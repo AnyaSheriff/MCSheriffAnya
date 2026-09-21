@@ -50,6 +50,7 @@ use network::configuration::{
     send_finish_configuration, send_known_packs, send_registry_data, send_update_tags,
 };
 use network::handshake::read_handshake;
+use network::{PROTOCOL_VERSION, VERSION_NAME};
 use network::login::{format_uuid, read_login_start, send_login_disconnect, send_login_success};
 use network::play::{play_session, player_left};
 use network::status::handle_status;
@@ -277,6 +278,32 @@ async fn handle_connection(
         }
         // Состояние Login: игрок входит на сервер.
         2 => {
+            // Версию проверяем до всего остального. Клиент другой версии
+            // шлёт дальше пакеты, которых мы не знаем, и разбор упирался бы
+            // в невнятную «ошибку сетевого протокола» — вместо этого сразу
+            // говорим человеку, в чём дело.
+            //
+            // Пока ядро понимает одну версию. Когда появится свой перевод
+            // между версиями, здесь будет не отказ, а выбор переводчика.
+            if handshake.protocol_version != PROTOCOL_VERSION {
+                log_info!(
+                    "Вход отклонён: версия клиента (протокол {}) не подходит, ядру нужен протокол {}",
+                    handshake.protocol_version,
+                    PROTOCOL_VERSION
+                );
+
+                send_login_disconnect(
+                    &mut socket,
+                    &format!(
+                        "Ваша версия не подходит под ядро сервера\nНужен Minecraft {} (протокол {})",
+                        VERSION_NAME, PROTOCOL_VERSION
+                    ),
+                )
+                .await?;
+
+                return Ok(());
+            }
+
             let login = read_login_start(&mut socket).await?;
 
             // Как у обычного сервера: опознаватель игрока и откуда он пришёл —
