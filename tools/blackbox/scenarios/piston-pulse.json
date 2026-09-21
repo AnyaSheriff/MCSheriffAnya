@@ -1,0 +1,15 @@
+{
+  "name": "piston-pulse",
+  "about": "Наблюдатель смотрит на рычаг и даёт поршню импульс в два такта: питание пропадает, пока ход ещё идёт.",
+  "blocks": [
+    {"at": [0, 0, 0], "state": "minecraft:piston[facing=up]"},
+    {"at": [0, 1, 0], "state": "minecraft:stone"},
+    {"at": [1, 0, 0], "state": "minecraft:observer[facing=east,powered=false]"},
+    {"at": [2, 0, 0], "state": "minecraft:lever[face=floor,facing=north,powered=false]"}
+  ],
+  "actions": [
+    {"after": 0,  "click": [2, 0, 0]},
+    {"after": 40, "click": [2, 0, 0]}
+  ],
+  "record_ticks": 80
+}
