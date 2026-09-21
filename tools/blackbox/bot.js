@@ -160,10 +160,12 @@ let pendingDo = null;
   bot._client.write = (name, params) => {
     if (process.env.BB_DEBUG && name !== 'position' && name !== 'position_look' && name !== 'look' && name !== 'keep_alive') console.error('→', name, JSON.stringify(params, (k, v) => typeof v === 'bigint' ? String(v) : v).slice(0, 160));
     if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed')) {
-      // phase — в какую долю такта сервера ушло нажатие; по ней видно, ровно
-      // ли робот попадает в середину такта.
+      // Такт нажатия берём из плана, а не из часов: в какой такт целились,
+      // в тот оно и уходит. Часы на этом месте врать не должны, но нажатие
+      // ложится ровно на границу счёта, и округление могло бы дрогнуть.
+      // phase — в какую долю такта сервера нажатие ушло на самом деле.
       const phase = baseNow() === null ? null : Math.round(((Date.now() - baseNow()) % TICK_MS) / TICK_MS * 100) / 100;
-      events.push({ tick: tickNow(), ms: Date.now() - t0, kind: 'do', what: pendingDo, phase });
+      events.push({ tick: pendingDo.tick, ms: Date.now() - t0, kind: 'do', what: pendingDo.what, phase });
       pendingDo = null;
     }
     return write(name, params);
@@ -194,20 +196,24 @@ const clickBlock = (block) => {
 // раз вхолостую и смотрим, в какую долю нашей сетки приходят ответы: самый
 // ранний ответ и показывает начало такта. Без этого робот целится в середину
 // такта у одного сервера и на границу — у другого, и записи не сравнить.
-const calibrate = async (block, times = 6) => {
+const calibrate = async (times = 6) => {
   const phases = [];
+  // Меряем откликом на команду, а не нажатием по схеме: схему трогать нельзя,
+  // иначе к записи она придёт не в исходном виде — в `grass-crush` поршень
+  // успел бы раздавить траву ещё до начала.
+  const spot = { x: ORIGIN.x + PAD, y: ORIGIN.y, z: ORIGIN.z + PAD };
 
   for (let i = 0; i < times; i++) {
     let got = null;
     calibHook = (t) => { if (got === null) got = t; };
     await waitTick(tickNow() + 3, 0.5);
-    clickBlock(block);
+    bot.chat(`/setblock ${spot.x} ${spot.y} ${spot.z} ${i % 2 ? 'minecraft:air' : 'minecraft:stone'}`);
     await sleepTicks(8);
     calibHook = null;
     if (got !== null) phases.push(((got - tickBase) % TICK_MS + TICK_MS) % TICK_MS);
   }
 
-  if (phases.length < 3) throw new Error('калибровка не удалась: сервер не отвечает на нажатия');
+  if (phases.length < 3) throw new Error('калибровка не удалась: сервер не отвечает на команды');
 
   // Доли такта лежат по кругу: разворачиваем их вокруг первой, иначе 49 мс
   // и 1 мс выглядят как разные концы, хотя это соседние мгновения.
@@ -241,6 +247,13 @@ bot.once('spawn', async () => {
     await say(`fill ${ORIGIN.x - PAD} ${ORIGIN.y - 1} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${ORIGIN.y + PAD} ${ORIGIN.z + PAD} minecraft:air`);
     await say(`fill ${ORIGIN.x - PAD} ${ORIGIN.y - 1} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${ORIGIN.y - 1} ${ORIGIN.z + PAD} minecraft:stone`);
     await sleepTicks(20);
+    // Сетку тактов снимаем до постройки: калибровка ставит и убирает блок
+    // в углу площадки, и этот угол потом затирается заливкой.
+    for (let i = 0; clockSamples.length < 2 && i < 60; i++) await sleepTicks(20);
+    if (clockSamples.length < 2) throw new Error('не удалось сверить часы с сервером: нечем привязывать такты');
+    await calibrate();
+    await say(`setblock ${ORIGIN.x + PAD} ${ORIGIN.y} ${ORIGIN.z + PAD} minecraft:air`);
+
     for (const b of scenario.blocks) await setBlock(b);
     await sleepTicks(40);                      // тишина перед записью
     // Прицелиться заранее, до начала записи: иначе поворот головы съест
@@ -260,13 +273,6 @@ bot.once('spawn', async () => {
     for (let i = 0; clockSamples.length < 2 && i < 60; i++) await sleepTicks(20);
     if (clockSamples.length < 2) throw new Error('не удалось сверить часы с сервером: нечем привязывать такты');
 
-    // Сетку тактов снимаем тем же нажатием, каким пойдёт сценарий: чётное
-    // число раз, чтобы рычаг вернулся в исходное положение.
-    if (aimedAt) {
-      await calibrate(bot.blockAt(aimedAt));
-      await sleepTicks(20);
-    }
-
     fixedBase = tickBase + clockOffset;
     recording = true; t0 = Date.now();
     // Нажатия расставляем по тактам сервера, а не по часам робота: `after` —
@@ -274,11 +280,13 @@ bot.once('spawn', async () => {
     // на десяток миллисекунд не перекидывал нажатие в соседний такт.
     const baseTick = tickNow() + 3;   // запас, чтобы первое нажатие не опоздало
     for (const a of scenario.actions) {
-      // Доля 0,1 от счётного такта — это середина настоящего такта сервера
-      // (счёт сдвинут на полтакта при калибровке): дальше всего от границ,
-      // куда бы нажатие ни дрогнуло.
-      await waitTick(baseTick + (a.after || 0), 0.1);
-      pendingDo = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : JSON.stringify(a);
+      // Граница счётного такта — это ровно середина между приходами пакетов,
+      // то есть середина настоящего такта сервера: дальше всего от его краёв,
+      // куда бы отправка ни дрогнула.
+      const at = baseTick + (a.after || 0);
+      await waitTick(at, 0);
+      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : JSON.stringify(a);
+      pendingDo = { what, tick: at };
       if (a.set) bot.chat(`/setblock ${ORIGIN.x + a.set.at[0]} ${ORIGIN.y + a.set.at[1]} ${ORIGIN.z + a.set.at[2]} ${a.set.state}`);
       if (a.click) {
         const block = bot.blockAt(new Vec3(ORIGIN.x + a.click[0], ORIGIN.y + a.click[1], ORIGIN.z + a.click[2]));
