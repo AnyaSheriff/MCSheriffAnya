@@ -1,0 +1,15 @@
+{
+  "name": "sticky-pull",
+  "about": "Липкий поршень смотрит на восток, перед ним камень; рычаг сзади через блок. Выдвинуть и задвинуть — блок должен уехать и вернуться.",
+  "blocks": [
+    {"at": [0, 0, 0], "state": "minecraft:sticky_piston[facing=east]"},
+    {"at": [1, 0, 0], "state": "minecraft:stone"},
+    {"at": [-1, 0, 0], "state": "minecraft:stone"},
+    {"at": [-1, 1, 0], "state": "minecraft:lever[face=floor,facing=north,powered=false]"}
+  ],
+  "actions": [
+    {"after": 0,  "click": [-1, 1, 0]},
+    {"after": 40, "click": [-1, 1, 0]}
+  ],
+  "record_ticks": 80
+}

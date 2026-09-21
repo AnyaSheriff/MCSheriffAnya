@@ -1,0 +1,18 @@
+{
+  "name": "repeater",
+  "about": "Рычаг → повторитель (задержка 2) → провод → лампа. Проверяет запланированные такты и лампу.",
+  "blocks": [
+    {"at": [0, 0, 0], "state": "minecraft:stone"},
+    {"at": [0, 1, 0], "state": "minecraft:lever[face=floor,facing=north,powered=false]"},
+    {"at": [1, 0, 0], "state": "minecraft:stone"},
+    {"at": [1, 1, 0], "state": "minecraft:repeater[facing=west,delay=2]"},
+    {"at": [2, 0, 0], "state": "minecraft:stone"},
+    {"at": [2, 1, 0], "state": "minecraft:redstone_wire"},
+    {"at": [3, 1, 0], "state": "minecraft:redstone_lamp"}
+  ],
+  "actions": [
+    {"after": 0,  "click": [0, 1, 0]},
+    {"after": 40, "click": [0, 1, 0]}
+  ],
+  "record_ticks": 80
+}

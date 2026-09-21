@@ -1,0 +1,22 @@
+{
+  "name": "piston-fast",
+  "about": "Поршень головой вверх с блоком на голове; рычаг дёргается каждые три такта — новое питание приходит, пока ход ещё идёт.",
+  "continuous": true,
+  "blocks": [
+    {"at": [0, 0, 0], "state": "minecraft:piston[facing=up]"},
+    {"at": [0, 1, 0], "state": "minecraft:stone"},
+    {"at": [1, 0, 0], "state": "minecraft:stone"},
+    {"at": [1, 1, 0], "state": "minecraft:lever[face=floor,facing=north,powered=false]"}
+  ],
+  "actions": [
+    {"after": 0,  "click": [1, 1, 0]},
+    {"after": 3,  "click": [1, 1, 0]},
+    {"after": 6,  "click": [1, 1, 0]},
+    {"after": 9,  "click": [1, 1, 0]},
+    {"after": 12, "click": [1, 1, 0]},
+    {"after": 15, "click": [1, 1, 0]},
+    {"after": 18, "click": [1, 1, 0]},
+    {"after": 21, "click": [1, 1, 0]}
+  ],
+  "record_ticks": 50
+}

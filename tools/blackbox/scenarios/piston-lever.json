@@ -1,0 +1,15 @@
+{
+  "name": "piston-lever",
+  "about": "Поршень головой вверх, на голове блок, рядом рычаг. Включить, подождать, выключить.",
+  "blocks": [
+    {"at": [0, 0, 0], "state": "minecraft:piston[facing=up]"},
+    {"at": [0, 1, 0], "state": "minecraft:stone"},
+    {"at": [1, 0, 0], "state": "minecraft:stone"},
+    {"at": [1, 1, 0], "state": "minecraft:lever[face=floor,facing=north,powered=false]"}
+  ],
+  "actions": [
+    {"after": 0,  "click": [1, 1, 0]},
+    {"after": 40, "click": [1, 1, 0]}
+  ],
+  "record_ticks": 80
+}

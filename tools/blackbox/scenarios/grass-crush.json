@@ -1,0 +1,15 @@
+{
+  "name": "grass-crush",
+  "about": "Поршень на восток, перед ним трава (ломается), рычаг сзади через блок.",
+  "blocks": [
+    {"at": [0, 0, 0], "state": "minecraft:piston[facing=east]"},
+    {"at": [1, 0, 0], "state": "minecraft:short_grass"},
+    {"at": [-1, 0, 0], "state": "minecraft:stone"},
+    {"at": [-1, 1, 0], "state": "minecraft:lever[face=floor,facing=north,powered=false]"}
+  ],
+  "actions": [
+    {"after": 0,  "click": [-1, 1, 0]},
+    {"after": 40, "click": [-1, 1, 0]}
+  ],
+  "record_ticks": 80
+}
