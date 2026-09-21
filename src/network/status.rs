@@ -23,10 +23,7 @@ use super::handshake::HandshakePacket;
 use super::varint::{encode_string, encode_varint, read_varint};
 use crate::log_debug;
 
-/// Версия протокола и её человекочитаемое имя, которые сервер сообщает клиенту.
-/// Должны соответствовать реальной поддерживаемой версии Minecraft.
-const PROTOCOL_VERSION: i32 = 775;
-const VERSION_NAME: &str = "26.1.2";
+use super::{PROTOCOL_VERSION, VERSION_NAME};
 
 /// Формирует JSON-ответ Server List Ping по спецификации протокола.
 pub fn build_status_response(motd: &str, online: i32, max: i32) -> String {
