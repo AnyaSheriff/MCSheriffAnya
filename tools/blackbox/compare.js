@@ -33,6 +33,7 @@ const describe = (e) => {
     case 'block': return `блок ${at} ${e.state}${e.batch ? ' [пачкой]' : ''}`;
     case 'action': return `действие ${at} ${e.block} ${e.a}/${e.b}`;
     case 'sound': return `звук ${at} ${e.sound.replace(/^minecraft:/, '')} ${e.volume.toFixed(2)} ~${e.pitch.toFixed(2)}`;
+    case 'particle': return `частица ${at} ${e.particle} ${e.count} шт. скорость ${e.speed} (${e.offset})`;
     case 'spawn': return `сущность ${at} ${e.type} ${e.data}`;
     case 'destroy': return `убрана сущность`;
     case 'block_entity': return `данные блока ${at} ${e.type} ${e.data}`;
@@ -48,6 +49,7 @@ const key = (e) => {
     case 'block': return `block ${e.at.join(',')} ${e.state}`;
     case 'action': return `action ${e.at.join(',')} ${e.block} ${e.a}/${e.b}`;
     case 'sound': return `sound ${e.at.join(',')} ${e.sound} ${e.volume.toFixed(2)}`;
+    case 'particle': return `частица ${e.at.join(',')} ${e.particle} ${e.count} ${e.speed} (${e.offset})`;
     case 'spawn': return `spawn ${e.at.join(',')} ${e.type} ${e.data}`;
     case 'block_entity': return `block_entity ${e.at.join(',')} ${e.type}`;
     default: return e.kind;

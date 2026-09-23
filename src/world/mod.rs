@@ -18,16 +18,20 @@
 // терять постройки при падении не хочется.
 
 pub mod flat;
+pub mod noise;
 pub mod region;
+pub mod terrain;
 
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use crate::fluids;
 use crate::journal::{self, Journal};
 use crate::redstone;
+use crate::world::terrain::{Column, Terrain};
 use crate::{log_debug, log_error, log_info, log_warn};
 
 /// Воздух — состояние 0. Это единственное число, в котором мы уверены
@@ -131,17 +135,118 @@ pub enum WorldEvent {
 /// не приходится перекладывать при отправке.
 struct Chunk {
     /// Секции снизу вверх. None — секция целиком из воздуха.
-    sections: Vec<Option<Vec<i32>>>,
+    ///
+    /// Состояние блока хранится в двух байтах, а не в четырёх: номеров
+    /// состояний в игре около тридцати тысяч, и в два байта они влезают
+    /// с запасом. На дальности в тридцать два чанка это половина памяти
+    /// сервера — сотни мегабайт.
+    sections: Vec<Option<Vec<Packed>>>,
+
+    /// Биомы чанка: по одному на ячейку 4×4 блока — так же дробно, как их
+    /// передаёт протокол. По высоте биом у нас пока один на весь столбец.
+    biomes: [i32; BIOME_CELLS * BIOME_CELLS],
 }
+
+/// Состояние блока в том виде, в каком оно лежит в памяти чанка.
+type Packed = u16;
+
+/// Ужимает состояние для хранения. Номеров состояний в игре около тридцати
+/// тысяч; если однажды их станет больше, чем помещается, лучше об этом
+/// узнать сразу, а не получить чужой блок в мире.
+fn pack(state: i32) -> Packed {
+    Packed::try_from(state).unwrap_or_else(|_| panic!("состояние {} не влезает в два байта", state))
+}
+
+/// Разворачивает хранимое состояние обратно.
+fn unpack(state: Packed) -> i32 {
+    state as i32
+}
+
+/// Сколько ячеек биома приходится на сторону чанка: биом задаётся на каждые
+/// четыре блока, так же как в пакете чанка.
+const BIOME_CELLS: usize = (CHUNK_SIZE / 4) as usize;
 
 impl Chunk {
     fn new() -> Self {
         Self {
             sections: (0..SECTIONS).map(|_| None).collect(),
+            biomes: [0; BIOME_CELLS * BIOME_CELLS],
+        }
+    }
+
+    /// Биомы чанка ячейками 4×4, в том же порядке, в каком их ждёт пакет:
+    /// сперва по Z, внутри — по X.
+    fn biomes(&self) -> &[i32] {
+        &self.biomes
+    }
+
+    /// Чанк сложенного мира: рельеф, биомы и всё, что из них следует.
+    fn generated(generator: &Generator, chunk_x: i32, chunk_z: i32) -> Self {
+        let mut chunk = Self::new();
+
+        for local_x in 0..CHUNK_SIZE {
+            for local_z in 0..CHUNK_SIZE {
+                let x = chunk_x * CHUNK_SIZE + local_x;
+                let z = chunk_z * CHUNK_SIZE + local_z;
+
+                // Шумы считаются один раз на столбец, а не на каждый блок:
+                // иначе на чанк приходилось бы сто тысяч обращений к шуму.
+                let column = generator.column_at(x, z);
+
+                // Столбец заполняется снизу вверх только до поверхности:
+                // выше неё стоять может лишь вода, и та до уровня моря.
+                let top = generator.top_of(&column);
+
+                for y in MIN_Y..=top {
+                    let state = generator.block_at(&column, x, y, z);
+
+                    if state == AIR {
+                        continue;
+                    }
+
+                    let (section, inside) = split(y);
+                    let index = (local_z * CHUNK_SIZE + local_x) as usize;
+
+                    chunk.filled_section(section)[inside + index] = pack(state);
+                }
+
+                // Биом ячейки берём у её первого столбца: внутри четырёх
+                // блоков он всё равно один.
+                if local_x % 4 == 0 && local_z % 4 == 0 {
+                    let cell = (local_z / 4) as usize * BIOME_CELLS + (local_x / 4) as usize;
+
+                    chunk.biomes[cell] = generator.biome_of(&column).number();
+                }
+            }
+        }
+
+        generator.grow_trees(&mut chunk, chunk_x, chunk_z);
+
+        chunk
+    }
+
+    /// Ставит блок дерева, если он попал в этот чанк, и не затирает то, что
+    /// уже стоит: ствол важнее листвы.
+    fn put_tree_block(&mut self, x: i32, y: i32, z: i32, state: i32, over: bool) {
+        if !(0..CHUNK_SIZE).contains(&x) || !(0..CHUNK_SIZE).contains(&z) {
+            return;
+        }
+
+        if y < MIN_Y || y >= MIN_Y + WORLD_HEIGHT {
+            return;
+        }
+
+        let (section, inside) = split(y);
+        let index = (z * CHUNK_SIZE + x) as usize;
+        let place = &mut self.filled_section(section)[inside + index];
+
+        if over || unpack(*place) == AIR {
+            *place = pack(state);
         }
     }
 
     /// Чанк ровного мира: земля одинаковой высоты по всей площади.
+    #[cfg(test)]
     fn flat() -> Self {
         let mut chunk = Self::new();
 
@@ -155,7 +260,7 @@ impl Chunk {
             for index in 0..(CHUNK_SIZE * CHUNK_SIZE) as usize {
                 let (section, inside) = split(y);
 
-                chunk.filled_section(section)[inside + index] = state;
+                chunk.filled_section(section)[inside + index] = pack(state);
             }
         }
 
@@ -167,7 +272,7 @@ impl Chunk {
         let (section, inside) = split(y);
 
         match &self.sections[section] {
-            Some(blocks) => blocks[inside + corner(x, z)],
+            Some(blocks) => unpack(blocks[inside + corner(x, z)]),
             None => AIR,
         }
     }
@@ -185,17 +290,17 @@ impl Chunk {
 
         let blocks = self.filled_section(section);
 
-        if blocks[index] == state {
+        if unpack(blocks[index]) == state {
             return false;
         }
 
-        blocks[index] = state;
+        blocks[index] = pack(state);
         true
     }
 
     /// Секция, готовая к записи: воздушная заводится на месте.
-    fn filled_section(&mut self, section: usize) -> &mut Vec<i32> {
-        self.sections[section].get_or_insert_with(|| vec![AIR; SECTION_BLOCKS])
+    fn filled_section(&mut self, section: usize) -> &mut Vec<Packed> {
+        self.sections[section].get_or_insert_with(|| vec![pack(AIR); SECTION_BLOCKS])
     }
 
     /// Сколько в чанке блоков, отличных от воздуха.
@@ -204,12 +309,12 @@ impl Chunk {
         self.sections
             .iter()
             .flatten()
-            .map(|blocks| blocks.iter().filter(|state| **state != AIR).count())
+            .map(|blocks| blocks.iter().filter(|state| unpack(**state) != AIR).count())
             .sum()
     }
 
     /// Блоки секции. None — секция целиком из воздуха.
-    fn section(&self, section: usize) -> Option<&[i32]> {
+    fn section(&self, section: usize) -> Option<&[Packed]> {
         self.sections[section].as_deref()
     }
 
@@ -242,12 +347,21 @@ impl Chunk {
             }
         }
 
+        // Биомы идут в конце: по два байта на ячейку — номеров биомов
+        // заведомо меньше, чем помещается в два байта.
+        for biome in self.biomes {
+            out.extend_from_slice(&(biome as u16).to_be_bytes());
+        }
+
         out
     }
 
     /// Читает чанк из байтов файла региона.
     fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        if *bytes.first()? != CHUNK_VERSION {
+        let version = *bytes.first()?;
+        let wide = version == CHUNK_VERSION_WIDE;
+
+        if version != CHUNK_VERSION && !wide {
             return None;
         }
 
@@ -265,7 +379,12 @@ impl Chunk {
             let mut at = 0usize;
 
             for _ in 0..runs {
-                let state = reader.i32().ok()?;
+                let state = if wide {
+                    pack(reader.i32().ok()?)
+                } else {
+                    reader.u16().ok()?
+                };
+
                 let length = reader.u16().ok()? as usize;
 
                 for _ in 0..length {
@@ -275,13 +394,23 @@ impl Chunk {
             }
         }
 
+        // Биомы дописаны в конце. Их может не быть: чанк записан прежним
+        // сервером, когда биом был один на весь мир. Тогда оставляем нули —
+        // это равнина, и мир от этого не пропадёт.
+        for cell in 0..chunk.biomes.len() {
+            match reader.u16() {
+                Ok(biome) => chunk.biomes[cell] = biome as i32,
+                Err(_) => break,
+            }
+        }
+
         Some(chunk)
     }
 }
 
 /// Разбивает блоки секции на записи «состояние и сколько его подряд».
-fn runs_of(blocks: &[i32]) -> Vec<(i32, u16)> {
-    let mut runs: Vec<(i32, u16)> = Vec::new();
+fn runs_of(blocks: &[Packed]) -> Vec<(Packed, u16)> {
+    let mut runs: Vec<(Packed, u16)> = Vec::new();
 
     for state in blocks {
         match runs.last_mut() {
@@ -343,7 +472,11 @@ const REGIONS: &str = "region";
 
 /// Версия записи чанка. Меняется, если меняется раскладка байтов или само
 /// устройство мира, чтобы старая запись не была прочитана неправильно.
-const CHUNK_VERSION: u8 = 1;
+const CHUNK_VERSION: u8 = 2;
+
+/// Прежний вид записи чанка: состояния по четыре байта. Такие файлы мы ещё
+/// читаем — у кого-то мир записан ими, и терять его незачем.
+const CHUNK_VERSION_WIDE: u8 = 1;
 
 /// Мир целиком: чанки и список изменений.
 pub struct World {
@@ -414,6 +547,14 @@ pub struct World {
     /// Насколько часы мира переведены относительно его возраста.
     time_offset: i64,
 
+    /// Семя мира: из него складывается рельеф. Живёт в level.dat, чтобы мир
+    /// оставался тем же и после перезапуска.
+    seed: i64,
+
+    /// Правила, по которым складывается ещё не сложенный кусок мира.
+    /// Под Arc: сеть берёт их себе и складывает чанк, не держа замок мира.
+    generator: Arc<Generator>,
+
     /// Блочные события: то, что делается не в свой запланированный такт,
     /// а отдельной фазой в конце такта мира. Так устроен ход поршня.
     block_events: Vec<(i32, i32, i32)>,
@@ -438,6 +579,11 @@ pub struct World {
     dirty: HashSet<(i32, i32)>,
 }
 
+/// Семя, с которым мир открывают проверки: они должны получать один и тот же
+/// мир при каждом запуске.
+#[cfg(test)]
+const TEST_SEED: i64 = 20_260_921;
+
 impl World {
     /// Пустой мир без файла на диске — только для проверок.
     #[cfg(test)]
@@ -456,6 +602,8 @@ impl World {
             changed: Vec::new(),
             falling: Vec::new(),
             time_offset: 0,
+            seed: 0,
+            generator: Arc::new(Generator::Flat),
             block_events: Vec::new(),
             redstone: redstone::Memory::new(),
             destroyed: Vec::new(),
@@ -466,7 +614,11 @@ impl World {
     /// Открывает мир: готовит директорию, в которой лежат регионы.
     ///
     /// Сами чанки не читаются: каждый читается тогда, когда до него дошли.
-    pub fn open(directory: impl AsRef<Path>) -> io::Result<Self> {
+    pub fn open(
+        directory: impl AsRef<Path>,
+        wanted_seed: Option<i64>,
+        flat: bool,
+    ) -> io::Result<Self> {
         let path = directory.as_ref().to_path_buf();
 
         fs::create_dir_all(path.join(REGIONS))?;
@@ -496,6 +648,29 @@ impl World {
         let level = read_level(&path.join(LEVEL));
         let (tick, time_offset) = (level.age, level.time_offset);
 
+        // Семя: у сложенного мира своё, записанное в level.dat, и менять его
+        // нельзя — иначе новые чанки не сойдутся со старыми. У нового мира
+        // семя берётся из настроек, а если там пусто — выбирается само.
+        let seed = match (level.seed, wanted_seed) {
+            (Some(saved), wanted) => {
+                if let Some(wanted) = wanted
+                    && wanted != saved
+                {
+                    log_warn!(
+                        "Семя мира из настроек ({}) не применяется: у мира уже своё ({})",
+                        wanted,
+                        saved
+                    );
+                }
+
+                saved
+            }
+            (None, Some(wanted)) => wanted,
+            (None, None) => random_seed(),
+        };
+
+        log_info!("Семя мира: {}", seed);
+
         let mut world = Self {
             noise: 0x9E37_79B9 ^ std::process::id(),
             late: Vec::new(),
@@ -510,6 +685,12 @@ impl World {
             changed: Vec::new(),
             falling: Vec::new(),
             time_offset,
+            seed,
+            generator: Arc::new(if flat {
+                Generator::Flat
+            } else {
+                Generator::Normal(Terrain::new(seed))
+            }),
             block_events: Vec::new(),
             redstone: redstone::Memory::new(),
             destroyed: Vec::new(),
@@ -666,10 +847,78 @@ impl World {
     ///
     /// None — секции нет вовсе: там воздух. Клиенту такая секция и
     /// отправляется как пустая.
-    pub fn section_blocks(&self, chunk_x: i32, chunk_z: i32, section: usize) -> Option<&[i32]> {
+    pub fn section_blocks(&self, chunk_x: i32, chunk_z: i32, section: usize) -> Option<&[Packed]> {
         self.chunks
             .get(&(chunk_x, chunk_z))
             .and_then(|chunk| chunk.section(section))
+    }
+
+    /// Тело пакета чанка: секции и биомы в том виде, в каком они уходят
+    /// клиенту. Само составление передано сюда снаружи — мир не знает, как
+    /// устроены пакеты.
+    ///
+    /// Готовое тело нарочно не запоминается: на дальности в тридцать два
+    /// чанка это триста мегабайт памяти, а собирается оно быстрее, чем
+    /// уходит по сети (проверено замером — скорость та же).
+    pub fn chunk_packet(
+        &self,
+        chunk_x: i32,
+        chunk_z: i32,
+        build: impl FnOnce(&[Option<Vec<Packed>>], &[i32]) -> Vec<u8>,
+    ) -> Option<Vec<u8>> {
+        let chunk = self.chunks.get(&(chunk_x, chunk_z))?;
+
+        Some(build(&chunk.sections, &chunk.biomes))
+    }
+
+    /// Биомы чанка ячейками 4×4 — в том порядке, в каком их ждёт пакет.
+    /// Нет чанка — нет и биомов: клиенту уйдёт равнина.
+    pub fn chunk_biomes(&self, chunk_x: i32, chunk_z: i32) -> Option<&[i32]> {
+        self.chunks.get(&(chunk_x, chunk_z)).map(|chunk| chunk.biomes())
+    }
+
+    /// Откуда брать ещё не готовый чанк. Его можно унести с собой: чтение
+    /// с диска и складывание нового чанка — работа долгая, и держать на ней
+    /// замок мира нельзя, иначе встанет такт.
+    pub fn source(&self) -> ChunkSource {
+        ChunkSource {
+            path: self.path.clone(),
+            generator: Arc::clone(&self.generator),
+        }
+    }
+
+    /// Есть ли этот чанк в памяти.
+    pub fn has_chunk(&self, chunk_x: i32, chunk_z: i32) -> bool {
+        self.chunks.contains_key(&(chunk_x, chunk_z))
+    }
+
+    /// Кладёт готовый чанк в мир. Если его успели положить, пока он
+    /// складывался, — оставляем тот, что уже есть.
+    pub fn accept(&mut self, chunk_x: i32, chunk_z: i32, ready: ReadyChunk) {
+        if self.chunks.contains_key(&(chunk_x, chunk_z)) {
+            return;
+        }
+
+        self.chunks.insert((chunk_x, chunk_z), ready.chunk);
+        self.after_chunk_arrived(chunk_x, chunk_z, ready.from_disk);
+    }
+
+    /// Что делается, когда чанк появился в мире: разбудить отложенные такты
+    /// и починить прочитанное с диска.
+    fn after_chunk_arrived(&mut self, chunk_x: i32, chunk_z: i32, from_disk: bool) {
+        let woken: Vec<Scheduled> = self
+            .parked
+            .extract_if(.., |entry| chunk_key(entry.place.0, entry.place.2) == (chunk_x, chunk_z))
+            .collect();
+
+        for entry in woken {
+            self.waiting.remove(&(entry.place, entry.kind));
+            self.push_scheduled(entry.place, entry.kind, self.tick + 1, entry.priority);
+        }
+
+        if from_disk {
+            redstone::repair_chunk(self, chunk_x, chunk_z);
+        }
     }
 
     /// Готовит чанк, если его ещё нет: складывает землю ровного мира.
@@ -683,29 +932,15 @@ impl World {
 
         let (chunk, from_disk) = match self.read_chunk(chunk_x, chunk_z) {
             Some(chunk) => (chunk, true),
-            None => (Chunk::flat(), false),
+            None => (Chunk::generated(&self.generator, chunk_x, chunk_z), false),
         };
 
         self.chunks.insert((chunk_x, chunk_z), chunk);
 
-        // Такты, дожидавшиеся этого чанка, возвращаются в очередь. Срок у них
-        // уже вышел, поэтому сработают на ближайшем такте — в игре такой
-        // просроченный такт тоже выполняется сразу.
-        let woken: Vec<Scheduled> = self
-            .parked
-            .extract_if(.., |entry| chunk_key(entry.place.0, entry.place.2) == (chunk_x, chunk_z))
-            .collect();
-
-        for entry in woken {
-            self.waiting.remove(&(entry.place, entry.kind));
-            self.push_scheduled(entry.place, entry.kind, self.tick + 1, entry.priority);
-        }
-
-        // Прочитанное с диска может быть несогласованным — сервер могли
-        // остановить посреди хода поршня. Свежесложенной земле чинить нечего.
-        if from_disk {
-            redstone::repair_chunk(self, chunk_x, chunk_z);
-        }
+        // Такты, дожидавшиеся этого чанка, возвращаются в очередь, а
+        // прочитанное с диска чинится: сервер могли остановить посреди хода
+        // поршня.
+        self.after_chunk_arrived(chunk_x, chunk_z, from_disk);
 
         true
     }
@@ -735,30 +970,7 @@ impl World {
 
     /// Читает чанк с диска. None — его там нет или он не читается.
     fn read_chunk(&self, chunk_x: i32, chunk_z: i32) -> Option<Chunk> {
-        if self.path.as_os_str().is_empty() {
-            return None;
-        }
-
-        let directory = self.path.join(REGIONS);
-
-        match region::read(&directory, chunk_x, chunk_z) {
-            Ok(Some(bytes)) => match Chunk::from_bytes(&bytes) {
-                Some(chunk) => Some(chunk),
-                None => {
-                    log_warn!(
-                        "Чанк {} {} не читается, складываю заново",
-                        chunk_x,
-                        chunk_z
-                    );
-                    None
-                }
-            },
-            Ok(None) => None,
-            Err(e) => {
-                log_error!("Не удалось прочитать чанк {} {}: {}", chunk_x, chunk_z, e);
-                None
-            }
-        }
+        read_chunk_at(&self.path, chunk_x, chunk_z)
     }
 
     /// События мира, начиная с записи `from` — то, что осталось разослать.
@@ -1075,7 +1287,10 @@ impl World {
     /// который держится на времени: часы на факелах, повторители в середине
     /// задержки, начатый ход поршня.
     fn save_level(&self) {
-        let mut text = format!("age = {}\ntime-offset = {}\n", self.tick, self.time_offset);
+        let mut text = format!(
+            "age = {}\ntime-offset = {}\nseed = {}\n",
+            self.tick, self.time_offset, self.seed
+        );
 
         for ((place, kind), (due, _)) in &self.waiting {
             let kind = match kind {
@@ -1151,6 +1366,16 @@ impl World {
         self.changed.pop()
     }
 
+    /// Забирает все изменившиеся блоки разом, в том же порядке, в каком их
+    /// выдавал бы `pop_changed`. Что изменится, пока этот список разбирают,
+    /// ляжет в очередь заново и дождётся следующего раза.
+    pub fn take_changed(&mut self) -> Vec<((i32, i32, i32), i32)> {
+        let mut taken = std::mem::take(&mut self.changed);
+
+        taken.reverse();
+        taken
+    }
+
     /// Запоминает, что блок сломал сам мир: из него должен выпасть предмет.
     pub fn note_destroyed(&mut self, x: i32, y: i32, z: i32) {
         let state = self.get_block(x, y, z);
@@ -1195,6 +1420,249 @@ impl World {
     }
 }
 
+/// Читает чанк с диска по пути мира. None — его там нет или он не читается.
+///
+/// Свободная функция, а не метод: читать чанк нужно и тогда, когда мира под
+/// рукой нет — например, пока он занят тактом.
+fn read_chunk_at(path: &Path, chunk_x: i32, chunk_z: i32) -> Option<Chunk> {
+    if path.as_os_str().is_empty() {
+        return None;
+    }
+
+    let directory = path.join(REGIONS);
+
+    match region::read(&directory, chunk_x, chunk_z) {
+        Ok(Some(bytes)) => match Chunk::from_bytes(&bytes) {
+            Some(chunk) => Some(chunk),
+            None => {
+                log_warn!("Чанк {} {} не читается, складываю заново", chunk_x, chunk_z);
+                None
+            }
+        },
+        Ok(None) => None,
+        Err(e) => {
+            log_error!("Не удалось прочитать чанк {} {}: {}", chunk_x, chunk_z, e);
+            None
+        }
+    }
+}
+
+/// Сколько блоков над землёй может занять растительность: кактус — самый
+/// высокий из того, что мы сажаем.
+const PLANT_ROOM: i32 = 4;
+
+/// Готовый чанк, который осталось положить в мир.
+pub struct ReadyChunk {
+    chunk: Chunk,
+    from_disk: bool,
+}
+
+/// Откуда берутся ещё не готовые чанки: папка мира и правила складывания.
+///
+/// Живёт отдельно от мира нарочно: пока чанк читается с диска или
+/// складывается заново, замок мира держать нельзя — такт не должен ждать.
+pub struct ChunkSource {
+    path: PathBuf,
+    generator: Arc<Generator>,
+}
+
+impl ChunkSource {
+    /// Читает чанк с диска, а если его там нет — складывает заново.
+    pub fn take(&self, chunk_x: i32, chunk_z: i32) -> ReadyChunk {
+        if let Some(chunk) = read_chunk_at(&self.path, chunk_x, chunk_z) {
+            return ReadyChunk { chunk, from_disk: true };
+        }
+
+        ReadyChunk {
+            chunk: Chunk::generated(&self.generator, chunk_x, chunk_z),
+            from_disk: false,
+        }
+    }
+}
+
+/// Чем складывается ещё не сложенный кусок мира.
+enum Generator {
+    /// Обычный мир: рельеф, биомы, море.
+    Normal(Terrain),
+
+    /// Ровный мир — настройка `level-type=minecraft:flat` у оригинала.
+    /// Земля одинаковой высоты по всей площади.
+    Flat,
+}
+
+impl World {
+    /// Где появляется игрок, зашедший впервые.
+    ///
+    /// В ровном мире это начало координат. В обычном там может оказаться
+    /// море, поэтому от начала координат расходимся кругами и ищем первое
+    /// место на суше — как делает игра, выбирая точку появления.
+    pub fn spawn_position(&self) -> (f64, f64, f64) {
+        /// Насколько далеко от начала координат искать сушу.
+        const SEARCH: i32 = 3_000;
+
+        /// Через сколько блоков проверять следующее место.
+        const STEP: i32 = 16;
+
+        let mut ring = 0;
+
+        while ring * STEP <= SEARCH {
+            let side = ring * STEP;
+
+            // Обходим кольцо: его углы и стороны с тем же шагом.
+            for step in -ring..=ring {
+                let along = step * STEP;
+
+                for (x, z) in [
+                    (along, -side),
+                    (along, side),
+                    (-side, along),
+                    (side, along),
+                ] {
+                    let column = self.generator.column_at(x, z);
+
+                    // Суша выше уровня моря и не голый лёд: на воде и на
+                    // отвесных пиках появляться незачем.
+                    if column.height >= terrain::SEA && !column.biome.is_ocean() {
+                        log_info!(
+                            "Точка появления: {} {} {} ({})",
+                            x,
+                            column.height + 1,
+                            z,
+                            column.biome.name()
+                        );
+
+                        return (x as f64 + 0.5, (column.height + 1) as f64, z as f64 + 0.5);
+                    }
+                }
+            }
+
+            ring += 1;
+        }
+
+        // Суши не нашлось — появляемся над водой в начале координат.
+        (0.5, (terrain::SEA + 1) as f64, 0.5)
+    }
+}
+
+impl Generator {
+    /// Всё про столбец в этом месте: высота поверхности и биом. Считается
+    /// один раз на место — дальше столбец заполняется по нему.
+    fn column_at(&self, x: i32, z: i32) -> Column {
+        match self {
+            Generator::Normal(terrain) => terrain.column_at(x, z),
+            Generator::Flat => Column::flat(flat::GROUND),
+        }
+    }
+
+    /// Что стоит в этом месте столбца.
+    fn block_at(&self, column: &Column, x: i32, y: i32, z: i32) -> i32 {
+        match self {
+            Generator::Normal(terrain) => terrain.block_at(column, x, y, z),
+            Generator::Flat => flat::block_at(y),
+        }
+    }
+
+    /// Сажает деревья этого чанка.
+    ///
+    /// Смотреть приходится шире самого чанка: ствол у соседа, а крона —
+    /// у нас. Поэтому обходим полосу вокруг чанка и рисуем то, что попало
+    /// внутрь. Соседний чанк посчитает то же самое и нарисует свою часть —
+    /// договариваться им не о чем.
+    fn grow_trees(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
+        /// Насколько широко крона выходит за ствол.
+        const REACH: i32 = 3;
+
+        let Generator::Normal(terrain) = self else {
+            return;
+        };
+
+        for local_x in -REACH..(CHUNK_SIZE + REACH) {
+            for local_z in -REACH..(CHUNK_SIZE + REACH) {
+                let x = chunk_x * CHUNK_SIZE + local_x;
+                let z = chunk_z * CHUNK_SIZE + local_z;
+
+                // Дерево редкое, а столбец считать дорого: сперва дешёвая
+                // проверка «а не здесь ли ствол вообще», и только потом сам
+                // столбец.
+                if !terrain::tree_possible(x, z) {
+                    continue;
+                }
+
+                let column = terrain.column_at(x, z);
+
+                let Some(tree) = terrain.tree_at(&column, x, z) else {
+                    continue;
+                };
+
+                let leaves = terrain::block_named(tree.leaves);
+                let log = terrain::block_named(tree.log);
+                let top = column.height + tree.trunk;
+
+                // Крона: у ели сужается кверху, у прочих — шар с плоским
+                // низом. Листва не затирает стволы, поэтому ставится первой.
+                for y in (top - 3)..=(top + 1) {
+                    let from_top = top + 1 - y;
+                    let radius = if tree.pointed {
+                        (from_top - 1).clamp(0, 2)
+                    } else if from_top <= 1 {
+                        1
+                    } else {
+                        2
+                    };
+
+                    for dx in -radius..=radius {
+                        for dz in -radius..=radius {
+                            // Углы у широкой кроны срезаны: так она круглее.
+                            if radius == 2 && dx.abs() == 2 && dz.abs() == 2 {
+                                continue;
+                            }
+
+                            chunk.put_tree_block(
+                                local_x + dx,
+                                y,
+                                local_z + dz,
+                                leaves,
+                                false,
+                            );
+                        }
+                    }
+                }
+
+                // Ствол: он главнее листвы и ставится поверх неё.
+                for y in (column.height + 1)..=top {
+                    chunk.put_tree_block(local_x, y, local_z, log, true);
+                }
+            }
+        }
+    }
+
+    /// Какой биом у этого столбца.
+    fn biome_of(&self, column: &Column) -> terrain::Biome {
+        match self {
+            Generator::Normal(_) => column.biome,
+            Generator::Flat => terrain::Biome::Plains,
+        }
+    }
+
+    /// До какой высоты имеет смысл считать столбец: выше неё пусто.
+    ///
+    /// Чуть выше поверхности: там стоят трава, цветы, снег и кактусы.
+    fn top_of(&self, column: &Column) -> i32 {
+        match self {
+            Generator::Normal(_) => column.height.max(terrain::SEA) + PLANT_ROOM,
+            Generator::Flat => flat::GROUND,
+        }
+    }
+}
+
+/// Случайное семя для нового мира: берём его из часов.
+fn random_seed() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|since| since.as_nanos() as i64)
+        .unwrap_or(0)
+}
+
 /// Имя файла с общими сведениями о мире — как у оригинального сервера.
 /// Внутри — наш собственный простой вид, не формат игры.
 const LEVEL: &str = "level.dat";
@@ -1210,6 +1678,9 @@ type SavedCargo = ((i32, i32, i32), (i32, i32, i32), i32);
 struct Level {
     age: u64,
     time_offset: i64,
+
+    /// Семя мира. `None` — в файле его нет: мир новый.
+    seed: Option<i64>,
 
     /// Места, ждущие своего такта.
     waiting: Vec<SavedTick>,
@@ -1227,6 +1698,7 @@ fn read_level(path: &Path) -> Level {
     let mut level = Level {
         age: 0,
         time_offset: 0,
+        seed: None,
         waiting: Vec::new(),
         moving: Vec::new(),
         cargo: Vec::new(),
@@ -1246,6 +1718,7 @@ fn read_level(path: &Path) -> Level {
         match name.trim() {
             "age" => level.age = value.parse().unwrap_or(0),
             "time-offset" => level.time_offset = value.parse().unwrap_or(0),
+            "seed" => level.seed = value.parse().ok(),
             "tick" => {
                 if let Some(waiting) = read_waiting(value) {
                     level.waiting.push(waiting);
@@ -1413,14 +1886,14 @@ mod tests {
         let stone = crate::blocks::state_by_name("stone").unwrap();
 
         {
-            let mut world = World::open(&directory).expect("открыть мир");
+            let mut world = World::open(&directory, Some(1), true).expect("открыть мир");
 
             world.ensure(0, 0);
             world.set_block(3, flat::SURFACE, 4, stone);
             world.save_if_needed();
         }
 
-        let mut world = World::open(&directory).expect("открыть мир снова");
+        let mut world = World::open(&directory, Some(1), true).expect("открыть мир снова");
 
         world.ensure(0, 0);
         assert_eq!(world.get_block(3, flat::SURFACE, 4), stone);
@@ -1469,7 +1942,7 @@ mod tests {
 
         let stone = crate::blocks::state_by_name("stone").unwrap();
 
-        let mut world = World::open(&directory).expect("открыть мир");
+        let mut world = World::open(&directory, Some(1), true).expect("открыть мир");
 
         world.ensure(0, 0);
         world.ensure(10, 10);
@@ -1537,7 +2010,7 @@ mod tests {
         let _ = fs::remove_dir_all(&path);
 
         {
-            let mut world = World::open(&path).expect("мир открылся");
+            let mut world = World::open(&path, Some(1), true).expect("мир открылся");
 
             world.advance(16);
             world.set_time_of_day(13_000);
@@ -1547,7 +2020,7 @@ mod tests {
         }
 
         // Открываем заново — время на месте.
-        let again = World::open(&path).expect("мир открылся снова");
+        let again = World::open(&path, Some(1), true).expect("мир открылся снова");
 
         assert_eq!(again.time_of_day(), 13_000, "часы сбросились");
         assert_eq!(again.tick(), 1, "возраст мира потерялся");
@@ -1566,7 +2039,7 @@ mod tests {
         let _ = fs::remove_dir_all(&path);
 
         {
-            let mut world = World::open(&path).expect("мир открылся");
+            let mut world = World::open(&path, Some(1), true).expect("мир открылся");
 
             world.ensure(0, 0);
             world.schedule_once(1, 2, 3, 4, -3);
@@ -1574,7 +2047,7 @@ mod tests {
             world.save_if_needed();
         }
 
-        let mut again = World::open(&path).expect("мир открылся снова");
+        let mut again = World::open(&path, Some(1), true).expect("мир открылся снова");
         again.ensure(0, 0);
 
         // Через четыре такта должно всплыть место повторителя, через два —
@@ -1609,7 +2082,7 @@ mod tests {
         path.push(format!("rustcraft-parked-{}", std::process::id()));
         let _ = fs::remove_dir_all(&path);
 
-        let mut world = World::open(&path).expect("мир открылся");
+        let mut world = World::open(&path, Some(1), true).expect("мир открылся");
         world.ensure(0, 0);
         world.ensure(10, 10);
 
@@ -1639,4 +2112,50 @@ mod tests {
         let _ = fs::remove_dir_all(&path);
     }
 
+}
+
+#[cfg(test)]
+mod spawn_tests {
+    use super::*;
+
+    /// Точка появления — на суше и над водой: в обычном мире начало координат
+    /// запросто оказывается морем.
+    #[test]
+    fn the_spawn_point_stands_on_land() {
+        let directory = std::env::temp_dir().join("mc_spawn_point");
+        let _ = fs::remove_dir_all(&directory);
+
+        let world = World::open(&directory, Some(100_554_032_945_340), false).expect("мир");
+        let (x, y, z) = world.spawn_position();
+
+        let column = world.generator.column_at(x as i32, z as i32);
+
+        assert!(!column.biome.is_ocean(), "появление в море: {:?}", column.biome);
+        assert!(y as i32 > terrain::SEA, "появление под водой: y = {}", y);
+        assert_eq!(y as i32, column.height + 1, "не на поверхности");
+    }
+}
+
+#[cfg(test)]
+mod speed {
+    use super::*;
+
+    /// Сколько времени уходит на чанк. Не проверка, а замер: запускается
+    /// вручную, `cargo test chunk_speed -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn chunk_speed() {
+        let generator = Generator::Normal(Terrain::new(100_554_032_945_340));
+
+        let started = std::time::Instant::now();
+        let count = 64;
+
+        for i in 0..count {
+            Chunk::generated(&generator, i % 8, i / 8);
+        }
+
+        let each = started.elapsed() / count as u32;
+
+        println!("чанк: {:?}, на 441 чанк ушло бы {:?}", each, each * 441);
+    }
 }

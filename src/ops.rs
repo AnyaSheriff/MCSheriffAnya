@@ -146,7 +146,7 @@ mod tests {
     /// они делили бы друг с другом.
     fn temporary(what: &str) -> PathBuf {
         let mut path = std::env::temp_dir();
-        path.push(format!("rustcraft-ops-{}-{}.json", std::process::id(), what));
+        path.push(format!("mcsheriffanya-ops-{}-{}.json", std::process::id(), what));
         let _ = fs::remove_file(&path);
         path
     }

@@ -24,6 +24,15 @@ pub struct ServerProperties {
     /// На сколько чанков вокруг игрока мир живёт: течёт вода, работает
     /// редстоун. Дальше него ничего не пересчитывается.
     pub simulation_distance: i32,
+
+    /// Семя мира из настроек. Пусто — мир получит случайное семя, а число
+    /// или слово задают его наверняка. У уже сложенного мира своё семя
+    /// записано в level.dat, и настройка его не перебивает.
+    pub level_seed: Option<i64>,
+
+    /// Ровный мир вместо обычного — настройка `level-type=minecraft:flat`,
+    /// как у оригинала.
+    pub flat_world: bool,
 }
 
 impl Default for ServerProperties {
@@ -35,6 +44,8 @@ impl Default for ServerProperties {
             // Значения по умолчанию — те же, что у оригинала.
             view_distance: 10,
             simulation_distance: 10,
+            level_seed: None,
+            flat_world: false,
         }
     }
 }
@@ -75,13 +86,48 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
         defaults.simulation_distance,
     );
 
+    let level_seed = values.get("level-seed").and_then(|value| seed_of(value));
+
+    // В файле двоеточие принято закрывать косой чертой, поэтому её убираем.
+    let flat_world = values
+        .get("level-type")
+        .map(|value| value.replace('\\', "").trim().eq_ignore_ascii_case("minecraft:flat"))
+        .unwrap_or(false);
+
     Ok(ServerProperties {
         motd,
         max_players,
         server_port,
         view_distance,
         simulation_distance,
+        level_seed,
+        flat_world,
     })
+}
+
+/// Семя мира из настройки: число берётся как есть, слово превращается
+/// в число — так же, как в игре, где семенем может быть любая строка.
+/// Пустая настройка означает «любое»: мир получит случайное семя.
+fn seed_of(value: &str) -> Option<i64> {
+    let value = value.trim();
+
+    if value.is_empty() {
+        return None;
+    }
+
+    if let Ok(number) = value.parse::<i64>() {
+        return Some(number);
+    }
+
+    // Простая свёртка строки в число: важно лишь, чтобы одно и то же слово
+    // всегда давало один и тот же мир.
+    let mut hash: i64 = 0;
+
+    for byte in value.bytes() {
+        hash = hash.wrapping_mul(31).wrapping_add(byte as i64);
+    }
+
+    Some(hash)
 }
 
 /// Дальность в чанках из настроек: число от 3 до 32.
@@ -162,7 +208,7 @@ const DEFAULT_PROPERTIES: &[(&str, &str)] = &[
     ("max-tick-time", "60000"),
     ("max-world-size", "29999984"),
     // Приветствие своё: выдавать себя за чужой сервер незачем.
-    ("motd", "RustCraft Server"),
+    ("motd", "MCSheriffAnya Server"),
     ("network-compression-threshold", "256"),
     ("online-mode", "true"),
     ("op-permission-level", "4"),
@@ -214,7 +260,7 @@ fn create_default_properties(path: &Path) -> io::Result<()> {
     }
 
     let mut content = format!(
-        "#RustCraft server properties\n\
+        "#MCSheriffAnya server properties\n\
          #{}\n\
          #Названия и значения по умолчанию — как у оригинального сервера.\n\
          #Сервер пока слушается этих настроек: {}.\n\
@@ -311,7 +357,7 @@ mod tests {
     /// по алфавиту, и он читается обратно.
     #[test]
     fn the_default_file_looks_like_the_original() {
-        let path = std::env::temp_dir().join("rustcraft_props_default/server.properties");
+        let path = std::env::temp_dir().join("mcsheriffanya_props_default/server.properties");
         let _ = fs::remove_dir_all(path.parent().expect("есть директория"));
 
         let properties = load_server_properties(path.to_str().expect("путь из букв"))

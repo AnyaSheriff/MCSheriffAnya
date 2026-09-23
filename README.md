@@ -1,14 +1,14 @@
-# RustCraft
+# MCSheriffAnya
 
 [Русская версия](README_ru.md)
 
 A Minecraft-compatible game server written from scratch in Rust.
 
-RustCraft is an independent implementation of the Java Edition server protocol.
+MCSheriffAnya is an independent implementation of the Java Edition server protocol.
 It is not a fork: it is written only from public documentation (the Minecraft
 Wiki, protocol descriptions, bug tracker) and observation of the official
 server from the outside. It contains no code from Mojang, Paper, Spigot,
-Fabric, Forge or any other server core. RustCraft is not affiliated with or
+Fabric, Forge or any other server core. MCSheriffAnya is not affiliated with or
 endorsed by Mojang or Microsoft.
 
 - **Client version:** Java Edition 26.1.2 (protocol 775). Older clients work
@@ -35,7 +35,7 @@ endorsed by Mojang or Microsoft.
   `help`, `list`, `say`, `tp`, `gamemode`, `kick`, `give`, `clear`, `time`,
   `op`, `deop`, `setblock`, `fill`, `stop`.
 - A console that looks like the original one; technical detail is hidden
-  behind `debug = true` in `config/rustcraft.toml`.
+  behind `debug = true` in `config/mcsheriffanya.toml`.
 
 Not there yet: mobs, health and damage, containers, a light engine, packet
 compression, world generation beyond flat land.
@@ -44,7 +44,7 @@ compression, world generation beyond flat land.
 
 ```sh
 cargo build
-./target/debug/rustcraft
+./target/debug/mcsheriffanya
 ```
 
 Run it from a terminal if you want to type console commands. The first start
@@ -55,14 +55,14 @@ creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
 
 - `config/server.properties` — the same keys and format as the original
   server. Nothing from it is hard-coded.
-- `config/rustcraft.toml` — RustCraft's own settings (`debug`).
+- `config/mcsheriffanya.toml` — MCSheriffAnya's own settings (`debug`).
 - `config/skins.toml` — which skin sources to use.
 - `ops.json` — operators, the original format.
 
 ## Verified against the original
 
 `tools/blackbox/` holds a "black box" harness: a bot joins the official
-26.1.2 server and RustCraft, builds the same contraption with commands, flips
+26.1.2 server and MCSheriffAnya, builds the same contraption with commands, flips
 a lever like a player would, records every block change, block action and
 sound with its tick, and diffs the two recordings. The official server is
 only *run* and observed over the network; its jar is never opened. Five

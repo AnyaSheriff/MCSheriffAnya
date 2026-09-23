@@ -1,0 +1,868 @@
+{
+ "name": "note-instruments",
+ "about": "Музыкальный блок от рычага через провод; под ним по очереди меняется материал — сверяем инструмент.",
+ "continuous": true,
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "minecraft:note_block"
+  },
+  {
+   "at": [
+    1,
+    1,
+    0
+   ],
+   "state": "minecraft:redstone_wire"
+  },
+  {
+   "at": [
+    2,
+    1,
+    0
+   ],
+   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:stone"
+   }
+  },
+  {
+   "after": 4,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 8,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 12,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:oak_planks"
+   }
+  },
+  {
+   "after": 16,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 20,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 24,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:sand"
+   }
+  },
+  {
+   "after": 28,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 32,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 36,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:glass"
+   }
+  },
+  {
+   "after": 40,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 44,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 48,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:gold_block"
+   }
+  },
+  {
+   "after": 52,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 56,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 60,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:clay"
+   }
+  },
+  {
+   "after": 64,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 68,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 72,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:packed_ice"
+   }
+  },
+  {
+   "after": 76,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 80,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 84,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:white_wool"
+   }
+  },
+  {
+   "after": 88,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 92,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 96,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:bone_block"
+   }
+  },
+  {
+   "after": 100,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 104,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 108,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:iron_block"
+   }
+  },
+  {
+   "after": 112,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 116,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 120,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:soul_sand"
+   }
+  },
+  {
+   "after": 124,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 128,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 132,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:pumpkin"
+   }
+  },
+  {
+   "after": 136,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 140,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 144,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:emerald_block"
+   }
+  },
+  {
+   "after": 148,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 152,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 156,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:hay_block"
+   }
+  },
+  {
+   "after": 160,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 164,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 168,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:glowstone"
+   }
+  },
+  {
+   "after": 172,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 176,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 180,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:copper_block"
+   }
+  },
+  {
+   "after": 184,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 188,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 192,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:exposed_copper"
+   }
+  },
+  {
+   "after": 196,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 200,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 204,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:weathered_copper"
+   }
+  },
+  {
+   "after": 208,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 212,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 216,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:oxidized_copper"
+   }
+  },
+  {
+   "after": 220,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 224,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 228,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:dirt"
+   }
+  },
+  {
+   "after": 232,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 236,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 240,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:obsidian"
+   }
+  },
+  {
+   "after": 244,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 248,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 252,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:oak_log"
+   }
+  },
+  {
+   "after": 256,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 260,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 264,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:stone_bricks"
+   }
+  },
+  {
+   "after": 268,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 272,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 276,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:deepslate_tile_slab"
+   }
+  },
+  {
+   "after": 280,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 284,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 288,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:cyan_concrete_powder"
+   }
+  },
+  {
+   "after": 292,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 296,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 300,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:blue_stained_glass"
+   }
+  },
+  {
+   "after": 304,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 308,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 312,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:iron_ore"
+   }
+  },
+  {
+   "after": 316,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 320,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 324,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:bookshelf"
+   }
+  },
+  {
+   "after": 328,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 332,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 336,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:cherry_hanging_sign"
+   }
+  },
+  {
+   "after": 340,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 344,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 348,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:waxed_cut_copper_stairs"
+   }
+  },
+  {
+   "after": 352,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 356,
+   "click": [
+    2,
+    1,
+    0
+   ]
+  }
+ ],
+ "record_ticks": 370
+}
