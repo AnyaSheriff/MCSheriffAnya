@@ -21,6 +21,9 @@ pub mod flat;
 pub mod noise;
 pub mod region;
 pub mod terrain;
+pub mod trees;
+pub mod underground;
+pub mod vegetation;
 
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -28,10 +31,11 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use crate::config::server_properties::WorldKind;
 use crate::fluids;
 use crate::journal::{self, Journal};
 use crate::redstone;
-use crate::world::terrain::{Column, Terrain};
+use crate::world::terrain::{Column, Style, Terrain};
 use crate::{log_debug, log_error, log_info, log_warn};
 
 /// Воздух — состояние 0. Это единственное число, в котором мы уверены
@@ -184,21 +188,63 @@ impl Chunk {
     fn generated(generator: &Generator, chunk_x: i32, chunk_z: i32) -> Self {
         let mut chunk = Self::new();
 
+        // Шумы считаются один раз на столбец, а не на каждый блок: иначе на
+        // чанк приходилось бы сто тысяч обращений к шуму. Берём и кайму
+        // в блок шириной — крутизну склона видно только по соседям.
+        const SIDE: i32 = CHUNK_SIZE + 2;
+        let (from_x, from_z) = (chunk_x * CHUNK_SIZE - 1, chunk_z * CHUNK_SIZE - 1);
+        let grid = generator.relief_grid(from_x, from_z, from_x + SIDE - 1, from_z + SIDE - 1);
+        let mut columns = Vec::with_capacity((SIDE * SIDE) as usize);
+
+        for local_x in -1..=CHUNK_SIZE {
+            for local_z in -1..=CHUNK_SIZE {
+                let (x, z) = (
+                    chunk_x * CHUNK_SIZE + local_x,
+                    chunk_z * CHUNK_SIZE + local_z,
+                );
+
+                columns.push(generator.column_in(x, z, grid.as_ref()));
+            }
+        }
+
+        // Шумы пещер — тоже по сетке, до самого высокого столбца чанка.
+        let highest = columns
+            .iter()
+            .map(|column| column.height)
+            .max()
+            .unwrap_or(MIN_Y);
+        let caves = generator.cave_grid(chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE, highest);
+
+        let at =
+            |local_x: i32, local_z: i32| columns[((local_x + 1) * SIDE + local_z + 1) as usize];
+
         for local_x in 0..CHUNK_SIZE {
             for local_z in 0..CHUNK_SIZE {
                 let x = chunk_x * CHUNK_SIZE + local_x;
                 let z = chunk_z * CHUNK_SIZE + local_z;
 
-                // Шумы считаются один раз на столбец, а не на каждый блок:
-                // иначе на чанк приходилось бы сто тысяч обращений к шуму.
-                let column = generator.column_at(x, z);
+                // Крутизна — как у оригинала: южный сосед выше северного
+                // на четыре и больше или западный выше восточного.
+                let mut column = at(local_x, local_z);
+                column.steep = at(local_x, local_z + 1).height - at(local_x, local_z - 1).height
+                    >= 4
+                    || at(local_x - 1, local_z).height - at(local_x + 1, local_z).height >= 4;
 
-                // Столбец заполняется снизу вверх только до поверхности:
-                // выше неё стоять может лишь вода, и та до уровня моря.
+                // Столбец заполняется сверху вниз: так видно, где кончается
+                // толща камня над блоком, — от её верха считается глубина
+                // для травы, земли и песка.
                 let top = generator.top_of(&column);
+                let mut run_top = top;
 
-                for y in MIN_Y..=top {
-                    let state = generator.block_at(&column, x, y, z);
+                for y in (MIN_Y..=top).rev() {
+                    let solid = generator.solid_in(grid.as_ref(), &column, x, y, z);
+
+                    if !solid {
+                        run_top = y - 1;
+                    }
+
+                    let state =
+                        generator.block_with(&column, caves.as_ref(), x, y, z, solid, run_top);
 
                     if state == AIR {
                         continue;
@@ -220,14 +266,19 @@ impl Chunk {
             }
         }
 
+        // Руда и пятна камня — после рельефа и пещер: им надо знать, где
+        // камень и где воздух. Деревья — после руды: им до неё дела нет.
+        generator.lay_ores(&mut chunk, chunk_x, chunk_z);
+        underground::dig(generator, &mut chunk, chunk_x, chunk_z);
         generator.grow_trees(&mut chunk, chunk_x, chunk_z);
+        vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
 
         chunk
     }
 
     /// Ставит блок дерева, если он попал в этот чанк, и не затирает то, что
     /// уже стоит: ствол важнее листвы.
-    fn put_tree_block(&mut self, x: i32, y: i32, z: i32, state: i32, over: bool) {
+    fn put_generated(&mut self, x: i32, y: i32, z: i32, state: i32, over: bool) {
         if !(0..CHUNK_SIZE).contains(&x) || !(0..CHUNK_SIZE).contains(&z) {
             return;
         }
@@ -299,6 +350,14 @@ impl Chunk {
     }
 
     /// Секция, готовая к записи: воздушная заводится на месте.
+    /// Верх самой высокой непустой секции: выше него в чанке только воздух.
+    fn highest(&self) -> i32 {
+        match self.sections.iter().rposition(Option::is_some) {
+            Some(section) => MIN_Y + (section as i32 + 1) * 16 - 1,
+            None => MIN_Y - 1,
+        }
+    }
+
     fn filled_section(&mut self, section: usize) -> &mut Vec<Packed> {
         self.sections[section].get_or_insert_with(|| vec![pack(AIR); SECTION_BLOCKS])
     }
@@ -551,6 +610,10 @@ pub struct World {
     /// оставался тем же и после перезапуска.
     seed: i64,
 
+    /// Тип мира: обычный, суперплоский или «Супер плавность». Живёт
+    /// в level.dat рядом с семенем.
+    kind: WorldKind,
+
     /// Правила, по которым складывается ещё не сложенный кусок мира.
     /// Под Arc: сеть берёт их себе и складывает чанк, не держа замок мира.
     generator: Arc<Generator>,
@@ -603,6 +666,7 @@ impl World {
             falling: Vec::new(),
             time_offset: 0,
             seed: 0,
+            kind: WorldKind::Flat,
             generator: Arc::new(Generator::Flat),
             block_events: Vec::new(),
             redstone: redstone::Memory::new(),
@@ -617,7 +681,7 @@ impl World {
     pub fn open(
         directory: impl AsRef<Path>,
         wanted_seed: Option<i64>,
-        flat: bool,
+        wanted_kind: WorldKind,
     ) -> io::Result<Self> {
         let path = directory.as_ref().to_path_buf();
 
@@ -671,6 +735,26 @@ impl World {
 
         log_info!("Семя мира: {}", seed);
 
+        // Тип мира — так же, как семя: у сложенного мира свой, записанный,
+        // и его нельзя сменить правкой настроек, иначе новые чанки не
+        // сойдутся со старыми.
+        let kind = match level.kind {
+            Some(saved) => {
+                if saved != wanted_kind {
+                    log_warn!(
+                        "Тип мира из настроек ({}) не применяется: у мира уже свой ({})",
+                        wanted_kind.name(),
+                        saved.name()
+                    );
+                }
+
+                saved
+            }
+            None => wanted_kind,
+        };
+
+        log_info!("Тип мира: {}", kind.name());
+
         let mut world = Self {
             noise: 0x9E37_79B9 ^ std::process::id(),
             late: Vec::new(),
@@ -686,10 +770,11 @@ impl World {
             falling: Vec::new(),
             time_offset,
             seed,
-            generator: Arc::new(if flat {
-                Generator::Flat
-            } else {
-                Generator::Normal(Terrain::new(seed))
+            kind,
+            generator: Arc::new(match kind {
+                WorldKind::Flat => Generator::Flat,
+                WorldKind::Normal => Generator::Normal(Terrain::new(seed, Style::Vanilla)),
+                WorldKind::SuperSmooth => Generator::Normal(Terrain::new(seed, Style::Smooth)),
             }),
             block_events: Vec::new(),
             redstone: redstone::Memory::new(),
@@ -1288,8 +1373,11 @@ impl World {
     /// задержки, начатый ход поршня.
     fn save_level(&self) {
         let mut text = format!(
-            "age = {}\ntime-offset = {}\nseed = {}\n",
-            self.tick, self.time_offset, self.seed
+            "age = {}\ntime-offset = {}\nseed = {}\ntype = {}\n",
+            self.tick,
+            self.time_offset,
+            self.seed,
+            self.kind.name()
         );
 
         for ((place, kind), (due, _)) in &self.waiting {
@@ -1554,11 +1642,150 @@ impl Generator {
         }
     }
 
-    /// Что стоит в этом месте столбца.
-    fn block_at(&self, column: &Column, x: i32, y: i32, z: i32) -> i32 {
+    /// Сетка плотности для участка — только у «Обычного» мира: остальные
+    /// обходятся картой высот.
+    fn relief_grid(
+        &self,
+        x_from: i32,
+        z_from: i32,
+        x_to: i32,
+        z_to: i32,
+    ) -> Option<terrain::ReliefGrid> {
         match self {
-            Generator::Normal(terrain) => terrain.block_at(column, x, y, z),
-            Generator::Flat => flat::block_at(y),
+            Generator::Normal(terrain) if terrain.style() == terrain::Style::Vanilla => {
+                Some(terrain.relief_grid(x_from, z_from, x_to, z_to))
+            }
+            _ => None,
+        }
+    }
+
+    /// Столбец, когда сетка плотности уже построена.
+    fn column_in(&self, x: i32, z: i32, grid: Option<&terrain::ReliefGrid>) -> Column {
+        match self {
+            Generator::Normal(terrain) => terrain.column_in(x, z, grid),
+            Generator::Flat => Column::flat(flat::GROUND),
+        }
+    }
+
+    /// Камень ли в этом месте по рельефу.
+    fn solid_in(
+        &self,
+        grid: Option<&terrain::ReliefGrid>,
+        column: &Column,
+        x: i32,
+        y: i32,
+        z: i32,
+    ) -> bool {
+        match self {
+            Generator::Normal(terrain) => terrain.solid_in(grid, column, x, y, z),
+            Generator::Flat => y <= column.height,
+        }
+    }
+
+    /// Сетка шумов пещер над чанком — где пещеры есть.
+    fn cave_grid(&self, x: i32, z: i32, y_to: i32) -> Option<terrain::CaveGrid> {
+        match self {
+            Generator::Normal(terrain) => {
+                Some(terrain.cave_grid(x, z, x + CHUNK_SIZE - 1, z + CHUNK_SIZE - 1, y_to))
+            }
+            Generator::Flat => None,
+        }
+    }
+
+    /// Что стоит в этом месте столбца.
+    #[allow(clippy::too_many_arguments)]
+    fn block_with(
+        &self,
+        column: &Column,
+        caves: Option<&terrain::CaveGrid>,
+        x: i32,
+        y: i32,
+        z: i32,
+        solid: bool,
+        run_top: i32,
+    ) -> i32 {
+        match (self, caves) {
+            (Generator::Normal(terrain), Some(caves)) => {
+                terrain.block_with(column, caves, x, y, z, solid, run_top)
+            }
+            _ => flat::block_at(y),
+        }
+    }
+
+    /// Кладёт в чанк руду и пятна земли, гравия, гранита и прочего.
+    ///
+    /// Где лежат гнёзда, решает рельеф (`Terrain::ore_blocks_in`); здесь —
+    /// только можно ли положить блок на это место: гнездо ложится лишь
+    /// в камень, глубинный сланец, гранит, диорит, андезит и туф (вики,
+    /// «Ore (feature)»), а блок, соседствующий с воздухом, пропускается
+    /// с шансом из таблицы — каждый блок отдельно.
+    fn lay_ores(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
+        let Generator::Normal(terrain) = self else {
+            return;
+        };
+
+        let stone = terrain::block_named("stone");
+        let deepslate = terrain::block_named("deepslate");
+        let takes = [
+            stone,
+            deepslate,
+            terrain::block_named("granite"),
+            terrain::block_named("diorite"),
+            terrain::block_named("andesite"),
+            terrain::block_named("tuff"),
+        ];
+        let water = terrain::block_named("water");
+        let lava = terrain::block_named("lava");
+
+        for (x, y, z, placement) in terrain.ore_blocks_in(chunk_x, chunk_z, chunk.highest()) {
+            let (local_x, local_z) = (x - chunk_x * CHUNK_SIZE, z - chunk_z * CHUNK_SIZE);
+
+            if !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&y) {
+                continue;
+            }
+
+            let here = chunk.block(local_x, y, local_z);
+
+            if !takes.contains(&here) {
+                continue;
+            }
+
+            if placement.air_skip > 0.0 {
+                // Соседи за краем чанка нам не видны — считаем их камнем.
+                let open = [
+                    (1, 0, 0),
+                    (-1, 0, 0),
+                    (0, 1, 0),
+                    (0, -1, 0),
+                    (0, 0, 1),
+                    (0, 0, -1),
+                ]
+                .iter()
+                .any(|(dx, dy, dz)| {
+                    let (nx, ny, nz) = (local_x + dx, y + dy, local_z + dz);
+
+                    (0..CHUNK_SIZE).contains(&nx)
+                        && (0..CHUNK_SIZE).contains(&nz)
+                        && (MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&ny)
+                        && [AIR, water, lava].contains(&chunk.block(nx, ny, nz))
+                });
+
+                if open && terrain::chance_at(x, y, z, placement.air_skip) {
+                    continue;
+                }
+            }
+
+            // Под нулём — в глубинном сланце — у руды своя разновидность.
+            let deep = placement.has_deep && (here == deepslate || y < 0);
+            let name = if deep {
+                format!("deepslate_{}", placement.block)
+            } else {
+                placement.block.to_string()
+            };
+
+            if let Some(state) = crate::blocks::state_by_name(&name) {
+                chunk.put_generated(local_x, y, local_z, state, true);
+            }
         }
     }
 
@@ -1569,12 +1796,28 @@ impl Generator {
     /// внутрь. Соседний чанк посчитает то же самое и нарисует свою часть —
     /// договариваться им не о чем.
     fn grow_trees(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
-        /// Насколько широко крона выходит за ствол.
-        const REACH: i32 = 3;
+        const REACH: i32 = terrain::TREE_REACH;
 
         let Generator::Normal(terrain) = self else {
             return;
         };
+
+        let water = terrain::block_named("water");
+        // Земля, которую дерево может заменить подзолом или корнями.
+        let soil: Vec<(i32, i32)> = [
+            "grass_block",
+            "dirt",
+            "coarse_dirt",
+            "podzol",
+            "rooted_dirt",
+            "mud",
+        ]
+        .iter()
+        .filter_map(|name| crate::blocks::states_of(name))
+        .collect();
+        // Трава: под нижним бревном она становится простой землёй, прочая
+        // земля — подзол, ил — остаётся как есть.
+        let grass = crate::blocks::states_of("grass_block");
 
         for local_x in -REACH..(CHUNK_SIZE + REACH) {
             for local_z in -REACH..(CHUNK_SIZE + REACH) {
@@ -1594,43 +1837,135 @@ impl Generator {
                     continue;
                 };
 
-                let leaves = terrain::block_named(tree.leaves);
-                let log = terrain::block_named(tree.log);
-                let top = column.height + tree.trunk;
+                let by_text = |text: &str| {
+                    crate::blocks::state_from_text(text)
+                        .unwrap_or_else(|| terrain::block_named(text))
+                };
+                let leaves = by_text(tree.leaves);
+                // У огромных грибов «ствол» записан полным состоянием, оси
+                // у него нет.
+                let log = |axis: terrain::Axis| {
+                    if tree.log.contains('[') {
+                        return by_text(tree.log);
+                    }
 
-                // Крона: у ели сужается кверху, у прочих — шар с плоским
-                // низом. Листва не затирает стволы, поэтому ставится первой.
-                for y in (top - 3)..=(top + 1) {
-                    let from_top = top + 1 - y;
-                    let radius = if tree.pointed {
-                        (from_top - 1).clamp(0, 2)
-                    } else if from_top <= 1 {
-                        1
-                    } else {
-                        2
+                    let axis = match axis {
+                        terrain::Axis::X => "x",
+                        terrain::Axis::Y => "y",
+                        terrain::Axis::Z => "z",
                     };
 
-                    for dx in -radius..=radius {
-                        for dz in -radius..=radius {
-                            // Углы у широкой кроны срезаны: так она круглее.
-                            if radius == 2 && dx.abs() == 2 && dz.abs() == 2 {
-                                continue;
-                            }
+                    crate::blocks::state_from_text(&format!("{}[axis={}]", tree.log, axis))
+                        .unwrap_or_else(|| terrain::block_named(tree.log))
+                };
+                let logs = [
+                    log(terrain::Axis::X),
+                    log(terrain::Axis::Y),
+                    log(terrain::Axis::Z),
+                ];
+                let blocks = tree.blocks(x, z);
 
-                            chunk.put_tree_block(
-                                local_x + dx,
-                                y,
-                                local_z + dz,
-                                leaves,
-                                false,
-                            );
+                // Земля под деревом — первой: пока над ней не выросли ни
+                // корни, ни ствол, её верх виден сразу.
+                for (dx, dy, dz, part) in &blocks {
+                    if let terrain::Part::Ground(text) = part {
+                        let (bx, bz) = (local_x + dx, local_z + dz);
+
+                        if !(0..CHUNK_SIZE).contains(&bx) || !(0..CHUNK_SIZE).contains(&bz) {
+                            continue;
+                        }
+
+                        let near = column.height + dy;
+                        let lowest = (near - 3).max(MIN_Y);
+                        let highest = (near + 3).min(MIN_Y + WORLD_HEIGHT - 1);
+
+                        // Сверху вниз до первого блока, что не воздух и не
+                        // вода; меняем его, только если это земля.
+                        let Some(y) = (lowest..=highest)
+                            .rev()
+                            .find(|&y| ![AIR, water].contains(&chunk.block(bx, y, bz)))
+                        else {
+                            continue;
+                        };
+
+                        let here = chunk.block(bx, y, bz);
+
+                        if !soil.iter().any(|(low, high)| (*low..=*high).contains(&here)) {
+                            continue;
+                        }
+
+                        if *text == "dirt"
+                            && !grass.is_some_and(|(low, high)| (low..=high).contains(&here))
+                        {
+                            continue;
+                        }
+
+                        if let Some(state) = crate::blocks::state_from_text(text) {
+                            chunk.put_generated(bx, y, bz, state, true);
                         }
                     }
                 }
 
-                // Ствол: он главнее листвы и ставится поверх неё.
-                for y in (column.height + 1)..=top {
-                    chunk.put_tree_block(local_x, y, local_z, log, true);
+                // Листва не затирает стволы и ветви, поэтому ставится раньше,
+                // а брёвна — поверх неё.
+                for (dx, dy, dz, part) in &blocks {
+                    if *part == terrain::Part::Leaves {
+                        chunk.put_generated(
+                            local_x + dx,
+                            column.height + dy,
+                            local_z + dz,
+                            leaves,
+                            false,
+                        );
+                    }
+                }
+
+                for (dx, dy, dz, part) in &blocks {
+                    if let terrain::Part::Log(axis) = part {
+                        let state = logs[*axis as usize];
+
+                        chunk.put_generated(
+                            local_x + dx,
+                            column.height + dy,
+                            local_z + dz,
+                            state,
+                            true,
+                        );
+                    }
+                }
+
+                // Лианы, какао, корни — последними и только на свободное
+                // место: в воздух, а что бывает затоплено — и в воду.
+                for (dx, dy, dz, part) in &blocks {
+                    let terrain::Part::Block(text) = part else {
+                        continue;
+                    };
+                    let (bx, by, bz) = (local_x + dx, column.height + dy, local_z + dz);
+
+                    if !(0..CHUNK_SIZE).contains(&bx)
+                        || !(0..CHUNK_SIZE).contains(&bz)
+                        || !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&by)
+                    {
+                        continue;
+                    }
+
+                    let here = chunk.block(bx, by, bz);
+                    let state = if here == AIR {
+                        crate::blocks::state_from_text(text)
+                    } else if here == water {
+                        let wet = match text.strip_suffix(']') {
+                            Some(open) => format!("{},waterlogged=true]", open),
+                            None => format!("{}[waterlogged=true]", text),
+                        };
+
+                        crate::blocks::state_from_text(&wet)
+                    } else {
+                        None
+                    };
+
+                    if let Some(state) = state {
+                        chunk.put_generated(bx, by, bz, state, true);
+                    }
                 }
             }
         }
@@ -1682,6 +2017,10 @@ struct Level {
     /// Семя мира. `None` — в файле его нет: мир новый.
     seed: Option<i64>,
 
+    /// Тип мира. `None` — в файле его нет: мир новый или записан прежним
+    /// сервером, у которого типов не было.
+    kind: Option<WorldKind>,
+
     /// Места, ждущие своего такта.
     waiting: Vec<SavedTick>,
 
@@ -1699,6 +2038,7 @@ fn read_level(path: &Path) -> Level {
         age: 0,
         time_offset: 0,
         seed: None,
+        kind: None,
         waiting: Vec::new(),
         moving: Vec::new(),
         cargo: Vec::new(),
@@ -1719,6 +2059,7 @@ fn read_level(path: &Path) -> Level {
             "age" => level.age = value.parse().unwrap_or(0),
             "time-offset" => level.time_offset = value.parse().unwrap_or(0),
             "seed" => level.seed = value.parse().ok(),
+            "type" => level.kind = Some(WorldKind::from_setting(value)),
             "tick" => {
                 if let Some(waiting) = read_waiting(value) {
                     level.waiting.push(waiting);
@@ -1886,14 +2227,15 @@ mod tests {
         let stone = crate::blocks::state_by_name("stone").unwrap();
 
         {
-            let mut world = World::open(&directory, Some(1), true).expect("открыть мир");
+            let mut world = World::open(&directory, Some(1), WorldKind::Flat).expect("открыть мир");
 
             world.ensure(0, 0);
             world.set_block(3, flat::SURFACE, 4, stone);
             world.save_if_needed();
         }
 
-        let mut world = World::open(&directory, Some(1), true).expect("открыть мир снова");
+        let mut world =
+            World::open(&directory, Some(1), WorldKind::Flat).expect("открыть мир снова");
 
         world.ensure(0, 0);
         assert_eq!(world.get_block(3, flat::SURFACE, 4), stone);
@@ -1942,7 +2284,7 @@ mod tests {
 
         let stone = crate::blocks::state_by_name("stone").unwrap();
 
-        let mut world = World::open(&directory, Some(1), true).expect("открыть мир");
+        let mut world = World::open(&directory, Some(1), WorldKind::Flat).expect("открыть мир");
 
         world.ensure(0, 0);
         world.ensure(10, 10);
@@ -2010,7 +2352,7 @@ mod tests {
         let _ = fs::remove_dir_all(&path);
 
         {
-            let mut world = World::open(&path, Some(1), true).expect("мир открылся");
+            let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
 
             world.advance(16);
             world.set_time_of_day(13_000);
@@ -2020,7 +2362,7 @@ mod tests {
         }
 
         // Открываем заново — время на месте.
-        let again = World::open(&path, Some(1), true).expect("мир открылся снова");
+        let again = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся снова");
 
         assert_eq!(again.time_of_day(), 13_000, "часы сбросились");
         assert_eq!(again.tick(), 1, "возраст мира потерялся");
@@ -2039,7 +2381,7 @@ mod tests {
         let _ = fs::remove_dir_all(&path);
 
         {
-            let mut world = World::open(&path, Some(1), true).expect("мир открылся");
+            let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
 
             world.ensure(0, 0);
             world.schedule_once(1, 2, 3, 4, -3);
@@ -2047,7 +2389,7 @@ mod tests {
             world.save_if_needed();
         }
 
-        let mut again = World::open(&path, Some(1), true).expect("мир открылся снова");
+        let mut again = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся снова");
         again.ensure(0, 0);
 
         // Через четыре такта должно всплыть место повторителя, через два —
@@ -2082,7 +2424,7 @@ mod tests {
         path.push(format!("rustcraft-parked-{}", std::process::id()));
         let _ = fs::remove_dir_all(&path);
 
-        let mut world = World::open(&path, Some(1), true).expect("мир открылся");
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
         world.ensure(0, 0);
         world.ensure(10, 10);
 
@@ -2125,7 +2467,12 @@ mod spawn_tests {
         let directory = std::env::temp_dir().join("mc_spawn_point");
         let _ = fs::remove_dir_all(&directory);
 
-        let world = World::open(&directory, Some(100_554_032_945_340), false).expect("мир");
+        let world = World::open(
+            &directory,
+            Some(100_554_032_945_340),
+            WorldKind::SuperSmooth,
+        )
+        .expect("мир");
         let (x, y, z) = world.spawn_position();
 
         let column = world.generator.column_at(x as i32, z as i32);
@@ -2145,17 +2492,208 @@ mod speed {
     #[test]
     #[ignore]
     fn chunk_speed() {
-        let generator = Generator::Normal(Terrain::new(100_554_032_945_340));
+        for style in [terrain::Style::Vanilla, terrain::Style::Smooth] {
+            let generator = Generator::Normal(Terrain::new(100_554_032_945_340, style));
 
-        let started = std::time::Instant::now();
+            let started = std::time::Instant::now();
+            let count = 64;
+
+            for i in 0..count {
+                Chunk::generated(&generator, i % 8, i / 8);
+            }
+
+            let each = started.elapsed() / count as u32;
+
+            println!(
+                "{:?} — чанк: {:?}, на 441 чанк ушло бы {:?}",
+                style,
+                each,
+                each * 441
+            );
+        }
+    }
+
+    /// Сколько времени уходит на каждый этап генерации чанка «Обычного»
+    /// мира: `cargo test --release chunk_phases -- --ignored --nocapture`.
+    /// Этапы после рельефа прогоняются на готовом чанке ещё раз и меряются
+    /// по отдельности; рельеф — это всё остальное время.
+    #[test]
+    #[ignore]
+    fn chunk_phases() {
+        use std::time::{Duration, Instant};
+
+        let generator =
+            Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
         let count = 64;
+        let mut total = Duration::ZERO;
+        let mut phases = [Duration::ZERO; 5];
+        let mut nests = Duration::ZERO;
+        let mut ore_biomes = Duration::ZERO;
 
         for i in 0..count {
-            Chunk::generated(&generator, i % 8, i / 8);
+            let (chunk_x, chunk_z) = (i % 8, i / 8);
+            let started = Instant::now();
+            let mut chunk = Chunk::generated(&generator, chunk_x, chunk_z);
+
+            total += started.elapsed();
+
+            let highest = chunk.highest();
+            let mut timed = |index: usize, work: &mut dyn FnMut(&mut Chunk)| {
+                let started = Instant::now();
+
+                work(&mut chunk);
+                phases[index] += started.elapsed();
+            };
+
+            let (from_x, from_z) = (chunk_x * CHUNK_SIZE - 1, chunk_z * CHUNK_SIZE - 1);
+
+            timed(0, &mut |_| {
+                let grid = generator.relief_grid(
+                    from_x,
+                    from_z,
+                    from_x + CHUNK_SIZE + 1,
+                    from_z + CHUNK_SIZE + 1,
+                );
+
+                for x in from_x..from_x + CHUNK_SIZE + 2 {
+                    for z in from_z..from_z + CHUNK_SIZE + 2 {
+                        std::hint::black_box(generator.column_in(x, z, grid.as_ref()));
+                    }
+                }
+            });
+            timed(1, &mut |chunk| generator.lay_ores(chunk, chunk_x, chunk_z));
+
+            if let Generator::Normal(terrain) = &generator {
+                let started = Instant::now();
+
+                std::hint::black_box(terrain.ore_blocks_in(chunk_x, chunk_z, highest));
+                nests += started.elapsed();
+
+                let started = Instant::now();
+
+                for from_x in chunk_x - 1..=chunk_x + 1 {
+                    for from_z in chunk_z - 1..=chunk_z + 1 {
+                        std::hint::black_box(terrain.column_at(from_x * 16 + 8, from_z * 16 + 8));
+                    }
+                }
+
+                ore_biomes += started.elapsed();
+            }
+            timed(2, &mut |chunk| {
+                underground::dig(&generator, chunk, chunk_x, chunk_z)
+            });
+            timed(3, &mut |chunk| {
+                generator.grow_trees(chunk, chunk_x, chunk_z)
+            });
+
+            let grid = generator.relief_grid(
+                from_x,
+                from_z,
+                from_x + CHUNK_SIZE + 1,
+                from_z + CHUNK_SIZE + 1,
+            );
+            let mut columns = Vec::new();
+
+            for x in from_x..from_x + CHUNK_SIZE + 2 {
+                for z in from_z..from_z + CHUNK_SIZE + 2 {
+                    columns.push(generator.column_in(x, z, grid.as_ref()));
+                }
+            }
+
+            timed(4, &mut |chunk| {
+                vegetation::decorate(&generator, chunk, chunk_x, chunk_z, &columns)
+            });
         }
 
-        let each = started.elapsed() / count as u32;
+        let each = |time: Duration| time / count as u32;
+        let rest: Duration = phases.iter().sum();
 
-        println!("чанк: {:?}, на 441 чанк ушло бы {:?}", each, each * 441);
+        println!("весь чанк: {:?}", each(total));
+        println!("  сетка и столбцы: {:?}", each(phases[0]));
+        println!(
+            "  блоки (пещеры, водоёмы, поверхность): {:?}",
+            each(total.saturating_sub(rest))
+        );
+        println!(
+            "  руда: {:?} (из них расчёт гнёзд {:?}, биомы соседних чанков {:?})",
+            each(phases[1]),
+            each(nests),
+            each(ore_biomes)
+        );
+        println!("  подземелье: {:?}", each(phases[2]));
+        println!("  деревья: {:?}", each(phases[3]));
+        println!("  растительность: {:?}", each(phases[4]));
+    }
+
+    /// Разведка подземелья: из чего сложен камень под землёй в сложенных
+    /// чанках — сколько пустот, сколько руды и какой. Запускается вручную:
+    /// `cargo test underground -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn underground() {
+        let generator = Generator::Normal(Terrain::smooth(100_554_032_945_340));
+        let air = AIR;
+        let water = terrain::block_named("water");
+        let lava = terrain::block_named("lava");
+
+        let mut counts: HashMap<String, u64> = HashMap::new();
+        let mut hollow = 0u64;
+        let mut solid = 0u64;
+
+        for i in 0..64 {
+            let (chunk_x, chunk_z) = (i % 8 * 3, i / 8 * 3);
+            let chunk = Chunk::generated(&generator, chunk_x, chunk_z);
+
+            for x in 0..CHUNK_SIZE {
+                for z in 0..CHUNK_SIZE {
+                    let column = generator.column_at(chunk_x * 16 + x, chunk_z * 16 + z);
+
+                    // Только то, что под землёй: от дна до поверхности.
+                    for y in (MIN_Y + 5)..column.height.min(terrain::SEA) {
+                        let state = chunk.block(x, y, z);
+
+                        if state == air || state == water || state == lava {
+                            hollow += 1;
+                            continue;
+                        }
+
+                        solid += 1;
+
+                        let name = crate::blocks::block_at_state(state).unwrap_or("?");
+
+                        if name.ends_with("_ore")
+                            || matches!(
+                                name,
+                                "dirt" | "gravel" | "granite" | "diorite" | "andesite" | "tuff"
+                            )
+                        {
+                            *counts
+                                .entry(name.trim_start_matches("deepslate_").to_string())
+                                .or_default() += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        let total = (hollow + solid) as f64;
+        let ores: u64 = counts
+            .iter()
+            .filter(|(name, _)| name.ends_with("_ore"))
+            .map(|(_, n)| n)
+            .sum();
+
+        println!(
+            "под землёй: пустот {:.1}%, руды {:.2}%",
+            100.0 * hollow as f64 / total,
+            100.0 * ores as f64 / total
+        );
+
+        let mut rows: Vec<(String, u64)> = counts.into_iter().collect();
+        rows.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+
+        for (name, n) in rows {
+            println!("  {:>7.3}%  {}", 100.0 * n as f64 / total, name);
+        }
     }
 }

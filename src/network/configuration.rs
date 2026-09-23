@@ -393,8 +393,10 @@ pub async fn send_known_packs(stream: &mut TcpStream) -> io::Result<()> {
 /// показывает; поэтому они не пропускаются, а возвращаются вместе с наборами.
 ///
 /// Возвращает наборы ресурсов клиента и части скина, если они попались.
-pub async fn read_known_packs(stream: &mut TcpStream) -> io::Result<(Vec<KnownPack>, Option<u8>)> {
-    let mut skin_parts = None;
+pub async fn read_known_packs(
+    stream: &mut TcpStream,
+) -> io::Result<(Vec<KnownPack>, Option<ClientLook>)> {
+    let mut look = None;
 
     loop {
         let packet = read_packet(stream).await?;
@@ -407,7 +409,7 @@ pub async fn read_known_packs(stream: &mut TcpStream) -> io::Result<(Vec<KnownPa
         );
 
         if packet.id == CLIENT_INFORMATION {
-            skin_parts = note_skin_parts(packet.payload());
+            look = note_look(packet.payload());
         }
 
         if packet.id != SERVERBOUND_KNOWN_PACKS {
@@ -431,7 +433,7 @@ pub async fn read_known_packs(stream: &mut TcpStream) -> io::Result<(Vec<KnownPa
             });
         }
 
-        return Ok((packs, skin_parts));
+        return Ok((packs, look));
     }
 }
 
@@ -604,12 +606,13 @@ pub async fn send_finish_configuration(stream: &mut TcpStream) -> io::Result<()>
 /// возвращает false.
 pub async fn read_and_log_configuration_packets(
     stream: &mut TcpStream,
-    known: Option<u8>,
-) -> io::Result<Option<u8>> {
-    // Какие части скина игрок показывает. Настройки он присылает один раз,
-    // ещё до согласования наборов ресурсов, — оттуда они и приходят сюда.
-    // Если клиент их повторит, возьмём новые.
-    let mut skin_parts = known.unwrap_or(ALL_SKIN_PARTS);
+    known: Option<ClientLook>,
+) -> io::Result<Option<ClientLook>> {
+    // Какие части скина игрок показывает и какая рука у него ведущая.
+    // Настройки он присылает один раз, ещё до согласования наборов
+    // ресурсов, — оттуда они и приходят сюда. Если клиент их повторит,
+    // возьмём новые.
+    let mut look = known.unwrap_or(ClientLook::DEFAULT);
 
     loop {
         match read_packet(stream).await {
@@ -622,16 +625,16 @@ pub async fn read_and_log_configuration_packets(
                 );
 
                 if packet.id == CLIENT_INFORMATION
-                    && let Some(parts) = note_skin_parts(packet.payload())
+                    && let Some(now) = note_look(packet.payload())
                 {
-                    skin_parts = parts;
+                    look = now;
                 }
 
                 if packet.id == ACK_FINISH_CONFIGURATION {
                     log_debug!(
                         "Configuration: получен Acknowledge Finish Configuration (0x03) — фаза завершена клиентом"
                     );
-                    return Ok(Some(skin_parts));
+                    return Ok(Some(look));
                 }
             }
             Err(e) if is_client_disconnect(&e) => {
@@ -643,12 +646,41 @@ pub async fn read_and_log_configuration_packets(
     }
 }
 
+/// Как игрок выглядит для остальных — то, что сервер пересказывает о нём
+/// другим клиентам из его настроек.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ClientLook {
+    /// Показываемые части скина: плащ, куртка, рукава, штанины, шапка.
+    pub skin_parts: u8,
+    /// Ведущая рука: 0 — левая, 1 — правая.
+    pub main_hand: u8,
+}
+
+impl ClientLook {
+    /// Пока клиент не прислал своего: всё видно, рука правая — как у игры.
+    pub const DEFAULT: ClientLook = ClientLook {
+        skin_parts: ALL_SKIN_PARTS,
+        main_hand: RIGHT_HAND,
+    };
+}
+
+/// Правая рука — так её называет протокол.
+pub const RIGHT_HAND: u8 = 1;
+
 /// Разбирает настройки клиента и пишет в лог, что получилось.
-fn note_skin_parts(payload: &[u8]) -> Option<u8> {
-    match read_skin_parts(payload) {
-        Some(parts) => {
-            log_debug!("Configuration: показываемые части скина — {:#04X}", parts);
-            Some(parts)
+fn note_look(payload: &[u8]) -> Option<ClientLook> {
+    match read_look(payload) {
+        Some(look) => {
+            log_debug!(
+                "Configuration: части скина {:#04X}, ведущая рука {}",
+                look.skin_parts,
+                if look.main_hand == RIGHT_HAND {
+                    "правая"
+                } else {
+                    "левая"
+                }
+            );
+            Some(look)
         }
         None => {
             log_warn!(
@@ -664,7 +696,7 @@ fn note_skin_parts(payload: &[u8]) -> Option<u8> {
     }
 }
 
-/// Достаёт из настроек клиента набор показываемых частей скина.
+/// Достаёт из настроек клиента набор показываемых частей скина и ведущую руку.
 ///
 /// Это пятое поле: перед ним язык, дальность прорисовки, режим чата и
 /// раскраска чата. Остальное серверу не нужно.
@@ -672,7 +704,7 @@ fn note_skin_parts(payload: &[u8]) -> Option<u8> {
 /// Части — биты одного байта: плащ, куртка, рукава, штанины и шапка. Второй
 /// слой скина виден остальным игрокам, только если сервер перескажет им этот
 /// набор, — сам по себе скин его не включает.
-pub fn read_skin_parts(payload: &[u8]) -> Option<u8> {
+pub fn read_look(payload: &[u8]) -> Option<ClientLook> {
     let mut offset = 0;
 
     // Язык — строка.
@@ -688,7 +720,21 @@ pub fn read_skin_parts(payload: &[u8]) -> Option<u8> {
     // Раскраска чата — один байт.
     offset += 1;
 
-    payload.get(offset).copied()
+    let skin_parts = *payload.get(offset)?;
+    offset += 1;
+
+    // Сразу за частями скина — ведущая рука, число переменной длины.
+    // Прежние клиенты могли её не прислать — тогда правая, как у игры.
+    let main_hand = payload
+        .get(offset..)
+        .and_then(|rest| decode_varint(rest).ok())
+        .map(|(hand, _)| if hand == 0 { 0 } else { RIGHT_HAND })
+        .unwrap_or(RIGHT_HAND);
+
+    Some(ClientLook {
+        skin_parts,
+        main_hand,
+    })
 }
 
 #[cfg(test)]
@@ -728,7 +774,7 @@ mod tests {
     /// Второй слой скина — шапка и куртка — виден остальным только с ним,
     /// поэтому важно взять именно пятое поле, а не соседнее.
     #[test]
-    fn skin_parts_are_read_from_the_settings() {
+    fn skin_parts_and_main_hand_are_read_from_the_settings() {
         let mut settings = Vec::new();
 
         // Язык.
@@ -741,13 +787,34 @@ mod tests {
         settings.push(1);
         // Части скина: всё, кроме плаща.
         settings.push(0x7E);
-        // Дальше — главная рука и прочее, серверу не нужное.
-        settings.extend_from_slice(&encode_varint(1));
+        // Ведущая рука: левая.
+        settings.extend_from_slice(&encode_varint(0));
 
-        assert_eq!(read_skin_parts(&settings), Some(0x7E));
+        assert_eq!(
+            read_look(&settings),
+            Some(ClientLook {
+                skin_parts: 0x7E,
+                main_hand: 0
+            })
+        );
+
+        // Правая рука читается правой.
+        let mut right = settings[..settings.len() - 1].to_vec();
+        right.extend_from_slice(&encode_varint(1));
+        assert_eq!(
+            read_look(&right).map(|look| look.main_hand),
+            Some(RIGHT_HAND)
+        );
+
+        // Клиент, не приславший руку, — правша, как у игры.
+        let without = &settings[..settings.len() - 1];
+        assert_eq!(
+            read_look(without).map(|look| look.main_hand),
+            Some(RIGHT_HAND)
+        );
 
         // Обрезанные настройки не должны ронять разбор.
-        assert_eq!(read_skin_parts(&settings[..3]), None);
-        assert_eq!(read_skin_parts(&[]), None);
+        assert_eq!(read_look(&settings[..3]), None);
+        assert_eq!(read_look(&[]), None);
     }
 }

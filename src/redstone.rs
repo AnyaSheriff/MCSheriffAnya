@@ -4635,7 +4635,12 @@ mod tests {
         path.push(format!("mcsheriffanya-repair-{}-{}", std::process::id(), what));
         let _ = std::fs::remove_dir_all(&path);
 
-        let mut world = World::open(&path, Some(1), true).expect("мир открылся");
+        let mut world = World::open(
+            &path,
+            Some(1),
+            crate::config::server_properties::WorldKind::Flat,
+        )
+        .expect("мир открылся");
         world.ensure(0, 0);
 
         (world, path)
@@ -4665,7 +4670,12 @@ mod tests {
         world.save_if_needed();
         drop(world);
 
-        let mut again = World::open(&path, Some(1), true).expect("мир открылся снова");
+        let mut again = World::open(
+            &path,
+            Some(1),
+            crate::config::server_properties::WorldKind::Flat,
+        )
+        .expect("мир открылся снова");
         again.ensure(0, 0);
 
         assert_eq!(
@@ -4703,7 +4713,12 @@ mod tests {
         world.save_if_needed();
         drop(world);
 
-        let mut again = World::open(&path, Some(1), true).expect("мир открылся снова");
+        let mut again = World::open(
+            &path,
+            Some(1),
+            crate::config::server_properties::WorldKind::Flat,
+        )
+        .expect("мир открылся снова");
         again.ensure(0, 0);
 
         assert_eq!(block(&again, (0, 1, 0)).kind, Kind::Piston);
@@ -4738,7 +4753,12 @@ mod tests {
         world.save_if_needed();
         drop(world);
 
-        let mut again = World::open(&path, Some(1), true).expect("мир открылся снова");
+        let mut again = World::open(
+            &path,
+            Some(1),
+            crate::config::server_properties::WorldKind::Flat,
+        )
+        .expect("мир открылся снова");
         again.ensure(0, 0);
         run(&mut again, 5);
 
@@ -4918,7 +4938,12 @@ mod tests {
 
         std::fs::write(&level, without).expect("level.dat записывается");
 
-        let mut again = World::open(&path, Some(1), true).expect("мир открылся снова");
+        let mut again = World::open(
+            &path,
+            Some(1),
+            crate::config::server_properties::WorldKind::Flat,
+        )
+        .expect("мир открылся снова");
         again.ensure(0, 0);
         run(&mut again, 5);
 
