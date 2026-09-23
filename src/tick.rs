@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use crate::blocks;
 use crate::fluids;
-use crate::log_debug;
+use crate::{log_debug, log_error, log_warn};
 use crate::shared::Shared;
 use crate::inventory::Stack;
 use crate::items;
@@ -44,10 +44,94 @@ const KEEP_EXTRA: i32 = 2;
 /// чем задержать всё остальное. Лишнее не пропадает, а ждёт своей очереди.
 pub const PER_TICK: usize = 65_536;
 
-/// Запускает такт мира. Управление возвращается сразу, работа идёт своей
-/// задачей до остановки сервера.
+/// Запускает такт мира. Управление возвращается сразу, работа идёт до
+/// остановки сервера.
+///
+/// Такт живёт в своём потоке и на своём ядре, отдельно от всего остального.
+/// Причина простая: такт обязан просыпаться каждые пятьдесят миллисекунд, и
+/// если его вытеснит разбор пакетов или складывание чанков, мир дёрнется.
+/// Остальная работа — сеть, генерация, скины — раскладывается по оставшимся
+/// ядрам и такту не мешает.
 pub fn start(shared: Arc<Shared>) {
-    tokio::spawn(async move { run(shared).await });
+    let started = std::thread::Builder::new()
+        .name("world tick".to_string())
+        .spawn(move || {
+            // Ядро для такта — последнее: первые обычно занимают прерывания.
+            if let Some(core) = tick_core() {
+                pin_to_core(core);
+            }
+
+            // Свой однопоточный исполнитель: в этом потоке больше ничего не
+            // крутится, и делить его не с кем.
+            let alone = tokio::runtime::Builder::new_current_thread()
+                .enable_time()
+                .build()
+                .expect("исполнитель такта");
+
+            alone.block_on(run(shared));
+        });
+
+    if let Err(e) = started {
+        log_error!("Не удалось отвести такту отдельный поток: {}", e);
+    }
+}
+
+/// Сколько ядер у машины.
+pub fn cores() -> usize {
+    std::thread::available_parallelism().map(|count| count.get()).unwrap_or(1)
+}
+
+/// Какое ядро отводится такту. На одноядерной машине — никакое: делить
+/// нечего, и привязка только помешает.
+pub fn tick_core() -> Option<usize> {
+    let cores = cores();
+
+    if cores < 2 { None } else { Some(cores - 1) }
+}
+
+/// Уводит нынешний поток с ядра такта: пусть работает на любом другом.
+///
+/// Так рабочие потоки сети и генерации не отбирают у такта его ядро.
+pub fn keep_off_tick_core() {
+    let Some(tick_core) = tick_core() else {
+        return;
+    };
+
+    // SAFETY: заполняем набор ядер по правилам libc; нулевой первый довод
+    // означает «этот поток».
+    unsafe {
+        let mut set: libc::cpu_set_t = std::mem::zeroed();
+
+        libc::CPU_ZERO(&mut set);
+
+        for core in 0..cores() {
+            if core != tick_core {
+                libc::CPU_SET(core, &mut set);
+            }
+        }
+
+        libc::sched_setaffinity(0, size_of::<libc::cpu_set_t>(), &set);
+    }
+}
+
+/// Привязывает нынешний поток к одному ядру.
+///
+/// Без привязки планировщик перекидывает поток с ядра на ядро, и каждый
+/// переезд стоит промаха по кэшу. Такту это особенно заметно: он трогает
+/// один и тот же мир двадцать раз в секунду.
+fn pin_to_core(core: usize) {
+    // SAFETY: заполняем набор ядер по правилам libc и передаём его как есть.
+    // Нулевой первый довод означает «этот поток».
+    unsafe {
+        let mut set: libc::cpu_set_t = std::mem::zeroed();
+
+        libc::CPU_ZERO(&mut set);
+        libc::CPU_SET(core, &mut set);
+
+        if libc::sched_setaffinity(0, size_of::<libc::cpu_set_t>(), &set) != 0 {
+            log_warn!("Такт не удалось привязать к ядру {}", core);
+        }
+    }
 }
 
 async fn run(shared: Arc<Shared>) {

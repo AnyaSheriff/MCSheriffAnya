@@ -1,0 +1,144 @@
+{
+ "name": "note-pitch",
+ "about": "Щелчки по музыкальному блоку поднимают ноту; накрытый блок молчит, но ноту меняет.",
+ "continuous": true,
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "minecraft:note_block"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 4,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 8,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 12,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 16,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 20,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 24,
+   "set": {
+    "at": [
+     0,
+     2,
+     0
+    ],
+    "state": "minecraft:stone"
+   }
+  },
+  {
+   "after": 28,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 32,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 36,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 40,
+   "set": {
+    "at": [
+     0,
+     2,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 44,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 48,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  },
+  {
+   "after": 52,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  }
+ ],
+ "record_ticks": 66
+}

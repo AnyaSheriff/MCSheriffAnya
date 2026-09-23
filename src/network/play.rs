@@ -23,6 +23,7 @@
 use std::collections::HashMap;
 use std::io;
 use std::path::Path;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -328,12 +329,10 @@ const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(5);
 // в обоих пакетах. Само значение — в модуле команд, вместе с остальными
 // режимами. Кто уже заходил, входит в том режиме, в каком вышел.
 
-/// Точка появления: середина начального блока, на высоте земли ровного мира.
-/// Сюда попадает тот, кто заходит впервые; кто уже заходил — встаёт там, где
-/// вышел (см. playerdata).
-const SPAWN_X: f64 = 0.5;
-const SPAWN_Y: f64 = world::flat::SURFACE as f64;
-const SPAWN_Z: f64 = 0.5;
+/// Куда смотрит тот, кто появился впервые. Само место даёт мир: в обычном
+/// мире в начале координат может оказаться море, и точку появления там ищут
+/// по суше (`World::spawn_position`). Кто уже заходил — встаёт там, где вышел
+/// (см. playerdata).
 const SPAWN_YAW: f32 = 0.0;
 const SPAWN_PITCH: f32 = 30.0;
 
@@ -437,6 +436,12 @@ pub async fn play_session(
     // когда сервер расскажет о новом игроке остальным.
     let skin = skins::look_up(&shared.skins, name, shared.skin_settings).await;
 
+    let spawn = shared
+        .world
+        .lock()
+        .expect("мир захвачен другим потоком")
+        .spawn_position();
+
     let mut player = PlayerState::new(
         *uuid,
         name.to_string(),
@@ -444,6 +449,7 @@ pub async fn play_session(
         skin,
         skin_parts,
         shared.next_reader(),
+        spawn,
     );
 
     if player.saved.is_some() {
@@ -636,7 +642,7 @@ async fn enter_world(
     // ему — и в виде со стороны игрок будет без шапки и куртки.
     send_skin_parts(stream, member.entity_id, member.skin_parts).await?;
 
-    send_default_spawn_position(stream).await?;
+    send_default_spawn_position(stream, player.spawn_point).await?;
     send_health(stream).await?;
     send_game_event_start_waiting(stream).await?;
     let (age, time) = world_age(shared);
@@ -1259,18 +1265,64 @@ async fn send_chunks_around(
         sent.remove(&(chunk_x, chunk_z));
     }
 
+    // Что показать игроку: сперва ближние чанки, потом дальние — так земля
+    // под ногами появляется сразу, а даль дорисовывается.
+    let mut wanted: Vec<(i32, i32)> = Vec::new();
+
     for chunk_x in (center_x - view)..=(center_x + view) {
         for chunk_z in (center_z - view)..=(center_z + view) {
-            if !sent.insert((chunk_x, chunk_z)) {
+            if sent.insert((chunk_x, chunk_z)) {
+                wanted.push((chunk_x, chunk_z));
+            }
+        }
+    }
+
+    wanted.sort_by_key(|(x, z)| (x - center_x).pow(2) + (z - center_z).pow(2));
+
+    // Готовим чанки пачками и сразу несколькими руками: складывание куска
+    // мира — работа счётная, и на дальности в тридцать два чанка их тысячи.
+    // Замок мира при этом не держим: такт не должен ждать землю.
+    const AT_ONCE: usize = 16;
+
+    for part in wanted.chunks(AT_ONCE) {
+        let source = {
+            let world = shared.world.lock().expect("мир захвачен другим потоком");
+
+            Arc::new(world.source())
+        };
+
+        let mut coming = Vec::new();
+
+        for (chunk_x, chunk_z) in part.iter().copied() {
+            if shared
+                .world
+                .lock()
+                .expect("мир захвачен другим потоком")
+                .has_chunk(chunk_x, chunk_z)
+            {
                 continue;
             }
+
+            let source = Arc::clone(&source);
+
+            coming.push(tokio::task::spawn_blocking(move || {
+                (chunk_x, chunk_z, source.take(chunk_x, chunk_z))
+            }));
+        }
+
+        for waiting in coming {
+            let Ok((chunk_x, chunk_z, ready)) = waiting.await else {
+                continue;
+            };
 
             shared
                 .world
                 .lock()
                 .expect("мир захвачен другим потоком")
-                .ensure(chunk_x, chunk_z);
+                .accept(chunk_x, chunk_z, ready);
+        }
 
+        for (chunk_x, chunk_z) in part.iter().copied() {
             send_chunk(stream, &shared.world, chunk_x, chunk_z).await?;
         }
     }
@@ -1864,16 +1916,14 @@ async fn send_keep_alive(stream: &mut TcpStream, id: i64) -> io::Result<()> {
 }
 
 /// Отправляет Set Default Spawn Position — точку возрождения.
-async fn send_default_spawn_position(stream: &mut TcpStream) -> io::Result<()> {
+async fn send_default_spawn_position(
+    stream: &mut TcpStream,
+    spawn: (f64, f64, f64),
+) -> io::Result<()> {
     let mut body = encode_varint(SET_DEFAULT_SPAWN_POSITION);
 
     body.extend_from_slice(&encode_string(DIMENSION));
-    push_packed_position(
-        &mut body,
-        0,
-        world::flat::SURFACE,
-        0,
-    );
+    push_packed_position(&mut body, spawn.0 as i32, spawn.1 as i32, spawn.2 as i32);
     push_f32(&mut body, 0.0); // поворот
     push_f32(&mut body, 0.0); // наклон
 
@@ -2207,17 +2257,40 @@ async fn send_chunk(
     // минимальной высотой.
     body.extend_from_slice(&encode_varint(0));
 
-    // Секции чанка — одним блоком байт с длиной впереди.
-    let mut sections = Vec::new();
-    {
+    // Секции чанка — одним блоком байт с длиной впереди. Собранное тело
+    // хранится в самом чанке: пока в нём ничего не поставили, второму игроку
+    // оно достаётся готовым.
+    let sections = {
         let world = world.lock().expect("мир захвачен другим потоком");
 
-        for index in 0..world::SECTIONS as usize {
-            push_section(&mut sections, world.section_blocks(chunk_x, chunk_z, index));
+        world.chunk_packet(chunk_x, chunk_z, |sections, biomes| {
+            let mut out = Vec::new();
+
+            for section in sections {
+                push_section(&mut out, section.as_deref(), Some(biomes));
+            }
+
+            out
+        })
+    };
+
+    match sections {
+        Some(ready) => {
+            body.extend_from_slice(&encode_varint(ready.len() as i32));
+            body.extend_from_slice(&ready);
+        }
+        // Чанка нет вовсе — шлём пустой: клиент увидит пустоту и не упадёт.
+        None => {
+            let mut empty = Vec::new();
+
+            for _ in 0..world::SECTIONS {
+                push_section(&mut empty, None, None);
+            }
+
+            body.extend_from_slice(&encode_varint(empty.len() as i32));
+            body.extend_from_slice(&empty);
         }
     }
-    body.extend_from_slice(&encode_varint(sections.len() as i32));
-    body.extend_from_slice(&sections);
 
     // Блоков с дополнительными данными (сундуков, табличек) нет.
     body.extend_from_slice(&encode_varint(0));
@@ -2235,17 +2308,21 @@ async fn send_chunk(
 /// Формат: количество непустых блоков, количество блоков с жидкостью, затем
 /// состояния блоков и биомы. Состояния кодируются либо одним значением, либо
 /// палитрой, либо напрямую — что короче.
-fn push_section(out: &mut Vec<u8>, states: Option<&[i32]>) {
+fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[i32]>) {
     /// Больше этого числа разных состояний — и палитра перестаёт экономить.
     const MAX_PALETTE: usize = 16;
 
-    let empty = [world::AIR; world::SECTION_BLOCKS];
+    // Состояния в памяти лежат в двух байтах, а в пакет идут числами
+    // со знаком — разворачиваем по дороге.
+    let empty = [world::AIR as u16; world::SECTION_BLOCKS];
     let states = states.unwrap_or(&empty);
 
     let mut palette: Vec<i32> = Vec::new();
     let mut block_count: i32 = 0;
 
-    for &state in states {
+    for packed in states {
+        let state = *packed as i32;
+
         if state != world::AIR {
             block_count += 1;
         }
@@ -2266,13 +2343,78 @@ fn push_section(out: &mut Vec<u8>, states: Option<&[i32]>) {
         push_direct_container(out, states);
     }
 
-    // Биомы: одна запись на секцию — plains, у нас он в реестре под ID 0.
-    push_single_value_container(out, 0);
+    push_biomes(out, biomes);
+}
+
+/// Добавляет биомы секции.
+///
+/// Биом задаётся на каждые четыре блока: в секции это 4×4×4 = 64 ячейки.
+/// По высоте биом у нас один на весь столбец, поэтому четыре слоя ячеек
+/// повторяют один и тот же рисунок 4×4.
+fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[i32]>) {
+    /// Ячеек биома на сторону секции.
+    const CELLS: usize = 4;
+
+    let Some(biomes) = biomes else {
+        // Чанка ещё нет — пусть будет равнина: она в реестре первой... а
+        // точнее, под тем номером, под каким её объявил сервер.
+        push_single_value_container(out, plains_number());
+        return;
+    };
+
+    let mut palette: Vec<i32> = Vec::new();
+
+    for biome in biomes {
+        if !palette.contains(biome) {
+            palette.push(*biome);
+        }
+    }
+
+    if palette.len() == 1 {
+        push_single_value_container(out, palette[0]);
+        return;
+    }
+
+    // Битов на запись — столько, чтобы хватило на всю палитру.
+    let bits = usize::BITS - (palette.len() - 1).leading_zeros();
+    let bits = bits.max(1) as usize;
+
+    out.push(bits as u8);
+    out.extend_from_slice(&encode_varint(palette.len() as i32));
+
+    for biome in &palette {
+        out.extend_from_slice(&encode_varint(*biome));
+    }
+
+    // Порядок ячеек тот же, что у блоков: снизу вверх, внутри — по Z, потом
+    // по X. Слои по высоте одинаковы.
+    let mut indexes: Vec<u32> = Vec::with_capacity(CELLS * CELLS * CELLS);
+
+    for _ in 0..CELLS {
+        for cell in biomes {
+            let place = palette
+                .iter()
+                .position(|biome| biome == cell)
+                .expect("биом обязан быть в палитре");
+
+            indexes.push(place as u32);
+        }
+    }
+
+    for long in pack_values(&indexes, bits) {
+        push_i64(out, long);
+    }
+}
+
+/// Номер равнины в реестре биомов: под ним клиенту уходят места, которых
+/// сервер ещё не сложил.
+fn plains_number() -> i32 {
+    world::terrain::Biome::Plains.number()
 }
 
 /// Добавляет контейнер состояний блоков с палитрой: 4 бита на блок, палитра
 /// из встреченных состояний, данные — номера состояний внутри палитры.
-fn push_palette_container(out: &mut Vec<u8>, states: &[i32], palette: &[i32]) {
+fn push_palette_container(out: &mut Vec<u8>, states: &[u16], palette: &[i32]) {
     /// Битов на запись: минимум для состояний блоков.
     const BITS: usize = 4;
 
@@ -2283,15 +2425,27 @@ fn push_palette_container(out: &mut Vec<u8>, states: &[i32], palette: &[i32]) {
         out.extend_from_slice(&encode_varint(*state));
     }
 
-    let indexes: Vec<u32> = states
-        .iter()
-        .map(|state| {
-            palette
-                .iter()
-                .position(|palette_state| palette_state == state)
-                .expect("состояние обязано быть в палитре") as u32
-        })
-        .collect();
+    // Подряд идущие блоки обычно одинаковы, поэтому место в палитре ищется
+    // заново только когда состояние сменилось.
+    let mut indexes: Vec<u32> = Vec::with_capacity(states.len());
+    let mut last: Option<(u16, u32)> = None;
+
+    for packed in states {
+        let place = match last {
+            Some((state, place)) if state == *packed => place,
+            _ => {
+                let found = palette
+                    .iter()
+                    .position(|state| *state == *packed as i32)
+                    .expect("состояние обязано быть в палитре") as u32;
+
+                last = Some((*packed, found));
+                found
+            }
+        };
+
+        indexes.push(place);
+    }
 
     for long in pack_values(&indexes, BITS) {
         push_i64(out, long);
@@ -2300,7 +2454,7 @@ fn push_palette_container(out: &mut Vec<u8>, states: &[i32], palette: &[i32]) {
 
 /// Добавляет контейнер состояний блоков без палитры: 15 бит на блок, палитра
 /// не передаётся.
-fn push_direct_container(out: &mut Vec<u8>, states: &[i32]) {
+fn push_direct_container(out: &mut Vec<u8>, states: &[u16]) {
     /// Битов на запись: размер, при котором палитра уже не помогает.
     const BITS: usize = 15;
 
@@ -3188,9 +3342,6 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         let mut world = shared.world.lock().expect("мир захвачен другим потоком");
 
         if redstone::use_block(&mut world, (clicked_x, clicked_y, clicked_z)) {
-            // Соседи узнают о щелчке сразу: поршень от этого рычага
-            // тронется в этом же такте, как у оригинала.
-            redstone::settle(&mut world);
             world.save_if_needed();
             log_debug!("Play: {} щёлкнул по {} {} {}", player.name, clicked_x, clicked_y, clicked_z);
 
@@ -3206,8 +3357,18 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
                 _ => (1, 0, 0),
             };
 
+            // Порядок снят с оригинала чёрным ящиком: сперва повтор за
+            // гранью, потом перемены доходят до ближайших соседей (провод
+            // у рычага загорается), потом повтор самого блока, и только
+            // потом перемены идут дальше — к тому, что за проводом.
             world.tell_directly(clicked_x + dx, clicked_y + dy, clicked_z + dz);
+            redstone::settle_once(&mut world);
             world.tell_directly(clicked_x, clicked_y, clicked_z);
+            redstone::settle(&mut world);
+
+            // Что деталь делает после всего этого: нота музыкального блока
+            // у оригинала звучит последней.
+            redstone::after_use(&mut world, (clicked_x, clicked_y, clicked_z));
 
             return Some(Reaction::accepted(sequence));
         }
@@ -3839,6 +4000,10 @@ struct PlayerState {
     /// после. Нынешнее положение сравнивается именно с этим — записывается
     /// только то, что от него отличается.
     saved: Option<PlayerData>,
+
+    /// Точка появления мира: её сервер сообщает клиенту, и по ней клиент
+    /// рисует стрелку компаса.
+    spawn_point: (f64, f64, f64),
 }
 
 impl PlayerState {
@@ -3852,12 +4017,13 @@ impl PlayerState {
         skin: Option<Skin>,
         skin_parts: u8,
         reader: journal::Reader,
+        spawn: (f64, f64, f64),
     ) -> Self {
         // Игрок, сохранённый ниже дна мира, вернулся бы в пустоту и падал
         // вечно. Такое бывает после того, как мир поменялся, — ставим его
         // в точку появления.
         let saved = saved.filter(|data| {
-            let in_the_void = data.y < world::flat::bottom() as f64;
+            let in_the_void = data.y < world::MIN_Y as f64;
 
             if in_the_void {
                 log_debug!(
@@ -3881,9 +4047,9 @@ impl PlayerState {
                 data.game_mode,
             ),
             None => (
-                SPAWN_X,
-                SPAWN_Y,
-                SPAWN_Z,
+                spawn.0,
+                spawn.1,
+                spawn.2,
                 SPAWN_YAW,
                 SPAWN_PITCH,
                 GAME_MODE_CREATIVE,
@@ -3891,6 +4057,7 @@ impl PlayerState {
         };
 
         Self {
+            spawn_point: spawn,
             uuid,
             name,
             game_mode,
@@ -4134,6 +4301,9 @@ fn packet_name(packet_id: i32) -> &'static str {
 mod tests {
     use super::*;
 
+    /// Точка появления в проверках: в них мира нет, поэтому берём любую.
+    const SPAWN: (f64, f64, f64) = (0.5, 64.0, 0.5);
+
     /// Игрок, о котором на диске уже лежит ровно то, что он делает сейчас:
     /// так сервер видит игрока сразу после захода.
     fn settled_player() -> PlayerState {
@@ -4143,15 +4313,15 @@ mod tests {
     fn settled_player_with_yaw(yaw: f32) -> PlayerState {
         let saved = PlayerData {
             inventory: Inventory::new(),
-            x: SPAWN_X,
-            y: SPAWN_Y,
-            z: SPAWN_Z,
+            x: SPAWN.0,
+            y: SPAWN.1,
+            z: SPAWN.2,
             yaw,
             pitch: SPAWN_PITCH,
             game_mode: GAME_MODE_CREATIVE,
         };
 
-        PlayerState::new([7; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1)
+        PlayerState::new([7; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN)
     }
 
     /// Куда складывать файлы в тестах: своя директория, чтобы тесты не мешали
@@ -4167,9 +4337,9 @@ mod tests {
     /// сразу: файла на диске ещё нет.
     #[test]
     fn a_new_player_starts_at_the_spawn_and_is_saved() {
-        let player = PlayerState::new([1; 16], "Новичок".to_string(), None, None, 0x7F, 1);
+        let player = PlayerState::new([1; 16], "Новичок".to_string(), None, None, 0x7F, 1, SPAWN);
 
-        assert_eq!((player.x, player.y, player.z), (SPAWN_X, SPAWN_Y, SPAWN_Z));
+        assert_eq!((player.x, player.y, player.z), SPAWN);
         assert_eq!(player.game_mode, GAME_MODE_CREATIVE);
         assert!(player.needs_save());
     }
@@ -4188,7 +4358,7 @@ mod tests {
             game_mode: 0,
         };
 
-        let player = PlayerState::new([2; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1);
+        let player = PlayerState::new([2; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN);
 
         assert_eq!((player.x, player.y, player.z), (100.5, 70.0, -20.5));
         assert_eq!((player.yaw, player.pitch), (90.0, -10.0));
@@ -4203,11 +4373,11 @@ mod tests {
     fn a_step_inside_a_block_is_saved_only_when_the_player_stops() {
         let mut player = settled_player();
 
-        player.set_position(SPAWN_X + 0.3, SPAWN_Y, SPAWN_Z);
+        player.set_position(SPAWN.0 + 0.3, SPAWN.1, SPAWN.2);
         assert!(!player.needs_save(), "шаг внутри блока — не повод писать файл");
 
         // Тот же самый пакет второй раз: игрок никуда не идёт.
-        player.set_position(SPAWN_X + 0.3, SPAWN_Y, SPAWN_Z);
+        player.set_position(SPAWN.0 + 0.3, SPAWN.1, SPAWN.2);
         assert!(player.needs_save(), "остановку записываем");
     }
 
@@ -4216,10 +4386,10 @@ mod tests {
     fn crossing_into_another_block_is_saved() {
         let mut player = settled_player();
 
-        player.set_position(SPAWN_X + 1.0, SPAWN_Y, SPAWN_Z);
+        player.set_position(SPAWN.0 + 1.0, SPAWN.1, SPAWN.2);
         assert!(player.needs_save());
 
-        player.set_position(SPAWN_X + 1.0, SPAWN_Y - 1.0, SPAWN_Z);
+        player.set_position(SPAWN.0 + 1.0, SPAWN.1 - 1.0, SPAWN.2);
         assert!(player.needs_save());
     }
 
@@ -4284,10 +4454,10 @@ mod tests {
     fn the_chunk_is_taken_from_the_player_position() {
         let mut player = settled_player();
 
-        player.set_position(0.5, SPAWN_Y, 0.5);
+        player.set_position(0.5, SPAWN.1, 0.5);
         assert_eq!(player.chunk(), (0, 0));
 
-        player.set_position(100.5, SPAWN_Y, -1.5);
+        player.set_position(100.5, SPAWN.1, -1.5);
         assert_eq!(player.chunk(), (6, -1));
     }
 
@@ -4413,7 +4583,7 @@ mod tests {
     /// руки на экране пустые.
     #[test]
     fn the_shared_record_carries_the_held_item() {
-        let mut player = PlayerState::new([9; 16], "Игрок".to_string(), None, None, 0x7F, 1);
+        let mut player = PlayerState::new([9; 16], "Игрок".to_string(), None, None, 0x7F, 1, SPAWN);
 
         assert_eq!(player.member().held, None);
 
@@ -4427,7 +4597,7 @@ mod tests {
     /// сервера, а щелчок в чужое окно — нет: таких окон сервер не открывает.
     #[test]
     fn a_click_is_read_field_by_field() {
-        let mut player = PlayerState::new([3; 16], "Игрок".to_string(), None, None, 0x7F, 1);
+        let mut player = PlayerState::new([3; 16], "Игрок".to_string(), None, None, 0x7F, 1, SPAWN);
 
         player.inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(1, 5)));
 
@@ -4455,7 +4625,7 @@ mod tests {
     fn items_are_handed_out_only_in_creative() {
         use crate::commands::GAME_MODE_SURVIVAL;
 
-        let mut player = PlayerState::new([4; 16], "Игрок".to_string(), None, None, 0x7F, 1);
+        let mut player = PlayerState::new([4; 16], "Игрок".to_string(), None, None, 0x7F, 1, SPAWN);
 
         let mut message = Vec::new();
         message.extend_from_slice(&(inventory::FIRST_HOTBAR as i16).to_be_bytes());
@@ -4508,7 +4678,7 @@ mod tests {
             std::path::PathBuf::new(),
             std::path::PathBuf::new(),
             Default::default(),
-            crate::ops::Ops::open(std::path::Path::new("/tmp/rustcraft-no-ops.json")),
+            crate::ops::Ops::open(std::path::Path::new("/tmp/mcsheriffanya-no-ops.json")),
             crate::skins::Settings::default(),
         );
 
@@ -4523,6 +4693,7 @@ mod tests {
                     None,
                     0x7F,
                     number as u64,
+                    SPAWN,
                 )
                 .member();
 
@@ -4564,7 +4735,7 @@ mod tests {
             std::path::PathBuf::new(),
             std::path::PathBuf::new(),
             Default::default(),
-            crate::ops::Ops::open(std::path::Path::new("/tmp/rustcraft-hints-ops.json")),
+            crate::ops::Ops::open(std::path::Path::new("/tmp/mcsheriffanya-hints-ops.json")),
             crate::skins::Settings::default(),
         );
 

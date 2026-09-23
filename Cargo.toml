@@ -1,10 +1,10 @@
 [package]
-name = "rustcraft"
-version = "0.0.1-alpha"
+name = "mcsheriffanya"
+version = "0.0.2-alpha"
 edition = "2024"
 license = "MIT"
 description = "A Minecraft-compatible game server written from scratch in Rust"
-repository = "https://github.com/AnyaSheriff/RustCraft"
+repository = "https://github.com/AnyaSheriff/MCSheriffAnya"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }

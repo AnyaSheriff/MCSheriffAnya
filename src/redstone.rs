@@ -304,6 +304,7 @@ enum Kind {
     Gate,
     Observer,
     Bulb,
+    NoteBlock,
     Other,
 }
 
@@ -359,6 +360,7 @@ fn kind_of(name: &str) -> Kind {
         "observer" => Kind::Observer,
         _ if name.ends_with("copper_bulb") => Kind::Bulb,
         "redstone_lamp" => Kind::Lamp,
+        "note_block" => Kind::NoteBlock,
         "repeater" => Kind::Repeater,
         "comparator" => Kind::Comparator,
         "piston" | "sticky_piston" => Kind::Piston,
@@ -850,7 +852,13 @@ fn power_from(world: &World, receiver: Pos, dir: Dir, receiver_is_wire: bool) ->
                 0
             }
         }
-        Kind::Other | Kind::Lamp | Kind::Door | Kind::Trapdoor | Kind::Gate | Kind::Bulb => {
+        Kind::Other
+        | Kind::Lamp
+        | Kind::Door
+        | Kind::Trapdoor
+        | Kind::Gate
+        | Kind::Bulb
+        | Kind::NoteBlock => {
             if !neighbour.conductive() {
                 0
             } else if receiver_is_wire {
@@ -1255,6 +1263,22 @@ pub fn settle(world: &mut World) {
     settle_from(world, 0);
 }
 
+/// Разбирает только первый круг: соседей уже изменённых блоков, но не то,
+/// что от них пошло дальше. Остаток ждёт следующего `settle`.
+///
+/// Нужно щелчку игрока: у оригинала повтор щёлкнутого блока клиенту уходит
+/// после того, как перемены дошли до ближайших соседей, но до того, как они
+/// пошли дальше (сверено чёрным ящиком: провод меняется до повтора рычага,
+/// а музыкальный блок за проводом — после).
+pub fn settle_once(world: &mut World) {
+    // Берём снимок очереди: что изменится по ходу разбора, останется лежать
+    // до следующего `settle`. Глубина сразу предельная, чтобы разбор соседа
+    // не пошёл вглубь сам.
+    for (pos, old) in world.take_changed() {
+        block_changed(world, pos, old, MAX_DEPTH);
+    }
+}
+
 fn settle_from(world: &mut World, depth: usize) {
     if depth > MAX_DEPTH {
         // Слишком глубоко — остаток разберётся при следующем вызове.
@@ -1527,6 +1551,32 @@ fn neighbour_changed(world: &mut World, pos: Pos) {
 
             if let Some(state) = state {
                 set(world, pos, state);
+            }
+        }
+
+        // Музыкальный блок играет ноту на приходе сигнала — один раз, по
+        // фронту, а не всё время, пока питание есть. Заодно он пересчитывает
+        // инструмент: тот задаётся блоком прямо под ним и мог смениться.
+        Kind::NoteBlock => {
+            let powered = any_power(world, pos);
+            let was = block.is("powered", "true");
+            let instrument = instrument_under(world, pos);
+
+            let mut state = block.with("powered", yes_no(powered)).unwrap_or(block.state);
+
+            if let Some(kind) = block.orientation
+                && let Some(next) = kind.with(state, "instrument", instrument)
+            {
+                state = next;
+            }
+
+            // Сперва новое состояние блока, потом нота — так у оригинала.
+            if state != block.state {
+                set(world, pos, state);
+            }
+
+            if powered && !was {
+                play_note(world, pos, instrument, note_of(&block));
             }
         }
 
@@ -1970,7 +2020,10 @@ pub fn repair_chunk(world: &mut World, chunk_x: i32, chunk_z: i32) {
         };
 
         for (index, state) in states.iter().enumerate() {
-            if *state == AIR {
+            // В памяти состояния лежат в двух байтах — разворачиваем.
+            let state = *state as i32;
+
+            if state == AIR {
                 continue;
             }
 
@@ -1981,11 +2034,11 @@ pub fn repair_chunk(world: &mut World, chunk_x: i32, chunk_z: i32) {
                 chunk_z * 16 + (index / 16) % 16,
             );
 
-            if within(*state, &moving_range) {
+            if within(state, &moving_range) {
                 found.moving.push(pos);
-            } else if within(*state, &piston_range) {
+            } else if within(state, &piston_range) {
                 found.pistons.push(pos);
-            } else if within(*state, &head_range) {
+            } else if within(state, &head_range) {
                 found.heads.push(pos);
             }
         }
@@ -2377,6 +2430,312 @@ pub fn ticked(world: &mut World, pos: Pos) {
 }
 
 // ---------------------------------------------------------------------------
+// Музыкальный блок
+// ---------------------------------------------------------------------------
+
+/// Сколько ступеней у ноты: две октавы плюс исходная, от 0 до 24.
+const NOTES: i32 = 25;
+
+/// Имена ступеней — свойство `note` записывается числом-строкой.
+const NOTE_NAMES: [&str; NOTES as usize] = [
+    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
+    "17", "18", "19", "20", "21", "22", "23", "24",
+];
+
+/// Какая ступень стоит у блока сейчас.
+fn note_of(block: &Block) -> i32 {
+    block
+        .value("note")
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(0)
+}
+
+/// Играет ноту: звук инструмента с высотой по ступени.
+///
+/// Высота — `2^((ступень - 12) / 12)`, то есть ступени идут полутонами,
+/// а двенадцатая звучит как записано в файле (вики: «Note Block»).
+/// Звука нет, если сверху не воздух: блок заглушён. Щелчок при этом всё
+/// равно поднимает ноту — этим занимается вызывающий.
+fn play_note(world: &mut World, pos: Pos, instrument: &'static str, note: i32) {
+    if world.get_block(pos.0, pos.1 + 1, pos.2) != AIR {
+        return;
+    }
+
+    let pitch = 2f32.powf((note - 12) as f32 / 12.0);
+
+    world.note_sound(pos.0, pos.1, pos.2, sound_of(instrument), 3.0, pitch);
+
+    // Частицу-нотку клиент рисует сам, получив сообщение о действии блока:
+    // отдельного пакета частиц оригинал не шлёт (сверено чёрным ящиком).
+    // Оба числа действия — нули: инструмент и ступень клиент берёт
+    // из состояния блока.
+    if let Some(id) = blocks::block_id("note_block") {
+        world.note_action(crate::world::BlockAction {
+            x: pos.0,
+            y: pos.1,
+            z: pos.2,
+            action: 0,
+            param: 0,
+            block: id,
+        });
+    }
+}
+
+/// Имя звука инструмента.
+fn sound_of(instrument: &str) -> &'static str {
+    match instrument {
+        "basedrum" => "minecraft:block.note_block.basedrum",
+        "snare" => "minecraft:block.note_block.snare",
+        "hat" => "minecraft:block.note_block.hat",
+        "bass" => "minecraft:block.note_block.bass",
+        "flute" => "minecraft:block.note_block.flute",
+        "bell" => "minecraft:block.note_block.bell",
+        "guitar" => "minecraft:block.note_block.guitar",
+        "chime" => "minecraft:block.note_block.chime",
+        "xylophone" => "minecraft:block.note_block.xylophone",
+        "iron_xylophone" => "minecraft:block.note_block.iron_xylophone",
+        "cow_bell" => "minecraft:block.note_block.cow_bell",
+        "didgeridoo" => "minecraft:block.note_block.didgeridoo",
+        "bit" => "minecraft:block.note_block.bit",
+        "banjo" => "minecraft:block.note_block.banjo",
+        "pling" => "minecraft:block.note_block.pling",
+        "trumpet" => "minecraft:block.note_block.trumpet",
+        "trumpet_exposed" => "minecraft:block.note_block.trumpet_exposed",
+        "trumpet_weathered" => "minecraft:block.note_block.trumpet_weathered",
+        "trumpet_oxidized" => "minecraft:block.note_block.trumpet_oxidized",
+        _ => "minecraft:block.note_block.harp",
+    }
+}
+
+/// Какой инструмент задаёт блок под музыкальным блоком.
+///
+/// Список — со страницы вики «Note Block», таблица «Instruments & block
+/// materials». Она перечисляет блоки поимённо, но имена складываются из
+/// пород и видов, поэтому здесь они узнаются по окончаниям и приставкам;
+/// полнота списка проверяется `tools/check_instruments.py` по той же таблице.
+/// Всё, что не подошло (и воздух), — арфа.
+fn instrument_under(world: &World, pos: Pos) -> &'static str {
+    let below = world.get_block(pos.0, pos.1 - 1, pos.2);
+    let name = blocks::block_at_state(below).unwrap_or("air");
+
+    // Сперва блоки, названные поимённо: они могли бы попасть под общее
+    // правило и зазвучать не тем.
+    match name {
+        "gold_block" => return "bell",
+        "clay" => return "flute",
+        "packed_ice" => return "chime",
+        "bone_block" => return "xylophone",
+        "iron_block" => return "iron_xylophone",
+        "soul_sand" => return "cow_bell",
+        "pumpkin" | "carved_pumpkin" | "jack_o_lantern" => return "didgeridoo",
+        "emerald_block" => return "bit",
+        "hay_block" => return "banjo",
+        "glowstone" => return "pling",
+        _ => {}
+    }
+
+    if is_copper_of(name, "oxidized") {
+        return "trumpet_oxidized";
+    }
+    if is_copper_of(name, "weathered") {
+        return "trumpet_weathered";
+    }
+    if is_copper_of(name, "exposed") {
+        return "trumpet_exposed";
+    }
+    if is_copper_of(name, "") {
+        return "trumpet";
+    }
+
+    if is_wool(name) {
+        return "guitar";
+    }
+    if is_sandy(name) {
+        return "snare";
+    }
+    if is_glassy(name) {
+        return "hat";
+    }
+    if is_woody(name) {
+        return "bass";
+    }
+    if is_stony(name) {
+        return "basedrum";
+    }
+
+    "harp"
+}
+
+/// Медь — труба, и у каждой стадии окисления своя. Вощёная считается за ту же
+/// стадию. Медные лампы, решётки, двери и люки сюда не входят: на вики в этой
+/// строке только сам блок меди, тёсаная и резная медь.
+fn is_copper_of(name: &str, stage: &str) -> bool {
+    let bare = name.strip_prefix("waxed_").unwrap_or(name);
+
+    let bare = match stage {
+        "" => {
+            if bare.starts_with("exposed_")
+                || bare.starts_with("weathered_")
+                || bare.starts_with("oxidized_")
+            {
+                return false;
+            }
+            bare
+        }
+        _ => match bare.strip_prefix(stage).and_then(|rest| rest.strip_prefix('_')) {
+            Some(rest) => rest,
+            None => return false,
+        },
+    };
+
+    // Неокисленная медь зовётся copper_block, а окислившаяся — просто copper
+    // с приставкой стадии: exposed_copper, weathered_copper, oxidized_copper.
+    matches!(bare, "copper_block" | "copper" | "chiseled_copper")
+        || bare.starts_with("cut_copper")
+}
+
+/// Породы дерева: из них складываются имена досок, лестниц, дверей и прочего.
+const WOODS: [&str; 12] = [
+    "oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "pale_oak", "mangrove", "cherry",
+    "bamboo", "crimson", "warped",
+];
+
+/// Что из дерева. Деревянные кнопки сюда не входят: в Java они звучат
+/// как обычный блок (на вики эта строка помечена «только Bedrock»).
+fn is_woody(name: &str) -> bool {
+    let named = matches!(
+        name,
+        "mangrove_roots"
+            | "muddy_mangrove_roots"
+            | "mushroom_stem"
+            | "brown_mushroom_block"
+            | "red_mushroom_block"
+            | "bee_nest"
+            | "beehive"
+            | "bamboo_block"
+            | "stripped_bamboo_block"
+            | "bamboo_mosaic"
+            | "bamboo_mosaic_slab"
+            | "bamboo_mosaic_stairs"
+            | "shelf"
+            | "chest"
+            | "trapped_chest"
+            | "barrel"
+            | "crafting_table"
+            | "cartography_table"
+            | "fletching_table"
+            | "smithing_table"
+            | "loom"
+            | "campfire"
+            | "soul_campfire"
+            | "composter"
+            | "note_block"
+            | "jukebox"
+            | "bookshelf"
+            | "chiseled_bookshelf"
+            | "lectern"
+    );
+
+    if named {
+        return true;
+    }
+
+    // Породные: доски и всё, что из них.
+    let bare = name.strip_prefix("stripped_").unwrap_or(name);
+    let wooden = [
+        "_log", "_wood", "_stem", "_hyphae", "_planks", "_stairs", "_slab", "_door", "_trapdoor",
+        "_pressure_plate", "_fence", "_fence_gate", "_sign", "_wall_sign", "_hanging_sign",
+        "_wall_hanging_sign",
+    ]
+    .iter()
+    .any(|tail| bare.ends_with(tail));
+
+    let of_wood = WOODS
+        .iter()
+        .any(|wood| bare.starts_with(wood) && bare[wood.len()..].starts_with('_'));
+
+    (wooden && of_wood) || name.ends_with("_banner")
+}
+
+/// Что из камня. Имена вида «камень — плита — ступени — стена» разбираются
+/// заодно: у них общее начало, а хвост отбрасывается.
+fn is_stony(name: &str) -> bool {
+    let base = name
+        .strip_suffix("_slab")
+        .or_else(|| name.strip_suffix("_stairs"))
+        .or_else(|| name.strip_suffix("_wall"))
+        .unwrap_or(name);
+
+    let by_tail = base.ends_with("_ore")
+        || base.ends_with("_concrete")
+        || base.ends_with("_terracotta")
+        || base == "terracotta"
+        || base.ends_with("_coral_block")
+        || base.ends_with("_coral_fan")
+        || base.ends_with("_coral_wall_fan");
+
+    by_tail
+        || matches!(
+            base,
+            // Камень и его родня.
+            "stone" | "cobblestone" | "mossy_cobblestone" | "smooth_stone"
+            | "stone_pressure_plate" | "petrified_oak"
+            | "granite" | "polished_granite" | "diorite" | "polished_diorite"
+            | "andesite" | "polished_andesite"
+            // Глубинный сланец и туф.
+            | "deepslate" | "cobbled_deepslate" | "chiseled_deepslate" | "polished_deepslate"
+            | "reinforced_deepslate" | "tuff" | "chiseled_tuff" | "polished_tuff"
+            // Песчаник.
+            | "sandstone" | "chiseled_sandstone" | "smooth_sandstone" | "cut_sandstone"
+            | "red_sandstone" | "chiseled_red_sandstone" | "smooth_red_sandstone"
+            | "cut_red_sandstone"
+            // Призмарин, базальт, чернокамень, край.
+            | "prismarine" | "dark_prismarine" | "netherrack" | "basalt" | "smooth_basalt"
+            | "polished_basalt" | "blackstone" | "gilded_blackstone" | "polished_blackstone"
+            | "chiseled_polished_blackstone" | "polished_blackstone_pressure_plate" | "end_stone"
+            // Кирпичи всех видов.
+            | "bricks" | "brick" | "stone_bricks" | "stone_brick" | "cracked_stone_bricks"
+            | "chiseled_stone_bricks" | "mossy_stone_bricks" | "mossy_stone_brick"
+            | "deepslate_bricks" | "deepslate_brick" | "cracked_deepslate_bricks"
+            | "deepslate_tiles" | "deepslate_tile" | "cracked_deepslate_tiles"
+            | "tuff_bricks" | "tuff_brick" | "chiseled_tuff_bricks"
+            | "mud_bricks" | "mud_brick" | "resin_block" | "resin_bricks" | "resin_brick"
+            | "chiseled_resin_bricks" | "prismarine_bricks" | "prismarine_brick"
+            | "nether_bricks" | "nether_brick" | "nether_brick_fence" | "cracked_nether_bricks"
+            | "chiseled_nether_bricks" | "red_nether_bricks" | "red_nether_brick"
+            | "polished_blackstone_bricks" | "polished_blackstone_brick"
+            | "cracked_polished_blackstone_bricks" | "end_stone_bricks" | "end_stone_brick"
+            // Пурпур и кварц.
+            | "purpur" | "purpur_block" | "purpur_pillar" | "quartz" | "quartz_block"
+            | "chiseled_quartz_block" | "quartz_pillar" | "smooth_quartz" | "quartz_bricks"
+            // Прочее каменное.
+            | "crimson_nylium" | "warped_nylium" | "dripstone_block" | "pointed_dripstone"
+            | "magma_block" | "obsidian" | "crying_obsidian" | "bedrock" | "creaking_heart"
+            | "coal_block" | "raw_copper_block" | "raw_gold_block" | "raw_iron_block"
+            // Блоки-устройства из камня.
+            | "furnace" | "smoker" | "blast_furnace" | "dispenser" | "dropper" | "observer"
+            | "respawn_anchor" | "ender_chest" | "stonecutter" | "enchanting_table" | "vault"
+            | "end_portal_frame" | "spawner" | "trial_spawner"
+        )
+}
+
+fn is_wool(name: &str) -> bool {
+    name.ends_with("_wool") || name.ends_with("_wool_slab") || name.ends_with("_wool_stairs")
+}
+
+fn is_sandy(name: &str) -> bool {
+    matches!(name, "sand" | "red_sand" | "suspicious_sand" | "gravel" | "suspicious_gravel" | "heavy_core")
+        || name.ends_with("_concrete_powder")
+}
+
+fn is_glassy(name: &str) -> bool {
+    matches!(name, "glass" | "tinted_glass" | "sea_lantern" | "beacon" | "conduit")
+        || name.ends_with("_stained_glass")
+        || name.ends_with("_stained_glass_pane")
+        || name == "glass_pane"
+}
+
+// ---------------------------------------------------------------------------
 // Щелчки игрока
 // ---------------------------------------------------------------------------
 
@@ -2394,6 +2753,18 @@ pub fn use_block(world: &mut World, pos: Pos) -> bool {
             let pitch = if is_on(&block) { 0.5 } else { 0.6 };
             world.note_sound(pos.0, pos.1, pos.2, "minecraft:block.lever.click", 0.3, pitch);
             block.with("powered", yes_no(!is_on(&block)))
+        }
+
+        // Щелчок поднимает ноту на полтона: двадцать пять ступеней по кругу,
+        // после двадцать четвёртой снова ноль (вики: «Note Block»). Сама
+        // нота звучит уже после того, как клиент увидел новый блок, —
+        // этим занимается after_use.
+        Kind::NoteBlock => {
+            let note = (note_of(&block) + 1) % NOTES;
+
+            block
+                .orientation
+                .and_then(|kind| kind.with(block.state, "note", NOTE_NAMES[note as usize]))
         }
 
         Kind::Button => {
@@ -2481,12 +2852,24 @@ pub fn use_block(world: &mut World, pos: Pos) -> bool {
         _ => return false,
     };
 
+    // Соседей здесь не разбираем: порядок, в каком о щелчке узнают соседи
+    // и клиент, задаёт тот, кто щёлкнул (см. place_block в сети).
     if let Some(state) = new_state {
         set(world, pos, state);
-        settle(world);
     }
 
     true
+}
+
+/// Что деталь делает после щелчка — когда клиенту уже сказано, каким
+/// стал блок. Пока это только музыкальный блок: у оригинала нота идёт
+/// следом за изменением блока и его повтором, а не перед ними.
+pub fn after_use(world: &mut World, pos: Pos) {
+    let block = Block::at(world, pos);
+
+    if block.kind == Kind::NoteBlock {
+        play_note(world, pos, instrument_under(world, pos), note_of(&block));
+    }
 }
 
 /// Деревянная ли кнопка — по имени: каменные две, остальные из дерева.
@@ -2573,6 +2956,8 @@ mod tests {
 
         assert!(use_block(&mut world, (0, 1, 0)));
 
+        settle(&mut world);
+
         assert_eq!(wire_power_of(&block(&world, (1, 1, 0))), 15);
         assert_eq!(wire_power_of(&block(&world, (8, 1, 0))), 8);
         assert_eq!(wire_power_of(&block(&world, (15, 1, 0))), 1);
@@ -2580,6 +2965,7 @@ mod tests {
 
         // Выключили — всё погасло.
         assert!(use_block(&mut world, (0, 1, 0)));
+        settle(&mut world);
         assert_eq!(wire_power_of(&block(&world, (1, 1, 0))), 0);
     }
 
@@ -2600,10 +2986,13 @@ mod tests {
         assert!(block(&world, (2, 1, 0)).is("lit", "false"));
 
         use_block(&mut world, (0, 1, 0));
+
+        settle(&mut world);
         assert!(block(&world, (2, 1, 0)).is("lit", "true"));
 
         // Гаснет лампа не сразу, а через четыре такта.
         use_block(&mut world, (0, 1, 0));
+        settle(&mut world);
         assert!(block(&world, (2, 1, 0)).is("lit", "true"), "лампа погасла слишком быстро");
 
         run(&mut world, 5);
@@ -2656,6 +3045,7 @@ mod tests {
         let lever = state("lever", &[("face", "wall"), ("facing", "west"), ("powered", "false")]);
         put(&mut world, (-1, 1, 0), lever);
         use_block(&mut world, (-1, 1, 0));
+        settle(&mut world);
 
         assert!(is_on(&block(&world, (0, 2, 0))), "погас без задержки");
         run(&mut world, 1);
@@ -2681,6 +3071,8 @@ mod tests {
         put(&mut world, (16, 1, 0), wire);
 
         use_block(&mut world, (0, 1, 0));
+
+        settle(&mut world);
 
         assert_eq!(wire_power_of(&block(&world, (14, 1, 0))), 2);
         assert!(!is_on(&block(&world, (15, 1, 0))));
@@ -2742,6 +3134,7 @@ mod tests {
 
         // В режиме сравнения — то же самое: бок больше заднего.
         use_block(&mut world, (7, 1, 0));
+        settle(&mut world);
         run(&mut world, 6);
         assert_eq!(wire_power_of(&block(&world, (8, 1, 0))), 0);
     }
@@ -2760,6 +3153,8 @@ mod tests {
         put(&mut world, (1, 1, 0), wire);
 
         use_block(&mut world, (0, 1, 0));
+
+        settle(&mut world);
         assert_eq!(wire_power_of(&block(&world, (1, 1, 0))), 15);
 
         run(&mut world, 19);
@@ -2784,8 +3179,10 @@ mod tests {
         // Девять выключений подряд, быстрее чем за три секунды.
         for _ in 0..9 {
             use_block(&mut world, (-1, 1, 0));
+            settle(&mut world);
             run(&mut world, 2);
             use_block(&mut world, (-1, 1, 0));
+            settle(&mut world);
             run(&mut world, 2);
         }
 
@@ -2819,6 +3216,7 @@ mod tests {
         // Одинокий провод щелчком становится точкой.
         put(&mut world, (5, 1, 5), wire);
         assert!(use_block(&mut world, (5, 1, 5)));
+        settle(&mut world);
         assert!(HORIZONTAL.iter().all(|dir| block(&world, (5, 1, 5)).is(dir.name(), "none")));
     }
 
@@ -2915,6 +3313,8 @@ mod tests {
         put(&mut world, (0, 2, 0), lever); // рычаг сверху на поршне
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
 
         // Голова встала перед поршнем, камень уехал на блок вперёд.
@@ -2924,6 +3324,7 @@ mod tests {
 
         // Выключили — голова убралась, камень остался на месте.
         use_block(&mut world, (0, 2, 0));
+        settle(&mut world);
         run(&mut world, 6);
 
         assert!(block(&world, (0, 1, 0)).is("extended", "false"));
@@ -2943,10 +3344,14 @@ mod tests {
         put(&mut world, (0, 2, 0), lever);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
         assert_eq!(world.get_block(2, 1, 0), STONE);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
 
         // Блок вернулся вплотную к поршню.
@@ -2969,6 +3374,7 @@ mod tests {
             }
             put(&mut world, (0, 2, 0), lever);
             use_block(&mut world, (0, 2, 0));
+            settle(&mut world);
             run(&mut world, 6);
 
             world
@@ -3066,6 +3472,7 @@ mod tests {
         put(&mut world, (0, 1, 0), piston);
         put(&mut world, (0, 2, 0), lever);
         use_block(&mut world, (0, 2, 0));
+        settle(&mut world);
         run(&mut world, 6);
 
         assert_eq!(block(&world, (1, 1, 0)).kind, Kind::PistonHead);
@@ -3126,6 +3533,7 @@ mod tests {
             put(&mut world, (0, 1, 0), piston);
             put(&mut world, (0, 2, 0), lever);
             use_block(&mut world, (0, 2, 0));
+            settle(&mut world);
             run(&mut world, 6);
 
             assert_eq!(block(&world, (1, 1, 0)).kind, Kind::PistonHead);
@@ -3175,6 +3583,8 @@ mod tests {
         put(&mut world, (0, 2, 0), lever);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
 
         let destroyed = world.take_destroyed();
@@ -3202,6 +3612,8 @@ mod tests {
         put(&mut world, (0, 6, 0), lever);
 
         use_block(&mut world, (0, 6, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
 
         assert_eq!(world.get_block(2, 5, 0), slime, "слизь не поехала");
@@ -3224,6 +3636,8 @@ mod tests {
         put(&mut world, (0, 6, 0), lever);
 
         use_block(&mut world, (0, 6, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
 
         assert_eq!(world.get_block(2, 5, 0), slime);
@@ -3244,10 +3658,14 @@ mod tests {
         put(&mut world, (0, 6, 0), lever);
 
         use_block(&mut world, (0, 6, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
         assert_eq!(world.get_block(2, 5, 0), slime);
 
         use_block(&mut world, (0, 6, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
 
         assert_eq!(world.get_block(1, 5, 0), slime, "слизь не вернулась");
@@ -3273,6 +3691,7 @@ mod tests {
 
         put(&mut world, (0, 6, 0), lever);
         use_block(&mut world, (0, 6, 0));
+        settle(&mut world);
         run(&mut world, 6);
 
         assert!(
@@ -3299,6 +3718,8 @@ mod tests {
         put(&mut world, (0, 2, 0), lever);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
 
         assert!(block(&world, (0, 1, 0)).is("extended", "false"), "сдвинул тринадцать");
@@ -3560,12 +3981,15 @@ mod tests {
         assert!(block(&world, (0, 1, 0)).is("open", "true"));
 
         assert!(use_block(&mut world, (0, 1, 0)));
+
+        settle(&mut world);
         assert!(block(&world, (0, 1, 0)).is("open", "false"), "калитка не закрылась");
 
         // Сигналом: рычаг на блоке рядом.
         put(&mut world, (1, 1, 0), STONE);
         put(&mut world, (1, 2, 0), lever);
         assert!(use_block(&mut world, (1, 2, 0)));
+        settle(&mut world);
         settle(&mut world);
         run(&mut world, 6);
 
@@ -3670,6 +4094,8 @@ mod tests {
         put(&mut world, (0, 2, 0), lever);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
         run(&mut world, 5);
 
@@ -3677,6 +4103,7 @@ mod tests {
 
         // Задвигаем — керамика должна остаться на месте.
         use_block(&mut world, (0, 2, 0));
+        settle(&mut world);
         settle(&mut world);
         run(&mut world, 5);
 
@@ -3700,17 +4127,20 @@ mod tests {
         // Сигнал пришёл — загорелась.
         use_block(&mut world, (1, 1, 0));
         settle(&mut world);
+        settle(&mut world);
         run(&mut world, 6);
         assert!(block(&world, (0, 1, 0)).is("lit", "true"), "не загорелась");
 
         // Сигнал сняли — горит дальше.
         use_block(&mut world, (1, 1, 0));
         settle(&mut world);
+        settle(&mut world);
         run(&mut world, 6);
         assert!(block(&world, (0, 1, 0)).is("lit", "true"), "погасла раньше времени");
 
         // Второй сигнал — гаснет.
         use_block(&mut world, (1, 1, 0));
+        settle(&mut world);
         settle(&mut world);
         run(&mut world, 6);
         assert!(!block(&world, (0, 1, 0)).is("lit", "true"), "не погасла");
@@ -3729,6 +4159,8 @@ mod tests {
         put(&mut world, (0, 2, 0), lever);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
 
         // Событие заведено, но ещё не выполнено.
@@ -3828,6 +4260,8 @@ mod tests {
         put(&mut world, (0, 6, 0), lever);
 
         use_block(&mut world, (0, 6, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
 
         assert_eq!(world.get_block(2, 5, 0), slime, "слизь не поехала");
@@ -3867,6 +4301,8 @@ mod tests {
         world.watch_actions(reader);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
         run(&mut world, 1);
 
@@ -3896,12 +4332,14 @@ mod tests {
         // Включили — поршень тронулся.
         use_block(&mut world, (0, 2, 0));
         settle(&mut world);
+        settle(&mut world);
         run(&mut world, 1);
 
         assert!(block(&world, (0, 1, 0)).is("extended", "true"), "поршень не тронулся");
 
         // И тут же выключили, пока он ещё в пути.
         use_block(&mut world, (0, 2, 0));
+        settle(&mut world);
         settle(&mut world);
 
         // Доехав, он должен заметить, что питания больше нет, и задвинуться.
@@ -3931,6 +4369,8 @@ mod tests {
         world.watch_events(reader);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
         // О самом поршне клиенту говорят на такт позже хода — как у оригинала.
         run(&mut world, 2);
@@ -3986,6 +4426,8 @@ mod tests {
         world.watch_changes(reader);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
 
         let mut moved_at = None;
@@ -4032,6 +4474,8 @@ mod tests {
         world.watch_events(reader);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
         // О самом поршне клиенту говорят на такт позже хода — как у оригинала.
         run(&mut world, 2);
@@ -4070,6 +4514,8 @@ mod tests {
         put(&mut world, (0, 2, 0), lever);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
         run(&mut world, 1);
 
@@ -4116,10 +4562,14 @@ mod tests {
         put(&mut world, (0, 2, 0), lever);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         run(&mut world, 6);
         println!("выдвинулся: 1={} 2={}", world.get_block(1, 1, 0), world.get_block(2, 1, 0));
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
 
         for tick in 0..5 {
@@ -4149,6 +4599,8 @@ mod tests {
         put(&mut world, (0, 2, 0), lever);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
         run(&mut world, 1);
 
@@ -4180,10 +4632,10 @@ mod tests {
     /// Мир на диске для проверок починки при чтении: свой каталог на каждую.
     fn disk_world(what: &str) -> (World, std::path::PathBuf) {
         let mut path = std::env::temp_dir();
-        path.push(format!("rustcraft-repair-{}-{}", std::process::id(), what));
+        path.push(format!("mcsheriffanya-repair-{}-{}", std::process::id(), what));
         let _ = std::fs::remove_dir_all(&path);
 
-        let mut world = World::open(&path).expect("мир открылся");
+        let mut world = World::open(&path, Some(1), true).expect("мир открылся");
         world.ensure(0, 0);
 
         (world, path)
@@ -4204,6 +4656,7 @@ mod tests {
         put(&mut world, (1, 1, 0), wire);
         use_block(&mut world, (0, 1, 0));
         settle(&mut world);
+        settle(&mut world);
 
         assert_eq!(wire_power_of(&block(&world, (1, 1, 0))), 15);
 
@@ -4212,7 +4665,7 @@ mod tests {
         world.save_if_needed();
         drop(world);
 
-        let mut again = World::open(&path).expect("мир открылся снова");
+        let mut again = World::open(&path, Some(1), true).expect("мир открылся снова");
         again.ensure(0, 0);
 
         assert_eq!(
@@ -4250,7 +4703,7 @@ mod tests {
         world.save_if_needed();
         drop(world);
 
-        let mut again = World::open(&path).expect("мир открылся снова");
+        let mut again = World::open(&path, Some(1), true).expect("мир открылся снова");
         again.ensure(0, 0);
 
         assert_eq!(block(&again, (0, 1, 0)).kind, Kind::Piston);
@@ -4274,6 +4727,8 @@ mod tests {
         put(&mut world, (0, 2, 0), lever);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
         run(&mut world, 1);
 
@@ -4283,7 +4738,7 @@ mod tests {
         world.save_if_needed();
         drop(world);
 
-        let mut again = World::open(&path).expect("мир открылся снова");
+        let mut again = World::open(&path, Some(1), true).expect("мир открылся снова");
         again.ensure(0, 0);
         run(&mut again, 5);
 
@@ -4335,6 +4790,8 @@ mod tests {
         world.watch_events(reader);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
         run(&mut world, 2);
 
@@ -4435,6 +4892,8 @@ mod tests {
         put(&mut world, (0, 2, 0), lever);
 
         use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
         settle(&mut world);
         run(&mut world, 1); // ход начался, но ещё не доигран
 
@@ -4459,7 +4918,7 @@ mod tests {
 
         std::fs::write(&level, without).expect("level.dat записывается");
 
-        let mut again = World::open(&path).expect("мир открылся снова");
+        let mut again = World::open(&path, Some(1), true).expect("мир открылся снова");
         again.ensure(0, 0);
         run(&mut again, 5);
 

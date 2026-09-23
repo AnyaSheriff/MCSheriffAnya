@@ -63,12 +63,41 @@ const SERVER_PROPERTIES_PATH: &str = "config/server.properties";
 /// Путь к файлу мира. Мир лежит рядом с настройками, в директории world.
 const WORLD_PATH: &str = "world";
 
-#[tokio::main]
-async fn main() -> io::Result<()> {
+fn main() -> io::Result<()> {
+    // Такту отводится отдельное ядро, всё остальное делит оставшиеся: сеть,
+    // складывание чанков, скины. Если ядро всего одно, делить нечего —
+    // работаем как придётся.
+    let cores = tick::cores();
+    let others = cores.saturating_sub(1).max(1);
+
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(others)
+        .max_blocking_threads(others)
+        .enable_all()
+        .on_thread_start(move || {
+            // Рабочие потоки не залезают на ядро такта.
+            tick::keep_off_tick_core();
+        })
+        .build()?;
+
+    runtime.block_on(server())
+}
+
+async fn server() -> io::Result<()> {
     let started = Instant::now();
 
     // Первые строки — как у обычного сервера: что за сервер, что грузим.
-    log_info!("Запуск сервера RustCraft (Minecraft 26.1.2, протокол 775)");
+    log_info!("Запуск сервера MCSheriffAnya (Minecraft 26.1.2, протокол 775)");
+
+    match tick::tick_core() {
+        Some(core) => log_info!(
+            "Ядер: {}. Такту отведено ядро {}, остальные — сети и складыванию мира",
+            tick::cores(),
+            core
+        ),
+        None => log_info!("Ядро всего одно: такт и всё прочее делят его"),
+    }
+
     log_info!("Загрузка настроек");
 
     // Создаём необходимые рабочие директории, если их ещё нет.
@@ -76,11 +105,11 @@ async fn main() -> io::Result<()> {
 
     // Свои настройки — отдельно от server.properties: тот должен выглядеть
     // как у обычного сервера.
-    let settings = config::rustcraft::Settings::load(Path::new(config::rustcraft::FILE));
+    let settings = config::mcsheriffanya::Settings::load(Path::new(config::mcsheriffanya::FILE));
     log::set_debug(settings.debug);
 
     if settings.debug {
-        log_info!("Подробный лог включён (config/rustcraft.toml)");
+        log_info!("Подробный лог включён (config/mcsheriffanya.toml)");
     }
 
     // Образец таблицы «кому чей скин» — чтобы было видно, что писать.
@@ -109,7 +138,7 @@ async fn main() -> io::Result<()> {
 
     // Всё, что подключения делят между собой: мир, список игроков и чат.
     let shared = Arc::new(Shared::new(
-        World::open(WORLD_PATH)?,
+        World::open(WORLD_PATH, properties.level_seed, properties.flat_world)?,
         PathBuf::from(playerdata::DIRECTORY),
         PathBuf::from(skins::DIRECTORY),
         (*properties).clone(),

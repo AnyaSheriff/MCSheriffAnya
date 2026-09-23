@@ -1,6 +1,6 @@
 // Робот-записыватель: заходит на сервер, строит сценарий командами и пишет всё,
 // что сервер прислал о мире, с привязкой к тактам. Библиотека mineflayer (MIT)
-// используется как есть, её код в RustCraft не попадает.
+// используется как есть, её код в MCSheriffAnya не попадает.
 'use strict';
 const path = require('path');
 const fs = require('fs');
@@ -142,6 +142,19 @@ bot._client.on('sound_effect', (p) => {
     : s.data && s.data.soundName ? s.data.soundName
     : JSON.stringify(s);
   note('sound', { at: rel(pos).map(v => Math.round(v * 8) / 8), sound: name, category: p.soundCategory, volume: p.volume, pitch: p.pitch });
+});
+bot._client.on('world_particles', (p) => {
+  const pos = { x: p.x, y: p.y, z: p.z };
+  if (!inPad(pos)) return;
+  const kind = p.particle && (p.particle.type !== undefined ? p.particle.type : p.particle);
+  note('particle', {
+    at: rel(pos).map(v => Math.round(v * 1000) / 1000,),
+    particle: typeof kind === 'object' ? JSON.stringify(kind) : String(kind),
+    count: p.particles,
+    speed: Math.round((p.particleData ?? 0) * 1000) / 1000,
+    offset: [p.offsetX, p.offsetY, p.offsetZ].map(v => Math.round((v ?? 0) * 1000) / 1000).join(','),
+    long: p.longDistance
+  });
 });
 bot._client.on('spawn_entity', (p) => {
   const pos = { x: p.x, y: p.y, z: p.z };

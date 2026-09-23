@@ -422,7 +422,7 @@ mod tests {
     #[test]
     fn settings_are_read_and_default_to_everything_on() {
         let mut path = std::env::temp_dir();
-        path.push(format!("rustcraft-skins-{}.toml", std::process::id()));
+        path.push(format!("mcsheriffanya-skins-{}.toml", std::process::id()));
         let _ = fs::remove_file(&path);
 
         // Нет файла — образец на месте, всё включено.

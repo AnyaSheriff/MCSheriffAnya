@@ -12,7 +12,7 @@
 
 Робот написан на [mineflayer](https://github.com/PrismarineJS/mineflayer)
 (MIT, независимая реализация протокола) — библиотека берётся из
-`~/node_modules`, в RustCraft её код не попадает.
+`~/node_modules`, в MCSheriffAnya её код не попадает.
 
 ## Запуск
 

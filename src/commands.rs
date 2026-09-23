@@ -799,7 +799,7 @@ mod tests {
 
         let mut path = std::env::temp_dir();
         path.push(format!(
-            "rustcraft-test-ops-{}-{}.json",
+            "mcsheriffanya-test-ops-{}-{}.json",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));

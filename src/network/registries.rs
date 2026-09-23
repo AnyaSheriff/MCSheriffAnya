@@ -230,7 +230,7 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
             .string("asset_id", &format!("minecraft:{}", name))
             .string("translation_key", &format!("block.minecraft.banner.{}", name)),
         "minecraft:dimension_type" => dimension_type(),
-        "minecraft:worldgen/biome" => biome(),
+        "minecraft:worldgen/biome" => biome(name),
         // У мировых часов нет ни одного поля: игра различает их только по имени.
         "minecraft:world_clock" => Compound::new(),
         "minecraft:timeline" => match name {
@@ -466,19 +466,79 @@ fn dimension_type() -> Compound {
         .strings("timelines", &["minecraft:day", "minecraft:moon"])
 }
 
-/// Равнина: биом по умолчанию для ещё не загруженных кусков мира.
-/// Списки генерации пустые — генерацией занимается сервер, а не клиент.
-fn biome() -> Compound {
+/// Биом: то, что о нём должен знать клиент.
+///
+/// Температура и влажность — те же числа, что в игре: по ним клиент выбирает
+/// цвет травы и листвы. Осадков нет там, где слишком жарко: так и в игре —
+/// в пустыне и саванне не бывает дождя.
+///
+/// Списки генерации пустые: мир складывает сервер, а не клиент.
+fn biome(name: &str) -> Compound {
+    let biome = crate::world::terrain::Biome::ALL
+        .iter()
+        .find(|biome| biome.name() == name)
+        .copied()
+        .unwrap_or(crate::world::terrain::Biome::Plains);
+
+    let (temperature, downfall) = biome.climate();
+
     Compound::new()
-        .boolean("has_precipitation", true)
-        .float("temperature", 0.8)
-        .float("downfall", 0.4)
-        .compound("effects", Compound::new().int("water_color", 4159204))
+        .boolean("has_precipitation", temperature < 2.0)
+        .float("temperature", temperature)
+        .float("downfall", downfall)
+        .compound(
+            "effects",
+            Compound::new()
+                .int("sky_color", sky_color(temperature))
+                .int("fog_color", FOG_COLOR)
+                .int("water_color", WATER_COLOR)
+                .int("water_fog_color", WATER_FOG_COLOR),
+        )
         .empty_list("carvers")
         .empty_list("features")
         .compound("spawners", Compound::new())
         .compound("spawn_costs", Compound::new())
 }
+
+/// Цвет неба считается из температуры биома — как в игре (вики, «Biome» →
+/// Sky color): `T = температура / 3`, обрезанная промежутком от -1 до 1,
+/// и цвет берётся из HSV `(0,62222224 - 0,05T; 0,5 + 0,1T; 1)`.
+fn sky_color(temperature: f32) -> i32 {
+    let t = (temperature / 3.0).clamp(-1.0, 1.0);
+
+    hsv_to_rgb(0.622_222_24 - 0.05 * t, 0.5 + 0.1 * t, 1.0)
+}
+
+/// Цвет из HSV в число, как его ждёт клиент: по восемь бит на красный,
+/// зелёный и синий.
+fn hsv_to_rgb(hue: f32, saturation: f32, value: f32) -> i32 {
+    let sector = (hue * 6.0).floor();
+    let inside = hue * 6.0 - sector;
+
+    let p = value * (1.0 - saturation);
+    let q = value * (1.0 - inside * saturation);
+    let t = value * (1.0 - (1.0 - inside) * saturation);
+
+    let (red, green, blue) = match (sector as i32) % 6 {
+        0 => (value, t, p),
+        1 => (q, value, p),
+        2 => (p, value, t),
+        3 => (p, q, value),
+        4 => (t, p, value),
+        _ => (value, p, q),
+    };
+
+    let byte = |part: f32| (part * 255.0).round().clamp(0.0, 255.0) as i32;
+
+    (byte(red) << 16) | (byte(green) << 8) | byte(blue)
+}
+
+/// Цвет небесного тумана — один на все биомы верхнего мира (#c0d8ff).
+const FOG_COLOR: i32 = 0xC0_D8_FF;
+
+/// Цвет воды и подводного тумана: обычные значения верхнего мира.
+const WATER_COLOR: i32 = 0x3F_76_E4;
+const WATER_FOG_COLOR: i32 = 0x05_05_33;
 
 #[cfg(test)]
 mod tests {
