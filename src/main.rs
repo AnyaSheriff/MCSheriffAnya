@@ -138,7 +138,7 @@ async fn server() -> io::Result<()> {
 
     // Всё, что подключения делят между собой: мир, список игроков и чат.
     let shared = Arc::new(Shared::new(
-        World::open(WORLD_PATH, properties.level_seed, properties.flat_world)?,
+        World::open(WORLD_PATH, properties.level_seed, properties.world_kind)?,
         PathBuf::from(playerdata::DIRECTORY),
         PathBuf::from(skins::DIRECTORY),
         (*properties).clone(),
@@ -383,7 +383,7 @@ async fn handle_connection(
             send_known_packs(&mut socket).await?;
             log_debug!("Known Packs отправлен (minecraft:core)");
 
-            let (packs, skin_parts_from_settings) = read_known_packs(&mut socket).await?;
+            let (packs, look_from_settings) = read_known_packs(&mut socket).await?;
             for pack in &packs {
                 log_debug!(
                     "Known Packs клиента: {}:{} версия \"{}\"",
@@ -405,18 +405,17 @@ async fn handle_connection(
             send_finish_configuration(&mut socket).await?;
             log_debug!("Finish Configuration отправлен");
 
-            let skin_parts =
-                read_and_log_configuration_packets(&mut socket, skin_parts_from_settings).await?;
+            let look = read_and_log_configuration_packets(&mut socket, look_from_settings).await?;
             log_debug!("Configuration: чтение пакетов клиента завершено");
 
             // Фаза Play: вводим игрока в мир.
             // Если клиент отключился, не подтвердив фазу, входить некуда.
-            if let Some(skin_parts) = skin_parts {
+            if let Some(look) = look {
                 let entered = play_session(
                     &mut socket,
                     &login.username,
                     &login.uuid,
-                    skin_parts,
+                    look,
                     &shared,
                     (&came_from, &came_to),
                 )

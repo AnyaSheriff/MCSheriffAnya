@@ -110,9 +110,10 @@ const FORMAT_VERSION: u32 = 1;
 /// и вечно показывать старый неправильно.
 const FRESH: u64 = 24 * 60 * 60;
 
-/// Сколько ждать ответа Mojang. Дольше держать игрока на входе нельзя:
-/// он ждёт появления в мире, а скин — дело десятое.
-const WAIT: Duration = Duration::from_secs(5);
+/// Сколько ждать ответа одного запроса. Дольше держать игрока на входе
+/// нельзя: он ждёт появления в мире, а скин — дело десятое. У Mojang
+/// запросов два подряд, так что худший случай — вдвое больше.
+const WAIT: Duration = Duration::from_secs(2);
 
 /// Описание скина в том виде, в каком его понимает клиент.
 #[derive(Clone, PartialEq, Debug)]
@@ -288,16 +289,31 @@ fn now() -> u64 {
 async fn fetch(name: &str, settings: Settings) -> Option<Skin> {
     let client = client()?;
 
-    if settings.mojang
-        && let Some(skin) = fetch_mojang(client, name).await
-    {
+    // Оба источника спрашиваются сразу, а не по очереди: так игрок ждёт
+    // самого медленного, а не их сумму. Предпочтение — прежнее: Mojang.
+    let mojang = async {
+        if settings.mojang {
+            fetch_mojang(client, name).await
+        } else {
+            None
+        }
+    };
+    let ely = async {
+        if settings.ely {
+            fetch_ely(client, name).await
+        } else {
+            None
+        }
+    };
+
+    let (mojang, ely) = tokio::join!(mojang, ely);
+
+    if let Some(skin) = mojang {
         log_info!("Скины: скин {} получен от Mojang", name);
         return Some(skin);
     }
 
-    if settings.ely
-        && let Some(skin) = fetch_ely(client, name).await
-    {
+    if let Some(skin) = ely {
         log_info!("Скины: скин {} получен от Ely.by", name);
         return Some(skin);
     }

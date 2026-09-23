@@ -830,6 +830,7 @@ mod tests {
                     entity_id: number as i32,
                     skin: None,
                     skin_parts: 0x7F,
+                    main_hand: 1,
                     held: None,
                     position: Position {
                         x: number as f64 * 10.0,

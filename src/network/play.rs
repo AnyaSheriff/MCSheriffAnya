@@ -210,6 +210,22 @@ const SET_ENTITY_DATA: i32 = 0x63;
 /// здесь означает, что клиент запишет байт в чужое свойство.
 const SKIN_PARTS_PROPERTY: u8 = 16;
 
+/// Сколько чанков в каждую сторону присылается сразу при входе и после
+/// переноса — чтобы было на чём стоять. Остальное догружается порциями.
+const NEAR_CHUNKS: i32 = 3;
+
+/// Сколько чанков догружать за один круг основного цикла. Круг бывает на
+/// каждом такте и на каждом пакете игрока, так что даль приходит быстро,
+/// но не заслоняет чат и движение.
+const CHUNKS_PER_STEP: usize = 64;
+
+/// Номер свойства «ведущая рука» у игрока — прямо перед частями скина.
+const MAIN_HAND_PROPERTY: u8 = 15;
+
+/// Вид значения «рука» (Humanoid Arm): число-перечисление, 0 — левая,
+/// 1 — правая. Номер вида в 26.1 — 42 (minecraft-data, протокол 26.1).
+const PROPERTY_HUMANOID_ARM: i32 = 42;
+
 /// Вид значения «байт» в списке видов свойств сущности.
 const PROPERTY_BYTE: i32 = 0;
 
@@ -370,6 +386,7 @@ const SAME_POSITION: f64 = 0.001;
 struct Shown {
     position: Position,
     skin_parts: u8,
+    main_hand: u8,
     held: Option<Stack>,
 }
 
@@ -424,10 +441,11 @@ pub async fn play_session(
     stream: &mut TcpStream,
     name: &str,
     uuid: &[u8; 16],
-    skin_parts: u8,
+    look: configuration::ClientLook,
     shared: &Shared,
     (came_from, came_to): (&str, &str),
 ) -> io::Result<bool> {
+    let skin_parts = look.skin_parts;
     // Что осталось от прошлого захода: место, поворот и режим игры. Если
     // игрок здесь впервые, этого нет — он появится в точке появления.
     let saved = playerdata::load(&shared.playerdata, uuid);
@@ -451,6 +469,8 @@ pub async fn play_session(
         shared.next_reader(),
         spawn,
     );
+
+    player.main_hand = look.main_hand;
 
     if player.saved.is_some() {
         log_debug!(
@@ -560,16 +580,20 @@ async fn enter_world(
     // Из-за этого своя же запись о входе тоже попадёт в рассылку — она
     // пропускается по опознавателю при отправке.
     let (chat_lines, player_changes, world_changes, item_changes) = {
-        let chat = shared.chat.lock().expect("чат захвачен другим потоком");
+        // Замки берутся в общем для всего сервера порядке: мир, игроки,
+        // предметы, чат (см. Shared). Такт держит мир и берёт игроков; возьми
+        // мы здесь игроков раньше мира — вход игрока, совпавший с тактом,
+        // застыл бы вместе с тактом навсегда, а за ними и весь сервер.
+        let mut world = shared.world.lock().expect("мир захвачен другим потоком");
         let mut players = shared
             .players
             .lock()
             .expect("список игроков захвачен другим потоком");
-        let mut world = shared.world.lock().expect("мир захвачен другим потоком");
         let mut items = shared
             .items
             .lock()
             .expect("предметы захвачены другим потоком");
+        let chat = shared.chat.lock().expect("чат захвачен другим потоком");
 
         // Записываемся читателями: с этого места журналы держат для нас
         // всё новое, а прочитанное всеми выбрасывают.
@@ -623,7 +647,19 @@ async fn enter_world(
 
     // Клиент подтверждает телепортацию — до подтверждения он игнорирует
     // пакеты о перемещении.
-    read_confirm_teleportation(stream).await?;
+    if let Some(look) = read_confirm_teleportation(stream).await? {
+        player.skin_parts = look.skin_parts;
+        player.main_hand = look.main_hand;
+
+        // Игрок уже в общем списке — остальные должны увидеть новое.
+        let mut players = shared
+            .players
+            .lock()
+            .expect("список игроков захвачен другим потоком");
+
+        players.set_skin_parts(&player.uuid, look.skin_parts);
+        players.set_main_hand(&player.uuid, look.main_hand);
+    }
 
     // Дерево команд: без него клиент не знает, что можно вводить после косой
     // черты, и не подсказывает.
@@ -640,7 +676,13 @@ async fn enter_world(
     // И про самого себя: свой второй слой скина клиент рисует не по своим
     // настройкам, а по тем же сведениям о сущности, что и чужой. Не сказать
     // ему — и в виде со стороны игрок будет без шапки и куртки.
-    send_skin_parts(stream, member.entity_id, member.skin_parts).await?;
+    send_look(
+        stream,
+        member.entity_id,
+        member.skin_parts,
+        member.main_hand,
+    )
+    .await?;
 
     send_default_spawn_position(stream, player.spawn_point).await?;
     send_health(stream).await?;
@@ -657,9 +699,22 @@ async fn enter_world(
 
     let mut sent = SentChunks::new();
 
-    send_chunks_around(stream, shared, (center_x, center_z), &mut sent).await?;
+    // Сперва только ближний квадрат — чтобы было на чём стоять. Остальное
+    // догружается в основном цикле: иначе на большой дальности игрок ждал бы
+    // тысячи чанков, прежде чем войти, а сообщение о его входе остальные
+    // увидели бы только через десяток секунд. У оригинала так же: игрок
+    // появляется сразу, даль дорисовывается потом.
+    send_chunks_around(
+        stream,
+        shared,
+        (center_x, center_z),
+        &mut sent,
+        NEAR_CHUNKS,
+        usize::MAX,
+    )
+    .await?;
 
-    log_debug!("Play: отправлено чанков — {}", sent.len());
+    log_debug!("Play: отправлено ближних чанков — {}", sent.len());
 
     // Чужие игроки появляются в мире только теперь: сущность клиент создаёт
     // лишь после того, как получил запись об игроке в списке, а место в мире —
@@ -668,7 +723,7 @@ async fn enter_world(
 
     for other in &others {
         send_add_entity(stream, other).await?;
-        send_skin_parts(stream, other.entity_id, other.skin_parts).await?;
+        send_look(stream, other.entity_id, other.skin_parts, other.main_hand).await?;
         send_equipment(stream, other.entity_id, other.held).await?;
 
         seen.insert(
@@ -676,6 +731,7 @@ async fn enter_world(
             Shown {
                 position: other.position,
                 skin_parts: other.skin_parts,
+                main_hand: other.main_hand,
                 held: other.held,
             },
         );
@@ -786,14 +842,26 @@ async fn send_player_position(stream: &mut TcpStream, player: &PlayerState) -> i
     write_body(stream, body).await
 }
 
-/// Читает подтверждение телепортации, пропуская прочие пакеты клиента.
-async fn read_confirm_teleportation(stream: &mut TcpStream) -> io::Result<()> {
+/// Читает подтверждение телепортации, пропуская прочие пакеты клиента —
+/// кроме настроек: их клиент шлёт сразу после входа, и выбросить их значило
+/// бы потерять, например, его ведущую руку. Возвращает последние из них.
+async fn read_confirm_teleportation(
+    stream: &mut TcpStream,
+) -> io::Result<Option<configuration::ClientLook>> {
+    let mut look = None;
+
     loop {
         let packet = read_packet(stream).await?;
 
         if packet.id == CONFIRM_TELEPORTATION {
             log_debug!("Play: клиент подтвердил телепортацию");
-            return Ok(());
+            return Ok(look);
+        }
+
+        if packet.id == CLIENT_INFORMATION
+            && let Some(now) = configuration::read_look(packet.payload())
+        {
+            look = Some(now);
         }
 
         log_debug!(
@@ -1248,7 +1316,9 @@ async fn send_chunks_around(
     shared: &Shared,
     (center_x, center_z): (i32, i32),
     sent: &mut SentChunks,
-) -> io::Result<()> {
+    radius: i32,
+    limit: usize,
+) -> io::Result<bool> {
     // Ушедшие из виду чанки клиент выбрасывает сам. Сервер должен об этом
     // знать, иначе, вернувшись, игрок увидит на их месте пустоту: сервер
     // считал бы, что они у клиента уже есть.
@@ -1266,18 +1336,28 @@ async fn send_chunks_around(
     }
 
     // Что показать игроку: сперва ближние чанки, потом дальние — так земля
-    // под ногами появляется сразу, а даль дорисовывается.
+    // под ногами появляется сразу, а даль дорисовывается. За раз — не больше
+    // `limit`: остальное дошлёт следующий вызов, а игрок тем временем уже
+    // ходит и видит чат.
+    let radius = radius.min(view);
     let mut wanted: Vec<(i32, i32)> = Vec::new();
 
-    for chunk_x in (center_x - view)..=(center_x + view) {
-        for chunk_z in (center_z - view)..=(center_z + view) {
-            if sent.insert((chunk_x, chunk_z)) {
+    for chunk_x in (center_x - radius)..=(center_x + radius) {
+        for chunk_z in (center_z - radius)..=(center_z + radius) {
+            if !sent.contains(&(chunk_x, chunk_z)) {
                 wanted.push((chunk_x, chunk_z));
             }
         }
     }
 
     wanted.sort_by_key(|(x, z)| (x - center_x).pow(2) + (z - center_z).pow(2));
+
+    let all = wanted.len() <= limit;
+    wanted.truncate(limit);
+
+    for place in &wanted {
+        sent.insert(*place);
+    }
 
     // Готовим чанки пачками и сразу несколькими руками: складывание куска
     // мира — работа счётная, и на дальности в тридцать два чанка их тысячи.
@@ -1327,7 +1407,7 @@ async fn send_chunks_around(
         }
     }
 
-    Ok(())
+    Ok(all)
 }
 
 /// Отправляет Unload Chunk — «этот чанк можно забыть».
@@ -1342,20 +1422,27 @@ async fn send_unload_chunk(stream: &mut TcpStream, chunk_x: i32, chunk_z: i32) -
     write_body(stream, body).await
 }
 
-/// Отправляет Set Entity Data с набором показываемых частей скина.
+/// Отправляет Set Entity Data с тем, как игрок выглядит: ведущей рукой и
+/// набором показываемых частей скина.
 ///
-/// Без этого пакета клиент рисует чужого игрока в одном слое: сам скин у него
-/// уже есть, но второй слой — шапка и куртка — считается выключенным.
-async fn send_skin_parts(
+/// Без этого пакета клиент рисует чужого игрока в одном слое — сам скин у
+/// него уже есть, но второй слой, шапка и куртка, считается выключенным, —
+/// и любого игрока правшой.
+async fn send_look(
     stream: &mut TcpStream,
     entity_id: i32,
     skin_parts: u8,
+    main_hand: u8,
 ) -> io::Result<()> {
     let mut body = encode_varint(SET_ENTITY_DATA);
 
     body.extend_from_slice(&encode_varint(entity_id));
 
     // Свойства идут списком: номер, вид значения, само значение.
+    body.push(MAIN_HAND_PROPERTY);
+    body.extend_from_slice(&encode_varint(PROPERTY_HUMANOID_ARM));
+    body.extend_from_slice(&encode_varint(main_hand as i32));
+
     body.push(SKIN_PARTS_PROPERTY);
     body.extend_from_slice(&encode_varint(PROPERTY_BYTE));
     body.push(skin_parts);
@@ -1463,6 +1550,7 @@ async fn send_other_moves(
         let now = Shown {
             position: member.position,
             skin_parts: member.skin_parts,
+            main_hand: member.main_hand,
             held: member.held,
         };
 
@@ -1470,8 +1558,8 @@ async fn send_other_moves(
             continue;
         }
 
-        if now.skin_parts != shown.skin_parts {
-            send_skin_parts(stream, member.entity_id, now.skin_parts).await?;
+        if now.skin_parts != shown.skin_parts || now.main_hand != shown.main_hand {
+            send_look(stream, member.entity_id, now.skin_parts, now.main_hand).await?;
         }
 
         if now.held != shown.held {
@@ -2195,12 +2283,19 @@ async fn send_pending_player_changes(
                 let shown = Shown {
                     position: member.position,
                     skin_parts: member.skin_parts,
+                    main_hand: member.main_hand,
                     held: member.held,
                 };
 
                 if seen.insert(member.entity_id, shown).is_none() {
                     send_add_entity(stream, member).await?;
-                    send_skin_parts(stream, member.entity_id, member.skin_parts).await?;
+                    send_look(
+                        stream,
+                        member.entity_id,
+                        member.skin_parts,
+                        member.main_hand,
+                    )
+                    .await?;
                     send_equipment(stream, member.entity_id, member.held).await?;
                 }
             }
@@ -2607,6 +2702,10 @@ async fn read_and_log_play_packets(
     let mut standing_in = player.chunk();
     let mut seen = entered.seen;
 
+    // Весь ли обзор уже прислан. При входе прислан только ближний квадрат —
+    // даль догружается здесь, порциями.
+    let mut all_chunks_sent = false;
+
     // Круг цикла начинается либо с пакета клиента, либо с конца такта: всё,
     // что случилось в мире за такт, должно уйти клиенту сразу, а не тогда,
     // когда он в следующий раз что-нибудь пришлёт.
@@ -2654,7 +2753,21 @@ async fn read_and_log_play_packets(
             standing_in = chunk;
 
             send_center_chunk(stream, chunk).await?;
-            send_chunks_around(stream, shared, chunk, &mut sent_chunks).await?;
+            all_chunks_sent = false;
+        }
+
+        if !all_chunks_sent {
+            let view = shared.properties.view_distance;
+
+            all_chunks_sent = send_chunks_around(
+                stream,
+                shared,
+                chunk,
+                &mut sent_chunks,
+                view,
+                CHUNKS_PER_STEP,
+            )
+            .await?;
         }
 
         send_pending_player_changes(stream, shared, player, &mut player_changes, &mut seen).await?;
@@ -2687,7 +2800,18 @@ async fn read_and_log_play_packets(
 
                     standing_in = chunk;
                     send_center_chunk(stream, chunk).await?;
-                    send_chunks_around(stream, shared, chunk, &mut sent_chunks).await?;
+
+                    // Под ногами — сразу, даль — порциями в цикле.
+                    send_chunks_around(
+                        stream,
+                        shared,
+                        chunk,
+                        &mut sent_chunks,
+                        NEAR_CHUNKS,
+                        usize::MAX,
+                    )
+                    .await?;
+                    all_chunks_sent = false;
 
                     log_debug!(
                         "Play: игрок {} перенесён в {:.2} {:.2} {:.2}",
@@ -3081,14 +3205,28 @@ fn handle_client_packet(
             // Игрок поменял настройки: возможно, включил или выключил
             // какую-то часть скина. Остальным это разошлётся само —
             // по сравнению с тем, что им уже показано.
-            if let Some(parts) = configuration::read_skin_parts(payload) {
-                player.skin_parts = parts;
+            if let Some(look) = configuration::read_look(payload) {
+                log_debug!(
+                    "Play: {} сменил настройки: части скина {:#04X}, ведущая рука {}",
+                    player.name,
+                    look.skin_parts,
+                    if look.main_hand == configuration::RIGHT_HAND {
+                        "правая"
+                    } else {
+                        "левая"
+                    }
+                );
 
-                shared
+                player.skin_parts = look.skin_parts;
+                player.main_hand = look.main_hand;
+
+                let mut players = shared
                     .players
                     .lock()
-                    .expect("список игроков захвачен другим потоком")
-                    .set_skin_parts(&player.uuid, parts);
+                    .expect("список игроков захвачен другим потоком");
+
+                players.set_skin_parts(&player.uuid, look.skin_parts);
+                players.set_main_hand(&player.uuid, look.main_hand);
             }
         }
         SET_CARRIED_ITEM => {
@@ -3996,6 +4134,10 @@ struct PlayerState {
     /// остальным, чтобы увидеть второй слой его скина.
     skin_parts: u8,
 
+    /// Ведущая рука: 0 — левая, 1 — правая. Тоже настройка клиента, которую
+    /// сервер пересказывает остальным.
+    main_hand: u8,
+
     /// Что об игроке уже лежит на диске: прочитанное при заходе или записанное
     /// после. Нынешнее положение сравнивается именно с этим — записывается
     /// только то, что от него отличается.
@@ -4078,6 +4220,7 @@ impl PlayerState {
             state_id: 0,
             skin,
             skin_parts,
+            main_hand: configuration::RIGHT_HAND,
             reported: None,
             stopped: false,
             saved,
@@ -4094,6 +4237,7 @@ impl PlayerState {
             entity_id: 0,
             skin: self.skin.clone(),
             skin_parts: self.skin_parts,
+            main_hand: self.main_hand,
             held: self.inventory.held(),
             position: self.position(),
         }

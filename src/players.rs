@@ -56,6 +56,10 @@ pub struct Member {
     /// шапка. Без этого остальные видят только первый слой скина.
     pub skin_parts: u8,
 
+    /// Ведущая рука: 0 — левая, 1 — правая. Её настройка в клиенте, и
+    /// остальные видят левшу левшой, только если сервер им это перескажет.
+    pub main_hand: u8,
+
     /// Что игрок держит в руке. Остальные видят предмет в чужих руках
     /// только отсюда: в своём инвентаре чужие предметы им не показывают.
     pub held: Option<Stack>,
@@ -248,6 +252,13 @@ impl Players {
         }
     }
 
+    /// Игрок сменил ведущую руку в настройках — остальные должны это увидеть.
+    pub fn set_main_hand(&mut self, uuid: &[u8; 16], main_hand: u8) {
+        if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid) {
+            member.main_hand = main_hand;
+        }
+    }
+
     /// Поручает подключению игрока что-то сделать.
     pub fn order(&mut self, uuid: &[u8; 16], order: Order) {
         self.orders.entry(*uuid).or_default().push(order);
@@ -293,6 +304,7 @@ mod tests {
         Member {
             skin: None,
             skin_parts: 0x7F,
+            main_hand: 1,
             held: None,
             uuid: [uuid_byte; 16],
             name: name.to_string(),

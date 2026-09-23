@@ -30,9 +30,8 @@ pub struct ServerProperties {
     /// записано в level.dat, и настройка его не перебивает.
     pub level_seed: Option<i64>,
 
-    /// Ровный мир вместо обычного — настройка `level-type=minecraft:flat`,
-    /// как у оригинала.
-    pub flat_world: bool,
+    /// Тип мира — настройка `level-type`, как у оригинала, плюс наш.
+    pub world_kind: WorldKind,
 }
 
 impl Default for ServerProperties {
@@ -45,7 +44,7 @@ impl Default for ServerProperties {
             view_distance: 10,
             simulation_distance: 10,
             level_seed: None,
-            flat_world: false,
+            world_kind: WorldKind::Normal,
         }
     }
 }
@@ -88,11 +87,10 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
 
     let level_seed = values.get("level-seed").and_then(|value| seed_of(value));
 
-    // В файле двоеточие принято закрывать косой чертой, поэтому её убираем.
-    let flat_world = values
+    let world_kind = values
         .get("level-type")
-        .map(|value| value.replace('\\', "").trim().eq_ignore_ascii_case("minecraft:flat"))
-        .unwrap_or(false);
+        .map(|value| WorldKind::from_setting(value))
+        .unwrap_or(WorldKind::Normal);
 
     Ok(ServerProperties {
         motd,
@@ -101,8 +99,45 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
         view_distance,
         simulation_distance,
         level_seed,
-        flat_world,
+        world_kind,
     })
+}
+
+/// Тип мира.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum WorldKind {
+    /// Обычный — `minecraft:normal`, рельеф как у оригинала.
+    Normal,
+    /// Суперплоский — `minecraft:flat`.
+    Flat,
+    /// «Супер плавность» — `mcsheriffanya:super_smooth`, наш мягкий рельеф.
+    SuperSmooth,
+}
+
+impl WorldKind {
+    /// Разбирает значение `level-type`. В файле двоеточие принято закрывать
+    /// косой чертой, поэтому её убираем. Типы, которых у нас ещё нет
+    /// (большие биомы, расширенный), пока складываются обычным миром.
+    pub fn from_setting(value: &str) -> WorldKind {
+        let value = value.replace('\\', "");
+        let value = value.trim().to_ascii_lowercase();
+        let name = value.strip_prefix("minecraft:").unwrap_or(&value);
+
+        match name {
+            "flat" => WorldKind::Flat,
+            "mcsheriffanya:super_smooth" | "super_smooth" => WorldKind::SuperSmooth,
+            _ => WorldKind::Normal,
+        }
+    }
+
+    /// Как тип записывается в level.dat и в настройки.
+    pub fn name(self) -> &'static str {
+        match self {
+            WorldKind::Normal => "minecraft:normal",
+            WorldKind::Flat => "minecraft:flat",
+            WorldKind::SuperSmooth => "mcsheriffanya:super_smooth",
+        }
+    }
 }
 
 /// Семя мира из настройки: число берётся как есть, слово превращается
