@@ -47,7 +47,7 @@ fn world_key(terrain: &Terrain) -> u64 {
 }
 
 /// Перемешивание числа: из близких входов — далёкие выходы.
-fn scramble(mut value: u64) -> u64 {
+pub(super) fn scramble(mut value: u64) -> u64 {
     value = value.wrapping_add(0x9E37_79B9_7F4A_7C15);
     value = (value ^ (value >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
     value = (value ^ (value >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
@@ -55,7 +55,7 @@ fn scramble(mut value: u64) -> u64 {
 }
 
 /// Своё число для точки объёма и для вопроса `salt`.
-fn hash(key: u64, x: i32, y: i32, z: i32, salt: u64) -> u64 {
+pub(super) fn hash(key: u64, x: i32, y: i32, z: i32, salt: u64) -> u64 {
     let mut value = scramble(key ^ salt.wrapping_mul(0xD6E8_FEB8_6659_FD93));
 
     value = scramble(value ^ x as u32 as u64);
@@ -64,7 +64,7 @@ fn hash(key: u64, x: i32, y: i32, z: i32, salt: u64) -> u64 {
 }
 
 /// Число от 0 до 1 из перемешанного.
-fn unit(value: u64) -> f64 {
+pub(super) fn unit(value: u64) -> f64 {
     (value >> 11) as f64 / (1u64 << 53) as f64
 }
 

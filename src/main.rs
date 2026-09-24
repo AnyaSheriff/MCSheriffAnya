@@ -13,11 +13,13 @@
 // в точке появления и всё, что построили игроки.
 
 mod network;
+mod bedrock;
 mod config;
 mod world;
 mod blocks;
 mod blocks_table;
 mod placing;
+mod plants;
 mod entity;
 mod player;
 mod fluids;
@@ -107,9 +109,11 @@ async fn server() -> io::Result<()> {
     // как у обычного сервера.
     let settings = config::mcsheriffanya::Settings::load(Path::new(config::mcsheriffanya::FILE));
     log::set_debug(settings.debug);
+    world::terrain::AUTUMN_FORESTS.store(settings.autumn_forests, std::sync::atomic::Ordering::Relaxed);
+    world::terrain::PINK_CHERRY_GROVES.store(settings.pink_cherry_groves, std::sync::atomic::Ordering::Relaxed);
 
     if settings.debug {
-        log_info!("Подробный лог включён (config/mcsheriffanya.toml)");
+        log_info!("Подробный лог включён (config/mcsa.properties)");
     }
 
     // Образец таблицы «кому чей скин» — чтобы было видно, что писать.
@@ -137,14 +141,16 @@ async fn server() -> io::Result<()> {
     let properties = Arc::new(properties);
 
     // Всё, что подключения делят между собой: мир, список игроков и чат.
-    let shared = Arc::new(Shared::new(
+    let mut shared = Shared::new(
         World::open(WORLD_PATH, properties.level_seed, properties.world_kind)?,
         PathBuf::from(playerdata::DIRECTORY),
         PathBuf::from(skins::DIRECTORY),
         (*properties).clone(),
         ops::Ops::open(std::path::Path::new(ops::FILE)),
         skins::Settings::load(Path::new(skins::SETTINGS_FILE)),
-    ));
+    );
+    shared.settings = settings;
+    let shared = Arc::new(shared);
 
     // Остановка сервера: консоль сообщает о ней, а ждёт её вот этот приёмник.
     let (shutdown_sender, mut shutdown) = watch::channel(false);
@@ -153,6 +159,9 @@ async fn server() -> io::Result<()> {
 
     // Такт мира: без него жидкости стояли бы на месте.
     tick::start(Arc::clone(&shared));
+
+    // Игроки Bedrock — по UDP, на своём порту.
+    bedrock::start(Arc::clone(&shared));
 
     log_info!(
         "Готово ({:.3} с)! Чтобы узнать команды, набери help",

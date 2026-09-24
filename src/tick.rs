@@ -35,6 +35,9 @@ const UNLOAD_EVERY: u64 = 100;
 /// Меньше дальности прорисовки держать нельзя — выгрузился бы чанк, который
 /// игрок видит. А запас нужен, чтобы чанк не выгружался и не читался снова,
 /// когда игрок ходит туда-сюда через границу.
+///
+/// Мир, сложенный впрок (настройка `prefetch_chunks`), тоже держится: иначе
+/// его выгружало бы сразу после складывания.
 const KEEP_EXTRA: i32 = 2;
 
 /// Сколько мест пересчитывается за один такт.
@@ -271,7 +274,7 @@ fn unload_empty_chunks(shared: &Shared, world: &mut World) {
         })
         .collect();
 
-    let keep = shared.properties.view_distance + KEEP_EXTRA;
+    let keep = shared.properties.view_distance + KEEP_EXTRA.max(shared.settings.prefetch_chunks + 1);
 
     let unloaded = world.unload_far(|x, z| {
         players
@@ -390,7 +393,7 @@ fn drop_destroyed(shared: &Shared, world: &mut World) {
 }
 
 /// Пересчитывает одно место: во что там должна превратиться жидкость.
-fn flow(world: &mut World, x: i32, y: i32, z: i32) {
+pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
     // Правилам нужно смотреть на несколько блоков вперёд, поэтому им даётся
     // не набор соседей, а способ спросить любое место мира. Смотреть и менять
     // одновременно нельзя, поэтому сперва считаем, и только потом ставим.
@@ -404,6 +407,23 @@ fn flow(world: &mut World, x: i32, y: i32, z: i32) {
         // Изменение само разошлётся клиентам и само попросит пересчитать
         // соседей: этим занимается мир.
         world.set_block(x, y, z, state);
+        return;
+    }
+
+    // Сама жидкость не изменилась, но её такт пришёл не зря: рядом что-то
+    // поменялось — например, под ней залило пустоту, и теперь ей можно
+    // течь вбок. Решает за себя каждое место, поэтому пустоту рядом надо
+    // спросить заново: иначе вода так и стоит у края, пока её не тронут.
+    let here = world.get_block(x, y, z);
+
+    if let Some((kind, _)) = fluids::fluid_at(here) {
+        for (dx, dy, dz) in [(0, -1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1)] {
+            let next = world.get_block(x + dx, y + dy, z + dz);
+
+            if fluids::fluid_at(next).is_none() && fluids::can_flow_into(next) {
+                world.schedule(x + dx, y + dy, z + dz, kind.delay());
+            }
+        }
     }
 }
 

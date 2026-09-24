@@ -18,6 +18,7 @@ use crate::world::AIR;
 pub const GROUND: i32 = 0;
 
 /// Высота, на которой стоит игрок: над верхним блоком земли.
+#[cfg(test)]
 pub const SURFACE: i32 = GROUND + 1;
 
 /// Сколько слоёв земли под дёрном.
@@ -41,6 +42,7 @@ pub fn block_at(y: i32) -> i32 {
 }
 
 /// Ниже этой высоты блоков нет вовсе: всё, что там, — пустота.
+#[cfg(test)]
 pub fn bottom() -> i32 {
     GROUND - SOIL - 1
 }

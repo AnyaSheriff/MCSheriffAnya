@@ -165,15 +165,55 @@ pub async fn look_up(dir: &Path, name: &str, settings: Settings) -> Option<Skin>
         return remembered;
     }
 
-    let fetched = fetch(&source, settings).await;
-
-    if fetched.is_none() {
-        log_info!("Скины: скина {} нет ни в одном источнике", source);
-    }
+    let fetched = match fetch(&source, settings).await {
+        Answer::Found(skin) => Some(skin),
+        Answer::Missing => {
+            log_info!("Скины: скина {} нет ни в одном источнике", source);
+            None
+        }
+        // Сбой сети или отказ от лишних запросов — это не «скина нет».
+        // Запомнить такое на сутки значило бы сутки ходить без скина.
+        Answer::Failed => {
+            log_warn!("Скины: источники скина {} не ответили — спрошу при следующем входе", source);
+            return None;
+        }
+    };
 
     write_cache(&cache_path(dir, &source), fetched.as_ref());
 
     fetched
+}
+
+/// Ответ источника скинов.
+#[derive(Debug, PartialEq)]
+enum Answer {
+    Found(Skin),
+    /// Источник ответил, что такого игрока или скина нет.
+    Missing,
+    /// Источник не ответил толком: сеть, отказ, ошибка на их стороне.
+    Failed,
+}
+
+impl Answer {
+    /// Ответ по коду HTTP, когда тела ответа не нужно: нет игрока — это
+    /// 404 или 204 (так Mojang отвечал раньше), остальное — сбой.
+    fn from_status(status: reqwest::StatusCode) -> Answer {
+        if status == reqwest::StatusCode::NOT_FOUND || status == reqwest::StatusCode::NO_CONTENT {
+            Answer::Missing
+        } else {
+            Answer::Failed
+        }
+    }
+}
+
+/// Итог двух источников: найденный скин — по порядку предпочтения; «нет»
+/// — только если все опрошенные сказали «нет».
+fn combine(mojang: Answer, ely: Answer) -> Answer {
+    match (mojang, ely) {
+        (Answer::Found(skin), _) | (_, Answer::Found(skin)) => Answer::Found(skin),
+        (Answer::Missing, Answer::Missing) => Answer::Missing,
+        _ => Answer::Failed,
+    }
 }
 
 /// Чей скин выдать этому нику по своей таблице.
@@ -286,8 +326,10 @@ fn now() -> u64 {
 /// Спрашивает скин у Mojang.
 ///
 /// Спрашивает источники по порядку: сперва Mojang, потом Ely.by.
-async fn fetch(name: &str, settings: Settings) -> Option<Skin> {
-    let client = client()?;
+async fn fetch(name: &str, settings: Settings) -> Answer {
+    let Some(client) = client() else {
+        return Answer::Failed;
+    };
 
     // Оба источника спрашиваются сразу, а не по очереди: так игрок ждёт
     // самого медленного, а не их сумму. Предпочтение — прежнее: Mojang.
@@ -295,30 +337,26 @@ async fn fetch(name: &str, settings: Settings) -> Option<Skin> {
         if settings.mojang {
             fetch_mojang(client, name).await
         } else {
-            None
+            Answer::Missing
         }
     };
     let ely = async {
         if settings.ely {
             fetch_ely(client, name).await
         } else {
-            None
+            Answer::Missing
         }
     };
 
     let (mojang, ely) = tokio::join!(mojang, ely);
 
-    if let Some(skin) = mojang {
+    if matches!(mojang, Answer::Found(_)) {
         log_info!("Скины: скин {} получен от Mojang", name);
-        return Some(skin);
-    }
-
-    if let Some(skin) = ely {
+    } else if matches!(ely, Answer::Found(_)) {
         log_info!("Скины: скин {} получен от Ely.by", name);
-        return Some(skin);
     }
 
-    None
+    combine(mojang, ely)
 }
 
 /// Скин у Mojang.
@@ -326,21 +364,32 @@ async fn fetch(name: &str, settings: Settings) -> Option<Skin> {
 /// Делается это в два захода: сперва по нику узнаётся опознаватель игрока,
 /// потом по опознавателю — его профиль со свойствами. Подпись отдают только
 /// если её попросить отдельно, потому и unsigned=false.
-async fn fetch_mojang(client: &reqwest::Client, name: &str) -> Option<Skin> {
-    let uuid = fetch_uuid(client, name).await?;
-    let profile = client
+async fn fetch_mojang(client: &reqwest::Client, name: &str) -> Answer {
+    let uuid = match fetch_uuid(client, name).await {
+        Ok(uuid) => uuid,
+        Err(answer) => return answer,
+    };
+    let answer = client
         .get(format!(
             "https://sessionserver.mojang.com/session/minecraft/profile/{}?unsigned=false",
             uuid
         ))
         .send()
-        .await
-        .ok()?
-        .text()
-        .await
-        .ok()?;
+        .await;
 
-    textures(&profile)
+    let answer = match answer {
+        Ok(answer) if answer.status().is_success() => answer,
+        Ok(answer) => return Answer::from_status(answer.status()),
+        Err(error) => {
+            log_warn!("Скины: до Mojang не достучаться: {}", error);
+            return Answer::Failed;
+        }
+    };
+
+    match answer.text().await {
+        Ok(profile) => textures(&profile).map_or(Answer::Missing, Answer::Found),
+        Err(_) => Answer::Failed,
+    }
 }
 
 /// Скин у Ely.by.
@@ -349,7 +398,7 @@ async fn fetch_mojang(client: &reqwest::Client, name: &str) -> Option<Skin> {
 /// виде, что у Mojang: «This endpoint is an analog of the player profile
 /// query in the Mojang's API, but instead of UUID user is queried by his
 /// nickname» (docs.ely.by). Поэтому и разбирается тем же кодом.
-async fn fetch_ely(client: &reqwest::Client, name: &str) -> Option<Skin> {
+async fn fetch_ely(client: &reqwest::Client, name: &str) -> Answer {
     let answer = client
         .get(format!("http://skinsystem.ely.by/profile/{}", name))
         .send()
@@ -359,15 +408,18 @@ async fn fetch_ely(client: &reqwest::Client, name: &str) -> Option<Skin> {
         Ok(answer) => answer,
         Err(error) => {
             log_warn!("Скины: до Ely.by не достучаться: {}", error);
-            return None;
+            return Answer::Failed;
         }
     };
 
     if !answer.status().is_success() {
-        return None;
+        return Answer::from_status(answer.status());
     }
 
-    textures(&answer.text().await.ok()?)
+    match answer.text().await {
+        Ok(profile) => textures(&profile).map_or(Answer::Missing, Answer::Found),
+        Err(_) => Answer::Failed,
+    }
 }
 
 /// Тот, через кого сервер ходит к Mojang.
@@ -383,8 +435,20 @@ fn client() -> Option<&'static reqwest::Client> {
         .as_ref()
 }
 
-/// Узнаёт опознаватель игрока по нику.
-async fn fetch_uuid(client: &reqwest::Client, name: &str) -> Option<String> {
+/// Скачивает картинку скина по ссылке из его описания — для клиентов
+/// Bedrock, которым картинка нужна целиком.
+pub async fn download(url: &str) -> Option<Vec<u8>> {
+    let answer = client()?.get(url).send().await.ok()?;
+
+    if !answer.status().is_success() {
+        return None;
+    }
+
+    answer.bytes().await.ok().map(|bytes| bytes.to_vec())
+}
+
+/// Узнаёт опознаватель игрока по нику; если не вышло — почему.
+async fn fetch_uuid(client: &reqwest::Client, name: &str) -> Result<String, Answer> {
     let answer = client
         .get(format!(
             "https://api.mojang.com/users/profiles/minecraft/{}",
@@ -397,18 +461,18 @@ async fn fetch_uuid(client: &reqwest::Client, name: &str) -> Option<String> {
         Ok(answer) => answer,
         Err(error) => {
             log_warn!("Скины: до Mojang не достучаться: {}", error);
-            return None;
+            return Err(Answer::Failed);
         }
     };
 
     if !answer.status().is_success() {
-        return None;
+        return Err(Answer::from_status(answer.status()));
     }
 
-    let text = answer.text().await.ok()?;
-    let parsed: serde_json::Value = serde_json::from_str(&text).ok()?;
+    let text = answer.text().await.map_err(|_| Answer::Failed)?;
+    let parsed: serde_json::Value = serde_json::from_str(&text).map_err(|_| Answer::Failed)?;
 
-    parsed.get("id")?.as_str().map(|id| id.to_string())
+    parsed.get("id").and_then(|id| id.as_str()).map(str::to_string).ok_or(Answer::Missing)
 }
 
 /// Достаёт из профиля свойство со скином.
@@ -513,6 +577,18 @@ mod tests {
     }
 
     /// Свойство со скином достаётся из профиля, а профиль без него ничего не
+    /// Сбой источника — не «скина нет»: такое не запоминается на сутки.
+    #[test]
+    fn a_failed_source_is_not_an_absent_skin() {
+        let skin = || Skin { value: "описание".to_string(), signature: String::new() };
+
+        assert_eq!(combine(Answer::Missing, Answer::Failed), Answer::Failed);
+        assert_eq!(combine(Answer::Missing, Answer::Missing), Answer::Missing);
+        assert_eq!(combine(Answer::Failed, Answer::Found(skin())), Answer::Found(skin()));
+        assert_eq!(Answer::from_status(reqwest::StatusCode::TOO_MANY_REQUESTS), Answer::Failed);
+        assert_eq!(Answer::from_status(reqwest::StatusCode::NOT_FOUND), Answer::Missing);
+    }
+
     /// даёт.
     #[test]
     fn the_skin_is_taken_from_the_profile() {

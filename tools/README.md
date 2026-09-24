@@ -16,6 +16,15 @@
 его надо ломать, чтобы что-то выпало (`harvestTools`). Из `items.json` —
 размер стопки (`stackSize`).
 
+Для освещения из `blocks.json` берутся `emitLight` (сколько блок светит) и
+`filterLight` (сколько гасит проходящего света). Оба числа в данных — на весь
+блок, без оглядки на состояние, поэтому там, где свет зависит от состояния
+(горящая печь, лампа, ягоды пещерной лозы, свечи по числу, огурцы в воде,
+заряды якоря, хранилище и испытательный спавнер), значения выписаны
+в `make_block_table.py` по страницам вики (Light и страницы самих блоков).
+Там же по списку со страницы Light — какие грани у плит, ступеней, грядки,
+тропинки и снега закрыты для света целиком.
+
 ## Что в них важно понимать
 
 Эти данные — не документация. Их собрали, разобрав файлы самой игры, и выложили
@@ -105,3 +114,25 @@ north, south, west, east — ни по алфавиту, ни по кругу. �
 Conductivity на minecraft.wiki: «List of conductive blocks» и «List of
 non-conductive blocks». Отдельно разобрана плита: двойная проводит,
 обычная — нет.
+
+## Таблицы для Bedrock
+
+    python3 tools/make_bedrock_tables.py
+
+Источники — только данные: minecraft-data (`data/bedrock/1.26.10`:
+`blockStates.json`, `items.json`, `blocks.json`; `data/bedrock/1.26.0`:
+`blocksJ2B.json`), наши `tools/data/blocks.json` и `items.json` и страница
+вики «Biome/ID». Файлы minecraft-data лежат в
+`~/.cache/mcsheriffanya/minecraft-data/bedrock/<версия>/` — их берут из
+репозитория PrismarineJS/minecraft-data. Программа пишет в `src/bedrock/`:
+перевод состояний блоков Java → Bedrock, тело пакета Item Registry,
+творческий инвентарь (предметы Java, которые есть у Bedrock), перевод
+предметов Bedrock → Java и номера и имена биомов (`tables.rs`).
+
+Проверки Bedrock — роботом-клиентом bedrock-protocol как чёрным ящиком
+(его код не читаем): `tools/measure/bedrockbot.js` — вход, пакеты, чанки;
+`tools/measure/bedrockbuild.js` — ломание и постановка блоков
+(`node … <порт> <ник>`); `tools/measure/bedrockinv.js` — инвентарь:
+предмет из творческого меню, выброс. Робот
+ставится в `~/node_modules` (`npm install bedrock-protocol --allow-git=all`)
+и работает с `raknetBackend: 'jsp-raknet'`.

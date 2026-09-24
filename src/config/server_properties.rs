@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
-use crate::{log_info};
+use crate::{log_info, log_warn};
 
 /// Настройки сервера, загружаемые из server.properties.
 #[derive(Debug, Clone)]
@@ -61,6 +61,7 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
     }
 
     let content = fs::read_to_string(file_path)?;
+    point_to_own_settings(file_path, &content);
     let values = parse_properties(&content);
     let defaults = ServerProperties::default();
 
@@ -182,7 +183,7 @@ fn distance(values: &HashMap<String, String>, key: &str, default: i32) -> i32 {
 
 /// Разбирает содержимое файла в формате key=value в HashMap.
 /// Пустые строки и строки, начинающиеся с '#', пропускаются.
-fn parse_properties(content: &str) -> HashMap<String, String> {
+pub(crate) fn parse_properties(content: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
 
     for line in content.lines() {
@@ -299,9 +300,11 @@ fn create_default_properties(path: &Path) -> io::Result<()> {
          #{}\n\
          #Названия и значения по умолчанию — как у оригинального сервера.\n\
          #Сервер пока слушается этих настроек: {}.\n\
-         #Остальные лежат для вида: поведения за ними ещё нет.\n",
+         #Остальные лежат для вида: поведения за ними ещё нет.\n\
+         {}\n",
         written_at(),
-        HONOURED.join(", ")
+        HONOURED.join(", "),
+        OWN_SETTINGS_NOTE
     );
 
     for (key, value) in DEFAULT_PROPERTIES {
@@ -314,6 +317,28 @@ fn create_default_properties(path: &Path) -> io::Result<()> {
     log_info!("Создан файл настроек по умолчанию: {}", path.display());
 
     Ok(())
+}
+
+/// Строка-пояснение: где лежат настройки, которых у оригинала нет.
+const OWN_SETTINGS_NOTE: &str = "#Дополнительные настройки MCSheriffAnya (которых нет у оригинала) — в mcsa.properties рядом.";
+
+/// Дописывает пояснение про mcsa.properties в файл, созданный до того, как
+/// оно появилось: сразу после вводных комментариев, ничего не меняя в самих
+/// настройках. Не записалось — не беда, файл читается и так.
+fn point_to_own_settings(path: &Path, content: &str) {
+    if content.contains("mcsa.properties") {
+        return;
+    }
+
+    let head = content.lines().take_while(|line| line.starts_with('#')).count();
+    let mut lines: Vec<&str> = content.lines().collect();
+    lines.insert(head, OWN_SETTINGS_NOTE);
+    let mut text = lines.join("\n");
+    text.push('\n');
+
+    if let Err(error) = fs::write(path, text) {
+        log_warn!("{}: пояснение про mcsa.properties не дописано: {}", path.display(), error);
+    }
 }
 
 /// Время создания файла — в том же виде, в каком его пишет оригинальный
@@ -355,6 +380,35 @@ fn written_at() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// В новом файле и в старом, где пояснения ещё не было, есть строка про
+    /// mcsa.properties; сами настройки при этом не меняются.
+    #[test]
+    fn the_file_points_to_our_own_settings() {
+        let directory = std::env::temp_dir().join(format!("mcsheriffanya-props-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).expect("папка");
+
+        let fresh = directory.join("fresh.properties");
+        load_server_properties(fresh.to_str().expect("путь")).expect("читается");
+        assert!(fs::read_to_string(&fresh).expect("есть").contains("mcsa.properties"));
+
+        let old = directory.join("old.properties");
+        fs::write(&old, "#старый заголовок\n#ещё строка\nmotd=Мой\nview-distance=12\n").expect("пишется");
+        let properties = load_server_properties(old.to_str().expect("путь")).expect("читается");
+        let text = fs::read_to_string(&old).expect("есть");
+
+        assert_eq!(properties.motd, "Мой");
+        assert_eq!(properties.view_distance, 12);
+        assert_eq!(text.lines().nth(2), Some(OWN_SETTINGS_NOTE), "{}", text);
+        assert!(text.ends_with("view-distance=12\n"), "{}", text);
+
+        // Второй раз пояснение не дописывается.
+        load_server_properties(old.to_str().expect("путь")).expect("читается");
+        assert_eq!(fs::read_to_string(&old).expect("есть"), text);
+
+        let _ = fs::remove_dir_all(&directory);
+    }
 
     /// Дальности читаются из файла, а негодные значения заменяются
     /// значением по умолчанию: опечатка в настройках не должна ронять сервер.
