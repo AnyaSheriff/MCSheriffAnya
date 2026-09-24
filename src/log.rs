@@ -16,7 +16,7 @@
 // По умолчанию консоль немногословна — как у обычного сервера: кто зашёл и
 // откуда, кто вышел, чат, команды, скины. Всё техническое (пакеты, движение,
 // служебный обмен) идёт через log_debug! и печатается только при
-// debug = true в config/mcsheriffanya.toml.
+// debug=true в config/mcsa.properties.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -25,7 +25,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const UNKNOWN_TIME: &str = "--:--:--";
 
 /// Включён ли подробный лог. Задаётся один раз при запуске из настроек
-/// (`config/mcsheriffanya.toml`, ключ `debug`).
+/// (`config/mcsa.properties`, ключ `debug`).
 static DEBUG: AtomicBool = AtomicBool::new(false);
 
 /// Включает или выключает подробный лог.

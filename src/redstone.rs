@@ -1315,7 +1315,7 @@ fn block_changed(world: &mut World, pos: Pos, old: i32, depth: usize) {
     if !quiet {
         // Сперва сам блок: поставленный повторитель должен увидеть сигнал на
         // входе сразу, а не ждать, пока шевельнётся сосед.
-        neighbour_changed(world, pos);
+        itself_changed(world, pos);
         settle_from(world, depth + 1);
 
         for dir in NEIGHBOUR_ORDER {
@@ -1447,6 +1447,18 @@ fn reach_of(block: &Block, pos: Pos) -> Vec<Pos> {
 
 /// У блока в этом месте изменился сосед: решаем, что с ним делать.
 fn neighbour_changed(world: &mut World, pos: Pos) {
+    react(world, pos, false);
+}
+
+/// Блок только что поставлен или сменился сам. Разбирается как «сосед
+/// изменился», кроме растений: у оригинала растение проверяет опору, лишь
+/// когда меняется сосед, — трава, поставленная командой на камень, стоит,
+/// пока её не тронут (сценарий чёрного ящика grass-crush).
+fn itself_changed(world: &mut World, pos: Pos) {
+    react(world, pos, true);
+}
+
+fn react(world: &mut World, pos: Pos, itself: bool) {
     let block = Block::at(world, pos);
 
     match block.kind {
@@ -1650,6 +1662,12 @@ fn neighbour_changed(world: &mut World, pos: Pos) {
         // Наблюдатель на соседей не смотрит: его будит только изменение
         // блока прямо перед глазами, и делает это block_changed.
         Kind::RedstoneBlock | Kind::Observer | Kind::Other => {
+            // Растению нужна своя опора: убрали землю из-под цветка — цветок
+            // ломается и выпадает (правила — в модуле plants).
+            if !itself && crate::plants::check(world, pos.0, pos.1, pos.2) {
+                return;
+            }
+
             // Песку и гравию нужна опора: не стало её — блок падает.
             // Заводить сущность отсюда нечем, поэтому место просто
             // запоминается, а падение начнёт такт мира.
@@ -3415,6 +3433,8 @@ mod tests {
         // Трава ломается, поршень выдвигается.
         let mut through_grass = world();
         put(&mut through_grass, (0, 1, 0), piston);
+        // Траве нужна земля: на каменном полу она не стоит.
+        put(&mut through_grass, (1, 0, 0), blocks::state_by_name("dirt").unwrap());
         put(&mut through_grass, (1, 1, 0), grass);
         put(&mut through_grass, (0, 2, 0), lever);
 
@@ -3579,6 +3599,8 @@ mod tests {
         let grass = blocks::state_by_name("short_grass").unwrap();
 
         put(&mut world, (0, 1, 0), piston);
+        // Траве нужна земля: на каменном полу она не стоит.
+        put(&mut world, (1, 0, 0), blocks::state_by_name("dirt").unwrap());
         put(&mut world, (1, 1, 0), grass);
         put(&mut world, (0, 2, 0), lever);
 
@@ -4467,6 +4489,8 @@ mod tests {
         let grass = blocks::state_by_name("short_grass").unwrap();
 
         put(&mut world, (0, 1, 0), piston);
+        // Траве нужна земля: на каменном полу она не стоит.
+        put(&mut world, (1, 0, 0), blocks::state_by_name("dirt").unwrap());
         put(&mut world, (1, 1, 0), grass); // сломается при ходе
         put(&mut world, (0, 2, 0), lever);
 
@@ -4803,6 +4827,8 @@ mod tests {
         let grass = blocks::state_by_name("short_grass").unwrap();
 
         put(&mut world, (0, 1, 0), piston);
+        // Траве нужна земля: на каменном полу она не стоит.
+        put(&mut world, (1, 0, 0), blocks::state_by_name("dirt").unwrap());
         put(&mut world, (1, 1, 0), grass);
         put(&mut world, (0, 2, 0), lever);
 

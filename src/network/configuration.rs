@@ -314,6 +314,11 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 21] = [
             "eroded_badlands",
             "wooded_badlands",
             "pale_garden",
+            "lush_caves",
+            "dripstone_caves",
+            "deep_dark",
+            // Свои биомы — после всех оригинальных (terrain::CUSTOM_BIOMES).
+            "mcsheriffanya:autumn_forest",
         ],
     ),
     // Мировые часы: требуются по одной записи на каждое измерение, иначе
@@ -509,9 +514,10 @@ pub async fn send_registry_data(stream: &mut TcpStream) -> io::Result<usize> {
     Ok(entries)
 }
 
-/// Идентификатор записи реестра: имена в таблицах записаны без namespace.
+/// Идентификатор записи реестра: имена оригинала записаны в таблицах без
+/// namespace, свои — с ним.
 fn entry_id(name: &str) -> String {
-    format!("minecraft:{}", name)
+    if name.contains(':') { name.to_string() } else { format!("minecraft:{}", name) }
 }
 
 /// Ключ сообщения о смерти для записи реестра: часть имени после двоеточия.
@@ -654,6 +660,8 @@ pub struct ClientLook {
     pub skin_parts: u8,
     /// Ведущая рука: 0 — левая, 1 — правая.
     pub main_hand: u8,
+    /// Дальность прорисовки, выставленная у игрока, в чанках.
+    pub view_distance: u8,
 }
 
 impl ClientLook {
@@ -661,6 +669,8 @@ impl ClientLook {
     pub const DEFAULT: ClientLook = ClientLook {
         skin_parts: ALL_SKIN_PARTS,
         main_hand: RIGHT_HAND,
+        // Не знаем — тогда сколько позволит сервер.
+        view_distance: u8::MAX,
     };
 }
 
@@ -711,6 +721,7 @@ pub fn read_look(payload: &[u8]) -> Option<ClientLook> {
     decode_string(payload, &mut offset).ok()?;
 
     // Дальность прорисовки — один байт.
+    let view_distance = *payload.get(offset)?;
     offset += 1;
 
     // Режим чата — число переменной длины.
@@ -734,6 +745,7 @@ pub fn read_look(payload: &[u8]) -> Option<ClientLook> {
     Some(ClientLook {
         skin_parts,
         main_hand,
+        view_distance,
     })
 }
 
@@ -758,6 +770,23 @@ mod tests {
 
         assert_eq!(DAMAGE_TYPES.len(), saved.len());
         assert_eq!(DAMAGE_TYPES.to_vec(), saved);
+    }
+
+    /// Номер биома в пакете чанка — его место в реестре, который шлёт сервер.
+    /// Поэтому реестр обязан идти в том же порядке, что и `Biome::ALL`.
+    #[test]
+    fn biome_registry_follows_the_biome_list() {
+        let (_, sent) = REQUIRED_REGISTRIES
+            .iter()
+            .find(|(name, _)| *name == "minecraft:worldgen/biome")
+            .expect("реестра биомов нет");
+        let ours: Vec<&str> = crate::world::terrain::Biome::ALL
+            .iter()
+            .map(|biome| biome.name())
+            .chain(crate::world::terrain::CUSTOM_BIOMES)
+            .collect();
+
+        assert_eq!(sent.to_vec(), ours);
     }
 
     /// Запись реестра собирается для каждого вида урона: ключ сообщения о смерти
@@ -794,7 +823,8 @@ mod tests {
             read_look(&settings),
             Some(ClientLook {
                 skin_parts: 0x7E,
-                main_hand: 0
+                main_hand: 0,
+                view_distance: 12,
             })
         );
 

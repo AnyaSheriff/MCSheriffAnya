@@ -336,6 +336,170 @@ def state_ranges(states: list[int]) -> list[tuple[int, int]]:
     return [(low, high) for low, high in merged]
 
 
+# Свет. В исходных данных у блока одно число «светит» (emitLight) и одно
+# «гасит» (filterLight) — на весь блок, без оглядки на состояние. Для
+# большинства блоков этого хватает, а там, где свет зависит от состояния,
+# значения выписаны по вики (minecraft.wiki, страница Light и страницы самих
+# блоков): горящая печь, лампа, ягоды пещерной лозы, свечи по числу и т. п.
+
+# Грани блока — биты маски «грань закрыта целиком». Порядок тот же, что
+# у направлений в src/world/light.rs.
+FACE_DOWN = 1
+FACE_UP = 2
+FACE_BY_NAME = {"down": 1, "up": 2, "north": 4, "south": 8, "west": 16, "east": 32}
+ALL_FACES = 63
+
+# Блоки, горящие только при «lit», и сколько они тогда светят.
+LIT_LIGHT = {
+    "furnace": 13,
+    "blast_furnace": 13,
+    "smoker": 13,
+    "redstone_ore": 9,
+    "deepslate_redstone_ore": 9,
+    "redstone_lamp": 15,
+    "redstone_torch": 7,
+    "redstone_wall_torch": 7,
+    "campfire": 15,
+    "soul_campfire": 10,
+    "copper_bulb": 15,
+    "exposed_copper_bulb": 12,
+    "weathered_copper_bulb": 8,
+    "oxidized_copper_bulb": 4,
+    "waxed_copper_bulb": 15,
+    "waxed_exposed_copper_bulb": 12,
+    "waxed_weathered_copper_bulb": 8,
+    "waxed_oxidized_copper_bulb": 4,
+}
+
+# Заряды якоря возрождения → свет.
+ANCHOR_LIGHT = (0, 3, 7, 11, 15)
+
+# Хранилище: неактивное светит слабее (вики, Vault).
+VAULT_LIGHT = {"inactive": 6, "active": 12, "unlocking": 12, "ejecting": 12}
+
+# Испытательный спавнер: «светит, когда не неактивен; ждёт игроков — 4,
+# активен — 8» (вики, Trial Spawner). Остальные рабочие состояния считаем
+# активными.
+TRIAL_SPAWNER_LIGHT = {
+    "inactive": 0,
+    "waiting_for_players": 4,
+    "active": 8,
+    "waiting_for_reward_ejection": 8,
+    "ejecting_reward": 8,
+    "cooldown": 8,
+}
+
+# Блоки, у которых свет проходит не во все стороны: плиты, ступени, грядка,
+# тропинка, снег и прочие из списка на странице Light. У них закрыта целиком
+# нижняя грань — свет сквозь неё вниз не идёт.
+BOTTOM_CLOSED = (
+    "farmland",
+    "dirt_path",
+    "daylight_detector",
+    "enchanting_table",
+    "lectern",
+    "stonecutter",
+    "end_portal_frame",
+)
+
+
+def emitted_light(block: dict, values: dict[str, str]) -> int:
+    """Сколько света испускает блок в этом состоянии."""
+    name = block["name"]
+
+    if name in LIT_LIGHT:
+        return LIT_LIGHT[name] if values.get("lit") == "true" else 0
+    if name.endswith("candle"):
+        return 3 * int(values["candles"]) if values.get("lit") == "true" else 0
+    if name.endswith("candle_cake"):
+        return 3 if values.get("lit") == "true" else 0
+    if name in ("cave_vines", "cave_vines_plant"):
+        return 14 if values.get("berries") == "true" else 0
+    if name == "glow_lichen":
+        return 7
+    if name == "sea_pickle":
+        # Светится только в воде: 6, 9, 12, 15 по числу огурцов.
+        if values.get("waterlogged") != "true":
+            return 0
+        return 3 + 3 * int(values["pickles"])
+    if name == "respawn_anchor":
+        return ANCHOR_LIGHT[int(values["charges"])]
+    if name == "light":
+        return int(values["level"])
+    if name == "vault":
+        return VAULT_LIGHT[values["vault_state"]]
+    if name == "trial_spawner":
+        return TRIAL_SPAWNER_LIGHT[values["trial_spawner_state"]]
+
+    return block["emitLight"]
+
+
+def closed_faces(block: dict, values: dict[str, str]) -> int:
+    """Грани, закрытые целиком, у блоков, пропускающих свет не во все стороны."""
+    name = block["name"]
+
+    if name.endswith("_slab"):
+        return {"bottom": FACE_DOWN, "top": FACE_UP, "double": ALL_FACES}[values["type"]]
+    if name.endswith("_stairs"):
+        faces = FACE_DOWN if values["half"] == "bottom" else FACE_UP
+        # Высокая часть ступеней — со стороны `facing`: у прямых и у
+        # внутреннего угла эта грань закрыта вся, у внешнего — только четверть.
+        if not values["shape"].startswith("outer"):
+            faces |= FACE_BY_NAME[values["facing"]]
+        return faces
+    if name == "snow":
+        return ALL_FACES if values["layers"] == "8" else FACE_DOWN
+    if name == "piston_head":
+        return FACE_BY_NAME[values["facing"]]
+    if name in BOTTOM_CLOSED:
+        return FACE_DOWN
+
+    return 0
+
+
+def filtered_light(block: dict, values: dict[str, str]) -> int:
+    """Сколько блок гасит проходящего света (0 — прозрачен, 15 — глух)."""
+    filter_ = block["filterLight"]
+
+    # Прозрачный блок, залитый водой, гасит небесный свет как вода.
+    if block.get("transparent") and values.get("waterlogged") == "true":
+        filter_ = max(filter_, 1)
+
+    return filter_
+
+
+def light_ranges(blocks: list[dict]) -> list[tuple[int, int, int, int, int]]:
+    """Свет по состояниям: промежутки с одинаковыми значениями.
+
+    Состояния, где все три числа нулевые (воздух, трава, стекло), не
+    выписываются: таких большинство.
+    """
+    rows: list[list[int]] = []
+
+    for block in sorted(blocks, key=lambda block: block["minStateId"]):
+        for state in range(block["minStateId"], block["maxStateId"] + 1):
+            values = state_values(block, state)
+            light = (
+                emitted_light(block, values),
+                filtered_light(block, values),
+                closed_faces(block, values),
+            )
+
+            # Полностью закрытый со всех сторон блок — то же, что глухой.
+            if light[2] == ALL_FACES:
+                light = (light[0], 15, 0)
+
+            if light == (0, 0, 0):
+                continue
+
+            if rows and rows[-1][1] == state - 1 and tuple(rows[-1][2:]) == light:
+                rows[-1][1] = state
+            else:
+                rows.append([state, state, *light])
+
+    return [tuple(row) for row in rows]
+
+
 def main() -> None:
     blocks = json.loads((DATA / "blocks.json").read_text(encoding="utf-8"))
     items = json.loads((DATA / "items.json").read_text(encoding="utf-8"))
@@ -603,6 +767,18 @@ def main() -> None:
 
     lines.append("];")
     lines.append("")
+    lines.append("/// Свет по состояниям блоков: номера состояний от и до, сколько блок")
+    lines.append("/// светит, сколько гасит проходящего света (0 — прозрачен, 15 — глух)")
+    lines.append("/// и какие грани закрыты целиком (биты: низ, верх, север, юг, запад,")
+    lines.append("/// восток). Состояний, где все три числа нулевые, здесь нет.")
+    lines.append("pub const LIGHT: &[(i32, i32, u8, u8, u8)] = &[")
+
+    light = light_ranges(blocks)
+    for low, high, emit, filter_, faces in light:
+        lines.append(f"    ({low}, {high}, {emit}, {filter_}, {faces}),")
+
+    lines.append("];")
+    lines.append("")
 
     OUTPUT.write_text("\n".join(lines), encoding="utf-8")
 
@@ -619,6 +795,7 @@ def main() -> None:
     print(f"Записано предметов, не ломающих блоки нигде: {len(harmless)}")
     print(f"Записано имён блоков: {len(blocks)}")
     print(f"Записано полных кубов: {full}, блоков без ящика: {empty}")
+    print(f"Записано промежутков света: {len(light)}")
 
 
 if __name__ == "__main__":

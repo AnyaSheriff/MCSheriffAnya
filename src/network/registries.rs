@@ -474,71 +474,234 @@ fn dimension_type() -> Compound {
 ///
 /// Списки генерации пустые: мир складывает сервер, а не клиент.
 fn biome(name: &str) -> Compound {
-    let biome = crate::world::terrain::Biome::ALL
+    use crate::world::terrain::Biome;
+
+    // Осенний лес во всём, кроме цвета, — обычный лес.
+    let base = if name == crate::world::terrain::AUTUMN_FOREST { "forest" } else { name };
+    let biome = Biome::ALL
         .iter()
-        .find(|biome| biome.name() == name)
+        .find(|biome| biome.name() == base)
         .copied()
-        .unwrap_or(crate::world::terrain::Biome::Plains);
+        .unwrap_or(Biome::Plains);
 
     let (temperature, downfall) = biome.climate();
+    let look = look(name);
 
-    Compound::new()
-        .boolean("has_precipitation", temperature < 2.0)
-        .float("temperature", temperature)
-        .float("downfall", downfall)
-        .compound(
-            "effects",
+    // Небо, туман и подводный туман в 26.1 — свойства среды, как у измерения;
+    // биом лишь заменяет их у себя. Цвета воды, травы и листвы остались
+    // в `effects`. Цвета — строками `#rrggbb`, как в данных игры на вики.
+    let mut attributes = Compound::new().string("minecraft:visual/sky_color", look.sky);
+
+    if let Some(fog) = look.fog {
+        attributes = attributes.string("minecraft:visual/fog_color", fog);
+    }
+
+    if let Some(water_fog) = look.water_fog {
+        attributes = attributes.string("minecraft:visual/water_fog_color", water_fog);
+    }
+
+    if look.water_fog_distance != 1.0 {
+        attributes = attributes.compound(
+            "minecraft:visual/water_fog_end_distance",
             Compound::new()
-                .int("sky_color", sky_color(temperature))
-                .int("fog_color", FOG_COLOR)
-                .int("water_color", WATER_COLOR)
-                .int("water_fog_color", WATER_FOG_COLOR),
-        )
+                .float("argument", look.water_fog_distance)
+                .string("modifier", "multiply"),
+        );
+    }
+
+    let mut effects = Compound::new().string("water_color", look.water);
+
+    for (key, value) in [
+        ("grass_color", look.grass),
+        ("foliage_color", look.foliage),
+        ("dry_foliage_color", look.dry_foliage),
+        ("grass_color_modifier", look.grass_modifier),
+    ] {
+        if let Some(value) = value {
+            effects = effects.string(key, value);
+        }
+    }
+
+    let mut compound = Compound::new()
+        .boolean("has_precipitation", temperature < 2.0)
+        .float("temperature", temperature);
+
+    // В замёрзших океанах вода мёрзнет пятнами: так их помечает игра.
+    if matches!(biome, Biome::FrozenOcean | Biome::DeepFrozenOcean) {
+        compound = compound.string("temperature_modifier", "frozen");
+    }
+
+    compound
+        .float("downfall", downfall)
+        .compound("attributes", attributes)
+        .compound("effects", effects)
         .empty_list("carvers")
         .empty_list("features")
         .compound("spawners", Compound::new())
         .compound("spawn_costs", Compound::new())
 }
 
-/// Цвет неба считается из температуры биома — как в игре (вики, «Biome» →
-/// Sky color): `T = температура / 3`, обрезанная промежутком от -1 до 1,
-/// и цвет берётся из HSV `(0,62222224 - 0,05T; 0,5 + 0,1T; 1)`.
-fn sky_color(temperature: f32) -> i32 {
-    let t = (temperature / 3.0).clamp(-1.0, 1.0);
-
-    hsv_to_rgb(0.622_222_24 - 0.05 * t, 0.5 + 0.1 * t, 1.0)
+/// Как биом выглядит: небо, туман, вода, трава и листва.
+///
+/// Числа — из данных биомов 26.1.2 на вики, собраны в
+/// `tools/research/biome-colors.md`. Чего у биома нет, то берётся
+/// у измерения: подводный туман `#050533`, туман неба `#c0d8ff`.
+struct Look {
+    sky: &'static str,
+    fog: Option<&'static str>,
+    water: &'static str,
+    water_fog: Option<&'static str>,
+    /// Во сколько раз ближе обычного сгущается туман под водой.
+    water_fog_distance: f32,
+    grass: Option<&'static str>,
+    foliage: Option<&'static str>,
+    dry_foliage: Option<&'static str>,
+    grass_modifier: Option<&'static str>,
 }
 
-/// Цвет из HSV в число, как его ждёт клиент: по восемь бит на красный,
-/// зелёный и синий.
-fn hsv_to_rgb(hue: f32, saturation: f32, value: f32) -> i32 {
-    let sector = (hue * 6.0).floor();
-    let inside = hue * 6.0 - sector;
-
-    let p = value * (1.0 - saturation);
-    let q = value * (1.0 - inside * saturation);
-    let t = value * (1.0 - (1.0 - inside) * saturation);
-
-    let (red, green, blue) = match (sector as i32) % 6 {
-        0 => (value, t, p),
-        1 => (q, value, p),
-        2 => (p, value, t),
-        3 => (p, q, value),
-        4 => (t, p, value),
-        _ => (value, p, q),
-    };
-
-    let byte = |part: f32| (part * 255.0).round().clamp(0.0, 255.0) as i32;
-
-    (byte(red) << 16) | (byte(green) << 8) | byte(blue)
+/// Цвет воды биома (0xRRGGBB) — для клиентов Bedrock.
+pub fn water_color(name: &str) -> u32 {
+    u32::from_str_radix(look(name).water.trim_start_matches('#'), 16).unwrap_or(0x3f76e4)
 }
 
-/// Цвет небесного тумана — один на все биомы верхнего мира (#c0d8ff).
-const FOG_COLOR: i32 = 0xC0_D8_FF;
+/// Равнины: обычный вид, от которого отличаются остальные.
+const PLAIN: Look = Look {
+    sky: "#78a7ff",
+    fog: None,
+    water: "#3f76e4",
+    water_fog: None,
+    water_fog_distance: 1.0,
+    grass: None,
+    foliage: None,
+    dry_foliage: None,
+    grass_modifier: None,
+};
 
-/// Цвет воды и подводного тумана: обычные значения верхнего мира.
-const WATER_COLOR: i32 = 0x3F_76_E4;
-const WATER_FOG_COLOR: i32 = 0x05_05_33;
+fn look(name: &str) -> Look {
+    match name {
+        "ocean" => Look { sky: "#7ba4ff", ..PLAIN },
+        "deep_ocean" => Look { sky: "#7ba4ff", ..PLAIN },
+        "cold_ocean" => Look { sky: "#7ba4ff", water: "#3d57d6", ..PLAIN },
+        "deep_cold_ocean" => Look { sky: "#7ba4ff", water: "#3d57d6", ..PLAIN },
+        "frozen_ocean" => Look { sky: "#7fa1ff", water: "#3938c9", ..PLAIN },
+        "deep_frozen_ocean" => Look { sky: "#7ba4ff", water: "#3938c9", ..PLAIN },
+        "lukewarm_ocean" => Look { sky: "#7ba4ff", water: "#45adf2", water_fog: Some("#041633"), ..PLAIN },
+        "deep_lukewarm_ocean" => Look {
+            sky: "#7ba4ff",
+            water: "#45adf2",
+            water_fog: Some("#041633"),
+            ..PLAIN
+        },
+        "warm_ocean" => Look { sky: "#7ba4ff", water: "#43d5ee", water_fog: Some("#041f33"), ..PLAIN },
+        "mushroom_fields" => Look { sky: "#77a8ff", ..PLAIN },
+        "snowy_beach" => Look { sky: "#7fa1ff", water: "#3d57d6", ..PLAIN },
+        "stony_shore" => Look { sky: "#7da2ff", ..PLAIN },
+        "river" => Look { sky: "#7ba4ff", ..PLAIN },
+        "frozen_river" => Look { sky: "#7fa1ff", water: "#3938c9", ..PLAIN },
+        "swamp" => Look {
+            water: "#617b64",
+            water_fog: Some("#232317"),
+            water_fog_distance: 0.85,
+            foliage: Some("#6a7039"),
+            dry_foliage: Some("#7b5334"),
+            grass_modifier: Some("swamp"),
+            ..PLAIN
+        },
+        "mangrove_swamp" => Look {
+            fog: Some("#c0d8ff"),
+            water: "#3a7a6a",
+            water_fog: Some("#4d7a60"),
+            water_fog_distance: 0.85,
+            foliage: Some("#8db127"),
+            dry_foliage: Some("#7b5334"),
+            grass_modifier: Some("swamp"),
+            ..PLAIN
+        },
+        "snowy_plains" => Look { sky: "#7fa1ff", ..PLAIN },
+        "ice_spikes" => Look { sky: "#7fa1ff", ..PLAIN },
+        "forest" => Look { sky: "#79a6ff", ..PLAIN },
+        "flower_forest" => Look { sky: "#79a6ff", ..PLAIN },
+        "birch_forest" => Look { sky: "#7aa5ff", ..PLAIN },
+        "old_growth_birch_forest" => Look { sky: "#7aa5ff", ..PLAIN },
+        "dark_forest" => Look {
+            sky: "#79a6ff",
+            dry_foliage: Some("#7b5334"),
+            grass_modifier: Some("dark_forest"),
+            ..PLAIN
+        },
+        "taiga" => Look { sky: "#7da3ff", ..PLAIN },
+        "snowy_taiga" => Look { sky: "#839eff", water: "#3d57d6", ..PLAIN },
+        "old_growth_pine_taiga" => Look { sky: "#7ca3ff", ..PLAIN },
+        "old_growth_spruce_taiga" => Look { sky: "#7da3ff", ..PLAIN },
+        "jungle" => Look { sky: "#77a8ff", ..PLAIN },
+        "sparse_jungle" => Look { sky: "#77a8ff", ..PLAIN },
+        "bamboo_jungle" => Look { sky: "#77a8ff", ..PLAIN },
+        "savanna" => Look { sky: "#6eb1ff", ..PLAIN },
+        "desert" => Look { sky: "#6eb1ff", ..PLAIN },
+        "meadow" => Look { sky: "#7ba4ff", water: "#0e4ecf", ..PLAIN },
+        // С настройкой `pink-cherry-groves` трава в роще розоватая — будто
+        // присыпана лепестками.
+        "cherry_grove" if crate::world::terrain::PINK_CHERRY_GROVES.load(std::sync::atomic::Ordering::Relaxed) => Look {
+            sky: "#7ba4ff",
+            water: "#5db7ef",
+            water_fog: Some("#5db7ef"),
+            grass: Some("#d9b3b8"),
+            foliage: Some("#b6db61"),
+            ..PLAIN
+        },
+        "cherry_grove" => Look {
+            sky: "#7ba4ff",
+            water: "#5db7ef",
+            water_fog: Some("#5db7ef"),
+            grass: Some("#b6db61"),
+            foliage: Some("#b6db61"),
+            ..PLAIN
+        },
+        // Свой биом: осенняя листва, пожухлая трава, опавшие листья рыжие.
+        "mcsheriffanya:autumn_forest" => Look {
+            sky: "#79a6ff",
+            grass: Some("#b9a24f"),
+            foliage: Some("#d9822b"),
+            dry_foliage: Some("#a4532b"),
+            ..PLAIN
+        },
+        "savanna_plateau" => Look { sky: "#6eb1ff", ..PLAIN },
+        "grove" => Look { sky: "#81a0ff", ..PLAIN },
+        "snowy_slopes" => Look { sky: "#829fff", ..PLAIN },
+        "jagged_peaks" => Look { sky: "#859dff", ..PLAIN },
+        "frozen_peaks" => Look { sky: "#859dff", ..PLAIN },
+        "stony_peaks" => Look { sky: "#76a8ff", ..PLAIN },
+        "windswept_hills" => Look { sky: "#7da2ff", ..PLAIN },
+        "windswept_gravelly_hills" => Look { sky: "#7da2ff", ..PLAIN },
+        "windswept_forest" => Look { sky: "#7da2ff", ..PLAIN },
+        "windswept_savanna" => Look { sky: "#6eb1ff", ..PLAIN },
+        "badlands" => Look { sky: "#6eb1ff", grass: Some("#90814d"), foliage: Some("#9e814d"), ..PLAIN },
+        "eroded_badlands" => Look {
+            sky: "#6eb1ff",
+            grass: Some("#90814d"),
+            foliage: Some("#9e814d"),
+            ..PLAIN
+        },
+        "wooded_badlands" => Look {
+            sky: "#6eb1ff",
+            grass: Some("#90814d"),
+            foliage: Some("#9e814d"),
+            ..PLAIN
+        },
+        "pale_garden" => Look {
+            sky: "#b9b9b9",
+            fog: Some("#817770"),
+            water: "#76889d",
+            water_fog: Some("#556980"),
+            grass: Some("#778272"),
+            foliage: Some("#878d76"),
+            dry_foliage: Some("#a0a69c"),
+            ..PLAIN
+        },
+        "lush_caves" => Look { sky: "#7ba4ff", ..PLAIN },
+        _ => PLAIN,
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -591,6 +754,23 @@ mod tests {
 
         assert!(bytes.windows(4).any(|w| w == 96.0f32.to_be_bytes()));
         assert!(bytes.windows(4).any(|w| w == 7i32.to_be_bytes()));
+    }
+
+    /// У болота своя вода и свой подводный туман, у равнин — обычные.
+    #[test]
+    fn biomes_carry_their_own_water() {
+        let swamp = entry("minecraft:worldgen/biome", "swamp").expect("есть запись");
+        let swamp = String::from_utf8_lossy(&swamp.encode_network()).to_string();
+
+        assert!(swamp.contains("#617b64"), "{}", swamp);
+        assert!(swamp.contains("minecraft:visual/water_fog_color"), "{}", swamp);
+        assert!(swamp.contains("grass_color_modifier"), "{}", swamp);
+
+        let plains = entry("minecraft:worldgen/biome", "plains").expect("есть запись");
+        let plains = String::from_utf8_lossy(&plains.encode_network()).to_string();
+
+        assert!(plains.contains("#3f76e4"), "{}", plains);
+        assert!(!plains.contains("water_fog_color"), "{}", plains);
     }
 
     /// Незнакомая запись не выдумывается.

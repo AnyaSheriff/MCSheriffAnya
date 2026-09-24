@@ -22,6 +22,9 @@ endorsed by Mojang or Microsoft.
   (Mojang, then Ely.by as a fallback; both can be switched off).
 - A persistent world with its own on-disk format, saved on stop and every
   few seconds; player data and inventories are saved per player.
+- Our own world generation, fitted to measurements of vanilla worlds:
+  terrain, caves, aquifers, rivers, oceans, biomes, trees and plants; sky
+  and block light. World types: normal, superflat and "Super smooth".
 - Survival basics: mining and placing blocks, drops, picking items up,
   dropped items, falling sand and gravel, flowing water and lava.
 - Redstone: wire, torches, repeaters, comparators, levers, buttons, pressure
@@ -35,10 +38,14 @@ endorsed by Mojang or Microsoft.
   `help`, `list`, `say`, `tp`, `gamemode`, `kick`, `give`, `clear`, `time`,
   `op`, `deop`, `setblock`, `fill`, `stop`.
 - A console that looks like the original one; technical detail is hidden
-  behind `debug = true` in `config/mcsheriffanya.toml`.
+  behind `debug=true` in `config/mcsa.properties`.
+- Bedrock Edition 26.10–26.13 players join the core directly, no proxy (UDP
+  port `bedrock-port`, 19132 by default): the world, Java players and their
+  skins, chat, building in creative and survival, the inventory (kept in the
+  same player file as for Java), drops and item pickup, commands. No Xbox
+  account check yet (like `online-mode=false`) and no crafting.
 
-Not there yet: mobs, health and damage, containers, a light engine, packet
-compression, world generation beyond flat land.
+Not there yet: mobs, health and damage, containers, packet compression.
 
 ## Running
 
@@ -55,7 +62,7 @@ creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
 
 - `config/server.properties` — the same keys and format as the original
   server. Nothing from it is hard-coded.
-- `config/mcsheriffanya.toml` — MCSheriffAnya's own settings (`debug`).
+- `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`, and `prefetch-chunks` / `prefetch-at-once` — how far beyond the view distance the world is generated ahead of the player (0 turns it off); `bedrock-port`; `autumn-forests` and `pink-cherry-groves` — small additions not found in vanilla (rare autumn patches in forests, pinkish grass and more petals in cherry groves; `false` keeps the world vanilla).
 - `config/skins.toml` — which skin sources to use.
 - `ops.json` — operators, the original format.
 

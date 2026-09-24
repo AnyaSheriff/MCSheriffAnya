@@ -12,7 +12,197 @@
 
 use crate::blocks::{self, Family, Orientation};
 use crate::fluids;
+use crate::log_debug;
 use crate::world::{self, World};
+
+/// Чем кончилась попытка поставить блок.
+#[derive(Debug, PartialEq)]
+pub enum Placement {
+    /// Блок поставлен — предмет расходуется.
+    Placed,
+    /// Плита слилась с плитой в двойную.
+    Merged,
+    /// Ставить нечего или некуда, мир не менялся.
+    Nothing,
+    /// Отказ: клиенту надо напомнить, что на самом деле в этих местах.
+    Refused(Vec<(i32, i32, i32)>),
+}
+
+/// Ставит блок `name` по щелчку `click` по блоку `clicked` — общее для
+/// игроков Java и Bedrock. `player` — где стоит игрок (ноги): в него блок
+/// не ставится.
+pub fn place(
+    world: &mut World,
+    name: &'static str,
+    default_state: i32,
+    clicked: (i32, i32, i32),
+    click: &Click,
+    player: (f64, f64, f64),
+) -> Placement {
+    let (clicked_x, clicked_y, clicked_z) = clicked;
+    let (px, py, pz) = player;
+
+    // Факел на стене — другой блок, настенный; на потолок факел не вешается.
+    let Some((name, default_state)) = block_for_face(name, default_state, click.face) else {
+        log_debug!("Постановка: {} на эту грань не ставится", name);
+        return Placement::Nothing;
+    };
+
+    let orientation = blocks::orientation(name);
+
+    // Плита, поставленная на плиту того же вида, слипается с ней в двойную:
+    // занимает место того же блока, а не соседнего.
+    if let Some(orientation) = orientation
+        && let Some(double) = merge_into_double(orientation, world.get_block(clicked_x, clicked_y, clicked_z), click)
+    {
+        world.set_block(clicked_x, clicked_y, clicked_z, double);
+        refresh_neighbours(world, clicked_x, clicked_y, clicked_z);
+        log_debug!("Постановка: плита {} стала двойной в {} {} {}", name, clicked_x, clicked_y, clicked_z);
+        return Placement::Merged;
+    }
+
+    let (dx, dy, dz) = match click.face {
+        0 => (0, -1, 0),
+        1 => (0, 1, 0),
+        2 => (0, 0, -1),
+        3 => (0, 0, 1),
+        4 => (-1, 0, 0),
+        5 => (1, 0, 0),
+        _ => (0, 0, 0),
+    };
+    let (x, y, z) = (clicked_x + dx, clicked_y + dy, clicked_z + dz);
+
+    // Ставить можно в пустое место или туда, где стоит жидкость: блок её
+    // вытесняет, как в игре.
+    if !is_replaceable(world.get_block(x, y, z)) {
+        return Placement::Nothing;
+    }
+
+    // Состояние считается по тому, как игрок щёлкнул, и по тому, что стоит
+    // вокруг: забор срастается с соседями, а у кнопки поворот зависит
+    // от грани щелчка.
+    let state = orientation
+        .and_then(|orientation| state_in_world(orientation, click, world, x, y, z))
+        .unwrap_or(default_state);
+
+    // Проводу, факелу, рычагу нужна опора: в воздухе они не держатся.
+    if !has_support(orientation, state, world, x, y, z) {
+        log_debug!("Постановка: {} в {} {} {} не на что опереться", name, x, y, z);
+        return Placement::Refused(vec![(x, y, z)]);
+    }
+
+    // Растения — только на своём: цветок на земле, тростник у воды, кактус
+    // на песке.
+    if !crate::plants::can_place(world, state, x, y, z) {
+        log_debug!("Постановка: {} в {} {} {} расти не на чем", name, x, y, z);
+        return Placement::Refused(vec![(x, y, z)]);
+    }
+
+    // Дверь занимает два блока по высоте и ставится сразу целой: нижняя
+    // половина в этот блок, верхняя — в тот, что над ним.
+    if let Some(orientation) = orientation
+        && is_door(orientation)
+    {
+        let both = vec![(x, y, z), (x, y + 1, z)];
+
+        if !is_replaceable(world.get_block(x, y + 1, z)) {
+            log_debug!("Постановка: над дверью не пусто — в {} {} {} она не встанет", x, y, z);
+            return Placement::Refused(both);
+        }
+
+        // Двери нужна опора снизу: без неё она повисла бы в воздухе.
+        if !blocks::solid_top(world.get_block(x, y - 1, z)) {
+            log_debug!("Постановка: под дверью нет опоры — в {} {} {} она не встанет", x, y, z);
+            return Placement::Refused(both);
+        }
+
+        let Some(upper) = other_half(orientation, state, "upper") else {
+            log_debug!("Постановка: не удалось собрать вторую половину двери {}", name);
+            return Placement::Nothing;
+        };
+
+        if blocks_player(x, y, z, state, px, py, pz) || blocks_player(x, y + 1, z, upper, px, py, pz) {
+            log_debug!("Постановка: дверь в {} {} {} задела бы игрока — не ставим", x, y, z);
+            return Placement::Refused(both);
+        }
+
+        world.set_block(x, y, z, state);
+        world.set_block(x, y + 1, z, upper);
+        refresh_neighbours(world, x, y, z);
+        refresh_neighbours(world, x, y + 1, z);
+        crate::redstone::settle(world);
+        world.save_if_needed();
+
+        log_debug!("Постановка: дверь {} ({}) в {} {} {}", name, state, x, y, z);
+        return Placement::Placed;
+    }
+
+    // Блок в игрока не ставится: он окажется замурован. Блоки без ящика —
+    // трава, факел — никому не мешают.
+    if blocks_player(x, y, z, state, px, py, pz) {
+        log_debug!("Постановка: блок в {} {} {} задел бы игрока — не ставим", x, y, z);
+        return Placement::Refused(vec![(x, y, z)]);
+    }
+
+    world.set_block(x, y, z, state);
+
+    // Соседние заборы, стенки и панели должны увидеть новый блок и срастись
+    // с ним, а редстоун — узнать о нём.
+    refresh_neighbours(world, x, y, z);
+    crate::redstone::settle(world);
+
+    // Сделанное игроком записываем сразу: течение воды может и подождать
+    // до общей записи, а постройки — нет.
+    world.save_if_needed();
+
+    log_debug!("Постановка: блок {} ({}) в {} {} {}", name, state, x, y, z);
+    Placement::Placed
+}
+
+/// Ломает блок игроком — общее для Java и Bedrock. Возвращает, что было на
+/// месте, или None, если там и так пусто. Выпадение предметов — дело
+/// вызывающего: оно зависит от режима игры и инструмента.
+pub fn break_block(world: &mut World, x: i32, y: i32, z: i32) -> Option<i32> {
+    let broken = world.get_block(x, y, z);
+
+    if broken == world::AIR {
+        return None;
+    }
+
+    world.set_block(x, y, z, world::AIR);
+
+    // Дверь занимает два блока, и ломается тоже целиком: иначе от неё
+    // осталась бы висеть в воздухе вторая половинка.
+    if let Some(orientation) = blocks::orientation_of(broken)
+        && is_door(orientation)
+        && let Some(half) = orientation.value(broken, "half")
+    {
+        let paired_y = if half == "lower" { y + 1 } else { y - 1 };
+
+        if is_same_door(orientation, world.get_block(x, paired_y, z)) {
+            world.set_block(x, paired_y, z, world::AIR);
+            refresh_neighbours(world, x, paired_y, z);
+        }
+    }
+
+    // Поршень состоит из двух половин, и ломается целиком — с какой
+    // стороны его ни ломай.
+    if let Some((px, py, pz)) = crate::redstone::piston_pair(world, (x, y, z), broken) {
+        world.set_block(px, py, pz, world::AIR);
+    }
+
+    // Соседи могли срастись с этим блоком — теперь им надо расцепиться.
+    refresh_neighbours(world, x, y, z);
+
+    // Редстоун должен узнать, что блока не стало: провод на нём пропадёт,
+    // а запитанное им погаснет.
+    crate::redstone::settle(world);
+
+    // Сломанное записываем сразу — как и построенное.
+    world.save_if_needed();
+
+    Some(broken)
+}
 
 /// Как игрок щёлкнул: по какой грани, куда попал и куда смотрит.
 pub struct Click {

@@ -67,7 +67,7 @@ pub enum Kind {
 
 impl Kind {
     /// Промежуток состояний блока этой жидкости.
-    fn states(self) -> (i32, i32) {
+    pub fn states(self) -> (i32, i32) {
         match self {
             Kind::Water => range(&WATER_STATES, "water"),
             Kind::Lava => range(&LAVA_STATES, "lava"),

@@ -17,8 +17,11 @@
 // Сохранение происходит сразу при каждом изменении: сервер маленький, и
 // терять постройки при падении не хочется.
 
+pub mod cave_biomes;
 pub mod flat;
+pub mod light;
 pub mod noise;
+pub mod ocean;
 pub mod region;
 pub mod terrain;
 pub mod trees;
@@ -144,12 +147,31 @@ struct Chunk {
     /// состояний в игре около тридцати тысяч, и в два байта они влезают
     /// с запасом. На дальности в тридцать два чанка это половина памяти
     /// сервера — сотни мегабайт.
-    sections: Vec<Option<Vec<Packed>>>,
+    ///
+    /// Секция лежит под `Arc`: свет чанка считается вне захвата мира, и ему
+    /// достаётся не копия блоков, а та же секция. Правка в мире в это время
+    /// заводит себе новую копию секции, а считающий свет дочитывает старую.
+    sections: Vec<Option<Arc<[Packed]>>>,
 
-    /// Биомы чанка: по одному на ячейку 4×4 блока — так же дробно, как их
-    /// передаёт протокол. По высоте биом у нас пока один на весь столбец.
-    biomes: [i32; BIOME_CELLS * BIOME_CELLS],
+    /// Биомы чанка: по одному на клетку 4×4×4 блока — так же дробно, как их
+    /// передаёт протокол, и в том же порядке: снизу вверх, внутри слоя по Z,
+    /// потом по X. У поверхности и выше — биом столбца, в толще под ней —
+    /// пещерный, где его выбрали климат и глубина.
+    ///
+    /// Номер биома хранится в двух байтах: биомов в реестре меньше сотни.
+    biomes: Vec<BiomeId>,
+
+    /// Собственный свет чанка — посчитанный только по его блокам (см.
+    /// light.rs) — и номер правки блоков, к которой он относится. Не сходится
+    /// номер с `revision` — свет устарел и будет пересчитан при отправке.
+    light: Option<(u32, Arc<light::ChunkLight>)>,
+
+    /// Номер правки блоков: растёт при каждом изменении.
+    revision: u32,
 }
+
+/// Номер биома в реестре, как он лежит в памяти чанка.
+pub type BiomeId = u16;
 
 /// Состояние блока в том виде, в каком оно лежит в памяти чанка.
 type Packed = u16;
@@ -166,22 +188,46 @@ fn unpack(state: Packed) -> i32 {
     state as i32
 }
 
-/// Сколько ячеек биома приходится на сторону чанка: биом задаётся на каждые
+/// Сколько клеток биома приходится на сторону чанка: биом задаётся на каждые
 /// четыре блока, так же как в пакете чанка.
 const BIOME_CELLS: usize = (CHUNK_SIZE / 4) as usize;
+
+/// Слоёв клеток биома по высоте мира.
+const BIOME_LAYERS: usize = (WORLD_HEIGHT / 4) as usize;
+
+/// Клеток биома в слое 4×4.
+const BIOME_LAYER: usize = BIOME_CELLS * BIOME_CELLS;
+
+/// Клеток биома в секции: 4×4×4.
+pub const SECTION_BIOMES: usize = BIOME_LAYER * 4;
+
+/// Место клетки биома в `Chunk::biomes`: слой по высоте (от дна мира), затем
+/// клетка по Z и по X.
+fn biome_cell(layer: usize, cell_x: usize, cell_z: usize) -> usize {
+    layer * BIOME_LAYER + cell_z * BIOME_CELLS + cell_x
+}
 
 impl Chunk {
     fn new() -> Self {
         Self {
             sections: (0..SECTIONS).map(|_| None).collect(),
-            biomes: [0; BIOME_CELLS * BIOME_CELLS],
+            biomes: vec![0; BIOME_LAYERS * BIOME_LAYER],
+            light: None,
+            revision: 0,
         }
     }
 
-    /// Биомы чанка ячейками 4×4, в том же порядке, в каком их ждёт пакет:
-    /// сперва по Z, внутри — по X.
-    fn biomes(&self) -> &[i32] {
-        &self.biomes
+    /// Считает собственный свет чанка по его нынешним блокам.
+    fn light_up(&mut self) {
+        self.light = Some((self.revision, Arc::new(light::chunk_light(&self.sections))));
+    }
+
+    /// Собственный свет, если он не устарел.
+    fn fresh_light(&self) -> Option<&Arc<light::ChunkLight>> {
+        match &self.light {
+            Some((revision, light)) if *revision == self.revision => Some(light),
+            _ => None,
+        }
     }
 
     /// Чанк сложенного мира: рельеф, биомы и всё, что из них следует.
@@ -256,12 +302,24 @@ impl Chunk {
                     chunk.filled_section(section)[inside + index] = pack(state);
                 }
 
-                // Биом ячейки берём у её первого столбца: внутри четырёх
-                // блоков он всё равно один.
+                // Биом клетки у всех её столбцов один (его решает середина
+                // клетки), поэтому решаем его один раз — по середине: и
+                // поверхностный, и пещерные под ним.
                 if local_x % 4 == 0 && local_z % 4 == 0 {
-                    let cell = (local_z / 4) as usize * BIOME_CELLS + (local_x / 4) as usize;
+                    let middle = at(local_x + 2, local_z + 2);
+                    let surface = generator.biome_of(&column);
+                    // Редкие осенние пятна в обычном лесу — свой номер биома,
+                    // чтобы клиент красил листву и траву по-осеннему.
+                    let autumn = surface == terrain::Biome::Forest
+                        && matches!(generator, Generator::Normal(terrain) if terrain.autumn_at(x + 2, z + 2));
+                    let surface = if autumn { terrain::autumn_forest_number() } else { surface.number() as BiomeId };
 
-                    chunk.biomes[cell] = generator.biome_of(&column).number();
+                    chunk.fill_biome_column(
+                        (local_x / 4) as usize,
+                        (local_z / 4) as usize,
+                        surface,
+                        matches!(generator, Generator::Normal(_)).then_some(&middle),
+                    );
                 }
             }
         }
@@ -272,8 +330,43 @@ impl Chunk {
         underground::dig(generator, &mut chunk, chunk_x, chunk_z);
         generator.grow_trees(&mut chunk, chunk_x, chunk_z);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
+        ocean::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
+        cave_biomes::decorate(generator, &mut chunk, chunk_x, chunk_z);
+
+        // Свет — когда все блоки на местах.
+        chunk.light_up();
 
         chunk
+    }
+
+    /// Заполняет биомы одного столбца клеток 4×4: у поверхности и выше —
+    /// `surface`, в толще — пещерный биом, если его выбирают климат и
+    /// глубина под серединой клетки `middle`. Без `middle` пещерных биомов
+    /// нет (ровный мир).
+    fn fill_biome_column(
+        &mut self,
+        cell_x: usize,
+        cell_z: usize,
+        surface: BiomeId,
+        middle: Option<&Column>,
+    ) {
+
+        for layer in 0..BIOME_LAYERS {
+            // Середина клетки по высоте.
+            let y = MIN_Y + layer as i32 * 4 + 2;
+            let biome = middle
+                .and_then(|column| cave_biomes::biome_at(column, y))
+                .map_or(surface, |cave| cave.number() as BiomeId);
+
+            self.biomes[biome_cell(layer, cell_x, cell_z)] = biome;
+        }
+    }
+
+    /// Биом клетки, в которой лежит блок (местные координаты чанка).
+    fn biome(&self, local_x: i32, y: i32, local_z: i32) -> BiomeId {
+        let layer = ((y - MIN_Y) / 4) as usize;
+
+        self.biomes[biome_cell(layer, (local_x / 4) as usize, (local_z / 4) as usize)]
     }
 
     /// Ставит блок дерева, если он попал в этот чанк, и не затирает то, что
@@ -283,7 +376,7 @@ impl Chunk {
             return;
         }
 
-        if y < MIN_Y || y >= MIN_Y + WORLD_HEIGHT {
+        if !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&y) {
             return;
         }
 
@@ -333,23 +426,16 @@ impl Chunk {
         let (section, inside) = split(y);
         let index = inside + corner(x, z);
 
-        // В воздушную секцию воздух ставить незачем — заводить её ради этого
-        // тем более.
-        if state == AIR && self.sections[section].is_none() {
+        // Тот же блок ставить незачем, а в воздушную секцию воздух — тем
+        // более: заводить её ради этого не надо.
+        if self.block(x, y, z) == state {
             return false;
         }
 
-        let blocks = self.filled_section(section);
-
-        if unpack(blocks[index]) == state {
-            return false;
-        }
-
-        blocks[index] = pack(state);
+        self.filled_section(section)[index] = pack(state);
         true
     }
 
-    /// Секция, готовая к записи: воздушная заводится на месте.
     /// Верх самой высокой непустой секции: выше него в чанке только воздух.
     fn highest(&self) -> i32 {
         match self.sections.iter().rposition(Option::is_some) {
@@ -358,8 +444,16 @@ impl Chunk {
         }
     }
 
-    fn filled_section(&mut self, section: usize) -> &mut Vec<Packed> {
-        self.sections[section].get_or_insert_with(|| vec![pack(AIR); SECTION_BLOCKS])
+    /// Секция, готовая к записи: воздушная заводится на месте.
+    ///
+    /// Всякая правка блоков идёт через неё, поэтому здесь же растёт номер
+    /// правки: собственный свет чанка с этого мгновения устарел.
+    fn filled_section(&mut self, section: usize) -> &mut [Packed] {
+        self.revision = self.revision.wrapping_add(1);
+
+        let blocks = self.sections[section].get_or_insert_with(|| Arc::from([pack(AIR); SECTION_BLOCKS]));
+
+        Arc::make_mut(blocks)
     }
 
     /// Сколько в чанке блоков, отличных от воздуха.
@@ -375,6 +469,66 @@ impl Chunk {
     /// Блоки секции. None — секция целиком из воздуха.
     fn section(&self, section: usize) -> Option<&[Packed]> {
         self.sections[section].as_deref()
+    }
+
+    /// Места, куда вода и лава должны потечь сразу: пустые клетки (или
+    /// рыхлый снег, или другая жидкость) сбоку и снизу от них. Такт
+    /// жидкости решает, чем станет само место, поэтому будить надо не
+    /// источник — он и так останется источником, — а соседнюю пустоту: она
+    /// по такту станет текущей водой. Так у оригинала подземные водопады и
+    /// лава в пещерах текут с первого мгновения.
+    ///
+    /// Соседи за краем чанка тоже попадают в список: если соседа ещё нет,
+    /// такт подождёт его. Координаты мировые, вместе с задержкой такта.
+    fn fluids_to_wake(&self, chunk_x: i32, chunk_z: i32) -> Vec<((i32, i32, i32), u64)> {
+        let mut found = Vec::new();
+        // Состояния воды и лавы идут подряд: жидкость узнаётся сравнением
+        // номера, без разбора каждого блока.
+        let (water, lava) = (fluids::Kind::Water.states(), fluids::Kind::Lava.states());
+        let liquid = |state: i32| (water.0..=water.1).contains(&state) || (lava.0..=lava.1).contains(&state);
+
+        for (section, blocks) in self.sections.iter().enumerate() {
+            let Some(blocks) = blocks else {
+                continue;
+            };
+
+            for (index, packed) in blocks.iter().enumerate() {
+                if !liquid(unpack(*packed)) {
+                    continue;
+                }
+
+                let Some((kind, _)) = fluids::fluid_at(unpack(*packed)) else {
+                    continue;
+                };
+
+                let (x, z) = ((index % 16) as i32, (index / 16 % 16) as i32);
+                let y = MIN_Y + section as i32 * 16 + (index / 256) as i32;
+                let open = |state: i32| match fluids::fluid_at(state) {
+                    Some((other, _)) => other != kind,
+                    None => fluids::can_flow_into(state),
+                };
+
+                for (dx, dy, dz) in [(0, -1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1)] {
+                    let (nx, ny, nz) = (x + dx, y + dy, z + dz);
+
+                    if ny < MIN_Y {
+                        continue;
+                    }
+
+                    // Соседа за краем чанка отсюда не видно: край проверит
+                    // мир, когда чанк ляжет рядом с соседом (`wake_border`).
+                    let inside = (0..16).contains(&nx) && (0..16).contains(&nz);
+
+                    if inside && open(self.block(nx, ny, nz)) {
+                        found.push(((chunk_x * 16 + nx, ny, chunk_z * 16 + nz), kind.delay()));
+                    }
+                }
+            }
+        }
+
+        found.sort_unstable();
+        found.dedup();
+        found
     }
 
 }
@@ -406,10 +560,15 @@ impl Chunk {
             }
         }
 
-        // Биомы идут в конце: по два байта на ячейку — номеров биомов
-        // заведомо меньше, чем помещается в два байта.
-        for biome in self.biomes {
-            out.extend_from_slice(&(biome as u16).to_be_bytes());
+        // Биомы идут в конце — так же, «номер и сколько его подряд», в
+        // порядке клеток: у чанка без пещерных биомов это одна-две записи.
+        let runs = runs_of(&self.biomes);
+
+        out.extend_from_slice(&(runs.len() as u16).to_be_bytes());
+
+        for (biome, length) in runs {
+            out.extend_from_slice(&biome.to_be_bytes());
+            out.extend_from_slice(&length.to_be_bytes());
         }
 
         out
@@ -420,7 +579,7 @@ impl Chunk {
         let version = *bytes.first()?;
         let wide = version == CHUNK_VERSION_WIDE;
 
-        if version != CHUNK_VERSION && !wide {
+        if version != CHUNK_VERSION && version != CHUNK_VERSION_FLAT_BIOMES && !wide {
             return None;
         }
 
@@ -453,13 +612,38 @@ impl Chunk {
             }
         }
 
-        // Биомы дописаны в конце. Их может не быть: чанк записан прежним
-        // сервером, когда биом был один на весь мир. Тогда оставляем нули —
-        // это равнина, и мир от этого не пропадёт.
-        for cell in 0..chunk.biomes.len() {
-            match reader.u16() {
-                Ok(biome) => chunk.biomes[cell] = biome as i32,
-                Err(_) => break,
+        if version == CHUNK_VERSION {
+            // Биомы объёмные — записи «номер и сколько подряд». Они обязаны
+            // покрыть все клетки ровно: иначе запись испорчена.
+            let runs = reader.u16().ok()?;
+            let mut at = 0usize;
+
+            for _ in 0..runs {
+                let biome = reader.u16().ok()?;
+                let length = reader.u16().ok()? as usize;
+
+                chunk.biomes.get_mut(at..at + length)?.fill(biome);
+                at += length;
+            }
+
+            if at != chunk.biomes.len() {
+                return None;
+            }
+
+            return Some(chunk);
+        }
+
+        // Прежние записи: биом один на весь столбец клетки 4×4, по два
+        // байта на клетку. Его может и не быть: чанк записан сервером, когда
+        // биом был один на весь мир. Тогда остаются нули — это первый биом
+        // реестра, и мир от этого не пропадёт.
+        for cell in 0..BIOME_LAYER {
+            let Ok(biome) = reader.u16() else {
+                break;
+            };
+
+            for layer in 0..BIOME_LAYERS {
+                chunk.biomes[layer * BIOME_LAYER + cell] = biome;
             }
         }
 
@@ -467,14 +651,16 @@ impl Chunk {
     }
 }
 
-/// Разбивает блоки секции на записи «состояние и сколько его подряд».
-fn runs_of(blocks: &[Packed]) -> Vec<(Packed, u16)> {
-    let mut runs: Vec<(Packed, u16)> = Vec::new();
+/// Разбивает блоки секции (или биомы чанка) на записи «значение и сколько
+/// его подряд».
+fn runs_of(blocks: &[u16]) -> Vec<(u16, u16)> {
+    let mut runs: Vec<(u16, u16)> = Vec::new();
 
     for state in blocks {
         match runs.last_mut() {
-            // Подряд одного состояния не может быть больше, чем блоков
-            // в секции, так что счётчик не переполнится.
+            // Подряд одного значения не может быть больше, чем блоков
+            // в секции или клеток биома в чанке, так что счётчик не
+            // переполнится.
             Some((last, length)) if last == state => *length += 1,
             _ => runs.push((*state, 1)),
         }
@@ -531,10 +717,18 @@ const REGIONS: &str = "region";
 
 /// Версия записи чанка. Меняется, если меняется раскладка байтов или само
 /// устройство мира, чтобы старая запись не была прочитана неправильно.
-const CHUNK_VERSION: u8 = 2;
+///
+/// С третьей версии биомы объёмные: клетка 4×4×4, записаны «номер и сколько
+/// подряд».
+const CHUNK_VERSION: u8 = 3;
 
-/// Прежний вид записи чанка: состояния по четыре байта. Такие файлы мы ещё
-/// читаем — у кого-то мир записан ими, и терять его незачем.
+/// Вторая версия: состояния по два байта, биом один на столбец клетки 4×4.
+/// Такие чанки читаются, их биом растягивается на всю высоту.
+const CHUNK_VERSION_FLAT_BIOMES: u8 = 2;
+
+/// Первый вид записи чанка: состояния по четыре байта, биомы как во второй.
+/// Такие файлы мы ещё читаем — у кого-то мир записан ими, и терять его
+/// незачем.
 const CHUNK_VERSION_WIDE: u8 = 1;
 
 /// Мир целиком: чанки и список изменений.
@@ -641,11 +835,6 @@ pub struct World {
     /// станет незачем.
     dirty: HashSet<(i32, i32)>,
 }
-
-/// Семя, с которым мир открывают проверки: они должны получать один и тот же
-/// мир при каждом запуске.
-#[cfg(test)]
-const TEST_SEED: i64 = 20_260_921;
 
 impl World {
     /// Пустой мир без файла на диске — только для проверок.
@@ -945,21 +1134,62 @@ impl World {
     /// Готовое тело нарочно не запоминается: на дальности в тридцать два
     /// чанка это триста мегабайт памяти, а собирается оно быстрее, чем
     /// уходит по сети (проверено замером — скорость та же).
-    pub fn chunk_packet(
+    pub fn chunk_packet<T>(
         &self,
         chunk_x: i32,
         chunk_z: i32,
-        build: impl FnOnce(&[Option<Vec<Packed>>], &[i32]) -> Vec<u8>,
-    ) -> Option<Vec<u8>> {
+        build: impl FnOnce(&[Option<Arc<[Packed]>>], &[BiomeId]) -> T,
+    ) -> Option<T> {
         let chunk = self.chunks.get(&(chunk_x, chunk_z))?;
 
         Some(build(&chunk.sections, &chunk.biomes))
     }
 
-    /// Биомы чанка ячейками 4×4 — в том порядке, в каком их ждёт пакет.
-    /// Нет чанка — нет и биомов: клиенту уйдёт равнина.
-    pub fn chunk_biomes(&self, chunk_x: i32, chunk_z: i32) -> Option<&[i32]> {
-        self.chunks.get(&(chunk_x, chunk_z)).map(|chunk| chunk.biomes())
+    /// Всё, что нужно, чтобы посчитать свет чанка вне захвата мира: блоки и
+    /// собственный свет его и восьми соседей. None — чанка нет в памяти.
+    ///
+    /// Блоки не копируются: секции общие с миром (см. `Chunk::sections`).
+    pub fn light_job(&self, chunk_x: i32, chunk_z: i32) -> Option<light::LightJob> {
+        self.chunks.get(&(chunk_x, chunk_z))?;
+
+        Some(light::LightJob {
+            chunks: std::array::from_fn(|slot| {
+                let place = (chunk_x + slot as i32 % 3 - 1, chunk_z + slot as i32 / 3 - 1);
+                let chunk = self.chunks.get(&place)?;
+
+                Some(light::LightInput {
+                    place,
+                    revision: chunk.revision,
+                    sections: chunk.sections.clone(),
+                    light: chunk.fresh_light().cloned(),
+                })
+            }),
+        })
+    }
+
+    /// Кладёт в чанки пересчитанный собственный свет — если их блоки с тех
+    /// пор не менялись.
+    pub fn store_light(&mut self, recounted: Vec<light::Recounted>) {
+        for fresh in recounted {
+            if let Some(chunk) = self.chunks.get_mut(&fresh.place)
+                && chunk.revision == fresh.revision
+            {
+                chunk.light = Some((fresh.revision, fresh.light));
+            }
+        }
+    }
+
+    /// Небесный и блочный свет в блоке — с учётом соседних чанков. Для
+    /// проверок: считает свет всего чанка.
+    #[cfg(test)]
+    pub fn light_at(&mut self, x: i32, y: i32, z: i32) -> (u8, u8) {
+        let Some(job) = self.light_job(x.div_euclid(16), z.div_euclid(16)) else {
+            return (light::FULL, 0);
+        };
+        let (light, recounted) = job.finish();
+
+        self.store_light(recounted);
+        light.at(x.rem_euclid(16), y, z.rem_euclid(16))
     }
 
     /// Откуда брать ещё не готовый чанк. Его можно унести с собой: чтение
@@ -986,6 +1216,69 @@ impl World {
 
         self.chunks.insert((chunk_x, chunk_z), ready.chunk);
         self.after_chunk_arrived(chunk_x, chunk_z, ready.from_disk);
+        self.wake_fluids(&ready.wake);
+        self.wake_border(chunk_x, chunk_z);
+    }
+
+    /// Вода и лава на краю чанка, которым есть куда течь в соседний чанк
+    /// (или из соседа — в этот): видно, только когда оба лежат в мире.
+    fn wake_border(&mut self, chunk_x: i32, chunk_z: i32) {
+        let mut places = Vec::new();
+
+        for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+            let (Some(here), Some(there)) =
+                (self.chunks.get(&(chunk_x, chunk_z)), self.chunks.get(&(chunk_x + dx, chunk_z + dz)))
+            else {
+                continue;
+            };
+
+            for step in 0..16 {
+                // Пара столбцов по обе стороны края.
+                let (hx, hz, tx, tz) = match (dx, dz) {
+                    (1, _) => (15, step, 0, step),
+                    (-1, _) => (0, step, 15, step),
+                    (_, 1) => (step, 15, step, 0),
+                    _ => (step, 0, step, 15),
+                };
+
+                for section in 0..SECTIONS as usize {
+                    if here.sections[section].is_none() && there.sections[section].is_none() {
+                        continue;
+                    }
+
+                    for y in MIN_Y + section as i32 * 16..MIN_Y + section as i32 * 16 + 16 {
+                        let (a, b) = (here.block(hx, y, hz), there.block(tx, y, tz));
+                        let flows = |from: i32, to: i32| {
+                            fluids::fluid_at(from).is_some_and(|(kind, _)| match fluids::fluid_at(to) {
+                                Some((other, _)) => other != kind,
+                                None => fluids::can_flow_into(to),
+                            })
+                        };
+
+                        if flows(a, b) {
+                            places.push(((
+                                (chunk_x + dx) * 16 + tx, y, (chunk_z + dz) * 16 + tz,
+                            ), fluids::fluid_at(a).map_or(fluids::WATER_DELAY, |(kind, _)| kind.delay())));
+                        }
+
+                        if flows(b, a) {
+                            places.push(((
+                                chunk_x * 16 + hx, y, chunk_z * 16 + hz,
+                            ), fluids::fluid_at(b).map_or(fluids::WATER_DELAY, |(kind, _)| kind.delay())));
+                        }
+                    }
+                }
+            }
+        }
+
+        self.wake_fluids(&places);
+    }
+
+    /// Ставит в очередь на растекание места рядом с водой и лавой.
+    fn wake_fluids(&mut self, places: &[((i32, i32, i32), u64)]) {
+        for &((x, y, z), delay) in places {
+            self.schedule(x, y, z, delay);
+        }
     }
 
     /// Что делается, когда чанк появился в мире: разбудить отложенные такты
@@ -1020,12 +1313,16 @@ impl World {
             None => (Chunk::generated(&self.generator, chunk_x, chunk_z), false),
         };
 
+        let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
+
         self.chunks.insert((chunk_x, chunk_z), chunk);
 
         // Такты, дожидавшиеся этого чанка, возвращаются в очередь, а
         // прочитанное с диска чинится: сервер могли остановить посреди хода
-        // поршня.
+        // поршня. Жидкостям, которым есть куда течь, — свой такт.
         self.after_chunk_arrived(chunk_x, chunk_z, from_disk);
+        self.wake_fluids(&wake);
+        self.wake_border(chunk_x, chunk_z);
 
         true
     }
@@ -1521,7 +1818,11 @@ fn read_chunk_at(path: &Path, chunk_x: i32, chunk_z: i32) -> Option<Chunk> {
 
     match region::read(&directory, chunk_x, chunk_z) {
         Ok(Some(bytes)) => match Chunk::from_bytes(&bytes) {
-            Some(chunk) => Some(chunk),
+            // Свет на диске не хранится: он считается заново по блокам.
+            Some(mut chunk) => {
+                chunk.light_up();
+                Some(chunk)
+            }
             None => {
                 log_warn!("Чанк {} {} не читается, складываю заново", chunk_x, chunk_z);
                 None
@@ -1543,6 +1844,9 @@ const PLANT_ROOM: i32 = 4;
 pub struct ReadyChunk {
     chunk: Chunk,
     from_disk: bool,
+    /// Места рядом с водой и лавой, которые надо сразу пустить в такт:
+    /// найдены заранее, вне захвата мира.
+    wake: Vec<((i32, i32, i32), u64)>,
 }
 
 /// Откуда берутся ещё не готовые чанки: папка мира и правила складывания.
@@ -1557,18 +1861,21 @@ pub struct ChunkSource {
 impl ChunkSource {
     /// Читает чанк с диска, а если его там нет — складывает заново.
     pub fn take(&self, chunk_x: i32, chunk_z: i32) -> ReadyChunk {
-        if let Some(chunk) = read_chunk_at(&self.path, chunk_x, chunk_z) {
-            return ReadyChunk { chunk, from_disk: true };
-        }
+        let (chunk, from_disk) = match read_chunk_at(&self.path, chunk_x, chunk_z) {
+            Some(chunk) => (chunk, true),
+            None => (Chunk::generated(&self.generator, chunk_x, chunk_z), false),
+        };
+        let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
 
-        ReadyChunk {
-            chunk: Chunk::generated(&self.generator, chunk_x, chunk_z),
-            from_disk: false,
-        }
+        ReadyChunk { chunk, from_disk, wake }
     }
 }
 
 /// Чем складывается ещё не сложенный кусок мира.
+///
+/// Разница в размере вариантов не важна: генератор у мира один и живёт
+/// в `Arc`, копий не делается.
+#[allow(clippy::large_enum_variant)]
 enum Generator {
     /// Обычный мир: рельеф, биомы, море.
     Normal(Terrain),
@@ -1770,7 +2077,7 @@ impl Generator {
                         && [AIR, water, lava].contains(&chunk.block(nx, ny, nz))
                 });
 
-                if open && terrain::chance_at(x, y, z, placement.air_skip) {
+                if open && terrain::chance_at(terrain.seed(), x, y, z, placement.air_skip) {
                     continue;
                 }
             }
@@ -1802,22 +2109,7 @@ impl Generator {
             return;
         };
 
-        let water = terrain::block_named("water");
-        // Земля, которую дерево может заменить подзолом или корнями.
-        let soil: Vec<(i32, i32)> = [
-            "grass_block",
-            "dirt",
-            "coarse_dirt",
-            "podzol",
-            "rooted_dirt",
-            "mud",
-        ]
-        .iter()
-        .filter_map(|name| crate::blocks::states_of(name))
-        .collect();
-        // Трава: под нижним бревном она становится простой землёй, прочая
-        // земля — подзол, ил — остаётся как есть.
-        let grass = crate::blocks::states_of("grass_block");
+        let ground = TreeGround::new();
 
         for local_x in -REACH..(CHUNK_SIZE + REACH) {
             for local_z in -REACH..(CHUNK_SIZE + REACH) {
@@ -1827,7 +2119,7 @@ impl Generator {
                 // Дерево редкое, а столбец считать дорого: сперва дешёвая
                 // проверка «а не здесь ли ствол вообще», и только потом сам
                 // столбец.
-                if !terrain::tree_possible(x, z) {
+                if !terrain::tree_possible(terrain.seed(), x, z) {
                     continue;
                 }
 
@@ -1837,136 +2129,7 @@ impl Generator {
                     continue;
                 };
 
-                let by_text = |text: &str| {
-                    crate::blocks::state_from_text(text)
-                        .unwrap_or_else(|| terrain::block_named(text))
-                };
-                let leaves = by_text(tree.leaves);
-                // У огромных грибов «ствол» записан полным состоянием, оси
-                // у него нет.
-                let log = |axis: terrain::Axis| {
-                    if tree.log.contains('[') {
-                        return by_text(tree.log);
-                    }
-
-                    let axis = match axis {
-                        terrain::Axis::X => "x",
-                        terrain::Axis::Y => "y",
-                        terrain::Axis::Z => "z",
-                    };
-
-                    crate::blocks::state_from_text(&format!("{}[axis={}]", tree.log, axis))
-                        .unwrap_or_else(|| terrain::block_named(tree.log))
-                };
-                let logs = [
-                    log(terrain::Axis::X),
-                    log(terrain::Axis::Y),
-                    log(terrain::Axis::Z),
-                ];
-                let blocks = tree.blocks(x, z);
-
-                // Земля под деревом — первой: пока над ней не выросли ни
-                // корни, ни ствол, её верх виден сразу.
-                for (dx, dy, dz, part) in &blocks {
-                    if let terrain::Part::Ground(text) = part {
-                        let (bx, bz) = (local_x + dx, local_z + dz);
-
-                        if !(0..CHUNK_SIZE).contains(&bx) || !(0..CHUNK_SIZE).contains(&bz) {
-                            continue;
-                        }
-
-                        let near = column.height + dy;
-                        let lowest = (near - 3).max(MIN_Y);
-                        let highest = (near + 3).min(MIN_Y + WORLD_HEIGHT - 1);
-
-                        // Сверху вниз до первого блока, что не воздух и не
-                        // вода; меняем его, только если это земля.
-                        let Some(y) = (lowest..=highest)
-                            .rev()
-                            .find(|&y| ![AIR, water].contains(&chunk.block(bx, y, bz)))
-                        else {
-                            continue;
-                        };
-
-                        let here = chunk.block(bx, y, bz);
-
-                        if !soil.iter().any(|(low, high)| (*low..=*high).contains(&here)) {
-                            continue;
-                        }
-
-                        if *text == "dirt"
-                            && !grass.is_some_and(|(low, high)| (low..=high).contains(&here))
-                        {
-                            continue;
-                        }
-
-                        if let Some(state) = crate::blocks::state_from_text(text) {
-                            chunk.put_generated(bx, y, bz, state, true);
-                        }
-                    }
-                }
-
-                // Листва не затирает стволы и ветви, поэтому ставится раньше,
-                // а брёвна — поверх неё.
-                for (dx, dy, dz, part) in &blocks {
-                    if *part == terrain::Part::Leaves {
-                        chunk.put_generated(
-                            local_x + dx,
-                            column.height + dy,
-                            local_z + dz,
-                            leaves,
-                            false,
-                        );
-                    }
-                }
-
-                for (dx, dy, dz, part) in &blocks {
-                    if let terrain::Part::Log(axis) = part {
-                        let state = logs[*axis as usize];
-
-                        chunk.put_generated(
-                            local_x + dx,
-                            column.height + dy,
-                            local_z + dz,
-                            state,
-                            true,
-                        );
-                    }
-                }
-
-                // Лианы, какао, корни — последними и только на свободное
-                // место: в воздух, а что бывает затоплено — и в воду.
-                for (dx, dy, dz, part) in &blocks {
-                    let terrain::Part::Block(text) = part else {
-                        continue;
-                    };
-                    let (bx, by, bz) = (local_x + dx, column.height + dy, local_z + dz);
-
-                    if !(0..CHUNK_SIZE).contains(&bx)
-                        || !(0..CHUNK_SIZE).contains(&bz)
-                        || !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&by)
-                    {
-                        continue;
-                    }
-
-                    let here = chunk.block(bx, by, bz);
-                    let state = if here == AIR {
-                        crate::blocks::state_from_text(text)
-                    } else if here == water {
-                        let wet = match text.strip_suffix(']') {
-                            Some(open) => format!("{},waterlogged=true]", open),
-                            None => format!("{}[waterlogged=true]", text),
-                        };
-
-                        crate::blocks::state_from_text(&wet)
-                    } else {
-                        None
-                    };
-
-                    if let Some(state) = state {
-                        chunk.put_generated(bx, by, bz, state, true);
-                    }
-                }
+                draw_tree(chunk, &tree, local_x, local_z, column.height, x, z, &ground);
             }
         }
     }
@@ -1986,6 +2149,185 @@ impl Generator {
         match self {
             Generator::Normal(_) => column.height.max(terrain::SEA) + PLANT_ROOM,
             Generator::Flat => flat::GROUND,
+        }
+    }
+}
+
+/// Что дерево видит под собой: воду и землю, которую может заменить.
+/// Ищется по имени один раз на чанк.
+struct TreeGround {
+    water: i32,
+    /// Земля, которую дерево может заменить подзолом или корнями.
+    soil: Vec<(i32, i32)>,
+    /// Трава: под нижним бревном она становится простой землёй, прочая
+    /// земля — подзол, ил — остаётся как есть.
+    grass: Option<(i32, i32)>,
+}
+
+impl TreeGround {
+    fn new() -> TreeGround {
+        TreeGround {
+            water: terrain::block_named("water"),
+            soil: [
+                "grass_block",
+                "dirt",
+                "coarse_dirt",
+                "podzol",
+                "rooted_dirt",
+                "mud",
+            ]
+            .iter()
+            .filter_map(|name| crate::blocks::states_of(name))
+            .collect(),
+            grass: crate::blocks::states_of("grass_block"),
+        }
+    }
+}
+
+/// Рисует в чанке ту часть дерева, что попала в него. Ствол стоит в (x, z)
+/// — местные (local_x, local_z) — на земле высоты `height`.
+#[allow(clippy::too_many_arguments)]
+fn draw_tree(
+    chunk: &mut Chunk,
+    tree: &trees::Tree,
+    local_x: i32,
+    local_z: i32,
+    height: i32,
+    x: i32,
+    z: i32,
+    ground: &TreeGround,
+) {
+    let TreeGround { water, soil, grass } = ground;
+    let (water, grass) = (*water, *grass);
+
+    let by_text = |text: &str| {
+        crate::blocks::state_from_text(text)
+            .unwrap_or_else(|| terrain::block_named(text))
+    };
+    let leaves = by_text(tree.leaves);
+    // У огромных грибов «ствол» записан полным состоянием, оси
+    // у него нет.
+    let log = |axis: terrain::Axis| {
+        if tree.log.contains('[') {
+            return by_text(tree.log);
+        }
+
+        let axis = match axis {
+            terrain::Axis::X => "x",
+            terrain::Axis::Y => "y",
+            terrain::Axis::Z => "z",
+        };
+
+        crate::blocks::state_from_text(&format!("{}[axis={}]", tree.log, axis))
+            .unwrap_or_else(|| terrain::block_named(tree.log))
+    };
+    let logs = [
+        log(terrain::Axis::X),
+        log(terrain::Axis::Y),
+        log(terrain::Axis::Z),
+    ];
+    let blocks = tree.blocks(x, z);
+
+    // Земля под деревом — первой: пока над ней не выросли ни
+    // корни, ни ствол, её верх виден сразу.
+    for (dx, dy, dz, part) in &blocks {
+        if let terrain::Part::Ground(text) = part {
+            let (bx, bz) = (local_x + dx, local_z + dz);
+
+            if !(0..CHUNK_SIZE).contains(&bx) || !(0..CHUNK_SIZE).contains(&bz) {
+                continue;
+            }
+
+            let near = height + dy;
+            let lowest = (near - 3).max(MIN_Y);
+            let highest = (near + 3).min(MIN_Y + WORLD_HEIGHT - 1);
+
+            // Сверху вниз до первого блока, что не воздух и не
+            // вода; меняем его, только если это земля.
+            let Some(y) = (lowest..=highest)
+                .rev()
+                .find(|&y| ![AIR, water].contains(&chunk.block(bx, y, bz)))
+            else {
+                continue;
+            };
+
+            let here = chunk.block(bx, y, bz);
+
+            if !soil.iter().any(|(low, high)| (*low..=*high).contains(&here)) {
+                continue;
+            }
+
+            if *text == "dirt"
+                && !grass.is_some_and(|(low, high)| (low..=high).contains(&here))
+            {
+                continue;
+            }
+
+            if let Some(state) = crate::blocks::state_from_text(text) {
+                chunk.put_generated(bx, y, bz, state, true);
+            }
+        }
+    }
+
+    // Листва не затирает стволы и ветви, поэтому ставится раньше,
+    // а брёвна — поверх неё.
+    for (dx, dy, dz, part) in &blocks {
+        if *part == terrain::Part::Leaves {
+            chunk.put_generated(
+                local_x + dx,
+                height + dy,
+                local_z + dz,
+                leaves,
+                false,
+            );
+        }
+    }
+
+    for (dx, dy, dz, part) in &blocks {
+        if let terrain::Part::Log(axis) = part {
+            let state = logs[*axis as usize];
+
+            chunk.put_generated(
+                local_x + dx,
+                height + dy,
+                local_z + dz,
+                state,
+                true,
+            );
+        }
+    }
+
+    // Лианы, какао, корни — последними и только на свободное
+    // место: в воздух, а что бывает затоплено — и в воду.
+    for (dx, dy, dz, part) in &blocks {
+        let terrain::Part::Block(text) = part else {
+            continue;
+        };
+        let (bx, by, bz) = (local_x + dx, height + dy, local_z + dz);
+
+        if !(0..CHUNK_SIZE).contains(&bx)
+            || !(0..CHUNK_SIZE).contains(&bz)
+            || !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&by)
+        {
+            continue;
+        }
+
+        let here = chunk.block(bx, by, bz);
+        let state = if here == AIR {
+            crate::blocks::state_from_text(text)
+        } else if here == water {
+            let wet = match text.strip_suffix(']') {
+                Some(open) => format!("{},waterlogged=true]", open),
+                None => format!("{}[waterlogged=true]", text),
+            };
+
+            crate::blocks::state_from_text(&wet)
+        } else {
+            None
+        };
+
+        if let Some(state) = state {
+            chunk.put_generated(bx, by, bz, state, true);
         }
     }
 }
@@ -2260,6 +2602,105 @@ mod tests {
         assert_eq!(read.not_air(), Chunk::flat().not_air());
     }
 
+    /// Объёмные биомы записываются и читаются обратно клетка в клетку, и
+    /// записью «номер и сколько подряд» они почти ничего не стоят.
+    #[test]
+    fn volume_biomes_survive_the_disk() {
+        let mut chunk = Chunk::flat();
+        let plain = chunk.to_bytes().len();
+        let lush = terrain::Biome::LushCaves.number() as BiomeId;
+        let deep = terrain::Biome::DeepDark.number() as BiomeId;
+
+        for layer in 0..BIOME_LAYERS {
+            for cell in 0..BIOME_LAYER {
+                chunk.biomes[layer * BIOME_LAYER + cell] = match layer {
+                    0..=10 => deep,
+                    11..=30 if cell % 3 == 0 => lush,
+                    _ => cell as BiomeId,
+                };
+            }
+        }
+
+        let bytes = chunk.to_bytes();
+        let read = Chunk::from_bytes(&bytes).expect("прочитать");
+
+        assert_eq!(bytes[0], CHUNK_VERSION);
+        assert_eq!(read.biomes, chunk.biomes);
+        assert_eq!(read.not_air(), chunk.not_air());
+        assert!(plain < 256, "ровный чанк занял {} байт", plain);
+    }
+
+    /// Чанки прежних версий читаются: их биом был один на столбец клетки,
+    /// теперь он растягивается на всю высоту.
+    #[test]
+    fn older_chunks_are_still_read() {
+        let stone = crate::blocks::state_by_name("stone").unwrap();
+
+        for version in [CHUNK_VERSION_WIDE, CHUNK_VERSION_FLAT_BIOMES] {
+            let mut bytes = vec![version];
+
+            for section in 0..SECTIONS {
+                if section != 0 {
+                    bytes.push(0);
+                    continue;
+                }
+
+                // Нижняя секция целиком из камня: одна запись.
+                bytes.push(1);
+                bytes.extend_from_slice(&1u16.to_be_bytes());
+
+                if version == CHUNK_VERSION_WIDE {
+                    bytes.extend_from_slice(&stone.to_be_bytes());
+                } else {
+                    bytes.extend_from_slice(&(stone as u16).to_be_bytes());
+                }
+
+                bytes.extend_from_slice(&(SECTION_BLOCKS as u16).to_be_bytes());
+            }
+
+            let without_biomes = bytes.clone();
+
+            for cell in 0..BIOME_LAYER {
+                bytes.extend_from_slice(&(cell as u16 + 3).to_be_bytes());
+            }
+
+            let chunk = Chunk::from_bytes(&bytes).expect("прочитать прежний чанк");
+
+            assert_eq!(chunk.block(7, MIN_Y + 15, 9), stone);
+            assert_eq!(chunk.block(7, MIN_Y + 16, 9), AIR);
+
+            for layer in 0..BIOME_LAYERS {
+                for cell in 0..BIOME_LAYER {
+                    assert_eq!(chunk.biomes[layer * BIOME_LAYER + cell], cell as BiomeId + 3);
+                }
+            }
+
+            // Совсем старый чанк без биомов — первый биом реестра.
+            let chunk = Chunk::from_bytes(&without_biomes).expect("прочитать чанк без биомов");
+
+            assert!(chunk.biomes.iter().all(|biome| *biome == 0));
+
+            // Прочитанный старый чанк записывается уже новой версией.
+            assert_eq!(chunk.to_bytes()[0], CHUNK_VERSION);
+        }
+    }
+
+    /// Испорченная запись биомов — не повод читать чанк как попало.
+    #[test]
+    fn broken_biomes_are_refused() {
+        let mut bytes = Chunk::flat().to_bytes();
+
+        bytes.truncate(bytes.len() - 2);
+        assert!(Chunk::from_bytes(&bytes).is_none());
+
+        // Записи покрывают больше клеток, чем есть.
+        let mut bytes = Chunk::flat().to_bytes();
+        let length = bytes.len();
+
+        bytes[length - 2..].copy_from_slice(&u16::MAX.to_be_bytes());
+        assert!(Chunk::from_bytes(&bytes).is_none());
+    }
+
     /// Воздушные секции не занимают памяти: пустой чанк почти ничего не стоит.
     #[test]
     fn air_costs_nothing() {
@@ -2526,9 +2967,10 @@ mod speed {
             Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
         let count = 64;
         let mut total = Duration::ZERO;
-        let mut phases = [Duration::ZERO; 5];
+        let mut phases = [Duration::ZERO; 7];
         let mut nests = Duration::ZERO;
         let mut ore_biomes = Duration::ZERO;
+        let mut ready = HashMap::new();
 
         for i in 0..count {
             let (chunk_x, chunk_z) = (i % 8, i / 8);
@@ -2601,9 +3043,40 @@ mod speed {
             }
 
             timed(4, &mut |chunk| {
-                vegetation::decorate(&generator, chunk, chunk_x, chunk_z, &columns)
+                vegetation::decorate(&generator, chunk, chunk_x, chunk_z, &columns);
+                ocean::decorate(&generator, chunk, chunk_x, chunk_z, &columns)
             });
+            timed(5, &mut |chunk| {
+                cave_biomes::decorate(&generator, chunk, chunk_x, chunk_z)
+            });
+            timed(6, &mut |chunk| chunk.light_up());
+
+            ready.insert((chunk_x, chunk_z), chunk);
         }
+
+        // Сшивка света с соседями — у чанков, у которых все восемь соседей
+        // сложены, — и сколько памяти занимает свет.
+        let mut world = World::in_memory();
+        let light_bytes: usize = ready
+            .values()
+            .map(|chunk| chunk.light.as_ref().map_or(0, |(_, light)| light.bytes()))
+            .sum();
+
+        world.chunks = ready;
+
+        let mut stitched = 0;
+        let started = Instant::now();
+
+        for chunk_x in 1..7 {
+            for chunk_z in 1..7 {
+                let job = world.light_job(chunk_x, chunk_z).expect("чанк");
+
+                std::hint::black_box(job.finish());
+                stitched += 1;
+            }
+        }
+
+        let stitch = started.elapsed() / stitched;
 
         let each = |time: Duration| time / count as u32;
         let rest: Duration = phases.iter().sum();
@@ -2622,7 +3095,657 @@ mod speed {
         );
         println!("  подземелье: {:?}", each(phases[2]));
         println!("  деревья: {:?}", each(phases[3]));
-        println!("  растительность: {:?}", each(phases[4]));
+        println!("  растительность и море: {:?}", each(phases[4]));
+        println!("  пещерные биомы: {:?}", each(phases[5]));
+        println!("  свет чанка: {:?}", each(phases[6]));
+        println!("сшивка света с соседями перед отправкой: {:?}", stitch);
+        println!(
+            "память на свет: {} КБ на чанк (блоки — до {} КБ)",
+            light_bytes / count as usize / 1024,
+            SECTIONS as usize * SECTION_BLOCKS * 2 / 1024
+        );
+    }
+
+    /// Растения на чанк по биомам — как tools/measure/plants_census.py
+    /// считает у оригинала (биом — по середине чанка на поверхности,
+    /// двухблочные — по нижней половине):
+    /// `cargo test --release plants_census -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn plants_census() {
+        const WATCH: [&str; 40] = [
+            "sunflower", "lilac", "rose_bush", "peony", "tall_grass", "large_fern", "pumpkin", "melon", "sugar_cane",
+            "cactus", "sweet_berry_bush", "lily_pad", "dandelion", "poppy", "cornflower", "azure_bluet", "short_grass",
+            "fern", "pink_petals", "wildflowers", "dead_bush", "lily_of_the_valley", "oxeye_daisy", "allium",
+            "red_tulip", "orange_tulip", "white_tulip", "pink_tulip", "blue_orchid", "bush", "firefly_bush",
+            "leaf_litter", "short_dry_grass", "tall_dry_grass", "brown_mushroom", "red_mushroom", "seagrass",
+            "tall_seagrass", "kelp", "cactus_flower",
+        ];
+        // PLANTS_TSV=1 — все растения построчно, как `plants_census.py --tsv`.
+        let tsv = std::env::var_os("PLANTS_TSV").is_some();
+        let generator = Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
+        let mut chunks: HashMap<&str, u64> = HashMap::new();
+        let mut counts: HashMap<(&str, &str), u64> = HashMap::new();
+        // Чанки через восемь на квадрате 800×800 — по полосам, каждая в своём
+        // потоке.
+        let rows: Vec<i32> = (-400..400).step_by(8).collect();
+        let threads = std::thread::available_parallelism().map_or(4, |n| n.get());
+        let parts: Vec<_> = std::thread::scope(|scope| {
+            let handles: Vec<_> = rows
+                .chunks(rows.len().div_ceil(threads))
+                .map(|part| {
+                    let generator = &generator;
+
+                    scope.spawn(move || {
+                        let mut chunks: HashMap<&str, u64> = HashMap::new();
+                        let mut counts: HashMap<(&str, &str), u64> = HashMap::new();
+
+                        for &chunk_x in part {
+                            for chunk_z in (-400..400).step_by(8) {
+                                let chunk = Chunk::generated(generator, chunk_x, chunk_z);
+                                let biome =
+                                    generator.column_at(chunk_x * CHUNK_SIZE + 8, chunk_z * CHUNK_SIZE + 8).biome.name();
+
+                                *chunks.entry(biome).or_default() += 1;
+
+                                for x in 0..CHUNK_SIZE {
+                                    for z in 0..CHUNK_SIZE {
+                                        for y in 32..208 {
+                                            let state = chunk.block(x, y, z);
+
+                                            if state == AIR {
+                                                continue;
+                                            }
+
+                                            // Верхняя половина двухблочного стоит на нижней
+                                            // того же растения — её не считаем.
+                                            if let Some(name) = crate::blocks::block_at_state(state)
+                                                && WATCH.contains(&name)
+                                                && crate::blocks::block_at_state(chunk.block(x, y - 1, z)) != Some(name)
+                                            {
+                                                *counts.entry((biome, name)).or_default() += 1;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        (chunks, counts)
+                    })
+                })
+                .collect();
+
+            handles.into_iter().map(|handle| handle.join().expect("поток переписи упал")).collect()
+        });
+
+        for (part_chunks, part_counts) in parts {
+            for (biome, n) in part_chunks {
+                *chunks.entry(biome).or_default() += n;
+            }
+
+            for (key, n) in part_counts {
+                *counts.entry(key).or_default() += n;
+            }
+        }
+
+        let mut biomes: Vec<_> = chunks.iter().filter(|(_, n)| **n >= 20).collect();
+        biomes.sort_by_key(|(_, n)| std::cmp::Reverse(**n));
+
+        for (biome, n) in biomes {
+            if tsv {
+                let mut names = WATCH;
+                names.sort_unstable();
+
+                for name in names {
+                    if let Some(count) = counts.get(&(*biome, name)) {
+                        println!("{}\t{}\t{}\t{:.3}", biome, n, name, *count as f64 / *n as f64);
+                    }
+                }
+
+                continue;
+            }
+
+            let mut line: Vec<(&str, f64)> =
+                WATCH.iter().map(|name| (*name, *counts.get(&(*biome, *name)).unwrap_or(&0) as f64 / *n as f64)).collect();
+            line.sort_by(|a, b| b.1.total_cmp(&a.1));
+            let text: Vec<String> = line.iter().take(8).filter(|(_, v)| *v > 0.0).map(|(k, v)| format!("{} {:.1}", k, v)).collect();
+
+            println!("{} ({} чанков): {}", biome, n, text.join(", "));
+        }
+    }
+
+    /// Сколько воды и лавы в обычных чанках сразу ставится течь и сколько
+    /// стоит их поиск.
+    /// `cargo test --release fluids_wake_census -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn fluids_wake_census() {
+        let generator = Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
+        let chunks: Vec<Chunk> = (0..64).map(|i| Chunk::generated(&generator, i % 8 * 7, i / 8 * 7)).collect();
+        let started = std::time::Instant::now();
+        let found: usize = chunks.iter().enumerate().map(|(i, chunk)| chunk.fluids_to_wake(i as i32 % 8 * 7, i as i32 / 8 * 7).len()).sum();
+
+        println!("на чанк: мест {:.1}, поиск {:?}", found as f64 / 64.0, started.elapsed() / 64);
+    }
+
+    /// Разбор места, где вода не течёт: участок 5×5 чанков кладётся в мир
+    /// так же, как при игре, прогоняются такты жидкостей, и в середине
+    /// ищутся места, которые правило растекания ещё хотело бы изменить.
+    /// `CHUNK="-13 -81" cargo test --release fluids_missed -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn fluids_missed() {
+        let place = std::env::var("CHUNK").unwrap_or_else(|_| "-13 -81".into());
+        let mut parts = place.split_whitespace().map(|v| v.parse::<i32>().unwrap());
+        let (cx, cz) = (parts.next().unwrap(), parts.next().unwrap());
+        let generator = Arc::new(Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla)));
+        let mut world = World::in_memory();
+        let source = ChunkSource { path: std::env::temp_dir().join("mcsheriffanya-no-such-world"), generator };
+
+        for dx in -2..=2 {
+            for dz in -2..=2 {
+                world.accept(cx + dx, cz + dz, source.take(cx + dx, cz + dz));
+            }
+        }
+
+        if let Ok(spot) = std::env::var("SPOT") {
+            let v: Vec<i32> = spot.split_whitespace().map(|p| p.parse().unwrap()).collect();
+            let fresh = source.take(v[0].div_euclid(16), v[2].div_euclid(16));
+            let s = fresh.chunk.block(v[0].rem_euclid(16), v[1], v[2].rem_euclid(16));
+            let column = generator_column(&source, v[0], v[2]);
+            println!("свежий чанк в {:?}: {:?}; столбец: высота {}, биом {}", v, crate::blocks::block_at_state(s), column.0, column.1);
+            println!("в списке разбуженных: {}", fresh.wake.iter().any(|((x, y, z), _)| (*x, *y, *z) == (v[0], v[1], v[2])));
+            for (dx, dy, dz) in [(1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1), (0, 1, 0), (0, -1, 0)] {
+                let (x, y, z) = (v[0] + dx, v[1] + dy, v[2] + dz);
+                let chunk = source.take(x.div_euclid(16), z.div_euclid(16));
+                println!("  сосед {} {} {} при генерации: {:?}", x, y, z, crate::blocks::block_at_state(chunk.chunk.block(x.rem_euclid(16), y, z.rem_euclid(16))));
+            }
+        }
+
+        for _ in 0..std::env::var("TICKS").ok().and_then(|t| t.parse().ok()).unwrap_or(300) {
+            for ((x, y, z), kind) in world.advance(crate::tick::PER_TICK) {
+                if kind == TickKind::Fluid {
+                    crate::tick::flow(&mut world, x, y, z);
+                }
+            }
+        }
+
+        let block = |x: i32, y: i32, z: i32| world.get_block(x, y, z);
+        let mut stuck = 0;
+
+        for x in cx * 16 - 16..cx * 16 + 32 {
+            for z in cz * 16 - 16..cz * 16 + 32 {
+                for y in MIN_Y..MIN_Y + WORLD_HEIGHT {
+                    let state = world.get_block(x, y, z);
+
+                    if state != AIR && fluids::fluid_at(state).is_none() {
+                        continue;
+                    }
+
+                    if let Some(next) = fluids::update((x, y, z), &block)
+                        && next != state
+                    {
+                        stuck += 1;
+
+                        if stuck <= 8 {
+                            let around: Vec<String> = [(1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1), (0, 1, 0), (0, -1, 0)]
+                                .iter()
+                                .map(|(dx, dy, dz)| {
+                                    let s = world.get_block(x + dx, y + dy, z + dz);
+                                    format!("{}{}", crate::blocks::block_at_state(s).unwrap_or("?"),
+                                        fluids::fluid_at(s).map(|(_, l)| format!(":{}", l)).unwrap_or_default())
+                                })
+                                .collect();
+                            println!("стоит {} {} {}: {:?} → {:?}; +x -x +z -z +y -y: {:?}", x, y, z,
+                                crate::blocks::block_at_state(state), crate::blocks::block_at_state(next), around);
+                        }
+                    }
+                }
+            }
+        }
+
+        println!("мест, где жидкость ещё должна измениться: {}", stuck);
+    }
+
+    fn generator_column(source: &ChunkSource, x: i32, z: i32) -> (i32, &'static str) {
+        let column = source.generator.column_at(x, z);
+        (column.height, column.biome.name())
+    }
+
+    /// Вода над пустотой, сложенная вместе с чанком, сразу ставится течь,
+    /// а замкнутая камнем — нет: ей течь некуда.
+    #[test]
+    fn generated_water_starts_flowing() {
+        let mut chunk = Chunk::new();
+        let water = fluids::state_of(fluids::Kind::Water, fluids::SOURCE);
+        let stone = crate::blocks::state_by_name("stone").expect("камень есть");
+
+        chunk.set(3, 70, 3, water);
+        chunk.set(8, 70, 8, water);
+
+        for (x, y, z) in [(7, 70, 8), (9, 70, 8), (8, 70, 7), (8, 70, 9), (8, 69, 8)] {
+            chunk.set(x, y, z, stone);
+        }
+
+        // Будится пустота под водой, а не сама вода: такт жидкости решает,
+        // чем станет место.
+        let delay = fluids::Kind::Water.delay();
+        let woken = chunk.fluids_to_wake(2, -1);
+
+        assert!(woken.contains(&((35, 69, -13), delay)), "{:?}", woken);
+        assert!(!woken.iter().any(|((x, _, z), _)| (*x, *z) == (40, -8)), "замкнутая вода разбужена: {:?}", woken);
+    }
+
+    /// Дно под водой по биомам: глубина и блоки сверху дна и на 1..4 ниже —
+    /// в том же виде, что `tools/measure/seabed_census.py` у мира оригинала.
+    /// Сравнение: `tools/measure/seabed_compare.py`.
+    /// `cargo test --release seabed_census -- --ignored --nocapture | grep -P '^(depth|layer)\t'`.
+    #[test]
+    #[ignore]
+    fn seabed_census() {
+        type Layers = HashMap<(&'static str, i32), HashMap<&'static str, u64>>;
+
+        let name = |state| crate::blocks::block_at_state(state).unwrap_or("air");
+        let wet = |block: &str| {
+            matches!(block, "water" | "seagrass" | "tall_seagrass" | "kelp" | "kelp_plant" | "bubble_column" | "sea_pickle")
+                || block.ends_with("coral")
+                || block.ends_with("coral_fan")
+        };
+        let top = |block: &str| wet(block) || matches!(block, "ice" | "packed_ice" | "blue_ice" | "lily_pad");
+        let generator = Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
+        let rows: Vec<i32> = (-300..300).step_by(6).collect();
+        let threads = std::thread::available_parallelism().map_or(4, |n| n.get());
+        let parts: Vec<(HashMap<&str, Vec<i32>>, Layers)> = std::thread::scope(|scope| {
+            let handles: Vec<_> = rows
+                .chunks(rows.len().div_ceil(threads))
+                .map(|part| {
+                    let generator = &generator;
+
+                    scope.spawn(move || {
+                        let mut depth: HashMap<&str, Vec<i32>> = HashMap::new();
+                        let mut layers: Layers = HashMap::new();
+
+                        for &chunk_x in part {
+                            for chunk_z in (-300..300).step_by(6) {
+                                let chunk = Chunk::generated(generator, chunk_x, chunk_z);
+
+                                for x in 0..CHUNK_SIZE {
+                                    for z in 0..CHUNK_SIZE {
+                                        let mut y = terrain::SEA;
+
+                                        if !top(name(chunk.block(x, y, z))) {
+                                            continue;
+                                        }
+
+                                        while y > -60 && top(name(chunk.block(x, y, z))) {
+                                            y -= 1;
+                                        }
+
+                                        let biome = generator
+                                            .column_at(chunk_x * CHUNK_SIZE + x, chunk_z * CHUNK_SIZE + z)
+                                            .biome
+                                            .name();
+
+                                        depth.entry(biome).or_default().push(terrain::SEA - y);
+
+                                        for k in 0..5 {
+                                            *layers
+                                                .entry((biome, k))
+                                                .or_default()
+                                                .entry(name(chunk.block(x, y - k, z)))
+                                                .or_default() += 1;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        (depth, layers)
+                    })
+                })
+                .collect();
+
+            handles.into_iter().map(|handle| handle.join().expect("поток переписи упал")).collect()
+        });
+
+        let mut depth: HashMap<&str, Vec<i32>> = HashMap::new();
+        let mut layers: Layers = HashMap::new();
+
+        for (part_depth, part_layers) in parts {
+            for (biome, values) in part_depth {
+                depth.entry(biome).or_default().extend(values);
+            }
+
+            for (key, blocks) in part_layers {
+                for (block, n) in blocks {
+                    *layers.entry(key).or_default().entry(block).or_default() += n;
+                }
+            }
+        }
+
+        for (biome, values) in &mut depth {
+            if values.len() < 2000 {
+                continue;
+            }
+
+            values.sort();
+            let at = |part: f64| values[((values.len() - 1) as f64 * part) as usize];
+            println!("depth\t{}\t{}\t{}\t{}\t{}", biome, at(0.1), at(0.5), at(0.9), values.len());
+
+            for k in 0..5 {
+                let blocks = &layers[&(*biome, k)];
+                let total: u64 = blocks.values().sum();
+                let mut sorted: Vec<_> = blocks.iter().collect();
+                sorted.sort_by(|a, b| b.1.cmp(a.1));
+
+                for (block, n) in sorted.into_iter().take(8) {
+                    println!("layer\t{}\t{}\t{}\t{:.4}", biome, k, block, *n as f64 / total as f64);
+                }
+            }
+        }
+    }
+
+    /// Подводное на чанк по биомам — как tools/measure/ocean_census.py
+    /// считает у оригинала (биом — по середине чанка на поверхности):
+    /// кораллы, морские огурцы, айсберги, лёд на воде, магма и пузырьковые
+    /// колонны. Высоты айсбергов — от верхнего блока воды (у оригинала он
+    /// на y=62, у нас — `terrain::SEA`).
+    /// `cargo test --release ocean_census -- --ignored --nocapture`.
+    ///
+    /// Тёплых и замёрзших океанов мало, поэтому чанки выбираются по биому
+    /// середины на квадрате 4000×4000 чанков через восемь: каждого биома —
+    /// не больше 300 (OCEAN_CAP) первых по порядку.
+    #[test]
+    #[ignore]
+    fn ocean_census() {
+        const ROWS: [&str; 32] = [
+            "coral_block", "coral", "coral_fan", "coral_wall_fan", "sea_pickle", "pickles", "sea_pickle_on_coral",
+            "sea_pickle_on_other", "coral_chunks", "coral_kinds_sum", "packed_ice", "packed_ice_above",
+            "packed_ice_below", "snow_block", "snow_block_above", "snow_block_below", "blue_ice", "blue_ice_above",
+            "blue_ice_below", "berg_cols", "berg_chunks", "berg_max_sum", "berg_max_top", "sea_ice", "sea_open",
+            "magma_block", "magma_wet_floor", "magma_wet_under", "magma_dry", "magma_floor_y_sum", "bubble_column",
+            "bubble_bottoms",
+        ];
+        let sea = terrain::SEA;
+        let cap: usize = std::env::var("OCEAN_CAP").ok().and_then(|text| text.parse().ok()).unwrap_or(300);
+        // Имя блока по состоянию — заранее: иначе поиск на каждый блок.
+        let names: Vec<&str> =
+            (0..=u16::MAX as i32).map(|state| crate::blocks::block_at_state(state).unwrap_or("")).collect();
+        let name = |state: i32| names[state as usize];
+        let generator = Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
+        let threads = std::thread::available_parallelism().map_or(4, |n| n.get());
+        // Сперва биомы середин — это дёшево, потом чанки нужных.
+        let lines: Vec<i32> = (-2000..2000).step_by(8).collect();
+        let found: Vec<Vec<(i32, i32, &str)>> = std::thread::scope(|scope| {
+            let handles: Vec<_> = lines
+                .chunks(lines.len().div_ceil(threads))
+                .map(|part| {
+                    let generator = &generator;
+
+                    scope.spawn(move || {
+                        let mut found = Vec::new();
+
+                        for &chunk_x in part {
+                            for chunk_z in (-2000..2000).step_by(8) {
+                                let middle = generator.column_at(chunk_x * CHUNK_SIZE + 8, chunk_z * CHUNK_SIZE + 8);
+
+                                found.push((chunk_x, chunk_z, middle.biome.name()));
+                            }
+                        }
+
+                        found
+                    })
+                })
+                .collect();
+
+            handles.into_iter().map(|handle| handle.join().expect("поток переписи упал")).collect()
+        });
+        let mut taken: HashMap<&str, usize> = HashMap::new();
+        let picked: Vec<(i32, i32, &str)> = found
+            .into_iter()
+            .flatten()
+            .filter(|(_, _, biome)| {
+                let count = taken.entry(biome).or_default();
+
+                *count += 1;
+                *count <= cap
+            })
+            .collect();
+        let parts: Vec<_> = std::thread::scope(|scope| {
+            let handles: Vec<_> = picked
+                .chunks(picked.len().div_ceil(threads))
+                .map(|part| {
+                    let (generator, name) = (&generator, &name);
+
+                    scope.spawn(move || {
+                        let mut chunks: HashMap<&str, u64> = HashMap::new();
+                        let mut counts: HashMap<(&str, &str), u64> = HashMap::new();
+
+                        for &(chunk_x, chunk_z, biome) in part {
+                            {
+                                let chunk = Chunk::generated(generator, chunk_x, chunk_z);
+                                let mut add = |row: &'static str, n: u64| *counts.entry((biome, row)).or_default() += n;
+                                let top = chunk.highest();
+                                let mut kinds = std::collections::HashSet::new();
+                                let mut berg_top = 0;
+
+                                *chunks.entry(biome).or_default() += 1;
+
+                                for x in 0..CHUNK_SIZE {
+                                    for z in 0..CHUNK_SIZE {
+                                        let mut surface = None;
+
+                                        for y in (MIN_Y..=top).rev() {
+                                            let state = chunk.block(x, y, z);
+
+                                            if state == AIR {
+                                                continue;
+                                            }
+
+                                            let here = name(state);
+
+                                            if surface.is_none() {
+                                                surface = Some(if here == "snow" { y - 1 } else { y });
+                                            }
+
+                                            let coral = |suffix: &str| !here.starts_with("dead_") && here.ends_with(suffix);
+
+                                            if coral("_coral_block") {
+                                                add("coral_block", 1);
+                                            } else if coral("_coral_wall_fan") {
+                                                add("coral_wall_fan", 1);
+                                            } else if coral("_coral_fan") {
+                                                add("coral_fan", 1);
+                                            } else if coral("_coral") {
+                                                add("coral", 1);
+                                            } else if here == "sea_pickle" {
+                                                let count = crate::blocks::orientation_of(state)
+                                                    .and_then(|rule| rule.value(state, "pickles"))
+                                                    .and_then(|text| text.parse().ok())
+                                                    .unwrap_or(1);
+                                                let under = name(chunk.block(x, y - 1, z));
+
+                                                add("sea_pickle", 1);
+                                                add("pickles", count);
+                                                add(
+                                                    if under.ends_with("_coral_block") {
+                                                        "sea_pickle_on_coral"
+                                                    } else {
+                                                        "sea_pickle_on_other"
+                                                    },
+                                                    1,
+                                                );
+                                            } else if matches!(here, "packed_ice" | "snow_block" | "blue_ice") {
+                                                add(here, 1);
+                                                add(
+                                                    match (here, y > sea) {
+                                                        ("packed_ice", true) => "packed_ice_above",
+                                                        ("packed_ice", false) => "packed_ice_below",
+                                                        ("snow_block", true) => "snow_block_above",
+                                                        ("snow_block", false) => "snow_block_below",
+                                                        (_, true) => "blue_ice_above",
+                                                        _ => "blue_ice_below",
+                                                    },
+                                                    1,
+                                                );
+                                            } else if here == "magma_block" {
+                                                let above = name(chunk.block(x, y + 1, z));
+
+                                                add("magma_block", 1);
+                                                add(
+                                                    if matches!(above, "water" | "bubble_column") {
+                                                        "magma_wet_under"
+                                                    } else {
+                                                        "magma_dry"
+                                                    },
+                                                    1,
+                                                );
+                                            } else if here == "bubble_column" {
+                                                add("bubble_column", 1);
+
+                                                if name(chunk.block(x, y - 1, z)) == "magma_block" {
+                                                    add("bubble_bottoms", 1);
+                                                }
+                                            }
+
+                                            if !here.starts_with("dead_")
+                                                && (here.ends_with("_coral_block")
+                                                    || here.ends_with("_coral")
+                                                    || here.ends_with("_coral_fan")
+                                                    || here.ends_with("_coral_wall_fan"))
+                                            {
+                                                kinds.insert(here.split('_').next().unwrap_or(""));
+                                            }
+                                        }
+
+                                        // Поверхность моря: лёд или открытая вода там, где над
+                                        // ней ничего; айсберги — по столбцам.
+                                        match surface {
+                                            Some(y) if y == sea => match name(chunk.block(x, y, z)) {
+                                                "ice" => add("sea_ice", 1),
+                                                "water" => add("sea_open", 1),
+                                                _ => {}
+                                            },
+                                            Some(y)
+                                                if y > sea
+                                                    && y <= sea + 60
+                                                    && matches!(
+                                                        name(chunk.block(x, y, z)),
+                                                        "packed_ice" | "snow_block" | "blue_ice"
+                                                    ) =>
+                                            {
+                                                add("berg_cols", 1);
+                                                berg_top = berg_top.max(y - sea);
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                }
+
+                                if berg_top > 0 {
+                                    add("berg_chunks", 1);
+                                    add("berg_max_sum", berg_top as u64);
+                                    let best = counts.entry((biome, "berg_max_top")).or_default();
+                                    *best = (*best).max(berg_top as u64);
+                                }
+
+                                if !kinds.is_empty() {
+                                    *counts.entry((biome, "coral_chunks")).or_default() += 1;
+                                }
+
+                                *counts.entry((biome, "coral_kinds_sum")).or_default() += kinds.len() as u64;
+                            }
+                        }
+
+                        (chunks, counts)
+                    })
+                })
+                .collect();
+
+            handles.into_iter().map(|handle| handle.join().expect("поток переписи упал")).collect()
+        });
+
+        let mut chunks: HashMap<&str, u64> = HashMap::new();
+        let mut counts: HashMap<(&str, &str), u64> = HashMap::new();
+
+        for (part_chunks, part_counts) in parts {
+            for (biome, n) in part_chunks {
+                *chunks.entry(biome).or_default() += n;
+            }
+
+            for (key, n) in part_counts {
+                let total = counts.entry(key).or_default();
+
+                *total = if key.1 == "berg_max_top" { (*total).max(n) } else { *total + n };
+            }
+        }
+
+        let mut biomes: Vec<_> = chunks.iter().filter(|(_, n)| **n >= 20).collect();
+        biomes.sort_by_key(|(_, n)| std::cmp::Reverse(**n));
+
+        for (biome, n) in biomes {
+            let line: Vec<String> = ROWS
+                .iter()
+                .filter_map(|row| {
+                    let count = *counts.get(&(*biome, *row))?;
+
+                    (count > 0 && *row != "berg_max_top").then(|| format!("{} {:.2}", row, count as f64 / *n as f64))
+                })
+                .collect();
+
+            println!("{} ({} чанков): {}", biome, n, line.join(", "));
+
+            if let Some(top) = counts.get(&(*biome, "berg_max_top")) {
+                println!("  самый высокий айсберг: {}", top);
+            }
+        }
+    }
+
+    /// Сколько в чанках блоков, у которых на клиенте своя объёмная модель
+    /// (сундуки, спавнеры, ульи, скалк и прочее): клиент рисует их как
+    /// сущности, и тысячи таких в кадре тормозят.
+    /// `cargo test --release block_entity_census -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn block_entity_census() {
+        const WITH_MODEL: [&str; 16] = [
+            "chest", "trapped_chest", "spawner", "trial_spawner", "bee_nest", "beehive", "sculk_sensor",
+            "calibrated_sculk_sensor", "sculk_shrieker", "sculk_catalyst", "bell", "decorated_pot", "creaking_heart",
+            "suspicious_sand", "suspicious_gravel", "vault",
+        ];
+
+        for style in [terrain::Style::Smooth, terrain::Style::Vanilla] {
+            let generator = Generator::Normal(Terrain::new(100_554_032_945_340, style));
+            let mut counts: HashMap<&str, u64> = HashMap::new();
+            let side = 21;
+
+            for chunk_x in -side / 2..=side / 2 {
+                for chunk_z in -side / 2..=side / 2 {
+                    let chunk = Chunk::generated(&generator, chunk_x, chunk_z);
+
+                    for x in 0..CHUNK_SIZE {
+                        for z in 0..CHUNK_SIZE {
+                            for y in MIN_Y..MIN_Y + WORLD_HEIGHT {
+                                let state = chunk.block(x, y, z);
+
+                                if state == AIR {
+                                    continue;
+                                }
+
+                                if let Some(name) = crate::blocks::block_at_state(state)
+                                    && WITH_MODEL.contains(&name)
+                                {
+                                    *counts.entry(name).or_default() += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            println!("{:?}, {} чанков: {:?}", style, side * side, counts);
+        }
     }
 
     /// Разведка подземелья: из чего сложен камень под землёй в сложенных

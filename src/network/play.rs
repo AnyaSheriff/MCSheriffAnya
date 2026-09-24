@@ -47,6 +47,7 @@ use crate::placing;
 use crate::redstone;
 use crate::shared::Shared;
 use crate::skins::{self, Skin};
+use crate::world::light::{ChunkLight, LightJob, LightSection};
 use crate::world::{self, World, WorldEvent, WorldSound};
 use crate::{log_debug, log_error, log_info};
 
@@ -471,6 +472,7 @@ pub async fn play_session(
     );
 
     player.main_hand = look.main_hand;
+    player.view = view_for(shared, &look);
 
     if player.saved.is_some() {
         log_debug!(
@@ -513,7 +515,17 @@ pub async fn play_session(
 
     forget_reader(shared, player.reader);
 
-    result.map(|()| true)
+    // Игрок в мире был — значит, его надо убрать из списка при любом
+    // окончании, и оборванном тоже. Причина обрыва уже записана в лог выше.
+    Ok(true)
+}
+
+/// Сколько чанков вокруг слать игроку с такими настройками: его дальность,
+/// но не больше серверной и не меньше двух.
+fn view_for(shared: &Shared, look: &configuration::ClientLook) -> i32 {
+    let server = shared.properties.view_distance;
+
+    i32::from(look.view_distance).clamp(2.min(server), server)
 }
 
 /// Отписывает подключение от общих журналов.
@@ -635,148 +647,161 @@ async fn enter_world(
 
     player.entity_id = member.entity_id;
 
-    send_login(
-        stream,
-        player.game_mode,
-        player.entity_id,
-        shared.properties.view_distance,
-        shared.properties.simulation_distance,
-    )
-    .await?;
-    send_player_position(stream, player).await?;
+    // Всё дальнейшее — после записи в список: если связь оборвётся здесь,
+    // игрока надо из списка убрать, иначе его ник останется «занятым».
+    let entered: io::Result<Option<Entered>> = async {
 
-    // Клиент подтверждает телепортацию — до подтверждения он игнорирует
-    // пакеты о перемещении.
-    if let Some(look) = read_confirm_teleportation(stream).await? {
-        player.skin_parts = look.skin_parts;
-        player.main_hand = look.main_hand;
+        send_login(
+            stream,
+            player.game_mode,
+            player.entity_id,
+            shared.properties.view_distance,
+            shared.properties.simulation_distance,
+        )
+        .await?;
+        send_player_position(stream, player).await?;
 
-        // Игрок уже в общем списке — остальные должны увидеть новое.
-        let mut players = shared
-            .players
+        // Клиент подтверждает телепортацию — до подтверждения он игнорирует
+        // пакеты о перемещении.
+        if let Some(look) = read_confirm_teleportation(stream).await? {
+            player.skin_parts = look.skin_parts;
+            player.main_hand = look.main_hand;
+            player.view = view_for(shared, &look);
+
+            // Игрок уже в общем списке — остальные должны увидеть новое.
+            let mut players = shared
+                .players
+                .lock()
+                .expect("список игроков захвачен другим потоком");
+
+            players.set_skin_parts(&player.uuid, look.skin_parts);
+            players.set_main_hand(&player.uuid, look.main_hand);
+        }
+
+        // Дерево команд: без него клиент не знает, что можно вводить после косой
+        // черты, и не подсказывает.
+        send_commands(stream).await?;
+
+        // Список игроков: сперва те, кто уже на сервере, затем сам игрок.
+        // Новичок о них узнаёт только отсюда — записи журнала он ещё не читал.
+        for other in &others {
+            send_player_info(stream, other).await?;
+        }
+
+        send_player_info(stream, &member).await?;
+
+        // И про самого себя: свой второй слой скина клиент рисует не по своим
+        // настройкам, а по тем же сведениям о сущности, что и чужой. Не сказать
+        // ему — и в виде со стороны игрок будет без шапки и куртки.
+        send_look(
+            stream,
+            member.entity_id,
+            member.skin_parts,
+            member.main_hand,
+        )
+        .await?;
+
+        send_default_spawn_position(stream, player.spawn_point).await?;
+        send_health(stream).await?;
+        send_game_event_start_waiting(stream).await?;
+        let (age, time) = world_age(shared);
+        send_time(stream, age, time).await?;
+        send_center_chunk(stream, player.chunk()).await?;
+
+        // Клиент не закроет экран загрузки, пока не получит все чанки в объявленной
+        // дальности прорисовки. Отправляем квадрат вокруг игрока: он может стоять
+        // и не в начале координат — при следующем заходе он появляется там, где
+        // вышел.
+        let (center_x, center_z) = player.chunk();
+
+        let mut sent = SentChunks::new();
+
+        // Сперва только ближний квадрат — чтобы было на чём стоять. Остальное
+        // догружается в основном цикле: иначе на большой дальности игрок ждал бы
+        // тысячи чанков, прежде чем войти, а сообщение о его входе остальные
+        // увидели бы только через десяток секунд. У оригинала так же: игрок
+        // появляется сразу, даль дорисовывается потом.
+        send_chunks_around(
+            stream,
+            shared,
+            (center_x, center_z),
+            &mut sent,
+            (NEAR_CHUNKS, player.view),
+            usize::MAX,
+        )
+        .await?;
+
+        log_debug!("Play: отправлено ближних чанков — {}", sent.len());
+
+        // Чужие игроки появляются в мире только теперь: сущность клиент создаёт
+        // лишь после того, как получил запись об игроке в списке, а место в мире —
+        // после чанков под ним.
+        let mut seen = Seen::new();
+
+        for other in &others {
+            send_add_entity(stream, other).await?;
+            send_look(stream, other.entity_id, other.skin_parts, other.main_hand).await?;
+            send_equipment(stream, other.entity_id, other.held).await?;
+
+            seen.insert(
+                other.entity_id,
+                Shown {
+                    position: other.position,
+                    skin_parts: other.skin_parts,
+                    main_hand: other.main_hand,
+                    held: other.held,
+                },
+            );
+        }
+
+        // Предметы, уже лежащие в мире: о них новичок из журнала не узнает —
+        // они попали туда до его прихода.
+        let lying: Vec<Dropped> = shared
+            .items
             .lock()
-            .expect("список игроков захвачен другим потоком");
+            .expect("предметы захвачены другим потоком")
+            .items()
+            .to_vec();
 
-        players.set_skin_parts(&player.uuid, look.skin_parts);
-        players.set_main_hand(&player.uuid, look.main_hand);
+        let mut seen_items = SeenItems::new();
+
+        for item in &lying {
+            send_dropped_item(stream, item).await?;
+            seen_items.insert(item.entity_id, shown_item(item));
+        }
+
+        // Инвентарь: то, с чем игрок вышел в прошлый раз. Без этой посылки клиент
+        // показал бы пустой инвентарь, хотя на сервере вещи есть.
+        send_container_content(stream, player).await?;
+        send_held_slot(stream, player.inventory.selected()).await?;
+
+        if !others.is_empty() {
+            log_debug!("Play: показано чужих игроков — {}", others.len());
+        }
+
+        shared
+            .chat
+            .lock()
+            .expect("чат захвачен другим потоком")
+            .push(format!("{} зашёл на сервер", player.name));
+
+        Ok(Some(Entered {
+            item_changes,
+            seen_items,
+            sent_chunks: sent,
+            world_changes,
+            player_changes,
+            chat_lines,
+            seen,
+        }))
+    }
+    .await;
+
+    if entered.is_err() {
+        player_left(shared, &player.name, &player.uuid);
     }
 
-    // Дерево команд: без него клиент не знает, что можно вводить после косой
-    // черты, и не подсказывает.
-    send_commands(stream).await?;
-
-    // Список игроков: сперва те, кто уже на сервере, затем сам игрок.
-    // Новичок о них узнаёт только отсюда — записи журнала он ещё не читал.
-    for other in &others {
-        send_player_info(stream, other).await?;
-    }
-
-    send_player_info(stream, &member).await?;
-
-    // И про самого себя: свой второй слой скина клиент рисует не по своим
-    // настройкам, а по тем же сведениям о сущности, что и чужой. Не сказать
-    // ему — и в виде со стороны игрок будет без шапки и куртки.
-    send_look(
-        stream,
-        member.entity_id,
-        member.skin_parts,
-        member.main_hand,
-    )
-    .await?;
-
-    send_default_spawn_position(stream, player.spawn_point).await?;
-    send_health(stream).await?;
-    send_game_event_start_waiting(stream).await?;
-    let (age, time) = world_age(shared);
-    send_time(stream, age, time).await?;
-    send_center_chunk(stream, player.chunk()).await?;
-
-    // Клиент не закроет экран загрузки, пока не получит все чанки в объявленной
-    // дальности прорисовки. Отправляем квадрат вокруг игрока: он может стоять
-    // и не в начале координат — при следующем заходе он появляется там, где
-    // вышел.
-    let (center_x, center_z) = player.chunk();
-
-    let mut sent = SentChunks::new();
-
-    // Сперва только ближний квадрат — чтобы было на чём стоять. Остальное
-    // догружается в основном цикле: иначе на большой дальности игрок ждал бы
-    // тысячи чанков, прежде чем войти, а сообщение о его входе остальные
-    // увидели бы только через десяток секунд. У оригинала так же: игрок
-    // появляется сразу, даль дорисовывается потом.
-    send_chunks_around(
-        stream,
-        shared,
-        (center_x, center_z),
-        &mut sent,
-        NEAR_CHUNKS,
-        usize::MAX,
-    )
-    .await?;
-
-    log_debug!("Play: отправлено ближних чанков — {}", sent.len());
-
-    // Чужие игроки появляются в мире только теперь: сущность клиент создаёт
-    // лишь после того, как получил запись об игроке в списке, а место в мире —
-    // после чанков под ним.
-    let mut seen = Seen::new();
-
-    for other in &others {
-        send_add_entity(stream, other).await?;
-        send_look(stream, other.entity_id, other.skin_parts, other.main_hand).await?;
-        send_equipment(stream, other.entity_id, other.held).await?;
-
-        seen.insert(
-            other.entity_id,
-            Shown {
-                position: other.position,
-                skin_parts: other.skin_parts,
-                main_hand: other.main_hand,
-                held: other.held,
-            },
-        );
-    }
-
-    // Предметы, уже лежащие в мире: о них новичок из журнала не узнает —
-    // они попали туда до его прихода.
-    let lying: Vec<Dropped> = shared
-        .items
-        .lock()
-        .expect("предметы захвачены другим потоком")
-        .items()
-        .to_vec();
-
-    let mut seen_items = SeenItems::new();
-
-    for item in &lying {
-        send_dropped_item(stream, item).await?;
-        seen_items.insert(item.entity_id, shown_item(item));
-    }
-
-    // Инвентарь: то, с чем игрок вышел в прошлый раз. Без этой посылки клиент
-    // показал бы пустой инвентарь, хотя на сервере вещи есть.
-    send_container_content(stream, player).await?;
-    send_held_slot(stream, player.inventory.selected()).await?;
-
-    if !others.is_empty() {
-        log_debug!("Play: показано чужих игроков — {}", others.len());
-    }
-
-    shared
-        .chat
-        .lock()
-        .expect("чат захвачен другим потоком")
-        .push(format!("{} зашёл на сервер", player.name));
-
-    Ok(Some(Entered {
-        item_changes,
-        seen_items,
-        sent_chunks: sent,
-        world_changes,
-        player_changes,
-        chat_lines,
-        seen,
-    }))
+    entered
 }
 
 /// Отправляет Login (Play) — первый пакет фазы Play.
@@ -1316,13 +1341,12 @@ async fn send_chunks_around(
     shared: &Shared,
     (center_x, center_z): (i32, i32),
     sent: &mut SentChunks,
-    radius: i32,
+    (radius, view): (i32, i32),
     limit: usize,
 ) -> io::Result<bool> {
     // Ушедшие из виду чанки клиент выбрасывает сам. Сервер должен об этом
     // знать, иначе, вернувшись, игрок увидит на их месте пустоту: сервер
     // считал бы, что они у клиента уже есть.
-    let view = shared.properties.view_distance;
 
     let gone: Vec<(i32, i32)> = sent
         .iter()
@@ -1365,24 +1389,29 @@ async fn send_chunks_around(
     const AT_ONCE: usize = 16;
 
     for part in wanted.chunks(AT_ONCE) {
+        // Свет у края чанка зависит от соседей: без них там остался бы шов.
+        // Поэтому складываются и соседи отправляемых чанков — клиенту они
+        // уйдут позже, когда до них дойдёт очередь.
+        let mut needed: Vec<(i32, i32)> = Vec::new();
+
+        for (chunk_x, chunk_z) in part.iter().copied() {
+            for place in (-1..=1).flat_map(|dx| (-1..=1).map(move |dz| (chunk_x + dx, chunk_z + dz))) {
+                if !needed.contains(&place) {
+                    needed.push(place);
+                }
+            }
+        }
+
         let source = {
             let world = shared.world.lock().expect("мир захвачен другим потоком");
 
+            needed.retain(|(chunk_x, chunk_z)| !world.has_chunk(*chunk_x, *chunk_z));
             Arc::new(world.source())
         };
 
         let mut coming = Vec::new();
 
-        for (chunk_x, chunk_z) in part.iter().copied() {
-            if shared
-                .world
-                .lock()
-                .expect("мир захвачен другим потоком")
-                .has_chunk(chunk_x, chunk_z)
-            {
-                continue;
-            }
-
+        for (chunk_x, chunk_z) in needed {
             let source = Arc::clone(&source);
 
             coming.push(tokio::task::spawn_blocking(move || {
@@ -1402,12 +1431,151 @@ async fn send_chunks_around(
                 .accept(chunk_x, chunk_z, ready);
         }
 
+        // Свет — тоже вне захвата мира и сразу несколькими руками: миру
+        // достаются только ссылки на секции, счёт идёт в стороне.
+        let mut lighting = Vec::new();
+
         for (chunk_x, chunk_z) in part.iter().copied() {
-            send_chunk(stream, &shared.world, chunk_x, chunk_z).await?;
+            let job = shared
+                .world
+                .lock()
+                .expect("мир захвачен другим потоком")
+                .light_job(chunk_x, chunk_z);
+
+            lighting.push(tokio::task::spawn_blocking(move || job.map(LightJob::finish)));
+        }
+
+        for ((chunk_x, chunk_z), waiting) in part.iter().copied().zip(lighting) {
+            let light = match waiting.await {
+                Ok(Some((light, recounted))) => {
+                    // Пересчитанный собственный свет — обратно в чанки,
+                    // чтобы не считать его заново.
+                    if !recounted.is_empty() {
+                        shared
+                            .world
+                            .lock()
+                            .expect("мир захвачен другим потоком")
+                            .store_light(recounted);
+                    }
+
+                    light
+                }
+                _ => ChunkLight::open_sky(),
+            };
+
+            send_chunk(stream, &shared.world, chunk_x, chunk_z, &light).await?;
         }
     }
 
     Ok(all)
+}
+
+/// Чанки, которые складываются впрок за краем обзора одного игрока: к
+/// тому мгновению, как чанк войдёт в обзор, он уже готов, и отправка не ждёт
+/// генерации. Клиенту эти чанки не шлются. Насколько далеко и сколько за
+/// раз — настройки `prefetch_chunks` и `prefetch_at_once`.
+///
+/// Складывание идёт в стороне, на пуле блокирующих задач; готовое приходит
+/// по каналу и кладётся в мир на следующем круге цикла игрока. Замок мира на
+/// время складывания не держится.
+struct Prefetch {
+    /// Что уже складывается и ещё не пришло.
+    pending: std::collections::HashSet<(i32, i32)>,
+    sender: std::sync::mpsc::Sender<(i32, i32, world::ReadyChunk)>,
+    receiver: std::sync::mpsc::Receiver<(i32, i32, world::ReadyChunk)>,
+    /// Вокруг какого чанка кольцо уже всё готово: пока игрок там, искать
+    /// нечего.
+    done_around: Option<(i32, i32, i32)>,
+}
+
+impl Prefetch {
+    fn new() -> Prefetch {
+        let (sender, receiver) = std::sync::mpsc::channel();
+
+        Prefetch {
+            pending: std::collections::HashSet::new(),
+            sender,
+            receiver,
+            done_around: None,
+        }
+    }
+
+    /// Кладёт в мир то, что успело сложиться. Чанк, который тем временем
+    /// появился в мире другим путём (его прислали игроку, в нём уже что-то
+    /// поменяли), не заменяется.
+    fn collect(&mut self, shared: &Shared) {
+        let arrived: Vec<_> = self.receiver.try_iter().collect();
+
+        if arrived.is_empty() {
+            return;
+        }
+
+        let mut world = shared.world.lock().expect("мир захвачен другим потоком");
+
+        for (chunk_x, chunk_z, ready) in arrived {
+            self.pending.remove(&(chunk_x, chunk_z));
+
+            if !world.has_chunk(chunk_x, chunk_z) {
+                world.accept(chunk_x, chunk_z, ready);
+            }
+        }
+    }
+
+    /// Запускает складывание ближайших недостающих чанков кольца от `view`
+    /// до `view + prefetch_chunks` вокруг игрока.
+    fn step(&mut self, shared: &Shared, (center_x, center_z): (i32, i32), view: i32) {
+        let (ahead, at_once) = (shared.settings.prefetch_chunks, shared.settings.prefetch_at_once);
+
+        if ahead <= 0 || self.done_around == Some((center_x, center_z, view)) || self.pending.len() >= at_once {
+            return;
+        }
+
+        let reach = view + ahead;
+        let (missing, source) = {
+            let world = shared.world.lock().expect("мир захвачен другим потоком");
+            let mut missing: Vec<(i32, i32)> = Vec::new();
+
+            for chunk_x in (center_x - reach)..=(center_x + reach) {
+                for chunk_z in (center_z - reach)..=(center_z + reach) {
+                    let inside = (chunk_x - center_x).abs() <= view && (chunk_z - center_z).abs() <= view;
+
+                    if !inside && !self.pending.contains(&(chunk_x, chunk_z)) && !world.has_chunk(chunk_x, chunk_z) {
+                        missing.push((chunk_x, chunk_z));
+                    }
+                }
+            }
+
+            (missing, Arc::new(world.source()))
+        };
+
+        if missing.is_empty() {
+            if self.pending.is_empty() && self.done_around.is_none() {
+                log_debug!("Впрок: кольцо до {} чанков вокруг {} {} готово", reach, center_x, center_z);
+            }
+
+            if self.pending.is_empty() {
+                self.done_around = Some((center_x, center_z, view));
+            }
+
+            return;
+        }
+
+        self.done_around = None;
+
+        let mut missing = missing;
+        missing.sort_by_key(|(x, z)| (x - center_x).pow(2) + (z - center_z).pow(2));
+
+        for (chunk_x, chunk_z) in missing.into_iter().take(at_once - self.pending.len()) {
+            let source = Arc::clone(&source);
+            let sender = self.sender.clone();
+
+            self.pending.insert((chunk_x, chunk_z));
+            tokio::task::spawn_blocking(move || {
+                // Игрок мог уйти, и приёмника уже нет — тогда чанк не нужен.
+                let _ = sender.send((chunk_x, chunk_z, source.take(chunk_x, chunk_z)));
+            });
+        }
+    }
 }
 
 /// Отправляет Unload Chunk — «этот чанк можно забыть».
@@ -2337,11 +2505,13 @@ async fn send_pending_chat(
 }
 
 /// Отправляет чанк с указанными координатами — из текущего состояния мира.
+/// Свет посчитан заранее, вне захвата мира.
 async fn send_chunk(
     stream: &mut TcpStream,
     world: &Mutex<World>,
     chunk_x: i32,
     chunk_z: i32,
+    light: &ChunkLight,
 ) -> io::Result<()> {
     let mut body = encode_varint(CHUNK_DATA);
 
@@ -2361,13 +2531,22 @@ async fn send_chunk(
         world.chunk_packet(chunk_x, chunk_z, |sections, biomes| {
             let mut out = Vec::new();
 
-            for section in sections {
+            // У каждой секции свои 64 клетки биома: пещерные биомы лежат
+            // только в толще.
+            for (section, biomes) in sections.iter().zip(biomes.chunks(world::SECTION_BIOMES)) {
                 push_section(&mut out, section.as_deref(), Some(biomes));
             }
 
-            out
+            // Самая высокая секция, где есть хоть один блок: свет выше неё
+            // клиент считает полным сам.
+            let top = sections.iter().rposition(Option::is_some);
+
+            (out, top)
         })
     };
+
+    let top = sections.as_ref().and_then(|(_, top)| *top);
+    let sections = sections.map(|(ready, _)| ready);
 
     match sections {
         Some(ready) => {
@@ -2390,7 +2569,7 @@ async fn send_chunk(
     // Блоков с дополнительными данными (сундуков, табличек) нет.
     body.extend_from_slice(&encode_varint(0));
 
-    push_light(&mut body);
+    push_light(&mut body, top, light);
 
     write_body(stream, body).await
 }
@@ -2403,7 +2582,7 @@ async fn send_chunk(
 /// Формат: количество непустых блоков, количество блоков с жидкостью, затем
 /// состояния блоков и биомы. Состояния кодируются либо одним значением, либо
 /// палитрой, либо напрямую — что короче.
-fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[i32]>) {
+fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]>) {
     /// Больше этого числа разных состояний — и палитра перестаёт экономить.
     const MAX_PALETTE: usize = 16;
 
@@ -2443,12 +2622,16 @@ fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[i32]
 
 /// Добавляет биомы секции.
 ///
-/// Биом задаётся на каждые четыре блока: в секции это 4×4×4 = 64 ячейки.
-/// По высоте биом у нас один на весь столбец, поэтому четыре слоя ячеек
-/// повторяют один и тот же рисунок 4×4.
-fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[i32]>) {
-    /// Ячеек биома на сторону секции.
-    const CELLS: usize = 4;
+/// Биом задаётся на каждые четыре блока: в секции это 4×4×4 = 64 клетки,
+/// в том же порядке, что у блоков: снизу вверх, внутри — по Z, потом по X.
+///
+/// Палитра у биомов — до трёх битов на клетку (до восьми разных биомов);
+/// больше — и номера пишутся прямо, битов столько, сколько нужно на номер
+/// любого биома реестра (страница протокола, «Chunk Format» → Paletted
+/// Container).
+fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[u16]>) {
+    /// Больше битов на клетку палитра не берёт.
+    const MAX_PALETTE_BITS: usize = 3;
 
     let Some(biomes) = biomes else {
         // Чанка ещё нет — пусть будет равнина: она в реестре первой... а
@@ -2457,7 +2640,7 @@ fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[i32]>) {
         return;
     };
 
-    let mut palette: Vec<i32> = Vec::new();
+    let mut palette: Vec<u16> = Vec::new();
 
     for biome in biomes {
         if !palette.contains(biome) {
@@ -2466,39 +2649,52 @@ fn push_biomes(out: &mut Vec<u8>, biomes: Option<&[i32]>) {
     }
 
     if palette.len() == 1 {
-        push_single_value_container(out, palette[0]);
+        push_single_value_container(out, palette[0] as i32);
         return;
     }
 
     // Битов на запись — столько, чтобы хватило на всю палитру.
-    let bits = usize::BITS - (palette.len() - 1).leading_zeros();
-    let bits = bits.max(1) as usize;
+    let bits = bits_for(palette.len());
+
+    if bits > MAX_PALETTE_BITS {
+        let bits = bits_for(world::terrain::biome_registry_size());
+        let numbers: Vec<u32> = biomes.iter().map(|biome| *biome as u32).collect();
+
+        out.push(bits as u8);
+
+        for long in pack_values(&numbers, bits) {
+            push_i64(out, long);
+        }
+
+        return;
+    }
 
     out.push(bits as u8);
     out.extend_from_slice(&encode_varint(palette.len() as i32));
 
     for biome in &palette {
-        out.extend_from_slice(&encode_varint(*biome));
+        out.extend_from_slice(&encode_varint(*biome as i32));
     }
 
-    // Порядок ячеек тот же, что у блоков: снизу вверх, внутри — по Z, потом
-    // по X. Слои по высоте одинаковы.
-    let mut indexes: Vec<u32> = Vec::with_capacity(CELLS * CELLS * CELLS);
-
-    for _ in 0..CELLS {
-        for cell in biomes {
-            let place = palette
+    let indexes: Vec<u32> = biomes
+        .iter()
+        .map(|cell| {
+            palette
                 .iter()
                 .position(|biome| biome == cell)
-                .expect("биом обязан быть в палитре");
-
-            indexes.push(place as u32);
-        }
-    }
+                .expect("биом обязан быть в палитре") as u32
+        })
+        .collect();
 
     for long in pack_values(&indexes, bits) {
         push_i64(out, long);
     }
+}
+
+/// Сколько битов нужно, чтобы записать любое из `count` разных значений
+/// (не меньше одного).
+fn bits_for(count: usize) -> usize {
+    (usize::BITS - count.saturating_sub(1).leading_zeros()).max(1) as usize
 }
 
 /// Номер равнины в реестре биомов: под ним клиенту уходят места, которых
@@ -2585,50 +2781,99 @@ fn push_single_value_container(out: &mut Vec<u8>, global_id: i32) {
     out.extend_from_slice(&encode_varint(global_id));
 }
 
-/// Добавляет данные освещения: небо освещено во всех секциях.
+/// Добавляет данные освещения чанка (`top` — номер самой высокой непустой
+/// секции среди секций мира, `None` — чанк пуст).
 ///
-/// Байты одинаковы для всех чанков и не меняются, поэтому собираются один
-/// раз за всё время работы сервера: их около пятидесяти килобайт, и собирать
-/// их заново на каждый чанк каждому игроку — впустую.
-fn push_light(out: &mut Vec<u8>) {
-    static LIGHT: std::sync::OnceLock<Vec<u8>> = std::sync::OnceLock::new();
+/// В масках на две секции больше, чем в мире: по одной снизу и сверху. Секция
+/// попадает в «пустую» маску, если свет в ней всюду нулевой, — тогда массив
+/// не шлётся. Небесный свет выше секции над самым высоким блоком не шлётся
+/// вовсе: там только открытое небо, и клиент считает его полным сам — как
+/// у оригинала, который тоже не хранит свет пустых секций над землёй. Слать
+/// полные массивы на каждую секцию — это десятки килобайт на чанк.
+fn push_light(out: &mut Vec<u8>, top: Option<usize>, light: &ChunkLight) {
+    let sections = world::SECTIONS as usize;
 
-    out.extend_from_slice(LIGHT.get_or_init(build_light));
-}
-
-/// Собирает данные освещения.
-fn build_light() -> Vec<u8> {
-    let mut out = Vec::new();
-
-    push_light_bytes(&mut out);
-    out
-}
-
-/// Пишет данные освещения в готовый буфер.
-fn push_light_bytes(out: &mut Vec<u8>) {
-    /// В масках на две секции больше, чем в мире: по одной снизу и сверху.
-    const MASK_BITS: i32 = world::SECTIONS + 2;
-
-    /// Все биты до `MASK_BITS` включительно.
-    const ALL_SECTIONS: i64 = (1i64 << MASK_BITS) - 1;
-
-    // Маски: небесный свет есть у всех секций, блочного света нет ни у одной.
-    // Пустые маски — обратные к ним.
-    push_bitset(out, &[ALL_SECTIONS]);
-    push_bitset(out, &[]);
-    push_bitset(out, &[]);
-    push_bitset(out, &[ALL_SECTIONS]);
-
-    // Массивы небесного света: по одному на каждый установленный бит маски.
-    // Каждый массив — половина байта на блок, 15 (ярко) во всех.
-    out.extend_from_slice(&encode_varint(MASK_BITS));
-    for _ in 0..MASK_BITS {
-        out.extend_from_slice(&encode_varint(2048));
-        out.extend_from_slice(&[0xFFu8; 2048]);
+    /// Бит маски для секции мира: нулевой бит — секция под миром.
+    fn bit(section: usize) -> i64 {
+        1i64 << (section + 1)
     }
 
-    // Массивов блочного света нет.
-    out.extend_from_slice(&encode_varint(0));
+    let mut sky = LightMasks::default();
+    let mut block = LightMasks::default();
+
+    // Под миром темно.
+    sky.empty |= 1;
+    block.empty |= 1;
+
+    // Небо — до секции над самым высоким блоком включительно. Если самый
+    // высокий блок в верхней секции мира, то и секция над миром — открытое
+    // небо.
+    let sky_sections = top.map_or(0, |top| top + 2);
+
+    for section in 0..sky_sections.min(sections) {
+        sky.add(bit(section), &light.sky[section]);
+    }
+
+    if sky_sections > sections {
+        sky.add(bit(sections), &LightSection::Even(world::light::FULL));
+    }
+
+    for section in 0..sections {
+        block.add(bit(section), &light.block[section]);
+    }
+
+    block.empty |= bit(sections);
+
+    push_bitset(out, &sky.mask_longs());
+    push_bitset(out, &block.mask_longs());
+    push_bitset(out, &sky.empty_longs());
+    push_bitset(out, &block.empty_longs());
+
+    for arrays in [&sky.arrays, &block.arrays] {
+        out.extend_from_slice(&encode_varint(arrays.len() as i32));
+
+        for nibbles in arrays {
+            out.extend_from_slice(&encode_varint(world::light::NIBBLES as i32));
+            out.extend_from_slice(&nibbles[..]);
+        }
+    }
+}
+
+/// Маски и массивы света одного вида — пока пакет собирается.
+#[derive(Default)]
+struct LightMasks {
+    /// Секции, для которых шлётся массив.
+    mask: i64,
+
+    /// Секции, где свет всюду нулевой.
+    empty: i64,
+
+    arrays: Vec<[u8; world::light::NIBBLES]>,
+}
+
+impl LightMasks {
+    fn add(&mut self, bit: i64, section: &LightSection) {
+        if *section == LightSection::Even(0) {
+            self.empty |= bit;
+            return;
+        }
+
+        self.mask |= bit;
+        self.arrays.push(section.nibbles());
+    }
+
+    fn mask_longs(&self) -> Vec<i64> {
+        Self::longs(self.mask)
+    }
+
+    fn empty_longs(&self) -> Vec<i64> {
+        Self::longs(self.empty)
+    }
+
+    /// Маска без единого бита уходит пустым списком.
+    fn longs(value: i64) -> Vec<i64> {
+        if value == 0 { Vec::new() } else { vec![value] }
+    }
 }
 
 /// Записывает BitSet: количество long, затем сами long.
@@ -2705,6 +2950,8 @@ async fn read_and_log_play_packets(
     // Весь ли обзор уже прислан. При входе прислан только ближний квадрат —
     // даль догружается здесь, порциями.
     let mut all_chunks_sent = false;
+    let mut last_view = player.view;
+    let mut prefetch = Prefetch::new();
 
     // Круг цикла начинается либо с пакета клиента, либо с конца такта: всё,
     // что случилось в мире за такт, должно уйти клиенту сразу, а не тогда,
@@ -2756,18 +3003,30 @@ async fn read_and_log_play_packets(
             all_chunks_sent = false;
         }
 
-        if !all_chunks_sent {
-            let view = shared.properties.view_distance;
+        // Игрок поменял дальность прорисовки — лишнее убрать, недостающее
+        // дослать.
+        if player.view != last_view {
+            last_view = player.view;
+            all_chunks_sent = false;
+        }
 
+        if !all_chunks_sent {
             all_chunks_sent = send_chunks_around(
                 stream,
                 shared,
                 chunk,
                 &mut sent_chunks,
-                view,
+                (player.view, player.view),
                 CHUNKS_PER_STEP,
             )
             .await?;
+        }
+
+        // Весь обзор прислан — складываем впрок то, что за его краем.
+        prefetch.collect(shared);
+
+        if all_chunks_sent {
+            prefetch.step(shared, chunk, player.view);
         }
 
         send_pending_player_changes(stream, shared, player, &mut player_changes, &mut seen).await?;
@@ -2807,7 +3066,7 @@ async fn read_and_log_play_packets(
                         shared,
                         chunk,
                         &mut sent_chunks,
-                        NEAR_CHUNKS,
+                        (NEAR_CHUNKS, player.view),
                         usize::MAX,
                     )
                     .await?;
@@ -3219,6 +3478,7 @@ fn handle_client_packet(
 
                 player.skin_parts = look.skin_parts;
                 player.main_hand = look.main_hand;
+                player.view = view_for(shared, &look);
 
                 let mut players = shared
                     .players
@@ -3361,45 +3621,11 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         .lock()
         .expect("мир захвачен другим потоком");
 
-    let broken = world.get_block(x, y, z);
-
     // Воздух ломать нечего: такое действие подтверждения не требует.
-    if broken == world::AIR {
+    let Some(broken) = placing::break_block(&mut world, x, y, z) else {
         log_debug!("Play: в {} {} {} и так пусто", x, y, z);
         return Some(Reaction::default());
-    }
-
-    world.set_block(x, y, z, world::AIR);
-
-    // Дверь занимает два блока, и ломается тоже целиком: иначе от неё
-    // осталась бы висеть в воздухе вторая половинка.
-    if let Some(orientation) = blocks::orientation_of(broken)
-        && placing::is_door(orientation)
-        && let Some(half) = orientation.value(broken, "half")
-    {
-        let paired_y = if half == "lower" { y + 1 } else { y - 1 };
-
-        if placing::is_same_door(orientation, world.get_block(x, paired_y, z)) {
-            world.set_block(x, paired_y, z, world::AIR);
-            placing::refresh_neighbours(&mut world, x, paired_y, z);
-        }
-    }
-
-    // Поршень состоит из двух половин, и ломается целиком — с какой
-    // стороны его ни ломай.
-    if let Some((px, py, pz)) = redstone::piston_pair(&world, (x, y, z), broken) {
-        world.set_block(px, py, pz, world::AIR);
-    }
-
-    // Соседи могли срастись с этим блоком — теперь им надо расцепиться.
-    placing::refresh_neighbours(&mut world, x, y, z);
-
-    // Редстоун должен узнать, что блока не стало: провод на нём пропадёт,
-    // а запитанное им погаснет.
-    redstone::settle(&mut world);
-
-    // Сломанное записываем сразу — как и построенное.
-    world.save_if_needed();
+    };
 
     log_debug!("Play: сломан блок в {} {} {}", x, y, z);
 
@@ -3538,14 +3764,6 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         return Some(Reaction::accepted(sequence));
     };
 
-    // Факел на стене — другой блок, настенный; на потолок факел не вешается.
-    let Some((name, default_state)) = placing::block_for_face(name, default_state, face).or_else(|| {
-        log_debug!("Play: {} на эту грань не ставится", name);
-        None
-    }) else {
-        return Some(Reaction::accepted(sequence));
-    };
-
     let click = placing::Click {
         face,
         cursor_y,
@@ -3553,124 +3771,26 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         pitch: player.pitch,
     };
 
-    let orientation = blocks::orientation(name);
-
     let mut world = shared
         .world
         .lock()
         .expect("мир захвачен другим потоком");
 
-    // Плита, поставленная на плиту того же вида, слипается с ней в двойную:
-    // занимает место того же блока, а не соседнего.
-    if let Some(orientation) = orientation
-        && let Some(double) = placing::merge_into_double(
-            orientation,
-            world.get_block(clicked_x, clicked_y, clicked_z),
-            &click,
-        )
-    {
-        world.set_block(clicked_x, clicked_y, clicked_z, double);
-        placing::refresh_neighbours(&mut world, clicked_x, clicked_y, clicked_z);
-
-        log_debug!(
-            "Play: плита {} стала двойной в {} {} {}",
-            name,
-            clicked_x,
-            clicked_y,
-            clicked_z
-        );
-
-        return Some(Reaction::accepted(sequence));
-    }
-
-    let (x, y, z) = offset_towards(clicked_x, clicked_y, clicked_z, face);
-
-    // Ставить можно в пустое место или туда, где стоит жидкость: блок её
-    // вытесняет, как в игре.
-    if !placing::is_replaceable(world.get_block(x, y, z)) {
-        return Some(Reaction::accepted(sequence));
-    }
-
-    // Состояние считается по тому, как игрок щёлкнул, и по тому, что стоит
-    // вокруг: забор срастается с соседями, а у кнопки поворот зависит
-    // от грани щелчка.
-    let state = orientation
-        .and_then(|orientation| placing::state_in_world(orientation, &click, &world, x, y, z))
-        .unwrap_or(default_state);
-
-    // Проводу, факелу, рычагу нужна опора: в воздухе они не держатся.
-    if !placing::has_support(orientation, state, &world, x, y, z) {
-        log_debug!("Play: {} в {} {} {} не на что опереться", name, x, y, z);
-        return Some(Reaction::refused(sequence, &[(x, y, z)]));
-    }
-
-    // Дверь занимает два блока по высоте и ставится сразу целой: нижняя
-    // половина в этот блок, верхняя — в тот, что над ним.
-    if let Some(orientation) = orientation
-        && placing::is_door(orientation)
-    {
-        if !placing::is_replaceable(world.get_block(x, y + 1, z)) {
-            log_debug!("Play: над дверью не пусто — в {} {} {} она не встанет", x, y, z);
-            return Some(Reaction::refused(sequence, &[(x, y, z), (x, y + 1, z)]));
-        }
-
-        // Двери нужна опора снизу: без неё она повисла бы в воздухе.
-        if !blocks::solid_top(world.get_block(x, y - 1, z)) {
-            log_debug!("Play: под дверью нет опоры — в {} {} {} она не встанет", x, y, z);
-            return Some(Reaction::refused(sequence, &[(x, y, z), (x, y + 1, z)]));
-        }
-
-        let Some(upper) = placing::other_half(orientation, state, "upper") else {
-            log_debug!("Play: не удалось собрать вторую половину двери {}", name);
-            return Some(Reaction::accepted(sequence));
-        };
-
-        if placing::blocks_player(x, y, z, state, player.x, player.y, player.z)
-            || placing::blocks_player(x, y + 1, z, upper, player.x, player.y, player.z)
-        {
-            log_debug!("Play: дверь в {} {} {} задела бы игрока — не ставим", x, y, z);
-            return Some(Reaction::refused(sequence, &[(x, y, z), (x, y + 1, z)]));
-        }
-
-        world.set_block(x, y, z, state);
-        world.set_block(x, y + 1, z, upper);
-        placing::refresh_neighbours(&mut world, x, y, z);
-        placing::refresh_neighbours(&mut world, x, y + 1, z);
-        redstone::settle(&mut world);
-        world.save_if_needed();
-
-        log_debug!("Play: поставлена дверь {} ({}) в {} {} {}", name, state, x, y, z);
-
-        return Some(Reaction {
+    match placing::place(
+        &mut world,
+        name,
+        default_state,
+        (clicked_x, clicked_y, clicked_z),
+        &click,
+        (player.x, player.y, player.z),
+    ) {
+        placing::Placement::Placed => Some(Reaction {
             slots: spend_placed(player),
             ..Reaction::accepted(sequence)
-        });
+        }),
+        placing::Placement::Merged | placing::Placement::Nothing => Some(Reaction::accepted(sequence)),
+        placing::Placement::Refused(places) => Some(Reaction::refused(sequence, &places)),
     }
-
-    // Блок в игрока не ставится: он окажется замурован. Блоки без ящика —
-    // трава, факел — никому не мешают.
-    if placing::blocks_player(x, y, z, state, player.x, player.y, player.z) {
-        log_debug!("Play: блок в {} {} {} задел бы игрока — не ставим", x, y, z);
-        return Some(Reaction::refused(sequence, &[(x, y, z)]));
-    }
-
-    world.set_block(x, y, z, state);
-
-    // Соседние заборы, стенки и панели должны увидеть новый блок и срастись
-    // с ним, а редстоун — узнать о нём.
-    placing::refresh_neighbours(&mut world, x, y, z);
-    redstone::settle(&mut world);
-
-    // Сделанное игроком записываем сразу: течение воды может и подождать
-    // до общей записи, а постройки — нет.
-    world.save_if_needed();
-
-    log_debug!("Play: поставлен блок {} ({}) в {} {} {}", name, state, x, y, z);
-
-    Some(Reaction {
-        slots: spend_placed(player),
-        ..Reaction::accepted(sequence)
-    })
 }
 
 /// «Выбор блока»: игрок навёл на постройку и просит такой же предмет в руку.
@@ -4138,6 +4258,12 @@ struct PlayerState {
     /// сервер пересказывает остальным.
     main_hand: u8,
 
+    /// Сколько чанков вокруг слать этому игроку: меньшая из его дальности
+    /// прорисовки и серверной, но не меньше двух — как у оригинала. Слать
+    /// дальше, чем клиент рисует, — значит заставить его держать в памяти
+    /// в разы больше чанков, чем он показывает (и падать от нехватки памяти).
+    view: i32,
+
     /// Что об игроке уже лежит на диске: прочитанное при заходе или записанное
     /// после. Нынешнее положение сравнивается именно с этим — записывается
     /// только то, что от него отличается.
@@ -4221,6 +4347,7 @@ impl PlayerState {
             skin,
             skin_parts,
             main_hand: configuration::RIGHT_HAND,
+            view: i32::MAX,
             reported: None,
             stopped: false,
             saved,
@@ -4444,6 +4571,109 @@ fn packet_name(packet_id: i32) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Данные освещения по протоколу: массив у каждой секции из маски, тёмные
+    /// секции — только в «пустой» маске, небо выше секции над верхним блоком
+    /// не шлётся вовсе.
+    #[test]
+    fn light_data_follows_the_masks() {
+        let mut light = ChunkLight::open_sky();
+
+        // Чанк с землёй в секции 4: под ней темно, в ней свет разный.
+        let mut mixed = [0u8; world::light::NIBBLES];
+        mixed[..1024].fill(0xFF);
+
+        for section in 0..4 {
+            light.sky[section] = LightSection::Even(0);
+        }
+
+        light.sky[4] = LightSection::Mixed(Arc::new(mixed));
+        light.block[2] = LightSection::Mixed(Arc::new(mixed));
+
+        let mut out = Vec::new();
+        push_light(&mut out, Some(4), &light);
+
+        let mut at = 0;
+        let varint = |out: &[u8], at: &mut usize| {
+            let (value, size) = decode_varint(&out[*at..]).expect("число");
+            *at += size;
+            value
+        };
+        let mut masks = Vec::new();
+
+        for _ in 0..4 {
+            let longs = varint(&out, &mut at);
+            let mut value = 0i64;
+
+            for _ in 0..longs {
+                value = i64::from_be_bytes(out[at..at + 8].try_into().expect("long"));
+                at += 8;
+            }
+
+            masks.push(value);
+        }
+
+        let [sky, block, sky_empty, block_empty] = masks[..] else {
+            panic!("масок четыре");
+        };
+
+        // Небо: секции 0–3 тёмные, 4 — массив, 5 — над верхним блоком, ещё
+        // массивом; выше ничего. Нулевой бит — под миром, там темно.
+        assert_eq!(sky, 0b11 << 5);
+        assert_eq!(sky_empty, 0b11111);
+        assert_eq!(sky & sky_empty, 0);
+
+        // Блочный свет: массив только у секции 2, остальные — пустые, и так
+        // все биты маски, включая секции под миром и над ним.
+        let every = (1i64 << (world::SECTIONS + 2)) - 1;
+
+        assert_eq!(block, 1 << 3);
+        assert_eq!(block | block_empty, every);
+        assert_eq!(block & block_empty, 0);
+
+        let sky_arrays = varint(&out, &mut at);
+        assert_eq!(sky_arrays, 2);
+
+        for _ in 0..sky_arrays {
+            assert_eq!(varint(&out, &mut at), 2048);
+            at += 2048;
+        }
+
+        assert_eq!(varint(&out, &mut at), 1);
+        assert_eq!(varint(&out, &mut at), 2048);
+        assert_eq!(&out[at..at + 1024], &[0xFF; 1024][..]);
+        assert_eq!(out.len(), at + 2048);
+    }
+
+    /// Биомы секции: один — одно число, до восьми — палитра до трёх битов,
+    /// больше — номера прямо, по шесть битов (в реестре 54 биома).
+    #[test]
+    fn section_biomes_are_packed_by_the_protocol() {
+        let one = [5u16; 64];
+        let mut out = Vec::new();
+
+        push_biomes(&mut out, Some(&one));
+        assert_eq!(out, vec![0, 5]);
+
+        let two: Vec<u16> = (0..64).map(|cell| if cell < 16 { 1 } else { 7 }).collect();
+        let mut out = Vec::new();
+
+        push_biomes(&mut out, Some(&two));
+        // Один бит, палитра [1, 7], 64 записи — один long.
+        assert_eq!(&out[..4], &[1, 2, 1, 7]);
+        assert_eq!(out.len(), 4 + 8);
+        assert_eq!(i64::from_be_bytes(out[4..].try_into().unwrap()), !0xFFFF);
+
+        let many: Vec<u16> = (0..64).map(|cell| cell % 10).collect();
+        let mut out = Vec::new();
+
+        push_biomes(&mut out, Some(&many));
+        // Прямо: 6 битов, десять записей на long — семь long'ов, палитры нет.
+        assert_eq!(out[0], 6);
+        assert_eq!(out.len(), 1 + 7 * 8);
+        assert_eq!(i64::from_be_bytes(out[1..9].try_into().unwrap()) & 0x3F, 0);
+        assert_eq!((i64::from_be_bytes(out[1..9].try_into().unwrap()) >> 6) & 0x3F, 1);
+    }
 
     /// Точка появления в проверках: в них мира нет, поэтому берём любую.
     const SPAWN: (f64, f64, f64) = (0.5, 64.0, 0.5);

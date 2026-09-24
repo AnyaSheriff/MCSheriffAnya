@@ -80,6 +80,9 @@ pub struct Shared {
 
     /// Откуда брать скины.
     pub skin_settings: crate::skins::Settings,
+
+    /// Свои настройки сервера (config/mcsa.properties).
+    pub settings: crate::config::mcsheriffanya::Settings,
 }
 
 impl Shared {
@@ -118,6 +121,7 @@ impl Shared {
             skins,
             properties,
             skin_settings,
+            settings: Default::default(),
         }
     }
 }

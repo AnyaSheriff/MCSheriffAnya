@@ -248,17 +248,27 @@ impl Tree {
     /// до второго бревна гармошка: узкий ярус (крест вокруг ствола) через
     /// один с широким, и широкие всё шире книзу — 2, 2, 3. Углы широких
     /// ярусов срезаны всегда.
+    ///
+    /// Каждая ель своя: широкие ярусы растут ступенями по одному из трёх
+    /// рядов (средние ширины по ярусам те же, что в замере), а крона
+    /// начинается со второго или третьего бревна.
     fn spruce(&self, random: &mut Random, blocks: &mut Vec<TreeBlock>) {
         let top = self.trunk;
         let mut narrow = roll(random, 2) == 0;
         let mut wide = 0;
+        let steps: [i32; 4] = match roll(random, 4) {
+            0 => [1, 2, 3, 3],
+            1 => [1, 1, 2, 3],
+            _ => [1, 2, 2, 3],
+        };
+        let bottom = 2 + roll(random, 2);
 
-        for y in (2..=top + 3).rev() {
+        for y in (bottom..=top + 3).rev() {
             let radius = if narrow {
                 i32::from(y <= top)
             } else {
                 wide += 1;
-                [1, 2, 2, 3][(wide - 1).min(3) as usize]
+                steps[(wide - 1).min(3) as usize]
             };
 
             layer_without_corners(blocks, 0, y, 0, radius);
@@ -273,10 +283,14 @@ impl Tree {
     /// семи блоков без углов.
     fn pine(&self, random: &mut Random, blocks: &mut Vec<TreeBlock>) {
         let top = self.trunk;
-        let umbrella: &[i32] = match roll(random, 3) {
+        // Зонтик у каждой сосны свой; средние ширины слоёв — как в замере.
+        let umbrella: &[i32] = match roll(random, 6) {
             0 => &[1],
-            1 => &[2, 2],
-            _ => &[2, 3, 2],
+            1 => &[1, 2],
+            2 => &[2, 2],
+            3 => &[2, 3],
+            4 => &[2, 3, 2],
+            _ => &[1, 3, 2],
         };
 
         layer_without_corners(blocks, 0, top + 2, 0, 0);
@@ -553,23 +567,26 @@ impl Tree {
         for index in 0..branches {
             // Первые две смотрят в разные стороны, третья — поперёк им.
             let (step_x, step_z) = CARDINAL[((first + [0, 2, 1][index as usize]) % 4) as usize];
-            let length = if branches == 1 { 1 + roll(random, 2) } else { 2 + roll(random, 4) };
+            let length = if branches == 1 { 1 + roll(random, 2) } else { 2 + roll(random, 3) };
             let axis = if step_x != 0 { Axis::X } else { Axis::Z };
-            let (mut bx, mut bz) = (0, 0);
+            let (mut bx, mut by, mut bz) = (0, top, 0);
 
-            for _ in 0..length {
+            // Ветвь уходит вбок наискосок: шаг в сторону — и через шаг на
+            // блок вверх, как у оригинала, а не прямым коленом.
+            for step in 0..length {
                 bx += step_x;
                 bz += step_z;
-                blocks.push((bx, top + 1, bz, Part::Log(axis)));
+                by += i32::from(step % 2 == 0);
+                blocks.push((bx, by, bz, Part::Log(axis)));
             }
 
-            let rise = 1 + roll(random, 4);
+            let rise = roll(random, 3);
 
             for dy in 1..=rise {
-                blocks.push((bx, top + 1 + dy, bz, Part::Log(Axis::Y)));
+                blocks.push((bx, by + dy, bz, Part::Log(Axis::Y)));
             }
 
-            dome(random, blocks, bx, top + 1 + rise, bz);
+            dome(random, blocks, bx, by + rise + 1, bz);
         }
 
         trunk(blocks, 0, 0, 1, top);
@@ -803,7 +820,6 @@ const PROPAGULES: [&str; 5] = [
 /// Как поступать с углами квадратного слоя листвы.
 #[derive(Clone, Copy, PartialEq)]
 enum Corners {
-    Keep,
     Cut,
     /// Срезать каждый угол с шансом один к стольким.
     Random(i32),
@@ -870,7 +886,6 @@ fn square_layer(random: &mut Random, blocks: &mut Vec<TreeBlock>, x: i32, y: i32
         for dz in -radius..=radius {
             let corner = radius > 0 && dx.abs() == radius && dz.abs() == radius;
             let cut = match corners {
-                Corners::Keep => false,
                 Corners::Cut => true,
                 Corners::Random(odds) => roll(random, odds) == 0,
             };
@@ -1045,22 +1060,30 @@ fn cluster(blocks: &mut Vec<TreeBlock>, x: i32, y: i32, z: i32) {
 /// с неровными углами, слой 5×5 и крест; по нижнему краю листва местами
 /// свисает на блок.
 fn dome(random: &mut Random, blocks: &mut Vec<TreeBlock>, x: i32, y: i32, z: i32) {
-    for dx in -3..=3 {
-        for dz in -3..=3 {
-            if square_without_corners(dx, dz, 3) && roll(random, 2) == 0 {
+    // Купол вишни широкий и приплюснутый: снизу редкое кольцо, с краёв
+    // которого свисает листва на блок-два, выше — два широких слоя и
+    // скруглённая макушка.
+    for dx in -4i32..=4 {
+        for dz in -4i32..=4 {
+            let edge = dx.abs() == 4 || dz.abs() == 4;
+
+            if square_without_corners(dx, dz, 4) && (dx.abs() + dz.abs() < 7) && roll(random, 3) != 0 {
                 blocks.push((x + dx, y - 1, z + dz, Part::Leaves));
 
-                if (dx.abs() == 3 || dz.abs() == 3) && roll(random, 3) == 0 {
+                if edge && roll(random, 2) == 0 {
                     blocks.push((x + dx, y - 2, z + dz, Part::Leaves));
+
+                    if roll(random, 3) == 0 {
+                        blocks.push((x + dx, y - 3, z + dz, Part::Leaves));
+                    }
                 }
             }
         }
     }
 
-    square_layer(random, blocks, x, y, z, 3, Corners::Random(2));
-    square_layer(random, blocks, x, y + 1, z, 3, Corners::Random(3));
-    square_layer(random, blocks, x, y + 2, z, 2, Corners::Keep);
-    square_layer(random, blocks, x, y + 3, z, 1, Corners::Random(2));
+    square_layer(random, blocks, x, y, z, 4, Corners::Random(3));
+    square_layer(random, blocks, x, y + 1, z, 3, Corners::Random(2));
+    square_layer(random, blocks, x, y + 2, z, 2, Corners::Random(2));
 }
 
 /// Ветвь бревнами из одной точки в другую — по ближайшим блокам прямой.
@@ -1148,9 +1171,8 @@ const CHERRY: Species = species("cherry_log", "cherry_leaves", Shape::Cherry, 3,
 const MANGROVE: Species = species("mangrove_log", "mangrove_leaves", Shape::Mangrove, 2, 6, 1);
 /// 5–15, среднее 10.8.
 const TALL_MANGROVE: Species = species("mangrove_log", "mangrove_leaves", Shape::TallMangrove, 5, 6, 6);
-/// 2–5, среднее 3.88. Растёт над пышными пещерами, которых у нас пока нет:
-/// порода есть, в лесах её не выбирают.
-#[cfg_attr(not(test), allow(dead_code))]
+/// 2–5, среднее 3.88. Растёт над пышными пещерами (src/world/cave_biomes.rs),
+/// в лесах её не выбирают.
 const AZALEA: Species = species("oak_log", "azalea_leaves", Shape::Azalea, 3, 3, 1);
 /// 4–8, среднее 5.2.
 const BROWN_MUSHROOM: Species = species(
@@ -1259,7 +1281,7 @@ impl Terrain {
 
         let (density, mix, bees) = woodland(column.biome)?;
 
-        if !chance(x, z, 1_301, density) {
+        if !chance(self.seed(), x, z, 1_301, density) {
             return None;
         }
 
@@ -1273,7 +1295,7 @@ impl Terrain {
                     continue;
                 }
 
-                if chance(x + dx, z + dz, 1_301, density) {
+                if chance(self.seed(), x + dx, z + dz, 1_301, density) {
                     return None;
                 }
             }
@@ -1281,7 +1303,8 @@ impl Terrain {
 
         // Порода и высота ствола свои у каждого дерева.
         let mut random = Random::new(
-            (x as i64).wrapping_mul(132_897_987_541).wrapping_add((z as i64).wrapping_mul(341_873_128_712)) + 97,
+            ((x as i64).wrapping_mul(132_897_987_541).wrapping_add((z as i64).wrapping_mul(341_873_128_712)) + 97)
+                ^ self.seed().wrapping_mul(6_364_136_223_846_793_005),
         );
         let mut pick = fraction(&mut random);
         let species = mix
@@ -1300,12 +1323,24 @@ impl Terrain {
     }
 }
 
+/// Дерево с азалией над пышной пещерой в точке (x, z): высота ствола своя
+/// у каждого места и мира, одна и та же при каждом обращении.
+pub fn azalea_at(seed: i64, x: i32, z: i32) -> Tree {
+    let mut random = Random::new(
+        ((x as i64).wrapping_mul(341_873_128_712).wrapping_add((z as i64).wrapping_mul(132_897_987_541)) + 211)
+            ^ seed.wrapping_mul(6_364_136_223_846_793_005),
+    );
+    let trunk = AZALEA.tree.trunk + roll(&mut random, AZALEA.spread) + roll(&mut random, AZALEA.extra);
+
+    Tree { trunk, ..AZALEA.tree }
+}
+
 /// Может ли в этом месте вообще стоять ствол.
 ///
 /// Дешёвая проверка перед дорогой: самая густая чаща у нас реже одного ствола
 /// на шестнадцать мест, поэтому почти для всех мест столбец считать незачем.
-pub fn tree_possible(x: i32, z: i32) -> bool {
-    chance(x, z, 1_301, DENSEST_FOREST)
+pub fn tree_possible(seed: i64, x: i32, z: i32) -> bool {
+    chance(seed, x, z, 1_301, DENSEST_FOREST)
 }
 
 /// Самая большая густота деревьев среди всех биомов.
@@ -1314,6 +1349,16 @@ const DENSEST_FOREST: f64 = 0.06;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Семя мира решает, где стоят деревья: в двух мирах места разные,
+    /// в одном и том же — одинаковые.
+    #[test]
+    fn trees_move_with_the_seed() {
+        let spots = |seed: i64| (0..4000).filter(|&i| tree_possible(seed, i % 64, i / 64)).collect::<Vec<_>>();
+
+        assert_eq!(spots(1), spots(1));
+        assert_ne!(spots(1), spots(2), "деревья стоят одинаково в разных мирах");
+    }
     use std::collections::HashMap;
 
     /// Все породы — для проверок и профилей.
@@ -1804,5 +1849,53 @@ mod tests {
     /// Ствол 2×2.
     fn tree_is_wide(tree: Tree) -> bool {
         matches!(tree.shape, Shape::MegaSpruce | Shape::MegaPine | Shape::MegaJungle | Shape::DarkOak | Shape::PaleOak)
+    }
+
+    /// Разнообразие деревьев: сколько разных высот ствола и форм кроны
+    /// выходит на площади.
+    /// `cargo test --release tree_variety -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn tree_variety() {
+        use crate::world::terrain::{Style, Terrain};
+
+        let terrain = Terrain::new(100_554_032_945_340, Style::Vanilla);
+        let mut trunks = std::collections::BTreeMap::<(String, i32), usize>::new();
+        let mut shapes = std::collections::BTreeMap::<usize, usize>::new();
+        // Разные ли кроны у деревьев одной породы и высоты: набор блоков
+        // относительно ствола.
+        let mut crowns = std::collections::BTreeMap::<(String, i32), std::collections::BTreeSet<Vec<(i32, i32, i32)>>>::new();
+        let mut found = 0;
+
+        for x in (-2000..2000).step_by(3) {
+            for z in (-400..400).step_by(3) {
+                if !tree_possible(terrain.seed(), x, z) {
+                    continue;
+                }
+
+                let column = terrain.column_at(x, z);
+
+                if let Some(tree) = terrain.tree_at(&column, x, z) {
+                    found += 1;
+                    *trunks.entry((format!("{:?}", tree.shape), tree.trunk)).or_default() += 1;
+                    let blocks = tree.blocks(x, z);
+                    *shapes.entry(blocks.len()).or_default() += 1;
+                    let mut relative: Vec<(i32, i32, i32)> = blocks.iter().map(|b| (b.0, b.1, b.2)).collect();
+                    relative.sort();
+                    crowns.entry((format!("{:?}", tree.shape), tree.trunk)).or_default().insert(relative);
+                }
+            }
+        }
+
+        println!("деревьев {found}");
+        println!("порода и ствол: {:?}", trunks);
+        println!("разных чисел блоков: {} (из {})", shapes.len(), found);
+
+        for ((shape, trunk), sets) in &crowns {
+            let count = trunks[&(shape.clone(), *trunk)];
+            if count >= 10 {
+                println!("{shape} ствол {trunk}: деревьев {count}, разных крон {}", sets.len());
+            }
+        }
     }
 }

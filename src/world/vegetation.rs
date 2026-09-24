@@ -1,6 +1,7 @@
-// Растительность и мелочь на поверхности: высокая трава, тростник, кактусы,
-// тыквы, кувшинки, морская трава и ламинария, валуны, упавшие брёвна,
-// огромные грибы, цветы по биомам.
+// Растительность и мелочь на поверхности: трава и папоротники, цветы по
+// биомам, кусты, опавшие листья, сухая трава, тростник, кактусы, тыквы,
+// кувшинки, морская трава и ламинария, валуны, упавшие брёвна, огромные
+// грибы.
 //
 // Проход идёт по готовому чанку после деревьев. Всё решается числом от
 // координат, поэтому соседние чанки сходятся без сговора. Крупное — валуны,
@@ -8,16 +9,20 @@
 // штуки ищутся в полосе вокруг чанка, и каждый чанк рисует свою часть, как
 // деревья и гнёзда руды.
 //
-// Мелкие растения ставятся только в воздух, водные — только в воду.
+// Мелкие растения ставятся только в воздух, водные — только в воду; трава
+// и папоротники ещё и вместо слоя снега — как у оригинала в заснеженной
+// тайге.
 // Крупные вдобавок затирают короткую траву, папоротник и слой снега: иначе
 // в бревне и валуне зияли бы дыры там, где до них выросла трава.
 //
-// Числа — по вики и tools/research/worldgen-trees.md; где вики молчит,
-// густота подобрана на глаз.
+// Где что растёт — по вики и tools/research/worldgen-trees.md; густота
+// подобрана по замеру сохранённого мира оригинала: сколько чего на чанк
+// в каждом биоме (tools/measure/plants_census.py против
+// `cargo test --release plants_census -- --ignored --nocapture`).
 
 use std::sync::OnceLock;
 
-use super::terrain::{self, Biome, Column, Terrain, SEA};
+use super::terrain::{Biome, Column, Terrain, SEA};
 use super::{Chunk, Generator, AIR, CHUNK_SIZE, MIN_Y, WORLD_HEIGHT};
 
 /// Сторона квадрата столбцов, который чанк считает вместе с каймой.
@@ -39,7 +44,10 @@ pub(super) fn decorate(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, c
         return;
     };
 
-    let area = Area { terrain, columns, chunk_x, chunk_z };
+    // Семя мира подмешивается во все решения растительности: иначе трава,
+    // цветы и брёвна стояли бы на одних и тех же местах в любом мире.
+    let key = key_of(terrain);
+    let area = Area { terrain, columns, chunk_x, chunk_z, key };
     let blocks = palette();
 
     // Крупное — первым: оно заметнее, и мелочь потом обходит его сама.
@@ -49,12 +57,19 @@ pub(super) fn decorate(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, c
     single_plants(&area, chunk, blocks);
 }
 
+/// Семя мира, перемешанное для растительности.
+fn key_of(terrain: &Terrain) -> u64 {
+    (terrain.seed() as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0x7E6E_7A7E
+}
+
 /// Чанк и его окрестность: откуда брать столбцы.
 struct Area<'a> {
     terrain: &'a Terrain,
     columns: &'a [Column],
     chunk_x: i32,
     chunk_z: i32,
+    /// Семя мира, перемешанное для растительности.
+    key: u64,
 }
 
 impl Area<'_> {
@@ -93,8 +108,8 @@ impl Area<'_> {
 // ---------------------------------------------------------------------------
 
 /// Число от места и соли: одно и то же при каждом обращении.
-fn hash(x: i32, z: i32, salt: u64) -> u64 {
-    let mut value = ((x as u32 as u64) << 32 | z as u32 as u64) ^ salt.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+fn hash(key: u64, x: i32, z: i32, salt: u64) -> u64 {
+    let mut value = ((x as u32 as u64) << 32 | z as u32 as u64) ^ salt.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ key;
 
     // Перемешивание как у splitmix64: соседние места дают несхожие числа.
     value = (value ^ (value >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
@@ -103,21 +118,21 @@ fn hash(x: i32, z: i32, salt: u64) -> u64 {
 }
 
 /// Доля от 0 до 1 по месту.
-fn unit(x: i32, z: i32, salt: u64) -> f64 {
-    (hash(x, z, salt) >> 11) as f64 / (1u64 << 53) as f64
+fn unit(key: u64, x: i32, z: i32, salt: u64) -> f64 {
+    (hash(key, x, z, salt) >> 11) as f64 / (1u64 << 53) as f64
 }
 
 /// Выпало ли событие с такой вероятностью в этом месте.
-fn roll(x: i32, z: i32, salt: u64, part: f64) -> bool {
-    part > 0.0 && unit(x, z, salt) < part
+fn roll(key: u64, x: i32, z: i32, salt: u64, part: f64) -> bool {
+    part > 0.0 && unit(key, x, z, salt) < part
 }
 
 /// Кости для одной штуки: вереница чисел от её места.
 struct Dice(u64);
 
 impl Dice {
-    fn new(x: i32, z: i32, salt: u64) -> Dice {
-        Dice(hash(x, z, salt))
+    fn new(key: u64, x: i32, z: i32, salt: u64) -> Dice {
+        Dice(hash(key, x, z, salt))
     }
 
     fn next(&mut self) -> u64 {
@@ -155,9 +170,9 @@ const SALT_ROUND: u64 = 71_003;
 const SALT_FALLEN: u64 = 71_011;
 const SALT_CANE: u64 = 71_021;
 const SALT_CACTUS: u64 = 71_027;
-const SALT_DEAD_BUSH: u64 = 71_039;
-const SALT_TALL: u64 = 71_059;
-const SALT_FERN: u64 = 71_069;
+const SALT_COVER: u64 = 71_039;
+const SALT_MEADOW: u64 = 71_059;
+const SALT_FLOWER: u64 = 71_069;
 const SALT_LILY_PAD: u64 = 71_077;
 const SALT_SEAGRASS: u64 = 71_081;
 const SALT_KELP: u64 = 71_087;
@@ -181,8 +196,19 @@ struct Palette {
     sunflower: [i32; 2],
     tall_flowers: [[i32; 2]; 3],
     lily_of_the_valley: i32,
+    /// Простые цветы в порядке `Flower`.
+    flowers: [i32; FLOWERS.len()],
     pink_petals: [[i32; 4]; 4],
     wildflowers: [[i32; 4]; 4],
+    /// Опавшие листья: по стороне (север, юг, запад, восток) и числу
+    /// кучек от одной до четырёх.
+    leaf_litter: [[i32; 4]; 4],
+    bush: i32,
+    firefly_bush: i32,
+    short_dry_grass: i32,
+    tall_dry_grass: i32,
+    /// Листва всех пород — числа от и до: по ней видно крону над местом.
+    leaves: Vec<(i32, i32)>,
 
     sugar_cane: i32,
     cactus: i32,
@@ -224,6 +250,8 @@ struct Ground {
     clay: i32,
     stone: i32,
     mud: i32,
+    /// Трава под слоем снега.
+    snowy_grass: i32,
 }
 
 impl Ground {
@@ -261,12 +289,12 @@ fn palette() -> &'static Palette {
 
     PALETTE.get_or_init(|| {
         let pair = |name: &str| [state(&format!("{}[half=lower]", name)), state(&format!("{}[half=upper]", name))];
-        let flowery = |name: &str| {
+        let flowery = |name: &str, amount_name: &str| {
             let mut states = [[0; 4]; 4];
 
             for (facing, row) in ["north", "south", "west", "east"].iter().zip(states.iter_mut()) {
                 for (amount, place) in row.iter_mut().enumerate() {
-                    *place = state(&format!("{}[facing={},flower_amount={}]", name, facing, amount + 1));
+                    *place = state(&format!("{}[facing={},{}={}]", name, facing, amount_name, amount + 1));
                 }
             }
 
@@ -303,6 +331,7 @@ fn palette() -> &'static Palette {
                 clay: state("clay"),
                 stone: state("stone"),
                 mud: state("mud"),
+                snowy_grass: state("grass_block[snowy=true]"),
             },
 
             short_grass: state("short_grass"),
@@ -313,8 +342,30 @@ fn palette() -> &'static Palette {
             sunflower: pair("sunflower"),
             tall_flowers: [pair("lilac"), pair("rose_bush"), pair("peony")],
             lily_of_the_valley: state("lily_of_the_valley"),
-            pink_petals: flowery("pink_petals"),
-            wildflowers: flowery("wildflowers"),
+            flowers: FLOWERS.map(|flower| state(flower.name())),
+            pink_petals: flowery("pink_petals", "flower_amount"),
+            wildflowers: flowery("wildflowers", "flower_amount"),
+            leaf_litter: flowery("leaf_litter", "segment_amount"),
+            bush: state("bush"),
+            firefly_bush: state("firefly_bush"),
+            short_dry_grass: state("short_dry_grass"),
+            tall_dry_grass: state("tall_dry_grass"),
+            leaves: [
+                "oak_leaves",
+                "spruce_leaves",
+                "birch_leaves",
+                "jungle_leaves",
+                "acacia_leaves",
+                "dark_oak_leaves",
+                "mangrove_leaves",
+                "cherry_leaves",
+                "azalea_leaves",
+                "flowering_azalea_leaves",
+                "pale_oak_leaves",
+            ]
+            .iter()
+            .filter_map(|name| crate::blocks::states_of(name))
+            .collect(),
 
             sugar_cane: state("sugar_cane"),
             cactus: state("cactus"),
@@ -417,12 +468,12 @@ enum Round {
 const ROUND_DENSEST: f64 = 0.006;
 
 /// Какая круглая штука стоит в этой точке, если стоит.
-fn round_at(column: &Column, x: i32, z: i32) -> Option<Round> {
+fn round_at(key: u64, column: &Column, x: i32, z: i32) -> Option<Round> {
     if !on_land(column) {
         return None;
     }
 
-    let value = unit(x, z, SALT_ROUND);
+    let value = unit(key, x, z, SALT_ROUND);
 
     // Валуны из мшистого булыжника — в старовозрастной тайге; огромные
     // грибы — на грибных полях помногу, в тёмном лесу изредка и чуть чаще
@@ -442,15 +493,15 @@ fn round_at(column: &Column, x: i32, z: i32) -> Option<Round> {
         return Some(Round::Boulder);
     }
 
-    Some(if unit(x, z, SALT_ROUND + 1) < red_share { Round::RedMushroom } else { Round::BrownMushroom })
+    Some(if unit(key, x, z, SALT_ROUND + 1) < red_share { Round::RedMushroom } else { Round::BrownMushroom })
 }
 
 /// Блок круглой штуки: смещение от земли под точкой и состояние.
 type Placed = (i32, i32, i32, i32);
 
 /// Все блоки круглой штуки относительно её точки.
-fn round_blocks(round: Round, blocks: &Palette, x: i32, z: i32) -> Vec<Placed> {
-    let mut dice = Dice::new(x, z, SALT_ROUND + 2);
+fn round_blocks(key: u64, round: Round, blocks: &Palette, x: i32, z: i32) -> Vec<Placed> {
+    let mut dice = Dice::new(key, x, z, SALT_ROUND + 2);
 
     match round {
         Round::Boulder => boulder(&mut dice, blocks),
@@ -551,23 +602,25 @@ fn huge_mushroom(dice: &mut Dice, blocks: &Palette, red: bool) -> Vec<Placed> {
 
 /// Валуны и огромные грибы этого чанка — и зашедшие к нему от соседей.
 fn round_features(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
+    let key = area.key;
+
     for local_x in -ROUND_REACH..(CHUNK_SIZE + ROUND_REACH) {
         for local_z in -ROUND_REACH..(CHUNK_SIZE + ROUND_REACH) {
             let x = area.chunk_x * CHUNK_SIZE + local_x;
             let z = area.chunk_z * CHUNK_SIZE + local_z;
 
             // Сперва дешёвое «а не здесь ли», и только потом столбец.
-            if !roll(x, z, SALT_ROUND, ROUND_DENSEST) {
+            if !roll(key, x, z, SALT_ROUND, ROUND_DENSEST) {
                 continue;
             }
 
             let column = area.column(x, z);
 
-            let Some(round) = round_at(&column, x, z) else {
+            let Some(round) = round_at(key, &column, x, z) else {
                 continue;
             };
 
-            for (dx, dy, dz, state) in round_blocks(round, blocks, x, z) {
+            for (dx, dy, dz, state) in round_blocks(key, round, blocks, x, z) {
                 put_over_plants(chunk, blocks, local_x + dx, column.height + dy, local_z + dz, state);
             }
         }
@@ -609,14 +662,14 @@ const DIRECTIONS: [(i32, i32); 4] = [(0, -1), (0, 1), (-1, 0), (1, 0)];
 /// Какое дерево упало в этой точке, если упало. По вики они есть везде, где
 /// растут стоячие той же породы, кроме лугов, рощ и бамбуковых джунглей;
 /// в цветочном лесу — только берёзы.
-fn fallen_at(column: &Column, x: i32, z: i32) -> Option<Wood> {
+fn fallen_at(key: u64, column: &Column, x: i32, z: i32) -> Option<Wood> {
     if !on_land(column) {
         return None;
     }
 
     let (density, wood) = match column.biome {
         Biome::Forest => {
-            let birch = unit(x, z, SALT_FALLEN + 1) < 0.2;
+            let birch = unit(key, x, z, SALT_FALLEN + 1) < 0.2;
             (0.0025, if birch { Wood::Birch } else { Wood::Oak })
         }
         Biome::FlowerForest => (0.0015, Wood::Birch),
@@ -627,19 +680,20 @@ fn fallen_at(column: &Column, x: i32, z: i32) -> Option<Wood> {
         _ => return None,
     };
 
-    (unit(x, z, SALT_FALLEN) < density).then_some(wood)
+    (unit(key, x, z, SALT_FALLEN) < density).then_some(wood)
 }
 
 /// Куда ляжет ствол — решается раньше породы: по нему видно, может ли
 /// дерево дотянуться до чанка, и столбец зря не считается.
-fn fallen_direction(x: i32, z: i32) -> (i32, i32) {
-    DIRECTIONS[(hash(x, z, SALT_FALLEN + 2) % 4) as usize]
+fn fallen_direction(key: u64, x: i32, z: i32) -> (i32, i32) {
+    DIRECTIONS[(hash(key, x, z, SALT_FALLEN + 2) % 4) as usize]
 }
 
 /// Блоки упавшего дерева относительно земли под пнём: пень, зазор в один-
 /// два блока и лежачий ствол, если земля под ним ровная; на стволе грибы,
 /// на пне лианы. `column` — столбец в любом месте, нужен для проверки земли.
 fn fallen_blocks(
+    key: u64,
     wood: Wood,
     blocks: &Palette,
     x: i32,
@@ -647,9 +701,9 @@ fn fallen_blocks(
     height: i32,
     column: &dyn Fn(i32, i32) -> Column,
 ) -> Vec<Placed> {
-    let mut dice = Dice::new(x, z, SALT_FALLEN + 3);
+    let mut dice = Dice::new(key, x, z, SALT_FALLEN + 3);
     let logs = &blocks.logs[wood as usize];
-    let (step_x, step_z) = fallen_direction(x, z);
+    let (step_x, step_z) = fallen_direction(key, x, z);
     let mut placed = vec![(0, 1, 0, logs[1])];
 
     // Лианы на пне — у дуба и джунглей, в трёх случаях из четырёх.
@@ -709,18 +763,20 @@ fn fallen_blocks(
 
 /// Упавшие деревья этого чанка и зашедшие к нему от соседей.
 fn fallen_trees(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
+    let key = area.key;
+
     for local_x in -FALLEN_REACH..(CHUNK_SIZE + FALLEN_REACH) {
         for local_z in -FALLEN_REACH..(CHUNK_SIZE + FALLEN_REACH) {
             let x = area.chunk_x * CHUNK_SIZE + local_x;
             let z = area.chunk_z * CHUNK_SIZE + local_z;
 
-            if !roll(x, z, SALT_FALLEN, FALLEN_DENSEST) {
+            if !roll(key, x, z, SALT_FALLEN, FALLEN_DENSEST) {
                 continue;
             }
 
             // Дотянется ли дерево до чанка: от пня с лианами до самого
             // дальнего конца ствола.
-            let (step_x, step_z) = fallen_direction(x, z);
+            let (step_x, step_z) = fallen_direction(key, x, z);
             let far = (x + step_x * FALLEN_REACH, z + step_z * FALLEN_REACH);
             let from = ((x - 1).min(far.0), (z - 1).min(far.1));
             let to = ((x + 1).max(far.0), (z + 1).max(far.1));
@@ -731,13 +787,13 @@ fn fallen_trees(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
 
             let column = area.column(x, z);
 
-            let Some(wood) = fallen_at(&column, x, z) else {
+            let Some(wood) = fallen_at(key, &column, x, z) else {
                 continue;
             };
 
             let lookup = |x: i32, z: i32| area.column(x, z);
 
-            for (dx, dy, dz, state) in fallen_blocks(wood, blocks, x, z, column.height, &lookup) {
+            for (dx, dy, dz, state) in fallen_blocks(key, wood, blocks, x, z, column.height, &lookup) {
                 put_over_plants(chunk, blocks, local_x + dx, column.height + dy, local_z + dz, state);
             }
         }
@@ -759,6 +815,7 @@ enum Patch {
     TallFlowers,
     Sunflowers,
     LilyOfTheValley,
+    Bushes,
 }
 
 /// Как часто грядки и как они густы.
@@ -772,19 +829,21 @@ struct PatchRule {
     cells: f64,
 }
 
-/// Частота середин грядок — на один столбец. По вики тыквенная грядка
-/// бывает в одном чанке из 32, ягодная в тайге — из 12; арбузная
-/// в джунглях — примерно из 6 (оценка). Отсюда числа ниже: доля на чанк,
-/// делённая на 256 столбцов.
-const PATCHES: [PatchRule; 8] = [
-    PatchRule { patch: Patch::Pumpkin, salt: 72_001, centers: 0.000_12, radius: 3, cells: 0.2 },
+/// Частота середин грядок — на один столбец, и густота внутри. Подобраны
+/// так, чтобы на чанк выходило столько же, сколько в сохранённом мире
+/// оригинала (tools/measure/plants_census.py): тыквы — в среднем одна на
+/// двадцать чанков, арбузы в джунглях — одна-две на десять, кусты — по
+/// нескольку штук тесной кучкой.
+const PATCHES: [PatchRule; 9] = [
+    PatchRule { patch: Patch::Pumpkin, salt: 72_001, centers: 0.000_03, radius: 3, cells: 0.2 },
     PatchRule { patch: Patch::Melon, salt: 72_011, centers: 0.000_65, radius: 3, cells: 0.25 },
     PatchRule { patch: Patch::Berries, salt: 72_019, centers: 0.000_33, radius: 3, cells: 0.3 },
-    PatchRule { patch: Patch::Petals, salt: 72_031, centers: 0.02, radius: 3, cells: 0.5 },
+    PatchRule { patch: Patch::Petals, salt: 72_031, centers: 0.02, radius: 3, cells: 0.65 },
     PatchRule { patch: Patch::Wildflowers, salt: 72_043, centers: 0.012, radius: 3, cells: 0.4 },
     PatchRule { patch: Patch::TallFlowers, salt: 72_047, centers: 0.006, radius: 2, cells: 0.35 },
-    PatchRule { patch: Patch::Sunflowers, salt: 72_053, centers: 0.02, radius: 3, cells: 0.35 },
+    PatchRule { patch: Patch::Sunflowers, salt: 72_053, centers: 0.005, radius: 2, cells: 0.15 },
     PatchRule { patch: Patch::LilyOfTheValley, salt: 72_059, centers: 0.004, radius: 2, cells: 0.3 },
+    PatchRule { patch: Patch::Bushes, salt: 72_061, centers: 0.0013, radius: 1, cells: 0.35 },
 ];
 
 /// Насколько грядке рады в этом биоме: 0 — не растёт вовсе.
@@ -793,50 +852,74 @@ const PATCHES: [PatchRule; 8] = [
 /// лежать у соседа, и столбец там считать незачем.
 fn patch_share(patch: Patch, biome: Biome) -> f64 {
     match patch {
-        // Тыквы — редкими грядками почти везде, где есть трава.
+        // Тыквы — редкими грядками почти везде, где есть трава; в лесах,
+        // саванне и болоте заметно реже (перепись мира оригинала).
         Patch::Pumpkin => match biome {
             Biome::Plains
-            | Biome::SunflowerPlains
-            | Biome::Forest
+            | Biome::SnowyPlains
             | Biome::FlowerForest
-            | Biome::BirchForest
-            | Biome::OldGrowthBirchForest
-            | Biome::DarkForest
             | Biome::Taiga
             | Biome::OldGrowthPineTaiga
             | Biome::OldGrowthSpruceTaiga
-            | Biome::Savanna
             | Biome::SavannaPlateau
-            | Biome::Swamp
-            | Biome::Meadow
+            | Biome::SparseJungle
             | Biome::WindsweptHills
             | Biome::WindsweptForest => 1.0,
+            Biome::Savanna | Biome::SunflowerPlains => 0.3,
+            Biome::BirchForest | Biome::Forest | Biome::OldGrowthBirchForest => 0.15,
+            Biome::DarkForest | Biome::Swamp => 0.1,
             _ => 0.0,
         },
         Patch::Melon => match biome {
-            Biome::Jungle | Biome::BambooJungle => 1.0,
-            Biome::SparseJungle => 0.5,
+            Biome::BambooJungle => 0.35,
+            Biome::Jungle => 0.23,
+            Biome::SparseJungle => 0.1,
             _ => 0.0,
         },
         Patch::Berries => match biome {
-            Biome::Taiga | Biome::OldGrowthPineTaiga | Biome::OldGrowthSpruceTaiga => 1.0,
+            Biome::Taiga => 0.43,
+            Biome::WindsweptForest => 0.3,
+            Biome::OldGrowthSpruceTaiga => 0.2,
+            Biome::OldGrowthPineTaiga => 0.13,
             _ => 0.0,
         },
-        Patch::Petals => if biome == Biome::CherryGrove { 1.0 } else { 0.0 },
+        // С настройкой `pink-cherry-groves` лепестков в роще чуть больше.
+        Patch::Petals => match biome {
+            Biome::CherryGrove if super::terrain::PINK_CHERRY_GROVES.load(std::sync::atomic::Ordering::Relaxed) => 1.35,
+            Biome::CherryGrove => 1.0,
+            _ => 0.0,
+        },
         Patch::Wildflowers => match biome {
-            Biome::Meadow => 1.0,
-            Biome::BirchForest | Biome::OldGrowthBirchForest => 0.6,
+            Biome::BirchForest => 0.37,
+            Biome::OldGrowthBirchForest => 0.36,
+            Biome::Meadow => 0.23,
             _ => 0.0,
         },
         Patch::TallFlowers => match biome {
-            Biome::FlowerForest => 1.0,
-            Biome::Forest => 0.1,
+            Biome::FlowerForest => 0.16,
+            Biome::BirchForest => 0.057,
+            Biome::Forest => 0.04,
+            Biome::OldGrowthBirchForest => 0.026,
             _ => 0.0,
         },
         Patch::Sunflowers => if biome == Biome::SunflowerPlains { 1.0 } else { 0.0 },
         Patch::LilyOfTheValley => match biome {
-            Biome::FlowerForest => 1.0,
-            Biome::Forest => 0.15,
+            Biome::FlowerForest => 0.125,
+            Biome::OldGrowthBirchForest => 0.025,
+            Biome::Forest => 0.02,
+            Biome::BirchForest => 0.006,
+            _ => 0.0,
+        },
+        // Кусты — по вики: равнины, леса, берёзовые леса, продуваемые
+        // холмы и берега рек.
+        Patch::Bushes => match biome {
+            Biome::Plains => 1.0,
+            Biome::WindsweptForest => 1.45,
+            Biome::WindsweptHills => 0.65,
+            Biome::BirchForest | Biome::OldGrowthBirchForest => 0.57,
+            Biome::Forest => 0.4,
+            Biome::WindsweptGravellyHills => 0.25,
+            Biome::River | Biome::FrozenRiver => 0.15,
             _ => 0.0,
         },
     }
@@ -845,6 +928,8 @@ fn patch_share(patch: Patch, biome: Biome) -> f64 {
 /// Грядки, задевающие чанк: середина может быть и у соседа, но каждый
 /// ставит только то, что внутри него.
 fn patches(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
+    let key = area.key;
+
     for rule in &PATCHES {
         let reach = rule.radius;
 
@@ -853,14 +938,14 @@ fn patches(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
                 let x = area.chunk_x * CHUNK_SIZE + center_x;
                 let z = area.chunk_z * CHUNK_SIZE + center_z;
 
-                if !roll(x, z, rule.salt, rule.centers) {
+                if !roll(key, x, z, rule.salt, rule.centers) {
                     continue;
                 }
 
                 // Высокий цветок один на всю грядку: сирень, розовый куст
                 // или пион.
-                let kind = (hash(x, z, rule.salt + 1) % 3) as usize;
-                let cell_salt = hash(x, z, rule.salt + 2);
+                let kind = (hash(key, x, z, rule.salt + 1) % 3) as usize;
+                let cell_salt = hash(key, x, z, rule.salt + 2);
 
                 for dx in -reach..=reach {
                     for dz in -reach..=reach {
@@ -873,11 +958,11 @@ fn patches(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
                         let column = *area.near(local_x, local_z);
                         let share = patch_share(rule.patch, column.biome);
 
-                        if share <= 0.0 || !on_land(&column) || !roll(x + dx, z + dz, cell_salt, rule.cells * share) {
+                        if share <= 0.0 || !on_land(&column) || !roll(key, x + dx, z + dz, cell_salt, rule.cells * share) {
                             continue;
                         }
 
-                        grow_in_patch(chunk, blocks, rule.patch, kind, (x + dx, z + dz), (local_x, local_z), &column);
+                        grow_in_patch(key, chunk, blocks, rule.patch, kind, (x + dx, z + dz), (local_x, local_z), &column);
                     }
                 }
             }
@@ -886,7 +971,9 @@ fn patches(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
 }
 
 /// Одно растение грядки.
+#[allow(clippy::too_many_arguments)]
 fn grow_in_patch(
+    key: u64,
     chunk: &mut Chunk,
     blocks: &Palette,
     patch: Patch,
@@ -905,7 +992,7 @@ fn grow_in_patch(
     }
 
     // Лепестки лежат пучками по одному–четыре и смотрят в разные стороны.
-    let mut dice = Dice::new(x, z, 72_101);
+    let mut dice = Dice::new(key, x, z, 72_101);
 
     match patch {
         Patch::Pumpkin | Patch::Melon => {
@@ -931,6 +1018,11 @@ fn grow_in_patch(
         Patch::LilyOfTheValley => {
             put_in_air(chunk, local_x, y, local_z, blocks.lily_of_the_valley);
         }
+        Patch::Bushes => {
+            if ground == blocks.ground.grass_block {
+                put_in_air(chunk, local_x, y, local_z, blocks.bush);
+            }
+        }
     }
 }
 
@@ -938,24 +1030,330 @@ fn grow_in_patch(
 // Растения по одному: трава, тростник, кактус, водоросли
 // ---------------------------------------------------------------------------
 
-/// Густота кактусов сверх тех, что уже ставит рельеф в пустыне. В бесплодных
-/// землях вдвое реже, чем в пустыне (вики).
+/// Густота кактусов. В бесплодных землях реже, чем в пустыне (вики);
+/// числа — по замеру мира оригинала: кактус там редкость, один на
+/// несколько чанков.
 fn cactus_density(biome: Biome) -> f64 {
     match biome {
-        Biome::Desert => 0.003,
-        Biome::Badlands | Biome::ErodedBadlands => 0.0015,
+        Biome::Desert => 0.0015,
+        Biome::Badlands | Biome::ErodedBadlands | Biome::WoodedBadlands => 0.0012,
         _ => 0.0,
     }
 }
 
-/// Стоит ли в этом месте кактус — наш или тот, что ставит рельеф пустыни.
-/// Смотрится только место и биом: соседу нужно знать это и за краем чанка.
-fn cactus_here(x: i32, z: i32, biome: Biome) -> bool {
-    roll(x, z, SALT_CACTUS, cactus_density(biome)) || (biome == Biome::Desert && terrain::chance(x, z, 811, 0.004))
+/// Стоит ли в этом месте кактус. Смотрится только место и биом: соседу
+/// нужно знать это и за краем чанка.
+fn cactus_here(key: u64, x: i32, z: i32, biome: Biome) -> bool {
+    roll(key, x, z, SALT_CACTUS, cactus_density(biome))
+}
+
+/// Доля клеток 8×8, где у воды растёт кучка тростника. Подогнано под
+/// перепись мира оригинала (стеблей на чанк по биомам).
+fn cane_density(biome: Biome) -> f64 {
+    match biome {
+        Biome::Desert => 0.6,
+        Biome::WoodedBadlands => 0.12,
+        Biome::Swamp => 0.03,
+        Biome::Beach | Biome::Badlands | Biome::ErodedBadlands => 0.1,
+        Biome::MangroveSwamp => 0.03,
+        Biome::River => 0.018,
+        _ => 0.035,
+    }
+}
+
+/// Простой цветок в один блок.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Flower {
+    Dandelion,
+    Poppy,
+    BlueOrchid,
+    Allium,
+    AzureBluet,
+    RedTulip,
+    OrangeTulip,
+    WhiteTulip,
+    PinkTulip,
+    OxeyeDaisy,
+    Cornflower,
+}
+
+impl Flower {
+    fn name(self) -> &'static str {
+        match self {
+            Flower::Dandelion => "dandelion",
+            Flower::Poppy => "poppy",
+            Flower::BlueOrchid => "blue_orchid",
+            Flower::Allium => "allium",
+            Flower::AzureBluet => "azure_bluet",
+            Flower::RedTulip => "red_tulip",
+            Flower::OrangeTulip => "orange_tulip",
+            Flower::WhiteTulip => "white_tulip",
+            Flower::PinkTulip => "pink_tulip",
+            Flower::OxeyeDaisy => "oxeye_daisy",
+            Flower::Cornflower => "cornflower",
+        }
+    }
+}
+
+/// Все простые цветы — в порядке `Flower`.
+const FLOWERS: [Flower; 11] = [
+    Flower::Dandelion,
+    Flower::Poppy,
+    Flower::BlueOrchid,
+    Flower::Allium,
+    Flower::AzureBluet,
+    Flower::RedTulip,
+    Flower::OrangeTulip,
+    Flower::WhiteTulip,
+    Flower::PinkTulip,
+    Flower::OxeyeDaisy,
+    Flower::Cornflower,
+];
+
+/// Какие цветы растут в биоме и в какой доле — по замеру мира оригинала
+/// (сколько каждого на чанк, в сотых).
+type Bouquet = &'static [(Flower, u32)];
+
+const PLAINS_FLOWERS: Bouquet = &[
+    (Flower::Dandelion, 95),
+    (Flower::AzureBluet, 13),
+    (Flower::Poppy, 12),
+    (Flower::OxeyeDaisy, 12),
+    (Flower::Cornflower, 12),
+    (Flower::WhiteTulip, 2),
+    (Flower::RedTulip, 1),
+    (Flower::OrangeTulip, 1),
+    (Flower::PinkTulip, 1),
+];
+const MEADOW_FLOWERS: Bouquet = &[
+    (Flower::Poppy, 30),
+    (Flower::Dandelion, 29),
+    (Flower::AzureBluet, 17),
+    (Flower::Cornflower, 16),
+    (Flower::OxeyeDaisy, 8),
+    (Flower::Allium, 7),
+];
+const FLOWER_FOREST_FLOWERS: Bouquet = &[
+    (Flower::OrangeTulip, 30),
+    (Flower::RedTulip, 24),
+    (Flower::WhiteTulip, 24),
+    (Flower::PinkTulip, 16),
+    (Flower::AzureBluet, 13),
+    (Flower::Allium, 8),
+    (Flower::OxeyeDaisy, 7),
+    (Flower::Poppy, 3),
+    (Flower::Cornflower, 2),
+    (Flower::Dandelion, 1),
+];
+const BIRCH_FLOWERS: Bouquet = &[(Flower::Poppy, 12), (Flower::Allium, 4), (Flower::OxeyeDaisy, 3)];
+const SWAMP_FLOWERS: Bouquet = &[
+    (Flower::BlueOrchid, 27),
+    (Flower::PinkTulip, 13),
+    (Flower::WhiteTulip, 7),
+    (Flower::AzureBluet, 6),
+    (Flower::OrangeTulip, 5),
+    (Flower::RedTulip, 2),
+];
+const HILLS_FLOWERS: Bouquet =
+    &[(Flower::Dandelion, 5), (Flower::OrangeTulip, 5), (Flower::WhiteTulip, 3), (Flower::Allium, 2)];
+const COMMON_FLOWERS: Bouquet = &[(Flower::Dandelion, 1), (Flower::Poppy, 1)];
+
+/// Что покрывает землю биома: доля столбцов под каждым растением.
+///
+/// Числа подобраны по замеру мира оригинала — сколько чего на чанк
+/// (tools/measure/plants_census.py) — с поправкой на то, что часть столбцов
+/// занята деревьями, водой и грядками.
+#[derive(Clone, Copy)]
+struct Cover {
+    grass: f64,
+    fern: f64,
+    tall_grass: f64,
+    large_fern: f64,
+    /// Простые цветы — в среднем по биому; растут они полянками (`meadows`).
+    flowers: f64,
+    bouquet: Bouquet,
+    /// Доля клеток 8×8, где цветы есть; 1 — растут всюду.
+    meadows: f64,
+    /// Опавшие листья под кроной и на открытом месте рядом.
+    litter: (f64, f64),
+    brown_mushroom: f64,
+    /// Кусты со светлячками: у воды, в болоте — где угодно.
+    firefly_bush: f64,
+    dead_bush: f64,
+    /// Сухая трава на песке и терракоте: короткая и высокая.
+    dry_grass: f64,
+}
+
+const BARE: Cover = Cover {
+    grass: 0.0,
+    fern: 0.0,
+    tall_grass: 0.0,
+    large_fern: 0.0,
+    flowers: 0.0,
+    bouquet: COMMON_FLOWERS,
+    meadows: 0.25,
+    litter: (0.0, 0.0),
+    brown_mushroom: 0.0,
+    firefly_bush: 0.0,
+    dead_bush: 0.0,
+    dry_grass: 0.0,
+};
+
+/// Покров земли в биоме.
+fn cover(biome: Biome) -> Cover {
+    // Светлячки — почти везде, где у воды растёт трава.
+    let grassy = Cover { firefly_bush: 0.01, ..BARE };
+
+    match biome {
+        Biome::Plains => Cover {
+            grass: 0.21,
+            fern: 0.0003,
+            tall_grass: 0.013,
+            flowers: 0.0073,
+            bouquet: PLAINS_FLOWERS,
+            ..grassy
+        },
+        Biome::SunflowerPlains => Cover {
+            grass: 0.176,
+            tall_grass: 0.012,
+            flowers: 0.0058,
+            bouquet: PLAINS_FLOWERS,
+            ..grassy
+        },
+        Biome::Meadow => Cover {
+            grass: 0.11,
+            tall_grass: 0.025,
+            flowers: 0.054,
+            bouquet: MEADOW_FLOWERS,
+            meadows: 1.0,
+            ..BARE
+        },
+        Biome::Forest => Cover {
+            grass: 0.032,
+            fern: 0.0004,
+            tall_grass: 0.0004,
+            flowers: 0.00015,
+            litter: (0.7, 0.26),
+            ..grassy
+        },
+        Biome::DarkForest => Cover {
+            grass: 0.032,
+            fern: 0.0004,
+            tall_grass: 0.001,
+            litter: (0.53, 0.22),
+            ..grassy
+        },
+        Biome::WoodedBadlands => Cover {
+            grass: 0.004,
+            fern: 0.0005,
+            litter: (0.11, 0.002),
+            dead_bush: 0.066,
+            dry_grass: 0.0105,
+            ..BARE
+        },
+        Biome::FlowerForest => Cover {
+            grass: 0.019,
+            tall_grass: 0.0006,
+            flowers: 0.065,
+            bouquet: FLOWER_FOREST_FLOWERS,
+            meadows: 1.0,
+            ..grassy
+        },
+        Biome::BirchForest => Cover {
+            grass: 0.045,
+            tall_grass: 0.0003,
+            flowers: 0.001,
+            bouquet: BIRCH_FLOWERS,
+            ..grassy
+        },
+        Biome::OldGrowthBirchForest => Cover { grass: 0.04, fern: 0.0002, ..grassy },
+        Biome::Taiga => Cover {
+            grass: 0.0035,
+            fern: 0.018,
+            tall_grass: 0.0004,
+            large_fern: 0.015,
+            brown_mushroom: 0.0022,
+            ..grassy
+        },
+        Biome::SnowyTaiga => Cover {
+            grass: 0.0047,
+            fern: 0.015,
+            large_fern: 0.0159,
+            brown_mushroom: 0.0014,
+            ..grassy
+        },
+        Biome::OldGrowthPineTaiga => Cover {
+            grass: 0.04,
+            fern: 0.106,
+            tall_grass: 0.002,
+            large_fern: 0.013,
+            brown_mushroom: 0.0246,
+            dead_bush: 0.0023,
+            ..grassy
+        },
+        Biome::OldGrowthSpruceTaiga => Cover {
+            grass: 0.037,
+            fern: 0.114,
+            tall_grass: 0.0025,
+            large_fern: 0.0188,
+            brown_mushroom: 0.013,
+            dead_bush: 0.0022,
+            ..grassy
+        },
+        Biome::Jungle => Cover { grass: 0.254, fern: 0.087, dead_bush: 0.0003, ..grassy },
+        Biome::SparseJungle => Cover { grass: 0.44, fern: 0.143, dead_bush: 0.0004, ..grassy },
+        Biome::BambooJungle => Cover { grass: 0.32, fern: 0.09, tall_grass: 0.0097, ..grassy },
+        Biome::Savanna => Cover { grass: 0.37, tall_grass: 0.012, flowers: 0.0003, ..grassy },
+        Biome::SavannaPlateau => Cover { grass: 0.37, tall_grass: 0.011, flowers: 0.0003, ..grassy },
+        Biome::WindsweptSavanna => Cover { grass: 0.04, ..grassy },
+        Biome::Swamp => Cover {
+            grass: 0.13,
+            fern: 0.0007,
+            flowers: 0.0043,
+            bouquet: SWAMP_FLOWERS,
+            brown_mushroom: 0.027,
+            firefly_bush: 0.002,
+            dead_bush: 0.0022,
+            ..BARE
+        },
+        Biome::MangroveSwamp => Cover { grass: 0.25, firefly_bush: 0.01, dead_bush: 0.004, ..BARE },
+        Biome::SnowyPlains => Cover { grass: 0.02, ..BARE },
+        Biome::Grove => Cover { grass: 0.0024, fern: 0.0005, tall_grass: 0.0005, ..BARE },
+        Biome::SnowySlopes => Cover { grass: 0.009, tall_grass: 0.001, ..BARE },
+        Biome::JaggedPeaks => Cover { grass: 0.07, tall_grass: 0.012, ..BARE },
+        Biome::StonyPeaks => Cover { grass: 0.13, ..BARE },
+        Biome::FrozenPeaks => Cover { grass: 0.0035, ..BARE },
+        Biome::WindsweptHills => Cover {
+            grass: 0.008,
+            tall_grass: 0.0004,
+            flowers: 0.0008,
+            bouquet: HILLS_FLOWERS,
+            ..grassy
+        },
+        Biome::WindsweptForest => Cover {
+            grass: 0.03,
+            fern: 0.0008,
+            tall_grass: 0.0014,
+            large_fern: 0.0003,
+            ..grassy
+        },
+        Biome::WindsweptGravellyHills => Cover { grass: 0.007, tall_grass: 0.0012, ..grassy },
+        Biome::River => Cover { grass: 0.1, fern: 0.002, tall_grass: 0.002, ..grassy },
+        Biome::FrozenRiver => Cover { grass: 0.15, fern: 0.003, large_fern: 0.006, ..BARE },
+        Biome::Beach | Biome::StonyShore => Cover { grass: 0.05, ..grassy },
+        Biome::CherryGrove => Cover { grass: 0.37, tall_grass: 0.02, ..grassy },
+        Biome::Desert => Cover { dead_bush: 0.007, dry_grass: 0.012, ..BARE },
+        Biome::Badlands => Cover { dead_bush: 0.066, dry_grass: 0.0082, ..BARE },
+        Biome::ErodedBadlands => Cover { dead_bush: 0.04, dry_grass: 0.0069, ..BARE },
+        Biome::MushroomFields | Biome::IceSpikes => BARE,
+        _ => Cover { grass: 0.05, ..BARE },
+    }
 }
 
 /// Все растения по одному на столбец.
 fn single_plants(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
+    let key = area.key;
+
     for local_x in 0..CHUNK_SIZE {
         for local_z in 0..CHUNK_SIZE {
             let x = area.chunk_x * CHUNK_SIZE + local_x;
@@ -963,7 +1361,7 @@ fn single_plants(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
             let column = *area.near(local_x, local_z);
 
             if column.height < SEA {
-                underwater(chunk, blocks, &column, x, z, local_x, local_z);
+                underwater(key, chunk, blocks, &column, x, z, local_x, local_z);
             } else {
                 on_ground(area, chunk, blocks, &column, x, z, local_x, local_z);
             }
@@ -974,132 +1372,283 @@ fn single_plants(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
 /// Растение на суше, если место над землёй свободно.
 #[allow(clippy::too_many_arguments)]
 fn on_ground(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column, x: i32, z: i32, local_x: i32, local_z: i32) {
+    let key = area.key;
+
     let height = column.height;
     let y = height + 1;
     let biome = column.biome;
 
-    if biome.is_ocean() || chunk.block(local_x, y, local_z) != AIR {
+    if biome.is_ocean() {
         return;
     }
 
+    let here = chunk.block(local_x, y, local_z);
     let ground = chunk.block(local_x, height, local_z);
+
+    // Под слоем снега трава всё равно растёт: растение встаёт вместо снега,
+    // а земля под ним перестаёт быть заснеженной.
+    let snowed = here == blocks.snow && ground == blocks.ground.snowy_grass;
+
+    if here != AIR && !snowed {
+        return;
+    }
+
     let soil = blocks.ground.soil(ground);
+    let sandy = blocks.ground.sandy(ground);
 
-    // Тростник: на берегу у самой воды, если вода вровень с землёй сбоку.
-    if height == SEA && !biome.is_freezing() && (soil || blocks.ground.sandy(ground)) {
-        let shore = [(1, 0), (-1, 0), (0, 1), (0, -1)].iter().any(|(dx, dz)| {
-            let next = area.near(local_x + dx, local_z + dz);
+    if here == AIR {
+        // Тростник: на берегу у самой воды, если вода вровень с землёй сбоку.
+        if height == SEA && !biome.is_freezing() && (soil || sandy) {
+            let shore = [(1, 0), (-1, 0), (0, 1), (0, -1)].iter().any(|(dx, dz)| {
+                let next = area.near(local_x + dx, local_z + dz);
 
-            next.height < SEA && !next.biome.is_freezing()
-        });
-        let density = if biome == Biome::Desert { 0.3 } else { 0.18 };
+                next.height < SEA && !next.biome.is_freezing()
+            });
 
-        if shore && roll(x, z, SALT_CANE, density) {
-            let mut dice = Dice::new(x, z, SALT_CANE + 1);
+            // Тростник растёт кучками: у оригинала это грядка из нескольких
+            // стеблей вокруг одной точки у воды, а не ряд вдоль всего берега.
+            // Кучка — клетка 8×8, внутри неё стебель у большей части мест
+            // у воды.
+            let clump = roll(key, x >> 3, z >> 3, SALT_CANE + 7, cane_density(biome));
 
-            for dy in 0..dice.stalk(2) {
-                if !put_in_air(chunk, local_x, y + dy, local_z, blocks.sugar_cane) {
-                    break;
+            if shore && clump && roll(key, x, z, SALT_CANE, 0.6) {
+                let mut dice = Dice::new(key, x, z, SALT_CANE + 1);
+
+                for dy in 0..dice.stalk(2) {
+                    if !put_in_air(chunk, local_x, y + dy, local_z, blocks.sugar_cane) {
+                        break;
+                    }
                 }
+
+                return;
+            }
+        }
+
+        // Кактус: 1–3 блока, в четверти случаев с цветком. Сбоку не должно
+        // быть ни земли, ни другого кактуса — иначе он бы сломался.
+        if sandy && cactus_here(key, x, z, biome) {
+            let clear = [(1, 0), (-1, 0), (0, 1), (0, -1)].iter().all(|(dx, dz)| {
+                let next = area.near(local_x + dx, local_z + dz);
+
+                next.height <= height && !cactus_here(key, x + dx, z + dz, next.biome)
+            });
+
+            if clear {
+                let mut dice = Dice::new(key, x, z, SALT_CACTUS + 1);
+                let tall = dice.stalk(1);
+                let mut grown = 0;
+
+                while grown < tall && put_in_air(chunk, local_x, y + grown, local_z, blocks.cactus) {
+                    grown += 1;
+                }
+
+                if let Some(flower) = blocks.cactus_flower.filter(|_| grown == tall && dice.below(4) == 0) {
+                    put_in_air(chunk, local_x, y + grown, local_z, flower);
+                }
+
+                return;
+            }
+        }
+    }
+
+    let cover = cover(biome);
+    let dry = sandy || ground == blocks.ground.terracotta;
+    let value = unit(key, x, z, SALT_COVER);
+
+    // Мёртвые кусты и сухая трава — на песке, терракоте, а мёртвые кусты
+    // и на земле; в мангровом болоте — на иле.
+    let bush_ground = soil || dry || (biome == Biome::MangroveSwamp && ground == blocks.ground.mud);
+    let mut edge = cover.dead_bush;
+
+    if value < edge {
+        if bush_ground && !snowed {
+            put_in_air(chunk, local_x, y, local_z, blocks.dead_bush);
+        }
+
+        return;
+    }
+
+    edge += cover.dry_grass;
+
+    if value < edge {
+        if dry && !snowed {
+            // Короткой и высокой у оригинала поровну.
+            let tall = unit(key, x, z, SALT_COVER + 1) < 0.5;
+            put_in_air(chunk, local_x, y, local_z, if tall { blocks.tall_dry_grass } else { blocks.short_dry_grass });
+        }
+
+        return;
+    }
+
+    // Дальше — то, что растёт на земле с травой; в мангровом болоте — и на
+    // иле.
+    let earthy = soil || snowed || (biome == Biome::MangroveSwamp && ground == blocks.ground.mud);
+    let grow = |chunk: &mut Chunk, state: i32| {
+        if snowed {
+            chunk.put_generated(local_x, height, local_z, blocks.ground.grass_block, true);
+        }
+
+        chunk.put_generated(local_x, y, local_z, state, true);
+    };
+
+    let two_high = |chunk: &mut Chunk, pair: [i32; 2]| {
+        if block_in(chunk, local_x, y + 1, local_z) != Some(AIR) {
+            return;
+        }
+
+        if snowed {
+            chunk.put_generated(local_x, height, local_z, blocks.ground.grass_block, true);
+        }
+
+        chunk.put_generated(local_x, y, local_z, pair[0], true);
+        chunk.put_generated(local_x, y + 1, local_z, pair[1], true);
+    };
+
+    edge += cover.tall_grass;
+
+    if value < edge {
+        if earthy {
+            two_high(chunk, blocks.tall_grass);
+        }
+
+        return;
+    }
+
+    edge += cover.large_fern;
+
+    if value < edge {
+        if earthy {
+            two_high(chunk, blocks.large_fern);
+        }
+
+        return;
+    }
+
+    edge += cover.grass;
+
+    if value < edge {
+        if earthy {
+            grow(chunk, blocks.short_grass);
+        }
+
+        return;
+    }
+
+    edge += cover.fern;
+
+    if value < edge {
+        if earthy {
+            grow(chunk, blocks.fern);
+        }
+
+        return;
+    }
+
+    // Цветы растут полянками, а не ровной россыпью: у оригинала они
+    // сбиваются в пятна, между которыми их нет вовсе.
+    if cover.flowers > 0.0 {
+        let meadow = cover.meadows >= 1.0 || roll(key, x >> 3, z >> 3, SALT_MEADOW, cover.meadows);
+
+        edge += if meadow { cover.flowers / cover.meadows } else { 0.0 };
+
+        if value < edge {
+            if earthy {
+                grow(chunk, blocks.flowers[pick_flower(key, x, z, cover.bouquet) as usize]);
             }
 
             return;
         }
     }
 
-    // Кактус: 1–3 блока, в четверти случаев с цветком. Сбоку не должно быть
-    // ни земли, ни другого кактуса — иначе он бы сломался.
-    if blocks.ground.sandy(ground) && roll(x, z, SALT_CACTUS, cactus_density(biome)) {
-        let clear = [(1, 0), (-1, 0), (0, 1), (0, -1)].iter().all(|(dx, dz)| {
-            let next = area.near(local_x + dx, local_z + dz);
+    edge += cover.brown_mushroom;
 
-            next.height <= height && !cactus_here(x + dx, z + dz, next.biome)
-        });
+    if value < edge {
+        if earthy {
+            grow(chunk, blocks.brown_mushroom);
+        }
 
-        if clear {
-            let mut dice = Dice::new(x, z, SALT_CACTUS + 1);
-            let tall = dice.stalk(1);
-            let mut grown = 0;
+        return;
+    }
 
-            while grown < tall && put_in_air(chunk, local_x, y + grown, local_z, blocks.cactus) {
-                grown += 1;
-            }
+    if cover.firefly_bush > 0.0 {
+        edge += cover.firefly_bush;
 
-            if let Some(flower) = blocks.cactus_flower.filter(|_| grown == tall && dice.below(4) == 0) {
-                put_in_air(chunk, local_x, y + grown, local_z, flower);
+        // У воды: рядом столбец под уровнем моря. В болоте — где угодно.
+        if value < edge {
+            let wet = biome == Biome::Swamp
+                || [(1, 0), (-1, 0), (0, 1), (0, -1)]
+                    .iter()
+                    .any(|(dx, dz)| area.near(local_x + dx, local_z + dz).height < SEA);
+
+            if earthy && wet {
+                grow(chunk, blocks.firefly_bush);
             }
 
             return;
         }
     }
 
-    // Мёртвые кусты: бесплодные земли и старые тайги (пустыню засевает
-    // рельеф).
-    let dead_bush = match biome {
-        Biome::Badlands | Biome::ErodedBadlands => 0.02,
-        Biome::WoodedBadlands => 0.01,
-        Biome::OldGrowthPineTaiga | Biome::OldGrowthSpruceTaiga => 0.008,
-        _ => 0.0,
-    };
-    let bush_ground = soil || blocks.ground.sandy(ground) || ground == blocks.ground.terracotta;
+    // Опавшие листья — вокруг деревьев: гуще всего под кроной, реже на
+    // открытом месте рядом. Кроны ищем, только если листьям здесь место.
+    let (under, open) = cover.litter;
 
-    if bush_ground && roll(x, z, SALT_DEAD_BUSH, dead_bush) {
-        put_in_air(chunk, local_x, y, local_z, blocks.dead_bush);
+    if under <= 0.0 || value >= edge + under || snowed {
         return;
     }
 
-    if !soil {
+    let canopy = (y + 1..=y + 20).any(|up| {
+        let state = chunk.block(local_x, up, local_z);
+
+        blocks.leaves.iter().any(|(low, high)| (*low..=*high).contains(&state))
+    });
+
+    if value >= edge + if canopy { under } else { open } {
         return;
     }
 
-    // Высокая трава и большой папоротник.
-    let (tall_grass, large_fern) = match biome {
-        Biome::Plains | Biome::SunflowerPlains => (0.06, 0.0),
-        Biome::Meadow => (0.04, 0.0),
-        Biome::Savanna | Biome::SavannaPlateau => (0.12, 0.0),
-        Biome::WindsweptSavanna => (0.08, 0.0),
-        Biome::Forest | Biome::FlowerForest | Biome::BirchForest | Biome::OldGrowthBirchForest => (0.02, 0.0),
-        Biome::DarkForest | Biome::Swamp => (0.02, 0.0),
-        Biome::CherryGrove => (0.03, 0.0),
-        Biome::Taiga => (0.0, 0.03),
-        Biome::OldGrowthPineTaiga | Biome::OldGrowthSpruceTaiga => (0.0, 0.05),
-        Biome::Jungle => (0.03, 0.04),
-        Biome::SparseJungle | Biome::BambooJungle => (0.02, 0.03),
-        _ => (0.0, 0.0),
-    };
-    let value = unit(x, z, SALT_TALL);
+    if earthy || dry || ground == blocks.ground.gravel || ground == blocks.ground.stone {
+        // Кучек у оригинала по одной, две и три поровну, четыре — вдвое
+        // реже.
+        let mut dice = Dice::new(key, x, z, SALT_COVER + 3);
+        let amount = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3][dice.below(17) as usize];
 
-    if value < tall_grass {
-        put_pair(chunk, local_x, y, local_z, blocks.tall_grass);
-        return;
-    }
-
-    if value < tall_grass + large_fern {
-        put_pair(chunk, local_x, y, local_z, blocks.large_fern);
-        return;
-    }
-
-    // Папоротники в джунглях: в тайге их уже сажает рельеф.
-    let fern = match biome {
-        Biome::Jungle | Biome::SparseJungle | Biome::BambooJungle => 0.06,
-        _ => 0.0,
-    };
-
-    if roll(x, z, SALT_FERN, fern) {
-        put_in_air(chunk, local_x, y, local_z, blocks.fern);
+        put_in_air(chunk, local_x, y, local_z, blocks.leaf_litter[dice.below(4) as usize][amount]);
     }
 }
 
+/// Какой цветок из букета растёт в этом месте.
+fn pick_flower(key: u64, x: i32, z: i32, bouquet: Bouquet) -> Flower {
+    let total: u32 = bouquet.iter().map(|(_, weight)| weight).sum();
+    let mut left = (hash(key, x, z, SALT_FLOWER) % u64::from(total.max(1))) as u32;
+
+    for (flower, weight) in bouquet {
+        if left < *weight {
+            return *flower;
+        }
+
+        left -= weight;
+    }
+
+    bouquet[0].0
+}
+
 /// Растение под водой или на ней: кувшинки, ламинария, морская трава.
-fn underwater(chunk: &mut Chunk, blocks: &Palette, column: &Column, x: i32, z: i32, local_x: i32, local_z: i32) {
+#[allow(clippy::too_many_arguments)]
+fn underwater(key: u64, chunk: &mut Chunk, blocks: &Palette, column: &Column, x: i32, z: i32, local_x: i32, local_z: i32) {
     let biome = column.biome;
     let bottom = column.height + 1;
     let depth = SEA - column.height;
 
     // Кувшинки — на болотной воде.
-    if matches!(biome, Biome::Swamp | Biome::MangroveSwamp)
+    let lily_pads = match biome {
+        Biome::Swamp => 0.032,
+        Biome::MangroveSwamp => 0.05,
+        _ => 0.0,
+    };
+
+    if lily_pads > 0.0
         && chunk.block(local_x, SEA, local_z) == blocks.water
-        && roll(x, z, SALT_LILY_PAD, 0.04)
+        && roll(key, x, z, SALT_LILY_PAD, lily_pads)
     {
         put_in_air(chunk, local_x, SEA + 1, local_z, blocks.lily_pad);
     }
@@ -1118,19 +1667,20 @@ fn underwater(chunk: &mut Chunk, blocks: &Palette, column: &Column, x: i32, z: i
     };
 
     // Ламинария — в холодных, обычных и тёплых-умеренных океанах, лесами:
-    // в одних клетках 8×8 её много, в других нет вовсе.
-    let kelp = matches!(
-        biome,
-        Biome::Ocean
-            | Biome::DeepOcean
-            | Biome::ColdOcean
-            | Biome::DeepColdOcean
-            | Biome::LukewarmOcean
-            | Biome::DeepLukewarmOcean
-    );
+    // в одних клетках 8×8 её много, в других нет вовсе. Густота — по замеру
+    // мира оригинала.
+    let kelp = match biome {
+        Biome::DeepOcean => 0.24,
+        Biome::DeepColdOcean => 0.21,
+        Biome::ColdOcean => 0.19,
+        Biome::Ocean => 0.18,
+        Biome::LukewarmOcean => 0.126,
+        Biome::DeepLukewarmOcean => 0.12,
+        _ => 0.0,
+    };
 
-    if kelp && depth >= 3 && roll(x >> 3, z >> 3, SALT_KELP_ZONE, 0.35) && roll(x, z, SALT_KELP, 0.3) {
-        let mut dice = Dice::new(x, z, SALT_KELP + 1);
+    if depth >= 3 && roll(key, x >> 3, z >> 3, SALT_KELP_ZONE, 0.35) && roll(key, x, z, SALT_KELP, kelp) {
+        let mut dice = Dice::new(key, x, z, SALT_KELP + 1);
         let length = 1 + dice.below((depth - 1).min(25));
 
         for dy in 0..length - 1 {
@@ -1143,22 +1693,33 @@ fn underwater(chunk: &mut Chunk, blocks: &Palette, column: &Column, x: i32, z: i
         return;
     }
 
-    // Морская трава — в реках, болотах и незамёрзших океанах.
+    // Морская трава — в реках, озёрах, болотах и незамёрзших океанах; в глубоких
+    // океанах она большей частью высокая. Густота и доля высокой — по
+    // замеру мира оригинала.
     let (density, tall_share) = match biome {
-        Biome::WarmOcean => (0.35, 0.4),
-        Biome::LukewarmOcean | Biome::DeepLukewarmOcean => (0.3, 0.3),
-        Biome::Ocean | Biome::DeepOcean => (0.25, 0.3),
-        Biome::ColdOcean | Biome::DeepColdOcean => (0.15, 0.2),
-        Biome::River | Biome::Swamp | Biome::MangroveSwamp => (0.3, 0.3),
+        Biome::DeepOcean => (0.17, 0.75),
+        Biome::DeepLukewarmOcean => (0.2, 0.77),
+        Biome::DeepColdOcean => (0.15, 0.8),
+        Biome::LukewarmOcean => (0.25, 0.3),
+        Biome::WarmOcean => (0.23, 0.3),
+        Biome::Ocean => (0.166, 0.31),
+        Biome::ColdOcean => (0.12, 0.33),
+        Biome::River => (0.125, 0.43),
+        Biome::Swamp => (0.114, 0.83),
+        Biome::MangroveSwamp => (0.04, 0.6),
+        // Реки и озёра посреди суши другого биома — изредка; у пляжей и
+        // каменистых берегов — пореже, чем в море.
+        Biome::Beach | Biome::StonyShore => (0.02, 0.33),
+        _ if !biome.is_freezing() && !biome.is_ocean() => (0.017, 0.4),
         _ => return,
     };
 
-    if !roll(x, z, SALT_SEAGRASS, density) {
+    if !roll(key, x, z, SALT_SEAGRASS, density) {
         return;
     }
 
-    let tall = depth >= 3
-        && unit(x, z, SALT_SEAGRASS + 1) < tall_share
+    let tall = depth >= 2
+        && unit(key, x, z, SALT_SEAGRASS + 1) < tall_share
         && block_in(chunk, local_x, bottom + 1, local_z) == Some(blocks.water);
 
     if tall {
@@ -1175,16 +1736,30 @@ mod tests {
     use crate::world::terrain::Style;
     use std::collections::HashMap;
 
+    /// Семя мира решает, где растёт растительность.
+    #[test]
+    fn plants_move_with_the_seed() {
+        let spots = |seed: i64| {
+            let key = key_of(&Terrain::new(seed, Style::Vanilla));
+
+            (0..4000).filter(|&i| roll(key, i % 64, i / 64, SALT_COVER, 0.1)).collect::<Vec<_>>()
+        };
+
+        assert_eq!(spots(1), spots(1));
+        assert_ne!(spots(1), spots(2), "растительность стоит одинаково в разных мирах");
+    }
+
     /// Крупные штуки не выходят за полосу, которую чанк просматривает.
     #[test]
     fn features_stay_within_reach() {
         let blocks = palette();
+        let key = 0;
 
         for x in -200..200 {
             let z = x * 7 + 3;
 
             for round in [Round::Boulder, Round::BrownMushroom, Round::RedMushroom] {
-                for (dx, dy, dz, _) in round_blocks(round, blocks, x, z) {
+                for (dx, dy, dz, _) in round_blocks(key, round, blocks, x, z) {
                     assert!(dx.abs() <= ROUND_REACH && dz.abs() <= ROUND_REACH, "{:?}: {} {}", round, dx, dz);
                     assert!(dy >= -2, "{:?} ушёл в землю на {}", round, dy);
                 }
@@ -1193,7 +1768,7 @@ mod tests {
             let flat = |_: i32, _: i32| Column::flat(70);
 
             for wood in [Wood::Oak, Wood::Birch, Wood::Spruce, Wood::Jungle] {
-                let placed = fallen_blocks(wood, blocks, x, z, 70, &flat);
+                let placed = fallen_blocks(key, wood, blocks, x, z, 70, &flat);
                 let (shortest, longest) = wood.lengths();
                 let logs = placed.iter().filter(|b| b.1 == 1 && blocks.logs[wood as usize].contains(&b.3)).count() as i32;
 
@@ -1212,9 +1787,10 @@ mod tests {
     #[test]
     fn stalks_follow_the_wiki() {
         let mut counts = [0; 3];
+        let key = 0;
 
         for x in 0..18_000 {
-            counts[(Dice::new(x, 5, 1).stalk(2) - 2) as usize] += 1;
+            counts[(Dice::new(key, x, 5, 1).stalk(2) - 2) as usize] += 1;
         }
 
         assert!((10_500..11_500).contains(&counts[0]), "{:?}", counts);
@@ -1226,9 +1802,10 @@ mod tests {
     #[test]
     fn mushroom_caps_face_outwards() {
         let blocks = palette();
+        let key = 0;
 
         for red in [false, true] {
-            let placed = huge_mushroom(&mut Dice::new(1, 2, 3), blocks, red);
+            let placed = huge_mushroom(&mut Dice::new(key, 1, 2, 3), blocks, red);
             let top = placed.iter().map(|b| b.1).max().unwrap();
 
             // Середина верха шляпки: сверху открыта, снизу под ней ножка.
@@ -1267,11 +1844,12 @@ mod tests {
             let generator = Generator::Normal(Terrain::new(20_260_923, style));
             let mut chunks: HashMap<(i32, i32), Chunk> = HashMap::new();
             let lookup = |x: i32, z: i32| terrain.column_at(x, z);
+            let key = key_of(&terrain);
 
             'search: for x in -600..600 {
                 for z in -600..600 {
-                    let round = roll(x, z, SALT_ROUND, ROUND_DENSEST);
-                    let fallen = roll(x, z, SALT_FALLEN, FALLEN_DENSEST);
+                    let round = roll(key, x, z, SALT_ROUND, ROUND_DENSEST);
+                    let fallen = roll(key, x, z, SALT_FALLEN, FALLEN_DENSEST);
 
                     if !round && !fallen {
                         continue;
@@ -1280,10 +1858,10 @@ mod tests {
                     let column = terrain.column_at(x, z);
                     let mut placed = Vec::new();
 
-                    if let Some(kind) = round.then(|| round_at(&column, x, z)).flatten() {
-                        placed = round_blocks(kind, blocks, x, z);
-                    } else if let Some(wood) = fallen.then(|| fallen_at(&column, x, z)).flatten() {
-                        placed = fallen_blocks(wood, blocks, x, z, column.height, &lookup);
+                    if let Some(kind) = round.then(|| round_at(key, &column, x, z)).flatten() {
+                        placed = round_blocks(key, kind, blocks, x, z);
+                    } else if let Some(wood) = fallen.then(|| fallen_at(key, &column, x, z)).flatten() {
+                        placed = fallen_blocks(key, wood, blocks, x, z, column.height, &lookup);
                     }
 
                     let touched: Vec<(i32, i32)> = placed
@@ -1337,7 +1915,7 @@ mod tests {
                 let chunk = Chunk::generated(&generator, chunk_x * 9, chunk_z * 9);
 
                 for section in chunk.sections.iter().flatten() {
-                    for state in section {
+                    for state in section.iter() {
                         if let Some(name) = crate::blocks::block_at_state(*state as i32) {
                             *seen.entry(name).or_default() += 1;
                         }
@@ -1346,7 +1924,7 @@ mod tests {
             }
         }
 
-        for name in ["tall_grass", "seagrass"] {
+        for name in ["tall_grass", "seagrass", "short_grass", "leaf_litter", "bush"] {
             assert!(seen.get(name).copied().unwrap_or(0) > 0, "не выросло {}; есть {:?}", name, seen.keys().collect::<Vec<_>>());
         }
     }
@@ -1364,7 +1942,7 @@ mod tests {
                 let chunk = Chunk::generated(&generator, chunk_x * 7 - 70, chunk_z * 7 - 70);
 
                 for section in chunk.sections.iter().flatten() {
-                    for state in section {
+                    for state in section.iter() {
                         if let Some(name) = crate::blocks::block_at_state(*state as i32) {
                             *seen.entry(name).or_default() += 1;
                         }
