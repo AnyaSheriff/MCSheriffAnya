@@ -78,6 +78,16 @@ fn air() -> u32 {
     })
 }
 
+/// Режим игры для Bedrock. Выживание, творческий и приключение совпадают
+/// с Java; наблюдатель у Bedrock — 6 (GameMode в описании протокола), а 3
+/// там — «наблюдатель выживания».
+fn bedrock_game_mode(java: i32) -> i32 {
+    match java {
+        crate::commands::GAME_MODE_SPECTATOR => 6,
+        mode => mode,
+    }
+}
+
 /// Высота глаз игрока над ногами: Bedrock шлёт и ждёт положение глаз.
 const EYES: f32 = 1.62;
 
@@ -169,7 +179,7 @@ impl BedrockWorld {
         start
             .zigzag64(runtime_id as i64) // entity_id
             .varint64(runtime_id) // runtime_entity_id
-            .zigzag32(game_mode) // player_gamemode: номера режимов у Bedrock те же
+            .zigzag32(bedrock_game_mode(game_mode)) // player_gamemode
             .vec3f(position.0, position.1, position.2)
             .lf32(rotation.1)
             .lf32(rotation.0) // rotation: наклон, поворот
@@ -178,7 +188,7 @@ impl BedrockWorld {
             .string("plains") // biome_name
             .zigzag32(0) // dimension
             .zigzag32(1) // generator: бесконечный
-            .zigzag32(game_mode) // world_gamemode
+            .zigzag32(bedrock_game_mode(game_mode)) // world_gamemode
             .bool(false) // hardcore
             .zigzag32(2) // difficulty
             .block_position(world_spawn.0 as i32, world_spawn.1 as i32, world_spawn.2 as i32)
@@ -204,7 +214,11 @@ impl BedrockWorld {
             .bool(false) // experiments_previously_used
             .bool(false) // bonus_chest
             .bool(false) // map_enabled
-            .u8(1) // permission_level: участник
+            // permission_level: участник. Число со знаком переменной длины
+            // (официальная документация Mojang к r/26_u1, LevelSettings,
+            // «Player Permissions: varint»); у minecraft-data здесь u8 —
+            // тот же один байт, но 1 превратился бы у клиента в −1.
+            .zigzag32(1)
             .li32(4) // server_chunk_tick_range
             .bool(false) // has_locked_behavior_pack
             .bool(false) // has_locked_resource_pack
@@ -396,8 +410,8 @@ impl BedrockWorld {
             },
             session::TEXT => {
                 if let Some(message) = read_chat(payload) {
+                    // В консоль строку выводит общий чат — здесь не пишем.
                     let line = format!("<{}> {}", self.identity.name, message);
-                    log_info!("{}", line);
                     self.shared.chat.lock().expect("чат захвачен другим потоком").push(line);
                 }
             }
@@ -425,7 +439,7 @@ impl BedrockWorld {
         {
             self.game_mode = mode;
             let mut set = Out::packet(session::SET_PLAYER_GAME_TYPE);
-            set.zigzag32(mode);
+            set.zigzag32(bedrock_game_mode(mode));
             packets.push(set.bytes);
             packets.push(abilities(self.runtime_id, self.creative()));
         }
@@ -1149,7 +1163,7 @@ fn add_player(member: &Member) -> Vec<u8> {
         .lf32(p.yaw)
         .lf32(p.yaw)
         .zigzag32(0) // в руке пусто
-        .zigzag32(member.game_mode)
+        .zigzag32(bedrock_game_mode(member.game_mode))
         .varint(0) // metadata
         .varint(0)
         .varint(0) // properties
@@ -1450,6 +1464,11 @@ fn read_use(reader: &mut In) -> Option<ItemUse> {
     let held = read_item(reader)?;
     let _player = reader.take(12)?;
     let click = (reader.lf32()?, reader.lf32()?, reader.lf32()?);
+    // Хвост TransactionUseItem: номер блока, предсказание клиента, перезарядка.
+    // В Player Auth Input за ним идут другие поля — его надо пройти целиком.
+    let _block = reader.varint()?;
+    let _prediction = reader.varint()?;
+    let _cooldown = reader.u8()?;
 
     Some(ItemUse { kind, position, face, held, click_y: click.1 })
 }
@@ -1501,6 +1520,30 @@ mod tests {
         assert_eq!((actions[0].kind, actions[0].position), (2, (3, -60, -4)));
     }
 
+    /// Действие предметом в Player Auth Input читается до конца
+    /// (TransactionUseItem с номером блока, предсказанием и перезарядкой),
+    /// и действия с блоками после него не теряются.
+    #[test]
+    fn block_actions_after_an_item_interaction_are_read() {
+        let mut out = Out::default();
+        out.lf32(0.0).lf32(0.0).lf32(0.0);
+        out.varint64((1 << 34) | (1 << 35)); // item_interact и block_action
+        out.varint(1).varint(0).zigzag32(1).lf32(0.0).lf32(0.0).varint64(7).vec3f(0.0, 0.0, 0.0);
+        out.zigzag32(0).varint(0); // без старого запроса, без действий
+        out.varint(0).varint(1).zigzag32(-5).zigzag32(70).zigzag32(12).zigzag32(1).zigzag32(0);
+        stone(&mut out);
+        use_tail(&mut out);
+        out.zigzag32(1);
+        out.zigzag32(26).zigzag32(3).zigzag32(-60).zigzag32(-4).zigzag32(1);
+
+        let mut bag = Bag::new(crate::inventory::Inventory::new());
+        let (actions, _) = read_input_actions(&mut In::new(&out.bytes), &mut bag, true);
+
+        assert_eq!(actions.len(), 2);
+        assert_eq!((actions[0].kind, actions[0].position), (0, (-5, 70, 12)));
+        assert_eq!((actions[1].kind, actions[1].position), (2, (3, -60, -4)));
+    }
+
     /// В выживании запрос к инвентарю (износ инструмента) идёт в том же
     /// Player Auth Input перед «докопал» — поломка не должна теряться.
     #[test]
@@ -1532,6 +1575,14 @@ mod tests {
         assert_eq!(held_block(held(450, 14)).map(|(name, _)| name), Some("red_bed"));
         assert_eq!(held_block(held(450, 0)).map(|(name, _)| name), Some("white_bed"));
         assert_eq!(held_block(held(53, 0)).map(|(name, _)| name), Some("oak_stairs"));
+    }
+
+    #[test]
+    fn spectator_is_bedrock_spectator() {
+        assert_eq!(bedrock_game_mode(crate::commands::GAME_MODE_SURVIVAL), 0);
+        assert_eq!(bedrock_game_mode(crate::commands::GAME_MODE_CREATIVE), 1);
+        assert_eq!(bedrock_game_mode(crate::commands::GAME_MODE_ADVENTURE), 2);
+        assert_eq!(bedrock_game_mode(crate::commands::GAME_MODE_SPECTATOR), 6);
     }
 
     #[test]

@@ -62,7 +62,7 @@ creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
 
 - `config/server.properties` — the same keys and format as the original
   server. Nothing from it is hard-coded.
-- `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`, and `prefetch-chunks` / `prefetch-at-once` — how far beyond the view distance the world is generated ahead of the player (0 turns it off); `bedrock-port`; `autumn-forests` and `pink-cherry-groves` — small additions not found in vanilla (rare autumn patches in forests, pinkish grass and more petals in cherry groves; `false` keeps the world vanilla).
+- `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`, and `prefetch-chunks` / `prefetch-at-once` — how far beyond the view distance the world is generated ahead of the player (0 turns it off); `bedrock-port`; `autumn-forests` and `pink-cherry-groves` — small additions not found in vanilla (rare autumn patches in forests, pinkish grass and more petals in cherry groves; `false` keeps the world vanilla); `text-info` — a plain-text server summary for `telnet host port`, browsers and curl.
 - `config/skins.toml` — which skin sources to use.
 - `ops.json` — operators, the original format.
 

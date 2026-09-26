@@ -80,9 +80,21 @@ pub fn write_item(out: &mut Out, stack: Option<Stack>, stack_id: i32) {
     }
 
     // Дополнительные данные: без NBT, пустые списки «можно ставить на» и
-    // «можно ломать».
-    out.zigzag32(block).varint(10).lu16(0).li32(0).li32(0);
+    // «можно ломать». У щита после них ещё blocking_tick (li64): описание
+    // протокола, ItemExtraDataWithBlockingTick — без него клиент не разберёт
+    // пакет с щитом.
+    out.zigzag32(block);
+
+    if id == SHIELD {
+        out.varint(18).lu16(0).li32(0).li32(0).li64(0);
+    } else {
+        out.varint(10).lu16(0).li32(0).li32(0);
+    }
 }
+
+/// Сетевой номер щита у Bedrock 1.26.10 (minecraft-data, items.json): у него
+/// особый вид дополнительных данных предмета.
+const SHIELD: i32 = 387;
 
 /// Где лежит стопка.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -672,6 +684,67 @@ mod tests {
         let handled = bag.handle_requests(&payload, false);
         assert_eq!(handled.thrown, vec![Stack::new(stone, 1)]);
         assert_eq!(bag.inventory.slot(FIRST_MAIN), Some(Stack::new(stone, 2)));
+    }
+
+    /// Номер щита совпадает с реестром предметов, который получает клиент,
+    /// и щит пишется с blocking_tick: дополнительные данные — 18 байт.
+    #[test]
+    fn a_shield_carries_its_blocking_tick() {
+        let registry = include_bytes!("item_registry.bin");
+        let name = b"minecraft:shield";
+        let at = registry.windows(name.len() + 1).position(|w| w[0] as usize == name.len() && &w[1..] == name).expect("щит в реестре");
+        let id = i16::from_le_bytes([registry[at + 1 + name.len()], registry[at + 2 + name.len()]]) as i32;
+        assert_eq!(id, SHIELD);
+
+        let shield = crate::blocks::item_named("shield").expect("щит");
+        assert_eq!(bedrock_item(shield).map(|(id, _, _)| id), Some(SHIELD));
+
+        let mut out = Out::default();
+        write_item(&mut out, Some(Stack::new(shield, 1)), 0);
+        let mut reader = In::new(&out.bytes);
+        assert_eq!(reader.zigzag32(), Some(SHIELD));
+        reader.take(2).expect("количество");
+        reader.varint().expect("метаданные");
+        assert_eq!(reader.u8(), Some(0));
+        reader.zigzag32().expect("блок");
+        assert_eq!(reader.varint(), Some(18));
+        assert_eq!(reader.take(18).map(|rest| rest.len()), Some(18));
+        assert_eq!(reader.u8(), None);
+
+        let stone = crate::blocks::item_named("stone").expect("камень");
+        let mut out = Out::default();
+        write_item(&mut out, Some(Stack::new(stone, 1)), 0);
+        assert_eq!(out.bytes.len(), 1 + 2 + 1 + 1 + 2 + 1 + 10);
+    }
+
+    /// В творческом меню щит тоже с blocking_tick (make_bedrock_tables.py).
+    #[test]
+    fn the_creative_shield_carries_its_blocking_tick() {
+        let mut reader = In::new(include_bytes!("creative_content.bin"));
+
+        for _ in 0..reader.varint().expect("вкладки") {
+            reader.li32().expect("категория");
+            reader.string().expect("имя");
+            assert_eq!(reader.zigzag32(), Some(0));
+        }
+
+        let mut shields = 0;
+
+        for _ in 0..reader.varint().expect("предметы") {
+            reader.varint().expect("номер записи");
+            let id = reader.zigzag32().expect("предмет");
+            reader.take(2).expect("количество");
+            reader.varint().expect("метаданные");
+            reader.zigzag32().expect("блок");
+            let extra = reader.varint().expect("длина") as usize;
+            assert_eq!(extra, if id == SHIELD { 18 } else { 10 });
+            shields += usize::from(id == SHIELD);
+            reader.take(extra).expect("дополнительные данные");
+            reader.varint().expect("вкладка");
+        }
+
+        assert_eq!(shields, 1);
+        assert_eq!(reader.u8(), None);
     }
 
     #[test]

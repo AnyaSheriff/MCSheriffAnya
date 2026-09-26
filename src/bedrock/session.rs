@@ -99,7 +99,7 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
     // Такт: пока игрок в мире, раз в 50 мс рассказываем ему, что изменилось.
     let mut tick = tokio::time::interval(std::time::Duration::from_millis(50));
 
-    loop {
+    'session: loop {
         let body = tokio::select! {
             received = inbound.recv() => match received {
                 Some(body) => body,
@@ -192,6 +192,8 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
                         _ => {}
                     }
                 }
+                // Клиент уходит сам — не ждём тайм-аута RakNet.
+                DISCONNECT => break 'session,
                 _ => {
                     if let Some(world) = world.as_mut() {
                         world.handle(&connection, id, payload);
@@ -230,21 +232,25 @@ fn read_login(payload: &[u8]) -> Option<Identity> {
     log_debug!("Bedrock: устройство входа: {}", describe_tokens(&outer));
 
     // Новый вид (клиенты 26.x): всё о игроке — в JWT поля `Token`:
-    // `xname` — имя, `identity` — UUID, `xid` — XUID.
+    // `xname` — имя, `xid` — XUID.
+    //
+    // UUID, присланному клиентом (`identity`), не верим: подписи пока не
+    // проверяются, и подделанный клиент назвался бы UUID владельца из
+    // ops.json. UUID игрока Bedrock строится сервером из XUID (или ника) —
+    // в пространстве, которое с UUID игроков Java не пересекается.
     if let Some(token) = outer.get("Token").and_then(|t| t.as_str())
         && let Some(json) = token
             .split('.')
             .nth(1)
             .and_then(base64_url)
             .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
-        && let (Some(name), Some(uuid)) = (json.get("xname").and_then(|n| n.as_str()), json.get("identity").and_then(|i| i.as_str()))
+        && let Some(name) = json.get("xname").and_then(|n| n.as_str())
     {
-        return Some(Identity {
-            name: name.to_string(),
-            uuid: parse_uuid(uuid)?,
-            xuid: json.get("xid").and_then(|x| x.as_str()).unwrap_or("").to_string(),
-            look,
-        });
+        let xuid = json.get("xid").and_then(|x| x.as_str()).unwrap_or("").to_string();
+        let name = java_safe_name(name);
+        let uuid = uuid_for(&xuid, &name);
+
+        return Some(Identity { name, uuid, xuid, look });
     }
 
     // Прежний вид: цепочка JWT, данные игрока — в `extraData`.
@@ -260,9 +266,9 @@ fn read_login(payload: &[u8]) -> Option<Identity> {
         let json: serde_json::Value = serde_json::from_slice(&base64_url(payload)?).ok()?;
 
         if let Some(extra) = json.get("extraData") {
-            let name = extra.get("displayName")?.as_str()?.to_string();
-            let uuid = parse_uuid(extra.get("identity")?.as_str()?)?;
+            let name = java_safe_name(extra.get("displayName")?.as_str()?);
             let xuid = extra.get("XUID").and_then(|x| x.as_str()).unwrap_or("").to_string();
+            let uuid = uuid_for(&xuid, &name);
 
             return Some(Identity { name, uuid, xuid, look });
         }
@@ -336,21 +342,40 @@ fn describe_login(payload: &[u8]) -> String {
     format!("протокол {:?}, длина {:?}, Token: {}", protocol, length, token)
 }
 
-/// UUID из строки «8-4-4-4-12».
-fn parse_uuid(text: &str) -> Option<[u8; 16]> {
-    let hex: String = text.chars().filter(|c| *c != '-').collect();
+/// Ник, который примут клиенты Java: у gamertag бывают пробелы и суффикс
+/// «#1234», а Java ждёт до 16 знаков из букв, цифр и подчёркивания.
+fn java_safe_name(name: &str) -> String {
+    let cleaned: String = name
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .take(16)
+        .collect();
 
-    if hex.len() != 32 {
-        return None;
+    if cleaned.is_empty() { "Bedrock".to_string() } else { cleaned }
+}
+
+/// Постоянный UUID игрока Xbox: XUID в младших восьми байтах, старшие нули
+/// (у Java-игроков так не бывает — UUID не спутать). Без XUID — по нику.
+fn uuid_for(xuid: &str, name: &str) -> [u8; 16] {
+    let mut uuid = [0u8; 16];
+
+    match xuid.parse::<u64>() {
+        Ok(number) if number != 0 => uuid[8..].copy_from_slice(&number.to_be_bytes()),
+        _ => {
+            // FNV-1a по нику двумя проходами — просто стабильные 16 байт.
+            for (half, seed) in [(0usize, 0xcbf2_9ce4_8422_2325u64), (8, 0x6c62_272e_07bb_0142)] {
+                let mut hash = seed;
+                for byte in name.to_lowercase().bytes() {
+                    hash = (hash ^ byte as u64).wrapping_mul(0x0000_0100_0000_01b3);
+                }
+                uuid[half..half + 8].copy_from_slice(&hash.to_be_bytes());
+            }
+            uuid[6] = (uuid[6] & 0x0f) | 0x30; // версия 3: «по имени»
+            uuid[8] = (uuid[8] & 0x3f) | 0x80;
+        }
     }
 
-    let mut out = [0u8; 16];
-
-    for (index, byte) in out.iter_mut().enumerate() {
-        *byte = u8::from_str_radix(&hex[index * 2..index * 2 + 2], 16).ok()?;
-    }
-
-    Some(out)
+    uuid
 }
 
 /// Base64 — и в варианте для URL (как в JWT), и обычный.
@@ -392,9 +417,20 @@ mod tests {
     }
 
     #[test]
-    fn uuid_parses() {
-        let uuid = parse_uuid("01234567-89ab-cdef-0123-456789abcdef").expect("UUID");
-        assert_eq!(uuid[0], 0x01);
-        assert_eq!(uuid[15], 0xef);
+    fn xbox_uuid_comes_from_xuid() {
+        let uuid = uuid_for("2535425101461547", "Кто-то");
+        assert_eq!(&uuid[..8], &[0; 8]);
+        assert_eq!(u64::from_be_bytes(uuid[8..].try_into().expect("8 байт")), 2535425101461547);
+        assert_eq!(uuid_for("", "Steve"), uuid_for("", "steve"));
+        assert_ne!(uuid_for("0", "Steve"), uuid_for("0", "Alex"));
     }
+
+    #[test]
+    fn gamertags_become_java_names() {
+        assert_eq!(java_safe_name("Sheriff Anya#1234"), "Sheriff_Anya_123");
+        assert_eq!(java_safe_name("SheriffAnya6650"), "SheriffAnya6650");
+        assert_eq!(java_safe_name("   "), "___");
+        assert_eq!(java_safe_name(""), "Bedrock");
+    }
+
 }
