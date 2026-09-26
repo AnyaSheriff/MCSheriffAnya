@@ -133,6 +133,10 @@ struct Session {
     /// Сглаженное время отклика и его разброс.
     rtt: Duration,
     rtt_spread: Duration,
+    /// Сколько раз подряд срок повтора истёк без подтверждений: каждый раз
+    /// срок вдвое длиннее, как у TCP, — иначе на медленной связи сервер
+    /// забивает её повторами.
+    backoff: u32,
 
     // Приём.
     /// Номера наборов, которые пора подтвердить.
@@ -169,6 +173,7 @@ impl Session {
             threshold: WINDOW_MAX,
             rtt: Duration::from_millis(100),
             rtt_spread: Duration::from_millis(50),
+            backoff: 0,
             to_ack: Vec::new(),
             expected_sequence: 0,
             seen_reliable: HashSet::new(),
@@ -278,7 +283,7 @@ impl Session {
 
     /// Через сколько без подтверждения набор считается потерянным.
     fn resend_after(&self) -> Duration {
-        (self.rtt + self.rtt_spread * 4).clamp(RESEND_MIN, RESEND_MAX)
+        ((self.rtt + self.rtt_spread * 4) * (1 << self.backoff.min(5))).clamp(RESEND_MIN, RESEND_MAX)
     }
 
     /// Клиент подтвердил набор: окно растёт, время отклика уточняется.
@@ -286,6 +291,8 @@ impl Session {
         let Some(sent) = self.unacked.remove(&sequence) else {
             return;
         };
+
+        self.backoff = 0;
 
         // По повторам время отклика не мерим: неясно, на какую отправку ответ.
         if !sent.resent {
@@ -482,6 +489,7 @@ where
 
                     if !late.is_empty() {
                         session.lost();
+                        session.backoff += 1;
                         log_debug!(
                             "Bedrock: {} — повтор {} наборов по сроку {:?}, окно {:.0}",
                             addr, late.len(), resend_after, session.window

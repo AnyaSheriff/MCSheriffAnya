@@ -21,3 +21,4 @@ pub mod login;
 pub mod configuration;
 pub mod registries;
 pub mod play;
+pub mod text_info;

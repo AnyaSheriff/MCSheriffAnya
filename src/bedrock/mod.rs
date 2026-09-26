@@ -29,6 +29,9 @@ use crate::{log_error, log_info};
 /// Сетевой протокол Bedrock 26.10–26.13.
 pub const PROTOCOL: i32 = 944;
 
+/// Какие версии Bedrock пускаются — для справок.
+pub const VERSIONS: &str = "26.10–26.13";
+
 /// Версия игры в строке.
 pub const GAME_VERSION: &str = "1.26.10";
 

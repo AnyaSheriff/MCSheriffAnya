@@ -283,6 +283,17 @@ async fn handle_connection(
     properties: Arc<ServerProperties>,
     shared: Arc<Shared>,
 ) -> io::Result<()> {
+    // Подключился не клиент Minecraft (telnet, браузер) — справка текстом.
+    if shared.settings.text_info {
+        match network::text_info::classify(&socket).await {
+            network::text_info::Visitor::Game => {}
+            visitor => {
+                log_debug!("{} подключился не игрой — отвечаю справкой", addr);
+                return network::text_info::answer(socket, visitor, &properties, &shared).await;
+            }
+        }
+    }
+
     let handshake = read_handshake(&mut socket).await?;
 
     log_debug!(

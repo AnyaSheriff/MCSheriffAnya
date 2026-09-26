@@ -337,10 +337,16 @@ def write_creative(mapping, states):
 
     body += varint(len(entries))
 
+    shield = bedrock_items["shield"]["id"]
+
     for index, (network_id, metadata, runtime, group) in enumerate(entries):
         # entry_id; ItemLegacy: номер, количество, метаданные, блок, пустые
         # дополнительные данные (без NBT, два пустых списка); вкладка.
+        # У щита в дополнительных данных ещё blocking_tick (li64) — описание
+        # протокола, ItemExtraDataWithBlockingTick.
         extra = struct.pack("<H", 0) + struct.pack("<i", 0) + struct.pack("<i", 0)
+        if network_id == shield:
+            extra += struct.pack("<q", 0)
         body += varint(index + 1)
         body += zigzag32(network_id) + struct.pack("<H", 1) + varint(metadata) + zigzag32(runtime)
         body += varint(len(extra)) + extra

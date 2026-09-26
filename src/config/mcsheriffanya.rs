@@ -46,6 +46,10 @@ pub struct Settings {
 
     /// Розоватая трава и чуть больше лепестков в вишнёвых рощах.
     pub pink_cherry_groves: bool,
+
+    /// Справка о сервере текстом тому, кто подключился не игрой
+    /// (`telnet адрес порт`, браузер, curl).
+    pub text_info: bool,
 }
 
 impl Default for Settings {
@@ -57,6 +61,7 @@ impl Default for Settings {
             bedrock_port: 19132,
             autumn_forests: true,
             pink_cherry_groves: true,
+            text_info: true,
         }
     }
 }
@@ -112,6 +117,7 @@ impl Settings {
             bedrock_port: take(&values, "bedrock-port", default.bedrock_port, path),
             autumn_forests: take(&values, "autumn-forests", default.autumn_forests, path),
             pink_cherry_groves: take(&values, "pink-cherry-groves", default.pink_cherry_groves, path),
+            text_info: take(&values, "text-info", default.text_info, path),
         }
     }
 
@@ -144,13 +150,19 @@ autumn-forests={}
 
 # Вишнёвые рощи с розоватой травой и чуть большим числом лепестков.
 pink-cherry-groves={}
+
+# Справка о сервере для тех, кто подключился не игрой: `telnet адрес порт`,
+# браузер или curl. Сервер ждёт секунду: клиент Minecraft за это время
+# говорит первым, а молчащему отвечают справкой (версии, порты, игроки).
+text-info={}
 ",
             self.debug,
             self.prefetch_chunks,
             self.prefetch_at_once,
             self.bedrock_port,
             self.autumn_forests,
-            self.pink_cherry_groves
+            self.pink_cherry_groves,
+            self.text_info
         )
     }
 }

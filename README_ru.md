@@ -61,7 +61,7 @@ cargo build
 
 - `config/server.properties` — те же ключи и формат, что у оригинала. Ничего
   из него в код не зашито.
-- `config/mcsa.properties` (MCSheriffAnya.properties, тот же вид `ключ=значение`, что у `server.properties`) — собственные настройки MCSheriffAnya: `debug`, а также `prefetch-chunks` и `prefetch-at-once` — на сколько чанков дальше прорисовки мир складывается заранее (0 — выключить); `bedrock-port`; `autumn-forests` и `pink-cherry-groves` — небольшие дополнения, которых нет у оригинала (редкие осенние пятна в лесу, розоватая трава и больше лепестков в вишнёвых рощах; `false` — мир как у оригинала).
+- `config/mcsa.properties` (MCSheriffAnya.properties, тот же вид `ключ=значение`, что у `server.properties`) — собственные настройки MCSheriffAnya: `debug`, а также `prefetch-chunks` и `prefetch-at-once` — на сколько чанков дальше прорисовки мир складывается заранее (0 — выключить); `bedrock-port`; `autumn-forests` и `pink-cherry-groves` — небольшие дополнения, которых нет у оригинала (редкие осенние пятна в лесу, розоватая трава и больше лепестков в вишнёвых рощах; `false` — мир как у оригинала); `text-info` — справка о сервере текстом для `telnet адрес порт`, браузера и curl.
 - `config/skins.toml` — какие источники скинов использовать.
 - `ops.json` — операторы, формат оригинала.
 
