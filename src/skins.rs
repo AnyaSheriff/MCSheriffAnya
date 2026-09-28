@@ -72,6 +72,7 @@ impl Default for Settings {
 }
 
 /// Образец файла настроек — с пояснениями, чтобы было понятно, что править.
+/// Пишется вместе с [`BEDROCK_SECTION`].
 const SETTINGS_SAMPLE: &str = "\
 # Откуда брать скины игроков.
 #
@@ -84,7 +85,11 @@ const SETTINGS_SAMPLE: &str = "\
 
 mojang = true
 ely = true
+";
 
+/// Часть образца про скины Bedrock — её же дописываем в файл, положенный
+/// до того, как она появилась.
+const BEDROCK_SECTION: &str = "\
 # Скины игроков Bedrock для игроков Java. Java загружает скины только
 # с серверов Mojang, поэтому картинку скина Bedrock сервер отправляет
 # сервису MineSkin (mineskin.org), тот загружает её в Mojang и возвращает
@@ -98,24 +103,51 @@ mineskin-key = \"\"
 impl Settings {
     /// Читает настройки; нет файла — кладёт образец и берёт значения
     /// по умолчанию. Испорченный файл — тоже значения по умолчанию,
-    /// с предупреждением в логе.
+    /// с предупреждением в логе. В файл без настроек Bedrock они
+    /// дописываются.
     pub fn load(path: &Path) -> Self {
         match fs::read_to_string(path) {
             Ok(text) => match toml::from_str::<Settings>(&text) {
-                Ok(settings) => settings,
+                Ok(settings) => {
+                    add_bedrock_section(path, &text);
+                    settings
+                }
                 Err(error) => {
                     log_warn!("Скины: {} не разобрался ({}) — беру всё по умолчанию", path.display(), error);
                     Settings::default()
                 }
             },
             Err(_) => {
-                if let Err(error) = fs::write(path, SETTINGS_SAMPLE) {
+                if let Err(error) = fs::write(path, format!("{}\n{}", SETTINGS_SAMPLE, BEDROCK_SECTION)) {
                     log_warn!("Скины: {} не записан: {}", path.display(), error);
                 }
 
                 Settings::default()
             }
         }
+    }
+}
+
+/// Дописывает настройки Bedrock в файл, где их ещё нет; остальное в файле
+/// не трогается.
+fn add_bedrock_section(path: &Path, text: &str) {
+    let has_key = |key: &str| text.lines().any(|line| line.trim_start().starts_with(key));
+
+    if has_key("bedrock-to-java") || has_key("mineskin-key") {
+        return;
+    }
+
+    let gap = if text.ends_with("\n\n") || text.is_empty() {
+        ""
+    } else if text.ends_with('\n') {
+        "\n"
+    } else {
+        "\n\n"
+    };
+
+    match fs::write(path, format!("{}{}{}", text, gap, BEDROCK_SECTION)) {
+        Ok(()) => log_info!("Скины: в {} дописаны настройки скинов Bedrock", path.display()),
+        Err(error) => log_warn!("Скины: {} — настройки Bedrock не дописаны: {}", path.display(), error),
     }
 }
 
@@ -841,6 +873,12 @@ mod tests {
         // Выключили Ely — прочиталось.
         fs::write(&path, "mojang = true\nely = false\n").expect("пишется");
         assert_eq!(Settings::load(&path), Settings { mojang: true, ely: false, ..Settings::default() });
+
+        // В старый файл дописаны настройки Bedrock, прежнее не тронуто.
+        let text = fs::read_to_string(&path).expect("читается");
+        assert!(text.starts_with("mojang = true\nely = false\n\n") && text.contains("bedrock-to-java = false"));
+        assert_eq!(Settings::load(&path), Settings { mojang: true, ely: false, ..Settings::default() });
+        assert_eq!(fs::read_to_string(&path).expect("читается"), text, "дописано второй раз");
 
         // Загрузка скинов Bedrock и ключ.
         fs::write(&path, "bedrock-to-java = true\nmineskin-key = \"abc\"\n").expect("пишется");

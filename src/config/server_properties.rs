@@ -61,7 +61,7 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
     }
 
     let content = fs::read_to_string(file_path)?;
-    point_to_own_settings(file_path, &content);
+    refresh_notes(file_path, &content);
     let values = parse_properties(&content);
     let defaults = ServerProperties::default();
 
@@ -289,6 +289,8 @@ const HONOURED: &[&str] = &[
     "server-port",
     "view-distance",
     "simulation-distance",
+    "level-seed",
+    "level-type",
 ];
 
 /// Создаёт файл server.properties со значениями по умолчанию
@@ -301,14 +303,15 @@ fn create_default_properties(path: &Path) -> io::Result<()> {
     }
 
     let mut content = format!(
-        "#MCSheriffAnya server properties\n\
+        "{}\n\
          #{}\n\
          #Названия и значения по умолчанию — как у оригинального сервера.\n\
-         #Сервер пока слушается этих настроек: {}.\n\
+         {}\n\
          #Остальные лежат для вида: поведения за ними ещё нет.\n\
          {}\n",
+        TITLE,
         written_at(),
-        HONOURED.join(", "),
+        honoured_note(),
         OWN_SETTINGS_NOTE
     );
 
@@ -324,25 +327,49 @@ fn create_default_properties(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
+/// Первая строка файла.
+const TITLE: &str = "#MCSheriffAnya server properties";
+
+/// Начало строки-пояснения о том, каких настроек сервер слушается.
+const HONOURED_NOTE: &str = "#Сервер пока слушается этих настроек: ";
+
+/// Строка-пояснение целиком — с нынешним списком.
+fn honoured_note() -> String {
+    format!("{}{}.", HONOURED_NOTE, HONOURED.join(", "))
+}
+
 /// Строка-пояснение: где лежат настройки, которых у оригинала нет.
 const OWN_SETTINGS_NOTE: &str = "#Дополнительные настройки MCSheriffAnya (которых нет у оригинала) — в mcsa.properties рядом.";
 
-/// Дописывает пояснение про mcsa.properties в файл, созданный до того, как
-/// оно появилось: сразу после вводных комментариев, ничего не меняя в самих
-/// настройках. Не записалось — не беда, файл читается и так.
-fn point_to_own_settings(path: &Path, content: &str) {
-    if content.contains("mcsa.properties") {
-        return;
+/// Освежает пояснения в файле, созданном прежней версией сервера: старое
+/// название в первой строке, устаревший список настроек, которых сервер
+/// слушается, нет строки про mcsa.properties. Сами настройки не меняются.
+/// Не записалось — не беда, файл читается и так.
+fn refresh_notes(path: &Path, content: &str) {
+    let head = content.lines().take_while(|line| line.starts_with('#')).count();
+    let mut lines: Vec<String> = content.lines().map(str::to_string).collect();
+
+    for line in lines.iter_mut().take(head) {
+        if line.starts_with("#RustCraft server properties") {
+            *line = TITLE.to_string();
+        } else if line.starts_with(HONOURED_NOTE) {
+            *line = honoured_note();
+        }
     }
 
-    let head = content.lines().take_while(|line| line.starts_with('#')).count();
-    let mut lines: Vec<&str> = content.lines().collect();
-    lines.insert(head, OWN_SETTINGS_NOTE);
+    if !content.contains("mcsa.properties") {
+        lines.insert(head, OWN_SETTINGS_NOTE.to_string());
+    }
+
     let mut text = lines.join("\n");
     text.push('\n');
 
+    if text == content {
+        return;
+    }
+
     if let Err(error) = fs::write(path, text) {
-        log_warn!("{}: пояснение про mcsa.properties не дописано: {}", path.display(), error);
+        log_warn!("{}: пояснения не обновлены: {}", path.display(), error);
     }
 }
 
@@ -411,6 +438,13 @@ mod tests {
         // Второй раз пояснение не дописывается.
         load_server_properties(old.to_str().expect("путь")).expect("читается");
         assert_eq!(fs::read_to_string(&old).expect("есть"), text);
+
+        // Старое название и устаревший список освежаются, настройки — нет.
+        let renamed = directory.join("renamed.properties");
+        fs::write(&renamed, "#RustCraft server properties\n#Сервер пока слушается этих настроек: motd.\nmotd=Мой\n").expect("пишется");
+        load_server_properties(renamed.to_str().expect("путь")).expect("читается");
+        let text = fs::read_to_string(&renamed).expect("есть");
+        assert_eq!(text, format!("{}\n{}\n{}\nmotd=Мой\n", TITLE, honoured_note(), OWN_SETTINGS_NOTE));
 
         let _ = fs::remove_dir_all(&directory);
     }

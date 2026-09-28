@@ -102,7 +102,11 @@ impl Settings {
         }
 
         match fs::read_to_string(path) {
-            Ok(text) => Settings::parse(&text, path),
+            Ok(text) => {
+                let settings = Settings::parse(&text, path);
+                settings.add_missing(path, &text);
+                settings
+            }
             Err(error) => {
                 log_warn!("{} не читается ({}) — беру всё по умолчанию", path.display(), error);
                 Settings::default()
@@ -141,69 +145,111 @@ impl Settings {
 
     /// Файл с пояснениями — чтобы было понятно, что править.
     fn to_file(self) -> String {
-        format!(
-            "\
-# Настройки MCSheriffAnya, которых нет в server.properties.
+        let mut text = String::from(HEADER);
 
+        for (_, section) in self.sections() {
+            text.push('\n');
+            text.push_str(&section);
+        }
+
+        text
+    }
+
+    /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
+    /// отдельно: по нему видно, какой настройки в файле ещё нет.
+    fn sections(self) -> [(&'static str, String); 10] {
+        [
+            ("debug", format!("\
 # Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
 # с клиентом. Нужен только для поиска неполадок; в обычной игре — false.
 debug={}
-
+", self.debug)),
+            ("prefetch-chunks", format!("\
 # Складывание мира впрок: на сколько чанков дальше прорисовки игрока мир
 # готовится заранее (клиенту эти чанки не шлются, но держатся в памяти).
 # Когда игрок бежит, новые чанки уже готовы и отправка не ждёт генерации.
 # 0 — не складывать впрок.
 prefetch-chunks={}
-
+", self.prefetch_chunks)),
+            ("prefetch-at-once", format!("\
 # Сколько чанков одного игрока складывается впрок одновременно.
 prefetch-at-once={}
-
+", self.prefetch_at_once)),
+            ("bedrock-port", format!("\
 # UDP-порт для игроков Bedrock Edition (телефоны, консоли, Windows).
 # 0 — не пускать Bedrock.
 bedrock-port={}
-
+", self.bedrock_port)),
+            ("bedrock-online-mode", format!("\
 # Проверка входа Xbox Live у игроков Bedrock. Проверяется всегда: кто вошёл
 # с подтверждённой учётной записью, тот получает права по ops.json.
 # true — пускать только подтверждённых (как online-mode у Java);
 # false — пускать всех, неподтверждённым — только команды для всех.
 bedrock-online-mode={}
-
+", self.bedrock_online_mode)),
+            ("autumn-forests", format!("\
 # Дополнения к миру, которых нет у оригинала (false — мир как у оригинала).
 # Редкие осенние пятна в обычном лесу: рыжая листва и пожухлая трава.
 autumn-forests={}
-
+", self.autumn_forests)),
+            ("pink-cherry-groves", format!("\
 # Вишнёвые рощи с розоватой травой и чуть большим числом лепестков.
 pink-cherry-groves={}
-
+", self.pink_cherry_groves)),
+            ("text-info", format!("\
 # Справка о сервере для тех, кто подключился не игрой: `telnet адрес порт`,
 # браузер или curl. Сервер ждёт секунду: клиент Minecraft за это время
 # говорит первым, а молчащему отвечают справкой (версии, порты, игроки).
 text-info={}
-
+", self.text_info)),
+            ("portal-delay", format!("\
 # Сколько тактов (20 в секунду) стоять в портале, чтобы перейти в другое
 # измерение, — в выживании. У оригинала 80 (4 секунды); 1 — сразу.
 # В творческом переход всегда сразу.
 portal-delay={}
-
+", self.portal_delay)),
+            ("send-error-reports", format!("\
 # Анонимные отчёты об ошибках разработчикам MCSheriffAnya (падения и строки
 # ERROR с последними строками лога). Ники, адреса, UUID, XUID и чат из них
 # вычищаются; вместо адреса сервера — случайный номер (config/install-id).
 # Копия каждого отчёта остаётся в logs/reports. false — ничего не отправлять.
 send-error-reports={}
-",
-            self.debug,
-            self.prefetch_chunks,
-            self.prefetch_at_once,
-            self.bedrock_port,
-            self.bedrock_online_mode,
-            self.autumn_forests,
-            self.pink_cherry_groves,
-            self.text_info,
-            self.portal_delay,
-            self.send_error_reports
-        )
+", self.send_error_reports)),
+        ]
+    }
+
+    /// Дописывает в конец файла настройки, которых в нём нет (файл положен
+    /// прежней версией сервера), — с пояснениями и значениями по умолчанию.
+    /// Остальное в файле не трогается. Не записалось — не беда: настройки
+    /// всё равно берутся по умолчанию.
+    fn add_missing(self, path: &Path, text: &str) {
+        let values = parse_properties(text);
+        let missing: Vec<_> = self.sections().into_iter().filter(|(key, _)| !values.contains_key(*key)).collect();
+
+        if missing.is_empty() {
+            return;
+        }
+
+        let mut text = text.to_string();
+        let keys: Vec<_> = missing.iter().map(|(key, _)| *key).collect();
+
+        for (_, section) in missing {
+            if !text.is_empty() && !text.ends_with("\n\n") {
+                text.push_str(if text.ends_with('\n') { "\n" } else { "\n\n" });
+            }
+
+            text.push_str(&section);
+        }
+
+        match fs::write(path, text) {
+            Ok(()) => log_info!("{}: дописаны новые настройки: {}", path.display(), keys.join(", ")),
+            Err(error) => log_warn!("{}: новые настройки не дописаны: {}", path.display(), error),
+        }
     }
 }
+
+/// Шапка файла.
+const HEADER: &str = "# Настройки MCSheriffAnya, которых нет в server.properties.\n";
 
 /// Имя файла — без папки: прежние файлы лежат там же, где и новый.
 fn file_name(path: &str) -> &str {
@@ -262,6 +308,35 @@ mod tests {
 
         fs::write(&path, "debug=maybe").expect("пишется");
         assert!(!Settings::load(&path).debug);
+
+        let _ = fs::remove_dir_all(&directory);
+    }
+
+    /// Файл от прежней версии: недостающие настройки дописываются в конец,
+    /// а свои значения и пометки остаются как были.
+    #[test]
+    fn missing_settings_are_added_to_an_old_file() {
+        let directory = std::env::temp_dir().join(format!("mcsheriffanya-missing-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&directory);
+        fs::create_dir_all(&directory).expect("папка");
+        let path = directory.join("mcsa.properties");
+
+        fs::write(&path, "# своя пометка\ndebug=true\nbedrock-port=19133\n").expect("пишется");
+        let settings = Settings::load(&path);
+        assert!(settings.debug);
+        assert_eq!(settings.bedrock_port, 19133);
+
+        let text = fs::read_to_string(&path).expect("читается");
+        assert!(text.starts_with("# своя пометка\ndebug=true\nbedrock-port=19133\n"), "прежнее содержимое изменилось");
+        let values = parse_properties(&text);
+        for (key, _) in Settings::default().sections() {
+            assert!(values.contains_key(key), "{} не дописан", key);
+        }
+        assert_eq!(text.matches("bedrock-port=").count(), 1, "имеющаяся настройка дописана второй раз");
+
+        // Второй запуск уже ничего не меняет.
+        Settings::load(&path);
+        assert_eq!(fs::read_to_string(&path).expect("читается"), text);
 
         let _ = fs::remove_dir_all(&directory);
     }
