@@ -906,7 +906,7 @@ mod tests {
     fn key() -> u64 {
         match generator() {
             Generator::Normal(terrain) => world_key(&terrain),
-            Generator::Flat => unreachable!(),
+            Generator::Flat | Generator::Nether(_) => unreachable!(),
         }
     }
 

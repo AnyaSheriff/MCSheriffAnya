@@ -256,6 +256,10 @@ bot.once('spawn', async () => {
     await sleepTicks(100); // дать роботу разобрать присланные чанки
     await say(`gamemode creative`);
     await say(`tp blackbox ${ORIGIN.x + 3} ${ORIGIN.y + 1} ${ORIGIN.z + 3}`);
+    // Висеть на месте, пока строится пол: у нашего ровного мира земля на
+    // нуле, и площадка на ORIGIN.y оказывается в пустоте под ней. Упавшего
+    // робота сервер не пустит к рычагу — слишком далеко.
+    bot.creative.startFlying();
     await sleepTicks(40);
     await say(`fill ${ORIGIN.x - PAD} ${ORIGIN.y - 1} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${ORIGIN.y + PAD} ${ORIGIN.z + PAD} minecraft:air`);
     await say(`fill ${ORIGIN.x - PAD} ${ORIGIN.y - 1} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${ORIGIN.y - 1} ${ORIGIN.z + PAD} minecraft:stone`);

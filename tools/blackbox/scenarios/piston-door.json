@@ -1,0 +1,57 @@
+{
+  "name": "piston-door",
+  "about": "Поршень на восток давит дверь (две половины); рычаг рядом с поршнем.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:piston[facing=east]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:oak_door[facing=west,half=lower,hinge=left,open=false,powered=false]"
+    },
+    {
+      "at": [
+        1,
+        1,
+        0
+      ],
+      "state": "minecraft:oak_door[facing=west,half=upper,hinge=left,open=false,powered=false]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        1
+      ],
+      "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "after": 40,
+      "click": [
+        0,
+        0,
+        1
+      ]
+    }
+  ],
+  "record_ticks": 80
+}

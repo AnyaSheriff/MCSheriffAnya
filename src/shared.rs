@@ -9,6 +9,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 
 use crate::chat::Chat;
+use crate::dimension::Dimension;
 use crate::config::server_properties::ServerProperties;
 use crate::items::Items;
 use crate::ops::Ops;
@@ -18,13 +19,14 @@ use crate::world::World;
 /// То, что видят все подключения сразу.
 ///
 /// **Порядок замков.** Если нужно держать несколько замков сразу, брать их
-/// строго в таком порядке: `world`, `players`, `items`, `chat`. Такт держит
+/// строго в таком порядке: мир (`world_in`), `players`, предметы
+/// (`items_in`), `chat`. Два мира разом не держать. Такт держит
 /// мир и берёт игроков и предметы; кто возьмёт их в обратном порядке, рано
 /// или поздно застынет вместе с тактом — а за ними встанет весь сервер
 /// (так и было: вход игрока брал игроков раньше мира).
 pub struct Shared {
-    /// Блоки мира.
-    pub world: Mutex<World>,
+    /// Миры измерений по порядку `Dimension::ALL`: блоки, такты, события.
+    worlds: [Mutex<World>; 2],
 
     /// Кто сейчас на сервере.
     pub players: Mutex<Players>,
@@ -32,8 +34,8 @@ pub struct Shared {
     /// Лента сообщений в чат.
     pub chat: Mutex<Chat>,
 
-    /// Предметы, лежащие в мире.
-    pub items: Mutex<Items>,
+    /// Предметы, лежащие в мирах, — у каждого измерения свои.
+    items: [Mutex<Items>; 2],
 
     /// Кто и что может: список прав, он же файл ops.json.
     pub ops: Mutex<Ops>,
@@ -86,6 +88,16 @@ pub struct Shared {
 }
 
 impl Shared {
+    /// Мир этого измерения.
+    pub fn world_in(&self, dimension: Dimension) -> &Mutex<World> {
+        &self.worlds[dimension.index()]
+    }
+
+    /// Выпавшие предметы этого измерения.
+    pub fn items_in(&self, dimension: Dimension) -> &Mutex<Items> {
+        &self.items[dimension.index()]
+    }
+
     /// Выдаёт номер следующего читателя журналов.
     pub fn next_reader(&self) -> crate::journal::Reader {
         self.readers.fetch_add(1, Ordering::Relaxed)
@@ -99,6 +111,7 @@ impl Shared {
     /// Заводит общее состояние сервера.
     pub fn new(
         world: World,
+        nether: World,
         playerdata: PathBuf,
         skins: PathBuf,
         properties: ServerProperties,
@@ -106,10 +119,10 @@ impl Shared {
         skin_settings: crate::skins::Settings,
     ) -> Self {
         Self {
-            world: Mutex::new(world),
+            worlds: [Mutex::new(world), Mutex::new(nether)],
             players: Mutex::new(Players::new()),
             chat: Mutex::new(Chat::new()),
-            items: Mutex::new(Items::new()),
+            items: [Mutex::new(Items::new()), Mutex::new(Items::new())],
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,
             tick_starts: tokio::sync::watch::channel(0).0,

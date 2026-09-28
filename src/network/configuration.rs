@@ -256,7 +256,7 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 21] = [
     ),
     // Мир: без типа измерения клиент не примет Login (Play), а plains —
     // биом по умолчанию для незагруженных чанков.
-    ("minecraft:dimension_type", &["overworld"]),
+    ("minecraft:dimension_type", &["overworld", "the_nether"]),
     // Биомы: порядок здесь задаёт их номера, и по этим же номерам сервер
     // называет биом в пакете чанка. Он должен совпадать с порядком
     // `Biome::ALL` в src/world/terrain.rs — за этим следит проверка.
@@ -319,6 +319,12 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 21] = [
             "deep_dark",
             // Свои биомы — после всех оригинальных (terrain::CUSTOM_BIOMES).
             "mcsheriffanya:autumn_forest",
+            // Незер — после своих (terrain::Biome::NETHER).
+            "nether_wastes",
+            "crimson_forest",
+            "warped_forest",
+            "soul_sand_valley",
+            "basalt_deltas",
         ],
     ),
     // Мировые часы: требуются по одной записи на каждое измерение, иначе
@@ -784,6 +790,7 @@ mod tests {
             .iter()
             .map(|biome| biome.name())
             .chain(crate::world::terrain::CUSTOM_BIOMES)
+            .chain(crate::world::terrain::Biome::NETHER.iter().map(|biome| biome.name()))
             .collect();
 
         assert_eq!(sent.to_vec(), ours);

@@ -118,12 +118,26 @@ pub type TreeBlock = (i32, i32, i32, Part);
 pub const TREE_REACH: i32 = 8;
 
 impl Tree {
-    /// Все блоки дерева, выросшего в точке (x, z). Форма своя у каждого
-    /// места, но одна и та же при каждом обращении: соседние чанки рисуют
-    /// одно и то же дерево, каждый свою часть.
+    /// Толстый ли ствол — 2×2: стоит на четырёх столбцах, от (0, 0) до
+    /// (1, 1).
+    pub fn wide(&self) -> bool {
+        matches!(self.shape, Shape::MegaSpruce | Shape::MegaPine | Shape::MegaJungle | Shape::DarkOak | Shape::PaleOak)
+    }
+
+    /// Все блоки дерева в мире с нулевым семенем — для проверок.
+    #[cfg(test)]
     pub fn blocks(&self, x: i32, z: i32) -> Vec<TreeBlock> {
+        self.blocks_in(0, x, z)
+    }
+
+    /// Все блоки дерева, выросшего в точке (x, z) мира с этим семенем.
+    /// Форма своя у каждого места и каждого мира, но одна и та же при
+    /// каждом обращении: соседние чанки рисуют одно и то же дерево, каждый
+    /// свою часть.
+    pub fn blocks_in(&self, seed: i64, x: i32, z: i32) -> Vec<TreeBlock> {
         let mut random = Random::new(
-            (x as i64).wrapping_mul(341_873_128_712).wrapping_add((z as i64).wrapping_mul(132_897_987_541)) + 5_003,
+            ((x as i64).wrapping_mul(341_873_128_712).wrapping_add((z as i64).wrapping_mul(132_897_987_541)) + 5_003)
+                ^ seed.wrapping_mul(0x5DEE_CE66D),
         );
         let mut blocks = Vec::with_capacity(256);
 
@@ -200,7 +214,7 @@ impl Tree {
 
         // Лианы — с верхнего из широких слоёв: под ним слой той же ширины,
         // и свисающая плеть не упрётся в листву.
-        hang_vines(random, blocks, top - 1, 3, (2, 4), |dx, dz| square_without_corners(dx, dz, 3));
+        hang_vines(random, blocks, top - 1, (0, 0, 3), (2, 4), |dx, dz| square_without_corners(dx, dz, 3));
     }
 
     /// Большой дуб. Низкий — без ветвей: ком листвы радиусом два вокруг
@@ -355,11 +369,14 @@ impl Tree {
         }
 
         for y in 1..=top {
-            hang_vines(random, blocks, y, 1, (3, 1), |dx, dz| (dx, dz) == (0, 0));
+            hang_vines(random, blocks, y, (0, 0, 1), (3, 1), |dx, dz| (dx, dz) == (0, 0));
         }
 
-        hang_vines(random, blocks, top + 1, 1, (2, top), |dx, dz| square_without_corners(dx, dz, 1));
-        hang_vines(random, blocks, top - 1, 2, (2, top), |dx, dz| square_without_corners(dx, dz, 2));
+        hang_vines(random, blocks, top + 1, (0, 0, 1), (2, top), |dx, dz| square_without_corners(dx, dz, 1));
+        hang_vines(random, blocks, top - 1, (0, 0, 2), (2, top), |dx, dz| square_without_corners(dx, dz, 2));
+        // Плети с макушки обрываются о нижние слои кроны; взамен лианы
+        // свисают и с боков нижнего широкого слоя — там, где их ещё нет.
+        hang_vines(random, blocks, top - 2, (0, 0, 2), (2, top), |dx, dz| square_without_corners(dx, dz, 2));
     }
 
     /// Большое дерево джунглей 2×2: широкая шапка на макушке, по стволу
@@ -390,7 +407,7 @@ impl Tree {
 
             round_layer(blocks, at, end.1, 2);
             round_layer(blocks, at, end.1 + 1, 1);
-            hang_vines(random, blocks, end.1, 3, (2, 6), |dx, dz| inside_round(at, dx, dz, 2));
+            hang_vines(random, blocks, end.1, (at.x, at.z, 3), (2, 6), |dx, dz| inside_round(at, dx, dz, 2));
 
             y -= 2 + roll(random, 3);
         }
@@ -398,11 +415,11 @@ impl Tree {
         trunk_wide(blocks, 1, top);
 
         for y in 1..=top {
-            hang_vines(random, blocks, y, 1, (2, 1), |dx, dz| inside_round(WIDE, dx, dz, -1));
+            hang_vines(random, blocks, y, (0, 0, 1), (2, 1), |dx, dz| inside_round(WIDE, dx, dz, -1));
         }
 
-        hang_vines(random, blocks, top - 1, 5, (2, 8), |dx, dz| inside_round(WIDE, dx, dz, 4));
-        hang_vines(random, blocks, top, 6, (3, 6), |dx, dz| inside_round(WIDE, dx, dz, 5));
+        hang_vines(random, blocks, top - 1, (0, 0, 5), (2, 8), |dx, dz| inside_round(WIDE, dx, dz, 4));
+        hang_vines(random, blocks, top, (0, 0, 6), (3, 6), |dx, dz| inside_round(WIDE, dx, dz, 5));
     }
 
     /// Акация: ствол прямо, потом наискосок в одну сторону; наверху плоская
@@ -467,12 +484,14 @@ impl Tree {
         }
 
         // Ветви: от верха ствола наискосок вверх, по бревну на ступень,
-        // на конце — клок листвы.
+        // на конце — клок листвы. Ветвь начинается не выше верха своего
+        // столбца ствола — иначе она висела бы в воздухе рядом с ним.
         for _ in 0..(3 + roll(random, 3)) {
             let (step_x, step_z) = ALL_SIDES[roll(random, 8) as usize];
             let length = 1 + roll(random, 3);
             let (mut x, mut z) = (i32::from(step_x > 0), i32::from(step_z > 0));
-            let mut y = crown - 1 - length - roll(random, 2);
+            let column_top = base + extra[(x + 2 * z) as usize];
+            let mut y = (crown - 1 - length - roll(random, 2)).min(column_top);
 
             for _ in 0..length {
                 x += step_x;
@@ -514,7 +533,8 @@ impl Tree {
         }
 
         // Мох свисает из-под кроны плетями в один-три блока; кончик плети —
-        // с пометкой tip.
+        // с пометкой tip. Плеть начинается прямо под самым нижним листом
+        // своего столбца; где листа нет, мху не за что держаться.
         for dx in -5..=6 {
             for dz in -5..=6 {
                 let (ex, ez) = (span(dx, true), span(dz, true));
@@ -524,7 +544,17 @@ impl Tree {
                 }
 
                 let length = 1 + roll(random, 3);
-                let from = if inside_round(WIDE, dx, dz, 3) { crown - 3 } else { crown - 2 };
+                let lowest = blocks
+                    .iter()
+                    .filter(|&&(bx, _, bz, part)| (bx, bz) == (dx, dz) && part == Part::Leaves)
+                    .map(|&(_, by, _, _)| by)
+                    .min();
+                let Some(lowest) = lowest else {
+                    continue;
+                };
+                let from = lowest - 1;
+                // До земли плеть не достаёт.
+                let length = length.min(from);
 
                 for k in 0..length {
                     let part = if k == length - 1 { "pale_hanging_moss[tip=true]" } else { "pale_hanging_moss[tip=false]" };
@@ -664,16 +694,16 @@ impl Tree {
             line(blocks, (0, from, 0), end);
             round_layer(blocks, at, end.1, 2);
             round_layer(blocks, at, end.1 + 1, 1);
-            hang_vines(random, blocks, end.1, 3, (2, top), |dx, dz| inside_round(at, dx, dz, 2));
+            hang_vines(random, blocks, end.1, (at.x, at.z, 3), (2, top), |dx, dz| inside_round(at, dx, dz, 2));
         }
 
         for y in (rise + 1)..=top {
-            hang_vines(random, blocks, y, 1, (if tall { 4 } else { 2 }, 1), |dx, dz| (dx, dz) == (0, 0));
+            hang_vines(random, blocks, y, (0, 0, 1), (if tall { 4 } else { 2 }, 1), |dx, dz| (dx, dz) == (0, 0));
         }
 
         let widest = crown.iter().map(|(_, radius)| *radius).max().unwrap_or(3);
 
-        hang_vines(random, blocks, top - 1, widest, (2, top + 2), |dx, dz| {
+        hang_vines(random, blocks, top - 1, (0, 0, widest), (2, top + 2), |dx, dz| {
             inside_round(center, dx, dz, widest)
         });
 
@@ -991,18 +1021,21 @@ fn flat_crown(blocks: &mut Vec<TreeBlock>, x: i32, y: i32, z: i32, radius: i32) 
 /// Лианы вокруг слоя на высоте `y`: у каждого места рядом со слоем (но не
 /// в нём) с шансом один к `odds.0` свисает плеть длиной до `odds.1`
 /// блоков. `inside` — занято ли место слоем, `reach` — докуда слой
-/// тянется от ствола.
+/// тянется от своей середины `(center_x, center_z)`: у шапки на конце
+/// ветви это конец ветви, а не ствол. Плеть обрывается у первого места, уже
+/// занятого деревом, — сквозь листву и брёвна она не проходит.
 fn hang_vines(
     random: &mut Random,
     blocks: &mut Vec<TreeBlock>,
     y: i32,
-    reach: i32,
+    (center_x, center_z, reach): (i32, i32, i32),
     (odds, longest): (i32, i32),
     inside: impl Fn(i32, i32) -> bool,
 ) {
-    for dx in (-reach - 1)..=(reach + 2) {
-        for dz in (-reach - 1)..=(reach + 2) {
-            if inside(dx, dz) {
+    for dx in (center_x - reach - 1)..=(center_x + reach + 2) {
+        for dz in (center_z - reach - 1)..=(center_z + reach + 2) {
+            // Дальше `TREE_REACH` чанки дерево не ищут — там плети не будет.
+            if inside(dx, dz) || dx.abs() > TREE_REACH || dz.abs() > TREE_REACH {
                 continue;
             }
 
@@ -1018,6 +1051,14 @@ fn hang_vines(
 
             // Ниже первого блока над землёй плеть не спускается.
             for k in 0..length.min(y) {
+                let taken = blocks
+                    .iter()
+                    .any(|&(bx, by, bz, part)| (bx, by, bz) == (dx, y - k, dz) && !matches!(part, Part::Ground(_)));
+
+                if taken {
+                    break;
+                }
+
                 blocks.push((dx, y - k, dz, Part::Block(vine)));
             }
         }
@@ -1848,7 +1889,7 @@ mod tests {
 
     /// Ствол 2×2.
     fn tree_is_wide(tree: Tree) -> bool {
-        matches!(tree.shape, Shape::MegaSpruce | Shape::MegaPine | Shape::MegaJungle | Shape::DarkOak | Shape::PaleOak)
+        tree.wide()
     }
 
     /// Разнообразие деревьев: сколько разных высот ствола и форм кроны

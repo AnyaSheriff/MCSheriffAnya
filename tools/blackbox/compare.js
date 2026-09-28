@@ -50,7 +50,11 @@ const key = (e) => {
     case 'action': return `action ${e.at.join(',')} ${e.block} ${e.a}/${e.b}`;
     case 'sound': return `sound ${e.at.join(',')} ${e.sound} ${e.volume.toFixed(2)}`;
     case 'particle': return `частица ${e.at.join(',')} ${e.particle} ${e.count} ${e.speed} (${e.offset})`;
-    case 'spawn': return `spawn ${e.at.join(',')} ${e.type} ${e.data}`;
+    // Выпавший предмет у оригинала появляется в случайной точке блока
+    // (±0,25) — сравниваем по самому блоку, а не по точке.
+    case 'spawn': return e.type === 'item'
+      ? `spawn item ${e.at.map(Math.floor).join(',')}`
+      : `spawn ${e.at.join(',')} ${e.type} ${e.data}`;
     case 'block_entity': return `block_entity ${e.at.join(',')} ${e.type}`;
     default: return e.kind;
   }

@@ -1,0 +1,52 @@
+{
+  "name": "waterfall",
+  "about": "Источник воды на столбе высотой 4: вода стекает и растекается по полу.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        2,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        3,
+        0
+      ],
+      "state": "minecraft:stone"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          0,
+          4,
+          0
+        ],
+        "state": "minecraft:water"
+      }
+    }
+  ],
+  "record_ticks": 140
+}

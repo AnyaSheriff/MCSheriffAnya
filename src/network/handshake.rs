@@ -42,7 +42,8 @@ pub async fn read_handshake(stream: &mut TcpStream) -> io::Result<HandshakePacke
     }
 
     let protocol_version = read_varint(stream).await?;
-    let server_address = read_string(stream).await?;
+    // Адрес — String(255): до 255 символов, в UTF-8 до четырёх байт каждый.
+    let server_address = read_string(stream, 255 * 4).await?;
     // read_u16 читает 2 байта в порядке big-endian, что соответствует
     // формату UShort в протоколе Minecraft.
     let server_port = stream.read_u16().await?;

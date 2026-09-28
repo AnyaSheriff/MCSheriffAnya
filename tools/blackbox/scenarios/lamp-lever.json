@@ -1,0 +1,41 @@
+{
+  "name": "lamp-lever",
+  "about": "Рычаг рядом с лампой: лампа загорается сразу, гаснет с задержкой.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_lamp[lit=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 20,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 50
+}

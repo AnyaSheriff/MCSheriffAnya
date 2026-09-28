@@ -4,6 +4,8 @@
 # и слушает команды — его код и jar не читаются.
 #
 # python3 tools/measure/pregen.py <папка мира> <порт rcon> <пароль> <радиус в чанках> [центр x z в чанках]
+#
+# Измерение — переменная DIM: overworld (по умолчанию), the_nether, the_end.
 import sys, os, socket, struct, time, zlib, glob
 sys.path.insert(0, os.path.dirname(__file__))
 from plants_census import nbt
@@ -64,7 +66,9 @@ def full_chunks(region_dir, x0, z0, x1, z1):
 def main():
     world, port, password, radius = sys.argv[1], int(sys.argv[2]), sys.argv[3], int(sys.argv[4])
     center_x, center_z = (int(sys.argv[5]), int(sys.argv[6])) if len(sys.argv) > 6 else (0, 0)
-    region_dir = os.path.join(world, 'dimensions/minecraft/overworld/region')
+    dim = os.environ.get('DIM', 'overworld')
+    region_dir = os.path.join(world, 'dimensions/minecraft/%s/region' % dim)
+    within = 'execute in minecraft:%s run ' % dim
     rcon = Rcon(port, password)
     areas = [(center_x + x, center_z + z) for x in range(-radius, radius, 16) for z in range(-radius, radius, 16)]
     batch = 4
@@ -72,14 +76,14 @@ def main():
     for at in range(0, len(areas), batch):
         part = areas[at:at + batch]
         for x, z in part:
-            print(rcon.run('forceload add %d %d %d %d' % (x * 16, z * 16, x * 16 + 255, z * 16 + 255)), flush=True)
+            print(rcon.run(within + 'forceload add %d %d %d %d' % (x * 16, z * 16, x * 16 + 255, z * 16 + 255)), flush=True)
         while True:
             time.sleep(3)
             rcon.run('save-all')
             done = sum(full_chunks(region_dir, x, z, x + 15, z + 15) for x, z in part)
             if done >= 256 * len(part):
                 break
-        rcon.run('forceload remove all')
+        rcon.run(within + 'forceload remove all')
         print('готово %d/%d кусков, %.0f с' % (at + len(part), len(areas), time.time() - started), flush=True)
     rcon.run('save-all flush')
 

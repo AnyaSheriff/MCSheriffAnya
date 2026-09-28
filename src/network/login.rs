@@ -28,6 +28,30 @@ pub struct LoginStart {
     pub uuid: [u8; 16],
 }
 
+/// Годится ли ник: как у оригинала, от 1 до 16 знаков из латинских букв,
+/// цифр и подчёркивания. Иной ник ломает других клиентов: в списке игроков
+/// у них ник не длиннее 16 знаков, и длинный их отключает.
+pub fn valid_name(name: &str) -> bool {
+    (1..=16).contains(&name.len())
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+}
+
+/// Опознаватель игрока без проверки Mojang — как у оригинала в режиме
+/// `online-mode=false`: UUID версии 3 от строки «OfflinePlayer:<ник>».
+///
+/// Присланному клиентом опознавателю верить нельзя: к нему привязаны права
+/// и файл игрока, и любой мог бы назваться опознавателем оператора.
+pub fn offline_uuid(name: &str) -> [u8; 16] {
+    use md5::{Digest, Md5};
+
+    let mut uuid: [u8; 16] = Md5::digest(format!("OfflinePlayer:{}", name)).into();
+    uuid[6] = (uuid[6] & 0x0f) | 0x30; // версия 3
+    uuid[8] = (uuid[8] & 0x3f) | 0x80; // вариант IETF
+    uuid
+}
+
 /// Форматирует 16 байт UUID в привычный вид 8-4-4-4-12 (для логов).
 pub fn format_uuid(uuid: &[u8; 16]) -> String {
     let hex: String = uuid.iter().map(|b| format!("{:02x}", b)).collect();
@@ -58,7 +82,8 @@ pub async fn read_login_start(stream: &mut TcpStream) -> io::Result<LoginStart> 
         ));
     }
 
-    let username = read_string(stream).await?;
+    // Ник — String(16); проверка состава — у вызывающего.
+    let username = read_string(stream, 16 * 4).await?;
 
     // UUID передаётся 16 «сырыми» байтами, а не строкой.
     let mut uuid = [0u8; 16];
@@ -128,4 +153,29 @@ pub async fn send_login_success(
     stream.flush().await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Опознаватель считается так же, как у оригинала: для ника «Notch»
+    /// без проверки Mojang это общеизвестное b50ad385-829d-3141-a216-7e7d7539ba7f.
+    #[test]
+    fn offline_uuid_matches_the_known_one() {
+        assert_eq!(
+            format_uuid(&offline_uuid("Notch")),
+            "b50ad385-829d-3141-a216-7e7d7539ba7f"
+        );
+    }
+
+    #[test]
+    fn names_are_checked_like_the_original() {
+        assert!(valid_name("Anya_2008"));
+        assert!(!valid_name(""));
+        assert!(!valid_name("seventeen_letters"));
+        assert!(!valid_name("Аня"));
+        assert!(!valid_name("a b"));
+        assert!(!valid_name("../../etc"));
+    }
 }

@@ -136,3 +136,12 @@ non-conductive blocks». Отдельно разобрана плита: дво�
 предмет из творческого меню, выброс. Робот
 ставится в `~/node_modules` (`npm install bedrock-protocol --allow-git=all`)
 и работает с `raknetBackend: 'jsp-raknet'`.
+
+## Отчёты об ошибках
+
+Включаются настройкой `send-error-reports=true` в `config/mcsa.properties`.
+Сервер отправляет анонимные отчёты об ошибках (падения потока, ERROR в логе)
+на приёмник `log.sheriffanya.ru:7443/v1/report`: последние 50 строк лога с
+удалением ников, адресов, UUID и чата. Номер установки — файл
+`config/install-id`, по нему видно, что две ошибки — с одного сервера, но не
+видно, с какого.

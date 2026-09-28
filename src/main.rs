@@ -18,7 +18,9 @@ mod config;
 mod world;
 mod blocks;
 mod blocks_table;
+mod hardness_table;
 mod placing;
+mod portal;
 mod plants;
 mod entity;
 mod player;
@@ -36,6 +38,8 @@ mod players;
 mod shared;
 mod log;
 mod commands;
+mod dimension;
+mod reports;
 mod console;
 
 use std::io;
@@ -46,14 +50,18 @@ use std::time::Instant;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::watch;
 
-use config::server_properties::{load_server_properties, ServerProperties};
+use config::server_properties::{load_server_properties, ServerProperties, WorldKind};
+use dimension::Dimension;
 use network::configuration::{
     read_and_log_configuration_packets, read_known_packs, read_login_acknowledged,
     send_finish_configuration, send_known_packs, send_registry_data, send_update_tags,
 };
 use network::handshake::read_handshake;
 use network::{PROTOCOL_VERSION, VERSION_NAME};
-use network::login::{format_uuid, read_login_start, send_login_disconnect, send_login_success};
+use network::login::{
+    format_uuid, offline_uuid, read_login_start, send_login_disconnect, send_login_success,
+    valid_name,
+};
 use network::play::{play_session, player_left};
 use network::status::handle_status;
 use shared::Shared;
@@ -116,6 +124,9 @@ async fn server() -> io::Result<()> {
         log_info!("Подробный лог включён (config/mcsa.properties)");
     }
 
+    // Отчёты об ошибках — только если владелец их включил.
+    reports::start(settings.send_error_reports);
+
     // Образец таблицы «кому чей скин» — чтобы было видно, что писать.
     skins::prepare(Path::new(skins::DIRECTORY));
 
@@ -141,8 +152,18 @@ async fn server() -> io::Result<()> {
     let properties = Arc::new(properties);
 
     // Всё, что подключения делят между собой: мир, список игроков и чат.
+    // Обычный мир и Незер: у Незера своя папка внутри папки мира, как у
+    // оригинала, и то же семя.
+    let overworld = World::open(WORLD_PATH, properties.level_seed, properties.world_kind)?;
+    let nether = World::open(
+        Dimension::Nether.folder(Path::new(WORLD_PATH)),
+        Some(overworld.seed()),
+        WorldKind::Nether,
+    )?;
+
     let mut shared = Shared::new(
-        World::open(WORLD_PATH, properties.level_seed, properties.world_kind)?,
+        overworld,
+        nether,
         PathBuf::from(playerdata::DIRECTORY),
         PathBuf::from(skins::DIRECTORY),
         (*properties).clone(),
@@ -171,7 +192,16 @@ async fn server() -> io::Result<()> {
     loop {
         tokio::select! {
             accepted = listener.accept() => {
-                let (socket, addr) = accepted?;
+                // Ошибка приёма (например, кончились дескрипторы файлов) —
+                // не повод гасить сервер без сохранения: пишем и ждём.
+                let (socket, addr) = match accepted {
+                    Ok(accepted) => accepted,
+                    Err(error) => {
+                        log_error!("Не удалось принять подключение: {}", error);
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                        continue;
+                    }
+                };
                 log_debug!("Новое подключение: {}", addr);
 
                 // Без этого маленькие пакеты копятся в ядре по 40 мс
@@ -216,16 +246,19 @@ async fn server() -> io::Result<()> {
     }
 
     // Последовательность как у обычного сервера: остановка, игроки, мир.
-    // Игроки пишутся каждый своим подключением при выходе, поэтому здесь
-    // только мир: между записями изменения живут только в памяти.
+    // Игроки пишутся каждый своим подключением при выходе — поэтому всех
+    // выгоняем и ждём, пока подключения их запишут и уйдут из списка.
     log_info!("Остановка сервера");
     log_info!("Сохранение игроков");
+    kick_everyone(&shared).await;
     log_info!("Сохранение мира");
-    shared
-        .world
-        .lock()
-        .expect("мир захвачен другим потоком")
-        .save_if_needed();
+    for dimension in Dimension::ALL {
+        shared
+            .world_in(dimension)
+            .lock()
+            .expect("мир захвачен другим потоком")
+            .save_all();
+    }
     log_info!("Мир сохранён");
 
     // Терминал был переключён на посимвольный ввод — возвращаем как было,
@@ -237,8 +270,75 @@ async fn server() -> io::Result<()> {
     // Одна из них — чтение клавиатуры, и она ждёт нажатия: пока его нет,
     // выход не заканчивается, и после `stop` терминал так и висел бы до
     // первой нажатой клавиши. Всё, что нужно было сохранить, к этому времени
-    // уже на диске: мир и игроки пишутся сразу, а не при выходе.
+    // уже на диске: игроки записаны при выходе, мир — только что.
     std::process::exit(0);
+}
+
+/// Раньше опознавателем игрока был тот, что присылает клиент, и под ним
+/// лежат его файл и права. Теперь опознаватель считается из ника — старое
+/// переносим на новый, чтобы игрок не потерял вещи и права. Старый файл не
+/// трогаем: копия, а не перенос.
+fn adopt_old_identity(shared: &Shared, name: &str, sent: &[u8; 16], uuid: &[u8; 16]) {
+    if sent == uuid {
+        return;
+    }
+
+    let directory = Path::new(playerdata::DIRECTORY);
+    let old = playerdata::path_for(directory, sent);
+    let new = playerdata::path_for(directory, uuid);
+
+    if !new.exists() && old.exists() {
+        match std::fs::copy(&old, &new) {
+            Ok(_) => log_info!(
+                "Файл игрока {} перенесён на опознаватель {} (был {})",
+                name,
+                format_uuid(uuid),
+                format_uuid(sent)
+            ),
+            Err(error) => log_warn!("Не удалось перенести файл игрока {}: {}", name, error),
+        }
+    }
+
+    shared
+        .ops
+        .lock()
+        .expect("права захвачены другим потоком")
+        .adopt(uuid, name);
+}
+
+/// Выгоняет всех с сообщением об остановке и ждёт, пока они уйдут (не
+/// дольше трёх секунд: зависшее подключение не должно держать остановку).
+async fn kick_everyone(shared: &Shared) {
+    {
+        let mut players = shared
+            .players
+            .lock()
+            .expect("список игроков захвачен другим потоком");
+        let everyone: Vec<[u8; 16]> = players.members().iter().map(|member| member.uuid).collect();
+        for uuid in everyone {
+            players.order(
+                &uuid,
+                players::Order::Kick {
+                    reason: "Сервер остановлен".to_string(),
+                },
+            );
+        }
+    }
+
+    let deadline = Instant::now() + std::time::Duration::from_secs(3);
+    while Instant::now() < deadline {
+        let online = shared
+            .players
+            .lock()
+            .expect("список игроков захвачен другим потоком")
+            .online();
+        if online == 0 {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+
+    log_warn!("Не все игроки успели выйти до остановки");
 }
 
 /// Ждёт сигнала остановки от системы: Ctrl-C или просьбы завершиться.
@@ -353,12 +453,39 @@ async fn handle_connection(
                 return Ok(());
             }
 
-            let login = read_login_start(&mut socket).await?;
+            let mut login = read_login_start(&mut socket).await?;
+
+            // Ник — как у оригинала. Иначе длинный ник отключил бы всех
+            // остальных, а «../» попал бы в пути файлов.
+            if !valid_name(&login.username) {
+                log_info!("Вход отклонён: недопустимый ник {:?}", login.username);
+                send_login_disconnect(&mut socket, "Недопустимый ник").await?;
+                return Ok(());
+            }
+
+            // Опознаватель считаем сами, из ника, как оригинал без проверки
+            // Mojang: присланному клиентом верить нельзя — к нему привязаны
+            // права и файл игрока.
+            let sent = login.uuid;
+            login.uuid = offline_uuid(&login.username);
+            adopt_old_identity(&shared, &login.username, &sent, &login.uuid);
 
             // Как у обычного сервера: опознаватель игрока и откуда он пришёл —
             // с какого адреса и на какой адрес сервера стучался. Адрес сервера
             // полезен, когда у него несколько имён или он за туннелем.
+            reports::known_player(&login.username);
             log_info!("Опознаватель игрока {} — {}", login.username, format_uuid(&login.uuid));
+
+            let online = shared
+                .players
+                .lock()
+                .expect("список игроков захвачен другим потоком")
+                .online();
+            if online >= properties.max_players.max(0) as usize {
+                log_info!("{} не пущен: сервер полон", login.username);
+                send_login_disconnect(&mut socket, "Сервер полон").await?;
+                return Ok(());
+            }
 
             // Откуда пришёл и куда стучался: адрес сервера обычный сервер не
             // печатает, а нам он полезен — у сервера может быть несколько имён.
@@ -451,6 +578,13 @@ async fn handle_connection(
 
                 entered?;
             }
+        }
+        // Переход с другого сервера (Transfer): как у оригинала с
+        // `accepts-transfers=false` — отказ с объяснением, а не молчаливый
+        // обрыв.
+        3 => {
+            log_info!("Вход отклонён: переход с другого сервера ({})", addr);
+            send_login_disconnect(&mut socket, "Этот сервер не принимает переходы с других серверов").await?;
         }
         other => {
             log_info!("Неизвестное значение next_state: {}", other);

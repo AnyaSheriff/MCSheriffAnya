@@ -16,6 +16,19 @@
 const KEPT: usize = 256;
 
 /// Лента сообщений в чат.
+/// Самое длинное сообщение в чате, в знаках — как у оригинала.
+pub const MAX_MESSAGE: usize = 256;
+
+/// Годится ли текст для чата: как у оригинала, не длиннее 256 знаков, без
+/// управляющих знаков и без «§» (им клиент красит текст). Иначе None —
+/// такое сообщение не рассылается.
+pub fn allowed(text: &str) -> Option<&str> {
+    let fine = !text.is_empty()
+        && text.chars().count() <= MAX_MESSAGE
+        && !text.chars().any(|symbol| symbol == '§' || symbol.is_control());
+    fine.then_some(text)
+}
+
 pub struct Chat {
     /// Строки в порядке появления; хранятся только последние.
     lines: Vec<String>,
@@ -100,5 +113,21 @@ mod tests {
 
         // А счётчик указывает на конец — досылать нечего.
         assert!(chat.since(chat.count()).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod message_tests {
+    use super::*;
+
+    #[test]
+    fn only_plain_short_messages_pass() {
+        assert_eq!(allowed("привет 😀"), Some("привет 😀"));
+        assert_eq!(allowed(""), None);
+        assert_eq!(allowed("§4красный"), None);
+        assert_eq!(allowed("a\u{0}b"), None);
+        assert_eq!(allowed("строка\nвторая"), None);
+        assert!(allowed(&"я".repeat(256)).is_some());
+        assert!(allowed(&"я".repeat(257)).is_none());
     }
 }

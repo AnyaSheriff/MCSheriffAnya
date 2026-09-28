@@ -1,0 +1,57 @@
+{
+  "name": "piston-bed",
+  "about": "Поршень на север давит изножье кровати; рычаг рядом с поршнем.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:piston[facing=north]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        -1
+      ],
+      "state": "minecraft:red_bed[facing=north,occupied=false,part=foot]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        -2
+      ],
+      "state": "minecraft:red_bed[facing=north,occupied=false,part=head]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 40,
+      "click": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 80
+}

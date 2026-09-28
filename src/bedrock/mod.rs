@@ -6,10 +6,12 @@
 // - raknet — транспорт поверх UDP;
 // - codec — числа, строки, пакеты-обёртки со сжатием;
 // - session — вход: настройки сети, Login, наборы ресурсов;
+// - auth — проверка входа Xbox Live (подписи жетонов из Login);
 // - world — появление в мире, чанки, движение, стройка;
 // - inventory — инвентарь, которым распоряжается сервер (Item Stack Request);
 // - skin и png — скины: свои у игроков Bedrock, скачанные у игроков Java.
 
+pub mod auth;
 pub mod codec;
 pub mod inventory;
 pub mod png;

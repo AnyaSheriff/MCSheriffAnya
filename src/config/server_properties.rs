@@ -113,6 +113,9 @@ pub enum WorldKind {
     Flat,
     /// «Супер плавность» — `mcsheriffanya:super_smooth`, наш мягкий рельеф.
     SuperSmooth,
+    /// Незер — `minecraft:the_nether`. Настройкой не выбирается: так
+    /// записан мир незера рядом с обычным.
+    Nether,
 }
 
 impl WorldKind {
@@ -127,6 +130,7 @@ impl WorldKind {
         match name {
             "flat" => WorldKind::Flat,
             "mcsheriffanya:super_smooth" | "super_smooth" => WorldKind::SuperSmooth,
+            "the_nether" => WorldKind::Nether,
             _ => WorldKind::Normal,
         }
     }
@@ -137,6 +141,7 @@ impl WorldKind {
             WorldKind::Normal => "minecraft:normal",
             WorldKind::Flat => "minecraft:flat",
             WorldKind::SuperSmooth => "mcsheriffanya:super_smooth",
+            WorldKind::Nether => "minecraft:the_nether",
         }
     }
 }

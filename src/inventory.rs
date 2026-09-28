@@ -29,6 +29,9 @@ pub const LAST_HOTBAR: i32 = 44;
 /// Слот второй руки.
 pub const OFFHAND: i32 = 45;
 
+/// Первый слот сетки верстака в окне инвентаря: сетка — слоты 1–4.
+const CRAFTING_GRID: i32 = 1;
+
 /// Номер слота, который означает «щелчок мимо окна» — за его пределами.
 const OUTSIDE: i32 = -999;
 
@@ -43,6 +46,16 @@ pub struct Picked {
 
     /// Новый выбранный слот панели, если рука сменила слот.
     pub selected: Option<i32>,
+}
+
+/// Чем кончилось закрытие окна инвентаря.
+#[derive(Clone, PartialEq, Debug, Default)]
+pub struct Closed {
+    /// Слоты, которые изменились: их надо показать клиенту.
+    pub slots: Vec<i32>,
+
+    /// Что не поместилось в инвентарь: это должно упасть на землю.
+    pub thrown: Vec<Stack>,
 }
 
 /// Чем кончился щелчок по инвентарю.
@@ -117,7 +130,11 @@ impl Inventory {
         if let Ok(slot) = usize::try_from(slot)
             && slot < SLOTS
         {
-            self.slots[slot] = stack.filter(|stack| stack.count > 0);
+            // Больше предела стопки в слоте не бывает: клиент или испорченный
+            // файл могут прислать любое число, а дальше с ним считают.
+            self.slots[slot] = stack
+                .filter(|stack| stack.count > 0)
+                .map(|stack| Stack::new(stack.item, stack.count.min(stack.limit())));
         }
     }
 
@@ -126,16 +143,34 @@ impl Inventory {
         self.cursor
     }
 
-    /// Забирает предмет из курсора и раскладывает его обратно по слотам.
+    /// Закрывает окно инвентаря: то, что игрок держал мышкой, и то, что
+    /// лежало в сетке верстака (слоты 1–4), возвращается в инвентарь.
     ///
-    /// Зовётся, когда игрок закрывает окно инвентаря: то, что он держал
-    /// мышкой, не должно пропасть.
-    pub fn put_cursor_back(&mut self) -> Vec<i32> {
-        let Some(stack) = self.cursor.take() else {
-            return Vec::new();
-        };
+    /// Зовётся, когда игрок закрывает окно и когда уходит из игры: ни курсор,
+    /// ни сетка не должны съедать предметы. Что не поместилось, отдаётся
+    /// наружу — вызывающий бросает это на землю, как в игре при полном
+    /// рюкзаке.
+    pub fn close_window(&mut self) -> Closed {
+        let mut closed = Closed::default();
+        let mut returned: Vec<Stack> = self.cursor.take().into_iter().collect();
 
-        self.add(stack)
+        for slot in CRAFTING_GRID..CRAFTING_GRID + 4 {
+            if let Some(stack) = self.slots[slot as usize].take() {
+                closed.slots.push(slot);
+                returned.push(stack);
+            }
+        }
+
+        for stack in returned {
+            let (slots, left) = self.put(stack);
+
+            closed.slots.extend(slots);
+            closed.thrown.extend(left);
+        }
+
+        closed.slots.sort_unstable();
+        closed.slots.dedup();
+        closed
     }
 
     /// Запоминает выбранный слот панели.
@@ -178,10 +213,10 @@ impl Inventory {
     /// потом в первое пустое место. Сначала панель, потом рюкзак — так вещь
     /// сразу попадает под руку.
     ///
-    /// Возвращает слоты, которые изменились, — их надо показать клиенту.
-    /// Что не поместилось, пропадает: земли под ногами, куда это положить,
-    /// у сервера пока нет.
-    pub fn add(&mut self, stack: Stack) -> Vec<i32> {
+    /// Возвращает слоты, которые изменились, — их надо показать клиенту, —
+    /// и то, что не поместилось: его вызывающий оставляет лежать или бросает
+    /// на землю.
+    pub fn put(&mut self, stack: Stack) -> (Vec<i32>, Option<Stack>) {
         let mut left = stack.count;
         let mut changed = Vec::new();
 
@@ -200,7 +235,7 @@ impl Inventory {
             if let Some(there) = self.slots[index].as_mut()
                 && there.item == stack.item
             {
-                let room = there.limit() - there.count;
+                let room = (there.limit() - there.count).max(0);
                 let moved = room.min(left);
 
                 if moved > 0 {
@@ -228,7 +263,7 @@ impl Inventory {
             }
         }
 
-        changed
+        (changed, remainder(stack, left))
     }
 
     /// Находит предмет в инвентаре: сперва в панели, потом в рюкзаке.
@@ -351,7 +386,9 @@ impl Inventory {
                 self.slots[index] = None;
             }
             (None, Some(stack), _) => {
-                let taken = (stack.count + 1) / 2;
+                // Половина с округлением вверх — без `count + 1`, которое
+                // переполнилось бы на самом большом числе.
+                let taken = stack.count - stack.count / 2;
 
                 self.cursor = Some(Stack::new(stack.item, taken));
                 self.slots[index] = remainder(stack, stack.count - taken);
@@ -370,10 +407,10 @@ impl Inventory {
 
             // Тот же предмет — досыпаем, сколько влезет.
             (Some(held), Some(there), button) if held.item == there.item => {
-                let room = there.limit() - there.count;
+                let room = (there.limit() - there.count).max(0);
                 let moved = if button == 0 { room.min(held.count) } else { room.min(1) };
 
-                self.slots[index] = Some(Stack::new(there.item, there.count + moved));
+                self.slots[index] = Some(Stack::new(there.item, there.count.saturating_add(moved)));
                 self.cursor = remainder(held, held.count - moved);
             }
 
@@ -420,7 +457,7 @@ impl Inventory {
             if let Some(there) = self.slots[*target as usize].as_mut()
                 && there.item == stack.item
             {
-                let moved = (there.limit() - there.count).min(left);
+                let moved = (there.limit() - there.count).max(0).min(left);
 
                 there.count += moved;
                 left -= moved;
@@ -699,14 +736,14 @@ mod tests {
     fn picked_up_things_fill_stacks_first() {
         let mut inventory = with(FIRST_HOTBAR, Stack::new(STONE, 62));
 
-        assert_eq!(inventory.add(Stack::new(STONE, 5)), vec![FIRST_HOTBAR, FIRST_HOTBAR + 1]);
+        assert_eq!(inventory.put(Stack::new(STONE, 5)), (vec![FIRST_HOTBAR, FIRST_HOTBAR + 1], None));
         assert_eq!(inventory.slot(FIRST_HOTBAR), Some(Stack::new(STONE, 64)));
         assert_eq!(inventory.slot(FIRST_HOTBAR + 1), Some(Stack::new(STONE, 3)));
 
         let bucket = small_item();
         let mut inventory = Inventory::new();
 
-        inventory.add(Stack::new(bucket, 20));
+        inventory.put(Stack::new(bucket, 20));
         assert_eq!(inventory.slot(FIRST_HOTBAR), Some(Stack::new(bucket, 16)));
         assert_eq!(inventory.slot(FIRST_HOTBAR + 1), Some(Stack::new(bucket, 4)));
     }
@@ -752,11 +789,69 @@ mod tests {
         inventory.click(FIRST_HOTBAR, 0, 0);
         assert_eq!(inventory.cursor(), Some(Stack::new(STONE, 4)));
 
-        let changed = inventory.put_cursor_back();
+        let closed = inventory.close_window();
 
         assert_eq!(inventory.cursor(), None);
-        assert_eq!(changed, vec![FIRST_HOTBAR]);
+        assert_eq!(closed.slots, vec![FIRST_HOTBAR]);
+        assert!(closed.thrown.is_empty());
         assert_eq!(inventory.slot(FIRST_HOTBAR), Some(Stack::new(STONE, 4)));
+    }
+
+    /// Сетка верстака при закрытии окна тоже возвращается в инвентарь, а то,
+    /// что не влезло, отдаётся наружу — его бросают на землю.
+    #[test]
+    fn closing_the_window_empties_the_crafting_grid() {
+        let mut inventory = Inventory::new();
+
+        // Всё забито чужим, кроме одного слота.
+        for slot in (FIRST_MAIN..=LAST_MAIN).chain(FIRST_HOTBAR..=LAST_HOTBAR) {
+            inventory.set(slot, Some(Stack::new(STONE + 1, 64)));
+        }
+        inventory.set(LAST_MAIN, None);
+
+        inventory.set(1, Some(Stack::new(STONE, 3)));
+        inventory.set(4, Some(Stack::new(STONE, 64)));
+
+        let closed = inventory.close_window();
+
+        // Сетка пуста, влезло сколько влезло, остальное — наружу.
+        for slot in 1..=4 {
+            assert_eq!(inventory.slot(slot), None, "слот сетки {slot}");
+        }
+
+        assert_eq!(inventory.slot(LAST_MAIN), Some(Stack::new(STONE, 64)));
+        assert_eq!(closed.thrown, vec![Stack::new(STONE, 3)]);
+        assert!(closed.slots.contains(&1) && closed.slots.contains(&4) && closed.slots.contains(&LAST_MAIN));
+    }
+
+    /// Что не влезло в полный инвентарь, возвращается остатком, а не
+    /// пропадает.
+    #[test]
+    fn what_does_not_fit_is_given_back() {
+        let mut inventory = Inventory::new();
+
+        for slot in (FIRST_MAIN..=LAST_MAIN).chain(FIRST_HOTBAR..=LAST_HOTBAR) {
+            inventory.set(slot, Some(Stack::new(STONE, 60)));
+        }
+
+        // 36 слотов по 4 свободных места — 144; просим 150.
+        let (slots, left) = inventory.put(Stack::new(STONE, 150));
+
+        assert_eq!(slots.len(), 36);
+        assert_eq!(left, Some(Stack::new(STONE, 6)));
+    }
+
+    /// Слишком большое число в стопке не ломает счёт: при приёме оно
+    /// обрезается пределом стопки, а половина берётся без переполнения.
+    #[test]
+    fn huge_counts_are_safe() {
+        let mut inventory = with(FIRST_HOTBAR, Stack::new(STONE, i32::MAX));
+
+        assert_eq!(inventory.slot(FIRST_HOTBAR), Some(Stack::new(STONE, 64)));
+
+        inventory.click(FIRST_HOTBAR, 1, 0);
+        assert_eq!(inventory.cursor(), Some(Stack::new(STONE, 32)));
+        assert_eq!(inventory.slot(FIRST_HOTBAR), Some(Stack::new(STONE, 32)));
     }
 
     /// Shift досыпает в начатую стопку, а не занимает первый пустой слот:

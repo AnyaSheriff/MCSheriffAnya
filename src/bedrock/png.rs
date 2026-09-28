@@ -9,6 +9,10 @@ use std::io::Read;
 
 const SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
 
+/// Самая большая сторона картинки: скины — 64×64, у скинов высокой чёткости
+/// бывает больше, но не больше этого.
+const MAX_SIDE: u32 = 1024;
+
 /// Картинка: ширина, высота и точки RGBA по строкам.
 pub struct Image {
     pub width: u32,
@@ -42,7 +46,7 @@ pub fn decode(bytes: &[u8]) -> Option<Image> {
                 color_type = *body.get(9)?;
                 let interlace = *body.get(12)?;
 
-                if depth != 8 || interlace != 0 || width == 0 || height == 0 || width > 4096 || height > 4096 {
+                if depth != 8 || interlace != 0 || width == 0 || height == 0 || width > MAX_SIDE || height > MAX_SIDE {
                     return None;
                 }
             }
@@ -64,10 +68,14 @@ pub fn decode(bytes: &[u8]) -> Option<Image> {
     };
 
     let stride = width as usize * channels;
-    let mut raw = Vec::with_capacity((stride + 1) * height as usize);
-    flate2::read::ZlibDecoder::new(&compressed[..]).read_to_end(&mut raw).ok()?;
+    let expected = (stride + 1) * height as usize;
+    let mut raw = Vec::with_capacity(expected);
 
-    if raw.len() < (stride + 1) * height as usize {
+    // Распаковывается не больше, чем нужно картинке: сжатые данные могут
+    // развернуться во много раз больше заявленного.
+    flate2::read::ZlibDecoder::new(&compressed[..]).take(expected as u64).read_to_end(&mut raw).ok()?;
+
+    if raw.len() < expected {
         return None;
     }
 
@@ -136,6 +144,46 @@ fn paeth(left: u8, up: u8, corner: u8) -> u8 {
     }
 }
 
+/// Собирает PNG из точек RGBA (8 бит на канал, без фильтров): так скин
+/// игрока Bedrock уходит туда, где картинку ждут файлом. Контрольные суммы
+/// настоящие — чужие разборщики их проверяют.
+pub fn encode(width: u32, height: u32, rgba: &[u8]) -> Vec<u8> {
+    use std::io::Write;
+
+    fn chunk(out: &mut Vec<u8>, kind: &[u8; 4], body: &[u8]) {
+        let mut crc = flate2::Crc::new();
+        crc.update(kind);
+        crc.update(body);
+
+        out.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        out.extend_from_slice(kind);
+        out.extend_from_slice(body);
+        out.extend_from_slice(&crc.sum().to_be_bytes());
+    }
+
+    let stride = width as usize * 4;
+    let mut rows = Vec::with_capacity((stride + 1) * height as usize);
+    for row in rgba.chunks(stride).take(height as usize) {
+        rows.push(0); // строка без фильтра
+        rows.extend_from_slice(row);
+    }
+
+    let mut encoder = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    encoder.write_all(&rows).expect("сжатие в память не отказывает");
+    let data = encoder.finish().expect("сжатие в память не отказывает");
+
+    let mut header = Vec::with_capacity(13);
+    header.extend_from_slice(&width.to_be_bytes());
+    header.extend_from_slice(&height.to_be_bytes());
+    header.extend_from_slice(&[8, 6, 0, 0, 0]); // 8 бит, RGBA, без черезстрочности
+
+    let mut out = SIGNATURE.to_vec();
+    chunk(&mut out, b"IHDR", &header);
+    chunk(&mut out, b"IDAT", &data);
+    chunk(&mut out, b"IEND", &[]);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,6 +212,19 @@ mod tests {
         chunk(&mut out, b"IDAT", &data);
         chunk(&mut out, b"IEND", &[]);
         out
+    }
+
+    #[test]
+    fn encoded_image_reads_back_with_true_checksums() {
+        let rgba: Vec<u8> = (0..64 * 64 * 4).map(|at| (at * 7 % 251) as u8).collect();
+        let bytes = encode(64, 64, &rgba);
+        let image = decode(&bytes).expect("картинка");
+
+        assert_eq!((image.width, image.height), (64, 64));
+        assert_eq!(image.rgba, rgba);
+
+        // CRC куска IHDR у любого PNG 64×64 RGBA одна и та же (посчитано zlib).
+        assert_eq!(&bytes[29..33], &0xAA69_71DEu32.to_be_bytes());
     }
 
     #[test]

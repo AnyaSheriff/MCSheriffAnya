@@ -48,6 +48,16 @@ const DRAG: f64 = 0.98;
 /// на земле, и здесь взято то же.
 const GROUND_FRICTION: f64 = 0.6;
 
+/// Толчок течения за такт — снято с оригинала: скорость по течению растёт
+/// как v·0,9702 + 0,02758 (трение 0,99 в воде и 0,98 после шага).
+const WATER_PUSH: f64 = 0.028_423;
+
+/// Трение в воде до шага.
+const WATER_DRAG: f64 = 0.99;
+
+/// Подъём в воде за такт, пока всплывает медленнее 0,06.
+const BUOYANCY: f64 = 0.0005;
+
 /// Скорость меньше этой считается нулевой: иначе предмет вечно ползал бы на
 /// тысячные доли блока, а клиентам летели бы пакеты о его движении.
 const STILL: f64 = 0.003;
@@ -61,6 +71,10 @@ pub const THROW_LIFT: f64 = 0.12;
 
 /// Ширина предмета: по ней он упирается в стены.
 const SIZE: f64 = 0.25;
+
+/// Насколько ниже лежащего предмета ищется опора: он лежит ровно на верху
+/// блока, и сам этот блок — чуть ниже.
+const SUPPORT_PROBE: f64 = 0.01;
 
 /// Насколько предмет сдвигается за один шаг проверки.
 ///
@@ -116,6 +130,23 @@ pub struct Dropped {
 
     /// Когда он появился: полежав достаточно долго, предмет пропадает.
     born: Instant,
+
+    /// Касался ли воды в прошлый такт (None — такта ещё не было): вход в
+    /// воду даёт плеск.
+    in_water: Option<bool>,
+}
+
+/// Вода в клетке для предмета: высота её поверхности над низом клетки
+/// (0..=1) и направление течения по горизонтали (единичное или нулевое).
+pub struct ItemWater {
+    pub height: f64,
+    pub flow: (f64, f64),
+}
+
+/// Плеск: предмет вошёл в воду — где и насколько громко.
+pub struct Splash {
+    pub at: (f64, f64, f64),
+    pub volume: f32,
 }
 
 /// Что случилось с лежащими предметами — запись журнала.
@@ -176,6 +207,7 @@ impl Items {
             on_ground: false,
             ready_at: Instant::now() + delay,
             born: Instant::now(),
+            in_water: None,
         };
 
         self.items.push(dropped.clone());
@@ -206,6 +238,7 @@ impl Items {
             on_ground: false,
             ready_at: Instant::now(),
             born: Instant::now(),
+            in_water: None,
         };
 
         self.items.push(falling.clone());
@@ -217,12 +250,12 @@ impl Items {
     /// Вызывающий ставит их обратно в мир — или роняет предметом, если
     /// место занято.
     pub fn take_landed(&mut self) -> Vec<Dropped> {
-        let (landed, left): (Vec<Dropped>, Vec<Dropped>) = self
+        // Вынимаем на месте: остальные предметы не переезжают в новый
+        // список каждый такт.
+        let landed: Vec<Dropped> = self
             .items
-            .drain(..)
-            .partition(|item| item.block.is_some() && item.on_ground);
-
-        self.items = left;
+            .extract_if(.., |item| item.block.is_some() && item.on_ground)
+            .collect();
 
         for item in &landed {
             self.changes.push(Change::Gone {
@@ -240,58 +273,126 @@ impl Items {
 
     /// Двигает все предметы на один такт.
     ///
-    /// `solid` отвечает, можно ли на этом блоке стоять и упираться в него.
-    pub fn step<F>(&mut self, solid: &F)
+    /// `solid` отвечает, можно ли на этом блоке лежать предмету и упираться
+    /// в него, `holds_block` — то же для падающего блока: у них правила
+    /// разные (падающий блок проходит в невысокие блоки и разбивается там,
+    /// а предмет ложится сверху). `loaded` — лежит ли в памяти чанк с такими
+    /// номерами: в выгруженном чанке мира нет, и предмет провалился бы
+    /// в пустоту, поэтому там он замирает, пока чанк не вернётся.
+    #[cfg(test)]
+    pub fn step<F, B, L>(&mut self, solid: &F, holds_block: &B, loaded: &L)
     where
         F: Fn(i32, i32, i32) -> bool,
+        B: Fn(i32, i32, i32) -> bool,
+        L: Fn(i32, i32) -> bool,
     {
+        self.step_with_water(solid, holds_block, loaded, &|_, _, _| None);
+    }
+
+    /// Такт предметов с водой: течение несёт выпавшие предметы, в воде они
+    /// всплывают, а входя в воду — плещут. Возвращает плески.
+    pub fn step_with_water<F, B, L, W>(&mut self, solid: &F, holds_block: &B, loaded: &L, water: &W) -> Vec<Splash>
+    where
+        F: Fn(i32, i32, i32) -> bool,
+        B: Fn(i32, i32, i32) -> bool,
+        L: Fn(i32, i32) -> bool,
+        W: Fn(i32, i32, i32) -> Option<ItemWater>,
+    {
+        let mut splashes = Vec::new();
+
         for item in &mut self.items {
-            item.step(solid);
+            let chunk = (
+                (item.x.floor() as i32).div_euclid(16),
+                (item.z.floor() as i32).div_euclid(16),
+            );
+
+            if !loaded(chunk.0, chunk.1) {
+                continue;
+            }
+
+            if item.block.is_some() {
+                item.step(holds_block, &|_, _, _| None);
+            } else if let Some(splash) = item.step(solid, water) {
+                splashes.push(splash);
+            }
         }
 
         // Пропадают провалившиеся в пустоту и пролежавшие слишком долго.
         let bottom = crate::world::MIN_Y as f64 - LOST_BELOW;
         let now = Instant::now();
 
-        let gone: Vec<i32> = self
+        let gone: Vec<Dropped> = self
             .items
-            .iter()
-            .filter(|item| item.y < bottom || now.duration_since(item.born) >= LIFETIME)
-            .map(|item| item.entity_id)
+            .extract_if(.., |item| item.y < bottom || now.duration_since(item.born) >= LIFETIME)
             .collect();
 
-        for entity_id in &gone {
+        for item in &gone {
             self.changes.push(Change::Gone {
-                entity_id: *entity_id,
+                entity_id: item.entity_id,
             });
         }
 
-        self.items
-            .retain(|item| !gone.contains(&item.entity_id));
+        splashes
     }
 
-    /// Забирает предметы, до которых дотянулся игрок.
+    /// Забирает предметы, до которых дотянулся игрок, — столько, сколько
+    /// он может унести.
     ///
-    /// Возвращает поднятое, чтобы вызывающий разложил его по инвентарю.
-    /// Слишком свежее — то, что только что выброшено, — остаётся лежать.
-    pub fn take_near(&mut self, (x, y, z): (f64, f64, f64), by: i32) -> Vec<Dropped> {
+    /// `accept` получает стопку и кладёт в инвентарь, сколько влезет;
+    /// отвечает, сколько штук взято. Что не влезло, остаётся лежать тем же
+    /// предметом, только стопка меньше: в полный инвентарь не поднимается
+    /// ничего, и ничего не пропадает.
+    ///
+    /// Возвращает поднятое — со взятым числом. Слишком свежее — то, что
+    /// только что выброшено, — остаётся лежать.
+    pub fn take_near<A>(&mut self, (x, y, z): (f64, f64, f64), by: i32, mut accept: A) -> Vec<Dropped>
+    where
+        A: FnMut(Stack) -> i32,
+    {
         let now = Instant::now();
+        let mut taken = Vec::new();
+        let mut index = 0;
 
-        let (taken, left): (Vec<Dropped>, Vec<Dropped>) = self
-            .items
-            .drain(..)
-            .partition(|item| {
-                item.block.is_none() && item.ready_at <= now && item.reaches(x, y, z)
-            });
+        while index < self.items.len() {
+            let item = &self.items[index];
 
-        self.items = left;
+            if item.block.is_some() || item.ready_at > now || !item.reaches(x, y, z) {
+                index += 1;
+                continue;
+            }
 
-        for item in &taken {
+            let count = accept(item.stack).clamp(0, item.stack.count);
+
+            if count == 0 {
+                index += 1;
+                continue;
+            }
+
             self.changes.push(Change::Taken {
                 entity_id: item.entity_id,
                 by,
-                count: item.stack.count,
+                count,
             });
+
+            if count == item.stack.count {
+                taken.push(self.items.remove(index));
+                continue;
+            }
+
+            // Взята часть: клиенту подбор показывается как у целого предмета
+            // (он исчезает), а остаток появляется снова на том же месте с тем
+            // же номером — сказать клиенту «стопка стала меньше» журналу
+            // нечем.
+            let left = &mut self.items[index];
+            let mut picked = left.clone();
+
+            picked.stack.count = count;
+            left.stack.count -= count;
+            left.uuid = uuid_for(left.entity_id);
+
+            self.changes.push(Change::Dropped(left.clone()));
+            taken.push(picked);
+            index += 1;
         }
 
         taken
@@ -326,18 +427,80 @@ impl Dropped {
     /// Порядок в точности такой, как в игре: сперва к скорости добавляется
     /// тяжесть, потом предмет двигается, и лишь потом скорость уменьшается
     /// сопротивлением. От порядка зависит вид дуги, поэтому он важен.
-    fn step<F>(&mut self, solid: &F)
+    fn step<F, W>(&mut self, solid: &F, water: &W) -> Option<Splash>
+    where
+        F: Fn(i32, i32, i32) -> bool,
+        W: Fn(i32, i32, i32) -> Option<ItemWater>,
+    {
+        // Вода вокруг: касается ли её предмет и насколько глубоко сидит.
+        // Снято с оригинала чёрным ящиком (tools/blackbox/itemflow.js).
+        let cell = (self.x.floor() as i32, self.y.floor() as i32, self.z.floor() as i32);
+        let here = water(cell.0, cell.1, cell.2);
+        let depth = here.as_ref().map(|water| cell.1 as f64 + water.height - self.y);
+        let touching = depth.is_some_and(|depth| depth > 0.0);
+
+        // Вошёл в воду — плеск: громче, чем быстрее шёл (вертикаль весит
+        // впятеро больше). Первый такт после появления не считается.
+        let splash = (self.in_water == Some(false) && touching).then(|| Splash {
+            at: (self.x, self.y, self.z),
+            volume: ((self.vx * self.vx * 0.2 + self.vy * self.vy + self.vz * self.vz * 0.2).sqrt() * 0.2).min(1.0) as f32,
+        });
+        self.in_water = Some(touching);
+
+        if touching {
+            // Течение подталкивает: предмет в воде уже не «лежит».
+            if let Some(water) = &here
+                && water.flow != (0.0, 0.0)
+            {
+                self.vx += water.flow.0 * WATER_PUSH;
+                self.vz += water.flow.1 * WATER_PUSH;
+                self.on_ground = false;
+            }
+
+            // Глубже десятой блока — плывёт: всплывает, без тяжести, вязко.
+            if depth.is_some_and(|depth| depth > 0.1) {
+                if self.vy < 0.06 {
+                    self.vy += BUOYANCY;
+                }
+                self.vx *= WATER_DRAG;
+                self.vz *= WATER_DRAG;
+                self.on_ground = false;
+
+                self.move_across(solid);
+                self.slow_down();
+                return splash;
+            }
+        }
+
+        self.fall(solid);
+        splash
+    }
+
+    /// Обычный такт без воды: тяжесть, шаг, трение.
+    fn fall<F>(&mut self, solid: &F)
     where
         F: Fn(i32, i32, i32) -> bool,
     {
         if self.resting() {
-            return;
+            // Лежит — пока под ним есть на чём лежать. Опору сломали —
+            // предмет снова падает, а не висит в воздухе.
+            let below = (self.y - SUPPORT_PROBE).floor() as i32;
+
+            if solid(self.x.floor() as i32, below, self.z.floor() as i32) {
+                return;
+            }
+
+            self.on_ground = false;
         }
 
         self.vy -= GRAVITY;
 
         self.move_across(solid);
+        self.slow_down();
+    }
 
+    /// Трение после шага: в воздухе и на земле.
+    fn slow_down(&mut self) {
         let sideways = if self.on_ground {
             DRAG * GROUND_FRICTION
         } else {
@@ -485,6 +648,16 @@ mod tests {
         Stack::new(1, 3)
     }
 
+    /// Весь мир в памяти.
+    fn loaded(_: i32, _: i32) -> bool {
+        true
+    }
+
+    /// Поднимающий, у которого место есть для всего.
+    fn anything(stack: Stack) -> i32 {
+        stack.count
+    }
+
     /// Пол на высоте 63: всё, что ниже 64, — твёрдое.
     fn floor(_x: i32, y: i32, _z: i32) -> bool {
         y <= 63
@@ -529,7 +702,7 @@ mod tests {
         items.drop_item(2, stack(), (10.0, 64.0, 0.5), still, Duration::ZERO);
         items.drop_item(3, stack(), (0.5, 70.0, 0.5), still, Duration::ZERO);
 
-        let taken = items.take_near((0.0, 64.0, 0.0), 42);
+        let taken = items.take_near((0.0, 64.0, 0.0), 42, anything);
 
         assert_eq!(taken.len(), 1);
         assert_eq!(taken[0].entity_id, 1);
@@ -552,7 +725,7 @@ mod tests {
 
         items.drop_item(1, stack(), (0.0, 64.0, 0.0), (0.0, 0.0, 0.0), THROWN_DELAY);
 
-        assert!(items.take_near((0.0, 64.0, 0.0), 1).is_empty());
+        assert!(items.take_near((0.0, 64.0, 0.0), 1, anything).is_empty());
         assert_eq!(items.items().len(), 1);
     }
 
@@ -566,7 +739,7 @@ mod tests {
         let mut heights = Vec::new();
 
         for _ in 0..30 {
-            items.step(&floor);
+            items.step(&floor, &floor, &loaded);
             heights.push(items.items()[0].y);
         }
 
@@ -581,7 +754,7 @@ mod tests {
 
         // И в конце лежит на полу, улетев вперёд.
         for _ in 0..200 {
-            items.step(&floor);
+            items.step(&floor, &floor, &loaded);
         }
 
         let landed = &items.items()[0];
@@ -598,7 +771,7 @@ mod tests {
         let mut items = thrown((0.5, 70.0, 0.5), (0.0, 0.0, 0.0));
 
         for _ in 0..200 {
-            items.step(&floor);
+            items.step(&floor, &floor, &loaded);
         }
 
         let landed = &items.items()[0];
@@ -617,7 +790,7 @@ mod tests {
         let mut items = thrown((0.5, 65.0, 0.5), (0.5, 0.0, 0.0));
 
         for _ in 0..100 {
-            items.step(&wall);
+            items.step(&wall, &wall, &loaded);
         }
 
         let stopped = &items.items()[0];
@@ -640,7 +813,7 @@ mod tests {
         let mut items = thrown((0.5, 200.0, 0.5), (0.0, 0.0, 0.0));
 
         for _ in 0..500 {
-            items.step(&floor);
+            items.step(&floor, &floor, &loaded);
         }
 
         let landed = &items.items()[0];
@@ -658,7 +831,7 @@ mod tests {
         let mut items = thrown((0.5, 180.0, 0.5), (0.0, 0.0, 0.0));
 
         for _ in 0..300 {
-            items.step(&ledge);
+            items.step(&ledge, &ledge, &loaded);
         }
 
         let landed = &items.items()[0];
@@ -672,7 +845,7 @@ mod tests {
         let mut items = thrown((0.5, 0.0, 0.5), (0.0, 0.0, 0.0));
 
         for _ in 0..400 {
-            items.step(&|_, _, _| false);
+            items.step(&|_, _, _| false, &|_, _, _| false, &loaded);
         }
 
         assert!(items.items().is_empty());
@@ -692,13 +865,13 @@ mod tests {
     fn an_old_item_disappears() {
         let mut items = thrown((0.5, 64.0, 0.5), (0.0, 0.0, 0.0));
 
-        items.step(&floor);
+        items.step(&floor, &floor, &loaded);
         assert_eq!(items.items().len(), 1);
 
         // Переводим часы предмета назад: столько он уже пролежал.
         items.items[0].born -= LIFETIME;
 
-        items.step(&floor);
+        items.step(&floor, &floor, &loaded);
 
         assert!(items.items().is_empty());
 
@@ -723,10 +896,10 @@ mod tests {
         let solid = |_: i32, y: i32, _: i32| y <= 0;
 
         // Подойти и поднять его нельзя.
-        assert!(items.take_near((0.5, 5.0, 0.5), 99).is_empty(), "падающий блок подняли");
+        assert!(items.take_near((0.5, 5.0, 0.5), 99, anything).is_empty(), "падающий блок подняли");
 
         for _ in 0..60 {
-            items.step(&solid);
+            items.step(&solid, &solid, &loaded);
         }
 
         let landed = items.take_landed();
@@ -739,4 +912,84 @@ mod tests {
         assert!(items.items().is_empty());
     }
 
+    /// В полный инвентарь не поднимается ничего: предмет лежит дальше,
+    /// а не пропадает.
+    #[test]
+    fn a_full_inventory_leaves_the_item_on_the_ground() {
+        let mut items = Items::new();
+        items.watch_changes(READER);
+
+        items.drop_item(1, stack(), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), Duration::ZERO);
+
+        let taken = items.take_near((0.5, 64.0, 0.5), 42, |_| 0);
+
+        assert!(taken.is_empty());
+        assert_eq!(items.items().len(), 1);
+        assert_eq!(items.items()[0].stack.count, 3);
+
+        // О подборе в журнале ничего нет.
+        let (changes, _) = items.changes_since(1, READER);
+        assert!(changes.is_empty());
+    }
+
+    /// Влезла часть — поднимается часть, остаток лежит тем же предметом.
+    #[test]
+    fn part_of_a_stack_is_picked_up() {
+        let mut items = Items::new();
+        items.watch_changes(READER);
+
+        items.drop_item(1, stack(), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), Duration::ZERO);
+
+        let taken = items.take_near((0.5, 64.0, 0.5), 42, |stack| stack.count.min(2));
+
+        assert_eq!(taken.len(), 1);
+        assert_eq!(taken[0].stack.count, 2);
+        assert_eq!(items.items().len(), 1);
+        assert_eq!(items.items()[0].stack.count, 1);
+        assert_eq!(items.items()[0].entity_id, 1);
+
+        // Клиентам: подбор двух штук и остаток, появившийся снова.
+        let (changes, _) = items.changes_since(1, READER);
+
+        assert!(matches!(changes.first(), Some(Change::Taken { entity_id: 1, by: 42, count: 2 })));
+        assert!(matches!(changes.get(1), Some(Change::Dropped(left)) if left.stack.count == 1));
+    }
+
+    /// Лежащий предмет падает, когда из-под него убрали опору.
+    #[test]
+    fn a_resting_item_falls_when_its_support_goes() {
+        let mut items = thrown((0.5, 70.0, 0.5), (0.0, 0.0, 0.0));
+
+        for _ in 0..200 {
+            items.step(&floor, &floor, &loaded);
+        }
+
+        assert_eq!(items.items()[0].y, 64.0);
+
+        // Пол опустился на пять блоков.
+        let lower = |_: i32, y: i32, _: i32| y <= 58;
+
+        for _ in 0..200 {
+            items.step(&lower, &lower, &loaded);
+        }
+
+        let landed = &items.items()[0];
+
+        assert!(landed.on_ground);
+        assert_eq!(landed.y, 59.0, "остался висеть");
+    }
+
+    /// В выгруженном чанке предмет не двигается: мира под ним нет, и он
+    /// провалился бы в пустоту.
+    #[test]
+    fn an_item_in_an_unloaded_chunk_stays_put() {
+        let mut items = thrown((0.5, 70.0, 0.5), (0.0, 0.0, 0.0));
+
+        for _ in 0..100 {
+            items.step(&|_, _, _| false, &|_, _, _| false, &|_, _| false);
+        }
+
+        assert_eq!(items.items().len(), 1);
+        assert_eq!(items.items()[0].y, 70.0);
+    }
 }

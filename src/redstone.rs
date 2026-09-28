@@ -83,6 +83,24 @@ const PRIORITY_DEPOWERING: i8 = -2;
 const PRIORITY_DIODE: i8 = -1;
 const PRIORITY_NORMAL: i8 = 0;
 
+/// Звук отпущенной кнопки: у каменных свой, у деревянных — по породе.
+fn button_click_off(name: &str) -> &'static str {
+    if name.starts_with("cherry") {
+        "minecraft:block.cherry_wood_button.click_off"
+    } else if name.starts_with("bamboo") {
+        "minecraft:block.bamboo_wood_button.click_off"
+    } else if name.starts_with("crimson") || name.starts_with("warped") {
+        "minecraft:block.nether_wood_button.click_off"
+    } else if is_wooden(name) {
+        "minecraft:block.wooden_button.click_off"
+    } else {
+        "minecraft:block.stone_button.click_off"
+    }
+}
+
+/// Через сколько тактов падает песок, оставшийся без опоры.
+const FALL_DELAY: u64 = 2;
+
 /// Шесть сторон — в том порядке, в каком игра сообщает соседям об изменении.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Dir {
@@ -568,11 +586,25 @@ pub fn falls(state: i32) -> bool {
         .is_some_and(|name| FALLS.contains(&name) || name.ends_with("_concrete_powder"))
 }
 
-/// Может ли блок держать на себе упавшее.
+/// Может ли блок держать на себе песок и гравий.
 ///
-/// Воздух и всё, во что можно встать — трава, вода, — не держит.
+/// Вики, Falling Block: такие блоки падают, когда «block below is
+/// replaceable», — воздух, вода, лава, огонь, трава, снежный слой в один
+/// слой и прочее из тега `minecraft:replaceable`. Всё остальное держит,
+/// даже факел и цветок: на них песок стоит.
 fn holds_up(state: i32) -> bool {
-    state != AIR && blocks::has_box(state)
+    !free_to_fall_into(state)
+}
+
+/// Свободно ли место для падающего блока: можно ли упасть сквозь него
+/// и приземлиться в него.
+///
+/// То же, что заменяемый блок: при приземлении такой блок просто
+/// заменяется падающим (вики, Falling Block: «If it lands with the bottom
+/// center of its hitbox in a replaceable block ... the falling block returns
+/// to its block state»).
+pub fn free_to_fall_into(state: i32) -> bool {
+    blocks::replaceable(state)
 }
 
 /// Блоки, которые толкать можно, а тянуть нельзя.
@@ -1153,14 +1185,55 @@ fn set(world: &mut World, pos: Pos, state: i32) {
 /// Ломает блок: он исчезает, а предмет из него выпадет — этим займётся такт.
 /// Клиенту ничего не говорит: об этом месте скажет тот, кто ломал.
 /// Возвращает true, если там что-то было.
+///
+/// Дверь и кровать ломаются целиком: вторая половина убирается сразу и без
+/// выпадения — предмет один на обе (вики, Piston: двери и кровати поршень
+/// ломает, а висящая половина двери или кровати не бывает). Если поршень
+/// давит обе половины разом, вторая к своей очереди уже пуста, и второго
+/// предмета тоже нет. Об этой половине клиенту говорится обычным порядком:
+/// кроме мира, сказать о ней некому.
 fn destroy(world: &mut World, pos: Pos) -> bool {
-    if world.get_block(pos.0, pos.1, pos.2) == AIR {
+    let state = world.get_block(pos.0, pos.1, pos.2);
+
+    if state == AIR {
         return false;
     }
 
-    world.note_destroyed(pos.0, pos.1, pos.2);
+    let name = blocks::block_at_state(state).unwrap_or("");
+    let whole = name.ends_with("_door") || name.ends_with("_bed");
+    let partner = blocks::pair_partner(state, pos)
+        .filter(|other| whole && blocks::is_pair(state, pos, world.get_block(other.0, other.1, other.2), *other));
+
+    // Кровать выпадает из изголовья, даже если давили изножье: предмет у
+    // оригинала появляется на месте изголовья (снято чёрным ящиком,
+    // сценарий piston-bed).
+    let foot = name.ends_with("_bed")
+        && blocks::orientation_of(state).and_then(|block| block.value(state, "part")) == Some("foot");
+
+    match partner {
+        Some(head) if foot => world.note_destroyed(head.0, head.1, head.2),
+        _ => world.note_destroyed(pos.0, pos.1, pos.2),
+    }
+
     world.set_block_quietly(pos.0, pos.1, pos.2, AIR);
+
+    // Вторая половина уходит вместе с остальными переменами хода: клиентам —
+    // на такт позже (сценарии piston-door и piston-bed).
+    if let Some(other) = partner {
+        world.set_block_quietly(other.0, other.1, other.2, AIR);
+        world.tell_later(other.0, other.1, other.2, PISTON_TELL_LATER);
+    }
+
     true
+}
+
+/// Деталь без опоры отваливается: предмет выпадет, а клиентам уходит
+/// обычное изменение — в той же пачке, что и то, из-за чего она отвалилась
+/// (сценарий чёрного ящика dust-on-slab). `destroy` клиенту не говорит
+/// ничего — он для хода поршня, где о месте говорит сам ход.
+fn pop(world: &mut World, pos: Pos) {
+    world.note_destroyed(pos.0, pos.1, pos.2);
+    set(world, pos, AIR);
 }
 
 /// Через сколько тактов отпускается обычная плита, когда с неё сошли.
@@ -1464,7 +1537,7 @@ fn react(world: &mut World, pos: Pos, itself: bool) {
     match block.kind {
         Kind::Wire => {
             if !supported(world, pos, &block) {
-                destroy(world, pos);
+                pop(world, pos);
                 return;
             }
 
@@ -1477,7 +1550,7 @@ fn react(world: &mut World, pos: Pos, itself: bool) {
 
         Kind::Torch => {
             if !supported(world, pos, &block) {
-                destroy(world, pos);
+                pop(world, pos);
                 return;
             }
 
@@ -1486,9 +1559,12 @@ fn react(world: &mut World, pos: Pos, itself: bool) {
             }
         }
 
+        // Диод при своей установке опору не проверяет — только когда
+        // меняется сосед (повторитель, поставленный командой на нижнюю
+        // плиту, стоит до первого обновления: сценарий dust-on-slab).
         Kind::Repeater => {
-            if !supported(world, pos, &block) {
-                destroy(world, pos);
+            if !itself && !supported(world, pos, &block) {
+                pop(world, pos);
                 return;
             }
 
@@ -1522,8 +1598,8 @@ fn react(world: &mut World, pos: Pos, itself: bool) {
         }
 
         Kind::Comparator => {
-            if !supported(world, pos, &block) {
-                destroy(world, pos);
+            if !itself && !supported(world, pos, &block) {
+                pop(world, pos);
                 return;
             }
 
@@ -1594,6 +1670,10 @@ fn react(world: &mut World, pos: Pos, itself: bool) {
 
         // Лампа загорается сразу, а гаснет через четыре такта: если сигнал
         // за это время вернётся, она даже не мигнёт.
+        // Лампа, поставленная командой, питание сама не проверяет — только
+        // когда меняется сосед (сценарий чёрного ящика torch-inverter).
+        Kind::Lamp if itself => {}
+
         Kind::Lamp => {
             let powered = any_power(world, pos);
             let lit = block.is("lit", "true");
@@ -1624,7 +1704,7 @@ fn react(world: &mut World, pos: Pos, itself: bool) {
 
         Kind::Lever | Kind::Button | Kind::Plate => {
             if !supported(world, pos, &block) {
-                destroy(world, pos);
+                pop(world, pos);
             }
         }
 
@@ -1662,17 +1742,35 @@ fn react(world: &mut World, pos: Pos, itself: bool) {
         // Наблюдатель на соседей не смотрит: его будит только изменение
         // блока прямо перед глазами, и делает это block_changed.
         Kind::RedstoneBlock | Kind::Observer | Kind::Other => {
+            // Портал без рамки гаснет — без выпадения; следом гаснут и
+            // соседние блоки проёма.
+            if crate::portal::is_portal(block.state) && !crate::portal::holds(world, pos, block.state) {
+                set(world, pos, AIR);
+                return;
+            }
+
+            // Лава, которой коснулась вода, твердеет сразу.
+            let hardened = {
+                let view = |x, y, z| world.get_block(x, y, z);
+                crate::fluids::hardens_now(pos, &view)
+            };
+
+            if let Some(state) = hardened {
+                set(world, pos, state);
+                return;
+            }
+
             // Растению нужна своя опора: убрали землю из-под цветка — цветок
             // ломается и выпадает (правила — в модуле plants).
             if !itself && crate::plants::check(world, pos.0, pos.1, pos.2) {
                 return;
             }
 
-            // Песку и гравию нужна опора: не стало её — блок падает.
-            // Заводить сущность отсюда нечем, поэтому место просто
-            // запоминается, а падение начнёт такт мира.
+            // Песку и гравию нужна опора: не стало её — блок падает, но не
+            // сразу, а своим тактом через два (как у оригинала, снято чёрным
+            // ящиком: поставленный песок сперва виден на месте).
             if falls(block.state) && !holds_up(world.get_block(pos.0, pos.1 - 1, pos.2)) {
-                world.note_falling(pos.0, pos.1, pos.2);
+                world.schedule_once(pos.0, pos.1, pos.2, FALL_DELAY, PRIORITY_NORMAL);
             }
         }
     }
@@ -1879,9 +1977,14 @@ fn torch_should_be_lit(world: &World, pos: Pos, block: &Block) -> bool {
 /// факел, рычаг и кнопка — на том, к чему прикреплены.
 fn supported(world: &World, pos: Pos, block: &Block) -> bool {
     match block.kind {
-        Kind::Wire | Kind::Repeater | Kind::Comparator | Kind::Plate => {
-            holds_redstone(world.get_block(pos.0, pos.1 - 1, pos.2))
+        // Пыль и диоды на нижней плите не держатся: у неё верх посередине
+        // блока (вики, Redstone Dust и Redstone Repeater).
+        Kind::Wire | Kind::Repeater | Kind::Comparator => {
+            let below = world.get_block(pos.0, pos.1 - 1, pos.2);
+
+            !is_leaves(below) && blocks::carries_dust(below)
         }
+        Kind::Plate => holds_redstone(world.get_block(pos.0, pos.1 - 1, pos.2)),
         Kind::Torch | Kind::Lever | Kind::Button => attached_to(block, pos).is_some_and(|attached| {
             holds_redstone(world.get_block(attached.0, attached.1, attached.2))
         }),
@@ -1895,11 +1998,12 @@ fn supported(world: &World, pos: Pos, block: &Block) -> bool {
 /// кнопку, рычаг и рельсы на неё поставить нельзя. Вики перечисляет их
 /// поимённо на странице Conductivity.
 fn holds_redstone(state: i32) -> bool {
-    if blocks::block_at_state(state).is_some_and(|name| name.ends_with("_leaves")) {
-        return false;
-    }
+    !is_leaves(state) && blocks::solid_top(state)
+}
 
-    blocks::solid_top(state)
+/// Листва: полный блок, на котором редстоун не держится.
+fn is_leaves(state: i32) -> bool {
+    blocks::block_at_state(state).is_some_and(|name| name.ends_with("_leaves"))
 }
 
 /// Пришло блочное событие: поршень трогается с места.
@@ -2437,10 +2541,20 @@ pub fn ticked(world: &mut World, pos: Pos) {
             }
         }
 
+        // Кнопку отпустило время — щелчок слышат все (сценарии button-stone
+        // и button-wood: звук раньше смены состояния).
         Kind::Button => {
+            world.note_sound(pos.0, pos.1, pos.2, button_click_off(block.name), 1.0, 1.0);
+
             if let Some(state) = block.with("powered", "false") {
                 set(world, pos, state);
             }
+        }
+
+        // Такт песка или гравия: опоры так и нет — в полёт. Сущность
+        // заводит такт мира, здесь место только запоминается.
+        _ if falls(block.state) && free_to_fall_into(world.get_block(pos.0, pos.1 - 1, pos.2)) => {
+            world.note_falling(pos.0, pos.1, pos.2);
         }
 
         _ => {}
@@ -4208,23 +4322,96 @@ mod tests {
         let mut world = world();
         let sand = blocks::state_by_name("sand").unwrap();
 
+        // Падает не сразу, а своим тактом через два — как у оригинала.
         // На земле стоит спокойно.
         put(&mut world, (0, 1, 0), sand);
+        run(&mut world, FALL_DELAY as usize);
         assert!(world.take_falling().is_empty(), "песок на земле собрался падать");
 
-        // А в воздухе — падает.
+        // А в воздухе — падает, но не в тот же такт.
         put(&mut world, (0, 5, 0), sand);
+        assert!(world.take_falling().is_empty(), "песок упал без задержки");
+        run(&mut world, FALL_DELAY as usize);
         assert_eq!(world.take_falling(), vec![(0, 5, 0)], "песок в воздухе не упал");
 
         // Убрали опору из-под лежащего — тоже падает.
         put(&mut world, (0, 2, 0), sand);
+        run(&mut world, FALL_DELAY as usize);
         world.take_falling();
         put(&mut world, (0, 1, 0), AIR);
+        run(&mut world, FALL_DELAY as usize);
 
         assert!(
             world.take_falling().contains(&(0, 2, 0)),
             "песок не заметил, что опоры не стало"
         );
+    }
+
+    /// Над водой и травой песок не висит: они заменяемые, а факел держит
+    /// (вики, Falling Block: падает, когда «block below is replaceable»).
+    #[test]
+    fn sand_falls_through_water_and_grass_but_stands_on_a_torch() {
+        let mut world = world();
+        let sand = blocks::state_by_name("sand").unwrap();
+
+        for (x, below) in [(0, "water"), (2, "short_grass"), (4, "torch")] {
+            world.set_block_silently(x, 1, 0, blocks::state_by_name(below).unwrap());
+            put(&mut world, (x, 2, 0), sand);
+        }
+
+        run(&mut world, FALL_DELAY as usize);
+        let falling = world.take_falling();
+
+        assert!(falling.contains(&(0, 2, 0)), "над водой висит");
+        assert!(falling.contains(&(2, 2, 0)), "над травой висит");
+        assert!(!falling.contains(&(4, 2, 0)), "с факела упал");
+    }
+
+    /// Поршень, раздавивший половину двери, ломает дверь целиком — и
+    /// выпадает из неё одна дверь.
+    #[test]
+    fn a_crushed_door_breaks_whole() {
+        let mut world = world();
+        let piston = state("piston", &[("facing", "east"), ("extended", "false")]);
+        let lever = state("lever", &[("face", "floor"), ("facing", "north"), ("powered", "false")]);
+        let lower = state("oak_door", &[("half", "lower"), ("facing", "east")]);
+        let upper = state("oak_door", &[("half", "upper"), ("facing", "east")]);
+
+        put(&mut world, (0, 1, 0), piston);
+        put(&mut world, (1, 1, 0), lower);
+        put(&mut world, (1, 2, 0), upper);
+        put(&mut world, (0, 2, 0), lever);
+        world.take_destroyed();
+
+        use_block(&mut world, (0, 2, 0));
+
+        settle(&mut world);
+        run(&mut world, 6);
+
+        assert_eq!(world.get_block(1, 2, 0), AIR, "верх двери висит");
+
+        let doors = world
+            .take_destroyed()
+            .iter()
+            .filter(|(_, state)| blocks::block_at_state(*state) == Some("oak_door"))
+            .count();
+
+        assert_eq!(doors, 1);
+    }
+
+    /// Провод на нижней плите не держится, на верхней — держится.
+    #[test]
+    fn a_wire_does_not_stay_on_a_bottom_slab() {
+        let mut world = world();
+        let wire = blocks::state_by_name("redstone_wire").unwrap();
+
+        put(&mut world, (0, 1, 0), state("oak_slab", &[("type", "top")]));
+        put(&mut world, (0, 2, 0), wire);
+        assert_eq!(world.get_block(0, 2, 0), wire);
+
+        put(&mut world, (2, 1, 0), state("oak_slab", &[("type", "bottom")]));
+        put(&mut world, (2, 2, 0), wire);
+        assert_eq!(world.get_block(2, 2, 0), AIR);
     }
 
     /// Что падает, а что нет — по списку с вики.
@@ -4947,11 +5134,11 @@ mod tests {
         drop(world);
 
         // Такт хода пропадает — так выглядел мир игрока.
-        let level = path.join("level.dat");
-        let text = std::fs::read_to_string(&level).expect("level.dat читается");
+        let level = path.join("ticks.dat");
+        let text = std::fs::read_to_string(&level).expect("ticks.dat читается");
         let without: String = text
             .lines()
-            .filter(|line| !line.starts_with("tick = 0 1 0 block"))
+            .filter(|line| !line.starts_with("due = 0 1 0 block"))
             .map(|line| format!("{}\n", line))
             .collect();
 
@@ -4962,7 +5149,7 @@ mod tests {
             text
         );
 
-        std::fs::write(&level, without).expect("level.dat записывается");
+        std::fs::write(&level, without).expect("ticks.dat записывается");
 
         let mut again = World::open(
             &path,

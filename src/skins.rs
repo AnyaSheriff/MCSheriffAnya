@@ -29,7 +29,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::Deserialize;
 
-use crate::{log_info, log_warn};
+use crate::{log_debug, log_info, log_warn};
 
 /// Директория со скинами.
 pub const DIRECTORY: &str = "skins";
@@ -39,7 +39,7 @@ pub const SETTINGS_FILE: &str = "config/skins.toml";
 
 /// Откуда брать скины. Порядок опроса всегда один: сперва Mojang, потом
 /// Ely.by — кто нашёл, того и берём.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
     /// Спрашивать ли Mojang.
@@ -47,6 +47,17 @@ pub struct Settings {
 
     /// Спрашивать ли Ely.by, если у Mojang не нашлось.
     pub ely: bool,
+
+    /// Загружать ли скины игроков Bedrock в Mojang через MineSkin, чтобы
+    /// их видели игроки Java. Картинка уходит стороннему сервису — поэтому
+    /// по умолчанию выключено.
+    #[serde(rename = "bedrock-to-java")]
+    pub bedrock_to_java: bool,
+
+    /// Ключ API MineSkin (account.mineskin.org/keys): с ним лимит выше.
+    /// Пусто — загрузка без ключа, с меньшим лимитом.
+    #[serde(rename = "mineskin-key")]
+    pub mineskin_key: String,
 }
 
 impl Default for Settings {
@@ -54,6 +65,8 @@ impl Default for Settings {
         Self {
             mojang: true,
             ely: true,
+            bedrock_to_java: false,
+            mineskin_key: String::new(),
         }
     }
 }
@@ -71,6 +84,15 @@ const SETTINGS_SAMPLE: &str = "\
 
 mojang = true
 ely = true
+
+# Скины игроков Bedrock для игроков Java. Java загружает скины только
+# с серверов Mojang, поэтому картинку скина Bedrock сервер отправляет
+# сервису MineSkin (mineskin.org), тот загружает её в Mojang и возвращает
+# подписанное описание. Скин уходит стороннему сервису — включайте, если
+# согласны. Персонажи из редактора Bedrock так не показать: у Java нет
+# таких фигур. Ключ — с account.mineskin.org/keys (без ключа лимит ниже).
+bedrock-to-java = false
+mineskin-key = \"\"
 ";
 
 impl Settings {
@@ -125,6 +147,19 @@ pub struct Skin {
     pub signature: String,
 }
 
+impl Skin {
+    /// Требует ли описание подписи. У скинов Mojang внутри описания стоит
+    /// `signatureRequired: true`, и клиент такой скин без подписи молча
+    /// отбрасывает. Подпись заверяет само описание, а не опознаватель
+    /// игрока, поэтому годится и игроку с другим опознавателем.
+    pub fn signature_required(&self) -> bool {
+        crate::bedrock::session::base64_url(&self.value)
+            .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+            .and_then(|description| description.get("signatureRequired")?.as_bool())
+            .unwrap_or(false)
+    }
+}
+
 /// Кладёт образец таблицы ников, если её ещё нет.
 ///
 /// Пустая директория ничего о себе не рассказывает, а так сразу видно, что
@@ -157,7 +192,7 @@ pub fn prepare(dir: &Path) {
 ///
 /// None означает «скина нет»: такого ника у Mojang не нашлось или до них не
 /// достучаться. Игрок в этом случае заходит со стандартным скином.
-pub async fn look_up(dir: &Path, name: &str, settings: Settings) -> Option<Skin> {
+pub async fn look_up(dir: &Path, name: &str, settings: &Settings) -> Option<Skin> {
     // Чей скин выдать: по своей таблице — чужой, иначе — его собственный.
     let source = alias(dir, name).unwrap_or_else(|| name.to_string());
 
@@ -268,12 +303,12 @@ fn cache_path(dir: &Path, name: &str) -> PathBuf {
 fn read_cache(path: &Path) -> Option<Option<Skin>> {
     let text = fs::read_to_string(path).ok()?;
 
-    parse_cache(&text, now())
+    parse_cache(&text, now(), FRESH)
 }
 
-/// Разбирает запомненное. `now` — нынешнее время: по нему видно, не устарела
-/// ли запись.
-fn parse_cache(text: &str, now: u64) -> Option<Option<Skin>> {
+/// Разбирает запомненное. `now` — нынешнее время: по нему и `fresh` видно,
+/// не устарела ли запись.
+fn parse_cache(text: &str, now: u64, fresh: u64) -> Option<Option<Skin>> {
     let mut lines = text.lines();
 
     let (magic, version) = lines.next()?.split_once(' ')?;
@@ -284,7 +319,7 @@ fn parse_cache(text: &str, now: u64) -> Option<Option<Skin>> {
 
     let written: u64 = lines.next()?.parse().ok()?;
 
-    if now.saturating_sub(written) > FRESH {
+    if now.saturating_sub(written) > fresh {
         return None;
     }
 
@@ -326,7 +361,7 @@ fn now() -> u64 {
 /// Спрашивает скин у Mojang.
 ///
 /// Спрашивает источники по порядку: сперва Mojang, потом Ely.by.
-async fn fetch(name: &str, settings: Settings) -> Answer {
+async fn fetch(name: &str, settings: &Settings) -> Answer {
     let Some(client) = client() else {
         return Answer::Failed;
     };
@@ -447,6 +482,250 @@ pub async fn download(url: &str) -> Option<Vec<u8>> {
     answer.bytes().await.ok().map(|bytes| bytes.to_vec())
 }
 
+/// Сколько ждать задание MineSkin целиком и как часто о нём спрашивать
+/// (их правила: не чаще раза в секунду).
+const MINESKIN_WAIT: Duration = Duration::from_secs(90);
+const MINESKIN_POLL: Duration = Duration::from_millis(1500);
+
+/// Скин игрока Bedrock для игроков Java: картинка (PNG 64×64) загружается
+/// в Mojang через MineSkin (документация: docs.mineskin.org, api.mineskin.org
+/// /v2/openapi.json), в ответ — подписанное описание, как у любого скина
+/// Mojang. Ответ запоминается по картинке навсегда: ссылка на картинку
+/// у Mojang не устаревает, и тот же скин второй раз не загружается.
+///
+/// `cape` — плащ из списка MineSkin (`java_cape`), если плащ игрока Bedrock
+/// есть и у Java.
+pub async fn upload_bedrock(dir: &Path, settings: &Settings, png: Vec<u8>, slim: bool, cape: Option<&str>) -> Option<Skin> {
+    // Плащи MineSkin прикладывает не на всяком тарифе: раз отказал — дальше
+    // без плаща, скин важнее.
+    let cape = cape.filter(|_| !CAPES_FORBIDDEN.load(std::sync::atomic::Ordering::Relaxed));
+
+    let path = dir.join(format!(
+        "bedrock-{:016x}{}{}.skin",
+        fnv(&png),
+        if slim { "-slim" } else { "" },
+        cape.map(|cape| format!("-{}", cape)).unwrap_or_default()
+    ));
+
+    if let Some(Some(skin)) = fs::read_to_string(&path).ok().and_then(|text| parse_cache(&text, 0, u64::MAX)) {
+        return Some(skin);
+    }
+
+    let client = mineskin_client()?;
+    let with_headers = |request: reqwest::RequestBuilder| {
+        let request = request.header("User-Agent", concat!("MCSheriffAnya/", env!("CARGO_PKG_VERSION")));
+        match settings.mineskin_key.trim() {
+            "" => request,
+            key => request.bearer_auth(key),
+        }
+    };
+
+    // Копия — на случай, если с плащом откажут и придётся без него.
+    let png_again = cape.map(|_| png.clone());
+    let form = reqwest::multipart::Form::new()
+        .part("file", reqwest::multipart::Part::bytes(png).file_name("skin.png").mime_str("image/png").ok()?)
+        .text("variant", if slim { "slim" } else { "classic" })
+        .text("visibility", "unlisted");
+    let form = match cape {
+        Some(cape) => form.text("cape", cape.to_string()),
+        None => form,
+    };
+    let Some(mut answer) = mineskin_answer(with_headers(client.post("https://api.mineskin.org/v2/queue").multipart(form))).await else {
+        if cape.is_some() && CAPES_FORBIDDEN.load(std::sync::atomic::Ordering::Relaxed) {
+            return Box::pin(upload_bedrock(dir, settings, png_again?, slim, None)).await;
+        }
+        return None;
+    };
+
+    let started = std::time::Instant::now();
+    loop {
+        if let Some(skin) = mineskin_skin(&answer) {
+            write_cache(&path, Some(&skin));
+            return Some(skin);
+        }
+
+        let job = answer.pointer("/job/id").and_then(|id| id.as_str())?.to_string();
+        let status = answer.pointer("/job/status").and_then(|status| status.as_str()).unwrap_or("unknown");
+
+        if status == "failed" || started.elapsed() > MINESKIN_WAIT {
+            log_warn!("Скины: MineSkin не загрузил скин ({}): {}", status, mineskin_errors(&answer));
+            return None;
+        }
+
+        tokio::time::sleep(MINESKIN_POLL).await;
+        answer = mineskin_answer(with_headers(client.get(format!("https://api.mineskin.org/v2/queue/{}", job)))).await?;
+    }
+}
+
+/// Плащ Java для плаща игрока Bedrock: те плащи, что есть в обеих играх
+/// (юбилейные, праздничные), узнаются по картинке среди тех, что MineSkin
+/// умеет прикладывать к скину (`GET /v2/capes`, поле `supported`). Свою
+/// картинку плаща Mojang не принимает — плащ только из Bedrock Java не
+/// покажет. Ответ — номер плаща у MineSkin.
+pub async fn java_cape(width: u32, height: u32, rgba: &[u8]) -> Option<String> {
+    let capes = mineskin_capes().await;
+    let theirs = scaled_cape(width, height, rgba)?;
+
+    let (distance, uuid, alias) = capes
+        .iter()
+        .map(|(uuid, alias, known)| (cape_distance(&theirs, known), uuid, alias))
+        .min_by_key(|(distance, ..)| *distance)?;
+
+    if distance > CAPE_LIKENESS {
+        log_debug!("Скины: плащ Bedrock не похож ни на один плащ Java (ближе всех «{}», отличие {})", alias, distance);
+        return None;
+    }
+
+    log_debug!("Скины: плащ Bedrock — это «{}» (отличие {})", alias, distance);
+    Some(uuid.clone())
+}
+
+/// Насколько плащи могут отличаться (средняя разница канала на точку
+/// лицевой стороны, ×100), чтобы считаться одним: у двух игр картинки
+/// бывают пересохранены с мелкими отличиями.
+const CAPE_LIKENESS: u32 = 600;
+
+/// Плащи, которые MineSkin прикладывает к скину: номер, название и картинка
+/// 64×32. Спрашиваются один раз за работу сервера.
+async fn mineskin_capes() -> &'static [(String, String, Vec<u8>)] {
+    static CAPES: tokio::sync::OnceCell<Vec<(String, String, Vec<u8>)>> = tokio::sync::OnceCell::const_new();
+
+    CAPES
+        .get_or_init(|| async {
+            let Some(client) = mineskin_client() else {
+                return Vec::new();
+            };
+            let request = client
+                .get("https://api.mineskin.org/v2/capes")
+                .header("User-Agent", concat!("MCSheriffAnya/", env!("CARGO_PKG_VERSION")));
+            let Some(list) = mineskin_answer(request).await else {
+                return Vec::new();
+            };
+
+            let mut capes = Vec::new();
+            for cape in list.get("capes").and_then(|capes| capes.as_array()).into_iter().flatten() {
+                let text = |key: &str| cape.get(key).and_then(|v| v.as_str()).map(str::to_string);
+                let (Some(uuid), Some(alias), Some(url)) = (text("uuid"), text("alias"), text("url")) else {
+                    continue;
+                };
+                if cape.get("supported").and_then(|v| v.as_bool()) != Some(true) {
+                    continue;
+                }
+                if let Some(image) = download(&url).await.as_deref().and_then(crate::bedrock::png::decode)
+                    && let Some(rgba) = scaled_cape(image.width, image.height, &image.rgba)
+                {
+                    capes.push((uuid, alias, rgba));
+                }
+            }
+
+            log_debug!("Скины: MineSkin прикладывает {} плащей", capes.len());
+            capes
+        })
+        .await
+}
+
+/// Плащ к размеру 64×32 (у высокой чёткости — 128×64 и больше, берётся
+/// каждая n-я точка). Другие пропорции — не плащ.
+fn scaled_cape(width: u32, height: u32, rgba: &[u8]) -> Option<Vec<u8>> {
+    if width < 64 || !width.is_multiple_of(64) || height * 2 != width || rgba.len() != (width * height * 4) as usize {
+        return None;
+    }
+
+    let step = (width / 64) as usize;
+    Some(
+        (0..64 * 32usize)
+            .flat_map(|at| {
+                let (x, y) = (at % 64 * step, at / 64 * step);
+                let from = (y * width as usize + x) * 4;
+                rgba[from..from + 4].to_vec()
+            })
+            .collect(),
+    )
+}
+
+/// Отличие двух плащей 64×32 — по их лицевой и задней стороне (область
+/// 22×17 в левом верхнем углу картинки): средняя разница канала ×100.
+fn cape_distance(a: &[u8], b: &[u8]) -> u32 {
+    let mut total = 0u64;
+    let mut count = 0u64;
+
+    for y in 0..17 {
+        for x in 0..22 {
+            let at = (y * 64 + x) * 4;
+            for channel in 0..4 {
+                total += u64::from(a[at + channel].abs_diff(b[at + channel]));
+                count += 1;
+            }
+        }
+    }
+
+    (total * 100 / count) as u32
+}
+
+/// MineSkin отказал прикладывать плащ (такое бывает не на всяком тарифе):
+/// дальше скины загружаются без плащей.
+static CAPES_FORBIDDEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Отправляет запрос MineSkin и разбирает ответ; отказ — в лог и None.
+async fn mineskin_answer(request: reqwest::RequestBuilder) -> Option<serde_json::Value> {
+    let answer = match request.send().await {
+        Ok(answer) => answer,
+        Err(error) => {
+            log_warn!("Скины: MineSkin не отвечает: {}", error);
+            return None;
+        }
+    };
+    let status = answer.status();
+    let body: serde_json::Value = answer.json().await.unwrap_or_default();
+
+    if !status.is_success() {
+        let errors = mineskin_errors(&body);
+
+        if status == reqwest::StatusCode::FORBIDDEN && errors.contains("cape") {
+            log_info!("Скины: MineSkin не прикладывает плащи с этим ключом — скины пойдут без плащей");
+            CAPES_FORBIDDEN.store(true, std::sync::atomic::Ordering::Relaxed);
+        } else {
+            log_warn!("Скины: MineSkin отказал ({}): {}", status.as_u16(), errors);
+        }
+        return None;
+    }
+
+    Some(body)
+}
+
+/// Готовый скин из ответа MineSkin, если он уже там.
+fn mineskin_skin(answer: &serde_json::Value) -> Option<Skin> {
+    let data = answer.pointer("/skin/texture/data")?;
+    let text = |key: &str| data.get(key).and_then(|v| v.as_str()).filter(|t| !t.is_empty()).map(str::to_string);
+
+    Some(Skin { value: text("value")?, signature: text("signature")? })
+}
+
+/// Причины отказа из ответа MineSkin — для лога.
+fn mineskin_errors(answer: &serde_json::Value) -> String {
+    answer
+        .get("errors")
+        .and_then(|errors| errors.as_array())
+        .map(|errors| errors.iter().filter_map(|error| error.get("message").and_then(|m| m.as_str())).collect::<Vec<_>>().join("; "))
+        .filter(|text| !text.is_empty())
+        .unwrap_or_else(|| "без пояснений".to_string())
+}
+
+/// Клиент для MineSkin: загрузка и очередь идут дольше, чем ответы Mojang.
+fn mineskin_client() -> Option<&'static reqwest::Client> {
+    static CLIENT: std::sync::OnceLock<Option<reqwest::Client>> = std::sync::OnceLock::new();
+
+    CLIENT
+        .get_or_init(|| reqwest::Client::builder().timeout(Duration::from_secs(20)).build().ok())
+        .as_ref()
+}
+
+/// Хеш FNV-1a — имя файла для запомненного скина по его картинке: один и
+/// тот же на любой машине и версии.
+fn fnv(bytes: &[u8]) -> u64 {
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |hash, byte| (hash ^ u64::from(*byte)).wrapping_mul(0x0100_0000_01b3))
+}
+
 /// Узнаёт опознаватель игрока по нику; если не вышло — почему.
 async fn fetch_uuid(client: &reqwest::Client, name: &str) -> Result<String, Answer> {
     let answer = client
@@ -499,6 +778,55 @@ mod tests {
 
     /// Настройки читаются из файла; нет файла — всё включено и кладётся
     /// образец; испорченный файл — тоже всё включено.
+    /// Загрузка в MineSkin по-настоящему (сеть, без ключа): пробная картинка
+    /// возвращается подписанным описанием со ссылкой на textures.minecraft.net.
+    /// `cargo test --release mineskin_upload_live -- --ignored --nocapture`.
+    #[tokio::test]
+    #[ignore]
+    async fn mineskin_upload_live() {
+        let rgba: Vec<u8> = (0..64 * 64u32).flat_map(|at| [(at % 64 * 4) as u8, (at / 64 * 4) as u8, 0x80, 255]).collect();
+        let png = crate::bedrock::png::encode(64, 64, &rgba);
+        let dir = std::env::temp_dir().join(format!("mcsheriffanya-mineskin-{}", std::process::id()));
+        fs::create_dir_all(&dir).expect("папка");
+
+        let skin = upload_bedrock(&dir, &Settings::default(), png.clone(), false, None).await.expect("MineSkin вернул скин");
+        let described = crate::bedrock::session::base64_url(&skin.value).expect("base64");
+        let text = String::from_utf8_lossy(&described);
+        println!("{}", text);
+        assert!(text.contains("textures.minecraft.net") && !skin.signature.is_empty());
+
+        // Второй раз — с диска, без сети.
+        assert_eq!(upload_bedrock(&dir, &Settings::default(), png, false, None).await, Some(skin));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Плащи MineSkin по-настоящему (сеть): каждый узнаётся сам в себе,
+    /// а плащ 128×64 — тот же, что 64×32.
+    #[tokio::test]
+    #[ignore]
+    async fn mineskin_capes_match_themselves_live() {
+        let capes = mineskin_capes().await;
+        println!("плащей: {}", capes.len());
+        assert!(capes.len() >= 5);
+
+        for (uuid, alias, rgba) in capes {
+            let big: Vec<u8> = (0..128 * 64usize).flat_map(|at| {
+                let from = ((at / 128 / 2) * 64 + at % 128 / 2) * 4;
+                rgba[from..from + 4].to_vec()
+            }).collect();
+            assert_eq!(java_cape(128, 64, &big).await.as_deref(), Some(uuid.as_str()), "{}", alias);
+        }
+    }
+
+    #[test]
+    fn capes_compare_by_their_front() {
+        let plain = |value: u8| [value, value, value, 255].repeat(64 * 32);
+        assert_eq!(cape_distance(&plain(10), &plain(10)), 0);
+        assert_eq!(cape_distance(&plain(10), &plain(16)), 450); // три канала из четырёх на 6
+        assert!(scaled_cape(64, 64, &[0; 64 * 64 * 4]).is_none());
+        assert_eq!(scaled_cape(128, 64, &plain(3).repeat(4)).map(|rgba| rgba.len()), Some(64 * 32 * 4));
+    }
+
     #[test]
     fn settings_are_read_and_default_to_everything_on() {
         let mut path = std::env::temp_dir();
@@ -512,7 +840,12 @@ mod tests {
 
         // Выключили Ely — прочиталось.
         fs::write(&path, "mojang = true\nely = false\n").expect("пишется");
-        assert_eq!(Settings::load(&path), Settings { mojang: true, ely: false });
+        assert_eq!(Settings::load(&path), Settings { mojang: true, ely: false, ..Settings::default() });
+
+        // Загрузка скинов Bedrock и ключ.
+        fs::write(&path, "bedrock-to-java = true\nmineskin-key = \"abc\"\n").expect("пишется");
+        let settings = Settings::load(&path);
+        assert!(settings.bedrock_to_java && settings.mineskin_key == "abc" && settings.mojang);
 
         // Испорченный файл не роняет сервер.
         fs::write(&path, "mojang = ???").expect("пишется");
@@ -546,7 +879,7 @@ mod tests {
         let text = format!("{} {}\n1000\nописание\nподпись\n", MAGIC, FORMAT_VERSION);
 
         assert_eq!(
-            parse_cache(&text, 1000),
+            parse_cache(&text, 1000, FRESH),
             Some(Some(Skin {
                 value: "описание".to_string(),
                 signature: "подпись".to_string(),
@@ -559,7 +892,7 @@ mod tests {
     fn the_absence_of_a_skin_is_remembered_too() {
         let text = format!("{} {}\n1000\n\n\n", MAGIC, FORMAT_VERSION);
 
-        assert_eq!(parse_cache(&text, 1000), Some(None));
+        assert_eq!(parse_cache(&text, 1000, FRESH), Some(None));
     }
 
     /// Запись старше суток не годится: игрок мог сменить скин. Не годится и
@@ -568,12 +901,12 @@ mod tests {
     fn a_stale_or_foreign_file_is_not_used() {
         let text = format!("{} {}\n1000\nописание\nподпись\n", MAGIC, FORMAT_VERSION);
 
-        assert_eq!(parse_cache(&text, 1000 + FRESH), parse_cache(&text, 1000));
-        assert_eq!(parse_cache(&text, 1000 + FRESH + 1), None);
+        assert_eq!(parse_cache(&text, 1000 + FRESH, FRESH), parse_cache(&text, 1000, FRESH));
+        assert_eq!(parse_cache(&text, 1000 + FRESH + 1, FRESH), None);
 
-        assert_eq!(parse_cache("что-то чужое\n", 1000), None);
-        assert_eq!(parse_cache(&format!("{} 999\n1000\n\n\n", MAGIC), 1000), None);
-        assert_eq!(parse_cache("", 1000), None);
+        assert_eq!(parse_cache("что-то чужое\n", 1000, FRESH), None);
+        assert_eq!(parse_cache(&format!("{} 999\n1000\n\n\n", MAGIC), 1000, FRESH), None);
+        assert_eq!(parse_cache("", 1000, FRESH), None);
     }
 
     /// Свойство со скином достаётся из профиля, а профиль без него ничего не
@@ -607,5 +940,29 @@ mod tests {
         assert_eq!(textures(r#"{"properties":[]}"#), None);
         assert_eq!(textures("не json"), None);
     }
-}
 
+    /// Описание Mojang с `signatureRequired` требует подписи, прочие — нет.
+    #[test]
+    fn mojang_skins_require_a_signature() {
+        let with = |json: &str| Skin {
+            value: {
+                // base64 без внешних зависимостей: через тот же разбор, что
+                // у входа Bedrock, проверяем только обратную сторону.
+                const TABLE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+                let bytes = json.as_bytes();
+                let mut out = String::new();
+                for chunk in bytes.chunks(3) {
+                    let n = chunk.iter().enumerate().fold(0u32, |n, (i, b)| n | (*b as u32) << (16 - 8 * i));
+                    for i in 0..=chunk.len() {
+                        out.push(TABLE[(n >> (18 - 6 * i) & 63) as usize] as char);
+                    }
+                }
+                out
+            },
+            signature: String::new(),
+        };
+
+        assert!(with(r#"{"profileName":"A","signatureRequired":true}"#).signature_required());
+        assert!(!with(r#"{"profileName":"A"}"#).signature_required());
+    }
+}

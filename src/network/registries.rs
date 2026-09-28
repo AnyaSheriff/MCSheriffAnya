@@ -229,7 +229,10 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
         "minecraft:banner_pattern" => Compound::new()
             .string("asset_id", &format!("minecraft:{}", name))
             .string("translation_key", &format!("block.minecraft.banner.{}", name)),
-        "minecraft:dimension_type" => dimension_type(),
+        "minecraft:dimension_type" => match name {
+            "the_nether" => nether_type(),
+            _ => dimension_type(),
+        },
         "minecraft:worldgen/biome" => biome(name),
         // У мировых часов нет ни одного поля: игра различает их только по имени.
         "minecraft:world_clock" => Compound::new(),
@@ -466,6 +469,34 @@ fn dimension_type() -> Compound {
         .strings("timelines", &["minecraft:day", "minecraft:moon"])
 }
 
+/// Незер: без неба, с потолком, координаты в восемь раз короче, время
+/// стоит (вики, Dimension type). Высота — та же сетка −64..320, что у
+/// обычного мира: так у всех измерений общий формат чанков, а сам Незер
+/// заполнен от 0 до 127 — это и есть его логическая высота.
+fn nether_type() -> Compound {
+    Compound::new()
+        .boolean("has_skylight", false)
+        .boolean("has_ceiling", true)
+        .boolean("has_ender_dragon_fight", false)
+        .double("coordinate_scale", 8.0)
+        .boolean("has_fixed_time", true)
+        .float("ambient_light", 0.1)
+        .int("min_y", -64)
+        .int("height", 384)
+        .int("logical_height", 128)
+        .int("monster_spawn_light_level", 7)
+        .int("monster_spawn_block_light_limit", 15)
+        .string("infiniburn", "#minecraft:infiniburn_nether")
+        .string("skybox", "none")
+        .string("cardinal_light", "nether")
+        .compound(
+            "attributes",
+            Compound::new()
+                .string("minecraft:visual/fog_color", "#330808")
+                .string("minecraft:visual/ambient_light_color", "#302821"),
+        )
+}
+
 /// Биом: то, что о нём должен знать клиент.
 ///
 /// Температура и влажность — те же числа, что в игре: по ним клиент выбирает
@@ -475,6 +506,10 @@ fn dimension_type() -> Compound {
 /// Списки генерации пустые: мир складывает сервер, а не клиент.
 fn biome(name: &str) -> Compound {
     use crate::world::terrain::Biome;
+
+    if let Some(biome) = Biome::NETHER.iter().find(|biome| biome.name() == name) {
+        return nether_biome(*biome);
+    }
 
     // Осенний лес во всём, кроме цвета, — обычный лес.
     let base = if name == crate::world::terrain::AUTUMN_FOREST { "forest" } else { name };
@@ -541,6 +576,43 @@ fn biome(name: &str) -> Compound {
         .compound("spawn_costs", Compound::new())
 }
 
+/// Биом Незера: жарко и сухо, неба нет — только свой туман и пылинки
+/// в воздухе (споры, пепел). Числа — со страниц биомов на вики (Data
+/// values, Java Edition); цвет воды у всех обычный.
+fn nether_biome(biome: crate::world::terrain::Biome) -> Compound {
+    use crate::world::terrain::Biome;
+
+    let (fog, particle, probability) = match biome {
+        Biome::CrimsonForest => ("#330303", Some("minecraft:crimson_spore"), 0.025),
+        Biome::WarpedForest => ("#1a051a", Some("minecraft:warped_spore"), 0.01428),
+        Biome::SoulSandValley => ("#1b4745", Some("minecraft:ash"), 0.00625),
+        Biome::BasaltDeltas => ("#685f70", Some("minecraft:white_ash"), 0.118_093_334),
+        _ => ("#330808", None, 0.0),
+    };
+
+    let mut attributes = Compound::new().string("minecraft:visual/fog_color", fog);
+
+    if let Some(particle) = particle {
+        attributes = attributes.compounds(
+            "minecraft:visual/ambient_particles",
+            vec![Compound::new()
+                .compound("particle", Compound::new().string("type", particle))
+                .float("probability", probability)],
+        );
+    }
+
+    Compound::new()
+        .boolean("has_precipitation", false)
+        .float("temperature", 2.0)
+        .float("downfall", 0.0)
+        .compound("attributes", attributes)
+        .compound("effects", Compound::new().string("water_color", "#3f76e4"))
+        .empty_list("carvers")
+        .empty_list("features")
+        .compound("spawners", Compound::new())
+        .compound("spawn_costs", Compound::new())
+}
+
 /// Как биом выглядит: небо, туман, вода, трава и листва.
 ///
 /// Числа — из данных биомов 26.1.2 на вики, собраны в
@@ -557,11 +629,6 @@ struct Look {
     foliage: Option<&'static str>,
     dry_foliage: Option<&'static str>,
     grass_modifier: Option<&'static str>,
-}
-
-/// Цвет воды биома (0xRRGGBB) — для клиентов Bedrock.
-pub fn water_color(name: &str) -> u32 {
-    u32::from_str_radix(look(name).water.trim_start_matches('#'), 16).unwrap_or(0x3f76e4)
 }
 
 /// Равнины: обычный вид, от которого отличаются остальные.

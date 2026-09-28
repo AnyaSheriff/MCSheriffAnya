@@ -482,7 +482,11 @@ fn large_icebergs(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
                     continue;
                 }
 
-                if here == AIR || here == blocks.ice || blocks.watery(here) {
+                // В воде — через `put_in_water`: высокая морская трава и
+                // ламинария не остаются обрубками над льдом и под ним.
+                if blocks.watery(here) {
+                    put_in_water(chunk, blocks, local_x, y, local_z, blocks.packed_ice);
+                } else if here == AIR || here == blocks.ice {
                     chunk.put_generated(local_x, y, local_z, blocks.packed_ice, true);
                 }
             }
@@ -677,7 +681,11 @@ fn put_cone(area: &Area, chunk: &mut Chunk, blocks: &Palette, cone: &Cone) {
                     && (!inside(dx, dy + 1, dz) || SIDES.iter().any(|(sx, sz, _)| !inside(dx + sx, dy, dz + sz)));
                 let state = if shell { blocks.snow_block } else { cone.state };
 
-                chunk.put_generated(bx, y, bz, state, true);
+                if blocks.watery(here) {
+                    put_in_water(chunk, blocks, bx, y, bz, state);
+                } else {
+                    chunk.put_generated(bx, y, bz, state, true);
+                }
             }
         }
     }
@@ -718,9 +726,12 @@ fn blue_ice(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
         for _ in 0..size {
             if let Some(here) = block_in(chunk, x, y, z)
                 && y <= SEA
-                && (here == blocks.packed_ice || blocks.watery(here))
             {
-                chunk.put_generated(x, y, z, blocks.blue_ice, true);
+                if blocks.watery(here) {
+                    put_in_water(chunk, blocks, x, y, z, blocks.blue_ice);
+                } else if here == blocks.packed_ice {
+                    chunk.put_generated(x, y, z, blocks.blue_ice, true);
+                }
             }
 
             seed = seed.rotate_left(5) ^ 0x9E37_79B9;

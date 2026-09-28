@@ -20,6 +20,7 @@
 pub mod cave_biomes;
 pub mod flat;
 pub mod light;
+pub mod nether;
 pub mod noise;
 pub mod ocean;
 pub mod region;
@@ -28,12 +29,14 @@ pub mod trees;
 pub mod underground;
 pub mod vegetation;
 
+use std::cell::Cell;
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::fs;
-use std::io;
+use std::fs::{self, File};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
+use std::time::{Duration, Instant};
 use crate::config::server_properties::WorldKind;
 use crate::fluids;
 use crate::journal::{self, Journal};
@@ -110,6 +113,9 @@ pub struct WorldSound {
     pub name: &'static str,
     pub volume: f32,
     pub pitch: f32,
+
+    /// Точное место, если звук не от блока, а от сущности (плеск предмета).
+    pub exact: Option<(f64, f64, f64)>,
 }
 
 /// Событие мира, которое надо донести до клиентов: изменение блока или
@@ -232,6 +238,13 @@ impl Chunk {
 
     /// Чанк сложенного мира: рельеф, биомы и всё, что из них следует.
     fn generated(generator: &Generator, chunk_x: i32, chunk_z: i32) -> Self {
+        // У Незера пол и потолок — он складывается целиком своим путём.
+        if let Generator::Nether(nether) = generator {
+            let mut chunk = nether.chunk(chunk_x, chunk_z);
+            chunk.light_up();
+            return chunk;
+        }
+
         let mut chunk = Self::new();
 
         // Шумы считаются один раз на столбец, а не на каждый блок: иначе на
@@ -328,10 +341,10 @@ impl Chunk {
         // камень и где воздух. Деревья — после руды: им до неё дела нет.
         generator.lay_ores(&mut chunk, chunk_x, chunk_z);
         underground::dig(generator, &mut chunk, chunk_x, chunk_z);
-        generator.grow_trees(&mut chunk, chunk_x, chunk_z);
+        generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         ocean::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
-        cave_biomes::decorate(generator, &mut chunk, chunk_x, chunk_z);
+        cave_biomes::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns, grid.as_ref());
 
         // Свет — когда все блоки на местах.
         chunk.light_up();
@@ -575,6 +588,11 @@ impl Chunk {
     }
 
     /// Читает чанк из байтов файла региона.
+    ///
+    /// Всё прочитанное проверяется: номер состояния должен быть в таблице
+    /// блоков, номер биома — в реестре, а записи секции покрывать её ровно.
+    /// Испорченная запись даёт None, а не панику под замком мира и не чужие
+    /// блоки у клиента.
     fn from_bytes(bytes: &[u8]) -> Option<Self> {
         let version = *bytes.first()?;
         let wide = version == CHUNK_VERSION_WIDE;
@@ -598,19 +616,27 @@ impl Chunk {
 
             for _ in 0..runs {
                 let state = if wide {
-                    pack(reader.i32().ok()?)
+                    Packed::try_from(reader.i32().ok()?).ok()?
                 } else {
                     reader.u16().ok()?
                 };
 
+                if unpack(state) != AIR && crate::blocks::block_at_state(unpack(state)).is_none() {
+                    return None;
+                }
+
                 let length = reader.u16().ok()? as usize;
 
-                for _ in 0..length {
-                    *blocks.get_mut(at)? = state;
-                    at += 1;
-                }
+                blocks.get_mut(at..at + length)?.fill(state);
+                at += length;
+            }
+
+            if at != SECTION_BLOCKS {
+                return None;
             }
         }
+
+        let biomes = terrain::biome_registry_size();
 
         if version == CHUNK_VERSION {
             // Биомы объёмные — записи «номер и сколько подряд». Они обязаны
@@ -621,6 +647,10 @@ impl Chunk {
             for _ in 0..runs {
                 let biome = reader.u16().ok()?;
                 let length = reader.u16().ok()? as usize;
+
+                if biome as usize >= biomes {
+                    return None;
+                }
 
                 chunk.biomes.get_mut(at..at + length)?.fill(biome);
                 at += length;
@@ -641,6 +671,10 @@ impl Chunk {
             let Ok(biome) = reader.u16() else {
                 break;
             };
+
+            if biome as usize >= biomes {
+                return None;
+            }
 
             for layer in 0..BIOME_LAYERS {
                 chunk.biomes[layer * BIOME_LAYER + cell] = biome;
@@ -774,15 +808,16 @@ pub struct World {
     /// ведут себя по-разному при одинаковой постройке.
     scheduled: BinaryHeap<Reverse<Scheduled>>,
 
-    /// Что сейчас ждёт своего такта и под каким номером записи. По этому
-    /// видно, ждёт ли место уже, и отличается свежая запись от устаревшей:
-    /// перезаписанная на более ранний срок старая остаётся в очереди и просто
-    /// пропускается.
+    /// Что сейчас ждёт своего такта: срок, номер записи и приоритет. По
+    /// сроку и номеру видно, ждёт ли место уже, и отличается свежая запись
+    /// от устаревшей: перезаписанная на более ранний срок старая остаётся
+    /// в очереди и просто пропускается. Приоритет лежит здесь же, чтобы при
+    /// записи на диск не искать его перебором очереди.
     ///
     /// Блочные и жидкостные такты ждут порознь: у одного места может быть
     /// и тот и другой, как в игре, — иначе запланированная вода мешала бы
     /// повторителю сработать вовремя.
-    waiting: HashMap<Waiting, (u64, u64)>,
+    waiting: HashMap<Waiting, WaitingTick>,
 
     /// Номер следующей записи в очереди — для порядка среди равных.
     next_order: u64,
@@ -834,6 +869,85 @@ pub struct World {
     /// Когда мир будет храниться по регионам, запись подешевеет, и копить
     /// станет незачем.
     dirty: HashSet<(i32, i32)>,
+
+    /// Сложенные заново чанки, которых ещё нет на диске. Их тоже надо
+    /// записать, как это делает оригинал: иначе после смены генератора
+    /// нетронутая земля сложилась бы по-новому и не сошлась со старой.
+    /// Пишутся понемногу за раз (`FRESH_PER_SAVE`), а до записи из памяти
+    /// не выгружаются.
+    fresh: HashSet<(i32, i32)>,
+
+    /// Сколько раз выгружались чанки — «поколение» выгрузки. Готовый чанк,
+    /// взятый до выгрузки своего места, устарел: его могли за это время
+    /// изменить и записать (см. `accept`).
+    unload_epoch: u64,
+
+    /// Какие чанки в каком поколении выгружены. Старые отметки
+    /// выбрасываются (`UNLOAD_MEMORY`), а чанк, пришедший снова, свою
+    /// отметку снимает.
+    unloaded: HashMap<(i32, i32), u64>,
+
+    /// Точка появления: ищется один раз и хранится в level.dat.
+    spawn: OnceLock<(f64, f64, f64)>,
+
+    /// Когда мир последний раз записывался — для `save_if_due`.
+    last_save: Option<Instant>,
+
+    /// Места, куда жидкость пришла в этом такте, и номер такта. Пустое место
+    /// у них жидкость в тот же такт не берёт (см. `tick::flow`).
+    fresh_fluid: (u64, HashSet<(i32, i32, i32)>),
+
+    /// Проёмы порталов этого мира (нижний угол) — чтобы найти парный, не
+    /// обходя сотни чанков. Живут в `portals.dat`.
+    portals: Vec<(i32, i32, i32)>,
+
+    /// Отпечаток последнего записанного `ticks.dat`: неизменную очередь
+    /// (такты в выгруженных чанках лежат неделями) не переписывать.
+    ticks_written: Cell<u64>,
+
+    /// Запись в чанк, которого нет в памяти, заводит его пустым. Только для
+    /// проверок, которые строят мир блок за блоком без земли; у настоящего
+    /// мира запись в незагруженный чанк отбрасывается (см.
+    /// `set_block_silently`).
+    create_missing: bool,
+
+    /// Замок папки мира (`session.lock`): пока он взят, второй сервер ту же
+    /// папку не откроет. Отпускается вместе с файлом, когда мир закрывается.
+    _session: Option<File>,
+}
+
+/// Такт, ждущий своего срока: срок, номер записи, приоритет.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct WaitingTick {
+    due: u64,
+    order: u64,
+    priority: i8,
+}
+
+/// Сколько сложенных заново чанков записывать за одно сохранение. Сохранение
+/// идёт раз в секунду под замком мира, а при входе игрока новых чанков —
+/// тысячи: все разом встали бы такту поперёк.
+const FRESH_PER_SAVE: usize = 256;
+
+/// Не чаще скольки раз писать мир из `save_if_due`.
+const SAVE_PAUSE: Duration = Duration::from_secs(1);
+
+/// Сколько поколений выгрузки помнить, какой чанк когда выгружен. Выгрузка
+/// идёт раз в несколько секунд, так что это минуты — чанк столько не
+/// складывается. Готовый чанк старше этого считается устаревшим на всякий
+/// случай.
+const UNLOAD_MEMORY: u64 = 64;
+
+/// Как далеко от начала координат могут лежать чанки: граница мира у
+/// оригинала — тридцать миллионов блоков. Дальше чанки не читаются и не
+/// складываются: в счёте координат блоков начались бы переполнения.
+const CHUNK_LIMIT: i32 = 30_000_000 / CHUNK_SIZE + 1;
+
+/// Лежит ли чанк в пределах мира.
+fn chunk_in_limits(chunk_x: i32, chunk_z: i32) -> bool {
+    let inside = -CHUNK_LIMIT..=CHUNK_LIMIT;
+
+    inside.contains(&chunk_x) && inside.contains(&chunk_z)
 }
 
 impl World {
@@ -861,6 +975,16 @@ impl World {
             redstone: redstone::Memory::new(),
             destroyed: Vec::new(),
             dirty: HashSet::new(),
+            fresh: HashSet::new(),
+            unload_epoch: 0,
+            unloaded: HashMap::new(),
+            spawn: OnceLock::new(),
+            last_save: None,
+            ticks_written: Cell::new(0),
+            fresh_fluid: (0, HashSet::new()),
+            portals: Vec::new(),
+            create_missing: true,
+            _session: None,
         }
     }
 
@@ -875,6 +999,10 @@ impl World {
         let path = directory.as_ref().to_path_buf();
 
         fs::create_dir_all(path.join(REGIONS))?;
+
+        // Папку мира держит только один сервер: двое писали бы одни и те же
+        // регионы вперемешку и испортили бы их.
+        let session = lock_session(&path)?;
 
         // Мир прежнего образца лежал одним файлом. Читать его нечем, и
         // устройство мира с тех пор поменялось, поэтому просто откладываем
@@ -898,7 +1026,8 @@ impl World {
 
         // Сколько мир уже прожил, который в нём час и что ждёт своего
         // такта — из файла мира. Нет файла — мир новый, время утреннее.
-        let level = read_level(&path.join(LEVEL));
+        let mut level = load_level(&path)?;
+        read_ticks(&path.join(TICKS), &mut level);
         let (tick, time_offset) = (level.age, level.time_offset);
 
         // Семя: у сложенного мира своё, записанное в level.dat, и менять его
@@ -964,12 +1093,29 @@ impl World {
                 WorldKind::Flat => Generator::Flat,
                 WorldKind::Normal => Generator::Normal(Terrain::new(seed, Style::Vanilla)),
                 WorldKind::SuperSmooth => Generator::Normal(Terrain::new(seed, Style::Smooth)),
+                WorldKind::Nether => Generator::Nether(nether::Nether::new(seed)),
             }),
             block_events: Vec::new(),
             redstone: redstone::Memory::new(),
             destroyed: Vec::new(),
             dirty: HashSet::new(),
+            fresh: HashSet::new(),
+            unload_epoch: 0,
+            unloaded: HashMap::new(),
+            spawn: OnceLock::new(),
+            last_save: None,
+            ticks_written: Cell::new(0),
+            fresh_fluid: (0, HashSet::new()),
+            portals: Vec::new(),
+            create_missing: false,
+            _session: Some(session),
         };
+
+        if let Some(spawn) = level.spawn {
+            let _ = world.spawn.set(spawn);
+        }
+
+        world.portals = read_portals(&world.path.join(PORTALS));
 
         if !level.waiting.is_empty() {
             log_debug!("Мир: ждут своего такта мест — {}", level.waiting.len());
@@ -999,6 +1145,13 @@ impl World {
                 .restore_moving(pos, redstone::Moving::restored(pos, extending, facing, cargo));
         }
 
+        // Новый мир сразу получает свой level.dat: иначе, оборвись работа
+        // после записи первых чанков, но до первого level.dat, мир бы
+        // больше не открылся (регионы есть, семени нет).
+        if level.new {
+            world.save_level();
+        }
+
         Ok(world)
     }
 
@@ -1006,24 +1159,82 @@ impl World {
     ///
     /// Пишутся только те чанки, которых коснулись, и каждый — в свой регион.
     /// Поэтому запись стоит столько же и в маленьком мире, и в большом.
+    /// Чанки одного региона пишутся одной пачкой: файл открывается и
+    /// сбрасывается на диск один раз на регион, а не на каждый чанк.
+    ///
+    /// Сложенных заново, но не тронутых чанков за раз пишется не больше
+    /// `FRESH_PER_SAVE`; остальные дождутся следующего раза. Всё сразу
+    /// пишет `save_all` — для остановки сервера.
     pub fn save_if_needed(&mut self) {
-        if self.path.as_os_str().is_empty() {
-            self.dirty.clear();
+        self.save(false);
+    }
+
+    /// Записывает всё, что ещё не на диске, включая все сложенные заново
+    /// чанки, — при остановке сервера.
+    pub fn save_all(&mut self) {
+        self.save(true);
+    }
+
+    /// Записывает мир, если с прошлой записи прошла секунда; иначе ничего не
+    /// делает — изменения и так уйдут с ближайшей общей записью в такте.
+    ///
+    /// Для частых мест вроде постановки блока: там запись на каждое действие
+    /// стоила бы сброса на диск под замком мира.
+    #[allow(dead_code)] // для постановки блоков и команд (placing.rs, play.rs)
+    pub fn save_if_due(&mut self) {
+        if self.last_save.is_some_and(|at| at.elapsed() < SAVE_PAUSE) {
             return;
         }
 
+        self.save(false);
+    }
+
+    fn save(&mut self, everything: bool) {
+        if self.path.as_os_str().is_empty() {
+            self.dirty.clear();
+            self.fresh.clear();
+            return;
+        }
+
+        self.last_save = Some(Instant::now());
+
         let directory = self.path.join(REGIONS);
 
-        for (chunk_x, chunk_z) in std::mem::take(&mut self.dirty) {
+        // Что писать: всё изменённое и часть сложенного заново.
+        let limit = if everything { usize::MAX } else { FRESH_PER_SAVE };
+        let untouched: Vec<(i32, i32)> =
+            self.fresh.iter().filter(|key| !self.dirty.contains(key)).take(limit).copied().collect();
+        let mut wanted: Vec<(i32, i32)> = self.dirty.drain().collect();
+
+        wanted.extend(untouched);
+
+        // Чанки по регионам: координаты чанка и его байты.
+        type Batch = Vec<(i32, i32, Vec<u8>)>;
+
+        let mut by_region: HashMap<(i32, i32), Batch> = HashMap::new();
+
+        for (chunk_x, chunk_z) in wanted {
+            self.fresh.remove(&(chunk_x, chunk_z));
+
             let Some(chunk) = self.chunks.get(&(chunk_x, chunk_z)) else {
                 continue;
             };
 
-            if let Err(e) = region::write(&directory, chunk_x, chunk_z, &chunk.to_bytes()) {
-                log_error!("Не удалось сохранить чанк {} {}: {}", chunk_x, chunk_z, e);
+            by_region
+                .entry(region::region_of(chunk_x, chunk_z))
+                .or_default()
+                .push((chunk_x, chunk_z, chunk.to_bytes()));
+        }
+
+        for ((region_x, region_z), chunks) in by_region {
+            let batch: Vec<(i32, i32, &[u8])> = chunks.iter().map(|(x, z, bytes)| (*x, *z, bytes.as_slice())).collect();
+
+            if let Err(e) = region::write_many(&directory, &batch) {
+                log_error!("Не удалось сохранить регион {} {} ({} чанков): {}", region_x, region_z, batch.len(), e);
 
                 // Не записалось — пусть попробует записаться в следующий раз.
-                self.dirty.insert((chunk_x, chunk_z));
+                // До тех пор чанки из памяти не выгружаются (`unload_far`).
+                self.dirty.extend(chunks.iter().map(|(x, z, _)| (*x, *z)));
             }
         }
 
@@ -1049,6 +1260,15 @@ impl World {
         };
 
         chunk.block(x, y, z)
+    }
+
+    /// Состояние блока, если его чанк в памяти. None — чанк не загружен, и
+    /// что там стоит, неизвестно: отвечать «воздух» тут было бы неправдой.
+    #[allow(dead_code)] // для механик, которым важно отличить воздух от незагруженного
+    pub fn get_block_loaded(&self, x: i32, y: i32, z: i32) -> Option<i32> {
+        let chunk = self.chunks.get(&chunk_key(x, z))?;
+
+        Some(if in_bounds(y) { chunk.block(x, y, z) } else { AIR })
     }
 
     /// Ставит блок и запоминает изменение для рассылки.
@@ -1077,15 +1297,34 @@ impl World {
 
     /// Ставит блок, не запоминая изменение: для начальной расстановки, когда
     /// рассылать ещё некому.
+    ///
+    /// В чанк, которого нет в памяти, ничего не пишется (возвращается false):
+    /// заведённый на его месте пустой чанк при записи затёр бы настоящий на
+    /// диске, а прочитать настоящий потом было бы уже нельзя — место занято.
     pub fn set_block_silently(&mut self, x: i32, y: i32, z: i32, state: i32) -> bool {
         if !in_bounds(y) {
             return false;
         }
 
-        self.chunks
-            .entry(chunk_key(x, z))
-            .or_insert_with(Chunk::new)
-            .set(x, y, z, state)
+        // Номер состояния, не влезающий в хранение, — ошибка того, кто его
+        // прислал; падать из-за неё под замком мира нельзя.
+        if Packed::try_from(state).is_err() {
+            log_warn!("Мир: состояние {} в {} {} {} не поставлено — такого номера нет", state, x, y, z);
+            return false;
+        }
+
+        let key = chunk_key(x, z);
+
+        let chunk = match self.chunks.entry(key) {
+            std::collections::hash_map::Entry::Occupied(chunk) => chunk.into_mut(),
+            std::collections::hash_map::Entry::Vacant(place) if self.create_missing => place.insert(Chunk::new()),
+            std::collections::hash_map::Entry::Vacant(_) => {
+                log_debug!("Мир: блок {} {} {} не поставлен — чанк {} {} не загружен", x, y, z, key.0, key.1);
+                return false;
+            }
+        };
+
+        chunk.set(x, y, z, state)
     }
 
 
@@ -1199,6 +1438,7 @@ impl World {
         ChunkSource {
             path: self.path.clone(),
             generator: Arc::clone(&self.generator),
+            epoch: self.unload_epoch,
         }
     }
 
@@ -1209,14 +1449,59 @@ impl World {
 
     /// Кладёт готовый чанк в мир. Если его успели положить, пока он
     /// складывался, — оставляем тот, что уже есть.
+    ///
+    /// Готовый чанк мог и устареть: пока он читался в стороне, это место
+    /// успели загрузить, изменить, записать и снова выгрузить — тогда на
+    /// диске уже новее. Такой чанк не кладётся, а читается заново, здесь же.
+    /// Так же — если чанк в стороне прочитать не удалось.
     pub fn accept(&mut self, chunk_x: i32, chunk_z: i32, ready: ReadyChunk) {
-        if self.chunks.contains_key(&(chunk_x, chunk_z)) {
+        let key = (chunk_x, chunk_z);
+
+        if self.chunks.contains_key(&key) {
             return;
         }
 
-        self.chunks.insert((chunk_x, chunk_z), ready.chunk);
-        self.after_chunk_arrived(chunk_x, chunk_z, ready.from_disk);
-        self.wake_fluids(&ready.wake);
+        let stale = ready.epoch + UNLOAD_MEMORY < self.unload_epoch
+            || self.unloaded.get(&key).is_some_and(|at| *at > ready.epoch);
+
+        match ready.taken {
+            Taken::Loaded { chunk, from_disk, wake } if !stale => {
+                self.insert_chunk(chunk_x, chunk_z, chunk, from_disk, &wake);
+            }
+            Taken::Loaded { .. } => {
+                log_debug!("Мир: чанк {} {} выгружался, пока читался, — читаю заново", chunk_x, chunk_z);
+                self.ensure(chunk_x, chunk_z);
+            }
+            Taken::Unavailable => {
+                self.ensure(chunk_x, chunk_z);
+            }
+        }
+    }
+
+    /// Кладёт чанк в мир и делает всё, что следует за его появлением.
+    fn insert_chunk(
+        &mut self,
+        chunk_x: i32,
+        chunk_z: i32,
+        chunk: Chunk,
+        from_disk: bool,
+        wake: &[((i32, i32, i32), u64)],
+    ) {
+        let key = (chunk_x, chunk_z);
+
+        self.chunks.insert(key, chunk);
+        self.unloaded.remove(&key);
+
+        // Сложенный заново чанк записывается, даже если его не тронут.
+        if !from_disk {
+            self.fresh.insert(key);
+        }
+
+        // Такты, дожидавшиеся этого чанка, возвращаются в очередь, а
+        // прочитанное с диска чинится: сервер могли остановить посреди хода
+        // поршня. Жидкостям, которым есть куда течь, — свой такт.
+        self.after_chunk_arrived(chunk_x, chunk_z, from_disk);
+        self.wake_fluids(wake);
         self.wake_border(chunk_x, chunk_z);
     }
 
@@ -1303,28 +1588,22 @@ impl World {
     ///
     /// Чанки появляются по мере надобности — когда игрок до них дошёл, а не
     /// все сразу: мир бесконечен, и заранее его не наготовишь.
+    ///
+    /// Возвращает false, если чанк уже был — или если его не удалось ни
+    /// прочитать, ни сложить: диск не ответил, чанк за пределами мира.
+    /// Тогда в памяти его нет, и запись в это место отбрасывается.
     pub fn ensure(&mut self, chunk_x: i32, chunk_z: i32) -> bool {
         if self.chunks.contains_key(&(chunk_x, chunk_z)) {
             return false;
         }
 
-        let (chunk, from_disk) = match self.read_chunk(chunk_x, chunk_z) {
-            Some(chunk) => (chunk, true),
-            None => (Chunk::generated(&self.generator, chunk_x, chunk_z), false),
-        };
-
-        let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
-
-        self.chunks.insert((chunk_x, chunk_z), chunk);
-
-        // Такты, дожидавшиеся этого чанка, возвращаются в очередь, а
-        // прочитанное с диска чинится: сервер могли остановить посреди хода
-        // поршня. Жидкостям, которым есть куда течь, — свой такт.
-        self.after_chunk_arrived(chunk_x, chunk_z, from_disk);
-        self.wake_fluids(&wake);
-        self.wake_border(chunk_x, chunk_z);
-
-        true
+        match take_chunk(&self.path, &self.generator, chunk_x, chunk_z) {
+            Taken::Loaded { chunk, from_disk, wake } => {
+                self.insert_chunk(chunk_x, chunk_z, chunk, from_disk, &wake);
+                true
+            }
+            Taken::Unavailable => false,
+        }
     }
 
     /// Выгружает из памяти чанки, до которых никому нет дела.
@@ -1342,17 +1621,36 @@ impl World {
 
         let before = self.chunks.len();
 
-        self.chunks.retain(|(x, z), _| keep(*x, *z));
+        // Ещё не записанное не выгружается: запись не удалась или до
+        // сложенного заново чанка не дошла очередь. Выгрузить его — значит
+        // потерять, а сложенный заново потом читался бы с диска старым.
+        let (dirty, fresh) = (&self.dirty, &self.fresh);
+        let mut gone = Vec::new();
+
+        self.chunks.retain(|key, _| {
+            let stays = keep(key.0, key.1) || dirty.contains(key) || fresh.contains(key);
+
+            if !stays {
+                gone.push(*key);
+            }
+
+            stays
+        });
+
+        // Отметка о выгрузке: готовый чанк, взятый раньше неё, устарел.
+        if !gone.is_empty() {
+            self.unload_epoch += 1;
+
+            let epoch = self.unload_epoch;
+
+            self.unloaded.extend(gone.into_iter().map(|key| (key, epoch)));
+            self.unloaded.retain(|_, at| *at + UNLOAD_MEMORY >= epoch);
+        }
 
         // Ждать пересчёта в выгруженных чанках больше некому.
         self.redstone.forget_outside(|x, z| self.chunks.contains_key(&chunk_key(x, z)));
 
         before - self.chunks.len()
-    }
-
-    /// Читает чанк с диска. None — его там нет или он не читается.
-    fn read_chunk(&self, chunk_x: i32, chunk_z: i32) -> Option<Chunk> {
-        read_chunk_at(&self.path, chunk_x, chunk_z)
     }
 
     /// События мира, начиная с записи `from` — то, что осталось разослать.
@@ -1361,6 +1659,15 @@ impl World {
     /// захваченным, пока идёт отправка, нельзя.
     pub fn events_since(&mut self, from: usize, reader: journal::Reader) -> (Vec<WorldEvent>, usize) {
         (self.events.since(from, reader), self.events.count())
+    }
+
+    /// То же, что `events_since`, и заодно — отстал ли читатель: часть
+    /// событий до него уже не дойдёт (журнал выбросил их, не дождавшись).
+    /// Отставшему клиенту надо заново прислать чанки вокруг него целиком.
+    pub fn events_since_checked(&mut self, from: usize, reader: journal::Reader) -> (Vec<WorldEvent>, usize, bool) {
+        let (events, lagged) = self.events.since_checked(from, reader);
+
+        (events, self.events.count(), lagged)
     }
 
     /// Только изменения блоков из журнала — для проверок.
@@ -1418,7 +1725,20 @@ impl World {
 
     /// Сообщает всем клиентам о звуке в этом месте.
     pub fn note_sound(&mut self, x: i32, y: i32, z: i32, name: &'static str, volume: f32, pitch: f32) {
-        self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch }));
+        self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch, exact: None }));
+    }
+
+    /// Звук сущности в точном месте — плеск предмета, вошедшего в воду.
+    pub fn note_sound_at(&mut self, at: (f64, f64, f64), name: &'static str, volume: f32, pitch: f32) {
+        self.events.push(WorldEvent::Sound(WorldSound {
+            x: at.0.floor() as i32,
+            y: at.1.floor() as i32,
+            z: at.2.floor() as i32,
+            name,
+            volume,
+            pitch,
+            exact: Some(at),
+        }));
     }
 
     /// Случайное число от 0 до 1 — для высоты звуков и прочего, где в игре
@@ -1482,8 +1802,8 @@ impl World {
     pub fn schedule(&mut self, x: i32, y: i32, z: i32, delay: u64) {
         let due = self.tick + delay.max(1);
 
-        if let Some((waiting, _)) = self.waiting.get(&((x, y, z), TickKind::Fluid))
-            && *waiting <= due
+        if let Some(waiting) = self.waiting.get(&((x, y, z), TickKind::Fluid))
+            && waiting.due <= due
         {
             return;
         }
@@ -1521,7 +1841,7 @@ impl World {
         let order = self.next_order;
         self.next_order += 1;
 
-        self.waiting.insert((place, kind), (due, order));
+        self.waiting.insert((place, kind), WaitingTick { due, order, priority });
         self.scheduled.push(Reverse(Scheduled {
             due,
             priority,
@@ -1535,24 +1855,24 @@ impl World {
     ///
     /// Задержка зависит от того, лава ли тут замешана: она течёт заметно
     /// медленнее воды.
+    ///
+    /// Пересчитываются только места, у которых в них самих или рядом есть
+    /// жидкость: правило растекания (`fluids::update`) смотрит лишь на
+    /// само место и его соседей, и вдали от воды такт ничего бы не сделал —
+    /// только занял бы очередь. (Кроме рыхлого снега: такт без воды рядом
+    /// превращал его в воздух, а этого быть не должно.)
     fn schedule_around(&mut self, x: i32, y: i32, z: i32, state: i32) {
         let delay = match fluids::fluid_at(state) {
-            Some((kind, _)) => kind.delay(),
+            Some((kind, _)) => kind.delay_in(self.is_nether()),
             None => fluids::WATER_DELAY,
         };
 
-        let places = [
-            (x, y, z),
-            (x, y + 1, z),
-            (x, y - 1, z),
-            (x - 1, y, z),
-            (x + 1, y, z),
-            (x, y, z - 1),
-            (x, y, z + 1),
-        ];
+        for (dx, dy, dz) in AROUND {
+            let (x, y, z) = (x + dx, y + dy, z + dz);
 
-        for (x, y, z) in places {
-            self.schedule(x, y, z, delay);
+            if AROUND.iter().any(|(ax, ay, az)| wet(self.get_block(x + ax, y + ay, z + az))) {
+                self.schedule(x, y, z, delay);
+            }
         }
     }
 
@@ -1592,7 +1912,9 @@ impl World {
             self.scheduled.pop();
 
             // Устаревшая запись: место перезаписали на другой срок.
-            if self.waiting.get(&(next.place, next.kind)) != Some(&(next.due, next.order)) {
+            if self.waiting.get(&(next.place, next.kind)).map(|waiting| (waiting.due, waiting.order))
+                != Some((next.due, next.order))
+            {
                 continue;
             }
 
@@ -1677,28 +1999,42 @@ impl World {
             self.kind.name()
         );
 
-        for ((place, kind), (due, _)) in &self.waiting {
+        if let Some((x, y, z)) = self.spawn.get() {
+            text.push_str(&format!("spawn = {} {} {}\n", x, y, z));
+        }
+
+        // Такты и ходы поршней — в своём файле: их бывают десятки тысяч
+        // (вода в выгруженных чанках ждёт, пока чанк снова загрузят), и
+        // переписывать их вместе с возрастом мира раз в секунду незачем.
+        self.save_ticks();
+
+        if let Err(error) = write_level(&self.path, &text) {
+            log_error!("Не удалось записать {}: {}", LEVEL, error);
+        }
+    }
+
+    /// Записывает `ticks.dat`: что ждёт своего такта и начатые ходы поршней.
+    /// Срок пишется по возрасту мира, а не «сколько ждать», — тогда
+    /// неизменная очередь даёт тот же текст, и файл не переписывается.
+    fn save_ticks(&self) {
+        let mut text = String::new();
+
+        // Порядок постоянный, иначе один и тот же набор давал бы разный
+        // текст и файл переписывался бы зря.
+        let mut waiting: Vec<_> = self.waiting.iter().collect();
+        waiting.sort_by_key(|((place, kind), _)| (*place, matches!(kind, TickKind::Fluid)));
+
+        for ((place, kind), waiting) in waiting {
             let kind = match kind {
                 TickKind::Block => "block",
                 TickKind::Fluid => "fluid",
             };
 
-            // Записываем не срок, а сколько ждать: возраст мира при чтении
-            // тот же, но так запись понятнее и не зависит от него.
-            let delay = due.saturating_sub(self.tick).max(1);
-
             // Приоритет тоже записываем: от него зависит, кто сработает
             // раньше при одинаковом сроке, а на этом держатся схемы.
-            let priority = self
-                .scheduled
-                .iter()
-                .find(|Reverse(entry)| entry.place == *place && entry.due == *due)
-                .map(|Reverse(entry)| entry.priority)
-                .unwrap_or(0);
-
             text.push_str(&format!(
-                "tick = {} {} {} {} {} {}\n",
-                place.0, place.1, place.2, kind, delay, priority
+                "due = {} {} {} {} {} {}\n",
+                place.0, place.1, place.2, kind, waiting.due, waiting.priority
             ));
         }
 
@@ -1722,8 +2058,21 @@ impl World {
             }
         }
 
-        if let Err(error) = fs::write(self.path.join(LEVEL), text) {
-            log_error!("Не удалось записать {}: {}", LEVEL, error);
+        let print = {
+            use std::hash::{Hash, Hasher};
+
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            text.hash(&mut hasher);
+            hasher.finish()
+        };
+
+        if print == self.ticks_written.get() {
+            return;
+        }
+
+        match write_atomically(&self.path, TICKS, &text) {
+            Ok(()) => self.ticks_written.set(print),
+            Err(error) => log_error!("Не удалось записать {}: {}", TICKS, error),
         }
     }
 
@@ -1743,6 +2092,67 @@ impl World {
     /// Который сейчас такт мира.
     pub fn tick(&self) -> u64 {
         self.tick
+    }
+
+    /// Семя мира.
+    pub fn seed(&self) -> i64 {
+        self.seed
+    }
+
+    /// Незер ли это: там свои правила для жидкостей.
+    pub fn is_nether(&self) -> bool {
+        self.kind == WorldKind::Nether
+    }
+
+    /// Проёмы порталов, которые мир помнит.
+    pub fn portals(&self) -> &[(i32, i32, i32)] {
+        &self.portals
+    }
+
+    /// Запоминает новый проём портала и сразу пишет список на диск: их мало,
+    /// а потерять портал значило бы построить при возвращении второй.
+    pub fn note_portal(&mut self, corner: (i32, i32, i32)) {
+        if !self.portals.contains(&corner) {
+            self.portals.push(corner);
+            self.save_portals();
+        }
+    }
+
+    /// Забывает проём, которого больше нет.
+    pub fn forget_portal(&mut self, corner: (i32, i32, i32)) {
+        let before = self.portals.len();
+        self.portals.retain(|known| *known != corner);
+
+        if self.portals.len() != before {
+            self.save_portals();
+        }
+    }
+
+    fn save_portals(&self) {
+        // Мир в памяти (тесты) на диск не пишет.
+        if self.path.as_os_str().is_empty() {
+            return;
+        }
+
+        let text: String = self.portals.iter().map(|(x, y, z)| format!("portal = {} {} {}\n", x, y, z)).collect();
+
+        if let Err(error) = write_atomically(&self.path, PORTALS, &text) {
+            log_error!("Не удалось записать {}: {}", PORTALS, error);
+        }
+    }
+
+    /// Запоминает, что в это место жидкость пришла в этом такте.
+    pub fn note_fresh_fluid(&mut self, x: i32, y: i32, z: i32) {
+        if self.fresh_fluid.0 != self.tick {
+            self.fresh_fluid = (self.tick, HashSet::new());
+        }
+
+        self.fresh_fluid.1.insert((x, y, z));
+    }
+
+    /// Пришла ли жидкость в это место в этом такте.
+    pub fn is_fresh_fluid(&self, x: i32, y: i32, z: i32) -> bool {
+        self.fresh_fluid.0 == self.tick && self.fresh_fluid.1.contains(&(x, y, z))
     }
 
     /// Изменившиеся блоки, которые редстоун ещё не разобрал, и что там
@@ -1805,35 +2215,115 @@ impl World {
     }
 }
 
-/// Читает чанк с диска по пути мира. None — его там нет или он не читается.
+/// Что стало с чанком, который взялись приготовить.
+enum Taken {
+    /// Чанк готов: прочитан с диска или сложен заново. Рядом — места у воды
+    /// и лавы, которые надо сразу пустить в такт.
+    Loaded {
+        chunk: Chunk,
+        from_disk: bool,
+        wake: Vec<((i32, i32, i32), u64)>,
+    },
+
+    /// Чанка нет и складывать его нельзя: диск не ответил (запись на диске
+    /// может быть цела — затирать её новым чанком нельзя), или испорченную
+    /// запись не удалось отложить, или чанк за пределами мира.
+    Unavailable,
+}
+
+/// Читает чанк с диска, а если его там нет — складывает заново.
 ///
 /// Свободная функция, а не метод: читать чанк нужно и тогда, когда мира под
 /// рукой нет — например, пока он занят тактом.
-fn read_chunk_at(path: &Path, chunk_x: i32, chunk_z: i32) -> Option<Chunk> {
+///
+/// «Нет на диске» и «не читается» — разные вещи. Нет — складываем. Запись
+/// испорчена — сперва откладываем её байты в сторону (`set_aside`), и только
+/// потом складываем чанк заново: он ляжет на её место. Диск не ответил —
+/// не делаем ничего, чанк попробуют прочитать снова.
+fn take_chunk(path: &Path, generator: &Generator, chunk_x: i32, chunk_z: i32) -> Taken {
+    if !chunk_in_limits(chunk_x, chunk_z) {
+        log_debug!("Мир: чанк {} {} за пределами мира", chunk_x, chunk_z);
+        return Taken::Unavailable;
+    }
+
+    let generated = || {
+        let chunk = Chunk::generated(generator, chunk_x, chunk_z);
+        let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
+
+        Taken::Loaded { chunk, from_disk: false, wake }
+    };
+
     if path.as_os_str().is_empty() {
-        return None;
+        return generated();
     }
 
     let directory = path.join(REGIONS);
 
-    match region::read(&directory, chunk_x, chunk_z) {
-        Ok(Some(bytes)) => match Chunk::from_bytes(&bytes) {
+    let (raw, why) = match region::read_stored(&directory, chunk_x, chunk_z) {
+        Ok(region::Stored::Missing) => return generated(),
+        Ok(region::Stored::Found(bytes)) => match Chunk::from_bytes(&bytes) {
             // Свет на диске не хранится: он считается заново по блокам.
             Some(mut chunk) => {
                 chunk.light_up();
-                Some(chunk)
+
+                let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
+
+                return Taken::Loaded { chunk, from_disk: true, wake };
             }
-            None => {
-                log_warn!("Чанк {} {} не читается, складываю заново", chunk_x, chunk_z);
-                None
-            }
+            None => (bytes, "содержимое чанка не разбирается"),
         },
-        Ok(None) => None,
+        Ok(region::Stored::Damaged { raw, why }) => (raw, why),
         Err(e) => {
-            log_error!("Не удалось прочитать чанк {} {}: {}", chunk_x, chunk_z, e);
-            None
+            log_error!("Не удалось прочитать чанк {} {}: {} — попробую позже", chunk_x, chunk_z, e);
+            return Taken::Unavailable;
+        }
+    };
+
+    match set_aside(&directory, chunk_x, chunk_z, &raw) {
+        Ok(copy) => {
+            log_error!(
+                "Чанк {} {} испорчен ({}): его байты отложены в {}, складываю чанк заново",
+                chunk_x,
+                chunk_z,
+                why,
+                copy.display()
+            );
+
+            generated()
+        }
+        Err(e) => {
+            log_error!(
+                "Чанк {} {} испорчен ({}), и отложить его не удалось: {} — чанк не загружен, запись на диске не тронута",
+                chunk_x,
+                chunk_z,
+                why,
+                e
+            );
+
+            Taken::Unavailable
         }
     }
+}
+
+/// Откладывает испорченную запись чанка в `region/corrupt/`, чтобы её можно
+/// было разобрать руками. Возвращает, куда отложено.
+fn set_aside(directory: &Path, chunk_x: i32, chunk_z: i32, raw: &[u8]) -> io::Result<PathBuf> {
+    let corrupt = directory.join("corrupt");
+
+    fs::create_dir_all(&corrupt)?;
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs());
+    let copy = corrupt.join(format!("c.{}.{}.{}.bin", chunk_x, chunk_z, now));
+
+    let mut file = File::create(&copy)?;
+
+    file.write_all(raw)?;
+    file.sync_all()?;
+    region::sync_directory(&corrupt);
+
+    Ok(copy)
 }
 
 /// Сколько блоков над землёй может занять растительность: кактус — самый
@@ -1842,11 +2332,11 @@ const PLANT_ROOM: i32 = 4;
 
 /// Готовый чанк, который осталось положить в мир.
 pub struct ReadyChunk {
-    chunk: Chunk,
-    from_disk: bool,
-    /// Места рядом с водой и лавой, которые надо сразу пустить в такт:
-    /// найдены заранее, вне захвата мира.
-    wake: Vec<((i32, i32, i32), u64)>,
+    /// Сам чанк — или то, что его не удалось приготовить.
+    taken: Taken,
+
+    /// Поколение выгрузки, в котором чанк взялись готовить (см. `accept`).
+    epoch: u64,
 }
 
 /// Откуда берутся ещё не готовые чанки: папка мира и правила складывания.
@@ -1856,18 +2346,18 @@ pub struct ReadyChunk {
 pub struct ChunkSource {
     path: PathBuf,
     generator: Arc<Generator>,
+
+    /// Поколение выгрузки на момент, когда источник взят.
+    epoch: u64,
 }
 
 impl ChunkSource {
     /// Читает чанк с диска, а если его там нет — складывает заново.
     pub fn take(&self, chunk_x: i32, chunk_z: i32) -> ReadyChunk {
-        let (chunk, from_disk) = match read_chunk_at(&self.path, chunk_x, chunk_z) {
-            Some(chunk) => (chunk, true),
-            None => (Chunk::generated(&self.generator, chunk_x, chunk_z), false),
-        };
-        let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
-
-        ReadyChunk { chunk, from_disk, wake }
+        ReadyChunk {
+            taken: take_chunk(&self.path, &self.generator, chunk_x, chunk_z),
+            epoch: self.epoch,
+        }
     }
 }
 
@@ -1883,6 +2373,9 @@ enum Generator {
     /// Ровный мир — настройка `level-type=minecraft:flat` у оригинала.
     /// Земля одинаковой высоты по всей площади.
     Flat,
+
+    /// Незер: пол и потолок, море лавы.
+    Nether(nether::Nether),
 }
 
 impl World {
@@ -1891,7 +2384,14 @@ impl World {
     /// В ровном мире это начало координат. В обычном там может оказаться
     /// море, поэтому от начала координат расходимся кругами и ищем первое
     /// место на суше — как делает игра, выбирая точку появления.
+    ///
+    /// Ищется один раз: дальше берётся запомненная (она же пишется в
+    /// level.dat), а не обходятся заново тысячи столбцов под замком мира.
     pub fn spawn_position(&self) -> (f64, f64, f64) {
+        *self.spawn.get_or_init(|| self.find_spawn())
+    }
+
+    fn find_spawn(&self) -> (f64, f64, f64) {
         /// Насколько далеко от начала координат искать сушу.
         const SEARCH: i32 = 3_000;
 
@@ -1945,7 +2445,7 @@ impl Generator {
     fn column_at(&self, x: i32, z: i32) -> Column {
         match self {
             Generator::Normal(terrain) => terrain.column_at(x, z),
-            Generator::Flat => Column::flat(flat::GROUND),
+            Generator::Flat | Generator::Nether(_) => Column::flat(flat::GROUND),
         }
     }
 
@@ -1970,7 +2470,7 @@ impl Generator {
     fn column_in(&self, x: i32, z: i32, grid: Option<&terrain::ReliefGrid>) -> Column {
         match self {
             Generator::Normal(terrain) => terrain.column_in(x, z, grid),
-            Generator::Flat => Column::flat(flat::GROUND),
+            Generator::Flat | Generator::Nether(_) => Column::flat(flat::GROUND),
         }
     }
 
@@ -1985,7 +2485,7 @@ impl Generator {
     ) -> bool {
         match self {
             Generator::Normal(terrain) => terrain.solid_in(grid, column, x, y, z),
-            Generator::Flat => y <= column.height,
+            Generator::Flat | Generator::Nether(_) => y <= column.height,
         }
     }
 
@@ -1995,7 +2495,7 @@ impl Generator {
             Generator::Normal(terrain) => {
                 Some(terrain.cave_grid(x, z, x + CHUNK_SIZE - 1, z + CHUNK_SIZE - 1, y_to))
             }
-            Generator::Flat => None,
+            Generator::Flat | Generator::Nether(_) => None,
         }
     }
 
@@ -2102,14 +2602,15 @@ impl Generator {
     /// у нас. Поэтому обходим полосу вокруг чанка и рисуем то, что попало
     /// внутрь. Соседний чанк посчитает то же самое и нарисует свою часть —
     /// договариваться им не о чем.
-    fn grow_trees(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
+    fn grow_trees(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, columns: &[Column]) {
         const REACH: i32 = terrain::TREE_REACH;
 
         let Generator::Normal(terrain) = self else {
             return;
         };
 
-        let ground = TreeGround::new();
+        let ground = TreeGround { seed: terrain.seed(), ..TreeGround::new() };
+        let near = TreeColumns::new(self, chunk_x, chunk_z, columns);
 
         for local_x in -REACH..(CHUNK_SIZE + REACH) {
             for local_z in -REACH..(CHUNK_SIZE + REACH) {
@@ -2123,22 +2624,40 @@ impl Generator {
                     continue;
                 }
 
-                let column = terrain.column_at(x, z);
+                let column = near.column(x, z);
 
                 let Some(tree) = terrain.tree_at(&column, x, z) else {
                     continue;
                 };
 
+                // Земля годится под каждым столбцом ствола: толстый стоит
+                // на четырёх, и земля под ними не дальше `TRUNK_DOWN` от
+                // высоты ствола: ниже бревно до неё не дотянется
+                // (`draw_tree`), выше — ствол ушёл бы в склон.
+                let spots: &[(i32, i32)] = if tree.wide() { &[(0, 0), (1, 0), (0, 1), (1, 1)] } else { &[(0, 0)] };
+                let height = |x: i32, z: i32| near.column(x, z).height;
+                let fits = spots.iter().all(|&(dx, dz)| {
+                    let spot = if (dx, dz) == (0, 0) { column } else { near.column(x + dx, z + dz) };
+
+                    (column.height - spot.height).abs() <= TRUNK_DOWN && terrain.tree_ground_by(&spot, x + dx, z + dz, height)
+                });
+
+                if !fits {
+                    continue;
+                }
+
                 draw_tree(chunk, &tree, local_x, local_z, column.height, x, z, &ground);
             }
         }
+
+        snow_on_crowns(terrain, chunk, chunk_x, chunk_z, columns);
     }
 
     /// Какой биом у этого столбца.
     fn biome_of(&self, column: &Column) -> terrain::Biome {
         match self {
             Generator::Normal(_) => column.biome,
-            Generator::Flat => terrain::Biome::Plains,
+            Generator::Flat | Generator::Nether(_) => terrain::Biome::Plains,
         }
     }
 
@@ -2148,8 +2667,129 @@ impl Generator {
     fn top_of(&self, column: &Column) -> i32 {
         match self {
             Generator::Normal(_) => column.height.max(terrain::SEA) + PLANT_ROOM,
-            Generator::Flat => flat::GROUND,
+            Generator::Flat | Generator::Nether(_) => flat::GROUND,
         }
+    }
+}
+
+/// Снег в холодных местах лежит на самом верхнем блоке столбца — у дерева
+/// на кроне, а не на земле под ней: так у оригинала (замер мира: в заснеженной
+/// тайге на 97% крон снег, под кроной трава без снега). Поэтому после деревьев
+/// снег со земли под кроной снимается, трава перестаёт быть заснеженной,
+/// а на верхний лист или бревно ложится слой снега. Решается по своему
+/// столбцу — одинаково при любом порядке сложения чанков.
+fn snow_on_crowns(terrain: &Terrain, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, columns: &[Column]) {
+    const SIDE: i32 = CHUNK_SIZE + 2;
+
+    let (Some(snow), Some(grass), Some(plain_grass)) = (
+        crate::blocks::states_of("snow"),
+        crate::blocks::states_of("grass_block"),
+        crate::blocks::state_by_name("grass_block"),
+    ) else {
+        return;
+    };
+    let layer = terrain::block_named("snow");
+    let top = chunk.highest().min(MIN_Y + WORLD_HEIGHT - 1);
+
+    for local_x in 0..CHUNK_SIZE {
+        for local_z in 0..CHUNK_SIZE {
+            let Some(column) = columns.get(((local_x + 1) * SIDE + local_z + 1) as usize) else {
+                continue;
+            };
+            let ground = column.height;
+
+            // Верхний непустой блок столбца: выше слоя снега на земле — значит,
+            // над землёй дерево.
+            let Some(y) = (ground + 2..=top).rev().find(|&y| chunk.block(local_x, y, local_z) != AIR) else {
+                continue;
+            };
+            let (x, z) = (chunk_x * CHUNK_SIZE + local_x, chunk_z * CHUNK_SIZE + local_z);
+            let here = chunk.block(local_x, y, local_z);
+            let name = crate::blocks::block_at_state(here).unwrap_or("");
+
+            if (name.ends_with("_leaves") || name.ends_with("_log"))
+                && y < MIN_Y + WORLD_HEIGHT - 1
+                && terrain.snow_falls(column, x, y + 1, z)
+            {
+                chunk.put_generated(local_x, y + 1, local_z, layer, true);
+            }
+
+            if (MIN_Y..MIN_Y + WORLD_HEIGHT - 1).contains(&ground)
+                && (snow.0..=snow.1).contains(&chunk.block(local_x, ground + 1, local_z))
+            {
+                chunk.put_generated(local_x, ground + 1, local_z, AIR, true);
+
+                if (grass.0..=grass.1).contains(&chunk.block(local_x, ground, local_z)) {
+                    chunk.put_generated(local_x, ground, local_z, plain_grass, true);
+                }
+            }
+        }
+    }
+}
+
+/// На сколько блоков бревно низа ствола тянется вниз до земли, если под ним
+/// пусто: у толстого ствола на склоне соседние столбцы ниже.
+const TRUNK_DOWN: i32 = 3;
+
+/// Столбцы вокруг чанка на время посадки деревьев. Свои (с каймой) чанк уже
+/// посчитал; прочие считаются по одной сетке плотности на всю полосу вокруг
+/// чанка и запоминаются: соседи ствола нужны проверке земли, и считать
+/// каждый столбец отдельно в разы дороже. Ответ тот же, что у `column_at`.
+struct TreeColumns<'a> {
+    generator: &'a Generator,
+    chunk_x: i32,
+    chunk_z: i32,
+    /// Столбцы чанка с каймой в блок, как их считает `Chunk::generated`.
+    columns: &'a [Column],
+    grid: std::cell::OnceCell<Option<terrain::ReliefGrid>>,
+    more: std::cell::RefCell<HashMap<(i32, i32), Column>>,
+}
+
+impl<'a> TreeColumns<'a> {
+    fn new(generator: &'a Generator, chunk_x: i32, chunk_z: i32, columns: &'a [Column]) -> TreeColumns<'a> {
+        TreeColumns {
+            generator,
+            chunk_x,
+            chunk_z,
+            columns,
+            grid: std::cell::OnceCell::new(),
+            more: std::cell::RefCell::new(HashMap::new()),
+        }
+    }
+
+    fn column(&self, x: i32, z: i32) -> Column {
+        const SIDE: i32 = CHUNK_SIZE + 2;
+        // Полоса, где могут стоять стволы, и ещё блок — для соседей.
+        const EDGE: i32 = terrain::TREE_REACH + 2;
+
+        let (local_x, local_z) = (x - self.chunk_x * CHUNK_SIZE, z - self.chunk_z * CHUNK_SIZE);
+
+        if (-1..=CHUNK_SIZE).contains(&local_x)
+            && (-1..=CHUNK_SIZE).contains(&local_z)
+            && let Some(column) = self.columns.get(((local_x + 1) * SIDE + local_z + 1) as usize)
+        {
+            return *column;
+        }
+
+        if let Some(column) = self.more.borrow().get(&(x, z)) {
+            return *column;
+        }
+
+        let inside = (-EDGE..CHUNK_SIZE + EDGE).contains(&local_x) && (-EDGE..CHUNK_SIZE + EDGE).contains(&local_z);
+        let column = if inside {
+            let grid = self.grid.get_or_init(|| {
+                let (x0, z0) = (self.chunk_x * CHUNK_SIZE - EDGE, self.chunk_z * CHUNK_SIZE - EDGE);
+
+                self.generator.relief_grid(x0, z0, x0 + CHUNK_SIZE + 2 * EDGE - 1, z0 + CHUNK_SIZE + 2 * EDGE - 1)
+            });
+
+            self.generator.column_in(x, z, grid.as_ref())
+        } else {
+            self.generator.column_at(x, z)
+        };
+
+        self.more.borrow_mut().insert((x, z), column);
+        column
     }
 }
 
@@ -2162,12 +2802,20 @@ struct TreeGround {
     /// Трава: под нижним бревном она становится простой землёй, прочая
     /// земля — подзол, ил — остаётся как есть.
     grass: Option<(i32, i32)>,
+    /// Слой снега: земля под ним видна деревьям, как под воздухом.
+    snow: Option<(i32, i32)>,
+    dirt: i32,
+    /// Семя мира: форма дерева своя в каждом мире.
+    seed: i64,
 }
 
 impl TreeGround {
     fn new() -> TreeGround {
         TreeGround {
+            seed: 0,
             water: terrain::block_named("water"),
+            snow: crate::blocks::states_of("snow"),
+            dirt: terrain::block_named("dirt"),
             soil: [
                 "grass_block",
                 "dirt",
@@ -2182,6 +2830,68 @@ impl TreeGround {
             grass: crate::blocks::states_of("grass_block"),
         }
     }
+
+    fn is_soil(&self, state: i32) -> bool {
+        self.soil.iter().any(|(low, high)| (*low..=*high).contains(&state))
+    }
+
+    fn is_snow(&self, state: i32) -> bool {
+        self.snow.is_some_and(|(low, high)| (low..=high).contains(&state))
+    }
+
+    /// Может ли бревно встать на место этого блока. Бревно не режет
+    /// толщу — камень, руду, песок, землю: ветвь, упёршаяся в склон,
+    /// обрывается, а не прорастает сквозь гору. Встаёт в
+    /// воздух, воду, листву, траву и снег и на место другого бревна; низ
+    /// ствола (`dy` ≤ 1) — и в землю: у толстого ствола на неровном месте
+    /// он уходит в неё.
+    fn holds_log(&self, state: i32, dy: i32) -> bool {
+        if state == AIR || state == self.water || !crate::blocks::conductive(state) {
+            return true;
+        }
+
+        if dy <= 1 && self.is_soil(state) {
+            return true;
+        }
+
+        crate::blocks::block_at_state(state)
+            .is_some_and(|name| name.ends_with("_log") || name.ends_with("_wood") || name.contains("mushroom"))
+    }
+}
+
+/// Расстояние каждого листа дерева до ближайшего его бревна — обход по
+/// шести соседям, не дальше семи.
+fn leaf_distances(blocks: &[(i32, i32, i32, terrain::Part)]) -> std::collections::HashMap<(i32, i32, i32), i32> {
+    use std::collections::{HashMap, HashSet, VecDeque};
+
+    let leaves: HashSet<(i32, i32, i32)> = blocks
+        .iter()
+        .filter(|(_, _, _, part)| *part == terrain::Part::Leaves)
+        .map(|(x, y, z, _)| (*x, *y, *z))
+        .collect();
+    let mut distance: HashMap<(i32, i32, i32), i32> = HashMap::new();
+    let mut queue: VecDeque<((i32, i32, i32), i32)> = blocks
+        .iter()
+        .filter(|(_, _, _, part)| matches!(part, terrain::Part::Log(_)))
+        .map(|(x, y, z, _)| ((*x, *y, *z), 0))
+        .collect();
+
+    while let Some(((x, y, z), d)) = queue.pop_front() {
+        if d >= 7 {
+            continue;
+        }
+
+        for (dx, dy, dz) in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)] {
+            let next = (x + dx, y + dy, z + dz);
+
+            if leaves.contains(&next) && !distance.contains_key(&next) {
+                distance.insert(next, d + 1);
+                queue.push_back((next, d + 1));
+            }
+        }
+    }
+
+    distance
 }
 
 /// Рисует в чанке ту часть дерева, что попала в него. Ствол стоит в (x, z)
@@ -2197,8 +2907,10 @@ fn draw_tree(
     z: i32,
     ground: &TreeGround,
 ) {
-    let TreeGround { water, soil, grass } = ground;
-    let (water, grass) = (*water, *grass);
+    let (water, grass) = (ground.water, ground.grass);
+    let inside = |bx: i32, by: i32, bz: i32| {
+        (0..CHUNK_SIZE).contains(&bx) && (0..CHUNK_SIZE).contains(&bz) && (MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&by)
+    };
 
     let by_text = |text: &str| {
         crate::blocks::state_from_text(text)
@@ -2226,10 +2938,13 @@ fn draw_tree(
         log(terrain::Axis::Y),
         log(terrain::Axis::Z),
     ];
-    let blocks = tree.blocks(x, z);
+    let blocks = tree.blocks_in(ground.seed, x, z);
 
     // Земля под деревом — первой: пока над ней не выросли ни
-    // корни, ни ствол, её верх виден сразу.
+    // корни, ни ствол, её верх виден сразу. Где нашлась земля, запоминаем:
+    // ковёр мха ляжет прямо на неё.
+    let mut found: Vec<((i32, i32), i32)> = Vec::new();
+
     for (dx, dy, dz, part) in &blocks {
         if let terrain::Part::Ground(text) = part {
             let (bx, bz) = (local_x + dx, local_z + dz);
@@ -2242,20 +2957,23 @@ fn draw_tree(
             let lowest = (near - 3).max(MIN_Y);
             let highest = (near + 3).min(MIN_Y + WORLD_HEIGHT - 1);
 
-            // Сверху вниз до первого блока, что не воздух и не
-            // вода; меняем его, только если это земля.
-            let Some(y) = (lowest..=highest)
-                .rev()
-                .find(|&y| ![AIR, water].contains(&chunk.block(bx, y, bz)))
-            else {
+            // Сверху вниз до первого блока, что не воздух, не вода и не
+            // слой снега; меняем его, только если это земля.
+            let Some(y) = (lowest..=highest).rev().find(|&y| {
+                let here = chunk.block(bx, y, bz);
+
+                here != AIR && here != water && !ground.is_snow(here)
+            }) else {
                 continue;
             };
 
             let here = chunk.block(bx, y, bz);
 
-            if !soil.iter().any(|(low, high)| (*low..=*high).contains(&here)) {
+            if !ground.is_soil(here) {
                 continue;
             }
+
+            found.push(((bx, bz), y));
 
             if *text == "dirt"
                 && !grass.is_some_and(|(low, high)| (low..=high).contains(&here))
@@ -2269,51 +2987,135 @@ fn draw_tree(
         }
     }
 
+    // У огромного гриба грань, упёртая в соседний блок того же гриба, —
+    // поры, свободная — шляпка (так и в оригинале). Каждый блок получает
+    // своё состояние: скрытые грани у Java не видны, а Bedrock по ним
+    // выбирает вариант блока — иначе у крайних блоков стенки не та грань.
+    let mushroom = tree.leaves.contains("mushroom_block");
+    let taken: std::collections::HashSet<(i32, i32, i32)> = if mushroom {
+        blocks.iter().filter(|(_, _, _, part)| !matches!(part, terrain::Part::Ground(_))).map(|(x, y, z, _)| (*x, *y, *z)).collect()
+    } else {
+        std::collections::HashSet::new()
+    };
+    let cap = |text: &str, (x, y, z): (i32, i32, i32)| mushroom_cap(text, |dx, dy, dz| taken.contains(&(x + dx, y + dy, z + dz)));
+
     // Листва не затирает стволы и ветви, поэтому ставится раньше,
-    // а брёвна — поверх неё.
+    // а брёвна — поверх неё. В воду лист встаёт затопленным: нижняя
+    // листва мангра уходит под воду болота.
+    //
+    // У каждого листа — расстояние до ближайшего бревна своего дерева, как
+    // у оригинала (1 — рядом с бревном, 7 — дальше шести). Без этого вся
+    // листва считалась бы оторванной и осыпалась бы, как только появится
+    // опадание. Считается по блокам самого дерева, поэтому чанки на стыке
+    // решают одинаково.
+    let distances = if mushroom { std::collections::HashMap::new() } else { leaf_distances(&blocks) };
+    let leaf_state = |distance: i32, wet: bool| {
+        crate::blocks::state_from_text(&format!("{}[distance={},waterlogged={}]", tree.leaves, distance, wet))
+    };
+
     for (dx, dy, dz, part) in &blocks {
         if *part == terrain::Part::Leaves {
-            chunk.put_generated(
-                local_x + dx,
-                height + dy,
-                local_z + dz,
-                leaves,
-                false,
-            );
+            let (bx, by, bz) = (local_x + dx, height + dy, local_z + dz);
+
+            if !inside(bx, by, bz) {
+                continue;
+            }
+
+            let here = chunk.block(bx, by, bz);
+            let distance = distances.get(&(*dx, *dy, *dz)).copied().unwrap_or(7);
+            let state = if mushroom {
+                Some(cap(tree.leaves, (*dx, *dy, *dz)).unwrap_or(leaves))
+            } else {
+                leaf_state(distance, here == water).or(Some(leaves))
+            };
+
+            if let Some(state) = state {
+                chunk.put_generated(bx, by, bz, state, here == water);
+            }
         }
     }
 
     for (dx, dy, dz, part) in &blocks {
-        if let terrain::Part::Log(axis) = part {
-            let state = logs[*axis as usize];
-
-            chunk.put_generated(
-                local_x + dx,
-                height + dy,
-                local_z + dz,
-                state,
-                true,
-            );
-        }
-    }
-
-    // Лианы, какао, корни — последними и только на свободное
-    // место: в воздух, а что бывает затоплено — и в воду.
-    for (dx, dy, dz, part) in &blocks {
-        let terrain::Part::Block(text) = part else {
+        let terrain::Part::Log(axis) = part else {
             continue;
         };
         let (bx, by, bz) = (local_x + dx, height + dy, local_z + dz);
 
-        if !(0..CHUNK_SIZE).contains(&bx)
-            || !(0..CHUNK_SIZE).contains(&bz)
-            || !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&by)
-        {
+        if !inside(bx, by, bz) || !ground.holds_log(chunk.block(bx, by, bz), *dy) {
+            continue;
+        }
+
+        let state = logs[*axis as usize];
+
+        chunk.put_generated(bx, by, bz, state, true);
+
+        // Низ ствола на склоне: соседние столбцы толстого ствола ниже, и
+        // под бревном пусто. Бревно тянется вниз до земли — сквозь воздух,
+        // воду и растения, не дальше `TRUNK_DOWN`. Смотрим только свой
+        // столбец, поэтому оба чанка на стыке решают одинаково.
+        if *dy <= 1 && *axis == terrain::Axis::Y {
+            for below in (by - TRUNK_DOWN..by).rev() {
+                if below < MIN_Y {
+                    break;
+                }
+
+                let here = chunk.block(bx, below, bz);
+
+                // Дошли до земли: трава под бревном становится землёй, как
+                // под любым стволом.
+                if here != AIR && here != water && crate::blocks::conductive(here) {
+                    if grass.is_some_and(|(low, high)| (low..=high).contains(&here)) {
+                        chunk.put_generated(bx, below, bz, ground.dirt, true);
+                    }
+
+                    break;
+                }
+
+                chunk.put_generated(bx, below, bz, state, true);
+            }
+        }
+    }
+
+    // Лианы, какао, корни — последними и только на свободное
+    // место: в воздух, а что бывает затоплено — и в воду. Висячая плеть
+    // (лиана, бледный мох) записана подряд сверху вниз; не встал её блок —
+    // не ставится и всё, что ниже: висеть ему не на чем.
+    let moss = crate::blocks::state_from_text("pale_hanging_moss[tip=false]");
+    let moss_tip = crate::blocks::state_from_text("pale_hanging_moss[tip=true]");
+    let mut cut: Option<(i32, i32, i32)> = None;
+
+    for (dx, dy, dz, part) in &blocks {
+        let after_cut = cut.take();
+        let terrain::Part::Block(text) = part else {
+            continue;
+        };
+        let hanging = text.starts_with("vine") || text.starts_with("pale_hanging_moss");
+
+        if hanging && after_cut == Some((*dx, *dy + 1, *dz)) {
+            cut = Some((*dx, *dy, *dz));
+            continue;
+        }
+
+        // Ковёр мха — прямо на найденную под деревом землю, а не на
+        // высоту ствола: на склоне он иначе висел бы.
+        let dy = if text.starts_with("pale_moss_carpet") {
+            match found.iter().find(|((fx, fz), _)| (*fx, *fz) == (local_x + dx, local_z + dz)) {
+                Some((_, y)) => y + 1 - height,
+                None => continue,
+            }
+        } else {
+            *dy
+        };
+        let (bx, by, bz) = (local_x + dx, height + dy, local_z + dz);
+
+        if !inside(bx, by, bz) {
             continue;
         }
 
         let here = chunk.block(bx, by, bz);
-        let state = if here == AIR {
+        let state = if here == AIR && mushroom && text.contains("mushroom_block") {
+            cap(text, (*dx, dy, *dz))
+        } else if here == AIR {
             crate::blocks::state_from_text(text)
         } else if here == water {
             let wet = match text.strip_suffix(']') {
@@ -2328,8 +3130,37 @@ fn draw_tree(
 
         if let Some(state) = state {
             chunk.put_generated(bx, by, bz, state, true);
+        } else if hanging {
+            cut = Some((*dx, dy, *dz));
+
+            // Мох, оборванный на середине, кончается кончиком.
+            if moss.is_some()
+                && by + 1 < MIN_Y + WORLD_HEIGHT
+                && Some(chunk.block(bx, by + 1, bz)) == moss
+                && let Some(tip) = moss_tip
+            {
+                chunk.put_generated(bx, by + 1, bz, tip, true);
+            }
         }
     }
+}
+
+/// Блок шляпки огромного гриба: грани из записи (что не указано — шляпка),
+/// а где вплотную другой блок того же гриба — поры.
+fn mushroom_cap(text: &str, neighbour: impl Fn(i32, i32, i32) -> bool) -> Option<i32> {
+    const FACES: [(&str, i32, i32, i32); 6] =
+        [("up", 0, 1, 0), ("down", 0, -1, 0), ("north", 0, 0, -1), ("south", 0, 0, 1), ("east", 1, 0, 0), ("west", -1, 0, 0)];
+
+    let (name, given) = text.split_once('[').map_or((text, ""), |(name, rest)| (name, rest.trim_end_matches(']')));
+    let faces: Vec<String> = FACES
+        .iter()
+        .map(|(face, dx, dy, dz)| {
+            let open = !given.split(',').any(|pair| pair == format!("{}=false", face)) && !neighbour(*dx, *dy, *dz);
+            format!("{}={}", face, open)
+        })
+        .collect();
+
+    crate::blocks::state_from_text(&format!("{}[{}]", name, faces.join(",")))
 }
 
 /// Случайное семя для нового мира: берём его из часов.
@@ -2343,6 +3174,28 @@ fn random_seed() -> i64 {
 /// Имя файла с общими сведениями о мире — как у оригинального сервера.
 /// Внутри — наш собственный простой вид, не формат игры.
 const LEVEL: &str = "level.dat";
+
+/// Файл тактов мира: что ждёт своего срока и начатые ходы поршней.
+const TICKS: &str = "ticks.dat";
+
+/// Файл проёмов порталов мира.
+const PORTALS: &str = "portals.dat";
+
+/// Читает список проёмов порталов. Нет файла — порталов нет.
+fn read_portals(path: &Path) -> Vec<(i32, i32, i32)> {
+    let Ok(text) = fs::read_to_string(path) else {
+        return Vec::new();
+    };
+
+    text.lines()
+        .filter_map(|line| line.split_once('='))
+        .filter(|(name, _)| name.trim() == "portal")
+        .filter_map(|(_, value)| {
+            let mut parts = value.split_whitespace().map(|part| part.parse::<i32>().ok());
+            Some((parts.next()??, parts.next()??, parts.next()??))
+        })
+        .collect()
+}
 
 /// Место из файла мира, ждущее своего такта: где, какой такт, через сколько
 /// и с каким приоритетом.
@@ -2371,23 +3224,221 @@ struct Level {
 
     /// Что едет: у какого поршня, куда встанет и что это за блок.
     cargo: Vec<SavedCargo>,
+
+    /// Найденная когда-то точка появления.
+    spawn: Option<(f64, f64, f64)>,
+
+    /// Файла мира не было вовсе: мир новый.
+    new: bool,
 }
 
-/// Читает файл мира. Нет файла или он испорчен — начинаем с нуля: терять
-/// из-за этого мир незачем.
-fn read_level(path: &Path) -> Level {
-    let mut level = Level {
-        age: 0,
-        time_offset: 0,
-        seed: None,
-        kind: None,
-        waiting: Vec::new(),
-        moving: Vec::new(),
-        cargo: Vec::new(),
+/// Прежняя копия файла мира — как у оригинала: перед каждой записью
+/// нынешний level.dat становится ею.
+const LEVEL_OLD: &str = "level.dat_old";
+
+/// Куда сперва пишется новый файл мира: целиком и со сбросом на диск, и
+/// только потом он встаёт на место level.dat.
+const LEVEL_NEW: &str = "level.dat_new";
+
+/// Куда откладывается испорченный level.dat, если мир прочитан по копии.
+const LEVEL_CORRUPT: &str = "level.dat_corrupt";
+
+/// Записывает файл в папке мира целиком или никак: новое пишется рядом,
+/// сбрасывается на диск и встаёт на место прежнего.
+fn write_atomically(directory: &Path, name: &str, text: &str) -> io::Result<()> {
+    let target = directory.join(name);
+    let fresh = directory.join(format!("{}_new", name));
+
+    {
+        let mut file = File::create(&fresh)?;
+
+        file.write_all(text.as_bytes())?;
+        file.sync_all()?;
+    }
+
+    fs::rename(&fresh, &target)?;
+    region::sync_directory(directory);
+
+    Ok(())
+}
+
+/// Записывает файл мира так, чтобы при сбое посреди записи на диске
+/// остался целый файл — новый или прежний.
+///
+/// Новое содержимое пишется рядом и сбрасывается на диск; нынешний level.dat
+/// переименовывается в level.dat_old, новый — в level.dat, и сбрасывается
+/// сам каталог. Прервись это между переименованиями — останется
+/// level.dat_old, и мир прочитается по нему (`load_level`).
+fn write_level(directory: &Path, text: &str) -> io::Result<()> {
+    let target = directory.join(LEVEL);
+    let fresh = directory.join(LEVEL_NEW);
+
+    {
+        let mut file = File::create(&fresh)?;
+
+        file.write_all(text.as_bytes())?;
+        file.sync_all()?;
+    }
+
+    if target.exists() {
+        fs::rename(&target, directory.join(LEVEL_OLD))?;
+    }
+
+    fs::rename(&fresh, &target)?;
+    region::sync_directory(directory);
+
+    Ok(())
+}
+
+/// Читает файл мира, а если он испорчен или пропал — его прежнюю копию.
+///
+/// Если не читается ни то ни другое, а регионы в папке мира есть — это
+/// ошибка, и сервер не должен стартовать: иначе мир получил бы новое
+/// случайное семя, и новые чанки не сошлись бы со старыми.
+fn load_level(directory: &Path) -> io::Result<Level> {
+    let main = read_level(&directory.join(LEVEL));
+
+    if let Ok(Some(level)) = main {
+        return Ok(level);
+    }
+
+    let old = read_level(&directory.join(LEVEL_OLD));
+
+    if let Ok(Some(level)) = old {
+        match &main {
+            Err(why) => {
+                // Испорченный файл откладываем: следующая запись иначе
+                // сделала бы его копией и затёрла бы целую.
+                let aside = directory.join(LEVEL_CORRUPT);
+                let _ = fs::rename(directory.join(LEVEL), &aside);
+
+                log_warn!("{} не читается ({}), мир прочитан по {}; испорченный отложен в {}", LEVEL, why, LEVEL_OLD, aside.display());
+            }
+            _ => log_warn!("{} нет, мир прочитан по {}", LEVEL, LEVEL_OLD),
+        }
+
+        return Ok(level);
+    }
+
+    let broken = match (&main, &old) {
+        (Err(why), _) | (_, Err(why)) => Some(why.clone()),
+        _ => None,
     };
 
-    let Ok(text) = fs::read_to_string(path) else {
-        return level;
+    if has_regions(&directory.join(REGIONS)) {
+        return Err(io::Error::other(format!(
+            "в {} есть регионы, но файл мира не читается ({}): ни {}, ни {}. \
+             Сервер не запущен, чтобы не выдумать миру новое семя. Восстановите {} \
+             из копии или запишите в него строку «seed = <семя мира>»",
+            directory.display(),
+            broken.as_deref().unwrap_or("его нет"),
+            LEVEL,
+            LEVEL_OLD,
+            LEVEL
+        )));
+    }
+
+    if let Some(why) = broken {
+        log_warn!("{} не читается ({}), но регионов нет — мир начинается заново", LEVEL, why);
+    }
+
+    Ok(Level::fresh())
+}
+
+/// Лежат ли в папке регионов записанные чанки.
+fn has_regions(regions: &Path) -> bool {
+    let Ok(entries) = fs::read_dir(regions) else {
+        return false;
+    };
+
+    entries.flatten().any(|entry| {
+        entry.path().extension().is_some_and(|extension| extension == "rcw")
+            && entry.metadata().is_ok_and(|meta| meta.len() > 0)
+    })
+}
+
+/// Берёт замок папки мира: файл `session.lock`, запертый `flock`. Замок
+/// держится, пока открыт файл, и отпускается сам — даже если сервер упал.
+#[cfg(unix)]
+fn lock_session(directory: &Path) -> io::Result<File> {
+    use std::os::unix::io::AsRawFd;
+
+    let path = directory.join("session.lock");
+    let mut file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(&path)?;
+
+    // SAFETY: дескриптор принадлежит открытому здесь файлу и жив, пока
+    // жив `file`.
+    let locked = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
+
+    if locked != 0 {
+        let error = io::Error::last_os_error();
+
+        if error.kind() == io::ErrorKind::WouldBlock {
+            let holder = fs::read_to_string(&path).unwrap_or_default();
+
+            return Err(io::Error::other(format!(
+                "папка мира {} уже занята другим сервером (session.lock{}). Два сервера на одной папке испортили бы мир",
+                directory.display(),
+                match holder.trim() {
+                    "" => String::new(),
+                    pid => format!(", процесс {}", pid),
+                }
+            )));
+        }
+
+        return Err(error);
+    }
+
+    // Кто держит папку — для того, кто увидит отказ.
+    file.set_len(0)?;
+    file.write_all(std::process::id().to_string().as_bytes())?;
+
+    Ok(file)
+}
+
+#[cfg(not(unix))]
+fn lock_session(directory: &Path) -> io::Result<File> {
+    fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(directory.join("session.lock"))
+}
+
+impl Level {
+    /// Сведения нового мира: ему ещё ничего не досталось.
+    fn fresh() -> Level {
+        Level {
+            age: 0,
+            time_offset: 0,
+            seed: None,
+            kind: None,
+            waiting: Vec::new(),
+            moving: Vec::new(),
+            cargo: Vec::new(),
+            spawn: None,
+            new: true,
+        }
+    }
+}
+
+/// Читает файл мира. `Ok(None)` — файла нет. Ошибка — он есть, но не
+/// читается или в нём нет семени (так выглядит оборванная запись).
+fn read_level(path: &Path) -> Result<Option<Level>, String> {
+    let mut level = Level::fresh();
+
+    level.new = false;
+
+    let text = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e.to_string()),
     };
 
     for line in text.lines() {
@@ -2402,6 +3453,8 @@ fn read_level(path: &Path) -> Level {
             "time-offset" => level.time_offset = value.parse().unwrap_or(0),
             "seed" => level.seed = value.parse().ok(),
             "type" => level.kind = Some(WorldKind::from_setting(value)),
+            "spawn" => level.spawn = read_spawn(value),
+            // Прежний вид: такты лежали в level.dat со сроком «сколько ждать».
             "tick" => {
                 if let Some(waiting) = read_waiting(value) {
                     level.waiting.push(waiting);
@@ -2421,7 +3474,58 @@ fn read_level(path: &Path) -> Level {
         }
     }
 
-    level
+    if level.seed.is_none() {
+        return Err("в нём нет семени мира".to_string());
+    }
+
+    Ok(Some(level))
+}
+
+/// Дочитывает такты и ходы поршней из `ticks.dat`. Срок там — по возрасту
+/// мира, в `Level` он кладётся как «сколько ждать» от записанного возраста.
+fn read_ticks(path: &Path, level: &mut Level) {
+    let text = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return,
+        Err(e) => {
+            log_error!("Не удалось прочитать {}: {} — ждущие такты потеряны", path.display(), e);
+            return;
+        }
+    };
+
+    for line in text.lines() {
+        let Some((name, value)) = line.split_once('=') else {
+            continue;
+        };
+
+        let value = value.trim();
+
+        match name.trim() {
+            "due" => {
+                if let Some((place, kind, due, priority)) = read_waiting(value) {
+                    level.waiting.push((place, kind, due.saturating_sub(level.age).max(1), priority));
+                }
+            }
+            "moving" => {
+                if let Some(moving) = read_moving(value) {
+                    level.moving.push(moving);
+                }
+            }
+            "cargo" => {
+                if let Some(cargo) = read_cargo(value) {
+                    level.cargo.push(cargo);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Разбирает строку «x y z» точки появления.
+fn read_spawn(value: &str) -> Option<(f64, f64, f64)> {
+    let mut parts = value.split_whitespace().map(|part| part.parse::<f64>().ok().filter(|v| v.is_finite()));
+
+    Some((parts.next()??, parts.next()??, parts.next()??))
 }
 
 /// Разбирает строку «x y z выдвигается сторона».
@@ -2469,6 +3573,20 @@ fn read_waiting(value: &str) -> Option<SavedTick> {
     Some(((x, y, z), kind, delay, priority))
 }
 
+/// Само место и шесть его соседей — в том порядке, в каком их всегда
+/// пересчитывал `schedule_around`.
+const AROUND: [(i32, i32, i32); 7] = [(0, 0, 0), (0, 1, 0), (0, -1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1)];
+
+/// Есть ли в блоке жидкость: вода, лава или залитый водой блок.
+fn wet(state: i32) -> bool {
+    if state == AIR {
+        return false;
+    }
+
+    fluids::fluid_at(state).is_some()
+        || crate::blocks::orientation_of(state).and_then(|rule| rule.value(state, "waterlogged")) == Some("true")
+}
+
 /// Ключ чанка по мировым координатам блока.
 fn chunk_key(x: i32, z: i32) -> (i32, i32) {
     (x.div_euclid(CHUNK_SIZE), z.div_euclid(CHUNK_SIZE))
@@ -2513,6 +3631,54 @@ impl<'a> Reader<'a> {
 
     fn i32(&mut self) -> io::Result<i32> {
         Ok(i32::from_be_bytes(self.take::<4>()?))
+    }
+}
+
+#[cfg(test)]
+mod mushroom_tests {
+    use super::mushroom_cap;
+
+    /// Край стенки красного гриба: сосед только с юга и снизу пусто — поры
+    /// там, где задано, и там, где сосед.
+    #[test]
+    fn mushroom_faces_follow_neighbours() {
+        let state = mushroom_cap("red_mushroom_block[west=false,down=false]", |dx, dy, dz| (dx, dy, dz) == (0, 0, 1));
+        let expected = crate::blocks::state_from_text(
+            "red_mushroom_block[up=true,down=false,north=true,south=false,east=true,west=false]",
+        );
+        assert_eq!(state, expected);
+    }
+
+    /// Столбцы, которыми деревья решают, где им расти, — те же, что считает
+    /// `column_at`: иначе соседние чанки решали бы про одно дерево по-разному
+    /// и на стыке оставались бы обрубки.
+    #[test]
+    fn tree_columns_match_column_at() {
+        use super::{Column, Generator, TreeColumns, CHUNK_SIZE};
+        use crate::world::terrain::{self, Terrain};
+
+        let generator = Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
+        let (chunk_x, chunk_z) = (-3, 5);
+        let (from_x, from_z) = (chunk_x * CHUNK_SIZE - 1, chunk_z * CHUNK_SIZE - 1);
+        let grid = generator.relief_grid(from_x, from_z, from_x + CHUNK_SIZE + 1, from_z + CHUNK_SIZE + 1);
+        let mut columns: Vec<Column> = Vec::new();
+
+        for x in from_x..from_x + CHUNK_SIZE + 2 {
+            for z in from_z..from_z + CHUNK_SIZE + 2 {
+                columns.push(generator.column_in(x, z, grid.as_ref()));
+            }
+        }
+
+        let near = TreeColumns::new(&generator, chunk_x, chunk_z, &columns);
+        let reach = terrain::TREE_REACH + 3;
+
+        for x in chunk_x * CHUNK_SIZE - reach..(chunk_x + 1) * CHUNK_SIZE + reach {
+            for z in chunk_z * CHUNK_SIZE - reach..(chunk_z + 1) * CHUNK_SIZE + reach {
+                let (ours, alone) = (near.column(x, z), generator.column_at(x, z));
+
+                assert_eq!((ours.height, ours.biome), (alone.height, alone.biome), "столбец ({}, {})", x, z);
+            }
+        }
     }
 }
 
@@ -2898,6 +4064,296 @@ mod tests {
 }
 
 #[cfg(test)]
+mod safety_tests {
+    use super::*;
+
+    /// Своя папка для проверки — в каталоге временных файлов.
+    fn directory(name: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!("mcsheriffanya-safety-{}-{}", std::process::id(), name));
+        let _ = fs::remove_dir_all(&path);
+        path
+    }
+
+    /// Запись в незагруженный чанк не заводит его пустым: иначе пустой чанк
+    /// затёр бы настоящий на диске.
+    #[test]
+    fn writing_into_an_unloaded_chunk_does_not_create_it() {
+        let mut world = World::in_memory();
+        world.create_missing = false;
+
+        let stone = crate::blocks::state_by_name("stone").unwrap();
+
+        assert!(!world.set_block(5, 10, 5, stone));
+        assert!(!world.set_block_silently(5, 10, 5, stone));
+        assert!(!world.set_block_quietly(5, 10, 5, stone));
+        assert!(!world.has_chunk(0, 0), "чанк завёлся от записи");
+        assert_eq!(world.get_block_loaded(5, 10, 5), None);
+
+        // В загруженный — пишется.
+        world.ensure(0, 0);
+        assert!(world.set_block(5, 10, 5, stone));
+        assert_eq!(world.get_block_loaded(5, 10, 5), Some(stone));
+    }
+
+    /// Испорченный level.dat не даёт миру новое семя: мир читается по
+    /// level.dat_old, а испорченный откладывается.
+    #[test]
+    fn a_broken_level_file_falls_back_to_the_old_copy() {
+        let path = directory("level-old");
+
+        {
+            let mut world = World::open(&path, Some(7), WorldKind::Flat).expect("мир открылся");
+
+            world.ensure(0, 0);
+            world.save_if_needed();
+            world.save_if_needed();
+        }
+
+        assert!(path.join(LEVEL_OLD).exists(), "копии нет");
+
+        // Оборванная запись: файл есть, семени в нём нет.
+        fs::write(path.join(LEVEL), "age = 5\nti").unwrap();
+
+        let world = World::open(&path, Some(99), WorldKind::Flat).expect("мир открылся по копии");
+
+        assert_eq!(world.seed, 7, "семя подменено");
+        assert!(path.join(LEVEL_CORRUPT).exists(), "испорченный не отложен");
+        drop(world);
+
+        // Нет ни файла, ни копии, а регионы есть — мир не открывается.
+        let _ = fs::remove_file(path.join(LEVEL));
+        let _ = fs::remove_file(path.join(LEVEL_OLD));
+        fs::write(path.join(LEVEL), [0xFF, 0xFE, 0x00]).unwrap();
+
+        assert!(World::open(&path, Some(99), WorldKind::Flat).is_err(), "мир открылся с выдуманным семенем");
+
+        // Без регионов — это просто новый мир.
+        fs::remove_dir_all(path.join(REGIONS)).unwrap();
+        let world = World::open(&path, Some(99), WorldKind::Flat).expect("новый мир");
+        assert_eq!(world.seed, 99);
+        drop(world);
+
+        let _ = fs::remove_dir_all(&path);
+    }
+
+    /// Незаписанный чанк не выгружается: иначе изменения в нём пропали бы.
+    #[test]
+    fn unsaved_chunks_are_not_unloaded() {
+        let path = directory("unload-dirty");
+        let stone = crate::blocks::state_by_name("stone").unwrap();
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+
+        world.ensure(0, 0);
+        world.ensure(10, 10);
+        world.save_all();
+        world.set_block(160, flat::SURFACE, 160, stone); // чанк 10 10
+
+        // Файл региона подменён каталогом — записать его нельзя.
+        let file = region::path_for(&path.join(REGIONS), 10, 10);
+        fs::remove_file(&file).unwrap();
+        fs::create_dir(&file).unwrap();
+
+        world.unload_far(|_, _| false);
+
+        assert!(world.has_chunk(10, 10), "незаписанный чанк выгружен");
+        assert!(!world.has_chunk(0, 0), "записанный чанк остался");
+        assert_eq!(world.get_block(160, flat::SURFACE, 160), stone);
+
+        // Запись снова возможна — чанк записывается и выгружается.
+        fs::remove_dir(&file).unwrap();
+        world.unload_far(|_, _| false);
+
+        assert!(!world.has_chunk(10, 10));
+        world.ensure(10, 10);
+        assert_eq!(world.get_block(160, flat::SURFACE, 160), stone, "изменение потерялось");
+
+        drop(world);
+        let _ = fs::remove_dir_all(&path);
+    }
+
+    /// Сложенный заново чанк записывается на диск, даже если его не трогали.
+    #[test]
+    fn generated_chunks_are_saved() {
+        let path = directory("fresh");
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+
+        world.ensure(3, -4);
+        world.save_if_needed();
+
+        assert!(matches!(
+            region::read_stored(&path.join(REGIONS), 3, -4),
+            Ok(region::Stored::Found(_))
+        ));
+
+        drop(world);
+        let _ = fs::remove_dir_all(&path);
+    }
+
+    /// Чанк, приготовленный в стороне до выгрузки своего места, не ложится
+    /// поверх того, что за это время изменили и записали.
+    #[test]
+    fn a_stale_ready_chunk_is_not_accepted() {
+        let path = directory("stale");
+        let stone = crate::blocks::state_by_name("stone").unwrap();
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+
+        let source = world.source();
+        let ready = source.take(5, 5);
+
+        world.ensure(5, 5);
+        world.set_block(80, flat::SURFACE, 80, stone);
+        world.unload_far(|_, _| false);
+        assert!(!world.has_chunk(5, 5));
+
+        world.accept(5, 5, ready);
+
+        assert_eq!(world.get_block(80, flat::SURFACE, 80), stone, "устаревший чанк лёг поверх нового");
+
+        drop(world);
+        let _ = fs::remove_dir_all(&path);
+    }
+
+    /// Испорченная запись чанка не пропадает: её байты откладываются, и
+    /// только потом чанк складывается заново.
+    #[test]
+    fn a_corrupt_chunk_is_set_aside() {
+        let path = directory("corrupt");
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+        let regions = path.join(REGIONS);
+
+        region::write(&regions, 2, 2, &[CHUNK_VERSION, 1, 0xFF]).unwrap();
+
+        assert!(world.ensure(2, 2), "чанк не сложился заново");
+
+        let aside: Vec<_> = fs::read_dir(regions.join("corrupt")).expect("папка отложенного").flatten().collect();
+
+        assert_eq!(aside.len(), 1);
+        assert_eq!(fs::read(aside[0].path()).unwrap(), vec![CHUNK_VERSION, 1, 0xFF]);
+
+        drop(world);
+        let _ = fs::remove_dir_all(&path);
+    }
+
+    /// Испорченные номера в записи чанка не роняют сервер, а дают отказ.
+    #[test]
+    fn nonsense_in_a_chunk_is_refused() {
+        // Состояние не влезает в два байта.
+        let mut wide = vec![CHUNK_VERSION_WIDE, 1];
+        wide.extend_from_slice(&1u16.to_be_bytes());
+        wide.extend_from_slice(&70_000i32.to_be_bytes());
+        wide.extend_from_slice(&(SECTION_BLOCKS as u16).to_be_bytes());
+        assert!(Chunk::from_bytes(&wide).is_none());
+
+        // Состояния нет в таблице блоков.
+        let mut unknown = vec![CHUNK_VERSION, 1];
+        unknown.extend_from_slice(&1u16.to_be_bytes());
+        unknown.extend_from_slice(&u16::MAX.to_be_bytes());
+        unknown.extend_from_slice(&(SECTION_BLOCKS as u16).to_be_bytes());
+        assert!(Chunk::from_bytes(&unknown).is_none());
+
+        // Секция покрыта не целиком.
+        let mut short = vec![CHUNK_VERSION, 1];
+        short.extend_from_slice(&1u16.to_be_bytes());
+        short.extend_from_slice(&1u16.to_be_bytes());
+        short.extend_from_slice(&100u16.to_be_bytes());
+        assert!(Chunk::from_bytes(&short).is_none());
+
+        // Биома нет в реестре.
+        let mut bytes = Chunk::flat().to_bytes();
+        let length = bytes.len();
+        bytes[length - 4..length - 2].copy_from_slice(&u16::MAX.to_be_bytes());
+        assert!(Chunk::from_bytes(&bytes).is_none());
+    }
+
+    /// Вторая копия сервера ту же папку мира не открывает.
+    #[test]
+    fn a_world_folder_is_held_by_one_server() {
+        let path = directory("session");
+        let first = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+
+        assert!(World::open(&path, Some(1), WorldKind::Flat).is_err(), "папку открыли дважды");
+
+        drop(first);
+        World::open(&path, Some(1), WorldKind::Flat).expect("после закрытия папка свободна");
+
+        let _ = fs::remove_dir_all(&path);
+    }
+
+    /// Блочный и жидкостный такты одного места пишутся каждый со своим
+    /// приоритетом, а точка появления запоминается в level.dat.
+    #[test]
+    fn saved_ticks_keep_their_own_priority() {
+        let path = directory("priority");
+        let spawn;
+
+        {
+            let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+
+            world.ensure(0, 0);
+            world.schedule_block(1, 2, 3, 4, -3);
+            world.schedule(1, 2, 3, 4);
+            spawn = world.spawn_position();
+            world.save_if_needed();
+        }
+
+        let text = fs::read_to_string(path.join(LEVEL)).unwrap();
+        let ticks = fs::read_to_string(path.join(TICKS)).unwrap();
+
+        // Срок — по возрасту мира: мир не прожил ни такта, срок равен задержке.
+        assert!(ticks.contains("due = 1 2 3 block 4 -3"), "{}", ticks);
+        assert!(ticks.contains("due = 1 2 3 fluid 4 1"), "{}", ticks);
+        assert!(!text.contains("tick = "), "такты остались в level.dat: {}", text);
+        assert!(text.contains("spawn = "), "{}", text);
+
+        // Такты переживают перезапуск: снова открытый мир ждёт их же.
+        {
+            let world = World::open(&path, None, WorldKind::Flat).expect("мир открылся снова");
+            assert!(world.waiting.contains_key(&((1, 2, 3), TickKind::Block)));
+            assert!(world.waiting.contains_key(&((1, 2, 3), TickKind::Fluid)));
+        }
+
+        // Прежний вид (такты в level.dat) по-прежнему читается.
+        fs::remove_file(path.join(TICKS)).unwrap();
+        fs::write(path.join(LEVEL), format!("{}tick = 5 6 7 block 3 0\n", text)).unwrap();
+        {
+            let world = World::open(&path, None, WorldKind::Flat).expect("мир открылся по старому виду");
+            assert!(world.waiting.contains_key(&((5, 6, 7), TickKind::Block)));
+        }
+
+        let level = read_level(&path.join(LEVEL)).unwrap().unwrap();
+        assert_eq!(level.spawn, Some(spawn));
+
+        let _ = fs::remove_dir_all(&path);
+    }
+
+    /// Блок, поставленный вдали от воды, не заводит жидкостных тактов, а
+    /// рядом с водой — заводит.
+    #[test]
+    fn only_places_near_fluids_are_scheduled() {
+        let mut world = World::in_memory();
+        let stone = crate::blocks::state_by_name("stone").unwrap();
+        let water = fluids::state_of(fluids::Kind::Water, fluids::SOURCE);
+
+        world.ensure(0, 0);
+        world.set_block(4, 10, 4, stone);
+        assert_eq!(world.scheduled_count(), 0, "такты вдали от воды");
+
+        world.set_block(8, 10, 8, water);
+        assert_eq!(world.scheduled_count(), 7, "вода и её соседи не пустились в такт");
+
+        // Сосед воды пересчитывается и тогда, когда поставили блок рядом с
+        // ним, а не с самой водой: вода может потечь к нему иначе.
+        let mut world = World::in_memory();
+
+        world.ensure(0, 0);
+        world.set_block_silently(8, 10, 8, water);
+        world.set_block(10, 10, 8, stone);
+
+        assert_eq!(world.scheduled_count(), 1, "пересчитать надо только соседа воды");
+    }
+}
+
+#[cfg(test)]
 mod spawn_tests {
     use super::*;
 
@@ -3024,10 +4480,6 @@ mod speed {
             timed(2, &mut |chunk| {
                 underground::dig(&generator, chunk, chunk_x, chunk_z)
             });
-            timed(3, &mut |chunk| {
-                generator.grow_trees(chunk, chunk_x, chunk_z)
-            });
-
             let grid = generator.relief_grid(
                 from_x,
                 from_z,
@@ -3042,12 +4494,16 @@ mod speed {
                 }
             }
 
+            timed(3, &mut |chunk| {
+                generator.grow_trees(chunk, chunk_x, chunk_z, &columns)
+            });
+
             timed(4, &mut |chunk| {
                 vegetation::decorate(&generator, chunk, chunk_x, chunk_z, &columns);
                 ocean::decorate(&generator, chunk, chunk_x, chunk_z, &columns)
             });
             timed(5, &mut |chunk| {
-                cave_biomes::decorate(&generator, chunk, chunk_x, chunk_z)
+                cave_biomes::decorate(&generator, chunk, chunk_x, chunk_z, &columns, grid.as_ref())
             });
             timed(6, &mut |chunk| chunk.light_up());
 
@@ -3110,6 +4566,277 @@ mod speed {
     /// считает у оригинала (биом — по середине чанка на поверхности,
     /// двухблочные — по нижней половине):
     /// `cargo test --release plants_census -- --ignored --nocapture`.
+    /// На чём стоят стволы: ни одного дерева на камне, песке, гравии.
+    /// `cargo test --release tree_ground_census -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn tree_ground_census() {
+        let generator = Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
+        let mut under: HashMap<&str, u64> = HashMap::new();
+        let mut wrong = Vec::new();
+        let mut other: HashMap<&str, u64> = HashMap::new();
+
+        for chunk_x in (-400..400).step_by(16) {
+            for chunk_z in (-400..400).step_by(16) {
+                let chunk = Chunk::generated(&generator, chunk_x, chunk_z);
+
+                for x in 0..CHUNK_SIZE {
+                    for z in 0..CHUNK_SIZE {
+                        for y in MIN_Y + 1..MIN_Y + WORLD_HEIGHT {
+                            let name = crate::blocks::block_at_state(chunk.block(x, y, z)).unwrap_or("");
+                            let below = crate::blocks::block_at_state(chunk.block(x, y - 1, z)).unwrap_or("");
+
+                            // Прочее вокруг деревьев: затопленная листва, снег на
+                            // кронах, бледный мох, висящий ни на чём.
+                            let above = crate::blocks::block_at_state(chunk.block(x, (y + 1).min(MIN_Y + WORLD_HEIGHT - 1), z)).unwrap_or("");
+                            let wet = crate::blocks::orientation(name)
+                                .and_then(|rule| rule.value(chunk.block(x, y, z), "waterlogged"))
+                                .is_some_and(|value| value == "true");
+
+                            if name.ends_with("_leaves") && wet {
+                                *other.entry("лист в воде").or_default() += 1;
+                            }
+
+                            if name == "snow" && below.ends_with("_leaves") {
+                                *other.entry("снег на листве").or_default() += 1;
+                            }
+
+                            if name == "pale_hanging_moss" && above == "air" {
+                                *other.entry("мох ни на чём").or_default() += 1;
+                            }
+
+                            // Низ вертикального ствола: бревно над не-бревном и не-листвой.
+                            let trunk = name.ends_with("_log") || name == "mushroom_stem";
+                            let upright = crate::blocks::orientation(name)
+                                .and_then(|rule| rule.value(chunk.block(x, y, z), "axis"))
+                                .is_none_or(|axis| axis == "y");
+
+                            if trunk && upright && !below.ends_with("_log") && !below.contains("leaves") && below != "mushroom_stem" && below != "air" {
+                                *under.entry(below).or_default() += 1;
+
+                                // Первые случаи на камне, песке и гравии — с местом
+                                // и биомом, чтобы было с чего начать разбор.
+                                let bare = below == "stone" || below.ends_with("_ore") || below.contains("sand") || below == "gravel" || below == "mossy_cobblestone";
+
+                                if bare && wrong.len() < 30 {
+                                    let (wx, wz) = (chunk_x * CHUNK_SIZE + x, chunk_z * CHUNK_SIZE + z);
+                                    let column = generator.column_at(wx, wz);
+
+                                    wrong.push(format!("{} на {} в ({}, {}, {}), {:?}, верх {}", name, below, wx, y, wz, column.biome, column.height));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut rows: Vec<_> = under.into_iter().collect();
+        rows.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+        println!("под стволами: {:?}", rows);
+        println!("прочее: {:?}", other);
+
+        for line in wrong {
+            println!("  {}", line);
+        }
+    }
+
+    /// Плотная перепись деревьев вокруг точки: `AT="x z"` (блоки), радиус 6
+    /// чанков. Для каждого низа ствола — блок под ним и сколько камня вокруг
+    /// корня (8 соседей на уровне земли).
+    /// `AT="1234 -787" cargo test --release trees_around -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn trees_around() {
+        let at = std::env::var("AT").unwrap_or_else(|_| "0 0".into());
+        let mut parts = at.split_whitespace().map(|v| v.parse::<i32>().expect("число"));
+        let (bx, bz) = (parts.next().unwrap_or(0), parts.next().unwrap_or(0));
+        let seed: i64 = std::env::var("SEED").ok().and_then(|v| v.parse().ok()).unwrap_or(100_554_032_945_340);
+        let generator = Generator::Normal(Terrain::new(seed, terrain::Style::Vanilla));
+        let (cx0, cz0) = (bx.div_euclid(CHUNK_SIZE), bz.div_euclid(CHUNK_SIZE));
+        let mut chunks = HashMap::new();
+
+        // WORLD — папка мира: тогда берутся записанные на диск чанки (то, что
+        // видит игрок), а несложенные — пропускаются.
+        let saved = std::env::var("WORLD").ok().map(|world| Path::new(&world).join("region"));
+        let mut from_disk = 0;
+
+        for cx in cx0 - 7..=cx0 + 7 {
+            for cz in cz0 - 7..=cz0 + 7 {
+                match &saved {
+                    Some(region) => {
+                        if let Ok(Some(bytes)) = region::read(region, cx, cz)
+                            && let Some(chunk) = Chunk::from_bytes(&bytes)
+                        {
+                            chunks.insert((cx, cz), chunk);
+                            from_disk += 1;
+                        }
+                    }
+                    None => {
+                        chunks.insert((cx, cz), Chunk::generated(&generator, cx, cz));
+                    }
+                }
+            }
+        }
+
+        if saved.is_some() {
+            println!("чанков с диска: {}", from_disk);
+        }
+
+        let block = |wx: i32, y: i32, wz: i32| -> &str {
+            chunks
+                .get(&(wx.div_euclid(CHUNK_SIZE), wz.div_euclid(CHUNK_SIZE)))
+                .map(|chunk| chunk.block(wx.rem_euclid(CHUNK_SIZE), y, wz.rem_euclid(CHUNK_SIZE)))
+                .and_then(crate::blocks::block_at_state)
+                .unwrap_or("")
+        };
+        let bare = |name: &str| {
+            matches!(name, "stone" | "gravel" | "andesite" | "diorite" | "granite" | "tuff" | "calcite" | "deepslate" | "cobblestone" | "mossy_cobblestone")
+                || name.ends_with("_ore")
+                || name.contains("sand")
+                || name.contains("terracotta")
+        };
+
+        let (mut trees, mut on_bare, mut stony) = (0, 0, 0);
+        let mut examples = Vec::new();
+
+        for wx in (cx0 - 6) * CHUNK_SIZE..(cx0 + 7) * CHUNK_SIZE {
+            for wz in (cz0 - 6) * CHUNK_SIZE..(cz0 + 7) * CHUNK_SIZE {
+                for y in MIN_Y + 1..MIN_Y + WORLD_HEIGHT - 1 {
+                    let name = block(wx, y, wz);
+                    if !(name.ends_with("_log") || name == "mushroom_stem") {
+                        continue;
+                    }
+                    let below = block(wx, y - 1, wz);
+                    if below.ends_with("_log") || below.contains("leaves") || below == "air" || below == "mushroom_stem" || below.ends_with("_wood") {
+                        continue;
+                    }
+                    trees += 1;
+                    let around = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]
+                        .iter()
+                        .filter(|(dx, dz)| bare(block(wx + dx, y - 1, wz + dz)))
+                        .count();
+                    if bare(below) {
+                        on_bare += 1;
+                    }
+                    if around >= 4 {
+                        stony += 1;
+                    }
+                    if (bare(below) || around >= 4) && examples.len() < 25 {
+                        let column = generator.column_at(wx, wz);
+                        examples.push(format!(
+                            "{} на {} в ({}, {}, {}), камня вокруг {}/8, {:?}, верх столбца {}",
+                            name, below, wx, y, wz, around, column.biome, column.height
+                        ));
+                    }
+                }
+            }
+        }
+
+        println!("стволов {}, прямо на голом {}, среди голого (≥4 из 8) {}", trees, on_bare, stony);
+        for line in examples {
+            println!("  {}", line);
+        }
+    }
+
+    /// Сколько листвы с каким расстоянием до бревна (у оригинала 7 почти
+    /// не бывает: такая листва осыпается).
+    /// `cargo test --release leaf_distance_census -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn leaf_distance_census() {
+        let generator = Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
+        let mut counts = [0u64; 8];
+
+        for chunk_x in (-200..200).step_by(20) {
+            for chunk_z in (-200..200).step_by(20) {
+                let chunk = Chunk::generated(&generator, chunk_x, chunk_z);
+
+                for x in 0..CHUNK_SIZE {
+                    for z in 0..CHUNK_SIZE {
+                        for y in MIN_Y..MIN_Y + WORLD_HEIGHT {
+                            let state = chunk.block(x, y, z);
+                            let Some(name) = crate::blocks::block_at_state(state) else { continue };
+
+                            if !name.ends_with("_leaves") {
+                                continue;
+                            }
+
+                            let distance = crate::blocks::orientation(name)
+                                .and_then(|rule| rule.value(state, "distance"))
+                                .and_then(|value| value.parse::<usize>().ok())
+                                .unwrap_or(0);
+
+                            counts[distance.min(7)] += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        println!("листва по расстоянию 0..7: {:?}", counts);
+    }
+
+    /// Сходится ли высота столбца, посчитанная в одиночку (`column_at`), с
+    /// тем, что лежит в сложенном чанке: на этом держатся деревья и стыки.
+    /// `cargo test --release column_height_matches_chunk -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn column_height_matches_chunk() {
+        let generator = Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
+        let (mut total, mut off, mut worst) = (0u64, 0u64, 0i32);
+        let mut examples = Vec::new();
+
+        for chunk_x in (-300..300).step_by(25) {
+            for chunk_z in (-300..300).step_by(25) {
+                let chunk = Chunk::generated(&generator, chunk_x, chunk_z);
+
+                for x in 0..CHUNK_SIZE {
+                    for z in 0..CHUNK_SIZE {
+                        let (wx, wz) = (chunk_x * CHUNK_SIZE + x, chunk_z * CHUNK_SIZE + z);
+                        let column = generator.column_at(wx, wz);
+
+                        // Верх рельефа в чанке: первый сверху камень или земля,
+                        // мимо растений, деревьев, снега и воды.
+                        let top = (MIN_Y..MIN_Y + WORLD_HEIGHT).rev().find(|&y| {
+                            let name = crate::blocks::block_at_state(chunk.block(x, y, z)).unwrap_or("");
+                            crate::blocks::conductive(chunk.block(x, y, z))
+                                && !name.ends_with("_log")
+                                && !name.ends_with("_leaves")
+                                && !name.contains("mushroom")
+                                && name != "snow_block"
+                                && !name.contains("ice")
+                        });
+
+                        let Some(top) = top else { continue };
+
+                        // Над морем — сравнивать нечего, если столбец под водой.
+                        if column.height < 50 {
+                            continue;
+                        }
+
+                        total += 1;
+                        let diff = (top - column.height).abs();
+
+                        if diff > 2 {
+                            off += 1;
+                            worst = worst.max(diff);
+
+                            if examples.len() < 10 {
+                                examples.push(format!("({}, {}): чанк {} / столбец {} {:?}", wx, wz, top, column.height, column.biome));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        println!("столбцов {}, расходится больше чем на 2: {} ({:.3}%), худшее {}", total, off, off as f64 * 100.0 / total.max(1) as f64, worst);
+        for line in examples {
+            println!("  {}", line);
+        }
+    }
+
     #[test]
     #[ignore]
     fn plants_census() {
@@ -3241,7 +4968,10 @@ mod speed {
         let (cx, cz) = (parts.next().unwrap(), parts.next().unwrap());
         let generator = Arc::new(Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla)));
         let mut world = World::in_memory();
-        let source = ChunkSource { path: std::env::temp_dir().join("mcsheriffanya-no-such-world"), generator };
+        // WORLD=<папка мира> — брать сохранённые чанки оттуда (например, мир
+        // тестового сервера), а не свежую генерацию.
+        let path = std::env::var("WORLD").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir().join("mcsheriffanya-no-such-world"));
+        let source = ChunkSource { path, generator, epoch: 0 };
 
         for dx in -2..=2 {
             for dz in -2..=2 {
@@ -3251,15 +4981,19 @@ mod speed {
 
         if let Ok(spot) = std::env::var("SPOT") {
             let v: Vec<i32> = spot.split_whitespace().map(|p| p.parse().unwrap()).collect();
-            let fresh = source.take(v[0].div_euclid(16), v[2].div_euclid(16));
-            let s = fresh.chunk.block(v[0].rem_euclid(16), v[1], v[2].rem_euclid(16));
+            let Taken::Loaded { chunk: fresh, wake, .. } = source.take(v[0].div_euclid(16), v[2].div_euclid(16)).taken else {
+                panic!("чанк не сложился");
+            };
+            let s = fresh.block(v[0].rem_euclid(16), v[1], v[2].rem_euclid(16));
             let column = generator_column(&source, v[0], v[2]);
             println!("свежий чанк в {:?}: {:?}; столбец: высота {}, биом {}", v, crate::blocks::block_at_state(s), column.0, column.1);
-            println!("в списке разбуженных: {}", fresh.wake.iter().any(|((x, y, z), _)| (*x, *y, *z) == (v[0], v[1], v[2])));
+            println!("в списке разбуженных: {}", wake.iter().any(|((x, y, z), _)| (*x, *y, *z) == (v[0], v[1], v[2])));
             for (dx, dy, dz) in [(1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1), (0, 1, 0), (0, -1, 0)] {
                 let (x, y, z) = (v[0] + dx, v[1] + dy, v[2] + dz);
-                let chunk = source.take(x.div_euclid(16), z.div_euclid(16));
-                println!("  сосед {} {} {} при генерации: {:?}", x, y, z, crate::blocks::block_at_state(chunk.chunk.block(x.rem_euclid(16), y, z.rem_euclid(16))));
+                let Taken::Loaded { chunk, .. } = source.take(x.div_euclid(16), z.div_euclid(16)).taken else {
+                    continue;
+                };
+                println!("  сосед {} {} {} при генерации: {:?}", x, y, z, crate::blocks::block_at_state(chunk.block(x.rem_euclid(16), y, z.rem_euclid(16))));
             }
         }
 
@@ -3818,5 +5552,104 @@ mod speed {
         for (name, n) in rows {
             println!("  {:>7.3}%  {}", 100.0 * n as f64 / total, name);
         }
+    }
+
+    /// Вода в пещерах сразу после складывания — те же замеры, что
+    /// снимаются с region-файлов оригинала: текущая жидкость на чанк,
+    /// источники рядом с воздухом, и чем заполнены пустоты под дном моря
+    /// и под сушей по глубине от дна.
+    /// `cargo test --release cave_water_census -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn cave_water_census() {
+        use crate::world::terrain::{self, Terrain};
+        use std::collections::BTreeMap;
+
+        let generator = Generator::Normal(Terrain::new(100_554_032_945_340, terrain::Style::Vanilla));
+        let name = |state: i32| crate::blocks::block_at_state(state).unwrap_or("?");
+        let waterish = |state: i32| matches!(name(state), "water" | "seagrass" | "tall_seagrass" | "kelp" | "kelp_plant" | "bubble_column");
+        let (mut flow, mut leaks) = (BTreeMap::new(), BTreeMap::new());
+        let mut under: BTreeMap<(&str, &str, &str), u64> = BTreeMap::new();
+        let mut count = 0;
+
+        for chunk_z in 0..13 {
+            for chunk_x in 0..32 {
+                let chunk = Chunk::generated(&generator, chunk_x, chunk_z);
+                count += 1;
+
+                for x in 0..16 {
+                    for z in 0..16 {
+                        for y in MIN_Y..200 {
+                            let state = chunk.block(x, y, z);
+                            let Some((kind, level)) = fluids::fluid_at(state) else { continue };
+                            if level != fluids::SOURCE {
+                                *flow.entry(format!("{:?}", kind)).or_insert(0u64) += 1;
+                                continue;
+                            }
+                            for (dx, dy, dz) in [(0, -1, 0), (1, 0, 0), (-1, 0, 0), (0, 0, 1), (0, 0, -1)] {
+                                let (nx, ny, nz) = (x + dx, y + dy, z + dz);
+                                if (0..16).contains(&nx) && (0..16).contains(&nz) && chunk.block(nx, ny, nz) == AIR {
+                                    *leaks.entry(format!("{:?} {}", kind, if dy < 0 { "вниз" } else { "вбок" })).or_insert(0u64) += 1;
+                                }
+                            }
+                        }
+
+                        let mut y = 200;
+                        while y > MIN_Y && chunk.block(x, y, z) == AIR {
+                            y -= 1;
+                        }
+                        let sea = waterish(chunk.block(x, y, z)) && y >= 55;
+                        while y > MIN_Y && (waterish(chunk.block(x, y, z)) || chunk.block(x, y, z) == AIR || name(chunk.block(x, y, z)) == "ice") {
+                            y -= 1;
+                        }
+                        let floor = y;
+                        if floor < 40 {
+                            continue;
+                        }
+                        for yy in (-53..floor).rev() {
+                            let state = chunk.block(x, yy, z);
+                            let depth = floor - yy;
+                            let band = match depth {
+                                ..=10 => "1-10",
+                                11..=30 => "11-30",
+                                31..=60 => "31-60",
+                                _ => "61+",
+                            };
+                            let what = if state == AIR {
+                                "воздух"
+                            } else if waterish(state) {
+                                "вода"
+                            } else if name(state) == "lava" {
+                                "лава"
+                            } else {
+                                "твёрдое"
+                            };
+                            *under.entry((if sea { "под морем" } else { "под сушей" }, band, what)).or_insert(0) += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        println!("чанков {}", count);
+        println!("текущая на чанк: {:?}", flow.iter().map(|(k, v)| (k.clone(), *v as f64 / count as f64)).collect::<Vec<_>>());
+        println!("утечки на чанк: {:?}", leaks.iter().map(|(k, v)| (k.clone(), *v as f64 / count as f64)).collect::<Vec<_>>());
+        for place in ["под морем", "под сушей"] {
+            println!("{}", place);
+            for band in ["1-10", "11-30", "31-60", "61+"] {
+                let get = |what| under.get(&(place, band, what)).copied().unwrap_or(0);
+                let all = (get("воздух") + get("вода") + get("лава") + get("твёрдое")).max(1) as f64;
+                println!(
+                    "  {:6} воздух {:.4} вода {:.4} лава {:.4}  (блоков {})",
+                    band, get("воздух") as f64 / all, get("вода") as f64 / all, get("лава") as f64 / all, all
+                );
+            }
+        }
+
+        // Те же замеры по первым 400 чанкам r.0.0 мира оригинала
+        // (vanilla-big), снятые с region-файлов.
+        println!("оригинал: текущей воды 0,08 на чанк, лавы 0,01; утечек 0,2 на чанк");
+        println!("  под морем:  1-10 воздух 0,0001 вода 0,027; 11-30 — 0,014 / 0,040; 31-60 — 0,044 / 0,050; 61+ — 0,054 / 0,002");
+        println!("  под сушей:  1-10 воздух 0,023 вода 0,007; 11-30 — 0,005 / 0,008; 31-60 — 0,069 / 0,010; 61+ — 0,093 / 0,002");
     }
 }

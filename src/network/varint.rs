@@ -81,8 +81,16 @@ pub fn encode_varlong(value: i64) -> Vec<u8> {
 }
 
 /// Читает строку протокола: VarInt длина (в байтах) + сами UTF-8 байты.
-pub async fn read_string(stream: &mut TcpStream) -> io::Result<String> {
-    let len = read_varint(stream).await? as usize;
+/// Строка длиннее `max` байт — ошибка: так читаются только адрес
+/// в Handshake и ник, оба короткие.
+pub async fn read_string(stream: &mut TcpStream, max: usize) -> io::Result<String> {
+    let len = read_varint(stream).await?;
+    let Some(len) = usize::try_from(len).ok().filter(|&len| len <= max) else {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Недопустимая длина строки: {}", len),
+        ));
+    };
     let mut buffer = vec![0u8; len];
     stream.read_exact(&mut buffer).await?;
 

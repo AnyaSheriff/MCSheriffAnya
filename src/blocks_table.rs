@@ -3964,7 +3964,7 @@ pub const ORIENTED: &[Orientation] = &[
         name: "glow_lichen",
         min: 8390,
         max: 8517,
-        family: Family::Wall,
+        family: Family::Other,
         properties: &[
             Property { name: "down", values: &["true", "false"], default: "false" },
             Property { name: "east", values: &["true", "false"], default: "false" },
@@ -7038,7 +7038,7 @@ pub const ORIENTED: &[Orientation] = &[
         name: "resin_clump",
         min: 8518,
         max: 8645,
-        family: Family::Wall,
+        family: Family::Other,
         properties: &[
             Property { name: "down", values: &["true", "false"], default: "false" },
             Property { name: "east", values: &["true", "false"], default: "false" },
@@ -7149,7 +7149,7 @@ pub const ORIENTED: &[Orientation] = &[
         name: "sculk_vein",
         min: 25171,
         max: 25298,
-        family: Family::Wall,
+        family: Family::Other,
         properties: &[
             Property { name: "down", values: &["true", "false"], default: "false" },
             Property { name: "east", values: &["true", "false"], default: "false" },

@@ -1,0 +1,35 @@
+[Unit]
+Description=Приёмник отчётов об ошибках MCSheriffAnya
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/mcsa-logreceiver
+Environment=MCSA_LISTEN=127.0.0.1:8787
+Environment=MCSA_DATA=/var/lib/mcsa-logreceiver
+# Ключ для чтения systemd передаёт в папку %d только этой службе.
+LoadCredential=token:/etc/mcsa-logreceiver/token
+Environment=MCSA_TOKEN_FILE=%d/token
+Restart=on-failure
+
+# Своя временная учётная запись и папка данных; остальная система — только
+# для чтения, сеть — только IPv4/IPv6.
+DynamicUser=yes
+StateDirectory=mcsa-logreceiver
+StateDirectoryMode=0700
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

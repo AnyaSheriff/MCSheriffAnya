@@ -1,0 +1,231 @@
+{
+  "name": "stream-redirect",
+  "about": "Ручей по каменному жёлобу; когда он натёк, в его дне пробивают яму.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        1,
+        1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        1,
+        -1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        1,
+        1,
+        1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        1,
+        1,
+        -1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        2,
+        1,
+        1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        2,
+        1,
+        -1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        3,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        3,
+        1,
+        1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        3,
+        1,
+        -1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        4,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        4,
+        1,
+        1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        4,
+        1,
+        -1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        5,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        5,
+        1,
+        1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        5,
+        1,
+        -1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        6,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        6,
+        1,
+        1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        6,
+        1,
+        -1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        7,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        7,
+        1,
+        1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        7,
+        1,
+        -1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        -1,
+        1,
+        0
+      ],
+      "state": "minecraft:stone"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          0,
+          1,
+          0
+        ],
+        "state": "minecraft:water"
+      }
+    },
+    {
+      "after": 60,
+      "set": {
+        "at": [
+          3,
+          0,
+          0
+        ],
+        "state": "minecraft:air"
+      }
+    }
+  ],
+  "record_ticks": 160
+}

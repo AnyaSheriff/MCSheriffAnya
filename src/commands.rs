@@ -8,6 +8,7 @@
 
 use crate::blocks;
 use crate::ops;
+use crate::dimension::Dimension;
 use crate::players::Order;
 use crate::shared::Shared;
 
@@ -133,6 +134,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
 
                 for (uuid, _) in &targets {
                     players.set_game_mode(uuid, mode);
+                    players.order(uuid, Order::GameMode { mode });
                 }
             }
 
@@ -174,23 +176,25 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
 
             let targets = find_targets(named, source, shared);
 
-            let Some((uuid, name)) = targets.first().cloned() else {
+            if targets.is_empty() {
                 return Answer::saying(
                     "Такого игрока нет на сервере. Права выдаются тем, кто сейчас играет"
                         .to_string(),
                 );
-            };
+            }
 
-            let given = shared
-                .ops
-                .lock()
-                .expect("права захвачены другим потоком")
-                .give(&uuid, &name, ops::HIGHEST_LEVEL);
+            // Всем целям — `op @a` выдаёт права всем, а не первому.
+            let mut ops = shared.ops.lock().expect("права захвачены другим потоком");
+            let given: Vec<&str> = targets
+                .iter()
+                .filter(|(uuid, name)| ops.give(uuid, name, ops::HIGHEST_LEVEL))
+                .map(|(_, name)| name.as_str())
+                .collect();
 
-            if given {
-                Answer::saying(format!("У игрока {} теперь есть права", name))
+            if given.is_empty() {
+                Answer::saying(format!("Права уже были: {}", names_of(&targets)))
             } else {
-                Answer::saying(format!("У игрока {} права уже были", name))
+                Answer::saying(format!("Теперь есть права: {}", given.join(", ")))
             }
         }
         "deop" => {
@@ -198,11 +202,15 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 return Answer::saying("У кого снять права? deop <игрок>".to_string());
             };
 
-            let taken = shared
-                .ops
-                .lock()
-                .expect("права захвачены другим потоком")
-                .take_away(named);
+            // Сначала — среди тех, кто в сети (по опознавателю: права
+            // остаются за ним, даже если ник сменился), потом по нику из файла.
+            let targets = find_targets(named, source, shared);
+            let mut ops = shared.ops.lock().expect("права захвачены другим потоком");
+            let taken = if targets.is_empty() {
+                ops.take_away(None, named)
+            } else {
+                targets.iter().fold(false, |any, (uuid, name)| ops.take_away(Some(uuid), name) | any)
+            };
 
             if taken {
                 Answer::saying(format!("У игрока {} больше нет прав", named))
@@ -280,8 +288,8 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
             Answer::saying(format!("Инвентарь очищен: {}", names_of(&targets)))
         }
         "time" => time(parts.collect::<Vec<&str>>().as_slice(), shared),
-        "setblock" => set_blocks(parts.collect::<Vec<&str>>().as_slice(), shared, false),
-        "fill" => set_blocks(parts.collect::<Vec<&str>>().as_slice(), shared, true),
+        "setblock" => set_blocks(parts.collect::<Vec<&str>>().as_slice(), shared, dimension_of(source, shared), false),
+        "fill" => set_blocks(parts.collect::<Vec<&str>>().as_slice(), shared, dimension_of(source, shared), true),
         "list" => {
             let names = shared
                 .players
@@ -371,7 +379,21 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
 
             Answer::saying(format!("{} выгнан: {}", who, reason))
         }
-        "tp" | "teleport" => teleport(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "tp" | "teleport" => teleport(parts.collect::<Vec<&str>>().as_slice(), source, shared, None),
+
+        // Как у оригинала: `execute in <измерение> run tp …` — перенос в
+        // другое измерение. Другие виды execute пока не разбираются.
+        "execute" => {
+            let rest: Vec<&str> = parts.collect();
+
+            match rest.as_slice() {
+                ["in", dimension, "run", "tp" | "teleport", tail @ ..] => match Dimension::from_name(dimension) {
+                    Some(dimension) => teleport(tail, source, shared, Some(dimension)),
+                    None => Answer::saying(format!("Нет такого измерения: {}", dimension)),
+                },
+                _ => Answer::saying("Пока понимаю только: execute in <измерение> run tp <кого> <x> <y> <z>".to_string()),
+            }
+        }
         "help" => {
             // Показываем только то, что доступно вызвавшему: перечислять
             // недоступное — только путать.
@@ -425,13 +447,30 @@ fn names_of(targets: &[([u8; 16], String)]) -> String {
         .join(", ")
 }
 
+/// В каком измерении тот, кто ввёл команду: игрок — в своём, консоль — в
+/// обычном мире.
+fn dimension_of(source: &Source, shared: &Shared) -> Dimension {
+    match source {
+        Source::Player { uuid, .. } => shared
+            .players
+            .lock()
+            .expect("список игроков захвачен другим потоком")
+            .members()
+            .iter()
+            .find(|member| &member.uuid == uuid)
+            .map(|member| member.dimension)
+            .unwrap_or_default(),
+        Source::Console => Dimension::Overworld,
+    }
+}
+
 /// Ставит блок в одно место (`setblock`) или заливает им область (`fill`).
 ///
 /// Блок записывается как в игре: `minecraft:lever[face=floor,powered=true]`.
 /// Как и у обычного сервера, соседи узнают о новом блоке, а редстоун
 /// пересчитывается; своей логики нажатия у поставленного рычага нет.
 /// Область у `fill` ограничена, как в игре, 32 768 блоками.
-fn set_blocks(parts: &[&str], shared: &Shared, area: bool) -> Answer {
+fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool) -> Answer {
     let (corners, block) = match (area, parts) {
         (false, [x, y, z, block]) => ([*x, *y, *z, *x, *y, *z], *block),
         (true, [x1, y1, z1, x2, y2, z2, block]) => ([*x1, *y1, *z1, *x2, *y2, *z2], *block),
@@ -463,7 +502,8 @@ fn set_blocks(parts: &[&str], shared: &Shared, area: bool) -> Answer {
     let (y1, y2) = (y1.min(y2), y1.max(y2));
     let (z1, z2) = (z1.min(z2), z1.max(z2));
 
-    let volume = (x2 - x1 + 1) as i64 * (y2 - y1 + 1) as i64 * (z2 - z1 + 1) as i64;
+    // Считать в i64: разность крайних i32 в i32 переполняется.
+    let volume = (x2 as i64 - x1 as i64 + 1) * (y2 as i64 - y1 as i64 + 1) * (z2 as i64 - z1 as i64 + 1);
 
     if volume > 32_768 {
         return Answer::saying(format!(
@@ -472,14 +512,31 @@ fn set_blocks(parts: &[&str], shared: &Shared, area: bool) -> Answer {
         ));
     }
 
-    let mut world = shared.world.lock().expect("мир захвачен другим потоком");
+    // Вне высоты мира ставить некуда — и складывать ради этого чанки незачем.
+    let (lowest, highest) = (crate::world::MIN_Y, crate::world::MIN_Y + crate::world::WORLD_HEIGHT - 1);
+
+    if y2 < lowest || y1 > highest {
+        return Answer::saying(format!("Это вне мира: высота бывает от {} до {}", lowest, highest));
+    }
+
+    let (y1, y2) = (y1.max(lowest), y2.min(highest));
+    let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+
+    // Как у оригинала: только в загруженных чанках — иначе команда
+    // складывала бы мир под замком, и сервер стоял бы.
+    for chunk_x in x1 >> 4..=x2 >> 4 {
+        for chunk_z in z1 >> 4..=z2 >> 4 {
+            if !world.has_chunk(chunk_x, chunk_z) {
+                return Answer::saying("Это место не загружено".to_string());
+            }
+        }
+    }
+
     let mut changed = 0;
 
     for x in x1..=x2 {
         for y in y1..=y2 {
             for z in z1..=z2 {
-                world.ensure(x >> 4, z >> 4);
-
                 if world.get_block(x, y, z) != state && world.set_block(x, y, z, state) {
                     changed += 1;
                 }
@@ -496,7 +553,7 @@ fn set_blocks(parts: &[&str], shared: &Shared, area: bool) -> Answer {
     }
 
     crate::redstone::settle(&mut world);
-    world.save_if_needed();
+    world.save_if_due();
 
     if area {
         Answer::saying(format!("Заполнено блоков: {}", changed))
@@ -512,7 +569,8 @@ fn set_blocks(parts: &[&str], shared: &Shared, area: bool) -> Answer {
 /// Время идёт тактами, сутки — 24 000 тактов: рассвет 0, полдень 6000,
 /// закат 12 000, полночь 18 000.
 fn time(parts: &[&str], shared: &Shared) -> Answer {
-    let mut world = shared.world.lock().expect("мир захвачен другим потоком");
+    // Время суток — у обычного мира: в Незере его нет.
+    let mut world = shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком");
 
     match parts {
         ["query"] | [] => Answer::saying(format!("Время: {}", world.time_of_day())),
@@ -533,7 +591,9 @@ fn time(parts: &[&str], shared: &Shared) -> Answer {
                 return Answer::saying("Сколько добавить? Нужно число".to_string());
             };
 
-            let time = world.time_of_day() + added;
+            let Some(time) = world.time_of_day().checked_add(added).filter(|time| *time >= 0) else {
+                return Answer::saying("Слишком большое число".to_string());
+            };
             world.set_time_of_day(time);
 
             Answer::saying(format!("Время: {}", world.time_of_day()))
@@ -562,7 +622,7 @@ fn time_by_name(value: &str) -> Option<i64> {
 ///
 /// Относительных координат (`~`) пока нет: они требуют знать, откуда считать,
 /// а это отдельная работа.
-fn teleport(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+fn teleport(parts: &[&str], source: &Source, shared: &Shared, into: Option<Dimension>) -> Answer {
     let own = match source {
         Source::Player { uuid, name } => vec![(*uuid, name.clone())],
         Source::Console => Vec::new(),
@@ -570,8 +630,9 @@ fn teleport(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 
     // Сперва решаем, кого переносим, потом — куда.
     let (targets, place) = match parts {
-        // tp <куда-то> или tp <x> <y> <z> — переносится сам.
-        [_] | [_, _, _] => (own, parts),
+        // tp <куда-то>, tp <x> <y> <z> или с поворотом взгляда (так пишет
+        // F3+C) — переносится сам.
+        [_] | [_, _, _] | [_, _, _, _, _] => (own, parts),
 
         // tp <кого> <куда> или tp <кого> <x> <y> <z>.
         [who, rest @ ..] if !rest.is_empty() => (find_targets(who, source, shared), rest),
@@ -588,7 +649,7 @@ fn teleport(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return Answer::saying("Кого переносить? Из консоли имя игрока обязательно".to_string());
     }
 
-    let Some((x, y, z)) = place_of(place, source, shared) else {
+    let Some(Place { x, y, z, dimension: theirs, look }) = place_of(place, source, shared) else {
         return Answer::saying(
             "Не понял, куда переносить: нужно имя игрока или три числа".to_string(),
         );
@@ -601,7 +662,20 @@ fn teleport(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             .expect("список игроков захвачен другим потоком");
 
         for (uuid, _) in &targets {
-            players.order(uuid, Order::Teleport { x, y, z });
+            // В другое измерение — переход, в своём — обычный перенос. Место
+            // у другого игрока — это и его измерение, как у оригинала.
+            let here = players.members().iter().find(|member| &member.uuid == uuid).map(|member| member.dimension);
+
+            match into.or(theirs) {
+                Some(dimension) if Some(dimension) != here => {
+                    players.order(uuid, Order::ChangeDimension { dimension, x, y, z });
+                }
+                _ => players.order(uuid, Order::Teleport { x, y, z }),
+            }
+
+            if let Some((yaw, pitch)) = look {
+                players.order(uuid, Order::Look { yaw, pitch });
+            }
         }
     }
 
@@ -630,8 +704,20 @@ fn teleport(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     Answer::saying(reply)
 }
 
-/// Место, названное в команде: имя игрока или три числа.
-fn place_of(parts: &[&str], source: &Source, shared: &Shared) -> Option<(f64, f64, f64)> {
+/// Место из команды `tp`.
+struct Place {
+    x: f64,
+    y: f64,
+    z: f64,
+    /// Измерение, если место — у другого игрока.
+    dimension: Option<Dimension>,
+    /// Поворот и наклон взгляда, если названы.
+    look: Option<(f32, f32)>,
+}
+
+/// Место, названное в команде: имя игрока (его место и измерение) или три
+/// числа, можно с поворотом и наклоном взгляда (измерение не названо).
+fn place_of(parts: &[&str], source: &Source, shared: &Shared) -> Option<Place> {
     match parts {
         [who] => {
             let (uuid, _) = find_player_named(who, source, shared)?;
@@ -643,10 +729,32 @@ fn place_of(parts: &[&str], source: &Source, shared: &Shared) -> Option<(f64, f6
                 .members()
                 .iter()
                 .find(|member| member.uuid == uuid)
-                .map(|member| (member.position.x, member.position.y, member.position.z))
+                .map(|member| Place {
+                    x: member.position.x,
+                    y: member.position.y,
+                    z: member.position.z,
+                    dimension: Some(member.dimension),
+                    look: None,
+                })
         }
 
-        [x, y, z] => Some((x.parse().ok()?, y.parse().ok()?, z.parse().ok()?)),
+        // Только конечные числа в пределах мира, как у оригинала: NaN или
+        // бесконечность записались бы в файл игрока и ломали каждый вход.
+        [x, y, z] => {
+            let number = |text: &str| text.parse::<f64>().ok().filter(|value| value.is_finite() && value.abs() <= 30_000_000.0);
+            Some(Place { x: number(x)?, y: number(y)?, z: number(z)?, dimension: None, look: None })
+        }
+
+        // Поворот — любое конечное число (приводится к −180..180), наклон —
+        // от −90 до 90, как у оригинала.
+        [x, y, z, yaw, pitch] => {
+            let mut place = place_of(&[*x, *y, *z], source, shared)?;
+            let yaw = yaw.parse::<f32>().ok().filter(|value| value.is_finite())?;
+            let pitch = pitch.parse::<f32>().ok().filter(|value| value.is_finite() && value.abs() <= 90.0)?;
+
+            place.look = Some(((yaw + 180.0).rem_euclid(360.0) - 180.0, pitch));
+            Some(place)
+        }
 
         _ => None,
     }
@@ -812,6 +920,7 @@ mod tests {
     fn server() -> Shared {
         let shared = Shared::new(
             World::in_memory(),
+            crate::world::World::in_memory(),
             PathBuf::new(),
             PathBuf::new(),
             Default::default(),
@@ -840,6 +949,9 @@ mod tests {
                         pitch: 0.0,
                         on_ground: true,
                     },
+                    dimension: Default::default(),
+                    sneaking: false,
+                    swings: 0,
                 };
 
                 players.join(member, number as i32).expect("ник свободен");
@@ -939,6 +1051,47 @@ mod tests {
         assert!(orders_for(&shared, 1).is_empty());
     }
 
+    /// Строка из F3+C: числа места и взгляда, в `execute in` — измерение.
+    #[test]
+    fn teleport_takes_the_look_from_f3_c() {
+        let shared = server();
+        let first = Source::Player { uuid: [1; 16], name: "Первый".to_string() };
+
+        run("execute in minecraft:the_nether run tp @s 149.30 68.38 -112.30 -8.25 30.30", &first, &shared);
+
+        let orders = orders_for(&shared, 1);
+        assert!(matches!(orders.first(), Some(Order::ChangeDimension { dimension: Dimension::Nether, x, .. }) if *x == 149.3));
+        assert!(matches!(orders.get(1), Some(Order::Look { yaw, pitch }) if *yaw == -8.25 && *pitch == 30.3));
+
+        // Поворот приводится к −180..180; наклон за 90 — ошибка.
+        run("tp 0 64 0 270 0", &first, &shared);
+        assert!(matches!(orders_for(&shared, 1).get(1), Some(Order::Look { yaw, .. }) if *yaw == -90.0));
+        assert!(run("tp 0 64 0 0 95", &first, &shared).reply.contains("Не понял"));
+    }
+
+    /// Перенос к игроку в другом измерении — переход в его измерение.
+    #[test]
+    fn teleport_to_a_player_follows_their_dimension() {
+        let shared = server();
+        let first = Source::Player { uuid: [1; 16], name: "Первый".to_string() };
+        shared.players.lock().expect("список игроков").set_dimension(&[2; 16], Dimension::Nether);
+
+        run("tp Первый Второй", &first, &shared);
+
+        assert!(matches!(
+            orders_for(&shared, 1).first(),
+            Some(Order::ChangeDimension { dimension: Dimension::Nether, x, .. }) if *x == 20.0
+        ));
+
+        // Второго — к первому: из Незера обратно в обычный мир.
+        run("tp Второй @s", &first, &shared);
+
+        assert!(matches!(
+            orders_for(&shared, 2).first(),
+            Some(Order::ChangeDimension { dimension: Dimension::Overworld, x, .. }) if *x == 10.0
+        ));
+    }
+
     /// Значки выбора: @s — сам, @a — все, @p — ближайший, @r — кто-то один.
     #[test]
     fn selectors_choose_the_right_players() {
@@ -1009,8 +1162,8 @@ mod tests {
 
         {
             let mut ops = shared.ops.lock().expect("права");
-            ops.take_away("Первый");
-            ops.take_away("Второй");
+            ops.take_away(None, "Первый");
+            ops.take_away(None, "Второй");
         }
 
         let player = Source::Player {
@@ -1088,6 +1241,9 @@ mod tests {
     fn setblock_and_fill_change_the_world() {
         let shared = server();
 
+        // Команды меняют только загруженные места.
+        shared.world_in(crate::dimension::Dimension::Overworld).lock().expect("мир").ensure(0, 0);
+
         // Рычагу на полу нужна опора, иначе он тут же отвалится.
         run("setblock 3 4 7 stone", &Source::Console, &shared);
         let reply = run(
@@ -1102,7 +1258,7 @@ mod tests {
             .expect("рычаг разбирается");
 
         {
-            let world = shared.world.lock().expect("мир");
+            let world = shared.world_in(crate::dimension::Dimension::Overworld).lock().expect("мир");
             assert_eq!(world.get_block(3, 5, 7), lever);
         }
 
@@ -1110,7 +1266,7 @@ mod tests {
         assert!(reply.contains("4"), "{}", reply);
 
         let stone = blocks::state_by_name("stone").expect("камень есть");
-        let world = shared.world.lock().expect("мир");
+        let world = shared.world_in(crate::dimension::Dimension::Overworld).lock().expect("мир");
         assert_eq!(world.get_block(1, 1, 1), stone);
 
         assert!(run("setblock 0 0 0 nonsense_block", &Source::Console, &shared)

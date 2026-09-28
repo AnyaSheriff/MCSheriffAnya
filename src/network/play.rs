@@ -20,7 +20,7 @@
 // клиент берёт из того же измерения (обычный overworld: от -64, высота 384),
 // поэтому секций в чанке ровно 24.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::Path;
 use std::sync::Arc;
@@ -40,7 +40,12 @@ use crate::fluids;
 use crate::inventory::{self, Inventory, Stack};
 use crate::journal;
 use crate::items::{self, Dropped};
-use crate::commands::{self, Effect, GAME_MODE_CREATIVE, Source};
+use crate::dimension::Dimension;
+use crate::commands::{
+    self, Effect, GAME_MODE_ADVENTURE, GAME_MODE_CREATIVE, GAME_MODE_SPECTATOR, GAME_MODE_SURVIVAL,
+    Source,
+};
+use crate::hardness_table::{INSTANT, UNBREAKABLE};
 use crate::playerdata::{self, PlayerData};
 use crate::players::{Change, Member, Order, Position};
 use crate::placing;
@@ -94,6 +99,14 @@ const USE_ITEM: i32 = 0x43;
 /// Serverbound Set Carried Item — игрок выбрал другой слот панели быстрого
 /// доступа.
 const SET_CARRIED_ITEM: i32 = 0x35;
+
+/// Serverbound Swing Arm — игрок взмахнул рукой (щелчок, удар).
+const SWING_ARM: i32 = 0x3F;
+
+/// Clientbound Entity Animation — показать чужой взмах; 0 — главной рукой
+/// (minecraft-data, протокол 26.1).
+const ENTITY_ANIMATION: i32 = 0x02;
+const ANIMATION_SWING_MAIN_ARM: u8 = 0;
 
 /// Clientbound Set Container Content — содержимое окна целиком.
 /// Им сервер показывает игроку его инвентарь.
@@ -230,6 +243,18 @@ const PROPERTY_HUMANOID_ARM: i32 = 42;
 /// Вид значения «байт» в списке видов свойств сущности.
 const PROPERTY_BYTE: i32 = 0;
 
+/// Общие флаги сущности (свойство 0, байт): 0x02 — приседает
+/// (minecraft.wiki, Java Edition protocol/Entity metadata).
+const FLAGS_PROPERTY: u8 = 0;
+const FLAG_CROUCHING: u8 = 0x02;
+
+/// Поза сущности (свойство 6): вид значения «поза» — 20 в 26.1
+/// (minecraft-data, протокол 26.1); 0 — стоит, 5 — присел.
+const POSE_PROPERTY: u8 = 6;
+const PROPERTY_POSE: i32 = 20;
+const POSE_STANDING: i32 = 0;
+const POSE_CROUCHING: i32 = 5;
+
 /// Конец списка свойств в пакете.
 const PROPERTIES_END: u8 = 0xFF;
 
@@ -281,6 +306,9 @@ const SOUND_EFFECT: i32 = 0x75;
 /// какой ползунок громкости на него влияет.
 const SOUND_BLOCK: i32 = 4;
 
+/// Раздел звуков «существа» — в нём звучат сущности (плеск предмета).
+const SOUND_NEUTRAL: i32 = 6;
+
 /// Clientbound Block Action — то, что клиент проигрывает у себя сам:
 /// ход поршня, открытие сундука, звук нотного блока.
 const BLOCK_ACTION: i32 = 0x07;
@@ -322,15 +350,8 @@ const SET_DEFAULT_SPAWN_POSITION: i32 = 0x61;
 /// Serverbound Confirm Teleportation.
 const CONFIRM_TELEPORTATION: i32 = 0x00;
 
-/// Идентификатор телепортации. Клиент возвращает его в подтверждении.
-const TELEPORT_ID: i32 = 1;
-
-/// Имя измерения. Должно совпадать с именем в списке измерений и с записью
-/// реестра dimension_type.
-const DIMENSION: &str = "minecraft:overworld";
-
-/// ID измерения в реестре dimension_type: у нас там одна запись.
-const DIMENSION_TYPE_ID: i32 = 0;
+/// Clientbound Respawn: переход в другое измерение.
+const RESPAWN: i32 = 0x52;
 
 /// Дальность прорисовки, которую сервер объявляет клиенту. Клиент ждёт, пока
 /// загрузятся все чанки в этом радиусе, поэтому она должна совпадать с числом
@@ -340,6 +361,9 @@ const DIMENSION_TYPE_ID: i32 = 0;
 /// Клиент отключается, если не получал от сервера ни одного пакета дольше
 /// 30 секунд, поэтому интервал должен быть заметно меньше.
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(5);
+
+/// Сколько ждать ответа на Keep Alive, прежде чем отключить игрока.
+const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(30);
 
 // Режим игры при входе (для того, кто заходит впервые) — creative. Клиент
 // берёт его не из Login (Play), а из Player Info Update, поэтому он указывается
@@ -374,21 +398,20 @@ const SAVED_TURN: f32 = 15.0;
 /// заведомо меньше, чем игрок способен заметить.
 const SAME_POSITION: f64 = 0.001;
 
-/// Где сервер в последний раз показывал этому клиенту чужого игрока.
+/// Что этому клиенту уже показано про чужого игрока.
 ///
 /// Смещения при движении считаются от того, что клиент уже знает, поэтому
 /// помнить приходится про каждого чужого игрока отдельно, и у каждого
 /// подключения этот список свой.
-/// Что этому клиенту уже показано про чужого игрока.
-///
-/// Смещения при движении считаются от того, что клиент уже знает, поэтому
-/// помнить приходится для каждого подключения своё.
 #[derive(Clone, Copy, PartialEq)]
 struct Shown {
     position: Position,
     skin_parts: u8,
     main_hand: u8,
     held: Option<Stack>,
+    sneaking: bool,
+    /// Сколько взмахов рукой уже показано.
+    swings: u32,
 }
 
 type Seen = HashMap<i32, Shown>;
@@ -453,10 +476,11 @@ pub async fn play_session(
 
     // Скин узнаётся до входа в мир: он должен быть готов к тому мгновению,
     // когда сервер расскажет о новом игроке остальным.
-    let skin = skins::look_up(&shared.skins, name, shared.skin_settings).await;
+    let skin = skins::look_up(&shared.skins, name, &shared.skin_settings).await;
 
+    // Точка появления — всегда в обычном мире.
     let spawn = shared
-        .world
+        .world_in(crate::dimension::Dimension::Overworld)
         .lock()
         .expect("мир захвачен другим потоком")
         .spawn_position();
@@ -484,11 +508,23 @@ pub async fn play_session(
         );
     }
 
-    let Some(entered) = enter_world(stream, &mut player, shared, (came_from, came_to)).await? else {
+    // Отписаться от журналов надо и когда вход оборвался ошибкой: иначе
+    // журналы держали бы записи для этого читателя вечно.
+    let entered = enter_world(stream, &mut player, shared, (came_from, came_to)).await;
+    let Ok(Some(entered)) = entered else {
         log_debug!("Play: игрок {} в мир не попал", player.name);
 
-        forget_reader(shared, player.reader);
-        return Ok(false);
+        forget_reader(shared, player.dimension, player.reader);
+
+        // Номер сущности выдаётся вместе с появлением в списке: если он
+        // есть, обрыв случился уже там, и из списка надо убрать самим —
+        // вызывающий уберёт только вошедшего.
+        if entered.is_err() && player.entity_id != 0 {
+            player.save(&shared.playerdata);
+            player_left(shared, &player.name, &player.uuid);
+        }
+
+        return entered.map(|_| false);
     };
 
     let result = read_and_log_play_packets(stream, shared, &mut player, entered).await;
@@ -498,6 +534,12 @@ pub async fn play_session(
     match &result {
         Ok(()) => log_info!("{} потерял соединение: отключился", player.name),
         Err(error) => log_info!("{} потерял соединение: {}", player.name, error.kind()),
+    }
+
+    // Курсор и сетка верстака при выходе возвращаются в инвентарь, а что
+    // не влезло — на землю: в файл игрока они не пишутся.
+    for stack in player.inventory.close_window().thrown {
+        throw_out(shared, &player, stack);
     }
 
     // При выходе записываем положение в любом случае — в том числе когда
@@ -513,7 +555,7 @@ pub async fn play_session(
 
     log_debug!("Play: чтение пакетов клиента завершено");
 
-    forget_reader(shared, player.reader);
+    forget_reader(shared, player.dimension, player.reader);
 
     // Игрок в мире был — значит, его надо убрать из списка при любом
     // окончании, и оборванном тоже. Причина обрыва уже записана в лог выше.
@@ -532,9 +574,10 @@ fn view_for(shared: &Shared, look: &configuration::ClientLook) -> i32 {
 ///
 /// Пока читатель записан, журналы держат для него все изменения. Забыть
 /// отписаться — значит заставить их расти вечно.
-fn forget_reader(shared: &Shared, reader: journal::Reader) {
+fn forget_reader(shared: &Shared,
+    dimension: crate::dimension::Dimension, reader: journal::Reader) {
     shared
-        .world
+        .world_in(dimension)
         .lock()
         .expect("мир захвачен другим потоком")
         .forget_reader(reader);
@@ -546,7 +589,7 @@ fn forget_reader(shared: &Shared, reader: journal::Reader) {
         .forget_reader(reader);
 
     shared
-        .items
+        .items_in(dimension)
         .lock()
         .expect("предметы захвачены другим потоком")
         .forget_reader(reader);
@@ -596,13 +639,13 @@ async fn enter_world(
         // предметы, чат (см. Shared). Такт держит мир и берёт игроков; возьми
         // мы здесь игроков раньше мира — вход игрока, совпавший с тактом,
         // застыл бы вместе с тактом навсегда, а за ними и весь сервер.
-        let mut world = shared.world.lock().expect("мир захвачен другим потоком");
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
         let mut players = shared
             .players
             .lock()
             .expect("список игроков захвачен другим потоком");
         let mut items = shared
-            .items
+            .items_in(player.dimension)
             .lock()
             .expect("предметы захвачены другим потоком");
         let chat = shared.chat.lock().expect("чат захвачен другим потоком");
@@ -653,6 +696,7 @@ async fn enter_world(
 
         send_login(
             stream,
+            player.dimension,
             player.game_mode,
             player.entity_id,
             shared.properties.view_distance,
@@ -663,7 +707,10 @@ async fn enter_world(
 
         // Клиент подтверждает телепортацию — до подтверждения он игнорирует
         // пакеты о перемещении.
-        if let Some(look) = read_confirm_teleportation(stream).await? {
+        let look = read_confirm_teleportation(stream).await?;
+        player.awaiting_teleport = false;
+
+        if let Some(look) = look {
             player.skin_parts = look.skin_parts;
             player.main_hand = look.main_hand;
             player.view = view_for(shared, &look);
@@ -693,18 +740,13 @@ async fn enter_world(
         // И про самого себя: свой второй слой скина клиент рисует не по своим
         // настройкам, а по тем же сведениям о сущности, что и чужой. Не сказать
         // ему — и в виде со стороны игрок будет без шапки и куртки.
-        send_look(
-            stream,
-            member.entity_id,
-            member.skin_parts,
-            member.main_hand,
-        )
+        send_look(stream, member.entity_id, member.skin_parts, member.main_hand, member.sneaking)
         .await?;
 
         send_default_spawn_position(stream, player.spawn_point).await?;
         send_health(stream).await?;
         send_game_event_start_waiting(stream).await?;
-        let (age, time) = world_age(shared);
+        let (age, time) = world_age(shared, player.dimension);
         send_time(stream, age, time).await?;
         send_center_chunk(stream, player.chunk()).await?;
 
@@ -723,7 +765,7 @@ async fn enter_world(
         // появляется сразу, даль дорисовывается потом.
         send_chunks_around(
             stream,
-            shared,
+            shared, player.dimension,
             (center_x, center_z),
             &mut sent,
             (NEAR_CHUNKS, player.view),
@@ -738,9 +780,9 @@ async fn enter_world(
         // после чанков под ним.
         let mut seen = Seen::new();
 
-        for other in &others {
+        for other in others.iter().filter(|other| other.dimension == player.dimension) {
             send_add_entity(stream, other).await?;
-            send_look(stream, other.entity_id, other.skin_parts, other.main_hand).await?;
+            send_look(stream, other.entity_id, other.skin_parts, other.main_hand, other.sneaking).await?;
             send_equipment(stream, other.entity_id, other.held).await?;
 
             seen.insert(
@@ -750,6 +792,8 @@ async fn enter_world(
                     skin_parts: other.skin_parts,
                     main_hand: other.main_hand,
                     held: other.held,
+                    sneaking: other.sneaking,
+                    swings: other.swings,
                 },
             );
         }
@@ -757,7 +801,7 @@ async fn enter_world(
         // Предметы, уже лежащие в мире: о них новичок из журнала не узнает —
         // они попали туда до его прихода.
         let lying: Vec<Dropped> = shared
-            .items
+            .items_in(player.dimension)
             .lock()
             .expect("предметы захвачены другим потоком")
             .items()
@@ -811,6 +855,7 @@ async fn enter_world(
 /// им этого игрока.
 async fn send_login(
     stream: &mut TcpStream,
+    dimension: Dimension,
     game_mode: i32,
     entity_id: i32,
     view: i32,
@@ -822,8 +867,10 @@ async fn send_login(
     body.push(0x00); // не хардкор
 
     // Список измерений сервера.
-    body.extend_from_slice(&encode_varint(1));
-    body.extend_from_slice(&encode_string(DIMENSION));
+    body.extend_from_slice(&encode_varint(Dimension::ALL.len() as i32));
+    for known in Dimension::ALL {
+        body.extend_from_slice(&encode_string(known.name()));
+    }
 
     body.extend_from_slice(&encode_varint(20)); // максимальное число игроков
     body.extend_from_slice(&encode_varint(view)); // дальность прорисовки
@@ -832,10 +879,19 @@ async fn send_login(
     body.push(0x01); // показывать экран возрождения
     body.push(0x00); // ограниченная крафтовка
 
-    body.extend_from_slice(&encode_varint(DIMENSION_TYPE_ID));
-    body.extend_from_slice(&encode_string(DIMENSION));
+    push_spawn_info(&mut body, dimension, game_mode);
+    body.push(0x00); // обязательный защищённый чат
 
-    push_i64(&mut body, 0); // hashed seed
+    write_body(stream, body).await
+}
+
+/// Сведения о месте появления — общая часть Login (Play) и Respawn: в каком
+/// измерении игрок и в каком режиме.
+fn push_spawn_info(body: &mut Vec<u8>, dimension: Dimension, game_mode: i32) {
+    body.extend_from_slice(&encode_varint(dimension.type_id()));
+    body.extend_from_slice(&encode_string(dimension.name()));
+
+    push_i64(body, 0); // hashed seed
     body.push(game_mode as u8); // режим игры
     body.push(0xFF); // предыдущий режим игры: нет (-1)
     body.push(0x00); // отладочный мир
@@ -843,17 +899,30 @@ async fn send_login(
     body.push(0x00); // точки смерти нет
     body.extend_from_slice(&encode_varint(0)); // откат портала
     body.extend_from_slice(&encode_varint(63)); // уровень моря
-    body.push(0x00); // обязательный защищённый чат
+}
+
+/// Отправляет Respawn — игрок переходит в другое измерение. Клиент при этом
+/// забывает все чанки и сущности: их надо прислать заново.
+async fn send_respawn(stream: &mut TcpStream, dimension: Dimension, game_mode: i32) -> io::Result<()> {
+    let mut body = encode_varint(RESPAWN);
+
+    push_spawn_info(&mut body, dimension, game_mode);
+    body.push(0x03); // сохранить свойства и сведения о сущности
 
     write_body(stream, body).await
 }
 
 /// Отправляет Synchronize Player Position — ставит игрока в точку, где он
 /// стоял в прошлый раз (или в точку появления, если он здесь впервые).
-async fn send_player_position(stream: &mut TcpStream, player: &PlayerState) -> io::Result<()> {
+async fn send_player_position(stream: &mut TcpStream, player: &mut PlayerState) -> io::Result<()> {
     let mut body = encode_varint(PLAYER_POSITION);
 
-    body.extend_from_slice(&encode_varint(TELEPORT_ID));
+    // У каждого переноса свой номер: подтверждение старого не должно
+    // сниматься за подтверждение нового.
+    player.teleport = player.teleport.wrapping_add(1);
+    player.awaiting_teleport = true;
+
+    body.extend_from_slice(&encode_varint(player.teleport));
     push_f64(&mut body, player.x); // X
     push_f64(&mut body, player.y); // Y
     push_f64(&mut body, player.z); // Z
@@ -916,16 +985,21 @@ async fn send_player_info(stream: &mut TcpStream, member: &Member) -> io::Result
         // Скин — свойство профиля с именем textures: описание с ссылкой
         // на картинку.
         //
-        // Подпись Mojang мы не прикладываем намеренно. Она выдана на
-        // опознаватель владельца скина, а у наших игроков опознаватели
-        // свои — клиент видит несовпадение, пишет «invalid signature for
-        // textures property» и показывает стандартный скин. Без подписи
-        // он просто берёт описание как есть.
+        // Подпись прикладывается, только когда описание её требует (у скинов
+        // Mojang стоит `signatureRequired`): такой скин без подписи клиент
+        // молча отбрасывает. Остальные (Ely.by) идут без подписи — чужую
+        // подпись клиент счёл бы неверной и тоже отбросил бы скин.
         Some(skin) => {
             body.extend_from_slice(&encode_varint(1)); // одно свойство
             body.extend_from_slice(&encode_string("textures"));
             body.extend_from_slice(&encode_string(&skin.value));
-            body.push(0); // подписи нет
+
+            if skin.signature_required() && !skin.signature.is_empty() {
+                body.push(1);
+                body.extend_from_slice(&encode_string(&skin.signature));
+            } else {
+                body.push(0); // подписи нет
+            }
         }
         None => body.extend_from_slice(&encode_varint(0)), // свойств профиля нет
     }
@@ -1019,7 +1093,7 @@ fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) {
         look_z * items::THROW_SPEED,
     );
 
-    drop_into_world(shared, stack, from, velocity, items::THROWN_DELAY);
+    drop_into_world(shared, player.dimension, stack, from, velocity, items::THROWN_DELAY);
 
     log_debug!(
         "Play: {} выбросил предмет {} ({} шт.)",
@@ -1047,13 +1121,14 @@ fn looking(yaw: f32, pitch: f32) -> (f64, f64, f64) {
 /// Кладёт предмет в мир. Дальше он летит и падает сам — этим занимается такт.
 fn drop_into_world(
     shared: &Shared,
+    dimension: crate::dimension::Dimension,
     stack: Stack,
     at: (f64, f64, f64),
     velocity: (f64, f64, f64),
     delay: std::time::Duration,
 ) {
     shared
-        .items
+        .items_in(dimension)
         .lock()
         .expect("предметы захвачены другим потоком")
         .drop_item(shared.next_entity_id(), stack, at, velocity, delay);
@@ -1064,13 +1139,19 @@ fn drop_into_world(
 /// Возвращает слоты, которые изменились: их надо показать клиенту. Само
 /// исчезновение предмета из мира рассылается всем по журналу.
 fn pick_up_items(shared: &Shared, player: &mut PlayerState) -> Vec<i32> {
+    let mut slots = Vec::new();
+
+    // Поднимается столько, сколько влезает: остальное остаётся лежать.
     let taken = shared
-        .items
+        .items_in(player.dimension)
         .lock()
         .expect("предметы захвачены другим потоком")
-        .take_near((player.x, player.y, player.z), player.entity_id);
+        .take_near((player.x, player.y, player.z), player.entity_id, |stack| {
+            let (changed, left) = player.inventory.put(stack);
 
-    let mut slots = Vec::new();
+            slots.extend(changed);
+            stack.count - left.map_or(0, |left| left.count)
+        });
 
     for item in taken {
         log_debug!(
@@ -1079,8 +1160,6 @@ fn pick_up_items(shared: &Shared, player: &mut PlayerState) -> Vec<i32> {
             item.stack.item,
             item.stack.count
         );
-
-        slots.extend(player.inventory.add(item.stack));
     }
 
     slots
@@ -1155,13 +1234,14 @@ async fn send_pick_up(
 async fn send_pending_item_changes(
     stream: &mut TcpStream,
     shared: &Shared,
+    dimension: crate::dimension::Dimension,
     from: &mut usize,
     seen: &mut SeenItems,
     reader: journal::Reader,
 ) -> io::Result<()> {
     let changes = {
         let mut items = shared
-            .items
+            .items_in(dimension)
             .lock()
             .expect("предметы захвачены другим потоком");
 
@@ -1201,10 +1281,11 @@ async fn send_pending_item_changes(
 async fn send_item_moves(
     stream: &mut TcpStream,
     shared: &Shared,
+    dimension: crate::dimension::Dimension,
     seen: &mut SeenItems,
 ) -> io::Result<()> {
     let items: Vec<Dropped> = shared
-        .items
+        .items_in(dimension)
         .lock()
         .expect("предметы захвачены другим потоком")
         .items()
@@ -1339,6 +1420,7 @@ async fn send_container_slot(
 async fn send_chunks_around(
     stream: &mut TcpStream,
     shared: &Shared,
+    dimension: crate::dimension::Dimension,
     (center_x, center_z): (i32, i32),
     sent: &mut SentChunks,
     (radius, view): (i32, i32),
@@ -1403,7 +1485,7 @@ async fn send_chunks_around(
         }
 
         let source = {
-            let world = shared.world.lock().expect("мир захвачен другим потоком");
+            let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
             needed.retain(|(chunk_x, chunk_z)| !world.has_chunk(*chunk_x, *chunk_z));
             Arc::new(world.source())
@@ -1425,7 +1507,7 @@ async fn send_chunks_around(
             };
 
             shared
-                .world
+                .world_in(dimension)
                 .lock()
                 .expect("мир захвачен другим потоком")
                 .accept(chunk_x, chunk_z, ready);
@@ -1437,7 +1519,7 @@ async fn send_chunks_around(
 
         for (chunk_x, chunk_z) in part.iter().copied() {
             let job = shared
-                .world
+                .world_in(dimension)
                 .lock()
                 .expect("мир захвачен другим потоком")
                 .light_job(chunk_x, chunk_z);
@@ -1452,7 +1534,7 @@ async fn send_chunks_around(
                     // чтобы не считать его заново.
                     if !recounted.is_empty() {
                         shared
-                            .world
+                            .world_in(dimension)
                             .lock()
                             .expect("мир захвачен другим потоком")
                             .store_light(recounted);
@@ -1463,7 +1545,7 @@ async fn send_chunks_around(
                 _ => ChunkLight::open_sky(),
             };
 
-            send_chunk(stream, &shared.world, chunk_x, chunk_z, &light).await?;
+            send_chunk(stream, shared.world_in(dimension), chunk_x, chunk_z, &light).await?;
         }
     }
 
@@ -1503,14 +1585,14 @@ impl Prefetch {
     /// Кладёт в мир то, что успело сложиться. Чанк, который тем временем
     /// появился в мире другим путём (его прислали игроку, в нём уже что-то
     /// поменяли), не заменяется.
-    fn collect(&mut self, shared: &Shared) {
+    fn collect(&mut self, shared: &Shared, dimension: crate::dimension::Dimension) {
         let arrived: Vec<_> = self.receiver.try_iter().collect();
 
         if arrived.is_empty() {
             return;
         }
 
-        let mut world = shared.world.lock().expect("мир захвачен другим потоком");
+        let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
         for (chunk_x, chunk_z, ready) in arrived {
             self.pending.remove(&(chunk_x, chunk_z));
@@ -1523,7 +1605,8 @@ impl Prefetch {
 
     /// Запускает складывание ближайших недостающих чанков кольца от `view`
     /// до `view + prefetch_chunks` вокруг игрока.
-    fn step(&mut self, shared: &Shared, (center_x, center_z): (i32, i32), view: i32) {
+    fn step(&mut self, shared: &Shared,
+    dimension: crate::dimension::Dimension, (center_x, center_z): (i32, i32), view: i32) {
         let (ahead, at_once) = (shared.settings.prefetch_chunks, shared.settings.prefetch_at_once);
 
         if ahead <= 0 || self.done_around == Some((center_x, center_z, view)) || self.pending.len() >= at_once {
@@ -1532,7 +1615,7 @@ impl Prefetch {
 
         let reach = view + ahead;
         let (missing, source) = {
-            let world = shared.world.lock().expect("мир захвачен другим потоком");
+            let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
             let mut missing: Vec<(i32, i32)> = Vec::new();
 
             for chunk_x in (center_x - reach)..=(center_x + reach) {
@@ -1601,12 +1684,23 @@ async fn send_look(
     entity_id: i32,
     skin_parts: u8,
     main_hand: u8,
+    sneaking: bool,
 ) -> io::Result<()> {
     let mut body = encode_varint(SET_ENTITY_DATA);
 
     body.extend_from_slice(&encode_varint(entity_id));
 
     // Свойства идут списком: номер, вид значения, само значение.
+    // Присевшего клиент рисует по двум: флагу «приседает» среди общих
+    // флагов сущности и позе «присел».
+    body.push(FLAGS_PROPERTY);
+    body.extend_from_slice(&encode_varint(PROPERTY_BYTE));
+    body.push(if sneaking { FLAG_CROUCHING } else { 0 });
+
+    body.push(POSE_PROPERTY);
+    body.extend_from_slice(&encode_varint(PROPERTY_POSE));
+    body.extend_from_slice(&encode_varint(if sneaking { POSE_CROUCHING } else { POSE_STANDING }));
+
     body.push(MAIN_HAND_PROPERTY);
     body.extend_from_slice(&encode_varint(PROPERTY_HUMANOID_ARM));
     body.extend_from_slice(&encode_varint(main_hand as i32));
@@ -1616,6 +1710,16 @@ async fn send_look(
     body.push(skin_parts);
 
     body.push(PROPERTIES_END);
+
+    write_body(stream, body).await
+}
+
+/// Отправляет Entity Animation: чужой игрок взмахнул рукой.
+async fn send_swing(stream: &mut TcpStream, entity_id: i32) -> io::Result<()> {
+    let mut body = encode_varint(ENTITY_ANIMATION);
+
+    body.extend_from_slice(&encode_varint(entity_id));
+    body.push(ANIMATION_SWING_MAIN_ARM);
 
     write_body(stream, body).await
 }
@@ -1633,8 +1737,8 @@ fn publish_player(shared: &Shared, player: &PlayerState) {
 }
 
 /// Сколько тактов миру от роду и который в нём час.
-fn world_age(shared: &Shared) -> (i64, i64) {
-    let world = shared.world.lock().expect("мир захвачен другим потоком");
+fn world_age(shared: &Shared, dimension: crate::dimension::Dimension) -> (i64, i64) {
+    let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
     (world.tick() as i64, world.time_of_day())
 }
@@ -1709,25 +1813,57 @@ async fn send_other_moves(
             continue;
         }
 
-        // Про того, кто появился на этом же круге, уже рассказал Add Entity:
-        // его запись в seen появилась там же.
+        // Видно только тех, кто в том же измерении: пришёл — показать,
+        // ушёл в другое — убрать.
+        let here = member.dimension == player.dimension;
+
         let Some(shown) = seen.get(&member.entity_id).copied() else {
+            if here {
+                send_add_entity(stream, &member).await?;
+                send_look(stream, member.entity_id, member.skin_parts, member.main_hand, member.sneaking).await?;
+                send_equipment(stream, member.entity_id, member.held).await?;
+                seen.insert(
+                    member.entity_id,
+                    Shown {
+                        position: member.position,
+                        skin_parts: member.skin_parts,
+                        main_hand: member.main_hand,
+                        held: member.held,
+                        sneaking: member.sneaking,
+                        swings: member.swings,
+                    },
+                );
+            }
             continue;
         };
+
+        if !here {
+            send_remove_entity(stream, member.entity_id).await?;
+            seen.remove(&member.entity_id);
+            continue;
+        }
 
         let now = Shown {
             position: member.position,
             skin_parts: member.skin_parts,
             main_hand: member.main_hand,
             held: member.held,
+            sneaking: member.sneaking,
+            swings: member.swings,
         };
 
         if now == shown {
             continue;
         }
 
-        if now.skin_parts != shown.skin_parts || now.main_hand != shown.main_hand {
-            send_look(stream, member.entity_id, now.skin_parts, now.main_hand).await?;
+        if now.skin_parts != shown.skin_parts || now.main_hand != shown.main_hand || now.sneaking != shown.sneaking {
+            send_look(stream, member.entity_id, now.skin_parts, now.main_hand, now.sneaking).await?;
+        }
+
+        // Взмахнул рукой — один взмах, сколько бы их ни набежало с прошлого
+        // раза: подряд они всё равно слились бы в один.
+        if now.swings != shown.swings {
+            send_swing(stream, member.entity_id).await?;
         }
 
         if now.held != shown.held {
@@ -2178,10 +2314,22 @@ async fn send_default_spawn_position(
 ) -> io::Result<()> {
     let mut body = encode_varint(SET_DEFAULT_SPAWN_POSITION);
 
-    body.extend_from_slice(&encode_string(DIMENSION));
+    // Точка возрождения — всегда в обычном мире.
+    body.extend_from_slice(&encode_string(Dimension::Overworld.name()));
     push_packed_position(&mut body, spawn.0 as i32, spawn.1 as i32, spawn.2 as i32);
     push_f32(&mut body, 0.0); // поворот
     push_f32(&mut body, 0.0); // наклон
+
+    write_body(stream, body).await
+}
+
+/// Отправляет Game Event 3 — «смена режима игры»: без него клиент остаётся
+/// в прежнем режиме, как бы ни менялась строка в списке игроков.
+async fn send_game_event_game_mode(stream: &mut TcpStream, game_mode: i32) -> io::Result<()> {
+    let mut body = encode_varint(GAME_EVENT);
+
+    body.push(3); // событие: смена режима игры
+    push_f32(&mut body, game_mode as f32);
 
     write_body(stream, body).await
 }
@@ -2221,13 +2369,44 @@ async fn send_center_chunk(stream: &mut TcpStream, chunk: (i32, i32)) -> io::Res
     write_body(stream, body).await
 }
 
-/// Досылает клиенту события мира, которых он ещё не видел, — в том
-/// порядке, в каком они случились.
-///
-/// Порядок важен: действие поршня обязано уйти раньше изменения «поршень
-/// выдвинут» (иначе клиент ход не нарисует — «Sending an extension action to
-/// an already-extended piston has no effect»), а воздух на месте сломанного
-/// блока — раньше действия, в которое клиент этот воздух заполнит.
+/// Такт игрока у портала: стоит в портале достаточно долго — поручение
+/// перейти в другое измерение, к парному порталу (найденному или
+/// построенному).
+fn step_portal(shared: &Shared, player: &mut PlayerState) {
+    let inside = crate::portal::standing_in(
+        &shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком"),
+        (player.x, player.y, player.z),
+    );
+
+    if !inside {
+        player.in_portal = 0;
+        player.portal_ready = true;
+        return;
+    }
+
+    if !player.portal_ready {
+        return;
+    }
+
+    player.in_portal += 1;
+    let needed = crate::portal::wait(&shared.settings, player.game_mode == GAME_MODE_CREATIVE);
+
+    if player.in_portal < needed {
+        return;
+    }
+
+    player.in_portal = 0;
+    player.portal_ready = false;
+
+    let (dimension, (x, y, z)) = crate::portal::travel(shared, player.dimension, (player.x, player.y, player.z));
+
+    shared
+        .players
+        .lock()
+        .expect("список игроков захвачен другим потоком")
+        .order(&player.uuid, Order::ChangeDimension { dimension, x, y, z });
+}
+
 /// Конец такта для этого подключения: всё, что случилось в мире, и ответы
 /// на собственные пакеты игрока.
 async fn flush_tick(
@@ -2236,18 +2415,23 @@ async fn flush_tick(
     player: &mut PlayerState,
     world_changes: &mut usize,
     pending: &mut Vec<Reaction>,
-) -> io::Result<()> {
-    send_pending_world_events(stream, shared, world_changes, player.reader).await?;
+) -> io::Result<bool> {
+    let lagged = send_pending_world_events(stream, shared, player.dimension, world_changes, player.reader).await?;
 
     for reaction in pending.drain(..) {
         apply_reaction(stream, shared, player, &reaction).await?;
     }
 
-    Ok(())
+    Ok(lagged)
 }
 
 /// Отправляет клиенту события мира, накопившиеся с прошлого раза, в том
 /// порядке, в каком они случились.
+///
+/// Порядок важен: действие поршня обязано уйти раньше изменения «поршень
+/// выдвинут» (иначе клиент ход не нарисует — «Sending an extension action to
+/// an already-extended piston has no effect»), а воздух на месте сломанного
+/// блока — раньше действия, в которое клиент этот воздух заполнит.
 ///
 /// Изменения блоков идут пачкой по секциям, как у оригинала: одно — Block
 /// Update, несколько в одной секции — Update Section Blocks. Действие, звук
@@ -2255,14 +2439,15 @@ async fn flush_tick(
 async fn send_pending_world_events(
     stream: &mut TcpStream,
     shared: &Shared,
+    dimension: crate::dimension::Dimension,
     sent: &mut usize,
     reader: journal::Reader,
-) -> io::Result<()> {
-    let (events, count) = shared
-        .world
+) -> io::Result<bool> {
+    let (events, count, lagged) = shared
+        .world_in(dimension)
         .lock()
         .expect("мир захвачен другим потоком")
-        .events_since(*sent, reader);
+        .events_since_checked(*sent, reader);
 
     *sent = count;
 
@@ -2294,7 +2479,9 @@ async fn send_pending_world_events(
         }
     }
 
-    send_block_changes(stream, &mut pending).await
+    send_block_changes(stream, &mut pending).await?;
+
+    Ok(lagged)
 }
 
 /// Отправляет накопленные изменения блоков: по секциям, в порядке первого
@@ -2368,12 +2555,22 @@ async fn send_sound(stream: &mut TcpStream, sound: &WorldSound) -> io::Result<()
     body.extend_from_slice(&encode_string(sound.name));
     body.push(0); // своей дальности слышимости у него нет
 
-    body.extend_from_slice(&encode_varint(SOUND_BLOCK));
-
-    // Середина блока, в восьмых долях.
-    push_i32(&mut body, sound.x * 8 + 4);
-    push_i32(&mut body, sound.y * 8 + 4);
-    push_i32(&mut body, sound.z * 8 + 4);
+    // Звук сущности — в её точке и в разделе «существа»; звук блока — в
+    // середине блока. Место — в восьмых долях.
+    match sound.exact {
+        Some((x, y, z)) => {
+            body.extend_from_slice(&encode_varint(SOUND_NEUTRAL));
+            push_i32(&mut body, (x * 8.0).floor() as i32);
+            push_i32(&mut body, (y * 8.0).floor() as i32);
+            push_i32(&mut body, (z * 8.0).floor() as i32);
+        }
+        None => {
+            body.extend_from_slice(&encode_varint(SOUND_BLOCK));
+            push_i32(&mut body, sound.x * 8 + 4);
+            push_i32(&mut body, sound.y * 8 + 4);
+            push_i32(&mut body, sound.z * 8 + 4);
+        }
+    }
 
     body.extend_from_slice(&sound.volume.to_be_bytes());
     body.extend_from_slice(&sound.pitch.to_be_bytes());
@@ -2453,17 +2650,13 @@ async fn send_pending_player_changes(
                     skin_parts: member.skin_parts,
                     main_hand: member.main_hand,
                     held: member.held,
+                    sneaking: member.sneaking,
+                    swings: member.swings,
                 };
 
-                if seen.insert(member.entity_id, shown).is_none() {
+                if member.dimension == player.dimension && seen.insert(member.entity_id, shown).is_none() {
                     send_add_entity(stream, member).await?;
-                    send_look(
-                        stream,
-                        member.entity_id,
-                        member.skin_parts,
-                        member.main_hand,
-                    )
-                    .await?;
+                    send_look(stream, member.entity_id, member.skin_parts, member.main_hand, member.sneaking).await?;
                     send_equipment(stream, member.entity_id, member.held).await?;
                 }
             }
@@ -2475,6 +2668,38 @@ async fn send_pending_player_changes(
                 seen.remove(entity_id);
             }
             Change::Left { .. } => {}
+            Change::GameMode { uuid, mode } if *uuid != player.uuid => {
+                send_game_mode(stream, uuid, *mode).await?;
+            }
+            // О своём режиме подключение узнаёт из поручения.
+            Change::GameMode { .. } => {}
+            // Новый скин клиент берёт из записи в списке игроков: запись —
+            // заново, и сущность — заново, иначе она осталась бы в старом.
+            Change::Skin(member) if member.uuid != player.uuid => {
+                let shown = seen.remove(&member.entity_id).is_some();
+
+                if shown {
+                    send_remove_entity(stream, member.entity_id).await?;
+                }
+                send_player_info_remove(stream, &member.uuid).await?;
+                send_player_info(stream, member).await?;
+
+                if shown {
+                    let now = Shown {
+                        position: member.position,
+                        skin_parts: member.skin_parts,
+                        main_hand: member.main_hand,
+                        held: member.held,
+                        sneaking: member.sneaking,
+                        swings: member.swings,
+                    };
+                    seen.insert(member.entity_id, now);
+                    send_add_entity(stream, member).await?;
+                    send_look(stream, member.entity_id, member.skin_parts, member.main_hand, member.sneaking).await?;
+                    send_equipment(stream, member.entity_id, member.held).await?;
+                }
+            }
+            Change::Skin(_) => {}
         }
     }
 
@@ -2583,8 +2808,9 @@ async fn send_chunk(
 /// состояния блоков и биомы. Состояния кодируются либо одним значением, либо
 /// палитрой, либо напрямую — что короче.
 fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]>) {
-    /// Больше этого числа разных состояний — и палитра перестаёт экономить.
-    const MAX_PALETTE: usize = 16;
+    /// Больше этого числа разных состояний (восемь битов на блок) палитра
+    /// не бывает — дальше номера пишутся прямо, как и у оригинала.
+    const MAX_PALETTE: usize = 256;
 
     // Состояния в памяти лежат в двух байтах, а в пакет идут числами
     // со знаком — разворачиваем по дороге.
@@ -2592,6 +2818,7 @@ fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]
     let states = states.unwrap_or(&empty);
 
     let mut palette: Vec<i32> = Vec::new();
+    let mut known: HashSet<u16> = HashSet::new();
     let mut block_count: i32 = 0;
 
     for packed in states {
@@ -2601,7 +2828,7 @@ fn push_section(out: &mut Vec<u8>, states: Option<&[u16]>, biomes: Option<&[u16]
             block_count += 1;
         }
 
-        if !palette.contains(&state) {
+        if known.insert(*packed) {
             palette.push(state);
         }
     }
@@ -2706,10 +2933,11 @@ fn plains_number() -> i32 {
 /// Добавляет контейнер состояний блоков с палитрой: 4 бита на блок, палитра
 /// из встреченных состояний, данные — номера состояний внутри палитры.
 fn push_palette_container(out: &mut Vec<u8>, states: &[u16], palette: &[i32]) {
-    /// Битов на запись: минимум для состояний блоков.
-    const BITS: usize = 4;
+    // Битов на запись — сколько нужно на палитру, но не меньше четырёх:
+    // меньше у состояний блоков не бывает.
+    let bits = bits_for(palette.len()).max(4);
 
-    out.push(BITS as u8);
+    out.push(bits as u8);
     out.extend_from_slice(&encode_varint(palette.len() as i32));
 
     for state in palette {
@@ -2718,6 +2946,12 @@ fn push_palette_container(out: &mut Vec<u8>, states: &[u16], palette: &[i32]) {
 
     // Подряд идущие блоки обычно одинаковы, поэтому место в палитре ищется
     // заново только когда состояние сменилось.
+    let places: HashMap<u16, u32> = palette
+        .iter()
+        .enumerate()
+        .map(|(place, state)| (*state as u16, place as u32))
+        .collect();
+
     let mut indexes: Vec<u32> = Vec::with_capacity(states.len());
     let mut last: Option<(u16, u32)> = None;
 
@@ -2725,10 +2959,7 @@ fn push_palette_container(out: &mut Vec<u8>, states: &[u16], palette: &[i32]) {
         let place = match last {
             Some((state, place)) if state == *packed => place,
             _ => {
-                let found = palette
-                    .iter()
-                    .position(|state| *state == *packed as i32)
-                    .expect("состояние обязано быть в палитре") as u32;
+                let found = places[packed];
 
                 last = Some((*packed, found));
                 found
@@ -2738,7 +2969,7 @@ fn push_palette_container(out: &mut Vec<u8>, states: &[u16], palette: &[i32]) {
         indexes.push(place);
     }
 
-    for long in pack_values(&indexes, BITS) {
+    for long in pack_values(&indexes, bits) {
         push_i64(out, long);
     }
 }
@@ -2966,6 +3197,15 @@ async fn read_and_log_play_packets(
             _ = ticks.changed() => None,
         };
 
+        // Связь пропала без закрытия соединения (Wi-Fi, NAT): TCP заметит это
+        // через много минут, а до тех пор ник занят и вернуться нельзя. Как
+        // у оригинала — отключаем, если на Keep Alive долго нет ответа.
+        if player.answered.elapsed() >= KEEP_ALIVE_TIMEOUT {
+            log_info!("{} не отвечает — отключён по сроку", player.name);
+            send_disconnect(stream, "Время ожидания истекло").await?;
+            return Ok(());
+        }
+
         if last_keep_alive.elapsed() >= KEEP_ALIVE_INTERVAL {
             send_keep_alive(stream, keep_alive_id).await?;
             log_debug!(
@@ -2982,7 +3222,7 @@ async fn read_and_log_play_packets(
         // сверять с сервером — иначе часы разойдутся. Сверяем по возрасту
         // мира, а не по своим часам: так рассылка стоит ровно на сетке тактов.
         {
-            let (age, time) = world_age(shared);
+            let (age, time) = world_age(shared, player.dimension);
 
             if age % TIME_EVERY == 0 && age != last_time_age {
                 send_time(stream, age, time).await?;
@@ -3013,7 +3253,7 @@ async fn read_and_log_play_packets(
         if !all_chunks_sent {
             all_chunks_sent = send_chunks_around(
                 stream,
-                shared,
+                shared, player.dimension,
                 chunk,
                 &mut sent_chunks,
                 (player.view, player.view),
@@ -3023,10 +3263,10 @@ async fn read_and_log_play_packets(
         }
 
         // Весь обзор прислан — складываем впрок то, что за его краем.
-        prefetch.collect(shared);
+        prefetch.collect(shared, player.dimension);
 
         if all_chunks_sent {
-            prefetch.step(shared, chunk, player.view);
+            prefetch.step(shared, player.dimension, chunk, player.view);
         }
 
         send_pending_player_changes(stream, shared, player, &mut player_changes, &mut seen).await?;
@@ -3043,6 +3283,86 @@ async fn read_and_log_play_packets(
 
                     return Ok(());
                 }
+                // Переход в другое измерение: клиент получает Respawn и
+                // забывает всё, что видел, — чанки, предметы и игроков
+                // присылаем заново из нового мира.
+                Order::ChangeDimension { dimension, x, y, z } => {
+                    let reader = player.reader;
+
+                    {
+                        let old = player.dimension;
+                        shared.world_in(old).lock().expect("мир захвачен другим потоком").forget_reader(reader);
+                        shared.items_in(old).lock().expect("предметы захвачены другим потоком").forget_reader(reader);
+                    }
+
+                    player.dimension = dimension;
+                    player.x = x;
+                    player.y = y;
+                    player.z = z;
+
+                    shared
+                        .players
+                        .lock()
+                        .expect("список игроков захвачен другим потоком")
+                        .set_dimension(&player.uuid, dimension);
+
+                    send_respawn(stream, dimension, player.game_mode).await?;
+
+                    world_changes = shared
+                        .world_in(dimension)
+                        .lock()
+                        .expect("мир захвачен другим потоком")
+                        .watch_events(reader);
+
+                    let lying = {
+                        let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+                        item_changes = items.watch_changes(reader);
+                        items.items().to_vec()
+                    };
+
+                    seen_items.clear();
+                    for item in &lying {
+                        send_dropped_item(stream, item).await?;
+                        seen_items.insert(item.entity_id, shown_item(item));
+                    }
+
+                    // Чужих игроков покажет сверка видимости на этом же круге.
+                    seen.clear();
+                    sent_chunks.clear();
+                    prefetch = Prefetch::new();
+
+                    send_player_position(stream, player).await?;
+                    publish_player(shared, player);
+
+                    let chunk = player.chunk();
+                    standing_in = chunk;
+                    send_center_chunk(stream, chunk).await?;
+                    send_chunks_around(
+                        stream,
+                        shared,
+                        player.dimension,
+                        chunk,
+                        &mut sent_chunks,
+                        (NEAR_CHUNKS, player.view),
+                        usize::MAX,
+                    )
+                    .await?;
+                    all_chunks_sent = false;
+
+                    send_container_content(stream, player).await?;
+                    player.save(&shared.playerdata);
+
+                    log_info!("{} перешёл в {} ({:.1}, {:.1}, {:.1})", player.name, dimension.name(), x, y, z);
+                }
+
+                Order::Look { yaw, pitch } => {
+                    player.yaw = yaw;
+                    player.pitch = pitch;
+
+                    send_player_position(stream, player).await?;
+                    publish_player(shared, player);
+                }
+
                 Order::Teleport { x, y, z } => {
                     player.x = x;
                     player.y = y;
@@ -3063,7 +3383,7 @@ async fn read_and_log_play_packets(
                     // Под ногами — сразу, даль — порциями в цикле.
                     send_chunks_around(
                         stream,
-                        shared,
+                        shared, player.dimension,
                         chunk,
                         &mut sent_chunks,
                         (NEAR_CHUNKS, player.view),
@@ -3082,12 +3402,17 @@ async fn read_and_log_play_packets(
                 }
 
                 // Выданные предметы кладутся в инвентарь; если места нет,
-                // лишнее просто не выдаётся — как в игре при полном рюкзаке.
+                // лишнее падает на землю рядом с игроком.
                 Order::Give { item, count } => {
-                    let left = player.inventory.add(Stack::new(item, count));
+                    let (slots, left) = player.inventory.put(Stack::new(item, count));
 
-                    for slot in left {
+                    for slot in slots {
                         send_container_slot(stream, player, slot).await?;
+                    }
+
+                    // Не влезло — падает рядом с игроком, а не пропадает.
+                    if let Some(left) = left {
+                        throw_out(shared, player, left);
                     }
 
                     log_debug!(
@@ -3096,6 +3421,16 @@ async fn read_and_log_play_packets(
                         item,
                         count
                     );
+                }
+
+                // Режим сменила команда — своя или чужая (с Bedrock, из
+                // консоли): клиенту нужен Game Event «смена режима», строка
+                // в списке игроков — тоже.
+                Order::GameMode { mode } => {
+                    player.game_mode = mode;
+                    send_game_event_game_mode(stream, mode).await?;
+                    send_game_mode(stream, &player.uuid, mode).await?;
+                    player.save(&shared.playerdata);
                 }
 
                 Order::Clear => {
@@ -3117,13 +3452,13 @@ async fn read_and_log_play_packets(
 
         send_pending_item_changes(
             stream,
-            shared,
+            shared, player.dimension,
             &mut item_changes,
             &mut seen_items,
             player.reader,
         )
         .await?;
-        send_item_moves(stream, shared, &mut seen_items).await?;
+        send_item_moves(stream, shared, player.dimension, &mut seen_items).await?;
 
         match ready {
             // Клиент молчит — на этом круге Keep Alive уже отправлен выше.
@@ -3133,7 +3468,18 @@ async fn read_and_log_play_packets(
             // его собственные действия: подтверждение должно идти после
             // изменения мира, иначе клиент на миг покажет пустое место.
             None => {
-                flush_tick(stream, shared, player, &mut world_changes, &mut pending).await?;
+                step_portal(shared, player);
+
+                let lagged =
+                    flush_tick(stream, shared, player, &mut world_changes, &mut pending).await?;
+
+                // Журнал выбросил события, не дождавшись этого клиента: его
+                // картина мира разошлась с сервером. Обзор присылается заново.
+                if lagged {
+                    log_info!("{} отстал от событий мира — чанки присылаются заново", player.name);
+                    sent_chunks.clear();
+                    all_chunks_sent = false;
+                }
             }
             Some(Err(_)) => {}
             // Клиент закрыл соединение.
@@ -3219,7 +3565,7 @@ async fn apply_reaction(
     // сервера, и без поправки тот остался бы призраком.
     for (x, y, z) in &reaction.confirm {
         let state = shared
-            .world
+            .world_in(player.dimension)
             .lock()
             .expect("мир захвачен другим потоком")
             .get_block(*x, *y, *z);
@@ -3340,6 +3686,12 @@ fn handle_client_packet(
     match packet.id {
         SERVERBOUND_KEEP_ALIVE => {
             log_debug!("Play: клиент ответил на Keep Alive");
+            player.answered = Instant::now();
+        }
+        CONFIRM_TELEPORTATION => {
+            if Cursor::new(payload).varint() == Some(player.teleport) {
+                player.awaiting_teleport = false;
+            }
         }
         SET_PLAYER_POSITION | SET_PLAYER_POSITION_AND_ROTATION => {
             let Some((x, y, z)) = read_position(payload) else {
@@ -3349,6 +3701,20 @@ fn handle_client_packet(
                 );
                 return reaction;
             };
+
+            // Посланное до подтверждения переноса — со старого места.
+            if player.awaiting_teleport {
+                return reaction;
+            }
+
+            // Как у оригинала: не число, бесконечность и место за границей
+            // мира не принимаются — они ушли бы в файл игрока и всем
+            // остальным, а огромные координаты переполняли бы счёт чанков.
+            let sane = |value: f64, limit: f64| value.is_finite() && value.abs() <= limit;
+            if !(sane(x, 30_000_000.0) && sane(y, 20_000_000.0) && sane(z, 30_000_000.0)) {
+                log_debug!("Play: {} прислал недопустимое место {} {} {}", player.name, x, y, z);
+                return reaction;
+            }
 
             // В пакете «позиция и поворот» углы идут сразу за координатами.
             if packet.id == SET_PLAYER_POSITION_AND_ROTATION
@@ -3380,10 +3746,16 @@ fn handle_client_packet(
                 reaction = answer;
             }
         }
+        USE_ITEM => {
+            if let Some(answer) = use_item(payload, player, shared) {
+                reaction = answer;
+            }
+        }
         SERVERBOUND_CHAT_MESSAGE => {
             // Поля после самого текста (время, подпись, счётчики) серверу пока
             // не нужны: подписи мы не проверяем, а текст стоит первым полем.
-            if let Some(text) = Cursor::new(payload).string() {
+            let text = Cursor::new(payload).string();
+            if let Some(text) = text.as_deref().and_then(crate::chat::allowed) {
                 log_debug!("Play: {} пишет в чат: {}", player.name, text);
 
                 shared
@@ -3409,13 +3781,12 @@ fn handle_client_packet(
                     reaction.reply = Some(answer.reply);
                 }
 
-                // Смена режима — единственное, что разбор команды поручает
-                // подключению: у него есть сведения о самом игроке.
+                // Смена своего режима вступает в силу сразу, а клиенту о ней
+                // скажет поручение Order::GameMode — одно, без повтора.
                 if let Effect::GameMode { uuid, mode } = answer.effect
                     && uuid == player.uuid
                 {
                     player.game_mode = mode;
-                    reaction.game_mode = Some(mode);
                 }
             }
         }
@@ -3437,11 +3808,16 @@ fn handle_client_packet(
             reaction.inventory = true;
         }
         CLOSE_CONTAINER => {
-            // Окно закрыто: то, что игрок держал мышкой, надо вернуть в
-            // инвентарь, иначе предмет пропадёт.
-            let changed = player.inventory.put_cursor_back();
+            // Окно закрыто: то, что игрок держал мышкой и положил в сетку
+            // верстака, надо вернуть в инвентарь, иначе предмет пропадёт.
+            // Не влезло — падает на землю.
+            let closed = player.inventory.close_window();
 
-            if !changed.is_empty() {
+            for stack in closed.thrown {
+                throw_out(shared, player, stack);
+            }
+
+            if !closed.slots.is_empty() {
                 reaction.inventory = true;
             }
         }
@@ -3457,7 +3833,14 @@ fn handle_client_packet(
         }
         PLAYER_INPUT => {
             if let Some(flags) = payload.first() {
-                player.sneaking = flags & INPUT_SNEAK != 0;
+                let sneaking = flags & INPUT_SNEAK != 0;
+
+                // Остальным — через общий список: их подключения увидят
+                // перемену и перескажут своим клиентам.
+                if sneaking != player.sneaking {
+                    player.sneaking = sneaking;
+                    shared.players.lock().expect("список игроков захвачен другим потоком").set_sneaking(&player.uuid, sneaking);
+                }
             }
         }
         CLIENT_INFORMATION => {
@@ -3489,6 +3872,9 @@ fn handle_client_packet(
                 players.set_main_hand(&player.uuid, look.main_hand);
             }
         }
+        SWING_ARM => {
+            shared.players.lock().expect("список игроков захвачен другим потоком").swing(&player.uuid);
+        }
         SET_CARRIED_ITEM => {
             let mut cursor = Cursor::new(payload);
 
@@ -3502,7 +3888,10 @@ fn handle_client_packet(
             }
         }
         SET_CREATIVE_MODE_SLOT => {
-            read_creative_slot(payload, player);
+            // Слот −1 — предмет выброшен прямо из меню, мимо инвентаря.
+            if let Some(thrown) = read_creative_slot(payload, player) {
+                throw_out(shared, player, thrown);
+            }
         }
         _ => {
             log_debug!(
@@ -3587,15 +3976,52 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         });
     }
 
-    let breaks_now = if player.game_mode == GAME_MODE_CREATIVE {
+    // Подтверждение нужно на каждое действие с номером — и на «начал», и на
+    // «отменил»: клиент держит у себя предсказанные блоки, пока не получит
+    // его, и по нему же откатывает то, чего сервер не сделал.
+    let answer = Reaction {
+        confirm: vec![(x, y, z)],
+        ..Reaction::accepted(sequence)
+    };
+
+    let creative = player.game_mode == GAME_MODE_CREATIVE;
+
+    // В приключении и наблюдателем блоки не ломают.
+    if !creative && player.game_mode != GAME_MODE_SURVIVAL {
+        return Some(answer);
+    }
+
+    // Дальше, чем достаёт рука, и в незагруженных чанках — не ломаем.
+    if !within_reach(player, (x, y, z)) {
+        log_debug!("Play: {} тянется к {} {} {} слишком далеко", player.name, x, y, z);
+        return Some(answer);
+    }
+
+    let state = {
+        let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        if !world.has_chunk(x.div_euclid(16), z.div_euclid(16)) {
+            return Some(answer);
+        }
+        world.get_block(x, y, z)
+    };
+
+    // В творческом блок ломается сразу. В выживании — когда клиент докопал,
+    // а мгновенные (трава, цветы, факелы) — на «начал копать»: «докопал»
+    // для них клиент не шлёт вовсе.
+    let breaks_now = if creative {
         status == STARTED_DIGGING
     } else {
-        status == FINISHED_DIGGING
+        status == FINISHED_DIGGING || (status == STARTED_DIGGING && in_spans(INSTANT, state))
     };
 
     if !breaks_now {
         // Начало копания, отмена копания и прочие действия мир не меняют.
-        return Some(Reaction::default());
+        return Some(Reaction::accepted(sequence));
+    }
+
+    // Бедрок, барьер, порталы в выживании не ломаются.
+    if !creative && in_spans(UNBREAKABLE, state) {
+        return Some(answer);
     }
 
     // Клиенту в этом доверять нельзя — он присылает «начал копать» и с мечом
@@ -3617,14 +4043,14 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     }
 
     let mut world = shared
-        .world
+        .world_in(player.dimension)
         .lock()
         .expect("мир захвачен другим потоком");
 
-    // Воздух ломать нечего: такое действие подтверждения не требует.
+    // Воздух ломать нечего.
     let Some(broken) = placing::break_block(&mut world, x, y, z) else {
         log_debug!("Play: в {} {} {} и так пусто", x, y, z);
-        return Some(Reaction::default());
+        return Some(answer);
     };
 
     log_debug!("Play: сломан блок в {} {} {}", x, y, z);
@@ -3636,28 +4062,89 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         let tool = player.inventory.held().map(|stack| stack.item);
         let luck = world.random_unit();
 
-        match blocks::drop_by_luck(broken, tool, luck) {
-            Some(item) => {
+        match blocks::drops_by_luck(broken, tool, luck) {
+            Some(stack) => {
                 // Мир отпускаем: класть предмет будем под другим замком.
                 drop(world);
 
                 // Выпавшее из блока не бросают — оно просто падает с того
                 // места, где был блок.
                 drop_into_world(
-                    shared,
-                    Stack::new(item, 1),
+                    shared, player.dimension,
+                    stack,
                     (x as f64 + 0.5, y as f64 + 0.25, z as f64 + 0.5),
                     (0.0, 0.0, 0.0),
                     items::MINED_DELAY,
                 );
 
-                log_debug!("Play: из блока в {} {} {} выпал предмет {}", x, y, z, item);
+                log_debug!("Play: из блока в {} {} {} выпал предмет {} × {}", x, y, z, stack.item, stack.count);
             }
             None => log_debug!("Play: из блока {} ничего не выпало", broken),
         }
     }
 
     Some(Reaction::accepted(sequence))
+}
+
+/// Лежит ли номер состояния в одном из промежутков таблицы.
+fn in_spans(spans: &[(i32, i32)], state: i32) -> bool {
+    spans.iter().any(|(low, high)| (*low..=*high).contains(&state))
+}
+
+/// Дотягивается ли игрок до блока: от глаз до середины блока не дальше
+/// дальности взаимодействия (4,5 блока, в творческом 5) с запасом в полтора
+/// блока, как оставляет и оригинал на задержку и неточность. Заодно
+/// отсекает места вне мира по высоте.
+fn within_reach(player: &PlayerState, (x, y, z): (i32, i32, i32)) -> bool {
+    const EYES: f64 = 1.62;
+
+    if !(-64..320).contains(&y) {
+        return false;
+    }
+
+    let reach = if player.game_mode == GAME_MODE_CREATIVE { 5.0 } else { 4.5 } + 1.5;
+    let dx = x as f64 + 0.5 - player.x;
+    let dy = y as f64 + 0.5 - (player.y + EYES);
+    let dz = z as f64 + 0.5 - player.z;
+
+    dx * dx + dy * dy + dz * dz <= reach * reach
+}
+
+/// Use Item On второй рукой: клиент шлёт его, когда основной руке делать
+/// нечего (факел во второй руке, пустая основная). Весь разбор написан для
+/// основной руки, поэтому на время разбора вторая рука и выбранный слот
+/// меняются местами, а номера изменённых слотов — обратно.
+fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option<Reaction> {
+    /// Вторая рука в поле `hand`.
+    const OFF_HAND: i32 = 1;
+
+    if Cursor::new(payload).varint()? != OFF_HAND {
+        return place_with_main_hand(payload, player, shared);
+    }
+
+    let main = inventory::FIRST_HOTBAR + player.inventory.selected();
+    let swap = |player: &mut PlayerState| {
+        let held = player.inventory.slot(main);
+        let off = player.inventory.slot(inventory::OFFHAND);
+        player.inventory.set(main, off);
+        player.inventory.set(inventory::OFFHAND, held);
+    };
+
+    swap(player);
+    let mut reaction = place_with_main_hand(payload, player, shared);
+    swap(player);
+
+    if let Some(reaction) = &mut reaction {
+        for slot in &mut reaction.slots {
+            if *slot == main {
+                *slot = inventory::OFFHAND;
+            } else if *slot == inventory::OFFHAND {
+                *slot = main;
+            }
+        }
+    }
+
+    reaction
 }
 
 /// Обрабатывает Use Item On: игрок щёлкнул по блоку предметом в руке.
@@ -3669,7 +4156,7 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
 ///
 /// Возвращает ответ клиенту: подтверждение и, если блок не поставлен, —
 /// настоящее состояние того места, куда он его ставил.
-fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option<Reaction> {
+fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option<Reaction> {
     let mut cursor = Cursor::new(payload);
 
     let hand = cursor.varint()?;
@@ -3699,14 +4186,33 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         format_hex(payload)
     );
 
+    // Наблюдатель ничего не трогает; дальше руки и в незагруженных чанках
+    // не ставим: иначе можно было бы менять мир издалека, а запись в
+    // незагруженный чанк затёрла бы его на диске.
+    let refused = Reaction {
+        confirm: vec![(clicked_x, clicked_y, clicked_z)],
+        ..Reaction::accepted(sequence)
+    };
+    let loaded = shared
+        .world_in(player.dimension)
+        .lock()
+        .expect("мир захвачен другим потоком")
+        .has_chunk(clicked_x.div_euclid(16), clicked_z.div_euclid(16));
+    if player.game_mode == GAME_MODE_SPECTATOR
+        || !loaded
+        || !within_reach(player, (clicked_x, clicked_y, clicked_z))
+    {
+        log_debug!("Play: {} не может использовать {} {} {}", player.name, clicked_x, clicked_y, clicked_z);
+        return Some(refused);
+    }
+
     // Щелчок по рычагу, кнопке, двери, повторителю — это не установка, а
     // действие с ними, и рука тут ни при чём: щёлкают и пустой. Присев,
     // игрок всё-таки ставит блок.
     if !player.sneaking {
-        let mut world = shared.world.lock().expect("мир захвачен другим потоком");
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
         if redstone::use_block(&mut world, (clicked_x, clicked_y, clicked_z)) {
-            world.save_if_needed();
             log_debug!("Play: {} щёлкнул по {} {} {}", player.name, clicked_x, clicked_y, clicked_z);
 
             // Как у оригинала: после щелчка клиенту повторяют, что стоит
@@ -3738,10 +4244,37 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         }
     }
 
+    // В приключении рычаги и двери трогать можно, а ставить блоки — нет.
+    if player.game_mode == GAME_MODE_ADVENTURE {
+        return Some(refused);
+    }
+
     // Какой блок ставить, решает предмет в руке: сервер ищет его в таблице
     // блоков. Если предмет блока не даёт, ставить нечего, но подтвердить
     // действие всё равно нужно — подтверждение означает «сервер здесь ничего
     // не менял», и клиент уберёт свой предсказанный блок, если он его показал.
+    // Зажигалка: по обсидиану внутри рамки — портал, иначе огонь на месте
+    // рядом с гранью, по которой щёлкнули.
+    if player.inventory.held().map(|stack| stack.item) == blocks::item_named("flint_and_steel") {
+        let target = offset_towards(clicked_x, clicked_y, clicked_z, face);
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+        if world.get_block(target.0, target.1, target.2) == world::AIR {
+            if crate::portal::light(&mut world, target) {
+                log_info!("{} зажёг портал в {} {} {}", player.name, target.0, target.1, target.2);
+            } else if let Some(fire) = blocks::state_by_name("fire") {
+                world.set_block(target.0, target.1, target.2, fire);
+            }
+
+            redstone::settle(&mut world);
+        }
+
+        return Some(Reaction {
+            confirm: vec![target],
+            ..Reaction::accepted(sequence)
+        });
+    }
+
     let Some(item) = player.inventory.held().map(|stack| stack.item) else {
         log_debug!("Play: содержимое слота неизвестно — ставить нечего");
         return Some(Reaction::accepted(sequence));
@@ -3772,7 +4305,7 @@ fn place_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     };
 
     let mut world = shared
-        .world
+        .world_in(player.dimension)
         .lock()
         .expect("мир захвачен другим потоком");
 
@@ -3804,7 +4337,7 @@ fn pick_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opti
     let (x, y, z) = cursor.position()?;
 
     let state = shared
-        .world
+        .world_in(player.dimension)
         .lock()
         .expect("мир захвачен другим потоком")
         .get_block(x, y, z);
@@ -3841,6 +4374,84 @@ fn pick_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opti
 ///
 /// Номера предметов здесь названы по именам из таблицы: ведро одно, а полных
 /// два — с водой и с лавой.
+/// Use Item: предмет применяют не к блоку, а в сторону взгляда. Нужен он
+/// пустому ведру: воду прицел клиента не видит, и зачерпнуть её можно
+/// только этим пакетом — сервер сам ведёт луч от глаз до первого источника
+/// (текущая вода пропускается, твёрдый блок останавливает), как у
+/// оригинала. Подтверждается всегда.
+fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option<Reaction> {
+    const EYES: f64 = 1.62;
+    const STEP: f64 = 0.05;
+
+    let mut cursor = Cursor::new(payload);
+    let _hand = cursor.varint()?;
+    let sequence = cursor.varint()?;
+    let yaw = cursor.f32().unwrap_or(player.yaw);
+    let pitch = cursor.f32().unwrap_or(player.pitch);
+
+    let answer = Reaction::accepted(sequence);
+    let empty = blocks::item_named("bucket")?;
+
+    if player.inventory.held().map(|stack| stack.item) != Some(empty)
+        || player.game_mode == GAME_MODE_SPECTATOR
+        || player.game_mode == GAME_MODE_ADVENTURE
+    {
+        return Some(answer);
+    }
+
+    // Тот же щелчок, которым только что вылили, — не зачерпывать обратно.
+    if player.poured.take() == Some(sequence - 1) {
+        return Some(answer);
+    }
+
+    let reach = if player.game_mode == GAME_MODE_CREATIVE { 5.0 } else { 4.5 };
+    let (dx, dy, dz) = looking(yaw, pitch);
+    let eye = (player.x, player.y + EYES, player.z);
+    let mut last = None;
+    let mut target = None;
+
+    {
+        let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let mut travelled = 0.0;
+
+        while travelled <= reach {
+            let at = (
+                (eye.0 + dx * travelled).floor() as i32,
+                (eye.1 + dy * travelled).floor() as i32,
+                (eye.2 + dz * travelled).floor() as i32,
+            );
+            travelled += STEP;
+
+            if last == Some(at) {
+                continue;
+            }
+            last = Some(at);
+
+            let state = world.get_block(at.0, at.1, at.2);
+
+            match fluids::fluid_at(state) {
+                Some((_, fluids::SOURCE)) => {
+                    target = Some(at);
+                    break;
+                }
+                Some(_) => continue,
+                None if state == world::AIR => continue,
+                None if fluids::is_powder_snow(state) => {
+                    target = Some(at);
+                    break;
+                }
+                None => break,
+            }
+        }
+    }
+
+    let Some(at) = target else {
+        return Some(answer);
+    };
+
+    use_bucket(empty, at, 1, sequence, player, shared)
+}
+
 fn use_bucket(
     item: i32,
     clicked: (i32, i32, i32),
@@ -3860,7 +4471,7 @@ fn use_bucket(
     // ведро не наполняется.
     if item == empty {
         let clicked_state = {
-            let world = shared.world.lock().expect("мир захвачен другим потоком");
+            let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
             world.get_block(x, y, z)
         };
@@ -3873,17 +4484,16 @@ fn use_bucket(
         };
 
         {
-            let mut world = shared.world.lock().expect("мир захвачен другим потоком");
+            let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
             world.set_block(x, y, z, world::AIR);
             redstone::settle(&mut world);
-            world.save_if_needed();
         }
 
         log_debug!("Play: {} набрал ведро в {} {} {}", player.name, x, y, z);
 
         return Some(Reaction {
-            slots: swap_held(player, filled),
+            slots: swap_held(player, filled, shared),
             ..Reaction::accepted(sequence)
         });
     }
@@ -3903,7 +4513,7 @@ fn use_bucket(
     // Содержимое встаёт в тот блок, по которому щёлкнули, если он пустой,
     // иначе — в соседний с той стороны, куда щёлкнули.
     let here = {
-        let world = shared.world.lock().expect("мир захвачен другим потоком");
+        let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
         world.get_block(x, y, z)
     };
@@ -3915,17 +4525,23 @@ fn use_bucket(
     };
 
     {
-        let mut world = shared.world.lock().expect("мир захвачен другим потоком");
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
-        world.set_block(x, y, z, poured);
-        redstone::settle(&mut world);
-        world.save_if_needed();
+        // В Незере вода из ведра испаряется с шипением (вики, Water).
+        if world.is_nether() && item == with_water {
+            let pitch = 2.6 + (world.random_unit() - world.random_unit()) * 0.8;
+            world.note_sound(x, y, z, "minecraft:block.fire.extinguish", 0.5, pitch);
+        } else {
+            world.set_block(x, y, z, poured);
+            redstone::settle(&mut world);
+        }
     }
 
     log_debug!("Play: {} вылил ведро в {} {} {}", player.name, x, y, z);
+    player.poured = Some(sequence);
 
     Some(Reaction {
-        slots: swap_held(player, empty),
+        slots: swap_held(player, empty, shared),
         ..Reaction::accepted(sequence)
     })
 }
@@ -3933,7 +4549,7 @@ fn use_bucket(
 /// Меняет предмет в руке на другой — ведро наполняется и пустеет.
 ///
 /// В творческом режиме ведро не меняется: запас там бесконечный.
-fn swap_held(player: &mut PlayerState, item: i32) -> Vec<i32> {
+fn swap_held(player: &mut PlayerState, item: i32, shared: &Shared) -> Vec<i32> {
     if player.game_mode == GAME_MODE_CREATIVE {
         return Vec::new();
     }
@@ -3941,13 +4557,20 @@ fn swap_held(player: &mut PlayerState, item: i32) -> Vec<i32> {
     let slot = inventory::FIRST_HOTBAR + player.inventory.selected();
 
     // Ведро было не одно — остальные остаются на месте, а полное кладётся
-    // отдельно; не поместилось, значит пропало: класть его некуда.
+    // отдельно; не поместилось — падает на землю рядом с игроком.
     match player.inventory.held() {
         Some(held) if held.count > 1 => {
             player.inventory.spend_held();
 
             let mut slots = vec![slot];
-            slots.extend(player.inventory.add(Stack::new(item, 1)));
+            let (changed, left) = player.inventory.put(Stack::new(item, 1));
+
+            slots.extend(changed);
+
+            if let Some(left) = left {
+                throw_out(shared, player, left);
+            }
+
             slots
         }
         _ => {
@@ -4012,26 +4635,43 @@ fn read_slot(cursor: &mut Cursor) -> Option<(Option<Stack>, bool)> {
 /// В творческом режиме клиент сам сообщает, что он положил в слот: меню
 /// предметов есть только у него. Поэтому здесь сервер просто записывает
 /// сказанное.
-fn read_creative_slot(payload: &[u8], player: &mut PlayerState) {
+///
+/// Возвращает предмет, который надо бросить на землю: его выбросили прямо
+/// из меню (слот −1).
+fn read_creative_slot(payload: &[u8], player: &mut PlayerState) -> Option<Stack> {
     // В выживании предметы берутся из мира, а не из меню. Клиент такого
     // сообщения там и не шлёт, но верить ему на слово нельзя: изменённый
     // клиент мог бы выдать себе что угодно.
     if player.game_mode != GAME_MODE_CREATIVE {
         log_debug!("Play: {} не в творческом режиме — слот не выдаём", player.name);
-        return;
+        return None;
     }
 
     let mut cursor = Cursor::new(payload);
 
-    let Some(slot) = cursor.u16() else {
-        return;
-    };
+    let slot = cursor.u16()? as i16;
+    let (stack, _) = read_slot(&mut cursor)?;
 
-    let Some((stack, _)) = read_slot(&mut cursor) else {
-        return;
-    };
+    // Номер предмета и число — тоже от клиента. Несуществующий предмет
+    // в руке ушёл бы всем остальным и отключил бы их, а число больше стопки
+    // ломало бы счёт при делении стопки.
+    if let Some(stack) = stack
+        && (!known_item(stack.item) || stack.count > crate::blocks::stack_size(stack.item))
+    {
+        log_debug!(
+            "Play: {} прислал недопустимый предмет {} ({} шт.) — не берём",
+            player.name,
+            stack.item,
+            stack.count
+        );
+        return None;
+    }
 
-    player.inventory.set(slot as i32, stack);
+    if slot == -1 {
+        return stack;
+    }
+
+    player.inventory.set(i32::from(slot), stack);
 
     match stack {
         Some(stack) => log_debug!(
@@ -4042,6 +4682,16 @@ fn read_creative_slot(payload: &[u8], player: &mut PlayerState) {
         ),
         None => log_debug!("Play: слот {} опустел", slot),
     }
+
+    None
+}
+
+/// Есть ли такой предмет в реестре (воздух — не предмет).
+fn known_item(item: i32) -> bool {
+    item > 0
+        && crate::blocks_table::ITEM_NAMES
+            .binary_search_by_key(&item, |(number, _)| *number)
+            .is_ok()
 }
 
 /// Разбирает щелчок по слоту в открытом окне.
@@ -4227,6 +4877,27 @@ struct PlayerState {
     /// а ставят блок рядом с ними.
     sneaking: bool,
 
+    /// В каком измерении игрок.
+    dimension: crate::dimension::Dimension,
+
+    /// Сколько тактов подряд игрок стоит в портале, и можно ли порталу
+    /// сработать: после перехода — только когда игрок из портала выйдет.
+    in_portal: u32,
+    portal_ready: bool,
+
+    /// Номер последнего переноса и ждём ли его подтверждения. Пока клиент
+    /// не подтвердил перенос, его пакеты движения посланы ещё со старого
+    /// места — принять их значило бы вернуть игрока назад.
+    teleport: i32,
+    awaiting_teleport: bool,
+
+    /// Номер последнего действия, которым из ведра вылили: тот же щелчок
+    /// следом присылает Use Item, и вылитое не должно тут же зачерпнуться.
+    poured: Option<i32>,
+
+    /// Когда клиент последний раз ответил на Keep Alive.
+    answered: Instant,
+
     /// Инвентарь игрока: сервер ведёт его сам и показывает клиенту.
     inventory: Inventory,
 
@@ -4339,6 +5010,14 @@ impl PlayerState {
             // Инвентарь — тот, с которым игрок вышел в прошлый раз.
             reader,
             sneaking: false,
+            teleport: 0,
+            awaiting_teleport: false,
+            poured: None,
+            dimension: saved.as_ref().map(|data| data.dimension).unwrap_or_default(),
+            in_portal: 0,
+            // Зашёл, стоя в портале, — не переносить сразу.
+            portal_ready: false,
+            answered: Instant::now(),
             inventory: saved
                 .as_ref()
                 .map(|data| data.inventory.clone())
@@ -4367,6 +5046,9 @@ impl PlayerState {
             main_hand: self.main_hand,
             held: self.inventory.held(),
             position: self.position(),
+            dimension: self.dimension,
+            sneaking: self.sneaking,
+            swings: 0,
         }
     }
 
@@ -4411,6 +5093,11 @@ impl PlayerState {
 
     /// Запоминает поворот и пишет в лог, если игрок заметно повернулся.
     fn set_rotation(&mut self, yaw: f32, pitch: f32) {
+        // Не число ушло бы всем остальным в повороте головы.
+        if !(yaw.is_finite() && pitch.is_finite()) {
+            return;
+        }
+
         let turned = (self.yaw - yaw).abs() >= 5.0 || (self.pitch - pitch).abs() >= 5.0;
 
         self.yaw = yaw;
@@ -4486,6 +5173,7 @@ impl PlayerState {
             pitch: self.pitch,
             game_mode: self.game_mode,
             inventory: self.inventory.clone(),
+            dimension: self.dimension,
         };
 
         match playerdata::save(directory, &self.uuid, &data) {
@@ -4693,6 +5381,7 @@ mod tests {
             yaw,
             pitch: SPAWN_PITCH,
             game_mode: GAME_MODE_CREATIVE,
+            dimension: Default::default(),
         };
 
         PlayerState::new([7; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN)
@@ -4730,6 +5419,7 @@ mod tests {
             yaw: 90.0,
             pitch: -10.0,
             game_mode: 0,
+            dimension: Default::default(),
         };
 
         let player = PlayerState::new([2; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN);
@@ -5049,6 +5739,7 @@ mod tests {
     fn suggestions_complete_player_names() {
         let shared = crate::shared::Shared::new(
             crate::world::World::in_memory(),
+            crate::world::World::in_memory(),
             std::path::PathBuf::new(),
             std::path::PathBuf::new(),
             Default::default(),
@@ -5105,6 +5796,7 @@ mod tests {
     #[test]
     fn hints_depend_on_the_command() {
         let shared = crate::shared::Shared::new(
+            crate::world::World::in_memory(),
             crate::world::World::in_memory(),
             std::path::PathBuf::new(),
             std::path::PathBuf::new(),

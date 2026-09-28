@@ -101,6 +101,13 @@ pub enum Biome {
     LushCaves,
     DripstoneCaves,
     DeepDark,
+    // Незер (src/world/nether.rs). Их номера — после своих биомов
+    // (`CUSTOM_BIOMES`): номера прежних записаны в файлах мира.
+    NetherWastes,
+    CrimsonForest,
+    WarpedForest,
+    SoulSandValley,
+    BasaltDeltas,
 }
 
 impl Biome {
@@ -165,6 +172,16 @@ impl Biome {
         Biome::DeepDark,
     ];
 
+    /// Биомы Незера по порядку их номеров: они идут в реестре после своих
+    /// биомов (`CUSTOM_BIOMES`), а те — после `ALL`.
+    pub const NETHER: [Biome; 5] = [
+        Biome::NetherWastes,
+        Biome::CrimsonForest,
+        Biome::WarpedForest,
+        Biome::SoulSandValley,
+        Biome::BasaltDeltas,
+    ];
+
     /// Имя биома в реестре игры.
     pub fn name(self) -> &'static str {
         match self {
@@ -222,16 +239,29 @@ impl Biome {
             Biome::LushCaves => "lush_caves",
             Biome::DripstoneCaves => "dripstone_caves",
             Biome::DeepDark => "deep_dark",
+            Biome::NetherWastes => "nether_wastes",
+            Biome::CrimsonForest => "crimson_forest",
+            Biome::WarpedForest => "warped_forest",
+            Biome::SoulSandValley => "soul_sand_valley",
+            Biome::BasaltDeltas => "basalt_deltas",
         }
     }
 
-    /// Номер биома в реестре: место в списке `ALL`.
+    /// Номер биома в реестре: место в списке `ALL`, а у Незера — место
+    /// в `NETHER` после всех биомов `ALL` и своих.
     pub fn number(self) -> i32 {
-        Biome::ALL
+        if let Some(at) = Biome::ALL.iter().position(|biome| *biome == self) {
+            return at as i32;
+        }
+
+        let at = Biome::NETHER
             .iter()
             .position(|biome| *biome == self)
-            .unwrap_or_else(|| panic!("биом {:?} забыт в списке ALL", self)) as i32
+            .unwrap_or_else(|| panic!("биом {:?} забыт в списках ALL и NETHER", self));
+
+        (Biome::ALL.len() + CUSTOM_BIOMES.len() + at) as i32
     }
+
 
     /// Основная температура и влажность биома — те же числа, что в игре
     /// (вики, «Biome» → List of biome climates). По ним клиент выбирает цвет
@@ -292,6 +322,7 @@ impl Biome {
         "lush_caves" => (0.5, 0.5),
         "dripstone_caves" => (0.8, 0.4),
         "deep_dark" => (0.8, 0.4),
+        "nether_wastes" | "crimson_forest" | "warped_forest" | "soul_sand_valley" | "basalt_deltas" => (2.0, 0.0),
             _ => (0.8, 0.4),
         }
     }
@@ -675,9 +706,9 @@ pub fn autumn_forest_number() -> u16 {
     Biome::ALL.len() as u16
 }
 
-/// Сколько всего биомов в реестре: оригинальные и свои.
+/// Сколько всего биомов в реестре: оригинальные, свои и Незера.
 pub fn biome_registry_size() -> usize {
-    Biome::ALL.len() + CUSTOM_BIOMES.len()
+    Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len()
 }
 
 /// Включены ли редкие осенние пятна в обычном лесу (`autumn-forests`
@@ -1395,6 +1426,12 @@ impl Terrain {
         })
     }
 
+    /// Ляжет ли снег на то, что стоит в этом месте на высоте `y` (крону
+    /// дерева): биом со сдвигом, как у снега на земле, холод — по высоте.
+    pub fn snow_falls(&self, column: &Column, x: i32, y: i32, z: i32) -> bool {
+        self.weather_biome(column, x, z).snows_at(y)
+    }
+
     /// Лежит ли на земле этого столбца снег.
     fn snows_on(&self, column: &Column, x: i32, z: i32) -> bool {
         let biome = self.weather_biome(column, x, z);
@@ -1431,10 +1468,13 @@ impl Terrain {
     fn cave_noise(&self, x: i32, y: i32, z: i32) -> [f64; 3] {
         let (fx, fy, fz) = (x as f64, y as f64, z as f64);
 
+        // У каждого шума свой дробный сдвиг: шум Перлина равен нулю в целых
+        // узлах, и без сдвига оба шума ходов обнулялись бы в одних точках —
+        // через каждые 140 блоков по решётке шёл бы гарантированный ход.
         [
-            self.tunnels.at3(fx / 140.0, fy / 90.0, fz / 140.0),
-            self.tunnels_across.at3(fx / 140.0, fy / 90.0, fz / 140.0),
-            self.caves.octaves3(fx / 70.0, fy / 45.0, fz / 70.0, 2),
+            self.tunnels.at3(fx / 140.0 + 0.371, fy / 90.0 + 0.613, fz / 140.0 + 0.127),
+            self.tunnels_across.at3(fx / 140.0 + 0.719, fy / 90.0 + 0.293, fz / 140.0 + 0.537),
+            self.caves.octaves3(fx / 70.0 + 0.211, fy / 45.0 + 0.457, fz / 70.0 + 0.883, 2),
         ]
     }
 
@@ -1478,9 +1518,45 @@ impl Terrain {
     /// с разной жидкостью сходятся вплотную, остаётся каменная перемычка,
     /// чтобы вода не висела стеной над воздухом и не встречалась с лавой.
     /// Ниже −55 любая пустота — лава.
+    ///
+    /// Перемычка по расстоянию до двух середин тонкая и на косых стыках
+    /// выходит дырявой: вода одной клетки встаёт вплотную к воздуху
+    /// соседней — сбоку или сверху — и после появления чанка течёт в
+    /// пещеру. Поэтому жидкость, у которой сбоку или снизу по своим клеткам
+    /// оказалось иное (воздух или другая жидкость), тоже становится
+    /// перемычкой. Решает каждое место само, по одним координатам, — чанки
+    /// по обе стороны границы решают одинаково.
     fn aquifer_at(&self, x: i32, y: i32, z: i32) -> Fluid {
+        let (fluid, gap) = self.aquifer_raw(x, y, z);
+
+        if fluid == Fluid::Air || fluid == Fluid::Barrier {
+            return fluid;
+        }
+
+        // Сдвиг на блок меняет каждое расстояние не больше чем на блок, а
+        // разницу — не больше чем на два: при запасе больше двух у всех
+        // соседей та же ближайшая клетка, и жидкость у них та же. Кроме
+        // места прямо над лавой дна: у неё клеток нет.
+        if gap > 2.0 && y - 1 > LAVA_LEVEL {
+            return fluid;
+        }
+
+        for (dx, dy, dz) in [(0, -1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1)] {
+            let (beside, _) = self.aquifer_raw(x + dx, y + dy, z + dz);
+
+            if beside != fluid && beside != Fluid::Barrier {
+                return Fluid::Barrier;
+            }
+        }
+
+        fluid
+    }
+
+    /// Жидкость места по одной ближайшей клетке (с тонкой перемычкой на
+    /// стыке) и запас: насколько вторая середина дальше ближайшей.
+    fn aquifer_raw(&self, x: i32, y: i32, z: i32) -> (Fluid, f64) {
         if y <= LAVA_LEVEL {
-            return Fluid::Lava;
+            return (Fluid::Lava, f64::MAX);
         }
 
         let (cell_x, cell_y, cell_z) = (x.div_euclid(16), y.div_euclid(12), z.div_euclid(16));
@@ -1506,30 +1582,121 @@ impl Terrain {
         }
 
         let own = self.aquifer_fill(nearest.1);
-        let other = self.aquifer_fill(second.1);
         let wet = |fill: Option<(i32, Fluid)>| {
             fill.filter(|(level, _)| y <= *level)
                 .map(|(_, fluid)| fluid)
         };
+        let gap = second.0.sqrt() - nearest.0.sqrt();
 
         // Перемычка: на стыке двух клеток, если на этой высоте у них разное
         // — у одной вода, у другой воздух или лава.
-        let gap = second.0.sqrt() - nearest.0.sqrt();
-
-        if gap < 1.0 && wet(own) != wet(other) {
-            return Fluid::Barrier;
+        if gap < 1.0 && wet(own) != wet(self.aquifer_fill(second.1)) {
+            return (Fluid::Barrier, gap);
         }
 
-        wet(own).unwrap_or(Fluid::Air)
+        (wet(own).unwrap_or(Fluid::Air), gap)
     }
 
     /// Уровень и род жидкости клетки водоёмов, `None` — клетка сухая.
+    ///
+    /// Клетка решается долго (шумы, прикидка поверхности вокруг), а
+    /// спрашивают её для каждого места пещеры по нескольку раз — ответ
+    /// запоминается. Запоминает каждый поток генерации сам: ответ зависит
+    /// только от семени, стиля и клетки, и чанки по обе стороны границы
+    /// получают одно и то же.
+    fn aquifer_fill(&self, cell: (i32, i32, i32)) -> Option<(i32, Fluid)> {
+        thread_local! {
+            static FILLS: std::cell::RefCell<FillCache> = std::cell::RefCell::new(FillCache::new());
+        }
+
+        let key = (self.seed, self.style == Style::Vanilla, cell);
+
+        if let Some(fill) = FILLS.with(|fills| fills.borrow().get(&key).copied()) {
+            return fill;
+        }
+
+        let fill = self.decide_fill(cell);
+
+        FILLS.with(|fills| {
+            let mut fills = fills.borrow_mut();
+
+            // Чтобы память не росла без края: клеток на чанк — сотни.
+            if fills.len() > 200_000 {
+                fills.clear();
+            }
+
+            fills.insert(key, fill);
+        });
+
+        fill
+    }
+
+    /// Прикидка поверхности у середины чанка — без объёмного шума, как
+    /// «предварительная поверхность» оригинала (обычно чуть ниже настоящей).
+    /// Тоже запоминается: соседние клетки спрашивают одни и те же чанки.
+    fn rough_surface(&self, chunk_x: i32, chunk_z: i32) -> i32 {
+        thread_local! {
+            static SURFACES: std::cell::RefCell<std::collections::HashMap<(i64, bool, i32, i32), i32>> =
+                std::cell::RefCell::new(std::collections::HashMap::new());
+        }
+
+        let key = (self.seed, self.style == Style::Vanilla, chunk_x, chunk_z);
+
+        if let Some(surface) = SURFACES.with(|surfaces| surfaces.borrow().get(&key).copied()) {
+            return surface;
+        }
+
+        let (x, z) = (chunk_x * 16 + 8, chunk_z * 16 + 8);
+        let climate = self.climate_at(x, z);
+        let surface = match self.style {
+            Style::Vanilla => {
+                let relief = self.relief_at(&climate, x, z);
+
+                relief.surface.min(relief.cap).floor() as i32
+            }
+            Style::Smooth => self.smooth_height(&climate, x, z),
+        };
+
+        SURFACES.with(|surfaces| {
+            let mut surfaces = surfaces.borrow_mut();
+
+            if surfaces.len() > 50_000 {
+                surfaces.clear();
+            }
+
+            surfaces.insert(key, surface);
+        });
+
+        surface
+    }
+
+    /// Уровень и род жидкости клетки — без запоминания.
+    ///
+    /// Клетка у моря или реки — часть моря (вики, «Aquifer»): если верх
+    /// клетки (середина + 12) достаёт до прикидки поверхности, что лежит
+    /// ниже уровня моря, хоть в одном из чанков вокруг — на три чанка к
+    /// западу, на один к востоку, северу и югу, — клетка залита водой до
+    /// уровня моря. Поэтому пещеры под дном моря и рек у оригинала полны
+    /// воды, а не сухи: по замеру его мира в десяти блоках под дном моря
+    /// пустоты почти целиком вода.
     ///
     /// Залитость решает плавный шум: залитые клетки идут соседями, озёрами,
     /// а не вразброс. Чем глубже, тем реже; ниже −10 часть водоёмов —
     /// лавовые. Уровень тоже от плавного шума — у соседних клеток он часто
     /// один, и водоём выходит цельным.
-    fn aquifer_fill(&self, cell: (i32, i32, i32)) -> Option<(i32, Fluid)> {
+    fn decide_fill(&self, cell: (i32, i32, i32)) -> Option<(i32, Fluid)> {
+        let top = aquifer_middle(cell).1 as i32 + 12;
+
+        for dx in -3..=1 {
+            for dz in -1..=1 {
+                let surface = self.rough_surface(cell.0 + dx, cell.2 + dz);
+
+                if surface < SEA && top >= surface {
+                    return Some((SEA, Fluid::Water));
+                }
+            }
+        }
+
         let (cx, cy, cz) = (cell.0 as f64, cell.1 as f64, cell.2 as f64);
         let middle = cell.1 * 12 + 6;
 
@@ -1539,15 +1706,17 @@ impl Terrain {
         }
 
         // Пороги подобраны по замерам оригинала: выше −10 залита примерно
-        // четверть пещер, глубже — считанные проценты.
+        // четверть пещер, глубже — считанные проценты. Четверть — вместе с
+        // клетками у моря: порог выше нуля поднят, когда они появились.
         let threshold = if middle >= 0 {
-            0.0
+            0.08
         } else if middle >= -40 {
             0.33
         } else {
             0.22
         };
-        let flood = self.flood.at3(cx / 3.0, cy / 2.0, cz / 3.0);
+        // Сдвиг — чтобы клетки в целых узлах шума не были залиты все подряд.
+        let flood = self.flood.at3(cx / 3.0 + 0.413, cy / 2.0 + 0.167, cz / 3.0 + 0.829);
 
         if flood < threshold {
             return None;
@@ -2449,6 +2618,35 @@ pub fn blob_blocks(size: u32) -> u32 {
 }
 
 impl Terrain {
+    /// Годится ли место под ствол: деревья у оригинала растут только на
+    /// земле — траве, земле, подзоле, мху, иле, мицелии, а в заснеженных рощах
+    /// и на снежном блоке, — но не на камне, песке, гравии. Поверхность считается так же, как её красит чанк,
+    /// с крутизной по соседним столбцам: решение одно для всех чанков, куда
+    /// попадают части дерева.
+    pub fn tree_ground(&self, column: &Column, x: i32, z: i32) -> bool {
+        self.tree_ground_by(column, x, z, |x, z| self.column_at(x, z).height)
+    }
+
+    /// То же, что `tree_ground`, но высоты соседей берутся у `height`: у
+    /// чанка они уже посчитаны, и заново считать шумы незачем.
+    pub fn tree_ground_by(&self, column: &Column, x: i32, z: i32, height: impl Fn(i32, i32) -> i32) -> bool {
+        let steep = height(x, z + 1) - height(x, z - 1) >= 4 || height(x - 1, z) - height(x + 1, z) >= 4;
+        // Биом — со сдвигом, как его берёт чанк, когда красит поверхность
+        // (`block_with`): иначе у края пустыни, пляжа или каменистого берега
+        // проверка видела бы траву там, где в мире песок или камень.
+        let column = Column { steep, biome: self.weather_biome(column, x, z), ..*column };
+
+        let Some(top) = self.surface(&column, x, column.height, z, 0) else {
+            return false;
+        };
+        let name = top.split('[').next().unwrap_or(top);
+
+        matches!(
+            name,
+            "grass_block" | "dirt" | "coarse_dirt" | "podzol" | "rooted_dirt" | "moss_block" | "mud" | "mycelium" | "pale_moss_block" | "snow_block"
+        )
+    }
+
     /// Чем укрыт биом сверху: запись блока на такой глубине от поверхности.
     /// `None` — значит, дальше идёт камень. Пятна (подзол, лёд, кальцит,
     /// дно рек) решает мелкий шум по месту, полосы терракоты — высота.
@@ -2664,6 +2862,10 @@ enum Fluid {
     Barrier,
 }
 
+/// Запомненные клетки водоёмов: (семя, «Обычный» ли мир, клетка) →
+/// уровень и род жидкости.
+type FillCache = std::collections::HashMap<(i64, bool, (i32, i32, i32)), Option<(i32, Fluid)>>;
+
 /// Своё число клетки водоёмов.
 fn cell_seed((x, y, z): (i32, i32, i32)) -> i64 {
     (x as i64)
@@ -2811,6 +3013,37 @@ mod tests {
                         if style == Style::Vanilla {
                             assert_eq!(terrain.column_in(x, z, Some(&grid)).biome, biome);
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Жидкость водоёма нигде не стоит вплотную к воздуху или чужой
+    /// жидкости сбоку или сверху: иначе только что сложенный чанк сразу
+    /// течёт в пещеры (так было: сотня мест на чанк, 130 блоков текущей
+    /// воды). Над водой воздух может быть — это гладь водоёма.
+    #[test]
+    fn aquifer_fluid_does_not_touch_air_from_the_side() {
+        let terrain = Terrain::new(100_554_032_945_340, Style::Vanilla);
+
+        for x in -24..24 {
+            for z in -24..24 {
+                for y in -60..60 {
+                    let here = terrain.aquifer_at(x, y, z);
+
+                    if !matches!(here, Fluid::Water | Fluid::Lava) {
+                        continue;
+                    }
+
+                    for (dx, dy, dz) in [(0, -1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1)] {
+                        let beside = terrain.aquifer_at(x + dx, y + dy, z + dz);
+
+                        assert!(
+                            beside == here || beside == Fluid::Barrier,
+                            "{:?} в {} {} {} рядом с {:?}",
+                            here, x, y, z, beside
+                        );
                     }
                 }
             }
@@ -3081,7 +3314,14 @@ mod tests {
             assert_eq!(biome.number(), i as i32);
         }
 
-        let mut names: Vec<&str> = Biome::ALL.iter().map(|biome| biome.name()).collect();
+        // Незер — после своих: номер «осеннего леса» не сдвинулся.
+        assert_eq!(autumn_forest_number() as usize, Biome::ALL.len());
+        for (i, biome) in Biome::NETHER.iter().enumerate() {
+            assert_eq!(biome.number() as usize, Biome::ALL.len() + CUSTOM_BIOMES.len() + i);
+        }
+        assert_eq!(Biome::BasaltDeltas.number() as usize + 1, biome_registry_size());
+
+        let mut names: Vec<&str> = Biome::ALL.iter().chain(&Biome::NETHER).map(|biome| biome.name()).collect();
         let count = names.len();
 
         names.sort_unstable();
@@ -4014,5 +4254,108 @@ mod survey {
         }
 
         println!("осенних {:.1}% леса ({} из {})", 100.0 * autumn as f64 / forest as f64, autumn, forest);
+    }
+
+    /// Откуда течёт вода в только что сложенных чанках: каждое место
+    /// жидкости, рядом с которым пусто (снизу или сбоку), разбирается по
+    /// роду — море/река, водоносный слой, лава дна — и по тому, что рядом.
+    /// `cargo test --release leaks_at_load -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn leaks_at_load() {
+        use crate::fluids;
+        use std::collections::BTreeMap;
+
+        let seed = 100_554_032_945_340;
+        let path = std::env::temp_dir().join(format!("mc-leaks-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&path);
+        let mut world = crate::world::World::open(&path, Some(seed), crate::config::server_properties::WorldKind::Normal)
+            .expect("мир открылся");
+
+        for chunk_x in 0..10 {
+            for chunk_z in -10..0 {
+                world.ensure(chunk_x, chunk_z);
+            }
+        }
+
+        let terrain = Terrain::new(seed, Style::Vanilla);
+        let grid = terrain.relief_grid(0, -160, 159, -1);
+        let nearest = |x: i32, y: i32, z: i32| {
+            let (cell_x, cell_y, cell_z) = (x.div_euclid(16), y.div_euclid(12), z.div_euclid(16));
+            let mut best = (f64::MAX, (0, 0, 0));
+            for dx in -1..=1 {
+                for dy in -1..=1 {
+                    for dz in -1..=1 {
+                        let cell = (cell_x + dx, cell_y + dy, cell_z + dz);
+                        let (mx, my, mz) = aquifer_middle(cell);
+                        let d = (mx - x as f64).powi(2) + (my - y as f64).powi(2) + (mz - z as f64).powi(2);
+                        if d < best.0 {
+                            best = (d, cell);
+                        }
+                    }
+                }
+            }
+            best.1
+        };
+        let mut counts: BTreeMap<String, u32> = BTreeMap::new();
+
+        for x in 0..160 {
+            for z in -160..0 {
+                for y in crate::world::MIN_Y..200 {
+                    let Some((kind, _)) = fluids::fluid_at(world.get_block(x, y, z)) else {
+                        continue;
+                    };
+                    for (dx, dy, dz) in [(0, -1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1)] {
+                        let (nx, ny, nz) = (x + dx, y + dy, z + dz);
+                        if !(0..160).contains(&nx) || !(-160..0).contains(&nz) {
+                            continue;
+                        }
+                        let there = world.get_block(nx, ny, nz);
+                        let open = match fluids::fluid_at(there) {
+                            Some((other, _)) => other != kind,
+                            None => fluids::can_flow_into(there),
+                        };
+                        if !open {
+                            continue;
+                        }
+                        let from = if !grid.solid(x, y, z) {
+                            "море"
+                        } else if y <= LAVA_LEVEL {
+                            "лава дна"
+                        } else {
+                            "водоносный"
+                        };
+                        let to = if fluids::fluid_at(there).is_some() {
+                            "другая жидкость".to_string()
+                        } else if !grid.solid(nx, ny, nz) {
+                            "воздух над землёй".to_string()
+                        } else if terrain.aquifer_at(nx, ny, nz) == Fluid::Air {
+                            if from == "водоносный" {
+                                let (a, b) = (nearest(x, y, z), nearest(nx, ny, nz));
+                                if a == b { "пещера, та же клетка".to_string() } else { "пещера, другая клетка".to_string() }
+                            } else {
+                                "пещера".to_string()
+                            }
+                        } else {
+                            // Пустота, которую прорезала не пещера: жеода или данж.
+                            format!("пустота не пещеры ({:?})", terrain.aquifer_at(nx, ny, nz))
+                        };
+                        let side = if dy < 0 { "вниз" } else { "вбок" };
+                        let border = if nx.div_euclid(16) != x.div_euclid(16) || nz.div_euclid(16) != z.div_euclid(16) {
+                            ", через край"
+                        } else {
+                            ""
+                        };
+                        *counts.entry(format!("{:?} {} → {} {}{}", kind, from, to, side, border)).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+
+        for (what, count) in counts {
+            println!("{:6} {}", count, what);
+        }
+        println!("до правки перемычек (2026-09-27): 219 мест на внутренние 64 чанка, все — вода или лава клетки у воздуха соседней клетки");
+        let _ = std::fs::remove_dir_all(&path);
     }
 }

@@ -27,7 +27,10 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// Версия 1 — только место, поворот и режим игры. Версия 2 — то же самое
 /// и инвентарь следом. Файлы первой версии читаются по-прежнему: игрок
 /// встанет там, где вышел, просто с пустым инвентарём.
-const FORMAT_VERSION: u32 = 2;
+const FORMAT_VERSION: u32 = 3;
+
+/// Версия с инвентарём, но без измерения: такой игрок — в обычном мире.
+const INVENTORY_VERSION: u32 = 2;
 
 /// Прежняя версия формата, которую сервер ещё умеет читать.
 const OLD_FORMAT_VERSION: u32 = 1;
@@ -57,6 +60,9 @@ pub struct PlayerData {
 
     /// Инвентарь — с чем игрок вышел, с тем и зайдёт.
     pub inventory: Inventory,
+
+    /// В каком измерении игрок вышел. Записан последним байтом файла.
+    pub dimension: crate::dimension::Dimension,
 }
 
 /// Путь к файлу игрока внутри директории.
@@ -121,10 +127,17 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 
     let version = u32::from_be_bytes(take(bytes, 4)?);
 
-    // Файл первой версии — без инвентаря, и длина у него постоянная.
-    let inventory = match version {
-        OLD_FORMAT_VERSION if bytes.len() == SIZE => Inventory::new(),
-        FORMAT_VERSION => Inventory::from_bytes(bytes.get(SIZE..)?)?,
+    // Файл первой версии — без инвентаря, и длина у него постоянная;
+    // второй — без измерения; в третьей измерение — последний байт.
+    let (inventory, dimension) = match version {
+        OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default()),
+        INVENTORY_VERSION => (Inventory::from_bytes(bytes.get(SIZE..)?)?, Default::default()),
+        FORMAT_VERSION => {
+            let (last, inventory) = bytes.get(SIZE..)?.split_last()?;
+            let dimension = *crate::dimension::Dimension::ALL.get(*last as usize)?;
+
+            (Inventory::from_bytes(inventory)?, dimension)
+        }
         _ => return None,
     };
 
@@ -136,6 +149,7 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
         pitch: f32::from_be_bytes(take(bytes, 36)?),
         game_mode: i32::from_be_bytes(take(bytes, 40)?),
         inventory,
+        dimension,
     })
 }
 
@@ -163,6 +177,7 @@ pub fn save(directory: &Path, uuid: &[u8; 16], data: &PlayerData) -> io::Result<
     out.extend_from_slice(&data.pitch.to_be_bytes());
     out.extend_from_slice(&data.game_mode.to_be_bytes());
     out.extend_from_slice(&data.inventory.to_bytes());
+    out.push(data.dimension.index() as u8);
 
     let temporary = path.with_extension("tmp");
     fs::write(&temporary, &out)?;
@@ -194,6 +209,7 @@ mod tests {
             yaw: 90.0,
             pitch: -12.0,
             game_mode: 1,
+            dimension: Default::default(),
         }
     }
 

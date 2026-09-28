@@ -27,6 +27,9 @@
   метаданные (u16) и номер блока (i32);
 - src/bedrock/creative_items.bin — номер предмета Java (u16) для каждой
   записи творческого инвентаря по порядку;
+- src/bedrock/java_waterlogged.bin — по биту на состояние Java: есть ли в
+  блоке вода (водоросли, морская трава, пузырьковый столб — всегда; прочее —
+  при waterlogged=true). У Bedrock такая вода — второй слой подчанка;
 - src/bedrock/tables.rs — номера биомов и прочие мелкие таблицы.
 """
 
@@ -150,6 +153,15 @@ def main():
 
     print(f"состояний Java {total}: точно {exact}, по имени {by_name}, нет у Bedrock {missing}")
     print("нет у Bedrock:", sorted(missing_names)[:40])
+
+    always_wet = {"kelp", "kelp_plant", "seagrass", "tall_seagrass", "bubble_column"}
+    bits = bytearray((total + 7) // 8)
+    for state_id in range(total):
+        name, props = java.get(state_id, ("air", {}))
+        if name in always_wet or props.get("waterlogged") == "true":
+            bits[state_id // 8] |= 1 << (state_id % 8)
+    (OUT / "java_waterlogged.bin").write_bytes(bytes(bits))
+    print(f"состояний с водой внутри: {sum(bin(b).count('1') for b in bits)}")
 
     write_items()
     write_creative(mapping, states)
@@ -391,7 +403,12 @@ BIOME_ALIASES = {
     "swamp": "swampland",
     "savanna_plateau": "savanna_plateau",
     "autumn_forest": "forest",
+    "nether_wastes": "hell",
+    "soul_sand_valley": "soulsand_valley",
 }
+
+# Биомы Незера: в нашем реестре они идут после своих (`Biome::NETHER`).
+NETHER_BIOMES = ["nether_wastes", "crimson_forest", "warped_forest", "soul_sand_valley", "basalt_deltas"]
 
 
 def write_tables(state_count):
@@ -402,7 +419,8 @@ def write_tables(state_count):
     terrain = (ROOT / "src" / "world" / "terrain.rs").read_text(encoding="utf8")
     block = terrain[terrain.find("fn name(self)"):]
     block = block[:block.find("\n    }\n")]
-    ours = re.findall(r'=> "([a-z_]+)"', block) + ["autumn_forest"]
+    ours = [name for name in re.findall(r'=> "([a-z_]+)"', block) if name not in NETHER_BIOMES]
+    ours += ["autumn_forest"] + NETHER_BIOMES
 
     numbers = []
     names = []
@@ -421,11 +439,8 @@ def write_tables(state_count):
         f"pub const BLOCK_STATES: usize = {state_count};",
         "",
         "/// Номер биома Bedrock для каждого нашего: по порядку `Biome::ALL`, затем",
-        "/// свои (`CUSTOM_BIOMES`).",
+        "/// свои (`CUSTOM_BIOMES`), затем Незер (`Biome::NETHER`).",
         f"pub const BIOMES: [u32; {len(numbers)}] = {numbers};",
-        "",
-        "/// Имена тех же биомов у Bedrock.",
-        f"pub const BIOME_NAMES: [&str; {len(names)}] = [{', '.join(json.dumps(n) for n in names)}];",
         "",
     ]
     (OUT / "tables.rs").write_text("\n".join(lines), encoding="utf8")

@@ -14,7 +14,7 @@ use super::codec::{self, In, Out};
 use super::raknet::Sender;
 use super::world::BedrockWorld;
 use crate::shared::Shared;
-use crate::{log_debug, log_info};
+use crate::{log_debug, log_info, log_warn};
 
 pub const LOGIN: u32 = 0x01;
 pub const PLAY_STATUS: u32 = 0x02;
@@ -30,6 +30,9 @@ pub const REMOVE_ENTITY: u32 = 0x0e;
 pub const MOVE_PLAYER: u32 = 0x13;
 pub const UPDATE_BLOCK: u32 = 0x15;
 pub const INVENTORY_TRANSACTION: u32 = 0x1e;
+pub const INTERACT: u32 = 0x21;
+pub const CONTAINER_OPEN: u32 = 0x2e;
+pub const CONTAINER_CLOSE: u32 = 0x2f;
 pub const UPDATE_ABILITIES: u32 = 0xbb;
 pub const PLAYER_SKIN: u32 = 0x5d;
 pub const ADD_ITEM_ENTITY: u32 = 0x0f;
@@ -54,6 +57,14 @@ pub const PLAYER_AUTH_INPUT: u32 = 0x90;
 pub const CREATIVE_CONTENT: u32 = 0x91;
 pub const ITEM_REGISTRY: u32 = 0xa2;
 pub const REQUEST_NETWORK_SETTINGS: u32 = 0xc1;
+pub const PACKET_VIOLATION_WARNING: u32 = 0x9c;
+pub const UPDATE_ATTRIBUTES: u32 = 0x1d;
+pub const SET_ENTITY_DATA: u32 = 0x27;
+pub const ANIMATE: u32 = 0x2c;
+// Смена измерения — номера из MinecraftPacketIds документации Mojang к r/26_u1.
+pub const PLAYER_ACTION: u32 = 0x24;
+pub const CHANGE_DIMENSION: u32 = 0x3d;
+pub const SERVERBOUND_LOADING_SCREEN: u32 = 0x138;
 
 /// С какого размера пакеты-обёртки сжимаются.
 const COMPRESSION_THRESHOLD: usize = 256;
@@ -66,7 +77,22 @@ pub struct Identity {
     pub xuid: String,
     /// Скин из данных входа, если он там разборчивый.
     pub look: Option<super::skin::Look>,
+    /// Подтверждена ли личность подписью Xbox Live (auth.rs). Нет — имя и
+    /// XUID со слов клиента, и прав оператора такой игрок не получает.
+    pub verified: bool,
 }
+
+/// Пакет Login: кто назвался и чем это подтверждается.
+struct Login {
+    identity: Identity,
+    /// Жетон службы входа (`Token`); нет — прежний вид входа.
+    token: Option<String>,
+    /// Второй JWT — данные клиента, подписанные ключом клиента.
+    client_data: String,
+}
+
+/// Сколько всего ждать проверку входа (ключи службы входа по сети).
+const AUTH_WAIT: std::time::Duration = std::time::Duration::from_secs(12);
 
 /// Состояние соединения с клиентом Bedrock.
 pub struct Connection {
@@ -91,13 +117,16 @@ impl Connection {
 }
 
 /// Ведёт одного игрока Bedrock от подключения до выхода.
-pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: mpsc::UnboundedReceiver<Vec<u8>>, out: Sender) {
+pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: mpsc::Receiver<Vec<u8>>, out: Sender) {
     let mut connection = Connection { out, compressed: false };
     let mut identity: Option<Identity> = None;
     let mut world: Option<BedrockWorld> = None;
 
     // Такт: пока игрок в мире, раз в 50 мс рассказываем ему, что изменилось.
+    // Пропущенные такты не догоняются пачкой: после задержки — сразу
+    // следующий, как обычно.
     let mut tick = tokio::time::interval(std::time::Duration::from_millis(50));
+    tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
     'session: loop {
         let body = tokio::select! {
@@ -123,6 +152,18 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
                 continue;
             };
 
+            if id != super::session::PLAYER_AUTH_INPUT {
+                log_debug!("Bedrock: {} прислал игровой пакет {:#x} ({} байт)", addr, id, payload.len());
+            }
+
+            // Пакеты входа нужны до появления в мире. Уже вошедший клиент,
+            // приславший их снова, не войдёт второй раз: иначе в списке
+            // игроков остался бы призрак прежнего входа.
+            if world.is_some() && matches!(id, REQUEST_NETWORK_SETTINGS | LOGIN | RESOURCE_PACK_RESPONSE) {
+                log_debug!("Bedrock: {} уже в мире, а прислал пакет входа {:#x} — пропущен", addr, id);
+                continue;
+            }
+
             match id {
                 REQUEST_NETWORK_SETTINGS => {
                     let protocol = In::new(payload).i32_be().unwrap_or(0);
@@ -133,7 +174,7 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
                         status.i32_be(if protocol < super::PROTOCOL { 1 } else { 2 });
                         connection.send_one(status);
                         connection.close();
-                        return;
+                        break 'session;
                     }
 
                     let mut settings = Out::packet(NETWORK_SETTINGS);
@@ -147,15 +188,54 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
                     connection.compressed = true;
                 }
                 LOGIN => {
-                    let Some(who) = read_login(payload) else {
+                    if identity.is_some() {
+                        log_debug!("Bedrock: {} прислал вход повторно — пропущен", addr);
+                        continue;
+                    }
+
+                    let Some(login) = read_login(payload) else {
                         log_info!("Bedrock: {} прислал нечитаемый вход", addr);
                         log_debug!("Bedrock: вход начинается так: {}", describe_login(payload));
                         connection.close();
-                        return;
+                        break 'session;
                     };
 
+                    // Проверка входа Xbox Live — всегда, даже когда пускают
+                    // всех: подтверждённый игрок получает права по ops.json.
+                    // Ждёт только этот вход; мир и прочие игроки не ждут.
+                    let checked =
+                        tokio::time::timeout(AUTH_WAIT, super::auth::check(login.token.as_deref(), &login.client_data))
+                            .await
+                            .unwrap_or_else(|_| Err(super::auth::Failure::Network("служба входа не ответила вовремя".to_string())));
+                    let mut who = login.identity;
+                    who.verified = checked.is_ok();
+
+                    if let Err(why) = &checked {
+                        log_debug!("Bedrock: {} не подтверждён: {}", who.name, why);
+
+                        if shared.settings.bedrock_online_mode {
+                            let reason = if why.is_network() {
+                                "Не удалось проверить вход Xbox Live. Попробуй позже"
+                            } else {
+                                "Сервер пускает только с подтверждённым входом Xbox Live"
+                            };
+                            log_info!("{}[/{}] не пущен с Bedrock: {}", who.name, addr, why);
+                            let mut disconnect = Out::packet(DISCONNECT);
+                            disconnect.zigzag32(0).bool(false).string(reason).string("");
+                            connection.send_one(disconnect);
+                            connection.close();
+                            break 'session;
+                        }
+                    }
+
+                    crate::reports::known_player(&who.name);
                     log_info!("{}[/{}] вошёл с Bedrock", who.name, addr);
-                    log_debug!("Bedrock: {} — XUID «{}» (пока не проверяется)", who.name, who.xuid);
+                    log_debug!(
+                        "Bedrock: {} — XUID «{}», вход Xbox Live {}",
+                        who.name,
+                        who.xuid,
+                        if who.verified { "подтверждён" } else { "не подтверждён" }
+                    );
 
                     let mut status = Out::packet(PLAY_STATUS);
                     status.i32_be(0);
@@ -178,14 +258,14 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
                         4 => {
                             let Some(who) = identity.clone() else {
                                 connection.close();
-                                return;
+                                break 'session;
                             };
 
                             match BedrockWorld::enter(Arc::clone(&shared), &connection, who) {
                                 Some(entered) => world = Some(entered),
                                 None => {
                                     connection.close();
-                                    return;
+                                    break 'session;
                                 }
                             }
                         }
@@ -194,6 +274,16 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
                 }
                 // Клиент уходит сам — не ждём тайм-аута RakNet.
                 DISCONNECT => break 'session,
+                // Клиент не разобрал наш пакет — он сам говорит какой и почему.
+                PACKET_VIOLATION_WARNING => {
+                    let mut reader = In::new(payload);
+                    let (kind, severity, packet) = (reader.zigzag32(), reader.zigzag32(), reader.zigzag32());
+                    let reason = reader.string().unwrap_or_default();
+                    log_warn!(
+                        "Bedrock: {} не разобрал пакет {:#x?} (вид {:?}, серьёзность {:?}): {}",
+                        addr, packet, kind, severity, reason
+                    );
+                }
                 _ => {
                     if let Some(world) = world.as_mut() {
                         world.handle(&connection, id, payload);
@@ -208,12 +298,12 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
     }
 }
 
-/// Разбирает пакет Login: имя, UUID и XUID из цепочки JWT.
+/// Разбирает пакет Login: имя, UUID и XUID из цепочки JWT, и то, чем вход
+/// подтверждается. Подписи здесь не проверяются — это дело auth.rs.
 ///
 /// С 1.21.90 цепочка лежит строкой в поле `Certificate` JSON-объекта
-/// (proto.yml, LoginTokens). Подписи пока не проверяются — это вход
-/// без проверки Xbox Live, как `online-mode=false` у Java.
-fn read_login(payload: &[u8]) -> Option<Identity> {
+/// (proto.yml, LoginTokens).
+fn read_login(payload: &[u8]) -> Option<Login> {
     let mut reader = In::new(payload);
     let _protocol = reader.i32_be()?;
     let length = reader.varint()? as usize;
@@ -222,9 +312,11 @@ fn read_login(payload: &[u8]) -> Option<Identity> {
     let identity = tokens.little_string()?;
 
     // Второй JWT — данные клиента, среди них скин.
-    let look = tokens
-        .little_string()
-        .and_then(|client| client.split('.').nth(1).and_then(base64_url))
+    let client_data = tokens.little_string().unwrap_or_default();
+    let look = client_data
+        .split('.')
+        .nth(1)
+        .and_then(base64_url)
         .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
         .and_then(|json| super::skin::from_client_data(&json));
 
@@ -234,10 +326,11 @@ fn read_login(payload: &[u8]) -> Option<Identity> {
     // Новый вид (клиенты 26.x): всё о игроке — в JWT поля `Token`:
     // `xname` — имя, `xid` — XUID.
     //
-    // UUID, присланному клиентом (`identity`), не верим: подписи пока не
-    // проверяются, и подделанный клиент назвался бы UUID владельца из
-    // ops.json. UUID игрока Bedrock строится сервером из XUID (или ника) —
-    // в пространстве, которое с UUID игроков Java не пересекается.
+    // UUID, присланному клиентом (`identity`), не верим: неподтверждённый
+    // клиент назвался бы UUID владельца из ops.json. UUID игрока Bedrock
+    // строится сервером из XUID (или ника) — в пространстве, которое с UUID
+    // игроков Java не пересекается. Имя и XUID берутся из того же жетона,
+    // подпись которого проверяет auth.rs.
     if let Some(token) = outer.get("Token").and_then(|t| t.as_str())
         && let Some(json) = token
             .split('.')
@@ -250,7 +343,8 @@ fn read_login(payload: &[u8]) -> Option<Identity> {
         let name = java_safe_name(name);
         let uuid = uuid_for(&xuid, &name);
 
-        return Some(Identity { name, uuid, xuid, look });
+        let identity = Identity { name, uuid, xuid, look, verified: false };
+        return Some(Login { identity, token: Some(token.to_string()), client_data });
     }
 
     // Прежний вид: цепочка JWT, данные игрока — в `extraData`.
@@ -270,7 +364,11 @@ fn read_login(payload: &[u8]) -> Option<Identity> {
             let xuid = extra.get("XUID").and_then(|x| x.as_str()).unwrap_or("").to_string();
             let uuid = uuid_for(&xuid, &name);
 
-            return Some(Identity { name, uuid, xuid, look });
+            // Цепочку прежнего вида официальная документация Mojang не
+            // описывает, и клиенты 26.x входят жетоном `Token` — такой вход
+            // остаётся неподтверждённым.
+            let identity = Identity { name, uuid, xuid, look, verified: false };
+            return Some(Login { identity, token: None, client_data });
         }
     }
 

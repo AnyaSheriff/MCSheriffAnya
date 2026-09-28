@@ -1,0 +1,99 @@
+{
+  "name": "dust-on-slab",
+  "about": "Провод и повторитель на нижней и верхней плите: сосед сверху даёт им обновление.",
+  "blocks": [
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:stone_slab[type=bottom,waterlogged=false]"
+    },
+    {
+      "at": [
+        3,
+        0,
+        0
+      ],
+      "state": "minecraft:stone_slab[type=top,waterlogged=false]"
+    },
+    {
+      "at": [
+        5,
+        0,
+        0
+      ],
+      "state": "minecraft:stone_slab[type=bottom,waterlogged=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          1,
+          1,
+          0
+        ],
+        "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=none,west=none]"
+      }
+    },
+    {
+      "after": 2,
+      "set": {
+        "at": [
+          3,
+          1,
+          0
+        ],
+        "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=none,west=none]"
+      }
+    },
+    {
+      "after": 4,
+      "set": {
+        "at": [
+          5,
+          1,
+          0
+        ],
+        "state": "minecraft:repeater[delay=1,facing=north,locked=false,powered=false]"
+      }
+    },
+    {
+      "after": 10,
+      "set": {
+        "at": [
+          1,
+          2,
+          0
+        ],
+        "state": "minecraft:stone"
+      }
+    },
+    {
+      "after": 12,
+      "set": {
+        "at": [
+          3,
+          2,
+          0
+        ],
+        "state": "minecraft:stone"
+      }
+    },
+    {
+      "after": 14,
+      "set": {
+        "at": [
+          5,
+          2,
+          0
+        ],
+        "state": "minecraft:stone"
+      }
+    }
+  ],
+  "record_ticks": 60
+}

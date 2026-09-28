@@ -98,8 +98,12 @@ def family(block: dict) -> str | None:
     if sides <= names and "waterlogged" in names:
         if name.endswith("_pane") or "bars" in name:
             return "Pane"
-        if "up" in names:
+        # Лишайник, смола и жилы скалка тоже со сторонами и водой, но
+        # у них есть «низ» — это не стенка, а наросты на гранях.
+        if "up" in names and "down" not in names:
             return "Wall"
+        if "down" in names:
+            return "Other"
         return "Fence"
 
     if "type" in names and "facing" not in names:

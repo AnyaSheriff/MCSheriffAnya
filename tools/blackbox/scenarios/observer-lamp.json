@@ -1,0 +1,47 @@
+{
+  "name": "observer-lamp",
+  "about": "Наблюдатель смотрит на место, где ставят и убирают камень; сзади лампа.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:observer[facing=east,powered=false]"
+    },
+    {
+      "at": [
+        -1,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_lamp[lit=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          1,
+          0,
+          0
+        ],
+        "state": "minecraft:stone"
+      }
+    },
+    {
+      "after": 20,
+      "set": {
+        "at": [
+          1,
+          0,
+          0
+        ],
+        "state": "minecraft:air"
+      }
+    }
+  ],
+  "record_ticks": 50
+}

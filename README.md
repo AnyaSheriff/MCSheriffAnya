@@ -12,7 +12,11 @@ Fabric, Forge or any other server core. MCSheriffAnya is not affiliated with or
 endorsed by Mojang or Microsoft.
 
 - **Client version:** Java Edition 26.1.2 (protocol 775). Older clients work
-  through ViaFabricPlus and similar tools.
+  through ViaFabricPlus and similar tools. Player IDs are generated offline from
+  nicknames (UUID v3 "OfflinePlayer:<name>"), old player data is migrated
+  automatically.
+- **Bedrock support:** Bedrock Edition 26.10–26.13 join the core directly with
+  native account verification and cross-play features.
 - **Stack:** Rust (edition 2024), Tokio, Serde, TOML.
 - **License:** MIT.
 
@@ -26,7 +30,17 @@ endorsed by Mojang or Microsoft.
   terrain, caves, aquifers, rivers, oceans, biomes, trees and plants; sky
   and block light. World types: normal, superflat and "Super smooth".
 - Survival basics: mining and placing blocks, drops, picking items up,
-  dropped items, falling sand and gravel, flowing water and lava.
+  dropped items, falling sand and gravel (through two ticks, through water),
+  flowing water and lava (water washes away grass, flowers, torches, wires,
+  carpets; lava solidifies to cobblestone on contact with water); bucket
+  fills water by sight; water currents carry dropped items and splashes on
+  entry. In the Nether, lava flows farther and faster; water evaporates.
+- The Nether as a second dimension: caves, lava sea, bedrock ceiling, five
+  biomes (wastelands, crimson and warped forests, soul valley, basalt deltas)
+  with surface blocks, ores, fungi, vines, pillars and glowstone. Portal frames
+  (2×3 to 21×21), ignition with flint and steel (Java and Bedrock), automatic
+  portal finding or building and linking. Bedrock players see their own Nether
+  biome set.
 - Redstone: wire, torches, repeaters, comparators, levers, buttons, pressure
   plates, observers, copper bulbs, lamps, doors, trapdoors, fence gates,
   pistons and sticky pistons with real two-tick movement and client-side
@@ -35,15 +49,22 @@ endorsed by Mojang or Microsoft.
 - Day and night with sun, moon phases and sky colour; time is kept across
   restarts.
 - Operators (`ops.json`), commands with permission levels and tab hints:
-  `help`, `list`, `say`, `tp`, `gamemode`, `kick`, `give`, `clear`, `time`,
-  `op`, `deop`, `setblock`, `fill`, `stop`.
+  `help`, `list`, `say`, `tp` (with dimension switching), `gamemode`, `kick`,
+  `give`, `clear`, `time`, `op`, `deop`, `setblock`, `fill`, `stop`. The `tp`
+  command accepts player name or coordinates (including yaw and pitch from
+  F3+C). `execute in <dimension> run tp` teleports to another dimension.
 - A console that looks like the original one; technical detail is hidden
   behind `debug=true` in `config/mcsa.properties`.
 - Bedrock Edition 26.10–26.13 players join the core directly, no proxy (UDP
   port `bedrock-port`, 19132 by default): the world, Java players and their
-  skins, chat, building in creative and survival, the inventory (kept in the
-  same player file as for Java), drops and item pickup, commands. No Xbox
-  account check yet (like `online-mode=false`) and no crafting.
+  skins, chat, building in creative and survival, the inventory (opened with E,
+  kept in the same player file as for Java), drops and item pickup, commands,
+  cross-dimension travel via portals. Crouching, hand waving, nametags and
+  held items are visible between Java and Bedrock. Xbox Live account
+  verification (signature check via OpenID discovery); an unverified player can
+  only use `help`, `list`, and `say` commands. Flight is disabled in survival
+  mode. Player skins from Bedrock can be uploaded to Mojang via MineSkin for
+  Java players to see; Bedrock players see Java capes. No crafting yet.
 
 Not there yet: mobs, health and damage, containers, packet compression.
 
@@ -62,8 +83,8 @@ creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
 
 - `config/server.properties` — the same keys and format as the original
   server. Nothing from it is hard-coded.
-- `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`, and `prefetch-chunks` / `prefetch-at-once` — how far beyond the view distance the world is generated ahead of the player (0 turns it off); `bedrock-port`; `autumn-forests` and `pink-cherry-groves` — small additions not found in vanilla (rare autumn patches in forests, pinkish grass and more petals in cherry groves; `false` keeps the world vanilla); `text-info` — a plain-text server summary for `telnet host port`, browsers and curl.
-- `config/skins.toml` — which skin sources to use.
+- `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`; `prefetch-chunks` / `prefetch-at-once` — how far beyond the view distance the world is generated ahead of the player (0 turns it off); `bedrock-port` and `bedrock-online-mode` (if true, only verified Xbox Live accounts join; if false, all join but only verified get operator rights); `autumn-forests` and `pink-cherry-groves` — small additions not found in vanilla (rare autumn patches in forests, pinkish grass and more petals in cherry groves; `false` keeps the world vanilla); `text-info` — a plain-text server summary for `telnet host port`, browsers and curl; `portal-delay` — how many ticks to stand in a portal before changing dimensions in survival mode (80 by default, as in vanilla); `send-error-reports` — enable anonymous error reports sent to developers (false by default; reports contain recent log lines with names, addresses and UUIDs removed).
+- `config/skins.toml` — which skin sources to use (Mojang, Ely.by) and whether to upload Bedrock player skins to Mojang via MineSkin so Java players can see them.
 - `ops.json` — operators, the original format.
 
 ## Verified against the original
@@ -72,10 +93,11 @@ creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
 26.1.2 server and MCSheriffAnya, builds the same contraption with commands, flips
 a lever like a player would, records every block change, block action and
 sound with its tick, and diffs the two recordings. The official server is
-only *run* and observed over the network; its jar is never opened. Five
-scenarios (piston with a lever, sticky piston pull, two-block push, grass
-crushed by a piston, repeater into a lamp) currently match the original
-exactly. See `tools/blackbox/README.md`.
+only *run* and observed over the network; its jar is never opened. Seventeen
+scenarios (redstone mechanics, falling sand, water and lava flow) match the
+original tick for tick, except for randomness (seeds from grass, where dropped
+items appear) and one water-meets-lava case decided by tick order. See
+`tools/blackbox/README.md`.
 
 ## Contributing
 

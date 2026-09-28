@@ -388,6 +388,166 @@ pub fn has_box(state: i32) -> bool {
     !in_ranges(EMPTY_BOX, state)
 }
 
+/// Нижняя плита: занимает только нижнюю половину блока.
+fn bottom_slab(state: i32) -> bool {
+    orientation_of(state)
+        .is_some_and(|block| block.family == Family::Slab && block.value(state, "type") == Some("bottom"))
+}
+
+/// Держит ли верх блока красную пыль, повторитель и сравнитель.
+///
+/// Вики (Redstone Dust, Redstone Repeater): «can be placed on conductive
+/// blocks as well as glowstone, upside-down slabs, glass, upside-down stairs,
+/// and hoppers». Нижняя плита сюда не входит, хоть верх у неё и ровный: он
+/// на середине блока, а не наверху.
+pub fn carries_dust(state: i32) -> bool {
+    if bottom_slab(state) {
+        return false;
+    }
+
+    if solid_top(state) {
+        return true;
+    }
+
+    let Some(name) = block_at_state(state) else {
+        return false;
+    };
+
+    name == "hopper"
+        || orientation_of(state).is_some_and(|block| {
+            block.family == Family::Stairs && block.value(state, "half") == Some("top")
+        })
+}
+
+/// Упирается ли в блок лежащий предмет или падающий блок.
+///
+/// Всё, у чего есть ящик, — стена или пол: иначе предмет проваливался бы
+/// внутрь ступеней и заборов и лежал бы в них. Исключение — совсем низкие
+/// блоки (ковры, снежный слой, кувшинка, повторитель): предмет, лёгший
+/// поверх их блока, висел бы в воздухе почти на целый блок, а так ложится
+/// на то, что под ними, — ниже настоящего верха лишь на их толщину.
+pub fn stops_items(state: i32) -> bool {
+    if !has_box(state) {
+        return false;
+    }
+
+    if solid_top(state) {
+        return true;
+    }
+
+    !block_at_state(state).is_some_and(|name| {
+        name.ends_with("_carpet")
+            || matches!(name, "snow" | "lily_pad" | "repeater" | "comparator")
+    })
+}
+
+/// Заменяемый ли блок: можно ли поставить блок прямо на его место.
+///
+/// Список — тег `minecraft:replaceable` со страницы Block tag (Java Edition):
+/// воздух, вода, лава, трава, папоротники, сухие кусты и сухая трава,
+/// морская трава, огонь, снежный слой, лианы, светящийся лишайник, смола,
+/// невидимый свет, пустота структур, пузырьковый столб, корни и ростки Незера,
+/// опавшие листья, свисающие корни. Снежный слой заменяется, только пока он
+/// в один слой (вики, Snow).
+pub fn replaceable(state: i32) -> bool {
+    const REPLACEABLE: &[&str] = &[
+        "air",
+        "cave_air",
+        "void_air",
+        "water",
+        "lava",
+        "short_grass",
+        "fern",
+        "dead_bush",
+        "bush",
+        "short_dry_grass",
+        "tall_dry_grass",
+        "seagrass",
+        "tall_seagrass",
+        "fire",
+        "soul_fire",
+        "vine",
+        "glow_lichen",
+        "resin_clump",
+        "light",
+        "tall_grass",
+        "large_fern",
+        "structure_void",
+        "bubble_column",
+        "warped_roots",
+        "nether_sprouts",
+        "crimson_roots",
+        "leaf_litter",
+        "hanging_roots",
+    ];
+
+    if state == crate::world::AIR {
+        return true;
+    }
+
+    let Some(name) = block_at_state(state) else {
+        return false;
+    };
+
+    if name == "snow" {
+        return orientation_of(state).and_then(|block| block.value(state, "layers")) == Some("1");
+    }
+
+    REPLACEABLE.contains(&name)
+}
+
+/// Где вторая часть блока из двух частей: двери, высокого растения, кровати.
+///
+/// У двери и высоких растений (подсолнух, сирень, высокая трава, большой
+/// папоротник, малый капельник) половины стоят друг над другом — свойство
+/// `half` со значениями `lower`/`upper`. У кровати — рядом по горизонтали:
+/// изголовье (`part=head`) стоит от изножья в ту сторону, куда смотрит
+/// кровать (вики, Bed: «facing — the direction the head of the bed is
+/// pointing»).
+///
+/// Сама вторая часть здесь не проверяется: есть ли она на месте и та ли
+/// это кровать — решает тот, у кого есть мир (`same_block`).
+pub fn pair_partner(state: i32, (x, y, z): (i32, i32, i32)) -> Option<(i32, i32, i32)> {
+    let block = orientation_of(state)?;
+
+    match block.value(state, "half") {
+        Some("lower") => return Some((x, y + 1, z)),
+        Some("upper") => return Some((x, y - 1, z)),
+        _ => {}
+    }
+
+    let (dx, dz) = match block.value(state, "facing")? {
+        "north" => (0, -1),
+        "south" => (0, 1),
+        "west" => (-1, 0),
+        "east" => (1, 0),
+        _ => return None,
+    };
+
+    match block.value(state, "part")? {
+        "foot" => Some((x + dx, y, z + dz)),
+        "head" => Some((x - dx, y, z - dz)),
+        _ => None,
+    }
+}
+
+/// Вторая ли это часть того же блока: то же имя, и сама она указывает
+/// обратно сюда. Так две двери, поставленные одна на другую, не считаются
+/// одной: у верхней двери нижняя половина смотрит не туда.
+pub fn is_pair(state: i32, pos: (i32, i32, i32), other_state: i32, other: (i32, i32, i32)) -> bool {
+    same_block(state, other_state)
+        && pair_partner(state, pos) == Some(other)
+        && pair_partner(other_state, other) == Some(pos)
+}
+
+/// Один ли это блок по имени — у половинок одной двери или кровати имя общее.
+pub fn same_block(a: i32, b: i32) -> bool {
+    match (block_at_state(a), block_at_state(b)) {
+        (Some(a), Some(b)) => a == b,
+        _ => false,
+    }
+}
+
 /// Попадает ли номер состояния в один из промежутков таблицы.
 ///
 /// Промежутки отсортированы и не пересекаются, поэтому достаточно найти
@@ -442,31 +602,133 @@ pub fn drop_of(state: i32, tool: Option<i32>) -> Option<i32> {
         return None;
     }
 
+    // Номер 0 — это воздух: в таблице так записаны блоки, у которых
+    // выпадение зависит от случая (сухой куст, грибные блоки, стебли).
+    // Предмета «воздух» не бывает, поэтому это «ничего».
     DROPS
         .iter()
         .find(|(low, high, _)| (*low..=*high).contains(&state))
         .map(|(_, _, item)| *item)
+        .filter(|item| *item != 0)
 }
 
-/// Что выпадает из блока, когда в деле есть доля случая.
+/// Что и сколько выпадает из блока — с долей случая.
 ///
-/// `luck` — случайное число от 0 до 1. Трава и папоротник без ножниц дают
-/// семена пшеницы в одном случае из восьми (вики: «Short Grass», «Fern»),
-/// с ножницами — себя. Остальное — как у `drop_of`.
-pub fn drop_by_luck(state: i32, tool: Option<i32>, luck: f32) -> Option<i32> {
-    const GRASSY: [&str; 4] = ["short_grass", "fern", "tall_grass", "large_fern"];
+/// `luck` — случайное число от 0 до 1. Остальное — как у `drop_of`.
+///
+/// Поверх таблицы выпадений здесь правила, которых в ней нет (по страницам
+/// вики этих блоков):
+/// — трава и папоротник без ножниц: семена пшеницы в одном случае из восьми;
+///   с ножницами — сами они, а высокие — по две штуки низких («When broken
+///   using shears, tall grass drops two units of short grass»);
+/// — двойная плита: две плиты;
+/// — кровать: она сама своего цвета («A bed drops itself»); вторая половина
+///   убирается без выпадения, поэтому кровать одна;
+/// — сухой куст без ножниц: 0–2 палки;
+/// — грибные блоки: 0, 1 или 2 гриба — 77.77 %, 11.11 % и 11.11 %; ножка —
+///   ничего;
+/// — стебли тыквы и арбуза: 0–3 семечка, тем вероятнее, чем стебель старше
+///   (таблица на странице Pumpkin Seeds — это три броска с успехом
+///   (возраст + 1) / 15; у прикреплённого стебля — как у самого старого);
+/// — смола: по штуке на каждую занятую грань.
+///
+/// `luck` одно на всё: из него и «выпало ли», и «сколько».
+pub fn drops_by_luck(state: i32, tool: Option<i32>, luck: f32) -> Option<crate::inventory::Stack> {
+    use crate::inventory::Stack;
 
-    if block_at_state(state).is_some_and(|name| GRASSY.contains(&name)) {
-        let shears = item_named("shears");
+    let name = block_at_state(state)?;
+    let shears = tool.is_some() && tool == item_named("shears");
+    let some = |item: Option<i32>, count: i32| item.filter(|_| count > 0).map(|item| Stack::new(item, count));
 
-        if tool.is_some() && tool == shears {
-            return drop_of(state, tool);
+    match name {
+        "short_grass" | "fern" | "tall_grass" | "large_fern" => {
+            if shears {
+                return match name {
+                    "tall_grass" => some(item_named("short_grass"), 2),
+                    "large_fern" => some(item_named("fern"), 2),
+                    _ => some(item_for_block(name), 1),
+                };
+            }
+
+            return some(item_named("wheat_seeds"), (luck < 0.125) as i32);
         }
+        "dead_bush" => {
+            if shears {
+                return some(item_for_block(name), 1);
+            }
 
-        return (luck < 0.125).then(|| item_named("wheat_seeds")).flatten();
+            // Как делятся 0, 1 и 2, вики не говорит — поровну (сверить
+            // чёрным ящиком).
+            return some(item_named("stick"), ((luck * 3.0) as i32).min(2));
+        }
+        "brown_mushroom_block" | "red_mushroom_block" => {
+            let mushroom = if name.starts_with("brown") { "brown_mushroom" } else { "red_mushroom" };
+            let count = if luck < 7.0 / 9.0 {
+                0
+            } else if luck < 8.0 / 9.0 {
+                1
+            } else {
+                2
+            };
+
+            return some(item_named(mushroom), count);
+        }
+        "mushroom_stem" => return None,
+        "pumpkin_stem" | "melon_stem" | "attached_pumpkin_stem" | "attached_melon_stem" => {
+            let seeds = if name.contains("pumpkin") { "pumpkin_seeds" } else { "melon_seeds" };
+            let age = orientation(name)
+                .and_then(|block| block.value(state, "age"))
+                .and_then(|age| age.parse::<i32>().ok())
+                .unwrap_or(7);
+
+            return some(item_named(seeds), three_throws(luck, (age + 1) as f32 / 15.0));
+        }
+        "resin_clump" => {
+            let faces = orientation(name).map_or(0, |block| {
+                ["down", "up", "north", "south", "west", "east"]
+                    .iter()
+                    .filter(|face| block.value(state, face) == Some("true"))
+                    .count() as i32
+            });
+
+            return some(item_for_block(name), faces);
+        }
+        _ => {}
     }
 
-    drop_of(state, tool)
+    if name.ends_with("_bed") {
+        return some(item_for_block(name), 1);
+    }
+
+    let item = drop_of(state, tool)?;
+
+    let double_slab = orientation_of(state)
+        .is_some_and(|block| block.family == Family::Slab && block.value(state, "type") == Some("double"));
+
+    Some(Stack::new(item, if double_slab { 2 } else { 1 }))
+}
+
+/// Сколько успехов из трёх бросков с вероятностью `chance` — по одному
+/// случайному числу: отрезок от 0 до 1 делится по вероятностям исходов.
+fn three_throws(luck: f32, chance: f32) -> i32 {
+    let miss = 1.0 - chance;
+    let odds = [
+        miss * miss * miss,
+        3.0 * chance * miss * miss,
+        3.0 * chance * chance * miss,
+    ];
+
+    let mut edge = 0.0;
+
+    for (count, odd) in odds.iter().enumerate() {
+        edge += odd;
+
+        if luck < edge {
+            return count as i32;
+        }
+    }
+
+    3
 }
 
 /// Годится ли этот предмет, чтобы из блока что-то выпало.
@@ -804,6 +1066,11 @@ mod tests {
         assert_eq!(state_from_text("no_such_block"), None);
     }
 
+    /// Только сам предмет — для проверок, где число не важно.
+    fn drop_by_luck(state: i32, tool: Option<i32>, luck: f32) -> Option<i32> {
+        drops_by_luck(state, tool, luck).map(|stack| stack.item)
+    }
+
     #[test]
     fn grass_gives_seeds_by_luck_and_itself_to_shears() {
         let grass = state_by_name("short_grass").expect("трава есть");
@@ -812,9 +1079,128 @@ mod tests {
 
         assert_eq!(drop_by_luck(grass, None, 0.05), Some(seeds));
         assert_eq!(drop_by_luck(grass, None, 0.5), None);
-        assert_eq!(drop_by_luck(grass, Some(shears), 0.5), drop_of(grass, Some(shears)));
+        // С ножницами — сама трава, а не семена.
+        assert_eq!(drop_by_luck(grass, Some(shears), 0.5), item_named("short_grass"));
+
+        // Высокая трава с ножницами — две низких.
+        let tall = state_by_name("tall_grass").expect("высокая трава есть");
+        assert_eq!(
+            drops_by_luck(tall, Some(shears), 0.5),
+            Some(crate::inventory::Stack::new(item_named("short_grass").unwrap(), 2))
+        );
 
         let stone = state_by_name("stone").expect("камень есть");
         assert_eq!(drop_by_luck(stone, None, 0.5), drop_of(stone, None));
+    }
+
+    /// Двойная плита — две плиты, кровать — кровать своего цвета, а номера
+    /// «воздух» как предмета не выпадает ни из чего.
+    #[test]
+    fn special_drops_follow_the_wiki() {
+        use crate::inventory::Stack;
+
+        let slab = orientation("oak_slab").unwrap();
+        let double = slab.state(&[("type", "double")]).unwrap();
+        let oak_slab = item_named("oak_slab").unwrap();
+
+        assert_eq!(drops_by_luck(double, None, 0.5), Some(Stack::new(oak_slab, 2)));
+        assert_eq!(drops_by_luck(state_by_name("oak_slab").unwrap(), None, 0.5), Some(Stack::new(oak_slab, 1)));
+
+        // Кровать — с любой половины.
+        let bed = orientation("red_bed").unwrap();
+        for part in ["head", "foot"] {
+            let state = bed.state(&[("part", part)]).unwrap();
+            assert_eq!(drops_by_luck(state, None, 0.5), Some(Stack::new(item_named("red_bed").unwrap(), 1)));
+        }
+
+        // Ни у одного состояния выпадение не «воздух».
+        for (low, high, _) in BLOCK_NAMES {
+            for state in *low..=*high {
+                for luck in [0.0, 0.5, 0.99] {
+                    if let Some(stack) = drops_by_luck(state, None, luck) {
+                        assert!(stack.item != 0 && stack.count > 0, "состояние {state}: {stack:?}");
+                    }
+                }
+            }
+        }
+
+        // Сухой куст без ножниц: палки, 0–2.
+        let bush = state_by_name("dead_bush").unwrap();
+        let stick = item_named("stick").unwrap();
+        assert_eq!(drops_by_luck(bush, None, 0.1), None);
+        assert_eq!(drops_by_luck(bush, None, 0.5), Some(Stack::new(stick, 1)));
+        assert_eq!(drops_by_luck(bush, None, 0.9), Some(Stack::new(stick, 2)));
+
+        // Грибной блок: чаще ничего, иногда один-два гриба.
+        let cap = state_by_name("red_mushroom_block").unwrap();
+        let mushroom = item_named("red_mushroom").unwrap();
+        assert_eq!(drops_by_luck(cap, None, 0.5), None);
+        assert_eq!(drops_by_luck(cap, None, 0.8), Some(Stack::new(mushroom, 1)));
+        assert_eq!(drops_by_luck(cap, None, 0.95), Some(Stack::new(mushroom, 2)));
+
+        // Молодой стебель почти всегда пуст, а три семечка — только при
+        // самом большом везении.
+        let stem = state_by_name("pumpkin_stem").unwrap();
+        assert_eq!(drops_by_luck(stem, None, 0.5), None);
+        assert_eq!(drops_by_luck(stem, None, 0.9999).map(|stack| stack.count), Some(3));
+    }
+
+    /// Вероятности трёх бросков сходятся с таблицей вики (Pumpkin Seeds):
+    /// у стебля возраста 0 ничего не выпадает в 81.3 % случаев.
+    #[test]
+    fn three_throws_match_the_wiki_table() {
+        assert_eq!(three_throws(0.812, 1.0 / 15.0), 0);
+        assert_eq!(three_throws(0.814, 1.0 / 15.0), 1);
+        // Возраст 7: 10.16 % — ничего, 34.84 % — одно.
+        assert_eq!(three_throws(0.10, 8.0 / 15.0), 0);
+        assert_eq!(three_throws(0.44, 8.0 / 15.0), 1);
+        assert_eq!(three_throws(0.46, 8.0 / 15.0), 2);
+    }
+
+    /// Заменяемое — по тегу вики: трава да, цветок и камень нет, снег —
+    /// только в один слой.
+    #[test]
+    fn replaceable_follows_the_tag() {
+        let snow = orientation("snow").unwrap();
+
+        assert!(replaceable(crate::world::AIR));
+        assert!(replaceable(state_by_name("short_grass").unwrap()));
+        assert!(replaceable(state_by_name("tall_grass").unwrap()));
+        assert!(replaceable(state_by_name("water").unwrap()));
+        assert!(replaceable(snow.state(&[("layers", "1")]).unwrap()));
+        assert!(!replaceable(snow.state(&[("layers", "2")]).unwrap()));
+        assert!(!replaceable(state_by_name("poppy").unwrap()));
+        assert!(!replaceable(state_by_name("stone").unwrap()));
+    }
+
+    /// Пыль держится на верхней плите и перевёрнутых ступенях, а на нижней
+    /// плите — нет.
+    #[test]
+    fn dust_needs_a_top_that_is_really_on_top() {
+        let slab = orientation("oak_slab").unwrap();
+        let stairs = orientation("oak_stairs").unwrap();
+
+        assert!(carries_dust(state_by_name("stone").unwrap()));
+        assert!(carries_dust(slab.state(&[("type", "top")]).unwrap()));
+        assert!(!carries_dust(slab.state(&[("type", "bottom")]).unwrap()));
+        assert!(carries_dust(stairs.state(&[("half", "top")]).unwrap()));
+        assert!(!carries_dust(stairs.state(&[("half", "bottom")]).unwrap()));
+        assert!(carries_dust(state_by_name("hopper").unwrap()));
+    }
+
+    /// Вторая часть кровати — в ту сторону, куда она смотрит.
+    #[test]
+    fn a_bed_head_is_where_it_faces() {
+        let bed = orientation("red_bed").unwrap();
+        let foot = bed.state(&[("facing", "east"), ("part", "foot")]).unwrap();
+        let head = bed.state(&[("facing", "east"), ("part", "head")]).unwrap();
+
+        assert_eq!(pair_partner(foot, (0, 64, 0)), Some((1, 64, 0)));
+        assert_eq!(pair_partner(head, (1, 64, 0)), Some((0, 64, 0)));
+        assert_eq!(pair_partner(state_by_name("stone").unwrap(), (0, 64, 0)), None);
+
+        // Ступени — не пара, хоть и с «half».
+        let stairs = state_by_name("oak_stairs").unwrap();
+        assert_eq!(pair_partner(stairs, (0, 64, 0)), None);
     }
 }

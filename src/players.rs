@@ -63,6 +63,17 @@ pub struct Member {
     /// Что игрок держит в руке. Остальные видят предмет в чужих руках
     /// только отсюда: в своём инвентаре чужие предметы им не показывают.
     pub held: Option<Stack>,
+
+    /// В каком измерении игрок: другим он виден только в том же.
+    pub dimension: crate::dimension::Dimension,
+
+    /// Приседает ли: остальные видят его присевшим, только если сервер
+    /// им это перескажет.
+    pub sneaking: bool,
+
+    /// Сколько раз взмахнул рукой (щелчок, удар): подключения сравнивают
+    /// с показанным и досылают своим клиентам взмах.
+    pub swings: u32,
 }
 
 /// Что произошло с игроками — запись журнала.
@@ -79,6 +90,14 @@ pub enum Change {
         uuid: [u8; 16],
         entity_id: i32,
     },
+
+    /// Игроку сменили режим: остальным надо поправить строку в списке
+    /// игроков — наблюдателя там видно по режиму.
+    GameMode { uuid: [u8; 16], mode: i32 },
+
+    /// У игрока появился скин (у игрока Bedrock — когда его картинка
+    /// загружена в Mojang): остальным надо заново показать его с новым.
+    Skin(Member),
 }
 
 /// Поручение подключению игрока — то, что может сделать только оно само.
@@ -94,12 +113,27 @@ pub enum Order {
     /// Перенести в другое место.
     Teleport { x: f64, y: f64, z: f64 },
 
+    /// Повернуть взгляд: поворот по сторонам и наклон в градусах, как в
+    /// `tp x y z поворот наклон`. Идёт следом за переносом.
+    Look { yaw: f32, pitch: f32 },
+
     /// Выдать предметы: они лягут в инвентарь, а что не поместится —
     /// упадёт на землю.
     Give { item: i32, count: i32 },
 
     /// Очистить инвентарь.
     Clear,
+
+    /// Сменить режим игры: подключение само скажет об этом своему клиенту.
+    GameMode { mode: i32 },
+
+    /// Перейти в другое измерение и встать в это место.
+    ChangeDimension {
+        dimension: crate::dimension::Dimension,
+        x: f64,
+        y: f64,
+        z: f64,
+    },
 }
 
 /// Список игроков на сервере и журнал изменений.
@@ -137,7 +171,9 @@ impl Players {
     /// входе и входом в мир идёт обмен с клиентом, и за это время ник мог
     /// занять кто-то другой.
     pub fn join(&mut self, mut member: Member, entity_id: i32) -> Option<(Member, Vec<Member>)> {
-        if self.name_taken(&member.name) {
+        // И по опознавателю: у Bedrock он не из ника, и двое с одним
+        // опознавателем писали бы в один файл игрока.
+        if self.name_taken(&member.name) || self.members.iter().any(|other| other.uuid == member.uuid) {
             return None;
         }
 
@@ -215,8 +251,32 @@ impl Players {
     /// Запомнить нужно для тех, кто зайдёт позже: новичок получает сведения
     /// об остальных из списка, и режим должен быть там уже новый.
     pub fn set_game_mode(&mut self, uuid: &[u8; 16], game_mode: i32) {
-        if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid) {
+        if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid)
+            && member.game_mode != game_mode
+        {
             member.game_mode = game_mode;
+            self.changes.push(Change::GameMode {
+                uuid: *uuid,
+                mode: game_mode,
+            });
+        }
+    }
+
+    /// Запоминает скин игрока и сообщает о нём остальным.
+    pub fn set_skin(&mut self, uuid: &[u8; 16], skin: Skin) {
+        if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid)
+            && member.skin.as_ref() != Some(&skin)
+        {
+            member.skin = Some(skin);
+            self.changes.push(Change::Skin(member.clone()));
+        }
+    }
+
+    /// Запоминает, в каком измерении игрок: остальные по этому решают,
+    /// показывать ли его.
+    pub fn set_dimension(&mut self, uuid: &[u8; 16], dimension: crate::dimension::Dimension) {
+        if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid) {
+            member.dimension = dimension;
         }
     }
 
@@ -236,6 +296,20 @@ impl Players {
     ///
     /// Как и положение, это меняется часто и в журнал не пишется: остальные
     /// смотрят в список и замечают перемену сами.
+    /// Игрок взмахнул рукой.
+    pub fn swing(&mut self, uuid: &[u8; 16]) {
+        if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid) {
+            member.swings = member.swings.wrapping_add(1);
+        }
+    }
+
+    /// Запоминает, приседает ли игрок.
+    pub fn set_sneaking(&mut self, uuid: &[u8; 16], sneaking: bool) {
+        if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid) {
+            member.sneaking = sneaking;
+        }
+    }
+
     pub fn set_held(&mut self, uuid: &[u8; 16], held: Option<Stack>) {
         if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid) {
             member.held = held;
@@ -260,7 +334,14 @@ impl Players {
     }
 
     /// Поручает подключению игрока что-то сделать.
+    ///
+    /// Тому, кого нет на сервере, поручение не кладётся: его некому забрать,
+    /// и оно лежало бы вечно.
     pub fn order(&mut self, uuid: &[u8; 16], order: Order) {
+        if !self.members.iter().any(|member| &member.uuid == uuid) {
+            return;
+        }
+
         self.orders.entry(*uuid).or_default().push(order);
     }
 
@@ -318,6 +399,9 @@ mod tests {
                 pitch: 0.0,
                 on_ground: false,
             },
+            dimension: Default::default(),
+            sneaking: false,
+            swings: 0,
         }
     }
 

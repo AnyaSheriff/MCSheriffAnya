@@ -41,12 +41,15 @@
 // растения — перемешанным числом от точки. Сталактиты, лозы и листья стоят
 // в своём столбце, поэтому чанку не нужно знать соседей; дерево с азалией
 // больше столбца, и его, как обычные деревья, рисует каждый чанк, которого
-// оно касается.
+// оно касается. Скалк смотрит на соседние блоки во все стороны, поэтому у
+// граней чанка глубокой тьме нужна кайма — блоки соседа в полосу шириной
+// в блок (`Rim`): каждый чанк ставит только свои блоки, но решает по пустотам
+// с обеих сторон границы, и шва на ней нет.
 
 use std::sync::OnceLock;
 
 use super::noise::Noise;
-use super::terrain::{self, Biome, Climate, Column, Terrain, SEA};
+use super::terrain::{self, Biome, CaveGrid, Climate, Column, ReliefGrid, Terrain, SEA};
 use super::underground::{hash, scramble, unit};
 use super::{trees, Chunk, Generator, AIR, CHUNK_SIZE, MIN_Y, WORLD_HEIGHT};
 
@@ -72,6 +75,13 @@ const CLIMATE_WEIGHT: f64 = 3.0;
 
 /// Глубина глубокой тьмы — одна точка.
 const DEEP_DARK_DEPTH: f64 = 1.1;
+
+/// Выше этой эрозии глубокой тьмы не бывает ни на какой глубине. Промах
+/// по эрозии весит втрое, а выигрыш по глубине у наземного биома даже у дна
+/// мира (глубина около 3) — не больше 0,39 в квадрате расстояния: промах
+/// должен быть меньше √0,39 / 3 ≈ 0,21. С запасом на то, что столбец каймы
+/// стоит в блоке от середины соседской клетки, — 0,26.
+const DEEP_DARK_NEAR: f64 = DEEP_DARK_EROSION + 0.26;
 
 /// Выше этой глубины пещерный биом не может оказаться ближе наземного:
 /// до промежутка пещерных глубин ещё дальше, чем до поверхности.
@@ -463,8 +473,16 @@ fn roll(key: u64, (x, y, z): (i32, i32, i32), salt: u64) -> f64 {
 }
 
 /// Проход по чанку: деревья с азалией над пышными пещерами, затем убранство
-/// самих пещер.
-pub(super) fn decorate(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
+/// самих пещер. `columns` — столбцы чанка с каймой в блок, `grid` — его
+/// сетка плотности: по ним считаются блоки соседей у граней.
+pub(super) fn decorate(
+    generator: &Generator,
+    chunk: &mut Chunk,
+    chunk_x: i32,
+    chunk_z: i32,
+    columns: &[Column],
+    grid: Option<&ReliefGrid>,
+) {
     let Generator::Normal(terrain) = generator else {
         return;
     };
@@ -490,7 +508,12 @@ pub(super) fn decorate(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, c
         }
     }
 
-    if spans.iter().all(Option::is_none) {
+    // Глубокая тьма у соседа тоже задевает наш край: чанк без пещерных
+    // клеток ещё смотрит, нет ли её за гранями.
+    let caves = spans.iter().any(Option::is_some);
+    let rim = Rim::new(terrain, chunk, (chunk_x, chunk_z), columns, grid, caves);
+
+    if !caves && rim.sides.iter().all(Option::is_none) {
         return;
     }
 
@@ -501,6 +524,7 @@ pub(super) fn decorate(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, c
         blocks,
         numbers,
         patches: Patches::new(key),
+        rim,
     };
 
     for local_x in 0..CHUNK_SIZE {
@@ -515,6 +539,8 @@ pub(super) fn decorate(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, c
             area.column(chunk, local_x, local_z, from, to);
         }
     }
+
+    area.sculk_rim(chunk);
 }
 
 /// Всё, что нужно проходу по чанку.
@@ -525,6 +551,7 @@ struct Area {
     blocks: &'static Palette,
     numbers: Numbers,
     patches: Patches,
+    rim: Rim,
 }
 
 /// Пустота столбца от пола до потолка: `bottom` — первый пустой блок над
@@ -966,10 +993,21 @@ impl Area {
             for (bit, (dx, dy, dz)) in FACE_STEPS.iter().enumerate() {
                 let (nx, ny, nz) = (local_x + dx, y + dy, local_z + dz);
 
-                if !(0..CHUNK_SIZE).contains(&nx)
-                    || !(0..CHUNK_SIZE).contains(&nz)
-                    || !(MIN_Y..TOP).contains(&ny)
-                {
+                if !(MIN_Y..TOP).contains(&ny) {
+                    continue;
+                }
+
+                // Блок соседнего чанка: скалком его сделает сам сосед — ему
+                // видна наша пустота. Здесь — только грань жилы на его камне.
+                if !(0..CHUNK_SIZE).contains(&nx) || !(0..CHUNK_SIZE).contains(&nz) {
+                    if self.rim.beyond(nx, ny, nz) == Beyond::Rock {
+                        let value = patch(&self.patches.sculk, SCULK_SCALE, self.world(nx, ny, nz));
+
+                        if value > SCULK_VEIN && value <= SCULK {
+                            faces |= 1 << bit;
+                        }
+                    }
+
                     continue;
                 }
 
@@ -1006,6 +1044,232 @@ impl Area {
                 chunk.put_generated(local_x, y, local_z, blocks.sculk_vein[faces], true);
             }
         }
+    }
+
+    /// Свои крайние блоки у пустот глубокой тьмы соседа: камень становится
+    /// скалком, если здесь пятно, — как от пустоты своего чанка. Жилы на
+    /// воздухе соседа ставит сам сосед.
+    fn sculk_rim(&self, chunk: &mut Chunk) {
+        let blocks = self.blocks;
+
+        for (side, strip) in self.rim.sides.iter().enumerate() {
+            let Some(strip) = strip else {
+                continue;
+            };
+
+            for along in 0..CHUNK_SIZE {
+                let (_, (local_x, local_z)) = across(side, along);
+
+                for y in strip.from..=strip.to {
+                    if strip.at(along, y) != Beyond::Dark || !blocks.rock(chunk.block(local_x, y, local_z)) {
+                        continue;
+                    }
+
+                    if patch(&self.patches.sculk, SCULK_SCALE, self.world(local_x, y, local_z)) > SCULK {
+                        chunk.put_generated(local_x, y, local_z, blocks.sculk, true);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Кайма у граней чанка
+// ---------------------------------------------------------------------------
+
+/// Каким скалку виден блок соседнего чанка за гранью.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Beyond {
+    /// Ни камень, ни пустота глубокой тьмы.
+    Other,
+    /// Камень, в который ложится скалк.
+    Rock,
+    /// Воздух в клетке глубокой тьмы.
+    Dark,
+}
+
+/// Сколько сплошного камня над блоком хватает, чтобы блок решался как в
+/// самой толще: у поверхности пещеры сходят на нет на 32 блоках, правила
+/// поверхности — ещё раньше.
+const SOLID_ENOUGH: i32 = 32;
+
+/// Блоки соседей в полосу шириной в блок за гранями чанка — только на
+/// высотах, где у грани с той или другой стороны глубокая тьма. Считаются
+/// тем же рельефом и теми же пещерами, что и сам соседний чанк, но без его
+/// руды, жеод и данжей: камень под рудой здесь остаётся камнем.
+struct Rim {
+    /// Запад, восток, север, юг.
+    sides: [Option<RimSide>; 4],
+}
+
+/// Полоса за одной гранью: блоки от `from` до `to` по высоте в каждом из 16
+/// столбцов вдоль грани.
+struct RimSide {
+    from: i32,
+    to: i32,
+    blocks: Vec<Beyond>,
+}
+
+impl RimSide {
+    fn at(&self, along: i32, y: i32) -> Beyond {
+        if !(self.from..=self.to).contains(&y) {
+            return Beyond::Other;
+        }
+
+        self.blocks[(along * (self.to - self.from + 1) + y - self.from) as usize]
+    }
+}
+
+/// Шаг наружу через грань: запад, восток, север, юг.
+const OUTWARD: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+
+/// Местные координаты столбца за гранью `side` и своего крайнего столбца
+/// напротив него — для места `along` вдоль грани.
+fn across(side: usize, along: i32) -> ((i32, i32), (i32, i32)) {
+    let edge = match side {
+        0 => (0, along),
+        1 => (CHUNK_SIZE - 1, along),
+        2 => (along, 0),
+        _ => (along, CHUNK_SIZE - 1),
+    };
+    let (dx, dz) = OUTWARD[side];
+
+    ((edge.0 + dx, edge.1 + dz), edge)
+}
+
+/// Слои глубокой тьмы в столбце клеток — битами, нижний слой младшим.
+type Layers = u128;
+
+impl Rim {
+    /// Кайма чанка. `mine` — есть ли у самого чанка пещерные клетки: без
+    /// них своих слоёв глубокой тьмы у граней нет, смотрим только соседей.
+    fn new(
+        terrain: &Terrain,
+        chunk: &Chunk,
+        (chunk_x, chunk_z): (i32, i32),
+        columns: &[Column],
+        grid: Option<&ReliefGrid>,
+        mine: bool,
+    ) -> Rim {
+        let numbers = Numbers::new();
+        let near = |(local_x, local_z): (i32, i32)| &columns[((local_x + 1) * (CHUNK_SIZE + 2) + local_z + 1) as usize];
+        let world = |(local_x, local_z): (i32, i32)| (chunk_x * CHUNK_SIZE + local_x, chunk_z * CHUNK_SIZE + local_z);
+
+        let sides = std::array::from_fn(|side| {
+            // Слои глубокой тьмы по четырём клеткам вдоль грани: у себя —
+            // по готовым биомам чанка, у соседа — по середине его клетки,
+            // так же, как он решит их сам. Середину считаем, только если
+            // эрозия рядом вообще пускает глубокую тьму.
+            let mut ours: [Layers; 4] = [0; 4];
+            let mut theirs: [Layers; 4] = [0; 4];
+
+            for cell in 0..4 {
+                let (outside, edge) = across(side, cell * 4 + 2);
+
+                if mine {
+                    for layer in 0..WORLD_HEIGHT / 4 {
+                        if numbers.cave(chunk.biome(edge.0, MIN_Y + layer * 4, edge.1)) == Some(Cave::DeepDark) {
+                            ours[cell as usize] |= 1 << layer;
+                        }
+                    }
+                }
+
+                if near(outside).climate.erosion >= DEEP_DARK_NEAR {
+                    continue;
+                }
+
+                let (x, z) = world(outside);
+                let middle = terrain.column_in((x & !3) + 2, (z & !3) + 2, grid);
+
+                for layer in 0..WORLD_HEIGHT / 4 {
+                    if biome_at(&middle, MIN_Y + layer * 4 + 2) == Some(Biome::DeepDark) {
+                        theirs[cell as usize] |= 1 << layer;
+                    }
+                }
+            }
+
+            let all = ours.iter().chain(&theirs).fold(0, |all, layers| all | layers);
+
+            if all == 0 {
+                return None;
+            }
+
+            let from = MIN_Y + all.trailing_zeros() as i32 * 4;
+            let to = MIN_Y + (Layers::BITS - 1 - all.leading_zeros()) as i32 * 4 + 3;
+            let (first, _) = across(side, 0);
+            let (last, _) = across(side, CHUNK_SIZE - 1);
+            let ((x_from, z_from), (x_to, z_to)) = (world(first), world(last));
+            let caves = terrain.cave_grid(x_from, z_from, x_to, z_to, to);
+            let mut blocks = Vec::with_capacity((CHUNK_SIZE * (to - from + 1)) as usize);
+
+            for along in 0..CHUNK_SIZE {
+                let (outside, _) = across(side, along);
+                let dark = theirs[(along / 4) as usize];
+
+                rim_column(terrain, near(outside), &caves, grid, world(outside), (from, to), dark, &mut blocks);
+            }
+
+            Some(RimSide { from, to, blocks })
+        });
+
+        Rim { sides }
+    }
+
+    /// Блок соседа за гранью по местным координатам (одна из них — −1 или
+    /// 16).
+    fn beyond(&self, local_x: i32, y: i32, local_z: i32) -> Beyond {
+        let (side, along) = match (local_x, local_z) {
+            (-1, _) => (0, local_z),
+            (CHUNK_SIZE, _) => (1, local_z),
+            (_, -1) => (2, local_x),
+            _ => (3, local_x),
+        };
+
+        self.sides[side].as_ref().map_or(Beyond::Other, |strip| strip.at(along, y))
+    }
+}
+
+/// Один столбец каймы: блоки от `from` до `to`, как их сложит соседний
+/// чанк, — сверху вниз, чтобы знать толщу камня над каждым. `dark` — слои
+/// глубокой тьмы его клетки.
+#[allow(clippy::too_many_arguments)]
+fn rim_column(
+    terrain: &Terrain,
+    column: &Column,
+    caves: &CaveGrid,
+    grid: Option<&ReliefGrid>,
+    (x, z): (i32, i32),
+    (from, to): (i32, i32),
+    dark: Layers,
+    out: &mut Vec<Beyond>,
+) {
+    let blocks = palette();
+    let start = out.len();
+    let mut run_top = to + SOLID_ENOUGH;
+
+    out.resize(start + (to - from + 1) as usize, Beyond::Other);
+
+    for y in (from..=to + SOLID_ENOUGH).rev() {
+        let solid = terrain.solid_in(grid, column, x, y, z);
+
+        if !solid {
+            run_top = y - 1;
+        }
+
+        if y > to {
+            continue;
+        }
+
+        let state = terrain.block_with(column, caves, x, y, z, solid, run_top);
+
+        out[start + (y - from) as usize] = if state == AIR && dark >> ((y - MIN_Y) / 4) & 1 == 1 {
+            Beyond::Dark
+        } else if blocks.rock(state) {
+            Beyond::Rock
+        } else {
+            Beyond::Other
+        };
     }
 }
 
@@ -1084,6 +1348,12 @@ fn azalea_at(terrain: &Terrain, key: u64, x: i32, z: i32) -> Option<Column> {
 
     // Обычное дерево на этом месте важнее.
     if terrain::tree_possible(terrain.seed(), x, z) && terrain.tree_at(&column, x, z).is_some() {
+        return None;
+    }
+
+    // Как и обычное дерево — только на земле, не на камне склона или
+    // голой вершины.
+    if !terrain.tree_ground(&column, x, z) {
         return None;
     }
 
@@ -1378,6 +1648,119 @@ mod tests {
         assert!(!seen[0][Cave::DeepDark as usize] && !seen[2][Cave::Lush as usize]);
     }
 
+    /// Скалк не видит границы чанков: камень рядом с пустотой глубокой тьмы
+    /// становится скалком, а на воздух ложится жила — так же, как внутри
+    /// чанка, по какую бы сторону границы ни лежала пустота.
+    #[test]
+    fn sculk_crosses_the_border() {
+        let generator = Generator::Normal(Terrain::new(SEED, Style::Vanilla));
+        let Generator::Normal(terrain) = &generator else {
+            unreachable!()
+        };
+        let blocks = palette();
+        let numbers = Numbers::new();
+        let patches = Patches::new(world_key(terrain));
+        let deep = |x: i32, z: i32| {
+            let column = terrain.column_at(x, z);
+
+            (MIN_Y..column.height).step_by(4).any(|y| biome_at(&column, y + 2) == Some(Biome::DeepDark))
+        };
+
+        let mut sculk = 0;
+        let mut veins = 0;
+        let mut wrong = Vec::new();
+
+        // Границы по x и по z, у которых глубокая тьма по обе стороны: в
+        // крайней клетке одного чанка и в первой клетке следующего. Пещера на
+        // самой границе бывает не у каждой — берём первые несколько, где
+        // есть что проверить. Места вдоль границы — (поперёк, y, вдоль).
+        for axis in 0..2 {
+            let flip = |(across, along): (i32, i32)| if axis == 0 { (across, along) } else { (along, across) };
+            let borders = (0..4096).map(|i| ((i % 64) * 4, (i / 64) * 4)).filter(|chunk| {
+                let (across, along) = flip(*chunk);
+                let (x, z) = flip((across * CHUNK_SIZE + 14, along * CHUNK_SIZE + 6));
+                let (far_x, far_z) = flip((across * CHUNK_SIZE + 18, along * CHUNK_SIZE + 6));
+
+                deep(x, z) && deep(far_x, far_z)
+            });
+            let mut checked = 0;
+
+            for chunk in borders {
+                if checked == 6 {
+                    break;
+                }
+
+                let (step_x, step_z) = flip((1, 0));
+                let starts = [chunk, (chunk.0 + step_x, chunk.1 + step_z)];
+                let sides = starts.map(|(chunk_x, chunk_z)| Chunk::generated(&generator, chunk_x, chunk_z));
+                let before = sculk;
+
+                for along in 0..CHUNK_SIZE {
+                    for y in MIN_Y..TOP {
+                        // Камень P с одной стороны, пустота Q вплотную с другой.
+                        for (from, to) in [(0, 1), (1, 0)] {
+                            let (p_across, q_across) = if from == 0 { (CHUNK_SIZE - 1, 0) } else { (0, CHUNK_SIZE - 1) };
+                            let ((p_x, p_z), (q_x, q_z)) = (flip((p_across, along)), flip((q_across, along)));
+                            let (p, q) = (sides[from].block(p_x, y, p_z), sides[to].block(q_x, y, q_z));
+                            let dark = numbers.cave(sides[to].biome(q_x, y, q_z)) == Some(Cave::DeepDark);
+                            let open = q == AIR
+                                || blocks.sculk_vein.contains(&q)
+                                || q == blocks.sculk_sensor
+                                || q == blocks.sculk_shrieker;
+
+                            if !dark || !open {
+                                continue;
+                            }
+
+                            let (chunk_x, chunk_z) = starts[from];
+                            let place = (chunk_x * CHUNK_SIZE + p_x, y, chunk_z * CHUNK_SIZE + p_z);
+                            let value = patch(&patches.sculk, SCULK_SCALE, place);
+
+                            if value > SCULK && (blocks.rock(p) || p == blocks.sculk) {
+                                sculk += 1;
+
+                                if p != blocks.sculk {
+                                    wrong.push(("камень не стал скалком", place));
+                                }
+                            }
+
+                            // Грань жилы, смотрящая на P: запад или север,
+                            // если P по эту сторону, иначе восток или юг.
+                            let face = 1 << (2 + 2 * (1 - axis) + (from == 1) as i32);
+
+                            if blocks.rock(p)
+                                && value > SCULK_VEIN
+                                && value <= SCULK
+                                && q != blocks.sculk_sensor
+                                && q != blocks.sculk_shrieker
+                            {
+                                veins += 1;
+
+                                if !blocks.sculk_vein.iter().enumerate().any(|(mask, state)| *state == q && mask & face != 0) {
+                                    wrong.push(("нет жилы на грани", place));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                checked += (sculk > before) as usize;
+            }
+
+            assert!(checked > 0, "нет границы глубокой тьмы поперёк оси {}", axis);
+        }
+
+        assert!(sculk > 0 && veins > 0, "на границах глубокой тьмы нечего проверять");
+        assert!(
+            wrong.is_empty(),
+            "{} из {} мест скалка и {} жил на границе решены иначе: {:?}",
+            wrong.len(),
+            sculk,
+            veins,
+            &wrong[..wrong.len().min(8)]
+        );
+    }
+
     /// Дерево с азалией у края чанка рисуют оба чанка, каждый свою часть,
     /// не сговариваясь; корни уходят вниз под стволом.
     #[test]
@@ -1485,6 +1868,85 @@ mod tests {
         }
     }
 
+    /// Скалк у края чанка и в середине: сколько блоков скалка и жил
+    /// приходится на столбец в крайних столбцах (x или z по модулю 16 — 0
+    /// или 15) и в остальных, и сколько — на сотню пустот глубокой тьмы (у
+    /// края их может быть больше или меньше: чанки выбраны по одной клетке).
+    /// Шва нет — числа близки.
+    /// `cargo test --release sculk_border_census -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn sculk_border_census() {
+        let generator = Generator::Normal(Terrain::new(SEED, Style::Vanilla));
+        let Generator::Normal(terrain) = &generator else {
+            unreachable!()
+        };
+        let blocks = palette();
+        let places: Vec<(i32, i32)> = cave_chunks(terrain, 64)
+            .into_iter()
+            .filter(|(biome, _, _)| *biome == Biome::DeepDark)
+            .map(|(_, chunk_x, chunk_z)| (chunk_x, chunk_z))
+            .collect();
+        // [край, середина] × [скалк, жилы, пустоты глубокой тьмы, столбцы]
+        let mut counts = [[0u64; 4]; 2];
+        let numbers = Numbers::new();
+        let mut spent = std::time::Duration::ZERO;
+
+        for (chunk_x, chunk_z) in &places {
+            let started = std::time::Instant::now();
+            let chunk = Chunk::generated(&generator, *chunk_x, *chunk_z);
+
+            spent += started.elapsed();
+
+            for local_x in 0..CHUNK_SIZE {
+                for local_z in 0..CHUNK_SIZE {
+                    let edge = [0, CHUNK_SIZE - 1].contains(&local_x) || [0, CHUNK_SIZE - 1].contains(&local_z);
+                    let row = &mut counts[if edge { 0 } else { 1 }];
+
+                    row[3] += 1;
+
+                    for y in MIN_Y..TOP {
+                        let state = chunk.block(local_x, y, local_z);
+
+                        if state == blocks.sculk {
+                            row[0] += 1;
+                        } else if blocks.sculk_vein.contains(&state) {
+                            row[1] += 1;
+                        }
+
+                        if (state == AIR
+                            || blocks.sculk_vein.contains(&state)
+                            || state == blocks.sculk_sensor
+                            || state == blocks.sculk_shrieker)
+                            && numbers.cave(chunk.biome(local_x, y, local_z)) == Some(Cave::DeepDark)
+                        {
+                            row[2] += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        println!(
+            "чанков с глубокой тьмой: {}, в среднем {:?} на чанк",
+            places.len(),
+            spent / places.len() as u32
+        );
+
+        for (name, [sculk, veins, dark, columns]) in [("край", counts[0]), ("середина", counts[1])] {
+            println!(
+                "  {}: на столбец скалка {:.3}, жил {:.3}, пустот {:.2}; на сотню пустот скалка {:.2}, жил {:.2} ({} столбцов)",
+                name,
+                sculk as f64 / columns as f64,
+                veins as f64 / columns as f64,
+                dark as f64 / columns as f64,
+                100.0 * sculk as f64 / dark as f64,
+                100.0 * veins as f64 / dark as f64,
+                columns
+            );
+        }
+    }
+
     /// Перепись украшений: в чанках над каждым пещерным биомом считает
     /// поставленные блоки. `cargo test --release cave_decor -- --ignored --nocapture`.
     #[test]
@@ -1522,9 +1984,15 @@ mod tests {
 
             for (chunk_x, chunk_z) in places {
                 let mut chunk = Chunk::generated(&generator, *chunk_x, *chunk_z);
+                let (from_x, from_z) = (chunk_x * CHUNK_SIZE - 1, chunk_z * CHUNK_SIZE - 1);
+                let grid = terrain.relief_grid(from_x, from_z, from_x + CHUNK_SIZE + 1, from_z + CHUNK_SIZE + 1);
+                let columns: Vec<Column> = (from_x..from_x + CHUNK_SIZE + 2)
+                    .flat_map(|x| (from_z..from_z + CHUNK_SIZE + 2).map(move |z| (x, z)))
+                    .map(|(x, z)| terrain.column_in(x, z, Some(&grid)))
+                    .collect();
                 let again = std::time::Instant::now();
 
-                decorate(&generator, &mut chunk, *chunk_x, *chunk_z);
+                decorate(&generator, &mut chunk, *chunk_x, *chunk_z, &columns, Some(&grid));
                 pass += again.elapsed();
                 chunks += 1;
 

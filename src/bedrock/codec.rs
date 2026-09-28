@@ -231,6 +231,10 @@ pub const DEFLATE: u8 = 0;
 /// «Без сжатия» в заголовке пакета-обёртки.
 pub const NO_COMPRESSION: u8 = 0xff;
 
+/// Больше этого обёртка после распаковки не бывает: самое большое, что шлёт
+/// клиент, — вход со скином, и он в разы меньше.
+const MAX_UNPACKED: usize = 16 * 1024 * 1024;
+
 /// Разбирает тело пакета-обёртки (то, что шло после 0xFE) на игровые
 /// пакеты. `compressed` — включено ли уже сжатие (после Network Settings у
 /// обёртки есть байт алгоритма).
@@ -241,7 +245,13 @@ pub fn unbatch(body: &[u8], compressed: bool) -> Option<Vec<Vec<u8>>> {
         match algorithm {
             DEFLATE => {
                 let mut out = Vec::new();
-                flate2::read::DeflateDecoder::new(rest).take(64 * 1024 * 1024).read_to_end(&mut out).ok()?;
+                flate2::read::DeflateDecoder::new(rest).take(MAX_UNPACKED as u64 + 1).read_to_end(&mut out).ok()?;
+
+                // Больше предела — не обрезаем молча, а не принимаем вовсе.
+                if out.len() > MAX_UNPACKED {
+                    return None;
+                }
+
                 out
             }
             NO_COMPRESSION => rest.to_vec(),

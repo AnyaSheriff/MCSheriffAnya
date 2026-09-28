@@ -37,16 +37,20 @@ impl PacketInfo {
     }
 }
 
+/// Самый длинный пакет от клиента: длина — VarInt не длиннее трёх байт,
+/// как у оригинала. Без предела заголовок «2 ГБ» заставил бы выделить 2 ГБ.
+pub const MAX_PACKET: i32 = 2_097_151;
+
 /// Читает один пакет целиком: VarInt длина + тело длиной `length`.
 ///
 /// Тело читается в буфер, чтобы границы потока не сбивались и можно было
 /// безопасно пропускать пакеты, которые нам не нужны.
 pub async fn read_packet(stream: &mut TcpStream) -> io::Result<PacketInfo> {
     let length = read_varint(stream).await?;
-    if length < 0 {
+    if !(1..=MAX_PACKET).contains(&length) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("Отрицательная длина пакета: {}", length),
+            format!("Недопустимая длина пакета: {}", length),
         ));
     }
 

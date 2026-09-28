@@ -91,6 +91,23 @@ impl<T: Clone> Journal<T> {
         entries
     }
 
+    /// Отстал ли читатель, дочитавший до `from`: часть того, что ему
+    /// причиталось, уже выброшена (см. `LIMIT`), и `since` отдаст ему не всё.
+    ///
+    /// Спрашивать надо до `since`: после него читатель считается дочитавшим.
+    /// Отставшему мало досылать записи — его клиенту надо заново прислать
+    /// всё, чего касались пропавшие записи (для мира — чанки целиком).
+    pub fn lagged(&self, from: usize) -> bool {
+        from < self.dropped
+    }
+
+    /// То же, что `since`, и заодно — отстал ли читатель (см. `lagged`).
+    pub fn since_checked(&mut self, from: usize, reader: Reader) -> (Vec<T>, bool) {
+        let lagged = self.lagged(from);
+
+        (self.since(from, reader), lagged)
+    }
+
     /// Отписывает читателя: он ушёл, и ждать его больше не надо.
     pub fn forget(&mut self, reader: Reader) {
         self.readers.remove(&reader);
@@ -214,5 +231,34 @@ mod tests {
         }
 
         assert_eq!(journal.kept(), LIMIT);
+    }
+
+    /// Отставший читатель узнаёт, что часть записей до него не дойдёт, а
+    /// успевающий — нет.
+    #[test]
+    fn a_lagging_reader_is_told_so() {
+        let mut journal = Journal::new();
+
+        let slow = journal.watch(1);
+        let fast = journal.watch(2);
+
+        journal.push("первое");
+
+        let (read, lagged) = journal.since_checked(fast, 2);
+        assert_eq!(read, vec!["первое"]);
+        assert!(!lagged);
+
+        for _ in 0..(LIMIT + 10) {
+            journal.push("запись");
+        }
+
+        assert!(journal.lagged(slow), "отставание не замечено");
+
+        let (read, lagged) = journal.since_checked(slow, 1);
+        assert!(lagged);
+        assert_eq!(read.len(), LIMIT);
+
+        // Дочитав до конца, он больше не отстаёт.
+        assert!(!journal.lagged(journal.count()));
     }
 }

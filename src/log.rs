@@ -79,14 +79,14 @@ macro_rules! log_error {
 /// Наружу эта функция торчит только потому, что макросам нужно куда-то
 /// передать собранную строку; в остальном коде пользуются макросами.
 pub fn print(level: &str, message: std::fmt::Arguments) {
+    let text = message.to_string();
+
     // Печатаем не прямо в терминал, а через консоль: там может идти набор
     // команды, и строку ввода надо перерисовать под сообщением, а не порвать.
-    crate::console::prompt::print_above(&format!(
-        "[{}] [Server thread/{}]: {}",
-        local_time(),
-        level,
-        message
-    ));
+    crate::console::prompt::print_above(&format!("[{}] [Server thread/{}]: {}", local_time(), level, text));
+
+    // Для отчётов об ошибках, если владелец их включил.
+    crate::reports::line(level, &text);
 }
 
 /// Текущее местное время в виде ЧЧ:ММ:СС.

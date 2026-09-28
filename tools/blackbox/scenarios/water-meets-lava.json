@@ -1,0 +1,28 @@
+{
+  "name": "water-meets-lava",
+  "about": "Источник лавы и рядом ставится источник воды: где встречаются, появляется булыжник и обсидиан.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:lava"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          3,
+          0,
+          0
+        ],
+        "state": "minecraft:water"
+      }
+    }
+  ],
+  "record_ticks": 160
+}

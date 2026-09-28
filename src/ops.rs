@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::network::login::format_uuid;
-use crate::{log_debug, log_warn};
+use crate::{log_debug, log_info, log_warn};
 
 /// Имя файла — как у оригинального сервера.
 pub const FILE: &str = "ops.json";
@@ -51,7 +51,16 @@ impl Ops {
                     list
                 }
                 Err(error) => {
-                    log_warn!("Права: файл {} испорчен ({}) — считаем пустым", FILE, error);
+                    // Испорченный файл не затираем первой же командой op:
+                    // откладываем в сторону, чтобы его можно было починить.
+                    let aside = path.with_extension("json.broken");
+                    let _ = fs::rename(path, &aside);
+                    log_warn!(
+                        "Права: файл {} испорчен ({}) — отложен в {}, пока прав ни у кого нет",
+                        FILE,
+                        error,
+                        aside.display()
+                    );
                     Vec::new()
                 }
             },
@@ -80,12 +89,19 @@ impl Ops {
         let uuid = format_uuid(uuid);
 
         if let Some(op) = self.list.iter_mut().find(|op| op.uuid == uuid) {
-            if op.level == level {
+            if op.level == level && op.name == name {
                 return false;
             }
 
+            let changed = op.level != level;
             op.level = level;
             op.name = name.to_string();
+
+            // Сменился только ник — запомнить его, но права не «новые».
+            if !changed {
+                self.save();
+                return false;
+            }
         } else {
             self.list.push(Op {
                 uuid,
@@ -98,20 +114,48 @@ impl Ops {
         true
     }
 
-    /// Снимает права по нику. Возвращает false, если их и не было.
-    pub fn take_away(&mut self, name: &str) -> bool {
+    /// Снимает права по опознавателю (если игрок в сети) или по нику из
+    /// файла. Возвращает false, если их и не было.
+    pub fn take_away(&mut self, uuid: Option<&[u8; 16]>, name: &str) -> bool {
         let before = self.list.len();
 
         // Ник сравнивается без учёта регистра, и не только латинского:
         // в игре ники бывают какие угодно.
         let wanted = name.to_lowercase();
+        let uuid = uuid.map(format_uuid);
 
-        self.list.retain(|op| op.name.to_lowercase() != wanted);
+        self.list.retain(|op| op.name.to_lowercase() != wanted && Some(&op.uuid) != uuid.as_ref());
 
         if self.list.len() == before {
             return false;
         }
 
+        self.save();
+        true
+    }
+
+    /// Переносит права на новый опознаватель того же ника. Раньше сервер
+    /// верил опознавателю, который присылает клиент, и в файле могли остаться
+    /// записи с ним; теперь опознаватель считается из ника, и старую запись
+    /// с тем же ником надо переписать, иначе права пропадут. Возвращает true,
+    /// если что-то перенесено.
+    pub fn adopt(&mut self, uuid: &[u8; 16], name: &str) -> bool {
+        let uuid = format_uuid(uuid);
+
+        if self.list.iter().any(|op| op.uuid == uuid) {
+            return false;
+        }
+
+        let Some(op) = self
+            .list
+            .iter_mut()
+            .find(|op| op.name.eq_ignore_ascii_case(name))
+        else {
+            return false;
+        };
+
+        log_info!("Права: {} перенесены на опознаватель {} (был {})", name, uuid, op.uuid);
+        op.uuid = uuid;
         self.save();
         true
     }
@@ -132,7 +176,10 @@ impl Ops {
             }
         };
 
-        if let Err(error) = fs::write(&self.path, text) {
+        // Через временный файл: сбой посреди записи не оставит файл пустым.
+        let temporary = self.path.with_extension("json.tmp");
+
+        if let Err(error) = fs::write(&temporary, text).and_then(|_| fs::rename(&temporary, &self.path)) {
             log_warn!("Права: не удалось записать {} ({})", FILE, error);
         }
     }
@@ -169,9 +216,9 @@ mod tests {
         assert_eq!(again.level_of(&uuid), HIGHEST_LEVEL, "права не сохранились");
 
         let mut ops = Ops::open(&path);
-        assert!(ops.take_away("игрок"), "снятие по нику не сработало");
+        assert!(ops.take_away(None, "игрок"), "снятие по нику не сработало");
         assert_eq!(ops.level_of(&uuid), 0);
-        assert!(!ops.take_away("Игрок"), "сняли то, чего нет");
+        assert!(!ops.take_away(None, "Игрок"), "сняли то, чего нет");
 
         let _ = fs::remove_file(&path);
     }

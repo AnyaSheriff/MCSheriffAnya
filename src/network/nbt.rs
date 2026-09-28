@@ -163,16 +163,70 @@ pub fn text_component(text: &str) -> Vec<u8> {
     out
 }
 
-/// Записывает строку NBT: 2 байта длины (big-endian) + UTF-8 байты.
+/// Записывает строку NBT: 2 байта длины (big-endian) + байты в «modified
+/// UTF-8», как читает клиент Java. От обычного UTF-8 он отличается двумя
+/// вещами: нулевой знак пишется двумя байтами C0 80, а знак вне основной
+/// плоскости (смайлик) — суррогатной парой по три байта. Обычный UTF-8
+/// с четырёхбайтовым знаком клиент не читает и отключается — вместе со
+/// всеми, кому ушло такое сообщение в чате.
+///
+/// Длина — не больше 65 535 байт: длиннее строку обрезаем по целому знаку,
+/// иначе длина молча переполнилась бы и пакет стал бы битым.
 fn write_string(out: &mut Vec<u8>, value: &str) {
-    let bytes = value.as_bytes();
+    let mut bytes = Vec::with_capacity(value.len());
+
+    for symbol in value.chars() {
+        let mut units = [0u16; 2];
+        let mut encoded = Vec::with_capacity(6);
+
+        for &unit in symbol.encode_utf16(&mut units).iter() {
+            match unit {
+                0x0001..=0x007f => encoded.push(unit as u8),
+                0x0000 | 0x0080..=0x07ff => {
+                    encoded.push(0xc0 | (unit >> 6) as u8);
+                    encoded.push(0x80 | (unit & 0x3f) as u8);
+                }
+                _ => {
+                    encoded.push(0xe0 | (unit >> 12) as u8);
+                    encoded.push(0x80 | ((unit >> 6) & 0x3f) as u8);
+                    encoded.push(0x80 | (unit & 0x3f) as u8);
+                }
+            }
+        }
+
+        if bytes.len() + encoded.len() > u16::MAX as usize {
+            break;
+        }
+        bytes.extend_from_slice(&encoded);
+    }
+
     out.extend_from_slice(&(bytes.len() as u16).to_be_bytes());
-    out.extend_from_slice(bytes);
+    out.extend_from_slice(&bytes);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Смайлик — суррогатной парой по три байта, нулевой знак — C0 80.
+    #[test]
+    fn strings_are_modified_utf8() {
+        let mut out = Vec::new();
+        write_string(&mut out, "a\u{0}\u{1F600}я");
+        assert_eq!(
+            out,
+            [0, 11, b'a', 0xc0, 0x80, 0xed, 0xa0, 0xbd, 0xed, 0xb8, 0x80, 0xd1, 0x8f]
+        );
+    }
+
+    /// Слишком длинная строка обрезается, а не ломает длину.
+    #[test]
+    fn a_long_string_is_cut() {
+        let mut out = Vec::new();
+        write_string(&mut out, &"я".repeat(40_000));
+        assert_eq!(u16::from_be_bytes([out[0], out[1]]), 65_534);
+        assert_eq!(out.len(), 65_536);
+    }
 
     /// Поле-строка записывается так: тип, имя с длиной в два байта, значение
     /// с длиной в два байта.

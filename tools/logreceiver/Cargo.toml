@@ -1,0 +1,19 @@
+[package]
+name = "mcsa-logreceiver"
+version = "0.1.0"
+edition = "2021"
+description = "Приёмник анонимных отчётов об ошибках серверов MCSheriffAnya"
+license = "MIT"
+publish = false
+
+# Отдельная программа, не часть сервера: собирается сама по себе.
+[workspace]
+
+[dependencies]
+tiny_http = "0.12"
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

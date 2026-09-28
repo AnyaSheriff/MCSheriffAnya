@@ -223,11 +223,24 @@ impl Bag {
         }
     }
 
-    /// Уходя, игрок не уносит курсор: что в нём, возвращается в инвентарь.
-    pub fn put_cursor_back(&mut self) {
-        if let Some(stack) = self.cursor.take() {
-            self.inventory.add(stack);
+    /// Инвентарь для файла игрока: то, что держат курсором, — тоже в нём,
+    /// иначе при выходе оно пропало бы.
+    pub fn inventory_with_cursor(&self) -> Inventory {
+        let mut inventory = self.inventory.clone();
+
+        if let Some(stack) = self.cursor {
+            // Не влезло — в файле этого не будет; при выходе лишнее
+            // бросается на землю (`put_cursor_back`).
+            inventory.put(stack);
         }
+
+        inventory
+    }
+
+    /// Уходя, игрок не уносит курсор: что в нём, возвращается в инвентарь.
+    /// Что не влезло, отдаётся наружу — это бросают на землю.
+    pub fn put_cursor_back(&mut self) -> Option<crate::inventory::Stack> {
+        self.inventory.put(self.cursor.take()?).1
     }
 
     /// Весь инвентарь: рюкзак с панелью, броня, вторая рука.
@@ -339,7 +352,17 @@ impl Bag {
             answers.u8(1).zigzag32(request_id);
         }
 
+        // Выход творческого меню живёт только внутри одного запроса: то, что
+        // там осталось, не должно дожить до следующего.
+        self.set(Place::CreativeOutput, None);
+
         if tail { Parsed::Whole } else { Parsed::Broken }
+    }
+
+    /// Место по слоту из запроса. Выход творческого меню есть только
+    /// в творческом режиме: в выживании оттуда ничего не берётся.
+    fn place_for(named: Named, creative: bool) -> Option<Place> {
+        place(named.container, named.slot).filter(|place| creative || *place != Place::CreativeOutput)
     }
 
     /// Действия одного запроса: удались ли все. None — разобрать не вышло.
@@ -361,26 +384,26 @@ impl Bag {
                     let count = reader.u8()? as i32;
                     let source = read_slot(reader)?;
                     let destination = read_slot(reader)?;
-                    self.move_stack(count, source, destination, touched)
+                    self.move_stack(count, source, destination, creative, touched)
                 }
                 // Поменять местами.
                 2 => {
                     let source = read_slot(reader)?;
                     let destination = read_slot(reader)?;
-                    self.swap(source, destination, touched)
+                    self.swap(source, destination, creative, touched)
                 }
                 // Выбросить.
                 3 => {
                     let count = reader.u8()? as i32;
                     let source = read_slot(reader)?;
                     let _randomly = reader.u8()?;
-                    self.remove(count, source, touched).map(|stack| dropped.push(stack)).is_some()
+                    self.remove(count, source, creative, touched).map(|stack| dropped.push(stack)).is_some()
                 }
                 // Уничтожить (творческий) или израсходовать.
                 4 | 5 => {
                     let count = reader.u8()? as i32;
                     let source = read_slot(reader)?;
-                    (kind == 5 || creative) && self.remove(count, source, touched).is_some()
+                    (kind == 5 || creative) && self.remove(count, source, creative, touched).is_some()
                 }
                 // «Создать» и устаревший список итогов — только сопровождают
                 // другие действия.
@@ -428,9 +451,15 @@ impl Bag {
         true
     }
 
-    fn move_stack(&mut self, count: i32, source: Named, destination: Named, touched: &mut Vec<(Named, Place)>) -> bool {
-        let (Some(from), Some(to)) = (place(source.container, source.slot), place(destination.container, destination.slot))
-        else {
+    fn move_stack(
+        &mut self,
+        count: i32,
+        source: Named,
+        destination: Named,
+        creative: bool,
+        touched: &mut Vec<(Named, Place)>,
+    ) -> bool {
+        let (Some(from), Some(to)) = (Bag::place_for(source, creative), Bag::place_for(destination, creative)) else {
             return false;
         };
         let Some(moving) = self.get(from) else {
@@ -439,6 +468,13 @@ impl Bag {
 
         if count <= 0 || count > moving.count {
             return false;
+        }
+
+        // Откуда и куда — одно место (тот же слот, названный панелью и
+        // рюкзаком, или курсор в курсор): перекладывать нечего. Без этой
+        // проверки стопка прибавлялась бы к самой себе.
+        if from == to {
+            return true;
         }
 
         let there = self.get(to);
@@ -460,9 +496,8 @@ impl Bag {
         true
     }
 
-    fn swap(&mut self, source: Named, destination: Named, touched: &mut Vec<(Named, Place)>) -> bool {
-        let (Some(from), Some(to)) = (place(source.container, source.slot), place(destination.container, destination.slot))
-        else {
+    fn swap(&mut self, source: Named, destination: Named, creative: bool, touched: &mut Vec<(Named, Place)>) -> bool {
+        let (Some(from), Some(to)) = (Bag::place_for(source, creative), Bag::place_for(destination, creative)) else {
             return false;
         };
         let (a, b) = (self.get(from), self.get(to));
@@ -474,8 +509,8 @@ impl Bag {
         true
     }
 
-    fn remove(&mut self, count: i32, source: Named, touched: &mut Vec<(Named, Place)>) -> Option<Stack> {
-        let from = place(source.container, source.slot)?;
+    fn remove(&mut self, count: i32, source: Named, creative: bool, touched: &mut Vec<(Named, Place)>) -> Option<Stack> {
+        let from = Bag::place_for(source, creative)?;
         let stack = self.get(from)?;
 
         if count <= 0 || count > stack.count {
@@ -666,6 +701,62 @@ mod tests {
         let handled = bag.handle_requests(&out.bytes, false);
         assert_eq!(handled.response[2], 2); // два ответа
         assert_eq!(bag.get(Place::Cursor), Some(Stack::new(stone, 4)));
+    }
+
+    /// Перенос стопки в то же место — панель и «панель с рюкзаком» с тем же
+    /// номером слота, курсор в курсор — не размножает её.
+    #[test]
+    fn moving_a_stack_onto_itself_changes_nothing() {
+        let stone = crate::blocks::item_named("stone").expect("камень");
+        let mut inventory = Inventory::new();
+        inventory.set(FIRST_HOTBAR, Some(Stack::new(stone, 10)));
+        let mut bag = Bag::new(inventory);
+
+        let payload = request(1, 4, |out| {
+            out.u8(0).u8(5);
+            slot(out, HOTBAR, 0);
+            slot(out, HOTBAR_AND_INVENTORY, 0);
+            out.u8(0).u8(10);
+            slot(out, HOTBAR_AND_INVENTORY, 0);
+            slot(out, HOTBAR_AND_INVENTORY, 0);
+            out.u8(0).u8(4);
+            slot(out, HOTBAR, 0);
+            slot(out, CURSOR, 0);
+            out.u8(1).u8(4);
+            slot(out, CURSOR, 0);
+            slot(out, CURSOR, 0);
+        });
+
+        let handled = bag.handle_requests(&payload, false);
+        assert_eq!(handled.response[3], 0); // принято
+        assert_eq!(bag.inventory.slot(FIRST_HOTBAR), Some(Stack::new(stone, 6)));
+        assert_eq!(bag.get(Place::Cursor), Some(Stack::new(stone, 4)));
+    }
+
+    /// Из выхода творческого меню в выживании ничего не взять, а то, что
+    /// там осталось, не переживает запрос.
+    #[test]
+    fn the_creative_output_is_creative_only_and_short_lived() {
+        let stone_entry = (1..=1496).find(|entry| creative_item(*entry) == crate::blocks::item_named("stone")).expect("камень в меню");
+        let mut bag = Bag::new(Inventory::new());
+
+        // Создать и не забрать: выход пуст после запроса.
+        let payload = request(1, 1, |out| {
+            out.u8(14).varint(stone_entry).u8(1);
+        });
+        bag.handle_requests(&payload, true);
+        assert_eq!(bag.get(Place::CreativeOutput), None);
+
+        // Даже если что-то там лежит — в выживании его не взять.
+        bag.creative_output = crate::blocks::item_named("stone").map(|stone| Stack::new(stone, 64));
+        let payload = request(2, 1, |out| {
+            out.u8(0).u8(64);
+            slot(out, CREATIVE_OUTPUT, CREATIVE_OUTPUT_SLOT);
+            slot(out, HOTBAR_AND_INVENTORY, 0);
+        });
+        let handled = bag.handle_requests(&payload, false);
+        assert_eq!(handled.response[3], 1); // отказ
+        assert_eq!(bag.inventory.slot(FIRST_HOTBAR), None);
     }
 
     #[test]

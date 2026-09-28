@@ -41,6 +41,11 @@ pub struct Settings {
     /// UDP-порт для игроков Bedrock Edition. 0 — не пускать Bedrock.
     pub bedrock_port: u16,
 
+    /// Пускать игроков Bedrock только с подтверждённым входом Xbox Live
+    /// (как `online-mode` у Java). Выключено — пускаются все, но права по
+    /// ops.json получают только подтверждённые.
+    pub bedrock_online_mode: bool,
+
     /// Редкие осенние пятна в обычном лесу — свой биом с осенней листвой.
     pub autumn_forests: bool,
 
@@ -50,6 +55,13 @@ pub struct Settings {
     /// Справка о сервере текстом тому, кто подключился не игрой
     /// (`telnet адрес порт`, браузер, curl).
     pub text_info: bool,
+
+    /// Сколько тактов стоять в портале, чтобы перейти в другое измерение
+    /// (в выживании; в творческом — такт, как у оригинала).
+    pub portal_delay: u32,
+
+    /// Отправлять ли анонимные отчёты об ошибках разработчикам (reports.rs).
+    pub send_error_reports: bool,
 }
 
 impl Default for Settings {
@@ -59,9 +71,12 @@ impl Default for Settings {
             prefetch_chunks: 3,
             prefetch_at_once: 4,
             bedrock_port: 19132,
+            bedrock_online_mode: false,
             autumn_forests: true,
             pink_cherry_groves: true,
             text_info: true,
+            portal_delay: crate::portal::DELAY,
+            send_error_reports: false,
         }
     }
 }
@@ -115,9 +130,12 @@ impl Settings {
             prefetch_chunks: take(&values, "prefetch-chunks", default.prefetch_chunks, path),
             prefetch_at_once: take(&values, "prefetch-at-once", default.prefetch_at_once, path),
             bedrock_port: take(&values, "bedrock-port", default.bedrock_port, path),
+            bedrock_online_mode: take(&values, "bedrock-online-mode", default.bedrock_online_mode, path),
             autumn_forests: take(&values, "autumn-forests", default.autumn_forests, path),
             pink_cherry_groves: take(&values, "pink-cherry-groves", default.pink_cherry_groves, path),
             text_info: take(&values, "text-info", default.text_info, path),
+            portal_delay: take(&values, "portal-delay", default.portal_delay, path),
+            send_error_reports: take(&values, "send-error-reports", default.send_error_reports, path),
         }
     }
 
@@ -144,6 +162,12 @@ prefetch-at-once={}
 # 0 — не пускать Bedrock.
 bedrock-port={}
 
+# Проверка входа Xbox Live у игроков Bedrock. Проверяется всегда: кто вошёл
+# с подтверждённой учётной записью, тот получает права по ops.json.
+# true — пускать только подтверждённых (как online-mode у Java);
+# false — пускать всех, неподтверждённым — только команды для всех.
+bedrock-online-mode={}
+
 # Дополнения к миру, которых нет у оригинала (false — мир как у оригинала).
 # Редкие осенние пятна в обычном лесу: рыжая листва и пожухлая трава.
 autumn-forests={}
@@ -155,14 +179,28 @@ pink-cherry-groves={}
 # браузер или curl. Сервер ждёт секунду: клиент Minecraft за это время
 # говорит первым, а молчащему отвечают справкой (версии, порты, игроки).
 text-info={}
+
+# Сколько тактов (20 в секунду) стоять в портале, чтобы перейти в другое
+# измерение, — в выживании. У оригинала 80 (4 секунды); 1 — сразу.
+# В творческом переход всегда сразу.
+portal-delay={}
+
+# Анонимные отчёты об ошибках разработчикам MCSheriffAnya (падения и строки
+# ERROR с последними строками лога). Ники, адреса, UUID, XUID и чат из них
+# вычищаются; вместо адреса сервера — случайный номер (config/install-id).
+# Копия каждого отчёта остаётся в logs/reports. false — ничего не отправлять.
+send-error-reports={}
 ",
             self.debug,
             self.prefetch_chunks,
             self.prefetch_at_once,
             self.bedrock_port,
+            self.bedrock_online_mode,
             self.autumn_forests,
             self.pink_cherry_groves,
-            self.text_info
+            self.text_info,
+            self.portal_delay,
+            self.send_error_reports
         )
     }
 }
@@ -217,6 +255,10 @@ mod tests {
         assert!(settings.debug);
         assert_eq!(settings.prefetch_chunks, 5);
         assert_eq!(settings.prefetch_at_once, Settings::default().prefetch_at_once);
+        assert!(!settings.bedrock_online_mode, "проверка входа Bedrock включилась сама");
+
+        fs::write(&path, "bedrock-online-mode=true\n").expect("пишется");
+        assert!(Settings::load(&path).bedrock_online_mode);
 
         fs::write(&path, "debug=maybe").expect("пишется");
         assert!(!Settings::load(&path).debug);

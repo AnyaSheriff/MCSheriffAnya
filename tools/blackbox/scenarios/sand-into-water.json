@@ -1,0 +1,90 @@
+{
+  "name": "sand-into-water",
+  "about": "Песок падает в воду (лунка с источником) и на траву; гравий — в ту же воду позже.",
+  "blocks": [
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        -1,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        0,
+        1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        0,
+        -1
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:water"
+    },
+    {
+      "at": [
+        4,
+        0,
+        0
+      ],
+      "state": "minecraft:short_grass"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          0,
+          4,
+          0
+        ],
+        "state": "minecraft:sand"
+      }
+    },
+    {
+      "after": 4,
+      "set": {
+        "at": [
+          4,
+          4,
+          0
+        ],
+        "state": "minecraft:sand"
+      }
+    },
+    {
+      "after": 40,
+      "set": {
+        "at": [
+          0,
+          6,
+          0
+        ],
+        "state": "minecraft:gravel"
+      }
+    }
+  ],
+  "record_ticks": 100
+}

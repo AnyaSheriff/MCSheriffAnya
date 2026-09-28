@@ -452,6 +452,12 @@ fn on_land(column: &Column) -> bool {
     column.height >= SEA && !column.biome.is_ocean()
 }
 
+/// Годится ли место под ствол — та же проверка земли, что у деревьев
+/// (`Terrain::tree_ground`); высоты соседей — из каймы чанка, где они есть.
+fn on_tree_ground(area: &Area, column: &Column, x: i32, z: i32) -> bool {
+    area.terrain.tree_ground_by(column, x, z, |x, z| area.column(x, z).height)
+}
+
 // ---------------------------------------------------------------------------
 // Валуны и огромные грибы
 // ---------------------------------------------------------------------------
@@ -620,6 +626,12 @@ fn round_features(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
                 continue;
             };
 
+            // Огромный гриб, как и дерево, растёт только на земле (мицелий,
+            // трава, подзол), а не на камне склона. Валун лежит где угодно.
+            if round != Round::Boulder && !on_tree_ground(area, &column, x, z) {
+                continue;
+            }
+
             for (dx, dy, dz, state) in round_blocks(key, round, blocks, x, z) {
                 put_over_plants(chunk, blocks, local_x + dx, column.height + dy, local_z + dz, state);
             }
@@ -653,8 +665,8 @@ impl Wood {
     }
 }
 
-/// Самая большая густота упавших деревьев.
-const FALLEN_DENSEST: f64 = 0.003;
+/// Самая большая густота упавших деревьев (на столбец) — лес.
+const FALLEN_DENSEST: f64 = 0.000_17;
 
 /// Направления, в которые может лечь ствол.
 const DIRECTIONS: [(i32, i32); 4] = [(0, -1), (0, 1), (-1, 0), (1, 0)];
@@ -667,16 +679,22 @@ fn fallen_at(key: u64, column: &Column, x: i32, z: i32) -> Option<Wood> {
         return None;
     }
 
+    // Густота — на столбец: замер мира оригинала (tools/measure/fallen_census.py,
+    // семя 100554032945340, 182 региона) в деревьях на чанк, делённый на 256
+    // столбцов. Лес — 0,044 на чанк (берёз из них пятая часть), березняки —
+    // 0,025, цветочный лес — 0,0044 берёзы, тайги — 0,011–0,0125, джунгли —
+    // 0,03, редкие — 0,0086, равнины — 0,0005.
     let (density, wood) = match column.biome {
         Biome::Forest => {
             let birch = unit(key, x, z, SALT_FALLEN + 1) < 0.2;
-            (0.0025, if birch { Wood::Birch } else { Wood::Oak })
+            (0.000_17, if birch { Wood::Birch } else { Wood::Oak })
         }
-        Biome::FlowerForest => (0.0015, Wood::Birch),
-        Biome::BirchForest | Biome::OldGrowthBirchForest => (0.003, Wood::Birch),
-        Biome::Taiga | Biome::OldGrowthPineTaiga | Biome::OldGrowthSpruceTaiga => (0.003, Wood::Spruce),
-        Biome::Jungle | Biome::SparseJungle => (0.002, Wood::Jungle),
-        Biome::Plains | Biome::SunflowerPlains => (0.0003, Wood::Oak),
+        Biome::FlowerForest => (0.000_017, Wood::Birch),
+        Biome::BirchForest | Biome::OldGrowthBirchForest => (0.000_1, Wood::Birch),
+        Biome::Taiga | Biome::OldGrowthPineTaiga | Biome::OldGrowthSpruceTaiga => (0.000_047, Wood::Spruce),
+        Biome::Jungle => (0.000_115, Wood::Jungle),
+        Biome::SparseJungle => (0.000_034, Wood::Jungle),
+        Biome::Plains | Biome::SunflowerPlains => (0.000_002, Wood::Oak),
         _ => return None,
     };
 
@@ -790,6 +808,11 @@ fn fallen_trees(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
             let Some(wood) = fallen_at(key, &column, x, z) else {
                 continue;
             };
+
+            // Пень стоит там, где могло бы стоять дерево.
+            if !on_tree_ground(area, &column, x, z) {
+                continue;
+            }
 
             let lookup = |x: i32, z: i32| area.column(x, z);
 
@@ -1382,8 +1405,10 @@ fn on_ground(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column, 
         return;
     }
 
-    let here = chunk.block(local_x, y, local_z);
-    let ground = chunk.block(local_x, height, local_z);
+    // Столбец у самого верха мира: ставить растение некуда.
+    let (Some(here), Some(ground)) = (block_in(chunk, local_x, y, local_z), block_in(chunk, local_x, height, local_z)) else {
+        return;
+    };
 
     // Под слоем снега трава всё равно растёт: растение встаёт вместо снега,
     // а земля под ним перестаёт быть заснеженной.
@@ -1399,10 +1424,16 @@ fn on_ground(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column, 
     if here == AIR {
         // Тростник: на берегу у самой воды, если вода вровень с землёй сбоку.
         if height == SEA && !biome.is_freezing() && (soil || sandy) {
-            let shore = [(1, 0), (-1, 0), (0, 1), (0, -1)].iter().any(|(dx, dz)| {
-                let next = area.near(local_x + dx, local_z + dz);
+            // Вода сбоку: в чанке смотрим сам блок на уровне моря — лёд
+            // решает биом со сдвигом, и по биому клетки его не угадать; за
+            // краем чанка — по столбцу.
+            let shore = [(1, 0), (-1, 0), (0, 1), (0, -1)].iter().any(|(dx, dz)| match block_in(chunk, local_x + dx, SEA, local_z + dz) {
+                Some(side) => side == blocks.water,
+                None => {
+                    let next = area.near(local_x + dx, local_z + dz);
 
-                next.height < SEA && !next.biome.is_freezing()
+                    next.height < SEA && !next.biome.is_freezing()
+                }
             });
 
             // Тростник растёт кучками: у оригинала это грядка из нескольких
@@ -1597,9 +1628,8 @@ fn on_ground(area: &Area, chunk: &mut Chunk, blocks: &Palette, column: &Column, 
     }
 
     let canopy = (y + 1..=y + 20).any(|up| {
-        let state = chunk.block(local_x, up, local_z);
-
-        blocks.leaves.iter().any(|(low, high)| (*low..=*high).contains(&state))
+        block_in(chunk, local_x, up, local_z)
+            .is_some_and(|state| blocks.leaves.iter().any(|(low, high)| (*low..=*high).contains(&state)))
     });
 
     if value >= edge + if canopy { under } else { open } {

@@ -55,6 +55,13 @@ pub fn place(
     if let Some(orientation) = orientation
         && let Some(double) = merge_into_double(orientation, world.get_block(clicked_x, clicked_y, clicked_z), click)
     {
+        // Двойная плита занимает блок целиком: если в нижней или верхней
+        // половине стоит игрок, он оказался бы замурован.
+        if blocks_player(clicked_x, clicked_y, clicked_z, double, px, py, pz) {
+            log_debug!("Постановка: двойная плита в {} {} {} задела бы игрока — не ставим", clicked_x, clicked_y, clicked_z);
+            return Placement::Refused(vec![(clicked_x, clicked_y, clicked_z)]);
+        }
+
         world.set_block(clicked_x, clicked_y, clicked_z, double);
         refresh_neighbours(world, clicked_x, clicked_y, clicked_z);
         log_debug!("Постановка: плита {} стала двойной в {} {} {}", name, clicked_x, clicked_y, clicked_z);
@@ -70,7 +77,16 @@ pub fn place(
         5 => (1, 0, 0),
         _ => (0, 0, 0),
     };
-    let (x, y, z) = (clicked_x + dx, clicked_y + dy, clicked_z + dz);
+
+    // Щелчок по траве, снежному слою, лиане ставит блок на её место, а не
+    // рядом: такой блок заменяется поставленным. Воздух и жидкость щелчком
+    // не выбираются — по ним не щёлкают.
+    let clicked_state = world.get_block(clicked_x, clicked_y, clicked_z);
+    let (x, y, z) = if clicked_state != world::AIR && fluids::fluid_at(clicked_state).is_none() && is_replaceable(clicked_state) {
+        (clicked_x, clicked_y, clicked_z)
+    } else {
+        (clicked_x + dx, clicked_y + dy, clicked_z + dz)
+    };
 
     // Ставить можно в пустое место или туда, где стоит жидкость: блок её
     // вытесняет, как в игре.
@@ -98,43 +114,13 @@ pub fn place(
         return Placement::Refused(vec![(x, y, z)]);
     }
 
-    // Дверь занимает два блока по высоте и ставится сразу целой: нижняя
-    // половина в этот блок, верхняя — в тот, что над ним.
+    // Дверь, высокое растение и кровать занимают два блока и ставятся сразу
+    // целыми: дверь и растение — нижняя половина в этот блок, верхняя над
+    // ним; кровать — изножье в этот блок, изголовье дальше от игрока.
     if let Some(orientation) = orientation
-        && is_door(orientation)
+        && let Some((state, other, other_state)) = pair_to_place(orientation, state, click, (x, y, z))
     {
-        let both = vec![(x, y, z), (x, y + 1, z)];
-
-        if !is_replaceable(world.get_block(x, y + 1, z)) {
-            log_debug!("Постановка: над дверью не пусто — в {} {} {} она не встанет", x, y, z);
-            return Placement::Refused(both);
-        }
-
-        // Двери нужна опора снизу: без неё она повисла бы в воздухе.
-        if !blocks::solid_top(world.get_block(x, y - 1, z)) {
-            log_debug!("Постановка: под дверью нет опоры — в {} {} {} она не встанет", x, y, z);
-            return Placement::Refused(both);
-        }
-
-        let Some(upper) = other_half(orientation, state, "upper") else {
-            log_debug!("Постановка: не удалось собрать вторую половину двери {}", name);
-            return Placement::Nothing;
-        };
-
-        if blocks_player(x, y, z, state, px, py, pz) || blocks_player(x, y + 1, z, upper, px, py, pz) {
-            log_debug!("Постановка: дверь в {} {} {} задела бы игрока — не ставим", x, y, z);
-            return Placement::Refused(both);
-        }
-
-        world.set_block(x, y, z, state);
-        world.set_block(x, y + 1, z, upper);
-        refresh_neighbours(world, x, y, z);
-        refresh_neighbours(world, x, y + 1, z);
-        crate::redstone::settle(world);
-        world.save_if_needed();
-
-        log_debug!("Постановка: дверь {} ({}) в {} {} {}", name, state, x, y, z);
-        return Placement::Placed;
+        return place_pair(world, name, orientation, (x, y, z, state), (other, other_state), player);
     }
 
     // Блок в игрока не ставится: он окажется замурован. Блоки без ящика —
@@ -151,11 +137,90 @@ pub fn place(
     refresh_neighbours(world, x, y, z);
     crate::redstone::settle(world);
 
-    // Сделанное игроком записываем сразу: течение воды может и подождать
-    // до общей записи, а постройки — нет.
-    world.save_if_needed();
-
+    // На диск это попадёт с общей записью раз в секунду: писать под замком
+    // мира на каждый блок незачем.
     log_debug!("Постановка: блок {} ({}) в {} {} {}", name, state, x, y, z);
+    Placement::Placed
+}
+
+/// Блок из двух частей — какой частью он ставится сюда и где и какой будет
+/// вторая. None — блок обычный, из одной части.
+///
+/// Пары две: половины друг над другом (`half` = `lower`/`upper` — двери и
+/// высокие растения) и кровать (`part` = `foot`/`head`). Кровать смотрит
+/// туда же, куда игрок, и изголовье встаёт дальше от него (вики, Bed:
+/// «the foot of the bed is placed on the block selected and the head of the
+/// bed on the block farther away from the player»).
+fn pair_to_place(
+    orientation: &Orientation,
+    state: i32,
+    click: &Click,
+    (x, y, z): (i32, i32, i32),
+) -> Option<(i32, (i32, i32, i32), i32)> {
+    // Росток кувшинчика ставится одним блоком: вторая половина вырастает
+    // у него потом.
+    if orientation.name == "pitcher_crop" {
+        return None;
+    }
+
+    if orientation.value(state, "half").is_some_and(|half| half == "lower" || half == "upper") {
+        let lower = orientation.with(state, "half", "lower")?;
+        let upper = other_half(orientation, lower, "upper")?;
+
+        return Some((lower, (x, y + 1, z), upper));
+    }
+
+    if orientation.value(state, "part").is_some() {
+        let facing = direction_from_yaw(click.yaw);
+        let foot = orientation.state(&[("facing", facing), ("part", "foot")])?;
+        let head = orientation.with(foot, "part", "head")?;
+        let other = blocks::pair_partner(foot, (x, y, z))?;
+
+        return Some((foot, other, head));
+    }
+
+    None
+}
+
+/// Ставит блок из двух частей — обе сразу или никакой.
+///
+/// Второе место должно быть свободным или заменяемым и в пределах мира:
+/// дверь у самого потолка мира без верхней половины не ставится. Двери
+/// нужна опора снизу; кровати на Java — нет (вики, Bed: «In Java, beds do
+/// not require supporting blocks»); высокому растению — своя земля, её
+/// проверил вызывающий.
+fn place_pair(
+    world: &mut World,
+    name: &str,
+    orientation: &Orientation,
+    (x, y, z, state): (i32, i32, i32, i32),
+    ((ox, oy, oz), other_state): ((i32, i32, i32), i32),
+    (px, py, pz): (f64, f64, f64),
+) -> Placement {
+    let both = vec![(x, y, z), (ox, oy, oz)];
+
+    if oy >= world::MIN_Y + world::WORLD_HEIGHT || !is_replaceable(world.get_block(ox, oy, oz)) {
+        log_debug!("Постановка: второй части {} места нет — в {} {} {} не встанет", name, x, y, z);
+        return Placement::Refused(both);
+    }
+
+    if is_door(orientation) && !blocks::solid_top(world.get_block(x, y - 1, z)) {
+        log_debug!("Постановка: под дверью нет опоры — в {} {} {} она не встанет", x, y, z);
+        return Placement::Refused(both);
+    }
+
+    if blocks_player(x, y, z, state, px, py, pz) || blocks_player(ox, oy, oz, other_state, px, py, pz) {
+        log_debug!("Постановка: {} в {} {} {} задел бы игрока — не ставим", name, x, y, z);
+        return Placement::Refused(both);
+    }
+
+    world.set_block(x, y, z, state);
+    world.set_block(ox, oy, oz, other_state);
+    refresh_neighbours(world, x, y, z);
+    refresh_neighbours(world, ox, oy, oz);
+    crate::redstone::settle(world);
+
+    log_debug!("Постановка: {} ({}) в {} {} {} и {} {} {}", name, state, x, y, z, ox, oy, oz);
     Placement::Placed
 }
 
@@ -171,18 +236,15 @@ pub fn break_block(world: &mut World, x: i32, y: i32, z: i32) -> Option<i32> {
 
     world.set_block(x, y, z, world::AIR);
 
-    // Дверь занимает два блока, и ломается тоже целиком: иначе от неё
-    // осталась бы висеть в воздухе вторая половинка.
-    if let Some(orientation) = blocks::orientation_of(broken)
-        && is_door(orientation)
-        && let Some(half) = orientation.value(broken, "half")
+    // Дверь, высокое растение и кровать занимают два блока и ломаются тоже
+    // целиком: иначе от них осталась бы висеть вторая половинка. Вторая
+    // убирается без выпадения — предмет один на обе, и его выпадение считает
+    // вызывающий по сломанной половине.
+    if let Some((ox, oy, oz)) = blocks::pair_partner(broken, (x, y, z))
+        && blocks::is_pair(broken, (x, y, z), world.get_block(ox, oy, oz), (ox, oy, oz))
     {
-        let paired_y = if half == "lower" { y + 1 } else { y - 1 };
-
-        if is_same_door(orientation, world.get_block(x, paired_y, z)) {
-            world.set_block(x, paired_y, z, world::AIR);
-            refresh_neighbours(world, x, paired_y, z);
-        }
+        world.set_block(ox, oy, oz, world::AIR);
+        refresh_neighbours(world, ox, oy, oz);
     }
 
     // Поршень состоит из двух половин, и ломается целиком — с какой
@@ -197,9 +259,6 @@ pub fn break_block(world: &mut World, x: i32, y: i32, z: i32) -> Option<i32> {
     // Редстоун должен узнать, что блока не стало: провод на нём пропадёт,
     // а запитанное им погаснет.
     crate::redstone::settle(world);
-
-    // Сломанное записываем сразу — как и построенное.
-    world.save_if_needed();
 
     Some(broken)
 }
@@ -431,7 +490,6 @@ fn facing_the_player(click: &Click) -> &'static str {
     if z > 0.0 { "north" } else { "south" }
 }
 
-/// Сторона, противоположная этой.
 /// Сторона, противоположная этой.
 pub fn opposite_direction(direction: &str) -> &'static str {
     match direction {
@@ -671,15 +729,15 @@ pub fn other_half(orientation: &Orientation, state: i32, half: &str) -> Option<i
     orientation.with(state, "half", half)
 }
 
-/// Можно ли поставить блок прямо в это место, не ломая то, что там стоит.
+/// Можно ли поставить блок прямо в это место.
 ///
 /// Пустое место — можно. Воду и лаву блок вытесняет: в игре так и есть,
-/// иначе под водой было бы не построить ничего.
-///
-/// Трава, снежный слой и прочее, что тоже вытесняется, сюда пока не входит —
-/// этих блоков у нас ещё нет.
+/// иначе под водой было бы не построить ничего. Траву, снежный слой в один
+/// слой, лианы и прочее из тега `minecraft:replaceable` — тоже: они
+/// пропадают без выпадения (вики, Tall Grass: «Placing any block on tall
+/// grass breaks the grass and causes it to not drop anything»).
 pub fn is_replaceable(state: i32) -> bool {
-    state == world::AIR || fluids::fluid_at(state).is_some()
+    blocks::replaceable(state)
 }
 
 /// Дверь ли это.
@@ -688,14 +746,6 @@ pub fn is_replaceable(state: i32) -> bool {
 /// и ставить, и ломать её приходится парой.
 pub fn is_door(orientation: &Orientation) -> bool {
     orientation.family == Family::Door
-}
-
-/// Вторая половинка той же двери: у половинок одной двери имя блока совпадает.
-///
-/// Одной двери принадлежат только два её блока — верхний и нижний, — а имя
-/// блока отличает дубовую дверь от еловой: у каждой пары оно своё.
-pub fn is_same_door(orientation: &Orientation, state: i32) -> bool {
-    blocks::orientation_of(state).is_some_and(|other| other.name == orientation.name)
 }
 
 /// Мешает ли блок, поставленный в этот блок, стоящему там игроку.
@@ -1011,11 +1061,15 @@ mod tests {
 
         // Верхняя половинка — вторая половинка этой же двери, а камень и
         // дверь из другого дерева — нет.
-        assert!(is_same_door(door, upper));
-        assert!(!is_same_door(door, 1)); // камень
+        assert!(blocks::same_block(lower, upper));
+        assert!(!blocks::same_block(lower, 1)); // камень
 
-        let spruce = blocks::orientation("spruce_door").expect("правило для еловой двери");
-        assert!(!is_same_door(spruce, upper));
+        let spruce = blocks::state_by_name("spruce_door").expect("еловая дверь");
+        assert!(!blocks::same_block(spruce, upper));
+
+        // Где вторая половина — над нижней и под верхней.
+        assert_eq!(blocks::pair_partner(lower, (0, 64, 0)), Some((0, 65, 0)));
+        assert_eq!(blocks::pair_partner(upper, (0, 65, 0)), Some((0, 64, 0)));
     }
 
     /// Забор срастается с тем, что стоит рядом: с камнем — да, с воздухом —
@@ -1110,6 +1164,143 @@ mod tests {
         // Камень и всё прочее заменять нельзя.
         assert!(!is_replaceable(1));
         assert!(!is_replaceable(13333));
+
+        // А траву можно: блок встаёт на её место.
+        assert!(is_replaceable(blocks::state_by_name("short_grass").unwrap()));
+    }
+
+    /// Мир с каменным полом на высоте 63 — для постановки.
+    fn floor() -> World {
+        let mut world = World::in_memory();
+
+        for x in -4..=4 {
+            for z in -4..=4 {
+                world.set_block_silently(x, 63, z, 1);
+                world.set_block_silently(x, 62, z, 1);
+            }
+        }
+
+        world
+    }
+
+    fn name_at(world: &World, x: i32, y: i32, z: i32) -> Option<&'static str> {
+        blocks::block_at_state(world.get_block(x, y, z))
+    }
+
+    /// Щелчок по траве ставит блок на место травы, а не над ней.
+    #[test]
+    fn a_click_on_grass_places_into_the_grass() {
+        let mut world = floor();
+        let dirt = blocks::state_by_name("dirt").unwrap();
+        let grass = blocks::state_by_name("short_grass").unwrap();
+
+        world.set_block_silently(0, 63, 0, dirt);
+        world.set_block_silently(0, 64, 0, grass);
+
+        let placed = place(&mut world, "stone", 1, (0, 64, 0), &click(1, 0.5, 0.0), (5.5, 64.0, 5.5));
+
+        assert_eq!(placed, Placement::Placed);
+        assert_eq!(world.get_block(0, 64, 0), 1);
+        assert_eq!(world.get_block(0, 65, 0), world::AIR);
+    }
+
+    /// Подсолнух ставится сразу целым — обе половины; ломается тоже целым,
+    /// и вторая половина при этом не выпадает (выпадение считают по
+    /// сломанной половине).
+    #[test]
+    fn a_sunflower_is_placed_and_broken_whole() {
+        let mut world = floor();
+        let dirt = blocks::state_by_name("dirt").unwrap();
+        let sunflower = blocks::state_by_name("sunflower").unwrap();
+
+        world.set_block_silently(0, 63, 0, dirt);
+
+        let placed = place(&mut world, "sunflower", sunflower, (0, 63, 0), &click(1, 0.5, 0.0), (5.5, 64.0, 5.5));
+
+        assert_eq!(placed, Placement::Placed);
+        assert_eq!(name_at(&world, 0, 64, 0), Some("sunflower"));
+        assert_eq!(name_at(&world, 0, 65, 0), Some("sunflower"));
+
+        let upper = world.get_block(0, 65, 0);
+        assert_eq!(break_block(&mut world, 0, 65, 0), Some(upper));
+        assert_eq!(world.get_block(0, 64, 0), world::AIR, "нижняя половина осталась");
+        assert!(world.take_destroyed().is_empty(), "вторая половина выпала отдельно");
+
+        // Над ним занято — не ставится вовсе, ни половины.
+        world.set_block_silently(0, 65, 0, 1);
+
+        let refused = place(&mut world, "sunflower", sunflower, (0, 63, 0), &click(1, 0.5, 0.0), (5.5, 64.0, 5.5));
+
+        assert!(matches!(refused, Placement::Refused(_)));
+        assert_eq!(world.get_block(0, 64, 0), world::AIR);
+    }
+
+    /// Кровать ставится изножьем в выбранный блок, изголовьем — дальше от
+    /// игрока, туда, куда он смотрит; ломается целиком с любой стороны.
+    #[test]
+    fn a_bed_takes_two_blocks_along_the_look() {
+        let mut world = floor();
+        let bed = blocks::orientation("red_bed").unwrap();
+        let default = blocks::state_by_name("red_bed").unwrap();
+
+        // Смотрит на восток (поворот 270).
+        let placed = place(&mut world, "red_bed", default, (0, 63, 0), &click(1, 0.5, 270.0), (-2.5, 64.0, 0.5));
+
+        assert_eq!(placed, Placement::Placed);
+
+        let foot = world.get_block(0, 64, 0);
+        let head = world.get_block(1, 64, 0);
+
+        assert_eq!(bed.value(foot, "part"), Some("foot"));
+        assert_eq!(bed.value(foot, "facing"), Some("east"));
+        assert_eq!(bed.value(head, "part"), Some("head"));
+        assert_eq!(bed.value(head, "facing"), Some("east"));
+
+        assert_eq!(break_block(&mut world, 1, 64, 0), Some(head));
+        assert_eq!(world.get_block(0, 64, 0), world::AIR, "изножье осталось");
+
+        // Изголовью некуда встать — кровать не ставится.
+        world.set_block_silently(1, 64, 0, 1);
+
+        let refused = place(&mut world, "red_bed", default, (0, 63, 0), &click(1, 0.5, 270.0), (-2.5, 64.0, 0.5));
+
+        assert!(matches!(refused, Placement::Refused(_)));
+        assert_eq!(world.get_block(0, 64, 0), world::AIR);
+    }
+
+    /// У самого верха мира дверь не ставится: верхней половине там не
+    /// место.
+    #[test]
+    fn a_door_does_not_fit_under_the_sky_limit() {
+        let mut world = World::in_memory();
+        let top = world::MIN_Y + world::WORLD_HEIGHT - 1;
+        let door = blocks::state_by_name("oak_door").unwrap();
+
+        world.set_block_silently(0, top - 1, 0, 1);
+
+        let refused = place(&mut world, "oak_door", door, (0, top - 1, 0), &click(1, 0.5, 0.0), (5.5, 64.0, 5.5));
+
+        assert!(matches!(refused, Placement::Refused(_)));
+        assert_eq!(world.get_block(0, top, 0), world::AIR);
+    }
+
+    /// Плита не сливается в двойную, если в этой половине стоит игрок.
+    #[test]
+    fn a_double_slab_does_not_wall_the_player_in() {
+        let mut world = floor();
+        let bottom = blocks::orientation("oak_slab").unwrap().state(&[("type", "bottom")]).unwrap();
+
+        world.set_block_silently(0, 64, 0, bottom);
+
+        // Игрок стоит на нижней плите — в её верхней половине.
+        let refused = place(&mut world, "oak_slab", bottom, (0, 64, 0), &click(1, 0.5, 0.0), (0.5, 64.5, 0.5));
+
+        assert!(matches!(refused, Placement::Refused(_)));
+        assert_eq!(world.get_block(0, 64, 0), bottom);
+
+        // Отошёл — сливается.
+        let merged = place(&mut world, "oak_slab", bottom, (0, 64, 0), &click(1, 0.5, 0.0), (3.5, 64.0, 0.5));
+        assert_eq!(merged, Placement::Merged);
     }
 
     /// Поршень встаёт головой к игроку: смотришь на север — голова на юг,

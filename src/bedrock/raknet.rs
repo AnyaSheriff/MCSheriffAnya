@@ -62,6 +62,12 @@ const TIMEOUT: Duration = Duration::from_secs(15);
 const RESEND_MIN: Duration = Duration::from_millis(100);
 const RESEND_MAX: Duration = Duration::from_secs(2);
 
+/// Запас срока повтора сверх времени отклика: клиент подтверждает наборы
+/// пачками и с задержкой, и без запаса на дальней связи срок истекает
+/// раньше подтверждения — повтор зря, окно сжимается. Настоящую потерю
+/// клиент и так назовёт в NACK.
+const RESEND_SLACK: Duration = Duration::from_millis(100);
+
 /// Окно перегрузки: сколько наборов может быть в пути без подтверждения.
 /// Растёт с каждым подтверждением и вдвое сжимается при потере — иначе
 /// медленный клиент тонет в повторах, и всё приходит с опозданием в секунды.
@@ -71,6 +77,33 @@ const WINDOW_MAX: f64 = 4096.0;
 
 /// Как часто сессии отправляют накопленное и подтверждения.
 const FLUSH_EVERY: Duration = Duration::from_millis(10);
+
+/// Номера наборов и кадров у RakNet — 24-битные и идут по кругу.
+const U24: u32 = 0xFF_FFFF;
+
+/// Насколько далеко вперёд от ожидаемого принимаются номера надёжных и
+/// упорядоченных кадров. Что дальше — либо старый повтор, либо чужая
+/// выдумка: хранить такое ни к чему.
+const RECEIVE_WINDOW: u32 = 4096;
+
+/// Пределы сборки разбитых сообщений: сколько собирается одновременно, из
+/// скольких частей может быть одно сообщение и сколько байтов всего может
+/// ждать сборки и своей очереди в одной сессии.
+const MAX_SPLITS: usize = 16;
+const MAX_SPLIT_PARTS: u32 = 1024;
+const MAX_WAITING_BYTES: usize = 8 * 1024 * 1024;
+
+/// Сколько обёрток может ждать игровую часть. Больше — клиент шлёт быстрее,
+/// чем их можно разобрать: такое соединение закрывается.
+const INBOUND_QUEUE: usize = 1024;
+
+/// Сколько диапазонов разбирается в одном ACK или NACK.
+const MAX_RANGES: u16 = 512;
+
+/// На сколько номер `a` впереди `b` по кругу 24-битных номеров.
+fn ahead(a: u32, b: u32) -> u32 {
+    a.wrapping_sub(b) & U24
+}
 
 /// Что сервер говорит о себе в списке серверов.
 pub struct Status {
@@ -84,15 +117,22 @@ pub struct Status {
 /// Событие для игровой части.
 pub enum Event {
     /// Клиент подключился по RakNet: дальше пойдут игровые сообщения.
-    Connected { addr: SocketAddr, inbound: mpsc::UnboundedReceiver<Vec<u8>>, outbound: Sender },
+    Connected { addr: SocketAddr, inbound: mpsc::Receiver<Vec<u8>>, outbound: Sender },
 }
 
 /// Куда игровая часть отдаёт сообщения для клиента (тело — без 0xFE).
+///
+/// Сессия с того же адреса может смениться (клиент переподключился), поэтому
+/// у каждой — свой номер поколения: сообщения старой в новую не попадут.
 #[derive(Clone)]
 pub struct Sender {
     addr: SocketAddr,
-    queue: mpsc::UnboundedSender<(SocketAddr, Outgoing)>,
+    generation: u64,
+    queue: mpsc::UnboundedSender<Queued>,
 }
+
+/// Сообщение для отправки: кому (адрес и поколение сессии) и что.
+type Queued = (SocketAddr, u64, Outgoing);
 
 enum Outgoing {
     Game(Vec<u8>),
@@ -102,12 +142,12 @@ enum Outgoing {
 impl Sender {
     /// Отправить игровое сообщение: надёжно и по порядку.
     pub fn send(&self, body: Vec<u8>) -> bool {
-        self.queue.send((self.addr, Outgoing::Game(body))).is_ok()
+        self.queue.send((self.addr, self.generation, Outgoing::Game(body))).is_ok()
     }
 
     /// Закрыть соединение.
     pub fn close(&self) {
-        let _ = self.queue.send((self.addr, Outgoing::Close));
+        let _ = self.queue.send((self.addr, self.generation, Outgoing::Close));
     }
 }
 
@@ -115,6 +155,8 @@ impl Sender {
 struct Session {
     mtu: usize,
     guid: i64,
+    /// Номер поколения: у каждой новой сессии свой.
+    generation: u64,
     connected: bool,
     last_seen: Instant,
 
@@ -130,6 +172,11 @@ struct Session {
     /// Окно перегрузки и порог, после которого оно растёт медленно.
     window: f64,
     threshold: f64,
+    /// Номер первого набора, отправленного после последнего сжатия окна:
+    /// потери более ранних наборов — та же перегрузка, и окно второй раз
+    /// за неё не сжимается (как у TCP). Иначе на дальней связи окно за
+    /// несколько тактов отправки падает до минимума.
+    recover: u32,
     /// Сглаженное время отклика и его разброс.
     rtt: Duration,
     rtt_spread: Duration,
@@ -151,16 +198,21 @@ struct Session {
     order_waiting: BTreeMap<u32, Vec<u8>>,
     /// Недособранные разбитые сообщения.
     splits: HashMap<u16, (u32, HashMap<u32, Vec<u8>>)>,
+    /// Сколько байтов лежит в недособранных и ждущих очереди сообщениях.
+    waiting_bytes: usize,
 
     /// Куда отдаются игровые сообщения.
-    inbound: Option<mpsc::UnboundedSender<Vec<u8>>>,
+    inbound: Option<mpsc::Sender<Vec<u8>>>,
 }
 
 impl Session {
     fn new(mtu: usize, guid: i64) -> Session {
+        static GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+
         Session {
             mtu,
             guid,
+            generation: GENERATION.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             connected: false,
             last_seen: Instant::now(),
             send_sequence: 0,
@@ -171,6 +223,7 @@ impl Session {
             unacked: BTreeMap::new(),
             window: WINDOW_START,
             threshold: WINDOW_MAX,
+            recover: 0,
             rtt: Duration::from_millis(100),
             rtt_spread: Duration::from_millis(50),
             backoff: 0,
@@ -181,6 +234,7 @@ impl Session {
             order_expected: 0,
             order_waiting: BTreeMap::new(),
             splits: HashMap::new(),
+            waiting_bytes: 0,
             inbound: None,
         }
     }
@@ -206,14 +260,14 @@ impl Session {
             self.pending.push_back(frame);
         }
 
-        self.order_index = self.order_index.wrapping_add(1);
+        self.order_index = (self.order_index + 1) & U24;
     }
 
     fn frame(&mut self, body: &[u8], reliability: u8, split: Option<(u32, u16, u32)>) -> Vec<u8> {
         let order = self.order_index;
 
         if reliability == RELIABLE_ORDERED {
-            self.order_index = self.order_index.wrapping_add(1);
+            self.order_index = (self.order_index + 1) & U24;
         }
 
         self.frame_with_order(body, reliability, split, order)
@@ -228,7 +282,7 @@ impl Session {
 
         if reliability == RELIABLE_ORDERED {
             push_u24(&mut out, self.reliable_index);
-            self.reliable_index = self.reliable_index.wrapping_add(1);
+            self.reliable_index = (self.reliable_index + 1) & U24;
             push_u24(&mut out, order);
             out.push(0); // канал упорядочивания
         }
@@ -270,7 +324,7 @@ impl Session {
 
     fn datagram(&mut self, frames: Vec<Vec<u8>>, resent: bool) -> Vec<u8> {
         let sequence = self.send_sequence;
-        self.send_sequence = (self.send_sequence + 1) & 0xFF_FFFF;
+        self.send_sequence = (self.send_sequence + 1) & U24;
         let bytes = encode_datagram(sequence, &frames);
 
         // Надёжные кадры храним до подтверждения.
@@ -283,7 +337,7 @@ impl Session {
 
     /// Через сколько без подтверждения набор считается потерянным.
     fn resend_after(&self) -> Duration {
-        ((self.rtt + self.rtt_spread * 4) * (1 << self.backoff.min(5))).clamp(RESEND_MIN, RESEND_MAX)
+        ((self.rtt + (self.rtt_spread * 4).max(RESEND_SLACK)) * (1 << self.backoff.min(5))).clamp(RESEND_MIN, RESEND_MAX)
     }
 
     /// Клиент подтвердил набор: окно растёт, время отклика уточняется.
@@ -306,10 +360,17 @@ impl Session {
         self.window = self.window.min(WINDOW_MAX);
     }
 
-    /// Потеря: окно вдвое меньше.
-    fn lost(&mut self) {
+    /// Потеря наборов `numbers`: окно вдвое меньше — один раз на каждую
+    /// перегрузку. Ответ — сжалось ли окно.
+    fn lost(&mut self, numbers: &[u32]) -> bool {
+        if !numbers.iter().any(|&number| ahead(number, self.recover) < U24 / 2) {
+            return false;
+        }
+
         self.window = (self.window / 2.0).max(WINDOW_MIN);
         self.threshold = self.window;
+        self.recover = self.send_sequence;
+        true
     }
 
     /// Снова отправить набор под новым номером.
@@ -425,7 +486,7 @@ where
         let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
         (now.as_nanos() as i64).wrapping_mul(0x5851_F42D_4C95_7F2D) ^ std::process::id() as i64
     };
-    let (out_tx, mut out_rx) = mpsc::unbounded_channel::<(SocketAddr, Outgoing)>();
+    let (out_tx, mut out_rx) = mpsc::unbounded_channel::<Queued>();
     let mut sessions: HashMap<SocketAddr, Session> = HashMap::new();
     let mut buffer = vec![0u8; 2048];
     let mut flush = tokio::time::interval(FLUSH_EVERY);
@@ -440,8 +501,9 @@ where
                     log_debug!("Bedrock: {} — {}", addr, reason);
                 }
             }
-            Some((addr, outgoing)) = out_rx.recv() => {
-                if let Some(session) = sessions.get_mut(&addr) {
+            Some((addr, generation, outgoing)) = out_rx.recv() => {
+                // Сообщение прежней сессии с этого адреса — не для новой.
+                if let Some(session) = sessions.get_mut(&addr).filter(|session| session.generation == generation) {
                     match outgoing {
                         Outgoing::Game(body) => {
                             let mut message = Vec::with_capacity(body.len() + 1);
@@ -488,8 +550,9 @@ where
                         .collect();
 
                     if !late.is_empty() {
-                        session.lost();
-                        session.backoff += 1;
+                        if session.lost(&late) {
+                            session.backoff += 1;
+                        }
                         log_debug!(
                             "Bedrock: {} — повтор {} наборов по сроку {:?}, окно {:.0}",
                             addr, late.len(), resend_after, session.window
@@ -549,22 +612,38 @@ fn encode_ranges(id: u8, numbers: &mut Vec<u32>) -> Vec<u8> {
     out
 }
 
-fn decode_ranges(reader: &mut Reader) -> Option<Vec<u32>> {
+/// Диапазоны номеров из ACK или NACK — как есть, не разворачивая: клиент
+/// может назвать диапазон в миллионы номеров. Диапазон через ноль (конец
+/// меньше начала) делится на два.
+fn decode_ranges(reader: &mut Reader) -> Option<Vec<(u32, u32)>> {
     let count = reader.u16_be()?;
-    let mut out = Vec::new();
+
+    if count > MAX_RANGES {
+        return None;
+    }
+
+    let mut out = Vec::with_capacity(count as usize);
 
     for _ in 0..count {
         let single = reader.u8()? != 0;
         let start = reader.u24()?;
         let end = if single { start } else { reader.u24()? };
 
-        // Защита от огромных диапазонов.
-        for number in start..=end.min(start + 4096) {
-            out.push(number);
+        if end < start {
+            out.push((start, U24));
+            out.push((0, end));
+        } else {
+            out.push((start, end));
         }
     }
 
     Some(out)
+}
+
+/// Какие из отправленных и ещё не подтверждённых наборов попадают в
+/// диапазоны: перебираются только они, а не все номера диапазонов.
+fn in_ranges(unacked: &BTreeMap<u32, Sent>, ranges: &[(u32, u32)]) -> Vec<u32> {
+    ranges.iter().flat_map(|&(start, end)| unacked.range(start..=end).map(|(sequence, _)| *sequence)).collect()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -573,7 +652,7 @@ async fn handle_datagram<F>(
     guid: i64,
     status: &F,
     events: &mpsc::UnboundedSender<Event>,
-    out_tx: &mpsc::UnboundedSender<(SocketAddr, Outgoing)>,
+    out_tx: &mpsc::UnboundedSender<Queued>,
     sessions: &mut HashMap<SocketAddr, Session>,
     addr: SocketAddr,
     data: &[u8],
@@ -643,6 +722,13 @@ where
             let mtu = reader.u16_be().ok_or("нет MTU")?.clamp(576, 1492);
             let client_guid = reader.i64_be().ok_or("нет guid")?;
 
+            // С этого адреса уже идёт игра: чужой запрос её не заменит.
+            // Тот же клиент (тот же guid) может начать заново — например,
+            // после вылета, не дождавшись тайм-аута.
+            if sessions.get(&addr).is_some_and(|session| session.connected && session.guid != client_guid) {
+                return Err("запрос на подключение поверх чужой сессии");
+            }
+
             sessions.insert(addr, Session::new(mtu as usize, client_guid));
 
             let mut out = vec![OPEN_REPLY_2];
@@ -657,7 +743,9 @@ where
             let Some(session) = sessions.get_mut(&addr) else { return Ok(()) };
             session.last_seen = Instant::now();
 
-            for number in decode_ranges(&mut reader).ok_or("битый ACK")? {
+            let ranges = decode_ranges(&mut reader).ok_or("битый ACK")?;
+
+            for number in in_ranges(&session.unacked, &ranges) {
                 session.acked(number);
             }
         }
@@ -665,12 +753,11 @@ where
             let Some(session) = sessions.get_mut(&addr) else { return Ok(()) };
             session.last_seen = Instant::now();
 
-            let numbers = decode_ranges(&mut reader).ok_or("битый NACK")?;
+            let ranges = decode_ranges(&mut reader).ok_or("битый NACK")?;
+            let numbers = in_ranges(&session.unacked, &ranges);
             log_debug!("Bedrock: {} просит повторить {:?}", addr, numbers);
 
-            if !numbers.is_empty() {
-                session.lost();
-            }
+            session.lost(&numbers);
 
             for number in numbers {
                 if let Some(datagram) = session.resend(number) {
@@ -684,15 +771,18 @@ where
             let sequence = reader.u24().ok_or("нет номера набора")?;
             session.to_ack.push(sequence);
 
-            // Пропуск в номерах — просим повторить недостающие.
-            if sequence > session.expected_sequence && sequence - session.expected_sequence < 1024 {
-                let mut missing: Vec<u32> = (session.expected_sequence..sequence).collect();
+            // Пропуск в номерах — просим повторить недостающие. Номера идут
+            // по кругу: «впереди» — это меньше половины круга.
+            let gap = ahead(sequence, session.expected_sequence);
+
+            if gap > 0 && gap < 1024 {
+                let mut missing: Vec<u32> = (0..gap).map(|step| (session.expected_sequence + step) & U24).collect();
                 let nack = encode_ranges(NACK, &mut missing);
                 let _ = socket.send_to(&nack, addr).await;
             }
 
-            if sequence >= session.expected_sequence {
-                session.expected_sequence = sequence + 1;
+            if gap < U24 / 2 {
+                session.expected_sequence = (sequence + 1) & U24;
             }
 
             let mut messages = Vec::new();
@@ -744,27 +834,42 @@ fn read_frame(session: &mut Session, reader: &mut Reader, messages: &mut Vec<Vec
     let split_info = if split { Some((reader.u32_be()?, reader.u16_be()?, reader.u32_be()?)) } else { None };
     let body = reader.take(length)?.to_vec();
 
-    // Повтор надёжного кадра — выбрасываем.
+    // Повтор надёжного кадра — выбрасываем; номер вне окна — тоже: это
+    // старый повтор или выдумка.
     if let Some(index) = reliable_index {
-        if index < session.lowest_reliable || !session.seen_reliable.insert(index) {
+        if ahead(index, session.lowest_reliable) >= RECEIVE_WINDOW || !session.seen_reliable.insert(index) {
             return Some(());
         }
 
         // Держим окно небольшим.
-        while session.seen_reliable.contains(&session.lowest_reliable) {
-            session.seen_reliable.remove(&session.lowest_reliable);
-            session.lowest_reliable += 1;
+        while session.seen_reliable.remove(&session.lowest_reliable) {
+            session.lowest_reliable = (session.lowest_reliable + 1) & U24;
         }
     }
 
     // Сборка разбитого сообщения.
     let body = match split_info {
         Some((count, id, index)) => {
-            if count == 0 || count > 8192 {
+            if count == 0 || count > MAX_SPLIT_PARTS || index >= count {
+                return Some(());
+            }
+
+            if !session.splits.contains_key(&id) && session.splits.len() >= MAX_SPLITS {
+                return Some(());
+            }
+
+            if session.waiting_bytes + body.len() > MAX_WAITING_BYTES {
                 return Some(());
             }
 
             let entry = session.splits.entry(id).or_insert_with(|| (count, HashMap::new()));
+
+            // Другое число частей у того же сообщения или повтор части.
+            if entry.0 != count || entry.1.contains_key(&index) {
+                return Some(());
+            }
+
+            session.waiting_bytes += body.len();
             entry.1.insert(index, body);
 
             if entry.1.len() < entry.0 as usize {
@@ -778,6 +883,7 @@ fn read_frame(session: &mut Session, reader: &mut Reader, messages: &mut Vec<Vec
                 whole.extend_from_slice(&parts.remove(&index)?);
             }
 
+            session.waiting_bytes = session.waiting_bytes.saturating_sub(whole.len());
             whole
         }
         None => body,
@@ -785,15 +891,22 @@ fn read_frame(session: &mut Session, reader: &mut Reader, messages: &mut Vec<Vec
 
     match order_index {
         Some(index) if !sequenced => {
-            if index == session.order_expected {
+            let distance = ahead(index, session.order_expected);
+
+            if distance == 0 {
                 messages.push(body);
-                session.order_expected += 1;
+                session.order_expected = (session.order_expected + 1) & U24;
 
                 while let Some(next) = session.order_waiting.remove(&session.order_expected) {
+                    session.waiting_bytes = session.waiting_bytes.saturating_sub(next.len());
                     messages.push(next);
-                    session.order_expected += 1;
+                    session.order_expected = (session.order_expected + 1) & U24;
                 }
-            } else if index > session.order_expected {
+            } else if distance < RECEIVE_WINDOW
+                && session.waiting_bytes + body.len() <= MAX_WAITING_BYTES
+                && !session.order_waiting.contains_key(&index)
+            {
+                session.waiting_bytes += body.len();
                 session.order_waiting.insert(index, body);
             }
         }
@@ -809,7 +922,7 @@ async fn handle_message(
     socket: &UdpSocket,
     guid: i64,
     events: &mpsc::UnboundedSender<Event>,
-    out_tx: &mpsc::UnboundedSender<(SocketAddr, Outgoing)>,
+    out_tx: &mpsc::UnboundedSender<Queued>,
     session: &mut Session,
     addr: SocketAddr,
     message: &[u8],
@@ -853,9 +966,9 @@ async fn handle_message(
             }
 
             session.connected = true;
-            let (inbound_tx, inbound_rx) = mpsc::unbounded_channel();
+            let (inbound_tx, inbound_rx) = mpsc::channel(INBOUND_QUEUE);
             session.inbound = Some(inbound_tx);
-            let sender = Sender { addr, queue: out_tx.clone() };
+            let sender = Sender { addr, generation: session.generation, queue: out_tx.clone() };
             let _ = events.send(Event::Connected { addr, inbound: inbound_rx, outbound: sender });
             log_debug!("Bedrock: {} подключился по RakNet (guid {})", addr, session.guid);
         }
@@ -864,8 +977,14 @@ async fn handle_message(
             session.last_seen = Instant::now() - TIMEOUT - Duration::from_secs(1);
         }
         GAME => {
-            if let Some(inbound) = &session.inbound {
-                let _ = inbound.send(message[1..].to_vec());
+            // Игровая часть не успевает разбирать — клиент заваливает сервер:
+            // закрываем, как если бы он замолчал.
+            if let Some(inbound) = &session.inbound
+                && let Err(mpsc::error::TrySendError::Full(_)) = inbound.try_send(message[1..].to_vec())
+            {
+                log_debug!("Bedrock: {} шлёт быстрее, чем их можно разобрать — соединение закрыто", addr);
+                session.inbound = None;
+                session.last_seen = Instant::now() - TIMEOUT - Duration::from_secs(1);
             }
         }
         _ => {}
@@ -918,6 +1037,110 @@ mod tests {
         let bytes = encode_ranges(ACK, &mut numbers);
         let mut reader = Reader::new(&bytes[1..]);
 
-        assert_eq!(decode_ranges(&mut reader), Some(vec![1, 2, 3, 5, 9, 10]));
+        assert_eq!(decode_ranges(&mut reader), Some(vec![(1, 3), (5, 5), (9, 10)]));
+    }
+
+    /// Огромный диапазон в ACK не разворачивается: перебираются только
+    /// отправленные наборы, что в него попали.
+    #[test]
+    fn a_huge_ack_range_touches_only_sent_datagrams() {
+        let mut session = Session::new(1400, 1);
+        session.queue(&[0xfe, 1], RELIABLE_ORDERED);
+        session.take_datagrams();
+        session.queue(&[0xfe, 2], RELIABLE_ORDERED);
+        session.take_datagrams();
+        assert_eq!(session.unacked.len(), 2);
+
+        let bytes = [0, 1, 0, 0, 0, 0, 0xff, 0xff, 0xff];
+        let ranges = decode_ranges(&mut Reader::new(&bytes)).expect("диапазон");
+        assert_eq!(in_ranges(&session.unacked, &ranges), vec![0, 1]);
+
+        // Диапазон через ноль делится на два.
+        let bytes = [0, 1, 0, 0xfe, 0xff, 0xff, 0, 0, 0];
+        assert_eq!(decode_ranges(&mut Reader::new(&bytes)), Some(vec![(0xff_fffe, U24), (0, 0)]));
+    }
+
+    /// Кадр одной надёжности: номер надёжности, номер очереди, тело.
+    fn reliable_frame(reliable: u32, order: u32, split: Option<(u32, u16, u32)>, body: &[u8]) -> Vec<u8> {
+        let mut out = vec![(RELIABLE_ORDERED << 5) | if split.is_some() { 0x10 } else { 0 }];
+        out.extend_from_slice(&((body.len() * 8) as u16).to_be_bytes());
+        push_u24(&mut out, reliable);
+        push_u24(&mut out, order);
+        out.push(0);
+
+        if let Some((count, id, index)) = split {
+            out.extend_from_slice(&count.to_be_bytes());
+            out.extend_from_slice(&id.to_be_bytes());
+            out.extend_from_slice(&index.to_be_bytes());
+        }
+
+        out.extend_from_slice(body);
+        out
+    }
+
+    fn receive(session: &mut Session, frame: &[u8]) -> Vec<Vec<u8>> {
+        let mut messages = Vec::new();
+        read_frame(session, &mut Reader::new(frame), &mut messages).expect("кадр читается");
+        messages
+    }
+
+    /// Части с номером вне сообщения, повторы частей и лишние одновременные
+    /// сборки отбрасываются.
+    #[test]
+    fn broken_splits_are_dropped() {
+        let mut session = Session::new(1400, 1);
+
+        // Номер части не меньше их числа.
+        receive(&mut session, &reliable_frame(0, 0, Some((2, 7, 2)), b"x"));
+        assert!(session.splits.is_empty());
+
+        // Повтор части не засчитывается за вторую.
+        receive(&mut session, &reliable_frame(1, 0, Some((2, 7, 0)), b"a"));
+        receive(&mut session, &reliable_frame(2, 0, Some((2, 7, 0)), b"a"));
+        assert_eq!(session.splits[&7].1.len(), 1);
+        assert_eq!(receive(&mut session, &reliable_frame(3, 0, Some((2, 7, 1)), b"b")), vec![b"ab".to_vec()]);
+        assert_eq!(session.waiting_bytes, 0);
+
+        // Не больше MAX_SPLITS сборок сразу.
+        for id in 0..MAX_SPLITS as u16 + 4 {
+            receive(&mut session, &reliable_frame(4 + id as u32, 1, Some((2, 100 + id, 0)), b"z"));
+        }
+        assert_eq!(session.splits.len(), MAX_SPLITS);
+    }
+
+    /// Номера надёжности и очереди идут по кругу 24 бит; далёкие вперёд
+    /// номера не копятся.
+    #[test]
+    fn one_congestion_shrinks_the_window_once() {
+        let mut session = Session::new(1400, 1);
+        session.window = 64.0;
+        session.send_sequence = 100;
+
+        // Наборы 10 и 20 ушли до сжатия: их потеря — та же перегрузка.
+        assert!(session.lost(&[10]));
+        assert_eq!(session.window, 32.0);
+        assert!(!session.lost(&[20]));
+        assert_eq!(session.window, 32.0);
+
+        // Потерян набор, отправленный уже после сжатия, — новая перегрузка.
+        assert!(session.lost(&[100]));
+        assert_eq!(session.window, 16.0);
+    }
+
+    #[test]
+    fn frame_numbers_wrap_and_stay_in_window() {
+        let mut session = Session::new(1400, 1);
+        session.lowest_reliable = U24;
+        session.order_expected = U24;
+
+        assert_eq!(receive(&mut session, &reliable_frame(U24, U24, None, b"a")), vec![b"a".to_vec()]);
+        assert_eq!((session.lowest_reliable, session.order_expected), (0, 0));
+        assert_eq!(receive(&mut session, &reliable_frame(0, 0, None, b"b")), vec![b"b".to_vec()]);
+
+        // Далеко впереди — не принимается и не хранится.
+        receive(&mut session, &reliable_frame(RECEIVE_WINDOW + 5, 3, None, b"c"));
+        receive(&mut session, &reliable_frame(2, RECEIVE_WINDOW + 5, None, b"d"));
+        assert!(session.order_waiting.is_empty());
+        assert!(!session.seen_reliable.contains(&(RECEIVE_WINDOW + 5)));
     }
 }

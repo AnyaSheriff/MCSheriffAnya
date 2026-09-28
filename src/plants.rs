@@ -187,6 +187,11 @@ pub fn can_place(world: &World, state: i32, x: i32, y: i32, z: i32) -> bool {
 
 /// Проверяет растение в этом месте и, если опоры нет, ломает его — с
 /// выпадением, как у оригинала. Возвращает, сломано ли.
+///
+/// Высокое растение — один предмет на две половины. Половина, у которой
+/// пропала пара, уходит без выпадения: предмет уже выпал из той половины,
+/// что сломали первой (игроком, поршнем, водой или потерей земли под
+/// нижней). Иначе из подсолнуха выпадало бы два подсолнуха.
 pub fn check(world: &mut World, x: i32, y: i32, z: i32) -> bool {
     let state = world.get_block(x, y, z);
 
@@ -194,9 +199,41 @@ pub fn check(world: &mut World, x: i32, y: i32, z: i32) -> bool {
         return false;
     }
 
-    world.note_destroyed(x, y, z);
+    if !lost_its_pair(world, state, x, y, z) {
+        world.note_destroyed(x, y, z);
+    }
+
     world.set_block(x, y, z, AIR);
     true
+}
+
+/// Половина высокого растения, у которой нет второй половины.
+fn lost_its_pair(world: &World, state: i32, x: i32, y: i32, z: i32) -> bool {
+    let Some(name) = blocks::block_at_state(state) else {
+        return false;
+    };
+
+    let other_y = match half(name, state) {
+        Some("upper") => y - 1,
+        Some("lower") => y + 1,
+        _ => return false,
+    };
+
+    blocks::block_at_state(world.get_block(x, other_y, z)) != Some(name)
+}
+
+/// Растение, которое смывает текущая вода (вики, Water: «washes away ...
+/// plants (except trees)»): трава, цветы, саженцы, грибы, посевы, ростки
+/// Незера. Не входят блоки с ящиком (кактус, азалия), тростник — он сдерживает
+/// даже лаву (вики, Lava), кувшинка и водные растения — они живут в воде.
+pub fn washed_away(name: &str) -> bool {
+    match needs(name) {
+        Some(Needs::Soil | Needs::DrySoil | Needs::Farmland | Needs::SoulSand | Needs::NetherSoil) => {
+            !matches!(name, "azalea" | "flowering_azalea" | "pale_moss_carpet" | "leaf_litter")
+        }
+        Some(Needs::Solid) => name != "snow",
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -278,6 +315,36 @@ mod tests {
         put(&mut world, (2, 0, 2), AIR);
         assert_eq!(world.get_block(2, 1, 2), AIR);
         assert_eq!(world.get_block(2, 2, 2), AIR, "верхняя половина висит в воздухе");
+    }
+
+    /// Высокое растение без земли ломается целиком, но выпадает из него
+    /// один предмет, а не два.
+    #[test]
+    fn a_tall_plant_drops_once() {
+        let mut world = world();
+
+        put(&mut world, (1, 1, 1), state("sunflower[half=lower]"));
+        put(&mut world, (1, 2, 1), state("sunflower[half=upper]"));
+        world.take_destroyed();
+
+        put(&mut world, (1, 0, 1), AIR);
+
+        assert_eq!(world.get_block(1, 1, 1), AIR);
+        assert_eq!(world.get_block(1, 2, 1), AIR);
+
+        let destroyed = world.take_destroyed();
+        assert_eq!(destroyed.len(), 1, "выпало не одно: {:?}", destroyed);
+        assert_eq!(destroyed[0].0, (1, 1, 1));
+
+        // Сломали верх — низ уходит молча: предмет выпал из верха.
+        put(&mut world, (2, 1, 2), state("sunflower[half=lower]"));
+        put(&mut world, (2, 2, 2), state("sunflower[half=upper]"));
+        world.take_destroyed();
+
+        put(&mut world, (2, 2, 2), AIR);
+
+        assert_eq!(world.get_block(2, 1, 2), AIR);
+        assert!(world.take_destroyed().is_empty());
     }
 
     /// Тростник растёт только у воды, а сломанный снизу — падает весь.

@@ -1,0 +1,68 @@
+{
+  "name": "water-washes",
+  "about": "Источник воды растекается по полу: мак, факел, провод и кнопка на пути.",
+  "blocks": [
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:poppy"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:torch"
+    },
+    {
+      "at": [
+        0,
+        0,
+        1
+      ],
+      "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=none,west=none]"
+    },
+    {
+      "at": [
+        -1,
+        0,
+        0
+      ],
+      "state": "minecraft:short_grass"
+    },
+    {
+      "at": [
+        0,
+        0,
+        -2
+      ],
+      "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+    },
+    {
+      "at": [
+        -2,
+        0,
+        -1
+      ],
+      "state": "minecraft:white_carpet"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          0,
+          0,
+          0
+        ],
+        "state": "minecraft:water"
+      }
+    }
+  ],
+  "record_ticks": 100
+}
