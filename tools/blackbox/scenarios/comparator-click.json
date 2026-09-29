@@ -1,0 +1,135 @@
+{
+ "name": "comparator-click",
+ "about": "Сравнители читают рамку портала (око рукой), якорь возрождения (светокамень рукой) и торт (съеден рукой).",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:end_portal_frame[eye=false,facing=north]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    2
+   ],
+   "state": "minecraft:comparator[facing=north,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    3
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    1
+   ],
+   "state": "minecraft:respawn_anchor[charges=0]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    2
+   ],
+   "state": "minecraft:comparator[facing=north,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    3
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "minecraft:cake[bites=0]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    1
+   ],
+   "state": "minecraft:comparator[facing=north,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  }
+ ],
+ "setup": [
+  "item replace entity blackbox weapon.mainhand with minecraft:ender_eye 16"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 10,
+   "cmd": "item replace entity blackbox weapon.mainhand with minecraft:glowstone 16"
+  },
+  {
+   "after": 20,
+   "click": [
+    5,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 30,
+   "click": [
+    5,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 40,
+   "cmd": "item replace entity blackbox weapon.mainhand with minecraft:air"
+  },
+  {
+   "after": 50,
+   "click": [
+    3,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 60,
+   "click": [
+    3,
+    0,
+    0
+   ]
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "clear blackbox"
+ ]
+}

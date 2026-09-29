@@ -1,0 +1,71 @@
+{
+ "name": "piston-qc-lever",
+ "about": "Квазисвязность от рычага: рычаг на стене рядом с местом над поршнем, самого поршня не касается. Поршень ждёт обновления соседа; рычаг выключили — стоит выдвинутым до следующего обновления.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    0,
+    1,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    1,
+    1
+   ],
+   "state": "minecraft:lever[face=wall,facing=north,powered=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    1,
+    1
+   ]
+  },
+  {
+   "after": 10,
+   "set": {
+    "at": [
+     0,
+     0,
+     -1
+    ],
+    "state": "minecraft:stone"
+   }
+  },
+  {
+   "after": 25,
+   "click": [
+    0,
+    1,
+    1
+   ]
+  },
+  {
+   "after": 40,
+   "set": {
+    "at": [
+     0,
+     0,
+     -1
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 70
+}

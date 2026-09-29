@@ -298,6 +298,76 @@ pub fn ticked(world: &mut World, pos: Pos, block: &Block) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Крикун скалка
+// ---------------------------------------------------------------------------
+
+/// Сколько кричит крикун: «The shrieker shrieks for 90 game ticks».
+pub const SHRIEK_TICKS: u64 = 90;
+
+/// Событие мира «крикун кричит» — снято с оригинала (sculk-shrieker).
+const SHRIEK_EVENT: i32 = 3007;
+
+/// Крикун начинает кричать, если ещё не кричит: `shrieking=true`, звук
+/// и через 90 тактов — тишина. Вызвать варден `can_summon=false` не
+/// может, а мобов у нас нет — предупреждений и тьмы тоже нет. [проверить]
+/// громкость и частицы `shriek`.
+pub fn shriek(world: &mut World, pos: Pos) -> bool {
+    let block = Block::at(world, pos);
+
+    if block.name != "sculk_shrieker" || block.is("shrieking", "true") {
+        return false;
+    }
+
+    let Some(state) = block.with("shrieking", "true") else {
+        return false;
+    };
+
+    set(world, pos, state);
+    world.schedule_block(pos.0, pos.1, pos.2, SHRIEK_TICKS, PRIORITY_NORMAL);
+
+    // Звук и частицы клиент играет сам по событию мира 3007 (сценарий
+    // sculk-shrieker).
+    world.note_level_event(pos.0, pos.1, pos.2, SHRIEK_EVENT, 0);
+
+    true
+}
+
+/// Запланированный такт крикуна: крик кончился. Кто всё ещё стоит на нём,
+/// тут же будит его снова — у оригинала новый крик начинается в том же
+/// такте (сценарий sculk-shrieker: `shrieking=false` и событие 3007 разом).
+pub fn shrieker_ticked(world: &mut World, pos: Pos, block: &Block) {
+    if block.is("shrieking", "true")
+        && let Some(state) = block.with("shrieking", "false")
+    {
+        set(world, pos, state);
+    }
+}
+
+/// Игрок, вставший на крикуна, будит его: «activates when any player stands
+/// on the black part in the center of the block, even when sneaking». Верх
+/// крикуна — на половине блока.
+pub fn step_on_shriekers(world: &mut World, occupants: &[super::components::Occupant]) {
+    for occupant in occupants {
+        if !occupant.living || !occupant.on_ground {
+            continue;
+        }
+
+        // Блок «под ногами» — на 0,2 ниже ног, как у стоящего на земле.
+        // [проверить] точную границу.
+        let below = (occupant.x.floor() as i32, (occupant.y - 0.2).floor() as i32, occupant.z.floor() as i32);
+        let above_top = occupant.y - (f64::from(below.1) + 0.5);
+
+        if !(-0.001..=0.2).contains(&above_top) {
+            continue;
+        }
+
+        if shriek(world, below) {
+            settle(world);
+        }
+    }
+}
+
 /// Кого ещё будит смена силы датчика: соседей блока под ним — его датчик
 /// питает сильно («powers the block below the sensor strongly»).
 pub fn reach(pos: Pos) -> Vec<Pos> {

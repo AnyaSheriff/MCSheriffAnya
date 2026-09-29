@@ -1,15 +1,7 @@
 {
  "name": "plate-items",
- "about": "Выбрасыватели под плитами выкидывают предмет вверх: каменная плита от предмета не нажимается, деревянная — нажимается; лампы рядом.",
+ "about": "Предмет на плитах: каменная плита от предмета не нажимается, деревянная — нажимается и отпускает, когда предмет убран; лампы рядом. Предмет кладётся командой summon ровно на плиту без скорости: выброшенный выбрасывателем летит со случайным толчком, и попадёт ли он обратно на плиту, случайно и у оригинала (оригинал против оригинала: отпускание на +23, +34 или никогда).",
  "blocks": [
-  {
-   "at": [
-    0,
-    -1,
-    0
-   ],
-   "state": "minecraft:dropper[facing=up,triggered=false]"
-  },
   {
    "at": [
     0,
@@ -28,22 +20,6 @@
   },
   {
    "at": [
-    1,
-    0,
-    0
-   ],
-   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
-  },
-  {
-   "at": [
-    4,
-    -1,
-    0
-   ],
-   "state": "minecraft:dropper[facing=up,triggered=false]"
-  },
-  {
-   "at": [
     4,
     0,
     0
@@ -57,37 +33,24 @@
     1
    ],
    "state": "minecraft:redstone_lamp[lit=false]"
-  },
-  {
-   "at": [
-    5,
-    0,
-    0
-   ],
-   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
   }
- ],
- "setup": [
-  "item replace block $(0,-1,0) container.0 with minecraft:stone 1",
-  "item replace block $(4,-1,0) container.0 with minecraft:stone 1"
  ],
  "actions": [
   {
    "after": 0,
-   "click": [
-    1,
-    0,
-    0
-   ]
+   "cmd": "summon item $(0.5,0.1,0.5) {Item:{id:\"minecraft:stone\",count:1}}"
   },
   {
    "after": 10,
-   "click": [
-    5,
-    0,
-    0
-   ]
+   "cmd": "summon item $(4.5,0.1,0.5) {Item:{id:\"minecraft:stone\",count:1}}"
+  },
+  {
+   "after": 40,
+   "cmd": "kill @e[type=item,distance=..48]"
   }
  ],
- "record_ticks": 80
+ "record_ticks": 90,
+ "cleanup": [
+  "kill @e[type=item,distance=..48]"
+ ]
 }

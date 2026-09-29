@@ -1,0 +1,53 @@
+{
+ "name": "lightning-rod",
+ "about": "Молния командой в громоотвод на камне: 8 тактов сигнала, лампа рядом с камнем.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    1,
+    1
+   ],
+   "state": "minecraft:lightning_rod[facing=up,powered=false,waterlogged=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    1
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon lightning_bolt $(1.5,2,1.5)"
+  }
+ ],
+ "record_ticks": 60,
+ "random": [
+  {
+   "type": "count",
+   "name": "искры чистки меди у громоотвода",
+   "match": "^level 1,1,1 3002 -1$",
+   "range": [
+    0,
+    40
+   ],
+   "why": "Удар по меди запускает 3…5 случайных блужданий по 1…8 шагов, на каждом шаге из куба 3×3×3 берутся 10 случайных мест и найденная медь даёт искру (minecraft.wiki/w/Oxidation: «one single lightning strike can deoxidize up to 41 blocks»). Единственная медь здесь — сам громоотвод. Оригинал против оригинала (10 записей): 3, 0, 2, 2, 1, 2, 1, 0, 0, 2 искр."
+  }
+ ],
+ "cleanup": [
+  "kill @e[type=lightning_bolt,distance=..30]",
+  "fill $(-2,0,-2) $(6,3,6) minecraft:air replace minecraft:fire"
+ ]
+}

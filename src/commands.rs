@@ -292,7 +292,16 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         "time" => time(parts.collect::<Vec<&str>>().as_slice(), shared),
         "setblock" => set_blocks(parts.collect::<Vec<&str>>().as_slice(), shared, dimension_of(source, shared), false),
         "fill" => set_blocks(parts.collect::<Vec<&str>>().as_slice(), shared, dimension_of(source, shared), true),
-        "item" => item(parts.collect::<Vec<&str>>().as_slice(), shared, dimension_of(source, shared)),
+        "item" => {
+            let parts: Vec<&str> = parts.collect();
+
+            // Основную руку разбирает `item` (сценарии comparator-click),
+            // прочие ячейки игрока — `item_entity` (сценарий shelf).
+            match parts.as_slice() {
+                ["replace", "entity", _, slot, ..] if *slot != "weapon.mainhand" => item_entity(&parts, source, shared),
+                _ => item(&parts, source, shared, dimension_of(source, shared)),
+            }
+        }
         "list" => {
             let names = shared
                 .players
@@ -580,7 +589,7 @@ fn chosen_carts(items: &crate::items::Items, (kind, limit): (crate::minecart::Ki
 }
 
 /// `summon <вагонетка> <x> <y> <z> [{Items:[…]}]` — у нас из сущностей
-/// призываются только вагонетки. Она появляется ровно в названной точке,
+/// призываются вагонетки, предметы и молния. Она появляется ровно в названной точке,
 /// без скорости; к рельсе её прижмёт её же такт.
 fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let usage = || Answer::saying("Нужно: summon <вагонетка> <x> <y> <z>".to_string());
@@ -590,11 +599,19 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         [] => return usage(),
     };
 
-    let Some(kind) = crate::minecart::Kind::from_name(name) else {
-        return Answer::saying(format!("Пока призываются только вагонетки, а не {}", name));
-    };
-
     let origin = origin_of(source, shared);
+
+    if name.strip_prefix("minecraft:").unwrap_or(name) == "item" {
+        return summon_item(rest, source, shared);
+    }
+
+    if name.strip_prefix("minecraft:").unwrap_or(name) == "lightning_bolt" {
+        return summon_lightning(rest, source, shared);
+    }
+
+    let Some(kind) = crate::minecart::Kind::from_name(name) else {
+        return Answer::saying(format!("Пока призываются только вагонетки, предметы и молния, а не {}", name));
+    };
     let (place, data) = match rest {
         [] => (Some(origin), None),
         [x, y, z] => (entity_place(&[*x, *y, *z], origin), None),
@@ -629,8 +646,87 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     Answer::saying(format!("Призвана сущность {}", kind.name()))
 }
 
+/// `summon item <x> <y> <z> {Item:{id:"…",count:N}}` — предмет ровно
+/// в названной точке, без скорости и без задержки подбора: так у оригинала
+/// призванный предмет не разлетается, как выпавший из блока (чёрный ящик,
+/// piston-push-items — он лежит там, где призван).
+fn summon_item(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let usage = || Answer::saying("Нужно: summon item <x> <y> <z> {Item:{id:\"…\",count:N}}".to_string());
+
+    let [x, y, z, data] = rest else {
+        return usage();
+    };
+
+    let Some(place) = entity_place(&[*x, *y, *z], origin_of(source, shared)) else {
+        return usage();
+    };
+
+    let Some(stack) = item_from_text(data) else {
+        return Answer::saying(format!("Не понял данные предмета: {}", data));
+    };
+
+    shared
+        .items_in(dimension_of(source, shared))
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .summon_item(shared.next_entity_id(), stack, place, no_gravity(data));
+
+    Answer::saying("Призвана сущность item".to_string())
+}
+
+/// `NoGravity:1b` (или `true`) в данных призыва: сущность без тяжести.
+fn no_gravity(text: &str) -> bool {
+    text.contains("NoGravity:1b") || text.contains("NoGravity:true") || text.contains("NoGravity:1}") || text.contains("NoGravity:1,")
+}
+
+/// `summon lightning_bolt [<x> <y> <z>]` — молния в названной точке (без
+/// точки — там, где стоит вызвавший). Бьёт в свой первый такт (lightning.rs).
+/// Громоотводы командную молнию к себе не притягивают: «do not divert ...
+/// lightning summoned by commands» (вики, Lightning Rod).
+fn summon_lightning(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let origin = origin_of(source, shared);
+    let place = match rest {
+        [] => Some(origin),
+        [x, y, z] => entity_place(&[*x, *y, *z], origin),
+        _ => None,
+    };
+
+    let Some(place) = place else {
+        return Answer::saying("Нужно: summon lightning_bolt <x> <y> <z>".to_string());
+    };
+
+    shared
+        .items_in(dimension_of(source, shared))
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .add_bolt(crate::lightning::Bolt::new(shared.next_entity_id(), place));
+
+    Answer::saying("Призвана сущность lightning_bolt".to_string())
+}
+
+/// Предмет из данных сущности: `{Item:{id:"minecraft:stone",count:5}}`.
+/// Прочие поля (Motion, PickupDelay) пропускаются.
+fn item_from_text(text: &str) -> Option<crate::inventory::Stack> {
+    let inner = &text[text.find("Item:{")? + "Item:{".len()..];
+    let inner = &inner[..inner.find('}')?];
+    let (mut item, mut count) = (None, 1);
+
+    for field in inner.split(',') {
+        let (key, value) = field.split_once(':')?;
+        let value = value.trim().trim_matches('"');
+
+        match key.trim() {
+            "id" => item = blocks::item_named(value.strip_prefix("minecraft:").unwrap_or(value)),
+            "count" | "Count" => count = value.trim_end_matches('b').parse().ok()?,
+            _ => {}
+        }
+    }
+
+    Some(crate::inventory::Stack::new(item?, count))
+}
+
 /// `kill @e[type=<вид>,distance=..<N>,limit=<N>]` — убрать сущности:
-/// вагонетки, предметы, подожжённый динамит, падающие блоки. `type=!<вид>` —
+/// вагонетки, предметы, подожжённый динамит, падающие блоки, молнии. `type=!<вид>` —
 /// все, кроме этого вида. Игроков команда не трогает.
 ///
 /// Как у оригинала, сама вагонетка предметом не выпадает, а содержимое
@@ -662,13 +758,20 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         picked
     });
 
+    let bolts = items.remove_bolts(|bolt| {
+        let picked = left > 0 && chosen.takes("lightning_bolt") && near((bolt.x, bolt.y, bolt.z));
+
+        left -= usize::from(picked);
+        picked
+    });
+
     for cart in &carts {
         for stack in cart.slots.iter().flatten() {
             items.drop_item(shared.next_entity_id(), *stack, (cart.x, cart.y, cart.z), (0.0, 0.0, 0.0), crate::items::MINED_DELAY);
         }
     }
 
-    Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len()))
+    Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len() + bolts))
 }
 
 /// Выбор сущностей `@e[…]` для `kill`.
@@ -964,8 +1067,44 @@ fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool)
 /// `item replace block <x> <y> <z> container.<N> with <предмет> [сколько]`:
 /// кладёт предмет в ячейку хранилища (воздух — опустошает её). Как у
 /// оригинала, сравнители рядом узнают о смене содержимого.
-fn item(parts: &[&str], shared: &Shared, dimension: Dimension) -> Answer {
+fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) -> Answer {
     let usage = || Answer::saying("Нужно: item replace block <x> <y> <z> container.<N> with <предмет> [сколько]".to_string());
+
+    // Основная рука игрока: `item replace entity <игрок> weapon.mainhand
+    // with <предмет> [сколько]`.
+    if let ["replace", "entity", named, "weapon.mainhand", "with", thing, rest @ ..] = parts {
+        let count = match rest {
+            [] => 1,
+            [count] => match count.parse::<i32>() {
+                Ok(count) if count > 0 => count,
+                _ => return usage(),
+            },
+            _ => return usage(),
+        };
+        let name = thing.strip_prefix("minecraft:").unwrap_or(thing);
+        let stack = if name == "air" {
+            None
+        } else {
+            let Some(number) = blocks::item_named(name) else {
+                return Answer::saying(format!("Не знаю такого предмета: {}", thing));
+            };
+
+            Some(crate::inventory::Stack::new(number, count.min(blocks::stack_size(number))))
+        };
+        let targets = find_targets(named, source, shared);
+
+        if targets.is_empty() {
+            return Answer::saying("Такого игрока нет на сервере".to_string());
+        }
+
+        let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+        for (uuid, _) in &targets {
+            players.order(uuid, Order::Hold { stack });
+        }
+
+        return Answer::saying(format!("Предмет в руке заменён — игрокам: {}", names_of(&targets)));
+    }
 
     let ["replace", "block", x, y, z, slot, "with", thing, rest @ ..] = parts else {
         return usage();
@@ -1016,6 +1155,63 @@ fn item(parts: &[&str], shared: &Shared, dimension: Dimension) -> Answer {
         Some(false) => Answer::saying(format!("Нет ячейки {}", slot)),
         None => Answer::saying("Там нет хранилища".to_string()),
     }
+}
+
+/// `item replace entity <игрок> hotbar.<N>|inventory.<N>|weapon.mainhand
+/// with <предмет> [сколько]`: кладёт предмет в ячейку инвентаря игрока
+/// (воздух — опустошает её).
+fn item_entity(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let usage = || Answer::saying("Нужно: item replace entity <игрок> hotbar.<N> with <предмет> [сколько]".to_string());
+
+    let ["replace", "entity", named, slot, "with", thing, rest @ ..] = parts else {
+        return usage();
+    };
+
+    let number = |prefix: &str| slot.strip_prefix(prefix).and_then(|n| n.parse::<i32>().ok());
+    let slot = match (number("hotbar."), number("inventory."), *slot) {
+        (Some(n), _, _) if (0..9).contains(&n) => crate::inventory::FIRST_HOTBAR + n,
+        (_, Some(n), _) if (0..27).contains(&n) => crate::inventory::FIRST_MAIN + n,
+        (_, _, "weapon.offhand") => crate::inventory::OFFHAND,
+        _ => return usage(),
+    };
+    // Основная рука — выбранная ячейка панели: её номер знает только
+    // подключение, поэтому `weapon.mainhand` пока не разбирается. [проверить]
+
+    let count = match rest {
+        [] => 1,
+        [count] => match count.parse::<i32>() {
+            Ok(count) if count > 0 => count,
+            _ => return usage(),
+        },
+        _ => return usage(),
+    };
+
+    let name = thing.strip_prefix("minecraft:").unwrap_or(thing);
+    let stack = if name == "air" {
+        None
+    } else {
+        let Some(item) = blocks::item_named(name) else {
+            return Answer::saying(format!("Не знаю такого предмета: {}", thing));
+        };
+
+        Some(crate::inventory::Stack::new(item, count.min(blocks::stack_size(item))))
+    };
+
+    let targets = find_targets(named, source, shared);
+
+    if targets.is_empty() {
+        return Answer::saying("Такого игрока нет на сервере".to_string());
+    }
+
+    {
+        let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+        for (uuid, _) in &targets {
+            players.order(uuid, Order::SetSlot { slot, stack });
+        }
+    }
+
+    Answer::saying(format!("Ячейка изменена: {}", names_of(&targets)))
 }
 
 /// Который час в мире и как его поменять.
@@ -1124,7 +1320,18 @@ fn teleport(parts: &[&str], source: &Source, shared: &Shared, into: Option<Dimen
                 Some(dimension) if Some(dimension) != here => {
                     players.order(uuid, Order::ChangeDimension { dimension, x, y, z });
                 }
-                _ => players.order(uuid, Order::Teleport { x, y, z }),
+                _ => {
+                    players.order(uuid, Order::Teleport { x, y, z });
+
+                    // Оригинал переносит сразу: сущности этого же такта уже
+                    // видят игрока на новом месте (minecart-push: вагонетку
+                    // толкает в такте команды, у нас без этого — тактом
+                    // позже, и рассылки её движения сдвигаются).
+                    if let Some(mut position) = players.members().iter().find(|member| &member.uuid == uuid).map(|member| member.position) {
+                        (position.x, position.y, position.z) = (x, y, z);
+                        players.set_position(uuid, position);
+                    }
+                }
             }
 
             if let Some((yaw, pitch)) = look {
@@ -1356,6 +1563,17 @@ mod tests {
     use crate::world::World;
     use std::path::PathBuf;
 
+    /// Данные призываемого предмета: вид и число.
+    #[test]
+    fn summoned_item_data_is_read() {
+        let stack = item_from_text(r#"{Item:{id:"minecraft:cobblestone",count:3}}"#).expect("предмет");
+
+        assert_eq!(stack.item, crate::blocks::item_named("cobblestone").expect("булыжник"));
+        assert_eq!(stack.count, 3);
+        assert_eq!(item_from_text(r#"{Item:{id:"dirt"}}"#).map(|stack| stack.count), Some(1));
+        assert!(item_from_text("{}").is_none());
+    }
+
     /// Свой файл прав на каждую проверку: проверки идут разом и общий файл
     /// делили бы друг с другом.
     fn own_ops_file() -> PathBuf {
@@ -1410,6 +1628,7 @@ mod tests {
                     dimension: Default::default(),
                     sneaking: false,
                     swings: 0,
+                    shoved: ((0.0, 0.0, 0.0), 0),
                 };
 
                 players.join(member, number as i32).expect("ник свободен");
@@ -1491,12 +1710,13 @@ mod tests {
             Some(Order::Teleport { x, y, z }) if *x == 1.5 && *y == 2.0 && *z == 3.5
         ));
 
-        // Другого — к третьему.
+        // Другого — к третьему. Первый уже там, куда его перенесли (к
+        // Второму, в 20): перенос виден сразу, как у оригинала.
         run("tp Второй Первый", &first, &shared);
 
         assert!(matches!(
             orders_for(&shared, 2).first(),
-            Some(Order::Teleport { x, .. }) if *x == 10.0
+            Some(Order::Teleport { x, .. }) if *x == 20.0
         ));
 
         // Из консоли без имени переносить некого.
@@ -1790,5 +2010,15 @@ mod tests {
         assert!(run("fill 0 0 0 100 100 100 stone", &Source::Console, &shared)
             .reply
             .contains("Слишком много"));
+    }
+
+    /// Предмет для `summon item` берётся из поля Item; прочее пропускается.
+    #[test]
+    fn a_summoned_item_is_read_from_its_data() {
+        let stack = item_from_text(r#"{Item:{id:"minecraft:stone",count:64},Motion:[0.0,0.0,0.0]}"#).expect("разобрано");
+
+        assert_eq!(stack.item, blocks::item_named("stone").unwrap());
+        assert_eq!(stack.count, 64);
+        assert!(item_from_text("{Motion:[0.0,0.0,0.0]}").is_none());
     }
 }

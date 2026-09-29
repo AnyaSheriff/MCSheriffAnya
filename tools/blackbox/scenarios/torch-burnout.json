@@ -1,0 +1,76 @@
+{
+ "name": "torch-burnout",
+ "about": "Факел питает свой же блок через петлю провода: гаснет и загорается, пока не перегорит.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wall_torch[facing=south,lit=true]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    3
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    3
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    3
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=none,west=none]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    1
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=none]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     0,
+     0,
+     1
+    ],
+    "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+   }
+  }
+ ],
+ "record_ticks": 260
+}

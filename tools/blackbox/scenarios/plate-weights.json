@@ -1,0 +1,368 @@
+{
+ "name": "plate-weights",
+ "about": "Плиты с весом (лёгкая, тяжёлая), каменная и из полированного чернокамня под 1, 5, 20 стопками; потом предметы убираются.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:light_weighted_pressure_plate[power=0]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    1
+   ],
+   "state": "minecraft:heavy_weighted_pressure_plate[power=0]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    5
+   ],
+   "state": "minecraft:stone_pressure_plate[powered=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    5
+   ],
+   "state": "minecraft:polished_blackstone_pressure_plate[powered=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon item $(5.20,0.1,1.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon item $(1.20,0.1,1.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon item $(1.20,0.1,5.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon item $(5.20,0.1,5.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(5.35,0.1,1.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(5.50,0.1,1.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(5.65,0.1,1.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(5.80,0.1,1.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(1.35,0.1,1.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(1.50,0.1,1.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(1.65,0.1,1.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(1.80,0.1,1.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(1.35,0.1,5.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(1.50,0.1,5.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(1.65,0.1,5.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(1.80,0.1,5.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(5.35,0.1,5.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(5.50,0.1,5.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(5.65,0.1,5.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon item $(5.80,0.1,5.20) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.20,0.1,1.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.35,0.1,1.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.50,0.1,1.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.65,0.1,1.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.80,0.1,1.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.20,0.1,1.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.35,0.1,1.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.50,0.1,1.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.65,0.1,1.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.80,0.1,1.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.20,0.1,1.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.35,0.1,1.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.50,0.1,1.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.65,0.1,1.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.80,0.1,1.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.20,0.1,1.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.35,0.1,1.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.50,0.1,1.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.65,0.1,1.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.80,0.1,1.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.20,0.1,1.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.35,0.1,1.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.50,0.1,1.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.65,0.1,1.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.80,0.1,1.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.20,0.1,1.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.35,0.1,1.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.50,0.1,1.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.65,0.1,1.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.80,0.1,1.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.20,0.1,5.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.35,0.1,5.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.50,0.1,5.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.65,0.1,5.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.80,0.1,5.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.20,0.1,5.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.35,0.1,5.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.50,0.1,5.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.65,0.1,5.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.80,0.1,5.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.20,0.1,5.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.35,0.1,5.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.50,0.1,5.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.65,0.1,5.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(1.80,0.1,5.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.20,0.1,5.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.35,0.1,5.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.50,0.1,5.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.65,0.1,5.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.80,0.1,5.40) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.20,0.1,5.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.35,0.1,5.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.50,0.1,5.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.65,0.1,5.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.80,0.1,5.60) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.20,0.1,5.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.35,0.1,5.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.50,0.1,5.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.65,0.1,5.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 40,
+   "cmd": "summon item $(5.80,0.1,5.80) {Item:{id:\"minecraft:stone\",count:64},Motion:[0.0,0.0,0.0]}"
+  },
+  {
+   "after": 80,
+   "cmd": "kill @e[type=item,distance=..30]"
+  }
+ ],
+ "record_ticks": 130,
+ "cleanup": [
+  "kill @e[type=item,distance=..30]"
+ ]
+}

@@ -1,0 +1,92 @@
+{
+ "name": "flying-machine",
+ "about": "Летающая машина из двух поршней: сзади обычный поршень с наблюдателем, спереди липкий поршень головой назад с наблюдателем; части на слизи. Наблюдатели ставятся первыми, пока их импульсу некого будить. Запуск — камень перед задним наблюдателем, остановка — обсидиан на пути.",
+ "blocks": [
+  {
+   "at": [
+    -1,
+    1,
+    0
+   ],
+   "state": "minecraft:observer[facing=west,powered=false]"
+  },
+  {
+   "at": [
+    2,
+    2,
+    0
+   ],
+   "state": "minecraft:observer[facing=east,powered=false]"
+  },
+  {
+   "at": [
+    0,
+    2,
+    0
+   ],
+   "state": "minecraft:slime_block"
+  },
+  {
+   "at": [
+    -1,
+    2,
+    0
+   ],
+   "state": "minecraft:slime_block"
+  },
+  {
+   "at": [
+    1,
+    1,
+    0
+   ],
+   "state": "minecraft:slime_block"
+  },
+  {
+   "at": [
+    2,
+    1,
+    0
+   ],
+   "state": "minecraft:slime_block"
+  },
+  {
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    1,
+    2,
+    0
+   ],
+   "state": "minecraft:sticky_piston[extended=false,facing=west]"
+  },
+  {
+   "at": [
+    6,
+    1,
+    0
+   ],
+   "state": "minecraft:obsidian"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -2,
+     1,
+     0
+    ],
+    "state": "minecraft:stone"
+   }
+  }
+ ],
+ "record_ticks": 120
+}

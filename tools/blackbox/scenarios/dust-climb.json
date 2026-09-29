@@ -1,0 +1,169 @@
+{
+ "name": "dust-climb",
+ "about": "Провод поднимается на стекло и перевёрнутую плиту и спускается с них; рычаг в начале, лампа в конце.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    5
+   ],
+   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    5
+   ],
+   "state": "minecraft:redstone_wire[east=up,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    5
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    2,
+    1,
+    5
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    5
+   ],
+   "state": "minecraft:redstone_wire[east=up,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    5
+   ],
+   "state": "minecraft:smooth_stone_slab[type=top,waterlogged=false]"
+  },
+  {
+   "at": [
+    4,
+    1,
+    5
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    5
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    5
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    0
+   ],
+   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    1
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  },
+  {
+   "at": [
+    -1,
+    1,
+    2
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=none,west=none]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    5
+   ]
+  },
+  {
+   "after": 20,
+   "click": [
+    0,
+    0,
+    5
+   ]
+  },
+  {
+   "after": 40,
+   "click": [
+    -1,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 60,
+   "click": [
+    -1,
+    0,
+    0
+   ]
+  }
+ ],
+ "record_ticks": 80
+}

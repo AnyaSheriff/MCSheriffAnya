@@ -32,6 +32,24 @@ pub struct ServerProperties {
 
     /// Тип мира — настройка `level-type`, как у оригинала, плюс наш.
     pub world_kind: WorldKind,
+
+    /// Сложность: 0 — мирная, 1 — лёгкая, 2 — обычная, 3 — сложная.
+    /// От неё зависит, зажигает ли молния огонь.
+    pub difficulty: u8,
+}
+
+/// Обычная сложность: с неё молния зажигает огонь (вики, Lightning).
+pub const DIFFICULTY_NORMAL: u8 = 2;
+
+/// Сложность из настройки: словом, как у оригинала, или числом.
+fn difficulty_of(value: &str) -> Option<u8> {
+    match value.trim() {
+        "peaceful" | "0" => Some(0),
+        "easy" | "1" => Some(1),
+        "normal" | "2" => Some(2),
+        "hard" | "3" => Some(3),
+        _ => None,
+    }
 }
 
 impl Default for ServerProperties {
@@ -45,6 +63,7 @@ impl Default for ServerProperties {
             simulation_distance: 10,
             level_seed: None,
             world_kind: WorldKind::Normal,
+            difficulty: 1,
         }
     }
 }
@@ -101,6 +120,7 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
         simulation_distance,
         level_seed,
         world_kind,
+        difficulty: values.get("difficulty").and_then(|value| difficulty_of(value)).unwrap_or(defaults.difficulty),
     })
 }
 
@@ -412,6 +432,15 @@ fn written_at() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Сложность читается словом и числом; непонятное — не сложность.
+    #[test]
+    fn difficulty_is_read_by_name_and_number() {
+        assert_eq!(difficulty_of("peaceful"), Some(0));
+        assert_eq!(difficulty_of("normal"), Some(DIFFICULTY_NORMAL));
+        assert_eq!(difficulty_of("3"), Some(3));
+        assert_eq!(difficulty_of("insane"), None);
+    }
 
     /// В новом файле и в старом, где пояснения ещё не было, есть строка про
     /// mcsa.properties; сами настройки при этом не меняются.

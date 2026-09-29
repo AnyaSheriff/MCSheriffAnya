@@ -84,6 +84,18 @@ const STILL: f64 = 0.003;
 pub const THROW_SPEED: f64 = 0.3;
 pub const THROW_LIFT: f64 = 0.12;
 
+/// Раз во сколько тактов лежащий предмет всё же сдвигается (probe-item-rest).
+const ITEM_MOVE_EVERY: i64 = 4;
+
+/// Скользящий по земле предмет (квадрат скорости вбок больше этого)
+/// двигается каждый такт [проверить: порог не замерен, взят как у STILL].
+const SLIDING: f64 = 1.0e-5;
+
+/// Перемена скорости за такт (квадрат), после которой оригинал рассказывает
+/// о предмете вне очереди: лежащий предмет, накопивший −0,12, в свой такт
+/// сдвига шлёт ноль сразу, а накопивший −0,08 — нет (probe-item-rest).
+const IMPULSE: f64 = 0.01;
+
 /// Ширина предмета: по ней он упирается в стены.
 const SIZE: f64 = 0.25;
 
@@ -169,6 +181,17 @@ pub struct Dropped {
     /// Запал, который клиенты уже знают (у динамита).
     shown_fuse: i32,
 
+    /// Без тяжести (`NoGravity` в призыве): не падает, лежит где висит.
+    pub no_gravity: bool,
+
+    /// Сколько тактов сущности прожил предмет — по нему идут и такт
+    /// «лежащий предмет всё же сдвигается», и рассылка (network/play.rs).
+    pub age: u64,
+
+    /// Скорость за этот такт изменилась резко (квадрат разницы больше 0,01):
+    /// оригинал в таком такте рассказывает о предмете вне очереди.
+    pub impulse: bool,
+
     /// Где предмет был к началу такта; у появившегося в этом такте — None.
     /// Игрок подбирает по этому месту: у оригинала подбор идёт в начале
     /// такта, до шага предметов (чёрный ящик, dropper-pulse — у нас на такт
@@ -204,6 +227,9 @@ pub enum Change {
     /// Появилась вагонетка (minecart.rs). Пропадает она записью `Gone`.
     Cart(crate::minecart::Minecart),
 
+    /// Ударила молния (lightning.rs). Пропадает она записью `Gone`.
+    Lightning(crate::lightning::Bolt),
+
     /// Предмет подняли.
     Taken {
         entity_id: i32,
@@ -224,6 +250,9 @@ pub struct Items {
     /// журнал общий с предметами — клиенты узнают о них тем же путём.
     carts: Vec<crate::minecart::Minecart>,
 
+    /// Молнии: живут несколько тактов, журнал тоже общий.
+    bolts: Vec<crate::lightning::Bolt>,
+
     changes: Journal<Change>,
 }
 
@@ -232,6 +261,7 @@ impl Items {
         Self {
             items: Vec::new(),
             carts: Vec::new(),
+            bolts: Vec::new(),
             changes: Journal::new(),
         }
     }
@@ -240,6 +270,32 @@ impl Items {
     pub fn add_cart(&mut self, cart: crate::minecart::Minecart) {
         self.changes.push(Change::Cart(cart.clone()));
         self.carts.push(cart);
+    }
+
+    /// Ставит молнию в мир: клиенты узнают о ней сразу.
+    pub fn add_bolt(&mut self, bolt: crate::lightning::Bolt) {
+        self.changes.push(Change::Lightning(bolt.clone()));
+        self.bolts.push(bolt);
+    }
+
+    /// Такт молний: `step` возвращает false у погасшей — она убирается.
+    pub fn step_bolts(&mut self, mut step: impl FnMut(&mut crate::lightning::Bolt) -> bool) {
+        let gone: Vec<crate::lightning::Bolt> = self.bolts.extract_if(.., |bolt| !step(bolt)).collect();
+
+        for bolt in &gone {
+            self.changes.push(Change::Gone { entity_id: bolt.entity_id });
+        }
+    }
+
+    /// Убирает молнии, которые выбирает `gone` (команда `kill`); сколько убрано.
+    pub fn remove_bolts(&mut self, gone: impl FnMut(&mut crate::lightning::Bolt) -> bool) -> usize {
+        let removed: Vec<crate::lightning::Bolt> = self.bolts.extract_if(.., gone).collect();
+
+        for bolt in &removed {
+            self.changes.push(Change::Gone { entity_id: bolt.entity_id });
+        }
+
+        removed.len()
     }
 
     /// Все вагонетки — в порядке появления.
@@ -268,6 +324,16 @@ impl Items {
         removed
     }
 
+    /// Призванный командой предмет: как выпавший, только может быть без
+    /// тяжести (`NoGravity:1b`).
+    pub fn summon_item(&mut self, entity_id: i32, stack: Stack, at: (f64, f64, f64), no_gravity: bool) {
+        let mut item = Self::new_item(entity_id, stack, at, (0.0, 0.0, 0.0), Duration::ZERO);
+
+        item.no_gravity = no_gravity;
+        self.items.push(item.clone());
+        self.changes.push(Change::Dropped(item));
+    }
+
     /// Кладёт предмет в мир.
     pub fn drop_item(
         &mut self,
@@ -277,7 +343,21 @@ impl Items {
         velocity: (f64, f64, f64),
         delay: Duration,
     ) {
-        let dropped = Dropped {
+        let dropped = Self::new_item(entity_id, stack, (x, y, z), velocity, delay);
+
+        self.items.push(dropped.clone());
+        self.changes.push(Change::Dropped(dropped));
+    }
+
+    /// Выпавший предмет, ещё не положенный в мир.
+    fn new_item(
+        entity_id: i32,
+        stack: Stack,
+        (x, y, z): (f64, f64, f64),
+        velocity: (f64, f64, f64),
+        delay: Duration,
+    ) -> Dropped {
+        Dropped {
             entity_id,
             uuid: uuid_for(entity_id),
             stack,
@@ -297,10 +377,10 @@ impl Items {
             in_water: None,
             shown_fuse: 0,
             touchable: None,
-        };
-
-        self.items.push(dropped.clone());
-        self.changes.push(Change::Dropped(dropped));
+            age: 0,
+            impulse: false,
+            no_gravity: false,
+        }
     }
 
     /// Пускает блок в свободное падение.
@@ -333,6 +413,9 @@ impl Items {
             in_water: None,
             shown_fuse: 0,
             touchable: None,
+            age: 0,
+            impulse: false,
+            no_gravity: false,
         };
 
         self.items.push(falling.clone());
@@ -373,6 +456,9 @@ impl Items {
             // ещё раз, хотя тот не изменился (чёрный ящик, tnt-chain).
             shown_fuse: if fuse == crate::tnt::FUSE { fuse } else { -1 },
             touchable: None,
+            age: 0,
+            impulse: false,
+            no_gravity: false,
         };
 
         self.items.push(primed.clone());
@@ -499,6 +585,8 @@ impl Items {
         let mut splashes = Vec::new();
 
         for item in &mut self.items {
+            item.impulse = false;
+
             let chunk = (
                 (item.x.floor() as i32).div_euclid(16),
                 (item.z.floor() as i32).div_euclid(16),
@@ -511,13 +599,30 @@ impl Items {
             // Динамит ложится на всё, у чего есть ящик, как предмет; воду
             // у него пока не считаем. [проверить]: течение сносит динамит
             // (вики, TNT: «can be pushed by flowing water»).
+            let before = (item.vx, item.vy, item.vz);
+
             if item.fuse.is_some() {
-                item.step(solid, &|_, _, _| None);
+                item.step(solid, &|_, _, _| None, None);
             } else if item.block.is_some() {
-                item.step(holds_block, &|_, _, _| None);
-            } else if let Some(splash) = item.step(solid, water) {
-                splashes.push(splash);
+                item.step(holds_block, &|_, _, _| None, None);
+            } else {
+                // Лежащий предмет сдвигается (и замечает, что опоры нет) не
+                // каждый такт, а раз в 4 — по номеру и возрасту; тяжесть же
+                // копится каждый такт. Снято чёрным ящиком (probe-item-rest):
+                // лежащий предмет раз в 20 тактов сообщает скорость −0,04,
+                // −0,08 или −0,12 — смотря по фазе, — и сразу за ней ноль в
+                // такте, когда он «упал» на свой же пол.
+                let cycle = (item.age as i64 + item.entity_id as i64).rem_euclid(ITEM_MOVE_EVERY) == 0;
+
+                if let Some(splash) = item.step(solid, water, Some(cycle)) {
+                    splashes.push(splash);
+                }
             }
+
+            let change = (item.vx - before.0).powi(2) + (item.vy - before.1).powi(2) + (item.vz - before.2).powi(2);
+
+            item.impulse = change > IMPULSE;
+            item.age += 1;
         }
 
         // Пропадают провалившиеся в пустоту и пролежавшие слишком долго.
@@ -641,6 +746,31 @@ impl Items {
         taken
     }
 
+    /// Едущие блоки поршней толкают всё, что лежит у них на пути
+    /// (redstone::shoves): предмет уезжает до края блока и ещё на зазор.
+    /// Скорость толчок не меняет — у оригинала сдвинутый предмет шлёт лишь
+    /// сдвиг места, без скорости (piston-push-items).
+    pub fn shove<F>(&mut self, shoves: &[crate::redstone::Shove], solid: &F)
+    where
+        F: Fn(i32, i32, i32) -> bool,
+    {
+        if shoves.is_empty() {
+            return;
+        }
+
+        for item in &mut self.items {
+            for shove in shoves {
+                let (half, height) = item.size();
+                let min = (item.x - half, item.y, item.z - half);
+                let max = (item.x + half, item.y + height, item.z + half);
+
+                if let Some(distance) = crate::redstone::shove_distance(shove, min, max) {
+                    item.shove((shove.dir.0 * distance, shove.dir.1 * distance, shove.dir.2 * distance), solid);
+                }
+            }
+        }
+    }
+
     /// Изменения, начиная с записи `from`.
     pub fn changes_since(&mut self, from: usize, reader: Reader) -> (Vec<Change>, usize) {
         (self.changes.since(from, reader), self.changes.count())
@@ -670,6 +800,36 @@ impl Dropped {
         }
     }
 
+    /// Половина ширины и высота рамки: у предмета 0,25 × 0,25, у динамита
+    /// и падающего блока 0,98 × 0,98 (вики, Item (entity), TNT, Falling
+    /// Block).
+    fn size(&self) -> (f64, f64) {
+        if self.block.is_some() { (0.49, 0.98) } else { (0.125, 0.25) }
+    }
+
+    /// Сдвиг поршнем: предмет переносится, упираясь в блоки, а скорость у
+    /// него остаётся прежней. Сдвинутый вбок уже не «лежит» — в следующем
+    /// такте он двигается сам и снова ложится (у оригинала так: сдвинутый
+    /// лежащий предмет следующий свой отчёт шлёт лишь через полный круг из
+    /// 4 тактов, piston-push-items).
+    fn shove<F>(&mut self, by: (f64, f64, f64), solid: &F)
+    where
+        F: Fn(i32, i32, i32) -> bool,
+    {
+        let speed = (self.vx, self.vy, self.vz);
+        let longest = by.0.abs().max(by.1.abs()).max(by.2.abs());
+        let steps = (longest / MAX_STEP).ceil().max(1.0);
+
+        for _ in 0..steps as i32 {
+            self.step_sideways(by.0 / steps, 0.0, solid);
+            self.step_sideways(0.0, by.2 / steps, solid);
+            self.step_down_or_up(by.1 / steps, solid);
+        }
+
+        (self.vx, self.vy, self.vz) = speed;
+        self.on_ground = false;
+    }
+
     /// Дотягивается ли игрок, стоящий здесь, до этого предмета.
     fn reaches(&self, x: f64, y: f64, z: f64) -> bool {
         let Some((at_x, at_y, at_z)) = self.touchable else {
@@ -686,7 +846,7 @@ impl Dropped {
     /// Порядок в точности такой, как в игре: сперва к скорости добавляется
     /// тяжесть, потом предмет двигается, и лишь потом скорость уменьшается
     /// сопротивлением. От порядка зависит вид дуги, поэтому он важен.
-    fn step<F, W>(&mut self, solid: &F, water: &W) -> Option<Splash>
+    fn step<F, W>(&mut self, solid: &F, water: &W, cycle: Option<bool>) -> Option<Splash>
     where
         F: Fn(i32, i32, i32) -> bool,
         W: Fn(i32, i32, i32) -> Option<ItemWater>,
@@ -731,15 +891,38 @@ impl Dropped {
             }
         }
 
-        self.fall(solid);
+        self.fall(solid, cycle);
         splash
     }
 
     /// Обычный такт без воды: тяжесть, шаг, трение.
-    fn fall<F>(&mut self, solid: &F)
+    ///
+    /// `cycle` — у выпавшего предмета: Some(такт ли сдвигаться лежащему).
+    /// Лежащий и не скользящий предмет в прочие такты не двигается вовсе:
+    /// тяжесть копится в скорости без трения (у оригинала лежащий шлёт
+    /// ровно −0,08 и −0,12, а не −0,0792), а опору он проверяет в свой
+    /// такт. У динамита и падающего блока (None) — как раньше: лежит, пока
+    /// есть опора.
+    fn fall<F>(&mut self, solid: &F, cycle: Option<bool>)
     where
         F: Fn(i32, i32, i32) -> bool,
     {
+        if let Some(cycle) = cycle {
+            if !self.no_gravity {
+                self.vy -= GRAVITY;
+            }
+
+            let sliding = self.vx * self.vx + self.vz * self.vz > SLIDING;
+
+            if self.on_ground && !sliding && !cycle {
+                return;
+            }
+
+            self.move_across(solid);
+            self.slow_down();
+            return;
+        }
+
         if self.resting() {
             // Лежит — пока под ним есть на чём лежать. Опору сломали —
             // предмет снова падает, а не висит в воздухе.
@@ -931,6 +1114,73 @@ mod tests {
 
         items.drop_item(1, stack(), at, velocity, Duration::ZERO);
         items
+    }
+
+    /// Лежащий предмет сдвигается раз в 4 такта (по возрасту и номеру), а
+    /// тяжесть копится каждый такт без трения: −0,04, −0,08, −0,12, потом
+    /// сдвиг и ноль. Резкая перемена (с −0,12 до нуля) — отчёт вне очереди,
+    /// с −0,08 — нет (probe-item-rest).
+    #[test]
+    fn a_lying_item_moves_every_fourth_tick() {
+        // Номер 1: сдвиг в такты, где возраст + 1 делится на 4.
+        let mut items = thrown((0.5, 64.0, 0.5), (0.0, 0.0, 0.0));
+        let mut seen = Vec::new();
+
+        for _ in 0..12 {
+            items.step(&floor, &floor, &loaded);
+            let item = &items.items()[0];
+            seen.push(((item.vy * 100.0).round() as i32, item.impulse));
+        }
+
+        // Такт 0 — первый шаг, падать некуда; такт 3 — свой такт сдвига.
+        assert_eq!(
+            seen,
+            [
+                (0, false), (-4, false), (-8, false), (0, false),
+                (-4, false), (-8, false), (-12, false), (0, true),
+                (-4, false), (-8, false), (-12, false), (0, true),
+            ]
+        );
+        assert_eq!(items.items()[0].y, 64.0);
+    }
+
+    /// Поршень сдвигает предмет, не меняя скорости; сдвинутый вбок уже не
+    /// лежит — в следующем такте он двигается сам и ложится снова.
+    #[test]
+    fn a_shoved_item_keeps_its_speed_and_settles_again() {
+        let mut items = thrown((1.5, 64.0, 0.5), (0.0, 0.0, 0.0));
+
+        items.step(&floor, &floor, &loaded);
+        assert!(items.items()[0].on_ground);
+
+        let head = crate::redstone::Shove { min: (0.5, 64.0, 0.0), max: (1.5, 65.0, 1.0), dir: (1.0, 0.0, 0.0) };
+        items.shove(&[head], &floor);
+
+        let item = &items.items()[0];
+        assert!((item.x - 1.635).abs() < 1e-9, "до края головы и ещё 0,01: {}", item.x);
+        assert!(!item.on_ground);
+        assert_eq!((item.vx, item.vy, item.vz), (0.0, 0.0, 0.0));
+
+        items.step(&floor, &floor, &loaded);
+        assert!(items.items()[0].on_ground);
+        assert_eq!(items.items()[0].y, 64.0);
+    }
+
+    /// Призванный без тяжести предмет висит, где его поставили.
+    #[test]
+    fn an_item_without_gravity_stays_in_the_air() {
+        let mut items = Items::new();
+
+        items.watch_changes(READER);
+        items.summon_item(1, stack(), (0.5, 70.0, 0.5), true);
+
+        for _ in 0..40 {
+            items.step(&floor, &floor, &loaded);
+        }
+
+        let item = &items.items()[0];
+        assert_eq!((item.y, item.vy), (70.0, 0.0));
+        assert!(!item.impulse);
     }
 
     /// Выброшенный предмет появляется в мире и попадает в журнал.

@@ -37,5 +37,8 @@
    ]
   }
  ],
- "record_ticks": 60
+ "record_ticks": 60,
+ "random": [
+  {"type": "anytick", "name": "руда гаснет на случайном такте", "match": "^block \\S+ (deepslate_)?redstone_ore\\[lit=false\\]$", "why": "minecraft.wiki/w/Redstone_Ore: «This effect continues until the redstone ore block receives a random tick (averaging 68.27 seconds)» — за 60 тактов записи руда гаснет редко и в любой такт (в трёх прогонах оригинала — ни разу)."}
+ ]
 }

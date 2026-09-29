@@ -785,6 +785,19 @@ pub fn blast_resistance(state: i32) -> f32 {
     own
 }
 
+/// Что выпадает из блока, который сломал сам мир — ход поршня, поток воды,
+/// отвал без опоры. Инструмента нет, но паутина при этом всё же даёт нитку:
+/// «A cobweb drops one piece of string if broken with a non-Silk Touch sword,
+/// if water touches or flows over it, or a piston pushes it» (вики, Cobweb;
+/// сценарий чёрного ящика piston-breaks). Рукой — ничего, как и прежде.
+pub fn world_drops(state: i32, luck: f32) -> Option<crate::inventory::Stack> {
+    if block_at_state(state) == Some("cobweb") {
+        return item_named("string").map(|string| crate::inventory::Stack::new(string, 1));
+    }
+
+    drops_by_luck(state, None, luck)
+}
+
 /// Что выпадает из блока, разрушенного динамитом: «as if mined by a player
 /// using a correct, unenchanted tool (or an empty hand if the correct tool
 /// would be shears)» (вики, TNT). Инструмент — первый годный из таблицы,
@@ -921,6 +934,19 @@ mod tests {
     fn unknown_blocks_have_no_orientation() {
         assert!(orientation("stone").is_none());
         assert!(orientation("oak_planks").is_none());
+    }
+
+    /// Паутина, сломанная поршнем или водой, даёт нитку, а рукой — ничего.
+    #[test]
+    fn a_cobweb_broken_by_the_world_drops_string() {
+        let cobweb = state_of("cobweb");
+
+        assert!(drops_by_luck(cobweb, None, 0.5).is_none());
+
+        let stack = world_drops(cobweb, 0.5).expect("из паутины выпадает нитка");
+
+        assert_eq!(Some(stack.item), item_named("string"));
+        assert_eq!(world_drops(state_of("dirt"), 0.5).map(|stack| stack.item), Some(item_of("dirt")));
     }
 
     /// Из сломанного блока выпадает то, что положено: из камня булыжник,

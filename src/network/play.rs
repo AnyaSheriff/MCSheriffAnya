@@ -82,6 +82,10 @@ const SERVERBOUND_KEEP_ALIVE: i32 = 0x1C;
 /// Serverbound Set Player Position — игрок сдвинулся.
 const SET_PLAYER_POSITION: i32 = 0x1E;
 
+/// На сколько место от клиента может разойтись с серверным после толчка
+/// поршнем, чтобы его приняли без сверки.
+const SHOVE_TOLERANCE: f64 = 0.0625;
+
 /// Serverbound Set Player Position and Rotation — игрок сдвинулся и повернулся.
 const SET_PLAYER_POSITION_AND_ROTATION: i32 = 0x1F;
 
@@ -140,6 +144,11 @@ const FALLING_BLOCK_ENTITY_TYPE: i32 = 51;
 /// Номер вида сущности «подожжённый динамит» (minecraft-data 26.1,
 /// entities.json: `tnt`, id 132).
 const TNT_ENTITY_TYPE: i32 = 132;
+
+/// Номер вида сущности «молния» (minecraft-data 26.1, entities.json:
+/// `lightning_bolt`, id 77; тот же номер прочёл робот чёрного ящика
+/// в пакете оригинала, сценарий lightning-rod).
+const LIGHTNING_ENTITY_TYPE: i32 = 77;
 
 /// Свойства подожжённого динамита (minecraft-data 26.1, entities.json,
 /// metadataKeys): восьмое — запал (`fuse`), девятое — состояние блока
@@ -513,6 +522,9 @@ struct ShownItem {
     place: (f64, f64, f64),
     speed: (f64, f64, f64),
     on_ground: bool,
+
+    /// Ушёл ли отчёт такта появления (`send_item_ticks`).
+    first_sent: bool,
 }
 
 type SeenItems = HashMap<i32, ShownItem>;
@@ -1304,6 +1316,9 @@ async fn send_dropped_item(stream: &mut Outgoing<'_>, item: &Dropped) -> io::Res
     // Динамит появляется уже с толчком — клиент ведёт полёт сам.
     match item.fuse {
         Some(_) => types::push_velocity(&mut body, item.vx, item.vy, item.vz),
+        // Выпавший предмет — тоже: о нём рассказывается лишь раз в 20
+        // тактов (`send_item_ticks`), и полёт до того клиент ведёт сам.
+        None if item.block.is_none() => types::push_velocity(&mut body, item.vx, item.vy, item.vz),
         None => types::push_velocity(&mut body, 0.0, 0.0, 0.0),
     }
 
@@ -1359,12 +1374,44 @@ async fn send_dropped_item(stream: &mut Outgoing<'_>, item: &Dropped) -> io::Res
     let mut data = encode_varint(SET_ENTITY_DATA);
 
     data.extend_from_slice(&encode_varint(item.entity_id));
+    // Без тяжести (`NoGravity` в призыве) — свойство 5, логическое
+    // (minecraft-data 26.1, entities.json: `no_gravity`), иначе клиент
+    // тянул бы предмет вниз.
+    if item.no_gravity {
+        const NO_GRAVITY: u8 = 5;
+        const PROPERTY_BOOLEAN: i32 = 8;
+
+        data.push(NO_GRAVITY);
+        data.extend_from_slice(&encode_varint(PROPERTY_BOOLEAN));
+        data.push(1);
+    }
+
     data.push(ITEM_PROPERTY);
     data.extend_from_slice(&encode_varint(PROPERTY_SLOT));
     push_slot(&mut data, Some(item.stack));
     data.push(PROPERTIES_END);
 
     write_body(stream, data).await
+}
+
+/// Молния: одна сущность без скорости и без свойств — как у оригинала
+/// (чёрный ящик, lightning-rod: данные 0). Гром и треск клиент играет сам.
+async fn send_lightning(stream: &mut Outgoing<'_>, bolt: &crate::lightning::Bolt) -> io::Result<()> {
+    let mut body = encode_varint(ADD_ENTITY);
+
+    body.extend_from_slice(&encode_varint(bolt.entity_id));
+    body.extend_from_slice(&bolt.uuid);
+    body.extend_from_slice(&encode_varint(LIGHTNING_ENTITY_TYPE));
+    push_f64(&mut body, bolt.x);
+    push_f64(&mut body, bolt.y);
+    push_f64(&mut body, bolt.z);
+    types::push_velocity(&mut body, 0.0, 0.0, 0.0);
+    body.push(0);
+    body.push(0);
+    body.push(0);
+    body.extend_from_slice(&encode_varint(0));
+
+    write_body(stream, body).await
 }
 
 /// Вагонетка, как её знает клиент: последнее присланное место (точное и
@@ -1503,7 +1550,14 @@ async fn send_cart_moves(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
 
         let speed = (now.vx, now.vy, now.vz);
 
-        if now.hits != shown.hits || now.impulses != shown.impulses {
+        // Толкнули или ударили — скорость уходит сразу, а с ней и место, как
+        // в очередную рассылку (minecart-push: пока игрок толкает, оригинал
+        // каждый такт шлёт скорость и сдвиг; minecart-collide: у ещё не
+        // сдвинувшейся — одну скорость). Раз в 60 тактов место уходит только
+        // в очередную рассылку. [проверить]: поворот вне очереди.
+        let pushed = now.hits != shown.hits || now.impulses != shown.impulses;
+
+        if pushed {
             (shown.hits, shown.impulses) = (now.hits, now.impulses);
             send_velocity(stream, entity_id, speed).await?;
             shown.speed = speed;
@@ -1511,8 +1565,9 @@ async fn send_cart_moves(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
 
         // Такт с появления: сразу после появления — нулевой.
         let tick = age.saturating_sub(1);
+        let due = tick % EVERY == 0;
 
-        if tick % EVERY == 0 {
+        if due || pushed {
             let change = (speed.0 - shown.speed.0).powi(2) + (speed.1 - shown.speed.1).powi(2) + (speed.2 - shown.speed.2).powi(2);
 
             if change > SPED || (speed == (0.0, 0.0, 0.0) && shown.speed != (0.0, 0.0, 0.0)) {
@@ -1534,8 +1589,8 @@ async fn send_cart_moves(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
                 (shown.place, shown.grid, shown.yaw, shown.pitch) = (place, grid, yaw, pitch);
                 shown.on_ground = now.on_ground;
                 shown.teleports = teleports;
-            } else if moved || tick % FORCED == 0 || turned {
-                let kind = match (moved || tick % FORCED == 0, turned) {
+            } else if moved || (due && tick % FORCED == 0) || turned {
+                let kind = match (moved || (due && tick % FORCED == 0), turned) {
                     (true, true) => ENTITY_POSITION_AND_ROTATION,
                     (true, false) => ENTITY_POSITION,
                     (false, _) => ENTITY_ROTATION,
@@ -1711,6 +1766,7 @@ async fn send_pending_item_changes(
                 send_cart(stream, &cart).await?;
                 carts.insert(cart.entity_id, ShownCart::of(&cart));
             }
+            items::Change::Lightning(bolt) => send_lightning(stream, &bolt).await?,
             items::Change::Taken { entity_id, by, count } => {
                 send_pick_up(stream, entity_id, by, count).await?;
                 send_remove_entity(stream, entity_id).await?;
@@ -1722,10 +1778,10 @@ async fn send_pending_item_changes(
     Ok(())
 }
 
-/// Досылает клиенту движение летящих предметов.
-///
-/// Предметы переносятся целиком, а не смещениями: в пакете переноса есть
-/// ещё и скорость, а она клиенту нужна — он досчитывает полёт сам.
+/// Досылает клиенту движение динамита и падающих блоков: переносом целиком,
+/// как только что-то изменилось, — в переносе есть и скорость, по ней
+/// клиент досчитывает полёт сам. [проверить]: у оригинала и у них своя
+/// очередь рассылки, как у предметов (`send_item_ticks`).
 async fn send_item_moves(
     stream: &mut Outgoing<'_>,
     shared: &Shared,
@@ -1737,7 +1793,10 @@ async fn send_item_moves(
         .lock()
         .expect("предметы захвачены другим потоком")
         .items()
-        .to_vec();
+        .iter()
+        .filter(|item| item.block.is_some())
+        .cloned()
+        .collect();
 
     for item in items {
         // О только что появившемся расскажет журнал — там же он попадёт
@@ -1766,12 +1825,118 @@ async fn send_item_moves(
     Ok(())
 }
 
+/// В конце такта досылает клиенту, что стало с выпавшими предметами, —
+/// в очередь, как оригинал (зонды probe-item-rest и piston-push-items):
+///
+/// - о предмете рассказывается раз в 20 тактов от появления и вне очереди —
+///   в такте, когда его скорость резко изменилась (`Dropped::impulse`);
+/// - тогда уходит скорость, если она заметно изменилась (квадрат разницы
+///   больше 1e-7 или стала нулём), и место: шагом, если сдвинулся хотя бы
+///   на 1/362 блока, а раз в 60 тактов — в любом случае; сменил «лежит ли»
+///   — сверкой места целиком, со скоростью;
+/// - в такте появления — только нулевой шаг с «лежит ли» из появления: этот
+///   отчёт у оригинала идёт раньше первого такта предмета (у призванного
+///   на полу — «не лежит», а через круг — сверка «лежит»).
+async fn send_item_ticks(
+    stream: &mut Outgoing<'_>,
+    shared: &Shared,
+    dimension: crate::dimension::Dimension,
+    seen: &mut SeenItems,
+) -> io::Result<()> {
+    /// Раз во сколько тактов о предмете рассказывается в очередь и раз во
+    /// сколько — место, даже если оно не изменилось.
+    const EVERY: u64 = 20;
+    const FORCED: u64 = 60;
+
+    /// Меньшие сдвиги и перемены скорости не сообщаются.
+    const MOVED: f64 = 7.629_394_531_25e-6;
+    const SPED: f64 = 1e-7;
+
+    let items: Vec<(i32, u64, bool, ShownItem)> = shared
+        .items_in(dimension)
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .items()
+        .iter()
+        .filter(|item| item.block.is_none() && seen.contains_key(&item.entity_id))
+        .map(|item| (item.entity_id, item.age, item.impulse, shown_item(item)))
+        .collect();
+
+    for (entity_id, age, impulse, now) in items {
+        let Some(mut shown) = seen.get(&entity_id).copied() else {
+            continue;
+        };
+
+        // Такт с появления: в такте появления — нулевой.
+        let tick = age.saturating_sub(1);
+
+        if tick == 0 {
+            if !shown.first_sent {
+                let mut body = encode_varint(ENTITY_POSITION);
+
+                body.extend_from_slice(&encode_varint(entity_id));
+                push_i16(&mut body, 0);
+                push_i16(&mut body, 0);
+                push_i16(&mut body, 0);
+                body.push(u8::from(shown.on_ground));
+                write_body(stream, body).await?;
+                shown.first_sent = true;
+                seen.insert(entity_id, shown);
+            }
+            continue;
+        }
+
+        let due = tick.is_multiple_of(EVERY);
+
+        if !due && !impulse {
+            continue;
+        }
+
+        let speed = now.speed;
+        let change = (speed.0 - shown.speed.0).powi(2) + (speed.1 - shown.speed.1).powi(2) + (speed.2 - shown.speed.2).powi(2);
+
+        if change > SPED || (speed == (0.0, 0.0, 0.0) && shown.speed != (0.0, 0.0, 0.0)) {
+            send_velocity(stream, entity_id, speed).await?;
+            shown.speed = speed;
+        }
+
+        let place = now.place;
+        let grid = grid_of(place);
+        let shown_grid = grid_of(shown.place);
+        let moved = (place.0 - shown.place.0).powi(2) + (place.1 - shown.place.1).powi(2) + (place.2 - shown.place.2).powi(2) >= MOVED;
+        let forced = due && tick.is_multiple_of(FORCED);
+        let step = (grid.0 - shown_grid.0, grid.1 - shown_grid.1, grid.2 - shown_grid.2);
+        let fits = |value: i64| i16::try_from(value).is_ok();
+
+        if now.on_ground != shown.on_ground || !(fits(step.0) && fits(step.1) && fits(step.2)) {
+            send_teleport_with_speed(stream, entity_id, item_place(place, now.on_ground), speed).await?;
+            shown.place = place;
+            shown.on_ground = now.on_ground;
+        } else if moved || forced {
+            let mut body = encode_varint(ENTITY_POSITION);
+
+            body.extend_from_slice(&encode_varint(entity_id));
+            push_i16(&mut body, step.0 as i16);
+            push_i16(&mut body, step.1 as i16);
+            push_i16(&mut body, step.2 as i16);
+            body.push(u8::from(now.on_ground));
+            write_body(stream, body).await?;
+            shown.place = place;
+        }
+
+        seen.insert(entity_id, shown);
+    }
+
+    Ok(())
+}
+
 /// То, что о предмете надо рассказать клиенту.
 fn shown_item(item: &Dropped) -> ShownItem {
     ShownItem {
         place: (item.x, item.y, item.z),
         speed: (item.vx, item.vy, item.vz),
         on_ground: item.on_ground,
+        first_sent: false,
     }
 }
 
@@ -2786,11 +2951,13 @@ fn hints_for(text: &str, typed: &str, shared: &Shared, who: &[u8; 16]) -> Vec<St
         // есть вагонетки, предметы, динамит и падающие блоки.
         ("summon", 1) => crate::minecart::Kind::ALL
             .into_iter()
-            .map(|kind| kind.name().to_string())
+            .map(|kind| kind.name())
+            .chain(["lightning_bolt"])
+            .map(|name| name.to_string())
             .filter(|name| name.starts_with(typed.strip_prefix("minecraft:").unwrap_or(typed)))
             .collect(),
 
-        ("kill", 1) => ["item", "tnt", "falling_block", "!player"]
+        ("kill", 1) => ["item", "tnt", "falling_block", "lightning_bolt", "!player"]
             .into_iter()
             .chain(crate::minecart::Kind::ALL.into_iter().map(|kind| kind.name()))
             .map(|kind| format!("@e[type={}]", kind))
@@ -3042,6 +3209,7 @@ async fn send_pending_world_events(
     // Изменения блоков копятся до метки рассылки — и между вызовами тоже:
     // сделанное после метки уйдёт со следующей.
     let mut pending = std::mem::take(&mut player.pending_changes);
+    let mut entities = std::mem::take(&mut player.pending_entities);
 
     for event in &events {
         match event {
@@ -3049,7 +3217,25 @@ async fn send_pending_world_events(
                 send_block_update(stream, change.x, change.y, change.z, change.state).await?;
             }
             WorldEvent::Change(change) => pending.push(*change),
-            WorldEvent::Broadcast => send_block_changes(stream, &mut pending).await?,
+            WorldEvent::Broadcast => {
+                send_block_changes(stream, &mut pending).await?;
+
+                // Данные блок-сущностей — после пачки, по одному разу на
+                // место: последние, в порядке первого появления места.
+                let mut order: Vec<PendingEntity> = Vec::new();
+
+                for (x, y, z, kind, nbt) in entities.drain(..) {
+                    match order.iter_mut().find(|there| (there.0, there.1, there.2) == (x, y, z)) {
+                        Some(there) => *there = (x, y, z, kind, nbt),
+                        None => order.push((x, y, z, kind, nbt)),
+                    }
+                }
+
+                for (x, y, z, kind, nbt) in order {
+                    send_block_entity(stream, (x, y, z), kind, &nbt).await?;
+                }
+            }
+            WorldEvent::BlockEntity { x, y, z, kind, nbt } => entities.push((*x, *y, *z, *kind, nbt.clone())),
             WorldEvent::Action(action) => {
                 let mut body = encode_varint(BLOCK_ACTION);
 
@@ -3060,6 +3246,7 @@ async fn send_pending_world_events(
 
                 write_body(stream, body).await?;
             }
+            WorldEvent::Sound(sound) if sound.except == Some(player.entity_id) => {}
             WorldEvent::Sound(sound) => send_sound(stream, sound).await?,
             WorldEvent::Level { x, y, z, effect, data } => {
                 let mut body = encode_varint(WORLD_EVENT);
@@ -3127,8 +3314,23 @@ async fn send_pending_world_events(
     }
 
     player.pending_changes = pending;
+    player.pending_entities = entities;
 
     Ok(lagged)
+}
+
+/// Данные блок-сущности, ждущие рассылки: место, вид, сетевой NBT.
+type PendingEntity = (i32, i32, i32, i32, Arc<[u8]>);
+
+/// Block Entity Data: место, вид и сетевой NBT.
+async fn send_block_entity(stream: &mut Outgoing<'_>, (x, y, z): (i32, i32, i32), kind: i32, nbt: &[u8]) -> io::Result<()> {
+    let mut body = encode_varint(BLOCK_ENTITY_DATA);
+
+    push_packed_position(&mut body, x, y, z);
+    body.extend_from_slice(&encode_varint(kind));
+    body.extend_from_slice(nbt);
+
+    write_body(stream, body).await
 }
 
 /// Открывает клиенту окно хранилища в этом месте: Open Screen и всё
@@ -3789,11 +3991,25 @@ async fn send_chunk(
     // складываются байты уже без него: складывание палитр — самое долгое
     // в пакете, и такт всё это время ждал бы мира. Хранилища — тем же
     // захватом.
-    let (taken, entities) = {
+    let (taken, entities, shelves) = {
         let world = world.lock().expect("мир захвачен другим потоком");
         let taken = world.chunk_packet(chunk_x, chunk_z, |sections, biomes| (sections.to_vec(), biomes.to_vec()));
+        let entities = world.chunk_containers(chunk_x, chunk_z);
 
-        (taken, world.chunk_containers(chunk_x, chunk_z))
+        // Полки показывают свои предметы всем — их данные идут и в пакете
+        // чанка, иначе вошедший увидит пустые полки. [проверить] так ли у
+        // оригинала.
+        let shelves: HashMap<(i32, i32, i32), Vec<u8>> = entities
+            .iter()
+            .filter(|(_, _, _, kind)| *kind == containers::Kind::Shelf)
+            .filter_map(|&(x, y, z, _)| {
+                let (wx, wz) = (chunk_x * 16 + x, chunk_z * 16 + z);
+
+                world.container(wx, y, wz).map(|c| ((x, y, z), redstone::shelf::nbt(&c.slots)))
+            })
+            .collect();
+
+        (taken, entities, shelves)
     };
 
     let sections = taken.map(|(sections, biomes)| {
@@ -3869,7 +4085,11 @@ async fn send_chunk(
         body.push(((x << 4) | z) as u8);
         push_i16(&mut body, y as i16);
         body.extend_from_slice(&encode_varint(kind));
-        body.push(0); // данных нет: пустой тег
+
+        match shelves.get(&(x, y, z)) {
+            Some(nbt) => body.extend_from_slice(nbt),
+            None => body.push(0), // данных нет: пустой тег
+        }
     }
 
     push_light(&mut body, top, light);
@@ -4519,6 +4739,18 @@ async fn read_and_log_play_packets(
                     player.save(&shared.playerdata);
                 }
 
+                Order::SetSlot { slot, stack } => {
+                    player.inventory.set(slot, stack);
+                    send_container_slot(stream, player, slot).await?;
+                }
+
+                Order::Hold { stack } => {
+                    let slot = inventory::FIRST_HOTBAR + player.inventory.selected();
+
+                    player.inventory.set(slot, stack);
+                    send_container_slot(stream, player, slot).await?;
+                }
+
                 Order::Clear => {
                     for slot in 0..inventory::SLOTS as i32 {
                         player.inventory.set(slot, None);
@@ -4563,6 +4795,18 @@ async fn read_and_log_play_packets(
                 // Движение вагонеток — в конце такта, после изменений мира,
                 // как у оригинала.
                 send_cart_moves(stream, shared, player).await?;
+                send_item_ticks(stream, shared, player.dimension, &mut seen_items).await?;
+
+                // Едущие блоки поршней сдвинули игрока: по серверу он уже там.
+                let shoved = shared.players.lock().expect("список игроков захвачен другим потоком").take_shoved(&player.uuid);
+
+                if let Some(((dx, dy, dz), _)) = shoved {
+                    player.x += dx;
+                    player.y += dy;
+                    player.z += dz;
+                    player.shoved_to = Some((player.x, player.y, player.z));
+                    publish_player(shared, player);
+                }
 
                 // Журнал выбросил события, не дождавшись этого клиента: его
                 // картина мира разошлась с сервером. Обзор присылается заново.
@@ -4604,6 +4848,21 @@ async fn read_and_log_play_packets(
                 }
 
                 let reaction = handle_client_packet(&packet, player, shared);
+
+                // Команда перенесла самого игрока: в мире он на новом месте
+                // уже в этом такте, до шага сущностей, как у оригинала
+                // (minecart-push: вагонетку толкает в такте команды). Пакет
+                // переноса клиенту уйдёт с поручением на ближайшем круге.
+                let moved = if packet.id == SERVERBOUND_CHAT_COMMAND {
+                    shared.players.lock().expect("список игроков захвачен другим потоком").pending_teleport(&player.uuid)
+                } else {
+                    None
+                };
+
+                if let Some((x, y, z)) = moved {
+                    (player.x, player.y, player.z) = (x, y, z);
+                    publish_player(shared, player);
+                }
 
                 if gated {
                     shared
@@ -4782,6 +5041,10 @@ async fn apply_reaction(
         send_window_property(stream, window, property, value).await?;
     }
 
+    if reaction.resync {
+        send_player_position(stream, player).await?;
+    }
+
     if let Some(window) = reaction.close_window {
         let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
 
@@ -4856,6 +5119,10 @@ struct Reaction {
 
     /// Окно, которое надо закрыть у клиента (с кафедры забрали книгу).
     close_window: Option<i32>,
+
+    /// Вернуть клиента на место, где он по серверу (его сдвинул поршень, а
+    /// клиент прислал прежнее место).
+    resync: bool,
 }
 
 /// Подсказки клиенту в ответ на Tab.
@@ -4939,6 +5206,22 @@ fn handle_client_packet(
                 && let Some((yaw, pitch)) = read_rotation(payload, POSITION_BYTES)
             {
                 player.set_rotation(yaw, pitch);
+            }
+
+            // Поршень сдвинул игрока, а клиент прислал место заметно
+            // иное: оригинал на ближайший пакет места отвечает сверкой —
+            // возвращает игрока туда, куда его сдвинули (piston-push-player:
+            // робот, не знающий о толчке, получил сверку на (4,31; 0; 3,5)
+            // в ответ на свой очередной пакет места). Сдвиг, который клиент
+            // посчитал сам, принимается. Допуск 0,0625 — как у оригинала на
+            // «moved wrongly» [проверить].
+            if let Some(at) = player.shoved_to.take() {
+                let off = (x - at.0).powi(2) + (y - at.1).powi(2) + (z - at.2).powi(2);
+
+                if off > SHOVE_TOLERANCE * SHOVE_TOLERANCE {
+                    reaction.resync = true;
+                    return reaction;
+                }
             }
 
             player.set_position(x, y, z);
@@ -5546,11 +5829,12 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     let (clicked_x, clicked_y, clicked_z) = cursor.position()?;
     let face = cursor.varint()?;
 
-    // Из точки щелчка серверу нужна только высота: от неё зависит, какая
-    // половина блока достанется ступени или плите.
-    let _cursor_x = cursor.f32()?;
+    // Точка щелчка внутри блока: по высоте — какая половина блока
+    // достанется ступени или плите, по всем трём — какая ячейка полки или
+    // резного шкафа.
+    let cursor_x = cursor.f32()?;
     let cursor_y = cursor.f32()?;
-    let _cursor_z = cursor.f32()?;
+    let cursor_z = cursor.f32()?;
     let _inside_block = cursor.u8()?;
 
     let sequence = cursor.sequence()?;
@@ -5607,6 +5891,22 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         let kind = containers::Kind::of(world.get_block(clicked_x, clicked_y, clicked_z));
         let (bx, by, bz) = offset_towards(clicked_x, clicked_y, clicked_z, face);
 
+        // Око в рамку портала, светокамень в якорь, кусок торта. Порядок —
+        // как у прочих щелчков (чёрный ящик, comparator-click): повтор
+        // блока, повтор за гранью, потом общая рассылка.
+        let held_name = player.inventory.held().and_then(|stack| blocks::item_name(stack.item));
+
+        if let Some(spend) = redstone::use_with_item(&mut world, clicked, held_name, player.game_mode == GAME_MODE_CREATIVE) {
+            world.tell_directly(clicked_x, clicked_y, clicked_z);
+            world.tell_directly(bx, by, bz);
+            redstone::settle(&mut world);
+            drop(world);
+
+            let slots = if spend { spend_placed(player) } else { Vec::new() };
+
+            return Some(Reaction { slots, ..Reaction::accepted(sequence) });
+        }
+
         // Проигрыватель: вставить пластинку из руки или выбросить ту, что
         // внутри. Окна у него нет; пустой и без пластинки в руке — щелчок
         // идёт дальше, как по обычному блоку.
@@ -5643,6 +5943,76 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             }
         }
 
+        // Полка: ячейка по точке щелчка меняется с рукой, под током —
+        // сцепка с правой частью панели (redstone/shelf.rs). Порядок как
+        // у прочих щелчков: звук, повтор блока и за гранью, пачка, данные.
+        if kind == Some(containers::Kind::Shelf) {
+            let hotbar: Vec<Option<inventory::Stack>> =
+                (0..9).map(|index| player.inventory.slot(inventory::FIRST_HOTBAR + index)).collect();
+            let selected = player.inventory.selected() as usize;
+            let used = redstone::shelf::use_shelf(
+                &mut world,
+                clicked,
+                face,
+                (cursor_x, cursor_y, cursor_z),
+                &hotbar,
+                selected,
+                player.game_mode == GAME_MODE_CREATIVE,
+            );
+
+            match used {
+                Some(used) => {
+                    world.tell_directly(clicked_x, clicked_y, clicked_z);
+                    world.tell_directly(bx, by, bz);
+                    containers::after_change(&mut world);
+                    redstone::settle(&mut world);
+                    drop(world);
+
+                    let changes = match used {
+                        redstone::shelf::Used::Hand(stack) => vec![(selected, stack)],
+                        redstone::shelf::Used::Hotbar(list) => list,
+                    };
+                    let mut slots = Vec::new();
+
+                    for (index, stack) in changes {
+                        let slot = inventory::FIRST_HOTBAR + index as i32;
+
+                        if player.inventory.slot(slot) != stack {
+                            player.inventory.set(slot, stack);
+                            slots.push(slot);
+                        }
+                    }
+
+                    return Some(Reaction { slots, ..Reaction::accepted(sequence) });
+                }
+                None => kind = None,
+            }
+        }
+
+        // Резной книжный шкаф: книга из руки — в ячейку под точкой щелчка,
+        // из занятой ячейки — игроку (redstone/bookshelf.rs).
+        if kind == Some(containers::Kind::ChiseledBookshelf) {
+            match redstone::bookshelf::use_bookshelf(&mut world, clicked, face, (cursor_x, cursor_y, cursor_z), player.inventory.held()) {
+                Some(used) => {
+                    world.tell_directly(clicked_x, clicked_y, clicked_z);
+                    world.tell_directly(bx, by, bz);
+                    containers::after_change(&mut world);
+                    redstone::settle(&mut world);
+                    drop(world);
+
+                    let slots = match used {
+                        redstone::bookshelf::Used::Placed => spend_placed(player),
+                        // Не влезшее в инвентарь пропадает. [проверить] у
+                        // оригинала оно выпадает под ноги.
+                        redstone::bookshelf::Used::Taken(book) => player.inventory.put(book).0,
+                    };
+
+                    return Some(Reaction { slots, ..Reaction::accepted(sequence) });
+                }
+                None => kind = None,
+            }
+        }
+
         if kind.is_some() {
             let halves = containers::halves(&world, clicked);
 
@@ -5662,7 +6032,22 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             return Some(Reaction::accepted(sequence));
         }
 
-        if redstone::use_block_on(&mut world, (clicked_x, clicked_y, clicked_z), face) {
+        // Статуя медного голема: следующая поза (redstone/statue.rs).
+        if redstone::statue::use_statue(&mut world, clicked) {
+            world.tell_directly(clicked_x, clicked_y, clicked_z);
+            world.tell_directly(bx, by, bz);
+            redstone::settle(&mut world);
+
+            return Some(Reaction::accepted(sequence));
+        }
+
+        // Звуки, вызванные рукой (дверь, люк, калитка), щёлкнувшему не
+        // шлются: его клиент играет их сам.
+        world.actor = Some(player.entity_id);
+        let used = redstone::use_block_on(&mut world, (clicked_x, clicked_y, clicked_z), face);
+        world.actor = None;
+
+        if used {
             log_debug!("Play: {} щёлкнул по {} {} {}", player.name, clicked_x, clicked_y, clicked_z);
 
             // Как у оригинала: после щелчка клиенту повторяют, что стоит
@@ -6693,6 +7078,10 @@ struct PlayerState {
     teleport: i32,
     awaiting_teleport: bool,
 
+    /// Где игрок по серверу после того, как его сдвинул поршень (tick.rs):
+    /// ближайшее место от клиента с этим сверяется (`SET_PLAYER_POSITION`).
+    shoved_to: Option<(f64, f64, f64)>,
+
     /// Номер последнего действия, которым из ведра вылили: тот же щелчок
     /// следом присылает Use Item, и вылитое не должно тут же зачерпнуться.
     poured: Option<i32>,
@@ -6758,6 +7147,9 @@ struct PlayerState {
 
     /// Изменения блоков, ждущие метки рассылки (`WorldEvent::Broadcast`).
     pending_changes: Vec<world::BlockChange>,
+
+    /// Данные блок-сущностей, которые уйдут после ближайшей пачки.
+    pending_entities: Vec<PendingEntity>,
 
     /// Инвентарь менялся, пока было открыто окно хранилища, так, что окно
     /// этого не показало (броня, вторая рука): после закрытия прислать
@@ -6867,6 +7259,7 @@ impl PlayerState {
             sneaking: false,
             teleport: 0,
             awaiting_teleport: false,
+            shoved_to: None,
             poured: None,
             seen_carts: HashMap::new(),
             last_attack: 0,
@@ -6882,6 +7275,7 @@ impl PlayerState {
             state_id: 0,
             window: None,
             pending_changes: Vec::new(),
+            pending_entities: Vec::new(),
             inventory_after_window: false,
             window_counter: 0,
             skin,
@@ -6910,6 +7304,7 @@ impl PlayerState {
             dimension: self.dimension,
             sneaking: self.sneaking,
             swings: 0,
+            shoved: ((0.0, 0.0, 0.0), 0),
         }
     }
 

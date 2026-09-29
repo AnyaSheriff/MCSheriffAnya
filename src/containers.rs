@@ -33,6 +33,17 @@ pub enum Kind {
     /// Крафтер: сетка 3×3, выключенные ячейки и такты «крафтит»
     /// (redstone/crafter.rs).
     Crafter,
+
+    /// Медный сундук любой стадии, вощёный или нет: во всём как сундук,
+    /// только звуки свои и в пару идёт с любым медным (вики, Copper Chest).
+    CopperChest,
+
+    /// Полка: три ячейки, щелчок меняет предмет в руке (redstone/shelf.rs).
+    Shelf,
+
+    /// Резной книжный шкаф: шесть ячеек под книги и последняя тронутая
+    /// ячейка (redstone/bookshelf.rs).
+    ChiseledBookshelf,
 }
 
 impl Kind {
@@ -48,14 +59,25 @@ impl Kind {
             "jukebox" => Kind::Jukebox,
             "lectern" => Kind::Lectern,
             "crafter" => Kind::Crafter,
+            "chiseled_bookshelf" => Kind::ChiseledBookshelf,
+            name if name.ends_with("copper_chest") => Kind::CopperChest,
+            name if name.ends_with("_shelf") => Kind::Shelf,
             _ => return None,
         })
+    }
+
+    /// Сундук ли это — простой, ловушка или медный: половины, крышка,
+    /// окно сундука.
+    pub fn is_chest(self) -> bool {
+        matches!(self, Kind::Chest | Kind::TrappedChest | Kind::CopperChest)
     }
 
     /// Сколько ячеек у хранилища.
     pub fn size(self) -> usize {
         match self {
-            Kind::Chest | Kind::TrappedChest | Kind::Barrel => 27,
+            Kind::Chest | Kind::TrappedChest | Kind::Barrel | Kind::CopperChest => 27,
+            Kind::Shelf => 3,
+            Kind::ChiseledBookshelf => 6,
             Kind::Hopper => 5,
             Kind::Dropper | Kind::Dispenser | Kind::Crafter => 9,
             Kind::Jukebox | Kind::Lectern => 1,
@@ -67,8 +89,11 @@ impl Kind {
     /// tools/blackbox/data/registries.json).
     pub fn block_entity_type(self) -> i32 {
         match self {
-            Kind::Chest => 1,
+            // Своего вида у медного сундука в реестре нет — он `chest`.
+            Kind::Chest | Kind::CopperChest => 1,
             Kind::TrappedChest => 2,
+            Kind::ChiseledBookshelf => 39,
+            Kind::Shelf => 40,
             Kind::Dispenser => 5,
             Kind::Dropper => 6,
             Kind::Hopper => 18,
@@ -91,6 +116,9 @@ impl Kind {
             Kind::Jukebox => 6,
             Kind::Lectern => 7,
             Kind::Crafter => 8,
+            Kind::CopperChest => 9,
+            Kind::Shelf => 10,
+            Kind::ChiseledBookshelf => 11,
         }
     }
 
@@ -105,6 +133,9 @@ impl Kind {
             6 => Kind::Jukebox,
             7 => Kind::Lectern,
             8 => Kind::Crafter,
+            9 => Kind::CopperChest,
+            10 => Kind::Shelf,
+            11 => Kind::ChiseledBookshelf,
             _ => return None,
         })
     }
@@ -129,7 +160,8 @@ pub struct Container {
     /// 0 — музыка не играет (пластинки нет или песня кончилась).
     pub started: u64,
 
-    /// Кафедра: открытая страница, с нуля.
+    /// Кафедра: открытая страница, с нуля. Резной книжный шкаф: последняя
+    /// тронутая ячейка (`last_interacted_slot`), −1 — никакой.
     pub page: i32,
 
     /// Кафедра: сколько страниц в книге.
@@ -152,7 +184,8 @@ impl Container {
             cooldown: 0,
             ticked: 0,
             started: 0,
-            page: 0,
+            // У шкафа «последней тронутой» ячейки поначалу нет.
+            page: if kind == Kind::ChiseledBookshelf { -1 } else { 0 },
             pages: 0,
             disabled: 0,
             crafting: 0,
@@ -227,6 +260,8 @@ impl Container {
                 out.extend_from_slice(&self.disabled.to_be_bytes());
                 out.push(self.crafting.clamp(0, 127) as u8);
             }
+            // Шкаф помнит последнюю тронутую ячейку (−1 — никакой).
+            Kind::ChiseledBookshelf => out.push(self.page.clamp(-1, 5) as i8 as u8),
             _ => {}
         }
     }
@@ -274,6 +309,7 @@ impl Container {
                 container.disabled = u16::from_be_bytes(take(2)?.try_into().ok()?) & 0x1ff;
                 container.crafting = take(1)?[0] as i32;
             }
+            Kind::ChiseledBookshelf => container.page = i32::from(take(1)?[0] as i8),
             _ => {}
         }
 
@@ -400,7 +436,7 @@ pub fn halves(world: &World, pos: Pos) -> Vec<Pos> {
         return Vec::new();
     };
 
-    if !matches!(kind, Kind::Chest | Kind::TrappedChest) {
+    if !kind.is_chest() {
         return vec![pos];
     }
 
@@ -445,23 +481,27 @@ pub fn can_open(world: &World, halves: &[Pos]) -> bool {
     halves.iter().all(|&(x, y, z)| {
         let state = world.get_block(x, y, z);
 
-        !matches!(Kind::of(state), Some(Kind::Chest | Kind::TrappedChest)) || !blocks::conductive(world.get_block(x, y + 1, z))
+        !Kind::of(state).is_some_and(Kind::is_chest) || !blocks::conductive(world.get_block(x, y + 1, z))
     })
 }
 
 /// Номер вида окна (реестр `minecraft:menu`) и ключ заголовка.
 pub fn menu(kind: Kind, halves: usize) -> (i32, &'static str) {
     match kind {
-        Kind::Chest | Kind::TrappedChest if halves > 1 => (5, "container.chestDouble"),
-        Kind::Chest | Kind::TrappedChest => (2, "container.chest"),
+        // Медный — с тем же заголовком, что простой (вики, Copper Chest:
+        // «"Chest" (JE)»; снято чёрным ящиком, copper-chest).
+        Kind::Chest | Kind::TrappedChest | Kind::CopperChest if halves > 1 => (5, "container.chestDouble"),
+        Kind::Chest | Kind::TrappedChest | Kind::CopperChest => (2, "container.chest"),
         Kind::Barrel => (2, "container.barrel"),
         Kind::Hopper => (16, "container.hopper"),
         Kind::Dropper => (6, "container.dropper"),
         Kind::Dispenser => (6, "container.dispenser"),
         Kind::Lectern => (17, "container.lectern"),
         Kind::Crafter => (7, "container.crafter"),
-        // Своего окна у проигрывателя нет: сюда не доходит.
+        // Своего окна у проигрывателя, полки и шкафа нет: сюда не доходит.
         Kind::Jukebox => (0, "container.jukebox"),
+        Kind::Shelf => (0, "container.shelf"),
+        Kind::ChiseledBookshelf => (0, "container.chiseled_bookshelf"),
     }
 }
 
@@ -528,13 +568,52 @@ fn lid_pitch(world: &mut World) -> f32 {
     world.random_unit() * 0.1 + 0.9
 }
 
-/// Звуки открытия и закрытия по виду хранилища.
-fn lid_sounds(kind: Kind) -> Option<(&'static str, &'static str)> {
+/// Звуки открытия и закрытия по блоку хранилища. У медного сундука — по
+/// стадии: обычный и «exposed» звучат одинаково, у «weathered» и
+/// «oxidized» свои, воск не в счёт (вики, Copper Chest, Sounds; сверено
+/// чёрным ящиком, copper-chest).
+fn lid_sounds(state: i32) -> Option<(&'static str, &'static str)> {
+    let kind = Kind::of(state)?;
+
     match kind {
+        Kind::CopperChest => Some(match blocks::block_at_state(state).map(copper_stage) {
+            Some(2) => ("minecraft:block.copper_chest_weathered.open", "minecraft:block.copper_chest_weathered.close"),
+            Some(3) => ("minecraft:block.copper_chest_oxidized.open", "minecraft:block.copper_chest_oxidized.close"),
+            _ => ("minecraft:block.copper_chest.open", "minecraft:block.copper_chest.close"),
+        }),
         Kind::Chest | Kind::TrappedChest => Some(("minecraft:block.chest.open", "minecraft:block.chest.close")),
         Kind::Barrel => Some(("minecraft:block.barrel.open", "minecraft:block.barrel.close")),
         _ => None,
     }
+}
+
+/// Стадия окисления медного блока по имени: 0 — чистый, 1 — «exposed»,
+/// 2 — «weathered», 3 — «oxidized»; воск не в счёт.
+pub fn copper_stage(name: &str) -> u8 {
+    let name = name.strip_prefix("waxed_").unwrap_or(name);
+
+    if name.starts_with("exposed_") {
+        1
+    } else if name.starts_with("weathered_") {
+        2
+    } else if name.starts_with("oxidized_") {
+        3
+    } else {
+        0
+    }
+}
+
+/// Каким медным сундуком становится большой из двух половин: «takes the
+/// oxidization level of the least oxidized half, and is unwaxed if one of
+/// the two halves is unwaxed» (вики, Copper Chest). Сверено чёрным ящиком
+/// (copper-chest): «exposed» слева и вощёный «oxidized» справа дают две
+/// половины «exposed».
+pub fn copper_chest_merged(first: &str, second: &str) -> String {
+    let stage = copper_stage(first).min(copper_stage(second));
+    let waxed = first.starts_with("waxed_") && second.starts_with("waxed_");
+    let stage = ["", "exposed_", "weathered_", "oxidized_"][usize::from(stage)];
+
+    format!("{}{stage}copper_chest", if waxed { "waxed_" } else { "" })
 }
 
 /// Сколько тактов между повторами крышки, пока сундук открыт (вики,
@@ -559,7 +638,7 @@ pub fn open_begin(world: &mut World, halves: &[Pos]) -> bool {
         world.add_viewers(hx, hy, hz, 1);
     }
 
-    if first && let Some((sound, _)) = lid_sounds(kind) {
+    if first && let Some((sound, _)) = lid_sounds(world.get_block(x, y, z)) {
         let pitch = lid_pitch(world);
         let at = sound_point(world, halves);
 
@@ -632,7 +711,7 @@ pub fn close(world: &mut World, halves: &[Pos]) {
         last = world.add_viewers(hx, hy, hz, -1) == 0;
     }
 
-    if last && let Some((_, sound)) = lid_sounds(kind) {
+    if last && let Some((_, sound)) = lid_sounds(world.get_block(x, y, z)) {
         let pitch = lid_pitch(world);
         let at = sound_point(world, halves);
 
@@ -645,7 +724,7 @@ pub fn close(world: &mut World, halves: &[Pos]) {
 /// Что следует за сменой числа смотрящих.
 fn after_viewers(world: &mut World, kind: Kind, halves: &[Pos], edge: bool) {
     match kind {
-        Kind::Chest | Kind::TrappedChest => {
+        Kind::Chest | Kind::TrappedChest | Kind::CopperChest => {
             for &(hx, hy, hz) in halves {
                 queue_lid(world, (hx, hy, hz));
 
@@ -672,7 +751,7 @@ fn after_viewers(world: &mut World, kind: Kind, halves: &[Pos], edge: bool) {
 /// Такт сундука: повторить крышку клиентам и, пока открыт, завести
 /// следующий повтор.
 pub fn recheck_lid(world: &mut World, (x, y, z): Pos) {
-    if !matches!(Kind::of(world.get_block(x, y, z)), Some(Kind::Chest | Kind::TrappedChest)) {
+    if !Kind::of(world.get_block(x, y, z)).is_some_and(Kind::is_chest) {
         return;
     }
 
@@ -696,7 +775,7 @@ fn queue_lid(world: &mut World, (x, y, z): Pos) {
 pub fn tell_lid(world: &mut World, (x, y, z): Pos, viewers: u8) {
     let state = world.get_block(x, y, z);
 
-    if !matches!(Kind::of(state), Some(Kind::Chest | Kind::TrappedChest)) {
+    if !Kind::of(state).is_some_and(Kind::is_chest) {
         return;
     }
 
@@ -723,6 +802,14 @@ pub fn trapped_power(world: &World, (x, y, z): Pos) -> u8 {
 pub fn after_change(world: &mut World) {
     for pos in world.take_contents_changed() {
         crate::redstone::jukebox_contents_changed(world, pos);
+        // Шкаф показывает занятые ячейки в состоянии блока, полка — свои
+        // предметы в данных блок-сущности. [проверить] у полки, которую
+        // наполняет воронка, оригинал ещё повторяет и сам блок.
+        crate::redstone::bookshelf::contents_changed(world, pos);
+
+        if Kind::of(world.get_block(pos.0, pos.1, pos.2)) == Some(Kind::Shelf) {
+            crate::redstone::shelf::tell(world, pos);
+        }
         crate::redstone::comparator_update(world, pos);
     }
 }
@@ -743,6 +830,10 @@ fn insert_one(world: &mut World, halves: &[Pos], like: Stack) -> Option<Pos> {
         let container = world.container(x, y, z)?;
         let slot = if container.kind == Kind::Crafter {
             crate::redstone::crafter::slot_for(container, like.item)
+        } else if container.kind == Kind::ChiseledBookshelf {
+            // В шкафу по книге на ячейку: первая пустая (вики, Chiseled
+            // Bookshelf: «inserted into the first empty slot»).
+            container.slots.iter().position(Option::is_none)
         } else {
             container.slots.iter().position(|slot| match slot {
                 None => true,
@@ -758,6 +849,12 @@ fn insert_one(world: &mut World, halves: &[Pos], like: Stack) -> Option<Pos> {
                     Some(there) => like.with_count(there.count + 1),
                     None => like.with_count(1),
                 });
+
+                // Шкаф помнит, какую ячейку тронули последней, — её
+                // читает сравнитель.
+                if container.kind == Kind::ChiseledBookshelf {
+                    container.page = slot as i32;
+                }
             });
 
             return Some((x, y, z));
@@ -794,6 +891,7 @@ fn accepts(world: &World, (x, y, z): Pos, item: i32) -> bool {
     match world.container(x, y, z).map(|c| c.kind) {
         Some(Kind::Jukebox) => crate::redstone::jukebox_song(item).is_some() && is_empty_at(world, (x, y, z)),
         Some(Kind::Lectern) => false,
+        Some(Kind::ChiseledBookshelf) => crate::redstone::bookshelf::is_book(item),
         _ => true,
     }
 }
@@ -806,6 +904,10 @@ fn gives(world: &World, (x, y, z): Pos) -> bool {
 /// Убирает один предмет из ячейки.
 fn remove_one(world: &mut World, (x, y, z): Pos, slot: usize) {
     world.with_container(x, y, z, |container| {
+        if container.kind == Kind::ChiseledBookshelf {
+            container.page = slot as i32;
+        }
+
         if let Some(stack) = container.slots.get_mut(slot) {
             *stack = stack.and_then(|there| (there.count > 1).then(|| there.with_count(there.count - 1)));
         }
@@ -1265,14 +1367,20 @@ fn can_open_for_dropper(world: &World, target: &[Pos]) -> bool {
     can_open(world, target)
 }
 
-/// Разброс скорости вылета у выбрасывателя и раздатчика.
-const DROPPER_SPREAD: f64 = 0.0075 * 6.0;
+/// Разброс скорости вылета у выбрасывателя и раздатчика — тот же, что у
+/// крафтера: разница двух равномерных, до ±0,103 (чёрный ящик, 24 вылета
+/// выбрасывателей и крафтера у оригинала: отклонения до 0,087, средний
+/// квадрат 0,048; прежний ±0,045 такого не даёт — dropper-pulse у нас
+/// подбирал предмет не в те такты).
+const DROPPER_SPREAD: f64 = 0.0172275 * 6.0;
 
 /// Выброс предмета: из середины грани на 0,7 блока вперёд, со скоростью
-/// около 0,2–0,3 по направлению и 0,2 вверх, с небольшим разбросом.
-/// Снято чёрным ящиком (dropper-pulse: предмет у оригинала появился в
-/// (1.2, 0.34, 3.5) от выбрасывателя, смотрящего на восток, со скоростью
-/// около (0.20, 0.15, 0.02)).
+/// 0,2–0,3 по направлению вбок и 0,2 вверх, куда бы ни смотрел, с небольшим
+/// разбросом по каждой оси. Снято чёрным ящиком (dropper-pulse: у оригинала
+/// предмет появился в (1.2, 0.34, 3.5) от выбрасывателя, смотрящего на
+/// восток, со скоростью по Y 0,13–0,26; plate-items: у смотрящего вверх по
+/// Y 0,16–0,28, в среднем 0,21 из шести — не 0,4–0,5 и не 0,25).
+/// [проверить]: вниз.
 pub fn throw_forward(world: &mut World, (x, y, z): Pos, (dx, dy, dz): (i32, i32, i32), stack: Stack, spread: f64) {
     let mut at = (
         x as f64 + 0.5 + 0.7 * dx as f64,
@@ -1291,7 +1399,7 @@ pub fn throw_forward(world: &mut World, (x, y, z): Pos, (dx, dy, dz): (i32, i32,
     let mut spread = || (world.random_unit() as f64 - world.random_unit() as f64) * spread;
     let velocity = (
         dx as f64 * speed + spread(),
-        dy as f64 * speed + spread() + 0.2,
+        0.2 + spread(),
         dz as f64 * speed + spread(),
     );
 
@@ -1410,13 +1518,15 @@ pub fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
             Kind::Jukebox => return Some(crate::redstone::jukebox_reading(world, pos)),
             Kind::Lectern => return Some(crate::redstone::lectern_reading(world, pos)),
             Kind::Crafter => return Some(crate::redstone::crafter::reading(world, pos)),
+            Kind::Shelf => return Some(crate::redstone::shelf::reading(world, pos)),
+            Kind::ChiseledBookshelf => return Some(crate::redstone::bookshelf::reading(world, pos)),
             _ => {}
         }
 
         let parts = halves(world, pos);
 
         // Сундук, который нельзя открыть, читается как пустой (Java).
-        if matches!(kind, Kind::Chest | Kind::TrappedChest) && !can_open(world, &parts) {
+        if kind.is_chest() && !can_open(world, &parts) {
             return Some(0);
         }
 
@@ -1440,6 +1550,7 @@ pub fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
         }
         "respawn_anchor" => (number("charges")? as u32 * 15 / 4) as u8,
         "beehive" | "bee_nest" => number("honey_level")?,
+        _ if name.ends_with("copper_golem_statue") => crate::redstone::statue::reading(state),
         _ if name.ends_with("copper_bulb") => {
             if property(state, "lit") == Some("true") {
                 15
@@ -1454,6 +1565,71 @@ pub fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Медный сундук: звуки по стадии, большой из разных стадий — наименее
+    /// окисленный, вощёный только из двух вощёных (сценарий copper-chest).
+    #[test]
+    fn copper_chests_sound_and_merge_by_stage() {
+        let state = |name: &str| blocks::state_by_name(name).unwrap();
+
+        assert_eq!(Kind::of(state("waxed_oxidized_copper_chest")), Some(Kind::CopperChest));
+        assert_eq!(Kind::of(state("oak_shelf")), Some(Kind::Shelf));
+        assert_eq!(Kind::of(state("chiseled_bookshelf")), Some(Kind::ChiseledBookshelf));
+        assert_eq!(Kind::CopperChest.block_entity_type(), 1);
+        assert_eq!(lid_sounds(state("exposed_copper_chest")).unwrap().0, "minecraft:block.copper_chest.open");
+        assert_eq!(lid_sounds(state("waxed_weathered_copper_chest")).unwrap().1, "minecraft:block.copper_chest_weathered.close");
+        assert_eq!(lid_sounds(state("oxidized_copper_chest")).unwrap().0, "minecraft:block.copper_chest_oxidized.open");
+        assert_eq!(copper_chest_merged("exposed_copper_chest", "waxed_oxidized_copper_chest"), "exposed_copper_chest");
+        assert_eq!(copper_chest_merged("waxed_weathered_copper_chest", "waxed_oxidized_copper_chest"), "waxed_weathered_copper_chest");
+        assert_eq!(menu(Kind::CopperChest, 2), (5, "container.chestDouble"));
+    }
+
+    /// Шкаф помнит последнюю ячейку и на диске.
+    #[test]
+    fn bookshelf_remembers_last_slot_on_disk() {
+        let mut shelf = Container::new(Kind::ChiseledBookshelf);
+
+        assert_eq!(shelf.page, -1);
+        shelf.page = 4;
+        shelf.slots[4] = Some(Stack::new(blocks::item_named("book").unwrap(), 1));
+
+        let mut bytes = Vec::new();
+        shelf.write((3, 70, 5), &mut bytes);
+        let (_, back) = Container::read(&mut bytes.as_slice(), 0, 0).unwrap();
+
+        assert_eq!(back, shelf);
+    }
+
+    /// Выброшенный предмет летит как у оригинала: вбок 0,2–0,3 вперёд и
+    /// около 0,2 вверх, у смотрящего вверх — тоже около 0,2 вверх (не
+    /// 0,4–0,5); разброс по каждой оси до ±0,103, в среднем около ±0,045.
+    #[test]
+    fn thrown_items_fly_like_the_original() {
+        let stone = blocks::item_named("stone").expect("камень");
+        let mut world = World::in_memory();
+        let (mut lift, mut side, mut spread) = (0.0, 0.0, 0.0);
+        const TRIES: usize = 2000;
+
+        for _ in 0..TRIES {
+            throw_forward(&mut world, (0, 0, 0), (1, 0, 0), Stack::new(stone, 1), DROPPER_SPREAD);
+            throw_forward(&mut world, (0, 0, 0), (0, 1, 0), Stack::new(stone, 1), DROPPER_SPREAD);
+
+            let thrown = world.take_ejected();
+            let (east, up) = (thrown[0].1, thrown[1].1);
+
+            assert!((0.2 - DROPPER_SPREAD..=0.3 + DROPPER_SPREAD).contains(&east.0), "{east:?}");
+            assert!((0.2 - DROPPER_SPREAD..=0.2 + DROPPER_SPREAD).contains(&up.1), "{up:?}");
+            lift += up.1;
+            side += east.2;
+            spread += east.2 * east.2;
+        }
+
+        let tries = TRIES as f64;
+
+        assert!((lift / tries - 0.2).abs() < 0.005, "вверх в среднем {}", lift / tries);
+        assert!((side / tries).abs() < 0.005, "вбок в среднем {}", side / tries);
+        assert!(((spread / tries).sqrt() - 0.042).abs() < 0.006, "разброс {}", (spread / tries).sqrt());
+    }
 
     /// Хранилище переживает запись и чтение.
     #[test]

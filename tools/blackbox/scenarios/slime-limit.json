@@ -1,0 +1,107 @@
+{
+ "name": "slime-limit",
+ "about": "Слизь 2×2×3 (12 блоков) липкий поршень толкает и тянет; та же с камнем сверху (13) не двигается; вытянутую связку, к которой прилип 13-й блок, поршень не тянет.",
+ "blocks": [
+  {
+   "at": [
+    -4,
+    1,
+    0
+   ],
+   "state": "minecraft:sticky_piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -4,
+    1,
+    -3
+   ],
+   "state": "minecraft:sticky_piston[extended=false,facing=east]"
+  }
+ ],
+ "setup": [
+  "fill $(-3,1,-1) $(-1,2,0) minecraft:slime_block",
+  "fill $(-3,1,-4) $(-1,2,-3) minecraft:slime_block",
+  "setblock $(-2,3,-4) minecraft:stone"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -5,
+     1,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 5,
+   "set": {
+    "at": [
+     -5,
+     1,
+     -3
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 20,
+   "set": {
+    "at": [
+     -5,
+     1,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 25,
+   "set": {
+    "at": [
+     -5,
+     1,
+     -3
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 40,
+   "set": {
+    "at": [
+     -5,
+     1,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 55,
+   "set": {
+    "at": [
+     -1,
+     3,
+     0
+    ],
+    "state": "minecraft:stone"
+   }
+  },
+  {
+   "after": 65,
+   "set": {
+    "at": [
+     -5,
+     1,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 95
+}

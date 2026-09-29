@@ -1,0 +1,63 @@
+{
+ "name": "piston-pushes-power",
+ "about": "Поршень задвигает блок редстоуна в схему: загорается лампа, выдвигается поршень сбоку.",
+ "blocks": [
+  {
+   "at": [
+    -4,
+    0,
+    -2
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    -2
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    -3
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    -1
+   ],
+   "state": "minecraft:piston[extended=false,facing=south]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -5,
+     0,
+     -2
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 25,
+   "set": {
+    "at": [
+     -5,
+     0,
+     -2
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 50
+}

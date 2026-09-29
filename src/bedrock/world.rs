@@ -342,6 +342,7 @@ impl BedrockWorld {
             dimension,
             sneaking: false,
             swings: 0,
+            shoved: ((0.0, 0.0, 0.0), 0),
         };
 
         if shared.players.lock().expect("список игроков захвачен другим потоком").join(member, entity_id).is_none() {
@@ -807,6 +808,15 @@ impl BedrockWorld {
                 crate::players::Order::ChangeDimension { dimension, x, y, z } => {
                     self.change_dimension(connection, packets, dimension, (x, y, z));
                 }
+                // [проверить] ячейку по команде на Bedrock пока не кладём.
+                crate::players::Order::SetSlot { .. } => {}
+                crate::players::Order::Hold { stack } => {
+                    let slot = crate::inventory::FIRST_HOTBAR + self.bag.inventory.selected();
+
+                    self.bag.inventory.set(slot, stack);
+                    self.bag.touched(&[slot]);
+                    packets.extend(self.bag.slot_packet(slot));
+                }
                 crate::players::Order::Clear => {
                     self.bag.clear();
                     packets.extend(self.bag.content_packets());
@@ -1064,6 +1074,10 @@ impl BedrockWorld {
                         packets.push(packet);
                         self.items_shown.insert(item.entity_id);
                     }
+                }
+                crate::items::Change::Lightning(bolt) => {
+                    packets.push(add_lightning(&bolt));
+                    self.items_shown.insert(bolt.entity_id);
                 }
                 crate::items::Change::Cart(cart) => {
                     packets.push(add_cart(&cart));
@@ -1419,6 +1433,10 @@ impl BedrockWorld {
 
             return Some(packets);
         }
+
+        // Полка и резной шкаф на Bedrock пока не разбираются: окна у них
+        // нет, щелчок идёт дальше. [проверить] живым клиентом.
+        let kind = kind.filter(|kind| !matches!(kind, containers::Kind::Shelf | containers::Kind::ChiseledBookshelf));
 
         if let Some(kind) = kind {
             let halves = containers::halves(&world, clicked);
@@ -1906,7 +1924,7 @@ impl BedrockWorld {
                 for (index, place) in around.into_iter().enumerate() {
                     let kind = containers::Kind::of(world.get_block(place.0, place.1, place.2));
                     let wanted = match kind {
-                        Some(containers::Kind::Chest | containers::Kind::TrappedChest) => true,
+                        Some(containers::Kind::Chest | containers::Kind::TrappedChest | containers::Kind::CopperChest) => true,
                         Some(_) => index == 0,
                         None => false,
                     };
@@ -2564,6 +2582,27 @@ fn add_cart(cart: &crate::minecart::Minecart) -> Vec<u8> {
         .lf32(yaw)
         .lf32(yaw)
         .lf32(yaw)
+        .varint(0) // свойства-атрибуты
+        .varint(0) // данные сущности
+        .varint(0)
+        .varint(0) // свойства: целые, дробные
+        .varint(0); // связи
+    out.bytes
+}
+
+/// Молния (Add Actor `minecraft:lightning_bolt`): без скорости, поворота
+/// и свойств. [проверить]: играет ли клиент Bedrock гром сам, как Java.
+fn add_lightning(bolt: &crate::lightning::Bolt) -> Vec<u8> {
+    let mut out = Out::packet(ADD_ACTOR);
+    out.zigzag64(bolt.entity_id as i64)
+        .varint64(bolt.entity_id as u64)
+        .string("minecraft:lightning_bolt")
+        .vec3f(bolt.x as f32, bolt.y as f32, bolt.z as f32)
+        .vec3f(0.0, 0.0, 0.0)
+        .lf32(0.0)
+        .lf32(0.0)
+        .lf32(0.0)
+        .lf32(0.0)
         .varint(0) // свойства-атрибуты
         .varint(0) // данные сущности
         .varint(0)

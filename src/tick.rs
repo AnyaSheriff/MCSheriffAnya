@@ -260,6 +260,11 @@ async fn run(shared: Arc<Shared>) {
             spawn_ejected(&shared, dimension, &mut world);
             spawn_primed(&shared, dimension, &mut world);
 
+            // Молнии бьют в первом же такте: искры уходят в этом такте, а
+            // громоотвод и лампа — со следующей рассылкой (чёрный ящик,
+            // lightning-rod).
+            step_bolts(&shared, dimension, &mut world);
+
             // Вагонетки катятся — сущности, как и предметы ниже; детекторные
             // рельсы под ними включаются в этой же фазе (чёрный ящик,
             // rail-detector: рельса и лампа — в рассылке следующего такта
@@ -323,6 +328,13 @@ async fn run(shared: Arc<Shared>) {
 
             // Долетевшие до земли снова становятся блоками.
             land_falling(&shared, dimension, &mut world);
+
+            // Плиты нажимаются по местам после шага: предмет жмёт плиту,
+            // когда на неё упал, а не когда пролетал клетку (чёрный ящик,
+            // plate-items).
+            let (moved, _) = occupants(&shared, dimension);
+            redstone::step_plates(&mut world, &moved);
+            redstone::settle(&mut world);
             phases.add(3, &mut clock);
 
             // Игроки видят содержимое хранилищ таким, каким оно стало к фазе
@@ -351,6 +363,7 @@ async fn run(shared: Arc<Shared>) {
                 &mut shared.items_in(dimension).lock().expect("предметы захвачены другим потоком"),
             );
             redstone::settle(&mut world);
+            shove_entities(&shared, dimension, &world);
             redstone::finish_due_moves(&mut world);
             spill_containers(&shared, dimension, &mut world);
             phases.add(4, &mut clock);
@@ -495,6 +508,51 @@ fn occupants(shared: &Shared, dimension: Dimension) -> (Vec<redstone::Occupant>,
     );
 
     (standing, chunks)
+}
+
+/// Едущие блоки поршней делают шаг и толкают сущности на пути: предметы
+/// (с динамитом и падающими блоками) и игроков. Наблюдатели сквозь всё
+/// проходят. [проверить]: вагонетки.
+fn shove_entities(shared: &Shared, dimension: Dimension, world: &World) {
+    /// Режим наблюдателя.
+    const SPECTATOR: i32 = 3;
+
+    /// Рамка игрока: 0,6 в ширину и 1,8 в высоту (вики, Player).
+    const HALF_WIDTH: f64 = 0.3;
+    const HEIGHT: f64 = 1.8;
+
+    let shoves = redstone::shoves(world);
+
+    if shoves.is_empty() {
+        return;
+    }
+
+    let solid = |x, y, z| blocks::stops_items(world.get_block(x, y, z));
+
+    shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").shove(&shoves, &solid);
+
+    let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+    let standing: Vec<i32> = players
+        .members()
+        .iter()
+        .filter(|member| member.dimension == dimension && member.game_mode != SPECTATOR)
+        .map(|member| member.entity_id)
+        .collect();
+
+    for shove in &shoves {
+        for &entity_id in &standing {
+            let Some(member) = players.members().iter().find(|member| member.entity_id == entity_id) else {
+                continue;
+            };
+            let at = &member.position;
+            let min = (at.x - HALF_WIDTH, at.y, at.z - HALF_WIDTH);
+            let max = (at.x + HALF_WIDTH, at.y + HEIGHT, at.z + HALF_WIDTH);
+
+            if let Some(distance) = redstone::shove_distance(shove, min, max) {
+                players.shove(entity_id, (shove.dir.0 * distance, shove.dir.1 * distance, shove.dir.2 * distance));
+            }
+        }
+    }
 }
 
 /// Где стоят вагонетки этого мира и что покажет сравнитель за каждой — для
@@ -770,7 +828,7 @@ fn drop_destroyed(shared: &Shared, dimension: Dimension, world: &mut World) {
         // Инструмент тут ни при чём: блок сломал не игрок.
         let luck = world.random_unit();
 
-        let Some(stack) = blocks::drops_by_luck(state, None, luck) else {
+        let Some(stack) = blocks::world_drops(state, luck) else {
             continue;
         };
 
@@ -882,6 +940,17 @@ fn blast_targets(shared: &Shared, dimension: Dimension) -> Vec<tnt::Target> {
             sneaking: member.sneaking,
         })
         .collect()
+}
+
+/// Такт молний; огонь от них — только на обычной и сложной сложности.
+fn step_bolts(shared: &Shared, dimension: Dimension, world: &mut World) {
+    let fire = shared.properties.difficulty >= crate::config::server_properties::DIFFICULTY_NORMAL;
+
+    shared
+        .items_in(dimension)
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .step_bolts(|bolt| crate::lightning::step(world, bolt, fire));
 }
 
 /// Отложенное большим взрывом особого динамита (custom_tnt.rs): часть за

@@ -1,0 +1,162 @@
+{
+ "name": "piston-pulses",
+ "about": "Обычный поршень с камнем от импульсов в 0, 1, 2 и 3 такта (блок редстоуна ставят и убирают командами).",
+ "blocks": [
+  {
+   "at": [
+    -3,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    -2
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    -2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    -4
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    -4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    -6
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    -6
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -4,
+     0,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -4,
+     0,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 25,
+   "set": {
+    "at": [
+     -4,
+     0,
+     -2
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 26,
+   "set": {
+    "at": [
+     -4,
+     0,
+     -2
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 50,
+   "set": {
+    "at": [
+     -4,
+     0,
+     -4
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 52,
+   "set": {
+    "at": [
+     -4,
+     0,
+     -4
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 75,
+   "set": {
+    "at": [
+     -4,
+     0,
+     -6
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 78,
+   "set": {
+    "at": [
+     -4,
+     0,
+     -6
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 110,
+ "continuous": true
+}

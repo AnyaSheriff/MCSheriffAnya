@@ -23,7 +23,7 @@ pub const LAST_WINDOW: u8 = 100;
 /// CONTAINER (0), у двойного сундука отдельного нет.
 pub fn screen(kind: Kind) -> u8 {
     match kind {
-        Kind::Chest | Kind::TrappedChest | Kind::Barrel => 0,
+        Kind::Chest | Kind::TrappedChest | Kind::Barrel | Kind::CopperChest => 0,
         Kind::Dispenser => 6,
         Kind::Dropper => 7,
         Kind::Hopper => 8,
@@ -32,7 +32,8 @@ pub fn screen(kind: Kind) -> u8 {
         Kind::Crafter => 36,
         // Окна у них на Bedrock нет: щелчок разбирается раньше
         // (world.rs, use_block).
-        Kind::Jukebox | Kind::Lectern => 0,
+        // [проверить] у полки и резного шкафа на Bedrock окна тоже нет.
+        Kind::Jukebox | Kind::Lectern | Kind::Shelf | Kind::ChiseledBookshelf => 0,
     }
 }
 
@@ -75,6 +76,10 @@ pub fn lid_packet((x, y, z): Pos, open: bool) -> Vec<u8> {
 fn actor_id(kind: Kind) -> &'static str {
     match kind {
         Kind::Chest | Kind::TrappedChest => "Chest",
+        // [проверить] имена блок-акторов меди и полки по bedrock-protocol-docs.
+        Kind::CopperChest => "Chest",
+        Kind::Shelf => "Shelf",
+        Kind::ChiseledBookshelf => "ChiseledBookshelf",
         Kind::Barrel => "Barrel",
         Kind::Hopper => "Hopper",
         Kind::Dropper => "Dropper",

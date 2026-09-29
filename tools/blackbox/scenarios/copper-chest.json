@@ -1,0 +1,29 @@
+{
+ "name": "copper-chest",
+ "about": "Медные сундуки всех стадий: открыть и закрыть — звуки по стадии, крышка; большой из двух разных стадий; воронка сверху кладёт меч, сравнитель читает заполненность.",
+ "blocks": [
+  {"at": [0, 0, 0], "state": "minecraft:copper_chest[facing=north,type=single,waterlogged=false]{Items:[{Slot:0b,id:\"minecraft:stone\",count:64}]}"},
+  {"at": [1, 0, 0], "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"},
+  {"at": [2, 0, 0], "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"},
+  {"at": [0, 0, 2], "state": "minecraft:weathered_copper_chest[facing=north,type=single,waterlogged=false]"},
+  {"at": [2, 0, 2], "state": "minecraft:oxidized_copper_chest[facing=north,type=single,waterlogged=false]"},
+  {"at": [4, 0, 0], "state": "minecraft:exposed_copper_chest[facing=north,type=left,waterlogged=false]"},
+  {"at": [5, 0, 0], "state": "minecraft:waxed_oxidized_copper_chest[facing=north,type=right,waterlogged=false]"},
+  {"at": [4, 0, 2], "state": "minecraft:waxed_weathered_copper_chest[facing=north,type=single,waterlogged=false]"}
+ ],
+ "actions": [
+  {"after": 0, "click": [0, 0, 0]},
+  {"after": 15, "close": true},
+  {"after": 20, "set": {"at": [0, 1, 0], "state": "minecraft:hopper[enabled=true,facing=down]{Items:[{Slot:0b,id:\"minecraft:diamond_sword\",count:1}]}"}},
+  {"after": 40, "click": [0, 0, 2]},
+  {"after": 50, "close": true},
+  {"after": 60, "click": [2, 0, 2]},
+  {"after": 70, "close": true},
+  {"after": 80, "click": [4, 0, 0]},
+  {"after": 90, "close": true},
+  {"after": 100, "click": [4, 0, 2]},
+  {"after": 110, "close": true}
+ ],
+ "cleanup": ["fill $(-1,0,-1) $(6,2,3) minecraft:air"],
+ "record_ticks": 130
+}

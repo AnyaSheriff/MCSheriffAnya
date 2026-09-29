@@ -1,0 +1,69 @@
+{
+ "name": "piston-qc-observer",
+ "about": "Квазисвязность от блока редстоуна двумя клетками выше поршня; будит поршень наблюдатель сбоку (его выход смотрит в пустую клетку рядом с поршнем: обновляет, но не питает).",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    -2
+   ],
+   "state": "minecraft:observer[facing=north,powered=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     0,
+     2,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 10,
+   "set": {
+    "at": [
+     0,
+     0,
+     -3
+    ],
+    "state": "minecraft:stone"
+   }
+  },
+  {
+   "after": 30,
+   "set": {
+    "at": [
+     0,
+     2,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 45,
+   "set": {
+    "at": [
+     0,
+     0,
+     -3
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 75
+}

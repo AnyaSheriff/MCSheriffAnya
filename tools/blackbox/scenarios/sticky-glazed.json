@@ -1,0 +1,109 @@
+{
+ "name": "sticky-glazed",
+ "about": "Глазурованная керамика: липкий поршень её толкает, но не тянет; к слизи она не липнет, а камень липнет.",
+ "blocks": [
+  {
+   "at": [
+    -3,
+    1,
+    0
+   ],
+   "state": "minecraft:sticky_piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -2,
+    1,
+    0
+   ],
+   "state": "minecraft:slime_block"
+  },
+  {
+   "at": [
+    -2,
+    1,
+    -1
+   ],
+   "state": "minecraft:white_glazed_terracotta[facing=north]"
+  },
+  {
+   "at": [
+    -2,
+    2,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -1,
+    1,
+    0
+   ],
+   "state": "minecraft:orange_glazed_terracotta[facing=north]"
+  },
+  {
+   "at": [
+    -3,
+    1,
+    -4
+   ],
+   "state": "minecraft:sticky_piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -2,
+    1,
+    -4
+   ],
+   "state": "minecraft:white_glazed_terracotta[facing=north]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -4,
+     1,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 5,
+   "set": {
+    "at": [
+     -4,
+     1,
+     -4
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 25,
+   "set": {
+    "at": [
+     -4,
+     1,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 30,
+   "set": {
+    "at": [
+     -4,
+     1,
+     -4
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 55
+}

@@ -1,0 +1,76 @@
+{
+ "name": "dust-join",
+ "about": "Провод, поставленный командой рядом с углом запитанной линии, меняет форму соседа.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wall_torch[facing=south,lit=true]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    1
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    -1
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=none,power=0,south=side,west=side]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    -1
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=side,west=none]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     1,
+     0,
+     0
+    ],
+    "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+   }
+  }
+ ],
+ "record_ticks": 220
+}

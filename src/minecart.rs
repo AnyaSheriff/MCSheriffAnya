@@ -1223,17 +1223,42 @@ impl Minecart {
         other.impulses += 1;
     }
 
-    /// Игрок, стоящий вплотную, отталкивает вагонетку от себя, как сущности
-    /// толкают друг друга: 0,05 на расстояние (вики, Minecart: «mobs that
-    /// move up against a still cart set it in motion»). [проверить]: число.
-    fn pushed_by(&mut self, (x, y, z): (f64, f64, f64)) {
+    /// Игрок, стоящий вплотную, отталкивает вагонетку от себя (вики,
+    /// Minecart: «mobs that move up against a still cart set it in
+    /// motion»). Толчков два, они складываются (зонд minecart-push: игрок в
+    /// 0,3–0,82 блока позади вагонетки, толчки 0,05, 0,05, 0,05, 0,0886,
+    /// 0,0452, потом ни одного):
+    ///
+    /// - ящики касаются — 0,05 от игрока, как ни близко;
+    /// - вагонетка едет по рельсам (`grow` > 0) и игрок в её ящике, раздутом
+    ///   на `grow` вбок, — ещё толчок, как сущности толкают друг друга:
+    ///   0,05 · √d, где d — большая из разниц по X и Z (0,05 · √0,592 =
+    ///   0,0385, 0,05 · √0,819 = 0,0452).
+    fn pushed_by(&mut self, (x, y, z): (f64, f64, f64), grow: f64) {
         const PLAYER_WIDTH: f64 = 0.6;
         const PLAYER_HEIGHT: f64 = 1.8;
 
         let reach = WIDTH / 2.0 + PLAYER_WIDTH / 2.0;
         let (dx, dz) = (self.x - x, self.z - z);
 
-        if dx.abs() >= reach || dz.abs() >= reach || y >= self.y + HEIGHT || self.y >= y + PLAYER_HEIGHT {
+        if y >= self.y + HEIGHT || self.y >= y + PLAYER_HEIGHT {
+            return;
+        }
+
+        if grow > 0.0 && dx.abs() < reach + grow && dz.abs() < reach + grow {
+            let far = dx.abs().max(dz.abs());
+
+            if far >= 0.01 {
+                let root = far.sqrt();
+                let scale = (1.0 / root).min(1.0) * PUSH / root;
+
+                self.vx += dx * scale;
+                self.vz += dz * scale;
+                self.impulses += 1;
+            }
+        }
+
+        if dx.abs() >= reach || dz.abs() >= reach {
             return;
         }
 
@@ -1248,8 +1273,8 @@ impl Minecart {
         self.vx += dx * scale;
         self.vz += dz * scale;
 
-        // Толкнутую игроком клиентам сообщают сразу (minecart-push: скорость
-        // каждый такт, пока игрок в ней).
+        // Толкнутую игроком клиентам сообщают сразу: скорость и место каждый
+        // такт, пока игрок её толкает (minecart-push).
         self.impulses += 1;
     }
 }
@@ -1291,7 +1316,7 @@ pub fn step_all<V: View>(carts: &mut [Minecart], view: &V, players: &[(f64, f64,
         }
 
         for &player in players {
-            carts[index].pushed_by(player);
+            carts[index].pushed_by(player, grow);
         }
     }
 }
@@ -1474,6 +1499,27 @@ mod tests {
 
         assert!((trace[hit][0].vx - 0.155_150_768_108_266_22).abs() < 1e-12, "{}", trace[hit][0].vx);
         assert!((trace[hit][1].vx - 0.114_840_570_104_050_47).abs() < 1e-12, "{}", trace[hit][1].vx);
+    }
+
+    /// Игрок стоит в 0,3 блока позади вагонетки на ровной рельсе и не
+    /// двигается: скорость по тактам — как у оригинала (зонд minecart-push:
+    /// 0,05, 0,098, 0,144, 0,227, 0,263, дальше только сопротивление).
+    #[test]
+    fn a_player_pushes_a_cart_like_the_original() {
+        let scene = collide_scene();
+        let view = scene.view();
+        let mut carts = vec![Minecart::new(0, Kind::Plain, (450.5, -60.0, 430.5))];
+
+        step_all(&mut carts, &view, &[], |_| true);
+
+        let player = [(450.2, -60.0, 430.5)];
+        let wanted = [0.05, 0.098, 0.144, 0.227, 0.263, 0.252, 0.242];
+
+        for speed in wanted {
+            step_all(&mut carts, &view, &player, |_| true);
+            assert!((carts[0].vx - speed).abs() < 0.0006, "{} вместо {speed}", carts[0].vx);
+            assert_eq!(carts[0].vz, 0.0);
+        }
     }
 
     /// Сцены зондов — на тех же местах, что у оригинала.

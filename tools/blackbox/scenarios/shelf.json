@@ -1,0 +1,35 @@
+{
+ "name": "shelf",
+ "about": "Три полки смотрят на робота: щелчок меняет предмет в руке с ячейкой по точке щелчка; под током полки сцепляются, щелчок меняет всю панель быстрого доступа; сравнитель сзади читает, какие ячейки заняты.",
+ "inventory": true,
+ "blocks": [
+  {"at": [1, 0, 2], "state": "minecraft:oak_shelf[facing=east,powered=false,side_chain=unconnected,waterlogged=false]"},
+  {"at": [1, 0, 3], "state": "minecraft:oak_shelf[facing=east,powered=false,side_chain=unconnected,waterlogged=false]"},
+  {"at": [1, 0, 4], "state": "minecraft:spruce_shelf[facing=east,powered=false,side_chain=unconnected,waterlogged=false]"},
+  {"at": [0, 0, 3], "state": "minecraft:comparator[facing=east,mode=compare,powered=false]"},
+  {"at": [-1, 0, 3], "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"}
+ ],
+ "setup": [
+  "item replace entity blackbox hotbar.0 with minecraft:stone 5",
+  "item replace entity blackbox hotbar.1 with minecraft:dirt 3",
+  "item replace entity blackbox hotbar.2 with minecraft:air",
+  "item replace entity blackbox hotbar.8 with minecraft:diamond 1"
+ ],
+ "actions": [
+  {"after": 0, "hotbar": 0},
+  {"after": 2, "click": [1, 0, 3], "face": 5, "cursor": [1.0, 0.5, 0.85]},
+  {"after": 8, "hotbar": 1},
+  {"after": 10, "click": [1, 0, 3], "face": 5, "cursor": [1.0, 0.5, 0.15]},
+  {"after": 20, "click": [1, 0, 3], "face": 5, "cursor": [1.0, 0.5, 0.5]},
+  {"after": 28, "hotbar": 2},
+  {"after": 30, "click": [1, 0, 3], "face": 5, "cursor": [1.0, 0.5, 0.15]},
+  {"after": 40, "cmd": "fill $(1,-1,2) $(1,-1,4) minecraft:redstone_block"},
+  {"after": 50, "click": [1, 0, 3], "face": 5, "cursor": [1.0, 0.5, 0.5]},
+  {"after": 60, "click": [1, 0, 3], "face": 5, "cursor": [1.0, 0.5, 0.5]},
+  {"after": 70, "cmd": "setblock $(1,-1,4) minecraft:stone"},
+  {"after": 80, "click": [1, 0, 3], "face": 5, "cursor": [1.0, 0.5, 0.5]},
+  {"after": 90, "cmd": "fill $(1,-1,2) $(1,-1,4) minecraft:stone"}
+ ],
+ "cleanup": ["fill $(-1,0,1) $(2,1,5) minecraft:air", "clear blackbox"],
+ "record_ticks": 120
+}

@@ -74,6 +74,11 @@ pub struct Member {
     /// Сколько раз взмахнул рукой (щелчок, удар): подключения сравнивают
     /// с показанным и досылают своим клиентам взмах.
     pub swings: u32,
+
+    /// Насколько игрока сдвинули едущие блоки поршней и сколько раз, с тех
+    /// пор как подключение это забрало (`take_shoved`): место игрока знает
+    /// его подключение, такт лишь сообщает сдвиг.
+    pub shoved: ((f64, f64, f64), u32),
 }
 
 /// Что произошло с игроками — запись журнала.
@@ -121,8 +126,16 @@ pub enum Order {
     /// упадёт на землю.
     Give { stack: crate::inventory::Stack },
 
+    /// Положить в основную руку (выбранную ячейку панели) это — или
+    /// опустошить её: `item replace entity <игрок> weapon.mainhand`.
+    Hold { stack: Option<crate::inventory::Stack> },
+
     /// Очистить инвентарь.
     Clear,
+
+    /// Положить в ячейку инвентаря (номер как в окне игрока: панель —
+    /// 36–44) ровно это (`item replace entity`).
+    SetSlot { slot: i32, stack: Option<crate::inventory::Stack> },
 
     /// Сменить режим игры: подключение само скажет об этом своему клиенту.
     GameMode { mode: i32 },
@@ -292,6 +305,29 @@ impl Players {
         }
     }
 
+    /// Едущий блок поршня сдвинул игрока (tick.rs): место в списке — сразу,
+    /// чтобы следующий едущий блок в этом же такте видел его уже сдвинутым.
+    pub fn shove(&mut self, entity_id: i32, (dx, dy, dz): (f64, f64, f64)) {
+        if let Some(member) = self.members.iter_mut().find(|member| member.entity_id == entity_id) {
+            member.position.x += dx;
+            member.position.y += dy;
+            member.position.z += dz;
+            let ((x, y, z), count) = member.shoved;
+            member.shoved = ((x + dx, y + dy, z + dz), count + 1);
+        }
+    }
+
+    /// Забирает накопленный сдвиг поршнями: None — никто не толкал.
+    pub fn take_shoved(&mut self, uuid: &[u8; 16]) -> Option<((f64, f64, f64), u32)> {
+        let member = self.members.iter_mut().find(|member| &member.uuid == uuid)?;
+
+        if member.shoved.1 == 0 {
+            return None;
+        }
+
+        Some(std::mem::replace(&mut member.shoved, ((0.0, 0.0, 0.0), 0)))
+    }
+
     /// Запоминает, что у игрока в руке.
     ///
     /// Как и положение, это меняется часто и в журнал не пишется: остальные
@@ -343,6 +379,17 @@ impl Players {
         }
 
         self.orders.entry(*uuid).or_default().push(order);
+    }
+
+    /// Куда игрока перенесёт последнее ждущее поручение, если перенос в
+    /// своём измерении и после него нет перехода в другое.
+    pub fn pending_teleport(&self, uuid: &[u8; 16]) -> Option<(f64, f64, f64)> {
+        let orders = self.orders.get(uuid)?;
+
+        match orders.iter().rev().find(|order| matches!(order, Order::Teleport { .. } | Order::ChangeDimension { .. }))? {
+            Order::Teleport { x, y, z } => Some((*x, *y, *z)),
+            _ => None,
+        }
     }
 
     /// Забирает поручения для этого игрока.
@@ -402,6 +449,7 @@ mod tests {
             dimension: Default::default(),
             sneaking: false,
             swings: 0,
+            shoved: ((0.0, 0.0, 0.0), 0),
         }
     }
 
@@ -415,6 +463,49 @@ mod tests {
         players
             .join(member(name, uuid_byte), entity_id)
             .expect("ник должен быть свободен")
+    }
+
+    /// Толчки поршнем копятся, пока подключение их не заберёт: место в
+    /// списке сдвигается сразу, забранный сдвиг обнуляется.
+    #[test]
+    fn shoves_add_up_until_taken() {
+        let mut players = Players::new();
+        let uuid = [1; 16];
+
+        joined(&mut players, "Первый", 1);
+        assert_eq!(players.take_shoved(&uuid), None);
+
+        players.shove(1, (0.31, 0.0, 0.0));
+        players.shove(1, (0.5, 0.0, 0.0));
+
+        assert!((players.members()[0].position.x - 0.81).abs() < 1e-9);
+
+        let ((dx, dy, dz), count) = players.take_shoved(&uuid).expect("толкали");
+        assert!((dx - 0.81).abs() < 1e-9);
+        assert_eq!((dy, dz, count), (0.0, 0.0, 2));
+        assert_eq!(players.take_shoved(&uuid), None);
+    }
+
+    /// Ждущий перенос виден до того, как подключение заберёт поручение:
+    /// последний, и только если после него нет перехода в другое измерение.
+    #[test]
+    fn pending_teleport_is_the_last_one_in_this_dimension() {
+        let mut players = Players::new();
+        let uuid = [1; 16];
+
+        joined(&mut players, "Первый", 1);
+        assert_eq!(players.pending_teleport(&uuid), None);
+
+        players.order(&uuid, Order::Teleport { x: 1.0, y: 2.0, z: 3.0 });
+        players.order(&uuid, Order::Look { yaw: 0.0, pitch: 0.0 });
+        players.order(&uuid, Order::Teleport { x: 4.0, y: 5.0, z: 6.0 });
+        assert_eq!(players.pending_teleport(&uuid), Some((4.0, 5.0, 6.0)));
+
+        players.order(&uuid, Order::ChangeDimension { dimension: Default::default(), x: 0.0, y: 0.0, z: 0.0 });
+        assert_eq!(players.pending_teleport(&uuid), None);
+
+        assert_eq!(players.take_orders(&uuid).len(), 4);
+        assert_eq!(players.pending_teleport(&uuid), None);
     }
 
     /// Новичок должен получить список тех, кто уже зашёл, — иначе он их не

@@ -32,6 +32,7 @@ mod minecart;
 mod playerdata;
 mod redstone;
 mod tnt;
+mod lightning;
 mod custom_tnt;
 mod permissions;
 mod containers;

@@ -99,7 +99,7 @@ impl Occupant {
     /// `high` (доли блока) во всю его ширину. Строго: касание границы не
     /// считается (вики, String: с 25w31a «entities can no longer trigger
     /// tripwire by exactly touching its former detection boundary»).
-    fn crosses(&self, pos: Pos, low: f64, high: f64) -> bool {
+    pub(super) fn crosses(&self, pos: Pos, low: f64, high: f64) -> bool {
         let half = self.width / 2.0;
 
         self.x - half < (pos.0 + 1) as f64
@@ -116,10 +116,9 @@ impl Occupant {
 pub(super) fn step_entities(world: &mut World) {
     let occupants = world.redstone.occupants.clone();
 
-    super::step_plates(world, &occupants);
-    settle(world);
     touch_tripwires(world, &occupants);
     step_on_ores(world, &occupants);
+    super::sculk::step_on_shriekers(world, &occupants);
 }
 
 // ---------------------------------------------------------------------------
@@ -179,8 +178,7 @@ pub(super) fn power_value(block: &Block) -> u8 {
 const ROD_TICKS: u64 = 8;
 
 /// В громоотвод ударила молния: 8 тактов он включён и сильно питает блок,
-/// на котором стоит. Молний у нас пока нет.
-#[allow(dead_code)] // молний пока нет
+/// на котором стоит (lightning.rs).
 pub fn strike(world: &mut World, pos: Pos) {
     let block = Block::at(world, pos);
 

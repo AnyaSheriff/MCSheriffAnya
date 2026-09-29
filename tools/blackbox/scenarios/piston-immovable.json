@@ -1,0 +1,182 @@
+{
+ "name": "piston-immovable",
+ "about": "Поршни упираются в неподвижное: обсидиан, коренную породу, сундук, печь, воронку; глазурованную керамику толкают.",
+ "blocks": [
+  {
+   "at": [
+    -6,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=north]"
+  },
+  {
+   "at": [
+    -6,
+    0,
+    -1
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    -4,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=north]"
+  },
+  {
+   "at": [
+    -4,
+    0,
+    -1
+   ],
+   "state": "minecraft:bedrock"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=north]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    -1
+   ],
+   "state": "minecraft:chest[facing=south,type=single,waterlogged=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=north]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    -1
+   ],
+   "state": "minecraft:furnace[facing=south,lit=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=north]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    -1
+   ],
+   "state": "minecraft:hopper[enabled=true,facing=down]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=north]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    -1
+   ],
+   "state": "minecraft:white_glazed_terracotta[facing=north]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -6,
+     0,
+     1
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 4,
+   "set": {
+    "at": [
+     -4,
+     0,
+     1
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 8,
+   "set": {
+    "at": [
+     -2,
+     0,
+     1
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 12,
+   "set": {
+    "at": [
+     0,
+     0,
+     1
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 16,
+   "set": {
+    "at": [
+     2,
+     0,
+     1
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 20,
+   "set": {
+    "at": [
+     4,
+     0,
+     1
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 35,
+   "set": {
+    "at": [
+     4,
+     0,
+     1
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 60
+}

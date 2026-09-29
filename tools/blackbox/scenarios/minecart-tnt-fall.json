@@ -24,5 +24,10 @@
   "kill @e[type=furnace_minecart]",
   "kill @e[type=item]",
   "fill $(-8,-5,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "random": [
+  {"type": "values", "name": "сила взрыва вагонетки", "kind": "explosion", "field": "radius", "range": [4, 11.5], "why": "minecraft.wiki/w/Minecart_with_TNT: «base power of 4 … adds a random bonus value up to 1.5 times velocity, but no higher than 7.5». Оригинал против оригинала: 4.40 и 4.63 у первой, 4.00001 и 4 у второй."},
+  {"type": "mask", "name": "урон вагонетки от взрыва", "kind": "meta", "pattern": "10=[-\\d.e]+", "replace": "10=*", "why": "урон второй вагонетки (поле 10) зависит от силы взрыва первой, а она случайна: у оригинала 269.6 и 298.7. Такт тряски (поле 8) сверяется точно."},
+  {"type": "delay", "name": "запал вагонетки от взрыва", "from": "^explosion ", "to": "^explosion ", "between": "^(cart вагонетка (скорость|сдвиг|сверка|поворот)|meta )", "shift_between": false, "range": [0, 39], "why": "minecraft.wiki/w/Minecart_with_TNT: «For other causes there is a random delay between 0 and 1.95 seconds»; толчок от взрыва случайной силы делает случайным и движение второй вагонетки (скорости, сдвиги, сверки места). Оригинал против оригинала: запал 22 и 17 тактов."}
  ]
 }

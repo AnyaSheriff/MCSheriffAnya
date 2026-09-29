@@ -419,7 +419,7 @@ pub fn state_for(orientation: &Orientation, click: &Click) -> Option<i32> {
         // Сундук смотрит защёлкой на игрока: «The opposite from the
         // direction the player faces» (вики, Chest). С соседом он сливается
         // в `state_in_world`.
-        Family::Other if matches!(orientation.name, "chest" | "trapped_chest") => {
+        Family::Other if is_chest_name(orientation.name) => {
             orientation.state(&[("facing", opposite_direction(direction_from_yaw(click.yaw))), ("type", "single")])
         }
 
@@ -469,6 +469,12 @@ pub fn state_for(orientation: &Orientation, click: &Click) -> Option<i32> {
 /// стороной, сливается с ним в большой (вики, Chest). Если подходят оба
 /// соседа, берётся тот, что по часовой стрелке от стороны сундука, —
 /// [проверить] чёрным ящиком. Соседа перестраивает его обновление формы.
+/// Сундук ли это, что сливается с соседом в большой: простой, ловушка,
+/// медный любой стадии.
+fn is_chest_name(name: &str) -> bool {
+    matches!(name, "chest" | "trapped_chest") || name.ends_with("copper_chest")
+}
+
 fn chest_joined(orientation: &Orientation, world: &World, (x, y, z): (i32, i32, i32), state: i32) -> i32 {
     let Some(facing) = orientation.value(state, "facing") else {
         return state;
@@ -487,9 +493,16 @@ fn chest_joined(orientation: &Orientation, world: &World, (x, y, z): (i32, i32, 
     for (dx, dz, own) in [(cx, cz, "left"), (-cx, -cz, "right")] {
         let other = world.get_block(x + dx, y, z + dz);
 
-        if blocks::block_at_state(other) == Some(orientation.name)
-            && orientation.value(other, "facing") == Some(facing)
-            && orientation.value(other, "type") == Some("single")
+        // Медный сундук сливается с любым медным (вики, Copper Chest);
+        // стадии уравнивает потом обновление формы (redstone.rs).
+        let same = blocks::block_at_state(other)
+            .is_some_and(|name| name == orientation.name || (name.ends_with("copper_chest") && orientation.name.ends_with("copper_chest")));
+
+        let other_value = |name: &str| blocks::orientation_of(other).and_then(|o| o.value(other, name));
+
+        if same
+            && other_value("facing") == Some(facing)
+            && other_value("type") == Some("single")
             && let Some(joined) = orientation.with(state, "type", own)
         {
             return joined;
@@ -627,7 +640,7 @@ pub fn state_in_world(
 ) -> Option<i32> {
     let state = state_for(orientation, click)?;
 
-    if matches!(orientation.name, "chest" | "trapped_chest") {
+    if is_chest_name(orientation.name) {
         return Some(chest_joined(orientation, world, (x, y, z), state));
     }
 

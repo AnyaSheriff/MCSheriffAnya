@@ -1,0 +1,331 @@
+{
+ "name": "comparator-read",
+ "about": "Сравнители читают торт, котёл, компостер, рамку портала, якорь, улей; блоки меняются командой.",
+ "blocks": [
+  {
+   "at": [
+    -1,
+    0,
+    0
+   ],
+   "state": "minecraft:cake[bites=0]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    1
+   ],
+   "state": "minecraft:comparator[facing=north,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:water_cauldron[level=1]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:comparator[facing=north,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "minecraft:composter[level=0]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    1
+   ],
+   "state": "minecraft:comparator[facing=north,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    0
+   ],
+   "state": "minecraft:end_portal_frame[eye=false,facing=north]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    1
+   ],
+   "state": "minecraft:comparator[facing=north,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    6
+   ],
+   "state": "minecraft:respawn_anchor[charges=0]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    5
+   ],
+   "state": "minecraft:comparator[facing=south,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    4
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    6
+   ],
+   "state": "minecraft:beehive[facing=north,honey_level=0]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    5
+   ],
+   "state": "minecraft:comparator[facing=south,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    4
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    6
+   ],
+   "state": "minecraft:lava_cauldron"
+  },
+  {
+   "at": [
+    3,
+    0,
+    5
+   ],
+   "state": "minecraft:comparator[facing=south,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    4
+   ],
+   "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -1,
+     0,
+     0
+    ],
+    "state": "minecraft:cake[bites=3]"
+   }
+  },
+  {
+   "after": 1,
+   "set": {
+    "at": [
+     1,
+     0,
+     0
+    ],
+    "state": "minecraft:water_cauldron[level=3]"
+   }
+  },
+  {
+   "after": 2,
+   "set": {
+    "at": [
+     3,
+     0,
+     0
+    ],
+    "state": "minecraft:composter[level=4]"
+   }
+  },
+  {
+   "after": 3,
+   "set": {
+    "at": [
+     5,
+     0,
+     0
+    ],
+    "state": "minecraft:end_portal_frame[eye=true,facing=north]"
+   }
+  },
+  {
+   "after": 10,
+   "set": {
+    "at": [
+     -1,
+     0,
+     0
+    ],
+    "state": "minecraft:cake[bites=6]"
+   }
+  },
+  {
+   "after": 11,
+   "set": {
+    "at": [
+     1,
+     0,
+     0
+    ],
+    "state": "minecraft:cauldron"
+   }
+  },
+  {
+   "after": 12,
+   "set": {
+    "at": [
+     3,
+     0,
+     0
+    ],
+    "state": "minecraft:composter[level=8]"
+   }
+  },
+  {
+   "after": 13,
+   "set": {
+    "at": [
+     5,
+     0,
+     0
+    ],
+    "state": "minecraft:end_portal_frame[eye=false,facing=north]"
+   }
+  },
+  {
+   "after": 20,
+   "set": {
+    "at": [
+     -1,
+     0,
+     6
+    ],
+    "state": "minecraft:respawn_anchor[charges=1]"
+   }
+  },
+  {
+   "after": 21,
+   "set": {
+    "at": [
+     1,
+     0,
+     6
+    ],
+    "state": "minecraft:beehive[facing=north,honey_level=3]"
+   }
+  },
+  {
+   "after": 22,
+   "set": {
+    "at": [
+     3,
+     0,
+     6
+    ],
+    "state": "minecraft:powder_snow_cauldron[level=2]"
+   }
+  },
+  {
+   "after": 30,
+   "set": {
+    "at": [
+     -1,
+     0,
+     6
+    ],
+    "state": "minecraft:respawn_anchor[charges=4]"
+   }
+  },
+  {
+   "after": 31,
+   "set": {
+    "at": [
+     1,
+     0,
+     6
+    ],
+    "state": "minecraft:beehive[facing=north,honey_level=5]"
+   }
+  },
+  {
+   "after": 32,
+   "set": {
+    "at": [
+     3,
+     0,
+     6
+    ],
+    "state": "minecraft:cauldron"
+   }
+  }
+ ],
+ "record_ticks": 60
+}

@@ -1,0 +1,66 @@
+{
+ "name": "piston-pushes-piston",
+ "about": "Поршень толкает задвинутый поршень к блоку редстоуна: приехавший запитывается и выдвигается; убрали блок — задвигается.",
+ "blocks": [
+  {
+   "at": [
+    -4,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=north]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    1
+   ],
+   "state": "minecraft:redstone_block"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -5,
+     0,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 20,
+   "set": {
+    "at": [
+     -5,
+     0,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 40,
+   "set": {
+    "at": [
+     -2,
+     0,
+     1
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 70
+}

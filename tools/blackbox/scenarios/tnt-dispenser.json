@@ -1,33 +1,52 @@
 {
-  "name": "tnt-dispenser",
-  "about": "Раздатчик с динамитом от кнопки сверху: через 4 такта в блоке перед ним появляется подожжённый динамит, щелчок и дым, взрыв через 80 тактов.",
-  "blocks": [
-    {
-      "at": [
-        0,
-        0,
-        0
-      ],
-      "state": "minecraft:dispenser[facing=east,triggered=false]{Items:[{Slot:0b,id:\"minecraft:tnt\",count:1}]}"
-    },
-    {
-      "at": [
-        0,
-        1,
-        0
-      ],
-      "state": "minecraft:stone_button[face=floor,facing=north,powered=false]"
-    }
-  ],
-  "actions": [
-    {
-      "after": 0,
-      "click": [
-        0,
-        1,
-        0
-      ]
-    }
-  ],
-  "record_ticks": 110
+ "name": "tnt-dispenser",
+ "about": "Раздатчик с динамитом от кнопки сверху: через 4 такта в блоке перед ним появляется подожжённый динамит, щелчок и дым, взрыв через 80 тактов. Пол — обсидиан: иначе край воронки в каменном полу случаен (сила луча ×0,7…1,3 и случайный снос динамита), а так взрыв рушит только слабые блоки рядом — это сверяется точно.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:dispenser[facing=east,triggered=false]{Items:[{Slot:0b,id:\"minecraft:tnt\",count:1}]}"
+  },
+  {
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "minecraft:stone_button[face=floor,facing=north,powered=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    1,
+    0
+   ]
+  }
+ ],
+ "record_ticks": 110,
+ "setup": [
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:obsidian"
+ ],
+ "cleanup": [
+  "kill @e[type=item,distance=..48]",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "кнопка отваливается с частицами",
+   "match": "^level 0,1,0 2001 ",
+   "range": [
+    0,
+    1
+   ],
+   "why": "взрыв рушит раздатчик и кнопку на нём в случайном порядке (minecraft.wiki/w/Explosion: «the list of blocks to blow up is shuffled»): раньше сломан раздатчик — кнопка отваливается и даёт частицы (2001), раньше кнопка — частиц нет. Оригинал против оригинала: частицы были в 3 прогонах из 6."
+  }
+ ]
 }

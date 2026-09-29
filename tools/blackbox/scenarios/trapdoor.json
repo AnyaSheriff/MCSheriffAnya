@@ -1,0 +1,105 @@
+{
+ "name": "trapdoor",
+ "about": "Люки: деревянный щелчком и рычагом, железный только рычагом; щелчок по запитанному люку.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:oak_trapdoor[facing=north,half=bottom,open=false,powered=false,waterlogged=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    1
+   ],
+   "state": "minecraft:iron_trapdoor[facing=north,half=top,open=false,powered=false,waterlogged=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    1
+   ],
+   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    1
+   ],
+   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 10,
+   "click": [
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 20,
+   "click": [
+    5,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 30,
+   "click": [
+    2,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 40,
+   "click": [
+    4,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 50,
+   "click": [
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 60,
+   "click": [
+    2,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 70,
+   "click": [
+    4,
+    0,
+    1
+   ]
+  }
+ ],
+ "record_ticks": 90
+}

@@ -1,0 +1,19 @@
+{
+ "name": "golem-statue",
+ "about": "Статуя медного голема: щелчок меняет позу по кругу, сравнитель сзади читает позу (1–4); вторая статуя — другая стадия окисления.",
+ "blocks": [
+  {"at": [1, 0, 3], "state": "minecraft:copper_golem_statue[facing=east,copper_golem_pose=standing,waterlogged=false]"},
+  {"at": [0, 0, 3], "state": "minecraft:comparator[facing=east,mode=compare,powered=false]"},
+  {"at": [-1, 0, 3], "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"},
+  {"at": [1, 0, 1], "state": "minecraft:waxed_oxidized_copper_golem_statue[facing=south,copper_golem_pose=star,waterlogged=false]"}
+ ],
+ "actions": [
+  {"after": 0, "click": [1, 0, 3]},
+  {"after": 10, "click": [1, 0, 3]},
+  {"after": 20, "click": [1, 0, 3]},
+  {"after": 30, "click": [1, 0, 3]},
+  {"after": 40, "click": [1, 0, 1]}
+ ],
+ "cleanup": ["fill $(-1,0,0) $(2,1,4) minecraft:air"],
+ "record_ticks": 60
+}

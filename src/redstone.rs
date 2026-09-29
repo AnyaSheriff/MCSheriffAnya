@@ -26,12 +26,15 @@ use crate::blocks::{self, Orientation};
 use crate::containers;
 use crate::world::{AIR, World};
 
+pub mod bookshelf;
 mod components;
 pub mod crafter;
 mod jukebox;
 pub mod lectern;
 mod rails;
 mod sculk;
+pub mod shelf;
+pub mod statue;
 
 pub use jukebox::{jukebox_contents_changed, jukebox_reading, jukebox_song, tick_jukebox, use_jukebox};
 pub use lectern::lectern_reading;
@@ -273,10 +276,6 @@ pub struct Memory {
     /// Выгоревшие факелы: они не загораются, пока не остынут.
     burned_torches: std::collections::HashSet<Pos>,
 
-    /// Нажатые плиты и такт, когда на них последний раз кто-то был:
-    /// плита отпускается не сразу, а спустя время после того, как с неё сошли.
-    plates: HashMap<Pos, u64>,
-
     /// Кто где стоит в этом такте: игроки и то, что лежит в мире. Нужны и
     /// плитам с растяжками в фазе сущностей, и такту растяжки — он проверяет,
     /// не ушли ли с неё.
@@ -307,7 +306,6 @@ impl Memory {
             next_move: 0,
             detached: Vec::new(),
             burned_torches: std::collections::HashSet::new(),
-            plates: HashMap::new(),
             occupants: Vec::new(),
             lit_ores: BTreeSet::new(),
             daylight: BTreeSet::new(),
@@ -363,7 +361,6 @@ impl Memory {
     {
         self.torch_toggles.retain(|(x, _, z), _| keep(*x, *z));
         self.comparator_output.retain(|(x, _, z), _| keep(*x, *z));
-        self.plates.retain(|(x, _, z), _| keep(*x, *z));
         self.burned_torches.retain(|(x, _, z)| keep(*x, *z));
         self.lit_ores.retain(|(x, _, z)| keep(*x, *z));
         self.daylight.retain(|(x, _, z)| keep(*x, *z));
@@ -558,6 +555,8 @@ fn kind_of(name: &str) -> Kind {
         "redstone_lamp" => Kind::Lamp,
         "note_block" => Kind::NoteBlock,
         "chest" | "barrel" => Kind::Chest,
+        // Медный сундук любой стадии — как сундук (вики, Copper Chest).
+        _ if name.ends_with("copper_chest") => Kind::Chest,
         "trapped_chest" => Kind::TrappedChest,
         "dropper" | "dispenser" => Kind::Dispenser,
         "hopper" => Kind::Hopper,
@@ -1589,83 +1588,113 @@ fn pop_breaking(world: &mut World, pos: Pos) {
     pop(world, pos);
 }
 
-/// Через сколько тактов отпускается обычная плита, когда с неё сошли.
+/// Раз во сколько тактов нажатая плита пересчитывает, кто на ней: обычная —
+/// раз в 20, взвешенная — раз в 10 (вики, Pressure Plate: «checks every 20
+/// game ticks» / «every 10 game ticks»).
 const PLATE_RELEASE: u64 = 20;
-
-/// То же у взвешенной плиты — она отпускается вдвое быстрее.
 const WEIGHTED_RELEASE: u64 = 10;
 
-/// Нажимает и отпускает плиты по тому, кто на них стоит.
-///
-/// Плита слушает не только редстоун, но и мир: на неё встают игроки и
-/// падают предметы. Поэтому её считает такт мира, а не общий разбор
-/// сигналов.
-///
-/// Отпускается плита не сразу: обычная через секунду после того, как с неё
-/// сошли, взвешенная — вдвое быстрее.
-pub fn step_plates(world: &mut World, occupants: &[Occupant]) {
-    let tick = world.tick();
+/// Докуда над низом клетки плита чувствует сущности (доля блока).
+const PLATE_REACH: f64 = 0.25;
 
-    // Кто на какой плите стоит. Плита тонкая, и стоящий на ней находится
-    // в её же клетке.
+/// Сколько сущностей лежит на каждой плите: плита тонкая, и стоящий на ней
+/// находится в её же клетке. Каменную плиту и плиту из полированного
+/// чернокамня нажимают только живые: «activated only by mobs, players, and
+/// armor stands» — не предметы, стрелы, вагонетки (вики, Pressure Plate).
+fn plate_counts(world: &World, occupants: &[Occupant]) -> HashMap<Pos, u32> {
     let mut counts: HashMap<Pos, u32> = HashMap::new();
 
     for occupant in occupants {
         let pos = (occupant.x.floor() as i32, occupant.y.floor() as i32, occupant.z.floor() as i32);
         let plate = Block::at(world, pos);
 
-        // Каменную плиту и плиту из полированного чернокамня нажимают только
-        // живые: «activated only by mobs, players, and armor stands» — не
-        // предметы, стрелы, вагонетки (вики, Pressure Plate).
-        if plate.kind == Kind::Plate && (occupant.living || !only_living(plate.name)) {
+        // Плиту нажимает только то, что задевает её нижнюю четверть:
+        // предмет, который выбрасыватель подкинул вверх из клетки плиты,
+        // жмёт её, лишь упав обратно (чёрный ящик, plate-items).
+        // [проверить]: точные границы области у оригинала.
+        if plate.kind == Kind::Plate
+            && (occupant.living || !only_living(plate.name))
+            && occupant.crosses(pos, 0.0, PLATE_REACH)
+        {
             *counts.entry(pos).or_insert(0) += 1;
         }
     }
 
-    for (pos, count) in &counts {
+    counts
+}
+
+/// Через сколько тактов плита пересчитывает, кто на ней.
+fn plate_period(block: &Block) -> u64 {
+    if is_weighted(block.name) {
+        WEIGHTED_RELEASE
+    } else {
+        PLATE_RELEASE
+    }
+}
+
+/// Нажимает ненажатые плиты, на которые кто-то встал, — в фазе сущностей,
+/// по местам после шага предметов: предмет жмёт плиту в тот такт, когда
+/// на неё упал (чёрный ящик, plate-items, plate-weights).
+///
+/// Нажатая плита на сущности уже не смотрит: кто на ней, она пересчитывает
+/// своим тактом раз в 10 или 20 тактов (`plate_ticked`) — там же меняется
+/// сила взвешенной и там же плита отпускается. Сила взвешенной поэтому
+/// меняется не в тот такт, когда на неё легли новые предметы, а на ближайшем
+/// пересчёте; и отпускается плита на пересчёте, а не через срок после ухода
+/// (чёрный ящик, plate-weights).
+pub fn step_plates(world: &mut World, occupants: &[Occupant]) {
+    // Оригинал проверяет весь путь сущности за шаг, а у нас есть только
+    // концы: где она была до шага (записано фазой сущностей) и где стала.
+    // Предмет, который выбрасыватель выкинул из клетки плиты вверх, жмёт
+    // её уже в такт появления, а упавший обратно — когда упал (чёрный ящик,
+    // plate-items: у оригинала бывает и так, и так). На плиту берём
+    // большее из двух чисел, чтобы лежащее не считалось дважды.
+    let before = world.redstone.occupants.clone();
+    let mut counts = plate_counts(world, occupants);
+
+    for (pos, count) in plate_counts(world, &before) {
+        let now = counts.entry(pos).or_insert(0);
+        *now = (*now).max(count);
+    }
+    let mut pressed: Vec<(&Pos, &u32)> = counts.iter().collect();
+
+    pressed.sort();
+
+    for (pos, count) in pressed {
         let block = Block::at(world, *pos);
+
+        if plate_power(&block) > 0 {
+            continue;
+        }
 
         if let Some(state) = pressed_state(&block, *count)
             && state != block.state
         {
             plate_click(world, *pos, &block, state);
             set(world, *pos, state);
-        }
-
-        world.redstone.plates.insert(*pos, tick);
-    }
-
-    // Те, с кого сошли: отпускаем, когда вышло время.
-    let free: Vec<Pos> = world
-        .redstone
-        .plates
-        .iter()
-        .filter(|(pos, last)| {
-            let block = Block::at(world, **pos);
-            let delay = if is_weighted(block.name) {
-                WEIGHTED_RELEASE
-            } else {
-                PLATE_RELEASE
-            };
-
-            !counts.contains_key(*pos) && tick.saturating_sub(**last) >= delay
-        })
-        .map(|(pos, _)| *pos)
-        .collect();
-
-    for pos in free {
-        world.redstone.plates.remove(&pos);
-
-        let block = Block::at(world, pos);
-
-        if let Some(state) = pressed_state(&block, 0)
-            && state != block.state
-        {
-            plate_click(world, pos, &block, state);
-            set(world, pos, state);
+            world.schedule_once(pos.0, pos.1, pos.2, plate_period(&block), PRIORITY_NORMAL);
         }
     }
 }
+
+/// Такт нажатой плиты: пересчитать, кто на ней (по местам к началу такта),
+/// сменить силу или отпустить; пока нажата — следующий пересчёт.
+fn plate_ticked(world: &mut World, pos: Pos, block: &Block) {
+    let occupants = world.redstone.occupants.clone();
+    let count = plate_counts(world, &occupants).get(&pos).copied().unwrap_or(0);
+
+    if let Some(state) = pressed_state(block, count)
+        && state != block.state
+    {
+        plate_click(world, pos, block, state);
+        set(world, pos, state);
+    }
+
+    if count > 0 {
+        world.schedule_once(pos.0, pos.1, pos.2, plate_period(block), PRIORITY_NORMAL);
+    }
+}
+
 
 /// Щелчок плиты, когда её нажали или отпустили: звук раньше смены блока,
 /// как у кнопки. У оригинала деревянная плита под упавшим предметом
@@ -1789,7 +1818,8 @@ fn block_changed(world: &mut World, pos: Pos, old: i32, depth: usize) {
     // его: соседям — общее «сосед изменился» и обновление формы, но ничего
     // из того, что деталь рассылает сама при своей смене (чёрный ящик,
     // rail-activator: пыль-крестик с силой 0 так и остаётся с нулём).
-    let replaced = world.take_commanded(pos) && same_block;
+    let commanded = world.take_commanded(pos);
+    let replaced = commanded && same_block;
     let quiet = same_block && !replaced && keeps_quiet(new_block.kind);
 
     // Порядок рассылки при одном изменении — по таблице «Priorities» на
@@ -1803,7 +1833,16 @@ fn block_changed(world: &mut World, pos: Pos, old: i32, depth: usize) {
     // обновление, а часть постановки (вики, Block update: «Strictly
     // speaking, this isn't a block update»).
     if !same_block {
-        itself_changed(world, pos);
+        // Пыль, поставленная командой, форму не подбирает — остаётся такой,
+        // какой её дали, и пересчитывает только силу: поставленная концом
+        // в пустоту так и смотрит туда, и когда там появится провод, сосед
+        // ничего не шлёт (чёрный ящик, dust-join).
+        if commanded && new_block.kind == Kind::Wire {
+            react(world, pos, false, false);
+        } else {
+            itself_changed(world, pos);
+        }
+
         settle_from(world, depth + 1);
     }
 
@@ -2081,6 +2120,11 @@ fn reach_of(block: &Block, pos: Pos) -> Vec<Pos> {
     }
 }
 
+/// В громоотвод ударила молния (lightning.rs): 8 тактов сигнала.
+pub fn lightning_struck(world: &mut World, pos: Pos) {
+    components::strike(world, pos);
+}
+
 /// Обновление сравнителей: у блока в этом месте сменилось то, что они
 /// читают (содержимое хранилища). Будятся четыре соседа по бокам в порядке
 /// север, восток, юг, запад — сравнитель рядом или за одним проводящим
@@ -2121,6 +2165,16 @@ fn itself_changed(world: &mut World, pos: Pos) {
 
 fn react(world: &mut World, pos: Pos, itself: bool, from_signal: bool) {
     let block = Block::at(world, pos);
+
+    // Полка: ток — `powered` и сцепка с соседками (redstone/shelf.rs).
+    // Поставленная командой питание сама не проверяет. [проверить]
+    if block.kind == Kind::Other && shelf::is_shelf(block.name) {
+        if !itself {
+            shelf::react(world, pos);
+        }
+
+        return;
+    }
 
     match block.kind {
         // Пыль на «сосед изменился» пересчитывает только силу; форму — по
@@ -2238,6 +2292,18 @@ fn react(world: &mut World, pos: Pos, itself: bool, from_signal: bool) {
                     .and_then(|kind| kind.with(current, "lit", yes_no(!block.is("lit", "true"))));
             }
 
+            // Сменила свет — щелчок `turn_on` или `turn_off`, громкость
+            // и высота 1, раньше нового блока (чёрный ящик, copper-bulb).
+            if powered {
+                let sound = if block.is("lit", "true") {
+                    "minecraft:block.copper_bulb.turn_off"
+                } else {
+                    "minecraft:block.copper_bulb.turn_on"
+                };
+
+                world.note_sound(pos.0, pos.1, pos.2, sound, 1.0, 1.0);
+            }
+
             if let Some(state) = state {
                 set(world, pos, state);
             }
@@ -2299,12 +2365,27 @@ fn react(world: &mut World, pos: Pos, itself: bool, from_signal: bool) {
                     .with("powered", yes_no(powered))
                     .and_then(|state| block.orientation?.with(state, "open", yes_no(powered)));
 
-                if let Some(state) = opened {
-                    set(world, pos, state);
+                // Открылась или закрылась от сигнала — звук и вибрация
+                // `block_open` или `block_close`, если `open` и правда
+                // сменился. Звук раньше, чем новый блок (чёрный ящик,
+                // door-lever, trapdoor, fence-gate).
+                if block.is("open", "true") != powered {
+                    let pitch = 0.9 + world.random_unit() * 0.1;
+
+                    world.note_sound(pos.0, pos.1, pos.2, opening_sound(&block, powered), 1.0, pitch);
                 }
 
-                // Открылась или закрылась от сигнала — `block_open` или
-                // `block_close`, если `open` и правда сменился.
+                if let Some(state) = opened {
+                    set(world, pos, state);
+
+                    // Вторая половина двери повторяет первую: у оригинала
+                    // она подстраивается по обновлению формы и уходит
+                    // клиенту той же пачкой (чёрный ящик, door-lever).
+                    if block.kind == Kind::Door {
+                        door_copy_to_other_half(world, pos, &block, state);
+                    }
+                }
+
                 if block.is("open", "true") != powered {
                     game_event(world, pos, if powered { FREQ_ACTIVATE } else { FREQ_DEACTIVATE });
                 }
@@ -2607,14 +2688,38 @@ fn shape_update(world: &mut World, pos: Pos, from: Dir, loud: bool) {
             // Сосед по часовой от стороны сундука — пара для «левой».
             let clockwise = facing.clockwise();
             let side_of = |dir: Dir| if dir == clockwise { "left" } else { "right" };
+            // Медные сундуки в пару идут с любым медным, какой бы ни была
+            // стадия (вики, Copper Chest).
+            let copper = |name: &str| name.ends_with("copper_chest");
             let points_here = |other: &Block| {
-                other.name == block.name
+                (other.name == block.name || (copper(other.name) && copper(block.name)))
                     && other.facing() == Some(facing)
                     && other.value("type") == Some(if side_of(from) == "left" { "right" } else { "left" })
             };
 
             // Смотрим только на бока: спереди и сзади пары не бывает.
             if from == facing || from == facing.opposite() {
+                return;
+            }
+
+            // Пара медных сундуков разных стадий становится одним сундуком:
+            // обе половины — наименее окисленной стадии, вощёные, только
+            // если вощены обе (вики, Copper Chest; сценарий copper-chest).
+            if kind != "single" && points_here(&other) && other.name != block.name && copper(block.name) {
+                let merged = containers::copper_chest_merged(block.name, other.name);
+
+                for (at, half) in [(pos, block), (step(pos, from), other)] {
+                    if half.name != merged
+                        && let Some(state) = blocks::orientation(&merged).and_then(|o| o.state(&[
+                            ("facing", half.value("facing").unwrap_or("north")),
+                            ("type", half.value("type").unwrap_or("single")),
+                            ("waterlogged", half.value("waterlogged").unwrap_or("false")),
+                        ]))
+                    {
+                        set(world, at, state);
+                    }
+                }
+
                 return;
             }
 
@@ -2818,6 +2923,24 @@ fn set_moved(world: &mut World, pos: Pos, state: i32) {
     world.tell_later(pos.0, pos.1, pos.2, PISTON_TELL_LATER);
 }
 
+/// Едущий блок встаёт на место в конце хода.
+///
+/// Наблюдатель после переезда срабатывает: «Observers also emit a pulse after
+/// getting moved by pistons» (вики, Observer); «moving an observer while it's
+/// not active causes it to output a pulse after its usual delay; however,
+/// moving an observer that is currently emitting a redstone signal causes it
+/// to turn off instead». Такт наблюдателя сам решает, что делать: выключенный
+/// включается, включённый гаснет. Сверено чёрным ящиком (сценарий
+/// piston-moves-observer): загорается через два такта после приезда. Когда
+/// гаснет приехавший включённым, не замерено [проверить].
+fn arrive(world: &mut World, pos: Pos, state: i32) {
+    set_moved(world, pos, state);
+
+    if blocks::block_at_state(state).is_some_and(|name| kind_of(name) == Kind::Observer) {
+        world.schedule_once(pos.0, pos.1, pos.2, OBSERVER_PULSE, PRIORITY_NORMAL);
+    }
+}
+
 /// Состояние служебного блока «движущийся поршень».
 ///
 /// Клиенту он не отправляется: сервер держит его у себя, чтобы место
@@ -2836,6 +2959,91 @@ fn set_hidden(world: &mut World, pos: Pos, state: i32) {
 
 
 
+
+/// Вторая половина двери принимает `open` и `powered` первой.
+fn door_copy_to_other_half(world: &mut World, pos: Pos, block: &Block, state: i32) {
+    let other = match block.value("half") {
+        Some("lower") => step(pos, Dir::Up),
+        _ => step(pos, Dir::Down),
+    };
+    let other_block = Block::at(world, other);
+
+    if other_block.kind != Kind::Door || other_block.name != block.name {
+        return;
+    }
+
+    let Some(kind) = block.orientation else {
+        return;
+    };
+
+    let mut copied = Some(other_block.state);
+
+    for property in ["open", "powered"] {
+        let value = kind.value(state, property);
+        copied = copied.and_then(|current| value.and_then(|value| kind.with(current, property, value)));
+    }
+
+    if let Some(copied) = copied
+        && copied != other_block.state
+    {
+        set(world, other, copied);
+    }
+}
+
+/// Звук открытия и закрытия двери, люка, калитки — по материалу (имена
+/// звуков из отчёта `--reports`): у железа, меди, вишни, бамбука и
+/// незерских пород свои, у прочего дерева — общий деревянный.
+fn opening_sound(block: &Block, open: bool) -> &'static str {
+    let name = block.name;
+    let material = if name.starts_with("iron_") {
+        "iron"
+    } else if name.contains("copper") {
+        "copper"
+    } else if name.starts_with("cherry") {
+        "cherry"
+    } else if name.starts_with("bamboo") {
+        "bamboo"
+    } else if name.starts_with("crimson") || name.starts_with("warped") {
+        "nether"
+    } else {
+        "wood"
+    };
+
+    match (block.kind, material, open) {
+        (Kind::Door, "iron", true) => "minecraft:block.iron_door.open",
+        (Kind::Door, "iron", false) => "minecraft:block.iron_door.close",
+        (Kind::Door, "copper", true) => "minecraft:block.copper_door.open",
+        (Kind::Door, "copper", false) => "minecraft:block.copper_door.close",
+        (Kind::Door, "cherry", true) => "minecraft:block.cherry_wood_door.open",
+        (Kind::Door, "cherry", false) => "minecraft:block.cherry_wood_door.close",
+        (Kind::Door, "bamboo", true) => "minecraft:block.bamboo_wood_door.open",
+        (Kind::Door, "bamboo", false) => "minecraft:block.bamboo_wood_door.close",
+        (Kind::Door, "nether", true) => "minecraft:block.nether_wood_door.open",
+        (Kind::Door, "nether", false) => "minecraft:block.nether_wood_door.close",
+        (Kind::Door, _, true) => "minecraft:block.wooden_door.open",
+        (Kind::Door, _, false) => "minecraft:block.wooden_door.close",
+        (Kind::Trapdoor, "iron", true) => "minecraft:block.iron_trapdoor.open",
+        (Kind::Trapdoor, "iron", false) => "minecraft:block.iron_trapdoor.close",
+        (Kind::Trapdoor, "copper", true) => "minecraft:block.copper_trapdoor.open",
+        (Kind::Trapdoor, "copper", false) => "minecraft:block.copper_trapdoor.close",
+        (Kind::Trapdoor, "cherry", true) => "minecraft:block.cherry_wood_trapdoor.open",
+        (Kind::Trapdoor, "cherry", false) => "minecraft:block.cherry_wood_trapdoor.close",
+        (Kind::Trapdoor, "bamboo", true) => "minecraft:block.bamboo_wood_trapdoor.open",
+        (Kind::Trapdoor, "bamboo", false) => "minecraft:block.bamboo_wood_trapdoor.close",
+        (Kind::Trapdoor, "nether", true) => "minecraft:block.nether_wood_trapdoor.open",
+        (Kind::Trapdoor, "nether", false) => "minecraft:block.nether_wood_trapdoor.close",
+        (Kind::Trapdoor, _, true) => "minecraft:block.wooden_trapdoor.open",
+        (Kind::Trapdoor, _, false) => "minecraft:block.wooden_trapdoor.close",
+        (_, "cherry", true) => "minecraft:block.cherry_wood_fence_gate.open",
+        (_, "cherry", false) => "minecraft:block.cherry_wood_fence_gate.close",
+        (_, "bamboo", true) => "minecraft:block.bamboo_wood_fence_gate.open",
+        (_, "bamboo", false) => "minecraft:block.bamboo_wood_fence_gate.close",
+        (_, "nether", true) => "minecraft:block.nether_wood_fence_gate.open",
+        (_, "nether", false) => "minecraft:block.nether_wood_fence_gate.close",
+        (_, _, true) => "minecraft:block.fence_gate.open",
+        (_, _, false) => "minecraft:block.fence_gate.close",
+    }
+}
 
 /// Запитана ли вторая половина двери: дверь открывается целиком.
 fn door_other_half_powered(world: &World, pos: Pos, block: &Block) -> bool {
@@ -3033,7 +3241,7 @@ fn interrupt_extension(world: &mut World, moving: Moving, drop_block: bool) {
 
     for (place, state) in moving.cargo {
         if drop_block && place == first {
-            set_moved(world, place, state);
+            arrive(world, place, state);
         } else {
             rest.push((place, state));
         }
@@ -3070,7 +3278,7 @@ pub fn finish_due_moves(world: &mut World) {
 
     for (_, _, cargo) in arrived {
         for (place, state) in cargo {
-            set_moved(world, place, state);
+            arrive(world, place, state);
         }
 
         settle(world);
@@ -3091,11 +3299,111 @@ pub fn finish_due_moves(world: &mut World) {
     }
 }
 
+/// Едущий блок в этом такте — чем он толкает сущности: где его рамка после
+/// шага и куда он едет (единичный вектор).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Shove {
+    pub min: (f64, f64, f64),
+    pub max: (f64, f64, f64),
+    pub dir: (f64, f64, f64),
+}
+
+/// Насколько сущность отодвигается дальше края едущего блока (чёрный ящик,
+/// piston-push-items: предмет шириной 0,25, лежавший серединой в 0,5 блока
+/// перед головой, уехал на 2601/4096 = 0,635 — ровно до края головы и ещё
+/// на 0,01; робот — до 4,31 при краю головы в 4 и половине ширины 0,3).
+pub const SHOVE_MARGIN: f64 = 0.01;
+
+/// Больше этого за такт по одной оси едущий блок сущность не сдвигает:
+/// шаг блока 0,5 и зазор 0,01 [проверить].
+pub const SHOVE_LIMIT: f64 = 0.51;
+
+/// Фаза блок-сущностей: едущие блоки делают шаг и толкают сущности у себя
+/// на пути (вики, Piston: «Any entities in the path of an extending piston
+/// (or any block it might be moving) are pushed along»). Ход длится два
+/// такта: в такте начала блок проходит половину пути, в следующем — вторую,
+/// а ещё через такт встаёт на место и уже ничего не толкает. Возвращает
+/// рамки блоков после шага — в порядке ходов; двигает сущности вызывающий.
+///
+/// Голова при задвигании не тянет за собой (вики: «Retracting pistons can
+/// no longer pull entities through them»); вытягиваемые блоки толкают то,
+/// что у них на пути к поршню [проверить].
+pub fn shoves(world: &World) -> Vec<Shove> {
+    let now = world.tick();
+    let mut moves: Vec<(u64, &Moving)> = world
+        .redstone
+        .moving
+        .values()
+        .filter(|moving| moving.due > now && moving.due <= now + PISTON_MOVE)
+        .map(|moving| (moving.order, moving))
+        .collect();
+
+    moves.sort_unstable_by_key(|(order, _)| *order);
+
+    let mut found = Vec::new();
+
+    for (_, moving) in moves {
+        // Сколько пути пройдено после этого шага: половина, потом весь.
+        let progress = 1.0 - (moving.due - now - 1) as f64 / PISTON_MOVE as f64;
+        let dir = if moving.extending { moving.facing } else { moving.facing.opposite() };
+        let unit = step((0, 0, 0), dir);
+        let unit = (unit.0 as f64, unit.1 as f64, unit.2 as f64);
+        let back = progress - 1.0;
+
+        let head = moving.extending.then_some(moving.head);
+        let cells = moving
+            .cargo
+            .iter()
+            .filter(|(_, state)| blocks::has_box(*state))
+            .map(|(place, _)| *place)
+            .chain(head);
+
+        for (x, y, z) in cells {
+            let min = (x as f64 + unit.0 * back, y as f64 + unit.1 * back, z as f64 + unit.2 * back);
+
+            found.push(Shove { min, max: (min.0 + 1.0, min.1 + 1.0, min.2 + 1.0), dir: unit });
+        }
+    }
+
+    found
+}
+
+/// Насколько едущий блок сдвигает сущность с рамкой `min..max` (по
+/// направлению его хода): до своего края и ещё на зазор, но не больше
+/// предела за такт. None — не задевает.
+pub fn shove_distance(shove: &Shove, min: (f64, f64, f64), max: (f64, f64, f64)) -> Option<f64> {
+    let overlaps = min.0 < shove.max.0
+        && max.0 > shove.min.0
+        && min.1 < shove.max.1
+        && max.1 > shove.min.1
+        && min.2 < shove.max.2
+        && max.2 > shove.min.2;
+
+    if !overlaps {
+        return None;
+    }
+
+    // Ход всегда вдоль одной оси: по ней и считаем.
+    let pick = |v: (f64, f64, f64)| {
+        if shove.dir.0 != 0.0 {
+            v.0
+        } else if shove.dir.1 != 0.0 {
+            v.1
+        } else {
+            v.2
+        }
+    };
+    let forward = pick(shove.dir) > 0.0;
+    let need = if forward { pick(shove.max) - pick(min) } else { pick(max) - pick(shove.min) };
+
+    Some((need + SHOVE_MARGIN).clamp(0.0, SHOVE_LIMIT))
+}
+
 /// Доигрывает ход, у которого не стало поршня: блоки встают на места
 /// назначения, а служебные блоки убираются.
 fn abandon_move(world: &mut World, moving: &Moving) {
     for (place, state) in &moving.cargo {
-        set_moved(world, *place, *state);
+        arrive(world, *place, *state);
     }
 
     if Block::at(world, moving.head).kind == Kind::MovingPiston {
@@ -3289,10 +3597,14 @@ fn start_move(
 
     // Что поедет: при выдвигании — связка перед поршнем, при задвигании —
     // то, что липкий поршень тянет за собой.
+    let mut failed_pull = false;
     let group = if extending {
         push_group(world, front, facing, pos)?
     } else {
-        pulled_group(world, pos, facing, sticky)
+        pulled_group(world, pos, facing, sticky).unwrap_or_else(|| {
+            failed_pull = true;
+            Vec::new()
+        })
     };
 
     // Место головы занято ходом: оно не пустое, но и ничего не проводит.
@@ -3305,9 +3617,12 @@ fn start_move(
         // оригинал говорит о месте служебным «движущимся поршнем», только
         // если голова так и не встала — выдвигание прервали (чёрный ящик:
         // sticky-spit-many — говорит, sticky-pull — молчит).
-        if group.is_empty() {
+        // Если же тянуть пытался, но связка не пошла (больше двенадцати или
+        // упёрлась), о месте головы оригинал молчит и в начале, и в конце
+        // хода (чёрный ящик, slime-limit).
+        if group.is_empty() && !failed_pull {
             world.tell_later(front.0, front.1, front.2, PISTON_TELL_LATER);
-        } else if cut_short {
+        } else if !group.is_empty() && cut_short {
             world.tell_later_as_is(front.0, front.1, front.2, PISTON_TELL_LATER);
         }
     }
@@ -3343,13 +3658,17 @@ fn start_move(
         cargo.push((step(*place, step_to), state));
     }
 
-    // Старые места пустеют: блоки уже едут. При вытягивании клиенту об
-    // опустевшем месте говорят (на такт позже), при толкании — нет: так
-    // у оригинала, клиент и сам рисует, как блок уезжает.
+    // Старые места пустеют: блоки уже едут. Клиенту об опустевшем месте
+    // говорят (на такт позже), если туда не приедет другой блок связки;
+    // при толкании молчат и о месте головы — его займёт она сама. В линию
+    // таких мест не бывает, а у связки на слизи бывают: задний слой
+    // (чёрный ящик, slime-limit, slime-honey, sticky-glazed).
     for place in &group {
         set_hidden(world, *place, AIR);
 
-        if !extending && !group.iter().any(|other| step(*other, step_to) == *place) {
+        let refilled = group.iter().any(|other| step(*other, step_to) == *place);
+
+        if !refilled && (!extending || *place != front) {
             world.tell_later(place.0, place.1, place.2, PISTON_TELL_LATER);
         }
     }
@@ -3385,20 +3704,22 @@ fn start_move(
 }
 
 /// Что липкий поршень тянет за собой, задвигаясь.
-fn pulled_group(world: &World, pos: Pos, facing: Dir, sticky: bool) -> Vec<Pos> {
+///
+/// None — поршень пытался тянуть, но связка не идёт: больше двенадцати
+/// блоков или упирается в неподвижное. Пустой список — тянуть нечего.
+fn pulled_group(world: &World, pos: Pos, facing: Dir, sticky: bool) -> Option<Vec<Pos>> {
     if !sticky {
-        return Vec::new();
+        return Some(Vec::new());
     }
 
     let ahead = step(step(pos, facing), facing);
     let pulled = world.get_block(ahead.0, ahead.1, ahead.2);
 
     if push_reaction(pulled) != Push::Moves || !can_be_pulled(pulled) {
-        return Vec::new();
+        return Some(Vec::new());
     }
 
-
-    push_group(world, ahead, facing.opposite(), pos).unwrap_or_default()
+    push_group(world, ahead, facing.opposite(), pos)
 }
 
 /// Доигрывает ход поршня: время вышло, блоки встают на новые места.
@@ -3442,7 +3763,7 @@ fn finish_move(world: &mut World, pos: Pos, moving: Moving) {
 
     // И сами блоки — на новые места.
     for (place, state) in &moving.cargo {
-        set_moved(world, *place, *state);
+        arrive(world, *place, *state);
     }
 
     if !moving.extending && let Some(retracted) = block.with("extended", "false") {
@@ -3457,6 +3778,8 @@ pub fn ticked(world: &mut World, pos: Pos) {
     let block = Block::at(world, pos);
 
     match block.kind {
+        Kind::Plate => plate_ticked(world, pos, &block),
+
         // Поршень: вышло время хода.
         // Запланированный такт поршня — только из мира, записанного
         // прежней версией (тогда ход кончался тактом). Ход, о котором
@@ -3530,14 +3853,17 @@ pub fn ticked(world: &mut World, pos: Pos) {
                 toggles.push_back(tick);
             }
 
-            // Пороги разные: выгорает факел, когда переключений стало
-            // больше восьми, а загореться снова может, только когда их
+            // Выгорает факел на восьмом выключении за 60 тактов: гаснет
+            // как обычно, но с шипением и дымом (событие мира 1502), и
+            // больше сам не загорается (чёрный ящик, torch-burnout).
+            // Загореться снова может, только когда выключений в окне
             // осталось меньше восьми — «until the number of state changes
             // in the last 60 game ticks drops to fewer than eight».
             let count = toggles.len();
 
-            if count > BURNOUT_TOGGLES {
+            if !wanted && count >= BURNOUT_TOGGLES {
                 world.redstone.burned_torches.insert(pos);
+                world.note_level_event(pos.0, pos.1, pos.2, 1502, 0);
             } else if count < BURNOUT_TOGGLES {
                 world.redstone.burned_torches.remove(&pos);
             }
@@ -3616,6 +3942,9 @@ pub fn ticked(world: &mut World, pos: Pos) {
 
         // Датчик скалка: `active` → `cooldown` → `inactive`.
         Kind::Sculk => sculk::ticked(world, pos, &block),
+
+        // Крикун скалка докричал.
+        Kind::Other if block.name == "sculk_shrieker" => sculk::shrieker_ticked(world, pos, &block),
 
         // Растяжка проверяет, не ушли ли с неё; крючок — цепь.
         Kind::Tripwire => components::tripwire_ticked(world, pos, &block),
@@ -4142,6 +4471,11 @@ pub fn use_block(world: &mut World, pos: Pos) -> bool {
                 }
             }
 
+            // Звук слышат все, кроме щёлкнувшего: его клиент играет звук
+            // сам (чёрный ящик, door-click — роботу звук не приходит).
+            let pitch = 0.9 + world.random_unit() * 0.1;
+
+            world.note_sound_by_hand(pos.0, pos.1, pos.2, opening_sound(&block, open), 1.0, pitch);
             game_event(world, pos, if open { FREQ_ACTIVATE } else { FREQ_DEACTIVATE });
             block.with("open", yes_no(open))
         }
@@ -4186,6 +4520,58 @@ pub fn use_block(world: &mut World, pos: Pos) -> bool {
     }
 
     true
+}
+
+/// Щелчок, который меняет сам блок по тому, что в руке: око Края в рамку
+/// портала, светокамень в якорь возрождения; торт едят рукой. Сравнитель
+/// рядом читает новое состояние (чёрный ящик, comparator-click).
+///
+/// Some(true) — предмет из руки тратится, Some(false) — нет, None — щелчок
+/// не про это. Торт у нас едят только в творческом: голода пока нет, а
+/// сытый в выживании торт не ест. [проверить]: полный якорь от светокамня
+/// в обычном мире у оригинала взрывается — у нас щелчок ничего не делает;
+/// портал из заполненных рамок не открывается.
+pub fn use_with_item(world: &mut World, pos: Pos, held: Option<&str>, creative: bool) -> Option<bool> {
+    let block = Block::at(world, pos);
+
+    match block.name {
+        // Око: вспышка частиц у клиента — событие мира 1503, раньше повтора
+        // блока.
+        "end_portal_frame" if held == Some("ender_eye") && block.is("eye", "false") => {
+            let state = block.with("eye", "true")?;
+
+            world.note_level_event(pos.0, pos.1, pos.2, 1503, 0);
+            set(world, pos, state);
+            Some(true)
+        }
+
+        // Светокамень добавляет заряд, до четырёх; звук `charge`,
+        // громкость и высота 1 — его слышит и тот, кто заряжал.
+        "respawn_anchor" if held == Some("glowstone") => {
+            let charges: u8 = block.value("charges")?.parse().ok()?;
+
+            if charges >= 4 {
+                return None;
+            }
+
+            let state = block.with("charges", &(charges + 1).to_string())?;
+
+            world.note_sound(pos.0, pos.1, pos.2, "minecraft:block.respawn_anchor.charge", 1.0, 1.0);
+            set(world, pos, state);
+            Some(true)
+        }
+
+        // Торт: кусок за щелчок, седьмой съедает торт целиком.
+        "cake" if creative => {
+            let bites: u8 = block.value("bites")?.parse().ok()?;
+            let state = if bites >= 6 { AIR } else { block.with("bites", &(bites + 1).to_string())? };
+
+            set(world, pos, state);
+            Some(false)
+        }
+
+        _ => None,
+    }
 }
 
 /// Игрок щёлкнул по блоку гранью `face` (номер стороны, как в пакете).
@@ -4244,6 +4630,8 @@ pub fn block_entity_type(state: i32) -> Option<i32> {
                 Some(name) if head_of(name).is_some() => SKULL_ENTITY,
                 Some("sculk_sensor") => 35,
                 Some("calibrated_sculk_sensor") => 36,
+                Some("sculk_shrieker") => 38,
+                Some(name) if statue::is_statue(name) => statue::BLOCK_ENTITY as u8,
                 Some(name) if name.ends_with("_hanging_sign") => HANGING_SIGN_ENTITY,
                 Some(name) if name.ends_with("_sign") => SIGN_ENTITY,
                 _ => 0,
@@ -4310,6 +4698,118 @@ mod tests {
     fn put(world: &mut World, pos: Pos, state: i32) {
         world.set_block(pos.0, pos.1, pos.2, state);
         settle(world);
+    }
+
+    /// Три запитанные полки на восток: слева (юг) `left`, потом `center`
+    /// и `right`; щелчок по средней меняет все девять ячеек панели
+    /// (сценарий shelf).
+    #[test]
+    fn powered_shelves_chain_and_swap_the_hotbar() {
+        let mut world = world();
+        let oak = state("oak_shelf", &[("facing", "east"), ("powered", "false"), ("side_chain", "unconnected")]);
+        let stone = blocks::item_named("stone").unwrap();
+
+        for z in 2..=4 {
+            put(&mut world, (1, 1, z), oak);
+        }
+
+        world.with_container(1, 1, 3, |c| c.slots[0] = Some(crate::inventory::Stack::new(stone, 5)));
+        assert_eq!(shelf::reading(&world, (1, 1, 3)), 1);
+
+        for z in 2..=4 {
+            put(&mut world, (1, 0, z), blocks::state_by_name("redstone_block").unwrap());
+        }
+
+        let chain = |world: &World, z| Block::at(world, (1, 1, z)).value("side_chain");
+        assert_eq!(chain(&world, 4), Some("left"));
+        assert_eq!(chain(&world, 3), Some("center"));
+        assert_eq!(chain(&world, 2), Some("right"));
+        assert_eq!(shelf::chain(&world, (1, 1, 3)), vec![(1, 1, 4), (1, 1, 3), (1, 1, 2)]);
+
+        let hotbar = vec![None; 9];
+        let used = shelf::use_shelf(&mut world, (1, 1, 3), 5, (1.0, 0.5, 0.5), &hotbar, 0, true);
+
+        // Средняя полка — ячейки 3–5 панели.
+        match used {
+            Some(shelf::Used::Hotbar(changes)) => assert!(changes.contains(&(3, Some(crate::inventory::Stack::new(stone, 5))))),
+            other => panic!("ждали обмен панели, вышло {other:?}"),
+        }
+
+        assert_eq!(shelf::reading(&world, (1, 1, 3)), 0);
+
+        // Ток ушёл у левой — она сама по себе, две оставшиеся — пара.
+        put(&mut world, (1, 0, 4), STONE);
+        assert_eq!(chain(&world, 4), Some("unconnected"));
+        assert_eq!(chain(&world, 3), Some("left"));
+        assert_eq!(chain(&world, 2), Some("right"));
+    }
+
+    /// Резной шкаф: книга ложится в ячейку под точкой щелчка, сравнитель
+    /// читает последнюю тронутую ячейку (сценарий chiseled-bookshelf).
+    #[test]
+    fn chiseled_bookshelf_takes_books_by_cursor() {
+        let mut world = world();
+        let book = crate::inventory::Stack::new(blocks::item_named("book").unwrap(), 3);
+
+        put(&mut world, (1, 1, 3), state("chiseled_bookshelf", &[("facing", "east")]));
+        assert_eq!(bookshelf::reading(&world, (1, 1, 3)), 0);
+
+        let placed = bookshelf::use_bookshelf(&mut world, (1, 1, 3), 5, (1.0, 0.25, 0.5), Some(book));
+
+        assert_eq!(placed, Some(bookshelf::Used::Placed));
+        assert_eq!(Block::at(&world, (1, 1, 3)).value("slot_4_occupied"), Some("true"));
+        assert_eq!(bookshelf::reading(&world, (1, 1, 3)), 5);
+
+        // Не по лицевой стороне — мимо.
+        assert_eq!(bookshelf::use_bookshelf(&mut world, (1, 1, 3), 1, (0.5, 1.0, 0.5), Some(book)), None);
+
+        let taken = bookshelf::use_bookshelf(&mut world, (1, 1, 3), 5, (1.0, 0.25, 0.5), None);
+
+        assert_eq!(taken, Some(bookshelf::Used::Taken(book.with_count(1))));
+        assert_eq!(Block::at(&world, (1, 1, 3)).value("slot_4_occupied"), Some("false"));
+    }
+
+    /// Статуя голема: поза по кругу, сравнитель 1–4.
+    #[test]
+    fn golem_statue_cycles_poses() {
+        let mut world = world();
+
+        put(&mut world, (0, 1, 0), state("copper_golem_statue", &[("copper_golem_pose", "star")]));
+        assert!(statue::use_statue(&mut world, (0, 1, 0)));
+        assert_eq!(Block::at(&world, (0, 1, 0)).value("copper_golem_pose"), Some("standing"));
+        assert_eq!(containers::comparator_reading(&world, (0, 1, 0)), Some(1));
+    }
+
+    /// Крикун: игрок на нём — крик 90 тактов (сценарий sculk-shrieker).
+    #[test]
+    fn shrieker_shrieks_for_90_ticks_under_a_player() {
+        let mut world = world();
+        let pos = (0, 1, 0);
+
+        put(&mut world, pos, state("sculk_shrieker", &[("can_summon", "false")]));
+        note_occupants(&mut world, vec![Occupant::player(0.5, 1.5, 0.5, false)]);
+        components::step_entities(&mut world);
+        assert_eq!(Block::at(&world, pos).value("shrieking"), Some("true"));
+
+        note_occupants(&mut world, Vec::new());
+        run(&mut world, 89);
+        assert_eq!(Block::at(&world, pos).value("shrieking"), Some("true"));
+        run(&mut world, 1);
+        assert_eq!(Block::at(&world, pos).value("shrieking"), Some("false"));
+    }
+
+    /// Медные сундуки разных стадий в паре уравниваются (сценарий
+    /// copper-chest).
+    #[test]
+    fn copper_chest_halves_merge_to_the_least_oxidized() {
+        let mut world = world();
+
+        put(&mut world, (0, 1, 0), state("exposed_copper_chest", &[("facing", "north"), ("type", "left")]));
+        put(&mut world, (1, 1, 0), state("waxed_oxidized_copper_chest", &[("facing", "north"), ("type", "right")]));
+
+        assert_eq!(Block::at(&world, (1, 1, 0)).name, "exposed_copper_chest");
+        assert_eq!(Block::at(&world, (1, 1, 0)).value("type"), Some("right"));
+        assert_eq!(containers::halves(&world, (0, 1, 0)).len(), 2);
     }
 
     fn block(world: &World, pos: Pos) -> Block {
@@ -4755,6 +5255,79 @@ mod tests {
         assert!(block(&world, (0, 1, 0)).is("extended", "false"));
         assert_eq!(world.get_block(1, 1, 0), AIR);
         assert_eq!(world.get_block(2, 1, 0), STONE);
+    }
+
+    /// Едущие блоки толкают сущности два такта: в такте начала хода —
+    /// с половины пути, в следующем — с полного; потом блок встаёт и больше
+    /// не толкает. Предмет шириной 0,25 серединой в полублоке перед головой
+    /// уезжает на 0,135 и 0,5 — всего 0,635, как 2601/4096 у оригинала
+    /// (piston-push-items).
+    #[test]
+    fn moving_blocks_shove_entities_for_two_ticks() {
+        let mut world = world();
+        let piston = state("piston", &[("facing", "east"), ("extended", "false")]);
+        let lever = state("lever", &[("face", "floor"), ("facing", "north"), ("powered", "false")]);
+
+        put(&mut world, (0, 1, 0), piston);
+        put(&mut world, (0, 2, 0), lever);
+
+        use_block(&mut world, (0, 2, 0));
+        settle(&mut world);
+
+        let mut item = (1.375, 1.0, 0.375);
+        let mut pushes = Vec::new();
+
+        for _ in 0..5 {
+            for (pos, kind) in world.advance(crate::tick::PER_TICK) {
+                if kind == crate::world::TickKind::Block {
+                    ticked(&mut world, pos);
+                }
+                settle(&mut world);
+            }
+
+            while let Some((place, kind, param)) = world.take_block_event() {
+                block_event(&mut world, place, kind, param);
+                settle(&mut world);
+            }
+
+            for shove in shoves(&world) {
+                let max = (item.0 + 0.25, item.1 + 0.25, item.2 + 0.25);
+
+                if let Some(distance) = shove_distance(&shove, item, max) {
+                    assert_eq!(shove.dir, (1.0, 0.0, 0.0));
+                    item.0 += distance;
+                    pushes.push(distance);
+                }
+            }
+
+            finish_due_moves(&mut world);
+            settle(&mut world);
+        }
+
+        assert_eq!(pushes.len(), 2, "толкает ровно два такта: {pushes:?}");
+        assert!((pushes[0] - 0.135).abs() < 1e-9);
+        assert!((pushes[1] - 0.5).abs() < 1e-9);
+        assert!(((item.0 - 1.375) * 4096.0 - 2601.0).abs() < 0.5);
+        assert_eq!(block(&world, (1, 1, 0)).kind, Kind::PistonHead);
+    }
+
+    /// Сдвиг — до края едущего блока и ещё на 0,01, но не больше 0,51 за
+    /// такт; незадетое не двигается, сдвиг против хода — тоже.
+    #[test]
+    fn a_shove_reaches_the_edge_and_no_further() {
+        let east = Shove { min: (0.5, 0.0, 0.0), max: (1.5, 1.0, 1.0), dir: (1.0, 0.0, 0.0) };
+
+        // Игрок шириной 0,6 серединой в 3,5 перед головой в полпути.
+        let west = Shove { min: (2.5, 0.0, 0.0), max: (3.5, 1.0, 1.0), dir: (1.0, 0.0, 0.0) };
+        let pushed = shove_distance(&west, (3.2, 0.0, 0.2), (3.8, 1.8, 0.8)).expect("задет");
+        assert!((pushed - 0.31).abs() < 1e-9);
+
+        assert_eq!(shove_distance(&east, (1.5, 0.0, 0.0), (1.75, 0.25, 0.25)), None, "касание — не задет");
+        assert_eq!(shove_distance(&east, (0.6, 0.0, 0.0), (0.85, 0.25, 0.25)), Some(SHOVE_LIMIT));
+
+        let down = Shove { min: (0.0, -0.5, 0.0), max: (1.0, 0.5, 1.0), dir: (0.0, -1.0, 0.0) };
+        let pushed = shove_distance(&down, (0.2, -0.8, 0.2), (0.4, -0.3, 0.4)).expect("задет");
+        assert!((pushed - 0.21).abs() < 1e-9);
     }
 
     /// Липкий поршень тянет блок обратно, обычный — нет.
@@ -5797,6 +6370,95 @@ mod tests {
         assert!(!sticks_to("slime_block", state("obsidian")));
     }
 
+    /// Места, которые связка на слизи освобождает и которые никто не займёт,
+    /// клиенту называют пустыми — на такт позже хода (чёрный ящик,
+    /// slime-limit). О месте головы при толкании молчат.
+    #[test]
+    fn a_pushed_slime_group_tells_the_places_it_leaves() {
+        let piston = state("piston", &[("facing", "east"), ("extended", "false")]);
+        let slime = blocks::state_by_name("slime_block").unwrap();
+        let mut world = world();
+
+        put(&mut world, (0, 5, 0), piston);
+        put(&mut world, (1, 5, 0), slime);
+        put(&mut world, (1, 6, 0), STONE);
+
+        let reader = 1;
+        world.watch_changes(reader);
+
+        put(&mut world, (-1, 5, 0), blocks::state_by_name("redstone_block").unwrap());
+        run(&mut world, 2);
+
+        let (changes, _) = world.changes_since(0, reader);
+        let told = |pos: Pos| changes.iter().any(|change| (change.x, change.y, change.z) == pos && change.state == AIR);
+
+        assert!(told((1, 6, 0)), "об освободившемся месте камня не сказали");
+        assert!(!told((1, 5, 0)), "место головы назвали пустым");
+    }
+
+    /// Липкий поршень, которому связка не по силам (тринадцать блоков слизи),
+    /// задвигается впустую и о месте головы не говорит ничего — ни в начале,
+    /// ни в конце хода (чёрный ящик, slime-limit). Если же тянуть нечего,
+    /// о пустоте на месте головы говорит.
+    #[test]
+    fn a_sticky_piston_that_cannot_pull_keeps_quiet_about_its_head() {
+        let slime = blocks::state_by_name("slime_block").unwrap();
+        let head = state("piston_head", &[("facing", "east"), ("type", "sticky"), ("short", "false")]);
+        let extended = state("sticky_piston", &[("facing", "east"), ("extended", "true")]);
+
+        for (count, quiet) in [(13, true), (0, false)] {
+            let mut world = world();
+
+            for x in 2..2 + count {
+                world.set_block_silently(x, 5, 0, slime);
+            }
+
+            world.set_block_silently(1, 5, 0, head);
+            world.set_block_silently(0, 5, 0, extended);
+
+            let reader = 1;
+            world.watch_changes(reader);
+
+            // Питания нет — первое же обновление его задвигает.
+            put(&mut world, (-1, 5, 0), STONE);
+            run(&mut world, 5);
+
+            assert!(block(&world, (0, 5, 0)).is("extended", "false"), "поршень не задвинулся");
+            assert_eq!(world.get_block(2, 5, 0), if count > 0 { slime } else { AIR }, "связка сдвинулась");
+
+            let (changes, _) = world.changes_since(0, reader);
+            let told = changes.iter().any(|change| (change.x, change.y, change.z) == (1, 5, 0));
+
+            assert_eq!(told, !quiet, "о месте головы сказали не так (блоков: {count})");
+        }
+    }
+
+    /// Наблюдатель, приехавший на поршне, срабатывает через свою обычную
+    /// задержку и гаснет (вики, Observer; чёрный ящик, piston-moves-observer).
+    #[test]
+    fn a_moved_observer_fires_after_it_arrives() {
+        let piston = state("sticky_piston", &[("facing", "east"), ("extended", "false")]);
+        let observer = state("observer", &[("facing", "north"), ("powered", "false")]);
+        let mut world = world();
+
+        put(&mut world, (0, 1, 0), piston);
+        put(&mut world, (1, 1, 0), observer);
+        put(&mut world, (-1, 1, 0), blocks::state_by_name("redstone_block").unwrap());
+
+        let mut lit = Vec::new();
+
+        for tick in 1..=10 {
+            run(&mut world, 1);
+
+            if block(&world, (2, 1, 0)).is("powered", "true") {
+                lit.push(tick);
+            }
+        }
+
+        assert_eq!(lit.len(), OBSERVER_PULSE as usize, "наблюдатель не дал импульса после переезда: {lit:?}");
+        assert!(block(&world, (2, 1, 0)).is("powered", "false"), "наблюдатель не погас");
+    }
+
     /// Связка слизи едет целиком, а если в ней окажется больше двенадцати
     /// блоков — не едет вовсе.
     #[test]
@@ -6771,6 +7433,40 @@ mod tests {
         assert!(world.redstone.lit_ores.is_empty(), "погасшая руда осталась в списке");
     }
 
+    /// Горящая руда гаснет в среднем через 4096 / 3 = 1365 тактов (вики,
+    /// Tick: «randomTickSpeed» 3 блока на секцию 16×16×16 за такт; Redstone
+    /// Ore: «68.27 seconds») — и только на случайном такте.
+    #[test]
+    fn lit_redstone_ore_goes_out_at_the_random_tick_rate() {
+        let mut world = world();
+        let ore = blocks::state_by_name("redstone_ore").unwrap();
+        let (mut total, mut first) = (0u64, u64::MAX);
+        const TRIES: u64 = 400;
+
+        put(&mut world, (0, 1, 0), ore);
+
+        for _ in 0..TRIES {
+            use_block(&mut world, (0, 1, 0));
+            settle(&mut world);
+            assert!(block(&world, (0, 1, 0)).is("lit", "true"));
+
+            let mut ticks = 0;
+
+            while block(&world, (0, 1, 0)).is("lit", "true") {
+                ticks += 1;
+                random_ticks(&mut world, &[(0, 0)], 10);
+            }
+
+            total += ticks;
+            first = first.min(ticks);
+        }
+
+        let mean = total as f64 / TRIES as f64;
+
+        assert!((mean - 1365.3).abs() < 1365.3 * 0.15, "в среднем {mean} тактов");
+        assert!(first < 100, "раньше {first} тактов не гасла ни разу");
+    }
+
     /// Колокол звонит по фронту сигнала — один раз, пока сигнал держится;
     /// качается в сторону своего `facing`.
     /// Датчик скалка в четырёх блоках от рычага: щёлкает через 3 такта,
@@ -7330,5 +8026,244 @@ mod tests {
         }
 
         panic!("детекторная рельса не сработала или не погасла");
+    }
+
+    /// Дверь от рычага открывается целиком — обе половины — и со звуком;
+    /// закрывается тоже со звуком (чёрный ящик, door-lever).
+    #[test]
+    fn a_door_opens_whole_by_signal_and_is_heard() {
+        let mut world = world();
+        let lower = state("oak_door", &[("half", "lower"), ("facing", "south")]);
+        let upper = state("oak_door", &[("half", "upper"), ("facing", "south")]);
+        let lever = state("lever", &[("face", "floor"), ("facing", "north"), ("powered", "false")]);
+
+        put(&mut world, (0, 1, 0), lower);
+        put(&mut world, (0, 2, 0), upper);
+        put(&mut world, (1, 1, 0), lever);
+
+        let reader = 1;
+        world.watch_events(reader);
+
+        use_block(&mut world, (1, 1, 0));
+        settle(&mut world);
+
+        assert!(block(&world, (0, 1, 0)).is("open", "true"), "низ не открылся");
+        assert!(block(&world, (0, 2, 0)).is("open", "true"), "верх не открылся");
+        assert!(block(&world, (0, 2, 0)).is("powered", "true"));
+
+        let heard = sounds(&mut world, reader);
+
+        assert_eq!(heard.first().map(|(name, _)| *name), Some("minecraft:block.wooden_door.open"));
+        assert_eq!(heard.iter().filter(|(name, _)| name.contains("door")).count(), 1, "звук двери не один");
+
+        use_block(&mut world, (1, 1, 0));
+        settle(&mut world);
+
+        assert!(block(&world, (0, 2, 0)).is("open", "false"), "верх не закрылся");
+        assert!(sounds(&mut world, reader).iter().any(|(name, _)| *name == "minecraft:block.wooden_door.close"));
+    }
+
+    /// У люков, калиток и дверей из разного материала свои звуки.
+    #[test]
+    fn opening_sounds_follow_the_material() {
+        let of = |name: &str, open: bool| {
+            let block = Block {
+                state: blocks::state_by_name(name).unwrap(),
+                name: blocks::block_at_state(blocks::state_by_name(name).unwrap()).unwrap(),
+                kind: kind_of(name),
+                orientation: blocks::orientation(name),
+            };
+
+            opening_sound(&block, open)
+        };
+
+        assert_eq!(of("iron_door", true), "minecraft:block.iron_door.open");
+        assert_eq!(of("iron_trapdoor", false), "minecraft:block.iron_trapdoor.close");
+        assert_eq!(of("oak_trapdoor", true), "minecraft:block.wooden_trapdoor.open");
+        assert_eq!(of("spruce_fence_gate", false), "minecraft:block.fence_gate.close");
+        assert_eq!(of("cherry_door", true), "minecraft:block.cherry_wood_door.open");
+        assert_eq!(of("warped_fence_gate", true), "minecraft:block.nether_wood_fence_gate.open");
+        assert_eq!(of("bamboo_trapdoor", true), "minecraft:block.bamboo_wood_trapdoor.open");
+        assert_eq!(of("waxed_oxidized_copper_door", false), "minecraft:block.copper_door.close");
+    }
+
+    /// Дверь, открытая рукой, звучит для всех, кроме того, кто открыл.
+    #[test]
+    fn a_door_opened_by_hand_is_not_heard_by_its_opener() {
+        let mut world = world();
+        let lower = state("oak_door", &[("half", "lower"), ("facing", "south")]);
+        let upper = state("oak_door", &[("half", "upper"), ("facing", "south")]);
+
+        put(&mut world, (0, 1, 0), lower);
+        put(&mut world, (0, 2, 0), upper);
+
+        let reader = 1;
+        world.watch_events(reader);
+
+        world.actor = Some(42);
+        assert!(use_block(&mut world, (0, 1, 0)));
+        world.actor = None;
+
+        let excepted: Vec<Option<i32>> = world
+            .events_since(0, reader)
+            .0
+            .into_iter()
+            .filter_map(|event| match event {
+                crate::world::WorldEvent::Sound(sound) if sound.name.contains("door") => Some(sound.except),
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(excepted, vec![Some(42)]);
+    }
+
+    /// Медная лампа щёлкает, когда меняет свет, и молчит, когда сигнал
+    /// снимают (чёрный ящик, copper-bulb).
+    #[test]
+    fn a_copper_bulb_clicks_when_it_switches() {
+        let mut world = world();
+        let lever = state("lever", &[("face", "floor"), ("facing", "north"), ("powered", "false")]);
+
+        put(&mut world, (0, 1, 0), blocks::state_by_name("copper_bulb").unwrap());
+        put(&mut world, (1, 1, 0), lever);
+
+        let reader = 1;
+        world.watch_events(reader);
+
+        let bulb_sounds = |world: &mut World| -> Vec<&'static str> {
+            sounds(world, reader).into_iter().map(|(name, _)| name).filter(|name| name.contains("copper_bulb")).collect()
+        };
+
+        use_block(&mut world, (1, 1, 0));
+        settle(&mut world);
+        assert_eq!(bulb_sounds(&mut world), vec!["minecraft:block.copper_bulb.turn_on"]);
+
+        use_block(&mut world, (1, 1, 0));
+        settle(&mut world);
+        assert!(bulb_sounds(&mut world).is_empty(), "снятие сигнала не звучит");
+
+        use_block(&mut world, (1, 1, 0));
+        settle(&mut world);
+        assert_eq!(bulb_sounds(&mut world), vec!["minecraft:block.copper_bulb.turn_off"]);
+    }
+
+    /// Факел выгорает на восьмом выключении за 60 тактов — с шипением
+    /// (событие 1502) — и больше не загорается (чёрный ящик, torch-burnout).
+    #[test]
+    fn a_torch_burns_out_on_the_eighth_turn_off() {
+        let mut world = world();
+        let torch = blocks::state_by_name("redstone_torch").unwrap();
+        let lever = state("lever", &[("face", "wall"), ("facing", "west"), ("powered", "false")]);
+
+        put(&mut world, (0, 1, 0), STONE);
+        put(&mut world, (0, 2, 0), torch);
+        put(&mut world, (-1, 1, 0), lever);
+
+        let reader = 1;
+        world.watch_events(reader);
+
+        let fizzles = |world: &mut World| {
+            world
+                .events_since(0, reader)
+                .0
+                .into_iter()
+                .filter(|event| matches!(event, crate::world::WorldEvent::Level { effect: 1502, .. }))
+                .count()
+        };
+
+        for turn in 1..=8 {
+            use_block(&mut world, (-1, 1, 0));
+            settle(&mut world);
+            run(&mut world, 2);
+            assert!(!is_on(&block(&world, (0, 2, 0))), "факел не погас на {turn}-м выключении");
+            assert_eq!(fizzles(&mut world), usize::from(turn == 8), "шипение не на восьмом");
+
+            use_block(&mut world, (-1, 1, 0));
+            settle(&mut world);
+            run(&mut world, 2);
+        }
+
+        assert!(!is_on(&block(&world, (0, 2, 0))), "выгоревший факел загорелся");
+    }
+
+    /// Пыль, поставленная командой, форму не подбирает: остаётся какой
+    /// дали, пересчитывается только сила (чёрный ящик, dust-join).
+    #[test]
+    fn a_wire_placed_by_command_keeps_its_shape() {
+        let mut world = world();
+        let lever = state("lever", &[("face", "floor"), ("facing", "north"), ("powered", "true")]);
+        // Конец линии смотрит на восток, в пустоту.
+        let wire = state("redstone_wire", &[("north", "side"), ("east", "side"), ("south", "none"), ("west", "none")]);
+
+        put(&mut world, (0, 1, -1), lever);
+        world.note_commanded(0, 1, 0);
+        put(&mut world, (0, 1, 0), wire);
+
+        let placed = block(&world, (0, 1, 0));
+
+        assert!(placed.is("east", "side") && placed.is("north", "side") && placed.is("south", "none"), "форма пересчитана");
+        assert_eq!(wire_power_of(&placed), 15, "сила не пересчитана");
+    }
+
+    /// Нажатая взвешенная плита меняет силу и отпускается только на своём
+    /// пересчёте раз в 10 тактов, а не в тот такт, когда на ней стало
+    /// больше или меньше предметов (чёрный ящик, plate-weights).
+    #[test]
+    fn a_pressed_weighted_plate_recounts_on_its_own_tick() {
+        let mut world = world();
+        let plate = blocks::state_by_name("light_weighted_pressure_plate").unwrap();
+
+        put(&mut world, (0, 1, 0), plate);
+
+        let items = |n: usize| -> Vec<Occupant> { (0..n).map(|_| Occupant::item(0.5, 1.0, 0.5, true)).collect() };
+        let power = |world: &World| plate_power(&block(world, (0, 1, 0)));
+
+        // Легла одна стопка — плита нажата сразу.
+        note_occupants(&mut world, items(1));
+        step_plates(&mut world, &items(1));
+        settle(&mut world);
+        assert_eq!(power(&world), 1);
+
+        // Легли ещё четыре — сила прежняя до пересчёта.
+        note_occupants(&mut world, items(5));
+        step_plates(&mut world, &items(5));
+        run(&mut world, 9);
+        assert_eq!(power(&world), 1, "сила сменилась раньше пересчёта");
+        run(&mut world, 1);
+        assert_eq!(power(&world), 5, "пересчёт не пришёл через 10 тактов");
+
+        // Все ушли — плита держится до следующего пересчёта.
+        note_occupants(&mut world, Vec::new());
+        step_plates(&mut world, &[]);
+        run(&mut world, 9);
+        assert_eq!(power(&world), 5, "отпустилась раньше пересчёта");
+        run(&mut world, 1);
+        assert_eq!(power(&world), 0, "не отпустилась на пересчёте");
+    }
+
+    /// Око в рамку, светокамень в якорь, кусок торта: сравнитель читает
+    /// новое состояние (чёрный ящик, comparator-click).
+    #[test]
+    fn clicks_fill_frames_charge_anchors_and_eat_cakes() {
+        let mut world = world();
+
+        put(&mut world, (0, 1, 0), state("end_portal_frame", &[("eye", "false")]));
+        put(&mut world, (2, 1, 0), state("respawn_anchor", &[("charges", "3")]));
+        put(&mut world, (4, 1, 0), state("cake", &[("bites", "5")]));
+
+        assert_eq!(use_with_item(&mut world, (0, 1, 0), Some("stone"), true), None);
+        assert_eq!(use_with_item(&mut world, (0, 1, 0), Some("ender_eye"), true), Some(true));
+        assert!(block(&world, (0, 1, 0)).is("eye", "true"));
+        assert_eq!(use_with_item(&mut world, (0, 1, 0), Some("ender_eye"), true), None, "второе око");
+
+        assert_eq!(use_with_item(&mut world, (2, 1, 0), Some("glowstone"), false), Some(true));
+        assert!(block(&world, (2, 1, 0)).is("charges", "4"));
+        assert_eq!(use_with_item(&mut world, (2, 1, 0), Some("glowstone"), false), None, "полный якорь");
+
+        assert_eq!(use_with_item(&mut world, (4, 1, 0), None, false), None, "сытый в выживании не ест");
+        assert_eq!(use_with_item(&mut world, (4, 1, 0), None, true), Some(false));
+        assert!(block(&world, (4, 1, 0)).is("bites", "6"));
+        use_with_item(&mut world, (4, 1, 0), None, true);
+        assert_eq!(world.get_block(4, 1, 0), AIR, "последний кусок не съел торт");
     }
 }

@@ -127,6 +127,11 @@ pub struct WorldSound {
 
     /// Звук игрока (удар): раздел звука «игроки».
     pub of_player: bool,
+
+    /// Кому звук не слать: игрок, который открыл дверь рукой, слышит её
+    /// у себя сам, и сервер ему звук не повторяет (чёрный ящик, door-click:
+    /// щёлкнувшему роботу звук двери не приходит).
+    pub except: Option<i32>,
 }
 
 /// Событие мира, которое надо донести до клиентов: изменение блока или
@@ -177,6 +182,11 @@ pub enum WorldEvent {
     /// Взрыв: клиенту — пакет Explosion (звук, вспышка, толчок своему
     /// игроку). Сами разрушенные блоки идут обычными изменениями.
     Explosion(std::sync::Arc<Blast>),
+
+    /// Данные блок-сущности (Block Entity Data): уходят после пачки
+    /// изменений, в которую попали, — как у оригинала у полки и статуи
+    /// голема (сценарии shelf, golem-statue). `nbt` — сетевой NBT.
+    BlockEntity { x: i32, y: i32, z: i32, kind: i32, nbt: std::sync::Arc<[u8]> },
 }
 
 /// Взрыв для клиентов: где, какой силы, сколько блоков разрушил и кого из
@@ -982,6 +992,10 @@ pub struct World {
     /// Состояние генератора случайных чисел — см. `random_unit`.
     noise: u32,
 
+    /// Кто сейчас действует рукой (номер сущности игрока): звуки, которые
+    /// он так вызвал, ему самому не шлются — см. `note_sound_by_hand`.
+    pub actor: Option<i32>,
+
     /// Места, о которых клиентам скажут позже: (место, такт, как есть).
     /// «Как есть» — служебный блок не подменяется пустотой.
     late: Vec<((i32, i32, i32), u64, bool)>,
@@ -1222,6 +1236,7 @@ impl World {
     pub fn in_memory() -> Self {
         Self {
             noise: 0x9E37_79B9,
+            actor: None,
             late: Vec::new(),
             chunks: HashMap::default(),
             events: Journal::new(),
@@ -1352,6 +1367,7 @@ impl World {
 
         let mut world = Self {
             noise: 0x9E37_79B9 ^ std::process::id(),
+            actor: None,
             late: Vec::new(),
             chunks: HashMap::default(),
             events: Journal::new(),
@@ -2304,7 +2320,14 @@ impl World {
 
     /// Сообщает всем клиентам о звуке в этом месте.
     pub fn note_sound(&mut self, x: i32, y: i32, z: i32, name: &'static str, volume: f32, pitch: f32) {
-        self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch, exact: None, of_block: true, of_player: false }));
+        self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch, exact: None, of_block: true, of_player: false, except: None }));
+    }
+
+    /// Звук блока, вызванный рукой игрока (`actor`): всем, кроме него.
+    pub fn note_sound_by_hand(&mut self, x: i32, y: i32, z: i32, name: &'static str, volume: f32, pitch: f32) {
+        let except = self.actor;
+
+        self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch, exact: None, of_block: true, of_player: false, except }));
     }
 
     /// Звук сущности в точном месте — плеск предмета, вошедшего в воду.
@@ -2319,6 +2342,7 @@ impl World {
             exact: Some(at),
             of_block: false,
             of_player: false,
+            except: None,
         }));
     }
 
@@ -2334,6 +2358,7 @@ impl World {
             exact: Some(at),
             of_block: false,
             of_player: true,
+            except: None,
         }));
     }
 
@@ -2350,7 +2375,13 @@ impl World {
             exact: Some(at),
             of_block: true,
             of_player: false,
+            except: None,
         }));
+    }
+
+    /// Данные блок-сущности клиентам — после ближайшей пачки изменений.
+    pub fn note_block_entity(&mut self, x: i32, y: i32, z: i32, kind: i32, nbt: Vec<u8>) {
+        self.events.push(WorldEvent::BlockEntity { x, y, z, kind, nbt: nbt.into() });
     }
 
     /// Рассылает то, что стоит в месте, как обычное изменение (пачкой) и

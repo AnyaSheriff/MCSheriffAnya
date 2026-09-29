@@ -19,5 +19,8 @@
   {"after": 60, "set": {"at": [0, 1, 4], "state": "minecraft:hopper[enabled=true,facing=down]{Items:[{Slot:0b,id:\"minecraft:music_disc_cat\",count:1}]}"}}
  ],
  "cleanup": ["setblock $(0,0,0) minecraft:air", "setblock $(0,0,4) minecraft:air", "setblock $(0,1,4) minecraft:air", "kill @e[type=item,distance=..48]", "clear blackbox"],
- "record_ticks": 100
+ "record_ticks": 95,
+ "random": [
+  {"type": "values", "name": "цвет ноты проигрывателя", "kind": "particle", "match": "note", "field": "offset", "values": ["0,0,0", "0.042,0,0", "0.083,0,0", "0.125,0,0", "0.167,0,0", "0.208,0,0", "0.25,0,0", "0.292,0,0", "0.333,0,0", "0.375,0,0", "0.417,0,0", "0.458,0,0", "0.5,0,0", "0.542,0,0", "0.583,0,0", "0.625,0,0", "0.667,0,0", "0.708,0,0", "0.75,0,0", "0.792,0,0", "0.833,0,0", "0.875,0,0", "0.917,0,0", "0.958,0,0", "1,0,0"], "why": "minecraft.wiki/w/Particles_(Java_Edition), нота: цвета как у нотного блока, «Jukeboxes use these colors randomly»; цвет передаётся смещением по x = k/24, k = 0…24. Оригинал против оригинала: у одной и той же ноты 0, 0.042, 0.083, 0.125."}
+ ]
 }

@@ -1,0 +1,73 @@
+{
+ "name": "piston-limit",
+ "about": "Предел толкания: поршень двигает ровно 12 камней (линия z=0), а 13 (линия z=-2) — нет.",
+ "blocks": [
+  {
+   "at": [
+    -7,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -7,
+    0,
+    -2
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  }
+ ],
+ "setup": [
+  "fill $(-6,0,0) $(5,0,0) minecraft:stone",
+  "fill $(-6,0,-2) $(6,0,-2) minecraft:stone"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -8,
+     0,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 5,
+   "set": {
+    "at": [
+     -8,
+     0,
+     -2
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 30,
+   "set": {
+    "at": [
+     -8,
+     0,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 35,
+   "set": {
+    "at": [
+     -8,
+     0,
+     -2
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 60
+}
