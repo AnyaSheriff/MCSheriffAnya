@@ -76,7 +76,7 @@
   }
  ],
  "setup": [
-  "item replace entity blackbox weapon.mainhand with minecraft:ender_eye 16"
+  "item replace entity $(bot) weapon.mainhand with minecraft:ender_eye 16"
  ],
  "actions": [
   {
@@ -89,7 +89,7 @@
   },
   {
    "after": 10,
-   "cmd": "item replace entity blackbox weapon.mainhand with minecraft:glowstone 16"
+   "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:glowstone 16"
   },
   {
    "after": 20,
@@ -109,7 +109,7 @@
   },
   {
    "after": 40,
-   "cmd": "item replace entity blackbox weapon.mainhand with minecraft:air"
+   "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:air"
   },
   {
    "after": 50,
@@ -130,6 +130,6 @@
  ],
  "record_ticks": 80,
  "cleanup": [
-  "clear blackbox"
+  "clear $(bot)"
  ]
 }

@@ -54,15 +54,15 @@
   },
   {
    "after": 60,
-   "cmd": "tp blackbox 102.5 -58.4 100.5"
+   "cmd": "tp $(bot) $(2.5,0.6,0.5)"
   }
  ],
  "record_ticks": 180,
  "cleanup": [
   "fill $(-2,0,-3) $(5,1,5) minecraft:air",
-  "gamemode creative blackbox"
+  "gamemode creative $(bot)"
  ],
  "setup": [
-  "gamemode survival blackbox"
+  "gamemode survival $(bot)"
  ]
 }

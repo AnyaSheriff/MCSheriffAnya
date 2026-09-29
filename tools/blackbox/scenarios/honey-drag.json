@@ -87,7 +87,7 @@
  ],
  "record_ticks": 55,
  "cleanup": [
-  "kill @e[type=item]",
+  "kill @e[type=item,distance=..128]",
   "fill $(9,-1,-8) $(20,-1,8) minecraft:air"
  ],
  "track_items": true

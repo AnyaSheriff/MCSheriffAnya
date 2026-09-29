@@ -27,7 +27,12 @@ view-distance=4
 simulation-distance=4
 motd=blackbox vanilla
 P
+# Права роботам всех полос (blackbox, blackbox2…5 — см. bot.js): офлайн-UUID из ника.
 cat > "$V/ops.json" <<'P'
-[{"uuid":"26d479c9-4844-3b0a-ba59-8cc656622a78","name":"blackbox","level":4,"bypassesPlayerLimit":true}]
+[{"uuid":"26d479c9-4844-3b0a-ba59-8cc656622a78","name":"blackbox","level":4,"bypassesPlayerLimit":true},
+ {"uuid":"8db7aee5-ef46-3281-b3c4-f00d7c34c93c","name":"blackbox2","level":4,"bypassesPlayerLimit":true},
+ {"uuid":"ea6bdeb9-3459-3edf-98d1-a4a1901bc58d","name":"blackbox3","level":4,"bypassesPlayerLimit":true},
+ {"uuid":"3e6020d9-2933-38a5-962a-14434df3f116","name":"blackbox4","level":4,"bypassesPlayerLimit":true},
+ {"uuid":"edb5454a-e6e4-35a6-8995-cf68095c583c","name":"blackbox5","level":4,"bypassesPlayerLimit":true}]
 P
 echo "Готово: $V"

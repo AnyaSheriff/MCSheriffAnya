@@ -156,7 +156,7 @@
   }
  ],
  "setup": [
-  "kill @e[type=minecart]"
+  "kill @e[type=minecart,distance=..128]"
  ],
  "actions": [
   {
@@ -170,9 +170,9 @@
  ],
  "record_ticks": 120,
  "cleanup": [
-  "kill @e[type=minecart]",
-  "kill @e[type=chest_minecart]",
-  "kill @e[type=hopper_minecart]",
-  "kill @e[type=item]"
+  "kill @e[type=minecart,distance=..128]",
+  "kill @e[type=chest_minecart,distance=..128]",
+  "kill @e[type=hopper_minecart,distance=..128]",
+  "kill @e[type=item,distance=..128]"
  ]
 }

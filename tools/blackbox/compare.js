@@ -38,10 +38,15 @@ if (filesFlag > 0) {
 }
 if (!fs.existsSync(path.join(HERE, 'reports'))) fs.mkdirSync(path.join(HERE, 'reports'));
 
+// `--lane N` — писать полосой N: робот `blackboxN` на своей площадке
+// (bot.js), чтобы несколько сценариев писались разом (lanes.js).
+const laneFlag = process.argv.indexOf('--lane');
+const lane = laneFlag > 0 ? String(Number(process.argv[laneFlag + 1])) : '1';
+
 // `--parallel` — писать обе стороны разом: серверы разные, роботы друг
 // другу не мешают, а полный прогон идёт вдвое быстрее.
 const record = async () => {
-  const args = (s) => [path.join(HERE, 'bot.js'), '127.0.0.1', String(s.port), scenario, s.file];
+  const args = (s) => [path.join(HERE, 'bot.js'), '127.0.0.1', String(s.port), scenario, s.file, lane];
   if (!process.argv.includes('--parallel')) {
     for (const s of sides) {
       const r = spawnSync('node', args(s), { stdio: ['ignore', 'inherit', 'pipe'] });

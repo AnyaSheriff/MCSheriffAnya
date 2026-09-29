@@ -116,7 +116,7 @@
   }
  ],
  "setup": [
-  "give blackbox minecraft:flint_and_steel 1"
+  "give $(bot) minecraft:flint_and_steel 1"
  ],
  "actions": [
   {
@@ -142,7 +142,7 @@
  "cleanup": [
   "fill $(6,0,1) $(6,4,4) minecraft:air",
   "kill @e[type=item,distance=..48]",
-  "clear blackbox"
+  "clear $(bot)"
  ],
  "record_ticks": 40
 }

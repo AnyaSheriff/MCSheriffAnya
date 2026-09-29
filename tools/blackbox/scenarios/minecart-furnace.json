@@ -4,7 +4,7 @@
  "blocks": [],
  "setup": [
   "fill $(3,0,-8) $(3,0,2) minecraft:rail[shape=north_south]",
-  "give blackbox coal 4"
+  "give $(bot) coal 4"
  ],
  "actions": [
   {
@@ -22,11 +22,11 @@
  ],
  "record_ticks": 50,
  "cleanup": [
-  "kill @e[type=minecart]",
-  "kill @e[type=chest_minecart]",
-  "kill @e[type=hopper_minecart]",
-  "kill @e[type=tnt_minecart]",
-  "kill @e[type=furnace_minecart]",
-  "kill @e[type=item]"
+  "kill @e[type=minecart,distance=..128]",
+  "kill @e[type=chest_minecart,distance=..128]",
+  "kill @e[type=hopper_minecart,distance=..128]",
+  "kill @e[type=tnt_minecart,distance=..128]",
+  "kill @e[type=furnace_minecart,distance=..128]",
+  "kill @e[type=item,distance=..128]"
  ]
 }

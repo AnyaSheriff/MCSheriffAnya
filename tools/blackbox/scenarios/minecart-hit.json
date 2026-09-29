@@ -12,9 +12,9 @@
   }
  ],
  "setup": [
-  "kill @e[type=minecart]",
-  "gamemode survival blackbox",
-  "give blackbox minecart 1"
+  "kill @e[type=minecart,distance=..128]",
+  "gamemode survival $(bot)",
+  "give $(bot) minecart 1"
  ],
  "actions": [
   {
@@ -43,7 +43,7 @@
   },
   {
    "after": 70,
-   "cmd": "gamemode creative blackbox"
+   "cmd": "gamemode creative $(bot)"
   },
   {
    "after": 75,
@@ -52,9 +52,9 @@
  ],
  "record_ticks": 100,
  "cleanup": [
-  "kill @e[type=minecart]",
-  "kill @e[type=chest_minecart]",
-  "kill @e[type=hopper_minecart]",
-  "kill @e[type=item]"
+  "kill @e[type=minecart,distance=..128]",
+  "kill @e[type=chest_minecart,distance=..128]",
+  "kill @e[type=hopper_minecart,distance=..128]",
+  "kill @e[type=item,distance=..128]"
  ]
 }

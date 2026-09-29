@@ -1,5 +1,6 @@
 {
  "name": "button-blackstone",
+ "exclusive": true,
  "about": "Кнопка из полированного чернокамня — как каменная: 20 тактов, свой звук.",
  "blocks": [
   {

@@ -10,10 +10,10 @@
   {"at": [-1, 0, 3], "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"}
  ],
  "setup": [
-  "item replace entity blackbox hotbar.0 with minecraft:stone 5",
-  "item replace entity blackbox hotbar.1 with minecraft:dirt 3",
-  "item replace entity blackbox hotbar.2 with minecraft:air",
-  "item replace entity blackbox hotbar.8 with minecraft:diamond 1"
+  "item replace entity $(bot) hotbar.0 with minecraft:stone 5",
+  "item replace entity $(bot) hotbar.1 with minecraft:dirt 3",
+  "item replace entity $(bot) hotbar.2 with minecraft:air",
+  "item replace entity $(bot) hotbar.8 with minecraft:diamond 1"
  ],
  "actions": [
   {"after": 0, "hotbar": 0},
@@ -30,6 +30,6 @@
   {"after": 80, "click": [1, 0, 3], "face": 5, "cursor": [1.0, 0.5, 0.5]},
   {"after": 90, "cmd": "fill $(1,-1,2) $(1,-1,4) minecraft:stone"}
  ],
- "cleanup": ["fill $(-1,0,1) $(2,1,5) minecraft:air", "clear blackbox"],
+ "cleanup": ["fill $(-1,0,1) $(2,1,5) minecraft:air", "clear $(bot)"],
  "record_ticks": 120
 }

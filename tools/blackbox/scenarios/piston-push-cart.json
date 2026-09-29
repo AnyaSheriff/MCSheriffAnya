@@ -87,7 +87,7 @@
  ],
  "record_ticks": 70,
  "cleanup": [
-  "kill @e[type=minecart]",
-  "kill @e[type=item]"
+  "kill @e[type=minecart,distance=..128]",
+  "kill @e[type=item,distance=..128]"
  ]
 }

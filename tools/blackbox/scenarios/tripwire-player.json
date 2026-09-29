@@ -87,11 +87,11 @@
   },
   {
    "after": 20,
-   "cmd": "tp blackbox 103.5 -59 100.5"
+   "cmd": "tp $(bot) $(3.5,0,0.5)"
   },
   {
    "after": 45,
-   "cmd": "tp blackbox 103.5 -56 105.5"
+   "cmd": "tp $(bot) $(3.5,3,5.5)"
   }
  ],
  "record_ticks": 90

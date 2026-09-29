@@ -11,16 +11,27 @@ const Vec3 = require(path.join(HOME_MODULES, 'vec3')).Vec3;
 // Номера звуков → имена: таблица снята с официального сервера его же генератором отчётов.
 const SOUNDS = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'sounds.json'), 'utf8'));
 
-const [,, host, portArg, scenarioFile, outFile] = process.argv;
+const [,, host, portArg, scenarioFile, outFile, laneArg] = process.argv;
 if (!outFile) {
-  console.error('использование: node bot.js <host> <port> <scenario.json> <out.json>');
+  console.error('использование: node bot.js <host> <port> <scenario.json> <out.json> [полоса]');
   process.exit(2);
 }
 const port = Number(portArg);
 const scenario = JSON.parse(fs.readFileSync(scenarioFile, 'utf8'));
+// Полоса (1…5): несколько роботов пишут разные сценарии разом, каждый под
+// своим именем и на своей площадке. Полоса 1 — прежние имя и место, так
+// старые записи остаются сравнимыми. Площадки полос — через 512 блоков по x
+// (целая область файла мира): при дальности обзора 4 чанка ни блоки, ни
+// звуки, ни сущности одной полосы до робота другой не доходят.
+const LANE = Number(laneArg || process.env.BB_LANE || 1);
+if (!Number.isInteger(LANE) || LANE < 1) { console.error(`плохая полоса: ${laneArg || process.env.BB_LANE}`); process.exit(2); }
+const LANE_STEP = 512;
+const USER = LANE === 1 ? 'blackbox' : `blackbox${LANE}`;
 // Площадка вдали от точки появления. Сценарий может задать свою (`origin`):
-// порядок обновлений пыли у оригинала зависит от места в мире.
-const ORIGIN = scenario.origin ? { x: scenario.origin[0], y: scenario.origin[1], z: scenario.origin[2] } : { x: 100, y: -59, z: 100 };
+// порядок обновлений пыли у оригинала зависит от места в мире. Такое место
+// задано ради самого места, поэтому полоса его не сдвигает — прогон полосами
+// гоняет такие сценарии отдельно, по одному (см. lanes.js).
+const ORIGIN = scenario.origin ? { x: scenario.origin[0], y: scenario.origin[1], z: scenario.origin[2] } : { x: 100 + (LANE - 1) * LANE_STEP, y: -59, z: 100 };
 const PAD = 8;
 const TICK_MS = 50;
 
@@ -46,7 +57,7 @@ const stateName = (id) => {
 const rel = (p) => [p.x - ORIGIN.x, p.y - ORIGIN.y, p.z - ORIGIN.z];
 const inPad = (p) => Math.abs(p.x - ORIGIN.x) <= PAD && Math.abs(p.y - ORIGIN.y) <= PAD && Math.abs(p.z - ORIGIN.z) <= PAD;
 
-const bot = mineflayer.createBot({ host, port, username: 'blackbox', version: '26.1', auth: 'offline' });
+const bot = mineflayer.createBot({ host, port, username: USER, version: '26.1', auth: 'offline' });
 const events = [];
 let serverAge = null, ageStamp = 0;       // возраст мира из последнего «обновления времени»
 let recording = false, t0 = null;         // t0 — момент первого действия (мс)
@@ -383,8 +394,13 @@ const say = async (cmd) => { bot.chat('/' + cmd); await sleepTicks(2); };
 const setBlock = (b) => say(`setblock ${ORIGIN.x + b.at[0]} ${ORIGIN.y + b.at[1]} ${ORIGIN.z + b.at[2]} ${b.state}`);
 // Команда сценария: `$(dx,dy,dz)` заменяется настоящими координатами точки
 // площадки — так в `cmd` можно звать summon, data, item и прочее. Дробные
-// смещения тоже годятся: `$(0.5,0,0.5)` — середина клетки (summon).
-const expand = (cmd) => cmd.replace(/\$\((-?[\d.]+),(-?[\d.]+),(-?[\d.]+)\)/g, (_, x, y, z) => `${ORIGIN.x + Number(x)} ${ORIGIN.y + Number(y)} ${ORIGIN.z + Number(z)}`);
+// смещения тоже годятся: `$(0.5,0,0.5)` — середина клетки (summon). Сумма
+// округляется до знаков смещения: 612 + 6.93 в двоичных дробях дало бы хвост.
+// `$(bot)` — имя робота этой полосы (tp, give, clear, item replace).
+const shift = (o, d) => String(Number((o + Number(d)).toFixed((d.split('.')[1] || '').length)));
+const expand = (cmd) => cmd
+  .replace(/\$\(bot\)/g, USER)
+  .replace(/\$\((-?[\d.]+),(-?[\d.]+),(-?[\d.]+)\)/g, (_, x, y, z) => `${shift(ORIGIN.x, x)} ${shift(ORIGIN.y, y)} ${shift(ORIGIN.z, z)}`);
 
 bot.once('spawn', async () => {
   try {
@@ -392,22 +408,31 @@ bot.once('spawn', async () => {
     await say(`gamemode creative`);
     // Инвентарь робота у каждого сервера свой и переживает перезаходы:
     // очищаем, чтобы окна хранилищ показывали одно и то же.
-    await say(`clear blackbox`);
+    await say(`clear ${USER}`);
     // Выбранная ячейка руки тоже переживает перезаходы: другой сценарий мог
     // оставить не первую, и тогда выданная в первую ячейку пластинка
     // оказывается не в руке (`jukebox-disc` у оригинала через раз не играл).
     bot.setQuickBarSlot(0);
-    await say(`tp blackbox ${ORIGIN.x + 3} ${ORIGIN.y + 1} ${ORIGIN.z + 3}`);
+    await say(`tp ${USER} ${ORIGIN.x + 3} ${ORIGIN.y + 1} ${ORIGIN.z + 3}`);
     // Висеть на месте, пока строится пол: у нашего ровного мира земля на
     // нуле, и площадка на ORIGIN.y оказывается в пустоте под ней. Упавшего
     // робота сервер не пустит к рычагу — слишком далеко.
     bot.creative.startFlying();
     await sleepTicks(40);
+    // Площадка новой полосы в первый раз лежит в ещё не созданных чанках:
+    // заливка по незагруженному месту не сработает. Ждём, пока сервер пришлёт
+    // все четыре угла площадки (у обжитой площадки они уже есть).
+    const corners = [[-PAD, -PAD], [PAD, -PAD], [-PAD, PAD], [PAD, PAD]].map(([dx, dz]) => new Vec3(ORIGIN.x + dx, ORIGIN.y, ORIGIN.z + dz));
+    for (let i = 0; corners.some(c => !bot.blockAt(c)) && i < 200; i++) await sleepTicks(1);
+    if (corners.some(c => !bot.blockAt(c))) throw new Error('чанки площадки так и не пришли');
     await say(`fill ${ORIGIN.x - PAD} ${ORIGIN.y - 1} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${ORIGIN.y + PAD} ${ORIGIN.z + PAD} minecraft:air`);
     await say(`fill ${ORIGIN.x - PAD} ${ORIGIN.y - 1} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${ORIGIN.y - 1} ${ORIGIN.z + PAD} minecraft:stone`);
     // Чужие сущности вокруг площадки — летучие мыши из пещер, предметы от
     // прошлых взрывов — шумят в записи: убрать и мобов больше не пускать.
     await say(`gamerule spawn_mobs false`);
+    // Дождь у оригинала гасит небесный свет: датчик света в полдень давал 12
+    // вместо 15 (daylight-*, у нас погоды нет). Перед записью — ясно.
+    await say(`weather clear`);
     await say(`kill @e[type=!player,distance=..48]`);
     await sleepTicks(20);
     // Сетку тактов снимаем до постройки: калибровка ставит и убирает блок
@@ -510,7 +535,7 @@ bot.once('spawn', async () => {
     // Уборка после записи (`cleanup`): вагонетки и прочие сущности иначе
     // остались бы на площадке и мешали следующим сценариям.
     for (const c of scenario.cleanup || []) await say(expand(c));
-    fs.writeFileSync(outFile, JSON.stringify({ scenario: scenario.name, host, port, window: { first: baseTick, last }, events }, null, 1));
+    fs.writeFileSync(outFile, JSON.stringify({ scenario: scenario.name, host, port, lane: LANE, window: { first: baseTick, last }, events }, null, 1));
     console.log(`записано событий: ${events.length} → ${outFile}`);
     bot.quit();
     setTimeout(() => process.exit(0), 500);

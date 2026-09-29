@@ -111,6 +111,6 @@
  ],
  "record_ticks": 170,
  "cleanup": [
-  "kill @e[type=item]"
+  "kill @e[type=item,distance=..128]"
  ]
 }

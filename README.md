@@ -117,7 +117,7 @@ only *run* and observed over the network; its jar is never opened. The bot can
 record both servers at once (`--parallel`). Of 137 scenarios (redstone,
 pistons with slime, honey and flying machines, containers, rails and
 minecarts, TNT and lightning, sculk, the crafter, fluids, the Nether portal)
-135 match the original tick for tick in full. Where vanilla itself is random
+All 137 match the original tick for tick in full. Where vanilla itself is random
 (blast spread, fuse from an explosion, particle colours), the scenario says so
 in a `random` rule backed by a wiki quote or vanilla-against-vanilla
 recordings, and everything else is still compared exactly. See `tools/blackbox/README.md`.

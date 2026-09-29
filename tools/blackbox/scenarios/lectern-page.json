@@ -68,7 +68,7 @@
   }
  ],
  "setup": [
-  "give blackbox minecraft:written_book 1"
+  "give $(bot) minecraft:written_book 1"
  ],
  "actions": [
   {
@@ -116,7 +116,7 @@
   "setblock $(0,0,0) minecraft:air",
   "setblock $(3,0,1) minecraft:air",
   "kill @e[type=item,distance=..48]",
-  "clear blackbox"
+  "clear $(bot)"
  ],
  "record_ticks": 100
 }

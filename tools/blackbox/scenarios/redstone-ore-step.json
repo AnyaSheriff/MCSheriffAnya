@@ -14,11 +14,11 @@
  "actions": [
   {
    "after": 0,
-   "cmd": "tp blackbox 100.5 -58 100.5"
+   "cmd": "tp $(bot) $(0.5,1,0.5)"
   },
   {
    "after": 20,
-   "cmd": "tp blackbox 103.5 -56 105.5"
+   "cmd": "tp $(bot) $(3.5,3,5.5)"
   }
  ],
  "record_ticks": 40

@@ -5,15 +5,15 @@
   { "at": [0, 0, 0], "state": "minecraft:lever[face=floor,facing=north,powered=false]" }
  ],
  "actions": [
-  { "after": 0, "cmd": "tp blackbox 107.1 -59 100.5" },
+  { "after": 0, "cmd": "tp $(bot) $(7.1,0,0.5)" },
   { "after": 5, "click": [0, 0, 0] },
-  { "after": 10, "cmd": "tp blackbox 106.93 -59 100.5" },
+  { "after": 10, "cmd": "tp $(bot) $(6.93,0,0.5)" },
   { "after": 15, "click": [0, 0, 0] },
-  { "after": 20, "cmd": "tp blackbox 106.7 -59 100.5" },
+  { "after": 20, "cmd": "tp $(bot) $(6.7,0,0.5)" },
   { "after": 25, "click": [0, 0, 0] },
-  { "after": 30, "cmd": "tp blackbox 106.45 -59 100.5" },
+  { "after": 30, "cmd": "tp $(bot) $(6.45,0,0.5)" },
   { "after": 35, "click": [0, 0, 0] },
-  { "after": 40, "cmd": "tp blackbox 106.3 -59 100.5" },
+  { "after": 40, "cmd": "tp $(bot) $(6.3,0,0.5)" },
   { "after": 45, "click": [0, 0, 0] }
  ],
  "record_ticks": 55,
