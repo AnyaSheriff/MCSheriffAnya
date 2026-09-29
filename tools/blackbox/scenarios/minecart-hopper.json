@@ -1,0 +1,81 @@
+{
+ "name": "minecart-hopper",
+ "about": "Вагонетка с воронкой под сундуком с 10 камнями вытягивает по предмету за такт: сравнитель у сундука гаснет, когда сундук опустеет. Запитанная активирующая рельса (блок редстоуна под ней) выключает воронку — наполненный снова сундук не пустеет, пока питание не снимут.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:activator_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    1,
+    0
+   ],
+   "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    2,
+    1,
+    0
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  }
+ ],
+ "setup": [
+  "kill @e[type=hopper_minecart]",
+  "setblock $(0,1,0) minecraft:chest[facing=north,type=single,waterlogged=false]{Items:[{Slot:0b,id:\"minecraft:stone\",count:10}]}"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon hopper_minecart $(0.5,0,0.5)"
+  },
+  {
+   "after": 20,
+   "set": {
+    "at": [
+     0,
+     -1,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 25,
+   "cmd": "setblock $(0,1,0) minecraft:chest[facing=north,type=single,waterlogged=false]{Items:[{Slot:0b,id:\"minecraft:stone\",count:10}]}"
+  },
+  {
+   "after": 40,
+   "set": {
+    "at": [
+     0,
+     -1,
+     0
+    ],
+    "state": "minecraft:stone"
+   }
+  }
+ ],
+ "record_ticks": 70,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=item]"
+ ]
+}

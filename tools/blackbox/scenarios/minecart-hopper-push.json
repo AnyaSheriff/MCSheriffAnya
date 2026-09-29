@@ -1,0 +1,46 @@
+{
+ "name": "minecart-hopper-push",
+ "about": "Воронка над вагонеткой с сундуком (смотрит вниз) кладёт в неё по предмету раз в 8 тактов; окно вагонетки открыто щелчком — видно каждый приход.",
+ "blocks": [
+  {
+   "at": [
+    3,
+    0,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    1,
+    1
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  }
+ ],
+ "setup": [],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon chest_minecart $(3.5,1,1.5)"
+  },
+  {
+   "after": 4,
+   "interact": true
+  },
+  {
+   "after": 8,
+   "cmd": "setblock $(3,2,1) minecraft:hopper[facing=down]{Items:[{Slot:0b,id:\"minecraft:dirt\",count:4}]}"
+  }
+ ],
+ "record_ticks": 45,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=tnt_minecart]",
+  "kill @e[type=furnace_minecart]",
+  "kill @e[type=item]"
+ ]
+}

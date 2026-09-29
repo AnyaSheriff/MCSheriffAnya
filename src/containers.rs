@@ -22,6 +22,17 @@ pub enum Kind {
     Hopper,
     Dropper,
     Dispenser,
+
+    /// Проигрыватель: одна ячейка под пластинку (redstone/jukebox.rs).
+    Jukebox,
+
+    /// Кафедра: одна ячейка под книгу и открытая страница
+    /// (redstone/lectern.rs).
+    Lectern,
+
+    /// Крафтер: сетка 3×3, выключенные ячейки и такты «крафтит»
+    /// (redstone/crafter.rs).
+    Crafter,
 }
 
 impl Kind {
@@ -34,6 +45,9 @@ impl Kind {
             "hopper" => Kind::Hopper,
             "dropper" => Kind::Dropper,
             "dispenser" => Kind::Dispenser,
+            "jukebox" => Kind::Jukebox,
+            "lectern" => Kind::Lectern,
+            "crafter" => Kind::Crafter,
             _ => return None,
         })
     }
@@ -43,7 +57,8 @@ impl Kind {
         match self {
             Kind::Chest | Kind::TrappedChest | Kind::Barrel => 27,
             Kind::Hopper => 5,
-            Kind::Dropper | Kind::Dispenser => 9,
+            Kind::Dropper | Kind::Dispenser | Kind::Crafter => 9,
+            Kind::Jukebox | Kind::Lectern => 1,
         }
     }
 
@@ -58,6 +73,9 @@ impl Kind {
             Kind::Dropper => 6,
             Kind::Hopper => 18,
             Kind::Barrel => 27,
+            Kind::Jukebox => 4,
+            Kind::Lectern => 30,
+            Kind::Crafter => 43,
         }
     }
 
@@ -70,6 +88,9 @@ impl Kind {
             Kind::Hopper => 3,
             Kind::Dropper => 4,
             Kind::Dispenser => 5,
+            Kind::Jukebox => 6,
+            Kind::Lectern => 7,
+            Kind::Crafter => 8,
         }
     }
 
@@ -81,6 +102,9 @@ impl Kind {
             3 => Kind::Hopper,
             4 => Kind::Dropper,
             5 => Kind::Dispenser,
+            6 => Kind::Jukebox,
+            7 => Kind::Lectern,
+            8 => Kind::Crafter,
             _ => return None,
         })
     }
@@ -100,6 +124,23 @@ pub struct Container {
     /// В каком такте мира воронка последний раз отработала: от этого
     /// зависит, сколько ждать воронке, получившей предмет от другой.
     pub ticked: u64,
+
+    /// Проигрыватель: сколько его тактов прошло с начала песни, плюс один;
+    /// 0 — музыка не играет (пластинки нет или песня кончилась).
+    pub started: u64,
+
+    /// Кафедра: открытая страница, с нуля.
+    pub page: i32,
+
+    /// Кафедра: сколько страниц в книге.
+    pub pages: i32,
+
+    /// Крафтер: выключенные ячейки, по биту на ячейку (бит 0 — ячейка 0).
+    pub disabled: u16,
+
+    /// Крафтер: сколько тактов ещё держится `crafting=true`
+    /// (`crafting_ticks_remaining`), 0 — не крафтит.
+    pub crafting: i32,
 }
 
 impl Container {
@@ -110,7 +151,17 @@ impl Container {
             slots: vec![None; kind.size()],
             cooldown: 0,
             ticked: 0,
+            started: 0,
+            page: 0,
+            pages: 0,
+            disabled: 0,
+            crafting: 0,
         }
+    }
+
+    /// Выключена ли ячейка крафтера.
+    pub fn is_disabled(&self, slot: usize) -> bool {
+        slot < 16 && self.disabled & (1 << slot) != 0
     }
 
     /// Пусто ли хранилище целиком.
@@ -159,8 +210,24 @@ impl Container {
 
         for (slot, stack) in filled {
             out.push(slot as u8);
-            out.extend_from_slice(&stack.item.to_be_bytes());
+            // Пометка особого динамита — в старшем байте номера
+            // (`Stack::stored_item`).
+            out.extend_from_slice(&stack.stored_item().to_be_bytes());
             out.push(stack.count.clamp(0, 127) as u8);
+        }
+
+        // Своё у проигрывателя и кафедры — после ячеек.
+        match self.kind {
+            Kind::Jukebox => out.push(u8::from(self.started > 0)),
+            Kind::Lectern => {
+                out.extend_from_slice(&(self.page.clamp(0, i16::MAX as i32) as i16).to_be_bytes());
+                out.extend_from_slice(&(self.pages.clamp(0, i16::MAX as i32) as i16).to_be_bytes());
+            }
+            Kind::Crafter => {
+                out.extend_from_slice(&self.disabled.to_be_bytes());
+                out.push(self.crafting.clamp(0, 127) as u8);
+            }
+            _ => {}
         }
     }
 
@@ -184,14 +251,30 @@ impl Container {
 
         for _ in 0..filled {
             let slot = take(1)?[0] as usize;
-            let item = i32::from_be_bytes(take(4)?.try_into().ok()?);
+            let stored = Stack::from_stored(i32::from_be_bytes(take(4)?.try_into().ok()?), 0);
             let count = take(1)?[0] as i32;
+            let item = stored.item;
 
             if blocks::stack_size(item) <= 0 {
                 continue;
             }
 
-            *container.slots.get_mut(slot)? = (count > 0).then(|| Stack::new(item, count.min(blocks::stack_size(item))));
+            *container.slots.get_mut(slot)? = (count > 0).then(|| stored.with_count(count.min(blocks::stack_size(item))));
+        }
+
+        match kind {
+            // Играющая песня после запуска начинается сначала. [проверить]
+            // у оригинала она продолжается с `ticks_since_song_started`.
+            Kind::Jukebox => container.started = u64::from(take(1)?[0] != 0),
+            Kind::Lectern => {
+                container.page = i16::from_be_bytes(take(2)?.try_into().ok()?) as i32;
+                container.pages = i16::from_be_bytes(take(2)?.try_into().ok()?) as i32;
+            }
+            Kind::Crafter => {
+                container.disabled = u16::from_be_bytes(take(2)?.try_into().ok()?) & 0x1ff;
+                container.crafting = take(1)?[0] as i32;
+            }
+            _ => {}
         }
 
         let place = (chunk_x * 16 + (corner >> 4) as i32, y, chunk_z * 16 + (corner & 15) as i32);
@@ -211,6 +294,20 @@ pub fn items_from_text(text: &str) -> Option<Vec<(usize, Stack)>> {
     }
 
     let Some(start) = text.find("Items:[") else {
+        // Кафедра и проигрыватель держат один предмет: `Book:{id:…}` и
+        // `RecordItem:{id:…}`.
+        for key in ["Book:{", "RecordItem:{"] {
+            if let Some(at) = text.find(key) {
+                let inner = &text[at + key.len()..];
+                let id = inner.find("id:")?;
+                let name = inner[id + 3..].trim_start().trim_start_matches('"');
+                let name = &name[..name.find(['"', ',', '}'])?];
+                let name = name.strip_prefix("minecraft:").unwrap_or(name);
+
+                return Some(vec![(0, Stack::new(blocks::item_named(name)?, 1))]);
+            }
+        }
+
         // Данных хранилища нет — значит, и ячеек нет.
         return Some(Vec::new());
     };
@@ -266,7 +363,7 @@ pub fn items_from_text(text: &str) -> Option<Vec<(usize, Stack)>> {
 pub type Pos = (i32, i32, i32);
 
 /// Сторона света по имени свойства `facing`.
-fn facing_offset(facing: &str) -> Option<(i32, i32, i32)> {
+pub fn facing_offset(facing: &str) -> Option<(i32, i32, i32)> {
     Some(match facing {
         "north" => (0, 0, -1),
         "south" => (0, 0, 1),
@@ -361,6 +458,10 @@ pub fn menu(kind: Kind, halves: usize) -> (i32, &'static str) {
         Kind::Hopper => (16, "container.hopper"),
         Kind::Dropper => (6, "container.dropper"),
         Kind::Dispenser => (6, "container.dispenser"),
+        Kind::Lectern => (17, "container.lectern"),
+        Kind::Crafter => (7, "container.crafter"),
+        // Своего окна у проигрывателя нет: сюда не доходит.
+        Kind::Jukebox => (0, "container.jukebox"),
     }
 }
 
@@ -616,8 +717,12 @@ pub fn trapped_power(world: &World, (x, y, z): Pos) -> u8 {
 }
 
 /// Разослать обновления сравнителям от хранилищ, чьё содержимое сменилось.
+/// Проигрыватель, в который пластинку положили (или из которого вынули)
+/// воронкой, выбрасывателем или командой, сперва начинает или бросает
+/// играть.
 pub fn after_change(world: &mut World) {
     for pos in world.take_contents_changed() {
+        crate::redstone::jukebox_contents_changed(world, pos);
         crate::redstone::comparator_update(world, pos);
     }
 }
@@ -629,20 +734,29 @@ pub fn after_change(world: &mut World) {
 /// Кладёт один предмет в хранилище (все его половины подряд): в первую
 /// слева ячейку, где есть место, — пустую или с тем же предметом.
 /// Возвращает, куда положено (место половины), или None — некуда.
-fn insert_one(world: &mut World, halves: &[Pos], item: i32) -> Option<Pos> {
+fn insert_one(world: &mut World, halves: &[Pos], like: Stack) -> Option<Pos> {
     for &(x, y, z) in halves {
-        let slot = world.container(x, y, z)?.slots.iter().position(|slot| match slot {
-            None => true,
-            Some(stack) => stack.item == item && stack.count < blocks::stack_size(item),
-        });
+        if !accepts(world, (x, y, z), like.item) {
+            continue;
+        }
+
+        let container = world.container(x, y, z)?;
+        let slot = if container.kind == Kind::Crafter {
+            crate::redstone::crafter::slot_for(container, like.item)
+        } else {
+            container.slots.iter().position(|slot| match slot {
+                None => true,
+                Some(stack) => stack.stacks_with(&like) && stack.count < blocks::stack_size(like.item),
+            })
+        };
 
         if let Some(slot) = slot {
             world.with_container(x, y, z, |container| {
                 let stack = &mut container.slots[slot];
 
                 *stack = Some(match stack {
-                    Some(there) => Stack::new(item, there.count + 1),
-                    None => Stack::new(item, 1),
+                    Some(there) => like.with_count(there.count + 1),
+                    None => like.with_count(1),
                 });
             });
 
@@ -653,11 +767,47 @@ fn insert_one(world: &mut World, halves: &[Pos], item: i32) -> Option<Pos> {
     None
 }
 
+/// Кладёт стопку в хранилище перед крафтером (все его половины) по одной
+/// штуке, как выбрасыватель; возвращает, что не влезло. Воронка, получившая
+/// первый предмет в пустое нутро, ждёт, как от выбрасывателя.
+pub fn insert_stack(world: &mut World, halves: &[Pos], stack: Stack) -> Option<Stack> {
+    let was_empty = halves.iter().all(|&half| is_empty_at(world, half));
+    let mut left = stack.count;
+
+    while left > 0 {
+        let Some(into) = insert_one(world, halves, stack) else {
+            break;
+        };
+
+        cool_receiver(world, into, was_empty);
+        left -= 1;
+    }
+
+    (left > 0).then(|| stack.with_count(left))
+}
+
+/// Берёт ли хранилище этот предмет снаружи — от воронки, выбрасывателя.
+/// Проигрыватель — только пластинку и только пустой (вики, Hopper: «A
+/// jukebox accepts a music disc if it is empty»), кафедра — ничего
+/// (вики, Hopper: «Lectern — no interaction»).
+fn accepts(world: &World, (x, y, z): Pos, item: i32) -> bool {
+    match world.container(x, y, z).map(|c| c.kind) {
+        Some(Kind::Jukebox) => crate::redstone::jukebox_song(item).is_some() && is_empty_at(world, (x, y, z)),
+        Some(Kind::Lectern) => false,
+        _ => true,
+    }
+}
+
+/// Можно ли вытянуть предмет из хранилища снизу: из кафедры — нельзя.
+fn gives(world: &World, (x, y, z): Pos) -> bool {
+    world.container(x, y, z).is_some_and(|c| c.kind != Kind::Lectern)
+}
+
 /// Убирает один предмет из ячейки.
 fn remove_one(world: &mut World, (x, y, z): Pos, slot: usize) {
     world.with_container(x, y, z, |container| {
         if let Some(stack) = container.slots.get_mut(slot) {
-            *stack = stack.and_then(|there| (there.count > 1).then(|| Stack::new(there.item, there.count - 1)));
+            *stack = stack.and_then(|there| (there.count > 1).then(|| there.with_count(there.count - 1)));
         }
     });
 }
@@ -695,8 +845,14 @@ pub const HOPPER_COOLDOWN: i32 = 8;
 /// влезло, возвращает обратно).
 pub fn tick_hoppers(world: &mut World, items: &mut crate::items::Items) {
     for pos in world.containers_in_order() {
-        if world.container(pos.0, pos.1, pos.2).is_some_and(|c| c.kind == Kind::Hopper) {
-            tick_hopper(world, items, pos);
+        match world.container(pos.0, pos.1, pos.2).map(|c| c.kind) {
+            Some(Kind::Hopper) => tick_hopper(world, items, pos),
+            // Проигрыватель — тоже блок-сущность со своим тактом: песня
+            // кончается в нём.
+            Some(Kind::Jukebox) => crate::redstone::tick_jukebox(world, pos),
+            // Крафтер отсчитывает такты `crafting=true`.
+            Some(Kind::Crafter) => crate::redstone::crafter::tick(world, pos),
+            _ => {}
         }
     }
 
@@ -730,7 +886,7 @@ fn tick_hopper(world: &mut World, items: &mut crate::items::Items, pos: Pos) {
     let mut moved = false;
 
     if !is_empty_at(world, pos) {
-        moved = push(world, pos, state);
+        moved = push(world, items, pos, state);
     }
 
     if !is_full_at(world, pos) {
@@ -751,7 +907,7 @@ fn is_full_at(world: &World, (x, y, z): Pos) -> bool {
 
 /// Воронка кладёт один предмет в хранилище перед выходом: берётся первая
 /// ячейка воронки, чей предмет влезает.
-fn push(world: &mut World, pos: Pos, state: i32) -> bool {
+fn push(world: &mut World, items: &mut crate::items::Items, pos: Pos, state: i32) -> bool {
     let Some(facing) = property(state, "facing").and_then(facing_offset) else {
         return false;
     };
@@ -759,7 +915,7 @@ fn push(world: &mut World, pos: Pos, state: i32) -> bool {
     let target_halves = halves(world, target);
 
     if target_halves.is_empty() {
-        return false;
+        return push_into_cart(world, items, pos, target);
     }
 
     let was_empty = target_halves.iter().all(|&half| is_empty_at(world, half));
@@ -770,7 +926,7 @@ fn push(world: &mut World, pos: Pos, state: i32) -> bool {
             continue;
         };
 
-        if let Some(into) = insert_one(world, &target_halves, stack.item) {
+        if let Some(into) = insert_one(world, &target_halves, *stack) {
             remove_one(world, pos, slot);
             cool_receiver(world, into, was_empty);
             return true;
@@ -788,6 +944,10 @@ fn pull(world: &mut World, items: &mut crate::items::Items, pos: Pos) -> bool {
 
     if !source.is_empty() {
         for &half in &source {
+            if !gives(world, half) {
+                continue;
+            }
+
             let slots = world.container(half.0, half.1, half.2).map(|c| c.slots.clone()).unwrap_or_default();
 
             for (slot, stack) in slots.iter().enumerate() {
@@ -795,7 +955,7 @@ fn pull(world: &mut World, items: &mut crate::items::Items, pos: Pos) -> bool {
                     continue;
                 };
 
-                if insert_one(world, &[pos], stack.item).is_some() {
+                if insert_one(world, &[pos], *stack).is_some() {
                     remove_one(world, half, slot);
                     return true;
                 }
@@ -805,12 +965,84 @@ fn pull(world: &mut World, items: &mut crate::items::Items, pos: Pos) -> bool {
         return false;
     }
 
+    // Хранилища-блока нет — тянет из вагонетки с сундуком или воронкой в
+    // клетке над собой (вики, Hopper: «minecart with chest or hopper»).
+    if let Some(pulled) = pull_from_cart(world, items, pos, above) {
+        return pulled;
+    }
+
     // Полный блок сверху подбирать не даёт (вики, Hopper).
     if blocks::full_cube(world.get_block(above.0, above.1, above.2)) {
         return false;
     }
 
     collect(world, items, pos)
+}
+
+/// Первая по появлению вагонетка-хранилище, чей ящик задевает клетку
+/// `cell`. [проверить]: у оригинала — случайная из задевающих.
+fn cart_in(items: &mut crate::items::Items, (x, y, z): Pos) -> Option<&mut crate::minecart::Minecart> {
+    let half = crate::minecart::WIDTH / 2.0;
+
+    items.carts_mut().iter_mut().find(|cart| {
+        !cart.slots.is_empty()
+            && cart.x + half > x as f64
+            && cart.x - half < x as f64 + 1.0
+            && cart.z + half > z as f64
+            && cart.z - half < z as f64 + 1.0
+            && cart.y + crate::minecart::HEIGHT > y as f64
+            && cart.y < y as f64 + 1.0
+    })
+}
+
+/// Ячейка, куда влезет ещё один такой предмет.
+fn room_for(slots: &[Option<Stack>], like: &Stack) -> Option<usize> {
+    slots.iter().position(|slot| match slot {
+        None => true,
+        Some(stack) => stack.stacks_with(like) && stack.count < blocks::stack_size(like.item),
+    })
+}
+
+/// Воронка кладёт один предмет в вагонетку-хранилище в клетке `target`.
+fn push_into_cart(world: &mut World, items: &mut crate::items::Items, pos: Pos, target: Pos) -> bool {
+    let slots = world.container(pos.0, pos.1, pos.2).map(|c| c.slots.clone()).unwrap_or_default();
+
+    let Some(cart) = cart_in(items, target) else {
+        return false;
+    };
+
+    for (slot, stack) in slots.iter().enumerate() {
+        let Some(stack) = stack else {
+            continue;
+        };
+
+        if let Some(into) = room_for(&cart.slots, stack) {
+            cart.slots[into] = Some(stack.with_count(cart.slots[into].map_or(0, |there| there.count) + 1));
+            remove_one(world, pos, slot);
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Воронка тянет один предмет из вагонетки-хранилища в клетке `above`.
+/// None — вагонетки там нет.
+fn pull_from_cart(world: &mut World, items: &mut crate::items::Items, pos: Pos, above: Pos) -> Option<bool> {
+    let cart = cart_in(items, above)?;
+
+    for slot in 0..cart.slots.len() {
+        let Some(stack) = cart.slots[slot] else {
+            continue;
+        };
+
+        if insert_one(world, &[pos], stack).is_some() {
+            cart.slots[slot] = (stack.count > 1).then(|| stack.with_count(stack.count - 1));
+            return Some(true);
+        }
+    }
+
+    Some(false)
 }
 
 /// Подбор предметов, лежащих в чаше воронки и в блоке над ней. Первая
@@ -832,10 +1064,91 @@ fn collect(world: &mut World, items: &mut crate::items::Items, (x, y, z): Pos) -
     let mut taken = 0;
 
     while taken < found.count {
-        if insert_one(world, &[(x, y, z)], found.item).is_none() {
+        if insert_one(world, &[(x, y, z)], found).is_none() {
             break;
         }
 
+        taken += 1;
+    }
+
+    if taken == 0 {
+        return false;
+    }
+
+    items.take_from_first_inside(&inside, taken);
+    true
+}
+
+/// Вагонетка с воронкой (`slots` — её ячейки, `at` — середина низа ящика)
+/// тянет один предмет за такт из хранилища, чей низ выше низа вагонетки
+/// больше чем на 0,5 и не больше чем на 1,5 блока (вики, Minecart with
+/// Hopper: «pulls items from a container with its bottom face 0.5
+/// (exclusive) to 1.5 (inclusive) blocks directly above … one item every
+/// game tick»; зонд minecart-hopper: по предмету за такт с первого такта).
+/// Хранилища нет — подбирает лежащие рядом предметы. [проверить]: область
+/// подбора.
+pub fn cart_pull(world: &mut World, items: &mut crate::items::Items, slots: &mut [Option<Stack>], at: (f64, f64, f64)) -> bool {
+    let above = (at.0.floor() as i32, (at.1 + 1.5).floor() as i32, at.2.floor() as i32);
+    let source = halves(world, above);
+
+    let fits = |slots: &[Option<Stack>], like: Stack| {
+        slots.iter().position(|slot| match slot {
+            None => true,
+            Some(stack) => stack.stacks_with(&like) && stack.count < blocks::stack_size(like.item),
+        })
+    };
+
+    let put = |slots: &mut [Option<Stack>], at: usize, like: Stack| {
+        slots[at] = Some(match slots[at] {
+            Some(there) => like.with_count(there.count + 1),
+            None => like.with_count(1),
+        });
+    };
+
+    if !source.is_empty() {
+        for &half in &source {
+            if !gives(world, half) {
+                continue;
+            }
+
+            let there = world.container(half.0, half.1, half.2).map(|c| c.slots.clone()).unwrap_or_default();
+
+            for (slot, stack) in there.iter().enumerate() {
+                let Some(stack) = stack else {
+                    continue;
+                };
+
+                if let Some(into) = fits(slots, *stack) {
+                    put(slots, into, *stack);
+                    remove_one(world, half, slot);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // Лежащие предметы: в ящике вагонетки, раздутом на 0,25 по бокам.
+    let inside = |item: (f64, f64, f64)| {
+        (item.0 - at.0).abs() < crate::minecart::WIDTH / 2.0 + 0.25
+            && (item.2 - at.2).abs() < crate::minecart::WIDTH / 2.0 + 0.25
+            && item.1 >= at.1
+            && item.1 < at.1 + crate::minecart::HEIGHT
+    };
+
+    let Some(found) = items.first_inside(&inside) else {
+        return false;
+    };
+
+    let mut taken = 0;
+
+    while taken < found.count {
+        let Some(into) = fits(slots, found) else {
+            break;
+        };
+
+        put(slots, into, found);
         taken += 1;
     }
 
@@ -856,7 +1169,7 @@ pub const DISPENSE_DELAY: u64 = 4;
 
 /// Номер стороны для дыма (World Event 2000): 0 низ, 1 верх, 2 север,
 /// 3 юг, 4 запад, 5 восток.
-fn smoke_direction(facing: &str) -> i32 {
+pub fn smoke_direction(facing: &str) -> i32 {
     match facing {
         "down" => 0,
         "up" => 1,
@@ -913,7 +1226,7 @@ pub fn dispense(world: &mut World, pos: Pos) {
 
             let was_empty = target.iter().all(|&half| is_empty_at(world, half));
 
-            if let Some(into) = insert_one(world, &target, stack.item) {
+            if let Some(into) = insert_one(world, &target, stack) {
                 remove_one(world, pos, slot);
                 cool_receiver(world, into, was_empty);
             }
@@ -941,7 +1254,7 @@ pub fn dispense(world: &mut World, pos: Pos) {
     }
 
     remove_one(world, pos, slot);
-    throw_forward(world, pos, facing, Stack::new(stack.item, 1));
+    throw_forward(world, pos, facing, stack.with_count(1), DROPPER_SPREAD);
     world.note_level_event(x, y, z, 1000, 0);
     world.note_level_event(x, y, z, 2000, smoke_direction(facing_name));
     after_change(world);
@@ -952,12 +1265,15 @@ fn can_open_for_dropper(world: &World, target: &[Pos]) -> bool {
     can_open(world, target)
 }
 
+/// Разброс скорости вылета у выбрасывателя и раздатчика.
+const DROPPER_SPREAD: f64 = 0.0075 * 6.0;
+
 /// Выброс предмета: из середины грани на 0,7 блока вперёд, со скоростью
 /// около 0,2–0,3 по направлению и 0,2 вверх, с небольшим разбросом.
 /// Снято чёрным ящиком (dropper-pulse: предмет у оригинала появился в
 /// (1.2, 0.34, 3.5) от выбрасывателя, смотрящего на восток, со скоростью
 /// около (0.20, 0.15, 0.02)).
-fn throw_forward(world: &mut World, (x, y, z): Pos, (dx, dy, dz): (i32, i32, i32), stack: Stack) {
+pub fn throw_forward(world: &mut World, (x, y, z): Pos, (dx, dy, dz): (i32, i32, i32), stack: Stack, spread: f64) {
     let mut at = (
         x as f64 + 0.5 + 0.7 * dx as f64,
         y as f64 + 0.5 + 0.7 * dy as f64,
@@ -972,7 +1288,7 @@ fn throw_forward(world: &mut World, (x, y, z): Pos, (dx, dy, dz): (i32, i32, i32
     }
 
     let speed = world.random_unit() as f64 * 0.1 + 0.2;
-    let mut spread = || (world.random_unit() as f64 - world.random_unit() as f64) * 0.0075 * 6.0;
+    let mut spread = || (world.random_unit() as f64 - world.random_unit() as f64) * spread;
     let velocity = (
         dx as f64 * speed + spread(),
         dy as f64 * speed + spread() + 0.2,
@@ -1039,10 +1355,10 @@ fn dispense_special(world: &mut World, pos: Pos, facing: (i32, i32, i32), slot: 
                 remove_one(world, pos, slot);
 
                 if let Some(item) = blocks::item_named(filled) {
-                    let placed = insert_one(world, &[pos], item);
+                    let placed = insert_one(world, &[pos], Stack::new(item, 1));
 
                     if placed.is_none() {
-                        throw_forward(world, pos, facing, Stack::new(item, 1));
+                        throw_forward(world, pos, facing, Stack::new(item, 1), DROPPER_SPREAD);
                     }
                 }
             }
@@ -1054,7 +1370,7 @@ fn dispense_special(world: &mut World, pos: Pos, facing: (i32, i32, i32), slot: 
         // щелчком и дымом, как у выброса. [проверить] порядок звуков
         // (tnt-dispenser).
         "tnt" => {
-            crate::tnt::dispense(world, front);
+            crate::tnt::dispense(world, front, stack.tnt);
             remove_one(world, pos, slot);
             Some(true)
         }
@@ -1090,6 +1406,13 @@ pub fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
     let state = world.get_block(x, y, z);
 
     if let Some(kind) = Kind::of(state) {
+        match kind {
+            Kind::Jukebox => return Some(crate::redstone::jukebox_reading(world, pos)),
+            Kind::Lectern => return Some(crate::redstone::lectern_reading(world, pos)),
+            Kind::Crafter => return Some(crate::redstone::crafter::reading(world, pos)),
+            _ => {}
+        }
+
         let parts = halves(world, pos);
 
         // Сундук, который нельзя открыть, читается как пустой (Java).
@@ -1155,6 +1478,35 @@ mod tests {
         assert!(reading.is_empty());
     }
 
+    /// Кафедра и проигрыватель хранят своё: страницу и «играет».
+    #[test]
+    fn lectern_and_jukebox_survive_the_disk() {
+        let book = blocks::item_named("writable_book").expect("книга");
+        let mut lectern = Container::new(Kind::Lectern);
+
+        lectern.slots[0] = Some(Stack::new(book, 1));
+        lectern.page = 3;
+        lectern.pages = 5;
+
+        let mut jukebox = Container::new(Kind::Jukebox);
+
+        jukebox.started = 40;
+
+        let mut bytes = Vec::new();
+        lectern.write((1, 2, 3), &mut bytes);
+        jukebox.write((4, 5, 6), &mut bytes);
+
+        let mut reading = bytes.as_slice();
+        let (_, read) = Container::read(&mut reading, 0, 0).expect("кафедра читается");
+
+        assert_eq!((read.slots.clone(), read.page, read.pages), (lectern.slots.clone(), 3, 5));
+
+        let (_, read) = Container::read(&mut reading, 0, 0).expect("проигрыватель читается");
+
+        assert_eq!((read.kind, read.started), (Kind::Jukebox, 1));
+        assert!(reading.is_empty());
+    }
+
     /// Данные блока из команды разбираются в ячейки.
     #[test]
     fn items_come_from_command_text() {
@@ -1165,6 +1517,10 @@ mod tests {
 
         assert_eq!(items, vec![(0, Stack::new(stone, 10)), (26, Stack::new(dirt, 2))]);
         assert_eq!(items_from_text("{}"), Some(Vec::new()));
+
+        let book = blocks::item_named("writable_book").expect("книга");
+        let lectern = r#"{Book:{id:"minecraft:writable_book",count:1,components:{"minecraft:writable_book_content":{pages:["a"]}}},Page:0}"#;
+        assert_eq!(items_from_text(lectern), Some(vec![(0, Stack::new(book, 1))]));
         assert_eq!(items_from_text("нет"), None);
     }
 

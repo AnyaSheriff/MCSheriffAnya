@@ -321,6 +321,23 @@ mod tests {
     /// Файл прежней версии, без инвентаря, читается по-прежнему: игрок встанет
     /// там, где вышел, просто с пустыми руками.
     #[test]
+    fn custom_tnt_is_saved_with_the_player() {
+        let directory = test_directory("custom-tnt");
+        let uuid = [0x5a; 16];
+        let mut data = sample();
+        let cluster = crate::custom_tnt::by_name("cluster").expect("cluster");
+        let stack = crate::custom_tnt::stack(cluster, 7).expect("динамит");
+
+        data.inventory.set(crate::inventory::FIRST_HOTBAR + 2, Some(stack));
+        save(&directory, &uuid, &data).expect("записать");
+
+        let read = load(&directory, &uuid).expect("прочитать");
+        assert_eq!(read.inventory.slot(crate::inventory::FIRST_HOTBAR + 2), Some(stack));
+
+        let _ = fs::remove_dir_all(&directory);
+    }
+
+    #[test]
     fn an_old_file_is_still_read() {
         let directory = test_directory("old_version");
         let path = path_for(&directory, &[8; 16]);

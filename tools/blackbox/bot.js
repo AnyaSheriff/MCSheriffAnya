@@ -161,17 +161,54 @@ bot._client.on('world_particles', (p) => {
 // Динамит на площадке: его свойства (запал, блок) пишем отдельно — по ним
 // видно, с каким запалом он появился.
 const padTnt = new Set();
+// Вагонетки на площадке: их движение пишем пакет за пакетом — сдвиг, скорость,
+// перенос, сверка места. По ним видно, как часто и чем сервер рассказывает о
+// вагонетке. Сдвиг — в 1/4096 блока, как в пакете; место — от площадки.
+const padCarts = new Set();
+// Где вагонетка по присланному (появление, сдвиги, сверки): пакеты
+// пишутся, пока она на площадке, — увезённая командой прочь не в счёт.
+const cartAt = new Map();
+const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart']);
 bot._client.on('spawn_entity', (p) => {
   const pos = { x: p.x, y: p.y, z: p.z };
   const type = (mcData.entities[p.type] || {}).name || p.type;
   if (inPad(pos) && type === 'tnt') padTnt.add(p.entityId);
+  // Только появившиеся за запись: оставшиеся от прошлых прогонов не в счёт.
+  if (recording && inPad(pos) && CART_TYPES.has(type)) { padCarts.add(p.entityId); cartAt.set(p.entityId, pos); }
   if (inPad(pos)) note('spawn', { at: rel(pos).map(v => Math.round(v * 100) / 100), type, data: p.objectData, id: p.entityId, velocity: p.velocity });
 });
 bot._client.on('entity_metadata', (p) => {
-  if (!padTnt.has(p.entityId)) return;
+  if (!padTnt.has(p.entityId) && !(padCarts.has(p.entityId) && inPad(cartAt.get(p.entityId)))) return;
   const fields = (p.metadata || []).map(m => `${m.key}=${typeof m.value === 'object' ? JSON.stringify(m.value) : m.value}`);
   if (fields.length) note('meta', { id: p.entityId, fields: fields.join(' ') });
 });
+const round3 = (v) => Math.round(v * 1000) / 1000;
+const vec = (v) => (v ? [v.x, v.y, v.z].map(round3) : null);
+for (const name of ['rel_entity_move', 'entity_move_look', 'entity_look']) {
+  bot._client.on(name, (p) => {
+    if (!padCarts.has(p.entityId)) return;
+    const d = p.dX === undefined ? null : [p.dX, p.dY, p.dZ];
+    const was = cartAt.get(p.entityId);
+    if (d && was) cartAt.set(p.entityId, { x: was.x + d[0] / 4096, y: was.y + d[1] / 4096, z: was.z + d[2] / 4096 });
+    if (!inPad(cartAt.get(p.entityId) || was)) return;
+    note('cart', { what: name === 'entity_look' ? 'rot' : 'move', id: p.entityId, d, yaw: p.yaw, pitch: p.pitch, ground: p.onGround });
+  });
+}
+// Событие сущности у вагонетки: 10 — вагонетку с динамитом подожгли.
+bot._client.on('entity_status', (p) => {
+  if (padCarts.has(p.entityId) && inPad(cartAt.get(p.entityId))) note('cart', { what: 'status', id: p.entityId, status: p.entityStatus });
+});
+bot._client.on('entity_velocity', (p) => {
+  if (padCarts.has(p.entityId) && inPad(cartAt.get(p.entityId))) note('cart', { what: 'vel', id: p.entityId, v: vec(p.velocity) });
+});
+for (const name of ['entity_teleport', 'sync_entity_position']) {
+  bot._client.on(name, (p) => {
+    if (!padCarts.has(p.entityId)) return;
+    cartAt.set(p.entityId, { x: p.x, y: p.y, z: p.z });
+    if (!inPad(p)) return;
+    note('cart', { what: name === 'entity_teleport' ? 'tp' : 'sync', id: p.entityId, at: rel(p).map(round3), v: [p.dx, p.dy, p.dz].map(round3), yaw: round3(p.yaw), pitch: round3(p.pitch), ground: p.onGround });
+  });
+}
 // Взрыв приходит своим пакетом: звук и вспышка — в нём же. Число блоков
 // случайно, сравнивается только место, сила, вспышка и звук.
 bot._client.on('explosion', (p) => {
@@ -185,6 +222,13 @@ bot._client.on('explosion', (p) => {
   note('explosion', { at: rel(c).map(v => Math.round(v * 1000) / 1000), radius: p.radius, blocks: p.blockCount, knockback: Boolean(p.playerKnockback), particle: String(p.explosionParticle && p.explosionParticle.type), sound, smoke });
 });
 bot._client.on('entity_destroy', (p) => note('destroy', { ids: p.entityIds }));
+bot._client.on('entity_destroy', (p) => {
+  for (const id of p.entityIds) {
+    if (!padCarts.has(id)) continue;
+    padCarts.delete(id);
+    if (inPad(cartAt.get(id))) note('cart', { what: 'gone', id });
+  }
+});
 // Окна хранилищ: робот открывает сундук или воронку щелчком и видит каждое
 // изменение содержимого — сервер шлёт его открытому окну в тот же такт.
 const itemName = (it) => {
@@ -194,7 +238,10 @@ const itemName = (it) => {
 };
 let openWindow = null;
 bot._client.on('open_window', (p) => { openWindow = Number(p.windowId); });
-bot._client.on('open_window', (p) => note('window', { type: String(p.inventoryType ?? p.windowType), title: JSON.stringify(p.windowTitle ?? p.title ?? '').slice(0, 60) }));
+// Заголовок окна — ключ перевода, если он есть: у окна вагонетки заголовок
+// несёт ещё и её опознаватель, а он у каждого сервера свой.
+const titleOf = (t) => { const j = JSON.stringify(t ?? ''); const m = /"translate":\{"type":"string","value":"([^"]+)"/.exec(j) || /"translate":"([^"]+)"/.exec(j); return m ? m[1] : j.slice(0, 60); };
+bot._client.on('open_window', (p) => note('window', { type: String(p.inventoryType ?? p.windowType), title: titleOf(p.windowTitle ?? p.title) }));
 bot._client.on('window_items', (p) => {
   if (Number(p.windowId) === 0) return;
   const slots = (p.items || []).map((it, i) => [i, itemName(it)]).filter(([, n]) => n).map(([i, n]) => `${i}:${n}`);
@@ -225,7 +272,7 @@ let pendingDo = null;
   const write = bot._client.write.bind(bot._client);
   bot._client.write = (name, params) => {
     if (process.env.BB_DEBUG && name !== 'position' && name !== 'position_look' && name !== 'look' && name !== 'keep_alive') console.error('→', name, JSON.stringify(params, (k, v) => typeof v === 'bigint' ? String(v) : v).slice(0, 160));
-    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'window_click')) {
+    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack')) {
       // Такт нажатия берём из плана, а не из часов: в какой такт целились,
       // в тот оно и уходит. Часы на этом месте врать не должны, но нажатие
       // ложится ровно на границу счёта, и округление могло бы дрогнуть.
@@ -360,14 +407,19 @@ bot.once('spawn', async () => {
     // Нажатия расставляем по тактам сервера, а не по часам робота: `after` —
     // это такты от первого нажатия. Целимся в середину такта, чтобы промах
     // на десяток миллисекунд не перекидывал нажатие в соседний такт.
-    const baseTick = tickNow() + 3;   // запас, чтобы первое нажатие не опоздало
+    let baseTick = tickNow() + 3;   // запас, чтобы первое нажатие не опоздало
+    // `align` — начать сценарий в такте, кратном этому числу по возрасту
+    // мира: то, что сервер делает раз в 20 тактов (датчик света), иначе
+    // попадает в случайную фазу относительно действий, и записи двух
+    // серверов не сравнить.
+    if (scenario.align) baseTick = Math.ceil(baseTick / scenario.align) * scenario.align;
     for (const a of scenario.actions) {
       // Граница счётного такта — это ровно середина между приходами пакетов,
       // то есть середина настоящего такта сервера: дальше всего от его краёв,
       // куда бы отправка ни дрогнула.
       const at = baseTick + (a.after || 0);
       await waitTick(at, 0);
-      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : JSON.stringify(a);
+      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : a.attack ? 'attack' : a.interact ? 'interact' : a.button !== undefined ? `button ${a.button}` : a.slot_state ? `slot_state ${a.slot_state.slot} ${a.slot_state.state}` : JSON.stringify(a);
       pendingDo = { what, tick: at };
       if (a.set) bot.chat(`/setblock ${ORIGIN.x + a.set.at[0]} ${ORIGIN.y + a.set.at[1]} ${ORIGIN.z + a.set.at[2]} ${a.set.state}`);
       if (a.cmd) bot.chat('/' + expand(a.cmd));
@@ -378,7 +430,24 @@ bot.once('spawn', async () => {
         const w = a.window_click;
         bot._client.write('window_click', { windowId: openWindow, stateId, slot: w.slot, mouseButton: w.button || 0, mode: w.mode || 0, changedSlots: [], cursorItem: undefined });
       }
+      // Кнопка в открытом окне (кафедра листает, стол зачарования): пакет
+      // Click Container Button, в mineflayer он зовётся enchant_item.
+      if (a.button !== undefined && openWindow !== null) bot._client.write('enchant_item', { windowId: openWindow, enchantment: a.button });
+      // Щелчок по пустой ячейке крафтера: включить или выключить её
+      // (пакет Change Container Slot State, в mineflayer — set_slot_state).
+      if (a.slot_state && openWindow !== null) bot._client.write('set_slot_state', { slot_id: a.slot_state.slot, window_id: openWindow, state: a.slot_state.state });
       if (a.close && openWindow !== null) { bot._client.write('close_window', { windowId: openWindow }); openWindow = null; }
+      // Щелчок (правой кнопкой) по последней появившейся на площадке
+      // вагонетке — основной рукой, в середину её ящика.
+      if (a.interact) {
+        const id = [...padCarts].pop();
+        if (id !== undefined) { bot._client.write('use_entity', { target: id, hand: 0, location: { x: 0, y: 0.35, z: 0 }, sneaking: false }); bot.swingArm(); }
+      }
+      // Удар по последней появившейся на площадке вагонетке.
+      if (a.attack) {
+        const id = [...padCarts].pop();
+        if (id !== undefined) { bot._client.write('attack', { entityId: id }); bot.swingArm(); }
+      }
       if (a.click) {
         const block = bot.blockAt(new Vec3(ORIGIN.x + a.click[0], ORIGIN.y + a.click[1], ORIGIN.z + a.click[2]));
 
@@ -395,6 +464,9 @@ bot.once('spawn', async () => {
     }
     await waitTick(baseTick + scenario.record_ticks + 10);
     recording = false;
+    // Уборка после записи (`cleanup`): вагонетки и прочие сущности иначе
+    // остались бы на площадке и мешали следующим сценариям.
+    for (const c of scenario.cleanup || []) await say(expand(c));
     fs.writeFileSync(outFile, JSON.stringify({ scenario: scenario.name, host, port, events }, null, 1));
     console.log(`записано событий: ${events.length} → ${outFile}`);
     bot.quit();

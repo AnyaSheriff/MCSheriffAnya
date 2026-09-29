@@ -1,0 +1,54 @@
+{
+ "name": "minecart-hopper-pull",
+ "about": "Воронка под рельсой тянет из вагонетки с сундуком над собой по предмету раз в 8 тактов и сразу отдаёт в сундук рядом; окно сундука открыто — видно каждый приход.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:hopper[facing=east,enabled=true]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    1
+   ],
+   "state": "minecraft:chest[facing=north,type=single,waterlogged=false]"
+  },
+  {
+   "at": [
+    1,
+    1,
+    1
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  }
+ ],
+ "setup": [],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    2,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 2,
+   "cmd": "summon chest_minecart $(1.5,1,1.5) {Items:[{Slot:0b,id:\"minecraft:stone\",count:3},{Slot:5b,id:\"minecraft:sand\",count:2}]}"
+  }
+ ],
+ "record_ticks": 50,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=tnt_minecart]",
+  "kill @e[type=furnace_minecart]",
+  "kill @e[type=item]"
+ ]
+}

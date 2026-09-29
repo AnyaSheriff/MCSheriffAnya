@@ -1,0 +1,60 @@
+{
+ "name": "minecart-hit",
+ "about": "Игрок в выживании ставит вагонетку на рельсу и бьёт её рукой: свойства удара (удар, сторона, урон) каждый такт, скорость после удара; урон спадает; творческий ломает сразу.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  }
+ ],
+ "setup": [
+  "kill @e[type=minecart]",
+  "gamemode survival blackbox",
+  "give blackbox minecart 1"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 20,
+   "attack": true
+  },
+  {
+   "after": 24,
+   "attack": true
+  },
+  {
+   "after": 40,
+   "attack": true
+  },
+  {
+   "after": 41,
+   "attack": true
+  },
+  {
+   "after": 70,
+   "cmd": "gamemode creative blackbox"
+  },
+  {
+   "after": 75,
+   "attack": true
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=item]"
+ ]
+}

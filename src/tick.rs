@@ -209,6 +209,10 @@ async fn run(shared: Arc<Shared>) {
             let (present, player_chunks) = occupants(&shared, dimension);
             redstone::note_occupants(&mut world, present);
 
+            // Где вагонетки — для детекторных рельс: их такт проверяет, не
+            // уехала ли вагонетка (её могла увести команда в начале такта).
+            redstone::note_carts(&mut world, cart_marks(&shared, dimension));
+
             let due = world.advance(PER_TICK);
 
             for ((x, y, z), kind) in due {
@@ -256,6 +260,15 @@ async fn run(shared: Arc<Shared>) {
             spawn_ejected(&shared, dimension, &mut world);
             spawn_primed(&shared, dimension, &mut world);
 
+            // Вагонетки катятся — сущности, как и предметы ниже; детекторные
+            // рельсы под ними включаются в этой же фазе (чёрный ящик,
+            // rail-detector: рельса и лампа — в рассылке следующего такта
+            // после появления вагонетки).
+            step_carts(&shared, dimension, &mut world);
+            explode_carts(&shared, dimension, &mut world);
+            hopper_carts(&shared, dimension, &mut world);
+            redstone::note_carts(&mut world, cart_marks(&shared, dimension));
+
             // Плиты, растяжки и руда слушают не только сигнал, но и мир: на
             // них встают игроки и падают предметы. Список — заново: только
             // что выброшенное выбрасывателями тоже в счёт.
@@ -302,6 +315,9 @@ async fn run(shared: Arc<Shared>) {
                 world.note_sound_at(splash.at, "minecraft:entity.generic.splash", splash.volume, pitch);
             }
 
+            // Большой взрыв особого динамита дорушивает своё — по частям.
+            continue_blasts(&shared, dimension, &mut world);
+
             // Догоревший динамит взрывается — по порядку появления.
             explode_all(&shared, dimension, &mut world, exploding);
 
@@ -312,12 +328,24 @@ async fn run(shared: Arc<Shared>) {
             // Игроки видят содержимое хранилищ таким, каким оно стало к фазе
             // сущностей: что воронки перенесут дальше, окна увидят в
             // следующем такте (снято чёрным ящиком, hopper-chain).
-            world.publish_contents();
+            // Вагонетки-хранилища — тоже: их окна видят то же время.
+            let carts = shared
+                .items_in(dimension)
+                .lock()
+                .expect("предметы захвачены другим потоком")
+                .carts()
+                .iter()
+                .filter(|cart| !cart.slots.is_empty())
+                .map(|cart| (cart.entity_id, cart.slots.clone()))
+                .collect();
+
+            world.publish_contents(carts);
 
             // Фаза блок-сущностей: датчики света (раз в 20 тактов), воронки,
             // потом ходы поршней, которым пора кончиться (они появились позже
             // воронок).
             redstone::daylight_tick(&mut world);
+            redstone::sensors_tick(&mut world);
             containers::tick_hoppers(
                 &mut world,
                 &mut shared.items_in(dimension).lock().expect("предметы захвачены другим потоком"),
@@ -456,7 +484,136 @@ fn occupants(shared: &Shared, dimension: Dimension) -> (Vec<redstone::Occupant>,
             }),
     );
 
+    standing.extend(
+        shared
+            .items_in(dimension)
+            .lock()
+            .expect("предметы захвачены другим потоком")
+            .carts()
+            .iter()
+            .map(|cart| redstone::Occupant::minecart(cart.x, cart.y, cart.z, cart.on_ground || cart.on_rail)),
+    );
+
     (standing, chunks)
+}
+
+/// Где стоят вагонетки этого мира и что покажет сравнитель за каждой — для
+/// детекторных рельс, в порядке появления.
+fn cart_marks(shared: &Shared, dimension: Dimension) -> Vec<redstone::Cart> {
+    shared
+        .items_in(dimension)
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .carts()
+        .iter()
+        .map(|cart| redstone::Cart { x: cart.x, y: cart.y, z: cart.z, reading: cart.reading() })
+        .collect()
+}
+
+/// Такт вагонеток: каждая в порядке появления, со встречами друг с другом
+/// и с игроками. В выгруженном чанке вагонетка стоит, как и всё там.
+/// Провалившиеся в пустоту пропадают.
+fn step_carts(shared: &Shared, dimension: Dimension, world: &mut World) {
+    /// Режим наблюдателя: сквозь всё проходит, вагонетку не толкает.
+    const SPECTATOR: i32 = 3;
+
+    if shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").carts().is_empty() {
+        return;
+    }
+
+    let players: Vec<(f64, f64, f64)> = shared
+        .players
+        .lock()
+        .expect("список игроков захвачен другим потоком")
+        .members()
+        .iter()
+        .filter(|member| member.dimension == dimension && member.game_mode != SPECTATOR)
+        .map(|member| (member.position.x, member.position.y, member.position.z))
+        .collect();
+
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    {
+        let view = |x, y, z| world.get_block(x, y, z);
+        let loaded = |cart: &crate::minecart::Minecart| {
+            world.has_chunk((cart.x.floor() as i32).div_euclid(16), (cart.z.floor() as i32).div_euclid(16))
+        };
+
+        crate::minecart::step_all(items.carts_mut(), &view, &players, loaded);
+    }
+
+    items.remove_carts(|cart| cart.lost());
+    prime_sounds(world, &mut items);
+}
+
+/// Звук поджога у вагонеток с динамитом, подожжённых в этом такте — там,
+/// где они стоят (зонд t-act: звук вместе с событием «подожжена»).
+fn prime_sounds(world: &mut World, items: &mut items::Items) {
+    for cart in items.carts_mut().iter_mut().filter(|cart| cart.just_primed) {
+        cart.just_primed = false;
+        world.note_sound_at((cart.x, cart.y, cart.z), tnt::PRIMED_SOUND, 1.0, 1.0);
+    }
+}
+
+/// Вагонетки с динамитом, которым пора, взрываются — по порядку появления,
+/// каждая до конца, как динамит (`explode_all`). Центр — место вагонетки.
+/// [проверить]: центр и порядок относительно прочих сущностей.
+fn explode_carts(shared: &Shared, dimension: Dimension, world: &mut World) {
+    let blasts: Vec<(i32, (f64, f64, f64), f64)> = shared
+        .items_in(dimension)
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .carts()
+        .iter()
+        .filter_map(|cart| Some((cart.entity_id, (cart.x, cart.y, cart.z), cart.blast?)))
+        .collect();
+
+    if blasts.is_empty() {
+        return;
+    }
+
+    let players = blast_targets(shared, dimension);
+
+    // Сама взорвавшаяся пропадает после взрыва: у оригинала задетые
+    // вагонетки разбиваются раньше (зонд t-act).
+    for (entity_id, centre, bonus) in blasts {
+        let power = crate::minecart::blast_power(bonus, world.random_unit());
+
+        {
+            let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+            let mut next_id = || shared.next_entity_id();
+
+            tnt::explode(world, &mut items, &players, centre, power, true, &mut next_id);
+            items.remove_carts(|cart| cart.entity_id == entity_id);
+            prime_sounds(world, &mut items);
+        }
+
+        redstone::settle(world);
+        drop_destroyed(shared, dimension, world);
+    }
+}
+
+/// Вагонетки с воронкой тянут предметы — сразу после своего шага, в фазе
+/// сущностей (зонд minecart-hopper: первый предмет — в такт появления).
+fn hopper_carts(shared: &Shared, dimension: Dimension, world: &mut World) {
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    if !items.carts().iter().any(|cart| cart.kind == crate::minecart::Kind::Hopper && cart.enabled) {
+        return;
+    }
+
+    let mut carts = std::mem::take(items.carts_vec());
+
+    for cart in carts.iter_mut().filter(|cart| cart.kind == crate::minecart::Kind::Hopper && cart.enabled) {
+        let at = (cart.x, cart.y, cart.z);
+
+        containers::cart_pull(world, &mut items, &mut cart.slots, at);
+    }
+
+    *items.carts_vec() = carts;
+    drop(items);
+
+    containers::after_change(world);
 }
 
 /// Убирает из памяти чанки, рядом с которыми никого нет.
@@ -618,19 +775,36 @@ fn drop_destroyed(shared: &Shared, dimension: Dimension, world: &mut World) {
         };
 
         let entity_id = shared.next_entity_id();
+        let (at, velocity) = scattered((x, y, z), || f64::from(world.random_unit()));
 
         shared
             .items_in(dimension)
             .lock()
             .expect("предметы захвачены другим потоком")
-            .drop_item(
-                entity_id,
-                stack,
-                (x as f64 + 0.5, y as f64 + 0.25, z as f64 + 0.5),
-                (0.0, 0.0, 0.0),
-                items::MINED_DELAY,
-            );
+            .drop_item(entity_id, stack, at, velocity, items::MINED_DELAY);
     }
+}
+
+/// Где и с какой скоростью появляется предмет, выпавший из сломанного блока.
+///
+/// Снято чёрным ящиком (water-washes, dust-on-slab, tnt-*): точка случайна
+/// в пределах ±0,25 от середины блока по каждой оси (по высоте — середина
+/// предмета, его низ на 0,125 ниже), скорость вверх 0,2, вбок — случайная,
+/// до 0,1 в каждую сторону. Без этого смытые водой предметы плыли строго по
+/// оси блока, и всплески воды звучали не там.
+fn scattered(
+    (x, y, z): (i32, i32, i32),
+    mut random: impl FnMut() -> f64,
+) -> ((f64, f64, f64), (f64, f64, f64)) {
+    let mut offset = || random() * 0.5 - 0.25;
+    let at = (
+        f64::from(x) + 0.5 + offset(),
+        f64::from(y) + 0.5 + offset() - 0.125,
+        f64::from(z) + 0.5 + offset(),
+    );
+    let velocity = (random() * 0.2 - 0.1, 0.2, random() * 0.2 - 0.1);
+
+    (at, velocity)
 }
 
 /// Предметы, выброшенные выбрасывателями и раздатчиками, становятся
@@ -659,8 +833,8 @@ fn spawn_primed(shared: &Shared, dimension: Dimension, world: &mut World) {
     let state = blocks::state_by_name("tnt").unwrap_or(crate::world::AIR);
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
 
-    for (at, velocity, fuse) in primed {
-        items.prime(shared.next_entity_id(), state, at, velocity, fuse);
+    for (at, velocity, fuse, custom) in primed {
+        items.prime(shared.next_entity_id(), state, at, velocity, fuse, custom);
     }
 }
 
@@ -672,10 +846,28 @@ fn explode_all(shared: &Shared, dimension: Dimension, world: &mut World, explodi
         return;
     }
 
+    let players = blast_targets(shared, dimension);
+
+    for primed in exploding {
+        {
+            let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+            let mut next_id = || shared.next_entity_id();
+
+            tnt::explode_primed(world, &mut items, &players, &primed, &mut next_id);
+            prime_sounds(world, &mut items);
+        }
+
+        redstone::settle(world);
+        drop_destroyed(shared, dimension, world);
+    }
+}
+
+/// Игроки этого мира, которых может толкнуть взрыв.
+fn blast_targets(shared: &Shared, dimension: Dimension) -> Vec<tnt::Target> {
     /// Режим наблюдателя: сквозь всё проходит, взрыв его не толкает.
     const SPECTATOR: i32 = 3;
 
-    let players: Vec<tnt::Target> = shared
+    shared
         .players
         .lock()
         .expect("список игроков захвачен другим потоком")
@@ -689,16 +881,24 @@ fn explode_all(shared: &Shared, dimension: Dimension, world: &mut World, explodi
             z: member.position.z,
             sneaking: member.sneaking,
         })
-        .collect();
+        .collect()
+}
 
-    for primed in exploding {
-        {
-            let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
-            let mut next_id = || shared.next_entity_id();
+/// Отложенное большим взрывом особого динамита (custom_tnt.rs): часть за
+/// такт. У обычного динамита отложенного нет — здесь ничего не делается.
+fn continue_blasts(shared: &Shared, dimension: Dimension, world: &mut World) {
+    if !world.blast_pending() {
+        return;
+    }
 
-            tnt::explode(world, &mut items, &players, tnt::centre_of(&primed), tnt::POWER, &mut next_id);
-        }
+    let went = {
+        let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+        let mut next_id = || shared.next_entity_id();
 
+        tnt::continue_blasts(world, &mut items, &mut next_id)
+    };
+
+    if went {
         redstone::settle(world);
         drop_destroyed(shared, dimension, world);
     }
@@ -720,9 +920,20 @@ fn spill_containers(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 }
 
-/// Пересчитывает одно место: во что там должна превратиться жидкость.
+/// Такт жидкости: она пересчитывает свой уровень и растекается.
+///
+/// Как у оригинала, жидкость «толкает»: такт есть только у самой жидкости,
+/// пустое место своего такта не ждёт — его заливает соседняя жидкость своим
+/// тактом (`fluids::spreading`). Такт, заведённый для жидкости, которой
+/// здесь больше нет или которая сменилась (источник стал текущей водой и
+/// наоборот), пропадает (`World::fluid_tick_holds`).
 pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
+    let holds = world.fluid_tick_holds((x, y, z));
     world.begin_tick((x, y, z), TickKind::Fluid);
+
+    if !holds {
+        return;
+    }
 
     // Правилам нужно смотреть на несколько блоков вперёд, поэтому им даётся
     // не набор соседей, а способ спросить любое место мира. Смотреть и менять
@@ -742,54 +953,34 @@ pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
             world.note_level_event(x, y, z, 1501, 0);
         }
 
-        // У оригинала жидкость толкает сама: пустое место получает её на
-        // такте той жидкости, что рядом, — через задержку после того, как
-        // она туда пришла. Наш такт пустого места мог наступить раньше
-        // (его завело другое изменение рядом), и тогда он взял бы жидкость,
-        // пришедшую к соседу в этом же такте. Такое место ждёт своей
-        // очереди (сценарий чёрного ящика water-meets-lava).
-        if let Some((kind, _)) = fluids::fluid_at(state)
-            && fluids::fluid_at(here).is_none()
-            && [(0, 1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1)]
-                .iter()
-                .any(|(dx, dy, dz)| world.is_fresh_fluid(x + dx, y + dy, z + dz))
-        {
-            world.schedule(x, y, z, kind.delay_in(world.is_nether()));
-            return;
-        }
+        // Изменение само разошлётся клиентам и само попросит пересчитать
+        // соседей: этим занимается мир.
+        world.set_block(x, y, z, state);
+    }
 
-        if fluids::fluid_at(state).is_some() {
-            world.note_fresh_fluid(x, y, z);
+    // Высохшая или застывшая жидкость никуда не течёт.
+    let targets = {
+        let view = |x, y, z| world.get_block(x, y, z);
+
+        fluids::in_world(world.is_nether(), || fluids::spreading((x, y, z), &view))
+    };
+
+    for ((tx, ty, tz), state) in targets {
+        let there = world.get_block(tx, ty, tz);
+
+        // Вода, в которую сверху полилась лава, становится камнем и шипит.
+        if fluids::fluid_at(there).is_some() && fluids::fluid_at(state).is_none() {
+            world.note_level_event(tx, ty, tz, 1501, 0);
         }
 
         // Вода сносит траву, цветы, факелы, провод — и они выпадают
         // предметами. Лава сносит то же, но сжигает: ничего не выпадает
         // (вики, Water и Lava).
-
-        if matches!(fluids::fluid_at(state), Some((fluids::Kind::Water, _))) && fluids::washed_away(here) {
-            world.note_destroyed(x, y, z);
+        if matches!(fluids::fluid_at(state), Some((fluids::Kind::Water, _))) && fluids::washed_away(there) {
+            world.note_destroyed(tx, ty, tz);
         }
 
-        // Изменение само разошлётся клиентам и само попросит пересчитать
-        // соседей: этим занимается мир.
-        world.set_block(x, y, z, state);
-        return;
-    }
-
-    // Сама жидкость не изменилась, но её такт пришёл не зря: рядом что-то
-    // поменялось — например, под ней залило пустоту, и теперь ей можно
-    // течь вбок. Решает за себя каждое место, поэтому пустоту рядом надо
-    // спросить заново: иначе вода так и стоит у края, пока её не тронут.
-    let here = world.get_block(x, y, z);
-
-    if let Some((kind, _)) = fluids::fluid_at(here) {
-        for (dx, dy, dz) in [(0, -1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1)] {
-            let next = world.get_block(x + dx, y + dy, z + dz);
-
-            if fluids::fluid_at(next).is_none() && fluids::flows_through(next) {
-                world.schedule(x + dx, y + dy, z + dz, kind.delay_in(world.is_nether()));
-            }
-        }
+        world.set_block(tx, ty, tz, state);
     }
 }
 
@@ -855,6 +1046,43 @@ mod tests {
         }
 
         assert_eq!(world.get_block(0, 64, 0), water(2));
+    }
+
+    /// Спад после забранного источника идёт волнами: на его место вода
+    /// возвращается уровнем 2, потом 4, потом 6 — место пересчитывается
+    /// после соседей, чей такт завёлся раньше (чёрный ящик, dispenser-water).
+    #[test]
+    fn a_taken_source_recedes_in_waves() {
+        let mut world = floor();
+
+        // С запада — раздатчик, как в сценарии: от него зависит, чей такт
+        // заведётся раньше.
+        world.set_block(-1, 64, 0, STONE);
+        world.set_block(0, 64, 0, water(0));
+        run(&mut world, 60);
+        world.set_block(0, 64, 0, AIR);
+
+        let mut seen = Vec::new();
+
+        for _ in 0..3 {
+            run(&mut world, 5);
+            seen.push(fluids::fluid_at(world.get_block(0, 64, 0)).map(|(_, level)| level));
+        }
+
+        assert_eq!(seen, [Some(2), Some(4), Some(6)]);
+    }
+
+    /// Такт, заведённый для источника, пропадает, если источник стал текущей
+    /// водой: у оригинала это разные жидкости.
+    #[test]
+    fn a_tick_for_a_source_does_not_serve_flowing_water() {
+        let mut world = floor();
+
+        world.set_block(0, 64, 0, water(0));
+        assert!(world.fluid_tick_holds((0, 64, 0)));
+
+        world.set_block_silently(0, 64, 0, water(3));
+        assert!(!world.fluid_tick_holds((0, 64, 0)));
     }
 
     /// То же с настоящим раздатчиком: включаясь, он будит соседний источник,
@@ -1122,12 +1350,15 @@ mod tests {
         let cobblestone = blocks::states_of("cobblestone").unwrap().0;
         let mut world = floor();
 
+        // Лава успела растечься на шаг, прежде чем рядом поставили воду
+        // (как в сценарии чёрного ящика water-meets-lava).
         world.set_block(0, 64, 0, fluids::state_of(Kind::Lava, fluids::SOURCE));
+        run(&mut world, 35);
         world.set_block(3, 64, 0, water(fluids::SOURCE));
 
         run(&mut world, 400);
 
-        // Камень встаёт там, где лава дотекла до воды, — рядом с источником
+        // Камень встаёт там, где вода дотекла до лавы, — рядом с источником
         // лавы, потому что вода растекается быстрее.
         assert_eq!(world.get_block(1, 64, 0), cobblestone);
 

@@ -77,11 +77,44 @@ pub struct Stack {
 
     /// Сколько их в стопке.
     pub count: i32,
+
+    /// Особый динамит (custom_tnt.rs): какой именно. У обычных предметов —
+    /// None. Стопки с разной пометкой не сливаются.
+    pub tnt: Option<crate::custom_tnt::KindId>,
 }
 
 impl Stack {
     pub fn new(item: i32, count: i32) -> Self {
-        Self { item, count }
+        Self { item, count, tnt: None }
+    }
+
+    /// Та же стопка другого размера — с теми же пометками.
+    pub fn with_count(self, count: i32) -> Self {
+        Self { count, ..self }
+    }
+
+    /// Сливаются ли стопки: тот же предмет и те же пометки.
+    pub fn stacks_with(&self, other: &Stack) -> bool {
+        self.item == other.item && self.tnt == other.tnt
+    }
+
+    /// Номер предмета для файла (игрока, хранилища): в старшем байте —
+    /// номер особого динамита, у обычных предметов там ноль, и запись та же,
+    /// что прежде.
+    pub fn stored_item(&self) -> i32 {
+        self.item | self.tnt.map_or(0, |kind| i32::from(kind.0) << 24)
+    }
+
+    /// Стопка из записи `stored_item`. Неизвестный номер особого динамита
+    /// (вид убрали из таблицы) — обычный динамит.
+    pub fn from_stored(stored: i32, count: i32) -> Self {
+        let tnt = crate::custom_tnt::KindId((stored >> 24) as u8);
+
+        Self {
+            item: stored & 0x00ff_ffff,
+            count,
+            tnt: crate::custom_tnt::by_id(tnt).map(|kind| kind.id),
+        }
     }
 
     /// Сколько таких предметов помещается в одну стопку.
@@ -134,7 +167,7 @@ impl Inventory {
             // файл могут прислать любое число, а дальше с ним считают.
             self.slots[slot] = stack
                 .filter(|stack| stack.count > 0)
-                .map(|stack| Stack::new(stack.item, stack.count.min(stack.limit())));
+                .map(|stack| stack.with_count(stack.count.min(stack.limit())));
         }
     }
 
@@ -239,7 +272,7 @@ impl Inventory {
             let index = *slot as usize;
 
             if let Some(there) = self.slots[index].as_mut()
-                && there.item == stack.item
+                && there.stacks_with(&stack)
             {
                 let room = (there.limit() - there.count).max(0);
                 let moved = room.min(left);
@@ -263,7 +296,7 @@ impl Inventory {
             if self.slots[index].is_none() {
                 let moved = left.min(blocks::stack_size(stack.item));
 
-                self.slots[index] = Some(Stack::new(stack.item, moved));
+                self.slots[index] = Some(stack.with_count(moved));
                 left -= moved;
                 changed.push(*slot);
             }
@@ -372,7 +405,7 @@ impl Inventory {
                 }
                 (Some(held), _) => {
                     self.cursor = take_one(self.cursor);
-                    Some(Stack::new(held.item, 1))
+                    Some(held.with_count(1))
                 }
             };
 
@@ -396,7 +429,7 @@ impl Inventory {
                 // переполнилось бы на самом большом числе.
                 let taken = stack.count - stack.count / 2;
 
-                self.cursor = Some(Stack::new(stack.item, taken));
+                self.cursor = Some(stack.with_count(taken));
                 self.slots[index] = remainder(stack, stack.count - taken);
             }
             (None, None, _) => {}
@@ -407,16 +440,16 @@ impl Inventory {
                 self.cursor = None;
             }
             (Some(held), None, _) => {
-                self.slots[index] = Some(Stack::new(held.item, 1));
+                self.slots[index] = Some(held.with_count(1));
                 self.cursor = take_one(Some(held));
             }
 
             // Тот же предмет — досыпаем, сколько влезет.
-            (Some(held), Some(there), button) if held.item == there.item => {
+            (Some(held), Some(there), button) if held.stacks_with(&there) => {
                 let room = (there.limit() - there.count).max(0);
                 let moved = if button == 0 { room.min(held.count) } else { room.min(1) };
 
-                self.slots[index] = Some(Stack::new(there.item, there.count.saturating_add(moved)));
+                self.slots[index] = Some(there.with_count(there.count.saturating_add(moved)));
                 self.cursor = remainder(held, held.count - moved);
             }
 
@@ -461,7 +494,7 @@ impl Inventory {
             }
 
             if let Some(there) = self.slots[*target as usize].as_mut()
-                && there.item == stack.item
+                && there.stacks_with(&stack)
             {
                 let moved = (there.limit() - there.count).max(0).min(left);
 
@@ -481,7 +514,7 @@ impl Inventory {
             if self.slots[target].is_none() {
                 let moved = left.min(blocks::stack_size(stack.item));
 
-                self.slots[target] = Some(Stack::new(stack.item, moved));
+                self.slots[target] = Some(stack.with_count(moved));
                 left -= moved;
             }
         }
@@ -523,7 +556,7 @@ impl Inventory {
         let thrown = match button {
             0 => {
                 self.slots[index] = take_one(Some(there));
-                Stack::new(there.item, 1)
+                there.with_count(1)
             }
             _ => {
                 self.slots[index] = None;
@@ -558,7 +591,7 @@ impl Inventory {
 
         for (slot, stack) in filled {
             out.push(slot as u8);
-            out.extend_from_slice(&stack.item.to_be_bytes());
+            out.extend_from_slice(&stack.stored_item().to_be_bytes());
             out.extend_from_slice(&stack.count.to_be_bytes());
         }
 
@@ -581,7 +614,7 @@ impl Inventory {
             let count = i32::from_be_bytes(bytes.get(start + 5..start + 9)?.try_into().ok()?);
 
             if count > 0 {
-                inventory.set(slot, Some(Stack::new(item, count)));
+                inventory.set(slot, Some(Stack::from_stored(item, count)));
             }
         }
 
@@ -598,7 +631,7 @@ pub fn take_one(stack: Option<Stack>) -> Option<Stack> {
 
 /// Та же стопка, но другого размера. None — в ней ничего не осталось.
 pub fn remainder(stack: Stack, count: i32) -> Option<Stack> {
-    (count > 0).then(|| Stack::new(stack.item, count))
+    (count > 0).then(|| stack.with_count(count))
 }
 
 #[cfg(test)]

@@ -1,0 +1,27 @@
+{
+ "name": "minecart-push",
+ "about": "Игрок входит в стоящую на рельсе вагонетку и толкает её: 0,05 в такт от игрока.",
+ "blocks": [],
+ "setup": [
+  "fill $(-6,0,1) $(8,0,1) minecraft:rail[shape=east_west]"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecart $(1.5,0,1.5)"
+  },
+  {
+   "after": 6,
+   "cmd": "tp blackbox $(1.2,0,1.5)"
+  }
+ ],
+ "record_ticks": 30,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=tnt_minecart]",
+  "kill @e[type=furnace_minecart]",
+  "kill @e[type=item]"
+ ]
+}

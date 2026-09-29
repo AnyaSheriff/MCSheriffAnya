@@ -91,7 +91,7 @@ impl Window<'_> {
                 }
                 (Some(held), _) => {
                     self.inventory.set_cursor(take_one(cursor));
-                    Some(Stack::new(held.item, 1))
+                    Some(held.with_count(1))
                 }
             };
 
@@ -112,7 +112,7 @@ impl Window<'_> {
             (None, Some(stack), _) => {
                 let taken = stack.count - stack.count / 2;
 
-                self.inventory.set_cursor(Some(Stack::new(stack.item, taken)));
+                self.inventory.set_cursor(Some(stack.with_count(taken)));
                 self.set(index, remainder(stack, stack.count - taken));
             }
             (None, None, _) => {}
@@ -121,14 +121,14 @@ impl Window<'_> {
                 self.inventory.set_cursor(None);
             }
             (Some(held), None, _) => {
-                self.set(index, Some(Stack::new(held.item, 1)));
+                self.set(index, Some(held.with_count(1)));
                 self.inventory.set_cursor(take_one(Some(held)));
             }
-            (Some(held), Some(there), button) if held.item == there.item => {
+            (Some(held), Some(there), button) if held.stacks_with(&there) => {
                 let room = (there.limit() - there.count).max(0);
                 let moved = if button == 0 { room.min(held.count) } else { room.min(1) };
 
-                self.set(index, Some(Stack::new(there.item, there.count.saturating_add(moved))));
+                self.set(index, Some(there.with_count(there.count.saturating_add(moved))));
                 self.inventory.set_cursor(remainder(held, held.count - moved));
             }
             (Some(held), Some(there), _) => {
@@ -176,12 +176,12 @@ impl Window<'_> {
             }
 
             if let Some(there) = self.get(target)
-                && there.item == stack.item
+                && there.stacks_with(&stack)
             {
                 let moved = (there.limit() - there.count).max(0).min(left);
 
                 if moved > 0 {
-                    self.set(target, Some(Stack::new(there.item, there.count + moved)));
+                    self.set(target, Some(there.with_count(there.count + moved)));
                     left -= moved;
                 }
             }
@@ -195,7 +195,7 @@ impl Window<'_> {
             if self.get(target).is_none() {
                 let moved = left.min(blocks::stack_size(stack.item));
 
-                self.set(target, Some(Stack::new(stack.item, moved)));
+                self.set(target, Some(stack.with_count(moved)));
                 left -= moved;
             }
         }
@@ -236,7 +236,7 @@ impl Window<'_> {
 
         let thrown = if button == 0 {
             self.set(index, take_one(Some(there)));
-            Stack::new(there.item, 1)
+            there.with_count(1)
         } else {
             self.set(index, None);
             there
@@ -266,7 +266,7 @@ impl Window<'_> {
                     continue;
                 };
 
-                if there.item != held.item || (there.count >= there.limit()) != full_pass {
+                if !there.stacks_with(&held) || (there.count >= there.limit()) != full_pass {
                     continue;
                 }
 

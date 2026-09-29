@@ -1,8 +1,9 @@
 // Незер: из чего он сложен.
 //
 // Рельеф подогнан по замеру мира оригинала 26.1.2 (tools/research/nether.md,
-// tools/measure/nether_census.py): на каждой высоте доля пустот та же, что
-// у оригинала.
+// tools/measure/nether_census.py, nether_layers.py): на каждой высоте доля
+// пустот та же, что у оригинала, и столько же полов и потолков на столбец
+// (1,2 и 1,75 над морем лавы), той же толщины пустоты и перемычки.
 //
 // Пустоты двух видов, как и в обычном мире:
 // — большие пещеры — объём между морем лавы и потолком: где объёмный шум
@@ -20,6 +21,11 @@
 // подогнаны к замеру. От биома зависят только поверхность и наполнение:
 // нилий в лесах, песок и почва душ в долине, базальт и чернокамень в дельтах.
 //
+// Крепости — src/world/nether_fortress.rs: кладутся до объектов (опоры
+// доходят до породы) и ещё раз после них (куски чисты от грибов и
+// светокамня). Бастионы — src/world/nether_bastion.rs, в регионах, где не
+// выпала крепость; кладутся теми же двумя проходами.
+//
 // Всё решается только по координатам и семени: объект, выросший у края
 // соседнего чанка (гриб, светокамень, столб), дорисовывается в этом чанке
 // по тем же числам, и на стыке ничего не рвётся.
@@ -30,6 +36,8 @@
 
 use std::sync::OnceLock;
 
+use super::nether_bastion as bastion;
+use super::nether_fortress as fortress;
 use super::noise::Noise;
 use super::terrain::Biome;
 use super::{biome_cell, pack, split, BiomeId, Chunk, AIR, BIOME_CELLS, BIOME_LAYERS, CHUNK_SIZE};
@@ -64,45 +72,105 @@ const PLACES: [(f64, f64); 5] = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.2), (0.0, -1.0)
 /// сменяется в 1,7 % случаев.
 const CLIMATE_SCALE: f64 = 760.0;
 
-/// Доля пустот больших пещер на высоте y (0..=127) — замер оригинала за
-/// вычетом узких ходов.
-fn cavern_share(y: i32) -> f64 {
-    const RISE: [(i32, f64); 13] = [
-        (20, 0.0),
-        (21, 0.02),
-        (22, 0.10),
-        (23, 0.24),
-        (24, 0.41),
-        (26, 0.45),
-        (31, 0.47),
-        (40, 0.51),
-        (60, 0.53),
-        (90, 0.57),
-        (104, 0.56),
-        (108, 0.33),
-        (114, 0.0),
-    ];
+/// Замер оригинала по высотам (tools/measure/nether_layers.py, 19 тысяч
+/// чанков мира vanilla-big): доля воздуха больших пещер над морем лавы.
+/// Сверху пещеры кончаются к y 114 — там начинается сплошной потолок.
+const MEASURED_AIR: [(i32, f64); 22] = [
+    (32, 0.492),
+    (40, 0.473),
+    (48, 0.473),
+    (56, 0.464),
+    (64, 0.458),
+    (72, 0.459),
+    (76, 0.455),
+    (80, 0.461),
+    (88, 0.474),
+    (96, 0.478),
+    (104, 0.478),
+    (105, 0.435),
+    (106, 0.383),
+    (107, 0.320),
+    (108, 0.245),
+    (109, 0.177),
+    (110, 0.127),
+    (111, 0.090),
+    (112, 0.064),
+    (113, 0.019),
+    (114, 0.002),
+    (115, 0.0),
+];
 
-    interpolate(&RISE, y)
+/// То же — доля узких ходов (у оригинала это cave_air): их прорезают
+/// после поверхности, поэтому они есть и в толще потолка, до y 120.
+const MEASURED_CAVE_AIR: [(i32, f64); 17] = [
+    (32, 0.041),
+    (40, 0.045),
+    (52, 0.047),
+    (60, 0.047),
+    (64, 0.044),
+    (72, 0.043),
+    (80, 0.042),
+    (88, 0.040),
+    (96, 0.040),
+    (104, 0.038),
+    (106, 0.045),
+    (108, 0.056),
+    (110, 0.064),
+    (112, 0.068),
+    (114, 0.072),
+    (120, 0.063),
+    (121, 0.0),
+];
+
+/// То же — доля лавы ниже моря (y ≤ 31): море с y ~22 и карманы в толще.
+const MEASURED_LAVA: [(i32, f64); 13] = [
+    (1, 0.0),
+    (2, 0.019),
+    (5, 0.055),
+    (10, 0.066),
+    (16, 0.075),
+    (20, 0.080),
+    (21, 0.097),
+    (22, 0.166),
+    (23, 0.301),
+    (24, 0.470),
+    (26, 0.504),
+    (28, 0.523),
+    (31, 0.533),
+];
+
+/// Во сколько раз воздуха пещер оставлять больше замера: часть его потом
+/// занимают грибы, столбы, светокамень и крепости.
+const AIR_MARGIN: f64 = 1.0;
+
+/// Доля пустот больших пещер на высоте y (0..=127). Ниже моря — начало
+/// моря лавы (от y 21), выше — замер воздуха.
+fn cavern_share(y: i32) -> f64 {
+    const SEA: [(i32, f64); 7] = [(20, 0.0), (21, 0.02), (22, 0.10), (23, 0.24), (24, 0.41), (26, 0.45), (31, 0.47)];
+
+    if y <= LAVA_SEA {
+        interpolate(&SEA, y)
+    } else {
+        (interpolate(&MEASURED_AIR, y) * AIR_MARGIN).min(1.0)
+    }
 }
 
-/// Доля узких ходов на высоте y — замер оригинала: ниже моря лавы это
-/// лавовые карманы, выше — cave_air.
+/// Доля узких ходов на высоте y — так, чтобы вместе с пещерами вышла
+/// замеренная доля: ходы режут только породу, пещеры их поглощают.
+/// Ниже моря лавы это лавовые карманы, выше — cave_air.
 fn tunnel_share(y: i32) -> f64 {
-    const TUNNELS: [(i32, f64); 10] = [
-        (1, 0.0),
-        (2, 0.015),
-        (5, 0.043),
-        (20, 0.068),
-        (31, 0.06),
-        (32, 0.035),
-        (104, 0.03),
-        (113, 0.073),
-        (120, 0.065),
-        (121, 0.0),
-    ];
+    let cavern = cavern_share(y);
+    let wanted = if y <= LAVA_SEA {
+        interpolate(&MEASURED_LAVA, y) - cavern
+    } else {
+        interpolate(&MEASURED_CAVE_AIR, y)
+    };
 
-    interpolate(&TUNNELS, y)
+    if y < 2 || wanted <= 0.0 {
+        0.0
+    } else {
+        (wanted / (1.0 - cavern)).min(1.0)
+    }
 }
 
 /// Доля незеррака в толще базальтовых дельт на высоте y — замер: внизу
@@ -141,7 +209,7 @@ fn interpolate(points: &[(i32, f64)], y: i32) -> f64 {
 }
 
 /// Что в месте рельефа.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Void {
     Rock,
     /// Большая пещера: её пол и потолок покрывает поверхность биома.
@@ -149,6 +217,18 @@ enum Void {
     /// Узкий ход. У оригинала его прорезают уже после поверхности (там он
     /// cave_air), поэтому стенки хода — голая порода.
     Tunnel,
+}
+
+/// Где перемычки в блок толщиной убираются: над морем лавы, ниже бедрока
+/// потолка.
+const MEMBRANES: std::ops::RangeInclusive<i32> = LAVA_SEA + 2..=CEILING - BEDROCK_LAYERS - 1;
+
+/// Перемычка между пещерами снизу и сверху становится пещерой; тонкие
+/// стенки узких ходов остаются (у оригинала ходы режут отдельно, после
+/// поверхности, и перемычки у них есть). Соседи берутся исходные, так что
+/// решение не зависит от порядка обхода.
+fn membrane(below: Void, above: Void) -> Option<Void> {
+    (below == Void::Cavern && above == Void::Cavern).then_some(Void::Cavern)
 }
 
 /// Метка узкого хода в куске чанка, пока он складывается; в чанк идёт
@@ -238,6 +318,26 @@ impl States {
         }
     }
 
+    /// Мелочь: огонь, грибы, корни, ростки, лозы — не держит опору.
+    fn is_loose(&self, state: i32) -> bool {
+        [
+            self.fire,
+            self.soul_fire,
+            self.brown_mushroom,
+            self.red_mushroom,
+            self.crimson_roots,
+            self.warped_roots,
+            self.sprouts,
+            self.crimson_fungus,
+            self.warped_fungus,
+            self.weeping_vines,
+            self.weeping_vines_plant,
+            self.twisting_vines,
+            self.twisting_vines_plant,
+        ]
+        .contains(&state)
+    }
+
     /// Порода, по которой идут поверхность и руда: её можно заменять.
     fn is_rock(&self, state: i32) -> bool {
         state == self.netherrack || state == self.basalt || state == self.blackstone
@@ -306,19 +406,27 @@ impl Nether {
         self.seed
     }
 
-    /// Шум больших пещер.
+    /// Шум больших пещер. Растянут по высоте (60 блоков на слой против 72
+    /// по горизонтали): так на столбец над морем лавы приходится столько
+    /// же полов и потолков, как у оригинала, — 1,2 и 1,75 (замер
+    /// tools/measure/nether_layers.py), а пустоты и перемычки между ними
+    /// той же толщины (в среднем 23 и 14 блоков). С прежними 30 блоками
+    /// полов было вдвое больше, а с ними — вдвое больше нилия и мелочи.
     fn cavern(&self, x: i32, y: i32, z: i32) -> f64 {
-        self.caverns.octaves3(f64::from(x) / 72.0 + 0.37, f64::from(y) / 30.0 + 0.61, f64::from(z) / 72.0 + 0.13, 4)
+        self.caverns.octaves3(f64::from(x) / 72.0 + 0.37, f64::from(y) / 60.0 + 0.61, f64::from(z) / 72.0 + 0.13, 4)
     }
 
     /// Шум узких ходов: насколько далеко от нуля хоть один из двух шумов.
+    /// Ходы редкие и широкие: у оригинала cave_air занимает ~4 % объёма,
+    /// а полов добавляет всего ~0,1 на столбец; частые тонкие ходы давали
+    /// почти целый лишний пол.
     fn tunnel(&self, x: i32, y: i32, z: i32) -> f64 {
         let (fx, fy, fz) = (f64::from(x), f64::from(y), f64::from(z));
 
         self.along
-            .at3(fx / 48.0 + 0.71, fy / 24.0 + 0.29, fz / 48.0 + 0.53)
+            .at3(fx / 300.0 + 0.71, fy / 80.0 + 0.29, fz / 300.0 + 0.53)
             .abs()
-            .max(self.across.at3(fx / 48.0 + 0.19, fy / 24.0 + 0.83, fz / 48.0 + 0.47).abs())
+            .max(self.across.at3(fx / 300.0 + 0.19, fy / 80.0 + 0.83, fz / 300.0 + 0.47).abs())
     }
 
     /// Шум пород дельт.
@@ -380,8 +488,24 @@ impl Nether {
         })
     }
 
-    /// Что в этом месте рельефа: порода, большая пещера или узкий ход.
+    /// Что в этом месте рельефа, с перемычками: порода в один блок между
+    /// пещерами сверху и снизу выше моря лавы тоже пуста. Замер оригинала
+    /// (nether_layers): перемычек толщиной в блок 0,10 на столбец, у нас
+    /// без этого было 0,16–0,18 — лишние полы и потолки, и опоры крепостей
+    /// чаще упирались в них высоко под мостом.
     fn void(&self, x: i32, y: i32, z: i32) -> Void {
+        let here = self.raw_void(x, y, z);
+
+        if here != Void::Rock || !(MEMBRANES.contains(&y)) {
+            return here;
+        }
+
+        membrane(self.raw_void(x, y - 1, z), self.raw_void(x, y + 1, z)).unwrap_or(Void::Rock)
+    }
+
+    /// Что в этом месте рельефа по шумам: порода, большая пещера или узкий
+    /// ход.
+    fn raw_void(&self, x: i32, y: i32, z: i32) -> Void {
         if !(0..=CEILING).contains(&y) {
             return Void::Rock;
         }
@@ -558,6 +682,12 @@ impl Nether {
 
     /// Блоки чанка на высотах 0..=127: рельеф, поверхность, руда, объекты.
     fn piece(&self, chunk_x: i32, chunk_z: i32) -> Piece {
+        self.piece_with(chunk_x, chunk_z, true)
+    }
+
+    /// То же, с постройками или без: мир оригинала для замеров рельефа
+    /// (vanilla-big) снят без построек, и сверка идёт с таким же нашим.
+    fn piece_with(&self, chunk_x: i32, chunk_z: i32, structures: bool) -> Piece {
         let mut piece = Piece {
             x0: chunk_x * CHUNK_SIZE,
             z0: chunk_z * CHUNK_SIZE,
@@ -570,14 +700,150 @@ impl Nether {
             *biome = self.biome_at(x, z);
         }
 
+        let (fortresses, bastions) = if structures {
+            (self.fortresses_near(chunk_x, chunk_z), self.bastions_near(chunk_x, chunk_z))
+        } else {
+            (Vec::new(), Vec::new())
+        };
+
         self.relief(&mut piece, &biomes);
         self.surface(&mut piece, &biomes);
         self.blobs(&mut piece, chunk_x, chunk_z);
+        // Крепость — до объектов и растений, как у оригинала: опоры доходят
+        // до породы, а не до шляпы гриба или светокамня.
+        self.fortresses(&mut piece, &fortresses, true);
+        self.bastions(&mut piece, &bastions);
         self.features(&mut piece, chunk_x, chunk_z);
         self.decorate(&mut piece, &biomes);
         self.springs(&mut piece, chunk_x, chunk_z);
+        // Объекты решаются по рельефу и могли зайти в пустоты крепости —
+        // куски кладутся ещё раз, уже без опор.
+        self.fortresses(&mut piece, &fortresses, false);
+        self.bastions(&mut piece, &bastions);
 
         piece
+    }
+
+    /// Бастион региона — там, где не выпала крепость (в дельтах их нет).
+    pub fn bastion_start(&self, region_x: i32, region_z: i32) -> Option<(i32, i32)> {
+        let start = fortress::region_start(self.seed, region_x, region_z);
+
+        self.fortress_start(region_x, region_z).is_none().then_some((start.0, start.1))
+    }
+
+    /// Бастионы, задевающие этот чанк.
+    fn bastions_near(&self, chunk_x: i32, chunk_z: i32) -> Vec<Vec<bastion::Placed>> {
+        let span = |at: i32| (at - bastion::RADIUS_CHUNKS).div_euclid(27)..=(at + bastion::RADIUS_CHUNKS).div_euclid(27);
+
+        span(chunk_x)
+            .flat_map(|region_x| span(chunk_z).map(move |region_z| (region_x, region_z)))
+            .filter_map(|(region_x, region_z)| self.bastion_start(region_x, region_z))
+            .filter(|(start_x, start_z)| {
+                (start_x - chunk_x).abs() <= bastion::RADIUS_CHUNKS && (start_z - chunk_z).abs() <= bastion::RADIUS_CHUNKS
+            })
+            .map(|(start_x, start_z)| bastion::plan(self.seed, start_x, start_z))
+            .collect()
+    }
+
+    /// Кладёт куски бастионов (опор у них нет) и убирает растения, у
+    /// которых бастион отнял опору.
+    fn bastions(&self, piece: &mut Piece, bastions: &[Vec<bastion::Placed>]) {
+        if bastions.is_empty() {
+            return;
+        }
+
+        let passable = |state: i32| is_air(state);
+        let mut canvas = fortress::Canvas {
+            blocks: &mut piece.blocks,
+            x0: piece.x0,
+            z0: piece.z0,
+            passable: &passable,
+            air: AIR,
+            supports: false,
+        };
+
+        for plan in bastions {
+            bastion::paint(self.seed, plan, &mut canvas);
+        }
+
+        self.drop_unsupported(piece);
+    }
+
+    /// Постройка региона: крепость или бастион (замер оригинала: в каждом
+    /// регионе 27×27 чанков ровно одна; в дельтах — всегда крепость, иначе
+    /// крепость в 40 %). Биом решает середина чанка старта.
+    pub fn fortress_start(&self, region_x: i32, region_z: i32) -> Option<(i32, i32)> {
+        let (chunk_x, chunk_z, roll) = fortress::region_start(self.seed, region_x, region_z);
+        let deltas = self.biome_at(chunk_x * CHUNK_SIZE + 8, chunk_z * CHUNK_SIZE + 8) == Biome::BasaltDeltas;
+
+        (deltas || roll < fortress::FORTRESS_SHARE).then_some((chunk_x, chunk_z))
+    }
+
+    /// Крепости, задевающие этот чанк: каждая раскладывается целиком по
+    /// семени, а кладётся только своей частью.
+    fn fortresses_near(&self, chunk_x: i32, chunk_z: i32) -> Vec<Vec<fortress::Placed>> {
+        fortress::regions_near(chunk_x, chunk_z)
+            .filter_map(|(region_x, region_z)| self.fortress_start(region_x, region_z))
+            .filter(|(start_x, start_z)| {
+                (start_x - chunk_x).abs() <= fortress::RADIUS_CHUNKS && (start_z - chunk_z).abs() <= fortress::RADIUS_CHUNKS
+            })
+            .map(|(start_x, start_z)| fortress::plan(self.seed, start_x, start_z))
+            .collect()
+    }
+
+    /// Кладёт куски крепостей (с опорами или без) и убирает растения,
+    /// у которых крепость отняла опору.
+    fn fortresses(&self, piece: &mut Piece, fortresses: &[Vec<fortress::Placed>], supports: bool) {
+        let states = &self.states;
+
+        if fortresses.is_empty() {
+            return;
+        }
+
+        let passable = |state: i32| is_air(state) || state == states.lava || states.is_loose(state);
+        let mut canvas = fortress::Canvas {
+            blocks: &mut piece.blocks,
+            x0: piece.x0,
+            z0: piece.z0,
+            passable: &passable,
+            air: AIR,
+            supports,
+        };
+
+        for plan in fortresses {
+            fortress::paint(plan, &mut canvas);
+        }
+
+        self.drop_unsupported(piece);
+    }
+
+    /// Растения без опоры: на полу — над пустотой (снизу вверх), лозы
+    /// с потолка — под пустотой (сверху вниз).
+    fn drop_unsupported(&self, piece: &mut Piece) {
+        let states = &self.states;
+
+        for local_z in 0..CHUNK_SIZE {
+            for local_x in 0..CHUNK_SIZE {
+                for hanging in [false, true] {
+                    for step in 1..CEILING {
+                        let y = if hanging { CEILING - step } else { step };
+                        let at = Piece::index(local_x, y, local_z);
+                        let here = piece.blocks[at];
+                        let vine = here == states.weeping_vines || here == states.weeping_vines_plant;
+
+                        if !states.is_loose(here) || vine != hanging {
+                            continue;
+                        }
+
+                        let holder = Piece::index(local_x, if hanging { y + 1 } else { y - 1 }, local_z);
+
+                        if is_air(piece.blocks[holder]) {
+                            piece.blocks[at] = AIR;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Рельеф: бедрок, порода, лава моря и карманов, пустоты.
@@ -590,8 +856,23 @@ impl Nether {
                 let (x, z) = (piece.x0 + local_x, piece.z0 + local_z);
                 let deltas = biomes[(local_z * CHUNK_SIZE + local_x) as usize] == Biome::BasaltDeltas;
 
+                let mut voids = [Void::Rock; (CEILING + 1) as usize];
+
+                for (y, void) in voids.iter_mut().enumerate() {
+                    *void = self.raw_void(x, y as i32, z);
+                }
+                for y in MEMBRANES {
+                    let at = y as usize;
+
+                    if voids[at] == Void::Rock
+                        && let Some(open) = membrane(voids[at - 1], voids[at + 1])
+                    {
+                        voids[at] = open;
+                    }
+                }
+
                 for y in 0..=CEILING {
-                    let void = if self.bedrock(x, y, z) { Void::Rock } else { self.void(x, y, z) };
+                    let void = if self.bedrock(x, y, z) { Void::Rock } else { voids[y as usize] };
                     let state = if self.bedrock(x, y, z) {
                         states.bedrock
                     } else if void == Void::Rock {
@@ -638,6 +919,18 @@ impl Nether {
                 let biome = biomes[(local_z * CHUNK_SIZE + local_x) as usize];
                 let (fx, fz) = (f64::from(x), f64::from(z));
 
+                // Дно долины: над бедроком — слой песка и почвы душ.
+                if biome == Biome::SoulSandValley {
+                    for y in 1..=soul_bottom(self.hash(0xB077, x, 0, z)) {
+                        let at = Piece::index(local_x, y, local_z);
+
+                        if states.is_rock(piece.blocks[at]) {
+                            let patch = self.patches.octaves3(fx / 9.0 + 0.5, f64::from(y) / 5.0 + 0.1, fz / 9.0 + 0.3, 2);
+                            piece.blocks[at] = if patch > 0.0 { states.soul_sand } else { states.soul_soil };
+                        }
+                    }
+                }
+
                 for y in 1..CEILING {
                     let here = piece.blocks[Piece::index(local_x, y, local_z)];
 
@@ -647,7 +940,13 @@ impl Nether {
 
                     let above = piece.blocks[Piece::index(local_x, y + 1, local_z)];
                     let below = piece.blocks[Piece::index(local_x, y - 1, local_z)];
-                    let floor = above == AIR || (above == states.lava && biome != Biome::CrimsonForest && biome != Biome::WarpedForest);
+                    let forest = matches!(biome, Biome::CrimsonForest | Biome::WarpedForest);
+                    // Пол узкого хода в лесу — часть его тоже в нилии: у нас
+                    // голого незеррака на полу леса без этого 20 %, у оригинала
+                    // 14 % (нилий 52 %) [проверить: как это выходит у оригинала].
+                    let floor = above == AIR
+                        || (above == states.lava && !forest)
+                        || (above == TUNNEL && forest && self.chance(0x7C11, x, y, z, TUNNEL_NYLIUM));
                     let ceiling = below == AIR;
                     let shore = floor && (26..=35).contains(&y);
 
@@ -660,7 +959,7 @@ impl Nether {
                         let top = match biome {
                             Biome::NetherWastes if shore => match patch {
                                 p if p > 0.06 => Some((states.soul_sand, depth)),
-                                p if p < -0.2 => Some((states.gravel, depth)),
+                                p if p < -0.35 => Some((states.gravel, depth)),
                                 _ => None,
                             },
                             Biome::SoulSandValley => {
@@ -669,18 +968,18 @@ impl Nether {
                                 let gravel = self.patches.octaves3(fx / 9.0 + 7.3, fy / 5.0 + 2.9, fz / 9.0 + 4.1, 2);
 
                                 if shore && gravel < -0.12 {
-                                    Some((states.gravel, depth))
-                                } else if self.specks.octaves3(fx / 14.0, fy / 9.0, fz / 14.0, 2) < -0.4 {
+                                    Some((states.gravel, gravel_depth(self.hash(0x6EA7, x, y, z))))
+                                } else if self.specks.octaves3(fx / 14.0, fy / 9.0, fz / 14.0, 2) < SOUL_GAPS {
                                     None
                                 } else {
                                     // Песок или почва — пятнами; слой толще,
-                                    // чем у прочих: 2–4 блока.
+                                    // чем у прочих: чаще 3–4 блока.
                                     let soul = if patch > 0.0 { states.soul_sand } else { states.soul_soil };
-                                    Some((soul, depth + 1))
+                                    Some((soul, soul_depth(self.hash(0xDE98, x, y, z))))
                                 }
                             }
-                            Biome::CrimsonForest | Biome::WarpedForest if above == AIR => {
-                                if self.specks.octaves3(fx / 6.0, fy / 6.0, fz / 6.0, 2) < -0.38 {
+                            Biome::CrimsonForest | Biome::WarpedForest if is_air(above) => {
+                                if self.specks.octaves3(fx / 6.0, fy / 6.0, fz / 6.0, 2) < -0.6 {
                                     None
                                 } else if biome == Biome::CrimsonForest {
                                     Some((states.crimson_nylium, 1))
@@ -689,8 +988,8 @@ impl Nether {
                                 }
                             }
                             Biome::BasaltDeltas => {
-                                if shore && patch < -0.3 {
-                                    Some((states.gravel, 1))
+                                if shore && patch < -0.2 {
+                                    Some((states.gravel, gravel_depth(self.hash(0x6EA7, x, y, z))))
                                 } else if above == AIR && self.specks.octaves3(fx / 5.0, fy / 5.0, fz / 5.0, 2) > 0.38 {
                                     Some((states.magma, 1))
                                 } else if here == states.netherrack {
@@ -721,10 +1020,10 @@ impl Nether {
                             Biome::SoulSandValley => {
                                 let (fx, fy) = (f64::from(x), f64::from(y));
 
-                                if self.specks.octaves3(fx / 14.0, fy / 9.0, fz / 14.0, 2) >= -0.4 {
+                                if self.specks.octaves3(fx / 14.0, fy / 9.0, fz / 14.0, 2) >= SOUL_GAPS {
                                     let patch = self.patches.octaves3(fx / 9.0 + 0.5, fy / 5.0 + 0.1, fz / 9.0 + 0.3, 2);
                                     let soul = if patch > 0.0 { states.soul_sand } else { states.soul_soil };
-                                    let depth = 1 + (self.hash(0xCE11, x, y, z) % 2) as i32;
+                                    let depth = soul_depth(self.hash(0xCE11, x, y, z));
 
                                     for up in 0..depth {
                                         let at = Piece::index(local_x, y + up, local_z);
@@ -936,14 +1235,16 @@ impl Nether {
                 continue;
             };
 
-            // Ствол не упирается в потолок: не хватает места — гриб ниже.
+            // Ствол не упирается в потолок: не хватает места — гриб ниже,
+            // а шляпу срезает потолок. У оригинала так же: пятая часть
+            // одиночных грибов со стволом в 1–3 блока под самой породой.
             let room = (floor + 1..floor + 1 + height + 2).take_while(|&y| self.open(x, y, z)).count() as i32;
 
-            if room < 6 {
+            if room < 3 {
                 continue;
             }
 
-            let height = height.min(room - 2);
+            let height = height.min(room - 1);
             let top = floor + height;
             let mut roll = Dice(seed);
 
@@ -957,45 +1258,83 @@ impl Nether {
                 }
             }
 
-            // Шляпа: сверху сплошная крышка, ниже — кольца по краю, пустые
-            // внутри; чем ниже, тем шире и реже.
-            let radius = if height >= 8 { 3 } else { 2 };
-            let depth = (height / 3 + 1).clamp(2, 5);
+            // Шляпа — по замеру оригинала (tools/measure/nether_fungus.py,
+            // 475 одиночных багровых грибов vanilla-big): крышка над стволом
+            // в одно кольцо, под ней стенки на расстоянии 2 от ствола —
+            // столбиками по нескольку блоков, внутри у ствола редкие наросты,
+            // изредка юбка на расстоянии 3 ниже. Столбики стоят друг на друге,
+            // поэтому сверху открыто только ~40 % наростов (у прежних колец,
+            // шагавших вширь, — почти 60 %, и шляпы занимали 41 % полов леса
+            // вместо 31 %).
+            let wall_run = 4 + height.min(13) / 4;
+            let cap = |piece: &mut Piece, dx: i32, y: i32, dz: i32, roll: &mut Dice| {
+                let block = if roll.unit() < 0.03 { states.shroomlight } else { wart };
 
-            for layer in 0..=depth {
-                let y = top + 1 - layer;
-                let ring = (1 + layer).min(radius);
+                piece.put_into_air(x + dx, y, z + dz, block)
+            };
 
-                for dx in -ring..=ring {
-                    for dz in -ring..=ring {
-                        let edge = dx.abs().max(dz.abs());
-                        let corner = dx.abs() == ring && dz.abs() == ring;
-                        let keep = if layer == 0 {
-                            !corner || roll.unit() < 0.3
-                        } else if edge == ring {
-                            roll.unit() < if corner { 0.3 } else { 0.92 - 0.06 * layer as f64 }
-                        } else {
-                            false
-                        };
+            for dx in -3i32..=3 {
+                for dz in -3i32..=3 {
+                    let ring = dx.abs().max(dz.abs());
+                    let corner = dx.abs() == ring && dz.abs() == ring;
 
-                        if !keep || (dx == 0 && dz == 0 && layer > 0) {
-                            continue;
+                    match ring {
+                        0 => {
+                            if roll.unit() < 0.5 {
+                                cap(piece, 0, top + 1, 0, &mut roll);
+                            }
                         }
+                        1 => {
+                            // Крышка и под ней — столбик от верха вниз.
+                            if roll.unit() < 0.55 {
+                                cap(piece, dx, top + 1, dz, &mut roll);
+                            }
+                            if roll.unit() < 0.45 {
+                                let mut y = top;
 
-                        let block = if roll.unit() < 0.035 { states.shroomlight } else { wart };
+                                loop {
+                                    cap(piece, dx, y, dz, &mut roll);
+                                    y -= 1;
+                                    if y <= top - 5 || roll.unit() >= 0.62 {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        2 => {
+                            if roll.unit() < 0.06 {
+                                cap(piece, dx, top + 1, dz, &mut roll);
+                            }
+                            if roll.unit() < if corner { 0.35 } else { 0.65 } {
+                                // Стенка: столбик с верха 0, −1 или −2 вниз.
+                                let start = top - roll.below(3);
+                                let length = 1 + roll.below(wall_run as u32);
 
-                        piece.put_into_air(x + dx, y, z + dz, block);
+                                for down in 0..length {
+                                    cap(piece, dx, start - down, dz, &mut roll);
+                                }
+                                if biome == Biome::CrimsonForest && roll.unit() < 0.12 {
+                                    let bottom = start - length + 1;
+                                    let length = 1 + roll.below(4);
 
-                        // Лозы с нижнего края багровой шляпы.
-                        if biome == Biome::CrimsonForest && layer == depth && roll.unit() < 0.1 {
-                            let length = 1 + roll.below(4);
+                                    for down in 1..=length {
+                                        let tip = down == length;
+                                        let vine = if tip { states.weeping_vines } else { states.weeping_vines_plant };
 
-                            for down in 1..=length {
-                                let tip = down == length;
-                                let vine = if tip { states.weeping_vines } else { states.weeping_vines_plant };
+                                        if !piece.put_into_air(x + dx, bottom - down, z + dz, vine) {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            // Юбка: редкие столбики ниже стенок.
+                            if !corner && roll.unit() < 0.1 {
+                                let start = top - 1 - roll.below(5);
 
-                                if !piece.put_into_air(x + dx, y - down, z + dz, vine) {
-                                    break;
+                                for down in 0..1 + roll.below(3) {
+                                    cap(piece, dx, start - down, dz, &mut roll);
                                 }
                             }
                         }
@@ -1240,28 +1579,28 @@ impl Nether {
 
         match biome {
             Biome::CrimsonForest if floor == states.crimson_nylium => pick(&[
-                (0.08, states.crimson_roots),
-                (0.010, states.crimson_fungus),
-                (0.001, states.warped_fungus),
+                (0.146, states.crimson_roots),
+                (0.018, states.crimson_fungus),
+                (0.0018, states.warped_fungus),
             ]),
             Biome::WarpedForest if floor == states.warped_nylium => pick(&[
-                (0.072, states.warped_roots),
-                (0.056, states.sprouts),
-                (0.011, states.warped_fungus),
-                (0.0085, states.twisting_vines),
-                (0.0015, states.crimson_roots),
+                (0.114, states.warped_roots),
+                (0.096, states.sprouts),
+                (0.019, states.warped_fungus),
+                (0.016, states.twisting_vines),
+                (0.0026, states.crimson_roots),
             ]),
             Biome::NetherWastes if floor == states.netherrack => pick(&[
-                (0.0037, states.fire),
-                (0.0009, states.brown_mushroom),
-                (0.0007, states.red_mushroom),
+                (0.0074, states.fire),
+                (0.0018, states.brown_mushroom),
+                (0.0012, states.red_mushroom),
             ]),
             Biome::SoulSandValley if floor == states.soul_soil || floor == states.soul_sand => {
-                pick(&[(0.0023, states.soul_fire), (0.0013, states.crimson_roots)])
+                pick(&[(0.0046, states.soul_fire), (0.0026, states.crimson_roots)])
             }
-            Biome::SoulSandValley if floor == states.netherrack => pick(&[(0.003, states.fire)]),
+            Biome::SoulSandValley if floor == states.netherrack => pick(&[(0.006, states.fire)]),
             Biome::BasaltDeltas if floor == states.basalt || floor == states.blackstone => {
-                pick(&[(0.0005, states.brown_mushroom), (0.0005, states.red_mushroom)])
+                pick(&[(0.0008, states.brown_mushroom), (0.0008, states.red_mushroom)])
             }
             _ => None,
         }
@@ -1277,11 +1616,54 @@ impl Nether {
     }
 }
 
+/// Порог шума, ниже которого пол и потолок долины душ остаются голым
+/// незерраком (замер: ~17 % полов и потолков долины).
+const SOUL_GAPS: f64 = -0.45;
+
+/// Толщина слоя песка или почвы душ на полу и потолке долины — замер
+/// оригинала (где слой есть): 1 — 4 %, 2 — 10 %, 3 — 36 %, 4 — 35 %,
+/// 5 — 11 %, 6 — 4 %.
+fn soul_depth(roll: u64) -> i32 {
+    const PARTS: [(i32, u64); 6] = [(1, 4), (2, 10), (3, 36), (4, 35), (5, 11), (6, 4)];
+    let mut left = roll % 100;
+
+    for (depth, part) in PARTS {
+        if left < part {
+            return depth;
+        }
+        left -= part;
+    }
+
+    4
+}
+
+/// Толщина душ над бедроком пола долины: у оригинала нижние несколько слоёв
+/// между выступами бедрока — песок и почва душ (замер: y 1 — почти всё, что
+/// не бедрок, y 2 — 86 %, y 3 — 52 %, y 4 — 14 %).
+fn soul_bottom(roll: u64) -> i32 {
+    match roll % 100 {
+        0..14 => 1,
+        14..48 => 2,
+        48..86 => 3,
+        _ => 4,
+    }
+}
+
+/// Толщина гравия у моря лавы в долине и дельтах: замер оригинала — там
+/// гравий лежит толстым слоем (y 25–31, в столбце гравий на гравии), а не
+/// коркой в блок: в дельтах ~0,1 блока на столбец при 7 % полов у моря.
+fn gravel_depth(roll: u64) -> i32 {
+    2 + (roll % 5) as i32
+}
+
 /// Попыток лавы в стене на чанк.
 const SPRING_TRIES: usize = 12;
 
+/// Доля полов узких ходов в лесах, покрытых нилием.
+const TUNNEL_NYLIUM: f64 = 0.35;
+
 /// Попыток огромного гриба на чанк.
-const FUNGUS_TRIES: usize = 16;
+const FUNGUS_TRIES: usize = 28;
 
 /// Попыток грозди светокамня на чанк.
 const GLOWSTONE_TRIES: f64 = 0.5;
@@ -1290,7 +1672,7 @@ const GLOWSTONE_TRIES: f64 = 0.5;
 const DELTA_COLUMN_TRIES: usize = 4;
 
 /// Доля потолка багрового леса, откуда свисают лозы.
-const WEEPING_PART: f64 = 0.011;
+const WEEPING_PART: f64 = 0.018;
 
 /// Пятно в толще: что, сколько попыток на чанк (в дельтах — своё число),
 /// на каких высотах и какого размера (блоков, от и до).
@@ -1315,15 +1697,16 @@ impl Blob {
 
 /// Пятна в толще Незера. Высоты и объёмы — по замеру оригинала, блоков на
 /// столбец пустошей: кварц 0,5 (y 8–117), золото 0,18, древние обломки
-/// 0,006 (y 8–24), гравий 0,6 (y 5–41), чернокамень 0,74 (y 5–31), магма
-/// 0,77 (y 26–37), базальт 0,4 (кроме багрового леса и дельт).
+/// 0,006 (y 8–24), гравий 0,6 (пятнами y 4–37: по 8 блоков высоты 0,09 /
+/// 0,17 / 0,16 от y 0, выше y 40 почти нет; в дельтах пятен нет), чернокамень 0,74 (y 5–31), магма
+/// 0,77 (y 23–37, гуще всего 27–33), базальт 0,4 (кроме багрового леса и дельт).
 const BLOBS: [Blob; 7] = [
     Blob { state: Blob::QUARTZ, tries: 26.0, deltas: 52.0, low: 10, high: 117, size: (6.0, 16.0) },
     Blob { state: Blob::GOLD, tries: 14.0, deltas: 28.0, low: 10, high: 117, size: (4.0, 10.0) },
     Blob { state: Blob::DEBRIS, tries: 1.2, deltas: 1.2, low: 8, high: 24, size: (1.0, 3.0) },
-    Blob { state: Blob::GRAVEL, tries: 5.6, deltas: 3.0, low: 5, high: 41, size: (20.0, 50.0) },
+    Blob { state: Blob::GRAVEL, tries: 6.6, deltas: 0.0, low: 4, high: 37, size: (20.0, 50.0) },
     Blob { state: Blob::BLACKSTONE, tries: 8.0, deltas: 3.0, low: 5, high: 31, size: (20.0, 50.0) },
-    Blob { state: Blob::MAGMA, tries: 12.0, deltas: 4.0, low: 26, high: 37, size: (20.0, 50.0) },
+    Blob { state: Blob::MAGMA, tries: 14.5, deltas: 4.0, low: 24, high: 34, size: (20.0, 50.0) },
     Blob { state: Blob::BASALT, tries: 9.0, deltas: 0.0, low: 5, high: 120, size: (10.0, 40.0) },
 ];
 
@@ -1460,6 +1843,33 @@ mod tests {
     /// Пол и потолок: сплошной бедрок в крайних слоях, над морем есть где
     /// стоять.
     #[test]
+    fn no_single_block_slabs_between_caverns() {
+        assert_eq!(membrane(Void::Cavern, Void::Cavern), Some(Void::Cavern));
+        assert_eq!(membrane(Void::Tunnel, Void::Cavern), None);
+        assert_eq!(membrane(Void::Rock, Void::Cavern), None);
+
+        // Рельеф куска и решение по координатам сходятся, перемычек в блок
+        // между пещерами нет.
+        let nether = Nether::new(7);
+        let biomes = vec![Biome::NetherWastes; 256];
+        let mut piece = Piece { x0: 32, z0: -48, blocks: vec![AIR; PIECE] };
+        nether.relief(&mut piece, &biomes);
+        for at in 0..256 {
+            let (lx, lz) = (at % 16, at / 16);
+            for y in MEMBRANES {
+                let (x, z) = (32 + lx, -48 + lz);
+                assert_eq!(nether.hollow(x, y, z), is_air(piece.blocks[Piece::index(lx, y, lz)]));
+                let slab = !nether.hollow(x, y, z)
+                    && nether.void(x, y - 1, z) == Void::Cavern
+                    && nether.void(x, y + 1, z) == Void::Cavern
+                    && nether.raw_void(x, y - 1, z) == Void::Cavern
+                    && nether.raw_void(x, y + 1, z) == Void::Cavern;
+                assert!(!slab, "перемычка в ({x}, {y}, {z})");
+            }
+        }
+    }
+
+    #[test]
     fn floor_ceiling_and_room() {
         let nether = Nether::new(1);
 
@@ -1578,11 +1988,12 @@ mod tests {
         );
         println!("смена биома у соседних клеток 4×4: {:.2}%", 100.0 * changes.0 as f64 / changes.1 as f64);
 
-        // Блоки — по чанкам: 16 квадратов 10×10 чанков вразброс.
-        let places: Vec<(i32, i32)> = (0..16)
+        // Блоки — по чанкам: 128 квадратов 5×5 чанков вразброс по ±9 тысяч
+        // блоков (пещеры и ходы крупные — выборка должна захватить многие).
+        let places: Vec<(i32, i32)> = (0..128)
             .flat_map(|area| {
-                let (ax, az) = ((area % 4) * 157 - 230, (area / 4) * 211 - 400);
-                (0..100).map(move |at| (ax + at % 10, az + at / 10))
+                let (ax, az) = ((area % 16) * 73 - 580, (area / 16) * 131 - 560);
+                (0..25).map(move |at| (ax + at % 5, az + at / 5))
             })
             .collect();
         let chunks: Vec<(Piece, Vec<Biome>)> = std::thread::scope(|scope| {
@@ -1594,7 +2005,7 @@ mod tests {
                         part.iter()
                             .map(|&(cx, cz)| {
                                 let biomes = (0..256).map(|at| nether.biome_at(cx * 16 + at % 16, cz * 16 + at / 16)).collect();
-                                (nether.piece(cx, cz), biomes)
+                                (nether.piece_with(cx, cz, false), biomes)
                             })
                             .collect::<Vec<_>>()
                     })
@@ -1606,6 +2017,8 @@ mod tests {
         type Table = HashMap<&'static str, HashMap<&'static str, f64>>;
         let (mut floor, mut floor_low, mut ceiling, mut loose, mut volume): (Table, Table, Table, Table, Table) = Default::default();
         let mut columns: HashMap<&str, f64> = HashMap::new();
+        // Биом → (блок, полоса по 8 блоков высоты) → штук.
+        let mut heights: HashMap<&str, HashMap<(&str, usize), f64>> = HashMap::new();
 
         for (piece, biomes) in &chunks {
             for at in 0..256 {
@@ -1617,6 +2030,10 @@ mod tests {
 
                 for (y, &state) in column.iter().enumerate() {
                     *volume.entry(biome).or_default().entry(name(state)).or_default() += 1.0;
+
+                    if !is_air(state) && !matches!(name(state), "bedrock" | "lava" | "netherrack") {
+                        *heights.entry(biome).or_default().entry((name(state), y / 8 * 8)).or_default() += 1.0;
+                    }
 
                     if !is_air(state) && open(state) && name(state) != "lava" {
                         *loose.entry(biome).or_default().entry(name(state)).or_default() += 1.0;
@@ -1673,10 +2090,482 @@ mod tests {
         show("низ потолка (под ним пусто)", &ceiling, false, 12);
         show("мелочь на столбец", &loose, true, 20);
         show("объём на столбец (y 0..127)", &volume, true, 24);
+
+        println!("\n== высоты (блок: доли по 8 блокам высоты, в штуках на столбец)");
+        for (biome, count) in &order {
+            let Some(table) = heights.get(biome) else { continue };
+            let mut names: Vec<&str> = table.keys().map(|(block, _)| *block).collect();
+            names.sort();
+            names.dedup();
+
+            for block in names {
+                let row: Vec<String> = (0..128)
+                    .step_by(8)
+                    .filter_map(|y| table.get(&(block, y)).map(|n| format!("{}:{:.3}", y, n / count)))
+                    .collect();
+                println!("  {:<16} {:<20} {}", biome, block, row.join(" "));
+            }
+        }
+    }
+
+    /// Незер по слоям — тот же вывод, что пишет с мира оригинала
+    /// tools/measure/nether_layers.py: доли блоков на каждой высоте, полы и
+    /// потолки на столбец, толщина пустот и перемычек. Сверка —
+    /// tools/measure/nether_layers_compare.py.
+    /// `NETHER_LAYERS=файл.tsv cargo test --release nether_layers -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn nether_layers() {
+        use std::collections::HashMap;
+        use std::fmt::Write as _;
+
+        let nether = Nether::new(100_554_032_945_340);
+        let out = std::env::var("NETHER_LAYERS").unwrap_or_else(|_| "nether_layers_ours.tsv".into());
+        let name = |state: i32| if state == TUNNEL { "cave_air" } else { blocks::block_at_state(state).unwrap_or("?") };
+        let plants = [
+            "fire",
+            "soul_fire",
+            "crimson_roots",
+            "warped_roots",
+            "nether_sprouts",
+            "crimson_fungus",
+            "warped_fungus",
+            "brown_mushroom",
+            "red_mushroom",
+            "weeping_vines",
+            "weeping_vines_plant",
+            "twisting_vines",
+            "twisting_vines_plant",
+        ];
+
+        // 768 квадратов 2×2 чанка вразброс по ±50 тысяч блоков. Пещеры
+        // крупные и по высоте тянутся на десятки блоков: сотня квадратов
+        // 5×5 врала на 2–3 % доли пустот на целых полосах высоты (у начала
+        // на y 48–71 выходило 0,44 против 0,46 по самому шуму на всём мире,
+        // в другом месте — наоборот), нужны много мелких мест.
+        const AREAS: i32 = 768;
+        const SIDE: i32 = 2;
+        let places: Vec<(i32, i32)> = (0..AREAS)
+            .flat_map(|area| {
+                let (ax, az) = ((area % 32) * 197 - 3100, (area / 32) * 263 - 3150);
+                (0..SIDE * SIDE).map(move |at| (ax + at % SIDE, az + at / SIDE))
+            })
+            .collect();
+        let pieces: Vec<Piece> = std::thread::scope(|scope| {
+            let workers: Vec<_> = places
+                .chunks(places.len().div_ceil(8))
+                .map(|part| {
+                    let nether = &nether;
+                    scope.spawn(move || part.iter().map(|&(cx, cz)| nether.piece_with(cx, cz, false)).collect::<Vec<_>>())
+                })
+                .collect();
+            workers.into_iter().flat_map(|worker| worker.join().unwrap()).collect()
+        });
+
+        let mut per_y: Vec<HashMap<&str, u64>> = vec![HashMap::new(); 128];
+        let mut stats: [HashMap<i32, u64>; 6] = Default::default();
+        let [floors, ceilings, floor_y, ceiling_y, gaps, slabs] = &mut stats;
+
+        for piece in &pieces {
+            for at in 0..256 {
+                let column: Vec<&str> = (0..=CEILING).map(|y| name(piece.blocks[Piece::index(at % 16, y, at / 16)])).collect();
+                let open: Vec<bool> =
+                    column.iter().map(|block| matches!(*block, "air" | "cave_air") || plants.contains(block)).collect();
+
+                for (y, block) in column.iter().enumerate() {
+                    *per_y[y].entry(block).or_default() += 1;
+                }
+
+                let (mut floor_count, mut ceiling_count) = (0, 0);
+
+                for y in 32..126 {
+                    if !open[y] && column[y] != "lava" && open[y + 1] {
+                        floor_count += 1;
+                        *floor_y.entry(y as i32).or_default() += 1;
+                    }
+                    if !open[y] && column[y] != "lava" && open[y - 1] && column[y - 1] != "lava" {
+                        ceiling_count += 1;
+                        *ceiling_y.entry(y as i32).or_default() += 1;
+                    }
+                }
+
+                *floors.entry(floor_count).or_default() += 1;
+                *ceilings.entry(ceiling_count).or_default() += 1;
+
+                let mut y = 32;
+
+                while y < 127 {
+                    let mut top = y;
+
+                    while top < 127 && open[top] == open[y] {
+                        top += 1;
+                    }
+
+                    if open[y] {
+                        *gaps.entry((top - y).min(99) as i32).or_default() += 1;
+                    } else if y > 32 && top < 127 {
+                        *slabs.entry((top - y).min(99) as i32).or_default() += 1;
+                    }
+
+                    y = top;
+                }
+            }
+        }
+
+        // Как далеко по горизонтали тянется пустота: доля пустых среди мест
+        // в d блоках по x от пустого (по квадратам 5×5 чанков).
+        let mut reach: HashMap<(i32, i32), (u64, u64)> = HashMap::new();
+        let width = SIDE * 16;
+        for group in pieces.chunks((SIDE * SIDE) as usize) {
+            for y in [40, 56, 72, 88] {
+                let open_at = |x: i32, z: i32| {
+                    let piece = &group[((z / 16) * SIDE + x / 16) as usize];
+                    let name = name(piece.blocks[Piece::index(x % 16, y, z % 16)]);
+                    name == "air" || name == "cave_air"
+                };
+                for z in 0..width {
+                    for x in 0..width {
+                        if !open_at(x, z) {
+                            continue;
+                        }
+                        for d in [2, 4, 8, 16, 32] {
+                            if x + d < width {
+                                let entry = reach.entry((y, d)).or_default();
+                                entry.0 += 1;
+                                entry.1 += u64::from(open_at(x + d, z));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let columns = (pieces.len() * 256) as f64;
+        let mut text = format!("chunks\t-\t{}\n", pieces.len());
+        let mut keys: Vec<_> = reach.keys().copied().collect();
+        keys.sort();
+        for (y, d) in keys {
+            let (all, open) = reach[&(y, d)];
+            let _ = writeln!(text, "reach{}\t{}\t{:.6}", y, d, open as f64 / all as f64);
+        }
+
+        for (y, row) in per_y.iter().enumerate() {
+            let total: u64 = row.values().sum();
+
+            for (block, count) in row {
+                let _ = writeln!(text, "y{}\t{}\t{:.6}", y, block, *count as f64 / total as f64);
+            }
+        }
+
+        for (title, table) in ["floors", "ceilings", "floor_y", "ceiling_y", "gap", "slab"].iter().zip(&stats) {
+            let mut rows: Vec<_> = table.iter().collect();
+            rows.sort();
+
+            for (value, count) in rows {
+                let _ = writeln!(text, "{}\t{}\t{:.6}", title, value, *count as f64 / columns);
+            }
+        }
+
+        std::fs::write(&out, text).unwrap();
+        println!("чанков: {} → {}", pieces.len(), out);
+    }
+
+    /// Крепости: доли построек по регионам и блоки в столбцах под рамками
+    /// кусков — тот же счёт, что `nether_fortress.py blocks` с мира
+    /// оригинала. `cargo test --release fortress_blocks -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn fortress_blocks() {
+        use std::collections::{HashMap, HashSet};
+
+        let nether = Nether::new(100_554_032_945_340);
+        let mut regions: Vec<(i32, i32)> = (-20..20).flat_map(|x| (-20..20).map(move |z| (x, z))).collect();
+        let (mut fortresses, mut deltas) = (0, 0);
+
+        for &(x, z) in &regions {
+            if let Some((cx, cz)) = nether.fortress_start(x, z) {
+                fortresses += 1;
+                deltas += usize::from(nether.biome_at(cx * 16 + 8, cz * 16 + 8) == Biome::BasaltDeltas);
+            }
+        }
+        println!("регионов {}, крепостей {} ({:.1} %), из них в дельтах {}", regions.len(), fortresses, 100.0 * fortresses as f64 / regions.len() as f64, deltas);
+
+        regions.sort_by_key(|(x, z)| x * x + z * z);
+        // Сколько крепостей брать и сколько ближайших пропустить: у одной
+        // крепости все опоры стоят на одном рельефе, и 40 крепостей дают
+        // разброс долей по высоте в несколько процентов.
+        let env = |name: &str, default: usize| std::env::var(name).ok().and_then(|v| v.parse().ok()).unwrap_or(default);
+        let starts: Vec<(i32, i32)> = regions
+            .iter()
+            .filter_map(|&(x, z)| nether.fortress_start(x, z))
+            .skip(env("FORTRESS_SKIP", 0))
+            .take(env("FORTRESSES", 40))
+            .collect();
+        let plans: Vec<Vec<fortress::Placed>> = starts.iter().map(|&(x, z)| fortress::plan(nether.seed, x, z)).collect();
+        // Столбец → высоты рамок кусков над ним (низ, верх).
+        type Spans = HashMap<(i32, i32), Vec<(i32, i32)>>;
+        let mut columns: Vec<Spans> = Vec::new();
+        let mut chunks: HashSet<(i32, i32)> = HashSet::new();
+
+        for plan in &plans {
+            let mut set = Spans::new();
+            for piece in plan {
+                let b = piece.bounds;
+                for x in b[0]..=b[3] {
+                    for z in b[2]..=b[5] {
+                        set.entry((x, z)).or_default().push((b[1], b[4]));
+                        chunks.insert((x >> 4, z >> 4));
+                    }
+                }
+            }
+            columns.push(set);
+        }
+
+        let chunks: Vec<(i32, i32)> = chunks.into_iter().collect();
+        let pieces: HashMap<(i32, i32), Piece> = std::thread::scope(|scope| {
+            let workers: Vec<_> = chunks
+                .chunks(chunks.len().div_ceil(8))
+                .map(|part| {
+                    let nether = &nether;
+                    scope.spawn(move || part.iter().map(|&(cx, cz)| ((cx, cz), nether.piece(cx, cz))).collect::<Vec<_>>())
+                })
+                .collect();
+            workers.into_iter().flat_map(|worker| worker.join().unwrap()).collect()
+        });
+        let mut total: HashMap<&str, u64> = HashMap::new();
+        let counted = ["nether_bricks", "nether_brick_fence", "nether_brick_stairs", "spawner", "chest", "nether_wart", "soul_sand", "lava"];
+
+        for set in &columns {
+            for (&(x, z), spans) in set {
+                let piece = &pieces[&(x >> 4, z >> 4)];
+                for y in 1..127 {
+                    let name = blocks::block_at_state(piece.blocks[Piece::index(x & 15, y, z & 15)]).unwrap_or("?");
+                    if counted.contains(&name) {
+                        *total.entry(name).or_default() += 1;
+                    }
+                    if name == "nether_bricks" && y < 45 {
+                        *total.entry("nether_bricks ниже y 45").or_default() += 1;
+                    }
+                    if name == "nether_bricks" && !spans.iter().any(|(low, high)| (*low..=*high).contains(&y)) {
+                        *total.entry("nether_bricks вне рамок (опоры)").or_default() += 1;
+                    }
+                }
+            }
+        }
+
+        println!("крепостей {}, кусков в среднем {:.1}", plans.len(), plans.iter().map(Vec::len).sum::<usize>() as f64 / plans.len() as f64);
+
+        // Опоры по видам кусков: кирпич под низом куска, блоков на кусок.
+        let bricks = blocks::state_by_name("nether_bricks").unwrap();
+        let mut supports: HashMap<&str, (u64, u64)> = HashMap::new();
+        let mut ends: HashMap<i32, u64> = HashMap::new();
+        let mut below: HashMap<&str, u64> = HashMap::new();
+        let name = |state: i32| if state == TUNNEL { "cave_air" } else { blocks::block_at_state(state).unwrap_or("?") };
+        for plan in &plans {
+            for placed in plan {
+                let entry = supports.entry(placed.kind.id()).or_default();
+                entry.1 += 1;
+                for (x, bottom, z) in placed.support_columns() {
+                    let piece = &pieces[&(x >> 4, z >> 4)];
+                    let mut y = bottom - 1;
+                    while y > 0 && piece.blocks[Piece::index(x & 15, y, z & 15)] == bricks {
+                        entry.0 += 1;
+                        y -= 1;
+                    }
+                    if y < bottom - 1 && matches!(placed.kind.id(), "nebcr" | "nebs") {
+                        *ends.entry(y / 4 * 4).or_default() += 1;
+                        *below.entry(name(piece.blocks[Piece::index(x & 15, y, z & 15)])).or_default() += 1;
+                    }
+                }
+            }
+        }
+        let mut kinds: Vec<_> = supports.into_iter().collect();
+        kinds.sort();
+        for (kind, (length, count)) in kinds {
+            println!("  опоры {:<7} {:6.0}", kind, length as f64 / count as f64);
+        }
+        let mut ends: Vec<_> = ends.into_iter().collect();
+        ends.sort();
+        println!("  низ опор мостов по высоте: {:?}", ends);
+        let mut below: Vec<_> = below.into_iter().collect();
+        below.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
+        println!("  под опорами: {:?}", &below[..below.len().min(8)]);
+        let mut rows: Vec<_> = total.into_iter().collect();
+        rows.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
+        for (name, count) in rows {
+            println!("  {:<22} {:8.1}", name, count as f64 / plans.len() as f64);
+        }
+    }
+
+    /// Крепость видна в чанках: кирпич есть, стыки чанков одинаковы при
+    /// любом порядке складывания, одно семя — одни байты чанка.
+    #[test]
+    fn fortress_chunks_are_deterministic() {
+        let nether = Nether::new(100_554_032_945_340);
+        let (start_x, start_z) = (-20..20)
+            .flat_map(|x| (-20..20).map(move |z| (x, z)))
+            .find_map(|(x, z)| nether.fortress_start(x, z))
+            .expect("крепость в 1600 регионах");
+        let bricks = blocks::state_by_name("nether_bricks").unwrap();
+        let one = nether.piece(start_x, start_z);
+        let two = Nether::new(100_554_032_945_340).piece(start_x, start_z);
+
+        assert!(one.blocks.iter().filter(|state| **state == bricks).count() > 100);
+        assert_eq!(one.blocks, two.blocks);
+        assert_eq!(nether.chunk(start_x, start_z).to_bytes(), Nether::new(100_554_032_945_340).chunk(start_x, start_z).to_bytes());
+    }
+
+    /// Бастионы: доля регионов и блоки в рамках кусков — тот же счёт, что
+    /// `nether_bastion.py blocks` с мира оригинала, и время чанка с
+    /// бастионом. `cargo test --release bastion_blocks -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn bastion_blocks() {
+        use std::collections::{HashMap, HashSet};
+        use std::time::Instant;
+
+        let nether = Nether::new(100_554_032_945_340);
+        let mut regions: Vec<(i32, i32)> = (-20..20).flat_map(|x| (-20..20).map(move |z| (x, z))).collect();
+        let found = regions.iter().filter(|&&(x, z)| nether.bastion_start(x, z).is_some()).count();
+        println!("регионов {}, бастионов {} ({:.1} %)", regions.len(), found, 100.0 * found as f64 / regions.len() as f64);
+
+        regions.sort_by_key(|(x, z)| x * x + z * z);
+        let plans: Vec<Vec<bastion::Placed>> = regions
+            .iter()
+            .filter_map(|&(x, z)| nether.bastion_start(x, z))
+            .take(40)
+            .map(|(x, z)| bastion::plan(nether.seed, x, z))
+            .collect();
+        let mut cache: HashMap<(i32, i32), Piece> = HashMap::new();
+        let mut total: HashMap<&str, u64> = HashMap::new();
+        let (mut chunks, mut spent) = (0, 0.0);
+
+        for plan in &plans {
+            let mut cells = HashSet::new();
+            for placed in plan {
+                let b = placed.bounds;
+                for x in b[0]..=b[3] {
+                    for y in b[1]..=b[4] {
+                        for z in b[2]..=b[5] {
+                            cells.insert((x, y, z));
+                        }
+                    }
+                }
+            }
+            for &(x, y, z) in &cells {
+                let piece = cache.entry((x >> 4, z >> 4)).or_insert_with(|| {
+                    let started = Instant::now();
+                    let piece = nether.piece(x >> 4, z >> 4);
+                    spent += started.elapsed().as_secs_f64() * 1000.0;
+                    chunks += 1;
+                    piece
+                });
+                let state = piece.blocks[Piece::index(x & 15, y, z & 15)];
+                let name = if state == TUNNEL { "cave_air" } else { blocks::block_at_state(state).unwrap_or("?") };
+                *total.entry(name).or_default() += 1;
+            }
+        }
+
+        println!("бастионов {}, чанков {} по {:.2} мс", plans.len(), chunks, spent / chunks as f64);
+        let mut rows: Vec<_> = total.into_iter().collect();
+        rows.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
+        for (name, count) in rows.into_iter().take(24) {
+            println!("  {:<36} {:8.1}", name, count as f64 / plans.len() as f64);
+        }
+    }
+
+    /// Бастион виден в чанке старта и складывается одинаково.
+    #[test]
+    fn bastion_chunks_are_deterministic() {
+        let nether = Nether::new(100_554_032_945_340);
+        let (start_x, start_z) = (0..10).flat_map(|x| (0..10).map(move |z| (x, z))).find_map(|(x, z)| nether.bastion_start(x, z)).unwrap();
+        let one = nether.piece(start_x, start_z);
+        let two = Nether::new(100_554_032_945_340).piece(start_x, start_z);
+        let stone = ["polished_blackstone_bricks", "cracked_polished_blackstone_bricks", "blackstone"].map(|name| blocks::state_by_name(name).unwrap());
+
+        assert!(one.blocks.iter().filter(|state| stone.contains(state)).count() > 100);
+        assert_eq!(one.blocks, two.blocks);
     }
 
     /// Скорость: сколько в среднем складывается чанк Незера и из чего это
     /// время. `cargo test --release nether_chunk_phases -- --ignored --nocapture`.
+    /// Куски лесов для счёта шляп огромных грибов — тот же счёт, что
+    /// `tools/measure/nether_fungus.py region` по миру оригинала:
+    /// `NETHER_FUNGUS=файл cargo test --release nether_fungus_dump -- --ignored`,
+    /// потом `nether_fungus.py dump файл`.
+    #[test]
+    #[ignore]
+    fn nether_fungus_dump() {
+        let nether = Nether::new(100_554_032_945_340);
+        let out = std::env::var("NETHER_FUNGUS").unwrap_or_else(|_| "nether_fungus_ours.bin".into());
+        let side = 12;
+        // Квадраты 12×12 чанков, серединой в лесу.
+        let mut areas = Vec::new();
+        for at in 0..4000 {
+            let (ax, az) = ((at % 63) * 37 - 1100, (at / 63) * 41 - 1300);
+            let biome = nether.biome_at(ax * 16 + side * 8, az * 16 + side * 8);
+            let wanted = if areas.len() % 3 == 2 { Biome::WarpedForest } else { Biome::CrimsonForest };
+            if biome == wanted {
+                areas.push((ax, az));
+            }
+            if areas.len() == 24 {
+                break;
+            }
+        }
+        let code = |state: i32| -> u8 {
+            if is_air(state) {
+                return 0;
+            }
+            match blocks::block_at_state(state).unwrap_or("?") {
+                "crimson_stem" => 1,
+                "nether_wart_block" => 2,
+                "shroomlight" => 3,
+                "crimson_nylium" | "warped_nylium" => 4,
+                "crimson_roots" | "warped_roots" | "nether_sprouts" | "crimson_fungus" | "warped_fungus" | "weeping_vines"
+                | "weeping_vines_plant" | "twisting_vines" | "twisting_vines_plant" | "fire" => 5,
+                "warped_stem" => 7,
+                "warped_wart_block" => 8,
+                "lava" => 9,
+                _ => 6,
+            }
+        };
+        let width = (side * 16) as usize;
+        let grids: Vec<Vec<u8>> = std::thread::scope(|scope| {
+            let workers: Vec<_> = areas
+                .iter()
+                .map(|&(ax, az)| {
+                    let nether = &nether;
+                    scope.spawn(move || {
+                        let mut grid = vec![6u8; width * width * 96];
+                        for cz in 0..side {
+                            for cx in 0..side {
+                                let piece = nether.piece_with(ax + cx, az + cz, false);
+                                for y in 32..128 {
+                                    for lz in 0..16 {
+                                        for lx in 0..16 {
+                                            let (x, z) = ((cx * 16 + lx) as usize, (cz * 16 + lz) as usize);
+                                            grid[((y as usize - 32) * width + z) * width + x] =
+                                                code(piece.blocks[Piece::index(lx, y, lz)]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        grid
+                    })
+                })
+                .collect();
+            workers.into_iter().map(|worker| worker.join().unwrap()).collect()
+        });
+        let mut bytes = Vec::new();
+        for grid in grids {
+            bytes.extend_from_slice(&(width as u32).to_le_bytes());
+            bytes.extend_from_slice(&grid);
+        }
+        std::fs::write(&out, bytes).unwrap();
+        println!("квадратов: {} → {}", areas.len(), out);
+    }
+
     #[test]
     #[ignore]
     fn nether_chunk_phases() {

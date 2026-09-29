@@ -20,8 +20,9 @@
 use std::collections::HashSet;
 
 use crate::blocks;
+use crate::custom_tnt::{self, KindId};
 use crate::items::{self, Dropped, Items};
-use crate::world::{AIR, Blast, MIN_Y, WORLD_HEIGHT, World};
+use crate::world::{AIR, Blast, CoordHash, MIN_Y, WORLD_HEIGHT, World};
 
 /// Место в мире.
 pub type Pos = (i32, i32, i32);
@@ -55,6 +56,14 @@ pub const SIZE: f64 = 0.98;
 /// source=block).
 pub const PRIMED_SOUND: &str = "minecraft:entity.tnt.primed";
 pub const EXPLODE_SOUND: &str = "minecraft:entity.generic.explode";
+
+/// Сколько блоков большой взрыв особого динамита рушит за такт; остальное
+/// — в следующих тактах (`continue_blasts`). Замер (a_nuke_fits_into_a_tick):
+/// ~3.5 мкс на блок со всеми соседями и редстоуном — полтысячи блоков
+/// укладывается в несколько миллисекунд (первый такт ядерного — ~15 мс
+/// вместе с лучами). У обычного динамита отложенного
+/// не бывает: он рушит всё сразу, как оригинал.
+pub const BLAST_BATCH: usize = 512;
 
 /// Лучи — к точкам на поверхности куба 16 × 16 × 16 (вики, Explosion,
 /// «Calculating which blocks to destroy»).
@@ -95,12 +104,17 @@ fn kick(world: &mut World) -> (f64, f64, f64) {
 /// огнивом из раздатчика: блок исчезает, на его месте появляется подожжённый
 /// динамит с запалом 80. Сперва сущность и звук, потом блок убирается.
 /// Возвращает, был ли там динамит.
+///
+/// Особый динамит (custom_tnt.rs) загорается своим видом — со своим
+/// запалом.
 pub fn ignite(world: &mut World, pos: Pos) -> bool {
     if !is_tnt(world.get_block(pos.0, pos.1, pos.2)) {
         return false;
     }
 
-    spawn_primed(world, bottom_centre(pos));
+    let custom = world.custom_tnt_at(pos);
+
+    spawn_primed(world, bottom_centre(pos), custom);
     world.set_block(pos.0, pos.1, pos.2, AIR);
     true
 }
@@ -108,16 +122,17 @@ pub fn ignite(world: &mut World, pos: Pos) -> bool {
 /// Выставляет подожжённый динамит в этой точке: раздатчик с динамитом
 /// ставит его сразу подожжённым в блок перед собой, с тем же сдвигом и
 /// толчком (вики, TNT). Сущность заведёт такт, звук поджога — здесь.
-pub fn spawn_primed(world: &mut World, at: (f64, f64, f64)) {
+pub fn spawn_primed(world: &mut World, at: (f64, f64, f64), custom: Option<KindId>) {
     let velocity = kick(world);
+    let fuse = custom.and_then(custom_tnt::by_id).map_or(FUSE, |kind| kind.fuse);
 
-    world.prime(at, velocity, FUSE);
+    world.prime(at, velocity, fuse, custom);
     world.note_sound_at_block(at, PRIMED_SOUND, 1.0, 1.0);
 }
 
 /// Раздатчик с динамитом: сущность в блоке перед ним.
-pub fn dispense(world: &mut World, front: Pos) {
-    spawn_primed(world, bottom_centre(front));
+pub fn dispense(world: &mut World, front: Pos, custom: Option<KindId>) {
+    spawn_primed(world, bottom_centre(front), custom);
 }
 
 /// Игрок, которого может толкнуть взрыв: номер сущности, ноги, крадётся ли.
@@ -145,22 +160,117 @@ pub fn explode(
     players: &[Target],
     centre: (f64, f64, f64),
     power: f32,
+    spare_rails: bool,
     next_id: &mut dyn FnMut() -> i32,
 ) {
-    let (doomed, reached) = rays(world, centre, power);
+    blast(world, items, players, centre, power, true, false, spare_rails, next_id);
+}
+
+/// Взрыв догоревшего динамита: обычный — силы 4, особый — по своему виду
+/// (custom_tnt.rs): своя сила, без разрушения блоков у безопасного, малые
+/// заряды у кассетного.
+pub fn explode_primed(
+    world: &mut World,
+    items: &mut Items,
+    players: &[Target],
+    primed: &Dropped,
+    next_id: &mut dyn FnMut() -> i32,
+) {
+    let centre = centre_of(primed);
+
+    let Some(kind) = primed.custom.and_then(custom_tnt::by_id) else {
+        explode(world, items, players, centre, POWER, false, next_id);
+        return;
+    };
+
+    blast(world, items, players, centre, kind.power, kind.breaks_blocks, true, false, next_id);
+
+    // Кассетный: малые обычные заряды во все стороны — из места взрыва,
+    // вверх и вбок со случайной скоростью, с коротким запалом.
+    let state = blocks::state_by_name("tnt").unwrap_or(AIR);
+
+    for _ in 0..kind.cluster {
+        let angle = world.random_unit() as f64 * std::f64::consts::TAU;
+        let speed = 0.2 + world.random_unit() as f64 * 0.3;
+        let up = 0.3 + world.random_unit() as f64 * 0.3;
+        let spread = (custom_tnt::CLUSTER_FUSE_MAX - custom_tnt::CLUSTER_FUSE_MIN + 1) as f32;
+        let fuse = custom_tnt::CLUSTER_FUSE_MIN + (world.random_unit() * spread) as i32;
+
+        items.prime(
+            next_id(),
+            state,
+            (primed.x, primed.y, primed.z),
+            (-angle.sin() * speed, up, -angle.cos() * speed),
+            fuse.min(custom_tnt::CLUSTER_FUSE_MAX),
+            None,
+        );
+    }
+}
+
+/// Сам взрыв: лучи (если он рушит блоки), сущности, пакет, разрушение.
+/// У взрыва, не рушащего блоков, лучей нет вовсе — и случай на них не
+/// тратится. `defer` — большой список можно дорушить в следующих тактах
+/// (только у особого динамита). `spare_rails` — взрыв вагонетки с
+/// динамитом: рельсы и то, на чём они лежат, целы.
+#[allow(clippy::too_many_arguments)]
+fn blast(
+    world: &mut World,
+    items: &mut Items,
+    players: &[Target],
+    centre: (f64, f64, f64),
+    power: f32,
+    breaks_blocks: bool,
+    defer: bool,
+    spare_rails: bool,
+    next_id: &mut dyn FnMut() -> i32,
+) {
+    let (mut doomed, reached) = if breaks_blocks { rays(world, centre, power) } else { (Vec::new(), 0) };
+
+    // Вагонетка с динамитом рельсы и то, на чём они лежат, не рушит (вики,
+    // Minecart with TNT: «it does not destroy its rails and the blocks the
+    // rail is on»). Лучи они держат, как обычно. [проверить]
+    if spare_rails {
+        let rail = |state: i32| blocks::block_at_state(state).is_some_and(|name| name.ends_with("rail"));
+
+        doomed.retain(|&(x, y, z)| !rail(world.get_block(x, y, z)) && !rail(world.get_block(x, y + 1, z)));
+    }
 
     // Сущности — пока блоки стоят: заслоняют именно они (вики, Explosion:
     // «Exposure»).
     let pushed = push_entities(world, items, players, centre, power);
 
+    break_carts(world, items, next_id);
+
+    // Большой список особого динамита рушится частями по тактам.
+    if defer && doomed.len() > BLAST_BATCH {
+        world.defer_blast(doomed[BLAST_BATCH..].iter().copied());
+        destroy_blocks(world, items, &doomed[..BLAST_BATCH], next_id);
+    } else {
+        destroy_blocks(world, items, &doomed, next_id);
+    }
+
+    // Пакет взрыва — после разрушения: у оригинала частицы отвалившегося
+    // (2001) и выпавшие предметы приходят раньше него (чёрный ящик,
+    // tnt-lever и tnt-powered-place).
     world.note_explosion(Blast {
         centre,
         power,
         blocks: reached as i32,
         pushed,
     });
+}
 
-    destroy_blocks(world, items, &doomed, next_id);
+/// Рушит следующую часть отложенного большим взрывом (`BLAST_BATCH`).
+/// Возвращает, было ли что рушить: нет — такт ничего не делал.
+pub fn continue_blasts(world: &mut World, items: &mut Items, next_id: &mut dyn FnMut() -> i32) -> bool {
+    let batch = world.take_blast_batch(BLAST_BATCH);
+
+    if batch.is_empty() {
+        return false;
+    }
+
+    destroy_blocks(world, items, &batch, next_id);
+    true
 }
 
 /// Какие блоки рушит взрыв — лучами (вики, Explosion, дословно):
@@ -183,8 +293,9 @@ pub fn blocks_to_destroy(world: &mut World, centre: (f64, f64, f64), power: f32)
 /// вместе, — это число оригинал кладёт в пакет взрыва (чёрный ящик,
 /// tnt-lever: ~550 клеток при 11 сломанных блоках).
 fn rays(world: &mut World, centre: (f64, f64, f64), power: f32) -> (Vec<Pos>, usize) {
-    let mut seen = HashSet::new();
-    let mut reached = HashSet::new();
+    // Хеш — быстрый (`CoordHash`): у ядерного динамита клеток сотни тысяч.
+    let mut seen: HashSet<Pos, CoordHash> = HashSet::default();
+    let mut reached: HashSet<Pos, CoordHash> = HashSet::default();
     let mut doomed = Vec::new();
     let edge = |n: i32| n == 0 || n == GRID - 1;
     let last = (GRID - 1) as f64;
@@ -300,6 +411,23 @@ fn push_entities(
 
     items.remove_broken();
 
+    // Вагонетки толкаются, как сущности, и получают урон: у них он
+    // вдесятеро больше (как от удара рукой, minecart.rs). Глаза — на 0,85
+    // высоты. [проверить]
+    // Взрывающаяся сама себя не толкает.
+    for cart in items.carts_mut().iter_mut().filter(|cart| cart.blast.is_none()) {
+        let size = (crate::minecart::WIDTH, crate::minecart::HEIGHT);
+
+        let Some(impact) = impact(world, centre, reach, (cart.x, cart.y, cart.z), size) else {
+            continue;
+        };
+        let Some(push) = push_towards(centre, (cart.x, cart.y + size.1 * EYES_SHARE, cart.z), impact) else {
+            continue;
+        };
+
+        cart.blasted(push, damage(impact, reach));
+    }
+
     players
         .iter()
         .filter_map(|player| {
@@ -335,6 +463,24 @@ fn push_towards(centre: (f64, f64, f64), towards: (f64, f64, f64), impact: f64) 
     }
 
     Some((way.0 / length * impact, way.1 / length * impact, way.2 / length * impact))
+}
+
+/// Вагонетки, разбитые взрывом, пропадают, из них выпадает то же, что
+/// при поломке рукой (вики, Minecart: «drops it as an item»). [проверить]
+fn break_carts(world: &mut World, items: &mut Items, next_id: &mut dyn FnMut() -> i32) {
+    for cart in items.carts_mut() {
+        if cart.kind == crate::minecart::Kind::Tnt && cart.fuse < 0 {
+            cart.blast_prime(world.random_unit());
+        }
+    }
+
+    for broken in items.remove_carts(|cart| cart.wrecked()) {
+        let at = (broken.x, broken.y, broken.z);
+
+        for stack in broken.drops() {
+            items.drop_item(next_id(), stack, at, (0.0, 0.0, 0.0), crate::items::MINED_DELAY);
+        }
+    }
 }
 
 /// Урон от взрыва (вики, Explosion, «Damage»).
@@ -471,10 +617,14 @@ fn destroy_blocks(world: &mut World, items: &mut Items, doomed: &[Pos], next_id:
         if is_tnt(state) {
             let fuse = CHAIN_FUSE_MIN + (world.random_unit() * (CHAIN_FUSE_MAX - CHAIN_FUSE_MIN + 1) as f32) as i32;
             let velocity = kick(world);
+            // Особый динамит загорается своим видом — запал короткий, как у
+            // всякого подожжённого взрывом.
+            let custom = world.custom_tnt_at((x, y, z));
 
-            items.prime(next_id(), tnt, bottom_centre((x, y, z)), velocity, fuse.min(CHAIN_FUSE_MAX));
+            items.prime(next_id(), tnt, bottom_centre((x, y, z)), velocity, fuse.min(CHAIN_FUSE_MAX), custom);
             world.set_block(x, y, z, AIR);
             crate::redstone::settle(world);
+            drop_fallen_off(world, items, next_id);
             continue;
         }
 
@@ -497,10 +647,25 @@ fn destroy_blocks(world: &mut World, items: &mut Items, doomed: &[Pos], next_id:
         // отваливается с частицами (2001) ещё посреди взрыва (чёрный ящик,
         // tnt-dispenser и tnt-chain).
         crate::redstone::settle(world);
+        drop_fallen_off(world, items, next_id);
     }
 
     for (stack, at) in dropped {
         items.drop_item(next_id(), stack, at, (0.0, 0.0, 0.0), items::MINED_DELAY);
+    }
+}
+
+/// Отвалившееся посреди взрыва (рычаг без опоры) выпадает сразу, как при
+/// обычном сломе, — раньше добычи самого взрыва, которая высыпается в конце:
+/// у оригинала предмет рычага приходит первым (чёрный ящик,
+/// tnt-powered-place).
+fn drop_fallen_off(world: &mut World, items: &mut Items, next_id: &mut dyn FnMut() -> i32) {
+    for ((x, y, z), state) in world.take_destroyed() {
+        let luck = world.random_unit();
+
+        if let Some(stack) = blocks::drops_by_luck(state, None, luck) {
+            items.drop_item(next_id(), stack, (x as f64 + 0.5, y as f64 + 0.25, z as f64 + 0.5), (0.0, 0.0, 0.0), items::MINED_DELAY);
+        }
     }
 }
 
@@ -609,7 +774,7 @@ mod tests {
         let mut items = Items::new();
         let loaded = |_: i32, _: i32| true;
 
-        items.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), FUSE);
+        items.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), FUSE, None);
 
         for tick in 1..FUSE {
             assert!(items.burn_fuses(&loaded).is_empty(), "взорвался на такте {}", tick);
@@ -640,7 +805,7 @@ mod tests {
         };
 
         let mut items = Items::new();
-        items.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), FUSE);
+        items.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), FUSE, None);
         let (_, start) = items.changes_since(0, READER);
 
         items.burn_fuses(&loaded);
@@ -649,7 +814,7 @@ mod tests {
         assert_eq!(fuses(&mut items, start), vec![79, 78]);
 
         let mut items = Items::new();
-        items.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), 15);
+        items.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), 15, None);
         let (_, start) = items.changes_since(0, READER);
 
         items.burn_fuses(&loaded);
@@ -664,7 +829,7 @@ mod tests {
         let floor = |_: i32, y: i32, _: i32| y <= 63;
         let loaded = |_: i32, _: i32| true;
 
-        items.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.2, 0.0), FUSE);
+        items.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.2, 0.0), FUSE, None);
 
         for _ in 0..30 {
             items.step_with_water(&floor, &floor, &loaded, &|_, _, _| None);
@@ -703,7 +868,8 @@ mod tests {
         let primed = world.take_primed();
 
         assert_eq!(primed.len(), 1);
-        let ((x, y, z), (vx, vy, vz), fuse) = primed[0];
+        let ((x, y, z), (vx, vy, vz), fuse, custom) = primed[0];
+        assert_eq!(custom, None);
         assert_eq!((x, y, z), (0.5, 64.0, 0.5));
         assert_eq!(fuse, FUSE);
         assert_eq!(vy, KICK_UP);
@@ -738,7 +904,7 @@ mod tests {
         items.watch_changes(READER);
         world.set_block_silently(2, 64, 0, state("tnt"));
 
-        explode(&mut world, &mut items, &[], (0.5, 64.06125, 0.5), POWER, &mut next);
+        explode(&mut world, &mut items, &[], (0.5, 64.06125, 0.5), POWER, false, &mut next);
 
         assert_eq!(world.get_block(2, 64, 0), AIR);
 
@@ -761,12 +927,53 @@ mod tests {
 
         world.set_block_silently(0, 63, 0, state("stone"));
 
-        explode(&mut world, &mut items, &[], (0.5, 64.06125, 0.5), POWER, &mut next);
+        explode(&mut world, &mut items, &[], (0.5, 64.06125, 0.5), POWER, false, &mut next);
 
         assert_eq!(world.get_block(0, 63, 0), AIR);
 
         let cobblestone = blocks::item_named("cobblestone");
         assert!(items.items().iter().any(|item| Some(item.stack.item) == cobblestone));
+    }
+
+    /// Пакет взрыва уходит после разрушения, а отвалившийся без опоры рычаг
+    /// выпадает сразу, до добычи взрыва (чёрный ящик, tnt-powered-place).
+    #[test]
+    fn the_blast_packet_follows_the_damage() {
+        let mut world = World::in_memory();
+        let mut items = Items::new();
+        let mut next = ids();
+
+        world.set_block_silently(0, 63, 0, state("stone"));
+
+        let world_reader = world.watch_events(READER);
+
+        explode(&mut world, &mut items, &[], (0.5, 64.06125, 0.5), POWER, false, &mut next);
+
+        let (events, _) = world.events_since(world_reader, READER);
+        let blast = events
+            .iter()
+            .position(|event| matches!(event, crate::world::WorldEvent::Explosion(_)))
+            .expect("пакета взрыва нет");
+        let broken = events
+            .iter()
+            .position(|event| matches!(event, crate::world::WorldEvent::Change(_)))
+            .expect("камень не сломан");
+
+        assert!(broken < blast, "пакет взрыва раньше разрушения");
+
+        // Рычаг на камне: камень убрали — рычаг отвалился и выпал сразу.
+        let lever = blocks::state_from_text("lever[face=floor,facing=north]").unwrap();
+
+        world.set_block_silently(3, 63, 0, state("stone"));
+        world.set_block(3, 64, 0, lever);
+        crate::redstone::settle(&mut world);
+        world.set_block(3, 63, 0, AIR);
+        crate::redstone::settle(&mut world);
+        drop_fallen_off(&mut world, &mut items, &mut next);
+
+        let lever_item = blocks::item_named("lever");
+        assert_eq!(world.get_block(3, 64, 0), AIR, "рычаг висит без опоры");
+        assert!(items.items().iter().any(|item| Some(item.stack.item) == lever_item), "рычаг не выпал");
     }
 
     /// Одинаковое выпавшее сливается в одну стопку.
@@ -780,7 +987,7 @@ mod tests {
             world.set_block_silently(x, 63, 0, state("stone"));
         }
 
-        explode(&mut world, &mut items, &[], (0.5, 64.06125, 0.5), POWER, &mut next);
+        explode(&mut world, &mut items, &[], (0.5, 64.06125, 0.5), POWER, false, &mut next);
 
         let cobblestone = blocks::item_named("cobblestone");
         let piles: Vec<_> = items.items().iter().filter(|item| Some(item.stack.item) == cobblestone).collect();
@@ -805,7 +1012,7 @@ mod tests {
         let players = [Target { entity_id: 9, x: 0.5, y: 64.0, z: 3.5, sneaking: false }];
         let world_reader = world.watch_events(READER);
 
-        explode(&mut world, &mut items, &players, (0.5, 64.06125, 0.5), POWER, &mut next);
+        explode(&mut world, &mut items, &players, (0.5, 64.06125, 0.5), POWER, false, &mut next);
 
         let sand = items.items().iter().find(|item| item.entity_id == 5).expect("песок пропал");
         assert!(sand.vx > 0.0 && sand.vy > 0.0, "не толкнуло: {:?}", (sand.vx, sand.vy));
@@ -824,6 +1031,225 @@ mod tests {
         let (id, push) = blast.pushed[0];
         assert_eq!(id, 9);
         assert!(push.2 > 0.0 && push.1 > 0.0);
+    }
+
+    fn kind(name: &str) -> &'static custom_tnt::Kind {
+        custom_tnt::by_name(name).unwrap_or_else(|| panic!("нет вида {}", name))
+    }
+
+    /// Особый динамит на месте: поджигается своим видом, со своим запалом.
+    #[test]
+    fn custom_tnt_ignites_as_its_kind() {
+        for (name, fuse) in [("mega", 80), ("nuke", 160), ("cluster", 80), ("safe", 80)] {
+            let mut world = World::in_memory();
+            let id = kind(name).id;
+
+            world.set_block_silently(0, 64, 0, state("tnt"));
+            world.set_custom_tnt((0, 64, 0), Some(id));
+
+            assert!(ignite(&mut world, (0, 64, 0)));
+            assert_eq!(world.custom_tnt_at((0, 64, 0)), None, "вид остался на пустом месте");
+
+            let primed = world.take_primed();
+            assert_eq!((primed[0].2, primed[0].3), (fuse, Some(id)), "{}", name);
+        }
+    }
+
+    /// Сила взрыва особого — из таблицы: пакет несёт её, а мега-динамит
+    /// в земле рушит дальше обычного.
+    #[test]
+    fn custom_power_reaches_further() {
+        let dirt_cube = || {
+            let mut world = World::in_memory();
+
+            for x in -10..=10 {
+                for y in -10..=10 {
+                    for z in -10..=10 {
+                        world.set_block_silently(x, y, z, state("dirt"));
+                    }
+                }
+            }
+
+            world.set_block_silently(0, 0, 0, AIR);
+            world
+        };
+        let far = |world: &World| {
+            (-10..=10i32)
+                .flat_map(|x| (-10..=10i32).map(move |y| (x, y)))
+                .filter(|&(x, y)| x.abs().max(y.abs()) >= 5 && world.get_block(x, y, 0) == AIR)
+                .count()
+        };
+
+        let mut next = ids();
+        let mut items = Items::new();
+        let mut plain = dirt_cube();
+        explode(&mut plain, &mut items, &[], (0.5, 0.06125, 0.5), POWER, false, &mut next);
+        assert_eq!(far(&plain), 0, "обычный дотянулся до пятого блока");
+
+        let mut items = Items::new();
+        let mut world = dirt_cube();
+        let world_reader = world.watch_events(READER);
+        let primed = |custom| {
+            let mut items = Items::new();
+            items.prime(1, state("tnt"), (0.5, 0.0, 0.5), (0.0, 0.0, 0.0), 1, custom);
+            items.burn_fuses(&|_, _| true).remove(0)
+        };
+
+        explode_primed(&mut world, &mut items, &[], &primed(Some(kind("mega").id)), &mut next);
+
+        let (events, _) = world.events_since(world_reader, READER);
+        let power = events.iter().find_map(|event| match event {
+            crate::world::WorldEvent::Explosion(blast) => Some(blast.power),
+            _ => None,
+        });
+        assert_eq!(power, Some(8.0));
+
+        assert!(far(&world) > 0, "мега-динамит не дотянулся до пятого блока");
+    }
+
+    /// Безопасный динамит блоков не ломает и ничего не роняет, но толкает
+    /// и ранит: предмет рядом пропадает, песок летит.
+    #[test]
+    fn safe_tnt_breaks_nothing() {
+        let mut world = World::in_memory();
+        let mut items = Items::new();
+        let mut next = ids();
+
+        for x in -3..=3 {
+            for z in -3..=3 {
+                world.set_block_silently(x, 63, z, state("dirt"));
+            }
+        }
+        world.set_block_silently(2, 64, 0, state("tnt"));
+
+        items.drop_block(5, state("sand"), crate::inventory::Stack::new(0, 0), (0.5, 64.0, 3.5));
+        items.drop_item(6, crate::inventory::Stack::new(1, 1), (1.0, 64.0, 0.5), (0.0, 0.0, 0.0), std::time::Duration::ZERO);
+
+        let mut primed = Items::new();
+        primed.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), 1, Some(kind("safe").id));
+        let primed = primed.burn_fuses(&|_, _| true).remove(0);
+
+        explode_primed(&mut world, &mut items, &[], &primed, &mut next);
+
+        for x in -3..=3 {
+            for z in -3..=3 {
+                assert_eq!(world.get_block(x, 63, z), state("dirt"), "сломан {} 63 {}", x, z);
+            }
+        }
+        assert_eq!(world.get_block(2, 64, 0), state("tnt"), "соседний динамит загорелся");
+        assert!(items.items().iter().all(|item| item.entity_id != 6), "предмет уцелел");
+        assert!(items.items().iter().all(|item| item.fuse.is_none()), "что-то подожглось");
+        assert_eq!(items.items().len(), 1, "что-то выпало: {:?}", items.items().len());
+
+        let sand = &items.items()[0];
+        assert!(sand.vz > 0.0, "песок не толкнуло");
+    }
+
+    /// Кассетный: после взрыва — восемь малых обычных зарядов с запалом
+    /// 20–40 тактов, летящих вверх.
+    #[test]
+    fn cluster_tnt_throws_small_charges() {
+        let mut world = World::in_memory();
+        let mut items = Items::new();
+        let mut next = ids();
+
+        let mut primed = Items::new();
+        primed.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), 1, Some(kind("cluster").id));
+        let primed = primed.burn_fuses(&|_, _| true).remove(0);
+
+        explode_primed(&mut world, &mut items, &[], &primed, &mut next);
+
+        let small: Vec<&Dropped> = items.items().iter().filter(|item| item.fuse.is_some()).collect();
+
+        assert_eq!(small.len(), 8);
+
+        for charge in small {
+            let fuse = charge.fuse.unwrap_or(0);
+            assert!((custom_tnt::CLUSTER_FUSE_MIN..=custom_tnt::CLUSTER_FUSE_MAX).contains(&fuse), "запал {}", fuse);
+            assert_eq!(charge.custom, None);
+            assert!(charge.vy > 0.0);
+        }
+    }
+
+    /// Особый динамит, задетый чужим взрывом, загорается своим видом.
+    #[test]
+    fn a_chained_custom_tnt_keeps_its_kind() {
+        let mut world = World::in_memory();
+        let mut items = Items::new();
+        let mut next = ids();
+        let nuke = kind("nuke").id;
+
+        world.set_block_silently(2, 64, 0, state("tnt"));
+        world.set_custom_tnt((2, 64, 0), Some(nuke));
+
+        explode(&mut world, &mut items, &[], (0.5, 64.06125, 0.5), POWER, false, &mut next);
+
+        let primed: Vec<&Dropped> = items.items().iter().filter(|item| item.fuse.is_some()).collect();
+        assert_eq!(primed.len(), 1);
+        assert_eq!(primed[0].custom, Some(nuke));
+    }
+
+    /// Ядерный динамит (сила 16) в толще земли и камня укладывается в такт:
+    /// замер времени взрыва целиком — лучи, сущности, разрушение, выпадение.
+    #[test]
+    fn a_nuke_fits_into_a_tick() {
+        let (dirt, stone) = (state("dirt"), state("stone"));
+        let build = || {
+            let mut world = World::in_memory();
+
+            for x in -40..=40 {
+                for z in -40..=40 {
+                    for y in 20..64 {
+                        world.set_block_silently(x, y, z, if y < 50 { stone } else { dirt });
+                    }
+                }
+            }
+
+            world
+        };
+        let mut world = build();
+        let mut items = Items::new();
+        let mut next = ids();
+
+        let mut primed = Items::new();
+        primed.prime(1, state("tnt"), (0.5, 63.0, 0.5), (0.0, 0.0, 0.0), 1, Some(kind("nuke").id));
+        let primed = primed.burn_fuses(&|_, _| true).remove(0);
+
+        // Первый такт: лучи, сущности и первая часть блоков; дальше — по
+        // части за такт.
+        let started = std::time::Instant::now();
+        explode_primed(&mut world, &mut items, &[], &primed, &mut next);
+        redstone::settle(&mut world);
+        let mut slowest = started.elapsed();
+        let first = slowest;
+        let mut ticks = 1;
+
+        while world.blast_pending() {
+            let started = std::time::Instant::now();
+            assert!(continue_blasts(&mut world, &mut items, &mut next));
+            redstone::settle(&mut world);
+            slowest = slowest.max(started.elapsed());
+            ticks += 1;
+        }
+
+        assert!(!continue_blasts(&mut world, &mut items, &mut next));
+
+        let broken = (-30..=30)
+            .flat_map(|x| (20..64).flat_map(move |y| (-30..=30).map(move |z| (x, y, z))))
+            .filter(|&(x, y, z)| world.get_block(x, y, z) == AIR)
+            .count();
+
+        println!(
+            "ядерный динамит: первый такт {:?}, самый долгий {:?}, тактов {}, сломано блоков {}, предметов {}",
+            first,
+            slowest,
+            ticks,
+            broken,
+            items.items().len()
+        );
+        assert!(broken > BLAST_BATCH, "сломано мало: {}", broken);
+        assert!(ticks > 1, "всё сломано за один такт");
+        assert!(slowest < std::time::Duration::from_millis(if cfg!(debug_assertions) { 2000 } else { 45 }), "такт взрыва занял {:?}", slowest);
     }
 
     /// Стена заслоняет: за сплошной стеной сущность взрыва не видит.

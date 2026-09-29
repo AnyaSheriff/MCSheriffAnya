@@ -1,0 +1,18 @@
+{
+ "name": "sculk-lever",
+ "about": "Датчик скалка слышит рычаг в четырёх блоках: срабатывание, сила по расстоянию в пыли, частота в сравнителе, откат. Второй щелчок — после отката.",
+ "blocks": [
+  {"at": [0, 0, 0], "state": "minecraft:sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false]"},
+  {"at": [0, 0, -1], "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"},
+  {"at": [0, 0, -2], "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"},
+  {"at": [1, 0, 0], "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"},
+  {"at": [2, 0, 0], "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"},
+  {"at": [0, 0, 4], "state": "minecraft:lever[face=floor,facing=north,powered=false]"}
+ ],
+ "actions": [
+  {"after": 0, "click": [0, 0, 4]},
+  {"after": 60, "click": [0, 0, 4]}
+ ],
+ "record_ticks": 120,
+ "cleanup": ["fill $(-2,0,-3) $(3,1,5) minecraft:air"]
+}

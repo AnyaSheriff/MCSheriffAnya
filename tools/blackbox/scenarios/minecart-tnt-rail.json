@@ -1,0 +1,35 @@
+{
+ "name": "minecart-tnt-rail",
+ "about": "Вагонетка с динамитом на запитанной активирующей рельсе: поджог в такте появления (событие 10 и звук), взрыв силы 4 через 80 тактов в её точке. Рельсы и блок редстоуна под рельсой взрыв не рушит; обычная вагонетка в 4 блоках и вагонетка с сундуком в 3 блоках разбиты, из них выпадают предметы. Пол — обсидиан, чтобы взрыв ничего случайного не рушил.",
+ "blocks": [],
+ "setup": [
+  "fill $(-8,-5,-8) $(8,-1,8) minecraft:obsidian",
+  "setblock $(0,-1,0) minecraft:redstone_block",
+  "fill $(-3,0,0) $(4,0,0) minecraft:rail[shape=east_west]",
+  "setblock $(0,0,0) minecraft:activator_rail[shape=east_west,powered=true]"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecart $(4.5,0,0.5)"
+  },
+  {
+   "after": 0,
+   "cmd": "summon chest_minecart $(0.5,0,-2.5) {Items:[{Slot:0b,id:\"minecraft:stone\",count:5}]}"
+  },
+  {
+   "after": 2,
+   "cmd": "summon tnt_minecart $(0.5,0,0.5)"
+  }
+ ],
+ "record_ticks": 95,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=tnt_minecart]",
+  "kill @e[type=furnace_minecart]",
+  "kill @e[type=item]",
+  "fill $(-8,-5,-8) $(8,-1,8) minecraft:stone"
+ ]
+}

@@ -67,6 +67,12 @@ endorsed by Mojang or Microsoft.
   `give`, `clear`, `time`, `op`, `deop`, `setblock`, `fill`, `stop`. The `tp`
   command accepts player name or coordinates (including yaw and pitch from
   F3+C). `execute in <dimension> run tp` teleports to another dimension.
+- Custom TNT for operators: `tnt give <player> <mega|nuke|cluster|safe>
+  [count]` and `tnt list` (permission node `mcsheriffanya.tnt.give`, for now
+  granted to ops). Mega — power 8, nuke — power 16 with an 8-second fuse,
+  cluster — throws 8 small charges, safe — pushes but breaks no blocks. The
+  item keeps its kind in inventories, chests and on the ground; a placed block
+  remembers it in the chunk. Anyone holding it can place and light it.
 - A console that looks like the original one; technical detail is hidden
   behind `debug=true` in `config/mcsa.properties`.
 - Bedrock Edition 26.10–26.13 players join the core directly, no proxy (UDP
@@ -97,7 +103,7 @@ creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
 
 - `config/server.properties` — the same keys and format as the original
   server. Nothing from it is hard-coded.
-- `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`; `prefetch-chunks` / `prefetch-at-once` — how far beyond the view distance the world is generated ahead of the player (0 turns it off); `bedrock-port` and `bedrock-online-mode` (if true, only verified Xbox Live accounts join; if false, all join but only verified get operator rights); `autumn-forests` and `pink-cherry-groves` — small additions not found in vanilla (rare autumn patches in forests, pinkish grass and more petals in cherry groves; `false` keeps the world vanilla); `text-info` — a plain-text server summary for `telnet host port`, browsers and curl; `portal-delay` — how many ticks to stand in a portal before changing dimensions in survival mode (80 by default, as in vanilla); `send-error-reports` — enable anonymous error reports sent to developers (false by default; reports contain recent log lines with names, addresses and UUIDs removed).
+- `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`; `prefetch-chunks` / `prefetch-at-once` — how far beyond the view distance the world is generated ahead of the player (0 turns it off); `bedrock-port` and `bedrock-online-mode` (if true, only verified Xbox Live accounts join; if false, all join but only verified get operator rights); `autumn-forests` and `pink-cherry-groves` — small additions not found in vanilla (rare autumn patches in forests, pinkish grass and more petals in cherry groves; `false` keeps the world vanilla); `text-info` — a plain-text server summary for `telnet host port`, browsers and curl; `portal-delay` — how many ticks to stand in a portal before changing dimensions in survival mode (80 by default, as in vanilla); `portal-min-width`, `portal-min-height`, `portal-max-width`, `portal-max-height` — which portal openings light (2×3 to 21×21 by default, as in vanilla; each side 1 to 256); `send-error-reports` — enable anonymous error reports sent to developers (false by default; reports contain recent log lines with names, addresses and UUIDs removed).
 - `config/skins.toml` — which skin sources to use (Mojang, Ely.by) and whether to upload Bedrock player skins to Mojang via MineSkin so Java players can see them.
 - `ops.json` — operators, the original format.
 
@@ -107,11 +113,12 @@ creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
 26.1.2 server and MCSheriffAnya, builds the same contraption with commands, flips
 a lever like a player would, records every block change, block action and
 sound with its tick, and diffs the two recordings. The official server is
-only *run* and observed over the network; its jar is never opened. Seventeen
-scenarios (redstone mechanics, falling sand, water and lava flow) match the
-original tick for tick, except for randomness (seeds from grass, where dropped
-items appear) and one water-meets-lava case decided by tick order. See
-`tools/blackbox/README.md`.
+only *run* and observed over the network; its jar is never opened. The bot can
+record both servers at once (`--parallel`). Of 91 scenarios (redstone,
+containers, rails and minecarts, TNT, sculk sensors, the crafter, fluids, the
+Nether portal) 79 match the original tick for tick in full; the rest differ
+only in random parts — blast spread, where dropped items land, particle
+colours — and in a player pushing a minecart. See `tools/blackbox/README.md`.
 
 ## Contributing
 

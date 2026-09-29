@@ -119,7 +119,7 @@ pub enum Order {
 
     /// Выдать предметы: они лягут в инвентарь, а что не поместится —
     /// упадёт на землю.
-    Give { item: i32, count: i32 },
+    Give { stack: crate::inventory::Stack },
 
     /// Очистить инвентарь.
     Clear,

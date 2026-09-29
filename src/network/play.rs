@@ -31,7 +31,7 @@ use tokio::net::TcpStream;
 use tokio::time::timeout;
 
 use super::nbt;
-use super::packet::{PacketInfo, decode_varint, is_client_disconnect, read_packet, write_body};
+use super::packet::{Outgoing, PacketInfo, decode_varint, is_client_disconnect, read_packet};
 use super::types;
 use super::configuration;
 use super::varint::{encode_string, encode_varint, encode_varlong};
@@ -160,6 +160,13 @@ const PARTICLE_EXPLOSION_EMITTER: i32 = 22;
 const PARTICLE_EXPLOSION: i32 = 23;
 const PARTICLE_POOF: i32 = 59;
 const PARTICLE_SMOKE: i32 = 62;
+const PARTICLE_VIBRATION: i32 = 48;
+
+/// Номер частицы `note` (minecraft-data 26.1, particles.json).
+const PARTICLE_NOTE: i32 = 58;
+
+/// Clientbound Level Particles (protocol.json 26.1, `world_particles`).
+const LEVEL_PARTICLES: i32 = 0x2F;
 
 /// Дальше этого от взрыва пакет не шлётся: звук громкостью 4 слышен на
 /// 4 · 16 = 64 блока (вики, TNT, Sounds: distance=16). [проверить].
@@ -175,6 +182,19 @@ const PROPERTY_SLOT: i32 = 7;
 
 /// Serverbound Close Container — игрок закрыл окно инвентаря.
 const CLOSE_CONTAINER: i32 = 0x13;
+
+/// Click Container Button: кнопка в окне — у кафедры листание и «взять
+/// книгу» (протокол 775, `enchant_item` в minecraft-data).
+const CLICK_CONTAINER_BUTTON: i32 = 0x11;
+
+/// Change Container Slot State: игрок включил или выключил ячейку крафтера
+/// (протокол 775, `set_slot_state` в minecraft-data: номер ячейки, номер
+/// окна, включена ли).
+const CHANGE_CONTAINER_SLOT_STATE: i32 = 0x14;
+
+/// Set Container Property: свойство окна — у кафедры открытая страница
+/// (свойство 0).
+const SET_CONTAINER_PROPERTY: i32 = 0x13;
 
 /// Open Screen: открыть окно хранилища.
 const OPEN_SCREEN: i32 = 0x3B;
@@ -356,8 +376,19 @@ const SOUND_BLOCK: i32 = 4;
 /// Раздел звуков «существа» — в нём звучат сущности (плеск предмета).
 const SOUND_NEUTRAL: i32 = 6;
 
+/// Раздел звуков «игроки» — удар игрока.
+const SOUND_PLAYERS: i32 = 7;
+
 /// Clientbound Block Action — то, что клиент проигрывает у себя сам:
 /// ход поршня, открытие сундука, звук нотного блока.
+/// Clientbound Block Entity Data — данные блок-сущности (вики, Java Edition
+/// protocol/Packets: идёт прямо перед Block Action).
+const BLOCK_ENTITY_DATA: i32 = 0x06;
+
+/// Номер вида блок-сущности головы в реестре `minecraft:block_entity_type`
+/// (`minecraft:skull`, tools/blackbox/data/registries.json).
+const SKULL_BLOCK_ENTITY: i32 = 16;
+
 const BLOCK_ACTION: i32 = 0x07;
 
 /// Clientbound Block Update — «вот какое состояние у этого блока».
@@ -396,6 +427,14 @@ const SET_DEFAULT_SPAWN_POSITION: i32 = 0x61;
 
 /// Serverbound Confirm Teleportation.
 const CONFIRM_TELEPORTATION: i32 = 0x00;
+
+/// Serverbound Interact — игрок щёлкнул по сущности (minecraft-data 26.1,
+/// protocol.json: 0x1a, `use_entity`: номер сущности, рука, точка, присел).
+const USE_ENTITY: i32 = 0x1A;
+
+/// Serverbound Attack — игрок ударил сущность (minecraft-data 26.1,
+/// protocol.json: 0x01, `attack`, одно поле — номер сущности).
+const ATTACK: i32 = 0x01;
 
 /// Clientbound Respawn: переход в другое измерение.
 const RESPAWN: i32 = 0x52;
@@ -509,7 +548,7 @@ struct Entered {
 /// Проводит игрока через игру. Возвращает false, если игрок в мир так и не
 /// попал — например, его ник успели занять, пока он проходил настройку.
 pub async fn play_session(
-    stream: &mut TcpStream,
+    socket: &mut TcpStream,
     name: &str,
     uuid: &[u8; 16],
     look: configuration::ClientLook,
@@ -557,7 +596,18 @@ pub async fn play_session(
 
     // Отписаться от журналов надо и когда вход оборвался ошибкой: иначе
     // журналы держали бы записи для этого читателя вечно.
+    let mut out = Outgoing::new(socket);
+    let stream = &mut out;
+
     let entered = enter_world(stream, &mut player, shared, (came_from, came_to)).await;
+
+    // Что вход успел положить в очередь, уходит и при отказе: там может быть
+    // сообщение об отключении.
+    let entered = match stream.flush().await {
+        Ok(()) => entered,
+        Err(error) => entered.and(Err(error)),
+    };
+
     let Ok(Some(entered)) = entered else {
         log_debug!("Play: игрок {} в мир не попал", player.name);
 
@@ -575,6 +625,9 @@ pub async fn play_session(
     };
 
     let result = read_and_log_play_packets(stream, shared, &mut player, entered).await;
+
+    // Последнее (например, причина отключения) — клиенту, пока сокет жив.
+    let result = result.and(stream.flush().await);
 
     // Как у обычного сервера: «потерял соединение» с причиной, а «вышел»
     // добавит общий список игроков следом.
@@ -672,7 +725,7 @@ pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
 /// проходил настройку. Отказ здесь — окончательный, потому что он выносится
 /// тем же захватом списка, каким игрок в него добавляется.
 async fn enter_world(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     player: &mut PlayerState,
     shared: &Shared,
     (came_from, came_to): (&str, &str),
@@ -777,7 +830,8 @@ async fn enter_world(
 
         // Дерево команд: без него клиент не знает, что можно вводить после косой
         // черты, и не подсказывает.
-        send_commands(stream).await?;
+        let may_tnt = crate::permissions::allowed(shared, &player.uuid, crate::custom_tnt::GIVE_NODE);
+        send_commands(stream, may_tnt).await?;
 
         // Список игроков: сперва те, кто уже на сервере, затем сам игрок.
         // Новичок о них узнаёт только отсюда — записи журнала он ещё не читал.
@@ -864,6 +918,8 @@ async fn enter_world(
             seen_items.insert(item.entity_id, shown_item(item));
         }
 
+        send_all_carts(stream, shared, player).await?;
+
         // Инвентарь: то, с чем игрок вышел в прошлый раз. Без этой посылки клиент
         // показал бы пустой инвентарь, хотя на сервере вещи есть.
         send_container_content(stream, player).await?;
@@ -904,7 +960,7 @@ async fn enter_world(
 /// себя от других. Тот же номер сервер сообщает остальным, когда показывает
 /// им этого игрока.
 async fn send_login(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     dimension: Dimension,
     game_mode: i32,
     entity_id: i32,
@@ -953,7 +1009,7 @@ fn push_spawn_info(body: &mut Vec<u8>, dimension: Dimension, game_mode: i32) {
 
 /// Отправляет Respawn — игрок переходит в другое измерение. Клиент при этом
 /// забывает все чанки и сущности: их надо прислать заново.
-async fn send_respawn(stream: &mut TcpStream, dimension: Dimension, game_mode: i32) -> io::Result<()> {
+async fn send_respawn(stream: &mut Outgoing<'_>, dimension: Dimension, game_mode: i32) -> io::Result<()> {
     let mut body = encode_varint(RESPAWN);
 
     push_spawn_info(&mut body, dimension, game_mode);
@@ -964,7 +1020,7 @@ async fn send_respawn(stream: &mut TcpStream, dimension: Dimension, game_mode: i
 
 /// Отправляет Synchronize Player Position — ставит игрока в точку, где он
 /// стоял в прошлый раз (или в точку появления, если он здесь впервые).
-async fn send_player_position(stream: &mut TcpStream, player: &mut PlayerState) -> io::Result<()> {
+async fn send_player_position(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
     let mut body = encode_varint(PLAYER_POSITION);
 
     // У каждого переноса свой номер: подтверждение старого не должно
@@ -986,16 +1042,25 @@ async fn send_player_position(stream: &mut TcpStream, player: &mut PlayerState) 
     write_body(stream, body).await
 }
 
+/// Кладёт пакет в очередь подключения (см. `Outgoing`): он уйдёт вместе с
+/// остальными, когда подключение соберётся ждать.
+async fn write_body(stream: &mut Outgoing<'_>, body: Vec<u8>) -> io::Result<()> {
+    stream.send(&body).await
+}
+
 /// Читает подтверждение телепортации, пропуская прочие пакеты клиента —
 /// кроме настроек: их клиент шлёт сразу после входа, и выбросить их значило
 /// бы потерять, например, его ведущую руку. Возвращает последние из них.
 async fn read_confirm_teleportation(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
 ) -> io::Result<Option<configuration::ClientLook>> {
     let mut look = None;
 
+    // Клиент подтвердит только то, что получил.
+    stream.flush().await?;
+
     loop {
-        let packet = read_packet(stream).await?;
+        let packet = read_packet(stream.stream()).await?;
 
         if packet.id == CONFIRM_TELEPORTATION {
             log_debug!("Play: клиент подтвердил телепортацию");
@@ -1022,7 +1087,7 @@ async fn read_confirm_teleportation(
 ///
 /// «Показывать в списке» — отдельное действие со своим битом, и без него
 /// клиент игрока знает, но в списке не показывает: список остаётся пустым.
-async fn send_player_info(stream: &mut TcpStream, member: &Member) -> io::Result<()> {
+async fn send_player_info(stream: &mut Outgoing<'_>, member: &Member) -> io::Result<()> {
     let mut body = encode_varint(PLAYER_INFO_UPDATE);
 
     body.push(PLAYER_INFO_ADD | PLAYER_INFO_GAME_MODE | PLAYER_INFO_LISTED);
@@ -1067,7 +1132,7 @@ async fn send_player_info(stream: &mut TcpStream, member: &Member) -> io::Result
 ///
 /// Именно этим клиент переключает режим игры, а не текстом в чате: текст
 /// только уведомляет игрока, а режим меняется отсюда.
-async fn send_game_mode(stream: &mut TcpStream, uuid: &[u8; 16], game_mode: i32) -> io::Result<()> {
+async fn send_game_mode(stream: &mut Outgoing<'_>, uuid: &[u8; 16], game_mode: i32) -> io::Result<()> {
     let mut body = encode_varint(PLAYER_INFO_UPDATE);
 
     body.push(PLAYER_INFO_GAME_MODE);
@@ -1079,7 +1144,7 @@ async fn send_game_mode(stream: &mut TcpStream, uuid: &[u8; 16], game_mode: i32)
 }
 
 /// Отправляет Player Info Remove — игрок пропал из списка.
-async fn send_player_info_remove(stream: &mut TcpStream, uuid: &[u8; 16]) -> io::Result<()> {
+async fn send_player_info_remove(stream: &mut Outgoing<'_>, uuid: &[u8; 16]) -> io::Result<()> {
     let mut body = encode_varint(PLAYER_INFO_REMOVE);
 
     body.extend_from_slice(&encode_varint(1)); // один игрок
@@ -1092,7 +1157,7 @@ async fn send_player_info_remove(stream: &mut TcpStream, uuid: &[u8; 16]) -> io:
 ///
 /// Обязательно после Player Info Update на этого же игрока: без записи
 /// в списке клиент сущность не создаст, и игрок останется невидимым.
-async fn send_add_entity(stream: &mut TcpStream, member: &Member) -> io::Result<()> {
+async fn send_add_entity(stream: &mut Outgoing<'_>, member: &Member) -> io::Result<()> {
     let mut body = encode_varint(ADD_ENTITY);
     let position = member.position;
 
@@ -1220,7 +1285,7 @@ fn pick_up_items(shared: &Shared, player: &mut PlayerState) -> Vec<i32> {
 /// Двумя пакетами: сперва сама сущность, потом её свойство — какой это
 /// предмет. Без второго клиент нарисует пустоту: вид сущности он знает,
 /// а что именно лежит — нет.
-async fn send_dropped_item(stream: &mut TcpStream, item: &Dropped) -> io::Result<()> {
+async fn send_dropped_item(stream: &mut Outgoing<'_>, item: &Dropped) -> io::Result<()> {
     let mut body = encode_varint(ADD_ENTITY);
 
     let kind = match (item.fuse, item.block) {
@@ -1302,10 +1367,286 @@ async fn send_dropped_item(stream: &mut TcpStream, item: &Dropped) -> io::Result
     write_body(stream, data).await
 }
 
+/// Вагонетка, как её знает клиент: последнее присланное место (точное и
+/// в 1/4096 блока, от которых считаются шаги), скорость, поворот байтами,
+/// «на земле», число ударов, толчков и переносов.
+#[derive(Clone, Copy)]
+struct ShownCart {
+    place: (f64, f64, f64),
+    grid: (i64, i64, i64),
+    speed: (f64, f64, f64),
+    yaw: u8,
+    pitch: u8,
+    on_ground: bool,
+    hits: u32,
+    impulses: u32,
+    teleports: u32,
+    primes: u32,
+    burning: bool,
+}
+
+impl ShownCart {
+    /// Вагонетка в том виде, в каком её показал пакет появления.
+    fn of(cart: &crate::minecart::Minecart) -> Self {
+        Self {
+            place: (cart.x, cart.y, cart.z),
+            grid: grid_of((cart.x, cart.y, cart.z)),
+            speed: (cart.vx, cart.vy, cart.vz),
+            yaw: cart_angle(cart.yaw),
+            pitch: cart_angle(cart.pitch),
+            on_ground: cart.on_ground,
+            hits: cart.hits,
+            impulses: cart.impulses,
+            teleports: cart.teleports,
+            primes: cart.primes,
+            burning: cart.fuel > 0,
+        }
+    }
+}
+
+/// Место в шагах по 1/4096 блока — так его считает пакет сдвига.
+fn grid_of((x, y, z): (f64, f64, f64)) -> (i64, i64, i64) {
+    ((x * 4096.0).round() as i64, (y * 4096.0).round() as i64, (z * 4096.0).round() as i64)
+}
+
+/// Угол байтом, как его шлёт оригинал: с отбрасыванием дробной части
+/// (зонд minecart-curve: 52,9° уходит как 37, а не 38).
+fn cart_angle(degrees: f32) -> u8 {
+    ((degrees * 256.0 / 360.0).floor() as i32 & 0xFF) as u8
+}
+
+/// Показывает клиенту все вагонетки мира, где он теперь: о них он из
+/// журнала не узнает — они появились раньше.
+async fn send_all_carts(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    let carts: Vec<crate::minecart::Minecart> =
+        shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").carts().to_vec();
+
+    for cart in &carts {
+        send_cart(stream, cart).await?;
+        player.seen_carts.insert(cart.entity_id, ShownCart::of(cart));
+    }
+
+    Ok(())
+}
+
+/// Досылает клиенту, что стало с вагонетками к началу этого такта (снято
+/// с оригинала зондом, minecart-powered и minecart-hit):
+///
+/// - свойства удара (удар, сторона, урон) — каждый такт, только
+///   изменившиеся; после удара — ещё и скорость;
+/// - раз в 3 такта от появления — скорость, если она заметно изменилась
+///   (квадрат разницы больше 1e-7 или стала нулём), и место: шагом, если
+///   сдвинулась хотя бы на 1/362 блока, а раз в 60 тактов — в любом случае;
+///   сменила «на земле» — сверкой места целиком; повернулась — с поворотом.
+async fn send_cart_moves(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    /// Раз во сколько тактов сообщается место и скорость, и раз во сколько —
+    /// место, даже если оно не изменилось.
+    const EVERY: u64 = 3;
+    const FORCED: u64 = 60;
+
+    /// Меньшие сдвиги и перемены скорости не сообщаются.
+    const MOVED: f64 = 7.629_394_531_25e-6;
+    const SPED: f64 = 1e-7;
+
+    if player.seen_carts.is_empty() {
+        return Ok(());
+    }
+
+    let carts: Vec<(i32, u64, u32, crate::minecart::Snapshot, u32)> = shared
+        .items_in(player.dimension)
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .carts()
+        .iter()
+        .map(|cart| (cart.entity_id, cart.age, cart.teleports, cart.last, cart.primes))
+        .collect();
+
+    for (entity_id, age, teleports, now, primes) in carts {
+        let Some(mut shown) = player.seen_carts.get(&entity_id).copied() else {
+            continue;
+        };
+
+        send_cart_data(stream, entity_id, &now).await?;
+
+        // Вагонетку с динамитом подожгли: событие сущности 10 — клиент
+        // рисует мигание (minecraft-data 26.1: 0x22, `entity_status`,
+        // номер — i32, событие — байт). Уходит в такте поджога, не дожидаясь
+        // рассылки (зонд t-act).
+        if primes != shown.primes {
+            const ENTITY_EVENT: i32 = 0x22;
+            const PRIMED: u8 = 10;
+
+            let mut body = encode_varint(ENTITY_EVENT);
+
+            body.extend_from_slice(&entity_id.to_be_bytes());
+            body.push(PRIMED);
+            write_body(stream, body).await?;
+            shown.primes = primes;
+        }
+
+        // Печь загорелась или погасла: свойство `fuel` (minecraft-data 26.1,
+        // entities.json: четырнадцатое, логическое — вид 8).
+        if now.burning != shown.burning {
+            const FUEL: u8 = 13;
+            const PROPERTY_BOOLEAN: i32 = 8;
+
+            let mut data = encode_varint(SET_ENTITY_DATA);
+
+            data.extend_from_slice(&encode_varint(entity_id));
+            data.push(FUEL);
+            data.extend_from_slice(&encode_varint(PROPERTY_BOOLEAN));
+            data.push(u8::from(now.burning));
+            data.push(PROPERTIES_END);
+            write_body(stream, data).await?;
+            shown.burning = now.burning;
+        }
+
+        let speed = (now.vx, now.vy, now.vz);
+
+        if now.hits != shown.hits || now.impulses != shown.impulses {
+            (shown.hits, shown.impulses) = (now.hits, now.impulses);
+            send_velocity(stream, entity_id, speed).await?;
+            shown.speed = speed;
+        }
+
+        // Такт с появления: сразу после появления — нулевой.
+        let tick = age.saturating_sub(1);
+
+        if tick % EVERY == 0 {
+            let change = (speed.0 - shown.speed.0).powi(2) + (speed.1 - shown.speed.1).powi(2) + (speed.2 - shown.speed.2).powi(2);
+
+            if change > SPED || (speed == (0.0, 0.0, 0.0) && shown.speed != (0.0, 0.0, 0.0)) {
+                send_velocity(stream, entity_id, speed).await?;
+                shown.speed = speed;
+            }
+
+            let place = (now.x, now.y, now.z);
+            let grid = grid_of(place);
+            let moved = (place.0 - shown.place.0).powi(2) + (place.1 - shown.place.1).powi(2) + (place.2 - shown.place.2).powi(2) >= MOVED;
+            let (yaw, pitch) = (cart_angle(now.yaw), cart_angle(now.pitch));
+            let turned = yaw != shown.yaw || pitch != shown.pitch;
+            let step = (grid.0 - shown.grid.0, grid.1 - shown.grid.1, grid.2 - shown.grid.2);
+            let fits = |value: i64| i16::try_from(value).is_ok();
+            let whole = Position { x: now.x, y: now.y, z: now.z, yaw: now.yaw, pitch: now.pitch, on_ground: now.on_ground };
+
+            if teleports != shown.teleports || now.on_ground != shown.on_ground || !(fits(step.0) && fits(step.1) && fits(step.2)) {
+                send_teleport_with_speed(stream, entity_id, whole, speed).await?;
+                (shown.place, shown.grid, shown.yaw, shown.pitch) = (place, grid, yaw, pitch);
+                shown.on_ground = now.on_ground;
+                shown.teleports = teleports;
+            } else if moved || tick % FORCED == 0 || turned {
+                let kind = match (moved || tick % FORCED == 0, turned) {
+                    (true, true) => ENTITY_POSITION_AND_ROTATION,
+                    (true, false) => ENTITY_POSITION,
+                    (false, _) => ENTITY_ROTATION,
+                };
+                let mut body = encode_varint(kind);
+
+                body.extend_from_slice(&encode_varint(entity_id));
+
+                if kind != ENTITY_ROTATION {
+                    push_i16(&mut body, step.0 as i16);
+                    push_i16(&mut body, step.1 as i16);
+                    push_i16(&mut body, step.2 as i16);
+                    (shown.place, shown.grid) = (place, grid);
+                }
+
+                if kind != ENTITY_POSITION {
+                    body.push(yaw);
+                    body.push(pitch);
+                    (shown.yaw, shown.pitch) = (yaw, pitch);
+                }
+
+                body.push(u8::from(now.on_ground));
+                write_body(stream, body).await?;
+            }
+        }
+
+        player.seen_carts.insert(entity_id, shown);
+    }
+
+    Ok(())
+}
+
+/// Свойства удара, записанные за такт (minecraft-data 26.1,
+/// entities.json: восьмое — `hurt`, девятое — `hurtdir`, десятое — `damage`;
+/// виды значений из protocol.json: 1 — int, 3 — float).
+async fn send_cart_data(stream: &mut Outgoing<'_>, entity_id: i32, now: &crate::minecart::Snapshot) -> io::Result<()> {
+    const HURT: u8 = 8;
+    const HURT_DIR: u8 = 9;
+    const DAMAGE: u8 = 10;
+    const PROPERTY_FLOAT: i32 = 3;
+
+    use crate::minecart::{DIRTY_DAMAGE, DIRTY_DIR, DIRTY_HURT};
+
+    if now.dirty == 0 {
+        return Ok(());
+    }
+
+    let mut data = encode_varint(SET_ENTITY_DATA);
+
+    data.extend_from_slice(&encode_varint(entity_id));
+
+    if now.dirty & DIRTY_HURT != 0 {
+        data.push(HURT);
+        data.extend_from_slice(&encode_varint(PROPERTY_INT));
+        data.extend_from_slice(&encode_varint(now.hurt_time));
+    }
+
+    if now.dirty & DIRTY_DIR != 0 {
+        data.push(HURT_DIR);
+        data.extend_from_slice(&encode_varint(PROPERTY_INT));
+        data.extend_from_slice(&encode_varint(now.hurt_dir));
+    }
+
+    if now.dirty & DIRTY_DAMAGE != 0 {
+        data.push(DAMAGE);
+        data.extend_from_slice(&encode_varint(PROPERTY_FLOAT));
+        push_f32(&mut data, now.damage);
+    }
+
+    data.push(PROPERTIES_END);
+
+    write_body(stream, data).await
+}
+
+/// Set Entity Motion — скорость сущности (minecraft-data 26.1: 0x65,
+/// `entity_velocity`).
+async fn send_velocity(stream: &mut Outgoing<'_>, entity_id: i32, (x, y, z): (f64, f64, f64)) -> io::Result<()> {
+    const SET_ENTITY_MOTION: i32 = 0x65;
+
+    let mut body = encode_varint(SET_ENTITY_MOTION);
+
+    body.extend_from_slice(&encode_varint(entity_id));
+    types::push_velocity(&mut body, x, y, z);
+
+    write_body(stream, body).await
+}
+
+/// Add Entity для вагонетки: вид, место, скорость и поворот. Свойства
+/// (удар, урон) у новой вагонетки обычные — пакета свойств нет.
+async fn send_cart(stream: &mut Outgoing<'_>, cart: &crate::minecart::Minecart) -> io::Result<()> {
+    let mut body = encode_varint(ADD_ENTITY);
+
+    body.extend_from_slice(&encode_varint(cart.entity_id));
+    body.extend_from_slice(&cart.uuid);
+    body.extend_from_slice(&encode_varint(cart.kind.java_type()));
+    push_f64(&mut body, cart.x);
+    push_f64(&mut body, cart.y);
+    push_f64(&mut body, cart.z);
+    types::push_velocity(&mut body, cart.vx, cart.vy, cart.vz);
+    body.push(cart_angle(cart.pitch));
+    body.push(cart_angle(cart.yaw));
+    body.push(0);
+    body.extend_from_slice(&encode_varint(0));
+
+    write_body(stream, body).await
+}
+
 /// Отправляет подбор предмета: клиент рисует, как предмет летит к тому,
 /// кто его поднял.
 async fn send_pick_up(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     entity_id: i32,
     by: i32,
     count: i32,
@@ -1321,11 +1662,12 @@ async fn send_pick_up(
 
 /// Досылает клиенту всё, что случилось с лежащими предметами.
 async fn send_pending_item_changes(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     dimension: crate::dimension::Dimension,
     from: &mut usize,
     seen: &mut SeenItems,
+    carts: &mut HashMap<i32, ShownCart>,
     reader: journal::Reader,
 ) -> io::Result<()> {
     let changes = {
@@ -1351,6 +1693,7 @@ async fn send_pending_item_changes(
                 // подбора.
                 send_remove_entity(stream, entity_id).await?;
                 seen.remove(&entity_id);
+                carts.remove(&entity_id);
             }
             items::Change::Fuse { entity_id, fuse } => {
                 if seen.contains_key(&entity_id) {
@@ -1363,6 +1706,10 @@ async fn send_pending_item_changes(
                     data.push(PROPERTIES_END);
                     write_body(stream, data).await?;
                 }
+            }
+            items::Change::Cart(cart) => {
+                send_cart(stream, &cart).await?;
+                carts.insert(cart.entity_id, ShownCart::of(&cart));
             }
             items::Change::Taken { entity_id, by, count } => {
                 send_pick_up(stream, entity_id, by, count).await?;
@@ -1380,7 +1727,7 @@ async fn send_pending_item_changes(
 /// Предметы переносятся целиком, а не смещениями: в пакете переноса есть
 /// ещё и скорость, а она клиенту нужна — он досчитывает полёт сам.
 async fn send_item_moves(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     dimension: crate::dimension::Dimension,
     seen: &mut SeenItems,
@@ -1445,24 +1792,59 @@ fn item_place((x, y, z): (f64, f64, f64), on_ground: bool) -> Position {
 
 /// Дописывает «слот» протокола: сколько предметов и какой это предмет.
 ///
-/// Довесков сервер не передаёт: предметы у нас пока обычные.
+/// Довески передаются только у особого динамита (`slot_components`), у
+/// прочих предметов их нет.
 fn push_slot(body: &mut Vec<u8>, stack: Option<Stack>) {
     match stack {
         Some(stack) => {
             body.extend_from_slice(&encode_varint(stack.count));
             body.extend_from_slice(&encode_varint(stack.item));
-            body.extend_from_slice(&encode_varint(0)); // довесков не добавляем
-            body.extend_from_slice(&encode_varint(0)); // и не убираем
+
+            match stack.tnt.and_then(crate::custom_tnt::by_id) {
+                Some(kind) => body.extend_from_slice(&slot_components(kind)),
+                None => {
+                    body.extend_from_slice(&encode_varint(0)); // довесков не добавляем
+                    body.extend_from_slice(&encode_varint(0)); // и не убираем
+                }
+            }
         }
         None => body.extend_from_slice(&encode_varint(0)),
     }
+}
+
+/// Номера довесков предмета в 775 (minecraft-data, protocol.json,
+/// SlotComponentType): custom_data, custom_name, lore.
+const COMPONENT_CUSTOM_DATA: i32 = 0;
+const COMPONENT_CUSTOM_NAME: i32 = 6;
+const COMPONENT_LORE: i32 = 11;
+
+/// Довески особого динамита: три добавленных, ни одного убранного —
+/// цветное название без курсива, строка описания серым и пометка
+/// `{mcsheriffanya_tnt:"вид"}` в custom_data (её клиент в творческом
+/// режиме присылает обратно — так вид и узнаётся).
+fn slot_components(kind: &crate::custom_tnt::Kind) -> Vec<u8> {
+    let text = |text: &str, colour: &str| {
+        nbt::Compound::new().string("text", text).string("color", colour).boolean("italic", false).encode_network()
+    };
+
+    let mut out = encode_varint(3);
+
+    out.extend_from_slice(&encode_varint(0));
+    out.extend_from_slice(&encode_varint(COMPONENT_CUSTOM_NAME));
+    out.extend_from_slice(&text(kind.title, kind.colour));
+    out.extend_from_slice(&encode_varint(COMPONENT_LORE));
+    out.extend_from_slice(&encode_varint(1));
+    out.extend_from_slice(&text(kind.lore, "gray"));
+    out.extend_from_slice(&encode_varint(COMPONENT_CUSTOM_DATA));
+    out.extend_from_slice(&nbt::Compound::new().string(crate::custom_tnt::MARKER, kind.name).encode_network());
+    out
 }
 
 /// Отправляет выбранный слот панели быстрого доступа.
 ///
 /// Нужно при входе: игрок должен вернуться с тем же предметом в руке, с каким
 /// вышел.
-async fn send_held_slot(stream: &mut TcpStream, slot: i32) -> io::Result<()> {
+async fn send_held_slot(stream: &mut Outgoing<'_>, slot: i32) -> io::Result<()> {
     let mut body = encode_varint(SET_HELD_ITEM);
 
     body.extend_from_slice(&encode_varint(slot));
@@ -1475,7 +1857,7 @@ async fn send_held_slot(stream: &mut TcpStream, slot: i32) -> io::Result<()> {
 /// Этим же он и восстанавливается после перезахода: клиент показывает то,
 /// что прислал сервер.
 async fn send_container_content(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     player: &mut PlayerState,
 ) -> io::Result<()> {
     if player.window.is_some() {
@@ -1503,7 +1885,7 @@ async fn send_container_content(
 
 /// Отправляет содержимое одного слота — когда изменился только он.
 async fn send_container_slot(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     player: &mut PlayerState,
     slot: i32,
 ) -> io::Result<()> {
@@ -1544,7 +1926,7 @@ async fn send_container_slot(
 /// Мир ровный и бесконечный: чанк складывается, когда до него дошли, и
 /// с этого мгновения хранится вместе с остальным миром.
 async fn send_chunks_around(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     dimension: crate::dimension::Dimension,
     (center_x, center_z): (i32, i32),
@@ -1616,6 +1998,10 @@ async fn send_chunks_around(
             needed.retain(|(chunk_x, chunk_z)| !world.has_chunk(*chunk_x, *chunk_z));
             Arc::new(world.source())
         };
+
+        // Пока чанки складываются и светятся, уже готовое (выгрузка чанков,
+        // центр обзора) не должно ждать в очереди.
+        stream.flush().await?;
 
         let mut coming = Vec::new();
 
@@ -1790,7 +2176,7 @@ impl Prefetch {
 /// Отправляет Unload Chunk — «этот чанк можно забыть».
 ///
 /// Поля идут наоборот привычному: сперва Z, потом X.
-async fn send_unload_chunk(stream: &mut TcpStream, chunk_x: i32, chunk_z: i32) -> io::Result<()> {
+async fn send_unload_chunk(stream: &mut Outgoing<'_>, chunk_x: i32, chunk_z: i32) -> io::Result<()> {
     let mut body = encode_varint(UNLOAD_CHUNK);
 
     push_i32(&mut body, chunk_z);
@@ -1806,7 +2192,7 @@ async fn send_unload_chunk(stream: &mut TcpStream, chunk_x: i32, chunk_z: i32) -
 /// него уже есть, но второй слой, шапка и куртка, считается выключенным, —
 /// и любого игрока правшой.
 async fn send_look(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     entity_id: i32,
     skin_parts: u8,
     main_hand: u8,
@@ -1841,7 +2227,7 @@ async fn send_look(
 }
 
 /// Отправляет Entity Animation: чужой игрок взмахнул рукой.
-async fn send_swing(stream: &mut TcpStream, entity_id: i32) -> io::Result<()> {
+async fn send_swing(stream: &mut Outgoing<'_>, entity_id: i32) -> io::Result<()> {
     let mut body = encode_varint(ENTITY_ANIMATION);
 
     body.extend_from_slice(&encode_varint(entity_id));
@@ -1874,7 +2260,7 @@ fn world_age(shared: &Shared, dimension: crate::dimension::Dimension) -> (i64, i
 /// Часы у нас одни — те, что объявлены в реестре мировых часов, поэтому
 /// запись одна, с номером 0. Скорость обычная, доля такта нулевая:
 /// время идёт ровно по тактам сервера.
-async fn send_time(stream: &mut TcpStream, age: i64, time: i64) -> io::Result<()> {
+async fn send_time(stream: &mut Outgoing<'_>, age: i64, time: i64) -> io::Result<()> {
     let mut body = encode_varint(UPDATE_TIME);
 
     body.extend_from_slice(&age.to_be_bytes());
@@ -1893,7 +2279,7 @@ async fn send_time(stream: &mut TcpStream, age: i64, time: i64) -> io::Result<()
 /// конец помечается старшим битом номера места. Мы сообщаем одно место,
 /// поэтому бит не ставим — список сразу и заканчивается.
 async fn send_equipment(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     entity_id: i32,
     held: Option<Stack>,
 ) -> io::Result<()> {
@@ -1907,7 +2293,7 @@ async fn send_equipment(
 }
 
 /// Отправляет Remove Entities — сущность игрока пропадает из мира.
-async fn send_remove_entity(stream: &mut TcpStream, entity_id: i32) -> io::Result<()> {
+async fn send_remove_entity(stream: &mut Outgoing<'_>, entity_id: i32) -> io::Result<()> {
     let mut body = encode_varint(REMOVE_ENTITIES);
 
     body.extend_from_slice(&encode_varint(1)); // одна сущность
@@ -1922,85 +2308,80 @@ async fn send_remove_entity(stream: &mut TcpStream, entity_id: i32) -> io::Resul
 /// считается от них, и если отправить его от другой точки, игрок на экране
 /// окажется не там, где он на самом деле.
 async fn send_other_moves(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     player: &PlayerState,
     seen: &mut Seen,
 ) -> io::Result<()> {
-    let others: Vec<Member> = shared
+    // Круг подключения идёт по нескольку раз за такт, и копировать каждый
+    // раз всех игроков целиком (с ником и скином) незачем: сверке хватает
+    // того, что видно другим. Целиком копируется только тот, кого клиенту
+    // надо показать впервые.
+    let others: Vec<(Shown, i32, bool, Option<Member>)> = shared
         .players
         .lock()
         .expect("список игроков захвачен другим потоком")
         .members()
-        .to_vec();
+        .iter()
+        .filter(|member| member.uuid != player.uuid)
+        .map(|member| {
+            let now = Shown {
+                position: member.position,
+                skin_parts: member.skin_parts,
+                main_hand: member.main_hand,
+                held: member.held,
+                sneaking: member.sneaking,
+                swings: member.swings,
+            };
+            let here = member.dimension == player.dimension;
+            let new = (here && !seen.contains_key(&member.entity_id)).then(|| member.clone());
 
-    for member in others {
-        if member.uuid == player.uuid {
-            continue;
-        }
+            (now, member.entity_id, here, new)
+        })
+        .collect();
 
+    for (now, entity_id, here, new) in others {
         // Видно только тех, кто в том же измерении: пришёл — показать,
         // ушёл в другое — убрать.
-        let here = member.dimension == player.dimension;
-
-        let Some(shown) = seen.get(&member.entity_id).copied() else {
-            if here {
+        let Some(shown) = seen.get(&entity_id).copied() else {
+            if let Some(member) = new {
                 send_add_entity(stream, &member).await?;
                 send_look(stream, member.entity_id, member.skin_parts, member.main_hand, member.sneaking).await?;
                 send_equipment(stream, member.entity_id, member.held).await?;
-                seen.insert(
-                    member.entity_id,
-                    Shown {
-                        position: member.position,
-                        skin_parts: member.skin_parts,
-                        main_hand: member.main_hand,
-                        held: member.held,
-                        sneaking: member.sneaking,
-                        swings: member.swings,
-                    },
-                );
+                seen.insert(entity_id, now);
             }
             continue;
         };
 
         if !here {
-            send_remove_entity(stream, member.entity_id).await?;
-            seen.remove(&member.entity_id);
+            send_remove_entity(stream, entity_id).await?;
+            seen.remove(&entity_id);
             continue;
         }
-
-        let now = Shown {
-            position: member.position,
-            skin_parts: member.skin_parts,
-            main_hand: member.main_hand,
-            held: member.held,
-            sneaking: member.sneaking,
-            swings: member.swings,
-        };
 
         if now == shown {
             continue;
         }
 
         if now.skin_parts != shown.skin_parts || now.main_hand != shown.main_hand || now.sneaking != shown.sneaking {
-            send_look(stream, member.entity_id, now.skin_parts, now.main_hand, now.sneaking).await?;
+            send_look(stream, entity_id, now.skin_parts, now.main_hand, now.sneaking).await?;
         }
 
         // Взмахнул рукой — один взмах, сколько бы их ни набежало с прошлого
         // раза: подряд они всё равно слились бы в один.
         if now.swings != shown.swings {
-            send_swing(stream, member.entity_id).await?;
+            send_swing(stream, entity_id).await?;
         }
 
         if now.held != shown.held {
-            send_equipment(stream, member.entity_id, now.held).await?;
+            send_equipment(stream, entity_id, now.held).await?;
         }
 
         if now.position != shown.position {
-            send_move(stream, member.entity_id, shown.position, now.position).await?;
+            send_move(stream, entity_id, shown.position, now.position).await?;
         }
 
-        seen.insert(member.entity_id, now);
+        seen.insert(entity_id, now);
     }
 
     Ok(())
@@ -2012,7 +2393,7 @@ async fn send_other_moves(
 /// Смещение записывается коротким числом, поэтому большое перемещение так
 /// не рассказать: тогда сообщаются координаты целиком.
 async fn send_move(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     entity_id: i32,
     from: Position,
     to: Position,
@@ -2084,7 +2465,7 @@ fn move_body(entity_id: i32, from: Position, to: Position) -> Option<Vec<u8>> {
 }
 
 /// Переносит сущность на новое место целиком.
-async fn send_teleport(stream: &mut TcpStream, entity_id: i32, to: Position) -> io::Result<()> {
+async fn send_teleport(stream: &mut Outgoing<'_>, entity_id: i32, to: Position) -> io::Result<()> {
     send_teleport_with_speed(stream, entity_id, to, (0.0, 0.0, 0.0)).await
 }
 
@@ -2094,7 +2475,7 @@ async fn send_teleport(stream: &mut TcpStream, entity_id: i32, to: Position) -> 
 /// между пакетами сервера. Если ему не сказать, что предмет остановился, он
 /// продолжит тянуть его вниз — и предмет уедет в пол.
 async fn send_teleport_with_speed(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     entity_id: i32,
     to: Position,
     speed: (f64, f64, f64),
@@ -2121,7 +2502,7 @@ async fn send_teleport_with_speed(
 }
 
 /// Отправляет System Chat Message — сообщение в чат.
-async fn send_system_chat(stream: &mut TcpStream, text: &str) -> io::Result<()> {
+async fn send_system_chat(stream: &mut Outgoing<'_>, text: &str) -> io::Result<()> {
     let mut body = encode_varint(SYSTEM_CHAT);
 
     push_text_component(&mut body, text);
@@ -2146,7 +2527,11 @@ fn push_text_component(out: &mut Vec<u8>, text: &str) {
 /// слова, поэтому дерево простое. Слово, на котором команда считается
 /// законченной, помечается отдельным битом — без него клиент не даст
 /// отправить команду.
-async fn send_commands(stream: &mut TcpStream) -> io::Result<()> {
+///
+/// Ветка `tnt` (особый динамит) — только тем, кому она позволена
+/// (`may_tnt`): остальным её незачем и видеть. Права, выданные позже,
+/// откроют её при следующем входе.
+async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<()> {
     /// Виды узлов — младшие два бита флагов.
     const NODE_ROOT: u8 = 0x00;
     const NODE_LITERAL: u8 = 0x01;
@@ -2185,6 +2570,22 @@ async fn send_commands(stream: &mut TcpStream) -> io::Result<()> {
         node
     }
 
+    /// Разборщик «целое число» и его флаг «есть нижняя граница».
+    const PARSER_INTEGER: i32 = 3;
+    const HAS_MIN: u8 = 0x01;
+
+    /// Узел-число не меньше `min`: клиент сам проверит и подскажет.
+    fn integer(name: &str, min: i32) -> Vec<u8> {
+        let mut node = vec![NODE_ARGUMENT | EXECUTABLE];
+
+        node.extend_from_slice(&encode_varint(0));
+        node.extend_from_slice(&encode_string(name));
+        node.extend_from_slice(&encode_varint(PARSER_INTEGER));
+        node.push(HAS_MIN);
+        node.extend_from_slice(&min.to_be_bytes());
+        node
+    }
+
     /// Узел-слово: имя и номера узлов-продолжений.
     fn literal(name: &str, children: &[i32], executable: bool) -> Vec<u8> {
         let mut node = vec![NODE_LITERAL | if executable { EXECUTABLE } else { 0 }];
@@ -2206,7 +2607,11 @@ async fn send_commands(stream: &mut TcpStream) -> io::Result<()> {
     nodes.push({
         let mut root = vec![NODE_ROOT];
 
-        let children = [1, 6, 7, 8, 11, 13, 15, 17, 19, 21, 23, 25, 27];
+        let mut children = vec![1, 6, 7, 8, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31];
+
+        if may_tnt {
+            children.push(TNT_NODE);
+        }
 
         root.extend_from_slice(&encode_varint(children.len() as i32));
 
@@ -2264,6 +2669,25 @@ async fn send_commands(stream: &mut TcpStream) -> io::Result<()> {
     nodes.push(literal("item", &[28], false));
     nodes.push(argument("что куда", &[], GREEDY));
 
+    // summon <вагонетка> <x> <y> <z> и kill @e[type=<вагонетка>]
+    nodes.push(literal("summon", &[30], false));
+    nodes.push(argument("что где", &[], GREEDY));
+    nodes.push(literal("kill", &[32], false));
+    nodes.push(argument("кого", &[], GREEDY));
+
+    // tnt give <игрок> <вид> [сколько] и tnt list: игрока и вид подсказывает
+    // сервер (виды — из таблицы custom_tnt.rs), число проверяет клиент.
+    const TNT_NODE: i32 = 33;
+
+    if may_tnt {
+        nodes.push(literal("tnt", &[TNT_NODE + 1, TNT_NODE + 5], false));
+        nodes.push(literal("give", &[TNT_NODE + 2], false));
+        nodes.push(argument("игрок", &[TNT_NODE + 3], SINGLE_WORD));
+        nodes.push(argument("вид", &[TNT_NODE + 4], SINGLE_WORD));
+        nodes.push(integer("сколько", 1));
+        nodes.push(literal("list", &[], true));
+    }
+
     let mut body = encode_varint(COMMANDS);
 
     body.extend_from_slice(&encode_varint(nodes.len() as i32));
@@ -2282,7 +2706,7 @@ async fn send_commands(stream: &mut TcpStream) -> io::Result<()> {
 /// Клиент присылает всё, что набрано, и ждёт, чем дописать последнее слово.
 /// Сам он умеет дополнять только названия команд: имена игроков знает
 /// только сервер.
-fn suggestions(payload: &[u8], shared: &Shared) -> Option<Suggestions> {
+fn suggestions(payload: &[u8], shared: &Shared, who: &[u8; 16]) -> Option<Suggestions> {
     let mut cursor = Cursor::new(payload);
 
     let id = cursor.varint()?;
@@ -2300,21 +2724,37 @@ fn suggestions(payload: &[u8], shared: &Shared) -> Option<Suggestions> {
         id,
         start,
         length,
-        matches: hints_for(&text, typed, shared),
+        matches: hints_for(&text, typed, shared, who),
     })
 }
 
 /// Что подсказать: имена игроков, названия предметов или что-то ещё —
 /// смотря какая команда и какое слово по счёту дописывается.
-fn hints_for(text: &str, typed: &str, shared: &Shared) -> Vec<String> {
+fn hints_for(text: &str, typed: &str, shared: &Shared, who: &[u8; 16]) -> Vec<String> {
     let line = text.strip_prefix('/').unwrap_or(text);
     let mut words = line.split(' ');
 
     let command = words.next().unwrap_or("");
+    let first = words.clone().next().unwrap_or("");
     // Сколько слов уже написано после самой команды: дописываемое считается.
     let written = words.count();
 
+    let starting = |list: &mut dyn Iterator<Item = &str>| -> Vec<String> {
+        list.filter(|word| word.starts_with(typed)).map(|word| word.to_string()).collect()
+    };
+
+    // Особый динамит: подсказки — только тем, кому он позволен.
+    if command == "tnt" && !crate::permissions::allowed(shared, who, crate::custom_tnt::GIVE_NODE) {
+        return Vec::new();
+    }
+
     match (command, written) {
+        ("tnt", 1) => starting(&mut ["give", "list"].into_iter()),
+        ("tnt", 2) if first == "give" => player_names(shared, typed),
+        ("tnt", 3) if first == "give" => starting(&mut crate::custom_tnt::names()),
+        ("tnt", 4) if first == "give" => starting(&mut ["1", "16", "64"].into_iter()),
+        ("tnt", _) => Vec::new(),
+
         // give <игрок> <предмет>: на втором слове подсказываем предметы.
         ("give", 2) => item_names(typed),
 
@@ -2341,6 +2781,25 @@ fn hints_for(text: &str, typed: &str, shared: &Shared) -> Vec<String> {
             .filter(|word| word.starts_with(typed))
             .map(|word| word.to_string())
             .collect(),
+
+        // summon <вагонетка> и kill @e[type=<вид>]: из сущностей у нас
+        // есть вагонетки, предметы, динамит и падающие блоки.
+        ("summon", 1) => crate::minecart::Kind::ALL
+            .into_iter()
+            .map(|kind| kind.name().to_string())
+            .filter(|name| name.starts_with(typed.strip_prefix("minecraft:").unwrap_or(typed)))
+            .collect(),
+
+        ("kill", 1) => ["item", "tnt", "falling_block", "!player"]
+            .into_iter()
+            .chain(crate::minecart::Kind::ALL.into_iter().map(|kind| kind.name()))
+            .map(|kind| format!("@e[type={}]", kind))
+            .chain(["@e".to_string()])
+            .filter(|selector| selector.starts_with(typed))
+            .collect(),
+
+        // setblock <x> <y> <z> <блок> и fill <x1> <y1> <z1> <x2> <y2> <z2> <блок>
+        ("setblock", 4) | ("fill", 7) => item_names(typed),
 
         _ => player_names(shared, typed),
     }
@@ -2393,7 +2852,7 @@ fn player_names(shared: &Shared, typed: &str) -> Vec<String> {
 }
 
 /// Отправляет подсказки клиенту.
-async fn send_suggestions(stream: &mut TcpStream, hints: &Suggestions) -> io::Result<()> {
+async fn send_suggestions(stream: &mut Outgoing<'_>, hints: &Suggestions) -> io::Result<()> {
     let mut body = encode_varint(TAB_COMPLETE_RESPONSE);
 
     body.extend_from_slice(&encode_varint(hints.id));
@@ -2419,7 +2878,7 @@ fn take_orders(shared: &Shared, uuid: &[u8; 16]) -> Vec<Order> {
 }
 
 /// Отправляет Disconnect — сервер отключает игрока и называет причину.
-async fn send_disconnect(stream: &mut TcpStream, reason: &str) -> io::Result<()> {
+async fn send_disconnect(stream: &mut Outgoing<'_>, reason: &str) -> io::Result<()> {
     let mut body = encode_varint(DISCONNECT);
 
     push_text_component(&mut body, reason);
@@ -2429,7 +2888,7 @@ async fn send_disconnect(stream: &mut TcpStream, reason: &str) -> io::Result<()>
 
 /// Отправляет Keep Alive — без него клиент решает, что сервер пропал,
 /// и отключается.
-async fn send_keep_alive(stream: &mut TcpStream, id: i64) -> io::Result<()> {
+async fn send_keep_alive(stream: &mut Outgoing<'_>, id: i64) -> io::Result<()> {
     let mut body = encode_varint(KEEP_ALIVE);
 
     push_i64(&mut body, id);
@@ -2439,7 +2898,7 @@ async fn send_keep_alive(stream: &mut TcpStream, id: i64) -> io::Result<()> {
 
 /// Отправляет Set Default Spawn Position — точку возрождения.
 async fn send_default_spawn_position(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     spawn: (f64, f64, f64),
 ) -> io::Result<()> {
     let mut body = encode_varint(SET_DEFAULT_SPAWN_POSITION);
@@ -2455,7 +2914,7 @@ async fn send_default_spawn_position(
 
 /// Отправляет Game Event 3 — «смена режима игры»: без него клиент остаётся
 /// в прежнем режиме, как бы ни менялась строка в списке игроков.
-async fn send_game_event_game_mode(stream: &mut TcpStream, game_mode: i32) -> io::Result<()> {
+async fn send_game_event_game_mode(stream: &mut Outgoing<'_>, game_mode: i32) -> io::Result<()> {
     let mut body = encode_varint(GAME_EVENT);
 
     body.push(3); // событие: смена режима игры
@@ -2465,7 +2924,7 @@ async fn send_game_event_game_mode(stream: &mut TcpStream, game_mode: i32) -> io
 }
 
 /// Отправляет Game Event 13 — «начать ждать чанки».
-async fn send_game_event_start_waiting(stream: &mut TcpStream) -> io::Result<()> {
+async fn send_game_event_start_waiting(stream: &mut Outgoing<'_>) -> io::Result<()> {
     let mut body = encode_varint(GAME_EVENT);
 
     body.push(13); // событие: начало ожидания чанков
@@ -2479,7 +2938,7 @@ async fn send_game_event_start_waiting(stream: &mut TcpStream) -> io::Result<()>
 /// Пока урона нет, всё полное — но без этого пакета клиент не считает вход
 /// законченным: полоски здоровья и еды остаются пустыми, а некоторые
 /// клиенты не начинают действовать в мире.
-async fn send_health(stream: &mut TcpStream) -> io::Result<()> {
+async fn send_health(stream: &mut Outgoing<'_>) -> io::Result<()> {
     let mut body = encode_varint(SET_HEALTH);
 
     push_f32(&mut body, 20.0); // здоровье
@@ -2490,7 +2949,7 @@ async fn send_health(stream: &mut TcpStream) -> io::Result<()> {
 }
 
 /// Отправляет Set Center Chunk — центральный чанк для клиента.
-async fn send_center_chunk(stream: &mut TcpStream, chunk: (i32, i32)) -> io::Result<()> {
+async fn send_center_chunk(stream: &mut Outgoing<'_>, chunk: (i32, i32)) -> io::Result<()> {
     let mut body = encode_varint(SET_CENTER_CHUNK);
 
     body.extend_from_slice(&encode_varint(chunk.0)); // чанк X
@@ -2540,7 +2999,7 @@ fn step_portal(shared: &Shared, player: &mut PlayerState) {
 /// Конец такта для этого подключения: всё, что случилось в мире, и ответы
 /// на собственные пакеты игрока.
 async fn flush_tick(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     player: &mut PlayerState,
     world_changes: &mut usize,
@@ -2567,7 +3026,7 @@ async fn flush_tick(
 /// Update, несколько в одной секции — Update Section Blocks. Действие, звук
 /// или прямое изменение (повтор блока после щелчка) — граница пачки.
 async fn send_pending_world_events(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     player: &mut PlayerState,
     sent: &mut usize,
@@ -2612,6 +3071,44 @@ async fn send_pending_world_events(
 
                 write_body(stream, body).await?;
             }
+            WorldEvent::Vibration { from, to, ticks } => {
+                let mut body = encode_varint(LEVEL_PARTICLES);
+
+                body.push(0); // не издалека
+                body.push(0); // не всегда
+                for v in [from.0, from.1, from.2] {
+                    body.extend_from_slice(&(f64::from(v) + 0.5).to_be_bytes());
+                }
+                for _ in 0..4 {
+                    body.extend_from_slice(&0f32.to_be_bytes()); // разброс и скорость
+                }
+                push_i32(&mut body, 1);
+                body.extend_from_slice(&encode_varint(PARTICLE_VIBRATION));
+                body.extend_from_slice(&encode_varint(0)); // цель — блок
+                push_packed_position(&mut body, to.0, to.1, to.2);
+                body.extend_from_slice(&encode_varint(*ticks));
+
+                write_body(stream, body).await?;
+            }
+            // Нота проигрывателя: число частиц 0 — тогда разброс по X
+            // несёт цвет, а скорость — множитель (чёрный ящик, jukebox-disc:
+            // разброс 0, 1/24, 2/24, 3/24). [проверить] скорость 1.
+            WorldEvent::Note { at, color } => {
+                let mut body = encode_varint(LEVEL_PARTICLES);
+
+                body.push(0); // не издалека
+                body.push(0); // не всегда
+                for v in [at.0, at.1, at.2] {
+                    body.extend_from_slice(&v.to_be_bytes());
+                }
+                for v in [*color, 0.0, 0.0, 1.0] {
+                    body.extend_from_slice(&v.to_be_bytes());
+                }
+                push_i32(&mut body, 0);
+                body.extend_from_slice(&encode_varint(PARTICLE_NOTE));
+
+                write_body(stream, body).await?;
+            }
             WorldEvent::OpenWindow { viewer, x, y, z } if *viewer == player.entity_id => {
                 open_window(stream, shared, player, (*x, *y, *z)).await?;
             }
@@ -2637,7 +3134,7 @@ async fn send_pending_world_events(
 /// Открывает клиенту окно хранилища в этом месте: Open Screen и всё
 /// содержимое окна — ячейки хранилища, рюкзак, панель и курсор.
 async fn open_window(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     player: &mut PlayerState,
     at: (i32, i32, i32),
@@ -2666,13 +3163,100 @@ async fn open_window(
     body.extend_from_slice(&nbt::translated(title));
     write_body(stream, body).await?;
 
-    player.window = Some(OpenWindow { id, halves, shown: slots });
+    let lectern = kind == containers::Kind::Lectern;
+    let page = if lectern {
+        let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+        redstone::lectern::page(&world, at).map_or(0, |(page, _)| page)
+    } else {
+        0
+    };
+
+    let crafter = kind == containers::Kind::Crafter;
+
+    player.window = Some(OpenWindow { id, halves, cart: None, shown: slots, lectern, crafter });
+    send_window_content(stream, player).await?;
+
+    if lectern {
+        send_window_property(stream, id, 0, page as i16).await?;
+    }
+
+    // Крафтер: выключенные ячейки и «запитан» — свойствами окна.
+    if kind == containers::Kind::Crafter {
+        let properties = {
+            let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+            redstone::crafter::window_properties(&world, at)
+        };
+
+        for (property, value) in properties {
+            send_window_property(stream, id, property, value).await?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Открывает клиенту окно вагонетки с сундуком или воронкой: как у
+/// хранилищ-блоков, только ячейки — самой вагонетки (вики, Minecart with
+/// Chest: «27 slots», как у сундука; Minecart with Hopper: 5 ячеек, окно
+/// воронки). Заголовок — имя сущности. [проверить]: заголовок.
+async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, entity_id: i32) -> io::Result<()> {
+    let found = shared
+        .items_in(player.dimension)
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .carts()
+        .iter()
+        .find(|cart| cart.entity_id == entity_id)
+        .map(|cart| (cart.kind, cart.slots.clone()));
+
+    let Some((kind, slots)) = found else {
+        return Ok(());
+    };
+    let Some((menu, title)) = cart_menu(kind) else {
+        return Ok(());
+    };
+
+    player.window_counter = player.window_counter % WINDOW_IDS + 1;
+
+    let id = player.window_counter;
+    let mut body = encode_varint(OPEN_SCREEN);
+
+    body.extend_from_slice(&encode_varint(id));
+    body.extend_from_slice(&encode_varint(menu));
+    body.extend_from_slice(&nbt::translated(title));
+    write_body(stream, body).await?;
+
+    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false });
     send_window_content(stream, player).await
+}
+
+/// Окно вагонетки-хранилища: вид меню и заголовок. Вид — тот же, что у
+/// сундука в один блок и у воронки (`containers::menu`).
+fn cart_menu(kind: crate::minecart::Kind) -> Option<(i32, &'static str)> {
+    match kind {
+        crate::minecart::Kind::Chest => Some((containers::menu(containers::Kind::Chest, 1).0, "entity.minecraft.chest_minecart")),
+        crate::minecart::Kind::Hopper => Some((containers::menu(containers::Kind::Hopper, 1).0, "entity.minecraft.hopper_minecart")),
+        _ => None,
+    }
+}
+
+/// Ячейки вагонетки с этим номером, если она ещё в мире.
+fn cart_slots(shared: &Shared, dimension: crate::dimension::Dimension, entity_id: i32) -> Option<Vec<Option<Stack>>> {
+    shared
+        .items_in(dimension)
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .carts()
+        .iter()
+        .find(|cart| cart.entity_id == entity_id)
+        .map(|cart| cart.slots.clone())
 }
 
 /// Всё окно хранилища целиком: ячейки хранилища (как их знает клиент),
 /// рюкзак и панель игрока, курсор.
-async fn send_window_content(stream: &mut TcpStream, player: &mut PlayerState) -> io::Result<()> {
+async fn send_window_content(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
     let Some(window) = &player.window else {
         return Ok(());
     };
@@ -2683,14 +3267,28 @@ async fn send_window_content(stream: &mut TcpStream, player: &mut PlayerState) -
 
     body.extend_from_slice(&encode_varint(window.id));
     body.extend_from_slice(&encode_varint(player.state_id));
-    body.extend_from_slice(&encode_varint((window.shown.len() + window::PLAYER_SLOTS) as i32));
+    // У кафедры в окне только книга — без рюкзака и панели игрока.
+    let player_slots = if window.lectern { 0 } else { window::PLAYER_SLOTS };
+
+    let result_slots = usize::from(window.crafter);
+
+    body.extend_from_slice(&encode_varint((window.shown.len() + player_slots + result_slots) as i32));
 
     for stack in &window.shown {
         push_slot(&mut body, *stack);
     }
 
+    if window.lectern {
+        push_slot(&mut body, player.inventory.cursor());
+        return write_body(stream, body).await;
+    }
+
     for slot in (inventory::FIRST_MAIN..=inventory::LAST_MAIN).chain(inventory::FIRST_HOTBAR..=inventory::LAST_HOTBAR) {
         push_slot(&mut body, player.inventory.slot(slot));
+    }
+
+    if window.crafter {
+        push_slot(&mut body, crate::crafting::craft(&window.shown));
     }
 
     push_slot(&mut body, player.inventory.cursor());
@@ -2698,7 +3296,7 @@ async fn send_window_content(stream: &mut TcpStream, player: &mut PlayerState) -
 }
 
 /// Одна ячейка открытого окна.
-async fn send_window_slot(stream: &mut TcpStream, player: &mut PlayerState, slot: usize, stack: Option<Stack>) -> io::Result<()> {
+async fn send_window_slot(stream: &mut Outgoing<'_>, player: &mut PlayerState, slot: usize, stack: Option<Stack>) -> io::Result<()> {
     let Some(window) = &player.window else {
         return Ok(());
     };
@@ -2717,12 +3315,14 @@ async fn send_window_slot(stream: &mut TcpStream, player: &mut PlayerState, slot
 
 /// Досылает открытому окну перемены содержимого, опубликованные к этому
 /// мгновению такта. Хранилища больше нет (сломали) — окно закрывается.
-async fn send_window_changes(stream: &mut TcpStream, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     let Some(window) = &player.window else {
         return Ok(());
     };
 
-    let now: Option<Vec<Option<Stack>>> = {
+    let now: Option<Vec<Option<Stack>>> = if let Some(cart) = window.cart {
+        shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").published_carts.get(&cart).cloned()
+    } else {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
         window
@@ -2744,6 +3344,7 @@ async fn send_window_changes(stream: &mut TcpStream, shared: &Shared, player: &m
     };
 
     let changed: Vec<usize> = (0..now.len()).filter(|&slot| now[slot] != window.shown[slot]).collect();
+    let result = window.crafter.then(|| (window.result_slot(), crate::crafting::craft(&window.shown), crate::crafting::craft(&now)));
 
     for slot in changed {
         let stack = now[slot];
@@ -2755,6 +3356,13 @@ async fn send_window_changes(stream: &mut TcpStream, shared: &Shared, player: &m
         send_window_slot(stream, player, slot, stack).await?;
     }
 
+    // У крафтера сменилось, что выйдет.
+    if let Some((slot, before, after)) = result
+        && before != after
+    {
+        send_window_slot(stream, player, slot, after).await?;
+    }
+
     Ok(())
 }
 
@@ -2764,6 +3372,11 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
     let Some(window) = player.window.take() else {
         return;
     };
+
+    // У вагонетки смотрящих не считают: крышки нет.
+    if window.cart.is_some() {
+        return;
+    }
 
     let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
@@ -2782,7 +3395,7 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
 /// появления секции; повторное изменение того же места в пачке — последнее
 /// слово за последним.
 async fn send_block_changes(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     pending: &mut Vec<world::BlockChange>,
 ) -> io::Result<()> {
     if pending.is_empty() {
@@ -2811,7 +3424,19 @@ async fn send_block_changes(
         }
     }
 
+    // У голов и табличек есть блок-сущность, и оригинал после пачки шлёт её
+    // данные на каждую сменившуюся: у головы — пустой тег (сценарий
+    // note-heads), у таблички — пустой текст (note-instruments).
+    let mut heads = Vec::new();
+
     for ((sx, sy, sz), group) in sections {
+        heads.extend(
+            group
+                .iter()
+                .filter(|change| redstone::is_head(change.state) || redstone::is_sign(change.state))
+                .map(|change| (change.x, change.y, change.z, change.state)),
+        );
+
         if let [only] = group.as_slice() {
             send_block_update(stream, only.x, only.y, only.z, only.state).await?;
             continue;
@@ -2834,7 +3459,64 @@ async fn send_block_changes(
         write_body(stream, body).await?;
     }
 
+    for (x, y, z, state) in heads {
+        let mut body = encode_varint(BLOCK_ENTITY_DATA);
+
+        push_packed_position(&mut body, x, y, z);
+
+        match redstone::block_entity_type(state).filter(|_| redstone::is_sign(state)) {
+            Some(kind) => {
+                body.extend_from_slice(&encode_varint(kind));
+                body.extend_from_slice(&empty_sign_nbt());
+            }
+            None => {
+                body.extend_from_slice(&encode_varint(SKULL_BLOCK_ENTITY));
+                body.extend_from_slice(&[0x0A, 0x00]); // пустой безымянный тег-составной
+            }
+        }
+
+        write_body(stream, body).await?;
+    }
+
     Ok(())
+}
+
+/// Данные чистой таблички, как их шлёт оригинал (сценарий note-instruments):
+/// с каждой стороны — без свечения, чёрный цвет, четыре пустые строки;
+/// не вощёная. Безымянный корень — сетевой NBT.
+fn empty_sign_nbt() -> Vec<u8> {
+    fn name(out: &mut Vec<u8>, kind: u8, name: &str) {
+        out.push(kind);
+        out.extend_from_slice(&(name.len() as u16).to_be_bytes());
+        out.extend_from_slice(name.as_bytes());
+    }
+
+    fn side(out: &mut Vec<u8>, side: &str) {
+        name(out, 0x0A, side);
+        name(out, 0x01, "has_glowing_text");
+        out.push(0);
+        name(out, 0x08, "color");
+        out.extend_from_slice(&5u16.to_be_bytes());
+        out.extend_from_slice(b"black");
+        name(out, 0x09, "messages");
+        out.push(0x08);
+        out.extend_from_slice(&4i32.to_be_bytes());
+
+        for _ in 0..4 {
+            out.extend_from_slice(&0u16.to_be_bytes());
+        }
+
+        out.push(0x00);
+    }
+
+    let mut out = vec![0x0A];
+
+    side(&mut out, "back_text");
+    side(&mut out, "front_text");
+    name(&mut out, 0x01, "is_waxed");
+    out.push(0);
+    out.push(0x00);
+    out
 }
 
 /// Отправляет Sound Effect — звук в точке мира.
@@ -2842,7 +3524,7 @@ async fn send_block_changes(
 /// Звук называется словом, а не числом: у числа свой список, который
 /// у клиента и у нас может не совпасть, а названия одинаковы всегда.
 /// Место передаётся в восьмых долях блока — так в протоколе.
-async fn send_sound(stream: &mut TcpStream, sound: &WorldSound) -> io::Result<()> {
+async fn send_sound(stream: &mut Outgoing<'_>, sound: &WorldSound) -> io::Result<()> {
     let mut body = encode_varint(SOUND_EFFECT);
 
     body.extend_from_slice(&encode_varint(0)); // звук назван словом, а не номером
@@ -2853,10 +3535,20 @@ async fn send_sound(stream: &mut TcpStream, sound: &WorldSound) -> io::Result<()
     // середине блока. Место — в восьмых долях.
     match sound.exact {
         Some((x, y, z)) => {
-            body.extend_from_slice(&encode_varint(if sound.of_block { SOUND_BLOCK } else { SOUND_NEUTRAL }));
-            push_i32(&mut body, (x * 8.0).floor() as i32);
-            push_i32(&mut body, (y * 8.0).floor() as i32);
-            push_i32(&mut body, (z * 8.0).floor() as i32);
+            let category = match (sound.of_block, sound.of_player) {
+                (true, _) => SOUND_BLOCK,
+                (false, true) => SOUND_PLAYERS,
+                (false, false) => SOUND_NEUTRAL,
+            };
+
+            body.extend_from_slice(&encode_varint(category));
+
+            // Восьмые доли отсекаются к нулю, а не вниз: поджог вагонетки на
+            // высоте −59,9375 оригинал шлёт как −59,875 (чёрный ящик,
+            // minecart-tnt-rail).
+            push_i32(&mut body, (x * 8.0) as i32);
+            push_i32(&mut body, (y * 8.0) as i32);
+            push_i32(&mut body, (z * 8.0) as i32);
         }
         None => {
             body.extend_from_slice(&encode_varint(SOUND_BLOCK));
@@ -2885,7 +3577,7 @@ async fn send_sound(stream: &mut TcpStream, sound: &WorldSound) -> io::Result<()
 /// [проверить]: какие частицы блоков шлёт оригинал (вики: с 25w33a
 /// «Explosions now create smoke particles again»); у нас дымок и дым поровну.
 /// Поля «Play Sound» из вики здесь нет: вики описывает протокол новее 26.1.
-async fn send_explosion(stream: &mut TcpStream, blast: &world::Blast, own: Option<(f64, f64, f64)>) -> io::Result<()> {
+async fn send_explosion(stream: &mut Outgoing<'_>, blast: &world::Blast, own: Option<(f64, f64, f64)>) -> io::Result<()> {
     let mut body = encode_varint(EXPLOSION);
 
     push_f64(&mut body, blast.centre.0);
@@ -2930,7 +3622,7 @@ async fn send_explosion(stream: &mut TcpStream, blast: &world::Blast, own: Optio
 /// ответа сервера (своё предсказание), а этим пакетом сервер сообщает, что
 /// получилось на самом деле.
 async fn send_block_update(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     x: i32,
     y: i32,
     z: i32,
@@ -2949,7 +3641,7 @@ async fn send_block_update(
 /// Клиент запоминает номер действия (`sequence`) и до подтверждения показывает
 /// свой вариант, а не серверный. Подтверждение нужно отправлять на каждое
 /// действие игрока с блоком, иначе клиент будет показывать не то, что в мире.
-async fn send_acknowledge_block_change(stream: &mut TcpStream, sequence: i32) -> io::Result<()> {
+async fn send_acknowledge_block_change(stream: &mut Outgoing<'_>, sequence: i32) -> io::Result<()> {
     let mut body = encode_varint(ACKNOWLEDGE_BLOCK_CHANGE);
 
     body.extend_from_slice(&encode_varint(sequence));
@@ -2967,7 +3659,7 @@ async fn send_acknowledge_block_change(stream: &mut TcpStream, sequence: i32) ->
 /// Своя собственная запись пропускается: о себе клиент уже знает, а в списке
 /// игроков ему не нужны две одинаковые строки.
 async fn send_pending_player_changes(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     player: &PlayerState,
     sent: &mut usize,
@@ -3055,7 +3747,7 @@ async fn send_pending_player_changes(
 
 /// Досылает клиенту сообщения чата, которых он ещё не видел.
 async fn send_pending_chat(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     sent: &mut usize,
 ) -> io::Result<()> {
@@ -3077,7 +3769,7 @@ async fn send_pending_chat(
 /// Отправляет чанк с указанными координатами — из текущего состояния мира.
 /// Свет посчитан заранее, вне захвата мира.
 async fn send_chunk(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     world: &Mutex<World>,
     chunk_x: i32,
     chunk_z: i32,
@@ -3092,31 +3784,55 @@ async fn send_chunk(
     // минимальной высотой.
     body.extend_from_slice(&encode_varint(0));
 
-    // Секции чанка — одним блоком байт с длиной впереди. Собранное тело
-    // хранится в самом чанке: пока в нём ничего не поставили, второму игроку
-    // оно достаётся готовым.
-    let sections = {
+    // Секции чанка — одним блоком байт с длиной впереди. Под захватом мира
+    // берутся только ссылки на секции (они общие с миром) и биомы, а
+    // складываются байты уже без него: складывание палитр — самое долгое
+    // в пакете, и такт всё это время ждал бы мира. Хранилища — тем же
+    // захватом.
+    let (taken, entities) = {
         let world = world.lock().expect("мир захвачен другим потоком");
+        let taken = world.chunk_packet(chunk_x, chunk_z, |sections, biomes| (sections.to_vec(), biomes.to_vec()));
 
-        world.chunk_packet(chunk_x, chunk_z, |sections, biomes| {
-            let mut out = Vec::new();
-
-            // У каждой секции свои 64 клетки биома: пещерные биомы лежат
-            // только в толще.
-            for (section, biomes) in sections.iter().zip(biomes.chunks(world::SECTION_BIOMES)) {
-                push_section(&mut out, section.as_deref(), Some(biomes));
-            }
-
-            // Самая высокая секция, где есть хоть один блок: свет выше неё
-            // клиент считает полным сам.
-            let top = sections.iter().rposition(Option::is_some);
-
-            (out, top)
-        })
+        (taken, world.chunk_containers(chunk_x, chunk_z))
     };
 
-    let top = sections.as_ref().and_then(|(_, top)| *top);
-    let sections = sections.map(|(ready, _)| ready);
+    let sections = taken.map(|(sections, biomes)| {
+        let mut out = Vec::new();
+
+        // У каждой секции свои 64 клетки биома: пещерные биомы лежат
+        // только в толще.
+        for (section, biomes) in sections.iter().zip(biomes.chunks(world::SECTION_BIOMES)) {
+            push_section(&mut out, section.as_deref(), Some(biomes));
+        }
+
+        // Самая высокая секция, где есть хоть один блок: свет выше неё
+        // клиент считает полным сам.
+        let top = sections.iter().rposition(Option::is_some);
+
+        // Блок-сущности, которых нет среди хранилищ: головы, датчики
+        // скалка, кафедры, проигрыватели — их находим по состоянию.
+        let mut others = Vec::new();
+
+        for (index, section) in sections.iter().enumerate() {
+            let Some(states) = section.as_deref() else {
+                continue;
+            };
+
+            for (at, state) in states.iter().enumerate() {
+                if let Some(kind) = redstone::block_entity_type(i32::from(*state)) {
+                    let (x, z, y) = (at as i32 & 15, (at as i32 >> 4) & 15, at as i32 >> 8);
+
+                    others.push((x, world::MIN_Y + index as i32 * 16 + y, z, kind));
+                }
+            }
+        }
+
+        (out, top, others)
+    });
+
+    let top = sections.as_ref().and_then(|(_, top, _)| *top);
+    let others = sections.as_ref().map(|(_, _, others)| others.clone()).unwrap_or_default();
+    let sections = sections.map(|(ready, _, _)| ready);
 
     match sections {
         Some(ready) => {
@@ -3139,14 +3855,20 @@ async fn send_chunk(
     // Блоки с дополнительными данными: хранилища. Оригинал шлёт их без
     // данных (чёрный ящик: у сундука, воронки, бочки, выбрасывателя в
     // пакете чанка только место и вид) — содержимое уходит только в окно.
-    let entities = world.lock().expect("мир захвачен другим потоком").chunk_containers(chunk_x, chunk_z);
+    // Головы, датчики и прочие — так же, место и вид без данных.
+    let mut entities: Vec<(i32, i32, i32, i32)> = entities
+        .into_iter()
+        .map(|(x, y, z, kind)| (x & 15, y, z & 15, kind.block_entity_type()))
+        .chain(others)
+        .collect();
 
+    entities.sort_unstable_by_key(|&(x, y, z, _)| (y, z, x));
     body.extend_from_slice(&encode_varint(entities.len() as i32));
 
     for (x, y, z, kind) in entities {
         body.push(((x << 4) | z) as u8);
         push_i16(&mut body, y as i16);
-        body.extend_from_slice(&encode_varint(kind.block_entity_type()));
+        body.extend_from_slice(&encode_varint(kind));
         body.push(0); // данных нет: пустой тег
     }
 
@@ -3512,7 +4234,7 @@ fn push_f64(out: &mut Vec<u8>, value: f64) {
 /// потока. Поэтому прерванное по таймауту ожидание ничего не теряет: когда
 /// байты появятся, пакет будет прочитан целиком.
 async fn read_and_log_play_packets(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     player: &mut PlayerState,
     entered: Entered,
@@ -3545,9 +4267,13 @@ async fn read_and_log_play_packets(
     let mut ticks = shared.ticks.subscribe();
     let mut starts = shared.tick_starts.subscribe();
     let mut pending: Vec<Reaction> = Vec::new();
-    let mut inbound = Inbound::start(stream, shared)?;
+    let mut inbound = Inbound::start(stream.stream(), shared)?;
 
     loop {
+        // Всё, что прошлый круг положил в очередь, уходит одной записью,
+        // прежде чем ждать клиента или конца такта.
+        stream.flush().await?;
+
         let ready = tokio::select! {
             ready = timeout(KEEP_ALIVE_INTERVAL, inbound.packets.recv()) => Some(ready),
             _ = ticks.changed() => None,
@@ -3682,6 +4408,9 @@ async fn read_and_log_play_packets(
                         seen_items.insert(item.entity_id, shown_item(item));
                     }
 
+                    player.seen_carts.clear();
+                    send_all_carts(stream, shared, player).await?;
+
                     // Чужих игроков покажет сверка видимости на этом же круге.
                     seen.clear();
                     sent_chunks.clear();
@@ -3759,8 +4488,9 @@ async fn read_and_log_play_packets(
 
                 // Выданные предметы кладутся в инвентарь; если места нет,
                 // лишнее падает на землю рядом с игроком.
-                Order::Give { item, count } => {
-                    let (slots, left) = player.inventory.put(Stack::new(item, count));
+                Order::Give { stack } => {
+                    let (item, count) = (stack.item, stack.count);
+                    let (slots, left) = player.inventory.put(stack);
 
                     for slot in slots {
                         send_container_slot(stream, player, slot).await?;
@@ -3811,6 +4541,7 @@ async fn read_and_log_play_packets(
             shared, player.dimension,
             &mut item_changes,
             &mut seen_items,
+            &mut player.seen_carts,
             player.reader,
         )
         .await?;
@@ -3828,6 +4559,10 @@ async fn read_and_log_play_packets(
 
                 let lagged =
                     flush_tick(stream, shared, player, &mut world_changes, &mut pending).await?;
+
+                // Движение вагонеток — в конце такта, после изменений мира,
+                // как у оригинала.
+                send_cart_moves(stream, shared, player).await?;
 
                 // Журнал выбросил события, не дождавшись этого клиента: его
                 // картина мира разошлась с сервером. Обзор присылается заново.
@@ -3857,6 +4592,10 @@ async fn read_and_log_play_packets(
                 let gated = is_gated(packet.id);
 
                 if gated {
+                    // Ждать начала такта с неотправленным нельзя: оно
+                    // задержалось бы на такт.
+                    stream.flush().await?;
+
                     while *starts.borrow_and_update() <= arrived {
                         if starts.changed().await.is_err() {
                             break;
@@ -3896,7 +4635,7 @@ async fn read_and_log_play_packets(
 
 /// Действия с миром: их применяют только в начале такта.
 fn is_gated(packet_id: i32) -> bool {
-    matches!(packet_id, USE_ITEM_ON | PLAYER_ACTION | USE_ITEM | SERVERBOUND_CHAT_COMMAND)
+    matches!(packet_id, USE_ITEM_ON | PLAYER_ACTION | USE_ITEM | SERVERBOUND_CHAT_COMMAND | ATTACK)
 }
 
 /// Пакеты клиента, прочитанные отдельной задачей.
@@ -3928,7 +4667,9 @@ impl Inbound {
         let own = unsafe { std::net::TcpStream::from_raw_fd(fd) };
         own.set_nonblocking(true)?;
 
-        let mut own = TcpStream::from_std(own)?;
+        // Чтение — через буфер: клиент шлёт по нескольку мелких пакетов за
+        // такт, и без буфера каждый байт длины был бы своим системным вызовом.
+        let mut own = tokio::io::BufReader::new(TcpStream::from_std(own)?);
         let (sender, packets) = tokio::sync::mpsc::unbounded_channel();
         let waiting = shared.waiting_for_tick.clone();
         let counted = waiting.clone();
@@ -3974,7 +4715,7 @@ impl Drop for Inbound {
 /// Отправляет клиенту ответ на его пакет: подтверждение, поправки блоков,
 /// режим игры, текст, содержимое инвентаря, подсказки.
 async fn apply_reaction(
-    stream: &mut TcpStream,
+    stream: &mut Outgoing<'_>,
     shared: &Shared,
     player: &mut PlayerState,
     reaction: &Reaction,
@@ -4031,7 +4772,34 @@ async fn apply_reaction(
         write_body(stream, body).await?;
     }
 
+    if let Some(cart) = reaction.open_cart
+        && player.window.is_none()
+    {
+        open_cart_window(stream, shared, player, cart).await?;
+    }
+
+    if let Some((window, property, value)) = reaction.window_property {
+        send_window_property(stream, window, property, value).await?;
+    }
+
+    if let Some(window) = reaction.close_window {
+        let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
+
+        body.extend_from_slice(&encode_varint(window));
+        write_body(stream, body).await?;
+    }
+
     Ok(())
+}
+
+/// Set Container Property: одно свойство окна.
+async fn send_window_property(stream: &mut Outgoing<'_>, window: i32, property: i16, value: i16) -> io::Result<()> {
+    let mut body = encode_varint(SET_CONTAINER_PROPERTY);
+
+    body.extend_from_slice(&encode_varint(window));
+    push_i16(&mut body, property);
+    push_i16(&mut body, value);
+    write_body(stream, body).await
 }
 
 /// Что сервер должен сделать в ответ на пакет клиента.
@@ -4078,6 +4846,16 @@ struct Reaction {
 
     /// Курсор, если клиент его предсказал не так.
     cursor: Option<Option<Stack>>,
+
+    /// Открыть окно этой вагонетки.
+    open_cart: Option<i32>,
+
+    /// Свойство открытого окна: номер окна, свойства и значение (страница
+    /// кафедры).
+    window_property: Option<(i32, i16, i16)>,
+
+    /// Окно, которое надо закрыть у клиента (с кафедры забрали книгу).
+    close_window: Option<i32>,
 }
 
 /// Подсказки клиенту в ответ на Tab.
@@ -4191,6 +4969,20 @@ fn handle_client_packet(
                 reaction = answer;
             }
         }
+        ATTACK => {
+            if let Some(target) = Cursor::new(payload).varint() {
+                attack(target, player, shared);
+            }
+        }
+        USE_ENTITY => {
+            let mut cursor = Cursor::new(payload);
+
+            // Вторая рука пробует, только если основной делать нечего: у
+            // вагонеток всё делает основная.
+            if let (Some(target), Some(0)) = (cursor.varint(), cursor.varint()) {
+                reaction = use_entity(target, player, shared);
+            }
+        }
         SERVERBOUND_CHAT_MESSAGE => {
             // Поля после самого текста (время, подпись, счётчики) серверу пока
             // не нужны: подписи мы не проверяем, а текст стоит первым полем.
@@ -4228,6 +5020,20 @@ fn handle_client_packet(
                 {
                     player.game_mode = mode;
                 }
+            }
+        }
+        CHANGE_CONTAINER_SLOT_STATE => {
+            let mut cursor = Cursor::new(payload);
+
+            if let (Some(slot), Some(window), Some(enabled)) = (cursor.varint(), cursor.varint(), cursor.u8()) {
+                crafter_slot_state(shared, player, window, slot, enabled != 0, &mut reaction);
+            }
+        }
+        CLICK_CONTAINER_BUTTON => {
+            let mut cursor = Cursor::new(payload);
+
+            if let (Some(window), Some(button)) = (cursor.varint(), cursor.varint()) {
+                lectern_button(shared, player, window, button, &mut reaction);
             }
         }
         CLICK_CONTAINER if player.window.as_ref().is_some_and(|window| Cursor::new(payload).varint() == Some(window.id)) => {
@@ -4273,7 +5079,7 @@ fn handle_client_packet(
             }
         }
         TAB_COMPLETE_REQUEST => {
-            if let Some(answer) = suggestions(payload, shared) {
+            if let Some(answer) = suggestions(payload, shared, &player.uuid) {
                 reaction.suggestions = Some(answer);
             }
         }
@@ -4358,6 +5164,112 @@ fn handle_client_packet(
     reaction
 }
 
+/// Удар по сущности. Бить у нас можно только вагонетки: удар качает её,
+/// а набравшая урона ломается. В выживании из сломанной выпадает предмет
+/// вагонетки и её содержимое, в творческом — ничего (вики, Minecart:
+/// «Breaking a minecart drops it as an item»). [проверить]: число ударов —
+/// зонд minecart-hit.
+fn attack(target: i32, player: &mut PlayerState, shared: &Shared) {
+    if player.game_mode == GAME_MODE_SPECTATOR {
+        return;
+    }
+
+    let now = *shared.ticks.borrow();
+    let since = u32::try_from(now.saturating_sub(player.last_attack)).unwrap_or(u32::MAX);
+
+    if strike_cart(shared, player.dimension, target, (player.x, player.y, player.z), player.game_mode == GAME_MODE_CREATIVE, since) {
+        player.last_attack = now;
+    }
+}
+
+/// Удар игрока в `from` по вагонетке `target`: `since` — сколько тактов
+/// прошло с его прошлого удара. Общий для Java и Bedrock. Возвращает, был
+/// ли удар (вагонетка есть и достаётся рукой).
+pub(crate) fn strike_cart(shared: &Shared, dimension: crate::dimension::Dimension, target: i32, from: (f64, f64, f64), creative: bool, since: u32) -> bool {
+    /// Дальше этого ударить нельзя (вики, Player: досягаемость сущностей 3
+    /// блока, у творческого — 5; с запасом на задержку).
+    const REACH: f64 = 6.0;
+
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    let Some(cart) = items.carts_mut().iter_mut().find(|cart| cart.entity_id == target) else {
+        return false;
+    };
+
+    if (cart.x - from.0).powi(2) + (cart.y - from.1).powi(2) + (cart.z - from.2).powi(2) > REACH * REACH {
+        return false;
+    }
+
+    let broken = cart.hit(creative, since);
+
+    // Удар слышен всем: сильный при полной руке, иначе слабый (зонд
+    // minecart-hit: удар через 4 такта — уже слабый).
+    let sound = if crate::minecart::hand_charge(since) > 0.9 {
+        "minecraft:entity.player.attack.strong"
+    } else {
+        "minecraft:entity.player.attack.weak"
+    };
+
+    if broken {
+        for broken in items.remove_carts(|cart| cart.entity_id == target) {
+            if creative {
+                continue;
+            }
+
+            let at = (broken.x, broken.y, broken.z);
+
+            for stack in broken.drops() {
+                items.drop_item(shared.next_entity_id(), stack, at, (0.0, 0.0, 0.0), items::MINED_DELAY);
+            }
+        }
+    }
+
+    drop(items);
+    shared.world_in(dimension).lock().expect("мир захвачен другим потоком").note_player_sound(from, sound);
+    true
+}
+
+/// Щелчок по сущности. Щёлкать у нас можно только по вагонеткам: с
+/// сундуком и воронкой открывают окно (вики, Minecart with Chest: «can be
+/// accessed by pressing use»), печь заправляют углём.
+fn use_entity(target: i32, player: &mut PlayerState, shared: &Shared) -> Reaction {
+    /// Дальше этого щёлкнуть нельзя (как у удара).
+    const REACH: f64 = 6.0;
+
+    let mut reaction = Reaction::default();
+
+    if player.game_mode == GAME_MODE_SPECTATOR {
+        return reaction;
+    }
+
+    let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+
+    let Some(cart) = items.carts_mut().iter_mut().find(|cart| cart.entity_id == target) else {
+        return reaction;
+    };
+
+    if (cart.x - player.x).powi(2) + (cart.y - player.y).powi(2) + (cart.z - player.z).powi(2) > REACH * REACH {
+        return reaction;
+    }
+
+    match cart.kind {
+        crate::minecart::Kind::Chest | crate::minecart::Kind::Hopper => reaction.open_cart = Some(target),
+        crate::minecart::Kind::Furnace => {
+            let coal = player.inventory.held().is_some_and(|stack| crate::minecart::is_furnace_fuel(stack.item));
+
+            if cart.refuel((player.x, player.z), coal)
+                && player.game_mode != GAME_MODE_CREATIVE
+                && let Some(slot) = player.inventory.spend_held()
+            {
+                reaction.slots.push(slot);
+            }
+        }
+        _ => {}
+    }
+
+    reaction
+}
+
 /// Обрабатывает Player Action: ломание блока.
 ///
 /// Копание устроено по-разному в зависимости от режима игры. В творческом блок
@@ -4416,7 +5328,7 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
             held
         } else {
             player.inventory.spend_held();
-            Stack::new(held.item, 1)
+            held.with_count(1)
         };
 
         throw_out(shared, player, thrown);
@@ -4516,6 +5428,9 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     }
 
     // Воздух ломать нечего.
+    // Особый динамит помнит свой вид до слома: выпадет он же.
+    let custom = world.custom_tnt_at((x, y, z));
+
     let Some(broken) = placing::break_block(&mut world, x, y, z) else {
         log_debug!("Play: в {} {} {} и так пусто", x, y, z);
         return Some(answer);
@@ -4530,7 +5445,7 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         let tool = player.inventory.held().map(|stack| stack.item);
         let luck = world.random_unit();
 
-        match blocks::drops_by_luck(broken, tool, luck) {
+        match blocks::drops_by_luck(broken, tool, luck).map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
             Some(stack) => {
                 // Мир отпускаем: класть предмет будем под другим замком.
                 drop(world);
@@ -4689,8 +5604,46 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // блока, повтор за гранью, и только потом — общая рассылка (бочка
         // «открыта», лампы у ловушки) и крышка в фазе блочных событий.
         let clicked = (clicked_x, clicked_y, clicked_z);
+        let kind = containers::Kind::of(world.get_block(clicked_x, clicked_y, clicked_z));
+        let (bx, by, bz) = offset_towards(clicked_x, clicked_y, clicked_z, face);
 
-        if containers::Kind::of(world.get_block(clicked_x, clicked_y, clicked_z)).is_some() {
+        // Проигрыватель: вставить пластинку из руки или выбросить ту, что
+        // внутри. Окна у него нет; пустой и без пластинки в руке — щелчок
+        // идёт дальше, как по обычному блоку.
+        if kind == Some(containers::Kind::Jukebox)
+            && let Some(took) = redstone::use_jukebox(&mut world, clicked, player.inventory.held())
+        {
+            world.tell_directly(clicked_x, clicked_y, clicked_z);
+            world.tell_directly(bx, by, bz);
+            drop(world);
+
+            let slots = if took { spend_placed(player) } else { Vec::new() };
+
+            return Some(Reaction { slots, ..Reaction::accepted(sequence) });
+        }
+
+        // Кафедра без книги: книга из руки ложится на неё. С книгой —
+        // окно, как у хранилища; пустая и без книги в руке — щелчок идёт
+        // дальше.
+        let mut kind = kind.filter(|kind| *kind != containers::Kind::Jukebox);
+
+        if kind == Some(containers::Kind::Lectern) {
+            match redstone::lectern::place_book(&mut world, clicked, player.inventory.held(), 0) {
+                Some(true) => {
+                    world.tell_directly(clicked_x, clicked_y, clicked_z);
+                    world.tell_directly(bx, by, bz);
+                    drop(world);
+
+                    let slots = spend_placed(player);
+
+                    return Some(Reaction { slots, ..Reaction::accepted(sequence) });
+                }
+                Some(false) => {}
+                None => kind = None,
+            }
+        }
+
+        if kind.is_some() {
             let halves = containers::halves(&world, clicked);
 
             if player.window.is_none() && containers::can_open(&world, &halves) {
@@ -4771,6 +5724,44 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         return Some(refused);
     }
 
+    // Вагонетка ставится только на рельсу (вики, Minecart: «can be placed
+    // on rails»); мимо рельсы щелчок ничего не делает.
+    if let Some(kind) = player
+        .inventory
+        .held()
+        .and_then(|stack| blocks::item_name(stack.item))
+        .and_then(crate::minecart::Kind::from_name)
+    {
+        let clicked = (clicked_x, clicked_y, clicked_z);
+        let state = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").get_block(clicked_x, clicked_y, clicked_z);
+
+        let Some(at) = crate::minecart::place_on_rail(state, clicked) else {
+            return Some(Reaction::accepted(sequence));
+        };
+
+        shared
+            .items_in(player.dimension)
+            .lock()
+            .expect("предметы захвачены другим потоком")
+            .add_cart(crate::minecart::Minecart::new(shared.next_entity_id(), kind, at));
+        log_debug!("Play: {} поставил вагонетку в {} {} {}", player.name, clicked_x, clicked_y, clicked_z);
+
+        // Как у оригинала: после появления вагонетки клиенту повторяют
+        // рельсу и то, что за гранью щелчка (зонд minecart-hit).
+        {
+            let (x, y, z) = offset_towards(clicked_x, clicked_y, clicked_z, face);
+            let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+            world.tell_directly(clicked_x, clicked_y, clicked_z);
+            world.tell_directly(x, y, z);
+        }
+
+        return Some(Reaction {
+            slots: spend_placed(player),
+            ..Reaction::accepted(sequence)
+        });
+    }
+
     // Какой блок ставить, решает предмет в руке: сервер ищет его в таблице
     // блоков. Если предмет блока не даёт, ставить нечего, но подтвердить
     // действие всё равно нужно — подтверждение означает «сервер здесь ничего
@@ -4782,7 +5773,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
         if world.get_block(target.0, target.1, target.2) == world::AIR {
-            if crate::portal::light(&mut world, target) {
+            if crate::portal::light(&mut world, target, shared.settings.portal_sizes()) {
                 log_info!("{} зажёг портал в {} {} {}", player.name, target.0, target.1, target.2);
             } else if let Some(fire) = blocks::state_by_name("fire") {
                 world.set_block(target.0, target.1, target.2, fire);
@@ -4791,14 +5782,29 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             redstone::settle(&mut world);
         }
 
-        return Some(Reaction {
-            confirm: vec![target],
-            ..Reaction::accepted(sequence)
-        });
+        // Как пустой рукой: оригинал повторяет клиенту блок, по которому
+        // щёлкнули, и блок за гранью — прежде общей пачки (чёрный ящик,
+        // nether-portal).
+        world.tell_directly(clicked_x, clicked_y, clicked_z);
+        world.tell_directly(target.0, target.1, target.2);
+
+        return Some(Reaction::accepted(sequence));
     }
 
     let Some(item) = player.inventory.held().map(|stack| stack.item) else {
         log_debug!("Play: содержимое слота неизвестно — ставить нечего");
+
+        // Пустой рукой по блоку: оригинал повторяет клиенту сам блок и блок
+        // за гранью щелчка — как после щелчка по рычагу, — а перемены
+        // (загоревшаяся руда) уходят общей пачкой (сценарии
+        // redstone-ore-click, bell-click).
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let (x, y, z) = offset_towards(clicked_x, clicked_y, clicked_z, face);
+
+        world.tell_directly(clicked_x, clicked_y, clicked_z);
+        world.tell_directly(x, y, z);
+        redstone::settle(&mut world);
+
         return Some(Reaction::accepted(sequence));
     };
 
@@ -4831,13 +5837,14 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         .lock()
         .expect("мир захвачен другим потоком");
 
-    let placed = placing::place(
+    let placed = placing::place_tagged(
         &mut world,
         name,
         default_state,
         (clicked_x, clicked_y, clicked_z),
         &click,
         (player.x, player.y, player.z),
+        player.inventory.held().and_then(|stack| stack.tnt),
     );
 
     // Как у оригинала после установки: сразу повтор блока, по которому
@@ -5148,6 +6155,7 @@ fn offset_towards(x: i32, y: i32, z: i32, face: i32) -> (i32, i32, i32) {
 /// обычного: имя, зачарования, содержимое. Их длина сервером не разбирается,
 /// поэтому дальше по пакету после довесков читать нельзя — об этом говорит
 /// второе значение: false означает «дальше читать нечего».
+#[cfg(test)]
 fn read_slot(cursor: &mut Cursor) -> Option<(Option<Stack>, bool)> {
     let count = cursor.varint()?;
 
@@ -5162,6 +6170,37 @@ fn read_slot(cursor: &mut Cursor) -> Option<(Option<Stack>, bool)> {
     let readable = added == 0 && removed == 0;
 
     Some((Some(Stack::new(item, count)), readable))
+}
+
+/// Читает слот от клиента в творческом режиме (Untrusted Slot): у каждого
+/// довеска там своя длина, поэтому их можно пропускать. Из довесков
+/// смотрится только custom_data — пометка особого динамита; прочие
+/// отбрасываются, как и прежде.
+fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
+    let count = cursor.varint()?;
+
+    if count <= 0 {
+        return Some(None);
+    }
+
+    let mut stack = Stack::new(cursor.varint()?, count);
+    let added = cursor.varint()?;
+    let _removed = cursor.varint()?;
+
+    for _ in 0..added.clamp(0, 256) {
+        let kind = cursor.varint()?;
+        let length = usize::try_from(cursor.varint()?).ok()?;
+        let data = cursor.bytes(length)?;
+
+        if kind == COMPONENT_CUSTOM_DATA
+            && let Some(name) = nbt::string_field(data, crate::custom_tnt::MARKER)
+            && Some(stack.item) == blocks::item_named("tnt")
+        {
+            stack.tnt = crate::custom_tnt::by_name(&name).map(|kind| kind.id);
+        }
+    }
+
+    Some(Some(stack))
 }
 
 /// Разбирает сообщение о содержимом слота инвентаря в творческом режиме.
@@ -5184,7 +6223,7 @@ fn read_creative_slot(payload: &[u8], player: &mut PlayerState) -> Option<Stack>
     let mut cursor = Cursor::new(payload);
 
     let slot = cursor.u16()? as i16;
-    let (stack, _) = read_slot(&mut cursor)?;
+    let stack = read_untrusted_slot(&mut cursor)?;
 
     // Номер предмета и число — тоже от клиента. Несуществующий предмет
     // в руке ушёл бы всем остальным и отключил бы их, а число больше стопки
@@ -5233,7 +6272,66 @@ fn known_item(item: i32) -> bool {
 /// предсказал сам (присланные изменённые ячейки и курсор), и досылаются
 /// только несовпавшие ячейки. Предсказание сверяется по предмету и числу:
 /// своих довесков у наших предметов нет.
+/// Кнопка в окне кафедры: листать (1 — назад, 2 — вперёд, 100 + N — на
+/// страницу N) или взять книгу (3). Страница сменилась — клиенту новое
+/// свойство окна; книгу взяли — она в инвентаре, окно закрывается.
+fn lectern_button(shared: &Shared, player: &mut PlayerState, window: i32, button: i32, reaction: &mut Reaction) {
+    let Some(open) = player.window.as_ref().filter(|open| open.id == window && open.lectern) else {
+        return;
+    };
+    let Some(&pos) = open.halves.first() else {
+        return;
+    };
+    let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+    if button == redstone::lectern::BUTTON_TAKE {
+        let Some(book) = redstone::lectern::take_book(&mut world, pos) else {
+            return;
+        };
+
+        drop(world);
+
+        let (_, left) = player.inventory.put(book);
+
+        if let Some(stack) = left {
+            throw_out(shared, player, stack);
+        }
+
+        reaction.inventory = true;
+        reaction.close_window = Some(window);
+        close_own_window(shared, player);
+        return;
+    }
+
+    if redstone::lectern::turn_page(&mut world, pos, button)
+        && let Some((page, _)) = redstone::lectern::page(&world, pos)
+    {
+        reaction.window_property = Some((window, 0, page as i16));
+    }
+}
+
+/// Ячейка крафтера включена или выключена щелчком в окне: свойство окна
+/// с новым состоянием уходит обратно.
+fn crafter_slot_state(shared: &Shared, player: &mut PlayerState, window: i32, slot: i32, enabled: bool, reaction: &mut Reaction) {
+    let Some(&pos) = player.window.as_ref().filter(|open| open.id == window).and_then(|open| open.halves.first()) else {
+        return;
+    };
+    let Ok(slot) = usize::try_from(slot) else {
+        return;
+    };
+    let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+    if redstone::crafter::toggle_slot(&mut world, pos, slot, enabled) {
+        reaction.window_property = Some((window, slot as i16, i16::from(!enabled)));
+    }
+}
+
 fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], reaction: &mut Reaction) {
+    // В окне кафедры ячейку не трогают — книгу берут кнопкой.
+    if player.window.as_ref().is_some_and(|window| window.lectern) {
+        return;
+    }
+
     let mut cursor = Cursor::new(payload);
 
     let (Some(_window), Some(_state_id), Some(slot), Some(button), Some(mode)) =
@@ -5266,11 +6364,15 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
         return;
     };
     let halves = window.halves.clone();
+    let cart = window.cart;
     let size = window.shown.len();
 
     let (before, after, thrown) = {
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
-        let mut slots = containers::window_slots(&world, &halves);
+        let mut slots = match cart {
+            Some(cart) => cart_slots(shared, player.dimension, cart).unwrap_or_default(),
+            None => containers::window_slots(&world, &halves),
+        };
 
         if slots.len() != size {
             return;
@@ -5287,9 +6389,31 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
         };
 
         let before = snapshot(&slots, &player.inventory);
-        let click = window::Window { container: &mut slots, inventory: &mut player.inventory }.click(slot as i16 as i32, button as i8, mode);
+        let (slots_before, inventory_before) = (slots.clone(), player.inventory.clone());
+        let mut click = window::Window { container: &mut slots, inventory: &mut player.inventory }.click(slot as i16 as i32, button as i8, mode);
 
-        containers::store_window_slots(&mut world, &halves, &slots);
+        // В выключенную ячейку крафтера ничего не кладётся (вики, Crafter:
+        // «Disabled slots cannot have items put in them») — такой щелчок
+        // отменяется целиком.
+        if let Some(crafter) = halves.first().and_then(|&(x, y, z)| world.container(x, y, z)).filter(|c| c.kind == containers::Kind::Crafter)
+            && slots.iter().enumerate().any(|(index, stack)| stack.is_some() && crafter.is_disabled(index))
+        {
+            slots = slots_before;
+            player.inventory = inventory_before;
+            click.thrown = None;
+        }
+
+        match cart {
+            Some(cart) => {
+                let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+
+                if let Some(cart) = items.carts_mut().iter_mut().find(|found| found.entity_id == cart) {
+                    cart.slots.clone_from(&slots);
+                }
+            }
+            None => containers::store_window_slots(&mut world, &halves, &slots),
+        }
+
         redstone::settle(&mut world);
 
         (before, snapshot(&slots, &player.inventory), click.thrown)
@@ -5300,7 +6424,15 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
     }
 
     if let Some(window) = player.window.as_mut() {
+        let crafted = window.crafter.then(|| (crate::crafting::craft(&window.shown), crate::crafting::craft(&after[..size])));
+
         window.shown = after[..size].to_vec();
+
+        if let Some((was, now)) = crafted
+            && was != now
+        {
+            reaction.window_slots.push((window.result_slot(), now));
+        }
     }
 
     // Чего клиент ждёт в каждой ячейке: предсказанное — там, где он его
@@ -5439,6 +6571,15 @@ impl<'a> Cursor<'a> {
         Some(f32::from_be_bytes(bytes))
     }
 
+    /// Следующие `length` байт как есть.
+    fn bytes(&mut self, length: usize) -> Option<&'a [u8]> {
+        let value = self.bytes.get(self.offset..self.offset.checked_add(length)?)?;
+
+        self.offset += length;
+
+        Some(value)
+    }
+
     /// Строка протокола: длина в байтах, затем сами байты в UTF-8.
     fn string(&mut self) -> Option<String> {
         let length = usize::try_from(self.varint()?).ok()?;
@@ -5556,6 +6697,13 @@ struct PlayerState {
     /// следом присылает Use Item, и вылитое не должно тут же зачерпнуться.
     poured: Option<i32>,
 
+    /// Вагонетки, показанные клиенту, — какими он их знает (minecart.rs).
+    seen_carts: HashMap<i32, ShownCart>,
+
+    /// Такт мира, когда игрок последний раз бил: сила удара зависит от
+    /// того, сколько прошло.
+    last_attack: u64,
+
     /// Когда клиент последний раз ответил на Keep Alive.
     answered: Instant,
 
@@ -5629,9 +6777,27 @@ struct OpenWindow {
     /// Места хранилища (половины сундука) в порядке ячеек окна.
     halves: Vec<(i32, i32, i32)>,
 
+    /// Вагонетка, чьё это окно (тогда мест нет).
+    cart: Option<i32>,
+
     /// Ячейки хранилища, какими их знает клиент: по ним видно, что
     /// досылать.
     shown: Vec<Option<Stack>>,
+
+    /// Окно кафедры: одна ячейка без инвентаря игрока и свойство
+    /// «страница».
+    lectern: bool,
+
+    /// Окно крафтера: после рюкзака и панели — ячейка с тем, что выйдет
+    /// (чёрный ящик, crafter-slots: ячейка 45).
+    crafter: bool,
+}
+
+impl OpenWindow {
+    /// Номер ячейки «что выйдет» у окна крафтера.
+    fn result_slot(&self) -> usize {
+        self.shown.len() + window::PLAYER_SLOTS
+    }
 }
 
 impl PlayerState {
@@ -5702,6 +6868,8 @@ impl PlayerState {
             teleport: 0,
             awaiting_teleport: false,
             poured: None,
+            seen_carts: HashMap::new(),
+            last_attack: 0,
             dimension: saved.as_ref().map(|data| data.dimension).unwrap_or_default(),
             in_portal: 0,
             // Зашёл, стоя в портале, — не переносить сразу.
@@ -5952,6 +7120,20 @@ fn packet_name(packet_id: i32) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Чистая табличка: корень, сторона «back_text» первой, в ней свечение,
+    /// цвет и четыре пустые строки — как у оригинала; тег закрыт.
+    #[test]
+    fn an_empty_sign_is_encoded_like_the_original() {
+        let nbt = empty_sign_nbt();
+
+        assert_eq!(&nbt[..4], &[0x0A, 0x0A, 0x00, 9]);
+        assert_eq!(&nbt[4..13], b"back_text");
+        assert_eq!(nbt.last(), Some(&0x00));
+        // Корень; стороны — заголовок (12 и 13) и 60 байт тегов; is_waxed
+        // (12); конец корня.
+        assert_eq!(nbt.len(), 1 + (12 + 60) + (13 + 60) + 12 + 1);
+    }
 
     /// Данные освещения по протоколу: массив у каждой секции из маски, тёмные
     /// секции — только в «пустой» маске, небо выше секции над верхним блоком
@@ -6400,6 +7582,41 @@ mod tests {
         );
     }
 
+    /// Особый динамит уходит клиенту с тремя довесками (название, описание,
+    /// пометка), а из творческого меню пометка приходит обратно — вид не
+    /// теряется, когда игрок в творческом перекладывает стопку.
+    #[test]
+    fn custom_tnt_goes_out_with_components_and_comes_back() {
+        let kind = crate::custom_tnt::by_name("nuke").expect("nuke");
+        let stack = crate::custom_tnt::stack(kind, 2).expect("динамит");
+
+        let mut sent = Vec::new();
+        push_slot(&mut sent, Some(stack));
+        assert_eq!(&sent[..2], &[2, stack.item as u8, 0][..2]);
+        assert!(sent.windows(kind.title.len()).any(|window| window == kind.title.as_bytes()));
+
+        // Творческий слот: у каждого довеска своя длина (Untrusted Slot).
+        let data = nbt::Compound::new().string(crate::custom_tnt::MARKER, kind.name).encode_network();
+        let name = nbt::text_component(kind.title);
+        let mut message = Vec::new();
+        message.extend_from_slice(&(inventory::FIRST_HOTBAR as i16).to_be_bytes());
+
+        for value in [2, stack.item, 2, 0, COMPONENT_CUSTOM_NAME, name.len() as i32] {
+            message.extend_from_slice(&encode_varint(value));
+        }
+
+        message.extend_from_slice(&name);
+        message.extend_from_slice(&encode_varint(COMPONENT_CUSTOM_DATA));
+        message.extend_from_slice(&encode_varint(data.len() as i32));
+        message.extend_from_slice(&data);
+
+        let mut player = PlayerState::new([4; 16], "Игрок".to_string(), None, None, 0x7F, 1, SPAWN);
+        player.game_mode = GAME_MODE_CREATIVE;
+        read_creative_slot(&message, &mut player);
+
+        assert_eq!(player.inventory.slot(inventory::FIRST_HOTBAR), Some(stack));
+    }
+
     /// Брошенный предмет летит туда, куда смотрит игрок, — с наклоном:
     /// в небо вверх, под ноги вниз.
     #[test]
@@ -6464,7 +7681,7 @@ mod tests {
             let mut payload = encode_varint(7); // номер запроса
             payload.extend_from_slice(&encode_string(text));
 
-            suggestions(&payload, &shared).expect("подсказки собрались")
+            suggestions(&payload, &shared, &[1; 16]).expect("подсказки собрались")
         };
 
         // Набрано начало имени: подходят двое из трёх.
@@ -6482,6 +7699,43 @@ mod tests {
 
         // Набрано то, чего нет.
         assert!(ask("kick Юра").matches.is_empty());
+
+        // Особый динамит без прав не подсказывается вовсе.
+        assert!(ask("tnt ").matches.is_empty());
+        assert!(ask("tnt give Вася m").matches.is_empty());
+    }
+
+    /// Подсказки к `tnt`: слова, игроки, виды из таблицы, число — тому, у
+    /// кого есть права.
+    #[test]
+    fn tnt_hints_come_from_the_kinds_table() {
+        let ops = std::env::temp_dir().join(format!("mcsheriffanya-tnt-hints-{}.json", std::process::id()));
+        let _ = std::fs::remove_file(&ops);
+        let shared = crate::shared::Shared::new(
+            crate::world::World::in_memory(),
+            crate::world::World::in_memory(),
+            std::path::PathBuf::new(),
+            std::path::PathBuf::new(),
+            Default::default(),
+            crate::ops::Ops::open(&ops),
+            crate::skins::Settings::default(),
+        );
+
+        shared.ops.lock().expect("права").give(&[1; 16], "Вася", crate::ops::HIGHEST_LEVEL);
+
+        let hints = |text: &str| {
+            let typed = text.rsplit(' ').next().unwrap_or("");
+            hints_for(text, typed, &shared, &[1; 16])
+        };
+
+        assert_eq!(hints("/tnt "), vec!["give".to_string(), "list".to_string()]);
+        assert_eq!(hints("/tnt give Вася "), crate::custom_tnt::names().map(str::to_string).collect::<Vec<_>>());
+        assert_eq!(hints("/tnt give Вася n"), vec!["nuke".to_string()]);
+        assert!(hints("/tnt give Вася mega ").contains(&"64".to_string()));
+        assert!(hints("/tnt give ").contains(&"@a".to_string()));
+        assert!(hints_for("/tnt ", "", &shared, &[2; 16]).is_empty(), "без прав подсказалось");
+
+        let _ = std::fs::remove_file(&ops);
     }
 
     /// Подсказки зависят от команды: где ждут игрока — имена, где предмет —
@@ -6499,15 +7753,20 @@ mod tests {
         );
 
         // Предметы подсказываются по началу названия.
-        let items = hints_for("/give Игрок sto", "sto", &shared);
+        let items = hints_for("/give Игрок sto", "sto", &shared, &[1; 16]);
         assert!(items.iter().any(|name| name == "stone"), "камня нет в подсказках");
         assert!(items.iter().all(|name| name.starts_with("sto")));
 
         // Без начала слова список предметов не вываливается.
-        assert!(hints_for("/give Игрок ", "", &shared).is_empty());
+        assert!(hints_for("/give Игрок ", "", &shared, &[1; 16]).is_empty());
 
         // У времени свои слова.
-        let time = hints_for("/time s", "s", &shared);
+        assert_eq!(hints_for("/summon chest", "chest", &shared, &[1; 16]), vec!["chest_minecart".to_string()]);
+        assert!(hints_for("/kill @e[type=i", "@e[type=i", &shared, &[1; 16]).contains(&"@e[type=item]".to_string()));
+        assert!(hints_for("/setblock 1 2 3 redstone_l", "redstone_l", &shared, &[1; 16]).contains(&"redstone_lamp".to_string()));
+        assert!(hints_for("/fill 1 2 3 4 5 6 redstone_l", "redstone_l", &shared, &[1; 16]).contains(&"redstone_lamp".to_string()));
+
+        let time = hints_for("/time s", "s", &shared, &[1; 16]);
         assert_eq!(time, vec!["set".to_string()]);
     }
 

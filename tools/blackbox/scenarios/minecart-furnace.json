@@ -1,0 +1,32 @@
+{
+ "name": "minecart-furnace",
+ "about": "Игрок щёлкает углём по вагонетке с печью: она загорается (свойство fuel) и едет от игрока по рельсе на 0,2 блока за такт; скорость — 0,96·(0,8·v + толчок). Второй щелчок добавляет топлива и толчок заново.",
+ "blocks": [],
+ "setup": [
+  "fill $(3,0,-8) $(3,0,2) minecraft:rail[shape=north_south]",
+  "give blackbox coal 4"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon furnace_minecart $(3.5,0,0.5)"
+  },
+  {
+   "after": 4,
+   "interact": true
+  },
+  {
+   "after": 14,
+   "interact": true
+  }
+ ],
+ "record_ticks": 50,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=tnt_minecart]",
+  "kill @e[type=furnace_minecart]",
+  "kill @e[type=item]"
+ ]
+}

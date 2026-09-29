@@ -50,7 +50,14 @@ impl<T: Clone> Journal<T> {
     /// Добавляет запись.
     pub fn push(&mut self, entry: T) {
         self.entries.push_back(entry);
-        self.forget_read();
+
+        // Прочитанное всеми выбрасывают `since` и `forget`; новая запись ещё
+        // никем не прочитана. Здесь остаётся выбросить только ненужное
+        // никому (читателей нет) и лишнее сверх предела — без обхода
+        // читателей на каждой записи.
+        if self.readers.is_empty() || self.entries.len() > LIMIT {
+            self.forget_read();
+        }
     }
 
     /// Сколько всего записей было за всё время.
@@ -260,5 +267,37 @@ mod tests {
 
         // Дочитав до конца, он больше не отстаёт.
         assert!(!journal.lagged(journal.count()));
+    }
+
+    /// Запись без обхода читателей: пока все дочитывают, в журнале держится
+    /// ровно непрочитанное, как и раньше, когда обход шёл на каждой записи.
+    #[test]
+    fn a_push_keeps_exactly_the_unread() {
+        let mut journal = Journal::new();
+
+        let (first, second) = (1, 2);
+        let mut at_first = journal.watch(first);
+
+        journal.push(1);
+        journal.push(2);
+
+        // Второй пришёл позже: ему — только новое.
+        let mut at_second = journal.watch(second);
+
+        journal.push(3);
+        assert_eq!(journal.kept(), 3);
+
+        assert_eq!(journal.since(at_first, first), vec![1, 2, 3]);
+        at_first = journal.count();
+        assert_eq!(journal.kept(), 1);
+
+        journal.push(4);
+        assert_eq!(journal.since(at_second, second), vec![3, 4]);
+        at_second = journal.count();
+        assert_eq!(journal.kept(), 1);
+
+        assert_eq!(journal.since(at_first, first), vec![4]);
+        assert_eq!(journal.kept(), 0);
+        assert!(journal.since(at_second, second).is_empty());
     }
 }

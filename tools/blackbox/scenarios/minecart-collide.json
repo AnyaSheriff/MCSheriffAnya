@@ -1,0 +1,178 @@
+{
+ "name": "minecart-collide",
+ "about": "Разогнанная вагонетка догоняет стоящую: обе получают среднюю скорость и толчок друг от друга.",
+ "blocks": [
+  {
+   "at": [
+    -8,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -7,
+    -1,
+    0
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    -6,
+    -1,
+    0
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    -7,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[shape=east_west,powered=true,waterlogged=false]"
+  },
+  {
+   "at": [
+    -6,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[shape=east_west,powered=true,waterlogged=false]"
+  },
+  {
+   "at": [
+    -5,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -4,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    7,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    8,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  }
+ ],
+ "setup": [
+  "kill @e[type=minecart]"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecart $(0.5,0,0.5)"
+  },
+  {
+   "after": 1,
+   "cmd": "summon minecart $(-6.5,0,0.5)"
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=item]"
+ ]
+}

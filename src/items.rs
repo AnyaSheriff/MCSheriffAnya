@@ -23,11 +23,18 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use crate::inventory::Stack;
 use crate::journal::{Journal, Reader};
 
-/// Насколько близко надо подойти, чтобы предмет поднялся: примерно шаг
-/// по горизонтали и полтора блока по высоте — чтобы поднять и то, что лежит
-/// под ногами, и то, что на голову выше.
-const PICK_UP_RANGE: f64 = 1.4;
-const PICK_UP_HEIGHT: f64 = 1.5;
+/// Докуда дотягивается игрок: его рамка (0.6 × 1.8), раздвинутая на блок
+/// по сторонам и на полблока вверх и вниз, должна задеть рамку предмета
+/// (0.25 × 0.25) — вики, Item (entity), «Pickup». По сторонам это
+/// 0.3 + 1 + 0.125 от оси игрока до оси предмета — квадрат, а не круг:
+/// наискось игрок дотягивается дальше (чёрный ящик, dropper-pulse — с кругом
+/// в 1.4 камень поднимался на 2 такта позже).
+const PICK_UP_REACH: f64 = 0.3 + 1.0 + 0.125;
+
+/// По высоте: низ предмета ниже макушки игрока + 0.5, верх предмета выше
+/// его ног − 0.5.
+const PICK_UP_ABOVE: f64 = 1.8 + 0.5;
+const PICK_UP_BELOW: f64 = 0.5 + 0.25;
 
 /// Сколько предмет нельзя поднимать после того, как игрок его выбросил:
 /// две секунды, как в игре.
@@ -130,6 +137,10 @@ pub struct Dropped {
     /// None.
     pub fuse: Option<i32>,
 
+    /// Особый динамит (custom_tnt.rs) — какой; у обычного и у прочих
+    /// сущностей — None.
+    pub custom: Option<crate::custom_tnt::KindId>,
+
     /// Здоровье: у предмета его отнимает взрыв (`ITEM_HEALTH`).
     pub health: f32,
 
@@ -190,6 +201,9 @@ pub enum Change {
     /// У динамита убыл запал: оригинал сообщает его клиентам каждый такт.
     Fuse { entity_id: i32, fuse: i32 },
 
+    /// Появилась вагонетка (minecart.rs). Пропадает она записью `Gone`.
+    Cart(crate::minecart::Minecart),
+
     /// Предмет подняли.
     Taken {
         entity_id: i32,
@@ -205,6 +219,11 @@ pub enum Change {
 /// Все предметы, лежащие в мире, и журнал изменений.
 pub struct Items {
     items: Vec<Dropped>,
+
+    /// Вагонетки в порядке появления: у них своя физика (minecart.rs), но
+    /// журнал общий с предметами — клиенты узнают о них тем же путём.
+    carts: Vec<crate::minecart::Minecart>,
+
     changes: Journal<Change>,
 }
 
@@ -212,8 +231,41 @@ impl Items {
     pub fn new() -> Self {
         Self {
             items: Vec::new(),
+            carts: Vec::new(),
             changes: Journal::new(),
         }
+    }
+
+    /// Ставит вагонетку в мир.
+    pub fn add_cart(&mut self, cart: crate::minecart::Minecart) {
+        self.changes.push(Change::Cart(cart.clone()));
+        self.carts.push(cart);
+    }
+
+    /// Все вагонетки — в порядке появления.
+    pub fn carts(&self) -> &[crate::minecart::Minecart] {
+        &self.carts
+    }
+
+    pub fn carts_mut(&mut self) -> &mut [crate::minecart::Minecart] {
+        &mut self.carts
+    }
+
+    /// Сам список вагонеток — чтобы на время вынуть его целиком.
+    pub fn carts_vec(&mut self) -> &mut Vec<crate::minecart::Minecart> {
+        &mut self.carts
+    }
+
+    /// Убирает вагонетки, которые выбирает `gone` (сломали, убили
+    /// командой, провалились в пустоту), и возвращает их.
+    pub fn remove_carts(&mut self, gone: impl FnMut(&mut crate::minecart::Minecart) -> bool) -> Vec<crate::minecart::Minecart> {
+        let removed: Vec<crate::minecart::Minecart> = self.carts.extract_if(.., gone).collect();
+
+        for cart in &removed {
+            self.changes.push(Change::Gone { entity_id: cart.entity_id });
+        }
+
+        removed
     }
 
     /// Кладёт предмет в мир.
@@ -231,6 +283,7 @@ impl Items {
             stack,
             block: None,
             fuse: None,
+            custom: None,
             health: ITEM_HEALTH,
             x,
             y,
@@ -266,6 +319,7 @@ impl Items {
             stack,
             block: Some(state),
             fuse: None,
+            custom: None,
             health: ITEM_HEALTH,
             x,
             y,
@@ -286,14 +340,24 @@ impl Items {
     }
 
     /// Подожжённый динамит: сущность с запалом `fuse` тактов. `state` —
-    /// состояние блока динамита, `velocity` — начальный толчок.
-    pub fn prime(&mut self, entity_id: i32, state: i32, (x, y, z): (f64, f64, f64), velocity: (f64, f64, f64), fuse: i32) {
+    /// состояние блока динамита, `velocity` — начальный толчок, `custom` —
+    /// вид особого динамита.
+    pub fn prime(
+        &mut self,
+        entity_id: i32,
+        state: i32,
+        (x, y, z): (f64, f64, f64),
+        velocity: (f64, f64, f64),
+        fuse: i32,
+        custom: Option<crate::custom_tnt::KindId>,
+    ) {
         let primed = Dropped {
             entity_id,
             uuid: uuid_for(entity_id),
             stack: Stack::new(0, 0),
             block: Some(state),
             fuse: Some(fuse),
+            custom,
             health: ITEM_HEALTH,
             x,
             y,
@@ -355,6 +419,18 @@ impl Items {
     /// Всё, что лежит в мире, — для взрыва: он толкает и ранит.
     pub fn items_mut(&mut self) -> &mut [Dropped] {
         &mut self.items
+    }
+
+    /// Убирает предметы, которые выбирает `gone` (команда `kill`), и
+    /// возвращает их.
+    pub fn remove_items(&mut self, gone: impl FnMut(&mut Dropped) -> bool) -> Vec<Dropped> {
+        let removed: Vec<Dropped> = self.items.extract_if(.., gone).collect();
+
+        for item in &removed {
+            self.changes.push(Change::Gone { entity_id: item.entity_id });
+        }
+
+        removed
     }
 
     /// Убирает предметы, у которых не осталось здоровья, — их уничтожил
@@ -582,14 +658,27 @@ impl Items {
 }
 
 impl Dropped {
+    /// Имя вида сущности, как в командах: подожжённый динамит, падающий
+    /// блок или предмет.
+    pub fn type_name(&self) -> &'static str {
+        if self.fuse.is_some() {
+            "tnt"
+        } else if self.block.is_some() {
+            "falling_block"
+        } else {
+            "item"
+        }
+    }
+
     /// Дотягивается ли игрок, стоящий здесь, до этого предмета.
     fn reaches(&self, x: f64, y: f64, z: f64) -> bool {
         let Some((at_x, at_y, at_z)) = self.touchable else {
             return false;
         };
-        let flat = ((at_x - x).powi(2) + (at_z - z).powi(2)).sqrt();
-
-        flat <= PICK_UP_RANGE && (at_y - y).abs() <= PICK_UP_HEIGHT
+        (at_x - x).abs() < PICK_UP_REACH
+            && (at_z - z).abs() < PICK_UP_REACH
+            && at_y < y + PICK_UP_ABOVE
+            && at_y > y - PICK_UP_BELOW
     }
 
     /// Двигает предмет на один такт.
@@ -792,7 +881,7 @@ impl Dropped {
 /// Он должен быть разным у разных предметов и больше нигде не значит ничего:
 /// клиент по нему только отличает сущности друг от друга. Поэтому составляем
 /// его из номера сущности и времени.
-fn uuid_for(entity_id: i32) -> [u8; 16] {
+pub(crate) fn uuid_for(entity_id: i32) -> [u8; 16] {
     let moment = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|passed| passed.as_nanos() as u64)

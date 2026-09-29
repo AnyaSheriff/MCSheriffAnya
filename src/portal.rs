@@ -10,12 +10,40 @@ use crate::blocks;
 use crate::dimension::Dimension;
 use crate::world::{World, AIR};
 
-/// Самая большая сторона проёма.
-const MAX_SIDE: i32 = 21;
+/// Какие проёмы зажигаются: ширина и высота внутри рамки, от и до. У
+/// оригинала от 2×3 до 21×21; сервер может задать свои
+/// (`portal-min-width`, `portal-min-height`, `portal-max-width`,
+/// `portal-max-height` в config/mcsa.properties).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Sizes {
+    pub min_width: i32,
+    pub min_height: i32,
+    pub max_width: i32,
+    pub max_height: i32,
+}
 
-/// Самая маленькая ширина и высота проёма.
-const MIN_WIDTH: i32 = 2;
-const MIN_HEIGHT: i32 = 3;
+/// Размеры у оригинала.
+pub const VANILLA: Sizes = Sizes { min_width: 2, min_height: 3, max_width: 21, max_height: 21 };
+
+/// Самая большая сторона, какую можно задать: огромный проём заполняется
+/// порталом за один такт.
+pub const LARGEST: i32 = 256;
+
+impl Sizes {
+    /// Размеры, приведённые в допустимые рамки: сторона от 1 до `LARGEST`,
+    /// наименьшее не больше наибольшего.
+    pub fn sane(self) -> Sizes {
+        let max_width = self.max_width.clamp(1, LARGEST);
+        let max_height = self.max_height.clamp(1, LARGEST);
+
+        Sizes {
+            min_width: self.min_width.clamp(1, max_width),
+            min_height: self.min_height.clamp(1, max_height),
+            max_width,
+            max_height,
+        }
+    }
+}
 
 /// Ось портала: вдоль x или вдоль z.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -74,7 +102,7 @@ pub struct Opening {
 
 /// Ищет рамку вокруг этого места по данной оси: вниз до пола из обсидиана,
 /// влево до стенки, потом ширина, высота и проверка всей рамки.
-fn opening_at(world: &World, (x, y, z): (i32, i32, i32), axis: Axis) -> Option<Opening> {
+fn opening_at(world: &World, (x, y, z): (i32, i32, i32), axis: Axis, sizes: Sizes) -> Option<Opening> {
     let block = |(x, y, z): (i32, i32, i32)| world.get_block(x, y, z);
     let obsidian = obsidian();
     let (dx, dz) = axis.step();
@@ -87,7 +115,7 @@ fn opening_at(world: &World, (x, y, z): (i32, i32, i32), axis: Axis) -> Option<O
     let mut bottom = y;
     while fillable(block((x, bottom - 1, z))) {
         bottom -= 1;
-        if y - bottom > MAX_SIDE {
+        if y - bottom > sizes.max_height {
             return None;
         }
     }
@@ -100,7 +128,7 @@ fn opening_at(world: &World, (x, y, z): (i32, i32, i32), axis: Axis) -> Option<O
     while fillable(block((left_x - dx, bottom, left_z - dz))) {
         left_x -= dx;
         left_z -= dz;
-        if (x - left_x).abs() + (z - left_z).abs() > MAX_SIDE {
+        if (x - left_x).abs() + (z - left_z).abs() > sizes.max_width {
             return None;
         }
     }
@@ -110,7 +138,7 @@ fn opening_at(world: &World, (x, y, z): (i32, i32, i32), axis: Axis) -> Option<O
 
     // Ширина: вправо, пока пусто и под ногами обсидиан.
     let mut width = 0;
-    while width <= MAX_SIDE {
+    while width <= sizes.max_width {
         let at = (left_x + dx * width, bottom, left_z + dz * width);
 
         if !fillable(block(at)) {
@@ -121,13 +149,13 @@ fn opening_at(world: &World, (x, y, z): (i32, i32, i32), axis: Axis) -> Option<O
         }
         width += 1;
     }
-    if !(MIN_WIDTH..=MAX_SIDE).contains(&width) || block((left_x + dx * width, bottom, left_z + dz * width)) != obsidian {
+    if !(sizes.min_width..=sizes.max_width).contains(&width) || block((left_x + dx * width, bottom, left_z + dz * width)) != obsidian {
         return None;
     }
 
     // Высота: вверх, пока весь ряд пуст, а по бокам обсидиан.
     let mut height = 0;
-    'rows: while height <= MAX_SIDE {
+    'rows: while height <= sizes.max_height {
         let row = bottom + height;
 
         for column in 0..width {
@@ -142,7 +170,7 @@ fn opening_at(world: &World, (x, y, z): (i32, i32, i32), axis: Axis) -> Option<O
         }
         height += 1;
     }
-    if !(MIN_HEIGHT..=MAX_SIDE).contains(&height) {
+    if !(sizes.min_height..=sizes.max_height).contains(&height) {
         return None;
     }
 
@@ -172,10 +200,13 @@ fn fill(world: &mut World, opening: Opening) {
 }
 
 /// Зажигалка по этому месту: если оно внутри целой рамки — загорается
-/// портал. Возвращает true, если портал появился.
-pub fn light(world: &mut World, at: (i32, i32, i32)) -> bool {
+/// портал. Возвращает true, если портал появился. `sizes` — какие проёмы
+/// зажигаются (`Settings::portal_sizes`).
+pub fn light(world: &mut World, at: (i32, i32, i32), sizes: Sizes) -> bool {
+    let sizes = sizes.sane();
+
     for axis in [Axis::X, Axis::Z] {
-        if let Some(opening) = opening_at(world, at, axis) {
+        if let Some(opening) = opening_at(world, at, axis, sizes) {
             fill(world, opening);
             return true;
         }
@@ -394,7 +425,7 @@ mod tests {
         let mut world = World::in_memory();
         frame(&mut world);
 
-        assert!(light(&mut world, (1, 65, 0)));
+        assert!(light(&mut world, (1, 65, 0), VANILLA));
         for (x, y) in [(1, 65), (2, 65), (1, 67), (2, 67)] {
             assert!(is_portal(world.get_block(x, y, 0)), "нет портала в {} {}", x, y);
         }
@@ -406,7 +437,7 @@ mod tests {
         frame(&mut world);
         world.set_block(2, 68, 0, AIR);
 
-        assert!(!light(&mut world, (1, 65, 0)));
+        assert!(!light(&mut world, (1, 65, 0), VANILLA));
         assert_eq!(world.get_block(1, 65, 0), AIR);
     }
 
@@ -414,11 +445,55 @@ mod tests {
     fn a_broken_frame_does_not_hold() {
         let mut world = World::in_memory();
         frame(&mut world);
-        assert!(light(&mut world, (1, 65, 0)));
+        assert!(light(&mut world, (1, 65, 0), VANILLA));
 
         world.set_block(0, 65, 0, AIR);
         let here = world.get_block(1, 65, 0);
         assert!(!holds(&world, (1, 65, 0), here));
+    }
+
+    /// Рамка с проёмом `width` × 3 вдоль x.
+    fn wide_frame(world: &mut World, width: i32) {
+        let obsidian = obsidian();
+
+        for dy in 0..5 {
+            world.set_block(0, 64 + dy, 0, obsidian);
+            world.set_block(width + 1, 64 + dy, 0, obsidian);
+        }
+        for dx in 1..=width {
+            world.set_block(dx, 64, 0, obsidian);
+            world.set_block(dx, 68, 0, obsidian);
+        }
+    }
+
+    #[test]
+    fn the_opening_sizes_follow_the_settings() {
+        let sized = |min_width, min_height, max_width, max_height| Sizes { min_width, min_height, max_width, max_height };
+
+        // 22 в ширину — больше, чем у оригинала: не зажигается.
+        let mut world = World::in_memory();
+        wide_frame(&mut world, 22);
+        assert!(!light(&mut world, (1, 65, 0), VANILLA));
+
+        // С наибольшей шириной 22 — зажигается целиком.
+        assert!(light(&mut world, (1, 65, 0), sized(2, 3, 22, 21)));
+        assert!(is_portal(world.get_block(22, 67, 0)));
+
+        // Проём 2×3 не зажечь, когда наименьшая ширина 3 или высота 4.
+        let mut world = World::in_memory();
+        frame(&mut world);
+        assert!(!light(&mut world, (1, 65, 0), sized(3, 3, 21, 21)));
+        assert!(!light(&mut world, (1, 65, 0), sized(2, 4, 21, 21)));
+
+        // Наименьшая ширина 1 — горит и проём 1×3.
+        let mut world = World::in_memory();
+        wide_frame(&mut world, 1);
+        assert!(!light(&mut world, (1, 65, 0), VANILLA));
+        assert!(light(&mut world, (1, 65, 0), sized(1, 3, 21, 21)));
+
+        // Наименьшее больше наибольшего — берётся наибольшее.
+        assert_eq!(sized(30, 3, 21, 21).sane(), sized(21, 3, 21, 21));
+        assert_eq!(sized(0, 0, 1000, -5).sane(), sized(1, 1, LARGEST, 1));
     }
 
     #[test]

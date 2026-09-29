@@ -27,8 +27,9 @@ const CHAIN: usize = 8;
 /// Раз во сколько тактов включённая детекторная рельса смотрит, есть ли на
 /// ней ещё вагонетка (вики, Detector Rail: «Every 20th game tick after the
 /// rail first becomes powered, it checks whether any minecart is still
-/// present»). [проверить]: страница Redstone components пишет о кратности
-/// 10 тактам и минимуме 20 — сценарий rail-detector.
+/// present»). Сверено чёрным ящиком (rail-detector): вагонетку уводят через
+/// 1, 5, 15, 25 и 35 тактов — рельса гаснет через 20 или 40 тактов после
+/// включения.
 const DETECTOR_RECHECK: u64 = 20;
 
 /// Форма рельсы — значение свойства `shape`.
@@ -539,9 +540,8 @@ pub(super) fn power_reach(block: &Block, pos: Pos) -> Vec<Pos> {
 // ---------------------------------------------------------------------------
 
 /// Вагонетка, как её видят детекторные рельсы: где стоит и что покажет
-/// сравнитель. Кладёт их сюда такт мира; пока вагонеток нет, список пуст.
+/// сравнитель. Кладёт их сюда такт мира (вагонетки — minecart.rs).
 #[derive(Clone, Copy, Debug)]
-#[allow(dead_code)] // вагонеток пока нет: их положит такт мира
 pub struct Cart {
     /// Середина низа ящика.
     pub x: f64,
@@ -554,13 +554,13 @@ pub struct Cart {
 }
 
 /// Ящик вагонетки: 0,98 × 0,7 (components-rest.md §12.5, minecraft-data).
-const CART_WIDTH: f64 = 0.98;
-const CART_HEIGHT: f64 = 0.7;
+const CART_WIDTH: f64 = crate::minecart::WIDTH;
+const CART_HEIGHT: f64 = crate::minecart::HEIGHT;
 
 impl Cart {
     /// Касается ли ящик вагонетки клетки рельсы. Вики (Detector Rail):
     /// «when any part of any minecart's bounding box comes into contact with
-    /// it». [проверить]: границы клетки — сценарий rail-detector.
+    /// it». [проверить]: касание самой границы клетки.
     fn touches(&self, pos: Pos) -> bool {
         let half = CART_WIDTH / 2.0;
 

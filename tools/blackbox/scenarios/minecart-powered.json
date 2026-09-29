@@ -1,0 +1,174 @@
+{
+ "name": "minecart-powered",
+ "about": "Вагонетка у стены на двух запитанных рельсах (блок редстоуна под каждой) трогается и катится по обычным до остановки: пакеты движения, скорости, поворота — такт в такт.",
+ "blocks": [
+  {
+   "at": [
+    -8,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -7,
+    -1,
+    0
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    -6,
+    -1,
+    0
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    -7,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[shape=east_west,powered=true,waterlogged=false]"
+  },
+  {
+   "at": [
+    -6,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[shape=east_west,powered=true,waterlogged=false]"
+  },
+  {
+   "at": [
+    -5,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -4,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    7,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    8,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  }
+ ],
+ "setup": [
+  "kill @e[type=minecart]"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecart $(-6.5,0,0.5)"
+  }
+ ],
+ "record_ticks": 140,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=item]"
+ ]
+}

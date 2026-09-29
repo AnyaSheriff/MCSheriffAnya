@@ -307,7 +307,7 @@ where
         return None;
     }
 
-    let supply = supply(at, block);
+    let supply = supply(at, fluid_at(here).map(|(kind, _)| kind), block);
 
     // Жидкости здесь нет, и прийти ей неоткуда — место остаётся, каким было.
     // Высыхает только сама жидкость: рыхлый снег или цветок, рядом с которым
@@ -333,6 +333,76 @@ where
     };
 
     (wanted != here).then_some(wanted)
+}
+
+/// Куда растекается жидкость из этого места своим тактом и что там встаёт.
+///
+/// Жидкость «толкает»: пустое место своего такта не ждёт, его заливает
+/// соседняя жидкость, когда наступает её такт (вики, Water: «water ...
+/// spreads ... every 5 game ticks»; у оригинала на встрече воды с лавой
+/// пустое место берёт та жидкость, чей такт раньше, — сценарий
+/// water-meets-lava). Сперва вниз, если есть куда падать; вбок — туда,
+/// куда жидкость течёт (`flows_towards`). Что встаёт в пустом месте,
+/// считается по всем его соседям той же жидкости — как `update`.
+///
+/// Лава, которой есть куда падать в воду, делает из воды камень (вики,
+/// Lava: «If lava flows into water from above, the water turns into
+/// stone»).
+pub fn spreading<F>(from: (i32, i32, i32), block: &F) -> Vec<((i32, i32, i32), i32)>
+where
+    F: Fn(i32, i32, i32) -> i32,
+{
+    let (x, y, z) = from;
+    let mut out = Vec::new();
+
+    let Some((kind, _)) = fluid_at(block(x, y, z)) else {
+        return out;
+    };
+
+    let below = (x, y - 1, z);
+    let under = block(below.0, below.1, below.2);
+
+    if kind == Kind::Lava && matches!(fluid_at(under), Some((Kind::Water, _))) {
+        out.push((below, named_state("stone")));
+    } else if let Some(state) = poured(below, kind, block) {
+        out.push((below, state));
+    }
+
+    // Порядок сторон — север, восток, юг, запад [проверить]: внутри такта
+    // он виден только тем, кто из двух соседей займёт место первым.
+    for side in [2, 1, 3, 0] {
+        let (dx, dz) = SIDES[side];
+        let to = (x + dx, y, z + dz);
+
+        if flows_towards(from, side, kind, block)
+            && let Some(state) = poured(to, kind, block)
+        {
+            out.push((to, state));
+        }
+    }
+
+    out
+}
+
+/// Что встанет в пустом месте, куда растекается эта жидкость. None — место
+/// занято или питать его нечем.
+fn poured<F>(at: (i32, i32, i32), kind: Kind, block: &F) -> Option<i32>
+where
+    F: Fn(i32, i32, i32) -> i32,
+{
+    let here = block(at.0, at.1, at.2);
+
+    if fluid_at(here).is_some() || !flows_through(here) {
+        return None;
+    }
+
+    let (kind, level) = supply(at, Some(kind), block)?;
+
+    if kind == Kind::Water && becomes_source(at, block) {
+        return Some(state_of(Kind::Water, SOURCE));
+    }
+
+    Some(state_of(kind, level))
 }
 
 /// Высота поверхности воды в клетке над её низом: источник 8/9, каждый
@@ -441,27 +511,29 @@ where
 ///
 /// Сверху льётся — значит, падающая. Иначе берём того соседа сбоку, который
 /// даёт самый толстый слой, и добавляем к его уровню единицу.
-fn supply<F>(at: (i32, i32, i32), block: &F) -> Option<(Kind, i32)>
+///
+/// `own` — какой жидкостью питается место: своей, если она в нём уже есть,
+/// или той, что сейчас в него растекается (`spreading`). Жидкость питается
+/// только своей же жидкостью: вода рядом с лавой лавой не становится —
+/// встречу воды с лавой разбирает `mixing`, и там меняется лава, а не вода.
+fn supply<F>(at: (i32, i32, i32), own: Option<Kind>, block: &F) -> Option<(Kind, i32)>
 where
     F: Fn(i32, i32, i32) -> i32,
 {
     let (x, y, z) = at;
 
-    // Жидкость питается только своей же жидкостью: вода рядом с лавой лавой
-    // не становится — встречу воды с лавой разбирает `mixing`, и там
-    // меняется лава, а не вода. Пустое место берёт то, что даёт слой толще.
-    let own = fluid_at(block(x, y, z)).map(|(kind, _)| kind);
-
     // Жидкость, над которой жидкость, — падающая, даже если под ней пол:
     // низ водопада у оригинала тоже падающий, а растекание от него
     // начинается с первого уровня (сценарий чёрного ящика waterfall).
-    if let Some((kind, _)) = fluid_at(block(x, y + 1, z)) {
+    if let Some((kind, _)) = fluid_at(block(x, y + 1, z))
+        && own.is_none_or(|own| own == kind)
+    {
         return Some((kind, FALLING));
     }
 
     let mut best: Option<(Kind, i32)> = None;
 
-    for (side, (dx, dz)) in SIDES.iter().enumerate() {
+    for (dx, dz) in SIDES {
         let neighbour = (x + dx, y, z + dz);
 
         let Some((kind, level)) = fluid_at(block(neighbour.0, neighbour.1, neighbour.2)) else {
@@ -488,16 +560,11 @@ where
             continue;
         }
 
-        // Течёт ли сосед в нашу сторону: он выбирает направление по тому,
-        // где ближе спуск.
-        if !flows_towards(neighbour, opposite(side), kind, block) {
-            continue;
-        }
-
-        // Если в пустое место могут прийти и вода, и лава, у оригинала
-        // всё решает порядок их тактов (сценарий water-meets-lava: где-то
-        // входит лава и твердеет, где-то вода). Порядка тактов источников
-        // мы здесь не знаем — берём слой толще; расходится в паре клеток.
+        // Течёт ли сосед в нашу сторону, здесь не важно: куда течь, решает
+        // растекание (`spreading`), а уровень уже налитой жидкости берётся
+        // от самого толстого соседа, куда бы тот ни тёк (чёрный ящик,
+        // dispenser-water: у края площадки, где рядом спуск, вода при спаде
+        // держит уровень от соседа, текущего к обрыву).
         best = match best {
             Some((_, best_level)) if best_level <= next => best,
             _ => Some((kind, next)),
@@ -650,16 +717,6 @@ where
     !flows_through(below) || matches!(fluid_at(below), Some((Kind::Water, SOURCE)))
 }
 
-/// Сторона, противоположная этой.
-fn opposite(side: usize) -> usize {
-    match side {
-        0 => 1,
-        1 => 0,
-        2 => 3,
-        _ => 2,
-    }
-}
-
 /// Во что превращается лава, встретившая воду.
 ///
 /// Источник даёт обсидиан, текущая лава — булыжник.
@@ -797,9 +854,53 @@ mod tests {
         // Дыра в полу в двух шагах к востоку.
         place.set((2, 63, 0), AIR);
 
-        assert_eq!(place.update((1, 64, 0)), Some(water(1)));
-        assert_eq!(place.update((-1, 64, 0)), None);
-        assert_eq!(place.update((0, 64, 1)), None);
+        let view = |x, y, z| place.blocks.get(&(x, y, z)).copied().unwrap_or(AIR);
+
+        assert_eq!(spreading((0, 64, 0), &view), vec![((1, 64, 0), water(1))]);
+    }
+
+    /// Уровень текущей воды берётся от самого толстого соседа, даже если тот
+    /// течёт в другую сторону (чёрный ящик, dispenser-water: спад у края
+    /// площадки).
+    #[test]
+    fn a_level_follows_the_thickest_neighbour_wherever_it_flows() {
+        let mut place = Place::with_floor();
+
+        place.set((0, 64, 0), water(5));
+        place.set((1, 64, 0), water(3));
+        // Сосед течёт только к дыре на востоке, не к нам.
+        place.set((3, 63, 0), AIR);
+
+        assert_eq!(place.update((0, 64, 0)), Some(water(4)));
+    }
+
+    /// Растекаясь, жидкость несёт себя: лава в пустое место у воды входит
+    /// лавой, хотя вода рядом дала бы слой толще (чёрный ящик,
+    /// water-meets-lava: там она сразу твердеет).
+    #[test]
+    fn lava_spreads_as_lava_next_to_water() {
+        let mut place = Place::with_floor();
+
+        place.set((0, 64, 0), lava(2));
+        place.set((2, 64, 0), water(1));
+
+        let view = |x, y, z| place.blocks.get(&(x, y, z)).copied().unwrap_or(AIR);
+
+        assert!(spreading((0, 64, 0), &view).contains(&((1, 64, 0), lava(4))));
+    }
+
+    /// Лава, которой есть куда падать в воду, делает из неё камень своим
+    /// тактом.
+    #[test]
+    fn lava_pouring_onto_water_makes_stone() {
+        let mut place = Place::with_floor();
+
+        place.set((0, 65, 0), lava(SOURCE));
+        place.set((0, 64, 0), water(3));
+
+        let view = |x, y, z| place.blocks.get(&(x, y, z)).copied().unwrap_or(AIR);
+
+        assert_eq!(spreading((0, 65, 0), &view).first(), Some(&((0, 64, 0), named_state("stone"))));
     }
 
     /// Когда спуска нигде нет, вода растекается ровно во все стороны.

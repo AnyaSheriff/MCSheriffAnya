@@ -85,6 +85,16 @@ impl Occupant {
         }
     }
 
+    /// Вагонетка: ящик 0,98 × 0,7 (вики, Minecart). Деревянные плиты и
+    /// растяжки её чувствуют, каменные — нет: она не живая.
+    pub fn minecart(x: f64, y: f64, z: f64, on_ground: bool) -> Self {
+        Self {
+            width: crate::minecart::WIDTH,
+            height: crate::minecart::HEIGHT,
+            ..Self::item(x, y, z, on_ground)
+        }
+    }
+
     /// Пересекает ли ящик сущности кусок блока `pos` от высоты `low` до
     /// `high` (доли блока) во всю его ширину. Строго: касание границы не
     /// считается (вики, String: с 25w31a «entities can no longer trigger
@@ -195,55 +205,33 @@ pub fn strike(world: &mut World, pos: Pos) {
 /// Detector). Обновления блоков на него не действуют.
 const DAYLIGHT_PERIOD: u64 = 20;
 
-/// Внутренний небесный свет в ясную погоду по времени суток — таблица вики
-/// (Light, «Internal sky light», столбцы «ясно»): с какого такта какой
-/// уровень. Утро — рост от 4 к 15, вечер — спад от 15 к 4. Погоды у нас нет,
-/// поэтому только ясно.
-const MORNING: [(i64, i32); 11] = [
-    (22_331, 5),
-    (22_492, 6),
-    (22_653, 7),
-    (22_813, 8),
-    (22_974, 9),
-    (23_135, 10),
-    (23_297, 11),
-    (23_460, 12),
-    (23_624, 13),
-    (23_791, 14),
-    (23_961, 15),
-];
-const EVENING: [(i64, i32); 11] = [
-    (12_041, 14),
-    (12_210, 13),
-    (12_377, 12),
-    (12_542, 11),
-    (12_705, 10),
-    (12_867, 9),
-    (13_027, 8),
-    (13_188, 7),
-    (13_348, 6),
-    (13_509, 5),
-    (13_670, 4),
-];
+/// Внутренний небесный свет в ясную погоду по времени суток — снят
+/// с оригинала 26.1.2 (сценарий daylight-dusk: инвертированный датчик под
+/// открытым небом от 11800 до 13200). Вечером свет падает на единицу
+/// каждые 164 такта начиная с такта ~12030, до 4; все 15 переходов записи
+/// сходятся с этим и только с этим (перебор начала, шага и округления:
+/// округление вниз, шаг 163,5…164,5). Ни таблица вики Light, ни линия
+/// 12040→13670 из timelines.md с записью не сходятся. Утро — зеркально
+/// относительно полудня: рост до 15 к такту 23970. [проверить] утро и
+/// начало спада с точностью до такта: время в записи известно лишь до
+/// сдвига, который вносит сама запись.
+const DUSK_START: i64 = 12_030;
+const DAWN_END: i64 = 23_970;
+const TICKS_PER_LEVEL: f64 = 164.0;
 
 /// Внутренний небесный свет при небесном свете 15: днём 15, ночью 4.
 fn internal_sky(time: i64) -> i32 {
     let time = time.rem_euclid(crate::world::DAY_LENGTH);
-    let level_at = |table: &[(i64, i32)]| {
-        table
-            .iter()
-            .rev()
-            .find(|(from, _)| *from <= time)
-            .map_or(15, |(_, level)| *level)
+
+    let level = if time <= DUSK_START || time >= DAWN_END {
+        15.0
+    } else if time < 18_000 {
+        15.0 - (time - DUSK_START) as f64 / TICKS_PER_LEVEL
+    } else {
+        15.0 - (DAWN_END - time) as f64 / TICKS_PER_LEVEL
     };
 
-    if (MORNING[0].0..MORNING[10].0).contains(&time) {
-        level_at(&MORNING)
-    } else if (EVENING[0].0..MORNING[0].0).contains(&time) {
-        level_at(&EVENING)
-    } else {
-        15
-    }
+    (level.floor() as i32).max(4)
 }
 
 /// Множитель солнца для обычного датчика. Формула со страницы обсуждения
@@ -294,12 +282,18 @@ fn daylight_power(world: &mut World, pos: Pos, inverted: bool) -> u8 {
     daylight_output(sky, world.time_of_day(), inverted)
 }
 
-/// Датчики света пересчитывают выход в тактах, кратных 20. У оригинала это
+/// Датчики света пересчитывают выход раз в 20 тактов. У оригинала это
 /// блок-сущность, поэтому здесь — фаза блок-сущностей. [проверить]: порядок
 /// среди прочих блок-сущностей (у нас — раньше воронок) и между датчиками
 /// (у нас — по координатам).
+///
+/// Фаза снята чёрным ящиком (daylight-dusk с привязкой к сетке возраста):
+/// у оригинала пересчёт приходит в такте, которому «обновление времени»
+/// приписывает возраст 19 по модулю 20, — на такт раньше, чем приходит
+/// само обновление с кратным 20 возрастом. Мы рассылаем возраст уже после
+/// прибавки такта, поэтому пересчитываем, когда `tick % 20 == 19`.
 pub fn daylight_tick(world: &mut World) {
-    if !world.tick().is_multiple_of(DAYLIGHT_PERIOD) || world.redstone.daylight.is_empty() {
+    if !(world.tick() + 1).is_multiple_of(DAYLIGHT_PERIOD) || world.redstone.daylight.is_empty() {
         return;
     }
 
@@ -614,20 +608,14 @@ fn set_hook(world: &mut World, pos: Pos, attached: bool, powered: bool) {
     }
 }
 
-/// Крючок сняли: второй крючок его цепи пересчитывает цепь — она больше не
-/// исправна, импульса нет (вики: «Breaking the tripwire hook … does not
-/// generate a pulse»). Был в цепи — звук «detach» (0,4, высота от 12/11 до
-/// 4/3).
+/// Крючок сняли: второй крючок его цепи выпадает из цепи и гаснет, импульса
+/// нет (вики: «Breaking the tripwire hook … does not generate a pulse»).
+/// Растяжки свой `attached` при этом сохраняют, звука нет — так у
+/// оригинала, когда крючок убирают командой (сценарий tripwire-hook-break).
 pub(super) fn hook_removed(world: &mut World, pos: Pos, old: &Block) {
     let Some(facing) = old.facing() else {
         return;
     };
-
-    if old.is("attached", "true") {
-        let pitch = 1.2 / (0.9 + 0.2 * world.random_unit());
-
-        world.note_sound(pos.0, pos.1, pos.2, DETACH, 0.4, pitch);
-    }
 
     for distance in 1..=MAX_WIRES + 1 {
         let at = step_by(pos, facing, distance);
@@ -635,7 +623,7 @@ pub(super) fn hook_removed(world: &mut World, pos: Pos, old: &Block) {
 
         if block.kind == Kind::Hook {
             if block.facing() == Some(facing.opposite()) {
-                update_hook(world, at, None);
+                set_hook(world, at, false, false);
             }
             return;
         }
@@ -644,6 +632,23 @@ pub(super) fn hook_removed(world: &mut World, pos: Pos, old: &Block) {
             return;
         }
     }
+}
+
+/// Игрок сломал крючок, который был в цепи: звук «detach» (0,4, высота от
+/// 12/11 до 4/3) — «When a tripwire hook in a tripwire line is destroyed»
+/// (вики, Tripwire Hook). Крючок, убранный командой, у оригинала молчит
+/// (сценарий tripwire-hook-break), поэтому звук — только здесь.
+/// [проверить]: звучит ли он у оригинала при ломании игроком.
+pub fn hook_broken_by_player(world: &mut World, pos: Pos, old: i32) {
+    let name = blocks::block_at_state(old).unwrap_or("air");
+
+    if name != "tripwire_hook" || blocks::orientation(name).and_then(|hook| hook.value(old, "attached")) != Some("true") {
+        return;
+    }
+
+    let pitch = 1.2 / (0.9 + 0.2 * world.random_unit());
+
+    world.note_sound(pos.0, pos.1, pos.2, DETACH, 0.4, pitch);
 }
 
 /// Растяжку режут ножницами: сперва она становится обезвреженной — без
@@ -812,29 +817,37 @@ pub fn random_ticks(world: &mut World, players: &[(i32, i32)], distance: i32) {
 // Колокол
 // ---------------------------------------------------------------------------
 
-/// Звук колокола (вики, Bell, Java): `block.bell.use`, громкость 24,0,
-/// высота 0,93, 0,95 или 0,97. [проверить] громкость перехватом пакета.
+/// Звук колокола: `block.bell.use`, громкость 2,0, высота 1,0 — так
+/// в пакете у оригинала (сценарий bell-redstone, три звона подряд). Вики
+/// пишет громкость 24,0 и высоту 0,93/0,95/0,97 — это не то, что уходит
+/// клиенту.
 const BELL_SOUND: &str = "minecraft:block.bell.use";
-const BELL_VOLUME: f32 = 24.0;
-const BELL_PITCHES: [f32; 3] = [0.93, 0.95, 0.97];
+const BELL_VOLUME: f32 = 2.0;
+const BELL_PITCH: f32 = 1.0;
 
-/// Колокол звонит: звук и действие блока 1 со стороной, откуда ударили
-/// (вики, Java Edition protocol/Block actions: «There is only one action: 1
-/// … the direction from which the bell was rung (down=0, up=1, north=2,
-/// south=3, west=4, east=5)»). [проверить]: что раньше — звук или действие
-/// (у музыкального блока сперва звук).
+/// Вид блочного события колокола: «There is only one action: 1» (вики,
+/// Java Edition protocol/Block actions).
+pub(super) const BELL_RING: u8 = 1;
+
+/// Колокол звонит: звук — сразу, посреди обновлений (у оригинала звон
+/// колокола от рычага слышен раньше щелчка самого рычага), а качание —
+/// блочным событием в своей фазе такта, после общей рассылки блоков
+/// (сценарий bell-redstone). Параметр события — сторона, откуда ударили:
+/// «down=0, up=1, north=2, south=3, west=4, east=5».
 pub fn ring(world: &mut World, pos: Pos, from: Dir) {
-    let pitch = BELL_PITCHES[((world.random_unit() * 3.0) as usize).min(2)];
+    world.note_sound(pos.0, pos.1, pos.2, BELL_SOUND, BELL_VOLUME, BELL_PITCH);
+    world.queue_block_event(pos.0, pos.1, pos.2, BELL_RING, from.number());
+}
 
-    world.note_sound(pos.0, pos.1, pos.2, BELL_SOUND, BELL_VOLUME, pitch);
-
+/// Блочное событие колокола: клиенту уходит качание.
+pub(super) fn bell_event(world: &mut World, pos: Pos, param: u8) {
     if let Some(id) = blocks::block_id("bell") {
         world.note_action(crate::world::BlockAction {
             x: pos.0,
             y: pos.1,
             z: pos.2,
-            action: 1,
-            param: from.number(),
+            action: BELL_RING,
+            param,
             block: id,
         });
     }
@@ -844,8 +857,8 @@ pub fn ring(world: &mut World, pos: Pos, from: Dir) {
 /// меняет `powered`; на спаде только `powered` («The bell does not ring again
 /// until the redstone signal stops, and a new signal is supplied»). Сторона
 /// звона от сигнала — по `facing` колокола («otherwise, it is based on the
-/// bell's facing state»). Сперва состояние, потом звон — как у
-/// музыкального блока. [проверить] порядок.
+/// bell's facing state»; сценарий bell-redstone: 1/2 у смотрящего на север,
+/// 1/5 — на восток).
 pub(super) fn bell_changed(world: &mut World, pos: Pos, bell: &Block) {
     let powered = super::any_power(world, pos);
 
@@ -863,10 +876,10 @@ pub(super) fn bell_changed(world: &mut World, pos: Pos, bell: &Block) {
 }
 
 /// Игрок щёлкнул по колоколу гранью `face`: звонит, если щёлкнули сбоку
-/// («while looking at the side of a bell»); сверху и снизу — нет. Вики
-/// говорит только «Bells can be rung by players only from certain angles».
-/// [проверить]: какие именно боковые грани и части колокола годятся при
-/// каждом креплении.
+/// («while looking at the side of a bell»); сверху и снизу — нет: щелчок
+/// по верху у оригинала не звонит, а только повторяет клиенту колокол и
+/// блок над ним (сценарий bell-click). [проверить]: какие именно боковые
+/// грани и части колокола годятся при каждом креплении.
 pub(super) fn bell_clicked(world: &mut World, pos: Pos, face: Dir) -> bool {
     if matches!(face, Dir::Up | Dir::Down) {
         return false;
@@ -909,9 +922,8 @@ mod tests {
             (933, 9),
             (12_500, 4),
             (23_000, 2),
-            (22_331, 1),
             (18_000, 0),
-            (13_670, 0),
+            (13_900, 0),
         ] {
             assert_eq!(daylight_output(15, time, false), power, "такт {}", time);
         }
@@ -921,20 +933,28 @@ mod tests {
         assert_eq!(daylight_output(15, 18_000, true), 11);
         assert_eq!(daylight_output(15, 6_000, true), 0);
         assert_eq!(daylight_output(0, 6_000, true), 15);
+
+        // Под крышей (свет 13) у оригинала: полночь — 0 и 13, ~13020 — 2 и 9
+        // (сценарий daylight-shade).
+        assert_eq!(daylight_output(13, 18_000, false), 0);
+        assert_eq!(daylight_output(13, 18_000, true), 13);
+        assert_eq!(daylight_output(13, 13_020, false), 2);
+        assert_eq!(daylight_output(13, 13_020, true), 9);
     }
 
-    /// Внутренний небесный свет — по таблице вики Light (ясно).
+    /// Внутренний небесный свет — как у оригинала на закате (сценарий
+    /// daylight-dusk).
     #[test]
-    fn internal_sky_light_follows_the_table() {
+    fn internal_sky_light_follows_the_original() {
         assert_eq!(internal_sky(6_000), 15);
-        assert_eq!(internal_sky(12_040), 15);
-        assert_eq!(internal_sky(12_041), 14);
-        assert_eq!(internal_sky(13_669), 5);
-        assert_eq!(internal_sky(13_670), 4);
-        assert_eq!(internal_sky(22_330), 4);
-        assert_eq!(internal_sky(22_331), 5);
-        assert_eq!(internal_sky(23_960), 14);
-        assert_eq!(internal_sky(23_961), 15);
+        assert_eq!(internal_sky(12_030), 15);
+        assert_eq!(internal_sky(12_031), 14);
+        assert_eq!(internal_sky(13_020), 8);
+        assert_eq!(internal_sky(13_670), 5);
+        assert_eq!(internal_sky(13_900), 4);
+        assert_eq!(internal_sky(18_000), 4);
+        assert_eq!(internal_sky(23_969), 14);
+        assert_eq!(internal_sky(23_970), 15);
         assert_eq!(internal_sky(0), 15);
     }
 

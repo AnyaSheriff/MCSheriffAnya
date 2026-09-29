@@ -4,7 +4,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const name = process.argv[2];
 if (!name) { console.error('использование: node compare.js <сценарий> [--record]'); process.exit(2); }
@@ -14,18 +14,40 @@ const scenario = path.join(HERE, 'scenarios', `${name}.json`);
 // отклики на соседние нажатия перекрываются, и делить запись по нажатиям
 // нельзя — такты считаются от первого отклика на всю запись.
 const continuous = JSON.parse(fs.readFileSync(scenario, 'utf8')).continuous === true;
+// `--ours-port N` — сверять с нашей сборкой на другом порту (например, из
+// копии проекта), не трогая сервер чёрного ящика на 25567.
+const portFlag = process.argv.indexOf('--ours-port');
+const oursPort = portFlag > 0 ? Number(process.argv[portFlag + 1]) : 25567;
 const sides = [
   { title: 'оригинал', port: 25566, file: path.join(HERE, 'reports', `vanilla-${name}.json`) },
-  { title: 'у нас',    port: 25567, file: path.join(HERE, 'reports', `ours-${name}.json`) },
+  { title: 'у нас',    port: oursPort, file: path.join(HERE, 'reports', `ours-${name}.json`) },
 ];
+if (!fs.existsSync(path.join(HERE, 'reports'))) fs.mkdirSync(path.join(HERE, 'reports'));
 
-if (process.argv.includes('--record')) {
-  for (const s of sides) {
-    const r = spawnSync('node', [path.join(HERE, 'bot.js'), '127.0.0.1', String(s.port), scenario, s.file], { stdio: ['ignore', 'inherit', 'pipe'] });
-    if (r.status !== 0) { console.error(`запись «${s.title}» не удалась:\n${r.stderr}`); process.exit(1); }
+// `--parallel` — писать обе стороны разом: серверы разные, роботы друг
+// другу не мешают, а полный прогон идёт вдвое быстрее.
+const record = async () => {
+  const args = (s) => [path.join(HERE, 'bot.js'), '127.0.0.1', String(s.port), scenario, s.file];
+  if (!process.argv.includes('--parallel')) {
+    for (const s of sides) {
+      const r = spawnSync('node', args(s), { stdio: ['ignore', 'inherit', 'pipe'] });
+      if (r.status !== 0) { console.error(`запись «${s.title}» не удалась:\n${r.stderr}`); process.exit(1); }
+    }
+    return;
   }
-}
+  const runs = sides.map((s) => new Promise((done) => {
+    const child = spawn('node', args(s), { stdio: ['ignore', 'inherit', 'pipe'] });
+    let stderr = '';
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('close', (status) => done({ s, status, stderr }));
+  }));
+  for (const { s, status, stderr } of await Promise.all(runs)) {
+    if (status !== 0) { console.error(`запись «${s.title}» не удалась:\n${stderr}`); process.exit(1); }
+  }
+};
 
+// Сравнение — после записи.
+const compare = () => {
 // Событие → строка без лишних дробей; такт — относительно последнего действия.
 const describe = (e) => {
   const at = e.at ? `(${e.at.join(',')})` : '';
@@ -45,7 +67,22 @@ const describe = (e) => {
     case 'property': return `свойство окна ${e.property}=${e.value}`;
     case 'close': return 'окно закрыто';
     case 'meta': return `свойства сущности ${e.fields}`;
+    case 'cart': return describeCart(e);
     case 'explosion': return `взрыв ${at} сила ${e.radius} блоков ${e.blocks} ${e.particle} ${e.sound.replace(/^minecraft:/, '')} толчок ${e.knockback ? 'есть' : 'нет'} дым [${e.smoke}]`;
+    default: return JSON.stringify(e);
+  }
+};
+// Пакет о вагонетке: сдвиг (в 1/4096 блока), скорость, перенос, сверка места.
+const describeCart = (e) => {
+  const ground = e.ground ? ' на земле' : '';
+  switch (e.what) {
+    case 'move': return `вагонетка сдвиг ${e.d ? e.d.join(',') : ''}${e.yaw !== undefined ? ` поворот ${e.yaw}/${e.pitch}` : ''}${ground}`;
+    case 'rot': return `вагонетка поворот ${e.yaw}/${e.pitch}${ground}`;
+    case 'vel': return `вагонетка скорость ${e.v.join(',')}`;
+    case 'tp': return `вагонетка перенос (${e.at.join(',')}) скорость ${e.v.join(',')}${ground}`;
+    case 'sync': return `вагонетка сверка (${e.at.join(',')}) скорость ${e.v.join(',')} поворот ${e.yaw}/${e.pitch}${ground}`;
+    case 'gone': return 'вагонетка убрана';
+    case 'status': return `вагонетка событие ${e.status}`;
     default: return JSON.stringify(e);
   }
 };
@@ -73,6 +110,7 @@ const key = (e) => {
     case 'level': return `level ${e.at.join(',')} ${e.effect} ${e.data}`;
     case 'property': return `property ${e.property} ${e.value}`;
     case 'meta': return `meta ${e.fields}`;
+    case 'cart': return `cart ${describeCart(e)}`;
     // Динамит сносит вбок случайный толчок, а блоков взрыв рушит случайно:
     // сверяем клетку центра, силу, вспышку, звук и дым.
     case 'explosion': return `explosion ${e.at.map(Math.floor).join(',')} ${e.radius} ${e.particle} ${e.sound} ${e.smoke}`;
@@ -175,3 +213,9 @@ const out = lines.join('\n');
 console.log(out);
 const stamp = new Date().toISOString().slice(0, 16).replace('T', '-').replace(':', '');
 fs.writeFileSync(path.join(HERE, 'reports', `${name}-${stamp}.md`), out + '\n');
+};
+
+(async () => {
+  if (process.argv.includes('--record')) await record();
+  compare();
+})();

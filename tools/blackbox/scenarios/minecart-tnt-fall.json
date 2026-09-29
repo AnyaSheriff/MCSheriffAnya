@@ -1,0 +1,28 @@
+{
+ "name": "minecart-tnt-fall",
+ "about": "Вагонетка с динамитом падает с пяти блоков на пол без рельс и взрывается о землю сразу; вторая, упавшая с двух блоков, цела, но взрыв первой её поджигает (событие 10, звук) со случайным запалом. Сила взрыва случайна: прибавка от пролёта и скорости.",
+ "blocks": [],
+ "setup": [
+  "fill $(-8,-5,-8) $(8,-1,8) minecraft:obsidian"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon tnt_minecart $(4.5,2,0.5)"
+  },
+  {
+   "after": 0,
+   "cmd": "summon tnt_minecart $(0.5,5,0.5)"
+  }
+ ],
+ "record_ticks": 70,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=tnt_minecart]",
+  "kill @e[type=furnace_minecart]",
+  "kill @e[type=item]",
+  "fill $(-8,-5,-8) $(8,-1,8) minecraft:stone"
+ ]
+}

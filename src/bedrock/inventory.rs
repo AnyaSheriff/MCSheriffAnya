@@ -51,6 +51,9 @@ const CREATIVE_OUTPUT: u8 = 60;
 pub const LEVEL_ENTITY: u8 = 7;
 pub const BARREL: u8 = 58;
 
+/// Ячейки крафтера — CrafterLevelEntityContainer. [проверить] живым клиентом.
+pub const CRAFTER: u8 = 62;
+
 /// Окна (WindowID) для Inventory Content.
 const WINDOW_INVENTORY: u32 = 0;
 const WINDOW_OFFHAND: u32 = 119;
@@ -97,11 +100,53 @@ pub fn write_item(out: &mut Out, stack: Option<Stack>, stack_id: i32) {
     // пакет с щитом.
     out.zigzag32(block);
 
+    // Особый динамит (custom_tnt.rs) — с именем и описанием в NBT предмета.
+    if let Some(user_data) = stack.tnt.and_then(crate::custom_tnt::by_id).map(custom_tnt_user_data) {
+        out.varint((2 + 1 + user_data.len() + 4 + 4) as u32).li16(-1).u8(1).raw(&user_data).li32(0).li32(0);
+        return;
+    }
+
     if id == SHIELD {
         out.varint(18).lu16(0).li32(0).li32(0).li64(0);
     } else {
         out.varint(10).lu16(0).li32(0).li32(0);
     }
+}
+
+/// NBT предмета особого динамита: `{display:{Name:"§r§cМега-ТНТ",
+/// Lore:["§r§7…"]}}`. Данные предмета по документации Mojang
+/// (ItemInstanceUserData): метка −1, версия 1, затем Compound Tag — здесь
+/// в NBT Bedrock с числами little-endian, как в его файлах мира.
+/// [проверить] на живом клиенте.
+fn custom_tnt_user_data(kind: &crate::custom_tnt::Kind) -> Vec<u8> {
+    const COMPOUND: u8 = 10;
+    const LIST: u8 = 9;
+    const STRING: u8 = 8;
+
+    fn text(out: &mut Vec<u8>, value: &str) {
+        out.extend_from_slice(&(value.len() as u16).to_le_bytes());
+        out.extend_from_slice(value.as_bytes());
+    }
+
+    let mut out = vec![COMPOUND];
+    text(&mut out, "");
+
+    out.push(COMPOUND);
+    text(&mut out, "display");
+
+    out.push(STRING);
+    text(&mut out, "Name");
+    text(&mut out, &crate::custom_tnt::bedrock_title(kind));
+
+    out.push(LIST);
+    text(&mut out, "Lore");
+    out.push(STRING);
+    out.extend_from_slice(&1i32.to_le_bytes());
+    text(&mut out, &format!("§r§7{}", kind.lore));
+
+    out.push(0); // конец display
+    out.push(0); // конец корня
+    out
 }
 
 /// Сетевой номер щита у Bedrock 1.26.10 (minecraft-data, items.json): у него
@@ -457,7 +502,7 @@ impl Bag {
     /// в творческом режиме: в выживании оттуда ничего не берётся. Ячейки
     /// хранилища — только пока его окно открыто, и не дальше его размера.
     fn place_for(&self, named: Named, creative: bool) -> Option<Place> {
-        if matches!(named.container, LEVEL_ENTITY | BARREL) {
+        if matches!(named.container, LEVEL_ENTITY | BARREL | CRAFTER) {
             let size = self.window.as_ref()?.len();
             let slot = named.slot as usize;
 
@@ -581,7 +626,7 @@ impl Bag {
 
         let there = self.get(to);
 
-        if there.is_some_and(|t| t.item != moving.item) {
+        if there.is_some_and(|t| !t.stacks_with(&moving)) {
             return false;
         }
 
@@ -591,8 +636,8 @@ impl Bag {
             return false;
         }
 
-        self.set(from, Some(Stack::new(moving.item, moving.count - count)));
-        self.set(to, Some(Stack::new(moving.item, total)));
+        self.set(from, Some(moving.with_count(moving.count - count)));
+        self.set(to, Some(moving.with_count(total)));
         touched.push((source, from));
         touched.push((destination, to));
         true
@@ -619,9 +664,9 @@ impl Bag {
             return None;
         }
 
-        self.set(from, Some(Stack::new(stack.item, stack.count - count)));
+        self.set(from, Some(stack.with_count(stack.count - count)));
         touched.push((source, from));
-        Some(Stack::new(stack.item, count))
+        Some(stack.with_count(count))
     }
 
     /// Затронутые слоты в ответе — по контейнерам, как их назвал клиент.
@@ -1062,6 +1107,34 @@ mod tests {
 
         assert_eq!(shields, 1);
         assert_eq!(reader.u8(), None);
+    }
+
+    #[test]
+    fn custom_tnt_carries_its_name() {
+        let kind = crate::custom_tnt::by_name("mega").expect("mega");
+        let stack = crate::custom_tnt::stack(kind, 3).expect("динамит");
+        let mut out = Out::packet(0);
+
+        write_item(&mut out, Some(stack), 0);
+
+        let mut reader = In::new(&out.bytes);
+        reader.varint().expect("номер пакета");
+        reader.zigzag32().expect("предмет");
+        reader.take(2).expect("число");
+        reader.varint().expect("метаданные");
+        assert_eq!(reader.u8(), Some(0));
+        reader.zigzag32().expect("блок");
+
+        let extra = reader.varint().expect("длина") as usize;
+        let data = reader.take(extra).expect("данные");
+
+        assert_eq!(reader.take(1), None, "лишние байты");
+        assert_eq!(&data[..3], &[0xff, 0xff, 1]);
+        assert_eq!(&data[data.len() - 8..], &[0; 8]);
+
+        let title = crate::custom_tnt::bedrock_title(kind);
+        let found = data.windows(title.len()).any(|window| window == title.as_bytes());
+        assert!(found, "имени нет в NBT");
     }
 
     #[test]

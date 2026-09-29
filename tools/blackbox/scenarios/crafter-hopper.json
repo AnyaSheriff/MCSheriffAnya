@@ -1,0 +1,92 @@
+{
+ "name": "crafter-hopper",
+ "about": "Воронка сверху кладёт 8 досок в крафтер с отключёнными ячейками 2,5,6,7,8 (по наименьшей стопке); кнопка сбоку — верстак уходит в сундук перед крафтером; сравнитель читает крафтер.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:crafter[crafting=false,orientation=east_up,triggered=false]{disabled_slots:[I;2,5,6,7,8]}"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:chest[facing=north,type=single,waterlogged=false]"
+  },
+  {
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "minecraft:hopper[enabled=true,facing=down]{Items:[{Slot:0b,id:\"minecraft:oak_planks\",count:8}]}"
+  },
+  {
+   "at": [
+    0,
+    0,
+    1
+   ],
+   "state": "minecraft:stone_button[face=wall,facing=south,powered=false]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    0
+   ],
+   "state": "minecraft:comparator[facing=east,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    0
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 85,
+   "click": [
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 115,
+   "click": [
+    0,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 145,
+   "click": [
+    0,
+    0,
+    1
+   ]
+  }
+ ],
+ "record_ticks": 185,
+ "cleanup": [
+  "kill @e[type=item]"
+ ]
+}

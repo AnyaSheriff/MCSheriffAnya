@@ -145,6 +145,41 @@ impl Compound {
     }
 }
 
+/// Строковое поле `name` сетевого компаунда верхнего уровня — например,
+/// пометка особого динамита в custom_data предмета от клиента. Разбираются
+/// только строки: поле другого типа прежде искомого — None (его длину мы
+/// не считаем). Имена и строки — ASCII; прочий «modified UTF-8» читается
+/// как есть, с заменой негодного.
+pub fn string_field(bytes: &[u8], name: &str) -> Option<String> {
+    let mut rest = bytes.strip_prefix(&[TAG_COMPOUND])?;
+
+    let string = |rest: &mut &[u8]| -> Option<String> {
+        let (length, tail) = rest.split_at_checked(2)?;
+        let length = u16::from_be_bytes([length[0], length[1]]) as usize;
+        let (text, tail) = tail.split_at_checked(length)?;
+
+        *rest = tail;
+        Some(String::from_utf8_lossy(text).into_owned())
+    };
+
+    loop {
+        let (&kind, tail) = rest.split_first()?;
+
+        rest = tail;
+
+        if kind != TAG_STRING {
+            return None;
+        }
+
+        let field = string(&mut rest)?;
+        let value = string(&mut rest)?;
+
+        if field == name {
+            return Some(value);
+        }
+    }
+}
+
 /// Записывает имя тега: длина в 2 байта (big-endian) + UTF-8 байты.
 /// В NBT длина строки, в отличие от строк протокола, не VarInt.
 fn write_name(out: &mut Vec<u8>, name: &str) {
@@ -220,6 +255,16 @@ mod tests {
     use super::*;
 
     /// Смайлик — суррогатной парой по три байта, нулевой знак — C0 80.
+    #[test]
+    fn a_string_field_is_read_back() {
+        let bytes = Compound::new().string("a", "b").string("mcsheriffanya_tnt", "mega").encode_network();
+
+        assert_eq!(string_field(&bytes, "mcsheriffanya_tnt").as_deref(), Some("mega"));
+        assert_eq!(string_field(&bytes, "нет"), None);
+        assert_eq!(string_field(&bytes[..bytes.len() - 3], "mcsheriffanya_tnt"), None);
+        assert_eq!(string_field(&Compound::new().int("x", 1).encode_network(), "x"), None);
+    }
+
     #[test]
     fn strings_are_modified_utf8() {
         let mut out = Vec::new();

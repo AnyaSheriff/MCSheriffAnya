@@ -60,8 +60,27 @@ pub struct Settings {
     /// (в выживании; в творческом — такт, как у оригинала).
     pub portal_delay: u32,
 
+    /// Какие проёмы портала в Незер зажигаются: ширина и высота внутри
+    /// рамки, от и до (у оригинала от 2×3 до 21×21).
+    pub portal_min_width: i32,
+    pub portal_min_height: i32,
+    pub portal_max_width: i32,
+    pub portal_max_height: i32,
+
     /// Отправлять ли анонимные отчёты об ошибках разработчикам (reports.rs).
     pub send_error_reports: bool,
+}
+
+impl Settings {
+    /// Какие проёмы портала в Незер зажигаются.
+    pub fn portal_sizes(&self) -> crate::portal::Sizes {
+        crate::portal::Sizes {
+            min_width: self.portal_min_width,
+            min_height: self.portal_min_height,
+            max_width: self.portal_max_width,
+            max_height: self.portal_max_height,
+        }
+    }
 }
 
 impl Default for Settings {
@@ -76,6 +95,10 @@ impl Default for Settings {
             pink_cherry_groves: true,
             text_info: true,
             portal_delay: crate::portal::DELAY,
+            portal_min_width: crate::portal::VANILLA.min_width,
+            portal_min_height: crate::portal::VANILLA.min_height,
+            portal_max_width: crate::portal::VANILLA.max_width,
+            portal_max_height: crate::portal::VANILLA.max_height,
             send_error_reports: false,
         }
     }
@@ -139,6 +162,10 @@ impl Settings {
             pink_cherry_groves: take(&values, "pink-cherry-groves", default.pink_cherry_groves, path),
             text_info: take(&values, "text-info", default.text_info, path),
             portal_delay: take(&values, "portal-delay", default.portal_delay, path),
+            portal_min_width: take(&values, "portal-min-width", default.portal_min_width, path),
+            portal_min_height: take(&values, "portal-min-height", default.portal_min_height, path),
+            portal_max_width: take(&values, "portal-max-width", default.portal_max_width, path),
+            portal_max_height: take(&values, "portal-max-height", default.portal_max_height, path),
             send_error_reports: take(&values, "send-error-reports", default.send_error_reports, path),
         }
     }
@@ -157,7 +184,7 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 10] {
+    fn sections(self) -> [(&'static str, String); 14] {
         [
             ("debug", format!("\
 # Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
@@ -208,6 +235,25 @@ text-info={}
 # В творческом переход всегда сразу.
 portal-delay={}
 ", self.portal_delay)),
+            ("portal-min-width", format!("\
+# Какие проёмы портала в Незер зажигаются: ширина и высота внутри рамки из
+# обсидиана, в блоках, от и до. У оригинала от 2×3 до 21×21. Каждая сторона
+# — от 1 до 256; огромный проём заполняется порталом за один такт.
+# Наименьшая ширина (у оригинала 2):
+portal-min-width={}
+", self.portal_min_width)),
+            ("portal-min-height", format!("\
+# Наименьшая высота проёма портала (у оригинала 3).
+portal-min-height={}
+", self.portal_min_height)),
+            ("portal-max-width", format!("\
+# Наибольшая ширина проёма портала (у оригинала 21).
+portal-max-width={}
+", self.portal_max_width)),
+            ("portal-max-height", format!("\
+# Наибольшая высота проёма портала (у оригинала 21).
+portal-max-height={}
+", self.portal_max_height)),
             ("send-error-reports", format!("\
 # Анонимные отчёты об ошибках разработчикам MCSheriffAnya (падения и строки
 # ERROR с последними строками лога). Ники, адреса, UUID, XUID и чат из них

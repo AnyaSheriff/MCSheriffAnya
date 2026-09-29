@@ -21,6 +21,8 @@ pub mod cave_biomes;
 pub mod flat;
 pub mod light;
 pub mod nether;
+pub mod nether_bastion;
+pub mod nether_fortress;
 pub mod noise;
 pub mod ocean;
 pub mod region;
@@ -122,6 +124,9 @@ pub struct WorldSound {
     /// Звук блока, но в точке не посередине (сундук, бочка): раздел звука —
     /// «блоки», как у звука в середине блока.
     pub of_block: bool,
+
+    /// Звук игрока (удар): раздел звука «игроки».
+    pub of_player: bool,
 }
 
 /// Событие мира, которое надо донести до клиентов: изменение блока или
@@ -144,6 +149,14 @@ pub enum WorldEvent {
     /// Событие мира, которое клиент проигрывает сам (World Event): звук и
     /// дым выбрасывателя, например. `effect` и `data` — как в пакете.
     Level { x: i32, y: i32, z: i32, effect: i32, data: i32 },
+
+    /// Вибрация пошла от места `from` к датчику скалка `to` и долетит за
+    /// `ticks` тактов: клиент рисует её частицей `vibration`.
+    Vibration { from: (i32, i32, i32), to: (i32, i32, i32), ticks: i32 },
+
+    /// Нота над играющим проигрывателем: частица `note` в точке `at`,
+    /// `color` — её цвет (доля от 0 до 1, уходит разбросом по X).
+    Note { at: (f64, f64, f64), color: f32 },
 
     /// Игрок `viewer` (номер его сущности) открыл хранилище: окно уходит
     /// ему в этом месте потока — после звука открытия, до повтора блока.
@@ -225,14 +238,53 @@ struct Chunk {
     /// Хранилища, чей блок сменился другим: их содержимое высыплется
     /// (мировые координаты). Забирает мир — `World::take_spilled`.
     spilled: Vec<((i32, i32, i32), containers::Container)>,
+
+    /// Особый динамит (custom_tnt.rs): какой вид стоит в этом месте чанка
+    /// (x, z — от 0 до 15, y — настоящая высота). Запись живёт, пока там
+    /// динамит. Список, а не словарь: таких мест в чанке единицы, а чанк
+    /// должен оставаться маленьким.
+    custom_tnt: Vec<((i32, i32, i32), crate::custom_tnt::KindId)>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
 pub type Ejected = ((f64, f64, f64), (f64, f64, f64), crate::inventory::Stack);
 
 /// Подожжённый динамит, который такт ещё не сделал сущностью: где, с какой
-/// скоростью и сколько тактов запала.
-pub type Primed = ((f64, f64, f64), (f64, f64, f64), i32);
+/// скоростью, сколько тактов запала и какой он, если особый.
+pub type Primed = ((f64, f64, f64), (f64, f64, f64), i32, Option<crate::custom_tnt::KindId>);
+
+/// Быстрый хеш для ключей-координат (номер чанка, место блока): умножение
+/// с поворотом, как у FxHash. Обычный хеш стойкий к подбору ключей, но
+/// медленный, а мир спрашивает чанк на каждый блок — ядерный динамит
+/// (custom_tnt.rs) делает это сотни тысяч раз за такт. Порядок обхода от
+/// хеша не зависит ни у кого: он и прежде был случайным.
+#[derive(Default, Clone, Copy)]
+pub struct CoordHasher(u64);
+
+impl std::hash::Hasher for CoordHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        for &byte in bytes {
+            self.write_u64(u64::from(byte));
+        }
+    }
+
+    fn write_i32(&mut self, value: i32) {
+        self.write_u64(u64::from(value as u32));
+    }
+
+    fn write_u64(&mut self, value: u64) {
+        const SEED: u64 = 0x51_7c_c1_b7_27_22_0a_95;
+
+        self.0 = (self.0.rotate_left(5) ^ value).wrapping_mul(SEED);
+    }
+}
+
+/// Сборщик `CoordHasher` для HashMap и HashSet.
+pub type CoordHash = std::hash::BuildHasherDefault<CoordHasher>;
 
 /// Номер биома в реестре, как он лежит в памяти чанка.
 pub type BiomeId = u16;
@@ -280,6 +332,7 @@ impl Chunk {
             revision: 0,
             containers: HashMap::new(),
             spilled: Vec::new(),
+            custom_tnt: Vec::new(),
         }
     }
 
@@ -526,6 +579,13 @@ impl Chunk {
             }
         }
 
+        // Динамит сменился чем-то другим — вид его больше не нужен.
+        if !self.custom_tnt.is_empty() && !crate::tnt::is_tnt(state) {
+            let place = (x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
+
+            self.custom_tnt.retain(|(there, _)| *there != place);
+        }
+
         true
     }
 
@@ -612,8 +672,9 @@ impl Chunk {
                     // мир, когда чанк ляжет рядом с соседом (`wake_border`).
                     let inside = (0..16).contains(&nx) && (0..16).contains(&nz);
 
+                    // Будится сама жидкость: пустое место её такта не ждёт.
                     if inside && open(self.block(nx, ny, nz)) {
-                        found.push(((chunk_x * 16 + nx, ny, chunk_z * 16 + nz), kind.delay()));
+                        found.push(((chunk_x * 16 + x, y, chunk_z * 16 + z), kind.delay()));
                     }
                 }
             }
@@ -667,7 +728,7 @@ impl Chunk {
         // Хранилища — последними, и только если они есть: запись чанка без
         // них та же, что и прежде. Порядок — по месту, чтобы одинаковый
         // чанк давал одинаковые байты.
-        if !self.containers.is_empty() {
+        if !self.containers.is_empty() || !self.custom_tnt.is_empty() {
             let mut places: Vec<_> = self.containers.keys().copied().collect();
 
             places.sort_unstable();
@@ -675,6 +736,21 @@ impl Chunk {
 
             for place in places {
                 self.containers[&place].write(place, &mut out);
+            }
+        }
+
+        // Особый динамит — после хранилищ (их число тогда пишется и
+        // нулём): сколько, потом место и номер вида.
+        if !self.custom_tnt.is_empty() {
+            let mut places: Vec<_> = self.custom_tnt.iter().map(|&(place, kind)| (place, kind.0)).collect();
+
+            places.sort_unstable();
+            out.extend_from_slice(&(places.len() as u16).to_be_bytes());
+
+            for ((x, y, z), kind) in places {
+                out.push(((x << 4) | z) as u8);
+                out.extend_from_slice(&(y as i16).to_be_bytes());
+                out.push(kind);
             }
         }
 
@@ -768,6 +844,29 @@ impl Chunk {
 
                     if containers::Kind::of(chunk.block(place.0, place.1, place.2)) == Some(container.kind) {
                         chunk.containers.insert(place, container);
+                    }
+                }
+            }
+
+            // Особый динамит, если записан. Вид, которого больше нет в
+            // таблице, или не динамит на месте — пропускаются.
+            if rest.len() >= 2 {
+                let count = u16::from_be_bytes([rest[0], rest[1]]);
+
+                rest = &rest[2..];
+
+                for _ in 0..count {
+                    let (record, tail) = rest.split_at_checked(4)?;
+                    let place = ((record[0] >> 4) as i32, i16::from_be_bytes([record[1], record[2]]) as i32, (record[0] & 15) as i32);
+
+                    rest = tail;
+
+                    if in_bounds(place.1)
+                        && crate::tnt::is_tnt(chunk.block(place.0, place.1, place.2))
+                        && let Some(kind) = crate::custom_tnt::by_id(crate::custom_tnt::KindId(record[3]))
+                    {
+                        chunk.custom_tnt.retain(|(there, _)| *there != place);
+                        chunk.custom_tnt.push((place, kind.id));
                     }
                 }
             }
@@ -887,7 +986,7 @@ pub struct World {
     /// «Как есть» — служебный блок не подменяется пустотой.
     late: Vec<((i32, i32, i32), u64, bool)>,
 
-    chunks: HashMap<(i32, i32), Chunk>,
+    chunks: HashMap<(i32, i32), Chunk, CoordHash>,
 
     /// Все события мира по порядку: изменения блоков и действия блоков.
     /// Каждое подключение помнит, сколько записей оно уже разослало своему
@@ -1006,10 +1105,6 @@ pub struct World {
     /// Когда мир последний раз записывался — для `save_if_due`.
     last_save: Option<Instant>,
 
-    /// Места, куда жидкость пришла в этом такте, и номер такта. Пустое место
-    /// у них жидкость в тот же такт не берёт (см. `tick::flow`).
-    fresh_fluid: (u64, HashSet<(i32, i32, i32)>),
-
     /// Проёмы порталов этого мира (нижний угол) — чтобы найти парный, не
     /// обходя сотни чанков. Живут в `portals.dat`.
     portals: Vec<(i32, i32, i32)>,
@@ -1047,10 +1142,18 @@ pub struct World {
     /// Подожжённый динамит: сущности заводит такт (`take_primed`).
     primed: Vec<Primed>,
 
+    /// Блоки, которые большой взрыв особого динамита (custom_tnt.rs) ещё
+    /// не дорушил: такт рушит их по частям (`tnt::continue_blasts`), чтобы
+    /// ядерный динамит не остановил мир. Не пишется на диск.
+    blast_rest: std::collections::VecDeque<(i32, i32, i32)>,
+
     /// Содержимое хранилищ, каким его видят игроки: снимается в фазе
     /// сущностей, как у оригинала, — то, что воронки перенесли позже в том же
     /// такте, окна увидят на следующем.
     pub published: HashMap<(i32, i32, i32), Vec<Option<crate::inventory::Stack>>>,
+
+    /// То же для вагонеток-хранилищ: номер сущности — ячейки.
+    pub published_carts: HashMap<i32, Vec<Option<crate::inventory::Stack>>>,
 
     /// Хранилища в порядке появления в мире — для их хода в такте.
     container_order: Vec<(i32, i32, i32)>,
@@ -1076,10 +1179,12 @@ struct WaitingTick {
     order: u64,
     priority: i8,
 
-    /// Такт жидкости заведён, когда в месте была жидкость: он её, и с ней
-    /// пропадает (у оригинала такт жидкости исполняется, только если она
-    /// всё ещё там).
-    wet: bool,
+    /// Для какой жидкости заведён такт жидкости (`fluid_type`): он её, и
+    /// с ней пропадает — у оригинала такт жидкости исполняется, только если
+    /// она всё ещё там, причём источник и текущая вода считаются разными
+    /// жидкостями [проверить] (чёрный ящик, dispenser-water: забранный
+    /// ведром источник уносит свой такт).
+    fluid: u8,
 }
 
 /// Сколько сложенных заново чанков записывать за одно сохранение. Сохранение
@@ -1118,7 +1223,7 @@ impl World {
         Self {
             noise: 0x9E37_79B9,
             late: Vec::new(),
-            chunks: HashMap::new(),
+            chunks: HashMap::default(),
             events: Journal::new(),
             parked: Vec::new(),
             path: PathBuf::new(),
@@ -1144,14 +1249,15 @@ impl World {
             ticks_written: Cell::new(0),
             level_written: Cell::new(None),
             commanded: HashSet::new(),
-            fresh_fluid: (0, HashSet::new()),
             portals: Vec::new(),
             create_missing: true,
             spilled: Vec::new(),
             viewers: HashMap::new(),
             ejected: Vec::new(),
             primed: Vec::new(),
+            blast_rest: Default::default(),
             published: HashMap::new(),
+            published_carts: HashMap::new(),
             container_order: Vec::new(),
             contents_changed: Vec::new(),
             sky_cache: HashMap::new(),
@@ -1247,7 +1353,7 @@ impl World {
         let mut world = Self {
             noise: 0x9E37_79B9 ^ std::process::id(),
             late: Vec::new(),
-            chunks: HashMap::new(),
+            chunks: HashMap::default(),
             events: Journal::new(),
             parked: Vec::new(),
             path,
@@ -1278,14 +1384,15 @@ impl World {
             ticks_written: Cell::new(0),
             level_written: Cell::new(None),
             commanded: HashSet::new(),
-            fresh_fluid: (0, HashSet::new()),
             portals: Vec::new(),
             create_missing: false,
             spilled: Vec::new(),
             viewers: HashMap::new(),
             ejected: Vec::new(),
             primed: Vec::new(),
+            blast_rest: Default::default(),
             published: HashMap::new(),
+            published_carts: HashMap::new(),
             container_order: Vec::new(),
             contents_changed: Vec::new(),
             sky_cache: HashMap::new(),
@@ -1468,7 +1575,7 @@ impl World {
 
             // Соседей надо пересчитать: рядом могла стоять вода, которой
             // теперь есть куда течь, — или наоборот, её путь перекрыли.
-            self.schedule_around(x, y, z, state);
+            self.schedule_around(x, y, z);
 
             // А редстоун узнает об изменении при ближайшем разборе.
             self.changed.push(((x, y, z), old));
@@ -1527,6 +1634,41 @@ impl World {
         }
 
         changed
+    }
+
+    /// Какой особый динамит стоит в этом месте. None — обычный или не
+    /// динамит вовсе.
+    pub fn custom_tnt_at(&self, (x, y, z): (i32, i32, i32)) -> Option<crate::custom_tnt::KindId> {
+        let chunk = self.chunks.get(&chunk_key(x, z))?;
+
+        if chunk.custom_tnt.is_empty() {
+            return None;
+        }
+
+        let place = (x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
+
+        chunk.custom_tnt.iter().find(|(there, _)| *there == place).map(|&(_, kind)| kind)
+    }
+
+    /// Запоминает вид особого динамита в этом месте (там должен стоять
+    /// динамит — иначе ничего не делается). None — снова обычный.
+    pub fn set_custom_tnt(&mut self, (x, y, z): (i32, i32, i32), kind: Option<crate::custom_tnt::KindId>) {
+        if !crate::tnt::is_tnt(self.get_block(x, y, z)) {
+            return;
+        }
+
+        let Some(chunk) = self.chunks.get_mut(&chunk_key(x, z)) else {
+            return;
+        };
+        let place = (x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
+
+        chunk.custom_tnt.retain(|(there, _)| *there != place);
+
+        if let Some(kind) = kind {
+            chunk.custom_tnt.push((place, kind));
+        }
+
+        self.dirty.insert(chunk_key(x, z));
     }
 
     /// Хранилище в этом месте, если оно там есть и его чанк в памяти.
@@ -1600,6 +1742,16 @@ impl World {
         self.events.push(WorldEvent::Level { x, y, z, effect, data });
     }
 
+    /// Вибрация к датчику скалка — частица на месте события.
+    pub fn note_vibration(&mut self, from: (i32, i32, i32), to: (i32, i32, i32), ticks: i32) {
+        self.events.push(WorldEvent::Vibration { from, to, ticks });
+    }
+
+    /// Нота над проигрывателем — частицей в общем потоке событий.
+    pub fn note_music_particle(&mut self, at: (f64, f64, f64), color: f32) {
+        self.events.push(WorldEvent::Note { at, color });
+    }
+
     /// Окно хранилища для игрока — в общем потоке событий.
     pub fn note_open_window(&mut self, viewer: i32, x: i32, y: i32, z: i32) {
         self.events.push(WorldEvent::OpenWindow { viewer, x, y, z });
@@ -1616,13 +1768,30 @@ impl World {
     }
 
     /// Подожжённый динамит: сущность заведёт такт.
-    pub fn prime(&mut self, at: (f64, f64, f64), velocity: (f64, f64, f64), fuse: i32) {
-        self.primed.push((at, velocity, fuse));
+    pub fn prime(&mut self, at: (f64, f64, f64), velocity: (f64, f64, f64), fuse: i32, custom: Option<crate::custom_tnt::KindId>) {
+        self.primed.push((at, velocity, fuse, custom));
     }
 
     /// Забирает подожжённый динамит.
     pub fn take_primed(&mut self) -> Vec<Primed> {
         std::mem::take(&mut self.primed)
+    }
+
+    /// Откладывает недорушенное большим взрывом на следующие такты.
+    pub fn defer_blast(&mut self, rest: impl IntoIterator<Item = (i32, i32, i32)>) {
+        self.blast_rest.extend(rest);
+    }
+
+    /// Есть ли недорушенное большим взрывом.
+    pub fn blast_pending(&self) -> bool {
+        !self.blast_rest.is_empty()
+    }
+
+    /// Следующая часть отложенного, не больше `limit` мест. Пусто — нечего.
+    pub fn take_blast_batch(&mut self, limit: usize) -> Vec<(i32, i32, i32)> {
+        let count = limit.min(self.blast_rest.len());
+
+        self.blast_rest.drain(..count).collect()
     }
 
     /// Сообщает клиентам о взрыве.
@@ -1632,8 +1801,10 @@ impl World {
 
     /// Снимает содержимое хранилищ, в которые кто-то смотрит, — это увидят
     /// окна, — и ставит в поток метку, где это случилось.
-    pub fn publish_contents(&mut self) {
-        if self.viewers.is_empty() {
+    pub fn publish_contents(&mut self, carts: HashMap<i32, Vec<Option<crate::inventory::Stack>>>) {
+        self.published_carts = carts;
+
+        if self.viewers.is_empty() && self.published_carts.is_empty() {
             self.published.clear();
             return;
         }
@@ -1685,7 +1856,7 @@ impl World {
         let changed = self.set_block_silently(x, y, z, state);
 
         if changed {
-            self.schedule_around(x, y, z, state);
+            self.schedule_around(x, y, z);
             self.changed.push(((x, y, z), old));
             self.dirty.insert(chunk_key(x, z));
         }
@@ -1946,15 +2117,16 @@ impl World {
                             })
                         };
 
+                        // Будится та жидкость, которой есть куда течь.
                         if flows(a, b) {
                             places.push(((
-                                (chunk_x + dx) * 16 + tx, y, (chunk_z + dz) * 16 + tz,
+                                chunk_x * 16 + hx, y, chunk_z * 16 + hz,
                             ), fluids::fluid_at(a).map_or(fluids::WATER_DELAY, |(kind, _)| kind.delay())));
                         }
 
                         if flows(b, a) {
                             places.push(((
-                                chunk_x * 16 + hx, y, chunk_z * 16 + hz,
+                                (chunk_x + dx) * 16 + tx, y, (chunk_z + dz) * 16 + tz,
                             ), fluids::fluid_at(b).map_or(fluids::WATER_DELAY, |(kind, _)| kind.delay())));
                         }
                     }
@@ -2132,7 +2304,7 @@ impl World {
 
     /// Сообщает всем клиентам о звуке в этом месте.
     pub fn note_sound(&mut self, x: i32, y: i32, z: i32, name: &'static str, volume: f32, pitch: f32) {
-        self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch, exact: None, of_block: true }));
+        self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch, exact: None, of_block: true, of_player: false }));
     }
 
     /// Звук сущности в точном месте — плеск предмета, вошедшего в воду.
@@ -2146,6 +2318,22 @@ impl World {
             pitch,
             exact: Some(at),
             of_block: false,
+            of_player: false,
+        }));
+    }
+
+    /// Звук игрока в его точке — удар (раздел «игроки»).
+    pub fn note_player_sound(&mut self, at: (f64, f64, f64), name: &'static str) {
+        self.events.push(WorldEvent::Sound(WorldSound {
+            x: at.0.floor() as i32,
+            y: at.1.floor() as i32,
+            z: at.2.floor() as i32,
+            name,
+            volume: 1.0,
+            pitch: 1.0,
+            exact: Some(at),
+            of_block: false,
+            of_player: true,
         }));
     }
 
@@ -2161,6 +2349,7 @@ impl World {
             pitch,
             exact: Some(at),
             of_block: true,
+            of_player: false,
         }));
     }
 
@@ -2257,17 +2446,15 @@ impl World {
         // не ставить» вода у нас растекалась иначе). Такт этого же такта, ещё
         // не исполненный, не мешает: вода может завести новый, пока
         // исполняется прежний (вики, Tick, 18w10c).
-        // Прежний такт был заведён для жидкости, которой здесь больше нет
-        // (раздатчик забрал источник ведром): он пропал вместе с ней, и
-        // пустое место ждёт такта соседей заново (чёрный ящик,
-        // dispenser-water — иначе вода возвращалась на 4 такта раньше).
-        let dried = !wet(self.get_block(x, y, z));
+        // Прежний такт был заведён для другой жидкости (раздатчик забрал
+        // источник ведром): он пропадёт вместе с ней, и новый не ждёт его.
+        let fluid = fluid_type(self.get_block(x, y, z));
 
         if self.waits_ahead((x, y, z), TickKind::Fluid)
             && self
                 .waiting
                 .get(&((x, y, z), TickKind::Fluid))
-                .is_some_and(|waiting| waiting.due <= due && !(waiting.wet && dried))
+                .is_some_and(|waiting| waiting.due <= due && waiting.fluid == fluid)
         {
             return;
         }
@@ -2305,9 +2492,9 @@ impl World {
         let order = self.next_order;
         self.next_order += 1;
 
-        let wet = kind == TickKind::Fluid && wet(self.get_block(place.0, place.1, place.2));
+        let fluid = if kind == TickKind::Fluid { fluid_type(self.get_block(place.0, place.1, place.2)) } else { 0 };
 
-        self.waiting.insert((place, kind), WaitingTick { due, order, priority, wet });
+        self.waiting.insert((place, kind), WaitingTick { due, order, priority, fluid });
         self.scheduled.push(Reverse(Scheduled {
             due,
             priority,
@@ -2317,29 +2504,37 @@ impl World {
         }));
     }
 
-    /// Просит пересчитать место и всех его соседей — для жидкостей.
+    /// Будит жидкость в самом месте и у его соседей — для жидкостей.
     ///
-    /// Задержка зависит от того, лава ли тут замешана: она течёт заметно
-    /// медленнее воды.
-    ///
-    /// Пересчитываются только места, у которых в них самих или рядом есть
-    /// жидкость: правило растекания (`fluids::update`) смотрит лишь на
-    /// само место и его соседей, и вдали от воды такт ничего бы не сделал —
-    /// только занял бы очередь. (Кроме рыхлого снега: такт без воды рядом
-    /// превращал его в воздух, а этого быть не должно.)
-    fn schedule_around(&mut self, x: i32, y: i32, z: i32, state: i32) {
-        let delay = match fluids::fluid_at(state) {
-            Some((kind, _)) => kind.delay_in(self.is_nether()),
-            None => fluids::WATER_DELAY,
-        };
-
+    /// Как у оригинала, такт заводится только жидкости: изменение рядом
+    /// будит её, и своим тактом она пересчитывает себя и растекается
+    /// (`tick::flow`). Пустому месту такт не нужен — его зальёт сосед.
+    /// Срок у каждой жидкости свой: лава течёт заметно медленнее воды.
+    fn schedule_around(&mut self, x: i32, y: i32, z: i32) {
         for (dx, dy, dz) in AROUND {
             let (x, y, z) = (x + dx, y + dy, z + dz);
+            let state = self.get_block(x, y, z);
 
-            if AROUND.iter().any(|(ax, ay, az)| wet(self.get_block(x + ax, y + ay, z + az))) {
-                self.schedule(x, y, z, delay);
+            if !wet(state) {
+                continue;
             }
+
+            let delay = match fluids::fluid_at(state) {
+                Some((kind, _)) => kind.delay_in(self.is_nether()),
+                None => fluids::WATER_DELAY,
+            };
+
+            self.schedule(x, y, z, delay);
         }
+    }
+
+    /// Исполнять ли такт жидкости в этом месте: он заведён для той жидкости,
+    /// что здесь сейчас. Такт без записи (заведённый в обход очереди)
+    /// исполняется.
+    pub fn fluid_tick_holds(&self, place: (i32, i32, i32)) -> bool {
+        self.waiting
+            .get(&(place, TickKind::Fluid))
+            .is_none_or(|waiting| waiting.fluid == fluid_type(self.get_block(place.0, place.1, place.2)))
     }
 
     /// Двигает время мира на такт вперёд и отдаёт места, которым пора, —
@@ -2606,20 +2801,6 @@ impl World {
         if let Err(error) = write_atomically(&self.path, PORTALS, &text) {
             log_error!("Не удалось записать {}: {}", PORTALS, error);
         }
-    }
-
-    /// Запоминает, что в это место жидкость пришла в этом такте.
-    pub fn note_fresh_fluid(&mut self, x: i32, y: i32, z: i32) {
-        if self.fresh_fluid.0 != self.tick {
-            self.fresh_fluid = (self.tick, HashSet::new());
-        }
-
-        self.fresh_fluid.1.insert((x, y, z));
-    }
-
-    /// Пришла ли жидкость в это место в этом такте.
-    pub fn is_fresh_fluid(&self, x: i32, y: i32, z: i32) -> bool {
-        self.fresh_fluid.0 == self.tick && self.fresh_fluid.1.contains(&(x, y, z))
     }
 
     /// Изменившиеся блоки, которые редстоун ещё не разобрал, и что там
@@ -4044,6 +4225,20 @@ fn read_waiting(value: &str) -> Option<SavedTick> {
 /// пересчитывал `schedule_around`.
 const AROUND: [(i32, i32, i32); 7] = [(0, 0, 0), (0, 1, 0), (0, -1, 0), (-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1)];
 
+/// Какая жидкость в блоке — для такта жидкости: 0 — никакой, 1 — источник
+/// воды (и залитый водой блок), 2 — текущая вода, 3 — источник лавы,
+/// 4 — текущая лава.
+fn fluid_type(state: i32) -> u8 {
+    match fluids::fluid_at(state) {
+        Some((fluids::Kind::Water, fluids::SOURCE)) => 1,
+        Some((fluids::Kind::Water, _)) => 2,
+        Some((fluids::Kind::Lava, fluids::SOURCE)) => 3,
+        Some((fluids::Kind::Lava, _)) => 4,
+        None if wet(state) => 1,
+        None => 0,
+    }
+}
+
 /// Есть ли в блоке жидкость: вода, лава или залитый водой блок.
 fn wet(state: i32) -> bool {
     if state == AIR {
@@ -4238,6 +4433,38 @@ mod tests {
 
         assert_eq!(read.block(5, flat::GROUND, 5), Chunk::flat().block(5, flat::GROUND, 5));
         assert_eq!(read.not_air(), Chunk::flat().not_air());
+    }
+
+    /// Особый динамит помнит свой вид и после записи чанка на диск; сменился
+    /// блок — вид забыт. Чанк без хранилищ, но с особым динамитом, тоже
+    /// читается.
+    #[test]
+    fn custom_tnt_survives_the_disk() {
+        let tnt = crate::blocks::state_by_name("tnt").expect("динамит");
+        let mega = crate::custom_tnt::by_name("mega").expect("mega").id;
+        let mut chunk = Chunk::flat();
+
+        chunk.set(3, 70, 4, tnt);
+        chunk.custom_tnt.push(((3, 70, 4), mega));
+        chunk.set(5, -60, 6, tnt);
+
+        let read = Chunk::from_bytes(&chunk.to_bytes()).expect("прочитать");
+
+        assert_eq!(read.custom_tnt, vec![((3, 70, 4), mega)]);
+        assert!(read.containers.is_empty());
+
+        // Сменился блок — вид забыт.
+        let mut read = read;
+        read.set(3, 70, 4, AIR);
+        assert!(read.custom_tnt.is_empty());
+
+        // Через мир: поставленный особый динамит виден по месту.
+        let mut world = World::in_memory();
+        world.set_block_silently(17, 64, -3, tnt);
+        world.set_custom_tnt((17, 64, -3), Some(mega));
+        assert_eq!(world.custom_tnt_at((17, 64, -3)), Some(mega));
+        world.set_block(17, 64, -3, AIR);
+        assert_eq!(world.custom_tnt_at((17, 64, -3)), None);
     }
 
     /// Объёмные биомы записываются и читаются обратно клетка в клетку, и
@@ -4820,7 +5047,8 @@ mod safety_tests {
     }
 
     /// Блок, поставленный вдали от воды, не заводит жидкостных тактов, а
-    /// рядом с водой — заводит.
+    /// рядом с водой — заводит, причём самой воде: пустому месту такт не
+    /// нужен, его зальёт сосед.
     #[test]
     fn only_places_near_fluids_are_scheduled() {
         let mut world = World::in_memory();
@@ -4832,17 +5060,18 @@ mod safety_tests {
         assert_eq!(world.scheduled_count(), 0, "такты вдали от воды");
 
         world.set_block(8, 10, 8, water);
-        assert_eq!(world.scheduled_count(), 7, "вода и её соседи не пустились в такт");
+        assert_eq!(world.scheduled_count(), 1, "вода не пустилась в такт");
 
-        // Сосед воды пересчитывается и тогда, когда поставили блок рядом с
-        // ним, а не с самой водой: вода может потечь к нему иначе.
+        // Блок рядом с водой будит её саму, а через клетку — никого.
         let mut world = World::in_memory();
 
         world.ensure(0, 0);
         world.set_block_silently(8, 10, 8, water);
         world.set_block(10, 10, 8, stone);
+        assert_eq!(world.scheduled_count(), 0, "вода через клетку разбужена");
 
-        assert_eq!(world.scheduled_count(), 1, "пересчитать надо только соседа воды");
+        world.set_block(9, 10, 8, stone);
+        assert_eq!(world.scheduled_count(), 1, "вода рядом не разбужена");
     }
 }
 
@@ -5011,7 +5240,7 @@ mod speed {
             .map(|chunk| chunk.light.as_ref().map_or(0, |(_, light)| light.bytes()))
             .sum();
 
-        world.chunks = ready;
+        world.chunks = ready.into_iter().collect();
 
         let mut stitched = 0;
         let started = Instant::now();
@@ -5555,12 +5784,11 @@ mod speed {
             chunk.set(x, y, z, stone);
         }
 
-        // Будится пустота под водой, а не сама вода: такт жидкости решает,
-        // чем станет место.
+        // Будится сама вода: своим тактом она растечётся в пустоту под собой.
         let delay = fluids::Kind::Water.delay();
         let woken = chunk.fluids_to_wake(2, -1);
 
-        assert!(woken.contains(&((35, 69, -13), delay)), "{:?}", woken);
+        assert!(woken.contains(&((35, 70, -13), delay)), "{:?}", woken);
         assert!(!woken.iter().any(|((x, _, z), _)| (*x, *z) == (40, -8)), "замкнутая вода разбужена: {:?}", woken);
     }
 

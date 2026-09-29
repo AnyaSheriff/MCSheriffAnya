@@ -233,6 +233,13 @@ pub struct BedrockWorld {
     /// Журнал лежащих предметов: докуда разослано и что клиент видит.
     items_from: usize,
     items_shown: HashSet<i32>,
+
+    /// Где клиент видит вагонетки: чтобы слать движение, только когда
+    /// вагонетка сдвинулась.
+    carts_at: HashMap<i32, (f32, f32, f32, f32)>,
+    /// Такт сервера, когда игрок последний раз ударил: сила удара растёт
+    /// с перезарядкой руки, как у Java.
+    last_attack: u64,
     radius: i32,
     sent: HashSet<(i32, i32)>,
     /// Кого из других игроков этот клиент видит: где, UUID, версия скина.
@@ -493,6 +500,8 @@ impl BedrockWorld {
             bag,
             items_from,
             items_shown: HashSet::new(),
+            carts_at: HashMap::new(),
+            last_attack: 0,
             radius: START_RADIUS,
             sent: HashSet::new(),
             shown: HashMap::new(),
@@ -532,7 +541,8 @@ impl BedrockWorld {
             packets.push(packet);
         }
 
-        packets.push(available_commands());
+        let may_tnt = crate::permissions::allowed(&player.shared, &player.identity.uuid, crate::custom_tnt::GIVE_NODE);
+        packets.push(available_commands(may_tnt));
         packets.push(abilities(runtime_id, game_mode));
         packets.push(own_entity_data(runtime_id));
         packets.push(own_attributes(runtime_id));
@@ -655,6 +665,7 @@ impl BedrockWorld {
             }
             session::INVENTORY_TRANSACTION => match read_item_use(payload) {
                 Some(action) => self.use_item(connection, action),
+                None if let Some((target, action)) = read_entity_use(payload) => self.use_entity(target, action),
                 None => crate::log_debug!("Bedrock: не разобрал действие предметом: {:02x?}", &payload[..payload.len().min(64)]),
             },
             session::TEXT => {
@@ -775,8 +786,8 @@ impl BedrockWorld {
                         connection.send(&std::mem::take(packets));
                     }
                 }
-                crate::players::Order::Give { item, count } => {
-                    let (slots, left) = self.bag.inventory.put(crate::inventory::Stack::new(item, count));
+                crate::players::Order::Give { stack } => {
+                    let (slots, left) = self.bag.inventory.put(stack);
 
                     // Не влезло — падает рядом с игроком, а не пропадает.
                     if let Some(left) = left {
@@ -1033,8 +1044,13 @@ impl BedrockWorld {
             });
             let (changes, count) = items.changes_since(self.items_from, self.reader);
             self.items_from = count;
-            changes
+
+            let carts: Vec<(i32, (f32, f32, f32, f32))> =
+                items.carts().iter().map(|cart| (cart.entity_id, cart_place(cart))).collect();
+
+            (changes, carts)
         };
+        let (changes, carts) = changes;
 
         slots.sort_unstable();
         slots.dedup();
@@ -1049,8 +1065,17 @@ impl BedrockWorld {
                         self.items_shown.insert(item.entity_id);
                     }
                 }
+                crate::items::Change::Cart(cart) => {
+                    packets.push(add_cart(&cart));
+                    self.items_shown.insert(cart.entity_id);
+                    self.carts_at.insert(cart.entity_id, cart_place(&cart));
+                }
+                // [проверить]: качание ударенной вагонетки у Bedrock не
+                // показываем.
                 crate::items::Change::Dropped(_) | crate::items::Change::Fuse { .. } => {}
                 crate::items::Change::Gone { entity_id } => {
+                    self.carts_at.remove(&entity_id);
+
                     if self.items_shown.remove(&entity_id) {
                         packets.push(remove_entity(entity_id));
                     }
@@ -1063,6 +1088,22 @@ impl BedrockWorld {
                         packets.push(remove_entity(entity_id));
                     }
                 }
+            }
+        }
+
+        self.move_carts(carts, packets);
+    }
+
+    /// Вагонетки, которые сдвинулись, — переносом (Move Entity). Шлём, когда
+    /// показанная вагонетка сдвинулась.
+    fn move_carts(&mut self, carts: Vec<(i32, (f32, f32, f32, f32))>, packets: &mut Vec<Vec<u8>>) {
+        for (entity_id, place) in carts {
+            if !self.items_shown.contains(&entity_id) {
+                continue;
+            }
+
+            if self.carts_at.insert(entity_id, place) != Some(place) {
+                packets.push(move_cart(entity_id, place));
             }
         }
     }
@@ -1124,6 +1165,11 @@ impl BedrockWorld {
             }
         }
 
+        // Вагонетка в руке ставится только на рельсу, мимо — ничего.
+        if kind == CLICK && action.trigger != SIMULATION_TICK && self.place_cart(connection, action.held, action.position).is_some() {
+            return;
+        }
+
         let target = if kind == BREAK { action.position } else { offset(action.position, action.face) };
         let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
 
@@ -1144,6 +1190,8 @@ impl BedrockWorld {
         match kind {
             // Сломал. В выживании из блока выпадает предмет — как у Java.
             BREAK => {
+                // Особый динамит помнит свой вид до слома: выпадет он же.
+                let custom = world.custom_tnt_at((x, y, z));
                 let Some(broken) = crate::placing::break_block(&mut world, x, y, z) else {
                     // Ломать было нечего — но клиент мог показать поломку.
                     let packets = self.restore(&world, &[action.position]);
@@ -1161,7 +1209,7 @@ impl BedrockWorld {
                     let luck = world.random_unit();
                     drop(world);
 
-                    if let Some(stack) = crate::blocks::drops_by_luck(broken, tool, luck) {
+                    if let Some(stack) = crate::blocks::drops_by_luck(broken, tool, luck).map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
                         self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком").drop_item(
                             self.shared.next_entity_id(),
                             stack,
@@ -1193,7 +1241,7 @@ impl BedrockWorld {
                     }
 
                     if world.get_block(target.0, target.1, target.2) == crate::world::AIR {
-                        if crate::portal::light(&mut world, target) {
+                        if crate::portal::light(&mut world, target, self.shared.settings.portal_sizes()) {
                             log_info!("{} зажёг портал в {} {} {}", self.identity.name, target.0, target.1, target.2);
                         } else if let Some(fire) = crate::blocks::state_by_name("fire") {
                             world.set_block(target.0, target.1, target.2, fire);
@@ -1222,7 +1270,8 @@ impl BedrockWorld {
                 };
                 let feet = (self.position.0 as f64, (self.position.1 - EYES) as f64, self.position.2 as f64);
 
-                let refused = match crate::placing::place(&mut world, name, default_state, action.position, &click, feet) {
+                let custom = if from_bag.is_some() { self.bag.inventory.held().and_then(|stack| stack.tnt) } else { None };
+                let refused = match crate::placing::place_tagged(&mut world, name, default_state, action.position, &click, feet, custom) {
                     crate::placing::Placement::Refused(places) => places,
                     crate::placing::Placement::Nothing => vec![target],
                     crate::placing::Placement::Placed => {
@@ -1257,6 +1306,67 @@ impl BedrockWorld {
     ///
     /// None — действия у блока нет (тогда щелчок — установка блока); иначе —
     /// что отправить клиенту.
+    /// Действие по сущности: удар или щелчок. Бить и щёлкать у нас можно
+    /// только вагонетки — как у Java (`strike_cart` в network/play.rs).
+    /// [проверить]: окна вагонеток с сундуком и воронкой Bedrock пока не
+    /// открывает — щелчок по ним ничего не делает.
+    fn use_entity(&mut self, target: u64, action: u32) {
+        /// Interact и Attack (InventoryTransaction, ItemUseOnEntity,
+        /// описание протокола Mojang).
+        const ATTACK: u32 = 1;
+
+        let Ok(target) = i32::try_from(target) else {
+            return;
+        };
+
+        if action != ATTACK || self.game_mode == crate::commands::GAME_MODE_SPECTATOR {
+            return;
+        }
+
+        let now = *self.shared.ticks.borrow();
+        let since = u32::try_from(now.saturating_sub(self.last_attack)).unwrap_or(u32::MAX);
+        let feet = (self.position.0 as f64, self.position.1 as f64 - EYES as f64, self.position.2 as f64);
+
+        if crate::network::play::strike_cart(&self.shared, self.dimension, target, feet, self.creative(), since) {
+            self.last_attack = now;
+            log_debug!("Bedrock: {} ударил вагонетку {}", self.identity.name, target);
+        }
+    }
+
+    /// Ставит вагонетку предметом в руке на рельсу, как у Java (вики,
+    /// Minecart: «can be placed on rails»). None — в руке не вагонетка,
+    /// Some(false) — щёлкнул не по рельсе.
+    fn place_cart(&mut self, connection: &Connection, held: Option<Held>, clicked: containers::Pos) -> Option<bool> {
+        // Что в руке — знает сервер; клиенту верим только в творческом, как
+        // при установке блока.
+        let from_bag = self.bag.inventory.held().map(|stack| stack.item);
+        let claimed = if self.creative() { held.and_then(java_item) } else { None };
+        let kind = from_bag
+            .or(claimed)
+            .and_then(crate::blocks::item_name)
+            .and_then(crate::minecart::Kind::from_name)?;
+        let state = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком").get_block(clicked.0, clicked.1, clicked.2);
+        let Some(at) = crate::minecart::place_on_rail(state, clicked) else {
+            return Some(false);
+        };
+
+        self.shared
+            .items_in(self.dimension)
+            .lock()
+            .expect("предметы захвачены другим потоком")
+            .add_cart(crate::minecart::Minecart::new(self.shared.next_entity_id(), kind, at));
+
+        if !self.creative()
+            && let Some(slot) = self.bag.inventory.spend_held()
+        {
+            self.bag.touched(&[slot]);
+            connection.send(&self.bag.slot_packet(slot).into_iter().collect::<Vec<_>>());
+        }
+
+        log_debug!("Bedrock: {} поставил вагонетку в {:?}", self.identity.name, clicked);
+        Some(true)
+    }
+
     fn use_block(&mut self, clicked: containers::Pos, face: i32) -> Option<Vec<Vec<u8>>> {
         // Наблюдатель ничего не трогает; в приключении рычаги, двери и
         // сундуки — можно.
@@ -1280,7 +1390,37 @@ impl BedrockWorld {
             return None;
         }
 
-        if let Some(kind) = containers::Kind::of(world.get_block(x, y, z)) {
+        let kind = containers::Kind::of(world.get_block(x, y, z));
+
+        // Проигрыватель и кафедра — общий с Java ход (redstone/jukebox.rs,
+        // redstone/lectern.rs): пластинка и книга из руки. Окна кафедры у
+        // Bedrock пока нет. [проверить] пакет Lectern Update.
+        if matches!(kind, Some(containers::Kind::Jukebox | containers::Kind::Lectern)) {
+            let held = self.bag.inventory.held();
+            let took = if kind == Some(containers::Kind::Jukebox) {
+                crate::redstone::use_jukebox(&mut world, clicked, held)?
+            } else {
+                crate::redstone::lectern::place_book(&mut world, clicked, held, 0)?
+            };
+
+            world.tell_directly(x, y, z);
+            world.tell_directly(beyond.0, beyond.1, beyond.2);
+            drop(world);
+
+            let mut packets = Vec::new();
+
+            if took
+                && !self.creative()
+                && let Some(slot) = self.bag.inventory.spend_held()
+            {
+                self.bag.touched(&[slot]);
+                packets.extend(self.bag.slot_packet(slot));
+            }
+
+            return Some(packets);
+        }
+
+        if let Some(kind) = kind {
             let halves = containers::halves(&world, clicked);
 
             // Окно уже открыто или сундук придавлен сверху — ничего не
@@ -1306,7 +1446,7 @@ impl BedrockWorld {
             return Some(self.open_window(kind, halves, &slots));
         }
 
-        if !crate::redstone::use_block(&mut world, clicked) {
+        if !crate::redstone::use_block_on(&mut world, clicked, face) {
             return None;
         }
 
@@ -2356,12 +2496,14 @@ fn change_dimension_packet(dimension: Dimension, eyes: (f32, f32, f32), loading_
 /// ними.
 fn lying_items(shared: &Shared, dimension: Dimension, reader: crate::journal::Reader) -> (usize, Vec<(i32, Vec<u8>)>) {
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
-    let lying: Vec<(i32, Vec<u8>)> = items
+    let mut lying: Vec<(i32, Vec<u8>)> = items
         .items()
         .iter()
         .filter(|item| item.block.is_none())
         .filter_map(|item| Some((item.entity_id, add_item_entity(item)?)))
         .collect();
+
+    lying.extend(items.carts().iter().map(|cart| (cart.entity_id, add_cart(cart))));
 
     (items.watch_changes(reader), lying)
 }
@@ -2380,6 +2522,63 @@ fn player_list_add(member: &Member, look: &skin::Look) -> Vec<u8> {
     skin::encode(&mut out, look);
     out.bool(false).bool(false).bool(false).li32(0);
     out.bool(true); // verified
+    out.bytes
+}
+
+/// Add Actor и Move Actor Absolute (описание протокола 1.26.10:
+/// `add_entity` — 13, `move_entity` — 18).
+const ADD_ACTOR: u32 = 0x0d;
+const MOVE_ACTOR_ABSOLUTE: u32 = 0x12;
+
+/// Место и поворот вагонетки для клиента Bedrock. [проверить]: Bedrock может
+/// ждать вагонетку не на уровне низа ящика, а выше — живой клиент.
+///
+/// TODO(Bedrock): поставить вагонетку предметом на рельсу, ударить и
+/// сломать её, толкнуть собой игрок Bedrock пока не может — у нас это есть
+/// только для Java (play.rs: place_with_main_hand, attack). Качание от
+/// удара (hurt_time) Bedrock тоже не показываем.
+fn cart_place(cart: &crate::minecart::Minecart) -> (f32, f32, f32, f32) {
+    (cart.x as f32, cart.y as f32, cart.z as f32, cart.yaw)
+}
+
+/// Вагонетка появилась (Add Actor): вид сущности по имени Bedrock —
+/// `minecraft:minecart`, `minecraft:chest_minecart` и т. д.
+fn add_cart(cart: &crate::minecart::Minecart) -> Vec<u8> {
+    let (x, y, z, yaw) = cart_place(cart);
+    let name = match cart.kind {
+        crate::minecart::Kind::Plain => "minecraft:minecart",
+        crate::minecart::Kind::Chest => "minecraft:chest_minecart",
+        crate::minecart::Kind::Hopper => "minecraft:hopper_minecart",
+        crate::minecart::Kind::Tnt => "minecraft:tnt_minecart",
+        // У Bedrock вагонетки с печью нет: показываем обычную.
+        crate::minecart::Kind::Furnace => "minecraft:minecart",
+    };
+
+    let mut out = Out::packet(ADD_ACTOR);
+    out.zigzag64(cart.entity_id as i64)
+        .varint64(cart.entity_id as u64)
+        .string(name)
+        .vec3f(x, y, z)
+        .vec3f(cart.vx as f32, cart.vy as f32, cart.vz as f32)
+        .lf32(cart.pitch)
+        .lf32(yaw)
+        .lf32(yaw)
+        .lf32(yaw)
+        .varint(0) // свойства-атрибуты
+        .varint(0) // данные сущности
+        .varint(0)
+        .varint(0) // свойства: целые, дробные
+        .varint(0); // связи
+    out.bytes
+}
+
+/// Вагонетка сдвинулась (Move Actor Absolute): флаги 0 — просто сдвиг,
+/// углы — байтами по 256 на оборот.
+fn move_cart(entity_id: i32, (x, y, z, yaw): (f32, f32, f32, f32)) -> Vec<u8> {
+    let angle = |degrees: f32| ((degrees / 360.0 * 256.0).round() as i32 & 0xFF) as u8;
+    let mut out = Out::packet(MOVE_ACTOR_ABSOLUTE);
+
+    out.varint64(entity_id as u64).u8(0).vec3f(x, y, z).u8(angle(yaw)).u8(0).u8(angle(yaw));
     out.bytes
 }
 
@@ -2596,16 +2795,31 @@ const PARSE_MESSAGE: u32 = 0x10_0043;
 ///
 /// У каждой команды один необязательный аргумент «текст до конца строки»:
 /// клиент пропускает любые аргументы, разбирает их сервер.
-fn available_commands() -> Vec<u8> {
+///
+/// `tnt` (особый динамит) — только тем, кому он позволен (`may_tnt`), с
+/// видами в описании. Перечисление видов отдельным параметром требует
+/// символа разбора «перечисление», которого документация Mojang не
+/// называет, — [проверить], пока текстом.
+fn available_commands(may_tnt: bool) -> Vec<u8> {
+    let tnt = format!(
+        "Особый динамит: tnt give <игрок> <{}> [сколько] | tnt list",
+        crate::custom_tnt::names().collect::<Vec<&str>>().join("|")
+    );
+    let mut commands: Vec<(&str, &str)> = COMMANDS.to_vec();
+
+    if may_tnt {
+        commands.push(("tnt", &tnt));
+    }
+
     let mut out = Out::packet(session::AVAILABLE_COMMANDS);
     out.varint(0) // Enum Values
         .varint(0) // Chained Subcommand Values
         .varint(0) // Post Fixes
         .varint(0) // Enum Data
         .varint(0) // Chained Subcommand Data
-        .varint(COMMANDS.len() as u32);
+        .varint(commands.len() as u32);
 
-    for (name, description) in COMMANDS {
+    for (name, description) in commands {
         out.string(name)
             .string(description)
             .lu16(0) // Flags
@@ -2920,6 +3134,27 @@ fn skip_actions(reader: &mut In) -> Option<()> {
     Some(())
 }
 
+/// Из Inventory Transaction — действие по сущности (тип 3,
+/// ItemUseOnEntity): номер сущности у клиента и что сделано (0 — щелчок,
+/// 1 — удар). Дальше — ячейка, предмет, место игрока и щелчка: не нужны.
+fn read_entity_use(payload: &[u8]) -> Option<(u64, u32)> {
+    const USE_ON_ENTITY: u32 = 3;
+
+    let mut reader = In::new(payload);
+    skip_legacy(&mut reader)?;
+    let transaction_type = reader.varint()?;
+    skip_actions(&mut reader)?;
+
+    if transaction_type != USE_ON_ENTITY {
+        return None;
+    }
+
+    let target = reader.varint64()?;
+    let action = reader.varint()?;
+
+    Some((target, action))
+}
+
 /// Тело «предмет применён»: что сделано, где, чем.
 fn read_use(reader: &mut In) -> Option<ItemUse> {
     let kind = reader.varint()?;
@@ -3076,7 +3311,7 @@ mod tests {
 
     #[test]
     fn available_commands_bytes_of_one_command() {
-        let packet = available_commands();
+        let packet = available_commands(false);
 
         // Номер пакета 0x4c, пять пустых списков, 14 команд.
         assert_eq!(packet[..7], [0x4c, 0, 0, 0, 0, 0, 14]);
@@ -3102,7 +3337,7 @@ mod tests {
 
     #[test]
     fn available_commands_read_back() {
-        let packet = available_commands();
+        let packet = available_commands(false);
         let mut reader = In::new(&packet);
 
         assert_eq!(reader.varint(), Some(session::AVAILABLE_COMMANDS));
@@ -3130,6 +3365,18 @@ mod tests {
         assert_eq!(reader.varint(), Some(0));
         assert_eq!(reader.varint(), Some(0));
         assert_eq!(reader.take(1), None, "лишние байты в конце");
+    }
+
+    /// Особый динамит в списке команд — только тем, кому он позволен.
+    #[test]
+    fn tnt_is_listed_only_when_allowed() {
+        let has_tnt = |packet: &[u8]| packet.windows(4).any(|window| window == [3, b't', b'n', b't']);
+
+        assert!(!has_tnt(&available_commands(false)));
+
+        let packet = available_commands(true);
+        assert!(has_tnt(&packet));
+        assert_eq!(packet[6] as usize, COMMANDS.len() + 1);
     }
 
     /// Пропускает палитровое хранилище и отдаёт его палитру.

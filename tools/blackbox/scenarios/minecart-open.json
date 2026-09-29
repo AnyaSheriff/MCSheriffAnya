@@ -1,0 +1,53 @@
+{
+ "name": "minecart-open",
+ "about": "Щелчок по вагонетке с сундуком открывает окно сундука (generic_9x3) с её содержимым, по вагонетке с воронкой — окно воронки; щелчок в окне переносит стопку.",
+ "blocks": [],
+ "setup": [
+  "fill $(0,0,1) $(5,0,1) minecraft:rail[shape=east_west]",
+  "fill $(0,0,3) $(5,0,3) minecraft:rail[shape=east_west]"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon chest_minecart $(3.5,0,1.5) {Items:[{Slot:3b,id:\"minecraft:stone\",count:5}]}"
+  },
+  {
+   "after": 4,
+   "interact": true
+  },
+  {
+   "after": 8,
+   "window_click": {
+    "slot": 3,
+    "button": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 12,
+   "close": true
+  },
+  {
+   "after": 14,
+   "cmd": "summon hopper_minecart $(1.5,0,3.5) {Items:[{Slot:1b,id:\"minecraft:dirt\",count:2}]}"
+  },
+  {
+   "after": 18,
+   "interact": true
+  },
+  {
+   "after": 24,
+   "close": true
+  }
+ ],
+ "record_ticks": 30,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=tnt_minecart]",
+  "kill @e[type=furnace_minecart]",
+  "kill @e[type=item]",
+  "clear blackbox"
+ ]
+}

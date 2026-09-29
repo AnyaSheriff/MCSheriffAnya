@@ -1,0 +1,73 @@
+{
+ "name": "crafter-slots",
+ "about": "Пустой крафтер: окно открывается щелчком, ячейки 0 и 4 выключаются, 0 включается обратно; сравнитель читает число выключенных; окно закрывается.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:crafter[crafting=false,orientation=north_up,triggered=false]{Items:[{Slot:8b,id:\"minecraft:stone\",count:3}]}"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 10,
+   "slot_state": {
+    "slot": 0,
+    "state": false
+   }
+  },
+  {
+   "after": 20,
+   "slot_state": {
+    "slot": 4,
+    "state": false
+   }
+  },
+  {
+   "after": 30,
+   "slot_state": {
+    "slot": 0,
+    "state": true
+   }
+  },
+  {
+   "after": 40,
+   "slot_state": {
+    "slot": 8,
+    "state": false
+   }
+  },
+  {
+   "after": 50,
+   "close": true
+  }
+ ],
+ "record_ticks": 70
+}

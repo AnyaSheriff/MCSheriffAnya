@@ -85,5 +85,11 @@
    "cmd": "tp @e[type=chest_minecart] $(0.5,0,30.5)"
   }
  ],
- "record_ticks": 310
+ "record_ticks": 310,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=item]"
+ ]
 }

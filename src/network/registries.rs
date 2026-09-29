@@ -98,6 +98,12 @@ const JUKEBOX_SONGS: [(&str, f32, i32); 21] = [
     ("lava_chicken", 135.0, 9),
 ];
 
+/// Длина песни в секундах и сила для сравнителя по имени записи
+/// (`cat`, `11`); None — такой пластинки нет.
+pub fn jukebox_song(name: &str) -> Option<(f32, u8)> {
+    JUKEBOX_SONGS.iter().find(|(id, _, _)| *id == name).map(|&(_, length, comparator)| (length, comparator as u8))
+}
+
 /// Содержимое одной записи реестра. Возвращает None, если такой записи
 /// у нас нет — тогда отправлять её нельзя.
 pub fn entry(registry: &str, name: &str) -> Option<Compound> {

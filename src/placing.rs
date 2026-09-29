@@ -31,6 +31,7 @@ pub enum Placement {
 /// Ставит блок `name` по щелчку `click` по блоку `clicked` — общее для
 /// игроков Java и Bedrock. `player` — где стоит игрок (ноги): в него блок
 /// не ставится.
+#[cfg(test)]
 pub fn place(
     world: &mut World,
     name: &'static str,
@@ -38,6 +39,21 @@ pub fn place(
     clicked: (i32, i32, i32),
     click: &Click,
     player: (f64, f64, f64),
+) -> Placement {
+    place_tagged(world, name, default_state, clicked, click, player, None)
+}
+
+/// То же, но со стопкой, у которой есть пометка: особый динамит
+/// (custom_tnt.rs) запоминает свой вид в чанке — до разбора редстоуна,
+/// чтобы динамит, поставленный у сигнала, загорелся уже своим видом.
+pub fn place_tagged(
+    world: &mut World,
+    name: &'static str,
+    default_state: i32,
+    clicked: (i32, i32, i32),
+    click: &Click,
+    player: (f64, f64, f64),
+    custom: Option<crate::custom_tnt::KindId>,
 ) -> Placement {
     let (clicked_x, clicked_y, clicked_z) = clicked;
     let (px, py, pz) = player;
@@ -132,10 +148,19 @@ pub fn place(
 
     world.set_block(x, y, z, state);
 
+    if custom.is_some() {
+        world.set_custom_tnt((x, y, z), custom);
+    }
+
+    crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_PLACE);
+
     // Соседние заборы, стенки и панели должны увидеть новый блок и срастись
     // с ним, а редстоун — узнать о нём.
     refresh_neighbours(world, x, y, z);
     crate::redstone::settle(world);
+
+    // То, что делает только постановка игроком: крючок собирает цепь.
+    crate::redstone::placed_by_player(world, (x, y, z));
 
     // На диск это попадёт с общей записью раз в секунду: писать под замком
     // мира на каждый блок незачем.
@@ -234,7 +259,11 @@ pub fn break_block(world: &mut World, x: i32, y: i32, z: i32) -> Option<i32> {
         return None;
     }
 
+    // Крючок растяжки, сломанный игроком, звучит «detach».
+    crate::redstone::hook_broken_by_player(world, (x, y, z), broken);
+
     world.set_block(x, y, z, world::AIR);
+    crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_DESTROY);
 
     // Дверь, высокое растение и кровать занимают два блока и ломаются тоже
     // целиком: иначе от них осталась бы висеть вторая половинка. Вторая

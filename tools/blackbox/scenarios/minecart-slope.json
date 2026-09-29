@@ -1,0 +1,206 @@
+{
+ "name": "minecart-slope",
+ "about": "Вагонетка на наклоне из трёх ступеней скатывается на ровную линию: разгон на спуске, торможение на ровном.",
+ "blocks": [
+  {
+   "at": [
+    -8,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -8,
+    1,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -8,
+    2,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -8,
+    3,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -7,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -7,
+    1,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -7,
+    2,
+    0
+   ],
+   "state": "minecraft:rail[shape=ascending_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -6,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -6,
+    1,
+    0
+   ],
+   "state": "minecraft:rail[shape=ascending_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -5,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=ascending_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -4,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    7,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    8,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  }
+ ],
+ "setup": [
+  "kill @e[type=minecart]"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecart $(-6.5,2,0.5)"
+  }
+ ],
+ "record_ticks": 140,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=item]"
+ ]
+}

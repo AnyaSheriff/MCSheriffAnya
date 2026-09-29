@@ -2,14 +2,17 @@
 // VarInt (целое число переменной длины) и String (VarInt-длина + UTF-8 байты).
 
 use std::io;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
 /// Читает VarInt напрямую из TCP-потока.
 ///
 /// Формат VarInt: каждый байт содержит 7 бит данных в младших битах,
 /// старший бит (0x80) означает "есть следующий байт".
-pub async fn read_varint(stream: &mut TcpStream) -> io::Result<i32> {
+///
+/// Читать можно и из буфера (`BufReader`): тогда байты числа берутся из
+/// памяти, а не отдельным системным вызовом каждый.
+pub async fn read_varint<R: AsyncRead + Unpin>(stream: &mut R) -> io::Result<i32> {
     let mut num_read: u32 = 0;
     let mut result: i32 = 0;
 

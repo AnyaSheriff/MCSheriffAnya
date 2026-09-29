@@ -69,6 +69,8 @@ impl Answer {
 fn level_needed(command: &str) -> i32 {
     match command {
         "help" | "list" | "say" => 0,
+        // Права на особый динамит — узлом (permissions.rs), не уровнем.
+        "tnt" => 0,
         _ => ops::HIGHEST_LEVEL,
     }
 }
@@ -250,7 +252,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                     .expect("список игроков захвачен другим потоком");
 
                 for (uuid, _) in &targets {
-                    players.order(uuid, Order::Give { item, count });
+                    players.order(uuid, Order::Give { stack: crate::inventory::Stack::new(item, count) });
                 }
             }
 
@@ -380,7 +382,18 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
 
             Answer::saying(format!("{} выгнан: {}", who, reason))
         }
-        "tp" | "teleport" => teleport(parts.collect::<Vec<&str>>().as_slice(), source, shared, None),
+        "tp" | "teleport" => {
+            let rest: Vec<&str> = parts.collect();
+
+            // Сущности, кроме игроков, — только вагонетки: `tp @e[type=minecart] x y z`.
+            match rest.as_slice() {
+                [who, place @ ..] if cart_selector(who).is_some() => teleport_carts(who, place, source, shared),
+                _ => teleport(&rest, source, shared, None),
+            }
+        }
+        "summon" => summon(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "tnt" => custom_tnt(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "kill" => kill(parts.collect::<Vec<&str>>().as_slice(), source, shared),
 
         // Как у оригинала: `execute in <измерение> run tp …` — перенос в
         // другое измерение. Другие виды execute пока не разбираются.
@@ -415,6 +428,10 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 ]);
             }
 
+            if crate::permissions::allowed_for(shared, source, crate::custom_tnt::GIVE_NODE) {
+                names.extend(["tnt give <игрок> <вид> [сколько]", "tnt list"]);
+            }
+
             if matches!(source, Source::Console) {
                 names.push("stop");
             }
@@ -432,6 +449,311 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         },
         unknown => Answer::saying(format!("Неизвестная команда: {}", unknown)),
     }
+}
+
+/// `tnt give <игрок> <вид> [сколько]` и `tnt list` — особый динамит
+/// (custom_tnt.rs). Только тем, кому позволено (узел `GIVE_NODE`).
+fn custom_tnt(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    use crate::custom_tnt::{self, KINDS};
+
+    if !crate::permissions::allowed_for(shared, source, custom_tnt::GIVE_NODE) {
+        return Answer::saying("На это у тебя нет прав".to_string());
+    }
+
+    let kinds = custom_tnt::names().collect::<Vec<&str>>().join(", ");
+
+    match parts {
+        ["list", ..] => {
+            let lines: Vec<String> = KINDS
+                .iter()
+                .map(|kind| format!("{} — {} (сила {}, запал {})", kind.name, kind.title, kind.power, kind.fuse))
+                .collect();
+
+            Answer::saying(format!("Особый динамит: {}", lines.join("; ")))
+        }
+        ["give"] => Answer::saying("Кому выдать? tnt give <игрок> <вид> [сколько]".to_string()),
+        ["give", _] => Answer::saying(format!("Какой? tnt give <игрок> <вид> [сколько]. Виды: {}", kinds)),
+        ["give", named, kind, rest @ ..] => {
+            let Some(kind) = custom_tnt::by_name(kind) else {
+                return Answer::saying(format!("Нет такого вида: {}. Виды: {}", kind, kinds));
+            };
+
+            let count = match rest.first() {
+                None => 1,
+                Some(value) => match value.parse::<i32>() {
+                    Ok(count) if count > 0 => count,
+                    _ => return Answer::saying("Сколько выдавать? Число должно быть больше нуля".to_string()),
+                },
+            };
+
+            let Some(stack) = custom_tnt::stack(kind, count) else {
+                return Answer::saying("Динамита нет в таблице предметов".to_string());
+            };
+
+            let targets = find_targets(named, source, shared);
+
+            if targets.is_empty() {
+                return Answer::saying("Такого игрока нет на сервере".to_string());
+            }
+
+            {
+                let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+                for (uuid, _) in &targets {
+                    players.order(uuid, Order::Give { stack });
+                }
+            }
+
+            Answer::saying(format!("Выдано: {} × {} — игрокам: {}", kind.title, count, names_of(&targets)))
+        }
+        _ => Answer::saying("Как выдать? tnt give <игрок> <вид> [сколько] или tnt list".to_string()),
+    }
+}
+
+/// Место, откуда отсчитываются относительные координаты (`~`): у игрока —
+/// где он стоит, у консоли — начало мира.
+fn origin_of(source: &Source, shared: &Shared) -> (f64, f64, f64) {
+    match source {
+        Source::Player { uuid, .. } => shared
+            .players
+            .lock()
+            .expect("список игроков захвачен другим потоком")
+            .members()
+            .iter()
+            .find(|member| &member.uuid == uuid)
+            .map(|member| (member.position.x, member.position.y, member.position.z))
+            .unwrap_or_default(),
+        Source::Console => (0.0, 0.0, 0.0),
+    }
+}
+
+/// Три координаты места для сущности: числа или `~` со сдвигом от `origin`.
+/// Как у оригинала, целое число по x и z означает середину блока (вики,
+/// Argument types, vec3: «an integer … is centered»). [проверить]: у
+/// оригинала целые по x и z сдвигаются на 0,5.
+fn entity_place(parts: &[&str], origin: (f64, f64, f64)) -> Option<(f64, f64, f64)> {
+    let [x, y, z] = parts else {
+        return None;
+    };
+
+    let one = |text: &str, from: f64, centre: bool| -> Option<f64> {
+        let value = match text.strip_prefix('~') {
+            Some("") => from,
+            Some(shift) => from + shift.parse::<f64>().ok()?,
+            None if centre && !text.contains('.') => text.parse::<i64>().ok()? as f64 + 0.5,
+            None => text.parse::<f64>().ok()?,
+        };
+
+        (value.is_finite() && value.abs() <= 30_000_000.0).then_some(value)
+    };
+
+    Some((one(x, origin.0, true)?, one(y, origin.1, false)?, one(z, origin.2, true)?))
+}
+
+/// Выбор вагонеток: `@e[type=minecart]`, `@e[type=chest_minecart,limit=1]`,
+/// `@n[type=…]`. Возвращает вид и сколько взять (None — всех).
+fn cart_selector(text: &str) -> Option<(crate::minecart::Kind, Option<usize>)> {
+    let inner = text.strip_prefix("@e[").or_else(|| text.strip_prefix("@n["))?.strip_suffix(']')?;
+    let mut kind = None;
+    let mut limit = text.starts_with("@n").then_some(1);
+
+    for pair in inner.split(',') {
+        match pair.split_once('=')? {
+            ("type", name) => kind = Some(crate::minecart::Kind::from_name(name)?),
+            ("limit", count) => limit = Some(count.parse().ok()?),
+            _ => return None,
+        }
+    }
+
+    Some((kind?, limit))
+}
+
+/// Номера вагонеток по выбору — в порядке появления.
+fn chosen_carts(items: &crate::items::Items, (kind, limit): (crate::minecart::Kind, Option<usize>)) -> Vec<i32> {
+    items
+        .carts()
+        .iter()
+        .filter(|cart| cart.kind == kind)
+        .take(limit.unwrap_or(usize::MAX))
+        .map(|cart| cart.entity_id)
+        .collect()
+}
+
+/// `summon <вагонетка> <x> <y> <z> [{Items:[…]}]` — у нас из сущностей
+/// призываются только вагонетки. Она появляется ровно в названной точке,
+/// без скорости; к рельсе её прижмёт её же такт.
+fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let usage = || Answer::saying("Нужно: summon <вагонетка> <x> <y> <z>".to_string());
+
+    let (name, rest) = match parts {
+        [name, rest @ ..] => (*name, rest),
+        [] => return usage(),
+    };
+
+    let Some(kind) = crate::minecart::Kind::from_name(name) else {
+        return Answer::saying(format!("Пока призываются только вагонетки, а не {}", name));
+    };
+
+    let origin = origin_of(source, shared);
+    let (place, data) = match rest {
+        [] => (Some(origin), None),
+        [x, y, z] => (entity_place(&[*x, *y, *z], origin), None),
+        [x, y, z, data] => (entity_place(&[*x, *y, *z], origin), Some(*data)),
+        _ => return usage(),
+    };
+
+    let Some(place) = place else {
+        return usage();
+    };
+
+    let items = match data.map(crate::containers::items_from_text) {
+        Some(Some(items)) => items,
+        Some(None) => return Answer::saying(format!("Не понял данные сущности: {}", data.unwrap_or(""))),
+        None => Vec::new(),
+    };
+
+    let mut cart = crate::minecart::Minecart::new(shared.next_entity_id(), kind, place);
+
+    for (slot, stack) in items {
+        if let Some(cell) = cart.slots.get_mut(slot) {
+            *cell = Some(stack);
+        }
+    }
+
+    shared
+        .items_in(dimension_of(source, shared))
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .add_cart(cart);
+
+    Answer::saying(format!("Призвана сущность {}", kind.name()))
+}
+
+/// `kill @e[type=<вид>,distance=..<N>,limit=<N>]` — убрать сущности:
+/// вагонетки, предметы, подожжённый динамит, падающие блоки. `type=!<вид>` —
+/// все, кроме этого вида. Игроков команда не трогает.
+///
+/// Как у оригинала, сама вагонетка предметом не выпадает, а содержимое
+/// сундука или воронки высыпается (чёрный ящик: после kill вагонетки с
+/// сундуком лежит её земля, предмета вагонетки нет). [проверить]: разброс
+/// высыпанного.
+fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let Some(chosen) = parts.first().and_then(|who| Selector::parse(who)) else {
+        return Answer::saying("Нужно: kill @e[type=<вид>] — вагонетки, item, tnt, falling_block".to_string());
+    };
+
+    let (x, y, z) = origin_of(source, shared);
+    let near = |at: (f64, f64, f64)| chosen.reaches((x, y, z), at);
+    let mut left = chosen.limit.unwrap_or(usize::MAX);
+
+    let mut items = shared.items_in(dimension_of(source, shared)).lock().expect("предметы захвачены другим потоком");
+
+    let carts = items.remove_carts(|cart| {
+        let picked = left > 0 && chosen.takes(cart.kind.name()) && near((cart.x, cart.y, cart.z));
+
+        left -= usize::from(picked);
+        picked
+    });
+
+    let dropped = items.remove_items(|item| {
+        let picked = left > 0 && chosen.takes(item.type_name()) && near((item.x, item.y, item.z));
+
+        left -= usize::from(picked);
+        picked
+    });
+
+    for cart in &carts {
+        for stack in cart.slots.iter().flatten() {
+            items.drop_item(shared.next_entity_id(), *stack, (cart.x, cart.y, cart.z), (0.0, 0.0, 0.0), crate::items::MINED_DELAY);
+        }
+    }
+
+    Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len()))
+}
+
+/// Выбор сущностей `@e[…]` для `kill`.
+struct Selector {
+    /// Вид: `Some((true, "item"))` — только предметы, `Some((false, "player"))`
+    /// — все, кроме игроков; `None` — любые.
+    kind: Option<(bool, String)>,
+
+    /// Не дальше скольких блоков от того, кто ввёл команду.
+    distance: Option<f64>,
+
+    /// Сколько самое большее.
+    limit: Option<usize>,
+}
+
+impl Selector {
+    fn parse(text: &str) -> Option<Selector> {
+        let mut chosen = Selector { kind: None, distance: None, limit: text.starts_with("@n").then_some(1) };
+
+        let inner = match text {
+            "@e" | "@n" => return Some(chosen),
+            _ => text.strip_prefix("@e[").or_else(|| text.strip_prefix("@n["))?.strip_suffix(']')?,
+        };
+
+        for pair in inner.split(',') {
+            match pair.split_once('=')? {
+                ("type", name) => {
+                    let (wanted, name) = match name.strip_prefix('!') {
+                        Some(name) => (false, name),
+                        None => (true, name),
+                    };
+
+                    chosen.kind = Some((wanted, name.strip_prefix("minecraft:").unwrap_or(name).to_string()));
+                }
+                // `..N`, `M..N` или `N` — важна только верхняя граница.
+                ("distance", range) => chosen.distance = Some(range.rsplit("..").next()?.parse().ok()?),
+                ("limit", count) => chosen.limit = Some(count.parse().ok()?),
+                _ => return None,
+            }
+        }
+
+        Some(chosen)
+    }
+
+    /// Подходит ли сущность такого вида.
+    fn takes(&self, kind: &str) -> bool {
+        match &self.kind {
+            Some((wanted, name)) => (name == kind) == *wanted,
+            None => true,
+        }
+    }
+
+    /// Достаточно ли близко сущность.
+    fn reaches(&self, (x, y, z): (f64, f64, f64), (at_x, at_y, at_z): (f64, f64, f64)) -> bool {
+        self.distance.is_none_or(|distance| (at_x - x).powi(2) + (at_y - y).powi(2) + (at_z - z).powi(2) <= distance * distance)
+    }
+}
+
+/// `tp @e[type=<вагонетка>] <x> <y> <z>` — перенести вагонетки. Скорость
+/// по горизонтали сохраняется, по вертикали обнуляется, и вагонетка
+/// считается стоящей на земле: у оригинала перенесённая в воздух вагонетка
+/// в первый такт падает со скоростью −0,04·0,5·0,95 = −0,019 — как с земли
+/// (чёрный ящик, rail-detector).
+fn teleport_carts(who: &str, place: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let Some(chosen) = cart_selector(who) else {
+        return Answer::saying("Не понял, кого переносить".to_string());
+    };
+
+    let Some((x, y, z)) = entity_place(place, origin_of(source, shared)) else {
+        return Answer::saying("Куда переносить? tp @e[type=minecart] <x> <y> <z>".to_string());
+    };
+
+    let mut items = shared.items_in(dimension_of(source, shared)).lock().expect("предметы захвачены другим потоком");
+    let ids = chosen_carts(&items, chosen);
+
+    for cart in items.carts_mut().iter_mut().filter(|cart| ids.contains(&cart.entity_id)) {
+        cart.x = x;
+        cart.y = y;
+        cart.z = z;
+        cart.vy = 0.0;
+        cart.on_ground = true;
+        cart.teleports += 1;
+    }
+
+    Answer::saying(format!("Перенесено сущностей: {}", ids.len()))
 }
 
 /// Имя предмета без «minecraft:» — писать его каждый раз незачем.
@@ -577,6 +899,30 @@ fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool)
 
                     if filled.is_some() {
                         changed += 1;
+
+                        // Тот же блок с новыми данными оригинал ставит
+                        // заново: клиентам уходит блок, хоть он и прежний
+                        // (чёрный ящик, minecart-hopper: сундук с камнем
+                        // поверх такого же сундука).
+                        if !placed.contains(&(x, y, z)) {
+                            world.announce_change(x, y, z, state);
+                        }
+                    }
+
+                    // Кафедра: сколько страниц в книге и какая открыта.
+                    if let Some(text) = data {
+                        world.with_container(x, y, z, |container| {
+                            if container.kind == crate::containers::Kind::Lectern {
+                                container.pages = crate::redstone::lectern::pages_from_text(text);
+                                container.page = crate::redstone::lectern::page_from_text(text)
+                                    .clamp(0, (container.pages - 1).max(0));
+                            }
+
+                            // Крафтер: выключенные ячейки (`disabled_slots`).
+                            if container.kind == crate::containers::Kind::Crafter {
+                                container.disabled = crate::redstone::crafter::disabled_from_text(text);
+                            }
+                        });
                     }
                 }
             }
@@ -848,9 +1194,13 @@ fn place_of(parts: &[&str], source: &Source, shared: &Shared) -> Option<Place> {
 
         // Только конечные числа в пределах мира, как у оригинала: NaN или
         // бесконечность записались бы в файл игрока и ломали каждый вход.
+        // Целые X и Z оригинал ставит в середину блока (+0.5): `tp 470 -58
+        // 470` приводит в 470.5 (чёрный ящик, tripwire-player, minecart-hit).
         [x, y, z] => {
             let number = |text: &str| text.parse::<f64>().ok().filter(|value| value.is_finite() && value.abs() <= 30_000_000.0);
-            Some(Place { x: number(x)?, y: number(y)?, z: number(z)?, dimension: None, look: None })
+            let centred = |text: &str| Some(number(text)? + if text.contains('.') { 0.0 } else { 0.5 });
+
+            Some(Place { x: centred(x)?, y: number(y)?, z: centred(z)?, dimension: None, look: None })
         }
 
         // Поворот — любое конечное число (приводится к −180..180), наклон —
@@ -1117,12 +1467,12 @@ mod tests {
         let shared = server();
         let first = Source::Player { uuid: [1; 16], name: "Первый".to_string() };
 
-        // Себя по числам.
+        // Себя по числам: целые X и Z — в середину блока, как у оригинала.
         run("tp 5 64 -7", &first, &shared);
 
         assert!(matches!(
             orders_for(&shared, 1).first(),
-            Some(Order::Teleport { x, y, z }) if *x == 5.0 && *y == 64.0 && *z == -7.0
+            Some(Order::Teleport { x, y, z }) if *x == 5.5 && *y == 64.0 && *z == -6.5
         ));
 
         // Себя — к другому игроку: тот стоит в 20 по X.
@@ -1138,7 +1488,7 @@ mod tests {
 
         assert!(matches!(
             orders_for(&shared, 2).first(),
-            Some(Order::Teleport { x, y, z }) if *x == 1.0 && *y == 2.0 && *z == 3.0
+            Some(Order::Teleport { x, y, z }) if *x == 1.5 && *y == 2.0 && *z == 3.5
         ));
 
         // Другого — к третьему.
@@ -1263,6 +1613,38 @@ mod tests {
         }
     }
 
+    /// Особый динамит выдаёт только тот, кому позволено: без прав — отказ
+    /// и никаких поручений, с правами — стопка с пометкой вида.
+    #[test]
+    fn custom_tnt_is_given_only_by_those_allowed() {
+        let shared = server();
+        let player = Source::Player { uuid: [2; 16], name: "Второй".to_string() };
+
+        shared.ops.lock().expect("права").take_away(None, "Второй");
+
+        assert!(!crate::permissions::allowed(&shared, &[2; 16], crate::custom_tnt::GIVE_NODE));
+        assert!(run("tnt give Второй mega 3", &player, &shared).reply.contains("нет прав"));
+        assert!(run("tnt list", &player, &shared).reply.contains("нет прав"));
+        assert!(orders_for(&shared, 2).is_empty(), "без прав что-то выдано");
+        assert!(!run("help", &player, &shared).reply.contains("tnt"));
+
+        // С правами (у первого они есть) — выдаётся.
+        let op = Source::Player { uuid: [1; 16], name: "Первый".to_string() };
+        let answer = run("tnt give Второй mega 3", &op, &shared);
+        assert!(answer.reply.contains("Мега-ТНТ"), "{}", answer.reply);
+
+        let mega = crate::custom_tnt::by_name("mega").expect("mega").id;
+        assert!(matches!(
+            orders_for(&shared, 2).first(),
+            Some(Order::Give { stack }) if stack.count == 3 && stack.tnt == Some(mega)
+        ));
+
+        assert!(run("tnt give Второй бомба", &op, &shared).reply.contains("Нет такого вида"));
+        assert!(run("tnt give Второй safe 0", &op, &shared).reply.contains("больше нуля"));
+        assert!(run("tnt list", &op, &shared).reply.contains("nuke"));
+        assert!(run("tnt list", &Source::Console, &shared).reply.contains("cluster"));
+    }
+
     /// Без прав команды, меняющие мир, не работают, а безобидные — работают.
     #[test]
     fn commands_ask_for_rights() {
@@ -1335,7 +1717,7 @@ mod tests {
             .take_orders(&[1; 16]);
 
         assert!(
-            matches!(orders.first(), Some(Order::Give { count: 5, .. })),
+            matches!(orders.first(), Some(Order::Give { stack }) if stack.count == 5),
             "поручение не дошло"
         );
 
@@ -1344,6 +1726,31 @@ mod tests {
         assert!(answer.reply.contains("Нет такого предмета"), "{}", answer.reply);
     }
 
+
+    #[test]
+    fn kill_removes_the_chosen_entities_within_reach() {
+        let shared = server();
+        let stack = crate::inventory::Stack::new(1, 1);
+
+        {
+            let mut items = shared.items_in(Dimension::Overworld).lock().expect("предметы");
+
+            items.drop_item(101, stack, (1.0, 0.0, 0.0), (0.0, 0.0, 0.0), crate::items::MINED_DELAY);
+            items.drop_item(102, stack, (100.0, 0.0, 0.0), (0.0, 0.0, 0.0), crate::items::MINED_DELAY);
+            items.prime(103, 0, (2.0, 0.0, 0.0), (0.0, 0.0, 0.0), 80, None);
+        }
+
+        // Консоль стоит в 0 0 0: дальний предмет вне досягаемости.
+        let reply = run("kill @e[type=!player,distance=..48]", &Source::Console, &shared).reply;
+        assert_eq!(reply, "Убрано сущностей: 2");
+
+        let left: Vec<i32> = shared.items_in(Dimension::Overworld).lock().expect("предметы").items().iter().map(|item| item.entity_id).collect();
+        assert_eq!(left, vec![102]);
+
+        // Только динамит — предмет остаётся.
+        assert_eq!(run("kill @e[type=tnt]", &Source::Console, &shared).reply, "Убрано сущностей: 0");
+        assert_eq!(run("kill @e[type=item]", &Source::Console, &shared).reply, "Убрано сущностей: 1");
+    }
 
     #[test]
     fn setblock_and_fill_change_the_world() {

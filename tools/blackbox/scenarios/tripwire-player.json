@@ -1,6 +1,6 @@
 {
  "name": "tripwire-player",
- "about": "Робот телепортируется на растяжку и через 25 тактов уходит: включение крючков, звуки click_on/click_off, отпускание в такте, кратном 10.",
+ "about": "Крючки на камне; растяжки ставятся командой уже во время записи (цепь собирается), потом робот телепортируется точно в середину средней растяжки (координаты с .5 — чтобы задеть только её) и через 25 тактов уходит: включение крючков, звуки click_on/click_off, отпускание в такте, кратном 10.",
  "blocks": [
   {
    "at": [
@@ -36,30 +36,6 @@
   },
   {
    "at": [
-    2,
-    0,
-    0
-   ],
-   "state": "minecraft:tripwire"
-  },
-  {
-   "at": [
-    3,
-    0,
-    0
-   ],
-   "state": "minecraft:tripwire"
-  },
-  {
-   "at": [
-    4,
-    0,
-    0
-   ],
-   "state": "minecraft:tripwire"
-  },
-  {
-   "at": [
     0,
     0,
     1
@@ -78,12 +54,45 @@
  "actions": [
   {
    "after": 0,
-   "cmd": "tp blackbox $(3,0,0)"
+   "set": {
+    "at": [
+     2,
+     0,
+     0
+    ],
+    "state": "minecraft:tripwire"
+   }
   },
   {
-   "after": 25,
-   "cmd": "tp blackbox $(3,3,5)"
+   "after": 2,
+   "set": {
+    "at": [
+     3,
+     0,
+     0
+    ],
+    "state": "minecraft:tripwire"
+   }
+  },
+  {
+   "after": 4,
+   "set": {
+    "at": [
+     4,
+     0,
+     0
+    ],
+    "state": "minecraft:tripwire"
+   }
+  },
+  {
+   "after": 20,
+   "cmd": "tp blackbox 103.5 -59 100.5"
+  },
+  {
+   "after": 45,
+   "cmd": "tp blackbox 103.5 -56 105.5"
   }
  ],
- "record_ticks": 70
+ "record_ticks": 90
 }

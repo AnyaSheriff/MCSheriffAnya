@@ -1,0 +1,110 @@
+{
+ "name": "minecart-end",
+ "about": "Четыре запитанные рельсы разгоняют вагонетку, она слетает с конца рельс и скользит по земле: скорость режется до 0,4 и делится пополам; сверка места при касании земли.",
+ "blocks": [
+  {
+   "at": [
+    -8,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -7,
+    -1,
+    0
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    -6,
+    -1,
+    0
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    -5,
+    -1,
+    0
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    -4,
+    -1,
+    0
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    -7,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[shape=east_west,powered=true,waterlogged=false]"
+  },
+  {
+   "at": [
+    -6,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[shape=east_west,powered=true,waterlogged=false]"
+  },
+  {
+   "at": [
+    -5,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[shape=east_west,powered=true,waterlogged=false]"
+  },
+  {
+   "at": [
+    -4,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[shape=east_west,powered=true,waterlogged=false]"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  }
+ ],
+ "setup": [
+  "kill @e[type=minecart]"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecart $(-6.5,0,0.5)"
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=chest_minecart]",
+  "kill @e[type=hopper_minecart]",
+  "kill @e[type=item]"
+ ]
+}

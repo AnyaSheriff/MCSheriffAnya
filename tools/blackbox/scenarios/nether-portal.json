@@ -1,0 +1,148 @@
+{
+ "name": "nether-portal",
+ "about": "Портал в Незер: рамка из обсидиана с проёмом 2×3 (вдоль z, в стороне от робота — иначе он уйдёт в Незер) зажигается огнивом по полу рамки; через 10 тактов у рамки убирают блок сбоку — портал гаснет весь.",
+ "blocks": [
+  {
+   "at": [
+    6,
+    0,
+    1
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    0,
+    4
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    1,
+    1
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    1,
+    4
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    2,
+    1
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    2,
+    4
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    3,
+    1
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    3,
+    4
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    4,
+    1
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    4,
+    4
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    0,
+    2
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    4,
+    2
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    0,
+    3
+   ],
+   "state": "minecraft:obsidian"
+  },
+  {
+   "at": [
+    6,
+    4,
+    3
+   ],
+   "state": "minecraft:obsidian"
+  }
+ ],
+ "setup": [
+  "give blackbox minecraft:flint_and_steel 1"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    6,
+    0,
+    2
+   ]
+  },
+  {
+   "after": 10,
+   "set": {
+    "at": [
+     6,
+     2,
+     1
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "cleanup": [
+  "fill $(6,0,1) $(6,4,4) minecraft:air",
+  "kill @e[type=item,distance=..48]",
+  "clear blackbox"
+ ],
+ "record_ticks": 40
+}

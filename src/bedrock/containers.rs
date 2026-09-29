@@ -10,7 +10,7 @@
 // format». Разбор — tools/research/container-protocol.md, часть 2.
 
 use super::codec::Out;
-use super::inventory::{BARREL, LEVEL_ENTITY};
+use super::inventory::{BARREL, CRAFTER, LEVEL_ENTITY};
 use super::session;
 use crate::containers::{self, Kind, Pos};
 use crate::world::World;
@@ -27,6 +27,12 @@ pub fn screen(kind: Kind) -> u8 {
         Kind::Dispenser => 6,
         Kind::Dropper => 7,
         Kind::Hopper => 8,
+        // CRAFTER (36). [проверить] живым клиентом: выключенные ячейки
+        // Bedrock пока не видит.
+        Kind::Crafter => 36,
+        // Окна у них на Bedrock нет: щелчок разбирается раньше
+        // (world.rs, use_block).
+        Kind::Jukebox | Kind::Lectern => 0,
     }
 }
 
@@ -35,6 +41,7 @@ pub fn screen(kind: Kind) -> u8 {
 pub fn slot_name(kind: Kind) -> u8 {
     match kind {
         Kind::Barrel => BARREL,
+        Kind::Crafter => CRAFTER,
         _ => LEVEL_ENTITY,
     }
 }
@@ -72,6 +79,10 @@ fn actor_id(kind: Kind) -> &'static str {
         Kind::Hopper => "Hopper",
         Kind::Dropper => "Dropper",
         Kind::Dispenser => "Dispenser",
+        // [проверить] имена блок-акторов по bedrock-protocol-docs.
+        Kind::Jukebox => "Jukebox",
+        Kind::Lectern => "Lectern",
+        Kind::Crafter => "Crafter",
     }
 }
 
