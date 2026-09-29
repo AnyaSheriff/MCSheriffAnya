@@ -1330,6 +1330,10 @@ fn teleport(parts: &[&str], source: &Source, shared: &Shared, into: Option<Dimen
                     if let Some(mut position) = players.members().iter().find(|member| &member.uuid == uuid).map(|member| member.position) {
                         (position.x, position.y, position.z) = (x, y, z);
                         players.set_position(uuid, position);
+
+                        // Перенос — не шаг: на крикуна (и руду) под точкой
+                        // переноса игрок «встаёт» не сразу (`SETTLE_TICKS`).
+                        players.unsettle(uuid);
                     }
                 }
             }
@@ -1347,22 +1351,30 @@ fn teleport(parts: &[&str], source: &Source, shared: &Shared, into: Option<Dimen
     );
 
     let reply = if own_move {
-        format!("Переношу в {:.0} {:.0} {:.0}", x, y, z)
+        format!("Переношу в {} {} {}", coordinate(x), coordinate(y), coordinate(z))
     } else {
         format!(
-            "{} перенесён в {:.0} {:.0} {:.0}",
+            "{} перенесён в {} {} {}",
             targets
                 .iter()
                 .map(|(_, name)| name.as_str())
                 .collect::<Vec<&str>>()
                 .join(", "),
-            x,
-            y,
-            z
+            coordinate(x),
+            coordinate(y),
+            coordinate(z)
         )
     };
 
     Answer::saying(reply)
+}
+
+/// Координата для ответа: как есть, без лишних нулей — 103.5, а не
+/// округлённое 104 (сервер переносит на середину блока).
+fn coordinate(value: f64) -> String {
+    let text = format!("{:.3}", value);
+
+    text.trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
 /// Место из команды `tp`.
@@ -1629,6 +1641,7 @@ mod tests {
                     sneaking: false,
                     swings: 0,
                     shoved: ((0.0, 0.0, 0.0), 0),
+                    unsettled: 0,
                 };
 
                 players.join(member, number as i32).expect("ник свободен");
@@ -1727,6 +1740,22 @@ mod tests {
         let answer = run("tp сюда-вот", &first, &shared);
         assert!(answer.reply.contains("Не понял"));
         assert!(orders_for(&shared, 1).is_empty());
+    }
+
+    /// Перенос — не шаг: на новом месте игрок не стоит, пока от клиента не
+    /// придут пакеты о перемещении (иначе крикун под точкой переноса
+    /// вскрикивал бы в такте команды — sculk-shrieker).
+    #[test]
+    fn teleport_leaves_the_player_in_the_air() {
+        let shared = server();
+        let first = Source::Player { uuid: [1; 16], name: "Первый".to_string() };
+
+        run("tp 5 64 -7", &first, &shared);
+
+        let players = shared.players.lock().expect("список игроков");
+        let member = players.members().iter().find(|member| member.uuid == [1; 16]).expect("игрок");
+        assert_eq!((member.position.x, member.position.y, member.position.z), (5.5, 64.0, -6.5));
+        assert_eq!(member.unsettled, crate::players::AWAITING_CONFIRM);
     }
 
     /// Строка из F3+C: числа места и взгляда, в `execute in` — измерение.

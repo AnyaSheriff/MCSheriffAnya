@@ -197,6 +197,10 @@ async fn run(shared: Arc<Shared>) {
             tokio::task::yield_now().await;
         }
 
+        // Перенесённые и подтвердившие перенос — на такт ближе к тому, чтобы
+        // встать на блок под ногами (`players::SETTLE_TICKS`).
+        shared.players.lock().expect("список игроков захвачен другим потоком").settle();
+
         // Работа такта — в своём блоке: замок мира отпускается до сигнала
         // подключениям. Миры измерений идут по очереди, каждый со своими
         // предметами; два мира разом не держатся.
@@ -480,7 +484,12 @@ fn occupants(shared: &Shared, dimension: Dimension) -> (Vec<redstone::Occupant>,
         chunks.push(((x.floor() as i32).div_euclid(16), (z.floor() as i32).div_euclid(16)));
 
         if member.game_mode != SPECTATOR {
-            standing.push(redstone::Occupant::player(x, y, z, member.sneaking));
+            // Только что перенесённый игрок ещё не стоит на блоке под ногами
+            // (`players::SETTLE_TICKS`, sculk-shrieker).
+            standing.push(redstone::Occupant {
+                on_ground: member.unsettled == 0,
+                ..redstone::Occupant::player(x, y, z, member.sneaking)
+            });
         }
     }
 
@@ -511,8 +520,10 @@ fn occupants(shared: &Shared, dimension: Dimension) -> (Vec<redstone::Occupant>,
 }
 
 /// Едущие блоки поршней делают шаг и толкают сущности на пути: предметы
-/// (с динамитом и падающими блоками) и игроков. Наблюдатели сквозь всё
-/// проходят. [проверить]: вагонетки.
+/// (с динамитом и падающими блоками), вагонетки и игроков. Наблюдатели
+/// сквозь всё проходят. Игрок упирается в стену (piston-push-wall).
+/// Выдвигаемая слизь подбрасывает только предметы [проверить]: вагонетки
+/// и игроков.
 fn shove_entities(shared: &Shared, dimension: Dimension, world: &World) {
     /// Режим наблюдателя.
     const SPECTATOR: i32 = 3;
@@ -528,8 +539,25 @@ fn shove_entities(shared: &Shared, dimension: Dimension, world: &World) {
     }
 
     let solid = |x, y, z| blocks::stops_items(world.get_block(x, y, z));
+    let walls = |x, y, z| blocks::has_box(world.get_block(x, y, z));
 
-    shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").shove(&shoves, &solid);
+    {
+        let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+        let view = |x, y, z| world.get_block(x, y, z);
+
+        items.shove(&shoves, &solid);
+
+        // Вагонетки — тем же порядком: каждый едущий блок по очереди.
+        for shove in &shoves {
+            for cart in items.carts_mut() {
+                let (min, max) = cart.bounds();
+
+                if let Some(distance) = redstone::shove_distance(shove, min, max) {
+                    cart.shoved(&view, (shove.dir.0 * distance, shove.dir.1 * distance, shove.dir.2 * distance));
+                }
+            }
+        }
+    }
 
     let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
     let standing: Vec<i32> = players
@@ -549,6 +577,13 @@ fn shove_entities(shared: &Shared, dimension: Dimension, world: &World) {
             let max = (at.x + HALF_WIDTH, at.y + HEIGHT, at.z + HALF_WIDTH);
 
             if let Some(distance) = redstone::shove_distance(shove, min, max) {
+                // Упирается в стену: дальше неё сервер игрока не двигает.
+                let distance = redstone::free_run(min, max, shove.dir, distance, &walls);
+
+                if distance <= 0.0 {
+                    continue;
+                }
+
                 players.shove(entity_id, (shove.dir.0 * distance, shove.dir.1 * distance, shove.dir.2 * distance));
             }
         }

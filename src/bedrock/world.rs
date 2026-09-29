@@ -343,6 +343,7 @@ impl BedrockWorld {
             sneaking: false,
             swings: 0,
             shoved: ((0.0, 0.0, 0.0), 0),
+            unsettled: 0,
         };
 
         if shared.players.lock().expect("список игроков захвачен другим потоком").join(member, entity_id).is_none() {

@@ -499,12 +499,18 @@ bot.once('spawn', async () => {
         clickBlock(block, a.face ?? 1, a.cursor ?? [0.5, 0.5, 0.5]);
       }
     }
-    await waitTick(baseTick + scenario.record_ticks + 10);
+    // Окно записи — до такта `last` включительно. События такта приходят
+    // в его середину, ровно туда, где кончалось бы ожидание, — и последний
+    // такт то попадал в запись, то нет (minecart-slope: сдвиг вагонетки на
+    // +150 у одного сервера есть, у другого нет). Поэтому слушаем ещё три
+    // такта, а всё позже `last` compare.js отбрасывает у обеих сторон.
+    const last = baseTick + scenario.record_ticks + 10;
+    await waitTick(last + 3);
     recording = false;
     // Уборка после записи (`cleanup`): вагонетки и прочие сущности иначе
     // остались бы на площадке и мешали следующим сценариям.
     for (const c of scenario.cleanup || []) await say(expand(c));
-    fs.writeFileSync(outFile, JSON.stringify({ scenario: scenario.name, host, port, events }, null, 1));
+    fs.writeFileSync(outFile, JSON.stringify({ scenario: scenario.name, host, port, window: { first: baseTick, last }, events }, null, 1));
     console.log(`записано событий: ${events.length} → ${outFile}`);
     bot.quit();
     setTimeout(() => process.exit(0), 500);

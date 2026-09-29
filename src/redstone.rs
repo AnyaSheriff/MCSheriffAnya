@@ -3300,13 +3300,54 @@ pub fn finish_due_moves(world: &mut World) {
 }
 
 /// Едущий блок в этом такте — чем он толкает сущности: где его рамка после
-/// шага и куда он едет (единичный вектор).
+/// шага и куда он едет (единичный вектор). `bounce` — это выдвигаемая
+/// слизь: задетое она ещё и подбрасывает (`LAUNCH`). `drag` — это мёд:
+/// лежащее на его верху едет вместе с ним (`drags`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Shove {
     pub min: (f64, f64, f64),
     pub max: (f64, f64, f64),
     pub dir: (f64, f64, f64),
+    pub bounce: bool,
+    pub drag: bool,
 }
+
+/// Шаг едущего блока за такт: полблока.
+pub const SHOVE_STEP: f64 = 0.5;
+
+/// Везёт ли едущий мёд сущность, стоящую на земле с рамкой `min..max`:
+/// она лежит на его верху (низ — от верха мёда до верха его клетки: наши
+/// предметы ложатся на верх клетки [проверить]) и над ним по горизонтали
+/// до шага или после. Вверх мёд и так толкает. Везёт на шаг блока — и при
+/// толкании, и когда липкий поршень тянет обратно (вики, Honey Block:
+/// «entities on a honey block's top surface move with it»; honey-drag:
+/// лежавший на мёде предмет уехал на 1,0 и вернулся; предмет без тяжести,
+/// висевший на той же высоте, не поехал — он не «на земле»).
+pub fn drags(shove: &Shove, on_ground: bool, min: (f64, f64, f64), max: (f64, f64, f64)) -> Option<f64> {
+    const EPSILON: f64 = 1e-6;
+
+    if !shove.drag || !on_ground || shove.dir.1 > 0.0 {
+        return None;
+    }
+
+    // Рамка мёда до шага и после — вместе.
+    let back = (-shove.dir.0 * SHOVE_STEP, -shove.dir.1 * SHOVE_STEP, -shove.dir.2 * SHOVE_STEP);
+    let low = (shove.min.0 + back.0.min(0.0), shove.min.2 + back.2.min(0.0));
+    let high = (shove.max.0 + back.0.max(0.0), shove.max.2 + back.2.max(0.0));
+    let top = shove.max.1 - shove.dir.1 * SHOVE_STEP;
+    let cell_top = (top - EPSILON).floor() + 1.0;
+    let above = min.0 < high.0 && max.0 > low.0 && min.2 < high.1 && max.2 > low.1;
+    let resting = min.1 >= top - EPSILON && min.1 <= cell_top + EPSILON;
+
+    (above && resting).then_some(SHOVE_STEP)
+}
+
+/// Скорость, которую выдвигаемая слизь даёт задетой сущности по ходу, —
+/// блок за такт (вики, Slime Block: «launched into the direction the block
+/// is pushed into, at an initial speed of 20 blocks a second»; чёрный ящик,
+/// slime-launch: у предмета без тяжести через 10 тактов 0,817 = 0,98¹⁰ и
+/// через 6 — 0,886 = 0,98⁶, то есть 1,0 в первом такте хода).
+pub const LAUNCH: f64 = 1.0;
 
 /// Насколько сущность отодвигается дальше края едущего блока (чёрный ящик,
 /// piston-push-items: предмет шириной 0,25, лежавший серединой в 0,5 блока
@@ -3318,50 +3359,124 @@ pub const SHOVE_MARGIN: f64 = 0.01;
 /// шаг блока 0,5 и зазор 0,01 [проверить].
 pub const SHOVE_LIMIT: f64 = 0.51;
 
+/// Рамка: ближний и дальний углы.
+type Corners = ((f64, f64, f64), (f64, f64, f64));
+
+/// Рамки едущего блока внутри его клетки (доли блока, от угла клетки):
+/// толкает настоящая форма, а не куб (чёрный ящик):
+///
+/// - голова — плита в 4/16 у передней грани и шток 4/16 × 4/16 за ней
+///   (piston-push-shape: предмет в клетке поршня мимо штока не сдвинут);
+/// - мёд — на 1/16 уже с боков и ниже на 1/16 (honey-drag: предмет,
+///   висевший на высоте 15/16 над мёдом, мёд не задел — сдвинула только
+///   голова, на 0,635, и обратно липкий поршень его не утянул);
+/// - нижняя и верхняя плиты — своя половина (piston-push-shape: предмет
+///   над нижней плитой на 0,6 не сдвинут);
+/// - прочее с ящиком — куб [проверить]: ступени, заборы и остальное неполное.
+fn push_boxes(state: i32, head: Option<Dir>) -> Vec<Corners> {
+    const PLATE: f64 = 4.0 / 16.0;
+    const ARM_LOW: f64 = 6.0 / 16.0;
+    const ARM_HIGH: f64 = 10.0 / 16.0;
+    const HONEY_SIDE: f64 = 1.0 / 16.0;
+    const HONEY_TOP: f64 = 15.0 / 16.0;
+
+    if let Some(facing) = head {
+        // Вдоль хода: плита у передней грани, шток — от задней до плиты.
+        let (dx, dy, dz) = step((0, 0, 0), facing);
+        let forward = dx + dy + dz > 0;
+        let (plate, arm) = if forward { ((1.0 - PLATE, 1.0), (0.0, 1.0 - PLATE)) } else { ((0.0, PLATE), (PLATE, 1.0)) };
+        let span = |axis: i32, along: (f64, f64), across: (f64, f64)| if axis != 0 { along } else { across };
+        let make = |along: (f64, f64), across: (f64, f64)| {
+            let x = span(dx, along, across);
+            let y = span(dy, along, across);
+            let z = span(dz, along, across);
+
+            ((x.0, y.0, z.0), (x.1, y.1, z.1))
+        };
+
+        return vec![make(plate, (0.0, 1.0)), make(arm, (ARM_LOW, ARM_HIGH))];
+    }
+
+    match blocks::block_at_state(state) {
+        Some("honey_block") => vec![((HONEY_SIDE, 0.0, HONEY_SIDE), (1.0 - HONEY_SIDE, HONEY_TOP, 1.0 - HONEY_SIDE))],
+        Some(name) if name.ends_with("_slab") => match blocks::orientation(name).and_then(|block| block.value(state, "type")) {
+            Some("bottom") => vec![((0.0, 0.0, 0.0), (1.0, 0.5, 1.0))],
+            Some("top") => vec![((0.0, 0.5, 0.0), (1.0, 1.0, 1.0))],
+            _ => vec![((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))],
+        },
+        _ => vec![((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))],
+    }
+}
+
 /// Фаза блок-сущностей: едущие блоки делают шаг и толкают сущности у себя
 /// на пути (вики, Piston: «Any entities in the path of an extending piston
-/// (or any block it might be moving) are pushed along»). Ход длится два
-/// такта: в такте начала блок проходит половину пути, в следующем — вторую,
-/// а ещё через такт встаёт на место и уже ничего не толкает. Возвращает
+/// (or any block it might be moving) are pushed along»). Толкает он в два
+/// такта после такта начала хода: в первом — с половины пути, во втором —
+/// с полного, и в том же такте встаёт на место (вызывающий двигает сущности
+/// до `finish_due_moves`). Такт снят с оригинала: у подброшенного слизью
+/// предмета без тяжести скорость в отчёте на одно затухание 0,98 больше,
+/// чем при толчке в такте начала (slime-launch: 0,785 против 0,769), а
+/// везомый мёдом предмет в такте после начала хода стоит на полпути
+/// (honey-drag, первый прогон). Возвращает
 /// рамки блоков после шага — в порядке ходов; двигает сущности вызывающий.
 ///
 /// Голова при задвигании не тянет за собой (вики: «Retracting pistons can
 /// no longer pull entities through them»); вытягиваемые блоки толкают то,
-/// что у них на пути к поршню [проверить].
+/// что у них на пути к поршню [проверить]. Подбрасывает только выдвигаемая
+/// слизь (вики, Slime Block: «When pulled by a piston, no entities are
+/// launched»).
 pub fn shoves(world: &World) -> Vec<Shove> {
     let now = world.tick();
     let mut moves: Vec<(u64, &Moving)> = world
         .redstone
         .moving
         .values()
-        .filter(|moving| moving.due > now && moving.due <= now + PISTON_MOVE)
+        .filter(|moving| moving.due >= now && moving.due < now + PISTON_MOVE)
         .map(|moving| (moving.order, moving))
         .collect();
 
     moves.sort_unstable_by_key(|(order, _)| *order);
 
+    let slime = blocks::state_by_name("slime_block");
+    let honey = blocks::state_by_name("honey_block");
     let mut found = Vec::new();
 
     for (_, moving) in moves {
         // Сколько пути пройдено после этого шага: половина, потом весь.
-        let progress = 1.0 - (moving.due - now - 1) as f64 / PISTON_MOVE as f64;
+        let progress = 1.0 - (moving.due - now) as f64 / PISTON_MOVE as f64;
         let dir = if moving.extending { moving.facing } else { moving.facing.opposite() };
         let unit = step((0, 0, 0), dir);
         let unit = (unit.0 as f64, unit.1 as f64, unit.2 as f64);
         let back = progress - 1.0;
 
-        let head = moving.extending.then_some(moving.head);
+        // Задвигаемая голова не толкает [проверить]: у оригинала предмет
+        // в её клетке мимо штока при задвигании получает случайную скорость
+        // 0,12…0,25 к поршню (piston-push-shape, три прогона) — похоже на
+        // выталкивание застрявшего в блоке, а не на толчок плитой; игрока,
+        // прижатого к стене в клетке головы, задвигание не сдвинуло
+        // (piston-push-wall: сверки нет).
+        let head = moving.extending.then_some((moving.head, AIR, Some(moving.facing)));
         let cells = moving
             .cargo
             .iter()
             .filter(|(_, state)| blocks::has_box(*state))
-            .map(|(place, _)| *place)
+            .map(|(place, state)| (*place, *state, None))
             .chain(head);
 
-        for (x, y, z) in cells {
-            let min = (x as f64 + unit.0 * back, y as f64 + unit.1 * back, z as f64 + unit.2 * back);
+        for ((x, y, z), state, head) in cells {
+            let corner = (x as f64 + unit.0 * back, y as f64 + unit.1 * back, z as f64 + unit.2 * back);
+            let bounce = moving.extending && Some(state) == slime && head.is_none();
+            let drag = Some(state) == honey && head.is_none();
 
-            found.push(Shove { min, max: (min.0 + 1.0, min.1 + 1.0, min.2 + 1.0), dir: unit });
+            for (low, high) in push_boxes(state, head) {
+                found.push(Shove {
+                    min: (corner.0 + low.0, corner.1 + low.1, corner.2 + low.2),
+                    max: (corner.0 + high.0, corner.1 + high.1, corner.2 + high.2),
+                    dir: unit,
+                    bounce,
+                    drag,
+                });
+            }
         }
     }
 
@@ -3397,6 +3512,61 @@ pub fn shove_distance(shove: &Shove, min: (f64, f64, f64), max: (f64, f64, f64))
     let need = if forward { pick(shove.max) - pick(min) } else { pick(max) - pick(shove.min) };
 
     Some((need + SHOVE_MARGIN).clamp(0.0, SHOVE_LIMIT))
+}
+
+/// Сколько из сдвига `wanted` (вдоль единичного `dir`) рамка `min..max`
+/// проходит, не входя в сплошные клетки впереди (`solid`): толкнутый игрок
+/// упирается в стену (piston-push-wall). Клетки, в которые рамка уже
+/// залезла, не мешают — как у вагонетки (`minecart::sweep`). Клетки —
+/// полные кубы [проверить]: плиты и прочие неполные блоки.
+pub fn free_run<F>(min: (f64, f64, f64), max: (f64, f64, f64), dir: (f64, f64, f64), wanted: f64, solid: &F) -> f64
+where
+    F: Fn(i32, i32, i32) -> bool,
+{
+    if wanted <= 0.0 {
+        return wanted.max(0.0);
+    }
+
+    let low = [min.0, min.1, min.2];
+    let high = [max.0, max.1, max.2];
+    let dir = [dir.0, dir.1, dir.2];
+    let Some(along) = (0..3).find(|index| dir[*index] != 0.0) else {
+        return wanted;
+    };
+    let forward = dir[along] > 0.0;
+
+    // Клетки, которые рамка заденет по пути.
+    let mut from = low;
+    let mut to = high;
+
+    if forward {
+        to[along] += wanted;
+    } else {
+        from[along] -= wanted;
+    }
+
+    let cells = |index: usize| (from[index].floor() as i32)..=((to[index] - 1e-9).floor() as i32);
+    let mut allowed = wanted;
+
+    for x in cells(0) {
+        for y in cells(1) {
+            for z in cells(2) {
+                if !solid(x, y, z) {
+                    continue;
+                }
+
+                let cube = [x as f64, y as f64, z as f64];
+
+                if forward && cube[along] >= high[along] {
+                    allowed = allowed.min(cube[along] - high[along]);
+                } else if !forward && cube[along] + 1.0 <= low[along] {
+                    allowed = allowed.min(low[along] - cube[along] - 1.0);
+                }
+            }
+        }
+    }
+
+    allowed.max(0.0)
 }
 
 /// Доигрывает ход, у которого не стало поршня: блоки встают на места
@@ -4787,6 +4957,14 @@ mod tests {
         let pos = (0, 1, 0);
 
         put(&mut world, pos, state("sculk_shrieker", &[("can_summon", "false")]));
+        // Игрок только что перенесён сюда и ещё не «встал» (такт берёт
+        // это из `unsettled`): крикун молчит, как у оригинала — тот
+        // вскрикивает через 2 такта после переноса (sculk-shrieker).
+        let airborne = Occupant { on_ground: false, ..Occupant::player(0.5, 1.6, 0.5, false) };
+        note_occupants(&mut world, vec![airborne]);
+        components::step_entities(&mut world);
+        assert_eq!(Block::at(&world, pos).value("shrieking"), Some("false"));
+
         note_occupants(&mut world, vec![Occupant::player(0.5, 1.5, 0.5, false)]);
         components::step_entities(&mut world);
         assert_eq!(Block::at(&world, pos).value("shrieking"), Some("true"));
@@ -5257,9 +5435,9 @@ mod tests {
         assert_eq!(world.get_block(2, 1, 0), STONE);
     }
 
-    /// Едущие блоки толкают сущности два такта: в такте начала хода —
-    /// с половины пути, в следующем — с полного; потом блок встаёт и больше
-    /// не толкает. Предмет шириной 0,25 серединой в полублоке перед головой
+    /// Едущие блоки толкают сущности два такта после такта начала хода:
+    /// с половины пути, потом с полного; потом блок встаёт и больше не
+    /// толкает. Предмет шириной 0,25 серединой в полублоке перед головой
     /// уезжает на 0,135 и 0,5 — всего 0,635, как 2601/4096 у оригинала
     /// (piston-push-items).
     #[test]
@@ -5315,19 +5493,129 @@ mod tests {
     /// такт; незадетое не двигается, сдвиг против хода — тоже.
     #[test]
     fn a_shove_reaches_the_edge_and_no_further() {
-        let east = Shove { min: (0.5, 0.0, 0.0), max: (1.5, 1.0, 1.0), dir: (1.0, 0.0, 0.0) };
+        let east = Shove { min: (0.5, 0.0, 0.0), max: (1.5, 1.0, 1.0), dir: (1.0, 0.0, 0.0), bounce: false, drag: false };
 
         // Игрок шириной 0,6 серединой в 3,5 перед головой в полпути.
-        let west = Shove { min: (2.5, 0.0, 0.0), max: (3.5, 1.0, 1.0), dir: (1.0, 0.0, 0.0) };
+        let west = Shove { min: (2.5, 0.0, 0.0), max: (3.5, 1.0, 1.0), dir: (1.0, 0.0, 0.0), bounce: false, drag: false };
         let pushed = shove_distance(&west, (3.2, 0.0, 0.2), (3.8, 1.8, 0.8)).expect("задет");
         assert!((pushed - 0.31).abs() < 1e-9);
 
         assert_eq!(shove_distance(&east, (1.5, 0.0, 0.0), (1.75, 0.25, 0.25)), None, "касание — не задет");
         assert_eq!(shove_distance(&east, (0.6, 0.0, 0.0), (0.85, 0.25, 0.25)), Some(SHOVE_LIMIT));
 
-        let down = Shove { min: (0.0, -0.5, 0.0), max: (1.0, 0.5, 1.0), dir: (0.0, -1.0, 0.0) };
+        let down = Shove { min: (0.0, -0.5, 0.0), max: (1.0, 0.5, 1.0), dir: (0.0, -1.0, 0.0), bounce: false, drag: false };
         let pushed = shove_distance(&down, (0.2, -0.8, 0.2), (0.4, -0.3, 0.4)).expect("задет");
         assert!((pushed - 0.21).abs() < 1e-9);
+    }
+
+    /// Толкает настоящая форма: голова — плитой у передней грани и штоком,
+    /// мёд — ниже на 1/16, нижняя плита — нижней половиной; выдвигаемая
+    /// слизь подбрасывает, втягиваемая — нет.
+    #[test]
+    fn moving_blocks_push_with_their_real_shape() {
+        let head = push_boxes(AIR, Some(Dir::East));
+        assert_eq!(head.len(), 2);
+        assert_eq!(head[0], ((0.75, 0.0, 0.0), (1.0, 1.0, 1.0)), "плита");
+        assert_eq!(head[1], ((0.0, 0.375, 0.375), (0.75, 0.625, 0.625)), "шток");
+
+        let down = push_boxes(AIR, Some(Dir::Down));
+        assert_eq!(down[0], ((0.0, 0.0, 0.0), (1.0, 0.25, 1.0)));
+        assert_eq!(down[1], ((0.375, 0.25, 0.375), (0.625, 1.0, 0.625)));
+
+        let honey = push_boxes(blocks::state_by_name("honey_block").unwrap(), None);
+        assert_eq!(honey, vec![((0.0625, 0.0, 0.0625), (0.9375, 0.9375, 0.9375))]);
+
+        let slab = push_boxes(state("stone_slab", &[("type", "bottom"), ("waterlogged", "false")]), None);
+        assert_eq!(slab, vec![((0.0, 0.0, 0.0), (1.0, 0.5, 1.0))]);
+
+        let stone = push_boxes(blocks::state_by_name("stone").unwrap(), None);
+        assert_eq!(stone, vec![((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))]);
+
+        // Выдвигаемая слизь подбрасывает, втягиваемая — нет.
+        let mut world = world();
+        let piston = state("sticky_piston", &[("facing", "up"), ("extended", "false")]);
+        let slime = blocks::state_by_name("slime_block").unwrap();
+
+        put(&mut world, (0, 1, 0), piston);
+        put(&mut world, (0, 2, 0), slime);
+        put(&mut world, (1, 1, 0), blocks::state_by_name("redstone_block").unwrap());
+        settle(&mut world);
+
+        let mut bounced = Vec::new();
+
+        for round in 0..12 {
+            if round == 6 {
+                put(&mut world, (1, 1, 0), AIR);
+                settle(&mut world);
+            }
+
+            for (pos, kind) in world.advance(crate::tick::PER_TICK) {
+                if kind == crate::world::TickKind::Block {
+                    ticked(&mut world, pos);
+                }
+                settle(&mut world);
+            }
+
+            while let Some((place, kind, param)) = world.take_block_event() {
+                block_event(&mut world, place, kind, param);
+                settle(&mut world);
+            }
+
+            for shove in shoves(&world) {
+                bounced.push((shove.dir, shove.bounce));
+            }
+
+            finish_due_moves(&mut world);
+            settle(&mut world);
+        }
+
+        assert!(bounced.contains(&((0.0, 1.0, 0.0), true)), "вверх подбрасывает: {bounced:?}");
+        assert!(bounced.contains(&((0.0, -1.0, 0.0), false)), "вниз тянет без подброса: {bounced:?}");
+        assert!(!bounced.contains(&((0.0, -1.0, 0.0), true)));
+    }
+
+    /// Мёд везёт лежащее на его верху на шаг, висящее без опоры и лежащее
+    /// рядом — нет; слизь не везёт.
+    #[test]
+    fn moving_honey_drags_what_rests_on_top() {
+        // Мёд после шага на восток: рамка 1,5625…2,4375, верх 0,9375.
+        let honey = Shove { min: (1.5625, 0.0, 0.0625), max: (2.4375, 0.9375, 0.9375), dir: (1.0, 0.0, 0.0), bounce: false, drag: true };
+        let item = |x: f64, y: f64| ((x - 0.125, y, 0.375), (x + 0.125, y + 0.25, 0.625));
+
+        let (min, max) = item(1.5, 0.9375);
+        assert_eq!(drags(&honey, true, min, max), Some(SHOVE_STEP));
+        assert_eq!(drags(&honey, false, min, max), None, "не на земле");
+
+        let (min, max) = item(1.5, 1.0);
+        assert_eq!(drags(&honey, true, min, max), Some(SHOVE_STEP), "наш предмет лежит на верху клетки");
+
+        let (min, max) = item(3.5, 0.9375);
+        assert_eq!(drags(&honey, true, min, max), None, "рядом");
+
+        let (min, max) = item(1.5, 2.0);
+        assert_eq!(drags(&honey, true, min, max), None, "выше");
+
+        let slime = Shove { drag: false, ..honey };
+        let (min, max) = item(1.5, 1.0);
+        assert_eq!(drags(&slime, true, min, max), None);
+    }
+
+    /// Толкнутый упирается в стену: проходит до неё и не дальше; клетка,
+    /// в которую рамка уже залезла, не мешает; без стены — весь сдвиг.
+    #[test]
+    fn a_shoved_box_stops_at_a_wall() {
+        let wall = |x: i32, _y: i32, z: i32| x == 4 && z == 3;
+        let east = (1.0, 0.0, 0.0);
+        let west = (-1.0, 0.0, 0.0);
+
+        let run = free_run((3.2, 1.0, 3.2), (3.8, 2.8, 3.8), east, 0.31, &wall);
+        assert!((run - 0.2).abs() < 1e-9, "{run}");
+
+        assert!((free_run((3.2, 1.0, 1.2), (3.8, 2.8, 1.8), east, 0.31, &wall) - 0.31).abs() < 1e-9);
+        assert!((free_run((4.2, 1.0, 3.2), (4.8, 2.8, 3.8), east, 0.31, &wall) - 0.31).abs() < 1e-9, "уже внутри");
+
+        let back = free_run((5.3, 1.0, 3.2), (5.9, 2.8, 3.8), west, 0.5, &wall);
+        assert!((back - 0.3).abs() < 1e-9, "{back}");
     }
 
     /// Липкий поршень тянет блок обратно, обычный — нет.

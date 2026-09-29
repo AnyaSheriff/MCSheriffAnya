@@ -1,0 +1,94 @@
+{
+ "name": "honey-drag",
+ "about": "Липкий поршень двигает вбок мёд (z=0) и слизь (z=-3) на высоте 1 (на полу они тащили бы за собой пол), на каждом — предмет без тяжести: мёд его не задевает (верх мёда ниже на 1/16), толкает только голова. Предмет с тяжестью на мёде едет с ним, но когда о нём рассказывается — зависит от фазы лежащего предмета (два прогона оригинала: сверка в +1 и +2), поэтому здесь его нет.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "minecraft:sticky_piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    1,
+    1,
+    0
+   ],
+   "state": "minecraft:honey_block"
+  },
+  {
+   "at": [
+    0,
+    1,
+    -3
+   ],
+   "state": "minecraft:sticky_piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    1,
+    1,
+    -3
+   ],
+   "state": "minecraft:slime_block"
+  }
+ ],
+ "setup": [
+  "summon item $(1.5,1.9375,0.5) {Item:{id:\"minecraft:cobblestone\",count:1},NoGravity:1b}",
+  "summon item $(1.5,2,-2.5) {Item:{id:\"minecraft:dirt\",count:1},NoGravity:1b}"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -1,
+     1,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 5,
+   "set": {
+    "at": [
+     -1,
+     1,
+     -3
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 25,
+   "set": {
+    "at": [
+     -1,
+     1,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 30,
+   "set": {
+    "at": [
+     -1,
+     1,
+     -3
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 55,
+ "cleanup": [
+  "kill @e[type=item]",
+  "fill $(9,-1,-8) $(20,-1,8) minecraft:air"
+ ],
+ "track_items": true
+}

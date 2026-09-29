@@ -1,0 +1,93 @@
+{
+ "name": "piston-push-cart",
+ "about": "Поршень толкает вагонетку на рельсе: головой (ряд z=0) и камнем, который толкает второй поршень (ряд z=-3). Вагонетка стоит на рельсе в 2,2 — её ящик заходит в клетку, куда въезжает голова.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    -3
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    -3
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "fill $(2,0,0) $(8,0,0) minecraft:rail[shape=east_west]",
+  "fill $(2,0,-3) $(8,0,-3) minecraft:rail[shape=east_west]"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecart $(2.2,0,0.5)"
+  },
+  {
+   "after": 1,
+   "cmd": "summon minecart $(2.2,0,-2.5)"
+  },
+  {
+   "after": 6,
+   "set": {
+    "at": [
+     -1,
+     0,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 12,
+   "set": {
+    "at": [
+     -2,
+     0,
+     -3
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 40,
+   "set": {
+    "at": [
+     -1,
+     0,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 45,
+   "set": {
+    "at": [
+     -2,
+     0,
+     -3
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 70,
+ "cleanup": [
+  "kill @e[type=minecart]",
+  "kill @e[type=item]"
+ ]
+}

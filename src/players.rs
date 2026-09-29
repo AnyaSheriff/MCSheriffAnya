@@ -34,6 +34,20 @@ pub struct Position {
     pub on_ground: bool,
 }
 
+/// Перенесённый игрок ещё не подтвердил перенос (`Member::unsettled`).
+pub const AWAITING_CONFIRM: u8 = u8::MAX;
+
+/// Через сколько тактов после подтверждения переноса игрок «встаёт» на блок
+/// под ногами. Чёрный ящик, sculk-shrieker: робот перенесён командой на 0,1
+/// над крикуном (и висит там — летает, в пакетах «не на земле»); оригинал
+/// вскрикивает через 2 такта после команды при любых пакетах робота: в такте
+/// команды игрок перенесён, подтверждение приходит к следующему, и ещё через
+/// такт он стоит. Признак «на земле» от клиента оригинал для этого не
+/// спрашивает, и число пакетов о перемещении тоже не важно (второй пакет
+/// после переноса робот шлёт через полсекунды, а крик — через 2 такта).
+/// [проверить] на настоящем клиенте.
+pub const SETTLE_TICKS: u8 = 2;
+
 /// Один игрок на сервере.
 #[derive(Clone)]
 pub struct Member {
@@ -79,6 +93,11 @@ pub struct Member {
     /// пор как подключение это забрало (`take_shoved`): место игрока знает
     /// его подключение, такт лишь сообщает сдвиг.
     pub shoved: ((f64, f64, f64), u32),
+
+    /// Только что перенесён: `AWAITING_CONFIRM` — перенос ещё не подтверждён,
+    /// иначе — сколько тактов ждать, прежде чем игрок «встанет» на блок под
+    /// ногами (крикун, руда). 0 — стоит.
+    pub unsettled: u8,
 }
 
 /// Что произошло с игроками — запись журнала.
@@ -305,6 +324,29 @@ impl Players {
         }
     }
 
+    /// Игрока перенесли: на блок под ногами он встанет не сразу (`SETTLE_TICKS`).
+    pub fn unsettle(&mut self, uuid: &[u8; 16]) {
+        if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid) {
+            member.unsettled = AWAITING_CONFIRM;
+        }
+    }
+
+    /// Клиент подтвердил перенос: отсчёт тактов до того, как игрок встанет.
+    pub fn confirm_teleport(&mut self, uuid: &[u8; 16]) {
+        if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid && member.unsettled == AWAITING_CONFIRM) {
+            member.unsettled = SETTLE_TICKS;
+        }
+    }
+
+    /// Такт: подтвердившие перенос на такт ближе к тому, чтобы встать.
+    pub fn settle(&mut self) {
+        for member in &mut self.members {
+            if member.unsettled != AWAITING_CONFIRM {
+                member.unsettled = member.unsettled.saturating_sub(1);
+            }
+        }
+    }
+
     /// Едущий блок поршня сдвинул игрока (tick.rs): место в списке — сразу,
     /// чтобы следующий едущий блок в этом же такте видел его уже сдвинутым.
     pub fn shove(&mut self, entity_id: i32, (dx, dy, dz): (f64, f64, f64)) {
@@ -450,6 +492,7 @@ mod tests {
             sneaking: false,
             swings: 0,
             shoved: ((0.0, 0.0, 0.0), 0),
+            unsettled: 0,
         }
     }
 
@@ -488,6 +531,30 @@ mod tests {
 
     /// Ждущий перенос виден до того, как подключение заберёт поручение:
     /// последний, и только если после него нет перехода в другое измерение.
+    #[test]
+    /// Перенесённый игрок встаёт на блок под ногами только через
+    /// `SETTLE_TICKS` тактов после подтверждения переноса.
+    fn a_teleported_player_settles_after_the_confirmation() {
+        let mut players = Players::new();
+        let uuid = [3; 16];
+        joined(&mut players, "Третий", 3);
+
+        players.unsettle(&uuid);
+        players.settle();
+        players.settle();
+        assert_eq!(players.members()[0].unsettled, AWAITING_CONFIRM, "без подтверждения стоять нельзя");
+
+        players.confirm_teleport(&uuid);
+        players.settle();
+        assert_eq!(players.members()[0].unsettled, 1);
+        players.settle();
+        assert_eq!(players.members()[0].unsettled, 0);
+
+        // Подтверждение обычной сверки места ничего не меняет.
+        players.confirm_teleport(&uuid);
+        assert_eq!(players.members()[0].unsettled, 0);
+    }
+
     #[test]
     fn pending_teleport_is_the_last_one_in_this_dimension() {
         let mut players = Players::new();

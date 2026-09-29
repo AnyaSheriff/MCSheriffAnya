@@ -83,8 +83,10 @@ const SERVERBOUND_KEEP_ALIVE: i32 = 0x1C;
 const SET_PLAYER_POSITION: i32 = 0x1E;
 
 /// На сколько место от клиента может разойтись с серверным после толчка
-/// поршнем, чтобы его приняли без сверки.
-const SHOVE_TOLERANCE: f64 = 0.0625;
+/// поршнем, чтобы его приняли без сверки: 0,25 (квадрат — 0,0625).
+/// Чёрный ящик: сдвинутого на 0,81 оригинал сверяет (piston-push-player),
+/// прижатого к стене после 0,2 — нет (piston-push-wall) [проверить].
+const SHOVE_TOLERANCE: f64 = 0.25;
 
 /// Serverbound Set Player Position and Rotation — игрок сдвинулся и повернулся.
 const SET_PLAYER_POSITION_AND_ROTATION: i32 = 0x1F;
@@ -367,6 +369,13 @@ const PLAYER_ENTITY_TYPE: i32 = 155;
 
 /// Сколько байт занимают координаты в пакете о перемещении: три double.
 const POSITION_BYTES: usize = 24;
+
+/// Длина углов в пакетах о перемещении: поворот и наклон, по f32.
+const ROTATION_BYTES: usize = 8;
+
+/// Флаг «на земле» в байте флагов пакетов о перемещении (Movement Flags:
+/// 0x01 — на земле, 0x02 — упёрся в стену).
+const ON_GROUND_FLAG: u8 = 0x01;
 
 /// Clientbound Game Event.
 const GAME_EVENT: i32 = 0x26;
@@ -818,6 +827,7 @@ async fn enter_world(
             shared.properties.simulation_distance,
         )
         .await?;
+        send_abilities(stream, player.game_mode).await?;
         send_player_position(stream, player).await?;
 
         // Клиент подтверждает телепортацию — до подтверждения он игнорирует
@@ -3090,6 +3100,36 @@ async fn send_game_event_game_mode(stream: &mut Outgoing<'_>, game_mode: i32) ->
     write_body(stream, body).await
 }
 
+/// Clientbound Player Abilities.
+const PLAYER_ABILITIES: i32 = 0x40;
+
+/// Флаги способностей игрока по режиму игры (протокол, Player Abilities:
+/// 0x01 — неуязвим, 0x02 — летит, 0x04 — может летать, 0x08 — творческий,
+/// ломает мгновенно). Наблюдатель летает всегда; творческий может летать,
+/// но после смены режима не летит; выживание и приключение — ничего.
+fn ability_flags(game_mode: i32) -> u8 {
+    match game_mode {
+        GAME_MODE_CREATIVE => 0x01 | 0x04 | 0x08,
+        GAME_MODE_SPECTATOR => 0x01 | 0x02 | 0x04,
+        _ => 0,
+    }
+}
+
+/// Отправляет Player Abilities — что игроку можно в его режиме. Без этого
+/// клиент, переведённый из творческого в выживание, так и продолжал
+/// висеть в воздухе: оригинал шлёт способности при входе и при смене
+/// режима (sculk-shrieker: робот после `gamemode survival` должен упасть и
+/// встать на крикуна).
+async fn send_abilities(stream: &mut Outgoing<'_>, game_mode: i32) -> io::Result<()> {
+    let mut body = encode_varint(PLAYER_ABILITIES);
+
+    body.push(ability_flags(game_mode));
+    push_f32(&mut body, 0.05); // скорость полёта
+    push_f32(&mut body, 0.1); // поле зрения (скорость ходьбы)
+
+    write_body(stream, body).await
+}
+
 /// Отправляет Game Event 13 — «начать ждать чанки».
 async fn send_game_event_start_waiting(stream: &mut Outgoing<'_>) -> io::Result<()> {
     let mut body = encode_varint(GAME_EVENT);
@@ -4609,6 +4649,7 @@ async fn read_and_log_play_packets(
                         .set_dimension(&player.uuid, dimension);
 
                     send_respawn(stream, dimension, player.game_mode).await?;
+                    send_abilities(stream, player.game_mode).await?;
 
                     world_changes = shared
                         .world_in(dimension)
@@ -4735,6 +4776,7 @@ async fn read_and_log_play_packets(
                 Order::GameMode { mode } => {
                     player.game_mode = mode;
                     send_game_event_game_mode(stream, mode).await?;
+                    send_abilities(stream, mode).await?;
                     send_game_mode(stream, &player.uuid, mode).await?;
                     player.save(&shared.playerdata);
                 }
@@ -5176,6 +5218,10 @@ fn handle_client_packet(
         CONFIRM_TELEPORTATION => {
             if Cursor::new(payload).varint() == Some(player.teleport) {
                 player.awaiting_teleport = false;
+
+                // Перенесённый командой встанет на блок под ногами через
+                // `players::SETTLE_TICKS` тактов.
+                shared.players.lock().expect("список игроков захвачен другим потоком").confirm_teleport(&player.uuid);
             }
         }
         SET_PLAYER_POSITION | SET_PLAYER_POSITION_AND_ROTATION => {
@@ -5225,15 +5271,30 @@ fn handle_client_packet(
             }
 
             player.set_position(x, y, z);
+
+            // Признак «на земле» — в байте флагов после координат (и углов).
+            let flags = if packet.id == SET_PLAYER_POSITION { POSITION_BYTES } else { POSITION_BYTES + ROTATION_BYTES };
+            if let Some(&flag) = payload.get(flags) {
+                player.set_on_ground(flag & ON_GROUND_FLAG != 0);
+            }
         }
         SET_PLAYER_ROTATION => {
             if let Some((yaw, pitch)) = read_rotation(payload, 0) {
                 player.set_rotation(yaw, pitch);
             }
+
+            // До подтверждения переноса клиент ещё на старом месте.
+            if !player.awaiting_teleport
+                && let Some(&flag) = payload.get(ROTATION_BYTES)
+            {
+                player.set_on_ground(flag & ON_GROUND_FLAG != 0);
+            }
         }
         SET_PLAYER_ON_GROUND => {
-            if let Some(&flag) = payload.first() {
-                player.set_on_ground(flag != 0);
+            if !player.awaiting_teleport
+                && let Some(&flag) = payload.first()
+            {
+                player.set_on_ground(flag & ON_GROUND_FLAG != 0);
             }
         }
         // Разобрать пакет могло и не получиться: тогда отвечать не на что.
@@ -5757,10 +5818,13 @@ fn in_spans(spans: &[(i32, i32)], state: i32) -> bool {
     spans.iter().any(|(low, high)| (*low..=*high).contains(&state))
 }
 
-/// Дотягивается ли игрок до блока: от глаз до середины блока не дальше
-/// дальности взаимодействия (4,5 блока, в творческом 5) с запасом в полтора
-/// блока, как оставляет и оригинал на задержку и неточность. Заодно
-/// отсекает места вне мира по высоте.
+/// Дотягивается ли игрок до блока: от глаз до ближайшей точки блока не
+/// дальше дальности взаимодействия (4,5 блока, в творческом 5; вики,
+/// Attribute: block_interaction_range) с запасом в блок. Мерка — до ящика
+/// блока, а не до его середины: чёрный ящик, reach-edge — оригинал в
+/// творческом принимает щелчок по рычагу с 5,96 блока до ящика (6,53 до
+/// середины) и не принимает с 6,13 (6,69). [проверить] точную границу между
+/// ними. Заодно отсекает места вне мира по высоте.
 fn within_reach(player: &PlayerState, (x, y, z): (i32, i32, i32)) -> bool {
     const EYES: f64 = 1.62;
 
@@ -5768,12 +5832,15 @@ fn within_reach(player: &PlayerState, (x, y, z): (i32, i32, i32)) -> bool {
         return false;
     }
 
-    let reach = if player.game_mode == GAME_MODE_CREATIVE { 5.0 } else { 4.5 } + 1.5;
-    let dx = x as f64 + 0.5 - player.x;
-    let dy = y as f64 + 0.5 - (player.y + EYES);
-    let dz = z as f64 + 0.5 - player.z;
+    let reach = if player.game_mode == GAME_MODE_CREATIVE { 5.0 } else { 4.5 } + 1.0;
 
-    dx * dx + dy * dy + dz * dz <= reach * reach
+    // От глаз до ближайшей точки куба блока по каждой оси.
+    let gap = |eye: f64, low: i32| (f64::from(low) - eye).max(eye - f64::from(low + 1)).max(0.0);
+    let dx = gap(player.x, x);
+    let dy = gap(player.y + EYES, y);
+    let dz = gap(player.z, z);
+
+    dx * dx + dy * dy + dz * dz < reach * reach
 }
 
 /// Use Item On второй рукой: клиент шлёт его, когда основной руке делать
@@ -7078,6 +7145,7 @@ struct PlayerState {
     teleport: i32,
     awaiting_teleport: bool,
 
+
     /// Где игрок по серверу после того, как его сдвинул поршень (tick.rs):
     /// ближайшее место от клиента с этим сверяется (`SET_PLAYER_POSITION`).
     shoved_to: Option<(f64, f64, f64)>,
@@ -7305,6 +7373,7 @@ impl PlayerState {
             sneaking: self.sneaking,
             swings: 0,
             shoved: ((0.0, 0.0, 0.0), 0),
+            unsettled: 0,
         }
     }
 
@@ -7844,6 +7913,86 @@ mod tests {
 
         assert_eq!(packet.payload().len(), POSITION_BYTES);
         assert_eq!(read_position(packet.payload()), Some((12.5, 65.0, -7.25)));
+    }
+
+    /// Признак «на земле» приходит флагом в каждом пакете о перемещении, а
+    /// не только в отдельном пакете: клиент шлёт его, лишь когда стоит на
+    /// месте. До подтверждения переноса пакеты клиента — со старого места
+    /// и не в счёт.
+    #[test]
+    fn on_ground_comes_with_every_move_packet() {
+        let shared = crate::shared::Shared::new(
+            crate::world::World::in_memory(),
+            crate::world::World::in_memory(),
+            std::path::PathBuf::new(),
+            std::path::PathBuf::new(),
+            Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("/tmp/mcsheriffanya-ground-ops.json")),
+            crate::skins::Settings::default(),
+        );
+        let mut player = PlayerState::new([5; 16], "Игрок".to_string(), None, None, 0x7F, 1, SPAWN);
+        let packet = |id: i32, fields: &[f64], angles: &[f32], flags: u8| {
+            let mut body = encode_varint(id);
+            for value in fields {
+                push_f64(&mut body, *value);
+            }
+            for value in angles {
+                push_f32(&mut body, *value);
+            }
+            body.push(flags);
+            PacketInfo { id, length: body.len() as i32, body }
+        };
+
+        handle_client_packet(&packet(SET_PLAYER_POSITION, &[1.5, 2.0, 3.5], &[], 0x01), &mut player, &shared);
+        assert!(player.on_ground);
+
+        handle_client_packet(&packet(SET_PLAYER_POSITION_AND_ROTATION, &[1.5, 2.5, 3.5], &[90.0, 10.0], 0x00), &mut player, &shared);
+        assert!(!player.on_ground);
+        assert_eq!(player.y, 2.5);
+
+        // Флаг «упёрся в стену» (0x02) — не земля.
+        handle_client_packet(&packet(SET_PLAYER_ROTATION, &[], &[0.0, 0.0], 0x02), &mut player, &shared);
+        assert!(!player.on_ground);
+
+        handle_client_packet(&packet(SET_PLAYER_ON_GROUND, &[], &[], 0x03), &mut player, &shared);
+        assert!(player.on_ground);
+
+        // Ждём подтверждения переноса — старое место и признак не в счёт.
+        player.awaiting_teleport = true;
+        handle_client_packet(&packet(SET_PLAYER_POSITION, &[9.0, 9.0, 9.0], &[], 0x00), &mut player, &shared);
+        handle_client_packet(&packet(SET_PLAYER_ON_GROUND, &[], &[], 0x00), &mut player, &shared);
+        assert!(player.on_ground);
+        assert_eq!(player.x, 1.5);
+
+    }
+
+    /// Дотягивание меряется до ящика блока: так у оригинала (чёрный ящик,
+    /// reach-edge и target-conduct — робот в углу площадки).
+    #[test]
+    fn reach_is_measured_to_the_block_box() {
+        let mut player = PlayerState::new([6; 16], "Игрок".to_string(), None, None, 0x7F, 1, SPAWN);
+        player.game_mode = GAME_MODE_CREATIVE;
+        let lever = (100, -59, 100);
+
+        (player.x, player.y, player.z) = (106.93, -59.0, 100.5);
+        assert!(within_reach(&player, lever));
+
+        (player.x, player.y, player.z) = (107.1, -59.0, 100.5);
+        assert!(!within_reach(&player, lever));
+
+        // До середины 6,5 — на волос дальше прежней мерки, до ящика 5,73.
+        (player.x, player.y, player.z) = (104.5, -59.0, 104.5);
+        assert!(within_reach(&player, (100, -59, 99)));
+
+        // В выживании рука короче.
+        player.game_mode = GAME_MODE_SURVIVAL;
+        (player.x, player.y, player.z) = (106.6, -59.0, 100.5);
+        assert!(!within_reach(&player, lever));
+        (player.x, player.y, player.z) = (106.3, -59.0, 100.5);
+        assert!(within_reach(&player, lever));
+
+        // Вне мира по высоте — никогда.
+        assert!(!within_reach(&player, (105, -65, 100)));
     }
 
     /// Место, где стоит сущность, — для проверок пакетов о перемещении.

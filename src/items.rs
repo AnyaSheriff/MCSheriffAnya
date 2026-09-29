@@ -766,6 +766,15 @@ impl Items {
 
                 if let Some(distance) = crate::redstone::shove_distance(shove, min, max) {
                     item.shove((shove.dir.0 * distance, shove.dir.1 * distance, shove.dir.2 * distance), solid);
+
+                    if shove.bounce {
+                        item.launch(shove.dir);
+                    }
+                } else if let Some(distance) = crate::redstone::drags(shove, item.on_ground, min, max) {
+                    // Везомый мёдом так и лежит на нём: следующий шаг везёт
+                    // его снова.
+                    item.shove((shove.dir.0 * distance, shove.dir.1 * distance, shove.dir.2 * distance), solid);
+                    item.on_ground = true;
                 }
             }
         }
@@ -827,6 +836,24 @@ impl Dropped {
         }
 
         (self.vx, self.vy, self.vz) = speed;
+        self.on_ground = false;
+    }
+
+    /// Выдвигаемая слизь подбросила: скорость по ходу — `LAUNCH`, прочие
+    /// оси как были [проверить]. Клиентам вне очереди не сообщается: у
+    /// оригинала подброшенный предмет шлёт скорость лишь в свой очередной
+    /// отчёт раз в 20 тактов (slime-launch).
+    fn launch(&mut self, dir: (f64, f64, f64)) {
+        let launch = crate::redstone::LAUNCH;
+
+        if dir.0 != 0.0 {
+            self.vx = dir.0 * launch;
+        } else if dir.1 != 0.0 {
+            self.vy = dir.1 * launch;
+        } else {
+            self.vz = dir.2 * launch;
+        }
+
         self.on_ground = false;
     }
 
@@ -1153,7 +1180,7 @@ mod tests {
         items.step(&floor, &floor, &loaded);
         assert!(items.items()[0].on_ground);
 
-        let head = crate::redstone::Shove { min: (0.5, 64.0, 0.0), max: (1.5, 65.0, 1.0), dir: (1.0, 0.0, 0.0) };
+        let head = crate::redstone::Shove { min: (0.5, 64.0, 0.0), max: (1.5, 65.0, 1.0), dir: (1.0, 0.0, 0.0), bounce: false, drag: false };
         items.shove(&[head], &floor);
 
         let item = &items.items()[0];
@@ -1164,6 +1191,31 @@ mod tests {
         items.step(&floor, &floor, &loaded);
         assert!(items.items()[0].on_ground);
         assert_eq!(items.items()[0].y, 64.0);
+    }
+
+    /// Выдвигаемая слизь подбрасывает предмет со скоростью 1,0 по ходу, и
+    /// это не толчок вне очереди; без тяжести скорость дальше гаснет по 0,98
+    /// за такт — через 10 тактов 0,817, как у оригинала (slime-launch).
+    #[test]
+    fn a_pushed_slime_block_launches_an_item() {
+        let mut items = Items::new();
+
+        items.watch_changes(READER);
+        items.summon_item(1, stack(), (0.5, 66.0, 0.5), true);
+
+        let slime = crate::redstone::Shove { min: (0.0, 65.5, 0.0), max: (1.0, 66.5, 1.0), dir: (0.0, 1.0, 0.0), bounce: true, drag: false };
+        items.shove(&[slime], &floor);
+
+        let item = &items.items()[0];
+        assert!((item.y - 66.51).abs() < 1e-9, "{}", item.y);
+        assert_eq!(item.vy, 1.0);
+
+        for _ in 0..10 {
+            items.step(&floor, &floor, &loaded);
+            assert!(!items.items()[0].impulse);
+        }
+
+        assert!((items.items()[0].vy - 0.98_f64.powi(10)).abs() < 1e-3, "{}", items.items()[0].vy);
     }
 
     /// Призванный без тяжести предмет висит, где его поставили.

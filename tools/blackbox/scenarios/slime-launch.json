@@ -1,0 +1,93 @@
+{
+ "name": "slime-launch",
+ "about": "Поршень толкает вверх блок слизи, на нём предмет без тяжести (z=0); вбок — слизь на высоте 1 толкает предмет перед собой (z=-6). Предмет с тяжестью на слизи не годится: он и сам подпрыгивает на ней (два прогона оригинала расходятся).",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:piston[extended=false,facing=up]"
+  },
+  {
+   "at": [
+    0,
+    1,
+    0
+   ],
+   "state": "minecraft:slime_block"
+  },
+  {
+   "at": [
+    0,
+    1,
+    -6
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    1,
+    1,
+    -6
+   ],
+   "state": "minecraft:slime_block"
+  }
+ ],
+ "setup": [
+  "summon item $(0.5,2,0.5) {Item:{id:\"minecraft:cobblestone\",count:1},NoGravity:1b}",
+  "summon item $(2.5,1,-5.5) {Item:{id:\"minecraft:sand\",count:1},NoGravity:1b}"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -1,
+     0,
+     0
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 8,
+   "set": {
+    "at": [
+     -1,
+     1,
+     -6
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 40,
+   "set": {
+    "at": [
+     -1,
+     0,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 42,
+   "set": {
+    "at": [
+     -1,
+     1,
+     -6
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "kill @e[type=item]"
+ ],
+ "track_items": true
+}

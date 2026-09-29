@@ -137,7 +137,12 @@ const key = (e) => {
 };
 
 const load = (file) => {
-  const events = JSON.parse(fs.readFileSync(file, 'utf8')).events;
+  const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+  // Окно записи (`window` от bot.js): что пришло после такта `last`, робот
+  // слушал лишь затем, чтобы не потерять сам последний такт. Такое
+  // отбрасывается у обеих сторон одинаково — по такту сервера от начала.
+  const last = saved.window ? saved.window.last : null;
+  const events = saved.events.filter(e => last === null || e.tick === null || e.tick === undefined || e.tick <= last);
   const out = [];
   let step = -1, base = null;
   // Время события — номер такта сервера, а не часы робота: робот пишет такт

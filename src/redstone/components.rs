@@ -48,7 +48,8 @@ pub struct Occupant {
 impl Occupant {
     /// Игрок: ящик 0,6 × 1,8, крадущийся — 0,6 × 1,5 (вики, Player). Лежит
     /// ли он на земле, сервер не знает — считаем, что да: руда смотрит, есть
-    /// ли она прямо под ногами.
+    /// ли она прямо под ногами. Только что перенесённый — нет (tick.rs,
+    /// `occupants`; `players::SETTLE_TICKS`).
     pub fn player(x: f64, y: f64, z: f64, sneaking: bool) -> Self {
         Self {
             x,

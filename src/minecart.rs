@@ -1178,6 +1178,27 @@ impl Minecart {
         allowed
     }
 
+    /// Рамка ящика: от угла до угла.
+    pub fn bounds(&self) -> ((f64, f64, f64), (f64, f64, f64)) {
+        let half = WIDTH / 2.0;
+
+        ((self.x - half, self.y, self.z - half), (self.x + half, self.y + HEIGHT, self.z + half))
+    }
+
+    /// Сдвиг едущим блоком поршня: ящик переносится, упираясь в блоки, а
+    /// скорость остаётся прежней и клиентам вне очереди не сообщается
+    /// (piston-push-cart: стоявшая на рельсе вагонетка уехала на 1229/4096 =
+    /// 0,3 — до края головы и ещё на 0,01 — одним сдвигом в очередную
+    /// рассылку, без скорости). Ось — одна, ход поршня всегда вдоль оси.
+    pub fn shoved<V: View>(&mut self, view: &V, (dx, dy, dz): (f64, f64, f64)) {
+        let step_up = std::mem::replace(&mut self.step_up, 0.0);
+
+        self.y += self.sweep(view, Axis::Y, dy);
+        self.x += self.sweep(view, Axis::X, dx);
+        self.z += self.sweep(view, Axis::Z, dz);
+        self.step_up = step_up;
+    }
+
     /// Раздут ли ящик для встреч: идёт по рельсам. [проверить]: у стоящей.
     fn reaches(&self) -> f64 {
         if self.on_rail && self.vx * self.vx + self.vz * self.vz > 0.01 { REACH } else { 0.0 }
@@ -1639,6 +1660,28 @@ mod tests {
     }
 
     /// Незапитанная рельса с питанием останавливает медленную вагонетку.
+    /// Поршень сдвигает вагонетку, скорость не трогая; в стену ящик не
+    /// входит (piston-push-cart: стоявшая в 2,2 уехала на 0,3).
+    #[test]
+    fn a_piston_shoves_a_cart_without_speed() {
+        let mut scene = Scene::new(64);
+        scene.fill((0, 64, 0), (8, 64, 0), "minecraft:rail[shape=east_west]");
+        scene.set((5, 64, 0), "minecraft:stone");
+
+        let mut cart = Minecart::new(1, Kind::Plain, (2.2, 64.0, 0.5));
+
+        cart.shoved(&scene.view(), (0.3, 0.0, 0.0));
+        assert!((cart.x - 2.5).abs() < 1e-9, "{}", cart.x);
+        assert_eq!((cart.vx, cart.vy, cart.vz), (0.0, 0.0, 0.0));
+
+        cart.shoved(&scene.view(), (3.0, 0.0, 0.0));
+        assert!((cart.x - (5.0 - WIDTH / 2.0)).abs() < 1e-9, "до стены: {}", cart.x);
+
+        let ((low_x, low_y, _), (high_x, high_y, _)) = cart.bounds();
+        assert!((high_x - low_x - WIDTH).abs() < 1e-9);
+        assert!((high_y - low_y - HEIGHT).abs() < 1e-9);
+    }
+
     #[test]
     fn an_unpowered_powered_rail_brakes() {
         let mut scene = Scene::new(0);

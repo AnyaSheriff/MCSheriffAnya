@@ -1,0 +1,54 @@
+{
+ "name": "piston-push-shape",
+ "about": "Чем толкает едущий блок: предмет над половинной плитой, которую толкают (z=-3), — толкает ли полный куб или настоящая форма. Шток головы так не проверить: предмет в клетке головы или поршня оригинал выталкивает со случайной скоростью (три прогона: 0,12…0,25).",
+ "blocks": [
+  {
+   "at": [
+    -1,
+    0,
+    -3
+   ],
+   "state": "minecraft:piston[extended=false,facing=east]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    -3
+   ],
+   "state": "minecraft:stone_slab[type=bottom]"
+  }
+ ],
+ "setup": [
+  "summon item $(1.5,0.6,-2.5) {Item:{id:\"minecraft:dirt\",count:1},NoGravity:1b}"
+ ],
+ "actions": [
+  {
+   "after": 5,
+   "set": {
+    "at": [
+     -2,
+     0,
+     -3
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 30,
+   "set": {
+    "at": [
+     -2,
+     0,
+     -3
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 50,
+ "cleanup": [
+  "kill @e[type=item]"
+ ],
+ "track_items": true
+}
