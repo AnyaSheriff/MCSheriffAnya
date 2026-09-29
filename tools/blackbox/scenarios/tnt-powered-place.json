@@ -1,0 +1,28 @@
+{
+  "name": "tnt-powered-place",
+  "about": "Динамит ставится командой рядом с уже включённым рычагом: загорается ли в тот же такт.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:lever[face=floor,facing=north,powered=true]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          1,
+          0,
+          0
+        ],
+        "state": "minecraft:tnt[unstable=false]"
+      }
+    }
+  ],
+  "record_ticks": 100
+}

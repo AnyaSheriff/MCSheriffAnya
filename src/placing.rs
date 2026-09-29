@@ -387,9 +387,87 @@ pub fn state_for(orientation: &Orientation, click: &Click) -> Option<i32> {
             orientation.state(&[("facing", opposite_direction(facing_the_player(click)))])
         }
 
+        // Сундук смотрит защёлкой на игрока: «The opposite from the
+        // direction the player faces» (вики, Chest). С соседом он сливается
+        // в `state_in_world`.
+        Family::Other if matches!(orientation.name, "chest" | "trapped_chest") => {
+            orientation.state(&[("facing", opposite_direction(direction_from_yaw(click.yaw))), ("type", "single")])
+        }
+
+        // Бочка, выбрасыватель и раздатчик — лицом к игроку по всем шести
+        // сторонам, как поршень (вики, Dropper: «The opposite from the
+        // direction the player faces»; Barrel — так же).
+        Family::Other if matches!(orientation.name, "barrel" | "dropper" | "dispenser") => {
+            orientation.state(&[("facing", facing_the_player(click))])
+        }
+
+        // Воронка выходом в тот блок, по которому щёлкнули; вверх она не
+        // смотрит — щелчок по потолку даёт «вниз» (вики, Hopper: «aiming at
+        // the surface to which its output should face»).
+        Family::Other if orientation.name == "hopper" => {
+            let facing = match click.face {
+                2 => "south",
+                3 => "north",
+                4 => "east",
+                5 => "west",
+                _ => "down",
+            };
+
+            orientation.state(&[("facing", facing)])
+        }
+
+        // Рельса без соседок ложится по взгляду игрока (вики, Rail: «in
+        // java the new rail orients itself in the direction the player is
+        // facing», с 19w39a). К соседкам она перестроится сама, когда
+        // встанет (redstone/rails.rs). [проверить]: так ли у рельс
+        // с питанием, детекторной и активирующей — на их страницах вики
+        // пишет «north-south», у активирующей — «testingame».
+        Family::Other if is_rail(orientation.name) => {
+            let shape = match direction_from_yaw(click.yaw) {
+                "north" | "south" => "north_south",
+                _ => "east_west",
+            };
+
+            orientation.state(&[("shape", shape)])
+        }
+
         // Правило не выяснено — состояние по умолчанию.
         Family::Other => None,
     }
+}
+
+/// Сундук, поставленный рядом с одиночным сундуком того же вида и с той же
+/// стороной, сливается с ним в большой (вики, Chest). Если подходят оба
+/// соседа, берётся тот, что по часовой стрелке от стороны сундука, —
+/// [проверить] чёрным ящиком. Соседа перестраивает его обновление формы.
+fn chest_joined(orientation: &Orientation, world: &World, (x, y, z): (i32, i32, i32), state: i32) -> i32 {
+    let Some(facing) = orientation.value(state, "facing") else {
+        return state;
+    };
+    let offset = |name: &str| match name {
+        "north" => (0, -1),
+        "south" => (0, 1),
+        "west" => (-1, 0),
+        _ => (1, 0),
+    };
+    let (fx, fz) = offset(facing);
+    // По часовой стрелке от стороны сундука — сосед, к которому новый будет
+    // «левой» половиной; против — «правой».
+    let (cx, cz) = (-fz, fx);
+
+    for (dx, dz, own) in [(cx, cz, "left"), (-cx, -cz, "right")] {
+        let other = world.get_block(x + dx, y, z + dz);
+
+        if blocks::block_at_state(other) == Some(orientation.name)
+            && orientation.value(other, "facing") == Some(facing)
+            && orientation.value(other, "type") == Some("single")
+            && let Some(joined) = orientation.with(state, "type", own)
+        {
+            return joined;
+        }
+    }
+
+    state
 }
 
 /// Какой блок ставить от предмета с учётом грани: факел на стене — это
@@ -434,6 +512,9 @@ pub fn has_support(orientation: Option<&Orientation>, state: i32, world: &World,
     match orientation.family {
         Family::Wire | Family::Diode => below_is_solid(),
         Family::Other if orientation.name.ends_with("_pressure_plate") => below_is_solid(),
+        // Рельсе нужен верх с ободком: полный блок, воронка, верхняя плита,
+        // перевёрнутые ступени, закрытый верхний люк (вики, Rail).
+        Family::Other if is_rail(orientation.name) => crate::redstone::holds_rail(world.get_block(x, y - 1, z)),
         Family::Torch => {
             if orientation.name.contains("wall") {
                 let (dx, dz) = match orientation.value(state, "facing") {
@@ -516,6 +597,10 @@ pub fn state_in_world(
     z: i32,
 ) -> Option<i32> {
     let state = state_for(orientation, click)?;
+
+    if matches!(orientation.name, "chest" | "trapped_chest") {
+        return Some(chest_joined(orientation, world, (x, y, z), state));
+    }
 
     with_neighbours(orientation, world, x, y, z, state)
 }
@@ -854,6 +939,11 @@ fn axis_from_face(face: i32) -> Option<&'static str> {
         4 | 5 => Some("x"),
         _ => None,
     }
+}
+
+/// Рельса ли это: обычная, с питанием, детекторная или активирующая.
+fn is_rail(name: &str) -> bool {
+    matches!(name, "rail" | "powered_rail" | "detector_rail" | "activator_rail")
 }
 
 /// Направление, в которое смотрит игрок.

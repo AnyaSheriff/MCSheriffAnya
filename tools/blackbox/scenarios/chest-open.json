@@ -1,0 +1,57 @@
+{
+  "name": "chest-open",
+  "about": "Двойной сундук и бочка: открыть, закрыть — крышка, звуки, вид окна.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:chest[facing=north,type=left,waterlogged=false]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:chest[facing=north,type=right,waterlogged=false]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        3
+      ],
+      "state": "minecraft:barrel[facing=up,open=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 15,
+      "close": true
+    },
+    {
+      "after": 30,
+      "click": [
+        0,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 45,
+      "close": true
+    }
+  ],
+  "record_ticks": 70
+}

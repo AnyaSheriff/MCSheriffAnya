@@ -1,0 +1,53 @@
+{
+  "name": "trapped-chest",
+  "about": "Робот открывает и закрывает сундук-ловушку: крышка, звуки, лампа рядом и лампа под блоком снизу.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:trapped_chest[facing=north,type=single,waterlogged=false]"
+    },
+    {
+      "at": [
+        1,
+        1,
+        0
+      ],
+      "state": "minecraft:redstone_lamp[lit=false]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        0,
+        1
+      ],
+      "state": "minecraft:redstone_lamp[lit=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 20,
+      "close": true
+    }
+  ],
+  "record_ticks": 60
+}

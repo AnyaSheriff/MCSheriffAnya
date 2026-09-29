@@ -1,0 +1,102 @@
+{
+  "name": "dust-two-pistons-2",
+  "about": "Рычаг, линия пыли и два поршня по бокам линии: в каком порядке поршни стартуют и задвигаются. Та же схема в другом месте мира ([211, -59, -150]): порядок у оригинала зависит от координат.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    },
+    {
+      "at": [
+        3,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    },
+    {
+      "at": [
+        4,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    },
+    {
+      "at": [
+        2,
+        0,
+        -1
+      ],
+      "state": "minecraft:piston[extended=false,facing=north]"
+    },
+    {
+      "at": [
+        3,
+        0,
+        1
+      ],
+      "state": "minecraft:piston[extended=false,facing=south]"
+    },
+    {
+      "at": [
+        4,
+        0,
+        1
+      ],
+      "state": "minecraft:piston[extended=false,facing=south]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        -1
+      ],
+      "state": "minecraft:piston[extended=false,facing=north]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 20,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 45,
+  "origin": [
+    211,
+    -59,
+    -150
+  ]
+}

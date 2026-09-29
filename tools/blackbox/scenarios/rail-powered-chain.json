@@ -1,0 +1,199 @@
+{
+ "name": "rail-powered-chain",
+ "about": "Рычаг у первой из двенадцати рельс с питанием: включаются девять (она и восемь за ней), выключаются все; вторая линия — рельса с питанием на наклоне, питание идёт вверх по нему.",
+ "blocks": [
+  {
+   "at": [
+    -7,
+    0,
+    0
+   ],
+   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+  },
+  {
+   "at": [
+    -6,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -5,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -4,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    0
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    0,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    3
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=ascending_east,waterlogged=false]"
+  },
+  {
+   "at": [
+    0,
+    1,
+    3
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    1,
+    1,
+    3
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    3
+   ],
+   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     -7,
+     0,
+     0
+    ],
+    "state": "minecraft:lever[face=floor,facing=north,powered=true]"
+   }
+  },
+  {
+   "after": 20,
+   "set": {
+    "at": [
+     -7,
+     0,
+     0
+    ],
+    "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+   }
+  },
+  {
+   "after": 40,
+   "click": [
+    -2,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 60,
+   "click": [
+    -2,
+    0,
+    3
+   ]
+  }
+ ],
+ "record_ticks": 90
+}

@@ -1,0 +1,33 @@
+{
+  "name": "tnt-dispenser",
+  "about": "Раздатчик с динамитом от кнопки сверху: через 4 такта в блоке перед ним появляется подожжённый динамит, щелчок и дым, взрыв через 80 тактов.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:dispenser[facing=east,triggered=false]{Items:[{Slot:0b,id:\"minecraft:tnt\",count:1}]}"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:stone_button[face=floor,facing=north,powered=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 110
+}

@@ -1,0 +1,99 @@
+{
+  "name": "sticky-spit-many",
+  "about": "Липкий поршень с камнем, шесть одинаковых импульсов наблюдателя по 2 такта: когда поршень бросает камень, а когда притягивает.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:sticky_piston[extended=false,facing=east]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        -1,
+        0,
+        0
+      ],
+      "state": "minecraft:observer[facing=west,powered=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          -2,
+          0,
+          0
+        ],
+        "state": "minecraft:stone"
+      }
+    },
+    {
+      "after": 30,
+      "set": {
+        "at": [
+          -2,
+          0,
+          0
+        ],
+        "state": "minecraft:air"
+      }
+    },
+    {
+      "after": 60,
+      "set": {
+        "at": [
+          -2,
+          0,
+          0
+        ],
+        "state": "minecraft:stone"
+      }
+    },
+    {
+      "after": 90,
+      "set": {
+        "at": [
+          -2,
+          0,
+          0
+        ],
+        "state": "minecraft:air"
+      }
+    },
+    {
+      "after": 120,
+      "set": {
+        "at": [
+          -2,
+          0,
+          0
+        ],
+        "state": "minecraft:stone"
+      }
+    },
+    {
+      "after": 150,
+      "set": {
+        "at": [
+          -2,
+          0,
+          0
+        ],
+        "state": "minecraft:air"
+      }
+    }
+  ],
+  "record_ticks": 200
+}

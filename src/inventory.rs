@@ -33,10 +33,10 @@ pub const OFFHAND: i32 = 45;
 const CRAFTING_GRID: i32 = 1;
 
 /// Номер слота, который означает «щелчок мимо окна» — за его пределами.
-const OUTSIDE: i32 = -999;
+pub const OUTSIDE: i32 = -999;
 
 /// Кнопка обмена со второй рукой при щелчке с цифрой.
-const SWAP_OFFHAND: i8 = 40;
+pub const SWAP_OFFHAND: i8 = 40;
 
 /// Чем кончился «выбор блока».
 #[derive(Clone, PartialEq, Debug)]
@@ -85,7 +85,7 @@ impl Stack {
     }
 
     /// Сколько таких предметов помещается в одну стопку.
-    fn limit(&self) -> i32 {
+    pub fn limit(&self) -> i32 {
         blocks::stack_size(self.item)
     }
 }
@@ -141,6 +141,12 @@ impl Inventory {
     /// Предмет в курсоре.
     pub fn cursor(&self) -> Option<Stack> {
         self.cursor
+    }
+
+    /// Кладёт предмет в курсор — для окон хранилищ (window.rs), где щелчок
+    /// разбирается поверх двух наборов слотов сразу.
+    pub fn set_cursor(&mut self, stack: Option<Stack>) {
+        self.cursor = stack.filter(|stack| stack.count > 0);
     }
 
     /// Закрывает окно инвентаря: то, что игрок держал мышкой, и то, что
@@ -584,14 +590,14 @@ impl Inventory {
 }
 
 /// Стопка, из которой убрали одну штуку. None — стопка кончилась.
-fn take_one(stack: Option<Stack>) -> Option<Stack> {
+pub fn take_one(stack: Option<Stack>) -> Option<Stack> {
     let stack = stack?;
 
     remainder(stack, stack.count - 1)
 }
 
 /// Та же стопка, но другого размера. None — в ней ничего не осталось.
-fn remainder(stack: Stack, count: i32) -> Option<Stack> {
+pub fn remainder(stack: Stack, count: i32) -> Option<Stack> {
     (count > 0).then(|| Stack::new(stack.item, count))
 }
 

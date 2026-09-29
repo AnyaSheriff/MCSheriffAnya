@@ -1,0 +1,77 @@
+{
+  "name": "chest-slots",
+  "about": "Двойной сундук с предметами в обеих половинах: в каком порядке половины в окне; Shift-щелчок из сундука и обратно; двойной щелчок.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:chest[facing=north,type=left,waterlogged=false]{Items:[{Slot:0b,id:\"minecraft:stone\",count:1},{Slot:5b,id:\"minecraft:stone\",count:30}]}"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:chest[facing=north,type=right,waterlogged=false]{Items:[{Slot:0b,id:\"minecraft:dirt\",count:2},{Slot:26b,id:\"minecraft:stone\",count:40}]}"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 10,
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 1
+      }
+    },
+    {
+      "after": 20,
+      "window_click": {
+        "slot": 27,
+        "button": 0,
+        "mode": 1
+      }
+    },
+    {
+      "after": 30,
+      "window_click": {
+        "slot": 5,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 40,
+      "window_click": {
+        "slot": 5,
+        "button": 0,
+        "mode": 6
+      }
+    },
+    {
+      "after": 50,
+      "window_click": {
+        "slot": 8,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 60,
+      "close": true
+    }
+  ],
+  "record_ticks": 80
+}

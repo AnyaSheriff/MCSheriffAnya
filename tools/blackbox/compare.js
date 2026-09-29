@@ -37,6 +37,15 @@ const describe = (e) => {
     case 'spawn': return `сущность ${at} ${e.type} ${e.data}`;
     case 'destroy': return `убрана сущность`;
     case 'block_entity': return `данные блока ${at} ${e.type} ${e.data}`;
+    case 'window': return `окно ${e.type}`;
+    case 'slots': return `содержимое окна ${e.items}`;
+    case 'slot': return `ячейка ${e.window === 'курсор' ? 'курсора' : e.slot}: ${e.item}`;
+    case 'cursor': return `курсор: ${e.item}`;
+    case 'level': return `событие мира ${at} ${e.effect}/${e.data}`;
+    case 'property': return `свойство окна ${e.property}=${e.value}`;
+    case 'close': return 'окно закрыто';
+    case 'meta': return `свойства сущности ${e.fields}`;
+    case 'explosion': return `взрыв ${at} сила ${e.radius} блоков ${e.blocks} ${e.particle} ${e.sound.replace(/^minecraft:/, '')} толчок ${e.knockback ? 'есть' : 'нет'} дым [${e.smoke}]`;
     default: return JSON.stringify(e);
   }
 };
@@ -56,6 +65,17 @@ const key = (e) => {
       ? `spawn item ${e.at.map(Math.floor).join(',')}`
       : `spawn ${e.at.join(',')} ${e.type} ${e.data}`;
     case 'block_entity': return `block_entity ${e.at.join(',')} ${e.type}`;
+    // Заголовок окна у сервера свой («Chest» или перевод) — сравниваем тип.
+    case 'window': return `window ${e.type}`;
+    case 'slots': return `slots ${e.items}`;
+    case 'slot': return `slot ${e.window} ${e.slot} ${e.item}`;
+    case 'cursor': return `cursor ${e.item}`;
+    case 'level': return `level ${e.at.join(',')} ${e.effect} ${e.data}`;
+    case 'property': return `property ${e.property} ${e.value}`;
+    case 'meta': return `meta ${e.fields}`;
+    // Динамит сносит вбок случайный толчок, а блоков взрыв рушит случайно:
+    // сверяем клетку центра, силу, вспышку, звук и дым.
+    case 'explosion': return `explosion ${e.at.map(Math.floor).join(',')} ${e.radius} ${e.particle} ${e.sound} ${e.smoke}`;
     default: return e.kind;
   }
 };

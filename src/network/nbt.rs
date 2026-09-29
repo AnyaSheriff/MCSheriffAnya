@@ -163,6 +163,17 @@ pub fn text_component(text: &str) -> Vec<u8> {
     out
 }
 
+/// Текст, который клиент переводит сам: `{"translate": key}` — так
+/// оригинал подписывает окна («container.chest» и т. п.).
+pub fn translated(key: &str) -> Vec<u8> {
+    let mut out = vec![TAG_COMPOUND, TAG_STRING];
+
+    write_name(&mut out, "translate");
+    write_string(&mut out, key);
+    out.push(TAG_END);
+    out
+}
+
 /// Записывает строку NBT: 2 байта длины (big-endian) + байты в «modified
 /// UTF-8», как читает клиент Java. От обычного UTF-8 он отличается двумя
 /// вещами: нулевой знак пишется двумя байтами C0 80, а знак вне основной

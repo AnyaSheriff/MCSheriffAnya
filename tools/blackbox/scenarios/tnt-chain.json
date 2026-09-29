@@ -1,0 +1,41 @@
+{
+  "name": "tnt-chain",
+  "about": "Два динамита через блок: первый поджигается рычагом, второй загорается от взрыва с коротким запалом (10–30 тактов) и взрывается следом.",
+  "blocks": [
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:tnt[unstable=false]"
+    },
+    {
+      "at": [
+        3,
+        0,
+        0
+      ],
+      "state": "minecraft:tnt[unstable=false]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 130
+}

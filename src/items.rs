@@ -13,6 +13,10 @@
 //
 // Между запусками сервера лежащие предметы не сохраняются: мир хранит блоки,
 // а не сущности. Поднимать их надо в ту же игру.
+//
+// Здесь же живёт подожжённый динамит: он летит и падает так же (вики,
+// Entity: у падающих блоков и TNT тяжесть 0.04 и сопротивление 0.98 после
+// шага), только у него есть запал, а поднять его нельзя.
 
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -35,6 +39,10 @@ pub const THROWN_DELAY: Duration = Duration::from_secs(2);
 /// Сколько нельзя поднимать то, что выпало из сломанного блока: полсекунды,
 /// как в игре.
 pub const MINED_DELAY: Duration = Duration::from_millis(500);
+
+/// Предмет из выбрасывателя поднимается сразу: у оригинала робот подобрал
+/// его через 4 такта после выброса (чёрный ящик, dropper-pulse).
+pub const DISPENSED_DELAY: Duration = Duration::ZERO;
 
 /// Насколько предмет тянет вниз за такт.
 const GRAVITY: f64 = 0.04;
@@ -87,6 +95,10 @@ const MAX_STEP: f64 = 0.2;
 /// Без этого брошенное копилось бы в памяти сервера до самой его остановки.
 const LIFETIME: Duration = Duration::from_secs(300);
 
+/// Здоровье лежащего предмета: 5 (вики, Item (entity): «Health: The health
+/// of the item, which starts at 5»). Его отнимает взрыв.
+pub const ITEM_HEALTH: f32 = 5.0;
+
 /// Насколько ниже мира предмет считается пропавшим.
 ///
 /// Упавший в пустоту предмет никуда не денется сам, и помнить его вечно
@@ -113,6 +125,14 @@ pub struct Dropped {
     /// и, долетев, он снова становится блоком.
     pub block: Option<i32>,
 
+    /// Подожжённый динамит — сколько тактов осталось до взрыва; `block` у
+    /// него — состояние блока динамита (его клиент и рисует). У прочих —
+    /// None.
+    pub fuse: Option<i32>,
+
+    /// Здоровье: у предмета его отнимает взрыв (`ITEM_HEALTH`).
+    pub health: f32,
+
     pub x: f64,
     pub y: f64,
     pub z: f64,
@@ -134,6 +154,15 @@ pub struct Dropped {
     /// Касался ли воды в прошлый такт (None — такта ещё не было): вход в
     /// воду даёт плеск.
     in_water: Option<bool>,
+
+    /// Запал, который клиенты уже знают (у динамита).
+    shown_fuse: i32,
+
+    /// Где предмет был к началу такта; у появившегося в этом такте — None.
+    /// Игрок подбирает по этому месту: у оригинала подбор идёт в начале
+    /// такта, до шага предметов (чёрный ящик, dropper-pulse — у нас на такт
+    /// раньше, пока брали место после шага).
+    touchable: Option<(f64, f64, f64)>,
 }
 
 /// Вода в клетке для предмета: высота её поверхности над низом клетки
@@ -157,6 +186,9 @@ pub enum Change {
 
     /// Предмет пропал сам: провалился в пустоту.
     Gone { entity_id: i32 },
+
+    /// У динамита убыл запал: оригинал сообщает его клиентам каждый такт.
+    Fuse { entity_id: i32, fuse: i32 },
 
     /// Предмет подняли.
     Taken {
@@ -198,6 +230,8 @@ impl Items {
             uuid: uuid_for(entity_id),
             stack,
             block: None,
+            fuse: None,
+            health: ITEM_HEALTH,
             x,
             y,
             z,
@@ -208,6 +242,8 @@ impl Items {
             ready_at: Instant::now() + delay,
             born: Instant::now(),
             in_water: None,
+            shown_fuse: 0,
+            touchable: None,
         };
 
         self.items.push(dropped.clone());
@@ -229,6 +265,8 @@ impl Items {
             uuid: uuid_for(entity_id),
             stack,
             block: Some(state),
+            fuse: None,
+            health: ITEM_HEALTH,
             x,
             y,
             z,
@@ -239,10 +277,94 @@ impl Items {
             ready_at: Instant::now(),
             born: Instant::now(),
             in_water: None,
+            shown_fuse: 0,
+            touchable: None,
         };
 
         self.items.push(falling.clone());
         self.changes.push(Change::Dropped(falling));
+    }
+
+    /// Подожжённый динамит: сущность с запалом `fuse` тактов. `state` —
+    /// состояние блока динамита, `velocity` — начальный толчок.
+    pub fn prime(&mut self, entity_id: i32, state: i32, (x, y, z): (f64, f64, f64), velocity: (f64, f64, f64), fuse: i32) {
+        let primed = Dropped {
+            entity_id,
+            uuid: uuid_for(entity_id),
+            stack: Stack::new(0, 0),
+            block: Some(state),
+            fuse: Some(fuse),
+            health: ITEM_HEALTH,
+            x,
+            y,
+            z,
+            vx: velocity.0,
+            vy: velocity.1,
+            vz: velocity.2,
+            on_ground: false,
+            ready_at: Instant::now(),
+            born: Instant::now(),
+            in_water: None,
+            // Необычный запал (от взрыва) оригинал в следующем такте шлёт
+            // ещё раз, хотя тот не изменился (чёрный ящик, tnt-chain).
+            shown_fuse: if fuse == crate::tnt::FUSE { fuse } else { -1 },
+            touchable: None,
+        };
+
+        self.items.push(primed.clone());
+        self.changes.push(Change::Dropped(primed));
+    }
+
+    /// Запал убывает на единицу за такт; на нуле динамит взрывается (вики,
+    /// TNT: «The timer decreases by 1 every game tick, and the Primed TNT
+    /// explodes when it reaches 0»). Сперва шаг, потом запал — зовётся после
+    /// `step_with_water`. Возвращает взорвавшиеся: они уже убраны из мира,
+    /// взрыв устраивает вызывающий. В выгруженном чанке запал стоит, как и
+    /// всё там.
+    pub fn burn_fuses<L>(&mut self, loaded: &L) -> Vec<Dropped>
+    where
+        L: Fn(i32, i32) -> bool,
+    {
+        for item in &mut self.items {
+            let chunk = ((item.x.floor() as i32).div_euclid(16), (item.z.floor() as i32).div_euclid(16));
+
+            if let Some(fuse) = &mut item.fuse
+                && loaded(chunk.0, chunk.1)
+            {
+                // Клиентам уходит запал, каким он стал к концу прошлого
+                // такта: в такте взрыва ещё видна единица (чёрный ящик,
+                // tnt-lever).
+                if *fuse != item.shown_fuse {
+                    item.shown_fuse = *fuse;
+                    self.changes.push(Change::Fuse { entity_id: item.entity_id, fuse: *fuse });
+                }
+
+                *fuse -= 1;
+            }
+        }
+
+        let exploded: Vec<Dropped> = self.items.extract_if(.., |item| item.fuse.is_some_and(|fuse| fuse <= 0)).collect();
+
+        for item in &exploded {
+            self.changes.push(Change::Gone { entity_id: item.entity_id });
+        }
+
+        exploded
+    }
+
+    /// Всё, что лежит в мире, — для взрыва: он толкает и ранит.
+    pub fn items_mut(&mut self) -> &mut [Dropped] {
+        &mut self.items
+    }
+
+    /// Убирает предметы, у которых не осталось здоровья, — их уничтожил
+    /// взрыв.
+    pub fn remove_broken(&mut self) {
+        let broken: Vec<Dropped> = self.items.extract_if(.., |item| item.health <= 0.0).collect();
+
+        for item in &broken {
+            self.changes.push(Change::Gone { entity_id: item.entity_id });
+        }
     }
 
     /// Забирает падающие блоки, которые уже приземлились.
@@ -254,7 +376,7 @@ impl Items {
         // список каждый такт.
         let landed: Vec<Dropped> = self
             .items
-            .extract_if(.., |item| item.block.is_some() && item.on_ground)
+            .extract_if(.., |item| item.block.is_some() && item.fuse.is_none() && item.on_ground)
             .collect();
 
         for item in &landed {
@@ -310,7 +432,12 @@ impl Items {
                 continue;
             }
 
-            if item.block.is_some() {
+            // Динамит ложится на всё, у чего есть ящик, как предмет; воду
+            // у него пока не считаем. [проверить]: течение сносит динамит
+            // (вики, TNT: «can be pushed by flowing water»).
+            if item.fuse.is_some() {
+                item.step(solid, &|_, _, _| None);
+            } else if item.block.is_some() {
                 item.step(holds_block, &|_, _, _| None);
             } else if let Some(splash) = item.step(solid, water) {
                 splashes.push(splash);
@@ -345,6 +472,46 @@ impl Items {
     ///
     /// Возвращает поднятое — со взятым числом. Слишком свежее — то, что
     /// только что выброшено, — остаётся лежать.
+    /// Первый лежащий предмет (не падающий блок), чья точка внутри
+    /// области, — первым в мир попавший. Для воронки: она подбирает не
+    /// глядя на задержку подбора.
+    pub fn first_inside(&self, inside: &dyn Fn((f64, f64, f64)) -> bool) -> Option<Stack> {
+        self.items
+            .iter()
+            .find(|item| item.block.is_none() && inside((item.x, item.y, item.z)))
+            .map(|item| item.stack)
+    }
+
+    /// Забирает `count` штук у первого предмета внутри области: целиком —
+    /// предмет пропадает, частью — остаток лежит дальше.
+    pub fn take_from_first_inside(&mut self, inside: &dyn Fn((f64, f64, f64)) -> bool, count: i32) {
+        let Some(index) = self.items.iter().position(|item| item.block.is_none() && inside((item.x, item.y, item.z))) else {
+            return;
+        };
+
+        if count >= self.items[index].stack.count {
+            let gone = self.items.remove(index);
+
+            self.changes.push(Change::Gone { entity_id: gone.entity_id });
+            return;
+        }
+
+        let left = &mut self.items[index];
+
+        left.stack.count -= count;
+        left.uuid = uuid_for(left.entity_id);
+        self.changes.push(Change::Gone { entity_id: left.entity_id });
+        self.changes.push(Change::Dropped(left.clone()));
+    }
+
+    /// Начало такта: запомнить, где лежит каждый предмет, — по этим местам
+    /// игроки подбирают до конца такта.
+    pub fn note_tick_start(&mut self) {
+        for item in &mut self.items {
+            item.touchable = Some((item.x, item.y, item.z));
+        }
+    }
+
     pub fn take_near<A>(&mut self, (x, y, z): (f64, f64, f64), by: i32, mut accept: A) -> Vec<Dropped>
     where
         A: FnMut(Stack) -> i32,
@@ -417,9 +584,12 @@ impl Items {
 impl Dropped {
     /// Дотягивается ли игрок, стоящий здесь, до этого предмета.
     fn reaches(&self, x: f64, y: f64, z: f64) -> bool {
-        let flat = ((self.x - x).powi(2) + (self.z - z).powi(2)).sqrt();
+        let Some((at_x, at_y, at_z)) = self.touchable else {
+            return false;
+        };
+        let flat = ((at_x - x).powi(2) + (at_z - z).powi(2)).sqrt();
 
-        flat <= PICK_UP_RANGE && (self.y - y).abs() <= PICK_UP_HEIGHT
+        flat <= PICK_UP_RANGE && (at_y - y).abs() <= PICK_UP_HEIGHT
     }
 
     /// Двигает предмет на один такт.
@@ -702,6 +872,7 @@ mod tests {
         items.drop_item(2, stack(), (10.0, 64.0, 0.5), still, Duration::ZERO);
         items.drop_item(3, stack(), (0.5, 70.0, 0.5), still, Duration::ZERO);
 
+        items.note_tick_start();
         let taken = items.take_near((0.0, 64.0, 0.0), 42, anything);
 
         assert_eq!(taken.len(), 1);
@@ -725,6 +896,7 @@ mod tests {
 
         items.drop_item(1, stack(), (0.0, 64.0, 0.0), (0.0, 0.0, 0.0), THROWN_DELAY);
 
+        items.note_tick_start();
         assert!(items.take_near((0.0, 64.0, 0.0), 1, anything).is_empty());
         assert_eq!(items.items().len(), 1);
     }
@@ -896,6 +1068,7 @@ mod tests {
         let solid = |_: i32, y: i32, _: i32| y <= 0;
 
         // Подойти и поднять его нельзя.
+        items.note_tick_start();
         assert!(items.take_near((0.5, 5.0, 0.5), 99, anything).is_empty(), "падающий блок подняли");
 
         for _ in 0..60 {
@@ -921,6 +1094,7 @@ mod tests {
 
         items.drop_item(1, stack(), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), Duration::ZERO);
 
+        items.note_tick_start();
         let taken = items.take_near((0.5, 64.0, 0.5), 42, |_| 0);
 
         assert!(taken.is_empty());
@@ -940,6 +1114,7 @@ mod tests {
 
         items.drop_item(1, stack(), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), Duration::ZERO);
 
+        items.note_tick_start();
         let taken = items.take_near((0.5, 64.0, 0.5), 42, |stack| stack.count.min(2));
 
         assert_eq!(taken.len(), 1);

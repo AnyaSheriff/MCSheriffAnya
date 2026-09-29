@@ -192,7 +192,7 @@ pub fn can_place(world: &World, state: i32, x: i32, y: i32, z: i32) -> bool {
 /// пропала пара, уходит без выпадения: предмет уже выпал из той половины,
 /// что сломали первой (игроком, поршнем, водой или потерей земли под
 /// нижней). Иначе из подсолнуха выпадало бы два подсолнуха.
-pub fn check(world: &mut World, x: i32, y: i32, z: i32) -> bool {
+pub fn check(world: &mut World, x: i32, y: i32, z: i32, loud: bool) -> bool {
     let state = world.get_block(x, y, z);
 
     if state == AIR || survives(world, state, x, y, z) {
@@ -201,6 +201,13 @@ pub fn check(world: &mut World, x: i32, y: i32, z: i32) -> bool {
 
     if !lost_its_pair(world, state, x, y, z) {
         world.note_destroyed(x, y, z);
+    }
+
+    // Как у оригинала: растение без опоры ломается с событием слома — 2001
+    // с его состоянием (чёрный ящик, water-washes); при постановке командой
+    // — молча.
+    if loud {
+        world.note_level_event(x, y, z, 2001, state);
     }
 
     world.set_block(x, y, z, AIR);

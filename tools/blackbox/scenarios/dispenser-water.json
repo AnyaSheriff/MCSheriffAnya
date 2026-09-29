@@ -1,0 +1,57 @@
+{
+  "name": "dispenser-water",
+  "about": "Раздатчик с ведром воды от рычага сверху: ставит воду, выключение, снова включение — забирает воду обратно.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:dispenser[facing=east,triggered=false]{Items:[{Slot:0b,id:\"minecraft:water_bucket\",count:1}]}"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 30,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 40,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 70,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 110
+}

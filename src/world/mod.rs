@@ -27,6 +27,7 @@ pub mod region;
 pub mod terrain;
 pub mod trees;
 pub mod underground;
+mod writer;
 pub mod vegetation;
 
 use std::cell::Cell;
@@ -38,6 +39,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 use crate::config::server_properties::WorldKind;
+use crate::containers;
 use crate::fluids;
 use crate::journal::{self, Journal};
 use crate::redstone;
@@ -116,6 +118,10 @@ pub struct WorldSound {
 
     /// Точное место, если звук не от блока, а от сущности (плеск предмета).
     pub exact: Option<(f64, f64, f64)>,
+
+    /// Звук блока, но в точке не посередине (сундук, бочка): раздел звука —
+    /// «блоки», как у звука в середине блока.
+    pub of_block: bool,
 }
 
 /// Событие мира, которое надо донести до клиентов: изменение блока или
@@ -127,13 +133,50 @@ pub struct WorldSound {
 /// заполнит. Два журнала такого порядка не держат: подключение выливало бы
 /// сперва один целиком, потом другой, и действие более позднего такта
 /// обгоняло бы изменения более раннего.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum WorldEvent {
     Change(BlockChange),
     Action(BlockAction),
 
     /// Звук, который слышно в этом месте.
     Sound(WorldSound),
+
+    /// Событие мира, которое клиент проигрывает сам (World Event): звук и
+    /// дым выбрасывателя, например. `effect` и `data` — как в пакете.
+    Level { x: i32, y: i32, z: i32, effect: i32, data: i32 },
+
+    /// Игрок `viewer` (номер его сущности) открыл хранилище: окно уходит
+    /// ему в этом месте потока — после звука открытия, до повтора блока.
+    OpenWindow { viewer: i32, x: i32, y: i32, z: i32 },
+
+    /// Метка «здесь изменения блоков уходят клиентам пачкой». У оригинала
+    /// изменения блоков копятся и рассылаются в одной точке такта — после
+    /// запланированных тактов, до блочных событий, — а звуки, события мира
+    /// и действия блоков уходят сразу. Снято чёрным ящиком: у раздатчика
+    /// звук ведра и дым раньше воды, у ловушки лампы раньше крышки.
+    Broadcast,
+
+    /// Метка «здесь такт дошёл до игроков»: открытые окна получают
+    /// перемены содержимого, опубликованные к этому мгновению
+    /// (`World::published`).
+    Contents,
+
+    /// Взрыв: клиенту — пакет Explosion (звук, вспышка, толчок своему
+    /// игроку). Сами разрушенные блоки идут обычными изменениями.
+    Explosion(std::sync::Arc<Blast>),
+}
+
+/// Взрыв для клиентов: где, какой силы, сколько блоков разрушил и кого из
+/// игроков как толкнул — номер сущности и прибавка к скорости. Игрока
+/// двигает его клиент, поэтому толчок уходит в пакете (вики, Java Edition
+/// protocol/Packets, Explosion: «Velocity difference of the player being
+/// pushed by the explosion»).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Blast {
+    pub centre: (f64, f64, f64),
+    pub power: f32,
+    pub blocks: i32,
+    pub pushed: Vec<(i32, (f64, f64, f64))>,
 }
 
 /// Блоки одного чанка — по секциям.
@@ -174,7 +217,22 @@ struct Chunk {
 
     /// Номер правки блоков: растёт при каждом изменении.
     revision: u32,
+
+    /// Хранилища чанка (сундуки, воронки…) по месту внутри чанка:
+    /// (x, y, z), где x и z — от 0 до 15, а y — настоящая высота.
+    containers: HashMap<(i32, i32, i32), containers::Container>,
+
+    /// Хранилища, чей блок сменился другим: их содержимое высыплется
+    /// (мировые координаты). Забирает мир — `World::take_spilled`.
+    spilled: Vec<((i32, i32, i32), containers::Container)>,
 }
+
+/// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
+pub type Ejected = ((f64, f64, f64), (f64, f64, f64), crate::inventory::Stack);
+
+/// Подожжённый динамит, который такт ещё не сделал сущностью: где, с какой
+/// скоростью и сколько тактов запала.
+pub type Primed = ((f64, f64, f64), (f64, f64, f64), i32);
 
 /// Номер биома в реестре, как он лежит в памяти чанка.
 pub type BiomeId = u16;
@@ -220,6 +278,8 @@ impl Chunk {
             biomes: vec![0; BIOME_LAYERS * BIOME_LAYER],
             light: None,
             revision: 0,
+            containers: HashMap::new(),
+            spilled: Vec::new(),
         }
     }
 
@@ -441,11 +501,31 @@ impl Chunk {
 
         // Тот же блок ставить незачем, а в воздушную секцию воздух — тем
         // более: заводить её ради этого не надо.
-        if self.block(x, y, z) == state {
+        let old = self.block(x, y, z);
+
+        if old == state {
             return false;
         }
 
         self.filled_section(section)[index] = pack(state);
+
+        // Хранилище живёт, пока на месте стоит блок того же вида: сундук,
+        // повёрнутый или спаренный с соседом, своё содержимое сохраняет,
+        // а сундук, сменённый воронкой, — нет.
+        let (kind, was) = (containers::Kind::of(state), containers::Kind::of(old));
+
+        if kind != was {
+            let place = (x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
+
+            if let Some(gone) = self.containers.remove(&place) {
+                self.spilled.push(((x, y, z), gone));
+            }
+
+            if let Some(kind) = kind {
+                self.containers.insert(place, containers::Container::new(kind));
+            }
+        }
+
         true
     }
 
@@ -584,6 +664,20 @@ impl Chunk {
             out.extend_from_slice(&length.to_be_bytes());
         }
 
+        // Хранилища — последними, и только если они есть: запись чанка без
+        // них та же, что и прежде. Порядок — по месту, чтобы одинаковый
+        // чанк давал одинаковые байты.
+        if !self.containers.is_empty() {
+            let mut places: Vec<_> = self.containers.keys().copied().collect();
+
+            places.sort_unstable();
+            out.extend_from_slice(&(places.len() as u16).to_be_bytes());
+
+            for place in places {
+                self.containers[&place].write(place, &mut out);
+            }
+        }
+
         out
     }
 
@@ -658,6 +752,24 @@ impl Chunk {
 
             if at != chunk.biomes.len() {
                 return None;
+            }
+
+            // Хранилища, если записаны. Хранилище на месте блока другого
+            // вида (файл правили руками) пропускается.
+            let mut rest = reader.rest();
+
+            if rest.len() >= 2 {
+                let count = u16::from_be_bytes([rest[0], rest[1]]);
+
+                rest = &rest[2..];
+
+                for _ in 0..count {
+                    let (place, container) = containers::Container::read(&mut rest, 0, 0)?;
+
+                    if containers::Kind::of(chunk.block(place.0, place.1, place.2)) == Some(container.kind) {
+                        chunk.containers.insert(place, container);
+                    }
+                }
             }
 
             return Some(chunk);
@@ -765,6 +877,7 @@ const CHUNK_VERSION_FLAT_BIOMES: u8 = 2;
 /// незачем.
 const CHUNK_VERSION_WIDE: u8 = 1;
 
+
 /// Мир целиком: чанки и список изменений.
 pub struct World {
     /// Состояние генератора случайных чисел — см. `random_unit`.
@@ -849,7 +962,7 @@ pub struct World {
 
     /// Блочные события: то, что делается не в свой запланированный такт,
     /// а отдельной фазой в конце такта мира. Так устроен ход поршня.
-    block_events: Vec<(i32, i32, i32)>,
+    block_events: std::collections::VecDeque<((i32, i32, i32), u8, u8)>,
 
     /// Память редстоуна: то, что не помещается в состояние блока.
     pub redstone: redstone::Memory,
@@ -905,11 +1018,51 @@ pub struct World {
     /// (такты в выгруженных чанках лежат неделями) не переписывать.
     ticks_written: Cell<u64>,
 
+    /// Когда и с каким содержимым (без возраста) последний раз писался
+    /// `level.dat`: возраст мира меняется каждый такт, но ради него одного
+    /// переписывать файл со сбросом на диск каждую секунду незачем.
+    level_written: Cell<Option<(Instant, u64)>>,
+
+    /// Места, где блок сменила команда (`setblock`, `fill`): такая смена
+    /// того же блока — просто замена состояния, без собственных обновлений
+    /// детали (разбирает редстоун).
+    commanded: HashSet<(i32, i32, i32)>,
+
     /// Запись в чанк, которого нет в памяти, заводит его пустым. Только для
     /// проверок, которые строят мир блок за блоком без земли; у настоящего
     /// мира запись в незагруженный чанк отбрасывается (см.
     /// `set_block_silently`).
     create_missing: bool,
+
+    /// Хранилища, чей блок сменился другим: их содержимое высыплется.
+    spilled: Vec<((i32, i32, i32), containers::Container)>,
+
+    /// Сколько игроков смотрят в хранилище (по месту каждой половины).
+    viewers: HashMap<(i32, i32, i32), u32>,
+
+    /// Предметы, выброшенные выбрасывателем или раздатчиком: где, с какой
+    /// скоростью и что. Заводит сущности такт (`take_ejected`).
+    ejected: Vec<Ejected>,
+
+    /// Подожжённый динамит: сущности заводит такт (`take_primed`).
+    primed: Vec<Primed>,
+
+    /// Содержимое хранилищ, каким его видят игроки: снимается в фазе
+    /// сущностей, как у оригинала, — то, что воронки перенесли позже в том же
+    /// такте, окна увидят на следующем.
+    pub published: HashMap<(i32, i32, i32), Vec<Option<crate::inventory::Stack>>>,
+
+    /// Хранилища в порядке появления в мире — для их хода в такте.
+    container_order: Vec<(i32, i32, i32)>,
+
+    /// Места, где сменилось содержимое хранилища, — для сравнителей.
+    contents_changed: Vec<(i32, i32, i32)>,
+
+    /// Свет чанков, сшитый с соседями, — для датчиков дневного света: они
+    /// спрашивают небесный свет раз в 20 тактов. Ключ — чанк, при нём номера
+    /// правки девяти чанков, по которым свет считан: сменился хоть один —
+    /// считаем заново.
+    sky_cache: HashMap<(i32, i32), ([u32; 9], Arc<light::ChunkLight>)>,
 
     /// Замок папки мира (`session.lock`): пока он взят, второй сервер ту же
     /// папку не откроет. Отпускается вместе с файлом, когда мир закрывается.
@@ -922,12 +1075,20 @@ struct WaitingTick {
     due: u64,
     order: u64,
     priority: i8,
+
+    /// Такт жидкости заведён, когда в месте была жидкость: он её, и с ней
+    /// пропадает (у оригинала такт жидкости исполняется, только если она
+    /// всё ещё там).
+    wet: bool,
 }
 
 /// Сколько сложенных заново чанков записывать за одно сохранение. Сохранение
 /// идёт раз в секунду под замком мира, а при входе игрока новых чанков —
 /// тысячи: все разом встали бы такту поперёк.
 const FRESH_PER_SAVE: usize = 256;
+
+/// Как часто переписывать level.dat, если в нём сменился только возраст.
+const LEVEL_PAUSE: Duration = Duration::from_secs(30);
 
 /// Не чаще скольки раз писать мир из `save_if_due`.
 const SAVE_PAUSE: Duration = Duration::from_secs(1);
@@ -971,7 +1132,7 @@ impl World {
             seed: 0,
             kind: WorldKind::Flat,
             generator: Arc::new(Generator::Flat),
-            block_events: Vec::new(),
+            block_events: std::collections::VecDeque::new(),
             redstone: redstone::Memory::new(),
             destroyed: Vec::new(),
             dirty: HashSet::new(),
@@ -981,9 +1142,19 @@ impl World {
             spawn: OnceLock::new(),
             last_save: None,
             ticks_written: Cell::new(0),
+            level_written: Cell::new(None),
+            commanded: HashSet::new(),
             fresh_fluid: (0, HashSet::new()),
             portals: Vec::new(),
             create_missing: true,
+            spilled: Vec::new(),
+            viewers: HashMap::new(),
+            ejected: Vec::new(),
+            primed: Vec::new(),
+            published: HashMap::new(),
+            container_order: Vec::new(),
+            contents_changed: Vec::new(),
+            sky_cache: HashMap::new(),
             _session: None,
         }
     }
@@ -1095,7 +1266,7 @@ impl World {
                 WorldKind::SuperSmooth => Generator::Normal(Terrain::new(seed, Style::Smooth)),
                 WorldKind::Nether => Generator::Nether(nether::Nether::new(seed)),
             }),
-            block_events: Vec::new(),
+            block_events: std::collections::VecDeque::new(),
             redstone: redstone::Memory::new(),
             destroyed: Vec::new(),
             dirty: HashSet::new(),
@@ -1105,9 +1276,19 @@ impl World {
             spawn: OnceLock::new(),
             last_save: None,
             ticks_written: Cell::new(0),
+            level_written: Cell::new(None),
+            commanded: HashSet::new(),
             fresh_fluid: (0, HashSet::new()),
             portals: Vec::new(),
             create_missing: false,
+            spilled: Vec::new(),
+            viewers: HashMap::new(),
+            ejected: Vec::new(),
+            primed: Vec::new(),
+            published: HashMap::new(),
+            container_order: Vec::new(),
+            contents_changed: Vec::new(),
+            sky_cache: HashMap::new(),
             _session: Some(session),
         };
 
@@ -1226,24 +1407,29 @@ impl World {
                 .push((chunk_x, chunk_z, chunk.to_bytes()));
         }
 
-        for ((region_x, region_z), chunks) in by_region {
-            let batch: Vec<(i32, i32, &[u8])> = chunks.iter().map(|(x, z, bytes)| (*x, *z, bytes.as_slice())).collect();
-
-            if let Err(e) = region::write_many(&directory, &batch) {
-                log_error!("Не удалось сохранить регион {} {} ({} чанков): {}", region_x, region_z, batch.len(), e);
-
-                // Не записалось — пусть попробует записаться в следующий раз.
-                // До тех пор чанки из памяти не выгружаются (`unload_far`).
-                self.dirty.extend(chunks.iter().map(|(x, z, _)| (*x, *z)));
-            }
+        // Пишет свой поток (`writer`): такт диска не ждёт. Не записалось —
+        // поток повторяет сам, а байты до тех пор читаются из его памяти.
+        for (_, chunks) in by_region {
+            writer::write_chunks(&directory, chunks);
         }
 
         // Файл мира — после чанков, а не до. В нём записаны начатые ходы
         // поршней, а едущие блоки уже сняты с мест в чанках; если сервер
         // прервут между двумя записями, пусть лучше пропадёт запись о ходе,
         // чем в чанках останутся старые блоки, а ход доиграется поверх них.
-        // Время идёт всегда, поэтому пишется и без изменённых чанков.
+        // Очередь тактов пишется всегда, когда изменилась; сам level.dat —
+        // когда сменилось что-то кроме возраста, раз в полминуты и при
+        // остановке.
+        if everything {
+            self.level_written.set(None);
+        }
+
         self.save_level();
+
+        // При остановке — дождаться, пока всё ляжет на диск.
+        if everything {
+            writer::flush();
+        }
     }
 
     /// Состояние блока по мировым координатам. Всё, что не задано, — воздух.
@@ -1324,7 +1510,168 @@ impl World {
             }
         };
 
-        chunk.set(x, y, z, state)
+        let changed = chunk.set(x, y, z, state);
+
+        if !chunk.spilled.is_empty() {
+            self.spilled.append(&mut chunk.spilled);
+        }
+
+        if changed && containers::Kind::of(state).is_some() {
+            self.container_order.push((x, y, z));
+        }
+
+        // Редстоун помнит горящую руду и датчики света: их такт идёт не по
+        // очереди, а сам (случайный такт и раз в 20 тактов).
+        if changed {
+            self.redstone.note_state((x, y, z), state);
+        }
+
+        changed
+    }
+
+    /// Хранилище в этом месте, если оно там есть и его чанк в памяти.
+    pub fn container(&self, x: i32, y: i32, z: i32) -> Option<&containers::Container> {
+        self.chunks.get(&chunk_key(x, z))?.containers.get(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))
+    }
+
+    /// Правит хранилище в этом месте. Чанк помечается изменённым, а место —
+    /// «содержимое сменилось»: сравнители рядом пересчитаются
+    /// (`take_contents_changed`). None — хранилища нет.
+    pub fn with_container<R>(
+        &mut self,
+        x: i32,
+        y: i32,
+        z: i32,
+        change: impl FnOnce(&mut containers::Container) -> R,
+    ) -> Option<R> {
+        let chunk = self.chunks.get_mut(&chunk_key(x, z))?;
+        let container = chunk.containers.get_mut(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))?;
+        let before = container.slots.clone();
+        let result = change(container);
+
+        if container.slots != before {
+            self.contents_changed.push((x, y, z));
+        }
+
+        self.dirty.insert(chunk_key(x, z));
+
+        Some(result)
+    }
+
+    /// Хранилища чанка для пакета чанка: место внутри чанка (x, z), высота
+    /// и вид.
+    pub fn chunk_containers(&self, chunk_x: i32, chunk_z: i32) -> Vec<(i32, i32, i32, containers::Kind)> {
+        let Some(chunk) = self.chunks.get(&(chunk_x, chunk_z)) else {
+            return Vec::new();
+        };
+        let mut found: Vec<_> = chunk.containers.iter().map(|(&(x, y, z), c)| (x, y, z, c.kind)).collect();
+
+        found.sort_unstable_by_key(|&(x, y, z, _)| (y, z, x));
+        found
+    }
+
+    /// Сколько игроков смотрят в хранилище в этом месте.
+    pub fn viewers(&self, x: i32, y: i32, z: i32) -> u32 {
+        self.viewers.get(&(x, y, z)).copied().unwrap_or(0)
+    }
+
+    /// Меняет число смотрящих и возвращает новое.
+    pub fn add_viewers(&mut self, x: i32, y: i32, z: i32, delta: i32) -> u32 {
+        let count = self.viewers.entry((x, y, z)).or_insert(0);
+
+        *count = (*count as i32 + delta).max(0) as u32;
+
+        let now = *count;
+
+        if now == 0 {
+            self.viewers.remove(&(x, y, z));
+        }
+
+        now
+    }
+
+    /// Точка такта, где накопленные изменения блоков уходят клиентам.
+    pub fn note_broadcast(&mut self) {
+        self.events.push(WorldEvent::Broadcast);
+    }
+
+    /// Событие мира, которое клиент проигрывает сам (World Event).
+    pub fn note_level_event(&mut self, x: i32, y: i32, z: i32, effect: i32, data: i32) {
+        self.events.push(WorldEvent::Level { x, y, z, effect, data });
+    }
+
+    /// Окно хранилища для игрока — в общем потоке событий.
+    pub fn note_open_window(&mut self, viewer: i32, x: i32, y: i32, z: i32) {
+        self.events.push(WorldEvent::OpenWindow { viewer, x, y, z });
+    }
+
+    /// Выброшенный предмет: сущность заведёт такт.
+    pub fn eject(&mut self, at: (f64, f64, f64), velocity: (f64, f64, f64), stack: crate::inventory::Stack) {
+        self.ejected.push((at, velocity, stack));
+    }
+
+    /// Забирает выброшенные предметы.
+    pub fn take_ejected(&mut self) -> Vec<Ejected> {
+        std::mem::take(&mut self.ejected)
+    }
+
+    /// Подожжённый динамит: сущность заведёт такт.
+    pub fn prime(&mut self, at: (f64, f64, f64), velocity: (f64, f64, f64), fuse: i32) {
+        self.primed.push((at, velocity, fuse));
+    }
+
+    /// Забирает подожжённый динамит.
+    pub fn take_primed(&mut self) -> Vec<Primed> {
+        std::mem::take(&mut self.primed)
+    }
+
+    /// Сообщает клиентам о взрыве.
+    pub fn note_explosion(&mut self, blast: Blast) {
+        self.events.push(WorldEvent::Explosion(std::sync::Arc::new(blast)));
+    }
+
+    /// Снимает содержимое хранилищ, в которые кто-то смотрит, — это увидят
+    /// окна, — и ставит в поток метку, где это случилось.
+    pub fn publish_contents(&mut self) {
+        if self.viewers.is_empty() {
+            self.published.clear();
+            return;
+        }
+
+        let places: Vec<_> = self.viewers.keys().copied().collect();
+
+        self.published = places
+            .into_iter()
+            .filter_map(|(x, y, z)| Some(((x, y, z), self.container(x, y, z)?.slots.clone())))
+            .collect();
+        self.events.push(WorldEvent::Contents);
+    }
+
+    /// Места, где с прошлого раза сменилось содержимое хранилища.
+    pub fn take_contents_changed(&mut self) -> Vec<(i32, i32, i32)> {
+        std::mem::take(&mut self.contents_changed)
+    }
+
+    /// Хранилища, чей блок сменился другим, — с их содержимым.
+    pub fn take_spilled(&mut self) -> Vec<((i32, i32, i32), containers::Container)> {
+        std::mem::take(&mut self.spilled)
+    }
+
+    /// Хранилища мира в порядке появления — в нём они и работают в такте,
+    /// как у оригинала. Места, где хранилища уже нет, по пути вычищаются.
+    pub fn containers_in_order(&mut self) -> Vec<(i32, i32, i32)> {
+        let chunks = &self.chunks;
+
+        self.container_order.retain(|&(x, y, z)| {
+            chunks
+                .get(&chunk_key(x, z))
+                .is_some_and(|chunk| chunk.containers.contains_key(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE))))
+        });
+
+        let mut seen = HashSet::new();
+
+        self.container_order.retain(|place| seen.insert(*place));
+        self.container_order.clone()
     }
 
 
@@ -1431,6 +1778,58 @@ impl World {
         light.at(x.rem_euclid(16), y, z.rem_euclid(16))
     }
 
+    /// Небесный свет в блоке — тот же, что уходит клиенту: свет чанка,
+    /// сшитый с восемью соседями. Нужен датчику дневного света.
+    ///
+    /// Под открытым небом (выше только воздух) это всегда 15 — считать
+    /// ничего не надо. Иначе свет чанка считается и запоминается до первой
+    /// правки блоков в нём или у соседей. Незагруженный чанк — 15: спросить
+    /// не у чего, а датчик в нём и не тикает.
+    pub fn sky_light(&mut self, x: i32, y: i32, z: i32) -> u8 {
+        if y >= MIN_Y + WORLD_HEIGHT {
+            return light::FULL;
+        }
+
+        if y < MIN_Y {
+            return 0;
+        }
+
+        let (chunk_x, chunk_z) = chunk_key(x, z);
+        let Some(chunk) = self.chunks.get(&(chunk_x, chunk_z)) else {
+            return light::FULL;
+        };
+
+        if (y + 1..=chunk.highest()).all(|above| chunk.block(x, above, z) == AIR) {
+            return light::FULL;
+        }
+
+        let revisions: [u32; 9] = std::array::from_fn(|slot| {
+            let place = (chunk_x + slot as i32 % 3 - 1, chunk_z + slot as i32 / 3 - 1);
+
+            self.chunks.get(&place).map_or(u32::MAX, |chunk| chunk.revision)
+        });
+
+        let (local_x, local_z) = (x.rem_euclid(CHUNK_SIZE), z.rem_euclid(CHUNK_SIZE));
+
+        if let Some((seen, light)) = self.sky_cache.get(&(chunk_x, chunk_z))
+            && *seen == revisions
+        {
+            return light.at(local_x, y, local_z).0;
+        }
+
+        let Some(job) = self.light_job(chunk_x, chunk_z) else {
+            return light::FULL;
+        };
+        let (light, recounted) = job.finish();
+
+        self.store_light(recounted);
+
+        let level = light.at(local_x, y, local_z).0;
+
+        self.sky_cache.insert((chunk_x, chunk_z), (revisions, Arc::new(light)));
+        level
+    }
+
     /// Откуда брать ещё не готовый чанк. Его можно унести с собой: чтение
     /// с диска и складывание нового чанка — работа долгая, и держать на ней
     /// замок мира нельзя, иначе встанет такт.
@@ -1488,7 +1887,14 @@ impl World {
         wake: &[((i32, i32, i32), u64)],
     ) {
         let key = (chunk_x, chunk_z);
+        let mut places: Vec<_> = chunk
+            .containers
+            .keys()
+            .map(|&(x, y, z)| (chunk_x * CHUNK_SIZE + x, y, chunk_z * CHUNK_SIZE + z))
+            .collect();
 
+        places.sort_unstable();
+        self.container_order.extend(places);
         self.chunks.insert(key, chunk);
         self.unloaded.remove(&key);
 
@@ -1621,9 +2027,9 @@ impl World {
 
         let before = self.chunks.len();
 
-        // Ещё не записанное не выгружается: запись не удалась или до
-        // сложенного заново чанка не дошла очередь. Выгрузить его — значит
-        // потерять, а сложенный заново потом читался бы с диска старым.
+        // Ещё не отданное на запись не выгружается: до сложенного заново
+        // чанка не дошла очередь. Отданное выгружать можно — пока оно не на
+        // диске, чтение берёт его из очереди записи (`writer`).
         let (dirty, fresh) = (&self.dirty, &self.fresh);
         let mut gone = Vec::new();
 
@@ -1649,6 +2055,7 @@ impl World {
 
         // Ждать пересчёта в выгруженных чанках больше некому.
         self.redstone.forget_outside(|x, z| self.chunks.contains_key(&chunk_key(x, z)));
+        self.sky_cache.retain(|key, _| self.chunks.contains_key(key));
 
         before - self.chunks.len()
     }
@@ -1678,7 +2085,7 @@ impl World {
             .into_iter()
             .filter_map(|event| match event {
                 WorldEvent::Change(change) => Some(change),
-                WorldEvent::Action(_) | WorldEvent::Sound(_) => None,
+                _ => None,
             })
             .collect();
 
@@ -1693,7 +2100,7 @@ impl World {
             .into_iter()
             .filter_map(|event| match event {
                 WorldEvent::Action(action) => Some(action),
-                WorldEvent::Change(_) | WorldEvent::Sound(_) => None,
+                _ => None,
             })
             .collect();
 
@@ -1725,7 +2132,7 @@ impl World {
 
     /// Сообщает всем клиентам о звуке в этом месте.
     pub fn note_sound(&mut self, x: i32, y: i32, z: i32, name: &'static str, volume: f32, pitch: f32) {
-        self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch, exact: None }));
+        self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch, exact: None, of_block: true }));
     }
 
     /// Звук сущности в точном месте — плеск предмета, вошедшего в воду.
@@ -1738,7 +2145,38 @@ impl World {
             volume,
             pitch,
             exact: Some(at),
+            of_block: false,
         }));
+    }
+
+    /// Звук блока в точке не посередине блока: открытие большого сундука
+    /// слышно между половинами, бочки — у крышки.
+    pub fn note_sound_at_block(&mut self, at: (f64, f64, f64), name: &'static str, volume: f32, pitch: f32) {
+        self.events.push(WorldEvent::Sound(WorldSound {
+            x: at.0.floor() as i32,
+            y: at.1.floor() as i32,
+            z: at.2.floor() as i32,
+            name,
+            volume,
+            pitch,
+            exact: Some(at),
+            of_block: true,
+        }));
+    }
+
+    /// Рассылает то, что стоит в месте, как обычное изменение (пачкой) и
+    /// сообщает редстоуну: блок уже поставлен молча, прежний был `old`.
+    pub fn announce_change(&mut self, x: i32, y: i32, z: i32, old: i32) {
+        let state = self.get_block(x, y, z);
+
+        self.events.push(WorldEvent::Change(BlockChange { x, y, z, state, direct: false }));
+        self.changed.push(((x, y, z), old));
+        self.dirty.insert(chunk_key(x, z));
+    }
+
+    /// Такт блока в этом месте через `delay`, если он ещё не ждёт своего.
+    pub fn schedule_block_once(&mut self, x: i32, y: i32, z: i32, delay: u64) {
+        self.schedule_once(x, y, z, delay, 0);
     }
 
     /// Случайное число от 0 до 1 — для высоты звуков и прочего, где в игре
@@ -1750,6 +2188,17 @@ impl World {
         x ^= x << 5;
         self.noise = x;
         (x % 10_000) as f32 / 10_000.0
+    }
+
+    /// Случайное число во всю ширину генератора — там, где нужна точная
+    /// доля вроде 3/4096 (случайный такт), а `random_unit` для неё грубовата.
+    pub fn random_bits(&mut self) -> u32 {
+        let mut x = self.noise.max(1);
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        self.noise = x;
+        x
     }
 
     /// Сообщает клиентам, что стоит в этом месте сейчас, — даже если для
@@ -1802,8 +2251,23 @@ impl World {
     pub fn schedule(&mut self, x: i32, y: i32, z: i32, delay: u64) {
         let due = self.tick + delay.max(1);
 
-        if let Some(waiting) = self.waiting.get(&((x, y, z), TickKind::Fluid))
-            && waiting.due <= due
+        // Место уже ждёт такта жидкости не позже этого срока — новой просьбы
+        // не нужно; ждёт позже — просьба ставится на более ранний срок
+        // (сверено сценариями waterfall и stream-redirect: с правилом «вторую
+        // не ставить» вода у нас растекалась иначе). Такт этого же такта, ещё
+        // не исполненный, не мешает: вода может завести новый, пока
+        // исполняется прежний (вики, Tick, 18w10c).
+        // Прежний такт был заведён для жидкости, которой здесь больше нет
+        // (раздатчик забрал источник ведром): он пропал вместе с ней, и
+        // пустое место ждёт такта соседей заново (чёрный ящик,
+        // dispenser-water — иначе вода возвращалась на 4 такта раньше).
+        let dried = !wet(self.get_block(x, y, z));
+
+        if self.waits_ahead((x, y, z), TickKind::Fluid)
+            && self
+                .waiting
+                .get(&((x, y, z), TickKind::Fluid))
+                .is_some_and(|waiting| waiting.due <= due && !(waiting.wet && dried))
         {
             return;
         }
@@ -1841,7 +2305,9 @@ impl World {
         let order = self.next_order;
         self.next_order += 1;
 
-        self.waiting.insert((place, kind), WaitingTick { due, order, priority });
+        let wet = kind == TickKind::Fluid && wet(self.get_block(place.0, place.1, place.2));
+
+        self.waiting.insert((place, kind), WaitingTick { due, order, priority, wet });
         self.scheduled.push(Reverse(Scheduled {
             due,
             priority,
@@ -1886,8 +2352,6 @@ impl World {
     pub fn advance(&mut self, limit: usize) -> Vec<((i32, i32, i32), TickKind)> {
         self.tick += 1;
 
-        self.wake_forgotten_moves();
-
         // Места, о которых пришла пора сказать: берём то, что стоит там
         // сейчас, а не то, что стояло, когда решили сказать.
         let tick = self.tick;
@@ -1926,63 +2390,47 @@ impl World {
                 continue;
             }
 
-            self.waiting.remove(&(next.place, next.kind));
+            // С учёта такт снимается, когда до него дойдёт очередь
+            // (`begin_tick`), а не сейчас: пока он не исполнен, он ещё
+            // ожидает, и повторитель или факел второго такта не заведут
+            // (MC-189954: так ведут себя все, кроме наблюдателя).
             due.push((next.place, next.kind));
         }
 
         due
     }
 
-    /// Ждёт ли это место своего блочного такта.
-    fn has_block_tick(&self, place: (i32, i32, i32)) -> bool {
-        self.waiting.contains_key(&(place, TickKind::Block))
-            || self
-                .parked
-                .iter()
-                .any(|entry| entry.place == place && entry.kind == TickKind::Block)
-    }
-
-    /// Возвращает в очередь ходы поршней, о которых напомнить больше некому.
-    ///
-    /// Каждый начатый ход доигрывает свой запланированный такт. Если такт
-    /// потерялся — мир прочитан без него, — ход завис бы навсегда: едущие
-    /// блоки сняты со своих мест, а на местах назначения стоит служебный
-    /// «движущийся поршень». Для игрока это выглядит так, что у поршня
-    /// пропала голова, а блок на нём стал невидимым, и починить это в игре
-    /// нельзя. Поэтому раз в такт проверяем: у каждого хода такт на месте.
-    fn wake_forgotten_moves(&mut self) {
-        let moves: Vec<(i32, i32, i32)> = self
-            .redstone
-            .moving_pistons()
-            .map(|(place, _)| *place)
-            .collect();
-
-        for place in moves {
-            if !self.has_block_tick(place) {
-                self.push_scheduled(place, TickKind::Block, self.tick + 1, 0);
-            }
+    /// Такт в этом месте начинает исполняться: снимается с учёта.
+    pub fn begin_tick(&mut self, place: (i32, i32, i32), kind: TickKind) {
+        if self.waiting.get(&(place, kind)).is_some_and(|waiting| waiting.due <= self.tick) {
+            self.waiting.remove(&(place, kind));
         }
     }
 
-    /// Просит выполнить блочное событие в этом месте — в конце такта мира.
-    ///
-    /// Поршень трогается не в свой запланированный такт, а позже, отдельной
-    /// фазой: в игре его ход — это «block event», и идёт он после всех
-    /// запланированных тактов. От этого зависят тайминги схем.
-    pub fn queue_block_event(&mut self, x: i32, y: i32, z: i32) {
-        let place = (x, y, z);
+    /// Ждёт ли место такта, который ещё не пришёл (срок впереди).
+    fn waits_ahead(&self, place: (i32, i32, i32), kind: TickKind) -> bool {
+        self.waiting.get(&(place, kind)).is_some_and(|waiting| waiting.due > self.tick)
+    }
 
-        if !self.block_events.contains(&place) {
-            self.block_events.push(place);
+    /// Заводит блочное событие: место, вид события и его параметр (у
+    /// поршня вид — «выдвинуться» или «задвинуться», у сундука — крышка и
+    /// число смотрящих).
+    ///
+    /// Как у оригинала (вики, Piston; techmcdocs, GameTick): события
+    /// исполняются в своей фазе такта по порядку появления, повтор —
+    /// совпадающий целиком: место, вид и параметр — не заводится, а
+    /// заведённое во время фазы исполняется в ней же.
+    pub fn queue_block_event(&mut self, x: i32, y: i32, z: i32, kind: u8, param: u8) {
+        let event = ((x, y, z), kind, param);
+
+        if !self.block_events.contains(&event) {
+            self.block_events.push_back(event);
         }
     }
 
-    /// Забирает накопившиеся блочные события.
-    ///
-    /// Забирается только то, что накопилось к этому мгновению: события,
-    /// заведённые во время разбора, ждут следующего такта — как в игре.
-    pub fn take_block_events(&mut self) -> Vec<(i32, i32, i32)> {
-        std::mem::take(&mut self.block_events)
+    /// Следующее блочное событие по очереди.
+    pub fn take_block_event(&mut self) -> Option<((i32, i32, i32), u8, u8)> {
+        self.block_events.pop_front()
     }
 
     /// Записывает возраст мира, часы и то, что ждёт своего такта.
@@ -2008,9 +2456,28 @@ impl World {
         // переписывать их вместе с возрастом мира раз в секунду незачем.
         self.save_ticks();
 
-        if let Err(error) = write_level(&self.path, &text) {
-            log_error!("Не удалось записать {}: {}", LEVEL, error);
+        // Без возраста содержимое меняется редко (время перевели, нашлась
+        // точка появления): тогда — сразу, иначе раз в полминуты. Возраст
+        // мира, потерянный при обрыве, — не больше полуминуты.
+        let print = {
+            use std::hash::{Hash, Hasher};
+
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            text.lines().skip(1).collect::<Vec<_>>().hash(&mut hasher);
+            hasher.finish()
+        };
+
+        if let Some((at, seen)) = self.level_written.get()
+            && seen == print
+            && at.elapsed() < LEVEL_PAUSE
+        {
+            return;
         }
+
+        let path = self.path.clone();
+
+        writer::write_file(LEVEL, move || write_level(&path, &text));
+        self.level_written.set(Some((Instant::now(), print)));
     }
 
     /// Записывает `ticks.dat`: что ждёт своего такта и начатые ходы поршней.
@@ -2070,10 +2537,10 @@ impl World {
             return;
         }
 
-        match write_atomically(&self.path, TICKS, &text) {
-            Ok(()) => self.ticks_written.set(print),
-            Err(error) => log_error!("Не удалось записать {}: {}", TICKS, error),
-        }
+        let path = self.path.clone();
+
+        writer::write_file(TICKS, move || write_atomically(&path, TICKS, &text));
+        self.ticks_written.set(print);
     }
 
     /// Который сейчас час в мире: такты суток, от 0 до 23 999.
@@ -2161,14 +2628,14 @@ impl World {
         self.changed.pop()
     }
 
-    /// Забирает все изменившиеся блоки разом, в том же порядке, в каком их
-    /// выдавал бы `pop_changed`. Что изменится, пока этот список разбирают,
-    /// ляжет в очередь заново и дождётся следующего раза.
-    pub fn take_changed(&mut self) -> Vec<((i32, i32, i32), i32)> {
-        let mut taken = std::mem::take(&mut self.changed);
+    /// Помечает место: блок в нём сейчас сменит команда.
+    pub fn note_commanded(&mut self, x: i32, y: i32, z: i32) {
+        self.commanded.insert((x, y, z));
+    }
 
-        taken.reverse();
-        taken
+    /// Сменила ли блок в этом месте команда (пометка снимается).
+    pub fn take_commanded(&mut self, pos: (i32, i32, i32)) -> bool {
+        self.commanded.remove(&pos)
     }
 
     /// Запоминает, что блок сломал сам мир: из него должен выпасть предмет.
@@ -3632,6 +4099,11 @@ impl<'a> Reader<'a> {
     fn i32(&mut self) -> io::Result<i32> {
         Ok(i32::from_be_bytes(self.take::<4>()?))
     }
+
+    /// Всё, что ещё не прочитано.
+    fn rest(&self) -> &'a [u8] {
+        self.bytes.get(self.offset..).unwrap_or_default()
+    }
 }
 
 #[cfg(test)]
@@ -4095,6 +4567,25 @@ mod safety_tests {
         assert_eq!(world.get_block_loaded(5, 10, 5), Some(stone));
     }
 
+    /// Возраст мира сам по себе level.dat каждую секунду не переписывает:
+    /// файл пишется, когда сменилось что-то ещё, и при остановке.
+    #[test]
+    fn the_level_file_is_not_rewritten_for_the_age_alone() {
+        let path = directory("level-pause");
+        let mut world = World::open(&path, Some(7), WorldKind::Flat).expect("мир открылся");
+
+        world.save_if_needed();
+        let written = fs::metadata(path.join(LEVEL)).and_then(|meta| meta.modified()).expect("файл есть");
+
+        world.advance(1);
+        world.save_if_needed();
+        assert_eq!(fs::metadata(path.join(LEVEL)).and_then(|meta| meta.modified()).expect("файл есть"), written);
+
+        world.set_time_of_day(13_000);
+        world.save_if_needed();
+        assert!(read_level(&path.join(LEVEL)).expect("читается").is_some_and(|level| level.time_offset != 0), "перевод часов не записан");
+    }
+
     /// Испорченный level.dat не даёт миру новое семя: мир читается по
     /// level.dat_old, а испорченный откладывается.
     #[test]
@@ -4105,8 +4596,8 @@ mod safety_tests {
             let mut world = World::open(&path, Some(7), WorldKind::Flat).expect("мир открылся");
 
             world.ensure(0, 0);
-            world.save_if_needed();
-            world.save_if_needed();
+            world.save_all();
+            world.save_all();
         }
 
         assert!(path.join(LEVEL_OLD).exists(), "копии нет");
@@ -4136,9 +4627,10 @@ mod safety_tests {
         let _ = fs::remove_dir_all(&path);
     }
 
-    /// Незаписанный чанк не выгружается: иначе изменения в нём пропали бы.
+    /// Чанк, который не удалось записать, не теряется: выгруженный, он
+    /// читается из очереди записи, а на диск ложится, как только можно.
     #[test]
-    fn unsaved_chunks_are_not_unloaded() {
+    fn unsaved_chunks_are_not_lost() {
         let path = directory("unload-dirty");
         let stone = crate::blocks::state_by_name("stone").unwrap();
         let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
@@ -4153,19 +4645,20 @@ mod safety_tests {
         fs::remove_file(&file).unwrap();
         fs::create_dir(&file).unwrap();
 
+        // Чанк выгружается, но его байты ждут у записи и читаются оттуда.
         world.unload_far(|_, _| false);
-
-        assert!(world.has_chunk(10, 10), "незаписанный чанк выгружен");
-        assert!(!world.has_chunk(0, 0), "записанный чанк остался");
-        assert_eq!(world.get_block(160, flat::SURFACE, 160), stone);
-
-        // Запись снова возможна — чанк записывается и выгружается.
-        fs::remove_dir(&file).unwrap();
-        world.unload_far(|_, _| false);
-
         assert!(!world.has_chunk(10, 10));
         world.ensure(10, 10);
         assert_eq!(world.get_block(160, flat::SURFACE, 160), stone, "изменение потерялось");
+
+        // Запись снова возможна — застрявшее ложится на диск со следующей.
+        fs::remove_dir(&file).unwrap();
+        world.save_all();
+        drop(world);
+
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+        world.ensure(10, 10);
+        assert_eq!(world.get_block(160, flat::SURFACE, 160), stone, "не дошло до диска");
 
         drop(world);
         let _ = fs::remove_dir_all(&path);

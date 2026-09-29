@@ -1,0 +1,50 @@
+{
+  "name": "daylight-dusk",
+  "about": "Датчик света на закате: время ставится на 11800 и идёт; сила падает ступенями по таблице вики (пересчёт раз в 20 тактов). Площадка на высоте 5: у нашего ровного мира земля на нуле, и на обычной высоте −59 неба нет.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:daylight_detector[inverted=false,power=15]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "state": "minecraft:daylight_detector[inverted=true,power=0]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        2
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "time set 11800"
+    }
+  ],
+  "record_ticks": 1400,
+  "origin": [
+    100,
+    5,
+    100
+  ]
+}

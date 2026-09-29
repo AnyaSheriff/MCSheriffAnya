@@ -18,7 +18,9 @@ if (!outFile) {
 }
 const port = Number(portArg);
 const scenario = JSON.parse(fs.readFileSync(scenarioFile, 'utf8'));
-const ORIGIN = { x: 100, y: -59, z: 100 }; // площадка вдали от точки появления
+// Площадка вдали от точки появления. Сценарий может задать свою (`origin`):
+// порядок обновлений пыли у оригинала зависит от места в мире.
+const ORIGIN = scenario.origin ? { x: scenario.origin[0], y: scenario.origin[1], z: scenario.origin[2] } : { x: 100, y: -59, z: 100 };
 const PAD = 8;
 const TICK_MS = 50;
 
@@ -156,11 +158,62 @@ bot._client.on('world_particles', (p) => {
     long: p.longDistance
   });
 });
+// Динамит на площадке: его свойства (запал, блок) пишем отдельно — по ним
+// видно, с каким запалом он появился.
+const padTnt = new Set();
 bot._client.on('spawn_entity', (p) => {
   const pos = { x: p.x, y: p.y, z: p.z };
-  if (inPad(pos)) note('spawn', { at: rel(pos).map(v => Math.round(v * 100) / 100), type: (mcData.entities[p.type] || {}).name || p.type, data: p.objectData, id: p.entityId });
+  const type = (mcData.entities[p.type] || {}).name || p.type;
+  if (inPad(pos) && type === 'tnt') padTnt.add(p.entityId);
+  if (inPad(pos)) note('spawn', { at: rel(pos).map(v => Math.round(v * 100) / 100), type, data: p.objectData, id: p.entityId, velocity: p.velocity });
+});
+bot._client.on('entity_metadata', (p) => {
+  if (!padTnt.has(p.entityId)) return;
+  const fields = (p.metadata || []).map(m => `${m.key}=${typeof m.value === 'object' ? JSON.stringify(m.value) : m.value}`);
+  if (fields.length) note('meta', { id: p.entityId, fields: fields.join(' ') });
+});
+// Взрыв приходит своим пакетом: звук и вспышка — в нём же. Число блоков
+// случайно, сравнивается только место, сила, вспышка и звук.
+bot._client.on('explosion', (p) => {
+  const c = p.center;
+  if (!inPad(c)) return;
+  const s = p.sound || {};
+  const sound = s.soundId !== undefined ? (SOUNDS[String(s.soundId)] || `#${s.soundId}`)
+    : s.data && s.data.soundName ? s.data.soundName
+    : JSON.stringify(s);
+  const smoke = (p.blockParticles || []).map(b => `${b.data.particle.type}:${b.data.scaling}/${b.data.speed}x${b.weight}`).join(' ');
+  note('explosion', { at: rel(c).map(v => Math.round(v * 1000) / 1000), radius: p.radius, blocks: p.blockCount, knockback: Boolean(p.playerKnockback), particle: String(p.explosionParticle && p.explosionParticle.type), sound, smoke });
 });
 bot._client.on('entity_destroy', (p) => note('destroy', { ids: p.entityIds }));
+// Окна хранилищ: робот открывает сундук или воронку щелчком и видит каждое
+// изменение содержимого — сервер шлёт его открытому окну в тот же такт.
+const itemName = (it) => {
+  if (!it || !it.itemCount) return null;
+  const id = it.itemId ?? it.id;
+  return `${(mcData.items[id] || {}).name || id}×${it.itemCount}`;
+};
+let openWindow = null;
+bot._client.on('open_window', (p) => { openWindow = Number(p.windowId); });
+bot._client.on('open_window', (p) => note('window', { type: String(p.inventoryType ?? p.windowType), title: JSON.stringify(p.windowTitle ?? p.title ?? '').slice(0, 60) }));
+bot._client.on('window_items', (p) => {
+  if (Number(p.windowId) === 0) return;
+  const slots = (p.items || []).map((it, i) => [i, itemName(it)]).filter(([, n]) => n).map(([i, n]) => `${i}:${n}`);
+  note('slots', { items: slots.join(' ') });
+});
+let stateId = 0;
+bot._client.on('window_items', (p) => { stateId = p.stateId; });
+bot._client.on('set_slot', (p) => {
+  stateId = p.stateId;
+  if (Number(p.windowId) === 0) return;
+  note('slot', { window: Number(p.windowId) === -1 ? 'курсор' : 'окно', slot: p.slot, item: itemName(p.item) || 'пусто' });
+});
+bot._client.on('set_cursor_item', (p) => note('cursor', { item: itemName(p.contents) || 'пусто' }));
+// События мира (звук и дым выбрасывателя, шаги и т. п.) — клиент играет их сам.
+bot._client.on('world_event', (p) => {
+  if (inPad(p.location)) note('level', { at: rel(p.location), effect: p.effectId, data: p.data });
+});
+bot._client.on('craft_progress_bar', (p) => note('property', { property: p.property, value: p.value }));
+bot._client.on('close_window', () => note('close', {}));
 bot._client.on('tile_entity_data', (p) => {
   if (inPad(p.location)) note('block_entity', { at: rel(p.location), type: p.action, data: JSON.stringify(p.nbtData).slice(0, 200) });
 });
@@ -172,7 +225,7 @@ let pendingDo = null;
   const write = bot._client.write.bind(bot._client);
   bot._client.write = (name, params) => {
     if (process.env.BB_DEBUG && name !== 'position' && name !== 'position_look' && name !== 'look' && name !== 'keep_alive') console.error('→', name, JSON.stringify(params, (k, v) => typeof v === 'bigint' ? String(v) : v).slice(0, 160));
-    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed')) {
+    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'window_click')) {
       // Такт нажатия берём из плана, а не из часов: в какой такт целились,
       // в тот оно и уходит. Часы на этом месте врать не должны, но нажатие
       // ложится ровно на границу счёта, и округление могло бы дрогнуть.
@@ -250,11 +303,18 @@ const calibrate = async (times = 6) => {
 const sleepTicks = (n) => new Promise(r => setTimeout(r, n * TICK_MS));
 const say = async (cmd) => { bot.chat('/' + cmd); await sleepTicks(2); };
 const setBlock = (b) => say(`setblock ${ORIGIN.x + b.at[0]} ${ORIGIN.y + b.at[1]} ${ORIGIN.z + b.at[2]} ${b.state}`);
+// Команда сценария: `$(dx,dy,dz)` заменяется настоящими координатами точки
+// площадки — так в `cmd` можно звать summon, data, item и прочее. Дробные
+// смещения тоже годятся: `$(0.5,0,0.5)` — середина клетки (summon).
+const expand = (cmd) => cmd.replace(/\$\((-?[\d.]+),(-?[\d.]+),(-?[\d.]+)\)/g, (_, x, y, z) => `${ORIGIN.x + Number(x)} ${ORIGIN.y + Number(y)} ${ORIGIN.z + Number(z)}`);
 
 bot.once('spawn', async () => {
   try {
     await sleepTicks(100); // дать роботу разобрать присланные чанки
     await say(`gamemode creative`);
+    // Инвентарь робота у каждого сервера свой и переживает перезаходы:
+    // очищаем, чтобы окна хранилищ показывали одно и то же.
+    await say(`clear blackbox`);
     await say(`tp blackbox ${ORIGIN.x + 3} ${ORIGIN.y + 1} ${ORIGIN.z + 3}`);
     // Висеть на месте, пока строится пол: у нашего ровного мира земля на
     // нуле, и площадка на ORIGIN.y оказывается в пустоте под ней. Упавшего
@@ -263,6 +323,10 @@ bot.once('spawn', async () => {
     await sleepTicks(40);
     await say(`fill ${ORIGIN.x - PAD} ${ORIGIN.y - 1} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${ORIGIN.y + PAD} ${ORIGIN.z + PAD} minecraft:air`);
     await say(`fill ${ORIGIN.x - PAD} ${ORIGIN.y - 1} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${ORIGIN.y - 1} ${ORIGIN.z + PAD} minecraft:stone`);
+    // Чужие сущности вокруг площадки — летучие мыши из пещер, предметы от
+    // прошлых взрывов — шумят в записи: убрать и мобов больше не пускать.
+    await say(`gamerule spawn_mobs false`);
+    await say(`kill @e[type=!player,distance=..48]`);
     await sleepTicks(20);
     // Сетку тактов снимаем до постройки: калибровка ставит и убирает блок
     // в углу площадки, и этот угол потом затирается заливкой.
@@ -272,6 +336,7 @@ bot.once('spawn', async () => {
     await say(`setblock ${ORIGIN.x + PAD} ${ORIGIN.y} ${ORIGIN.z + PAD} minecraft:air`);
 
     for (const b of scenario.blocks) await setBlock(b);
+    for (const c of scenario.setup || []) await say(expand(c));
     await sleepTicks(40);                      // тишина перед записью
     // Прицелиться заранее, до начала записи: иначе поворот головы съест
     // первые такты сценария.
@@ -302,9 +367,18 @@ bot.once('spawn', async () => {
       // куда бы отправка ни дрогнула.
       const at = baseTick + (a.after || 0);
       await waitTick(at, 0);
-      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : JSON.stringify(a);
+      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : JSON.stringify(a);
       pendingDo = { what, tick: at };
       if (a.set) bot.chat(`/setblock ${ORIGIN.x + a.set.at[0]} ${ORIGIN.y + a.set.at[1]} ${ORIGIN.z + a.set.at[2]} ${a.set.state}`);
+      if (a.cmd) bot.chat('/' + expand(a.cmd));
+      // Закрыть открытое окно, как это делает игрок клавишей Esc.
+      // Щелчок в открытом окне: слот, кнопка, режим. Что изменилось, робот
+      // серверу не подсказывает — пусть сервер сам пришлёт итог.
+      if (a.window_click && openWindow !== null) {
+        const w = a.window_click;
+        bot._client.write('window_click', { windowId: openWindow, stateId, slot: w.slot, mouseButton: w.button || 0, mode: w.mode || 0, changedSlots: [], cursorItem: undefined });
+      }
+      if (a.close && openWindow !== null) { bot._client.write('close_window', { windowId: openWindow }); openWindow = null; }
       if (a.click) {
         const block = bot.blockAt(new Vec3(ORIGIN.x + a.click[0], ORIGIN.y + a.click[1], ORIGIN.z + a.click[2]));
 

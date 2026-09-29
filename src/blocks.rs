@@ -274,6 +274,14 @@ pub fn item_named(name: &str) -> Option<i32> {
         .map(|(number, _)| *number)
 }
 
+/// Имя предмета по номеру.
+pub fn item_name(item: i32) -> Option<&'static str> {
+    ITEM_NAMES
+        .binary_search_by_key(&item, |(number, _)| *number)
+        .ok()
+        .map(|index| ITEM_NAMES[index].1)
+}
+
 /// Состояние блока по умолчанию — то, которое и надо ставить.
 ///
 /// Именно оно, а не начало промежутка состояний: у свойств-переключателей
@@ -743,6 +751,52 @@ fn tool_suits(state: i32, tool: Option<i32>) -> bool {
     };
 
     tool.is_some_and(|tool| suitable.contains(&tool))
+}
+
+/// Стойкость блока к взрыву — число из minecraft-data (таблица
+/// `hardness_table::RESISTANCE`, вики, Explosion: «Blast resistance»).
+/// Блок с водой внутри держит не слабее самой воды: луч проверяет блок
+/// в точке, а вода в нём — тоже блок на пути (вики, Explosion: «Sufficiently
+/// weak explosions happening on … any height of water or lava don't do block
+/// damage»). [проверить] залитые водой ступени и плиты чёрным ящиком.
+pub fn blast_resistance(state: i32) -> f32 {
+    use std::cmp::Ordering;
+
+    let table = crate::hardness_table::RESISTANCE;
+    let own = table
+        .binary_search_by(|(low, high, _)| {
+            if *high < state {
+                Ordering::Less
+            } else if *low > state {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
+            }
+        })
+        .map_or(0.0, |index| table[index].2);
+
+    let waterlogged = orientation_of(state).is_some_and(|block| block.value(state, "waterlogged") == Some("true"));
+
+    if waterlogged {
+        let water = state_by_name("water").map_or(own, blast_resistance);
+        return own.max(water);
+    }
+
+    own
+}
+
+/// Что выпадает из блока, разрушенного динамитом: «as if mined by a player
+/// using a correct, unenchanted tool (or an empty hand if the correct tool
+/// would be shears)» (вики, TNT). Инструмент — первый годный из таблицы,
+/// кроме ножниц.
+pub fn explosion_drops(state: i32, luck: f32) -> Option<crate::inventory::Stack> {
+    let shears = item_named("shears");
+    let tool = HARVEST_TOOLS
+        .iter()
+        .find(|(low, high, _)| (*low..=*high).contains(&state))
+        .and_then(|(_, _, suitable)| suitable.iter().copied().find(|tool| Some(*tool) != shears));
+
+    drops_by_luck(state, tool, luck)
 }
 
 #[cfg(test)]

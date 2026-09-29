@@ -1,0 +1,58 @@
+{
+ "name": "target-shape",
+ "about": "Пыль рядом с местом, куда командой ставят и убирают мишень: тянется ли пыль к мишени (форма) и что видит лампа.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:redstone_wire"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:target"
+   }
+  },
+  {
+   "after": 10,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 20,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:target"
+   }
+  }
+ ],
+ "record_ticks": 40
+}

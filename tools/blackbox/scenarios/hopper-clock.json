@@ -1,0 +1,76 @@
+{
+  "name": "hopper-clock",
+  "about": "Две воронки смотрят друг в друга и гоняют один камень; сравнители читают каждую, провод показывает силу. Первая воронка заперта редстоун-блоком до начала записи.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:hopper[enabled=false,facing=east]{Items:[{Slot:0b,id:\"minecraft:stone\",count:1}]}"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:hopper[enabled=true,facing=west]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        1
+      ],
+      "state": "minecraft:comparator[facing=north,mode=compare,powered=false]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        1
+      ],
+      "state": "minecraft:comparator[facing=north,mode=compare,powered=false]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        2
+      ],
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        -1
+      ],
+      "state": "minecraft:redstone_block"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          0,
+          0,
+          -1
+        ],
+        "state": "minecraft:air"
+      }
+    }
+  ],
+  "record_ticks": 200
+}

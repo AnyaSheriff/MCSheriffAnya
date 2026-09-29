@@ -290,6 +290,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         "time" => time(parts.collect::<Vec<&str>>().as_slice(), shared),
         "setblock" => set_blocks(parts.collect::<Vec<&str>>().as_slice(), shared, dimension_of(source, shared), false),
         "fill" => set_blocks(parts.collect::<Vec<&str>>().as_slice(), shared, dimension_of(source, shared), true),
+        "item" => item(parts.collect::<Vec<&str>>().as_slice(), shared, dimension_of(source, shared)),
         "list" => {
             let names = shared
                 .players
@@ -493,6 +494,18 @@ fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool)
         *slot = value;
     }
 
+    // Данные блока в фигурных скобках — как у оригинала: пока понимаются
+    // только ячейки хранилища (`{Items:[{Slot:0b,id:"minecraft:stone",count:5}]}`).
+    let (block, data) = match block.find('{') {
+        Some(at) => (&block[..at], Some(&block[at..])),
+        None => (block, None),
+    };
+    let items = match data.map(crate::containers::items_from_text) {
+        Some(Some(items)) => Some(items),
+        Some(None) => return Answer::saying(format!("Не понял данные блока: {}", data.unwrap_or(""))),
+        None => None,
+    };
+
     let Some(state) = blocks::state_from_text(block) else {
         return Answer::saying(format!("Не знаю такого блока: {}", block));
     };
@@ -533,16 +546,45 @@ fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool)
     }
 
     let mut changed = 0;
+    let mut placed = Vec::new();
 
     for x in x1..=x2 {
         for y in y1..=y2 {
             for z in z1..=z2 {
+                // Как у оригинала: команда хранилище сперва опустошает, и
+                // заменённый сундук ничего не высыпает.
+                world.with_container(x, y, z, |container| container.slots.fill(None));
+
+                if world.get_block(x, y, z) != state {
+                    world.note_commanded(x, y, z);
+                }
+
                 if world.get_block(x, y, z) != state && world.set_block(x, y, z, state) {
                     changed += 1;
+                    placed.push((x, y, z));
+                }
+
+                if let Some(items) = &items {
+                    let filled = world.with_container(x, y, z, |container| {
+                        container.slots.fill(None);
+
+                        for &(slot, stack) in items {
+                            if let Some(place) = container.slots.get_mut(slot) {
+                                *place = Some(stack);
+                            }
+                        }
+                    });
+
+                    if filled.is_some() {
+                        changed += 1;
+                    }
                 }
             }
         }
     }
+
+    world.take_spilled();
+    crate::containers::after_change(&mut world);
 
     for x in x1..=x2 {
         for y in y1..=y2 {
@@ -553,6 +595,15 @@ fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool)
     }
 
     crate::redstone::settle(&mut world);
+
+    // Поставленное командой подстраивается под соседей уже после того, как
+    // соседи узнали о нём (сценарий observer-clock: сосед-наблюдатель
+    // срабатывает раньше поставленного).
+    for place in placed {
+        crate::redstone::command_placed(&mut world, place);
+        crate::redstone::settle(&mut world);
+    }
+
     world.save_if_due();
 
     if area {
@@ -561,6 +612,63 @@ fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool)
         Answer::saying("Там уже такой блок".to_string())
     } else {
         Answer::saying(format!("Блок в {}, {}, {} изменён", x1, y1, z1))
+    }
+}
+
+/// `item replace block <x> <y> <z> container.<N> with <предмет> [сколько]`:
+/// кладёт предмет в ячейку хранилища (воздух — опустошает её). Как у
+/// оригинала, сравнители рядом узнают о смене содержимого.
+fn item(parts: &[&str], shared: &Shared, dimension: Dimension) -> Answer {
+    let usage = || Answer::saying("Нужно: item replace block <x> <y> <z> container.<N> with <предмет> [сколько]".to_string());
+
+    let ["replace", "block", x, y, z, slot, "with", thing, rest @ ..] = parts else {
+        return usage();
+    };
+
+    let (Ok(x), Ok(y), Ok(z)) = (x.parse::<i32>(), y.parse::<i32>(), z.parse::<i32>()) else {
+        return usage();
+    };
+
+    let Some(slot) = slot.strip_prefix("container.").and_then(|n| n.parse::<usize>().ok()) else {
+        return usage();
+    };
+
+    let count = match rest {
+        [] => 1,
+        [count] => match count.parse::<i32>() {
+            Ok(count) if count > 0 => count,
+            _ => return usage(),
+        },
+        _ => return usage(),
+    };
+
+    let name = thing.strip_prefix("minecraft:").unwrap_or(thing);
+    let stack = if name == "air" {
+        None
+    } else {
+        let Some(number) = blocks::item_named(name) else {
+            return Answer::saying(format!("Не знаю такого предмета: {}", thing));
+        };
+
+        Some(crate::inventory::Stack::new(number, count.min(blocks::stack_size(number))))
+    };
+
+    let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+    let done = world.with_container(x, y, z, |container| match container.slots.get_mut(slot) {
+        Some(place) => {
+            *place = stack;
+            true
+        }
+        None => false,
+    });
+
+    match done {
+        Some(true) => {
+            crate::containers::after_change(&mut world);
+            Answer::saying(format!("Ячейка {} изменена", slot))
+        }
+        Some(false) => Answer::saying(format!("Нет ячейки {}", slot)),
+        None => Answer::saying("Там нет хранилища".to_string()),
     }
 }
 

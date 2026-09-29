@@ -1,0 +1,65 @@
+{
+  "name": "comparator-chest",
+  "about": "Сравнитель читает сундук, в который командой кладут разное число предметов; провод за сравнителем показывает силу.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:chest[facing=north,type=single,waterlogged=false]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    },
+    {
+      "at": [
+        3,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace block $(0,0,0) container.0 with minecraft:stone 1"
+    },
+    {
+      "after": 10,
+      "cmd": "item replace block $(0,0,0) container.1 with minecraft:stone 64"
+    },
+    {
+      "after": 20,
+      "cmd": "item replace block $(0,0,0) container.2 with minecraft:ender_pearl 16"
+    },
+    {
+      "after": 30,
+      "cmd": "item replace block $(0,0,0) container.3 with minecraft:diamond_sword 1"
+    },
+    {
+      "after": 40,
+      "cmd": "item replace block $(0,0,0) container.0 with minecraft:air"
+    },
+    {
+      "after": 50,
+      "cmd": "item replace block $(0,0,0) container.1 with minecraft:air"
+    }
+  ],
+  "record_ticks": 80
+}

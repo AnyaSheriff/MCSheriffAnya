@@ -1,0 +1,109 @@
+{
+ "name": "rail-slope-support",
+ "about": "Наклонная рельса опирается поднятым концом на блок: убрали его — отваливаются верхняя рельса и наклон [проверить]; рельса на убранной опоре снизу отваливается.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    1,
+    0
+   ],
+   "state": "minecraft:rail[shape=east_west,waterlogged=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:rail[shape=ascending_east,waterlogged=false]"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    2
+   ],
+   "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    0,
+    2
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=ascending_east,waterlogged=false]"
+  },
+  {
+   "at": [
+    4,
+    1,
+    2
+   ],
+   "state": "minecraft:powered_rail[powered=false,shape=east_west,waterlogged=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     1,
+     0,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 10,
+   "set": {
+    "at": [
+     -3,
+     -1,
+     2
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 20,
+   "set": {
+    "at": [
+     4,
+     1,
+     2
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 30,
+   "set": {
+    "at": [
+     4,
+     0,
+     2
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 50
+}

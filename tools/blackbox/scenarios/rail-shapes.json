@@ -1,0 +1,190 @@
+{
+ "name": "rail-shapes",
+ "about": "Рельсы ставятся командой по одной: вторая рядом — обе вдоль, третья сбоку — крайняя поворачивает, рядом с серединой линии — не соединяется; развилка переключается блоком редстоуна; наклон к рельсе на блок выше; рельсы, поставленные щелчком — к линии и одиночная (по взгляду). Перекрёсток на блоке редстоуна — поворот к северу и западу.",
+ "setup": [
+  "give blackbox minecraft:rail 64"
+ ],
+ "blocks": [
+  {
+   "at": [
+    3,
+    0,
+    -3
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 4,
+   "set": {
+    "at": [
+     1,
+     0,
+     0
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 8,
+   "set": {
+    "at": [
+     0,
+     0,
+     1
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 12,
+   "set": {
+    "at": [
+     -1,
+     0,
+     0
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 16,
+   "set": {
+    "at": [
+     0,
+     0,
+     -1
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 22,
+   "set": {
+    "at": [
+     0,
+     0,
+     -1
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 26,
+   "set": {
+    "at": [
+     3,
+     1,
+     -3
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 30,
+   "set": {
+    "at": [
+     2,
+     0,
+     -3
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 34,
+   "set": {
+    "at": [
+     -4,
+     -1,
+     -3
+    ],
+    "state": "minecraft:redstone_block"
+   }
+  },
+  {
+   "after": 36,
+   "set": {
+    "at": [
+     -5,
+     0,
+     -3
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 38,
+   "set": {
+    "at": [
+     -3,
+     0,
+     -3
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 40,
+   "set": {
+    "at": [
+     -4,
+     0,
+     -2
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 41,
+   "set": {
+    "at": [
+     -4,
+     0,
+     -4
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 42,
+   "set": {
+    "at": [
+     -4,
+     0,
+     -3
+    ],
+    "state": "minecraft:rail[shape=north_south,waterlogged=false]"
+   }
+  },
+  {
+   "after": 46,
+   "click": [
+    2,
+    -1,
+    0
+   ]
+  },
+  {
+   "after": 56,
+   "click": [
+    -3,
+    -1,
+    3
+   ]
+  }
+ ],
+ "record_ticks": 80
+}

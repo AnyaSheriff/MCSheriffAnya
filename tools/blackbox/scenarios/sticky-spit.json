@@ -1,0 +1,55 @@
+{
+  "name": "sticky-spit",
+  "about": "Липкий поршень с камнем от импульсов наблюдателя (2 такта): бросает ли поршень блок.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:sticky_piston[extended=false,facing=east]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        -1,
+        0,
+        0
+      ],
+      "state": "minecraft:observer[facing=west,powered=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          -2,
+          0,
+          0
+        ],
+        "state": "minecraft:stone"
+      }
+    },
+    {
+      "after": 20,
+      "set": {
+        "at": [
+          -2,
+          0,
+          0
+        ],
+        "state": "minecraft:air"
+      }
+    }
+  ],
+  "record_ticks": 45
+}

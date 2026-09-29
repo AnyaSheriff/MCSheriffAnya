@@ -17,6 +17,12 @@
 // 120), вторая рука — окно 119. Устройство запросов и ответов — по описанию
 // протокола (minecraft-data, protocol.json 1.26.10: ItemStackRequest,
 // packet_item_stack_response, FullContainerName).
+//
+// Пока открыто окно хранилища (сундук, бочка, воронка…), его ячейки — тоже
+// места запросов: клиент называет их контейнером LevelEntity (7) или Barrel
+// (58), слоты — от нуля по порядку окна. Сами ячейки живут в мире; здесь —
+// их копия, какой её знает клиент, с номерами стопок (world.rs берёт её из
+// мира перед запросом и кладёт обратно после).
 
 use std::collections::BTreeMap;
 
@@ -38,6 +44,12 @@ const INVENTORY: u8 = 29;
 const OFFHAND_SLOT: u8 = 34;
 const CURSOR: u8 = 59;
 const CREATIVE_OUTPUT: u8 = 60;
+
+/// Имена ячеек хранилища (ContainerEnumName документации Mojang к r/26_u1):
+/// сундук, воронка, раздатчик, выбрасыватель — LevelEntityContainer, у бочки
+/// своё имя.
+pub const LEVEL_ENTITY: u8 = 7;
+pub const BARREL: u8 = 58;
 
 /// Окна (WindowID) для Inventory Content.
 const WINDOW_INVENTORY: u32 = 0;
@@ -105,6 +117,8 @@ enum Place {
     Cursor,
     /// Выход творческого меню: сюда кладётся созданный предмет.
     CreativeOutput,
+    /// Ячейка открытого окна хранилища.
+    Container(usize),
 }
 
 /// Слот общей раскладки по контейнеру и слоту Bedrock.
@@ -131,6 +145,8 @@ pub struct Bag {
     pub inventory: Inventory,
     cursor: Option<Stack>,
     creative_output: Option<Stack>,
+    /// Ячейки открытого окна хранилища, какими их знает клиент; None — окна нет.
+    window: Option<Vec<Option<Stack>>>,
     ids: BTreeMap<Place, i32>,
     next_id: i32,
 }
@@ -163,7 +179,7 @@ struct Named {
 
 impl Bag {
     pub fn new(inventory: Inventory) -> Bag {
-        let mut bag = Bag { inventory, cursor: None, creative_output: None, ids: BTreeMap::new(), next_id: 1 };
+        let mut bag = Bag { inventory, cursor: None, creative_output: None, window: None, ids: BTreeMap::new(), next_id: 1 };
 
         for slot in 0..crate::inventory::SLOTS as i32 {
             if bag.inventory.slot(slot).is_some() {
@@ -179,6 +195,7 @@ impl Bag {
             Place::Slot(slot) => self.inventory.slot(slot),
             Place::Cursor => self.cursor,
             Place::CreativeOutput => self.creative_output,
+            Place::Container(slot) => self.window.as_ref()?.get(slot).copied().flatten(),
         }
     }
 
@@ -189,6 +206,11 @@ impl Bag {
             Place::Slot(slot) => self.inventory.set(slot, stack),
             Place::Cursor => self.cursor = stack,
             Place::CreativeOutput => self.creative_output = stack,
+            Place::Container(slot) => {
+                if let Some(place) = self.window.as_mut().and_then(|window| window.get_mut(slot)) {
+                    *place = stack;
+                }
+            }
         }
 
         if stack.is_some() {
@@ -241,6 +263,78 @@ impl Bag {
     /// Что не влезло, отдаётся наружу — это бросают на землю.
     pub fn put_cursor_back(&mut self) -> Option<crate::inventory::Stack> {
         self.inventory.put(self.cursor.take()?).1
+    }
+
+    /// Инвентарь очищен (команда clear): пусто всё, кроме окна хранилища —
+    /// его ячейки лежат в мире.
+    pub fn clear(&mut self) {
+        self.inventory = Inventory::new();
+        self.cursor = None;
+        self.creative_output = None;
+        self.ids.retain(|place, _| matches!(place, Place::Container(_)));
+    }
+
+    /// Открылось окно хранилища: его ячейки становятся местами запросов,
+    /// каждой стопке — свой номер.
+    pub fn open_window(&mut self, slots: &[Option<Stack>]) {
+        self.close_window();
+        self.window = Some(vec![None; slots.len()]);
+
+        for (slot, stack) in slots.iter().enumerate() {
+            self.set(Place::Container(slot), *stack);
+        }
+    }
+
+    /// Окно хранилища закрылось: его ячеек у клиента больше нет.
+    pub fn close_window(&mut self) {
+        self.window = None;
+        self.ids.retain(|place, _| !matches!(place, Place::Container(_)));
+    }
+
+    /// Ячейки открытого окна, какими их знает клиент.
+    pub fn window_slots(&self) -> Option<&[Option<Stack>]> {
+        self.window.as_deref()
+    }
+
+    /// Хранилище изменилось не по запросу этого клиента (воронка, другой
+    /// игрок): ячейки, ставшие другими, получают новые стопки и номера.
+    /// Возвращает, какие ячейки сменились.
+    pub fn update_window(&mut self, now: &[Option<Stack>]) -> Vec<usize> {
+        let Some(window) = &self.window else {
+            return Vec::new();
+        };
+        let changed: Vec<usize> = (0..window.len().min(now.len())).filter(|&slot| window[slot] != now[slot]).collect();
+
+        for &slot in &changed {
+            self.set(Place::Container(slot), now[slot]);
+        }
+
+        changed
+    }
+
+    /// Всё окно хранилища пакетом Inventory Content: номер окна из Container
+    /// Open, только ячейки хранилища (инвентарь игрока в это окно у Bedrock
+    /// не входит), имя контейнера, пустой storage item.
+    pub fn window_content_packet(&self, window: u8, container: u8) -> Option<Vec<u8>> {
+        let slots = self.window.as_ref()?;
+        let mut out = Out::packet(super::session::INVENTORY_CONTENT);
+        out.varint(window as u32).varint(slots.len() as u32);
+
+        for (slot, stack) in slots.iter().enumerate() {
+            write_item(&mut out, *stack, self.id(Place::Container(slot)));
+        }
+
+        out.u8(container).u8(0).zigzag32(0);
+        Some(out.bytes)
+    }
+
+    /// Одна ячейка окна хранилища пакетом Inventory Slot.
+    pub fn window_slot_packet(&self, window: u8, container: u8, slot: usize) -> Option<Vec<u8>> {
+        let stack = *self.window.as_ref()?.get(slot)?;
+        let mut out = Out::packet(super::session::INVENTORY_SLOT);
+        out.varint(window as u32).varint(slot as u32).u8(container).u8(0).zigzag32(0);
+        write_item(&mut out, stack, self.id(Place::Container(slot)));
+        Some(out.bytes)
     }
 
     /// Весь инвентарь: рюкзак с панелью, броня, вторая рука.
@@ -360,8 +454,16 @@ impl Bag {
     }
 
     /// Место по слоту из запроса. Выход творческого меню есть только
-    /// в творческом режиме: в выживании оттуда ничего не берётся.
-    fn place_for(named: Named, creative: bool) -> Option<Place> {
+    /// в творческом режиме: в выживании оттуда ничего не берётся. Ячейки
+    /// хранилища — только пока его окно открыто, и не дальше его размера.
+    fn place_for(&self, named: Named, creative: bool) -> Option<Place> {
+        if matches!(named.container, LEVEL_ENTITY | BARREL) {
+            let size = self.window.as_ref()?.len();
+            let slot = named.slot as usize;
+
+            return (slot < size).then_some(Place::Container(slot));
+        }
+
         place(named.container, named.slot).filter(|place| creative || *place != Place::CreativeOutput)
     }
 
@@ -459,7 +561,7 @@ impl Bag {
         creative: bool,
         touched: &mut Vec<(Named, Place)>,
     ) -> bool {
-        let (Some(from), Some(to)) = (Bag::place_for(source, creative), Bag::place_for(destination, creative)) else {
+        let (Some(from), Some(to)) = (self.place_for(source, creative), self.place_for(destination, creative)) else {
             return false;
         };
         let Some(moving) = self.get(from) else {
@@ -497,7 +599,7 @@ impl Bag {
     }
 
     fn swap(&mut self, source: Named, destination: Named, creative: bool, touched: &mut Vec<(Named, Place)>) -> bool {
-        let (Some(from), Some(to)) = (Bag::place_for(source, creative), Bag::place_for(destination, creative)) else {
+        let (Some(from), Some(to)) = (self.place_for(source, creative), self.place_for(destination, creative)) else {
             return false;
         };
         let (a, b) = (self.get(from), self.get(to));
@@ -510,7 +612,7 @@ impl Bag {
     }
 
     fn remove(&mut self, count: i32, source: Named, creative: bool, touched: &mut Vec<(Named, Place)>) -> Option<Stack> {
-        let from = Bag::place_for(source, creative)?;
+        let from = self.place_for(source, creative)?;
         let stack = self.get(from)?;
 
         if count <= 0 || count > stack.count {
@@ -775,6 +877,130 @@ mod tests {
         let handled = bag.handle_requests(&payload, false);
         assert_eq!(handled.thrown, vec![Stack::new(stone, 1)]);
         assert_eq!(bag.inventory.slot(FIRST_MAIN), Some(Stack::new(stone, 2)));
+    }
+
+    /// Shift-щелчок из сундука: клиент шлёт «взять» из ячейки хранилища
+    /// (LevelEntity, 7) прямо в панель — стопка переезжает, в ответе оба
+    /// контейнера так, как их назвал клиент.
+    #[test]
+    fn a_stack_moves_out_of_a_chest() {
+        let stone = crate::blocks::item_named("stone").expect("камень");
+        let mut chest = vec![None; 54];
+        chest[30] = Some(Stack::new(stone, 10));
+        let mut bag = Bag::new(Inventory::new());
+        bag.open_window(&chest);
+
+        let payload = request(4, 1, |out| {
+            out.u8(0).u8(10);
+            slot(out, LEVEL_ENTITY, 30);
+            slot(out, HOTBAR_AND_INVENTORY, 3);
+        });
+
+        let handled = bag.handle_requests(&payload, false);
+        assert_eq!(handled.response[3], 0); // принято
+        assert_eq!(bag.inventory.slot(FIRST_HOTBAR + 3), Some(Stack::new(stone, 10)));
+        assert_eq!(bag.window_slots().map(|slots| slots[30]), Some(None));
+
+        // Ответ: два контейнера — 7 (слот 30, пусто) и 12 (слот 3, 10 штук).
+        let mut reader = In::new(&handled.response[5..]);
+        assert_eq!(reader.varint(), Some(2));
+        assert_eq!((reader.u8(), reader.u8()), (Some(LEVEL_ENTITY), Some(0)));
+        assert_eq!(reader.varint(), Some(1));
+        assert_eq!((reader.u8(), reader.u8(), reader.u8()), (Some(30), Some(30), Some(0)));
+    }
+
+    /// Обратно — из курсора в бочку (имя 58), половину стопки.
+    #[test]
+    fn a_stack_goes_into_a_barrel() {
+        let stone = crate::blocks::item_named("stone").expect("камень");
+        let mut inventory = Inventory::new();
+        inventory.set(FIRST_MAIN, Some(Stack::new(stone, 8)));
+        let mut bag = Bag::new(inventory);
+        bag.open_window(&[None; 27]);
+
+        let payload = request(5, 2, |out| {
+            out.u8(0).u8(8);
+            slot(out, INVENTORY, 9);
+            slot(out, CURSOR, 0);
+            out.u8(1).u8(4);
+            slot(out, CURSOR, 0);
+            slot(out, BARREL, 26);
+        });
+
+        let handled = bag.handle_requests(&payload, false);
+        assert_eq!(handled.response[3], 0);
+        assert_eq!(bag.window_slots().map(|slots| slots[26]), Some(Some(Stack::new(stone, 4))));
+        assert_eq!(bag.get(Place::Cursor), Some(Stack::new(stone, 4)));
+    }
+
+    /// Без открытого окна и за его краем ячеек хранилища нет: отказ, и
+    /// ничего не меняется.
+    #[test]
+    fn container_slots_exist_only_while_the_window_is_open() {
+        let stone = crate::blocks::item_named("stone").expect("камень");
+        let mut inventory = Inventory::new();
+        inventory.set(FIRST_HOTBAR, Some(Stack::new(stone, 5)));
+        let mut bag = Bag::new(inventory);
+        let payload = |to: u8| {
+            request(6, 1, |out| {
+                out.u8(1).u8(5);
+                slot(out, HOTBAR, 0);
+                slot(out, LEVEL_ENTITY, to);
+            })
+        };
+
+        assert_eq!(bag.handle_requests(&payload(0), false).response[3], 1);
+
+        bag.open_window(&[None; 5]); // воронка
+        assert_eq!(bag.handle_requests(&payload(5), false).response[3], 1);
+        assert_eq!(bag.inventory.slot(FIRST_HOTBAR), Some(Stack::new(stone, 5)));
+
+        assert_eq!(bag.handle_requests(&payload(4), false).response[3], 0);
+        assert_eq!(bag.window_slots().map(|slots| slots[4]), Some(Some(Stack::new(stone, 5))));
+
+        bag.close_window();
+        assert_eq!(bag.window_slots(), None);
+        assert!(!bag.ids.keys().any(|place| matches!(place, Place::Container(_))));
+    }
+
+    /// Что изменилось без клиента, получает новый номер стопки; окно
+    /// пакетом Inventory Content — номер окна, все ячейки, имя контейнера.
+    #[test]
+    fn window_updates_and_content() {
+        let stone = crate::blocks::item_named("stone").expect("камень");
+        let mut bag = Bag::new(Inventory::new());
+        bag.open_window(&[None; 9]);
+
+        let mut now = vec![None; 9];
+        now[2] = Some(Stack::new(stone, 1));
+        assert_eq!(bag.update_window(&now), vec![2]);
+        assert_ne!(bag.id(Place::Container(2)), 0);
+        assert_eq!(bag.update_window(&now), Vec::<usize>::new());
+
+        let packet = bag.window_content_packet(4, LEVEL_ENTITY).expect("окно открыто");
+        let mut reader = In::new(&packet);
+        assert_eq!(reader.varint(), Some(super::super::session::INVENTORY_CONTENT));
+        assert_eq!(reader.varint(), Some(4));
+        assert_eq!(reader.varint(), Some(9));
+        assert_eq!(reader.zigzag32(), Some(0));
+        assert_eq!(reader.zigzag32(), Some(0));
+        assert_eq!(reader.zigzag32(), Some(1)); // камень у Bedrock — 1
+        reader.take(2).expect("количество");
+        reader.varint().expect("метаданные");
+        assert_eq!(reader.u8(), Some(1)); // есть номер стопки
+        assert_eq!(reader.zigzag32(), Some(bag.id(Place::Container(2))));
+        reader.zigzag32().expect("блок");
+        let extra = reader.varint().expect("длина") as usize;
+        reader.take(extra).expect("данные");
+        for _ in 3..9 {
+            assert_eq!(reader.zigzag32(), Some(0));
+        }
+        assert_eq!((reader.u8(), reader.u8(), reader.zigzag32()), (Some(LEVEL_ENTITY), Some(0), Some(0)));
+        assert_eq!(reader.u8(), None);
+
+        // Очистка инвентаря окно не трогает.
+        bag.clear();
+        assert_eq!(bag.window_slots().map(|slots| slots[2]), Some(Some(Stack::new(stone, 1))));
     }
 
     /// Номер щита совпадает с реестром предметов, который получает клиент,

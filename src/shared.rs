@@ -5,7 +5,7 @@
 // и передаётся им одним общим указателем, а не по частям.
 
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 
 use crate::chat::Chat;
@@ -51,9 +51,11 @@ pub struct Shared {
     /// щелчок по рычагу относительно поршня.
     pub tick_starts: tokio::sync::watch::Sender<u64>,
 
-    /// Сколько подключений ждут начала такта, чтобы применить пакет. Такт
-    /// не начинает работу, пока они не отработают.
-    pub waiting_for_tick: std::sync::atomic::AtomicUsize,
+    /// Сколько прочитанных действий игроков (щелчок, ломание, команда) ещё
+    /// не применено. Такт не начинает работу, пока они не отработают: как
+    /// у оригинала, всё, что пришло до начала такта, ложится в этот такт.
+    /// Счётчик общий с читателями подключений, поэтому в `Arc`.
+    pub waiting_for_tick: Arc<std::sync::atomic::AtomicUsize>,
 
     /// Номер, который достанется следующей сущности.
     ///
@@ -126,7 +128,7 @@ impl Shared {
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,
             tick_starts: tokio::sync::watch::channel(0).0,
-            waiting_for_tick: std::sync::atomic::AtomicUsize::new(0),
+            waiting_for_tick: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
             // Номера начинаются с единицы: ноль клиент понимает как «никого».
             entity_ids: AtomicI32::new(1),
             readers: AtomicU64::new(1),

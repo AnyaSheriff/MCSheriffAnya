@@ -1,0 +1,49 @@
+{
+ "name": "bell-click",
+ "about": "Робот щёлкает по колоколу сверху (грань 1): звонит ли колокол от щелчка по верху — у нас нет.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:bell[attachment=floor,facing=north,powered=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:bell[attachment=ceiling,facing=north,powered=false]"
+  },
+  {
+   "at": [
+    2,
+    1,
+    0
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 20,
+   "click": [
+    2,
+    0,
+    0
+   ]
+  }
+ ],
+ "record_ticks": 40
+}

@@ -1,0 +1,85 @@
+{
+  "name": "piston-bud",
+  "about": "Квазисвязность и залипание: блок редстоуна ставят наискось над поршнем — поршень молчит, пока его не обновят; потом блок убирают — остаётся выдвинутым до следующего обновления.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:piston[extended=false,facing=east]"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:air"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:air"
+    },
+    {
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "state": "minecraft:stone"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          1,
+          1,
+          0
+        ],
+        "state": "minecraft:redstone_block"
+      }
+    },
+    {
+      "after": 10,
+      "set": {
+        "at": [
+          0,
+          0,
+          -1
+        ],
+        "state": "minecraft:stone"
+      }
+    },
+    {
+      "after": 25,
+      "set": {
+        "at": [
+          1,
+          1,
+          0
+        ],
+        "state": "minecraft:air"
+      }
+    },
+    {
+      "after": 40,
+      "set": {
+        "at": [
+          0,
+          0,
+          -1
+        ],
+        "state": "minecraft:air"
+      }
+    }
+  ],
+  "record_ticks": 70
+}

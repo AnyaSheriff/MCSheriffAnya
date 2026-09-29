@@ -92,6 +92,11 @@ pub fn read(directory: &Path, chunk_x: i32, chunk_z: i32) -> io::Result<Option<V
 /// ответил. Такой чанк нельзя считать ни пропавшим, ни испорченным — его
 /// надо попробовать прочитать позже.
 pub fn read_stored(directory: &Path, chunk_x: i32, chunk_z: i32) -> io::Result<Stored> {
+    // Ещё не записанное лежит у потока записи — оно новее того, что на диске.
+    if let Some(bytes) = super::writer::waiting(directory, chunk_x, chunk_z) {
+        return Ok(Stored::Found(bytes.to_vec()));
+    }
+
     let path = path_for(directory, chunk_x, chunk_z);
 
     let mut file = match File::open(&path) {

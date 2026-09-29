@@ -1,0 +1,89 @@
+{
+  "name": "comparator-subtract",
+  "about": "Сравнитель в режиме вычитания: сзади блок редстоуна (15), сбоку провод разной силы.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_block"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:comparator[facing=west,mode=subtract,powered=false]"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    },
+    {
+      "at": [
+        3,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        1
+      ],
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        2
+      ],
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        4
+      ],
+      "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        3
+      ],
+      "state": "minecraft:redstone_wire[east=none,north=side,power=0,south=side,west=none]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        1,
+        0,
+        4
+      ]
+    },
+    {
+      "after": 20,
+      "click": [
+        1,
+        0,
+        4
+      ]
+    }
+  ],
+  "record_ticks": 40
+}

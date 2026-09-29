@@ -20,6 +20,8 @@ use crate::shared::Shared;
 use crate::inventory::Stack;
 use crate::items;
 use crate::redstone;
+use crate::containers;
+use crate::tnt;
 use crate::world::{TickKind, World};
 
 /// Сколько длится такт.
@@ -154,6 +156,7 @@ async fn run(shared: Arc<Shared>) {
     // рывком.
     let mut next = tokio::time::Instant::now();
     let mut ticks: u64 = 0;
+    let mut phases = PhaseStats::default();
 
     loop {
         tokio::time::sleep_until(next).await;
@@ -175,6 +178,12 @@ async fn run(shared: Arc<Shared>) {
 
         let started = std::time::Instant::now();
 
+        // Где лежат предметы к началу такта — по этим местам их подбирают
+        // игроки, как у оригинала, где подбор идёт раньше шага предметов.
+        for dimension in Dimension::ALL {
+            shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").note_tick_start();
+        }
+
         // Сперва — пакеты игроков, что накопились за прошлый такт: их
         // применяют сами подключения, а такт ждёт, пока они закончат.
         // Ждём недолго: застрявшее подключение не должно останавливать мир.
@@ -194,6 +203,12 @@ async fn run(shared: Arc<Shared>) {
         for dimension in Dimension::ALL {
             let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
+            // Кто где стоит — для растяжек: их такт проверяет, не ушли ли
+            // с них.
+            let mut clock = std::time::Instant::now();
+            let (present, player_chunks) = occupants(&shared, dimension);
+            redstone::note_occupants(&mut world, present);
+
             let due = world.advance(PER_TICK);
 
             for ((x, y, z), kind) in due {
@@ -208,37 +223,45 @@ async fn run(shared: Arc<Shared>) {
                 redstone::settle(&mut world);
             }
 
+            // Песок и гравий, чей такт падения пришёл, — в полёт сразу, в
+            // фазе запланированных тактов, как у оригинала: место пустеет в
+            // той же рассылке (сценарий sand-into-water).
+            start_falling(&shared, dimension, &mut world);
+            phases.add(0, &mut clock);
+
+            // Случайные такты — после запланированных, до рассылки (вики,
+            // Tick: фаза чанков). Из них у нас пока только горящая руда.
+            redstone::random_ticks(&mut world, &player_chunks, shared.properties.simulation_distance);
+            redstone::settle(&mut world);
+            phases.add(1, &mut clock);
+
+            // Изменения блоков уходят клиентам пачкой — здесь, до блочных
+            // событий, как у оригинала.
+            world.note_broadcast();
+
             // Поршни трогаются отдельной фазой, после всех запланированных
             // тактов: так в игре. Заведённое во время этой фазы ждёт следующего
             // такта — иначе цепочка поршней срабатывала бы вся разом.
-            for (x, y, z) in world.take_block_events() {
-                redstone::block_event(&mut world, (x, y, z));
+            // События, заведённые по ходу этой фазы, исполняются в ней же.
+            while let Some((place, kind, param)) = world.take_block_event() {
+                redstone::block_event(&mut world, place, kind, param);
                 redstone::settle(&mut world);
             }
 
-            // Плиты слушают не сигнал, а мир: на них встают игроки и падают
-            // предметы. Собираем, кто где стоит, и отдаём плитам.
-            let mut standing: Vec<(f64, f64, f64)> = shared
-                .players
-                .lock()
-                .expect("список игроков захвачен другим потоком")
-                .members()
-                .iter()
-                .filter(|member| member.dimension == dimension)
-                .map(|member| (member.position.x, member.position.y, member.position.z))
-                .collect();
+            phases.add(2, &mut clock);
 
-            standing.extend(
-                shared
-                    .items_in(dimension)
-                    .lock()
-                    .expect("предметы захвачены другим потоком")
-                    .items()
-                    .iter()
-                    .map(|item| (item.x, item.y, item.z)),
-            );
+            // Выброшенное выбрасывателями и раздатчиками — в мир; туда же
+            // подожжённый динамит: в фазе сущностей этого же такта его запал
+            // уже убывает.
+            spawn_ejected(&shared, dimension, &mut world);
+            spawn_primed(&shared, dimension, &mut world);
 
-            redstone::step_plates(&mut world, &standing);
+            // Плиты, растяжки и руда слушают не только сигнал, но и мир: на
+            // них встают игроки и падают предметы. Список — заново: только
+            // что выброшенное выбрасывателями тоже в счёт.
+            let (standing, _) = occupants(&shared, dimension);
+            redstone::note_occupants(&mut world, standing);
+            redstone::step_entities(&mut world);
 
             // Всё, что изменилось за такт, должно дойти до соседей по редстоуну.
             redstone::settle(&mut world);
@@ -265,11 +288,13 @@ async fn run(shared: Arc<Shared>) {
                 fluids::item_water((x, y, z), &view)
             };
 
-            let splashes = shared
-                .items_in(dimension)
-                .lock()
-                .expect("предметы захвачены другим потоком")
-                .step_with_water(&solid, &holds_block, &loaded, &water);
+            let (splashes, exploding) = {
+                let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+                let splashes = items.step_with_water(&solid, &holds_block, &loaded, &water);
+
+                // Сперва шаг, потом запал — у каждого динамита.
+                (splashes, items.burn_fuses(&loaded))
+            };
 
             // Предмет вошёл в воду — плеск, как у оригинала.
             for splash in splashes {
@@ -277,8 +302,30 @@ async fn run(shared: Arc<Shared>) {
                 world.note_sound_at(splash.at, "minecraft:entity.generic.splash", splash.volume, pitch);
             }
 
+            // Догоревший динамит взрывается — по порядку появления.
+            explode_all(&shared, dimension, &mut world, exploding);
+
             // Долетевшие до земли снова становятся блоками.
             land_falling(&shared, dimension, &mut world);
+            phases.add(3, &mut clock);
+
+            // Игроки видят содержимое хранилищ таким, каким оно стало к фазе
+            // сущностей: что воронки перенесут дальше, окна увидят в
+            // следующем такте (снято чёрным ящиком, hopper-chain).
+            world.publish_contents();
+
+            // Фаза блок-сущностей: датчики света (раз в 20 тактов), воронки,
+            // потом ходы поршней, которым пора кончиться (они появились позже
+            // воронок).
+            redstone::daylight_tick(&mut world);
+            containers::tick_hoppers(
+                &mut world,
+                &mut shared.items_in(dimension).lock().expect("предметы захвачены другим потоком"),
+            );
+            redstone::settle(&mut world);
+            redstone::finish_due_moves(&mut world);
+            spill_containers(&shared, dimension, &mut world);
+            phases.add(4, &mut clock);
 
             if ticks.is_multiple_of(SAVE_EVERY) {
                 world.save_if_needed();
@@ -288,6 +335,7 @@ async fn run(shared: Arc<Shared>) {
                 unload_empty_chunks(&shared, dimension, &mut world);
             }
 
+            phases.add(5, &mut clock);
         }
 
         // Работа такта сделана: подключения рассылают, что случилось.
@@ -299,8 +347,116 @@ async fn run(shared: Arc<Shared>) {
             log_debug!("Такт {} занял {} мс", ticks, spent.as_millis());
         }
 
+        phases.tick_done(spent);
+
+        if ticks.is_multiple_of(PHASE_REPORT_EVERY) {
+            phases.report();
+        }
+
         shared.ticks.send_replace(ticks);
     }
+}
+
+/// Раз во сколько тактов писать в лог (при `debug`), сколько времени ушло на
+/// каждую фазу такта: по этому видно, что оптимизировать.
+const PHASE_REPORT_EVERY: u64 = 200;
+
+/// Время фаз такта, накопленное между отчётами.
+#[derive(Default)]
+struct PhaseStats {
+    /// По фазам: запланированные такты, случайные такты, блочные события,
+    /// сущности, блок-сущности, запись и выгрузка.
+    spent: [Duration; 6],
+
+    /// Весь такт: сумма и самый долгий.
+    total: Duration,
+    longest: Duration,
+    ticks: u32,
+}
+
+impl PhaseStats {
+    const NAMES: [&'static str; 6] = ["такты", "случайные", "события", "сущности", "блок-сущности", "запись"];
+
+    /// Прибавить время с прошлой отметки к фазе и сдвинуть отметку.
+    fn add(&mut self, phase: usize, clock: &mut std::time::Instant) {
+        let now = std::time::Instant::now();
+
+        self.spent[phase] += now - *clock;
+        *clock = now;
+    }
+
+    fn tick_done(&mut self, spent: Duration) {
+        self.total += spent;
+        self.longest = self.longest.max(spent);
+        self.ticks += 1;
+    }
+
+    /// В лог — средние по фазам (мкс на такт) и самый долгий такт; счёт
+    /// начинается заново.
+    fn report(&mut self) {
+        if self.ticks == 0 {
+            return;
+        }
+
+        let per_tick = |spent: Duration| spent.as_micros() / self.ticks as u128;
+        let parts: Vec<String> = Self::NAMES
+            .iter()
+            .zip(self.spent)
+            .map(|(name, spent)| format!("{} {}", name, per_tick(spent)))
+            .collect();
+
+        log_debug!(
+            "Такт: в среднем {} мкс ({}), самый долгий {} мс",
+            per_tick(self.total),
+            parts.join(", "),
+            self.longest.as_millis()
+        );
+
+        *self = PhaseStats::default();
+    }
+}
+
+/// Кто в этом мире может нажать плиту, задеть растяжку, встать на руду:
+/// игроки (кроме наблюдателей — они сквозь всё проходят) и то, что лежит
+/// в мире. Заодно — чанки, где стоят игроки: около них идут случайные такты.
+fn occupants(shared: &Shared, dimension: Dimension) -> (Vec<redstone::Occupant>, Vec<(i32, i32)>) {
+    /// Режим наблюдателя.
+    const SPECTATOR: i32 = 3;
+
+    let mut standing = Vec::new();
+    let mut chunks = Vec::new();
+
+    for member in shared
+        .players
+        .lock()
+        .expect("список игроков захвачен другим потоком")
+        .members()
+        .iter()
+        .filter(|member| member.dimension == dimension)
+    {
+        let (x, y, z) = (member.position.x, member.position.y, member.position.z);
+
+        chunks.push(((x.floor() as i32).div_euclid(16), (z.floor() as i32).div_euclid(16)));
+
+        if member.game_mode != SPECTATOR {
+            standing.push(redstone::Occupant::player(x, y, z, member.sneaking));
+        }
+    }
+
+    standing.extend(
+        shared
+            .items_in(dimension)
+            .lock()
+            .expect("предметы захвачены другим потоком")
+            .items()
+            .iter()
+            .map(|item| match item.block {
+                Some(_) => redstone::Occupant::falling_block(item.x, item.y, item.z, item.on_ground),
+                None => redstone::Occupant::item(item.x, item.y, item.z, item.on_ground),
+            }),
+    );
+
+    (standing, chunks)
 }
 
 /// Убирает из памяти чанки, рядом с которыми никого нет.
@@ -404,11 +560,12 @@ fn land_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
 
         if redstone::free_to_fall_into(there) {
             world.set_block(x, y, z, hardened_in_water(state, there));
-            redstone::settle(world);
 
-            // Оригинал через такт повторяет клиентам приземлившийся блок
-            // (снято чёрным ящиком, сценарий sand-into-water).
-            world.tell_later(x, y, z, 1);
+            // Оригинал говорит о приземлившемся блоке дважды: сразу и ещё
+            // раз общей рассылкой следующего такта (снято чёрным ящиком,
+            // сценарий sand-into-water).
+            world.tell_directly(x, y, z);
+            redstone::settle(world);
             continue;
         }
 
@@ -476,8 +633,97 @@ fn drop_destroyed(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 }
 
+/// Предметы, выброшенные выбрасывателями и раздатчиками, становятся
+/// сущностями: с той точкой и скоростью, что выбрало хранилище.
+fn spawn_ejected(shared: &Shared, dimension: Dimension, world: &mut World) {
+    for (at, velocity, stack) in world.take_ejected() {
+        let entity_id = shared.next_entity_id();
+
+        shared
+            .items_in(dimension)
+            .lock()
+            .expect("предметы захвачены другим потоком")
+            .drop_item(entity_id, stack, at, velocity, items::DISPENSED_DELAY);
+    }
+}
+
+/// Подожжённый динамит становится сущностью: запал и толчок выбрал тот,
+/// кто поджёг.
+fn spawn_primed(shared: &Shared, dimension: Dimension, world: &mut World) {
+    let primed = world.take_primed();
+
+    if primed.is_empty() {
+        return;
+    }
+
+    let state = blocks::state_by_name("tnt").unwrap_or(crate::world::AIR);
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    for (at, velocity, fuse) in primed {
+        items.prime(shared.next_entity_id(), state, at, velocity, fuse);
+    }
+}
+
+/// Взрывы догоревшего динамита. Каждый разбирается до конца — редстоун,
+/// выпавшее из отвалившегося, — прежде чем следующий: второй взрыв видит
+/// мир уже без того, что снёс первый.
+fn explode_all(shared: &Shared, dimension: Dimension, world: &mut World, exploding: Vec<items::Dropped>) {
+    if exploding.is_empty() {
+        return;
+    }
+
+    /// Режим наблюдателя: сквозь всё проходит, взрыв его не толкает.
+    const SPECTATOR: i32 = 3;
+
+    let players: Vec<tnt::Target> = shared
+        .players
+        .lock()
+        .expect("список игроков захвачен другим потоком")
+        .members()
+        .iter()
+        .filter(|member| member.dimension == dimension && member.game_mode != SPECTATOR)
+        .map(|member| tnt::Target {
+            entity_id: member.entity_id,
+            x: member.position.x,
+            y: member.position.y,
+            z: member.position.z,
+            sneaking: member.sneaking,
+        })
+        .collect();
+
+    for primed in exploding {
+        {
+            let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+            let mut next_id = || shared.next_entity_id();
+
+            tnt::explode(world, &mut items, &players, tnt::centre_of(&primed), tnt::POWER, &mut next_id);
+        }
+
+        redstone::settle(world);
+        drop_destroyed(shared, dimension, world);
+    }
+}
+
+/// Хранилища, чей блок сломали, высыпают содержимое на месте блока.
+fn spill_containers(shared: &Shared, dimension: Dimension, world: &mut World) {
+    for ((x, y, z), container) in world.take_spilled() {
+        for stack in container.slots.into_iter().flatten() {
+            let entity_id = shared.next_entity_id();
+            let (dx, dz) = (world.random_unit() as f64 * 0.8 + 0.1, world.random_unit() as f64 * 0.8 + 0.1);
+
+            shared
+                .items_in(dimension)
+                .lock()
+                .expect("предметы захвачены другим потоком")
+                .drop_item(entity_id, stack, (x as f64 + dx, y as f64 + 0.5, z as f64 + dz), (0.0, 0.2, 0.0), items::MINED_DELAY);
+        }
+    }
+}
+
 /// Пересчитывает одно место: во что там должна превратиться жидкость.
 pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
+    world.begin_tick((x, y, z), TickKind::Fluid);
+
     // Правилам нужно смотреть на несколько блоков вперёд, поэтому им даётся
     // не набор соседей, а способ спросить любое место мира. Смотреть и менять
     // одновременно нельзя, поэтому сперва считаем, и только потом ставим.
@@ -489,6 +735,12 @@ pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
 
     if let Some(state) = wanted {
         let here = world.get_block(x, y, z);
+
+        // Лава, ставшая камнем от воды, шипит: событие мира 1501 (чёрный
+        // ящик, water-meets-lava).
+        if matches!(fluids::fluid_at(here), Some((fluids::Kind::Lava, _))) && fluids::fluid_at(state).is_none() {
+            world.note_level_event(x, y, z, 1501, 0);
+        }
 
         // У оригинала жидкость толкает сама: пустое место получает её на
         // такте той жидкости, что рядом, — через задержку после того, как
@@ -577,6 +829,83 @@ mod tests {
 
     fn water(level: i32) -> i32 {
         fluids::state_of(Kind::Water, level)
+    }
+
+    /// Источник забрали (раздатчик с ведром): на его место вода от соседей
+    /// возвращается их тактом, через 5 тактов, вместе с их спадом (чёрный
+    /// ящик, dispenser-water).
+    #[test]
+    fn a_taken_source_refills_with_the_neighbours() {
+        let mut world = floor();
+
+        world.set_block(0, 64, 0, water(0));
+        run(&mut world, 60);
+        assert_eq!(world.get_block(1, 64, 0), water(1));
+
+        world.set_block(0, 64, 0, AIR);
+        redstone::settle(&mut world);
+
+        for tick in 1..=5 {
+            run(&mut world, 1);
+            let here = world.get_block(0, 64, 0);
+
+            if tick < 5 {
+                assert_eq!(here, AIR, "вода вернулась через {tick}");
+            }
+        }
+
+        assert_eq!(world.get_block(0, 64, 0), water(2));
+    }
+
+    /// То же с настоящим раздатчиком: включаясь, он будит соседний источник,
+    /// но этот такт пропадает вместе с источником, которое забирает ведро, —
+    /// вода возвращается тактом соседей, через 5 после забора.
+    #[test]
+    fn a_dispenser_takes_the_source_and_water_returns_with_the_neighbours() {
+        let mut world = floor();
+        let dispenser = blocks::orientation("dispenser").unwrap().state(&[("facing", "east"), ("triggered", "false")]).unwrap();
+        world.set_block(-1, 64, 0, dispenser);
+        redstone::settle(&mut world);
+        let bucket = blocks::item_named("bucket").unwrap();
+        world.with_container(-1, 64, 0, |container| container.slots[0] = Some(crate::inventory::Stack::new(bucket, 1)));
+
+        world.set_block(0, 64, 0, water(0));
+        redstone::settle(&mut world);
+
+        let full = |world: &mut World| {
+            for ((x, y, z), kind) in world.advance(PER_TICK) {
+                match kind {
+                    TickKind::Block => redstone::ticked(world, (x, y, z)),
+                    TickKind::Fluid => flow(world, x, y, z),
+                }
+                redstone::settle(world);
+            }
+        };
+
+        for _ in 0..60 {
+            full(&mut world);
+        }
+
+        world.set_block(-1, 65, 0, blocks::state_by_name("redstone_block").unwrap());
+        redstone::settle(&mut world);
+
+        let mut taken = None;
+
+        for tick in 1..=12 {
+            full(&mut world);
+            let here = world.get_block(0, 64, 0);
+
+            match taken {
+                None if here == AIR => taken = Some(tick),
+                Some(at) if fluids::fluid_at(here).is_some() => {
+                    assert_eq!(tick - at, 5, "вода вернулась не через 5 тактов");
+                    return;
+                }
+                _ => {}
+            }
+        }
+
+        panic!("вода не вернулась");
     }
 
     /// Сколько гравия и песка падает в только что сложенном обычном мире и

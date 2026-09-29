@@ -1,0 +1,68 @@
+{
+  "name": "piston-relay",
+  "about": "Три поршня: каждый толкает блок редстоуна вплотную к следующему поршню. Видно, через сколько тактов стартует следующий (у оригинала — 3).",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:piston[extended=false,facing=south]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        1
+      ],
+      "state": "minecraft:redstone_block"
+    },
+    {
+      "at": [
+        1,
+        0,
+        2
+      ],
+      "state": "minecraft:piston[extended=false,facing=east]"
+    },
+    {
+      "at": [
+        2,
+        0,
+        2
+      ],
+      "state": "minecraft:redstone_block"
+    },
+    {
+      "at": [
+        3,
+        0,
+        3
+      ],
+      "state": "minecraft:piston[extended=false,facing=south]"
+    },
+    {
+      "at": [
+        3,
+        0,
+        4
+      ],
+      "state": "minecraft:redstone_block"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "set": {
+        "at": [
+          -1,
+          0,
+          0
+        ],
+        "state": "minecraft:redstone_block"
+      }
+    }
+  ],
+  "record_ticks": 40
+}

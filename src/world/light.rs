@@ -231,7 +231,6 @@ impl ChunkLight {
     }
 
     /// Небесный и блочный свет в блоке (местные координаты чанка).
-    #[cfg(test)]
     pub fn at(&self, local_x: i32, y: i32, local_z: i32) -> (u8, u8) {
         let layer = (y - super::MIN_Y) as usize;
         let index = (layer % 16) * LAYER + local_z as usize * 16 + local_x as usize;

@@ -1,0 +1,93 @@
+{
+ "name": "plate-items",
+ "about": "Выбрасыватели под плитами выкидывают предмет вверх: каменная плита от предмета не нажимается, деревянная — нажимается; лампы рядом.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    -1,
+    0
+   ],
+   "state": "minecraft:dropper[facing=up,triggered=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:stone_pressure_plate[powered=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    1
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+  },
+  {
+   "at": [
+    4,
+    -1,
+    0
+   ],
+   "state": "minecraft:dropper[facing=up,triggered=false]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    0
+   ],
+   "state": "minecraft:oak_pressure_plate[powered=false]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    1
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    0
+   ],
+   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+  }
+ ],
+ "setup": [
+  "item replace block $(0,-1,0) container.0 with minecraft:stone 1",
+  "item replace block $(4,-1,0) container.0 with minecraft:stone 1"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 10,
+   "click": [
+    5,
+    0,
+    0
+   ]
+  }
+ ],
+ "record_ticks": 80
+}

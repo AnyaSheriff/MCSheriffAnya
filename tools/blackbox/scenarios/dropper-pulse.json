@@ -1,0 +1,89 @@
+{
+  "name": "dropper-pulse",
+  "about": "Два выбрасывателя с камнями от кнопок сверху: один кладёт в сундук, другой выбрасывает в воздух.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:dropper[facing=east,triggered=false]{Items:[{Slot:0b,id:\"minecraft:stone\",count:5}]}"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:chest[facing=north,type=single,waterlogged=false]"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:stone_button[face=floor,facing=north,powered=false]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        3
+      ],
+      "state": "minecraft:dropper[facing=east,triggered=false]{Items:[{Slot:0b,id:\"minecraft:stone\",count:5}]}"
+    },
+    {
+      "at": [
+        0,
+        1,
+        3
+      ],
+      "state": "minecraft:stone_button[face=floor,facing=north,powered=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 2,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 30,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 60,
+      "click": [
+        0,
+        1,
+        3
+      ]
+    },
+    {
+      "after": 90,
+      "click": [
+        0,
+        1,
+        3
+      ]
+    }
+  ],
+  "record_ticks": 140
+}

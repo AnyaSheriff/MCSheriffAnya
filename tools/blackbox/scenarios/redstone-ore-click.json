@@ -1,0 +1,41 @@
+{
+ "name": "redstone-ore-click",
+ "about": "Щелчок по редстоуновой руде: загорается сразу; гаснет на случайном такте (время случайно — сравнивать только загорание).",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:redstone_ore[lit=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:deepslate_redstone_ore[lit=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 10,
+   "click": [
+    2,
+    0,
+    0
+   ]
+  }
+ ],
+ "record_ticks": 60
+}

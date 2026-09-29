@@ -1,0 +1,61 @@
+{
+  "name": "daylight-noon",
+  "about": "Датчик света под открытым небом в полдень: выход появляется только в такте, кратном 20; щелчок инвертирует — сразу ли меняется сила. Площадка на высоте 5: у нашего ровного мира земля на нуле, и на обычной высоте −59 неба нет.",
+  "setup": [
+    "time set 6000"
+  ],
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:daylight_detector[inverted=false,power=0]"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:redstone_lamp[lit=false]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "time set 6000"
+    },
+    {
+      "after": 7,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 33,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 70,
+  "origin": [
+    100,
+    5,
+    100
+  ]
+}

@@ -1,8 +1,22 @@
+<div align="center">
+
 # MCSheriffAnya
 
-[Русская версия](README_ru.md)
-
 A Minecraft-compatible game server written from scratch in Rust.
+
+[![Java Edition 26.1.2](https://img.shields.io/badge/Java_Edition-26.1.2-62B47A?style=for-the-badge&logo=openjdk&logoColor=white)](#what-works)
+[![Bedrock 26.10–26.13](https://img.shields.io/badge/Bedrock-26.10–26.13-4E4E4E?style=for-the-badge&logo=xbox&logoColor=white)](#what-works)
+[![Rust 2024](https://img.shields.io/badge/Rust-2024-CE422B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![MIT](https://img.shields.io/badge/License-MIT-3DA639?style=for-the-badge)](LICENSE)
+
+[![Last commit](https://img.shields.io/github/last-commit/AnyaSheriff/MCSheriffAnya?style=flat-square&label=last%20commit)](https://github.com/AnyaSheriff/MCSheriffAnya/commits/main)
+[![Stars](https://img.shields.io/github/stars/AnyaSheriff/MCSheriffAnya?style=flat-square&label=stars)](https://github.com/AnyaSheriff/MCSheriffAnya/stargazers)
+[![Issues](https://img.shields.io/github/issues/AnyaSheriff/MCSheriffAnya?style=flat-square&label=issues)](https://github.com/AnyaSheriff/MCSheriffAnya/issues)
+
+[![English](https://img.shields.io/badge/English-selected-0969DA?style=flat-square)](README.md)
+[![Русский](https://img.shields.io/badge/Русский-читать-555555?style=flat-square)](README_ru.md)
+
+</div>
 
 MCSheriffAnya is an independent implementation of the Java Edition server protocol.
 It is not a fork: it is written only from public documentation (the Minecraft

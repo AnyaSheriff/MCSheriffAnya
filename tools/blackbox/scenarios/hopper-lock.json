@@ -1,0 +1,73 @@
+{
+  "name": "hopper-lock",
+  "about": "Воронка с камнями заперта рычагом; рычаг отпирает и снова запирает её, камни идут в сундук.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:hopper[enabled=false,facing=east]{Items:[{Slot:0b,id:\"minecraft:stone\",count:20}]}"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:chest[facing=north,type=single,waterlogged=false]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        -1
+      ],
+      "state": "minecraft:lever[face=floor,facing=north,powered=true]"
+    }
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 2,
+      "click": [
+        0,
+        0,
+        -1
+      ]
+    },
+    {
+      "after": 30,
+      "click": [
+        0,
+        0,
+        -1
+      ]
+    },
+    {
+      "after": 45,
+      "click": [
+        0,
+        0,
+        -1
+      ]
+    },
+    {
+      "after": 70,
+      "click": [
+        0,
+        0,
+        -1
+      ]
+    }
+  ],
+  "record_ticks": 140
+}

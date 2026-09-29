@@ -1,8 +1,22 @@
+<div align="center">
+
 # MCSheriffAnya
 
-[English version](README.md)
-
 Игровой сервер, совместимый с Minecraft, написанный на Rust с нуля.
+
+[![Java Edition 26.1.2](https://img.shields.io/badge/Java_Edition-26.1.2-62B47A?style=for-the-badge&logo=openjdk&logoColor=white)](#что-работает)
+[![Bedrock 26.10–26.13](https://img.shields.io/badge/Bedrock-26.10–26.13-4E4E4E?style=for-the-badge&logo=xbox&logoColor=white)](#что-работает)
+[![Rust 2024](https://img.shields.io/badge/Rust-2024-CE422B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![MIT](https://img.shields.io/badge/Лицензия-MIT-3DA639?style=for-the-badge)](LICENSE)
+
+[![Last commit](https://img.shields.io/github/last-commit/AnyaSheriff/MCSheriffAnya?style=flat-square&label=последний%20коммит)](https://github.com/AnyaSheriff/MCSheriffAnya/commits/main)
+[![Stars](https://img.shields.io/github/stars/AnyaSheriff/MCSheriffAnya?style=flat-square&label=звёзды)](https://github.com/AnyaSheriff/MCSheriffAnya/stargazers)
+[![Issues](https://img.shields.io/github/issues/AnyaSheriff/MCSheriffAnya?style=flat-square&label=задачи)](https://github.com/AnyaSheriff/MCSheriffAnya/issues)
+
+[![English](https://img.shields.io/badge/English-read-555555?style=flat-square)](README.md)
+[![Русский](https://img.shields.io/badge/Русский-выбран-0969DA?style=flat-square)](README_ru.md)
+
+</div>
 
 MCSheriffAnya — независимая реализация серверного протокола Java Edition. Это не
 форк: сервер написан только по открытым источникам (Minecraft Wiki, описания

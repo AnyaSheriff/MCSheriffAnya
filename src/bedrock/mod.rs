@@ -9,10 +9,12 @@
 // - auth — проверка входа Xbox Live (подписи жетонов из Login);
 // - world — появление в мире, чанки, движение, стройка;
 // - inventory — инвентарь, которым распоряжается сервер (Item Stack Request);
+// - containers — окна хранилищ, блок-акторы и крышка сундука;
 // - skin и png — скины: свои у игроков Bedrock, скачанные у игроков Java.
 
 pub mod auth;
 pub mod codec;
+pub mod containers;
 pub mod inventory;
 pub mod png;
 pub mod raknet;

@@ -12,9 +12,11 @@ use std::sync::{Arc, OnceLock};
 use tokio::sync::mpsc;
 
 use super::codec::{In, Out};
+use super::containers as screens;
 use super::session::{self, Connection, Identity};
 use super::inventory::Bag;
 use super::skin;
+use crate::containers;
 use crate::dimension::Dimension;
 use crate::players::{Member, Position};
 use crate::shared::Shared;
@@ -268,6 +270,27 @@ pub struct BedrockWorld {
     /// Приседает ли — по вводу клиента (бит «sneaking»).
     sneaking: bool,
     portal_ready: bool,
+    /// Открытое окно хранилища, если есть.
+    window: Option<OpenWindow>,
+    /// Номер последнего открытого окна — следующее получит на один больше.
+    next_window: u8,
+    /// Крышки сундуков, как их последний раз показали клиенту: открыта ли.
+    /// Оригинал повторяет крышку раз в 5 тактов — клиенту уходит только
+    /// перемена.
+    lids: HashMap<(i32, i32, i32), bool>,
+    /// Блок, по которому последний щелчок сработал как действие (рычаг,
+    /// сундук): повторы щелчка по нему, пока кнопка зажата, пропускаются.
+    last_use: Option<(i32, i32, i32)>,
+}
+
+/// Окно хранилища, открытое у клиента. Его ячейки, какими их знает клиент,
+/// — в инвентаре (`Bag::window_slots`).
+struct OpenWindow {
+    /// Номер окна у клиента.
+    id: u8,
+    kind: containers::Kind,
+    /// Места хранилища (половины сундука) в порядке ячеек окна.
+    halves: Vec<containers::Pos>,
 }
 
 impl BedrockWorld {
@@ -491,6 +514,10 @@ impl BedrockWorld {
             sneaking: false,
             // Зашёл, стоя в портале, — не переносить сразу (как у Java).
             portal_ready: false,
+            window: None,
+            next_window: 0,
+            lids: HashMap::new(),
+            last_use: None,
         };
 
         player.radius = player.radius.min(player.max_radius());
@@ -570,8 +597,9 @@ impl BedrockWorld {
                 }
             }
             session::ITEM_STACK_REQUEST => {
-                let handled = self.bag.handle_requests(payload, self.creative());
-                connection.send(&[handled.response]);
+                let (handled, mut packets) = self.stack_requests(payload);
+                packets.push(handled.response);
+                connection.send(&packets);
 
                 for stack in handled.thrown {
                     self.throw_out(stack);
@@ -686,14 +714,17 @@ impl BedrockWorld {
                 }
             }
             // Клиент закрыл экран — сервер отвечает тем же, иначе экран
-            // больше не откроется.
+            // больше не откроется. Было это окно хранилища — хранилище
+            // теряет смотрящего.
             session::CONTAINER_CLOSE => {
                 let mut reader = In::new(payload);
 
                 if let (Some(window), Some(kind)) = (reader.u8(), reader.u8()) {
-                    let mut close = Out::packet(session::CONTAINER_CLOSE);
-                    close.u8(window).u8(kind).bool(false); // закрыл не сервер
-                    connection.send_one(close);
+                    if self.window.as_ref().is_some_and(|open| open.id == window) {
+                        self.close_window();
+                    }
+
+                    connection.send(&[screens::close_packet(window, kind, false)]); // закрыл не сервер
                 }
             }
             _ => {}
@@ -766,7 +797,7 @@ impl BedrockWorld {
                     self.change_dimension(connection, packets, dimension, (x, y, z));
                 }
                 crate::players::Order::Clear => {
-                    self.bag = Bag::new(crate::inventory::Inventory::new());
+                    self.bag.clear();
                     packets.extend(self.bag.content_packets());
                 }
             }
@@ -820,6 +851,8 @@ impl BedrockWorld {
 
         // Всё, что накопилось для старого измерения, уходит до перехода —
         // вместе с удалением его сущностей: предметов и других игроков.
+        // Окно хранилища закрывается: хранилище осталось в старом мире.
+        packets.extend(self.close_window_by_server());
         packets.extend(self.items_shown.drain().map(remove_entity));
         for (id, shown) in std::mem::take(&mut self.shown) {
             packets.extend(forget_player(id, &shown));
@@ -835,6 +868,7 @@ impl BedrockWorld {
         self.teleport = None;
         self.sent.clear();
         self.loading.clear();
+        self.lids.clear();
         self.published = None;
         self.in_portal = 0;
         self.portal_ready = false;
@@ -1015,7 +1049,7 @@ impl BedrockWorld {
                         self.items_shown.insert(item.entity_id);
                     }
                 }
-                crate::items::Change::Dropped(_) => {}
+                crate::items::Change::Dropped(_) | crate::items::Change::Fuse { .. } => {}
                 crate::items::Change::Gone { entity_id } => {
                     if self.items_shown.remove(&entity_id) {
                         packets.push(remove_entity(entity_id));
@@ -1061,6 +1095,33 @@ impl BedrockWorld {
         // соседний блок уже не переполнит число.
         if !block_in_world(self.dimension, action.position) {
             return;
+        }
+
+        // Щелчок по хранилищу, рычагу, кнопке, двери, музыкальному блоку —
+        // это действие с ними, а не установка, как у Java (place_with_main_hand
+        // в network/play.rs): рука тут ни при чём, а присев, игрок всё-таки
+        // ставит блок.
+        if kind == CLICK && !self.sneaking {
+            // Повтор щелчка, пока кнопка зажата (trigger «simulation tick»),
+            // по тому же блоку ничего не делает: ни рычаг ещё раз не дёргает,
+            // ни блок к сундуку не ставит.
+            if action.trigger == SIMULATION_TICK {
+                if self.last_use == Some(action.position) {
+                    return;
+                }
+            } else {
+                self.last_use = None;
+            }
+
+            if let Some(packets) = self.use_block(action.position, action.face) {
+                self.last_use = Some(action.position);
+
+                if !packets.is_empty() {
+                    connection.send(&packets);
+                }
+
+                return;
+            }
         }
 
         let target = if kind == BREAK { action.position } else { offset(action.position, action.face) };
@@ -1123,6 +1184,14 @@ impl BedrockWorld {
                     .or_else(|| if self.creative() { action.held.and_then(java_item) } else { None });
 
                 if held_item.is_some() && held_item == crate::blocks::item_named("flint_and_steel") {
+                    // По динамиту — поджог, присевший ставит огонь рядом
+                    // (вики, TNT). Сущность динамита Bedrock-клиенту пока
+                    // не показывается — он увидит только взрыв.
+                    if !self.sneaking && crate::tnt::ignite(&mut world, action.position) {
+                        crate::redstone::settle(&mut world);
+                        return;
+                    }
+
                     if world.get_block(target.0, target.1, target.2) == crate::world::AIR {
                         if crate::portal::light(&mut world, target) {
                             log_info!("{} зажёг портал в {} {} {}", self.identity.name, target.0, target.1, target.2);
@@ -1178,6 +1247,219 @@ impl BedrockWorld {
                 }
             }
         }
+    }
+
+    /// Щелчок по блоку, у которого есть своё действие. Хранилище
+    /// открывается через общий ход (containers.rs) — игроки Java увидят
+    /// крышку, услышат звук, ловушка даст сигнал; рычаг, кнопка, дверь,
+    /// музыкальный блок срабатывают, как от щелчка игрока Java. Порядок тот
+    /// же, что в place_with_main_hand (network/play.rs).
+    ///
+    /// None — действия у блока нет (тогда щелчок — установка блока); иначе —
+    /// что отправить клиенту.
+    fn use_block(&mut self, clicked: containers::Pos, face: i32) -> Option<Vec<Vec<u8>>> {
+        // Наблюдатель ничего не трогает; в приключении рычаги, двери и
+        // сундуки — можно.
+        if self.game_mode == crate::commands::GAME_MODE_SPECTATOR {
+            return None;
+        }
+
+        let reach = if self.creative() { REACH_CREATIVE } else { REACH_SURVIVAL };
+        let eyes = (self.position.0 as f64, self.position.1 as f64, self.position.2 as f64);
+        let center = (clicked.0 as f64 + 0.5, clicked.1 as f64 + 0.5, clicked.2 as f64 + 0.5);
+
+        if distance(eyes, center) > reach {
+            return None;
+        }
+
+        let (x, y, z) = clicked;
+        let beyond = offset(clicked, face);
+        let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+
+        if !world.has_chunk(x >> 4, z >> 4) {
+            return None;
+        }
+
+        if let Some(kind) = containers::Kind::of(world.get_block(x, y, z)) {
+            let halves = containers::halves(&world, clicked);
+
+            // Окно уже открыто или сундук придавлен сверху — ничего не
+            // открывается, но и блок не ставится.
+            if self.window.is_some() || !containers::can_open(&world, &halves) {
+                return Some(Vec::new());
+            }
+
+            // Как у Java: звук, повтор самого блока и того, что за гранью,
+            // потом общая рассылка (бочка «открыта», лампы у ловушки)
+            // и крышка в фазе блочных событий.
+            let first = containers::open_begin(&mut world, &halves);
+
+            world.tell_directly(x, y, z);
+            world.tell_directly(beyond.0, beyond.1, beyond.2);
+            containers::open_finish(&mut world, &halves, first);
+            crate::redstone::settle(&mut world);
+
+            let slots = containers::window_slots(&world, &halves);
+            drop(world);
+
+            log_debug!("Bedrock: {} открыл {:?} в {:?}", self.identity.name, kind, clicked);
+            return Some(self.open_window(kind, halves, &slots));
+        }
+
+        if !crate::redstone::use_block(&mut world, clicked) {
+            return None;
+        }
+
+        log_debug!("Bedrock: {} щёлкнул по {:?}", self.identity.name, clicked);
+
+        // Повтор самого блока и того, что за гранью, — сразу, а перемены
+        // вокруг — общей пачкой; нота музыкального блока — последней.
+        world.tell_directly(x, y, z);
+        world.tell_directly(beyond.0, beyond.1, beyond.2);
+        crate::redstone::settle(&mut world);
+        crate::redstone::after_use(&mut world, clicked);
+
+        Some(Vec::new())
+    }
+
+    /// Открывает клиенту окно хранилища: Container Open (номер окна 1–100,
+    /// вид экрана, место) и сразу Inventory Content с ячейками хранилища —
+    /// у двойного сундука все 54, в порядке окна Java (`containers::halves`).
+    /// Место — ведущая половина: её ячейки в окне первые.
+    fn open_window(&mut self, kind: containers::Kind, halves: Vec<containers::Pos>, slots: &[Option<crate::inventory::Stack>]) -> Vec<Vec<u8>> {
+        self.next_window = self.next_window % screens::LAST_WINDOW + screens::FIRST_WINDOW;
+
+        let id = self.next_window;
+        let mut packets = vec![screens::open_packet(id, kind, halves[0])];
+
+        self.bag.open_window(slots);
+        packets.extend(self.bag.window_content_packet(id, screens::slot_name(kind)));
+        self.window = Some(OpenWindow { id, kind, halves });
+        packets
+    }
+
+    /// Хранилища окна больше нет (сломали, сменилось другим блоком).
+    fn window_gone(world: &world::World, window: &OpenWindow) -> bool {
+        window.halves.iter().any(|&(x, y, z)| {
+            world.container(x, y, z).is_none() || containers::Kind::of(world.get_block(x, y, z)).is_none()
+        })
+    }
+
+    /// Закрывает окно хранилища: хранилище теряет смотрящего, как у Java
+    /// (close_own_window в network/play.rs), ячейки окна забываются.
+    /// Возвращает, какое окно было закрыто.
+    fn close_window(&mut self) -> Option<OpenWindow> {
+        let window = self.window.take()?;
+
+        self.bag.close_window();
+
+        let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+
+        // Смотрящим он был, только пока хранилище стоит на месте.
+        if window.halves.iter().all(|&(x, y, z)| world.container(x, y, z).is_some()) {
+            containers::close(&mut world, &window.halves);
+            crate::redstone::settle(&mut world);
+        } else {
+            for &(x, y, z) in &window.halves {
+                world.add_viewers(x, y, z, -1);
+            }
+        }
+
+        Some(window)
+    }
+
+    /// Закрывает окно хранилища по воле сервера — и говорит об этом
+    /// клиенту (Container Close с «закрыл сервер»).
+    fn close_window_by_server(&mut self) -> Option<Vec<u8>> {
+        let window = self.close_window()?;
+
+        log_debug!("Bedrock: {} — окно хранилища закрыто сервером", self.identity.name);
+        Some(screens::close_packet(window.id, screens::screen(window.kind), true))
+    }
+
+    /// Item Stack Request. Пока открыто окно хранилища, его ячейки берутся
+    /// из мира прямо перед запросом и кладутся обратно после — под одним
+    /// замком мира, как щелчок окна у Java (click_window в network/play.rs):
+    /// воронка между ними ничего не потеряет и не размножит. Вместе с ответом
+    /// — ячейки, которые сменились без клиента, чтобы он видел то же, что
+    /// сервер.
+    fn stack_requests(&mut self, payload: &[u8]) -> (super::inventory::Handled, Vec<Vec<u8>>) {
+        let creative = self.creative();
+        let Some(window) = &self.window else {
+            return (self.bag.handle_requests(payload, creative), Vec::new());
+        };
+
+        let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+        let now = containers::window_slots(&world, &window.halves);
+
+        // Хранилища уже нет (его содержимое высыпалось): окно закрывается,
+        // запрос выполняется без него — иначе вещи бы размножились.
+        if Self::window_gone(&world, window) || Some(now.len()) != self.bag.window_slots().map(<[_]>::len) {
+            drop(world);
+
+            let packets = self.close_window_by_server().into_iter().collect();
+            return (self.bag.handle_requests(payload, creative), packets);
+        }
+
+        let (id, name, halves) = (window.id, screens::slot_name(window.kind), window.halves.clone());
+        let mut world = world;
+        let packets: Vec<Vec<u8>> =
+            self.bag.update_window(&now).into_iter().filter_map(|slot| self.bag.window_slot_packet(id, name, slot)).collect();
+        let handled = self.bag.handle_requests(payload, creative);
+        let after = self.bag.window_slots().map(<[_]>::to_vec).unwrap_or_default();
+
+        if after != now {
+            containers::store_window_slots(&mut world, &halves, &after);
+            crate::redstone::settle(&mut world);
+
+            // Так это уже видит и этот клиент: снимок для окон — тоже, иначе
+            // ближайшая рассылка вернула бы ему прежнее.
+            let mut from = 0;
+
+            for &(x, y, z) in &halves {
+                let size = world.container(x, y, z).map_or(0, |container| container.slots.len());
+
+                if let (Some(published), Some(part)) = (world.published.get_mut(&(x, y, z)), after.get(from..from + size))
+                    && published.len() == size
+                {
+                    published.copy_from_slice(part);
+                }
+
+                from += size;
+            }
+        }
+
+        (handled, packets)
+    }
+
+    /// Досылает открытому окну перемены содержимого, опубликованные к этому
+    /// мгновению такта (`World::published`), — как send_window_changes у
+    /// Java. Хранилища больше нет — окно закрывается.
+    fn window_changes(&mut self) -> Vec<Vec<u8>> {
+        let Some(window) = &self.window else {
+            return Vec::new();
+        };
+
+        let (gone, now) = {
+            let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+            let now: Option<Vec<Option<crate::inventory::Stack>>> =
+                window.halves.iter().map(|place| world.published.get(place).cloned()).collect::<Option<Vec<_>>>().map(|parts| parts.concat());
+
+            (Self::window_gone(&world, window), now)
+        };
+
+        if gone {
+            return self.close_window_by_server().into_iter().collect();
+        }
+
+        // Снимок ещё без этого хранилища (окно открылось после него) —
+        // ждём следующего.
+        let Some(now) = now.filter(|now| Some(now.len()) == self.bag.window_slots().map(<[_]>::len)) else {
+            return Vec::new();
+        };
+        let (id, name) = (window.id, screens::slot_name(window.kind));
+
+        self.bag.update_window(&now).into_iter().filter_map(|slot| self.bag.window_slot_packet(id, name, slot)).collect()
     }
 
     /// Почему игроку нельзя сломать блок (`BREAK`) или поставить его
@@ -1441,13 +1723,65 @@ impl BedrockWorld {
             events
         };
 
+        // Места, где сменился блок: хранилищу там и сундукам по соседству —
+        // новый блок-актор (сундук стал половиной большого или перестал,
+        // когда вторую половину сломали), после самого блока.
+        let mut changed = Vec::new();
+        let mut contents = false;
+
         for event in events {
-            if let WorldEvent::Change(change) = event
-                && self.sent.contains(&(change.x >> 4, change.z >> 4))
-                && heights(self.dimension).contains(&change.y)
-            {
-                packets.extend(block_updates(change.x, change.y, change.z, change.state));
+            match event {
+                WorldEvent::Change(change)
+                    if self.sent.contains(&(change.x >> 4, change.z >> 4)) && heights(self.dimension).contains(&change.y) =>
+                {
+                    packets.extend(block_updates(change.x, change.y, change.z, change.state));
+                    changed.push((change.x, change.y, change.z));
+                }
+                // Крышка сундука (Block Action 1, параметр — число
+                // смотрящих): у Bedrock — Block Event «сменить состояние».
+                WorldEvent::Action(action)
+                    if action.action == 1
+                        && screens::is_chest_block(action.block)
+                        && self.sent.contains(&(action.x >> 4, action.z >> 4))
+                        && heights(self.dimension).contains(&action.y) =>
+                {
+                    let (place, open) = ((action.x, action.y, action.z), action.param > 0);
+
+                    if self.lids.insert(place, open) != Some(open) {
+                        packets.push(screens::lid_packet(place, open));
+                    }
+                }
+                WorldEvent::Contents => contents = true,
+                _ => {}
             }
+        }
+
+        if !changed.is_empty() {
+            let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+            let mut actors = Vec::new();
+
+            for (x, y, z) in changed {
+                let around = [(x, y, z), (x + 1, y, z), (x - 1, y, z), (x, y, z + 1), (x, y, z - 1)];
+
+                for (index, place) in around.into_iter().enumerate() {
+                    let kind = containers::Kind::of(world.get_block(place.0, place.1, place.2));
+                    let wanted = match kind {
+                        Some(containers::Kind::Chest | containers::Kind::TrappedChest) => true,
+                        Some(_) => index == 0,
+                        None => false,
+                    };
+
+                    if wanted && self.sent.contains(&(place.0 >> 4, place.2 >> 4)) && !actors.contains(&place) {
+                        actors.push(place);
+                    }
+                }
+            }
+
+            packets.extend(actors.into_iter().filter_map(|place| screens::actor_at(&world, place)));
+        }
+
+        if contents {
+            packets.extend(self.window_changes());
         }
 
         // Время суток — раз в секунду.
@@ -1560,6 +1894,9 @@ impl BedrockWorld {
     pub fn leave(mut self) {
         log_info!("{} (Bedrock) вышел", self.identity.name);
 
+        // Открытое хранилище теряет смотрящего.
+        self.close_window();
+
         // В файл игрока — где он, куда смотрит, в каком режиме, что при нём.
         if let Some(left) = self.bag.put_cursor_back() {
             self.throw_out(left);
@@ -1573,6 +1910,34 @@ impl BedrockWorld {
         crate::network::play::player_left(&self.shared, &self.identity.name, &self.identity.uuid);
         skin::forget(&self.identity.uuid);
         self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком").forget_reader(self.reader);
+    }
+
+    /// Блок-акторы хранилищ чанка — пакетами Block Actor Data вслед за
+    /// Level Chunk: так клиент рисует сундуки и спаривает половины. Если
+    /// вторая половина большого сундука — в соседнем, уже отправленном чанке,
+    /// ей актор уходит заново: пара там видна только теперь.
+    fn chunk_actors(&self, world: &world::World, chunk_x: i32, chunk_z: i32) -> Vec<Vec<u8>> {
+        let mut packets = Vec::new();
+
+        for (x, y, z, _) in world.chunk_containers(chunk_x, chunk_z) {
+            let place = (chunk_x * 16 + x, y, chunk_z * 16 + z);
+
+            if !heights(self.dimension).contains(&y) {
+                continue;
+            }
+
+            packets.extend(screens::actor_at(world, place));
+
+            for (hx, hy, hz) in containers::halves(world, place) {
+                let other_chunk = (hx >> 4, hz >> 4);
+
+                if other_chunk != (chunk_x, chunk_z) && self.sent.contains(&other_chunk) {
+                    packets.extend(screens::actor_at(world, (hx, hy, hz)));
+                }
+            }
+        }
+
+        packets
     }
 
     /// Шлёт недостающие чанки вокруг игрока, ближние первыми.
@@ -1609,6 +1974,11 @@ impl BedrockWorld {
         wanted.sort_by_key(|(x, z)| (x - cx).pow(2) + (z - cz).pow(2));
         self.sent.retain(|(x, z)| (x - cx).pow(2) + (z - cz).pow(2) <= (radius + 2).pow(2));
 
+        // Крышки в забытых чанках клиент при новой отправке увидит
+        // закрытыми — помнить их незачем.
+        let sent = &self.sent;
+        self.lids.retain(|(x, _, z), _| sent.contains(&(x >> 4, z >> 4)));
+
         let dimension = self.dimension;
         let (ready, missing, source) = {
             let world = self.shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
@@ -1621,7 +1991,7 @@ impl BedrockWorld {
                 }
 
                 match world.chunk_packet(x, z, |sections, biomes| (sections.to_vec(), biomes.to_vec())) {
-                    Some(parts) => ready.push((x, z, parts)),
+                    Some(parts) => ready.push((x, z, parts, self.chunk_actors(&world, x, z))),
                     None if !self.loading.contains(&(x, z)) => missing.push((x, z)),
                     None => {}
                 }
@@ -1648,8 +2018,9 @@ impl BedrockWorld {
 
         let mut batch = Vec::new();
 
-        for (x, z, (sections, biomes)) in ready {
+        for (x, z, (sections, biomes), actors) in ready {
             batch.push(encode_chunk(dimension, x, z, &sections, &biomes));
+            batch.extend(actors);
             self.sent.insert((x, z));
 
             if batch.len() >= 8 {
@@ -2321,9 +2692,15 @@ const START_BREAK: u32 = 100;
 const CLICK: u32 = 0;
 const BREAK: u32 = 2;
 
+/// Отчего действие (trigger_type у TransactionUseItem): 2 — «simulation
+/// tick», повтор, пока кнопка зажата.
+const SIMULATION_TICK: u32 = 2;
+
 /// Что игрок сделал предметом: сломал блок, щёлкнул по блоку.
 struct ItemUse {
     kind: u32,
+    /// Отчего: щелчок игрока или повтор (`SIMULATION_TICK`).
+    trigger: u32,
     position: (i32, i32, i32),
     face: i32,
     /// Предмет в руке; None — рука пуста.
@@ -2488,8 +2865,8 @@ fn read_input_actions(reader: &mut In, bag: &mut Bag, creative: bool) -> Input {
                     // «Предсказал поломку» — клиент докопал. Творческий режим
                     // ломает с первого удара: такие отмечены отдельно.
                     match action {
-                        26 => found.push(ItemUse { kind: BREAK, position, face, held: None, click_y: 0.0 }),
-                        0 => found.push(ItemUse { kind: START_BREAK, position, face, held: None, click_y: 0.0 }),
+                        26 => found.push(ItemUse { kind: BREAK, trigger: 0, position, face, held: None, click_y: 0.0 }),
+                        0 => found.push(ItemUse { kind: START_BREAK, trigger: 0, position, face, held: None, click_y: 0.0 }),
                         _ => {}
                     }
                 }
@@ -2546,7 +2923,7 @@ fn skip_actions(reader: &mut In) -> Option<()> {
 /// Тело «предмет применён»: что сделано, где, чем.
 fn read_use(reader: &mut In) -> Option<ItemUse> {
     let kind = reader.varint()?;
-    let _trigger = reader.varint()?;
+    let trigger = reader.varint()?;
     let position = (reader.zigzag32()?, reader.zigzag32()?, reader.zigzag32()?);
     let face = reader.zigzag32()?;
     let _hotbar = reader.zigzag32()?;
@@ -2559,7 +2936,7 @@ fn read_use(reader: &mut In) -> Option<ItemUse> {
     let _prediction = reader.varint()?;
     let _cooldown = reader.u8()?;
 
-    Some(ItemUse { kind, position, face, held, click_y: click.1 })
+    Some(ItemUse { kind, trigger, position, face, held, click_y: click.1 })
 }
 
 #[cfg(test)]
