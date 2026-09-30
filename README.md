@@ -38,7 +38,9 @@ endorsed by Mojang or Microsoft.
 
 - Login, world join, several players at once, chat, tab list, player skins
   (Mojang, then Ely.by as a fallback; both can be switched off).
-- A persistent world with its own on-disk format, saved on stop and every
+- A persistent world with its own compact on-disk format (`region/r.X.Z.mcs`,
+  zstd-compressed palettes, about half the size of vanilla Anvil; old `.rcw`
+  regions are converted on startup), saved on stop and every
   few seconds; player data and inventories are saved per player.
 - Our own world generation, fitted to measurements of vanilla worlds:
   terrain, caves, aquifers, rivers, oceans, biomes, trees and plants; sky

@@ -17,6 +17,8 @@
 // Сохранение происходит сразу при каждом изменении: сервер маленький, и
 // терять постройки при падении не хочется.
 
+mod codec;
+mod legacy;
 pub mod cave_biomes;
 pub mod flat;
 pub mod light;
@@ -697,233 +699,6 @@ impl Chunk {
 
 }
 
-impl Chunk {
-    /// Записывает чанк в байты для файла региона.
-    ///
-    /// Записывается не каждый блок по отдельности, а «состояние и сколько его
-    /// подряд»: у ровной земли в секции всего несколько таких записей вместо
-    /// четырёх тысяч блоков.
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut out = vec![CHUNK_VERSION];
-
-        for section in &self.sections {
-            let Some(blocks) = section else {
-                out.push(0); // секция целиком из воздуха
-                continue;
-            };
-
-            out.push(1);
-
-            let runs = runs_of(blocks);
-
-            out.extend_from_slice(&(runs.len() as u16).to_be_bytes());
-
-            for (state, length) in runs {
-                out.extend_from_slice(&state.to_be_bytes());
-                out.extend_from_slice(&length.to_be_bytes());
-            }
-        }
-
-        // Биомы идут в конце — так же, «номер и сколько его подряд», в
-        // порядке клеток: у чанка без пещерных биомов это одна-две записи.
-        let runs = runs_of(&self.biomes);
-
-        out.extend_from_slice(&(runs.len() as u16).to_be_bytes());
-
-        for (biome, length) in runs {
-            out.extend_from_slice(&biome.to_be_bytes());
-            out.extend_from_slice(&length.to_be_bytes());
-        }
-
-        // Хранилища — последними, и только если они есть: запись чанка без
-        // них та же, что и прежде. Порядок — по месту, чтобы одинаковый
-        // чанк давал одинаковые байты.
-        if !self.containers.is_empty() || !self.custom_tnt.is_empty() {
-            let mut places: Vec<_> = self.containers.keys().copied().collect();
-
-            places.sort_unstable();
-            out.extend_from_slice(&(places.len() as u16).to_be_bytes());
-
-            for place in places {
-                self.containers[&place].write(place, &mut out);
-            }
-        }
-
-        // Особый динамит — после хранилищ (их число тогда пишется и
-        // нулём): сколько, потом место и номер вида.
-        if !self.custom_tnt.is_empty() {
-            let mut places: Vec<_> = self.custom_tnt.iter().map(|&(place, kind)| (place, kind.0)).collect();
-
-            places.sort_unstable();
-            out.extend_from_slice(&(places.len() as u16).to_be_bytes());
-
-            for ((x, y, z), kind) in places {
-                out.push(((x << 4) | z) as u8);
-                out.extend_from_slice(&(y as i16).to_be_bytes());
-                out.push(kind);
-            }
-        }
-
-        out
-    }
-
-    /// Читает чанк из байтов файла региона.
-    ///
-    /// Всё прочитанное проверяется: номер состояния должен быть в таблице
-    /// блоков, номер биома — в реестре, а записи секции покрывать её ровно.
-    /// Испорченная запись даёт None, а не панику под замком мира и не чужие
-    /// блоки у клиента.
-    fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        let version = *bytes.first()?;
-        let wide = version == CHUNK_VERSION_WIDE;
-
-        if version != CHUNK_VERSION && version != CHUNK_VERSION_FLAT_BIOMES && !wide {
-            return None;
-        }
-
-        let mut reader = Reader::new(bytes.get(1..)?);
-        let mut chunk = Chunk::new();
-
-        for section in 0..SECTIONS as usize {
-            if reader.u8().ok()? == 0 {
-                continue;
-            }
-
-            let runs = reader.u16().ok()?;
-            let blocks = chunk.filled_section(section);
-
-            let mut at = 0usize;
-
-            for _ in 0..runs {
-                let state = if wide {
-                    Packed::try_from(reader.i32().ok()?).ok()?
-                } else {
-                    reader.u16().ok()?
-                };
-
-                if unpack(state) != AIR && crate::blocks::block_at_state(unpack(state)).is_none() {
-                    return None;
-                }
-
-                let length = reader.u16().ok()? as usize;
-
-                blocks.get_mut(at..at + length)?.fill(state);
-                at += length;
-            }
-
-            if at != SECTION_BLOCKS {
-                return None;
-            }
-        }
-
-        let biomes = terrain::biome_registry_size();
-
-        if version == CHUNK_VERSION {
-            // Биомы объёмные — записи «номер и сколько подряд». Они обязаны
-            // покрыть все клетки ровно: иначе запись испорчена.
-            let runs = reader.u16().ok()?;
-            let mut at = 0usize;
-
-            for _ in 0..runs {
-                let biome = reader.u16().ok()?;
-                let length = reader.u16().ok()? as usize;
-
-                if biome as usize >= biomes {
-                    return None;
-                }
-
-                chunk.biomes.get_mut(at..at + length)?.fill(biome);
-                at += length;
-            }
-
-            if at != chunk.biomes.len() {
-                return None;
-            }
-
-            // Хранилища, если записаны. Хранилище на месте блока другого
-            // вида (файл правили руками) пропускается.
-            let mut rest = reader.rest();
-
-            if rest.len() >= 2 {
-                let count = u16::from_be_bytes([rest[0], rest[1]]);
-
-                rest = &rest[2..];
-
-                for _ in 0..count {
-                    let (place, container) = containers::Container::read(&mut rest, 0, 0)?;
-
-                    if containers::Kind::of(chunk.block(place.0, place.1, place.2)) == Some(container.kind) {
-                        chunk.containers.insert(place, container);
-                    }
-                }
-            }
-
-            // Особый динамит, если записан. Вид, которого больше нет в
-            // таблице, или не динамит на месте — пропускаются.
-            if rest.len() >= 2 {
-                let count = u16::from_be_bytes([rest[0], rest[1]]);
-
-                rest = &rest[2..];
-
-                for _ in 0..count {
-                    let (record, tail) = rest.split_at_checked(4)?;
-                    let place = ((record[0] >> 4) as i32, i16::from_be_bytes([record[1], record[2]]) as i32, (record[0] & 15) as i32);
-
-                    rest = tail;
-
-                    if in_bounds(place.1)
-                        && crate::tnt::is_tnt(chunk.block(place.0, place.1, place.2))
-                        && let Some(kind) = crate::custom_tnt::by_id(crate::custom_tnt::KindId(record[3]))
-                    {
-                        chunk.custom_tnt.retain(|(there, _)| *there != place);
-                        chunk.custom_tnt.push((place, kind.id));
-                    }
-                }
-            }
-
-            return Some(chunk);
-        }
-
-        // Прежние записи: биом один на весь столбец клетки 4×4, по два
-        // байта на клетку. Его может и не быть: чанк записан сервером, когда
-        // биом был один на весь мир. Тогда остаются нули — это первый биом
-        // реестра, и мир от этого не пропадёт.
-        for cell in 0..BIOME_LAYER {
-            let Ok(biome) = reader.u16() else {
-                break;
-            };
-
-            if biome as usize >= biomes {
-                return None;
-            }
-
-            for layer in 0..BIOME_LAYERS {
-                chunk.biomes[layer * BIOME_LAYER + cell] = biome;
-            }
-        }
-
-        Some(chunk)
-    }
-}
-
-/// Разбивает блоки секции (или биомы чанка) на записи «значение и сколько
-/// его подряд».
-fn runs_of(blocks: &[u16]) -> Vec<(u16, u16)> {
-    let mut runs: Vec<(u16, u16)> = Vec::new();
-
-    for state in blocks {
-        match runs.last_mut() {
-            // Подряд одного значения не может быть больше, чем блоков
-            // в секции или клеток биома в чанке, так что счётчик не
-            // переполнится.
-            Some((last, length)) if last == state => *length += 1,
-            _ => runs.push((*state, 1)),
-        }
-    }
-
-    runs
-}
-
 /// Секция, в которой лежит эта высота, и начало её слоя внутри секции.
 fn split(y: i32) -> (usize, usize) {
     let from_bottom = (y - MIN_Y) as usize;
@@ -975,7 +750,11 @@ const REGIONS: &str = "region";
 ///
 /// С третьей версии биомы объёмные: клетка 4×4×4, записаны «номер и сколько
 /// подряд».
-const CHUNK_VERSION: u8 = 3;
+///
+/// Четвёртая версия — палитры с битовыми номерами (codec.rs); файл региона
+/// `.mcs` сжимает её ещё и zstd. Первые три версии писались в `.rcw`, их
+/// читает только перенос мира (legacy.rs).
+const CHUNK_VERSION: u8 = 4;
 
 /// Вторая версия: состояния по два байта, биом один на столбец клетки 4×4.
 /// Такие чанки читаются, их биом растягивается на всю высоту.
@@ -1312,6 +1091,10 @@ impl World {
 
             let _ = fs::rename(&single_file, &old);
         }
+
+        // Регионы прежнего вида (`.rcw`) переносятся в `.mcs` до всего
+        // остального: дальше мир видит только новые файлы.
+        legacy::migrate(&path.join(REGIONS));
 
         log_info!("Подготовка мира \"{}\"", path.display());
         log_debug!("Мир: регионы в {}", path.join(REGIONS).display());
@@ -4031,7 +3814,7 @@ fn has_regions(regions: &Path) -> bool {
     };
 
     entries.flatten().any(|entry| {
-        entry.path().extension().is_some_and(|extension| extension == "rcw")
+        entry.path().extension().is_some_and(|extension| extension == "mcs" || extension == "rcw")
             && entry.metadata().is_ok_and(|meta| meta.len() > 0)
     })
 }
@@ -4322,6 +4105,24 @@ impl<'a> Reader<'a> {
         Ok(u16::from_be_bytes(self.take::<2>()?))
     }
 
+    /// Следующий байт, не сдвигая позицию.
+    fn peek(&self) -> Option<u8> {
+        self.bytes.get(self.offset).copied()
+    }
+
+    /// Забирает следующие `count` байт.
+    fn slice(&mut self, count: usize) -> io::Result<&'a [u8]> {
+        let end = self.offset.checked_add(count).ok_or_else(|| io::Error::new(io::ErrorKind::UnexpectedEof, "файл мира обрывается"))?;
+
+        let slice = self.bytes.get(self.offset..end).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::UnexpectedEof, "файл мира обрывается")
+        })?;
+
+        self.offset = end;
+
+        Ok(slice)
+    }
+
     fn i32(&mut self) -> io::Result<i32> {
         Ok(i32::from_be_bytes(self.take::<4>()?))
     }
@@ -4451,11 +4252,11 @@ mod tests {
         assert_eq!(world.get_block(3, flat::GROUND, 4), grass);
     }
 
-    /// Чанк в байтах занимает немного: земля записывается не поблочно,
-    /// а «состояние и сколько его подряд».
+    /// Чанк на диске занимает немного: земля записывается палитрой, а
+    /// регион сжимает запись.
     #[test]
     fn a_flat_chunk_is_small_on_disk() {
-        let bytes = Chunk::flat().to_bytes().len();
+        let bytes = region::compress(&Chunk::flat().to_bytes()).unwrap().len();
 
         assert!(bytes < 256, "чанк занял {} байт", bytes);
 
@@ -4499,11 +4300,11 @@ mod tests {
     }
 
     /// Объёмные биомы записываются и читаются обратно клетка в клетку, и
-    /// записью «номер и сколько подряд» они почти ничего не стоят.
+    /// после сжатия они почти ничего не стоят.
     #[test]
     fn volume_biomes_survive_the_disk() {
         let mut chunk = Chunk::flat();
-        let plain = chunk.to_bytes().len();
+        let plain = region::compress(&chunk.to_bytes()).unwrap().len();
         let lush = terrain::Biome::LushCaves.number() as BiomeId;
         let deep = terrain::Biome::DeepDark.number() as BiomeId;
 
@@ -4560,7 +4361,7 @@ mod tests {
                 bytes.extend_from_slice(&(cell as u16 + 3).to_be_bytes());
             }
 
-            let chunk = Chunk::from_bytes(&bytes).expect("прочитать прежний чанк");
+            let chunk = Chunk::from_legacy(&bytes).expect("прочитать прежний чанк");
 
             assert_eq!(chunk.block(7, MIN_Y + 15, 9), stone);
             assert_eq!(chunk.block(7, MIN_Y + 16, 9), AIR);
@@ -4572,7 +4373,7 @@ mod tests {
             }
 
             // Совсем старый чанк без биомов — первый биом реестра.
-            let chunk = Chunk::from_bytes(&without_biomes).expect("прочитать чанк без биомов");
+            let chunk = Chunk::from_legacy(&without_biomes).expect("прочитать чанк без биомов");
 
             assert!(chunk.biomes.iter().all(|biome| *biome == 0));
 
@@ -4589,11 +4390,11 @@ mod tests {
         bytes.truncate(bytes.len() - 2);
         assert!(Chunk::from_bytes(&bytes).is_none());
 
-        // Записи покрывают больше клеток, чем есть.
+        // Вид контейнера, которого нет.
         let mut bytes = Chunk::flat().to_bytes();
         let length = bytes.len();
 
-        bytes[length - 2..].copy_from_slice(&u16::MAX.to_be_bytes());
+        bytes[length - 3] = 9;
         assert!(Chunk::from_bytes(&bytes).is_none());
     }
 
@@ -4988,31 +4789,44 @@ mod safety_tests {
     /// Испорченные номера в записи чанка не роняют сервер, а дают отказ.
     #[test]
     fn nonsense_in_a_chunk_is_refused() {
-        // Состояние не влезает в два байта.
-        let mut wide = vec![CHUNK_VERSION_WIDE, 1];
-        wide.extend_from_slice(&1u16.to_be_bytes());
-        wide.extend_from_slice(&70_000i32.to_be_bytes());
-        wide.extend_from_slice(&(SECTION_BLOCKS as u16).to_be_bytes());
-        assert!(Chunk::from_bytes(&wide).is_none());
-
         // Состояния нет в таблице блоков.
         let mut unknown = vec![CHUNK_VERSION, 1];
-        unknown.extend_from_slice(&1u16.to_be_bytes());
         unknown.extend_from_slice(&u16::MAX.to_be_bytes());
-        unknown.extend_from_slice(&(SECTION_BLOCKS as u16).to_be_bytes());
         assert!(Chunk::from_bytes(&unknown).is_none());
 
-        // Секция покрыта не целиком.
-        let mut short = vec![CHUNK_VERSION, 1];
-        short.extend_from_slice(&1u16.to_be_bytes());
-        short.extend_from_slice(&1u16.to_be_bytes());
-        short.extend_from_slice(&100u16.to_be_bytes());
+        // Палитра из одного значения (для этого есть свой вид), из большего
+        // числа значений, чем клеток, и с номером за пределами палитры.
+        for count in [1u16, 5000] {
+            let mut palette = vec![CHUNK_VERSION, 2];
+            palette.extend_from_slice(&count.to_be_bytes());
+            palette.extend(std::iter::repeat_n(0u8, 20_000));
+            assert!(Chunk::from_bytes(&palette).is_none(), "палитра из {}", count);
+        }
+
+        let mut outside = vec![CHUNK_VERSION, 2];
+        outside.extend_from_slice(&3u16.to_be_bytes());
+
+        for state in [0u16, 1, 2] {
+            outside.extend_from_slice(&state.to_be_bytes());
+        }
+
+        // Ширина номера — 2 бита; номер 3 в палитре из трёх значений — вне её.
+        outside.extend(std::iter::repeat_n(0xFFu8, SECTION_BLOCKS / 4));
+        assert!(Chunk::from_bytes(&outside).is_none());
+
+        // Записи не хватает на секцию.
+        let mut short = vec![CHUNK_VERSION, 2];
+        short.extend_from_slice(&2u16.to_be_bytes());
+        short.extend_from_slice(&[0, 0, 0, 1, 0, 0]);
         assert!(Chunk::from_bytes(&short).is_none());
+
+        // Прежние версии записи через `from_bytes` не читаются.
+        assert!(Chunk::from_bytes(&[3, 0]).is_none());
 
         // Биома нет в реестре.
         let mut bytes = Chunk::flat().to_bytes();
         let length = bytes.len();
-        bytes[length - 4..length - 2].copy_from_slice(&u16::MAX.to_be_bytes());
+        bytes[length - 2..].copy_from_slice(&u16::MAX.to_be_bytes());
         assert!(Chunk::from_bytes(&bytes).is_none());
     }
 
