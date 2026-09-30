@@ -1,0 +1,60 @@
+{
+ "name": "item-frame-break",
+ "about": "Рамка с предметом на камне: камень убирают командой — рамка держится до своей проверки раз в 100 тактов, потом отваливается вместе с предметом.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "kill @e[type=item_frame,distance=..128]",
+  "kill @e[type=glow_item_frame,distance=..128]",
+  "kill @e[type=item,distance=..128]",
+  "clear $(bot)",
+  "give $(bot) minecraft:item_frame 4",
+  "give $(bot) minecraft:stick 4",
+  "gamemode survival $(bot)"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    0
+   ],
+   "face": 4
+  },
+  {
+   "after": 6,
+   "hotbar": 1
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 14,
+   "set": {
+    "at": [
+     1,
+     0,
+     0
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 150,
+ "cleanup": [
+  "kill @e[type=item_frame,distance=..128]",
+  "kill @e[type=glow_item_frame,distance=..128]",
+  "kill @e[type=item,distance=..128]",
+  "setblock $(1,0,0) air"
+ ]
+}

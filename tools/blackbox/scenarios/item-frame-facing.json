@@ -1,0 +1,96 @@
+{
+ "name": "item-frame-facing",
+ "about": "Камень в воздухе, рамки ставятся на все шесть граней; потом камень убирают — рамки отваливаются (или висят) и роняют себя.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    1,
+    1
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "kill @e[type=item_frame,distance=..128]",
+  "kill @e[type=glow_item_frame,distance=..128]",
+  "kill @e[type=item,distance=..128]",
+  "clear $(bot)",
+  "gamemode survival $(bot)",
+  "give $(bot) minecraft:item_frame 8"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    1,
+    1
+   ],
+   "face": 0
+  },
+  {
+   "after": 6,
+   "click": [
+    1,
+    1,
+    1
+   ],
+   "face": 1
+  },
+  {
+   "after": 12,
+   "click": [
+    1,
+    1,
+    1
+   ],
+   "face": 2
+  },
+  {
+   "after": 18,
+   "click": [
+    1,
+    1,
+    1
+   ],
+   "face": 3
+  },
+  {
+   "after": 24,
+   "click": [
+    1,
+    1,
+    1
+   ],
+   "face": 4
+  },
+  {
+   "after": 30,
+   "click": [
+    1,
+    1,
+    1
+   ],
+   "face": 5
+  },
+  {
+   "after": 40,
+   "set": {
+    "at": [
+     1,
+     1,
+     1
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 186,
+ "cleanup": [
+  "kill @e[type=item_frame,distance=..128]",
+  "kill @e[type=glow_item_frame,distance=..128]",
+  "kill @e[type=item,distance=..128]",
+  "setblock $(1,1,1) air"
+ ]
+}

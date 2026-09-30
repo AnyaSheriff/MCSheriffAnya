@@ -226,6 +226,7 @@ async fn run(shared: Arc<Shared>) {
             // Где вагонетки — для детекторных рельс: их такт проверяет, не
             // уехала ли вагонетка (её могла увести команда в начале такта).
             redstone::note_carts(&mut world, cart_marks(&shared, dimension));
+            redstone::note_frames(&mut world, frame_marks(&shared, dimension));
 
             let due = world.advance(PER_TICK);
 
@@ -287,6 +288,10 @@ async fn run(shared: Arc<Shared>) {
             explode_carts(&shared, dimension, &mut world);
             hopper_carts(&shared, dimension, &mut world);
             redstone::note_carts(&mut world, cart_marks(&shared, dimension));
+
+            // Рамки: загруженные с чанками встают в мир, а те, у которых
+            // убрали опору, отваливаются на своей проверке.
+            step_frames(&shared, dimension, &mut world);
 
             // Плиты, растяжки и руда слушают не только сигнал, но и мир: на
             // них встают игроки и падают предметы. Список — заново: только
@@ -611,6 +616,74 @@ fn cart_marks(shared: &Shared, dimension: Dimension) -> Vec<redstone::Cart> {
         .iter()
         .map(|cart| redstone::Cart { x: cart.x, y: cart.y, z: cart.z, reading: cart.reading() })
         .collect()
+}
+
+/// Где висят рамки этого мира и что они показывают сравнителю.
+fn frame_marks(shared: &Shared, dimension: Dimension) -> Vec<redstone::FrameMark> {
+    shared
+        .items_in(dimension)
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .frames()
+        .iter()
+        .map(|frame| redstone::FrameMark { pos: frame.pos, facing: frame.facing, power: frame.comparator_power() })
+        .collect()
+}
+
+/// Такт рамок. Прочитанные вместе с чанками заводятся сущностями (если
+/// такой рамки ещё нет: чанк мог выгрузиться и вернуться). Каждая рамка
+/// живёт на такт дольше, и на каждом сотом такте жизни проверяет опору: без
+/// неё она ломается — уходит из мира, звучит поломка, выпадают она сама и
+/// её предмет (чёрный ящик, item-frame-facing и item-frame-break).
+fn step_frames(shared: &Shared, dimension: Dimension, world: &mut World) {
+    let loaded = world.take_loaded_frames();
+
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    for mut frame in loaded {
+        if items.frames().iter().any(|there| (there.pos, there.facing) == (frame.pos, frame.facing)) {
+            continue;
+        }
+
+        frame.entity_id = shared.next_entity_id();
+        frame.uuid = crate::frame::Frame::new(frame.entity_id, frame.pos, frame.facing, frame.glow).uuid;
+        items.add_frame(frame);
+    }
+
+    if items.frames().is_empty() {
+        return;
+    }
+
+    let mut falling: Vec<i32> = Vec::new();
+
+    for frame in items.frames_mut() {
+        // Возраст растёт после проверки: в такте появления он нулевой, и
+        // проверка приходится на сотый такт после него, а не на 99-й.
+        let loaded = world.has_chunk(frame.pos.0.div_euclid(16), frame.pos.2.div_euclid(16));
+
+        if loaded && frame.age > 0 && frame.age % crate::frame::SURVIVAL_CHECK == 0 && !frame.supported(&|x, y, z| world.get_block(x, y, z)) {
+            falling.push(frame.entity_id);
+        }
+
+        frame.age += 1;
+    }
+
+    if falling.is_empty() {
+        return;
+    }
+
+    let broken = items.remove_frames(|frame| falling.contains(&frame.entity_id));
+
+    for frame in &broken {
+        crate::frame::break_frame(world, &mut items, shared, frame, true);
+    }
+
+    drop(items);
+    redstone::note_frames(world, frame_marks(shared, dimension));
+
+    for frame in &broken {
+        redstone::comparator_update(world, frame.pos);
+    }
 }
 
 /// Такт вагонеток: каждая в порядке появления, со встречами друг с другом
@@ -1585,5 +1658,57 @@ mod tests {
         // А вбок от источника не растеклась: спуск был только в одну сторону.
         assert_eq!(world.get_block(-1, 64, 0), AIR);
         assert_eq!(world.get_block(0, 64, 3), AIR);
+    }
+
+    /// Рамка без опоры отваливается ровно на сотом такте после появления, а не
+    /// раньше (сценарии item-frame-break и item-frame-facing); с опорой —
+    /// держится. Вместе с ней выпадает предмет рамки.
+    #[test]
+    fn a_frame_without_support_falls_on_its_hundredth_tick() {
+        let shared = Shared::new(
+            World::in_memory(),
+            World::in_memory(),
+            std::path::PathBuf::new(),
+            std::path::PathBuf::new(),
+            Default::default(),
+            crate::ops::Ops::open(&std::env::temp_dir().join(format!("mcsheriffanya-tick-frame-ops-{}.json", std::process::id()))),
+            crate::skins::Settings::default(),
+        );
+        let overworld = Dimension::Overworld;
+        let mut world = shared.world_in(overworld).lock().unwrap();
+
+        world.set_block_silently(1, 64, 0, STONE);
+        world.set_block_silently(1, 64, 5, STONE);
+
+        {
+            let mut items = shared.items_in(overworld).lock().unwrap();
+
+            // Одна рамка на камне, другая — на камне, который потом уберут.
+            assert!(crate::frame::place(&mut world, &mut items, &shared, (1, 64, 0), crate::frame::WEST, false));
+            assert!(crate::frame::place(&mut world, &mut items, &shared, (1, 64, 5), crate::frame::WEST, false));
+        }
+
+        world.set_block_silently(1, 64, 5, AIR);
+
+        let frames = |world: &mut World| {
+            let _ = world;
+            shared.items_in(overworld).lock().unwrap().frames().len()
+        };
+
+        for _ in 0..100 {
+            step_frames(&shared, overworld, &mut world);
+        }
+
+        assert_eq!(frames(&mut world), 2, "раньше сотого такта рамка держится");
+
+        step_frames(&shared, overworld, &mut world);
+        assert_eq!(frames(&mut world), 1, "на сотом отвалилась только висящая в воздухе");
+        assert_eq!(shared.items_in(overworld).lock().unwrap().items().len(), 1, "выпала сама рамка");
+
+        for _ in 0..300 {
+            step_frames(&shared, overworld, &mut world);
+        }
+
+        assert_eq!(frames(&mut world), 1, "с опорой висит и дальше");
     }
 }

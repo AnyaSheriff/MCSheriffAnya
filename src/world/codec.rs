@@ -229,8 +229,9 @@ impl Chunk {
         });
 
         // Хранилища — последними, и только если они есть. Порядок — по
-        // месту, чтобы одинаковый чанк давал одинаковые байты.
-        if !self.containers.is_empty() || !self.custom_tnt.is_empty() {
+        // месту, чтобы одинаковый чанк давал одинаковые байты. Если дальше
+        // идёт что-то ещё, число хранилищ пишется и нулём.
+        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() {
             let mut places: Vec<_> = self.containers.keys().copied().collect();
 
             places.sort_unstable();
@@ -242,8 +243,9 @@ impl Chunk {
         }
 
         // Особый динамит — после хранилищ (их число тогда пишется и
-        // нулём): сколько, потом место и номер вида.
-        if !self.custom_tnt.is_empty() {
+        // нулём): сколько, потом место и номер вида. Если дальше рамки —
+        // число пишется и нулём.
+        if !self.custom_tnt.is_empty() || !self.frames.is_empty() {
             let mut places: Vec<_> = self.custom_tnt.iter().map(|&(place, kind)| (place, kind.0)).collect();
 
             places.sort_unstable();
@@ -253,6 +255,19 @@ impl Chunk {
                 out.push(((x << 4) | z) as u8);
                 out.extend_from_slice(&(y as i16).to_be_bytes());
                 out.push(kind);
+            }
+        }
+
+        // Рамки для предметов (frame.rs) — последними: сколько и записи по
+        // порядку места, чтобы одинаковый чанк давал одинаковые байты.
+        if !self.frames.is_empty() {
+            let mut frames: Vec<&crate::frame::Frame> = self.frames.iter().collect();
+
+            frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
+            out.extend_from_slice(&(frames.len() as u16).to_be_bytes());
+
+            for frame in frames {
+                crate::frame::write(frame, &mut out);
             }
         }
 
@@ -333,6 +348,19 @@ impl Chunk {
             }
         }
 
+        // Рамки, если записаны. Испорченная запись — весь чанк испорчен.
+        if rest.len() >= 2 {
+            let count = u16::from_be_bytes([rest[0], rest[1]]);
+
+            rest = &rest[2..];
+
+            for _ in 0..count {
+                let frame = crate::frame::read(&mut rest, 0, 0, 0)?;
+
+                chunk.frames.push(frame);
+            }
+        }
+
         Some(chunk)
     }
 
@@ -355,7 +383,13 @@ impl Chunk {
         mine.sort_unstable_by_key(|(place, kind)| (*place, kind.0));
         theirs.sort_unstable_by_key(|(place, kind)| (*place, kind.0));
 
-        blocks && self.biomes == other.biomes && self.containers == other.containers && mine == theirs
+        let mut my_frames = self.frames.clone();
+        let mut their_frames = other.frames.clone();
+
+        my_frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
+        their_frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
+
+        blocks && self.biomes == other.biomes && self.containers == other.containers && mine == theirs && my_frames == their_frames
     }
 }
 
@@ -381,8 +415,15 @@ mod tests {
         assert!(back.same_content(chunk), "прочитанный чанк отличается");
         assert_eq!(back.to_bytes(), bytes, "повторная запись дала другие байты");
 
-        // И через файл региона, со сжатием.
-        let directory = std::env::temp_dir().join(format!("mcsheriffanya_codec_{}", std::process::id()));
+        // И через файл региона, со сжатием. Папка — своя у каждой проверки:
+        // проверки идут разом, и общий файл региона они переписывали бы
+        // друг у друга (в CI так и падало: «файл обрывается на записи»).
+        static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+        let directory = std::env::temp_dir().join(format!(
+            "mcsheriffanya_codec_{}_{}",
+            std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        ));
 
         region::write(&directory, 1, 2, &bytes).unwrap();
 
@@ -390,7 +431,35 @@ mod tests {
 
         assert_eq!(stored, bytes);
 
+        let _ = std::fs::remove_dir_all(&directory);
+
         bytes
+    }
+
+    /// Рамки идут в конец записи, после хранилищ и особого динамита (их числа
+    /// тогда пишутся и нулями), и читаются обратно; чанк без рамок остаётся
+    /// таким же коротким, как был.
+    #[test]
+    fn frames_round_trip_after_the_other_records() {
+        let plain = Chunk::flat().to_bytes();
+        let mut chunk = Chunk::flat();
+        let mut hung = crate::frame::Frame::new(0, (3, 70, 4), crate::frame::NORTH, false);
+
+        hung.item = Some(crate::inventory::Stack::new(1, 1));
+        hung.rotation = 3;
+        chunk.frames.push(hung.clone());
+        chunk.frames.push(crate::frame::Frame::new(0, (9, 71, 4), crate::frame::DOWN, true));
+
+        let bytes = assert_round_trip(&chunk);
+
+        // Число хранилищ и число особого динамита — нули, потом две рамки.
+        assert_eq!(&bytes[plain.len()..plain.len() + 4], &[0, 0, 0, 0]);
+        assert_eq!(&bytes[plain.len() + 4..plain.len() + 6], &[0, 2]);
+
+        let back = Chunk::from_bytes(&bytes).expect("прочиталось");
+
+        assert!(back.frames.iter().any(|frame| frame.pos == hung.pos && frame.rotation == 3 && frame.item == hung.item));
+        assert_eq!(assert_round_trip(&Chunk::flat()), plain);
     }
 
     #[test]

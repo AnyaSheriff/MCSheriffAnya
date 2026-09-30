@@ -256,6 +256,11 @@ struct Chunk {
     /// динамит. Список, а не словарь: таких мест в чанке единицы, а чанк
     /// должен оставаться маленьким.
     custom_tnt: Vec<((i32, i32, i32), crate::custom_tnt::KindId)>,
+
+    /// Рамки для предметов (frame.rs), висящие в этом чанке, — то, что
+    /// ложится в файл. Живая сущность — в `Items`, здесь её запись (место —
+    /// мировое, номер сущности не в счёт).
+    frames: Vec<crate::frame::Frame>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
@@ -345,6 +350,7 @@ impl Chunk {
             containers: HashMap::new(),
             spilled: Vec::new(),
             custom_tnt: Vec::new(),
+            frames: Vec::new(),
         }
     }
 
@@ -945,6 +951,10 @@ pub struct World {
     /// такте, окна увидят на следующем.
     pub published: HashMap<(i32, i32, i32), Vec<Option<crate::inventory::Stack>>>,
 
+    /// Рамки, прочитанные из файла вместе с чанком: такт заводит их в мир
+    /// как сущности (`take_loaded_frames`).
+    loaded_frames: Vec<crate::frame::Frame>,
+
     /// То же для вагонеток-хранилищ: номер сущности — ячейки.
     pub published_carts: HashMap<i32, Vec<Option<crate::inventory::Stack>>>,
 
@@ -1052,6 +1062,7 @@ impl World {
             blast_rest: Default::default(),
             published: HashMap::new(),
             published_carts: HashMap::new(),
+            loaded_frames: Vec::new(),
             container_order: Vec::new(),
             contents_changed: Vec::new(),
             sky_cache: HashMap::new(),
@@ -1192,6 +1203,7 @@ impl World {
             blast_rest: Default::default(),
             published: HashMap::new(),
             published_carts: HashMap::new(),
+            loaded_frames: Vec::new(),
             container_order: Vec::new(),
             contents_changed: Vec::new(),
             sky_cache: HashMap::new(),
@@ -1468,6 +1480,38 @@ impl World {
         }
 
         self.dirty.insert(chunk_key(x, z));
+    }
+
+    /// Запоминает рамку в её чанке — чтобы она легла в файл. Рамка с тем же
+    /// местом и стороной заменяется. Чанк не в памяти — молча ничего.
+    pub fn store_frame(&mut self, frame: &crate::frame::Frame) {
+        let Some(chunk) = self.chunks.get_mut(&chunk_key(frame.pos.0, frame.pos.2)) else {
+            return;
+        };
+
+        let mut local = frame.clone();
+
+        local.pos = (frame.pos.0.rem_euclid(CHUNK_SIZE), frame.pos.1, frame.pos.2.rem_euclid(CHUNK_SIZE));
+        chunk.frames.retain(|there| (there.pos, there.facing) != (local.pos, local.facing));
+        chunk.frames.push(local);
+        self.dirty.insert(chunk_key(frame.pos.0, frame.pos.2));
+    }
+
+    /// Стирает запись рамки: она сломана или отвалилась.
+    pub fn forget_frame(&mut self, pos: (i32, i32, i32), facing: u8) {
+        let Some(chunk) = self.chunks.get_mut(&chunk_key(pos.0, pos.2)) else {
+            return;
+        };
+
+        let local = (pos.0.rem_euclid(CHUNK_SIZE), pos.1, pos.2.rem_euclid(CHUNK_SIZE));
+
+        chunk.frames.retain(|there| (there.pos, there.facing) != (local, facing));
+        self.dirty.insert(chunk_key(pos.0, pos.2));
+    }
+
+    /// Рамки, что пришли вместе с загруженными чанками, — забирает такт.
+    pub fn take_loaded_frames(&mut self) -> Vec<crate::frame::Frame> {
+        std::mem::take(&mut self.loaded_frames)
     }
 
     /// Хранилище в этом месте, если оно там есть и его чанк в памяти.
@@ -1865,6 +1909,12 @@ impl World {
 
         places.sort_unstable();
         self.container_order.extend(places);
+        // В чанке рамки записаны с местом внутри него; миру нужно мировое.
+        self.loaded_frames.extend(chunk.frames.iter().cloned().map(|mut frame| {
+            frame.pos.0 += chunk_x * CHUNK_SIZE;
+            frame.pos.2 += chunk_z * CHUNK_SIZE;
+            frame
+        }));
         self.chunks.insert(key, chunk);
         self.unloaded.remove(&key);
 
@@ -2678,6 +2728,7 @@ impl World {
 }
 
 /// Что стало с чанком, который взялись приготовить.
+#[allow(clippy::large_enum_variant)] // чанк большой, но живёт в очереди мгновение; коробка ради этого не нужна
 enum Taken {
     /// Чанк готов: прочитан с диска или сложен заново. Рядом — места у воды
     /// и лавы, которые надо сразу пустить в такт.
@@ -4718,6 +4769,44 @@ mod safety_tests {
         let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
         world.ensure(10, 10);
         assert_eq!(world.get_block(160, flat::SURFACE, 160), stone, "не дошло до диска");
+
+        drop(world);
+        let _ = fs::remove_dir_all(&path);
+    }
+
+    /// Рамка для предмета ложится в файл вместе с чанком и возвращается с ним,
+    /// а убранная — нет; и в мировых координатах, а не в местных.
+    #[test]
+    fn frames_survive_the_disk() {
+        let path = directory("frames");
+        let stone_item = crate::blocks::item_named("stone").expect("камень");
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+
+        world.ensure(-1, 2);
+
+        let mut kept = crate::frame::Frame::new(1, (-3, flat::SURFACE + 1, 40), crate::frame::EAST, true);
+
+        kept.item = Some(crate::inventory::Stack::new(stone_item, 1));
+        kept.rotation = 6;
+
+        let gone = crate::frame::Frame::new(2, (-4, flat::SURFACE + 1, 41), crate::frame::UP, false);
+
+        world.store_frame(&kept);
+        world.store_frame(&gone);
+        world.forget_frame(gone.pos, gone.facing);
+        world.save_all();
+        drop(world);
+
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+
+        assert!(world.take_loaded_frames().is_empty(), "чанк ещё не загружен");
+        world.ensure(-1, 2);
+
+        let loaded = world.take_loaded_frames();
+
+        assert_eq!(loaded.len(), 1);
+        assert_eq!((loaded[0].pos, loaded[0].facing, loaded[0].glow), (kept.pos, kept.facing, true));
+        assert_eq!((loaded[0].item, loaded[0].rotation), (kept.item, 6));
 
         drop(world);
         let _ = fs::remove_dir_all(&path);

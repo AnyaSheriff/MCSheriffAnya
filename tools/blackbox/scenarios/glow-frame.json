@@ -1,0 +1,85 @@
+{
+ "name": "glow-frame",
+ "about": "Светящаяся рамка: ставится, принимает предмет, вращается, ломается.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    0
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  }
+ ],
+ "setup": [
+  "kill @e[type=item_frame,distance=..128]",
+  "kill @e[type=glow_item_frame,distance=..128]",
+  "kill @e[type=item,distance=..128]",
+  "clear $(bot)",
+  "gamemode survival $(bot)",
+  "give $(bot) minecraft:glow_item_frame 4",
+  "give $(bot) minecraft:stick 4"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    0
+   ],
+   "face": 4
+  },
+  {
+   "after": 6,
+   "hotbar": 1
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 16,
+   "interact": true
+  },
+  {
+   "after": 22,
+   "attack": true
+  },
+  {
+   "after": 28,
+   "attack": true
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "kill @e[type=item_frame,distance=..128]",
+  "kill @e[type=glow_item_frame,distance=..128]",
+  "kill @e[type=item,distance=..128]",
+  "setblock $(1,0,0) air"
+ ]
+}

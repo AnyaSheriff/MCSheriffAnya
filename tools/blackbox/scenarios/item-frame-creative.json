@@ -1,0 +1,57 @@
+{
+ "name": "item-frame-creative",
+ "about": "Творческий игрок: ставит рамку, кладёт предмет, бьёт — предмет выходит без выпадения? бьёт ещё — рамка ломается без выпадения.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "kill @e[type=item_frame,distance=..128]",
+  "kill @e[type=glow_item_frame,distance=..128]",
+  "kill @e[type=item,distance=..128]",
+  "clear $(bot)",
+  "give $(bot) minecraft:item_frame 4",
+  "give $(bot) minecraft:stick 4",
+  "gamemode creative $(bot)"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    0
+   ],
+   "face": 4
+  },
+  {
+   "after": 6,
+   "hotbar": 1
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 16,
+   "attack": true
+  },
+  {
+   "after": 22,
+   "attack": true
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "kill @e[type=item_frame,distance=..128]",
+  "kill @e[type=glow_item_frame,distance=..128]",
+  "kill @e[type=item,distance=..128]",
+  "setblock $(1,0,0) air"
+ ]
+}

@@ -29,6 +29,7 @@ mod inventory;
 mod journal;
 mod items;
 mod minecart;
+mod frame;
 mod playerdata;
 mod redstone;
 mod tnt;

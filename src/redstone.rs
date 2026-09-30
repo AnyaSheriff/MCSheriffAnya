@@ -293,6 +293,10 @@ pub struct Memory {
     /// рельсы и сравнитель за ними.
     carts: Vec<Cart>,
 
+    /// Рамки для предметов: клетка, сторона и сила, которую читает
+    /// сравнитель (frame.rs).
+    frames: Vec<FrameMark>,
+
     /// Датчики скалка и что они слышат — у оригинала это их блок-сущности.
     sensors: sculk::Sensors,
 }
@@ -310,6 +314,7 @@ impl Memory {
             lit_ores: BTreeSet::new(),
             daylight: BTreeSet::new(),
             carts: Vec::new(),
+            frames: Vec::new(),
             sensors: sculk::Sensors::new(),
         }
     }
@@ -1456,11 +1461,16 @@ fn comparator_output(world: &World, pos: Pos, block: &Block) -> u8 {
 
     if let Some(reading) = comparator_reading(world, back) {
         rear = reading;
-    } else if Block::at(world, back).conductive()
-        && rear < MAX_POWER
-        && let Some(reading) = comparator_reading(world, step(back, facing))
-    {
-        rear = reading;
+    } else if Block::at(world, back).conductive() && rear < MAX_POWER {
+        // За блоком читается и хранилище, и рамка в той же клетке; из двух
+        // берётся большее (вики, Redstone Comparator: «outputs whichever
+        // signal is stronger»). Рамка прямо у сравнителя, без блока между
+        // ними, не читается (чёрный ящик, item-frame-probe).
+        let beyond = step(back, facing);
+
+        if let Some(reading) = comparator_reading(world, beyond).into_iter().chain(frame_reading(world, beyond, facing)).max() {
+            rear = reading;
+        }
     }
 
     let side = facing
@@ -1746,6 +1756,44 @@ pub fn note_occupants(world: &mut World, occupants: Vec<Occupant>) {
 pub fn step_entities(world: &mut World) {
     components::step_entities(world);
     rails::press_detectors(world);
+}
+
+/// Рамка, как её видит сравнитель: клетка, сторона (номера игры, frame.rs) и
+/// сила — поворот плюс один, у пустой ноль.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FrameMark {
+    pub pos: Pos,
+    pub facing: u8,
+    pub power: u8,
+}
+
+/// Какие рамки есть и что они показывают сравнителю. Зовут при каждой
+/// перемене рамки и в каждом такте мира.
+pub fn note_frames(world: &mut World, frames: Vec<FrameMark>) {
+    world.redstone.frames = frames;
+}
+
+/// Сила рамки в клетке `pos`, смотрящей в сторону `facing` (номера игры):
+/// что о ней знает редстоун. None — рамки нет.
+pub fn frame_power(world: &World, pos: Pos, facing: u8) -> Option<u8> {
+    world.redstone.frames.iter().find(|mark| mark.pos == pos && mark.facing == facing).map(|mark| mark.power)
+}
+
+/// Что читает сравнитель, глядящий в сторону `facing`, с рамки в клетке
+/// `pos`: рамка должна смотреть туда же, куда смотрит сравнитель — от него
+/// (вики, Redstone Comparator: «the comparator must be placed behind this
+/// block, facing away from the item frame»).
+fn frame_reading(world: &World, pos: Pos, facing: Dir) -> Option<u8> {
+    let number = match facing {
+        Dir::Down => crate::frame::DOWN,
+        Dir::Up => crate::frame::UP,
+        Dir::North => crate::frame::NORTH,
+        Dir::South => crate::frame::SOUTH,
+        Dir::West => crate::frame::WEST,
+        Dir::East => crate::frame::EAST,
+    };
+
+    frame_power(world, pos, number)
 }
 
 /// Где стоят вагонетки в этом такте — для детекторных рельс. Такт мира
@@ -5240,6 +5288,53 @@ mod tests {
         settle(&mut world);
         run(&mut world, 6);
         assert_eq!(wire_power_of(&block(&world, (8, 1, 0))), 0);
+    }
+
+    /// Сравнитель читает рамку за полным блоком, если она смотрит туда же,
+    /// куда сравнитель: сила — поворот плюс один, у пустой ноль (сценарий
+    /// item-frame-rotate). Рамка не в той клетке или не в ту сторону не в счёт.
+    #[test]
+    fn a_comparator_reads_the_item_frame_behind_a_block() {
+        let mut world = world();
+        let wire = blocks::state_by_name("redstone_wire").unwrap();
+        let comparator = state("comparator", &[("facing", "west"), ("mode", "compare")]);
+
+        put(&mut world, (1, 1, 0), STONE);
+        put(&mut world, (2, 1, 0), comparator);
+        put(&mut world, (3, 1, 0), wire);
+
+        let mark = |pos, facing, power| FrameMark { pos, facing, power };
+
+        // Рамка на западной стороне камня, с предметом на четвёртом повороте.
+        note_frames(&mut world, vec![mark((0, 1, 0), crate::frame::WEST, 4)]);
+        comparator_update(&mut world, (0, 1, 0));
+        run(&mut world, 6);
+        assert_eq!(wire_power_of(&block(&world, (3, 1, 0))), 4);
+
+        // Повернули — сила 5.
+        note_frames(&mut world, vec![mark((0, 1, 0), crate::frame::WEST, 5)]);
+        comparator_update(&mut world, (0, 1, 0));
+        run(&mut world, 6);
+        assert_eq!(wire_power_of(&block(&world, (3, 1, 0))), 5);
+
+        // Рамка смотрит в другую сторону или висит в клетке между камнем и
+        // сравнителем — не читается.
+        note_frames(&mut world, vec![mark((0, 1, 0), crate::frame::EAST, 6), mark((1, 1, 0), crate::frame::WEST, 7)]);
+        comparator_update(&mut world, (0, 1, 0));
+        run(&mut world, 6);
+        assert_eq!(wire_power_of(&block(&world, (3, 1, 0))), 0);
+
+        // И снова читается, когда рамка встала как надо.
+        note_frames(&mut world, vec![mark((0, 1, 0), crate::frame::WEST, 8)]);
+        comparator_update(&mut world, (0, 1, 0));
+        run(&mut world, 6);
+        assert_eq!(wire_power_of(&block(&world, (3, 1, 0))), 8);
+
+        // Вынули предмет — ноль.
+        note_frames(&mut world, vec![mark((0, 1, 0), crate::frame::WEST, 0)]);
+        comparator_update(&mut world, (0, 1, 0));
+        run(&mut world, 6);
+        assert_eq!(wire_power_of(&block(&world, (3, 1, 0))), 0);
     }
 
     /// Кнопка отпускается сама: каменная через 20 тактов.

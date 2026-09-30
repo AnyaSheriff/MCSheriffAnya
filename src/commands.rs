@@ -609,6 +609,10 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return summon_lightning(rest, source, shared);
     }
 
+    if let glow @ ("item_frame" | "glow_item_frame") = name.strip_prefix("minecraft:").unwrap_or(name) {
+        return summon_frame(glow == "glow_item_frame", rest, source, shared);
+    }
+
     let Some(kind) = crate::minecart::Kind::from_name(name) else {
         return Answer::saying(format!("Пока призываются только вагонетки, предметы и молния, а не {}", name));
     };
@@ -672,6 +676,52 @@ fn summon_item(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
         .summon_item(shared.next_entity_id(), stack, place, no_gravity(data));
 
     Answer::saying("Призвана сущность item".to_string())
+}
+
+/// `summon item_frame <x> <y> <z> {Facing:4b,Item:{id:"…",count:1},ItemRotation:2b}`
+/// — рамка в клетке точки. Стороны: 0 — низ, 1 — верх, 2 — север, 3 — юг,
+/// 4 — запад, 5 — восток (вики, Item Frame, «Facing»); по умолчанию юг.
+/// Как у оригинала, призванная рамка не сообщает сравнителям о себе:
+/// им нужен толчок соседа.
+fn summon_frame(glow: bool, rest: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let usage = || Answer::saying("Нужно: summon item_frame <x> <y> <z> {Facing:4b,Item:{id:\"…\",count:1},ItemRotation:2b}".to_string());
+
+    let (place, data) = match rest {
+        [x, y, z] => (entity_place(&[*x, *y, *z], origin_of(source, shared)), ""),
+        [x, y, z, data] => (entity_place(&[*x, *y, *z], origin_of(source, shared)), *data),
+        _ => return usage(),
+    };
+
+    let Some((x, y, z)) = place else {
+        return usage();
+    };
+
+    let number_after = |key: &str| -> Option<u8> {
+        let tail = &data[data.find(key)? + key.len()..];
+        let digits: String = tail.chars().take_while(char::is_ascii_digit).collect();
+
+        digits.parse().ok()
+    };
+
+    let dimension = dimension_of(source, shared);
+    let mut frame = crate::frame::Frame::new(
+        shared.next_entity_id(),
+        (x.floor() as i32, y.floor() as i32, z.floor() as i32),
+        number_after("Facing:").unwrap_or(crate::frame::DEFAULT_FACING),
+        glow,
+    );
+
+    frame.item = item_from_text(data).map(|stack| stack.with_count(1));
+    frame.rotation = number_after("ItemRotation:").unwrap_or(0) & 7;
+
+    let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    world.store_frame(&frame);
+    items.add_frame(frame);
+    crate::frame::refresh_marks(&mut world, &items);
+
+    Answer::saying(format!("Призвана сущность {}", if glow { "glow_item_frame" } else { "item_frame" }))
 }
 
 /// `NoGravity:1b` (или `true`) в данных призыва: сущность без тяжести.
@@ -742,7 +792,27 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let near = |at: (f64, f64, f64)| chosen.reaches((x, y, z), at);
     let mut left = chosen.limit.unwrap_or(usize::MAX);
 
+    let mut world = shared.world_in(dimension_of(source, shared)).lock().expect("мир захвачен другим потоком");
     let mut items = shared.items_in(dimension_of(source, shared)).lock().expect("предметы захвачены другим потоком");
+
+    // Рамки убираются молча, без выпадения (вики, Commands/kill: сущность
+    // просто исчезает). [проверить]: у оригинала рамка при kill могла бы
+    // выронить содержимое.
+    let frames = items.remove_frames(|frame| {
+        let name = if frame.glow { "glow_item_frame" } else { "item_frame" };
+        let picked = left > 0 && chosen.takes(name) && near(frame.place());
+
+        left -= usize::from(picked);
+        picked
+    });
+
+    for frame in &frames {
+        world.forget_frame(frame.pos, frame.facing);
+    }
+
+    if !frames.is_empty() {
+        crate::frame::refresh_marks(&mut world, &items);
+    }
 
     let carts = items.remove_carts(|cart| {
         let picked = left > 0 && chosen.takes(cart.kind.name()) && near((cart.x, cart.y, cart.z));
@@ -771,7 +841,7 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         }
     }
 
-    Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len() + bolts))
+    Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len() + bolts + frames.len()))
 }
 
 /// Выбор сущностей `@e[…]` для `kill`.

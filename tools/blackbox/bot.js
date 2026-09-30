@@ -181,7 +181,7 @@ const padCarts = new Set();
 const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
-const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart']);
+const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {
   const pos = { x: p.x, y: p.y, z: p.z };
   const type = (mcData.entities[p.type] || {}).name || p.type;
@@ -192,7 +192,9 @@ bot._client.on('spawn_entity', (p) => {
   // как у вагонеток (поршень толкает предметы). Предметы, лежавшие до записи,
   // тоже в счёт: их кладут командой перед записью.
   if (scenario.track_items && inPad(pos) && type === 'item') { padCarts.add(p.entityId); cartAt.set(p.entityId, pos); entKind.set(p.entityId, 'предмет'); }
-  if (inPad(pos)) note('spawn', { at: rel(pos).map(v => Math.round(v * 100) / 100), type, data: p.objectData, id: p.entityId, velocity: p.velocity });
+  // Рамки: точное место и углы пакета появления (у рамки они несут сторону).
+  const frameExtra = (type === 'item_frame' || type === 'glow_item_frame') ? { extra: `${rel(pos).map(v => Math.round(v * 100000) / 100000).join(',')} yaw=${p.yaw} pitch=${p.pitch} head=${p.headYaw}` } : {};
+  if (inPad(pos)) note('spawn', { at: rel(pos).map(v => Math.round(v * 100) / 100), type, data: p.objectData, id: p.entityId, velocity: p.velocity, ...frameExtra });
 });
 bot._client.on('entity_metadata', (p) => {
   if (!padTnt.has(p.entityId) && !(padCarts.has(p.entityId) && inPad(cartAt.get(p.entityId)))) return;

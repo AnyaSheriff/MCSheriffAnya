@@ -1088,6 +1088,12 @@ impl BedrockWorld {
                 // [проверить]: качание ударенной вагонетки у Bedrock не
                 // показываем.
                 crate::items::Change::Dropped(_) | crate::items::Change::Fuse { .. } => {}
+                // Рамки у Bedrock — блоки с данными, не сущности; здесь не
+                // показываются. [проверить]
+                crate::items::Change::Frame(_)
+                | crate::items::Change::FrameItem { .. }
+                | crate::items::Change::FrameRotation { .. }
+                | crate::items::Change::FrameSound { .. } => {}
                 crate::items::Change::Gone { entity_id } => {
                     self.carts_at.remove(&entity_id);
 

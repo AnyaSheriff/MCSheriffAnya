@@ -230,6 +230,21 @@ pub enum Change {
     /// Ударила молния (lightning.rs). Пропадает она записью `Gone`.
     Lightning(crate::lightning::Bolt),
 
+    /// Появилась рамка (frame.rs). Пропадает она записью `Gone`.
+    Frame(crate::frame::Frame),
+
+    /// В рамку положили предмет или вынули его (None): клиентам уходит
+    /// свойство «предмет».
+    FrameItem { entity_id: i32, item: Option<Stack> },
+
+    /// Предмет в рамке повернули: свойство «поворот».
+    FrameRotation { entity_id: i32, rotation: u8 },
+
+    /// Звук рамки — в её месте, вперемешку с прочими событиями рамки в
+    /// журнале, чтобы порядок пакетов был как у оригинала (чёрный ящик,
+    /// item-frame-rotate: звук, потом свойство).
+    FrameSound { at: (f64, f64, f64), name: &'static str },
+
     /// Предмет подняли.
     Taken {
         entity_id: i32,
@@ -253,6 +268,9 @@ pub struct Items {
     /// Молнии: живут несколько тактов, журнал тоже общий.
     bolts: Vec<crate::lightning::Bolt>,
 
+    /// Рамки для предметов (frame.rs): висят на гранях блоков, журнал общий.
+    frames: Vec<crate::frame::Frame>,
+
     changes: Journal<Change>,
 }
 
@@ -262,6 +280,7 @@ impl Items {
             items: Vec::new(),
             carts: Vec::new(),
             bolts: Vec::new(),
+            frames: Vec::new(),
             changes: Journal::new(),
         }
     }
@@ -270,6 +289,38 @@ impl Items {
     pub fn add_cart(&mut self, cart: crate::minecart::Minecart) {
         self.changes.push(Change::Cart(cart.clone()));
         self.carts.push(cart);
+    }
+
+    /// Ставит рамку в мир: клиенты узнают о ней сразу.
+    pub fn add_frame(&mut self, frame: crate::frame::Frame) {
+        self.changes.push(Change::Frame(frame.clone()));
+        self.frames.push(frame);
+    }
+
+    /// Все рамки — в порядке появления.
+    pub fn frames(&self) -> &[crate::frame::Frame] {
+        &self.frames
+    }
+
+    pub fn frames_mut(&mut self) -> &mut [crate::frame::Frame] {
+        &mut self.frames
+    }
+
+    /// Убирает рамки, которые выбирает `gone` (сломали, отвалились, убили
+    /// командой), и возвращает их. Клиентам уходит `Gone`.
+    pub fn remove_frames(&mut self, gone: impl FnMut(&mut crate::frame::Frame) -> bool) -> Vec<crate::frame::Frame> {
+        let removed: Vec<crate::frame::Frame> = self.frames.extract_if(.., gone).collect();
+
+        for frame in &removed {
+            self.changes.push(Change::Gone { entity_id: frame.entity_id });
+        }
+
+        removed
+    }
+
+    /// Записывает в журнал событие рамки (свойство или звук).
+    pub fn note_frame(&mut self, change: Change) {
+        self.changes.push(change);
     }
 
     /// Ставит молнию в мир: клиенты узнают о ней сразу.

@@ -941,6 +941,7 @@ async fn enter_world(
         }
 
         send_all_carts(stream, shared, player).await?;
+        send_all_frames(stream, shared, player).await?;
 
         // Инвентарь: то, с чем игрок вышел в прошлый раз. Без этой посылки клиент
         // показал бы пустой инвентарь, хотя на сервере вещи есть.
@@ -1708,6 +1709,152 @@ async fn send_cart(stream: &mut Outgoing<'_>, cart: &crate::minecart::Minecart) 
     write_body(stream, body).await
 }
 
+/// Что клиент уже знает из журнала предметов, кроме самих предметов, и где он
+/// стоит (для слышимости звуков).
+struct Known<'a> {
+    carts: &'a mut HashMap<i32, ShownCart>,
+    frames: &'a mut HashMap<i32, ShownFrame>,
+    listener: (f64, f64, f64),
+}
+
+/// Дальше этого звук рамки клиенту не шлётся. [проверить]
+const FRAME_HEARD: f64 = 48.0;
+
+/// Рамка, как её знает клиент: `pending` — сразу после появления в конце
+/// такта оригинал ещё раз шлёт свойства и нулевой сдвиг (чёрный ящик,
+/// item-frame-facing), `meta` — что слать (нет ничего — не шлётся).
+struct ShownFrame {
+    pending: bool,
+    meta: Option<Vec<u8>>,
+}
+
+/// Свойства рамки, отличные от умолчаний: сторона (не юг), предмет, поворот.
+/// У оригинала пустая рамка, смотрящая на юг, свойств не шлёт вовсе.
+fn frame_meta(frame: &crate::frame::Frame) -> Option<Vec<u8>> {
+    let mut data = encode_varint(SET_ENTITY_DATA);
+
+    data.extend_from_slice(&encode_varint(frame.entity_id));
+
+    let start = data.len();
+
+    if frame.facing != crate::frame::DEFAULT_FACING {
+        data.push(crate::frame::DIRECTION_PROPERTY);
+        data.extend_from_slice(&encode_varint(crate::frame::PROPERTY_DIRECTION));
+        data.extend_from_slice(&encode_varint(i32::from(frame.facing)));
+    }
+
+    if frame.item.is_some() {
+        data.push(crate::frame::ITEM_PROPERTY);
+        data.extend_from_slice(&encode_varint(PROPERTY_SLOT));
+        push_slot(&mut data, frame.item);
+    }
+
+    if frame.rotation != 0 {
+        data.push(crate::frame::ROTATION_PROPERTY);
+        data.extend_from_slice(&encode_varint(PROPERTY_INT));
+        data.extend_from_slice(&encode_varint(i32::from(frame.rotation)));
+    }
+
+    if data.len() == start {
+        return None;
+    }
+
+    data.push(PROPERTIES_END);
+    Some(data)
+}
+
+/// Появление рамки: клетка (не настоящее место), углы стороны, номер
+/// стороны в данных; следом свойства, если есть.
+async fn send_frame(stream: &mut Outgoing<'_>, frame: &crate::frame::Frame, meta: Option<&[u8]>) -> io::Result<()> {
+    let mut body = encode_varint(ADD_ENTITY);
+    let (pitch, yaw) = frame.angles();
+    let (x, y, z) = frame.spawn_place();
+
+    body.extend_from_slice(&encode_varint(frame.entity_id));
+    body.extend_from_slice(&frame.uuid);
+    body.extend_from_slice(&encode_varint(frame.java_type()));
+    push_f64(&mut body, x);
+    push_f64(&mut body, y);
+    push_f64(&mut body, z);
+    types::push_velocity(&mut body, 0.0, 0.0, 0.0);
+    body.push(pitch);
+    body.push(yaw);
+    body.push(0);
+    body.extend_from_slice(&encode_varint(i32::from(frame.facing)));
+    write_body(stream, body).await?;
+
+    if let Some(meta) = meta {
+        write_body(stream, meta.to_vec()).await?;
+    }
+
+    Ok(())
+}
+
+/// Показывает клиенту все рамки мира — вошедшему о них журнал не скажет.
+async fn send_all_frames(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    let frames: Vec<crate::frame::Frame> =
+        shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").frames().to_vec();
+
+    for frame in &frames {
+        let meta = frame_meta(frame);
+
+        send_frame(stream, frame, meta.as_deref()).await?;
+        player.seen_frames.insert(frame.entity_id, ShownFrame { pending: false, meta });
+    }
+
+    Ok(())
+}
+
+/// Конец такта у только что появившихся рамок: свойства повторяются, следом —
+/// сдвиг на ноль, не на земле (чёрный ящик: так после каждого появления).
+async fn send_frame_intros(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
+    let mut pending: Vec<i32> = player.seen_frames.iter().filter(|(_, shown)| shown.pending).map(|(id, _)| *id).collect();
+
+    pending.sort_unstable();
+
+    for entity_id in pending {
+        let Some(shown) = player.seen_frames.get_mut(&entity_id) else {
+            continue;
+        };
+
+        shown.pending = false;
+
+        if let Some(meta) = shown.meta.clone() {
+            write_body(stream, meta).await?;
+        }
+
+        let mut body = encode_varint(ENTITY_POSITION);
+
+        body.extend_from_slice(&encode_varint(entity_id));
+        push_i16(&mut body, 0);
+        push_i16(&mut body, 0);
+        push_i16(&mut body, 0);
+        body.push(0);
+        write_body(stream, body).await?;
+    }
+
+    Ok(())
+}
+
+/// Звук сущности в её месте, раздел «нейтральные»: место в восьмых долях,
+/// отсекаемых к нулю (как `send_sound`).
+async fn send_entity_sound(stream: &mut Outgoing<'_>, (x, y, z): (f64, f64, f64), name: &str) -> io::Result<()> {
+    let mut body = encode_varint(SOUND_EFFECT);
+
+    body.extend_from_slice(&encode_varint(0));
+    body.extend_from_slice(&encode_string(name));
+    body.push(0);
+    body.extend_from_slice(&encode_varint(SOUND_NEUTRAL));
+    push_i32(&mut body, (x * 8.0) as i32);
+    push_i32(&mut body, (y * 8.0) as i32);
+    push_i32(&mut body, (z * 8.0) as i32);
+    body.extend_from_slice(&1.0f32.to_be_bytes());
+    body.extend_from_slice(&1.0f32.to_be_bytes());
+    body.extend_from_slice(&0i64.to_be_bytes());
+
+    write_body(stream, body).await
+}
+
 /// Отправляет подбор предмета: клиент рисует, как предмет летит к тому,
 /// кто его поднял.
 async fn send_pick_up(
@@ -1732,9 +1879,11 @@ async fn send_pending_item_changes(
     dimension: crate::dimension::Dimension,
     from: &mut usize,
     seen: &mut SeenItems,
-    carts: &mut HashMap<i32, ShownCart>,
+    known: Known<'_>,
     reader: journal::Reader,
 ) -> io::Result<()> {
+    let Known { carts, frames, listener } = known;
+
     let changes = {
         let mut items = shared
             .items_in(dimension)
@@ -1759,6 +1908,7 @@ async fn send_pending_item_changes(
                 send_remove_entity(stream, entity_id).await?;
                 seen.remove(&entity_id);
                 carts.remove(&entity_id);
+                frames.remove(&entity_id);
             }
             items::Change::Fuse { entity_id, fuse } => {
                 if seen.contains_key(&entity_id) {
@@ -1777,6 +1927,42 @@ async fn send_pending_item_changes(
                 carts.insert(cart.entity_id, ShownCart::of(&cart));
             }
             items::Change::Lightning(bolt) => send_lightning(stream, &bolt).await?,
+            items::Change::Frame(frame) => {
+                let meta = frame_meta(&frame);
+
+                send_frame(stream, &frame, meta.as_deref()).await?;
+                frames.insert(frame.entity_id, ShownFrame { pending: true, meta });
+            }
+            items::Change::FrameItem { entity_id, item } => {
+                if frames.contains_key(&entity_id) {
+                    let mut data = encode_varint(SET_ENTITY_DATA);
+
+                    data.extend_from_slice(&encode_varint(entity_id));
+                    data.push(crate::frame::ITEM_PROPERTY);
+                    data.extend_from_slice(&encode_varint(PROPERTY_SLOT));
+                    push_slot(&mut data, item);
+                    data.push(PROPERTIES_END);
+                    write_body(stream, data).await?;
+                }
+            }
+            items::Change::FrameRotation { entity_id, rotation } => {
+                if frames.contains_key(&entity_id) {
+                    let mut data = encode_varint(SET_ENTITY_DATA);
+
+                    data.extend_from_slice(&encode_varint(entity_id));
+                    data.push(crate::frame::ROTATION_PROPERTY);
+                    data.extend_from_slice(&encode_varint(PROPERTY_INT));
+                    data.extend_from_slice(&encode_varint(i32::from(rotation)));
+                    data.push(PROPERTIES_END);
+                    write_body(stream, data).await?;
+                }
+            }
+            items::Change::FrameSound { at, name } => {
+                // Громкость 1 слышна на 16 блоков; с запасом.
+                if (at.0 - listener.0).powi(2) + (at.1 - listener.1).powi(2) + (at.2 - listener.2).powi(2) <= FRAME_HEARD * FRAME_HEARD {
+                    send_entity_sound(stream, at, name).await?;
+                }
+            }
             items::Change::Taken { entity_id, by, count } => {
                 send_pick_up(stream, entity_id, by, count).await?;
                 send_remove_entity(stream, entity_id).await?;
@@ -4671,6 +4857,8 @@ async fn read_and_log_play_packets(
 
                     player.seen_carts.clear();
                     send_all_carts(stream, shared, player).await?;
+                    player.seen_frames.clear();
+                    send_all_frames(stream, shared, player).await?;
 
                     // Чужих игроков покажет сверка видимости на этом же круге.
                     seen.clear();
@@ -4815,7 +5003,7 @@ async fn read_and_log_play_packets(
             shared, player.dimension,
             &mut item_changes,
             &mut seen_items,
-            &mut player.seen_carts,
+            Known { carts: &mut player.seen_carts, frames: &mut player.seen_frames, listener: (player.x, player.y, player.z) },
             player.reader,
         )
         .await?;
@@ -4837,6 +5025,7 @@ async fn read_and_log_play_packets(
                 // Движение вагонеток — в конце такта, после изменений мира,
                 // как у оригинала.
                 send_cart_moves(stream, shared, player).await?;
+                send_frame_intros(stream, player).await?;
                 send_item_ticks(stream, shared, player.dimension, &mut seen_items).await?;
 
                 // Едущие блоки поршней сдвинули игрока: по серверу он уже там.
@@ -5521,12 +5710,39 @@ fn attack(target: i32, player: &mut PlayerState, shared: &Shared) {
         return;
     }
 
+    // Рамка: удар вынимает предмет или ломает её, без звука удара (чёрный
+    // ящик, item-frame-rotate: только звуки рамки).
+    if strike_frame(shared, player.dimension, target, (player.x, player.y, player.z), player.game_mode == GAME_MODE_CREATIVE) {
+        return;
+    }
+
     let now = *shared.ticks.borrow();
     let since = u32::try_from(now.saturating_sub(player.last_attack)).unwrap_or(u32::MAX);
 
     if strike_cart(shared, player.dimension, target, (player.x, player.y, player.z), player.game_mode == GAME_MODE_CREATIVE, since) {
         player.last_attack = now;
     }
+}
+
+/// Удар игрока в `from` по рамке `target`. Возвращает, была ли такая рамка
+/// в досягаемости.
+fn strike_frame(shared: &Shared, dimension: crate::dimension::Dimension, target: i32, from: (f64, f64, f64), creative: bool) -> bool {
+    /// Дальше этого ударить нельзя (как у вагонетки).
+    const REACH: f64 = 6.0;
+
+    let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    let Some(frame) = items.frames().iter().find(|frame| frame.entity_id == target) else {
+        return false;
+    };
+    let (x, y, z) = frame.place();
+
+    if (x - from.0).powi(2) + (y - from.1).powi(2) + (z - from.2).powi(2) > REACH * REACH {
+        return false;
+    }
+
+    crate::frame::strike(&mut world, &mut items, shared, target, creative)
 }
 
 /// Удар игрока в `from` по вагонетке `target`: `since` — сколько тактов
@@ -5587,6 +5803,32 @@ fn use_entity(target: i32, player: &mut PlayerState, shared: &Shared) -> Reactio
 
     if player.game_mode == GAME_MODE_SPECTATOR {
         return reaction;
+    }
+
+    // Рамка: с предметом в руке кладёт его, по полной поворачивает.
+    {
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+
+        if let Some(frame) = items.frames().iter().find(|frame| frame.entity_id == target) {
+            let (x, y, z) = frame.place();
+
+            // В приключении рамку не тронуть. [проверить]
+            if (x - player.x).powi(2) + (y - player.y).powi(2) + (z - player.z).powi(2) > REACH * REACH || player.game_mode == GAME_MODE_ADVENTURE {
+                return reaction;
+            }
+
+            let used = crate::frame::use_on(&mut world, &mut items, target, player.inventory.held());
+
+            if used == crate::frame::Used::Added
+                && player.game_mode != GAME_MODE_CREATIVE
+                && let Some(slot) = player.inventory.spend_held()
+            {
+                reaction.slots.push(slot);
+            }
+
+            return reaction;
+        }
     }
 
     let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
@@ -6177,6 +6419,45 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     // В приключении рычаги и двери трогать можно, а ставить блоки — нет.
     if player.game_mode == GAME_MODE_ADVENTURE {
         return Some(refused);
+    }
+
+    // Рамка вешается на грань блока, по которой щёлкнули: клиентам уходит
+    // звук и сама рамка, потом повторяются блок опоры и клетка рамки (чёрный
+    // ящик, item-frame-rotate и item-frame-facing).
+    if let Some(glow) = player
+        .inventory
+        .held()
+        .and_then(|stack| blocks::item_name(stack.item))
+        .and_then(|name| match name {
+            "item_frame" => Some(false),
+            "glow_item_frame" => Some(true),
+            _ => None,
+        })
+    {
+        let clicked = (clicked_x, clicked_y, clicked_z);
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let placed = {
+            let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+
+            crate::frame::place(&mut world, &mut items, shared, clicked, face as u8, glow)
+        };
+
+        if !placed {
+            return Some(Reaction::accepted(sequence));
+        }
+
+        log_debug!("Play: {} повесил рамку в {} {} {}", player.name, clicked_x, clicked_y, clicked_z);
+
+        let (x, y, z) = offset_towards(clicked_x, clicked_y, clicked_z, face);
+
+        world.tell_directly(clicked_x, clicked_y, clicked_z);
+        world.tell_directly(x, y, z);
+        drop(world);
+
+        return Some(Reaction {
+            slots: spend_placed(player),
+            ..Reaction::accepted(sequence)
+        });
     }
 
     // Вагонетка ставится только на рельсу (вики, Minecart: «can be placed
@@ -7160,6 +7441,9 @@ struct PlayerState {
     /// Вагонетки, показанные клиенту, — какими он их знает (minecart.rs).
     seen_carts: HashMap<i32, ShownCart>,
 
+    /// Рамки, показанные клиенту (frame.rs).
+    seen_frames: HashMap<i32, ShownFrame>,
+
     /// Такт мира, когда игрок последний раз бил: сила удара зависит от
     /// того, сколько прошло.
     last_attack: u64,
@@ -7333,6 +7617,7 @@ impl PlayerState {
             shoved_to: None,
             poured: None,
             seen_carts: HashMap::new(),
+            seen_frames: HashMap::new(),
             last_attack: 0,
             dimension: saved.as_ref().map(|data| data.dimension).unwrap_or_default(),
             in_portal: 0,

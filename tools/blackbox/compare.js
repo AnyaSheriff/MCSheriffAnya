@@ -75,7 +75,7 @@ const describe = (e) => {
     case 'action': return `действие ${at} ${e.block} ${e.a}/${e.b}`;
     case 'sound': return `звук ${at} ${e.sound.replace(/^minecraft:/, '')} ${e.volume.toFixed(2)} ~${e.pitch.toFixed(2)}`;
     case 'particle': return `частица ${at} ${e.particle} ${e.count} шт. скорость ${e.speed} (${e.offset})`;
-    case 'spawn': return `сущность ${at} ${e.type} ${e.data}`;
+    case 'spawn': return `сущность ${at} ${e.type} ${e.data}${e.extra ? ' ' + e.extra : ''}`;
     case 'destroy': return `убрана сущность`;
     case 'block_entity': return `данные блока ${at} ${e.type} ${e.data}`;
     case 'window': return `окно ${e.type}`;
@@ -122,7 +122,7 @@ const key = (e) => {
     // (±0,25) — сравниваем по самому блоку, а не по точке.
     case 'spawn': return e.type === 'item'
       ? `spawn item ${e.at.map(Math.floor).join(',')}`
-      : `spawn ${e.at.join(',')} ${e.type} ${e.data}`;
+      : `spawn ${e.at.join(',')} ${e.type} ${e.data}${e.extra ? ' ' + e.extra : ''}`;
     case 'block_entity': return `block_entity ${e.at.join(',')} ${e.type}`;
     // Заголовок окна у сервера свой («Chest» или перевод) — сравниваем тип.
     case 'window': return `window ${e.type}`;

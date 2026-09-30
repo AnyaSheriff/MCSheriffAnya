@@ -1,0 +1,209 @@
+{
+ "name": "item-frame-probe",
+ "about": "Проба: где сравнитель читает рамку.",
+ "blocks": [
+  {
+   "at": [
+    2,
+    0,
+    2
+   ],
+   "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    2
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    0,
+    4
+   ],
+   "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    4
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    6
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    2,
+    0,
+    6
+   ],
+   "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    6
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    8
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    0,
+    8
+   ],
+   "state": "minecraft:comparator[facing=east,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    8
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  }
+ ],
+ "setup": [
+  "kill @e[type=item_frame,distance=..128]",
+  "kill @e[type=item,distance=..128]"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon item_frame $(1,0,2) {Facing:4b,Item:{id:\"minecraft:stick\",count:1},ItemRotation:2b}"
+  },
+  {
+   "after": 2,
+   "cmd": "summon item_frame $(0,0,4) {Facing:4b,Item:{id:\"minecraft:stick\",count:1},ItemRotation:3b}"
+  },
+  {
+   "after": 4,
+   "cmd": "summon item_frame $(0,0,6) {Facing:4b,Item:{id:\"minecraft:stick\",count:1},ItemRotation:4b}"
+  },
+  {
+   "after": 6,
+   "cmd": "summon item_frame $(0,0,8) {Facing:4b,Item:{id:\"minecraft:stick\",count:1},ItemRotation:5b}"
+  },
+  {
+   "after": 10,
+   "set": {
+    "at": [
+     3,
+     0,
+     2
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 20,
+   "set": {
+    "at": [
+     3,
+     0,
+     2
+    ],
+    "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+   }
+  },
+  {
+   "after": 11,
+   "set": {
+    "at": [
+     3,
+     0,
+     4
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 21,
+   "set": {
+    "at": [
+     3,
+     0,
+     4
+    ],
+    "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+   }
+  },
+  {
+   "after": 12,
+   "set": {
+    "at": [
+     3,
+     0,
+     6
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 22,
+   "set": {
+    "at": [
+     3,
+     0,
+     6
+    ],
+    "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+   }
+  },
+  {
+   "after": 13,
+   "set": {
+    "at": [
+     3,
+     0,
+     8
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 23,
+   "set": {
+    "at": [
+     3,
+     0,
+     8
+    ],
+    "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+   }
+  }
+ ],
+ "record_ticks": 50,
+ "cleanup": [
+  "kill @e[type=item_frame,distance=..128]",
+  "kill @e[type=item,distance=..128]"
+ ]
+}
