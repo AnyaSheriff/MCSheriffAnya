@@ -349,7 +349,14 @@ async fn kick_everyone(shared: &Shared) {
     log_warn!("Не все игроки успели выйти до остановки");
 }
 
+/// Ждёт сигнала остановки от системы: Ctrl-C (на Windows только он).
+#[cfg(not(unix))]
+async fn stop_signal() {
+    let _ = tokio::signal::ctrl_c().await;
+}
+
 /// Ждёт сигнала остановки от системы: Ctrl-C или просьбы завершиться.
+#[cfg(unix)]
 async fn stop_signal() {
     use tokio::signal::unix::{SignalKind, signal};
 

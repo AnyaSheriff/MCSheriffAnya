@@ -37,7 +37,57 @@
 use std::cell::RefCell;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom};
+#[cfg(unix)]
 use std::os::unix::fs::FileExt;
+#[cfg(windows)]
+use windows_at::FileExt;
+
+/// Чтение и запись по смещению для Windows: те же `read_exact_at` и
+/// `write_all_at`, что у unix, поверх `seek_read`/`seek_write`. Курсор файла
+/// они двигают, но регион везде ходит по смещениям, а не по курсору.
+#[cfg(windows)]
+mod windows_at {
+    use std::fs::File;
+    use std::io;
+    use std::os::windows::fs::FileExt as _;
+
+    pub trait FileExt {
+        fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()>;
+        fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()>;
+    }
+
+    impl FileExt for File {
+        fn read_exact_at(&self, mut buf: &mut [u8], mut offset: u64) -> io::Result<()> {
+            while !buf.is_empty() {
+                match self.seek_read(buf, offset) {
+                    Ok(0) => return Err(io::ErrorKind::UnexpectedEof.into()),
+                    Ok(n) => {
+                        buf = &mut buf[n..];
+                        offset += n as u64;
+                    }
+                    Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
+                    Err(e) => return Err(e),
+                }
+            }
+            Ok(())
+        }
+
+        fn write_all_at(&self, mut buf: &[u8], mut offset: u64) -> io::Result<()> {
+            while !buf.is_empty() {
+                match self.seek_write(buf, offset) {
+                    Ok(0) => return Err(io::ErrorKind::WriteZero.into()),
+                    Ok(n) => {
+                        buf = &buf[n..];
+                        offset += n as u64;
+                    }
+                    Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
+                    Err(e) => return Err(e),
+                }
+            }
+            Ok(())
+        }
+    }
+}
 use std::path::{Path, PathBuf};
 
 /// Сторона региона в чанках.

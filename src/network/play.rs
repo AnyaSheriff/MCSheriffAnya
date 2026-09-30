@@ -4955,17 +4955,20 @@ struct Inbound {
 
 impl Inbound {
     fn start(stream: &TcpStream, shared: &Shared) -> io::Result<Self> {
-        use std::os::fd::{AsRawFd, FromRawFd};
-
         // Второй дескриптор того же сокета: читатель владеет своим, запись
         // остаётся за подключением.
-        let fd = unsafe { libc::dup(stream.as_raw_fd()) };
+        #[cfg(unix)]
+        let own = {
+            use std::os::fd::AsFd;
 
-        if fd < 0 {
-            return Err(io::Error::last_os_error());
-        }
+            std::net::TcpStream::from(stream.as_fd().try_clone_to_owned()?)
+        };
+        #[cfg(windows)]
+        let own = {
+            use std::os::windows::io::AsSocket;
 
-        let own = unsafe { std::net::TcpStream::from_raw_fd(fd) };
+            std::net::TcpStream::from(stream.as_socket().try_clone_to_owned()?)
+        };
         own.set_nonblocking(true)?;
 
         // Чтение — через буфер: клиент шлёт по нескольку мелких пакетов за

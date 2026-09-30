@@ -13,7 +13,18 @@
 // в prompt.rs и raw.rs.
 
 pub mod prompt;
+#[cfg(unix)]
 mod raw;
+
+/// Без termios (Windows) своей строки ввода нет: команды читаются построчно.
+#[cfg(not(unix))]
+mod raw {
+    pub fn enable() -> bool {
+        false
+    }
+
+    pub fn restore() {}
+}
 
 use std::sync::Arc;
 use std::time::Duration;

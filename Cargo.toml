@@ -20,3 +20,7 @@ md-5 = "0.10"
 # Проверка подписей входа Xbox Live (RS256, ES384). Та же библиотека уже
 # стоит под rustls у reqwest — с теми же возможностями, без новой сборки.
 aws-lc-rs = { version = "1", default-features = false, features = ["aws-lc-sys", "prebuilt-nasm"] }
+
+# Местное время без libc на Windows (там нет localtime_r).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_SystemInformation", "Win32_System_Time"] }

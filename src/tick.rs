@@ -104,6 +104,11 @@ pub fn tick_core() -> Option<usize> {
 /// Уводит нынешний поток с ядра такта: пусть работает на любом другом.
 ///
 /// Так рабочие потоки сети и генерации не отбирают у такта его ядро.
+#[cfg(not(target_os = "linux"))]
+pub fn keep_off_tick_core() {}
+
+/// Уводит нынешний поток с ядра такта (только Linux: `sched_setaffinity`).
+#[cfg(target_os = "linux")]
 pub fn keep_off_tick_core() {
     let Some(tick_core) = tick_core() else {
         return;
@@ -131,6 +136,11 @@ pub fn keep_off_tick_core() {
 /// Без привязки планировщик перекидывает поток с ядра на ядро, и каждый
 /// переезд стоит промаха по кэшу. Такту это особенно заметно: он трогает
 /// один и тот же мир двадцать раз в секунду.
+#[cfg(not(target_os = "linux"))]
+fn pin_to_core(_core: usize) {}
+
+/// Привязка к ядру — только Linux; на macOS и Windows планировщик решает сам.
+#[cfg(target_os = "linux")]
 fn pin_to_core(core: usize) {
     // SAFETY: заполняем набор ядер по правилам libc и передаём его как есть.
     // Нулевой первый довод означает «этот поток».

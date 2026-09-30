@@ -395,6 +395,50 @@ fn refresh_notes(path: &Path, content: &str) {
 
 /// Время создания файла — в том же виде, в каком его пишет оригинальный
 /// сервер: «Сб сен 20 10:05:00 MSK 2026», только по-английски.
+#[cfg(windows)]
+fn written_at() -> String {
+    use windows_sys::Win32::System::SystemInformation::GetLocalTime;
+    use windows_sys::Win32::System::Time::GetTimeZoneInformation;
+
+    const DAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    // SAFETY: обе функции только заполняют переданные структуры.
+    let (now, bias) = unsafe {
+        let mut now: windows_sys::Win32::Foundation::SYSTEMTIME = std::mem::zeroed();
+        GetLocalTime(&mut now);
+
+        let mut zone: windows_sys::Win32::System::Time::TIME_ZONE_INFORMATION = std::mem::zeroed();
+        let bias = match GetTimeZoneInformation(&mut zone) {
+            // Идёт летнее время — к общему сдвигу добавляется его поправка.
+            2 => zone.Bias + zone.DaylightBias,
+            _ => zone.Bias + zone.StandardBias,
+        };
+
+        (now, bias)
+    };
+
+    // Bias — минуты «UTC минус местное»; у имени пояса на Windows своего
+    // короткого вида нет, поэтому пишем сдвиг.
+    let east = -bias;
+    let sign = if east < 0 { '-' } else { '+' };
+
+    format!(
+        "{} {} {:02} {:02}:{:02}:{:02} UTC{}{:02}:{:02} {}",
+        DAYS[usize::from(now.wDayOfWeek) % 7],
+        MONTHS[usize::from(now.wMonth).saturating_sub(1) % 12],
+        now.wDay,
+        now.wHour,
+        now.wMinute,
+        now.wSecond,
+        sign,
+        east.abs() / 60,
+        east.abs() % 60,
+        now.wYear
+    )
+}
+
+#[cfg(unix)]
 fn written_at() -> String {
     /// Сколько байт хватит на строку времени.
     const ROOM: usize = 64;

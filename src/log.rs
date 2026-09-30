@@ -89,7 +89,19 @@ pub fn print(level: &str, message: std::fmt::Arguments) {
     crate::reports::line(level, &text);
 }
 
+/// Текущее местное время в виде ЧЧ:ММ:СС (Windows: системные часы через WinAPI).
+#[cfg(windows)]
+fn local_time() -> String {
+    let mut now: windows_sys::Win32::Foundation::SYSTEMTIME = unsafe { std::mem::zeroed() };
+
+    // SAFETY: функция только заполняет переданную структуру.
+    unsafe { windows_sys::Win32::System::SystemInformation::GetLocalTime(&mut now) };
+
+    format!("{:02}:{:02}:{:02}", now.wHour, now.wMinute, now.wSecond)
+}
+
 /// Текущее местное время в виде ЧЧ:ММ:СС.
+#[cfg(unix)]
 fn local_time() -> String {
     let seconds = match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(since) => since.as_secs() as libc::time_t,

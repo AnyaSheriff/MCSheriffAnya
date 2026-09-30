@@ -90,6 +90,16 @@ endorsed by Mojang or Microsoft.
 
 Not there yet: mobs, health and damage, containers, packet compression.
 
+## Download
+
+Ready-made builds for Linux, Windows and macOS (Apple Silicon and Intel) are
+on the [Releases](https://github.com/AnyaSheriff/MCSheriffAnya/releases) page.
+Download the archive for your system, unpack it and run `mcsheriffanya`
+(`mcsheriffanya.exe` on Windows) from a terminal. No Rust is needed. The first
+start creates the config and the world next to the binary. Ports: `25565`
+(Java) and `19132/UDP` (Bedrock). On Windows the console reads whole lines
+(no live input line); on Linux and macOS it has the full line editor.
+
 ## Running
 
 ```sh
