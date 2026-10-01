@@ -1,0 +1,49 @@
+{
+ "name": "end-fight-enter",
+ "about": "Приход в Край (творчество, полёт над порталом выхода): полоса босса дракона, кристаллы на столбах, дракон. У оригинала Край уже жил: дракон кружит, его место и фаза случайны.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "execute in minecraft:the_end run tp $(bot) 0.5 80.0 0.5"
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "execute in minecraft:overworld run tp $(bot) $(0.5,0,0.5)",
+  "!wait 10",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "anytick",
+   "name": "дракон кружит",
+   "match": "ender_dragon",
+   "why": "вики, Ender Dragon: путь по кругу и фаза — случайные; у оригинала дракон уже летал до прихода робота"
+  },
+  {
+   "type": "anytick",
+   "name": "голос и крылья дракона",
+   "match": "entity\\.ender_dragon\\.(ambient|flap|growl)",
+   "why": "вики, Sounds: голос в покое по случайному счёту"
+  },
+  {
+   "type": "anytick",
+   "name": "здоровье полосы босса",
+   "match": "Boss Bar action=2",
+   "why": "кристаллы лечат дракона с 1 HP за 10 тактов — зависит от того, где он летит"
+  }
+ ]
+}

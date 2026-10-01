@@ -837,6 +837,12 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         world.light_full(x, y, z);
     }
 
+    // Бой Края — до хода мобов: кристаллы и дракон появляются в этом же
+    // такте, полоса босса уходит и когда мобов ещё нет.
+    if dimension == Dimension::End {
+        crate::dragon_fight::tick(shared, world, watchers.len(), ticks);
+    }
+
     let spawning = dimension == Dimension::Overworld && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed);
     let mut natural: Vec<crate::mob::Mob> = Vec::new();
 
@@ -965,8 +971,40 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         world.store_mobs(items.mobs());
     }
 
+    dragon_xp(&mut items, rng, &mut || shared.next_entity_id());
     drop(items);
     creeper_blasts(shared, dimension, world, &outcome.blasts);
+}
+
+/// Опыт умирающего дракона: с 154-го такта подъёма десять шариков по 8 %
+/// и последний в 20 % на 200-м (вики, Ender Dragon: «Starting 7.7 seconds
+/// (154 game ticks) … ten drops of 960 and one drop of 2400») [проверить:
+/// такты между шариками].
+fn dragon_xp(items: &mut items::Items, rng: &mut crate::mob::Rng, next_id: &mut dyn FnMut() -> i32) {
+    let dying: Vec<(usize, i32, (f64, f64, f64))> = items
+        .mobs()
+        .iter()
+        .enumerate()
+        .filter(|(_, mob)| mob.kind == crate::mob::Kind::EnderDragon && mob.is_dead() && mob.dragon.xp > 0)
+        .map(|(index, mob)| (index, mob.dead_for, (mob.x, mob.y + 4.0, mob.z)))
+        .collect();
+
+    for (index, dead_for, at) in dying {
+        let total = items.mobs()[index].dragon.xp;
+        let portion = if dead_for == crate::mob::DRAGON_DEATH_TICKS {
+            total / 5
+        } else if dead_for >= 154 && (dead_for - 154) % 5 == 0 {
+            total * 8 / 100
+        } else {
+            continue;
+        };
+
+        items.drop_experience(portion, at, next_id, rng);
+
+        if dead_for == crate::mob::DRAGON_DEATH_TICKS {
+            items.mobs_mut()[index].dragon.xp = 0;
+        }
+    }
 }
 
 /// Взрывы криперов: центр — их ноги, сила 3; каждый разбирается до конца, как
@@ -1391,6 +1429,7 @@ pub(crate) fn blow_crystal(
     }
 
     world.blast_source = culprit;
+    world.blast_by_player = culprit != 0;
     tnt::explode(world, items, players, centre, POWER, false, next_id);
     prime_sounds(world, items);
 

@@ -25,6 +25,7 @@ pub mod light;
 pub mod nether;
 pub mod nether_bastion;
 pub mod nether_fortress;
+pub mod end_city;
 pub mod the_end;
 pub mod noise;
 pub mod ocean;
@@ -148,6 +149,8 @@ pub struct WorldSound {
 /// обгоняло бы изменения более раннего.
 #[derive(Clone)]
 pub enum WorldEvent {
+    /// Полоса босса дракона: доля здоровья; None — убрать.
+    BossBar(Option<f32>),
     Change(BlockChange),
     Action(BlockAction),
 
@@ -843,6 +846,9 @@ pub struct World {
     /// назван виновником в уроне игрокам.
     pub blast_source: i32,
 
+    /// Взрыв по вине игрока (ударил кристалл): урон вида «player_explosion».
+    pub blast_by_player: bool,
+
     /// Ключ имени виновника взрыва для сообщения о смерти (крипер): пусто — нет.
     pub blast_killer: &'static str,
 
@@ -999,6 +1005,9 @@ pub struct World {
     /// Сколько игроков смотрят в хранилище (по месту каждой половины).
     viewers: HashMap<(i32, i32, i32), u32>,
 
+    /// Бой с драконом Края (dragon_fight.rs); у прочих миров пуст.
+    pub fight: crate::dragon_fight::Fight,
+
     /// Предметы, выброшенные выбрасывателем или раздатчиком: где, с какой
     /// скоростью и что. Заводит сущности такт (`take_ejected`).
     ejected: Vec<Ejected>,
@@ -1100,6 +1109,7 @@ impl World {
             noise: 0x9E37_79B9,
             actor: None,
             blast_source: 0,
+            blast_by_player: false,
             blast_killer: "",
             late: Vec::new(),
             chunks: HashMap::default(),
@@ -1132,6 +1142,7 @@ impl World {
             create_missing: true,
             spilled: Vec::new(),
             viewers: HashMap::new(),
+            fight: crate::dragon_fight::Fight::default(),
             ejected: Vec::new(),
             primed: Vec::new(),
             blast_rest: Default::default(),
@@ -1240,6 +1251,7 @@ impl World {
             noise: 0x9E37_79B9 ^ std::process::id(),
             actor: None,
             blast_source: 0,
+            blast_by_player: false,
             blast_killer: "",
             late: Vec::new(),
             chunks: HashMap::default(),
@@ -1278,6 +1290,7 @@ impl World {
             create_missing: false,
             spilled: Vec::new(),
             viewers: HashMap::new(),
+            fight: level.fight.clone(),
             ejected: Vec::new(),
             primed: Vec::new(),
             blast_rest: Default::default(),
@@ -1694,6 +1707,11 @@ impl World {
         }
 
         now
+    }
+
+    /// Полоса босса дракона для всех в этом мире.
+    pub fn note_boss_bar(&mut self, share: Option<f32>) {
+        self.events.push(WorldEvent::BossBar(share));
     }
 
     /// Точка такта, где слежение рассылает клиентам мобов.
@@ -2798,6 +2816,10 @@ impl World {
 
         if let Some((x, y, z)) = self.spawn.get() {
             text.push_str(&format!("spawn = {} {} {}\n", x, y, z));
+        }
+
+        if self.fight.started {
+            text.push_str(&self.fight.save());
         }
 
         // Такты и ходы поршней — в своём файле: их бывают десятки тысяч
@@ -4041,6 +4063,9 @@ struct Level {
     /// Найденная когда-то точка появления.
     spawn: Option<(f64, f64, f64)>,
 
+    /// Бой с драконом (у Края).
+    fight: crate::dragon_fight::Fight,
+
     /// Файла мира не было вовсе: мир новый.
     new: bool,
 }
@@ -4236,6 +4261,7 @@ impl Level {
             moving: Vec::new(),
             cargo: Vec::new(),
             spawn: None,
+            fight: crate::dragon_fight::Fight::default(),
             new: true,
         }
     }
@@ -4267,6 +4293,8 @@ fn read_level(path: &Path) -> Result<Option<Level>, String> {
             "seed" => level.seed = value.parse().ok(),
             "type" => level.kind = Some(WorldKind::from_setting(value)),
             "spawn" => level.spawn = read_spawn(value),
+            "dragon-fight" => level.fight.read_flags(value),
+            "gateways" => level.fight.read_gateways(value),
             // Прежний вид: такты лежали в level.dat со сроком «сколько ждать».
             "tick" => {
                 if let Some(waiting) = read_waiting(value) {

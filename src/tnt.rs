@@ -276,6 +276,7 @@ fn blast(
     });
 
     world.blast_source = 0;
+    world.blast_by_player = false;
 }
 
 /// Рушит следующую часть отложенного большим взрывом (`BLAST_BATCH`).
@@ -462,7 +463,25 @@ fn push_entities(
             mob.on_ground = false;
         }
 
-        mob.hurt(crate::survival::explosion_damage(impact, power), crate::survival::Source::Explosion, None);
+        // Взрыв по вине игрока (кристалл от его руки) — «player_explosion»
+        // (чёрный ящик, dragon-crystal-heal: вид 35); дракону — в тело,
+        // четверть (там же: 200 → 192,08).
+        let source = if world.blast_by_player { crate::survival::Source::PlayerExplosion } else { crate::survival::Source::Explosion };
+        let amount = crate::survival::explosion_damage(impact, power);
+
+        if mob.kind == crate::mob::Kind::EnderDragon {
+            mob.hurt_part(amount, false, source, None);
+        } else {
+            mob.hurt(amount, source, None);
+        }
+
+        // Виновник взрыва — в событии урона (чёрный ящик, dragon-crystal-heal:
+        // «sourceCauseId: entity»).
+        if world.blast_by_player
+            && let Some(crate::mob::Event::Hurt { cause, .. }) = mob.events.iter_mut().rev().find(|event| matches!(event, crate::mob::Event::Hurt { .. }))
+        {
+            *cause = world.blast_source;
+        }
     }
 
     let mut pushed = Vec::new();

@@ -85,6 +85,8 @@ pub struct PlayerStrike {
     /// Чем ударили (для сообщения о смерти) и во что: топор отключает щит.
     pub weapon: Option<Stack>,
     pub disables_shield_ticks: u32,
+    /// «Пробивание» булавы: доля защиты брони, которая остаётся (1 — вся).
+    pub breach_scale: f32,
     /// Зачарование «заговорённое лезвие»: столько тактов горит жертва.
     pub fire_ticks: i32,
     /// Слоты брони, чьи шипы сработали при этом ударе (бросок делает нападающий).
@@ -258,16 +260,70 @@ pub struct Strike {
 /// Считает урон удара: основа умножается на долю заряда, критический удар
 /// (только при полном заряде и `crit_ok`) умножает основу ещё на 1,5, а
 /// прибавка от зачарований масштабируется зарядом (вики, Melee attack).
-pub fn strike(attack_damage: f64, enchant: f32, charge: f32, crit_ok: bool) -> Strike {
+/// `bonus` — прибавка к основе до крита: сокрушающий удар булавы (вики,
+/// Mace: «both the mace's base damage and its smash attack damage are
+/// increased by 50%»; чёрный ящик, pvp-mace: (6 + 4·1,5925)·1,5 = 18,556).
+pub fn strike(attack_damage: f64, bonus: f32, enchant: f32, charge: f32, crit_ok: bool) -> Strike {
     let full = charge > FULL_CHARGE;
     let crit = full && crit_ok;
-    let mut base = attack_damage as f32 * base_scale(charge);
+    let mut base = attack_damage as f32 * base_scale(charge) + bonus;
 
     if crit {
         base *= 1.5;
     }
 
     Strike { damage: base + enchant * charge, crit, full, charge }
+}
+
+// ---------------------------------------------------------------------------
+// Булава
+// ---------------------------------------------------------------------------
+
+/// С какого пролёта удар булавой сокрушающий (вики, Mace: «falling 1.5
+/// blocks or more»).
+pub const SMASH_FALL: f32 = 1.5;
+
+/// Сокрушает ли удар: булава в руке, игрок в пролёте не меньше 1,5 блока и
+/// не на земле (вики, Mace). [проверить: полёт на крыльях не считается]
+pub fn smash_ready(mace: bool, fall: f32, on_ground: bool) -> bool {
+    mace && fall >= SMASH_FALL && !on_ground
+}
+
+/// Прибавка сокрушающего удара за пролёт `fall` блоков (вики, Mace): 4 за
+/// каждый из первых трёх блоков, 2 за каждый из следующих пяти, дальше по 1;
+/// доли блока считаются (чёрный ящик, pvp-mace: пролёт 1,5925 дал 6,37).
+/// «Плотность» прибавляет 0,5 за уровень на каждый блок пролёта
+/// (вики, Density) [проверить].
+pub fn smash_bonus(fall: f32, density: i32) -> f32 {
+    let first = fall.min(3.0);
+    let second = (fall - 3.0).clamp(0.0, 5.0);
+    let rest = (fall - 8.0).max(0.0);
+
+    4.0 * first + 2.0 * second + rest + 0.5 * density as f32 * fall
+}
+
+/// Звук сокрушающего удара: по стоящей на земле жертве — «о землю», при
+/// пролёте больше пяти блоков — тяжёлый; по жертве в воздухе — «в воздухе»
+/// (вики, Mace: «fall of greater than five blocks»; чёрный ящик, pvp-mace).
+/// [проверить: тяжёлый и воздушный]
+pub fn smash_sound(fall: f32, victim_on_ground: bool) -> &'static str {
+    if !victim_on_ground {
+        "minecraft:item.mace.smash_air"
+    } else if fall > 5.0 {
+        "minecraft:item.mace.smash_ground_heavy"
+    } else {
+        "minecraft:item.mace.smash_ground"
+    }
+}
+
+/// Сколько частиц просит событие мира 2013 «сокрушающий удар» под жертвой
+/// (чёрный ящик, pvp-mace и pvp-mace-heavy: 750 при пролёте 1,6 и 4,8).
+pub const SMASH_PARTICLES: i32 = 750;
+
+/// Доля брони, которую оставляет «пробивание» (вики, Breach: «reduces the
+/// effectiveness of armor by 15% per level») [проверить].
+pub fn breach_scale(level: i32) -> f32 {
+    (1.0 - 0.15 * level as f32).max(0.0)
 }
 
 // ---------------------------------------------------------------------------
@@ -283,7 +339,13 @@ pub fn bypasses_armor(source: Source) -> bool {
 /// Урон после брони и твёрдости (вики, Armor): `урон · (1 − min(20,
 /// max(броня/5, броня − урон/(2 + твёрдость/4)))/25)`.
 pub fn after_armor(damage: f32, armor: f32, toughness: f32) -> f32 {
-    let defense = (armor / 5.0).max(armor - damage / (2.0 + toughness / 4.0)).min(20.0);
+    after_armor_breached(damage, armor, toughness, 1.0)
+}
+
+/// То же, но защита брони умножена на `scale` — «пробивание» булавы
+/// (`breach_scale`).
+pub fn after_armor_breached(damage: f32, armor: f32, toughness: f32, scale: f32) -> f32 {
+    let defense = (armor / 5.0).max(armor - damage / (2.0 + toughness / 4.0)).min(20.0) * scale;
 
     damage * (1.0 - defense / 25.0)
 }
@@ -496,6 +558,43 @@ mod tests {
     }
 
     #[test]
+    fn mace_smash_matches_the_black_box() {
+        // pvp-mace: пролёт 1,5925 блока, крит: (6 + 6,37)·1,5 = 18,556.
+        let fall = 1.5925;
+        let hit = strike(6.0, smash_bonus(fall, 0), 0.0, 1.0, true);
+
+        assert!((hit.damage - 18.556).abs() < 0.01, "{}", hit.damage);
+        assert!(hit.crit);
+
+        // Ступени прибавки: 3 блока по 4, 5 блоков по 2, дальше по 1.
+        assert_eq!(smash_bonus(3.0, 0), 12.0);
+        assert_eq!(smash_bonus(8.0, 0), 22.0);
+        assert_eq!(smash_bonus(10.0, 0), 24.0);
+        // «Плотность» I: ещё 0,5 за блок.
+        assert_eq!(smash_bonus(4.0, 1), 16.0);
+
+        assert!(smash_ready(true, 1.5, false));
+        assert!(!smash_ready(true, 1.4, false));
+        assert!(!smash_ready(true, 3.0, true));
+        assert!(!smash_ready(false, 3.0, false));
+
+        assert_eq!(smash_sound(1.6, true), "minecraft:item.mace.smash_ground");
+        assert_eq!(smash_sound(5.5, true), "minecraft:item.mace.smash_ground_heavy");
+        assert_eq!(smash_sound(5.5, false), "minecraft:item.mace.smash_air");
+    }
+
+    #[test]
+    fn breach_weakens_armor() {
+        // Пробивание II оставляет 70 % защиты: алмазная броня 20 против 10 урона.
+        let whole = after_armor(10.0, 20.0, 8.0);
+        let breached = after_armor_breached(10.0, 20.0, 8.0, breach_scale(2));
+
+        assert!(breached > whole);
+        assert!((breach_scale(2) - 0.7).abs() < 1e-6);
+        assert_eq!(breach_scale(7), 0.0);
+    }
+
+    #[test]
     fn armor_gives_points_only_in_its_slot() {
         let mut attributes = Attributes::player();
         let mut applied = Vec::new();
@@ -550,13 +649,13 @@ mod tests {
     #[test]
     fn a_full_crit_multiplies_only_the_base_damage() {
         // меч 7, острота V (+3), полный заряд, крит: 7·1,5 + 3
-        let hit = strike(7.0, 3.0, 1.0, true);
+        let hit = strike(7.0, 0.0, 3.0, 1.0, true);
 
         assert!(hit.crit && hit.full);
         assert!((hit.damage - 13.5).abs() < 1e-5);
 
         // не полный заряд — крита нет, и прибавка масштабируется зарядом
-        let weak = strike(7.0, 3.0, 0.5, true);
+        let weak = strike(7.0, 0.0, 3.0, 0.5, true);
 
         assert!(!weak.crit && !weak.full);
         assert!((weak.damage - (7.0 * 0.4 + 1.5)).abs() < 1e-5);

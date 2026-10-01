@@ -15,6 +15,7 @@
 // Что не сверено, помечено «[проверить]».
 
 pub mod ai;
+pub mod dragon;
 pub mod hostile;
 pub mod path;
 pub mod spawn;
@@ -514,6 +515,9 @@ pub struct Mob {
 
     /// Кристалл ударили: взрывается в этот же такт и исчезает.
     pub exploding: bool,
+
+    /// Дракон: фаза полёта и память боя (mob/dragon.rs).
+    pub dragon: dragon::State,
 }
 
 impl Mob {
@@ -568,6 +572,30 @@ impl Mob {
             beam_target: None,
             healer: 0,
             exploding: false,
+            dragon: dragon::State::default(),
+        }
+    }
+
+    /// Лечение кристаллом: ближайший живой кристалл не дальше 32 блоков по
+    /// каждой оси светит в дракона лучом и даёт 1 здоровья раз в 10 тактов
+    /// (вики, Ender Dragon: «1HP every 10 game ticks»; End Crystal: «cuboid
+    /// extending 32 blocks»). Кто лечит — `healer`; луч ставит такт боя.
+    fn crystal_heal(&mut self, mates: &[ai::Mate]) {
+        let nearest = mates
+            .iter()
+            .filter(|mate| mate.kind == Kind::EndCrystal)
+            .filter(|mate| (mate.x - self.x).abs() <= dragon::HEAL_RANGE && (mate.y - self.y).abs() <= dragon::HEAL_RANGE && (mate.z - self.z).abs() <= dragon::HEAL_RANGE)
+            .min_by(|a, b| {
+                let da = (a.x - self.x).powi(2) + (a.y - self.y).powi(2) + (a.z - self.z).powi(2);
+                let db = (b.x - self.x).powi(2) + (b.y - self.y).powi(2) + (b.z - self.z).powi(2);
+                da.total_cmp(&db)
+            })
+            .map(|mate| mate.id);
+
+        self.healer = nearest.unwrap_or(0);
+
+        if self.healer != 0 && self.ticks.is_multiple_of(dragon::HEAL_EVERY) {
+            self.vitals.health = (self.vitals.health + 1.0).min(self.kind.max_health());
         }
     }
 
@@ -629,7 +657,9 @@ impl Mob {
         if self.is_dead() {
             self.dead_for += 1;
 
-            if !self.no_ai {
+            if self.kind == Kind::EnderDragon {
+                dragon::die_step(self);
+            } else if !self.no_ai {
                 self.physics(view, 0.0, false);
             }
 
@@ -681,6 +711,13 @@ impl Mob {
         // в покое — и у NoAI (чёрный ящик, dragon-summon: NoAI рычит).
         if self.kind == Kind::EnderDragon {
             ai::voice(self, rng);
+            dragon::think(self, ctx.players, rng);
+
+            // Без ИИ кристаллы его не лечат (чёрный ящик, dragon-crystal-heal:
+            // у NoAI-дракона ни луча, ни здоровья).
+            if !self.no_ai {
+                self.crystal_heal(ctx.mates);
+            }
 
             return ai::Plan::default();
         }
@@ -949,6 +986,13 @@ impl Mob {
             return None;
         }
 
+        // Дракону вредят только игроки и взрывы (вики, Ender Dragon: «Only
+        // explosions and players deal damage»; чёрный ящик, dragon-die:
+        // `damage … minecraft:generic` ему нипочём).
+        if self.kind == Kind::EnderDragon && !matches!(source, Source::PlayerAttack | Source::Arrow | Source::Explosion | Source::PlayerExplosion | Source::GenericKill) {
+            return None;
+        }
+
         let before = self.vitals.health;
         let amount = if armored(source) { after_armor(amount, self.kind.armor()) } else { amount };
         let mut hit = self.vitals.hurt(amount, source, false)?;
@@ -956,11 +1000,17 @@ impl Mob {
         // Снято на самом деле — не больше оставшегося здоровья.
         hit.taken = hit.taken.min(before);
 
+        if self.kind == Kind::EnderDragon {
+            let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xD4A);
+
+            dragon::on_hurt(self, hit.taken, push.map(|push| push.cause).filter(|cause| *cause != 0), &mut rng);
+        }
+
         self.events.push(Event::Hurt { source, cause: push.map_or(0, |push| push.cause), at: (self.x, self.y, self.z) });
 
         // Ударил игрок: враждебный мстит ему (паук нападает и при свете).
         if let Some(push) = push.filter(|push| push.cause != 0) {
-            self.by_player = source == Source::PlayerAttack;
+            self.by_player = matches!(source, Source::PlayerAttack | Source::MaceSmash);
 
             if self.kind.hostile() && !self.no_ai {
                 self.h.target = Some(push.cause);
@@ -1046,7 +1096,8 @@ impl Mob {
         // Дракон даёт опыт всегда — и убитый командой [проверить]; за первого
         // в бою Края больше (ставит бой, tick.rs).
         if self.kind == Kind::EnderDragon {
-            self.pending_xp = if self.first_dragon { DRAGON_XP_FIRST } else { DRAGON_XP };
+            // Шарики — по ходу анимации смерти (tick.rs, dragon_xp).
+            self.dragon.xp = if self.first_dragon { DRAGON_XP_FIRST } else { DRAGON_XP };
         } else if self.xp_until > self.ticks && !self.is_baby() {
             let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xE4B);
 
@@ -1457,7 +1508,7 @@ fn clip_z(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dz: f64
 /// Действует ли броня на урон: не действует на падение, огонь, лаву,
 /// удушье и пустоту (вики, Armor: «bypasses armor»).
 fn armored(source: Source) -> bool {
-    matches!(source, Source::PlayerAttack | Source::MobAttack | Source::Arrow | Source::Explosion | Source::PlayerExplosion)
+    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::Arrow | Source::Explosion | Source::PlayerExplosion)
 }
 
 /// Урон после брони (вики, Armor, «Damage protection»).

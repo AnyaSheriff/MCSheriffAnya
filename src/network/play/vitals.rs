@@ -617,7 +617,7 @@ pub(super) struct Killer<'a> {
 /// Строка о смерти для чата и журнала.
 fn death_line(source: Source, name: &str, killer: Option<Killer<'_>>) -> String {
     match killer {
-        Some(killer) => survival::death_text_by(source, name, killer.name, killer.weapon.and_then(|stack| crate::combat::item_name(stack.item))),
+        Some(killer) => survival::death_text_by(source, name, killer.name, killer.weapon.filter(|_| source != Source::MaceSmash).and_then(|stack| crate::combat::item_name(stack.item))),
         None => death_text(source, name),
     }
 }
@@ -648,8 +648,12 @@ fn death_message(source: Source, player: &PlayerState, mob: &str, killer: Option
     if let Some(killer) = killer {
         with.push(named(killer.name, killer.uuid));
 
-        // С оружием в руке: «… using [Меч]» (ключ с суффиксом `.item`).
-        if let Some(item) = killer.weapon.and_then(|stack| crate::combat::item_name(stack.item)) {
+        // С оружием в руке: «… using [Меч]» (ключ с суффиксом `.item`); у
+        // сокрушающего удара булавы оружие не называется (чёрный ящик,
+        // pvp-mace-heavy: death.attack.mace_smash с двумя именами).
+        if source != Source::MaceSmash
+            && let Some(item) = killer.weapon.and_then(|stack| crate::combat::item_name(stack.item))
+        {
             key.push_str(".item");
             with.push(nbt::Compound::new().string("text", &format!("[{}]", survival::item_title(item))));
         }

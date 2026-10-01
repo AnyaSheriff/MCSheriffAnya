@@ -1307,9 +1307,11 @@ fn dragon_parts_take_quarter_damage_except_head() {
 fn dragon_dies_for_200_ticks_and_gives_500_xp() {
     let mut dragon = Mob::new(10, Kind::EnderDragon, (0.0, 64.0, 0.0));
 
-    dragon.hurt(f32::MAX, Source::Generic, None);
+    // Обычный урон дракону нипочём (чёрный ящик, dragon-probe) — бьёт игрок.
+    assert!(dragon.hurt(f32::MAX, Source::Generic, None).is_none());
+    dragon.hurt(f32::MAX, Source::PlayerAttack, None);
     assert!(dragon.is_dead());
-    assert_eq!(dragon.pending_xp, DRAGON_XP);
+    assert_eq!(dragon.dragon.xp, DRAGON_XP);
     dragon.dead_for = DRAGON_DEATH_TICKS;
     assert!(!dragon.gone());
     dragon.dead_for += 1;
@@ -1317,8 +1319,8 @@ fn dragon_dies_for_200_ticks_and_gives_500_xp() {
 
     let mut first = Mob::new(11, Kind::EnderDragon, (0.0, 64.0, 0.0));
     first.first_dragon = true;
-    first.hurt(f32::MAX, Source::Generic, None);
-    assert_eq!(first.pending_xp, DRAGON_XP_FIRST);
+    first.hurt(f32::MAX, Source::PlayerAttack, None);
+    assert_eq!(first.dragon.xp, DRAGON_XP_FIRST);
 }
 
 #[test]

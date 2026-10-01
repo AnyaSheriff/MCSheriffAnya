@@ -412,6 +412,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         extra_knockback: arrow.punch as f32 * 1.2,
                         weapon: None,
                         disables_shield_ticks: 0,
+                        breach_scale: 1.0,
                         fire_ticks: if arrow.flame { 100 } else { 0 },
                         thorns_slots: Vec::new(),
                     });
@@ -420,9 +421,31 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     let speed = arrow.vx.hypot(arrow.vz).max(1.0e-9);
                     let push = crate::mob::Push { dir: (arrow.vx / speed, arrow.vz / speed), strength: crate::mob::BASE_KNOCKBACK, cause: arrow.owner };
 
+                    let mut bounced = false;
+
                     if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == entity_id) {
                         mob.credit_player();
-                        mob.hurt(damage, Source::Arrow, Some(push));
+
+                        if mob.kind == crate::mob::Kind::EnderDragon {
+                            // Сидящий дракон стрелам не по зубам: «they catch
+                            // fire and bounce off» (вики, Ender Dragon); в полёте
+                            // стрела бьёт в тело — четверть урона [проверить].
+                            if matches!(mob.dragon.phase, crate::mob::dragon::SCANNING | crate::mob::dragon::ROAR | crate::mob::dragon::BREATH) {
+                                bounced = true;
+                            } else {
+                                mob.hurt_part(damage, false, Source::Arrow, Some(push));
+                            }
+                        } else {
+                            mob.hurt(damage, Source::Arrow, Some(push));
+                        }
+                    }
+
+                    if bounced {
+                        arrow.vx *= -0.1;
+                        arrow.vy *= -0.1;
+                        arrow.vz *= -0.1;
+                        arrow.flame = true;
+                        continue;
                     }
                 }
             }

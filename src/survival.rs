@@ -70,6 +70,8 @@ pub enum Source {
     PlayerExplosion,
     /// Удар игрока по существу.
     PlayerAttack,
+    /// Сокрушающий удар булавой с падения (вики, Mace).
+    MaceSmash,
     Starve,
     /// Шипы: урон ударившему по надетой броне с «шипами».
     Thorns,
@@ -94,6 +96,7 @@ impl Source {
             Source::MobAttack => 28,
             Source::PlayerExplosion => 35,
             Source::PlayerAttack => 34,
+            Source::MaceSmash => 26,
             Source::Starve => 40,
             Source::Thorns => 43,
         }
@@ -118,6 +121,7 @@ impl Source {
             Source::MobAttack => "death.attack.mob",
             Source::PlayerExplosion => "death.attack.explosion.player",
             Source::PlayerAttack => "death.attack.player",
+            Source::MaceSmash => "death.attack.mace_smash",
             Source::Starve => "death.attack.starve",
             Source::Thorns => "death.attack.thorns",
         }
@@ -186,6 +190,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::InWall => "suffocated in a wall",
         Source::Generic => "died",
         Source::PlayerAttack => "was slain",
+        Source::MaceSmash => "was smashed",
         Source::MobAttack => "was slain by a monster",
         Source::Arrow => "was shot",
         Source::PlayerExplosion => "was blown up",
@@ -213,6 +218,7 @@ pub fn death_text_by(source: Source, name: &str, killer: &str, item: Option<&str
     let what = match source {
         Source::Arrow => "was shot by",
         Source::Thorns => "was killed trying to hurt",
+        Source::MaceSmash => "was smashed by",
         _ => "was slain by",
     };
 
@@ -462,6 +468,10 @@ pub struct Vitals {
 
     /// Накопленная высота падения.
     pub fall: f32,
+    /// Сокрушающий удар булавы прощает ближайшее приземление: оригинал не
+    /// ранит после смаша с 3,2 блока (чёрный ящик, pvp-mace-heavy; вики,
+    /// Mace: «nullifying any fall damage») [проверить: предел].
+    pub smash_forgives: bool,
 
     /// Высота падения до последнего шага приземления (для частиц), 0 — не
     /// приземлялся в этом шаге.
@@ -525,6 +535,7 @@ impl Vitals {
             invulnerable: 0,
             last_hurt: 0.0,
             fall: 0.0,
+            smash_forgives: false,
             landed_from: 0.0,
             dead: false,
             sprinting: false,
@@ -833,6 +844,10 @@ impl Vitals {
 
         self.landed_from = before;
 
+        if std::mem::take(&mut self.smash_forgives) {
+            return None;
+        }
+
         if distance > SAFE_FALL && multiplier > 0.0 {
             let damage = ((distance - SAFE_FALL) * multiplier).ceil();
 
@@ -911,6 +926,20 @@ mod tests {
         assert_eq!(v.land(0.0, true, false, 1.0), Some(5.0));
         // после приземления счёт с нуля
         assert_eq!(v.land(-0.1, true, false, 1.0), None);
+    }
+
+    #[test]
+    fn mace_smash_forgives_the_next_landing_only() {
+        // pvp-mace-heavy: после смаша с 3,2 блока урона нет; следующее
+        // падение — как обычно.
+        let mut v = Vitals::new();
+
+        v.smash_forgives = true;
+        assert_eq!(v.land(-3.2, false, false, 1.0), None);
+        assert_eq!(v.land(0.0, true, false, 1.0), None);
+        assert!(!v.smash_forgives);
+        assert_eq!(v.land(-5.0, false, false, 1.0), None);
+        assert_eq!(v.land(0.0, true, false, 1.0), Some(2.0));
     }
 
     #[test]

@@ -1,0 +1,2169 @@
+# Куски Энд-городов — замер мира оригинала 26.1.2 (30 городов),
+# tools/measure/end_city.py templates. Рамка: a — вбок, b — вдоль, y — от низа;
+# направления в состояниях — как у образца без поворота. «.» — рельеф
+# остаётся, «_» — пусто, «#» — purpur_block.
+
+piece base_floor 10 10 4 127
+  A purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  B purpur_pillar[axis=y]
+  C end_stone_bricks
+  D magenta_stained_glass
+layer 0
+  __________
+  _########_
+  _########_
+  _########_
+  _########_
+  _########_
+  _########_
+  _########_
+  _########_
+  __A####A__
+layer 1
+  __________
+  _BCCCCCCB_
+  _C_____.C_
+  _C_____.C_
+  _C__.._.C_
+  _C__..__C_
+  _C___.__C_
+  _C______C_
+  _BCC__CCB_
+  __________
+layer 2
+  __________
+  _BCDCCDCB_
+  _C___...C_
+  _D______D_
+  _C__..._C_
+  _C__.___C_
+  _D______D_
+  _C______C_
+  _BCC__CCB_
+  __________
+layer 3
+  __________
+  _BCDCCDCB_
+  _C_...__C_
+  _D__.___D_
+  _C__.___C_
+  _C_..___C_
+  _D______D_
+  _C______C_
+  _BCC__CCB_
+  __________
+
+piece base_roof 12 12 2 37
+  A purpur_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  B purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  C purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  D purpur_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  E purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  F purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  G purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  H purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I purpur_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  J purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  K purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  L purpur_slab[type=bottom,waterlogged=false]
+  M purpur_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  N end_rod[facing=up]
+layer 0
+  ABCCBCCBCCBD
+  E##########F
+  G##########H
+  G##########H
+  E##########F
+  G##########H
+  G##########H
+  E##########F
+  G##########H
+  G##########H
+  E##########F
+  IJKKL###LKJM
+layer 1
+  ____________
+  _N________N_
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  _N________N_
+  ____________
+
+piece bridge_end 5 2 6 261
+  A purpur_pillar[axis=z]
+  B purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  C end_rod[facing=up]
+  D purpur_slab[type=top,waterlogged=false]
+  E purpur_slab[type=bottom,waterlogged=false]
+layer 0
+  __A__
+  _###_
+layer 1
+  #BBB#
+  #####
+layer 2
+  #___#
+  #___#
+layer 3
+  C___C
+  #___#
+layer 4
+  _____
+  #D_D#
+layer 5
+  _____
+  E###E
+
+piece bridge_gentle_stairs 5 8 7 80
+  A purpur_pillar[axis=x]
+  B purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  C purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  D purpur_slab[type=bottom,waterlogged=false]
+  E purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  F purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+  __A__
+layer 1
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+  B###C
+layer 2
+  _____
+  _____
+  _____
+  _____
+  _____
+  B###C
+  #####
+  #DDD#
+layer 3
+  _____
+  _____
+  _____
+  B###C
+  #####
+  #DDD#
+  E___F
+  E___F
+layer 4
+  __A__
+  B###C
+  #####
+  #DDD#
+  E___F
+  E___F
+  _____
+  _____
+layer 5
+  #...#
+  #DDD#
+  E___F
+  E___F
+  _____
+  _____
+  _____
+  _____
+layer 6
+  #___#
+  E___F
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+
+piece bridge_piece 5 4 6 241
+  A purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  B purpur_pillar[axis=z]
+  C purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  D purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  _ABC_
+  __B__
+  __B__
+  __B__
+layer 1
+  A###C
+  #####
+  #####
+  #####
+layer 2
+  #___#
+  D___E
+  D___E
+  D___E
+layer 3
+  .___.
+  _____
+  _____
+  _____
+layer 4
+  _____
+  _____
+  _____
+  _____
+layer 5
+  _____
+  _____
+  _____
+  _____
+
+piece bridge_steep_stairs 5 4 7 72
+  A purpur_pillar[axis=z]
+  B purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  C purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  D purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  E purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  F purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  _____
+  _____
+  _____
+  __A__
+layer 1
+  _____
+  _____
+  _____
+  _###_
+layer 2
+  _____
+  _____
+  _B#C_
+  #DDD#
+layer 3
+  _____
+  _B#C_
+  #DDD#
+  E___F
+layer 4
+  _.A._
+  #DDD#
+  E___F
+  _____
+layer 5
+  #DDD#
+  E___F
+  _____
+  _____
+layer 6
+  #___#
+  _____
+  _____
+  _____
+
+piece fat_tower_base 13 13 4 26
+  A purpur_slab[type=bottom,waterlogged=false]
+  B purpur_pillar[axis=y]
+  C purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  D purpur_pillar[axis=x]
+  E end_rod[facing=east]
+  F purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  G purpur_pillar[axis=z]
+  H purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  I end_rod[facing=west]
+  J purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  K end_rod[facing=south]
+  L end_rod[facing=north]
+layer 0
+  _____________
+  _____###_____
+  ___#######___
+  __#########__
+  __#########__
+  _####___####_
+  _####___####_
+  _####_A_####_
+  __#########__
+  __#########__
+  ___#######___
+  _____###_____
+  _____________
+layer 1
+  _____________
+  _____BBB_____
+  ___BB___BB___
+  __B_______B__
+  __B_______B__
+  _BA________B_
+  _B_________B_
+  _B________AB_
+  __B_______B__
+  __B_______B__
+  ___BB___BB___
+  _____BBB_____
+  _____________
+layer 2
+  ______C______
+  _____BDB_____
+  ___BB___BB___
+  __B_______B__
+  __BE______B__
+  _B_________B_
+  FG_________GH
+  _B_________B_
+  __B______IB__
+  __B_______B__
+  ___BB___BB___
+  _____BDB_____
+  ______J______
+layer 3
+  _____________
+  _____BBB_____
+  ___BB___BB___
+  __B_K_____B__
+  __B_______B__
+  _B_________B_
+  _B_________B_
+  _B_________B_
+  __B_______B__
+  __B_____L_B__
+  ___BB___BB___
+  _____BBB_____
+  _____________
+
+piece fat_tower_middle 13 13 8 50
+  A purpur_slab[type=bottom,waterlogged=false]
+  B purpur_pillar[axis=y]
+  C purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  D purpur_pillar[axis=x]
+  E end_rod[facing=south]
+  F purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  G purpur_pillar[axis=z]
+  H purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  I end_rod[facing=north]
+  J purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  K end_rod[facing=west]
+  L end_rod[facing=east]
+layer 0
+  ____.....____
+  ____.###.____
+  ___##A__##___
+  __#_______#__
+  __#_______#__
+  _#_________#_
+  _#_________#_
+  _#_________#_
+  __#_______#__
+  __#_______#__
+  ___##__A##___
+  ____.###.____
+  ____.....____
+layer 1
+  ____.___.____
+  ____.BBB.____
+  ___BB__ABB___
+  __B_______B__
+  __B_______B__
+  _B_________B_
+  _B_________B_
+  _B_________B_
+  __B_______B__
+  __B_______B__
+  ___BBA__BB___
+  ____.BBB.____
+  ____.___.____
+layer 2
+  ____._C_.____
+  ____.BDB.____
+  ___BB___BB___
+  __B_____E_B__
+  __B_______B__
+  _B_________B_
+  FG_________GH
+  _B_________B_
+  __B_______B__
+  __B_I_____B__
+  ___BB___BB___
+  ____.BGB.____
+  ____._J_.____
+layer 3
+  _____________
+  ____.BBB.____
+  ___BB___BB___
+  __B_______B__
+  __B______KB__
+  _B_________B_
+  _B_________B_
+  _B_________B_
+  __BL______B__
+  __B_______B__
+  ___BB___BB___
+  ____.BBB.____
+  _____________
+layer 4
+  _____________
+  ____.###.____
+  ___##___##___
+  __#_______#__
+  __#_______#__
+  _#________A#_
+  _#_________#_
+  _#A________#_
+  __#_______#__
+  __#_______#__
+  ___##___##___
+  ____.###.____
+  _____________
+layer 5
+  _____________
+  _____BBB_____
+  ___BB___BB___
+  __B_______B__
+  __B_______B__
+  _BA________B_
+  _B_________B_
+  _B________AB_
+  __B_______B__
+  __B_______B__
+  ___BB___BB___
+  _____BBB_____
+  _____________
+layer 6
+  ______C______
+  _____BDB_____
+  ___BB___BB___
+  __B_______B__
+  __BL______B__
+  _B_________B_
+  FG_________GH
+  _B_________B_
+  __B______KB__
+  __B_______B__
+  ___BB___BB___
+  _____BDB_____
+  ______J______
+layer 7
+  ______D______
+  _____###_____
+  ___BB___BB___
+  __B_E_____B__
+  __B_______B__
+  _#_________B_
+  G#_________B_
+  _#_________B_
+  __B_______B__
+  __B_____I_B__
+  ___BB___BB___
+  _____BBB_____
+  ______.______
+
+piece fat_tower_top 17 17 6 26
+  A purpur_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  B purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  C purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  D purpur_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  E purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  F purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  G purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  H purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I purpur_slab[type=bottom,waterlogged=false]
+  J purpur_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  K purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  L purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  M purpur_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  N end_rod[facing=up]
+  O purpur_pillar[axis=y]
+  P end_stone_bricks
+  Q purpur_slab[type=top,waterlogged=false]
+  R chest[facing=east,type=single,waterlogged=false]
+  S chest[facing=north,type=single,waterlogged=false]
+  T magenta_stained_glass
+  U purpur_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  V purpur_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  _________________
+  _ABCCBBCCCBBCCBD_
+  _E#############F_
+  _G#############H_
+  _G#####I_######H_
+  _E###____######F_
+  _E###____######F_
+  _G##_____######H_
+  _G##_________##H_
+  _G######_____##H_
+  _E######____###F_
+  _E######____###F_
+  _G######_I#####H_
+  _G#############H_
+  _E#############F_
+  _JKLLKKLLLKKLLKM_
+  _________________
+layer 1
+  _________________
+  _N_____________N_
+  __OPPPPPPPPPPPO__
+  __P____I#Q____P__
+  __P___________P__
+  __P___________P__
+  __P___________P__
+  __P______O____P__
+  __P___________P__
+  __P____O______P__
+  __P___________P__
+  __PR__________P__
+  __P___________P__
+  __P__S________P__
+  __OPPPPPPPPPPPO__
+  _N_____________N_
+  _________________
+layer 2
+  _________________
+  _________________
+  __OPTPPTPPPPPPO__
+  __P______I#Q__P__
+  __T___________P__
+  __P___________P__
+  __P___________P__
+  __T______O____T__
+  __P___________P__
+  __T____O______T__
+  __P___________P__
+  __P___________P__
+  __T___________T__
+  __P___________P__
+  __OPTPPTPTPPTPO__
+  _________________
+  _________________
+layer 3
+  _________________
+  _________________
+  __OPTPPTPPPPPPO__
+  __P________I#QP__
+  __T___________P__
+  __P___________P__
+  __P___________P__
+  __T______O____T__
+  __P___________P__
+  __T____O______T__
+  __P___________P__
+  __P___________P__
+  __T___________T__
+  __P___________P__
+  __OPTPPTPTPPTPO__
+  _________________
+  _________________
+layer 4
+  ABCCBBCCBCCBBCCBD
+  E###############F
+  G###############H
+  G#######_____I##H
+  E###############F
+  E###############F
+  G###############H
+  G###############H
+  E###############F
+  G###############H
+  G###############H
+  E###############F
+  E###############F
+  G###############H
+  G###############H
+  E###############F
+  JKLLKKLLKLLKKLLKM
+layer 5
+  _________________
+  _________________
+  _______UCCCC_____
+  _______G_________
+  _______VLLLL_____
+  _________________
+  _________________
+  _________________
+  _________________
+  _________________
+  _________________
+  _________________
+  _________________
+  _________________
+  _________________
+  _________________
+  _________________
+
+piece second_floor_1 12 12 8 30
+  A purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  B purpur_pillar[axis=y]
+  C end_stone_bricks
+  D purpur_slab[type=top,waterlogged=false]
+  E purpur_slab[type=bottom,waterlogged=false]
+  F magenta_stained_glass
+  G purpur_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  H purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  I purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  J purpur_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  K purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  L purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  M purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  N purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  O purpur_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  P purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  Q purpur_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  R end_rod[facing=up]
+layer 0
+  ............
+  .__________.
+  ._########_.
+  ._########_.
+  ._########_.
+  ._########_.
+  ._########_.
+  ._########_.
+  ._########_.
+  ._########_.
+  .__A####A__.
+  ............
+layer 1
+  ............
+  .__________.
+  ._BCCCCCCB_.
+  ._C_____DC_.
+  ._C_____#C_.
+  __C_____EC_.
+  __C______C_.
+  __C______C_.
+  __C______C_.
+  __BCC__CCB_.
+  .__________.
+  ............
+layer 2
+  ____________
+  ____________
+  __BCCCCCCB__
+  __C___D#EC__
+  __F______F__
+  __C______C__
+  __C______C__
+  __F______F__
+  __C______C__
+  __BCC__CCB__
+  ____________
+  ____________
+layer 3
+  ____________
+  ____________
+  __BCCCCCCB__
+  __C_D#E__C__
+  __F______F__
+  __C______C__
+  __C______C__
+  __F______F__
+  __C______C__
+  __BCC__CCB__
+  ____________
+  ____________
+layer 4
+  GHIHHIIHHIHJ
+  K##########L
+  M##########N
+  K###E____##L
+  K#######_##L
+  M#######_##N
+  M#######_##N
+  K##########L
+  K##########L
+  M##########N
+  K##########L
+  OPAPPAAPPAPQ
+layer 5
+  R__________R
+  _BCCCCCCCCB_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C________C_
+  _CE#D_____C_
+  _BCCCCCCCCB_
+  R__________R
+layer 6
+  ____________
+  _BCFCCCCFCB_
+  _C________C_
+  _F________F_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C________C_
+  _F________F_
+  _C__E#D___C_
+  _BCFCCCCCCB_
+  ____________
+layer 7
+  ____________
+  _BCFCCCCFCB_
+  _C________C_
+  _F________F_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C________C_
+  _F________F_
+  _C____E#D_C_
+  _BCFCCCCCCB_
+  ____________
+
+piece second_floor_2 12 12 8 60
+  A purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  B purpur_pillar[axis=y]
+  C end_stone_bricks
+  D purpur_slab[type=bottom,waterlogged=false]
+  E magenta_stained_glass
+  F purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  G purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  H purpur_slab[type=top,waterlogged=false]
+  I purpur_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  J purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  K purpur_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  L purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  M purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  N purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  O purpur_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  P purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  Q purpur_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  R end_rod[facing=up]
+layer 0
+  ____________
+  ____________
+  __########__
+  __########__
+  __########__
+  __########__
+  __########__
+  __########__
+  __########__
+  __########__
+  ___A####A___
+  ____#####___
+layer 1
+  ____________
+  ____________
+  __BCCCCCCB__
+  __C______C__
+  __C______C__
+  __C__##__C__
+  __C__#A__C__
+  __C___D__C__
+  __C______C__
+  __BCC__CCB__
+  ____________
+  ____#___#___
+layer 2
+  ____________
+  ____________
+  __BCECCECB__
+  __C______C__
+  __E______E__
+  __C__#FD_C__
+  __C__#___C__
+  __E______E__
+  __C______C__
+  __BCC__CCB__
+  ____________
+  ____#___#___
+layer 3
+  ____________
+  ____________
+  __BCECCECB__
+  __C______C__
+  __E__D___E__
+  __C__G___C__
+  __C_H#___C__
+  __E______E__
+  __C______C__
+  __BCC__CCB__
+  ____________
+  ____#H_H#___
+layer 4
+  IJGJJGGJJGJK
+  L##########M
+  N##########F
+  L##______##M
+  L##______##M
+  N##______##F
+  N##__NHHH##F
+  L##______##M
+  L##...___##M
+  N##########F
+  L##########M
+  OPAPD###DAPQ
+layer 5
+  R__________R
+  _BCCCCCCCCB_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C___..__LC_
+  _C_...___LC_
+  _C___...._C_
+  _BCCCCCCCCB_
+  R__________R
+layer 6
+  ____________
+  _BCECCCCECB_
+  _C________C_
+  _E________E_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C___..__NC_
+  _E__..___NC_
+  _C___...._C_
+  _BCECCCC.CB_
+  ____________
+layer 7
+  ____________
+  _BCECCCCECB_
+  _C________C_
+  _E________E_
+  _C________C_
+  _C________C_
+  _C________C_
+  _C___.._HLC_
+  _E______HLC_
+  _C_____.._C_
+  _BCECCCC.CB_
+  ____________
+
+piece second_roof 14 14 2 35
+  A purpur_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  B purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  C purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  D purpur_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  E purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  F purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  G purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  H purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I purpur_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  J purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  K purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  L purpur_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  M end_rod[facing=up]
+  N purpur_pillar[axis=y]
+layer 0
+  ABCCBBCCBBCCBD
+  E############F
+  G############H
+  G############H
+  E############F
+  E#####..#####F
+  G####.._.####H
+  G####.._.####H
+  E#####..#####F
+  E############F
+  G############H
+  G############H
+  E############F
+  IJKKJJKKJJKKJL
+layer 1
+  ______________
+  _M__________M_
+  ______________
+  ______________
+  _____...._____
+  ____....N.____
+  ____.._...____
+  ____..__..____
+  _____N....____
+  ______..._____
+  ______________
+  ______________
+  _M__________M_
+  ______________
+
+piece ship 13 29 24 20
+  A purpur_pillar[axis=z]
+  B purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  C purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  D obsidian
+  E purpur_pillar[axis=y]
+  F purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  G chest[facing=south,type=single,waterlogged=false]
+  H purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  I purpur_stairs[facing=south,half=top,shape=outer_left,waterlogged=false]
+  J purpur_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  K purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  L purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  M purpur_stairs[facing=east,half=top,shape=outer_left,waterlogged=false]
+  N purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  O purpur_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  P end_rod[facing=south]
+  Q end_stone_bricks
+  R end_rod[facing=up]
+  S magenta_stained_glass
+  T brewing_stand[has_bottle_0=true,has_bottle_1=false,has_bottle_2=true]
+  U dragon_wall_head[facing=north,powered=false]
+  V purpur_stairs[facing=south,half=bottom,shape=inner_left,waterlogged=false]
+  W purpur_stairs[facing=south,half=bottom,shape=inner_right,waterlogged=false]
+  X ladder[facing=south,waterlogged=false]
+  Y purpur_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  Z purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  a purpur_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  b purpur_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  c purpur_stairs[facing=west,half=bottom,shape=inner_left,waterlogged=false]
+  d purpur_stairs[facing=east,half=bottom,shape=inner_right,waterlogged=false]
+  e purpur_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  f purpur_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  g purpur_slab[type=top,waterlogged=false]
+  h purpur_stairs[facing=west,half=top,shape=outer_left,waterlogged=false]
+layer 0
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 1
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  _____###_____
+  ____B###C____
+  _____###_____
+  _____###_____
+  _____###_____
+  ____B###C____
+  _____###_____
+  _____###_____
+  _____###_____
+  ____B###C____
+  _____###_____
+  _____#A#_____
+  _____#A#_____
+  _____________
+  _____________
+  _____________
+  _____________
+layer 2
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______A______
+  ______A______
+  _____#A#_____
+  _____#A#_____
+  ____##A##____
+  ____##A##____
+  ____#DAD#____
+  ___B#DAD#C___
+  ____#DED#____
+  ____#DAD#____
+  ____#DAD#____
+  ___B#DAD#C___
+  ____#DAD#____
+  ____#DAD#____
+  ____#DAD#____
+  ___B#DAD#C___
+  ____#DAD#____
+  ____#DAD#____
+  ____#DAD#____
+  ___B##A##C___
+  _____________
+  _____________
+  _____________
+layer 3
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______A______
+  ______A______
+  _____###_____
+  ____#####____
+  ____#___#____
+  ___#_____#___
+  ___#_____#___
+  ___#_____#___
+  __B#_____#C__
+  ___#__E__#___
+  ___#____F#___
+  ___#____##___
+  __B#____##C__
+  ___#____##___
+  ___#____##___
+  ___#____##___
+  __B#____##C__
+  ___#____##___
+  ___#____##___
+  ___#____##___
+  __B#######C__
+  _____________
+  _____________
+  _____________
+layer 4
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______#______
+  _____###_____
+  ____#G_G#____
+  ____#___#____
+  ___#_____#___
+  ___#_____#___
+  __#_______#__
+  __#_______#__
+  __#_______#__
+  __#___E___#__
+  __#_______#__
+  __#_______#__
+  __#_______#__
+  __#_______#__
+  __#_____FF#__
+  __#_____###__
+  __#_____###__
+  __#_____###__
+  __#_____###__
+  __#_____###__
+  __#########__
+  __H___H___H__
+  _____________
+  _____________
+layer 5
+  _____________
+  _____________
+  _____________
+  _____________
+  ______A______
+  ______A______
+  _____###_____
+  ____#___#____
+  ____#___#____
+  ___#_____#___
+  ___#_____#___
+  __#_______#__
+  __#_______#__
+  _B#_______#C_
+  __#___E___#__
+  __#_______#__
+  _B#_______#C_
+  __#_______#__
+  __#_______#__
+  __#_______#__
+  _I######FF#J_
+  _B#########C_
+  _K#########L_
+  _B#########C_
+  _B#########C_
+  _K#########L_
+  _B#########C_
+  _MHNHHNHHHHO_
+  _____________
+layer 6
+  _____________
+  _____________
+  _____________
+  ______A______
+  ______A______
+  ______#______
+  _____#P#_____
+  ____#___#____
+  ____#___#____
+  ___#_____#___
+  ___#_____#___
+  __#_______#__
+  __#_______#__
+  _____________
+  __#___E___#__
+  __#_______#__
+  _____________
+  __#_______#__
+  __#_______#__
+  __######__#__
+  __##NN##__#__
+  __E#__##__E__
+  __Q_______Q__
+  __Q_______Q__
+  __Q_______Q__
+  __Q___E___Q__
+  __EQQQEQQQE__
+  _R_________R_
+  _____________
+layer 7
+  _____________
+  ______A______
+  ______A______
+  ______A______
+  ______A______
+  _____###_____
+  ____#####____
+  ____#####____
+  ___#######___
+  ___#######___
+  __#########__
+  __#########__
+  __####A####__
+  __####S####__
+  __####E####__
+  __#########__
+  __#########__
+  __#########__
+  __#########__
+  __##NN##__#__
+  __##__##__#__
+  __E#__##__E__
+  __Q_______Q__
+  __S_______S__
+  __S_______S__
+  __Q___T___Q__
+  __EQSQEQSQE__
+  _____________
+  _____________
+layer 8
+  ______U______
+  ______N______
+  _____________
+  _____________
+  ______#______
+  _____#_#_____
+  ____#___#____
+  ____K___L____
+  ___#V___W#___
+  ___K_____L___
+  __#V__A__W#__
+  __K___A___L__
+  __K___N___L__
+  __#_______#__
+  __K___E___L__
+  __K___X___L__
+  __#_______#__
+  __K_______L__
+  __K_______L__
+  __#_____FF#__
+  __#_____###__
+  __E#__##HHE__
+  __Q_______Q__
+  __Q_______Q__
+  __Q_______Q__
+  __Q_______Q__
+  __EQQQEQQQE__
+  _____________
+  _____________
+layer 9
+  _____________
+  _____________
+  _____________
+  _____________
+  ______R______
+  _____________
+  _____________
+  _____________
+  ______A______
+  ______A______
+  __R___N___R__
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  YZZZ_______ZJ
+  B###__##FF##C
+  K###########L
+  K###########L
+  B###########C
+  B###########C
+  K###########L
+  K###########L
+  B###########C
+  aHNNHHNHHNNHb
+layer 10
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______A______
+  ______A______
+  ______N______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  _____________
+  _#F#__##__##_
+  _K_cFFd____L_
+  _K__E______L_
+  _K_________L_
+  _K_________L_
+  _K_________L_
+  _K__eFFFf__L_
+  _#NN#NNN#NN#_
+  _____________
+layer 11
+  _____________
+  _____________
+  _____________
+  _____________
+  ______A______
+  ______A______
+  ______N______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 12
+  _____________
+  ______g______
+  ______A______
+  ______A______
+  ______N______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 13
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 14
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 15
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 16
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 17
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 18
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 19
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  ______X______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 20
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____g_g_____
+  _____gEg_____
+  _____gXg_____
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 21
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ____IZZZh____
+  ____B___C____
+  ____B_E_C____
+  ____B_X_C____
+  ____MHHHO____
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 22
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______E______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+layer 23
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  ______#______
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+  _____________
+
+piece third_floor_1 14 14 8 30
+  A purpur_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  B purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  C purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  D purpur_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  E purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  F purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  G purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  H purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I purpur_slab[type=bottom,waterlogged=false]
+  J purpur_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  K purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  L purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  M purpur_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  N end_rod[facing=up]
+  O purpur_pillar[axis=y]
+  P end_stone_bricks
+  Q purpur_slab[type=top,waterlogged=false]
+  R magenta_stained_glass
+  S purpur_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  T purpur_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  ______________
+  _ABCBBCCBBCBD_
+  _E##########F_
+  _G##########H_
+  _E###I____##F_
+  _E#######_##F_
+  _G#######_##H_
+  _G#######_##H_
+  _E##########F_
+  _E##########F_
+  _G##########H_
+  _E##########F_
+  _JKLKKLLKKLKM_
+  ______________
+layer 1
+  ______________
+  _N__________N_
+  __OPPPPPPPPO__
+  __P________P__
+  __P________P__
+  __P________P__
+  __P________P__
+  __P________P__
+  __P________P__
+  __P________P__
+  __PI#Q_____P__
+  __OPPPPPPPPO__
+  _N__________N_
+  ______________
+layer 2
+  ______________
+  ______________
+  __OPRPPPPRPO__
+  __P________P__
+  __R________R__
+  __P________P__
+  __P________P__
+  __P________P__
+  __P________P__
+  __R________R__
+  __P__I#Q___P__
+  __OPRPPPPPPO__
+  ______________
+  ______________
+layer 3
+  ______________
+  ______________
+  __OPRPPPPRPO__
+  __P________P__
+  __R________R__
+  __P________P__
+  __P________P__
+  __P________P__
+  __P________P__
+  __R________R__
+  __P____I#Q_P__
+  __OPRPPPPPPO__
+  ______________
+  ______________
+layer 4
+  ABCCBBCCBBCCBD
+  E############F
+  G############H
+  G############H
+  E############F
+  E############F
+  G############H
+  G############H
+  E############F
+  E############F
+  G##______I###H
+  G############H
+  E############F
+  JKLLKKLLKKLLKM
+layer 5
+  N____________N
+  _OPPPPPPPPPPO_
+  _P____GH____P_
+  _P____GH____P_
+  _P____GH____P_
+  _P____GH____P_
+  _P___.OO____P_
+  _P___..H____P_
+  _P____ST____P_
+  _P__________P_
+  _P__________P_
+  _P__________P_
+  _OPPPPPPPPPPO_
+  N____________N
+layer 6
+  ______________
+  _OPRPRPPRPRPO_
+  _P__________P_
+  _R__________R_
+  _P__________P_
+  _R__________R_
+  _P___.OO____P_
+  _P___.._____P_
+  _R____._____R_
+  _P__________P_
+  _R__________R_
+  _P__________P_
+  _OPRPRPPRPRPO_
+  ______________
+layer 7
+  ______________
+  _OPRPRPPRPRPO_
+  _P__________P_
+  _R__________R_
+  _P__________P_
+  _R__________R_
+  _P___.OO____P_
+  _P___.._____P_
+  _R____._____R_
+  _P__________P_
+  _R__________R_
+  _P__________P_
+  _OPRPRPPRPRPO_
+  ______________
+
+piece third_floor_2 14 14 8 25
+  A purpur_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  B purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  C purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  D purpur_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  E purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  F purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  G purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  H purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I purpur_slab[type=top,waterlogged=false]
+  J purpur_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  K purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  L purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  M purpur_slab[type=bottom,waterlogged=false]
+  N purpur_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  O end_rod[facing=up]
+  P purpur_pillar[axis=y]
+  Q end_stone_bricks
+  R magenta_stained_glass
+  S end_rod[facing=south]
+  T chest[facing=south,type=single,waterlogged=false]
+  U ender_chest[facing=south,waterlogged=false]
+layer 0
+  ______________
+  _ABCBBCCBBCBD_
+  _E##########F_
+  _G##########H_
+  _E##______##F_
+  _E##______##F_
+  _G##______##H_
+  _G##__GIII##H_
+  _E##______##F_
+  _E#####___##F_
+  _G##########H_
+  _E##########F_
+  _JKLKM###MLKN_
+  ______________
+layer 1
+  ______________
+  _O__________O_
+  __PQQQQQQQQP__
+  __Q________Q__
+  __Q________Q__
+  __Q________Q__
+  __Q________Q__
+  __Q________Q__
+  __Q_______EQ__
+  __Q_G##___EQ__
+  __Q___####_Q__
+  __PQQQQQQQQP__
+  _O__________O_
+  ______________
+layer 2
+  ______________
+  ______________
+  __PQRQQQQRQP__
+  __Q________Q__
+  __R________R__
+  __Q________Q__
+  __Q________Q__
+  __Q________Q__
+  __Q_______GQ__
+  __R__G#___GQ__
+  __Q___####_Q__
+  __PQRQQQQQQP__
+  ______________
+  ______________
+layer 3
+  ______________
+  ______________
+  __PQRQQQQRQP__
+  __Q________Q__
+  __R________R__
+  __Q________Q__
+  __Q________Q__
+  __Q________Q__
+  __Q______IEQ__
+  __R______IEQ__
+  __Q_____G#_Q__
+  __PQRQQQQQQP__
+  ______________
+  ______________
+layer 4
+  ABCCBBCCBBCCBD
+  E############F
+  G############H
+  G##___##___##H
+  E##___SS___##F
+  E##________##F
+  G##________##H
+  G##________##H
+  E##__####__##F
+  E##________##F
+  G##______G###H
+  G############H
+  E############F
+  JKLLKKLLKKLLKN
+layer 5
+  O____________O
+  _PQQQQQQQQQQP_
+  _Q____TU____Q_
+  _Q__________Q_
+  _Q__________Q_
+  _Q__________Q_
+  _Q#__._____#Q_
+  _Q___.._____Q_
+  _Q#__#__#__#Q_
+  _Q__________Q_
+  _Q#________#Q_
+  _Q__________Q_
+  _PQQQQQQQQQQP_
+  O____________O
+layer 6
+  ______________
+  _PQRQRQQRQRQP_
+  _Q__________Q_
+  _R__________R_
+  _Q__________Q_
+  _R__________R_
+  _Q#__._____#Q_
+  _Q___.._____Q_
+  _Q####__####Q_
+  _Q__________Q_
+  _Q#________#Q_
+  _Q__________Q_
+  _PQRQRQQRQRQP_
+  ______________
+layer 7
+  ______________
+  _PQRQRQQRQRQP_
+  _Q__________Q_
+  _R__________R_
+  _Q__________Q_
+  _R__________R_
+  _Q#__._____#Q_
+  _Q___.._____Q_
+  _Q#________#Q_
+  _Q__________Q_
+  _Q#________#Q_
+  _Q__________Q_
+  _PQRQRQQRQRQP_
+  ______________
+
+piece third_roof 16 16 2 55
+  A purpur_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  B purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  C purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  D purpur_stairs[facing=west,half=top,shape=outer_left,waterlogged=false]
+  E purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  F purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  G purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  H purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I purpur_stairs[facing=east,half=top,shape=outer_left,waterlogged=false]
+  J purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  K purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  L purpur_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  M end_rod[facing=up]
+layer 0
+  ABCCBBCBBCBBCCBD
+  E##############F
+  G##############H
+  G##############H
+  E##############F
+  E#####..#######F
+  G####.._.######H
+  E####.._.######F
+  E##############F
+  G##############H
+  E##############F
+  E##############F
+  G##############H
+  G##############H
+  E##############F
+  IJKKJJKJJKJJKKJL
+layer 1
+  ________________
+  _M____________M_
+  ________________
+  ________________
+  _____...._______
+  ____......______
+  ____..__..______
+  ____..__..______
+  _____...._______
+  ______..________
+  ________________
+  ________________
+  ________________
+  ________________
+  _M____________M_
+  ________________
+
+piece tower_base 7 7 7 82
+  A ladder[facing=north,waterlogged=false]
+  B purpur_pillar[axis=y]
+  C purpur_slab[type=bottom,waterlogged=false]
+  D purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  E purpur_pillar[axis=x]
+  F purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  G purpur_pillar[axis=z]
+  H purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  I purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+layer 0
+  ___..._
+  ____.__
+  ____.__
+  ____.__
+  ___A.__
+  ___B...
+  ____.__
+layer 1
+  _______
+  _______
+  _______
+  _______
+  ___A.__
+  ___B__.
+  ______.
+layer 2
+  _______
+  _______
+  _______
+  _______
+  ___A.._
+  ___B_..
+  ______.
+layer 3
+  #######
+  #######
+  ##___##
+  ##C__##
+  ##___##
+  #######
+  #######
+layer 4
+  _______
+  __BBB__
+  _B_C_B_
+  _B___B_
+  _B___B_
+  __BBB__
+  _______
+layer 5
+  ___D___
+  __BEB__
+  _B___B_
+  FG__CGH
+  _B___B_
+  __BEB__
+  ___I___
+layer 6
+  _______
+  __BBB__
+  _B___B_
+  _B___B_
+  _B_C_B_
+  __BBB__
+  _______
+
+piece tower_piece 7 7 4 256
+  A purpur_slab[type=bottom,waterlogged=false]
+  B purpur_pillar[axis=y]
+  C purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  D purpur_pillar[axis=x]
+  E purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  F purpur_pillar[axis=z]
+  G purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  H purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+layer 0
+  _______
+  _.###._
+  _#___#_
+  _#A__#_
+  _#___#_
+  _.###._
+  _______
+layer 1
+  _______
+  __BBB__
+  _B_A_B_
+  _B___B_
+  _B___B_
+  __BBB__
+  _______
+layer 2
+  ___C___
+  __BDB__
+  _B___B_
+  EF__AFG
+  _B___B_
+  __BDB__
+  ___H___
+layer 3
+  _______
+  __BBB__
+  _B___B_
+  _B___B_
+  _B_A_B_
+  __BBB__
+  _______
+
+piece tower_top 9 9 5 56
+  A magenta_wall_banner[facing=north]
+  B purpur_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  C purpur_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  D purpur_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  E purpur_stairs[facing=west,half=top,shape=outer_left,waterlogged=false]
+  F magenta_wall_banner[facing=west]
+  G purpur_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  H purpur_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  I magenta_wall_banner[facing=east]
+  J purpur_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  K purpur_slab[type=bottom,waterlogged=false]
+  L purpur_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  M purpur_stairs[facing=east,half=top,shape=outer_left,waterlogged=false]
+  N purpur_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  O purpur_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  P purpur_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  Q magenta_wall_banner[facing=south]
+  R end_rod[facing=up]
+  S purpur_pillar[axis=y]
+  T end_stone_bricks
+  U magenta_stained_glass
+  V purpur_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  W purpur_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  X purpur_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+layer 0
+  __A___A__
+  _BCDCDCE_
+  FG#####HI
+  _J#KK##L_
+  _G#___#H_
+  _J#___#L_
+  FG#####HI
+  _MNONONP_
+  __Q___Q__
+layer 1
+  _________
+  _R_____R_
+  __STTTS__
+  __T______
+  __T______
+  __T___T__
+  __STTTS__
+  _R_____R_
+  _________
+layer 2
+  _________
+  _________
+  __STUTS__
+  __T______
+  __U______
+  __T___T__
+  __STUTS__
+  _________
+  _________
+layer 3
+  _________
+  _________
+  __STUTS__
+  __T___T__
+  __U___T__
+  __T___T__
+  __STUTS__
+  _________
+  _________
+layer 4
+  BCDDCDDCV
+  G#######H
+  J#######L
+  J#######L
+  G#######H
+  J#######L
+  J#######L
+  G#######H
+  WNOONOONX

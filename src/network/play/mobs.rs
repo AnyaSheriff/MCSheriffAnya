@@ -180,7 +180,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
         Kind::Spider => out.push((16, TYPE_BYTE, vec![u8::from(mob.h.climbing)])),
         // Фаза дракона: 10 — висит (minecraft-data: phase; чёрный ящик,
         // dragon-summon: призванный фазы не шлёт — она по умолчанию).
-        Kind::EnderDragon => out.push((16, TYPE_INT, encode_varint(DRAGON_PHASE_HOVER))),
+        Kind::EnderDragon => out.push((16, TYPE_INT, encode_varint(i32::from(mob.dragon.phase)))),
         Kind::EndCrystal => {}
     }
 

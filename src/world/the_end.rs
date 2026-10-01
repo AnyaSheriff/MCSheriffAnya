@@ -38,6 +38,7 @@
 
 use std::sync::OnceLock;
 
+use super::end_city;
 use super::noise::Noise;
 use super::terrain::Biome;
 use super::{biome_cell, pack, split, BiomeId, Chunk, AIR, BIOME_CELLS, BIOME_LAYERS, CHUNK_SIZE};
@@ -474,6 +475,7 @@ impl End {
         }
 
         self.chorus(&mut chunk, chunk_x, chunk_z, &tops);
+        self.cities(&mut chunk, chunk_x, chunk_z);
         self.podium(&mut chunk, x0, z0);
         self.spikes(&mut chunk, x0, z0);
 
@@ -549,6 +551,9 @@ impl End {
     /// Хорус: простые деревья на внешних островах верховий и середины.
     fn chorus(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, tops: &[Option<i32>]) {
         let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);
+        // Клетки, занятые деревьями этого чанка: соседние деревья не растут
+        // друг сквозь друга.
+        let mut taken = std::collections::HashSet::new();
 
         // Дерево растёт в столбце, если выпал жребий; ветви не выходят за
         // чанк — столбцы у краёв пропускаем.
@@ -571,51 +576,135 @@ impl End {
                     continue;
                 }
 
-                self.tree(chunk, local_x, top + 1, local_z, &mut roll);
+                self.tree(chunk, local_x, top + 1, local_z, &mut roll, &mut taken);
             }
         }
     }
 
-    /// Одно дерево хоруса: стебель вверх, от него ветви — в сторону на
-    /// один-два блока и снова вверх; цветок на макушке и на концах ветвей.
-    /// Связи блоков стебля считаются по соседям.
-    fn tree(&self, chunk: &mut Chunk, x: i32, y: i32, z: i32, roll: &mut Dice) {
-        let height = 3 + roll.below(5);
-        let mut cells: Vec<(i32, i32, i32)> = (0..height).map(|step| (x, y + step, z)).collect();
-        let mut flowers = vec![(x, y + height, z)];
+    /// Город региона: чанк старта и низ, если остров под основанием
+    /// достаточно высок и биом подходит (end_city.rs).
+    fn city_at(&self, region_x: i32, region_z: i32) -> Option<(i32, i32, i32)> {
+        let (chunk_x, chunk_z) = end_city::region_start(self.seed, region_x, region_z);
+        let (x, z) = end_city::root_corner(chunk_x, chunk_z);
 
-        for side in 0..4 {
-            if roll.unit() >= 0.5 {
+        if f64::from(x).hypot(f64::from(z)) < OUTER_FROM {
+            return None;
+        }
+
+        if !matches!(self.biome_at(x + 4, z + 4), Biome::EndHighlands | Biome::EndMidlands) {
+            return None;
+        }
+
+        // Низ города — на верхе эндемняка под углами и серединой основания.
+        let mut top = i32::MAX;
+
+        for (dx, dz) in [(0, 0), (9, 0), (0, 9), (9, 9), (4, 4)] {
+            top = top.min(self.surface(x + dx, z + dz)?);
+        }
+
+        (top >= end_city::MIN_TOP).then_some((chunk_x, chunk_z, top + 1))
+    }
+
+    /// Энд-города, задевающие чанк.
+    fn cities(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
+        let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);
+
+        for (region_x, region_z) in end_city::regions_near(chunk_x, chunk_z) {
+            let Some((start_x, start_z, y)) = self.city_at(region_x, region_z) else { continue };
+
+            if (start_x - chunk_x).abs() > end_city::RADIUS_CHUNKS || (start_z - chunk_z).abs() > end_city::RADIUS_CHUNKS {
                 continue;
             }
 
-            let (dx, dz) = [(0, -1), (1, 0), (0, 1), (-1, 0)][side];
-            let level = y + 1 + roll.below(height - 1);
-            let run = 1 + roll.below(3);
-            let rise = 1 + roll.below(4);
+            let pieces = end_city::plan(self.seed, start_x, start_z, y);
+            end_city::paint(&pieces, x0, z0, AIR, &mut |x, y, z, state| put(chunk, x - x0, y, z - z0, state));
+        }
+    }
 
-            for step in 1..=run {
-                cells.push((x + dx * step, level, z + dz * step));
+    /// Одно дерево хоруса — выращено по правилам роста цветка (вики, Chorus
+    /// Flower, Growth): цветок растёт вверх, пока над ним пусто, с шансом по
+    /// высоте стебля под ним («100% chance if zero or one plant block is
+    /// directly beneath, 60% if above a two-block unbranched plant, 50% …
+    /// branch, 40% … three-block unbranched, 25% … branch, 20% … four-block
+    /// unbranched»); не вырос вверх — ветвится вбок («1–4 branches … on an
+    /// unbranched plant or 0–3 on a branched plant», в сторону, где пусто
+    /// вокруг и снизу); не вырос никуда — засыхает (age 5).
+    fn tree(&self, chunk: &mut Chunk, x: i32, y: i32, z: i32, roll: &mut Dice, taken: &mut std::collections::HashSet<(i32, i32, i32)>) {
+        let mut cells: Vec<(i32, i32, i32)> = Vec::new();
+        // Живые цветки: место и сколько блоков стебля под ним и ветвился ли он.
+        let mut flowers: Vec<((i32, i32, i32), i32, bool)> = vec![((x, y, z), 0, false)];
+        let mut dead: Vec<(i32, i32, i32)> = Vec::new();
+        let free = |cells: &[(i32, i32, i32)], flowers: &[((i32, i32, i32), i32, bool)], dead: &[(i32, i32, i32)], c: (i32, i32, i32)| {
+            (3..CHUNK_SIZE - 3).contains(&c.0)
+                && (3..CHUNK_SIZE - 3).contains(&c.2)
+                && c.1 < y + 22
+                && !taken.contains(&c)
+                && !cells.contains(&c)
+                && !flowers.iter().any(|f| f.0 == c)
+                && !dead.contains(&c)
+        };
+
+        for _ in 0..40 {
+            if flowers.is_empty() {
+                break;
             }
 
-            let (bx, bz) = (x + dx * run, z + dz * run);
+            let mut next = Vec::new();
 
-            for step in 1..=rise {
-                cells.push((bx, level + step, bz));
+            for (at, height, branched) in flowers {
+                let up = (at.0, at.1 + 1, at.2);
+                let share = match (height, branched) {
+                    (0 | 1, _) => 1.0,
+                    (2, false) => 0.6,
+                    (2, true) => 0.5,
+                    (3, false) => 0.4,
+                    (3, true) => 0.25,
+                    (4, false) => 0.2,
+                    _ => 0.0,
+                };
+                let sides = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+                let clear_around = |c: (i32, i32, i32)| sides.iter().all(|(dx, dz)| free(&cells, &next, &dead, (c.0 + dx, c.1, c.2 + dz)));
+
+                if roll.unit() < share && free(&cells, &next, &dead, up) && clear_around(up) {
+                    cells.push(at);
+                    next.push((up, height + 1, branched));
+                    continue;
+                }
+
+                let tries = if branched { roll.below(4) } else { 1 + roll.below(4) };
+                let mut grown = false;
+
+                for _ in 0..tries {
+                    let (dx, dz) = sides[roll.below(4) as usize];
+                    let side = (at.0 + dx, at.1, at.2 + dz);
+                    let below = (side.0, side.1 - 1, side.2);
+                    let others = sides
+                        .iter()
+                        .filter(|(ox, oz)| (*ox, *oz) != (-dx, -dz))
+                        .all(|(ox, oz)| free(&cells, &next, &dead, (side.0 + ox, side.1, side.2 + oz)));
+
+                    if free(&cells, &next, &dead, side) && others && free(&cells, &next, &dead, below) && below.1 > y {
+                        next.push((side, 0, true));
+                        grown = true;
+                    }
+                }
+
+                if grown {
+                    cells.push(at);
+                } else {
+                    dead.push(at);
+                }
             }
 
-            // Цветок — на половине ветвей: остальные оканчиваются стеблем.
-            if roll.unit() < 0.5 {
-                flowers.push((bx, level + rise + 1, bz));
-            }
+            flowers = next;
         }
 
-        let has = |cx: i32, cy: i32, cz: i32| cells.contains(&(cx, cy, cz)) || flowers.contains(&(cx, cy, cz));
+        let has = |cx: i32, cy: i32, cz: i32| cells.contains(&(cx, cy, cz)) || dead.contains(&(cx, cy, cz)) || flowers.iter().any(|f| f.0 == (cx, cy, cz));
 
         for &(cx, cy, cz) in &cells {
             let text = format!(
                 "chorus_plant[down={},east={},north={},south={},up={},west={}]",
-                cy == y || has(cx, cy - 1, cz),
+                (cx, cy, cz) == (x, y, z) || has(cx, cy - 1, cz),
                 has(cx + 1, cy, cz),
                 has(cx, cy, cz - 1),
                 has(cx, cy, cz + 1),
@@ -627,9 +716,12 @@ impl End {
             put(chunk, cx, cy, cz, state);
         }
 
-        for (fx, fy, fz) in flowers {
+        for (fx, fy, fz) in dead.into_iter().chain(flowers.into_iter().map(|f| f.0)) {
             put(chunk, fx, fy, fz, self.states.chorus_flower);
+            taken.insert((fx, fy, fz));
         }
+
+        taken.extend(cells);
     }
 
     /// Кости для решений по столбцу.
@@ -642,8 +734,8 @@ impl End {
 
 /// Сколько деревьев хоруса на столбец верховий и середины. Замер: 0,08
 /// блока стебля и 0,01 цветка на столбец внешних островов; у дерева
-/// ~8 блоков стебля на цветок.
-const CHORUS_PER_COLUMN: f64 = 0.0145;
+/// ~8 блоков стебля на цветок. Подогнано переписью end_city_census.
+const CHORUS_PER_COLUMN: f64 = 0.0095;
 
 /// Кости.
 struct Dice(u64);
@@ -789,6 +881,119 @@ fn scramble(mut value: u64) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Хорус растёт по правилам вики: стебель связан вниз до эндемняка,
+    /// цветки только на концах, и деревья есть на внешних островах.
+    #[test]
+    fn chorus_trees_are_connected_and_tipped_with_flowers() {
+        let end = End::new(100554032945340);
+        let plant = |state: i32| blocks::block_at_state(state) == Some("chorus_plant");
+        let flower = |state: i32| blocks::block_at_state(state) == Some("chorus_flower");
+        let (mut plants, mut flowers, mut covered) = (0, 0, 0);
+
+        for chunk_x in 70..110 {
+            for chunk_z in 60..80 {
+                let chunk = end.chunk(chunk_x, chunk_z);
+                let at = |x: i32, y: i32, z: i32| {
+                    let (section, layer) = split(y);
+                    chunk.section(section).map_or(AIR, |blocks| super::super::unpack(blocks[layer + (z * CHUNK_SIZE + x) as usize]))
+                };
+
+                for x in 0..16 {
+                    for z in 0..16 {
+                        for y in 40..120 {
+                            let state = at(x, y, z);
+
+                            if plant(state) {
+                                plants += 1;
+                                let below = at(x, y - 1, z);
+                                let sideways = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+                                    .iter()
+                                    .any(|(dx, dz)| (0..16).contains(&(x + dx)) && (0..16).contains(&(z + dz)) && (plant(at(x + dx, y, z + dz)) || flower(at(x + dx, y, z + dz))));
+                                assert!(plant(below) || blocks::block_at_state(below) == Some("end_stone") || sideways, "стебель висит в {} {} {}", x, y, z);
+                            } else if flower(state) {
+                                flowers += 1;
+                                // Над цветком пусто, кроме редких случаев, когда
+                                // соседнее дерево или город легли сверху.
+                                if at(x, y + 1, z) != AIR {
+                                    covered += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        assert!(plants > 200, "стеблей {}", plants);
+        assert!(flowers > 20, "цветков {}", flowers);
+        assert!(covered * 50 < flowers, "накрытых цветков {} из {}", covered, flowers);
+        let ratio = plants as f64 / flowers as f64;
+        assert!((4.0..12.0).contains(&ratio), "стеблей на цветок {}", ratio);
+    }
+
+    /// Перепись блоков городов и хоруса на внешних островах — тот же счёт,
+    /// что `tools/measure/end_city.py blocks` с мира оригинала: блоков на
+    /// 10⁴ столбцов с эндемняком дальше 1000 от центра и городов на регион.
+    /// Запуск: cargo test --release end_city_census -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn end_city_census() {
+        let end = End::new(100554032945340);
+        let names = ["purpur_block", "purpur_pillar", "purpur_stairs", "purpur_slab", "end_stone_bricks", "magenta_stained_glass", "end_rod", "chest", "obsidian", "ladder", "dragon_head", "brewing_stand", "chorus_plant", "chorus_flower"];
+        let mut counts = vec![0u64; names.len()];
+        let mut columns = 0u64;
+        let mut chunks = 0u64;
+        let mut cities = std::collections::HashSet::new();
+        let mut regions = std::collections::HashSet::new();
+        let half: i32 = 128;
+
+        for chunk_x in -half..half {
+            for chunk_z in -half..half {
+                if (chunk_x * 16 + 8).pow(2) + (chunk_z * 16 + 8).pow(2) < 1000 * 1000 {
+                    continue;
+                }
+
+                chunks += 1;
+                regions.insert((chunk_x.div_euclid(end_city::REGION), chunk_z.div_euclid(end_city::REGION)));
+
+                if end.city_at(chunk_x.div_euclid(end_city::REGION), chunk_z.div_euclid(end_city::REGION)).is_some_and(|(sx, sz, _)| (sx, sz) == (chunk_x, chunk_z)) {
+                    cities.insert((chunk_x, chunk_z));
+                }
+
+                let chunk = end.chunk(chunk_x, chunk_z);
+                let mut stone = [false; 256];
+
+                for section in 0..chunk.sections.len() {
+                    let Some(blocks) = chunk.section(section) else { continue };
+
+                    for (at, packed) in blocks.iter().enumerate() {
+                        let state = super::super::unpack(*packed);
+
+                        if state == AIR {
+                            continue;
+                        }
+
+                        let name = blocks::block_at_state(state).unwrap_or("");
+
+                        if name == "end_stone" {
+                            stone[at & 255] = true;
+                        } else if let Some(i) = names.iter().position(|n| *n == name) {
+                            counts[i] += 1;
+                        }
+                    }
+                }
+
+                columns += stone.iter().filter(|s| **s).count() as u64;
+            }
+        }
+
+        eprintln!("чанков {}, столбцов с эндемняком {}, регионов {}, городов {}", chunks, columns, regions.len(), cities.len());
+
+        for (name, count) in names.iter().zip(&counts) {
+            eprintln!("  {:<22} {:>8}  на 10⁴ столбцов {:.1}", name, count, *count as f64 * 1e4 / columns.max(1) as f64);
+        }
+    }
 
     #[test]
     fn terrain_is_deterministic() {

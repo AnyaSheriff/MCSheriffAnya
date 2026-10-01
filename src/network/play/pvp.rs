@@ -55,6 +55,8 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
     let feet = (victim.position.x, victim.position.y, victim.position.z);
 
     if distance_to_box(eye, feet, victim.sneaking) > range + REACH_SLACK {
+        log_debug!("PvP: {} не дотянулся до {}: глаза {:.2} {:.2} {:.2}, ноги цели {:.2} {:.2} {:.2}", player.name, victim.name, eye.0, eye.1, eye.2, feet.0, feet.1, feet.2);
+
         return false;
     }
 
@@ -65,7 +67,14 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
     let data = held.map(|stack| stack.extras()).unwrap_or_default();
     let charge = combat::charge(since, player.attrs.value(crate::attributes::ATTACK_SPEED));
     let enchant = combat::enchant_bonus(&data, false, false);
-    let strike = combat::strike(player.attrs.value(crate::attributes::ATTACK_DAMAGE), enchant, charge, may_crit(player));
+    // Сокрушающий удар булавы (вики, Mace): в пролёте от 1,5 блока прибавка
+    // за каждый блок падения идёт в основу (и под крит), вид урона —
+    // mace_smash, пролёт гасится (чёрный ящик, pvp-mace).
+    let mace = held.and_then(|stack| combat::item_name(stack.item)) == Some("mace");
+    let smash = combat::smash_ready(mace, player.vit.fall, player.on_ground);
+    let bonus = if smash { combat::smash_bonus(player.vit.fall, data.level("density")) } else { 0.0 };
+    let strike = combat::strike(player.attrs.value(crate::attributes::ATTACK_DAMAGE), bonus, enchant, charge, may_crit(player));
+    let source = if smash { Source::MaceSmash } else { Source::PlayerAttack };
     let sprint_hit = player.vit.sprinting && strike.full;
     let extra = combat::extra_knockback(player.attrs.value(crate::attributes::ATTACK_KNOCKBACK), &data, sprint_hit);
     let sweep = strike.full && !strike.crit && !sprint_hit && player.on_ground && held.and_then(|stack| combat::item_name(stack.item)).is_some_and(|name| name.ends_with("_sword"));
@@ -77,11 +86,23 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
     // Исход удара — по тому, что жертва опубликовала (броня, щит,
     // неуязвимость): от него зависят звуки и частицы, которые ставит нападающий
     // сразу за ударом, в том же такте (чёрный ящик, pvp-fist).
-    let outcome = combat::outcome(&gear.view, strike.damage, Source::PlayerAttack, now, (victim.position.x, victim.position.z, victim.position.yaw), (player.x, player.z));
+    let outcome = combat::outcome(&gear.view, strike.damage, source, now, (victim.position.x, victim.position.z, victim.position.yaw), (player.x, player.z));
     let lands = matches!(outcome, combat::Outcome::Taken(_));
 
     if lands {
         player.vit.add_exhaustion(0.1);
+    }
+
+    // Сокрушил: пролёт считается заново от этого места — падение дальше не
+    // ранит, — и клиенту уходит скорость (0; 0,01; 0): вертикальный ход
+    // гасится (чёрный ящик, pvp-mace: «b: Velocity 0,0.01,0», урона от
+    // падения с 4 и 8 блоков нет).
+    let smash_fall = player.vit.fall;
+
+    if smash && lands {
+        player.vit.fall = 0.0;
+        player.vit.smash_forgives = true;
+        player.net.velocity = Some((0.0, 0.01, 0.0));
     }
 
     if sprint_hit && lands {
@@ -109,10 +130,11 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         from: (player.x, player.y, player.z),
         yaw: player.yaw,
         damage: strike.damage,
-        source: Source::PlayerAttack,
+        source,
         extra_knockback: extra,
         weapon: held,
         disables_shield_ticks: (disables * 20.0) as u32,
+        breach_scale: if smash { combat::breach_scale(data.level("breach")) } else { 1.0 },
         fire_ticks: fire * 80,
         thorns_slots,
     });
@@ -179,12 +201,26 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
                     world.note_animation(target, 4);
                 }
 
+                // Сокрушающий удар: звук у нападающего и частицы из блока под
+                // жертвой (событие мира 2013) — после крит-анимации, до частиц
+                // урона (чёрный ящик, pvp-mace).
+                if smash {
+                    world.note_sound_player_at(from, combat::smash_sound(smash_fall, victim.position.on_ground), 1.0, 1.0);
+
+                    if victim.position.on_ground {
+                        world.note_level_event(at.0.floor() as i32, at.1.floor() as i32 - 1, at.2.floor() as i32, 2013, combat::SMASH_PARTICLES);
+                    }
+                }
+
                 if extra_enchant_hit(&data) {
                     world.note_animation(target, 5);
                 }
 
+                // Частиц урона — половина снятого, но не больше, чем было
+                // здоровья (чёрный ящик, pvp-mace-heavy: 32,5 урона по 20
+                // здоровья — 10 частиц).
                 if let combat::Outcome::Taken(taken) = outcome {
-                    let count = (taken * 0.5) as i32;
+                    let count = (taken.min(gear.health) * 0.5) as i32;
 
                     if count > 0 {
                         world.note_particle(crate::mob::Particle::DamageIndicator.id(), None, (at.0, at.1 + 0.9, at.2), (0.1, 0.0, 0.1), 0.2, count);
@@ -274,7 +310,7 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
     let (armor, toughness) = (player.attrs.value(crate::attributes::ARMOR) as f32, player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32);
 
     if mortal && !combat::bypasses_armor(strike.source) {
-        damage = combat::after_armor(damage, armor, toughness);
+        damage = combat::after_armor_breached(damage, armor, toughness, strike.breach_scale);
 
         let points: i32 = combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot)).map(|stack| combat::protection_points(&stack.extras(), strike.source)).sum();
 
@@ -484,6 +520,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
             extra_knockback: 0.8,
             weapon: player.inventory.held(),
             disables_shield_ticks: 0,
+            breach_scale: 1.0,
             fire_ticks: 0,
             thorns_slots: Vec::new(),
         });

@@ -463,6 +463,14 @@ const ATTACK: i32 = 0x01;
 /// Clientbound Respawn: переход в другое измерение.
 const RESPAWN: i32 = 0x52;
 
+/// Boss Event (minecraft-data 26.1: boss_bar, 0x09): UUID полосы, действие
+/// (0 — добавить: здоровье, заголовок, цвет, деления, флаги; 1 — убрать;
+/// 2 — здоровье).
+const BOSS_EVENT: i32 = 0x09;
+
+/// UUID полосы дракона — постоянный [проверить: у оригинала случайный].
+const DRAGON_BOSS_UUID: [u8; 16] = [0xD4, 0xA6, 0x0E, 0x4D, 0x1A, 0x7E, 0x4C, 0x0D, 0x9A, 0x33, 0x5E, 0x1C, 0xE2, 0xD1, 0x0B, 0xA1];
+
 /// Дальность прорисовки, которую сервер объявляет клиенту. Клиент ждёт, пока
 /// загрузятся все чанки в этом радиусе, поэтому она должна совпадать с числом
 /// реально отправленных чанков.
@@ -1096,6 +1104,38 @@ async fn send_respawn(stream: &mut Outgoing<'_>, dimension: Dimension, game_mode
 
     push_spawn_info(&mut body, dimension, game_mode);
     body.push(0x03); // сохранить свойства и сведения о сущности
+
+    write_body(stream, body).await
+}
+
+/// Полоса босса дракона: доля здоровья — добавить или обновить, None —
+/// убрать. Заголовок — имя дракона, цвет розовый (0), без делений, флаги
+/// 6 — музыка и туман (чёрный ящик, end-fight-enter).
+async fn send_boss_bar(stream: &mut Outgoing<'_>, player: &mut PlayerState, share: Option<f32>) -> io::Result<()> {
+    let mut body = encode_varint(BOSS_EVENT);
+
+    body.extend_from_slice(&DRAGON_BOSS_UUID);
+
+    match share {
+        Some(share) if !player.boss_shown => {
+            player.boss_shown = true;
+            body.extend_from_slice(&encode_varint(0));
+            body.extend_from_slice(&nbt::translated("entity.minecraft.ender_dragon"));
+            body.extend_from_slice(&share.to_be_bytes());
+            body.extend_from_slice(&encode_varint(0)); // цвет: розовый
+            body.extend_from_slice(&encode_varint(0)); // без делений
+            body.push(6); // флаги: музыка дракона и туман
+        }
+        Some(share) => {
+            body.extend_from_slice(&encode_varint(2));
+            body.extend_from_slice(&share.to_be_bytes());
+        }
+        None if player.boss_shown => {
+            player.boss_shown = false;
+            body.extend_from_slice(&encode_varint(1));
+        }
+        None => return Ok(()),
+    }
 
     write_body(stream, body).await
 }
@@ -3815,6 +3855,7 @@ async fn send_pending_world_events(
                 write_body(stream, body).await?;
             }
             WorldEvent::GameEvent { .. } => {}
+            WorldEvent::BossBar(share) => send_boss_bar(stream, player, *share).await?,
             WorldEvent::Collect { entity_id, by, count } => {
                 if player.seen_bow_arrows.remove(entity_id).is_some() {
                     send_pick_up(stream, *entity_id, *by, *count).await?;
@@ -5187,6 +5228,11 @@ async fn read_and_log_play_packets(
                         .expect("список игроков захвачен другим потоком")
                         .set_dimension(&player.uuid, dimension);
 
+                    // Полосу босса оригинал убирает, когда игрок покидает бой.
+                    if player.boss_shown {
+                        send_boss_bar(stream, player, None).await?;
+                    }
+
                     if respawning {
                         // После смерти сперва способности, потом Respawn.
                         send_abilities(stream, player.game_mode).await?;
@@ -5219,6 +5265,14 @@ async fn read_and_log_play_packets(
                     player.seen_frames.clear();
                     send_all_frames(stream, shared, player).await?;
                     mobs::send_all_mobs(stream, shared, player).await?;
+
+                    // Полоса босса: клиент после Respawn её забывает; в Крае с
+                    // живым драконом — показать заново.
+                    player.boss_shown = false;
+                    let boss = (dimension == Dimension::End).then(|| shared.world_in(dimension).lock().expect("мир захвачен другим потоком").fight.boss).flatten();
+                    if boss.is_some() {
+                        send_boss_bar(stream, player, boss).await?;
+                    }
 
                     // Чужих игроков покажет сверка видимости на этом же круге.
                     seen.clear();
@@ -6218,7 +6272,14 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     // не на земле, не бежит, не в воде; урон ×1,5 (чёрный ящик, cow-crit).
     let crit_ok = player.vit.fall > 0.0 && !player.on_ground && !player.vit.sprinting && !player.net.in_water;
     let (undead, arthropod) = crate::combat::mob_traits(mob.kind.name());
-    let blow = crate::combat::strike(player.attrs.value(crate::attributes::ATTACK_DAMAGE), crate::combat::enchant_bonus(&data, undead, arthropod), charge, crit_ok);
+    // Сокрушающий удар булавы — как по игроку (pvp::strike_player): прибавка
+    // за пролёт в основу, вид урона mace_smash, пролёт гасится [проверить
+    // по мобу: снято только по игроку, pvp-mace].
+    let smash = crate::combat::smash_ready(held == Some("mace"), player.vit.fall, player.on_ground);
+    let smash_fall = player.vit.fall;
+    let bonus = if smash { crate::combat::smash_bonus(smash_fall, data.level("density")) } else { 0.0 };
+    let source = if smash { crate::survival::Source::MaceSmash } else { crate::survival::Source::PlayerAttack };
+    let blow = crate::combat::strike(player.attrs.value(crate::attributes::ATTACK_DAMAGE), bonus, crate::combat::enchant_bonus(&data, undead, arthropod), charge, crit_ok);
     let (damage, crit) = (blow.damage, blow.crit);
     // Рывок (бег при полном заряде) и зачарование «отдача» толкают ещё, вдоль
     // взгляда; рывок сбрасывает бег (вики, Knockback).
@@ -6239,11 +6300,17 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     }
 
     let hit = if mob.kind == crate::mob::Kind::EnderDragon {
-        mob.hurt_part(damage, head, crate::survival::Source::PlayerAttack, Some(push))
+        mob.hurt_part(damage, head, source, Some(push))
     } else {
-        mob.hurt(damage, crate::survival::Source::PlayerAttack, Some(push))
+        mob.hurt(damage, source, Some(push))
     };
     let landed = hit.is_some();
+
+    if smash && landed {
+        player.vit.fall = 0.0;
+        player.vit.smash_forgives = true;
+        player.net.velocity = Some((0.0, 0.01, 0.0));
+    }
 
     if hit.is_some() && extra > 0.0 {
         mob.knockback(look.0, look.1, f64::from(extra) * 0.5);
@@ -6286,6 +6353,13 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
                 let name = if charge > 0.9 { "minecraft:entity.player.attack.strong" } else { "minecraft:entity.player.attack.weak" };
 
                 mob.events.push(crate::mob::Event::PlayerSound { name, at: from });
+            }
+
+            // Сокрушающий удар: звук у нападающего после крит-анимации
+            // (чёрный ящик, pvp-mace). Частицы из блока под мобом (событие
+            // мира 2013) — через журнал мира [проверить].
+            if smash {
+                mob.events.push(crate::mob::Event::PlayerSound { name: crate::combat::smash_sound(smash_fall, mob.on_ground), at: from });
             }
 
             if data.level("sharpness") > 0 || data.level("smite") > 0 || data.level("bane_of_arthropods") > 0 {
@@ -8217,6 +8291,9 @@ struct PlayerState {
     in_portal: u32,
     portal_ready: bool,
 
+    /// Полоса босса дракона показана клиенту.
+    boss_shown: bool,
+
     /// Номер последнего переноса и ждём ли его подтверждения. Пока клиент
     /// не подтвердил перенос, его пакеты движения посланы ещё со старого
     /// места — принять их значило бы вернуть игрока назад.
@@ -8461,6 +8538,7 @@ impl PlayerState {
             in_portal: 0,
             // Зашёл, стоя в портале, — не переносить сразу.
             portal_ready: false,
+            boss_shown: false,
             answered: Instant::now(),
             inventory: saved
                 .as_ref()

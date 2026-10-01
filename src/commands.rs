@@ -447,6 +447,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         "data" => data_command(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "tnt" => custom_tnt(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "kill" => kill(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "damage" => damage(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "difficulty" => difficulty(parts.collect::<Vec<&str>>().as_slice(), shared),
         "effect" => effect(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "experience" | "xp" => experience(parts.collect::<Vec<&str>>().as_slice(), source, shared),
@@ -1169,6 +1170,58 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     }
 
     Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len() + bolts + frames.len() + killed_mobs + orbs + shot))
+}
+
+/// `damage @e[…] <сколько> [вид]` — урон мобам (пока только обычный,
+/// `minecraft:generic`); игрокам — как `Hurt`.
+fn damage(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let (Some(who), Some(amount)) = (parts.first(), parts.get(1).and_then(|amount| amount.parse::<f32>().ok())) else {
+        return Answer::saying("Нужно: damage <кто> <сколько> [minecraft:generic|minecraft:explosion|minecraft:player_attack]".to_string());
+    };
+    let kind = match parts.get(2).map(|kind| kind.trim_start_matches("minecraft:")) {
+        Some("explosion") => crate::survival::Source::Explosion,
+        Some("player_attack") => crate::survival::Source::PlayerAttack,
+        _ => crate::survival::Source::Generic,
+    };
+
+    if !who.starts_with("@e") {
+        let targets = find_targets(who, source, shared);
+        let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+        for (uuid, _) in &targets {
+            players.order(uuid, Order::Hurt { amount, source: kind });
+        }
+
+        return Answer::saying(format!("Нанесён урон: {}", names_of(&targets)));
+    }
+
+    let Some(chosen) = Selector::parse(who) else {
+        return Answer::saying("Не понял, кому наносить урон".to_string());
+    };
+    let origin = origin_of(source, shared);
+    let dimension = dimension_of(source, shared);
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+    let mut left = chosen.limit.unwrap_or(usize::MAX);
+    let mut hurt = 0;
+
+    for mob in items.mobs_mut() {
+        // Дракону команда нипочём: урон он берёт только частями — от игрока
+        // и взрыва (чёрный ящик, dragon-probe: ни generic, ни player_attack,
+        // ни explosion, ни out_of_world его не берут).
+        if mob.kind == crate::mob::Kind::EnderDragon {
+            continue;
+        }
+
+        if left > 0 && chosen.takes(mob.kind.name()) && chosen.reaches(origin, (mob.x, mob.y, mob.z)) && !mob.is_dead() {
+            mob.hurt(amount, kind, None);
+            left -= 1;
+            hurt += 1;
+        }
+    }
+
+    items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
+
+    Answer::saying(format!("Нанесён урон сущностям: {hurt}"))
 }
 
 /// `difficulty <peaceful|easy|normal|hard>` — сложность на ходу.

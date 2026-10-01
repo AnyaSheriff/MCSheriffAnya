@@ -1,0 +1,60 @@
+{
+ "name": "dragon-crystal-heal",
+ "about": "Дракон NoAI и кристалл Края рядом: без ИИ кристалл его не лечит (ни луча, ни здоровья); удар по кристаллу — взрыв силой 6, дракону урон в тело (четверть: 200 → 192,08) от «player_explosion». Команда damage дракона не берёт (чёрный ящик, проба), поэтому ранить его заранее нельзя. Дно площадки (бедрок на −64) кладётся обратно.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "fill $(-4,-1,-4) $(9,-1,9) minecraft:obsidian",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon ender_dragon $(0.5,6,0.5) {NoAI:1b}"
+  },
+  {
+   "after": 20,
+   "cmd": "summon end_crystal $(3.5,0,0.5)"
+  },
+  {
+   "after": 100,
+   "attack": true
+  }
+ ],
+ "record_ticks": 140,
+ "cleanup": [
+  "fill $(-4,-5,-7) $(10,-2,8) minecraft:stone",
+  "fill $(-4,-5,-7) $(10,-5,8) minecraft:bedrock",
+  "kill @e[type=ender_dragon,distance=..64]",
+  "kill @e[type=end_crystal,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(-4,-1,-4) $(9,-1,9) minecraft:stone",
+  "fill $(-4,0,-4) $(9,4,9) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "голос дракона в покое",
+   "match": "entity\\.ender_dragon\\.ambient",
+   "range": [
+    0,
+    4
+   ],
+   "anytick": true,
+   "why": "вики, Sounds: голос в покое по случайному счёту"
+  }
+ ]
+}
