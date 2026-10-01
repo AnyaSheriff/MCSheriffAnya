@@ -325,6 +325,11 @@ if (bot2) bot2._client.on('packet', (p, meta) => {
   const text = selfText(bot2, p, meta);
   if (text) note('sv', { text: `b: ${text}` });
 });
+// `track_second_velocity`: и скорость, которую сервер сообщает второму (отдача нападающему).
+if (bot2) bot2._client.on('entity_velocity', (p) => {
+  if (!scenario.track_second_velocity || !recording || !isSelfOf(bot2)(p.entityId)) return;
+  note('sv', { text: `b: Velocity ${vec(p.velocity)}` });
+});
 // `track_players`: что первый робот видит о втором как о чужом игроке —
 // свойства, взмахи, события (ушиб, смерть, щит), снаряжение, звуки. Номера
 // сущностей у серверов свои и не пишутся.

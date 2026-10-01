@@ -90,6 +90,11 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
 
     let fire = data.level("fire_aspect");
 
+    // Шипы жертвы (вики, Thorns): каждая деталь с «шипами» с шансом 15 % за
+    // уровень ранит ударившего; урон приходит ему в этом же такте, со звуками
+    // у него (чёрный ящик, pvp-thorns).
+    let thorns_slots = if lands { thorns_hits(shared, player, &gear.view, (victim.position.x, victim.position.y, victim.position.z), target) } else { Vec::new() };
+
     // Рывок: звук отдачи звучит до удара и сверх обычного (чёрный ящик,
     // pvp-sprint-knockback).
     if sprint_hit {
@@ -109,6 +114,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         weapon: held,
         disables_shield_ticks: (disables * 20.0) as u32,
         fire_ticks: fire * 80,
+        thorns_slots,
     });
 
     // Звуки и частицы удара — в порядке оригинала: ушиб жертвы, звук удара,
@@ -255,6 +261,7 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
     // Щит (вики, Shield): поднятый дольше 5 тактов держит удар из передней
     // полусферы — урона нет, щит изнашивается, а топор отключает его.
     if mortal
+        && strike.source != Source::Thorns
         && !player.vit.dead
         && damage > 0.0
         && let Some(hand) = vitals::shield_up(player, now)
@@ -297,10 +304,12 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
                 wear_armor(shared, player, strike.damage);
             }
 
-            // Шипы (вики, Thorns): каждая деталь с «шипами» с шансом 15 % за
-            // уровень ранит ударившего на 1–4 и теряет 2 прочности.
-            if strike.source == Source::PlayerAttack {
-                thorns(shared, player, strike);
+            // Шипы (вики, Thorns): сработавшие детали теряют по 2 прочности;
+            // сам урон ударившему он выдаёт себе в такт удара (`strike_player`).
+            for slot in &strike.thorns_slots {
+                if let Some(stack) = player.inventory.slot(*slot) {
+                    replace_worn(shared, player, *slot, stack, 2);
+                }
             }
 
             // Отдача: обычная 0,4 от нападающего, сверх неё — по взгляду.
@@ -314,7 +323,18 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             if strike.extra_knockback > 0.0 {
                 let look = crate::mob::look_direction(strike.yaw);
 
-                vitals::knock_back(player, look, f64::from(strike.extra_knockback) * 0.5, resistance);
+                if strike.source == Source::Arrow {
+                    // «Отбрасывание» лука не гасит скорость, а прибавляет:
+                    // 0,6 на уровень вдоль полёта и 0,1 вверх (чёрный ящик,
+                    // pvp-bow-punch: (0,874; 0,373) при отбрасывании II).
+                    let push = f64::from(strike.extra_knockback) * 0.5 * (1.0 - resistance).max(0.0);
+
+                    if let Some(velocity) = player.net.velocity.as_mut() {
+                        *velocity = (velocity.0 + look.0 * push, velocity.1 + 0.1, velocity.2 + look.1 * push);
+                    }
+                } else {
+                    vitals::knock_back(player, look, f64::from(strike.extra_knockback) * 0.5, resistance);
+                }
             }
 
             if strike.fire_ticks > 0 {
@@ -465,6 +485,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
             weapon: player.inventory.held(),
             disables_shield_ticks: 0,
             fire_ticks: 0,
+            thorns_slots: Vec::new(),
         });
     }
 }
@@ -492,26 +513,42 @@ pub(super) fn sweep_mobs(items: &mut crate::items::Items, player: &PlayerState, 
     }
 }
 
-/// Шипы брони жертвы: урон возвращается ударившему поручением `Hurt`.
-fn thorns(shared: &Shared, player: &mut PlayerState, strike: &PlayerStrike) {
-    for (slot, _) in combat::ARMOR_SLOTS {
-        let Some(stack) = player.inventory.slot(slot) else { continue };
-        let level = stack.extras().level("thorns");
+/// Бросает шипы жертвы по её опубликованным уровням: сработавшим кладёт урон
+/// в очередь ударов нападающего; возвращает слоты сработавших.
+fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players::CombatView, victim_at: (f64, f64, f64), victim: i32) -> Vec<i32> {
+    let mut slots = Vec::new();
+    let dimension = player.dimension;
 
-        if level <= 0 {
+    for ((slot, _), level) in combat::ARMOR_SLOTS.iter().zip(view.thorns) {
+        if level <= 0 || vitals::world_random(shared, dimension) >= 0.15 * level as f32 {
             continue;
         }
 
-        let dimension = player.dimension;
-        let chance = vitals::world_random(shared, dimension);
+        let amount = if level > 10 { (level - 10) as f32 } else { combat::thorns_damage(level, vitals::world_random(shared, dimension)) };
+        let toward = (victim_at.2 - player.z).atan2(victim_at.0 - player.x).to_degrees() as f32;
+        let at = (player.x, player.y, player.z);
+        let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
-        if chance >= 0.15 * level as f32 {
-            continue;
-        }
+        // Звуки идут в журнал сразу: клиенты получат их в этом же такте.
+        world.note_sound_player_except(at, "minecraft:entity.player.hurt", 1.0, 1.0, player.entity_id);
+        world.note_sound_player_at(at, "minecraft:enchant.thorns.hit", 1.0, 1.0);
+        drop(world);
 
-        let amount = if level > 10 { (level - 10) as f32 } else { 1.0 + (vitals::world_random(shared, dimension) * 4.0).floor() };
+        player.net.hits.push(vitals::Pending {
+            amount,
+            source: Source::Thorns,
+            direct: victim,
+            hurt_yaw: Some((toward - player.yaw).rem_euclid(360.0)),
+            push: {
+                let away = (player.x - victim_at.0, player.z - victim_at.2);
+                let length = away.0.hypot(away.1);
 
-        shared.players.lock().expect("список игроков захвачен другим потоком").order(&strike.attacker_uuid, crate::players::Order::Hurt { amount, source: Source::Thorns });
-        replace_worn(shared, player, slot, stack, 2);
+                Some(if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { crate::mob::look_direction(player.yaw) })
+            },
+            killer: shared.players.lock().expect("список игроков захвачен другим потоком").by_entity(victim).map(|(member, _)| (member.name.clone(), member.uuid)),
+        });
+        slots.push(*slot);
     }
+
+    slots
 }

@@ -21,6 +21,8 @@ pub(super) struct ShownArrow {
     moves: u32,
     in_ground: bool,
     crit_sent: bool,
+    /// Место, которое клиент знает (сетка 1/4096): от него считается сдвиг.
+    grid: (i64, i64, i64),
 }
 
 /// Первый слот с обычной стрелой: вторая рука, панель, рюкзак.
@@ -178,14 +180,58 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
                 write_body(stream, data).await?;
             }
 
-            player.seen_bow_arrows.insert(arrow.entity_id, ShownArrow { moves: 0, in_ground: false, crit_sent: arrow.crit });
+            // Сразу за появлением — нулевой сдвиг с поворотом (чёрный ящик,
+            // arrow-pickup: «arrow сдвиг 0,0,0»).
+            let mut zero = encode_varint(0x36);
+
+            zero.extend_from_slice(&encode_varint(arrow.entity_id));
+            push_i16(&mut zero, 0);
+            push_i16(&mut zero, 0);
+            push_i16(&mut zero, 0);
+            zero.push(cart_angle(yaw));
+            zero.push(cart_angle(pitch));
+            zero.push(0);
+            write_body(stream, zero).await?;
+
+            player.seen_bow_arrows.insert(arrow.entity_id, ShownArrow { moves: 0, in_ground: false, crit_sent: arrow.crit, grid: grid_of((sx, sy, sz)) });
             continue;
         };
 
-        if arrow.moves != shown.moves || arrow.in_ground != shown.in_ground {
+        // Слежение оригинала узнаёт о приземлении на такт позже (чёрный ящик,
+        // arrow-pickup: в такте выстрела — нулевой сдвиг, остановка — на +1).
+        let landing_now = arrow.in_ground && !shown.in_ground && arrow.ground_ticks == 0;
+
+        if !landing_now && (arrow.moves != shown.moves || arrow.in_ground != shown.in_ground) {
             if arrow.in_ground != shown.in_ground || arrow.in_ground {
-                // Встала — точное место и нулевая скорость.
-                send_position_sync(stream, arrow).await?;
+                // Встала — нулевая скорость и сдвиг до точки остановки с тем
+                // поворотом, с каким летела (чёрный ящик, arrow-pickup).
+                let mut body = encode_varint(ENTITY_VELOCITY);
+
+                body.extend_from_slice(&encode_varint(arrow.entity_id));
+                types::push_velocity(&mut body, 0.0, 0.0, 0.0);
+                write_body(stream, body).await?;
+
+                let (svx, svy, svz) = arrow.start.1;
+                let (yaw, pitch) = crate::player_arrow::Arrow { vx: svx, vy: svy, vz: svz, ..arrow.clone() }.angles();
+                let grid = grid_of((arrow.x, arrow.y, arrow.z));
+                let step = (grid.0 - shown.grid.0, grid.1 - shown.grid.1, grid.2 - shown.grid.2);
+
+                if [step.0, step.1, step.2].iter().all(|value| i16::try_from(*value).is_ok()) {
+                    let mut body = encode_varint(0x36);
+
+                    body.extend_from_slice(&encode_varint(arrow.entity_id));
+                    push_i16(&mut body, step.0 as i16);
+                    push_i16(&mut body, step.1 as i16);
+                    push_i16(&mut body, step.2 as i16);
+                    body.push(cart_angle(yaw));
+                    body.push(cart_angle(pitch));
+                    body.push(0);
+                    write_body(stream, body).await?;
+                } else {
+                    send_position_sync(stream, arrow).await?;
+                }
+
+                shown.grid = grid;
 
                 let mut data = encode_varint(SET_ENTITY_DATA);
 

@@ -526,6 +526,9 @@ struct Shown {
     /// Бежит ли: остальным — флаг сущности и атрибут скорости.
     sprinting: bool,
     living: u8,
+    effect_colors: [i32; crate::survival::EFFECT_PARTICLES],
+    /// Здоровье (биты числа): остальным — свойством 9.
+    health_bits: u32,
     sneaking: bool,
     /// Сколько взмахов рукой уже показано.
     swings: u32,
@@ -950,6 +953,8 @@ async fn enter_world(
                     speed_bits: 0,
                     sprinting: false,
                     living: 0,
+                    effect_colors: [0; crate::survival::EFFECT_PARTICLES],
+                    health_bits: crate::survival::MAX_HEALTH.to_bits(),
                     sneaking: other.sneaking,
                     swings: other.swings,
                 },
@@ -2815,6 +2820,8 @@ async fn send_other_moves(
                 speed_bits: u64::from(players.gear(&member.uuid).speed_touch),
                 sprinting: players.gear(&member.uuid).sprinting,
                 living: players.gear(&member.uuid).living,
+                effect_colors: players.gear(&member.uuid).effect_colors,
+                health_bits: players.gear(&member.uuid).health.to_bits(),
                 sneaking: member.sneaking,
                 swings: member.swings,
             };
@@ -2860,6 +2867,8 @@ async fn send_other_moves(
                 only.swings = now.swings;
                 only.sprinting = now.sprinting;
                 only.living = now.living;
+                only.effect_colors = now.effect_colors;
+                only.health_bits = now.health_bits;
             } else {
                 (only.held, only.worn, only.speed_bits) = (now.held, now.worn, now.speed_bits);
             }
@@ -2905,6 +2914,28 @@ async fn send_other_moves(
                 write_body(stream, data).await?;
             }
 
+            // Частицы эффектов: цвет в свойстве 10 (пустой список — сняты).
+            if only.effect_colors != shown.effect_colors {
+                let mut data = encode_varint(SET_ENTITY_DATA);
+
+                data.extend_from_slice(&encode_varint(entity_id));
+                vitals::push_effect_particles(&mut data, &only.effect_colors);
+                data.push(PROPERTIES_END);
+                write_body(stream, data).await?;
+            }
+
+            // Здоровье чужого игрока: свойство 9 с числом.
+            if only.health_bits != shown.health_bits {
+                let mut data = encode_varint(SET_ENTITY_DATA);
+
+                data.extend_from_slice(&encode_varint(entity_id));
+                data.push(9);
+                data.extend_from_slice(&encode_varint(3));
+                data.extend_from_slice(&f32::from_bits(only.health_bits).to_be_bytes());
+                data.push(PROPERTIES_END);
+                write_body(stream, data).await?;
+            }
+
             let mut changed = Vec::new();
 
             if only.held != shown.held {
@@ -2936,7 +2967,7 @@ async fn send_other_moves(
             continue;
         }
 
-        (now.swings, now.held, now.worn, now.speed_bits, now.sprinting, now.living) = (shown.swings, shown.held, shown.worn, shown.speed_bits, shown.sprinting, shown.living);
+        (now.swings, now.held, now.worn, now.speed_bits, now.sprinting, now.living, now.effect_colors, now.health_bits) = (shown.swings, shown.held, shown.worn, shown.speed_bits, shown.sprinting, shown.living, shown.effect_colors, shown.health_bits);
 
         if now == shown {
             continue;
@@ -3761,6 +3792,35 @@ async fn send_pending_world_events(
                     mobs::send_particles(stream, *kind, *block, *at, *offset, *speed, *count).await?;
                 }
             }
+            WorldEvent::PlayerDamaged { entity_id, type_id, culprit, direct } if *entity_id != player.entity_id => {
+                let here = shared.players.lock().expect("список игроков захвачен другим потоком").by_entity(*entity_id).is_some_and(|(member, _)| member.dimension == player.dimension);
+
+                if here {
+                    let mut body = encode_varint(0x19);
+
+                    body.extend_from_slice(&encode_varint(*entity_id));
+                    body.extend_from_slice(&encode_varint(*type_id));
+                    body.extend_from_slice(&encode_varint(*culprit));
+                    body.extend_from_slice(&encode_varint(*direct));
+                    body.push(0);
+                    write_body(stream, body).await?;
+                }
+            }
+            WorldEvent::PlayerDamaged { .. } => {}
+            WorldEvent::GameEvent { entity_id, reason, value } if *entity_id == player.entity_id => {
+                let mut body = encode_varint(GAME_EVENT);
+
+                body.push(*reason);
+                body.extend_from_slice(&value.to_be_bytes());
+                write_body(stream, body).await?;
+            }
+            WorldEvent::GameEvent { .. } => {}
+            WorldEvent::Collect { entity_id, by, count } => {
+                if player.seen_bow_arrows.remove(entity_id).is_some() {
+                    send_pick_up(stream, *entity_id, *by, *count).await?;
+                    send_remove_entity(stream, *entity_id).await?;
+                }
+            }
             WorldEvent::Animation { entity_id, kind } => {
                 let mut body = encode_varint(ENTITY_ANIMATION);
 
@@ -4364,6 +4424,8 @@ async fn send_pending_player_changes(
                     speed_bits: 0,
                     sprinting: false,
                     living: 0,
+                    effect_colors: [0; crate::survival::EFFECT_PARTICLES],
+                    health_bits: crate::survival::MAX_HEALTH.to_bits(),
                     sneaking: member.sneaking,
                     swings: member.swings,
                 };
@@ -4408,6 +4470,8 @@ async fn send_pending_player_changes(
                         speed_bits: 0,
                         sprinting: false,
                         living: 0,
+                    effect_colors: [0; crate::survival::EFFECT_PARTICLES],
+                    health_bits: crate::survival::MAX_HEALTH.to_bits(),
                         sneaking: member.sneaking,
                         swings: member.swings,
                     };
@@ -5077,9 +5141,10 @@ async fn read_and_log_play_packets(
 
             match order {
                 Order::Respawn => {}
-                Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0 }),
+                Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None }),
                 Order::Effect { kind, amplifier, ticks } => vitals::give_effect(stream, player, kind, amplifier, ticks).await?,
-                Order::ClearEffects => vitals::clear_effects(stream, player).await?,
+                Order::ClearEffects => vitals::clear_effects(stream, player, None).await?,
+                Order::ClearEffect(kind) => vitals::clear_effects(stream, player, Some(kind)).await?,
                 Order::XpTaken { points } => player.net.xp_taken += points,
                 Order::Experience { set, amount, levels } => vitals::command_xp(stream, player, set, amount, levels).await?,
                 Order::Kick { reason } => {
@@ -8427,12 +8492,24 @@ impl PlayerState {
                 toughness: self.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32,
                 protection: points(crate::survival::Source::PlayerAttack),
                 projectile_protection: points(crate::survival::Source::Arrow) - points(crate::survival::Source::PlayerAttack),
+                resistance: self.vit.resistance_level(),
+                thorns: {
+                    let mut levels = [0; 4];
+
+                    for (level, data) in levels.iter_mut().zip(crate::combat::ARMOR_SLOTS.iter().map(|(number, _)| slot(*number).map(|stack| stack.extras()))) {
+                        *level = data.map_or(0, |data| data.level("thorns"));
+                    }
+
+                    levels
+                },
                 blocking_since: self.net.using.filter(|using| using.kind == vitals::UseKind::Shield).map(|using| using.since),
                 shield_disabled_until: self.net.shield_disabled_until,
             },
             attack_speed: self.attrs.get(crate::attributes::ATTACK_SPEED).cloned(),
             speed_touch: self.speed_touch,
             living: vitals::living_flags(self),
+            effect_colors: self.vit.effect_colors(),
+            health: self.vit.health,
             sprinting: self.vit.sprinting,
             movement_speed: self.attrs.get(crate::attributes::MOVEMENT_SPEED).cloned().map(|mut attribute| {
                 // Модификатор бега — по текущему флагу, а не по последней рассылке.

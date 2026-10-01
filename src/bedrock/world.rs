@@ -814,6 +814,7 @@ impl BedrockWorld {
                 // Эффекты голода и насыщения считаются, значка у Bedrock пока нет [проверить].
                 crate::players::Order::Effect { kind, amplifier, ticks } => self.health.vit.give_effect(kind, amplifier, ticks),
                 crate::players::Order::ClearEffects => self.health.vit.effects.clear(),
+                crate::players::Order::ClearEffect(kind) => self.health.vit.effects.retain(|effect| effect.kind != kind),
                 crate::players::Order::Kick { reason } => {
                     let mut disconnect = Out::packet(session::DISCONNECT);
                     disconnect.zigzag32(0).bool(false).string(&reason).string("");

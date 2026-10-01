@@ -33,7 +33,11 @@ const GROUND_LIFE: u32 = 1200;
 const OWNER_SAFE: u32 = 5;
 
 /// Сколько тактов после попадания в блок стрела ещё нельзя подобрать. [проверить]
-const PICKUP_DELAY: u32 = 5;
+const PICKUP_DELAY: u32 = 7;
+
+/// Насколько по горизонтали от оси игрока стрела ещё подбирается: полуширина
+/// игрока 0,3 + запас подбора 1,0 + полуширина стрелы 0,25 [проверить].
+const PICKUP_REACH: f64 = 1.55;
 
 /// Можно ли подобрать стрелу (вики, Arrow: «Pickup»).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -83,7 +87,7 @@ impl Arrow {
     pub fn angles(&self) -> (f32, f32) {
         let horizontal = self.vx.hypot(self.vz);
         let yaw = (-self.vx).atan2(self.vz).to_degrees() as f32;
-        let pitch = (-self.vy).atan2(horizontal).to_degrees() as f32;
+        let pitch = self.vy.atan2(horizontal).to_degrees() as f32;
 
         (yaw, pitch)
     }
@@ -92,7 +96,7 @@ impl Arrow {
 /// Все стрелы сервера.
 #[derive(Default)]
 pub struct Arrows {
-    list: Vec<Arrow>,
+    pub list: Vec<Arrow>,
 }
 
 impl Arrows {
@@ -212,14 +216,19 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 let picker = members.iter().find(|(_, at, _, mode, _, _)| {
                     (*mode == 0 || *mode == 1 || *mode == 2)
                         && (arrow.pickup == Pickup::Yes || *mode == 1)
-                        && (at.0 - arrow.x).abs() <= 1.3
-                        && (arrow.y - at.1 + 0.5).abs() <= 2.0
-                        && (at.2 - arrow.z).abs() <= 1.3
+                        && (at.0 - arrow.x).abs() <= PICKUP_REACH
+                        && arrow.y >= at.1 - 1.0
+                        && arrow.y <= at.1 + 2.3
+                        && (at.2 - arrow.z).abs() <= PICKUP_REACH
                 });
 
-                if let Some((_, _, _, _, uuid, _)) = picker {
+                if let Some((entity_id, _, _, _, uuid, _)) = picker {
                     pickups.push((*uuid, Stack::new(crate::blocks::item_named("arrow").unwrap_or(0), 1)));
-                    removed.push(arrow.entity_id);
+                    world.note_collect(arrow.entity_id, *entity_id, 1);
+                    // Стрела исчезнет в следующем такте: клиентам её убирает сам
+                    // подбор (Collect), чтобы шёл раньше удаления.
+                    arrow.pickup = Pickup::No;
+                    arrow.ground_ticks = GROUND_LIFE;
                 }
             }
 
@@ -291,6 +300,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
             match target {
                 Target::Player { entity_id } => {
+                    world.note_game_event(arrow.owner, 6, 0.0);
                     world.note_player_strike(PlayerStrike {
                         victim: entity_id,
                         attacker: arrow.owner,
@@ -304,6 +314,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         weapon: None,
                         disables_shield_ticks: 0,
                         fire_ticks: if arrow.flame { 100 } else { 0 },
+                        thorns_slots: Vec::new(),
                     });
                 }
                 Target::Mob { entity_id } => {

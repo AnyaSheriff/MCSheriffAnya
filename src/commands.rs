@@ -1093,6 +1093,22 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         picked
     });
 
+    // Стрелы игроков: убираются молча (клиентам — по слежению).
+    let shot = {
+        let dimension = dimension_of(source, shared);
+        let mut arrows = shared.arrows.lock().expect("стрелы захвачены другим потоком");
+        let before = arrows.list.len();
+
+        arrows.list.retain(|arrow| {
+            let picked = arrow.dimension == dimension && left > 0 && chosen.takes("arrow") && near((arrow.x, arrow.y, arrow.z));
+
+            left -= usize::from(picked);
+            !picked
+        });
+
+        before - arrows.list.len()
+    };
+
     let mut orbs = 0;
 
     if chosen.takes("experience_orb") {
@@ -1131,7 +1147,7 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         }
     }
 
-    Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len() + bolts + frames.len() + killed_mobs + orbs))
+    Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len() + bolts + frames.len() + killed_mobs + orbs + shot))
 }
 
 /// `difficulty <peaceful|easy|normal|hard>` — сложность на ходу.
@@ -1150,10 +1166,10 @@ fn difficulty(parts: &[&str], shared: &Shared) -> Answer {
 }
 
 /// `effect give <игрок> <эффект> [секунды] [уровень] [скрыть]` и
-/// `effect clear <игрок>`. Считаются голод и насыщение — остальным вредно
+/// `effect clear <игрок>`. Считаются голод, насыщение, сила, слабость, скорость, замедление и сопротивление — остальным вредно
 /// не быть [проверить].
 fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
-    let usage = || Answer::saying("Нужно: effect give <игрок> <hunger|saturation> [секунды] [уровень] | effect clear <игрок>".to_string());
+    let usage = || Answer::saying("Нужно: effect give <игрок> <эффект> [секунды] [уровень] | effect clear <игрок>".to_string());
 
     match parts {
         ["give", who, name, rest @ ..] => {
@@ -1175,6 +1191,19 @@ fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             }
 
             Answer::saying(format!("Эффект {} наложен: {}", name, names_of(&targets)))
+        }
+        ["clear", who, name] => {
+            let Some(kind) = crate::survival::EffectKind::from_name(name) else {
+                return Answer::saying(format!("Такого эффекта пока нет: {}", name));
+            };
+            let targets = find_targets(who, source, shared);
+            let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+            for (uuid, _) in &targets {
+                players.order(uuid, Order::ClearEffect(kind));
+            }
+
+            Answer::saying(format!("Эффект {} снят: {}", name, names_of(&targets)))
         }
         ["clear", who] => {
             let targets = find_targets(who, source, shared);

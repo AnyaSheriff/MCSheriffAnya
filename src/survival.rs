@@ -95,7 +95,7 @@ impl Source {
             Source::PlayerExplosion => 35,
             Source::PlayerAttack => 34,
             Source::Starve => 40,
-            Source::Thorns => 44,
+            Source::Thorns => 43,
         }
     }
 
@@ -320,6 +320,16 @@ pub fn explosion_damage(impact: f64, power: f32) -> f32 {
     ((impact * impact + impact) / 2.0 * 7.0 * f64::from(2.0 * power) + 1.0) as f32
 }
 
+/// Урон после сопротивления: `урон · (25 − 5·уровень) / 25`, в f32 как у
+/// оригинала (чёрный ящик, pvp-resistance: 7 · 15 / 25 = 4,2).
+pub fn after_resistance(amount: f32, level: i32, source: Source) -> f32 {
+    if level <= 0 || matches!(source, Source::Starve | Source::OutOfWorld | Source::GenericKill) {
+        return amount;
+    }
+
+    amount * ((25 - 5 * level).max(0)) as f32 / 25.0
+}
+
 /// Исход удара.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Hit {
@@ -329,6 +339,9 @@ pub struct Hit {
     pub died: bool,
 }
 
+/// Сколько частиц эффектов ведётся (по одной на эффект).
+pub const EFFECT_PARTICLES: usize = 8;
+
 /// Вид эффекта, который считает сервер.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EffectKind {
@@ -336,14 +349,71 @@ pub enum EffectKind {
     Hunger,
     /// Насыщение: еда и насыщение растут каждый такт.
     Saturation,
+    /// Скорость: +20 % к скорости движения за уровень (вики, Speed).
+    Speed,
+    /// Замедление: −15 % к скорости движения за уровень (вики, Slowness).
+    Slowness,
+    /// Сила: +3 к урону ближнего боя за уровень (вики, Strength).
+    Strength,
+    /// Слабость: −4 к урону ближнего боя за уровень (вики, Weakness).
+    Weakness,
+    /// Сопротивление: −20 % входящего урона за уровень (вики, Resistance).
+    Resistance,
 }
 
 impl EffectKind {
     /// Номер эффекта в реестре (пакет Entity Effect).
     pub fn id(self) -> i32 {
         match self {
+            EffectKind::Speed => 0,
+            EffectKind::Slowness => 1,
+            EffectKind::Strength => 4,
+            EffectKind::Resistance => 10,
             EffectKind::Hunger => 16,
+            EffectKind::Weakness => 17,
             EffectKind::Saturation => 22,
+        }
+    }
+
+    /// Цвет частиц эффекта (RGB, вики, страницы эффектов).
+    pub fn color(self) -> i32 {
+        match self {
+            EffectKind::Speed => 0x33EBFF,
+            EffectKind::Slowness => 0x8BAFE0,
+            EffectKind::Strength => 0xFFC700,
+            EffectKind::Resistance => 0x9146F0,
+            EffectKind::Hunger => 0x587653,
+            EffectKind::Weakness => 0x484D48,
+            EffectKind::Saturation => 0xF82423,
+        }
+    }
+
+    /// Атрибут, который эффект меняет, опознаватель и величина модификатора
+    /// на уровень (вики, Attribute; страницы эффектов).
+    pub fn modifier(self) -> Option<(i32, &'static str, f64, crate::attributes::Operation)> {
+        use crate::attributes::{Operation, ATTACK_DAMAGE, MOVEMENT_SPEED};
+
+        match self {
+            EffectKind::Speed => Some((MOVEMENT_SPEED, "minecraft:effect.speed", 0.2, Operation::AddMultipliedTotal)),
+            EffectKind::Slowness => Some((MOVEMENT_SPEED, "minecraft:effect.slowness", -0.15, Operation::AddMultipliedTotal)),
+            EffectKind::Strength => Some((ATTACK_DAMAGE, "minecraft:effect.strength", 3.0, Operation::AddValue)),
+            EffectKind::Weakness => Some((ATTACK_DAMAGE, "minecraft:effect.weakness", -4.0, Operation::AddValue)),
+            _ => None,
+        }
+    }
+
+    /// Место в списке частиц: порядок, который прислал оригинал (slowness,
+    /// speed, weakness, resistance, strength; чёрный ящик, effect-speed) —
+    /// похоже на хеш-порядок, не на имена и не на номера [проверить].
+    fn particle_rank(self) -> u8 {
+        match self {
+            EffectKind::Slowness => 0,
+            EffectKind::Speed => 1,
+            EffectKind::Weakness => 2,
+            EffectKind::Resistance => 3,
+            EffectKind::Strength => 4,
+            EffectKind::Hunger => 5,
+            EffectKind::Saturation => 6,
         }
     }
 
@@ -351,6 +421,11 @@ impl EffectKind {
         match name.strip_prefix("minecraft:").unwrap_or(name) {
             "hunger" => Some(EffectKind::Hunger),
             "saturation" => Some(EffectKind::Saturation),
+            "speed" => Some(EffectKind::Speed),
+            "slowness" => Some(EffectKind::Slowness),
+            "strength" => Some(EffectKind::Strength),
+            "weakness" => Some(EffectKind::Weakness),
+            "resistance" => Some(EffectKind::Resistance),
             _ => None,
         }
     }
@@ -416,6 +491,27 @@ impl Default for Vitals {
 }
 
 impl Vitals {
+    /// Частицы эффектов (ARGB): по одной на эффект, в порядке `particle_rank`;
+    /// нули в хвосте.
+    pub fn effect_colors(&self) -> [i32; EFFECT_PARTICLES] {
+        let mut out = [0; EFFECT_PARTICLES];
+
+        let mut kinds: Vec<EffectKind> = self.effects.iter().map(|effect| effect.kind).collect();
+
+        kinds.sort_by_key(|kind| kind.particle_rank());
+
+        for (slot, kind) in out.iter_mut().zip(kinds) {
+            *slot = (0xFF00_0000u32 | kind.color() as u32) as i32;
+        }
+
+        out
+    }
+
+    /// Уровень сопротивления (0 — нет эффекта).
+    pub fn resistance_level(&self) -> i32 {
+        self.effects.iter().find(|effect| effect.kind == EffectKind::Resistance).map_or(0, |effect| effect.amplifier + 1)
+    }
+
     /// Новорождённый: здоровье и еда полные, насыщение 5 (вики, Hunger).
     pub fn new() -> Self {
         Self {
@@ -477,6 +573,14 @@ impl Vitals {
     /// «Invulnerability frames»).
     pub fn hurt(&mut self, amount: f32, source: Source, immune: bool) -> Option<Hit> {
         if self.dead || amount <= 0.0 {
+            return None;
+        }
+
+        // Сопротивление (вики, Resistance): −20 % за уровень, кроме голода,
+        // пустоты и команды kill; на пятом уровне урон пропадает.
+        let amount = after_resistance(amount, self.resistance_level(), source);
+
+        if amount <= 0.0 {
             return None;
         }
 
@@ -605,6 +709,7 @@ impl Vitals {
             match effect.kind {
                 EffectKind::Hunger => exhaustion += 0.005 * (effect.amplifier + 1) as f32,
                 EffectKind::Saturation => fed += effect.amplifier + 1,
+                _ => {}
             }
 
             effect.ticks_left -= 1;
@@ -628,8 +733,19 @@ impl Vitals {
         gone
     }
 
+    /// Заменит ли новый эффект прежний того же вида: слабее по уровню или
+    /// не длиннее при том же уровне — нет (чёрный ящик, effect-speed: повторный
+    /// speed 0 при действующем speed 1 молчит; скрытые эффекты не хранятся [проверить]).
+    pub fn effect_replaced_by(&self, kind: EffectKind, amplifier: i32, ticks: i32) -> bool {
+        self.effects.iter().find(|effect| effect.kind == kind).is_none_or(|old| amplifier > old.amplifier || (amplifier == old.amplifier && ticks > old.ticks_left))
+    }
+
     /// Дать эффект (новый заменяет прежний того же вида).
     pub fn give_effect(&mut self, kind: EffectKind, amplifier: i32, ticks: i32) {
+        if !self.effect_replaced_by(kind, amplifier, ticks) {
+            return;
+        }
+
         self.effects.retain(|effect| effect.kind != kind);
         self.effects.push(Effect { kind, amplifier, ticks_left: ticks });
     }
@@ -1167,5 +1283,61 @@ mod tests {
         v.respawned();
 
         assert_eq!((v.health, v.food, v.dead), (20.0, 20, false));
+    }
+
+    #[test]
+    fn resistance_cuts_twenty_percent_per_level() {
+        let mut v = Vitals::new();
+
+        v.give_effect(EffectKind::Resistance, 1, 100);
+
+        // Сопротивление II: −40 % (вики, Resistance).
+        let hit = v.hurt(10.0, Source::MobAttack, false).expect("удар прошёл");
+
+        assert!((hit.taken - 6.0).abs() < 1e-5, "{}", hit.taken);
+        // Пустота и голод его обходят.
+        assert_eq!(after_resistance(10.0, 2, Source::OutOfWorld), 10.0);
+        assert_eq!(after_resistance(10.0, 2, Source::Starve), 10.0);
+        // Пятый уровень гасит урон целиком.
+        assert_eq!(after_resistance(10.0, 5, Source::Fall), 0.0);
+        assert_eq!(after_resistance(7.0, 2, Source::Fall), 4.2);
+    }
+
+    #[test]
+    fn combat_effects_name_their_modifiers() {
+        let (attribute, id, amount, _) = EffectKind::Strength.modifier().expect("у силы есть модификатор");
+
+        assert_eq!((attribute, id, amount), (crate::attributes::ATTACK_DAMAGE, "minecraft:effect.strength", 3.0));
+        assert_eq!(EffectKind::from_name("minecraft:weakness"), Some(EffectKind::Weakness));
+        assert!(EffectKind::Resistance.modifier().is_none());
+        assert_eq!(EffectKind::Resistance.id(), 10);
+    }
+
+    #[test]
+    fn effect_particles_follow_the_recorded_order() {
+        let mut v = Vitals::new();
+
+        for kind in [EffectKind::Speed, EffectKind::Slowness, EffectKind::Strength] {
+            v.give_effect(kind, 0, 600);
+        }
+
+        // slowness, speed, strength (чёрный ящик, effect-speed).
+        let colors = v.effect_colors();
+
+        assert_eq!(&colors[..3], &[0xFF8BAFE0u32 as i32, 0xFF33EBFFu32 as i32, 0xFFFFC700u32 as i32]);
+        assert_eq!(colors[3], 0);
+    }
+
+    #[test]
+    fn a_weaker_effect_does_not_replace_a_stronger_one() {
+        let mut v = Vitals::new();
+
+        v.give_effect(EffectKind::Speed, 1, 600);
+
+        assert!(!v.effect_replaced_by(EffectKind::Speed, 0, 600));
+        assert!(!v.effect_replaced_by(EffectKind::Speed, 1, 600));
+        assert!(v.effect_replaced_by(EffectKind::Speed, 1, 601));
+        assert!(v.effect_replaced_by(EffectKind::Speed, 2, 10));
+        assert!(v.effect_replaced_by(EffectKind::Weakness, 0, 10));
     }
 }

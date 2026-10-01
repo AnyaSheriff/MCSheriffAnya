@@ -1,0 +1,92 @@
+{
+ "name": "pvp-thorns",
+ "about": "Жертва в нагруднике с шипами VII (шанс 105 %, срабатывают всегда): ударивший получает урон шипов (type 43), звуки, анимацию ушиба; нагрудник теряет 3. Шанс шипов III замерен отдельно (оригинал: 9 из 24 ударов).",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "exclusive": true,
+ "blocks": [],
+ "inventory": true,
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "kill $(bot)",
+  "!wait 30",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "tp $(bot2) $(3.5,0,1.5) 0 0",
+  "item replace entity $(bot) armor.chest with minecraft:diamond_chestplate[enchantments={thorns:7}]",
+  "!stopfly",
+  "!wait 20",
+  "!hotbar2 0",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "attack": true,
+   "bot": 2
+  }
+ ],
+ "record_ticks": 40,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "item_components": true,
+ "random": [
+  {
+   "type": "count",
+   "name": "досыл атрибутов сущности",
+   "match": "^sv (other entity_update_attributes|Attributes )",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "у игрока интервал слежения 2 такта: досыл атрибутов после износа вещи приходит на +1 или +2 такт в зависимости от чётности счёта сущности; у оригинала два прогона расходятся"
+  },
+  {
+   "type": "count",
+   "name": "шаги роботов",
+   "match": "block\\.stone\\.step",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "после отдачи роботы идут по камню сами (клиентская физика): звук шага зависит от пройденного пути, у оригинала два прогона расходятся"
+  },
+  {
+   "type": "mask",
+   "name": "здоровье ударившего после шипов",
+   "kind": "sv",
+   "pattern": "(b: Metadata 9=|b: Set Health health=|other entity_metadata \\{\"metadata\":\\[\"9=)[0-9.]+",
+   "replace": "$1H",
+   "why": "урон шипов случаен в пределах 1,5…4,5 и от уровня не зависит; у оригинала шипы III и VII дали 12 значений от 1,51 до 4,37"
+  },
+  {
+   "type": "mask",
+   "name": "здоровье ударившего (для других)",
+   "kind": "sv",
+   "pattern": "9=[0-9.]+\\\"\\]",
+   "replace": "9=H\\\"]",
+   "why": "урон шипов случаен в пределах 1,5…4,5 и от уровня не зависит; у оригинала шипы III и VII дали 12 значений от 1,51 до 4,37"
+  }
+ ],
+ "track_second": true,
+ "track_second_velocity": true
+}

@@ -113,6 +113,10 @@ pub struct CombatView {
     pub toughness: f32,
     pub protection: i32,
     pub projectile_protection: i32,
+    /// Уровень сопротивления (0 — нет).
+    pub resistance: i32,
+    /// Уровни «шипов» на ботинках…шлеме по `ARMOR_SLOTS`.
+    pub thorns: [i32; 4],
     /// С какого такта поднят щит (None — не поднят) и до какого он отключён.
     pub blocking_since: Option<u64>,
     pub shield_disabled_until: u64,
@@ -129,6 +133,10 @@ pub struct Gear {
     pub speed_touch: u32,
     /// Флаги живой сущности (использует предмет, рука): остальным — свойством 8.
     pub living: u8,
+    /// Частицы эффектов (ARGB, нули — нет): остальным — свойством 10.
+    pub effect_colors: [i32; crate::survival::EFFECT_PARTICLES],
+    /// Здоровье: остальным — свойством 9.
+    pub health: f32,
     /// Бежит ли и его скорость шага: остальным они уходят флагом и атрибутом.
     pub sprinting: bool,
     pub movement_speed: Option<crate::attributes::Attribute>,
@@ -209,6 +217,8 @@ pub enum Order {
 
     /// Снять все эффекты (`effect clear`).
     ClearEffects,
+    /// Снять один эффект.
+    ClearEffect(crate::survival::EffectKind),
 
     /// Перейти в другое измерение и встать в это место.
     ChangeDimension {
@@ -468,9 +478,16 @@ impl Players {
         }
     }
 
+    /// Здоровье игрока сразу после удара: остальные увидят его в этом же такте.
+    pub fn set_health(&mut self, uuid: &[u8; 16], health: f32) {
+        if let Some(gear) = self.gear.get_mut(uuid) {
+            gear.health = health;
+        }
+    }
+
     /// Броня и бой игрока (у неизвестного — пусто).
     pub fn gear(&self, uuid: &[u8; 16]) -> Gear {
-        self.gear.get(uuid).cloned().unwrap_or_default()
+        self.gear.get(uuid).cloned().unwrap_or_else(|| Gear { health: crate::survival::MAX_HEALTH, ..Gear::default() })
     }
 
     /// Игрок по номеру его сущности: сам и его броня с боем.

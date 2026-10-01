@@ -78,6 +78,11 @@ pub(super) struct Pending {
     pub source: Source,
     /// Номер сущности виновника (динамит); 0 — нет.
     pub direct: i32,
+    /// Направление анимации ушиба (шипы) и виновник для сообщения о смерти.
+    pub hurt_yaw: Option<f32>,
+    pub killer: Option<(String, [u8; 16])>,
+    /// Отдача от ударившего (шипы): единичное направление по горизонтали.
+    pub push: Option<(f64, f64)>,
 }
 
 /// Чем занята рука, пока держится кнопка «использовать».
@@ -113,6 +118,7 @@ struct Meta {
     air: i32,
     flags: u8,
     living: u8,
+    effects: [i32; survival::EFFECT_PARTICLES],
 }
 
 /// Сетевая сторона здоровья игрока.
@@ -202,7 +208,7 @@ impl Net {
             sent_health: survival::MAX_HEALTH,
             sent_food: 20,
             sent_saturation_zero: false,
-            meta: Meta { score: 0, arrows: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, living: 0 },
+            meta: Meta { score: 0, arrows: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES] },
             fire_flag: false,
             velocity: None,
             pin: None,
@@ -459,7 +465,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         if let Some(damage) = damage {
             log_debug!("Play: {} приземлился с уроном {} на {:.2} {:.2} {:.2} (шаг {:.3})", player.name, damage, player.x, player.y, player.z, dy);
 
-            player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0 });
+            player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0, hurt_yaw: None, killer: None, push: None });
         }
     }
 
@@ -664,23 +670,29 @@ async fn send_entity_event(stream: &mut Outgoing<'_>, entity_id: i32, status: i8
     write_body(stream, body).await
 }
 
-async fn send_damage_event(stream: &mut Outgoing<'_>, entity_id: i32, source: Source, direct: i32, cause: i32) -> io::Result<()> {
-    let mut body = encode_varint(DAMAGE_EVENT);
-
-    body.extend_from_slice(&encode_varint(entity_id));
-    body.extend_from_slice(&encode_varint(source.type_id()));
-    // Виновник: другой игрок (`cause`); у удара моба, стрелы и взрыва крипера —
-    // он сам (чёрный ящик: cause=entity); у динамита и прочего — нет.
+/// Поля Damage Event: вид, виновник и прямой виновник (оба со сдвигом +1, 0 — нет).
+fn damage_fields(source: Source, direct: i32, cause: i32) -> (i32, i32, i32) {
+    // Виновник: другой игрок (`cause`); у удара моба, стрелы, шипов и взрыва
+    // крипера — он сам (чёрный ящик: cause=entity); у динамита и прочего — нет.
     let culprit = if cause != 0 {
         cause + 1
-    } else if matches!(source, Source::MobAttack | Source::Arrow | Source::PlayerExplosion) && direct != 0 {
+    } else if matches!(source, Source::MobAttack | Source::Arrow | Source::PlayerExplosion | Source::Thorns) && direct != 0 {
         direct + 1
     } else {
         0
     };
 
+    (source.type_id(), culprit, if direct == 0 { 0 } else { direct + 1 })
+}
+
+async fn send_damage_event(stream: &mut Outgoing<'_>, entity_id: i32, source: Source, direct: i32, cause: i32) -> io::Result<()> {
+    let (type_id, culprit, direct) = damage_fields(source, direct, cause);
+    let mut body = encode_varint(DAMAGE_EVENT);
+
+    body.extend_from_slice(&encode_varint(entity_id));
+    body.extend_from_slice(&encode_varint(type_id));
     body.extend_from_slice(&encode_varint(culprit)); // виновник
-    body.extend_from_slice(&encode_varint(if direct == 0 { 0 } else { direct + 1 })); // прямой виновник
+    body.extend_from_slice(&encode_varint(direct)); // прямой виновник
     body.push(0); // места удара нет
 
     write_body(stream, body).await
@@ -767,6 +779,21 @@ pub(super) async fn command_xp(stream: &mut Outgoing<'_>, player: &mut PlayerSta
     send_experience(stream, &player.vit).await
 }
 
+/// Свойство 10 «частицы эффектов»: по частице `entity_effect` с цветом ARGB
+/// на эффект (чёрный ящик, pvp-strength, effect-speed) или пустой список.
+pub(super) fn push_effect_particles(body: &mut Vec<u8>, colors: &[i32]) {
+    let shown: Vec<i32> = colors.iter().copied().filter(|color| *color != 0).collect();
+
+    body.push(10);
+    body.extend_from_slice(&encode_varint(17));
+    body.extend_from_slice(&encode_varint(shown.len() as i32));
+
+    for color in shown {
+        body.extend_from_slice(&encode_varint(21));
+        body.extend_from_slice(&color.to_be_bytes());
+    }
+}
+
 /// Set Entity Data: только то, что изменилось.
 async fn send_meta(stream: &mut Outgoing<'_>, entity_id: i32, now: Meta, before: Meta) -> io::Result<()> {
     let mut body = encode_varint(SET_ENTITY_DATA);
@@ -795,6 +822,10 @@ async fn send_meta(stream: &mut Outgoing<'_>, entity_id: i32, now: Meta, before:
         body.push(LIVING_FLAGS_PROPERTY);
         body.extend_from_slice(&encode_varint(PROPERTY_BYTE));
         body.push(now.living);
+    }
+
+    if now.effects != before.effects {
+        push_effect_particles(&mut body, &now.effects);
     }
 
     if now.health != before.health {
@@ -1112,6 +1143,13 @@ pub(super) async fn hit_by(
 
     send_damage_event(stream, player.entity_id, source, direct, cause).await?;
 
+    {
+        let (type_id, culprit, direct) = damage_fields(source, direct, cause);
+
+        shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_damaged(player.entity_id, type_id, culprit, direct);
+        shared.players.lock().expect("список игроков захвачен другим потоком").set_health(&player.uuid, player.vit.health);
+    }
+
     // Анимация ушиба идёт сразу за событием урона, раньше сообщения о смерти.
     if let Some(yaw) = hurt_yaw {
         send_hurt_animation(stream, player.entity_id, yaw).await?;
@@ -1208,13 +1246,34 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     let tick_now = *shared.ticks.borrow();
     let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
 
+    // Творческий игрок сыт полностью: насыщение 20 (чёрный ящик, pvp-thorns:
+    // после возврата из творческого режима у оригинала saturation=20, у нас 5).
+    if player.game_mode == GAME_MODE_CREATIVE {
+        player.vit.food = 20;
+        player.vit.saturation = 20.0;
+    }
+
     // A. удары, ждавшие своего такта.
     for (block, count) in std::mem::take(&mut player.net.landings) {
         send_landing_particles(stream, (player.x, player.y, player.z), block, count).await?;
     }
 
     for pending in std::mem::take(&mut player.net.hits) {
-        hit(stream, shared, player, pending.amount, pending.source, pending.direct).await?;
+        let killer = pending.killer.as_ref().map(|(name, uuid)| Killer { name, uuid: *uuid, weapon: None });
+
+        let done = hit_by(stream, shared, player, pending.amount, pending.source, pending.direct, 0, killer, pending.hurt_yaw).await?;
+
+        // Шипы отбрасывают ударившего, как обычный удар: скорость идёт сразу
+        // за анимацией ушиба (чёрный ящик, pvp-thorns: (0; 0,361; −0,4)).
+        if let (Some(_), Some(dir)) = (done, pending.push) {
+            let resistance = player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE);
+
+            knock_back(player, dir, crate::mob::BASE_KNOCKBACK, resistance);
+
+            if let Some(velocity) = player.net.velocity.take() {
+                send_velocity(stream, player.entity_id, velocity).await?;
+            }
+        }
     }
 
     // B. свойства сущности, скорость после удара, бег.
@@ -1240,6 +1299,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         air: player.vit.air,
         flags,
         living: living_flags(player),
+        effects: player.vit.effect_colors(),
     };
 
     let held = std::mem::take(&mut player.net.hold_meta);
@@ -1484,7 +1544,13 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         }
     }
 
-    for gone in player.vit.effects_tick() {
+    let gone = player.vit.effects_tick();
+
+    if !gone.is_empty() {
+        apply_effect_modifiers(player);
+    }
+
+    for gone in gone {
         let mut body = encode_varint(REMOVE_ENTITY_EFFECT);
 
         body.extend_from_slice(&encode_varint(entity));
@@ -1534,7 +1600,12 @@ pub(super) async fn give_effect(
     amplifier: i32,
     ticks: i32,
 ) -> io::Result<()> {
+    if !player.vit.effect_replaced_by(kind, amplifier, ticks) {
+        return Ok(());
+    }
+
     player.vit.give_effect(kind, amplifier, ticks);
+    apply_effect_modifiers(player);
 
     let mut body = encode_varint(ENTITY_EFFECT);
 
@@ -1542,14 +1613,35 @@ pub(super) async fn give_effect(
     body.extend_from_slice(&encode_varint(kind.id()));
     body.extend_from_slice(&encode_varint(amplifier));
     body.extend_from_slice(&encode_varint(ticks));
-    body.push(0x04); // значок виден
+    body.push(0x0E); // частицы, значок и ещё бит 0x08 (чёрный ящик, pvp-strength: flags=14)
 
     write_body(stream, body).await
 }
 
-/// Снять все эффекты.
-pub(super) async fn clear_effects(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
-    for effect in std::mem::take(&mut player.vit.effects) {
+/// Модификаторы атрибутов от действующих эффектов (сила, слабость, скорость,
+/// замедление): ставятся по уровню, снятые эффекты убираются.
+pub(super) fn apply_effect_modifiers(player: &mut PlayerState) {
+    use survival::EffectKind::{Slowness, Speed, Strength, Weakness};
+
+    for kind in [Speed, Slowness, Strength, Weakness] {
+        let Some((attribute, id, per_level, operation)) = kind.modifier() else { continue };
+
+        match player.vit.effects.iter().find(|effect| effect.kind == kind) {
+            Some(effect) => player.attrs.set_modifier(attribute, Modifier::new(id, f64::from(per_level as f32 * (effect.amplifier + 1) as f32), operation)),
+            None => player.attrs.remove_modifier(attribute, id),
+        }
+    }
+}
+
+/// Снять все эффекты (или один).
+pub(super) async fn clear_effects(stream: &mut Outgoing<'_>, player: &mut PlayerState, only: Option<survival::EffectKind>) -> io::Result<()> {
+    let (cleared, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut player.vit.effects).into_iter().partition(|effect| only.is_none_or(|kind| effect.kind == kind));
+
+    player.vit.effects = kept;
+
+    apply_effect_modifiers(player);
+
+    for effect in cleared {
         let mut body = encode_varint(REMOVE_ENTITY_EFFECT);
 
         body.extend_from_slice(&encode_varint(player.entity_id));

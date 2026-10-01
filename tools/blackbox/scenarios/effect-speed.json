@@ -1,0 +1,99 @@
+{
+ "name": "effect-speed",
+ "about": "Скорость II, затем замедление III, затем снятие: пакеты эффектов и атрибут скорости движения.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "kill $(bot)",
+  "!wait 30",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "tp $(bot2) $(3.5,0,1.5) 0 0",
+  "!stopfly",
+  "!wait 20",
+  "!hotbar2 0",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "effect give $(bot) minecraft:speed 30 1"
+  },
+  {
+   "after": 6,
+   "cmd": "effect give $(bot) minecraft:slowness 30 2"
+  },
+  {
+   "after": 12,
+   "cmd": "effect give $(bot) minecraft:strength 30 0"
+  },
+  {
+   "after": 18,
+   "cmd": "effect give $(bot) minecraft:weakness 30 0"
+  },
+  {
+   "after": 21,
+   "cmd": "effect give $(bot) minecraft:resistance 30 0"
+  },
+  {
+   "after": 23,
+   "cmd": "effect give $(bot) minecraft:speed 30 0"
+  },
+  {
+   "after": 24,
+   "cmd": "effect clear $(bot) minecraft:slowness"
+  },
+  {
+   "after": 30,
+   "cmd": "effect clear $(bot)"
+  }
+ ],
+ "record_ticks": 45,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly",
+  "effect clear $(bot)",
+  "effect clear $(bot2)"
+ ],
+ "item_components": true,
+ "random": [
+  {
+   "type": "mask",
+   "name": "порядок частиц эффектов",
+   "kind": "sv",
+   "pattern": "Metadata 10=\\[.*\\]",
+   "replace": "Metadata 10=[…]",
+   "why": "список частиц идёт у оригинала в порядке хеша эффектов (slowness, speed, weakness, resistance, strength — не по номерам и не по алфавиту), у нас — тем же порядком по таблице; порядок хеша между запусками оригинала не проверен"
+  },
+  {
+   "type": "count",
+   "name": "частицы эффектов у себя",
+   "match": "Metadata 10=",
+   "range": [
+    0,
+    12
+   ],
+   "anytick": true,
+   "why": "свойство с частицами уходит в такте слежения: от места команды в такте приходит на +0 или +1; два прогона оригинала расходятся (pvp-strength)"
+  }
+ ],
+ "track_second": true
+}

@@ -218,6 +218,19 @@ pub enum WorldEvent {
     /// Анимация сущности (Entity Animation): 4 — критический удар, 5 —
     /// удар с зачарованием.
     Animation { entity_id: i32, kind: u8 },
+
+    /// Игрок `entity_id` получил урон: остальные игроки видят Damage Event
+    /// (номер вида, виновник и прямой виновник уже со сдвигом +1; чёрный
+    /// ящик, pvp-thorns: «other damage_event»).
+    PlayerDamaged { entity_id: i32, type_id: i32, culprit: i32, direct: i32 },
+
+    /// Game Event одному игроку (6 — стрела попала в игрока: стрелку звук
+    /// попадания; чёрный ящик, pvp-bow-power).
+    GameEvent { entity_id: i32, reason: u8, value: f32 },
+
+    /// Игрок `by` подобрал стрелу `entity_id`: всем Take Item Entity и
+    /// сразу за ним — убрать стрелу (чёрный ящик, arrow-pickup).
+    Collect { entity_id: i32, by: i32, count: i32 },
 }
 
 /// Взрыв для клиентов: где, какой силы, сколько блоков разрушил и кого из
@@ -1834,6 +1847,21 @@ impl World {
     /// Частицы для всех, кто рядом.
     pub fn note_particle(&mut self, kind: i32, block: Option<i32>, at: (f64, f64, f64), offset: (f32, f32, f32), speed: f32, count: i32) {
         self.events.push(WorldEvent::Particle { kind, block, at, offset, speed, count });
+    }
+
+    /// Подбор стрелы игроком.
+    pub fn note_collect(&mut self, entity_id: i32, by: i32, count: i32) {
+        self.events.push(WorldEvent::Collect { entity_id, by, count });
+    }
+
+    /// Game Event игроку `entity_id`.
+    pub fn note_game_event(&mut self, entity_id: i32, reason: u8, value: f32) {
+        self.events.push(WorldEvent::GameEvent { entity_id, reason, value });
+    }
+
+    /// Урон игрока — остальным игрокам Damage Event.
+    pub fn note_player_damaged(&mut self, entity_id: i32, type_id: i32, culprit: i32, direct: i32) {
+        self.events.push(WorldEvent::PlayerDamaged { entity_id, type_id, culprit, direct });
     }
 
     /// Анимация сущности всем, кто её видит.

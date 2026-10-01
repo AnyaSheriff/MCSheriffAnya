@@ -28,6 +28,8 @@ pub enum Outcome {
 
 /// Урон после брони и зачарований защиты по опубликованному состоянию.
 pub fn final_damage(view: &CombatView, damage: f32, source: Source) -> f32 {
+    let damage = crate::survival::after_resistance(damage, view.resistance, source);
+
     if bypasses_armor(source) {
         return damage;
     }
@@ -85,6 +87,8 @@ pub struct PlayerStrike {
     pub disables_shield_ticks: u32,
     /// Зачарование «заговорённое лезвие»: столько тактов горит жертва.
     pub fire_ticks: i32,
+    /// Слоты брони, чьи шипы сработали при этом ударе (бросок делает нападающий).
+    pub thorns_slots: Vec<i32>,
 }
 
 /// Свойства предмета по номеру.
@@ -273,7 +277,7 @@ pub fn strike(attack_damage: f64, enchant: f32, charge: f32, crit_ok: bool) -> S
 /// Виды урона, которые броня и её зачарования не смягчают (вики, Armor:
 /// «Armor does not protect against»).
 pub fn bypasses_armor(source: Source) -> bool {
-    matches!(source, Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::InWall | Source::Generic)
+    matches!(source, Source::Thorns | Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::InWall | Source::Generic)
 }
 
 /// Урон после брони и твёрдости (вики, Armor): `урон · (1 − min(20,
@@ -282,6 +286,14 @@ pub fn after_armor(damage: f32, armor: f32, toughness: f32) -> f32 {
     let defense = (armor / 5.0).max(armor - damage / (2.0 + toughness / 4.0)).min(20.0);
 
     damage * (1.0 - defense / 25.0)
+}
+
+/// Урон шипов при броске `roll` из [0; 1): от 1,5 до 4,5 и от уровня не
+/// зависит (чёрный ящик, pvp-thorns: шипы III и VII дали 12 значений от 1,51
+/// до 4,37; у VII ниже 3,5 — значит, на уровень не множится) [проверить:
+/// точная форма распределения].
+pub fn thorns_damage(_level: i32, roll: f32) -> f32 {
+    3.0 * (0.5 + roll)
 }
 
 /// Очки защиты зачарований (EPF) одной детали от этого урона (вики,
@@ -681,5 +693,19 @@ mod tests {
         // крит добавляет до урона/2 + 2
         assert_eq!(arrow_damage(3.0, 0, true, 0.0), 6.0);
         assert_eq!(arrow_damage(3.0, 0, true, 0.99), 6.0 + (0.99f32 * 5.0).floor());
+    }
+
+    #[test]
+    fn thorns_damage_stays_within_the_measured_range() {
+        // Шипы III и VII у оригинала: от 1,51 до 4,37, от уровня не зависят.
+        for level in [3, 7] {
+            assert_eq!(thorns_damage(level, 0.0), 1.5);
+            assert!((thorns_damage(level, 0.999) - 4.497).abs() < 1e-3);
+        }
+    }
+
+    #[test]
+    fn thorns_ignore_armor() {
+        assert!(bypasses_armor(Source::Thorns));
     }
 }
