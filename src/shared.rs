@@ -37,9 +37,9 @@ pub struct Shared {
     /// Предметы, лежащие в мирах, — у каждого измерения свои.
     items: [Mutex<Items>; 3],
 
-    /// Стрелы игроков (arrow.rs): в полёте и застрявшие, всех измерений.
+    /// Стрелы (arrow.rs): в полёте и застрявшие, всех измерений.
     /// Замок — после предметов.
-    pub arrows: Mutex<crate::player_arrow::Arrows>,
+    pub arrows: Mutex<crate::arrow::Arrows>,
 
     /// Кто и что может: список прав, он же файл ops.json.
     pub ops: Mutex<Ops>,
@@ -170,7 +170,7 @@ impl Shared {
             players: Mutex::new(Players::new()),
             chat: Mutex::new(Chat::new()),
             items: [Mutex::new(Items::new()), Mutex::new(Items::new()), Mutex::new(Items::new())],
-            arrows: Mutex::new(crate::player_arrow::Arrows::new()),
+            arrows: Mutex::new(crate::arrow::Arrows::new()),
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,
             tick_starts: tokio::sync::watch::channel(0).0,

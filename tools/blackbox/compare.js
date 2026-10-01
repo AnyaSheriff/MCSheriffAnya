@@ -210,6 +210,11 @@ const [a, b] = sides.map(s => load(s.file));
 //   лежать в `range` = [от, до]. Совпавшие по ключу и такту сверяются как
 //   обычно, остальные — в допуске. Вне диапазона допуска нет. С `anytick:
 //   true` такт у них тоже не сверяется.
+// - `window`: событие приходит в случайный такт из небольшого промежутка
+//   (оригинал против оригинала расходится на такт-другой от фазы, с какой
+//   робот начал бег). `match` — выражение по ключу, `range` = [от, до] — такт
+//   от первого отклика шага. Событие с обеих сторон должно лежать в промежутке,
+//   тогда оно в допуске; вне него допуска нет.
 // - `anytick`: событие случайного такта (гаснущая руда на случайном такте):
 //   ключ совпадает, такт любой, или его нет совсем. У нас все такие события
 //   одного ключа должны прийти в один такт — иначе допуска нет.
@@ -284,6 +289,18 @@ function applyRandom(A, B) {
       for (const e of [...ma, ...mb]) {
         e.free = name; e.rule = name;
         if (rule.anytick) e.anytick = name;
+      }
+    } else if (rule.type === 'window') {
+      const re = new RegExp(rule.match);
+      for (const [side, list] of [['a', A], ['b', B]]) {
+        for (const e of list) {
+          if (!re.test(e.key)) continue;
+          const ok = e.dt >= rule.range[0] && e.dt <= rule.range[1];
+          if (!ok && side === 'a') warnings.push(`у оригинала «${e.text}»: такт ${e.dt} вне [${rule.range.join(', ')}] («${name}»)`);
+          if (!ok) continue;
+          e.dt = rule.range[0];
+          e.free = name; e.rule = name;
+        }
       }
     } else if (rule.type === 'anytick') {
       const re = new RegExp(rule.match);

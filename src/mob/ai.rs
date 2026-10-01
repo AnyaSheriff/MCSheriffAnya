@@ -239,15 +239,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
 
     let mut plan = Plan::default();
 
-    // Голос: ambient-звук (вики, Sounds): шанс растёт с каждым тактом тишины.
-    mob.brain.ambient += 1;
-
-    if rng.below(1000) < mob.brain.ambient.max(0) as u32 {
-        let (ambient, _, _) = mob.kind.sounds();
-
-        mob.brain.ambient = -80;
-        mob.events.push(super::Event::Sound { name: ambient, volume: 1.0, pitch: mob.voice_pitch() });
-    }
+    voice(mob, rng);
 
     // Курица несёт яйцо раз в 6000–12000 тактов (вики, Chicken: «Egg»).
     if mob.kind == Kind::Chicken && !mob.is_baby() {
@@ -635,4 +627,21 @@ pub(super) fn walk(mob: &mut Mob, mut plan: Plan) -> Plan {
     }
 
     plan
+}
+
+/// Голос: ambient-звук (вики, Sounds): шанс растёт с каждым тактом тишины.
+/// Громкость — по виду (у дракона 5; чёрный ящик, dragon-summon).
+pub fn voice(mob: &mut Mob, rng: &mut Rng) {
+    mob.brain.ambient += 1;
+
+    if rng.below(1000) < mob.brain.ambient.max(0) as u32 {
+        let (ambient, _, _) = mob.kind.sounds();
+
+        if ambient.is_empty() {
+            return;
+        }
+
+        mob.brain.ambient = -80;
+        mob.events.push(super::Event::Sound { name: ambient, volume: mob.sound_volume(), pitch: mob.voice_pitch() });
+    }
 }

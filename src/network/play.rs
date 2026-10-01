@@ -3766,8 +3766,8 @@ async fn send_pending_world_events(
             WorldEvent::Contents => send_window_changes(stream, shared, player).await?,
             WorldEvent::Tracker => {
                 mobs::send_mob_ticks(stream, shared, player).await?;
-                bow::send_arrow_ticks(stream, shared, player).await?;
             }
+            WorldEvent::ArrowTracker => bow::send_arrow_ticks(stream, shared, player).await?,
             WorldEvent::Hurt { entity_id, amount, source, killer } if *entity_id == player.entity_id => {
                 let kind = if killer.is_empty() { crate::survival::Source::Explosion } else { crate::survival::Source::PlayerExplosion };
 
@@ -6181,12 +6181,31 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
 
     let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
 
-    let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == target) else {
+    // Части дракона: номера следом за ним, голова — первая (commands.rs,
+    // summon_mob) [проверить]. Удар по самому дракону — как по телу.
+    let is_part = |mob: &crate::mob::Mob| {
+        mob.kind == crate::mob::Kind::EnderDragon && target > mob.entity_id && target <= mob.entity_id + crate::mob::DRAGON_PARTS
+    };
+    let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == target || is_part(mob)) else {
         return false;
     };
+    let head = target == mob.entity_id + 1;
+    let reach = REACH + mob.size().0 * 0.5;
 
-    if (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) > REACH * REACH {
+    if (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) > reach * reach {
         return false;
+    }
+
+    // Кристалл Края: любой удар — взрыв силой 6 в его точке, сам он исчезает;
+    // следом звук удара (чёрный ящик, end-crystal-explode: «убран», взрыв,
+    // attack.strong — в один такт).
+    if mob.kind == crate::mob::Kind::EndCrystal {
+        let crystal_id = mob.entity_id;
+
+        drop(items);
+        detonate_crystal(shared, player.dimension, crystal_id, player.entity_id, (player.x, player.y, player.z));
+
+        return true;
     }
 
     let held_stack = player.inventory.held();
@@ -6219,7 +6238,11 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
         mob.events.push(crate::mob::Event::PlayerSound { name: "minecraft:entity.player.attack.knockback", at: (player.x, player.y, player.z) });
     }
 
-    let hit = mob.hurt(damage, crate::survival::Source::PlayerAttack, Some(push));
+    let hit = if mob.kind == crate::mob::Kind::EnderDragon {
+        mob.hurt_part(damage, head, crate::survival::Source::PlayerAttack, Some(push))
+    } else {
+        mob.hurt(damage, crate::survival::Source::PlayerAttack, Some(push))
+    };
     let landed = hit.is_some();
 
     if hit.is_some() && extra > 0.0 {
@@ -6305,6 +6328,22 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     }
 
     true
+}
+
+/// Взрыв кристалла Края от удара игрока (tick::blow_crystal); звук удара —
+/// после взрыва (чёрный ящик, end-crystal-explode). Виновник — ударивший.
+pub(crate) fn detonate_crystal(shared: &Shared, dimension: crate::dimension::Dimension, crystal_id: i32, culprit: i32, from: (f64, f64, f64)) {
+    let players = crate::tick::blast_targets(shared, dimension);
+    let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+    let mut next_id = || shared.next_entity_id();
+
+    if !crate::tick::blow_crystal(&mut world, &mut items, &players, crystal_id, culprit, &mut next_id) {
+        return;
+    }
+
+    world.note_player_sound(from, "minecraft:entity.player.attack.strong");
+    items.flush_mob_events(&mut next_id, &mut crate::mob::Rng::new(u64::from(crystal_id as u32)));
 }
 
 /// Удар игрока в `from` по рамке `target`. Возвращает, была ли такая рамка
@@ -8203,7 +8242,6 @@ struct PlayerState {
     seen_mobs: HashMap<i32, mobs::ShownMob>,
 
     /// Стрелы, показанные клиенту (arrow.rs).
-    seen_arrows: HashMap<i32, mobs::ShownArrow>,
     seen_bow_arrows: HashMap<i32, bow::ShownArrow>,
 
     /// Такт мира, когда игрок последний раз бил: сила удара зависит от
@@ -8417,7 +8455,6 @@ impl PlayerState {
             seen_carts: HashMap::new(),
             seen_frames: HashMap::new(),
             seen_mobs: HashMap::new(),
-            seen_arrows: HashMap::new(),
             seen_bow_arrows: HashMap::new(),
             last_attack: 0,
             dimension: saved.as_ref().map(|data| data.dimension).unwrap_or_default(),

@@ -1,0 +1,57 @@
+{
+ "name": "dragon-death",
+ "about": "Дракон NoAI и команда kill: у оригинала kill убирает дракона сразу, без анимации смерти и опыта (чёрный ящик). Удар по частям NoAI-дракона у оригинала не проходит: части стоят в нуле мира.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:diamond_sword 1",
+  "fill $(-4,-1,-4) $(9,-1,9) minecraft:obsidian",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon ender_dragon $(0.5,0,0.5) {NoAI:1b}"
+  },
+  {
+   "after": 20,
+   "cmd": "kill @e[type=ender_dragon,distance=..48]"
+  }
+ ],
+ "record_ticks": 260,
+ "cleanup": [
+  "kill @e[type=ender_dragon,distance=..64]",
+  "kill @e[type=end_crystal,distance=..48]",
+  "kill @e[type=dragon_fireball,distance=..48]",
+  "kill @e[type=area_effect_cloud,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(-4,-1,-4) $(9,-1,9) minecraft:stone",
+  "fill $(-4,0,-4) $(9,4,9) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "голос дракона в покое",
+   "match": "entity\\.ender_dragon\\.ambient",
+   "range": [
+    0,
+    4
+   ],
+   "anytick": true,
+   "why": "вики, Sounds: голос в покое по случайному счёту; у оригинала три записи расходятся (+58, +16, +24)"
+  }
+ ]
+}

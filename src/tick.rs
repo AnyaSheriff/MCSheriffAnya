@@ -309,7 +309,7 @@ async fn run(shared: Arc<Shared>) {
             step_mobs(&shared, dimension, &mut world, &mut mob_rng, ticks);
 
             // Стрелы: полёт, попадание, застревание (arrow.rs).
-            crate::player_arrow::step(&shared, dimension, &mut world);
+            crate::arrow::step(&shared, dimension, &mut world);
 
             // Плиты, растяжки и руда слушают не только сигнал, но и мир: на
             // них встают игроки и падают предметы. Список — заново: только
@@ -388,6 +388,9 @@ async fn run(shared: Arc<Shared>) {
 
             // Догоревший динамит взрывается — по порядку появления.
             explode_all(&shared, dimension, &mut world, exploding);
+
+            // Задетые стрелой или взрывом кристаллы Края взрываются следом.
+            detonate_crystals(&shared, dimension, &mut world);
 
             // Долетевшие до земли снова становятся блоками.
             land_falling(&shared, dimension, &mut world);
@@ -892,31 +895,6 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         }
     }
 
-    // Стрелы летят раньше мобов: выпущенная в этом такте начнёт полёт со
-    // следующего.
-    let targets: Vec<crate::arrow::Target> = watchers
-        .iter()
-        .filter(|player| !player.spectator)
-        .map(|player| crate::arrow::Target { id: player.id, x: player.x, y: player.y, z: player.z, width: 0.6, height: 1.8 })
-        .collect();
-
-    if !items.arrows().is_empty() {
-        // Клиентам стрелы рассылает слежение: пока они есть (и в такт, когда
-        // последняя пропала), оно должно идти.
-        world.note_tracker();
-
-        let mut arrows = std::mem::take(items.arrows_mut());
-
-        for arrow in &mut arrows {
-            if let Some(strike) = arrow.step(&MobView(world), &targets) {
-                world.note_mob_hurt(strike.target, strike.damage, crate::survival::Source::Arrow, arrow.owner, arrow.killer, Some(strike.dir), (arrow.x, arrow.y, arrow.z));
-            }
-        }
-
-        arrows.retain(|arrow| !arrow.gone);
-        *items.arrows_mut() = arrows;
-    }
-
     if items.mobs().is_empty() {
         // Слежению есть о чём рассказать, пока у клиентов остались показанные
         // мобы — или пока в мире есть шарики опыта: их движение рассылает то
@@ -956,9 +934,10 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         };
         let error = crate::mob::hostile::arrow_error(difficulty);
         let velocity = crate::arrow::launch(fired.shot.from, fired.shot.aim, fired.shot.speed, error, &mut gauss);
-        let arrow = crate::arrow::Arrow::new(shared.next_entity_id(), fired.shot.from, velocity, fired.shooter, crate::mob::hostile::killer_key(crate::mob::Kind::Skeleton));
+        let arrow = crate::arrow::Arrow::from_mob(shared.next_entity_id(), dimension, fired.shot.from, velocity, fired.shooter, crate::mob::hostile::killer_key(crate::mob::Kind::Skeleton));
 
-        items.add_arrow(arrow);
+        // Замок стрел — после предметов (shared.rs).
+        shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
     }
 
     for eat in outcome.eaten {
@@ -1384,8 +1363,74 @@ fn explode_all(shared: &Shared, dimension: Dimension, world: &mut World, explodi
     }
 }
 
+/// Взрыв кристалла Края силой 6 в его точке (вики, End Crystal: «explosion
+/// power of 6»): кристалл убирается до взрыва; дракон, которого он лечил,
+/// получает 10 (вики: «takes 10 HP damage»). Виновник — `culprit` (0 —
+/// никто). Возвращает, был ли такой кристалл.
+pub(crate) fn blow_crystal(
+    world: &mut World,
+    items: &mut items::Items,
+    players: &[tnt::Target],
+    crystal_id: i32,
+    culprit: i32,
+    next_id: &mut dyn FnMut() -> i32,
+) -> bool {
+    /// Сила взрыва кристалла.
+    const POWER: f32 = 6.0;
+
+    let removed = items.remove_mobs(|mob| mob.entity_id == crystal_id);
+
+    let Some(crystal) = removed.first() else {
+        return false;
+    };
+    let centre = (crystal.x, crystal.y, crystal.z);
+
+    for dragon in items.mobs_mut().iter_mut().filter(|mob| mob.healer == crystal_id) {
+        dragon.healer = 0;
+        dragon.hurt(10.0, crate::survival::Source::Explosion, None);
+    }
+
+    world.blast_source = culprit;
+    tnt::explode(world, items, players, centre, POWER, false, next_id);
+    prime_sounds(world, items);
+
+    true
+}
+
+/// Кристаллы, задетые не ударом игрока (стрела, взрыв рядом), взрываются в
+/// такте после шага [проверить: у оригинала, возможно, в тот же такт, что и
+/// задевший их взрыв]. Взрыв одного может задеть другой — тогда и тот, по
+/// кругу.
+fn detonate_crystals(shared: &Shared, dimension: Dimension, world: &mut World) {
+    loop {
+        let doomed: Vec<i32> = {
+            let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+            items.mobs_mut().iter().filter(|mob| mob.exploding).map(|mob| mob.entity_id).collect()
+        };
+
+        if doomed.is_empty() {
+            return;
+        }
+
+        let players = blast_targets(shared, dimension);
+
+        for crystal_id in doomed {
+            {
+                let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+                let mut next_id = || shared.next_entity_id();
+
+                blow_crystal(world, &mut items, &players, crystal_id, 0, &mut next_id);
+                items.flush_mob_events(&mut next_id, &mut crate::mob::Rng::new(u64::from(crystal_id as u32)));
+            }
+
+            redstone::settle(world);
+            drop_destroyed(shared, dimension, world);
+        }
+    }
+}
+
 /// Игроки этого мира, которых может толкнуть взрыв.
-fn blast_targets(shared: &Shared, dimension: Dimension) -> Vec<tnt::Target> {
+pub(crate) fn blast_targets(shared: &Shared, dimension: Dimension) -> Vec<tnt::Target> {
     /// Режим наблюдателя: сквозь всё проходит, взрыв его не толкает.
     const SPECTATOR: i32 = 3;
 

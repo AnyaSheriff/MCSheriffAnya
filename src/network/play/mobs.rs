@@ -39,6 +39,7 @@ const TYPE_BYTE: i32 = 0;
 const TYPE_INT: i32 = 1;
 const TYPE_FLOAT: i32 = 3;
 const TYPE_BOOL: i32 = 8;
+const TYPE_OPT_BLOCK_POS: i32 = 11;
 const TYPE_POSE: i32 = 20;
 const TYPE_COW_VARIANT: i32 = 23;
 const TYPE_COW_SOUND: i32 = 24;
@@ -46,6 +47,9 @@ const TYPE_PIG_VARIANT: i32 = 28;
 const TYPE_PIG_SOUND: i32 = 29;
 const TYPE_CHICKEN_VARIANT: i32 = 30;
 const TYPE_CHICKEN_SOUND: i32 = 31;
+
+/// Фаза дракона «висит на месте» (вики, Ender Dragon: DragonPhase 10).
+const DRAGON_PHASE_HOVER: i32 = 10;
 
 /// Поза «умирает» (protocol.json, Pose: 7 — dying).
 const POSE_DYING: i32 = 7;
@@ -63,6 +67,9 @@ const FORCED: u64 = 60;
 fn attributes_at(kind: Kind) -> u64 {
     match kind {
         Kind::Creeper => 1,
+        // Кристаллу и дракону атрибуты не шлются вовсе (чёрный ящик,
+        // end-crystal-explode, dragon-summon).
+        Kind::EndCrystal | Kind::EnderDragon => u64::MAX,
         _ => 3,
     }
 }
@@ -115,6 +122,24 @@ fn float(value: f32) -> Vec<u8> {
 /// у скелета 16 — превращение в бродягу.
 fn properties(mob: &Mob) -> Vec<Property> {
     let fire = u8::from(mob.vitals.fire > 0);
+
+    // Кристалл Края — не живое: флаги, тишина, цель луча (11 — Optional
+    // BlockPos: 0 — нет), «показывать подножие» (minecraft-data: beam_target,
+    // show_bottom; по умолчанию подножие есть — чёрный ящик,
+    // end-crystal-explode: призванный свойств не шлёт).
+    if mob.kind == Kind::EndCrystal {
+        let mut beam = Vec::new();
+
+        match mob.beam_target {
+            None => beam.push(0),
+            Some((x, y, z)) => {
+                beam.push(1);
+                beam.extend_from_slice(&(((i64::from(x) & 0x3FF_FFFF) << 38) | ((i64::from(z) & 0x3FF_FFFF) << 12) | (i64::from(y) & 0xFFF)).to_be_bytes());
+            }
+        }
+
+        return vec![(0, TYPE_BYTE, vec![fire]), (4, TYPE_BOOL, vec![u8::from(mob.silent)]), (8, TYPE_OPT_BLOCK_POS, beam), (9, TYPE_BOOL, vec![1])];
+    }
     let aggressive = u8::from(mob.kind.hostile() && mob.h.target.is_some()) << 2;
     let mut out: Vec<Property> = vec![
         (0, TYPE_BYTE, vec![fire]),
@@ -153,6 +178,10 @@ fn properties(mob: &Mob) -> Vec<Property> {
             out.push((18, TYPE_BOOL, vec![u8::from(mob.h.lit)]));
         }
         Kind::Spider => out.push((16, TYPE_BYTE, vec![u8::from(mob.h.climbing)])),
+        // Фаза дракона: 10 — висит (minecraft-data: phase; чёрный ящик,
+        // dragon-summon: призванный фазы не шлёт — она по умолчанию).
+        Kind::EnderDragon => out.push((16, TYPE_INT, encode_varint(DRAGON_PHASE_HOVER))),
+        Kind::EndCrystal => {}
     }
 
     out
@@ -165,6 +194,9 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
     let (key, _, value) = entry;
 
     match (*key, kind) {
+        (8, Kind::EndCrystal) => value.as_slice() == [0],
+        (9, Kind::EndCrystal) => value.as_slice() == [1],
+        (16, Kind::EnderDragon) => value.as_slice() == encode_varint(DRAGON_PHASE_HOVER).as_slice(),
         (16, Kind::Creeper) => value.as_slice() == encode_varint(-1).as_slice(),
         (0 | 4 | 6 | 15 | 16, _) => value.iter().all(|byte| *byte == 0),
         (9, _) => value.as_slice() == float(1.0),
@@ -258,7 +290,6 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
 /// появились раньше.
 pub(super) async fn send_all_mobs(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     player.seen_mobs.clear();
-    player.seen_arrows.clear();
     player.seen_bow_arrows.clear();
     send_mob_ticks(stream, shared, player).await
 }
@@ -547,7 +578,9 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         // только изменившиеся.
         let now = properties(mob);
         let changed: Vec<&Property> = if shown.first {
-            now.iter().filter(|entry| !is_default(entry, mob.kind)).collect()
+            // У дракона здоровье в первый прогон уходит и равное единице: оно
+            // «грязное» с рождения (чёрный ящик, dragon-death: `9=1 15=1`).
+            now.iter().filter(|entry| !is_default(entry, mob.kind) || (mob.kind == Kind::EnderDragon && entry.0 == 9)).collect()
         } else {
             now.iter().filter(|entry| !shown.properties.contains(entry)).collect()
         };
@@ -584,8 +617,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         player.seen_mobs.insert(mob.entity_id, shown);
     }
 
-    send_orb_ticks(stream, player, &orbs).await?;
-    send_arrow_ticks(stream, shared, player).await
+    send_orb_ticks(stream, player, &orbs).await
 }
 
 /// Вид сущности «шарик опыта» (minecraft-data 26.1: 49) и номер её свойства
@@ -691,120 +723,6 @@ async fn send_orb_ticks(stream: &mut Outgoing<'_>, player: &mut PlayerState, orb
         }
 
         player.seen_mobs.insert(orb.entity_id, shown);
-    }
-
-    Ok(())
-}
-
-// ---------------------------------------------------------------------------
-// Стрелы
-// ---------------------------------------------------------------------------
-//
-// Появление — Add Entity с номером стрелка в поле данных; дальше сдвиг и
-// поворот пакетами, как у мобов; воткнувшаяся — свойство «в земле» и
-// перенос в точку остановки. Частота и порядок пакетов — по замеру
-// оригинала (сценарий skeleton-arrow) [проверить].
-
-/// Стрела, как её знает клиент.
-pub(super) struct ShownArrow {
-    grid: (i64, i64, i64),
-    yaw: u8,
-    pitch: u8,
-    in_ground: bool,
-    first: bool,
-}
-
-/// Раз во сколько тактов жизни стрела сверяет место (`updateInterval` 20 у
-/// снарядов) [проверить: замерено только до 17-го такта].
-const ARROW_SYNC: u64 = 20;
-
-/// Стрелы для клиента: появившиеся показываются, пропавшие убираются. Полёт
-/// клиент считает сам по скорости из пакета появления (чёрный ящик,
-/// skeleton-arrow): сверка места нулевым сдвигом в первом проходе, потом
-/// раз в 20 тактов, а застрявшая сообщается нулевой скоростью.
-pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
-    let range = tracking_range(shared);
-    let arrows: Vec<crate::arrow::Arrow> = {
-        let items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
-
-        items.arrows().iter().filter(|arrow| (arrow.x - player.x).abs() <= range && (arrow.z - player.z).abs() <= range).cloned().collect()
-    };
-    let present: HashSet<i32> = arrows.iter().map(|arrow| arrow.entity_id).collect();
-    let gone: Vec<i32> = player.seen_arrows.keys().filter(|id| !present.contains(id)).copied().collect();
-
-    for entity_id in gone {
-        send_remove_entity(stream, entity_id).await?;
-        player.seen_arrows.remove(&entity_id);
-    }
-
-    for arrow in &arrows {
-        let place = (arrow.x, arrow.y, arrow.z);
-        let grid = grid_of(place);
-        let (yaw, pitch) = (cart_angle(arrow.yaw), cart_angle(arrow.pitch));
-
-        let Some(mut shown) = player.seen_arrows.remove(&arrow.entity_id) else {
-            let mut body = encode_varint(ADD_ENTITY);
-
-            body.extend_from_slice(&encode_varint(arrow.entity_id));
-            body.extend_from_slice(&arrow.uuid);
-            body.extend_from_slice(&encode_varint(crate::arrow::JAVA_TYPE));
-            push_f64(&mut body, arrow.x);
-            push_f64(&mut body, arrow.y);
-            push_f64(&mut body, arrow.z);
-            types::push_velocity(&mut body, arrow.vx, arrow.vy, arrow.vz);
-            body.push(pitch);
-            body.push(yaw);
-            body.push(0);
-            body.extend_from_slice(&encode_varint(arrow.owner));
-            write_body(stream, body).await?;
-
-            player.seen_arrows.insert(arrow.entity_id, ShownArrow { grid, yaw, pitch, in_ground: false, first: true });
-            continue;
-        };
-
-        if shown.first {
-            // Первая сверка: место как в пакете появления — сдвиг нулевой.
-            let mut body = encode_varint(ENTITY_POSITION_AND_ROTATION);
-
-            body.extend_from_slice(&encode_varint(arrow.entity_id));
-            push_i16(&mut body, 0);
-            push_i16(&mut body, 0);
-            push_i16(&mut body, 0);
-            body.push(shown.yaw);
-            body.push(shown.pitch);
-            body.push(0);
-            write_body(stream, body).await?;
-            shown.first = false;
-        } else if arrow.ticks.is_multiple_of(ARROW_SYNC) && !arrow.in_ground {
-            let step = (grid.0 - shown.grid.0, grid.1 - shown.grid.1, grid.2 - shown.grid.2);
-            let fits = |value: i64| i16::try_from(value).is_ok();
-
-            if fits(step.0) && fits(step.1) && fits(step.2) {
-                let mut body = encode_varint(ENTITY_POSITION_AND_ROTATION);
-
-                body.extend_from_slice(&encode_varint(arrow.entity_id));
-                push_i16(&mut body, step.0 as i16);
-                push_i16(&mut body, step.1 as i16);
-                push_i16(&mut body, step.2 as i16);
-                body.push(yaw);
-                body.push(pitch);
-                body.push(0);
-                write_body(stream, body).await?;
-            } else {
-                let whole = Position { x: arrow.x, y: arrow.y, z: arrow.z, yaw: arrow.yaw, pitch: arrow.pitch, on_ground: false };
-
-                send_teleport_with_speed(stream, arrow.entity_id, whole, (arrow.vx, arrow.vy, arrow.vz)).await?;
-            }
-
-            (shown.grid, shown.yaw, shown.pitch) = (grid, yaw, pitch);
-        }
-
-        if arrow.in_ground != shown.in_ground {
-            send_velocity(stream, arrow.entity_id, (arrow.vx, arrow.vy, arrow.vz)).await?;
-            shown.in_ground = arrow.in_ground;
-        }
-
-        player.seen_arrows.insert(arrow.entity_id, shown);
     }
 
     Ok(())

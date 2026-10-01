@@ -182,6 +182,9 @@ pub enum WorldEvent {
     /// идут после пакетов мобов (чёрный ящик, mob-plate).
     Tracker,
 
+    /// Метка «здесь слежение рассылает стрелы»: после хода стрел (arrow.rs).
+    ArrowTracker,
+
     /// Метка «здесь такт дошёл до игроков»: открытые окна получают
     /// перемены содержимого, опубликованные к этому мгновению
     /// (`World::published`).
@@ -1696,6 +1699,11 @@ impl World {
     /// Точка такта, где слежение рассылает клиентам мобов.
     pub fn note_tracker(&mut self) {
         self.events.push(WorldEvent::Tracker);
+    }
+
+    /// Точка такта, где слежение рассылает клиентам стрелы.
+    pub fn note_arrow_tracker(&mut self) {
+        self.events.push(WorldEvent::ArrowTracker);
     }
 
     /// Точка такта, где накопленные изменения блоков уходят клиентам.

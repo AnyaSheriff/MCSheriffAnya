@@ -199,7 +199,8 @@ const padCarts = new Set();
 const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
-const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow']);
+// Край: кристалл, дракон, его огненный шар и облако дыхания — пишутся как мобы.
+const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud']);
 const padDrops = new Set();
 const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {
@@ -310,6 +311,8 @@ const selfText = (b, p, meta) => {
     case 'spawn_position': text = `Spawn Position ${jstr(p.globalPos || p.location || p)}`; break;
     case 'collect': text = `Collect count=${p.pickupItemCount}`; break;
     case 'action_bar': text = `Action Bar ${simp(p.text)}`; break;
+    // Полоса босса (дракон): действие 0 — добавить (название, здоровье, цвет, деления, флаги), 1 — убрать, 2 — здоровье.
+    case 'boss_bar': text = `Boss Bar action=${p.action}${p.health !== undefined ? ' health=' + rnd(p.health) : ''}${p.title !== undefined ? ' title=' + simp(p.title) : ''}${p.color !== undefined ? ' color=' + p.color + ' dividers=' + p.dividers : ''}${p.flags !== undefined ? ' flags=' + p.flags : ''}`; break;
     default: break;
   }
   return text;
@@ -663,7 +666,9 @@ bot.once('spawn', async () => {
       // `"target": "second"` бьёт второго — то есть игрока, а не моба.
       if (a.attack) {
         const ids = [...padCarts];
-        const id = a.bot === 2 ? bot.entity.id : a.target === 'second' ? bot2.entity.id : (a.which === undefined ? ids.pop() : ids[a.which]);
+        // `"part": N` — удар по части дракона: у клиента её номер — номер дракона + N (1 — голова … 8 — крыло) [проверить].
+        const base = a.bot === 2 ? bot.entity.id : a.target === 'second' ? bot2.entity.id : (a.which === undefined ? ids.pop() : ids[a.which]);
+        const id = base === undefined ? undefined : base + (a.part || 0);
         const actor = a.bot === 2 ? bot2 : bot;
         if (id !== undefined) { actor._client.write('attack', { entityId: id }); actor.swingArm(); }
       }

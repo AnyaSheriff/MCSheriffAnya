@@ -71,6 +71,8 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Pig => "entity.minecraft.pig",
         Kind::Sheep => "entity.minecraft.sheep",
         Kind::Chicken => "entity.minecraft.chicken",
+        Kind::EndCrystal => "entity.minecraft.end_crystal",
+        Kind::EnderDragon => "entity.minecraft.ender_dragon",
     }
 }
 

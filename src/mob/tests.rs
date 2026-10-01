@@ -1288,3 +1288,52 @@ fn a_hostile_mob_gives_five_and_more_for_its_gear() {
     skeleton.hurt(f32::MAX, Source::Generic, None);
     assert!((6..=8).contains(&skeleton.pending_xp), "лук: 5 + 1–3, а не {}", skeleton.pending_xp);
 }
+
+#[test]
+fn dragon_parts_take_quarter_damage_except_head() {
+    // Вики, Ender Dragon: «reduces all incoming damage … by ~75% unless the
+    // attack is hitting its head»: 8 в голову — 8, в тело — 8/4 + 1 = 3.
+    let mut dragon = Mob::new(10, Kind::EnderDragon, (0.0, 64.0, 0.0));
+
+    assert_eq!(dragon.vitals.health, 200.0);
+    let head = dragon.hurt_part(8.0, true, Source::PlayerAttack, None).expect("удар прошёл");
+    assert_eq!(head.taken, 8.0);
+    dragon.vitals.invulnerable = 0;
+    let body = dragon.hurt_part(8.0, false, Source::PlayerAttack, None).expect("удар прошёл");
+    assert_eq!(body.taken, 3.0);
+}
+
+#[test]
+fn dragon_dies_for_200_ticks_and_gives_500_xp() {
+    let mut dragon = Mob::new(10, Kind::EnderDragon, (0.0, 64.0, 0.0));
+
+    dragon.hurt(f32::MAX, Source::Generic, None);
+    assert!(dragon.is_dead());
+    assert_eq!(dragon.pending_xp, DRAGON_XP);
+    dragon.dead_for = DRAGON_DEATH_TICKS;
+    assert!(!dragon.gone());
+    dragon.dead_for += 1;
+    assert!(dragon.gone());
+
+    let mut first = Mob::new(11, Kind::EnderDragon, (0.0, 64.0, 0.0));
+    first.first_dragon = true;
+    first.hurt(f32::MAX, Source::Generic, None);
+    assert_eq!(first.pending_xp, DRAGON_XP_FIRST);
+}
+
+#[test]
+fn crystal_explodes_from_any_hit_and_survives_the_file() {
+    let mut crystal = Mob::new(12, Kind::EndCrystal, (3.5, 64.0, 0.5));
+
+    assert!(crystal.hurt(0.0, Source::PlayerAttack, None).is_none());
+    assert!(crystal.exploding, "кристалл взрывается от любого удара");
+
+    let mut bytes = Vec::new();
+    crystal.write(&mut bytes);
+    let back = Mob::read(&mut bytes.as_slice()).expect("запись читается");
+    assert_eq!(back.kind, Kind::EndCrystal);
+
+    let mut bytes = Vec::new();
+    Mob::new(13, Kind::EnderDragon, (0.0, 64.0, 0.0)).write(&mut bytes);
+    assert_eq!(Mob::read(&mut bytes.as_slice()).expect("запись читается").kind, Kind::EnderDragon);
+}

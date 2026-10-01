@@ -34,12 +34,17 @@ pub enum Kind {
     Skeleton,
     Creeper,
     Spider,
+    /// Кристалл Края: не живое существо, а «сущность-другое» (minecraft-data:
+    /// end_crystal), но живёт в списке мобов ради слежения и ударов.
+    EndCrystal,
+    /// Дракон Края (вики, Ender Dragon).
+    EnderDragon,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 8] = [Kind::Cow, Kind::Pig, Kind::Sheep, Kind::Chicken, Kind::Zombie, Kind::Skeleton, Kind::Creeper, Kind::Spider];
+    pub const ALL: [Kind; 10] = [Kind::Cow, Kind::Pig, Kind::Sheep, Kind::Chicken, Kind::Zombie, Kind::Skeleton, Kind::Creeper, Kind::Spider, Kind::EndCrystal, Kind::EnderDragon];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
     pub fn hostile(self) -> bool {
@@ -57,6 +62,8 @@ impl Kind {
             "skeleton" => Kind::Skeleton,
             "creeper" => Kind::Creeper,
             "spider" => Kind::Spider,
+            "end_crystal" => Kind::EndCrystal,
+            "ender_dragon" => Kind::EnderDragon,
             _ => return None,
         })
     }
@@ -71,6 +78,8 @@ impl Kind {
             Kind::Skeleton => "skeleton",
             Kind::Creeper => "creeper",
             Kind::Spider => "spider",
+            Kind::EndCrystal => "end_crystal",
+            Kind::EnderDragon => "ender_dragon",
         }
     }
 
@@ -85,6 +94,8 @@ impl Kind {
             Kind::Cow => 30,
             Kind::Pig => 100,
             Kind::Sheep => 111,
+            Kind::EnderDragon => 43,
+            Kind::EndCrystal => 45,
         }
     }
 
@@ -99,6 +110,8 @@ impl Kind {
             Kind::Skeleton => "minecraft:skeleton",
             Kind::Creeper => "minecraft:creeper",
             Kind::Spider => "minecraft:spider",
+            Kind::EndCrystal => "minecraft:ender_crystal",
+            Kind::EnderDragon => "minecraft:ender_dragon",
         }
     }
 
@@ -108,6 +121,8 @@ impl Kind {
             Kind::Chicken => 0.4,
             Kind::Zombie | Kind::Skeleton | Kind::Creeper => 0.6,
             Kind::Spider => 1.4,
+            Kind::EndCrystal => 2.0,
+            Kind::EnderDragon => 16.0,
             _ => 0.9,
         }
     }
@@ -123,6 +138,8 @@ impl Kind {
             Kind::Skeleton => 1.99,
             Kind::Creeper => 1.7,
             Kind::Spider => 0.9,
+            Kind::EndCrystal => 2.0,
+            Kind::EnderDragon => 8.0,
         }
     }
 
@@ -134,6 +151,10 @@ impl Kind {
             Kind::Chicken => 4.0,
             Kind::Zombie | Kind::Skeleton | Kind::Creeper => 20.0,
             Kind::Spider => 16.0,
+            // У кристалла здоровья нет: любой удар его взрывает (вики, End Crystal).
+            Kind::EndCrystal => 1.0,
+            // Вики, Ender Dragon: «Health: 200»; чёрный ящик, dragon-summon: 9=200.
+            Kind::EnderDragon => 200.0,
         }
     }
 
@@ -146,6 +167,9 @@ impl Kind {
             Kind::Sheep | Kind::Zombie => 0.23,
             Kind::Skeleton | Kind::Creeper => 0.25,
             Kind::Spider => 0.3,
+            Kind::EndCrystal => 0.0,
+            // Дракон летает (вики, Ender Dragon); ходьбы у него нет.
+            Kind::EnderDragon => 0.0,
         }
     }
 
@@ -157,7 +181,7 @@ impl Kind {
             Kind::Chicken => {
                 matches!(item, "wheat_seeds" | "beetroot_seeds" | "melon_seeds" | "pumpkin_seeds" | "torchflower_seeds" | "pitcher_pod")
             }
-            Kind::Zombie | Kind::Skeleton | Kind::Creeper | Kind::Spider => false,
+            Kind::Zombie | Kind::Skeleton | Kind::Creeper | Kind::Spider | Kind::EndCrystal | Kind::EnderDragon => false,
         }
     }
 
@@ -182,6 +206,10 @@ impl Kind {
             // У крипера голоса в покое нет (вики, Creeper, «Sounds»).
             Kind::Creeper => ("", "minecraft:entity.creeper.hurt", "minecraft:entity.creeper.death"),
             Kind::Spider => ("minecraft:entity.spider.ambient", "minecraft:entity.spider.hurt", "minecraft:entity.spider.death"),
+            // Кристалл молчит: его единственный звук — взрыв.
+            Kind::EndCrystal => ("", "", ""),
+            // Чёрный ящик, dragon-summon: голос в покое — entity.ender_dragon.ambient, громкость 5.
+            Kind::EnderDragon => ("minecraft:entity.ender_dragon.ambient", "minecraft:entity.ender_dragon.hurt", "minecraft:entity.ender_dragon.death"),
         }
     }
 
@@ -197,6 +225,7 @@ impl Kind {
             // Шаги крипера играются звуком блока [проверить]; молча.
             Kind::Creeper => "",
             Kind::Spider => "minecraft:entity.spider.step",
+            Kind::EndCrystal | Kind::EnderDragon => "",
         }
     }
 }
@@ -227,6 +256,20 @@ pub const PANIC_TICKS: i32 = 100;
 /// Сколько тактов тело лежит после смерти, пока не пропадёт: 20 (вики,
 /// Entity, «Death»: анимация смерти — секунда).
 pub const DEATH_TICKS: i32 = 20;
+
+/// Сколько частей у дракона: голова, шея, тело, три хвоста, два крыла
+/// (вики, Ender Dragon, «Hitbox»); их номера идут следом за номером дракона,
+/// голова — первая [проверить].
+pub const DRAGON_PARTS: i32 = 8;
+
+/// Сколько тактов дракон умирает (вики, Ender Dragon: «death animation … 10
+/// seconds (200 game ticks)»).
+pub const DRAGON_DEATH_TICKS: i32 = 200;
+
+/// Опыт за дракона: 12000 за первого в бою Края, 500 за всякого другого
+/// (вики, Ender Dragon: «12,000 … 500 for subsequent dragons»).
+pub const DRAGON_XP_FIRST: i32 = 12000;
+pub const DRAGON_XP: i32 = 500;
 
 /// Сколько тактов после удара игрока смерть моба ещё даёт опыт (вики,
 /// Experience, «Sources»: «within five seconds (100 game ticks)»).
@@ -460,6 +503,17 @@ pub struct Mob {
     /// Опыт, который надо ронять шариками: ставит смерть, забирает
     /// `Items::flush_mob_events`.
     pub pending_xp: i32,
+
+    /// Дракон боя Края, ещё не побеждённого: за него 12000 опыта.
+    pub first_dragon: bool,
+
+    /// Кристалл: куда идёт луч (цель исцеления); дракон: номер кристалла,
+    /// что его лечит (0 — никто).
+    pub beam_target: Option<(i32, i32, i32)>,
+    pub healer: i32,
+
+    /// Кристалл ударили: взрывается в этот же такт и исчезает.
+    pub exploding: bool,
 }
 
 impl Mob {
@@ -510,6 +564,10 @@ impl Mob {
             teleports: 0,
             xp_until: 0,
             pending_xp: 0,
+            first_dragon: false,
+            beam_target: None,
+            healer: 0,
+            exploding: false,
         }
     }
 
@@ -610,6 +668,21 @@ impl Mob {
         // в полдень цел).
         if self.kind.hostile() && hostile::burn(self, view, ctx, rng, !self.no_ai) {
             self.hurt(1.0, Source::OnFire, None);
+        }
+
+        // Кристалл Края стоит, где поставлен: ни тяжести, ни мыслей, ни голоса
+        // (вики, End Crystal; чёрный ящик, end-crystal-explode: висит без сверок скорости).
+        if self.kind == Kind::EndCrystal {
+            return ai::Plan::default();
+        }
+
+        // Дракон: полёта по кругу у нас нет — висит на месте (фаза 10,
+        // «hovering»), как призванный [проверить: ИИ боя только по вики]. Голос
+        // в покое — и у NoAI (чёрный ящик, dragon-summon: NoAI рычит).
+        if self.kind == Kind::EnderDragon {
+            ai::voice(self, rng);
+
+            return ai::Plan::default();
         }
 
         if self.no_ai {
@@ -848,11 +921,31 @@ impl Mob {
         }
     }
 
+    /// Удар по части дракона: в голову — полный, в прочие части — четверть
+    /// и ещё до одного очка (вики, Ender Dragon: «reduces all incoming damage
+    /// to it by ~75% unless the attack is hitting its head»; формула
+    /// `damage/4 + min(1, damage)`) [проверить: у оригинала NoAI-дракона
+    /// ударить нельзя — части стоят в нуле мира, сверить не удалось].
+    pub fn hurt_part(&mut self, amount: f32, head: bool, source: Source, push: Option<Push>) -> Option<Hit> {
+        let amount = if head { amount } else { amount / 4.0 + amount.min(1.0) };
+
+        self.hurt(amount, source, push)
+    }
+
     /// Удар. `push` — кто и как толкнул (None — урон без толчка: падение,
     /// команда). Возвращает исход или None, если удар не прошёл (вики,
     /// Damage: «Invulnerability frames»).
     pub fn hurt(&mut self, amount: f32, source: Source, push: Option<Push>) -> Option<Hit> {
         if self.is_dead() {
+            return None;
+        }
+
+        // Кристалл: любой урон — взрыв, даже нулевой (вики, End Crystal:
+        // «explode when attacked or damaged in most ways, even by attacks that
+        // normally do zero damage»). Самого взрыва здесь нет: его делает
+        // ударивший (strike_mob) или такт (tick::detonate_crystals), по `exploding`.
+        if self.kind == Kind::EndCrystal {
+            self.exploding = true;
             return None;
         }
 
@@ -916,7 +1009,12 @@ impl Mob {
     /// Громкость голоса: у коровы 0,4, у прочих 1 (чёрный ящик: голос
     /// коровы при смерти — 0,4).
     pub fn sound_volume(&self) -> f32 {
-        if self.kind == Kind::Cow { 0.4 } else { 1.0 }
+        match self.kind {
+            Kind::Cow => 0.4,
+            // Чёрный ящик, dragon-summon: голос дракона громкостью 5,00.
+            Kind::EnderDragon => 5.0,
+            _ => 1.0,
+        }
     }
 
     /// Высота голоса: `1 + (случайное − случайное)·0,2`, у детёныша на 0,5
@@ -945,7 +1043,11 @@ impl Mob {
         // курица — 1–3 (вики, «Drops»); враждебный — 5 и ещё 1–3 за каждую
         // вещь снаряжения (вики, Experience, «Killing mobs»; чёрный ящик:
         // зомби — шарики 3+1+1, скелет с луком — 3+3).
-        if self.xp_until > self.ticks && !self.is_baby() {
+        // Дракон даёт опыт всегда — и убитый командой [проверить]; за первого
+        // в бою Края больше (ставит бой, tick.rs).
+        if self.kind == Kind::EnderDragon {
+            self.pending_xp = if self.first_dragon { DRAGON_XP_FIRST } else { DRAGON_XP };
+        } else if self.xp_until > self.ticks && !self.is_baby() {
             let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xE4B);
 
             self.pending_xp = if self.kind.hostile() {
@@ -966,7 +1068,7 @@ impl Mob {
 
     /// Пропал ли труп: 20 тактов после смерти.
     pub fn gone(&self) -> bool {
-        self.dead_for > DEATH_TICKS
+        self.dead_for > if self.kind == Kind::EnderDragon { DRAGON_DEATH_TICKS } else { DEATH_TICKS }
     }
 
     /// Запись для файла региона: вид, место, скорость не пишется, здоровье,
@@ -981,6 +1083,8 @@ impl Mob {
             Kind::Skeleton => 5,
             Kind::Creeper => 6,
             Kind::Spider => 7,
+            Kind::EndCrystal => 8,
+            Kind::EnderDragon => 9,
         });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -1011,6 +1115,8 @@ impl Mob {
             5 => Kind::Skeleton,
             6 => Kind::Creeper,
             7 => Kind::Spider,
+            8 => Kind::EndCrystal,
+            9 => Kind::EnderDragon,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -1113,6 +1219,9 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
                 give("spider_eye", 0, 1, rng);
             }
         }
+        // Кристалл и дракон предметов не роняют (вики: у дракона только опыт,
+        // яйцо — блок на портале).
+        Kind::EndCrystal | Kind::EnderDragon => {}
     }
 
     drops

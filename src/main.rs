@@ -41,7 +41,6 @@ mod snbt;
 mod stackdata;
 mod combat_table;
 mod combat;
-mod player_arrow;
 mod xp;
 mod lightning;
 mod custom_tnt;

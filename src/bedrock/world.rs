@@ -1137,11 +1137,20 @@ impl BedrockWorld {
                 .map(|mob| (mob.entity_id, mob.kind, mob.is_baby(), [mob.x as f32, mob.y as f32, mob.z as f32, mob.yaw, mob.pitch, mob.head_yaw]))
                 .collect();
 
-            let arrows: Vec<(i32, [f32; 6], [f32; 3])> = items
-                .arrows()
+            // Замок стрел — после предметов.
+            let arrows: Vec<(i32, [f32; 6], [f32; 3])> = self
+                .shared
+                .arrows
+                .lock()
+                .expect("стрелы захвачены другим потоком")
+                .list
                 .iter()
-                .filter(|arrow| (arrow.x - f64::from(self.position.0)).abs() <= range && (arrow.z - f64::from(self.position.2)).abs() <= range)
-                .map(|arrow| (arrow.entity_id, [arrow.x as f32, arrow.y as f32, arrow.z as f32, -arrow.yaw, -arrow.pitch, -arrow.yaw], [arrow.vx as f32, arrow.vy as f32, arrow.vz as f32]))
+                .filter(|arrow| arrow.dimension == self.dimension && (arrow.x - f64::from(self.position.0)).abs() <= range && (arrow.z - f64::from(self.position.2)).abs() <= range)
+                .map(|arrow| {
+                    let (yaw, pitch) = arrow.facing();
+
+                    (arrow.entity_id, [arrow.x as f32, arrow.y as f32, arrow.z as f32, -yaw, -pitch, -yaw], [arrow.vx as f32, arrow.vy as f32, arrow.vz as f32])
+                })
                 .collect();
 
             (changes, carts, frames, (mobs, arrows))

@@ -670,7 +670,7 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     }
 
     let Some(kind) = crate::minecart::Kind::from_name(name) else {
-        return Answer::saying(format!("Пока призываются только вагонетки, предметы, рамки, молния, животные (cow, pig, sheep, chicken) и враждебные (zombie, skeleton, creeper, spider), а не {}", name));
+        return Answer::saying(format!("Пока призываются только вагонетки, предметы, рамки, молния, животные (cow, pig, sheep, chicken), враждебные (zombie, skeleton, creeper, spider), кристалл и дракон Края, а не {}", name));
     };
     let (place, data) = match rest {
         [] => (Some(origin), None),
@@ -880,7 +880,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
 /// ровно в названной точке. У призванного детёныша `Age` отрицательный
 /// (вики, Breeding: «Age: negative for baby»).
 fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &Shared) -> Answer {
-    let usage = || Answer::saying("Нужно: summon <cow|pig|sheep|chicken|zombie|skeleton|creeper|spider> <x> <y> <z> {NoAI:1b,Age:-24000}".to_string());
+    let usage = || Answer::saying("Нужно: summon <cow|pig|sheep|chicken|zombie|skeleton|creeper|spider|end_crystal|ender_dragon> <x> <y> <z> {NoAI:1b,Age:-24000}".to_string());
     let origin = origin_of(source, shared);
 
     let (place, data) = match rest {
@@ -895,6 +895,14 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
     };
 
     let mut mob = crate::mob::Mob::new(shared.next_entity_id(), kind, place);
+
+    // Части дракона (голова, шея, тело, три хвоста, два крыла) — восемь
+    // номеров следом за ним: по ним клиент бьёт (strike_mob) [проверить].
+    if kind == crate::mob::Kind::EnderDragon {
+        for _ in 0..crate::mob::DRAGON_PARTS {
+            shared.next_entity_id();
+        }
+    }
 
     apply_mob_data(&mut mob, data);
 
@@ -1124,12 +1132,25 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     // добычу (вики, Commands/kill: сущность умирает).
     let mut killed_mobs = 0;
 
+    let mut discarded = Vec::new();
+
     for mob in items.mobs_mut() {
         if left > 0 && chosen.takes(mob.kind.name()) && near((mob.x, mob.y, mob.z)) && !mob.is_dead() {
-            mob.hurt(f32::MAX, crate::survival::Source::GenericKill, None);
+            // Дракона и кристалл команда убирает сразу — без анимации смерти,
+            // опыта и взрыва (чёрный ящик, dragon-death: «убран» в тот же такт).
+            if matches!(mob.kind, crate::mob::Kind::EnderDragon | crate::mob::Kind::EndCrystal) {
+                discarded.push(mob.entity_id);
+            } else {
+                mob.hurt(f32::MAX, crate::survival::Source::GenericKill, None);
+            }
+
             left -= 1;
             killed_mobs += 1;
         }
+    }
+
+    if !discarded.is_empty() {
+        items.remove_mobs(|mob| discarded.contains(&mob.entity_id));
     }
 
     items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));

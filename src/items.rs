@@ -283,9 +283,6 @@ pub struct Items {
     /// Мобы (mob/mod.rs): своя физика и мысли, журнал общий.
     mobs: Vec<crate::mob::Mob>,
 
-    /// Стрелы (arrow.rs): летят, втыкаются, попадают в игроков.
-    arrows: Vec<crate::arrow::Arrow>,
-
     /// Мобы на начало такта — по ним слежение рассылает клиентам (`snapshot_mobs`).
     mob_view: Vec<crate::mob::Mob>,
 
@@ -311,7 +308,6 @@ impl Items {
             orbs: Vec::new(),
             orb_view: Vec::new(),
             xp_delay: std::collections::HashMap::new(),
-            arrows: Vec::new(),
             changes: Journal::new(),
         }
     }
@@ -377,19 +373,6 @@ impl Items {
     pub fn add_mob_late(&mut self, mob: crate::mob::Mob) {
         self.mob_view.push(mob.clone());
         self.mobs.push(mob);
-    }
-
-    /// Выпускает стрелу.
-    pub fn add_arrow(&mut self, arrow: crate::arrow::Arrow) {
-        self.arrows.push(arrow);
-    }
-
-    pub fn arrows(&self) -> &[crate::arrow::Arrow] {
-        &self.arrows
-    }
-
-    pub fn arrows_mut(&mut self) -> &mut Vec<crate::arrow::Arrow> {
-        &mut self.arrows
     }
 
     pub fn mobs(&self) -> &[crate::mob::Mob] {

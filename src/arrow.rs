@@ -1,4 +1,5 @@
-// Стрелы игроков: полёт, попадание, застревание, подбор.
+// Стрелы: одна сущность на всех — и выпущенные игроками из лука, и выпущенные
+// скелетами. Полёт, попадание, застревание, подбор.
 //
 // Правила — вики (Arrow, Bow, Power, Punch, Flame): тяжесть 0,05 за такт,
 // сопротивление воздуха 0,99 (воды 0,6), урон — `ceil(скорость · базовый)`,
@@ -9,7 +10,10 @@
 //
 // Стрелы хранятся общим списком в `Shared::arrows` (у каждой своё
 // измерение); такт двигает их из tick.rs, подключения рассказывают о них
-// клиентам (network/play/bow.rs).
+// клиентам (network/play/bow.rs), Bedrock — bedrock/world.rs. Стрела скелета
+// отличается тем, кто стрелок (`Shooter::Mob`): она бьёт только игроков, ранит
+// их как моб (пакеты урона уходят из `vitals::mob_hit`) и не подбирается;
+// выпущенная в такт мобов, она начинает полёт со следующего такта (`fresh`).
 
 use crate::combat::PlayerStrike;
 use crate::dimension::Dimension;
@@ -20,6 +24,14 @@ use crate::world::World;
 
 /// Номер вида сущности «стрела» (minecraft-data 26.1, entities.json).
 pub const ARROW_TYPE: i32 = 6;
+
+/// Кто выпустил стрелу.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Shooter {
+    Player,
+    /// Моб (скелет): ключ его имени для сообщения о смерти.
+    Mob { killer: &'static str },
+}
 
 /// Тяжесть и сопротивление стрелы (вики, Arrow).
 const GRAVITY: f64 = 0.05;
@@ -64,6 +76,7 @@ pub struct Arrow {
     pub owner: i32,
     pub owner_uuid: [u8; 16],
     pub owner_name: String,
+    pub shooter: Shooter,
     /// Полностью натянутая стрела бьёт сильнее и летит с искрами.
     pub crit: bool,
     /// Уровни «силы» и «отдачи» лука, «горящая стрела».
@@ -74,8 +87,9 @@ pub struct Arrow {
     pub in_ground: bool,
     pub ground_ticks: u32,
     pub age: u32,
-    /// Сколько скорость менялась: клиенты досылают скорость при каждом изменении.
-    pub moves: u32,
+    /// Только что выпущена мобом: первый такт пропускает (выпущенная в такт
+    /// мобов начинает полёт со следующего).
+    pub fresh: bool,
     /// Как дошла до клиентов: попала в блок (для звука на следующей рассылке).
     pub landed: bool,
     /// Место и скорость при появлении: клиенту сперва уходит оно.
@@ -83,10 +97,58 @@ pub struct Arrow {
 }
 
 impl Arrow {
-    /// Угол по сторонам света и наклон по скорости (для пакетов).
+    /// Стрела выпущена мобом.
+    pub fn is_mob_shot(&self) -> bool {
+        matches!(self.shooter, Shooter::Mob { .. })
+    }
+
+    /// Стрела скелета: из точки `at` со скоростью `velocity`.
+    pub fn from_mob(entity_id: i32, dimension: Dimension, at: (f64, f64, f64), velocity: (f64, f64, f64), owner: i32, killer: &'static str) -> Self {
+        Self {
+            entity_id,
+            uuid: crate::items::uuid_for(entity_id),
+            dimension,
+            x: at.0,
+            y: at.1,
+            z: at.2,
+            vx: velocity.0,
+            vy: velocity.1,
+            vz: velocity.2,
+            owner,
+            owner_uuid: [0; 16],
+            owner_name: String::new(),
+            shooter: Shooter::Mob { killer },
+            crit: false,
+            power: 0,
+            punch: 0,
+            flame: false,
+            pickup: Pickup::No,
+            in_ground: false,
+            ground_ticks: 0,
+            age: 0,
+            fresh: true,
+            landed: false,
+            start: (at, velocity),
+        }
+    }
+
+    /// Куда смотрит стрела: по скорости, а у вставшей — по скорости выстрела.
+    pub fn facing(&self) -> (f32, f32) {
+        if self.vx == 0.0 && self.vy == 0.0 && self.vz == 0.0 {
+            let (svx, svy, svz) = self.start.1;
+
+            return Arrow { vx: svx, vy: svy, vz: svz, ..self.clone() }.angles();
+        }
+
+        self.angles()
+    }
+
+    /// Угол по сторонам света и наклон по скорости (для пакетов). У снарядов
+    /// угол без знака минус: `yaw = atan2(vx, vz)` (чёрный ящик, skeleton-arrow:
+    /// стрела на −x — поворот −65).
     pub fn angles(&self) -> (f32, f32) {
         let horizontal = self.vx.hypot(self.vz);
-        let yaw = (-self.vx).atan2(self.vz).to_degrees() as f32;
+        let yaw = self.vx.atan2(self.vz).to_degrees() as f32;
         let pitch = self.vy.atan2(horizontal).to_degrees() as f32;
 
         (yaw, pitch)
@@ -121,6 +183,26 @@ pub fn aim(yaw: f32, pitch: f32, speed: f64) -> (f64, f64, f64) {
     let (yaw, pitch) = (f64::from(yaw).to_radians(), f64::from(pitch).to_radians());
 
     (-yaw.sin() * pitch.cos() * speed, -pitch.sin() * speed, yaw.cos() * pitch.cos() * speed)
+}
+
+/// Начальная скорость выстрела скелета: от точки `from` в точку `aim`, с
+/// поправкой вверх на дальность (`+ дальность · 0,2` по высоте — так целятся
+/// стрелки, чтобы стрела не упала раньше цели) и разбросом: каждая ось
+/// получает нормальную добавку `error · 0,0075`; длина вектора приводится к
+/// `speed`. `gauss` выдаёт нормальные числа с нулевым средним и единичным
+/// разбросом.
+pub fn launch(from: (f64, f64, f64), aim: (f64, f64, f64), speed: f64, error: f64, gauss: &mut dyn FnMut() -> f64) -> (f64, f64, f64) {
+    let (dx, mut dy, dz) = (aim.0 - from.0, aim.1 - from.1, aim.2 - from.2);
+    let flat = (dx * dx + dz * dz).sqrt();
+
+    dy += flat * 0.2;
+
+    let len = (dx * dx + dy * dy + dz * dz).sqrt().max(1.0e-9);
+    let (nx, ny, nz) = (dx / len, dy / len, dz / len);
+    let spread = 0.0075 * error;
+    let (vx, vy, vz) = (nx + gauss() * spread, ny + gauss() * spread, nz + gauss() * spread);
+
+    (vx * speed, vy * speed, vz * speed)
 }
 
 /// Урон стрелы, влетевшей со скоростью `speed`: `ceil(скорость · базовый)`,
@@ -170,13 +252,13 @@ type Bystander = (i32, (f64, f64, f64), bool, i32, [u8; 16], String);
 /// Ход стрел одного измерения за такт. Мир нужен для блоков, игроки и
 /// мобы — для целей.
 pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
-    // Стрелы клиентам рассылает слежение: пока они есть (и в такт, когда
-    // последняя пропала), оно должно идти — даже если в мире нет ни одного
-    // моба (pvp-bow на пустой площадке: стрелу никто не видел).
+    // Стрелы клиентам рассылает своё слежение (после хода стрел): пока они есть
+    // (и в такт, когда последняя пропала), оно должно идти — даже без мобов
+    // (pvp-bow на пустой площадке: стрелу никто не видел).
     let any = shared.arrows.lock().expect("стрелы захвачены другим потоком").list.iter().any(|arrow| arrow.dimension == dimension);
 
     if any {
-        world.note_tracker();
+        world.note_arrow_tracker();
     }
 
     let members: Vec<Bystander> = shared
@@ -195,6 +277,16 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     let mut removed: Vec<i32> = Vec::new();
 
     for arrow in arrows.list.iter_mut().filter(|arrow| arrow.dimension == dimension) {
+        if arrow.fresh {
+            arrow.fresh = false;
+            continue;
+        }
+
+        // Стрела в незагруженном чанке стоит.
+        if !world.has_chunk((arrow.x.floor() as i32).div_euclid(16), (arrow.z.floor() as i32).div_euclid(16)) {
+            continue;
+        }
+
         arrow.age += 1;
 
         if arrow.in_ground {
@@ -206,7 +298,6 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             if !crate::mob::solid(state) {
                 arrow.in_ground = false;
                 arrow.ground_ticks = 0;
-                arrow.moves += 1;
             } else if arrow.ground_ticks >= GROUND_LIFE {
                 removed.push(arrow.entity_id);
                 continue;
@@ -254,8 +345,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             }
         }
 
-        // Мобы.
-        for mob in items.mobs() {
+        // Мобы (стрелы мобов их не задевают).
+        for mob in items.mobs().iter().filter(|_| !arrow.is_mob_shot()) {
             if mob.is_dead() {
                 continue;
             }
@@ -298,7 +389,15 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             let roll = world.random_unit();
             let damage = damage_of(arrow, roll);
 
+            let on_player = matches!(target, Target::Player { .. });
+
             match target {
+                Target::Player { entity_id } if arrow.is_mob_shot() => {
+                    let Shooter::Mob { killer } = arrow.shooter else { unreachable!() };
+                    let flat = arrow.vx.hypot(arrow.vz).max(1.0e-9);
+
+                    world.note_mob_hurt(entity_id, damage, Source::Arrow, arrow.owner, killer, Some((arrow.vx / flat, arrow.vz / flat)), (arrow.x, arrow.y, arrow.z));
+                }
                 Target::Player { entity_id } => {
                     world.note_game_event(arrow.owner, 6, 0.0);
                     world.note_player_strike(PlayerStrike {
@@ -307,7 +406,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         attacker_uuid: arrow.owner_uuid,
                         attacker_name: arrow.owner_name.clone(),
                         from: (arrow.x, arrow.y, arrow.z),
-                        yaw: arrow.angles().0,
+                        yaw: -arrow.angles().0,
                         damage,
                         source: Source::Arrow,
                         extra_knockback: arrow.punch as f32 * 1.2,
@@ -329,7 +428,12 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             }
 
             removed.push(arrow.entity_id);
-            world.note_sound_neutral_at((arrow.x, arrow.y, arrow.z), "minecraft:entity.arrow.hit", 1.0, 1.0);
+
+            // Игроку, раненому мобом, звук попадания уходит из `vitals::mob_hit`.
+            if !(arrow.is_mob_shot() && on_player) {
+                world.note_sound_neutral_at((arrow.x, arrow.y, arrow.z), "minecraft:entity.arrow.hit", 1.0, 1.0);
+            }
+
             continue;
         }
 
@@ -341,7 +445,6 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             arrow.in_ground = true;
             arrow.ground_ticks = 0;
             arrow.landed = true;
-            arrow.moves += 1;
             world.note_sound_neutral_at((arrow.x, arrow.y, arrow.z), "minecraft:entity.arrow.hit", 1.0, 1.0);
             continue;
         }
@@ -356,7 +459,6 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         arrow.vx *= drag;
         arrow.vy = arrow.vy * drag - GRAVITY;
         arrow.vz *= drag;
-        arrow.moves += 1;
 
         // Улетела за край мира.
         if arrow.y < -128.0 {
@@ -425,6 +527,7 @@ mod tests {
             owner: 0,
             owner_uuid: [0; 16],
             owner_name: String::new(),
+            shooter: Shooter::Player,
             crit: false,
             power: 0,
             punch: 0,
@@ -433,7 +536,7 @@ mod tests {
             in_ground: false,
             ground_ticks: 0,
             age: 0,
-            moves: 0,
+            fresh: false,
             landed: false,
             start: ((0.0, 0.0, 0.0), (0.0, 0.0, 3.0)),
         };
@@ -443,7 +546,33 @@ mod tests {
         arrow.vx = -3.0;
         arrow.vz = 0.0;
 
-        assert!((arrow.angles().0 - 90.0).abs() < 1e-4);
+        assert!((arrow.angles().0 + 90.0).abs() < 1e-4);
         assert_eq!(damage_of(&arrow, 0.0), 6.0);
+    }
+
+    #[test]
+    fn a_skeleton_arrow_waits_one_tick_and_cannot_be_picked_up() {
+        let arrow = Arrow::from_mob(7, Dimension::Overworld, (1.0, 2.0, 3.0), (1.6, 0.0, 0.0), 4, "entity.minecraft.skeleton");
+
+        assert!(arrow.fresh && arrow.is_mob_shot());
+        assert_eq!(arrow.pickup, Pickup::No);
+        assert_eq!(arrow.start, ((1.0, 2.0, 3.0), (1.6, 0.0, 0.0)));
+        // Урон по скорости: 2 · 1,6 = 3,2 → 4 (вики, Arrow).
+        assert_eq!(damage_of(&arrow, 0.0), 4.0);
+    }
+
+    #[test]
+    fn the_launch_aims_up_by_distance_and_keeps_the_speed() {
+        let mut none = || 0.0;
+        let v = launch((0.0, 1.0, 0.0), (10.0, 1.0, 0.0), 1.6, 6.0, &mut none);
+
+        assert!(v.1 > 0.0, "наводка вверх на дальность");
+        assert!((v.0 * v.0 + v.1 * v.1 + v.2 * v.2).sqrt() - 1.6 < 1.0e-9);
+
+        // Разброс сдвигает вектор: направление в пределах error · 0,0075 на ось.
+        let mut one = || 1.0;
+        let off = launch((0.0, 1.0, 0.0), (10.0, 1.0, 0.0), 1.6, 6.0, &mut one);
+
+        assert!((off.2 / 1.6 - 0.045).abs() < 0.005);
     }
 }

@@ -1,0 +1,44 @@
+{
+ "name": "end-crystal-explode",
+ "about": "Кристалл Края призван на обсидиан рядом с роботом (творчество): появление, свойства, удар рукой — взрыв силой 6. Взрыв роет воронку глубже площадки — уборка засыпает её камнем.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "fill $(-4,-1,-4) $(9,-1,9) minecraft:obsidian",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon end_crystal $(3.5,0,0.5)"
+  },
+  {
+   "after": 20,
+   "attack": true
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "fill $(-4,-5,-7) $(10,-2,8) minecraft:stone",
+  "kill @e[type=ender_dragon,distance=..64]",
+  "kill @e[type=end_crystal,distance=..48]",
+  "kill @e[type=dragon_fireball,distance=..48]",
+  "kill @e[type=area_effect_cloud,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(-4,-1,-4) $(9,-1,9) minecraft:stone",
+  "fill $(-4,0,-4) $(9,4,9) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

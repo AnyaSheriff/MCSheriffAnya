@@ -8,7 +8,7 @@
 
 use super::*;
 
-use crate::player_arrow::{Arrow, Pickup};
+use crate::arrow::{Arrow, Pickup, Shooter};
 use crate::combat;
 
 /// Пакеты: скорость сущности, сверка места, убрать сущность, звук.
@@ -18,11 +18,14 @@ const ENTITY_POSITION_SYNC: i32 = 0x23;
 /// Что клиенту о стреле уже сказано.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct ShownArrow {
-    moves: u32,
     in_ground: bool,
-    crit_sent: bool,
+    /// Нулевой сдвиг ещё не отправлен (стрела скелета в такт выстрела).
+    first: bool,
     /// Место, которое клиент знает (сетка 1/4096): от него считается сдвиг.
     grid: (i64, i64, i64),
+    /// Поворот при появлении (по скорости выстрела).
+    yaw: u8,
+    pitch: u8,
 }
 
 /// Первый слот с обычной стрелой: вторая рука, панель, рюкзак.
@@ -64,7 +67,7 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
 
     // Неточность: 0,0172275 (вики, Arrow) — к каждой оси направления.
     let wobble = || f64::from(roll() + roll() + roll() + roll() - 2.0) * 0.0172275 * 1.732;
-    let (dx, dy, dz) = crate::player_arrow::aim(player.yaw, player.pitch, 1.0);
+    let (dx, dy, dz) = crate::arrow::aim(player.yaw, player.pitch, 1.0);
     let speed = combat::arrow_speed(power);
     let (last_x, last_y, last_z) = player.net.last_delta;
     // К скорости стрелы прибавляется скорость стрелка (по вертикали — только в воздухе).
@@ -89,6 +92,7 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
         owner: owner.0,
         owner_uuid: owner.1,
         owner_name: owner.2,
+        shooter: Shooter::Player,
         crit: power >= 1.0,
         power: data.level("power"),
         punch: data.level("punch"),
@@ -97,7 +101,7 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
         in_ground: false,
         ground_ticks: 0,
         age: 0,
-        moves: 0,
+        fresh: false,
         landed: false,
         start: ((player.x, player.y + if player.sneaking { 1.27 } else { 1.62 } - 0.1, player.z), velocity),
     };
@@ -128,13 +132,21 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
         .note_sound_player_at((player.x, player.y, player.z), "minecraft:entity.arrow.shoot", 1.0, pitch);
 }
 
-/// Рассказывает клиенту о стрелах: появление, скорость, сверка места,
-/// исчезновение.
+/// Рассказывает клиенту о стрелах (и игроков, и скелетов): появление,
+/// нулевая сверка места, остановка, сверка раз в 20 тактов, исчезновение.
+///
+/// Полёт клиент считает сам по скорости из пакета появления: пока стрела
+/// летит, пакетов о ней нет (чёрный ящик, skeleton-arrow: между сдвигом
+/// 0,0,0 и остановкой у оригинала тихо). Слежение оригинала смотрит на мир
+/// до хода сущностей, поэтому стрелу, выпущенную игроком (она в этом же такте
+/// уже сделала ход), оно показывает вместе с нулевым сдвигом сразу, а стрелу
+/// скелета (выпущена в ход мобов, ещё не двигалась) — со сдвигом в следующем
+/// такте; приземление узнаёт на такт позже.
 pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     let arrows = shared.arrows.lock().expect("стрелы захвачены другим потоком").in_dimension(player.dimension);
     let range = f64::from(shared.properties.view_distance.clamp(2, 10)) * 16.0;
 
-    let present: HashSet<i32> = arrows.iter().map(|arrow| arrow.entity_id).collect();
+    let present: HashSet<i32> = arrows.iter().filter(|arrow| (arrow.x - player.x).abs() <= range && (arrow.z - player.z).abs() <= range).map(|arrow| arrow.entity_id).collect();
     let vanished: Vec<i32> = player.seen_bow_arrows.keys().filter(|id| !present.contains(id)).copied().collect();
 
     for id in vanished {
@@ -143,21 +155,21 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
     }
 
     for arrow in &arrows {
-        if (arrow.x - player.x).abs() > range || (arrow.z - player.z).abs() > range {
+        if !present.contains(&arrow.entity_id) {
             continue;
         }
 
-        let speed = (arrow.vx, arrow.vy, arrow.vz);
         let Some(mut shown) = player.seen_bow_arrows.get(&arrow.entity_id).copied() else {
             // Появление — с местом и скоростью выстрела, как их знал сервер в
-            // миг выстрела (чёрный ящик, pvp-bow: место у стрелка).
-            let ((sx, sy, sz), (svx, svy, svz)) = arrow.start;
-            let (yaw, pitch) = crate::player_arrow::Arrow { vx: svx, vy: svy, vz: svz, ..arrow.clone() }.angles();
+            // миг выстрела (чёрный ящик, pvp-bow: место у стрелка). Увиденная
+            // позже — там, где она теперь.
+            let ((sx, sy, sz), (svx, svy, svz)) = if arrow.age <= 1 { arrow.start } else { ((arrow.x, arrow.y, arrow.z), (arrow.vx, arrow.vy, arrow.vz)) };
+            let (yaw, pitch) = Arrow { vx: svx, vy: svy, vz: svz, ..arrow.clone() }.angles();
             let mut body = encode_varint(ADD_ENTITY);
 
             body.extend_from_slice(&encode_varint(arrow.entity_id));
             body.extend_from_slice(&arrow.uuid);
-            body.extend_from_slice(&encode_varint(crate::player_arrow::ARROW_TYPE));
+            body.extend_from_slice(&encode_varint(crate::arrow::ARROW_TYPE));
             push_f64(&mut body, sx);
             push_f64(&mut body, sy);
             push_f64(&mut body, sz);
@@ -180,39 +192,45 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
                 write_body(stream, data).await?;
             }
 
-            // Сразу за появлением — нулевой сдвиг с поворотом (чёрный ящик,
-            // arrow-pickup: «arrow сдвиг 0,0,0»).
-            let mut zero = encode_varint(0x36);
+            let shown = ShownArrow { in_ground: false, first: arrow.age == 0, grid: grid_of((sx, sy, sz)), yaw: cart_angle(yaw), pitch: cart_angle(pitch) };
 
-            zero.extend_from_slice(&encode_varint(arrow.entity_id));
-            push_i16(&mut zero, 0);
-            push_i16(&mut zero, 0);
-            push_i16(&mut zero, 0);
-            zero.push(cart_angle(yaw));
-            zero.push(cart_angle(pitch));
-            zero.push(0);
-            write_body(stream, zero).await?;
+            // Нулевой сдвиг с поворотом: сразу за появлением, если стрела уже
+            // ходила (чёрный ящик, arrow-pickup: «arrow сдвиг 0,0,0»), иначе —
+            // в следующем такте (чёрный ящик, skeleton-arrow).
+            if !shown.first {
+                send_zero_move(stream, arrow.entity_id, &shown).await?;
+            }
 
-            player.seen_bow_arrows.insert(arrow.entity_id, ShownArrow { moves: 0, in_ground: false, crit_sent: arrow.crit, grid: grid_of((sx, sy, sz)) });
+            player.seen_bow_arrows.insert(arrow.entity_id, shown);
             continue;
         };
 
-        // Слежение оригинала узнаёт о приземлении на такт позже (чёрный ящик,
-        // arrow-pickup: в такте выстрела — нулевой сдвиг, остановка — на +1).
-        let landing_now = arrow.in_ground && !shown.in_ground && arrow.ground_ticks == 0;
+        if shown.first {
+            send_zero_move(stream, arrow.entity_id, &shown).await?;
+            shown.first = false;
+        }
 
-        if !landing_now && (arrow.moves != shown.moves || arrow.in_ground != shown.in_ground) {
-            if arrow.in_ground != shown.in_ground || arrow.in_ground {
-                // Встала — нулевая скорость и сдвиг до точки остановки с тем
-                // поворотом, с каким летела (чёрный ящик, arrow-pickup).
-                let mut body = encode_varint(ENTITY_VELOCITY);
+        if arrow.in_ground != shown.in_ground {
+            // Слежение оригинала узнаёт о приземлении на такт позже (чёрный
+            // ящик, arrow-pickup: в такте выстрела — нулевой сдвиг, остановка —
+            // на +1).
+            if arrow.in_ground && arrow.ground_ticks == 0 {
+                player.seen_bow_arrows.insert(arrow.entity_id, shown);
+                continue;
+            }
 
-                body.extend_from_slice(&encode_varint(arrow.entity_id));
-                types::push_velocity(&mut body, 0.0, 0.0, 0.0);
-                write_body(stream, body).await?;
+            // Встала — нулевая скорость; севшая сразу после выстрела (arrow-pickup)
+            // ещё сдвиг до точки остановки с тем поворотом, с каким летела, и
+            // свойство «в блоке»; севшая в конце долгого полёта (skeleton-arrow,
+            // 18-й такт) у оригинала присылает одну скорость [проверить].
+            let mut body = encode_varint(ENTITY_VELOCITY);
 
-                let (svx, svy, svz) = arrow.start.1;
-                let (yaw, pitch) = crate::player_arrow::Arrow { vx: svx, vy: svy, vz: svz, ..arrow.clone() }.angles();
+            body.extend_from_slice(&encode_varint(arrow.entity_id));
+            types::push_velocity(&mut body, arrow.vx, arrow.vy, arrow.vz);
+            write_body(stream, body).await?;
+
+            if arrow.in_ground && arrow.age <= LANDING_SYNC_AGE {
+                let (yaw, pitch) = arrow.facing();
                 let grid = grid_of((arrow.x, arrow.y, arrow.z));
                 let step = (grid.0 - shown.grid.0, grid.1 - shown.grid.1, grid.2 - shown.grid.2);
 
@@ -232,7 +250,9 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
                 }
 
                 shown.grid = grid;
+            }
 
+            if arrow.age <= LANDING_SYNC_AGE || !arrow.in_ground {
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(arrow.entity_id));
@@ -241,28 +261,41 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
                 data.push(u8::from(arrow.in_ground));
                 data.push(PROPERTIES_END);
                 write_body(stream, data).await?;
-            } else {
-                let mut body = encode_varint(ENTITY_VELOCITY);
-
-                body.extend_from_slice(&encode_varint(arrow.entity_id));
-                types::push_velocity(&mut body, speed.0, speed.1, speed.2);
-                write_body(stream, body).await?;
-
-                // Раз в 20 тактов — сверка места (у оригинала так у всех сущностей).
-                if arrow.age % 20 == 0 {
-                    send_position_sync(stream, arrow).await?;
-                }
             }
 
-            shown.moves = arrow.moves;
             shown.in_ground = arrow.in_ground;
+        } else if !arrow.in_ground && arrow.age.is_multiple_of(ARROW_SYNC) {
+            // Раз в 20 тактов — сверка места (у оригинала так у всех
+            // сущностей; замерено только до 18-го такта) [проверить].
+            send_position_sync(stream, arrow).await?;
         }
 
-        shown.crit_sent = arrow.crit;
         player.seen_bow_arrows.insert(arrow.entity_id, shown);
     }
 
     Ok(())
+}
+
+/// Раз во сколько тактов жизни стрела сверяет место.
+const ARROW_SYNC: u32 = 20;
+
+/// До какого возраста севшая стрела сообщается полностью (скорость, сдвиг,
+/// свойство «в блоке»): у оригинала севшая в первые такты — так
+/// (arrow-pickup), севшая на 18-м — одной скоростью (skeleton-arrow).
+const LANDING_SYNC_AGE: u32 = 2;
+
+/// Нулевой сдвиг с поворотом выстрела: сверка места сразу после появления.
+async fn send_zero_move(stream: &mut Outgoing<'_>, entity_id: i32, shown: &ShownArrow) -> io::Result<()> {
+    let mut body = encode_varint(0x36);
+
+    body.extend_from_slice(&encode_varint(entity_id));
+    push_i16(&mut body, 0);
+    push_i16(&mut body, 0);
+    push_i16(&mut body, 0);
+    body.push(shown.yaw);
+    body.push(shown.pitch);
+    body.push(0);
+    write_body(stream, body).await
 }
 
 /// Свойства стрелы: флаги (искры), «в блоке»; вид значения «логическое».
