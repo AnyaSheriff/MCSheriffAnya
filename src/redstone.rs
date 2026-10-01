@@ -39,7 +39,7 @@ pub mod statue;
 pub use jukebox::{jukebox_contents_changed, jukebox_reading, jukebox_song, tick_jukebox, use_jukebox};
 pub use lectern::lectern_reading;
 
-pub use components::{Occupant, daylight_tick, disarm_tripwire, hook_broken_by_player, punched, random_ticks};
+pub use components::{Occupant, ambient_sky, daylight_tick, disarm_tripwire, hook_broken_by_player, punched, random_ticks};
 pub use rails::{Cart, holds_rail};
 pub use sculk::{game_event, sensors_tick};
 
@@ -4747,8 +4747,7 @@ pub fn use_block(world: &mut World, pos: Pos) -> bool {
 /// Some(true) — предмет из руки тратится, Some(false) — нет, None — щелчок
 /// не про это. Торт у нас едят только в творческом: голода пока нет, а
 /// сытый в выживании торт не ест. [проверить]: полный якорь от светокамня
-/// в обычном мире у оригинала взрывается — у нас щелчок ничего не делает;
-/// портал из заполненных рамок не открывается.
+/// в обычном мире у оригинала взрывается — у нас щелчок ничего не делает.
 pub fn use_with_item(world: &mut World, pos: Pos, held: Option<&str>, creative: bool) -> Option<bool> {
     let block = Block::at(world, pos);
 
@@ -4760,8 +4759,14 @@ pub fn use_with_item(world: &mut World, pos: Pos, held: Option<&str>, creative: 
 
             world.note_level_event(pos.0, pos.1, pos.2, 1503, 0);
             set(world, pos, state);
+            // Последнее око замкнуло кольцо — портал Края открывается.
+            crate::portal::open_end_portal(world, pos);
             Some(true)
         }
+
+        // Второе око в полную рамку: ничего не меняется и глаз не тратится,
+        // но блок и блок за гранью повторяются (чёрный ящик, end-portal).
+        "end_portal_frame" if held == Some("ender_eye") => Some(false),
 
         // Светокамень добавляет заряд, до четырёх; звук `charge`,
         // громкость и высота 1 — его слышит и тот, кто заряжал.
@@ -8637,7 +8642,7 @@ mod tests {
         assert_eq!(use_with_item(&mut world, (0, 1, 0), Some("stone"), true), None);
         assert_eq!(use_with_item(&mut world, (0, 1, 0), Some("ender_eye"), true), Some(true));
         assert!(block(&world, (0, 1, 0)).is("eye", "true"));
-        assert_eq!(use_with_item(&mut world, (0, 1, 0), Some("ender_eye"), true), None, "второе око");
+        assert_eq!(use_with_item(&mut world, (0, 1, 0), Some("ender_eye"), true), Some(false), "второе око");
 
         assert_eq!(use_with_item(&mut world, (2, 1, 0), Some("glowstone"), false), Some(true));
         assert!(block(&world, (2, 1, 0)).is("charges", "4"));

@@ -1,0 +1,104 @@
+{
+ "name": "void-death",
+ "about": "Выживание: робот падает в дыру сквозь дно мира — урон бездны и смерть.",
+ "blocks": [
+  {
+   "at": [
+    3,
+    -5,
+    3
+   ],
+   "state": "minecraft:air"
+  },
+  {
+   "at": [
+    3,
+    -4,
+    3
+   ],
+   "state": "minecraft:air"
+  },
+  {
+   "at": [
+    3,
+    -3,
+    3
+   ],
+   "state": "minecraft:air"
+  },
+  {
+   "at": [
+    3,
+    -2,
+    3
+   ],
+   "state": "minecraft:air"
+  },
+  {
+   "at": [
+    3,
+    -1,
+    3
+   ],
+   "state": "minecraft:air"
+  },
+  {
+   "at": [
+    3,
+    0,
+    3
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,1,3.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     3,
+     0,
+     3
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 160,
+ "cleanup": [
+  "fill $(3,-5,3) $(3,0,3) minecraft:stone",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "kind": "self",
+   "name": "место возрождения",
+   "pattern": "\\(-?[\\d.]+,-?[\\d.]+,-?[\\d.]+\\)",
+   "replace": "(место)",
+   "why": "Игрок без кровати возрождается в случайной точке вокруг точки появления мира (minecraft.wiki/w/Respawn, «Spawn radius»: gamerule spawnRadius, по умолчанию 10); оригинал против оригинала: (-3.5,-60,-8.5), (5.5,-59,2.5), (6.5,-60,3.5)."
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "высота точки появления",
+   "pattern": "\"location\":\\{\"x\":0,\"z\":0,\"y\":-?\\d+\\}",
+   "replace": "\"location\":{точка}",
+   "why": "У нашего испытательного ровного мира точка появления считается по высоте обычного мира (63), а у оригинала — по плоскому (−60): расхождение испытательного мира, а не механики."
+  }
+ ],
+ "track_self": true
+}

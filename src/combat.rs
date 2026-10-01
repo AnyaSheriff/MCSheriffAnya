@@ -1,0 +1,685 @@
+// Бой: свойства предметов, урон ближнего боя, броня, зачарования, щит, лук.
+//
+// Здесь только счёт — без сети и без состояния игроков; подключения
+// (network/play/combat.rs) берут числа отсюда. Источники: вики (Damage,
+// Attack cooldown / Melee attack, Armor, Shield, Knockback, страницы
+// зачарований, Bow, Arrow), таблица предметов combat_table.rs (отчёты штатного
+// генератора) и сверка с оригиналом чёрным ящиком (сценарии pvp-*).
+
+use std::collections::HashMap;
+use std::sync::OnceLock;
+
+use crate::attributes::{Attributes, Modifier, Operation};
+use crate::combat_table::{ItemInfo, ITEMS};
+use crate::inventory::{self, Inventory, Stack};
+use crate::players::CombatView;
+use crate::stackdata::Data;
+use crate::survival::Source;
+
+/// Чем кончится удар по игроку, если судить по тому, что он опубликовал:
+/// щит держит удар, иначе — сколько здоровья он потеряет (после брони,
+/// зачарований и неуязвимости); None — удар не пройдёт.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Outcome {
+    Blocked,
+    Taken(f32),
+    Missed,
+}
+
+/// Урон после брони и зачарований защиты по опубликованному состоянию.
+pub fn final_damage(view: &CombatView, damage: f32, source: Source) -> f32 {
+    if bypasses_armor(source) {
+        return damage;
+    }
+
+    let points = view.protection + if source == Source::Arrow { view.projectile_protection } else { 0 };
+
+    after_protection(after_armor(damage, view.armor, view.toughness), points)
+}
+
+/// Предсказание исхода удара `damage` из точки `from` по жертве, которая
+/// стоит в `at` и смотрит по `yaw`, на такте `now`.
+pub fn outcome(view: &CombatView, damage: f32, source: Source, now: u64, victim: (f64, f64, f32), from: (f64, f64)) -> Outcome {
+    if view.dead || damage <= 0.0 {
+        return Outcome::Missed;
+    }
+
+    let up = view.blocking_since.is_some_and(|since| now >= since + u64::from(SHIELD_DELAY)) && now >= view.shield_disabled_until;
+
+    if up && shield_covers(victim.2, (victim.0, victim.1), from) {
+        return Outcome::Blocked;
+    }
+
+    let taken = final_damage(view, damage, source);
+
+    if view.invulnerable > 10 {
+        if taken <= view.last_hurt {
+            return Outcome::Missed;
+        }
+
+        return Outcome::Taken(taken - view.last_hurt);
+    }
+
+    Outcome::Taken(taken)
+}
+
+/// Удар по игроку, который нападающий отдаёт жертве через журнал мира
+/// (`WorldEvent::PlayerStrike`): щит, броню, отдачу и износ считает
+/// подключение жертвы — у него её инвентарь и состояние.
+#[derive(Clone, Debug)]
+pub struct PlayerStrike {
+    pub victim: i32,
+    pub attacker: i32,
+    pub attacker_uuid: [u8; 16],
+    pub attacker_name: String,
+    /// Где стоял нападающий и куда смотрел (градусы).
+    pub from: (f64, f64, f64),
+    pub yaw: f32,
+    /// Урон до щита и брони.
+    pub damage: f32,
+    pub source: Source,
+    /// Сверх обычной отдачи 0,4: зачарование «отдача», бег, `attack_knockback`.
+    pub extra_knockback: f32,
+    /// Чем ударили (для сообщения о смерти) и во что: топор отключает щит.
+    pub weapon: Option<Stack>,
+    pub disables_shield_ticks: u32,
+    /// Зачарование «заговорённое лезвие»: столько тактов горит жертва.
+    pub fire_ticks: i32,
+}
+
+/// Свойства предмета по номеру.
+pub fn info(item: i32) -> Option<&'static ItemInfo> {
+    static BY_NUMBER: OnceLock<HashMap<i32, &'static ItemInfo>> = OnceLock::new();
+
+    BY_NUMBER.get_or_init(|| ITEMS.iter().map(|info| (info.item, info)).collect()).get(&item).copied()
+}
+
+/// Наибольший износ стопки (0 — не изнашивается).
+pub fn max_damage(stack: &Stack) -> i32 {
+    if stack.extras().unbreakable {
+        return 0;
+    }
+
+    info(stack.item).map_or(0, |info| info.max_damage)
+}
+
+// ---------------------------------------------------------------------------
+// Экипировка и атрибуты
+// ---------------------------------------------------------------------------
+
+/// Места экипировки игрока в инвентаре: шлем, нагрудник, штаны, ботинки.
+pub const ARMOR_SLOTS: [(i32, u8); 4] = [(5, 7), (6, 6), (7, 5), (8, 4)];
+
+/// Подходит ли группа мест модификатора месту экипировки.
+fn group_matches(group: u8, place: u8) -> bool {
+    match group {
+        0 => true,
+        3 => place == 1 || place == 2,
+        8 => (4..=7).contains(&place),
+        _ => group == place,
+    }
+}
+
+/// Модификаторы, которые стопка даёт на месте `place` (1 — основная рука,
+/// 2 — вторая, 4–7 — обувь…шлем): свои из довесков или, если их нет, по
+/// умолчанию из таблицы. Предмет с местом надевания даёт своё, только надетым
+/// туда (нагрудник в руке ничего не даёт).
+pub fn granted(stack: &Stack, place: u8) -> Vec<(i32, Modifier)> {
+    let data = stack.extras();
+
+    if let Some(custom) = &data.attributes {
+        return custom.iter().filter(|m| group_matches(m.slot, place)).map(|m| (m.attribute, m.modifier())).collect();
+    }
+
+    let Some(info) = info(stack.item) else {
+        return Vec::new();
+    };
+
+    info.mods
+        .iter()
+        .filter(|m| group_matches(m.slot, place))
+        .map(|m| (m.attribute, Modifier { id: m.id.to_string(), amount: m.amount, operation: Operation::from_number(i32::from(m.operation)).unwrap_or(Operation::AddValue) }))
+        .collect()
+}
+
+/// Переставляет модификаторы от предметов: снимает прежние (`applied`) и
+/// ставит те, что дают рука, вторая рука и броня сейчас.
+pub fn refresh_equipment(attributes: &mut Attributes, applied: &mut Vec<(i32, String)>, inventory: &Inventory) {
+    for (attribute, id) in applied.drain(..) {
+        attributes.remove_modifier(attribute, &id);
+    }
+
+    // Порядок — как у оригинала обходятся места экипировки: рука, вторая
+    // рука, ботинки, штаны, нагрудник, шлем (чёрный ящик, pvp-armor: части
+    // брони идут в пакете ботинки, штаны, нагрудник, шлем).
+    let mut places: Vec<(Stack, u8)> = Vec::new();
+
+    if let Some(stack) = inventory.held() {
+        places.push((stack, 1));
+    }
+
+    if let Some(stack) = inventory.slot(inventory::OFFHAND) {
+        places.push((stack, 2));
+    }
+
+    for (slot, place) in ARMOR_SLOTS.iter().rev() {
+        if let Some(stack) = inventory.slot(*slot) {
+            places.push((stack, *place));
+        }
+    }
+
+    for (stack, place) in places {
+        for (attribute, modifier) in granted(&stack, place) {
+            applied.push((attribute, modifier.id.clone()));
+            attributes.set_modifier(attribute, modifier);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Удар в ближнем бою
+// ---------------------------------------------------------------------------
+
+/// Заряд руки от 0 до 1: `(такты + 0,5) / (20 / скорость удара)`. Вики,
+/// Melee attack: «attack strength»; чёрный ящик (cow-hit): такты считаются
+/// от прошлого удара.
+pub fn charge(ticks_since: u32, attack_speed: f64) -> f32 {
+    if attack_speed <= 0.0 {
+        return 1.0;
+    }
+
+    let period = (20.0 / attack_speed) as f32;
+
+    ((ticks_since as f32 + 0.5) / period).clamp(0.0, 1.0)
+}
+
+/// Доля основного урона при заряде: `0,2 + заряд²·0,8`.
+pub fn base_scale(charge: f32) -> f32 {
+    0.2 + charge * charge * 0.8
+}
+
+/// Порог полного заряда: только выше него работают крит, взмах и рывок
+/// (вики, Melee attack).
+pub const FULL_CHARGE: f32 = 0.9;
+
+/// Прибавка урона от зачарований оружия по цели (вики, Sharpness, Smite,
+/// Bane of Arthropods): острота 0,5 + 0,5·уровень; небесная кара и бич
+/// членистоногих 2,5 за уровень против своих целей.
+pub fn enchant_bonus(data: &Data, undead: bool, arthropod: bool) -> f32 {
+    let mut bonus = 0.0;
+    let sharp = data.level("sharpness");
+
+    if sharp > 0 {
+        bonus += 0.5 + 0.5 * sharp as f32;
+    }
+
+    if undead {
+        bonus += 2.5 * data.level("smite") as f32;
+    }
+
+    if arthropod {
+        bonus += 2.5 * data.level("bane_of_arthropods") as f32;
+    }
+
+    bonus
+}
+
+/// Нежить и членистоногие по имени вида (вики, Smite, Bane of Arthropods):
+/// зачарования оружия бьют по ним сильнее. Виды, которых здесь нет, — ни то
+/// ни другое; при добавлении враждебных мобов список пополняется.
+pub fn mob_traits(kind: &str) -> (bool, bool) {
+    let undead = matches!(kind, "zombie" | "skeleton" | "husk" | "stray" | "drowned" | "zombie_villager" | "zombified_piglin" | "wither_skeleton" | "phantom" | "wither" | "skeleton_horse" | "zombie_horse" | "bogged" | "parched");
+    let arthropod = matches!(kind, "spider" | "cave_spider" | "silverfish" | "endermite" | "bee");
+
+    (undead, arthropod)
+}
+
+/// Сила отдачи от удара сверх обычной (0,4): атрибут `attack_knockback`,
+/// зачарование «отдача» (1 за уровень) и бег (1). Вики, Knockback.
+pub fn extra_knockback(attack_knockback: f64, data: &Data, sprint_bonus: bool) -> f32 {
+    attack_knockback as f32 + data.level("knockback") as f32 + if sprint_bonus { 1.0 } else { 0.0 }
+}
+
+/// Итог удара по цели.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Strike {
+    /// Урон до брони.
+    pub damage: f32,
+    pub crit: bool,
+    /// Рука заряжена выше порога.
+    pub full: bool,
+    pub charge: f32,
+}
+
+/// Считает урон удара: основа умножается на долю заряда, критический удар
+/// (только при полном заряде и `crit_ok`) умножает основу ещё на 1,5, а
+/// прибавка от зачарований масштабируется зарядом (вики, Melee attack).
+pub fn strike(attack_damage: f64, enchant: f32, charge: f32, crit_ok: bool) -> Strike {
+    let full = charge > FULL_CHARGE;
+    let crit = full && crit_ok;
+    let mut base = attack_damage as f32 * base_scale(charge);
+
+    if crit {
+        base *= 1.5;
+    }
+
+    Strike { damage: base + enchant * charge, crit, full, charge }
+}
+
+// ---------------------------------------------------------------------------
+// Броня
+// ---------------------------------------------------------------------------
+
+/// Виды урона, которые броня и её зачарования не смягчают (вики, Armor:
+/// «Armor does not protect against»).
+pub fn bypasses_armor(source: Source) -> bool {
+    matches!(source, Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::InWall | Source::Generic)
+}
+
+/// Урон после брони и твёрдости (вики, Armor): `урон · (1 − min(20,
+/// max(броня/5, броня − урон/(2 + твёрдость/4)))/25)`.
+pub fn after_armor(damage: f32, armor: f32, toughness: f32) -> f32 {
+    let defense = (armor / 5.0).max(armor - damage / (2.0 + toughness / 4.0)).min(20.0);
+
+    damage * (1.0 - defense / 25.0)
+}
+
+/// Очки защиты зачарований (EPF) одной детали от этого урона (вики,
+/// Protection и др.): защита 1 за уровень от всего, что броня смягчает;
+/// огнезащита и взрывоустойчивость и защита от снарядов — по 2 за уровень
+/// от своего; лёгкость падения — 3 за уровень от падения.
+pub fn protection_points(data: &Data, source: Source) -> i32 {
+    let mut points = 0;
+
+    if !bypasses_armor(source) {
+        points += data.level("protection");
+    }
+
+    match source {
+        Source::InFire | Source::Lava | Source::OnFire => points += 2 * data.level("fire_protection"),
+        Source::Explosion => points += 2 * data.level("blast_protection"),
+        Source::Arrow => points += 2 * data.level("projectile_protection"),
+        Source::Fall => points += 3 * data.level("feather_falling"),
+        _ => {}
+    }
+
+    points
+}
+
+/// Урон после зачарований защиты: сумма очков зажимается в 20, каждое очко
+/// снимает 4 % (вики, Armor: «Enchantments»).
+pub fn after_protection(damage: f32, points: i32) -> f32 {
+    damage * (1.0 - points.clamp(0, 20) as f32 / 25.0)
+}
+
+/// Снижение отдачи взрыва и прочего здесь не считается.
+///
+/// Прочность, которую теряет каждая надетая деталь от удара `damage`: 1 за
+/// каждые 4 единицы, не меньше 1 (вики, Armor: «Durability»).
+pub fn armor_wear(damage: f32) -> i32 {
+    ((damage / 4.0) as i32).max(1)
+}
+
+/// Износ предмета с учётом «прочности»: каждая единица урона проходит с
+/// шансом. Инструмент и оружие — 1/(уровень+1); броня — 0,6 + 0,4/(уровень+1)
+/// (вики, Unbreaking). `roll` даёт случайные числа [0; 1).
+pub fn wear(stack: &Stack, amount: i32, armor: bool, mut roll: impl FnMut() -> f32) -> i32 {
+    let level = stack.extras().level("unbreaking");
+
+    if level <= 0 {
+        return amount;
+    }
+
+    let chance = if armor { 0.6 + 0.4 / (level as f32 + 1.0) } else { 1.0 / (level as f32 + 1.0) };
+
+    (0..amount).filter(|_| roll() < chance).count() as i32
+}
+
+/// Добавляет износ. None — предмет сломался (износ дошёл до наибольшего).
+pub fn add_damage(stack: Stack, amount: i32) -> Option<Stack> {
+    let max = max_damage(&stack);
+
+    if max <= 0 || amount <= 0 {
+        return Some(stack);
+    }
+
+    let mut data = stack.extras();
+
+    data.damage += amount;
+
+    if data.damage >= max {
+        return None;
+    }
+
+    Some(stack.with_extras(data))
+}
+
+// ---------------------------------------------------------------------------
+// Отдача
+// ---------------------------------------------------------------------------
+
+/// Скорость цели после отдачи силой `strength` от ударившего в направлении
+/// `(dx, dz)` — от ударившего к цели, единичное. Вики, Knockback: скорость
+/// цели вдвое гасится, вычитается направление · сила; вертикаль на земле —
+/// вдвое гасится и растёт на силу, но не выше 0,4. Стойкость (0…1) ослабляет
+/// силу: `сила · (1 − стойкость)`.
+pub fn knockback_velocity(velocity: (f64, f64, f64), dir: (f64, f64), strength: f64, resistance: f64, on_ground: bool) -> (f64, f64, f64) {
+    let strength = strength * (1.0 - resistance.clamp(0.0, 1.0));
+
+    if strength <= 0.0 {
+        return velocity;
+    }
+
+    let vy = if on_ground { (velocity.1 / 2.0 + strength).min(0.4) } else { velocity.1 };
+
+    (velocity.0 / 2.0 + dir.0 * strength, vy, velocity.2 / 2.0 + dir.1 * strength)
+}
+
+// ---------------------------------------------------------------------------
+// Щит
+// ---------------------------------------------------------------------------
+
+/// Тактов до того, как поднятый щит начинает держать удар: 0,25 с
+/// (компонент `blocks_attacks`, `block_delay_seconds`).
+pub const SHIELD_DELAY: u32 = 5;
+
+/// Угол защиты щита в каждую сторону от взгляда, градусы (вики, Shield:
+/// полукруг перед игроком).
+pub const SHIELD_HALF_ANGLE: f64 = 90.0;
+
+/// Держит ли щит удар из точки `from`: угол между взглядом и направлением
+/// на источник не больше 90° (вики, Shield). `yaw` — взгляд в градусах.
+pub fn shield_covers(yaw: f32, (x, z): (f64, f64), from: (f64, f64)) -> bool {
+    let (dx, dz) = (from.0 - x, from.1 - z);
+    let length = dx.hypot(dz);
+
+    if length < 1.0e-9 {
+        return true;
+    }
+
+    let rad = f64::from(yaw).to_radians();
+    let look = (-rad.sin(), rad.cos());
+    let cos = (look.0 * dx + look.1 * dz) / length;
+
+    cos >= SHIELD_HALF_ANGLE.to_radians().cos() - 1.0e-9
+}
+
+/// Износ щита от заблокированного удара: при уроне не меньше порога 3 —
+/// `1 + 1·урон` (округление вниз), иначе ничего (компонент `blocks_attacks`,
+/// `item_damage`: base 1, factor 1, threshold 3).
+pub fn shield_wear(blocked: f32) -> i32 {
+    if blocked < 3.0 { 0 } else { (1.0 + blocked) as i32 }
+}
+
+// ---------------------------------------------------------------------------
+// Лук
+// ---------------------------------------------------------------------------
+
+/// Сила натяжения по времени в тактах (вики, Bow): `f = t/20`,
+/// `f = (f² + 2f)/3`, не больше 1; меньше 0,1 — выстрела нет.
+pub fn bow_power(ticks: u32) -> f32 {
+    let t = ticks as f32 / 20.0;
+    let power = (t * t + t * 2.0) / 3.0;
+
+    power.min(1.0)
+}
+
+/// Скорость стрелы: 3 блока за такт при полном натяжении (вики, Arrow).
+pub fn arrow_speed(power: f32) -> f64 {
+    f64::from(power) * 3.0
+}
+
+/// Урон стрелы при попадании: `ceil(скорость · (2 + сила·0,5 + 0,5))`, где
+/// сила — уровень «силы» (вики, Arrow, Power: +25 % за уровень + 1 к уровню).
+/// Критическая полностью натянутая стрела добавляет случайные 0…(урон/2 + 1)
+/// (`crit_roll` в [0; 1)). Возвращает дробный урон: округление вверх — у
+/// вызывающего.
+pub fn arrow_damage(speed: f64, power_level: i32, crit: bool, crit_roll: f32) -> f32 {
+    let mut base = 2.0 + if power_level > 0 { 0.5 * power_level as f64 + 0.5 } else { 0.0 };
+
+    base *= speed;
+
+    let mut damage = base.ceil() as f32;
+
+    if crit {
+        damage += (crit_roll * (damage / 2.0 + 2.0)).floor();
+    }
+
+    damage
+}
+
+/// Имя предмета по номеру без пространства имён.
+pub fn item_name(item: i32) -> Option<&'static str> {
+    crate::blocks::item_name(item).map(|name| name.strip_prefix("minecraft:").unwrap_or(name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::attributes::{ARMOR, ARMOR_TOUGHNESS, ATTACK_DAMAGE, ATTACK_SPEED};
+    use crate::stackdata;
+
+    fn stack_of(name: &str) -> Stack {
+        Stack::new(crate::blocks::item_named(name).expect("предмет есть"), 1)
+    }
+
+    #[test]
+    fn a_diamond_sword_in_hand_gives_seven_damage_and_the_wiki_speed() {
+        let mut attributes = Attributes::player();
+        let mut applied = Vec::new();
+        let mut inventory = Inventory::new();
+
+        inventory.set(inventory::FIRST_HOTBAR, Some(stack_of("diamond_sword")));
+        refresh_equipment(&mut attributes, &mut applied, &inventory);
+
+        assert_eq!(attributes.value(ATTACK_DAMAGE), 7.0);
+        assert!((attributes.value(ATTACK_SPEED) - 1.6).abs() < 1e-6);
+
+        // убрали меч — вернулась основа
+        inventory.set(inventory::FIRST_HOTBAR, None);
+        refresh_equipment(&mut attributes, &mut applied, &inventory);
+
+        assert_eq!(attributes.value(ATTACK_DAMAGE), 1.0);
+        assert_eq!(attributes.value(ATTACK_SPEED), 4.0);
+    }
+
+    #[test]
+    fn armor_gives_points_only_in_its_slot() {
+        let mut attributes = Attributes::player();
+        let mut applied = Vec::new();
+        let mut inventory = Inventory::new();
+
+        // нагрудник в руке ничего не даёт
+        inventory.set(inventory::FIRST_HOTBAR, Some(stack_of("diamond_chestplate")));
+        refresh_equipment(&mut attributes, &mut applied, &inventory);
+
+        assert_eq!(attributes.value(ARMOR), 0.0);
+
+        for (name, slot) in [("diamond_helmet", 5), ("diamond_chestplate", 6), ("diamond_leggings", 7), ("diamond_boots", 8)] {
+            inventory.set(slot, Some(stack_of(name)));
+        }
+
+        refresh_equipment(&mut attributes, &mut applied, &inventory);
+
+        assert_eq!(attributes.value(ARMOR), 20.0);
+        assert_eq!(attributes.value(ARMOR_TOUGHNESS), 8.0);
+    }
+
+    #[test]
+    fn custom_modifiers_replace_the_defaults() {
+        let (name, data) = stackdata::parse_item_spec(
+            "diamond_sword[attribute_modifiers=[{type:\"minecraft:attack_damage\",id:\"my:dmg\",amount:20,operation:\"add_value\",slot:\"mainhand\"}]]",
+        )
+        .expect("разобралось");
+        let sword = stack_of(&name).with_extras(data);
+        let mut attributes = Attributes::player();
+        let mut applied = Vec::new();
+        let mut inventory = Inventory::new();
+
+        inventory.set(inventory::FIRST_HOTBAR, Some(sword));
+        refresh_equipment(&mut attributes, &mut applied, &inventory);
+
+        // 1 + 20; скорость осталась основой — своих модификаторов на неё нет
+        assert_eq!(attributes.value(ATTACK_DAMAGE), 21.0);
+        assert_eq!(attributes.value(ATTACK_SPEED), 4.0);
+    }
+
+    #[test]
+    fn the_charge_follows_the_attack_speed() {
+        // мечу нужно 12,5 такта: сразу после удара заряд мал, через 13 — полный
+        assert!(charge(0, 1.6) < 0.05);
+        assert_eq!(charge(13, 1.6), 1.0);
+        // кулаку — 5 тактов
+        assert_eq!(charge(5, 4.0), 1.0);
+        assert!((base_scale(0.0) - 0.2).abs() < 1e-6);
+        assert!((base_scale(1.0) - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn a_full_crit_multiplies_only_the_base_damage() {
+        // меч 7, острота V (+3), полный заряд, крит: 7·1,5 + 3
+        let hit = strike(7.0, 3.0, 1.0, true);
+
+        assert!(hit.crit && hit.full);
+        assert!((hit.damage - 13.5).abs() < 1e-5);
+
+        // не полный заряд — крита нет, и прибавка масштабируется зарядом
+        let weak = strike(7.0, 3.0, 0.5, true);
+
+        assert!(!weak.crit && !weak.full);
+        assert!((weak.damage - (7.0 * 0.4 + 1.5)).abs() < 1e-5);
+    }
+
+    #[test]
+    fn enchant_bonuses_follow_the_wiki() {
+        let mut data = Data::default();
+
+        data.set_enchant(stackdata::enchantment_number("sharpness").unwrap(), 5);
+        data.set_enchant(stackdata::enchantment_number("smite").unwrap(), 2);
+
+        assert_eq!(enchant_bonus(&data, false, false), 3.0);
+        assert_eq!(enchant_bonus(&data, true, false), 8.0);
+        assert_eq!(enchant_bonus(&Data::default(), true, true), 0.0);
+    }
+
+    #[test]
+    fn armor_formula_matches_the_wiki_table() {
+        // алмазная броня (20 / 8): удар 7 — снижение 20 %·… по формуле
+        let reduced = after_armor(7.0, 20.0, 8.0);
+        let defense = 20.0f32 - 7.0 / (2.0 + 2.0);
+
+        assert!((reduced - 7.0 * (1.0 - defense / 25.0)).abs() < 1e-5);
+        assert!(reduced < 7.0);
+        // без брони урон не меняется
+        assert_eq!(after_armor(7.0, 0.0, 0.0), 7.0);
+        // броня 20, урон 10, твёрдости нет: защита max(4, 20 − 10/2) = 15 → 40 % урона
+        assert!((after_armor(10.0, 20.0, 0.0) - 4.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn protection_enchants_cap_at_twenty_points() {
+        assert!((after_protection(10.0, 4) - 8.4).abs() < 1e-5);
+        assert!((after_protection(10.0, 99) - 2.0).abs() < 1e-5);
+
+        let mut data = Data::default();
+
+        data.set_enchant(stackdata::enchantment_number("protection").unwrap(), 4);
+        data.set_enchant(stackdata::enchantment_number("fire_protection").unwrap(), 4);
+
+        assert_eq!(protection_points(&data, Source::PlayerAttack), 4);
+        assert_eq!(protection_points(&data, Source::Lava), 12);
+        assert_eq!(protection_points(&data, Source::Fall), 0);
+    }
+
+    #[test]
+    fn armor_wear_is_a_quarter_of_the_damage_and_at_least_one() {
+        assert_eq!(armor_wear(1.0), 1);
+        assert_eq!(armor_wear(7.9), 1);
+        assert_eq!(armor_wear(8.0), 2);
+        assert_eq!(armor_wear(20.0), 5);
+    }
+
+    #[test]
+    fn tools_wear_out_and_break() {
+        let sword = stack_of("wooden_sword");
+        let max = max_damage(&sword);
+
+        assert_eq!(max, 59);
+
+        let worn = add_damage(sword, 58).expect("ещё цел");
+
+        assert_eq!(worn.extras().damage, 58);
+        assert_eq!(add_damage(worn, 1), None);
+        // то, что не изнашивается, не ломается
+        assert_eq!(add_damage(stack_of("stone"), 5), Some(stack_of("stone")));
+    }
+
+    #[test]
+    fn unbreaking_lowers_the_wear() {
+        let mut data = Data::default();
+
+        data.set_enchant(stackdata::enchantment_number("unbreaking").unwrap(), 3);
+
+        let tool = stack_of("iron_pickaxe").with_extras(data.clone());
+        let boots = stack_of("iron_boots").with_extras(data);
+
+        // всегда 0,5: инструмент (шанс 0,25) не изнашивается, броня (шанс 0,7) — тоже
+        assert_eq!(wear(&tool, 4, false, || 0.5), 0);
+        assert_eq!(wear(&boots, 4, true, || 0.5), 4);
+        assert_eq!(wear(&boots, 4, true, || 0.9), 0);
+        assert_eq!(wear(&stack_of("iron_pickaxe"), 4, false, || 0.99), 4);
+    }
+
+    #[test]
+    fn knockback_halves_the_speed_and_caps_the_lift() {
+        let v = knockback_velocity((0.0, 0.0, 0.0), (0.0, 1.0), 0.4, 0.0, true);
+
+        assert_eq!(v, (0.0, 0.4, 0.4));
+
+        let v = knockback_velocity((0.2, 0.3, 0.0), (1.0, 0.0), 0.4, 0.0, true);
+
+        assert!((v.0 - 0.5).abs() < 1e-9 && (v.1 - 0.4).abs() < 1e-9);
+        // в воздухе вертикаль не трогается
+        assert_eq!(knockback_velocity((0.0, -0.5, 0.0), (0.0, 1.0), 0.4, 0.0, false).1, -0.5);
+        // полная стойкость гасит всё
+        assert_eq!(knockback_velocity((0.1, 0.0, 0.0), (0.0, 1.0), 0.4, 1.0, true), (0.1, 0.0, 0.0));
+    }
+
+    #[test]
+    fn the_shield_covers_the_front_half() {
+        // игрок в нуле смотрит на +z (yaw 0)
+        assert!(shield_covers(0.0, (0.0, 0.0), (0.0, 3.0)));
+        assert!(shield_covers(0.0, (0.0, 0.0), (3.0, 0.0)));
+        assert!(!shield_covers(0.0, (0.0, 0.0), (0.0, -3.0)));
+        // смотрит на -x (yaw 90): источник на +x — позади
+        assert!(!shield_covers(90.0, (0.0, 0.0), (3.0, 0.0)));
+        assert!(shield_covers(90.0, (0.0, 0.0), (-3.0, 0.0)));
+    }
+
+    #[test]
+    fn the_shield_wears_only_from_hard_hits() {
+        assert_eq!(shield_wear(2.9), 0);
+        assert_eq!(shield_wear(3.0), 4);
+        assert_eq!(shield_wear(7.0), 8);
+    }
+
+    #[test]
+    fn the_bow_pulls_like_the_wiki() {
+        assert!((bow_power(20) - 1.0).abs() < 1e-6);
+        assert_eq!(bow_power(40), 1.0);
+        // 10 тактов — треть плюс четверть
+        assert!((bow_power(10) - (0.25 + 1.0) / 3.0).abs() < 1e-6);
+        assert!((arrow_speed(1.0) - 3.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn arrow_damage_scales_with_speed_power_and_crit() {
+        // полный лук: 2·3 = 6
+        assert_eq!(arrow_damage(3.0, 0, false, 0.0), 6.0);
+        // сила I: (2 + 1)·3 = 9
+        assert_eq!(arrow_damage(3.0, 1, false, 0.0), 9.0);
+        // крит добавляет до урона/2 + 2
+        assert_eq!(arrow_damage(3.0, 0, true, 0.0), 6.0);
+        assert_eq!(arrow_damage(3.0, 0, true, 0.99), 6.0 + (0.99f32 * 5.0).floor());
+    }
+}

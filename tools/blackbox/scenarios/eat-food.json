@@ -1,0 +1,32 @@
+{
+ "name": "eat-food",
+ "about": "Выживание: после голода (еда 19) робот ест хлеб: 32 такта, потом еда и насыщение растут, хлеб убывает.",
+ "blocks": [],
+ "inventory": true,
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "effect give $(bot) minecraft:hunger 1 255 true",
+  "give $(bot) minecraft:bread 2",
+  "!wait 40"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  }
+ ],
+ "record_ticks": 70,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true
+}

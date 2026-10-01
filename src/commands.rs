@@ -97,7 +97,47 @@ fn allowed(command: &str, source: &Source, shared: &Shared) -> bool {
     }
 }
 
+/// Убирает пробелы внутри квадратных скобок вне кавычек: запись предмета с
+/// довесками (`iron_sword[enchantments={sharpness:5, knockback:1}]`) должна
+/// остаться одним словом команды.
+fn compact_item_specs(command: &str) -> String {
+    let mut out = String::with_capacity(command.len());
+    let mut depth = 0;
+    let mut quote: Option<char> = None;
+
+    for c in command.chars() {
+        match (quote, c) {
+            (Some(q), c) if c == q => quote = None,
+            (None, '"' | '\'') if depth > 0 => quote = Some(c),
+            (None, '[') => depth += 1,
+            (None, ']') if depth > 0 => depth -= 1,
+            (None, c) if depth > 0 && c.is_whitespace() => continue,
+            _ => {}
+        }
+
+        out.push(c);
+    }
+
+    out
+}
+
+/// Стопка по записи предмета команды (`diamond_sword[damage=5]`): None —
+/// воздух.
+fn stack_from_spec(spec: &str, count: i32) -> Result<Option<crate::inventory::Stack>, String> {
+    let (name, data) = crate::stackdata::parse_item_spec(spec).map_err(|why| format!("Не разобрать предмет {spec}: {why}"))?;
+
+    if name == "air" {
+        return Ok(None);
+    }
+
+    let number = blocks::item_named(&name).ok_or_else(|| format!("Нет такого предмета: {}", spec.split('[').next().unwrap_or(spec)))?;
+
+    Ok(Some(crate::inventory::Stack::new(number, count.min(blocks::stack_size(number))).with_extras(data)))
+}
+
 pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
+    let compact = compact_item_specs(command);
+    let command = compact.as_str();
     let mut parts = command.split_whitespace();
     let name = parts.next().unwrap_or("");
 
@@ -229,15 +269,17 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 return Answer::saying("Что выдать? give <игрок> <предмет> [сколько]".to_string());
             };
 
-            let Some(item) = blocks::item_named(&without_namespace(item_name)) else {
-                return Answer::saying(format!("Нет такого предмета: {}", item_name));
-            };
-
             let count: i32 = parts.next().and_then(|value| value.parse().ok()).unwrap_or(1);
 
             if count <= 0 {
                 return Answer::saying("Сколько выдавать? Число должно быть больше нуля".to_string());
             }
+
+            let stack = match stack_from_spec(item_name, count) {
+                Ok(Some(stack)) => crate::inventory::Stack { count, ..stack },
+                Ok(None) => return Answer::saying(format!("Нет такого предмета: {}", item_name)),
+                Err(why) => return Answer::saying(why),
+            };
 
             let targets = find_targets(named, source, shared);
 
@@ -252,7 +294,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                     .expect("список игроков захвачен другим потоком");
 
                 for (uuid, _) in &targets {
-                    players.order(uuid, Order::Give { stack: crate::inventory::Stack::new(item, count) });
+                    players.order(uuid, Order::Give { stack });
                 }
             }
 
@@ -397,12 +439,18 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
             // Сущности, кроме игроков, — только вагонетки: `tp @e[type=minecart] x y z`.
             match rest.as_slice() {
                 [who, place @ ..] if cart_selector(who).is_some() => teleport_carts(who, place, source, shared),
+                [who, place @ ..] if who.starts_with("@e[") && place.len() == 3 && !who.contains("type=!player") => teleport_mobs(who, place, source, shared),
                 _ => teleport(&rest, source, shared, None),
             }
         }
         "summon" => summon(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "data" => data_command(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "tnt" => custom_tnt(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "kill" => kill(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "difficulty" => difficulty(parts.collect::<Vec<&str>>().as_slice(), shared),
+        "effect" => effect(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "experience" | "xp" => experience(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "gamerule" => gamerule(parts.collect::<Vec<&str>>().as_slice(), shared),
 
         // Как у оригинала: `execute in <измерение> run tp …` — перенос в
         // другое измерение. Другие виды execute пока не разбираются.
@@ -605,6 +653,10 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return summon_item(rest, source, shared);
     }
 
+    if name.strip_prefix("minecraft:").unwrap_or(name) == "experience_orb" {
+        return summon_orb(rest, source, shared);
+    }
+
     if name.strip_prefix("minecraft:").unwrap_or(name) == "lightning_bolt" {
         return summon_lightning(rest, source, shared);
     }
@@ -613,8 +665,12 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return summon_frame(glow == "glow_item_frame", rest, source, shared);
     }
 
+    if let Some(kind) = crate::mob::Kind::from_name(name) {
+        return summon_mob(kind, rest, source, shared);
+    }
+
     let Some(kind) = crate::minecart::Kind::from_name(name) else {
-        return Answer::saying(format!("Пока призываются только вагонетки, предметы и молния, а не {}", name));
+        return Answer::saying(format!("Пока призываются только вагонетки, предметы, рамки, молния, животные (cow, pig, sheep, chicken) и враждебные (zombie, skeleton, creeper, spider), а не {}", name));
     };
     let (place, data) = match rest {
         [] => (Some(origin), None),
@@ -678,6 +734,29 @@ fn summon_item(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
     Answer::saying("Призвана сущность item".to_string())
 }
 
+/// `summon experience_orb <x> <y> <z> {Value:N}` — шарик опыта без толчка;
+/// общий, как у оригинала: его видят и подбирают все рядом (xp.rs).
+fn summon_orb(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let (place, data) = match rest {
+        [x, y, z] => (entity_place(&[*x, *y, *z], origin_of(source, shared)), ""),
+        [x, y, z, data] => (entity_place(&[*x, *y, *z], origin_of(source, shared)), *data),
+        _ => return Answer::saying("Нужно: summon experience_orb <x> <y> <z> {Value:N}".to_string()),
+    };
+    let Some(at) = place else {
+        return Answer::saying("Нужно: summon experience_orb <x> <y> <z> {Value:N}".to_string());
+    };
+    let value = data
+        .split_once("Value:")
+        .map(|(_, tail)| tail.chars().take_while(|c| c.is_ascii_digit() || *c == '-').collect::<String>())
+        .and_then(|digits| digits.parse::<i32>().ok())
+        .unwrap_or(1)
+        .max(0);
+
+    shared.items_in(dimension_of(source, shared)).lock().expect("предметы захвачены другим потоком").add_orb(shared.next_entity_id(), value, at, (0.0, 0.0, 0.0));
+
+    Answer::saying("Призвана сущность experience_orb".to_string())
+}
+
 /// `summon item_frame <x> <y> <z> {Facing:4b,Item:{id:"…",count:1},ItemRotation:2b}`
 /// — рамка в клетке точки. Стороны: 0 — низ, 1 — верх, 2 — север, 3 — юг,
 /// 4 — запад, 5 — восток (вики, Item Frame, «Facing»); по умолчанию юг.
@@ -722,6 +801,170 @@ fn summon_frame(glow: bool, rest: &[&str], source: &Source, shared: &Shared) -> 
     crate::frame::refresh_marks(&mut world, &items);
 
     Answer::saying(format!("Призвана сущность {}", if glow { "glow_item_frame" } else { "item_frame" }))
+}
+
+/// Число после ключа в данных призыва: `Age:-24000`, `Color:3b`.
+fn int_after(data: &str, key: &str) -> Option<i32> {
+    let tail = &data[data.find(key)? + key.len()..];
+    let digits: String = tail.chars().enumerate().take_while(|(index, ch)| ch.is_ascii_digit() || (*index == 0 && *ch == '-')).map(|(_, ch)| ch).collect();
+
+    digits.parse().ok()
+}
+
+/// Признак в данных: `NoAI:1b`, `NoAI:true`, `NoAI:1`.
+fn flag_in(data: &str, key: &str) -> Option<bool> {
+    let tail = &data[data.find(key)? + key.len()..];
+
+    Some(tail.starts_with("1b") || tail.starts_with("true") || tail.starts_with('1'))
+}
+
+/// Правит моба по данным: `NoAI`, `Silent`, `Age`, `Sheared`, `Color`,
+/// `Health`, `Rotation:[yaw,pitch]`.
+fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
+    if let Some(on) = flag_in(data, "NoAI:") {
+        mob.no_ai = on;
+    }
+
+    if let Some(on) = flag_in(data, "Silent:") {
+        mob.silent = on;
+    }
+
+    if let Some(on) = flag_in(data, "Sheared:") {
+        mob.sheared = on;
+    }
+
+    if let Some(age) = int_after(data, "Age:") {
+        mob.age = age;
+    }
+
+    if let Some(color) = int_after(data, "Color:") {
+        mob.color = color.clamp(0, 15) as u8;
+    }
+
+    // Призванный с данными скелет без лука в руке — с луком он только если он
+    // назван в данных (`equipment:{mainhand:{id:"minecraft:bow"}}`).
+    if mob.kind == crate::mob::Kind::Skeleton && !data.is_empty() {
+        mob.h.bow = data.contains("bow");
+    }
+
+    if let Some(on) = flag_in(data, "ignited:") {
+        mob.h.lit = on;
+    }
+
+    // Шлем: `ArmorItems` (четвёртый элемент, голова) или `equipment:{head:…}` (с
+    // 1.21.5): любой «…_helmet».
+    if let Some(at) = data.find("ArmorItems:").or_else(|| data.find("equipment:")) {
+        mob.h.helmet = data[at..].contains("_helmet") || data[at..].contains("_head");
+    }
+
+    if let Some(health) = int_after(data, "Health:") {
+        mob.vitals.health = (health as f32).clamp(0.5, mob.kind.max_health());
+    }
+
+    if let Some(at) = data.find("Rotation:[") {
+        let inner = &data[at + "Rotation:[".len()..];
+        let inner = &inner[..inner.find(']').unwrap_or(inner.len())];
+        let mut numbers = inner.split(',').map(|field| field.trim().trim_end_matches('f').parse::<f32>().ok());
+
+        if let Some(Some(yaw)) = numbers.next() {
+            mob.face(yaw);
+        }
+
+        if let Some(Some(pitch)) = numbers.next() {
+            mob.pitch = pitch;
+        }
+    }
+}
+
+/// `summon cow|pig|sheep|chicken <x> <y> <z> {NoAI:1b,Age:-24000,…}` — животное
+/// ровно в названной точке. У призванного детёныша `Age` отрицательный
+/// (вики, Breeding: «Age: negative for baby»).
+fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let usage = || Answer::saying("Нужно: summon <cow|pig|sheep|chicken|zombie|skeleton|creeper|spider> <x> <y> <z> {NoAI:1b,Age:-24000}".to_string());
+    let origin = origin_of(source, shared);
+
+    let (place, data) = match rest {
+        [] => (Some(origin), ""),
+        [x, y, z] => (entity_place(&[*x, *y, *z], origin), ""),
+        [x, y, z, data] => (entity_place(&[*x, *y, *z], origin), *data),
+        _ => return usage(),
+    };
+
+    let Some(place) = place else {
+        return usage();
+    };
+
+    let mut mob = crate::mob::Mob::new(shared.next_entity_id(), kind, place);
+
+    apply_mob_data(&mut mob, data);
+
+    if kind == crate::mob::Kind::Chicken {
+        mob.egg_timer = 6000 + (mob.entity_id as u32 % 6001) as i32;
+    }
+
+    shared.items_in(dimension_of(source, shared)).lock().expect("предметы захвачены другим потоком").add_mob(mob);
+
+    Answer::saying(format!("Призвана сущность {}", kind.name()))
+}
+
+/// `data merge entity <кто> {NoAI:0b,…}` — правка данных мобов.
+fn data_command(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let ["merge", "entity", who, data] = parts else {
+        return Answer::saying("Нужно: data merge entity @e[type=cow,limit=1] {NoAI:0b}".to_string());
+    };
+
+    let Some(chosen) = Selector::parse(who) else {
+        return Answer::saying("Не понял, кого править".to_string());
+    };
+
+    let (x, y, z) = origin_of(source, shared);
+    let mut left = chosen.limit.unwrap_or(usize::MAX);
+    let mut items = shared.items_in(dimension_of(source, shared)).lock().expect("предметы захвачены другим потоком");
+    let mut changed = 0;
+
+    for mob in items.mobs_mut() {
+        if left > 0 && chosen.takes(mob.kind.name()) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z)) {
+            apply_mob_data(mob, data);
+            // Правка данных — как перезагрузка из NBT: голова смотрит по телу,
+            // клиентам уходят атрибуты (чёрный ящик, cow-physics).
+            mob.head_yaw = mob.yaw;
+            mob.attr_changes += 1;
+            left -= 1;
+            changed += 1;
+        }
+    }
+
+    Answer::saying(format!("Изменено сущностей: {}", changed))
+}
+
+/// `tp @e[type=cow,…] <x> <y> <z>` — перенос мобов: скорость обнуляется.
+fn teleport_mobs(who: &str, place: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let Some(chosen) = Selector::parse(who) else {
+        return Answer::saying("Не понял, кого переносить".to_string());
+    };
+
+    let origin = origin_of(source, shared);
+    let Some((x, y, z)) = entity_place(place, origin) else {
+        return Answer::saying("Нужно: tp @e[type=cow] <x> <y> <z>".to_string());
+    };
+
+    let mut left = chosen.limit.unwrap_or(usize::MAX);
+    let mut items = shared.items_in(dimension_of(source, shared)).lock().expect("предметы захвачены другим потоком");
+    let mut moved = 0;
+
+    for mob in items.mobs_mut() {
+        if left > 0 && chosen.takes(mob.kind.name()) && chosen.reaches(origin, (mob.x, mob.y, mob.z)) {
+            (mob.x, mob.y, mob.z) = (x, y, z);
+            (mob.vx, mob.vy, mob.vz) = (0.0, 0.0, 0.0);
+            mob.on_ground = false;
+            mob.vitals.fall = 0.0;
+            mob.teleports += 1;
+            left -= 1;
+            moved += 1;
+        }
+    }
+
+    Answer::saying(format!("Перенесено сущностей: {}", moved))
 }
 
 /// `NoGravity:1b` (или `true`) в данных призыва: сущность без тяжести.
@@ -784,6 +1027,28 @@ fn item_from_text(text: &str) -> Option<crate::inventory::Stack> {
 /// сундуком лежит её земля, предмета вагонетки нет). [проверить]: разброс
 /// высыпанного.
 fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    // `kill <игрок>` / `kill @s` — убить игрока (вид урона generic_kill).
+    if let Some(who) = parts.first().filter(|who| !who.starts_with("@e")) {
+        let targets = if *who == "@s" {
+            match source {
+                Source::Player { uuid, name } => vec![(*uuid, name.clone())],
+                Source::Console => Vec::new(),
+            }
+        } else {
+            find_targets(who, source, shared)
+        };
+
+        if !targets.is_empty() {
+            let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+            for (uuid, _) in &targets {
+                players.order(uuid, Order::Hurt { amount: f32::MAX, source: crate::survival::Source::GenericKill });
+            }
+
+            return Answer::saying(format!("Убит: {}", names_of(&targets)));
+        }
+    }
+
     let Some(chosen) = parts.first().and_then(|who| Selector::parse(who)) else {
         return Answer::saying("Нужно: kill @e[type=<вид>] — вагонетки, item, tnt, falling_block".to_string());
     };
@@ -828,6 +1093,31 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         picked
     });
 
+    let mut orbs = 0;
+
+    if chosen.takes("experience_orb") {
+        orbs = items.remove_orbs(|orb| {
+            let picked = left > 0 && near((orb.x, orb.y, orb.z));
+
+            left -= usize::from(picked);
+            picked
+        });
+    }
+
+    // Животные погибают, как от урона `generic_kill`: падают набок, роняют
+    // добычу (вики, Commands/kill: сущность умирает).
+    let mut killed_mobs = 0;
+
+    for mob in items.mobs_mut() {
+        if left > 0 && chosen.takes(mob.kind.name()) && near((mob.x, mob.y, mob.z)) && !mob.is_dead() {
+            mob.hurt(f32::MAX, crate::survival::Source::GenericKill, None);
+            left -= 1;
+            killed_mobs += 1;
+        }
+    }
+
+    items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
+
     let bolts = items.remove_bolts(|bolt| {
         let picked = left > 0 && chosen.takes("lightning_bolt") && near((bolt.x, bolt.y, bolt.z));
 
@@ -841,7 +1131,127 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         }
     }
 
-    Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len() + bolts + frames.len()))
+    Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len() + bolts + frames.len() + killed_mobs + orbs))
+}
+
+/// `difficulty <peaceful|easy|normal|hard>` — сложность на ходу.
+fn difficulty(parts: &[&str], shared: &Shared) -> Answer {
+    let level = match parts.first().copied() {
+        Some("peaceful" | "p" | "0") => 0,
+        Some("easy" | "e" | "1") => 1,
+        Some("normal" | "n" | "2") => 2,
+        Some("hard" | "h" | "3") => 3,
+        _ => return Answer::saying("Нужно: difficulty <peaceful|easy|normal|hard>".to_string()),
+    };
+
+    shared.difficulty.store(level, std::sync::atomic::Ordering::Relaxed);
+
+    Answer::saying(format!("Сложность: {}", parts[0]))
+}
+
+/// `effect give <игрок> <эффект> [секунды] [уровень] [скрыть]` и
+/// `effect clear <игрок>`. Считаются голод и насыщение — остальным вредно
+/// не быть [проверить].
+fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let usage = || Answer::saying("Нужно: effect give <игрок> <hunger|saturation> [секунды] [уровень] | effect clear <игрок>".to_string());
+
+    match parts {
+        ["give", who, name, rest @ ..] => {
+            let Some(kind) = crate::survival::EffectKind::from_name(name) else {
+                return Answer::saying(format!("Такого эффекта пока нет: {}", name));
+            };
+            let targets = find_targets(who, source, shared);
+
+            if targets.is_empty() {
+                return Answer::saying("Такого игрока нет на сервере".to_string());
+            }
+
+            let seconds: i32 = rest.first().and_then(|value| value.parse().ok()).unwrap_or(30);
+            let amplifier: i32 = rest.get(1).and_then(|value| value.parse().ok()).unwrap_or(0);
+            let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+            for (uuid, _) in &targets {
+                players.order(uuid, Order::Effect { kind, amplifier: amplifier.clamp(0, 255), ticks: seconds.max(1) * 20 });
+            }
+
+            Answer::saying(format!("Эффект {} наложен: {}", name, names_of(&targets)))
+        }
+        ["clear", who] => {
+            let targets = find_targets(who, source, shared);
+            let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+            for (uuid, _) in &targets {
+                players.order(uuid, Order::ClearEffects);
+            }
+
+            Answer::saying(format!("Эффекты сняты: {}", names_of(&targets)))
+        }
+        _ => usage(),
+    }
+}
+
+/// `experience add|set <игрок> <число> [points|levels]` (и `xp`): опыт игрока.
+fn experience(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let usage = || Answer::saying("Нужно: experience add|set <игрок> <число> [points|levels]".to_string());
+
+    let [action @ ("add" | "set"), who, amount, rest @ ..] = parts else {
+        return usage();
+    };
+    let Ok(amount) = amount.parse::<i32>() else {
+        return usage();
+    };
+    let levels = match rest.first().copied() {
+        None | Some("points") => false,
+        Some("levels") => true,
+        _ => return usage(),
+    };
+    let set = *action == "set";
+
+    if set && amount < 0 {
+        return Answer::saying("Значение не может быть отрицательным".to_string());
+    }
+
+    let targets = find_targets(who, source, shared);
+
+    if targets.is_empty() {
+        return Answer::saying("Такого игрока нет на сервере".to_string());
+    }
+
+    let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+    for (uuid, _) in &targets {
+        players.order(uuid, Order::Experience { set, amount, levels });
+    }
+
+    Answer::saying(format!("Опыт изменён: {}", names_of(&targets)))
+}
+
+/// `gamerule <правило> [значение]`: настоящим считается `keepInventory`,
+/// остальные правила принимаются и молча игнорируются.
+fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
+    match parts {
+        ["keepInventory" | "keep_inventory", value] => {
+            let on = *value == "true";
+
+            shared.keep_inventory.store(on, std::sync::atomic::Ordering::Relaxed);
+
+            Answer::saying(format!("Правило keepInventory: {}", value))
+        }
+        // 26.1: `spawn_mobs` (прежнее doMobSpawning) — появляются ли животные
+        // сами в новых чанках.
+        ["spawn_mobs" | "doMobSpawning", value] => {
+            shared.spawn_mobs.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+
+            Answer::saying(format!("Правило spawn_mobs: {}", value))
+        }
+        ["natural_health_regeneration" | "naturalRegeneration", value] => {
+            shared.natural_regeneration.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+
+            Answer::saying(format!("Правило natural_health_regeneration: {}", value))
+        }
+        [rule, value] => Answer::saying(format!("Правило {}: {}", rule, value)),
+        _ => Answer::saying("Нужно: gamerule <правило> <значение>".to_string()),
+    }
 }
 
 /// Выбор сущностей `@e[…]` для `kill`.
@@ -927,11 +1337,6 @@ fn teleport_carts(who: &str, place: &[&str], source: &Source, shared: &Shared) -
     }
 
     Answer::saying(format!("Перенесено сущностей: {}", ids.len()))
-}
-
-/// Имя предмета без «minecraft:» — писать его каждый раз незачем.
-fn without_namespace(name: &str) -> String {
-    name.strip_prefix("minecraft:").unwrap_or(name).to_string()
 }
 
 /// Ники через запятую — для ответов.
@@ -1151,15 +1556,9 @@ fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) 
             },
             _ => return usage(),
         };
-        let name = thing.strip_prefix("minecraft:").unwrap_or(thing);
-        let stack = if name == "air" {
-            None
-        } else {
-            let Some(number) = blocks::item_named(name) else {
-                return Answer::saying(format!("Не знаю такого предмета: {}", thing));
-            };
-
-            Some(crate::inventory::Stack::new(number, count.min(blocks::stack_size(number))))
+        let stack = match stack_from_spec(thing, count) {
+            Ok(stack) => stack,
+            Err(why) => return Answer::saying(why),
         };
         let targets = find_targets(named, source, shared);
 
@@ -1242,6 +1641,11 @@ fn item_entity(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         (Some(n), _, _) if (0..9).contains(&n) => crate::inventory::FIRST_HOTBAR + n,
         (_, Some(n), _) if (0..27).contains(&n) => crate::inventory::FIRST_MAIN + n,
         (_, _, "weapon.offhand") => crate::inventory::OFFHAND,
+        // Броня: места окна игрока 5–8 (шлем, нагрудник, штаны, ботинки).
+        (_, _, "armor.head") => 5,
+        (_, _, "armor.chest") => 6,
+        (_, _, "armor.legs") => 7,
+        (_, _, "armor.feet") => 8,
         _ => return usage(),
     };
     // Основная рука — выбранная ячейка панели: её номер знает только
@@ -1256,15 +1660,9 @@ fn item_entity(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         _ => return usage(),
     };
 
-    let name = thing.strip_prefix("minecraft:").unwrap_or(thing);
-    let stack = if name == "air" {
-        None
-    } else {
-        let Some(item) = blocks::item_named(name) else {
-            return Answer::saying(format!("Не знаю такого предмета: {}", thing));
-        };
-
-        Some(crate::inventory::Stack::new(item, count.min(blocks::stack_size(item))))
+    let stack = match stack_from_spec(thing, count) {
+        Ok(stack) => stack,
+        Err(why) => return Answer::saying(why),
     };
 
     let targets = find_targets(named, source, shared);
@@ -1641,6 +2039,19 @@ fn game_mode_name(mode: i32) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn item_specs_stay_one_word_and_carry_their_components() {
+        assert_eq!(compact_item_specs("give a iron_sword[enchantments={sharpness:5, knockback:1}] 1"), "give a iron_sword[enchantments={sharpness:5,knockback:1}] 1");
+        assert_eq!(compact_item_specs("say [a b] c"), "say [ab] c");
+
+        let stack = stack_from_spec("minecraft:diamond_sword[damage=3,enchantments={sharpness:2}]", 1).expect("разобралось").expect("не воздух");
+
+        assert_eq!(stack.extras().damage, 3);
+        assert_eq!(stack.extras().level("sharpness"), 2);
+        assert!(stack_from_spec("nope", 1).is_err());
+        assert_eq!(stack_from_spec("air", 1), Ok(None));
+    }
     use crate::players::{Member, Position};
     use crate::world::World;
     use std::path::PathBuf;
@@ -2047,6 +2458,28 @@ mod tests {
 
 
     #[test]
+    fn difficulty_and_keep_inventory_are_runtime_settings() {
+        let shared = server();
+
+        run("difficulty hard", &Source::Console, &shared);
+        assert_eq!(shared.difficulty.load(std::sync::atomic::Ordering::Relaxed), 3);
+
+        run("difficulty peaceful", &Source::Console, &shared);
+        assert_eq!(shared.difficulty.load(std::sync::atomic::Ordering::Relaxed), 0);
+
+        run("gamerule keepInventory true", &Source::Console, &shared);
+        assert!(shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed));
+    }
+
+    #[test]
+    fn effect_names_are_checked() {
+        let shared = server();
+
+        assert!(run("effect give nobody minecraft:poison", &Source::Console, &shared).reply.contains("нет"));
+        assert!(run("effect give nobody minecraft:hunger 1 255 true", &Source::Console, &shared).reply.contains("нет на сервере"));
+    }
+
+    #[test]
     fn kill_removes_the_chosen_entities_within_reach() {
         let shared = server();
         let stack = crate::inventory::Stack::new(1, 1);
@@ -2109,6 +2542,112 @@ mod tests {
         assert!(run("fill 0 0 0 100 100 100 stone", &Source::Console, &shared)
             .reply
             .contains("Слишком много"));
+    }
+
+    /// Враждебные призываются командой: скелет без данных — с луком, с данными —
+    /// только если лук назван; шлем и `ignited` разбираются; `kill` берёт их по виду.
+    #[test]
+    fn hostile_mobs_are_summoned_with_their_data() {
+        let shared = server();
+
+        assert!(run("summon zombie 1 64 2 {NoAI:1b,equipment:{head:{id:\"minecraft:iron_helmet\",count:1}}}", &Source::Console, &shared).reply.contains("zombie"));
+        assert!(run("summon skeleton 3 64 2", &Source::Console, &shared).reply.contains("skeleton"));
+        assert!(run("summon skeleton 5 64 2 {Silent:1b}", &Source::Console, &shared).reply.contains("skeleton"));
+        assert!(run("summon skeleton 7 64 2 {equipment:{mainhand:{id:\"minecraft:bow\",count:1}}}", &Source::Console, &shared).reply.contains("skeleton"));
+        assert!(run("summon creeper 9 64 2 {ignited:1b,NoAI:1b}", &Source::Console, &shared).reply.contains("creeper"));
+        assert!(run("summon spider 11 64 2", &Source::Console, &shared).reply.contains("spider"));
+
+        {
+            let items = shared.items_in(Dimension::Overworld).lock().expect("предметы");
+            let mobs = items.mobs();
+
+            assert_eq!(mobs.len(), 6);
+            assert!(mobs[0].h.helmet && mobs[0].no_ai && !mobs[1].h.helmet);
+            assert!(mobs[1].h.bow, "без данных — с луком");
+            assert!(!mobs[2].h.bow, "с данными без лука — без лука");
+            assert!(mobs[3].h.bow);
+            assert!(mobs[4].h.lit);
+            assert_eq!(mobs[5].kind, crate::mob::Kind::Spider);
+        }
+
+        assert_eq!(run("kill @e[type=skeleton]", &Source::Console, &shared).reply, "Убрано сущностей: 3");
+    }
+
+    /// Животные призываются по вики: NoAI, Age, Silent, Sheared, Color,
+    /// Health, Rotation — и правятся `data merge`; `tp` и `kill` берут их
+    /// по виду и досягаемости.
+    #[test]
+    fn mobs_are_summoned_edited_moved_and_killed() {
+        let shared = server();
+        let overworld = Dimension::Overworld;
+
+        assert!(run("summon cow 1 64 2 {NoAI:1b,Silent:1b,Age:-500,Health:6}", &Source::Console, &shared).reply.contains("cow"));
+        assert!(run("summon sheep 3 64 2 {Sheared:1b,Color:11b,Rotation:[90f,10f]}", &Source::Console, &shared).reply.contains("sheep"));
+        assert!(run("summon chicken 5 64 2", &Source::Console, &shared).reply.contains("chicken"));
+        assert!(run("summon pig 7 64 2 {NoAI:true}", &Source::Console, &shared).reply.contains("pig"));
+
+        {
+            let items = shared.items_in(overworld).lock().expect("предметы");
+            let mobs = items.mobs();
+
+            assert_eq!(mobs.len(), 4);
+            assert_eq!((mobs[0].kind, mobs[0].no_ai, mobs[0].silent, mobs[0].age), (crate::mob::Kind::Cow, true, true, -500));
+            assert_eq!(mobs[0].vitals.health, 6.0);
+            assert_eq!((mobs[0].x, mobs[0].y, mobs[0].z), (1.5, 64.0, 2.5), "целые x и z — середина блока");
+            assert_eq!((mobs[1].sheared, mobs[1].color, mobs[1].yaw, mobs[1].pitch), (true, 11, 90.0, 10.0));
+            assert!(!mobs[1].no_ai);
+            assert!(mobs[2].egg_timer >= 6000, "курице назначен срок яйца");
+            assert!(mobs[3].no_ai, "NoAI:true тоже разбирается");
+        }
+
+        // Правка: NoAI выключен только у одного, счёт правок растёт.
+        let reply = run("data merge entity @e[type=cow,limit=1] {NoAI:0b}", &Source::Console, &shared).reply;
+
+        assert_eq!(reply, "Изменено сущностей: 1");
+
+        {
+            let items = shared.items_in(overworld).lock().expect("предметы");
+
+            assert!(!items.mobs()[0].no_ai);
+            assert_eq!(items.mobs()[0].attr_changes, 1);
+            assert!(items.mobs()[3].no_ai);
+        }
+
+        // Перенос: скорость и падение сброшены, клиентам нужен перенос целиком.
+        assert_eq!(run("tp @e[type=pig] 9 70 9", &Source::Console, &shared).reply, "Перенесено сущностей: 1");
+
+        {
+            let items = shared.items_in(overworld).lock().expect("предметы");
+
+            assert_eq!((items.mobs()[3].x, items.mobs()[3].y, items.mobs()[3].z), (9.5, 70.0, 9.5));
+            assert_eq!(items.mobs()[3].teleports, 1);
+        }
+
+        // Убить: погибают, а не пропадают; добыча падает предметами.
+        assert_eq!(run("kill @e[type=sheep]", &Source::Console, &shared).reply, "Убрано сущностей: 1");
+
+        {
+            let items = shared.items_in(overworld).lock().expect("предметы");
+
+            assert!(items.mobs()[1].is_dead(), "овца падает набок, а не исчезает");
+            assert!(items.items().iter().any(|item| blocks::item_name(item.stack.item) == Some("mutton")), "выпала добыча овцы (остриженная — без шерсти)");
+        }
+
+        // Неведомый вид и нехватка чисел — понятный ответ.
+        assert!(run("summon cow 1 2", &Source::Console, &shared).reply.contains("Нужно"));
+        assert!(run("summon horse 1 2 3", &Source::Console, &shared).reply.contains("Пока"));
+    }
+
+    /// Правило `spawn_mobs` (26.1) выключает появление в новых чанках.
+    #[test]
+    fn spawn_mobs_rule_is_a_runtime_setting() {
+        let shared = server();
+
+        assert!(shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed));
+        run("gamerule spawn_mobs false", &Source::Console, &shared);
+        assert!(!shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed));
+        run("gamerule spawn_mobs true", &Source::Console, &shared);
+        assert!(shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed));
     }
 
     /// Предмет для `summon item` берётся из поля Item; прочее пропускается.

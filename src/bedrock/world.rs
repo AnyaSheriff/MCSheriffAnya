@@ -13,6 +13,7 @@ use tokio::sync::mpsc;
 
 use super::codec::{In, Out};
 use super::containers as screens;
+use super::health;
 use super::session::{self, Connection, Identity};
 use super::inventory::Bag;
 use super::skin;
@@ -46,6 +47,8 @@ fn sub_chunks(dimension: Dimension) -> (i32, usize) {
     match dimension {
         Dimension::Overworld => (-4, 24),
         Dimension::Nether => (0, 8),
+        // Энд у Bedrock — от 0 до 256: 16 подчанков (minecraft.wiki, The End).
+        Dimension::End => (0, 16),
     }
 }
 
@@ -61,6 +64,7 @@ fn bedrock_dimension(dimension: Dimension) -> i32 {
     match dimension {
         Dimension::Overworld => 0,
         Dimension::Nether => 1,
+        Dimension::End => 2,
     }
 }
 
@@ -68,6 +72,10 @@ fn bedrock_dimension(dimension: Dimension) -> i32 {
 /// таблице minecraft.wiki (Biome ID, Bedrock Edition): им считается место
 /// Незера, биом которого не нашёлся в таблице.
 const NETHER_WASTES: u32 = 8;
+
+/// Биом Энда у Bedrock — «the_end», номер 9 (minecraft.wiki, Biome ID,
+/// Bedrock Edition).
+const THE_END: u32 = 9;
 
 /// Сколько ждать подтверждения перехода в другое измерение (в тактах): не
 /// пришло — переход считается законченным и так.
@@ -121,6 +129,9 @@ const START_FLYING: u128 = 1 << 42;
 /// Бит «приседает» во вводе игрока (InputFlag, описание протокола).
 const SNEAKING: u128 = 1 << 8;
 const VERTICAL_COLLISION: u128 = 1 << 50;
+
+/// Бит «бежит» во вводе (InputFlag «Sprinting») [проверить].
+const SPRINTING: u128 = 1 << 20;
 
 /// Сетевой номер Bedrock для состояния Java.
 pub fn bedrock_state(java: i32) -> u32 {
@@ -237,6 +248,15 @@ pub struct BedrockWorld {
     /// Где клиент видит вагонетки: чтобы слать движение, только когда
     /// вагонетка сдвинулась.
     carts_at: HashMap<i32, (f32, f32, f32, f32)>,
+
+    /// Где клиент видит мобов: место, поворот тела и головы, наклон.
+    mobs_at: HashMap<i32, [f32; 6]>,
+
+    /// Где клиент видит стрелы (mob-стрелка: arrow.rs): место и поворот.
+    arrows_at: HashMap<i32, [f32; 6]>,
+    /// Где клиент видит блоки рамок (номер сущности рамки у Java → клетка):
+    /// чтобы убрать блок, когда рамка ушла.
+    frames_at: HashMap<i32, (i32, i32, i32)>,
     /// Такт сервера, когда игрок последний раз ударил: сила удара растёт
     /// с перезарядкой руки, как у Java.
     last_attack: u64,
@@ -288,6 +308,8 @@ pub struct BedrockWorld {
     /// Блок, по которому последний щелчок сработал как действие (рычаг,
     /// сундук): повторы щелчка по нему, пока кнопка зажата, пропускаются.
     last_use: Option<(i32, i32, i32)>,
+    /// Здоровье, еда, падение, смерть (health.rs).
+    health: health::Health,
 }
 
 /// Окно хранилища, открытое у клиента. Его ячейки, какими их знает клиент,
@@ -317,6 +339,7 @@ impl BedrockWorld {
         let game_mode = saved.as_ref().map_or(crate::commands::GAME_MODE_CREATIVE, |data| data.game_mode);
         let bag = Bag::new(saved.as_ref().map(|data| data.inventory.clone()).unwrap_or_else(crate::inventory::Inventory::new));
 
+        let health = health::Health::new(saved.as_ref().map(|data| &data.vitals));
         let entity_id = shared.next_entity_id();
         let runtime_id = entity_id as u64;
         let position = (spawn.0 as f32, spawn.1 as f32 + EYES, spawn.2 as f32);
@@ -503,6 +526,9 @@ impl BedrockWorld {
             items_from,
             items_shown: HashSet::new(),
             carts_at: HashMap::new(),
+            mobs_at: HashMap::new(),
+            arrows_at: HashMap::new(),
+            frames_at: HashMap::new(),
             last_attack: 0,
             radius: START_RADIUS,
             sent: HashSet::new(),
@@ -529,6 +555,7 @@ impl BedrockWorld {
             next_window: 0,
             lids: HashMap::new(),
             last_use: None,
+            health,
         };
 
         player.radius = player.radius.min(player.max_radius());
@@ -547,7 +574,7 @@ impl BedrockWorld {
         packets.push(available_commands(may_tnt));
         packets.push(abilities(runtime_id, game_mode));
         packets.push(own_entity_data(runtime_id));
-        packets.push(own_attributes(runtime_id));
+        packets.push(health::attributes(runtime_id, &player.health.vit));
         packets.push(status.bytes);
         connection.send(&packets);
 
@@ -684,8 +711,20 @@ impl BedrockWorld {
                 const CHANGE_DIMENSION_ACK: i32 = 14;
                 let mut reader = In::new(payload);
 
-                if reader.varint64().is_some() && reader.zigzag32() == Some(CHANGE_DIMENSION_ACK) {
-                    self.finish_change(connection, "подтвердил переход");
+                if reader.varint64().is_some() {
+                    match reader.zigzag32() {
+                        Some(CHANGE_DIMENSION_ACK) => self.finish_change(connection, "подтвердил переход"),
+                        Some(health::ACTION_RESPAWN) => self.respawn(connection),
+                        _ => {}
+                    }
+                }
+            }
+            // Respawn от клиента: «готов появиться» — после экрана смерти.
+            health::RESPAWN => {
+                let mut reader = In::new(payload);
+
+                if reader.lf32().is_some() && reader.lf32().is_some() && reader.lf32().is_some() && reader.u8() == Some(health::STATE_CLIENT_READY) {
+                    self.respawn(connection);
                 }
             }
             // Экран загрузки (ServerboundLoadingScreenPacket, r/26_u1): тип —
@@ -768,6 +807,13 @@ impl BedrockWorld {
 
         for order in orders {
             match order {
+                crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
+                crate::players::Order::Respawn => {}
+                // Опыт у Bedrock пока не считается [проверить].
+                crate::players::Order::Experience { .. } | crate::players::Order::XpTaken { .. } => {}
+                // Эффекты голода и насыщения считаются, значка у Bedrock пока нет [проверить].
+                crate::players::Order::Effect { kind, amplifier, ticks } => self.health.vit.give_effect(kind, amplifier, ticks),
+                crate::players::Order::ClearEffects => self.health.vit.effects.clear(),
                 crate::players::Order::Kick { reason } => {
                     let mut disconnect = Out::packet(session::DISCONNECT);
                     disconnect.zigzag32(0).bool(false).string(&reason).string("");
@@ -837,6 +883,7 @@ impl BedrockWorld {
         }
 
         self.position = target;
+        self.health.vit.fall = 0.0;
         self.teleport = Some(Teleporting { target, since: self.ticks });
         self.publish_position();
         packets.push(teleport_packet(self.runtime_id, target, self.rotation, TELEPORT_BY_COMMAND));
@@ -891,6 +938,7 @@ impl BedrockWorld {
         self.sent.clear();
         self.loading.clear();
         self.lids.clear();
+        self.frames_at.clear();
         self.published = None;
         self.in_portal = 0;
         self.portal_ready = false;
@@ -992,7 +1040,12 @@ impl BedrockWorld {
         }
 
         self.in_portal += 1;
-        let needed = crate::portal::wait(&self.shared.settings, self.creative());
+        let end_portal = crate::portal::standing_in_end_portal(
+            &self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком"),
+            feet,
+        );
+        // В портале Края ждать не надо.
+        let needed = if end_portal { 1 } else { crate::portal::wait(&self.shared.settings, self.creative()) };
 
         if self.in_portal < needed {
             return;
@@ -1059,9 +1112,41 @@ impl BedrockWorld {
             let carts: Vec<(i32, (f32, f32, f32, f32))> =
                 items.carts().iter().map(|cart| (cart.entity_id, cart_place(cart))).collect();
 
-            (changes, carts)
+            // Рамки, о которых журнал что-то говорит: клиенту уходит их
+            // нынешнее состояние целиком, а не по кусочкам.
+            let touched: Vec<i32> = changes
+                .iter()
+                .filter_map(|change| match change {
+                    crate::items::Change::Frame(frame) => Some(frame.entity_id),
+                    crate::items::Change::FrameItem { entity_id, .. } | crate::items::Change::FrameRotation { entity_id, .. } => Some(*entity_id),
+                    _ => None,
+                })
+                .collect();
+            let frames: Vec<crate::frame::Frame> = if touched.is_empty() {
+                Vec::new()
+            } else {
+                items.frames().iter().filter(|frame| touched.contains(&frame.entity_id)).cloned().collect()
+            };
+
+            let range = f64::from(self.shared.properties.view_distance.clamp(2, 10)) * 16.0;
+            let mobs: Vec<(i32, crate::mob::Kind, bool, [f32; 6])> = items
+                .mobs()
+                .iter()
+                .filter(|mob| (mob.x - f64::from(self.position.0)).abs() <= range && (mob.z - f64::from(self.position.2)).abs() <= range)
+                .map(|mob| (mob.entity_id, mob.kind, mob.is_baby(), [mob.x as f32, mob.y as f32, mob.z as f32, mob.yaw, mob.pitch, mob.head_yaw]))
+                .collect();
+
+            let arrows: Vec<(i32, [f32; 6], [f32; 3])> = items
+                .arrows()
+                .iter()
+                .filter(|arrow| (arrow.x - f64::from(self.position.0)).abs() <= range && (arrow.z - f64::from(self.position.2)).abs() <= range)
+                .map(|arrow| (arrow.entity_id, [arrow.x as f32, arrow.y as f32, arrow.z as f32, -arrow.yaw, -arrow.pitch, -arrow.yaw], [arrow.vx as f32, arrow.vy as f32, arrow.vz as f32]))
+                .collect();
+
+            (changes, carts, frames, (mobs, arrows))
         };
-        let (changes, carts) = changes;
+        let (changes, carts, frames, (mobs, arrows)) = changes;
+        let mut vanished = Vec::new();
 
         slots.sort_unstable();
         slots.dedup();
@@ -1088,14 +1173,24 @@ impl BedrockWorld {
                 // [проверить]: качание ударенной вагонетки у Bedrock не
                 // показываем.
                 crate::items::Change::Dropped(_) | crate::items::Change::Fuse { .. } => {}
-                // Рамки у Bedrock — блоки с данными, не сущности; здесь не
-                // показываются. [проверить]
-                crate::items::Change::Frame(_)
-                | crate::items::Change::FrameItem { .. }
-                | crate::items::Change::FrameRotation { .. }
-                | crate::items::Change::FrameSound { .. } => {}
+                // Рамки у Bedrock — блоки с данными (bedrock/frames.rs):
+                // клиент получает блок и блок-актор, когда рамка появилась
+                // или сменилась (предмет, поворот). Звук рамки клиент играет
+                // сам по блоку. [проверить]
+                crate::items::Change::Frame(_) | crate::items::Change::FrameItem { .. } | crate::items::Change::FrameRotation { .. } => {}
+                crate::items::Change::FrameSound { .. } => {}
+                // Удары, смерть и голоса мобов клиент Bedrock пока не получает:
+                // мобы для него показываются и двигаются, но молча. [проверить]
+                crate::items::Change::MobEvent { .. } => {}
+                // Шарики опыта Bedrock пока не показываются [проверить].
+                crate::items::Change::Orb(_) => {}
                 crate::items::Change::Gone { entity_id } => {
                     self.carts_at.remove(&entity_id);
+                    self.mobs_at.remove(&entity_id);
+
+                    if let Some(place) = self.frames_at.remove(&entity_id) {
+                        vanished.push(place);
+                    }
 
                     if self.items_shown.remove(&entity_id) {
                         packets.push(remove_entity(entity_id));
@@ -1113,6 +1208,79 @@ impl BedrockWorld {
         }
 
         self.move_carts(carts, packets);
+        self.show_mobs(mobs, packets);
+        self.show_arrows(arrows, packets);
+
+        // Рамки: блок и блок-актор — в тех чанках, что клиент уже получил.
+        for frame in frames {
+            if self.sent.contains(&(frame.pos.0 >> 4, frame.pos.2 >> 4)) && heights(self.dimension).contains(&frame.pos.1) {
+                self.frames_at.insert(frame.entity_id, frame.pos);
+                packets.extend(super::frames::show(&frame));
+            }
+        }
+
+        // Ушедшая рамка — на её месте снова то, что лежит в мире.
+        if !vanished.is_empty() {
+            let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+
+            packets.extend(self.restore(&world, &vanished));
+        }
+    }
+
+    /// Мобы: вошедшие в дальность появляются (Add Actor), сдвинувшиеся —
+    /// переносом, ушедшие — убираются. Голоса и удары Bedrock пока не
+    /// получает [проверить]: AddActor с `minecraft:cow` и прочими показывает
+    /// нужную модель; детёныш и цвет овцы — без данных сущности.
+    fn show_mobs(&mut self, mobs: Vec<(i32, crate::mob::Kind, bool, [f32; 6])>, packets: &mut Vec<Vec<u8>>) {
+        let present: HashSet<i32> = mobs.iter().map(|(id, ..)| *id).collect();
+        let gone: Vec<i32> = self.mobs_at.keys().filter(|id| !present.contains(id)).copied().collect();
+
+        for entity_id in gone {
+            self.mobs_at.remove(&entity_id);
+
+            if self.items_shown.remove(&entity_id) {
+                packets.push(remove_entity(entity_id));
+            }
+        }
+
+        for (entity_id, kind, _baby, place) in mobs {
+            match self.mobs_at.insert(entity_id, place) {
+                None => {
+                    packets.push(add_mob(entity_id, kind, place));
+                    self.items_shown.insert(entity_id);
+                }
+                Some(before) if before != place => packets.push(move_mob(entity_id, place)),
+                Some(_) => {}
+            }
+        }
+    }
+
+    /// Стрелы: вошедшие в дальность появляются (Add Actor `minecraft:arrow` со
+    /// скоростью), летящие — переносом каждый такт, ушедшие и попавшие —
+    /// убираются. Поворот берётся с противоположным знаком: у снарядов угол
+    /// Java считается иначе, чем у мобов [проверить на живом клиенте].
+    fn show_arrows(&mut self, arrows: Vec<(i32, [f32; 6], [f32; 3])>, packets: &mut Vec<Vec<u8>>) {
+        let present: HashSet<i32> = arrows.iter().map(|(id, ..)| *id).collect();
+        let gone: Vec<i32> = self.arrows_at.keys().filter(|id| !present.contains(id)).copied().collect();
+
+        for entity_id in gone {
+            self.arrows_at.remove(&entity_id);
+
+            if self.items_shown.remove(&entity_id) {
+                packets.push(remove_entity(entity_id));
+            }
+        }
+
+        for (entity_id, place, motion) in arrows {
+            match self.arrows_at.insert(entity_id, place) {
+                None => {
+                    packets.push(add_arrow(entity_id, place, motion));
+                    self.items_shown.insert(entity_id);
+                }
+                Some(before) if before != place => packets.push(move_mob(entity_id, place)),
+                Some(_) => {}
+            }
+        }
     }
 
     /// Вагонетки, которые сдвинулись, — переносом (Move Entity). Шлём, когда
@@ -1129,6 +1297,104 @@ impl BedrockWorld {
         }
     }
 
+    /// Выживание и приключение: урон и голод работают.
+    fn mortal(&self) -> bool {
+        self.game_mode == crate::commands::GAME_MODE_SURVIVAL || self.game_mode == crate::commands::GAME_MODE_ADVENTURE
+    }
+
+    /// Движение клиента для здоровья: падение и изнурение. Среда — по блокам
+    /// у ног (вода, паутина, лестница гасят падение; сено, кровать смягчают).
+    fn track_health(&mut self, dy: f64, run: f64, was_on_ground: bool) {
+        if !self.mortal() || self.health.vit.dead || self.changing.is_some() {
+            return;
+        }
+
+        let (x, y, z) = (self.position.0, self.position.1 - EYES, self.position.2);
+        let (soft, multiplier) = {
+            let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+            let feet = world.get_block(x.floor() as i32, y.floor() as i32, z.floor() as i32);
+            let below = world.get_block(x.floor() as i32, (y - 0.2).floor() as i32, z.floor() as i32);
+            let soft = crate::fluids::fluid_at(feet).is_some() || crate::blocks::block_at_state(feet).is_some_and(crate::survival::soft_block);
+
+            (soft, crate::blocks::block_at_state(below).map_or(1.0, crate::survival::landing_multiplier))
+        };
+
+        self.health.moved(dy, self.on_ground, run, was_on_ground && !self.on_ground && dy > 0.0, soft, multiplier);
+    }
+
+    /// Такт здоровья: удары, голод, атрибуты; смерть.
+    fn tick_health(&mut self, packets: &mut Vec<Vec<u8>>) {
+        if self.changing.is_some() {
+            return;
+        }
+
+        let difficulty = self.shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
+        let mortal = self.mortal();
+        let immune = self.game_mode == crate::commands::GAME_MODE_CREATIVE || self.game_mode == crate::commands::GAME_MODE_SPECTATOR;
+        let feet_y = self.position.1 - EYES;
+        let outcome = self.health.tick(self.runtime_id, mortal, immune, difficulty, feet_y);
+
+        packets.extend(outcome.packets);
+
+        if let Some(source) = outcome.died {
+            self.die(packets, source);
+        }
+    }
+
+    /// Смерть: сообщение, вещи на землю, экран смерти у клиента.
+    fn die(&mut self, packets: &mut Vec<Vec<u8>>, source: crate::survival::Source) {
+        let name = self.identity.name.clone();
+
+        packets.push(health::death_event(self.runtime_id));
+        packets.push(health::death_info(source, &name));
+
+        let text = crate::survival::death_text(source, &name);
+
+        log_info!("{}", text);
+        self.shared.chat.lock().expect("чат захвачен другим потоком").push_hidden(text, Some(self.identity.uuid));
+
+        // Вещи падают, если не включено `keepInventory`.
+        if !self.shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed) {
+            for slot in 0..crate::inventory::SLOTS as i32 {
+                if let Some(stack) = self.bag.inventory.slot(slot) {
+                    self.throw_out(stack);
+                    self.bag.inventory.set(slot, None);
+                }
+            }
+
+            packets.extend(self.bag.content_packets());
+        }
+
+        self.health.vit.dead = true;
+    }
+
+    /// Клиент нажал «возродиться»: к точке возрождения, здоровье заново.
+    fn respawn(&mut self, connection: &Connection) {
+        if !self.health.vit.dead || self.changing.is_some() {
+            return;
+        }
+
+        self.health.respawned();
+
+        let spawn = self.shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком").spawn_position();
+        let (x, y, z) = crate::network::play::on_the_ground(&self.shared, spawn);
+        let mut packets = Vec::new();
+
+        if self.dimension == Dimension::Overworld {
+            self.teleport_to(connection, &mut packets, (x, y, z));
+        } else {
+            self.change_dimension(connection, &mut packets, Dimension::Overworld, (x, y, z));
+        }
+
+        let eyes = (x as f32, y as f32 + EYES, z as f32);
+        let mut answer = vec![health::respawn_packet(eyes, health::STATE_READY, self.runtime_id), health::attributes(self.runtime_id, &self.health.vit)];
+
+        answer.push(abilities(self.runtime_id, self.game_mode));
+        connection.send(&answer);
+        self.save_if_changed();
+        log_info!("{} (Bedrock) возродился", self.identity.name);
+    }
+
     /// Творческий режим: полёт, мгновенное ломание, меню предметов.
     fn creative(&self) -> bool {
         self.game_mode == crate::commands::GAME_MODE_CREATIVE
@@ -1141,6 +1407,11 @@ impl BedrockWorld {
             "Bedrock: {} — действие {} по {:?}, грань {}, в руке {:?}",
             self.identity.name, action.kind, action.position, action.face, action.held
         );
+
+        // Рамка в этой клетке — свои действия (у Java это сущность, тут блок).
+        if self.use_frame(connection, &action) {
+            return;
+        }
 
         let kind = match action.kind {
             START_BREAK if self.creative() => BREAK,
@@ -1184,6 +1455,11 @@ impl BedrockWorld {
 
                 return;
             }
+        }
+
+        // Рамка в руке вешается на грань блока, по которой щёлкнули.
+        if kind == CLICK && action.trigger != SIMULATION_TICK && self.place_frame(connection, &action) {
+            return;
         }
 
         // Вагонетка в руке ставится только на рельсу, мимо — ничего.
@@ -1352,6 +1628,162 @@ impl BedrockWorld {
             self.last_attack = now;
             log_debug!("Bedrock: {} ударил вагонетку {}", self.identity.name, target);
         }
+    }
+
+    /// Что в руке у игрока: то, что знает сервер, а в творческом режиме,
+    /// пока инвентарь пуст, — то, что назвал клиент (как при установке блока).
+    fn held_stack(&self, claimed: Option<Held>) -> Option<crate::inventory::Stack> {
+        self.bag.inventory.held().or_else(|| {
+            if self.creative() { claimed.and_then(java_item).map(|item| crate::inventory::Stack::new(item, 1)) } else { None }
+        })
+    }
+
+    /// Дальность руки до точки: как у остальных действий.
+    fn within_reach(&self, point: (f64, f64, f64)) -> bool {
+        let reach = if self.creative() { REACH_CREATIVE } else { REACH_SURVIVAL };
+        let eyes = (self.position.0 as f64, self.position.1 as f64, self.position.2 as f64);
+
+        distance(eyes, point) <= reach
+    }
+
+    /// Действие по клетке, где висит рамка: щелчок кладёт предмет или
+    /// поворачивает его, удар вынимает предмет (или ломает пустую рамку),
+    /// слом блока убирает рамку целиком — те же действия, что у игрока Java
+    /// (`frame::use_on`, `frame::strike`, `frame::break_off`), так что оба
+    /// видят одно. Ответ клиенту — то, что теперь на самом деле в клетке.
+    /// Возвращает, была ли там рамка (тогда остальное не делается).
+    ///
+    /// [проверить] живым клиентом: у Bedrock удар по рамке приходит как
+    /// начало слома и слом блока; старый пакет Item Frame Drop Item в
+    /// протоколе 944 уже не описан.
+    fn use_frame(&mut self, connection: &Connection, action: &ItemUse) -> bool {
+        if self.game_mode == crate::commands::GAME_MODE_SPECTATOR
+            || !matches!(action.kind, START_BREAK | BREAK | CLICK)
+            || self.frames_at.is_empty()
+            || !block_in_world(self.dimension, action.position)
+        {
+            return false;
+        }
+
+        let Some(frame) = super::frames::frame_at(
+            self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком").frames(),
+            action.position,
+        )
+        .cloned() else {
+            return false;
+        };
+
+        // Повтор щелчка, пока кнопка зажата, ничего не делает.
+        if action.kind == CLICK && action.trigger == SIMULATION_TICK {
+            return true;
+        }
+
+        let (x, y, z) = frame.place();
+
+        if !self.within_reach((x, y, z)) {
+            return true;
+        }
+
+        let creative = self.creative();
+        let mut packets = Vec::new();
+
+        {
+            let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+
+            {
+                let mut items = self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком");
+
+                match action.kind {
+                    CLICK if self.game_mode != crate::commands::GAME_MODE_ADVENTURE => {
+                        let used = crate::frame::use_on(&mut world, &mut items, frame.entity_id, self.held_stack(action.held));
+
+                        if used == crate::frame::Used::Added
+                            && !creative
+                            && let Some(slot) = self.bag.inventory.spend_held()
+                        {
+                            self.bag.touched(&[slot]);
+                            packets.extend(self.bag.slot_packet(slot));
+                        }
+                    }
+                    CLICK => {}
+                    // В творческом один удар ломает рамку с предметом, как
+                    // блок; в выживании первый вынимает предмет.
+                    START_BREAK if creative => {
+                        crate::frame::break_off(&mut world, &mut items, &self.shared, frame.entity_id, true);
+                    }
+                    START_BREAK => {
+                        crate::frame::strike(&mut world, &mut items, &self.shared, frame.entity_id, false);
+                    }
+                    _ => {
+                        crate::frame::break_off(&mut world, &mut items, &self.shared, frame.entity_id, creative);
+                    }
+                }
+            }
+
+            packets.extend(self.restore(&world, &[action.position]));
+        }
+
+        log_debug!("Bedrock: {} — действие {} по рамке в {:?}", self.identity.name, action.kind, action.position);
+        connection.send(&packets);
+        true
+    }
+
+    /// Вешает рамку предметом в руке на грань блока (у Java — щелчок по
+    /// блоку с рамкой в руке, `network::play`): звук, сама рамка и повтор
+    /// соседей. Возвращает, была ли в руке рамка (тогда остальное не
+    /// делается).
+    fn place_frame(&mut self, connection: &Connection, action: &ItemUse) -> bool {
+        let Some(held) = self.held_stack(action.held) else {
+            return false;
+        };
+        let glow = match crate::blocks::item_name(held.item) {
+            Some("item_frame") => false,
+            Some("glow_item_frame") => true,
+            _ => return false,
+        };
+        let clicked = action.position;
+
+        if self.game_mode == crate::commands::GAME_MODE_SPECTATOR
+            || self.game_mode == crate::commands::GAME_MODE_ADVENTURE
+            || !(0..=5).contains(&action.face)
+            || !self.within_reach((clicked.0 as f64 + 0.5, clicked.1 as f64 + 0.5, clicked.2 as f64 + 0.5))
+        {
+            return true;
+        }
+
+        let beyond = offset(clicked, action.face);
+        let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+        let placed = {
+            let mut items = self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком");
+
+            crate::frame::place(&mut world, &mut items, &self.shared, clicked, action.face as u8, glow)
+        };
+
+        if !placed {
+            // Клиент уже нарисовал свою рамку — вернём ему правду.
+            let packets = self.restore(&world, &[beyond]);
+            drop(world);
+
+            if !packets.is_empty() {
+                connection.send(&packets);
+            }
+
+            return true;
+        }
+
+        world.tell_directly(clicked.0, clicked.1, clicked.2);
+        world.tell_directly(beyond.0, beyond.1, beyond.2);
+        drop(world);
+
+        if !self.creative()
+            && let Some(slot) = self.bag.inventory.spend_held()
+        {
+            self.bag.touched(&[slot]);
+            connection.send(&self.bag.slot_packet(slot).into_iter().collect::<Vec<_>>());
+        }
+
+        log_debug!("Bedrock: {} повесил рамку в {:?}", self.identity.name, beyond);
+        true
     }
 
     /// Ставит вагонетку предметом в руке на рельсу, как у Java (вики,
@@ -1685,10 +2117,21 @@ impl BedrockWorld {
         places.sort_unstable();
         places.dedup();
 
+        // Клетка с рамкой у клиента — блок рамки, а не то, что лежит в мире
+        // (там воздух).
+        let frames: Vec<crate::frame::Frame> = if self.frames_at.is_empty() {
+            Vec::new()
+        } else {
+            self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком").frames().to_vec()
+        };
+
         places
             .into_iter()
             .filter(|&(x, y, z)| block_in_world(self.dimension, (x, y, z)) && self.sent.contains(&(x >> 4, z >> 4)))
-            .flat_map(|(x, y, z)| block_updates(x, y, z, world.get_block(x, y, z)))
+            .flat_map(|(x, y, z)| match super::frames::frame_at(&frames, (x, y, z)) {
+                Some(frame) => super::frames::show(frame).to_vec(),
+                None => block_updates(x, y, z, world.get_block(x, y, z)).to_vec(),
+            })
             .collect()
     }
 
@@ -1732,8 +2175,13 @@ impl BedrockWorld {
         let before = chunk_of(self.position);
 
         // Стоит на земле, если упёрся во что-то по вертикали и не поднимается.
+        let was_on_ground = self.on_ground;
+        let (dy, run) = ((eyes.1 - self.position.1) as f64, f64::from(eyes.0 - self.position.0).hypot(f64::from(eyes.2 - self.position.2)));
+
         self.on_ground = flags & VERTICAL_COLLISION != 0 && eyes.1 <= self.position.1;
         self.position = eyes;
+        self.health.vit.sprinting = flags & SPRINTING != 0;
+        self.track_health(dy, run, was_on_ground);
 
         if rotation.0.is_finite() && rotation.1.is_finite() {
             self.rotation = rotation;
@@ -1796,6 +2244,7 @@ impl BedrockWorld {
             game_mode: self.game_mode,
             inventory: self.bag.inventory_with_cursor(),
             dimension: self.dimension,
+            vitals: self.health.vit.saved(),
         }
     }
 
@@ -1892,6 +2341,7 @@ impl BedrockWorld {
         // новый блок-актор (сундук стал половиной большого или перестал,
         // когда вторую половину сломали), после самого блока.
         let mut changed = Vec::new();
+        let mut under_frames = Vec::new();
         let mut contents = false;
 
         for event in events {
@@ -1899,6 +2349,12 @@ impl BedrockWorld {
                 WorldEvent::Change(change)
                     if self.sent.contains(&(change.x >> 4, change.z >> 4)) && heights(self.dimension).contains(&change.y) =>
                 {
+                    // В клетке рамки у клиента блок рамки — мир там не показываем.
+                    if self.frames_at.values().any(|place| *place == (change.x, change.y, change.z)) {
+                        under_frames.push((change.x, change.y, change.z));
+                        continue;
+                    }
+
                     packets.extend(block_updates(change.x, change.y, change.z, change.state));
                     changed.push((change.x, change.y, change.z));
                 }
@@ -1917,8 +2373,18 @@ impl BedrockWorld {
                     }
                 }
                 WorldEvent::Contents => contents = true,
+                // Взрыв ранит и Bedrock-игрока; толчка ему пока нет [проверить].
+                WorldEvent::Hurt { entity_id, amount, .. } if entity_id == self.runtime_id as i32 => {
+                    self.health.hurt(amount, crate::survival::Source::Explosion);
+                }
                 _ => {}
             }
+        }
+
+        if !under_frames.is_empty() {
+            let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+
+            packets.extend(self.restore(&world, &under_frames));
         }
 
         if !changed.is_empty() {
@@ -1948,6 +2414,8 @@ impl BedrockWorld {
         if contents {
             packets.extend(self.window_changes());
         }
+
+        self.tick_health(&mut packets);
 
         // Время суток — раз в секунду.
         if self.ticks % 20 == 1 {
@@ -2105,6 +2573,20 @@ impl BedrockWorld {
         packets
     }
 
+    /// Рамки, что висят в этом чанке (в пределах высоты мира клиента): их
+    /// блоки уходят следом за чанком (bedrock/frames.rs). Берётся замок
+    /// предметов под замком мира — как везде.
+    fn chunk_frames(&self, chunk_x: i32, chunk_z: i32) -> Vec<crate::frame::Frame> {
+        let items = self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком");
+
+        items
+            .frames()
+            .iter()
+            .filter(|frame| frame.pos.0 >> 4 == chunk_x && frame.pos.2 >> 4 == chunk_z && heights(self.dimension).contains(&frame.pos.1))
+            .cloned()
+            .collect()
+    }
+
     /// Шлёт недостающие чанки вокруг игрока, ближние первыми.
     ///
     /// Чанков, которых нет в памяти, здесь не ждут: они читаются с диска или
@@ -2143,6 +2625,7 @@ impl BedrockWorld {
         // закрытыми — помнить их незачем.
         let sent = &self.sent;
         self.lids.retain(|(x, _, z), _| sent.contains(&(x >> 4, z >> 4)));
+        self.frames_at.retain(|_, (x, _, z)| sent.contains(&(*x >> 4, *z >> 4)));
 
         let dimension = self.dimension;
         let (ready, missing, source) = {
@@ -2156,7 +2639,7 @@ impl BedrockWorld {
                 }
 
                 match world.chunk_packet(x, z, |sections, biomes| (sections.to_vec(), biomes.to_vec())) {
-                    Some(parts) => ready.push((x, z, parts, self.chunk_actors(&world, x, z))),
+                    Some(parts) => ready.push((x, z, parts, self.chunk_actors(&world, x, z), self.chunk_frames(x, z))),
                     None if !self.loading.contains(&(x, z)) => missing.push((x, z)),
                     None => {}
                 }
@@ -2183,9 +2666,16 @@ impl BedrockWorld {
 
         let mut batch = Vec::new();
 
-        for (x, z, (sections, biomes), actors) in ready {
+        for (x, z, (sections, biomes), actors, frames) in ready {
             batch.push(encode_chunk(dimension, x, z, &sections, &biomes));
             batch.extend(actors);
+
+            // Рамки: блоки поверх воздуха чанка, следом их данные.
+            for frame in frames {
+                self.frames_at.insert(frame.entity_id, frame.pos);
+                batch.extend(super::frames::show(&frame));
+            }
+
             self.sent.insert((x, z));
 
             if batch.len() >= 8 {
@@ -2395,6 +2885,7 @@ fn encode_chunk(dimension: Dimension, x: i32, z: i32, sections: &[Option<Arc<[u1
                     let ours = biomes.get(cell).copied().unwrap_or(0) as usize;
                     let fallback = match dimension {
                         Dimension::Nether => NETHER_WASTES,
+                        Dimension::End => THE_END,
                         Dimension::Overworld => 1,
                     };
                     let biome = super::tables::BIOMES.get(ours).copied().unwrap_or(fallback);
@@ -2597,6 +3088,55 @@ fn add_cart(cart: &crate::minecart::Minecart) -> Vec<u8> {
     out.bytes
 }
 
+/// Моб появился (Add Actor): имя вида Bedrock, место, поворот тела и головы.
+fn add_mob(entity_id: i32, kind: crate::mob::Kind, [x, y, z, yaw, pitch, head]: [f32; 6]) -> Vec<u8> {
+    let mut out = Out::packet(ADD_ACTOR);
+    out.zigzag64(i64::from(entity_id))
+        .varint64(entity_id as u64)
+        .string(kind.bedrock_name())
+        .vec3f(x, y, z)
+        .vec3f(0.0, 0.0, 0.0)
+        .lf32(pitch)
+        .lf32(yaw)
+        .lf32(head)
+        .lf32(yaw)
+        .varint(0) // свойства-атрибуты
+        .varint(0) // данные сущности
+        .varint(0)
+        .varint(0) // свойства: целые, дробные
+        .varint(0); // связи
+    out.bytes
+}
+
+/// Стрела появилась (Add Actor): место, скорость и поворот.
+fn add_arrow(entity_id: i32, [x, y, z, yaw, pitch, head]: [f32; 6], [vx, vy, vz]: [f32; 3]) -> Vec<u8> {
+    let mut out = Out::packet(ADD_ACTOR);
+    out.zigzag64(i64::from(entity_id))
+        .varint64(entity_id as u64)
+        .string("minecraft:arrow")
+        .vec3f(x, y, z)
+        .vec3f(vx, vy, vz)
+        .lf32(pitch)
+        .lf32(yaw)
+        .lf32(head)
+        .lf32(yaw)
+        .varint(0) // свойства-атрибуты
+        .varint(0) // данные сущности
+        .varint(0)
+        .varint(0) // свойства: целые, дробные
+        .varint(0); // связи
+    out.bytes
+}
+
+/// Моб сдвинулся (Move Actor Absolute): флаги 0, углы — байтами.
+fn move_mob(entity_id: i32, [x, y, z, yaw, pitch, head]: [f32; 6]) -> Vec<u8> {
+    let angle = |degrees: f32| ((degrees / 360.0 * 256.0).round() as i32 & 0xFF) as u8;
+    let mut out = Out::packet(MOVE_ACTOR_ABSOLUTE);
+
+    out.varint64(entity_id as u64).u8(0).vec3f(x, y, z).u8(angle(pitch)).u8(angle(yaw)).u8(angle(head));
+    out.bytes
+}
+
 /// Молния (Add Actor `minecraft:lightning_bolt`): без скорости, поворота
 /// и свойств. [проверить]: играет ли клиент Bedrock гром сам, как Java.
 fn add_lightning(bolt: &crate::lightning::Bolt) -> Vec<u8> {
@@ -2711,20 +3251,6 @@ fn own_entity_data(runtime_id: u64) -> Vec<u8> {
     out.varint(WIDTH).varint(FLOAT).lf32(0.6);
     out.varint(HEIGHT).varint(FLOAT).lf32(1.8);
     out.varint(0).varint(0); // свойства: целые, дробные
-    out.varint64(0); // такт
-    out.bytes
-}
-
-/// Атрибуты игрока: скорость шага и здоровье. Без них клиент берёт что
-/// попало, и движение кажется «ватным».
-fn own_attributes(runtime_id: u64) -> Vec<u8> {
-    let mut out = Out::packet(session::UPDATE_ATTRIBUTES);
-    out.varint64(runtime_id).varint(2);
-
-    for (name, max, value) in [("minecraft:movement", f32::MAX, 0.1), ("minecraft:health", 20.0, 20.0)] {
-        out.lf32(0.0).lf32(max).lf32(value).lf32(0.0).lf32(max).lf32(value).string(name).varint(0);
-    }
-
     out.varint64(0); // такт
     out.bytes
 }
@@ -3235,6 +3761,35 @@ mod tests {
         out.vec3f(0.0, 0.0, 0.0).vec3f(0.5, 1.0, 0.5).varint(0).varint(1).u8(0);
     }
 
+    /// Моб для клиента Bedrock появляется под своим именем вида и
+    /// сдвигается переносом; ушедший убирается.
+    #[test]
+    fn a_mob_is_shown_by_its_bedrock_name_and_moved() {
+        let place = [1.5, 64.0, -2.5, 90.0, 10.0, 90.0];
+
+        for kind in crate::mob::Kind::ALL {
+            let packet = add_mob(7, kind, place);
+            let text = String::from_utf8_lossy(&packet);
+
+            assert!(text.contains(kind.bedrock_name()), "{}", kind.name());
+        }
+
+        let moved = move_mob(7, place);
+
+        assert!(!moved.is_empty());
+        assert_ne!(moved, move_mob(7, [1.5, 65.0, -2.5, 90.0, 10.0, 90.0]));
+    }
+
+    /// Стрела для клиента Bedrock — актор `minecraft:arrow` со скоростью.
+    #[test]
+    fn an_arrow_is_shown_as_a_bedrock_arrow_with_motion() {
+        let place = [1.5, 64.0, -2.5, 90.0, 10.0, 90.0];
+        let packet = add_arrow(9, place, [1.6, 0.0, 0.0]);
+
+        assert!(String::from_utf8_lossy(&packet).contains("minecraft:arrow"));
+        assert_ne!(packet, add_arrow(9, place, [0.0, 0.0, 0.0]));
+    }
+
     #[test]
     fn inventory_transaction_place_reads() {
         let mut out = Out::default();
@@ -3322,6 +3877,44 @@ mod tests {
         assert_eq!(held_block(held(450, 14)).map(|(name, _)| name), Some("red_bed"));
         assert_eq!(held_block(held(450, 0)).map(|(name, _)| name), Some("white_bed"));
         assert_eq!(held_block(held(53, 0)).map(|(name, _)| name), Some("oak_stairs"));
+    }
+
+    /// Щелчок с рамкой в руке по западной грани блока: действие читается, а
+    /// предмет Bedrock (`frame` 553, `glow_frame` 665) — это рамки Java.
+    #[test]
+    fn a_click_with_a_frame_in_hand_reads_as_a_frame_placement() {
+        for (network_id, name) in [(553, "item_frame"), (665, "glow_item_frame")] {
+            let item = crate::blocks::item_named(name).expect("рамка");
+            let mut out = Out::default();
+
+            out.zigzag32(0).varint(2).varint(0);
+            out.varint(0).varint(1).zigzag32(3).zigzag32(64).zigzag32(-2).zigzag32(4).zigzag32(0);
+            super::super::inventory::write_item(&mut out, Some(crate::inventory::Stack::new(item, 1)), 0);
+            use_tail(&mut out);
+
+            let action = read_item_use(&out.bytes).expect("действие");
+            let held = action.held.expect("рамка в руке");
+
+            assert_eq!((action.kind, action.position, action.face), (CLICK, (3, 64, -2), 4));
+            assert_eq!(held.network_id, network_id);
+            assert_eq!(java_item(held), Some(item));
+        }
+    }
+
+    /// Щелчок и удар по клетке с рамкой читаются обычными действиями
+    /// (клетка та же, что у рамки Java), из Player Auth Input — начало слома.
+    #[test]
+    fn breaking_a_frame_block_reads_as_a_break_action() {
+        let mut out = Out::default();
+
+        out.zigzag32(0).varint(2).varint(0);
+        out.varint(BREAK).varint(0).zigzag32(0).zigzag32(70).zigzag32(0).zigzag32(5).zigzag32(0);
+        out.zigzag32(0);
+        use_tail(&mut out);
+
+        let action = read_item_use(&out.bytes).expect("действие");
+
+        assert_eq!((action.kind, action.position), (BREAK, (0, 70, 0)));
     }
 
     #[test]

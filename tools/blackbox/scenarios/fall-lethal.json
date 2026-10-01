@@ -1,0 +1,63 @@
+{
+ "name": "fall-lethal",
+ "about": "Выживание: падение на 30 блоков насмерть: смерть, сообщение, возрождение.",
+ "blocks": [
+  {
+   "at": [
+    3,
+    29,
+    3
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,30,3.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     3,
+     29,
+     3
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 80,
+ "random": [
+  {
+   "type": "mask",
+   "kind": "self",
+   "name": "место возрождения",
+   "pattern": "\\(-?[\\d.]+,-?[\\d.]+,-?[\\d.]+\\)",
+   "replace": "(место)",
+   "why": "Игрок без кровати возрождается в случайной точке вокруг точки появления мира (minecraft.wiki/w/Respawn, «Spawn radius»: gamerule spawnRadius, по умолчанию 10); оригинал против оригинала: (-3.5,-60,-8.5), (5.5,-59,2.5), (6.5,-60,3.5)."
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "высота точки появления",
+   "pattern": "\"location\":\\{\"x\":0,\"z\":0,\"y\":-?\\d+\\}",
+   "replace": "\"location\":{точка}",
+   "why": "У нашего испытательного ровного мира точка появления считается по высоте обычного мира (63), а у оригинала — по плоскому (−60): расхождение испытательного мира, а не механики."
+  }
+ ],
+ "cleanup": [
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true
+}

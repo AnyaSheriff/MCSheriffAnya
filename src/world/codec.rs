@@ -231,7 +231,7 @@ impl Chunk {
         // Хранилища — последними, и только если они есть. Порядок — по
         // месту, чтобы одинаковый чанк давал одинаковые байты. Если дальше
         // идёт что-то ещё, число хранилищ пишется и нулём.
-        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() {
+        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() {
             let mut places: Vec<_> = self.containers.keys().copied().collect();
 
             places.sort_unstable();
@@ -245,7 +245,7 @@ impl Chunk {
         // Особый динамит — после хранилищ (их число тогда пишется и
         // нулём): сколько, потом место и номер вида. Если дальше рамки —
         // число пишется и нулём.
-        if !self.custom_tnt.is_empty() || !self.frames.is_empty() {
+        if !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() {
             let mut places: Vec<_> = self.custom_tnt.iter().map(|&(place, kind)| (place, kind.0)).collect();
 
             places.sort_unstable();
@@ -258,9 +258,10 @@ impl Chunk {
             }
         }
 
-        // Рамки для предметов (frame.rs) — последними: сколько и записи по
-        // порядку места, чтобы одинаковый чанк давал одинаковые байты.
-        if !self.frames.is_empty() {
+        // Рамки для предметов (frame.rs): сколько и записи по порядку места,
+        // чтобы одинаковый чанк давал одинаковые байты. Если дальше мобы —
+        // число пишется и нулём.
+        if !self.frames.is_empty() || !self.mobs.is_empty() {
             let mut frames: Vec<&crate::frame::Frame> = self.frames.iter().collect();
 
             frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
@@ -268,6 +269,15 @@ impl Chunk {
 
             for frame in frames {
                 crate::frame::write(frame, &mut out);
+            }
+        }
+
+        // Мобы (mob/mod.rs) — последними: сколько и записи по порядку.
+        if !self.mobs.is_empty() {
+            out.extend_from_slice(&(self.mobs.len() as u16).to_be_bytes());
+
+            for mob in &self.mobs {
+                mob.write(&mut out);
             }
         }
 
@@ -358,6 +368,19 @@ impl Chunk {
                 let frame = crate::frame::read(&mut rest, 0, 0, 0)?;
 
                 chunk.frames.push(frame);
+            }
+        }
+
+        // Мобы, если записаны. Испорченная запись — весь чанк испорчен.
+        if rest.len() >= 2 {
+            let count = u16::from_be_bytes([rest[0], rest[1]]);
+
+            rest = &rest[2..];
+
+            for _ in 0..count {
+                let mob = crate::mob::Mob::read(&mut rest)?;
+
+                chunk.mobs.push(mob);
             }
         }
 
@@ -459,6 +482,32 @@ mod tests {
         let back = Chunk::from_bytes(&bytes).expect("прочиталось");
 
         assert!(back.frames.iter().any(|frame| frame.pos == hung.pos && frame.rotation == 3 && frame.item == hung.item));
+        assert_eq!(assert_round_trip(&Chunk::flat()), plain);
+    }
+
+    /// Мобы идут после рамок (их число тогда пишется и нулём) и читаются
+    /// обратно; чанк без мобов остаётся таким же коротким, как был.
+    #[test]
+    fn mobs_round_trip_after_the_frames() {
+        let plain = Chunk::flat().to_bytes();
+        let mut chunk = Chunk::flat();
+        let mut cow = crate::mob::Mob::new(0, crate::mob::Kind::Cow, (3.5, 70.0, 4.5));
+
+        cow.age = -500;
+        cow.vitals.health = 6.0;
+        chunk.mobs.push(cow);
+        chunk.mobs.push(crate::mob::Mob::new(0, crate::mob::Kind::Chicken, (9.25, 71.0, 4.5)));
+
+        let bytes = assert_round_trip(&chunk);
+
+        // Хранилищ, динамита и рамок нет — три нуля по два байта, потом два моба.
+        assert_eq!(&bytes[plain.len()..plain.len() + 8], &[0, 0, 0, 0, 0, 0, 0, 2]);
+
+        let back = Chunk::from_bytes(&bytes).expect("прочиталось");
+
+        assert_eq!(back.mobs.len(), 2);
+        assert_eq!(back.mobs[0].kind, crate::mob::Kind::Cow);
+        assert_eq!((back.mobs[0].age, back.mobs[0].vitals.health), (-500, 6.0));
         assert_eq!(assert_round_trip(&Chunk::flat()), plain);
     }
 

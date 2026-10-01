@@ -108,6 +108,12 @@ pub enum Biome {
     WarpedForest,
     SoulSandValley,
     BasaltDeltas,
+    // Энд (src/world/the_end.rs): после биомов Незера.
+    TheEnd,
+    SmallEndIslands,
+    EndMidlands,
+    EndHighlands,
+    EndBarrens,
 }
 
 impl Biome {
@@ -182,6 +188,16 @@ impl Biome {
         Biome::BasaltDeltas,
     ];
 
+    /// Биомы Энда по порядку их номеров: в реестре они идут после биомов
+    /// Незера.
+    pub const END: [Biome; 5] = [
+        Biome::TheEnd,
+        Biome::SmallEndIslands,
+        Biome::EndMidlands,
+        Biome::EndHighlands,
+        Biome::EndBarrens,
+    ];
+
     /// Имя биома в реестре игры.
     pub fn name(self) -> &'static str {
         match self {
@@ -244,6 +260,11 @@ impl Biome {
             Biome::WarpedForest => "warped_forest",
             Biome::SoulSandValley => "soul_sand_valley",
             Biome::BasaltDeltas => "basalt_deltas",
+            Biome::TheEnd => "the_end",
+            Biome::SmallEndIslands => "small_end_islands",
+            Biome::EndMidlands => "end_midlands",
+            Biome::EndHighlands => "end_highlands",
+            Biome::EndBarrens => "end_barrens",
         }
     }
 
@@ -254,12 +275,16 @@ impl Biome {
             return at as i32;
         }
 
-        let at = Biome::NETHER
+        if let Some(at) = Biome::NETHER.iter().position(|biome| *biome == self) {
+            return (Biome::ALL.len() + CUSTOM_BIOMES.len() + at) as i32;
+        }
+
+        let at = Biome::END
             .iter()
             .position(|biome| *biome == self)
-            .unwrap_or_else(|| panic!("биом {:?} забыт в списках ALL и NETHER", self));
+            .unwrap_or_else(|| panic!("биом {:?} забыт в списках ALL, NETHER и END", self));
 
-        (Biome::ALL.len() + CUSTOM_BIOMES.len() + at) as i32
+        (Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + at) as i32
     }
 
 
@@ -323,6 +348,7 @@ impl Biome {
         "dripstone_caves" => (0.8, 0.4),
         "deep_dark" => (0.8, 0.4),
         "nether_wastes" | "crimson_forest" | "warped_forest" | "soul_sand_valley" | "basalt_deltas" => (2.0, 0.0),
+        "the_end" | "small_end_islands" | "end_midlands" | "end_highlands" | "end_barrens" => (0.5, 0.5),
             _ => (0.8, 0.4),
         }
     }
@@ -708,7 +734,7 @@ pub fn autumn_forest_number() -> u16 {
 
 /// Сколько всего биомов в реестре: оригинальные, свои и Незера.
 pub fn biome_registry_size() -> usize {
-    Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len()
+    Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + Biome::END.len()
 }
 
 /// Включены ли редкие осенние пятна в обычном лесу (`autumn-forests`
@@ -3319,9 +3345,12 @@ mod tests {
         for (i, biome) in Biome::NETHER.iter().enumerate() {
             assert_eq!(biome.number() as usize, Biome::ALL.len() + CUSTOM_BIOMES.len() + i);
         }
-        assert_eq!(Biome::BasaltDeltas.number() as usize + 1, biome_registry_size());
+        for (i, biome) in Biome::END.iter().enumerate() {
+            assert_eq!(biome.number() as usize, Biome::ALL.len() + CUSTOM_BIOMES.len() + Biome::NETHER.len() + i);
+        }
+        assert_eq!(Biome::EndBarrens.number() as usize + 1, biome_registry_size());
 
-        let mut names: Vec<&str> = Biome::ALL.iter().chain(&Biome::NETHER).map(|biome| biome.name()).collect();
+        let mut names: Vec<&str> = Biome::ALL.iter().chain(&Biome::NETHER).chain(&Biome::END).map(|biome| biome.name()).collect();
         let count = names.len();
 
         names.sort_unstable();

@@ -1,0 +1,45 @@
+{
+ "name": "fall-damage",
+ "about": "Выживание: падение на 8 блоков (урон ceil(8-3)=5).",
+ "blocks": [
+  {
+   "at": [
+    3,
+    7,
+    3
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,8,3.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     3,
+     7,
+     3
+    ],
+    "state": "minecraft:air"
+   }
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true
+}

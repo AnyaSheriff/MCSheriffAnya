@@ -57,6 +57,12 @@ endorsed by Mojang or Microsoft.
   (2×3 to 21×21), ignition with flint and steel (Java and Bedrock), automatic
   portal finding or building and linking. Bedrock players see their own Nether
   biome set.
+- The End as a third dimension: the main island with ten obsidian pillars
+  (two caged) and the exit portal podium, the void gap, and outer islands from
+  ~1000 blocks with chorus plants, all fitted to a measured vanilla End. End
+  portal frames (twelve eyes open the portal, as in vanilla), the obsidian
+  arrival platform at 100, 49, 0, and the way back. No ender dragon or crystals
+  yet.
 - Redstone: wire, torches, repeaters, comparators, levers, buttons, pressure
   plates, observers, copper bulbs, lamps, doors, trapdoors, fence gates,
   pistons and sticky pistons with real two-tick movement and client-side
@@ -88,7 +94,54 @@ endorsed by Mojang or Microsoft.
   mode. Player skins from Bedrock can be uploaded to Mojang via MineSkin for
   Java players to see; Bedrock players see Java capes. No crafting yet.
 
-Not there yet: mobs, health and damage, containers, packet compression.
+- Farm animals: cows, pigs, sheep and chickens (`summon cow|pig|sheep|chicken
+  <x> <y> <z> {NoAI:1b,Age:-24000,…}`). They fall, take fall damage, wander,
+  look at players, follow wheat/carrots/seeds, breed into babies, panic when
+  hit, drop meat, leather, feathers and wool; sheep are sheared with shears and
+  eat grass, chickens lay eggs. They also settle in newly generated chunks
+  (rule `spawn_mobs`), press plates, are saved with the chunk and are visible
+  to Bedrock players (silent there, no hitting yet). Physics, damage, drops
+  and the packet stream are checked against the official server with the black
+  box (`cow-physics`, `cow-hit`, `sheep-shear`, `mob-plate`, `chicken-fall`,
+  `pig-baby`, `cow-feed`); the random behaviour (wandering, breeding walks,
+  spawn choices) is checked by unit tests only. An animal killed by a player
+  drops experience orbs (1–3).
+
+- Hostile mobs: zombie, skeleton, creeper and spider (`summon zombie|skeleton|
+  creeper|spider <x> <y> <z> {NoAI:1b,…}`). They hunt the nearest survival
+  player in line of sight (creative and spectators are ignored); zombies and
+  spiders strike every 20 ticks with knockback, skeletons draw a bow and shoot
+  arrow entities (gravity 0.05, drag 0.99, stick in blocks, hit players, an
+  arrow stays in the body), creepers swell for 30 ticks near a player and
+  explode with power 3 (the blast also hurts nearby mobs), spiders climb walls
+  and stay neutral in daylight unless hit. Zombies and skeletons burn in the
+  sun (not with a helmet or in water). They spawn in the dark in the overworld
+  (block light 0, monster cap 70, at least 24 blocks from players) and despawn
+  far away. Damage, armor, drops, burning, fuse, explosion and arrow packets
+  are checked against the official server with the black box (`zombie-hit`,
+  `zombie-burn`, `creeper-explode`, `skeleton-stand`; `skeleton-arrow`,
+  `zombie-attack`, `spider-climb` are random and match by structure). A
+  hostile mob killed by a player drops 5 experience points plus 1–3 per
+  equipment item; Bedrock sees the mobs and arrows, silently.
+- Experience orbs: real entities that fly to the nearest player and are picked
+  up one per 2 ticks; the value is split greedily into 7, 3 and 1 (checked
+  against the official server).
+- Containers: chests (including trapped and copper), barrels, hoppers,
+  droppers, dispensers, jukebox, lectern, crafter, shelf and chiseled
+  bookshelf; checked with the black box.
+- Player combat, checked against the official server with the black box
+  (`pvp-*` scenarios, two robots): entity attributes with modifiers (weapon
+  damage and attack speed, armor, toughness, knockback resistance, sprint
+  speed) sent with Update Attributes; item components `damage`, `enchantments`
+  and `attribute_modifiers` (`give @p diamond_sword[enchantments={sharpness:5}]`);
+  attack cooldown, crits, sprint knockback, sweeping, armor and protection
+  enchantments, durability, shields (blocking arc, axes disable them), bows and
+  arrows, thorns, fire aspect. Not checked against the official server: thorns,
+  bow enchantments (power, punch, flame, infinity), arrow pickup, netherite
+  knockback resistance. Potion effects (strength, weakness) are missing.
+
+Not there yet: other mobs, furnaces, ender chests and shulker boxes, packet
+compression.
 
 ## Download
 

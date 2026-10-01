@@ -140,7 +140,57 @@ const DAMAGE_TYPES: [&str; 51] = [
 ///
 /// Имена записей даны без namespace — он всегда minecraft. Это идентификаторы
 /// из документации протокола, а не содержимое игровых файлов.
-pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 21] = [
+pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 22] = [
+    // Зачарования: на них ссылаются довески предметов (`enchantments`); порядок —
+    // номера для клиента (stackdata::ENCHANTMENTS).
+    (
+        "minecraft:enchantment",
+        &[
+            "aqua_affinity",
+            "bane_of_arthropods",
+            "binding_curse",
+            "blast_protection",
+            "breach",
+            "channeling",
+            "density",
+            "depth_strider",
+            "efficiency",
+            "feather_falling",
+            "fire_aspect",
+            "fire_protection",
+            "flame",
+            "fortune",
+            "frost_walker",
+            "impaling",
+            "infinity",
+            "knockback",
+            "looting",
+            "loyalty",
+            "luck_of_the_sea",
+            "lunge",
+            "lure",
+            "mending",
+            "multishot",
+            "piercing",
+            "power",
+            "projectile_protection",
+            "protection",
+            "punch",
+            "quick_charge",
+            "respiration",
+            "riptide",
+            "sharpness",
+            "silk_touch",
+            "smite",
+            "soul_speed",
+            "sweeping_edge",
+            "swift_sneak",
+            "thorns",
+            "unbreaking",
+            "vanishing_curse",
+            "wind_burst",
+        ],
+    ),
     ("minecraft:cat_variant", &["tabby"]),
     ("minecraft:cat_sound_variant", &["classic"]),
     // Клиент ссылается на все три записи напрямую.
@@ -256,7 +306,7 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 21] = [
     ),
     // Мир: без типа измерения клиент не примет Login (Play), а plains —
     // биом по умолчанию для незагруженных чанков.
-    ("minecraft:dimension_type", &["overworld", "the_nether"]),
+    ("minecraft:dimension_type", &["overworld", "the_nether", "the_end"]),
     // Биомы: порядок здесь задаёт их номера, и по этим же номерам сервер
     // называет биом в пакете чанка. Он должен совпадать с порядком
     // `Biome::ALL` в src/world/terrain.rs — за этим следит проверка.
@@ -325,11 +375,17 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 21] = [
             "warped_forest",
             "soul_sand_valley",
             "basalt_deltas",
+            // Энд — после Незера (terrain::Biome::END).
+            "the_end",
+            "small_end_islands",
+            "end_midlands",
+            "end_highlands",
+            "end_barrens",
         ],
     ),
     // Мировые часы: требуются по одной записи на каждое измерение, иначе
     // клиент падает с "Unbound values in registry minecraft:world_clock".
-    ("minecraft:world_clock", &["overworld"]),
+    ("minecraft:world_clock", &["overworld", "the_end"]),
     // Линии времени: по ним клиент водит солнце, красит небо и меняет
     // фазы луны.
     ("minecraft:timeline", &["day", "moon"]),
@@ -778,6 +834,16 @@ mod tests {
         assert_eq!(DAMAGE_TYPES.to_vec(), saved);
     }
 
+    /// Зачарования уходят клиенту по номерам, а довески стопок хранят те же
+    /// номера: порядок в реестре обязан совпадать с таблицей довесков.
+    #[test]
+    fn enchantment_registry_follows_the_stack_data_table() {
+        let (_, sent) = REQUIRED_REGISTRIES.iter().find(|(registry, _)| *registry == "minecraft:enchantment").expect("реестр зачарований");
+        let table: Vec<&str> = crate::stackdata::ENCHANTMENTS.iter().map(|(name, _)| *name).collect();
+
+        assert_eq!(sent.to_vec(), table);
+    }
+
     /// Номер биома в пакете чанка — его место в реестре, который шлёт сервер.
     /// Поэтому реестр обязан идти в том же порядке, что и `Biome::ALL`.
     #[test]
@@ -791,6 +857,7 @@ mod tests {
             .map(|biome| biome.name())
             .chain(crate::world::terrain::CUSTOM_BIOMES)
             .chain(crate::world::terrain::Biome::NETHER.iter().map(|biome| biome.name()))
+            .chain(crate::world::terrain::Biome::END.iter().map(|biome| biome.name()))
             .collect();
 
         assert_eq!(sent.to_vec(), ours);

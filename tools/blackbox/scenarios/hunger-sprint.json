@@ -1,0 +1,57 @@
+{
+ "name": "hunger-sprint",
+ "about": "Выживание: эффект голода 1 с (насыщение 5→0, еда 19), потом бег 150 тактов — упражнение расходуется, еда убывает.",
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "fill $(2,0,-70) $(4,3,4) minecraft:air",
+  "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "effect give $(bot) minecraft:hunger 1 255 true",
+  "!wait 30"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "control": [
+    "forward",
+    true
+   ]
+  },
+  {
+   "after": 0,
+   "control": [
+    "sprint",
+    true
+   ]
+  },
+  {
+   "after": 160,
+   "control": [
+    "forward",
+    false
+   ]
+  },
+  {
+   "after": 160,
+   "control": [
+    "sprint",
+    false
+   ]
+  }
+ ],
+ "record_ticks": 200,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true
+}

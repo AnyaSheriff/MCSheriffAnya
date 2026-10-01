@@ -1,0 +1,40 @@
+{
+ "about": "Крипер (подожжён данными) рядом с роботом в выживании: запал 30 тактов, взрыв силой 3, урон роботу.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "fill $(-4,-1,-4) $(9,-1,9) minecraft:obsidian",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon creeper $(4.5,0,0.5) {NoAI:1b,Silent:1b,ignited:1b}"
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=skeleton,distance=..48]",
+  "kill @e[type=creeper,distance=..48]",
+  "kill @e[type=spider,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "fill $(-4,-1,-4) $(9,-1,9) minecraft:stone",
+  "fill $(-4,0,-4) $(9,4,9) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "name": "creeper-explode"
+}

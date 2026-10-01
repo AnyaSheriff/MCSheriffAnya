@@ -49,6 +49,11 @@ const UNLOAD_EVERY: u64 = 100;
 /// его выгружало бы сразу после складывания.
 const KEEP_EXTRA: i32 = 2;
 
+/// Сколько такт ждёт применения уже прочитанных действий игроков (щелчки,
+/// команды, пакеты места). Ждать дольше нельзя: застрявшее подключение
+/// остановило бы мир.
+const PATIENCE: Duration = Duration::from_millis(5);
+
 /// Сколько мест пересчитывается за один такт.
 ///
 /// Столько же, сколько в игре: 65 536. Предел нужен на случай, если кто-то
@@ -167,6 +172,7 @@ async fn run(shared: Arc<Shared>) {
     let mut next = tokio::time::Instant::now();
     let mut ticks: u64 = 0;
     let mut phases = PhaseStats::default();
+    let mut mob_rng = crate::mob::Rng::new(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(1, |passed| passed.as_nanos() as u64));
 
     loop {
         tokio::time::sleep_until(next).await;
@@ -199,12 +205,18 @@ async fn run(shared: Arc<Shared>) {
         // Ждём недолго: застрявшее подключение не должно останавливать мир.
         shared.tick_starts.send_replace(ticks);
 
-        let patience = tokio::time::Instant::now() + Duration::from_millis(5);
+        let patience = tokio::time::Instant::now() + PATIENCE;
 
-        while shared.waiting_for_tick.load(std::sync::atomic::Ordering::Acquire) > 0
+        let earlier = &shared.waiting_for_tick[(ticks.wrapping_sub(1) % 2) as usize];
+
+        while earlier.load(std::sync::atomic::Ordering::Acquire) > 0
             && tokio::time::Instant::now() < patience
         {
             tokio::task::yield_now().await;
+        }
+
+        if earlier.load(std::sync::atomic::Ordering::Acquire) > 0 {
+            log_debug!("Такт {}: действия игроков не успели к началу такта", ticks);
         }
 
         // Перенесённые и подтвердившие перенос — на такт ближе к тому, чтобы
@@ -293,6 +305,12 @@ async fn run(shared: Arc<Shared>) {
             // убрали опору, отваливаются на своей проверке.
             step_frames(&shared, dimension, &mut world);
 
+            // Мобы: мысли, движение, разведение, добыча погибших.
+            step_mobs(&shared, dimension, &mut world, &mut mob_rng, ticks);
+
+            // Стрелы: полёт, попадание, застревание (arrow.rs).
+            crate::player_arrow::step(&shared, dimension, &mut world);
+
             // Плиты, растяжки и руда слушают не только сигнал, но и мир: на
             // них встают игроки и падают предметы. Список — заново: только
             // что выброшенное выбрасывателями тоже в счёт.
@@ -325,13 +343,39 @@ async fn run(shared: Arc<Shared>) {
                 fluids::item_water((x, y, z), &view)
             };
 
-            let (splashes, exploding) = {
+            // Шарики опыта тянутся к ближайшему игроку (не наблюдателю) и
+            // подбираются им в этом же такте.
+            let pullers: Vec<(i32, (f64, f64, f64))> = shared
+                .players
+                .lock()
+                .expect("список игроков захвачен другим потоком")
+                .members()
+                .iter()
+                .filter(|member| member.dimension == dimension && member.game_mode != 3)
+                .map(|member| (member.entity_id, (member.position.x, member.position.y, member.position.z)))
+                .collect();
+
+            let (splashes, exploding, gains) = {
                 let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
                 let splashes = items.step_with_water(&solid, &holds_block, &loaded, &water);
 
+                let gains = items.step_orbs(&pullers, &solid);
+
                 // Сперва шаг, потом запал — у каждого динамита.
-                (splashes, items.burn_fuses(&loaded))
+                (splashes, items.burn_fuses(&loaded), gains)
             };
+
+            // Подобранное шариками уходит подключениям: они прибавят очки и
+            // скажут клиенту после пакета подбора.
+            if !gains.is_empty() {
+                let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+                for (entity_id, points) in gains {
+                    if let Some(uuid) = players.members().iter().find(|member| member.entity_id == entity_id).map(|member| member.uuid) {
+                        players.order(&uuid, crate::players::Order::XpTaken { points });
+                    }
+                }
+            }
 
             // Предмет вошёл в воду — плеск, как у оригинала.
             for splash in splashes {
@@ -531,6 +575,21 @@ fn occupants(shared: &Shared, dimension: Dimension) -> (Vec<redstone::Occupant>,
             .map(|cart| redstone::Occupant::minecart(cart.x, cart.y, cart.z, cart.on_ground || cart.on_rail)),
     );
 
+    // Мобы — живые: жмут и деревянные, и каменные плиты, задевают растяжки.
+    standing.extend(
+        shared
+            .items_in(dimension)
+            .lock()
+            .expect("предметы захвачены другим потоком")
+            .mobs()
+            .iter()
+            .map(|mob| {
+                let (width, height) = mob.size();
+
+                redstone::Occupant::mob(mob.x, mob.y, mob.z, width, height, mob.on_ground)
+            }),
+    );
+
     (standing, chunks)
 }
 
@@ -686,6 +745,277 @@ fn step_frames(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 }
 
+/// Мир глазами мобов (mob::View).
+pub struct MobView<'a>(pub &'a World);
+
+impl crate::mob::View for MobView<'_> {
+    fn block(&self, x: i32, y: i32, z: i32) -> i32 {
+        self.0.get_block(x, y, z)
+    }
+
+    fn loaded(&self, chunk_x: i32, chunk_z: i32) -> bool {
+        self.0.has_chunk(chunk_x, chunk_z)
+    }
+
+    fn open_sky(&self, x: i32, y: i32, z: i32) -> bool {
+        self.0.open_sky(x, y, z)
+    }
+
+    fn light(&self, x: i32, y: i32, z: i32, sky: i32) -> (u8, u8) {
+        match self.0.light_cached(x, y, z) {
+            Some((s, b)) => ((i32::from(s) - (15 - sky).max(0)).max(0) as u8, b),
+            None => (if self.0.open_sky(x, y, z) { sky as u8 } else { 0 }, 0),
+        }
+    }
+}
+
+/// Игроки, которых мобы замечают: где стоят, что держат в руке.
+fn watchers(shared: &Shared, dimension: Dimension) -> Vec<crate::mob::ai::Watcher> {
+    /// Режим наблюдателя.
+    const SPECTATOR: i32 = 3;
+
+    shared
+        .players
+        .lock()
+        .expect("список игроков захвачен другим потоком")
+        .members()
+        .iter()
+        .filter(|member| member.dimension == dimension)
+        .map(|member| crate::mob::ai::Watcher {
+            id: member.entity_id,
+            targetable: member.game_mode == 0 || member.game_mode == 2,
+            x: member.position.x,
+            y: member.position.y,
+            z: member.position.z,
+            eye: if member.sneaking { 1.27 } else { 1.62 },
+            holding: [member.held.and_then(|stack| blocks::item_name(stack.item)), None],
+            spectator: member.game_mode == SPECTATOR,
+        })
+        .collect()
+}
+
+/// Записывает мобов в их чанки — в файл они лягут вместе с чанком.
+pub fn store_mobs(shared: &Shared, dimension: Dimension, world: &mut World) {
+    let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    world.store_mobs(items.mobs());
+}
+
+/// Такт мобов. Прочитанные вместе с чанками заводятся в мир; в новых чанках
+/// Обычного мира селятся животные (если не выключено `gamerule spawn_mobs`),
+/// а в темноте — враждебные; дальше — мысли, движение, разведение, добыча
+/// погибших, удары, стрелы и взрывы крипера, а то, что мобы делают с блоками
+/// (овца съела траву) и предметами (курица снесла яйцо), исполняется здесь.
+/// Раз в 200 тактов моб записывается в свой чанк.
+fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut crate::mob::Rng, ticks: u64) {
+    let loaded = world.take_loaded_mobs();
+    let fresh = world.take_new_chunks();
+
+    // Список игроков берётся до замка предметов: два замка разом не держим.
+    let watchers = watchers(shared, dimension);
+    let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
+    let time = world.time_of_day();
+    let nether = world.is_nether();
+    let env = crate::mob::Env {
+        difficulty,
+        sky: if nether { 0 } else { redstone::ambient_sky(time) },
+        sun_up: !nether && !(12_540..23_460).contains(&time),
+    };
+
+    // Свет для мобов, которым он нужен (паук, появление): считается здесь,
+    // пока мир в руках целиком, и ложится в запоминание мира.
+    let dark_spots: Vec<(i32, i32, i32)> = {
+        let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+        items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Spider).map(|mob| mob.cell()).collect()
+    };
+
+    for (x, y, z) in dark_spots {
+        world.light_full(x, y, z);
+    }
+
+    let spawning = dimension == Dimension::Overworld && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed);
+    let mut natural: Vec<crate::mob::Mob> = Vec::new();
+
+    if spawning && difficulty > crate::survival::PEACEFUL && ticks.is_multiple_of(8) && !watchers.is_empty() {
+        let players: Vec<(f64, f64, f64)> = watchers.iter().filter(|player| !player.spectator).map(|player| (player.x, player.y, player.z)).collect();
+        let crowd = {
+            let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+            items.mobs().iter().filter(|mob| mob.kind.hostile() && !mob.is_dead()).count()
+        };
+
+        if crowd < crate::mob::spawn::MONSTER_CAP {
+            let ambient = env.sky;
+            let surface = |x: i32, z: i32| {
+                let mut y = crate::world::MIN_Y + crate::world::WORLD_HEIGHT - 1;
+
+                while y > crate::world::MIN_Y && !blocks::stops_items(world.get_block(x, y, z)) {
+                    y -= 1;
+                }
+
+                y + 1
+            };
+            natural = crate::mob::spawn::hostile_attempt(&MobView(world), &players, &surface, rng, &mut || shared.next_entity_id());
+
+            // Свет каждой найденной точки: небесный с поправкой на час и
+            // блочный; в темноте (блочный 0, небесный ≤ случайного 0…7)
+            // моб остаётся [проверить: случайное берётся после выбора места].
+            natural.retain(|mob| {
+                let (x, y, z) = mob.cell();
+                let (sky, block) = world.light_full(x, y, z);
+                let sky = (i32::from(sky) - (15 - ambient).max(0)).max(0) as u8;
+
+                crate::mob::spawn::dark_enough(sky, block, rng)
+            });
+        }
+    }
+
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    for mut mob in loaded {
+        mob.entity_id = shared.next_entity_id();
+        mob.uuid = crate::mob::uuid_for(mob.entity_id);
+        mob.brain = crate::mob::ai::Brain::new(mob.entity_id);
+        items.add_mob(mob);
+    }
+
+    for mob in natural {
+        items.add_mob(mob);
+    }
+
+    if spawning {
+        for (chunk_x, chunk_z) in fresh {
+            for mob in crate::mob::spawn::for_new_chunk(&MobView(world), chunk_x, chunk_z, rng, &mut || shared.next_entity_id()) {
+                items.add_mob(mob);
+            }
+        }
+    }
+
+    // Стрелы летят раньше мобов: выпущенная в этом такте начнёт полёт со
+    // следующего.
+    let targets: Vec<crate::arrow::Target> = watchers
+        .iter()
+        .filter(|player| !player.spectator)
+        .map(|player| crate::arrow::Target { id: player.id, x: player.x, y: player.y, z: player.z, width: 0.6, height: 1.8 })
+        .collect();
+
+    if !items.arrows().is_empty() {
+        // Клиентам стрелы рассылает слежение: пока они есть (и в такт, когда
+        // последняя пропала), оно должно идти.
+        world.note_tracker();
+
+        let mut arrows = std::mem::take(items.arrows_mut());
+
+        for arrow in &mut arrows {
+            if let Some(strike) = arrow.step(&MobView(world), &targets) {
+                world.note_mob_hurt(strike.target, strike.damage, crate::survival::Source::Arrow, arrow.owner, arrow.killer, Some(strike.dir), (arrow.x, arrow.y, arrow.z));
+            }
+        }
+
+        arrows.retain(|arrow| !arrow.gone);
+        *items.arrows_mut() = arrows;
+    }
+
+    if items.mobs().is_empty() {
+        // Слежению есть о чём рассказать, пока у клиентов остались показанные
+        // мобы — или пока в мире есть шарики опыта: их движение рассылает то
+        // же слежение (без мобов рядом шарики замирали, xp-orb-far).
+        if !items.mob_view().is_empty() || !items.orbs().is_empty() {
+            world.note_tracker();
+        }
+
+        items.snapshot_mobs();
+        return;
+    }
+
+    // Слежение рассылает клиентам мобов такими, какими они стоят до своего
+    // хода (чёрный ящик, cow-physics).
+    items.snapshot_mobs();
+    world.note_tracker();
+
+    let outcome = crate::mob::step_all(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id());
+
+    for strike in outcome.strikes {
+        world.note_mob_hurt(
+            strike.melee.target,
+            strike.melee.damage,
+            crate::survival::Source::MobAttack,
+            strike.attacker,
+            crate::mob::hostile::killer_key(strike.kind),
+            Some(strike.melee.push),
+            strike.at,
+        );
+    }
+
+    for fired in outcome.shots {
+        let mut gauss = || {
+            let (a, b) = (rng.unit().max(1.0e-12), rng.unit());
+
+            (-2.0 * a.ln()).sqrt() * (std::f64::consts::TAU * b).cos()
+        };
+        let error = crate::mob::hostile::arrow_error(difficulty);
+        let velocity = crate::arrow::launch(fired.shot.from, fired.shot.aim, fired.shot.speed, error, &mut gauss);
+        let arrow = crate::arrow::Arrow::new(shared.next_entity_id(), fired.shot.from, velocity, fired.shooter, crate::mob::hostile::killer_key(crate::mob::Kind::Skeleton));
+
+        items.add_arrow(arrow);
+    }
+
+    for eat in outcome.eaten {
+        let (x, y, z) = eat.at;
+
+        // Съеденная трава: у высокой травы блок пропадает, у дёрна — земля
+        // (вики, Sheep: «Eating grass»); клиенты видят разлетающиеся частицы
+        // (событие мира 2001).
+        let old = world.get_block(x, y, z);
+        let new = if eat.block { blocks::state_by_name("dirt") } else { blocks::state_by_name("air") };
+
+        if let Some(new) = new {
+            world.note_level_event(x, y, z, 2001, old);
+            world.set_block(x, y, z, new);
+        }
+    }
+
+    for (x, y, z) in outcome.eggs {
+        if let Some(egg) = blocks::item_named("egg") {
+            items.drop_item(shared.next_entity_id(), crate::inventory::Stack::new(egg, 1), (x, y + 0.3, z), (0.0, 0.0, 0.0), items::MINED_DELAY);
+        }
+    }
+
+    if ticks.is_multiple_of(200) {
+        world.store_mobs(items.mobs());
+    }
+
+    drop(items);
+    creeper_blasts(shared, dimension, world, &outcome.blasts);
+}
+
+/// Взрывы криперов: центр — их ноги, сила 3; каждый разбирается до конца, как
+/// у динамита. Виновник — крипер: игрок, что погиб, узнает его по имени.
+fn creeper_blasts(shared: &Shared, dimension: Dimension, world: &mut World, blasts: &[crate::mob::Blast]) {
+    if blasts.is_empty() {
+        return;
+    }
+
+    let players = blast_targets(shared, dimension);
+
+    for blast in blasts {
+        {
+            let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+            let mut next_id = || shared.next_entity_id();
+
+            world.blast_source = blast.shooter;
+            world.blast_killer = crate::mob::hostile::killer_key(crate::mob::Kind::Creeper);
+            tnt::explode(world, &mut items, &players, blast.at, blast.power, false, &mut next_id);
+            world.blast_killer = "";
+            prime_sounds(world, &mut items);
+        }
+
+        redstone::settle(world);
+        drop_destroyed(shared, dimension, world);
+    }
+}
+
 /// Такт вагонеток: каждая в порядке появления, со встречами друг с другом
 /// и с игроками. В выгруженном чанке вагонетка стоит, как и всё там.
 /// Провалившиеся в пустоту пропадают.
@@ -814,11 +1144,27 @@ fn unload_empty_chunks(shared: &Shared, dimension: Dimension, world: &mut World)
 
     let keep = shared.properties.view_distance + KEEP_EXTRA.max(shared.settings.prefetch_chunks + 1);
 
+    // Мобы уходят в файл вместе со своими чанками: запись — до выгрузки,
+    // а из мира убираются те, чей чанк выгрузился.
+    store_mobs(shared, dimension, world);
+
     let unloaded = world.unload_far(|x, z| {
         players
             .iter()
             .any(|(px, pz)| (x - px).abs() <= keep && (z - pz).abs() <= keep)
     });
+
+    if unloaded > 0 {
+        shared
+            .items_in(dimension)
+            .lock()
+            .expect("предметы захвачены другим потоком")
+            .remove_mobs(|mob| {
+                let (x, z) = mob.chunk();
+
+                !world.has_chunk(x, z)
+            });
+    }
 
     if unloaded > 0 {
         log_debug!("Мир: выгружено чанков — {}", unloaded);
@@ -1445,7 +1791,7 @@ mod tests {
         run(&mut world, 60);
 
         let mut items = crate::items::Items::new();
-        items.drop_item(1, crate::inventory::Stack::new(1, 1), (1.5, 64.2, 0.5), (0.0, 0.0, 0.0), Duration::from_secs(60));
+        items.drop_item(1, crate::inventory::Stack::new(1, 1), (1.5, 64.2, 0.5), (0.0, 0.0, 0.0), 1200);
 
         let solid = |x, y, z| blocks::stops_items(world.get_block(x, y, z));
         let loaded = |_, _| true;
@@ -1710,5 +2056,147 @@ mod tests {
         }
 
         assert_eq!(frames(&mut world), 1, "с опорой висит и дальше");
+    }
+
+    /// Общее состояние для проверок мобов: два пустых мира в памяти.
+    fn mob_server() -> Shared {
+        Shared::new(
+            World::in_memory(),
+            World::in_memory(),
+            std::path::PathBuf::new(),
+            std::path::PathBuf::new(),
+            Default::default(),
+            crate::ops::Ops::open(&std::env::temp_dir().join(format!("mcsheriffanya-tick-mob-ops-{}.json", std::process::id()))),
+            crate::skins::Settings::default(),
+        )
+    }
+
+    /// Мобы в такте мира падают, встают на землю, получают урон падения
+    /// и через снимок отдают слежению состояние до своего хода.
+    #[test]
+    fn mobs_fall_in_the_world_tick_and_the_view_lags_one_step() {
+        let shared = mob_server();
+        let overworld = Dimension::Overworld;
+        let mut world = shared.world_in(overworld).lock().unwrap();
+        let mut rng = crate::mob::Rng::new(1);
+        let start = f64::from(crate::world::flat::SURFACE) + 6.0;
+
+        world.ensure(0, 0);
+        shared.items_in(overworld).lock().unwrap().add_mob(crate::mob::Mob::new(1, crate::mob::Kind::Cow, (8.5, start, 8.5)));
+
+        step_mobs(&shared, overworld, &mut world, &mut rng, 1);
+
+        {
+            let items = shared.items_in(overworld).lock().unwrap();
+
+            // Снимок — до хода: корова ещё на месте, а сама уже сделала ход.
+            assert_eq!(items.mob_view()[0].ticks, 0);
+            assert_eq!(items.mob_view()[0].y, start);
+            assert_eq!(items.mobs()[0].ticks, 1);
+        }
+
+        for tick in 2..70 {
+            step_mobs(&shared, overworld, &mut world, &mut rng, tick);
+        }
+
+        let items = shared.items_in(overworld).lock().unwrap();
+        let cow = &items.mobs()[0];
+
+        assert!(cow.on_ground);
+        assert_eq!(cow.y, f64::from(crate::world::flat::SURFACE));
+        assert_eq!(cow.vitals.health, 7.0, "падение с шести блоков: урон ceil(6 − 3) = 3");
+    }
+
+    /// Плиты и растяжки видят мобов: живые, они жмут и каменные плиты.
+    #[test]
+    fn mobs_are_living_occupants() {
+        let shared = mob_server();
+        let overworld = Dimension::Overworld;
+
+        shared.items_in(overworld).lock().unwrap().add_mob(crate::mob::Mob::new(1, crate::mob::Kind::Pig, (3.5, 64.0, 3.5)));
+
+        let (standing, _) = occupants(&shared, overworld);
+
+        assert_eq!(standing.len(), 1);
+        assert!(standing[0].living);
+        assert_eq!((standing[0].width, standing[0].height), (0.9, 0.9));
+    }
+
+    /// Съеденная овцой трава становится землёй, снесённое курицей яйцо
+    /// падает предметом, детёныш у пары в любви рождается.
+    #[test]
+    fn mobs_change_the_world_around_them() {
+        let shared = mob_server();
+        let overworld = Dimension::Overworld;
+        let mut world = shared.world_in(overworld).lock().unwrap();
+        let mut rng = crate::mob::Rng::new(3);
+        let surface = crate::world::flat::SURFACE;
+
+        world.ensure(0, 0);
+        world.set_block_silently(4, surface - 1, 4, blocks::state_by_name("grass_block").unwrap());
+
+        {
+            let mut items = shared.items_in(overworld).lock().unwrap();
+            let mut sheep = crate::mob::Mob::new(1, crate::mob::Kind::Sheep, (4.5, f64::from(surface), 4.5));
+            let mut hen = crate::mob::Mob::new(2, crate::mob::Kind::Chicken, (9.5, f64::from(surface), 9.5));
+
+            sheep.sheared = true;
+            sheep.brain.eating = 5;
+            hen.egg_timer = 5;
+            items.add_mob(sheep);
+            items.add_mob(hen);
+        }
+
+        for tick in 1..=10 {
+            step_mobs(&shared, overworld, &mut world, &mut rng, tick);
+        }
+
+        let eggs = shared.items_in(overworld).lock().unwrap().items().iter().filter(|item| blocks::item_name(item.stack.item) == Some("egg")).count();
+
+        assert_eq!(eggs, 1, "курица снесла яйцо на пятом такте");
+        assert_eq!(world.get_block(4, surface - 1, 4), blocks::state_by_name("dirt").unwrap(), "дёрн под овцой стал землёй");
+        assert!(!shared.items_in(overworld).lock().unwrap().mobs()[0].sheared, "шерсть отросла");
+    }
+
+    /// Выключенное правило `spawn_mobs` не пускает животных в новые чанки;
+    /// включённое — пускает (в обычном мире, не в Незере).
+    #[test]
+    fn new_chunks_get_animals_only_when_the_rule_is_on() {
+        let shared = mob_server();
+        let overworld = Dimension::Overworld;
+        let mut rng = crate::mob::Rng::new(4);
+
+        // Обычный мир с травой: много новых чанков, чтобы шанс в 10 % сработал.
+        {
+            let mut world = shared.world_in(overworld).lock().unwrap();
+
+            for x in 0..40 {
+                world.ensure(x, 0);
+            }
+
+            step_mobs(&shared, overworld, &mut world, &mut rng, 1);
+        }
+
+        assert!(shared.items_in(overworld).lock().unwrap().mobs().iter().all(|mob| !mob.persistent || mob.ticks > 0), "мобы появились и сделали ход");
+
+        let with_rule = shared.items_in(overworld).lock().unwrap().mobs().len();
+
+        assert!(with_rule > 0, "на сорока плоских чанках хоть одна группа селится");
+
+        let quiet = mob_server();
+
+        quiet.spawn_mobs.store(false, std::sync::atomic::Ordering::Relaxed);
+
+        {
+            let mut world = quiet.world_in(overworld).lock().unwrap();
+
+            for x in 0..40 {
+                world.ensure(x, 0);
+            }
+
+            step_mobs(&quiet, overworld, &mut world, &mut rng, 1);
+        }
+
+        assert!(quiet.items_in(overworld).lock().unwrap().mobs().is_empty(), "правило выключено — никого");
     }
 }

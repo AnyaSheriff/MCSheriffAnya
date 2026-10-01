@@ -25,6 +25,7 @@ pub mod light;
 pub mod nether;
 pub mod nether_bastion;
 pub mod nether_fortress;
+pub mod the_end;
 pub mod noise;
 pub mod ocean;
 pub mod region;
@@ -176,6 +177,11 @@ pub enum WorldEvent {
     /// звук ведра и дым раньше воды, у ловушки лампы раньше крышки.
     Broadcast,
 
+    /// Метка «здесь слежение рассылает мобов»: у оригинала слежение стоит
+    /// раньше хода сущностей, и их звуки этого такта (плита под свиньёй)
+    /// идут после пакетов мобов (чёрный ящик, mob-plate).
+    Tracker,
+
     /// Метка «здесь такт дошёл до игроков»: открытые окна получают
     /// перемены содержимого, опубликованные к этому мгновению
     /// (`World::published`).
@@ -189,6 +195,29 @@ pub enum WorldEvent {
     /// изменений, в которую попали, — как у оригинала у полки и статуи
     /// голема (сценарии shelf, golem-statue). `nbt` — сетевой NBT.
     BlockEntity { x: i32, y: i32, z: i32, kind: i32, nbt: std::sync::Arc<[u8]> },
+
+    /// Игроку `entity_id` нанесён урон (взрыв): подключение применяет его в
+    /// этом месте потока — раньше пакета взрыва (чёрный ящик, tnt-damage).
+    /// `amount` — урон до поправки на сложность, `source` — виновник
+    /// (номер сущности динамита; 0 — нет).
+    Hurt { entity_id: i32, amount: f32, source: i32, killer: &'static str },
+
+    /// Игроку `entity_id` нанёс урон моб или стрела (mob/hostile.rs, arrow.rs):
+    /// вид урона, номер виновника, ключ его имени для сообщения о смерти и
+    /// толчок (скорость после отдачи, если есть).
+    MobHurt { entity_id: i32, amount: f32, source: crate::survival::Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64) },
+
+    /// Игрок бьёт игрока (или стрела попала): жертвино подключение считает
+    /// щит, броню и отдачу в этом месте потока (combat.rs).
+    PlayerStrike(std::sync::Arc<crate::combat::PlayerStrike>),
+
+    /// Частицы (Level Particles): вид, блок для частицы блока, место,
+    /// разброс, скорость, число.
+    Particle { kind: i32, block: Option<i32>, at: (f64, f64, f64), offset: (f32, f32, f32), speed: f32, count: i32 },
+
+    /// Анимация сущности (Entity Animation): 4 — критический удар, 5 —
+    /// удар с зачарованием.
+    Animation { entity_id: i32, kind: u8 },
 }
 
 /// Взрыв для клиентов: где, какой силы, сколько блоков разрушил и кого из
@@ -261,6 +290,11 @@ struct Chunk {
     /// ложится в файл. Живая сущность — в `Items`, здесь её запись (место —
     /// мировое, номер сущности не в счёт).
     frames: Vec<crate::frame::Frame>,
+
+    /// Мобы (mob/mod.rs), стоявшие в этом чанке при последнем сохранении:
+    /// то, что ложится в файл. Живой моб — в `Items`; записи обновляет
+    /// `World::store_mobs` перед записью на диск и выгрузкой.
+    mobs: Vec<crate::mob::Mob>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
@@ -351,6 +385,7 @@ impl Chunk {
             spilled: Vec::new(),
             custom_tnt: Vec::new(),
             frames: Vec::new(),
+            mobs: Vec::new(),
         }
     }
 
@@ -372,6 +407,13 @@ impl Chunk {
         // У Незера пол и потолок — он складывается целиком своим путём.
         if let Generator::Nether(nether) = generator {
             let mut chunk = nether.chunk(chunk_x, chunk_z);
+            chunk.light_up();
+            return chunk;
+        }
+
+        // Энд — тоже целиком своим путём.
+        if let Generator::End(end) = generator {
+            let mut chunk = end.chunk(chunk_x, chunk_z);
             chunk.light_up();
             return chunk;
         }
@@ -781,6 +823,13 @@ pub struct World {
     /// он так вызвал, ему самому не шлются — см. `note_sound_by_hand`.
     pub actor: Option<i32>,
 
+    /// Номер сущности динамита, чей взрыв сейчас считается (0 — нет): он
+    /// назван виновником в уроне игрокам.
+    pub blast_source: i32,
+
+    /// Ключ имени виновника взрыва для сообщения о смерти (крипер): пусто — нет.
+    pub blast_killer: &'static str,
+
     /// Места, о которых клиентам скажут позже: (место, такт, как есть).
     /// «Как есть» — служебный блок не подменяется пустотой.
     late: Vec<((i32, i32, i32), u64, bool)>,
@@ -955,6 +1004,14 @@ pub struct World {
     /// как сущности (`take_loaded_frames`).
     loaded_frames: Vec<crate::frame::Frame>,
 
+    /// Мобы, прочитанные из файла вместе с чанком: такт заводит их в мир
+    /// (`take_loaded_mobs`).
+    loaded_mobs: Vec<crate::mob::Mob>,
+
+    /// Чанки, только что созданные генерацией (не с диска): в них могут
+    /// появиться животные (`take_new_chunks`).
+    new_chunks: Vec<(i32, i32)>,
+
     /// То же для вагонеток-хранилищ: номер сущности — ячейки.
     pub published_carts: HashMap<i32, Vec<Option<crate::inventory::Stack>>>,
 
@@ -1026,6 +1083,8 @@ impl World {
         Self {
             noise: 0x9E37_79B9,
             actor: None,
+            blast_source: 0,
+            blast_killer: "",
             late: Vec::new(),
             chunks: HashMap::default(),
             events: Journal::new(),
@@ -1063,6 +1122,8 @@ impl World {
             published: HashMap::new(),
             published_carts: HashMap::new(),
             loaded_frames: Vec::new(),
+            loaded_mobs: Vec::new(),
+            new_chunks: Vec::new(),
             container_order: Vec::new(),
             contents_changed: Vec::new(),
             sky_cache: HashMap::new(),
@@ -1162,6 +1223,8 @@ impl World {
         let mut world = Self {
             noise: 0x9E37_79B9 ^ std::process::id(),
             actor: None,
+            blast_source: 0,
+            blast_killer: "",
             late: Vec::new(),
             chunks: HashMap::default(),
             events: Journal::new(),
@@ -1181,6 +1244,7 @@ impl World {
                 WorldKind::Normal => Generator::Normal(Terrain::new(seed, Style::Vanilla)),
                 WorldKind::SuperSmooth => Generator::Normal(Terrain::new(seed, Style::Smooth)),
                 WorldKind::Nether => Generator::Nether(nether::Nether::new(seed)),
+                WorldKind::End => Generator::End(the_end::End::new(seed)),
             }),
             block_events: std::collections::VecDeque::new(),
             redstone: redstone::Memory::new(),
@@ -1204,6 +1268,8 @@ impl World {
             published: HashMap::new(),
             published_carts: HashMap::new(),
             loaded_frames: Vec::new(),
+            loaded_mobs: Vec::new(),
+            new_chunks: Vec::new(),
             container_order: Vec::new(),
             contents_changed: Vec::new(),
             sky_cache: HashMap::new(),
@@ -1497,6 +1563,45 @@ impl World {
         self.dirty.insert(chunk_key(frame.pos.0, frame.pos.2));
     }
 
+    /// Мобы, что пришли вместе с загруженными чанками, — забирает такт.
+    pub fn take_loaded_mobs(&mut self) -> Vec<crate::mob::Mob> {
+        std::mem::take(&mut self.loaded_mobs)
+    }
+
+    /// Только что созданные генерацией чанки — забирает такт, чтобы поселить
+    /// в них животных.
+    pub fn take_new_chunks(&mut self) -> Vec<(i32, i32)> {
+        std::mem::take(&mut self.new_chunks)
+    }
+
+    /// Записывает мобов в их чанки: список каждого загруженного чанка
+    /// заменяется тем, кто в нём сейчас стоит. Чанк без мобов, у которого их
+    /// и не было, не трогается — не переписывается зря.
+    pub fn store_mobs(&mut self, mobs: &[crate::mob::Mob]) {
+        let mut by_chunk: HashMap<(i32, i32), Vec<crate::mob::Mob>> = HashMap::new();
+
+        for mob in mobs.iter().filter(|mob| !mob.is_dead() && mob.persistent) {
+            let (x, z) = mob.chunk();
+
+            by_chunk.entry((x, z)).or_default().push(mob.clone());
+        }
+
+        let mut dirty = Vec::new();
+
+        for (key, chunk) in &mut self.chunks {
+            let now = by_chunk.remove(key).unwrap_or_default();
+
+            if now.is_empty() && chunk.mobs.is_empty() {
+                continue;
+            }
+
+            chunk.mobs = now;
+            dirty.push(*key);
+        }
+
+        self.dirty.extend(dirty);
+    }
+
     /// Стирает запись рамки: она сломана или отвалилась.
     pub fn forget_frame(&mut self, pos: (i32, i32, i32), facing: u8) {
         let Some(chunk) = self.chunks.get_mut(&chunk_key(pos.0, pos.2)) else {
@@ -1575,6 +1680,11 @@ impl World {
         now
     }
 
+    /// Точка такта, где слежение рассылает клиентам мобов.
+    pub fn note_tracker(&mut self) {
+        self.events.push(WorldEvent::Tracker);
+    }
+
     /// Точка такта, где накопленные изменения блоков уходят клиентам.
     pub fn note_broadcast(&mut self) {
         self.events.push(WorldEvent::Broadcast);
@@ -1635,6 +1745,148 @@ impl World {
         let count = limit.min(self.blast_rest.len());
 
         self.blast_rest.drain(..count).collect()
+    }
+
+    /// Сообщает игроку об уроне (взрыв): см. `WorldEvent::Hurt`.
+    pub fn note_hurt(&mut self, entity_id: i32, amount: f32, source: i32) {
+        self.events.push(WorldEvent::Hurt { entity_id, amount, source, killer: self.blast_killer });
+    }
+
+    /// Урон игроку от моба или стрелы: см. `WorldEvent::MobHurt`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn note_mob_hurt(&mut self, entity_id: i32, amount: f32, source: crate::survival::Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64)) {
+        self.events.push(WorldEvent::MobHurt { entity_id, amount, source, attacker, killer, push, at });
+    }
+
+    /// Открыто ли небо над клеткой: выше только воздух и прозрачное (стекло
+    /// солнце не держит, вики, Zombie: «Transparent blocks, such as glass,
+    /// do not prevent them from burning»). Незагруженный чанк — нет.
+    pub fn open_sky(&self, x: i32, y: i32, z: i32) -> bool {
+        let (chunk_x, chunk_z) = chunk_key(x, z);
+        let Some(chunk) = self.chunks.get(&(chunk_x, chunk_z)) else {
+            return false;
+        };
+
+        (y + 1..=chunk.highest()).all(|above| {
+            let state = chunk.block(x, above, z);
+
+            state == AIR || light::filter(state) == 0
+        })
+    }
+
+    /// Небесный и блочный свет в клетке, с учётом соседей: считается и
+    /// запоминается (как `sky_light`), для мобов — спавн и пауки.
+    pub fn light_full(&mut self, x: i32, y: i32, z: i32) -> (u8, u8) {
+        if !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&y) {
+            return (light::FULL, 0);
+        }
+
+        let (chunk_x, chunk_z) = chunk_key(x, z);
+
+        if !self.chunks.contains_key(&(chunk_x, chunk_z)) {
+            return (light::FULL, 0);
+        }
+
+        let revisions: [u32; 9] = std::array::from_fn(|slot| {
+            let place = (chunk_x + slot as i32 % 3 - 1, chunk_z + slot as i32 / 3 - 1);
+
+            self.chunks.get(&place).map_or(u32::MAX, |chunk| chunk.revision)
+        });
+        let (local_x, local_z) = (x.rem_euclid(CHUNK_SIZE), z.rem_euclid(CHUNK_SIZE));
+
+        if let Some((seen, light)) = self.sky_cache.get(&(chunk_x, chunk_z))
+            && *seen == revisions
+        {
+            return light.at(local_x, y, local_z);
+        }
+
+        let Some(job) = self.light_job(chunk_x, chunk_z) else {
+            return (light::FULL, 0);
+        };
+        let (light, recounted) = job.finish();
+
+        self.store_light(recounted);
+
+        let level = light.at(local_x, y, local_z);
+
+        self.sky_cache.insert((chunk_x, chunk_z), (revisions, Arc::new(light)));
+        level
+    }
+
+    /// То же, но только из уже посчитанного (`light_full`): без замка на
+    /// записи. Нет в запоминании — None.
+    pub fn light_cached(&self, x: i32, y: i32, z: i32) -> Option<(u8, u8)> {
+        if !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&y) {
+            return None;
+        }
+
+        let (chunk_x, chunk_z) = chunk_key(x, z);
+        let (_, light) = self.sky_cache.get(&(chunk_x, chunk_z))?;
+
+        Some(light.at(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))
+    }
+
+    /// Удар игрока по игроку — жертве (`WorldEvent::PlayerStrike`).
+    pub fn note_player_strike(&mut self, strike: crate::combat::PlayerStrike) {
+        self.events.push(WorldEvent::PlayerStrike(std::sync::Arc::new(strike)));
+    }
+
+    /// Частицы для всех, кто рядом.
+    pub fn note_particle(&mut self, kind: i32, block: Option<i32>, at: (f64, f64, f64), offset: (f32, f32, f32), speed: f32, count: i32) {
+        self.events.push(WorldEvent::Particle { kind, block, at, offset, speed, count });
+    }
+
+    /// Анимация сущности всем, кто её видит.
+    pub fn note_animation(&mut self, entity_id: i32, kind: u8) {
+        self.events.push(WorldEvent::Animation { entity_id, kind });
+    }
+
+    /// Звук игрока, который сам его не слышит (ушиб: `except` — его сущность).
+    pub fn note_sound_player_except(&mut self, at: (f64, f64, f64), name: &'static str, volume: f32, pitch: f32, except: i32) {
+        self.events.push(WorldEvent::Sound(WorldSound {
+            x: at.0.floor() as i32,
+            y: at.1.floor() as i32,
+            z: at.2.floor() as i32,
+            name,
+            volume,
+            pitch,
+            exact: Some(at),
+            of_block: false,
+            of_player: true,
+            except: Some(except),
+        }));
+    }
+
+    /// Звук существа (раздел «существа») в точке: стрела в блоке.
+    pub fn note_sound_neutral_at(&mut self, at: (f64, f64, f64), name: &'static str, volume: f32, pitch: f32) {
+        self.events.push(WorldEvent::Sound(WorldSound {
+            x: at.0.floor() as i32,
+            y: at.1.floor() as i32,
+            z: at.2.floor() as i32,
+            name,
+            volume,
+            pitch,
+            exact: Some(at),
+            of_block: false,
+            of_player: false,
+            except: None,
+        }));
+    }
+
+    /// Звук игрока с высотой и громкостью (выстрел, щит).
+    pub fn note_sound_player_at(&mut self, at: (f64, f64, f64), name: &'static str, volume: f32, pitch: f32) {
+        self.events.push(WorldEvent::Sound(WorldSound {
+            x: at.0.floor() as i32,
+            y: at.1.floor() as i32,
+            z: at.2.floor() as i32,
+            name,
+            volume,
+            pitch,
+            exact: Some(at),
+            of_block: false,
+            of_player: true,
+            except: None,
+        }));
     }
 
     /// Сообщает клиентам о взрыве.
@@ -1915,12 +2167,14 @@ impl World {
             frame.pos.2 += chunk_z * CHUNK_SIZE;
             frame
         }));
+        self.loaded_mobs.extend(chunk.mobs.iter().cloned());
         self.chunks.insert(key, chunk);
         self.unloaded.remove(&key);
 
         // Сложенный заново чанк записывается, даже если его не тронут.
         if !from_disk {
             self.fresh.insert(key);
+            self.new_chunks.push(key);
         }
 
         // Такты, дожидавшиеся этого чанка, возвращаются в очередь, а
@@ -2889,6 +3143,9 @@ enum Generator {
 
     /// Незер: пол и потолок, море лавы.
     Nether(nether::Nether),
+
+    /// Энд: главный остров, пустота и внешние острова.
+    End(the_end::End),
 }
 
 impl World {
@@ -2905,6 +3162,13 @@ impl World {
     }
 
     fn find_spawn(&self) -> (f64, f64, f64) {
+        // В Энде появляются на площадке, а не по суше у начала координат.
+        if matches!(*self.generator, Generator::End(_)) {
+            let (x, y, z) = the_end::PLATFORM;
+
+            return (f64::from(x) + 0.5, f64::from(y + 1), f64::from(z) + 0.5);
+        }
+
         /// Насколько далеко от начала координат искать сушу.
         const SEARCH: i32 = 3_000;
 
@@ -2958,7 +3222,7 @@ impl Generator {
     fn column_at(&self, x: i32, z: i32) -> Column {
         match self {
             Generator::Normal(terrain) => terrain.column_at(x, z),
-            Generator::Flat | Generator::Nether(_) => Column::flat(flat::GROUND),
+            Generator::Flat | Generator::Nether(_) | Generator::End(_) => Column::flat(flat::GROUND),
         }
     }
 
@@ -2983,7 +3247,7 @@ impl Generator {
     fn column_in(&self, x: i32, z: i32, grid: Option<&terrain::ReliefGrid>) -> Column {
         match self {
             Generator::Normal(terrain) => terrain.column_in(x, z, grid),
-            Generator::Flat | Generator::Nether(_) => Column::flat(flat::GROUND),
+            Generator::Flat | Generator::Nether(_) | Generator::End(_) => Column::flat(flat::GROUND),
         }
     }
 
@@ -2998,7 +3262,7 @@ impl Generator {
     ) -> bool {
         match self {
             Generator::Normal(terrain) => terrain.solid_in(grid, column, x, y, z),
-            Generator::Flat | Generator::Nether(_) => y <= column.height,
+            Generator::Flat | Generator::Nether(_) | Generator::End(_) => y <= column.height,
         }
     }
 
@@ -3008,7 +3272,7 @@ impl Generator {
             Generator::Normal(terrain) => {
                 Some(terrain.cave_grid(x, z, x + CHUNK_SIZE - 1, z + CHUNK_SIZE - 1, y_to))
             }
-            Generator::Flat | Generator::Nether(_) => None,
+            Generator::Flat | Generator::Nether(_) | Generator::End(_) => None,
         }
     }
 
@@ -3170,7 +3434,7 @@ impl Generator {
     fn biome_of(&self, column: &Column) -> terrain::Biome {
         match self {
             Generator::Normal(_) => column.biome,
-            Generator::Flat | Generator::Nether(_) => terrain::Biome::Plains,
+            Generator::Flat | Generator::Nether(_) | Generator::End(_) => terrain::Biome::Plains,
         }
     }
 
@@ -3180,7 +3444,7 @@ impl Generator {
     fn top_of(&self, column: &Column) -> i32 {
         match self {
             Generator::Normal(_) => column.height.max(terrain::SEA) + PLANT_ROOM,
-            Generator::Flat | Generator::Nether(_) => flat::GROUND,
+            Generator::Flat | Generator::Nether(_) | Generator::End(_) => flat::GROUND,
         }
     }
 }
@@ -4807,6 +5071,50 @@ mod safety_tests {
         assert_eq!(loaded.len(), 1);
         assert_eq!((loaded[0].pos, loaded[0].facing, loaded[0].glow), (kept.pos, kept.facing, true));
         assert_eq!((loaded[0].item, loaded[0].rotation), (kept.item, 6));
+
+        drop(world);
+        let _ = fs::remove_dir_all(&path);
+    }
+
+    /// Мобы ложатся в файл вместе со своим чанком (по тому месту, где стоят
+    /// при записи) и возвращаются с ним; вышедшие из мира не возвращаются.
+    /// Новый чанк один раз попадает в список «только что созданных».
+    #[test]
+    fn mobs_survive_the_disk() {
+        let path = directory("mobs");
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+
+        world.ensure(0, 3);
+        assert_eq!(world.take_new_chunks(), vec![(0, 3)], "созданный чанк отмечен");
+        assert!(world.take_new_chunks().is_empty(), "отметка одноразовая");
+
+        let mut cow = crate::mob::Mob::new(1, crate::mob::Kind::Cow, (5.5, f64::from(flat::SURFACE + 1), 50.5));
+
+        cow.age = -900;
+        cow.vitals.health = 4.0;
+
+        let mut dead = crate::mob::Mob::new(2, crate::mob::Kind::Pig, (6.5, f64::from(flat::SURFACE + 1), 50.5));
+
+        dead.die();
+
+        // Третий стоит в чанке, которого в памяти нет: не записывается.
+        let far = crate::mob::Mob::new(3, crate::mob::Kind::Sheep, (500.5, f64::from(flat::SURFACE + 1), 500.5));
+
+        world.store_mobs(&[cow, dead, far]);
+        world.save_all();
+        drop(world);
+
+        let mut world = World::open(&path, Some(1), WorldKind::Flat).expect("мир открылся");
+
+        assert!(world.take_loaded_mobs().is_empty(), "чанк ещё не загружен");
+        world.ensure(0, 3);
+
+        let loaded = world.take_loaded_mobs();
+
+        assert_eq!(loaded.len(), 1, "погибший и дальний не записались");
+        assert_eq!(loaded[0].kind, crate::mob::Kind::Cow);
+        assert_eq!((loaded[0].x, loaded[0].z, loaded[0].age, loaded[0].vitals.health), (5.5, 50.5, -900, 4.0));
+        assert!(world.take_new_chunks().is_empty(), "прочитанный с диска чанк не новый");
 
         drop(world);
         let _ = fs::remove_dir_all(&path);

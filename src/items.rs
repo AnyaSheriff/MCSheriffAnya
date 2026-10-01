@@ -18,7 +18,7 @@
 // Entity: у падающих блоков и TNT тяжесть 0.04 и сопротивление 0.98 после
 // шага), только у него есть запал, а поднять его нельзя.
 
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::inventory::Stack;
 use crate::journal::{Journal, Reader};
@@ -36,20 +36,22 @@ const PICK_UP_REACH: f64 = 0.3 + 1.0 + 0.125;
 const PICK_UP_ABOVE: f64 = 1.8 + 0.5;
 const PICK_UP_BELOW: f64 = 0.5 + 0.25;
 
-/// Сколько предмет нельзя поднимать после того, как игрок его выбросил:
-/// две секунды, как в игре.
+/// Сколько тактов предмет нельзя поднимать после того, как игрок его
+/// выбросил: 40 (две секунды при 20 тактах в секунду), как в игре. Считается
+/// в тактах, а не по часам: у отстающего сервера оригинал тоже ждёт 40
+/// тактов, а не две секунды.
 ///
 /// Иначе выброшенное тут же вернулось бы обратно: игрок стоит рядом с тем,
 /// что бросил.
-pub const THROWN_DELAY: Duration = Duration::from_secs(2);
+pub const THROWN_DELAY: u64 = 40;
 
-/// Сколько нельзя поднимать то, что выпало из сломанного блока: полсекунды,
-/// как в игре.
-pub const MINED_DELAY: Duration = Duration::from_millis(500);
+/// Сколько тактов нельзя поднимать то, что выпало из сломанного блока: 10
+/// (полсекунды), как в игре.
+pub const MINED_DELAY: u64 = 10;
 
 /// Предмет из выбрасывателя поднимается сразу: у оригинала робот подобрал
 /// его через 4 такта после выброса (чёрный ящик, dropper-pulse).
-pub const DISPENSED_DELAY: Duration = Duration::ZERO;
+pub const DISPENSED_DELAY: u64 = 0;
 
 /// Насколько предмет тянет вниз за такт.
 const GRAVITY: f64 = 0.04;
@@ -109,10 +111,11 @@ const SUPPORT_PROBE: f64 = 0.01;
 /// через блок, и предмет прошёл бы сквозь пол.
 const MAX_STEP: f64 = 0.2;
 
-/// Сколько предмет лежит, прежде чем пропасть: пять минут, как в игре.
+/// Сколько тактов предмет лежит, прежде чем пропасть: 6000 (пять минут), как
+/// в игре; тоже в тактах, а не по часам.
 ///
 /// Без этого брошенное копилось бы в памяти сервера до самой его остановки.
-const LIFETIME: Duration = Duration::from_secs(300);
+const LIFETIME: u64 = 6000;
 
 /// Здоровье лежащего предмета: 5 (вики, Item (entity): «Health: The health
 /// of the item, which starts at 5»). Его отнимает взрыв.
@@ -168,11 +171,9 @@ pub struct Dropped {
     /// Лежит ли он на чём-то. Лежащий тормозится трением, летящий — воздухом.
     pub on_ground: bool,
 
-    /// С какого времени предмет можно поднять.
-    ready_at: Instant,
-
-    /// Когда он появился: полежав достаточно долго, предмет пропадает.
-    born: Instant,
+    /// Сколько тактов от появления предмет нельзя поднять (сравнивается с
+    /// `age`).
+    pickup_delay: u64,
 
     /// Касался ли воды в прошлый такт (None — такта ещё не было): вход в
     /// воду даёт плеск.
@@ -245,6 +246,14 @@ pub enum Change {
     /// item-frame-rotate: звук, потом свойство).
     FrameSound { at: (f64, f64, f64), name: &'static str },
 
+    /// Что случилось с мобом: удар, смерть, звук, сердечки. Клиентам это
+    /// уходит в порядке записи, вперемешку с прочими событиями.
+    MobEvent { entity_id: i32, at: (f64, f64, f64), event: crate::mob::Event },
+
+    /// Появился шарик опыта (xp.rs). Пропадает записью `Gone`, а подобранный —
+    /// `Taken`.
+    Orb(crate::xp::XpOrb),
+
     /// Предмет подняли.
     Taken {
         entity_id: i32,
@@ -271,6 +280,22 @@ pub struct Items {
     /// Рамки для предметов (frame.rs): висят на гранях блоков, журнал общий.
     frames: Vec<crate::frame::Frame>,
 
+    /// Мобы (mob/mod.rs): своя физика и мысли, журнал общий.
+    mobs: Vec<crate::mob::Mob>,
+
+    /// Стрелы (arrow.rs): летят, втыкаются, попадают в игроков.
+    arrows: Vec<crate::arrow::Arrow>,
+
+    /// Мобы на начало такта — по ним слежение рассылает клиентам (`snapshot_mobs`).
+    mob_view: Vec<crate::mob::Mob>,
+
+    /// Шарики опыта (xp.rs) и их снимок на начало такта — как у мобов.
+    orbs: Vec<crate::xp::XpOrb>,
+    orb_view: Vec<crate::xp::XpOrb>,
+
+    /// Сколько тактов игрок (по номеру сущности) ещё ждёт до следующего шарика.
+    xp_delay: std::collections::HashMap<i32, u32>,
+
     changes: Journal<Change>,
 }
 
@@ -281,8 +306,116 @@ impl Items {
             carts: Vec::new(),
             bolts: Vec::new(),
             frames: Vec::new(),
+            mobs: Vec::new(),
+            mob_view: Vec::new(),
+            orbs: Vec::new(),
+            orb_view: Vec::new(),
+            xp_delay: std::collections::HashMap::new(),
+            arrows: Vec::new(),
             changes: Journal::new(),
         }
+    }
+
+    /// Ставит моба в мир: клиентам его покажет конец такта (`send_mob_ticks`).
+    pub fn add_mob(&mut self, mob: crate::mob::Mob) {
+        self.mobs.push(mob);
+    }
+
+    /// Переносит накопленные мобами события в журнал: в месте моба на
+    /// этот миг. Добыча падает предметами прямо здесь, чтобы порядок журнала
+    /// был как у оригинала: удар, звук, добыча, смерть. Зовётся после такта,
+    /// удара игрока и команд.
+    pub fn flush_mob_events(&mut self, next_id: &mut dyn FnMut() -> i32, rng: &mut crate::mob::Rng) {
+        for index in 0..self.mobs.len() {
+            let (entity_id, silent) = (self.mobs[index].entity_id, self.mobs[index].silent);
+            let at = (self.mobs[index].x, self.mobs[index].y, self.mobs[index].z);
+
+            for event in std::mem::take(&mut self.mobs[index].events) {
+                match event {
+                    crate::mob::Event::Sound { .. } if silent => {}
+                    crate::mob::Event::Loot(stacks) => {
+                        for stack in stacks {
+                            // Как у выпавшего из блока: скорость вверх 0,2, вбок
+                            // случайная до 0,1 (чёрный ящик, cow-physics).
+                            let velocity = (rng.unit() * 0.2 - 0.1, 0.2, rng.unit() * 0.2 - 0.1);
+
+                            self.drop_item(next_id(), stack, at, velocity, crate::mob::DROP_DELAY);
+                        }
+                    }
+                    event => {
+                        // Опыт падает шариками после добычи, прямо перед
+                        // событием смерти (чёрный ящик, cow-hit).
+                        if matches!(event, crate::mob::Event::Death) {
+                            let points = std::mem::take(&mut self.mobs[index].pending_xp);
+
+                            self.drop_experience(points, at, next_id, rng);
+                        }
+
+                        self.changes.push(Change::MobEvent { entity_id, at, event });
+                    }
+                }
+            }
+        }
+    }
+
+    /// Снимок мобов на начало их такта: клиентам рассылка идёт по нему, как
+    /// у оригинала, где слежение за сущностями стоит раньше их хода —
+    /// конец такта показывает то, что было до хода мобов (чёрный ящик,
+    /// cow-physics: скорость и сдвиг при падении отстают на один ход).
+    pub fn snapshot_mobs(&mut self) {
+        self.mob_view = self.mobs.clone();
+        self.orb_view = self.orbs.clone();
+    }
+
+    /// Мобы такими, какими их видит слежение (`snapshot_mobs`).
+    pub fn mob_view(&self) -> &[crate::mob::Mob] {
+        &self.mob_view
+    }
+
+    /// Ставит моба, родившегося во время хода мобов: клиентам он виден уже
+    /// в этом конце такта (появление), первая сверка — со следующего.
+    pub fn add_mob_late(&mut self, mob: crate::mob::Mob) {
+        self.mob_view.push(mob.clone());
+        self.mobs.push(mob);
+    }
+
+    /// Выпускает стрелу.
+    pub fn add_arrow(&mut self, arrow: crate::arrow::Arrow) {
+        self.arrows.push(arrow);
+    }
+
+    pub fn arrows(&self) -> &[crate::arrow::Arrow] {
+        &self.arrows
+    }
+
+    pub fn arrows_mut(&mut self) -> &mut Vec<crate::arrow::Arrow> {
+        &mut self.arrows
+    }
+
+    pub fn mobs(&self) -> &[crate::mob::Mob] {
+        &self.mobs
+    }
+
+    pub fn mobs_mut(&mut self) -> &mut [crate::mob::Mob] {
+        &mut self.mobs
+    }
+
+    /// Сам список мобов — чтобы на время вынуть его целиком.
+    pub fn mobs_vec(&mut self) -> &mut Vec<crate::mob::Mob> {
+        &mut self.mobs
+    }
+
+    /// Убирает мобов, которых выбирает `gone` (команда `kill`, пропавший труп,
+    /// выгруженный чанк), и возвращает их. Клиентам уходит `Gone`.
+    pub fn remove_mobs(&mut self, gone: impl FnMut(&mut crate::mob::Mob) -> bool) -> Vec<crate::mob::Mob> {
+        let removed: Vec<crate::mob::Mob> = self.mobs.extract_if(.., gone).collect();
+
+        for mob in &removed {
+            self.changes.push(Change::Gone { entity_id: mob.entity_id });
+            self.mob_view.retain(|seen| seen.entity_id != mob.entity_id);
+        }
+
+        removed
     }
 
     /// Ставит вагонетку в мир.
@@ -378,7 +511,7 @@ impl Items {
     /// Призванный командой предмет: как выпавший, только может быть без
     /// тяжести (`NoGravity:1b`).
     pub fn summon_item(&mut self, entity_id: i32, stack: Stack, at: (f64, f64, f64), no_gravity: bool) {
-        let mut item = Self::new_item(entity_id, stack, at, (0.0, 0.0, 0.0), Duration::ZERO);
+        let mut item = Self::new_item(entity_id, stack, at, (0.0, 0.0, 0.0), 0);
 
         item.no_gravity = no_gravity;
         self.items.push(item.clone());
@@ -392,7 +525,7 @@ impl Items {
         stack: Stack,
         (x, y, z): (f64, f64, f64),
         velocity: (f64, f64, f64),
-        delay: Duration,
+        delay: u64,
     ) {
         let dropped = Self::new_item(entity_id, stack, (x, y, z), velocity, delay);
 
@@ -406,7 +539,7 @@ impl Items {
         stack: Stack,
         (x, y, z): (f64, f64, f64),
         velocity: (f64, f64, f64),
-        delay: Duration,
+        delay: u64,
     ) -> Dropped {
         Dropped {
             entity_id,
@@ -423,8 +556,7 @@ impl Items {
             vy: velocity.1,
             vz: velocity.2,
             on_ground: false,
-            ready_at: Instant::now() + delay,
-            born: Instant::now(),
+            pickup_delay: delay,
             in_water: None,
             shown_fuse: 0,
             touchable: None,
@@ -459,8 +591,7 @@ impl Items {
             vy: 0.0,
             vz: 0.0,
             on_ground: false,
-            ready_at: Instant::now(),
-            born: Instant::now(),
+            pickup_delay: 0,
             in_water: None,
             shown_fuse: 0,
             touchable: None,
@@ -500,8 +631,7 @@ impl Items {
             vy: velocity.1,
             vz: velocity.2,
             on_ground: false,
-            ready_at: Instant::now(),
-            born: Instant::now(),
+            pickup_delay: 0,
             in_water: None,
             // Необычный запал (от взрыва) оригинал в следующем такте шлёт
             // ещё раз, хотя тот не изменился (чёрный ящик, tnt-chain).
@@ -678,11 +808,9 @@ impl Items {
 
         // Пропадают провалившиеся в пустоту и пролежавшие слишком долго.
         let bottom = crate::world::MIN_Y as f64 - LOST_BELOW;
-        let now = Instant::now();
-
         let gone: Vec<Dropped> = self
             .items
-            .extract_if(.., |item| item.y < bottom || now.duration_since(item.born) >= LIFETIME)
+            .extract_if(.., |item| item.y < bottom || item.age >= LIFETIME)
             .collect();
 
         for item in &gone {
@@ -744,18 +872,106 @@ impl Items {
         }
     }
 
+    /// Кладёт в мир шарик опыта; клиентам он уходит по журналу.
+    pub fn add_orb(&mut self, entity_id: i32, value: i32, at: (f64, f64, f64), velocity: (f64, f64, f64)) {
+        let orb = crate::xp::XpOrb::new(entity_id, value, at, velocity);
+
+        self.orbs.push(orb.clone());
+        self.changes.push(Change::Orb(orb));
+    }
+
+    /// Роняет `points` очков опыта шариками (вики, Experience: жадно, от
+    /// больших к малым) с толчком, как у падающих из моба (чёрный ящик,
+    /// cow-xp): `x, z ∈ [−0,2; 0,2]`, `y ∈ [0; 0,4]`. `command` — призванный
+    /// командой (без толчка).
+    pub fn drop_experience(&mut self, points: i32, at: (f64, f64, f64), next_id: &mut dyn FnMut() -> i32, rng: &mut crate::mob::Rng) {
+        for value in crate::survival::orb_values(points) {
+            let velocity = ((rng.unit() * 0.2 - 0.1) * 2.0, rng.unit() * 0.2 * 2.0, (rng.unit() * 0.2 - 0.1) * 2.0);
+
+            self.add_orb(next_id(), value, at, velocity);
+        }
+    }
+
+    pub fn orbs(&self) -> &[crate::xp::XpOrb] {
+        &self.orbs
+    }
+
+    /// Шарики такими, какими их видит слежение (`snapshot_mobs`).
+    pub fn orb_view(&self) -> &[crate::xp::XpOrb] {
+        &self.orb_view
+    }
+
+    /// Убирает шарики, которые выбирает `gone` (команда `kill`).
+    pub fn remove_orbs(&mut self, gone: impl FnMut(&mut crate::xp::XpOrb) -> bool) -> usize {
+        let removed: Vec<crate::xp::XpOrb> = self.orbs.extract_if(.., gone).collect();
+
+        for orb in &removed {
+            self.changes.push(Change::Gone { entity_id: orb.entity_id });
+        }
+
+        removed.len()
+    }
+
+    /// Такт шариков: тяга к ближайшему из `players` (номер сущности и ноги),
+    /// падение, старость, потом подбор: игрок берёт по одному шарику в
+    /// 2 такта (`xp::TAKE_DELAY`), до которого дотянулся. Возвращает, кто
+    /// сколько очков подобрал.
+    pub fn step_orbs(&mut self, players: &[(i32, (f64, f64, f64))], solid: &dyn Fn(i32, i32, i32) -> bool) -> Vec<(i32, i32)> {
+        let feet: Vec<(f64, f64, f64)> = players.iter().map(|&(_, feet)| feet).collect();
+
+        for orb in &mut self.orbs {
+            orb.step(crate::xp::nearest_pull((orb.x, orb.y, orb.z), &feet), solid);
+        }
+
+        self.remove_orbs(|orb| orb.expired() || orb.y < -64.0);
+        self.xp_delay.retain(|id, _| players.iter().any(|&(player, _)| player == *id));
+
+        let mut gains = Vec::new();
+
+        for &(id, at) in players {
+            let delay = self.xp_delay.entry(id).or_insert(0);
+
+            *delay = delay.saturating_sub(1);
+
+            if *delay == 0
+                && let Some(value) = self.take_orb(at, id)
+            {
+                self.xp_delay.insert(id, crate::xp::TAKE_DELAY);
+                gains.push((id, value));
+            }
+        }
+
+        gains
+    }
+
+    /// Игрок с ногами в `feet` подбирает один шарик, до которого дотянулся
+    /// (по одному: паузу между ними ведёт игрок). Возвращает его очки.
+    fn take_orb(&mut self, feet: (f64, f64, f64), by: i32) -> Option<i32> {
+        let index = self.orbs.iter().position(|orb| orb.reached_by(feet))?;
+        let value = self.orbs[index].value;
+        let entity_id = self.orbs[index].entity_id;
+
+        self.changes.push(Change::Taken { entity_id, by, count: 1 });
+        self.orbs[index].count -= 1;
+
+        if self.orbs[index].count <= 0 {
+            self.orbs.remove(index);
+        }
+
+        Some(value)
+    }
+
     pub fn take_near<A>(&mut self, (x, y, z): (f64, f64, f64), by: i32, mut accept: A) -> Vec<Dropped>
     where
         A: FnMut(Stack) -> i32,
     {
-        let now = Instant::now();
         let mut taken = Vec::new();
         let mut index = 0;
 
         while index < self.items.len() {
             let item = &self.items[index];
 
-            if item.block.is_some() || item.ready_at > now || !item.reaches(x, y, z) {
+            if item.block.is_some() || item.age < item.pickup_delay || !item.reaches(x, y, z) {
                 index += 1;
                 continue;
             }
@@ -1190,7 +1406,7 @@ mod tests {
         // Журнал держит записи только для записанных читателей.
         items.watch_changes(READER);
 
-        items.drop_item(1, stack(), at, velocity, Duration::ZERO);
+        items.drop_item(1, stack(), at, velocity, 0);
         items
     }
 
@@ -1292,7 +1508,7 @@ mod tests {
         let mut items = Items::new();
         items.watch_changes(READER);
 
-        items.drop_item(7, stack(), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), Duration::ZERO);
+        items.drop_item(7, stack(), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), 0);
 
         assert_eq!(items.items().len(), 1);
         assert_eq!(items.items()[0].entity_id, 7);
@@ -1310,9 +1526,9 @@ mod tests {
 
         let still = (0.0, 0.0, 0.0);
 
-        items.drop_item(1, stack(), (0.5, 64.0, 0.5), still, Duration::ZERO);
-        items.drop_item(2, stack(), (10.0, 64.0, 0.5), still, Duration::ZERO);
-        items.drop_item(3, stack(), (0.5, 70.0, 0.5), still, Duration::ZERO);
+        items.drop_item(1, stack(), (0.5, 64.0, 0.5), still, 0);
+        items.drop_item(2, stack(), (10.0, 64.0, 0.5), still, 0);
+        items.drop_item(3, stack(), (0.5, 70.0, 0.5), still, 0);
 
         items.note_tick_start();
         let taken = items.take_near((0.0, 64.0, 0.0), 42, anything);
@@ -1483,7 +1699,7 @@ mod tests {
         assert_eq!(items.items().len(), 1);
 
         // Переводим часы предмета назад: столько он уже пролежал.
-        items.items[0].born -= LIFETIME;
+        items.items[0].age = LIFETIME;
 
         items.step(&floor, &floor, &loaded);
 
@@ -1534,7 +1750,7 @@ mod tests {
         let mut items = Items::new();
         items.watch_changes(READER);
 
-        items.drop_item(1, stack(), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), Duration::ZERO);
+        items.drop_item(1, stack(), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), 0);
 
         items.note_tick_start();
         let taken = items.take_near((0.5, 64.0, 0.5), 42, |_| 0);
@@ -1554,7 +1770,7 @@ mod tests {
         let mut items = Items::new();
         items.watch_changes(READER);
 
-        items.drop_item(1, stack(), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), Duration::ZERO);
+        items.drop_item(1, stack(), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), 0);
 
         items.note_tick_start();
         let taken = items.take_near((0.5, 64.0, 0.5), 42, |stack| stack.count.min(2));
@@ -1608,5 +1824,112 @@ mod tests {
 
         assert_eq!(items.items().len(), 1);
         assert_eq!(items.items()[0].y, 70.0);
+    }
+
+    fn one_id() -> impl FnMut() -> i32 {
+        let mut next = 100;
+
+        move || {
+            next += 1;
+            next
+        }
+    }
+
+    #[test]
+    fn experience_falls_as_greedy_orbs_in_the_journal() {
+        let mut items = Items::new();
+        let reader = 1;
+        let from = items.watch_changes(reader);
+
+        items.drop_experience(5, (0.5, 0.0, 0.5), &mut one_id(), &mut crate::mob::Rng::new(7));
+
+        let values: Vec<i32> = items.orbs().iter().map(|orb| orb.value).collect();
+        let (changes, _) = items.changes_since(from, reader);
+
+        assert_eq!(values, vec![3, 1, 1]);
+        assert_eq!(changes.iter().filter(|change| matches!(change, Change::Orb(_))).count(), 3);
+        // Толчок как у оригинала: по сторонам до 0,2, вверх до 0,4.
+        assert!(items.orbs().iter().all(|orb| orb.vx.abs() <= 0.2 && orb.vz.abs() <= 0.2 && (0.0..=0.4).contains(&orb.vy)));
+    }
+
+    #[test]
+    fn a_player_takes_one_orb_per_two_ticks_and_everyone_sees_it() {
+        let mut items = Items::new();
+        let reader = 1;
+        let from = items.watch_changes(reader);
+        let solid = |_: i32, y: i32, _: i32| y < 0;
+
+        for id in 1..=3 {
+            items.add_orb(id, 1, (0.5, 0.0, 0.5), (0.0, 0.0, 0.0));
+        }
+
+        let players = [(50, (0.5, 0.0, 0.5))];
+        let taken: Vec<usize> = (0..6).map(|_| items.step_orbs(&players, &solid).len()).collect();
+
+        // Первый — сразу, потом через такт: паузы по 2 такта.
+        assert_eq!(taken, vec![1, 0, 1, 0, 1, 0]);
+        assert!(items.orbs().is_empty());
+
+        let (changes, _) = items.changes_since(from, reader);
+        let takes = changes.iter().filter(|change| matches!(change, Change::Taken { by: 50, count: 1, .. })).count();
+
+        assert_eq!(takes, 3);
+    }
+
+    #[test]
+    fn the_nearest_player_gets_the_orb_and_a_far_one_nothing() {
+        let mut items = Items::new();
+        let solid = |_: i32, y: i32, _: i32| y < 0;
+
+        items.add_orb(1, 7, (0.5, 0.0, 0.5), (0.0, 0.0, 0.0));
+
+        let gains = items.step_orbs(&[(10, (30.5, 0.0, 0.5)), (11, (0.5, 0.0, 0.5))], &solid);
+
+        assert_eq!(gains, vec![(11, 7)]);
+    }
+
+    #[test]
+    fn an_untouched_orb_disappears_after_6000_ticks() {
+        let mut items = Items::new();
+        let solid = |_: i32, y: i32, _: i32| y < 0;
+
+        items.add_orb(1, 1, (0.5, 0.0, 0.5), (0.0, 0.0, 0.0));
+
+        for _ in 0..5999 {
+            items.step_orbs(&[], &solid);
+        }
+
+        assert_eq!(items.orbs().len(), 1);
+        items.step_orbs(&[], &solid);
+        assert!(items.orbs().is_empty());
+    }
+
+    #[test]
+    fn a_kill_of_a_credited_mob_drops_orbs_before_its_death() {
+        let mut items = Items::new();
+        let reader = 1;
+        let from = items.watch_changes(reader);
+        let mut cow = crate::mob::Mob::new(1, crate::mob::Kind::Cow, (0.5, 0.0, 0.5));
+
+        cow.credit_player();
+        cow.hurt(f32::MAX, crate::survival::Source::PlayerAttack, None);
+        items.add_mob(cow);
+        items.flush_mob_events(&mut one_id(), &mut crate::mob::Rng::new(3));
+
+        let (changes, _) = items.changes_since(from, reader);
+        let order: Vec<char> = changes
+            .iter()
+            .map(|change| match change {
+                Change::Dropped(_) => 'D',
+                Change::Orb(_) => 'O',
+                Change::MobEvent { event: crate::mob::Event::Death, .. } => 'X',
+                _ => '.',
+            })
+            .collect();
+        let points: i32 = items.orbs().iter().map(|orb| orb.value).sum();
+
+        assert!((1..=3).contains(&points), "{points}");
+        assert!(order.iter().position(|c| *c == 'O') > order.iter().position(|c| *c == 'D'));
+        assert!(order.iter().position(|c| *c == 'O') < order.iter().position(|c| *c == 'X'));
     }
 }

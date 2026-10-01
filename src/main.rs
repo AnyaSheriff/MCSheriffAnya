@@ -30,9 +30,19 @@ mod journal;
 mod items;
 mod minecart;
 mod frame;
+mod mob;
+mod arrow;
 mod playerdata;
 mod redstone;
 mod tnt;
+mod survival;
+mod attributes;
+mod snbt;
+mod stackdata;
+mod combat_table;
+mod combat;
+mod player_arrow;
+mod xp;
 mod lightning;
 mod custom_tnt;
 mod permissions;
@@ -169,10 +179,16 @@ async fn server() -> io::Result<()> {
         Some(overworld.seed()),
         WorldKind::Nether,
     )?;
+    let end = World::open(
+        Dimension::End.folder(Path::new(WORLD_PATH)),
+        Some(overworld.seed()),
+        WorldKind::End,
+    )?;
 
-    let mut shared = Shared::new(
+    let mut shared = Shared::with_end(
         overworld,
         nether,
+        end,
         PathBuf::from(playerdata::DIRECTORY),
         PathBuf::from(skins::DIRECTORY),
         (*properties).clone(),
@@ -262,11 +278,11 @@ async fn server() -> io::Result<()> {
     kick_everyone(&shared).await;
     log_info!("Сохранение мира");
     for dimension in Dimension::ALL {
-        shared
-            .world_in(dimension)
-            .lock()
-            .expect("мир захвачен другим потоком")
-            .save_all();
+        let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+
+        // Мобы ложатся в файл вместе со своими чанками.
+        tick::store_mobs(&shared, dimension, &mut world);
+        world.save_all();
     }
     log_info!("Мир сохранён");
 

@@ -16,6 +16,7 @@
 - src/bedrock/java_to_bedrock.bin — на каждый номер состояния Java два байта
   (little-endian): сетевой номер состояния Bedrock;
 - src/bedrock/item_registry.bin — готовое тело пакета Item Registry;
+- src/bedrock/item_names.txt — «номер<TAB>имя» каждого предмета Bedrock;
 - src/bedrock/creative_content.bin — готовое тело пакета Creative Content:
   предметы Java 26.1.2 (tools/data/items.json) в их порядке, которые есть и
   у Bedrock — по имени предмета или по имени блока из blocksJ2B;
@@ -263,6 +264,11 @@ def write_items():
         body += nbt_root(item.get("nbt") or {"type": "compound", "name": "", "value": {}})
 
     (OUT / "item_registry.bin").write_bytes(body)
+
+    # Имена предметов по номерам — для NBT предмета в блок-акторах (рамка).
+    with open(OUT / "item_names.txt", "w", encoding="utf8") as names:
+        for item in items:
+            names.write(f"{item['id']}\t{item['name']}\n")
     print(f"предметов в реестре: {len(items)}, {len(body)} байт")
 
 
@@ -301,6 +307,11 @@ def item_metadata(name):
     return 0
 
 
+# Предметы, у которых имя у Bedrock другое (у рамок это блоки-акторы, а не
+# блоки Java, так что по имени блока их не найти).
+ITEM_ALIASES = {"item_frame": "frame", "glow_item_frame": "glow_frame"}
+
+
 def write_creative(mapping, states):
     java_items = json.load(open(ROOT / "tools" / "data" / "items.json"))
     java_blocks = {block["name"]: block for block in json.load(open(ROOT / "tools" / "data" / "blocks.json"))}
@@ -317,7 +328,7 @@ def write_creative(mapping, states):
         name = item["name"]
         block = java_blocks.get(name)
         runtime = mapping[block["defaultState"]] if block else 0
-        bedrock = bedrock_items.get(name)
+        bedrock = bedrock_items.get(ITEM_ALIASES.get(name, name))
 
         # Имя предмета у Bedrock другое — берём имя блока, в который
         # переводится блок Java.

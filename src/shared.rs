@@ -26,7 +26,7 @@ use crate::world::World;
 /// (так и было: вход игрока брал игроков раньше мира).
 pub struct Shared {
     /// Миры измерений по порядку `Dimension::ALL`: блоки, такты, события.
-    worlds: [Mutex<World>; 2],
+    worlds: [Mutex<World>; 3],
 
     /// Кто сейчас на сервере.
     pub players: Mutex<Players>,
@@ -35,7 +35,11 @@ pub struct Shared {
     pub chat: Mutex<Chat>,
 
     /// Предметы, лежащие в мирах, — у каждого измерения свои.
-    items: [Mutex<Items>; 2],
+    items: [Mutex<Items>; 3],
+
+    /// Стрелы игроков (arrow.rs): в полёте и застрявшие, всех измерений.
+    /// Замок — после предметов.
+    pub arrows: Mutex<crate::player_arrow::Arrows>,
 
     /// Кто и что может: список прав, он же файл ops.json.
     pub ops: Mutex<Ops>,
@@ -55,7 +59,12 @@ pub struct Shared {
     /// не применено. Такт не начинает работу, пока они не отработают: как
     /// у оригинала, всё, что пришло до начала такта, ложится в этот такт.
     /// Счётчик общий с читателями подключений, поэтому в `Arc`.
-    pub waiting_for_tick: Arc<std::sync::atomic::AtomicUsize>,
+    ///
+    /// Два счётчика по чётности такта, во время которого действие пришло:
+    /// такт `T` ждёт только пришедшее до него (такт `T − 1`). Действие,
+    /// прочитанное сразу после сигнала начала `T`, ляжет в `T + 1`, и ждать
+    /// его такту незачем — раньше он терял на этом всё терпение.
+    pub waiting_for_tick: Arc<[std::sync::atomic::AtomicUsize; 2]>,
 
     /// Номер, который достанется следующей сущности.
     ///
@@ -87,6 +96,20 @@ pub struct Shared {
 
     /// Свои настройки сервера (config/mcsa.properties).
     pub settings: crate::config::mcsheriffanya::Settings,
+
+    /// Сложность сейчас (0…3): начинается со значения server.properties,
+    /// команда `difficulty` меняет её на ходу.
+    pub difficulty: std::sync::atomic::AtomicU8,
+
+    /// Правило `keepInventory`: после смерти вещи остаются у игрока.
+    pub keep_inventory: std::sync::atomic::AtomicBool,
+
+    /// Правило `spawn_mobs` (26.1: прежнее doMobSpawning): появляются ли
+    /// животные сами в новых чанках. Призванные командой — всегда.
+    pub spawn_mobs: std::sync::atomic::AtomicBool,
+
+    /// Правило `natural_health_regeneration`: лечит ли сытость.
+    pub natural_regeneration: std::sync::atomic::AtomicBool,
 }
 
 impl Shared {
@@ -110,7 +133,8 @@ impl Shared {
         self.entity_ids.fetch_add(1, Ordering::Relaxed)
     }
 
-    /// Заводит общее состояние сервера.
+    /// Для проверок: третий мир (Энд) — пустой, в памяти.
+    #[cfg(test)]
     pub fn new(
         world: World,
         nether: World,
@@ -120,15 +144,37 @@ impl Shared {
         ops: Ops,
         skin_settings: crate::skins::Settings,
     ) -> Self {
+        Self::with_end(world, nether, World::in_memory(), playerdata, skins, properties, ops, skin_settings)
+    }
+
+    /// Заводит общее состояние сервера.
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_end(
+        world: World,
+        nether: World,
+        end: World,
+        playerdata: PathBuf,
+        skins: PathBuf,
+        properties: ServerProperties,
+        ops: Ops,
+        skin_settings: crate::skins::Settings,
+    ) -> Self {
+        let difficulty = std::sync::atomic::AtomicU8::new(properties.difficulty);
+
         Self {
-            worlds: [Mutex::new(world), Mutex::new(nether)],
+            difficulty,
+            keep_inventory: std::sync::atomic::AtomicBool::new(false),
+            spawn_mobs: std::sync::atomic::AtomicBool::new(true),
+            natural_regeneration: std::sync::atomic::AtomicBool::new(true),
+            worlds: [Mutex::new(world), Mutex::new(nether), Mutex::new(end)],
             players: Mutex::new(Players::new()),
             chat: Mutex::new(Chat::new()),
-            items: [Mutex::new(Items::new()), Mutex::new(Items::new())],
+            items: [Mutex::new(Items::new()), Mutex::new(Items::new()), Mutex::new(Items::new())],
+            arrows: Mutex::new(crate::player_arrow::Arrows::new()),
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,
             tick_starts: tokio::sync::watch::channel(0).0,
-            waiting_for_tick: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+            waiting_for_tick: Arc::new([std::sync::atomic::AtomicUsize::new(0), std::sync::atomic::AtomicUsize::new(0)]),
             // Номера начинаются с единицы: ноль клиент понимает как «никого».
             entity_ids: AtomicI32::new(1),
             readers: AtomicU64::new(1),

@@ -1,0 +1,105 @@
+{
+ "about": "Скелет с ИИ и луком в 7 блоках от робота в выживании: натяжка, стрела, полёт, попадание, отдача, стрела в теле. Стрелок ходит и целится случайно, поэтому сверяется структура (числа событий), а числа урона и скорости — отдельно (см. README).",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon skeleton $(7.5,0,0.5) {Silent:1b,equipment:{mainhand:{id:\"minecraft:bow\",count:1},head:{id:\"minecraft:iron_helmet\",count:1}}}"
+  }
+ ],
+ "record_ticks": 220,
+ "cleanup": [
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=skeleton,distance=..48]",
+  "kill @e[type=creeper,distance=..48]",
+  "kill @e[type=spider,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "name": "skeleton-arrow",
+ "random": [
+  {
+   "type": "count",
+   "name": "выпущенные стрелы",
+   "match": "^spawn .* arrow",
+   "range": [
+    1,
+    6
+   ],
+   "anytick": true,
+   "why": "вики, Skeleton: цель выбирается и стреляет с разбросом по сложности, стрелок ходит сам; у оригинала два прогона расходятся по местам и тактам выстрелов"
+  },
+  {
+   "type": "count",
+   "name": "пакеты о стрелах",
+   "match": "^cart arrow",
+   "range": [
+    1,
+    60
+   ],
+   "anytick": true,
+   "why": "вики, Skeleton: цель выбирается и стреляет с разбросом по сложности, стрелок ходит сам; у оригинала два прогона расходятся по местам и тактам выстрелов"
+  },
+  {
+   "type": "count",
+   "name": "попадания: урон, анимация, звук",
+   "match": "Damage Event type=0|Hurt Animation|entity.arrow.hit",
+   "range": [
+    0,
+    15
+   ],
+   "anytick": true,
+   "why": "вики, Skeleton: цель выбирается и стреляет с разбросом по сложности, стрелок ходит сам; у оригинала два прогона расходятся по местам и тактам выстрелов"
+  },
+  {
+   "type": "count",
+   "name": "здоровье робота и отдача",
+   "match": "^sv (Set Health|Metadata)|^self |^sv Damage",
+   "range": [
+    0,
+    200
+   ],
+   "anytick": true,
+   "why": "вики, Skeleton: цель выбирается и стреляет с разбросом по сложности, стрелок ходит сам; у оригинала два прогона расходятся по местам и тактам выстрелов"
+  },
+  {
+   "type": "count",
+   "name": "ходьба и взгляд скелета",
+   "match": "^cart skeleton|^meta ",
+   "range": [
+    0,
+    500
+   ],
+   "anytick": true,
+   "why": "вики, Skeleton: цель выбирается и стреляет с разбросом по сложности, стрелок ходит сам; у оригинала два прогона расходятся по местам и тактам выстрелов"
+  },
+  {
+   "type": "count",
+   "name": "голос и прочее",
+   "match": "^sound|^spawn skeleton|^cart skeleton",
+   "range": [
+    0,
+    500
+   ],
+   "anytick": true,
+   "why": "вики, Skeleton: цель выбирается и стреляет с разбросом по сложности, стрелок ходит сам; у оригинала два прогона расходятся по местам и тактам выстрелов"
+  }
+ ]
+}

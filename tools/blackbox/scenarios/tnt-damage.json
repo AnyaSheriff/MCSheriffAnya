@@ -1,0 +1,87 @@
+{
+ "name": "tnt-damage",
+ "about": "Выживание: динамит поджигают рычагом, робот в 3 блоках — урон взрывом, толчок.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:tnt[unstable=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+  }
+ ],
+ "setup": [
+  "fill $(-4,-1,-4) $(9,-1,4) minecraft:obsidian",
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(-3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "fill $(-4,-1,-4) $(9,-1,4) minecraft:stone",
+  "fill $(-1,0,-1) $(6,3,2) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "kind": "self",
+   "name": "место возрождения",
+   "pattern": "\\(-?[\\d.]+,-?[\\d.]+,-?[\\d.]+\\)",
+   "replace": "(место)",
+   "why": "Игрок без кровати возрождается в случайной точке вокруг точки появления мира (minecraft.wiki/w/Respawn, «Spawn radius»: gamerule spawnRadius, по умолчанию 10); оригинал против оригинала: (-3.5,-60,-8.5), (5.5,-59,2.5), (6.5,-60,3.5)."
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "высота точки появления",
+   "pattern": "\"location\":\\{\"x\":0,\"z\":0,\"y\":-?\\d+\\}",
+   "replace": "\"location\":{точка}",
+   "why": "У нашего испытательного ровного мира точка появления считается по высоте обычного мира (63), а у оригинала — по плоскому (−60): расхождение испытательного мира, а не механики."
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "здоровье после взрыва",
+   "pattern": "(Set Health health|Metadata 9)=\\d+(\\.\\d+)?",
+   "replace": "$1=(значение)",
+   "why": "Запал динамита стартует в случайную сторону (вики, TNT: «random upward-and-sideways velocity»), центр взрыва у каждого прогона свой на ±0,2 блока, а урон 7·сила·(i²+i)+1 зависит от расстояния; оригинал против оригинала здоровье после взрыва различалось. Формула сверена по центру взрыва из записи: 14,481 против снятых 14,484 (воздействие 1,0), см. тест explosion_damage_follows_the_wiki_formula."
+  },
+  {
+   "type": "mask",
+   "kind": "self",
+   "name": "толчок взрывом",
+   "pattern": "скорость [-\\d.,]+",
+   "replace": "скорость (толчок)",
+   "why": "Толчок — по тому же случайному центру взрыва: (i)·(глаза − центр)/расстояние; проверено числом: толчок (−0,340; 0,103; −0,009) → (−0,186; −0,055; −0,005), см. тест a_blast_push_becomes_one_tick_of_movement."
+  }
+ ],
+ "track_self": true
+}

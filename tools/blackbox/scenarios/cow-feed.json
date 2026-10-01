@@ -1,0 +1,45 @@
+{
+ "name": "cow-feed",
+ "about": "Корова NoAI: пшеница в руке, щелчок — любовь (сердечки), пшеница уходит; второй щелчок ничего не даёт.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:wheat 6",
+  "give $(bot) minecraft:carrot 2",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 20,
+   "interact": true
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=sheep,distance=..48]",
+  "kill @e[type=pig,distance=..48]",
+  "kill @e[type=chicken,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

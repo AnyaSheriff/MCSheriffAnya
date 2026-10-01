@@ -1,0 +1,73 @@
+{
+ "name": "sheep-shear",
+ "about": "Овца NoAI стоит на земле; ножницы в руке: щелчок правой кнопкой — шерсть падает, овца остригнута (свойство), звук стрижки; второй щелчок ничего не даёт.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:shears 1",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon sheep $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 30,
+   "interact": true
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=sheep,distance=..48]",
+  "kill @e[type=pig,distance=..48]",
+  "kill @e[type=chicken,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "число выпавших стопок",
+   "match": "^spawn [-0-9,.]+ item|^spawn item",
+   "range": [
+    1,
+    3
+   ],
+   "why": "вики, Sheep: «shearing drops 1–3 wool» — число кусков случайно"
+  },
+  {
+   "type": "mask",
+   "name": "число предметов в стопке",
+   "kind": "meta",
+   "pattern": "\"itemCount\":\\d+",
+   "replace": "\"itemCount\":N",
+   "why": "вики, Sheep: «shearing drops 1–3 wool» — число кусков случайно"
+  },
+  {
+   "type": "count",
+   "name": "свойства выпавших стопок",
+   "match": "^meta 8=",
+   "range": [
+    2,
+    9
+   ],
+   "why": "вики, Sheep: «shearing drops 1–3 wool» — число кусков случайно; одинаковые куски у оригинала ещё и сливаются в одну стопку (вторая запись свойств позже), у нас слияния предметов нет"
+  }
+ ]
+}

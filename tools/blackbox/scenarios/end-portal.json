@@ -1,0 +1,129 @@
+{
+ "name": "end-portal",
+ "about": "Портал Края: кольцо из 12 рамок, в 11 уже стоят глаза; последнее око кладут рукой — проём 3×3 заполняется порталом Края (звук и событие открытия); потом ещё один щелчок в готовую рамку.",
+ "blocks": [
+  {
+   "at": [
+    7,
+    0,
+    2
+   ],
+   "state": "minecraft:end_portal_frame[eye=false,facing=south]"
+  },
+  {
+   "at": [
+    8,
+    0,
+    2
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=south]"
+  },
+  {
+   "at": [
+    9,
+    0,
+    2
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=south]"
+  },
+  {
+   "at": [
+    7,
+    0,
+    6
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=north]"
+  },
+  {
+   "at": [
+    8,
+    0,
+    6
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=north]"
+  },
+  {
+   "at": [
+    9,
+    0,
+    6
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=north]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    3
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=east]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    4
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=east]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    5
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=east]"
+  },
+  {
+   "at": [
+    10,
+    0,
+    3
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=west]"
+  },
+  {
+   "at": [
+    10,
+    0,
+    4
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=west]"
+  },
+  {
+   "at": [
+    10,
+    0,
+    5
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=west]"
+  }
+ ],
+ "setup": [
+  "item replace entity $(bot) weapon.mainhand with minecraft:ender_eye 4"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    7,
+    0,
+    2
+   ]
+  },
+  {
+   "after": 10,
+   "click": [
+    7,
+    0,
+    2
+   ]
+  }
+ ],
+ "cleanup": [
+  "fill $(6,0,2) $(10,0,6) minecraft:air",
+  "kill @e[type=item,distance=..48]",
+  "clear $(bot)"
+ ],
+ "record_ticks": 40
+}

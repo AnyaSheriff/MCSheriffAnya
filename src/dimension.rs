@@ -1,4 +1,4 @@
-// Измерения: обычный мир и Незер.
+// Измерения: обычный мир, Незер и Энд.
 //
 // У каждого измерения свой мир (свои чанки, такты, выпавшие предметы) —
 // в своей папке, как у оригинала 26.x: обычный мир в корне папки мира,
@@ -12,17 +12,19 @@ pub enum Dimension {
     #[default]
     Overworld,
     Nether,
+    End,
 }
 
 impl Dimension {
     /// Все измерения по порядку записи в реестре.
-    pub const ALL: [Dimension; 2] = [Dimension::Overworld, Dimension::Nether];
+    pub const ALL: [Dimension; 3] = [Dimension::Overworld, Dimension::Nether, Dimension::End];
 
     /// Имя измерения, как его знает клиент.
     pub fn name(self) -> &'static str {
         match self {
             Dimension::Overworld => "minecraft:overworld",
             Dimension::Nether => "minecraft:the_nether",
+            Dimension::End => "minecraft:the_end",
         }
     }
 
@@ -31,6 +33,7 @@ impl Dimension {
         match self {
             Dimension::Overworld => "overworld",
             Dimension::Nether => "the_nether",
+            Dimension::End => "the_end",
         }
     }
 
@@ -39,6 +42,7 @@ impl Dimension {
         match self {
             Dimension::Overworld => 0,
             Dimension::Nether => 1,
+            Dimension::End => 2,
         }
     }
 
@@ -61,6 +65,7 @@ impl Dimension {
         match self {
             Dimension::Overworld => 1.0,
             Dimension::Nether => 8.0,
+            Dimension::End => 1.0,
         }
     }
 
@@ -69,6 +74,7 @@ impl Dimension {
         match self {
             Dimension::Overworld => world.to_path_buf(),
             Dimension::Nether => world.join("dimensions").join("minecraft").join("the_nether"),
+            Dimension::End => world.join("dimensions").join("minecraft").join("the_end"),
         }
     }
 }
@@ -83,6 +89,24 @@ mod tests {
             assert_eq!(Dimension::from_name(dimension.name()), Some(dimension));
             assert_eq!(Dimension::from_name(dimension.short()), Some(dimension));
         }
-        assert_eq!(Dimension::from_name("minecraft:the_end"), None);
+        assert_eq!(Dimension::from_name("minecraft:the_end"), Some(Dimension::End));
+        assert_eq!(Dimension::from_name("minecraft:the_void"), None);
+    }
+
+    #[test]
+    fn the_end_lives_in_its_own_folder() {
+        let world = Path::new("world");
+
+        assert_eq!(Dimension::End.folder(world), world.join("dimensions").join("minecraft").join("the_end"));
+        assert_eq!(Dimension::End.type_id(), 2);
+        assert_eq!(Dimension::End.index(), 2);
+        assert_eq!(Dimension::End.name(), "minecraft:the_end");
+        assert_eq!(Dimension::End.scale(), 1.0);
+    }
+
+    #[test]
+    fn execute_in_understands_the_end() {
+        assert_eq!(Dimension::from_name("the_end"), Some(Dimension::End));
+        assert_eq!(Dimension::from_name(" minecraft:the_end "), Some(Dimension::End));
     }
 }

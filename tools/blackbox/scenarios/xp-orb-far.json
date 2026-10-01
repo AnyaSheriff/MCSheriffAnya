@@ -1,0 +1,41 @@
+{
+ "name": "xp-orb-far",
+ "about": "Опыт: шарики далеко от робота (12 блоков, вне тяги): падение, что о них рассылается раз в 20 тактов, слияние одинаковых рядом.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty peaceful",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "fill $(-2,-1,-2) $(8,3,8) minecraft:air",
+  "fill $(-2,-1,-2) $(8,-1,8) minecraft:stone",
+  "tp $(bot) $(3.5,0,-5.5)",
+  "!stopfly",
+  "!wait 30"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:3s}"
+  }
+ ],
+ "record_ticks": 90,
+ "cleanup": [
+  "kill @e[type=minecraft:experience_orb,distance=..24]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true
+}

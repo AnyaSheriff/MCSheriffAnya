@@ -367,13 +367,23 @@ pub fn strike(world: &mut World, items: &mut Items, shared: &Shared, entity_id: 
         return true;
     }
 
-    for frame in items.remove_frames(|frame| frame.entity_id == entity_id) {
-        break_frame(world, items, shared, &frame, !creative);
+    break_off(world, items, shared, entity_id, creative);
+    true
+}
+
+/// Рамка ломается целиком, вместе с предметом внутри (выпадают оба; в
+/// творческом — ничего): так выходит у Bedrock, где рамка — блок и ломается
+/// одним ударом. Возвращает, была ли такая рамка.
+pub fn break_off(world: &mut World, items: &mut Items, shared: &Shared, entity_id: i32, creative: bool) -> bool {
+    let removed = items.remove_frames(|frame| frame.entity_id == entity_id);
+
+    for frame in &removed {
+        break_frame(world, items, shared, frame, !creative);
         refresh_marks(world, items);
         redstone::comparator_update(world, frame.pos);
     }
 
-    true
+    !removed.is_empty()
 }
 
 /// Рамка уже убрана из мира (клиентам ушёл `Gone`): звучит поломка, запись
@@ -422,6 +432,7 @@ pub fn write(frame: &Frame, out: &mut Vec<u8>) {
     if let Some(stack) = frame.item {
         out.extend_from_slice(&stack.stored_item().to_be_bytes());
         out.push(stack.count.clamp(1, 127) as u8);
+        stack.write_extras(out);
     }
 }
 
@@ -450,8 +461,13 @@ pub fn read(bytes: &mut &[u8], chunk_x: i32, chunk_z: i32, entity_id: i32) -> Op
     frame.rotation = rotation;
 
     if flags & 16 != 0 {
-        let stored = Stack::from_stored(i32::from_be_bytes(take(4)?.try_into().ok()?), 0);
+        let raw = i32::from_be_bytes(take(4)?.try_into().ok()?);
+        let mut stored = Stack::from_stored(raw, 0);
         let count = i32::from(take(1)?[0]);
+
+        if let Some(extras) = Stack::read_extras(raw, &mut take)? {
+            stored = stored.with_extras(extras);
+        }
 
         if blocks::stack_size(stored.item) > 0 && count > 0 {
             frame.item = Some(stored.with_count(1));

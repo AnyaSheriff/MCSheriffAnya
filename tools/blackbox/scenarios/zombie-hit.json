@@ -1,0 +1,104 @@
+{
+ "about": "Зомби NoAI: удар мечом (7 из 20), слабый удар сразу следом (неуязвимость), потом ещё два — гибель и добыча. Опыт (experience_orb) у нас не выпадает: опыта в ядре нет.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:diamond_sword 1",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon zombie $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 20,
+   "attack": true
+  },
+  {
+   "after": 24,
+   "attack": true
+  },
+  {
+   "after": 45,
+   "attack": true
+  },
+  {
+   "after": 70,
+   "attack": true
+  }
+ ],
+ "record_ticks": 140,
+ "cleanup": [
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=skeleton,distance=..48]",
+  "kill @e[type=creeper,distance=..48]",
+  "kill @e[type=spider,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "name": "zombie-hit",
+ "random": [
+  {
+   "type": "count",
+   "name": "число выпавших стопок",
+   "match": "^spawn [-0-9,.]+ item|^spawn item",
+   "range": [
+    0,
+    1
+   ],
+   "why": "вики, Zombie: «Drops: 0–2 rotten flesh» — число стопок 0–1, число штук в них случайно"
+  },
+  {
+   "type": "mask",
+   "name": "число предметов в стопке",
+   "kind": "meta",
+   "pattern": "\"itemCount\":\\d+",
+   "replace": "\"itemCount\":N",
+   "why": "вики, Zombie: «Drops: 0–2 rotten flesh» — число стопок 0–1, число штук в них случайно"
+  },
+  {
+   "type": "count",
+   "name": "свойства выпавших стопок",
+   "match": "^meta 8=\\{",
+   "range": [
+    0,
+    2
+   ],
+   "why": "вики, Zombie: «Drops: 0–2 rotten flesh» — число стопок 0–1, число штук в них случайно"
+  },
+  {
+   "type": "count",
+   "name": "ход и подбор шариков опыта",
+   "match": "^cart experience_orb",
+   "range": [
+    2,
+    12
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении, поэтому подбирается на случайном такте (как в cow-xp: у оригинала расходятся два прогона)"
+  },
+  {
+   "type": "count",
+   "name": "подбор опыта роботом",
+   "match": "^sv (Collect count|Set Experience|Metadata 18)",
+   "range": [
+    1,
+    9
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении, поэтому подбирается на случайном такте (как в cow-xp: у оригинала расходятся два прогона)"
+  }
+ ]
+}

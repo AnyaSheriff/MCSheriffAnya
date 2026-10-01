@@ -58,10 +58,10 @@ fn adult_and_baby(entity: &str, fields: &[&str]) -> Compound {
 /// заодно это убирает ссылки на биомы, которых у нас нет.
 fn variant(kind: &str, name: &str, model: Option<&str>) -> Compound {
     let mut out = Compound::new()
-        .string("asset_id", &format!("minecraft:entity/{}/{}", kind, name))
+        .string("asset_id", &format!("minecraft:entity/{}/{}_{}", kind, kind, name))
         .string(
             "baby_asset_id",
-            &format!("minecraft:entity/{}/{}_baby", kind, name),
+            &format!("minecraft:entity/{}/{}_{}_baby", kind, kind, name),
         );
 
     if let Some(model) = model {
@@ -126,16 +126,15 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
                 "stray_ambient_sound",
             ],
         ),
-        "minecraft:chicken_variant" => {
-            // Моделей у курицы две: обычная и «холодная».
-            let model = if name == "cold" { "cold" } else { "normal" };
-            variant("chicken", &format!("{}_chicken", name), Some(model))
-        }
+        // Модели и имена текстур — как в реестрах официального сервера,
+        // присланных ему клиентом без известных наборов (30.09): текстура
+        // `entity/<вид>/<вид>_<вариант>`, отдельная модель — только у части.
+        "minecraft:chicken_variant" => variant("chicken", name, (name == "cold").then_some("cold")),
         "minecraft:chicken_sound_variant" => adult_and_baby(
             "chicken",
             &["ambient_sound", "death_sound", "hurt_sound", "step_sound"],
         ),
-        "minecraft:cow_variant" => variant("cow", &format!("{}_cow", name), Some("normal")),
+        "minecraft:cow_variant" => variant("cow", name, matches!(name, "cold" | "warm").then_some(name)),
         // У коровы, в отличие от остальных, звуки лежат прямо в записи,
         // без разделения на взрослых и телят.
         "minecraft:cow_sound_variant" => sounds(
@@ -146,7 +145,7 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
         "minecraft:frog_variant" => Compound::new()
             .string(
                 "asset_id",
-                &format!("minecraft:entity/frog/{}_frog", name),
+                &format!("minecraft:entity/frog/frog_{}", name),
             )
             .empty_list("spawn_conditions"),
         "minecraft:painting_variant" => Compound::new()
@@ -158,7 +157,7 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
                 "author",
                 translate(&format!("painting.minecraft.{}.author", name)),
             ),
-        "minecraft:pig_variant" => variant("pig", &format!("{}_pig", name), Some("normal")),
+        "minecraft:pig_variant" => variant("pig", name, (name == "cold").then_some("cold")),
         "minecraft:pig_sound_variant" => adult_and_baby(
             "pig",
             &[
@@ -171,11 +170,13 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
         ),
         // У волка вместо одной текстуры три: спокойный, злой и прирученный.
         "minecraft:wolf_variant" => {
+            // Бледный волк — просто `wolf`, остальные — `wolf_<вариант>`.
+            let base = if name == "pale" { "wolf".to_string() } else { format!("wolf_{}", name) };
             let assets = |suffix: &str| {
                 Compound::new()
-                    .string("angry", &format!("minecraft:entity/wolf/wolf_angry{}", suffix))
-                    .string("wild", &format!("minecraft:entity/wolf/wolf{}", suffix))
-                    .string("tame", &format!("minecraft:entity/wolf/wolf_tame{}", suffix))
+                    .string("angry", &format!("minecraft:entity/wolf/{}_angry{}", base, suffix))
+                    .string("wild", &format!("minecraft:entity/wolf/{}{}", base, suffix))
+                    .string("tame", &format!("minecraft:entity/wolf/{}_tame{}", base, suffix))
             };
 
             Compound::new()
@@ -197,13 +198,15 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
                 "whine_sound",
             ],
         ),
-        "minecraft:zombie_nautilus_variant" => Compound::new()
-            .string(
-                "asset_id",
-                &format!("minecraft:entity/zombie_nautilus/{}_zombie_nautilus", name),
-            )
-            .string("model", "normal")
-            .empty_list("spawn_conditions"),
+        "minecraft:zombie_nautilus_variant" => {
+            let out = if name == "warm" {
+                Compound::new().string("asset_id", "minecraft:entity/nautilus/zombie_nautilus_coral").string("model", "warm")
+            } else {
+                Compound::new().string("asset_id", "minecraft:entity/nautilus/zombie_nautilus")
+            };
+
+            out.empty_list("spawn_conditions")
+        }
         // Материал отделки брони: имя набора картинок и название в подсказке.
         "minecraft:trim_material" => Compound::new()
             .string("asset_name", name)
@@ -232,11 +235,29 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
                 .float("length_in_seconds", *length)
                 .int("comparator_output", *comparator)
         }
+        // Зачарование: клиент читает название и пределы, зачаровывать он не
+        // будет. Действия (`effects`) считает сервер, поэтому их нет.
+        // Веса, цены и «слоты» — [проверить]: клиенту они нужны лишь для разбора.
+        "minecraft:enchantment" => {
+            let max_level = crate::stackdata::ENCHANTMENTS.iter().find(|(known, _)| *known == name)?.1;
+            let cost = |base: i32| Compound::new().int("base", base).int("per_level_above_first", 10);
+
+            Compound::new()
+                .compound("description", translate(&format!("enchantment.minecraft.{}", name)))
+                .empty_list("supported_items")
+                .int("weight", 5)
+                .int("max_level", max_level)
+                .compound("min_cost", cost(1))
+                .compound("max_cost", cost(21))
+                .int("anvil_cost", 1)
+                .strings("slots", &["any"])
+        }
         "minecraft:banner_pattern" => Compound::new()
             .string("asset_id", &format!("minecraft:{}", name))
             .string("translation_key", &format!("block.minecraft.banner.{}", name)),
         "minecraft:dimension_type" => match name {
             "the_nether" => nether_type(),
+            "the_end" => end_type(),
             _ => dimension_type(),
         },
         "minecraft:worldgen/biome" => biome(name),
@@ -503,6 +524,54 @@ fn nether_type() -> Compound {
         )
 }
 
+/// Энд: время стоит, небо своё (`skybox: end`), потолка нет, координаты
+/// как в обычном мире (вики, Dimension type: The End). Настоящий Энд
+/// занимает y 0..255; у нас та же сетка −64..320, что у остальных
+/// измерений, а заполнен он от 0 до 255 — логическая высота 256.
+/// Небесный свет в Энде есть (has_skylight: true), поэтому острова
+/// освещены сверху, а пустота под ними — нет только по падению света.
+fn end_type() -> Compound {
+    Compound::new()
+        .boolean("has_skylight", true)
+        .boolean("has_ceiling", false)
+        .boolean("has_ender_dragon_fight", true)
+        .double("coordinate_scale", 1.0)
+        .boolean("has_fixed_time", true)
+        .float("ambient_light", 0.25)
+        .int("min_y", -64)
+        .int("height", 384)
+        .int("logical_height", 256)
+        .int("monster_spawn_light_level", 15)
+        .int("monster_spawn_block_light_limit", 0)
+        .string("infiniburn", "#minecraft:infiniburn_end")
+        .string("skybox", "end")
+        .string("cardinal_light", "default")
+        .compound("attributes", Compound::new())
+        .string("default_clock", "minecraft:the_end")
+}
+
+/// Биом Энда: пять биомов различаются только для генерации, клиенту
+/// нужен один и тот же вид — туман `#181318`, вода как у всех, осадков нет
+/// (вики, The End → Biomes; [проверить] цвет тумана у краёв).
+fn end_biome() -> Compound {
+    Compound::new()
+        .boolean("has_precipitation", false)
+        .float("temperature", 0.5)
+        .float("downfall", 0.5)
+        .compound(
+            "attributes",
+            Compound::new()
+                .string("minecraft:visual/fog_color", "#181318")
+                .string("minecraft:visual/sky_color", "#000000")
+                .string("minecraft:visual/water_fog_color", "#050533"),
+        )
+        .compound("effects", Compound::new().string("water_color", "#3f76e4"))
+        .empty_list("carvers")
+        .empty_list("features")
+        .compound("spawners", Compound::new())
+        .compound("spawn_costs", Compound::new())
+}
+
 /// Биом: то, что о нём должен знать клиент.
 ///
 /// Температура и влажность — те же числа, что в игре: по ним клиент выбирает
@@ -515,6 +584,10 @@ fn biome(name: &str) -> Compound {
 
     if let Some(biome) = Biome::NETHER.iter().find(|biome| biome.name() == name) {
         return nether_biome(*biome);
+    }
+
+    if Biome::END.iter().any(|biome| biome.name() == name) {
+        return end_biome();
     }
 
     // Осенний лес во всём, кроме цвета, — обычный лес.
@@ -796,6 +869,33 @@ mod tests {
         }
     }
 
+    /// Энд объявлен клиенту так, как его знает вики: время стоит, небо
+    /// своё, бой с драконом возможен, обычные координаты.
+    #[test]
+    fn the_end_dimension_type_follows_the_wiki() {
+        let end = entry("minecraft:dimension_type", "the_end").expect("есть запись");
+        let text = String::from_utf8_lossy(&end.encode_network()).to_string();
+
+        for wanted in ["has_ender_dragon_fight", "has_fixed_time", "#minecraft:infiniburn_end", "minecraft:the_end", "end", "logical_height"] {
+            assert!(text.contains(wanted), "нет {} в {}", wanted, text);
+        }
+
+        // Часы Энда объявлены — иначе клиент падает на несвязанной ссылке.
+        assert!(REQUIRED_REGISTRIES.iter().any(|(name, entries)| *name == "minecraft:world_clock" && entries.contains(&"the_end")));
+        assert!(entry("minecraft:world_clock", "the_end").is_some());
+    }
+
+    /// Порядок измерений в реестре — тот же, что у `Dimension::ALL`: по нему
+    /// клиенту говорят номер типа.
+    #[test]
+    fn dimension_registry_follows_the_dimension_list() {
+        let (_, sent) = REQUIRED_REGISTRIES.iter().find(|(name, _)| *name == "minecraft:dimension_type").expect("реестр есть");
+
+        for dimension in crate::dimension::Dimension::ALL {
+            assert_eq!(format!("minecraft:{}", sent[dimension.type_id() as usize]), dimension.name());
+        }
+    }
+
     /// Имя звука получается из имени поля, а не задаётся отдельно.
     #[test]
     fn sound_names_follow_the_field_names() {
@@ -806,17 +906,20 @@ mod tests {
         assert!(!text.contains("hurt_sound_sound"), "{}", text);
     }
 
-    /// У курицы «холодного» варианта своя модель, у остальных обычная.
+    /// Имена текстур и модели — как у официального сервера: `вид_вариант`,
+    /// своя модель у холодной курицы, у холодной и тёплой коровы.
     #[test]
-    fn the_cold_chicken_has_its_own_model() {
-        let cold = entry("minecraft:chicken_variant", "cold").expect("есть запись");
-        let warm = entry("minecraft:chicken_variant", "warm").expect("есть запись");
+    fn variant_textures_follow_the_official_names() {
+        let text = |registry: &str, name: &str| String::from_utf8_lossy(&entry(registry, name).expect("есть запись").encode_network()).to_string();
+        let cold = text("minecraft:chicken_variant", "cold");
+        let warm = text("minecraft:chicken_variant", "warm");
 
-        let cold = String::from_utf8_lossy(&cold.encode_network()).to_string();
-        let warm = String::from_utf8_lossy(&warm.encode_network()).to_string();
-
-        assert!(cold.contains("cold_chicken"), "{}", cold);
-        assert!(warm.contains("normal"), "{}", warm);
+        assert!(cold.contains("entity/chicken/chicken_cold") && cold.contains("model"), "{}", cold);
+        assert!(warm.contains("entity/chicken/chicken_warm") && !warm.contains("model"), "{}", warm);
+        assert!(text("minecraft:cow_variant", "temperate").contains("entity/cow/cow_temperate_baby"));
+        assert!(text("minecraft:wolf_variant", "ashen").contains("entity/wolf/wolf_ashen_tame"));
+        assert!(text("minecraft:wolf_variant", "pale").contains("entity/wolf/wolf_angry"));
+        assert!(text("minecraft:cat_variant", "tabby").contains("entity/cat/cat_tabby"));
     }
 
     /// Пластинки различаются длиной и сигналом компаратора.

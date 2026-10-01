@@ -1,0 +1,54 @@
+{
+ "about": "Паук с ИИ в темноте (ночью) лезет по стене к роботу на башне.",
+ "track_mobs": true,
+ "blocks": [],
+ "exclusive": true,
+ "setup": [
+  "difficulty normal",
+  "time set midnight",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "fill $(6,0,0) $(6,5,2) minecraft:stone",
+  "tp $(bot) $(6.5,6,1.5)",
+  "!stopfly",
+  "!wait 10",
+  "effect give $(bot) minecraft:resistance 100 4"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon spider $(2.5,0,1.5) {Silent:1b}"
+  }
+ ],
+ "record_ticks": 160,
+ "cleanup": [
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=skeleton,distance=..48]",
+  "kill @e[type=creeper,distance=..48]",
+  "kill @e[type=spider,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "fill $(6,0,0) $(6,5,2) minecraft:air",
+  "effect clear $(bot)",
+  "time set noon",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "name": "spider-climb",
+ "random": [
+  {
+   "type": "count",
+   "name": "ходьба и лазание паука",
+   "match": "^cart spider|^meta ",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "вики, Spider: цель и путь выбираются случайно, старт погони у оригинала случаен"
+  }
+ ]
+}

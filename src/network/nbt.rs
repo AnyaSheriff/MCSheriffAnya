@@ -93,6 +93,19 @@ impl Compound {
         self
     }
 
+    /// Добавляет поле-массив целых.
+    pub fn int_array(mut self, name: &str, values: &[i32]) -> Self {
+        self.bytes.push(0x0B);
+        write_name(&mut self.bytes, name);
+        self.bytes.extend_from_slice(&(values.len() as i32).to_be_bytes());
+
+        for value in values {
+            self.bytes.extend_from_slice(&value.to_be_bytes());
+        }
+
+        self
+    }
+
     /// Добавляет поле-список записей.
     pub fn compounds(mut self, name: &str, values: Vec<Compound>) -> Self {
         self.bytes.push(TAG_LIST);

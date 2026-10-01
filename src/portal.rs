@@ -237,6 +237,8 @@ pub fn destination(from: Dimension, (x, y, z): (f64, f64, f64)) -> (Dimension, (
     match from {
         Dimension::Overworld => (Dimension::Nether, (x / 8.0, y, z / 8.0)),
         Dimension::Nether => (Dimension::Overworld, (x * 8.0, y, z * 8.0)),
+        // Порталы Незера в Энде не зажечь; на всякий случай — домой.
+        Dimension::End => (Dimension::Overworld, (x, y, z)),
     }
 }
 
@@ -249,16 +251,123 @@ pub fn wait(settings: &crate::config::mcsheriffanya::Settings, creative: bool) -
     if creative { 1 } else { settings.portal_delay.max(1) }
 }
 
-/// Стоит ли игрок в портале: портал у ног или на уровне груди.
+/// Стоит ли игрок в портале: портал у ног или на уровне груди; портал
+/// Края — только у ног (блок ниже человека, в нём стоят).
 pub fn standing_in(world: &World, (x, y, z): (f64, f64, f64)) -> bool {
     let (x, y, z) = (x.floor() as i32, y.floor() as i32, z.floor() as i32);
 
-    is_portal(world.get_block(x, y, z)) || is_portal(world.get_block(x, y + 1, z))
+    is_portal(world.get_block(x, y, z)) || is_portal(world.get_block(x, y + 1, z)) || is_end_portal(world.get_block(x, y, z))
+}
+
+/// Портал Края ли этот блок.
+pub fn is_end_portal(state: i32) -> bool {
+    blocks::block_at_state(state) == Some("end_portal")
+}
+
+/// Стоит ли игрок в портале Края: в нём переход мгновенный (вики, End
+/// portal: «immediately opens up a loading screen»), а не через 80 тактов.
+pub fn standing_in_end_portal(world: &World, (x, y, z): (f64, f64, f64)) -> bool {
+    is_end_portal(world.get_block(x.floor() as i32, y.floor() as i32, z.floor() as i32))
+}
+
+/// Как расставлены двенадцать рамок вокруг проёма 3×3: смещение от центра
+/// и куда рамка смотрит (внутрь), как у оригинала.
+const FRAME_RING: [((i32, i32), &str); 12] = [
+    ((-1, -2), "south"),
+    ((0, -2), "south"),
+    ((1, -2), "south"),
+    ((-1, 2), "north"),
+    ((0, 2), "north"),
+    ((1, 2), "north"),
+    ((-2, -1), "east"),
+    ((-2, 0), "east"),
+    ((-2, 1), "east"),
+    ((2, -1), "west"),
+    ((2, 0), "west"),
+    ((2, 1), "west"),
+];
+
+/// Событие мира «портал Края открылся» — слышно на весь мир.
+pub const END_PORTAL_SPAWN: i32 = 1038;
+
+/// Вложили око в рамку: если теперь все двенадцать рамок кольца, куда
+/// входит эта, с глазами и смотрят внутрь, проём 3×3 заполняется порталом
+/// Края (блоки внутри исчезают без выпадения). Возвращает центр открытого
+/// портала.
+pub fn open_end_portal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<(i32, i32, i32)> {
+    for (offset, _) in FRAME_RING {
+        let center = (x - offset.0, y, z - offset.1);
+
+        if FRAME_RING.iter().all(|((dx, dz), facing)| {
+            let state = world.get_block(center.0 + dx, y, center.2 + dz);
+            let Some(rule) = blocks::orientation("end_portal_frame") else { return false };
+
+            rule.value(state, "eye") == Some("true") && rule.value(state, "facing") == Some(*facing)
+        }) {
+            let portal = blocks::state_by_name("end_portal")?;
+
+            for dx in -1..=1 {
+                for dz in -1..=1 {
+                    world.set_block(center.0 + dx, y, center.2 + dz, portal);
+                }
+            }
+
+            world.note_level_event(center.0, y, center.2, END_PORTAL_SPAWN, 0);
+
+            return Some(center);
+        }
+    }
+
+    None
+}
+
+/// Строит площадку Края: обсидиан 5×5 под ногами и три слоя воздуха над
+/// ней (вики, End portal). Игрок встаёт на неё.
+pub fn build_end_platform(world: &mut World) -> (f64, f64, f64) {
+    let (px, py, pz) = crate::world::the_end::PLATFORM;
+    let obsidian = obsidian();
+
+    // Чанки под площадкой должны быть в памяти, иначе блоки не лягут.
+    for chunk_x in (px - 2).div_euclid(16)..=(px + 2).div_euclid(16) {
+        for chunk_z in (pz - 2).div_euclid(16)..=(pz + 2).div_euclid(16) {
+            world.ensure(chunk_x, chunk_z);
+        }
+    }
+
+    for dx in -2..=2 {
+        for dz in -2..=2 {
+            world.set_block(px + dx, py, pz + dz, obsidian);
+
+            for dy in 1..=3 {
+                if world.get_block(px + dx, py + dy, pz + dz) != AIR {
+                    world.set_block(px + dx, py + dy, pz + dz, AIR);
+                }
+            }
+        }
+    }
+
+    (f64::from(px) + 0.5, f64::from(py + 1), f64::from(pz) + 0.5)
 }
 
 /// Переход через портал из этого места: другое измерение и где там встать
 /// (у найденного или построенного парного портала).
 pub fn travel(shared: &crate::shared::Shared, from: Dimension, at: (f64, f64, f64)) -> (Dimension, (f64, f64, f64)) {
+    // Портал Края: из обычного мира и Незера — на площадку, из Края —
+    // домой, в обычный мир.
+    if standing_in_end_portal(&shared.world_in(from).lock().expect("мир захвачен другим потоком"), at) {
+        if from == Dimension::End {
+            let spawn = shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком").spawn_position();
+
+            return (Dimension::Overworld, spawn);
+        }
+
+        let mut world = shared.world_in(Dimension::End).lock().expect("мир захвачен другим потоком");
+        let place = build_end_platform(&mut world);
+        crate::redstone::settle(&mut world);
+
+        return (Dimension::End, place);
+    }
+
     let (dimension, rough) = destination(from, at);
     let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
     let place = arrive(&mut world, dimension, rough);
@@ -272,6 +381,7 @@ fn search_radius(dimension: Dimension) -> i32 {
     match dimension {
         Dimension::Overworld => 128,
         Dimension::Nether => 16,
+        Dimension::End => 16,
     }
 }
 
@@ -347,6 +457,7 @@ fn heights(dimension: Dimension) -> (i32, i32) {
     match dimension {
         Dimension::Overworld => (crate::world::MIN_Y + 1, 300),
         Dimension::Nether => (1, 122),
+        Dimension::End => (1, 250),
     }
 }
 
@@ -500,5 +611,76 @@ mod tests {
     fn coordinates_scale_by_eight() {
         assert_eq!(destination(Dimension::Overworld, (800.0, 70.0, -160.0)), (Dimension::Nether, (100.0, 70.0, -20.0)));
         assert_eq!(destination(Dimension::Nether, (10.0, 40.0, 1.0)), (Dimension::Overworld, (80.0, 40.0, 8.0)));
+    }
+
+    /// Двенадцать рамок вокруг центра (10, 70, 10): с глазами или без.
+    fn ring(world: &mut World, eye: bool) {
+        for ((dx, dz), facing) in FRAME_RING {
+            let state = blocks::state_from_text(&format!("end_portal_frame[eye={},facing={}]", eye, facing)).unwrap();
+
+            world.set_block(10 + dx, 70, 10 + dz, state);
+        }
+    }
+
+    #[test]
+    fn twelve_eyes_open_the_end_portal() {
+        let mut world = World::in_memory();
+        ring(&mut world, true);
+        world.set_block(10, 70, 10, obsidian());
+
+        assert_eq!(open_end_portal(&mut world, (11, 70, 8)), Some((10, 70, 10)));
+
+        for dx in -1..=1 {
+            for dz in -1..=1 {
+                assert!(is_end_portal(world.get_block(10 + dx, 70, 10 + dz)), "нет портала в {} {}", dx, dz);
+            }
+        }
+
+        assert!(standing_in(&world, (10.5, 70.75, 10.5)));
+        assert!(standing_in_end_portal(&world, (10.5, 70.75, 10.5)));
+    }
+
+    #[test]
+    fn eleven_eyes_do_not() {
+        let mut world = World::in_memory();
+        ring(&mut world, true);
+        world.set_block(9, 70, 8, blocks::state_from_text("end_portal_frame[eye=false,facing=south]").unwrap());
+
+        assert_eq!(open_end_portal(&mut world, (10, 70, 8)), None);
+        assert!(!is_end_portal(world.get_block(10, 70, 10)));
+    }
+
+    #[test]
+    fn a_frame_facing_out_breaks_the_ring() {
+        let mut world = World::in_memory();
+        ring(&mut world, true);
+        world.set_block(10, 70, 8, blocks::state_from_text("end_portal_frame[eye=true,facing=north]").unwrap());
+
+        assert_eq!(open_end_portal(&mut world, (11, 70, 8)), None);
+    }
+
+    #[test]
+    fn the_platform_is_five_by_five_with_air_above() {
+        let mut world = World::in_memory();
+        world.set_block(101, 50, 1, obsidian());
+
+        let (x, y, z) = build_end_platform(&mut world);
+
+        assert_eq!((x, y, z), (100.5, 49.0, 0.5));
+
+        for dx in -2..=2 {
+            for dz in -2..=2 {
+                assert_eq!(world.get_block(100 + dx, 48, dz), obsidian());
+                assert_eq!(world.get_block(100 + dx, 49, dz), AIR);
+                assert_eq!(world.get_block(100 + dx, 51, dz), AIR);
+            }
+        }
+
+        assert_eq!(world.get_block(103, 48, 0), AIR);
+    }
+
+    #[test]
+    fn the_end_maps_home_by_the_book() {
+        assert_eq!(destination(Dimension::End, (5.0, 60.0, 7.0)).0, Dimension::Overworld);
     }
 }

@@ -81,11 +81,25 @@ pub struct Stack {
     /// Особый динамит (custom_tnt.rs): какой именно. У обычных предметов —
     /// None. Стопки с разной пометкой не сливаются.
     pub tnt: Option<crate::custom_tnt::KindId>,
+
+    /// Довески: износ, зачарования, свои модификаторы (stackdata.rs). У
+    /// обычных предметов — None. Стопки с разными довесками не сливаются.
+    pub data: Option<crate::stackdata::DataId>,
 }
 
 impl Stack {
     pub fn new(item: i32, count: i32) -> Self {
-        Self { item, count, tnt: None }
+        Self { item, count, tnt: None, data: None }
+    }
+
+    /// Довески стопки (пустые, если их нет).
+    pub fn extras(&self) -> crate::stackdata::Data {
+        self.data.map(crate::stackdata::get).unwrap_or_default()
+    }
+
+    /// Та же стопка с другими довесками.
+    pub fn with_extras(self, data: crate::stackdata::Data) -> Self {
+        Self { data: crate::stackdata::intern(data), ..self }
     }
 
     /// Та же стопка другого размера — с теми же пометками.
@@ -95,25 +109,53 @@ impl Stack {
 
     /// Сливаются ли стопки: тот же предмет и те же пометки.
     pub fn stacks_with(&self, other: &Stack) -> bool {
-        self.item == other.item && self.tnt == other.tnt
+        self.item == other.item && self.tnt == other.tnt && self.data == other.data
     }
 
     /// Номер предмета для файла (игрока, хранилища): в старшем байте —
     /// номер особого динамита, у обычных предметов там ноль, и запись та же,
     /// что прежде.
     pub fn stored_item(&self) -> i32 {
-        self.item | self.tnt.map_or(0, |kind| i32::from(kind.0) << 24)
+        // Старший бит — «за номером идут довески» (`write_stored`); на
+        // номер особого динамита остаются семь бит.
+        let flag = if self.data.is_some() { i32::MIN } else { 0 };
+
+        self.item | self.tnt.map_or(0, |kind| i32::from(kind.0 & 0x7f) << 24) | flag
+    }
+
+    /// Дописывает довески стопки, если они есть: длина и запись
+    /// (`stackdata::to_bytes`). Читает их `read_stored`.
+    pub fn write_extras(&self, out: &mut Vec<u8>) {
+        if let Some(data) = self.data {
+            let bytes = crate::stackdata::to_bytes(&crate::stackdata::get(data));
+
+            out.extend_from_slice(&(bytes.len() as u16).to_be_bytes());
+            out.extend_from_slice(&bytes);
+        }
+    }
+
+    /// Довески к стопке из `from_stored`, если её номер их обещал: берёт их
+    /// из `take` (длина и запись). None — запись испорчена.
+    pub fn read_extras<'a>(stored: i32, mut take: impl FnMut(usize) -> Option<&'a [u8]>) -> Option<Option<crate::stackdata::Data>> {
+        if stored >= 0 {
+            return Some(None);
+        }
+
+        let length = usize::from(u16::from_be_bytes(take(2)?.try_into().ok()?));
+
+        Some(Some(crate::stackdata::from_bytes(take(length)?)?))
     }
 
     /// Стопка из записи `stored_item`. Неизвестный номер особого динамита
     /// (вид убрали из таблицы) — обычный динамит.
     pub fn from_stored(stored: i32, count: i32) -> Self {
-        let tnt = crate::custom_tnt::KindId((stored >> 24) as u8);
+        let tnt = crate::custom_tnt::KindId(((stored >> 24) & 0x7f) as u8);
 
         Self {
             item: stored & 0x00ff_ffff,
             count,
             tnt: crate::custom_tnt::by_id(tnt).map(|kind| kind.id),
+            data: None,
         }
     }
 
@@ -133,6 +175,12 @@ pub struct Inventory {
 
     /// Предмет в курсоре: то, что игрок держит мышкой.
     cursor: Option<Stack>,
+
+    /// Атрибуты, которые у игрока когда-либо были с модификаторами: при
+    /// возрождении оригинал шлёт их все (у оригинала они живут в файле
+    /// игрока). Лежат хвостом записи инвентаря — своего места в файле игрока
+    /// у них нет.
+    seen_attributes: Vec<u8>,
 }
 
 impl Inventory {
@@ -141,6 +189,19 @@ impl Inventory {
             slots: [None; SLOTS],
             selected: 0,
             cursor: None,
+            seen_attributes: Vec::new(),
+        }
+    }
+
+    /// Атрибуты, что когда-либо имели модификаторы (по возрастанию номеров).
+    pub fn seen_attributes(&self) -> &[u8] {
+        &self.seen_attributes
+    }
+
+    /// Запоминает атрибут, у которого были модификаторы.
+    pub fn note_attribute(&mut self, attribute: u8) {
+        if let Err(at) = self.seen_attributes.binary_search(&attribute) {
+            self.seen_attributes.insert(at, attribute);
         }
     }
 
@@ -229,6 +290,11 @@ impl Inventory {
     /// Что у игрока в руке.
     pub fn held(&self) -> Option<Stack> {
         self.slots[FIRST_HOTBAR as usize + self.selected]
+    }
+
+    /// Номер слота, который выбран в руке (окно игрока: 36–44).
+    pub fn selected_slot(&self) -> i32 {
+        FIRST_HOTBAR + self.selected as i32
     }
 
     /// Убирает из руки одну штуку — так расходуется поставленный блок.
@@ -593,6 +659,13 @@ impl Inventory {
             out.push(slot as u8);
             out.extend_from_slice(&stack.stored_item().to_be_bytes());
             out.extend_from_slice(&stack.count.to_be_bytes());
+            stack.write_extras(&mut out);
+        }
+
+        // Хвост: сколько и какие атрибуты когда-либо имели модификаторы.
+        if !self.seen_attributes.is_empty() {
+            out.push(self.seen_attributes.len() as u8);
+            out.extend_from_slice(&self.seen_attributes);
         }
 
         out
@@ -606,15 +679,35 @@ impl Inventory {
         let mut inventory = Inventory::new();
         inventory.select(selected as i32);
 
-        for number in 0..filled {
-            let start = 2 + number * 9;
-            let slot = *bytes.get(start)? as i32;
+        let mut at = 2;
 
-            let item = i32::from_be_bytes(bytes.get(start + 1..start + 5)?.try_into().ok()?);
-            let count = i32::from_be_bytes(bytes.get(start + 5..start + 9)?.try_into().ok()?);
+        for _ in 0..filled {
+            let mut take = |count: usize| -> Option<&[u8]> {
+                let part = bytes.get(at..at + count)?;
+
+                at += count;
+
+                Some(part)
+            };
+            let slot = take(1)?[0] as i32;
+            let item = i32::from_be_bytes(take(4)?.try_into().ok()?);
+            let count = i32::from_be_bytes(take(4)?.try_into().ok()?);
+            let extras = Stack::read_extras(item, &mut take)?;
+            let mut stack = Stack::from_stored(item, count);
+
+            if let Some(extras) = extras {
+                stack = stack.with_extras(extras);
+            }
 
             if count > 0 {
-                inventory.set(slot, Some(Stack::from_stored(item, count)));
+                inventory.set(slot, Some(stack));
+            }
+        }
+
+        // Хвост записи (у старых файлов его нет).
+        if let Some(&number) = bytes.get(at) {
+            for id in bytes.get(at + 1..at + 1 + usize::from(number)).unwrap_or_default() {
+                inventory.note_attribute(*id);
             }
         }
 
@@ -656,6 +749,29 @@ mod tests {
     }
 
     /// Обычный щелчок: стопка берётся в курсор и кладётся в другой слот.
+    /// Износ и зачарования переживают файл игрока; стопки с разными довесками
+    /// не сливаются.
+    #[test]
+    fn worn_and_enchanted_stacks_survive_the_player_file() {
+        let sword = blocks::item_named("diamond_sword").expect("меч");
+        let mut data = crate::stackdata::Data { damage: 17, ..Default::default() };
+
+        data.set_enchant(crate::stackdata::enchantment_number("sharpness").unwrap(), 5);
+
+        let special = Stack::new(sword, 1).with_extras(data);
+        let mut inventory = Inventory::new();
+
+        inventory.set(FIRST_HOTBAR, Some(special));
+        inventory.set(FIRST_HOTBAR + 1, Some(Stack::new(STONE, 12)));
+
+        let back = Inventory::from_bytes(&inventory.to_bytes()).expect("прочиталось");
+
+        assert_eq!(back.slot(FIRST_HOTBAR), Some(special));
+        assert_eq!(back.slot(FIRST_HOTBAR).unwrap().extras().damage, 17);
+        assert_eq!(back.slot(FIRST_HOTBAR + 1), Some(Stack::new(STONE, 12)));
+        assert!(!special.stacks_with(&Stack::new(sword, 1)));
+    }
+
     #[test]
     fn a_click_moves_a_stack_through_the_cursor() {
         let mut inventory = with(FIRST_HOTBAR, Stack::new(STONE, 10));

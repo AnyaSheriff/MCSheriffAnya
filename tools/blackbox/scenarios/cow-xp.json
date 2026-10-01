@@ -1,0 +1,145 @@
+{
+ "name": "cow-xp",
+ "about": "Опыт с коровы: два удара мечом убивают корову; шарики опыта появляются, летят к роботу (3 блока), подбираются — Set Experience.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "xp set $(bot) 0 levels",
+  "xp set $(bot) 0 points",
+  "give $(bot) minecraft:diamond_sword 1",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b}"
+  },
+  {
+   "after": 20,
+   "attack": true
+  },
+  {
+   "after": 30,
+   "attack": true
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "xp set $(bot) 0 levels",
+  "xp set $(bot) 0 points",
+  "kill @e[type=experience_orb,distance=..48]",
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=sheep,distance=..48]",
+  "kill @e[type=pig,distance=..48]",
+  "kill @e[type=chicken,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "число выпавших стопок",
+   "match": "^spawn [-0-9,.]+ item|^spawn item",
+   "range": [
+    1,
+    2
+   ],
+   "why": "вики, Cow: «Drops: 0–2 leather, 1–3 raw beef» — число стопок 1–2, число штук в них случайно"
+  },
+  {
+   "type": "mask",
+   "name": "число предметов в стопке",
+   "kind": "meta",
+   "pattern": "\"itemCount\":\\d+",
+   "replace": "\"itemCount\":N",
+   "why": "вики, Cow: «Drops: 0–2 leather, 1–3 raw beef» — число стопок 1–2, число штук в них случайно"
+  },
+  {
+   "type": "count",
+   "name": "свойства выпавших стопок",
+   "match": "^meta 8=\\{",
+   "range": [
+    2,
+    4
+   ],
+   "why": "вики, Cow: «Drops: 0–2 leather, 1–3 raw beef» — число стопок 1–2, число штук в них случайно"
+  },
+  {
+   "type": "count",
+   "name": "голос коровы в покое",
+   "match": "entity\\.cow\\.ambient",
+   "range": [
+    0,
+    3
+   ],
+   "anytick": true,
+   "why": "вики, Sounds: голос в покое раз в несколько секунд по случайному счёту (`ambient sound`); у оригинала две записи расходятся"
+  },
+  {
+   "type": "count",
+   "name": "число шариков опыта",
+   "match": "^spawn [-0-9,.]+ experience_orb",
+   "range": [
+    1,
+    2
+   ],
+   "why": "вики, Experience: «Mobs drop a random number of experience orbs» — с коровы 1–3 очка: один шарик (1 или 3) или два по 1; у оригинала два прогона расходятся"
+  },
+  {
+   "type": "count",
+   "name": "свойства шариков опыта",
+   "match": "^meta 8=\\d+$",
+   "range": [
+    2,
+    4
+   ],
+   "why": "вики, Experience: «Mobs drop a random number of experience orbs» — с коровы 1–3 очка: один шарик (1 или 3) или два по 1; у оригинала два прогона расходятся"
+  },
+  {
+   "type": "count",
+   "name": "ход и подбор шариков опыта",
+   "match": "^cart experience_orb",
+   "range": [
+    3,
+    8
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении, поэтому подбирается на случайном такте (у оригинала расходятся два прогона)"
+  },
+  {
+   "type": "count",
+   "name": "подбор опыта роботом",
+   "match": "^sv (Collect count|Set Experience|Metadata 18)",
+   "range": [
+    3,
+    6
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении, поэтому подбирается на случайном такте (у оригинала расходятся два прогона)"
+  },
+  {
+   "type": "count",
+   "name": "досыл атрибутов после износа меча",
+   "match": "^sv Attributes ",
+   "range": [
+    2,
+    2
+   ],
+   "anytick": true,
+   "why": "у игрока интервал слежения 2 такта: атрибуты после износа вещи приходят на +1 или +2 в зависимости от чётности счёта сущности (как в pvp-*); у оригинала прогоны 30.09 дали +1 и +2"
+  }
+ ],
+ "track_self": true
+}

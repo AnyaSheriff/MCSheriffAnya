@@ -135,6 +135,12 @@ pub fn dispense(world: &mut World, front: Pos, custom: Option<KindId>) {
     spawn_primed(world, bottom_centre(front), custom);
 }
 
+/// Кого из игроков задел взрыв и с какой силой удара (`impact`).
+type Impact = (i32, f64);
+
+/// Толчки игрокам: номер сущности и прибавка к скорости.
+type Pushes = Vec<(i32, (f64, f64, f64))>;
+
 /// Игрок, которого может толкнуть взрыв: номер сущности, ноги, крадётся ли.
 #[derive(Clone, Copy, Debug)]
 pub struct Target {
@@ -177,6 +183,8 @@ pub fn explode_primed(
     next_id: &mut dyn FnMut() -> i32,
 ) {
     let centre = centre_of(primed);
+
+    world.blast_source = primed.entity_id;
 
     let Some(kind) = primed.custom.and_then(custom_tnt::by_id) else {
         explode(world, items, players, centre, POWER, false, next_id);
@@ -237,7 +245,15 @@ fn blast(
 
     // Сущности — пока блоки стоят: заслоняют именно они (вики, Explosion:
     // «Exposure»).
-    let pushed = push_entities(world, items, players, centre, power);
+    let (pushed, hurts) = push_entities(world, items, players, centre, power);
+
+    // Урон игрокам — раньше разрушения и пакета взрыва (чёрный ящик,
+    // tnt-damage: урон, смерть и её сообщение идут до вспышки и предметов).
+    let culprit = world.blast_source;
+
+    for (entity_id, impact) in hurts {
+        world.note_hurt(entity_id, crate::survival::explosion_damage(impact, power), culprit);
+    }
 
     break_carts(world, items, next_id);
 
@@ -258,6 +274,8 @@ fn blast(
         blocks: reached as i32,
         pushed,
     });
+
+    world.blast_source = 0;
 }
 
 /// Рушит следующую часть отложенного большим взрывом (`BLAST_BATCH`).
@@ -381,7 +399,7 @@ fn push_entities(
     players: &[Target],
     centre: (f64, f64, f64),
     power: f32,
-) -> Vec<(i32, (f64, f64, f64))> {
+) -> (Pushes, Vec<Impact>) {
     let reach = 2.0 * power as f64;
     let nether_star = blocks::item_named("nether_star");
 
@@ -428,16 +446,43 @@ fn push_entities(
         cart.blasted(push, damage(impact, reach));
     }
 
-    players
-        .iter()
-        .filter_map(|player| {
-            let (height, eyes) = if player.sneaking { (1.5, SNEAKING_EYES) } else { (1.8, PLAYER_EYES) };
-            let impact = impact(world, centre, reach, (player.x, player.y, player.z), (0.6, height))?;
-            let push = push_towards(centre, (player.x, player.y + eyes, player.z), impact)?;
+    // Мобы получают урон и толчок, как игроки (вики, Explosion: «Damage»);
+    // уходящий крипер сам себя не задевает. [проверить]
+    for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && !mob.h.despawn) {
+        let size = mob.size();
 
-            Some((player.entity_id, push))
-        })
-        .collect()
+        let Some(impact) = impact(world, centre, reach, (mob.x, mob.y, mob.z), size) else {
+            continue;
+        };
+
+        if let Some(push) = push_towards(centre, (mob.x, mob.y + size.1 * EYES_SHARE, mob.z), impact) {
+            mob.vx += push.0;
+            mob.vy += push.1;
+            mob.vz += push.2;
+            mob.on_ground = false;
+        }
+
+        mob.hurt(crate::survival::explosion_damage(impact, power), crate::survival::Source::Explosion, None);
+    }
+
+    let mut pushed = Vec::new();
+    let mut hurts = Vec::new();
+
+    for player in players {
+        let (height, eyes) = if player.sneaking { (1.5, SNEAKING_EYES) } else { (1.8, PLAYER_EYES) };
+        let Some(impact) = impact(world, centre, reach, (player.x, player.y, player.z), (0.6, height)) else {
+            continue;
+        };
+
+        // Урон идёт, даже когда толкать некуда (центр в самом игроке).
+        hurts.push((player.entity_id, impact));
+
+        if let Some(push) = push_towards(centre, (player.x, player.y + eyes, player.z), impact) {
+            pushed.push((player.entity_id, push));
+        }
+    }
+
+    (pushed, hurts)
 }
 
 /// Сила удара по сущности с ногами в `feet` и ящиком `size` (ширина,
@@ -767,6 +812,32 @@ mod tests {
         assert!(blocks_to_destroy(&mut world, (0.5, 0.06125, 0.5), POWER).is_empty());
     }
 
+    /// Взрыв ранит и толкает мобов рядом, дальним не вредит, уходящего
+    /// крипера не трогает (mob/hostile.rs).
+    #[test]
+    fn a_blast_hurts_and_pushes_mobs_nearby_but_not_far_ones_or_the_leaving_creeper() {
+        let mut world = World::in_memory();
+        let mut items = Items::new();
+        let mut next = ids();
+
+        for (id, x) in [(1, 2.5), (2, 30.5)] {
+            items.add_mob(crate::mob::Mob::new(id, crate::mob::Kind::Cow, (x, 64.0, 0.5)));
+        }
+
+        let mut leaving = crate::mob::Mob::new(3, crate::mob::Kind::Creeper, (0.5, 64.0, 0.5));
+
+        leaving.h.despawn = true;
+        items.add_mob(leaving);
+
+        explode(&mut world, &mut items, &[], (0.5, 64.0, 0.5), 3.0, false, &mut next);
+
+        let by_id = |id: i32| items.mobs().iter().find(|mob| mob.entity_id == id).expect("моб");
+
+        assert!(by_id(1).vitals.health < 10.0 && by_id(1).vx > 0.0, "рядом ранит и толкает от центра");
+        assert_eq!(by_id(2).vitals.health, 10.0);
+        assert_eq!(by_id(3).vitals.health, 20.0);
+    }
+
     /// Запал убывает на единицу за такт: динамит с запалом 80 взрывается
     /// на восьмидесятом такте, не раньше.
     #[test]
@@ -1007,7 +1078,7 @@ mod tests {
         // Падающий блок в трёх блоках к востоку: он не ранится, только летит.
         items.drop_block(5, state("sand"), crate::inventory::Stack::new(0, 0), (3.5, 64.0, 0.5));
         // Предмет рядом с центром — пропадёт.
-        items.drop_item(6, crate::inventory::Stack::new(1, 1), (1.0, 64.0, 0.5), (0.0, 0.0, 0.0), std::time::Duration::ZERO);
+        items.drop_item(6, crate::inventory::Stack::new(1, 1), (1.0, 64.0, 0.5), (0.0, 0.0, 0.0), 0);
 
         let players = [Target { entity_id: 9, x: 0.5, y: 64.0, z: 3.5, sneaking: false }];
         let world_reader = world.watch_events(READER);
@@ -1123,7 +1194,7 @@ mod tests {
         world.set_block_silently(2, 64, 0, state("tnt"));
 
         items.drop_block(5, state("sand"), crate::inventory::Stack::new(0, 0), (0.5, 64.0, 3.5));
-        items.drop_item(6, crate::inventory::Stack::new(1, 1), (1.0, 64.0, 0.5), (0.0, 0.0, 0.0), std::time::Duration::ZERO);
+        items.drop_item(6, crate::inventory::Stack::new(1, 1), (1.0, 64.0, 0.5), (0.0, 0.0, 0.0), 0);
 
         let mut primed = Items::new();
         primed.prime(1, state("tnt"), (0.5, 64.0, 0.5), (0.0, 0.0, 0.0), 1, Some(kind("safe").id));

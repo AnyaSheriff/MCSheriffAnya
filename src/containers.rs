@@ -247,6 +247,7 @@ impl Container {
             // (`Stack::stored_item`).
             out.extend_from_slice(&stack.stored_item().to_be_bytes());
             out.push(stack.count.clamp(0, 127) as u8);
+            stack.write_extras(out);
         }
 
         // Своё у проигрывателя и кафедры — после ячеек.
@@ -286,9 +287,14 @@ impl Container {
 
         for _ in 0..filled {
             let slot = take(1)?[0] as usize;
-            let stored = Stack::from_stored(i32::from_be_bytes(take(4)?.try_into().ok()?), 0);
+            let raw = i32::from_be_bytes(take(4)?.try_into().ok()?);
+            let mut stored = Stack::from_stored(raw, 0);
             let count = take(1)?[0] as i32;
             let item = stored.item;
+
+            if let Some(extras) = Stack::read_extras(raw, &mut take)? {
+                stored = stored.with_extras(extras);
+            }
 
             if blocks::stack_size(item) <= 0 {
                 continue;

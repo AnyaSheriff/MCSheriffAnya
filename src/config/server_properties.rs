@@ -136,6 +136,8 @@ pub enum WorldKind {
     /// Незер — `minecraft:the_nether`. Настройкой не выбирается: так
     /// записан мир незера рядом с обычным.
     Nether,
+    /// Энд — `minecraft:the_end`. Так же не выбирается настройкой.
+    End,
 }
 
 impl WorldKind {
@@ -151,6 +153,7 @@ impl WorldKind {
             "flat" => WorldKind::Flat,
             "mcsheriffanya:super_smooth" | "super_smooth" => WorldKind::SuperSmooth,
             "the_nether" => WorldKind::Nether,
+            "the_end" => WorldKind::End,
             _ => WorldKind::Normal,
         }
     }
@@ -162,6 +165,7 @@ impl WorldKind {
             WorldKind::Flat => "minecraft:flat",
             WorldKind::SuperSmooth => "mcsheriffanya:super_smooth",
             WorldKind::Nether => "minecraft:the_nether",
+            WorldKind::End => "minecraft:the_end",
         }
     }
 }

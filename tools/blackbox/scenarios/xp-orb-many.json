@@ -1,0 +1,189 @@
+{
+ "name": "xp-orb-many",
+ "about": "Опыт: 40 одинаковых шариков в одной точке далеко от робота — сливаются ли они (вики: «experience orbs of the same value can merge»).",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty peaceful",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "fill $(-2,-1,-2) $(8,3,8) minecraft:air",
+  "fill $(-2,-1,-2) $(8,-1,8) minecraft:stone",
+  "tp $(bot) $(3.5,0,-5.5)",
+  "!stopfly",
+  "!wait 30"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,3,7.5) {Value:1s}"
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "kill @e[type=minecraft:experience_orb,distance=..24]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true
+}

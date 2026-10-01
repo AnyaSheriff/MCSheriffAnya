@@ -10,11 +10,14 @@
 // - world — появление в мире, чанки, движение, стройка;
 // - inventory — инвентарь, которым распоряжается сервер (Item Stack Request);
 // - containers — окна хранилищ, блок-акторы и крышка сундука;
+// - frames — рамки для предметов: блоки с блок-актором вместо сущностей;
 // - skin и png — скины: свои у игроков Bedrock, скачанные у игроков Java.
 
 pub mod auth;
 pub mod codec;
 pub mod containers;
+pub mod frames;
+pub mod health;
 pub mod inventory;
 pub mod png;
 pub mod raknet;

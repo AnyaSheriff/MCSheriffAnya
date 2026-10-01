@@ -1,0 +1,57 @@
+{
+ "name": "zombie-attack",
+ "about": "Зомби с ИИ в 6 блоках от робота в выживании: подходит, бьёт раз в 20 тактов; урон, отдача, сообщение о смерти.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon zombie $(6.5,0,0.5) {Silent:1b,equipment:{head:{id:\"minecraft:iron_helmet\",count:1}}}"
+  }
+ ],
+ "record_ticks": 150,
+ "cleanup": [
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "ходьба зомби",
+   "match": "^cart zombie|^meta ",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "вики, Zombie: цель выбирается не каждый такт (шанс 1 к 10), поэтому старт погони у оригинала случаен (замеры: такты 21, 25); дальше ходьба и удары"
+  },
+  {
+   "type": "count",
+   "name": "удары и их последствия",
+   "match": "^sv |^self ",
+   "range": [
+    0,
+    200
+   ],
+   "anytick": true,
+   "why": "вики, Zombie: цель выбирается не каждый такт (шанс 1 к 10), поэтому старт погони у оригинала случаен (замеры: такты 21, 25); дальше ходьба и удары"
+  }
+ ]
+}

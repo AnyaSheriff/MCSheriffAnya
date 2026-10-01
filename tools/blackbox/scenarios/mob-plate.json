@@ -1,0 +1,68 @@
+{
+ "name": "mob-plate",
+ "about": "Свинья NoAI стоит на деревянной нажимной плите: плита нажимается (лампа под ней загорается), а когда свинью уносят — отпускается.",
+ "track_mobs": true,
+ "blocks": [
+  {
+   "at": [
+    3,
+    0,
+    3
+   ],
+   "state": "minecraft:oak_pressure_plate[powered=false]"
+  },
+  {
+   "at": [
+    3,
+    -1,
+    3
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    3
+   ],
+   "state": "minecraft:stone_pressure_plate[powered=false]"
+  },
+  {
+   "at": [
+    5,
+    -1,
+    3
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "tp $(bot) $(0.5,1,0.5)",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon pig $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 10,
+   "cmd": "summon pig $(5.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 40,
+   "cmd": "tp @e[type=pig,distance=..20] $(3.5,20,0.5)"
+  }
+ ],
+ "record_ticks": 90,
+ "cleanup": [
+  "kill @e[type=pig,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "setblock $(3,0,3) air",
+  "setblock $(5,0,3) air",
+  "setblock $(3,-1,3) minecraft:stone",
+  "setblock $(5,-1,3) minecraft:stone",
+  "difficulty peaceful"
+ ]
+}

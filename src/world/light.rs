@@ -87,7 +87,6 @@ pub fn emission(state: i32) -> u8 {
 }
 
 /// Сколько света гасит блок в этом состоянии: 0 — прозрачен, 15 — глух.
-#[cfg(test)]
 pub fn filter(state: i32) -> u8 {
     filtered(table()[state as u16 as usize])
 }

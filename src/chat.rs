@@ -35,6 +35,10 @@ pub struct Chat {
 
     /// Сколько строк уже выброшено из начала ленты.
     dropped: usize,
+
+    /// Кому строку не слать (тому, кто её уже получил своим путём: игрок
+    /// видит своё сообщение о смерти в пакете смерти).
+    hidden: Vec<Option<[u8; 16]>>,
 }
 
 impl Chat {
@@ -42,17 +46,38 @@ impl Chat {
         Self {
             lines: Vec::new(),
             dropped: 0,
+            hidden: Vec::new(),
         }
     }
 
     /// Добавляет строку в ленту.
     pub fn push(&mut self, line: String) {
+        self.push_hidden(line, None);
+    }
+
+    /// Добавляет строку, которую не надо слать игроку `except`.
+    pub fn push_hidden(&mut self, line: String, except: Option<[u8; 16]>) {
         self.lines.push(line);
+        self.hidden.push(except);
 
         if self.lines.len() > KEPT {
             self.lines.remove(0);
+            self.hidden.remove(0);
             self.dropped += 1;
         }
+    }
+
+    /// Строки с номера `from`, кроме скрытых от игрока `who`.
+    pub fn since_for(&self, from: usize, who: &[u8; 16]) -> Vec<String> {
+        let start = from.max(self.dropped) - self.dropped;
+        let start = start.min(self.lines.len());
+
+        self.lines[start..]
+            .iter()
+            .zip(&self.hidden[start..])
+            .filter(|(_, hidden)| hidden.as_ref() != Some(who))
+            .map(|(line, _)| line.clone())
+            .collect()
     }
 
     /// Сколько всего строк было — сколько уже разослано.
@@ -74,6 +99,19 @@ impl Chat {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hidden_lines_skip_only_their_player() {
+        let mut chat = Chat::new();
+        let (a, b) = ([1u8; 16], [2u8; 16]);
+
+        chat.push("для всех".to_string());
+        chat.push_hidden("не для a".to_string(), Some(a));
+
+        assert_eq!(chat.since_for(0, &a), vec!["для всех".to_string()]);
+        assert_eq!(chat.since_for(0, &b), vec!["для всех".to_string(), "не для a".to_string()]);
+        assert_eq!(chat.since_for(1, &b), vec!["не для a".to_string()]);
+    }
 
     fn push(chat: &mut Chat, line: &str) {
         chat.push(line.to_string());

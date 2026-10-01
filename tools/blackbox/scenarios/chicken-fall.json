@@ -1,0 +1,62 @@
+{
+ "name": "chicken-fall",
+ "about": "Курица падает с высоты 8: летит медленно (предельная скорость −0,114), частицы приземления, урона нет. NoAI выключен только на время падения и посадки.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "tp $(bot) $(0.5,0,0.5)"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon chicken $(3.5,8,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 6,
+   "cmd": "data merge entity @e[type=chicken,distance=..30,limit=1] {NoAI:0b}"
+  },
+  {
+   "after": 84,
+   "cmd": "data merge entity @e[type=chicken,distance=..30,limit=1] {NoAI:1b}"
+  }
+ ],
+ "record_ticks": 110,
+ "cleanup": [
+  "kill @e[type=chicken,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "поворот головы",
+   "match": "entity_head_rotation",
+   "range": [
+    0,
+    80
+   ],
+   "anytick": true,
+   "why": "вики, Mob AI: «Look at player / Random look around» — взгляд меняется с шансом 0,02 за такт; у оригинала он тоже случаен (две записи оригинала расходятся)"
+  },
+  {
+   "type": "count",
+   "name": "поворот тела при взгляде",
+   "match": "^cart chicken chicken поворот|^cart chicken поворот",
+   "range": [
+    0,
+    40
+   ],
+   "anytick": true,
+   "why": "вики, Mob AI: «Look at player / Random look around» — взгляд меняется с шансом 0,02 за такт; у оригинала он тоже случаен (две записи оригинала расходятся)"
+  },
+  {
+   "type": "mask",
+   "name": "угол при сдвиге",
+   "kind": "cart",
+   "pattern": " поворот [-0-9.]+/[-0-9.]+",
+   "replace": "",
+   "why": "вики, Mob AI: «Look at player / Random look around» — взгляд меняется с шансом 0,02 за такт; у оригинала он тоже случаен (две записи оригинала расходятся)"
+  }
+ ]
+}

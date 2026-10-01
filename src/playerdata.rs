@@ -27,7 +27,19 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// Версия 1 — только место, поворот и режим игры. Версия 2 — то же самое
 /// и инвентарь следом. Файлы первой версии читаются по-прежнему: игрок
 /// встанет там, где вышел, просто с пустым инвентарём.
-const FORMAT_VERSION: u32 = 3;
+///
+/// Версия 3 — плюс измерение последним байтом. Версия 4 — плюс здоровье,
+/// еда, насыщение, изнурение, воздух, огонь и высота падения: постоянный
+/// хвост из `VITALS_SIZE` байт после измерения. Файлы версий 1–3 читаются:
+/// игрок зайдёт сытым и здоровым.
+const FORMAT_VERSION: u32 = 4;
+
+/// Версия с измерением, но без здоровья.
+const DIMENSION_VERSION: u32 = 3;
+
+/// Длина записи о здоровье: здоровье, еда, насыщение, изнурение, воздух,
+/// огонь, высота падения, очки опыта — по четыре байта.
+const VITALS_SIZE: usize = 8 * 4;
 
 /// Версия с инвентарём, но без измерения: такой игрок — в обычном мире.
 const INVENTORY_VERSION: u32 = 2;
@@ -41,6 +53,75 @@ pub const DIRECTORY: &str = "world/playerdata";
 /// Длина постоянной части файла: подпись, версия, три координаты, два угла
 /// и режим игры. Дальше идёт инвентарь, а он разной длины.
 const SIZE: usize = 4 + 4 + 8 * 3 + 4 * 2 + 4;
+
+/// Здоровье игрока, каким оно ложится в файл.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct SavedVitals {
+    pub health: f32,
+    pub food: i32,
+    pub saturation: f32,
+    pub exhaustion: f32,
+    pub air: i32,
+    /// Сколько тактов ещё горит.
+    pub fire: i32,
+    pub fall: f32,
+    /// Всего очков опыта.
+    pub experience: i32,
+}
+
+impl Default for SavedVitals {
+    /// Новорождённый: полное здоровье и еда, насыщение 5, воздуха 300.
+    fn default() -> Self {
+        Self { health: 20.0, food: 20, saturation: 5.0, exhaustion: 0.0, air: 300, fire: 0, fall: 0.0, experience: 0 }
+    }
+}
+
+impl SavedVitals {
+    fn write(&self, out: &mut Vec<u8>) {
+        out.extend_from_slice(&self.health.to_be_bytes());
+        out.extend_from_slice(&self.food.to_be_bytes());
+        out.extend_from_slice(&self.saturation.to_be_bytes());
+        out.extend_from_slice(&self.exhaustion.to_be_bytes());
+        out.extend_from_slice(&self.air.to_be_bytes());
+        out.extend_from_slice(&self.fire.to_be_bytes());
+        out.extend_from_slice(&self.fall.to_be_bytes());
+        out.extend_from_slice(&self.experience.to_be_bytes());
+    }
+
+    /// None — запись не той длины или числа не годятся (не число, здоровье
+    /// вне 0…1024, еда вне 0…20): такому файлу не верим.
+    fn read(bytes: &[u8]) -> Option<Self> {
+        if bytes.len() != VITALS_SIZE {
+            return None;
+        }
+
+        let vitals = Self {
+            health: f32::from_be_bytes(take(bytes, 0)?),
+            food: i32::from_be_bytes(take(bytes, 4)?),
+            saturation: f32::from_be_bytes(take(bytes, 8)?),
+            exhaustion: f32::from_be_bytes(take(bytes, 12)?),
+            air: i32::from_be_bytes(take(bytes, 16)?),
+            fire: i32::from_be_bytes(take(bytes, 20)?),
+            fall: f32::from_be_bytes(take(bytes, 24)?),
+            experience: i32::from_be_bytes(take(bytes, 28)?),
+        };
+
+        let sane = vitals.health.is_finite()
+            && (0.0..=1024.0).contains(&vitals.health)
+            && (0..=20).contains(&vitals.food)
+            && vitals.saturation.is_finite()
+            && vitals.saturation >= 0.0
+            && vitals.exhaustion.is_finite()
+            && vitals.exhaustion >= 0.0
+            && vitals.fall.is_finite()
+            && vitals.fall >= 0.0
+            && (-20..=300).contains(&vitals.air)
+            && (0..=100_000).contains(&vitals.fire)
+            && vitals.experience >= 0;
+
+        sane.then_some(vitals)
+    }
+}
 
 /// Что сервер помнит об игроке между заходами.
 #[derive(Clone, PartialEq, Debug)]
@@ -63,6 +144,9 @@ pub struct PlayerData {
 
     /// В каком измерении игрок вышел. Записан последним байтом файла.
     pub dimension: crate::dimension::Dimension,
+
+    /// Здоровье, еда, воздух, огонь: хвост файла версии 4.
+    pub vitals: SavedVitals,
 }
 
 /// Путь к файлу игрока внутри директории.
@@ -129,14 +213,22 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 
     // Файл первой версии — без инвентаря, и длина у него постоянная;
     // второй — без измерения; в третьей измерение — последний байт.
-    let (inventory, dimension) = match version {
-        OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default()),
-        INVENTORY_VERSION => (Inventory::from_bytes(bytes.get(SIZE..)?)?, Default::default()),
-        FORMAT_VERSION => {
+    let (inventory, dimension, vitals) = match version {
+        OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default(), Default::default()),
+        INVENTORY_VERSION => (Inventory::from_bytes(bytes.get(SIZE..)?)?, Default::default(), Default::default()),
+        DIMENSION_VERSION => {
             let (last, inventory) = bytes.get(SIZE..)?.split_last()?;
             let dimension = *crate::dimension::Dimension::ALL.get(*last as usize)?;
 
-            (Inventory::from_bytes(inventory)?, dimension)
+            (Inventory::from_bytes(inventory)?, dimension, Default::default())
+        }
+        FORMAT_VERSION => {
+            let tail = bytes.get(SIZE..)?;
+            let (rest, vitals) = tail.split_at(tail.len().checked_sub(VITALS_SIZE)?);
+            let (last, inventory) = rest.split_last()?;
+            let dimension = *crate::dimension::Dimension::ALL.get(*last as usize)?;
+
+            (Inventory::from_bytes(inventory)?, dimension, SavedVitals::read(vitals)?)
         }
         _ => return None,
     };
@@ -150,6 +242,7 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
         game_mode: i32::from_be_bytes(take(bytes, 40)?),
         inventory,
         dimension,
+        vitals,
     })
 }
 
@@ -178,6 +271,7 @@ pub fn save(directory: &Path, uuid: &[u8; 16], data: &PlayerData) -> io::Result<
     out.extend_from_slice(&data.game_mode.to_be_bytes());
     out.extend_from_slice(&data.inventory.to_bytes());
     out.push(data.dimension.index() as u8);
+    data.vitals.write(&mut out);
 
     let temporary = path.with_extension("tmp");
     fs::write(&temporary, &out)?;
@@ -210,6 +304,7 @@ mod tests {
             pitch: -12.0,
             game_mode: 1,
             dimension: Default::default(),
+            vitals: Default::default(),
         }
     }
 
@@ -357,5 +452,62 @@ mod tests {
         fs::write(&path, &old).expect("записать старый файл");
 
         assert_eq!(load(&directory, &[8; 16]), Some(data));
+    }
+
+    /// Здоровье, еда, воздух, огонь и падение переживают перезапуск.
+    #[test]
+    fn vitals_are_saved_with_the_player() {
+        let directory = test_directory("vitals");
+        let data = PlayerData {
+            vitals: SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234 },
+            ..sample()
+        };
+
+        save(&directory, &[9; 16], &data).expect("записать");
+        assert_eq!(load(&directory, &[9; 16]), Some(data));
+    }
+
+    /// Файл третьей версии (без здоровья) читается: игрок сыт и здоров.
+    #[test]
+    fn a_version_three_file_gives_a_full_player() {
+        let directory = test_directory("v3");
+        let data = sample();
+        let mut old = Vec::new();
+
+        old.extend_from_slice(MAGIC);
+        old.extend_from_slice(&DIMENSION_VERSION.to_be_bytes());
+        old.extend_from_slice(&data.x.to_be_bytes());
+        old.extend_from_slice(&data.y.to_be_bytes());
+        old.extend_from_slice(&data.z.to_be_bytes());
+        old.extend_from_slice(&data.yaw.to_be_bytes());
+        old.extend_from_slice(&data.pitch.to_be_bytes());
+        old.extend_from_slice(&data.game_mode.to_be_bytes());
+        old.extend_from_slice(&data.inventory.to_bytes());
+        old.push(data.dimension.index() as u8);
+
+        fs::write(path_for(&directory, &[10; 16]), &old).expect("записать");
+
+        let read = load(&directory, &[10; 16]).expect("прочитать");
+
+        assert_eq!(read.vitals, SavedVitals::default());
+        assert_eq!(read, data);
+    }
+
+    /// Здоровье из невозможных чисел файлу не верится.
+    #[test]
+    fn nonsense_vitals_are_rejected() {
+        let mut bytes = Vec::new();
+
+        SavedVitals { health: f32::NAN, ..Default::default() }.write(&mut bytes);
+        assert_eq!(SavedVitals::read(&bytes), None);
+
+        bytes.clear();
+        SavedVitals { food: 99, ..Default::default() }.write(&mut bytes);
+        assert_eq!(SavedVitals::read(&bytes), None);
+
+        bytes.clear();
+        SavedVitals::default().write(&mut bytes);
+        assert_eq!(SavedVitals::read(&bytes), Some(SavedVitals::default()));
+        assert_eq!(SavedVitals::read(&bytes[1..]), None);
     }
 }

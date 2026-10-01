@@ -1,0 +1,23 @@
+{
+ "name": "pig-baby",
+ "about": "Детёныш свиньи NoAI (Age:-60): свойство «детёныш», через 60 тактов вырастает.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "tp $(bot) $(0.5,1,0.5)",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon pig $(3.5,0,3.5) {NoAI:1b,Silent:1b,Age:-60}"
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "kill @e[type=pig,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful"
+ ]
+}

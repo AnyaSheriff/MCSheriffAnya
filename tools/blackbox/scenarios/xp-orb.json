@@ -1,0 +1,36 @@
+{
+ "name": "xp-orb",
+ "about": "Опыт: шарик опыта в 1 блоке от робота (выживание) — как он появляется, летит к игроку и подбирается; Set Experience и звук подбора.",
+ "blocks": [],
+ "setup": [
+  "difficulty peaceful",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "xp set $(bot) 0 levels",
+  "xp set $(bot) 0 points",
+  "fill $(-2,-1,-2) $(8,3,8) minecraft:air",
+  "fill $(-2,-1,-2) $(8,-1,8) minecraft:stone",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!wait 30"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:experience_orb $(3.5,0.5,5.5) {Value:7s}"
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "kill @e[type=minecraft:experience_orb,distance=..12]",
+  "xp set $(bot) 0 levels",
+  "xp set $(bot) 0 points",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true
+}

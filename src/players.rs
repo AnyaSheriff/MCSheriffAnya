@@ -100,6 +100,40 @@ pub struct Member {
     pub unsettled: u8,
 }
 
+/// Что о бое игрока знают остальные подключения: сколько ещё неуязвим,
+/// каким был сильнейший удар за это время и жив ли. Нападающему это нужно,
+/// чтобы понять, пройдёт ли его удар (иначе — «пустой» звук).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct CombatView {
+    pub invulnerable: i32,
+    pub last_hurt: f32,
+    pub dead: bool,
+    /// Броня и твёрдость, очки защиты зачарований (общие и только от снарядов).
+    pub armor: f32,
+    pub toughness: f32,
+    pub protection: i32,
+    pub projectile_protection: i32,
+    /// С какого такта поднят щит (None — не поднят) и до какого он отключён.
+    pub blocking_since: Option<u64>,
+    pub shield_disabled_until: u64,
+}
+
+/// Снаряжение и бой игрока, видимые остальным: вторая рука и броня (шлем,
+/// нагрудник, штаны, ботинки) — их клиенты показывают на чужом игроке.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Gear {
+    pub worn: [Option<Stack>; 5],
+    pub view: CombatView,
+    /// Скорость удара: её меняет оружие в руке, и остальным она уходит атрибутом.
+    pub attack_speed: Option<crate::attributes::Attribute>,
+    pub speed_touch: u32,
+    /// Флаги живой сущности (использует предмет, рука): остальным — свойством 8.
+    pub living: u8,
+    /// Бежит ли и его скорость шага: остальным они уходят флагом и атрибутом.
+    pub sprinting: bool,
+    pub movement_speed: Option<crate::attributes::Attribute>,
+}
+
 /// Что произошло с игроками — запись журнала.
 #[derive(Clone)]
 pub enum Change {
@@ -159,6 +193,23 @@ pub enum Order {
     /// Сменить режим игры: подключение само скажет об этом своему клиенту.
     GameMode { mode: i32 },
 
+    /// Нанести урон (`kill`, `damage`): приходит как обычный удар своего вида.
+    Hurt { amount: f32, source: crate::survival::Source },
+    /// Команда `experience`: добавить или задать очки либо уровни.
+    Experience { set: bool, amount: i32, levels: bool },
+    /// Игрок подобрал шарики опыта на такте мира: очки прибавляются, клиент
+    /// узнаёт после пакета подбора.
+    XpTaken { points: i32 },
+
+    /// Возродить умершего игрока (клиент нажал «возродиться»).
+    Respawn,
+
+    /// Наложить эффект на столько тактов (`effect give`).
+    Effect { kind: crate::survival::EffectKind, amplifier: i32, ticks: i32 },
+
+    /// Снять все эффекты (`effect clear`).
+    ClearEffects,
+
     /// Перейти в другое измерение и встать в это место.
     ChangeDimension {
         dimension: crate::dimension::Dimension,
@@ -176,6 +227,11 @@ pub struct Players {
     /// Поручения подключениям: кого выгнать, кого перенести.
     orders: HashMap<[u8; 16], Vec<Order>>,
 
+    /// Броня, вторая рука и бой игроков (`Gear`).
+    gear: HashMap<[u8; 16], Gear>,
+
+    /// Такт последнего показанного взмаха каждого игрока.
+    swung: HashMap<[u8; 16], u64>,
 }
 
 impl Players {
@@ -184,6 +240,8 @@ impl Players {
             members: Vec::new(),
             changes: Journal::new(),
             orders: HashMap::new(),
+            gear: HashMap::new(),
+            swung: HashMap::new(),
         }
     }
 
@@ -242,6 +300,8 @@ impl Players {
 
         self.members.retain(|member| &member.uuid != uuid);
         self.orders.remove(uuid);
+        self.gear.remove(uuid);
+        self.swung.remove(uuid);
 
         self.changes.push(Change::Left {
             uuid: *uuid,
@@ -381,11 +441,43 @@ impl Players {
         }
     }
 
+    /// Взмах на такте `now`: пока прошлый взмах не прошёл четыре такта, новый
+    /// остальным не показывается (у оригинала взмах, идущий меньше половины
+    /// срока, не рассылается заново; чёрный ящик, pvp-sword-spam: удары через
+    /// 3 такта — взмахи на 0, 6, 12).
+    pub fn swing_at(&mut self, uuid: &[u8; 16], now: u64) {
+        if self.swung.get(uuid).is_some_and(|before| now.saturating_sub(*before) < 4) {
+            return;
+        }
+
+        self.swung.insert(*uuid, now);
+        self.swing(uuid);
+    }
+
     /// Запоминает, приседает ли игрок.
     pub fn set_sneaking(&mut self, uuid: &[u8; 16], sneaking: bool) {
         if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid) {
             member.sneaking = sneaking;
         }
+    }
+
+    /// Запоминает броню, вторую руку и бой игрока.
+    pub fn set_gear(&mut self, uuid: &[u8; 16], gear: Gear) {
+        if self.members.iter().any(|member| &member.uuid == uuid) {
+            self.gear.insert(*uuid, gear);
+        }
+    }
+
+    /// Броня и бой игрока (у неизвестного — пусто).
+    pub fn gear(&self, uuid: &[u8; 16]) -> Gear {
+        self.gear.get(uuid).cloned().unwrap_or_default()
+    }
+
+    /// Игрок по номеру его сущности: сам и его броня с боем.
+    pub fn by_entity(&self, entity_id: i32) -> Option<(Member, Gear)> {
+        let member = self.members.iter().find(|member| member.entity_id == entity_id)?;
+
+        Some((member.clone(), self.gear(&member.uuid)))
     }
 
     pub fn set_held(&mut self, uuid: &[u8; 16], held: Option<Stack>) {
