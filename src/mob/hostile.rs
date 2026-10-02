@@ -82,6 +82,7 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Shulker => "entity.minecraft.shulker",
         Kind::ShulkerBullet => "entity.minecraft.shulker_bullet",
         Kind::Witch => "entity.minecraft.witch",
+        Kind::Villager => "entity.minecraft.villager",
     }
 }
 

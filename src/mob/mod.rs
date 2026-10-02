@@ -49,12 +49,14 @@ pub enum Kind {
     ShulkerBullet,
     /// Ведьма (вики, Witch).
     Witch,
+    /// Житель (вики, Villager): торговля — src/villager.rs.
+    Villager,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 14] = [
+    pub const ALL: [Kind; 15] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -69,6 +71,7 @@ impl Kind {
         Kind::Shulker,
         Kind::ShulkerBullet,
         Kind::Witch,
+        Kind::Villager,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -98,6 +101,7 @@ impl Kind {
             "shulker" => Kind::Shulker,
             "shulker_bullet" => Kind::ShulkerBullet,
             "witch" => Kind::Witch,
+            "villager" => Kind::Villager,
             _ => return None,
         })
     }
@@ -118,6 +122,7 @@ impl Kind {
             Kind::Shulker => "shulker",
             Kind::ShulkerBullet => "shulker_bullet",
             Kind::Witch => "witch",
+            Kind::Villager => "villager",
         }
     }
 
@@ -138,6 +143,7 @@ impl Kind {
             Kind::Shulker => 112,
             Kind::ShulkerBullet => 113,
             Kind::Witch => 144,
+            Kind::Villager => 139,
         }
     }
 
@@ -158,6 +164,7 @@ impl Kind {
             Kind::Shulker => "minecraft:shulker",
             Kind::ShulkerBullet => "minecraft:shulker_bullet",
             Kind::Witch => "minecraft:witch",
+            Kind::Villager => "minecraft:villager_v2",
         }
     }
 
@@ -165,7 +172,7 @@ impl Kind {
     pub fn width(self) -> f64 {
         match self {
             Kind::Chicken => 0.4,
-            Kind::Zombie | Kind::Skeleton | Kind::Creeper | Kind::Enderman | Kind::Witch => 0.6,
+            Kind::Zombie | Kind::Skeleton | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
             Kind::Shulker => 1.0,
             Kind::ShulkerBullet => 0.3125,
@@ -191,7 +198,7 @@ impl Kind {
             Kind::Enderman => 2.9,
             Kind::Shulker => 1.0,
             Kind::ShulkerBullet => 0.3125,
-            Kind::Witch => 1.95,
+            Kind::Witch | Kind::Villager => 1.95,
         }
     }
 
@@ -212,6 +219,8 @@ impl Kind {
             Kind::Shulker => 30.0,
             Kind::ShulkerBullet => 1.0,
             Kind::Witch => 26.0,
+            // Вики, Villager: «Health points 20»; чёрный ящик, villager-trade: 9=20.
+            Kind::Villager => 20.0,
         }
     }
 
@@ -230,6 +239,8 @@ impl Kind {
             // Вики, Enderman: 0,3; Witch: 0,25; шалкер не ходит.
             Kind::Enderman => 0.3,
             Kind::Witch => 0.25,
+            // Чёрный ящик, villager-trade: атрибут скорости 0,5.
+            Kind::Villager => 0.5,
             Kind::Shulker | Kind::ShulkerBullet => 0.0,
         }
     }
@@ -277,6 +288,8 @@ impl Kind {
             Kind::Shulker => ("minecraft:entity.shulker.ambient", "minecraft:entity.shulker.hurt", "minecraft:entity.shulker.death"),
             Kind::ShulkerBullet => ("", "minecraft:entity.shulker_bullet.hurt", ""),
             Kind::Witch => ("minecraft:entity.witch.ambient", "minecraft:entity.witch.hurt", "minecraft:entity.witch.death"),
+            // Чёрный ящик, villager-shake: голос в покое и смерть; удар — hurt [проверить].
+            Kind::Villager => ("minecraft:entity.villager.ambient", "minecraft:entity.villager.hurt", "minecraft:entity.villager.death"),
         }
     }
 
@@ -594,6 +607,9 @@ pub struct Mob {
 
     /// Дракон: фаза полёта и память боя (mob/dragon.rs).
     pub dragon: dragon::State,
+
+    /// Житель: профессия, сделки, опыт (src/villager.rs).
+    pub villager: crate::villager::State,
 }
 
 impl Mob {
@@ -652,6 +668,7 @@ impl Mob {
             healer: 0,
             exploding: false,
             dragon: dragon::State::default(),
+            villager: crate::villager::State::new(),
         }
     }
 
@@ -741,6 +758,12 @@ impl Mob {
             return hostile::bullet(self, view, ctx);
         }
 
+        // Житель мотает головой и мёртвым: счёт идёт каждый такт (чёрный
+        // ящик, villager-shake: 18 = 20 в такте смерти и вниз дальше).
+        if self.kind == Kind::Villager && self.villager.unhappy > 0 {
+            self.villager.unhappy -= 1;
+        }
+
         // Мёртвый лежит и падает набок; тело пропадает через секунду.
         if self.is_dead() {
             self.dead_for += 1;
@@ -816,6 +839,16 @@ impl Mob {
         if self.kind == Kind::Witch {
             self.vitals.effects_tick();
             hostile::witch_drink(self, view, ctx, rng);
+        }
+
+        // Житель: эффекты (регенерация после нового уровня) и голос в покое —
+        // и без ИИ (чёрный ящик, villager-trade: NoAI-житель подаёт голос).
+        if self.kind == Kind::Villager {
+            self.vitals.effects_tick();
+
+            if self.no_ai {
+                ai::voice(self, rng);
+            }
         }
 
         if self.no_ai {
@@ -1285,6 +1318,7 @@ impl Mob {
             Kind::Shulker => 11,
             Kind::ShulkerBullet => 12,
             Kind::Witch => 13,
+            Kind::Villager => 14,
         });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -1301,6 +1335,7 @@ impl Mob {
         match self.kind {
             Kind::Enderman => out.extend_from_slice(&self.h.carried.unwrap_or(-1).to_be_bytes()),
             Kind::Shulker => out.extend_from_slice(&[self.h.face, self.h.shell_color]),
+            Kind::Villager => crate::villager::write(&self.villager, out),
             _ => {}
         }
     }
@@ -1328,6 +1363,7 @@ impl Mob {
             11 => Kind::Shulker,
             12 => Kind::ShulkerBullet,
             13 => Kind::Witch,
+            14 => Kind::Villager,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -1342,6 +1378,7 @@ impl Mob {
         let egg_timer = i32::from_be_bytes(take(4)?.try_into().ok()?);
         let carried = if kind == Kind::Enderman { Some(i32::from_be_bytes(take(4)?.try_into().ok()?)).filter(|state| *state >= 0) } else { None };
         let shell = if kind == Kind::Shulker { take(2)?.to_vec() } else { vec![0, 16] };
+        let villager = if kind == Kind::Villager { Some(crate::villager::read(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
             return None;
@@ -1364,6 +1401,10 @@ impl Mob {
         mob.h.carried = carried;
         mob.h.face = shell[0].min(5);
         mob.h.shell_color = shell[1].min(16);
+
+        if let Some(villager) = villager {
+            mob.villager = villager;
+        }
 
         // Снаряд без цели не живёт: прочитанный из файла гаснет.
         if kind == Kind::ShulkerBullet {
@@ -1442,7 +1483,8 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         }
         // Кристалл и дракон предметов не роняют (вики: у дракона только опыт,
         // яйцо — блок на портале).
-        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet => {}
+        // Житель ничего не роняет (вики, Villager: «Drops: none»).
+        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager => {}
         // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
         Kind::Enderman => {
             give("ender_pearl", 0, 1, rng);
@@ -1806,6 +1848,9 @@ pub struct Env {
     pub difficulty: u8,
     pub sky: i32,
     pub sun_up: bool,
+
+    /// Часы мира от начала: день × 24000 + час (пополнения жителей).
+    pub clock: i64,
 }
 
 /// Такт всех мобов склада: у каждого мысли и движение, потом разведение,
@@ -1846,8 +1891,16 @@ pub fn step_all(
     let mut breeds: Vec<(i32, i32)> = Vec::new();
     let mut born = Vec::new();
 
+    // Занятые жителями рабочие блоки: второй их не займёт.
+    let mut claimed: Vec<(i32, i32, i32)> = mobs.iter().filter_map(|mob| mob.villager.job_site).collect();
+
     for mob in &mut mobs {
         let plan = mob.tick(view, &ctx, rng);
+
+        if mob.kind == Kind::Villager && !mob.no_ai && !mob.is_dead() {
+            crate::villager::step(mob, view, env.clock, &claimed, rng);
+            claimed.extend(mob.villager.job_site);
+        }
 
         if let Some(melee) = plan.melee {
             outcome.strikes.push(Strike { attacker: mob.entity_id, at: (mob.x, mob.y, mob.z), kind: mob.kind, melee });

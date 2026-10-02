@@ -131,6 +131,9 @@ pub struct Shared {
     /// Правило `advance_weather` (прежнее doWeatherCycle): меняется ли
     /// погода сама.
     pub advance_weather: std::sync::atomic::AtomicBool,
+    /// Правило `players_sleeping_percentage` (прежнее playersSleepingPercentage):
+    /// какая доля игроков должна спать, чтобы пропустить ночь (bed.rs).
+    pub sleeping_percentage: std::sync::atomic::AtomicI32,
 }
 
 impl Shared {
@@ -191,6 +194,7 @@ impl Shared {
             scoreboard: Mutex::new(crate::scoreboard::Scoreboard::new()),
             functions: Mutex::new(crate::functions::Functions::new(std::path::Path::new("world"))),
             advance_weather: std::sync::atomic::AtomicBool::new(true),
+            sleeping_percentage: std::sync::atomic::AtomicI32::new(100),
             worlds: [Mutex::new(world), Mutex::new(nether), Mutex::new(end)],
             players: Mutex::new(Players::new()),
             chat: Mutex::new(Chat::new()),

@@ -1,0 +1,130 @@
+{
+ "name": "anchor-nether",
+ "about": "Якорь возрождения в Незере: два заряда светокамнем, щелчок пустой рукой ставит точку возрождения; смерть — возрождение у якоря (первым — место к северу), заряд тратится, звук deplete.",
+ "exclusive": true,
+ "origin": [
+  100,
+  64,
+  100
+ ],
+ "track_self": true,
+ "chat": true,
+ "blocks": [],
+ "setup": [
+  "execute in minecraft:the_nether run tp $(bot) $(3.5,1,1.5) 0 30",
+  "!wait 60",
+  "kill @e[type=item,distance=..48]",
+  "fill $(-7,-10,-6) $(13,10,14) minecraft:obsidian",
+  "fill $(-6,-9,-5) $(12,9,13) minecraft:air",
+  "fill $(0,-1,0) $(6,-1,6) minecraft:obsidian",
+  "setblock $(3,0,3) minecraft:respawn_anchor[charges=0]",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "item replace entity $(bot) hotbar.0 with minecraft:glowstone 4",
+  "!stopfly",
+  "!wait 30"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 5,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 10,
+   "hotbar": 1
+  },
+  {
+   "after": 12,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 16,
+   "cmd": "clear $(bot)"
+  },
+  {
+   "after": 20,
+   "cmd": "kill $(bot)"
+  }
+ ],
+ "record_ticks": 50,
+ "cleanup": [
+  "spawnpoint $(bot) 0 -60 0 0 0",
+  "clear $(bot)",
+  "setblock $(3,0,3) minecraft:air",
+  "gamemode creative $(bot)",
+  "execute in minecraft:overworld run tp $(bot) $(3.5,1,3.5)",
+  "!wait 20",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "высота точки появления",
+   "pattern": "\"location\":\\{\"x\":0,\"z\":0,\"y\":-?\\d+\\}",
+   "replace": "\"location\":{точка}",
+   "why": "У нашего испытательного ровного мира точка появления считается по высоте обычного мира (63), а у оригинала — по плоскому (−60): расхождение испытательного мира, а не механики (так же в void-death)."
+  },
+  {
+   "type": "count",
+   "name": "список атрибутов при возрождении",
+   "match": "^sv Attributes ",
+   "range": [
+    0,
+    4
+   ],
+   "anytick": true,
+   "why": "при возрождении оригинал шлёт все атрибуты, что когда-либо заводились у игрока (они лежат в его файле на сервере): состав списка зависит от истории робота (так же в void-death)"
+  },
+  {
+   "type": "window",
+   "name": "пакеты возрождения",
+   "match": "^(sv (Abilities |Game Event reason=no_respawn|Respawn |Spawn Position|Set Experience|Game Event reason=level_chunks_load_start|set_ticking_state|step_tick|Entity Event status=28$|Metadata 9=20 16=127$|Set Health health=20 )|self робот: сверка места)",
+   "range": [
+    1,
+    2
+   ],
+   "why": "возрождение — ответ на пакет робота (mineflayer шлёт «возродиться» сам, сразу после смерти), сервер разбирает его в случайный миг такта: у оригинала пакеты возрождения на +1 (первая смерть) и +2 (вторая) после kill; так же в void-death (+100/+101)"
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "сообщение /kill",
+   "pattern": "System Chat (\\{\"with\":.*commands\\.kill\\.success\\.single\"\\}|\"Убит: blackbox\")",
+   "replace": "System Chat (kill)",
+   "why": "у нас тексты команд русские готовыми строками, у оригинала — ключ перевода; расхождение языка текста, а не механики"
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "сообщение /setblock",
+   "pattern": "System Chat (\\{\"with\":.*commands\\.setblock\\.success\"\\}|\"Блок в [^\"]*изменён\")",
+   "replace": "System Chat (setblock)",
+   "why": "тексты команд у нас русские строками, у оригинала — ключ перевода; расхождение языка, не механики"
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "сообщение /clear",
+   "pattern": "System Chat (\\{\"with\":.*commands\\.clear\\.success\\.single\"\\}|\"Инвентарь очищен: [^\"]*\")",
+   "replace": "System Chat (clear)",
+   "why": "тексты команд у нас русские строками, у оригинала — ключ перевода; расхождение языка, не механики"
+  }
+ ]
+}

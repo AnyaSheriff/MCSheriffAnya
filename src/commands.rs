@@ -1021,6 +1021,13 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
         mob.h.helmet = data[at..].contains("_helmet") || data[at..].contains("_head");
     }
 
+    // Житель: `VillagerData`, `Offers`, `Xp` (src/villager.rs).
+    if mob.kind == crate::mob::Kind::Villager
+        && let Some(value) = crate::snbt::parse(data)
+    {
+        crate::villager::apply_data(&mut mob.villager, &value);
+    }
+
     if let Some(health) = int_after(data, "Health:") {
         mob.vitals.health = (health as f32).clamp(0.5, mob.kind.max_health());
     }
@@ -1044,7 +1051,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
 /// ровно в названной точке. У призванного детёныша `Age` отрицательный
 /// (вики, Breeding: «Age: negative for baby»).
 fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &Shared) -> Answer {
-    let usage = || Answer::saying("Нужно: summon <cow|pig|sheep|chicken|zombie|skeleton|creeper|spider|enderman|shulker|witch|end_crystal|ender_dragon> <x> <y> <z> {NoAI:1b,Age:-24000}".to_string());
+    let usage = || Answer::saying("Нужно: summon <cow|pig|sheep|chicken|zombie|skeleton|creeper|spider|enderman|shulker|witch|villager|end_crystal|ender_dragon> <x> <y> <z> {NoAI:1b,Age:-24000}".to_string());
     let origin = origin_of(source, shared);
 
     let (place, data) = match rest {
@@ -1069,6 +1076,12 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
     }
 
     apply_mob_data(&mut mob, data);
+
+    // Свойство 20 у жителя: призванный без данных или с VillagerData — да,
+    // с прочими данными — нет (чёрный ящик, villager-shake, villager-claim).
+    if kind == crate::mob::Kind::Villager {
+        mob.villager.finalized = data.is_empty() || data.contains("VillagerData");
+    }
 
     if kind == crate::mob::Kind::Chicken {
         mob.egg_timer = 6000 + (mob.entity_id as u32 % 6001) as i32;
@@ -1542,6 +1555,16 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
 
             Answer::saying(format!("Правило advance_weather: {}", value))
         }
+        // 26.1: `players_sleeping_percentage` (прежнее playersSleepingPercentage):
+        // доля спящих для пропуска ночи (вики, Game rule; bed.rs).
+        ["players_sleeping_percentage" | "playersSleepingPercentage", value] => match value.parse::<i32>() {
+            Ok(percentage) => {
+                shared.sleeping_percentage.store(percentage, std::sync::atomic::Ordering::Relaxed);
+
+                Answer::saying(format!("Правило players_sleeping_percentage: {}", percentage))
+            }
+            Err(_) => Answer::saying(format!("Ожидалось целое число, а не «{}»", value)),
+        },
         [rule, value] => Answer::saying(format!("Правило {}: {}", rule, value)),
         _ => Answer::saying("Нужно: gamerule <правило> <значение>".to_string()),
     }

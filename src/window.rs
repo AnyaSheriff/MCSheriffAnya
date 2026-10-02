@@ -67,7 +67,7 @@ impl Window<'_> {
         }
     }
 
-    fn set(&mut self, slot: usize, stack: Option<Stack>) {
+    pub fn set(&mut self, slot: usize, stack: Option<Stack>) {
         let stack = stack.filter(|stack| stack.count > 0);
 
         match self.player_slot(slot) {
@@ -205,6 +205,19 @@ impl Window<'_> {
 
         self.set(index, remainder(stack, left));
         true
+    }
+
+    /// Перекладывает стопку из ячейки в ячейки `targets` (как Shift-щелчок, но
+    /// со своим порядком: окно торговли). Возвращает, переложилась ли целиком.
+    pub fn move_to(&mut self, slot: usize, targets: &[usize]) -> bool {
+        let Some(stack) = self.get(slot) else {
+            return true;
+        };
+
+        let left = self.pour(stack, targets);
+
+        self.set(slot, remainder(stack, left));
+        left == 0
     }
 
     /// Раскладывает стопку по слотам `targets` по порядку: сперва в начатые

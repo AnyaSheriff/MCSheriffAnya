@@ -1,0 +1,52 @@
+{
+ "name": "anchor-overworld",
+ "about": "Якорь возрождения в обычном мире: светокамень заряжает (0→1), щелчок пустой рукой — взрыв силы 5 с огнём. Пустая коробка из обсидиана в небе (сперва вся обсидиан, потом середина воздух), робот в творческом летит рядом.",
+ "exclusive": true,
+ "origin": [
+  100,
+  64,
+  100
+ ],
+ "track_self": true,
+ "chat": true,
+ "blocks": [],
+ "setup": [
+  "fill $(-7,-10,-6) $(13,10,14) minecraft:obsidian",
+  "fill $(-6,-9,-5) $(12,9,13) minecraft:air",
+  "setblock $(3,0,3) minecraft:respawn_anchor[charges=0]",
+  "clear $(bot)",
+  "item replace entity $(bot) hotbar.0 with minecraft:glowstone 4",
+  "tp $(bot) $(3.5,1,1.5) 0 30",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 10,
+   "hotbar": 1
+  },
+  {
+   "after": 12,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  }
+ ],
+ "record_ticks": 30,
+ "cleanup": [
+  "fill $(-7,-10,-6) $(13,10,14) minecraft:air",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,1,3.5)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

@@ -269,6 +269,11 @@ pub enum WorldEvent {
     /// Игрок `by` подобрал стрелу `entity_id`: всем Take Item Entity и
     /// сразу за ним — убрать стрелу (чёрный ящик, arrow-pickup).
     Collect { entity_id: i32, by: i32, count: i32 },
+
+    /// Готовый пакет (номер и тело) только игроку `viewer` — в общем порядке
+    /// событий: «Respawn point set» у кровати идёт раньше взмаха и повтора
+    /// блоков (чёрный ящик, bed-sleep-day).
+    Private { viewer: i32, body: std::sync::Arc<[u8]> },
 }
 
 /// Взрыв для клиентов: где, какой силы, сколько блоков разрушил и кого из
@@ -981,6 +986,18 @@ pub struct World {
     /// Насколько часы мира переведены относительно его возраста.
     time_offset: i64,
 
+    /// Сколько раз часы переводили (команда `time`, сон): клиентам часы
+    /// уходят в Update Time только после перевода — в обычной ежесекундной
+    /// сверке оригинал шлёт пустой список часов (зонд 02.10: `clockUpdates:
+    /// []`; запись часов — при входе, `time set` и пропуске ночи, чёрный
+    /// ящик bed-sleep-night).
+    clock_changes: u64,
+
+    /// Который час поставлен последним переводом: клиенту уходит именно он,
+    /// а не час к моменту рассылки (чёрный ящик, bed-sleep-night: `time set
+    /// 14000` — 14000, утро после сна — 0).
+    clock_set_to: i64,
+
     /// Семя мира: из него складывается рельеф. Живёт в level.dat, чтобы мир
     /// оставался тем же и после перезапуска.
     seed: i64,
@@ -1198,6 +1215,8 @@ impl World {
             changed: Vec::new(),
             falling: Vec::new(),
             time_offset: 0,
+            clock_changes: 0,
+            clock_set_to: 0,
             seed: 0,
             kind: WorldKind::Flat,
             generator: Arc::new(Generator::Flat),
@@ -1343,6 +1362,8 @@ impl World {
             changed: Vec::new(),
             falling: Vec::new(),
             time_offset,
+            clock_changes: 0,
+            clock_set_to: 0,
             seed,
             kind,
             generator: Arc::new(match kind {
@@ -2779,6 +2800,10 @@ impl World {
     }
 
     /// Данные блок-сущности клиентам — после ближайшей пачки изменений.
+    pub fn note_private(&mut self, viewer: i32, body: Vec<u8>) {
+        self.events.push(WorldEvent::Private { viewer, body: body.into() });
+    }
+
     pub fn note_block_entity(&mut self, x: i32, y: i32, z: i32, kind: i32, nbt: Vec<u8>) {
         self.events.push(WorldEvent::BlockEntity { x, y, z, kind, nbt: nbt.into() });
     }
@@ -3193,9 +3218,22 @@ impl World {
         (self.tick as i64 + self.time_offset).rem_euclid(DAY_LENGTH)
     }
 
+    /// Часы мира от начала: день × 24000 + час (жители считают пополнения по дням).
+    pub fn clock(&self) -> i64 {
+        self.tick as i64 + self.time_offset
+    }
+
     /// Переводит часы мира.
     pub fn set_time_of_day(&mut self, time: i64) {
         self.time_offset = time.rem_euclid(DAY_LENGTH) - self.tick as i64;
+        self.clock_changes += 1;
+        self.clock_set_to = time.rem_euclid(DAY_LENGTH);
+    }
+
+    /// Сколько раз переводили часы и на который час — последний раз (см.
+    /// `clock_changes`).
+    pub fn clock_changes(&self) -> (u64, i64) {
+        (self.clock_changes, self.clock_set_to)
     }
 
     /// Который сейчас такт мира.

@@ -1,0 +1,38 @@
+{
+ "name": "bed-nether",
+ "about": "Кровать в Незере: щелчок — кровать взрывается (сила 5, с огнём) в изголовье. Робот в творческом летит рядом (взрыв его не толкает); вокруг пустая коробка из обсидиана (сперва вся обсидиан, потом середина воздух), лучи до стен не достают — блоков, кроме кровати, не рушит, огню лечь не на что. Команды строят там, где робот, — в Незере.",
+ "exclusive": true,
+ "origin": [
+  100,
+  64,
+  100
+ ],
+ "track_self": true,
+ "chat": true,
+ "blocks": [],
+ "setup": [
+  "execute in minecraft:the_nether run tp $(bot) $(3.5,1,1.5) 0 30",
+  "!wait 60",
+  "fill $(-7,-10,-6) $(13,10,14) minecraft:obsidian",
+  "fill $(-6,-9,-5) $(12,9,13) minecraft:air",
+  "setblock $(3,0,3) minecraft:red_bed[facing=south,part=foot]",
+  "setblock $(3,0,4) minecraft:red_bed[facing=south,part=head]",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  }
+ ],
+ "record_ticks": 30,
+ "cleanup": [
+  "execute in minecraft:overworld run tp $(bot) $(3.5,1,3.5)",
+  "!wait 20",
+  "!startfly"
+ ]
+}

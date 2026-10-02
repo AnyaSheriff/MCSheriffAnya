@@ -152,6 +152,9 @@ bot._client.on('update_time', (p) => {
     if (clockSamples.length > CLOCK_WINDOW) clockSamples.shift();
   }
   tickBase = clockSamples.length ? Math.min(...clockSamples) : roughBase;
+  // `track_time` в сценарии: часы суток (сон пропускает ночь) — время суток
+  // по модулю суток и скорость часов; возраст мира у серверов свой и не пишется.
+  if (scenario.track_time && recording) for (const c of p.clockUpdates || []) note('sv', { text: `Time clock=${c.id} day=${Number(BigInt(c.totalTicks) % 24000n)} rate=${rnd(c.rate)}` });
 });
 bot._client.on('block_change', (p) => {
   if (process.env.BB_DEBUG) console.error('bc', JSON.stringify(p));
@@ -208,7 +211,7 @@ const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
 // Край: кристалл, дракон, его огненный шар и облако дыхания — пишутся как мобы.
-const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket', 'eye_of_ender']);
+const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket', 'eye_of_ender', 'villager', 'wandering_trader', 'zombie_villager']);
 const padDrops = new Set();
 const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {
@@ -343,6 +346,17 @@ bot._client.on('packet', (p, meta) => {
   if (!scenario.track_self || !recording || meta.state !== 'play') return;
   const text = selfText(bot, p, meta);
   if (text) note('sv', { text });
+});
+// `track_trades`: окно торговли — список сделок (Merchant Offers) целиком,
+// со всеми полями, и опыт игрока (если не пишется `track_self`).
+const offerItem = (it) => (it ? `${(mcData.items[it.itemId] || {}).name || it.itemId}×${it.itemCount}` : '-');
+bot._client.on('packet', (p, meta) => {
+  if (!scenario.track_trades || !recording || meta.state !== 'play') return;
+  if (meta.name === 'trade_list') {
+    const offers = (p.trades || []).map(t => `[${offerItem(t.inputItem1)}+${offerItem(t.inputItem2)}→${itemName(t.outputItem) || '-'} off=${t.tradeDisabled} uses=${t.nbTradeUses}/${t.maximumNbTradeUses} xp=${t.xp} special=${t.specialPrice} mult=${rnd(t.priceMultiplier)} demand=${t.demand}]`);
+    note('sv', { text: `Merchant Offers level=${p.villagerLevel} xp=${p.experience} regular=${p.isRegularVillager} restock=${p.canRestock} ${offers.join(' ')}` });
+  }
+  if (meta.name === 'experience' && !scenario.track_self) note('sv', { text: `Set Experience bar=${rnd(p.experienceBar)} level=${p.level} total=${p.totalExperience}` });
 });
 // `track_second`: то же для второго робота (что видит и получает нападающий) — с пометкой `b:`.
 if (bot2) bot2._client.on('packet', (p, meta) => {
@@ -484,7 +498,7 @@ const hookWrites = (client) => {
   const write = client.write.bind(client);
   client.write = (name, params) => {
     if (process.env.BB_DEBUG && name !== 'position' && name !== 'position_look' && name !== 'look' && name !== 'keep_alive') console.error('→', name, JSON.stringify(params, (k, v) => typeof v === 'bigint' ? String(v) : v).slice(0, 160));
-    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item' || name === 'update_command_block')) {
+    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item' || name === 'update_command_block' || name === 'select_trade')) {
       // Такт нажатия берём из плана, а не из часов: в какой такт целились,
       // в тот оно и уходит. Часы на этом месте врать не должны, но нажатие
       // ложится ровно на границу счёта, и округление могло бы дрогнуть.
@@ -600,7 +614,10 @@ bot.once('spawn', async () => {
     // оставить не первую, и тогда выданная в первую ячейку пластинка
     // оказывается не в руке (`jukebox-disc` у оригинала через раз не играл).
     bot.setQuickBarSlot(0);
-    await say(`tp ${USER} ${ORIGIN.x + 3} ${ORIGIN.y + 1} ${ORIGIN.z + 3}`);
+    // Робот мог остаться в другом измерении (возрождение у якоря в Незере,
+    // переход порталом): тогда площадка «вне мира» и все команды сценария
+    // мимо. Возвращаем в обычный мир явно.
+    await say(`execute in minecraft:overworld run tp ${USER} ${ORIGIN.x + 3} ${ORIGIN.y + 1} ${ORIGIN.z + 3}`);
     // Висеть на месте, пока строится пол: у нашего ровного мира земля на
     // нуле, и площадка на ORIGIN.y оказывается в пустоте под ней. Упавшего
     // робота сервер не пустит к рычагу — слишком далеко.
@@ -682,7 +699,7 @@ bot.once('spawn', async () => {
       // куда бы отправка ни дрогнула.
       const at = baseTick + (a.after || 0);
       await waitTick(at, 0);
-      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : a.attack ? 'attack' : a.interact ? 'interact' : a.button !== undefined ? `button ${a.button}` : a.slot_state ? `slot_state ${a.slot_state.slot} ${a.slot_state.state}` : a.hotbar !== undefined ? `hotbar ${a.hotbar}` : a.control ? `control ${a.control.join('=')}` : a.fly !== undefined ? `fly ${a.fly}` : a.respawn ? 'respawn' : a.use ? 'use_item' : a.release ? 'release_use' : a.program ? `program ${a.program.at.join(',')} ${a.program.command}` : JSON.stringify(a);
+      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.select_trade !== undefined ? `select_trade ${a.select_trade}` : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : a.attack ? 'attack' : a.interact ? 'interact' : a.button !== undefined ? `button ${a.button}` : a.slot_state ? `slot_state ${a.slot_state.slot} ${a.slot_state.state}` : a.hotbar !== undefined ? `hotbar ${a.hotbar}` : a.control ? `control ${a.control.join('=')}` : a.fly !== undefined ? `fly ${a.fly}` : a.respawn ? 'respawn' : a.dig ? `dig ${a.dig.join(',')} ${a.status ?? 0}` : a.leave_bed ? 'leave_bed' : a.use ? 'use_item' : a.release ? 'release_use' : a.program ? `program ${a.program.at.join(',')} ${a.program.command}` : JSON.stringify(a);
       pendingDo = { what: a.bot === 2 ? `2: ${what}` : what, tick: at };
       if (a.set) bot.chat(`/setblock ${ORIGIN.x + a.set.at[0]} ${ORIGIN.y + a.set.at[1]} ${ORIGIN.z + a.set.at[2]} ${a.set.state}`);
       if (a.cmd) bot.chat('/' + expand(a.cmd));
@@ -705,6 +722,8 @@ bot.once('spawn', async () => {
       if (a.slot_state && openWindow !== null) bot._client.write('set_slot_state', { slot_id: a.slot_state.slot, window_id: openWindow, state: a.slot_state.state });
       // Выбрать ячейку панели быстрого доступа (пакет Set Held Item).
       if (a.hotbar !== undefined) (a.bot === 2 ? bot2 : bot)._client.write('held_item_slot', { slotId: a.hotbar });
+      // Выбор сделки в окне торговли (пакет Select Trade).
+      if (a.select_trade !== undefined) bot._client.write('select_trade', { slot: a.select_trade });
       if (a.close && openWindow !== null) { bot._client.write('close_window', { windowId: openWindow }); openWindow = null; }
       // Щелчок (правой кнопкой) по последней появившейся на площадке
       // вагонетке — основной рукой, в середину её ящика.
@@ -736,6 +755,11 @@ bot.once('spawn', async () => {
       if (a.fly !== undefined) { if (a.fly) bot.creative.startFlying(); else bot.creative.stopFlying(); }
       if ((a.control || a.fly !== undefined || a.look) && pendingDo) { events.push({ tick: pendingDo.tick, ms: Date.now() - t0, kind: 'do', what: pendingDo.what, phase: null }); pendingDo = null; }
       if (a.respawn) bot._client.write('client_command', { actionId: 0 });
+      // Ломать блок (`dig`: [x,y,z]): Player Action — 0 начать (в творческом
+      // блок ломается сразу), `"status": 2` — закончить; `face` — грань.
+      if (a.dig) bot._client.write('block_dig', { status: a.status ?? 0, location: new Vec3(ORIGIN.x + a.dig[0], ORIGIN.y + a.dig[1], ORIGIN.z + a.dig[2]), face: a.face ?? 1, sequence: placeSeq++ });
+      // Встать с кровати (Player Command «leave bed»).
+      if (a.leave_bed) bot._client.write('entity_action', { entityId: bot.entity.id, actionId: 'stop_sleeping', jumpBoost: 0 });
       // Правая кнопка мыши в воздухе (еда, зелье): пакет Use Item; `release` — отпустить (Player Action, статус 5).
       if (a.use) { const actor = a.bot === 2 ? bot2 : bot; actor._client.write('use_item', { hand: a.hand ?? 0, sequence: placeSeq++, rotation: { x: (Math.PI - actor.entity.yaw) * 180 / Math.PI, y: -actor.entity.pitch * 180 / Math.PI } }); }
       if (a.release) (a.bot === 2 ? bot2 : bot)._client.write('block_dig', { status: 5, location: { x: 0, y: 0, z: 0 }, face: 0, sequence: 0 });

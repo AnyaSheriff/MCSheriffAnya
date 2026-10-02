@@ -254,6 +254,15 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
 
     voice(mob, rng);
 
+    // Житель торгует: стоит (вики, Trading: «pauses their pathfinding»). К
+    // покупателю он не поворачивается: у оригинала за всю торговлю ни одного
+    // поворота головы (чёрный ящик, villager-levelup-ai) [проверить: «makes
+    // them face the trading player»].
+    if mob.kind == Kind::Villager && mob.villager.trading.is_some() {
+        mob.brain.stop();
+        return plan;
+    }
+
     // Курица несёт яйцо раз в 6000–12000 тактов (вики, Chicken: «Egg»).
     if mob.kind == Kind::Chicken && !mob.is_baby() {
         mob.egg_timer -= 1;
@@ -533,6 +542,13 @@ pub(super) fn turn(from: f32, to: f32, max: f32) -> f32 {
 /// Взгляд на игрока (вики, Mob AI, «Look at player»: шанс 0,02, 6 блоков,
 /// 40–80 тактов) и случайный взгляд (шанс 0,02, 20–40 тактов).
 fn look_around(mob: &mut Mob, ctx: &Ctx, rng: &mut Rng) {
+    // Житель по сторонам головой не водит: в клетке 1×1 за 400 тактов у
+    // оригинала ни одного поворота головы (чёрный ящик, villager-claim) [проверить:
+    // взгляд на игрока у колокола и на работе].
+    if mob.kind == Kind::Villager {
+        return;
+    }
+
     if let Some(look) = &mut mob.brain.look {
         look.ticks -= 1;
 
@@ -644,11 +660,33 @@ pub(super) fn walk(mob: &mut Mob, mut plan: Plan) -> Plan {
 
 /// Голос: ambient-звук (вики, Sounds): шанс растёт с каждым тактом тишины.
 /// Громкость — по виду (у дракона 5; чёрный ящик, dragon-summon).
+/// Звук жителя «сделка обновилась» — тем же счётом, что голос в покое: не
+/// чаще, чем через `TRADE_SOUND_GAP` тактов после прошлого (чёрный ящик,
+/// villager-trade, villager-levelup). Можно — счёт сбрасывается.
+pub fn trade_sound_due(mob: &mut Mob) -> bool {
+    if mob.brain.ambient > -80 + crate::villager::TRADE_SOUND_GAP {
+        mob.brain.ambient = -80;
+        true
+    } else {
+        false
+    }
+}
+
+/// Сделка совершилась: счёт голоса сбрасывается молча, как после голоса
+/// (чёрный ящик, villager-trade: после Shift-сделок «да» на следующем щелчке
+/// через 20 тактов не звучит).
+pub fn hush(mob: &mut Mob) {
+    mob.brain.ambient = -80;
+}
+
 pub fn voice(mob: &mut Mob, rng: &mut Rng) {
     mob.brain.ambient += 1;
 
     if rng.below(1000) < mob.brain.ambient.max(0) as u32 {
         let (ambient, _, _) = mob.kind.sounds();
+        // Торгующий житель вместо голоса в покое — «торгует» (чёрный ящик,
+        // villager-trade-ai: entity.villager.trade при открытом окне).
+        let ambient = if mob.kind == Kind::Villager && mob.villager.trading.is_some() { "minecraft:entity.villager.trade" } else { ambient };
 
         if ambient.is_empty() {
             return;

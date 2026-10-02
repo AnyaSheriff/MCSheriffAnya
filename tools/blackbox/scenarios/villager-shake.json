@@ -1,0 +1,89 @@
+{
+ "name": "villager-shake",
+ "about": "Безработный житель NoAI: щелчок — мотает головой (свойство 18), звук «нет», окна нет; детёныш-крестьянин со сделками — тоже; бестолковый — тоже.",
+ "track_mobs": true,
+ "track_trades": true,
+ "inventory": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "xp set $(bot) 0 points",
+  "xp set $(bot) 0 levels",
+  "give $(bot) minecraft:wheat 64",
+  "give $(bot) minecraft:emerald 3",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon villager $(3.5,0,3.5) {NoAI:1b}"
+  },
+  {
+   "after": 20,
+   "interact": true
+  },
+  {
+   "after": 40,
+   "interact": true
+  },
+  {
+   "after": 60,
+   "cmd": "kill @e[type=villager,distance=..48]"
+  },
+  {
+   "after": 70,
+   "cmd": "summon villager $(3.5,0,3.5) {NoAI:1b,Age:-24000,VillagerData:{type:\"minecraft:taiga\",profession:\"minecraft:farmer\",level:1},Offers:{Recipes:[{buy:{id:\"minecraft:wheat\",count:20},sell:{id:\"minecraft:emerald\",count:1},maxUses:16,xp:2,priceMultiplier:0.05f}]}}"
+  },
+  {
+   "after": 90,
+   "interact": true
+  },
+  {
+   "after": 110,
+   "cmd": "kill @e[type=villager,distance=..48]"
+  },
+  {
+   "after": 120,
+   "cmd": "summon villager $(3.5,0,3.5) {NoAI:1b,VillagerData:{type:\"minecraft:snow\",profession:\"minecraft:nitwit\",level:1}}"
+  },
+  {
+   "after": 140,
+   "interact": true
+  },
+  {
+   "after": 160,
+   "cmd": "kill @e[type=villager,distance=..48]"
+  }
+ ],
+ "record_ticks": 180,
+ "cleanup": [
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "xp set $(bot) 0 points",
+  "xp set $(bot) 0 levels",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "голос жителя в покое",
+   "match": "entity\\.villager\\.(ambient|trade)",
+   "range": [
+    0,
+    6
+   ],
+   "anytick": true,
+   "why": "вики, Sounds: голос в покое по случайному счёту, у торгующего — entity.villager.trade; у оригинала записи расходятся (villager-trade: на +14 и без него)"
+  }
+ ]
+}

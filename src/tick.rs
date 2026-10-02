@@ -173,6 +173,9 @@ async fn run(shared: Arc<Shared>) {
     let mut ticks: u64 = 0;
     let mut phases = PhaseStats::default();
     let mut mob_rng = crate::mob::Rng::new(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(1, |passed| passed.as_nanos() as u64));
+    // Ночь пропускается в начале этого такта (`morning`): спящих будят
+    // концом прошлого.
+    let mut morning_due = false;
 
     loop {
         tokio::time::sleep_until(next).await;
@@ -266,6 +269,10 @@ async fn run(shared: Arc<Shared>) {
             // Погода — в начале такта мира, до запланированных тактов
             // (чёрный ящик, weather-rain: сила дождя меняется уже в такте
             // команды).
+            if dimension == Dimension::Overworld && std::mem::take(&mut morning_due) {
+                morning(&shared, &mut world);
+            }
+
             world.tick_weather(shared.advance_weather.load(std::sync::atomic::Ordering::Relaxed));
 
             let due = world.advance(PER_TICK);
@@ -499,6 +506,10 @@ async fn run(shared: Arc<Shared>) {
 
         phases.tick_done(spent);
         crate::commands_world::note_spent(&shared, spent);
+
+        if plan.run_world {
+            morning_due = wake_sleepers(&shared);
+        }
 
         if ticks.is_multiple_of(PHASE_REPORT_EVERY) {
             phases.report();
@@ -877,6 +888,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         // Гроза гасит небо так, что дня нет (у оригинала день — пока
         // небо темнее не больше чем на 3): нежить не горит [проверить].
         sun_up: !skyless && !(12_540..23_460).contains(&time) && world.weather.dim_sky(15) > 11,
+        clock: world.clock(),
     };
 
     // Свет для мобов, которым он нужен (паук, появление): считается здесь,
@@ -1567,6 +1579,65 @@ fn detonate_crystals(shared: &Shared, dimension: Dimension, world: &mut World) {
 }
 
 /// Игроки этого мира, которых может толкнуть взрыв.
+/// Проспали ли спящие ночь (вики, Bed: «Once all players in a world are
+/// asleep, after 5 seconds (100 ticks) the time of day changes to sunrise»;
+/// доля — правило `players_sleeping_percentage`): к следующему такту их
+/// будят (поручение подключениям — пробуждение у них уходит в том же такте,
+/// что и утро: чёрный ящик bed-sleep-night, утро, взмах «встал», сверка
+/// места и «не занята» — на +100 от того, как лёг). Возвращает, наступит ли
+/// утро в начале следующего такта.
+fn wake_sleepers(shared: &Shared) -> bool {
+    let now = shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком").tick();
+    let percentage = shared.sleeping_percentage.load(std::sync::atomic::Ordering::Relaxed);
+    let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+    let (total, sleeping, deep) = players.sleep_status(Dimension::Overworld, now);
+
+    let Some(needed) = crate::bed::sleepers_needed(total, percentage) else {
+        return false;
+    };
+
+    if sleeping == 0 || sleeping < needed || deep < needed {
+        return false;
+    }
+
+    for uuid in players.sleepers() {
+        players.set_sleeping(&uuid, None);
+        players.order(&uuid, crate::players::Order::WakeUp);
+    }
+
+    true
+}
+
+/// Утро после сна: часы — на начало следующих суток, а дождь кончается и
+/// цикл погоды начинается заново, если погода меняется сама (вики, Bed:
+/// «the weather cycle resets only during rainy or snowy weather»).
+fn morning(shared: &Shared, world: &mut World) {
+    let time = world.time_of_day();
+
+    world.set_time_of_day(time + crate::bed::until_morning(time));
+
+    if shared.advance_weather.load(std::sync::atomic::Ordering::Relaxed) && world.weather.raining {
+        world.weather.reset_cycle();
+    }
+}
+
+/// Взрыв кровати вне обычного мира и якоря вне Незера (bed.rs): сила 5,
+/// с огнём; каждый сломанный блок разбирается, выпавшее — в мир.
+pub(crate) fn respawn_block_blast(shared: &Shared, dimension: Dimension, world: &mut World, centre: (f64, f64, f64)) {
+    let players = blast_targets(shared, dimension);
+
+    {
+        let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+        let mut next_id = || shared.next_entity_id();
+
+        tnt::explode_with_fire(world, &mut items, &players, centre, crate::bed::EXPLOSION_POWER, &mut next_id);
+        prime_sounds(world, &mut items);
+    }
+
+    redstone::settle(world);
+    drop_destroyed(shared, dimension, world);
+}
+
 pub(crate) fn blast_targets(shared: &Shared, dimension: Dimension) -> Vec<tnt::Target> {
     /// Режим наблюдателя: сквозь всё проходит, взрыв его не толкает.
     const SPECTATOR: i32 = 3;

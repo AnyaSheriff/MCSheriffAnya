@@ -245,6 +245,11 @@ fn place_pair(
     refresh_neighbours(world, ox, oy, oz);
     crate::redstone::settle(world);
 
+    // У кровати — данные блок-сущности обеих половин (bed.rs).
+    if name.ends_with("_bed") {
+        crate::bed::note_entities(world, (ox, oy, oz));
+    }
+
     log_debug!("Постановка: {} ({}) в {} {} {} и {} {} {}", name, state, x, y, z, ox, oy, oz);
     Placement::Placed
 }

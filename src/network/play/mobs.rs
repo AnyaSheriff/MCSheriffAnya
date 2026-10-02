@@ -43,6 +43,7 @@ const TYPE_OPT_BLOCK_POS: i32 = 11;
 const TYPE_DIRECTION: i32 = 12;
 const TYPE_OPT_BLOCK_STATE: i32 = 15;
 const TYPE_PARTICLES: i32 = 17;
+const TYPE_VILLAGER_DATA: i32 = 18;
 const TYPE_POSE: i32 = 20;
 const TYPE_COW_VARIANT: i32 = 23;
 const TYPE_COW_SOUND: i32 = 24;
@@ -172,7 +173,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
 
     // Частицы эффектов (10): у ведьмы — от выпитых зелий (чёрный ящик,
     // witch-stand: `10=[entity_effect]` в такте конца питья).
-    if mob.kind == Kind::Witch {
+    if matches!(mob.kind, Kind::Witch | Kind::Villager) {
         let mut particles = Vec::new();
 
         super::vitals::push_effect_particles(&mut particles, &mob.vitals.effect_colors());
@@ -234,6 +235,21 @@ fn properties(mob: &Mob) -> Vec<Property> {
             out.push((16, TYPE_BOOL, vec![0]));
             out.push((17, TYPE_BOOL, vec![u8::from(mob.h.drinking > 0)]));
         }
+        // Житель (minecraft-data: baby, age_locked, unhappy_counter,
+        // villager_data, villager_finalized; чёрный ящик, villager-shake):
+        // мотание головой — счёт 40 вниз, данные — тип, профессия, уровень.
+        Kind::Villager => {
+            let data = &mob.villager;
+            let mut value = encode_varint(i32::from(data.kind));
+
+            value.extend_from_slice(&encode_varint(i32::from(data.profession)));
+            value.extend_from_slice(&encode_varint(i32::from(data.level)));
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((17, TYPE_BOOL, vec![0]));
+            out.push((18, TYPE_INT, encode_varint(data.unhappy)));
+            out.push((19, TYPE_VILLAGER_DATA, value));
+            out.push((20, TYPE_BOOL, vec![u8::from(data.finalized)]));
+        }
     }
 
     out
@@ -252,6 +268,10 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (16, Kind::Creeper) => value.as_slice() == encode_varint(-1).as_slice(),
         (18, Kind::Shulker) => value.as_slice() == [16],
         (17 | 18, Kind::Enderman | Kind::Shulker | Kind::Witch) => value.iter().all(|byte| *byte == 0),
+        // Житель по умолчанию — равнинный без профессии, новичок (чёрный ящик,
+        // villager-shake: призванный без данных шлёт только 9 и 15).
+        (19, Kind::Villager) => value.as_slice() == [crate::villager::PLAINS, crate::villager::NONE, 1],
+        (17 | 18 | 20, Kind::Villager) => value.iter().all(|byte| *byte == 0),
         (0 | 4 | 6 | 15 | 16, _) => value.iter().all(|byte| *byte == 0),
         (9, _) => value.as_slice() == float(1.0),
         (10, _) => value.as_slice() == [0],

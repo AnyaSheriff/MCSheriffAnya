@@ -137,6 +137,8 @@ pub struct Gear {
     pub speed_touch: u32,
     /// Флаги живой сущности (использует предмет, рука): остальным — свойством 8.
     pub living: u8,
+    /// Спит: место изголовья (поза и свойство 14 — остальным).
+    pub sleeping: Option<(i32, i32, i32)>,
     /// Частицы эффектов (ARGB, нули — нет): остальным — свойством 10.
     pub effect_colors: [i32; crate::survival::EFFECT_PARTICLES],
     /// Здоровье: остальным — свойством 9.
@@ -216,6 +218,10 @@ pub enum Order {
     /// Возродить умершего игрока (клиент нажал «возродиться»).
     Respawn,
 
+    /// Проснуться: ночь пропущена (tick.rs) — встать с кровати без
+    /// сообщения о спящих (вики, Bed: «Passing the night»).
+    WakeUp,
+
     /// Наложить эффект на столько тактов (`effect give`).
     Effect(crate::survival::Effect),
 
@@ -281,6 +287,9 @@ pub struct Players {
     /// переноса в миг команды (чёрный ящик, pvp-mace: у нас он приходил то на
     /// 0, то на 25 мс позже, и падающий робот успевал на тик меньше).
     wakes: HashMap<[u8; 16], std::sync::Arc<tokio::sync::Notify>>,
+
+    /// Спящие: с какого такта мира спят (bed.rs, пропуск ночи в tick.rs).
+    sleepers: HashMap<[u8; 16], u64>,
 }
 
 impl Players {
@@ -292,6 +301,7 @@ impl Players {
             gear: HashMap::new(),
             swung: HashMap::new(),
             wakes: HashMap::new(),
+            sleepers: HashMap::new(),
         }
     }
 
@@ -353,12 +363,49 @@ impl Players {
         self.gear.remove(uuid);
         self.swung.remove(uuid);
         self.wakes.remove(uuid);
+        self.sleepers.remove(uuid);
 
         self.changes.push(Change::Left {
             uuid: *uuid,
             entity_id,
         });
         true
+    }
+
+    /// Лёг (с такта `since`) или встал (None).
+    pub fn set_sleeping(&mut self, uuid: &[u8; 16], since: Option<u64>) {
+        match since {
+            Some(since) => self.sleepers.insert(*uuid, since),
+            None => self.sleepers.remove(uuid),
+        };
+    }
+
+    /// Сон в измерении к такту `now`: сколько там игроков (наблюдатели не
+    /// считаются — вики, Bed: «all players in the Overworld»), сколько спит
+    /// и сколько проспало `crate::bed::DEEP_SLEEP_TICKS`.
+    pub fn sleep_status(&self, dimension: crate::dimension::Dimension, now: u64) -> (usize, usize, usize) {
+        const SPECTATOR: i32 = 3;
+
+        let mut status = (0, 0, 0);
+
+        for member in self.members.iter().filter(|member| member.dimension == dimension && member.game_mode != SPECTATOR) {
+            status.0 += 1;
+
+            if let Some(since) = self.sleepers.get(&member.uuid) {
+                status.1 += 1;
+
+                if now.saturating_sub(*since) >= u64::from(crate::bed::DEEP_SLEEP_TICKS) {
+                    status.2 += 1;
+                }
+            }
+        }
+
+        status
+    }
+
+    /// Кто спит.
+    pub fn sleepers(&self) -> Vec<[u8; 16]> {
+        self.sleepers.keys().copied().collect()
     }
 
     /// Сколько игроков сейчас на сервере.

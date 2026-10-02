@@ -1,0 +1,145 @@
+{
+ "name": "villager-claim",
+ "about": "Безработный житель с ИИ заперт в клетке 1×1 из стекла; на месте стенки ставится компостер — житель занимает его и становится крестьянином (свойство 19, звук работы, частицы); компостер ломается — новичок без сделок теряет профессию.",
+ "track_mobs": true,
+ "track_trades": true,
+ "inventory": true,
+ "blocks": [
+  {
+   "at": [
+    2,
+    0,
+    3
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    2,
+    1,
+    3
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    4,
+    0,
+    3
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    4,
+    1,
+    3
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    3,
+    0,
+    2
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    3,
+    1,
+    2
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    3,
+    1,
+    4
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    3,
+    0,
+    4
+   ],
+   "state": "minecraft:glass"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "xp set $(bot) 0 points",
+  "xp set $(bot) 0 levels",
+  "give $(bot) minecraft:wheat 64",
+  "give $(bot) minecraft:emerald 3",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon villager $(3.5,0,3.5)"
+  },
+  {
+   "after": 20,
+   "set": {
+    "at": [
+     3,
+     0,
+     4
+    ],
+    "state": "minecraft:composter"
+   }
+  },
+  {
+   "after": 250,
+   "set": {
+    "at": [
+     3,
+     0,
+     4
+    ],
+    "state": "minecraft:glass"
+   }
+  }
+ ],
+ "record_ticks": 400,
+ "cleanup": [
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "fill $(2,0,2) $(4,2,4) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "голос жителя в покое",
+   "match": "entity\\.villager\\.(ambient|trade)",
+   "range": [
+    0,
+    6
+   ],
+   "anytick": true,
+   "why": "вики, Sounds: голос в покое по случайному счёту, у торгующего — entity.villager.trade; у оригинала записи расходятся (villager-trade: на +14 и без него)"
+  },
+  {
+   "type": "jitter",
+   "name": "занял рабочий блок",
+   "max": 30,
+   "why": "житель находит рабочий блок в случайный такт: у оригинала через 12, 20 и 22 такта после появления компостера (villager-claim, три прогона)",
+   "match": "событие 14|^meta 19=.*\"villagerProfession\":5"
+  }
+ ]
+}

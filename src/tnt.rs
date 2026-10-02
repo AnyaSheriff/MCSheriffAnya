@@ -169,7 +169,23 @@ pub fn explode(
     spare_rails: bool,
     next_id: &mut dyn FnMut() -> i32,
 ) {
-    blast(world, items, players, centre, power, true, false, spare_rails, next_id);
+    blast(world, items, players, centre, power, true, false, spare_rails, false, next_id);
+}
+
+/// Взрыв с огнём — кровать вне обычного мира, якорь вне Незера (bed.rs):
+/// как обычный, и после разрушения в задетых пустых клетках над
+/// непрозрачным блоком с вероятностью 1/3 загорается огонь (вики,
+/// Explosion: «Fire is placed in a third of the air blocks … above an
+/// opaque block» [проверить] точную формулировку).
+pub fn explode_with_fire(
+    world: &mut World,
+    items: &mut Items,
+    players: &[Target],
+    centre: (f64, f64, f64),
+    power: f32,
+    next_id: &mut dyn FnMut() -> i32,
+) {
+    blast(world, items, players, centre, power, true, false, false, true, next_id);
 }
 
 /// Взрыв догоревшего динамита: обычный — силы 4, особый — по своему виду
@@ -191,7 +207,7 @@ pub fn explode_primed(
         return;
     };
 
-    blast(world, items, players, centre, kind.power, kind.breaks_blocks, true, false, next_id);
+    blast(world, items, players, centre, kind.power, kind.breaks_blocks, true, false, false, next_id);
 
     // Кассетный: малые обычные заряды во все стороны — из места взрыва,
     // вверх и вбок со случайной скоростью, с коротким запалом.
@@ -230,9 +246,11 @@ fn blast(
     breaks_blocks: bool,
     defer: bool,
     spare_rails: bool,
+    fire: bool,
     next_id: &mut dyn FnMut() -> i32,
 ) {
-    let (mut doomed, reached) = if breaks_blocks { rays(world, centre, power) } else { (Vec::new(), 0) };
+    let (mut doomed, touched) = if breaks_blocks { rays(world, centre, power) } else { (Vec::new(), Vec::new()) };
+    let reached = touched.len();
 
     // Вагонетка с динамитом рельсы и то, на чём они лежат, не рушит (вики,
     // Minecart with TNT: «it does not destroy its rails and the blocks the
@@ -263,6 +281,10 @@ fn blast(
         destroy_blocks(world, items, &doomed[..BLAST_BATCH], next_id);
     } else {
         destroy_blocks(world, items, &doomed, next_id);
+    }
+
+    if fire {
+        set_fires(world, &touched);
     }
 
     // Пакет взрыва — после разрушения: у оригинала частицы отвалившегося
@@ -302,7 +324,7 @@ pub fn wind_burst_knockback(level: i32) -> f64 {
 /// «блоков 835» на пустой площадке) [проверить: рычаги и двери лучи
 /// должны переключать].
 pub fn wind_burst(world: &mut World, items: &mut Items, players: &[Target], centre: (f64, f64, f64), knockback: f64) {
-    let (_, reached) = rays(world, centre, WIND_BURST_POWER);
+    let reached = rays(world, centre, WIND_BURST_POWER).1.len();
     let reach = 2.0 * f64::from(WIND_BURST_POWER);
     let mut pushed = Vec::new();
 
@@ -366,10 +388,13 @@ pub fn blocks_to_destroy(world: &mut World, centre: (f64, f64, f64), power: f32)
 /// Лучи взрыва: что рушится и сколько клеток лучи задели вообще, с воздухом
 /// вместе, — это число оригинал кладёт в пакет взрыва (чёрный ящик,
 /// tnt-lever: ~550 клеток при 11 сломанных блоках).
-fn rays(world: &mut World, centre: (f64, f64, f64), power: f32) -> (Vec<Pos>, usize) {
+fn rays(world: &mut World, centre: (f64, f64, f64), power: f32) -> (Vec<Pos>, Vec<Pos>) {
     // Хеш — быстрый (`CoordHash`): у ядерного динамита клеток сотни тысяч.
     let mut seen: HashSet<Pos, CoordHash> = HashSet::default();
     let mut reached: HashSet<Pos, CoordHash> = HashSet::default();
+    // Задетые клетки по порядку первого касания (и воздух): по ним ложится
+    // огонь взрыва с огнём.
+    let mut touched = Vec::new();
     let mut doomed = Vec::new();
     let edge = |n: i32| n == 0 || n == GRID - 1;
     let last = (GRID - 1) as f64;
@@ -407,7 +432,9 @@ fn rays(world: &mut World, centre: (f64, f64, f64), power: f32) -> (Vec<Pos>, us
                     }
 
                     if intensity > 0.0 {
-                        reached.insert(cell);
+                        if reached.insert(cell) {
+                            touched.push(cell);
+                        }
 
                         if can_blow_up(state) && seen.insert(cell) {
                             doomed.push(cell);
@@ -427,7 +454,22 @@ fn rays(world: &mut World, centre: (f64, f64, f64), power: f32) -> (Vec<Pos>, us
         doomed.swap(index, other);
     }
 
-    (doomed, reached.len())
+    (doomed, touched)
+}
+
+/// Огонь взрыва: пустая задетая клетка над непрозрачным полным блоком
+/// загорается с вероятностью 1/3. Непрозрачный полный — как «проводящий»
+/// у редстоуна (стекло нет) [проверить] совпадение списков.
+fn set_fires(world: &mut World, touched: &[Pos]) {
+    let Some(fire) = blocks::state_by_name("fire") else {
+        return;
+    };
+
+    for &(x, y, z) in touched {
+        if world.get_block(x, y, z) == AIR && blocks::conductive(world.get_block(x, y - 1, z)) && world.random_bits().is_multiple_of(3) {
+            world.set_block(x, y, z, fire);
+        }
+    }
 }
 
 /// Можно ли взорвать блок. Воздух — нечего; служебный блок едущего поршня
@@ -824,6 +866,35 @@ mod tests {
         move || {
             next += 1;
             next
+        }
+    }
+
+    /// Взрыв с огнём (кровать в Незере): на обсидиановом полу загорается
+    /// часть пустых клеток над ним, обсидиан цел; на стекле огню не лечь.
+    #[test]
+    fn a_fiery_blast_sets_fire_above_opaque_blocks_only() {
+        for (floor, burns) in [("obsidian", true), ("glass", false)] {
+            let mut world = World::in_memory();
+
+            for x in -10..=10 {
+                for z in -10..=10 {
+                    world.set_block_silently(x, 63, z, state(floor));
+                }
+            }
+
+            let mut items = Items::new();
+            let mut next = ids();
+
+            explode_with_fire(&mut world, &mut items, &[], (0.5, 64.5, 0.5), 5.0, &mut next);
+
+            let fires = (-10..=10).flat_map(|x| (-10..=10).map(move |z| (x, z))).filter(|&(x, z)| world.get_block(x, 64, z) == state("fire")).count();
+
+            assert_eq!(fires > 0, burns, "{}: огней {}", floor, fires);
+
+            if burns {
+                assert!(fires < 21 * 21, "огонь лёг не в каждую клетку");
+                assert_eq!(world.get_block(0, 63, 0), state("obsidian"));
+            }
         }
     }
 

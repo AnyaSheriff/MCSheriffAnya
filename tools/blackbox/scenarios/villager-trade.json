@@ -1,0 +1,124 @@
+{
+ "name": "villager-trade",
+ "about": "Крестьянин NoAI с двумя заданными сделками: щелчок — окно торговли (Open Screen merchant, Merchant Offers со всеми полями), выбор сделки — пшеница ложится в ячейку оплаты, Shift-щелчок по выходу — три сделки разом, опыт игроку и жителю; закрытие окна.",
+ "track_mobs": true,
+ "track_trades": true,
+ "inventory": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "xp set $(bot) 0 points",
+  "xp set $(bot) 0 levels",
+  "give $(bot) minecraft:wheat 64",
+  "give $(bot) minecraft:emerald 3",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon villager $(3.5,0,3.5) {NoAI:1b,VillagerData:{type:\"minecraft:plains\",profession:\"minecraft:farmer\",level:1},Offers:{Recipes:[{buy:{id:\"minecraft:wheat\",count:20},sell:{id:\"minecraft:emerald\",count:1},maxUses:16,xp:2,priceMultiplier:0.05f,rewardExp:1b},{buy:{id:\"minecraft:emerald\",count:1},sell:{id:\"minecraft:bread\",count:6},maxUses:16,xp:1,priceMultiplier:0.05f,rewardExp:1b}]}}"
+  },
+  {
+   "after": 20,
+   "interact": true
+  },
+  {
+   "after": 30,
+   "select_trade": 0
+  },
+  {
+   "after": 40,
+   "window_click": {
+    "slot": 2,
+    "mode": 1
+   }
+  },
+  {
+   "after": 50,
+   "select_trade": 1
+  },
+  {
+   "after": 60,
+   "window_click": {
+    "slot": 2,
+    "mode": 0
+   }
+  },
+  {
+   "after": 70,
+   "close": true
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "xp set $(bot) 0 points",
+  "xp set $(bot) 0 levels",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "голос жителя в покое",
+   "match": "entity\\.villager\\.(ambient|trade)",
+   "range": [
+    0,
+    6
+   ],
+   "anytick": true,
+   "why": "вики, Sounds: голос в покое по случайному счёту, у торгующего — entity.villager.trade; у оригинала записи расходятся (villager-trade: на +14 и без него)"
+  },
+  {
+   "type": "mask",
+   "name": "очки шарика опыта",
+   "kind": "meta",
+   "pattern": "^meta 8=\\d+$",
+   "replace": "meta 8=N",
+   "why": "вики, Trading: «3–6 experience plus an additional 5 experience if the villager levels up» — очки шарика случайны"
+  },
+  {
+   "type": "count",
+   "name": "ход и подбор шариков опыта",
+   "match": "^cart experience_orb",
+   "range": [
+    0,
+    40
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении, поэтому летит и подбирается на случайном такте (как в cow-xp)"
+  },
+  {
+   "type": "count",
+   "name": "опыт робота",
+   "match": "^sv Set Experience",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "шарики подбираются на случайном такте и с разными очками (вики, Trading: 3–6); у оригинала два прогона расходятся"
+  },
+  {
+   "type": "count",
+   "name": "«да» жителя",
+   "match": "entity\\.villager\\.yes",
+   "range": [
+    0,
+    2
+   ],
+   "anytick": true,
+   "why": "«да» звучит при смене выхода не раньше чем через 20 тактов после голоса в покое, а тот случаен (villager-trade: у оригинала в двух прогонах «да» то на выборе сделки, то на Shift-щелчке — после голоса на +14)"
+  }
+ ]
+}

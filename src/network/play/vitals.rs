@@ -42,6 +42,8 @@ const POSE_PROPERTY: u8 = 6;
 /// pose, spin_attack — 4).
 const PROPERTY_POSE: i32 = 20;
 pub(super) const POSE_SPIN_ATTACK: i32 = 4;
+// Поза «спит», свойство 14 «место кровати» и его вид 11 — в play.rs
+// (minecraft-data, protocol.json, entityMetadataEntry).
 
 /// Флаг живой сущности «вращается» (тягун) — свойство 8, бит 4.
 const LIVING_SPIN: u8 = 4;
@@ -178,6 +180,9 @@ struct Meta {
     ambient: bool,
     /// Свойство 17: поглощение (effect-absorption: Metadata 17=8).
     absorption: f32,
+    /// Свойство 14: место кровати спящего (чёрный ящик, bed-sleep-night:
+    /// «Metadata 6=2 14={…}»).
+    bed: Option<(i32, i32, i32)>,
 }
 
 /// Сетевая сторона здоровья игрока.
@@ -296,7 +301,7 @@ impl Net {
             sent_health: survival::MAX_HEALTH,
             sent_food: 20,
             sent_saturation_zero: false,
-            meta: Meta { score: 0, arrows: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, pose: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES], ambient: false, absorption: 0.0 },
+            meta: Meta { score: 0, arrows: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, pose: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES], ambient: false, absorption: 0.0, bed: None },
             fire_flag: false,
             velocity: None,
             pin: None,
@@ -1107,6 +1112,20 @@ async fn send_meta(stream: &mut Outgoing<'_>, entity_id: i32, now: Meta, before:
         body.extend_from_slice(&encode_varint(now.arrows));
     }
 
+    // Место кровати: необязательное место блока (вид 11) — есть ли и само место.
+    if now.bed != before.bed {
+        body.push(BED_PROPERTY);
+        body.extend_from_slice(&encode_varint(PROPERTY_OPTIONAL_BLOCK_POS));
+
+        match now.bed {
+            Some((x, y, z)) => {
+                body.push(1);
+                push_packed_position(&mut body, x, y, z);
+            }
+            None => body.push(0),
+        }
+    }
+
     body.push(PROPERTIES_END);
 
     write_body(stream, body).await
@@ -1230,10 +1249,16 @@ async fn send_base_attributes(stream: &mut Outgoing<'_>, player: &PlayerState) -
 }
 
 /// Что клиент должен знать о здоровье после возрождения: свойства и права.
-pub(super) async fn send_respawn_extras(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+/// `after_event` — пакет сразу за событием прав: звук якоря, отдавшего заряд
+/// (чёрный ящик, anchor-nether).
+pub(super) async fn send_respawn_extras(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, after_event: Option<Vec<u8>>) -> io::Result<()> {
     let level = shared.ops.lock().expect("права захвачены другим потоком").level_of(&player.uuid);
 
     send_entity_event(stream, player.entity_id, (24 + level.clamp(0, 4)) as i8).await?;
+
+    if let Some(body) = after_event {
+        write_body(stream, body).await?;
+    }
 
     // Здоровье и части скина — всё, что не по умолчанию.
     let mut body = encode_varint(SET_ENTITY_DATA);
@@ -1671,11 +1696,12 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         health: player.vit.health,
         air: player.vit.air,
         flags,
-        pose: if player.net.spin_pose { POSE_SPIN_ATTACK } else { 0 },
+        pose: if player.sleeping.is_some() { POSE_SLEEPING } else if player.net.spin_pose { POSE_SPIN_ATTACK } else { 0 },
         living: living_flags(player),
         effects: player.vit.effect_colors(),
         ambient: player.vit.effects_ambient().unwrap_or(player.net.meta.ambient),
         absorption: player.vit.absorption,
+        bed: player.sleeping,
     };
 
     let held = std::mem::take(&mut player.net.hold_meta);

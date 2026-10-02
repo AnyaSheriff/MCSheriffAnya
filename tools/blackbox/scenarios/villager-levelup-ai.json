@@ -1,0 +1,201 @@
+{
+ "name": "villager-levelup-ai",
+ "about": "Крестьянин-новичок с ИИ (Xp:5 — торговал, профессию держит) в клетке у компостера, одна сделка на 10 опыта: через 40 тактов после закрытия окна — подмастерье (новые сделки из пула, регенерация, частицы).",
+ "track_mobs": true,
+ "track_trades": true,
+ "inventory": true,
+ "blocks": [
+  {
+   "at": [
+    2,
+    0,
+    3
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    2,
+    1,
+    3
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    4,
+    0,
+    3
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    4,
+    1,
+    3
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    3,
+    0,
+    2
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    3,
+    1,
+    2
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    3,
+    1,
+    4
+   ],
+   "state": "minecraft:glass"
+  },
+  {
+   "at": [
+    3,
+    0,
+    4
+   ],
+   "state": "minecraft:composter"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "xp set $(bot) 0 points",
+  "xp set $(bot) 0 levels",
+  "give $(bot) minecraft:wheat 64",
+  "give $(bot) minecraft:emerald 3",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon villager $(3.5,0,3.5) {Xp:5,VillagerData:{type:\"minecraft:plains\",profession:\"minecraft:farmer\",level:1},Offers:{Recipes:[{buy:{id:\"minecraft:wheat\",count:20},sell:{id:\"minecraft:emerald\",count:1},maxUses:16,xp:10,priceMultiplier:0.05f,rewardExp:1b}]}}"
+  },
+  {
+   "after": 40,
+   "interact": true,
+   "which": 0
+  },
+  {
+   "after": 50,
+   "select_trade": 0
+  },
+  {
+   "after": 60,
+   "window_click": {
+    "slot": 2,
+    "mode": 0
+   }
+  },
+  {
+   "after": 80,
+   "close": true
+  },
+  {
+   "after": 200,
+   "interact": true,
+   "which": 0
+  },
+  {
+   "after": 210,
+   "close": true
+  }
+ ],
+ "record_ticks": 260,
+ "cleanup": [
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "fill $(2,0,2) $(4,2,4) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "голос жителя в покое",
+   "match": "entity\\.villager\\.(ambient|trade)",
+   "range": [
+    0,
+    6
+   ],
+   "anytick": true,
+   "why": "вики, Sounds: голос в покое по случайному счёту, у торгующего — entity.villager.trade; у оригинала записи расходятся (villager-trade: на +14 и без него)"
+  },
+  {
+   "type": "mask",
+   "name": "очки шарика опыта",
+   "kind": "meta",
+   "pattern": "^meta 8=\\d+$",
+   "replace": "meta 8=N",
+   "why": "вики, Trading: «3–6 experience plus an additional 5 experience if the villager levels up» — очки шарика случайны"
+  },
+  {
+   "type": "count",
+   "name": "ход и подбор шариков опыта",
+   "match": "^cart experience_orb",
+   "range": [
+    0,
+    40
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении, поэтому летит и подбирается на случайном такте (как в cow-xp)"
+  },
+  {
+   "type": "count",
+   "name": "опыт робота",
+   "match": "^sv Set Experience",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "шарики подбираются на случайном такте и с разными очками (вики, Trading: 3–6); у оригинала два прогона расходятся"
+  },
+  {
+   "type": "count",
+   "name": "«да» жителя",
+   "match": "entity\\.villager\\.yes",
+   "range": [
+    0,
+    2
+   ],
+   "anytick": true,
+   "why": "«да» звучит при смене выхода не раньше чем через 20 тактов после голоса в покое, а тот случаен (villager-trade: у оригинала в двух прогонах «да» то на выборе сделки, то на Shift-щелчке — после голоса на +14)"
+  },
+  {
+   "type": "mask",
+   "name": "новые сделки подмастерья",
+   "kind": "sv",
+   "pattern": "^(sv Merchant Offers level=2 xp=15 [^\\]]*\\]).*$",
+   "replace": "$1 [две случайные]",
+   "why": "вики, Trading: «If there are more than two possible trades, two are randomly selected» — у крестьянина-подмастерья три сделки в пуле"
+  },
+  {
+   "type": "jitter",
+   "name": "занял рабочий блок",
+   "max": 30,
+   "match": "событие 14",
+   "why": "житель находит рабочий блок в случайный такт: у оригинала через 7 и 3 такта после призыва (villager-levelup-ai, два прогона)"
+  }
+ ]
+}

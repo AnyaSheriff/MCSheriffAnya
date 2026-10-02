@@ -436,7 +436,7 @@ fn two_animals_in_love_breed_a_baby() {
     let mut babies = 0;
 
     for _ in 0..600 {
-        step_all(&mut items, &view, &[], Env { difficulty: 2, sky: 15, sun_up: false }, &mut rng, &mut || {
+        step_all(&mut items, &view, &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 }, &mut rng, &mut || {
             next += 1;
             next
         });
@@ -527,7 +527,7 @@ fn a_sheep_eats_grass_and_grows_wool_back() {
     let mut eaten = None;
 
     for _ in 0..6 {
-        let outcome = step_all(&mut items, &Meadow, &[], Env { difficulty: 2, sky: 15, sun_up: false }, &mut rng, &mut || {
+        let outcome = step_all(&mut items, &Meadow, &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 }, &mut rng, &mut || {
             next += 1;
             next
         });
@@ -1731,4 +1731,150 @@ fn endermen_and_witches_join_the_night_spawns() {
 
     assert!(seen.contains(&Kind::Enderman) && seen.contains(&Kind::Witch));
     assert!((0..100).all(|_| spawn::pick_hostile_for_test(&spawn::END_HOSTILE, &mut rng) == Kind::Enderman));
+}
+
+/// Пол и один блок поверх: рабочее место жителя.
+struct Site {
+    block: Option<((i32, i32, i32), &'static str)>,
+}
+
+impl View for Site {
+    fn block(&self, x: i32, y: i32, z: i32) -> i32 {
+        match self.block {
+            Some((at, name)) if at == (x, y, z) => blocks::state_by_name(name).expect("рабочий блок"),
+            _ if y <= 0 => blocks::state_by_name("stone").expect("камень"),
+            _ => blocks::state_by_name("air").expect("воздух"),
+        }
+    }
+
+    fn loaded(&self, _: i32, _: i32) -> bool {
+        true
+    }
+}
+
+/// Житель по вики и чёрному ящику: размеры, здоровье, скорость, номер.
+#[test]
+fn a_villager_has_the_vanilla_numbers() {
+    assert_eq!((Kind::Villager.width(), Kind::Villager.height(), Kind::Villager.max_health()), (0.6, 1.95, 20.0));
+    assert_eq!((Kind::Villager.speed(), Kind::Villager.java_type()), (0.5, 139));
+    assert_eq!(Kind::from_name("minecraft:villager"), Some(Kind::Villager));
+    assert!(!Kind::Villager.hostile());
+}
+
+/// Безработный житель занимает компостер рядом: частицы, профессия
+/// крестьянина, две сделки новичка; компостер сломан — профессия уходит
+/// (чёрный ящик, villager-claim).
+#[test]
+fn a_villager_claims_and_loses_a_job_site() {
+    let mut view = Site { block: Some(((1, 1, 0), "composter")) };
+    let mut mob = Mob::new(1, Kind::Villager, (0.5, 1.0, 0.5));
+    let mut rng = Rng::new(9);
+
+    for _ in 0..200 {
+        crate::villager::step(&mut mob, &view, 3000, &[], &mut rng);
+
+        if mob.villager.job_site.is_some() {
+            break;
+        }
+    }
+
+    assert_eq!(mob.villager.job_site, Some((1, 1, 0)));
+    assert_eq!(mob.villager.profession, crate::villager::profession_named("farmer").unwrap());
+    assert_eq!(mob.villager.offers.len(), 2);
+    assert!(mob.events.contains(&Event::Status(14)));
+
+    // Чужой рабочий блок не занимается.
+    let mut other = Mob::new(2, Kind::Villager, (0.5, 1.0, 0.5));
+
+    for _ in 0..200 {
+        crate::villager::step(&mut other, &view, 3000, &[(1, 1, 0)], &mut rng);
+    }
+
+    assert_eq!(other.villager.job_site, None);
+
+    view.block = None;
+    crate::villager::step(&mut mob, &view, 3000, &[], &mut rng);
+    assert_eq!((mob.villager.profession, mob.villager.offers.len()), (crate::villager::NONE, 0));
+}
+
+/// Торговавший житель профессию без рабочего места держит; новичок без
+/// опыта — теряет сразу (чёрный ящик, villager-levelup-ai).
+#[test]
+fn only_a_villager_that_traded_keeps_its_profession() {
+    let view = Site { block: None };
+    let mut rng = Rng::new(3);
+    let mut fresh = Mob::new(1, Kind::Villager, (0.5, 1.0, 0.5));
+    let mut traded = Mob::new(2, Kind::Villager, (0.5, 1.0, 0.5));
+
+    fresh.villager.profession = 5;
+    traded.villager.profession = 5;
+    traded.villager.xp = 5;
+    crate::villager::step(&mut fresh, &view, 3000, &[], &mut rng);
+    crate::villager::step(&mut traded, &view, 3000, &[], &mut rng);
+    assert_eq!((fresh.villager.profession, traded.villager.profession), (0, 5));
+}
+
+/// Новый уровень — через 40 тактов без торговли: две новые сделки и
+/// регенерация (чёрный ящик, villager-levelup-ai; вики, Trading).
+#[test]
+fn a_villager_levels_up_forty_ticks_after_the_trade() {
+    let view = Site { block: None };
+    let mut rng = Rng::new(4);
+    let mut mob = Mob::new(1, Kind::Villager, (0.5, 1.0, 0.5));
+
+    mob.villager.profession = 5;
+    mob.villager.xp = 10;
+    mob.villager.add_trades(1, &mut rng);
+    mob.villager.level_timer = crate::villager::LEVEL_UP_DELAY;
+    mob.villager.level_pending = true;
+    mob.villager.trading = Some(7);
+
+    for _ in 0..50 {
+        crate::villager::step(&mut mob, &view, 3000, &[], &mut rng);
+    }
+
+    assert_eq!(mob.villager.level, 1, "пока торгуют — ждёт");
+    mob.villager.trading = None;
+
+    for _ in 0..39 {
+        crate::villager::step(&mut mob, &view, 3000, &[], &mut rng);
+    }
+
+    assert_eq!(mob.villager.level, 1);
+    crate::villager::step(&mut mob, &view, 3000, &[], &mut rng);
+    assert_eq!((mob.villager.level, mob.villager.offers.len()), (2, 4));
+    assert!(mob.vitals.has_effect(crate::survival::EffectKind::Regeneration));
+}
+
+/// Мотание головой: счёт 40 убывает каждый такт и у NoAI (чёрный ящик,
+/// villager-shake).
+#[test]
+fn the_head_shake_counts_down_every_tick() {
+    let mut mob = Mob::new(1, Kind::Villager, (0.5, 1.0, 0.5));
+
+    mob.no_ai = true;
+    mob.villager.unhappy = crate::villager::UNHAPPY_TICKS;
+    run(&mut mob, &Flat::new(), 15);
+    assert_eq!(mob.villager.unhappy, 25);
+}
+
+/// Житель переживает запись в чанк: профессия, уровень, сделки.
+#[test]
+fn a_villager_survives_the_chunk_file() {
+    let mut mob = Mob::new(1, Kind::Villager, (0.5, 1.0, 0.5));
+    let mut rng = Rng::new(2);
+
+    mob.villager.profession = 9;
+    mob.villager.level = 3;
+    mob.villager.add_trades(1, &mut rng);
+
+    let mut bytes = Vec::new();
+
+    mob.write(&mut bytes);
+
+    let back = Mob::read(&mut bytes.as_slice()).expect("житель читается");
+
+    assert_eq!(back.kind, Kind::Villager);
+    assert_eq!((back.villager.profession, back.villager.level), (9, 3));
+    assert_eq!(back.villager.offers, mob.villager.offers);
 }

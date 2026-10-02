@@ -1,0 +1,58 @@
+{
+ "name": "bed-sleep-day",
+ "about": "Кровать днём: щелчок ставит точку возрождения («Respawn point set» в чат) и отказывает во сне (над панелью); второй щелчок по изголовью — только отказ.",
+ "exclusive": true,
+ "track_self": true,
+ "chat": true,
+ "blocks": [
+  {
+   "at": [
+    3,
+    0,
+    3
+   ],
+   "state": "minecraft:red_bed[facing=south,occupied=false,part=foot]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    4
+   ],
+   "state": "minecraft:red_bed[facing=south,occupied=false,part=head]"
+  }
+ ],
+ "setup": [
+  "time set noon",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,1.5) 0 30",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 20,
+   "click": [
+    3,
+    0,
+    4
+   ]
+  }
+ ],
+ "record_ticks": 40,
+ "cleanup": [
+  "spawnpoint $(bot) 0 -60 0 0 0",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

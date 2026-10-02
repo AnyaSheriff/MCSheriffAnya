@@ -812,6 +812,8 @@ impl BedrockWorld {
             match order {
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
                 crate::players::Order::Respawn => {}
+                // Сон у Bedrock пока не ведётся [проверить].
+                crate::players::Order::WakeUp => {}
                 // Сообщения командных блоков операторам — пока только Java [проверить].
                 crate::players::Order::Message { .. } => {}
                 // Опыт у Bedrock пока не считается [проверить].
@@ -2278,6 +2280,8 @@ impl BedrockWorld {
             inventory: self.bag.inventory_with_cursor(),
             dimension: self.dimension,
             vitals: self.health.vit.saved(),
+            // Точку возрождения Bedrock-игрок пока не ставит: сохраняем прежнюю.
+            respawn: self.saved.as_ref().and_then(|data| data.respawn),
         }
     }
 

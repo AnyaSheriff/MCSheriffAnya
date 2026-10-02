@@ -60,9 +60,11 @@ use crate::{log_debug, log_error, log_info};
 
 mod vitals;
 mod mobs;
+mod merchant;
 mod pvp;
 mod bow;
 mod thrown;
+mod sleep;
 
 /// Сторона чанка в блоках. По ней считается, в каком чанке стоит игрок.
 const CHUNK_SIZE: i32 = 16;
@@ -348,6 +350,11 @@ const POSE_PROPERTY: u8 = 6;
 const PROPERTY_POSE: i32 = 20;
 const POSE_STANDING: i32 = 0;
 const POSE_CROUCHING: i32 = 5;
+/// Поза «спит» и свойство 14 «место кровати» (вид 11 — необязательное место
+/// блока): чужой спящий игрок (чёрный ящик, bed-sleep-night — у себя так же).
+const POSE_SLEEPING: i32 = 2;
+const BED_PROPERTY: u8 = 14;
+const PROPERTY_OPTIONAL_BLOCK_POS: i32 = 11;
 
 /// Конец списка свойств в пакете.
 const PROPERTIES_END: u8 = 0xFF;
@@ -555,6 +562,8 @@ struct Shown {
     sneaking: bool,
     /// Сколько взмахов рукой уже показано.
     swings: u32,
+    /// Спит: место кровати (поза «спит» и свойство 14).
+    sleeping: Option<(i32, i32, i32)>,
 }
 
 type Seen = HashMap<i32, Shown>;
@@ -936,8 +945,8 @@ async fn enter_world(
         vitals::send_health(stream, &player.vit).await?;
         vitals::send_experience_if_any(stream, &player.vit).await?;
         send_game_event_start_waiting(stream).await?;
-        let (age, time) = world_age(shared, player.dimension);
-        send_time(stream, age, time).await?;
+        let (age, time, _) = world_age(shared, player.dimension);
+        send_time(stream, age, Some(time)).await?;
         send_weather(stream, shared, player.dimension).await?;
         send_center_chunk(stream, player.chunk()).await?;
 
@@ -991,6 +1000,7 @@ async fn enter_world(
                     health_bits: crate::survival::MAX_HEALTH.to_bits(),
                     sneaking: other.sneaking,
                     swings: other.swings,
+                    sleeping: None,
                 },
             );
         }
@@ -1208,6 +1218,14 @@ enum Sync {
 }
 
 async fn send_player_position_as(stream: &mut Outgoing<'_>, player: &mut PlayerState, sync: Sync) -> io::Result<()> {
+    let body = position_body(player, sync);
+
+    write_body(stream, body).await
+}
+
+/// Тело пакета сверки места (Synchronize Player Position) — с новым номером
+/// переноса; игрок ждёт подтверждения.
+fn position_body(player: &mut PlayerState, sync: Sync) -> Vec<u8> {
     let mut body = encode_varint(PLAYER_POSITION);
 
     // У каждого переноса свой номер: подтверждение старого не должно
@@ -1251,7 +1269,7 @@ async fn send_player_position_as(stream: &mut Outgoing<'_>, player: &mut PlayerS
         }
     }
 
-    write_body(stream, body).await
+    body
 }
 
 /// Кладёт пакет в очередь подключения (см. `Outgoing`): он уйдёт вместе с
@@ -2826,27 +2844,39 @@ fn publish_player(shared: &Shared, player: &PlayerState) {
     players.set_gear(&player.uuid, player.gear());
 }
 
-/// Сколько тактов миру от роду и который в нём час.
-fn world_age(shared: &Shared, dimension: crate::dimension::Dimension) -> (i64, i64) {
-    let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+/// Сколько тактов миру от роду, который в нём час и сколько раз часы
+/// переводили (`World::clock_changes`). Часы — у обычного мира: время
+/// суток одно на сервер.
+fn world_age(shared: &Shared, dimension: crate::dimension::Dimension) -> (i64, i64, (u64, i64)) {
+    let age = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").tick() as i64;
+    let world = shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком");
 
-    (world.tick() as i64, world.time_of_day())
+    (age, world.time_of_day(), world.clock_changes())
 }
 
 /// Отправляет Update Time: который час в мире.
 ///
 /// Часы у нас одни — те, что объявлены в реестре мировых часов, поэтому
 /// запись одна, с номером 0. Скорость обычная, доля такта нулевая:
-/// время идёт ровно по тактам сервера.
-async fn send_time(stream: &mut Outgoing<'_>, age: i64, time: i64) -> io::Result<()> {
+/// время идёт ровно по тактам сервера. `time` None — ежесекундная сверка
+/// без часов: так у оригинала, часы клиент ведёт сам, а запись о них
+/// приходит при входе и после перевода (зонд 02.10, чёрный ящик
+/// bed-sleep-night).
+async fn send_time(stream: &mut Outgoing<'_>, age: i64, time: Option<i64>) -> io::Result<()> {
     let mut body = encode_varint(UPDATE_TIME);
 
     body.extend_from_slice(&age.to_be_bytes());
-    body.extend_from_slice(&encode_varint(1)); // одни часы
-    body.extend_from_slice(&encode_varint(0)); // их номер в реестре
-    body.extend_from_slice(&encode_varlong(time));
-    body.extend_from_slice(&0.0f32.to_be_bytes());
-    body.extend_from_slice(&1.0f32.to_be_bytes());
+
+    match time {
+        Some(time) => {
+            body.extend_from_slice(&encode_varint(1)); // одни часы
+            body.extend_from_slice(&encode_varint(0)); // их номер в реестре
+            body.extend_from_slice(&encode_varlong(time));
+            body.extend_from_slice(&0.0f32.to_be_bytes());
+            body.extend_from_slice(&1.0f32.to_be_bytes());
+        }
+        None => body.extend_from_slice(&encode_varint(0)),
+    }
 
     write_body(stream, body).await
 }
@@ -2939,6 +2969,7 @@ async fn send_other_moves(
                 health_bits: players.gear(&member.uuid).health.to_bits(),
                 sneaking: member.sneaking,
                 swings: member.swings,
+                sleeping: players.gear(&member.uuid).sleeping,
             };
             let here = member.dimension == player.dimension;
             let new = (here && !seen.contains_key(&member.entity_id)).then(|| member.clone());
@@ -2959,7 +2990,8 @@ async fn send_other_moves(
 
                 slots.extend(worn_slots(&now.worn).into_iter().filter(|(_, stack)| stack.is_some()));
                 send_equipment(stream, member.entity_id, &slots).await?;
-                seen.insert(entity_id, now);
+                // Спящего покажет следующий проход (поза и кровать).
+                seen.insert(entity_id, Shown { sleeping: None, ..now });
             }
             continue;
         };
@@ -3106,6 +3138,29 @@ async fn send_other_moves(
 
         if now.position != shown.position {
             send_move(stream, entity_id, shown.position, now.position).await?;
+        }
+
+        // Лёг или встал: поза (спит — 2) и место кровати (свойство 14).
+        if now.sleeping != shown.sleeping {
+            let mut data = encode_varint(SET_ENTITY_DATA);
+
+            data.extend_from_slice(&encode_varint(entity_id));
+            data.push(POSE_PROPERTY);
+            data.extend_from_slice(&encode_varint(PROPERTY_POSE));
+            data.extend_from_slice(&encode_varint(if now.sleeping.is_some() { POSE_SLEEPING } else if now.sneaking { POSE_CROUCHING } else { POSE_STANDING }));
+            data.push(BED_PROPERTY);
+            data.extend_from_slice(&encode_varint(PROPERTY_OPTIONAL_BLOCK_POS));
+
+            match now.sleeping {
+                Some((x, y, z)) => {
+                    data.push(1);
+                    push_packed_position(&mut data, x, y, z);
+                }
+                None => data.push(0),
+            }
+
+            data.push(PROPERTIES_END);
+            write_body(stream, data).await?;
         }
 
         seen.insert(entity_id, now);
@@ -4075,6 +4130,8 @@ async fn send_pending_world_events(
             WorldEvent::Struck { entity_id } if *entity_id == player.entity_id => vitals::struck(stream, shared, player).await?,
             WorldEvent::Struck { .. } => {}
             WorldEvent::BossBar(share) => send_boss_bar(stream, player, *share).await?,
+            WorldEvent::Private { viewer, body } if *viewer == player.entity_id => write_body(stream, body.to_vec()).await?,
+            WorldEvent::Private { .. } => {}
             WorldEvent::Collect { entity_id, by, count } => {
                 if player.seen_bow_arrows.remove(entity_id).is_some() {
                     send_pick_up(stream, *entity_id, *by, *count).await?;
@@ -4177,7 +4234,7 @@ async fn open_window(
         world.container(at.0, at.1, at.2).map(crate::furnace::properties).unwrap_or_default()
     };
 
-    player.window = Some(OpenWindow { id, halves, cart: None, shown: slots, lectern, crafter, kind: Some(kind), props: props.clone() });
+    player.window = Some(OpenWindow { id, halves, cart: None, shown: slots, lectern, crafter, kind: Some(kind), props: props.clone(), merchant: None });
     send_window_content(stream, player).await?;
 
     for (property, value) in props.into_iter().enumerate() {
@@ -4235,7 +4292,7 @@ async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &m
     body.extend_from_slice(&nbt::translated(title));
     write_body(stream, body).await?;
 
-    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new() });
+    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None });
     send_window_content(stream, player).await
 }
 
@@ -4327,6 +4384,19 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
         return Ok(());
     };
 
+    // Окно торговли: ячейки живут у игрока; пропал житель — окно закрыто.
+    if let Some(trade) = &window.merchant {
+        if merchant::villager_gone(shared, player, trade.villager) {
+            let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
+
+            body.extend_from_slice(&encode_varint(window.id));
+            write_body(stream, body).await?;
+            close_own_window(shared, player);
+        }
+
+        return Ok(());
+    }
+
     let now: Option<Vec<Option<Stack>>> = if let Some(cart) = window.cart {
         shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").published_carts.get(&cart).cloned()
     } else {
@@ -4402,6 +4472,16 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
     let Some(window) = player.window.take() else {
         return;
     };
+
+    // Окно торговли: житель свободен; оплата, если осталась, — в инвентарь.
+    if let Some(trade) = window.merchant {
+        for stack in trade.slots[..2].iter().flatten() {
+            player.inventory.put(*stack);
+        }
+
+        merchant::release(shared, player.dimension, trade.villager);
+        return;
+    }
 
     // У вагонетки смотрящих не считают: крышки нет.
     if window.cart.is_some() {
@@ -4735,6 +4815,7 @@ async fn send_pending_player_changes(
                     health_bits: crate::survival::MAX_HEALTH.to_bits(),
                     sneaking: member.sneaking,
                     swings: member.swings,
+                    sleeping: None,
                 };
 
                 if member.dimension == player.dimension && seen.insert(member.entity_id, shown).is_none() {
@@ -4781,6 +4862,7 @@ async fn send_pending_player_changes(
                     health_bits: crate::survival::MAX_HEALTH.to_bits(),
                         sneaking: member.sneaking,
                         swings: member.swings,
+                        sleeping: None,
                     };
                     seen.insert(member.entity_id, now);
                     send_add_entity(stream, member).await?;
@@ -5369,6 +5451,7 @@ async fn read_and_log_play_packets(
     let mut keep_alive_id: i64 = 1;
     let mut last_keep_alive = Instant::now();
     let mut last_time_age: i64 = -1;
+    let mut clock_seen: Option<u64> = None;
 
     let mut world_changes = entered.world_changes;
     let mut player_changes = entered.player_changes;
@@ -5449,10 +5532,17 @@ async fn read_and_log_play_packets(
         // сверять с сервером — иначе часы разойдутся. Сверяем по возрасту
         // мира, а не по своим часам: так рассылка стоит ровно на сетке тактов.
         {
-            let (age, time) = world_age(shared, player.dimension);
+            let (age, _, (changes, set_to)) = world_age(shared, player.dimension);
 
-            if age % TIME_EVERY == 0 && age != last_time_age {
-                send_time(stream, age, time).await?;
+            // Часы перевели (команда, сон) — сразу, с записью часов.
+            if clock_seen != Some(changes) {
+                if clock_seen.is_some() {
+                    send_time(stream, age, Some(set_to)).await?;
+                }
+
+                clock_seen = Some(changes);
+            } else if age % TIME_EVERY == 0 && age != last_time_age {
+                send_time(stream, age, None).await?;
                 last_time_age = age;
             }
         }
@@ -5534,16 +5624,22 @@ async fn read_and_log_play_packets(
             // Возрождение — тот же переход, что и в другое измерение: клиент
             // забывает мир и получает его заново, только у точки возрождения.
             let respawning = matches!(order, Order::Respawn);
+            // Куда возрождаться: кровать, якорь, `spawnpoint` или точка мира
+            // (play/sleep.rs).
+            let mut target = None;
             let order = if respawning {
-                let (x, y, z) = on_the_ground(shared, player.spawn_point);
+                let found = sleep::respawn_target(shared, player);
+                let (dimension, (x, y, z)) = (found.dimension, found.at);
 
-                Order::ChangeDimension { dimension: Dimension::Overworld, x, y, z }
+                target = Some(found);
+                Order::ChangeDimension { dimension, x, y, z }
             } else {
                 order
             };
 
             match order {
                 Order::Respawn => {}
+                Order::WakeUp => player.wake_due = true,
                 Order::Message { component } => {
                     let mut body = encode_varint(SYSTEM_CHAT);
 
@@ -5580,7 +5676,13 @@ async fn read_and_log_play_packets(
                     write_body(stream, packet).await?;
                 }
                 Order::Spawn { x, y, z, body } => {
-                    player.spawn_point = (x, y, z);
+                    // Без пакета — `spawnpoint`: личная точка (play/sleep.rs);
+                    // с пакетом — `setworldspawn`: точка мира.
+                    if body.is_none() {
+                        sleep::set_forced(player, (x, y, z));
+                    } else {
+                        player.spawn_point = (x, y, z);
+                    }
 
                     if let Some(body) = body {
                         let mut packet = encode_varint(SET_DEFAULT_SPAWN_POSITION);
@@ -5597,6 +5699,10 @@ async fn read_and_log_play_packets(
 
                     if respawning {
                         vitals::respawned(player);
+
+                        if let Some(yaw) = target.as_ref().and_then(|target| target.yaw) {
+                            player.yaw = yaw;
+                        }
                     }
 
                     let from_dimension = player.dimension;
@@ -5633,6 +5739,11 @@ async fn read_and_log_play_packets(
                     if respawning {
                         // После смерти сперва способности, потом Respawn.
                         send_abilities(stream, player.game_mode).await?;
+
+                        if target.as_ref().is_some_and(|target| target.missing) {
+                            sleep::send_no_respawn_block(stream).await?;
+                        }
+
                         send_respawn_after_death(stream, dimension, player).await?;
 
                         // Состояние такта оригинал шлёт заново и после
@@ -5730,7 +5841,9 @@ async fn read_and_log_play_packets(
                         vitals::send_respawn_intro(stream, player).await?;
                         send_weather(stream, shared, dimension).await?;
                         send_game_event_start_waiting(stream).await?;
-                        vitals::send_respawn_extras(stream, shared, player).await?;
+                        let deplete = target.as_mut().and_then(|target| target.deplete.take());
+
+                        vitals::send_respawn_extras(stream, shared, player, deplete).await?;
                     } else {
                         publish_player(shared, player);
                     }
@@ -5962,6 +6075,7 @@ async fn read_and_log_play_packets(
                         vitals::send_vitals(stream, player).await?;
                     }
                 }
+                sleep::tick(shared, player);
                 vitals::tick(stream, shared, player).await?;
 
                 // Экипировка чужих игроков — следом за здоровьем.
@@ -6296,6 +6410,14 @@ async fn apply_reaction(
         open_cart_window(stream, shared, player, cart).await?;
     }
 
+    if let Some(villager) = reaction.open_merchant {
+        if player.window.is_none() {
+            merchant::open_merchant_window(stream, shared, player, villager).await?;
+        } else {
+            merchant::release(shared, player.dimension, villager);
+        }
+    }
+
     if let Some((window, property, value)) = reaction.window_property {
         send_window_property(stream, window, property, value).await?;
     }
@@ -6377,6 +6499,8 @@ struct Reaction {
 
     /// Открыть окно этой вагонетки.
     open_cart: Option<i32>,
+    /// Открыть окно торговли с этим жителем.
+    open_merchant: Option<i32>,
 
     /// Свойство открытого окна: номер окна, свойства и значение (страница
     /// кафедры).
@@ -6520,6 +6644,18 @@ fn handle_client_packet_inner(
                 }
             }
 
+            // Спящий стоит на месте кровати: его движение не принимается, а
+            // ушедшего дальше блока (квадрат расстояния больше 1) оригинал
+            // возвращает сверкой (чёрный ящик, bed-sleep-night: робот, не
+            // знающий о сне, на свой ежесекундный пакет места получил сверку
+            // на (3,5; 0,688; 4,5)).
+            if player.sleeping.is_some() {
+                let off = (x - player.x).powi(2) + (y - player.y).powi(2) + (z - player.z).powi(2);
+
+                reaction.resync = off > 1.0;
+                return reaction;
+            }
+
             let from = (player.x, player.y, player.z);
 
             player.moved_since_tp = true;
@@ -6554,7 +6690,10 @@ fn handle_client_packet_inner(
                 vitals::moved(player, shared, (player.x, player.y, player.z));
             }
         }
-        vitals::PLAYER_COMMAND => vitals::player_command(payload, player),
+        vitals::PLAYER_COMMAND => {
+            sleep::player_command(payload, player, shared);
+            vitals::player_command(payload, player);
+        }
         vitals::CLIENT_COMMAND => {
             // Действие 0 — «возродиться»; живому возрождаться незачем.
             if Cursor::new(payload).varint() == Some(0) && player.vit.dead {
@@ -6651,6 +6790,7 @@ fn handle_client_packet_inner(
                 crafter_slot_state(shared, player, window, slot, enabled != 0, &mut reaction);
             }
         }
+        merchant::SELECT_TRADE => merchant::select_trade(shared, player, payload, &mut reaction),
         CLICK_CONTAINER_BUTTON => {
             let mut cursor = Cursor::new(payload);
 
@@ -6679,6 +6819,15 @@ fn handle_client_packet_inner(
             reaction.inventory = true;
         }
         CLOSE_CONTAINER => {
+            // Окно торговли: курсор и оплата — в инвентарь, поячеечно.
+            let (slots, thrown) = merchant::close(shared, player);
+
+            reaction.slots.extend(slots);
+
+            for stack in thrown {
+                throw_out(shared, player, stack);
+            }
+
             // Закрыто окно хранилища — оно теряет смотрящего. Что менялось в
             // инвентаре мимо окна, клиент получит целиком.
             close_own_window(shared, player);
@@ -7181,6 +7330,15 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
 
     let mob = &items.mobs()[index];
 
+    // Житель: торговля или мотание головой (merchant.rs); в приключении тоже.
+    if mob.kind == crate::mob::Kind::Villager
+        && (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) <= REACH * REACH
+        && !mob.is_dead()
+    {
+        reaction.open_merchant = merchant::use_villager(&mut items, index, player.entity_id, shared);
+        return true;
+    }
+
     if (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) > REACH * REACH
         || player.game_mode == GAME_MODE_ADVENTURE
         || mob.is_dead()
@@ -7424,12 +7582,26 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     // Особый динамит помнит свой вид до слома: выпадет он же.
     let custom = world.custom_tnt_at((x, y, z));
 
+    // Кровать: что сказать о второй половине и откуда выпадет предмет
+    // (play/sleep.rs).
+    let bed = sleep::bed_break_plan(&world, (x, y, z), player.game_mode == GAME_MODE_CREATIVE);
+
     let Some(broken) = placing::break_block(&mut world, x, y, z) else {
         log_debug!("Play: в {} {} {} и так пусто", x, y, z);
         return Some(answer);
     };
 
     log_debug!("Play: сломан блок в {} {} {}", x, y, z);
+
+    if let Some(plan) = &bed {
+        let (ex, ey, ez) = plan.event_at;
+
+        world.note_level_event(ex, ey, ez, 2001, plan.event_state);
+    }
+
+    // Предмет кровати выпадает из изголовья, какую половину ни ломай
+    // (чёрный ящик, bed-place-break).
+    let (x, y, z) = bed.as_ref().map_or((x, y, z), |plan| plan.drop_at);
 
     // В выживании из сломанного блока выпадает предмет — он падает на землю
     // и лежит, пока его не подберут. В творческом режиме блоки просто
@@ -7643,6 +7815,16 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // как у прочих щелчков (чёрный ящик, comparator-click): повтор
         // блока, повтор за гранью, потом общая рассылка.
         let held_name = player.inventory.held().and_then(|stack| blocks::item_name(stack.item));
+
+        // Кровать: сон, точка возрождения, взрыв вне обычного мира; якорь:
+        // точка возрождения в Незере, взрыв вне его (play/sleep.rs).
+        if let Some(reaction) = sleep::use_bed(&mut world, shared, player, clicked, face, sequence) {
+            return Some(reaction);
+        }
+
+        if let Some(reaction) = sleep::use_anchor(&mut world, shared, player, clicked, face, held_name, sequence) {
+            return Some(reaction);
+        }
 
         if let Some(spend) = redstone::use_with_item(&mut world, clicked, held_name, player.game_mode == GAME_MODE_CREATIVE) {
             world.tell_directly(clicked_x, clicked_y, clicked_z);
@@ -8650,6 +8832,12 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
     let Some(window) = player.window.as_ref() else {
         return;
     };
+
+    if window.merchant.is_some() {
+        merchant::click(shared, player, (slot as i16 as i32, button as i8, mode), &predicted, predicted_cursor, readable, reaction);
+        return;
+    }
+
     let halves = window.halves.clone();
     let cart = window.cart;
     let size = window.shown.len();
@@ -9106,6 +9294,15 @@ struct PlayerState {
     /// рисует стрелку компаса.
     spawn_point: (f64, f64, f64),
 
+    /// Личная точка возрождения: кровать, якорь, `spawnpoint` (bed.rs).
+    respawn: Option<crate::bed::RespawnPoint>,
+
+    /// Спит: изголовье кровати (play/sleep.rs).
+    sleeping: Option<(i32, i32, i32)>,
+
+    /// Ночь пропущена — встать в конце такта (play/sleep.rs, `tick`).
+    wake_due: bool,
+
     /// Открытое окно хранилища, если есть.
     window: Option<OpenWindow>,
 
@@ -9186,6 +9383,10 @@ struct OpenWindow {
 
     /// Свойства окна печи или стойки, какими их знает клиент.
     props: Vec<i16>,
+
+    /// Окно торговли с жителем: ячейки оплаты и выхода, выбранная сделка
+    /// (merchant.rs). Тогда `shown` — эти три ячейки.
+    merchant: Option<crate::villager::Merchant>,
 }
 
 impl OpenWindow {
@@ -9250,6 +9451,9 @@ impl PlayerState {
 
         Self {
             spawn_point: spawn,
+            respawn: saved.as_ref().and_then(|data| data.respawn),
+            sleeping: None,
+            wake_due: false,
             uuid,
             name,
             game_mode,
@@ -9366,6 +9570,7 @@ impl PlayerState {
             attack_speed: self.attrs.get(crate::attributes::ATTACK_SPEED).cloned(),
             speed_touch: self.speed_touch,
             living: vitals::living_flags(self) | if self.net.spin_pose { crate::players::SPIN_POSE_BIT } else { 0 },
+            sleeping: self.sleeping,
             effect_colors: self.vit.effect_colors(),
             health: self.net.announced_health.unwrap_or(self.vit.health),
             sprinting: self.vit.sprinting,
@@ -9507,6 +9712,7 @@ impl PlayerState {
             inventory: self.inventory.clone(),
             dimension: self.dimension,
             vitals: self.vit.saved(),
+            respawn: self.respawn,
         };
 
         match playerdata::save(directory, &self.uuid, &data) {
@@ -9755,6 +9961,7 @@ mod tests {
             game_mode: GAME_MODE_CREATIVE,
             dimension: Default::default(),
             vitals: Default::default(),
+            respawn: None,
         };
 
         PlayerState::new([7; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN)
@@ -9794,6 +10001,7 @@ mod tests {
             game_mode: 0,
             dimension: Default::default(),
             vitals: Default::default(),
+            respawn: None,
         };
 
         let player = PlayerState::new([2; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN);
@@ -9818,6 +10026,7 @@ mod tests {
             game_mode: 0,
             dimension: Default::default(),
             vitals: crate::playerdata::SavedVitals { health: 6.0, food: 11, saturation: 2.0, exhaustion: 1.5, air: 200, fire: 80, fall: 0.0, experience: 21 },
+            respawn: None,
         };
 
         let mut player = PlayerState::new([3; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN);

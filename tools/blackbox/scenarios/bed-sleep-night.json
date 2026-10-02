@@ -1,0 +1,64 @@
+{
+ "name": "bed-sleep-night",
+ "about": "Ночью робот ложится в кровать: поза сна, место кровати в свойствах, «occupied», сообщение о сне, через 100 тактов ночь пропускается (часы на утро), робот встаёт.",
+ "exclusive": true,
+ "track_self": true,
+ "chat": true,
+ "track_time": true,
+ "blocks": [
+  {
+   "at": [
+    3,
+    0,
+    3
+   ],
+   "state": "minecraft:red_bed[facing=south,occupied=false,part=foot]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    4
+   ],
+   "state": "minecraft:red_bed[facing=south,occupied=false,part=head]"
+  }
+ ],
+ "setup": [
+  "time set 14000",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,1.5) 0 30",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  }
+ ],
+ "record_ticks": 135,
+ "cleanup": [
+  "time set noon",
+  "spawnpoint $(bot) 0 -60 0 0 0",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "window",
+   "name": "сверка места спящего",
+   "match": "^self робот: сверка места \\(3\\.5,0\\.688,4\\.5\\)",
+   "range": [
+    1,
+    25
+   ],
+   "why": "сверку на место кровати оригинал шлёт в ответ на пакет места робота, а робот, стоя, шлёт его раз в секунду по своим часам: у оригинала +19 (bed-sleep-night) и +9 (bed-leave) — фаза робота, не сервера"
+  }
+ ]
+}

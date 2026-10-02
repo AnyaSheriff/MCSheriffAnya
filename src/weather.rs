@@ -197,6 +197,16 @@ impl Weather {
         }
     }
 
+    /// Сон пропустил ночь: дождь и гроза кончаются, их сроки пусты — цикл
+    /// вытянет новые (вики, Bed: «resets the weather cycle»). [проверить]
+    /// судьбу таймера ясной погоды.
+    pub fn reset_cycle(&mut self) {
+        self.raining = false;
+        self.thundering = false;
+        self.rain_time = 0;
+        self.thunder_time = 0;
+    }
+
     /// Game Event-ы игроку, вошедшему в мир: если идёт дождь — «дождь
     /// пошёл», сила дождя и сила грома.
     pub fn on_entry(&self) -> Vec<(u8, f32)> {

@@ -2667,6 +2667,15 @@ fn shape_update(world: &mut World, pos: Pos, from: Dir, loud: bool) {
     let block = Block::at(world, pos);
     let fall_off = |world: &mut World| if loud { pop_breaking(world, pos) } else { pop(world, pos) };
 
+    // Половина кровати, у которой пропала пара (со стороны пары): ломается
+    // с частицами (2001), без предмета (чёрный ящик, bed-respawn: изголовье
+    // убрано командой — изножье ломается следом, предмета нет).
+    if from.is_horizontal() && crate::bed::lost_partner(world, pos, from.offset()) {
+        world.note_level_event(pos.0, pos.1, pos.2, 2001, block.state);
+        set(world, pos, AIR);
+        return;
+    }
+
     match block.kind {
         // Пыль: держится ли, и куда тянется. Сила остаётся прежней.
         Kind::Wire => {

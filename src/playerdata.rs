@@ -32,7 +32,13 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// еда, насыщение, изнурение, воздух, огонь и высота падения: постоянный
 /// хвост из `VITALS_SIZE` байт после измерения. Файлы версий 1–3 читаются:
 /// игрок зайдёт сытым и здоровым.
-const FORMAT_VERSION: u32 = 4;
+///
+/// Версия 5 — плюс личная точка возрождения (кровать, якорь, `spawnpoint`):
+/// постоянный хвост `bed::RespawnPoint::SIZE` после здоровья.
+const FORMAT_VERSION: u32 = 5;
+
+/// Версия со здоровьем, но без точки возрождения.
+const VITALS_VERSION: u32 = 4;
 
 /// Версия с измерением, но без здоровья.
 const DIMENSION_VERSION: u32 = 3;
@@ -147,6 +153,9 @@ pub struct PlayerData {
 
     /// Здоровье, еда, воздух, огонь: хвост файла версии 4.
     pub vitals: SavedVitals,
+
+    /// Личная точка возрождения: хвост файла версии 5.
+    pub respawn: Option<crate::bed::RespawnPoint>,
 }
 
 /// Путь к файлу игрока внутри директории.
@@ -213,22 +222,31 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 
     // Файл первой версии — без инвентаря, и длина у него постоянная;
     // второй — без измерения; в третьей измерение — последний байт.
-    let (inventory, dimension, vitals) = match version {
-        OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default(), Default::default()),
-        INVENTORY_VERSION => (Inventory::from_bytes(bytes.get(SIZE..)?)?, Default::default(), Default::default()),
+    let (inventory, dimension, vitals, respawn) = match version {
+        OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default(), Default::default(), None),
+        INVENTORY_VERSION => (Inventory::from_bytes(bytes.get(SIZE..)?)?, Default::default(), Default::default(), None),
         DIMENSION_VERSION => {
             let (last, inventory) = bytes.get(SIZE..)?.split_last()?;
             let dimension = *crate::dimension::Dimension::ALL.get(*last as usize)?;
 
-            (Inventory::from_bytes(inventory)?, dimension, Default::default())
+            (Inventory::from_bytes(inventory)?, dimension, Default::default(), None)
         }
-        FORMAT_VERSION => {
-            let tail = bytes.get(SIZE..)?;
+        VITALS_VERSION | FORMAT_VERSION => {
+            let mut tail = bytes.get(SIZE..)?;
+            let mut respawn = None;
+
+            if version == FORMAT_VERSION {
+                let (rest, point) = tail.split_at(tail.len().checked_sub(crate::bed::RespawnPoint::SIZE)?);
+
+                respawn = crate::bed::RespawnPoint::read(point)?;
+                tail = rest;
+            }
+
             let (rest, vitals) = tail.split_at(tail.len().checked_sub(VITALS_SIZE)?);
             let (last, inventory) = rest.split_last()?;
             let dimension = *crate::dimension::Dimension::ALL.get(*last as usize)?;
 
-            (Inventory::from_bytes(inventory)?, dimension, SavedVitals::read(vitals)?)
+            (Inventory::from_bytes(inventory)?, dimension, SavedVitals::read(vitals)?, respawn)
         }
         _ => return None,
     };
@@ -243,6 +261,7 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
         inventory,
         dimension,
         vitals,
+        respawn,
     })
 }
 
@@ -272,6 +291,7 @@ pub fn save(directory: &Path, uuid: &[u8; 16], data: &PlayerData) -> io::Result<
     out.extend_from_slice(&data.inventory.to_bytes());
     out.push(data.dimension.index() as u8);
     data.vitals.write(&mut out);
+    crate::bed::RespawnPoint::write(data.respawn.as_ref(), &mut out);
 
     let temporary = path.with_extension("tmp");
     fs::write(&temporary, &out)?;
@@ -305,6 +325,7 @@ mod tests {
             game_mode: 1,
             dimension: Default::default(),
             vitals: Default::default(),
+            respawn: None,
         }
     }
 
@@ -465,6 +486,36 @@ mod tests {
 
         save(&directory, &[9; 16], &data).expect("записать");
         assert_eq!(load(&directory, &[9; 16]), Some(data));
+    }
+
+    /// Точка возрождения (кровать в Незере — якорь) переживает перезапуск.
+    #[test]
+    fn the_respawn_point_is_saved_with_the_player() {
+        let directory = test_directory("respawn");
+        let data = PlayerData {
+            respawn: Some(crate::bed::RespawnPoint { dimension: crate::dimension::Dimension::Nether, pos: (3, 70, -9), yaw: -90.0, forced: false }),
+            ..sample()
+        };
+
+        save(&directory, &[11; 16], &data).expect("записать");
+        assert_eq!(load(&directory, &[11; 16]), Some(data));
+    }
+
+    /// Файл четвёртой версии (без точки возрождения) читается: точки нет.
+    #[test]
+    fn a_version_four_file_has_no_respawn_point() {
+        let directory = test_directory("v4");
+        let data = sample();
+
+        save(&directory, &[12; 16], &data).expect("записать");
+
+        let path = path_for(&directory, &[12; 16]);
+        let mut bytes = fs::read(&path).expect("прочитать");
+
+        bytes.truncate(bytes.len() - crate::bed::RespawnPoint::SIZE);
+        bytes[4..8].copy_from_slice(&VITALS_VERSION.to_be_bytes());
+        fs::write(&path, &bytes).expect("записать");
+        assert_eq!(load(&directory, &[12; 16]), Some(data));
     }
 
     /// Файл третьей версии (без здоровья) читается: игрок сыт и здоров.

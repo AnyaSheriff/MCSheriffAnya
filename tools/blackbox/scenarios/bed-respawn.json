@@ -1,0 +1,133 @@
+{
+ "name": "bed-respawn",
+ "about": "Точка возрождения у кровати: днём щелчок по кровати, смерть — возрождение рядом с изголовьем; кровать убрана — смерть, «нет кровати» (Game Event 0) и возрождение у точки появления мира.",
+ "exclusive": true,
+ "track_self": true,
+ "chat": true,
+ "blocks": [
+  {
+   "at": [
+    3,
+    0,
+    3
+   ],
+   "state": "minecraft:red_bed[facing=south,occupied=false,part=foot]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    4
+   ],
+   "state": "minecraft:red_bed[facing=south,occupied=false,part=head]"
+  }
+ ],
+ "setup": [
+  "time set noon",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.8,0,1.5) 0 30",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 10,
+   "cmd": "kill $(bot)"
+  },
+  {
+   "after": 40,
+   "set": {
+    "at": [
+     3,
+     0,
+     4
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 50,
+   "cmd": "kill $(bot)"
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "spawnpoint $(bot) 0 -60 0 0 0",
+  "tp $(bot) $(3.5,1,3.5)",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "kind": "self",
+   "name": "место возрождения у точки мира",
+   "pattern": "\\(-\\d+\\.5,-?\\d+,-\\d+\\.5\\)",
+   "replace": "(место)",
+   "why": "без кровати игрок возрождается в случайной точке вокруг точки появления мира (minecraft.wiki/w/Respawn, «Spawn radius»; так же в void-death): у оригинала (-107.5,-1,-103.5) и (-105.5,-1,-103.5) в двух записях"
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "высота точки появления",
+   "pattern": "\"location\":\\{\"x\":0,\"z\":0,\"y\":-?\\d+\\}",
+   "replace": "\"location\":{точка}",
+   "why": "У нашего испытательного ровного мира точка появления считается по высоте обычного мира (63), а у оригинала — по плоскому (−60): расхождение испытательного мира, а не механики (так же в void-death)."
+  },
+  {
+   "type": "count",
+   "name": "список атрибутов при возрождении",
+   "match": "^sv Attributes ",
+   "range": [
+    0,
+    4
+   ],
+   "anytick": true,
+   "why": "при возрождении оригинал шлёт все атрибуты, что когда-либо заводились у игрока (они лежат в его файле на сервере): состав списка зависит от истории робота (так же в void-death)"
+  },
+  {
+   "type": "window",
+   "name": "пакеты возрождения",
+   "match": "^(sv (Abilities |Game Event reason=no_respawn|Respawn |Spawn Position|Set Experience|Game Event reason=level_chunks_load_start|set_ticking_state|step_tick|Entity Event status=28$|Metadata 9=20 16=127$|Set Health health=20 )|self робот: сверка места)",
+   "range": [
+    1,
+    2
+   ],
+   "why": "возрождение — ответ на пакет робота (mineflayer шлёт «возродиться» сам, сразу после смерти), сервер разбирает его в случайный миг такта: у оригинала пакеты возрождения на +1 (первая смерть) и +2 (вторая) после kill; так же в void-death (+100/+101)"
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "сообщение /kill",
+   "pattern": "System Chat (\\{\"with\":.*commands\\.kill\\.success\\.single\"\\}|\"Убит: blackbox\")",
+   "replace": "System Chat (kill)",
+   "why": "у нас тексты команд русские готовыми строками, у оригинала — ключ перевода; расхождение языка текста, а не механики"
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "сообщение /setblock",
+   "pattern": "System Chat (\\{\"with\":.*commands\\.setblock\\.success\"\\}|\"Блок в [^\"]*изменён\")",
+   "replace": "System Chat (setblock)",
+   "why": "тексты команд у нас русские строками, у оригинала — ключ перевода; расхождение языка, не механики"
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "сытость при смерти",
+   "pattern": "health=0 food=20 saturation=\\d+",
+   "replace": "health=0 food=20 saturation=*",
+   "why": "насыщение робота зависит от истории его файла игрока на сервере (у оригинала 7, у нас 5): состояние, а не механика"
+  }
+ ]
+}
