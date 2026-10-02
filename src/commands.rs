@@ -1874,6 +1874,9 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
                             if container.kind == crate::containers::Kind::Crafter {
                                 container.disabled = crate::redstone::crafter::disabled_from_text(text);
                             }
+
+                            // Печь и стойка: жар из данных, чего нет — ноль.
+                            crate::furnace::heat_from_text(container, text);
                         });
                     }
                 }
@@ -1976,11 +1979,11 @@ fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) 
     let stack = if name == "air" {
         None
     } else {
-        let Some(number) = blocks::item_named(name) else {
-            return Answer::saying(format!("Не знаю такого предмета: {}", thing));
-        };
-
-        Some(crate::inventory::Stack::new(number, count.min(blocks::stack_size(number))))
+        // С довесками: `potion[potion_contents={potion:"minecraft:water"}]`.
+        match stack_from_spec(thing, count) {
+            Ok(stack) => stack,
+            Err(why) => return Answer::saying(why),
+        }
     };
 
     let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");

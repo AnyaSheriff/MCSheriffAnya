@@ -1,0 +1,102 @@
+{
+ "name": "furnace-hopper",
+ "about": "Воронки заперты блоками редстоуна; блоки убирают — воронка сверху кладёт руду во вход, воронка сбоку — уголь в топливо, воронка снизу забирает слитки в сундук; окно сундука открыто.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    3,
+    1
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    3,
+    1,
+    1
+   ],
+   "state": "minecraft:redstone_block"
+  },
+  {
+   "at": [
+    1,
+    1,
+    1
+   ],
+   "state": "minecraft:furnace[facing=south,lit=false]"
+  },
+  {
+   "at": [
+    1,
+    2,
+    1
+   ],
+   "state": "minecraft:hopper[enabled=false,facing=down]{Items:[{Slot:0b,id:\"minecraft:iron_ore\",count:2}]}"
+  },
+  {
+   "at": [
+    2,
+    1,
+    1
+   ],
+   "state": "minecraft:hopper[enabled=false,facing=west]{Items:[{Slot:0b,id:\"minecraft:coal\",count:1}]}"
+  },
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:hopper[enabled=true,facing=south]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    2
+   ],
+   "state": "minecraft:chest[facing=south,type=single,waterlogged=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    2
+   ]
+  },
+  {
+   "after": 10,
+   "set": {
+    "at": [
+     1,
+     3,
+     1
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 10,
+   "set": {
+    "at": [
+     3,
+     1,
+     1
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 440,
+   "close": true
+  }
+ ],
+ "record_ticks": 450,
+ "cleanup": [
+  "fill $(-1,0,-2) $(3,3,4) minecraft:air"
+ ]
+}

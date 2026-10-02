@@ -1,0 +1,103 @@
+{
+ "name": "furnace-smelt",
+ "about": "Печь с двумя железными рудами (положены командой — так печь узнаёт время плавки): окно открыто, уголь кладётся командой — печь загорается, свойства окна (горение, плавка) и ячейки по тактам; сравнитель перед печью. Слиток берут из выхода — опыт; окно закрывается.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:furnace[facing=south,lit=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:comparator[facing=south,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    1,
+    0,
+    -1
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=side,power=0,south=side,west=side]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 10,
+   "cmd": "item replace block $(1,0,1) container.1 with minecraft:coal 1"
+  },
+  {
+   "after": 420,
+   "window_click": {
+    "slot": 2,
+    "button": 0,
+    "mode": 0
+   }
+  },
+  {
+   "after": 425,
+   "window_click": {
+    "slot": 30,
+    "button": 0,
+    "mode": 0
+   }
+  },
+  {
+   "after": 430,
+   "close": true
+  }
+ ],
+ "record_ticks": 445,
+ "track_self": true,
+ "cleanup": [
+  "fill $(-1,0,-2) $(3,3,4) minecraft:air",
+  "kill @e[type=experience_orb,distance=..16]",
+  "kill @e[type=item,distance=..16]",
+  "clear $(bot)",
+  "experience set $(bot) 0 points",
+  "!startfly"
+ ],
+ "setup": [
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!wait 10",
+  "item replace block $(1,0,1) container.0 with minecraft:iron_ore 2"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "шарики опыта",
+   "match": "^spawn [-0-9,.]+ experience_orb",
+   "range": [
+    1,
+    2
+   ],
+   "why": "вики, Smelting: опыт дробный — «1 point, plus a 20% chance of another 1 point»; у железной руды 0,7 × 2 = 1,4: одно очко (шарик 1) или два (два шарика по 1)"
+  },
+  {
+   "type": "count",
+   "name": "подбор опыта роботом",
+   "match": "^sv (Collect count|Set Experience|Metadata 18)",
+   "range": [
+    3,
+    6
+   ],
+   "anytick": true,
+   "why": "вики, Smelting: 1 или 2 очка по случаю; общий счёт опыта робота (total, Metadata 18) копится от прогона к прогону — `experience set` его не сбрасывает"
+  }
+ ]
+}

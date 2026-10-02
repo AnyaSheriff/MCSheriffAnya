@@ -1098,6 +1098,10 @@ pub struct World {
     /// То же для вагонеток-хранилищ: номер сущности — ячейки.
     pub published_carts: HashMap<i32, Vec<Option<crate::inventory::Stack>>>,
 
+    /// Свойства окон печей и стоек, снятые вместе с содержимым
+    /// (furnace::properties).
+    pub published_props: HashMap<(i32, i32, i32), Vec<i16>>,
+
     /// Хранилища в порядке появления в мире — для их хода в такте.
     container_order: Vec<(i32, i32, i32)>,
 
@@ -1207,6 +1211,7 @@ impl World {
             blast_rest: Default::default(),
             published: HashMap::new(),
             published_carts: HashMap::new(),
+            published_props: HashMap::new(),
             loaded_frames: Vec::new(),
             loaded_mobs: Vec::new(),
             new_chunks: Vec::new(),
@@ -1357,6 +1362,7 @@ impl World {
             blast_rest: Default::default(),
             published: HashMap::new(),
             published_carts: HashMap::new(),
+            published_props: HashMap::new(),
             loaded_frames: Vec::new(),
             loaded_mobs: Vec::new(),
             new_chunks: Vec::new(),
@@ -1731,6 +1737,8 @@ impl World {
         let result = change(container);
 
         if container.slots != before {
+            // Печь начинает плавку заново, если вход сменили.
+            crate::furnace::after_slots_changed(container, &before);
             self.contents_changed.push((x, y, z));
         }
 
@@ -2181,10 +2189,17 @@ impl World {
 
         if self.viewers.is_empty() && self.published_carts.is_empty() {
             self.published.clear();
+            self.published_props.clear();
             return;
         }
 
         let places: Vec<_> = self.viewers.keys().copied().collect();
+
+        self.published_props = places
+            .iter()
+            .filter_map(|&(x, y, z)| Some(((x, y, z), crate::furnace::properties(self.container(x, y, z)?))))
+            .filter(|(_, props)| !props.is_empty())
+            .collect();
 
         self.published = places
             .into_iter()

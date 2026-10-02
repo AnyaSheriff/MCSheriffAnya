@@ -1,0 +1,22 @@
+{
+ "name": "brewing-swiftness",
+ "about": "Варочная стойка с огненным порошком и двумя грубыми зельями (средняя ячейка пуста): сахар кладётся командой — зелья быстроты; окно открыто.",
+ "blocks": [
+  {"at": [1, 0, 1], "state": "minecraft:brewing_stand[has_bottle_0=false,has_bottle_1=false,has_bottle_2=false]"}
+ ],
+ "setup": [
+  "item replace block $(1,0,1) container.0 with minecraft:potion[potion_contents={potion:\"minecraft:awkward\"}]",
+  "item replace block $(1,0,1) container.2 with minecraft:potion[potion_contents={potion:\"minecraft:awkward\"}]",
+  "item replace block $(1,0,1) container.4 with minecraft:blaze_powder 1"
+ ],
+ "actions": [
+  {"after": 0, "click": [1, 0, 1]},
+  {"after": 10, "cmd": "item replace block $(1,0,1) container.3 with minecraft:sugar 1"},
+  {"after": 425, "close": true}
+ ],
+ "record_ticks": 435,
+ "item_components": true,
+ "cleanup": [
+  "fill $(-1,0,-2) $(3,3,4) minecraft:air"
+ ]
+}

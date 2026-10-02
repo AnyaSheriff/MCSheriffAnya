@@ -49,6 +49,7 @@ mod weather;
 mod custom_tnt;
 mod permissions;
 mod containers;
+mod furnace;
 mod crafting;
 mod window;
 mod skins;

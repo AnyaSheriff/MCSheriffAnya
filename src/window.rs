@@ -20,6 +20,10 @@ pub const PLAYER_SLOTS: usize = 36;
 pub struct Window<'a> {
     pub container: &'a mut [Option<Stack>],
     pub inventory: &'a mut Inventory,
+
+    /// Вид хранилища: у печи и варочной стойки свои правила ячеек
+    /// (furnace::may_place, furnace::slot_limit). None — без правил.
+    pub kind: Option<crate::containers::Kind>,
 }
 
 impl Window<'_> {
@@ -36,6 +40,22 @@ impl Window<'_> {
             0..27 => Some(inventory::FIRST_MAIN + below as i32),
             27..36 => Some(inventory::FIRST_HOTBAR + (below - 27) as i32),
             _ => None,
+        }
+    }
+
+    /// Можно ли положить этот предмет в слот окна рукой.
+    fn may_place(&self, slot: usize, item: i32) -> bool {
+        match self.kind {
+            Some(kind) if slot < self.container.len() => crate::furnace::may_place(kind, slot, item),
+            _ => true,
+        }
+    }
+
+    /// Сколько этого предмета влезает в слот окна.
+    fn limit(&self, slot: usize, stack: &Stack) -> i32 {
+        match self.kind {
+            Some(kind) if slot < self.container.len() => crate::furnace::slot_limit(kind, slot, stack.item).min(stack.limit()),
+            _ => stack.limit(),
         }
     }
 
@@ -104,6 +124,23 @@ impl Window<'_> {
 
         let there = self.get(index);
 
+        // В выход печи и в чужую ячейку стойки ничего не кладётся: такой же
+        // предмет из выхода добавляется к курсору (вики, Furnace).
+        if let Some(held) = cursor
+            && !self.may_place(index, held.item)
+        {
+            if let Some(there) = there
+                && held.stacks_with(&there)
+            {
+                let moved = (held.limit() - held.count).max(0).min(there.count);
+
+                self.inventory.set_cursor(Some(held.with_count(held.count + moved)));
+                self.set(index, remainder(there, there.count - moved));
+            }
+
+            return Click { understood: true, thrown: None };
+        }
+
         match (cursor, there, button) {
             (None, Some(stack), 0) => {
                 self.inventory.set_cursor(Some(stack));
@@ -117,23 +154,28 @@ impl Window<'_> {
             }
             (None, None, _) => {}
             (Some(held), None, 0) => {
-                self.set(index, Some(held));
-                self.inventory.set_cursor(None);
+                let placed = held.count.min(self.limit(index, &held));
+
+                self.set(index, Some(held.with_count(placed)));
+                self.inventory.set_cursor(remainder(held, held.count - placed));
             }
             (Some(held), None, _) => {
                 self.set(index, Some(held.with_count(1)));
                 self.inventory.set_cursor(take_one(Some(held)));
             }
             (Some(held), Some(there), button) if held.stacks_with(&there) => {
-                let room = (there.limit() - there.count).max(0);
+                let room = (self.limit(index, &there) - there.count).max(0);
                 let moved = if button == 0 { room.min(held.count) } else { room.min(1) };
 
                 self.set(index, Some(there.with_count(there.count.saturating_add(moved))));
                 self.inventory.set_cursor(remainder(held, held.count - moved));
             }
             (Some(held), Some(there), _) => {
-                self.set(index, Some(held));
-                self.inventory.set_cursor(Some(there));
+                // Больше, чем влезает в ячейку, не меняется (бутылки стойки).
+                if held.count <= self.limit(index, &held) {
+                    self.set(index, Some(held));
+                    self.inventory.set_cursor(Some(there));
+                }
             }
         }
 
@@ -153,10 +195,10 @@ impl Window<'_> {
         };
 
         let size = self.container.len();
-        let targets: Vec<usize> = if index < size {
-            (size..self.len()).rev().collect()
-        } else {
-            (0..size).collect()
+        let targets: Vec<usize> = match self.kind.filter(|kind| crate::furnace::is_oven(*kind) || *kind == crate::containers::Kind::BrewingStand) {
+            Some(kind) => special_targets(kind, index, size, self.len(), stack.item),
+            None if index < size => (size..self.len()).rev().collect(),
+            None => (0..size).collect(),
         };
 
         let left = self.pour(stack, &targets);
@@ -178,7 +220,7 @@ impl Window<'_> {
             if let Some(there) = self.get(target)
                 && there.stacks_with(&stack)
             {
-                let moved = (there.limit() - there.count).max(0).min(left);
+                let moved = (self.limit(target, &there) - there.count).max(0).min(left);
 
                 if moved > 0 {
                     self.set(target, Some(there.with_count(there.count + moved)));
@@ -193,7 +235,7 @@ impl Window<'_> {
             }
 
             if self.get(target).is_none() {
-                let moved = left.min(blocks::stack_size(stack.item));
+                let moved = left.min(blocks::stack_size(stack.item)).min(self.limit(target, &stack));
 
                 self.set(target, Some(stack.with_count(moved)));
                 left -= moved;
@@ -218,6 +260,13 @@ impl Window<'_> {
 
         let here = self.get(index);
         let there = self.inventory.slot(own);
+
+        // Из панели в ячейку печи или стойки — только то, что туда кладётся.
+        if let Some(stack) = there
+            && (!self.may_place(index, stack.item) || stack.count > self.limit(index, &stack))
+        {
+            return true;
+        }
 
         self.set(index, there);
         self.inventory.set(own, here);
@@ -282,6 +331,58 @@ impl Window<'_> {
     }
 }
 
+/// Куда уходит стопка при Shift-щелчке в окне печи или стойки. Из печи —
+/// в инвентарь (из выхода — с правого края панели, как из сундука, из
+/// прочих ячеек — с рюкзака) [проверить] порядок. Из инвентаря: годное
+/// для плавки — во вход, топливо — в топливо, бутылки — в бутылочные
+/// ячейки, огненный порошок — в топливо стойки, потом в ингредиент,
+/// ингредиент — в ингредиент; прочее — между рюкзаком и панелью.
+fn special_targets(kind: crate::containers::Kind, index: usize, size: usize, len: usize, item: i32) -> Vec<usize> {
+    use crate::furnace;
+
+    if index < size {
+        return if furnace::is_oven(kind) && index == furnace::OUTPUT {
+            (size..len).rev().collect()
+        } else {
+            (size..len).collect()
+        };
+    }
+
+    let own_side = || -> Vec<usize> {
+        if index < size + 27 {
+            (size + 27..len).collect()
+        } else {
+            (size..size + 27).collect()
+        }
+    };
+
+    if furnace::is_oven(kind) {
+        if furnace::smelt(kind, item).is_some() {
+            return vec![furnace::INPUT];
+        }
+
+        if furnace::burn_time(item).is_some() {
+            return vec![furnace::FUEL];
+        }
+
+        return own_side();
+    }
+
+    if blocks::item_name(item) == Some("blaze_powder") {
+        return vec![furnace::POWDER, furnace::INGREDIENT];
+    }
+
+    if furnace::is_bottle(item) {
+        return vec![0, 1, 2];
+    }
+
+    if furnace::is_ingredient(item) {
+        return vec![furnace::INGREDIENT];
+    }
+
+    own_side()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -296,7 +397,7 @@ mod tests {
 
         chest[0] = Some(Stack::new(STONE, 10));
 
-        let mut window = Window { container: &mut chest, inventory: &mut inventory };
+        let mut window = Window { container: &mut chest, inventory: &mut inventory, kind: None };
 
         assert!(window.click(0, 0, 1).understood);
         assert_eq!(window.get(0), None);
@@ -313,7 +414,7 @@ mod tests {
         chest[5] = Some(Stack::new(STONE, 60));
         inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(STONE, 10)));
 
-        let mut window = Window { container: &mut chest, inventory: &mut inventory };
+        let mut window = Window { container: &mut chest, inventory: &mut inventory, kind: None };
         let hotbar_in_window = 27 + 27;
 
         assert!(window.click(hotbar_in_window, 0, 1).understood);
@@ -331,11 +432,54 @@ mod tests {
 
         hopper[2] = Some(Stack::new(STONE, 7));
 
-        let mut window = Window { container: &mut hopper, inventory: &mut inventory };
+        let mut window = Window { container: &mut hopper, inventory: &mut inventory, kind: None };
 
         window.click(2, 1, 0);
         assert_eq!(window.get(2), Some(Stack::new(STONE, 3)));
         window.click(5, 0, 0);
         assert_eq!(inventory.slot(inventory::FIRST_MAIN), Some(Stack::new(STONE, 4)));
+    }
+
+    /// Окно печи: Shift-щелчок кладёт уголь в топливо, руду — во вход, а в
+    /// выход курсором ничего не положить.
+    #[test]
+    fn a_furnace_window_sorts_by_slot_rules() {
+        let id = |name| blocks::item_named(name).expect("предмет");
+        let mut furnace = vec![None; 3];
+        let mut inventory = Inventory::new();
+
+        inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(id("coal"), 5)));
+        inventory.set(inventory::FIRST_HOTBAR + 1, Some(Stack::new(id("iron_ore"), 3)));
+
+        let mut window = Window { container: &mut furnace, inventory: &mut inventory, kind: Some(crate::containers::Kind::Furnace) };
+        let hotbar_in_window = 3 + 27;
+
+        window.click(hotbar_in_window, 0, 1);
+        window.click(hotbar_in_window + 1, 0, 1);
+        assert_eq!(window.get(crate::furnace::FUEL), Some(Stack::new(id("coal"), 5)));
+        assert_eq!(window.get(crate::furnace::INPUT), Some(Stack::new(id("iron_ore"), 3)));
+
+        window.click(crate::furnace::FUEL as i32, 0, 0);
+        window.click(crate::furnace::OUTPUT as i32, 0, 0);
+        assert_eq!(window.get(crate::furnace::OUTPUT), None);
+        assert_eq!(window.inventory.cursor(), Some(Stack::new(id("coal"), 5)));
+    }
+
+    /// Окно стойки: в бутылочную ячейку — одна бутылка из стопки.
+    #[test]
+    fn a_brewing_stand_takes_one_bottle_per_slot() {
+        let bottle = blocks::item_named("glass_bottle").expect("бутылка");
+        let mut stand = vec![None; 5];
+        let mut inventory = Inventory::new();
+
+        inventory.set_cursor(Some(Stack::new(bottle, 4)));
+
+        let mut window = Window { container: &mut stand, inventory: &mut inventory, kind: Some(crate::containers::Kind::BrewingStand) };
+
+        window.click(0, 0, 0);
+        window.click(crate::furnace::POWDER as i32, 0, 0);
+        assert_eq!(window.get(0), Some(Stack::new(bottle, 1)));
+        assert_eq!(window.get(crate::furnace::POWDER), None);
+        assert_eq!(window.inventory.cursor(), Some(Stack::new(bottle, 3)));
     }
 }

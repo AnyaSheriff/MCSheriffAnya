@@ -4168,8 +4168,20 @@ async fn open_window(
 
     let crafter = kind == containers::Kind::Crafter;
 
-    player.window = Some(OpenWindow { id, halves, cart: None, shown: slots, lectern, crafter });
+    // Печь и стойка: свойства окна (горение, плавка, варка) — все сразу
+    // после содержимого (чёрный ящик, furnace-smelt: 0, 1, 2, 3).
+    let props = {
+        let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+        world.container(at.0, at.1, at.2).map(crate::furnace::properties).unwrap_or_default()
+    };
+
+    player.window = Some(OpenWindow { id, halves, cart: None, shown: slots, lectern, crafter, kind: Some(kind), props: props.clone() });
     send_window_content(stream, player).await?;
+
+    for (property, value) in props.into_iter().enumerate() {
+        send_window_property(stream, id, property as i16, value).await?;
+    }
 
     if lectern {
         send_window_property(stream, id, 0, page as i16).await?;
@@ -4222,7 +4234,7 @@ async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &m
     body.extend_from_slice(&nbt::translated(title));
     write_body(stream, body).await?;
 
-    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false });
+    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new() });
     send_window_content(stream, player).await
 }
 
@@ -4340,6 +4352,16 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
     let changed: Vec<usize> = (0..now.len()).filter(|&slot| now[slot] != window.shown[slot]).collect();
     let result = window.crafter.then(|| (window.result_slot(), crate::crafting::craft(&window.shown), crate::crafting::craft(&now)));
 
+    // Свойства печи и стойки, снятые вместе с содержимым: уходят после
+    // ячеек, только сменившиеся (чёрный ящик, furnace-smelt).
+    let props: Vec<i16> = if window.props.is_empty() {
+        Vec::new()
+    } else {
+        let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+        window.halves.first().and_then(|place| world.published_props.get(place).cloned()).unwrap_or_default()
+    };
+
     for slot in changed {
         let stack = now[slot];
 
@@ -4355,6 +4377,19 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
         && before != after
     {
         send_window_slot(stream, player, slot, after).await?;
+    }
+
+    if let Some(window) = player.window.as_mut()
+        && props.len() == window.props.len()
+    {
+        let id = window.id;
+        let changed: Vec<(usize, i16)> = props.iter().enumerate().filter(|&(index, value)| window.props[index] != *value).map(|(index, value)| (index, *value)).collect();
+
+        window.props = props;
+
+        for (property, value) in changed {
+            send_window_property(stream, id, property as i16, value).await?;
+        }
     }
 
     Ok(())
@@ -8607,6 +8642,9 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
     let halves = window.halves.clone();
     let cart = window.cart;
     let size = window.shown.len();
+    let kind = window.kind;
+    let feet = (player.x, player.y, player.z);
+    let mut xp_points = 0;
 
     let (before, after, thrown) = {
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
@@ -8631,7 +8669,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
 
         let before = snapshot(&slots, &player.inventory);
         let (slots_before, inventory_before) = (slots.clone(), player.inventory.clone());
-        let mut click = window::Window { container: &mut slots, inventory: &mut player.inventory }.click(slot as i16 as i32, button as i8, mode);
+        let mut click = window::Window { container: &mut slots, inventory: &mut player.inventory, kind }.click(slot as i16 as i32, button as i8, mode);
 
         // В выключенную ячейку крафтера ничего не кладётся (вики, Crafter:
         // «Disabled slots cannot have items put in them») — такой щелчок
@@ -8639,7 +8677,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
         if let Some(crafter) = halves.first().and_then(|&(x, y, z)| world.container(x, y, z)).filter(|c| c.kind == containers::Kind::Crafter)
             && slots.iter().enumerate().any(|(index, stack)| stack.is_some() && crafter.is_disabled(index))
         {
-            slots = slots_before;
+            slots.clone_from(&slots_before);
             player.inventory = inventory_before;
             click.thrown = None;
         }
@@ -8655,6 +8693,18 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
             None => containers::store_window_slots(&mut world, &halves, &slots),
         }
 
+        // Из выхода печи забрали выплавленное — игроку весь накопленный
+        // опыт.
+        if kind.is_some_and(crate::furnace::is_oven)
+            && let Some(&place) = halves.first()
+        {
+            let count = |slots: &[Option<Stack>]| slots.get(crate::furnace::OUTPUT).copied().flatten().map_or(0, |stack| stack.count);
+
+            if count(&slots) < count(&slots_before) {
+                xp_points = crate::furnace::take_experience(&mut world, place);
+            }
+        }
+
         redstone::settle(&mut world);
 
         (before, snapshot(&slots, &player.inventory), click.thrown)
@@ -8662,6 +8712,18 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
 
     if let Some(stack) = thrown {
         throw_out(shared, player, stack);
+    }
+
+    // Опыт из печи — шариками у ног сразу, ещё до ответа на щелчок
+    // (чёрный ящик, furnace-smelt: появление шарика раньше ячеек окна).
+    if xp_points > 0 {
+        let mut rng = crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32) ^ (*shared.ticks.borrow() << 20));
+
+        shared
+            .items_in(player.dimension)
+            .lock()
+            .expect("предметы захвачены другим потоком")
+            .drop_experience(xp_points, feet, &mut || shared.next_entity_id(), &mut rng);
     }
 
     if let Some(window) = player.window.as_mut() {
@@ -9107,6 +9169,12 @@ struct OpenWindow {
     /// Окно крафтера: после рюкзака и панели — ячейка с тем, что выйдет
     /// (чёрный ящик, crafter-slots: ячейка 45).
     crafter: bool,
+
+    /// Вид хранилища (у вагонетки — None): правила ячеек печи и стойки.
+    kind: Option<containers::Kind>,
+
+    /// Свойства окна печи или стойки, какими их знает клиент.
+    props: Vec<i16>,
 }
 
 impl OpenWindow {

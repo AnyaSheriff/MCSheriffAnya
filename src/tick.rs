@@ -1733,6 +1733,21 @@ fn spill_containers(shared: &Shared, dimension: Dimension, world: &mut World) {
                 .expect("предметы захвачены другим потоком")
                 .drop_item(entity_id, stack, (x as f64 + dx, y as f64 + 0.5, z as f64 + dz), (0.0, 0.2, 0.0), items::MINED_DELAY);
         }
+
+        // Сломанная печь роняет и накопленный опыт (вики, Smelting: «any
+        // accumulated experience … dropped»).
+        let points = if container.heat.xp > 0.0 { crate::furnace::whole_points(container.heat.xp, world.random_unit()) } else { 0 };
+
+        if points > 0 {
+            let mut rng = crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32) ^ world.tick());
+
+            shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").drop_experience(
+                points,
+                (x as f64 + 0.5, y as f64 + 0.5, z as f64 + 0.5),
+                &mut || shared.next_entity_id(),
+                &mut rng,
+            );
+        }
     }
 }
 

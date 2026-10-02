@@ -1,0 +1,52 @@
+{
+ "name": "furnace-blast",
+ "about": "Плавильная печь с сырым железом и углём плавит вдвое быстрее (100 тактов); коптильне с говядиной дают палку — она прогорает вдвое быстрее, печь гаснет, не докоптив. Окно плавильной печи открыто — свойства и ячейки по тактам.",
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    1
+   ],
+   "state": "minecraft:blast_furnace[facing=south,lit=false]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    1
+   ],
+   "state": "minecraft:smoker[facing=south,lit=false]"
+  }
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    1,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 10,
+   "cmd": "item replace block $(1,0,1) container.1 with minecraft:coal 1"
+  },
+  {
+   "after": 11,
+   "cmd": "item replace block $(0,0,1) container.1 with minecraft:stick 1"
+  },
+  {
+   "after": 130,
+   "close": true
+  }
+ ],
+ "record_ticks": 140,
+ "cleanup": [
+  "fill $(-1,0,-2) $(3,3,4) minecraft:air"
+ ],
+ "setup": [
+  "item replace block $(1,0,1) container.0 with minecraft:raw_iron 1",
+  "item replace block $(0,0,1) container.0 with minecraft:beef 1"
+ ]
+}

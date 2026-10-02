@@ -1,0 +1,23 @@
+{
+ "name": "brewing-awkward",
+ "about": "Варочная стойка с тремя бутылками воды и незерским наростом: окно открыто, огненный порошок кладётся командой — 400 тактов варки, свойства окна (время, топливо), ячейки, звук.",
+ "blocks": [
+  {"at": [1, 0, 1], "state": "minecraft:brewing_stand[has_bottle_0=false,has_bottle_1=false,has_bottle_2=false]"}
+ ],
+ "setup": [
+  "item replace block $(1,0,1) container.0 with minecraft:potion[potion_contents={potion:\"minecraft:water\"}]",
+  "item replace block $(1,0,1) container.1 with minecraft:potion[potion_contents={potion:\"minecraft:water\"}]",
+  "item replace block $(1,0,1) container.2 with minecraft:potion[potion_contents={potion:\"minecraft:water\"}]",
+  "item replace block $(1,0,1) container.3 with minecraft:nether_wart 2"
+ ],
+ "actions": [
+  {"after": 0, "click": [1, 0, 1]},
+  {"after": 10, "cmd": "item replace block $(1,0,1) container.4 with minecraft:blaze_powder 1"},
+  {"after": 425, "close": true}
+ ],
+ "record_ticks": 435,
+ "item_components": true,
+ "cleanup": [
+  "fill $(-1,0,-2) $(3,3,4) minecraft:air"
+ ]
+}

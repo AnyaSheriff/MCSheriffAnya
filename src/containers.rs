@@ -44,6 +44,16 @@ pub enum Kind {
     /// Резной книжный шкаф: шесть ячеек под книги и последняя тронутая
     /// ячейка (redstone/bookshelf.rs).
     ChiseledBookshelf,
+
+    /// Печь, плавильная печь, коптильня: вход, топливо, выход и жар
+    /// (furnace.rs).
+    Furnace,
+    BlastFurnace,
+    Smoker,
+
+    /// Варочная стойка: три бутылки, ингредиент, огненный порошок
+    /// (furnace.rs).
+    BrewingStand,
 }
 
 impl Kind {
@@ -60,6 +70,10 @@ impl Kind {
             "lectern" => Kind::Lectern,
             "crafter" => Kind::Crafter,
             "chiseled_bookshelf" => Kind::ChiseledBookshelf,
+            "furnace" => Kind::Furnace,
+            "blast_furnace" => Kind::BlastFurnace,
+            "smoker" => Kind::Smoker,
+            "brewing_stand" => Kind::BrewingStand,
             name if name.ends_with("copper_chest") => Kind::CopperChest,
             name if name.ends_with("_shelf") => Kind::Shelf,
             _ => return None,
@@ -78,7 +92,8 @@ impl Kind {
             Kind::Chest | Kind::TrappedChest | Kind::Barrel | Kind::CopperChest => 27,
             Kind::Shelf => 3,
             Kind::ChiseledBookshelf => 6,
-            Kind::Hopper => 5,
+            Kind::Hopper | Kind::BrewingStand => 5,
+            Kind::Furnace | Kind::BlastFurnace | Kind::Smoker => 3,
             Kind::Dropper | Kind::Dispenser | Kind::Crafter => 9,
             Kind::Jukebox | Kind::Lectern => 1,
         }
@@ -101,6 +116,10 @@ impl Kind {
             Kind::Jukebox => 4,
             Kind::Lectern => 30,
             Kind::Crafter => 43,
+            Kind::Furnace => 0,
+            Kind::BlastFurnace => 29,
+            Kind::Smoker => 28,
+            Kind::BrewingStand => 12,
         }
     }
 
@@ -119,6 +138,10 @@ impl Kind {
             Kind::CopperChest => 9,
             Kind::Shelf => 10,
             Kind::ChiseledBookshelf => 11,
+            Kind::Furnace => 12,
+            Kind::BlastFurnace => 13,
+            Kind::Smoker => 14,
+            Kind::BrewingStand => 15,
         }
     }
 
@@ -136,6 +159,10 @@ impl Kind {
             9 => Kind::CopperChest,
             10 => Kind::Shelf,
             11 => Kind::ChiseledBookshelf,
+            12 => Kind::Furnace,
+            13 => Kind::BlastFurnace,
+            14 => Kind::Smoker,
+            15 => Kind::BrewingStand,
             _ => return None,
         })
     }
@@ -173,6 +200,9 @@ pub struct Container {
     /// Крафтер: сколько тактов ещё держится `crafting=true`
     /// (`crafting_ticks_remaining`), 0 — не крафтит.
     pub crafting: i32,
+
+    /// Печь и варочная стойка: жар (furnace.rs).
+    pub heat: crate::furnace::Heat,
 }
 
 impl Container {
@@ -189,6 +219,7 @@ impl Container {
             pages: 0,
             disabled: 0,
             crafting: 0,
+            heat: crate::furnace::Heat::default(),
         }
     }
 
@@ -263,6 +294,7 @@ impl Container {
             }
             // Шкаф помнит последнюю тронутую ячейку (−1 — никакой).
             Kind::ChiseledBookshelf => out.push(self.page.clamp(-1, 5) as i8 as u8),
+            Kind::Furnace | Kind::BlastFurnace | Kind::Smoker | Kind::BrewingStand => crate::furnace::write_heat(&self.heat, out),
             _ => {}
         }
     }
@@ -316,6 +348,9 @@ impl Container {
                 container.crafting = take(1)?[0] as i32;
             }
             Kind::ChiseledBookshelf => container.page = i32::from(take(1)?[0] as i8),
+            Kind::Furnace | Kind::BlastFurnace | Kind::Smoker | Kind::BrewingStand => {
+                container.heat = crate::furnace::read_heat(&mut |count| take(count).map(<[u8]>::to_vec))?;
+            }
             _ => {}
         }
 
@@ -504,6 +539,13 @@ pub fn menu(kind: Kind, halves: usize) -> (i32, &'static str) {
         Kind::Dispenser => (6, "container.dispenser"),
         Kind::Lectern => (17, "container.lectern"),
         Kind::Crafter => (7, "container.crafter"),
+        // Реестр `minecraft:menu` (tools/blackbox/data/registries.json);
+        // заголовки сняты чёрным ящиком (furnace-smelt, furnace-blast,
+        // brewing-awkward).
+        Kind::Furnace => (14, "container.furnace"),
+        Kind::BlastFurnace => (10, "container.blast_furnace"),
+        Kind::Smoker => (22, "container.smoker"),
+        Kind::BrewingStand => (11, "container.brewing"),
         // Своего окна у проигрывателя, полки и шкафа нет: сюда не доходит.
         Kind::Jukebox => (0, "container.jukebox"),
         Kind::Shelf => (0, "container.shelf"),
@@ -828,13 +870,26 @@ pub fn after_change(world: &mut World) {
 /// слева ячейку, где есть место, — пустую или с тем же предметом.
 /// Возвращает, куда положено (место половины), или None — некуда.
 fn insert_one(world: &mut World, halves: &[Pos], like: Stack) -> Option<Pos> {
+    insert_from(world, halves, like, (0, -1, 0))
+}
+
+/// То же, но предмет летит в направлении `travel`: печь и варочная стойка
+/// принимают его в разные ячейки с разных сторон (furnace::insert_slots).
+fn insert_from(world: &mut World, halves: &[Pos], like: Stack, travel: (i32, i32, i32)) -> Option<Pos> {
     for &(x, y, z) in halves {
         if !accepts(world, (x, y, z), like.item) {
             continue;
         }
 
         let container = world.container(x, y, z)?;
-        let slot = if container.kind == Kind::Crafter {
+        let slot = if let Some(allowed) = crate::furnace::insert_slots(container.kind, travel, like.item) {
+            let kind = container.kind;
+
+            allowed.into_iter().find(|&slot| match container.slots.get(slot).copied().flatten() {
+                None => true,
+                Some(stack) => stack.stacks_with(&like) && stack.count < crate::furnace::slot_limit(kind, slot, like.item),
+            })
+        } else if container.kind == Kind::Crafter {
             crate::redstone::crafter::slot_for(container, like.item)
         } else if container.kind == Kind::ChiseledBookshelf {
             // В шкафу по книге на ячейку: первая пустая (вики, Chiseled
@@ -873,12 +928,12 @@ fn insert_one(world: &mut World, halves: &[Pos], like: Stack) -> Option<Pos> {
 /// Кладёт стопку в хранилище перед крафтером (все его половины) по одной
 /// штуке, как выбрасыватель; возвращает, что не влезло. Воронка, получившая
 /// первый предмет в пустое нутро, ждёт, как от выбрасывателя.
-pub fn insert_stack(world: &mut World, halves: &[Pos], stack: Stack) -> Option<Stack> {
+pub fn insert_stack(world: &mut World, halves: &[Pos], stack: Stack, travel: (i32, i32, i32)) -> Option<Stack> {
     let was_empty = halves.iter().all(|&half| is_empty_at(world, half));
     let mut left = stack.count;
 
     while left > 0 {
-        let Some(into) = insert_one(world, halves, stack) else {
+        let Some(into) = insert_from(world, halves, stack, travel) else {
             break;
         };
 
@@ -918,6 +973,21 @@ fn remove_one(world: &mut World, (x, y, z): Pos, slot: usize) {
             *stack = stack.and_then(|there| (there.count > 1).then(|| there.with_count(there.count - 1)));
         }
     });
+}
+
+/// Что можно вытянуть снизу из хранилища, по порядку перебора: ячейка и
+/// стопка. У печи — выход и пустое ведро, у стойки — бутылки
+/// (furnace::may_extract).
+fn extractable(world: &World, (x, y, z): Pos) -> Vec<(usize, Stack)> {
+    let Some(container) = world.container(x, y, z) else {
+        return Vec::new();
+    };
+
+    crate::furnace::extract_order(container.kind, container.slots.len())
+        .into_iter()
+        .filter_map(|slot| Some((slot, container.slots.get(slot).copied().flatten()?)))
+        .filter(|(slot, stack)| crate::furnace::may_extract(container.kind, *slot, stack.item))
+        .collect()
 }
 
 /// Пустое ли хранилище в этом месте.
@@ -960,6 +1030,9 @@ pub fn tick_hoppers(world: &mut World, items: &mut crate::items::Items) {
             Some(Kind::Jukebox) => crate::redstone::tick_jukebox(world, pos),
             // Крафтер отсчитывает такты `crafting=true`.
             Some(Kind::Crafter) => crate::redstone::crafter::tick(world, pos),
+            // Печи и варочная стойка — свой такт (furnace.rs).
+            Some(Kind::Furnace | Kind::BlastFurnace | Kind::Smoker) => crate::furnace::tick_oven(world, pos),
+            Some(Kind::BrewingStand) => crate::furnace::tick_brewing(world, pos),
             _ => {}
         }
     }
@@ -1034,7 +1107,7 @@ fn push(world: &mut World, items: &mut crate::items::Items, pos: Pos, state: i32
             continue;
         };
 
-        if let Some(into) = insert_one(world, &target_halves, *stack) {
+        if let Some(into) = insert_from(world, &target_halves, *stack, facing) {
             remove_one(world, pos, slot);
             cool_receiver(world, into, was_empty);
             return true;
@@ -1056,14 +1129,8 @@ fn pull(world: &mut World, items: &mut crate::items::Items, pos: Pos) -> bool {
                 continue;
             }
 
-            let slots = world.container(half.0, half.1, half.2).map(|c| c.slots.clone()).unwrap_or_default();
-
-            for (slot, stack) in slots.iter().enumerate() {
-                let Some(stack) = stack else {
-                    continue;
-                };
-
-                if insert_one(world, &[pos], *stack).is_some() {
+            for (slot, stack) in extractable(world, half) {
+                if insert_one(world, &[pos], stack).is_some() {
                     remove_one(world, half, slot);
                     return true;
                 }
@@ -1219,15 +1286,9 @@ pub fn cart_pull(world: &mut World, items: &mut crate::items::Items, slots: &mut
                 continue;
             }
 
-            let there = world.container(half.0, half.1, half.2).map(|c| c.slots.clone()).unwrap_or_default();
-
-            for (slot, stack) in there.iter().enumerate() {
-                let Some(stack) = stack else {
-                    continue;
-                };
-
-                if let Some(into) = fits(slots, *stack) {
-                    put(slots, into, *stack);
+            for (slot, stack) in extractable(world, half) {
+                if let Some(into) = fits(slots, stack) {
+                    put(slots, into, stack);
                     remove_one(world, half, slot);
                     return true;
                 }
@@ -1334,7 +1395,7 @@ pub fn dispense(world: &mut World, pos: Pos) {
 
             let was_empty = target.iter().all(|&half| is_empty_at(world, half));
 
-            if let Some(into) = insert_one(world, &target, stack) {
+            if let Some(into) = insert_from(world, &target, stack, facing) {
                 remove_one(world, pos, slot);
                 cool_receiver(world, into, was_empty);
             }

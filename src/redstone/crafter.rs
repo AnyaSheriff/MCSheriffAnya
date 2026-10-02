@@ -174,7 +174,7 @@ fn out(world: &mut World, pos: Pos, facing: (i32, i32, i32), stack: Stack) -> bo
     let front = (pos.0 + facing.0, pos.1 + facing.1, pos.2 + facing.2);
     let target = containers::halves(world, front);
     let left = if !target.is_empty() && containers::can_open(world, &target) {
-        containers::insert_stack(world, &target, stack)
+        containers::insert_stack(world, &target, stack, facing)
     } else {
         Some(stack)
     };
