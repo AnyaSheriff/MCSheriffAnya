@@ -25,6 +25,44 @@ pub enum Source {
 
     /// Человек за консолью сервера.
     Console,
+
+    /// Командный блок (command_block.rs): место, измерение и имя («@» или
+    /// своё). Уровень прав — 2, как у оригинала.
+    Block { x: i32, y: i32, z: i32, dimension: Dimension, name: String },
+}
+
+/// Команды, которых командному блоку нельзя: уровень прав 3 и 4 (вики,
+/// Permission level: у командного блока уровень 2).
+const ABOVE_BLOCK_LEVEL: &[&str] = &[
+    "ban", "ban-ip", "banlist", "debug", "deop", "jfr", "kick", "op", "pardon", "pardon-ip", "perf", "save-all", "save-off", "save-on",
+    "setidletimeout", "stop", "transfer", "whitelist",
+];
+
+thread_local! {
+    /// Итог последней команды этого потока (SuccessCount командного блока),
+    /// если команда его назвала (`note_result`).
+    static RESULT: std::cell::Cell<Option<i32>> = const { std::cell::Cell::new(None) };
+}
+
+/// Команда называет свой итог: 0 — не удалась, иначе — сколько сделано.
+pub(crate) fn note_result(result: i32) {
+    RESULT.with(|cell| cell.set(Some(result)));
+}
+
+/// Забирает итог, названный последней командой.
+pub(crate) fn take_result() -> Option<i32> {
+    RESULT.with(|cell| cell.take())
+}
+
+/// Похож ли ответ на отказ — для команд, что итог не называют: такие ответы
+/// у нас начинаются с отрицания или с подсказки, как писать команду.
+pub(crate) fn looks_failed(reply: &str) -> bool {
+    const FAILED: &[&str] = &[
+        "Не ", "Нет ", "Неизвестн", "Нужно", "Нельзя", "На это", "Такого", "Укажи", "Кому", "Кого", "Что ", "Как ", "Сколько", "Это ", "Слишком",
+        "Пока понимаю", "Ожидалось", "Там уже", "Остановить сервер можно",
+    ];
+
+    FAILED.iter().any(|start| reply.starts_with(start))
 }
 
 /// Что тому, кто вызвал команду, остаётся сделать самому.
@@ -85,6 +123,7 @@ fn allowed(command: &str, source: &Source, shared: &Shared) -> bool {
 
     match source {
         Source::Console => true,
+        Source::Block { .. } => !ABOVE_BLOCK_LEVEL.contains(&command),
         Source::Player { uuid, .. } => {
             let level = shared
                 .ops
@@ -159,7 +198,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
             let targets = match (named, source) {
                 (Some(named), _) => find_targets(named, source, shared),
                 (None, Source::Player { uuid, name }) => vec![(*uuid, name.clone())],
-                (None, Source::Console) => Vec::new(),
+                (None, _) => Vec::new(),
             };
 
             let Some((uuid, name)) = targets.first().cloned() else {
@@ -311,7 +350,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
             let targets = match (named, source) {
                 (Some(named), _) => find_targets(named, source, shared),
                 (None, Source::Player { uuid, name }) => vec![(*uuid, name.clone())],
-                (None, Source::Console) => Vec::new(),
+                (None, _) => Vec::new(),
             };
 
             if targets.is_empty() {
@@ -332,8 +371,14 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
             Answer::saying(format!("Инвентарь очищен: {}", names_of(&targets)))
         }
         "time" => time(parts.collect::<Vec<&str>>().as_slice(), shared),
-        "setblock" => set_blocks(parts.collect::<Vec<&str>>().as_slice(), shared, dimension_of(source, shared), false),
-        "fill" => set_blocks(parts.collect::<Vec<&str>>().as_slice(), shared, dimension_of(source, shared), true),
+        // Данные блока (`{Command:"say a b"}`) бывают с пробелами — слова
+        // делятся с учётом скобок и кавычек.
+        "setblock" | "fill" => {
+            let words = words_of(command);
+            let words: Vec<&str> = words.iter().skip(1).map(String::as_str).collect();
+
+            set_blocks(&words, source, shared, dimension_of(source, shared), name == "fill")
+        }
         "item" => {
             let parts: Vec<&str> = parts.collect();
 
@@ -381,7 +426,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
             // Сообщение уходит в общую ленту, поэтому в ответе его повторять
             // не надо: сказавший увидит его там же, где все остальные.
             let who = match source {
-                Source::Player { name, .. } => name.clone(),
+                Source::Player { name, .. } | Source::Block { name, .. } => name.clone(),
                 Source::Console => "Server".to_string(),
             };
 
@@ -501,7 +546,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 reply: "Останавливаю сервер".to_string(),
                 effect: Effect::Stop,
             },
-            Source::Player { .. } => Answer::saying(
+            Source::Player { .. } | Source::Block { .. } => Answer::saying(
                 "Остановить сервер можно только из консоли сервера".to_string(),
             ),
         },
@@ -582,6 +627,8 @@ fn origin_of(source: &Source, shared: &Shared) -> (f64, f64, f64) {
             .map(|member| (member.position.x, member.position.y, member.position.z))
             .unwrap_or_default(),
         Source::Console => (0.0, 0.0, 0.0),
+        // У командного блока — середина блока (`Vec3.atCenterOf`).
+        Source::Block { x, y, z, .. } => (*x as f64 + 0.5, *y as f64 + 0.5, *z as f64 + 0.5),
     }
 }
 
@@ -1114,7 +1161,7 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         let targets = if *who == "@s" {
             match source {
                 Source::Player { uuid, name } => vec![(*uuid, name.clone())],
-                Source::Console => Vec::new(),
+                Source::Console | Source::Block { .. } => Vec::new(),
             }
         } else {
             find_targets(who, source, shared)
@@ -1413,6 +1460,20 @@ fn experience(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 /// `gamerule <правило> [значение]`: настоящим считается `keepInventory`,
 /// остальные правила принимаются и молча игнорируются.
 fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
+    // Правила командных блоков (command_block.rs).
+    if let [rule, rest @ ..] = parts
+        && rest.len() <= 1
+        && let Some(answer) = crate::command_block::gamerule(shared, rule, rest.first().copied())
+    {
+        return match answer {
+            Ok(reply) => Answer::saying(reply),
+            Err(why) => {
+                note_result(0);
+                Answer::saying(why)
+            }
+        };
+    }
+
     match parts {
         ["keepInventory" | "keep_inventory", value] => {
             let on = *value == "true";
@@ -1546,6 +1607,7 @@ fn dimension_of(source: &Source, shared: &Shared) -> Dimension {
             .map(|member| member.dimension)
             .unwrap_or_default(),
         Source::Console => Dimension::Overworld,
+        Source::Block { dimension, .. } => *dimension,
     }
 }
 
@@ -1555,10 +1617,57 @@ fn dimension_of(source: &Source, shared: &Shared) -> Dimension {
 /// Как и у обычного сервера, соседи узнают о новом блоке, а редстоун
 /// пересчитывается; своей логики нажатия у поставленного рычага нет.
 /// Область у `fill` ограничена, как в игре, 32 768 блоками.
-fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool) -> Answer {
+/// Слова команды: пробел внутри `{}`, `[]` и кавычек слова не делит.
+pub(crate) fn words_of(command: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut word = String::new();
+    let mut depth = 0i32;
+    let mut quote: Option<char> = None;
+    let mut escaped = false;
+
+    for c in command.chars() {
+        match (quote, c) {
+            (Some(_), _) if escaped => escaped = false,
+            (Some(_), '\\') => escaped = true,
+            (Some(q), c) if c == q => quote = None,
+            (Some(_), _) => {}
+            (None, '"' | '\'') if depth > 0 => quote = Some(c),
+            (None, '{' | '[') => depth += 1,
+            (None, '}' | ']') => depth -= 1,
+            (None, c) if depth <= 0 && c.is_whitespace() => {
+                if !word.is_empty() {
+                    words.push(std::mem::take(&mut word));
+                }
+
+                continue;
+            }
+            _ => {}
+        }
+
+        word.push(c);
+    }
+
+    if !word.is_empty() {
+        words.push(word);
+    }
+
+    words
+}
+
+/// Координата блока: число или `~` со сдвигом от `from` (у командного блока
+/// и игрока — от их места).
+fn block_coordinate(text: &str, from: f64) -> Option<i32> {
+    match text.strip_prefix('~') {
+        Some("") => Some(from.floor() as i32),
+        Some(shift) => Some((from + shift.parse::<f64>().ok()?).floor() as i32),
+        None => text.parse::<i32>().ok(),
+    }
+}
+
+fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension, area: bool) -> Answer {
     let (corners, block) = match (area, parts) {
-        (false, [x, y, z, block]) => ([*x, *y, *z, *x, *y, *z], *block),
-        (true, [x1, y1, z1, x2, y2, z2, block]) => ([*x1, *y1, *z1, *x2, *y2, *z2], *block),
+        (false, [x, y, z, block, ..]) => ([*x, *y, *z, *x, *y, *z], *block),
+        (true, [x1, y1, z1, x2, y2, z2, block, ..]) => ([*x1, *y1, *z1, *x2, *y2, *z2], *block),
         (false, _) => {
             return Answer::saying("Нужно: setblock <x> <y> <z> <блок>".to_string());
         }
@@ -1570,9 +1679,12 @@ fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool)
     };
 
     let mut numbers = [0i32; 6];
+    let from = if corners.iter().any(|text| text.starts_with('~')) { origin_of(source, shared) } else { (0.0, 0.0, 0.0) };
 
-    for (slot, text) in numbers.iter_mut().zip(corners) {
-        let Ok(value) = text.parse::<i32>() else {
+    for (index, (slot, text)) in numbers.iter_mut().zip(corners).enumerate() {
+        let base = [from.0, from.1, from.2][index % 3];
+        let Some(value) = block_coordinate(text, base) else {
+            note_result(0);
             return Answer::saying(format!("Не понял координату «{}»", text));
         };
         *slot = value;
@@ -1584,11 +1696,20 @@ fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool)
         Some(at) => (&block[..at], Some(&block[at..])),
         None => (block, None),
     };
-    let items = match data.map(crate::containers::items_from_text) {
+    // Командному блоку — его поля (command_block.rs), прочим — ячейки.
+    let command_block = blocks::state_from_text(block).and_then(crate::command_block::mode_of).is_some();
+    let items = match data.filter(|_| !command_block).map(crate::containers::items_from_text) {
         Some(Some(items)) => Some(items),
         Some(None) => return Answer::saying(format!("Не понял данные блока: {}", data.unwrap_or(""))),
         None => None,
     };
+
+    if let Some(text) = data.filter(|_| command_block)
+        && let Err(why) = crate::command_block::Data::default().apply_snbt(text)
+    {
+        note_result(0);
+        return Answer::saying(why);
+    }
 
     let Some(state) = blocks::state_from_text(block) else {
         return Answer::saying(format!("Не знаю такого блока: {}", block));
@@ -1646,6 +1767,17 @@ fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool)
                 if world.get_block(x, y, z) != state && world.set_block(x, y, z, state) {
                     changed += 1;
                     placed.push((x, y, z));
+                }
+
+                // Командный блок с данными: поля — из записи, как у
+                // оригинала, и блок считается изменённым, даже если стоял
+                // такой же.
+                if let Some(text) = data.filter(|_| command_block)
+                    && crate::command_block::set_from_command(&mut world, (x, y, z), text) == Ok(true)
+                    && !placed.contains(&(x, y, z))
+                {
+                    changed += 1;
+                    world.announce_change(x, y, z, state);
                 }
 
                 if let Some(items) = &items {
@@ -1713,6 +1845,8 @@ fn set_blocks(parts: &[&str], shared: &Shared, dimension: Dimension, area: bool)
     }
 
     world.save_if_due();
+
+    note_result(changed.min(i32::MAX as usize) as i32);
 
     if area {
         Answer::saying(format!("Заполнено блоков: {}", changed))
@@ -1927,7 +2061,7 @@ fn time_by_name(value: &str) -> Option<i64> {
 fn teleport(parts: &[&str], source: &Source, shared: &Shared, into: Option<Dimension>) -> Answer {
     let own = match source {
         Source::Player { uuid, name } => vec![(*uuid, name.clone())],
-        Source::Console => Vec::new(),
+        Source::Console | Source::Block { .. } => Vec::new(),
     };
 
     // Сперва решаем, кого переносим, потом — куда.
@@ -2126,13 +2260,14 @@ fn find_targets(named: &str, source: &Source, shared: &Shared) -> Vec<([u8; 16],
             .find(|(player, _, _)| player == uuid)
             .map(|(_, _, position)| (position.x, position.y, position.z)),
         Source::Console => None,
+        Source::Block { .. } => Some(origin_of(source, shared)),
     };
 
     match named {
         "@s" => match source {
             Source::Player { uuid, name } => vec![(*uuid, name.clone())],
-            // Консоль командой не является: ей выбирать некого.
-            Source::Console => Vec::new(),
+            // Консоль и блок — не игроки: им выбирать некого.
+            Source::Console | Source::Block { .. } => Vec::new(),
         },
 
         "@a" | "@e" => everyone()

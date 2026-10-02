@@ -102,7 +102,7 @@ const MAX_DEPTH: usize = 256;
 const PRIORITY_INTO_DIODE: i8 = -3;
 const PRIORITY_DEPOWERING: i8 = -2;
 const PRIORITY_DIODE: i8 = -1;
-const PRIORITY_NORMAL: i8 = 0;
+pub(crate) const PRIORITY_NORMAL: i8 = 0;
 
 /// Частоты вибраций (вики, Vibration): `block_activate`, `block_open`,
 /// `note_block_play` — 10; `block_deactivate`, `block_close` — 9;
@@ -423,6 +423,9 @@ impl Moving {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Kind {
     Wire,
+
+    /// Командный блок любого вида (command_block.rs).
+    CommandBlock,
     Piston,
     PistonHead,
 
@@ -558,6 +561,7 @@ fn kind_of(name: &str) -> Kind {
         "observer" => Kind::Observer,
         _ if name.ends_with("copper_bulb") => Kind::Bulb,
         "redstone_lamp" => Kind::Lamp,
+        "command_block" | "chain_command_block" | "repeating_command_block" => Kind::CommandBlock,
         "note_block" => Kind::NoteBlock,
         "chest" | "barrel" => Kind::Chest,
         // Медный сундук любой стадии — как сундук (вики, Copper Chest).
@@ -1504,6 +1508,11 @@ fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
     // Датчик скалка — частоту последней вибрации.
     if block.kind == Kind::Sculk {
         return Some(sculk::comparator_reading(world, pos, &block));
+    }
+
+    // Командный блок — SuccessCount.
+    if block.kind == Kind::CommandBlock {
+        return crate::command_block::comparator_reading(world, pos);
     }
 
     containers::comparator_reading(world, pos)
@@ -2484,6 +2493,14 @@ fn react(world: &mut World, pos: Pos, itself: bool, from_signal: bool) {
 
         // Колокол звонит по фронту сигнала.
         Kind::Bell => components::bell_changed(world, pos, &block),
+
+        // Командный блок запоминает сигнал; на подъёме заводит такт.
+        // Поставленный командой сам сигнал не проверяет [проверить].
+        Kind::CommandBlock => {
+            if !itself {
+                crate::command_block::react(world, pos, any_power(world, pos));
+            }
+        }
 
         // Рельсы: поставленная берёт форму и перестраивает соседок, на
         // «сосед изменился» — опора, развилка, питание.
@@ -4042,6 +4059,10 @@ pub fn ticked(world: &mut World, pos: Pos) {
         // Кафедра: импульс от перелистывания кончился.
         Kind::Lectern => lectern::pulse_over(world, pos),
 
+        // Командный блок: в очередь на выполнение (команду выполнит такт без
+        // замка мира), повторяющийся — ещё и такт на следующий.
+        Kind::CommandBlock => crate::command_block::ticked(world, pos),
+
         // Время вышло: если сигнал так и не вернулся, лампа гаснет.
         Kind::Lamp => {
             if !any_power(world, pos)
@@ -4854,6 +4875,7 @@ pub fn block_entity_type(state: i32) -> Option<i32> {
                 Some("sculk_sensor") => 35,
                 Some("calibrated_sculk_sensor") => 36,
                 Some("sculk_shrieker") => 38,
+                Some("command_block" | "chain_command_block" | "repeating_command_block") => crate::command_block::BLOCK_ENTITY as u8,
                 Some(name) if statue::is_statue(name) => statue::BLOCK_ENTITY as u8,
                 Some(name) if name.ends_with("_hanging_sign") => HANGING_SIGN_ENTITY,
                 Some(name) if name.ends_with("_sign") => SIGN_ENTITY,

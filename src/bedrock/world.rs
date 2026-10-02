@@ -809,6 +809,8 @@ impl BedrockWorld {
             match order {
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
                 crate::players::Order::Respawn => {}
+                // Сообщения командных блоков операторам — пока только Java [проверить].
+                crate::players::Order::Message { .. } => {}
                 // Опыт у Bedrock пока не считается [проверить].
                 crate::players::Order::Experience { .. } | crate::players::Order::XpTaken { .. } => {}
                 // Эффекты голода и насыщения считаются, значка у Bedrock пока нет [проверить].

@@ -91,7 +91,7 @@ pub fn print(level: &str, message: std::fmt::Arguments) {
 
 /// Текущее местное время в виде ЧЧ:ММ:СС (Windows: системные часы через WinAPI).
 #[cfg(windows)]
-fn local_time() -> String {
+pub(crate) fn local_time() -> String {
     let mut now: windows_sys::Win32::Foundation::SYSTEMTIME = unsafe { std::mem::zeroed() };
 
     // SAFETY: функция только заполняет переданную структуру.
@@ -102,7 +102,7 @@ fn local_time() -> String {
 
 /// Текущее местное время в виде ЧЧ:ММ:СС.
 #[cfg(unix)]
-fn local_time() -> String {
+pub(crate) fn local_time() -> String {
     let seconds = match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(since) => since.as_secs() as libc::time_t,
         Err(_) => return UNKNOWN_TIME.to_string(),

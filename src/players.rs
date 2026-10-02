@@ -225,6 +225,10 @@ pub enum Order {
     ClearEffect(crate::survival::EffectKind),
 
     /// Перейти в другое измерение и встать в это место.
+    /// Сообщение в чат только этому игроку (готовый компонент, сетевой
+    /// NBT): «[@: …]» операторам от командного блока.
+    Message { component: Vec<u8> },
+
     ChangeDimension {
         dimension: crate::dimension::Dimension,
         x: f64,

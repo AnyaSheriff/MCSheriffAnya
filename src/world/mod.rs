@@ -335,6 +335,10 @@ struct Chunk {
     /// то, что ложится в файл. Живой моб — в `Items`; записи обновляет
     /// `World::store_mobs` перед записью на диск и выгрузкой.
     mobs: Vec<crate::mob::Mob>,
+
+    /// Данные командных блоков (command_block.rs) по месту внутри чанка, как
+    /// у хранилищ. Запись живёт, пока на месте стоит любой из трёх видов.
+    command_blocks: HashMap<(i32, i32, i32), crate::command_block::Data>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
@@ -426,6 +430,7 @@ impl Chunk {
             custom_tnt: Vec::new(),
             frames: Vec::new(),
             mobs: Vec::new(),
+            command_blocks: HashMap::new(),
         }
     }
 
@@ -676,6 +681,20 @@ impl Chunk {
 
             if let Some(kind) = kind {
                 self.containers.insert(place, containers::Container::new(kind));
+            }
+        }
+
+        // Командный блок: данные переживают смену вида (окно меняет режим —
+        // блок другой, команда та же) и уходят вместе с блоком.
+        let (command, was_command) = (crate::command_block::mode_of(state).is_some(), crate::command_block::mode_of(old).is_some());
+
+        if command != was_command {
+            let place = (x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
+
+            if command {
+                self.command_blocks.insert(place, crate::command_block::Data::default());
+            } else {
+                self.command_blocks.remove(&place);
             }
         }
 
@@ -1023,6 +1042,10 @@ pub struct World {
     /// Хранилища, чей блок сменился другим: их содержимое высыплется.
     spilled: Vec<((i32, i32, i32), containers::Container)>,
 
+    /// Командные блоки, чей запланированный такт пришёл: команду выполнит
+    /// такт уже без замка мира (command_block::run_queued).
+    command_runs: Vec<(i32, i32, i32)>,
+
     /// Сколько игроков смотрят в хранилище (по месту каждой половины).
     viewers: HashMap<(i32, i32, i32), u32>,
 
@@ -1174,6 +1197,7 @@ impl World {
             new_chunks: Vec::new(),
             container_order: Vec::new(),
             contents_changed: Vec::new(),
+            command_runs: Vec::new(),
             sky_cache: HashMap::new(),
             _session: None,
         }
@@ -1322,6 +1346,7 @@ impl World {
             new_chunks: Vec::new(),
             container_order: Vec::new(),
             contents_changed: Vec::new(),
+            command_runs: Vec::new(),
             sky_cache: HashMap::new(),
             _session: Some(session),
         };
@@ -1696,6 +1721,37 @@ impl World {
         self.dirty.insert(chunk_key(x, z));
 
         Some(result)
+    }
+
+    /// Данные командного блока в этом месте, если он там стоит и чанк в памяти.
+    pub fn command_block(&self, x: i32, y: i32, z: i32) -> Option<&crate::command_block::Data> {
+        self.chunks.get(&chunk_key(x, z))?.command_blocks.get(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))
+    }
+
+    /// Правит данные командного блока; чанк помечается изменённым. None —
+    /// командного блока тут нет.
+    pub fn with_command_block<R>(&mut self, x: i32, y: i32, z: i32, change: impl FnOnce(&mut crate::command_block::Data) -> R) -> Option<R> {
+        let chunk = self.chunks.get_mut(&chunk_key(x, z))?;
+
+        // Блок без записи (мир чужой записи, правка руками) получает чистую.
+        crate::command_block::mode_of(chunk.block(x, y, z))?;
+
+        let data = chunk.command_blocks.entry((x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE))).or_default();
+        let result = change(data);
+
+        self.dirty.insert(chunk_key(x, z));
+
+        Some(result)
+    }
+
+    /// Командный блок дождался своего такта: команду выполнит такт.
+    pub fn queue_command_run(&mut self, x: i32, y: i32, z: i32) {
+        self.command_runs.push((x, y, z));
+    }
+
+    /// Забирает командные блоки, ждущие выполнения.
+    pub fn take_command_runs(&mut self) -> Vec<(i32, i32, i32)> {
+        std::mem::take(&mut self.command_runs)
     }
 
     /// Хранилища чанка для пакета чанка: место внутри чанка (x, z), высота

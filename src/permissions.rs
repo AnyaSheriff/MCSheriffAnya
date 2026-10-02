@@ -21,6 +21,8 @@ pub fn allowed(shared: &Shared, player: &[u8; 16], node: &str) -> bool {
 pub fn allowed_for(shared: &Shared, source: &Source, node: &str) -> bool {
     match source {
         Source::Console => true,
+        // Командный блок узлов прав не имеет [проверить].
+        Source::Block { .. } => false,
         Source::Player { uuid, .. } => allowed(shared, uuid, node),
     }
 }

@@ -300,6 +300,8 @@ const selfText = (b, p, meta) => {
     case 'respawn': { const w = p.worldState || p; const d = w.death; text = `Respawn dim=${w.name} mode=${w.gamemode} prev=${w.previousGamemode} death=${d ? d.dimensionName + ' ' + rel(d.location).join(',') : 'none'} portal=${w.portalCooldown} copy=${p.copyMetadata}`; break; }
     case 'experience': text = `Set Experience bar=${rnd(p.experienceBar)} level=${p.level} total=${p.totalExperience}`; break;
     case 'system_chat': if (/death\./.test(simp(p.content)) || scenario.chat) text = `System Chat ${simp(p.content)} overlay=${p.isActionBar}`; break;
+    // Сообщение без профиля (say от командного блока или консоли): текст и имя.
+    case 'profileless_chat': if (scenario.chat) text = `Disguised Chat ${simp(p.message)} name=${simp(p.name)}`; break;
     case 'entity_effect': if (isSelf(p.entityId)) text = `Effect id=${p.effectId} amp=${p.amplifier} dur=${p.duration} flags=${p.flags}`; break;
     case 'remove_entity_effect': if (isSelf(p.entityId)) text = `Remove Effect id=${p.effectId}`; break;
     case 'game_state_change': text = `Game Event reason=${p.reason} value=${rnd(p.gameMode)}`; break;
@@ -442,7 +444,7 @@ const hookWrites = (client) => {
   const write = client.write.bind(client);
   client.write = (name, params) => {
     if (process.env.BB_DEBUG && name !== 'position' && name !== 'position_look' && name !== 'look' && name !== 'keep_alive') console.error('→', name, JSON.stringify(params, (k, v) => typeof v === 'bigint' ? String(v) : v).slice(0, 160));
-    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item')) {
+    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item' || name === 'update_command_block')) {
       // Такт нажатия берём из плана, а не из часов: в какой такт целились,
       // в тот оно и уходит. Часы на этом месте врать не должны, но нажатие
       // ложится ровно на границу счёта, и округление могло бы дрогнуть.
@@ -640,10 +642,14 @@ bot.once('spawn', async () => {
       // куда бы отправка ни дрогнула.
       const at = baseTick + (a.after || 0);
       await waitTick(at, 0);
-      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : a.attack ? 'attack' : a.interact ? 'interact' : a.button !== undefined ? `button ${a.button}` : a.slot_state ? `slot_state ${a.slot_state.slot} ${a.slot_state.state}` : a.hotbar !== undefined ? `hotbar ${a.hotbar}` : a.control ? `control ${a.control.join('=')}` : a.fly !== undefined ? `fly ${a.fly}` : a.respawn ? 'respawn' : a.use ? 'use_item' : a.release ? 'release_use' : JSON.stringify(a);
+      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : a.attack ? 'attack' : a.interact ? 'interact' : a.button !== undefined ? `button ${a.button}` : a.slot_state ? `slot_state ${a.slot_state.slot} ${a.slot_state.state}` : a.hotbar !== undefined ? `hotbar ${a.hotbar}` : a.control ? `control ${a.control.join('=')}` : a.fly !== undefined ? `fly ${a.fly}` : a.respawn ? 'respawn' : a.use ? 'use_item' : a.release ? 'release_use' : a.program ? `program ${a.program.at.join(',')} ${a.program.command}` : JSON.stringify(a);
       pendingDo = { what: a.bot === 2 ? `2: ${what}` : what, tick: at };
       if (a.set) bot.chat(`/setblock ${ORIGIN.x + a.set.at[0]} ${ORIGIN.y + a.set.at[1]} ${ORIGIN.z + a.set.at[2]} ${a.set.state}`);
       if (a.cmd) bot.chat('/' + expand(a.cmd));
+      // Кнопка «Готово» в окне командного блока: пакет Program Command Block
+      // (в mineflayer — update_command_block). mode: 0 — цепной, 1 — повторяющийся,
+      // 2 — импульсный; flags: 1 — хранить вывод, 2 — условный, 4 — всегда активен.
+      if (a.program) bot._client.write('update_command_block', { location: { x: ORIGIN.x + a.program.at[0], y: ORIGIN.y + a.program.at[1], z: ORIGIN.z + a.program.at[2] }, command: a.program.command, mode: a.program.mode ?? 2, flags: a.program.flags ?? 1 });
       // Закрыть открытое окно, как это делает игрок клавишей Esc.
       // Щелчок в открытом окне: слот, кнопка, режим. Что изменилось, робот
       // серверу не подсказывает — пусть сервер сам пришлёт итог.

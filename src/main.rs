@@ -57,6 +57,7 @@ mod players;
 mod shared;
 mod log;
 mod commands;
+mod command_block;
 mod dimension;
 mod dragon_fight;
 mod reports;

@@ -114,6 +114,10 @@ pub struct Shared {
 
     /// Правило `natural_health_regeneration`: лечит ли сытость.
     pub natural_regeneration: std::sync::atomic::AtomicBool,
+
+    /// Правила командных блоков (command_block.rs): `command_block_output`,
+    /// `command_blocks_work`, `max_command_sequence_length`.
+    pub command_block_rules: crate::command_block::Rules,
 }
 
 impl Shared {
@@ -170,6 +174,7 @@ impl Shared {
             keep_inventory: std::sync::atomic::AtomicBool::new(false),
             spawn_mobs: std::sync::atomic::AtomicBool::new(true),
             natural_regeneration: std::sync::atomic::AtomicBool::new(true),
+            command_block_rules: crate::command_block::Rules::default(),
             worlds: [Mutex::new(world), Mutex::new(nether), Mutex::new(end)],
             players: Mutex::new(Players::new()),
             chat: Mutex::new(Chat::new()),

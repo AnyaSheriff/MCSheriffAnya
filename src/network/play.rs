@@ -108,6 +108,11 @@ const PLAYER_ACTION: i32 = 0x29;
 
 /// Serverbound Use Item On — игрок щёлкнул по блоку предметом в руке.
 const USE_ITEM_ON: i32 = 0x42;
+
+/// Program Command Block — кнопка «Готово» в окне командного блока
+/// (minecraft-data 26.1, update_command_block): место, команда, режим,
+/// признаки.
+const PROGRAM_COMMAND_BLOCK: i32 = 0x36;
 const USE_ITEM: i32 = 0x43;
 
 /// Serverbound Set Carried Item — игрок выбрал другой слот панели быстрого
@@ -5331,6 +5336,13 @@ async fn read_and_log_play_packets(
 
             match order {
                 Order::Respawn => {}
+                Order::Message { component } => {
+                    let mut body = encode_varint(SYSTEM_CHAT);
+
+                    body.extend_from_slice(&component);
+                    body.push(0x00);
+                    write_body(stream, body).await?;
+                }
                 Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false }),
                 Order::Effect(effect) => vitals::give_effect(stream, player, effect).await?,
                 Order::ClearEffects => vitals::clear_effects(stream, player, None).await?,
@@ -5795,6 +5807,8 @@ fn is_gated(packet_id: i32) -> bool {
             // к концу такта (он длится доли миллисекунды) — чужие видели его
             // то в такте удара, то в следующем (pvp-sword-charged, 30.09).
             | SWING_ARM | SET_CARRIED_ITEM
+            // Окно командного блока меняет мир — тоже в начале такта.
+            | PROGRAM_COMMAND_BLOCK
     )
 }
 
@@ -5875,6 +5889,37 @@ impl Drop for Inbound {
     }
 }
 
+/// Program Command Block: оператор в творческом режиме задаёт блоку
+/// команду, режим и признаки; в ответ — «Command set: …» (чёрный ящик,
+/// cmdblock-impulse). Прочим — ничего, как у оригинала.
+fn program_command_block(payload: &[u8], player: &PlayerState, shared: &Shared, reaction: &mut Reaction) {
+    let mut cursor = Cursor::new(payload);
+    let (Some((x, y, z)), Some(command), Some(mode), Some(flags)) = (cursor.position(), cursor.string(), cursor.varint(), cursor.u8()) else {
+        return;
+    };
+
+    if !crate::command_block::may_edit(shared, &player.uuid, player.game_mode) {
+        log_debug!("Play: {} не может править командный блок", player.name);
+        return;
+    }
+
+    let answer = {
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+        crate::command_block::program(&mut world, (x, y, z), &command, mode, flags)
+    };
+
+    if let Some(component) = answer {
+        log_info!("{} задал команду блоку в {} {} {}: {}", player.name, x, y, z, command);
+
+        let mut body = encode_varint(SYSTEM_CHAT);
+
+        body.extend_from_slice(&component);
+        body.push(0x00);
+        reaction.packets.push(body);
+    }
+}
+
 /// Отправляет клиенту ответ на его пакет: подтверждение, поправки блоков,
 /// режим игры, текст, содержимое инвентаря, подсказки.
 async fn apply_reaction(
@@ -5883,6 +5928,10 @@ async fn apply_reaction(
     player: &mut PlayerState,
     reaction: &Reaction,
 ) -> io::Result<()> {
+    for body in &reaction.packets {
+        write_body(stream, body.clone()).await?;
+    }
+
     if let Some(sequence) = reaction.acknowledge {
         send_acknowledge_block_change(stream, sequence).await?;
     }
@@ -6027,6 +6076,10 @@ struct Reaction {
     /// Вернуть клиента на место, где он по серверу (его сдвинул поршень, а
     /// клиент прислал прежнее место).
     resync: bool,
+
+    /// Готовые пакеты (номер и тело) — уходят первыми, до подтверждения:
+    /// данные командного блока при открытии окна.
+    packets: Vec<Vec<u8>>,
 }
 
 /// Подсказки клиенту в ответ на Tab.
@@ -6252,6 +6305,7 @@ fn handle_client_packet(
                 }
             }
         }
+        PROGRAM_COMMAND_BLOCK => program_command_block(payload, player, shared, &mut reaction),
         CHANGE_CONTAINER_SLOT_STATE => {
             let mut cursor = Cursor::new(payload);
 
@@ -7215,6 +7269,30 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     if !player.sneaking {
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
+        // Командный блок: оператору в творческом режиме — его данные (окно
+        // клиент открывает сам), потом повтор блока и за гранью (чёрный
+        // ящик, cmdblock-impulse). Прочим щелчок идёт дальше, как по
+        // обычному блоку.
+        let clicked_state = world.get_block(clicked_x, clicked_y, clicked_z);
+
+        if crate::command_block::mode_of(clicked_state).is_some()
+            && crate::command_block::may_edit(shared, &player.uuid, player.game_mode)
+            && let Some(data) = world.command_block(clicked_x, clicked_y, clicked_z)
+        {
+            let mut body = encode_varint(BLOCK_ENTITY_DATA);
+
+            push_packed_position(&mut body, clicked_x, clicked_y, clicked_z);
+            body.extend_from_slice(&encode_varint(crate::command_block::BLOCK_ENTITY));
+            body.extend_from_slice(&data.network_nbt());
+
+            let (bx, by, bz) = offset_towards(clicked_x, clicked_y, clicked_z, face);
+
+            world.tell_directly(clicked_x, clicked_y, clicked_z);
+            world.tell_directly(bx, by, bz);
+
+            return Some(Reaction { packets: vec![body], ..Reaction::accepted(sequence) });
+        }
+
         // Хранилище: окно открывается, если открыть можно. Порядок снят
         // с оригинала чёрным ящиком (chest-open): звук, окно, повтор самого
         // блока, повтор за гранью, и только потом — общая рассылка (бочка
@@ -7439,6 +7517,19 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     // В приключении рычаги и двери трогать можно, а ставить блоки — нет.
     if player.game_mode == GAME_MODE_ADVENTURE {
         return Some(refused);
+    }
+
+    // Командный блок ставит только оператор в творческом режиме (вики,
+    // Command Block: «cannot be obtained or placed» без прав).
+    if player.inventory.held().and_then(|stack| blocks::item_name(stack.item)).is_some_and(|name| name.ends_with("command_block"))
+        && !crate::command_block::may_edit(shared, &player.uuid, player.game_mode)
+    {
+        let (bx, by, bz) = offset_towards(clicked_x, clicked_y, clicked_z, face);
+
+        return Some(Reaction {
+            confirm: vec![(clicked_x, clicked_y, clicked_z), (bx, by, bz)],
+            ..Reaction::accepted(sequence)
+        });
     }
 
     // Рамка вешается на грань блока, по которой щёлкнули: клиентам уходит

@@ -252,6 +252,17 @@ async fn run(shared: Arc<Shared>) {
                 // начнётся следующий: так в игре, и от этого зависит порядок
                 // срабатывания деталей внутри одного такта.
                 redstone::settle(&mut world);
+
+                // Командный блок дождался такта: его команду (и цепочку за
+                // ним) выполняет общий разбор команд, а он берёт замок мира
+                // сам — мир на это время отпускается (command_block.rs).
+                let runs = world.take_command_runs();
+
+                if !runs.is_empty() {
+                    drop(world);
+                    crate::command_block::run_queued(&shared, dimension, runs);
+                    world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+                }
             }
 
             // Песок и гравий, чей такт падения пришёл, — в полёт сразу, в

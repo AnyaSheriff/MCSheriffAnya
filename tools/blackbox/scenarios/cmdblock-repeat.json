@@ -1,0 +1,21 @@
+{
+  "name": "cmdblock-repeat",
+  "about": "Повторяющийся блок с рычагом говорит каждый такт, пока есть сигнал, и будит цепной над собой; второй повторяющийся с auto:1b, поставленный командой, работает без сигнала, пока его не уберут.",
+  "chat": true,
+  "track_self": true,
+  "blocks": [
+    { "at": [-1, 0, 0], "state": "minecraft:lever[face=floor,facing=north,powered=false]" }
+  ],
+  "setup": [
+    "setblock $(0,0,0) minecraft:repeating_command_block[facing=up]{Command:\"say tick\"}",
+    "setblock $(0,1,0) minecraft:chain_command_block[facing=up]{auto:1b,Command:\"say chain\"}"
+  ],
+  "actions": [
+    { "after": 0, "click": [-1, 0, 0] },
+    { "after": 6, "click": [-1, 0, 0] },
+    { "after": 12, "cmd": "setblock $(2,0,0) minecraft:repeating_command_block[facing=up]{auto:1b,Command:\"say auto\"}" },
+    { "after": 16, "cmd": "setblock $(2,0,0) minecraft:air" }
+  ],
+  "cleanup": ["fill $(-1,0,0) $(2,1,0) minecraft:air"],
+  "record_ticks": 25
+}
