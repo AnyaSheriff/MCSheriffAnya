@@ -89,6 +89,7 @@ const describe = (e) => {
     case 'meta': return `свойства сущности ${e.fields}`;
     case 'cart': return describeCart(e);
     case 'sv': return `робот: ${e.text}`;
+    case 'sc': return `табло: ${e.text}`;
     case 'self': return e.what === 'pos' ? `робот: сверка места (${e.at.join(',')}) ${e.flags}` : `робот: скорость ${e.v.join(',')}`;
     case 'explosion': return `взрыв ${at} сила ${e.radius} блоков ${e.blocks} ${e.particle} ${e.sound.replace(/^minecraft:/, '')} толчок ${e.knockback ? 'есть' : 'нет'} дым [${e.smoke}]`;
     default: return JSON.stringify(e);
@@ -136,6 +137,7 @@ const key = (e) => {
     case 'meta': return `meta ${e.fields}`;
     case 'cart': return `cart ${describeCart(e)}`;
     case 'sv': return `sv ${e.text}`;
+    case 'sc': return `sc ${e.text}`;
     case 'self': return `self ${describe(e)}`;
     // Динамит сносит вбок случайный толчок, а блоков взрыв рушит случайно:
     // сверяем клетку центра, силу, вспышку, звук и дым.

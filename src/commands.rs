@@ -92,6 +92,14 @@ pub struct Answer {
     /// у оригинала: клиенту Java уходит он, а `reply` — его английская
     /// запись для консоли, журнала и Bedrock (commands_world.rs).
     pub component: Option<Vec<u8>>,
+
+    /// Готовые тексты для клиентов Java (переводы оригинала), по сообщению
+    /// на элемент; пусто — уходит `reply` простым текстом.
+    pub rich: Vec<Vec<u8>>,
+
+    /// Итог команды для `execute store` и функций: Some(число) — успех,
+    /// None — отказ (вики, Commands: «success count» и «result»).
+    pub result: Option<i32>,
 }
 
 impl Answer {
@@ -101,6 +109,8 @@ impl Answer {
             reply,
             effect: Effect::None,
             component: None,
+            rich: Vec::new(),
+            result: Some(1),
         }
     }
 }
@@ -113,6 +123,10 @@ impl Answer {
 fn level_needed(command: &str) -> i32 {
     match command {
         "help" | "list" | "say" => 0,
+        // Вики, Commands: trigger и teammsg доступны всем, прочие команды
+        // табло и функций — с уровня 2.
+        "trigger" | "teammsg" | "tm" => 0,
+        "scoreboard" | "team" | "tag" | "bossbar" | "function" | "schedule" | "return" | "execute" | "datapack" => 2,
         // Права на особый динамит — узлом (permissions.rs), не уровнем.
         "tnt" => 0,
         _ => ops::HIGHEST_LEVEL,
@@ -254,7 +268,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 _ => Effect::None,
             };
 
-            Answer { reply, effect, component: None }
+            Answer { reply, effect, component: None, rich: Vec::new(), result: Some(1) }
         }
         "op" => {
             let Some(named) = parts.next() else {
@@ -503,6 +517,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         "effect" => effect(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "experience" | "xp" => experience(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "gamerule" => gamerule(parts.collect::<Vec<&str>>().as_slice(), shared),
+        "scoreboard" | "team" | "tag" | "bossbar" | "trigger" | "teammsg" | "tm" | "function" | "schedule" | "datapack" | "return" => crate::commands_score::run(command, source, shared),
 
         // Команды мира и сущностей (commands_world.rs).
         "worldborder" | "tick" | "clone" | "attribute" | "enchant" | "locate" | "forceload" | "spreadplayers" | "random" | "ride"
@@ -520,7 +535,8 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                     Some(dimension) => teleport(tail, source, shared, Some(dimension)),
                     None => Answer::saying(format!("Нет такого измерения: {}", dimension)),
                 },
-                _ => Answer::saying("Пока понимаю только: execute in <измерение> run tp <кого> <x> <y> <z>".to_string()),
+                // Остальное (as, if/unless, store, run) — commands_score.rs.
+                _ => crate::commands_score::run(command, source, shared),
             }
         }
         "help" => {
@@ -558,6 +574,8 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 reply: "Останавливаю сервер".to_string(),
                 effect: Effect::Stop,
                 component: None,
+                rich: Vec::new(),
+                result: Some(1),
             },
             Source::Player { .. } | Source::Block { .. } => Answer::saying(
                 "Остановить сервер можно только из консоли сервера".to_string(),
@@ -1534,8 +1552,18 @@ impl Selector {
             _ => text.strip_prefix("@e[").or_else(|| text.strip_prefix("@n["))?.strip_suffix(']')?,
         };
 
-        for pair in inner.split(',') {
-            match pair.split_once('=')? {
+        for pair in split_selector_arguments(inner) {
+            // Метки, команды и счёт: у мобов их у нас нет (commands_score).
+            let (key, value) = pair.split_once('=')?;
+            let mut board = crate::commands_score::BoardFilter::default();
+            if board.take(key, value)? {
+                if !board.matches_entity() {
+                    chosen.limit = Some(0);
+                }
+                continue;
+            }
+
+            match (key, value) {
                 ("type", name) => {
                     let (wanted, name) = match name.strip_prefix('!') {
                         Some(name) => (false, name),
@@ -2245,6 +2273,11 @@ fn place_of(parts: &[&str], source: &Source, shared: &Shared) -> Option<Place> {
 ///
 /// Уточнений в квадратных скобках (`@a[distance=10]`) пока нет.
 pub(crate) fn find_targets(named: &str, source: &Source, shared: &Shared) -> Vec<([u8; 16], String)> {
+    // Выбор с условиями (`@a[tag=…,scores={…}]`) — отдельно.
+    if named.starts_with('@') && named.contains('[') {
+        return select_players(named, source, shared);
+    }
+
     let everyone = || {
         shared
             .players
@@ -2336,6 +2369,125 @@ pub(crate) fn find_targets(named: &str, source: &Source, shared: &Shared) -> Vec
 
         name => named_player(name).into_iter().collect(),
     }
+}
+
+/// Выбор игроков с условиями: `@a[…]`, `@p[…]`, `@r[…]`, `@s[…]`, `@e[…]`
+/// (из сущностей у нас так выбираются только игроки). Понимаются `tag`,
+/// `team`, `scores`, `name`, `distance`, `limit`, `gamemode`, `type=player`
+/// (вики, Target selectors); незнакомое условие — никого.
+fn select_players(text: &str, source: &Source, shared: &Shared) -> Vec<([u8; 16], String)> {
+    let Some((base, inner)) = text.split_once('[') else {
+        return Vec::new();
+    };
+    let Some(inner) = inner.strip_suffix(']') else {
+        return Vec::new();
+    };
+    let mut filter = crate::commands_score::BoardFilter::default();
+    let mut names: Vec<(bool, String)> = Vec::new();
+    let mut distance: Option<(Option<f64>, Option<f64>)> = None;
+    let mut limit: Option<usize> = None;
+    let mut modes: Vec<(bool, i32)> = Vec::new();
+
+    for pair in split_selector_arguments(inner) {
+        let Some((key, value)) = pair.split_once('=') else {
+            return Vec::new();
+        };
+        match filter.take(key, value) {
+            Some(true) => continue,
+            None => return Vec::new(),
+            Some(false) => {}
+        }
+        let (negated, bare) = value.strip_prefix('!').map_or((false, value), |rest| (true, rest));
+        match key {
+            "name" => names.push((!negated, bare.trim_matches('"').to_string())),
+            "distance" => {
+                let (low, high) = bare.split_once("..").unwrap_or((bare, bare));
+                let parse = |part: &str| if part.is_empty() { Some(None) } else { part.parse::<f64>().ok().map(Some) };
+                let (Some(low), Some(high)) = (parse(low), parse(high)) else {
+                    return Vec::new();
+                };
+                distance = Some((low, high));
+            }
+            "limit" => match value.parse() {
+                Ok(count) => limit = Some(count),
+                Err(_) => return Vec::new(),
+            },
+            "gamemode" => match game_mode_by_name(bare) {
+                Some(mode) => modes.push((!negated, mode)),
+                None => return Vec::new(),
+            },
+            "type" if bare.trim_start_matches("minecraft:") == "player" => {
+                if negated {
+                    return Vec::new();
+                }
+            }
+            "sort" => {}
+            _ => return Vec::new(),
+        }
+    }
+
+    let from = origin_of(source, shared);
+    let mut found: Vec<([u8; 16], String, f64)> = {
+        let players = shared.players.lock().expect("список игроков захвачен другим потоком");
+        players
+            .members()
+            .iter()
+            .map(|member| {
+                let place = &member.position;
+                let gap = ((place.x - from.0).powi(2) + (place.y - from.1).powi(2) + (place.z - from.2).powi(2)).sqrt();
+                (member.uuid, member.name.clone(), gap, member.game_mode)
+            })
+            .filter(|(uuid, name, gap, mode)| {
+                let me = matches!(source, Source::Player { uuid: own, .. } if own == uuid);
+                (base != "@s" || me)
+                    && names.iter().all(|(wanted, named)| (name == named) == *wanted)
+                    && modes.iter().all(|(wanted, wanted_mode)| (mode == wanted_mode) == *wanted)
+                    && distance.is_none_or(|(low, high)| low.is_none_or(|low| *gap >= low) && high.is_none_or(|high| *gap <= high))
+            })
+            .map(|(uuid, name, gap, _)| (uuid, name, gap))
+            .collect()
+    };
+
+    if !filter.is_empty() {
+        let board = shared.scoreboard.lock().expect("табло захвачено другим потоком");
+        found.retain(|(uuid, name, _)| filter.matches(&board, uuid, name));
+    }
+
+    if matches!(base, "@p" | "@n") {
+        found.sort_by(|a, b| a.2.total_cmp(&b.2));
+        limit = Some(limit.unwrap_or(1));
+    }
+
+    if base == "@r" {
+        limit = Some(limit.unwrap_or(1));
+    }
+
+    found.into_iter().take(limit.unwrap_or(usize::MAX)).map(|(uuid, name, _)| (uuid, name)).collect()
+}
+
+/// Условия выбора через запятую — запятые внутри `{…}` не делят.
+pub(crate) fn split_selector_arguments(inner: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut depth = 0;
+    let mut start = 0;
+
+    for (at, c) in inner.char_indices() {
+        match c {
+            '{' | '[' => depth += 1,
+            '}' | ']' => depth -= 1,
+            ',' if depth == 0 => {
+                out.push(&inner[start..at]);
+                start = at + 1;
+            }
+            _ => {}
+        }
+    }
+
+    if start < inner.len() {
+        out.push(&inner[start..]);
+    }
+
+    out
 }
 
 /// Находит одного игрока по имени или значку выбора.

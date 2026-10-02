@@ -1,0 +1,113 @@
+{
+ "name": "tag-selectors",
+ "about": "Команда tag и выбор по tag=, team=, scores=: метки у робота, список, выбор целей с условиями (ответы get/list).",
+ "blocks": [],
+ "track_score": true,
+ "setup": [
+  "tag $(bot) remove tg_one",
+  "tag $(bot) remove tg_two",
+  "team remove tg_t",
+  "scoreboard objectives remove tg_s"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "tag $(bot) add tg_one"
+  },
+  {
+   "after": 4,
+   "cmd": "tag $(bot) add tg_one"
+  },
+  {
+   "after": 8,
+   "cmd": "tag $(bot) add tg_two"
+  },
+  {
+   "after": 12,
+   "cmd": "tag $(bot) list"
+  },
+  {
+   "after": 16,
+   "cmd": "scoreboard objectives add tg_s dummy"
+  },
+  {
+   "after": 20,
+   "cmd": "scoreboard players set @a[tag=tg_one,distance=..1] tg_s 4"
+  },
+  {
+   "after": 24,
+   "cmd": "scoreboard players get @s[tag=tg_two] tg_s"
+  },
+  {
+   "after": 28,
+   "cmd": "scoreboard players get @s[tag=!tg_one] tg_s"
+  },
+  {
+   "after": 32,
+   "cmd": "scoreboard players set @s[scores={tg_s=3..5}] tg_s 9"
+  },
+  {
+   "after": 36,
+   "cmd": "scoreboard players set @s[scores={tg_s=..3}] tg_s 1"
+  },
+  {
+   "after": 40,
+   "cmd": "scoreboard players get @s tg_s"
+  },
+  {
+   "after": 44,
+   "cmd": "team add tg_t"
+  },
+  {
+   "after": 48,
+   "cmd": "team join tg_t @s"
+  },
+  {
+   "after": 52,
+   "cmd": "scoreboard players add @s[team=tg_t] tg_s 1"
+  },
+  {
+   "after": 56,
+   "cmd": "scoreboard players add @s[team=!tg_t] tg_s 100"
+  },
+  {
+   "after": 60,
+   "cmd": "scoreboard players add @s[team=] tg_s 1000"
+  },
+  {
+   "after": 64,
+   "cmd": "scoreboard players get @s tg_s"
+  },
+  {
+   "after": 68,
+   "cmd": "tag $(bot) remove tg_one"
+  },
+  {
+   "after": 72,
+   "cmd": "tag $(bot) remove tg_one"
+  },
+  {
+   "after": 76,
+   "cmd": "tag $(bot) remove tg_two"
+  },
+  {
+   "after": 80,
+   "cmd": "tag $(bot) list"
+  },
+  {
+   "after": 84,
+   "cmd": "team remove tg_t"
+  },
+  {
+   "after": 88,
+   "cmd": "scoreboard objectives remove tg_s"
+  }
+ ],
+ "record_ticks": 102,
+ "cleanup": [
+  "tag $(bot) remove tg_one",
+  "tag $(bot) remove tg_two",
+  "team remove tg_t",
+  "scoreboard objectives remove tg_s"
+ ]
+}

@@ -1,0 +1,109 @@
+{
+ "name": "execute-score",
+ "about": "execute store result/success score, execute if/unless score (сравнения и matches), if entity, if block — ответы и табло.",
+ "blocks": [],
+ "track_score": true,
+ "setup": [
+  "scoreboard objectives remove ex_s"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "scoreboard objectives add ex_s dummy"
+  },
+  {
+   "after": 4,
+   "cmd": "scoreboard players set #a ex_s 5"
+  },
+  {
+   "after": 8,
+   "cmd": "scoreboard players set #b ex_s 7"
+  },
+  {
+   "after": 12,
+   "cmd": "execute if score #a ex_s < #b ex_s"
+  },
+  {
+   "after": 16,
+   "cmd": "execute if score #a ex_s > #b ex_s"
+  },
+  {
+   "after": 20,
+   "cmd": "execute unless score #a ex_s = #b ex_s"
+  },
+  {
+   "after": 24,
+   "cmd": "execute if score #a ex_s matches 1..5"
+  },
+  {
+   "after": 28,
+   "cmd": "execute if score #a ex_s matches 6.."
+  },
+  {
+   "after": 32,
+   "cmd": "execute if score #a ex_s < #b ex_s run scoreboard players add #a ex_s 10"
+  },
+  {
+   "after": 36,
+   "cmd": "execute store result score #c ex_s run scoreboard players get #a ex_s"
+  },
+  {
+   "after": 40,
+   "cmd": "execute store success score #d ex_s run scoreboard players get #nobody ex_s"
+  },
+  {
+   "after": 44,
+   "cmd": "execute store result score #e ex_s if score #a ex_s matches 15"
+  },
+  {
+   "after": 48,
+   "cmd": "execute if entity @s[tag=nope] run scoreboard players set #f ex_s 1"
+  },
+  {
+   "after": 52,
+   "cmd": "execute unless entity @s[tag=nope] run scoreboard players set #f ex_s 2"
+  },
+  {
+   "after": 56,
+   "cmd": "execute if block $(0,-1,0) minecraft:air"
+  },
+  {
+   "after": 60,
+   "cmd": "execute unless block $(0,-1,0) minecraft:air"
+  },
+  {
+   "after": 64,
+   "cmd": "execute as $(bot) run scoreboard players set @s ex_s 3"
+  },
+  {
+   "after": 68,
+   "cmd": "scoreboard players list #c"
+  },
+  {
+   "after": 72,
+   "cmd": "scoreboard players list #d"
+  },
+  {
+   "after": 76,
+   "cmd": "scoreboard players list #e"
+  },
+  {
+   "after": 80,
+   "cmd": "scoreboard players list #f"
+  },
+  {
+   "after": 84,
+   "cmd": "scoreboard objectives remove ex_s"
+  }
+ ],
+ "record_ticks": 98,
+ "cleanup": [
+  "scoreboard objectives remove ex_s",
+  "scoreboard players reset #a",
+  "scoreboard players reset #b",
+  "scoreboard players reset #c",
+  "scoreboard players reset #d",
+  "scoreboard players reset #e",
+  "scoreboard players reset #f"
+ ]
+}

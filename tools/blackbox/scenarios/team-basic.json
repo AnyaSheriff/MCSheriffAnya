@@ -1,0 +1,117 @@
+{
+ "name": "team-basic",
+ "about": "Команда team: добавить, правка цвета, приставок и правил, вступить, список, выйти, очистить, удалить — пакеты команд и ответы в чат.",
+ "blocks": [],
+ "track_score": true,
+ "setup": [
+  "team remove tb_red",
+  "team remove tb_blue"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "team add tb_red"
+  },
+  {
+   "after": 4,
+   "cmd": "team add tb_red"
+  },
+  {
+   "after": 8,
+   "cmd": "team add tb_blue {\"text\":\"Синие\",\"color\":\"blue\"}"
+  },
+  {
+   "after": 12,
+   "cmd": "team list"
+  },
+  {
+   "after": 16,
+   "cmd": "team modify tb_red color red"
+  },
+  {
+   "after": 20,
+   "cmd": "team modify tb_red prefix {\"text\":\"[R] \"}"
+  },
+  {
+   "after": 24,
+   "cmd": "team modify tb_red suffix {\"text\":\" !\"}"
+  },
+  {
+   "after": 28,
+   "cmd": "team modify tb_red friendlyFire false"
+  },
+  {
+   "after": 32,
+   "cmd": "team modify tb_red seeFriendlyInvisibles false"
+  },
+  {
+   "after": 36,
+   "cmd": "team modify tb_red nametagVisibility hideForOtherTeams"
+  },
+  {
+   "after": 40,
+   "cmd": "team modify tb_red deathMessageVisibility never"
+  },
+  {
+   "after": 44,
+   "cmd": "team modify tb_red collisionRule pushOwnTeam"
+  },
+  {
+   "after": 48,
+   "cmd": "team modify tb_red displayName {\"text\":\"Красные\"}"
+  },
+  {
+   "after": 52,
+   "cmd": "team modify tb_red color red"
+  },
+  {
+   "after": 56,
+   "cmd": "team join tb_red $(bot)"
+  },
+  {
+   "after": 60,
+   "cmd": "team join tb_red #fake"
+  },
+  {
+   "after": 64,
+   "cmd": "team list tb_red"
+  },
+  {
+   "after": 68,
+   "cmd": "team join tb_blue $(bot)"
+  },
+  {
+   "after": 72,
+   "cmd": "team leave $(bot)"
+  },
+  {
+   "after": 76,
+   "cmd": "team leave $(bot)"
+  },
+  {
+   "after": 80,
+   "cmd": "team empty tb_red"
+  },
+  {
+   "after": 84,
+   "cmd": "team empty tb_red"
+  },
+  {
+   "after": 88,
+   "cmd": "team remove tb_red"
+  },
+  {
+   "after": 92,
+   "cmd": "team remove tb_blue"
+  },
+  {
+   "after": 96,
+   "cmd": "team remove tb_blue"
+  }
+ ],
+ "record_ticks": 110,
+ "cleanup": [
+  "team remove tb_red",
+  "team remove tb_blue"
+ ]
+}

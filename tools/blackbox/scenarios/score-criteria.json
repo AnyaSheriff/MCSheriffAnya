@@ -1,0 +1,52 @@
+{
+ "name": "score-criteria",
+ "about": "Счёт по условиям: смерти (deathCount) в боковой панели и здоровье (health) в списке игроков — урон командой damage, смерть от kill, возрождение.",
+ "blocks": [],
+ "track_score": true,
+ "setup": [
+  "scoreboard objectives remove sc_d",
+  "scoreboard objectives remove sc_h",
+  "gamemode survival $(bot)",
+  "!stopfly"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "scoreboard objectives add sc_d deathCount"
+  },
+  {
+   "after": 4,
+   "cmd": "scoreboard objectives add sc_h health"
+  },
+  {
+   "after": 8,
+   "cmd": "scoreboard objectives setdisplay sidebar sc_d"
+  },
+  {
+   "after": 12,
+   "cmd": "scoreboard objectives setdisplay list sc_h"
+  },
+  {
+   "after": 16,
+   "cmd": "damage $(bot) 3"
+  },
+  {
+   "after": 40,
+   "cmd": "kill $(bot)"
+  },
+  {
+   "after": 60,
+   "respawn": true
+  },
+  {
+   "after": 80,
+   "cmd": "scoreboard players get $(bot) sc_d"
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "scoreboard objectives remove sc_d",
+  "scoreboard objectives remove sc_h",
+  "gamemode creative $(bot)"
+ ]
+}

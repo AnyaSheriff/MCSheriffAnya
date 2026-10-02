@@ -60,6 +60,9 @@ mod log;
 mod commands;
 mod command_block;
 mod commands_world;
+mod commands_score;
+mod scoreboard;
+mod functions;
 mod dimension;
 mod dragon_fight;
 mod reports;
@@ -200,7 +203,21 @@ async fn server() -> io::Result<()> {
         skins::Settings::load(Path::new(skins::SETTINGS_FILE)),
     );
     shared.settings = settings;
+    shared.scoreboard = std::sync::Mutex::new(scoreboard::Scoreboard::open(Path::new(WORLD_PATH)));
+    shared.functions = std::sync::Mutex::new(functions::Functions::new(Path::new(WORLD_PATH)));
     let shared = Arc::new(shared);
+
+    // Табло пишется на диск своим потоком, раз в пять секунд, если менялось.
+    {
+        let shared = Arc::clone(&shared);
+        std::thread::spawn(move || loop {
+            std::thread::sleep(std::time::Duration::from_secs(5));
+            save_scoreboard(&shared);
+        });
+    }
+
+    // Функции метки `#minecraft:load` — при запуске.
+    functions::load(&shared);
 
     // Остановка сервера: консоль сообщает о ней, а ждёт её вот этот приёмник.
     let (shutdown_sender, mut shutdown) = watch::channel(false);
@@ -288,6 +305,7 @@ async fn server() -> io::Result<()> {
         tick::store_mobs(&shared, dimension, &mut world);
         world.save_all();
     }
+    save_scoreboard(&shared);
     log_info!("Мир сохранён");
 
     // Терминал был переключён на посимвольный ввод — возвращаем как было,
@@ -628,4 +646,21 @@ async fn handle_connection(
     }
 
     Ok(())
+}
+
+/// Записать табло, если менялось: рядом, потом на место.
+fn save_scoreboard(shared: &Shared) {
+    let Some((file, text)) = shared.scoreboard.lock().expect("табло захвачено другим потоком").take_save() else {
+        return;
+    };
+
+    if let Some(folder) = file.parent() {
+        let _ = std::fs::create_dir_all(folder);
+    }
+
+    let fresh = file.with_extension("dat_new");
+
+    if let Err(error) = std::fs::write(&fresh, text).and_then(|()| std::fs::rename(&fresh, &file)) {
+        log_warn!("Табло не записано ({}): {}", file.display(), error);
+    }
 }

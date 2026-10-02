@@ -1,0 +1,91 @@
+{
+ "name": "bossbar-basic",
+ "about": "Команда bossbar: добавить, показать роботу, значение, максимум, цвет, вид, название, видимость, get, список, убрать — пакеты полосы босса и ответы.",
+ "blocks": [],
+ "track_score": true,
+ "setup": [
+  "bossbar remove mcsa:bb1"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "bossbar add mcsa:bb1 {\"text\":\"Полоса\"}"
+  },
+  {
+   "after": 4,
+   "cmd": "bossbar add mcsa:bb1 \"x\""
+  },
+  {
+   "after": 8,
+   "cmd": "bossbar list"
+  },
+  {
+   "after": 12,
+   "cmd": "bossbar set mcsa:bb1 players $(bot)"
+  },
+  {
+   "after": 16,
+   "cmd": "bossbar set mcsa:bb1 value 40"
+  },
+  {
+   "after": 20,
+   "cmd": "bossbar set mcsa:bb1 max 200"
+  },
+  {
+   "after": 24,
+   "cmd": "bossbar set mcsa:bb1 color red"
+  },
+  {
+   "after": 28,
+   "cmd": "bossbar set mcsa:bb1 style notched_10"
+  },
+  {
+   "after": 32,
+   "cmd": "bossbar set mcsa:bb1 name {\"text\":\"Другая\",\"color\":\"yellow\"}"
+  },
+  {
+   "after": 36,
+   "cmd": "bossbar get mcsa:bb1 value"
+  },
+  {
+   "after": 40,
+   "cmd": "bossbar get mcsa:bb1 max"
+  },
+  {
+   "after": 44,
+   "cmd": "bossbar get mcsa:bb1 visible"
+  },
+  {
+   "after": 48,
+   "cmd": "bossbar get mcsa:bb1 players"
+  },
+  {
+   "after": 52,
+   "cmd": "bossbar set mcsa:bb1 visible false"
+  },
+  {
+   "after": 56,
+   "cmd": "bossbar set mcsa:bb1 visible true"
+  },
+  {
+   "after": 60,
+   "cmd": "bossbar set mcsa:bb1 value 40"
+  },
+  {
+   "after": 64,
+   "cmd": "bossbar set mcsa:bb1 players"
+  },
+  {
+   "after": 68,
+   "cmd": "bossbar remove mcsa:bb1"
+  },
+  {
+   "after": 72,
+   "cmd": "bossbar remove mcsa:bb1"
+  }
+ ],
+ "record_ticks": 86,
+ "cleanup": [
+  "bossbar remove mcsa:bb1"
+ ]
+}

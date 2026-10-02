@@ -26,6 +26,8 @@ const GLOBAL = [
   [/\bexecute in\b|\bthe_nether\b/, 'другое измерение'],
   [/\bsetworldspawn\b|\bspawnpoint\b/, 'точка появления'],
   [/\bdifficulty\b/, 'сложность общая'],
+  [/\b(scoreboard|team|bossbar|trigger|function|schedule|datapack)\b/, 'табло, команды и функции общие на весь мир'],
+  [/\b(worldborder|tick (rate|freeze|unfreeze|step|sprint))\b/, 'рамка мира и скорость такта общие'],
   [/@a\b/, '@a задевает роботов других полос'],
   // @e без предела расстояния задевает чужие площадки. У нас `tp @e[…]`
   // предела не понимает вовсе, поэтому такие команды и остаются без него.

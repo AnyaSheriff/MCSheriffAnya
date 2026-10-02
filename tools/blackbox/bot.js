@@ -364,6 +364,26 @@ bot._client.on('packet', (p, meta) => {
   const text = `other ${meta.name} ${jstr(rest)}`.replace(/\d+\.\d{4,}/g, (m) => String(Math.round(Number(m) * 1000) / 1000));
   note('sv', { text });
 });
+// `track_score`: табло, команды, полосы босса и ответы команд в чат (вид `sc`) —
+// для сценариев score-*, team-*, bossbar-*, function-*. Номера игроков не пишутся.
+const scoreText = (p, n) => {
+  const opt = (v) => (v === undefined || v === null ? 'none' : simp(v));
+  switch (n) {
+    case 'system_chat': return `System Chat ${simp(p.content)} overlay=${p.isActionBar}`;
+    case 'scoreboard_objective': return `Objective ${p.name} action=${p.action}${p.displayText !== undefined ? ' text=' + simp(p.displayText) + ' type=' + p.type + ' format=' + jstr(p.number_format) + (p.styling !== undefined ? ' style=' + simp(p.styling) : '') : ''}`;
+    case 'scoreboard_display_objective': return `Display slot=${p.position} name=${p.name}`;
+    case 'scoreboard_score': return `Score ${p.itemName} ${p.scoreName}=${p.value} display=${opt(p.display_name)} format=${jstr(p.number_format)}${p.styling !== undefined ? ' style=' + simp(p.styling) : ''}`;
+    case 'reset_score': return `Reset Score ${p.entity_name} ${p.objective_name ?? 'all'}`;
+    case 'teams': { const f = p.name !== undefined ? ` name=${simp(p.name)} flags=${jstr(p.flags)} tag=${p.nameTagVisibility} coll=${p.collisionRule} color=${p.formatting} prefix=${simp(p.prefix)} suffix=${simp(p.suffix)}` : ''; return `Team ${p.team} ${p.mode}${f}${p.players !== undefined ? ' players=' + jstr(p.players) : ''}`; }
+    case 'boss_bar': return `Boss Bar action=${p.action}${p.title !== undefined ? ' title=' + simp(p.title) : ''}${p.health !== undefined ? ' health=' + rnd(p.health) : ''}${p.color !== undefined ? ' color=' + p.color + ' dividers=' + p.dividers : ''}${p.flags !== undefined ? ' flags=' + p.flags : ''}`;
+    default: return null;
+  }
+};
+bot._client.on('packet', (p, meta) => {
+  if (!scenario.track_score || !recording || meta.state !== 'play') return;
+  const text = scoreText(p, meta.name);
+  if (text) note('sc', { text });
+});
 // Прочие пакеты о мобах `track_mobs`: поворот головы, урон, анимации, звуки
 // сущности, атрибуты, сбор предметов. Пишутся строкой `text` без номеров сущностей.
 const MOB_PACKETS = new Set(['entity_head_rotation', 'damage_event', 'hurt_animation', 'animation', 'entity_sound_effect', 'entity_update_attributes', 'entity_effect', 'entity_equipment', 'collect', 'attach_entity', 'set_passengers']);

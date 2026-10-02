@@ -121,6 +121,13 @@ pub struct Shared {
     /// Рамки мира, скорость такта, удержанные чанки и прочее команд мира
     /// (commands_world.rs).
     pub world_cmd: crate::commands_world::State,
+    /// Табло, команды, метки и полосы босса (scoreboard.rs). Замок — после
+    /// всех прочих: под ним другие не берутся.
+    pub scoreboard: Mutex<crate::scoreboard::Scoreboard>,
+
+    /// Функции наборов данных и расписание (functions.rs). Под ним табло не
+    /// берётся.
+    pub functions: Mutex<crate::functions::Functions>,
 }
 
 impl Shared {
@@ -178,6 +185,8 @@ impl Shared {
             spawn_mobs: std::sync::atomic::AtomicBool::new(true),
             natural_regeneration: std::sync::atomic::AtomicBool::new(true),
             command_block_rules: crate::command_block::Rules::default(),
+            scoreboard: Mutex::new(crate::scoreboard::Scoreboard::new()),
+            functions: Mutex::new(crate::functions::Functions::new(std::path::Path::new("world"))),
             worlds: [Mutex::new(world), Mutex::new(nether), Mutex::new(end)],
             players: Mutex::new(Players::new()),
             chat: Mutex::new(Chat::new()),

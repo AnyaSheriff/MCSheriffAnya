@@ -1,0 +1,99 @@
+{
+ "name": "trigger-teammsg",
+ "about": "trigger у робота (без разрешения, с разрешением, add/set), teammsg вне команды и в команде.",
+ "blocks": [],
+ "track_score": true,
+ "setup": [
+  "team remove tr_team",
+  "scoreboard objectives remove tr_t",
+  "scoreboard objectives remove tr_d"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "scoreboard objectives add tr_t trigger"
+  },
+  {
+   "after": 4,
+   "cmd": "scoreboard objectives add tr_d dummy"
+  },
+  {
+   "after": 8,
+   "cmd": "trigger tr_t"
+  },
+  {
+   "after": 12,
+   "cmd": "trigger tr_d"
+  },
+  {
+   "after": 16,
+   "cmd": "scoreboard players enable $(bot) tr_t"
+  },
+  {
+   "after": 20,
+   "cmd": "trigger tr_t"
+  },
+  {
+   "after": 24,
+   "cmd": "trigger tr_t"
+  },
+  {
+   "after": 28,
+   "cmd": "scoreboard players enable $(bot) tr_t"
+  },
+  {
+   "after": 32,
+   "cmd": "trigger tr_t add 5"
+  },
+  {
+   "after": 36,
+   "cmd": "scoreboard players enable $(bot) tr_t"
+  },
+  {
+   "after": 40,
+   "cmd": "trigger tr_t set 7"
+  },
+  {
+   "after": 44,
+   "cmd": "scoreboard players get $(bot) tr_t"
+  },
+  {
+   "after": 48,
+   "cmd": "teammsg привет"
+  },
+  {
+   "after": 52,
+   "cmd": "team add tr_team"
+  },
+  {
+   "after": 56,
+   "cmd": "team join tr_team $(bot)"
+  },
+  {
+   "after": 60,
+   "cmd": "teammsg привет"
+  },
+  {
+   "after": 64,
+   "cmd": "tm ещё"
+  },
+  {
+   "after": 68,
+   "cmd": "team remove tr_team"
+  },
+  {
+   "after": 72,
+   "cmd": "scoreboard objectives remove tr_t"
+  },
+  {
+   "after": 76,
+   "cmd": "scoreboard objectives remove tr_d"
+  }
+ ],
+ "record_ticks": 90,
+ "cleanup": [
+  "team remove tr_team",
+  "scoreboard objectives remove tr_t",
+  "scoreboard objectives remove tr_d"
+ ]
+}

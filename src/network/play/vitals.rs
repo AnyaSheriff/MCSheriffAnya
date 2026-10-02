@@ -1291,6 +1291,28 @@ async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerStat
 
     send_entity_event(stream, player.entity_id, EVENT_DEATH).await?;
 
+    // Табло: смерти и убийства (вики, Scoreboard#Criteria: deathCount,
+    // playerKillCount, totalKillCount, teamkill.<цвет>, killedByTeam.<цвет>).
+    {
+        let mut board = shared.scoreboard.lock().expect("табло захвачено другим потоком");
+        board.bump_criteria(&player.name, "deathCount", 1);
+
+        if let Some(killer) = killer {
+            board.bump_criteria(killer.name, "playerKillCount", 1);
+            board.bump_criteria(killer.name, "totalKillCount", 1);
+
+            let victim_color = board.team_of(&player.name).map(|team| team.color);
+            let killer_color = board.team_of(killer.name).map(|team| team.color);
+
+            if let Some(color) = victim_color.filter(|color| (0..16).contains(color)) {
+                board.bump_criteria(killer.name, &format!("teamkill.{}", crate::scoreboard::COLORS[color as usize]), 1);
+            }
+            if let Some(color) = killer_color.filter(|color| (0..16).contains(color)) {
+                board.bump_criteria(&player.name, &format!("killedByTeam.{}", crate::scoreboard::COLORS[color as usize]), 1);
+            }
+        }
+    }
+
     log_info!("{}", death_line(source, &player.name, killer));
 
     player.net.died_at = Some((player.dimension, block_of(player.x, player.y, player.z)));

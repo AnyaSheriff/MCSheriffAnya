@@ -3434,6 +3434,38 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
         nodes.push(argument("что", &[], GREEDY));
     }
 
+    // Команды табло и функций (commands_score.rs): слово и весь остаток —
+    // разбирает сервер. `trigger` и `teammsg` — всем, как у оригинала.
+    let mut extra_roots = Vec::new();
+
+    for name in ["scoreboard", "team", "tag", "bossbar", "trigger", "teammsg", "tm", "function", "schedule", "datapack", "return", "execute"] {
+        let at = nodes.len() as i32;
+
+        extra_roots.push(at);
+        nodes.push(literal(name, &[at + 1], false));
+        nodes.push(argument("доводы", &[], GREEDY));
+    }
+
+    // Корень — заново, с новыми словами.
+    {
+        let mut root = vec![NODE_ROOT];
+        let mut children = vec![1, 6, 7, 8, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31];
+
+        if may_tnt {
+            children.push(TNT_NODE);
+        }
+
+        children.extend((0..WORLD_COMMANDS.len() as i32).map(|index| world_base + index * 2));
+        children.extend(extra_roots);
+        root.extend_from_slice(&encode_varint(children.len() as i32));
+
+        for child in children {
+            root.extend_from_slice(&encode_varint(child));
+        }
+
+        nodes[0] = root;
+    }
+
     let mut body = encode_varint(COMMANDS);
 
     body.extend_from_slice(&encode_varint(nodes.len() as i32));
@@ -4696,6 +4728,50 @@ async fn send_pending_player_changes(
 }
 
 /// Досылает клиенту сообщения чата, которых он ещё не видел.
+/// Табло, команды и полосы босса (scoreboard.rs): вошедшему — снимок, дальше
+/// — лента пакетов.
+async fn send_pending_score(stream: &mut Outgoing<'_>, shared: &Shared, uuid: &[u8; 16], sent: &mut Option<usize>) -> io::Result<()> {
+    let (bodies, count) = {
+        let board = shared.scoreboard.lock().expect("табло захвачено другим потоком");
+
+        match *sent {
+            None => (board.snapshot_for(uuid), board.count()),
+            Some(from) if from == board.count() => return Ok(()),
+            Some(from) => (board.since_for(from, uuid), board.count()),
+        }
+    };
+
+    for body in bodies {
+        write_body(stream, body).await?;
+    }
+
+    *sent = Some(count);
+    Ok(())
+}
+
+/// Счёт по условиям, что сервер ведёт сам: здоровье, сытость, уровень,
+/// опыт, воздух (вики, Scoreboard#Criteria). Здоровье — вверх до целого.
+/// Как у оригинала, счёт пишется только при изменении значения (и в первый
+/// раз после входа): цель, заведённая позже, получает счёт с первым
+/// изменением [проверить].
+fn note_criteria(shared: &Shared, player: &PlayerState, seen: &mut Option<[i32; 5]>) {
+    const CRITERIA: [&str; 5] = ["health", "food", "air", "level", "xp"];
+    let now = [player.vit.health.ceil() as i32, player.vit.food, player.vit.air, crate::survival::level_of(player.vit.xp).0, player.vit.xp];
+
+    if *seen == Some(now) {
+        return;
+    }
+
+    let before = seen.replace(now);
+    let mut board = shared.scoreboard.lock().expect("табло захвачено другим потоком");
+
+    for (index, criteria) in CRITERIA.iter().enumerate() {
+        if before.is_none_or(|before| before[index] != now[index]) && board.watches(criteria) {
+            board.set_criteria(&player.name, criteria, now[index]);
+        }
+    }
+}
+
 async fn send_pending_chat(
     stream: &mut Outgoing<'_>,
     shared: &Shared,
@@ -5227,6 +5303,10 @@ async fn read_and_log_play_packets(
     let mut world_changes = entered.world_changes;
     let mut player_changes = entered.player_changes;
     let mut chat_lines = entered.chat_lines;
+    // Табло: None — снимок ещё не прислан (шлётся на первом круге).
+    let mut score_sent: Option<usize> = None;
+    // Последние записанные в табло здоровье, сытость, воздух, уровень, опыт.
+    let mut criteria_seen: Option<[i32; 5]> = None;
     let mut item_changes = entered.item_changes;
     let mut seen_items = entered.seen_items;
     let mut sent_chunks = entered.sent_chunks;
@@ -5336,6 +5416,8 @@ async fn read_and_log_play_packets(
         send_pending_player_changes(stream, shared, player, &mut player_changes, &mut seen).await?;
         send_other_moves(stream, shared, player, &mut seen, Phase::Moves).await?;
         send_pending_chat(stream, shared, &player.uuid, &mut chat_lines).await?;
+        note_criteria(shared, player, &mut criteria_seen);
+        send_pending_score(stream, shared, &player.uuid, &mut score_sent).await?;
 
         // Поручения от команд: выгнать, перенести. Их отдаёт не то
         // подключение, которого они касаются, поэтому забираем их отсюда.
@@ -5443,6 +5525,12 @@ async fn read_and_log_play_packets(
                         // После смерти сперва способности, потом Respawn.
                         send_abilities(stream, player.game_mode).await?;
                         send_respawn_after_death(stream, dimension, player).await?;
+
+                        // Состояние такта оригинал шлёт заново и после
+                        // возрождения (void-death: Set Ticking State, Step Tick).
+                        for body in crate::commands_world::ticking_packets(shared) {
+                            write_body(stream, body).await?;
+                        }
                     } else {
                         // Порядок оригинала (чёрный ящик, dim-nether-tp, end-portal-enter):
                         // Respawn, событие прав, место, способности, точка
@@ -5450,6 +5538,11 @@ async fn read_and_log_play_packets(
                         let portal = std::mem::take(&mut player.portal_trip);
 
                         send_respawn(stream, dimension, player, if portal { 10 } else { 0 }).await?;
+
+                        // И после смены мира (end-fight-enter: Set Ticking State, Step Tick).
+                        for body in crate::commands_world::ticking_packets(shared) {
+                            write_body(stream, body).await?;
+                        }
                         vitals::send_op_level(stream, shared, player).await?;
                         let sync = match (portal, dimension == Dimension::Nether || from_dimension == Dimension::Nether) {
                             (false, _) => Sync::Command,
@@ -6047,6 +6140,14 @@ async fn apply_reaction(
             body.push(0x00);
             write_body(stream, body).await?;
         }
+    } else if !reaction.reply_rich.is_empty() {
+        for component in &reaction.reply_rich {
+            let mut body = encode_varint(SYSTEM_CHAT);
+
+            body.extend_from_slice(component);
+            body.push(0x00);
+            write_body(stream, body).await?;
+        }
     } else if let Some(reply) = &reaction.reply {
         send_system_chat(stream, reply).await?;
     }
@@ -6137,6 +6238,9 @@ struct Reaction {
 
     /// Тот же ответ текстом игры (commands_world.rs): если есть, уходит он.
     reply_component: Option<Vec<u8>>,
+    /// Ответ команды готовыми текстами Java (переводы оригинала); если есть —
+    /// вместо `reply`.
+    reply_rich: Vec<Vec<u8>>,
 
     /// Показать клиенту инвентарь целиком.
     ///
@@ -6389,6 +6493,8 @@ fn handle_client_packet(
                     reaction.reply = Some(answer.reply);
                     reaction.reply_component = answer.component;
                 }
+
+                reaction.reply_rich = answer.rich;
 
                 // Смена своего режима вступает в силу сразу, а клиенту о ней
                 // скажет поручение Order::GameMode — одно, без повтора.

@@ -1,0 +1,97 @@
+{
+ "name": "score-objectives",
+ "about": "Команда scoreboard objectives: добавить (с повтором и с названием), список, правка названия, вида и формата чисел, показ в боковой панели и под именем, удаление — пакеты табло и ответы в чат.",
+ "blocks": [],
+ "track_score": true,
+ "setup": [
+  "scoreboard objectives remove sbo_a",
+  "scoreboard objectives remove sbo_b"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "scoreboard objectives add sbo_a dummy"
+  },
+  {
+   "after": 4,
+   "cmd": "scoreboard objectives add sbo_a dummy"
+  },
+  {
+   "after": 8,
+   "cmd": "scoreboard objectives add sbo_b deathCount {\"text\":\"Смерти\",\"color\":\"red\"}"
+  },
+  {
+   "after": 12,
+   "cmd": "scoreboard objectives list"
+  },
+  {
+   "after": 16,
+   "cmd": "scoreboard objectives setdisplay sidebar sbo_a"
+  },
+  {
+   "after": 20,
+   "cmd": "scoreboard objectives setdisplay sidebar sbo_a"
+  },
+  {
+   "after": 24,
+   "cmd": "scoreboard objectives setdisplay below_name sbo_b"
+  },
+  {
+   "after": 28,
+   "cmd": "scoreboard objectives setdisplay sidebar.team.red sbo_b"
+  },
+  {
+   "after": 32,
+   "cmd": "scoreboard objectives modify sbo_a displayname {\"text\":\"Очки\",\"bold\":true}"
+  },
+  {
+   "after": 36,
+   "cmd": "scoreboard objectives modify sbo_a rendertype hearts"
+  },
+  {
+   "after": 40,
+   "cmd": "scoreboard objectives modify sbo_a numberformat styled {color:\"red\"}"
+  },
+  {
+   "after": 44,
+   "cmd": "scoreboard objectives modify sbo_a numberformat fixed {\"text\":\"-\"}"
+  },
+  {
+   "after": 48,
+   "cmd": "scoreboard objectives modify sbo_a numberformat blank"
+  },
+  {
+   "after": 52,
+   "cmd": "scoreboard objectives modify sbo_a numberformat"
+  },
+  {
+   "after": 56,
+   "cmd": "scoreboard objectives modify sbo_a displayautoupdate true"
+  },
+  {
+   "after": 60,
+   "cmd": "scoreboard objectives setdisplay sidebar"
+  },
+  {
+   "after": 64,
+   "cmd": "scoreboard objectives remove sbo_b"
+  },
+  {
+   "after": 68,
+   "cmd": "scoreboard objectives remove sbo_b"
+  },
+  {
+   "after": 72,
+   "cmd": "scoreboard objectives remove sbo_a"
+  },
+  {
+   "after": 76,
+   "cmd": "scoreboard objectives add sbo_c nosuch"
+  }
+ ],
+ "record_ticks": 90,
+ "cleanup": [
+  "scoreboard objectives remove sbo_a",
+  "scoreboard objectives remove sbo_b"
+ ]
+}

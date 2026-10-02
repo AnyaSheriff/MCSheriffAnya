@@ -246,7 +246,7 @@ pub fn translated(key: &str) -> Vec<u8> {
 ///
 /// Длина — не больше 65 535 байт: длиннее строку обрезаем по целому знаку,
 /// иначе длина молча переполнилась бы и пакет стал бы битым.
-fn write_string(out: &mut Vec<u8>, value: &str) {
+pub(crate) fn write_string(out: &mut Vec<u8>, value: &str) {
     let mut bytes = Vec::with_capacity(value.len());
 
     for symbol in value.chars() {

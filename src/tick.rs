@@ -229,6 +229,10 @@ async fn run(shared: Arc<Shared>) {
             log_debug!("Такт {}: действия игроков не успели к началу такта", ticks);
         }
 
+        // Функции: `#minecraft:tick` и запланированное `schedule` — в начале
+        // такта, после действий игроков, без замков (functions.rs).
+        crate::functions::tick(&shared, ticks);
+
         // Перенесённые и подтвердившие перенос — на такт ближе к тому, чтобы
         // встать на блок под ногами (`players::SETTLE_TICKS`).
         shared.players.lock().expect("список игроков захвачен другим потоком").settle();

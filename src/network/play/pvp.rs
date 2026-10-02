@@ -50,6 +50,14 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         return false;
     }
 
+    // Свои по команде с выключенным дружеским огнём не ранят друг друга
+    // (вики, Scoreboard: friendlyFire). Удар засчитывается как сделанный —
+    // замах тратится [проверить: звук и отдача у оригинала].
+    if !shared.scoreboard.lock().expect("табло захвачено другим потоком").may_hurt(&player.name, &victim.name) {
+        player.last_attack = now;
+        return true;
+    }
+
     let eye = (player.x, player.y + if player.sneaking { 1.27 } else { 1.62 }, player.z);
     let range = if player.game_mode == GAME_MODE_CREATIVE { 5.0 } else { player.attrs.value(crate::attributes::ENTITY_INTERACTION_RANGE) };
     let feet = (victim.position.x, victim.position.y, victim.position.z);

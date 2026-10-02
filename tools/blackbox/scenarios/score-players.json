@@ -1,0 +1,119 @@
+{
+  "name": "score-players",
+  "about": "Команда scoreboard players: set/add/remove/get/list/reset/operation/enable/display у робота и у вымышленного держателя; табло в боковой панели.",
+  "blocks": [],
+  "track_score": true,
+  "setup": [
+    "scoreboard players reset *",
+    "scoreboard objectives remove sc_h",
+    "scoreboard objectives remove sc_d",
+    "scoreboard objectives remove sbo_b",
+    "scoreboard objectives remove tr_t",
+    "scoreboard objectives remove tr_d",
+    "scoreboard objectives remove tg_s",
+    "scoreboard objectives remove ex_s",
+    "scoreboard objectives remove sbo_a",
+    "scoreboard objectives remove sbp_a",
+    "scoreboard objectives remove sbp_a"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "scoreboard objectives add sbp_a dummy"
+    },
+    {
+      "after": 4,
+      "cmd": "scoreboard objectives setdisplay sidebar sbp_a"
+    },
+    {
+      "after": 8,
+      "cmd": "scoreboard players set $(bot) sbp_a 5"
+    },
+    {
+      "after": 12,
+      "cmd": "scoreboard players add $(bot) sbp_a 3"
+    },
+    {
+      "after": 16,
+      "cmd": "scoreboard players remove $(bot) sbp_a 1"
+    },
+    {
+      "after": 20,
+      "cmd": "scoreboard players get $(bot) sbp_a"
+    },
+    {
+      "after": 24,
+      "cmd": "scoreboard players get nobody sbp_a"
+    },
+    {
+      "after": 28,
+      "cmd": "scoreboard players set #fake sbp_a 10"
+    },
+    {
+      "after": 32,
+      "cmd": "scoreboard players operation $(bot) sbp_a += #fake sbp_a"
+    },
+    {
+      "after": 36,
+      "cmd": "scoreboard players operation $(bot) sbp_a %= #fake sbp_a"
+    },
+    {
+      "after": 40,
+      "cmd": "scoreboard players operation #fake sbp_a >< $(bot) sbp_a"
+    },
+    {
+      "after": 44,
+      "cmd": "scoreboard players operation $(bot) sbp_a /= #zero sbp_a"
+    },
+    {
+      "after": 48,
+      "cmd": "scoreboard players list"
+    },
+    {
+      "after": 52,
+      "cmd": "scoreboard players list $(bot)"
+    },
+    {
+      "after": 56,
+      "cmd": "scoreboard players display name $(bot) sbp_a {\"text\":\"Я\",\"color\":\"gold\"}"
+    },
+    {
+      "after": 60,
+      "cmd": "scoreboard players display numberformat $(bot) sbp_a styled {color:\"green\"}"
+    },
+    {
+      "after": 64,
+      "cmd": "scoreboard players display name $(bot) sbp_a"
+    },
+    {
+      "after": 68,
+      "cmd": "scoreboard players enable $(bot) sbp_a"
+    },
+    {
+      "after": 72,
+      "cmd": "scoreboard players reset #fake sbp_a"
+    },
+    {
+      "after": 76,
+      "cmd": "scoreboard players reset $(bot)"
+    },
+    {
+      "after": 80,
+      "cmd": "scoreboard players add $(bot) sbp_a 2147483647"
+    },
+    {
+      "after": 84,
+      "cmd": "scoreboard players add $(bot) sbp_a 1"
+    },
+    {
+      "after": 88,
+      "cmd": "scoreboard objectives remove sbp_a"
+    }
+  ],
+  "record_ticks": 102,
+  "cleanup": [
+    "scoreboard objectives remove sbp_a",
+    "scoreboard players reset #fake",
+    "scoreboard players reset #zero"
+  ]
+}

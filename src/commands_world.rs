@@ -168,6 +168,8 @@ pub(crate) fn tr(key: &str, args: &[Arg]) -> Answer {
         reply: english(key, args),
         effect: Effect::None,
         component: Some(component(key, args).encode_network()),
+        rich: Vec::new(),
+        result: Some(1),
     }
 }
 
@@ -179,6 +181,8 @@ pub(crate) fn fail(key: &str, args: &[Arg]) -> Answer {
         reply: english(key, args),
         effect: Effect::None,
         component: Some(wrapped.encode_network()),
+        rich: Vec::new(),
+        result: None,
     }
 }
 
@@ -948,7 +952,7 @@ fn several(lines: Vec<Answer>) -> Answer {
         }
     }
 
-    Answer { reply, effect: Effect::None, component: Some([MANY_MARK.as_slice(), &joined].concat()) }
+    Answer { reply, effect: Effect::None, component: Some([MANY_MARK.as_slice(), &joined].concat()), rich: Vec::new(), result: Some(1) }
 }
 
 /// Пометка «в ответе несколько сообщений»: дальше идут длина и тело
@@ -2340,7 +2344,7 @@ fn located(key: &str, what: &str, (x, y, z): (i32, Option<i32>, i32), from: (f64
         .string("translate", "chat.square_brackets");
     let message = Compound::new().compounds("with", vec![Compound::new().string("", what), bracketed, Compound::new().int("", away as i32)]).string("translate", key);
 
-    Answer { reply: english(key, &[s(what), s(format!("[{}, {}, {}]", x, height, z)), Arg::Int(away)]), effect: Effect::None, component: Some(message.encode_network()) }
+    Answer { reply: english(key, &[s(what), s(format!("[{}, {}, {}]", x, height, z)), Arg::Int(away)]), effect: Effect::None, component: Some(message.encode_network()), rich: Vec::new(), result: Some(1) }
 }
 
 fn locate(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
