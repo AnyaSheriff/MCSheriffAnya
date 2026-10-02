@@ -1,0 +1,235 @@
+{
+ "name": "end-portal-enter",
+ "about": "Вход в Край через портал (творчество): робот оказывается внутри готового портала, переход порталом.",
+ "track_self": true,
+ "blocks": [
+  {
+   "at": [
+    7,
+    0,
+    2
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=south]"
+  },
+  {
+   "at": [
+    8,
+    0,
+    2
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=south]"
+  },
+  {
+   "at": [
+    9,
+    0,
+    2
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=south]"
+  },
+  {
+   "at": [
+    7,
+    0,
+    6
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=north]"
+  },
+  {
+   "at": [
+    8,
+    0,
+    6
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=north]"
+  },
+  {
+   "at": [
+    9,
+    0,
+    6
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=north]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    3
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=east]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    4
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=east]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    5
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=east]"
+  },
+  {
+   "at": [
+    10,
+    0,
+    3
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=west]"
+  },
+  {
+   "at": [
+    10,
+    0,
+    4
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=west]"
+  },
+  {
+   "at": [
+    10,
+    0,
+    5
+   ],
+   "state": "minecraft:end_portal_frame[eye=true,facing=west]"
+  },
+  {
+   "at": [
+    7,
+    0,
+    3
+   ],
+   "state": "minecraft:end_portal"
+  },
+  {
+   "at": [
+    7,
+    0,
+    4
+   ],
+   "state": "minecraft:end_portal"
+  },
+  {
+   "at": [
+    7,
+    0,
+    5
+   ],
+   "state": "minecraft:end_portal"
+  },
+  {
+   "at": [
+    8,
+    0,
+    3
+   ],
+   "state": "minecraft:end_portal"
+  },
+  {
+   "at": [
+    8,
+    0,
+    4
+   ],
+   "state": "minecraft:end_portal"
+  },
+  {
+   "at": [
+    8,
+    0,
+    5
+   ],
+   "state": "minecraft:end_portal"
+  },
+  {
+   "at": [
+    9,
+    0,
+    3
+   ],
+   "state": "minecraft:end_portal"
+  },
+  {
+   "at": [
+    9,
+    0,
+    4
+   ],
+   "state": "minecraft:end_portal"
+  },
+  {
+   "at": [
+    9,
+    0,
+    5
+   ],
+   "state": "minecraft:end_portal"
+  }
+ ],
+ "setup": [
+  "gamemode survival $(bot)",
+  "tp $(bot) $(0.5,0,0.5)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(0.5,0,0.5)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "tp $(bot) $(8.5,0.3,4.5)"
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "execute in minecraft:overworld run tp $(bot) $(0.5,0,0.5)",
+  "!wait 10",
+  "fill $(6,0,2) $(10,0,6) minecraft:air",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "высота точки возрождения",
+   "pattern": "\"location\":\\{\"x\":0,\"z\":0,\"y\":-?\\d+\\}",
+   "replace": "\"location\":{точка}",
+   "why": "У нашего испытательного ровного мира точка появления считается по высоте обычного мира (63), а у оригинала — по плоскому (−60): расхождение испытательного мира, а не механики (так же в void-death)."
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "сытость после возрождения",
+   "pattern": "saturation=[\\d.]+",
+   "replace": "saturation=*",
+   "why": "У оригинала после возрождения (kill в подготовке) сытость при следующей смене измерения 9, 10 или 20 по ходу прогонов; откуда берётся прирост, не выяснено [проверить]."
+  },
+  {
+   "type": "window",
+   "name": "смена порталом ждёт движения",
+   "match": "^(sv (Respawn|Entity Event|Abilities|Spawn Position|Game Event|Held Slot|Set Health|Set Experience)|self .*496)",
+   "range": [
+    1,
+    2
+   ],
+   "why": "Портал Края замечает игрока, когда тот двигается: первый пакет места от робота после tp приходит в такт +1 или +2 по фазе робота (оригинал против оригинала: +2, +1)."
+  },
+  {
+   "type": "anytick",
+   "name": "полоса босса после входа",
+   "match": "Boss Bar action=0",
+   "why": "Полосу босса оригинал показывает, когда бой в Энде очередной раз обновляет список игроков: оригинал против оригинала на +3 и +16 тактов от входа порталом (при входе командой — в том же такте, end-fight-enter)."
+  }
+ ]
+}

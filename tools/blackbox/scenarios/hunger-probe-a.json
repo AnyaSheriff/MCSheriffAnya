@@ -1,0 +1,48 @@
+{
+ "name": "hunger-probe-a",
+ "about": "Выживание: эффект голода 3 с уровня 256 стоя на месте — еда убывает по изнурению потактно (Set Health 20→6).",
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "fill $(2,0,-70) $(4,3,4) minecraft:air",
+  "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 30"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "effect give $(bot) minecraft:hunger 3 255 true"
+  }
+ ],
+ "record_ticks": 90,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "random": [
+  {
+   "type": "jitter",
+   "name": "фоновость эффекта при наложении",
+   "match": "^sv Metadata 11=",
+   "max": 1,
+   "why": "свойство 11 уходит в такте слежения: от места команды относительно хода робота в такте на +0 или +1; прогоны оригинала расходятся (hunger-probe-a 0904/0941: +0, 0934/0939/1811: +1)"
+  },
+  {
+   "type": "jitter",
+   "name": "начало отсчёта эффекта",
+   "match": "^sv (Set Health|Remove Effect)",
+   "max": 1,
+   "why": "срок и изнурение эффекта начинают идти в такте команды или в следующем — смотря, пришла команда до хода робота в такте или после; у оригинала прогоны расходятся (Remove на +59 или +60, еда 16 на +28 или +29, а 19 на +18 в обоих: hunger-probe-a 0941 против 1811)"
+  }
+ ]
+}

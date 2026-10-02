@@ -39,6 +39,10 @@ pub struct Chat {
     /// Кому строку не слать (тому, кто её уже получил своим путём: игрок
     /// видит своё сообщение о смерти в пакете смерти).
     hidden: Vec<Option<[u8; 16]>>,
+
+    /// Готовый компонент для клиентов Java (перевод с именами, как у
+    /// оригинала: чёрный ящик, pvp-mace-heavy); у строки без него — простой текст.
+    rich: Vec<Option<Vec<u8>>>,
 }
 
 impl Chat {
@@ -47,6 +51,7 @@ impl Chat {
             lines: Vec::new(),
             dropped: 0,
             hidden: Vec::new(),
+            rich: Vec::new(),
         }
     }
 
@@ -57,17 +62,36 @@ impl Chat {
 
     /// Добавляет строку, которую не надо слать игроку `except`.
     pub fn push_hidden(&mut self, line: String, except: Option<[u8; 16]>) {
+        self.push_rich(line, except, None);
+    }
+
+    /// То же с готовым компонентом для Java (`line` остаётся для консоли и Bedrock).
+    pub fn push_rich(&mut self, line: String, except: Option<[u8; 16]>, rich: Option<Vec<u8>>) {
         self.lines.push(line);
         self.hidden.push(except);
+        self.rich.push(rich);
 
         if self.lines.len() > KEPT {
             self.lines.remove(0);
             self.hidden.remove(0);
+            self.rich.remove(0);
             self.dropped += 1;
         }
     }
 
+    /// Как `since_for`, но с готовыми компонентами.
+    pub fn since_for_rich(&self, from: usize, who: &[u8; 16]) -> Vec<(String, Option<Vec<u8>>)> {
+        let start = from.max(self.dropped) - self.dropped;
+        let start = start.min(self.lines.len());
+
+        (start..self.lines.len())
+            .filter(|&i| self.hidden[i].as_ref() != Some(who))
+            .map(|i| (self.lines[i].clone(), self.rich[i].clone()))
+            .collect()
+    }
+
     /// Строки с номера `from`, кроме скрытых от игрока `who`.
+    #[cfg(test)]
     pub fn since_for(&self, from: usize, who: &[u8; 16]) -> Vec<String> {
         let start = from.max(self.dropped) - self.dropped;
         let start = start.min(self.lines.len());
@@ -99,6 +123,20 @@ impl Chat {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rich_line_keeps_its_component_and_its_hidden_player() {
+        let mut chat = Chat::new();
+        let (a, b) = ([1u8; 16], [2u8; 16]);
+
+        chat.push("простая".to_string());
+        chat.push_rich("смерть".to_string(), Some(a), Some(vec![9, 9]));
+
+        assert_eq!(chat.since_for_rich(0, &a), vec![("простая".to_string(), None)]);
+        assert_eq!(chat.since_for_rich(0, &b), vec![("простая".to_string(), None), ("смерть".to_string(), Some(vec![9, 9]))]);
+        // Консоль и Bedrock видят обычный текст.
+        assert_eq!(chat.since(1), ["смерть"]);
+    }
 
     #[test]
     fn hidden_lines_skip_only_their_player() {

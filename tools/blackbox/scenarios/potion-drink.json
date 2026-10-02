@@ -1,0 +1,50 @@
+{
+ "name": "potion-drink",
+ "about": "Зелья пьются 32 такта: лечение II на раненом (здоровье 10), потом быстрота; в руке остаётся пузырёк.",
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "fill $(2,0,-70) $(4,3,4) minecraft:air",
+  "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "give $(bot) minecraft:potion[potion_contents={potion:\"minecraft:strong_healing\"}] 1",
+  "give $(bot) minecraft:potion[potion_contents={potion:\"minecraft:swiftness\"}] 1",
+  "!hotbar 0",
+  "damage $(bot) 10",
+  "!wait 25"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  },
+  {
+   "after": 45,
+   "hotbar": 1
+  },
+  {
+   "after": 49,
+   "use": true
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "item_components": true,
+ "inventory": true
+}

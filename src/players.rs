@@ -213,7 +213,7 @@ pub enum Order {
     Respawn,
 
     /// Наложить эффект на столько тактов (`effect give`).
-    Effect { kind: crate::survival::EffectKind, amplifier: i32, ticks: i32 },
+    Effect(crate::survival::Effect),
 
     /// Снять все эффекты (`effect clear`).
     ClearEffects,

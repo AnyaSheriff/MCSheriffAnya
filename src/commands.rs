@@ -1172,10 +1172,12 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     Answer::saying(format!("Убрано сущностей: {}", carts.len() + dropped.len() + bolts + frames.len() + killed_mobs + orbs + shot))
 }
 
-/// `damage @e[…] <сколько> [вид]` — урон мобам (пока только обычный,
-/// `minecraft:generic`); игрокам — как `Hurt`.
+/// `damage <кто> <сколько> [вид]` — урон мобам и игрокам (вики,
+/// Commands/damage); игрокам — как `Hurt`. У оригинала команда попадает то до
+/// такта игрока, то после: Set Health и свойства приходят на +0 или +1
+/// (effect-absorption, два прогона); у нас — всегда до такта (+0).
 fn damage(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
-    let (Some(who), Some(amount)) = (parts.first(), parts.get(1).and_then(|amount| amount.parse::<f32>().ok())) else {
+    let (Some(who), Some(amount)) = (parts.first(), parts.get(1).and_then(|amount| amount.parse::<f32>().ok()).map(|amount| amount.max(0.0))) else {
         return Answer::saying("Нужно: damage <кто> <сколько> [minecraft:generic|minecraft:explosion|minecraft:player_attack]".to_string());
     };
     let kind = match parts.get(2).map(|kind| kind.trim_start_matches("minecraft:")) {
@@ -1243,7 +1245,7 @@ fn difficulty(parts: &[&str], shared: &Shared) -> Answer {
 /// `effect clear <игрок>`. Считаются голод, насыщение, сила, слабость, скорость, замедление и сопротивление — остальным вредно
 /// не быть [проверить].
 fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
-    let usage = || Answer::saying("Нужно: effect give <игрок> <эффект> [секунды] [уровень] | effect clear <игрок>".to_string());
+    let usage = || Answer::saying("Нужно: effect give <игрок> <эффект> [секунды|infinite] [уровень] [скрыть частицы] | effect clear <игрок> [эффект]".to_string());
 
     match parts {
         ["give", who, name, rest @ ..] => {
@@ -1256,12 +1258,18 @@ fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
                 return Answer::saying("Такого игрока нет на сервере".to_string());
             }
 
-            let seconds: i32 = rest.first().and_then(|value| value.parse().ok()).unwrap_or(30);
+            // Срок: секунды или «infinite» (вики, Commands/effect); без
+            // срока — 30 с. Четвёртый довод «true» прячет частицы и значок.
+            let ticks = match rest.first().copied() {
+                Some("infinite") => crate::survival::INFINITE,
+                other => other.and_then(|value| value.parse::<i32>().ok()).unwrap_or(30).max(1) * 20,
+            };
             let amplifier: i32 = rest.get(1).and_then(|value| value.parse().ok()).unwrap_or(0);
+            let hidden = rest.get(2).copied() == Some("true");
             let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
             for (uuid, _) in &targets {
-                players.order(uuid, Order::Effect { kind, amplifier: amplifier.clamp(0, 255), ticks: seconds.max(1) * 20 });
+                players.order(uuid, Order::Effect(crate::survival::Effect { kind, amplifier: amplifier.clamp(0, 255), ticks_left: ticks, ambient: false, visible: !hidden }));
             }
 
             Answer::saying(format!("Эффект {} наложен: {}", name, names_of(&targets)))

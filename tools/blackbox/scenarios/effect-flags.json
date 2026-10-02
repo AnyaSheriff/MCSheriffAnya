@@ -1,0 +1,116 @@
+{
+ "name": "effect-flags",
+ "about": "Невидимость, свечение, огнестойкость, спешка II, усталость, прыгучесть II, плавное падение, удача, подводное дыхание, ночное зрение, слепота, тьма, левитация, тошнота по 2 с: пакеты эффектов, флаги и атрибуты, снятие.",
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "fill $(2,0,-70) $(4,3,4) minecraft:air",
+  "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 30"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "effect give $(bot) minecraft:invisibility 2 0"
+  },
+  {
+   "after": 2,
+   "cmd": "effect give $(bot) minecraft:glowing 2 0"
+  },
+  {
+   "after": 4,
+   "cmd": "effect give $(bot) minecraft:fire_resistance 2 0"
+  },
+  {
+   "after": 6,
+   "cmd": "effect give $(bot) minecraft:haste 2 1"
+  },
+  {
+   "after": 8,
+   "cmd": "effect give $(bot) minecraft:mining_fatigue 2 0"
+  },
+  {
+   "after": 10,
+   "cmd": "effect give $(bot) minecraft:jump_boost 2 1"
+  },
+  {
+   "after": 12,
+   "cmd": "effect give $(bot) minecraft:slow_falling 2 0"
+  },
+  {
+   "after": 14,
+   "cmd": "effect give $(bot) minecraft:luck 2 0"
+  },
+  {
+   "after": 16,
+   "cmd": "effect give $(bot) minecraft:unluck 2 0"
+  },
+  {
+   "after": 18,
+   "cmd": "effect give $(bot) minecraft:water_breathing 2 0"
+  },
+  {
+   "after": 20,
+   "cmd": "effect give $(bot) minecraft:night_vision 2 0"
+  },
+  {
+   "after": 22,
+   "cmd": "effect give $(bot) minecraft:blindness 2 0"
+  },
+  {
+   "after": 24,
+   "cmd": "effect give $(bot) minecraft:darkness 2 0"
+  },
+  {
+   "after": 26,
+   "cmd": "effect give $(bot) minecraft:levitation 1 0"
+  },
+  {
+   "after": 28,
+   "cmd": "effect give $(bot) minecraft:nausea 2 0"
+  }
+ ],
+ "record_ticks": 75,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "item_components": true,
+ "random": [
+  {
+   "type": "jitter",
+   "name": "досыл атрибутов сущности",
+   "match": "^sv (other entity_update_attributes|Attributes )",
+   "max": 1,
+   "why": "атрибуты от эффекта уходят в такте слежения: от места команды в такте приходят на +0 или +1 (effect-absorption: +1, effect-flags: +0); два прогона оригинала расходятся; содержимое сверяется точно"
+  },
+  {
+   "type": "jitter",
+   "name": "частицы и фоновость эффектов при наложении",
+   "match": "Metadata 1[01]=",
+   "max": 1,
+   "why": "свойство с частицами (10) и фоновостью (11) уходит в такте слежения: от места команды в такте оно приходит на +0 или +1; два прогона оригинала расходятся (hunger-probe-a: 11 на +1, effect-instant: 11 на +0); содержимое сверяется точно"
+  },
+  {
+   "type": "mask",
+   "name": "порядок частиц эффектов",
+   "kind": "sv",
+   "pattern": "10=\\[.*\\]",
+   "replace": "10=[…]",
+   "why": "список частиц идёт у оригинала в порядке хеш-таблицы; при 13 и больше эффектах таблица перекладывается и порядок меняется (effect-flags, +24); цвета сверены вручную по записи оригинала"
+  }
+ ]
+}

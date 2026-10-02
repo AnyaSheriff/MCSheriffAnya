@@ -200,7 +200,7 @@ const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
 // Край: кристалл, дракон, его огненный шар и облако дыхания — пишутся как мобы.
-const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud']);
+const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident']);
 const padDrops = new Set();
 const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {
@@ -327,6 +327,11 @@ if (bot2) bot2._client.on('packet', (p, meta) => {
   if (!scenario.track_second || !recording || meta.state !== 'play') return;
   const text = selfText(bot2, p, meta);
   if (text) note('sv', { text: `b: ${text}` });
+});
+// `track_second_slots`: и ячейки инвентаря второго (заряженный арбалет, износ оружия).
+if (bot2) bot2._client.on('set_slot', (p) => {
+  if (!scenario.track_second_slots || !recording || Number(p.windowId) !== 0) return;
+  note('sv', { text: `b: Slot ${p.slot} ${itemName(p.item) || 'пусто'}` });
 });
 // `track_second_velocity`: и скорость, которую сервер сообщает второму (отдача нападающему).
 if (bot2) bot2._client.on('entity_velocity', (p) => {

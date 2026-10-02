@@ -38,18 +38,25 @@ const REMOVE_ENTITY_EFFECT: i32 = 0x4E;
 const AIR_PROPERTY: u8 = 1;
 const LIVING_FLAGS_PROPERTY: u8 = 8;
 const HEALTH_PROPERTY: u8 = 9;
+const AMBIENT_PROPERTY: u8 = 11;
+const ABSORPTION_PROPERTY: u8 = 17;
 const SCORE_PROPERTY: u8 = 18;
 const PROPERTY_VARINT: i32 = 1;
 const PROPERTY_FLOAT: i32 = 3;
+const PROPERTY_BOOLEAN: i32 = 8;
 
 /// Общие флаги сущности: горит, бежит.
 const FLAG_ON_FIRE: u8 = 0x01;
 const FLAG_SPRINTING: u8 = 0x08;
+const FLAG_INVISIBLE: u8 = 0x20;
+const FLAG_GLOWING: u8 = 0x40;
 
 /// События сущности: обычная смерть, «доел» и утопление.
 const EVENT_DEATH: i8 = 3;
 const EVENT_FINISHED_EATING: i8 = 9;
 const EVENT_DROWN: i8 = 67;
+/// Тотем бессмертия сработал (вики, Entity statuses: 35).
+const EVENT_TOTEM: i8 = 35;
 
 /// Номера свойств в пакете Update Attributes (порядок minecraft-data,
 /// названия там сдвинуты: 22 — скорость движения, 23 — кислородный бонус).
@@ -83,6 +90,8 @@ pub(super) struct Pending {
     pub killer: Option<(String, [u8; 16])>,
     /// Отдача от ударившего (шипы): единичное направление по горизонтали.
     pub push: Option<(f64, f64)>,
+    /// Остальным игрокам об этом уроне уже сообщено в такт удара (шипы).
+    pub announced: bool,
 }
 
 /// Чем занята рука, пока держится кнопка «использовать».
@@ -90,6 +99,10 @@ pub(super) struct Pending {
 pub(super) enum UseKind {
     Shield,
     Bow,
+    /// Арбалет заряжается; уровень «быстрой перезарядки».
+    Crossbow { quick_charge: i32 },
+    /// Трезубец занесён для броска.
+    Trident,
 }
 
 /// Использование предмета, которое тянется: щит поднят, лук натянут.
@@ -107,6 +120,29 @@ pub(super) struct Eating {
     pub ticks_left: i32,
     pub nutrition: i32,
     pub saturation: f32,
+    /// Эффекты, которые даёт еда (золотые яблоки).
+    pub effects: Vec<survival::Effect>,
+    /// Питьё: молоко снимает эффекты, после питья остаётся посуда.
+    pub drink: Option<Drink>,
+}
+
+/// Что пьётся (вики, Milk Bucket и Potion: пьётся 32 такта).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(super) enum Drink {
+    /// Ведро молока: снимает все эффекты, остаётся ведро.
+    Milk,
+    /// Зелье: даёт свои эффекты, остаётся пузырёк.
+    Potion,
+}
+
+impl Drink {
+    /// Что остаётся в руке после питья.
+    fn remainder(self) -> &'static str {
+        match self {
+            Drink::Milk => "bucket",
+            Drink::Potion => "glass_bottle",
+        }
+    }
 }
 
 /// Что клиент уже знает о свойствах игрока.
@@ -119,11 +155,19 @@ struct Meta {
     flags: u8,
     living: u8,
     effects: [i32; survival::EFFECT_PARTICLES],
+    /// Свойство 11: эффекты фоновые (см. `Vitals::effects_ambient`).
+    ambient: bool,
+    /// Свойство 17: поглощение (effect-absorption: Metadata 17=8).
+    absorption: f32,
 }
 
 /// Сетевая сторона здоровья игрока.
 pub(super) struct Net {
     pub hits: Vec<Pending>,
+    /// Урон, что сейчас применяется, уже разослан остальным (см. `Pending::announced`).
+    pub announced: bool,
+    /// Здоровье, которое остальные должны увидеть до применения шипов у самого игрока.
+    pub announced_health: Option<f32>,
     /// Частицы приземления, ждущие своего места в такте: состояние блока
     /// под ногами и число.
     pub landings: Vec<(i32, i32)>,
@@ -169,6 +213,10 @@ pub(super) struct Net {
     slot_update: Option<i32>,
     /// Слоты, которые сервер поменял сам (износ вещей) и которые надо показать клиенту.
     slots_dirty: Vec<i32>,
+    /// Слоты, поменявшиеся в такте сущности, которые клиенту уходят
+    /// следующим кругом (чёрный ящик, crossbow-shoot: зарядка на +25, ячейки
+    /// арбалета и стрел — на +26).
+    slots_later: Vec<i32>,
     /// Клиент нажал «возродиться».
     pub respawn: bool,
     /// Где умер: точка смерти в пакете Respawn.
@@ -199,16 +247,25 @@ impl Net {
         }
     }
 
+    /// Слот поменялся в такте сущности: клиенту — на круг позже.
+    pub fn slot_changed_later(&mut self, slot: i32) {
+        if !self.slots_later.contains(&slot) {
+            self.slots_later.push(slot);
+        }
+    }
+
     pub fn new() -> Self {
         Self {
             hits: Vec::new(),
+            announced: false,
+            announced_health: None,
             landings: Vec::new(),
             new_orbs: Vec::new(),
             xp_taken: 0,
             sent_health: survival::MAX_HEALTH,
             sent_food: 20,
             sent_saturation_zero: false,
-            meta: Meta { score: 0, arrows: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES] },
+            meta: Meta { score: 0, arrows: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES], ambient: false, absorption: 0.0 },
             fire_flag: false,
             velocity: None,
             pin: None,
@@ -224,6 +281,7 @@ impl Net {
             shield_disabled_until: 0,
             slot_update: None,
             slots_dirty: Vec::new(),
+            slots_later: Vec::new(),
             respawn: false,
             died_at: None,
             teleported: false,
@@ -465,7 +523,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         if let Some(damage) = damage {
             log_debug!("Play: {} приземлился с уроном {} на {:.2} {:.2} {:.2} (шаг {:.3})", player.name, damage, player.x, player.y, player.z, dy);
 
-            player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0, hurt_yaw: None, killer: None, push: None });
+            player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false });
         }
     }
 
@@ -512,7 +570,22 @@ pub(super) fn start_eating(player: &mut PlayerState) -> bool {
     let Some(stack) = player.inventory.held() else {
         return false;
     };
-    let Some(food) = blocks::item_name(stack.item).and_then(|name| food_of(name.strip_prefix("minecraft:").unwrap_or(name))) else {
+    let name = blocks::item_name(stack.item).map_or("", |name| name.strip_prefix("minecraft:").unwrap_or(name));
+
+    // Молоко и зелья пьются в любой сытости, 32 такта (вики, Milk Bucket, Potion).
+    let drink = match name {
+        "milk_bucket" => Some((Drink::Milk, Vec::new())),
+        "potion" => Some((Drink::Potion, survival::potion_effects(stack.extras().potion.unwrap_or(0)))),
+        _ => None,
+    };
+
+    if let Some((drink, effects)) = drink {
+        player.net.eating = Some(Eating { ticks_left: 32, nutrition: 0, saturation: 0.0, effects, drink: Some(drink) });
+
+        return true;
+    }
+
+    let Some(food) = food_of(name) else {
         return false;
     };
 
@@ -521,7 +594,7 @@ pub(super) fn start_eating(player: &mut PlayerState) -> bool {
         return false;
     }
 
-    player.net.eating = Some(Eating { ticks_left: food.ticks, nutrition: food.nutrition, saturation: food.saturation });
+    player.net.eating = Some(Eating { ticks_left: food.ticks, nutrition: food.nutrition, saturation: food.saturation, effects: survival::food_effects(name), drink: None });
 
     true
 }
@@ -557,6 +630,28 @@ pub(super) fn start_using(player: &mut PlayerState, hand: i32, now: u64) -> bool
     let kind = match name {
         "shield" if now >= player.net.shield_disabled_until => UseKind::Shield,
         "bow" => UseKind::Bow,
+        // Незаряженный арбалет заряжается, если есть чем (вики, Crossbow);
+        // заряженный стреляет (`bow::crossbow_fire`).
+        "crossbow" => {
+            let data = stack.map(|stack| stack.extras()).unwrap_or_default();
+
+            if data.charged > 0 || (player.game_mode != GAME_MODE_CREATIVE && super::bow::arrow_slot(player).is_none()) {
+                return false;
+            }
+
+            UseKind::Crossbow { quick_charge: data.level("quick_charge") }
+        }
+        // Трезубец с одной единицей прочности не бросается (вики, Trident:
+        // «1 durability or less remaining cannot be thrown»).
+        "trident" => {
+            let stack = stack.expect("имя есть только у предмета");
+
+            if crate::combat::durability_left(&stack).is_some_and(|left| left <= 1) {
+                return false;
+            }
+
+            UseKind::Trident
+        }
         _ => return false,
     };
 
@@ -572,10 +667,45 @@ pub(super) fn release_use(player: &mut PlayerState, shared: &Shared) {
         return;
     };
 
-    if using.kind == UseKind::Bow {
-        let now = *shared.ticks.borrow();
+    let now = *shared.ticks.borrow();
+    let held = now.saturating_sub(using.since) as u32;
 
-        super::bow::release(shared, player, using.hand, now.saturating_sub(using.since) as u32);
+    match using.kind {
+        UseKind::Bow => super::bow::release(shared, player, using.hand, held),
+        UseKind::Trident => super::bow::throw_trident(shared, player, using.hand, held),
+        // Арбалет заряжается сам, пока кнопка держится (`tick_crossbow`);
+        // отпустили — только опустили руки.
+        UseKind::Crossbow { .. } | UseKind::Shield => {}
+    }
+}
+
+/// Такт зарядки арбалета: звуки натяжения (вики, Crossbow: loading_start,
+/// loading_middle, loading_end; с «быстрой перезарядкой» — quick_charge_N)
+/// и сама зарядка, когда натянуто до конца, — кнопку при этом не отпускают
+/// (чёрный ящик, crossbow-shoot: стрела и арбалет в ячейках на +25, при
+/// отпускании на +30 — только флаг «использует» снят).
+pub(super) fn tick_crossbow(shared: &Shared, player: &mut PlayerState, now: u64) {
+    let Some(Using { since, hand, kind: UseKind::Crossbow { quick_charge } }) = player.net.using else {
+        return;
+    };
+    let held = now.saturating_sub(since) as u32;
+
+    if let Some((name, volume)) = crate::combat::crossbow_loading_sound(held, quick_charge) {
+        let dimension = player.dimension;
+        let pitch = 1.0 / (world_random(shared, dimension) * 0.5 + 1.0) + 0.2;
+
+        shared
+            .world_in(dimension)
+            .lock()
+            .expect("мир захвачен другим потоком")
+            .note_sound_player_at((player.x, player.y, player.z), name, volume, pitch);
+    }
+
+    // Заряженный арбалет соседи видят в том же такте (чёрный ящик,
+    // crossbow-shoot: экипировка на +25 вместе с loading_end).
+    if held == crate::combat::crossbow_charge_ticks(quick_charge) {
+        super::bow::crossbow_load(player, hand);
+        super::publish_player(shared, player);
     }
 }
 
@@ -675,12 +805,12 @@ async fn send_entity_event(stream: &mut Outgoing<'_>, entity_id: i32, status: i8
 }
 
 /// Поля Damage Event: вид, виновник и прямой виновник (оба со сдвигом +1, 0 — нет).
-fn damage_fields(source: Source, direct: i32, cause: i32) -> (i32, i32, i32) {
+pub(super) fn damage_fields(source: Source, direct: i32, cause: i32) -> (i32, i32, i32) {
     // Виновник: другой игрок (`cause`); у удара моба, стрелы, шипов и взрыва
     // крипера — он сам (чёрный ящик: cause=entity); у динамита и прочего — нет.
     let culprit = if cause != 0 {
         cause + 1
-    } else if matches!(source, Source::MobAttack | Source::Arrow | Source::PlayerExplosion | Source::Thorns) && direct != 0 {
+    } else if matches!(source, Source::MobAttack | Source::Arrow | Source::Trident | Source::PlayerExplosion | Source::Thorns) && direct != 0 {
         direct + 1
     } else {
         0
@@ -828,14 +958,28 @@ async fn send_meta(stream: &mut Outgoing<'_>, entity_id: i32, now: Meta, before:
         body.push(now.living);
     }
 
-    if now.effects != before.effects {
-        push_effect_particles(&mut body, &now.effects);
-    }
-
+    // Здоровье (9) раньше частиц (10): свойства идут по номерам
+    // (effect-instant: Metadata 9=14 10=[]).
     if now.health != before.health {
         body.push(HEALTH_PROPERTY);
         body.extend_from_slice(&encode_varint(PROPERTY_FLOAT));
         push_f32(&mut body, now.health);
+    }
+
+    if now.effects != before.effects {
+        push_effect_particles(&mut body, &now.effects);
+    }
+
+    if now.ambient != before.ambient {
+        body.push(AMBIENT_PROPERTY);
+        body.extend_from_slice(&encode_varint(PROPERTY_BOOLEAN));
+        body.push(u8::from(now.ambient));
+    }
+
+    if now.absorption != before.absorption {
+        body.push(ABSORPTION_PROPERTY);
+        body.extend_from_slice(&encode_varint(PROPERTY_FLOAT));
+        push_f32(&mut body, now.absorption);
     }
 
     if now.arrows != before.arrows {
@@ -990,6 +1134,19 @@ pub(super) async fn send_respawn_extras(stream: &mut Outgoing<'_>, shared: &Shar
     send_experience(stream, &player.vit).await
 }
 
+/// Событие прав игрока (`24 + уровень`): после Respawn оригинал шлёт его заново.
+pub(super) async fn send_op_level(stream: &mut Outgoing<'_>, shared: &Shared, player: &PlayerState) -> io::Result<()> {
+    let level = shared.ops.lock().expect("права захвачены другим потоком").level_of(&player.uuid);
+
+    send_entity_event(stream, player.entity_id, (24 + level.clamp(0, 4)) as i8).await
+}
+
+/// Здоровье и опыт заново: клиент после смены измерения знает их заново.
+pub(super) async fn send_vitals(stream: &mut Outgoing<'_>, player: &PlayerState) -> io::Result<()> {
+    send_health(stream, &player.vit).await?;
+    send_experience(stream, &player.vit).await
+}
+
 /// Всё, что сообщается сразу после Respawn (до чанков): опыт и точка
 /// возрождения — как у оригинала, по два раза.
 pub(super) async fn send_respawn_intro(stream: &mut Outgoing<'_>, player: &PlayerState) -> io::Result<()> {
@@ -1032,7 +1189,7 @@ async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerStat
         .chat
         .lock()
         .expect("чат захвачен другим потоком")
-        .push_hidden(death_line(source, &player.name, killer), Some(player.uuid));
+        .push_rich(death_line(source, &player.name, killer), Some(player.uuid), Some(message.clone()));
 
     send_entity_event(stream, player.entity_id, EVENT_DEATH).await?;
 
@@ -1141,16 +1298,28 @@ pub(super) async fn hit_by(
     }
 
     let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
-    let Some(result) = player.vit.hurt(amount, source, immune) else {
+    let announced = std::mem::take(&mut player.net.announced);
+    let Some(mut result) = player.vit.hurt(amount, source, immune) else {
         return Ok(None);
     };
+    let totem = result.died && !source.bypasses_invulnerability() && take_totem(player);
+
+    if totem {
+        result.died = false;
+        player.vit.dead = false;
+        player.vit.health = 1.0;
+    }
 
     send_damage_event(stream, player.entity_id, source, direct, cause).await?;
 
     {
         let (type_id, culprit, direct) = damage_fields(source, direct, cause);
 
-        shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_damaged(player.entity_id, type_id, culprit, direct);
+        // Остальным о шипах сообщено в такт удара: здесь, в конце такта, их
+        // рассылка уже ушла бы на такт позже (чёрный ящик, pvp-thorns).
+        if !announced {
+            shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_damaged(player.entity_id, type_id, culprit, direct);
+        }
         shared.players.lock().expect("список игроков захвачен другим потоком").set_health(&player.uuid, player.vit.health);
     }
 
@@ -1184,11 +1353,57 @@ pub(super) async fn hit_by(
         player.net.velocity_due = true;
     }
 
+    if totem {
+        revive_by_totem(stream, player).await?;
+    }
+
     if result.died {
         die(stream, shared, player, source, killer).await?;
     }
 
     Ok(Some(result))
+}
+
+/// Тотем бессмертия в руке (вики, Totem of Undying: «held in either hand»;
+/// сперва основная рука [проверить]): расходуется, возвращает, был ли он.
+fn take_totem(player: &mut PlayerState) -> bool {
+    let Some(totem) = blocks::item_named("totem_of_undying") else {
+        return false;
+    };
+
+    if player.inventory.held().is_some_and(|stack| stack.item == totem) {
+        player.net.slot_update = player.inventory.spend_held();
+
+        return true;
+    }
+
+    match player.inventory.slot(inventory::OFFHAND) {
+        Some(stack) if stack.item == totem => {
+            player.inventory.set(inventory::OFFHAND, inventory::take_one(Some(stack)));
+            player.net.slots_dirty.push(inventory::OFFHAND);
+
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Тотем сработал: здоровье 1, все эффекты сняты, затем регенерация II
+/// на 45 с, поглощение II на 5 с и огнестойкость на 40 с (вики, Totem of
+/// Undying), событие 35 — клиент сам показывает тотем и играет звук.
+async fn revive_by_totem(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
+    clear_effects(stream, player, None).await?;
+    player.vit.absorption = 0.0;
+
+    for (kind, amplifier, ticks) in [
+        (survival::EffectKind::Regeneration, 1, 900),
+        (survival::EffectKind::Absorption, 1, 100),
+        (survival::EffectKind::FireResistance, 0, 800),
+    ] {
+        give_effect(stream, player, survival::Effect { kind, amplifier, ticks_left: ticks, ambient: false, visible: true }).await?;
+    }
+
+    send_entity_event(stream, player.entity_id, EVENT_TOTEM).await
 }
 
 
@@ -1265,6 +1480,9 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     for pending in std::mem::take(&mut player.net.hits) {
         let killer = pending.killer.as_ref().map(|(name, uuid)| Killer { name, uuid: *uuid, weapon: None });
 
+        player.net.announced = pending.announced;
+        player.net.announced_health = None;
+
         let done = hit_by(stream, shared, player, pending.amount, pending.source, pending.direct, 0, killer, pending.hurt_yaw).await?;
 
         // Шипы отбрасывают ударившего, как обычный удар: скорость идёт сразу
@@ -1296,6 +1514,14 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         flags |= FLAG_SPRINTING;
     }
 
+    if player.vit.has_effect(survival::EffectKind::Invisibility) {
+        flags |= FLAG_INVISIBLE;
+    }
+
+    if player.vit.has_effect(survival::EffectKind::Glowing) {
+        flags |= FLAG_GLOWING;
+    }
+
     let now = Meta {
         score: player.vit.xp,
         arrows: player.net.arrows,
@@ -1304,6 +1530,8 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         flags,
         living: living_flags(player),
         effects: player.vit.effect_colors(),
+        ambient: player.vit.effects_ambient().unwrap_or(player.net.meta.ambient),
+        absorption: player.vit.absorption,
     };
 
     let held = std::mem::take(&mut player.net.hold_meta);
@@ -1347,6 +1575,10 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
 
     for slot in std::mem::take(&mut player.net.slots_dirty) {
         send_container_slot(stream, player, slot).await?;
+    }
+
+    for slot in std::mem::take(&mut player.net.slots_later) {
+        player.net.slot_changed(slot);
     }
 
     // C. такт сущности.
@@ -1459,7 +1691,8 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         send_sound_at(stream, "minecraft:entity.generic.extinguish_fire", SOUND_PLAYERS, at, 0.7, pitch).await?;
     }
 
-    if player.vit.fire_tick(env.in_lava) {
+    // Огнестойкость: огонь горит, но не бьёт (вики, Fire Resistance) [проверить].
+    if player.vit.fire_tick(env.in_lava) && !player.vit.has_effect(survival::EffectKind::FireResistance) {
         hit(stream, shared, player, 1.0, Source::OnFire, 0).await?;
     }
 
@@ -1536,19 +1769,11 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         }
     }
 
-    // Недоеденное.
-    if let Some(eating) = &mut player.net.eating {
-        eating.ticks_left -= 1;
+    let survival::EffectTick { hurt, gone } = player.vit.effects_tick();
 
-        if eating.ticks_left <= 0 {
-            let (nutrition, saturation) = (eating.nutrition, eating.saturation);
-
-            player.net.eating = None;
-            finish_eating(stream, shared, player, nutrition, saturation).await?;
-        }
+    for (amount, source) in hurt {
+        hit(stream, shared, player, amount, source, 0).await?;
     }
-
-    let gone = player.vit.effects_tick();
 
     if !gone.is_empty() {
         apply_effect_modifiers(player);
@@ -1560,6 +1785,39 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         body.extend_from_slice(&encode_varint(entity));
         body.extend_from_slice(&encode_varint(gone.id()));
         write_body(stream, body).await?;
+    }
+
+    tick_crossbow(shared, player, *shared.ticks.borrow());
+
+    // Недоеденное — после такта эффектов: эффект от еды впервые действует
+    // в следующем такте (golden-apple: регенерация лечит на +1 после Effect).
+    if let Some(eating) = &mut player.net.eating {
+        eating.ticks_left -= 1;
+
+        if eating.ticks_left <= 0 {
+            let (nutrition, saturation, drink) = (eating.nutrition, eating.saturation, eating.drink);
+            let effects = std::mem::take(&mut eating.effects);
+
+            player.net.eating = None;
+
+            match drink {
+                Some(drink) => finish_drinking(stream, player, drink).await?,
+                None => finish_eating(stream, shared, player, nutrition, saturation).await?,
+            }
+
+            // Эффекты еды — после звуков еды [проверить] (golden-apple).
+            // Мгновенные из зелья действуют сразу, без пакета эффекта
+            // (potion-drink: Set Health в такте глотка, Entity Effect нет).
+            for effect in effects {
+                match effect.kind {
+                    survival::EffectKind::InstantHealth => player.vit.heal((4 << effect.amplifier.clamp(0, 20)) as f32),
+                    survival::EffectKind::InstantDamage => {
+                        hit(stream, shared, player, (6 << effect.amplifier.clamp(0, 20)) as f32, Source::Magic, 0).await?;
+                    }
+                    _ => give_effect(stream, player, effect).await?,
+                }
+            }
+        }
     }
 
     if let Some(amount) = player.vit.food_tick(difficulty, shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed)) {
@@ -1596,28 +1854,41 @@ async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
     send_sound_at(stream, "minecraft:entity.player.burp", SOUND_PLAYERS, at, 0.5, c * 0.1 + 0.9).await
 }
 
+/// Допили: молоко снимает эффекты, в руке остаётся посуда (в творческом
+/// режиме — прежний предмет). Звук питья клиент играет сам [проверить].
+async fn finish_drinking(stream: &mut Outgoing<'_>, player: &mut PlayerState, drink: Drink) -> io::Result<()> {
+    if player.game_mode != GAME_MODE_CREATIVE {
+        let slot = player.inventory.selected_slot();
+
+        player.inventory.set(slot, blocks::item_named(drink.remainder()).map(|item| Stack::new(item, 1)));
+        player.net.slot_update = Some(slot);
+    }
+
+    send_entity_event(stream, player.entity_id, EVENT_FINISHED_EATING).await?;
+
+    if drink == Drink::Milk {
+        clear_effects(stream, player, None).await?;
+    }
+
+    Ok(())
+}
+
 /// Эффект от команды: клиенту — Entity Effect.
-pub(super) async fn give_effect(
-    stream: &mut Outgoing<'_>,
-    player: &mut PlayerState,
-    kind: survival::EffectKind,
-    amplifier: i32,
-    ticks: i32,
-) -> io::Result<()> {
-    if !player.vit.effect_replaced_by(kind, amplifier, ticks) {
+pub(super) async fn give_effect(stream: &mut Outgoing<'_>, player: &mut PlayerState, effect: survival::Effect) -> io::Result<()> {
+    if !player.vit.effect_replaced_by(effect.kind, effect.amplifier, effect.ticks_left) {
         return Ok(());
     }
 
-    player.vit.give_effect(kind, amplifier, ticks);
+    player.vit.give_effect_shown(effect);
     apply_effect_modifiers(player);
 
     let mut body = encode_varint(ENTITY_EFFECT);
 
     body.extend_from_slice(&encode_varint(player.entity_id));
-    body.extend_from_slice(&encode_varint(kind.id()));
-    body.extend_from_slice(&encode_varint(amplifier));
-    body.extend_from_slice(&encode_varint(ticks));
-    body.push(0x0E); // частицы, значок и ещё бит 0x08 (чёрный ящик, pvp-strength: flags=14)
+    body.extend_from_slice(&encode_varint(effect.kind.id()));
+    body.extend_from_slice(&encode_varint(effect.amplifier));
+    body.extend_from_slice(&encode_varint(if effect.kind.instant() { 1 } else { effect.ticks_left }));
+    body.push(effect.flags());
 
     write_body(stream, body).await
 }
@@ -1625,9 +1896,9 @@ pub(super) async fn give_effect(
 /// Модификаторы атрибутов от действующих эффектов (сила, слабость, скорость,
 /// замедление): ставятся по уровню, снятые эффекты убираются.
 pub(super) fn apply_effect_modifiers(player: &mut PlayerState) {
-    use survival::EffectKind::{Slowness, Speed, Strength, Weakness};
+    use crate::attributes::{MAX_ABSORPTION, MAX_HEALTH, SAFE_FALL_DISTANCE};
 
-    for kind in [Speed, Slowness, Strength, Weakness] {
+    for kind in survival::EffectKind::ALL {
         let Some((attribute, id, per_level, operation)) = kind.modifier() else { continue };
 
         match player.vit.effects.iter().find(|effect| effect.kind == kind) {
@@ -1635,6 +1906,15 @@ pub(super) fn apply_effect_modifiers(player: &mut PlayerState) {
             None => player.attrs.remove_modifier(attribute, id),
         }
     }
+
+    // Прыгучесть ещё и поднимает безопасную высоту на 1 за уровень (вики,
+    // Jump Boost: «safe fall distance») [проверить].
+    match player.vit.effects.iter().find(|effect| effect.kind == survival::EffectKind::JumpBoost) {
+        Some(effect) => player.attrs.set_modifier(SAFE_FALL_DISTANCE, Modifier::new("minecraft:effect.jump_boost", f64::from(effect.amplifier + 1), Operation::AddValue)),
+        None => player.attrs.remove_modifier(SAFE_FALL_DISTANCE, "minecraft:effect.jump_boost"),
+    }
+
+    player.vit.apply_limits(player.attrs.value(MAX_HEALTH) as f32, player.attrs.value(MAX_ABSORPTION) as f32, player.attrs.value(SAFE_FALL_DISTANCE) as f32);
 }
 
 /// Снять все эффекты (или один).

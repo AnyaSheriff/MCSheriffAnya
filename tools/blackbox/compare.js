@@ -218,6 +218,11 @@ const [a, b] = sides.map(s => load(s.file));
 // - `anytick`: событие случайного такта (гаснущая руда на случайном такте):
 //   ключ совпадает, такт любой, или его нет совсем. У нас все такие события
 //   одного ключа должны прийти в один такт — иначе допуска нет.
+// - `jitter`: событие то же самое, но его такт дрожит на `max` тактов
+//   (свойство с частицами эффектов уходит в такте слежения: от места команды
+//   в такте на +0 или +1). Ключ должен совпасть целиком; пара со сдвигом не
+//   больше `max` — в допуске, событие без пары — как обычно «нет у нас» или
+//   «лишнее» (в отличие от `count`, само событие и его содержимое сверяются).
 //
 // Возвращает предупреждения: если сам оригинал вышел за допуск, правило
 // неверно и его надо пересмотреть.
@@ -302,6 +307,9 @@ function applyRandom(A, B) {
           e.free = name; e.rule = name;
         }
       }
+    } else if (rule.type === 'jitter') {
+      const re = new RegExp(rule.match);
+      for (const e of [...A, ...B]) if (re.test(e.key)) { e.jitter = { name, max: rule.max ?? 1 }; e.rule = name; }
     } else if (rule.type === 'anytick') {
       const re = new RegExp(rule.match);
       for (const e of A) if (re.test(e.key)) { e.anytick = name; e.free = name; e.rule = name; }
@@ -384,6 +392,7 @@ for (let s = 0; s < steps; s++) {
     } else {
       // Случайный такт (`anytick`): то же событие в любой такт окна.
       if (y && x.anytick && y.anytick) mark = tolerate(y.anytick);
+      else if (y && x.jitter && y.jitter && Math.abs(y.dt - x.dt) <= x.jitter.max) mark = tolerate(x.jitter.name);
       else if (y) { shifted++; mark = y.dt > x.dt ? `у нас позже на ${y.dt - x.dt}` : `у нас раньше на ${x.dt - y.dt}`; }
       else if (x.free) mark = `${tolerate(x.free)} (у нас не было)`;
       else { missing++; mark = 'нет у нас'; }

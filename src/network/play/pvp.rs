@@ -137,6 +137,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         breach_scale: if smash { combat::breach_scale(data.level("breach")) } else { 1.0 },
         fire_ticks: fire * 80,
         thorns_slots,
+        ignores_shield: false,
     });
 
     // Звуки и частицы удара — в порядке оригинала: ушиб жертвы, звук удара,
@@ -298,6 +299,7 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
     // полусферы — урона нет, щит изнашивается, а топор отключает его.
     if mortal
         && strike.source != Source::Thorns
+        && !strike.ignores_shield
         && !player.vit.dead
         && damage > 0.0
         && let Some(hand) = vitals::shield_up(player, now)
@@ -378,7 +380,7 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             }
 
             if let Some(velocity) = player.net.velocity.take() {
-                if strike.source == Source::Arrow {
+                if strike.source.is_projectile() {
                     // Стрела: скорость и свойства идут на такт позже, а скорость
                     // — уже после шага трения и тяжести (чёрный ящик, pvp-bow:
                     // 0,218 = 0,4·0,546; 0,275 = (0,361 − 0,08)·0,98); в теле
@@ -387,7 +389,9 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
 
                     player.net.delayed_velocity = Some((now + 1, (velocity.0 * friction, (velocity.1 - 0.08) * 0.98, velocity.2 * friction)));
                     player.net.meta_hold = now + 1;
-                    player.net.arrows += 1;
+                    // Пробивающая стрела и трезубец в теле не застревают
+                    // (чёрный ящик, crossbow-piercing: Metadata без 12=1).
+                    player.net.arrows += i32::from(strike.source == Source::Arrow && !strike.ignores_shield);
                 } else {
                     // Скорость уходит сразу, одним пакетом на обе отдачи (чёрный ящик,
                     // pvp-fist: сразу за Hurt Animation).
@@ -523,6 +527,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
             breach_scale: 1.0,
             fire_ticks: 0,
             thorns_slots: Vec::new(),
+            ignores_shield: false,
         });
     }
 }
@@ -566,6 +571,22 @@ fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players:
         let at = (player.x, player.y, player.z);
         let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
+        // Остальные игроки видят урон ударившего в такт удара, а не на такт
+        // позже, когда он применится у него самого (чёрный ящик, pvp-thorns:
+        // «other damage_event» и здоровье в одном сбросе с остальным): урон
+        // заранее прикидывается на копии состояния.
+        let mut probe = player.vit.clone();
+        let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
+        let announced = probe.hurt(amount, Source::Thorns, immune).is_some();
+
+        if announced {
+            let (type_id, culprit, direct) = vitals::damage_fields(Source::Thorns, victim, 0);
+
+            world.note_player_damaged(player.entity_id, type_id, culprit, direct);
+            player.net.announced_health = Some(probe.health);
+            shared.players.lock().expect("список игроков захвачен другим потоком").set_health(&player.uuid, probe.health);
+        }
+
         // Звуки идут в журнал сразу: клиенты получат их в этом же такте.
         world.note_sound_player_except(at, "minecraft:entity.player.hurt", 1.0, 1.0, player.entity_id);
         world.note_sound_player_at(at, "minecraft:enchant.thorns.hit", 1.0, 1.0);
@@ -582,6 +603,7 @@ fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players:
 
                 Some(if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { crate::mob::look_direction(player.yaw) })
             },
+            announced,
             killer: shared.players.lock().expect("список игроков захвачен другим потоком").by_entity(victim).map(|(member, _)| (member.name.clone(), member.uuid)),
         });
         slots.push(*slot);

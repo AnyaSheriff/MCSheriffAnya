@@ -11,6 +11,8 @@ use super::*;
 use crate::arrow::{Arrow, Pickup, Shooter};
 use crate::combat;
 
+/// Пакеты: скорость сущности, сверка места, звук от сущности.
+const ENTITY_SOUND: i32 = 0x74;
 /// Пакеты: скорость сущности, сверка места, убрать сущность, звук.
 const ENTITY_VELOCITY: i32 = 0x65;
 const ENTITY_POSITION_SYNC: i32 = 0x23;
@@ -26,10 +28,15 @@ pub(super) struct ShownArrow {
     /// Поворот при появлении (по скорости выстрела).
     yaw: u8,
     pitch: u8,
+    /// Флаги (свойство 8), которые клиент знает.
+    flags: u8,
+    /// Возраст последнего сообщённого перелома полёта: подключение, отставшее
+    /// на такт-другой, всё равно его пошлёт.
+    resynced: u32,
 }
 
 /// Первый слот с обычной стрелой: вторая рука, панель, рюкзак.
-fn arrow_slot(player: &PlayerState) -> Option<i32> {
+pub(super) fn arrow_slot(player: &PlayerState) -> Option<i32> {
     let arrow = blocks::item_named("arrow")?;
     let order = std::iter::once(inventory::OFFHAND).chain(inventory::FIRST_HOTBAR..=inventory::LAST_HOTBAR).chain(inventory::FIRST_MAIN..=inventory::LAST_MAIN);
 
@@ -62,51 +69,20 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
     }
 
     let infinity = data.level("infinity") > 0;
-    let dimension = player.dimension;
-    let roll = || vitals::world_random(shared, dimension);
-
-    // Неточность: 0,0172275 (вики, Arrow) — к каждой оси направления.
-    let wobble = || f64::from(roll() + roll() + roll() + roll() - 2.0) * 0.0172275 * 1.732;
-    let (dx, dy, dz) = crate::arrow::aim(player.yaw, player.pitch, 1.0);
-    let speed = combat::arrow_speed(power);
-    let (last_x, last_y, last_z) = player.net.last_delta;
-    // К скорости стрелы прибавляется скорость стрелка (по вертикали — только в воздухе).
-    let velocity = (
-        (dx + wobble()) * speed + last_x,
-        (dy + wobble()) * speed + if player.on_ground { 0.0 } else { last_y },
-        (dz + wobble()) * speed + last_z,
-    );
-
-    let owner = (player.entity_id, player.uuid, player.name.clone());
-    let entity_id = shared.next_entity_id();
-    let arrow = Arrow {
-        entity_id,
-        uuid: items::uuid_for(entity_id),
-        dimension,
-        x: player.x,
-        y: player.y + if player.sneaking { 1.27 } else { 1.62 } - 0.1,
-        z: player.z,
-        vx: velocity.0,
-        vy: velocity.1,
-        vz: velocity.2,
-        owner: owner.0,
-        owner_uuid: owner.1,
-        owner_name: owner.2,
-        shooter: Shooter::Player,
+    let shot = Shot {
+        speed: combat::arrow_speed(power),
         crit: power >= 1.0,
         power: data.level("power"),
         punch: data.level("punch"),
         flame: data.level("flame") > 0,
+        pierce: 0,
         pickup: if creative || infinity { Pickup::CreativeOnly } else { Pickup::Yes },
-        in_ground: false,
-        ground_ticks: 0,
-        age: 0,
-        fresh: false,
-        landed: false,
-        start: ((player.x, player.y + if player.sneaking { 1.27 } else { 1.62 } - 0.1, player.z), velocity),
+        crossbow: false,
+        trident: None,
+        loyalty: 0,
     };
 
-    shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
+    shoot(shared, player, &shot, 0.0);
 
     // Стрела тратится (кроме творческого и «бесконечности»).
     if let Some(slot) = slot
@@ -123,6 +99,7 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
         pvp::wear_slot(shared, player, bow_slot, bow, 1, false);
     }
 
+    let dimension = player.dimension;
     let pitch = 1.0 / (vitals::world_random(shared, dimension) * 0.4 + 1.2) + power * 0.5;
 
     shared
@@ -130,6 +107,258 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
         .lock()
         .expect("мир захвачен другим потоком")
         .note_sound_player_at((player.x, player.y, player.z), "minecraft:entity.arrow.shoot", 1.0, pitch);
+}
+
+/// Чем и как стреляют: скорость, свойства стрелы.
+#[derive(Clone, Copy)]
+pub(super) struct Shot {
+    pub speed: f64,
+    pub crit: bool,
+    pub power: i32,
+    pub punch: i32,
+    pub flame: bool,
+    /// Сколько сущностей стрела ещё пробьёт («пробивание»).
+    pub pierce: i32,
+    pub pickup: Pickup,
+    /// Из арбалета: свой звук попадания.
+    pub crossbow: bool,
+    /// Брошенный трезубец (сам предмет) и его «верность».
+    pub trident: Option<Stack>,
+    pub loyalty: i32,
+}
+
+/// Выпускает стрелу от глаз игрока по взгляду, повёрнутому на `yaw_offset`
+/// градусов (боковые стрелы «залпа»).
+fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
+    let dimension = player.dimension;
+    let roll = || vitals::world_random(shared, dimension);
+
+    // Неточность: 0,0172275 (вики, Arrow) — к каждой оси направления.
+    let wobble = || f64::from(roll() + roll() + roll() + roll() - 2.0) * 0.0172275 * 1.732;
+    let (dx, dy, dz) = crate::arrow::aim(player.yaw + yaw_offset, player.pitch, 1.0);
+    let (last_x, last_y, last_z) = player.net.last_delta;
+    // К скорости стрелы прибавляется скорость стрелка (по вертикали — только в воздухе).
+    let velocity = (
+        (dx + wobble()) * shot.speed + last_x,
+        (dy + wobble()) * shot.speed + if player.on_ground { 0.0 } else { last_y },
+        (dz + wobble()) * shot.speed + last_z,
+    );
+    let eye = player.y + if player.sneaking { 1.27 } else { 1.62 } - 0.1;
+    let entity_id = shared.next_entity_id();
+    let arrow = Arrow {
+        entity_id,
+        uuid: items::uuid_for(entity_id),
+        dimension,
+        x: player.x,
+        y: eye,
+        z: player.z,
+        vx: velocity.0,
+        vy: velocity.1,
+        vz: velocity.2,
+        owner: player.entity_id,
+        owner_uuid: player.uuid,
+        owner_name: player.name.clone(),
+        shooter: Shooter::Player,
+        crit: shot.crit,
+        power: shot.power,
+        punch: shot.punch,
+        flame: shot.flame,
+        pierce_left: shot.pierce,
+        pierced: Vec::new(),
+        crossbow: shot.crossbow,
+        trident: shot.trident,
+        loyalty: shot.loyalty,
+        dealt: false,
+        returning: false,
+        collected: false,
+        impulse: false,
+        resync: None,
+        rot: None,
+        ground_block: (0, 0, 0),
+        pickup: shot.pickup,
+        in_ground: false,
+        ground_ticks: 0,
+        age: 0,
+        fresh: false,
+        landed: false,
+        start: ((player.x, eye, player.z), velocity),
+    };
+
+    shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
+}
+
+/// Трезубец в руке `hand` занесён `ticks` тактов и отпущен: бросок, если
+/// держали не меньше 10 тактов (вики, Trident: «0.5s»). Летит 2,5 блока за
+/// такт, изнашивается на 1 ещё в руке и уходит из инвентаря (у творческого
+/// остаётся) (вики, Trident).
+pub(super) fn throw_trident(shared: &Shared, player: &mut PlayerState, hand: i32, ticks: u32) {
+    if ticks < 10 {
+        return;
+    }
+
+    let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+    let Some(trident) = player.inventory.slot(slot) else {
+        return;
+    };
+
+    if combat::item_name(trident.item) != Some("trident") {
+        return;
+    }
+
+    let creative = player.game_mode == GAME_MODE_CREATIVE;
+    let data = trident.extras();
+
+    // [проверить] «тягун» (riptide) пока не бросает игрока.
+    if data.level("riptide") > 0 {
+        return;
+    }
+
+    let dimension = player.dimension;
+    let thrown = if creative {
+        trident
+    } else {
+        let mut roll = || vitals::world_random(shared, dimension);
+        let worn = combat::wear(&trident, 1, false, &mut roll);
+
+        match combat::add_damage(trident, worn) {
+            Some(next) => next,
+            None => return,
+        }
+    };
+    let shot = Shot {
+        speed: crate::arrow::TRIDENT_SPEED,
+        crit: false,
+        power: 0,
+        punch: 0,
+        flame: false,
+        pierce: 0,
+        pickup: if creative { Pickup::CreativeOnly } else { Pickup::Yes },
+        crossbow: false,
+        trident: Some(thrown.with_count(1)),
+        loyalty: data.level("loyalty"),
+    };
+
+    shoot(shared, player, &shot, 0.0);
+
+    // Звук броска шлёт слежение за трезубцем (`send_arrow_ticks`).
+    if !creative {
+        player.inventory.set(slot, None);
+        player.net.slot_changed(slot);
+    }
+}
+
+/// Арбалет в руке `hand` натянут до конца: заряжается стрелой из инвентаря
+/// (вики, Crossbow).
+pub(super) fn crossbow_load(player: &mut PlayerState, hand: i32) {
+    let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+    let Some(crossbow) = player.inventory.slot(slot) else {
+        return;
+    };
+
+    if combat::item_name(crossbow.item) != Some("crossbow") {
+        return;
+    }
+
+    let creative = player.game_mode == GAME_MODE_CREATIVE;
+    let arrow_slot = arrow_slot(player);
+
+    if arrow_slot.is_none() && !creative {
+        return;
+    }
+
+    let mut data = crossbow.extras();
+
+    // С «залпом» в арбалете три стрелы, но из инвентаря берётся одна
+    // (вики, Multishot: «consumes only one arrow»).
+    data.charged = if data.level("multishot") > 0 { 3 } else { 1 };
+    player.inventory.set(slot, Some(crossbow.with_extras(data)));
+    player.net.slot_changed_later(slot);
+
+    if let Some(arrow_slot) = arrow_slot
+        && !creative
+        && let Some(stack) = player.inventory.slot(arrow_slot)
+    {
+        player.inventory.set(arrow_slot, inventory::remainder(stack, stack.count - 1));
+        player.net.slot_changed_later(arrow_slot);
+    }
+}
+
+/// Заряженный арбалет в руке `hand` нажат: выстрел. Возвращает, был ли он.
+/// Стрела 3,15 блока за такт, критическая; «залп» — три стрелы по ±10°,
+/// боковые не подбираются; износ 1 за стрелу (вики, Crossbow, Multishot).
+pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32) -> bool {
+    let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+    let Some(crossbow) = player.inventory.slot(slot) else {
+        return false;
+    };
+
+    if combat::item_name(crossbow.item) != Some("crossbow") {
+        return false;
+    }
+
+    let mut data = crossbow.extras();
+
+    if data.charged == 0 {
+        return false;
+    }
+
+    let creative = player.game_mode == GAME_MODE_CREATIVE;
+    let count = data.charged;
+    let shot = Shot {
+        speed: combat::CROSSBOW_SPEED,
+        crit: true,
+        power: 0,
+        punch: 0,
+        flame: false,
+        pierce: data.level("piercing"),
+        pickup: if creative { Pickup::CreativeOnly } else { Pickup::Yes },
+        crossbow: true,
+        trident: None,
+        loyalty: 0,
+    };
+    // Порядок: средняя, левая, правая — повороты стрел при появлении у
+    // оригинала 0, −10, +10 (чёрный ящик, crossbow-multishot: yaw −1, −8, 7),
+    // а поворот стрелы — взгляд с обратным знаком.
+    let offsets: &[f32] = if count >= 3 { &[0.0, combat::MULTISHOT_ANGLE, -combat::MULTISHOT_ANGLE] } else { &[0.0] };
+    let dimension = player.dimension;
+
+    // На каждую стрелу — звук выстрела, потом сама стрела (чёрный ящик,
+    // crossbow-multishot: звук, сущность, звук, сущность…); высота случайна.
+    for (index, offset) in offsets.iter().enumerate() {
+        let side = Shot { pickup: if index == 0 { shot.pickup } else { Pickup::CreativeOnly }, crossbow: true, ..shot };
+        // Средняя звучит ровно (у оригинала ~1,00 во всех записях), боковые —
+        // со случайной высотой (1,16 и 0,90 в crossbow-multishot) [проверить].
+        let pitch = if index == 0 { 1.0 } else { 1.0 / (vitals::world_random(shared, dimension) * 0.5 + 1.8) + if index == 1 { 0.63 } else { 0.43 } };
+
+        shared
+            .world_in(dimension)
+            .lock()
+            .expect("мир захвачен другим потоком")
+            .note_sound_player_at((player.x, player.y, player.z), "minecraft:item.crossbow.shoot", 1.0, pitch);
+        shoot(shared, player, &side, *offset);
+    }
+
+    // Стрелявшему ячейку не шлют: выстрел его клиент показывает сам (чёрный
+    // ящик, crossbow-shoot: у оригинала после выстрела Set Slot нет), соседям
+    // уходит экипировка с износом.
+    data.charged = 0;
+
+    let unloaded = crossbow.with_extras(data);
+
+    // Износ 1 за каждую стрелу (чёрный ящик, crossbow-multishot: damage=3).
+    if creative {
+        player.inventory.set(slot, Some(unloaded));
+    } else {
+        let mut roll = || vitals::world_random(shared, dimension);
+        let worn = combat::wear(&unloaded, i32::from(count), false, &mut roll);
+
+        match combat::add_damage(unloaded, worn) {
+            Some(next) => player.inventory.set(slot, Some(next)),
+            None => pvp::replace_worn(shared, player, slot, unloaded, worn),
+        }
+    }
+
+    true
 }
 
 /// Рассказывает клиенту о стрелах (и игроков, и скелетов): появление,
@@ -169,7 +398,7 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
 
             body.extend_from_slice(&encode_varint(arrow.entity_id));
             body.extend_from_slice(&arrow.uuid);
-            body.extend_from_slice(&encode_varint(crate::arrow::ARROW_TYPE));
+            body.extend_from_slice(&encode_varint(arrow.entity_type()));
             push_f64(&mut body, sx);
             push_f64(&mut body, sy);
             push_f64(&mut body, sz);
@@ -180,25 +409,45 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             body.extend_from_slice(&encode_varint(arrow.owner));
             write_body(stream, body).await?;
 
-            // Свойства не по умолчанию: полностью натянутая — с искрами.
-            if arrow.crit {
-                let mut data = encode_varint(SET_ENTITY_DATA);
-
-                data.extend_from_slice(&encode_varint(arrow.entity_id));
-                data.push(ARROW_FLAGS);
-                data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
-                data.push(1);
-                data.push(PROPERTIES_END);
+            // Свойства не по умолчанию — в связке с появлением: искры
+            // натянутой, «пробивание», «верность» и блеск трезубца.
+            if let Some(data) = arrow_data(arrow) {
                 write_body(stream, data).await?;
             }
 
-            let shown = ShownArrow { in_ground: false, first: arrow.age == 0, grid: grid_of((sx, sy, sz)), yaw: cart_angle(yaw), pitch: cart_angle(pitch) };
+            // Звук броска — от самой сущности, следом за её появлением
+            // (чёрный ящик, trident-throw: entity_sound_effect трезубца).
+            if arrow.trident.is_some() && arrow.age <= 1 && arrow.resync.is_none() {
+                let mut body = encode_varint(ENTITY_SOUND);
+
+                body.extend_from_slice(&encode_varint(0));
+                body.extend_from_slice(&encode_string("minecraft:item.trident.throw"));
+                body.push(0);
+                body.extend_from_slice(&encode_varint(SOUND_PLAYERS));
+                body.extend_from_slice(&encode_varint(arrow.entity_id));
+                body.extend_from_slice(&1.0f32.to_be_bytes());
+                body.extend_from_slice(&1.0f32.to_be_bytes());
+                body.extend_from_slice(&0i64.to_be_bytes());
+                write_body(stream, body).await?;
+            }
+
+            let shown = ShownArrow { in_ground: false, first: arrow.age == 0, grid: grid_of((sx, sy, sz)), yaw: cart_angle(yaw), pitch: cart_angle(pitch), flags: arrow.flags(), resynced: arrow.resync.map_or(0, |(due, ..)| due) };
 
             // Нулевой сдвиг с поворотом: сразу за появлением, если стрела уже
             // ходила (чёрный ящик, arrow-pickup: «arrow сдвиг 0,0,0»), иначе —
             // в следующем такте (чёрный ящик, skeleton-arrow).
             if !shown.first {
                 send_zero_move(stream, arrow.entity_id, &shown).await?;
+
+                // Свойства, заданные после создания, слежение шлёт ещё раз
+                // (чёрный ящик, crossbow-piercing: «8=1 9=2» до и после
+                // нулевого сдвига; trident-loyalty: «11=2 12=true»).
+                if arrow.age <= 1
+                    && !arrow.is_mob_shot()
+                    && let Some(data) = arrow_data(arrow)
+                {
+                    write_body(stream, data).await?;
+                }
             }
 
             player.seen_bow_arrows.insert(arrow.entity_id, shown);
@@ -208,6 +457,38 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
         if shown.first {
             send_zero_move(stream, arrow.entity_id, &shown).await?;
             shown.first = false;
+        }
+
+        // Перелом полёта прошлого такта (отскок трезубца, пробитая цель,
+        // возврат к хозяину): скорость, сдвиг к тогдашнему месту, флаги
+        // (чёрный ящик, trident-loyalty: +2 и +3; crossbow-piercing: +2).
+        if let Some((due, at, velocity, flags)) = arrow.resync
+            && due > shown.resynced
+            && due <= arrow.age
+        {
+            shown.resynced = due;
+
+            let mut body = encode_varint(ENTITY_VELOCITY);
+
+            body.extend_from_slice(&encode_varint(arrow.entity_id));
+            types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
+            write_body(stream, body).await?;
+
+            let facing = arrow.rot.unwrap_or_else(|| Arrow { vx: velocity.0, vy: velocity.1, vz: velocity.2, ..arrow.clone() }.angles());
+
+            send_move_to(stream, arrow, &mut shown, at, facing).await?;
+
+            if flags != shown.flags {
+                let mut data = encode_varint(SET_ENTITY_DATA);
+
+                data.extend_from_slice(&encode_varint(arrow.entity_id));
+                data.push(ARROW_FLAGS);
+                data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
+                data.push(flags);
+                data.push(PROPERTIES_END);
+                write_body(stream, data).await?;
+                shown.flags = flags;
+            }
         }
 
         if arrow.in_ground != shown.in_ground {
@@ -229,30 +510,15 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             types::push_velocity(&mut body, arrow.vx, arrow.vy, arrow.vz);
             write_body(stream, body).await?;
 
-            if arrow.in_ground && arrow.age <= LANDING_SYNC_AGE {
-                let (yaw, pitch) = arrow.facing();
-                let grid = grid_of((arrow.x, arrow.y, arrow.z));
-                let step = (grid.0 - shown.grid.0, grid.1 - shown.grid.1, grid.2 - shown.grid.2);
+            // Трезубец садится всегда полностью (чёрный ящик, trident-throw:
+            // на 9-м такте скорость, сдвиг и «в блоке»).
+            let full = arrow.age <= LANDING_SYNC_AGE || arrow.trident.is_some();
 
-                if [step.0, step.1, step.2].iter().all(|value| i16::try_from(*value).is_ok()) {
-                    let mut body = encode_varint(0x36);
-
-                    body.extend_from_slice(&encode_varint(arrow.entity_id));
-                    push_i16(&mut body, step.0 as i16);
-                    push_i16(&mut body, step.1 as i16);
-                    push_i16(&mut body, step.2 as i16);
-                    body.push(cart_angle(yaw));
-                    body.push(cart_angle(pitch));
-                    body.push(0);
-                    write_body(stream, body).await?;
-                } else {
-                    send_position_sync(stream, arrow).await?;
-                }
-
-                shown.grid = grid;
+            if arrow.in_ground && full {
+                send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), arrow.facing()).await?;
             }
 
-            if arrow.age <= LANDING_SYNC_AGE || !arrow.in_ground {
+            if full || !arrow.in_ground {
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(arrow.entity_id));
@@ -268,6 +534,11 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             // Раз в 20 тактов — сверка места (у оригинала так у всех
             // сущностей; замерено только до 18-го такта) [проверить].
             send_position_sync(stream, arrow).await?;
+        } else if arrow.in_ground && arrow.trident.is_some() && arrow.age.is_multiple_of(ARROW_SYNC) {
+            // Лежащий трезубец раз в 20 тактов шлёт нулевой сдвиг с поворотом
+            // (чёрный ящик, trident-throw: +19, +39, +59); у стрел так не
+            // бывает (skeleton-arrow).
+            send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), arrow.facing()).await?;
         }
 
         player.seen_bow_arrows.insert(arrow.entity_id, shown);
@@ -283,6 +554,75 @@ const ARROW_SYNC: u32 = 20;
 /// свойство «в блоке»): у оригинала севшая в первые такты — так
 /// (arrow-pickup), севшая на 18-м — одной скоростью (skeleton-arrow).
 const LANDING_SYNC_AGE: u32 = 2;
+
+/// Свойства стрелы не по умолчанию одним пакетом: флаги (искры), уровень
+/// «пробивания», у трезубца — «верность» и блеск зачарованного (minecraft-data,
+/// entities.json: flags, pierce_level, loyalty, foil). `None` — всё по умолчанию.
+fn arrow_data(arrow: &Arrow) -> Option<Vec<u8>> {
+    let foil = arrow.trident.is_some_and(|trident| !trident.extras().enchants.is_empty());
+
+    if arrow.flags() == 0 && arrow.pierce_left <= 0 && arrow.loyalty <= 0 && !foil {
+        return None;
+    }
+
+    let mut data = encode_varint(SET_ENTITY_DATA);
+
+    data.extend_from_slice(&encode_varint(arrow.entity_id));
+
+    if arrow.flags() != 0 {
+        data.push(ARROW_FLAGS);
+        data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
+        data.push(arrow.flags());
+    }
+
+    if arrow.pierce_left > 0 {
+        data.push(ARROW_PIERCE);
+        data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
+        data.push(arrow.pierce_left.clamp(0, 127) as u8);
+    }
+
+    if arrow.loyalty > 0 {
+        data.push(TRIDENT_LOYALTY);
+        data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
+        data.push(arrow.loyalty.clamp(0, 127) as u8);
+    }
+
+    if foil {
+        data.push(TRIDENT_FOIL);
+        data.extend_from_slice(&encode_varint(PROPERTY_BOOLEAN));
+        data.push(1);
+    }
+
+    data.push(PROPERTIES_END);
+
+    Some(data)
+}
+
+/// Сдвиг стрелы к месту `at` с поворотом `facing` от того, что клиент знает;
+/// слишком далёкий — сверкой места.
+async fn send_move_to(stream: &mut Outgoing<'_>, arrow: &Arrow, shown: &mut ShownArrow, at: (f64, f64, f64), (yaw, pitch): (f32, f32)) -> io::Result<()> {
+    let grid = grid_of(at);
+    let step = (grid.0 - shown.grid.0, grid.1 - shown.grid.1, grid.2 - shown.grid.2);
+
+    if [step.0, step.1, step.2].iter().all(|value| i16::try_from(*value).is_ok()) {
+        let mut body = encode_varint(0x36);
+
+        body.extend_from_slice(&encode_varint(arrow.entity_id));
+        push_i16(&mut body, step.0 as i16);
+        push_i16(&mut body, step.1 as i16);
+        push_i16(&mut body, step.2 as i16);
+        body.push(cart_angle(yaw));
+        body.push(cart_angle(pitch));
+        body.push(0);
+        write_body(stream, body).await?;
+    } else {
+        send_position_sync(stream, arrow).await?;
+    }
+
+    shown.grid = grid;
+
+    Ok(())
+}
 
 /// Нулевой сдвиг с поворотом выстрела: сверка места сразу после появления.
 async fn send_zero_move(stream: &mut Outgoing<'_>, entity_id: i32, shown: &ShownArrow) -> io::Result<()> {
@@ -300,7 +640,10 @@ async fn send_zero_move(stream: &mut Outgoing<'_>, entity_id: i32, shown: &Shown
 
 /// Свойства стрелы: флаги (искры), «в блоке»; вид значения «логическое».
 const ARROW_FLAGS: u8 = 8;
+const ARROW_PIERCE: u8 = 9;
 const ARROW_IN_GROUND: u8 = 10;
+const TRIDENT_LOYALTY: u8 = 11;
+const TRIDENT_FOIL: u8 = 12;
 const PROPERTY_BOOLEAN: i32 = 8;
 
 /// Сверка места и скорости стрелы (Entity Position Sync).

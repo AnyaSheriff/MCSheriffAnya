@@ -1,0 +1,56 @@
+{
+ "name": "dim-nether-survival",
+ "about": "Смена измерения командой в выживании (здоровье, голод, опыт после Respawn).",
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "gamemode survival $(bot)",
+  "tp $(bot) $(0.5,0,0.5)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(0.5,0,0.5)",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "execute in minecraft:the_nether run tp $(bot) 0.5 128.0 0.5"
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "execute in minecraft:overworld run tp $(bot) $(0.5,0,0.5)",
+  "!wait 10",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "высота точки возрождения",
+   "pattern": "\"location\":\\{\"x\":0,\"z\":0,\"y\":-?\\d+\\}",
+   "replace": "\"location\":{точка}",
+   "why": "У нашего испытательного ровного мира точка появления считается по высоте обычного мира (63), а у оригинала — по плоскому (−60): расхождение испытательного мира, а не механики (так же в void-death)."
+  },
+  {
+   "type": "mask",
+   "kind": "sv",
+   "name": "сытость после возрождения",
+   "pattern": "saturation=[\\d.]+",
+   "replace": "saturation=*",
+   "why": "У оригинала после возрождения (kill в подготовке) сытость при следующей смене измерения 9, 10 или 20 по ходу прогонов; откуда берётся прирост, не выяснено [проверить]."
+  },
+  {
+   "type": "anytick",
+   "name": "здоровье и опыт после смены",
+   "match": "Set (Health|Experience)",
+   "why": "Оригинал досылает их, когда игрок впервые тикает в новом мире, то есть когда его чанк готов: оригинал против оригинала на +0, +1, +3 и +30 тактов (dim-nether-tp, dim-nether-survival, dim-overworld-tp); порталом — в том же такте."
+  }
+ ]
+}

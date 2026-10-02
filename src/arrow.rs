@@ -25,6 +25,18 @@ use crate::world::World;
 /// Номер вида сущности «стрела» (minecraft-data 26.1, entities.json).
 pub const ARROW_TYPE: i32 = 6;
 
+/// Перелом полёта для клиентов: возраст, место, скорость, флаги.
+pub type Resync = (u32, (f64, f64, f64), (f64, f64, f64), u8);
+
+/// Номер вида сущности «трезубец» (minecraft-data 26.1, entities.json).
+pub const TRIDENT_TYPE: i32 = 135;
+
+/// Урон брошенного трезубца: 8, от скорости не зависит (вики, Trident).
+pub const TRIDENT_DAMAGE: f32 = 8.0;
+
+/// Скорость броска трезубца: 2,5 блока за такт (вики, Projectile) [проверить].
+pub const TRIDENT_SPEED: f64 = 2.5;
+
 /// Кто выпустил стрелу.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Shooter {
@@ -50,6 +62,10 @@ const PICKUP_DELAY: u32 = 7;
 /// Насколько по горизонтали от оси игрока стрела ещё подбирается: полуширина
 /// игрока 0,3 + запас подбора 1,0 + полуширина стрелы 0,25 [проверить].
 const PICKUP_REACH: f64 = 1.55;
+
+/// Сколько тактов трезубец с «верностью» лежит в блоке, прежде чем полететь
+/// к хозяину [проверить].
+const LOYALTY_GROUND_WAIT: u32 = 4;
 
 /// Можно ли подобрать стрелу (вики, Arrow: «Pickup»).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -83,6 +99,36 @@ pub struct Arrow {
     pub power: i32,
     pub punch: i32,
     pub flame: bool,
+    /// «Пробивание» арбалета: сквозь стольких ещё пройдёт; кого уже задела
+    /// (второй раз не бьёт) (вики, Piercing).
+    pub pierce_left: i32,
+    pub pierced: Vec<i32>,
+    /// Выпущена из арбалета: попадание звучит иначе (чёрный ящик,
+    /// crossbow-shoot: item.crossbow.hit).
+    pub crossbow: bool,
+    /// Брошенный трезубец: сам предмет (с износом и зачарованиями) — он и
+    /// вернётся в инвентарь. `None` — обычная стрела.
+    pub trident: Option<Stack>,
+    /// Уровень «верности» трезубца.
+    pub loyalty: i32,
+    /// Трезубец уже ранил: сущностей больше не задевает (вики, Trident:
+    /// «only damage one entity»).
+    pub dealt: bool,
+    /// Трезубец с «верностью» летит к хозяину сквозь блоки.
+    pub returning: bool,
+    /// Подобрана: исчезнет в следующем такте (клиентам её убирает сам подбор).
+    pub collected: bool,
+    /// В этом такте полёт переломился (отскок, пробитая цель, возврат):
+    /// слежение оригинала сообщает об этом на такт позже.
+    pub impulse: bool,
+    /// Что сообщить клиентам о переломе: в каком возрасте, место, скорость и
+    /// флаги к концу такта перелома.
+    pub resync: Option<Resync>,
+    /// Поворот трезубца (угол, наклон): после отскока он не следует за
+    /// скоростью, а догоняет её на пятую часть за такт [проверить].
+    pub rot: Option<(f32, f32)>,
+    /// Блок, в котором сидит вставшая стрела (трезубец отступает от него).
+    pub ground_block: (i32, i32, i32),
     pub pickup: Pickup,
     pub in_ground: bool,
     pub ground_ticks: u32,
@@ -122,6 +168,18 @@ impl Arrow {
             power: 0,
             punch: 0,
             flame: false,
+            pierce_left: 0,
+            pierced: Vec::new(),
+            crossbow: false,
+            trident: None,
+            loyalty: 0,
+            dealt: false,
+            returning: false,
+            collected: false,
+            impulse: false,
+            resync: None,
+            rot: None,
+            ground_block: (0, 0, 0),
             pickup: Pickup::No,
             in_ground: false,
             ground_ticks: 0,
@@ -132,8 +190,39 @@ impl Arrow {
         }
     }
 
+    /// Звук попадания в сущность: у стрелы арбалета и трезубца свои.
+    pub fn hit_sound(&self) -> &'static str {
+        if self.trident.is_some() {
+            "minecraft:item.trident.hit"
+        } else if self.crossbow {
+            "minecraft:item.crossbow.hit"
+        } else {
+            "minecraft:entity.arrow.hit"
+        }
+    }
+
+    /// Звук попадания в блок: у трезубца свой (вики, Trident: hit_ground)
+    /// [проверить для арбалета].
+    pub fn ground_sound(&self) -> &'static str {
+        if self.trident.is_some() { "minecraft:item.trident.hit_ground" } else { self.hit_sound() }
+    }
+
+    /// Флаги сущности (свойство 8): 1 — критическая, 2 — летит сквозь блоки.
+    pub fn flags(&self) -> u8 {
+        u8::from(self.crit) | if self.returning { 2 } else { 0 }
+    }
+
+    /// Вид сущности для клиента.
+    pub fn entity_type(&self) -> i32 {
+        if self.trident.is_some() { TRIDENT_TYPE } else { ARROW_TYPE }
+    }
+
     /// Куда смотрит стрела: по скорости, а у вставшей — по скорости выстрела.
     pub fn facing(&self) -> (f32, f32) {
+        if let Some(rot) = self.rot {
+            return rot;
+        }
+
         if self.vx == 0.0 && self.vy == 0.0 && self.vz == 0.0 {
             let (svx, svy, svz) = self.start.1;
 
@@ -208,6 +297,10 @@ pub fn launch(from: (f64, f64, f64), aim: (f64, f64, f64), speed: f64, error: f6
 /// Урон стрелы, влетевшей со скоростью `speed`: `ceil(скорость · базовый)`,
 /// у критической прибавка (вики, Arrow).
 pub fn damage_of(arrow: &Arrow, roll: f32) -> f32 {
+    if arrow.trident.is_some() {
+        return TRIDENT_DAMAGE;
+    }
+
     crate::combat::arrow_damage((arrow.vx * arrow.vx + arrow.vy * arrow.vy + arrow.vz * arrow.vz).sqrt(), arrow.power, arrow.crit, roll)
 }
 
@@ -287,13 +380,73 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             continue;
         }
 
+        if arrow.collected {
+            removed.push(arrow.entity_id);
+            continue;
+        }
+
         arrow.age += 1;
+
+        // Перелом прошлого такта: место и скорость к его концу уйдут
+        // клиентам в этом (чёрный ящик, trident-throw: отскок на +1, скорость
+        // и сдвиг до точки удара — на +2).
+        if std::mem::take(&mut arrow.impulse) {
+            arrow.resync = Some((arrow.age, (arrow.x, arrow.y, arrow.z), (arrow.vx, arrow.vy, arrow.vz), arrow.flags()));
+        }
+
+        // «Верность»: ранивший или вонзившийся трезубец летит к хозяину
+        // (вики, Loyalty: «return to the thrower after hitting an entity or
+        // directly hitting a block»); хозяина нет — лежит, как лежал.
+        if arrow.loyalty > 0 && !arrow.returning && (arrow.dealt || (arrow.in_ground && arrow.ground_ticks >= LOYALTY_GROUND_WAIT)) && members.iter().any(|member| member.0 == arrow.owner && member.3 != 3) {
+            arrow.returning = true;
+            arrow.in_ground = false;
+            arrow.impulse = true;
+            world.note_sound_neutral_at((arrow.x, arrow.y, arrow.z), "minecraft:item.trident.return", 10.0, 1.0);
+        }
+
+        if arrow.returning {
+            let Some((owner_id, at, _, mode, uuid, _)) = members.iter().find(|member| member.0 == arrow.owner && member.3 != 3) else {
+                // Хозяин ушёл: падает, где летел [проверить].
+                arrow.returning = false;
+                continue;
+            };
+            let level = f64::from(arrow.loyalty);
+            let eye = (at.0, at.1 + 1.62, at.2);
+
+            // Сквозь блоки к глазам хозяина: скорость гаснет на 5 % и
+            // набирает 0,05 за уровень в его сторону, по высоте ещё
+            // подтягивается на 0,015 за уровень [проверить].
+            arrow.y += (eye.1 - arrow.y) * 0.015 * level;
+
+            let (dx, dy, dz) = (eye.0 - arrow.x, eye.1 - arrow.y, eye.2 - arrow.z);
+            let length = (dx * dx + dy * dy + dz * dz).sqrt().max(1.0e-9);
+            let pull = 0.05 * level;
+
+            arrow.vx = arrow.vx * 0.95 + dx / length * pull;
+            arrow.vy = arrow.vy * 0.95 + dy / length * pull;
+            arrow.vz = arrow.vz * 0.95 + dz / length * pull;
+            arrow.x += arrow.vx;
+            arrow.y += arrow.vy;
+            arrow.z += arrow.vz;
+
+            if (at.0 - arrow.x).abs() <= PICKUP_REACH && arrow.y >= at.1 - 1.0 && arrow.y <= at.1 + 2.3 && (at.2 - arrow.z).abs() <= PICKUP_REACH {
+                if let Some(stack) = arrow.trident.filter(|_| *mode != 1 || arrow.pickup == Pickup::Yes) {
+                    pickups.push((*uuid, stack));
+                }
+
+                world.note_collect(arrow.entity_id, *owner_id, 1);
+                arrow.collected = true;
+            }
+
+            continue;
+        }
 
         if arrow.in_ground {
             arrow.ground_ticks += 1;
 
             // Опору убрали — стрела снова летит.
-            let state = world.get_block(arrow.x.floor() as i32, arrow.y.floor() as i32, arrow.z.floor() as i32);
+            let (bx, by, bz) = arrow.ground_block;
+            let state = world.get_block(bx, by, bz);
 
             if !crate::mob::solid(state) {
                 arrow.in_ground = false;
@@ -304,9 +457,14 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             } else if arrow.ground_ticks >= PICKUP_DELAY && arrow.pickup != Pickup::No {
                 // Подбор: игрок рядом (ящик игрока расширен на блок вширь и
                 // полблока ввысь и вниз). [проверить]
-                let picker = members.iter().find(|(_, at, _, mode, _, _)| {
+                // Трезубец берёт только хозяин: у оригинала раненый, стоя рядом
+                // с упавшим трезубцем, его не поднял (чёрный ящик,
+                // trident-throw: лежит до конца записи, 60 тактов).
+                let owner_only = arrow.trident.is_some();
+                let picker = members.iter().find(|(entity_id, at, _, mode, _, _)| {
                     (*mode == 0 || *mode == 1 || *mode == 2)
                         && (arrow.pickup == Pickup::Yes || *mode == 1)
+                        && (!owner_only || *entity_id == arrow.owner)
                         && (at.0 - arrow.x).abs() <= PICKUP_REACH
                         && arrow.y >= at.1 - 1.0
                         && arrow.y <= at.1 + 2.3
@@ -314,12 +472,17 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 });
 
                 if let Some((entity_id, _, _, _, uuid, _)) = picker {
-                    pickups.push((*uuid, Stack::new(crate::blocks::item_named("arrow").unwrap_or(0), 1)));
+                    // Творческому трезубец не возвращается в руки: он и не уходил.
+                    match arrow.trident {
+                        Some(stack) if arrow.pickup == Pickup::Yes => pickups.push((*uuid, stack)),
+                        Some(_) => {}
+                        None => pickups.push((*uuid, Stack::new(crate::blocks::item_named("arrow").unwrap_or(0), 1))),
+                    }
                     world.note_collect(arrow.entity_id, *entity_id, 1);
                     // Стрела исчезнет в следующем такте: клиентам её убирает сам
                     // подбор (Collect), чтобы шёл раньше удаления.
                     arrow.pickup = Pickup::No;
-                    arrow.ground_ticks = GROUND_LIFE;
+                    arrow.collected = true;
                 }
             }
 
@@ -332,7 +495,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
         // Игроки.
         for (entity_id, at, sneaking, mode, _, _) in &members {
-            if *mode == 3 || (*entity_id == arrow.owner && arrow.age <= OWNER_SAFE) {
+            if arrow.dealt || *mode == 3 || (*entity_id == arrow.owner && arrow.age <= OWNER_SAFE) || arrow.pierced.contains(entity_id) {
                 continue;
             }
 
@@ -347,7 +510,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
         // Мобы (стрелы мобов их не задевают).
         for mob in items.mobs().iter().filter(|_| !arrow.is_mob_shot()) {
-            if mob.is_dead() {
+            if arrow.dealt || mob.is_dead() || arrow.pierced.contains(&mob.entity_id) {
                 continue;
             }
 
@@ -381,6 +544,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             _ => false,
         };
 
+        let best_part = best.as_ref().map(|(part, _)| *part);
+
         if entity_first && let Some((part, target)) = best {
             arrow.x = from.0 + (to.0 - from.0) * part;
             arrow.y = from.1 + (to.1 - from.1) * part;
@@ -408,13 +573,14 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         from: (arrow.x, arrow.y, arrow.z),
                         yaw: -arrow.angles().0,
                         damage,
-                        source: Source::Arrow,
+                        source: if arrow.trident.is_some() { Source::Trident } else { Source::Arrow },
                         extra_knockback: arrow.punch as f32 * 1.2,
                         weapon: None,
                         disables_shield_ticks: 0,
                         breach_scale: 1.0,
                         fire_ticks: if arrow.flame { 100 } else { 0 },
                         thorns_slots: Vec::new(),
+                        ignores_shield: arrow.pierce_left > 0 || !arrow.pierced.is_empty(),
                     });
                 }
                 Target::Mob { entity_id } => {
@@ -436,7 +602,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                                 mob.hurt_part(damage, false, Source::Arrow, Some(push));
                             }
                         } else {
-                            mob.hurt(damage, Source::Arrow, Some(push));
+                            mob.hurt(damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, Some(push));
                         }
                     }
 
@@ -450,25 +616,80 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 }
             }
 
-            removed.push(arrow.entity_id);
-
             // Игроку, раненому мобом, звук попадания уходит из `vitals::mob_hit`.
             if !(arrow.is_mob_shot() && on_player) {
-                world.note_sound_neutral_at((arrow.x, arrow.y, arrow.z), "minecraft:entity.arrow.hit", 1.0, 1.0);
+                world.note_sound_neutral_at((arrow.x, arrow.y, arrow.z), arrow.hit_sound(), 1.0, 1.0);
             }
 
-            continue;
+            // Трезубец отскакивает от раненого и падает рядом (вики, Trident:
+            // «bounces off the entity and lands nearby») [проверить множители].
+            // Скорость гаснет и тянет вниз в том же такте (чёрный ящик,
+            // trident-throw: после удара скорость (0; −0,044; −0,025)).
+            if arrow.trident.is_some() {
+                arrow.dealt = true;
+                arrow.impulse = true;
+                // Поворот — по скорости сразу после отскока, до тяжести
+                // (чёрный ящик, trident-throw: на +2 наклон 0, назад).
+                arrow.rot = Some(Arrow { vx: -0.01 * arrow.vx, vy: -0.1 * arrow.vy, vz: -0.01 * arrow.vz, ..arrow.clone() }.angles());
+                arrow.vx *= -0.01 * AIR_DRAG;
+                arrow.vy = arrow.vy * -0.1 * AIR_DRAG - GRAVITY;
+                arrow.vz *= -0.01 * AIR_DRAG;
+                continue;
+            }
+
+            // «Пробивание»: стрела летит дальше сквозь задетого (вики,
+            // Piercing: «pass through the number of entities equal to the
+            // enchantment level») и в такт удара проходит весь свой ход
+            // (чёрный ящик, crossbow-piercing: через такт после удара сдвиг на
+            // два полных хода).
+            if arrow.pierce_left > 0 {
+                arrow.pierce_left -= 1;
+                arrow.pierced.push(match target {
+                    Target::Player { entity_id } | Target::Mob { entity_id } => entity_id,
+                });
+                arrow.impulse = true;
+                (arrow.x, arrow.y, arrow.z) = from;
+            } else {
+                removed.push(arrow.entity_id);
+                continue;
+            }
+        }
+
+        // Пробившая цель стрела летит дальше: блок после цели ещё может её
+        // остановить.
+        let block_part = if entity_first { block_part.filter(|part| best_part.is_some_and(|hit| *part >= hit)) } else { block_part };
+
+        // Отскочивший трезубец доворачивается к полёту на 0,2 за такт (чёрный
+        // ящик, trident-throw: сел через 8 тактов с наклоном −70°).
+        // Цель — скорость к концу такта, после сопротивления и тяжести.
+        if let Some((yaw, pitch)) = arrow.rot {
+            let (target_yaw, target_pitch) = Arrow { vx: arrow.vx * AIR_DRAG, vy: arrow.vy * AIR_DRAG - GRAVITY, vz: arrow.vz * AIR_DRAG, ..arrow.clone() }.angles();
+            let turn = (target_yaw - yaw + 540.0).rem_euclid(360.0) - 180.0;
+
+            arrow.rot = Some((yaw + turn * 0.2, pitch + (target_pitch - pitch) * 0.2));
         }
 
         if let Some(part) = block_part {
             arrow.x = from.0 + (to.0 - from.0) * part;
             arrow.y = from.1 + (to.1 - from.1) * part;
             arrow.z = from.2 + (to.2 - from.2) * part;
+            arrow.ground_block = (arrow.x.floor() as i32, arrow.y.floor() as i32, arrow.z.floor() as i32);
+
+            // Трезубец отступает от блока на 0,05 назад по полёту (чёрный ящик,
+            // trident-throw: сел на высоте 0,05 над полом) [проверить у стрел].
+            if arrow.trident.is_some() {
+                let length = (arrow.vx * arrow.vx + arrow.vy * arrow.vy + arrow.vz * arrow.vz).sqrt().max(1.0e-9);
+
+                arrow.x -= arrow.vx / length * 0.05;
+                arrow.y -= arrow.vy / length * 0.05;
+                arrow.z -= arrow.vz / length * 0.05;
+            }
+
             (arrow.vx, arrow.vy, arrow.vz) = (0.0, 0.0, 0.0);
             arrow.in_ground = true;
             arrow.ground_ticks = 0;
             arrow.landed = true;
-            world.note_sound_neutral_at((arrow.x, arrow.y, arrow.z), "minecraft:entity.arrow.hit", 1.0, 1.0);
+            world.note_sound_neutral_at((arrow.x, arrow.y, arrow.z), arrow.ground_sound(), 1.0, 1.0);
             continue;
         }
 
@@ -477,7 +698,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         arrow.z = to.2;
 
         let in_water = crate::mob::is_water(world.get_block(arrow.x.floor() as i32, arrow.y.floor() as i32, arrow.z.floor() as i32));
-        let drag = if in_water { WATER_DRAG } else { AIR_DRAG };
+        // Трезубец в воде не тормозит (вики, Trident: «does not slow down»).
+        let drag = if in_water && arrow.trident.is_none() { WATER_DRAG } else { AIR_DRAG };
 
         arrow.vx *= drag;
         arrow.vy = arrow.vy * drag - GRAVITY;
@@ -555,6 +777,18 @@ mod tests {
             power: 0,
             punch: 0,
             flame: false,
+            pierce_left: 0,
+            pierced: Vec::new(),
+            crossbow: false,
+            trident: None,
+            loyalty: 0,
+            dealt: false,
+            returning: false,
+            collected: false,
+            impulse: false,
+            resync: None,
+            rot: None,
+            ground_block: (0, 0, 0),
             pickup: Pickup::Yes,
             in_ground: false,
             ground_ticks: 0,
@@ -571,6 +805,33 @@ mod tests {
 
         assert!((arrow.angles().0 + 90.0).abs() < 1e-4);
         assert_eq!(damage_of(&arrow, 0.0), 6.0);
+    }
+
+    #[test]
+    fn a_piercing_arrow_remembers_whom_it_passed() {
+        let mut arrow = Arrow::from_mob(7, Dimension::Overworld, (0.0, 0.0, 0.0), (3.15, 0.0, 0.0), 4, "entity.minecraft.skeleton");
+
+        arrow.pierce_left = 2;
+        arrow.pierced.push(11);
+
+        // Пробитый второй раз не задевается, запас пробиваний убывает.
+        assert!(arrow.pierced.contains(&11));
+        assert_eq!(arrow.pierce_left, 2);
+        // Урон стрелы арбалета: ceil(3,15 · 2) = 7 (вики, Crossbow).
+        assert_eq!(damage_of(&arrow, 0.0), 7.0);
+    }
+
+    #[test]
+    fn a_thrown_trident_hits_for_eight_and_sounds_like_a_trident() {
+        let mut trident = Arrow::from_mob(7, Dimension::Overworld, (0.0, 0.0, 0.0), (2.5, 0.0, 0.0), 4, "entity.minecraft.skeleton");
+
+        trident.trident = Some(Stack::new(crate::blocks::item_named("trident").expect("трезубец есть"), 1));
+
+        // Урон 8 при любой скорости (вики, Trident).
+        assert_eq!(damage_of(&trident, 0.9), TRIDENT_DAMAGE);
+        assert_eq!(trident.entity_type(), TRIDENT_TYPE);
+        assert_eq!(trident.hit_sound(), "minecraft:item.trident.hit");
+        assert_eq!(trident.ground_sound(), "minecraft:item.trident.hit_ground");
     }
 
     #[test]

@@ -1,0 +1,62 @@
+{
+ "name": "effect-regen",
+ "about": "Регенерация II, яд и иссушение на раненом (здоровье 10): такты лечения и урона (Set Health, Damage Event).",
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "fill $(2,0,-70) $(4,3,4) minecraft:air",
+  "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 30",
+  "damage $(bot) 10",
+  "!wait 25"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "effect give $(bot) minecraft:regeneration 3 1"
+  },
+  {
+   "after": 70,
+   "cmd": "effect give $(bot) minecraft:poison 3 0"
+  },
+  {
+   "after": 140,
+   "cmd": "effect give $(bot) minecraft:wither 3 0"
+  }
+ ],
+ "record_ticks": 220,
+ "cleanup": [
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "item_components": true,
+ "random": [
+  {
+   "type": "jitter",
+   "name": "досыл атрибутов сущности",
+   "match": "^sv (other entity_update_attributes|Attributes )",
+   "max": 1,
+   "why": "атрибуты от эффекта уходят в такте слежения: от места команды в такте приходят на +0 или +1 (effect-absorption: +1, effect-flags: +0); два прогона оригинала расходятся; содержимое сверяется точно"
+  },
+  {
+   "type": "jitter",
+   "name": "частицы и фоновость эффектов при наложении",
+   "match": "Metadata 1[01]=",
+   "max": 1,
+   "why": "свойство с частицами (10) и фоновостью (11) уходит в такте слежения: от места команды в такте оно приходит на +0 или +1; два прогона оригинала расходятся (hunger-probe-a: 11 на +1, effect-instant: 11 на +0); содержимое сверяется точно"
+  }
+ ]
+}

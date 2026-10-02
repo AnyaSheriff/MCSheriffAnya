@@ -34,7 +34,7 @@ pub fn final_damage(view: &CombatView, damage: f32, source: Source) -> f32 {
         return damage;
     }
 
-    let points = view.protection + if source == Source::Arrow { view.projectile_protection } else { 0 };
+    let points = view.protection + if source.is_projectile() { view.projectile_protection } else { 0 };
 
     after_protection(after_armor(damage, view.armor, view.toughness), points)
 }
@@ -89,6 +89,9 @@ pub struct PlayerStrike {
     pub breach_scale: f32,
     /// Зачарование «заговорённое лезвие»: столько тактов горит жертва.
     pub fire_ticks: i32,
+    /// Стрела «пробивания» минует щит (вики, Piercing: «ignores shields»)
+    /// и не застревает в теле.
+    pub ignores_shield: bool,
     /// Слоты брони, чьи шипы сработали при этом ударе (бросок делает нападающий).
     pub thorns_slots: Vec<i32>,
 }
@@ -372,7 +375,7 @@ pub fn protection_points(data: &Data, source: Source) -> i32 {
     match source {
         Source::InFire | Source::Lava | Source::OnFire => points += 2 * data.level("fire_protection"),
         Source::Explosion => points += 2 * data.level("blast_protection"),
-        Source::Arrow => points += 2 * data.level("projectile_protection"),
+        Source::Arrow | Source::Trident => points += 2 * data.level("projectile_protection"),
         Source::Fall => points += 3 * data.level("feather_falling"),
         _ => {}
     }
@@ -407,6 +410,13 @@ pub fn wear(stack: &Stack, amount: i32, armor: bool, mut roll: impl FnMut() -> f
     let chance = if armor { 0.6 + 0.4 / (level as f32 + 1.0) } else { 1.0 / (level as f32 + 1.0) };
 
     (0..amount).filter(|_| roll() < chance).count() as i32
+}
+
+/// Сколько прочности у стопки осталось; `None` — не изнашивается.
+pub fn durability_left(stack: &Stack) -> Option<i32> {
+    let max = max_damage(stack);
+
+    (max > 0).then(|| max - stack.extras().damage)
 }
 
 /// Добавляет износ. None — предмет сломался (износ дошёл до наибольшего).
@@ -522,6 +532,48 @@ pub fn arrow_damage(speed: f64, power_level: i32, crit: bool, crit_roll: f32) ->
     damage
 }
 
+// ---------------------------------------------------------------------------
+// Арбалет
+// ---------------------------------------------------------------------------
+
+/// Скорость стрелы из арбалета: 3,15 блока за такт (вики, Arrow: «3.15 for
+/// crossbows»).
+pub const CROSSBOW_SPEED: f64 = 3.15;
+
+/// Сколько тактов арбалет заряжается: 25 (вики, Crossbow: 1,25 с), «быстрая
+/// перезарядка» снимает по 5 за уровень (1 с, 0,75 с, 0,5 с).
+pub fn crossbow_charge_ticks(quick_charge: i32) -> u32 {
+    (25 - 5 * quick_charge.clamp(0, 5)).max(0) as u32
+}
+
+/// Звук такта зарядки арбалета: имя и громкость. Такты от начала натяжения:
+/// начало — когда натянуто на 0,2 (громкость 0,5), середина — на 0,5 (0,5;
+/// у «быстрой перезарядки» своё начало и нет середины), конец — на 1 (1,0).
+/// Снято чёрным ящиком: crossbow-shoot (+5, +13, +25), crossbow-quick-charge
+/// II (+3, +15).
+pub fn crossbow_loading_sound(held: u32, quick_charge: i32) -> Option<(&'static str, f32)> {
+    let total = crossbow_charge_ticks(quick_charge) as f32;
+
+    if held == (total * 0.2).ceil() as u32 {
+        return Some(match quick_charge {
+            0 => ("minecraft:item.crossbow.loading_start", 0.5),
+            1 => ("minecraft:item.crossbow.quick_charge_1", 0.5),
+            2 => ("minecraft:item.crossbow.quick_charge_2", 0.5),
+            _ => ("minecraft:item.crossbow.quick_charge_3", 0.5),
+        });
+    }
+
+    if held == total as u32 {
+        return Some(("minecraft:item.crossbow.loading_end", 1.0));
+    }
+
+    (quick_charge == 0 && held == (total * 0.5).ceil() as u32).then_some(("minecraft:item.crossbow.loading_middle", 0.5))
+}
+
+/// Угол стрел «залпа» вокруг средней: ±10° по горизонтали (вики, Multishot:
+/// «10° apart horizontally»).
+pub const MULTISHOT_ANGLE: f32 = 10.0;
+
 /// Имя предмета по номеру без пространства имён.
 pub fn item_name(item: i32) -> Option<&'static str> {
     crate::blocks::item_name(item).map(|name| name.strip_prefix("minecraft:").unwrap_or(name))
@@ -555,6 +607,35 @@ mod tests {
 
         assert_eq!(attributes.value(ATTACK_DAMAGE), 1.0);
         assert_eq!(attributes.value(ATTACK_SPEED), 4.0);
+    }
+
+    #[test]
+    fn a_trident_with_one_durability_left_is_known() {
+        let trident = Stack::new(crate::blocks::item_named("trident").expect("трезубец есть"), 1);
+
+        // Прочность трезубца 250 (вики, Trident).
+        assert_eq!(durability_left(&trident), Some(250));
+        assert_eq!(durability_left(&add_damage(trident, 249).expect("ещё цел")), Some(1));
+        assert_eq!(durability_left(&Stack::new(crate::blocks::item_named("stone").expect("камень есть"), 1)), None);
+    }
+
+    #[test]
+    fn the_crossbow_charges_faster_with_quick_charge() {
+        assert_eq!(crossbow_charge_ticks(0), 25);
+        assert_eq!(crossbow_charge_ticks(1), 20);
+        assert_eq!(crossbow_charge_ticks(3), 10);
+        // Звуки зарядки (чёрный ящик, crossbow-shoot, crossbow-quick-charge).
+        assert_eq!(crossbow_loading_sound(5, 0), Some(("minecraft:item.crossbow.loading_start", 0.5)));
+        assert_eq!(crossbow_loading_sound(13, 0), Some(("minecraft:item.crossbow.loading_middle", 0.5)));
+        assert_eq!(crossbow_loading_sound(25, 0), Some(("minecraft:item.crossbow.loading_end", 1.0)));
+        assert_eq!(crossbow_loading_sound(3, 2), Some(("minecraft:item.crossbow.quick_charge_2", 0.5)));
+        assert_eq!(crossbow_loading_sound(15, 2), Some(("minecraft:item.crossbow.loading_end", 1.0)));
+        assert_eq!(crossbow_loading_sound(8, 2), None);
+        assert_eq!(crossbow_loading_sound(12, 0), None);
+        // Критическая стрела арбалета: ceil(3,15 · 2) = 7 плюс случайная добавка
+        // (чёрный ящик: у оригинала урон 7…11 в пяти записях).
+        assert_eq!(arrow_damage(CROSSBOW_SPEED, 0, true, 0.0), 7.0);
+        assert_eq!(arrow_damage(CROSSBOW_SPEED, 0, true, 0.8), 11.0);
     }
 
     #[test]

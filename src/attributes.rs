@@ -19,10 +19,15 @@ pub const ATTACK_SPEED: i32 = 4;
 pub const BLOCK_BREAK_SPEED: i32 = 5;
 pub const BLOCK_INTERACTION_RANGE: i32 = 6;
 pub const ENTITY_INTERACTION_RANGE: i32 = 10;
+pub const GRAVITY: i32 = 14;
+pub const JUMP_STRENGTH: i32 = 15;
 pub const KNOCKBACK_RESISTANCE: i32 = 16;
+pub const LUCK: i32 = 17;
+pub const MAX_ABSORPTION: i32 = 18;
 pub const MAX_HEALTH: i32 = 19;
 pub const MOVEMENT_SPEED: i32 = 22;
 pub const OXYGEN_BONUS: i32 = 23;
+pub const SAFE_FALL_DISTANCE: i32 = 24;
 pub const SNEAKING_SPEED: i32 = 26;
 pub const SWEEPING_DAMAGE_RATIO: i32 = 30;
 
@@ -78,7 +83,9 @@ impl Modifier {
 /// Уходит ли атрибут клиенту (вики, Attribute: «Syncable»): урон, отдача и
 /// стойкость к ней клиенту не нужны. [проверить] по остальным атрибутам.
 pub fn syncable(attribute: i32) -> bool {
-    !matches!(attribute, ATTACK_DAMAGE | ATTACK_KNOCKBACK | KNOCKBACK_RESISTANCE | SWEEPING_DAMAGE_RATIO)
+    // Тяготение и сила прыжка клиенту не уходят (effect-flags: у плавного
+    // падения и прыгучести пакета Attributes по ним нет).
+    !matches!(attribute, ATTACK_DAMAGE | ATTACK_KNOCKBACK | KNOCKBACK_RESISTANCE | SWEEPING_DAMAGE_RATIO | GRAVITY | JUMP_STRENGTH)
 }
 
 /// Пределы значения атрибута (вики, Attribute: «Range»); неизвестные —
@@ -91,6 +98,7 @@ pub fn limits(attribute: i32) -> (f64, f64) {
         ATTACK_KNOCKBACK => (0.0, 5.0),
         ATTACK_SPEED => (0.0, 1024.0),
         KNOCKBACK_RESISTANCE => (0.0, 1.0),
+        MAX_ABSORPTION => (0.0, 2048.0),
         MAX_HEALTH => (1.0, 1024.0),
         MOVEMENT_SPEED => (0.0, 1024.0),
         SWEEPING_DAMAGE_RATIO => (0.0, 1.0),
@@ -138,7 +146,12 @@ pub fn player_base(attribute: i32) -> f64 {
         BLOCK_BREAK_SPEED => 1.0,
         BLOCK_INTERACTION_RANGE => 4.5,
         ENTITY_INTERACTION_RANGE => 3.0,
+        // Тяготение, сила прыжка и безопасная высота — по вики (Attribute,
+        // «Default values») [проверить].
+        GRAVITY => 0.08,
+        JUMP_STRENGTH => f64::from(0.42f32),
         MAX_HEALTH => 20.0,
+        SAFE_FALL_DISTANCE => 3.0,
         // Скорость шага одинарной точности — как её знает клиент.
         MOVEMENT_SPEED => f64::from(0.1f32),
         SNEAKING_SPEED => 0.3,

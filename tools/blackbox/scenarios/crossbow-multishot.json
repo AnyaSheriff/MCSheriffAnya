@@ -1,0 +1,139 @@
+{
+ "name": "crossbow-multishot",
+ "about": "Арбалет с залпом: три стрелы (±10°), тратится одна, износ 3, боковые не подбираются.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "kill $(bot)",
+  "!wait 30",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "!stopfly",
+  "!wait 20",
+  "!hotbar2 0",
+  "!hotbar 0",
+  "give $(bot2) minecraft:crossbow[enchantments={multishot:1}] 1",
+  "give $(bot2) minecraft:arrow 5",
+  "tp $(bot2) $(3.5,0,-0.5) 0 0",
+  "!wait 20",
+  "!hotbar2 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true,
+   "bot": 2
+  },
+  {
+   "after": 30,
+   "release": true,
+   "bot": 2
+  },
+  {
+   "after": 36,
+   "use": true,
+   "bot": 2
+  }
+ ],
+ "record_ticks": 70,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly",
+  "kill @e[type=arrow,distance=..48]"
+ ],
+ "item_components": true,
+ "random": [
+  {
+   "type": "count",
+   "name": "досыл атрибутов сущности",
+   "match": "^sv (other entity_update_attributes|(b: )?Attributes )",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "у игрока интервал слежения 2 такта: досыл атрибутов после износа вещи приходит на +1 или +2 такт в зависимости от чётности счёта сущности; у оригинала два прогона расходятся"
+  },
+  {
+   "type": "count",
+   "name": "шаги роботов",
+   "match": "block\\.stone\\.step",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "после отдачи роботы идут по камню сами (клиентская физика): звук шага зависит от пройденного пути, у оригинала два прогона расходятся"
+  },
+  {
+   "type": "mask",
+   "name": "номер стрелка и поворот стрелы",
+   "kind": "spawn",
+   "pattern": "arrow \\d+ ([-0-9.,]+) yaw=-?\\d+ pitch=-?\\d+",
+   "replace": "arrow N $1 yaw=Y pitch=P",
+   "why": "выстрел у оригинала случаен: неточность направления ±0,0172 по каждой оси (вики, Arrow), поэтому точка попадания, скорость отдачи и угол ушиба меняются от прогона к прогону; номер стрелка в появлении — номер сущности сервера"
+  },
+  {
+   "type": "mask",
+   "name": "угол ушиба от стрелы",
+   "kind": "sv",
+   "pattern": "Hurt Animation yaw=[-0-9.]+",
+   "replace": "Hurt Animation yaw=Y",
+   "why": "выстрел у оригинала случаен: неточность направления ±0,0172 по каждой оси (вики, Arrow), поэтому точка попадания, скорость отдачи и угол ушиба меняются от прогона к прогону; номер стрелка в появлении — номер сущности сервера"
+  },
+  {
+   "type": "mask",
+   "name": "горизонтальная отдача от стрелы",
+   "kind": "self",
+   "pattern": "скорость -?[0-9.]+,([-0-9.]+),-?[0-9.]+",
+   "replace": "скорость X,$1,Z",
+   "why": "выстрел у оригинала случаен: неточность направления ±0,0172 по каждой оси (вики, Arrow), поэтому точка попадания, скорость отдачи и угол ушиба меняются от прогона к прогону; номер стрелка в появлении — номер сущности сервера"
+  },
+  {
+   "type": "mask",
+   "name": "точка попадания стрелы",
+   "kind": "sound",
+   "pattern": "^sound [-0-9.]+,[-0-9.]+,[-0-9.]+ (minecraft:item\\.crossbow\\.hit)",
+   "replace": "sound X,Y,Z $1",
+   "why": "выстрел у оригинала случаен: неточность направления ±0,0172 по каждой оси (вики, Arrow), поэтому точка попадания, скорость отдачи и угол ушиба меняются от прогона к прогону; номер стрелка в появлении — номер сущности сервера"
+  },
+  {
+   "type": "mask",
+   "name": "урон критической стрелы",
+   "kind": "sv",
+   "pattern": "(Set Health health=|Metadata 9=)[0-9.]+",
+   "replace": "$1H",
+   "why": "стрела арбалета критическая: к 7 добавляется случайное 0…4 (вики, Crossbow: урон 7–11); у оригинала три записи дали 12, 11 и 13 здоровья"
+  },
+  {
+   "type": "count",
+   "name": "боковые стрелы залпа",
+   "match": "^spawn .*arrow|item\\.crossbow\\.hit|arrow сдвиг|arrow скорость|arrow ушла|arrow сверка",
+   "range": [
+    0,
+    40
+   ],
+   "anytick": true,
+   "why": "боковые стрелы (±10°) летят мимо жертвы по случайному разбросу: куда сядут и когда — от прогона к прогону разное"
+  }
+ ],
+ "track_second_slots": true
+}

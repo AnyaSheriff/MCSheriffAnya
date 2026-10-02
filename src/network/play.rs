@@ -1063,7 +1063,7 @@ async fn send_login(
 /// Сведения о месте появления — общая часть Login (Play) и Respawn: в каком
 /// измерении игрок и в каком режиме.
 fn push_spawn_info(body: &mut Vec<u8>, dimension: Dimension, game_mode: i32) {
-    push_spawn_info_ex(body, dimension, game_mode, -1, None);
+    push_spawn_info_ex(body, dimension, game_mode, -1, None, 0);
 }
 
 /// То же с прежним режимом и точкой смерти (Respawn после гибели).
@@ -1073,6 +1073,7 @@ fn push_spawn_info_ex(
     game_mode: i32,
     previous_mode: i32,
     death: Option<(Dimension, (i32, i32, i32))>,
+    portal_cooldown: i32,
 ) {
     body.extend_from_slice(&encode_varint(dimension.type_id()));
     body.extend_from_slice(&encode_string(dimension.name()));
@@ -1091,7 +1092,7 @@ fn push_spawn_info_ex(
         }
         None => body.push(0x00),
     }
-    body.extend_from_slice(&encode_varint(0)); // откат портала
+    body.extend_from_slice(&encode_varint(portal_cooldown)); // откат портала
     // Уровень моря: у Энда 0 (замер оригинала: Respawn при входе в Энд),
     // у прочих — как был.
     body.extend_from_slice(&encode_varint(if dimension == Dimension::End { 0 } else { 63 }));
@@ -1099,10 +1100,12 @@ fn push_spawn_info_ex(
 
 /// Отправляет Respawn — игрок переходит в другое измерение. Клиент при этом
 /// забывает все чанки и сущности: их надо прислать заново.
-async fn send_respawn(stream: &mut Outgoing<'_>, dimension: Dimension, game_mode: i32) -> io::Result<()> {
+async fn send_respawn(stream: &mut Outgoing<'_>, dimension: Dimension, player: &PlayerState, portal_cooldown: i32) -> io::Result<()> {
     let mut body = encode_varint(RESPAWN);
 
-    push_spawn_info(&mut body, dimension, game_mode);
+    // Прежний режим и точка смерти — как у игрока (чёрный ящик,
+    // dim-nether-tp: prev=0, death=место последней гибели).
+    push_spawn_info_ex(&mut body, dimension, player.game_mode, player.prev_mode, player.net.died_at, portal_cooldown);
     body.push(0x03); // сохранить свойства и сведения о сущности
 
     write_body(stream, body).await
@@ -1145,7 +1148,7 @@ async fn send_respawn_after_death(stream: &mut Outgoing<'_>, dimension: Dimensio
     let mut body = encode_varint(RESPAWN);
     let death = player.net.died_at;
 
-    push_spawn_info_ex(&mut body, dimension, player.game_mode, player.prev_mode, death);
+    push_spawn_info_ex(&mut body, dimension, player.game_mode, player.prev_mode, death, 0);
     body.push(0x00); // ничего не сохранять
 
     write_body(stream, body).await
@@ -1154,12 +1157,33 @@ async fn send_respawn_after_death(stream: &mut Outgoing<'_>, dimension: Dimensio
 /// Отправляет Synchronize Player Position — ставит игрока в точку, где он
 /// стоял в прошлый раз (или в точку появления, если он здесь впервые).
 async fn send_player_position(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
+    send_player_position_as(stream, player, Sync::Absolute).await
+}
+
+/// Как сверка места ложится в пакет: у оригинала это зависит от того, что
+/// перенесло игрока (чёрный ящик, dim-nether-tp и end-portal-enter).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Sync {
+    /// Всё абсолютное (вход, возрождение).
+    Absolute,
+    /// Команда `tp`: поворот относительный, сдвиг на 0 — флаги 24.
+    Command,
+    /// Портал Края: поворот по горизонтали абсолютный, наклон и скорость
+    /// относительные — флаги 496.
+    Portal,
+    /// Портал Незера: и поворот относительный — флаги 504 (чёрный ящик,
+    /// nether-portal-enter). Сдвиг поворота у нас пока 0 [проверить].
+    NetherPortal,
+}
+
+async fn send_player_position_as(stream: &mut Outgoing<'_>, player: &mut PlayerState, sync: Sync) -> io::Result<()> {
     let mut body = encode_varint(PLAYER_POSITION);
 
     // У каждого переноса свой номер: подтверждение старого не должно
     // сниматься за подтверждение нового.
     player.teleport = player.teleport.wrapping_add(1);
     player.awaiting_teleport = true;
+    player.moved_since_tp = false;
 
     // Перенос обнуляет падение: скачок места не высота падения.
     player.vit.fall = 0.0;
@@ -1172,9 +1196,29 @@ async fn send_player_position(stream: &mut Outgoing<'_>, player: &mut PlayerStat
     push_f64(&mut body, 0.0); // скорость X
     push_f64(&mut body, 0.0); // скорость Y
     push_f64(&mut body, 0.0); // скорость Z
-    push_f32(&mut body, player.yaw); // поворот
-    push_f32(&mut body, player.pitch); // наклон
-    push_i32(&mut body, 0); // все координаты абсолютные
+
+    match sync {
+        Sync::Absolute => {
+            push_f32(&mut body, player.yaw); // поворот
+            push_f32(&mut body, player.pitch); // наклон
+            push_i32(&mut body, 0); // все координаты абсолютные
+        }
+        Sync::Command => {
+            push_f32(&mut body, 0.0); // поворот: прибавить 0
+            push_f32(&mut body, 0.0); // наклон: прибавить 0
+            push_i32(&mut body, 24); // относительные: поворот и наклон
+        }
+        Sync::Portal => {
+            push_f32(&mut body, player.yaw);
+            push_f32(&mut body, 0.0); // наклон: прибавить 0
+            push_i32(&mut body, 496); // относительные: наклон, скорость, её поворот
+        }
+        Sync::NetherPortal => {
+            push_f32(&mut body, 0.0); // поворот: прибавить 0
+            push_f32(&mut body, 0.0); // наклон: прибавить 0
+            push_i32(&mut body, 504); // относительные: поворот, наклон, скорость, её поворот
+        }
+    }
 
     write_body(stream, body).await
 }
@@ -3634,6 +3678,11 @@ fn step_portal(shared: &Shared, player: &mut PlayerState) {
         return;
     }
 
+    // Портал замечается при движении: после переноса — с первым пакетом места.
+    if !player.moved_since_tp {
+        return;
+    }
+
     player.in_portal += 1;
     let end_portal = crate::portal::standing_in_end_portal(
         &shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком"),
@@ -3648,6 +3697,7 @@ fn step_portal(shared: &Shared, player: &mut PlayerState) {
 
     player.in_portal = 0;
     player.portal_ready = false;
+    player.portal_trip = true;
 
     let (mut dimension, (mut x, mut y, mut z)) = crate::portal::travel(shared, player.dimension, (player.x, player.y, player.z));
 
@@ -4541,11 +4591,20 @@ async fn send_pending_chat(
     let (lines, count) = {
         let chat = shared.chat.lock().expect("чат захвачен другим потоком");
 
-        (chat.since_for(*sent, uuid), chat.count())
+        (chat.since_for_rich(*sent, uuid), chat.count())
     };
 
-    for line in &lines {
-        send_system_chat(stream, line).await?;
+    for (line, rich) in &lines {
+        match rich {
+            Some(component) => {
+                let mut body = encode_varint(SYSTEM_CHAT);
+
+                body.extend_from_slice(component);
+                body.push(0x00);
+                write_body(stream, body).await?;
+            }
+            None => send_system_chat(stream, line).await?,
+        }
     }
 
     *sent = count;
@@ -5182,8 +5241,8 @@ async fn read_and_log_play_packets(
 
             match order {
                 Order::Respawn => {}
-                Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None }),
-                Order::Effect { kind, amplifier, ticks } => vitals::give_effect(stream, player, kind, amplifier, ticks).await?,
+                Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false }),
+                Order::Effect(effect) => vitals::give_effect(stream, player, effect).await?,
                 Order::ClearEffects => vitals::clear_effects(stream, player, None).await?,
                 Order::ClearEffect(kind) => vitals::clear_effects(stream, player, Some(kind)).await?,
                 Order::XpTaken { points } => player.net.xp_taken += points,
@@ -5203,6 +5262,8 @@ async fn read_and_log_play_packets(
                     if respawning {
                         vitals::respawned(player);
                     }
+
+                    let from_dimension = player.dimension;
 
                     {
                         let old = player.dimension;
@@ -5238,8 +5299,30 @@ async fn read_and_log_play_packets(
                         send_abilities(stream, player.game_mode).await?;
                         send_respawn_after_death(stream, dimension, player).await?;
                     } else {
-                        send_respawn(stream, dimension, player.game_mode).await?;
+                        // Порядок оригинала (чёрный ящик, dim-nether-tp, end-portal-enter):
+                        // Respawn, событие прав, место, способности, точка
+                        // возрождения, «жди чанки», выбранный слот.
+                        let portal = std::mem::take(&mut player.portal_trip);
+
+                        send_respawn(stream, dimension, player, if portal { 10 } else { 0 }).await?;
+                        vitals::send_op_level(stream, shared, player).await?;
+                        let sync = match (portal, dimension == Dimension::Nether || from_dimension == Dimension::Nether) {
+                            (false, _) => Sync::Command,
+                            (true, true) => Sync::NetherPortal,
+                            (true, false) => Sync::Portal,
+                        };
+
+                        send_player_position_as(stream, player, sync).await?;
                         send_abilities(stream, player.game_mode).await?;
+                        send_default_spawn_position(stream, player.spawn_point).await?;
+                        send_game_event_start_waiting(stream).await?;
+                        send_held_slot(stream, player.inventory.selected()).await?;
+
+                        if portal {
+                            vitals::send_vitals(stream, player).await?;
+                        } else {
+                            player.vitals_due = 1;
+                        }
                     }
 
                     world_changes = shared
@@ -5254,17 +5337,22 @@ async fn read_and_log_play_packets(
                         items.items().to_vec()
                     };
 
-                    seen_items.clear();
-                    for item in &lying {
-                        send_dropped_item(stream, item).await?;
-                        seen_items.insert(item.entity_id, shown_item(item));
-                    }
+                    // Возрождение в том же измерении: клиент оставляет мир и всё, что
+                    // в нём стоит, — оригинал чужих сущностей заново не шлёт
+                    // (чёрный ящик, pvp-mace-heavy: чужой игрок не пересылался).
+                    if from_dimension != dimension {
+                        seen_items.clear();
+                        for item in &lying {
+                            send_dropped_item(stream, item).await?;
+                            seen_items.insert(item.entity_id, shown_item(item));
+                        }
 
-                    player.seen_carts.clear();
-                    send_all_carts(stream, shared, player).await?;
-                    player.seen_frames.clear();
-                    send_all_frames(stream, shared, player).await?;
-                    mobs::send_all_mobs(stream, shared, player).await?;
+                        player.seen_carts.clear();
+                        send_all_carts(stream, shared, player).await?;
+                        player.seen_frames.clear();
+                        send_all_frames(stream, shared, player).await?;
+                        mobs::send_all_mobs(stream, shared, player).await?;
+                    }
 
                     // Полоса босса: клиент после Respawn её забывает; в Крае с
                     // живым драконом — показать заново.
@@ -5275,23 +5363,24 @@ async fn read_and_log_play_packets(
                     }
 
                     // Чужих игроков покажет сверка видимости на этом же круге.
-                    seen.clear();
+                    if from_dimension != dimension {
+                        seen.clear();
+                    }
                     sent_chunks.clear();
                     prefetch = Prefetch::new();
 
-                    send_player_position(stream, player).await?;
-                    publish_player(shared, player);
-
                     // Как у оригинала, всё о самом игроке уходит сразу, до чанков.
+                    // (После перехода без смерти место и «жди чанки» ушли выше:
+                    // без «жди чанки» клиент висит на экране загрузки и не шлёт
+                    // движений — переход порталом в обычный мир 30.09.)
                     if respawning {
+                        send_player_position(stream, player).await?;
+                        publish_player(shared, player);
                         vitals::send_respawn_intro(stream, player).await?;
                         send_game_event_start_waiting(stream).await?;
                         vitals::send_respawn_extras(stream, shared, player).await?;
                     } else {
-                        // Respawn очищает у клиента мир: без «жди чанки» он так и
-                        // висит на экране загрузки и не шлёт движений (переход
-                        // порталом в обычный мир 30.09: одна точка, и всё).
-                        send_game_event_start_waiting(stream).await?;
+                        publish_player(shared, player);
                     }
 
                     let chunk = player.chunk();
@@ -5329,7 +5418,7 @@ async fn read_and_log_play_packets(
                     player.y = y;
                     player.z = z;
 
-                    send_player_position(stream, player).await?;
+                    send_player_position_as(stream, player, Sync::Command).await?;
                     player.save(&shared.playerdata);
 
                     publish_player(shared, player);
@@ -5457,6 +5546,13 @@ async fn read_and_log_play_packets(
                 send_other_moves(stream, shared, player, &mut seen, Phase::Swings).await?;
 
                 // Здоровье, урон, еда — после событий мира и ответов клиенту.
+                if player.vitals_due > 0 {
+                    player.vitals_due -= 1;
+
+                    if player.vitals_due == 0 {
+                        vitals::send_vitals(stream, player).await?;
+                    }
+                }
                 vitals::tick(stream, shared, player).await?;
 
                 // Экипировка чужих игроков — следом за здоровьем.
@@ -5921,6 +6017,7 @@ fn handle_client_packet(
 
             let from = (player.x, player.y, player.z);
 
+            player.moved_since_tp = true;
             player.set_position(x, y, z);
 
             // Признак «на земле» — в байте флагов после координат (и углов).
@@ -7489,7 +7586,12 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
         return Some(answer);
     }
 
-    // Щит или лук: поднять, натянуть.
+    // Заряженный арбалет: выстрел.
+    if bow::crossbow_fire(shared, player, hand) {
+        return Some(answer);
+    }
+
+    // Щит, лук или арбалет: поднять, натянуть, зарядить.
     if vitals::start_using(player, hand, *shared.ticks.borrow()) {
         return Some(answer);
     }
@@ -8300,6 +8402,23 @@ struct PlayerState {
     teleport: i32,
     awaiting_teleport: bool,
 
+    /// Присылал ли клиент пакет места после последнего переноса. Оригинал
+    /// замечает портал, только когда игрок двигается (`move` → блоки
+    /// внутри), а не сразу после `tp`: вход в портал Края — через два такта
+    /// после переноса в него (чёрный ящик, end-portal-enter).
+    moved_since_tp: bool,
+
+    /// Переход идёт порталом, а не командой: у пакета места другие флаги, а в
+    /// Respawn стоит откат портала (чёрный ящик, end-portal-enter).
+    portal_trip: bool,
+
+    /// После смены измерения оригинал досылает здоровье и опыт, когда игрок
+    /// впервые тикает в новом мире: порталом — сразу за выбранным слотом,
+    /// командой — в конце такта, после полосы босса (end-fight-enter); при
+    /// долгой загрузке чанков у оригинала и на 1, 3, 30 тактов позже —
+    /// случайное. Тут — сколько концов тактов ждать.
+    vitals_due: u8,
+
 
     /// Где игрок по серверу после того, как его сдвинул поршень (tick.rs):
     /// ближайшее место от клиента с этим сверяется (`SET_PLAYER_POSITION`).
@@ -8527,6 +8646,9 @@ impl PlayerState {
             sneaking: false,
             teleport: 0,
             awaiting_teleport: false,
+            moved_since_tp: true,
+            portal_trip: false,
+            vitals_due: 0,
             shoved_to: None,
             poured: None,
             seen_carts: HashMap::new(),
@@ -8624,7 +8746,7 @@ impl PlayerState {
             speed_touch: self.speed_touch,
             living: vitals::living_flags(self),
             effect_colors: self.vit.effect_colors(),
-            health: self.vit.health,
+            health: self.net.announced_health.unwrap_or(self.vit.health),
             sprinting: self.vit.sprinting,
             movement_speed: self.attrs.get(crate::attributes::MOVEMENT_SPEED).cloned().map(|mut attribute| {
                 // Модификатор бега — по текущему флагу, а не по последней рассылке.

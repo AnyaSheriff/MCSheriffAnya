@@ -812,7 +812,7 @@ impl BedrockWorld {
                 // Опыт у Bedrock пока не считается [проверить].
                 crate::players::Order::Experience { .. } | crate::players::Order::XpTaken { .. } => {}
                 // Эффекты голода и насыщения считаются, значка у Bedrock пока нет [проверить].
-                crate::players::Order::Effect { kind, amplifier, ticks } => self.health.vit.give_effect(kind, amplifier, ticks),
+                crate::players::Order::Effect(effect) => self.health.vit.give_effect_shown(effect),
                 crate::players::Order::ClearEffects => self.health.vit.effects.clear(),
                 crate::players::Order::ClearEffect(kind) => self.health.vit.effects.retain(|effect| effect.kind != kind),
                 crate::players::Order::Kick { reason } => {
