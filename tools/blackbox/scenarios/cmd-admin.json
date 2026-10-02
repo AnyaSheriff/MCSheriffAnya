@@ -1,0 +1,180 @@
+{
+ "name": "cmd-admin",
+ "about": "Серверные команды: ban/pardon/banlist, ban-ip, whitelist (list/add/remove/off/reload), setidletimeout, save-*, defaultgamemode, version; ответы.",
+ "blocks": [],
+ "setup": [
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "ban zzfakeplayer some reason"
+  },
+  {
+   "after": 3,
+   "cmd": "ban zzfakeplayer"
+  },
+  {
+   "after": 6,
+   "cmd": "banlist"
+  },
+  {
+   "after": 9,
+   "cmd": "banlist players"
+  },
+  {
+   "after": 12,
+   "cmd": "banlist ips"
+  },
+  {
+   "after": 15,
+   "cmd": "pardon zzfakeplayer"
+  },
+  {
+   "after": 18,
+   "cmd": "pardon zzfakeplayer"
+  },
+  {
+   "after": 21,
+   "cmd": "banlist"
+  },
+  {
+   "after": 24,
+   "cmd": "ban-ip 1.2.3.4 because"
+  },
+  {
+   "after": 27,
+   "cmd": "ban-ip 1.2.3.4"
+  },
+  {
+   "after": 30,
+   "cmd": "ban-ip nobodyhere"
+  },
+  {
+   "after": 33,
+   "cmd": "banlist ips"
+  },
+  {
+   "after": 36,
+   "cmd": "pardon-ip 1.2.3.4"
+  },
+  {
+   "after": 39,
+   "cmd": "pardon-ip 1.2.3.4"
+  },
+  {
+   "after": 42,
+   "cmd": "pardon-ip nobodyhere"
+  },
+  {
+   "after": 45,
+   "cmd": "whitelist add zzfakeplayer"
+  },
+  {
+   "after": 48,
+   "cmd": "whitelist add zzfakeplayer"
+  },
+  {
+   "after": 51,
+   "cmd": "whitelist list"
+  },
+  {
+   "after": 54,
+   "cmd": "whitelist remove zzfakeplayer"
+  },
+  {
+   "after": 57,
+   "cmd": "whitelist remove zzfakeplayer"
+  },
+  {
+   "after": 60,
+   "cmd": "whitelist list"
+  },
+  {
+   "after": 63,
+   "cmd": "whitelist off"
+  },
+  {
+   "after": 66,
+   "cmd": "whitelist reload"
+  },
+  {
+   "after": 69,
+   "cmd": "whitelist"
+  },
+  {
+   "after": 72,
+   "cmd": "setidletimeout 0"
+  },
+  {
+   "after": 75,
+   "cmd": "setidletimeout -1"
+  },
+  {
+   "after": 78,
+   "cmd": "save-all"
+  },
+  {
+   "after": 81,
+   "cmd": "save-all flush"
+  },
+  {
+   "after": 84,
+   "cmd": "save-all foo"
+  },
+  {
+   "after": 87,
+   "cmd": "save-off"
+  },
+  {
+   "after": 90,
+   "cmd": "save-off"
+  },
+  {
+   "after": 93,
+   "cmd": "save-on"
+  },
+  {
+   "after": 96,
+   "cmd": "save-on"
+  },
+  {
+   "after": 99,
+   "cmd": "defaultgamemode creative"
+  },
+  {
+   "after": 102,
+   "cmd": "defaultgamemode foo"
+  },
+  {
+   "after": 105,
+   "cmd": "version"
+  },
+  {
+   "after": 108,
+   "cmd": "publish"
+  },
+  {
+   "after": 111,
+   "cmd": "transfer"
+  },
+  {
+   "after": 114,
+   "cmd": "ban"
+  },
+  {
+   "after": 117,
+   "cmd": "pardon"
+  }
+ ],
+ "record_ticks": 135,
+ "cleanup": [
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "chat": true
+}

@@ -113,6 +113,20 @@ pub async fn send_login_disconnect(stream: &mut TcpStream, reason: &str) -> io::
     Ok(())
 }
 
+/// То же с готовым компонентом в виде JSON (блокировки: `translate` и аргументы).
+pub async fn send_login_disconnect_json(stream: &mut TcpStream, json: &str) -> io::Result<()> {
+    let mut body = encode_varint(0x00);
+    body.extend_from_slice(&encode_string(json));
+
+    let mut packet = encode_varint(body.len() as i32);
+    packet.extend_from_slice(&body);
+
+    stream.write_all(&packet).await?;
+    stream.flush().await?;
+
+    Ok(())
+}
+
 /// Готовит текст для строки JSON: кавычки, обратные косые черты и переводы
 /// строк в нём пришлось бы принять за разметку.
 fn escape_json(text: &str) -> String {

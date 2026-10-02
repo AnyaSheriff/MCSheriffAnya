@@ -1,0 +1,93 @@
+{
+ "name": "trident-riptide-rain",
+ "about": "Тягун III под дождём без воды: удержание 12 тактов, отпустили — рывок, звук riptide_3, износ 1.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "weather rain",
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "kill $(bot)",
+  "!wait 30",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "!stopfly",
+  "!wait 20",
+  "!hotbar2 0",
+  "!hotbar 0",
+  "give $(bot2) minecraft:trident[enchantments={riptide:3}] 1",
+  "tp $(bot2) $(3.5,0,-0.5) 0 0",
+  "!wait 20",
+  "!hotbar2 0",
+  "!wait 60"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true,
+   "bot": 2
+  },
+  {
+   "after": 12,
+   "release": true,
+   "bot": 2
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "weather clear",
+  "kill @e[type=trident,distance=..48]",
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly",
+  "kill @e[type=arrow,distance=..48]"
+ ],
+ "item_components": true,
+ "random": [
+  {
+   "type": "count",
+   "name": "досыл атрибутов сущности",
+   "match": "^sv (other entity_update_attributes|(b: )?Attributes )",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "у игрока интервал слежения 2 такта: досыл атрибутов после износа вещи приходит на +1 или +2 такт в зависимости от чётности счёта сущности; у оригинала два прогона расходятся"
+  },
+  {
+   "type": "count",
+   "name": "шаги роботов",
+   "match": "block\\.stone\\.step",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "после отдачи роботы идут по камню сами (клиентская физика): звук шага зависит от пройденного пути, у оригинала два прогона расходятся"
+  }
+ ],
+ "track_second_slots": true,
+ "track_mobs": true,
+ "track_second": true,
+ "origin": [
+  100,
+  5,
+  100
+ ]
+}

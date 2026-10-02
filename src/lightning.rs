@@ -50,6 +50,17 @@ const TRIES_PER_STEP: u32 = 10;
 /// и разброс не названы.
 const EXTRA_FIRES: u32 = 4;
 
+/// Урон молнии: «Most entities struck by lightning are dealt 5 HP damage»
+/// (вики, Lightning); чёрный ящик, trident-channeling: здоровье 12 → 7.
+pub const STRIKE_DAMAGE: f32 = 5.0;
+
+/// На сколько блоков вокруг молния задевает сущности [проверить].
+const STRIKE_REACH: f64 = 3.0;
+
+/// Сколько тактов горит задетый молнией, если ещё не горел: 8 секунд
+/// (вики, Lightning: «set on fire») [проверить].
+pub const STRIKE_FIRE_TICKS: i32 = 160;
+
 /// Молния в мире.
 #[derive(Clone, Debug)]
 pub struct Bolt {
@@ -85,6 +96,19 @@ impl Bolt {
     /// lightning-rod).
     pub fn struck_block(&self) -> Pos {
         (self.x.floor() as i32, (self.y - 1.0e-6).floor() as i32, self.z.floor() as i32)
+    }
+
+    /// Светит ли молния в этом такте (удар или вспышка): тогда она бьёт
+    /// сущности рядом.
+    pub fn is_lit(&self) -> bool {
+        self.flashes.is_some() && self.life >= 0
+    }
+
+    /// Задевает ли светящаяся молния сущность в этом месте: ящик молнии,
+    /// раздвинутый на 3 блока (вверх — на 6 + 3) [проверить: вики размеров
+    /// не называет].
+    pub fn reaches(&self, (x, y, z): (f64, f64, f64)) -> bool {
+        (x - self.x).abs() <= STRIKE_REACH && (z - self.z).abs() <= STRIKE_REACH && y >= self.y - STRIKE_REACH && y <= self.y + 6.0 + STRIKE_REACH
     }
 
     /// Клетка, где стоит сама молния, — там загорается огонь.
@@ -325,6 +349,39 @@ fn ignite(world: &mut World, bolt: &Bolt) {
     }
 }
 
+/// Шанс попытки удара за такт на загруженный чанк в грозу: «every tick
+/// there is a 1⁄100,000 chance» (вики, Lightning).
+pub const NATURAL_CHANCE: u32 = 100_000;
+
+/// Куда бьёт молния грозы в чанке (вики, Lightning): случайный столбец,
+/// клетка над верхним блоком, что держит движение или жидкость. Если в
+/// столбце 3×h×3 от трёх блоков ниже цели до верха мира есть живые под
+/// открытым небом — цель уходит в клетку одного из них, случайного. Бьёт,
+/// только если там идёт дождь (не снег): «Rain (not snow) is falling in the
+/// target block». `living` — места живых сущностей мира.
+///
+/// Громоотводы (притягивают удары в 128 блоках) и ловушка скелетов-всадников
+/// пока не учитываются [проверить].
+pub fn natural_target(world: &mut World, (chunk_x, chunk_z): (i32, i32), living: &[(f64, f64, f64)]) -> Option<(f64, f64, f64)> {
+    let bits = world.random_bits();
+    let x = chunk_x * 16 + (bits % 16) as i32;
+    let z = chunk_z * 16 + ((bits / 16) % 16) as i32;
+    let y = world.rain_top(x, z)?;
+
+    let near: Vec<(i32, i32, i32)> = living
+        .iter()
+        .map(|(ex, ey, ez)| (ex.floor() as i32, ey.floor() as i32, ez.floor() as i32))
+        .filter(|(ex, ey, ez)| (ex - x).abs() <= 1 && (ez - z).abs() <= 1 && *ey >= y - 3 && world.open_sky(*ex, *ey, *ez))
+        .collect();
+
+    let (x, y, z) = match near.len() {
+        0 => (x, y, z),
+        count => near[(world.random_bits() % count as u32) as usize],
+    };
+
+    world.rain_at(x, y, z).then_some((f64::from(x) + 0.5, f64::from(y), f64::from(z) + 0.5))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -497,5 +554,40 @@ mod tests {
 
         step(&mut world, &mut bolt, true);
         assert_eq!(name(&world, (0, 1, 0)), "fire");
+    }
+
+    /// Молния светит в такт удара и задевает сущности в 3 блоках вокруг.
+    #[test]
+    fn a_lit_bolt_reaches_three_blocks_around() {
+        let mut bolt = Bolt::new(1, (0.5, 1.0, 0.5));
+
+        assert!(!bolt.is_lit());
+        advance(&mut bolt, &mut |_| 0);
+        assert!(bolt.is_lit());
+        assert!(bolt.reaches((3.0, 1.0, -2.0)));
+        assert!(bolt.reaches((0.5, 9.5, 0.5)));
+        assert!(!bolt.reaches((4.0, 1.0, 0.5)));
+        assert!(!bolt.reaches((0.5, -2.5, 0.5)));
+    }
+
+    /// Гроза без дождя в клетке не бьёт; под дождём — в клетку над полом.
+    #[test]
+    fn natural_strikes_need_rain() {
+        let mut world = world();
+
+        for x in 0..16 {
+            for z in 0..16 {
+                world.set_block_silently(x, 0, z, state("stone"));
+            }
+        }
+
+        assert_eq!(natural_target(&mut world, (0, 0), &[]), None);
+
+        world.weather.rain_level = 1.0;
+        world.weather.thunder_level = 1.0;
+
+        let (x, y, z) = natural_target(&mut world, (0, 0), &[]).expect("под дождём бьёт");
+        assert_eq!(y, 1.0);
+        assert!((0.0..16.0).contains(&x) && (0.0..16.0).contains(&z));
     }
 }

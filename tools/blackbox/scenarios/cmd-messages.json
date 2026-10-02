@@ -1,0 +1,52 @@
+{
+ "name": "cmd-messages",
+ "about": "list, list uuids и ошибки me/msg. Сами me/msg/tell у оригинала идут пакетом disguised chat, у нас — system_chat (нет реестра типов чата): их проверено вручную по пакетам, в сценарий не входят.",
+ "blocks": [],
+ "setup": [
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "me"
+  },
+  {
+   "after": 3,
+   "cmd": "me "
+  },
+  {
+   "after": 6,
+   "cmd": "msg $(bot)"
+  },
+  {
+   "after": 9,
+   "cmd": "msg"
+  },
+  {
+   "after": 12,
+   "cmd": "msg nobody hi"
+  },
+  {
+   "after": 15,
+   "cmd": "list"
+  },
+  {
+   "after": 18,
+   "cmd": "list uuids"
+  },
+  {
+   "after": 21,
+   "cmd": "list foo"
+  }
+ ],
+ "record_ticks": 32,
+ "cleanup": [
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "chat": true
+}

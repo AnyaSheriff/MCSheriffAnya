@@ -583,7 +583,8 @@ fn skeleton(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &
 pub fn burn(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, sun: bool) -> bool {
     let (x, y, z) = mob.cell();
 
-    if super::is_water(view.block(x, y, z)) {
+    // Вода и дождь тушат (вики, Weather: «Extinguishes fires»).
+    if super::is_water(view.block(x, y, z)) || in_rain(mob, view) {
         mob.vitals.extinguish();
         return false;
     }
@@ -595,6 +596,15 @@ pub fn burn(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, sun: bool)
     }
 
     mob.vitals.fire_tick(false)
+}
+
+/// Под дождём ли моб: в клетке ног или макушки [проверить]: какие клетки
+/// смотрит оригинал.
+pub fn in_rain(mob: &Mob, view: &dyn View) -> bool {
+    let (x, y, z) = mob.cell();
+    let top = (mob.y + mob.kind.height()).floor() as i32;
+
+    view.rain(x, y, z) || view.rain(x, top, z)
 }
 
 /// Шанс загореться на солнце за такт — 1 к 50: у оригинала между зажиганиями
@@ -746,9 +756,10 @@ pub fn looks_at_head(mob: &Mob, watcher: &Watcher) -> bool {
 fn enderman_pre(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, plan: &mut Plan) -> bool {
     let (x, y, z) = mob.cell();
 
-    // Вода жжёт: 1 урона (вики: «take 1HP damage»), и он прыгает прочь;
-    // вид урона — утопление [проверить].
-    if super::is_water(view.block(x, y, z)) || super::is_water(view.block(x, y + 1, z)) {
+    // Вода и дождь жгут: 1 урона (вики: «take 1HP damage»), и он прыгает
+    // прочь («In rain, endermen continuously teleport until they find a dry
+    // spot»); вид урона — утопление [проверить].
+    if super::is_water(view.block(x, y, z)) || super::is_water(view.block(x, y + 1, z)) || in_rain(mob, view) {
         mob.hurt(1.0, crate::survival::Source::Drown, None);
     }
 

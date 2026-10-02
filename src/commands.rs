@@ -121,6 +121,11 @@ impl Answer {
 /// Ноль — можно всем. Всё, что меняет мир или задевает других игроков,
 /// требует прав; их выдают командой `op`, а хранятся они в `ops.json`.
 fn level_needed(command: &str) -> i32 {
+    // Команды commands_admin.rs: уровни по вики.
+    if let Some(level) = crate::commands_admin::level(command) {
+        return level;
+    }
+
     match command {
         "help" | "list" | "say" => 0,
         // Вики, Commands: trigger и teammsg доступны всем, прочие команды
@@ -195,6 +200,12 @@ pub(crate) fn stack_from_spec(spec: &str, count: i32) -> Result<Option<crate::in
 }
 
 pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
+    // Команды commands_admin.rs разбирают строку сами и целиком, до сжатия
+    // пробелов (в `tellraw` и `particle` в скобках важен каждый знак).
+    if let Some(answer) = crate::commands_admin::run(command, source, shared) {
+        return answer;
+    }
+
     let compact = compact_item_specs(command);
     let command = compact.as_str();
     let mut parts = command.split_whitespace();
@@ -524,6 +535,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         | "rotate" | "spectate" | "fillbiome" | "place" | "loot" => {
             crate::commands_world::run(name, parts.collect::<Vec<&str>>().as_slice(), source, shared)
         }
+        "weather" => weather(parts.collect::<Vec<&str>>().as_slice(), shared),
 
         // Как у оригинала: `execute in <измерение> run tp …` — перенос в
         // другое измерение. Другие виды execute пока не разбираются.
@@ -581,7 +593,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 "Остановить сервер можно только из консоли сервера".to_string(),
             ),
         },
-        unknown => Answer::saying(format!("Неизвестная команда: {}", unknown)),
+        _ => crate::commands_admin::unknown(command, source, shared),
     }
 }
 
@@ -1525,6 +1537,11 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
 
             Answer::saying(format!("Правило natural_health_regeneration: {}", value))
         }
+        ["advance_weather" | "doWeatherCycle", value] => {
+            shared.advance_weather.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+
+            Answer::saying(format!("Правило advance_weather: {}", value))
+        }
         [rule, value] => Answer::saying(format!("Правило {}: {}", rule, value)),
         _ => Answer::saying("Нужно: gamerule <правило> <значение>".to_string()),
     }
@@ -2080,6 +2097,45 @@ fn time(parts: &[&str], shared: &Shared) -> Answer {
     }
 }
 
+/// `weather clear|rain|thunder [срок]` (вики, Commands/weather): погода
+/// одна на сервер — у Обычного мира, откуда бы ни звали. Без срока он
+/// случаен в промежутке своего вида.
+fn weather(parts: &[&str], shared: &Shared) -> Answer {
+    use crate::weather::{Kind, parse_duration};
+
+    let usage = || Answer::saying("Как пользоваться: weather clear|rain|thunder [срок]".to_string());
+
+    let (kind, duration) = match parts {
+        [kind] => (Kind::from_name(kind), None),
+        [kind, duration] => match parse_duration(duration) {
+            Some(duration) => (Kind::from_name(kind), Some(duration)),
+            None => return Answer::saying("Срок — число тактов, можно с d, s или t".to_string()),
+        },
+        _ => return usage(),
+    };
+    let Some(kind) = kind else {
+        return usage();
+    };
+
+    let mut world = shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком");
+    let duration = duration.unwrap_or_else(|| {
+        let (low, high) = kind.default_range();
+
+        (low + world.random_bits() % (high - low + 1)) as i32
+    });
+
+    world.weather.set(kind, duration);
+
+    Answer::saying(
+        match kind {
+            Kind::Clear => "Погода: ясно",
+            Kind::Rain => "Погода: дождь",
+            Kind::Thunder => "Погода: гроза",
+        }
+        .to_string(),
+    )
+}
+
 /// Время по названию или числом.
 fn time_by_name(value: &str) -> Option<i64> {
     Some(match value {
@@ -2499,7 +2555,7 @@ fn find_player_named(named: &str, source: &Source, shared: &Shared) -> Option<([
 }
 
 /// Режим игры по названию, как его вводят в команде.
-fn game_mode_by_name(name: &str) -> Option<i32> {
+pub(crate) fn game_mode_by_name(name: &str) -> Option<i32> {
     match name {
         "survival" => Some(GAME_MODE_SURVIVAL),
         "creative" => Some(GAME_MODE_CREATIVE),

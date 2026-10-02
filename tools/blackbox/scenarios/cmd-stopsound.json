@@ -1,0 +1,56 @@
+{
+ "name": "cmd-stopsound",
+ "about": "stopsound: все, по источнику, по звуку, оба; ответы.",
+ "blocks": [],
+ "setup": [
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "stopsound @s"
+  },
+  {
+   "after": 3,
+   "cmd": "stopsound @s block"
+  },
+  {
+   "after": 6,
+   "cmd": "stopsound @s * minecraft:block.note_block.harp"
+  },
+  {
+   "after": 9,
+   "cmd": "stopsound @s music minecraft:x.y"
+  },
+  {
+   "after": 12,
+   "cmd": "stopsound @s music"
+  },
+  {
+   "after": 15,
+   "cmd": "stopsound nobody"
+  },
+  {
+   "after": 18,
+   "cmd": "stopsound @s *"
+  },
+  {
+   "after": 21,
+   "cmd": "stopsound @s ui minecraft:a.b extra"
+  },
+  {
+   "after": 24,
+   "cmd": "stopsound @s master"
+  }
+ ],
+ "record_ticks": 32,
+ "cleanup": [
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "chat": true
+}

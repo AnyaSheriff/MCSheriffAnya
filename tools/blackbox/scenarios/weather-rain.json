@@ -1,0 +1,25 @@
+{
+ "name": "weather-rain",
+ "about": "Погода командой: weather rain из ясной, через 150 тактов weather clear. Пишутся Game Event 1/2 (начало и конец дождя) и 7 (сила дождя) — нарастание и спад по тактам.",
+ "exclusive": true,
+ "blocks": [],
+ "track_self": true,
+ "setup": [
+  "weather clear",
+  "!wait 120"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "weather rain"
+  },
+  {
+   "after": 150,
+   "cmd": "weather clear"
+  }
+ ],
+ "record_ticks": 290,
+ "cleanup": [
+  "weather clear"
+ ]
+}

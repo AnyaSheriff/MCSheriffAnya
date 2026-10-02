@@ -1,0 +1,132 @@
+{
+ "name": "cmd-particle",
+ "about": "particle: все виды данных частиц, force и normal, число и скорость, ошибки.",
+ "blocks": [],
+ "setup": [
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "particle minecraft:flame ~ ~ ~"
+  },
+  {
+   "after": 3,
+   "cmd": "particle minecraft:flame ~ ~ ~ 1 1 1 0.5 10 force"
+  },
+  {
+   "after": 6,
+   "cmd": "particle minecraft:dust{color:[1.0,0.0,0.0],scale:2.0} ~ ~ ~ 0 0 0 0 1"
+  },
+  {
+   "after": 9,
+   "cmd": "particle minecraft:block{block_state:\"minecraft:stone\"} ~ ~ ~ 0 0 0 0 1 normal @s"
+  },
+  {
+   "after": 12,
+   "cmd": "particle minecraft:entity_effect{color:[1.0,0.5,0.0,1.0]} ~ ~ ~ 0 0 0 1 1"
+  },
+  {
+   "after": 15,
+   "cmd": "particle minecraft:item{item:\"minecraft:stone\"} ~ ~ ~"
+  },
+  {
+   "after": 18,
+   "cmd": "particle minecraft:item{item:{id:\"minecraft:stone\",count:2}} ~ ~ ~"
+  },
+  {
+   "after": 21,
+   "cmd": "particle minecraft:dust_color_transition{from_color:[1.0,0.0,0.0],to_color:[0.0,0.0,1.0],scale:1.0} ~ ~ ~"
+  },
+  {
+   "after": 24,
+   "cmd": "particle minecraft:sculk_charge{roll:1.5} ~ ~ ~"
+  },
+  {
+   "after": 27,
+   "cmd": "particle minecraft:shriek{delay:5} ~ ~ ~"
+  },
+  {
+   "after": 30,
+   "cmd": "particle minecraft:vibration{destination:{type:\"block\",pos:[1,2,3]},arrival_in_ticks:20} ~ ~ ~"
+  },
+  {
+   "after": 33,
+   "cmd": "particle minecraft:trail{target:[1.0,2.0,3.0],color:[1.0,0.0,0.0],duration:20} ~ ~ ~"
+  },
+  {
+   "after": 36,
+   "cmd": "particle minecraft:dragon_breath{power:1.0} ~ ~ ~"
+  },
+  {
+   "after": 39,
+   "cmd": "particle minecraft:flash{color:[1.0,1.0,1.0,1.0]} ~ ~ ~"
+  },
+  {
+   "after": 42,
+   "cmd": "particle minecraft:effect{color:[0.5,0.5,0.5],power:2.0} ~ ~ ~"
+  },
+  {
+   "after": 45,
+   "cmd": "particle minecraft:block{block_state:{Name:\"minecraft:oak_stairs\",Properties:{facing:\"east\"}}} ~ ~ ~"
+  },
+  {
+   "after": 48,
+   "cmd": "particle minecraft:block_marker{block_state:\"minecraft:barrier\"} ~ ~ ~"
+  },
+  {
+   "after": 51,
+   "cmd": "particle minecraft:dust{color:16711680,scale:1} ~ ~ ~"
+  },
+  {
+   "after": 54,
+   "cmd": "particle minecraft:dust{color:[1.0,0.0,0.0],scale:5.0} ~ ~ ~"
+  },
+  {
+   "after": 57,
+   "cmd": "particle minecraft:dust ~ ~ ~"
+  },
+  {
+   "after": 60,
+   "cmd": "particle minecraft:nothing ~ ~ ~"
+  },
+  {
+   "after": 63,
+   "cmd": "particle flame ~ ~ ~ -1 0 0 0 1"
+  },
+  {
+   "after": 66,
+   "cmd": "particle flame ~ ~ ~ 0 0 0 0 -1"
+  },
+  {
+   "after": 69,
+   "cmd": "particle minecraft:flame 1000 -60 1000"
+  },
+  {
+   "after": 72,
+   "cmd": "particle minecraft:flame ~ ~"
+  },
+  {
+   "after": 75,
+   "cmd": "particle minecraft:flame ~ ~ ~ 0 0 0 1 1 foo"
+  },
+  {
+   "after": 78,
+   "cmd": "particle minecraft:block{block_state:\"minecraft:nothing\"} ~ ~ ~"
+  },
+  {
+   "after": 81,
+   "cmd": "particle minecraft:item{} ~ ~ ~"
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "chat": true
+}

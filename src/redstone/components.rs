@@ -267,8 +267,15 @@ fn sun(time: i64) -> f64 {
 /// инвертированный — `15 − base`, оба зажаты в 0..15. [проверить]: ночью
 /// в тени (0 < SL < 11) у обычного оба множителя отрицательны и выход
 /// положительный — так описано в 2014 году; и способ округления.
+#[cfg(test)]
 fn daylight_output(sky: u8, time: i64, inverted: bool) -> u8 {
-    let base = internal_sky(time) - (15 - sky as i32);
+    daylight_output_with(sky, internal_sky(time), time, inverted)
+}
+
+/// То же при внутреннем свете `internal` — с погодой (weather.rs, `dim_sky`:
+/// «Rain and thunderstorms reduce the output», вики, Daylight Detector).
+fn daylight_output_with(sky: u8, internal: i32, time: i64, inverted: bool) -> u8 {
+    let base = internal - (15 - sky as i32);
 
     let power = if inverted {
         15 - base
@@ -288,7 +295,9 @@ fn daylight_power(world: &mut World, pos: Pos, inverted: bool) -> u8 {
 
     let sky = world.sky_light(pos.0, pos.1, pos.2);
 
-    daylight_output(sky, world.time_of_day(), inverted)
+    let time = world.time_of_day();
+
+    daylight_output_with(sky, world.weather.dim_sky(internal_sky(time)), time, inverted)
 }
 
 /// Датчики света пересчитывают выход раз в 20 тактов. У оригинала это

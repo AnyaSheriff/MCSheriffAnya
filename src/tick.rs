@@ -263,6 +263,11 @@ async fn run(shared: Arc<Shared>) {
             redstone::note_carts(&mut world, cart_marks(&shared, dimension));
             redstone::note_frames(&mut world, frame_marks(&shared, dimension));
 
+            // Погода — в начале такта мира, до запланированных тактов
+            // (чёрный ящик, weather-rain: сила дождя меняется уже в такте
+            // команды).
+            world.tick_weather(shared.advance_weather.load(std::sync::atomic::Ordering::Relaxed));
+
             let due = world.advance(PER_TICK);
 
             for ((x, y, z), kind) in due {
@@ -296,6 +301,7 @@ async fn run(shared: Arc<Shared>) {
 
             // Случайные такты — после запланированных, до рассылки (вики,
             // Tick: фаза чанков). Из них у нас пока только горящая руда.
+            natural_lightning(&shared, dimension, &mut world, &player_chunks);
             redstone::random_ticks(&mut world, &player_chunks, shared.properties.simulation_distance);
             redstone::settle(&mut world);
             phases.add(1, &mut clock);
@@ -802,6 +808,10 @@ impl crate::mob::View for MobView<'_> {
         self.0.open_sky(x, y, z)
     }
 
+    fn rain(&self, x: i32, y: i32, z: i32) -> bool {
+        self.0.rain_at(x, y, z)
+    }
+
     fn light(&self, x: i32, y: i32, z: i32, sky: i32) -> (u8, u8) {
         match self.0.light_cached(x, y, z) {
             Some((s, b)) => ((i32::from(s) - (15 - sky).max(0)).max(0) as u8, b),
@@ -863,8 +873,10 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     let skyless = nether || world.is_end();
     let env = crate::mob::Env {
         difficulty,
-        sky: if skyless { 0 } else { redstone::ambient_sky(time) },
-        sun_up: !skyless && !(12_540..23_460).contains(&time),
+        sky: if skyless { 0 } else { world.weather.dim_sky(redstone::ambient_sky(time)) },
+        // Гроза гасит небо так, что дня нет (у оригинала день — пока
+        // небо темнее не больше чем на 3): нежить не горит [проверить].
+        sun_up: !skyless && !(12_540..23_460).contains(&time) && world.weather.dim_sky(15) > 11,
     };
 
     // Свет для мобов, которым он нужен (паук, появление): считается здесь,
@@ -901,7 +913,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         };
 
         if crowd < crate::mob::spawn::MONSTER_CAP {
-            let ambient = env.sky;
+            let ambient = if skyless { 0 } else { world.weather.spawn_sky(redstone::ambient_sky(time)) };
             let surface = |x: i32, z: i32| {
                 let mut y = crate::world::MIN_Y + crate::world::WORLD_HEIGHT - 1;
 
@@ -1576,15 +1588,116 @@ pub(crate) fn blast_targets(shared: &Shared, dimension: Dimension) -> Vec<tnt::T
         .collect()
 }
 
-/// Такт молний; огонь от них — только на обычной и сложной сложности.
-fn step_bolts(shared: &Shared, dimension: Dimension, world: &mut World) {
-    let fire = shared.properties.difficulty >= crate::config::server_properties::DIFFICULTY_NORMAL;
+/// Молнии грозы (lightning.rs, `natural_target`): в каждом чанке в
+/// пределах дальности симуляции от игроков — с шансом 1/100 000 за такт.
+/// Фаза чанков, до случайных тактов (вики, Tick) [проверить].
+fn natural_lightning(shared: &Shared, dimension: Dimension, world: &mut World, players: &[(i32, i32)]) {
+    if !world.weather.is_thundering() || players.is_empty() {
+        return;
+    }
 
-    shared
-        .items_in(dimension)
+    let distance = shared.properties.simulation_distance;
+    let mut chunks: Vec<(i32, i32)> = Vec::new();
+
+    for (px, pz) in players {
+        for chunk_x in px - distance..=px + distance {
+            for chunk_z in pz - distance..=pz + distance {
+                if !chunks.contains(&(chunk_x, chunk_z)) && world.has_chunk(chunk_x, chunk_z) {
+                    chunks.push((chunk_x, chunk_z));
+                }
+            }
+        }
+    }
+
+    let mut strikes = Vec::new();
+    let mut living: Option<Vec<(f64, f64, f64)>> = None;
+
+    for chunk in chunks {
+        if !world.random_bits().is_multiple_of(crate::lightning::NATURAL_CHANCE) {
+            continue;
+        }
+
+        // Живые — только когда удар выпал: это редкость.
+        let living = living.get_or_insert_with(|| {
+            let mut places: Vec<(f64, f64, f64)> = shared
+                .players
+                .lock()
+                .expect("список игроков захвачен другим потоком")
+                .members()
+                .iter()
+                .filter(|member| member.dimension == dimension && member.game_mode != 3)
+                .map(|member| (member.position.x, member.position.y, member.position.z))
+                .collect();
+            let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+            places.extend(items.mobs().iter().filter(|mob| !mob.is_dead()).map(|mob| (mob.x, mob.y, mob.z)));
+            places
+        });
+
+        if let Some(at) = crate::lightning::natural_target(world, chunk, living) {
+            strikes.push(at);
+        }
+    }
+
+    if strikes.is_empty() {
+        return;
+    }
+
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    for at in strikes {
+        items.add_bolt(crate::lightning::Bolt::new(shared.next_entity_id(), at));
+    }
+}
+
+/// Такт молний; огонь от них — только на обычной и сложной сложности.
+/// Сложность — нынешняя, не из server.properties: её меняет команда
+/// (чёрный ящик, trident-channeling: огонь после `difficulty normal`).
+/// Светящаяся молния бьёт игроков и мобов рядом (вики, Lightning).
+fn step_bolts(shared: &Shared, dimension: Dimension, world: &mut World) {
+    let fire = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed) >= crate::config::server_properties::DIFFICULTY_NORMAL;
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+    let mut lit: Vec<crate::lightning::Bolt> = Vec::new();
+
+    items.step_bolts(|bolt| {
+        let alive = crate::lightning::step(world, bolt, fire);
+
+        if alive && bolt.is_lit() {
+            lit.push(bolt.clone());
+        }
+
+        alive
+    });
+
+    if lit.is_empty() {
+        return;
+    }
+
+    for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && lit.iter().any(|bolt| bolt.reaches((mob.x, mob.y, mob.z)))) {
+        if mob.vitals.fire > 0 {
+            mob.vitals.fire += 1;
+        } else {
+            mob.vitals.ignite(crate::lightning::STRIKE_FIRE_TICKS);
+        }
+
+        mob.hurt(crate::lightning::STRIKE_DAMAGE, crate::survival::Source::Lightning, None);
+    }
+
+    drop(items);
+
+    let struck: Vec<i32> = shared
+        .players
         .lock()
-        .expect("предметы захвачены другим потоком")
-        .step_bolts(|bolt| crate::lightning::step(world, bolt, fire));
+        .expect("список игроков захвачен другим потоком")
+        .members()
+        .iter()
+        .filter(|member| member.dimension == dimension && lit.iter().any(|bolt| bolt.reaches((member.position.x, member.position.y, member.position.z))))
+        .map(|member| member.entity_id)
+        .collect();
+
+    for entity_id in struck {
+        world.note_struck(entity_id);
+    }
 }
 
 /// Отложенное большим взрывом особого динамита (custom_tnt.rs): часть за

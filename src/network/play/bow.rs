@@ -301,12 +301,13 @@ fn riptide(shared: &Shared, player: &mut PlayerState, slot: i32, trident: Stack,
 
 /// Можно ли метнуться «тягуном»: игрок в воде (ноги или голова) — «only
 /// when a player stands in water or when exposed to rain» (вики, Riptide).
-/// [проверить] дождь: погоды у сервера пока нет.
+/// Дождь — World::in_rain (weather.rs).
 pub(super) fn riptide_allowed(shared: &Shared, player: &PlayerState) -> bool {
     let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
     let (x, z) = (player.x.floor() as i32, player.z.floor() as i32);
 
     [player.y, player.y + 1.0].iter().any(|y| crate::mob::is_water(world.get_block(x, y.floor() as i32, z)))
+        || world.in_rain(player.x, player.y, player.z, 1.8)
 }
 
 /// Арбалет в руке `hand` натянут до конца: заряжается стрелой из инвентаря

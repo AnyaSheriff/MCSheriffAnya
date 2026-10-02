@@ -128,6 +128,9 @@ pub struct Shared {
     /// Функции наборов данных и расписание (functions.rs). Под ним табло не
     /// берётся.
     pub functions: Mutex<crate::functions::Functions>,
+    /// Правило `advance_weather` (прежнее doWeatherCycle): меняется ли
+    /// погода сама.
+    pub advance_weather: std::sync::atomic::AtomicBool,
 }
 
 impl Shared {
@@ -187,6 +190,7 @@ impl Shared {
             command_block_rules: crate::command_block::Rules::default(),
             scoreboard: Mutex::new(crate::scoreboard::Scoreboard::new()),
             functions: Mutex::new(crate::functions::Functions::new(std::path::Path::new("world"))),
+            advance_weather: std::sync::atomic::AtomicBool::new(true),
             worlds: [Mutex::new(world), Mutex::new(nether), Mutex::new(end)],
             players: Mutex::new(Players::new()),
             chat: Mutex::new(Chat::new()),

@@ -321,6 +321,13 @@ const selfText = (b, p, meta) => {
     case 'spawn_position': text = `Spawn Position ${jstr(p.globalPos || p.location || p)}`; break;
     case 'collect': text = `Collect count=${p.pickupItemCount}`; break;
     case 'action_bar': text = `Action Bar ${simp(p.text)}`; break;
+    // Команды title/stopsound/transfer (cmdadmin): что клиент получает на экран и звук.
+    case 'set_title_text': text = `Title text=${simp(p.text)}`; break;
+    case 'set_title_subtitle': text = `Title subtitle=${simp(p.text)}`; break;
+    case 'set_title_time': text = `Title times in=${p.fadeIn} stay=${p.stay} out=${p.fadeOut}`; break;
+    case 'clear_titles': text = `Title clear reset=${p.reset}`; break;
+    case 'stop_sound': text = `Stop Sound flags=${p.flags} source=${p.source} sound=${p.sound}`; break;
+    case 'transfer': text = `Transfer ${jstr(p)}`; break;
     // Полоса босса (дракон): действие 0 — добавить (название, здоровье, цвет, деления, флаги), 1 — убрать, 2 — здоровье.
     case 'boss_bar': text = `Boss Bar action=${p.action}${p.health !== undefined ? ' health=' + rnd(p.health) : ''}${p.title !== undefined ? ' title=' + simp(p.title) : ''}${p.color !== undefined ? ' color=' + p.color + ' dividers=' + p.dividers : ''}${p.flags !== undefined ? ' flags=' + p.flags : ''}`; break;
     default: break;

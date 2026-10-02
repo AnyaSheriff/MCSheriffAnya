@@ -45,6 +45,7 @@ mod combat_table;
 mod combat;
 mod xp;
 mod lightning;
+mod weather;
 mod custom_tnt;
 mod permissions;
 mod containers;
@@ -63,6 +64,7 @@ mod commands_world;
 mod commands_score;
 mod scoreboard;
 mod functions;
+mod commands_admin;
 mod dimension;
 mod dragon_fight;
 mod reports;
@@ -85,7 +87,7 @@ use network::configuration::{
 use network::handshake::read_handshake;
 use network::{PROTOCOL_VERSION, VERSION_NAME};
 use network::login::{
-    format_uuid, offline_uuid, read_login_start, send_login_disconnect, send_login_success,
+    format_uuid, offline_uuid, read_login_start, send_login_disconnect, send_login_disconnect_json, send_login_success,
     valid_name,
 };
 use network::play::{play_session, player_left};
@@ -530,6 +532,16 @@ async fn handle_connection(
             reports::known_player(&login.username);
             log_info!("Опознаватель игрока {} — {}", login.username, format_uuid(&login.uuid));
 
+            // Блокировки по нику и адресу и белый список — раньше проверки на
+            // «сервер полон», как у оригинала (commands_admin.rs).
+            let is_op = shared.ops.lock().expect("права захвачены другим потоком").level_of(&login.uuid) > 0;
+
+            if let Some((json, plain)) = commands_admin::login_refusal(&login.username, &login.uuid, addr.ip(), is_op) {
+                log_info!("{} не пущен: {}", login.username, plain.replace('\n', " "));
+                send_login_disconnect_json(&mut socket, &json).await?;
+                return Ok(());
+            }
+
             let online = shared
                 .players
                 .lock()
@@ -571,6 +583,7 @@ async fn handle_connection(
                 return Ok(());
             }
 
+            commands_admin::note_address(&login.uuid, addr.ip());
             send_login_success(&mut socket, &login.username, &login.uuid).await?;
             log_debug!("Login Success отправлен игроку {}", login.username);
 

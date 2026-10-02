@@ -777,6 +777,8 @@ fn forget_reader(shared: &Shared,
 /// Зовётся при любом окончании сессии — и когда игрок вышел сам, и когда
 /// соединение оборвалось ошибкой. Иначе он остался бы в списке навсегда.
 pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
+    crate::commands_admin::forget_address(uuid);
+
     let removed = shared
         .players
         .lock()
@@ -936,6 +938,7 @@ async fn enter_world(
         send_game_event_start_waiting(stream).await?;
         let (age, time) = world_age(shared, player.dimension);
         send_time(stream, age, time).await?;
+        send_weather(stream, shared, player.dimension).await?;
         send_center_chunk(stream, player.chunk()).await?;
 
         // Клиент не закроет экран загрузки, пока не получит все чанки в объявленной
@@ -3446,6 +3449,11 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
         nodes.push(argument("доводы", &[], GREEDY));
     }
 
+    // Команды commands_admin.rs: свои узлы за остальными.
+    let (admin_roots, admin_nodes) = crate::commands_admin::tree_nodes(nodes.len() as i32);
+
+    nodes.extend(admin_nodes);
+
     // Корень — заново, с новыми словами.
     {
         let mut root = vec![NODE_ROOT];
@@ -3457,6 +3465,7 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
 
         children.extend((0..WORLD_COMMANDS.len() as i32).map(|index| world_base + index * 2));
         children.extend(extra_roots);
+        children.extend(admin_roots);
         root.extend_from_slice(&encode_varint(children.len() as i32));
 
         for child in children {
@@ -3685,7 +3694,7 @@ async fn send_default_spawn_position(
 
     // Точка возрождения — всегда в обычном мире.
     body.extend_from_slice(&encode_string(Dimension::Overworld.name()));
-    push_packed_position(&mut body, spawn.0 as i32, spawn.1 as i32, spawn.2 as i32);
+    push_packed_position(&mut body, spawn.0.floor() as i32, spawn.1.floor() as i32, spawn.2.floor() as i32);
     push_f32(&mut body, 0.0); // поворот
     push_f32(&mut body, 0.0); // наклон
 
@@ -3734,6 +3743,28 @@ async fn send_abilities(stream: &mut Outgoing<'_>, game_mode: i32) -> io::Result
     push_f32(&mut body, 0.1); // поле зрения (скорость ходьбы)
 
     write_body(stream, body).await
+}
+
+/// Отправляет Game Event с этим поводом и значением.
+async fn send_game_event(stream: &mut Outgoing<'_>, reason: u8, value: f32) -> io::Result<()> {
+    let mut body = encode_varint(GAME_EVENT);
+
+    body.push(reason);
+    push_f32(&mut body, value);
+
+    write_body(stream, body).await
+}
+
+/// Погода игроку, вошедшему в мир (weather.rs, `on_entry`): если идёт дождь
+/// — «дождь пошёл», сила дождя и грома.
+async fn send_weather(stream: &mut Outgoing<'_>, shared: &Shared, dimension: crate::dimension::Dimension) -> io::Result<()> {
+    let events = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").weather.on_entry();
+
+    for (reason, value) in events {
+        send_game_event(stream, reason, value).await?;
+    }
+
+    Ok(())
 }
 
 /// Отправляет Game Event 13 — «начать ждать чанки».
@@ -4039,6 +4070,9 @@ async fn send_pending_world_events(
                 write_body(stream, body).await?;
             }
             WorldEvent::GameEvent { .. } => {}
+            WorldEvent::Weather { reason, value } => send_game_event(stream, *reason, *value).await?,
+            WorldEvent::Struck { entity_id } if *entity_id == player.entity_id => vitals::struck(stream, shared, player).await?,
+            WorldEvent::Struck { .. } => {}
             WorldEvent::BossBar(share) => send_boss_bar(stream, player, *share).await?,
             WorldEvent::Collect { entity_id, by, count } => {
                 if player.seen_bow_arrows.remove(entity_id).is_some() {
@@ -5350,6 +5384,19 @@ async fn read_and_log_play_packets(
             return Ok(());
         }
 
+        if let Some(limit) = crate::commands_admin::idle_limit_ticks()
+            && player.idle.elapsed() >= Duration::from_millis(limit * 50)
+        {
+            log_info!("{} выгнан: слишком долго бездействовал", player.name);
+
+            let mut body = encode_varint(DISCONNECT);
+
+            body.extend_from_slice(&crate::commands_admin::idling());
+            write_body(stream, body).await?;
+
+            return Ok(());
+        }
+
         if last_keep_alive.elapsed() >= KEEP_ALIVE_INTERVAL {
             send_keep_alive(stream, keep_alive_id).await?;
             log_debug!(
@@ -5480,6 +5527,32 @@ async fn read_and_log_play_packets(
 
                     return Ok(());
                 }
+                Order::KickText { component, plain } => {
+                    log_info!("{} выгнан: {}", player.name, plain);
+
+                    let mut body = encode_varint(DISCONNECT);
+
+                    body.extend_from_slice(&component);
+                    write_body(stream, body).await?;
+
+                    return Ok(());
+                }
+                Order::PacketText { id, body, .. } => {
+                    let mut packet = encode_varint(id);
+
+                    packet.extend_from_slice(&body);
+                    write_body(stream, packet).await?;
+                }
+                Order::Spawn { x, y, z, body } => {
+                    player.spawn_point = (x, y, z);
+
+                    if let Some(body) = body {
+                        let mut packet = encode_varint(SET_DEFAULT_SPAWN_POSITION);
+
+                        packet.extend_from_slice(&body);
+                        write_body(stream, packet).await?;
+                    }
+                }
                 // Переход в другое измерение: клиент получает Respawn и
                 // забывает всё, что видел, — чанки, предметы и игроков
                 // присылаем заново из нового мира.
@@ -5553,6 +5626,7 @@ async fn read_and_log_play_packets(
                         send_player_position_as(stream, player, sync).await?;
                         send_abilities(stream, player.game_mode).await?;
                         send_default_spawn_position(stream, player.spawn_point).await?;
+                        send_weather(stream, shared, dimension).await?;
                         send_game_event_start_waiting(stream).await?;
                         send_held_slot(stream, player.inventory.selected()).await?;
 
@@ -5618,6 +5692,7 @@ async fn read_and_log_play_packets(
                         send_player_position(stream, player).await?;
                         publish_player(shared, player);
                         vitals::send_respawn_intro(stream, player).await?;
+                        send_weather(stream, shared, dimension).await?;
                         send_game_event_start_waiting(stream).await?;
                         vitals::send_respawn_extras(stream, shared, player).await?;
                     } else {
@@ -6319,6 +6394,29 @@ impl Reaction {
 /// Разбирает один пакет клиента: обновляет сведения об игроке, меняет мир и
 /// пишет в лог то, что стоит показать.
 fn handle_client_packet(
+    packet: &PacketInfo,
+    player: &mut PlayerState,
+    shared: &Shared,
+) -> Reaction {
+    let before = (player.x, player.y, player.z, player.yaw, player.pitch);
+    let reaction = handle_client_packet_inner(packet, player, shared);
+
+    // Бездействие (`setidletimeout`): движение и повороты считаются делом,
+    // только если место или взгляд правда изменились; ответы на Keep Alive и
+    // конец такта — нет.
+    let passive = matches!(
+        packet.id,
+        SERVERBOUND_KEEP_ALIVE | CONFIRM_TELEPORTATION | SET_PLAYER_POSITION | SET_PLAYER_POSITION_AND_ROTATION | SET_PLAYER_ROTATION | SET_PLAYER_ON_GROUND | 0x0D
+    );
+
+    if !passive || before != (player.x, player.y, player.z, player.yaw, player.pitch) {
+        player.idle = Instant::now();
+    }
+
+    reaction
+}
+
+fn handle_client_packet_inner(
     packet: &PacketInfo,
     player: &mut PlayerState,
     shared: &Shared,
@@ -8886,6 +8984,9 @@ struct PlayerState {
     /// Когда клиент последний раз ответил на Keep Alive.
     answered: Instant,
 
+    /// Когда игрок последний раз что-то делал (`setidletimeout`).
+    idle: Instant,
+
     /// Инвентарь игрока: сервер ведёт его сам и показывает клиенту.
     inventory: Inventory,
 
@@ -9061,7 +9162,7 @@ impl PlayerState {
                 spawn.2,
                 SPAWN_YAW,
                 SPAWN_PITCH,
-                GAME_MODE_CREATIVE,
+                crate::commands_admin::default_game_mode(),
             ),
         };
 
@@ -9102,6 +9203,7 @@ impl PlayerState {
             portal_ready: false,
             boss_shown: false,
             answered: Instant::now(),
+            idle: Instant::now(),
             inventory: saved
                 .as_ref()
                 .map(|data| data.inventory.clone())

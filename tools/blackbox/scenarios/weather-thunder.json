@@ -1,0 +1,29 @@
+{
+ "name": "weather-thunder",
+ "about": "Гроза командой: weather thunder из ясной (дождь и гром нарастают вместе), через 150 тактов weather rain (гром спадает, дождь остаётся), через 270 — weather clear.",
+ "exclusive": true,
+ "blocks": [],
+ "track_self": true,
+ "setup": [
+  "weather clear",
+  "!wait 120"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "weather thunder"
+  },
+  {
+   "after": 150,
+   "cmd": "weather rain"
+  },
+  {
+   "after": 270,
+   "cmd": "weather clear"
+  }
+ ],
+ "record_ticks": 410,
+ "cleanup": [
+  "weather clear"
+ ]
+}

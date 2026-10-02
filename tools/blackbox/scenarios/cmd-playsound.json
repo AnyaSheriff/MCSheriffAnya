@@ -1,0 +1,80 @@
+{
+ "name": "cmd-playsound",
+ "about": "playsound: источники, громкость и высота, слышимость и minVolume; ответы.",
+ "blocks": [],
+ "setup": [
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "playsound minecraft:block.note_block.harp master @s"
+  },
+  {
+   "after": 3,
+   "cmd": "playsound minecraft:block.note_block.harp master @s ~ ~ ~ 2 0.5 0.1"
+  },
+  {
+   "after": 6,
+   "cmd": "playsound foo:bar.baz player @s"
+  },
+  {
+   "after": 9,
+   "cmd": "playsound minecraft:block.note_block.harp ui @s ~ ~ ~ 1 1"
+  },
+  {
+   "after": 12,
+   "cmd": "playsound minecraft:block.note_block.harp voice @a ~ ~ ~ 100 1"
+  },
+  {
+   "after": 15,
+   "cmd": "playsound minecraft:block.note_block.harp master @s 1000 1000 1000"
+  },
+  {
+   "after": 18,
+   "cmd": "playsound minecraft:block.note_block.harp master @s 1000 1000 1000 1 1 0.5"
+  },
+  {
+   "after": 21,
+   "cmd": "playsound minecraft:block.note_block.harp master @s ~ ~ ~ 0"
+  },
+  {
+   "after": 24,
+   "cmd": "playsound minecraft:block.note_block.harp master @s ~ ~ ~ 1 3"
+  },
+  {
+   "after": 27,
+   "cmd": "playsound minecraft:block.note_block.harp badsource @s"
+  },
+  {
+   "after": 30,
+   "cmd": "playsound minecraft:x.y master @s ~ ~ ~ 1 1 1 extra"
+  },
+  {
+   "after": 33,
+   "cmd": "playsound x.Y master @s"
+  },
+  {
+   "after": 36,
+   "cmd": "playsound"
+  },
+  {
+   "after": 39,
+   "cmd": "playsound minecraft:block.note_block.harp master nobody"
+  },
+  {
+   "after": 42,
+   "cmd": "playsound minecraft:block.note_block.harp master @s ~2 ~1 ~-1.5"
+  }
+ ],
+ "record_ticks": 55,
+ "cleanup": [
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "chat": true
+}

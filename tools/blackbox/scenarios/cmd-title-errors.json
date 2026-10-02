@@ -1,0 +1,64 @@
+{
+ "name": "cmd-title-errors",
+ "about": "title: ошибки разбора (строка-контекст с меткой) и выполнения.",
+ "blocks": [],
+ "setup": [
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "title"
+  },
+  {
+   "after": 3,
+   "cmd": "title @s"
+  },
+  {
+   "after": 6,
+   "cmd": "title @s foo"
+  },
+  {
+   "after": 9,
+   "cmd": "title nobody title \"x\""
+  },
+  {
+   "after": 12,
+   "cmd": "title @s title {bad"
+  },
+  {
+   "after": 15,
+   "cmd": "title @s title \"x\" extra"
+  },
+  {
+   "after": 18,
+   "cmd": "title @s times -1 2 3"
+  },
+  {
+   "after": 21,
+   "cmd": "title @s times 1x 2 3"
+  },
+  {
+   "after": 24,
+   "cmd": "title @s times abc 2 3"
+  },
+  {
+   "after": 27,
+   "cmd": "title @s times 1 2"
+  },
+  {
+   "after": 30,
+   "cmd": "title @s title 5"
+  }
+ ],
+ "record_ticks": 45,
+ "cleanup": [
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "chat": true
+}

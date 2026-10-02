@@ -419,6 +419,8 @@ struct Env {
     in_wall: bool,
     in_lava: bool,
     in_water: bool,
+    /// Под дождём (World::in_rain): тушит, как вода.
+    in_rain: bool,
     eyes_in_water: bool,
     soft: bool,
     landing: f32,
@@ -443,11 +445,13 @@ fn fluid_height(world: &World, x: i32, y: i32, z: i32, kind: fluids::Kind, level
 
 fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool) -> Env {
     let (bx, bz) = (x.floor() as i32, z.floor() as i32);
-    let mut env = Env { in_fire: false, cactus: false, in_wall: false, in_lava: false, in_water: false, eyes_in_water: false, soft: false, landing: 1.0, below: 0 };
+    let mut env = Env { in_fire: false, cactus: false, in_wall: false, in_lava: false, in_water: false, in_rain: false, eyes_in_water: false, soft: false, landing: 1.0, below: 0 };
 
     // Ящик игрока: от ног до макушки; жидкость считается, если её
     // поверхность выше ног.
     let top = y + if sneaking { 1.5 } else { 1.8 };
+
+    env.in_rain = world.in_rain(x, y, z, top - y);
 
     for by in (y.floor() as i32)..=(top.floor() as i32) {
         let state = world.get_block(bx, by, bz);
@@ -1792,6 +1796,24 @@ async fn creative_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
     Ok(())
 }
 
+/// Молния задела игрока (вики, Lightning): поджигает (горящему — ещё
+/// такт огня) и бьёт на 5.
+pub(super) async fn struck(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    if player.vit.dead || !mortal(player.game_mode) {
+        return Ok(());
+    }
+
+    if player.vit.fire > 0 {
+        player.vit.fire += 1;
+    } else {
+        player.vit.ignite(crate::lightning::STRIKE_FIRE_TICKS);
+    }
+
+    hit(stream, shared, player, crate::lightning::STRIKE_DAMAGE, Source::Lightning, 0).await?;
+
+    Ok(())
+}
+
 async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
     let entity = player.entity_id;
     let at = (player.x, player.y, player.z);
@@ -1806,7 +1828,13 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
     player.net.in_lava = env.in_lava;
     player.net.in_water = env.in_water;
 
-    // Вода тушит огонь.
+    // Дождь тушит огонь молча (вики, Weather: «Extinguishes fires»; чёрный
+    // ящик, rain-fire-player: ни звука, ни признака «горит»).
+    if env.in_rain && !env.in_water && player.vit.fire > 0 {
+        player.vit.extinguish();
+    }
+
+    // Вода тушит огонь со звуком.
     if env.in_water && player.vit.fire > 0 {
         player.vit.extinguish();
 

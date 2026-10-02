@@ -42,7 +42,7 @@ use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use crate::config::server_properties::WorldKind;
 use crate::containers;
@@ -254,6 +254,12 @@ pub enum WorldEvent {
     /// Game Event одному игроку (6 — стрела попала в игрока: стрелку звук
     /// попадания; чёрный ящик, pvp-bow-power).
     GameEvent { entity_id: i32, reason: u8, value: f32 },
+
+    /// Game Event погоды всем игрокам мира (weather.rs).
+    Weather { reason: u8, value: f32 },
+
+    /// Игрока `entity_id` задела молния (lightning.rs).
+    Struck { entity_id: i32 },
 
     /// Игрок `by` подобрал стрелу `entity_id`: всем Take Item Entity и
     /// сразу за ним — убрать стрелу (чёрный ящик, arrow-pickup).
@@ -1013,7 +1019,7 @@ pub struct World {
     unloaded: HashMap<(i32, i32), u64>,
 
     /// Точка появления: ищется один раз и хранится в level.dat.
-    spawn: OnceLock<(f64, f64, f64)>,
+    spawn: std::sync::Mutex<Option<(f64, f64, f64)>>,
 
     /// Когда мир последний раз записывался — для `save_if_due`.
     last_save: Option<Instant>,
@@ -1054,6 +1060,9 @@ pub struct World {
 
     /// Бой с драконом Края (dragon_fight.rs); у прочих миров пуст.
     pub fight: crate::dragon_fight::Fight,
+
+    /// Погода (weather.rs): идёт только у Обычного мира, живёт в level.dat.
+    pub weather: crate::weather::Weather,
 
     /// Предметы, выброшенные выбрасывателем или раздатчиком: где, с какой
     /// скоростью и что. Заводит сущности такт (`take_ejected`).
@@ -1180,7 +1189,7 @@ impl World {
             fresh: HashSet::new(),
             unload_epoch: 0,
             unloaded: HashMap::new(),
-            spawn: OnceLock::new(),
+            spawn: std::sync::Mutex::new(None),
             last_save: None,
             ticks_written: Cell::new(0),
             level_written: Cell::new(None),
@@ -1190,6 +1199,7 @@ impl World {
             spilled: Vec::new(),
             viewers: HashMap::new(),
             fight: crate::dragon_fight::Fight::default(),
+            weather: crate::weather::Weather::default(),
             ejected: Vec::new(),
             primed: Vec::new(),
             blast_rest: Default::default(),
@@ -1329,7 +1339,7 @@ impl World {
             fresh: HashSet::new(),
             unload_epoch: 0,
             unloaded: HashMap::new(),
-            spawn: OnceLock::new(),
+            spawn: std::sync::Mutex::new(None),
             last_save: None,
             ticks_written: Cell::new(0),
             level_written: Cell::new(None),
@@ -1339,6 +1349,7 @@ impl World {
             spilled: Vec::new(),
             viewers: HashMap::new(),
             fight: level.fight.clone(),
+            weather: level.weather.clone(),
             ejected: Vec::new(),
             primed: Vec::new(),
             blast_rest: Default::default(),
@@ -1355,7 +1366,7 @@ impl World {
         };
 
         if let Some(spawn) = level.spawn {
-            let _ = world.spawn.set(spawn);
+            *world.spawn.lock().expect("точка появления захвачена другим потоком") = Some(spawn);
         }
 
         world.portals = read_portals(&world.path.join(PORTALS));
@@ -1917,6 +1928,70 @@ impl World {
         })
     }
 
+    /// Идёт ли в этой клетке дождь (вики, Weather): дождь в мире, выше
+    /// клетки — ничего, что держит движение или жидкость (стекло и листва
+    /// дождь держат), и биом клетки дождливый — не снежный (холоднее 0,15 с
+    /// поправкой на высоту) и не сухой (пустыня, саванна, пустошь: «not in
+    /// certain dry biomes»).
+    pub fn rain_at(&self, x: i32, y: i32, z: i32) -> bool {
+        if !self.weather.is_raining() {
+            return false;
+        }
+
+        let (chunk_x, chunk_z) = chunk_key(x, z);
+        let Some(chunk) = self.chunks.get(&(chunk_x, chunk_z)) else {
+            return false;
+        };
+
+        let open = (y..=chunk.highest()).all(|above| {
+            let state = chunk.block(x, above, z);
+
+            state == AIR || (!crate::blocks::stops_items(state) && fluids::fluid_at(state).is_none())
+        });
+
+        if !open || !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&y) {
+            return open;
+        }
+
+        let number = chunk.biome(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
+        let biome = if number == terrain::autumn_forest_number() {
+            Some(terrain::Biome::Forest)
+        } else {
+            terrain::Biome::ALL.get(usize::from(number)).copied()
+        };
+
+        biome.is_some_and(|biome| biome.climate().0 < 2.0 && !biome.snows_at(y))
+    }
+
+    /// Клетка над самым верхним блоком столбца, что держит движение или
+    /// жидкость (вики, Lightning: «the block just above the highest block
+    /// that is liquid or obstructs movement»). Незагруженный — None.
+    pub fn rain_top(&self, x: i32, z: i32) -> Option<i32> {
+        let (chunk_x, chunk_z) = chunk_key(x, z);
+        let chunk = self.chunks.get(&(chunk_x, chunk_z))?;
+        let mut y = chunk.highest();
+
+        while y >= MIN_Y {
+            let state = chunk.block(x, y, z);
+
+            if state != AIR && (crate::blocks::stops_items(state) || fluids::fluid_at(state).is_some()) {
+                break;
+            }
+
+            y -= 1;
+        }
+
+        Some(y + 1)
+    }
+
+    /// Под дождём ли сущность: в клетке ног или макушки (`height` — рост)
+    /// [проверить]: какие клетки смотрит оригинал.
+    pub fn in_rain(&self, x: f64, y: f64, z: f64, height: f64) -> bool {
+        let (bx, bz) = (x.floor() as i32, z.floor() as i32);
+
+        self.rain_at(bx, y.floor() as i32, bz) || self.rain_at(bx, (y + height).floor() as i32, bz)
+    }
+
     /// Небесный и блочный свет в клетке, с учётом соседей: считается и
     /// запоминается (как `sky_light`), для мобов — спавн и пауки.
     pub fn light_full(&mut self, x: i32, y: i32, z: i32) -> (u8, u8) {
@@ -1982,6 +2057,28 @@ impl World {
     /// Подбор стрелы игроком.
     pub fn note_collect(&mut self, entity_id: i32, by: i32, count: i32) {
         self.events.push(WorldEvent::Collect { entity_id, by, count });
+    }
+
+    /// Такт погоды (weather.rs): у мира без неба её нет. Изменения уходят
+    /// всем игрокам мира Game Event-ами.
+    pub fn tick_weather(&mut self, cycle: bool) {
+        if self.is_nether() || self.is_end() {
+            return;
+        }
+
+        let mut weather = std::mem::take(&mut self.weather);
+        let events = weather.tick(cycle, &mut |n| self.random_bits() % n);
+
+        self.weather = weather;
+
+        for (reason, value) in events {
+            self.events.push(WorldEvent::Weather { reason, value });
+        }
+    }
+
+    /// Молния задела игрока.
+    pub fn note_struck(&mut self, entity_id: i32) {
+        self.events.push(WorldEvent::Struck { entity_id });
     }
 
     /// Game Event игроку `entity_id`.
@@ -2941,12 +3038,16 @@ impl World {
             self.kind.name()
         );
 
-        if let Some((x, y, z)) = self.spawn.get() {
+        if let Some((x, y, z)) = *self.spawn.lock().expect("точка появления захвачена другим потоком") {
             text.push_str(&format!("spawn = {} {} {}\n", x, y, z));
         }
 
         if self.fight.started {
             text.push_str(&self.fight.save());
+        }
+
+        if self.weather != crate::weather::Weather::default() {
+            text.push_str(&self.weather.save());
         }
 
         // Такты и ходы поршней — в своём файле: их бывают десятки тысяч
@@ -2961,7 +3062,16 @@ impl World {
             use std::hash::{Hash, Hasher};
 
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
-            text.lines().skip(1).collect::<Vec<_>>().hash(&mut hasher);
+            // Таймеры погоды тоже идут каждый такт: в отпечаток — только
+            // её флаги («weather = 1 0 …» → «weather = 1 0»).
+            text.lines()
+                .skip(1)
+                .map(|line| match line.strip_prefix("weather = ") {
+                    Some(rest) => rest.split_whitespace().take(2).collect::<Vec<_>>().join(" "),
+                    None => line.to_string(),
+                })
+                .collect::<Vec<_>>()
+                .hash(&mut hasher);
             hasher.finish()
         };
 
@@ -3446,7 +3556,14 @@ impl World {
     /// Ищется один раз: дальше берётся запомненная (она же пишется в
     /// level.dat), а не обходятся заново тысячи столбцов под замком мира.
     pub fn spawn_position(&self) -> (f64, f64, f64) {
-        *self.spawn.get_or_init(|| self.find_spawn())
+        let mut spawn = self.spawn.lock().expect("точка появления захвачена другим потоком");
+
+        *spawn.get_or_insert_with(|| self.find_spawn())
+    }
+
+    /// Новая общая точка появления (`setworldspawn`); пишется в level.dat.
+    pub fn set_spawn_position(&self, place: (f64, f64, f64)) {
+        *self.spawn.lock().expect("точка появления захвачена другим потоком") = Some(place);
     }
 
     fn find_spawn(&self) -> (f64, f64, f64) {
@@ -4296,6 +4413,9 @@ struct Level {
     /// Бой с драконом (у Края).
     fight: crate::dragon_fight::Fight,
 
+    /// Погода.
+    weather: crate::weather::Weather,
+
     /// Файла мира не было вовсе: мир новый.
     new: bool,
 }
@@ -4492,6 +4612,7 @@ impl Level {
             cargo: Vec::new(),
             spawn: None,
             fight: crate::dragon_fight::Fight::default(),
+            weather: crate::weather::Weather::default(),
             new: true,
         }
     }
@@ -4524,6 +4645,7 @@ fn read_level(path: &Path) -> Result<Option<Level>, String> {
             "type" => level.kind = Some(WorldKind::from_setting(value)),
             "spawn" => level.spawn = read_spawn(value),
             "dragon-fight" => level.fight.read_flags(value),
+            "weather" => level.weather = crate::weather::Weather::read(value),
             "gateways" => level.fight.read_gateways(value),
             // Прежний вид: такты лежали в level.dat со сроком «сколько ждать».
             "tick" => {

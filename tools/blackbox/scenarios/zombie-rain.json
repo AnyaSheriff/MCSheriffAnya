@@ -1,0 +1,120 @@
+{
+ "about": "Зомби с ИИ в шахте под открытым небом в полдень, но под дождём: не загорается (вики, Weather: дождь тушит огонь).",
+ "track_mobs": true,
+ "exclusive": true,
+ "blocks": [
+  {
+   "at": [
+    2,
+    0,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    1,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    0,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    1,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    0,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    1,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    0,
+    4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    1,
+    4
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "time set noon",
+  "weather rain",
+  "tp $(bot) $(-6.5,1,-6.5)",
+  "!wait 120"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon zombie $(3.5,0,3.5) {Silent:1b}"
+  }
+ ],
+ "record_ticks": 200,
+ "cleanup": [
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=skeleton,distance=..48]",
+  "kill @e[type=creeper,distance=..48]",
+  "kill @e[type=spider,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "time set noon",
+  "fill $(2,0,2) $(4,2,4) minecraft:air",
+  "weather clear"
+ ],
+ "name": "zombie-rain",
+ "origin": [
+  100,
+  5,
+  100
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "поворот головы",
+   "match": "entity_head_rotation",
+   "range": [
+    0,
+    80
+   ],
+   "anytick": true,
+   "why": "вики, Mob AI: «Look around» — зомби без цели оглядывается случайно"
+  }
+ ]
+}

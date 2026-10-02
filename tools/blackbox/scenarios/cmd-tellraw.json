@@ -1,0 +1,96 @@
+{
+ "name": "cmd-tellraw",
+ "about": "tellraw: что клиент получает после приведения компонента к каноническому виду.",
+ "blocks": [],
+ "setup": [
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "tellraw @s {\"text\":\"raw\"}"
+  },
+  {
+   "after": 3,
+   "cmd": "tellraw @s \"plain\""
+  },
+  {
+   "after": 6,
+   "cmd": "tellraw @s [\"a\",{\"text\":\"b\",\"bold\":true}]"
+  },
+  {
+   "after": 9,
+   "cmd": "tellraw @s {\"text\":\"a\",\"extra\":[{\"text\":\"b\"}]}"
+  },
+  {
+   "after": 12,
+   "cmd": "tellraw @s {text:\"snbt\",color:red}"
+  },
+  {
+   "after": 15,
+   "cmd": "tellraw @s {\"selector\":\"@s\"}"
+  },
+  {
+   "after": 18,
+   "cmd": "tellraw @s {\"keybind\":\"key.jump\"}"
+  },
+  {
+   "after": 21,
+   "cmd": "tellraw @s [\"\",\"a\",\"b\"]"
+  },
+  {
+   "after": 24,
+   "cmd": "tellraw @s {\"text\":\"c\",\"color\":\"#ff0000\",\"bold\":true,\"font\":\"minecraft:uniform\"}"
+  },
+  {
+   "after": 27,
+   "cmd": "tellraw @s {\"text\":\"c\",\"click_event\":{\"action\":\"open_url\",\"url\":\"https://a.b\"}}"
+  },
+  {
+   "after": 30,
+   "cmd": "tellraw @s {\"text\":\"c\",\"hover_event\":{\"action\":\"show_text\",\"value\":\"v\"}}"
+  },
+  {
+   "after": 33,
+   "cmd": "tellraw @s {\"translate\":\"chat.type.text\",\"with\":[\"x\",{\"text\":\"y\"}]}"
+  },
+  {
+   "after": 36,
+   "cmd": "tellraw @s {\"translate\":\"x\",\"with\":[1,\"b\"]}"
+  },
+  {
+   "after": 39,
+   "cmd": "tellraw @s hello"
+  },
+  {
+   "after": 42,
+   "cmd": "tellraw nobody \"x\""
+  },
+  {
+   "after": 45,
+   "cmd": "tellraw @s {bad"
+  },
+  {
+   "after": 48,
+   "cmd": "tellraw @s \"a\" b"
+  },
+  {
+   "after": 51,
+   "cmd": "tellraw @s 5"
+  },
+  {
+   "after": 54,
+   "cmd": "tellraw @s"
+  }
+ ],
+ "record_ticks": 65,
+ "cleanup": [
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "chat": true
+}

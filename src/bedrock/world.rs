@@ -267,6 +267,8 @@ pub struct BedrockWorld {
     /// Журнал мира и чата: докуда разослано.
     reader: crate::journal::Reader,
     events_from: usize,
+    /// Что клиент знает о погоде: идёт ли дождь, гроза (Level Event).
+    weather_shown: (bool, bool),
     chat_from: usize,
     ticks: u64,
     /// Перенос, который клиент ещё не принял: до тех пор его прежнее место
@@ -535,6 +537,7 @@ impl BedrockWorld {
             shown: HashMap::new(),
             reader,
             events_from,
+            weather_shown: (false, false),
             chat_from,
             ticks: 0,
             teleport: None,
@@ -822,6 +825,22 @@ impl BedrockWorld {
                 crate::players::Order::Kick { reason } => {
                     let mut disconnect = Out::packet(session::DISCONNECT);
                     disconnect.zigzag32(0).bool(false).string(&reason).string("");
+                    packets.push(disconnect.bytes);
+                    connection.send(&std::mem::take(packets));
+                    connection.close();
+                    return;
+                }
+                // Готовые пакеты Java (title, звуки, частицы) Bedrock не нужны.
+                crate::players::Order::Spawn { .. } => {}
+                // Чат — простым текстом; прочие пакеты Java (title, звуки, частицы) Bedrock не нужны.
+                crate::players::Order::PacketText { plain, .. } => {
+                    if !plain.is_empty() {
+                        packets.push(raw_text(&plain));
+                    }
+                }
+                crate::players::Order::KickText { plain, .. } => {
+                    let mut disconnect = Out::packet(session::DISCONNECT);
+                    disconnect.zigzag32(0).bool(false).string(&plain).string("");
                     packets.push(disconnect.bytes);
                     connection.send(&std::mem::take(packets));
                     connection.close();
@@ -2344,12 +2363,18 @@ impl BedrockWorld {
         self.tick_orders(connection, &mut packets);
 
         // Изменения блоков в уже отправленных чанках.
-        let events = {
+        let (events, weather) = {
             let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
             let (events, count) = world.events_since(self.events_from, self.reader);
             self.events_from = count;
-            events
+            (events, (world.weather.is_raining(), world.weather.is_thundering()))
         };
+
+        // Погода: у Bedrock не сила по тактам, а начало и конец дождя и грозы.
+        if weather != self.weather_shown {
+            packets.extend(weather_packets(self.weather_shown, weather));
+            self.weather_shown = weather;
+        }
 
         // Места, где сменился блок: хранилищу там и сундукам по соседству —
         // новый блок-актор (сундук стал половиной большого или перестал,
@@ -2822,7 +2847,7 @@ fn clean_text(text: &str) -> String {
 /// Команды, которые можно всем (у `commands::level_needed` — нулевой
 /// уровень): неподтверждённому игроку Bedrock доступны только они.
 fn open_to_everyone(command: &str) -> bool {
-    matches!(command.split_whitespace().next().unwrap_or(""), "help" | "list" | "say")
+    matches!(command.split_whitespace().next().unwrap_or(""), "help" | "list" | "say" | "me" | "msg" | "tell" | "w")
 }
 
 /// Пакет Level Chunk со всеми подчанками и биомами измерения.
@@ -3154,6 +3179,28 @@ fn move_mob(entity_id: i32, [x, y, z, yaw, pitch, head]: [f32; 6]) -> Vec<u8> {
     out.bytes
 }
 
+/// Level Event (Mojang bedrock-protocol-docs, LevelEventPacket).
+const LEVEL_EVENT: u32 = 0x19;
+
+/// Погода в Level Event (minecraft-data, bedrock protocol.json:
+/// 3001 start_rain, 3002 start_thunder, 3003 stop_rain, 3004 stop_thunder).
+/// Данные — сила, 65 535 — полная [проверить].
+fn weather_packets((rain, thunder): (bool, bool), (now_rain, now_thunder): (bool, bool)) -> Vec<Vec<u8>> {
+    let mut packets = Vec::new();
+
+    for (was, now, start, stop) in [(rain, now_rain, 3001, 3003), (thunder, now_thunder, 3002, 3004)] {
+        if was != now {
+            let mut out = Out::packet(LEVEL_EVENT);
+            out.zigzag32(if now { start } else { stop })
+                .vec3f(0.0, 0.0, 0.0)
+                .zigzag32(if now { 65_535 } else { 0 });
+            packets.push(out.bytes);
+        }
+    }
+
+    packets
+}
+
 /// Молния (Add Actor `minecraft:lightning_bolt`): без скорости, поворота
 /// и свойств. [проверить]: играет ли клиент Bedrock гром сам, как Java.
 fn add_lightning(bolt: &crate::lightning::Bolt) -> Vec<u8> {
@@ -3351,7 +3398,7 @@ fn move_player(member: &Member) -> Vec<u8> {
 }
 
 /// Наши команды с описаниями — клиент их подсказывает при наборе.
-const COMMANDS: [(&str, &str); 40] = [
+const COMMANDS: [(&str, &str); 61] = [
     ("help", "Список команд"),
     ("list", "Кто на сервере"),
     ("say", "Сказать всем"),
@@ -3392,6 +3439,27 @@ const COMMANDS: [(&str, &str); 40] = [
     ("datapack", "Наборы данных"),
     ("return", "Итог функции"),
     ("execute", "Выполнить с условиями"),
+    ("me", "Сообщение о действии"),
+    ("msg", "Личное сообщение"),
+    ("tell", "Личное сообщение"),
+    ("w", "Личное сообщение"),
+    ("tellraw", "Сообщение с оформлением"),
+    ("title", "Надпись на экране"),
+    ("playsound", "Проиграть звук"),
+    ("stopsound", "Остановить звук"),
+    ("particle", "Показать частицы"),
+    ("setworldspawn", "Точка появления мира"),
+    ("spawnpoint", "Точка возрождения игрока"),
+    ("defaultgamemode", "Режим игры по умолчанию"),
+    ("seed", "Семя мира"),
+    ("version", "Версия сервера"),
+    ("reload", "Перезагрузить данные"),
+    ("ban", "Заблокировать игрока"),
+    ("banlist", "Список блокировок"),
+    ("pardon", "Снять блокировку игрока"),
+    ("whitelist", "Белый список"),
+    ("setidletimeout", "Выгон за бездействие"),
+    ("transfer", "Перевести на другой сервер"),
 ];
 
 /// Символ разбора «сообщение» — текст до конца строки. Значение из
@@ -3995,8 +4063,8 @@ mod tests {
     fn available_commands_bytes_of_one_command() {
         let packet = available_commands(false);
 
-        // Номер пакета 0x4c, пять пустых списков, 40 команд.
-        assert_eq!(packet[..7], [0x4c, 0, 0, 0, 0, 0, 40]);
+        // Номер пакета 0x4c, пять пустых списков, 61 команда.
+        assert_eq!(packet[..7], [0x4c, 0, 0, 0, 0, 0, 61]);
 
         // Первая команда — байт в байт.
         let mut help = vec![4];

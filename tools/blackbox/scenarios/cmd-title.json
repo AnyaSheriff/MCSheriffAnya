@@ -1,0 +1,60 @@
+{
+ "name": "cmd-title",
+ "about": "title: заголовок, подзаголовок, строка над панелью, времена, очистка и сброс; ответ в чат.",
+ "blocks": [],
+ "setup": [
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "title @s title {\"text\":\"Hello\"}"
+  },
+  {
+   "after": 3,
+   "cmd": "title @s subtitle {\"text\":\"Sub\",\"color\":\"red\",\"bold\":true}"
+  },
+  {
+   "after": 6,
+   "cmd": "title @s actionbar {\"text\":\"Act\",\"italic\":true}"
+  },
+  {
+   "after": 9,
+   "cmd": "title @s times 5 20 7"
+  },
+  {
+   "after": 12,
+   "cmd": "title @s times 1s 2s 1d"
+  },
+  {
+   "after": 15,
+   "cmd": "title @s clear"
+  },
+  {
+   "after": 18,
+   "cmd": "title @s reset"
+  },
+  {
+   "after": 21,
+   "cmd": "title @s title \"plain\""
+  },
+  {
+   "after": 24,
+   "cmd": "title @s title [{\"text\":\"a\"},{\"text\":\"b\",\"color\":\"gold\"}]"
+  },
+  {
+   "after": 27,
+   "cmd": "title @s title {text:\"snbt\",color:blue}"
+  }
+ ],
+ "record_ticks": 40,
+ "cleanup": [
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "chat": true
+}

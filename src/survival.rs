@@ -84,6 +84,9 @@ pub enum Source {
     Fireworks,
     /// За рамкой мира (damage_type outside_border).
     OutsideBorder,
+    /// Молния (damage_type lightning_bolt; чёрный ящик, trident-channeling:
+    /// Damage Event type=25).
+    Lightning,
 }
 
 impl Source {
@@ -117,6 +120,7 @@ impl Source {
             // Реестр damage_type по алфавиту: out_of_world 32, outside_border
             // 33, player_attack 34.
             Source::OutsideBorder => 33,
+            Source::Lightning => 25,
         }
     }
 
@@ -147,6 +151,7 @@ impl Source {
             Source::Trident => "death.attack.trident",
             Source::Fireworks => "death.attack.fireworks",
             Source::OutsideBorder => "death.attack.outsideBorder",
+            Source::Lightning => "death.attack.lightningBolt",
         }
     }
 
@@ -230,6 +235,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::Trident => "was impaled",
         Source::Fireworks => "went off with a bang",
         Source::OutsideBorder => "left the confines of this world",
+        Source::Lightning => "was struck by lightning",
     };
 
     format!("{} {}", name, what)

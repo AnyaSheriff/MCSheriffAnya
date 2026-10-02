@@ -373,6 +373,21 @@ type Bystander = (i32, (f64, f64, f64), bool, i32, [u8; 16], String);
 
 /// Ход стрел одного измерения за такт. Мир нужен для блоков, игроки и
 /// мобы — для целей.
+/// Куда трезубец с «громовержцем» зовёт молнию: в клетку раненого (низ,
+/// середина), если идёт гроза и над клеткой открыто небо (вики, Channeling).
+fn channeling_bolt(arrow: &Arrow, world: &World, target: Option<(f64, f64, f64)>) -> Option<(f64, f64, f64)> {
+    let trident = arrow.trident?;
+
+    if trident.extras().level("channeling") == 0 || !world.weather.is_thundering() {
+        return None;
+    }
+
+    let (x, y, z) = target?;
+    let cell = (x.floor() as i32, y.floor() as i32, z.floor() as i32);
+
+    world.open_sky(cell.0, cell.1, cell.2).then_some((f64::from(cell.0) + 0.5, f64::from(cell.1), f64::from(cell.2) + 0.5))
+}
+
 pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     // Стрелы клиентам рассылает своё слежение (после хода стрел): пока они есть
     // (и в такт, когда последняя пропала), оно должно идти — даже без мобов
@@ -690,6 +705,23 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         continue;
                     }
                 }
+            }
+
+            // «Громовержец»: в грозу трезубец зовёт молнию в клетку раненого,
+            // если над ним открытое небо (вики, Channeling: «There must not be
+            // opaque or partially transparent blocks at any position above
+            // the target entity»). Гром трезубца (`item.trident.thunder`,
+            // громкость 5) — в месте молнии, раньше обычного звука попадания
+            // (чёрный ящик, trident-channeling).
+            let target_place = match target {
+                Target::Player { entity_id } => members.iter().find(|member| member.0 == entity_id).map(|member| member.1),
+                Target::Mob { entity_id } => items.mobs().iter().find(|mob| mob.entity_id == entity_id).map(|mob| (mob.x, mob.y, mob.z)),
+            };
+            let bolt = channeling_bolt(arrow, world, target_place);
+
+            if let Some(place) = bolt {
+                items.add_bolt(crate::lightning::Bolt::new(shared.next_entity_id(), place));
+                world.note_sound_neutral_at(place, "minecraft:item.trident.thunder", 5.0, 1.0);
             }
 
             // Игроку, раненому мобом, звук попадания уходит из `vitals::mob_hit`.
