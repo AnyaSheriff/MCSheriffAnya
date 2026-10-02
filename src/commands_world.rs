@@ -2362,6 +2362,16 @@ fn locate(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
             let chunk = ((origin.0.floor() as i32).div_euclid(16), (origin.2.floor() as i32).div_euclid(16));
 
+            // Крепости — на кольцах, их оригинал находит на любом удалении
+            // и называет угол чанка старта (свой мир оригинала: «[1584, ~,
+            // 480] (1655 blocks away)» из 0 0).
+            if short == "stronghold" {
+                return match world.nearest_structure(short, chunk.0, chunk.1, 0) {
+                    Some((chunk_x, chunk_z)) => located("commands.locate.structure.success", "minecraft:stronghold", (chunk_x * 16, None, chunk_z * 16), origin),
+                    None => fail("commands.locate.structure.not_found", &[s("minecraft:stronghold")]),
+                };
+            }
+
             // Оригинал ищет до 100 чанков вокруг (вики, Commands/locate).
             match world.nearest_structure(short, chunk.0, chunk.1, 6) {
                 Some((chunk_x, chunk_z)) if (chunk_x - chunk.0).abs() <= 100 && (chunk_z - chunk.1).abs() <= 100 => {

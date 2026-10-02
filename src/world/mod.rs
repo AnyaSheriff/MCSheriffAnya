@@ -26,6 +26,7 @@ pub mod nether;
 pub mod nether_bastion;
 pub mod nether_fortress;
 pub mod end_city;
+pub mod stronghold;
 pub mod the_end;
 pub mod noise;
 pub mod ocean;
@@ -568,6 +569,7 @@ impl Chunk {
         // камень и где воздух. Деревья — после руды: им до неё дела нет.
         generator.lay_ores(&mut chunk, chunk_x, chunk_z);
         underground::dig(generator, &mut chunk, chunk_x, chunk_z);
+        stronghold::build(generator, &mut chunk, chunk_x, chunk_z);
         generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         ocean::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
@@ -3187,9 +3189,14 @@ impl World {
 
     /// Ближайшая к чанку постройка этого вида, какую кладёт наша генерация
     /// (`locate structure`): чанк старта. Ищется по регионам до `regions`
-    /// регионов вокруг. Своих построек в обычном мире пока нет.
+    /// регионов вокруг. В обычном мире — крепости (stronghold.rs).
     pub fn nearest_structure(&self, name: &str, chunk_x: i32, chunk_z: i32, regions: i32) -> Option<(i32, i32)> {
         type Start<'a> = Box<dyn Fn(i32, i32) -> Option<(i32, i32)> + 'a>;
+
+        // Крепости обычного мира — 128 стартов на кольцах, не по регионам.
+        if let (Generator::Normal(terrain), "stronghold") = (&*self.generator, name) {
+            return stronghold::nearest(terrain, chunk_x, chunk_z);
+        }
 
         let (size, start): (i32, Start<'_>) = match (&*self.generator, name) {
             (Generator::Nether(nether), "fortress") => (27, Box::new(|x, z| nether.fortress_start(x, z))),

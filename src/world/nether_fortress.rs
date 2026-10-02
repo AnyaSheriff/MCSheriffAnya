@@ -427,7 +427,7 @@ fn templates() -> &'static Templates {
 
 /// Состояние с направлениями образца (вперёд — south, +a — east) в мире
 /// для этой стороны.
-fn orient(text: &str, facing: u8) -> String {
+pub(super) fn orient(text: &str, facing: u8) -> String {
     let Some((name, rest)) = text.split_once('[') else {
         return text.to_string();
     };
