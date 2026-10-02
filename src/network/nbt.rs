@@ -135,6 +135,21 @@ impl Compound {
         self
     }
 
+    /// Список целых чисел (TAG_List из TAG_Int) — подстановки ответа
+    /// команды, когда все они числа.
+    pub fn ints(mut self, name: &str, values: &[i32]) -> Self {
+        self.bytes.push(TAG_LIST);
+        write_name(&mut self.bytes, name);
+        self.bytes.push(TAG_INT);
+        self.bytes.extend_from_slice(&(values.len() as i32).to_be_bytes());
+
+        for value in values {
+            self.bytes.extend_from_slice(&value.to_be_bytes());
+        }
+
+        self
+    }
+
     /// Добавляет пустой список.
     ///
     /// У пустого списка тип содержимого записывается как «конец»: содержимого

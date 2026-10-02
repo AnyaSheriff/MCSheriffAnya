@@ -3064,6 +3064,96 @@ impl World {
         self.seed
     }
 
+    /// Биом поверхности столбца по генератору (команда `locate biome`):
+    /// имя в реестре без «minecraft:». Ровный мир — равнины.
+    pub fn surface_biome(&self, x: i32, z: i32) -> &'static str {
+        match &*self.generator {
+            Generator::Normal(terrain) => terrain.column_in(x, z, None).biome.name(),
+            Generator::Nether(nether) => nether.biome_at(x, z).name(),
+            Generator::End(end) => end.biome_at(x, z).name(),
+            Generator::Flat => "plains",
+        }
+    }
+
+    /// Ближайшая к чанку постройка этого вида, какую кладёт наша генерация
+    /// (`locate structure`): чанк старта. Ищется по регионам до `regions`
+    /// регионов вокруг. Своих построек в обычном мире пока нет.
+    pub fn nearest_structure(&self, name: &str, chunk_x: i32, chunk_z: i32, regions: i32) -> Option<(i32, i32)> {
+        type Start<'a> = Box<dyn Fn(i32, i32) -> Option<(i32, i32)> + 'a>;
+
+        let (size, start): (i32, Start<'_>) = match (&*self.generator, name) {
+            (Generator::Nether(nether), "fortress") => (27, Box::new(|x, z| nether.fortress_start(x, z))),
+            (Generator::Nether(nether), "bastion_remnant") => (27, Box::new(|x, z| nether.bastion_start(x, z))),
+            (Generator::End(end), "end_city") => (end_city::REGION, Box::new(|x, z| end.city_at(x, z).map(|(x, z, _)| (x, z)))),
+            _ => return None,
+        };
+
+        let (home_x, home_z) = (chunk_x.div_euclid(size), chunk_z.div_euclid(size));
+        let distance = |(x, z): (i32, i32)| (i64::from(x - chunk_x)).pow(2) + (i64::from(z - chunk_z)).pow(2);
+        let mut best: Option<(i32, i32)> = None;
+
+        for ring in 0..=regions {
+            for dx in -ring..=ring {
+                for dz in -ring..=ring {
+                    if dx.abs() != ring && dz.abs() != ring {
+                        continue;
+                    }
+
+                    if let Some(found) = start(home_x + dx, home_z + dz)
+                        && best.is_none_or(|known| distance(found) < distance(known))
+                    {
+                        best = Some(found);
+                    }
+                }
+            }
+
+            // Ближе найденного следующий круг регионов уже не даст.
+            if let Some(found) = best
+                && (distance(found) as f64).sqrt() < f64::from(ring * size)
+            {
+                break;
+            }
+        }
+
+        best
+    }
+
+    /// Ставит биом клеткам 4×4×4 в загруженных чанках (`fillbiome`): только
+    /// тем, где сейчас `only` (если задан). Сколько клеток сменилось.
+    pub fn fill_biome(&mut self, from: (i32, i32, i32), to: (i32, i32, i32), biome: BiomeId, only: Option<BiomeId>) -> usize {
+        let mut changed = 0;
+
+        for cell_x in from.0.div_euclid(4)..=to.0.div_euclid(4) {
+            for cell_z in from.2.div_euclid(4)..=to.2.div_euclid(4) {
+                for cell_y in from.1.div_euclid(4)..=to.1.div_euclid(4) {
+                    let (x, y, z) = (cell_x * 4, cell_y * 4, cell_z * 4);
+
+                    if !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&y) {
+                        continue;
+                    }
+
+                    let key = chunk_key(x, z);
+                    let Some(chunk) = self.chunks.get_mut(&key) else {
+                        continue;
+                    };
+
+                    let layer = ((y - MIN_Y) / 4) as usize;
+                    let cell = biome_cell(layer, (x.rem_euclid(CHUNK_SIZE) / 4) as usize, (z.rem_euclid(CHUNK_SIZE) / 4) as usize);
+
+                    if chunk.biomes[cell] == biome || only.is_some_and(|wanted| chunk.biomes[cell] != wanted) {
+                        continue;
+                    }
+
+                    chunk.biomes[cell] = biome;
+                    changed += 1;
+                    self.dirty.insert(key);
+                }
+            }
+        }
+
+        changed
+    }
+
     /// Незер ли это: там свои правила для жидкостей.
     pub fn is_nether(&self) -> bool {
         self.kind == WorldKind::Nether

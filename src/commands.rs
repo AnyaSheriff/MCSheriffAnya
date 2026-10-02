@@ -87,14 +87,20 @@ pub struct Answer {
 
     /// Что сделать тому, кто вызвал команду.
     pub effect: Effect,
+
+    /// Ответ текстом игры (ключ перевода с подстановками, сетевой NBT), как
+    /// у оригинала: клиенту Java уходит он, а `reply` — его английская
+    /// запись для консоли, журнала и Bedrock (commands_world.rs).
+    pub component: Option<Vec<u8>>,
 }
 
 impl Answer {
     /// Ответ, после которого ничего делать не надо.
-    fn saying(reply: String) -> Self {
+    pub(crate) fn saying(reply: String) -> Self {
         Self {
             reply,
             effect: Effect::None,
+            component: None,
         }
     }
 }
@@ -162,7 +168,7 @@ fn compact_item_specs(command: &str) -> String {
 
 /// Стопка по записи предмета команды (`diamond_sword[damage=5]`): None —
 /// воздух.
-fn stack_from_spec(spec: &str, count: i32) -> Result<Option<crate::inventory::Stack>, String> {
+pub(crate) fn stack_from_spec(spec: &str, count: i32) -> Result<Option<crate::inventory::Stack>, String> {
     let (name, data) = crate::stackdata::parse_item_spec(spec).map_err(|why| format!("Не разобрать предмет {spec}: {why}"))?;
 
     if name == "air" {
@@ -248,7 +254,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 _ => Effect::None,
             };
 
-            Answer { reply, effect }
+            Answer { reply, effect, component: None }
         }
         "op" => {
             let Some(named) = parts.next() else {
@@ -498,6 +504,12 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         "experience" | "xp" => experience(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "gamerule" => gamerule(parts.collect::<Vec<&str>>().as_slice(), shared),
 
+        // Команды мира и сущностей (commands_world.rs).
+        "worldborder" | "tick" | "clone" | "attribute" | "enchant" | "locate" | "forceload" | "spreadplayers" | "random" | "ride"
+        | "rotate" | "spectate" | "fillbiome" | "place" | "loot" => {
+            crate::commands_world::run(name, parts.collect::<Vec<&str>>().as_slice(), source, shared)
+        }
+
         // Как у оригинала: `execute in <измерение> run tp …` — перенос в
         // другое измерение. Другие виды execute пока не разбираются.
         "execute" => {
@@ -545,6 +557,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
             Source::Console => Answer {
                 reply: "Останавливаю сервер".to_string(),
                 effect: Effect::Stop,
+                component: None,
             },
             Source::Player { .. } | Source::Block { .. } => Answer::saying(
                 "Остановить сервер можно только из консоли сервера".to_string(),
@@ -615,7 +628,7 @@ fn custom_tnt(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 
 /// Место, откуда отсчитываются относительные координаты (`~`): у игрока —
 /// где он стоит, у консоли — начало мира.
-fn origin_of(source: &Source, shared: &Shared) -> (f64, f64, f64) {
+pub(crate) fn origin_of(source: &Source, shared: &Shared) -> (f64, f64, f64) {
     match source {
         Source::Player { uuid, .. } => shared
             .players
@@ -636,7 +649,7 @@ fn origin_of(source: &Source, shared: &Shared) -> (f64, f64, f64) {
 /// Как у оригинала, целое число по x и z означает середину блока (вики,
 /// Argument types, vec3: «an integer … is centered»). [проверить]: у
 /// оригинала целые по x и z сдвигаются на 0,5.
-fn entity_place(parts: &[&str], origin: (f64, f64, f64)) -> Option<(f64, f64, f64)> {
+pub(crate) fn entity_place(parts: &[&str], origin: (f64, f64, f64)) -> Option<(f64, f64, f64)> {
     let [x, y, z] = parts else {
         return None;
     };
@@ -1500,20 +1513,20 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
 }
 
 /// Выбор сущностей `@e[…]` для `kill`.
-struct Selector {
+pub(crate) struct Selector {
     /// Вид: `Some((true, "item"))` — только предметы, `Some((false, "player"))`
     /// — все, кроме игроков; `None` — любые.
-    kind: Option<(bool, String)>,
+    pub(crate) kind: Option<(bool, String)>,
 
     /// Не дальше скольких блоков от того, кто ввёл команду.
-    distance: Option<f64>,
+    pub(crate) distance: Option<f64>,
 
     /// Сколько самое большее.
-    limit: Option<usize>,
+    pub(crate) limit: Option<usize>,
 }
 
 impl Selector {
-    fn parse(text: &str) -> Option<Selector> {
+    pub(crate) fn parse(text: &str) -> Option<Selector> {
         let mut chosen = Selector { kind: None, distance: None, limit: text.starts_with("@n").then_some(1) };
 
         let inner = match text {
@@ -1542,7 +1555,7 @@ impl Selector {
     }
 
     /// Подходит ли сущность такого вида.
-    fn takes(&self, kind: &str) -> bool {
+    pub(crate) fn takes(&self, kind: &str) -> bool {
         match &self.kind {
             Some((wanted, name)) => (name == kind) == *wanted,
             None => true,
@@ -1550,7 +1563,7 @@ impl Selector {
     }
 
     /// Достаточно ли близко сущность.
-    fn reaches(&self, (x, y, z): (f64, f64, f64), (at_x, at_y, at_z): (f64, f64, f64)) -> bool {
+    pub(crate) fn reaches(&self, (x, y, z): (f64, f64, f64), (at_x, at_y, at_z): (f64, f64, f64)) -> bool {
         self.distance.is_none_or(|distance| (at_x - x).powi(2) + (at_y - y).powi(2) + (at_z - z).powi(2) <= distance * distance)
     }
 }
@@ -1585,7 +1598,7 @@ fn teleport_carts(who: &str, place: &[&str], source: &Source, shared: &Shared) -
 }
 
 /// Ники через запятую — для ответов.
-fn names_of(targets: &[([u8; 16], String)]) -> String {
+pub(crate) fn names_of(targets: &[([u8; 16], String)]) -> String {
     targets
         .iter()
         .map(|(_, name)| name.as_str())
@@ -1595,7 +1608,7 @@ fn names_of(targets: &[([u8; 16], String)]) -> String {
 
 /// В каком измерении тот, кто ввёл команду: игрок — в своём, консоль — в
 /// обычном мире.
-fn dimension_of(source: &Source, shared: &Shared) -> Dimension {
+pub(crate) fn dimension_of(source: &Source, shared: &Shared) -> Dimension {
     match source {
         Source::Player { uuid, .. } => shared
             .players
@@ -2231,7 +2244,7 @@ fn place_of(parts: &[&str], source: &Source, shared: &Shared) -> Option<Place> {
 /// у нас пока не трогают, поэтому это те же игроки.
 ///
 /// Уточнений в квадратных скобках (`@a[distance=10]`) пока нет.
-fn find_targets(named: &str, source: &Source, shared: &Shared) -> Vec<([u8; 16], String)> {
+pub(crate) fn find_targets(named: &str, source: &Source, shared: &Shared) -> Vec<([u8; 16], String)> {
     let everyone = || {
         shared
             .players

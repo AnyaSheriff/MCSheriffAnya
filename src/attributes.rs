@@ -215,6 +215,11 @@ impl Attributes {
         }
     }
 
+    /// Ставит основу атрибута (команда `attribute … base set`).
+    pub fn set_base(&mut self, attribute: i32, value: f64) {
+        self.entry(attribute).base = value;
+    }
+
     /// Снимает модификатор по опознавателю.
     pub fn remove_modifier(&mut self, attribute: i32, id: &str) {
         if let Some(entry) = self.list.iter_mut().find(|entry| entry.id == attribute) {

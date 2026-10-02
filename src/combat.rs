@@ -336,7 +336,7 @@ pub fn breach_scale(level: i32) -> f32 {
 /// Виды урона, которые броня и её зачарования не смягчают (вики, Armor:
 /// «Armor does not protect against»).
 pub fn bypasses_armor(source: Source) -> bool {
-    matches!(source, Source::Thorns | Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::InWall | Source::Generic)
+    matches!(source, Source::Thorns | Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::InWall | Source::Generic | Source::OutsideBorder)
 }
 
 /// Урон после брони и твёрдости (вики, Armor): `урон · (1 − min(20,

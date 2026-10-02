@@ -1,0 +1,25 @@
+{
+ "name": "cmd-attribute",
+ "about": "Команды attribute и enchant у игрока: ответы (значения — double) и Update Attributes; зачарование меча в руке, ошибки уровня и несовместимости.",
+ "chat": true,
+ "track_self": true,
+ "inventory": true,
+ "blocks": [],
+ "setup": ["clear $(bot)", "!wait 4"],
+ "actions": [
+  {"after": 0, "cmd": "attribute $(bot) minecraft:movement_speed get"},
+  {"after": 2, "cmd": "attribute $(bot) minecraft:movement_speed base set 0.2"},
+  {"after": 4, "cmd": "attribute $(bot) minecraft:movement_speed modifier add test:x 0.5 add_multiplied_base"},
+  {"after": 6, "cmd": "attribute $(bot) minecraft:movement_speed get"},
+  {"after": 8, "cmd": "attribute $(bot) minecraft:movement_speed modifier remove test:x"},
+  {"after": 10, "cmd": "attribute $(bot) minecraft:movement_speed base reset"},
+  {"after": 12, "cmd": "attribute $(bot) minecraft:follow_range get"},
+  {"after": 14, "cmd": "enchant $(bot) minecraft:sharpness"},
+  {"after": 16, "cmd": "give $(bot) minecraft:diamond_sword"},
+  {"after": 18, "cmd": "enchant $(bot) minecraft:sharpness 6"},
+  {"after": 20, "cmd": "enchant $(bot) minecraft:sharpness 5"},
+  {"after": 22, "cmd": "enchant $(bot) minecraft:smite"}
+ ],
+ "record_ticks": 30,
+ "cleanup": ["clear $(bot)", "attribute $(bot) minecraft:movement_speed base reset"]
+}

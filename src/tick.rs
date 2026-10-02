@@ -189,7 +189,17 @@ async fn run(shared: Arc<Shared>) {
             next = tokio::time::Instant::now();
         }
 
-        next += TICK;
+        // Скорость, заморозка, шаги и разгон — команда `tick`
+        // (commands_world.rs). При 20 тактах в секунду — те же 50 мс.
+        let plan = crate::commands_world::next_tick(&shared);
+
+        if plan.period.is_zero() {
+            // Разгон: без ожидания и без догонялок по сетке.
+            next = tokio::time::Instant::now();
+        } else {
+            next += if plan.period == TICK { TICK } else { plan.period };
+        }
+
         ticks += 1;
 
         let started = std::time::Instant::now();
@@ -226,13 +236,22 @@ async fn run(shared: Arc<Shared>) {
         // Работа такта — в своём блоке: замок мира отпускается до сигнала
         // подключениям. Миры измерений идут по очереди, каждый со своими
         // предметами; два мира разом не держатся.
-        for dimension in Dimension::ALL {
+        // Заморозка (`tick freeze`): мир не идёт — ни блоки, ни сущности,
+        // ни время; игроки — идут (вики, Commands/tick).
+        if plan.run_world {
+            crate::commands_world::step_borders(&shared);
+        }
+
+        for dimension in Dimension::ALL.into_iter().filter(|_| plan.run_world) {
             let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
             // Кто где стоит — для растяжек: их такт проверяет, не ушли ли
             // с них.
             let mut clock = std::time::Instant::now();
-            let (present, player_chunks) = occupants(&shared, dimension);
+            let (present, mut player_chunks) = occupants(&shared, dimension);
+
+            // Удержанные чанки (`forceload`) тикают, как чанки у игрока.
+            player_chunks.extend(crate::commands_world::forced_chunks(&shared, dimension));
             redstone::note_occupants(&mut world, present);
 
             // Где вагонетки — для детекторных рельс: их такт проверяет, не
@@ -469,6 +488,7 @@ async fn run(shared: Arc<Shared>) {
         }
 
         phases.tick_done(spent);
+        crate::commands_world::note_spent(&shared, spent);
 
         if ticks.is_multiple_of(PHASE_REPORT_EVERY) {
             phases.report();
@@ -1224,10 +1244,13 @@ fn unload_empty_chunks(shared: &Shared, dimension: Dimension, world: &mut World)
     // а из мира убираются те, чей чанк выгрузился.
     store_mobs(shared, dimension, world);
 
+    // Удержанные (`forceload`) не выгружаются.
+    let forced = crate::commands_world::forced_chunks(shared, dimension);
     let unloaded = world.unload_far(|x, z| {
         players
             .iter()
             .any(|(px, pz)| (x - px).abs() <= keep && (z - pz).abs() <= keep)
+            || forced.contains(&(x, z))
     });
 
     if unloaded > 0 {

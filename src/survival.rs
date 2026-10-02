@@ -82,6 +82,8 @@ pub enum Source {
     Trident,
     /// Взрыв ракеты фейерверка (damage_type fireworks).
     Fireworks,
+    /// За рамкой мира (damage_type outside_border).
+    OutsideBorder,
 }
 
 impl Source {
@@ -112,6 +114,9 @@ impl Source {
             Source::Trident => 45,
             // Место в реестре damage_type (configuration.rs: 15).
             Source::Fireworks => 15,
+            // Реестр damage_type по алфавиту: out_of_world 32, outside_border
+            // 33, player_attack 34.
+            Source::OutsideBorder => 33,
         }
     }
 
@@ -141,6 +146,7 @@ impl Source {
             Source::Wither => "death.attack.wither",
             Source::Trident => "death.attack.trident",
             Source::Fireworks => "death.attack.fireworks",
+            Source::OutsideBorder => "death.attack.outsideBorder",
         }
     }
 
@@ -223,6 +229,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::Wither => "withered away",
         Source::Trident => "was impaled",
         Source::Fireworks => "went off with a bang",
+        Source::OutsideBorder => "left the confines of this world",
     };
 
     format!("{} {}", name, what)

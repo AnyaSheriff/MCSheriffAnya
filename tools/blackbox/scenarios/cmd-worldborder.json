@@ -1,0 +1,32 @@
+{
+ "name": "cmd-worldborder",
+ "about": "Команда worldborder: ответы (текст игры) и пакеты рамки — сразу, изменение поперечника в тактах. Рамка общая для мира, поэтому сценарий исключительный; в конце всё возвращается к умолчаниям оригинала (центр 0.0 0.0, 59999968, урон 0.2, запас 5, предупреждение 5 блоков и 15 с).",
+ "exclusive": true,
+ "chat": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": ["!wait 4"],
+ "actions": [
+  {"after": 0, "cmd": "worldborder get"},
+  {"after": 2, "cmd": "worldborder set 1000"},
+  {"after": 4, "cmd": "worldborder set 1000"},
+  {"after": 6, "cmd": "worldborder add -20 5"},
+  {"after": 14, "cmd": "worldborder set 1500.25 2s"},
+  {"after": 16, "cmd": "worldborder center 10.5 -20.25"},
+  {"after": 18, "cmd": "worldborder damage amount 0.5"},
+  {"after": 20, "cmd": "worldborder damage buffer 5"},
+  {"after": 22, "cmd": "worldborder warning distance 7"},
+  {"after": 24, "cmd": "worldborder warning time 2s"},
+  {"after": 26, "cmd": "worldborder set 0.5"},
+  {"after": 60, "cmd": "worldborder get"}
+ ],
+ "record_ticks": 70,
+ "cleanup": [
+  "worldborder set 59999968",
+  "worldborder center 0.0 0.0",
+  "worldborder damage amount 0.2",
+  "worldborder damage buffer 5",
+  "worldborder warning distance 5",
+  "worldborder warning time 15s"
+ ]
+}

@@ -583,7 +583,7 @@ impl End {
 
     /// Город региона: чанк старта и низ, если остров под основанием
     /// достаточно высок и биом подходит (end_city.rs).
-    fn city_at(&self, region_x: i32, region_z: i32) -> Option<(i32, i32, i32)> {
+    pub fn city_at(&self, region_x: i32, region_z: i32) -> Option<(i32, i32, i32)> {
         let (chunk_x, chunk_z) = end_city::region_start(self.seed, region_x, region_z);
         let (x, z) = end_city::root_corner(chunk_x, chunk_z);
 

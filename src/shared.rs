@@ -118,6 +118,9 @@ pub struct Shared {
     /// Правила командных блоков (command_block.rs): `command_block_output`,
     /// `command_blocks_work`, `max_command_sequence_length`.
     pub command_block_rules: crate::command_block::Rules,
+    /// Рамки мира, скорость такта, удержанные чанки и прочее команд мира
+    /// (commands_world.rs).
+    pub world_cmd: crate::commands_world::State,
 }
 
 impl Shared {
@@ -193,6 +196,7 @@ impl Shared {
             properties,
             skin_settings,
             settings: Default::default(),
+            world_cmd: Default::default(),
         }
     }
 }

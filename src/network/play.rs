@@ -922,6 +922,14 @@ async fn enter_world(
         send_look(stream, member.entity_id, member.skin_parts, member.main_hand, member.sneaking)
         .await?;
 
+        // Рамка мира и состояние такта (пробник cmdworld: у оригинала —
+        // сразу за входом: Initialize World Border, Set Ticking State, Step Tick).
+        write_body(stream, crate::commands_world::border_of(shared, player.dimension).init_packet()).await?;
+
+        for body in crate::commands_world::ticking_packets(shared) {
+            write_body(stream, body).await?;
+        }
+
         send_default_spawn_position(stream, player.spawn_point).await?;
         vitals::send_health(stream, &player.vit).await?;
         vitals::send_experience_if_any(stream, &player.vit).await?;
@@ -1003,6 +1011,11 @@ async fn enter_world(
         send_all_carts(stream, shared, player).await?;
         send_all_frames(stream, shared, player).await?;
         mobs::send_all_mobs(stream, shared, player).await?;
+
+        // Кто на ком едет (`ride`).
+        for body in crate::commands_world::passenger_packets(shared) {
+            write_body(stream, body).await?;
+        }
 
         // Инвентарь: то, с чем игрок вышел в прошлый раз. Без этой посылки клиент
         // показал бы пустой инвентарь, хотя на сервере вещи есть.
@@ -3324,6 +3337,11 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
             children.push(TNT_NODE);
         }
 
+        // Команды мира (commands_world.rs) — после ветки tnt.
+        let world_base = TNT_NODE + if may_tnt { TNT_NODES } else { 0 };
+
+        children.extend((0..WORLD_COMMANDS.len() as i32).map(|index| world_base + index * 2));
+
         root.extend_from_slice(&encode_varint(children.len() as i32));
 
         for child in children {
@@ -3389,6 +3407,13 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
     // tnt give <игрок> <вид> [сколько] и tnt list: игрока и вид подсказывает
     // сервер (виды — из таблицы custom_tnt.rs), число проверяет клиент.
     const TNT_NODE: i32 = 33;
+    const TNT_NODES: i32 = 6;
+
+    /// Команды мира (commands_world.rs).
+    const WORLD_COMMANDS: [&str; 15] = [
+        "worldborder", "tick", "clone", "attribute", "enchant", "locate", "forceload", "spreadplayers", "random", "ride", "rotate", "spectate",
+        "fillbiome", "place", "loot",
+    ];
 
     if may_tnt {
         nodes.push(literal("tnt", &[TNT_NODE + 1, TNT_NODE + 5], false));
@@ -3397,6 +3422,16 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
         nodes.push(argument("вид", &[TNT_NODE + 4], SINGLE_WORD));
         nodes.push(integer("сколько", 1));
         nodes.push(literal("list", &[], true));
+    }
+
+    // Команды мира: слово и всё остальное одним куском — разбирает сервер.
+    let world_base = nodes.len() as i32;
+
+    for (index, name) in WORLD_COMMANDS.iter().enumerate() {
+        let argument_node = world_base + index as i32 * 2 + 1;
+
+        nodes.push(literal(name, &[argument_node], true));
+        nodes.push(argument("что", &[], GREEDY));
     }
 
     let mut body = encode_varint(COMMANDS);
@@ -3638,6 +3673,9 @@ async fn send_game_event_game_mode(stream: &mut Outgoing<'_>, game_mode: i32) ->
 
 /// Clientbound Player Abilities.
 const PLAYER_ABILITIES: i32 = 0x40;
+
+/// Set Camera — смотреть глазами сущности (`spectate`).
+const CAMERA: i32 = 0x5D;
 
 /// Флаги способностей игрока по режиму игры (протокол, Player Abilities:
 /// 0x01 — неуязвим, 0x02 — летит, 0x04 — может летать, 0x08 — творческий,
@@ -5461,6 +5499,9 @@ async fn read_and_log_play_packets(
                         mobs::send_all_mobs(stream, shared, player).await?;
                     }
 
+                    // Рамка нового измерения (у каждого своя).
+                    write_body(stream, crate::commands_world::border_of(shared, dimension).init_packet()).await?;
+
                     // Полоса босса: клиент после Respawn её забывает; в Крае с
                     // живым драконом — показать заново.
                     player.boss_shown = false;
@@ -5617,6 +5658,45 @@ async fn read_and_log_play_packets(
                 Order::SetSlot { slot, stack } => {
                     player.inventory.set(slot, stack);
                     send_container_slot(stream, player, slot).await?;
+                }
+
+                // Готовый пакет команд мира (рамка, такт, наездники).
+                Order::Packet(body) => write_body(stream, body).await?,
+
+                // `attribute`: правка уходит клиенту обычной сверкой атрибутов
+                // в конце такта.
+                // Оригинал шлёт Update Attributes тактом позже (чёрный ящик,
+                // cmd-attribute).
+                Order::Attribute(edit) => {
+                    let attribute = crate::commands_world::edited_attribute(&edit);
+
+                    crate::commands_world::apply_attribute_edit(&mut player.attrs, &edit);
+                    player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                }
+
+                // `enchant`: зачарование предмету в основной руке.
+                Order::Enchant { enchantment, level } => {
+                    let slot = inventory::FIRST_HOTBAR + player.inventory.selected();
+
+                    if let Some(stack) = player.inventory.slot(slot) {
+                        let mut data = stack.extras();
+
+                        data.set_enchant(enchantment as u16, level);
+                        player.inventory.set(slot, Some(stack.with_extras(data)));
+                        send_container_slot(stream, player, slot).await?;
+
+                        // Следующая команда `enchant` должна видеть новые чары.
+                        publish_player(shared, player);
+                    }
+                }
+
+                // `spectate`: смотреть глазами сущности (Set Camera); своя —
+                // вернуть взгляд себе.
+                Order::Spectate { entity_id } => {
+                    let mut body = encode_varint(CAMERA);
+
+                    body.extend_from_slice(&encode_varint(entity_id.unwrap_or(player.entity_id)));
+                    write_body(stream, body).await?;
                 }
 
                 Order::Hold { stack } => {
@@ -5958,7 +6038,16 @@ async fn apply_reaction(
         send_game_mode(stream, &player.uuid, game_mode).await?;
     }
 
-    if let Some(reply) = &reaction.reply {
+    if let Some(component) = &reaction.reply_component {
+        // Пустой — ответ игроку уже ушёл рассылкой (`random roll`).
+        for part in crate::commands_world::split_components(component).into_iter().filter(|part| !part.is_empty()) {
+            let mut body = encode_varint(SYSTEM_CHAT);
+
+            body.extend_from_slice(part);
+            body.push(0x00);
+            write_body(stream, body).await?;
+        }
+    } else if let Some(reply) = &reaction.reply {
         send_system_chat(stream, reply).await?;
     }
 
@@ -6045,6 +6134,9 @@ struct Reaction {
 
     /// Ответ на команду — уходит только этому игроку.
     reply: Option<String>,
+
+    /// Тот же ответ текстом игры (commands_world.rs): если есть, уходит он.
+    reply_component: Option<Vec<u8>>,
 
     /// Показать клиенту инвентарь целиком.
     ///
@@ -6295,6 +6387,7 @@ fn handle_client_packet(
                     // Как у обычного сервера: «[Имя: что вышло]».
                     log_info!("[{}: {}]", player.name, answer.reply);
                     reaction.reply = Some(answer.reply);
+                    reaction.reply_component = answer.component;
                 }
 
                 // Смена своего режима вступает в силу сразу, а клиенту о ней

@@ -813,6 +813,8 @@ impl BedrockWorld {
                 crate::players::Order::Message { .. } => {}
                 // Опыт у Bedrock пока не считается [проверить].
                 crate::players::Order::Experience { .. } | crate::players::Order::XpTaken { .. } => {}
+                // Пакеты и правки команд мира — пока только у Java [проверить].
+                crate::players::Order::Packet(_) | crate::players::Order::Attribute(_) | crate::players::Order::Enchant { .. } | crate::players::Order::Spectate { .. } => {}
                 // Эффекты голода и насыщения считаются, значка у Bedrock пока нет [проверить].
                 crate::players::Order::Effect(effect) => self.health.vit.give_effect_shown(effect),
                 crate::players::Order::ClearEffects => self.health.vit.effects.clear(),
@@ -3349,7 +3351,7 @@ fn move_player(member: &Member) -> Vec<u8> {
 }
 
 /// Наши команды с описаниями — клиент их подсказывает при наборе.
-const COMMANDS: [(&str, &str); 14] = [
+const COMMANDS: [(&str, &str); 29] = [
     ("help", "Список команд"),
     ("list", "Кто на сервере"),
     ("say", "Сказать всем"),
@@ -3364,6 +3366,21 @@ const COMMANDS: [(&str, &str); 14] = [
     ("setblock", "Поставить блок"),
     ("fill", "Заполнить область"),
     ("stop", "Остановить сервер"),
+    ("worldborder", "Рамка мира"),
+    ("tick", "Скорость такта"),
+    ("clone", "Скопировать блоки"),
+    ("attribute", "Атрибуты существ"),
+    ("enchant", "Зачаровать предмет в руке"),
+    ("locate", "Найти постройку или биом"),
+    ("forceload", "Удерживать чанки"),
+    ("spreadplayers", "Раскидать игроков"),
+    ("random", "Случайное число"),
+    ("ride", "Посадить на сущность"),
+    ("rotate", "Повернуть сущность"),
+    ("spectate", "Смотреть глазами сущности"),
+    ("fillbiome", "Сменить биом"),
+    ("place", "Поставить постройку"),
+    ("loot", "Добыча"),
 ];
 
 /// Символ разбора «сообщение» — текст до конца строки. Значение из
@@ -3967,8 +3984,8 @@ mod tests {
     fn available_commands_bytes_of_one_command() {
         let packet = available_commands(false);
 
-        // Номер пакета 0x4c, пять пустых списков, 14 команд.
-        assert_eq!(packet[..7], [0x4c, 0, 0, 0, 0, 0, 14]);
+        // Номер пакета 0x4c, пять пустых списков, 29 команд.
+        assert_eq!(packet[..7], [0x4c, 0, 0, 0, 0, 0, 29]);
 
         // Первая команда — байт в байт.
         let mut help = vec![4];

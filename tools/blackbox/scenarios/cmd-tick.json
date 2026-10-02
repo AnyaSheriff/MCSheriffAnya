@@ -1,0 +1,21 @@
+{
+ "name": "cmd-tick",
+ "about": "Команда tick: rate, freeze, step, unfreeze — ответы и пакеты Set Ticking State / Step Tick. Скорость такта общая — сценарий исключительный; в конце rate 20 и unfreeze.",
+ "exclusive": true,
+ "chat": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": ["!wait 4"],
+ "actions": [
+  {"after": 0, "cmd": "tick rate 10"},
+  {"after": 2, "cmd": "tick rate 20"},
+  {"after": 4, "cmd": "tick step"},
+  {"after": 6, "cmd": "tick freeze"},
+  {"after": 8, "cmd": "tick step 5"},
+  {"after": 20, "cmd": "tick step stop"},
+  {"after": 22, "cmd": "tick unfreeze"},
+  {"after": 24, "cmd": "tick sprint stop"}
+ ],
+ "record_ticks": 30,
+ "cleanup": ["tick unfreeze", "tick rate 20"]
+}

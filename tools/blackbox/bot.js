@@ -313,6 +313,11 @@ const selfText = (b, p, meta) => {
     case 'entity_sound_effect': if (isSelf(p.entityId)) { const s = p.sound || {}; text = `Entity Sound ${s.soundId !== undefined ? (SOUNDS[String(s.soundId)] || `#${s.soundId}`) : (s.data && s.data.soundName) || jstr(s)} cat=${p.soundCategory} vol=${rnd(p.volume)}`; } break;
     case 'abilities': text = `Abilities flags=${p.flags} fly=${rnd(p.flyingSpeed)} fov=${rnd(p.walkingSpeed)}`; break;
     case 'held_item_slot': text = `Held Slot ${p.slot}`; break;
+    // Рамка мира, такт, наездники, взгляд (команды worldborder, tick, ride, spectate).
+    case 'world_border_center': case 'world_border_lerp_size': case 'world_border_size': case 'world_border_warning_delay': case 'world_border_warning_reach':
+    case 'set_ticking_state': case 'step_tick': text = `${n} ${jstr(p)}`; break;
+    case 'set_passengers': text = `Passengers n=${(p.passengers || []).length}`; break;
+    case 'camera': text = `Camera self=${isSelf(p.cameraId)}`; break;
     case 'spawn_position': text = `Spawn Position ${jstr(p.globalPos || p.location || p)}`; break;
     case 'collect': text = `Collect count=${p.pickupItemCount}`; break;
     case 'action_bar': text = `Action Bar ${simp(p.text)}`; break;

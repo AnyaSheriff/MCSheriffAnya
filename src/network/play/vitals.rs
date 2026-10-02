@@ -1654,6 +1654,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     let now = tick_now;
 
     sync_attributes(stream, player, now).await?;
+    crate::commands_world::publish_attributes(shared, &player.uuid, &player.attrs);
 
     if std::mem::take(&mut player.net.velocity_due) {
         player.net.velocity = Some(hurt_velocity(player));
@@ -1813,6 +1814,13 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
 
     if env.in_wall && !player.vit.dead {
         hit(stream, shared, player, 1.0, Source::InWall, 0).await?;
+    }
+
+    // За рамкой мира дальше запаса — урон (commands_world::Border::damage_at).
+    if !player.vit.dead
+        && let Some(amount) = crate::commands_world::border_of(shared, player.dimension).damage_at(player.x, player.z)
+    {
+        hit(stream, shared, player, amount, Source::OutsideBorder, 0).await?;
     }
 
     if env.in_lava && !player.vit.dead {

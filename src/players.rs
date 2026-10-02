@@ -224,6 +224,19 @@ pub enum Order {
     /// Снять один эффект.
     ClearEffect(crate::survival::EffectKind),
 
+    /// Отправить клиенту готовый пакет (номер и тело) как есть: рамка мира,
+    /// состояние такта, наездники (commands_world.rs).
+    Packet(Vec<u8>),
+
+    /// Атрибут игрока по команде `attribute` (commands_world.rs).
+    Attribute(crate::commands_world::AttributeEdit),
+
+    /// Зачаровать предмет в основной руке (`enchant`): номер чар и уровень.
+    Enchant { enchantment: i32, level: i32 },
+
+    /// Наблюдать за сущностью (`spectate`): номер сущности, None — перестать.
+    Spectate { entity_id: Option<i32> },
+
     /// Перейти в другое измерение и встать в это место.
     /// Сообщение в чат только этому игроку (готовый компонент, сетевой
     /// NBT): «[@: …]» операторам от командного блока.

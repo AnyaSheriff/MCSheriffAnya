@@ -1,0 +1,24 @@
+{
+ "name": "cmd-clone",
+ "about": "Команда clone: копия блоков и сундука, повтор (считается всё), masked, наложение без force, force, move, strict — блоки и ответы.",
+ "chat": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "setblock $(1,1,1) minecraft:stone",
+  "setblock $(2,1,1) minecraft:chest{Items:[{Slot:0b,id:\"minecraft:dirt\",count:3}]}",
+  "!wait 4"
+ ],
+ "actions": [
+  {"after": 0, "cmd": "clone $(1,1,1) $(2,1,1) $(1,1,3)"},
+  {"after": 2, "cmd": "clone $(1,1,1) $(2,1,1) $(1,1,3)"},
+  {"after": 4, "cmd": "clone $(1,1,1) $(3,1,1) $(1,2,3) masked"},
+  {"after": 6, "cmd": "clone $(1,1,1) $(2,1,1) $(2,1,1)"},
+  {"after": 8, "cmd": "clone $(1,1,1) $(2,1,1) $(2,1,1) replace force"},
+  {"after": 10, "cmd": "clone $(1,1,1) $(3,1,1) $(1,1,5) replace move"},
+  {"after": 12, "cmd": "clone $(1,1,3) $(2,1,3) $(1,3,3) strict"},
+  {"after": 14, "cmd": "clone $(1,1,1) $(2,1,1) $(1,1,6) filtered minecraft:chest"}
+ ],
+ "record_ticks": 20,
+ "cleanup": ["fill $(0,1,0) $(4,4,7) minecraft:air"]
+}
