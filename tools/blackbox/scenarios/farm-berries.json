@@ -1,0 +1,38 @@
+{
+ "name": "farm-berries",
+ "about": "Выживание: щелчок пустой рукой по спелому кусту ягод (стадия 3) — ягоды выпадают, куст на стадию 1, звук сбора; щелчок по кусту стадии 1 — ничего; костная мука по кусту стадии 1 — стадия 2.",
+ "exclusive": true,
+ "blocks": [
+  {"at": [2, -1, 1], "state": "minecraft:grass_block"},
+  {"at": [2, 0, 1], "state": "minecraft:sweet_berry_bush[age=3]"}
+ ],
+ "setup": [
+  "gamerule random_tick_speed 0",
+  "clear $(bot)",
+  "give $(bot) minecraft:bone_meal 4",
+  "gamemode survival $(bot)",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!hotbar 1",
+  "!wait 20"
+ ],
+ "actions": [
+  {"after": 0, "click": [2, 0, 1]},
+  {"after": 10, "click": [2, 0, 1]},
+  {"after": 20, "hotbar": 0},
+  {"after": 25, "click": [2, 0, 1]}
+ ],
+ "record_ticks": 50,
+ "random": [
+  {"type": "count", "name": "ягоды", "match": "^spawn item 2,0,1$", "range": [1, 1], "why": "Ягоды выпадают одной стопкой (2–3 штуки — случай, число в стопке не пишется); точка выпадения случайна в блоке."}
+ ],
+ "cleanup": [
+  "gamerule random_tick_speed 3",
+  "kill @e[type=item,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!hotbar 0",
+  "!wait 4",
+  "!startfly"
+ ]
+}

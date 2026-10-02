@@ -65,6 +65,7 @@ mod pvp;
 mod bow;
 mod thrown;
 mod sleep;
+mod farm;
 
 /// Сторона чанка в блоках. По ней считается, в каком чанке стоит игрок.
 const CHUNK_SIZE: i32 = 16;
@@ -7618,6 +7619,23 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
             player.net.new_orbs.push(((x as f64 + 0.5, y as f64 + 0.5, z as f64 + 0.5), xp));
         }
 
+        // Посев даёт несколько стопок: урожай и семена (farming.rs).
+        let fortune = player.inventory.held().map_or(0, |stack| stack.extras().level("fortune"));
+
+        if let Some(drops) = crate::farming::harvest(&mut world, broken, fortune) {
+            // Каждая стопка — в случайной точке блока со случайным толчком,
+            // как у оригинала (чёрный ящик, farm-till-wheat).
+            let placed: Vec<_> = drops.into_iter().map(|stack| (stack, crate::tick::scattered((x, y, z), || f64::from(world.random_unit())))).collect();
+
+            drop(world);
+
+            for (stack, (at, velocity)) in placed {
+                drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
+            }
+
+            return Some(Reaction::accepted(sequence));
+        }
+
         match blocks::drops_by_luck(broken, tool, luck).map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
             Some(stack) => {
                 // Мир отпускаем: класть предмет будем под другим замком.
@@ -7962,6 +7980,17 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             return Some(Reaction::accepted(sequence));
         }
 
+        // Куст ягод: сбор (farming.rs).
+        if player.game_mode != GAME_MODE_SPECTATOR {
+            drop(world);
+
+            if let Some(reaction) = farm::pick_berries(player, shared, clicked, face, sequence) {
+                return Some(reaction);
+            }
+
+            world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        }
+
         // Статуя медного голема: следующая поза (redstone/statue.rs).
         if redstone::statue::use_statue(&mut world, clicked) {
             world.tell_directly(clicked_x, clicked_y, clicked_z);
@@ -8005,6 +8034,11 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
 
             return Some(Reaction::accepted(sequence));
         }
+    }
+
+    // Мотыга и костная мука (farming.rs).
+    if let Some(reaction) = farm::use_on_block(player, shared, (clicked_x, clicked_y, clicked_z), face, sequence) {
+        return Some(reaction);
     }
 
     // Огниво или огненный заряд по динамиту — поджог (вики, TNT: «Using a

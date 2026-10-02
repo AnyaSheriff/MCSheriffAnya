@@ -117,6 +117,9 @@ pub fn place_tagged(
         .and_then(|orientation| state_in_world(orientation, click, world, x, y, z))
         .unwrap_or(default_state);
 
+    // Лист, поставленный игроком, не гниёт (farming.rs).
+    let state = crate::farming::placed(world, state, (x, y, z));
+
     // Проводу, факелу, рычагу нужна опора: в воздухе они не держатся.
     if !has_support(orientation, state, world, x, y, z) {
         log_debug!("Постановка: {} в {} {} {} не на что опереться", name, x, y, z);

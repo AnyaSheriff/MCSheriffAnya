@@ -22,6 +22,7 @@ mod hardness_table;
 mod placing;
 mod portal;
 mod plants;
+mod farming;
 mod entity;
 mod player;
 mod fluids;

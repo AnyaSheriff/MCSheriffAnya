@@ -1,0 +1,147 @@
+{
+ "name": "farm-till-wheat",
+ "about": "Выживание: мотыга по земле, дёрну, каменистой земле и земле с корнями (висячие корни выпадают); семена на грядку; костная мука по ростку (+2…5 стадий); спелая пшеница командой; мука по спелой не тратится; удар по спелой — пшеница и семена. Случайный такт выключен (random_tick_speed 0): иначе сухая грядка без посева может стать землёй посреди записи.",
+ "exclusive": true,
+ "blocks": [
+  {
+   "at": [
+    2,
+    -1,
+    1
+   ],
+   "state": "minecraft:dirt"
+  },
+  {
+   "at": [
+    1,
+    -1,
+    1
+   ],
+   "state": "minecraft:grass_block"
+  },
+  {
+   "at": [
+    0,
+    -1,
+    1
+   ],
+   "state": "minecraft:coarse_dirt"
+  },
+  {
+   "at": [
+    2,
+    -1,
+    2
+   ],
+   "state": "minecraft:rooted_dirt"
+  }
+ ],
+ "setup": [
+  "gamerule random_tick_speed 0",
+  "clear $(bot)",
+  "give $(bot) minecraft:wooden_hoe",
+  "give $(bot) minecraft:wheat_seeds 4",
+  "give $(bot) minecraft:bone_meal 16",
+  "gamemode survival $(bot)",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    2,
+    -1,
+    1
+   ]
+  },
+  {
+   "after": 10,
+   "click": [
+    1,
+    -1,
+    1
+   ]
+  },
+  {
+   "after": 20,
+   "click": [
+    0,
+    -1,
+    1
+   ]
+  },
+  {
+   "after": 30,
+   "click": [
+    2,
+    -1,
+    2
+   ]
+  },
+  {
+   "after": 40,
+   "hotbar": 1
+  },
+  {
+   "after": 45,
+   "click": [
+    2,
+    -1,
+    1
+   ]
+  },
+  {
+   "after": 55,
+   "hotbar": 2
+  },
+  {
+   "after": 60,
+   "click": [
+    2,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 70,
+   "cmd": "setblock $(2,0,1) minecraft:wheat[age=7]"
+  },
+  {
+   "after": 80,
+   "click": [
+    2,
+    0,
+    1
+   ]
+  },
+  {
+   "after": 90,
+   "dig": [
+    2,
+    0,
+    1
+   ]
+  }
+ ],
+ "record_ticks": 110,
+ "cleanup": [
+  "gamerule random_tick_speed 3",
+  "kill @e[type=item,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "kind": "block",
+   "name": "стадия пшеницы после муки",
+   "pattern": "wheat\\[age=[2-5]\\]",
+   "replace": "wheat[age=2..5]",
+   "why": "minecraft.wiki/w/Bone_Meal: пшеница от муки «randomly increasing their growth stage by 2 to 5». Оригинал против оригинала: 2 и 4 после первого щелчка; всё прочее совпало."
+  }
+ ]
+}

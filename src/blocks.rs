@@ -198,6 +198,18 @@ impl Orientation {
 /// None означает, что предмет блоком не является (палка, меч, ведро) либо
 /// это такой блок, которого у игрока в руках быть не может (вода, огонь).
 pub fn block_for_item(item: i32) -> Option<(&'static str, i32)> {
+    // Семена ставят посев, а сам урожай (пшеница) не ставится ничем
+    // (вики, Wheat Seeds; farming.rs).
+    if let Some(name) = item_name(item) {
+        if let Some(crop) = crate::farming::planted_by(name) {
+            return state_by_name(crop).and_then(|state| block_at_state(state).map(|name| (name, state)));
+        }
+
+        if name == "wheat" {
+            return None;
+        }
+    }
+
     // Список отсортирован по номеру предмета, поэтому поиск двоичный.
     let index = BLOCK_STATES
         .binary_search_by_key(&item, |(item_id, _, _)| *item_id)
@@ -216,6 +228,23 @@ pub fn block_for_item(item: i32) -> Option<(&'static str, i32)> {
 /// None означает, что предмета для такого блока нет вовсе: голова поршня,
 /// вода, огонь.
 pub fn item_for_block(name: &str) -> Option<i32> {
+    // Посев выбирается семенами (обратное к block_for_item).
+    let seeds = match name {
+        "wheat" => Some("wheat_seeds"),
+        "beetroots" => Some("beetroot_seeds"),
+        "carrots" => Some("carrot"),
+        "potatoes" => Some("potato"),
+        "melon_stem" | "attached_melon_stem" => Some("melon_seeds"),
+        "pumpkin_stem" | "attached_pumpkin_stem" => Some("pumpkin_seeds"),
+        "torchflower_crop" => Some("torchflower_seeds"),
+        "sweet_berry_bush" => Some("sweet_berries"),
+        _ => None,
+    };
+
+    if let Some(seeds) = seeds {
+        return item_named(seeds);
+    }
+
     BLOCK_STATES
         .iter()
         .find(|(_, _, block)| *block == name)

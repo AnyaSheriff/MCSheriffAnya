@@ -2837,6 +2837,11 @@ fn shape_update(world: &mut World, pos: Pos, from: Dir, loud: bool) {
                 return;
             }
 
+            // Грядка под твёрдым блоком, лист без опоры (farming.rs).
+            if crate::farming::on_neighbour(world, pos) {
+                return;
+            }
+
             // Песок и гравий без опоры падают своим тактом через два.
             if falls(block.state) && !holds_up(world.get_block(pos.0, pos.1 - 1, pos.2)) {
                 world.schedule_once(pos.0, pos.1, pos.2, FALL_DELAY, PRIORITY_NORMAL);
@@ -4219,7 +4224,8 @@ pub fn ticked(world: &mut World, pos: Pos) {
             world.note_falling(pos.0, pos.1, pos.2);
         }
 
-        _ => {}
+        // Лист пересчитывает расстояние до бревна (farming.rs).
+        _ => crate::farming::ticked(world, pos, block.state),
     }
 }
 

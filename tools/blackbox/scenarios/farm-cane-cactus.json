@@ -1,0 +1,127 @@
+{
+ "name": "farm-cane-cactus",
+ "about": "Случайный такт на всю (random_tick_speed 4096): тростник у воды и кактус на песке растут до трёх блоков; сухая грядка без посева становится землёй, мокрая у воды — влажность 7. Под песком опора: у нас под площадкой пустота, у оригинала — земля (песок иначе падает).",
+ "exclusive": true,
+ "blocks": [
+  {
+   "at": [
+    0,
+    -2,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    -3,
+    -2,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    -1,
+    0
+   ],
+   "state": "minecraft:sand"
+  },
+  {
+   "at": [
+    1,
+    -1,
+    0
+   ],
+   "state": "minecraft:water"
+  },
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:sugar_cane"
+  },
+  {
+   "at": [
+    -3,
+    -1,
+    0
+   ],
+   "state": "minecraft:sand"
+  },
+  {
+   "at": [
+    -3,
+    0,
+    0
+   ],
+   "state": "minecraft:cactus"
+  },
+  {
+   "at": [
+    0,
+    -1,
+    3
+   ],
+   "state": "minecraft:farmland"
+  },
+  {
+   "at": [
+    2,
+    -1,
+    0
+   ],
+   "state": "minecraft:farmland"
+  }
+ ],
+ "setup": [
+  "gamerule random_tick_speed 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "gamerule random_tick_speed 4096"
+  },
+  {
+   "after": 100,
+   "cmd": "gamerule random_tick_speed 0"
+  }
+ ],
+ "record_ticks": 110,
+ "cleanup": [
+  "gamerule random_tick_speed 3",
+  "setblock $(0,-2,0) minecraft:grass_block",
+  "setblock $(-3,-2,0) minecraft:grass_block"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "kind": "block",
+   "name": "возраст нового блока",
+   "pattern": "(sugar_cane|cactus)\\[age=\\d+\\]",
+   "replace": "$1[age=?]",
+   "why": "Возраст молча копится (оригинал не шлёт его клиенту); в пачке такта виден возраст на конец такта."
+  },
+  {
+   "type": "anytick",
+   "name": "рост тростника и кактуса",
+   "match": "^block (0|-3),[1-3],0 (sugar_cane|cactus)",
+   "why": "Случайный такт: 4096 мест на секцию, верхний блок растёт после 16 своих тактов — такт роста случаен. Оригинал: 15/33 у кактуса, 19/40 у тростника. Возраст в новых блоках бывает 1: новый блок успевает получить такт в том же такте (возраст клиенту отдельно не шлётся)."
+  },
+  {
+   "type": "anytick",
+   "name": "цветок кактуса",
+   "match": "^block -3,[1-3],0 cactus_flower",
+   "why": "Цветок вырастает на верхушке случайно (шанс на тактах блока), высота столба при этом разная; по вики шанс 10 % / 25 %."
+  },
+  {
+   "type": "anytick",
+   "name": "влажность грядки",
+   "match": "^block (0,-1,3|2,-1,0) farmland",
+   "why": "Грядка получает случайный такт в первые такты после включения скорости 4096; тик первого срабатывания случаен (шанс ~63 % за такт на блок)."
+  }
+ ]
+}

@@ -310,6 +310,7 @@ async fn run(shared: Arc<Shared>) {
             // Tick: фаза чанков). Из них у нас пока только горящая руда.
             natural_lightning(&shared, dimension, &mut world, &player_chunks);
             redstone::random_ticks(&mut world, &player_chunks, shared.properties.simulation_distance);
+            crate::farming::random_ticks(&mut world, &player_chunks, shared.properties.simulation_distance, crate::farming::random_tick_speed());
             redstone::settle(&mut world);
             phases.add(1, &mut clock);
 
@@ -1419,18 +1420,22 @@ fn drop_destroyed(shared: &Shared, dimension: Dimension, world: &mut World) {
         // Инструмент тут ни при чём: блок сломал не игрок.
         let luck = world.random_unit();
 
-        let Some(stack) = blocks::world_drops(state, luck) else {
-            continue;
+        // Посев — несколько стопок (farming.rs), прочее — одна.
+        let stacks = match crate::farming::harvest(world, state, 0) {
+            Some(stacks) => stacks,
+            None => blocks::world_drops(state, luck).into_iter().collect(),
         };
 
-        let entity_id = shared.next_entity_id();
-        let (at, velocity) = scattered((x, y, z), || f64::from(world.random_unit()));
+        for stack in stacks {
+            let entity_id = shared.next_entity_id();
+            let (at, velocity) = scattered((x, y, z), || f64::from(world.random_unit()));
 
-        shared
-            .items_in(dimension)
-            .lock()
-            .expect("предметы захвачены другим потоком")
-            .drop_item(entity_id, stack, at, velocity, items::MINED_DELAY);
+            shared
+                .items_in(dimension)
+                .lock()
+                .expect("предметы захвачены другим потоком")
+                .drop_item(entity_id, stack, at, velocity, items::MINED_DELAY);
+        }
     }
 }
 
@@ -1441,7 +1446,7 @@ fn drop_destroyed(shared: &Shared, dimension: Dimension, world: &mut World) {
 /// предмета, его низ на 0,125 ниже), скорость вверх 0,2, вбок — случайная,
 /// до 0,1 в каждую сторону. Без этого смытые водой предметы плыли строго по
 /// оси блока, и всплески воды звучали не там.
-fn scattered(
+pub(crate) fn scattered(
     (x, y, z): (i32, i32, i32),
     mut random: impl FnMut() -> f64,
 ) -> ((f64, f64, f64), (f64, f64, f64)) {

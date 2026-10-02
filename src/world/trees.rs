@@ -1376,6 +1376,34 @@ pub fn azalea_at(seed: i64, x: i32, z: i32) -> Tree {
     Tree { trunk, ..AZALEA.tree }
 }
 
+/// Дерево из саженца (вики, Sapling): дуб — в одном случае из десяти
+/// большой; ель и джунгли квадратом 2×2 (`wide`) — огромные; тёмный и
+/// бледный дуб — только квадратом; мангр — изредка высокий; азалия —
+/// дерево с азалией. Высота ствола — как у генерации. None — из этого
+/// саженца (или не квадратом) дерева нет.
+pub fn from_sapling(name: &str, wide: bool, seed: i64) -> Option<Tree> {
+    let mut random = Random::new(seed);
+    let pick = fraction(&mut random);
+    let species = match (name, wide) {
+        ("oak_sapling", _) => if pick < 0.1 { FANCY_OAK } else { OAK },
+        ("birch_sapling", _) => BIRCH,
+        ("spruce_sapling", true) => MEGA_SPRUCE,
+        ("spruce_sapling", false) => SPRUCE,
+        ("jungle_sapling", true) => MEGA_JUNGLE,
+        ("jungle_sapling", false) => JUNGLE,
+        ("acacia_sapling", _) => ACACIA,
+        ("dark_oak_sapling", true) => DARK_OAK,
+        ("pale_oak_sapling", true) => PALE_OAK,
+        ("cherry_sapling", _) => CHERRY,
+        ("mangrove_propagule", _) => if pick < 0.15 { TALL_MANGROVE } else { MANGROVE },
+        ("azalea" | "flowering_azalea", _) => AZALEA,
+        _ => return None,
+    };
+    let trunk = species.tree.trunk + roll(&mut random, species.spread) + roll(&mut random, species.extra);
+
+    Some(Tree { trunk, ..species.tree })
+}
+
 /// Может ли в этом месте вообще стоять ствол.
 ///
 /// Дешёвая проверка перед дорогой: самая густая чаща у нас реже одного ствола

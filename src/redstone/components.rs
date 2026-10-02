@@ -688,10 +688,6 @@ pub fn disarm_tripwire(world: &mut World, pos: Pos) {
 // Редстоуновая руда
 // ---------------------------------------------------------------------------
 
-/// Скорость случайного такта: правило `random_tick_speed`, по умолчанию 3 —
-/// столько случайных блоков на секцию 16×16×16 за такт (вики, Tick).
-const RANDOM_TICK_SPEED: u32 = 3;
-
 /// Блоков в секции: из них выбираются случайные.
 const SECTION_VOLUME: u32 = 4096;
 
@@ -816,7 +812,7 @@ pub fn random_ticks(world: &mut World, players: &[(i32, i32)], distance: i32) {
             .iter()
             .any(|(x, z)| (chunk.0 - x).abs() <= distance && (chunk.1 - z).abs() <= distance);
 
-        if !near || world.random_bits() % SECTION_VOLUME >= RANDOM_TICK_SPEED {
+        if !near || world.random_bits() % SECTION_VOLUME >= crate::farming::random_tick_speed() {
             continue;
         }
 

@@ -1550,6 +1550,19 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
 
             Answer::saying(format!("Правило natural_health_regeneration: {}", value))
         }
+        // Скорость случайного такта (farming.rs): мест на секцию за такт.
+        ["random_tick_speed" | "randomTickSpeed", value] => match value.parse::<i32>() {
+            Ok(speed) => {
+                crate::farming::set_random_tick_speed(speed);
+
+                Answer::saying(format!("Правило random_tick_speed: {}", speed))
+            }
+            Err(_) => {
+                note_result(0);
+                Answer::saying(format!("Ожидалось целое число, а не «{}»", value))
+            }
+        },
+        ["random_tick_speed" | "randomTickSpeed"] => Answer::saying(format!("Правило random_tick_speed сейчас: {}", crate::farming::random_tick_speed())),
         ["advance_weather" | "doWeatherCycle", value] => {
             shared.advance_weather.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
 

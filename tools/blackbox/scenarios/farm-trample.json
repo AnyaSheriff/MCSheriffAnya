@@ -1,0 +1,46 @@
+{
+ "name": "farm-trample",
+ "about": "Выживание: робот падает с трёх блоков на грядку со спелой пшеницей — грядка становится землёй (шанс «высота − 0,5» больше единицы), пшеница ломается (событие 2001) и выпадает урожаем.",
+ "exclusive": true,
+ "blocks": [
+  {
+   "at": [
+    5,
+    -1,
+    5
+   ],
+   "state": "minecraft:farmland"
+  },
+  {
+   "at": [
+    5,
+    0,
+    5
+   ],
+   "state": "minecraft:wheat[age=7]"
+  }
+ ],
+ "setup": [
+  "gamerule random_tick_speed 0",
+  "clear $(bot)",
+  "gamemode survival $(bot)",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "tp $(bot) $(5.5,3,5.5)"
+  }
+ ],
+ "record_ticks": 40,
+ "cleanup": [
+  "gamerule random_tick_speed 3",
+  "kill @e[type=item,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

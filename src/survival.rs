@@ -52,6 +52,8 @@ pub enum Source {
     /// Стрела (скелет или игрок из лука).
     Arrow,
     Cactus,
+    /// Куст сладких ягод (вики, Sweet Berry Bush: «1♥ damage» в движении).
+    SweetBerryBush,
     Drown,
     Explosion,
     Fall,
@@ -95,6 +97,9 @@ impl Source {
         match self {
             Source::Arrow => 0,
             Source::Cactus => 2,
+            // Реестр damage_type по алфавиту: starve 40, sting 41,
+            // sweet_berry_bush 42, thorns 43.
+            Source::SweetBerryBush => 42,
             Source::Drown => 6,
             Source::Explosion => 9,
             Source::Fall => 10,
@@ -129,6 +134,7 @@ impl Source {
         match self {
             Source::Arrow => "death.attack.arrow",
             Source::Cactus => "death.attack.cactus",
+            Source::SweetBerryBush => "death.attack.sweetBerryBush",
             Source::Drown => "death.attack.drown",
             Source::Explosion => "death.attack.explosion",
             // Падение без лестницы под ногами: «fell from a high place».
@@ -222,6 +228,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::OnFire => "burned to death",
         Source::InFire => "went up in flames",
         Source::Cactus => "was pricked to death",
+        Source::SweetBerryBush => "was poked to death by a sweet berry bush",
         Source::InWall => "suffocated in a wall",
         Source::Generic => "died",
         Source::PlayerAttack => "was slain",

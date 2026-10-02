@@ -763,6 +763,8 @@ bot.once('spawn', async () => {
       // Правая кнопка мыши в воздухе (еда, зелье): пакет Use Item; `release` — отпустить (Player Action, статус 5).
       if (a.use) { const actor = a.bot === 2 ? bot2 : bot; actor._client.write('use_item', { hand: a.hand ?? 0, sequence: placeSeq++, rotation: { x: (Math.PI - actor.entity.yaw) * 180 / Math.PI, y: -actor.entity.pitch * 180 / Math.PI } }); }
       if (a.release) (a.bot === 2 ? bot2 : bot)._client.write('block_dig', { status: 5, location: { x: 0, y: 0, z: 0 }, face: 0, sequence: 0 });
+      // Удар по блоку (Player Action, «начал копать»): в выживании мгновенные
+      // блоки — посевы, трава — ломаются сразу.
       if (a.click) {
         const block = bot.blockAt(new Vec3(ORIGIN.x + a.click[0], ORIGIN.y + a.click[1], ORIGIN.z + a.click[2]));
 

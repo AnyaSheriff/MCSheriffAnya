@@ -911,6 +911,10 @@ pub struct World {
     /// он так вызвал, ему самому не шлются — см. `note_sound_by_hand`.
     pub actor: Option<i32>,
 
+    /// Случайный такт (farming.rs): в каких секциях чанка есть блоки со
+    /// случайным тактом — по номеру правки чанка, чтобы не искать заново.
+    pub random_sections: HashMap<(i32, i32), (u32, u32)>,
+
     /// Номер сущности динамита, чей взрыв сейчас считается (0 — нет): он
     /// назван виновником в уроне игрокам.
     pub blast_source: i32,
@@ -1238,6 +1242,7 @@ impl World {
             viewers: HashMap::new(),
             fight: crate::dragon_fight::Fight::default(),
             weather: crate::weather::Weather::default(),
+            random_sections: HashMap::new(),
             ejected: Vec::new(),
             primed: Vec::new(),
             blast_rest: Default::default(),
@@ -1391,6 +1396,7 @@ impl World {
             viewers: HashMap::new(),
             fight: level.fight.clone(),
             weather: level.weather.clone(),
+            random_sections: HashMap::new(),
             ejected: Vec::new(),
             primed: Vec::new(),
             blast_rest: Default::default(),
@@ -2441,6 +2447,12 @@ impl World {
     }
 
     /// Есть ли этот чанк в памяти.
+    /// Номер правки чанка: растёт с каждым изменённым блоком. None — чанка
+    /// нет в памяти.
+    pub fn chunk_revision(&self, chunk_x: i32, chunk_z: i32) -> Option<u32> {
+        self.chunks.get(&(chunk_x, chunk_z)).map(|chunk| chunk.revision)
+    }
+
     pub fn has_chunk(&self, chunk_x: i32, chunk_z: i32) -> bool {
         self.chunks.contains_key(&(chunk_x, chunk_z))
     }
@@ -4149,7 +4161,7 @@ impl TreeGround {
 
 /// Расстояние каждого листа дерева до ближайшего его бревна — обход по
 /// шести соседям, не дальше семи.
-fn leaf_distances(blocks: &[(i32, i32, i32, terrain::Part)]) -> std::collections::HashMap<(i32, i32, i32), i32> {
+pub(crate) fn leaf_distances(blocks: &[(i32, i32, i32, terrain::Part)]) -> std::collections::HashMap<(i32, i32, i32), i32> {
     use std::collections::{HashMap, HashSet, VecDeque};
 
     let leaves: HashSet<(i32, i32, i32)> = blocks

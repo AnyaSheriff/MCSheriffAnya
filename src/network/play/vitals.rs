@@ -425,6 +425,8 @@ fn mortal(mode: i32) -> bool {
 struct Env {
     in_fire: bool,
     cactus: bool,
+    /// Ящик игрока в кусте ягод не младше первой стадии.
+    berries: bool,
     in_wall: bool,
     in_lava: bool,
     in_water: bool,
@@ -454,7 +456,7 @@ fn fluid_height(world: &World, x: i32, y: i32, z: i32, kind: fluids::Kind, level
 
 fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool) -> Env {
     let (bx, bz) = (x.floor() as i32, z.floor() as i32);
-    let mut env = Env { in_fire: false, cactus: false, in_wall: false, in_lava: false, in_water: false, in_rain: false, eyes_in_water: false, soft: false, landing: 1.0, below: 0 };
+    let mut env = Env { in_fire: false, cactus: false, berries: false, in_wall: false, in_lava: false, in_water: false, in_rain: false, eyes_in_water: false, soft: false, landing: 1.0, below: 0 };
 
     // Ящик игрока: от ног до макушки; жидкость считается, если её
     // поверхность выше ног.
@@ -478,6 +480,10 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool) -> Env {
     }
 
     let feet = world.get_block(bx, y.floor() as i32, bz);
+
+    // Куст ягод: в клетке ног, возраст от 1 (вики, Sweet Berry Bush:
+    // «except when it is in its first stage»).
+    env.berries = blocks::orientation_of(feet).is_some_and(|block| block.name == "sweet_berry_bush" && block.value(feet, "age") != Some("0"));
 
     // Огонь в клетке ног или головы; кактус в клетках вокруг ног (ящик
     // шириной 0,6 задевает соседние клетки у края); туловище в целом блоке.
@@ -552,7 +558,19 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
             look_around(&world, player.x, player.y, player.z, player.sneaking)
         };
 
+        // Высота падения вместе с этим шагом — для грядки.
+        let fallen = player.vit.fall + (-dy).max(0.0) as f32;
         let damage = player.vit.land(dy, on_ground, env.soft, env.landing);
+
+        // Приземлился на грядку — может её вытоптать (farming.rs).
+        if on_ground && !env.soft && fallen > 0.5 && blocks::block_at_state(env.below) == Some("farmland") {
+            let below = (player.x.floor() as i32, (player.y - 0.2).floor() as i32, player.z.floor() as i32);
+            let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+            if crate::farming::trample(&mut world, below, fallen) {
+                redstone::settle(&mut world);
+            }
+        }
 
         // Частицы приземления не зависят от урона (сено, мёд, стойкость их не
         // отменяют); число — по высоте до последнего шага (survival::
@@ -1903,6 +1921,15 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
 
     if env.cactus && !player.vit.dead {
         hit(stream, shared, player, 1.0, Source::Cactus, 0).await?;
+    }
+
+    // Куст ягод колет того, кто в нём движется (вики, Sweet Berry Bush:
+    // «moving… at least 0.003 blocks»); замедление клиент делает сам
+    // [проверить чёрным ящиком].
+    let (mx, _, mz) = player.net.last_delta;
+
+    if env.berries && !player.vit.dead && (mx.abs() >= 0.003 || mz.abs() >= 0.003) {
+        hit(stream, shared, player, 1.0, Source::SweetBerryBush, 0).await?;
     }
 
     if env.in_wall && !player.vit.dead {

@@ -1,0 +1,170 @@
+{
+ "name": "farm-sapling",
+ "about": "Творческий режим: костная мука по саженцу берёзы раз в 5 тактов, пока не вырастет дерево (шанс 45 % на шаг стадии), потом щелчки по стволу (мука глуха).",
+ "exclusive": true,
+ "blocks": [
+  {
+   "at": [
+    0,
+    -1,
+    0
+   ],
+   "state": "minecraft:dirt"
+  },
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:birch_sapling"
+  }
+ ],
+ "setup": [
+  "gamerule random_tick_speed 0",
+  "clear $(bot)",
+  "give $(bot) minecraft:bone_meal 64"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 5,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 10,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 15,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 20,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 25,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 30,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 35,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 40,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 45,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "gamerule random_tick_speed 3",
+  "fill $(-6,0,-6) $(6,8,6) minecraft:air",
+  "clear $(bot)"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "kind": "block",
+   "name": "стадия саженца",
+   "pattern": "birch_sapling\\[stage=\\d\\]",
+   "replace": "birch_sapling[stage=?]",
+   "why": "minecraft.wiki/w/Bone_Meal: саженец «45% chance» на стадию за щелчок — на каком щелчке он сменит стадию, случайно."
+  },
+  {
+   "type": "count",
+   "name": "частицы муки",
+   "match": "^level 0,0,0 1505 15$",
+   "range": [
+    2,
+    10
+   ],
+   "anytick": true,
+   "why": "Мука тратится и даёт частицы, пока стоит саженец; сколько щелчков до дерева — случай (45 %)."
+  },
+  {
+   "type": "count",
+   "name": "брёвна дерева",
+   "match": "birch_log",
+   "range": [
+    4,
+    40
+   ],
+   "anytick": true,
+   "why": "Высота берёзы случайна (minecraft.wiki/w/Birch: 5–7 брёвен), а повторы ствола после роста зависят от того, на каком щелчке оно выросло."
+  },
+  {
+   "type": "count",
+   "name": "листва дерева",
+   "match": "birch_leaves",
+   "range": [
+    25,
+    70
+   ],
+   "anytick": true,
+   "why": "Форма кроны у каждой берёзы своя; сверяется число листьев, не места."
+  },
+  {
+   "type": "count",
+   "name": "повторы саженца и воздуха",
+   "match": "^block 0,(0|1),0 (birch_sapling|air)",
+   "range": [
+    2,
+    20
+   ],
+   "anytick": true,
+   "why": "Повтор блока и клетки над ним на каждом щелчке до роста; число щелчков до дерева случайно."
+  }
+ ]
+}
