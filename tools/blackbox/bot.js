@@ -55,6 +55,9 @@ const stateName = (id) => {
   return `${b.name}[${props.join(',')}]`;
 };
 const rel = (p) => [p.x - ORIGIN.x, p.y - ORIGIN.y, p.z - ORIGIN.z];
+// Ракеты взлетают выше площадки: их пишем, пока они над ней (до 64 ввысь).
+const highPad = (p) => p && Math.abs(p.x - ORIGIN.x) <= PAD && p.y - ORIGIN.y >= -PAD && p.y - ORIGIN.y <= 64 && Math.abs(p.z - ORIGIN.z) <= PAD;
+const trackedAt = (id) => (entKind.get(id) === 'firework_rocket' ? highPad : inPad)(cartAt.get(id));
 const inPad = (p) => Math.abs(p.x - ORIGIN.x) <= PAD && Math.abs(p.y - ORIGIN.y) <= PAD && Math.abs(p.z - ORIGIN.z) <= PAD;
 
 const bot = mineflayer.createBot({ host, port, username: USER, version: '26.1', auth: 'offline', respawn: !scenario.manual_respawn });
@@ -200,7 +203,7 @@ const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
 // Край: кристалл, дракон, его огненный шар и облако дыхания — пишутся как мобы.
-const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion']);
+const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket']);
 const padDrops = new Set();
 const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {
@@ -224,7 +227,7 @@ bot._client.on('spawn_entity', (p) => {
   if (inPad(pos)) note('spawn', { at: rel(pos).map(v => Math.round(v * 100) / 100), type, data: p.objectData, id: p.entityId, velocity: p.velocity, ...frameExtra });
 });
 bot._client.on('entity_metadata', (p) => {
-  if (!padTnt.has(p.entityId) && !padDrops.has(p.entityId) && !(padCarts.has(p.entityId) && inPad(cartAt.get(p.entityId)))) return;
+  if (!padTnt.has(p.entityId) && !padDrops.has(p.entityId) && !(padCarts.has(p.entityId) && trackedAt(p.entityId))) return;
   const fields = (p.metadata || []).map(m => `${m.key}=${typeof m.value === 'object' ? JSON.stringify(m.value) : m.value}`);
   if (fields.length) note('meta', { id: p.entityId, fields: fields.join(' ') });
 });
@@ -236,16 +239,16 @@ for (const name of ['rel_entity_move', 'entity_move_look', 'entity_look']) {
     const d = p.dX === undefined ? null : [p.dX, p.dY, p.dZ];
     const was = cartAt.get(p.entityId);
     if (d && was) cartAt.set(p.entityId, { x: was.x + d[0] / 4096, y: was.y + d[1] / 4096, z: was.z + d[2] / 4096 });
-    if (!inPad(cartAt.get(p.entityId) || was)) return;
+    if (!(entKind.get(p.entityId) === 'firework_rocket' ? highPad : inPad)(cartAt.get(p.entityId) || was)) return;
     note('cart', { ent: entKind.get(p.entityId), what: name === 'entity_look' ? 'rot' : 'move', id: p.entityId, d, yaw: p.yaw, pitch: p.pitch, ground: p.onGround });
   });
 }
 // Событие сущности у вагонетки: 10 — вагонетку с динамитом подожгли.
 bot._client.on('entity_status', (p) => {
-  if (padCarts.has(p.entityId) && inPad(cartAt.get(p.entityId))) note('cart', { ent: entKind.get(p.entityId), what: 'status', id: p.entityId, status: p.entityStatus });
+  if (padCarts.has(p.entityId) && trackedAt(p.entityId)) note('cart', { ent: entKind.get(p.entityId), what: 'status', id: p.entityId, status: p.entityStatus });
 });
 bot._client.on('entity_velocity', (p) => {
-  if (padCarts.has(p.entityId) && inPad(cartAt.get(p.entityId))) note('cart', { ent: entKind.get(p.entityId), what: 'vel', id: p.entityId, v: vec(p.velocity) });
+  if (padCarts.has(p.entityId) && trackedAt(p.entityId)) note('cart', { ent: entKind.get(p.entityId), what: 'vel', id: p.entityId, v: vec(p.velocity) });
 });
 for (const name of ['entity_teleport', 'sync_entity_position']) {
   bot._client.on(name, (p) => {
@@ -362,7 +365,7 @@ const MOB_PACKETS = new Set(['entity_head_rotation', 'damage_event', 'hurt_anima
 bot._client.on('packet', (p, meta) => {
   if (!scenario.track_mobs || !recording || meta.state !== 'play' || !MOB_PACKETS.has(meta.name)) return;
   const id = p.entityId ?? p.collectedEntityId;
-  if (!padCarts.has(id) || !inPad(cartAt.get(id))) return;
+  if (!padCarts.has(id) || !trackedAt(id)) return;
   const { entityId, collectedEntityId, collectorEntityId, seed, ...rest } = p;
   // Номера сущностей у каждого сервера свои: причина и источник урона — просто «есть / нет».
   if (meta.name === 'damage_event') { rest.sourceCauseId = rest.sourceCauseId > 0 ? 'entity' : 0; rest.sourceDirectId = rest.sourceDirectId > 0 ? 'entity' : 0; }
@@ -375,7 +378,7 @@ bot._client.on('entity_destroy', (p) => {
   for (const id of p.entityIds) {
     if (!padCarts.has(id)) continue;
     padCarts.delete(id);
-    if (inPad(cartAt.get(id))) note('cart', { ent: entKind.get(id), what: 'gone', id });
+    if (trackedAt(id)) note('cart', { ent: entKind.get(id), what: 'gone', id });
   }
 });
 // Окна хранилищ: робот открывает сундук или воронку щелчком и видит каждое

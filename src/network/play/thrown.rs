@@ -15,6 +15,14 @@ use crate::thrown::{Cloud, Flying, Kind};
 const ENTITY_VELOCITY: i32 = 0x65;
 const ENTITY_MOVE_ROTATE: i32 = 0x36;
 
+/// Событие сущности: взрыв ракеты (вики, Entity statuses: 17).
+const ENTITY_EVENT: i32 = 0x22;
+const ROCKET_BLAST_EVENT: u8 = 17;
+
+/// Свойства ракеты: предмет (8), пущена под углом (10) (minecraft-data,
+/// entities.json: fireworks_item, attached_to_target, shot_at_angle).
+const ROCKET_ANGLED_PROPERTY: u8 = 10;
+
 /// Свойства: предмет снаряда (8), радиус (8), ожидание (9), частица (10)
 /// облака (minecraft-data, entities.json); виды значений — слот, число с
 /// точкой, логическое, частица.
@@ -99,6 +107,60 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
     true
 }
 
+/// Ракета фейерверка в основной руке щёлкнута по блоку: пуск из точки
+/// щелчка, сдвинутой на 0,15 от грани (вики, Firework Rocket: «launched up
+/// vertically by using its item on a block») [проверить сдвиг]. Возвращает,
+/// был ли пуск; ракету из руки тратит вызывающий.
+pub(super) fn launch_rocket(shared: &Shared, player: &mut PlayerState, at: (f64, f64, f64), face: i32) -> bool {
+    let Some(stack) = player.inventory.held() else {
+        return false;
+    };
+
+    if crate::combat::item_name(stack.item) != Some("firework_rocket") || player.game_mode == GAME_MODE_SPECTATOR || player.vit.dead {
+        return false;
+    }
+
+    let dimension = player.dimension;
+    let roll = || vitals::world_random(shared, dimension);
+    // Скорость вбок — нормальное распределение с σ 0,001 (вики).
+    let gauss = || {
+        let (a, b) = (f64::from(roll()).max(1.0e-9), f64::from(roll()));
+
+        (-2.0 * a.ln()).sqrt() * (std::f64::consts::TAU * b).cos() * 0.001
+    };
+    let velocity = (gauss(), 0.05, gauss());
+    let normal = match face {
+        0 => (0.0, -1.0, 0.0),
+        1 => (0.0, 1.0, 0.0),
+        2 => (0.0, 0.0, -1.0),
+        3 => (0.0, 0.0, 1.0),
+        4 => (-1.0, 0.0, 0.0),
+        _ => (1.0, 0.0, 0.0),
+    };
+    let at = (at.0 + normal.0 * 0.15, at.1 + normal.1 * 0.15, at.2 + normal.2 * 0.15);
+    let lifetime = crate::firework::lifetime(stack.extras().rocket().flight, roll(), roll());
+    // Предмет ракеты — вся стопка из руки, как была до траты (чёрный ящик,
+    // firework-launch: из двух ракет у сущности itemCount 2).
+    let rocket = crate::firework::Rocket::new(shared.next_entity_id(), dimension, stack, at, velocity, false, (player.entity_id, player.uuid, player.name.clone()), lifetime);
+
+    shared.thrown.lock().expect("снаряды захвачены другим потоком").rockets.push(rocket);
+
+    true
+}
+
+/// Событие 17 взорвавшейся ракеты — тем, кто её видит.
+pub(super) async fn send_rocket_blast(stream: &mut Outgoing<'_>, player: &PlayerState, entity_id: i32) -> io::Result<()> {
+    if !player.seen_thrown.contains_key(&entity_id) {
+        return Ok(());
+    }
+
+    let mut body = encode_varint(ENTITY_EVENT);
+
+    push_i32(&mut body, entity_id);
+    body.push(ROCKET_BLAST_EVENT);
+    write_body(stream, body).await
+}
+
 /// Правая кнопка с пустым пузырьком у облака дыхания дракона: набрать его.
 /// Возвращает, набрал ли.
 pub(super) fn fill_breath(shared: &Shared, player: &mut PlayerState, hand: i32) -> bool {
@@ -145,7 +207,7 @@ pub(super) fn fill_breath(shared: &Shared, player: &mut PlayerState, hand: i32) 
 /// начале хода: только облака, которые слежение видит на такт позже (их
 /// прошлый радиус, в том числе у только что истаявших).
 pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, early: bool) -> io::Result<()> {
-    let (flying, clouds, impacts, faded) = {
+    let (flying, clouds, impacts, faded, rockets, blasts) = {
         let thrown = shared.thrown.lock().expect("снаряды захвачены другим потоком");
         let dimension = player.dimension;
 
@@ -154,6 +216,8 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
             thrown.clouds.iter().filter(|c| c.dimension == dimension).cloned().collect::<Vec<_>>(),
             thrown.impacts.iter().filter(|i| i.dimension == dimension).cloned().collect::<Vec<_>>(),
             thrown.faded.iter().filter(|c| c.dimension == dimension).cloned().collect::<Vec<_>>(),
+            thrown.rockets.iter().filter(|r| r.dimension == dimension).cloned().collect::<Vec<_>>(),
+            thrown.blasts.iter().filter(|b| b.dimension == dimension).map(|b| b.last.clone()).collect::<Vec<_>>(),
         )
     };
 
@@ -200,7 +264,15 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
         .filter(|f| near((f.x, f.y, f.z)))
         .map(|f| f.entity_id)
         .chain(clouds.iter().filter(|c| near((c.x, c.y, c.z))).map(|c| c.entity_id))
+        .chain(rockets.iter().filter(|r| near((r.x, r.y, r.z))).map(|r| r.entity_id))
         .collect();
+    // Взорвавшиеся в этом такте ракеты: сверка места такта — до ухода.
+    for rocket in &blasts {
+        if player.seen_thrown.contains_key(&rocket.entity_id) {
+            update_rocket(stream, player, rocket).await?;
+        }
+    }
+
     let vanished: Vec<i32> = player.seen_thrown.keys().filter(|id| !present.contains(id)).copied().collect();
 
     for id in vanished {
@@ -275,6 +347,10 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
         }
     }
 
+    for rocket in rockets.iter().filter(|r| present.contains(&r.entity_id)) {
+        update_rocket(stream, player, rocket).await?;
+    }
+
     for cloud in clouds.iter().filter(|c| present.contains(&c.entity_id)) {
         if let std::collections::hash_map::Entry::Vacant(entry) = player.seen_thrown.entry(cloud.entity_id) {
             // Облако, о котором клиент не знал (подошёл позже) [проверить].
@@ -286,6 +362,81 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
         if !cloud.lag {
             update_cloud(stream, player, cloud).await?;
         }
+    }
+
+    Ok(())
+}
+
+/// Очередной такт слежения за ракетой: появление с местом и скоростью до
+/// хода и свойства (предмет, «под углом»); раз в 10 тактов — скорость и
+/// сдвиг с поворотом [проверить чёрным ящиком, firework-launch].
+async fn update_rocket(stream: &mut Outgoing<'_>, player: &mut PlayerState, rocket: &crate::firework::Rocket) -> io::Result<()> {
+    let Some(Shown::Flying { grid }) = player.seen_thrown.get(&rocket.entity_id).copied() else {
+        // Появление — с поворотом 0/0 и номером пустившего; потом предмет (и
+        // «под углом»), нулевой сдвиг, свойства ещё раз (чёрный ящик,
+        // firework-blast, firework-crossbow).
+        let ((sx, sy, sz), (svx, svy, svz)) = if rocket.life <= 1 { rocket.start } else { (rocket.prev.0, rocket.prev.1) };
+        let (yaw, pitch) = if rocket.life <= 1 { rocket.start_rot } else { rocket.prev.2 };
+        let mut body = encode_varint(ADD_ENTITY);
+
+        body.extend_from_slice(&encode_varint(rocket.entity_id));
+        body.extend_from_slice(&rocket.uuid);
+        body.extend_from_slice(&encode_varint(crate::firework::ROCKET_TYPE));
+        push_f64(&mut body, sx);
+        push_f64(&mut body, sy);
+        push_f64(&mut body, sz);
+        types::push_velocity(&mut body, svx, svy, svz);
+        body.push(cart_angle(pitch));
+        body.push(cart_angle(yaw));
+        body.push(0);
+        body.extend_from_slice(&encode_varint(rocket.owner));
+        write_body(stream, body).await?;
+
+        let mut body = encode_varint(SET_ENTITY_DATA);
+
+        body.extend_from_slice(&encode_varint(rocket.entity_id));
+        body.push(ITEM_PROPERTY);
+        body.extend_from_slice(&encode_varint(PROPERTY_SLOT));
+        push_slot(&mut body, Some(rocket.stack));
+
+        if rocket.angled {
+            body.push(ROCKET_ANGLED_PROPERTY);
+            body.extend_from_slice(&encode_varint(PROPERTY_BOOLEAN));
+            body.push(1);
+        }
+
+        body.push(PROPERTIES_END);
+
+        let properties = body;
+
+        write_body(stream, properties.clone()).await?;
+        send_zero_move(stream, rocket.entity_id).await?;
+        write_body(stream, properties).await?;
+        player.seen_thrown.insert(rocket.entity_id, Shown::Flying { grid: grid_of((sx, sy, sz)) });
+        return Ok(());
+    };
+
+    if rocket.life > 1 && (rocket.life - 1).is_multiple_of(FLYING_SYNC) {
+        let (at, velocity, (yaw, pitch)) = rocket.prev;
+        let mut body = encode_varint(ENTITY_VELOCITY);
+
+        body.extend_from_slice(&encode_varint(rocket.entity_id));
+        types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
+        write_body(stream, body).await?;
+
+        let next = grid_of(at);
+        let step = (next.0 - grid.0, next.1 - grid.1, next.2 - grid.2);
+        let mut body = encode_varint(ENTITY_MOVE_ROTATE);
+
+        body.extend_from_slice(&encode_varint(rocket.entity_id));
+        push_i16(&mut body, step.0.clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16);
+        push_i16(&mut body, step.1.clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16);
+        push_i16(&mut body, step.2.clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16);
+        body.push(cart_angle(yaw));
+        body.push(cart_angle(pitch));
+        body.push(0);
+        write_body(stream, body).await?;
+        player.seen_thrown.insert(rocket.entity_id, Shown::Flying { grid: next });
     }
 
     Ok(())

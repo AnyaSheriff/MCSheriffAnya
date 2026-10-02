@@ -412,7 +412,9 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             }
 
             if let Some(velocity) = player.net.velocity.take() {
-                if strike.source.is_projectile() {
+                // Взрыв ракеты — так же, как стрела (чёрный ящик, firework-crossbow:
+                // скорость (−0,012; 0,275; 0,218) на такт позже, отдача от ракеты).
+                if strike.source.is_projectile() || strike.source == Source::Fireworks {
                     // Стрела: скорость и свойства идут на такт позже, а скорость
                     // — уже после шага трения и тяжести (чёрный ящик, pvp-bow:
                     // 0,218 = 0,4·0,546; 0,275 = (0,361 − 0,08)·0,98); в теле

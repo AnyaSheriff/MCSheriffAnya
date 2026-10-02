@@ -1,0 +1,102 @@
+{
+ "name": "firework-launch",
+ "about": "Ракета без звёзд (полёт 1) пущена с пола: появление, свойства (предмет, угол), звук запуска, полёт вверх, событие 17 по сроку 10·(полёт+1)+0…5+0…6, уход.",
+ "track_mobs": true,
+ "track_self": true,
+ "item_components": true,
+ "inventory": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,0,3.5) 0 30",
+  "!wait 10",
+  "fill $(-2,0,-2) $(8,6,8) minecraft:air",
+  "fill $(-2,-1,-2) $(8,-1,8) minecraft:stone",
+  "!stopfly",
+  "give $(bot) minecraft:firework_rocket[fireworks={flight_duration:1}] 2",
+  "!hotbar 0",
+  "!wait 25"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    3,
+    -1,
+    5
+   ],
+   "face": 1,
+   "cursor": [
+    0.5,
+    1,
+    0.5
+   ]
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "kill @e[type=firework_rocket,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "delay",
+   "name": "срок ракеты",
+   "from": "^cart firework_rocket сдвиг 0,0,0",
+   "to": "^cart firework_rocket событие 17",
+   "between": "^cart firework_rocket (скорость|сдвиг)",
+   "shift_between": false,
+   "range": [
+    20,
+    31
+   ],
+   "why": "срок ракеты случаен: 10·(полёт + 1) + 0…5 + 0…6 тактов (вики, Firework Rocket: «LifeTime»), для полёта 1 — от 20 до 31; сверки места раз в 10 тактов до взрыва поэтому то есть, то нет"
+  },
+  {
+   "type": "mask",
+   "name": "номер пустившего ракету",
+   "kind": "spawn",
+   "pattern": "firework_rocket \\d+ ",
+   "replace": "firework_rocket N ",
+   "why": "в пакете появления ракеты — номер сущности пустившего, а номера у серверов свои (оригинал 2846, 2850, 2855)"
+  },
+  {
+   "type": "mask",
+   "name": "звук запуска по x/z",
+   "kind": "sound",
+   "pattern": "^sound [-0-9.]+,([-0-9.]+),[-0-9.]+ (minecraft:entity\\.firework_rocket\\.launch)",
+   "replace": "sound X,$1,Z $2",
+   "why": "у пущенной с блока ракеты скорость вбок случайна (вики, Firework Rocket: «random small X and Z speed (random value near zero with a standard deviation of .001)», за такт ×1,15): у оригинала в firework-launch и firework-blast сдвиг на +10 по x/z 117,−21 и −67,95, поворот 63 и −23 — от прогона к прогону разные; поэтому и звук запуска попадает то в 3,375, то в 3,5 по x/z"
+  },
+  {
+   "type": "mask",
+   "name": "скорость ракеты вбок",
+   "kind": "cart",
+   "pattern": "firework_rocket скорость -?[0-9.]+,([-0-9.]+),-?[0-9.]+",
+   "replace": "firework_rocket скорость X,$1,Z",
+   "why": "у пущенной с блока ракеты скорость вбок случайна (вики, Firework Rocket: «random small X and Z speed (random value near zero with a standard deviation of .001)», за такт ×1,15): у оригинала в firework-launch и firework-blast сдвиг на +10 по x/z 117,−21 и −67,95, поворот 63 и −23 — от прогона к прогону разные; поэтому и звук запуска попадает то в 3,375, то в 3,5 по x/z"
+  },
+  {
+   "type": "mask",
+   "name": "сдвиг ракеты вбок и угол",
+   "kind": "cart",
+   "pattern": "firework_rocket сдвиг -?\\d+,(-?\\d+),-?\\d+ поворот -?\\d+/(-?\\d+)",
+   "replace": "firework_rocket сдвиг X,$1,Z поворот Y/$2",
+   "why": "у пущенной с блока ракеты скорость вбок случайна (вики, Firework Rocket: «random small X and Z speed (random value near zero with a standard deviation of .001)», за такт ×1,15): у оригинала в firework-launch и firework-blast сдвиг на +10 по x/z 117,−21 и −67,95, поворот 63 и −23 — от прогона к прогону разные; поэтому и звук запуска попадает то в 3,375, то в 3,5 по x/z"
+  }
+ ]
+}

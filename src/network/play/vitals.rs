@@ -669,7 +669,7 @@ pub(super) fn start_using(shared: &Shared, player: &mut PlayerState, hand: i32, 
         "crossbow" => {
             let data = stack.map(|stack| stack.extras()).unwrap_or_default();
 
-            if data.charged > 0 || (player.game_mode != GAME_MODE_CREATIVE && super::bow::arrow_slot(player).is_none()) {
+            if data.charged > 0 || (player.game_mode != GAME_MODE_CREATIVE && super::bow::crossbow_ammo(player, hand).is_none()) {
                 return false;
             }
 

@@ -43,6 +43,21 @@ pub(super) fn arrow_slot(player: &PlayerState) -> Option<i32> {
     order.into_iter().find(|slot| player.inventory.slot(*slot).is_some_and(|stack| stack.item == arrow))
 }
 
+/// Чем заряжать арбалет в руке `hand`: сперва то, что в другой руке
+/// (стрела или ракета), потом первая стрела в инвентаре (вики, Crossbow:
+/// «Arrows in the off-hand, or the selected hotbar slot if the crossbow is
+/// in the off-hand, are prioritized first»; ракета — «must be present in
+/// the player's offhand»). Ячейка и ракета ли это.
+pub(super) fn crossbow_ammo(player: &PlayerState, hand: i32) -> Option<(i32, bool)> {
+    let other = if hand == 1 { player.inventory.selected_slot() } else { inventory::OFFHAND };
+
+    match player.inventory.slot(other).and_then(|stack| combat::item_name(stack.item)) {
+        Some("arrow") => Some((other, false)),
+        Some("firework_rocket") => Some((other, true)),
+        _ => arrow_slot(player).map(|slot| (slot, false)),
+    }
+}
+
 /// Кнопку отпустили: лук был натянут `ticks` тактов в руке `hand`.
 pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, ticks: u32) {
     let power = combat::bow_power(ticks);
@@ -307,21 +322,23 @@ pub(super) fn crossbow_load(player: &mut PlayerState, hand: i32) {
     }
 
     let creative = player.game_mode == GAME_MODE_CREATIVE;
-    let arrow_slot = arrow_slot(player);
+    let ammo = crossbow_ammo(player, hand);
 
-    if arrow_slot.is_none() && !creative {
+    if ammo.is_none() && !creative {
         return;
     }
 
     let mut data = crossbow.extras();
 
     // С «залпом» в арбалете три стрелы, но из инвентаря берётся одна
-    // (вики, Multishot: «consumes only one arrow»).
+    // (вики, Multishot: «consumes only one arrow»); ракета ложится со своими
+    // довесками (полёт, взрывы).
     data.charged = if data.level("multishot") > 0 { 3 } else { 1 };
+    data.charged_rocket = ammo.filter(|(_, rocket)| *rocket).and_then(|(ammo_slot, _)| player.inventory.slot(ammo_slot)).map(|stack| stack.extras().rocket());
     player.inventory.set(slot, Some(crossbow.with_extras(data)));
     player.net.slot_changed_later(slot);
 
-    if let Some(arrow_slot) = arrow_slot
+    if let Some((arrow_slot, _)) = ammo
         && !creative
         && let Some(stack) = player.inventory.slot(arrow_slot)
     {
@@ -351,6 +368,31 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
 
     let creative = player.game_mode == GAME_MODE_CREATIVE;
     let count = data.charged;
+
+    if let Some(rocket) = data.charged_rocket.take() {
+        fire_rockets(shared, player, &rocket, count);
+        data.charged = 0;
+
+        // Ракета изнашивает арбалет на 3, «залп» — на 9 (вики, Crossbow:
+        // «uses 3 durability per shot… 9 durability… with each shot»).
+        let unloaded = crossbow.with_extras(data);
+
+        if creative {
+            player.inventory.set(slot, Some(unloaded));
+        } else {
+            let dimension = player.dimension;
+            let mut roll = || vitals::world_random(shared, dimension);
+            let worn = combat::wear(&unloaded, 3 * i32::from(count), false, &mut roll);
+
+            match combat::add_damage(unloaded, worn) {
+                Some(next) => player.inventory.set(slot, Some(next)),
+                None => pvp::replace_worn(shared, player, slot, unloaded, worn),
+            }
+        }
+
+        return true;
+    }
+
     let shot = Shot {
         speed: combat::CROSSBOW_SPEED,
         crit: true,
@@ -406,6 +448,45 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
     }
 
     true
+}
+
+/// Выстрел ракетами из арбалета: на каждую — звук выстрела и ракета от глаз
+/// (−0,15) по взгляду (у «залпа» ±10°), 1,6 блока за такт с неточностью
+/// стрелы, летит прямо (вики, Crossbow, Firework Rocket) [проверить место
+/// появления и высоту звука].
+fn fire_rockets(shared: &Shared, player: &PlayerState, rocket: &crate::stackdata::Fireworks, count: u8) {
+    let Some(item) = blocks::item_named("firework_rocket") else {
+        return;
+    };
+    let mut data = crate::stackdata::Data::default();
+
+    data.set_rocket(rocket.clone());
+
+    let stack = Stack::new(item, 1).with_extras(data);
+    let offsets: &[f32] = if count >= 3 { &[0.0, combat::MULTISHOT_ANGLE, -combat::MULTISHOT_ANGLE] } else { &[0.0] };
+    let dimension = player.dimension;
+    let roll = || vitals::world_random(shared, dimension);
+    let eye = player.y + if player.sneaking { 1.27 } else { 1.62 } - 0.15;
+
+    for (index, offset) in offsets.iter().enumerate() {
+        let pitch = if index == 0 { 1.0 } else { 1.0 / (roll() * 0.5 + 1.8) + if index == 1 { 0.63 } else { 0.43 } };
+
+        shared
+            .world_in(dimension)
+            .lock()
+            .expect("мир захвачен другим потоком")
+            .note_sound_player_at((player.x, player.y, player.z), "minecraft:item.crossbow.shoot", 1.0, pitch);
+
+        let wobble = || f64::from(roll() - roll()) * 0.0172275;
+        let (dx, dy, dz) = crate::arrow::aim(player.yaw + offset, player.pitch, 1.0);
+        let speed = crate::firework::CROSSBOW_SPEED;
+        let velocity = ((dx + wobble()) * speed, (dy + wobble()) * speed, (dz + wobble()) * speed);
+        let lifetime = crate::firework::lifetime(rocket.flight, roll(), roll());
+        let entity_id = shared.next_entity_id();
+        let flying = crate::firework::Rocket::new(entity_id, dimension, stack, (player.x, eye, player.z), velocity, true, (player.entity_id, player.uuid, player.name.clone()), lifetime);
+
+        shared.thrown.lock().expect("снаряды захвачены другим потоком").rockets.push(flying);
+    }
 }
 
 /// Рассказывает клиенту о стрелах (и игроков, и скелетов): появление,

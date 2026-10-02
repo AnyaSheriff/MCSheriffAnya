@@ -80,6 +80,8 @@ pub enum Source {
     Wither,
     /// Брошенный трезубец.
     Trident,
+    /// Взрыв ракеты фейерверка (damage_type fireworks).
+    Fireworks,
 }
 
 impl Source {
@@ -108,6 +110,8 @@ impl Source {
             // Номер снят с оригинала (effect-regen: Damage Event type=48).
             Source::Wither => 48,
             Source::Trident => 45,
+            // Место в реестре damage_type (configuration.rs: 15).
+            Source::Fireworks => 15,
         }
     }
 
@@ -136,6 +140,7 @@ impl Source {
             Source::Magic => "death.attack.magic",
             Source::Wither => "death.attack.wither",
             Source::Trident => "death.attack.trident",
+            Source::Fireworks => "death.attack.fireworks",
         }
     }
 
@@ -217,6 +222,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::Magic => "was killed by magic",
         Source::Wither => "withered away",
         Source::Trident => "was impaled",
+        Source::Fireworks => "went off with a bang",
     };
 
     format!("{} {}", name, what)
@@ -237,6 +243,12 @@ pub fn item_title(name: &str) -> String {
 /// Сообщение о смерти от другого игрока: «X was slain by Y [using Z]»
 /// (вики, Death messages).
 pub fn death_text_by(source: Source, name: &str, killer: &str, item: Option<&str>) -> String {
+    // Ракета: ключ death.attack.fireworks и с пустившим — «went off with a
+    // bang»; пустивший называется только у ракеты с именем (`.item`) [проверить].
+    if source == Source::Fireworks {
+        return death_text(source, name);
+    }
+
     let what = match source {
         Source::Arrow => "was shot by",
         Source::Thorns => "was killed trying to hurt",

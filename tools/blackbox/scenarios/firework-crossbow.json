@@ -1,0 +1,114 @@
+{
+ "name": "firework-crossbow",
+ "about": "Арбалет заряжается ракетой из второй руки (одна звезда, полёт 1), выстрел во второго: ракета летит прямо (shot_at_angle), взрыв при попадании, урон fireworks, износ 3. Стрелок в 6 блоках: на краю 5 блоков взрыв задевал бы его случайно (неточность выстрела).",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "track_second": true,
+ "track_second_slots": true,
+ "track_mobs": true,
+ "exclusive": true,
+ "item_components": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "kill $(bot)",
+  "!wait 30",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "!stopfly",
+  "!wait 20",
+  "!hotbar2 0",
+  "!hotbar 0",
+  "give $(bot2) minecraft:crossbow 1",
+  "item replace entity $(bot2) weapon.offhand with minecraft:firework_rocket[fireworks={flight_duration:1,explosions:[{shape:\"small_ball\",colors:[I;16711680]}]}] 2",
+  "tp $(bot2) $(3.5,0,-2.5) 0 0",
+  "!wait 20",
+  "!hotbar2 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true,
+   "bot": 2
+  },
+  {
+   "after": 30,
+   "release": true,
+   "bot": 2
+  },
+  {
+   "after": 36,
+   "use": true,
+   "bot": 2
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "kill @e[type=firework_rocket,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "name": "номер пустившего ракету",
+   "kind": "spawn",
+   "pattern": "firework_rocket \\d+ ",
+   "replace": "firework_rocket N ",
+   "why": "в пакете появления ракеты — номер сущности пустившего, а номера у серверов свои (оригинал 2846, 2850, 2855)"
+  },
+  {
+   "type": "mask",
+   "name": "звук запуска по x/z",
+   "kind": "sound",
+   "pattern": "^sound [-0-9.]+,([-0-9.]+),[-0-9.]+ (minecraft:entity\\.firework_rocket\\.launch)",
+   "replace": "sound X,$1,Z $2",
+   "why": "выстрел из арбалета у оригинала случаен: неточность ±0,0172 по каждой оси (вики, Crossbow; как у стрел), поэтому точка взрыва, урон (оригинал: 14,142 и 14,137 здоровья в двух записях), угол ушиба (93,0 и 75,2) и отдача вбок (−0,012 и 0,056) меняются от прогона к прогону"
+  },
+  {
+   "type": "mask",
+   "name": "поворот ракеты при появлении",
+   "kind": "spawn",
+   "pattern": "(firework_rocket N [-0-9.,]+) yaw=-?\\d+ pitch=-?\\d+",
+   "replace": "$1 yaw=Y pitch=P",
+   "why": "выстрел из арбалета у оригинала случаен: неточность ±0,0172 по каждой оси (вики, Crossbow; как у стрел), поэтому точка взрыва, урон (оригинал: 14,142 и 14,137 здоровья в двух записях), угол ушиба (93,0 и 75,2) и отдача вбок (−0,012 и 0,056) меняются от прогона к прогону"
+  },
+  {
+   "type": "mask",
+   "name": "урон от взрыва",
+   "kind": "sv",
+   "pattern": "(Set Health health=|Metadata 9=)[0-9.]+",
+   "replace": "$1H",
+   "why": "выстрел из арбалета у оригинала случаен: неточность ±0,0172 по каждой оси (вики, Crossbow; как у стрел), поэтому точка взрыва, урон (оригинал: 14,142 и 14,137 здоровья в двух записях), угол ушиба (93,0 и 75,2) и отдача вбок (−0,012 и 0,056) меняются от прогона к прогону"
+  },
+  {
+   "type": "mask",
+   "name": "угол ушиба",
+   "kind": "sv",
+   "pattern": "Hurt Animation yaw=[-0-9.]+",
+   "replace": "Hurt Animation yaw=Y",
+   "why": "выстрел из арбалета у оригинала случаен: неточность ±0,0172 по каждой оси (вики, Crossbow; как у стрел), поэтому точка взрыва, урон (оригинал: 14,142 и 14,137 здоровья в двух записях), угол ушиба (93,0 и 75,2) и отдача вбок (−0,012 и 0,056) меняются от прогона к прогону"
+  },
+  {
+   "type": "mask",
+   "name": "отдача вбок",
+   "kind": "self",
+   "pattern": "скорость -?[0-9.]+,([-0-9.]+),(-?)0\\.2\\d+",
+   "replace": "скорость X,$1,$20.2Z",
+   "why": "выстрел из арбалета у оригинала случаен: неточность ±0,0172 по каждой оси (вики, Crossbow; как у стрел), поэтому точка взрыва, урон (оригинал: 14,142 и 14,137 здоровья в двух записях), угол ушиба (93,0 и 75,2) и отдача вбок (−0,012 и 0,056) меняются от прогона к прогону"
+  }
+ ]
+}

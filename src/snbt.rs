@@ -3,8 +3,8 @@
 //
 // Нужен для довесков предметов в `give` и `item replace`. Числа с суффиксом
 // (`1b`, `2s`, `3L`, `1.5f`, `2.5d`) читаются как числа, `true` и `false` — как
-// 1 и 0, слово без кавычек — как строка. Массивы вида `[I;1,2]` не
-// разбираются.
+// 1 и 0, слово без кавычек — как строка. Массивы вида `[I;1,2]` читаются
+// обычным списком (цвета фейерверков).
 
 /// Значение SNBT.
 #[derive(Clone, Debug, PartialEq)]
@@ -119,6 +119,13 @@ impl Parser {
     fn list(&mut self) -> Option<Value> {
         self.at += 1;
 
+        // Пометка вида массива: `[I;`, `[B;`, `[L;`.
+        self.skip();
+
+        if matches!(self.chars.get(self.at), Some('I' | 'B' | 'L')) && self.chars.get(self.at + 1) == Some(&';') {
+            self.at += 2;
+        }
+
         let mut items = Vec::new();
 
         if self.eat(']') {
@@ -202,6 +209,8 @@ mod tests {
         assert_eq!(value.get("minecraft:knockback"), Some(&Value::Num(2.0)));
         assert_eq!(value.get("list"), Some(&Value::List(vec![Value::Num(1.0), Value::Num(2.5), Value::Num(1.0)])));
         assert_eq!(value.get("name").and_then(Value::as_str), Some("a b"));
+        // Типизированный массив — тот же список.
+        assert_eq!(parse("[I; 16711680, 255]"), Some(Value::List(vec![Value::Num(16711680.0), Value::Num(255.0)])));
     }
 
     #[test]

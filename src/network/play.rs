@@ -412,6 +412,8 @@ const SOUND_NEUTRAL: i32 = 6;
 
 /// Раздел звуков «игроки» — удар игрока.
 const SOUND_PLAYERS: i32 = 7;
+/// Раздел «окружение» (ambient): запуск ракеты (вики, Firework Rocket).
+const SOUND_AMBIENT: i32 = 8;
 
 /// Entity Sound Effect: звук, привязанный к сущности.
 const ENTITY_SOUND: i32 = 0x74;
@@ -3897,6 +3899,7 @@ async fn send_pending_world_events(
             }
             WorldEvent::ArrowTracker => bow::send_arrow_ticks(stream, shared, player).await?,
             WorldEvent::ThrownTracker { early } => thrown::send_thrown_ticks(stream, shared, player, *early).await?,
+            WorldEvent::RocketBlast { entity_id } => thrown::send_rocket_blast(stream, player, *entity_id).await?,
             // Эффект от зелья или облака: пакет эффекта сразу, частицы и
             // атрибуты — на такт позже, частицы даже без перемен (чёрный ящик,
             // splash-potion-feet: Effect на +2, Metadata 10 и Attributes на +3;
@@ -4423,7 +4426,9 @@ async fn send_sound(stream: &mut Outgoing<'_>, sound: &WorldSound) -> io::Result
     match sound.exact {
         Some((x, y, z)) => {
             let category = match (sound.of_block, sound.of_player) {
-                (true, _) => SOUND_BLOCK,
+                // Оба признака — раздел «окружение» (запуск ракеты).
+                (true, true) => SOUND_AMBIENT,
+                (true, false) => SOUND_BLOCK,
                 (false, true) => SOUND_PLAYERS,
                 (false, false) => SOUND_NEUTRAL,
             };
@@ -7512,6 +7517,21 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
                 ..Reaction::accepted(sequence)
             });
         }
+    }
+
+    // Ракета фейерверка: щелчок по блоку пускает её из точки щелчка (вики,
+    // Firework Rocket) [проверить в приключении].
+    if thrown::launch_rocket(shared, player, (f64::from(clicked_x) + f64::from(cursor_x), f64::from(clicked_y) + f64::from(cursor_y), f64::from(clicked_z) + f64::from(cursor_z)), face) {
+        // Повтор блока щелчка и клетки за гранью (чёрный ящик, firework-blast).
+        let mut reaction = Reaction { confirm: vec![(clicked_x, clicked_y, clicked_z), offset_towards(clicked_x, clicked_y, clicked_z, face)], ..Reaction::accepted(sequence) };
+
+        if player.game_mode != GAME_MODE_CREATIVE
+            && let Some(slot) = player.inventory.spend_held()
+        {
+            reaction.slots.push(slot);
+        }
+
+        return Some(reaction);
     }
 
     // В приключении рычаги и двери трогать можно, а ставить блоки — нет.

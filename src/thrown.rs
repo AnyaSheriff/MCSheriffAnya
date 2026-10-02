@@ -297,6 +297,9 @@ pub struct Thrown {
     /// Облака, исчезнувшие в последнем такте: отстающее слежение ещё шлёт их
     /// последний радиус (lingering-potion-feet: 0,6 на +92, потом уход).
     pub faded: Vec<Cloud>,
+    /// Ракеты фейерверка (firework.rs) и их взрывы последнего такта.
+    pub rockets: Vec<crate::firework::Rocket>,
+    pub blasts: Vec<crate::firework::Blast>,
 }
 
 impl Thrown {
@@ -305,7 +308,12 @@ impl Thrown {
     }
 
     pub fn any_in(&self, dimension: Dimension) -> bool {
-        self.flying.iter().any(|f| f.dimension == dimension) || self.clouds.iter().any(|c| c.dimension == dimension) || self.impacts.iter().any(|i| i.dimension == dimension) || self.faded.iter().any(|c| c.dimension == dimension)
+        self.flying.iter().any(|f| f.dimension == dimension)
+            || self.clouds.iter().any(|c| c.dimension == dimension)
+            || self.impacts.iter().any(|i| i.dimension == dimension)
+            || self.faded.iter().any(|c| c.dimension == dimension)
+            || self.rockets.iter().any(|r| r.dimension == dimension)
+            || self.blasts.iter().any(|b| b.dimension == dimension)
     }
 }
 
@@ -351,7 +359,7 @@ pub fn instant_amount(kind: EffectKind, amplifier: i32, scale: f64) -> f32 {
 
 /// Первая точка отрезка `from → to` в твёрдом блоке: доля пути и блок (шаг по
 /// клеткам вдоль луча — точка входа на грани).
-fn first_block(world: &World, from: (f64, f64, f64), to: (f64, f64, f64)) -> Option<(f64, (i32, i32, i32))> {
+pub(crate) fn first_block(world: &World, from: (f64, f64, f64), to: (f64, f64, f64)) -> Option<(f64, (i32, i32, i32))> {
     let solid = |x: i32, y: i32, z: i32| crate::mob::solid(world.get_block(x, y, z));
     let start = [from.0, from.1, from.2];
     let step = [to.0 - from.0, to.1 - from.1, to.2 - from.2];
@@ -396,7 +404,7 @@ fn first_block(world: &World, from: (f64, f64, f64), to: (f64, f64, f64)) -> Opt
 }
 
 /// Отрезок `from → to` против ящика: доля пути до входа.
-fn sweep(from: (f64, f64, f64), to: (f64, f64, f64), (cx, low, cz): (f64, f64, f64), half: f64, height: f64) -> Option<f64> {
+pub(crate) fn sweep(from: (f64, f64, f64), to: (f64, f64, f64), (cx, low, cz): (f64, f64, f64), half: f64, height: f64) -> Option<f64> {
     let (min, max) = ([cx - half, low, cz - half], [cx + half, low + height, cz + half]);
     let (start, step) = ([from.0, from.1, from.2], [to.0 - from.0, to.1 - from.1, to.2 - from.2]);
     let (mut near, mut far) = (0.0f64, 1.0f64);
@@ -424,7 +432,7 @@ fn sweep(from: (f64, f64, f64), to: (f64, f64, f64), (cx, low, cz): (f64, f64, f
 }
 
 /// Пересекаются ли два ящика (центр низа, полуширина, высота).
-fn overlap(a: (f64, f64, f64), a_half: f64, a_height: f64, b: (f64, f64, f64), b_half: f64, b_height: f64) -> bool {
+pub(crate) fn overlap(a: (f64, f64, f64), a_half: f64, a_height: f64, b: (f64, f64, f64), b_half: f64, b_height: f64) -> bool {
     (a.0 - b.0).abs() < a_half + b_half && (a.2 - b.2).abs() < a_half + b_half && a.1 < b.1 + b_height && b.1 < a.1 + a_height
 }
 
@@ -492,6 +500,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     let mut thrown = shared.thrown.lock().expect("снаряды захвачены другим потоком");
 
     thrown.impacts.retain(|impact| impact.dimension != dimension);
+    thrown.blasts.retain(|blast| blast.dimension != dimension);
 
     // Дракон стреляет и дышит (mob/dragon.rs ставит заказ).
     let mut shots = Vec::new();
@@ -710,6 +719,64 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 
     thrown.flying.retain(|f| !gone.contains(&f.entity_id));
+
+    // Ракеты фейерверка: полёт и взрывы (firework.rs).
+    let mut strikes = Vec::new();
+
+    if thrown.rockets.iter().any(|r| r.dimension == dimension) {
+        let bystanders: Vec<crate::firework::Bystander> = members.iter().map(|m| (m.0, m.1, m.2, m.3)).collect();
+        let mut rockets = std::mem::take(&mut thrown.rockets);
+        let (mut blasts, mut wounds) = (Vec::new(), Vec::new());
+
+        crate::firework::step(world, &mut rockets, dimension, &bystanders, items.mobs(), &mut blasts, &mut wounds);
+        thrown.rockets = rockets;
+
+        // Событие 17 — раньше урона, уход ракеты — со слежением в конце хода.
+        for blast in &blasts {
+            world.note_rocket_blast(blast.rocket);
+        }
+
+        thrown.blasts.extend(blasts);
+
+        for (rocket, wound) in wounds {
+            match wound.target {
+                crate::firework::Struck::Mob(id) => {
+                    if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == id) {
+                        let away = (mob.x - wound.from.0, mob.z - wound.from.2);
+                        let length = away.0.hypot(away.1);
+                        let push = (length > 1.0e-6).then(|| crate::mob::Push { dir: (away.0 / length, away.1 / length), strength: crate::mob::BASE_KNOCKBACK, cause: rocket.owner });
+
+                        if rocket.owner != 0 {
+                            mob.credit_player();
+                        }
+
+                        mob.hurt(wound.damage, crate::firework::SOURCE, push);
+                    }
+                }
+                crate::firework::Struck::Player(id) => strikes.push(crate::combat::PlayerStrike {
+                    victim: id,
+                    attacker: rocket.owner,
+                    attacker_uuid: rocket.owner_uuid,
+                    attacker_name: rocket.owner_name.clone(),
+                    from: wound.from,
+                    yaw: rocket.rot.0,
+                    damage: wound.damage,
+                    source: crate::firework::SOURCE,
+                    extra_knockback: 0.0,
+                    weapon: None,
+                    disables_shield_ticks: 0,
+                    breach_scale: 1.0,
+                    fire_ticks: 0,
+                    thorns_slots: Vec::new(),
+                    ignores_shield: false,
+                }),
+            }
+        }
+    }
+
+    for strike in strikes {
+        world.note_player_strike(strike);
+    }
 
     // Облака: ожидание, таяние, наложение раз в 5 тактов [проверить период].
     let mut faded = Vec::new();

@@ -1551,7 +1551,7 @@ fn slide(view: &dyn View, at: &mut (f64, f64, f64), half: f64, height: f64, dx: 
 }
 
 /// Свободный ход по оси вверх/вниз: насколько можно сдвинуться, не входя в блоки.
-fn clip_y(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dy: f64) -> f64 {
+pub(crate) fn clip_y(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dy: f64) -> f64 {
     if dy == 0.0 {
         return 0.0;
     }
@@ -1601,7 +1601,7 @@ fn clip_y(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dy: f64
     }
 }
 
-fn clip_x(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dx: f64) -> f64 {
+pub(crate) fn clip_x(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dx: f64) -> f64 {
     if dx == 0.0 {
         return 0.0;
     }
@@ -1648,7 +1648,7 @@ fn clip_x(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dx: f64
     allowed
 }
 
-fn clip_z(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dz: f64) -> f64 {
+pub(crate) fn clip_z(view: &dyn View, min: (f64, f64, f64), half: f64, height: f64, dz: f64) -> f64 {
     if dz == 0.0 {
         return 0.0;
     }

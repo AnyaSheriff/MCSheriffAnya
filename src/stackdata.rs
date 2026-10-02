@@ -29,6 +29,37 @@ pub const COMPONENT_POTION_CONTENTS: i32 = 51;
 pub const COMPONENT_CHARGED_PROJECTILES: i32 = 49;
 /// Снаряд, который нельзя подобрать (minecraft-data, protocol.json: 22).
 pub const COMPONENT_INTANGIBLE_PROJECTILE: i32 = 22;
+/// Взрыв звезды фейерверка и ракета: полёт и взрывы (protocol.json: 68, 69).
+pub const COMPONENT_FIREWORK_EXPLOSION: i32 = 68;
+pub const COMPONENT_FIREWORKS: i32 = 69;
+
+/// Формы взрыва (вики, Data component format: firework_explosion), номер — место.
+pub const EXPLOSION_SHAPES: [&str; 5] = ["small_ball", "large_ball", "star", "creeper", "burst"];
+
+/// Один взрыв фейерверка (`firework_explosion`).
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
+pub struct Explosion {
+    /// Форма: номер в `EXPLOSION_SHAPES`.
+    pub shape: u8,
+    pub colors: Vec<i32>,
+    pub fade_colors: Vec<i32>,
+    pub trail: bool,
+    pub twinkle: bool,
+}
+
+/// Ракета (`fireworks`): длительность полёта и взрывы. У предмета ракеты по
+/// умолчанию полёт 1 и взрывов нет — такие довески не хранятся.
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+pub struct Fireworks {
+    pub flight: i8,
+    pub explosions: Vec<Explosion>,
+}
+
+impl Default for Fireworks {
+    fn default() -> Self {
+        Self { flight: 1, explosions: Vec::new() }
+    }
+}
 
 /// Номер записи в таблице довесков.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -76,9 +107,26 @@ pub struct Data {
     /// 0 — не заряжен; с «залпом» заряжается одна, а в компоненте — три
     /// [проверить чёрным ящиком, crossbow-multishot].
     pub charged: u8,
+    /// Заряжены ракеты, а не стрелы (их довески; полёт 1 без взрывов —
+    /// обычная ракета).
+    pub charged_rocket: Option<Fireworks>,
+    /// Ракета: полёт и взрывы (компонент `fireworks`), если не по умолчанию.
+    pub fireworks: Option<Fireworks>,
+    /// Звезда: её взрыв (компонент `firework_explosion`).
+    pub explosion: Option<Explosion>,
 }
 
 impl Data {
+    /// Довески ракеты (по умолчанию — полёт 1 без взрывов).
+    pub fn rocket(&self) -> Fireworks {
+        self.fireworks.clone().unwrap_or_default()
+    }
+
+    /// Ставит довески ракеты, не храня те, что по умолчанию.
+    pub fn set_rocket(&mut self, fireworks: Fireworks) {
+        self.fireworks = (fireworks != Fireworks::default()).then_some(fireworks);
+    }
+
     pub fn is_default(&self) -> bool {
         *self == Data::default()
     }
@@ -229,6 +277,35 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
     }
 
     if data.charged > 0
+        && let Some(rocket) = &data.charged_rocket
+        && let Some(item) = crate::blocks::item_named("firework_rocket")
+    {
+        // Ракеты: у каждой свои довески `fireworks` (если не по умолчанию),
+        // боковые «залпа» — ещё и `intangible_projectile` [проверить порядок].
+        out.extend_from_slice(&encode_varint(COMPONENT_CHARGED_PROJECTILES));
+        out.extend_from_slice(&encode_varint(i32::from(data.charged)));
+
+        let own = *rocket != Fireworks::default();
+
+        for index in 0..data.charged {
+            out.extend_from_slice(&encode_varint(item));
+            out.extend_from_slice(&encode_varint(1));
+            out.extend_from_slice(&encode_varint(i32::from(own) + i32::from(index > 0)));
+            out.extend_from_slice(&encode_varint(0));
+
+            if own {
+                out.extend_from_slice(&encode_varint(COMPONENT_FIREWORKS));
+                encode_fireworks(&mut out, rocket);
+            }
+
+            if index > 0 {
+                out.extend_from_slice(&encode_varint(COMPONENT_INTANGIBLE_PROJECTILE));
+                out.extend_from_slice(&[0x0a, 0x00]);
+            }
+        }
+
+        count += 1;
+    } else if data.charged > 0
         && let Some(arrow) = crate::blocks::item_named("arrow")
     {
         // Список снарядов: предмет, число, без довесков (ItemStackTemplate).
@@ -278,7 +355,76 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         count += 1;
     }
 
+    if let Some(explosion) = &data.explosion {
+        out.extend_from_slice(&encode_varint(COMPONENT_FIREWORK_EXPLOSION));
+        encode_explosion(&mut out, explosion);
+        count += 1;
+    }
+
+    if let Some(fireworks) = &data.fireworks {
+        out.extend_from_slice(&encode_varint(COMPONENT_FIREWORKS));
+        encode_fireworks(&mut out, fireworks);
+        count += 1;
+    }
+
     (count, out)
+}
+
+/// Взрыв для клиента: форма, цвета, цвета угасания, след, мерцание
+/// (protocol.json, ItemFireworkExplosion).
+fn encode_explosion(out: &mut Vec<u8>, explosion: &Explosion) {
+    out.extend_from_slice(&encode_varint(i32::from(explosion.shape)));
+
+    for colors in [&explosion.colors, &explosion.fade_colors] {
+        out.extend_from_slice(&encode_varint(colors.len() as i32));
+
+        for color in colors {
+            out.extend_from_slice(&color.to_be_bytes());
+        }
+    }
+
+    out.push(u8::from(explosion.trail));
+    out.push(u8::from(explosion.twinkle));
+}
+
+/// Ракета для клиента: полёт числом и список взрывов.
+fn encode_fireworks(out: &mut Vec<u8>, fireworks: &Fireworks) {
+    out.extend_from_slice(&encode_varint(i32::from(fireworks.flight)));
+    out.extend_from_slice(&encode_varint(fireworks.explosions.len() as i32));
+
+    for explosion in &fireworks.explosions {
+        encode_explosion(out, explosion);
+    }
+}
+
+/// Взрыв от клиента; None — испорчен.
+fn read_explosion(reader: &mut Reader) -> Option<Explosion> {
+    let shape = u8::try_from(reader.varint()?).ok().filter(|shape| usize::from(*shape) < EXPLOSION_SHAPES.len())?;
+    let mut lists = [Vec::new(), Vec::new()];
+
+    for list in &mut lists {
+        for _ in 0..reader.varint()?.clamp(0, 256) {
+            list.push(i32::from_be_bytes(reader.take(4)?.try_into().ok()?));
+        }
+    }
+
+    let [colors, fade_colors] = lists;
+    let trail = reader.take(1)?[0] != 0;
+    let twinkle = reader.take(1)?[0] != 0;
+
+    Some(Explosion { shape, colors, fade_colors, trail, twinkle })
+}
+
+/// Ракета от клиента; None — испорчена.
+fn read_fireworks(reader: &mut Reader) -> Option<Fireworks> {
+    let flight = reader.varint()?.clamp(-128, 127) as i8;
+    let mut explosions = Vec::new();
+
+    for _ in 0..reader.varint()?.clamp(0, 256) {
+        explosions.push(read_explosion(reader)?);
+    }
+
+    Some(Fireworks { flight, explosions })
 }
 
 /// Небольшой читатель байтов для довесков.
@@ -370,22 +516,53 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
             }
         }
         COMPONENT_CHARGED_PROJECTILES => {
-            // Только обычные стрелы без довесков; иное — не заряжен.
+            // Обычные стрелы без довесков или ракеты (с `fireworks`); иное —
+            // не заряжен.
             let Some(count) = reader.varint() else { return };
             let arrow = crate::blocks::item_named("arrow");
+            let rocket_item = crate::blocks::item_named("firework_rocket");
             let mut loaded = 0u8;
+            let mut rocket = None;
 
             for _ in 0..count.clamp(0, 3) {
                 let (Some(item), Some(_), Some(added), Some(removed)) = (reader.varint(), reader.varint(), reader.varint(), reader.varint()) else { return };
 
-                if Some(item) != arrow || added != 0 || removed != 0 {
+                if removed != 0 || !(Some(item) == arrow || Some(item) == rocket_item) {
                     return;
+                }
+
+                let mut own = Fireworks::default();
+
+                for _ in 0..added.clamp(0, 4) {
+                    match reader.varint() {
+                        Some(COMPONENT_FIREWORKS) if Some(item) == rocket_item => match read_fireworks(&mut reader) {
+                            Some(read) => own = read,
+                            None => return,
+                        },
+                        Some(COMPONENT_INTANGIBLE_PROJECTILE) => {
+                            if reader.take(2).is_none() {
+                                return;
+                            }
+                        }
+                        _ => return,
+                    }
+                }
+
+                if Some(item) == rocket_item {
+                    rocket = Some(own);
                 }
 
                 loaded += 1;
             }
 
             data.charged = loaded;
+            data.charged_rocket = rocket.filter(|_| loaded > 0);
+        }
+        COMPONENT_FIREWORK_EXPLOSION => data.explosion = read_explosion(&mut reader),
+        COMPONENT_FIREWORKS => {
+            if let Some(fireworks) = read_fireworks(&mut reader) {
+                data.set_rocket(fireworks);
+            }
         }
         _ => {}
     }
@@ -400,7 +577,15 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
     let mut out = Vec::new();
 
     out.extend_from_slice(&data.damage.to_be_bytes());
-    out.push(u8::from(data.unbreakable) | (u8::from(data.attributes.is_some()) << 1) | (u8::from(data.potion.is_some()) << 2) | (u8::from(data.charged > 0) << 3));
+    out.push(
+        u8::from(data.unbreakable)
+            | (u8::from(data.attributes.is_some()) << 1)
+            | (u8::from(data.potion.is_some()) << 2)
+            | (u8::from(data.charged > 0) << 3)
+            | (u8::from(data.fireworks.is_some()) << 4)
+            | (u8::from(data.explosion.is_some()) << 5)
+            | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6),
+    );
     out.push(data.enchants.len().min(255) as u8);
 
     for (number, level) in data.enchants.iter().take(255) {
@@ -429,7 +614,65 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
         out.push(data.charged);
     }
 
+    for fireworks in [&data.fireworks, &data.charged_rocket.clone().filter(|_| data.charged > 0)].into_iter().flatten() {
+        fireworks_to_bytes(&mut out, fireworks);
+    }
+
+    if let Some(explosion) = &data.explosion {
+        explosion_to_bytes(&mut out, explosion);
+    }
+
     out
+}
+
+fn explosion_to_bytes(out: &mut Vec<u8>, explosion: &Explosion) {
+    out.push(explosion.shape);
+
+    for colors in [&explosion.colors, &explosion.fade_colors] {
+        out.push(colors.len().min(255) as u8);
+
+        for color in colors.iter().take(255) {
+            out.extend_from_slice(&color.to_be_bytes());
+        }
+    }
+
+    out.push(u8::from(explosion.trail) | (u8::from(explosion.twinkle) << 1));
+}
+
+fn fireworks_to_bytes(out: &mut Vec<u8>, fireworks: &Fireworks) {
+    out.push(fireworks.flight as u8);
+    out.push(fireworks.explosions.len().min(255) as u8);
+
+    for explosion in fireworks.explosions.iter().take(255) {
+        explosion_to_bytes(out, explosion);
+    }
+}
+
+fn explosion_from_bytes(reader: &mut Reader) -> Option<Explosion> {
+    let shape = reader.take(1)?[0];
+    let mut lists = [Vec::new(), Vec::new()];
+
+    for list in &mut lists {
+        for _ in 0..reader.take(1)?[0] {
+            list.push(i32::from_be_bytes(reader.take(4)?.try_into().ok()?));
+        }
+    }
+
+    let [colors, fade_colors] = lists;
+    let flags = reader.take(1)?[0];
+
+    Some(Explosion { shape, colors, fade_colors, trail: flags & 1 != 0, twinkle: flags & 2 != 0 })
+}
+
+fn fireworks_from_bytes(reader: &mut Reader) -> Option<Fireworks> {
+    let flight = reader.take(1)?[0] as i8;
+    let mut explosions = Vec::new();
+
+    for _ in 0..reader.take(1)?[0] {
+        explosions.push(explosion_from_bytes(reader)?);
+    }
+
+    Some(Fireworks { flight, explosions })
 }
 
 /// Довески из файла; None — запись испорчена.
@@ -472,6 +715,18 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
 
     if flags & 8 != 0 {
         data.charged = reader.take(1)?[0];
+    }
+
+    if flags & 16 != 0 {
+        data.fireworks = Some(fireworks_from_bytes(&mut reader)?);
+    }
+
+    if flags & 64 != 0 {
+        data.charged_rocket = Some(fireworks_from_bytes(&mut reader)?);
+    }
+
+    if flags & 32 != 0 {
+        data.explosion = Some(explosion_from_bytes(&mut reader)?);
     }
 
     Some(data)
@@ -533,12 +788,47 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
 
                 data.potion = Some(crate::survival::potion_number(name).ok_or_else(|| format!("нет зелья {name}"))?);
             }
+            // Ракета: `fireworks={flight_duration:2,explosions:[{shape:"star",
+            // colors:[I;255]}]}`, звезда: `firework_explosion={…}` (вики, Data
+            // component format: fireworks, firework_explosion).
+            "fireworks" => {
+                let flight = value.get("flight_duration").map_or(Some(1.0), Value::as_f64).ok_or("flight_duration — число")?;
+                let mut explosions = Vec::new();
+
+                if let Some(list) = value.get("explosions") {
+                    let Value::List(list) = list else { return Err("explosions — список".to_string()) };
+
+                    for entry in list {
+                        explosions.push(parse_explosion(entry)?);
+                    }
+                }
+
+                data.set_rocket(Fireworks { flight: flight.clamp(-128.0, 127.0) as i8, explosions });
+            }
+            "firework_explosion" => data.explosion = Some(parse_explosion(&value)?),
             // Прочие довески пока не ведутся.
             _ => {}
         }
     }
 
     Ok((name, data))
+}
+
+/// Взрыв из записи SNBT: форма обязательна, прочее — по умолчанию.
+fn parse_explosion(value: &Value) -> Result<Explosion, String> {
+    let shape = value.get("shape").and_then(Value::as_str).ok_or("у взрыва нет shape")?;
+    let shape = shape.strip_prefix("minecraft:").unwrap_or(shape);
+    let shape = EXPLOSION_SHAPES.iter().position(|known| *known == shape).ok_or_else(|| format!("нет формы {shape}"))? as u8;
+    let colors = |key: &str| -> Result<Vec<i32>, String> {
+        match value.get(key) {
+            None => Ok(Vec::new()),
+            Some(Value::List(list)) => list.iter().map(|color| color.as_f64().map(|c| c as i64 as i32).ok_or_else(|| format!("{key} — числа"))).collect(),
+            Some(_) => Err(format!("{key} — список")),
+        }
+    };
+    let flag = |key: &str| value.get(key).and_then(Value::as_f64).is_some_and(|v| v != 0.0);
+
+    Ok(Explosion { shape, colors: colors("colors")?, fade_colors: colors("fade_colors")?, trail: flag("has_trail"), twinkle: flag("has_twinkle") })
 }
 
 /// Номер группы мест по имени (`mainhand`, `head`…).
@@ -624,6 +914,47 @@ mod tests {
         read_component(COMPONENT_POTION_CONTENTS, &[1, 25, 0, 0, 0], &mut back);
         assert_eq!(back, data);
         assert_eq!(from_bytes(&to_bytes(&data)), Some(data));
+    }
+
+    #[test]
+    fn fireworks_parse_encode_and_survive_the_file() {
+        let (name, data) = parse_item_spec(
+            "minecraft:firework_rocket[fireworks={flight_duration:2,explosions:[{shape:\"large_ball\",colors:[I;16711680],fade_colors:[I;255],has_twinkle:true},{shape:\"burst\",has_trail:1b}]}]",
+        )
+        .unwrap();
+        let rocket = data.rocket();
+
+        assert_eq!((name.as_str(), rocket.flight, rocket.explosions.len()), ("firework_rocket", 2, 2));
+        assert_eq!(rocket.explosions[0], Explosion { shape: 1, colors: vec![16711680], fade_colors: vec![255], trail: false, twinkle: true });
+        assert!(rocket.explosions[1].trail && rocket.explosions[1].shape == 4);
+        // Ракета по умолчанию (полёт 1, без взрывов) довесков не несёт.
+        assert!(parse_item_spec("firework_rocket[fireworks={flight_duration:1}]").unwrap().1.is_default());
+        assert!(parse_item_spec("firework_rocket[fireworks={explosions:[{shape:\"nope\"}]}]").is_err());
+
+        // Компонент 69: полёт 2, два взрыва; обратно читается тем же.
+        let (count, bytes) = encode_components(&data);
+
+        assert_eq!((count, &bytes[..3]), (1, &[69u8, 2, 2][..]));
+
+        let mut back = Data::default();
+
+        read_component(COMPONENT_FIREWORKS, &bytes[1..], &mut back);
+        assert_eq!(back, data);
+        assert_eq!(from_bytes(&to_bytes(&data)), Some(data.clone()));
+
+        // Звезда и заряженный ракетами арбалет переживают файл и клиента.
+        let star = parse_item_spec("firework_star[firework_explosion={shape:\"creeper\",colors:[I;1,2]}]").unwrap().1;
+
+        assert_eq!(star.explosion.as_ref().map(|e| (e.shape, e.colors.clone())), Some((3, vec![1, 2])));
+        assert_eq!(from_bytes(&to_bytes(&star)), Some(star));
+
+        let loaded = Data { charged: 3, charged_rocket: Some(rocket), ..Data::default() };
+        let (_, bytes) = encode_components(&loaded);
+        let mut back = Data::default();
+
+        read_component(COMPONENT_CHARGED_PROJECTILES, &bytes[1..], &mut back);
+        assert_eq!(back, loaded);
+        assert_eq!(from_bytes(&to_bytes(&loaded)), Some(loaded));
     }
 
     #[test]

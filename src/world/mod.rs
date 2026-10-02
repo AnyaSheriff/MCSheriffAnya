@@ -188,6 +188,9 @@ pub enum WorldEvent {
     /// Метка «здесь слежение рассылает стрелы»: после хода стрел (arrow.rs).
     ArrowTracker,
 
+    /// Ракета фейерверка взорвалась: событие сущности 17 тем, кто её видит
+    /// (firework.rs).
+    RocketBlast { entity_id: i32 },
     /// Метка «здесь слежение рассылает брошенные зелья и облака» (thrown.rs):
     /// `early` — в начале их хода (облака, которые слежение видит на такт
     /// позже), иначе — в конце.
@@ -1802,6 +1805,10 @@ impl World {
     }
 
     /// Точка такта, где слежение рассылает брошенные зелья и облака.
+    pub fn note_rocket_blast(&mut self, entity_id: i32) {
+        self.events.push(WorldEvent::RocketBlast { entity_id });
+    }
+
     pub fn note_thrown_tracker(&mut self, early: bool) {
         self.events.push(WorldEvent::ThrownTracker { early });
     }
@@ -2027,6 +2034,22 @@ impl World {
             exact: Some(at),
             of_block: false,
             of_player: false,
+            except: None,
+        }));
+    }
+
+    /// Звук окружения (раздел ambient) в точке: запуск ракеты.
+    pub fn note_sound_ambient_at(&mut self, at: (f64, f64, f64), name: &'static str, volume: f32, pitch: f32) {
+        self.events.push(WorldEvent::Sound(WorldSound {
+            x: at.0.floor() as i32,
+            y: at.1.floor() as i32,
+            z: at.2.floor() as i32,
+            name,
+            volume,
+            pitch,
+            exact: Some(at),
+            of_block: true,
+            of_player: true,
             except: None,
         }));
     }
