@@ -311,6 +311,9 @@ async fn run(shared: Arc<Shared>) {
             // Стрелы: полёт, попадание, застревание (arrow.rs).
             crate::arrow::step(&shared, dimension, &mut world);
 
+            // Брошенные зелья, огненные шары, облака (thrown.rs).
+            crate::thrown::step(&shared, dimension, &mut world);
+
             // Плиты, растяжки и руда слушают не только сигнал, но и мир: на
             // них встают игроки и падают предметы. Список — заново: только
             // что выброшенное выбрасывателями тоже в счёт.
@@ -777,10 +780,9 @@ fn watchers(shared: &Shared, dimension: Dimension) -> Vec<crate::mob::ai::Watche
     /// Режим наблюдателя.
     const SPECTATOR: i32 = 3;
 
-    shared
-        .players
-        .lock()
-        .expect("список игроков захвачен другим потоком")
+    let players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+    players
         .members()
         .iter()
         .filter(|member| member.dimension == dimension)
@@ -793,6 +795,9 @@ fn watchers(shared: &Shared, dimension: Dimension) -> Vec<crate::mob::ai::Watche
             eye: if member.sneaking { 1.27 } else { 1.62 },
             holding: [member.held.and_then(|stack| blocks::item_name(stack.item)), None],
             spectator: member.game_mode == SPECTATOR,
+            look: (member.position.yaw, member.position.pitch),
+            // Тыква на голове (вики, Enderman: «carved pumpkin»).
+            pumpkin: players.gear(&member.uuid).worn[1].and_then(|stack| blocks::item_name(stack.item)) == Some("carved_pumpkin"),
         })
         .collect()
 }
@@ -819,10 +824,12 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
     let time = world.time_of_day();
     let nether = world.is_nether();
+    // В Энде ни неба, ни солнца: нежить не горит, свет неба нулевой.
+    let skyless = nether || world.is_end();
     let env = crate::mob::Env {
         difficulty,
-        sky: if nether { 0 } else { redstone::ambient_sky(time) },
-        sun_up: !nether && !(12_540..23_460).contains(&time),
+        sky: if skyless { 0 } else { redstone::ambient_sky(time) },
+        sun_up: !skyless && !(12_540..23_460).contains(&time),
     };
 
     // Свет для мобов, которым он нужен (паук, появление): считается здесь,
@@ -844,9 +851,13 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     }
 
     let spawning = dimension == Dimension::Overworld && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed);
+    // Враждебные в темноте — в Обычном мире и в Энде (там одни эндермены:
+    // вики, Enderman, «Spawning»).
+    let hostile_spawning = matches!(dimension, Dimension::Overworld | Dimension::End) && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed);
+    let kinds = if dimension == Dimension::End { &crate::mob::spawn::END_HOSTILE[..] } else { &crate::mob::spawn::HOSTILE[..] };
     let mut natural: Vec<crate::mob::Mob> = Vec::new();
 
-    if spawning && difficulty > crate::survival::PEACEFUL && ticks.is_multiple_of(8) && !watchers.is_empty() {
+    if hostile_spawning && difficulty > crate::survival::PEACEFUL && ticks.is_multiple_of(8) && !watchers.is_empty() {
         let players: Vec<(f64, f64, f64)> = watchers.iter().filter(|player| !player.spectator).map(|player| (player.x, player.y, player.z)).collect();
         let crowd = {
             let items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
@@ -865,7 +876,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
                 y + 1
             };
-            natural = crate::mob::spawn::hostile_attempt(&MobView(world), &players, &surface, rng, &mut || shared.next_entity_id());
+            natural = crate::mob::spawn::hostile_attempt(&MobView(world), &players, &surface, kinds, rng, &mut || shared.next_entity_id());
 
             // Свет каждой найденной точки: небесный с поправкой на час и
             // блочный; в темноте (блочный 0, небесный ≤ случайного 0…7)
@@ -891,6 +902,19 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     for mob in natural {
         items.add_mob(mob);
+    }
+
+    // Шалкеры энд-городов: при сложении чанка, на местах стражей
+    // (end_city::sentries) — к соседней твёрдой грани.
+    if dimension == Dimension::End {
+        for (chunk_x, chunk_z) in &fresh {
+            for (x, y, z) in world.city_sentries(*chunk_x, *chunk_z) {
+                let mut shulker = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Shulker, (f64::from(x) + 0.5, f64::from(y), f64::from(z) + 0.5));
+
+                shulker.h.face = crate::mob::hostile::attach_face(&MobView(world), (x, y, z), rng).unwrap_or(0);
+                items.add_mob(shulker);
+            }
+        }
     }
 
     if spawning {
@@ -944,6 +968,30 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
         // Замок стрел — после предметов (shared.rs).
         shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
+    }
+
+    for (shooter, target, at) in outcome.bullet_hits {
+        let levitation = crate::survival::Effect {
+            kind: crate::survival::EffectKind::Levitation,
+            amplifier: 0,
+            ticks_left: crate::mob::hostile::LEVITATION_TICKS,
+            ambient: false,
+            visible: true,
+        };
+
+        world.note_mob_hurt(target, crate::mob::hostile::BULLET_DAMAGE, crate::survival::Source::MobAttack, shooter, crate::mob::hostile::killer_key(crate::mob::Kind::Shulker), None, at);
+        world.note_mob_effect(target, levitation);
+    }
+
+    // Блоки эндерменов: взятый пропадает, поставленный встаёт (вики, Enderman).
+    for (x, y, z) in outcome.grabs {
+        if let Some(air) = blocks::state_by_name("air") {
+            world.set_block(x, y, z, air);
+        }
+    }
+
+    for ((x, y, z), state) in outcome.puts {
+        world.set_block(x, y, z, state);
     }
 
     for eat in outcome.eaten {

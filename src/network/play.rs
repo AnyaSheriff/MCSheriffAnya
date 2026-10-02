@@ -62,6 +62,7 @@ mod vitals;
 mod mobs;
 mod pvp;
 mod bow;
+mod thrown;
 
 /// Сторона чанка в блоках. По ней считается, в каком чанке стоит игрок.
 const CHUNK_SIZE: i32 = 16;
@@ -175,6 +176,10 @@ const EXPLOSION: i32 = 0x24;
 const PARTICLE_EXPLOSION_EMITTER: i32 = 22;
 const PARTICLE_EXPLOSION: i32 = 23;
 const PARTICLE_POOF: i32 = 59;
+/// Вихрь взрыва ветра (minecraft-data 26.1, particles.json).
+const PARTICLE_GUST_EMITTER_LARGE: i32 = 26;
+/// Звук взрыва «порыва ветра» (вики, Wind Burst).
+const WIND_BURST_SOUND: &str = "minecraft:entity.wind_charge.wind_burst";
 const PARTICLE_SMOKE: i32 = 62;
 const PARTICLE_VIBRATION: i32 = 48;
 
@@ -402,6 +407,9 @@ const SOUND_NEUTRAL: i32 = 6;
 
 /// Раздел звуков «игроки» — удар игрока.
 const SOUND_PLAYERS: i32 = 7;
+
+/// Entity Sound Effect: звук, привязанный к сущности.
+const ENTITY_SOUND: i32 = 0x74;
 
 /// Clientbound Block Action — то, что клиент проигрывает у себя сам:
 /// ход поршня, открытие сундука, звук нотного блока.
@@ -2986,14 +2994,26 @@ async fn send_other_moves(
                 }
             }
 
-            // Использует предмет (щит, лук): флаги живой сущности.
+            // Использует предмет (щит, лук), вращается «тягуном»: флаги
+            // живой сущности и поза вращения одним пакетом (чёрный ящик,
+            // trident-riptide: «6=0 8=0» на +20).
             if only.living != shown.living {
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(entity_id));
-                data.push(LIVING_FLAGS_PROPERTY_ID);
-                data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
-                data.push(only.living);
+
+                if (only.living ^ shown.living) & crate::players::SPIN_POSE_BIT != 0 {
+                    data.push(POSE_PROPERTY);
+                    data.extend_from_slice(&encode_varint(PROPERTY_POSE));
+                    data.extend_from_slice(&encode_varint(if only.living & crate::players::SPIN_POSE_BIT != 0 { vitals::POSE_SPIN_ATTACK } else if now.sneaking { POSE_CROUCHING } else { POSE_STANDING }));
+                }
+
+                if (only.living ^ shown.living) & !crate::players::SPIN_POSE_BIT != 0 {
+                    data.push(LIVING_FLAGS_PROPERTY_ID);
+                    data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
+                    data.push(only.living & !crate::players::SPIN_POSE_BIT);
+                }
+
                 data.push(PROPERTIES_END);
                 write_body(stream, data).await?;
             }
@@ -3799,6 +3819,19 @@ async fn send_pending_world_events(
             }
             WorldEvent::Sound(sound) if sound.except == Some(player.entity_id) => {}
             WorldEvent::Sound(sound) => send_sound(stream, sound).await?,
+            WorldEvent::EntitySound { entity_id, name, volume, pitch } => {
+                let mut body = encode_varint(ENTITY_SOUND);
+
+                body.extend_from_slice(&encode_varint(0));
+                body.extend_from_slice(&encode_string(name));
+                body.push(0);
+                body.extend_from_slice(&encode_varint(SOUND_PLAYERS));
+                body.extend_from_slice(&encode_varint(*entity_id));
+                push_f32(&mut body, *volume);
+                push_f32(&mut body, *pitch);
+                body.extend_from_slice(&0i64.to_be_bytes());
+                write_body(stream, body).await?;
+            }
             WorldEvent::Level { x, y, z, effect, data } => {
                 let mut body = encode_varint(WORLD_EVENT);
 
@@ -3858,6 +3891,27 @@ async fn send_pending_world_events(
                 mobs::send_mob_ticks(stream, shared, player).await?;
             }
             WorldEvent::ArrowTracker => bow::send_arrow_ticks(stream, shared, player).await?,
+            WorldEvent::ThrownTracker { early } => thrown::send_thrown_ticks(stream, shared, player, *early).await?,
+            // Эффект от зелья или облака: пакет эффекта сразу, частицы и
+            // атрибуты — на такт позже, частицы даже без перемен (чёрный ящик,
+            // splash-potion-feet: Effect на +2, Metadata 10 и Attributes на +3;
+            // lingering-potion-feet: повторное наложение тоже шлёт Metadata 10).
+            WorldEvent::PotionEffect { entity_id, effect } if *entity_id == player.entity_id => {
+                vitals::give_effect(stream, player, *effect).await?;
+                player.net.hold_meta = true;
+                player.net.renew_effect_particles();
+
+                if let Some((attribute, ..)) = effect.kind.modifier() {
+                    player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                }
+            }
+            WorldEvent::PotionEffect { .. } => {}
+            // Лечение: здоровье в свойствах — на такт позже (splash-potion-heal).
+            WorldEvent::PotionHeal { entity_id, amount } if *entity_id == player.entity_id => {
+                player.vit.heal(*amount);
+                player.net.hold_meta = true;
+            }
+            WorldEvent::PotionHeal { .. } => {}
             WorldEvent::Hurt { entity_id, amount, source, killer } if *entity_id == player.entity_id => {
                 let kind = if killer.is_empty() { crate::survival::Source::Explosion } else { crate::survival::Source::PlayerExplosion };
 
@@ -3874,6 +3928,8 @@ async fn send_pending_world_events(
                 vitals::mob_hit(stream, shared, player, *amount, *source, *attacker, killer, *push, *at).await?;
             }
             WorldEvent::MobHurt { .. } => {}
+            WorldEvent::MobEffect { entity_id, effect } if *entity_id == player.entity_id => vitals::give_effect(stream, player, *effect).await?,
+            WorldEvent::MobEffect { .. } => {}
             WorldEvent::PlayerStrike(strike) => pvp::take_strike(stream, shared, player, strike).await?,
             WorldEvent::Particle { kind, block, at, offset, speed, count } => {
                 let near = (at.0 - player.x).powi(2) + (at.1 - player.y).powi(2) + (at.2 - player.z).powi(2) <= 32.0 * 32.0;
@@ -3927,7 +3983,9 @@ async fn send_pending_world_events(
 
                     send_explosion(stream, blast, own).await?;
 
-                    if let Some(push) = own {
+                    // Взрыв ветра не ранит — и скорости следом не шлёт (чёрный
+                    // ящик, pvp-mace-wind-burst: только толчок в пакете).
+                    if let Some(push) = own.filter(|_| !blast.wind) {
                         vitals::blasted(player, push);
                     }
                 }
@@ -4420,17 +4478,25 @@ async fn send_explosion(stream: &mut Outgoing<'_>, blast: &world::Blast, own: Op
         None => body.push(0),
     }
 
-    let flash = if blast.power >= 2.0 { PARTICLE_EXPLOSION_EMITTER } else { PARTICLE_EXPLOSION };
+    // Взрыв ветра: вихрь gust_emitter_large и звук wind_burst, дыма нет
+    // (чёрный ящик, pvp-mace-wind-burst).
+    let flash = if blast.wind {
+        PARTICLE_GUST_EMITTER_LARGE
+    } else if blast.power >= 2.0 {
+        PARTICLE_EXPLOSION_EMITTER
+    } else {
+        PARTICLE_EXPLOSION
+    };
     body.extend_from_slice(&encode_varint(flash));
 
     body.extend_from_slice(&encode_varint(0)); // звук назван словом, а не номером
-    body.extend_from_slice(&encode_string(crate::tnt::EXPLODE_SOUND));
+    body.extend_from_slice(&encode_string(if blast.wind { WIND_BURST_SOUND } else { crate::tnt::EXPLODE_SOUND }));
     body.push(0); // своей дальности слышимости у него нет
 
-    let smoke = [(PARTICLE_POOF, 0.5f32, 1.0f32, 1), (PARTICLE_SMOKE, 1.0, 1.0, 1)];
+    let smoke: &[(i32, f32, f32, i32)] = if blast.wind { &[] } else { &[(PARTICLE_POOF, 0.5, 1.0, 1), (PARTICLE_SMOKE, 1.0, 1.0, 1)] };
     body.extend_from_slice(&encode_varint(smoke.len() as i32));
 
-    for (particle, scaling, speed, weight) in smoke {
+    for &(particle, scaling, speed, weight) in smoke {
         body.extend_from_slice(&encode_varint(particle));
         push_f32(&mut body, scaling);
         push_f32(&mut body, speed);
@@ -5132,6 +5198,7 @@ async fn read_and_log_play_packets(
     let mut starts = shared.tick_starts.subscribe();
     let mut pending: Vec<Reaction> = Vec::new();
     let mut inbound = Inbound::start(stream.stream(), shared)?;
+    let wake = shared.players.lock().expect("список игроков захвачен другим потоком").waker(&player.uuid);
 
     loop {
         // Всё, что прошлый круг положил в очередь, уходит одной записью,
@@ -5141,6 +5208,9 @@ async fn read_and_log_play_packets(
         let ready = tokio::select! {
             ready = timeout(KEEP_ALIVE_INTERVAL, inbound.packets.recv()) => Some(ready),
             _ = ticks.changed() => None,
+            // Поручение (перенос командой) — обработать сразу, как у оригинала,
+            // где пакет переноса уходит в миг команды.
+            _ = wake.notified() => Some(timeout(Duration::ZERO, std::future::pending::<Option<io::Result<(PacketInfo, u64)>>>()).await),
         };
 
         // Связь пропала без закрытия соединения (Wi-Fi, NAT): TCP заметит это
@@ -5227,7 +5297,27 @@ async fn read_and_log_play_packets(
             orders.insert(0, Order::Respawn);
         }
 
-        for order in orders {
+        // Перенос с поворотом (`tp <ник> x y z yaw pitch`) оригинал шлёт одним
+        // пакетом сверки; у нас команда кладёт перенос и поворот двумя поручениями —
+        // сливаем их, иначе клиент отвечает дважды (чёрный ящик, pvp-mace: у робота
+        // на перенос с поворотом приходило два пакета места вместо одного).
+        let mut merged: Vec<(Order, Option<(f32, f32)>)> = Vec::with_capacity(orders.len());
+        let mut incoming = orders.into_iter().peekable();
+
+        while let Some(order) = incoming.next() {
+            let look = match (&order, incoming.peek()) {
+                (Order::Teleport { .. }, Some(&Order::Look { yaw, pitch })) => Some((yaw, pitch)),
+                _ => None,
+            };
+
+            if look.is_some() {
+                incoming.next();
+            }
+
+            merged.push((order, look));
+        }
+
+        for (order, with_look) in merged {
             // Возрождение — тот же переход, что и в другое измерение: клиент
             // забывает мир и получает его заново, только у точки возрождения.
             let respawning = matches!(order, Order::Respawn);
@@ -5418,7 +5508,16 @@ async fn read_and_log_play_packets(
                     player.y = y;
                     player.z = z;
 
-                    send_player_position_as(stream, player, Sync::Command).await?;
+                    // С поворотом — один пакет, взгляд абсолютный; без — относительный
+                    // нулевой (флаги 24, чёрный ящик, dim-nether-tp).
+                    if let Some((yaw, pitch)) = with_look {
+                        player.yaw = yaw;
+                        player.pitch = pitch;
+                        send_player_position(stream, player).await?;
+                    } else {
+                        send_player_position_as(stream, player, Sync::Command).await?;
+                    }
+
                     player.save(&shared.playerdata);
 
                     publish_player(shared, player);
@@ -5457,8 +5556,17 @@ async fn read_and_log_play_packets(
                     let (item, count) = (stack.item, stack.count);
                     let (slots, left) = player.inventory.put(stack);
 
+                    let shown = slots.iter().any(|slot| *slot == player.inventory.selected_slot() || *slot == inventory::OFFHAND);
+
                     for slot in slots {
                         send_container_slot(stream, player, slot).await?;
+                    }
+
+                    // Легло в руку — соседи видят новую экипировку (чёрный ящик,
+                    // trident-loyalty: вернувшийся трезубец в руке у соседей на
+                    // такт позже ячейки).
+                    if shown {
+                        publish_player(shared, player);
                     }
 
                     // Не влезло — падает рядом с игроком, а не пропадает.
@@ -5602,7 +5710,16 @@ async fn read_and_log_play_packets(
                 // если он уже начался, он ждёт нас (`waiting_for_tick`).
                 let gated = is_gated(packet.id);
 
-                if gated {
+                // Команда, пришедшая в простое (работа такта кончилась, следующий
+                // не начался), исполняется сразу: оригинал берёт её между тактами
+                // тут же, и ответ (пакет переноса `tp`) уходит через ~1 мс, а не
+                // на начале следующего такта (чёрный ящик, pvp-mace: у оригинала
+                // перенос на +1 мс при любой фазе, у нас на +27 — падающий робот
+                // успевал на тик меньше). Мир при этом не меняется: до начала
+                // такта всё равно ничего не идёт.
+                let at_once = packet.id == SERVERBOUND_CHAT_COMMAND && *ticks.borrow() >= *starts.borrow();
+
+                if gated && !at_once {
                     // Ждать начала такта с неотправленным нельзя: оно
                     // задержалось бы на такт.
                     stream.flush().await?;
@@ -7581,6 +7698,16 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
         player.set_rotation(yaw, pitch);
     }
 
+    // Взрывное или оседающее зелье: бросок (thrown.rs).
+    if thrown::throw_potion(shared, player, hand) {
+        return Some(answer);
+    }
+
+    // Пустой пузырёк у облака дыхания дракона: набрать.
+    if thrown::fill_breath(shared, player, hand) {
+        return Some(answer);
+    }
+
     // Еда в руке: начать есть.
     if hand == 0 && vitals::start_eating(player) {
         return Some(answer);
@@ -7592,7 +7719,7 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
     }
 
     // Щит, лук или арбалет: поднять, натянуть, зарядить.
-    if vitals::start_using(player, hand, *shared.ticks.borrow()) {
+    if vitals::start_using(shared, player, hand, *shared.ticks.borrow()) {
         return Some(answer);
     }
 
@@ -8439,6 +8566,8 @@ struct PlayerState {
 
     /// Стрелы, показанные клиенту (arrow.rs).
     seen_bow_arrows: HashMap<i32, bow::ShownArrow>,
+    /// Брошенные зелья, огненные шары и облака, о которых клиент знает.
+    seen_thrown: HashMap<i32, thrown::Shown>,
 
     /// Такт мира, когда игрок последний раз бил: сила удара зависит от
     /// того, сколько прошло.
@@ -8655,6 +8784,7 @@ impl PlayerState {
             seen_frames: HashMap::new(),
             seen_mobs: HashMap::new(),
             seen_bow_arrows: HashMap::new(),
+            seen_thrown: HashMap::new(),
             last_attack: 0,
             dimension: saved.as_ref().map(|data| data.dimension).unwrap_or_default(),
             in_portal: 0,
@@ -8744,7 +8874,7 @@ impl PlayerState {
             },
             attack_speed: self.attrs.get(crate::attributes::ATTACK_SPEED).cloned(),
             speed_touch: self.speed_touch,
-            living: vitals::living_flags(self),
+            living: vitals::living_flags(self) | if self.net.spin_pose { crate::players::SPIN_POSE_BIT } else { 0 },
             effect_colors: self.vit.effect_colors(),
             health: self.net.announced_health.unwrap_or(self.vit.health),
             sprinting: self.vit.sprinting,

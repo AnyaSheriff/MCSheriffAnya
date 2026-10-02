@@ -32,6 +32,7 @@ mod minecart;
 mod frame;
 mod mob;
 mod arrow;
+mod thrown;
 mod playerdata;
 mod redstone;
 mod tnt;

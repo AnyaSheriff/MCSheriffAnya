@@ -1,0 +1,90 @@
+{
+ "name": "lingering-potion",
+ "about": "Оседающее зелье регенерации под ноги: облако радиуса 3, ожидание, наложение 1/4 срока, сжатие, повтор через 20 тактов.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!wait 10",
+  "fill $(-2,0,-2) $(8,3,8) minecraft:air",
+  "fill $(-2,-1,-2) $(8,-1,8) minecraft:stone",
+  "!stopfly",
+  "!look 0 90",
+  "give $(bot) minecraft:lingering_potion[potion_contents={potion:\"minecraft:regeneration\"}] 1",
+  "!hotbar 0",
+  "damage $(bot) 4",
+  "!wait 25"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "kill @e[type=splash_potion,distance=..48]",
+  "kill @e[type=lingering_potion,distance=..48]",
+  "kill @e[type=area_effect_cloud,distance=..48]",
+  "kill @e[type=dragon_fireball,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "item_components": true,
+ "inventory": true,
+ "random": [
+  {
+   "type": "mask",
+   "name": "номер бросившего и поворот зелья",
+   "kind": "spawn",
+   "pattern": "(splash_potion|lingering_potion) \\d+ ([-0-9.,]+) yaw=-?\\d+ pitch=-?\\d+",
+   "replace": "$1 N $2 yaw=Y pitch=P",
+   "why": "бросок у оригинала случаен: неточность направления (вики, Splash Potion: летит как снаряд с разбросом), поэтому поворот при появлении, скорость и сдвиг на +10 меняются от прогона к прогону (оригинал, два броска вверх — splash-potion и splash-potion-heal: скорость 0,0011/0,5014/0,0015 и −0,0026/0,5010/0,0045, сдвиг на +10 43,8618,56 и −100,8603,172); номер в появлении — номер сущности бросившего"
+  },
+  {
+   "type": "mask",
+   "name": "скорость зелья на сверке",
+   "kind": "cart",
+   "pattern": "(splash_potion|lingering_potion) скорость -?[0-9.]+,-?[0-9.]+,-?[0-9.]+",
+   "replace": "$1 скорость V",
+   "why": "бросок у оригинала случаен: неточность направления (вики, Splash Potion: летит как снаряд с разбросом), поэтому поворот при появлении, скорость и сдвиг на +10 меняются от прогона к прогону (оригинал, два броска вверх — splash-potion и splash-potion-heal: скорость 0,0011/0,5014/0,0015 и −0,0026/0,5010/0,0045, сдвиг на +10 43,8618,56 и −100,8603,172); номер в появлении — номер сущности бросившего"
+  },
+  {
+   "type": "mask",
+   "name": "сдвиг и поворот зелья на сверке",
+   "kind": "cart",
+   "pattern": "(splash_potion|lingering_potion) сдвиг -?\\d+,-?\\d+,-?\\d+ поворот -?\\d+/-?\\d+",
+   "replace": "$1 сдвиг D поворот Y/P",
+   "why": "бросок у оригинала случаен: неточность направления (вики, Splash Potion: летит как снаряд с разбросом), поэтому поворот при появлении, скорость и сдвиг на +10 меняются от прогона к прогону (оригинал, два броска вверх — splash-potion и splash-potion-heal: скорость 0,0011/0,5014/0,0015 и −0,0026/0,5010/0,0045, сдвиг на +10 43,8618,56 и −100,8603,172); номер в появлении — номер сущности бросившего"
+  },
+  {
+   "type": "mask",
+   "name": "место облака",
+   "kind": "spawn",
+   "pattern": "^spawn [-0-9.]+,[-0-9.]+,[-0-9.]+ area_effect_cloud 0 [-0-9.]+,[-0-9.]+,[-0-9.]+",
+   "replace": "spawn X,Y,Z area_effect_cloud 0 X,Y,Z",
+   "why": "облако встаёт там, где зелье было до удара о голову робота, а это место случайно из-за неточности броска (оригинал: 3,62/2,1/3,41; высота над головой 1,8 — от 1,8 до 2,3 в зависимости от такта удара)"
+  },
+  {
+   "type": "mask",
+   "name": "высота раскола о голову",
+   "kind": "level",
+   "pattern": "^level (-?\\d+),-?\\d+,(-?\\d+) ",
+   "replace": "level $1,Y,$2 ",
+   "why": "зелье разбивается о голову робота там, где было до последнего хода, — на высоте от 1,8 до 2,3 (неточность броска меняет высоту по тактам: оригинал 2,13 в splash-potion), поэтому блок события то 1, то 2 по высоте"
+  }
+ ]
+}

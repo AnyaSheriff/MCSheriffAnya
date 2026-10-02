@@ -658,6 +658,10 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return summon_orb(rest, source, shared);
     }
 
+    if name.strip_prefix("minecraft:").unwrap_or(name) == "dragon_fireball" {
+        return summon_fireball(rest, source, shared);
+    }
+
     if name.strip_prefix("minecraft:").unwrap_or(name) == "lightning_bolt" {
         return summon_lightning(rest, source, shared);
     }
@@ -705,6 +709,41 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         .add_cart(cart);
 
     Answer::saying(format!("Призвана сущность {}", kind.name()))
+}
+
+/// `summon dragon_fireball <x> <y> <z> {Motion:[x,y,z]}` — огненный шар
+/// дракона без хозяина; разгоняется по направлению `Motion` (чёрный ящик,
+/// dragon-fireball).
+fn summon_fireball(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let origin = origin_of(source, shared);
+    let (place, data) = match rest {
+        [] => (Some(origin), ""),
+        [x, y, z] => (entity_place(&[*x, *y, *z], origin), ""),
+        [x, y, z, data @ ..] => (entity_place(&[*x, *y, *z], origin), *data.first().unwrap_or(&"")),
+        _ => (None, ""),
+    };
+    let Some(place) = place else {
+        return Answer::saying("Нужно: summon dragon_fireball <x> <y> <z> [{Motion:[x,y,z]}]".to_string());
+    };
+    let motion = motion_of(data).unwrap_or((0.0, 0.0, 0.0));
+    let dimension = dimension_of(source, shared);
+    let fireball = crate::thrown::Flying::fireball(shared.next_entity_id(), dimension, place, motion, motion, 0);
+
+    shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(fireball);
+
+    Answer::saying("Призвана сущность dragon_fireball".to_string())
+}
+
+/// `Motion:[a,b,c]` из данных сущности (числа с `d` на конце или без).
+fn motion_of(data: &str) -> Option<(f64, f64, f64)> {
+    let start = data.find("Motion:[")? + "Motion:[".len();
+    let end = start + data[start..].find(']')?;
+    let numbers: Vec<f64> = data[start..end].split(',').filter_map(|part| part.trim().trim_end_matches(['d', 'D']).parse().ok()).collect();
+
+    match numbers[..] {
+        [x, y, z] => Some((x, y, z)),
+        _ => None,
+    }
 }
 
 /// `summon item <x> <y> <z> {Item:{id:"…",count:N}}` — предмет ровно
@@ -840,6 +879,40 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
 
     if let Some(color) = int_after(data, "Color:") {
         mob.color = color.clamp(0, 15) as u8;
+
+        // Шалкер: цвет панциря, 16 — без цвета (вики, Shulker, «Entity data»).
+        if mob.kind == crate::mob::Kind::Shulker {
+            mob.h.shell_color = color.clamp(0, 16) as u8;
+        }
+    }
+
+    // Шалкер: грань крепления и приоткрытость (`AttachFace:2b`, `Peek:30b`).
+    if let Some(face) = int_after(data, "AttachFace:") {
+        mob.h.face = face.clamp(0, 5) as u8;
+    }
+
+    if let Some(peek) = int_after(data, "Peek:") {
+        mob.h.peek = peek.clamp(0, 100) as u8;
+    }
+
+    // Эндермен: блок в руках, `carriedBlockState:{Name:"minecraft:grass_block",…}`
+    // (вики, Enderman, «Entity data») — с указанными свойствами или без них.
+    if let Some(at) = data.find("carriedBlockState:") {
+        let tail = &data[at..];
+        let name = tail.split("Name:").nth(1).map(|rest| rest.trim_start_matches('"').split(['"', ',', '}']).next().unwrap_or("")).unwrap_or("");
+        let name = name.strip_prefix("minecraft:").unwrap_or(name);
+        let props = tail.find("Properties:{").map(|start| {
+            let inner = &tail[start + "Properties:{".len()..];
+            let inner = &inner[..inner.find('}').unwrap_or(inner.len())];
+
+            inner.split(',').map(|pair| pair.replace(['"', ' '], "").replace(':', "=")).filter(|pair| !pair.is_empty()).collect::<Vec<_>>().join(",")
+        });
+        let full = match props {
+            Some(props) if !props.is_empty() => format!("{name}[{props}]"),
+            _ => name.to_string(),
+        };
+
+        mob.h.carried = crate::blocks::state_from_text(&full).or_else(|| crate::blocks::state_by_name(name));
     }
 
     // Призванный с данными скелет без лука в руке — с луком он только если он
@@ -881,7 +954,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
 /// ровно в названной точке. У призванного детёныша `Age` отрицательный
 /// (вики, Breeding: «Age: negative for baby»).
 fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &Shared) -> Answer {
-    let usage = || Answer::saying("Нужно: summon <cow|pig|sheep|chicken|zombie|skeleton|creeper|spider|end_crystal|ender_dragon> <x> <y> <z> {NoAI:1b,Age:-24000}".to_string());
+    let usage = || Answer::saying("Нужно: summon <cow|pig|sheep|chicken|zombie|skeleton|creeper|spider|enderman|shulker|witch|end_crystal|ender_dragon> <x> <y> <z> {NoAI:1b,Age:-24000}".to_string());
     let origin = origin_of(source, shared);
 
     let (place, data) = match rest {
@@ -2166,6 +2239,15 @@ mod tests {
     use crate::players::{Member, Position};
     use crate::world::World;
     use std::path::PathBuf;
+
+    /// Движение призываемого огненного шара.
+    #[test]
+    fn a_fireball_motion_is_read_from_entity_data() {
+        // dragon-fireball: {Motion:[0.0d,-0.2d,0.0d],acceleration_power:0.1d}
+        assert_eq!(motion_of("{Motion:[0.0d,-0.2d,0.0d],acceleration_power:0.1d}"), Some((0.0, -0.2, 0.0)));
+        assert_eq!(motion_of("{Motion:[1,2]}"), None);
+        assert_eq!(motion_of(""), None);
+    }
 
     /// Данные призываемого предмета: вид и число.
     #[test]

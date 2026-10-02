@@ -1,0 +1,38 @@
+{
+ "name": "enderman-stare",
+ "track_mobs": true,
+ "blocks": [],
+ "exclusive": true,
+ "about": "Робот смотрит в голову эндермена с ИИ: через 5 тактов тот злится (свойства 17 и 18) и идёт к роботу.",
+ "setup": [
+  "difficulty normal",
+  "time set midnight",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "effect give $(bot) minecraft:resistance 100 4",
+  "!look 3.14159 0.17"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon enderman $(3.5,0,6.5) {Silent:1b}"
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "kill @e[type=enderman,distance=..48]",
+  "kill @e[type=shulker_bullet,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "time set noon",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

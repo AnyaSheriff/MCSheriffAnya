@@ -2387,6 +2387,9 @@ impl BedrockWorld {
                 WorldEvent::Hurt { entity_id, amount, .. } if entity_id == self.runtime_id as i32 => {
                     self.health.hurt(amount, crate::survival::Source::Explosion);
                 }
+                // Зелья и облака: эффекты считаются, значка у Bedrock пока нет [проверить].
+                WorldEvent::PotionEffect { entity_id, effect } if entity_id == self.runtime_id as i32 => self.health.vit.give_effect_shown(effect),
+                WorldEvent::PotionHeal { entity_id, amount } if entity_id == self.runtime_id as i32 => self.health.vit.heal(amount),
                 _ => {}
             }
         }

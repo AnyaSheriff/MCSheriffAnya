@@ -200,7 +200,7 @@ const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
 // Край: кристалл, дракон, его огненный шар и облако дыхания — пишутся как мобы.
-const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident']);
+const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion']);
 const padDrops = new Set();
 const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {
@@ -305,7 +305,7 @@ const selfText = (b, p, meta) => {
     case 'game_state_change': text = `Game Event reason=${p.reason} value=${rnd(p.gameMode)}`; break;
     case 'entity_update_attributes': if (isSelf(p.entityId)) text = `Attributes ${jstr([...p.properties].sort((a, b) => String(a.key).localeCompare(String(b.key))))}`; break;
     case 'animation': if (isSelf(p.entityId)) text = `Animate anim=${p.animation}`; break;
-    case 'entity_sound_effect': if (isSelf(p.entityId)) { const s = p.sound || {}; text = `Entity Sound ${s.soundId !== undefined ? (SOUNDS[String(s.soundId)] || `#${s.soundId}`) : jstr(s)} cat=${p.soundCategory} vol=${rnd(p.volume)}`; } break;
+    case 'entity_sound_effect': if (isSelf(p.entityId)) { const s = p.sound || {}; text = `Entity Sound ${s.soundId !== undefined ? (SOUNDS[String(s.soundId)] || `#${s.soundId}`) : (s.data && s.data.soundName) || jstr(s)} cat=${p.soundCategory} vol=${rnd(p.volume)}`; } break;
     case 'abilities': text = `Abilities flags=${p.flags} fly=${rnd(p.flyingSpeed)} fov=${rnd(p.walkingSpeed)}`; break;
     case 'held_item_slot': text = `Held Slot ${p.slot}`; break;
     case 'spawn_position': text = `Spawn Position ${jstr(p.globalPos || p.location || p)}`; break;
@@ -347,7 +347,8 @@ bot._client.on('packet', (p, meta) => {
   if (Number(p.entityId) !== bot2.entity.id) return;
   const { entityId, ...rest } = p;
   if (meta.name === 'damage_event') { rest.sourceCauseId = rest.sourceCauseId > 0 ? 'entity' : 0; rest.sourceDirectId = rest.sourceDirectId > 0 ? 'entity' : 0; }
-  if (meta.name === 'entity_sound_effect') { const sd = p.sound || {}; rest.sound = sd.soundId !== undefined ? (SOUNDS[String(sd.soundId)] || `#${sd.soundId}`) : (sd.data && sd.data.soundName) || jstr(sd); }
+  // Зерно звука (seed) случайно у оригинала в каждом пакете — его не пишем.
+  if (meta.name === 'entity_sound_effect') { const sd = p.sound || {}; rest.sound = sd.soundId !== undefined ? (SOUNDS[String(sd.soundId)] || `#${sd.soundId}`) : (sd.data && sd.data.soundName) || jstr(sd); delete rest.seed; }
   if (meta.name === 'entity_equipment') rest.equipments = (p.equipments || []).map(e => `${e.slot}:${itemName(e.item) || 'пусто'}`);
   if (meta.name === 'entity_metadata') rest.metadata = (p.metadata || []).map(m => `${m.key}=${typeof m.value === 'object' ? jstr(m.value) : m.value}`);
   const text = `other ${meta.name} ${jstr(rest)}`.replace(/\d+\.\d{4,}/g, (m) => String(Math.round(Number(m) * 1000) / 1000));

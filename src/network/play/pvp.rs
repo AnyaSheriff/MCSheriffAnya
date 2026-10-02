@@ -211,6 +211,38 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
                     if victim.position.on_ground {
                         world.note_level_event(at.0.floor() as i32, at.1.floor() as i32 - 1, at.2.floor() as i32, 2013, combat::SMASH_PARTICLES);
                     }
+
+                    // «Порыв ветра»: взрыв ветра у нападающего подбрасывает
+                    // его (вики, Wind Burst) — за частицами удара о землю, до
+                    // частиц урона (чёрный ящик, pvp-mace-wind-burst). Центр —
+                    // на 0,1 ниже ног: удар и звук на высоте 2,5…2,625, взрыв
+                    // на 2,407 [проверить].
+                    let wind = data.level("wind_burst");
+
+                    if wind > 0 && lands {
+                        let targets: Vec<crate::tnt::Target> = shared
+                            .players
+                            .lock()
+                            .expect("список игроков захвачен другим потоком")
+                            .members()
+                            .iter()
+                            .filter(|member| member.dimension == player.dimension && member.game_mode != 3)
+                            .map(|member| {
+                                let me = member.entity_id == player.entity_id;
+
+                                crate::tnt::Target {
+                                    entity_id: member.entity_id,
+                                    x: if me { player.x } else { member.position.x },
+                                    y: if me { player.y } else { member.position.y },
+                                    z: if me { player.z } else { member.position.z },
+                                    sneaking: member.sneaking,
+                                }
+                            })
+                            .collect();
+                        let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+
+                        crate::tnt::wind_burst(&mut world, &mut items, &targets, (from.0, from.1 - 0.1, from.2), crate::tnt::wind_burst_knockback(wind));
+                    }
                 }
 
                 if extra_enchant_hit(&data) {

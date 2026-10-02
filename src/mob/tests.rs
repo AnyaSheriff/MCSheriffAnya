@@ -383,7 +383,7 @@ fn a_tempting_player_draws_the_animal_in() {
     let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
     let mut rng = Rng::new(9);
     let wheat = blocks::item_name(blocks::item_named("wheat").expect("пшеница")).expect("имя");
-    let player = ai::Watcher { x: 8.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some(wheat), None], spectator: false, id: 1, targetable: true };
+    let player = ai::Watcher { x: 8.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some(wheat), None], spectator: false, id: 1, targetable: true, look: (0.0, 0.0), pumpkin: false };
     let players = [player];
     let ctx = ai::Ctx { players: &players, mates: &[], difficulty: 2, sky: 15, sun_up: false };
 
@@ -410,7 +410,7 @@ fn a_spectator_does_not_attract() {
     let view = Flat::new();
     let mut pig = Mob::new(1, Kind::Pig, (0.5, 1.0, 0.5));
     let mut rng = Rng::new(9);
-    let players = [ai::Watcher { x: 5.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some("carrot"), None], spectator: true, id: 1, targetable: false }];
+    let players = [ai::Watcher { x: 5.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some("carrot"), None], spectator: true, id: 1, targetable: false, look: (0.0, 0.0), pumpkin: false }];
     let ctx = ai::Ctx { players: &players, mates: &[], difficulty: 2, sky: 15, sun_up: false };
 
     for _ in 0..20 {
@@ -754,7 +754,7 @@ impl View for Sunny {
 }
 
 fn player_at(id: i32, x: f64, z: f64) -> ai::Watcher {
-    ai::Watcher { id, x, y: 1.0, z, eye: 1.62, holding: [None, None], spectator: false, targetable: true }
+    ai::Watcher { id, x, y: 1.0, z, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false }
 }
 
 fn ctx_for<'a>(players: &'a [ai::Watcher], difficulty: u8, sky: i32, sun_up: bool) -> ai::Ctx<'a> {
@@ -785,7 +785,7 @@ fn hostile_kinds_have_the_wiki_numbers() {
     assert_eq!((Kind::Creeper.width(), Kind::Creeper.height()), (0.6, 1.7));
     assert_eq!((Kind::Spider.width(), Kind::Spider.height()), (1.4, 0.9));
     assert_eq!((Kind::Zombie.java_type(), Kind::Skeleton.java_type(), Kind::Creeper.java_type(), Kind::Spider.java_type()), (150, 115, 32, 124));
-    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 4);
+    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 7);
     assert!(!Kind::Cow.hostile());
 }
 
@@ -1254,7 +1254,7 @@ fn natural_spawning_needs_dark_air_over_a_solid_floor() {
 
     for seed in 0..400 {
         let mut rng = Rng::new(seed);
-        let found = spawn::hostile_attempt(&view, &players, &|_, _| 40, &mut rng, &mut || {
+        let found = spawn::hostile_attempt(&view, &players, &|_, _| 40, &spawn::HOSTILE, &mut rng, &mut || {
             id += 1;
             id
         });
@@ -1338,4 +1338,397 @@ fn crystal_explodes_from_any_hit_and_survives_the_file() {
     let mut bytes = Vec::new();
     Mob::new(13, Kind::EnderDragon, (0.0, 64.0, 0.0)).write(&mut bytes);
     assert_eq!(Mob::read(&mut bytes.as_slice()).expect("запись читается").kind, Kind::EnderDragon);
+}
+
+#[test]
+fn end_mobs_have_the_wiki_numbers() {
+    assert_eq!((Kind::Enderman.max_health(), Kind::Shulker.max_health(), Kind::Witch.max_health()), (40.0, 30.0, 26.0));
+    assert_eq!((Kind::Enderman.width(), Kind::Enderman.height()), (0.6, 2.9));
+    assert_eq!((Kind::Shulker.width(), Kind::Shulker.height()), (1.0, 1.0));
+    assert_eq!((Kind::Witch.width(), Kind::Witch.height()), (0.6, 1.95));
+    assert_eq!((Kind::Enderman.java_type(), Kind::Shulker.java_type(), Kind::ShulkerBullet.java_type(), Kind::Witch.java_type()), (41, 112, 113, 144));
+    assert_eq!((Kind::Enderman.speed(), Kind::Witch.speed()), (0.3, 0.25));
+    assert_eq!(Kind::from_name("minecraft:shulker_bullet"), Some(Kind::ShulkerBullet));
+    assert!(Kind::ShulkerBullet.object() && !Kind::ShulkerBullet.hostile());
+    assert_eq!(Mob::new(1, Kind::Shulker, (0.0, 0.0, 0.0)).h.shell_color, 16);
+}
+
+#[test]
+fn end_mob_drops_follow_the_wiki() {
+    let names = |mob: &Mob| -> Vec<&'static str> {
+        let mut rng = Rng::new(1);
+        let mut seen = Vec::new();
+
+        for _ in 0..400 {
+            for stack in loot(mob, &mut rng) {
+                let name = blocks::item_name(stack.item).expect("имя");
+
+                if !seen.contains(&name) {
+                    seen.push(name);
+                }
+            }
+        }
+
+        seen.sort_unstable();
+        seen
+    };
+
+    assert_eq!(names(&Mob::new(1, Kind::Enderman, (0.0, 0.0, 0.0))), ["ender_pearl"]);
+
+    let mut carrying = Mob::new(1, Kind::Enderman, (0.0, 0.0, 0.0));
+
+    carrying.h.carried = blocks::state_by_name("sand");
+    assert_eq!(names(&carrying), ["ender_pearl", "sand"]);
+
+    // Блок из рук падает всегда.
+    let mut rng = Rng::new(9);
+    assert!((0..50).all(|_| loot(&carrying, &mut rng).iter().any(|stack| blocks::item_name(stack.item) == Some("sand"))));
+
+    assert_eq!(names(&Mob::new(1, Kind::Shulker, (0.0, 0.0, 0.0))), ["shulker_shell"]);
+    assert_eq!(names(&Mob::new(1, Kind::Witch, (0.0, 0.0, 0.0))), ["glass_bottle", "glowstone_dust", "gunpowder", "redstone", "spider_eye", "stick", "sugar"]);
+    assert!(names(&Mob::new(1, Kind::ShulkerBullet, (0.0, 0.0, 0.0))).is_empty());
+}
+
+#[test]
+fn end_mobs_give_five_xp_to_a_player() {
+    for kind in [Kind::Enderman, Kind::Shulker, Kind::Witch] {
+        let mut mob = Mob::new(1, kind, (0.5, 1.0, 0.5));
+
+        mob.no_ai = true;
+        mob.credit_player();
+        mob.hurt(100.0, Source::PlayerAttack, None);
+        assert_eq!(mob.pending_xp, 5, "{kind:?}");
+    }
+}
+
+/// Игрок в `at`, глядящий на точку `to`.
+fn gazing(id: i32, at: (f64, f64), to: (f64, f64, f64)) -> ai::Watcher {
+    let eye = 1.0 + 1.62;
+    let (dx, dy, dz) = (to.0 - at.0, to.1 - eye, to.2 - at.1);
+    let yaw = (-dx.atan2(dz)).to_degrees() as f32;
+    let pitch = (-dy.atan2((dx * dx + dz * dz).sqrt())).to_degrees() as f32;
+
+    ai::Watcher { look: (yaw, pitch), ..player_at(id, at.0, at.1) }
+}
+
+#[test]
+fn a_stare_at_the_head_provokes_the_enderman() {
+    let view = Flat::new();
+    let mut enderman = Mob::new(5, Kind::Enderman, (0.5, 1.0, 6.5));
+
+    // Взгляд в ноги не злит, в голову — злит на пятом такте (вики: «5 game ticks»).
+    let feet = [gazing(1, (0.5, 0.5), (0.5, 1.5, 6.5))];
+    let head = [gazing(1, (0.5, 0.5), (0.5, 3.7, 6.5))];
+
+    assert!(!hostile::looks_at_head(&enderman, &feet[0]));
+    assert!(hostile::looks_at_head(&enderman, &head[0]));
+
+    let mut rng = Rng::new(4);
+
+    for _ in 0..10 {
+        enderman.tick(&view, &ctx_for(&feet, 2, 0, false), &mut rng);
+    }
+
+    assert!(enderman.h.target.is_none());
+
+    // Мысль (взгляд) — до хода: стоит на месте, пока не сдвинется.
+    let mut ticks = 0;
+
+    while enderman.h.target.is_none() && ticks < 10 {
+        let (x, y, z) = (enderman.x, enderman.y, enderman.z);
+        let looking = [gazing(1, (0.5, 0.5), (x, y + 2.7, z))];
+
+        enderman.tick(&view, &ctx_for(&looking, 2, 0, false), &mut rng);
+        ticks += 1;
+    }
+
+    assert_eq!((enderman.h.target, ticks), (Some(1), hostile::STARE_TICKS as usize));
+
+    // Тыква на голове спасает.
+    let mut calm = Mob::new(6, Kind::Enderman, (0.5, 1.0, 6.5));
+    let masked = [ai::Watcher { pumpkin: true, ..head[0] }];
+
+    for _ in 0..10 {
+        calm.tick(&view, &ctx_for(&masked, 2, 0, false), &mut rng);
+    }
+
+    assert!(calm.h.target.is_none());
+}
+
+#[test]
+fn a_hurt_enderman_teleports_away() {
+    let view = Flat::new();
+    let mut enderman = Mob::new(5, Kind::Enderman, (0.5, 1.0, 0.5));
+    let mut rng = Rng::new(2);
+
+    enderman.tick(&view, &ctx(), &mut rng);
+    enderman.hurt(2.0, Source::PlayerAttack, Some(Push { dir: (0.0, 1.0), strength: 0.4, cause: 1 }));
+    enderman.tick(&view, &ctx(), &mut rng);
+
+    assert_eq!(enderman.teleports, 1);
+    assert!(enderman.events.iter().any(|event| matches!(event, Event::Sound { name: "minecraft:entity.enderman.teleport", .. })));
+    assert!(enderman.events.contains(&Event::Status(46)));
+    // На полу, в пределах 32 блоков по каждой оси.
+    assert_eq!(enderman.y, 1.0);
+    assert!((enderman.x - 0.5).abs() <= 32.0 && (enderman.z - 0.5).abs() <= 32.0);
+
+    // NoAI не прыгает.
+    let mut still = Mob::new(6, Kind::Enderman, (0.5, 1.0, 0.5));
+
+    still.no_ai = true;
+    still.hurt(2.0, Source::PlayerAttack, None);
+    still.tick(&view, &ctx(), &mut rng);
+    assert_eq!(still.teleports, 0);
+}
+
+#[test]
+fn water_hurts_the_enderman_and_sends_it_away() {
+    let mut view = Flat::new();
+
+    view.water.push((0, 1, 0));
+    view.water.push((0, 2, 0));
+
+    let mut enderman = Mob::new(5, Kind::Enderman, (0.5, 1.0, 0.5));
+    let mut rng = Rng::new(8);
+
+    enderman.tick(&view, &ctx(), &mut rng);
+
+    assert_eq!(enderman.vitals.health, 39.0);
+    assert!(enderman.events.iter().any(|event| matches!(event, Event::Hurt { source: Source::Drown, .. })));
+
+    enderman.tick(&view, &ctx(), &mut rng);
+    assert_eq!(enderman.teleports, 1);
+    assert!(!is_water(view.block(enderman.x.floor() as i32, enderman.y as i32, enderman.z.floor() as i32)));
+}
+
+#[test]
+fn the_enderman_picks_up_and_places_blocks() {
+    struct Grass;
+
+    // Пол каменный, рядом столбик дёрна в три блока: берёт эндермен из
+    // области 4×3×4 «vertically encompassing it» (вики) — от ног и выше.
+    impl View for Grass {
+        fn block(&self, x: i32, y: i32, z: i32) -> i32 {
+            let name = match (x, y, z) {
+                (_, ..=0, _) => "stone",
+                (1, 1..=3, 0) => "grass_block",
+                _ => "air",
+            };
+
+            blocks::state_by_name(name).expect("блок")
+        }
+
+        fn loaded(&self, _: i32, _: i32) -> bool {
+            true
+        }
+    }
+
+    let grass = blocks::state_by_name("grass_block").expect("дёрн");
+
+    assert!(hostile::holdable(grass) && !hostile::holdable(blocks::state_by_name("stone").expect("камень")));
+
+    let mut enderman = Mob::new(5, Kind::Enderman, (0.5, 1.0, 0.5));
+    let mut rng = Rng::new(3);
+    let mut taken = None;
+
+    // Шанс 1/20 за такт и место в 4×3×4 вокруг: в столбик — изредка.
+    for _ in 0..4000 {
+        let mut plan = ai::Plan::default();
+
+        hostile::grief(&mut enderman, &Grass, &mut rng, &mut plan);
+
+        if plan.take.is_some() {
+            taken = plan.take;
+            break;
+        }
+    }
+
+    let (x, y, z) = taken.expect("взял блок");
+
+    assert_eq!(((x, z), (1..=3).contains(&y), enderman.h.carried), ((1, 0), true, Some(grass)));
+
+    let mut placed = None;
+
+    for _ in 0..40_000 {
+        let mut plan = ai::Plan::default();
+
+        hostile::grief(&mut enderman, &Grass, &mut rng, &mut plan);
+
+        if plan.put.is_some() {
+            placed = plan.put;
+            break;
+        }
+    }
+
+    let ((_, y, _), state) = placed.expect("поставил блок");
+
+    assert_eq!((y, state, enderman.h.carried), (1, grass, None));
+}
+
+#[test]
+fn a_closed_shulker_wears_twenty_armor() {
+    let mut closed = Mob::new(5, Kind::Shulker, (0.5, 1.0, 0.5));
+
+    closed.h.covered = true;
+
+    let hit = closed.hurt(7.0, Source::PlayerAttack, None).expect("удар");
+
+    // Броня 20: 7·(1 − max(4, 20 − 3,5)/25) = 2,38.
+    assert!((hit.taken - 2.38).abs() < 1.0e-4, "{}", hit.taken);
+    assert!(closed.events.iter().any(|event| matches!(event, Event::Sound { name: "minecraft:entity.shulker.hurt_closed", .. })));
+
+    let mut open = Mob::new(6, Kind::Shulker, (0.5, 1.0, 0.5));
+
+    open.h.peek = 30;
+    assert_eq!(open.hurt(7.0, Source::PlayerAttack, None).expect("удар").taken, 7.0);
+
+    // Призванный закрытым брони не носит (чёрный ящик, shulker-stand).
+    let mut still = Mob::new(7, Kind::Shulker, (0.5, 1.0, 0.5));
+
+    still.no_ai = true;
+    assert_eq!(still.hurt(7.0, Source::PlayerAttack, None).expect("удар").taken, 7.0);
+}
+
+#[test]
+fn a_shulker_opens_and_fires_at_a_player() {
+    let view = Flat::new();
+    let players = [player_at(1, 6.5, 0.5)];
+    let ctx = ctx_for(&players, 2, 0, false);
+    let mut shulker = Mob::new(5, Kind::Shulker, (0.5, 1.0, 0.5));
+    let mut rng = Rng::new(6);
+    let mut fired = None;
+
+    for tick in 0..300 {
+        let plan = shulker.tick(&view, &ctx, &mut rng);
+
+        if plan.bullet.is_some() {
+            fired = Some((tick, plan.bullet));
+            break;
+        }
+    }
+
+    let (_, target) = fired.expect("выстрелил");
+
+    assert_eq!((target, shulker.h.peek), (Some(1), 100));
+    // Шалкер не падает и не ходит.
+    assert_eq!((shulker.x, shulker.y, shulker.z), (0.5, 1.0, 0.5));
+    assert!(shulker.events.iter().any(|event| matches!(event, Event::Sound { name: "minecraft:entity.shulker.open", .. })));
+}
+
+#[test]
+fn a_shulker_without_a_floor_clings_to_a_wall() {
+    let mut view = Flat::new();
+
+    view.floor = -10;
+    view.stone.push((1, 5, 0));
+
+    let mut rng = Rng::new(1);
+
+    assert_eq!(hostile::attach_face(&view, (0, 5, 0), &mut rng), Some(5));
+    assert_eq!(hostile::attach_face(&view, (0, -9, 0), &mut rng), Some(0));
+    assert_eq!(hostile::attach_face(&view, (5, 5, 5), &mut rng), None);
+}
+
+#[test]
+fn a_shulker_bullet_homes_in_and_hits() {
+    let view = Flat::new();
+    let players = [player_at(1, 4.5, 4.5)];
+    let ctx = ctx_for(&players, 2, 0, false);
+    let mut bullet = Mob::new(9, Kind::ShulkerBullet, (0.5, 1.5, 0.5));
+    let mut rng = Rng::new(1);
+
+    bullet.h.target = Some(1);
+
+    let mut hit = None;
+
+    for tick in 0..300 {
+        let plan = bullet.tick(&view, &ctx, &mut rng);
+
+        if plan.bullet_hit.is_some() {
+            hit = Some(tick);
+            break;
+        }
+    }
+
+    assert!(hit.is_some() && bullet.h.despawn);
+
+    // Удар по снаряду гасит его.
+    let mut struck = Mob::new(10, Kind::ShulkerBullet, (0.5, 1.5, 0.5));
+
+    assert!(struck.hurt(1.0, Source::PlayerAttack, None).is_none());
+    assert!(struck.h.despawn);
+}
+
+#[test]
+fn a_hurt_witch_drinks_healing() {
+    let view = Flat::new();
+    let mut witch = Mob::new(5, Kind::Witch, (0.5, 1.0, 0.5));
+    let mut rng = Rng::new(5);
+
+    witch.vitals.health = 10.0;
+
+    let mut ticks = 0;
+
+    while witch.h.drinking == 0 && ticks < 2000 {
+        witch.tick(&view, &ctx(), &mut rng);
+        ticks += 1;
+    }
+
+    assert_eq!((witch.h.drinking, crate::survival::POTIONS[usize::from(witch.h.potion)]), (hostile::DRINK_TICKS, "healing"));
+
+    for _ in 0..hostile::DRINK_TICKS {
+        witch.tick(&view, &ctx(), &mut rng);
+    }
+
+    // Лечение — тактом позже конца питья.
+    assert_eq!(witch.h.drinking, 0);
+    witch.tick(&view, &ctx(), &mut rng);
+    assert_eq!(witch.vitals.health, 14.0);
+
+    // Магия ей на 85 % слабее.
+    let mut target = Mob::new(6, Kind::Witch, (0.5, 1.0, 0.5));
+
+    target.no_ai = true;
+    assert!((target.hurt(6.0, Source::Magic, None).expect("удар").taken - 0.9).abs() < 1.0e-5);
+}
+
+#[test]
+fn end_mob_state_survives_the_region_file() {
+    let mut enderman = Mob::new(0, Kind::Enderman, (3.5, 70.0, 4.5));
+
+    enderman.h.carried = blocks::state_by_name("tnt");
+
+    let mut shulker = Mob::new(0, Kind::Shulker, (3.5, 70.0, 4.5));
+
+    shulker.h.face = 4;
+    shulker.h.shell_color = 3;
+
+    let mut bytes = Vec::new();
+
+    enderman.write(&mut bytes);
+    shulker.write(&mut bytes);
+    Mob::new(0, Kind::Witch, (0.0, 0.0, 0.0)).write(&mut bytes);
+
+    let mut rest = bytes.as_slice();
+    let a = Mob::read(&mut rest).expect("эндермен");
+    let b = Mob::read(&mut rest).expect("шалкер");
+    let c = Mob::read(&mut rest).expect("ведьма");
+
+    assert_eq!(a.h.carried, blocks::state_by_name("tnt"));
+    assert_eq!((b.h.face, b.h.shell_color), (4, 3));
+    assert_eq!(c.kind, Kind::Witch);
+    assert!(rest.is_empty());
+}
+
+#[test]
+fn endermen_and_witches_join_the_night_spawns() {
+    let mut rng = Rng::new(11);
+    let mut seen = std::collections::HashSet::new();
+
+    for _ in 0..20_000 {
+        seen.insert(spawn::pick_hostile_for_test(&spawn::HOSTILE, &mut rng));
+    }
+
+    assert!(seen.contains(&Kind::Enderman) && seen.contains(&Kind::Witch));
+    assert!((0..100).all(|_| spawn::pick_hostile_for_test(&spawn::END_HOSTILE, &mut rng) == Kind::Enderman));
 }

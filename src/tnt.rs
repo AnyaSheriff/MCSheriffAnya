@@ -273,10 +273,65 @@ fn blast(
         power,
         blocks: reached as i32,
         pushed,
+        wind: false,
     });
 
     world.blast_source = 0;
     world.blast_by_player = false;
+}
+
+/// Сила взрыва ветра «порыва ветра» (вики, Wind Burst: «Explosion radius:
+/// 3.5 blocks»).
+pub const WIND_BURST_POWER: f32 = 3.5;
+
+/// Во сколько раз «порыв ветра» уровня `level` толкает сильнее взрыва той же
+/// силы: 1,2; 1,75; 2,2, дальше 1,15 + 0,35 за уровень (вики, Wind Burst).
+pub fn wind_burst_knockback(level: i32) -> f64 {
+    match level {
+        1 => 1.2,
+        2 => 1.75,
+        3 => 2.2,
+        _ => 1.15 + 0.35 * f64::from(level),
+    }
+}
+
+/// Взрыв ветра после сокрушающего удара булавы с «порывом ветра»: блоков не
+/// рушит и не ранит, только толкает игроков и мобов в радиусе, сильнее в
+/// `knockback` раз (вики, Wind Burst). Лучи всё равно идут — их число
+/// клеток уходит в пакет, как у динамита (чёрный ящик, pvp-mace-wind-burst:
+/// «блоков 835» на пустой площадке) [проверить: рычаги и двери лучи
+/// должны переключать].
+pub fn wind_burst(world: &mut World, items: &mut Items, players: &[Target], centre: (f64, f64, f64), knockback: f64) {
+    let (_, reached) = rays(world, centre, WIND_BURST_POWER);
+    let reach = 2.0 * f64::from(WIND_BURST_POWER);
+    let mut pushed = Vec::new();
+
+    for player in players {
+        let (height, eyes) = if player.sneaking { (1.5, SNEAKING_EYES) } else { (1.8, PLAYER_EYES) };
+        let Some(impact) = impact(world, centre, reach, (player.x, player.y, player.z), (0.6, height)) else {
+            continue;
+        };
+
+        if let Some(push) = push_towards(centre, (player.x, player.y + eyes, player.z), impact * knockback) {
+            pushed.push((player.entity_id, push));
+        }
+    }
+
+    for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && !mob.h.despawn) {
+        let size = mob.size();
+        let Some(impact) = impact(world, centre, reach, (mob.x, mob.y, mob.z), size) else {
+            continue;
+        };
+
+        if let Some(push) = push_towards(centre, (mob.x, mob.y + size.1 * EYES_SHARE, mob.z), impact * knockback) {
+            mob.vx += push.0;
+            mob.vy += push.1;
+            mob.vz += push.2;
+            mob.on_ground = false;
+        }
+    }
+
+    world.note_explosion(Blast { centre, power: WIND_BURST_POWER, blocks: reached as i32, pushed, wind: true });
 }
 
 /// Рушит следующую часть отложенного большим взрывом (`BLAST_BATCH`).
@@ -855,6 +910,45 @@ mod tests {
         assert!(by_id(1).vitals.health < 10.0 && by_id(1).vx > 0.0, "рядом ранит и толкает от центра");
         assert_eq!(by_id(2).vitals.health, 10.0);
         assert_eq!(by_id(3).vitals.health, 20.0);
+    }
+
+    /// «Порыв ветра» подбрасывает стоящего в центре прямо вверх, тем
+    /// сильнее, чем выше уровень, и никого не ранит (вики, Wind Burst).
+    #[test]
+    fn a_wind_burst_throws_the_attacker_up_and_hurts_nobody() {
+        assert_eq!(wind_burst_knockback(1), 1.2);
+        assert_eq!(wind_burst_knockback(3), 2.2);
+        assert!((wind_burst_knockback(5) - 2.9).abs() < 1e-9);
+
+        let mut world = World::in_memory();
+        let mut items = Items::new();
+
+        items.add_mob(crate::mob::Mob::new(1, crate::mob::Kind::Cow, (2.5, 64.0, 0.5)));
+
+        let me = Target { entity_id: 7, x: 0.5, y: 64.0, z: 0.5, sneaking: false };
+        let reader = world.watch_events(READER);
+
+        wind_burst(&mut world, &mut items, &[me], (0.5, 63.9, 0.5), wind_burst_knockback(1));
+
+        let cow = &items.mobs()[0];
+
+        assert_eq!(cow.vitals.health, 10.0, "ветер не ранит");
+        assert!(cow.vx > 0.0, "корову относит от центра");
+
+        let (events, _) = world.events_since(reader, READER);
+        let blast = events
+            .iter()
+            .find_map(|event| match event {
+                crate::world::WorldEvent::Explosion(blast) => Some(blast.clone()),
+                _ => None,
+            })
+            .expect("пакета взрыва нет");
+        let (id, push) = blast.pushed[0];
+
+        assert!(blast.wind);
+        assert_eq!(id, 7);
+        // Прямо вверх: (1 − 0,1/7) · 1,2 ≈ 1,18.
+        assert!(push.0.abs() < 1e-9 && (push.1 - (1.0 - 0.1 / 7.0) * 1.2).abs() < 1e-6, "толчок {:?}", push);
     }
 
     /// Запал убывает на единицу за такт: динамит с запалом 80 взрывается

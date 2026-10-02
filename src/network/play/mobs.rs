@@ -40,6 +40,9 @@ const TYPE_INT: i32 = 1;
 const TYPE_FLOAT: i32 = 3;
 const TYPE_BOOL: i32 = 8;
 const TYPE_OPT_BLOCK_POS: i32 = 11;
+const TYPE_DIRECTION: i32 = 12;
+const TYPE_OPT_BLOCK_STATE: i32 = 15;
+const TYPE_PARTICLES: i32 = 17;
 const TYPE_POSE: i32 = 20;
 const TYPE_COW_VARIANT: i32 = 23;
 const TYPE_COW_SOUND: i32 = 24;
@@ -54,8 +57,9 @@ const DRAGON_PHASE_HOVER: i32 = 10;
 /// Поза «умирает» (protocol.json, Pose: 7 — dying).
 const POSE_DYING: i32 = 7;
 
-/// Номер атрибута «скорость движения» (registry attribute 26.1).
+/// Номера атрибутов «скорость движения» и «броня» (registry attribute 26.1).
 const ATTRIBUTE_MOVEMENT_SPEED: i32 = 22;
+const ATTRIBUTE_ARMOR: i32 = 0;
 
 /// Раз во сколько тактов от появления моб рассылает место и скорость, и раз
 /// во сколько — место, даже если оно не изменилось (как у вагонеток).
@@ -69,9 +73,15 @@ fn attributes_at(kind: Kind) -> u64 {
         Kind::Creeper => 1,
         // Кристаллу и дракону атрибуты не шлются вовсе (чёрный ящик,
         // end-crystal-explode, dragon-summon).
-        Kind::EndCrystal | Kind::EnderDragon => u64::MAX,
+        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet => u64::MAX,
         _ => 3,
     }
+}
+
+/// Шлются ли атрибуты сразу при появлении и ещё раз в первом прогоне
+/// слежения (чёрный ящик, zombie-hit и enderman-stand).
+fn attributes_at_spawn(kind: Kind) -> bool {
+    matches!(kind, Kind::Zombie | Kind::Enderman)
 }
 
 /// Меньшие сдвиги и перемены скорости не сообщаются.
@@ -104,6 +114,9 @@ pub(super) struct ShownMob {
     teleports: u32,
     attr_changes: u32,
     attributes_sent: bool,
+
+    /// `modded` — как показано клиенту (атрибуты, у ведьмы и рука).
+    modded: bool,
 
     /// Слежение ещё не прогонялось: свойства уйдут ещё раз целиком.
     first: bool,
@@ -140,7 +153,15 @@ fn properties(mob: &Mob) -> Vec<Property> {
 
         return vec![(0, TYPE_BYTE, vec![fire]), (4, TYPE_BOOL, vec![u8::from(mob.silent)]), (8, TYPE_OPT_BLOCK_POS, beam), (9, TYPE_BOOL, vec![1])];
     }
-    let aggressive = u8::from(mob.kind.hostile() && mob.h.target.is_some()) << 2;
+
+    // Снаряд шалкера — тоже не живое: флаги и тишина (minecraft-data:
+    // shulker_bullet — только общие свойства сущности).
+    if mob.kind == Kind::ShulkerBullet {
+        return vec![(0, TYPE_BYTE, vec![fire]), (4, TYPE_BOOL, vec![u8::from(mob.silent)])];
+    }
+    // «Агрессивен» (бит 4) у эндермена и шалкера не ставится: у первого
+    // злость — свойство 17 (чёрный ящик, enderman-stare, shulker-ai).
+    let aggressive = u8::from(mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker) && mob.h.target.is_some()) << 2;
     let mut out: Vec<Property> = vec![
         (0, TYPE_BYTE, vec![fire]),
         (4, TYPE_BOOL, vec![u8::from(mob.silent)]),
@@ -148,6 +169,17 @@ fn properties(mob: &Mob) -> Vec<Property> {
         (9, TYPE_FLOAT, float(mob.vitals.health)),
         (15, TYPE_BYTE, vec![u8::from(mob.no_ai) | aggressive]),
     ];
+
+    // Частицы эффектов (10): у ведьмы — от выпитых зелий (чёрный ящик,
+    // witch-stand: `10=[entity_effect]` в такте конца питья).
+    if mob.kind == Kind::Witch {
+        let mut particles = Vec::new();
+
+        super::vitals::push_effect_particles(&mut particles, &mob.vitals.effect_colors());
+        // Ключ и вид уже в записи — оставляем одно значение.
+        particles.drain(..1 + encode_varint(TYPE_PARTICLES).len());
+        out.insert(4, (10, TYPE_PARTICLES, particles));
+    }
 
     match mob.kind {
         Kind::Cow => {
@@ -181,7 +213,27 @@ fn properties(mob: &Mob) -> Vec<Property> {
         // Фаза дракона: 10 — висит (minecraft-data: phase; чёрный ящик,
         // dragon-summon: призванный фазы не шлёт — она по умолчанию).
         Kind::EnderDragon => out.push((16, TYPE_INT, encode_varint(i32::from(mob.dragon.phase)))),
-        Kind::EndCrystal => {}
+        Kind::EndCrystal | Kind::ShulkerBullet => {}
+        // Эндермен (minecraft-data: carry_state, creepy, stared_at): блок в
+        // руках — Optional BlockState: само состояние, 0 (воздух) — пусто
+        // (чёрный ящик, enderman-stand: дёрн без снега — 16=9); кричит
+        // (сердит), на него смотрят.
+        Kind::Enderman => {
+            out.push((16, TYPE_OPT_BLOCK_STATE, encode_varint(mob.h.carried.unwrap_or(0))));
+            out.push((17, TYPE_BOOL, vec![u8::from(mob.h.target.is_some())]));
+            out.push((18, TYPE_BOOL, vec![u8::from(mob.h.stared_at)]));
+        }
+        // Шалкер (minecraft-data: attach_face, peek, color).
+        Kind::Shulker => {
+            out.push((16, TYPE_DIRECTION, encode_varint(i32::from(mob.h.face))));
+            out.push((17, TYPE_BYTE, vec![mob.h.peek]));
+            out.push((18, TYPE_BYTE, vec![mob.h.shell_color]));
+        }
+        // Ведьма (minecraft-data: is_celebrating, using_item): пьёт ли.
+        Kind::Witch => {
+            out.push((16, TYPE_BOOL, vec![0]));
+            out.push((17, TYPE_BOOL, vec![u8::from(mob.h.drinking > 0)]));
+        }
     }
 
     out
@@ -198,8 +250,11 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (9, Kind::EndCrystal) => value.as_slice() == [1],
         (16, Kind::EnderDragon) => value.as_slice() == encode_varint(DRAGON_PHASE_HOVER).as_slice(),
         (16, Kind::Creeper) => value.as_slice() == encode_varint(-1).as_slice(),
+        (18, Kind::Shulker) => value.as_slice() == [16],
+        (17 | 18, Kind::Enderman | Kind::Shulker | Kind::Witch) => value.iter().all(|byte| *byte == 0),
         (0 | 4 | 6 | 15 | 16, _) => value.iter().all(|byte| *byte == 0),
         (9, _) => value.as_slice() == float(1.0),
+        (10, _) => value.as_slice() == [0],
         (18, Kind::Sheep) => value.iter().all(|byte| *byte == 0),
         (18, Kind::Creeper) | (17, Kind::Creeper) => value.iter().all(|byte| *byte == 0),
         (18..=20, _) => true,
@@ -241,7 +296,9 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
     body.push(cart_angle(mob.pitch));
     body.push(cart_angle(mob.yaw));
     body.push(cart_angle(mob.head_yaw));
-    body.extend_from_slice(&encode_varint(0));
+    // Данные появления: у снаряда шалкера — номер стрелявшего (чёрный ящик,
+    // shulker-ai: data = номер шалкера).
+    body.extend_from_slice(&encode_varint(if mob.kind == Kind::ShulkerBullet { mob.h.owner } else { 0 }));
     write_body(stream, body).await?;
 
     let properties = properties(mob);
@@ -251,8 +308,9 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
 
     send_mob_equipment(stream, mob).await?;
 
-    // Зомби — атрибуты сразу при появлении (чёрный ящик, zombie-hit).
-    if mob.kind == Kind::Zombie {
+    // Зомби и эндермен — атрибуты сразу при появлении (чёрный ящик,
+    // zombie-hit, enderman-stand).
+    if attributes_at_spawn(mob.kind) {
         send_attributes(stream, mob).await?;
     }
 
@@ -267,10 +325,17 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         impulses: mob.impulses,
         teleports: mob.teleports,
         attr_changes: mob.attr_changes,
-        attributes_sent: mob.kind == Kind::Zombie,
+        attributes_sent: attributes_at_spawn(mob.kind),
+        modded: modded(mob),
         first: true,
         properties,
     })
+}
+
+/// Скорость шага в пакете атрибутов: как у вида, но у шалкера, что не
+/// ходит, — 0,7, значение атрибута по умолчанию (чёрный ящик, shulker-stand).
+fn attribute_speed(kind: Kind) -> f64 {
+    if kind == Kind::Shulker { 0.7 } else { kind.speed() }
 }
 
 /// Атрибуты: сообщается одна скорость шага (у оригинала так же: клиенту
@@ -281,9 +346,56 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     body.extend_from_slice(&encode_varint(mob.entity_id));
     body.extend_from_slice(&encode_varint(1));
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
-    push_f64(&mut body, f64::from(mob.kind.speed() as f32));
-    body.extend_from_slice(&encode_varint(0));
+    push_f64(&mut body, f64::from(attribute_speed(mob.kind) as f32));
+
+    // Пьющая ведьма: модификатор «minecraft:drinking» −0,25; сердитый
+    // эндермен — «minecraft:attacking» +0,15; оба — сложением (чёрный ящик,
+    // witch-stand, enderman-stare).
+    let modifier = match mob.kind {
+        Kind::Witch if mob.h.drinking > 0 => Some(("minecraft:drinking", -0.25)),
+        Kind::Enderman if mob.h.target.is_some() => Some(("minecraft:attacking", crate::mob::hostile::ATTACKING_BONUS)),
+        _ => None,
+    };
+
+    push_modifiers(&mut body, modifier);
     write_body(stream, body).await
+}
+
+/// Модификаторы атрибута: ни одного или один (имя, прибавка, сложение).
+fn push_modifiers(body: &mut Vec<u8>, modifier: Option<(&str, f64)>) {
+    match modifier {
+        Some((name, amount)) => {
+            body.extend_from_slice(&encode_varint(1));
+            body.extend_from_slice(&encode_string(name));
+            push_f64(body, amount);
+            body.push(0);
+        }
+        None => body.extend_from_slice(&encode_varint(0)),
+    }
+}
+
+/// Броня шалкера: база 0, у закрытого — «minecraft:covered» +20 (чёрный
+/// ящик, shulker-ai: открылся — броня без модификаторов, закрылся — с ним).
+async fn send_shulker_armor(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+    let mut body = encode_varint(UPDATE_ATTRIBUTES);
+
+    body.extend_from_slice(&encode_varint(mob.entity_id));
+    body.extend_from_slice(&encode_varint(1));
+    body.extend_from_slice(&encode_varint(ATTRIBUTE_ARMOR));
+    push_f64(&mut body, 0.0);
+    push_modifiers(&mut body, mob.h.covered.then_some(("minecraft:covered", 20.0)));
+    write_body(stream, body).await
+}
+
+/// Состояние, что меняет атрибуты на лету: ведьма пьёт, эндермен сердит,
+/// шалкер закрыт.
+fn modded(mob: &Mob) -> bool {
+    match mob.kind {
+        Kind::Witch => mob.h.drinking > 0,
+        Kind::Enderman => mob.h.target.is_some(),
+        Kind::Shulker => mob.h.peek == 0,
+        _ => false,
+    }
 }
 
 /// Показывает клиенту всех мобов вокруг: о них журнал не скажет — они
@@ -291,6 +403,7 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
 pub(super) async fn send_all_mobs(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     player.seen_mobs.clear();
     player.seen_bow_arrows.clear();
+    player.seen_thrown.clear();
     send_mob_ticks(stream, shared, player).await
 }
 
@@ -332,6 +445,7 @@ pub(super) async fn send_mob_event(
         Event::Hearts => send_status(stream, entity_id, 18).await?,
         Event::Eating => send_status(stream, entity_id, 10).await?,
         Event::Swing => send_animation(stream, entity_id).await?,
+        Event::Status(status) => send_status(stream, entity_id, *status).await?,
         Event::Sound { name, volume, pitch } if heard(at) => send_sound(stream, name, SOUND_NEUTRAL, at, *volume, *pitch).await?,
         Event::PlayerSound { name, at: place } if heard(*place) => send_sound(stream, name, SOUND_PLAYERS, *place, 1.0, 1.0).await?,
         Event::EntitySound { name, category, volume, pitch } if heard(at) => {
@@ -373,9 +487,31 @@ async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<
         return Ok(());
     }
 
+    send_equipment_slots(stream, mob.entity_id, &slots).await
+}
+
+/// Зелье в руке пьющей ведьмы (чёрный ящик, witch-stand: `potion` с
+/// potion_contents, по окончании — пустая рука).
+async fn send_witch_hand(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+    let held = if mob.h.drinking > 0 {
+        blocks::item_named("potion").map(|item| Stack::new(item, 1).with_extras(crate::stackdata::Data { potion: Some(mob.h.potion), ..Default::default() }))
+    } else {
+        None
+    };
     let mut body = encode_varint(SET_EQUIPMENT);
 
     body.extend_from_slice(&encode_varint(mob.entity_id));
+    body.push(EQUIPMENT_MAIN_HAND);
+    push_slot(&mut body, held);
+    write_body(stream, body).await
+}
+
+/// Пакет снаряжения: места и стопки.
+async fn send_equipment_slots(stream: &mut Outgoing<'_>, entity_id: i32, slots: &[(u8, Stack)]) -> io::Result<()> {
+
+    let mut body = encode_varint(SET_EQUIPMENT);
+
+    body.extend_from_slice(&encode_varint(entity_id));
 
     // Места идут подряд, старший бит номера — «за этим есть ещё».
     for (index, (slot, stack)) in slots.iter().enumerate() {
@@ -519,7 +655,11 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
                 let place = (mob.x, mob.y, mob.z);
                 let grid = grid_of(place);
                 let moved = (place.0 - shown.place.0).powi(2) + (place.1 - shown.place.1).powi(2) + (place.2 - shown.place.2).powi(2) >= MOVED;
-                let forced = mob.ticks % FORCED == 0;
+                // Кристалл Края — не живое существо: нулевой сдвиг раз в 60 тактов у него не
+                // шлётся (чёрный ящик, dragon-crystal-heal: кристалл стоял 80 тактов, у оригинала
+                // на +60 ничего, у дракона рядом — шлётся); сдвиг при появлении (такт 0) — как у всех
+                // [проверить: другие неживые].
+                let forced = mob.ticks % FORCED == 0 && (mob.kind != Kind::EndCrystal || mob.ticks == 0);
                 let (yaw, pitch) = (cart_angle(mob.yaw), cart_angle(mob.pitch));
                 let turned = yaw != shown.yaw || pitch != shown.pitch;
                 let step = (grid.0 - shown.grid.0, grid.1 - shown.grid.1, grid.2 - shown.grid.2);
@@ -588,7 +728,23 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         send_properties(stream, mob.entity_id, &changed).await?;
         shown.properties = now;
 
-        if shown.first && mob.kind == Kind::Zombie {
+        // Ведьма начала или кончила пить, эндермен рассердился или остыл,
+        // шалкер открылся или закрылся: атрибуты (у ведьмы — и рука).
+        if modded(mob) != shown.modded {
+            if mob.kind == Kind::Shulker {
+                send_shulker_armor(stream, mob).await?;
+            } else {
+                send_attributes(stream, mob).await?;
+            }
+
+            if mob.kind == Kind::Witch {
+                send_witch_hand(stream, mob).await?;
+            }
+
+            shown.modded = modded(mob);
+        }
+
+        if shown.first && attributes_at_spawn(mob.kind) {
             send_attributes(stream, mob).await?;
         }
 
@@ -664,6 +820,7 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         teleports: 0,
         attr_changes: 0,
         attributes_sent: true,
+        modded: false,
         first: true,
         properties,
     })

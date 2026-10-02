@@ -1,0 +1,105 @@
+{
+ "name": "pvp-mace-wind-burst",
+ "about": "Удар булавой с «порывом ветра» I с падения 4 блока: после сокрушающего удара нападающего подбрасывает (взрыв ветра, звук wind_burst, частицы gust_emitter). Жертва в алмазных нагруднике и поножах — чтобы пережила удар.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "exclusive": true,
+ "blocks": [],
+ "track_second": true,
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "kill $(bot)",
+  "!wait 30",
+  "item replace entity $(bot) armor.chest with minecraft:diamond_chestplate",
+  "item replace entity $(bot) armor.legs with minecraft:diamond_leggings",
+  "give $(bot2) minecraft:mace[enchantments={wind_burst:1}] 1",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "tp $(bot2) $(3.5,0,1.5) 0 0",
+  "!stopfly",
+  "!wait 20",
+  "!hotbar2 0",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "tp $(bot2) $(3.5,4,1.5) 0 0"
+  },
+  {
+   "after": 8,
+   "attack": true,
+   "bot": 2
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "item_components": true,
+ "random": [
+  {
+   "type": "mask",
+   "name": "высота нападающего при ударе (entity.player.attack.crit)",
+   "kind": "sound",
+   "pattern": "^sound 3\\.5,[12](\\.\\d+)?,1\\.5 minecraft:entity\\.player\\.attack\\.crit",
+   "replace": "sound 3.5,Y,1.5 minecraft:entity.player.attack.crit",
+   "why": "робот бьёт в падении: высота, на которой сервер застаёт его в миг удара, зависит от того, сколько пакетов движения он успел обработать (как в pvp-crit)"
+  },
+  {
+   "type": "mask",
+   "name": "высота нападающего при ударе (item.mace.smash_ground)",
+   "kind": "sound",
+   "pattern": "^sound 3\\.5,[12](\\.\\d+)?,1\\.5 minecraft:item\\.mace\\.smash_ground",
+   "replace": "sound 3.5,Y,1.5 minecraft:item.mace.smash_ground",
+   "why": "робот бьёт в падении: высота, на которой сервер застаёт его в миг удара, зависит от того, сколько пакетов движения он успел обработать (как в pvp-crit)"
+  },
+  {
+   "type": "count",
+   "name": "досыл атрибутов сущности",
+   "match": "^sv (other entity_update_attributes|(b: )?Attributes )",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "у игрока интервал слежения 2 такта: досыл атрибутов после износа вещи приходит на +1 или +2 такт в зависимости от чётности счёта сущности; у оригинала два прогона расходятся; то же у нападающего (b:) после износа оружия"
+  },
+  {
+   "type": "count",
+   "name": "шаги роботов",
+   "match": "block\\.stone\\.step",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "после отдачи роботы идут по камню сами (клиентская физика): звук шага зависит от пройденного пути, у оригинала два прогона расходятся"
+  },
+  {
+   "type": "mask",
+   "name": "высота взрыва ветра",
+   "kind": "explosion",
+   "pattern": "^explosion 3,[12],1 ",
+   "replace": "explosion 3,Y,1 ",
+   "why": "взрыв ветра — у ног нападающего, а их высоту в миг удара сервер знает с точностью до пакетов движения робота (как звук крита, pvp-crit): у оригинала взрыв на 2,407 и 1,89 в двух записях"
+  }
+ ],
+ "track_second_velocity": true
+}

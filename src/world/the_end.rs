@@ -605,6 +605,24 @@ impl End {
         (top >= end_city::MIN_TOP).then_some((chunk_x, chunk_z, top + 1))
     }
 
+    /// Шалкеры энд-городов, стоящие в чанке (end_city::sentries).
+    pub fn city_sentries(&self, chunk_x: i32, chunk_z: i32) -> Vec<(i32, i32, i32)> {
+        let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);
+        let mut out = Vec::new();
+
+        for (region_x, region_z) in end_city::regions_near(chunk_x, chunk_z) {
+            let Some((start_x, start_z, y)) = self.city_at(region_x, region_z) else { continue };
+
+            if (start_x - chunk_x).abs() > end_city::RADIUS_CHUNKS || (start_z - chunk_z).abs() > end_city::RADIUS_CHUNKS {
+                continue;
+            }
+
+            out.extend(end_city::sentries(&end_city::plan(self.seed, start_x, start_z, y), x0, z0));
+        }
+
+        out
+    }
+
     /// Энд-города, задевающие чанк.
     fn cities(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
         let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);

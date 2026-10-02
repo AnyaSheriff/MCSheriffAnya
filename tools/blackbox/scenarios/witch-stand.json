@@ -1,0 +1,80 @@
+{
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:diamond_sword 1",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "name": "witch-stand",
+ "about": "Ведьма NoAI: появление, свойства, атрибуты; три удара мечом — раненая пьёт лечение (свойство 17, модификатор drinking, зелье в руке, частицы эффекта, +4 здоровья).",
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon witch $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 20,
+   "attack": true
+  },
+  {
+   "after": 45,
+   "attack": true
+  },
+  {
+   "after": 70,
+   "attack": true
+  }
+ ],
+ "record_ticks": 160,
+ "cleanup": [
+  "kill @e[type=witch,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "питьё ведьмы и её здоровье",
+   "match": "^meta (9=\\d+(\\.\\d+)?$|9=\\d+(\\.\\d+)? 10=|10=|17=)",
+   "range": [
+    3,
+    15
+   ],
+   "anytick": true,
+   "why": "два прогона оригинала (vanilla-witch-stand и vanilla-witch-stand-2) расходятся: вики, Witch — лечение с шансом 5 % за такт, пока ранена; от такта питья зависят и здоровье после ударов"
+  },
+  {
+   "type": "count",
+   "name": "атрибуты и рука пьющей ведьмы",
+   "match": "^cart witch entity_(update_attributes|equipment)",
+   "range": [
+    1,
+    17
+   ],
+   "anytick": true,
+   "why": "два прогона оригинала (vanilla-witch-stand и vanilla-witch-stand-2) расходятся: вики, Witch — лечение с шансом 5 % за такт, пока ранена; от такта питья зависят и здоровье после ударов"
+  },
+  {
+   "type": "count",
+   "name": "частицы ведьмы (событие 15)",
+   "match": "^cart witch событие 15",
+   "range": [
+    0,
+    6
+   ],
+   "anytick": true,
+   "why": "два прогона оригинала расходятся: событие 15 у ведьмы приходит в случайные такты [проверить: что его вызывает]"
+  }
+ ]
+}

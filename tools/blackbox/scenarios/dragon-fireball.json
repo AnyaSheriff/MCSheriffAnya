@@ -1,0 +1,38 @@
+{
+ "name": "dragon-fireball",
+ "about": "Огненный шар дракона призван над полом с движением вниз: полёт, удар о пол, звук, облако дыхания дракона (мгновенный урон).",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "fill $(-2,0,-2) $(8,6,8) minecraft:air",
+  "fill $(-2,-1,-2) $(8,-1,8) minecraft:stone",
+  "tp $(bot) $(-1.5,0,-1.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon dragon_fireball $(4.5,4,4.5) {Motion:[0.0d,-0.2d,0.0d],acceleration_power:0.1d}"
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "kill @e[type=splash_potion,distance=..48]",
+  "kill @e[type=lingering_potion,distance=..48]",
+  "kill @e[type=area_effect_cloud,distance=..48]",
+  "kill @e[type=dragon_fireball,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

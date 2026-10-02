@@ -133,8 +133,11 @@ fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
     let dimension = player.dimension;
     let roll = || vitals::world_random(shared, dimension);
 
-    // Неточность: 0,0172275 (вики, Arrow) — к каждой оси направления.
-    let wobble = || f64::from(roll() + roll() + roll() + roll() - 2.0) * 0.0172275 * 1.732;
+    // Неточность: к каждой оси направления — треугольная добавка в пределах
+    // ±0,0172275 (вики, Arrow), разность двух равномерных (чёрный ящик: у
+    // оригинала все 17 выстрелов луком, арбалетом и трезубцем в пределах
+    // ±0,0163 по оси при длине 1).
+    let wobble = || f64::from(roll() - roll()) * 0.0172275;
     let (dx, dy, dz) = crate::arrow::aim(player.yaw + yaw_offset, player.pitch, 1.0);
     let (last_x, last_y, last_z) = player.net.last_delta;
     // К скорости стрелы прибавляется скорость стрелка (по вертикали — только в воздухе).
@@ -173,7 +176,8 @@ fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
         collected: false,
         impulse: false,
         resync: None,
-        rot: None,
+        // Трезубец поворачивается сам (догоняет полёт), стрела — по скорости.
+        rot: shot.trident.map(|_| crate::arrow::angles_of(velocity)),
         ground_block: (0, 0, 0),
         pickup: shot.pickup,
         in_ground: false,
@@ -208,8 +212,10 @@ pub(super) fn throw_trident(shared: &Shared, player: &mut PlayerState, hand: i32
     let creative = player.game_mode == GAME_MODE_CREATIVE;
     let data = trident.extras();
 
-    // [проверить] «тягун» (riptide) пока не бросает игрока.
+    // «Тягун»: трезубец не летит, игрока вертит (`vitals::tick_spin`), сам
+    // рывок считает клиент (вики, Riptide).
     if data.level("riptide") > 0 {
+        riptide(shared, player, slot, trident, creative, data.level("riptide"));
         return;
     }
 
@@ -245,6 +251,47 @@ pub(super) fn throw_trident(shared: &Shared, player: &mut PlayerState, hand: i32
         player.inventory.set(slot, None);
         player.net.slot_changed(slot);
     }
+}
+
+/// Бросок с «тягуном» уровня `level`: износ 1, звук riptide_1…3 от самого
+/// игрока, вращение на 20 тактов (вики, Riptide; чёрный ящик,
+/// trident-riptide: на +0 звук, 8=4, ячейка и экипировка с износом).
+fn riptide(shared: &Shared, player: &mut PlayerState, slot: i32, trident: Stack, creative: bool, level: i32) {
+    let dimension = player.dimension;
+
+    if !creative {
+        let mut roll = || vitals::world_random(shared, dimension);
+        let worn = combat::wear(&trident, 1, false, &mut roll);
+
+        match combat::add_damage(trident, worn) {
+            Some(next) => player.inventory.set(slot, Some(next)),
+            None => pvp::replace_worn(shared, player, slot, trident, worn),
+        }
+
+        player.net.slot_changed(slot);
+    }
+
+    let sound = match level {
+        1 => "minecraft:item.trident.riptide_1",
+        2 => "minecraft:item.trident.riptide_2",
+        _ => "minecraft:item.trident.riptide_3",
+    };
+
+    shared.world_in(dimension).lock().expect("мир захвачен другим потоком").note_entity_sound(player.entity_id, sound, 1.0, 1.0);
+    player.net.spin_since = Some(0);
+    player.net.spin_pose = false;
+    player.net.spin_from = (player.x, player.y, player.z);
+    super::publish_player(shared, player);
+}
+
+/// Можно ли метнуться «тягуном»: игрок в воде (ноги или голова) — «only
+/// when a player stands in water or when exposed to rain» (вики, Riptide).
+/// [проверить] дождь: погоды у сервера пока нет.
+pub(super) fn riptide_allowed(shared: &Shared, player: &PlayerState) -> bool {
+    let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+    let (x, z) = (player.x.floor() as i32, player.z.floor() as i32);
+
+    [player.y, player.y + 1.0].iter().any(|y| crate::mob::is_water(world.get_block(x, y.floor() as i32, z)))
 }
 
 /// Арбалет в руке `hand` натянут до конца: заряжается стрелой из инвентаря
@@ -462,7 +509,7 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
         // Перелом полёта прошлого такта (отскок трезубца, пробитая цель,
         // возврат к хозяину): скорость, сдвиг к тогдашнему месту, флаги
         // (чёрный ящик, trident-loyalty: +2 и +3; crossbow-piercing: +2).
-        if let Some((due, at, velocity, flags)) = arrow.resync
+        if let Some((due, at, velocity, flags, facing)) = arrow.resync
             && due > shown.resynced
             && due <= arrow.age
         {
@@ -473,8 +520,6 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             body.extend_from_slice(&encode_varint(arrow.entity_id));
             types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
             write_body(stream, body).await?;
-
-            let facing = arrow.rot.unwrap_or_else(|| Arrow { vx: velocity.0, vy: velocity.1, vz: velocity.2, ..arrow.clone() }.angles());
 
             send_move_to(stream, arrow, &mut shown, at, facing).await?;
 
@@ -530,14 +575,14 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             }
 
             shown.in_ground = arrow.in_ground;
-        } else if !arrow.in_ground && arrow.age.is_multiple_of(ARROW_SYNC) {
+        } else if !arrow.in_ground && arrow.lived().is_multiple_of(ARROW_SYNC) && arrow.lived() > 0 {
             // Раз в 20 тактов — сверка места (у оригинала так у всех
             // сущностей; замерено только до 18-го такта) [проверить].
             send_position_sync(stream, arrow).await?;
-        } else if arrow.in_ground && arrow.trident.is_some() && arrow.age.is_multiple_of(ARROW_SYNC) {
+        } else if arrow.in_ground && arrow.trident.is_some() && arrow.lived().is_multiple_of(ARROW_SYNC) {
             // Лежащий трезубец раз в 20 тактов шлёт нулевой сдвиг с поворотом
-            // (чёрный ящик, trident-throw: +19, +39, +59); у стрел так не
-            // бывает (skeleton-arrow).
+            // через 20, 40, 60 тактов после броска (чёрный ящик, trident-throw:
+            // +20, +40, +60); у стрел так не бывает (skeleton-arrow).
             send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), arrow.facing()).await?;
         }
 

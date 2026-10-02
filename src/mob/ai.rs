@@ -42,6 +42,11 @@ pub struct Watcher {
 
     /// Выживание или приключение: цель для враждебных (творческого они не бьют).
     pub targetable: bool,
+
+    /// Куда смотрит (поворот и наклон, градусы) и не тыква ли на голове:
+    /// взгляд злит эндермена, тыква — нет (вики, Enderman).
+    pub look: (f32, f32),
+    pub pumpkin: bool,
 }
 
 /// Сородич рядом: для разведения и следования за родителем.
@@ -103,6 +108,14 @@ pub struct Plan {
     pub melee: Option<super::hostile::Melee>,
     pub shot: Option<super::hostile::Shot>,
     pub blast: Option<f32>,
+
+    /// Шалкер выпустил снаряд в этого игрока; снаряд попал в этого игрока.
+    pub bullet: Option<i32>,
+    pub bullet_hit: Option<i32>,
+
+    /// Эндермен взял блок из клетки; поставил блок (клетка, состояние).
+    pub take: Option<(i32, i32, i32)>,
+    pub put: Option<((i32, i32, i32), i32)>,
 }
 
 /// Состояние мыслей.

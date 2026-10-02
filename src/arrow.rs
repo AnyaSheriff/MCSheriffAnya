@@ -25,8 +25,8 @@ use crate::world::World;
 /// Номер вида сущности «стрела» (minecraft-data 26.1, entities.json).
 pub const ARROW_TYPE: i32 = 6;
 
-/// Перелом полёта для клиентов: возраст, место, скорость, флаги.
-pub type Resync = (u32, (f64, f64, f64), (f64, f64, f64), u8);
+/// Перелом полёта для клиентов: возраст, место, скорость, флаги, поворот.
+pub type Resync = (u32, (f64, f64, f64), (f64, f64, f64), u8, (f32, f32));
 
 /// Номер вида сущности «трезубец» (minecraft-data 26.1, entities.json).
 pub const TRIDENT_TYPE: i32 = 135;
@@ -236,12 +236,41 @@ impl Arrow {
     /// угол без знака минус: `yaw = atan2(vx, vz)` (чёрный ящик, skeleton-arrow:
     /// стрела на −x — поворот −65).
     pub fn angles(&self) -> (f32, f32) {
-        let horizontal = self.vx.hypot(self.vz);
-        let yaw = self.vx.atan2(self.vz).to_degrees() as f32;
-        let pitch = self.vy.atan2(horizontal).to_degrees() as f32;
-
-        (yaw, pitch)
+        angles_of((self.vx, self.vy, self.vz))
     }
+
+    /// Сколько тактов прошло с появления: стрела игрока делает первый ход в
+    /// такт выстрела (возраст 1), стрела моба — со следующего (возраст 0).
+    pub fn lived(&self) -> u32 {
+        if self.is_mob_shot() { self.age } else { self.age.saturating_sub(1) }
+    }
+}
+
+/// Угол и наклон по скорости: `yaw = atan2(vx, vz)`, `pitch = atan2(vy, по
+/// горизонтали)`, градусы.
+pub fn angles_of((vx, vy, vz): (f64, f64, f64)) -> (f32, f32) {
+    let horizontal = vx.hypot(vz);
+
+    (vx.atan2(vz).to_degrees() as f32, vy.atan2(horizontal).to_degrees() as f32)
+}
+
+/// Поворот `from` на пятую часть к `to` (угол — кратчайшим путём): так
+/// трезубец догоняет свой полёт (чёрный ящик, trident-throw: после отскока
+/// угол 169° → 177° за 8 тактов, наклон 0 → −70°).
+pub fn turn_toward((yaw, pitch): (f32, f32), (to_yaw, to_pitch): (f32, f32)) -> (f32, f32) {
+    let turn = (to_yaw - yaw + 540.0).rem_euclid(360.0) - 180.0;
+
+    (yaw + turn * 0.2, pitch + (to_pitch - pitch) * 0.2)
+}
+
+/// Отступ вставшего трезубца от точки удара: 0,05 назад по каждой оси, по
+/// знаку скорости, а не по её направлению (чёрный ящик, trident-throw: после
+/// отскока при скорости (≈0; −0,4; −0,024) сел на 0,05 выше пола, на 0,05
+/// дальше по z и на 0,05 в сторону по x, хотя по x почти не летел).
+pub fn ground_backoff((vx, vy, vz): (f64, f64, f64)) -> (f64, f64, f64) {
+    let sign = |value: f64| if value > 0.0 { 1.0 } else if value < 0.0 { -1.0 } else { 0.0 };
+
+    (-sign(vx) * 0.05, -sign(vy) * 0.05, -sign(vz) * 0.05)
 }
 
 /// Все стрелы сервера.
@@ -391,7 +420,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         // клиентам в этом (чёрный ящик, trident-throw: отскок на +1, скорость
         // и сдвиг до точки удара — на +2).
         if std::mem::take(&mut arrow.impulse) {
-            arrow.resync = Some((arrow.age, (arrow.x, arrow.y, arrow.z), (arrow.vx, arrow.vy, arrow.vz), arrow.flags()));
+            arrow.resync = Some((arrow.age, (arrow.x, arrow.y, arrow.z), (arrow.vx, arrow.vy, arrow.vz), arrow.flags(), arrow.facing()));
         }
 
         // «Верность»: ранивший или вонзившийся трезубец летит к хозяину
@@ -428,6 +457,23 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             arrow.x += arrow.vx;
             arrow.y += arrow.vy;
             arrow.z += arrow.vz;
+
+            // Возвращаясь, трезубец доворачивается против своего полёта —
+            // остриём от хозяина (чёрный ящик, trident-loyalty: угол −174° →
+            // −139° и 172° → 138° за такт, т. е. на пятую часть к 0 при полёте
+            // на −z; наклон — по полёту, 0 → −4°).
+            if let Some(rot) = arrow.rot {
+                let (_, pitch) = angles_of((arrow.vx, arrow.vy, arrow.vz));
+                let (yaw, _) = angles_of((-arrow.vx, -arrow.vy, -arrow.vz));
+
+                arrow.rot = Some(turn_toward(rot, (yaw, pitch)));
+            }
+
+            // Сопротивление воздуха — после хода, тяжести нет (чёрный ящик,
+            // trident-loyalty: сдвиг −0,1233 по z, а скорость следом −0,122).
+            arrow.vx *= AIR_DRAG;
+            arrow.vy *= AIR_DRAG;
+            arrow.vz *= AIR_DRAG;
 
             if (at.0 - arrow.x).abs() <= PICKUP_REACH && arrow.y >= at.1 - 1.0 && arrow.y <= at.1 + 2.3 && (at.2 - arrow.z).abs() <= PICKUP_REACH {
                 if let Some(stack) = arrow.trident.filter(|_| *mode != 1 || arrow.pickup == Pickup::Yes) {
@@ -489,6 +535,14 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             continue;
         }
 
+        // Трезубец доворачивается к полёту на 0,2 за такт — к скорости, с
+        // которой идёт этот такт (чёрный ящик, trident-throw: после отскока
+        // сел через 8 тактов с наклоном −50 в четырёх записях оригинала;
+        // к скорости после тяжести вышло бы −51).
+        if let Some(rot) = arrow.rot {
+            arrow.rot = Some(turn_toward(rot, angles_of((arrow.vx, arrow.vy, arrow.vz))));
+        }
+
         let from = (arrow.x, arrow.y, arrow.z);
         let to = (arrow.x + arrow.vx, arrow.y + arrow.vy, arrow.z + arrow.vz);
         let mut best: Option<(f64, Target)> = None;
@@ -508,7 +562,11 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             }
         }
 
-        // Мобы (стрелы мобов их не задевают).
+        // Мобы (стрелы мобов их не задевают). Эндермена стрела не берёт: он
+        // прыгает прочь прежде попадания, а стрела летит дальше (вики,
+        // Enderman: «immune to most projectiles»).
+        let mut dodgers = Vec::new();
+
         for mob in items.mobs().iter().filter(|_| !arrow.is_mob_shot()) {
             if arrow.dealt || mob.is_dead() || arrow.pierced.contains(&mob.entity_id) {
                 continue;
@@ -519,21 +577,39 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             if let Some(part) = sweep_box(from, to, (mob.x, mob.y, mob.z), width / 2.0, height)
                 && best.as_ref().is_none_or(|(known, _)| part < *known)
             {
+                if mob.kind == crate::mob::Kind::Enderman {
+                    dodgers.push(mob.entity_id);
+                    continue;
+                }
+
                 best = Some((part, Target::Mob { entity_id: mob.entity_id }));
             }
+        }
+
+        for mob in items.mobs_mut().iter_mut().filter(|mob| dodgers.contains(&mob.entity_id) && !mob.no_ai) {
+            mob.h.want_teleport = true;
         }
 
         // Блоки: шагом в четверть блока вдоль пути.
         let length = ((to.0 - from.0).powi(2) + (to.1 - from.1).powi(2) + (to.2 - from.2).powi(2)).sqrt();
         let steps = ((length / 0.25).ceil() as usize).max(1);
         let mut block_part = None;
+        let mut block_cell = (0, 0, 0);
 
         for index in 1..=steps {
             let part = index as f64 / steps as f64;
             let at = (from.0 + (to.0 - from.0) * part, from.1 + (to.1 - from.1) * part, from.2 + (to.2 - from.2) * part);
 
-            if crate::mob::solid(world.get_block(at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32)) {
-                block_part = Some(part);
+            let cell = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
+
+            if crate::mob::solid(world.get_block(cell.0, cell.1, cell.2)) {
+                // Точка входа в блок — на его грани, а не там, где шаг его
+                // нащупал (чёрный ящик, arrow-pickup и trident-throw: у
+                // оригинала встала ровно на 0,05 над полом).
+                let face = sweep_box(from, to, (f64::from(cell.0) + 0.5, f64::from(cell.1), f64::from(cell.2) + 0.5), 0.5, 1.0);
+
+                block_part = Some(face.unwrap_or(part));
+                block_cell = cell;
                 break;
             }
         }
@@ -628,9 +704,13 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             if arrow.trident.is_some() {
                 arrow.dealt = true;
                 arrow.impulse = true;
-                // Поворот — по скорости сразу после отскока, до тяжести
-                // (чёрный ящик, trident-throw: на +2 наклон 0, назад).
-                arrow.rot = Some(Arrow { vx: -0.01 * arrow.vx, vy: -0.1 * arrow.vy, vz: -0.01 * arrow.vz, ..arrow.clone() }.angles());
+                // Разворот на 170…190° со случайной добавкой, наклон прежний
+                // (чёрный ящик: после удара угол 169,5°, −175°, 172°, −174° в
+                // четырёх записях оригинала при броске почти ровно на +z;
+                // наклон как в полёте, 0 или −1).
+                let (yaw, pitch) = arrow.facing();
+
+                arrow.rot = Some((yaw + 170.0 + world.random_unit() * 20.0, pitch));
                 arrow.vx *= -0.01 * AIR_DRAG;
                 arrow.vy = arrow.vy * -0.1 * AIR_DRAG - GRAVITY;
                 arrow.vz *= -0.01 * AIR_DRAG;
@@ -659,31 +739,20 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         // остановить.
         let block_part = if entity_first { block_part.filter(|part| best_part.is_some_and(|hit| *part >= hit)) } else { block_part };
 
-        // Отскочивший трезубец доворачивается к полёту на 0,2 за такт (чёрный
-        // ящик, trident-throw: сел через 8 тактов с наклоном −70°).
-        // Цель — скорость к концу такта, после сопротивления и тяжести.
-        if let Some((yaw, pitch)) = arrow.rot {
-            let (target_yaw, target_pitch) = Arrow { vx: arrow.vx * AIR_DRAG, vy: arrow.vy * AIR_DRAG - GRAVITY, vz: arrow.vz * AIR_DRAG, ..arrow.clone() }.angles();
-            let turn = (target_yaw - yaw + 540.0).rem_euclid(360.0) - 180.0;
-
-            arrow.rot = Some((yaw + turn * 0.2, pitch + (target_pitch - pitch) * 0.2));
-        }
-
         if let Some(part) = block_part {
             arrow.x = from.0 + (to.0 - from.0) * part;
             arrow.y = from.1 + (to.1 - from.1) * part;
             arrow.z = from.2 + (to.2 - from.2) * part;
-            arrow.ground_block = (arrow.x.floor() as i32, arrow.y.floor() as i32, arrow.z.floor() as i32);
+            arrow.ground_block = block_cell;
 
-            // Трезубец отступает от блока на 0,05 назад по полёту (чёрный ящик,
-            // trident-throw: сел на высоте 0,05 над полом) [проверить у стрел].
-            if arrow.trident.is_some() {
-                let length = (arrow.vx * arrow.vx + arrow.vy * arrow.vy + arrow.vz * arrow.vz).sqrt().max(1.0e-9);
+            // Стрела и трезубец отступают от точки удара на 0,05 по каждой оси
+            // (чёрный ящик, trident-throw и arrow-pickup: сели на высоте 0,05
+            // над полом).
+            let (bx, by, bz) = ground_backoff((arrow.vx, arrow.vy, arrow.vz));
 
-                arrow.x -= arrow.vx / length * 0.05;
-                arrow.y -= arrow.vy / length * 0.05;
-                arrow.z -= arrow.vz / length * 0.05;
-            }
+            arrow.x += bx;
+            arrow.y += by;
+            arrow.z += bz;
 
             (arrow.vx, arrow.vy, arrow.vz) = (0.0, 0.0, 0.0);
             arrow.in_ground = true;
@@ -832,6 +901,41 @@ mod tests {
         assert_eq!(trident.entity_type(), TRIDENT_TYPE);
         assert_eq!(trident.hit_sound(), "minecraft:item.trident.hit");
         assert_eq!(trident.ground_sound(), "minecraft:item.trident.hit_ground");
+    }
+
+    #[test]
+    fn a_landed_trident_backs_off_by_the_sign_of_each_axis() {
+        // trident-throw: падает почти отвесно, чуть на −z и +x — отступ 0,05
+        // по каждой оси целиком; нулевая скорость по оси — без отступа.
+        let (bx, by, bz) = ground_backoff((0.0003, -0.4, -0.024));
+
+        assert_eq!((bx, by, bz), (-0.05, 0.05, 0.05));
+        assert_eq!(ground_backoff((0.0, -1.0, 0.0)), (0.0, 0.05, 0.0));
+    }
+
+    #[test]
+    fn a_trident_turns_a_fifth_of_the_way_by_the_short_side() {
+        // trident-loyalty: −174° к 0 → −139°; через ±180 — кратчайшим путём.
+        let (yaw, pitch) = turn_toward((-174.4, 0.0), (0.0, -19.4));
+
+        assert!((yaw + 139.52).abs() < 1e-3 && (pitch + 3.88).abs() < 1e-3);
+
+        let (yaw, _) = turn_toward((175.0, 0.0), (-175.0, 0.0));
+
+        assert!((yaw - 177.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn the_life_of_an_arrow_counts_from_its_spawn_tick() {
+        let mut mob = Arrow::from_mob(7, Dimension::Overworld, (0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 4, "entity.minecraft.skeleton");
+        let mut player = Arrow { shooter: Shooter::Player, ..mob.clone() };
+
+        // Стрела игрока ходит уже в такт выстрела (возраст 1), моба — нет.
+        mob.age = 20;
+        player.age = 21;
+
+        assert_eq!(mob.lived(), 20);
+        assert_eq!(player.lived(), 20);
     }
 
     #[test]

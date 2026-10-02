@@ -122,6 +122,10 @@ pub struct CombatView {
     pub shield_disabled_until: u64,
 }
 
+/// Бит позы вращения «тягуна» в `Gear::living`: самих флагов живой сущности
+/// три (1, 2, 4), поза едет рядом, чтобы уйти с ними одним пакетом.
+pub const SPIN_POSE_BIT: u8 = 0x80;
+
 /// Снаряжение и бой игрока, видимые остальным: вторая рука и броня (шлем,
 /// нагрудник, штаны, ботинки) — их клиенты показывают на чужом игроке.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -242,6 +246,12 @@ pub struct Players {
 
     /// Такт последнего показанного взмаха каждого игрока.
     swung: HashMap<[u8; 16], u64>,
+
+    /// Будильник подключения: поручение (перенос командой) будит его сразу, а
+    /// не на следующем пакете клиента или конце такта — оригинал шлёт пакет
+    /// переноса в миг команды (чёрный ящик, pvp-mace: у нас он приходил то на
+    /// 0, то на 25 мс позже, и падающий робот успевал на тик меньше).
+    wakes: HashMap<[u8; 16], std::sync::Arc<tokio::sync::Notify>>,
 }
 
 impl Players {
@@ -252,6 +262,7 @@ impl Players {
             orders: HashMap::new(),
             gear: HashMap::new(),
             swung: HashMap::new(),
+            wakes: HashMap::new(),
         }
     }
 
@@ -312,6 +323,7 @@ impl Players {
         self.orders.remove(uuid);
         self.gear.remove(uuid);
         self.swung.remove(uuid);
+        self.wakes.remove(uuid);
 
         self.changes.push(Change::Left {
             uuid: *uuid,
@@ -529,7 +541,21 @@ impl Players {
             return;
         }
 
+        // Будить сразу — только перенос в своём измерении: смену измерения
+        // (порталы) оригинал делает на ходу игрока в такте, пакеты идут в конце
+        // такта (чёрный ящик, end-portal-enter: Respawn на +1).
+        let wake = matches!(order, Order::Teleport { .. });
+
         self.orders.entry(*uuid).or_default().push(order);
+
+        if wake && let Some(wake) = self.wakes.get(uuid) {
+            wake.notify_one();
+        }
+    }
+
+    /// Будильник подключения этого игрока (см. `wakes`).
+    pub fn waker(&mut self, uuid: &[u8; 16]) -> std::sync::Arc<tokio::sync::Notify> {
+        self.wakes.entry(*uuid).or_default().clone()
     }
 
     /// Куда игрока перенесёт последнее ждущее поручение, если перенос в
@@ -682,6 +708,30 @@ mod tests {
 
         assert_eq!(players.take_orders(&uuid).len(), 4);
         assert_eq!(players.pending_teleport(&uuid), None);
+    }
+
+    /// Перенос командой будит подключение сразу (оригинал шлёт пакет места в
+    /// миг команды, чёрный ящик pvp-mace); смена измерения — нет: она идёт в
+    /// конце такта (end-portal-enter).
+    #[test]
+    fn a_teleport_order_wakes_the_connection_but_a_dimension_change_does_not() {
+        let mut players = Players::new();
+        let uuid = [1; 16];
+
+        joined(&mut players, "Первый", 1);
+
+        let wake = players.waker(&uuid);
+        let runtime = tokio::runtime::Builder::new_current_thread().enable_time().build().expect("часы для проверки");
+        let woken = |wake: &std::sync::Arc<tokio::sync::Notify>| {
+            runtime.block_on(async { tokio::time::timeout(std::time::Duration::from_millis(30), wake.notified()).await.is_ok() })
+        };
+
+        players.order(&uuid, Order::ChangeDimension { dimension: Default::default(), x: 0.0, y: 0.0, z: 0.0 });
+        assert!(!woken(&wake));
+
+        players.order(&uuid, Order::Teleport { x: 1.0, y: 2.0, z: 3.0 });
+        assert!(woken(&wake));
+        assert!(!woken(&wake), "один сигнал — один разбор");
     }
 
     /// Новичок должен получить список тех, кто уже зашёл, — иначе он их не

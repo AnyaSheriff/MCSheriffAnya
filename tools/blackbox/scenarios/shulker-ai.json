@@ -1,0 +1,36 @@
+{
+ "name": "shulker-ai",
+ "track_mobs": true,
+ "blocks": [],
+ "exclusive": true,
+ "about": "Шалкер с ИИ рядом с роботом в выживании: открывается (свойство 17), стреляет снарядом, снаряд летит к роботу, попадание — урон и левитация.",
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "effect give $(bot) minecraft:resistance 100 4"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon shulker $(3.5,0,5.5) {Silent:1b}"
+  }
+ ],
+ "record_ticks": 200,
+ "cleanup": [
+  "kill @e[type=shulker,distance=..48]",
+  "kill @e[type=shulker_bullet,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "time set noon",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

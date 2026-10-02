@@ -1,4 +1,4 @@
-// Враждебные мобы: зомби, скелет, крипер, паук.
+// Враждебные мобы: зомби, скелет, крипер, паук, эндермен, шалкер, ведьма.
 //
 // Кода игры здесь нет: правила — со страниц minecraft.wiki (Zombie, Skeleton,
 // Creeper, Spider, Arrow, Mob AI, Daylight cycle), числа, которых там нет, сняты
@@ -28,7 +28,12 @@ use super::{Event, Kind, Mob, Rng, View};
 
 /// Дальность слежения за целью (вики, Zombie: «Follow range 35»; у прочих 16).
 pub fn follow_range(kind: Kind) -> f64 {
-    if kind == Kind::Zombie { 35.0 } else { 16.0 }
+    match kind {
+        Kind::Zombie => 35.0,
+        // Вики, Enderman: злится на взгляд с 64 блоков и гонится за целью там же.
+        Kind::Enderman => 64.0,
+        _ => 16.0,
+    }
 }
 
 /// Запал крипера в тактах (вики, Creeper: «Fuse time 30 ticks»).
@@ -73,6 +78,10 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Chicken => "entity.minecraft.chicken",
         Kind::EndCrystal => "entity.minecraft.end_crystal",
         Kind::EnderDragon => "entity.minecraft.ender_dragon",
+        Kind::Enderman => "entity.minecraft.enderman",
+        Kind::Shulker => "entity.minecraft.shulker",
+        Kind::ShulkerBullet => "entity.minecraft.shulker_bullet",
+        Kind::Witch => "entity.minecraft.witch",
     }
 }
 
@@ -145,6 +154,36 @@ pub struct State {
 
     /// Пора убрать тихо: исчез вдали от игроков или взорвался.
     pub despawn: bool,
+
+    /// Эндермен: блок в руках (состояние), смотрит ли на него игрок сейчас
+    /// и сколько тактов подряд, пора ли прыгнуть прочь (удар, вода), тактов
+    /// до прыжка к цели.
+    pub carried: Option<i32>,
+    pub stared_at: bool,
+    pub stare: i32,
+    pub want_teleport: bool,
+    pub chase_timer: i32,
+
+    /// Шалкер: грань крепления (Direction: 0 низ, 1 верх, 2 север, 3 юг,
+    /// 4 запад, 5 восток), приоткрытость 0…100, сколько тактов ещё открыт,
+    /// цвет (16 — без цвета).
+    pub face: u8,
+    pub peek: u8,
+    pub peek_timer: i32,
+    pub shell_color: u8,
+
+    /// Шалкер закрылся, побыв открытым: модификатор «covered» +20 к броне.
+    /// Призванный закрытым его не носит (чёрный ящик, shulker-stand и
+    /// shulker-ai: первый пакет атрибутов — без брони, «covered» приходит с
+    /// первым закрытием).
+    pub covered: bool,
+
+    /// Снаряд шалкера: кто выпустил.
+    pub owner: i32,
+
+    /// Ведьма: сколько тактов ещё пьёт и какое зелье (номер в `POTIONS`).
+    pub drinking: i32,
+    pub potion: u16,
 }
 
 /// Игрок, которого можно атаковать: жив и в выживании.
@@ -206,6 +245,11 @@ fn eligible(mob: &Mob, view: &dyn View, ctx: &Ctx, watcher: &Watcher, need_sight
         return false;
     }
 
+    // Эндермен нейтрален: нападает, только если его разозлили (взгляд, удар).
+    if mob.kind == Kind::Enderman && !mob.h.provoked {
+        return false;
+    }
+
     !need_sight || line_of_sight(mob, view, watcher)
 }
 
@@ -241,6 +285,7 @@ fn choose_target<'a>(mob: &mut Mob, view: &dyn View, ctx: &'a Ctx, rng: &mut Rng
 pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     let mut plan = Plan::default();
 
+
     // Голос в покое: как у животных (вики, Sounds), у крипера его нет.
     mob.h.ambient += 1;
 
@@ -257,6 +302,18 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     }
 
     mob.h.cooldown = (mob.h.cooldown - 1).max(0);
+
+    // Свои такты до охоты: эндермен (вода, взгляд, блоки, прыжки), шалкер
+    // (весь его ход), ведьма (зелья).
+    match mob.kind {
+        Kind::Enderman => {
+            if enderman_pre(mob, view, ctx, rng, &mut plan) {
+                return plan;
+            }
+        }
+        Kind::Shulker => return shulker(mob, view, ctx, rng),
+        _ => {}
+    }
 
     let here = mob.cell();
     let in_water = super::is_water(view.block(here.0, here.1, here.2));
@@ -290,6 +347,8 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         Kind::Creeper => creeper(mob, view, &target, &mut plan, dist_sq, sight, grounded),
         Kind::Skeleton if mob.h.bow => skeleton(mob, view, ctx, &target, &mut plan, dist_sq, sight, rng, grounded),
         Kind::Skeleton => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
+        Kind::Enderman => enderman_chase(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
+        Kind::Witch => witch_keep(mob, view, &target, &mut plan, dist_sq, grounded),
         _ => {}
     }
 
@@ -378,7 +437,12 @@ fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist
             mob.h.cooldown = MELEE_COOLDOWN;
 
             let (ux, uz) = if flat > 1.0e-6 { ((target.x - mob.x) / flat, (target.z - mob.z) / flat) } else { (0.0, 1.0) };
-            let damage = if matches!(mob.kind, Kind::Spider | Kind::Skeleton) { 2.0 } else { 3.0 };
+            // Вики: паук и скелет 2, зомби 3, эндермен 7 (на нормальной).
+            let damage = match mob.kind {
+                Kind::Spider | Kind::Skeleton => 2.0,
+                Kind::Enderman => 7.0,
+                _ => 3.0,
+            };
 
             mob.events.push(Event::Swing);
             plan.melee = Some(Melee { target: target.id, damage, push: (ux, uz) });
@@ -572,4 +636,569 @@ pub fn despawn_check(mob: &mut Mob, players: &[Watcher], rng: &mut Rng, peaceful
     } else {
         mob.h.idle = 0;
     }
+}
+
+// ---------------------------------------------------------------------------
+// Эндермен
+// ---------------------------------------------------------------------------
+//
+// Вики (Enderman): нейтрален, злится на взгляд в голову с 64 блоков дольше
+// 5 тактов (тыква на голове спасает) и на удар; от любого урона, от воды и от
+// снарядов прыгает прочь — место выбирается в кубе ±32 блока; раз в такт с
+// шансом 1/20 пробует взять блок из «съедобных» в области 4×3×4 вокруг, с
+// шансом 1/2000 ставит его на целый пол рядом. Под взглядом цели ближе 16
+// блоков замирает. Дождя у нас нет — от него не прыгает [проверить].
+
+/// Высота глаз эндермена (minecraft-data, entities.json: рост 2,9) [проверить: 2,55].
+pub const ENDERMAN_EYE: f64 = 2.55;
+
+/// На каком такте взгляда эндермен злится: у оригинала 17=true приходит на
+/// третьем такте после 18=true (чёрный ящик, enderman-stare; вики, Enderman:
+/// «for 5 game ticks» — считая такт, когда взгляд замечен, и такт рассылки).
+pub const STARE_TICKS: i32 = 4;
+
+/// Размах прыжка эндермена по каждой оси (вики: «32 blocks along each axis»).
+pub const TELEPORT_SPREAD: f64 = 32.0;
+
+/// Блоки, что эндермен берёт в руки (вики, Enderman, «Picking up blocks»).
+pub fn holdable(state: i32) -> bool {
+    matches!(
+        crate::blocks::block_at_state(state),
+        Some(
+            "grass_block"
+                | "dirt"
+                | "coarse_dirt"
+                | "podzol"
+                | "rooted_dirt"
+                | "mycelium"
+                | "sand"
+                | "red_sand"
+                | "gravel"
+                | "clay"
+                | "pumpkin"
+                | "carved_pumpkin"
+                | "melon"
+                | "tnt"
+                | "cactus"
+                | "dandelion"
+                | "poppy"
+                | "blue_orchid"
+                | "allium"
+                | "azure_bluet"
+                | "red_tulip"
+                | "orange_tulip"
+                | "white_tulip"
+                | "pink_tulip"
+                | "oxeye_daisy"
+                | "cornflower"
+                | "lily_of_the_valley"
+                | "wither_rose"
+                | "torchflower"
+                | "brown_mushroom"
+                | "red_mushroom"
+                | "crimson_fungus"
+                | "warped_fungus"
+                | "crimson_nylium"
+                | "warped_nylium"
+                | "crimson_roots"
+                | "warped_roots"
+                | "moss_block"
+                | "mud"
+                | "muddy_mangrove_roots"
+        )
+    )
+}
+
+/// Смотрит ли игрок в голову эндермена: луч взгляда входит в ящик головы —
+/// верхние полблока, полблока в ширину (вики: «Looking anywhere at the head
+/// aggravates it, including the back») [проверить: размер ящика].
+pub fn looks_at_head(mob: &Mob, watcher: &Watcher) -> bool {
+    let (yaw, pitch) = (f64::from(watcher.look.0).to_radians(), f64::from(watcher.look.1).to_radians());
+    let dir = (-yaw.sin() * pitch.cos(), -pitch.sin(), yaw.cos() * pitch.cos());
+    let from = (watcher.x, watcher.y + watcher.eye, watcher.z);
+    let (_, height) = mob.size();
+    let low = [mob.x - 0.25, mob.y + height - 0.5, mob.z - 0.25];
+    let high = [mob.x + 0.25, mob.y + height, mob.z + 0.25];
+    let origin = [from.0, from.1, from.2];
+    let ray = [dir.0, dir.1, dir.2];
+    let (mut enter, mut leave) = (0.0f64, 64.0f64);
+
+    for axis in 0..3 {
+        if ray[axis].abs() < 1.0e-9 {
+            if origin[axis] < low[axis] || origin[axis] > high[axis] {
+                return false;
+            }
+
+            continue;
+        }
+
+        let (a, b) = ((low[axis] - origin[axis]) / ray[axis], (high[axis] - origin[axis]) / ray[axis]);
+
+        enter = enter.max(a.min(b));
+        leave = leave.min(a.max(b));
+    }
+
+    enter <= leave
+}
+
+/// Такт эндермена до охоты: вода, прыжок прочь, взгляд, блоки. true — ход
+/// окончен (прыгнул).
+fn enderman_pre(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, plan: &mut Plan) -> bool {
+    let (x, y, z) = mob.cell();
+
+    // Вода жжёт: 1 урона (вики: «take 1HP damage»), и он прыгает прочь;
+    // вид урона — утопление [проверить].
+    if super::is_water(view.block(x, y, z)) || super::is_water(view.block(x, y + 1, z)) {
+        mob.hurt(1.0, crate::survival::Source::Drown, None);
+    }
+
+    if mob.is_dead() {
+        return true;
+    }
+
+    if mob.h.want_teleport {
+        mob.h.want_teleport = false;
+
+        if teleport(mob, view, rng, (mob.x, mob.y, mob.z), TELEPORT_SPREAD) {
+            return true;
+        }
+    }
+
+    stare(mob, view, ctx);
+    grief(mob, view, rng, plan);
+    false
+}
+
+/// Взгляд игроков: глядящий в голову дольше 5 тактов становится целью.
+fn stare(mob: &mut Mob, view: &dyn View, ctx: &Ctx) {
+    let eye = (mob.x, mob.y + ENDERMAN_EYE, mob.z);
+    let staring = ctx
+        .players
+        .iter()
+        .filter(|player| victim(player) && !player.pumpkin)
+        .filter(|player| dist2(mob, player.x, player.y, player.z) <= 64.0 * 64.0)
+        .find(|player| looks_at_head(mob, player) && sees(view, (player.x, player.y + player.eye, player.z), eye))
+        .map(|player| player.id);
+
+    mob.h.stare = if staring.is_some() { mob.h.stare + 1 } else { 0 };
+
+    if let Some(id) = staring
+        && mob.h.target.is_none()
+        && mob.h.stare >= STARE_TICKS
+    {
+        mob.h.target = Some(id);
+        mob.h.provoked = true;
+    }
+
+    // «На него смотрят» — сразу, ещё не сердит (чёрный ящик, enderman-stare:
+    // 18=true на такт раньше 17=true).
+    mob.h.stared_at = staring.is_some();
+}
+
+/// Видна ли клетка блока из точки: луч до её середины не входит в твёрдое,
+/// кроме самой клетки.
+fn sees_cell(view: &dyn View, from: (f64, f64, f64), cell: (i32, i32, i32)) -> bool {
+    let to = (f64::from(cell.0) + 0.5, f64::from(cell.1) + 0.5, f64::from(cell.2) + 0.5);
+    let (dx, dy, dz) = (to.0 - from.0, to.1 - from.1, to.2 - from.2);
+    let steps = ((dx * dx + dy * dy + dz * dz).sqrt() / 0.25).ceil().max(1.0) as i32;
+
+    for step in 1..steps {
+        let t = f64::from(step) / f64::from(steps);
+        let at = ((from.0 + dx * t).floor() as i32, (from.1 + dy * t).floor() as i32, (from.2 + dz * t).floor() as i32);
+
+        if at != cell && super::solid(view.block(at.0, at.1, at.2)) {
+            return false;
+        }
+    }
+
+    true
+}
+
+/// Блоки: взять (1/20 за такт) или поставить (1/2000 за такт).
+pub fn grief(mob: &mut Mob, view: &dyn View, rng: &mut Rng, plan: &mut Plan) {
+    match mob.h.carried {
+        None => {
+            if rng.below(20) != 0 {
+                return;
+            }
+
+            let cell = (
+                (mob.x - 2.0 + rng.unit() * 4.0).floor() as i32,
+                (mob.y + rng.unit() * 3.0).floor() as i32,
+                (mob.z - 2.0 + rng.unit() * 4.0).floor() as i32,
+            );
+            let state = view.block(cell.0, cell.1, cell.2);
+
+            if holdable(state) && sees_cell(view, (mob.x, mob.y + ENDERMAN_EYE, mob.z), cell) {
+                mob.h.carried = Some(state);
+                plan.take = Some(cell);
+            }
+        }
+        Some(state) => {
+            if rng.below(2000) != 0 {
+                return;
+            }
+
+            let cell = (
+                (mob.x - 1.0 + rng.unit() * 2.0).floor() as i32,
+                (mob.y + rng.unit() * 2.0).floor() as i32,
+                (mob.z - 1.0 + rng.unit() * 2.0).floor() as i32,
+            );
+            let here = crate::blocks::block_at_state(view.block(cell.0, cell.1, cell.2));
+            let below = view.block(cell.0, cell.1 - 1, cell.2);
+
+            if matches!(here, Some("air" | "cave_air")) && crate::blocks::solid_top(below) && crate::blocks::block_at_state(below) != Some("bedrock") {
+                mob.h.carried = None;
+                plan.put = Some((cell, state));
+            }
+        }
+    }
+}
+
+/// Сердитый эндермен: бьёт, как зомби; под взглядом цели ближе 16 блоков
+/// стоит; цель дальше 16 блоков — раз в 30–40 тактов прыгает к ней (вики:
+/// «teleport … toward targets every 1.5-2 seconds») [проверить].
+#[allow(clippy::too_many_arguments)]
+fn enderman_chase(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist_sq: f64, flat: f64, rng: &mut Rng, grounded: bool) {
+    if mob.h.stared_at && dist_sq < 16.0 * 16.0 {
+        mob.brain.stop();
+        ai::look_at_point(mob, target.x, target.y + target.eye, target.z);
+        return;
+    }
+
+    if dist_sq > 16.0 * 16.0 {
+        mob.h.chase_timer += 1;
+
+        if mob.h.chase_timer >= 30 + rng.below(11) as i32 {
+            mob.h.chase_timer = 0;
+
+            let len = dist_sq.sqrt();
+            let toward = (mob.x + (target.x - mob.x) / len * 16.0, mob.y + (target.y - mob.y) / len * 16.0, mob.z + (target.z - mob.z) / len * 16.0);
+
+            if teleport(mob, view, rng, toward, 8.0) {
+                return;
+            }
+        }
+    }
+
+    melee(mob, view, target, plan, dist_sq, flat, rng, grounded);
+
+    // Сердитый быстрее: модификатор «attacking» +0,15 к скорости 0,3
+    // (чёрный ящик, enderman-stare).
+    plan.speed *= (Kind::Enderman.speed() + ATTACKING_BONUS) / Kind::Enderman.speed();
+}
+
+/// Прибавка к скорости сердитого эндермена (чёрный ящик, enderman-stare).
+pub const ATTACKING_BONUS: f64 = 0.15;
+
+/// Прыжок: до 64 попыток найти место в кубе ±`spread` вокруг `centre`.
+/// Эндермену — сухое место в рост над целым полом (опускается до пола);
+/// шалкеру — пустая клетка у твёрдой грани. Звук — только в месте прихода
+/// (вики, Enderman: «play a sound exclusively at the teleportation
+/// destination»), частицы — событие сущности 46 [проверить].
+pub fn teleport(mob: &mut Mob, view: &dyn View, rng: &mut Rng, centre: (f64, f64, f64), spread: f64) -> bool {
+    let free = |state: i32| !super::solid(state) && !super::is_water(state) && !super::is_lava(state);
+
+    for _ in 0..64 {
+        let x = centre.0 + (rng.unit() - 0.5) * 2.0 * spread;
+        let y = centre.1 + (rng.unit() - 0.5) * 2.0 * spread;
+        let z = centre.2 + (rng.unit() - 0.5) * 2.0 * spread;
+        let (cx, mut cy, cz) = (x.floor() as i32, y.floor() as i32, z.floor() as i32);
+
+        if !view.loaded(cx.div_euclid(16), cz.div_euclid(16)) || !(crate::world::MIN_Y..crate::world::MIN_Y + crate::world::WORLD_HEIGHT).contains(&cy) {
+            continue;
+        }
+
+        let to = if mob.kind == Kind::Shulker {
+            let Some(face) = attach_face(view, (cx, cy, cz), rng).filter(|_| free(view.block(cx, cy, cz))) else {
+                continue;
+            };
+
+            mob.h.face = face;
+            (f64::from(cx) + 0.5, f64::from(cy), f64::from(cz) + 0.5)
+        } else {
+            while cy > crate::world::MIN_Y && !super::solid(view.block(cx, cy - 1, cz)) {
+                cy -= 1;
+            }
+
+            if !super::solid(view.block(cx, cy - 1, cz)) || !(0..3).all(|dy| free(view.block(cx, cy + dy, cz))) {
+                continue;
+            }
+
+            (x, f64::from(cy), z)
+        };
+
+        (mob.x, mob.y, mob.z) = to;
+        (mob.vx, mob.vy, mob.vz) = (0.0, 0.0, 0.0);
+        mob.on_ground = mob.kind != Kind::Shulker;
+        mob.vitals.fall = 0.0;
+        mob.teleports += 1;
+        mob.brain.stop();
+
+        let name = if mob.kind == Kind::Shulker { "minecraft:entity.shulker.teleport" } else { "minecraft:entity.enderman.teleport" };
+
+        mob.events.push(Event::Status(46));
+
+        if !mob.silent {
+            mob.events.push(Event::Sound { name, volume: 1.0, pitch: 1.0 });
+        }
+
+        return true;
+    }
+
+    false
+}
+
+// ---------------------------------------------------------------------------
+// Шалкер
+// ---------------------------------------------------------------------------
+//
+// Вики (Shulker): сидит на грани блока; закрытый — броня 20, открытый — 0;
+// сам по себе изредка приоткрывается на 1–3 с; видя игрока в 16 блоках,
+// открывается и раз в 1–5,5 с (20–110 тактов) пускает самонаводящийся
+// снаряд: 4 урона и левитация на 10 с. Ниже половины здоровья удар с шансом
+// 25 % гонит его прочь; без опоры под гранью он тоже прыгает.
+
+/// Сдвиг к блоку, на котором держится шалкер, по грани Direction.
+pub fn face_offset(face: u8) -> (i32, i32, i32) {
+    match face {
+        1 => (0, 1, 0),
+        2 => (0, 0, -1),
+        3 => (0, 0, 1),
+        4 => (-1, 0, 0),
+        5 => (1, 0, 0),
+        _ => (0, -1, 0),
+    }
+}
+
+/// Грань, к которой шалкер в клетке может прилипнуть: сперва пол, потом
+/// потолок, потом стены в случайном порядке [проверить: порядок у оригинала].
+pub fn attach_face(view: &dyn View, (x, y, z): (i32, i32, i32), rng: &mut Rng) -> Option<u8> {
+    let mut sides = [2u8, 3, 4, 5];
+    let shift = rng.below(4) as usize;
+
+    sides.rotate_left(shift);
+
+    [0u8, 1].into_iter().chain(sides).find(|face| {
+        let (dx, dy, dz) = face_offset(*face);
+
+        super::solid(view.block(x + dx, y + dy, z + dz))
+    })
+}
+
+/// Приоткрытость: смена со звуком открытия или закрытия (вики, Shulker, «Sounds»).
+fn set_peek(mob: &mut Mob, peek: u8) {
+    if peek == mob.h.peek {
+        return;
+    }
+
+    let name = match (mob.h.peek, peek) {
+        (0, _) => Some("minecraft:entity.shulker.open"),
+        (_, 0) => Some("minecraft:entity.shulker.close"),
+        _ => None,
+    };
+
+    mob.h.peek = peek;
+    mob.h.covered = peek == 0;
+
+    if let Some(name) = name
+        && !mob.silent
+    {
+        mob.events.push(Event::Sound { name, volume: 1.0, pitch: 1.0 });
+    }
+}
+
+/// Такт шалкера.
+fn shulker(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
+    let mut plan = Plan::default();
+    let (x, y, z) = mob.cell();
+    let (dx, dy, dz) = face_offset(mob.h.face);
+
+    if !super::solid(view.block(x + dx, y + dy, z + dz)) {
+        match attach_face(view, (x, y, z), rng) {
+            Some(face) => mob.h.face = face,
+            None => mob.h.want_teleport = true,
+        }
+    }
+
+    if mob.h.want_teleport {
+        mob.h.want_teleport = false;
+
+        if teleport(mob, view, rng, (mob.x, mob.y, mob.z), 8.0) {
+            return plan;
+        }
+    }
+
+    let had = mob.h.target;
+    let target = choose_target(mob, view, ctx, rng).copied();
+
+    let Some(target) = target else {
+        if mob.h.peek == 100 {
+            set_peek(mob, 0);
+        }
+
+        if mob.h.peek_timer > 0 {
+            mob.h.peek_timer -= 1;
+
+            if mob.h.peek_timer == 0 {
+                set_peek(mob, 0);
+            }
+        } else if mob.h.peek == 0 && rng.below(40) == 0 {
+            // Сам по себе приоткрывается на 1–3 с (вики); замер мира оригинала:
+            // приоткрытые шалкеры стоят с Peek 30.
+            set_peek(mob, 30);
+            mob.h.peek_timer = 20 + rng.below(41) as i32;
+        }
+
+        return plan;
+    };
+
+    if had.is_none() {
+        mob.h.cooldown = 20;
+    }
+
+    // Тело шалкера не поворачивается, голова смотрит на цель сразу
+    // (чёрный ящик, shulker-ai: поворот головы одним пакетом, тела — нет).
+    mob.head_yaw = (-(target.x - mob.x).atan2(target.z - mob.z)).to_degrees() as f32;
+    set_peek(mob, 100);
+    mob.h.peek_timer = 0;
+
+    if mob.h.cooldown == 0 && line_of_sight(mob, view, &target) {
+        mob.h.cooldown = 20 + rng.below(91) as i32;
+        plan.bullet = Some(target.id);
+
+        if !mob.silent {
+            mob.events.push(Event::Sound { name: "minecraft:entity.shulker.shoot", volume: 2.0, pitch: mob.voice_pitch() });
+        }
+    }
+
+    plan
+}
+
+/// Скорость снаряда шалкера, блоков за такт [проверить].
+pub const BULLET_SPEED: f64 = 0.15;
+
+/// Сколько тактов снаряд живёт без попадания [проверить].
+pub const BULLET_LIFE: u64 = 300;
+
+/// Урон снаряда и срок левитации (вики, Shulker: «4HP», «Levitation for 10 seconds»).
+pub const BULLET_DAMAGE: f32 = 4.0;
+pub const LEVITATION_TICKS: i32 = 200;
+
+/// Такт снаряда: летит к цели, сворачивая к ней; в блоке гаснет, в цели —
+/// попадание.
+pub fn bullet(mob: &mut Mob, view: &dyn View, ctx: &Ctx) -> Plan {
+    let mut plan = Plan::default();
+    let target = mob.h.target.and_then(|id| ctx.players.iter().find(|player| player.id == id && victim(player)));
+
+    let Some(target) = target.filter(|_| mob.ticks <= BULLET_LIFE) else {
+        mob.h.despawn = true;
+        return plan;
+    };
+
+    let aim = (target.x - mob.x, target.y + 0.9 - mob.y, target.z - mob.z);
+    let len = (aim.0 * aim.0 + aim.1 * aim.1 + aim.2 * aim.2).sqrt().max(1.0e-6);
+
+    mob.vx += (aim.0 / len * BULLET_SPEED - mob.vx) * 0.2;
+    mob.vy += (aim.1 / len * BULLET_SPEED - mob.vy) * 0.2;
+    mob.vz += (aim.2 / len * BULLET_SPEED - mob.vz) * 0.2;
+    mob.x += mob.vx;
+    mob.y += mob.vy;
+    mob.z += mob.vz;
+
+    let hit_sound = Event::Sound { name: "minecraft:entity.shulker_bullet.hit", volume: 1.0, pitch: 1.0 };
+
+    if super::solid(view.block(mob.x.floor() as i32, mob.y.floor() as i32, mob.z.floor() as i32)) {
+        mob.h.despawn = true;
+        mob.events.push(hit_sound);
+        return plan;
+    }
+
+    let reach = 0.3 + mob.kind.width() / 2.0;
+
+    if (mob.x - target.x).abs() < reach && (mob.z - target.z).abs() < reach && mob.y > target.y - mob.kind.height() && mob.y < target.y + 1.8 {
+        mob.h.despawn = true;
+        mob.events.push(hit_sound);
+        plan.bullet_hit = Some(target.id);
+    }
+
+    plan
+}
+
+// ---------------------------------------------------------------------------
+// Ведьма
+// ---------------------------------------------------------------------------
+//
+// Вики (Witch): пьёт зелья — подводного дыхания (под водой, 15 %), огнестойкости
+// (горит, 15 %), лечения (ранена, 5 %), стремительности (цель в 11 блоках и
+// дальше, 50 %); пьёт 1,6 с. Бросок взрывных зелий — когда они будут в ядре
+// [проверить: бросков пока нет]; к цели подходит на 10 блоков и стоит.
+
+/// Сколько тактов ведьма пьёт: у оригинала от «пьёт» (свойство 17) до
+/// «допила» 33 такта (чёрный ящик, witch-stand; вики: «1.6 seconds»).
+pub const DRINK_TICKS: i32 = 33;
+
+/// Такт зелий ведьмы.
+pub fn witch_drink(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) {
+    use crate::survival::{EffectKind, potion_effects, potion_number};
+
+    if mob.is_dead() {
+        return;
+    }
+
+    // Допив, ведьма получает эффекты зелья; мгновенное лечение действует
+    // тактом позже, как у игрока (чёрный ящик, witch-stand: частицы
+    // лечения в такте конца питья, здоровье +4 — в следующем).
+    if mob.h.drinking > 0 {
+        mob.h.drinking -= 1;
+
+        if mob.h.drinking == 0 {
+            for effect in potion_effects(mob.h.potion) {
+                mob.vitals.give_effect_shown(effect);
+            }
+        }
+
+        return;
+    }
+
+    let (x, y, z) = mob.cell();
+    let under = super::is_water(view.block(x, y + 1, z));
+    let far = mob.h.target.and_then(|id| ctx.players.iter().find(|player| player.id == id)).is_some_and(|player| dist2(mob, player.x, player.y, player.z) >= 11.0 * 11.0);
+    let has = |kind| mob.vitals.has_effect(kind);
+    let potion = if under && !has(EffectKind::WaterBreathing) && rng.unit() < 0.15 {
+        "water_breathing"
+    } else if mob.vitals.fire > 0 && !has(EffectKind::FireResistance) && rng.unit() < 0.15 {
+        "fire_resistance"
+    } else if mob.vitals.health < mob.kind.max_health() && rng.unit() < 0.05 {
+        "healing"
+    } else if far && !has(EffectKind::Speed) && rng.unit() < 0.5 {
+        "swiftness"
+    } else {
+        return;
+    };
+
+    mob.h.potion = potion_number(potion).unwrap_or(0);
+    mob.h.drinking = DRINK_TICKS;
+
+    if !mob.silent {
+        let pitch = mob.voice_pitch();
+
+        mob.events.push(Event::Sound { name: "minecraft:entity.witch.drink", volume: 1.0, pitch });
+    }
+}
+
+/// Ведьма с целью: подходит на 10 блоков и смотрит на неё.
+fn witch_keep(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist_sq: f64, grounded: bool) {
+    ai::look_at_point(mob, target.x, target.y + target.eye, target.z);
+
+    if dist_sq <= 10.0 * 10.0 && line_of_sight(mob, view, target) {
+        mob.brain.stop();
+        return;
+    }
+
+    if grounded {
+        approach(mob, view, target, 1.0);
+    }
+
+    *plan = ai::walk(mob, std::mem::take(plan));
 }

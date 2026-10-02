@@ -75,11 +75,20 @@ pub struct State {
 
     /// Опыт, который ещё предстоит выронить по ходу смерти.
     pub xp: i32,
+
+    /// Заказ на огненный шар: откуда и куда (забирает thrown.rs).
+    pub fireball: Option<Shot>,
+
+    /// Заказ на облако дыхания у пасти (забирает thrown.rs).
+    pub breath_at: Option<(f64, f64, f64)>,
 }
+
+/// Выстрел огненным шаром: откуда и куда.
+pub type Shot = ((f64, f64, f64), (f64, f64, f64));
 
 impl Default for State {
     fn default() -> Self {
-        State { phase: HOVER, target: None, timer: 0, node: 0, breaths: 0, perch_damage: 0.0, crystals: 0, fighting: false, prey: None, xp: 0 }
+        State { phase: HOVER, target: None, timer: 0, node: 0, breaths: 0, perch_damage: 0.0, crystals: 0, fighting: false, prey: None, xp: 0, fireball: None, breath_at: None }
     }
 }
 
@@ -150,7 +159,14 @@ pub fn think(mob: &mut Mob, players: &[ai::Watcher], rng: &mut Rng) {
                     state.prey = Some(id);
                     let dist = fly_to(mob, (at.0, at.1 + 10.0, at.2), SPEED);
 
-                    if dist < 20.0 || state.timer > 300 {
+                    // В 64 блоках — огненный шар в игрока и снова в круг (вики,
+                    // Ender Dragon: «within 64 blocks, it shoots a fireball»).
+                    if dist <= 64.0 {
+                        let head = head_of(mob);
+
+                        state.fireball = Some((head, (at.0 - head.0, at.1 + 0.9 - head.1, at.2 - head.2)));
+                        state.enter(CIRCLING);
+                    } else if dist < 20.0 || state.timer > 300 {
                         state.enter(CIRCLING);
                     }
                 }
@@ -196,6 +212,11 @@ pub fn think(mob: &mut Mob, players: &[ai::Watcher], rng: &mut Rng) {
             }
 
             if state.timer >= 10 {
+                // Выдох: облако дыхания у пасти (вики, Ender Dragon: «breath
+                // attack … purple cloud») [проверить место и размер].
+                let head = head_of(mob);
+
+                state.breath_at = Some((head.0, PERCH_Y, head.2));
                 state.enter(BREATH);
             }
         }
@@ -263,6 +284,13 @@ pub fn on_hurt(mob: &mut Mob, amount: f32, attacker: Option<i32>, rng: &mut Rng)
 }
 
 /// Поворачивает дракона к точке.
+/// Пасть дракона: впереди по повороту на 6,5 блока, на 2 выше [проверить].
+fn head_of(mob: &Mob) -> (f64, f64, f64) {
+    let yaw = f64::from(mob.yaw).to_radians();
+
+    (mob.x - yaw.sin() * 6.5, mob.y + 2.0, mob.z + yaw.cos() * 6.5)
+}
+
 fn face_at(mob: &mut Mob, at: (f64, f64, f64)) {
     let yaw = (-(at.0 - mob.x)).atan2(at.2 - mob.z).to_degrees() as f32;
     mob.face(yaw);
@@ -332,6 +360,38 @@ mod tests {
     }
 
     #[test]
+    fn strafing_dragon_shoots_a_fireball_within_64_blocks() {
+        let mut mob = dragon();
+        let mut rng = Rng::new(1);
+        let player = ai::Watcher { id: 1, x: 30.0, y: 100.0, z: 0.0, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false };
+
+        mob.dragon.enter(STRAFING);
+        think(&mut mob, &[player], &mut rng);
+
+        // Вики: «within 64 blocks, it shoots a fireball» — и снова в круг.
+        let (from, direction) = mob.dragon.fireball.expect("выстрел");
+
+        assert_eq!(mob.dragon.phase, CIRCLING);
+        assert!(direction.0 * (player.x - from.0) > 0.0, "шар летит к игроку");
+    }
+
+    #[test]
+    fn roaring_dragon_breathes_a_cloud() {
+        let mut mob = dragon();
+        let mut rng = Rng::new(1);
+
+        mob.dragon.enter(ROAR);
+        mob.y = PERCH_Y;
+
+        for _ in 0..10 {
+            think(&mut mob, &[], &mut rng);
+        }
+
+        assert_eq!(mob.dragon.phase, BREATH);
+        assert_eq!(mob.dragon.breath_at.map(|at| at.1), Some(PERCH_Y));
+    }
+
+    #[test]
     fn perch_damage_makes_it_take_off() {
         let mut mob = dragon();
         let mut rng = Rng::new(1);
@@ -347,7 +407,7 @@ mod tests {
     fn scanning_roars_at_close_player_after_25_ticks() {
         let mut mob = dragon();
         let mut rng = Rng::new(1);
-        let player = ai::Watcher { id: 1, x: 5.0, y: 62.0, z: 0.0, eye: 1.62, holding: [None, None], spectator: false, targetable: true };
+        let player = ai::Watcher { id: 1, x: 5.0, y: 62.0, z: 0.0, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false };
 
         mob.dragon.enter(SCANNING);
         mob.y = PERCH_Y;

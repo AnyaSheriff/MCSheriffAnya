@@ -23,7 +23,8 @@
   "kill @e[type=tnt_minecart,distance=..128]",
   "kill @e[type=furnace_minecart,distance=..128]",
   "kill @e[type=item,distance=..128]",
-  "fill $(-8,-5,-8) $(8,-1,8) minecraft:stone"
+  "fill $(-8,-5,-8) $(8,-1,8) minecraft:stone",
+  "fill $(-8,-5,-8) $(8,-5,8) minecraft:bedrock"
  ],
  "random": [
   {"type": "values", "name": "сила взрыва вагонетки", "kind": "explosion", "field": "radius", "range": [4, 11.5], "why": "minecraft.wiki/w/Minecart_with_TNT: «base power of 4 … adds a random bonus value up to 1.5 times velocity, but no higher than 7.5». Оригинал против оригинала: 4.40 и 4.63 у первой, 4.00001 и 4 у второй."},

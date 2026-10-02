@@ -146,8 +146,18 @@ pub const MONSTER_CAP: usize = 70;
 pub const MIN_DISTANCE: f64 = 24.0;
 pub const MAX_DISTANCE: f64 = 128.0;
 
-/// Виды и веса враждебных.
-const HOSTILE: [(Kind, u32); 4] = [(Kind::Zombie, 95), (Kind::Skeleton, 100), (Kind::Creeper, 100), (Kind::Spider, 100)];
+/// Виды и веса враждебных: эндермен 10, ведьма 5 (вики, Enderman и Witch:
+/// «10⁄515», «5»).
+pub const HOSTILE: [(Kind, u32); 6] = [(Kind::Zombie, 95), (Kind::Skeleton, 100), (Kind::Creeper, 100), (Kind::Spider, 100), (Kind::Enderman, 10), (Kind::Witch, 5)];
+
+/// Энд: одни эндермены (вики, Enderman, «Spawning»).
+pub const END_HOSTILE: [(Kind, u32); 1] = [(Kind::Enderman, 10)];
+
+/// Сколько мобов в группе не больше: ведьма одна (вики, Witch: «Group size: 1»),
+/// прочие — до четырёх.
+fn hostile_group(kind: Kind) -> u32 {
+    if kind == Kind::Witch { 1 } else { 4 }
+}
 
 /// Годится ли клетка для появления: воздух в ногах и над головой, пол — целый.
 pub fn spawnable(view: &dyn View, x: i32, y: i32, z: i32, height: i32) -> bool {
@@ -161,11 +171,11 @@ pub fn spawnable(view: &dyn View, x: i32, y: i32, z: i32, height: i32) -> bool {
 }
 
 /// Ставит вид по весам.
-fn pick_hostile(rng: &mut Rng) -> Kind {
-    let total: u32 = HOSTILE.iter().map(|(_, weight)| weight).sum();
+fn pick_hostile(kinds: &[(Kind, u32)], rng: &mut Rng) -> Kind {
+    let total: u32 = kinds.iter().map(|(_, weight)| weight).sum();
     let mut roll = rng.below(total);
 
-    for (kind, weight) in HOSTILE {
+    for &(kind, weight) in kinds {
         if roll < weight {
             return kind;
         }
@@ -187,6 +197,7 @@ pub fn hostile_attempt(
     view: &dyn View,
     players: &[(f64, f64, f64)],
     surface_of: &dyn Fn(i32, i32) -> i32,
+    kinds: &[(Kind, u32)],
     rng: &mut Rng,
     next_id: &mut dyn FnMut() -> i32,
 ) -> Vec<Mob> {
@@ -229,7 +240,7 @@ pub fn hostile_attempt(
         return Vec::new();
     };
 
-    let kind = pick_hostile(rng);
+    let kind = pick_hostile(kinds, rng);
     let (width, height) = (kind.width(), kind.height());
     let block_height = height.ceil() as i32;
     let far_enough = |px: f64, py: f64, pz: f64| {
@@ -239,7 +250,7 @@ pub fn hostile_attempt(
     let _ = width;
     let mut group = Vec::new();
 
-    for _ in 0..4 {
+    for _ in 0..hostile_group(kind) {
         // Разброс пачки: сумма двух равномерных — «треугольный», до 5 блоков.
         let (gx, gz) = (x + rng.below(6) as i32 - rng.below(6) as i32, z + rng.below(6) as i32 - rng.below(6) as i32);
 
@@ -260,4 +271,10 @@ pub fn hostile_attempt(
     }
 
     group
+}
+
+/// Выбор вида по весам — для проверок.
+#[cfg(test)]
+pub fn pick_hostile_for_test(kinds: &[(Kind, u32)], rng: &mut Rng) -> Kind {
+    pick_hostile(kinds, rng)
 }

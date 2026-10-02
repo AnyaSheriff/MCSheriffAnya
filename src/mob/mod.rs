@@ -40,16 +40,45 @@ pub enum Kind {
     EndCrystal,
     /// Дракон Края (вики, Ender Dragon).
     EnderDragon,
+    /// Эндермен (вики, Enderman).
+    Enderman,
+    /// Шалкер (вики, Shulker): сидит на грани блока, не ходит.
+    Shulker,
+    /// Снаряд шалкера: не живое, как кристалл, но в списке мобов — ради
+    /// слежения и самонаведения (вики, Shulker Bullet).
+    ShulkerBullet,
+    /// Ведьма (вики, Witch).
+    Witch,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 10] = [Kind::Cow, Kind::Pig, Kind::Sheep, Kind::Chicken, Kind::Zombie, Kind::Skeleton, Kind::Creeper, Kind::Spider, Kind::EndCrystal, Kind::EnderDragon];
+    pub const ALL: [Kind; 14] = [
+        Kind::Cow,
+        Kind::Pig,
+        Kind::Sheep,
+        Kind::Chicken,
+        Kind::Zombie,
+        Kind::Skeleton,
+        Kind::Creeper,
+        Kind::Spider,
+        Kind::EndCrystal,
+        Kind::EnderDragon,
+        Kind::Enderman,
+        Kind::Shulker,
+        Kind::ShulkerBullet,
+        Kind::Witch,
+    ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
     pub fn hostile(self) -> bool {
-        matches!(self, Kind::Zombie | Kind::Skeleton | Kind::Creeper | Kind::Spider)
+        matches!(self, Kind::Zombie | Kind::Skeleton | Kind::Creeper | Kind::Spider | Kind::Enderman | Kind::Shulker | Kind::Witch)
+    }
+
+    /// Не живое существо, а «сущность-другое»: кристалл и снаряд шалкера.
+    pub fn object(self) -> bool {
+        matches!(self, Kind::EndCrystal | Kind::ShulkerBullet)
     }
 
     /// По имени сущности, как в командах.
@@ -65,6 +94,10 @@ impl Kind {
             "spider" => Kind::Spider,
             "end_crystal" => Kind::EndCrystal,
             "ender_dragon" => Kind::EnderDragon,
+            "enderman" => Kind::Enderman,
+            "shulker" => Kind::Shulker,
+            "shulker_bullet" => Kind::ShulkerBullet,
+            "witch" => Kind::Witch,
             _ => return None,
         })
     }
@@ -81,6 +114,10 @@ impl Kind {
             Kind::Spider => "spider",
             Kind::EndCrystal => "end_crystal",
             Kind::EnderDragon => "ender_dragon",
+            Kind::Enderman => "enderman",
+            Kind::Shulker => "shulker",
+            Kind::ShulkerBullet => "shulker_bullet",
+            Kind::Witch => "witch",
         }
     }
 
@@ -97,6 +134,10 @@ impl Kind {
             Kind::Sheep => 111,
             Kind::EnderDragon => 43,
             Kind::EndCrystal => 45,
+            Kind::Enderman => 41,
+            Kind::Shulker => 112,
+            Kind::ShulkerBullet => 113,
+            Kind::Witch => 144,
         }
     }
 
@@ -113,6 +154,10 @@ impl Kind {
             Kind::Spider => "minecraft:spider",
             Kind::EndCrystal => "minecraft:ender_crystal",
             Kind::EnderDragon => "minecraft:ender_dragon",
+            Kind::Enderman => "minecraft:enderman",
+            Kind::Shulker => "minecraft:shulker",
+            Kind::ShulkerBullet => "minecraft:shulker_bullet",
+            Kind::Witch => "minecraft:witch",
         }
     }
 
@@ -120,8 +165,10 @@ impl Kind {
     pub fn width(self) -> f64 {
         match self {
             Kind::Chicken => 0.4,
-            Kind::Zombie | Kind::Skeleton | Kind::Creeper => 0.6,
+            Kind::Zombie | Kind::Skeleton | Kind::Creeper | Kind::Enderman | Kind::Witch => 0.6,
             Kind::Spider => 1.4,
+            Kind::Shulker => 1.0,
+            Kind::ShulkerBullet => 0.3125,
             Kind::EndCrystal => 2.0,
             Kind::EnderDragon => 16.0,
             _ => 0.9,
@@ -141,6 +188,10 @@ impl Kind {
             Kind::Spider => 0.9,
             Kind::EndCrystal => 2.0,
             Kind::EnderDragon => 8.0,
+            Kind::Enderman => 2.9,
+            Kind::Shulker => 1.0,
+            Kind::ShulkerBullet => 0.3125,
+            Kind::Witch => 1.95,
         }
     }
 
@@ -156,6 +207,11 @@ impl Kind {
             Kind::EndCrystal => 1.0,
             // Вики, Ender Dragon: «Health: 200»; чёрный ящик, dragon-summon: 9=200.
             Kind::EnderDragon => 200.0,
+            // Вики: эндермен 40, шалкер 30, ведьма 26; снаряд гибнет от удара.
+            Kind::Enderman => 40.0,
+            Kind::Shulker => 30.0,
+            Kind::ShulkerBullet => 1.0,
+            Kind::Witch => 26.0,
         }
     }
 
@@ -171,6 +227,10 @@ impl Kind {
             Kind::EndCrystal => 0.0,
             // Дракон летает (вики, Ender Dragon); ходьбы у него нет.
             Kind::EnderDragon => 0.0,
+            // Вики, Enderman: 0,3; Witch: 0,25; шалкер не ходит.
+            Kind::Enderman => 0.3,
+            Kind::Witch => 0.25,
+            Kind::Shulker | Kind::ShulkerBullet => 0.0,
         }
     }
 
@@ -182,7 +242,7 @@ impl Kind {
             Kind::Chicken => {
                 matches!(item, "wheat_seeds" | "beetroot_seeds" | "melon_seeds" | "pumpkin_seeds" | "torchflower_seeds" | "pitcher_pod")
             }
-            Kind::Zombie | Kind::Skeleton | Kind::Creeper | Kind::Spider | Kind::EndCrystal | Kind::EnderDragon => false,
+            _ => false,
         }
     }
 
@@ -211,6 +271,12 @@ impl Kind {
             Kind::EndCrystal => ("", "", ""),
             // Чёрный ящик, dragon-summon: голос в покое — entity.ender_dragon.ambient, громкость 5.
             Kind::EnderDragon => ("minecraft:entity.ender_dragon.ambient", "minecraft:entity.ender_dragon.hurt", "minecraft:entity.ender_dragon.death"),
+            // Вики, Enderman/Shulker/Witch, «Sounds»; у закрытого шалкера удар
+            // звучит hurt_closed (`Mob::hurt_sound`).
+            Kind::Enderman => ("minecraft:entity.enderman.ambient", "minecraft:entity.enderman.hurt", "minecraft:entity.enderman.death"),
+            Kind::Shulker => ("minecraft:entity.shulker.ambient", "minecraft:entity.shulker.hurt", "minecraft:entity.shulker.death"),
+            Kind::ShulkerBullet => ("", "minecraft:entity.shulker_bullet.hurt", ""),
+            Kind::Witch => ("minecraft:entity.witch.ambient", "minecraft:entity.witch.hurt", "minecraft:entity.witch.death"),
         }
     }
 
@@ -226,7 +292,8 @@ impl Kind {
             // Шаги крипера играются звуком блока [проверить]; молча.
             Kind::Creeper => "",
             Kind::Spider => "minecraft:entity.spider.step",
-            Kind::EndCrystal | Kind::EnderDragon => "",
+            // У эндермена и ведьмы шаги — звуком блока [проверить]; молча.
+            _ => "",
         }
     }
 }
@@ -397,6 +464,10 @@ pub enum Event {
 
     /// Взмах рукой (Entity Animation 0): удар зомби, выстрел скелета.
     Swing,
+
+    /// Прочее событие сущности (Entity Event): 46 — частицы прыжка
+    /// эндермена и шалкера [проверить].
+    Status(u8),
 }
 
 /// Моб в мире.
@@ -525,8 +596,11 @@ impl Mob {
         let mut vitals = Vitals::new();
 
         vitals.health = kind.max_health();
+        vitals.max_health = kind.max_health();
 
-        let h = hostile::State { bow: kind == Kind::Skeleton, ..hostile::State::default() };
+        // Шалкер без цвета — 16 (minecraft-data: color; замер мира оригинала:
+        // у всех шалкеров городов Color 16).
+        let h = hostile::State { bow: kind == Kind::Skeleton, shell_color: 16, ..hostile::State::default() };
 
         Self {
             entity_id,
@@ -627,6 +701,10 @@ impl Mob {
             Kind::Zombie | Kind::Skeleton => 1.74,
             Kind::Creeper => 1.445,
             Kind::Spider => 0.65,
+            Kind::Enderman => hostile::ENDERMAN_EYE,
+            // Ведьма — как игрок; шалкер смотрит из середины [проверить].
+            Kind::Witch => 1.62,
+            Kind::Shulker => 0.5,
             _ => self.size().1 * 0.85,
         }
     }
@@ -652,6 +730,11 @@ impl Mob {
     pub fn tick(&mut self, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai::Plan {
         self.ticks += 1;
         self.late = false;
+
+        // Снаряд шалкера — не живое: ни возраста, ни урона, только полёт.
+        if self.kind == Kind::ShulkerBullet {
+            return hostile::bullet(self, view, ctx);
+        }
 
         // Мёртвый лежит и падает набок; тело пропадает через секунду.
         if self.is_dead() {
@@ -722,6 +805,14 @@ impl Mob {
             return ai::Plan::default();
         }
 
+        // Ведьма пьёт зелья и без ИИ: это её такт, а не мысль (чёрный ящик,
+        // witch-stand: раненая NoAI-ведьма пьёт лечение). Эффекты — до питья:
+        // выпитое лечение действует на следующем такте.
+        if self.kind == Kind::Witch {
+            self.vitals.effects_tick();
+            hostile::witch_drink(self, view, ctx, rng);
+        }
+
         if self.no_ai {
             // Запал крипера — не мысль, а его такт: подожжённый NoAI взрывается
             // (чёрный ящик, creeper-explode).
@@ -734,9 +825,19 @@ impl Mob {
             return plan;
         }
 
-        let plan = ai::think(self, view, ctx, rng);
+        let mut plan = ai::think(self, view, ctx, rng);
 
-        self.physics(view, plan.speed, plan.jump);
+        // Пьющая ведьма стоит: модификатор «drinking» −0,25 к скорости 0,25
+        // (чёрный ящик, witch-stand).
+        if self.kind == Kind::Witch && self.h.drinking > 0 {
+            plan.speed = 0.0;
+        }
+
+        // Шалкер сидит на грани: ни тяжести, ни шагов (вики, Shulker).
+        if self.kind != Kind::Shulker && !self.is_dead() {
+            self.physics(view, plan.speed, plan.jump);
+        }
+
         plan
     }
 
@@ -993,8 +1094,18 @@ impl Mob {
             return None;
         }
 
+        // Снаряд шалкера гаснет от любого удара (вики, Shulker Bullet:
+        // «destroyed when it is hit with any item»).
+        if self.kind == Kind::ShulkerBullet {
+            self.h.despawn = true;
+            self.events.push(Event::Sound { name: "minecraft:entity.shulker_bullet.hurt", volume: 1.0, pitch: 1.0 });
+            return None;
+        }
+
+        // Ведьма: магия на 85 % слабее (вики, Witch).
+        let amount = if self.kind == Kind::Witch && source == Source::Magic { amount * 0.15 } else { amount };
         let before = self.vitals.health;
-        let amount = if armored(source) { after_armor(amount, self.kind.armor()) } else { amount };
+        let amount = if armored(source) { after_armor(amount, self.armor()) } else { amount };
         let mut hit = self.vitals.hurt(amount, source, false)?;
 
         // Снято на самом деле — не больше оставшегося здоровья.
@@ -1026,10 +1137,23 @@ impl Mob {
             self.knockback(push.dir.0, push.dir.1, push.strength);
         }
 
+        // Эндермен от всякого урона прыгает прочь (вики, Enderman); шалкер —
+        // ниже половины здоровья с шансом 25 % (вики, Shulker).
+        if !self.no_ai && !hit.died {
+            match self.kind {
+                Kind::Enderman => self.h.want_teleport = true,
+                Kind::Shulker if self.vitals.health < self.kind.max_health() / 2.0 => {
+                    self.h.want_teleport = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0x5B).below(4) == 0;
+                }
+                _ => {}
+            }
+        }
+
         if hit.died {
             self.die();
         } else {
             let (_, hurt, _) = self.kind.sounds();
+            let hurt = if self.kind == Kind::Shulker && self.h.peek == 0 { "minecraft:entity.shulker.hurt_closed" } else { hurt };
 
             self.events.push(Event::Sound { name: hurt, volume: self.sound_volume(), pitch: self.voice_pitch() });
 
@@ -1044,9 +1168,25 @@ impl Mob {
         Some(hit)
     }
 
+    /// Броня: у шалкера закрытого — 20, открытого — 0 (вики, Shulker). Броню
+    /// даёт закрытие после открытия (`covered`): призванный закрытым без брони
+    /// (чёрный ящик, shulker-stand: NoAI-шалкер теряет от меча 7 из 30).
+    pub fn armor(&self) -> f32 {
+        match self.kind {
+            Kind::Shulker if self.h.covered => 20.0,
+            kind => kind.armor(),
+        }
+    }
+
     /// Толчок: скорость делится пополам и складывается с ударом; вверх
     /// не больше 0,4 (вики, Knockback).
     pub fn knockback(&mut self, ux: f64, uz: f64, strength: f64) {
+        // Шалкер не сдвигается (чёрный ящик, shulker-stand: скорость после
+        // удара мечом — 0).
+        if self.kind == Kind::Shulker {
+            return;
+        }
+
         self.vx = self.vx / 2.0 + ux * strength;
         self.vz = self.vz / 2.0 + uz * strength;
 
@@ -1136,6 +1276,10 @@ impl Mob {
             Kind::Spider => 7,
             Kind::EndCrystal => 8,
             Kind::EnderDragon => 9,
+            Kind::Enderman => 10,
+            Kind::Shulker => 11,
+            Kind::ShulkerBullet => 12,
+            Kind::Witch => 13,
         });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -1147,6 +1291,13 @@ impl Mob {
         out.push(u8::from(self.no_ai) | (u8::from(self.sheared) << 1) | (u8::from(self.h.helmet) << 2) | (u8::from(self.h.lit) << 3) | (u8::from(self.h.bow) << 4));
         out.push(self.color);
         out.extend_from_slice(&self.egg_timer.to_be_bytes());
+
+        // Хвост по виду: блок в руках эндермена (−1 — пусто), грань и цвет шалкера.
+        match self.kind {
+            Kind::Enderman => out.extend_from_slice(&self.h.carried.unwrap_or(-1).to_be_bytes()),
+            Kind::Shulker => out.extend_from_slice(&[self.h.face, self.h.shell_color]),
+            _ => {}
+        }
     }
 
     /// Читает запись `write`; None — она испорчена.
@@ -1168,6 +1319,10 @@ impl Mob {
             7 => Kind::Spider,
             8 => Kind::EndCrystal,
             9 => Kind::EnderDragon,
+            10 => Kind::Enderman,
+            11 => Kind::Shulker,
+            12 => Kind::ShulkerBullet,
+            13 => Kind::Witch,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -1180,6 +1335,8 @@ impl Mob {
         let flags = take(1)?[0];
         let color = take(1)?[0];
         let egg_timer = i32::from_be_bytes(take(4)?.try_into().ok()?);
+        let carried = if kind == Kind::Enderman { Some(i32::from_be_bytes(take(4)?.try_into().ok()?)).filter(|state| *state >= 0) } else { None };
+        let shell = if kind == Kind::Shulker { take(2)?.to_vec() } else { vec![0, 16] };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
             return None;
@@ -1199,6 +1356,14 @@ impl Mob {
         mob.h.bow = flags & 16 != 0;
         mob.color = color;
         mob.egg_timer = egg_timer;
+        mob.h.carried = carried;
+        mob.h.face = shell[0].min(5);
+        mob.h.shell_color = shell[1].min(16);
+
+        // Снаряд без цели не живёт: прочитанный из файла гаснет.
+        if kind == Kind::ShulkerBullet {
+            mob.persistent = false;
+        }
 
         Some(mob)
     }
@@ -1224,7 +1389,7 @@ impl PartialEq for Mob {
 /// курятина. Детёныши ничего не роняют. Горящие роняют жареное [проверить:
 /// огня у мобов ещё нет].
 pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
-    if mob.is_baby() && !mob.kind.hostile() {
+    if (mob.is_baby() && !mob.kind.hostile()) || mob.kind.object() {
         return Vec::new();
     }
 
@@ -1272,7 +1437,32 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         }
         // Кристалл и дракон предметов не роняют (вики: у дракона только опыт,
         // яйцо — блок на портале).
-        Kind::EndCrystal | Kind::EnderDragon => {}
+        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet => {}
+        // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
+        Kind::Enderman => {
+            give("ender_pearl", 0, 1, rng);
+
+            if let Some(name) = mob.h.carried.and_then(blocks::block_at_state) {
+                give(name, 1, 1, rng);
+            }
+        }
+        // Вики, Shulker: панцирь с шансом 50 %.
+        Kind::Shulker => {
+            if rng.below(2) == 0 {
+                give("shulker_shell", 1, 1, rng);
+            }
+        }
+        // Вики, Witch: 1–3 броска, в каждом — одно из семи (палка вдвое
+        // чаще) по 0–2 штуки [проверить: веса].
+        Kind::Witch => {
+            const WITCH: [&str; 8] = ["glass_bottle", "glowstone_dust", "gunpowder", "redstone", "spider_eye", "sugar", "stick", "stick"];
+
+            for _ in 0..1 + rng.below(3) {
+                let name = WITCH[rng.below(WITCH.len() as u32) as usize];
+
+                give(name, 0, 2, rng);
+            }
+        }
     }
 
     drops
@@ -1572,6 +1762,13 @@ pub struct Outcome {
     pub strikes: Vec<Strike>,
     pub shots: Vec<Fired>,
     pub blasts: Vec<Blast>,
+
+    /// Попадания снарядов шалкера: кто выпустил, в кого, где.
+    pub bullet_hits: Vec<(i32, i32, (f64, f64, f64))>,
+
+    /// Блоки, взятые эндерменами, и поставленные ими (клетка, состояние).
+    pub grabs: Vec<(i32, i32, i32)>,
+    pub puts: Vec<((i32, i32, i32), i32)>,
 }
 
 /// Удар моба в ближнем бою.
@@ -1642,6 +1839,7 @@ pub fn step_all(
     let ctx = ai::Ctx { players, mates: &mates, difficulty: env.difficulty, sky: env.sky, sun_up: env.sun_up };
     let mut mobs = std::mem::take(items.mobs_vec());
     let mut breeds: Vec<(i32, i32)> = Vec::new();
+    let mut born = Vec::new();
 
     for mob in &mut mobs {
         let plan = mob.tick(view, &ctx, rng);
@@ -1659,9 +1857,28 @@ pub fn step_all(
             mob.h.despawn = true;
         }
 
-        if mob.kind.hostile() && !mob.is_dead() {
+        // Шалкер не исчезает вдали от игроков (вики, Shulker: «does not despawn»)
+        // [проверить: на мирной].
+        if mob.kind.hostile() && mob.kind != Kind::Shulker && !mob.is_dead() {
             hostile::despawn_check(mob, players, rng, env.difficulty == crate::survival::PEACEFUL);
         }
+
+        if let Some(target) = plan.bullet {
+            // Снаряд появляется над шалкером: y + 0,99692 (чёрный ящик, shulker-ai).
+            let mut shot = Mob::new(next_id(), Kind::ShulkerBullet, (mob.x, mob.y + 0.99692, mob.z));
+
+            shot.h.target = Some(target);
+            shot.h.owner = mob.entity_id;
+            shot.persistent = false;
+            born.push(shot);
+        }
+
+        if let Some(target) = plan.bullet_hit {
+            outcome.bullet_hits.push((mob.h.owner, target, (mob.x, mob.y, mob.z)));
+        }
+
+        outcome.grabs.extend(plan.take);
+        outcome.puts.extend(plan.put);
 
         if let Some(partner) = plan.breed {
             breeds.push((mob.entity_id, partner));
@@ -1687,7 +1904,6 @@ pub fn step_all(
 
     // Разведение: оба родителя в паузу, детёныш рождается у первого. Пара,
     // из которой один уже занят, пропускается [проверить].
-    let mut born = Vec::new();
     let mut used: Vec<i32> = Vec::new();
 
     for (a, b) in breeds {

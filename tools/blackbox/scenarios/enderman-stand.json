@@ -1,0 +1,101 @@
+{
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:diamond_sword 1",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "name": "enderman-stand",
+ "about": "Эндермен NoAI с блоком травы в руках: появление, свойства, атрибуты; шесть ударов мечом — гибель, добыча и опыт.",
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon enderman $(3.5,0,3.5) {NoAI:1b,Silent:1b,carriedBlockState:{Name:\"minecraft:grass_block\",Properties:{snowy:\"false\"}}}"
+  },
+  {
+   "after": 20,
+   "attack": true
+  },
+  {
+   "after": 45,
+   "attack": true
+  },
+  {
+   "after": 70,
+   "attack": true
+  },
+  {
+   "after": 95,
+   "attack": true
+  },
+  {
+   "after": 120,
+   "attack": true
+  },
+  {
+   "after": 145,
+   "attack": true
+  }
+ ],
+ "record_ticks": 200,
+ "cleanup": [
+  "kill @e[type=enderman,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "число выпавших стопок",
+   "match": "^spawn [-0-9,.]+ item|^spawn item",
+   "range": [
+    1,
+    2
+   ],
+   "why": "вики, Enderman: «0–1 ender pearl» и всегда блок из рук — стопок 1–2"
+  },
+  {
+   "type": "count",
+   "name": "свойства выпавших стопок",
+   "match": "^meta 8=\\{",
+   "range": [
+    2,
+    4
+   ],
+   "why": "вики, Enderman: «0–1 ender pearl» и всегда блок из рук — стопок 1–2"
+  },
+  {
+   "type": "count",
+   "name": "ход и подбор шариков опыта",
+   "match": "^cart experience_orb",
+   "range": [
+    2,
+    12
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении, поэтому подбирается на случайном такте (как в cow-xp: у оригинала расходятся два прогона)"
+  },
+  {
+   "type": "count",
+   "name": "подбор опыта роботом",
+   "match": "^sv (Collect count|Set Experience|Metadata 18)",
+   "range": [
+    1,
+    9
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении, поэтому подбирается на случайном такте (как в cow-xp: у оригинала расходятся два прогона)"
+  }
+ ]
+}

@@ -30,6 +30,7 @@
   "kill @e[type=tnt_minecart,distance=..128]",
   "kill @e[type=furnace_minecart,distance=..128]",
   "kill @e[type=item,distance=..128]",
-  "fill $(-8,-5,-8) $(8,-1,8) minecraft:stone"
+  "fill $(-8,-5,-8) $(8,-1,8) minecraft:stone",
+  "fill $(-8,-5,-8) $(8,-5,8) minecraft:bedrock"
  ]
 }

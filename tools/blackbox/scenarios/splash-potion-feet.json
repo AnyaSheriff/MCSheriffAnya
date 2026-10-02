@@ -1,0 +1,73 @@
+{
+ "name": "splash-potion-feet",
+ "about": "Зелье быстроты брошено вниз под ноги: стрелка не задевает, раскол о пол, быстрота по расстоянию до ящика робота.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!wait 10",
+  "fill $(-2,0,-2) $(8,3,8) minecraft:air",
+  "fill $(-2,-1,-2) $(8,-1,8) minecraft:stone",
+  "!stopfly",
+  "!look 0 -1.5707",
+  "give $(bot) minecraft:splash_potion[potion_contents={potion:\"minecraft:swiftness\"}] 1",
+  "!hotbar 0",
+  "!wait 25"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  }
+ ],
+ "record_ticks": 50,
+ "cleanup": [
+  "kill @e[type=splash_potion,distance=..48]",
+  "kill @e[type=lingering_potion,distance=..48]",
+  "kill @e[type=area_effect_cloud,distance=..48]",
+  "kill @e[type=dragon_fireball,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "item_components": true,
+ "inventory": true,
+ "random": [
+  {
+   "type": "mask",
+   "name": "номер бросившего и поворот зелья",
+   "kind": "spawn",
+   "pattern": "(splash_potion|lingering_potion) \\d+ ([-0-9.,]+) yaw=-?\\d+ pitch=-?\\d+",
+   "replace": "$1 N $2 yaw=Y pitch=P",
+   "why": "бросок у оригинала случаен: неточность направления (вики, Splash Potion: летит как снаряд с разбросом), поэтому поворот при появлении, скорость и сдвиг на +10 меняются от прогона к прогону (оригинал, два броска вверх — splash-potion и splash-potion-heal: скорость 0,0011/0,5014/0,0015 и −0,0026/0,5010/0,0045, сдвиг на +10 43,8618,56 и −100,8603,172); номер в появлении — номер сущности бросившего"
+  },
+  {
+   "type": "mask",
+   "name": "скорость зелья на сверке",
+   "kind": "cart",
+   "pattern": "(splash_potion|lingering_potion) скорость -?[0-9.]+,-?[0-9.]+,-?[0-9.]+",
+   "replace": "$1 скорость V",
+   "why": "бросок у оригинала случаен: неточность направления (вики, Splash Potion: летит как снаряд с разбросом), поэтому поворот при появлении, скорость и сдвиг на +10 меняются от прогона к прогону (оригинал, два броска вверх — splash-potion и splash-potion-heal: скорость 0,0011/0,5014/0,0015 и −0,0026/0,5010/0,0045, сдвиг на +10 43,8618,56 и −100,8603,172); номер в появлении — номер сущности бросившего"
+  },
+  {
+   "type": "mask",
+   "name": "сдвиг и поворот зелья на сверке",
+   "kind": "cart",
+   "pattern": "(splash_potion|lingering_potion) сдвиг -?\\d+,-?\\d+,-?\\d+ поворот -?\\d+/-?\\d+",
+   "replace": "$1 сдвиг D поворот Y/P",
+   "why": "бросок у оригинала случаен: неточность направления (вики, Splash Potion: летит как снаряд с разбросом), поэтому поворот при появлении, скорость и сдвиг на +10 меняются от прогона к прогону (оригинал, два броска вверх — splash-potion и splash-potion-heal: скорость 0,0011/0,5014/0,0015 и −0,0026/0,5010/0,0045, сдвиг на +10 43,8618,56 и −100,8603,172); номер в появлении — номер сущности бросившего"
+  }
+ ]
+}

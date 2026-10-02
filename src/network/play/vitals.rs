@@ -37,6 +37,19 @@ const REMOVE_ENTITY_EFFECT: i32 = 0x4E;
 /// Свойства сущности: воздух, «использует предмет», здоровье; виды значений.
 const AIR_PROPERTY: u8 = 1;
 const LIVING_FLAGS_PROPERTY: u8 = 8;
+const POSE_PROPERTY: u8 = 6;
+/// Вид значения «поза» и сама поза вращения «тягуна» (minecraft-data:
+/// pose, spin_attack — 4).
+const PROPERTY_POSE: i32 = 20;
+pub(super) const POSE_SPIN_ATTACK: i32 = 4;
+
+/// Флаг живой сущности «вращается» (тягун) — свойство 8, бит 4.
+const LIVING_SPIN: u8 = 4;
+
+/// Сколько тактов длится вращение «тягуна»: флаг 8=4 при броске, поза
+/// вращения со следующего такта, оба сняты на 20-м (чёрный ящик,
+/// trident-riptide: 8=4 на +0, 6=4 на +1, «6=0 8=0» на +20).
+pub(super) const SPIN_TICKS: u32 = 20;
 const HEALTH_PROPERTY: u8 = 9;
 const AMBIENT_PROPERTY: u8 = 11;
 const ABSORPTION_PROPERTY: u8 = 17;
@@ -153,6 +166,8 @@ struct Meta {
     health: f32,
     air: i32,
     flags: u8,
+    /// Поза (свойство 6): своему клиенту уходит только поза вращения.
+    pose: i32,
     living: u8,
     effects: [i32; survival::EFFECT_PARTICLES],
     /// Свойство 11: эффекты фоновые (см. `Vitals::effects_ambient`).
@@ -210,6 +225,12 @@ pub(super) struct Net {
     pub delayed_velocity: Option<(u64, (f64, f64, f64))>,
     /// До какого такта щит отключён ударом топора.
     pub shield_disabled_until: u64,
+    /// «Тягун»: сколько тактов здоровья прошло с броска (пока идёт
+    /// вращение) и где игрок был в прошлом такте — по пути между ними ищутся
+    /// задетые вращением.
+    pub spin_since: Option<u32>,
+    pub spin_pose: bool,
+    pub spin_from: (f64, f64, f64),
     slot_update: Option<i32>,
     /// Слоты, которые сервер поменял сам (износ вещей) и которые надо показать клиенту.
     slots_dirty: Vec<i32>,
@@ -241,6 +262,12 @@ pub(super) struct Net {
 
 impl Net {
     /// Слот поменялся не по воле клиента: в конце такта он уйдёт ему целиком.
+    /// Частицы эффектов уйдут клиенту ещё раз, даже без перемен (эффект от
+    /// зелья обновлён: lingering-potion-feet).
+    pub fn renew_effect_particles(&mut self) {
+        self.meta.effects[0] = i32::MIN;
+    }
+
     pub fn slot_changed(&mut self, slot: i32) {
         if !self.slots_dirty.contains(&slot) {
             self.slots_dirty.push(slot);
@@ -265,7 +292,7 @@ impl Net {
             sent_health: survival::MAX_HEALTH,
             sent_food: 20,
             sent_saturation_zero: false,
-            meta: Meta { score: 0, arrows: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES], ambient: false, absorption: 0.0 },
+            meta: Meta { score: 0, arrows: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, pose: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES], ambient: false, absorption: 0.0 },
             fire_flag: false,
             velocity: None,
             pin: None,
@@ -279,6 +306,9 @@ impl Net {
             meta_hold: 0,
             delayed_velocity: None,
             shield_disabled_until: 0,
+            spin_since: None,
+            spin_pose: false,
+            spin_from: (0.0, 0.0, 0.0),
             slot_update: None,
             slots_dirty: Vec::new(),
             slots_later: Vec::new(),
@@ -608,6 +638,10 @@ pub(super) fn stop_eating(player: &mut PlayerState) {
 pub(super) fn living_flags(player: &PlayerState) -> u8 {
     let hand = if player.net.last_hand == 1 { 2 } else { 0 };
 
+    if player.net.spin_since.is_some() {
+        return LIVING_SPIN;
+    }
+
     match (player.net.using, player.net.eating.is_some()) {
         (Some(using), _) => 1 | if using.hand == 1 { 2 } else { 0 },
         (None, true) => 1,
@@ -617,7 +651,7 @@ pub(super) fn living_flags(player: &PlayerState) -> u8 {
 
 /// Правая кнопка со щитом или луком в руке `hand`: щит поднят, лук
 /// натягивается. Возвращает, началось ли использование.
-pub(super) fn start_using(player: &mut PlayerState, hand: i32, now: u64) -> bool {
+pub(super) fn start_using(shared: &Shared, player: &mut PlayerState, hand: i32, now: u64) -> bool {
     if !mortal(player.game_mode) || player.vit.dead || player.net.using.is_some() || player.net.eating.is_some() {
         return false;
     }
@@ -650,6 +684,11 @@ pub(super) fn start_using(player: &mut PlayerState, hand: i32, now: u64) -> bool
                 return false;
             }
 
+            // С «тягуном» — только в воде или под дождём (вики, Riptide).
+            if stack.extras().level("riptide") > 0 && !super::bow::riptide_allowed(shared, player) {
+                return false;
+            }
+
             UseKind::Trident
         }
         _ => return false,
@@ -676,6 +715,59 @@ pub(super) fn release_use(player: &mut PlayerState, shared: &Shared) {
         // Арбалет заряжается сам, пока кнопка держится (`tick_crossbow`);
         // отпустили — только опустили руки.
         UseKind::Crossbow { .. } | UseKind::Shield => {}
+    }
+}
+
+/// Такт вращения «тягуна»: поза со следующего такта после броска, конец
+/// через `SPIN_TICKS`; задетого по пути бьёт трезубцем, как рукой (вики,
+/// Riptide: «the mob takes melee damage»), и вращение на этом кончается
+/// [проверить]. Стоящий на месте никого не задевает: у оригинала жертва
+/// вплотную к неподвижному роботу урона не получила (чёрный ящик,
+/// trident-riptide-hit) — сам рывок считает клиент.
+/// Счёт — по тактам здоровья: первый из них идёт в такт броска.
+pub(super) fn tick_spin(shared: &Shared, player: &mut PlayerState, now: u64) {
+    let Some(elapsed) = player.net.spin_since else {
+        return;
+    };
+    let (pose, flag) = (player.net.spin_pose, true);
+
+    player.net.spin_since = Some(elapsed + 1);
+    let here = (player.x, player.y, player.z);
+    let from = std::mem::replace(&mut player.net.spin_from, here);
+
+    player.net.spin_pose = (1..SPIN_TICKS).contains(&elapsed);
+
+    if elapsed >= SPIN_TICKS {
+        player.net.spin_since = None;
+    } else if elapsed >= 1 && from != here {
+        // Путь за такт: ящик игрока в позе вращения (0,6 × 0,6) от прошлого
+        // места до нынешнего.
+        let low = (from.0.min(here.0) - 0.3, from.1.min(here.1), from.2.min(here.2) - 0.3);
+        let high = (from.0.max(here.0) + 0.3, from.1.max(here.1) + 0.6, from.2.max(here.2) + 0.3);
+        let touched = shared
+            .players
+            .lock()
+            .expect("список игроков захвачен другим потоком")
+            .members()
+            .iter()
+            .filter(|member| member.uuid != player.uuid && member.dimension == player.dimension && member.game_mode != 3)
+            .find(|member| {
+                let (x, y, z) = (member.position.x, member.position.y, member.position.z);
+                let height = if member.sneaking { 1.5 } else { 1.8 };
+
+                x + 0.3 > low.0 && x - 0.3 < high.0 && y + height > low.1 && y < high.1 && z + 0.3 > low.2 && z - 0.3 < high.2
+            })
+            .map(|member| member.entity_id);
+
+        if let Some(target) = touched {
+            player.net.spin_since = None;
+            player.net.spin_pose = false;
+            super::pvp::strike_player(shared, player, target, now);
+        }
+    }
+
+    if player.net.spin_pose != pose || player.net.spin_since.is_some() != flag {
+        super::publish_player(shared, player);
     }
 }
 
@@ -950,6 +1042,12 @@ async fn send_meta(stream: &mut Outgoing<'_>, entity_id: i32, now: Meta, before:
         body.push(SCORE_PROPERTY);
         body.extend_from_slice(&encode_varint(PROPERTY_VARINT));
         body.extend_from_slice(&encode_varint(now.score));
+    }
+
+    if now.pose != before.pose {
+        body.push(POSE_PROPERTY);
+        body.extend_from_slice(&encode_varint(PROPERTY_POSE));
+        body.extend_from_slice(&encode_varint(now.pose));
     }
 
     if now.living != before.living {
@@ -1463,6 +1561,8 @@ pub(super) fn blasted(player: &mut PlayerState, push: (f64, f64, f64)) {
 pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     let entity = player.entity_id;
     let tick_now = *shared.ticks.borrow();
+
+    tick_spin(shared, player, tick_now);
     let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
 
     // Творческий игрок сыт полностью: насыщение 20 (чёрный ящик, pvp-thorns:
@@ -1528,6 +1628,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         health: player.vit.health,
         air: player.vit.air,
         flags,
+        pose: if player.net.spin_pose { POSE_SPIN_ATTACK } else { 0 },
         living: living_flags(player),
         effects: player.vit.effect_colors(),
         ambient: player.vit.effects_ambient().unwrap_or(player.net.meta.ambient),
@@ -1879,6 +1980,10 @@ pub(super) async fn give_effect(stream: &mut Outgoing<'_>, player: &mut PlayerSt
         return Ok(());
     }
 
+    // Обновлённый эффект того же вида приходит без плавного появления
+    // (lingering-potion-feet: первое наложение flags=14, повторные — 6).
+    let renewed = player.vit.effects.iter().any(|old| old.kind == effect.kind);
+
     player.vit.give_effect_shown(effect);
     apply_effect_modifiers(player);
 
@@ -1888,7 +1993,7 @@ pub(super) async fn give_effect(stream: &mut Outgoing<'_>, player: &mut PlayerSt
     body.extend_from_slice(&encode_varint(effect.kind.id()));
     body.extend_from_slice(&encode_varint(effect.amplifier));
     body.extend_from_slice(&encode_varint(if effect.kind.instant() { 1 } else { effect.ticks_left }));
-    body.push(effect.flags());
+    body.push(if renewed { effect.flags() & !0x08 } else { effect.flags() });
 
     write_body(stream, body).await
 }

@@ -188,6 +188,18 @@ pub enum WorldEvent {
     /// Метка «здесь слежение рассылает стрелы»: после хода стрел (arrow.rs).
     ArrowTracker,
 
+    /// Метка «здесь слежение рассылает брошенные зелья и облака» (thrown.rs):
+    /// `early` — в начале их хода (облака, которые слежение видит на такт
+    /// позже), иначе — в конце.
+    ThrownTracker { early: bool },
+
+    /// Зелье или облако наложило эффект на игрока (в порядке такта: раньше
+    /// события раскола, позже отстающего слежения за облаком).
+    PotionEffect { entity_id: i32, effect: crate::survival::Effect },
+
+    /// Зелье или облако вылечило игрока.
+    PotionHeal { entity_id: i32, amount: f32 },
+
     /// Метка «здесь такт дошёл до игроков»: открытые окна получают
     /// перемены содержимого, опубликованные к этому мгновению
     /// (`World::published`).
@@ -213,6 +225,10 @@ pub enum WorldEvent {
     /// толчок (скорость после отдачи, если есть).
     MobHurt { entity_id: i32, amount: f32, source: crate::survival::Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64) },
 
+    /// Эффект игроку от моба (снаряд шалкера — левитация): подключение
+    /// игрока даёт его, как команда `effect give`.
+    MobEffect { entity_id: i32, effect: crate::survival::Effect },
+
     /// Игрок бьёт игрока (или стрела попала): жертвино подключение считает
     /// щит, броню и отдачу в этом месте потока (combat.rs).
     PlayerStrike(std::sync::Arc<crate::combat::PlayerStrike>),
@@ -224,6 +240,8 @@ pub enum WorldEvent {
     /// Анимация сущности (Entity Animation): 4 — критический удар, 5 —
     /// удар с зачарованием.
     Animation { entity_id: i32, kind: u8 },
+    /// Звук от сущности (Entity Sound Effect).
+    EntitySound { entity_id: i32, name: &'static str, volume: f32, pitch: f32 },
 
     /// Игрок `entity_id` получил урон: остальные игроки видят Damage Event
     /// (номер вида, виновник и прямой виновник уже со сдвигом +1; чёрный
@@ -250,6 +268,9 @@ pub struct Blast {
     pub power: f32,
     pub blocks: i32,
     pub pushed: Vec<(i32, (f64, f64, f64))>,
+    /// Взрыв ветра («порыв ветра» булавы): свои частицы и звук, без дыма,
+    /// толчок — только в самом пакете.
+    pub wind: bool,
 }
 
 /// Блоки одного чанка — по секциям.
@@ -1724,6 +1745,21 @@ impl World {
         self.events.push(WorldEvent::ArrowTracker);
     }
 
+    /// Точка такта, где слежение рассылает брошенные зелья и облака.
+    pub fn note_thrown_tracker(&mut self, early: bool) {
+        self.events.push(WorldEvent::ThrownTracker { early });
+    }
+
+    /// Эффект зелья игроку: см. `WorldEvent::PotionEffect`.
+    pub fn note_potion_effect(&mut self, entity_id: i32, effect: crate::survival::Effect) {
+        self.events.push(WorldEvent::PotionEffect { entity_id, effect });
+    }
+
+    /// Лечение зельем: см. `WorldEvent::PotionHeal`.
+    pub fn note_potion_heal(&mut self, entity_id: i32, amount: f32) {
+        self.events.push(WorldEvent::PotionHeal { entity_id, amount });
+    }
+
     /// Точка такта, где накопленные изменения блоков уходят клиентам.
     pub fn note_broadcast(&mut self) {
         self.events.push(WorldEvent::Broadcast);
@@ -1795,6 +1831,11 @@ impl World {
     #[allow(clippy::too_many_arguments)]
     pub fn note_mob_hurt(&mut self, entity_id: i32, amount: f32, source: crate::survival::Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64)) {
         self.events.push(WorldEvent::MobHurt { entity_id, amount, source, attacker, killer, push, at });
+    }
+
+    /// Эффект игроку от моба: см. `WorldEvent::MobEffect`.
+    pub fn note_mob_effect(&mut self, entity_id: i32, effect: crate::survival::Effect) {
+        self.events.push(WorldEvent::MobEffect { entity_id, effect });
     }
 
     /// Открыто ли небо над клеткой: выше только воздух и прозрачное (стекло
@@ -1888,6 +1929,13 @@ impl World {
     /// Урон игрока — остальным игрокам Damage Event.
     pub fn note_player_damaged(&mut self, entity_id: i32, type_id: i32, culprit: i32, direct: i32) {
         self.events.push(WorldEvent::PlayerDamaged { entity_id, type_id, culprit, direct });
+    }
+
+    /// Звук от самой сущности (раздел «игроки»): клиенты играют его там,
+    /// где она есть, — «тягун» (чёрный ящик, trident-riptide: Entity Sound
+    /// item.trident.riptide_N и самому бросившему, и соседям).
+    pub fn note_entity_sound(&mut self, entity_id: i32, name: &'static str, volume: f32, pitch: f32) {
+        self.events.push(WorldEvent::EntitySound { entity_id, name, volume, pitch });
     }
 
     /// Анимация сущности всем, кто её видит.
@@ -2940,6 +2988,19 @@ impl World {
     /// Незер ли это: там свои правила для жидкостей.
     pub fn is_nether(&self) -> bool {
         self.kind == WorldKind::Nether
+    }
+
+    /// Энд ли это: ни солнца, ни неба.
+    pub fn is_end(&self) -> bool {
+        self.kind == WorldKind::End
+    }
+
+    /// Шалкеры энд-городов в только что сложенном чанке (в прочих мирах — нет).
+    pub fn city_sentries(&self, chunk_x: i32, chunk_z: i32) -> Vec<(i32, i32, i32)> {
+        match &*self.generator {
+            Generator::End(end) => end.city_sentries(chunk_x, chunk_z),
+            _ => Vec::new(),
+        }
     }
 
     /// Проёмы порталов, которые мир помнит.
