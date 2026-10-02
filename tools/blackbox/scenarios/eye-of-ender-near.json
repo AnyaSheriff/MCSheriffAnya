@@ -1,0 +1,76 @@
+{
+ "track_mobs": true,
+ "track_self": true,
+ "inventory": true,
+ "item_components": true,
+ "pad_up": 16,
+ "pad_wide": 16,
+ "blocks": [],
+ "setup": [
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "tp $(bot) $(0.5,0,0.5) 0 0",
+  "!wait 10",
+  "!stopfly",
+  "!look 0 0",
+  "give $(bot) minecraft:ender_eye 2",
+  "!hotbar 0",
+  "!wait 25"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  }
+ ],
+ "record_ticks": 110,
+ "cleanup": [
+  "kill @e[type=eye_of_ender,distance=..64]",
+  "kill @e[type=item,distance=..64]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "name": "eye-of-ender-near",
+ "origin": [
+  1592,
+  150,
+  486
+ ],
+ "about": "Око Края брошено в 8 блоках от угла чанка старта крепости [1584, ~, 480] (своя копия оригинала, семя 1234567890): летит к ней и опускается.",
+ "random": [
+  {
+   "type": "count",
+   "name": "раскол ока",
+   "match": "^level \\S+ 2003 0$",
+   "range": [
+    0,
+    1
+   ],
+   "why": "око Края у оригинала в 80 % падает предметом, в 20 % раскалывается (вики, Eye of Ender: «20% chance of shattering and an 80% chance of surviving»); оригинал, своя копия с семенем 1234567890: eye-of-ender-far — раскол (звук, уход, событие 2003), повтор — предмет (звук, уход, предмет со случайным толчком)"
+  },
+  {
+   "type": "count",
+   "name": "упавшее око",
+   "match": "^spawn item ",
+   "range": [
+    0,
+    1
+   ],
+   "why": "око Края у оригинала в 80 % падает предметом, в 20 % раскалывается (вики, Eye of Ender: «20% chance of shattering and an 80% chance of surviving»); оригинал, своя копия с семенем 1234567890: eye-of-ender-far — раскол (звук, уход, событие 2003), повтор — предмет (звук, уход, предмет со случайным толчком)"
+  },
+  {
+   "type": "count",
+   "name": "предмет ока в свойствах",
+   "match": "^meta 8=\\{\"itemCount\":1,\"itemId\":1129,",
+   "range": [
+    2,
+    4
+   ],
+   "anytick": true,
+   "why": "око Края у оригинала в 80 % падает предметом, в 20 % раскалывается (вики, Eye of Ender: «20% chance of shattering and an 80% chance of surviving»); оригинал, своя копия с семенем 1234567890: eye-of-ender-far — раскол (звук, уход, событие 2003), повтор — предмет (звук, уход, предмет со случайным толчком); у упавшего предмета два пакета свойств, у расколотого — ни одного"
+  }
+ ]
+}

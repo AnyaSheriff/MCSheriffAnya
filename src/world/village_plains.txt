@@ -1,0 +1,4558 @@
+# Деревни (plains) — замер мира оригинала 26.1.2 (10 деревень, семя 1234567890),
+# tools/measure/village.py export. Образец: рамка в его собственном повороте
+# (a — x, b — z, y — от низа); «.» — рельеф остаётся, «_» — пусто. У образцов
+# terrain_matching (улицы) два слоя: верх рельефа столбца и над ним.
+# layout — раскладка одной деревни: образец, поворот (четверти по часовой),
+# начало куска от угла чанка старта по x и z и высота над землёй вокруг.
+
+template common/well_bottom 4 4 3 rigid 3
+  A cobblestone
+  B water[level=0]
+layer 0
+  AAAA
+  AAAA
+  AAAA
+  AAAA
+layer 1
+  AAAA
+  ABBA
+  ABBA
+  AAAA
+layer 2
+  AAAA
+  ABBA
+  ABBA
+  AAAA
+
+template plains/houses/plains_accessory_1 3 5 2 rigid 7
+  A oak_trapdoor[facing=north,half=bottom,open=true,powered=false,waterlogged=false]
+  B oak_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  C grass_block[snowy=false]
+  D oak_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  E oak_trapdoor[facing=south,half=bottom,open=true,powered=false,waterlogged=false]
+  F poppy
+  G oxeye_daisy
+  H dandelion
+layer 0
+  _A_
+  BCD
+  BCD
+  BCD
+  _E_
+layer 1
+  ___
+  _F_
+  _G_
+  _H_
+  ___
+
+template plains/houses/plains_animal_pen_1 5 6 8 rigid 8
+  A grass_block[snowy=false]
+  B dirt
+  C oak_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  D oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  E oak_fence_gate[facing=north,in_wall=false,open=false,powered=false]
+  F oak_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  G oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  H poppy
+  I oak_fence_gate[facing=east,in_wall=false,open=false,powered=false]
+  J short_grass
+  K oak_log[axis=y]
+  L oak_fence[east=false,north=true,south=true,waterlogged=false,west=true]
+  M oak_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  N oak_fence_gate[facing=south,in_wall=false,open=false,powered=false]
+  O oak_fence[east=true,north=true,south=false,waterlogged=false,west=true]
+  P oak_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  Q oak_leaves[distance=1,persistent=false,waterlogged=false]
+layer 0
+  AAAAA
+  AAAAA
+  BAAAA
+  AAAAA
+  AAABA
+  AAAAA
+layer 1
+  CDEDF
+  GH_.G
+  I_J.G
+  G_.JG
+  G._KL
+  MDNOP
+layer 2
+  _____
+  _____
+  __...
+  _....
+  _..K.
+  _....
+layer 3
+  _____
+  _____
+  _....
+  _....
+  _..K.
+  _....
+layer 4
+  _____
+  _____
+  __...
+  _..Q.
+  _.QKQ
+  _..Q.
+layer 5
+  _____
+  _____
+  __...
+  _....
+  _....
+  _....
+layer 6
+  _____
+  _____
+  _____
+  ___._
+  __...
+  ___._
+layer 7
+  _____
+  _____
+  _____
+  ___._
+  __...
+  ___._
+
+template plains/houses/plains_animal_pen_3 8 11 6 rigid 3
+  A grass_block[snowy=false]
+  B dirt
+  C water[level=0]
+  D oak_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  E oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  F oak_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  G short_grass
+  H oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  I oak_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  J oak_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  K oak_fence_gate[facing=east,in_wall=false,open=false,powered=false]
+  L torch
+layer 0
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  BAAAAAAA
+  AAAAACAA
+  AAAACCCA
+  AAAAACAA
+  AAAAAAAA
+  AAAAAAAA
+layer 1
+  __DEEEF_
+  G_H...H_
+  DEI__.H_
+  H_G.._JF
+  H____._H
+  K___.._H
+  H_.___GH
+  H__.___H
+  JEEF___H
+  _..HG__H
+  ___JEEEI
+layer 2
+  ________
+  ________
+  ________
+  ____.___
+  L_______
+  ________
+  L_______
+  ________
+  ________
+  ________
+  ________
+layer 3
+  ________
+  ________
+  ________
+  ____.___
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+layer 4
+  ________
+  ________
+  ____.___
+  ___...__
+  ____.___
+  __....__
+  ________
+  ________
+  ________
+  ________
+  ________
+layer 5
+  __._____
+  __....__
+  ________
+  ________
+  ________
+  __...___
+  ________
+  ________
+  ________
+  ________
+  ________
+
+template plains/houses/plains_armorer_house_1 9 8 8 rigid 5
+  A oak_log[axis=y]
+  B cobblestone
+  C cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  D bricks
+  E smooth_stone
+  F oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  G oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  H blast_furnace[facing=north,lit=false]
+  I oak_log[axis=x]
+  J glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  K wall_torch[facing=west]
+  L wall_torch[facing=south]
+  M oak_log[axis=z]
+  N oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  O glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  P oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  Q cobblestone_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  R cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  S cobblestone_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+  T oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  U oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  V cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  W oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  X oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  Y oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  Z oak_slab[type=top,waterlogged=false]
+  a oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  b wall_torch[facing=north]
+  c cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  d cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+layer 0
+  ______.__
+  _ABBBBBA.
+  .BBBBBBB_
+  CBBBBB.B_
+  CBBBBBBB.
+  _BBBDBB._
+  .ABB.BBA_
+  .._B.B___
+layer 1
+  _________
+  _ABBBBBA_
+  _BEEEEEB_
+  _F____EB_
+  _G____E._
+  _B_B_.EB_
+  _AB.HBBA_
+  ___BBB___
+layer 2
+  _________
+  _AIJIJIA_
+  KB__L__M_
+  _N_____O_
+  _P_____O_
+  KB_B_B_M_
+  _ABBDB.A_
+  ___QRS___
+layer 3
+  TTTTTTTTT
+  UABBBBBAU
+  _B_____B_
+  _B_____B_
+  _B_____B_
+  _B_CBV_B_
+  WABBBBBAW
+  XXYZZZaXX
+layer 4
+  _________
+  TTTTTTTTT
+  UB_____BU
+  _B_____B_
+  _B_____B_
+  WBb_c_bBW
+  XXXXBXXXX
+  _________
+layer 5
+  _________
+  _________
+  TTTTTTTTT
+  UB_____BU
+  WB_____BW
+  XXXXXXXXX
+  ____B____
+  _________
+layer 6
+  _________
+  _________
+  _________
+  TTTTTTTTT
+  XXXXXXXXX
+  _________
+  ____B____
+  _________
+layer 7
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  ____d____
+  _________
+
+template plains/houses/plains_big_house_1 7 11 11 rigid 4
+  A grass_block[snowy=false]
+  B dirt
+  C cobblestone
+  D dirt_path
+  E short_grass
+  F oak_log[axis=y]
+  G white_bed[facing=east,occupied=false,part=foot]
+  H white_bed[facing=east,occupied=false,part=head]
+  I cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  J white_bed[facing=south,occupied=false,part=foot]
+  K white_bed[facing=south,occupied=false,part=head]
+  L glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  M glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  N wall_torch[facing=south]
+  O wall_torch[facing=north]
+  P oak_log[axis=z]
+  Q oak_planks
+  R oak_log[axis=x]
+  S white_bed[facing=north,occupied=false,part=head]
+  T white_bed[facing=north,occupied=false,part=foot]
+  U chest[facing=north,type=single,waterlogged=false]
+  V wall_torch[facing=west]
+layer 0
+  AAAAAAA
+  ABBBBBA
+  AB.CCBA
+  ABCCCBA
+  ABCC.BA
+  DCCCCBA
+  ABCCCBA
+  ABCCCBA
+  ABCCCBA
+  ABBBBBA
+  AAAAAAA
+layer 1
+  _.E____
+  .FCCCF_
+  .C_GHC_
+  _C___C_
+  _C__CCE
+  _.__CF_
+  _C__IC_
+  _CJ__C.
+  _CK__C.
+  _FCCCF_
+  _.E.___
+layer 2
+  _______
+  _FCLCF_
+  _C___C_
+  _M___M_
+  _C__CC_
+  _.__IF_
+  _C___C_
+  _M___M_
+  _C___C_
+  _FCLCF_
+  _______
+layer 3
+  _______
+  _FCCCF_
+  _C_NCC_
+  _C__CC_
+  _C__IC_
+  _C___F_
+  _C___C_
+  _C___C_
+  _C_O_C_
+  _FCCCF_
+  _______
+layer 4
+  _______
+  _FFFFF_
+  _PQQQF_
+  _PQQIF_
+  _PQQ_F_
+  _PQQ_F_
+  _PQQ_F_
+  _PQQQF_
+  _PQQQF_
+  _FRRRF_
+  _______
+layer 5
+  _______
+  _FQQQF_
+  _QS__Q_
+  _QT__Q_
+  _Q___Q_
+  _F___F_
+  _Q___Q_
+  _QJ__Q_
+  _QK_UQ_
+  _FQQQF_
+  _______
+layer 6
+  _______
+  _FQLQF_
+  _Q___Q_
+  _M___M_
+  _Q___Q_
+  _F__VF_
+  _Q___Q_
+  _M___M_
+  _Q___Q_
+  _FQLQF_
+  _______
+layer 7
+  Q_____Q
+  QFQQQFQ
+  QQ_N_QQ
+  QQ___QQ
+  QQ___QQ
+  QF___FQ
+  QQ___QQ
+  QQ___QQ
+  QQ_O_QQ
+  QFQQQFQ
+  Q_____Q
+layer 8
+  _Q___Q_
+  _QQQQQ_
+  _Q___Q_
+  _Q___Q_
+  _Q___Q_
+  _Q___Q_
+  _Q___Q_
+  _Q___Q_
+  _Q___Q_
+  _QQQQQ_
+  _Q___Q_
+layer 9
+  __Q_Q__
+  __QQQ__
+  __Q_Q__
+  __Q_Q__
+  __Q_Q__
+  __Q_Q__
+  __Q_Q__
+  __Q_Q__
+  __Q_Q__
+  __QQQ__
+  __Q_Q__
+layer 10
+  ___Q___
+  ___Q___
+  ___Q___
+  ___Q___
+  ___Q___
+  ___Q___
+  ___Q___
+  ___Q___
+  ___Q___
+  ___Q___
+  ___Q___
+
+template plains/houses/plains_fletcher_house_1 9 11 7 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C oak_planks
+  D dirt_path
+  E oak_log[axis=y]
+  F mossy_cobblestone
+  G cobblestone
+  H short_grass
+  I fletching_table
+  J oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  K yellow_carpet
+  L oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  M tall_grass[half=lower]
+  N glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  O glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  P wall_torch[facing=east]
+  Q oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  R potted_dandelion
+  S tall_grass[half=upper]
+  T wall_torch[facing=west]
+  U oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  V oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  W oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  X oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  Y oak_log[axis=x]
+  Z oak_stairs[facing=south,half=bottom,shape=inner_left,waterlogged=false]
+  a oak_log[axis=z]
+  b oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  c oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  d oak_slab[type=bottom,waterlogged=false]
+  e yellow_wool
+  f white_wool
+  g oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  h oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  i oak_stairs[facing=north,half=bottom,shape=inner_right,waterlogged=false]
+  j oak_stairs[facing=east,half=bottom,shape=inner_right,waterlogged=false]
+  k oak_stairs[facing=west,half=bottom,shape=inner_left,waterlogged=false]
+  l oak_stairs[facing=east,half=bottom,shape=inner_left,waterlogged=false]
+  m oak_stairs[facing=west,half=bottom,shape=inner_right,waterlogged=false]
+  n oak_stairs[facing=south,half=bottom,shape=inner_right,waterlogged=false]
+  o oak_stairs[facing=north,half=bottom,shape=inner_left,waterlogged=false]
+layer 0
+  AAAAAAAAA
+  ABAABBBBA
+  AAAABCCBA
+  AAABCCCBA
+  AABCCCCBA
+  DDCCCCCBA
+  BABCCCCBA
+  AAABCCCBA
+  AAAABCCBA
+  AAAABBBBA
+  AAAAAAAAA
+layer 1
+  _________
+  ____EFGE_
+  _H__G_IG_
+  ___CHH_GH
+  JHC__K_G_
+  __L__K_G_
+  J_C__K_GH
+  ___C___G_
+  HH__GCCFH
+  M___EGGEH
+  MH_____HH
+layer 2
+  _________
+  ____ENNE_
+  ____G__G_
+  ___C___O_
+  J_C____GP
+  __Q____O_
+  J_C____GP
+  ___C___O_
+  ____G_RF_
+  S___ENNE_
+  S________
+layer 3
+  _________
+  ____EGGE_
+  ____G__G_
+  ___C___G_
+  J_C____G_
+  _TCP___G_
+  J_C____G_
+  ___C___G_
+  ____G__G_
+  ____EGGE_
+  _________
+layer 4
+  ___UV__WX
+  ___UEYYEX
+  ___ZG__aX
+  __bC___ac
+  ddC___Ta_
+  efC____a_
+  ddC___Ta_
+  __gC___ah
+  ___iG__aX
+  ___UEYYEX
+  ___UV__WX
+layer 5
+  ____UVWX_
+  ____UGGX_
+  ____U__X_
+  ___bjbbkb
+  __bC___Gc
+  __C____G_
+  __gC___Fh
+  ___glggmg
+  ____U__X_
+  ____UGFX_
+  ____UVWX_
+layer 6
+  _____UX__
+  _____UX__
+  _____UX__
+  _____UX__
+  ___bbjnbb
+  ___CCCCCC
+  ___gglogg
+  _____UX__
+  _____UX__
+  _____UX__
+  _____UX__
+
+template plains/houses/plains_masons_house_1 8 9 7 rigid 3
+  A oak_trapdoor[facing=north,half=top,open=true,powered=false,waterlogged=false]
+  B cobblestone
+  C mossy_cobblestone
+  D oak_trapdoor[facing=west,half=top,open=true,powered=false,waterlogged=false]
+  E grass_block[snowy=false]
+  F cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G oak_planks
+  H oak_log[axis=y]
+  I white_terracotta
+  J dandelion
+  K clay
+  L oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  M oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  N terracotta
+  O oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  P stonecutter[facing=north]
+  Q oak_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  R oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  S glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  T oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  U glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  V torch
+  W oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  X oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  Y oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  Z oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  a oak_log[axis=z]
+  b wall_torch[facing=east]
+  c wall_torch[facing=west]
+layer 0
+  ________
+  _ABBBCB_
+  DEBBBBB_
+  FBBBGBB_
+  BBBBGBB_
+  BBBBGBB_
+  BBCBBBB_
+  BBBBBBB_
+  ________
+layer 1
+  ________
+  __HIIIH_
+  _JI_KKI_
+  __L__KI_
+  M_I__NI_
+  O_I___I_
+  O_I_P_I_
+  QRHIIIH_
+  ________
+layer 2
+  ________
+  __HISIH_
+  __I__KI_
+  __T___U_
+  V_I___I_
+  __U___U_
+  __I___I_
+  V_HISIH_
+  ________
+layer 3
+  _WWWWWWW
+  _XHIIIHX
+  __I__NI_
+  __I___I_
+  __I___I_
+  __I___I_
+  __I___I_
+  _YHIIIHY
+  _ZZZZZZZ
+layer 4
+  ________
+  _WWWWWWW
+  _Xa___aX
+  __a___a_
+  __ab_ca_
+  __a___a_
+  _Ya___aY
+  _ZZZZZZZ
+  ________
+layer 5
+  ________
+  ________
+  _WWWWWWW
+  _XI___IX
+  __I___I_
+  _YI___IY
+  _ZZZZZZZ
+  ________
+  ________
+layer 6
+  ________
+  ________
+  ________
+  _WWWWWWW
+  _GGGGGGG
+  _ZZZZZZZ
+  ________
+  ________
+  ________
+
+template plains/houses/plains_medium_house_2 7 13 6 rigid 4
+  A oak_log[axis=y]
+  B cobblestone
+  C oak_planks
+  D cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E yellow_bed[facing=north,occupied=false,part=head]
+  F oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  G yellow_bed[facing=north,occupied=false,part=foot]
+  H oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  I yellow_bed[facing=south,occupied=false,part=foot]
+  J chest[facing=north,type=single,waterlogged=false]
+  K yellow_bed[facing=south,occupied=false,part=head]
+  L glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  M glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  N oak_pressure_plate[powered=false]
+  O wall_torch[facing=west]
+  P wall_torch[facing=east]
+  Q oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  R oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  S oak_slab[type=top,waterlogged=false]
+  T oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  U oak_log[axis=z]
+  V oak_slab[type=double,waterlogged=false]
+layer 0
+  ___.___
+  _ABBBA_
+  _BCCCB_
+  _BC.CB_
+  .BCBCB_
+  _ACCCA_
+  DBBBBB_
+  .ACCCA_
+  .BCBCB_
+  _BCBC._
+  _BCCCB_
+  _ABBBA.
+  _____._
+layer 1
+  _______
+  _ABBBA_
+  _BE_FB_
+  _BG_HB_
+  _B___B_
+  _A___A_
+  _.___B_
+  _A___A_
+  _B___B_
+  _B__IB_
+  _BJ_KB_
+  _ABBBA_
+  _______
+layer 2
+  _______
+  _ABLBA_
+  _B___B_
+  _M__NM_
+  _B___B_
+  OA__OA_
+  _.___BP
+  OA__OA_
+  _B___B_
+  _M___M_
+  _B___B_
+  _ABLBA_
+  _______
+layer 3
+  QQQQQQQ
+  RABBBAR
+  _B___B_
+  _B___B_
+  _B___B_
+  _A___A_
+  SB___BS
+  _A___A_
+  _B___B_
+  _B___B_
+  _B___B_
+  TABBBAT
+  FFFFFFF
+layer 4
+  _______
+  QQQQQQQ
+  RU___UR
+  _U___U_
+  TU___UT
+  FFFFFFF
+  VVVVVVV
+  QQQQQQQ
+  RU___UR
+  _U___U_
+  TU___UT
+  FFFFFFF
+  _______
+layer 5
+  _______
+  _______
+  QQQQQQQ
+  CCCCCCC
+  FFFFFFF
+  _______
+  _______
+  _______
+  QQQQQQQ
+  CCCCCCC
+  FFFFFFF
+  _______
+  _______
+
+template plains/houses/plains_meeting_point_5 10 11 6 rigid 1
+  A grass_block[snowy=false]
+  B dirt_path
+  C dirt
+  D short_grass
+  E oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  F oak_planks
+  G oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  H oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  I dandelion
+  J oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  K oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  L tall_grass[half=lower]
+  M azure_bluet
+  N tall_grass[half=upper]
+  O bell[attachment=ceiling,facing=east,powered=false]
+  P oak_slab[type=bottom,waterlogged=false]
+  Q yellow_wool
+  R white_wool
+  S wall_torch[facing=north]
+  T wall_torch[facing=west]
+  U stripped_oak_wood[axis=y]
+  V wall_torch[facing=east]
+  W wall_torch[facing=south]
+layer 0
+  AAAAAAAAAA
+  BACCCAAAAA
+  AAABAABCAA
+  BABBABAAAA
+  ABBBBBACAA
+  BBBABBBCAA
+  BABBBAACAA
+  BBBBBBBAAA
+  ABABAABBCA
+  BACCCBBAAA
+  AAAAAAABAA
+layer 1
+  D_E_EDD__D
+  _DFFFDDDD_
+  D_G_GD_HD_
+  ____D__IDD
+  ______JFK_
+  _______FL_
+  _D____JFKD
+  _______DLD
+  D_E_ED__MI
+  _DFFF__DDD
+  _DG_G___I_
+layer 2
+  __H_H_____
+  __________
+  __H_H__H__
+  __________
+  ______H_H_
+  ________N_
+  ______H_H_
+  ________N_
+  __H_H_____
+  __________
+  __H_H_____
+layer 3
+  __H_H_____
+  __________
+  __H_H__H__
+  __________
+  ______H_H_
+  _______O__
+  ______H_H_
+  __________
+  __H_H_____
+  __________
+  __H_H_____
+layer 4
+  __PQP_____
+  __PRP__S__
+  __PQP_TUV_
+  ___W___W__
+  ______PPP_
+  _____TRQR_
+  ______PPP_
+  ___S______
+  __PQP_____
+  __PRP_____
+  __PQP_____
+layer 5
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+
+template plains/houses/plains_shepherds_house_1 9 13 6 rigid 1
+  A dirt
+  B grass_block[snowy=false]
+  C oak_planks
+  D yellow_wool
+  E white_wool
+  F dirt_path
+  G short_grass
+  H hay_block[axis=y]
+  I oak_log[axis=y]
+  J loom[facing=south]
+  K oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  L oak_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  M oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  N oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  O oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  P oak_door[facing=west,half=lower,hinge=left,open=false,powered=false]
+  Q oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  R oak_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  S oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  T hay_block[axis=x]
+  U oak_log[axis=z]
+  V glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  W wall_torch[facing=west]
+  X oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  Y oak_door[facing=west,half=upper,hinge=left,open=false,powered=false]
+  Z oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  a oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  b oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  c oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  d wall_torch[facing=south]
+  e oak_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  f oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  g wall_torch[facing=east]
+  h oak_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  i oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  j wall_torch[facing=north]
+  k oak_stairs[facing=south,half=bottom,shape=inner_left,waterlogged=false]
+  l oak_stairs[facing=west,half=bottom,shape=inner_left,waterlogged=false]
+  m oak_slab[type=bottom,waterlogged=false]
+  n oak_stairs[facing=north,half=bottom,shape=inner_right,waterlogged=false]
+  o oak_stairs[facing=west,half=bottom,shape=inner_right,waterlogged=false]
+  p oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  ABBBBBBBB
+  BBAAAABBA
+  BBACCABBA
+  BBADEABBB
+  ABAEDABBB
+  BBADEABBB
+  FFCCCCBBB
+  BBAEDABBB
+  BBADEABBB
+  BBAEDABBB
+  BBACCABBB
+  BBAAAABBB
+  BBBBBBBBB
+layer 1
+  __G_GG__H
+  _GICCI__G
+  _GCJJC__H
+  G_CG_CKKL
+  __CG_C_GM
+  N_C__C__M
+  __O__P__M
+  Q_CGGCG_M
+  _GC__C_GM
+  __C__CKKR
+  __CSSC___
+  _GICCI_G_
+  __G_____G
+layer 2
+  ________T
+  __ICCI___
+  __U__U__H
+  __V__V___
+  __U__U___
+  QWC__U___
+  __X__Y___
+  QWC__U___
+  __U__U___
+  __V__V___
+  __U__U___
+  __ICCI___
+  _________
+layer 3
+  _Za__bc__
+  _ZICCIc__
+  _ZCddCc__
+  _ZC__Cc__
+  _eC__Cf__
+  Q_C__C___
+  __C__Cg__
+  Q_C__C___
+  _hC__Ci__
+  _ZC__Cc__
+  _ZCjjCc__
+  _ZICCIc__
+  _Za__bc__
+layer 4
+  __ZCCc___
+  __ZCCc___
+  __ZCCc___
+  __ZCCc___
+  __kCClS__
+  mmC__Cf__
+  EDC__C___
+  mmC__Ci__
+  __nCCop__
+  __ZCCc___
+  __ZCCc___
+  __ZCCc___
+  __ZCCc___
+layer 5
+  _________
+  _________
+  _________
+  _________
+  _________
+  __SSSSS__
+  __CCCCC__
+  __ppppp__
+  _________
+  _________
+  _________
+  _________
+  _________
+
+template plains/houses/plains_small_farm_1 7 9 6 rigid 14
+  A oak_log[axis=y]
+  B farmland[moisture=7]
+  C water[level=0]
+  D dirt
+  E wheat[age=0]
+  F wheat[age=1]
+  G wheat[age=2]
+  H composter[level=0]
+layer 0
+  AAAAAAA
+  ABBCBBA
+  ABBCBBA
+  ABBCBBA
+  ABBCBBA
+  ABBCBBA
+  ABBCBBA
+  ABBCBDA
+  AAAAAAA
+layer 1
+  _______
+  _E._.._
+  _E._.._
+  _.._F._
+  _.._.._
+  _.._.._
+  _EE_.G_
+  _.._FH_
+  _______
+layer 2
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+
+template plains/houses/plains_small_house_1 7 7 7 rigid 20
+  A stripped_oak_log[axis=y]
+  B cobblestone
+  C oak_planks
+  D oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E white_bed[facing=east,occupied=false,part=foot]
+  F white_bed[facing=east,occupied=false,part=head]
+  G oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  H glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  I wall_torch[facing=west]
+  J oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  K glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  L oak_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  M oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  N oak_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  O oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  P oak_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  Q oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  R oak_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  S oak_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  T oak_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  U oak_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  _.__.__
+  _ABBBA_
+  _BCCCB_
+  DBCCCB_
+  _BCCCB_
+  .ABBBA_
+  _______
+layer 1
+  _______
+  _ABBBA_
+  _B_EFB_
+  _G___B_
+  _B__DB_
+  _ABBBA_
+  _______
+layer 2
+  _______
+  _ABHBA_
+  IB___B_
+  _J___K_
+  IB___B_
+  _ABHBA_
+  _______
+layer 3
+  _______
+  _ABBBA_
+  _B___B_
+  _B__IB_
+  _B___B_
+  _ABBBA_
+  _______
+layer 4
+  LMMMMMN
+  DCCCCCO
+  DC___CO
+  DC___CO
+  DC___CO
+  DCCCCCO
+  PQQQQQR
+layer 5
+  _______
+  _SMMMT_
+  _DCCCO_
+  _DC_CO_
+  _DCCCO_
+  _PQQQR_
+  _______
+layer 6
+  _______
+  _______
+  __SMT__
+  __DCO__
+  __PQU__
+  _______
+  _______
+
+template plains/houses/plains_small_house_2 7 7 7 rigid 13
+  A stripped_oak_log[axis=y]
+  B cobblestone
+  C oak_planks
+  D oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E white_terracotta
+  F oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  G oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  H yellow_bed[facing=east,occupied=false,part=foot]
+  I yellow_bed[facing=east,occupied=false,part=head]
+  J glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  K oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  L glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  M wall_torch[facing=west]
+layer 0
+  ._____.
+  _ABBBA_
+  .BCCCB_
+  DBCCCB_
+  _BCCCB_
+  _ABBBA.
+  .__._..
+layer 1
+  _______
+  _AEEEA_
+  _EFCDE_
+  _G___E_
+  _E_HIE_
+  _AEEEA_
+  _______
+layer 2
+  _______
+  _AEJEA_
+  _E___E_
+  _K___L_
+  _E___E_
+  _AEJEA_
+  _______
+layer 3
+  _______
+  _AEEEA_
+  _E___E_
+  ME__ME_
+  _E___E_
+  _AEEEA_
+  _______
+layer 4
+  CCCCCCC
+  CCCCCCC
+  CC___CC
+  CC___CC
+  CC___CC
+  CCCCCCC
+  CCCCCCC
+layer 5
+  _______
+  _CCCCC_
+  _CCCCC_
+  _CC_CC_
+  _CCCCC_
+  _CCCCC_
+  _______
+layer 6
+  _______
+  _______
+  __CCC__
+  __CCC__
+  __CCC__
+  _______
+  _______
+
+template plains/houses/plains_small_house_3 7 7 7 rigid 17
+  A oak_log[axis=y]
+  B cobblestone
+  C oak_planks
+  D oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E yellow_bed[facing=east,occupied=false,part=foot]
+  F yellow_bed[facing=east,occupied=false,part=head]
+  G oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  H oak_log[axis=x]
+  I glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  J oak_log[axis=z]
+  K oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  L glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  M wall_torch[facing=west]
+  N oak_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  O oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  P oak_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  Q oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  R oak_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  S oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  T oak_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  U oak_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  V oak_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  W oak_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  _._.___
+  _ABBBA_
+  .BCCCB.
+  DBCCCB_
+  _BCCCB_
+  _ABBBA_
+  __...__
+layer 1
+  _______
+  _ABBBA_
+  _B_EFB_
+  _G___B_
+  _B__DB_
+  _ABBBA_
+  _______
+layer 2
+  _______
+  _AHIHA_
+  _B___J_
+  _K___L_
+  _B___J_
+  _AHIHA_
+  _______
+layer 3
+  _______
+  _ABBBA_
+  _B___B_
+  MB__MB_
+  _B___B_
+  _ABBBA_
+  _______
+layer 4
+  NOOOOOP
+  DCCCCCQ
+  DC___CQ
+  DC___CQ
+  DC___CQ
+  DCCCCCQ
+  RSSSSST
+layer 5
+  _______
+  _UOOOV_
+  _DCCCQ_
+  _DC_CQ_
+  _DCCCQ_
+  _RSSST_
+  _______
+layer 6
+  _______
+  _______
+  __UOV__
+  __DCQ__
+  __RSW__
+  _______
+  _______
+
+template plains/houses/plains_small_house_4 7 7 7 rigid 13
+  A oak_log[axis=y]
+  B cobblestone
+  C oak_planks
+  D oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E white_bed[facing=east,occupied=false,part=foot]
+  F white_bed[facing=east,occupied=false,part=head]
+  G oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  H cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  I oak_log[axis=x]
+  J glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  K oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  L glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  M wall_torch[facing=west]
+  N oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  O oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  P oak_log[axis=z]
+  Q oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  R oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  ___.___
+  _ABBBA_
+  _BCCCB_
+  DBCCCB_
+  _BCCCB_
+  _ABBBA_
+  ___.___
+layer 1
+  _______
+  _ABBBA_
+  _._EFB_
+  _G___B_
+  _BHHHB_
+  _ABBBA_
+  _______
+layer 2
+  _______
+  _AIJIA_
+  _B___B_
+  _K___L_
+  _B___B_
+  _AIJIA_
+  _______
+layer 3
+  _______
+  _ABBBA_
+  _B___B_
+  MB__MB_
+  _B___B_
+  _ABBBA_
+  _______
+layer 4
+  NNNNNNN
+  OACCCAO
+  _P___P_
+  _P___P_
+  _P___P_
+  QACCCAQ
+  RRRRRRR
+layer 5
+  _______
+  NNNNNNN
+  OBCCCBO
+  _BC_CB_
+  QBCCCBQ
+  RRRRRRR
+  _______
+layer 6
+  _______
+  _______
+  NNNNNNN
+  CCCCCCC
+  RRRRRRR
+  _______
+  _______
+
+template plains/houses/plains_small_house_5 9 9 11 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C oak_log[axis=y]
+  D cobblestone
+  E oak_planks
+  F short_grass
+  G cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  H ladder[facing=south,waterlogged=false]
+  I white_bed[facing=east,occupied=false,part=foot]
+  J white_bed[facing=east,occupied=false,part=head]
+  K oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  L green_carpet
+  M oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  N oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  O glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  P wall_torch[facing=east]
+  Q oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  R glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  S oak_pressure_plate[powered=false]
+  T wall_torch[facing=west]
+  U oak_log[axis=x]
+  V oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  W oak_door[facing=south,half=lower,hinge=right,open=true,powered=false]
+  X oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  Y oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  Z oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  a oak_door[facing=south,half=upper,hinge=right,open=true,powered=false]
+  b oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  c oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  d oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  e oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  f oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  g oak_log[axis=z]
+layer 0
+  AAAAAAAAA
+  BAABBBBBA
+  AABBBBBBA
+  ABBBBBBBB
+  BBBBBBBBA
+  ABBBBBBBA
+  AABBBBBBA
+  ABABBBBBA
+  AAAAAAAAA
+layer 1
+  _________
+  ___CDDDC_
+  __DEEEED_
+  _DEEEEEDF
+  GDEEEEED_
+  _DEEEEED_
+  __DEEEED_
+  ___CDDDC_
+  ________F
+layer 2
+  _________
+  ___CEEEC_
+  __D_HIJE_
+  _D_____E_
+  _K__L__E_
+  _D__L_ME_
+  __D__NME_
+  ___CEEEC_
+  _________
+layer 3
+  _________
+  ___CEOEC_
+  __D_H__E_
+  _DP____CP
+  _Q_____R_
+  _DP____CP
+  __D__S_E_
+  ___CEOEC_
+  _________
+layer 4
+  _________
+  ___CEEEC_
+  __DEH__E_
+  _DEEE__E_
+  TDEEE__E_
+  _DEEE__E_
+  __DEE__E_
+  ___CEEEC_
+  _________
+layer 5
+  _________
+  ___CUUUC_
+  __VE___E_
+  _N_W___E_
+  _X_E___E_
+  _Y_Z___E_
+  __VE___E_
+  ___CUUUC_
+  _________
+layer 6
+  _________
+  ___CEEEC_
+  ___E___E_
+  ___a___CP
+  ___E___R_
+  ___b___CP
+  ___E___E_
+  ___CEEEC_
+  _________
+layer 7
+  __ccccccc
+  __dCEEECd
+  ___E___E_
+  ___E___E_
+  ___EP_TE_
+  ___E___E_
+  ___E___E_
+  __eCEEECe
+  __fffffff
+layer 8
+  _________
+  __ccccccc
+  __dgEEEgd
+  ___g___g_
+  ___g___g_
+  ___g___g_
+  __egEEEge
+  __fffffff
+  _________
+layer 9
+  _________
+  _________
+  __ccccccc
+  __dEEEEEd
+  ___E___E_
+  __eEEEEEe
+  __fffffff
+  _________
+  _________
+layer 10
+  _________
+  _________
+  _________
+  __ccccccc
+  __EEEEEEE
+  __fffffff
+  _________
+  _________
+  _________
+
+template plains/houses/plains_small_house_6 7 7 7 rigid 4
+  A oak_trapdoor[facing=north,half=top,open=true,powered=false,waterlogged=false]
+  B oak_log[axis=y]
+  C cobblestone
+  D oak_trapdoor[facing=west,half=top,open=true,powered=false,waterlogged=false]
+  E grass_block[snowy=false]
+  F cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G oak_trapdoor[facing=south,half=top,open=true,powered=false,waterlogged=false]
+  H oak_planks
+  I poppy
+  J white_bed[facing=south,occupied=false,part=foot]
+  K white_bed[facing=south,occupied=false,part=head]
+  L torch
+  M glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  N wall_torch[facing=west]
+  O oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  P oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  Q oak_log[axis=x]
+  R oak_log[axis=z]
+  S oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  T oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  _____._
+  _ABCCB_
+  DECCCC.
+  .FCC.C_
+  DECCCC_
+  _GBCCB_
+  ____._.
+layer 1
+  _______
+  __BHHB_
+  _IH_HH_
+  __._JH_
+  _IH_KH_
+  __BHHB_
+  _______
+layer 2
+  _______
+  __BHHB_
+  __H_LH_
+  __.__M_
+  __H__H_
+  __BHHB_
+  _______
+layer 3
+  _______
+  __BHHB_
+  __H__H_
+  _NH__H_
+  __H__H_
+  __BHHB_
+  _______
+layer 4
+  _OOOOOO
+  _PBQQBP
+  __R__R_
+  __R__R_
+  __R__R_
+  _SBQQBS
+  _TTTTTT
+layer 5
+  _______
+  _OOOOOO
+  _PH__HP
+  __H__H_
+  _SH__HS
+  _TTTTTT
+  _______
+layer 6
+  _______
+  _______
+  _OOOOOO
+  _HHHHHH
+  _TTTTTT
+  _______
+  _______
+
+template plains/houses/plains_small_house_7 7 8 7 rigid 9
+  A oak_log[axis=y]
+  B cobblestone
+  C cobblestone_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  D oak_planks
+  E cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  F cobblestone_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  G yellow_bed[facing=west,occupied=false,part=head]
+  H yellow_bed[facing=west,occupied=false,part=foot]
+  I oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  J oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  K oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  L chest[facing=north,type=single,waterlogged=false]
+  M oak_log[axis=x]
+  N glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  O wall_torch[facing=west]
+  P oak_log[axis=z]
+  Q oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  R glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  S oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  T oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  U oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  V wall_torch[facing=east]
+  W oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+layer 0
+  ____.__
+  _ABBBA_
+  CBADAB_
+  EBDDDB_
+  EBDDDB_
+  FBADAB.
+  .ABBBA_
+  _______
+layer 1
+  _______
+  _ABBBA_
+  _BGHIB_
+  _J___B_
+  _K___B_
+  _B__LB_
+  _ABBBA_
+  _______
+layer 2
+  _______
+  _AMNMA_
+  OP___P_
+  _Q___R_
+  _S___R_
+  OP___P_
+  _AMNMA_
+  _______
+layer 3
+  TTTTTTT
+  UABBBAU
+  _B___B_
+  _BV__B_
+  _BV__B_
+  _B___B_
+  WABBBAW
+  IIIIIII
+layer 4
+  _______
+  TTTTTTT
+  UB___BU
+  _B___B_
+  _B___B_
+  WB___BW
+  IIIIIII
+  _______
+layer 5
+  _______
+  _______
+  TTTTTTT
+  UB___BU
+  WB___BW
+  IIIIIII
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  TTTTTTT
+  IIIIIII
+  _______
+  _______
+  _______
+
+template plains/houses/plains_small_house_8 8 9 9 rigid 4
+  A dirt
+  B grass_block[snowy=false]
+  C farmland[moisture=7]
+  D water[level=0]
+  E wheat[age=7]
+  F short_grass
+  G oak_log[axis=y]
+  H cobblestone
+  I cobblestone_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  J oak_planks
+  K cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  L cobblestone_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  M white_bed[facing=east,occupied=false,part=foot]
+  N white_bed[facing=east,occupied=false,part=head]
+  O oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  P oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  Q glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  R oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  S glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  T wall_torch[facing=west]
+  U oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  V oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  W oak_log[axis=z]
+  X oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  Y oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  Z oak_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  a oak_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  b oak_slab[type=double,waterlogged=false]
+  c oak_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  d oak_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  AAAAAAAA
+  AABABAAA
+  AAAAAAAA
+  AAAAAABA
+  AAAAAAAA
+  AAAAAABA
+  AAAAAAAA
+  AABABAAA
+  AAAAAAAA
+layer 1
+  BBBBBBBB
+  BBCDCBBB
+  BAAAAABB
+  BAAAAACB
+  AAAAAADB
+  BAAAAACB
+  BAAAAABB
+  BBCDCBBB
+  BBBBBBBB
+layer 2
+  _..__.._
+  __E_E.__
+  FGHHHG..
+  I.JJJHE_
+  KHJJJH__
+  LHJJJHE_
+  _GHHHG__
+  ._E_E_.F
+  ___.__.F
+layer 3
+  ________
+  ________
+  _GHHHG__
+  _H_MNH__
+  _O___H__
+  _H__PH__
+  _GHHHG__
+  ________
+  ________
+layer 4
+  ________
+  ________
+  _GHQHG__
+  _H___H__
+  _R___S__
+  _H___H__
+  _GHQHG__
+  ________
+  ________
+layer 5
+  ________
+  ________
+  _GH.HG__
+  _H___H__
+  TH___H__
+  _H___H__
+  _GHHHG__
+  ________
+  ________
+layer 6
+  ________
+  UUUUUUU_
+  VGHHHGV_
+  _W___W__
+  _W__TW__
+  _W___W__
+  XGHHHGX_
+  YYYYYYY_
+  ________
+layer 7
+  ________
+  ________
+  UUJQJUU_
+  V.___HV_
+  _H___H__
+  XH___HX_
+  YYJQJYY_
+  ________
+  ________
+layer 8
+  ________
+  ________
+  __ZUa___
+  UUJJJUU_
+  bJJJJJJ_
+  YYJJJYY_
+  __cYd___
+  ________
+  ________
+
+template plains/houses/plains_stable_2 7 17 6 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C dirt_path
+  D short_grass
+  E oak_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  F oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  G oak_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  H oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  I tall_grass[half=lower]
+  J oak_log[axis=y]
+  K white_terracotta
+  L hay_block[axis=y]
+  M hay_block[axis=z]
+  N oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  O oak_log[axis=x]
+  P water[level=0]
+  Q tall_grass[half=upper]
+  R oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  S oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  T glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  U glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  V oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  W oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  X wall_torch[facing=north]
+  Y oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  Z oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  a wall_torch[facing=south]
+  b oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  c wall_torch[facing=east]
+  d oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  e oak_slab[type=double,waterlogged=false]
+  f oak_slab[type=top,waterlogged=false]
+  g oak_planks
+  h oak_slab[type=bottom,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  ABAAABA
+  ABBAABA
+  ABAABBA
+  ABAABBA
+  BBAABBA
+  CAAAABA
+  ABAAABA
+  ABAAABA
+  ABBBBBA
+  ABABABA
+  DBBBBBA
+  ____AAA
+layer 1
+  _EFFFG_
+  _HID_HD
+  _HID_H_
+  _HI_DH_
+  _H__DH_
+  _J__DJ_
+  _KL__K_
+  _KDDLKD
+  DJ__LJ_
+  _K__MK_
+  _N_DDKD
+  _K___K_
+  DJD__J_
+  _KOOOK_
+  _KPPPK_
+  _JKKKJ_
+  _______
+layer 2
+  _______
+  __Q____
+  _RQ__R_
+  _QQ____
+  _Q_____
+  _J___J_
+  _K___K_
+  _K___K_
+  _J__LJ_
+  _K___K_
+  _S___T_
+  _K___K_
+  _J___J_
+  _K___K_
+  _K___K_
+  _JKUKJ_
+  _______
+layer 3
+  _______
+  _______
+  _R___R_
+  _______
+  VW_X_YZ
+  VJOOOJZ
+  VK_a_KZ
+  VK___KZ
+  VJ___JZ
+  bK___Kb
+  _Kc__K_
+  dK___Kd
+  VJ___JZ
+  VK___KZ
+  VK___KZ
+  VJKKKJZ
+  VW___YZ
+layer 4
+  _______
+  _______
+  _VefeZ_
+  _VefeZ_
+  _VefeZ_
+  _VKKKZ_
+  _V___Z_
+  _V___Z_
+  _V___Z_
+  Vg___gZ
+  Vg___gZ
+  Vg___gZ
+  _V___Z_
+  _V___Z_
+  _V___Z_
+  _VKKKZ_
+  _VW_YZ_
+layer 5
+  _______
+  _______
+  ___h___
+  ___h___
+  __VgZ__
+  __VgZ__
+  __VgZ__
+  __VgZ__
+  __VgZ__
+  __VgZ__
+  __VgZ__
+  __VgZ__
+  __VgZ__
+  __VgZ__
+  __VgZ__
+  __VgZ__
+  __VgZ__
+
+template plains/houses/plains_tannery_1 8 10 7 rigid 5
+  A oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  B oak_log[axis=y]
+  C cobblestone
+  D water_cauldron[level=3]
+  E oak_planks
+  F cobblestone_wall[east=low,north=none,south=none,up=true,waterlogged=false,west=none]
+  G cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  H smooth_stone
+  I torch
+  J oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  K chest[facing=north,type=single,waterlogged=false]
+  L glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  M oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  N glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  O oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  P oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  Q oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  R oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  S oak_slab[type=bottom,waterlogged=false]
+  T wall_torch[facing=south]
+  U oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  V oak_stairs[facing=south,half=bottom,shape=inner_left,waterlogged=false]
+  W oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  X wall_torch[facing=east]
+  Y oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  Z oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  a oak_stairs[facing=east,half=bottom,shape=inner_left,waterlogged=false]
+layer 0
+  ________
+  A__BCCB_
+  __DCEEC_
+  ._DCEEC_
+  __DCEEC_
+  A_.CEEC_
+  _FBCEEC_
+  _GCEEE._
+  .FBC.CB_
+  _....__.
+layer 1
+  ________
+  A__BCCB_
+  ___CHDC_
+  ___C__C_
+  ___C__C_
+  A__C__C_
+  _IBC__C_
+  __J__K._
+  _IBCCCB_
+  ________
+layer 2
+  ________
+  A__BCCB_
+  ___C__C_
+  ___C__L_
+  ___C__C_
+  A__C__C_
+  __BC__L_
+  __M___C_
+  __BCNCB_
+  ________
+layer 3
+  __OP__QR
+  SSOBCCBR
+  SSOCTTCR
+  SSOC__CR
+  SSOC__CR
+  SUVC__.R
+  _WBC__CR
+  __CX__CR
+  _YBCCCBR
+  _ZP___QR
+layer 4
+  ___OPQR_
+  ___OCCR_
+  ___O__R_
+  ___O__R_
+  ___O__R_
+  ___E__R_
+  _UUE__R_
+  _EEE__R_
+  _ZaCCCR_
+  __OP_QR_
+layer 5
+  ____OR__
+  ____OR__
+  ____OR__
+  ____OR__
+  ____OR__
+  ___OER__
+  ___OER__
+  ___OER__
+  ___OER__
+  ___OER__
+layer 6
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+
+template plains/houses/plains_temple_3 11 7 7 rigid 5
+  A cobblestone_wall[east=low,north=none,south=none,up=true,waterlogged=false,west=none]
+  B oak_log[axis=y]
+  C cobblestone
+  D cobblestone_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  E oak_planks
+  F cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G cobblestone_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  H torch
+  I white_terracotta
+  J oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  K oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  L brewing_stand[has_bottle_0=false,has_bottle_1=false,has_bottle_2=false]
+  M oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  N yellow_stained_glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  O oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  P yellow_stained_glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  Q white_stained_glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  R wall_torch[facing=east]
+  S oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  T oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  U oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  V wall_torch[facing=west]
+  W oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  X oak_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  Y oak_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  Z oak_log[axis=z]
+  a oak_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  b oak_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  _.______.._
+  ABCCCBCCCB_
+  DCEEEEEEEC_
+  FCEEEEEEEC.
+  GCEEEEEEEC_
+  ABCCCBCCCB_
+  .._____..._
+layer 1
+  ___________
+  HBIIIBIIIB_
+  _IJJJJ___I_
+  _K_____L_I_
+  _IMMMM___I_
+  HBIIIBIIIB_
+  ___________
+layer 2
+  ___________
+  _BINIBINIB_
+  _I_______I_
+  _O_______P_
+  _I_______I_
+  _BINIBINIB_
+  ___________
+layer 3
+  ___________
+  _BIQIBIQIB_
+  _I_______I_
+  _I_______IR
+  _I_______I_
+  _BIQIBIQIB_
+  ___________
+layer 4
+  MMS_TMS_TMM
+  UBIIIBIIIBU
+  _B_______B_
+  _IR_____VI_
+  _B_______B_
+  WBIIIBIIIBW
+  JJS_TJS_TJJ
+layer 5
+  __XMY_XMY__
+  MMEEEMEEEMM
+  UZ_______ZU
+  _Z_______Z_
+  WZ_______ZW
+  JJEEEJEEEJJ
+  __aJb_aJb__
+layer 6
+  ___________
+  ___________
+  MMMMMMMMMMM
+  EEEEEEEEEEE
+  JJJJJJJJJJJ
+  ___________
+  ___________
+
+template plains/houses/plains_temple_4 10 7 12 rigid 5
+  A cobblestone
+  B oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  C cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  D cobblestone_wall[east=low,north=none,south=none,up=true,waterlogged=false,west=none]
+  E cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  F brewing_stand[has_bottle_0=false,has_bottle_1=false,has_bottle_2=false]
+  G oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  H ladder[facing=north,waterlogged=false]
+  I cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  J yellow_stained_glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  K torch
+  L wall_torch[facing=east]
+  M yellow_stained_glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  N white_stained_glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  O white_stained_glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  P cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  Q wall_torch[facing=south]
+  R wall_torch[facing=west]
+  S wall_torch[facing=north]
+  T cobblestone_slab[type=bottom,waterlogged=false]
+  U cobblestone_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  V cobblestone_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+layer 0
+  ._AAA_.___
+  AAAAAAAAA.
+  _.AAAAAAAA
+  .B_CAAAA.A
+  _AAAAAAAAA
+  AAAAAAAAA.
+  __AAA_____
+layer 1
+  __AA._____
+  DAAEAAAAA_
+  _A__F_CAAA
+  _G_____CAA
+  _A__H_CAAA
+  D.AIAAAA._
+  __AAA_____
+layer 2
+  __AJA_____
+  KAA_AAAJA_
+  _A______EA
+  _.L______M
+  _A__H___IA
+  KAA_AAAJA_
+  __AJA_____
+layer 3
+  __ANA_____
+  _A._AAANA_
+  _A_______A
+  _M_______O
+  _A__H____A
+  _.A_AAAN._
+  __ANA_____
+layer 4
+  __CAP_____
+  _I.AAAAAA_
+  _A_____Q_A
+  _O______RA
+  _A__H__S_A
+  _EAAAAA.A_
+  __CAP_____
+layer 5
+  ___T______
+  __AAA_____
+  _AAAAAAAA_
+  _AAAAA.AA_
+  _.AAHAAAA_
+  __AAA_____
+  ___T______
+layer 6
+  __________
+  __AAA_____
+  _.___A____
+  _A___A_K__
+  _.__HA____
+  __AAA_____
+  __________
+layer 7
+  __________
+  __AJA_____
+  _AQ__A____
+  _M___M____
+  _AS_HA____
+  __AJA_____
+  __________
+layer 8
+  __________
+  _UANAU____
+  _A___A____
+  _O___O____
+  _A__HA____
+  _VANAV____
+  __________
+layer 9
+  __________
+  _AAA.A____
+  _AAAAA____
+  _AAAAA____
+  _AAAH.____
+  _AAAAA____
+  __________
+layer 10
+  __________
+  __AAA_____
+  _A___A____
+  _A_K_A____
+  _A__HA____
+  __AAA_____
+  __________
+layer 11
+  __________
+  ___A______
+  __________
+  _A___A____
+  __________
+  ___A______
+  __________
+
+template plains/houses/plains_tool_smith_1 9 12 6 rigid 1
+  A short_grass
+  B oak_log[axis=y]
+  C cobblestone
+  D mossy_cobblestone
+  E cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  F oak_planks
+  G smithing_table
+  H oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  I oak_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  J wall_torch[facing=north]
+  K oak_log[axis=z]
+  L glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  M wall_torch[facing=west]
+  N oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  O oak_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  P oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  Q oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  R oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  S oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  T oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  U oak_stairs[facing=south,half=bottom,shape=inner_left,waterlogged=false]
+  V oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  W oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  X oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  Y wall_torch[facing=east]
+  Z oak_stairs[facing=east,half=bottom,shape=inner_left,waterlogged=false]
+  a oak_stairs[facing=east,half=bottom,shape=inner_right,waterlogged=false]
+  b oak_stairs[facing=north,half=bottom,shape=inner_right,waterlogged=false]
+layer 0
+  ____A__A_
+  ___ABCCB_
+  _A__CCCC_
+  ____CDCC_
+  _A__CCCC_
+  A_A_CCCC_
+  ____CCCC_
+  A_BCBCCC_
+  _ECCCCCCA
+  _ECCCCCCA
+  A_BCCCCB_
+  A_______A
+layer 1
+  _________
+  ____BFFB_
+  ____FFGF_
+  ____F__F_
+  ____F__F_
+  ____F__F_
+  ____F__F_
+  __BFB__F_
+  __H____F_
+  __I____F_
+  __BFFFFB_
+  _________
+layer 2
+  ____J__J_
+  ____BFFB_
+  ____F__F_
+  ____K__K_
+  ____L__L_
+  ____K__K_
+  ____F__K_
+  _MBFB__L_
+  __N____K_
+  __O____F_
+  _MBFFFFB_
+  _________
+layer 3
+  ___PQ__RS
+  ___PBFFBS
+  ___PF__FS
+  ___PF__FS
+  ___PF_MFS
+  ___PF__FS
+  _TTUF__FS
+  _VBFB_MFS
+  __F____FS
+  __F____FS
+  _WBFFFFBS
+  _XXXQ__RS
+layer 4
+  ____PQRS_
+  ____PFFS_
+  ____P__S_
+  ____P__S_
+  ____P__S_
+  ____P__S_
+  ____P__S_
+  _TTTU__S_
+  _VFFY__S_
+  _WFFY__S_
+  _XXXZFFS_
+  ____PQRS_
+layer 5
+  _____PS__
+  _____PS__
+  _____PS__
+  _____PS__
+  _____PS__
+  _____PS__
+  _____PS__
+  _____PS__
+  _TTTTaS__
+  _XXXXbS__
+  _____PS__
+  _____PS__
+
+template plains/houses/plains_weaponsmith_1 9 11 8 rigid 3
+  A mossy_cobblestone
+  B cobblestone
+  C cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  D short_grass
+  E oak_log[axis=y]
+  F oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  G grindstone[face=floor,facing=east]
+  H lava[level=0]
+  I chest[facing=south,type=single,waterlogged=false]
+  J oak_door[facing=south,half=lower,hinge=right,open=false,powered=false]
+  K oak_planks
+  L oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  M oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  N iron_bars[east=true,north=false,south=false,waterlogged=false,west=false]
+  O iron_bars[east=true,north=false,south=false,waterlogged=false,west=true]
+  P wall_torch[facing=east]
+  Q furnace[facing=west,lit=false]
+  R oak_log[axis=z]
+  S glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  T wall_torch[facing=north]
+  U oak_door[facing=south,half=upper,hinge=right,open=false,powered=false]
+  V oak_pressure_plate[powered=false]
+  W wall_torch[facing=west]
+  X glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  Y wall_torch[facing=south]
+  Z oak_log[axis=x]
+  a smooth_stone_slab[type=bottom,waterlogged=false]
+  b torch
+  c oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  d oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  e oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  f cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+layer 0
+  .ABBBBBB_
+  CBBBBBBB_
+  CBBBBBBB_
+  CBBBBBBBD
+  _BBBBBBB_
+  DBBBBBBB_
+  _EBBBBBE_
+  _BBBBBBB_
+  _BBBBBBB_
+  DEBABBBE.
+  _________
+layer 1
+  _F___BBB_
+  __G__BHB_
+  _____BHA_
+  ____BBBB_
+  _F__B_IB_
+  ____E__B_
+  _EJK___E_
+  _K___FLK_
+  _K___MKK_
+  _EKKKKKE_
+  _________
+layer 2
+  _F___NOB_
+  _______BP
+  _______B_
+  ____QBBR_
+  _F__B__S_
+  ___TE__R_
+  _EUK___E_
+  _K___V_K_
+  _K____WK_
+  _EKXKXKE_
+  ____Y____
+layer 3
+  _F___BBB_
+  _____BBB_
+  _____BBB_
+  ____QBBB_
+  _F__B__B_
+  ____E__B_
+  _EKK___E_
+  _K_____K_
+  _K_____K_
+  _EKKKKKE_
+  _________
+layer 4
+  _BBABBBB_
+  _BBBBBBB_
+  _BBBBBBB_
+  _BBBBABB_
+  _BBBBBBB_
+  _BBBBBBB_
+  _EBBBBBE_
+  _RBBABBR_
+  _RBBBBBR_
+  _EZZZZZE_
+  _________
+layer 5
+  _aaaaaaa_
+  _a____Ba_
+  _a____Ba_
+  _a__b__a_
+  _a_____a_
+  MMMMMMMMM
+  cE_____Ec
+  _K_____K_
+  _K_____K_
+  dEKKKKKEd
+  eeeeeeeee
+layer 6
+  _________
+  ______f__
+  _________
+  _________
+  _________
+  _________
+  MMMMMMMMM
+  cK_____Kc
+  dK_____Kd
+  eeeeeeeee
+  _________
+layer 7
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  MMMMMMMMM
+  eeeeeeeee
+  _________
+  _________
+
+template plains/plains_lamp_1 3 3 4 rigid 51
+  A oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  B wall_torch[facing=north]
+  C wall_torch[facing=west]
+  D stripped_oak_wood[axis=y]
+  E wall_torch[facing=east]
+  F wall_torch[facing=south]
+layer 0
+  ___
+  _A_
+  ___
+layer 1
+  ___
+  _A_
+  ___
+layer 2
+  ___
+  _A_
+  ___
+layer 3
+  _B_
+  CDE
+  _F_
+
+template plains/streets/corner_01 16 16 2 terrain_matching 17
+  A dirt_path
+layer 0
+  ......AAA.......
+  ......AA........
+  ......AAA.......
+  ......AAA.......
+  ......AAA.......
+  ......AAA.......
+  ......AAA.......
+  AA.AAAAAA.......
+  AAAAAAAA........
+  AAAAA.A.........
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template plains/streets/corner_02 16 16 2 terrain_matching 13
+  A dirt_path
+layer 0
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  A.A.............
+  AAA.............
+  AAA.............
+  A.A.............
+  AAA.............
+  .A..............
+  A.A.............
+  AAA.............
+  AA..............
+  ..AAAAAAAA.A.AAA
+  .AAAAAAAAAAAAAAA
+  ...AAAAAAAAAAAAA
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template plains/streets/corner_03 4 4 2 terrain_matching 87
+  A dirt_path
+layer 0
+  ..AA
+  .AAA
+  AAAA
+  AAA.
+layer 1
+  ....
+  ....
+  ....
+  ....
+
+template plains/streets/crossroad_01 16 16 2 terrain_matching 11
+  A dirt_path
+layer 0
+  .......AAA......
+  .......AA.......
+  .......AAA......
+  .......AAA......
+  .......A........
+  .......AAA......
+  .......AAA......
+  .......AAAA.AAAA
+  .......AAAA..AAA
+  .......AAAAA.AAA
+  .......AAA......
+  .......AAA......
+  .......AAA......
+  .......AAA......
+  ........AA......
+  .......AAA......
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template plains/streets/crossroad_02 16 16 2 terrain_matching 2
+  A dirt_path
+layer 0
+  ................
+  ................
+  ................
+  ................
+  ................
+  .......AAA......
+  .......AAA......
+  AAAAAAAAAAAAAA.A
+  A.A.AAAAAAAAAAAA
+  AAAAAAAAA.A.A..A
+  .......A........
+  .......A.A......
+  .......AA.......
+  .......AAA......
+  .......AAA......
+  .......A.A......
+layer 1
+  ........AA......
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template plains/streets/crossroad_03 16 16 2 terrain_matching 13
+  A dirt_path
+layer 0
+  ...AAA..........
+  ...AAA..........
+  ...AAA..........
+  ...AAA..........
+  ...A.A..........
+  ...AAA..........
+  ...AAA..........
+  AAAAAAAAAAAAAAAA
+  AAAAAAAAA.AAAAAA
+  AAAAAAAAAAAAAAAA
+  ..........AAA...
+  ..........AAA...
+  ..........AAA...
+  ..........AAA...
+  ..........AAA...
+  ..........A.A...
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template plains/streets/crossroad_04 4 5 2 terrain_matching 82
+  A dirt_path
+layer 0
+  .AAA
+  AAAA
+  AAAA
+  AAAA
+  .AAA
+layer 1
+  ....
+  ....
+  ....
+  ....
+  ....
+
+template plains/streets/crossroad_05 5 5 2 terrain_matching 66
+  A dirt_path
+layer 0
+  .AAA.
+  AAAAA
+  AAAAA
+  AAAAA
+  .AAA.
+layer 1
+  .....
+  .....
+  .....
+  .....
+  .....
+
+template plains/streets/crossroad_06 5 5 2 terrain_matching 50
+  A dirt_path
+layer 0
+  .AAA.
+  AA.AA
+  A...A
+  AA.AA
+  .AAA.
+layer 1
+  .....
+  .....
+  .....
+  .....
+  .....
+
+template plains/streets/straight_01 16 16 2 terrain_matching 19
+  A dirt_path
+layer 0
+  ......AAA.......
+  ......AAA.......
+  .......AA.......
+  ......AAA.......
+  ......AAA.......
+  ......AAA.......
+  ......AAA.......
+  ......AAA.......
+  ......AAA.......
+  ......AAA.......
+  ......AA........
+  ......A.A.......
+  ......A.A.......
+  ......AAA.......
+  ......AAA.......
+  ......AAA.......
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template plains/streets/straight_02 16 16 2 terrain_matching 21
+  A dirt_path
+layer 0
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+  AAA.............
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template plains/streets/straight_03 13 11 2 terrain_matching 52
+  A dirt_path
+layer 0
+  AAA..........
+  AAA..........
+  AAA..........
+  AAA..........
+  AAA..........
+  AAA..........
+  AAA..........
+  AAA..........
+  AAA..........
+  AAA..........
+  AAA..........
+layer 1
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+
+template plains/streets/straight_04 11 9 2 terrain_matching 55
+  A dirt_path
+layer 0
+  AAA........
+  AAA........
+  AAA........
+  AAA........
+  AAA........
+  AAA........
+  AAA........
+  AAA........
+  AAA........
+layer 1
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+
+template plains/streets/straight_05 20 17 2 terrain_matching 24
+  A dirt_path
+layer 0
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+  AAA.................
+layer 1
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+
+template plains/streets/straight_06 21 18 2 terrain_matching 17
+  A dirt_path
+layer 0
+  .......AAA...........
+  .......AAA...........
+  .......AA............
+  .........A...........
+  ........AA...........
+  .......AAA...........
+  ........AA...........
+  ........AAA..........
+  ........A.A..........
+  .....................
+  ........A.A..........
+  ........AAA..........
+  .........AA..........
+  ........AAA..........
+  ..........A..........
+  .....................
+  ........AAA..........
+  ........AAA..........
+layer 1
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+  .....................
+
+template plains/streets/turn_01 18 8 2 terrain_matching 17
+  A dirt_path
+layer 0
+  ....AAA...........
+  .....AAA..........
+  ........A.........
+  ..................
+  .......A..........
+  ..................
+  .......AAA........
+  .......AAA........
+layer 1
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+
+template plains/terminators/terminator_01 2 3 2 terrain_matching 60
+  A dirt_path
+layer 0
+  .A
+  AA
+  .A
+layer 1
+  ..
+  ..
+  ..
+
+template plains/terminators/terminator_02 1 1 2 terrain_matching 116
+  A dirt_path
+layer 0
+  A
+layer 1
+  .
+
+template plains/terminators/terminator_03 3 3 2 terrain_matching 60
+  A dirt_path
+layer 0
+  A.A
+  AAA
+  .AA
+layer 1
+  ...
+  ...
+  ...
+
+template plains/terminators/terminator_04 4 4 2 terrain_matching 59
+  A dirt_path
+layer 0
+  ..AA
+  .AAA
+  AAAA
+  AA..
+layer 1
+  ....
+  ....
+  ....
+  ....
+
+template plains/town_centers/plains_fountain_01 9 9 4 rigid 4
+  A grass_block[snowy=false]
+  B dirt_path
+  C cobblestone
+  D torch
+  E mossy_cobblestone
+  F water[level=1]
+  G water[level=8]
+  H bell[attachment=floor,facing=south,powered=false]
+  I water[level=0]
+layer 0
+  ABBBBBBBA
+  BBBBBBBBB
+  BB..CCCBB
+  BBCCC..BB
+  BB.C..CBB
+  BBC.CCCBB
+  BBCCCCCBB
+  BBBBBBBBB
+  ABBBBBBBA
+layer 1
+  _________
+  _________
+  __DCCCD__
+  __EFGFC__
+  __.GCG.__
+  __CFGFC__
+  ._DECCD__
+  _________
+  _________
+layer 2
+  _________
+  _________
+  ____H____
+  ____G____
+  ___GCG___
+  ____G____
+  _________
+  _________
+  _________
+layer 3
+  _________
+  _________
+  _________
+  ____F____
+  ___FIF___
+  ____F____
+  _________
+  _________
+  _________
+
+template plains/town_centers/plains_meeting_point_1 10 10 7 rigid 3
+  A grass_block[snowy=false]
+  B dirt_path
+  C cobblestone
+  D water[level=0]
+  E mossy_cobblestone
+  F short_grass
+  G bell[attachment=floor,facing=north,powered=false]
+  H oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  I torch
+layer 0
+  AAAABBAAAA
+  ABBBBBBBBA
+  ABBBBBBBBA
+  ABBCCCCBBA
+  BBBCDDCBBB
+  BBBCDDCBBB
+  ABBCCE.BBA
+  ABBBBBBBBA
+  ABBBBBBBBA
+  AAAABBAAAA
+layer 1
+  __________
+  __________
+  __CCCCCC__
+  __CCCCCC_F
+  __CCDDCE__
+  __CCDDEC__
+  __CCCCCC__
+  F_CCCCCC_F
+  _________.
+  ________FF
+layer 2
+  __________
+  __________
+  __________
+  ___CCCC___
+  ___C__C___
+  ___C__C___
+  ___CCCC___
+  ___G______
+  __________
+  __________
+layer 3
+  __________
+  __________
+  __________
+  ___H__H___
+  __________
+  __________
+  ___H__H___
+  __________
+  __________
+  __________
+layer 4
+  __________
+  __________
+  __________
+  ___H__H___
+  __________
+  __________
+  ___H__H___
+  __________
+  __________
+  __________
+layer 5
+  __________
+  __________
+  __________
+  ___CCCC___
+  ___CCCC___
+  ___ECEE___
+  ___CCCC___
+  __________
+  __________
+  __________
+layer 6
+  __________
+  __________
+  __________
+  ___I__I___
+  __________
+  __________
+  ___I__I___
+  __________
+  __________
+  __________
+
+template plains/town_centers/plains_meeting_point_2 8 15 5 rigid 2
+  A grass_block[snowy=false]
+  B dirt_path
+  C dirt
+  D oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  E oak_planks
+  F oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  G short_grass
+  H oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  I oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  J oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  K torch
+  L bell[attachment=floor,facing=east,powered=false]
+  M oak_slab[type=bottom,waterlogged=false]
+  N white_wool
+  O yellow_wool
+layer 0
+  AAAA.BBA
+  CBBCBB..
+  ABB.BBBB
+  BBBB.BBB
+  BABBBABA
+  BBBB.B.A
+  BAABBB..
+  BBBBB.BA
+  BBBAB..A
+  BAABBA.A
+  AABA...A
+  BB..B..A
+  .BBABB.A
+  CCCC.BBA
+  AAAA.BBA
+layer 1
+  D__D__..
+  EEEE____
+  F._F____
+  ________
+  G____._G
+  ..__HEI_
+  _G___E__
+  _____EG_
+  .__GHEIG
+  ________
+  __.G_E__
+  ___G____
+  D__D__G_
+  EEEE____
+  F_.F____
+layer 2
+  J__J____
+  K__K____
+  J__J____
+  ________
+  ________
+  ____JKJ_
+  ________
+  ________
+  ____JKJ_
+  ________
+  _____L__
+  ________
+  J__J____
+  K__K____
+  J__J____
+layer 3
+  J__J____
+  ________
+  J__J____
+  ________
+  ________
+  ____J_J_
+  ________
+  ________
+  ____J_J_
+  ________
+  ________
+  ________
+  J__J____
+  ________
+  J__J____
+layer 4
+  MNOM____
+  MONM____
+  MNOM____
+  ________
+  ________
+  ____MMM_
+  ____ONO_
+  ____NON_
+  ____MMM_
+  ________
+  ________
+  ________
+  MNOM____
+  MONM____
+  MNOM____
+
+template plains/town_centers/plains_meeting_point_3 11 11 9 rigid 1
+  A grass_block[snowy=false]
+  B dirt_path
+  C mossy_cobblestone
+  D cobblestone
+  E dirt
+  F short_grass
+  G oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  H dandelion
+  I cobblestone_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  J cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  K cobblestone_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  L cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  M oak_log[axis=y]
+  N cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  O cobblestone_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  P cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  Q cobblestone_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+  R bell[attachment=ceiling,facing=south,powered=false]
+  S wall_torch[facing=north]
+  T wall_torch[facing=west]
+  U wall_torch[facing=east]
+  V wall_torch[facing=south]
+  W bell[attachment=ceiling,facing=north,powered=false]
+  X oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  Y oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  Z oak_leaves[distance=3,persistent=false,waterlogged=false]
+  a oak_leaves[distance=2,persistent=false,waterlogged=false]
+  b oak_leaves[distance=1,persistent=false,waterlogged=false]
+layer 0
+  AAAABBABBBA
+  BABCADAADBD
+  ABCACCABBAB
+  ABADDBDDABA
+  BACBEEEACBC
+  BBACEBEBCDB
+  ACBBEEECBAA
+  CAABABBACBA
+  ABACABCBBDB
+  ACBACBACBAB
+  AAABADBADAA
+layer 1
+  F_FF_______
+  ____G_GH___
+  ______F__F_
+  F_________F
+  ____IJKF___
+  __F_LMN____
+  ____OPQ__F_
+  ____F_____F
+  __F_F______
+  F___G_G____
+  FF_____F__F
+layer 2
+  ___________
+  ____G_G____
+  ___________
+  ___________
+  ___________
+  _____M_____
+  ___________
+  ___________
+  ___________
+  ____G_G____
+  ___________
+layer 3
+  ___________
+  ____GRG____
+  ___________
+  ___________
+  _____S_____
+  ____TMU____
+  _____V_____
+  ___________
+  ___________
+  ____GWG____
+  ___________
+layer 4
+  ___________
+  ____XCY____
+  ___________
+  ___________
+  ___________
+  _____M_____
+  ___________
+  ___________
+  ___________
+  ____XCY____
+  ___________
+layer 5
+  ___________
+  ___________
+  ___________
+  ____Za_____
+  ___ZabaZ___
+  ___abMba___
+  ___ZabaZ___
+  _____a_____
+  ___________
+  ___________
+  ___________
+layer 6
+  ___________
+  ___________
+  ___________
+  ____ZaZ____
+  ___ZabaZ___
+  ___abMba___
+  ___ZabaZ___
+  ____Z_Z____
+  ___________
+  ___________
+  ___________
+layer 7
+  ___________
+  ___________
+  ___________
+  ___________
+  ____aba____
+  ____bMb____
+  ____aba____
+  ___________
+  ___________
+  ___________
+  ___________
+layer 8
+  ___________
+  ___________
+  ___________
+  ___________
+  _____a_____
+  ____aba____
+  _____a_____
+  ___________
+  ___________
+  ___________
+  ___________
+
+layout 80
+  plains/town_centers/plains_fountain_01 1 0 0 0
+  plains/streets/straight_05 2 -3 0 -1
+  plains/streets/corner_03 0 -12 0 3
+  plains/streets/straight_04 1 9 0 3
+  plains/streets/straight_02 2 -3 0 24
+  plains/streets/corner_03 2 -3 0 3
+  plains/streets/crossroad_05 0 -6 0 -22
+  plains/terminators/terminator_01 3 -12 0 8
+  plains/streets/straight_06 3 10 0 12
+  plains/houses/plains_small_house_1 1 8 1 6
+  plains/streets/corner_01 0 -11 0 25
+  plains/houses/plains_accessory_1 2 -6 1 16
+  plains/streets/crossroad_06 2 3 0 -18
+  plains/streets/crossroad_04 1 -2 0 -17
+  plains/streets/crossroad_04 3 -6 0 -23
+  plains/streets/straight_01 1 -7 0 -27
+  plains/houses/plains_small_house_7 3 10 1 2
+  plains/houses/plains_animal_pen_1 1 26 0 5
+  plains/houses/plains_small_house_4 1 16 1 6
+  feature:pile_hay 0 25 0 3
+  plains/streets/straight_03 1 38 0 2
+  feature:pile_hay 0 -8 0 29
+  plains/streets/corner_01 1 -12 0 26
+  feature:pile_hay 0 -3 0 37
+  plains/streets/straight_06 3 4 0 -12
+  plains/streets/crossroad_06 0 -1 0 -27
+  plains/streets/crossroad_06 1 3 0 -17
+  feature:pile_hay 0 -14 0 -23
+  plains/streets/straight_02 3 -38 0 -19
+  plains/houses/plains_small_house_1 1 34 1 5
+  plains/streets/crossroad_01 2 54 0 11
+  plains/plains_lamp_1 1 -24 1 28
+  plains/plains_lamp_1 1 -20 1 38
+  plains/streets/straight_04 2 -19 0 25
+  plains/plains_lamp_1 2 -14 1 37
+  plains/houses/plains_animal_pen_1 1 15 -2 -19
+  plains/houses/plains_small_house_1 3 9 1 -23
+  plains/streets/crossroad_06 0 22 0 -23
+  plains/streets/straight_03 2 2 0 -28
+  plains/plains_lamp_1 2 2 1 -14
+  plains/streets/corner_03 3 0 0 -9
+  plains/streets/straight_03 1 -39 0 -21
+  plains/houses/plains_armorer_house_1 3 -34 1 -22
+  plains/houses/plains_small_house_7 0 48 1 0
+  plains/streets/corner_02 2 47 0 -5
+  plains/houses/plains_accessory_1 2 44 1 8
+  plains/streets/crossroad_05 1 48 0 12
+  plains/streets/straight_03 2 -19 0 16
+  plains/streets/corner_03 2 25 0 -15
+  plains/streets/straight_05 0 23 0 -40
+  plains/streets/crossroad_05 1 31 0 -23
+  plains/streets/turn_01 0 -7 0 -46
+  plains/houses/plains_masons_house_1 2 -1 1 -29
+  plains/streets/corner_03 1 7 0 -11
+  plains/streets/corner_03 0 0 0 -16
+  plains/streets/straight_06 3 -67 0 -11
+  plains/houses/plains_small_house_5 1 -41 0 -18
+  plains/streets/straight_03 0 45 0 17
+  plains/streets/crossroad_06 2 43 0 16
+  plains/streets/crossroad_04 3 49 0 16
+  plains/streets/crossroad_06 3 -22 0 5
+  plains/streets/corner_03 2 -19 0 20
+  plains/terminators/terminator_02 1 24 0 -41
+  plains/terminators/terminator_02 3 29 0 -18
+  plains/terminators/terminator_03 2 34 0 -20
+  plains/terminators/terminator_03 1 -1 0 -49
+  plains/terminators/terminator_03 3 5 0 -5
+  plains/terminators/terminator_01 0 2 0 -11
+  plains/terminators/terminator_02 0 -68 0 -19
+  plains/terminators/terminator_04 3 45 0 31
+  plains/terminators/terminator_04 3 40 0 20
+  plains/terminators/terminator_01 1 42 0 10
+  plains/terminators/terminator_04 0 35 0 13
+  plains/terminators/terminator_03 2 46 0 15
+  plains/terminators/terminator_03 2 56 0 15
+  plains/terminators/terminator_01 0 47 0 13
+  plains/terminators/terminator_02 1 -20 0 0
+  plains/terminators/terminator_03 0 -25 0 2
+  plains/terminators/terminator_01 2 -16 0 4
+  plains/terminators/terminator_02 3 -20 0 6
+
+layout 159
+  plains/town_centers/plains_meeting_point_1 2 0 0 0
+  plains/streets/corner_03 2 4 0 -3
+  plains/streets/corner_02 0 -25 0 -19
+  plains/streets/crossroad_04 0 -6 0 -14
+  common/well_bottom 1 -6 -4 -6
+  plains/streets/crossroad_05 2 -3 0 5
+  plains/streets/corner_02 1 17 0 -22
+  plains/houses/plains_armorer_house_1 3 -20 6 -8
+  plains/streets/straight_03 2 -23 0 -20
+  plains/streets/corner_03 3 -10 0 -11
+  plains/streets/corner_03 1 -3 0 -18
+  plains/streets/straight_04 1 -8 0 2
+  plains/streets/straight_02 0 -6 0 6
+  plains/streets/crossroad_04 0 -2 0 1
+  plains/streets/straight_05 1 34 0 -22
+  plains/houses/plains_small_house_3 2 -26 1 -21
+  plains/streets/crossroad_04 0 -26 0 -19
+  plains/streets/straight_05 0 -25 0 -47
+  plains/streets/crossroad_04 0 -6 0 -14
+  plains/streets/crossroad_05 2 -7 0 -15
+  plains/streets/crossroad_04 3 -11 0 -15
+  plains/streets/crossroad_04 2 -2 0 -10
+  plains/streets/crossroad_04 2 -17 0 5
+  plains/houses/plains_small_house_8 0 -3 -1 10
+  plains/streets/straight_02 2 -4 0 37
+  plains/houses/plains_animal_pen_3 1 29 0 -19
+  plains/streets/crossroad_06 1 17 0 -23
+  plains/streets/crossroad_03 1 50 0 -32
+  plains/streets/crossroad_05 1 -27 0 -19
+  plains/streets/crossroad_04 1 -22 0 -14
+  plains/houses/plains_armorer_house_1 0 -22 1 -43
+  plains/streets/crossroad_06 3 -26 0 -48
+  plains/streets/crossroad_04 2 -12 0 -15
+  plains/streets/corner_03 2 -8 0 -11
+  plains/streets/crossroad_06 3 -11 0 -20
+  plains/streets/corner_03 1 2 0 -13
+  plains/streets/corner_02 3 -33 0 21
+  plains/streets/crossroad_04 3 -21 0 0
+  plains/streets/straight_04 0 -6 0 38
+  plains/streets/crossroad_05 2 -3 0 21
+  plains/houses/plains_big_house_1 2 -7 0 34
+  plains/plains_lamp_1 1 27 -4 -16
+  plains/streets/crossroad_04 0 13 0 -18
+  plains/streets/crossroad_06 1 12 0 -23
+  plains/streets/straight_03 0 14 0 -34
+  plains/streets/corner_01 1 50 0 -16
+  plains/streets/corner_01 3 34 0 -33
+  plains/streets/straight_04 1 59 0 -29
+  plains/houses/plains_small_house_7 0 44 1 -25
+  plains/streets/straight_03 1 -32 0 -18
+  plains/streets/crossroad_04 1 -27 0 -14
+  plains/streets/crossroad_06 0 -21 0 -14
+  plains/streets/crossroad_05 2 -17 0 -48
+  plains/streets/straight_04 3 -35 0 -49
+  plains/streets/straight_05 0 -25 0 -69
+  plains/streets/crossroad_05 1 -22 0 -47
+  plains/streets/crossroad_06 1 -12 0 -24
+  plains/streets/corner_03 3 -15 0 -11
+  feature:pile_hay 0 -9 0 -22
+  plains/streets/corner_03 1 -8 0 -28
+  plains/terminators/terminator_02 3 -9 0 -19
+  plains/streets/crossroad_05 1 -2 0 -24
+  plains/terminators/terminator_02 3 1 0 -9
+  plains/terminators/terminator_02 0 -2 0 -12
+  plains/streets/straight_04 1 -34 0 19
+  plains/streets/crossroad_04 3 -16 0 0
+  plains/streets/crossroad_04 3 -26 0 0
+  plains/streets/straight_06 2 4 0 64
+  plains/houses/plains_small_house_3 0 -3 1 39
+  plains/streets/crossroad_04 1 -8 0 17
+  plains/streets/crossroad_04 1 12 0 -18
+  plains/streets/corner_03 1 11 0 -27
+  plains/streets/crossroad_06 1 7 0 -23
+  plains/houses/plains_small_house_6 0 17 1 -30
+  plains/streets/straight_02 2 16 0 -35
+  plains/streets/crossroad_05 0 51 0 -11
+  feature:pile_hay 0 41 0 -3
+  plains/streets/crossroad_05 2 33 0 -38
+  plains/streets/crossroad_05 3 40 0 -28
+  plains/streets/straight_04 1 68 0 -29
+  plains/streets/straight_02 1 -43 0 -18
+  plains/houses/plains_small_house_1 1 -33 1 -15
+  plains/streets/corner_03 1 -18 0 -18
+  feature:pile_hay 0 -19 0 -12
+  plains/terminators/terminator_02 2 -16 0 -12
+  plains/streets/corner_03 3 -20 0 -6
+  plains/streets/crossroad_05 3 -21 0 -53
+  plains/streets/crossroad_04 3 -16 0 -48
+  plains/streets/crossroad_05 1 -17 0 -47
+  plains/streets/crossroad_01 3 -51 0 -42
+  plains/houses/plains_small_house_3 3 -34 1 -52
+  plains/streets/crossroad_06 3 -26 0 -70
+  plains/houses/plains_small_house_3 0 -22 1 -62
+  plains/streets/straight_04 1 -27 0 -46
+  plains/streets/crossroad_04 3 -21 0 -20
+  plains/streets/crossroad_04 0 -16 0 -19
+  plains/streets/crossroad_06 3 -16 0 -25
+  plains/streets/straight_04 0 -5 0 -33
+  plains/terminators/terminator_02 3 -4 0 -19
+  plains/streets/corner_03 1 2 0 -23
+  plains/houses/plains_small_farm_1 1 -34 1 22
+  plains/streets/crossroad_04 1 -29 0 18
+  plains/streets/straight_01 1 -43 0 13
+  plains/streets/crossroad_04 2 -12 0 5
+  plains/terminators/terminator_01 2 -10 0 -1
+  plains/streets/corner_03 3 -25 0 4
+  plains/streets/corner_03 0 -30 0 -3
+  plains/houses/plains_medium_house_2 0 -3 1 50
+  plains/plains_lamp_1 0 -6 1 54
+  plains/streets/crossroad_04 2 -2 0 69
+  plains/houses/plains_tool_smith_1 2 -7 1 58
+  plains/streets/crossroad_05 1 -13 0 17
+  plains/streets/corner_03 1 -9 0 13
+  plains/terminators/terminator_03 0 5 0 -17
+  plains/terminators/terminator_02 0 7 0 -26
+  plains/terminators/terminator_02 3 5 0 -18
+  plains/terminators/terminator_02 1 5 0 -24
+  plains/terminators/terminator_04 1 16 0 -54
+  plains/terminators/terminator_04 2 59 0 -8
+  plains/terminators/terminator_03 3 52 0 -4
+  plains/terminators/terminator_01 1 54 0 -13
+  plains/terminators/terminator_03 0 26 0 -41
+  plains/terminators/terminator_03 3 30 0 -35
+  plains/terminators/terminator_01 1 32 0 -44
+  plains/terminators/terminator_03 3 41 0 -25
+  plains/terminators/terminator_03 0 37 0 -31
+  plains/terminators/terminator_04 2 48 0 -29
+  plains/terminators/terminator_03 2 71 0 -27
+  plains/terminators/terminator_01 0 -60 0 -18
+  plains/terminators/terminator_02 0 -22 0 -17
+  plains/terminators/terminator_02 2 -16 0 -55
+  plains/terminators/terminator_03 2 -9 0 -49
+  plains/terminators/terminator_04 0 -55 0 -51
+  plains/terminators/terminator_02 1 -43 0 -58
+  plains/terminators/terminator_03 0 -29 0 -73
+  plains/terminators/terminator_04 3 -25 0 -66
+  plains/terminators/terminator_03 2 -19 0 -71
+  plains/terminators/terminator_03 1 -23 0 -77
+  plains/terminators/terminator_02 0 -22 0 -22
+  plains/terminators/terminator_02 3 -19 0 -19
+  plains/terminators/terminator_02 0 -17 0 -17
+  plains/terminators/terminator_02 1 -14 0 -30
+  plains/terminators/terminator_03 0 -19 0 -28
+  plains/terminators/terminator_02 1 -4 0 -34
+  plains/terminators/terminator_02 3 1 0 -19
+  plains/terminators/terminator_01 2 -27 0 21
+  plains/terminators/terminator_02 1 -31 0 17
+  plains/terminators/terminator_03 0 -61 0 19
+  plains/terminators/terminator_04 2 -39 0 21
+  plains/terminators/terminator_02 2 -21 0 3
+  plains/terminators/terminator_04 3 -30 0 4
+  plains/terminators/terminator_03 2 -24 0 -1
+  plains/terminators/terminator_03 3 -5 0 72
+  plains/terminators/terminator_02 1 -4 0 64
+  plains/terminators/terminator_02 2 -1 0 67
+  plains/terminators/terminator_01 1 -14 0 15
+  plains/terminators/terminator_03 0 -20 0 18
+  plains/terminators/terminator_04 3 -11 0 20
+  plains/terminators/terminator_02 0 -13 0 14
+
+layout 141
+  plains/town_centers/plains_meeting_point_2 3 0 0 0
+  plains/streets/straight_04 1 -1 0 -6
+  plains/streets/straight_03 0 6 0 1
+  plains/streets/straight_04 3 15 0 -4
+  plains/streets/straight_04 2 4 0 -8
+  plains/streets/corner_03 2 3 0 -4
+  plains/houses/plains_small_house_8 1 -1 -1 -3
+  plains/streets/straight_06 3 -27 0 4
+  plains/streets/straight_05 0 6 0 12
+  plains/houses/plains_small_house_7 3 15 1 -7
+  plains/streets/corner_03 0 11 0 -6
+  plains/streets/straight_01 3 24 0 2
+  plains/streets/straight_03 2 4 0 -17
+  plains/streets/crossroad_05 2 5 0 -3
+  plains/streets/crossroad_05 2 -28 0 -2
+  plains/houses/plains_small_house_1 0 9 1 19
+  plains/streets/straight_04 2 8 0 37
+  plains/streets/corner_03 0 6 0 8
+  plains/streets/crossroad_04 2 14 0 2
+  plains/streets/straight_04 3 40 0 -4
+  plains/plains_lamp_1 1 38 1 -1
+  plains/houses/plains_small_house_3 2 1 1 -17
+  plains/streets/straight_03 0 2 0 -38
+  plains/streets/straight_05 0 -31 0 -23
+  plains/streets/straight_03 3 -43 0 -3
+  plains/streets/turn_01 0 -35 0 -1
+  plains/streets/corner_03 1 -24 0 -5
+  plains/streets/crossroad_05 0 5 0 24
+  plains/streets/crossroad_03 1 15 0 38
+  plains/streets/crossroad_06 2 14 0 11
+  plains/streets/crossroad_04 0 10 0 -7
+  plains/streets/corner_03 2 13 0 6
+  plains/streets/crossroad_04 0 15 0 -2
+  plains/streets/straight_03 3 49 0 -4
+  plains/streets/straight_01 3 24 0 2
+  plains/streets/straight_01 0 -4 0 -27
+  plains/houses/plains_small_house_1 0 5 1 -38
+  plains/streets/straight_01 0 -4 0 -54
+  plains/streets/turn_01 2 -25 0 -24
+  plains/houses/plains_small_house_8 0 -28 -1 -17
+  plains/streets/corner_03 2 -29 0 -3
+  plains/streets/straight_01 1 -44 0 -11
+  plains/streets/corner_03 1 -29 0 -5
+  plains/streets/corner_02 0 -28 0 7
+  plains/streets/crossroad_05 3 -32 0 -2
+  plains/streets/straight_02 3 -11 0 27
+  plains/streets/corner_03 1 8 0 34
+  plains/streets/straight_04 0 6 0 54
+  plains/streets/straight_04 3 16 0 43
+  plains/streets/straight_04 1 -1 0 48
+  plains/streets/crossroad_04 1 19 0 7
+  plains/streets/crossroad_04 1 9 0 -7
+  plains/streets/crossroad_04 2 14 0 -8
+  plains/streets/corner_03 3 6 0 6
+  plains/terminators/terminator_02 1 17 0 -3
+  plains/streets/corner_03 0 45 0 -6
+  plains/streets/corner_03 1 63 0 -6
+  feature:pile_hay 0 37 0 -9
+  feature:pile_hay 0 7 0 -21
+  plains/streets/corner_03 2 4 0 -8
+  feature:pile_hay 0 8 0 -23
+  plains/streets/corner_03 2 4 0 -35
+  feature:pile_hay 0 7 0 -48
+  plains/plains_lamp_1 3 -3 1 -40
+  feature:pile_hay 0 8 0 -50
+  plains/streets/straight_03 0 2 0 -65
+  plains/streets/straight_04 2 -32 0 -32
+  plains/streets/crossroad_06 0 -43 0 -6
+  plains/plains_lamp_1 0 -51 1 -1
+  plains/streets/straight_03 1 -60 0 -5
+  plains/streets/straight_01 0 -34 0 -9
+  plains/streets/crossroad_04 1 -8 0 19
+  plains/streets/corner_03 1 8 0 25
+  plains/streets/straight_04 1 -12 0 25
+  plains/streets/crossroad_04 3 0 0 37
+  plains/streets/crossroad_05 3 5 0 53
+  plains/streets/crossroad_04 0 5 0 63
+  plains/houses/plains_small_house_1 0 9 1 55
+  plains/streets/corner_02 2 40 0 56
+  plains/houses/plains_accessory_1 3 20 1 40
+  plains/streets/crossroad_06 0 -14 0 47
+  plains/streets/crossroad_06 1 4 0 47
+  plains/houses/plains_small_house_4 1 -2 1 51
+  plains/streets/straight_04 3 20 0 10
+  plains/streets/crossroad_06 0 5 0 -12
+  plains/terminators/terminator_02 3 12 0 -7
+  plains/streets/corner_03 1 13 0 -16
+  plains/streets/crossroad_04 1 19 0 -12
+  plains/streets/crossroad_05 0 44 0 -2
+  plains/streets/straight_04 0 61 0 -2
+  plains/streets/crossroad_06 0 55 0 -7
+  plains/streets/crossroad_04 0 1 0 -16
+  plains/streets/crossroad_04 2 0 0 -34
+  plains/houses/plains_temple_4 0 5 1 -61
+  plains/streets/straight_03 0 2 0 -76
+  plains/terminators/terminator_02 3 -33 0 -31
+  plains/terminators/terminator_03 1 -32 0 -43
+  plains/terminators/terminator_01 3 -42 0 0
+  plains/terminators/terminator_04 2 -35 0 -3
+  plains/terminators/terminator_04 1 -40 0 -10
+  plains/terminators/terminator_01 2 -58 0 -3
+  plains/terminators/terminator_02 0 -71 0 -4
+  plains/terminators/terminator_01 2 -6 0 22
+  plains/terminators/terminator_03 1 -9 0 16
+  plains/terminators/terminator_03 0 -23 0 25
+  plains/terminators/terminator_04 2 -8 0 27
+  plains/terminators/terminator_02 0 -1 0 35
+  plains/terminators/terminator_03 2 7 0 36
+  plains/terminators/terminator_04 3 1 0 41
+  plains/terminators/terminator_04 1 8 0 45
+  plains/terminators/terminator_01 2 11 0 52
+  plains/terminators/terminator_04 3 6 0 71
+  plains/terminators/terminator_03 0 2 0 64
+  plains/terminators/terminator_01 3 38 0 58
+  plains/terminators/terminator_03 1 -11 0 44
+  plains/terminators/terminator_02 3 -12 0 52
+  plains/terminators/terminator_03 0 -17 0 48
+  plains/terminators/terminator_01 1 3 0 45
+  plains/terminators/terminator_02 3 2 0 52
+  plains/terminators/terminator_02 2 5 0 49
+  plains/terminators/terminator_02 2 29 0 9
+  plains/terminators/terminator_02 0 19 0 9
+  plains/terminators/terminator_04 3 6 0 -4
+  plains/terminators/terminator_02 2 10 0 -10
+  plains/terminators/terminator_04 1 8 0 -16
+  plains/terminators/terminator_01 3 11 0 -11
+  plains/terminators/terminator_04 0 6 0 -16
+  plains/terminators/terminator_03 2 22 0 -9
+  plains/terminators/terminator_02 0 14 0 -10
+  plains/terminators/terminator_03 1 18 0 -15
+  plains/terminators/terminator_04 3 45 0 6
+  plains/terminators/terminator_01 0 42 0 -1
+  plains/terminators/terminator_03 2 51 0 1
+  plains/terminators/terminator_02 1 46 0 -3
+  plains/terminators/terminator_01 3 61 0 8
+  plains/terminators/terminator_04 3 56 0 1
+  plains/terminators/terminator_03 1 58 0 -10
+  plains/terminators/terminator_01 0 53 0 -6
+  plains/terminators/terminator_01 3 -3 0 -32
+  plains/terminators/terminator_03 3 2 0 -63
+  plains/terminators/terminator_02 1 3 0 -77
+
+layout 132
+  plains/town_centers/plains_meeting_point_1 2 0 0 0
+  plains/streets/straight_04 2 -3 0 -10
+  plains/streets/crossroad_03 3 -25 0 6
+  plains/streets/straight_06 3 1 0 4
+  common/well_bottom 0 -9 -3 -3
+  plains/streets/crossroad_06 0 -7 0 1
+  plains/houses/plains_small_farm_1 2 -6 1 -10
+  plains/streets/turn_01 2 1 0 -19
+  plains/streets/crossroad_04 0 -19 0 -14
+  plains/streets/straight_04 3 -34 0 3
+  plains/streets/crossroad_03 0 -21 0 7
+  feature:pile_hay 0 -14 0 -2
+  plains/houses/plains_small_house_4 1 8 1 -2
+  plains/houses/plains_small_farm_1 3 7 1 -7
+  plains/plains_lamp_1 3 15 1 -4
+  plains/streets/straight_03 3 19 0 -4
+  plains/plains_lamp_1 1 11 1 -6
+  plains/houses/plains_small_house_1 1 18 1 -3
+  plains/terminators/terminator_02 2 -2 0 3
+  plains/terminators/terminator_02 0 -8 0 3
+  plains/terminators/terminator_02 3 -5 0 6
+  plains/streets/corner_01 3 -15 0 -27
+  plains/houses/plains_small_house_6 2 -9 1 -20
+  plains/streets/straight_04 3 -28 0 -11
+  plains/streets/corner_03 0 -18 0 -18
+  plains/streets/crossroad_03 3 -50 0 13
+  plains/streets/straight_03 1 -22 0 14
+  feature:pile_hay 0 -13 0 18
+  plains/streets/turn_01 0 -15 0 23
+  plains/streets/crossroad_05 3 -5 0 17
+  plains/houses/plains_small_house_1 3 20 1 -7
+  plains/streets/crossroad_03 1 45 0 -16
+  feature:pile_hay 0 -3 0 -35
+  plains/streets/straight_04 3 -24 0 -33
+  plains/plains_lamp_1 2 -1 1 -29
+  plains/plains_lamp_1 0 -12 1 -31
+  feature:pile_hay 0 -6 0 -40
+  plains/houses/plains_small_house_1 3 -27 1 -14
+  plains/streets/straight_04 3 -37 0 -11
+  plains/terminators/terminator_02 2 -14 0 -17
+  plains/streets/straight_03 1 -51 0 8
+  plains/plains_lamp_1 1 -38 1 4
+  plains/streets/straight_04 2 -41 0 -3
+  plains/streets/crossroad_01 0 -50 0 14
+  plains/houses/plains_small_house_7 2 -44 1 6
+  plains/terminators/terminator_01 0 -34 0 14
+  plains/houses/plains_small_house_4 1 -24 1 17
+  plains/streets/corner_02 3 -21 0 46
+  plains/streets/crossroad_06 3 0 0 17
+  plains/streets/crossroad_06 1 -1 0 8
+  plains/streets/crossroad_05 0 -5 0 18
+  plains/streets/straight_01 0 30 0 -32
+  plains/plains_lamp_1 2 35 1 -7
+  plains/streets/straight_03 3 46 0 -11
+  plains/houses/plains_small_house_3 0 39 1 -8
+  plains/streets/crossroad_03 1 45 0 0
+  plains/streets/straight_01 1 -25 0 -41
+  plains/houses/plains_small_house_1 3 -23 1 -36
+  plains/terminators/terminator_01 0 -39 0 -13
+  plains/houses/plains_small_house_4 3 -36 1 -14
+  plains/houses/plains_temple_4 1 -55 1 11
+  plains/streets/crossroad_05 0 -50 0 7
+  plains/streets/crossroad_01 1 -62 0 1
+  plains/houses/plains_small_house_3 2 -44 1 -4
+  plains/streets/straight_03 2 -41 0 -12
+  plains/houses/plains_small_house_6 2 -44 1 29
+  plains/streets/straight_01 0 -49 0 30
+  plains/terminators/terminator_01 2 -33 0 23
+  plains/houses/plains_animal_pen_1 0 -40 0 16
+  feature:pile_hay 0 -37 0 26
+  plains/streets/straight_03 3 -32 0 46
+  plains/houses/plains_medium_house_2 2 -10 1 43
+  plains/streets/corner_01 0 5 0 7
+  plains/streets/corner_03 1 3 0 9
+  plains/streets/corner_03 3 1 0 21
+  plains/plains_lamp_1 2 -2 1 11
+  plains/terminators/terminator_01 1 -2 0 6
+  plains/terminators/terminator_02 2 0 0 20
+  feature:pile_hay 0 42 0 -28
+  plains/streets/straight_02 2 38 0 -33
+  plains/streets/straight_06 1 74 0 -21
+  plains/houses/plains_small_house_1 3 50 1 -14
+  plains/streets/straight_03 2 38 0 26
+  plains/streets/straight_02 1 61 0 3
+  plains/streets/straight_04 3 21 0 12
+  plains/houses/plains_small_house_3 0 39 1 8
+  feature:pile_hay 0 -38 0 -30
+  plains/streets/straight_04 1 -41 0 -35
+  plains/streets/crossroad_05 2 -46 0 6
+  plains/terminators/terminator_01 3 -49 0 13
+  plains/streets/corner_03 1 -42 0 8
+  plains/houses/plains_animal_pen_1 3 -69 0 7
+  plains/streets/corner_02 3 -84 0 32
+  feature:pile_hay 0 -74 0 14
+  plains/streets/crossroad_06 0 -82 0 7
+  plains/terminators/terminator_01 1 -41 0 -24
+  plains/houses/plains_small_house_3 2 -44 1 -12
+  plains/plains_lamp_1 1 -36 1 33
+  plains/streets/straight_04 0 -43 0 46
+  feature:pile_hay 0 -38 0 36
+  plains/houses/plains_small_house_4 3 -28 1 43
+  plains/terminators/terminator_02 0 -33 0 45
+  plains/plains_lamp_1 3 14 1 11
+  plains/plains_lamp_1 0 7 1 10
+  plains/terminators/terminator_02 1 12 0 6
+  plains/plains_lamp_1 3 12 1 20
+  plains/streets/crossroad_03 2 41 0 -49
+  plains/houses/plains_temple_3 2 35 1 -38
+  plains/houses/plains_small_house_1 3 67 1 -15
+  plains/houses/plains_small_house_1 1 73 1 -11
+  plains/terminators/terminator_02 2 75 0 -13
+  plains/plains_lamp_1 1 66 0 -13
+  plains/houses/plains_accessory_1 1 65 1 -10
+  plains/houses/plains_masons_house_1 3 57 1 -14
+  plains/houses/plains_small_house_3 2 35 1 25
+  plains/streets/corner_01 0 30 0 27
+  plains/houses/plains_temple_3 1 56 1 6
+  plains/streets/straight_04 1 70 0 3
+  plains/terminators/terminator_04 0 -53 0 -35
+  plains/terminators/terminator_02 0 -51 0 4
+  plains/terminators/terminator_04 2 -42 0 5
+  plains/terminators/terminator_04 1 -47 0 -2
+  plains/terminators/terminator_02 0 -85 0 31
+  plains/terminators/terminator_02 1 -80 0 6
+  plains/terminators/terminator_02 3 -80 0 12
+  plains/terminators/terminator_02 0 -83 0 9
+  plains/terminators/terminator_02 3 -42 0 55
+  plains/terminators/terminator_02 2 42 0 -57
+  plains/terminators/terminator_02 1 30 0 -65
+  plains/terminators/terminator_03 0 23 0 -58
+  plains/terminators/terminator_04 0 26 0 34
+  plains/terminators/terminator_04 2 74 0 5
+
+layout 110
+  plains/town_centers/plains_fountain_01 2 0 0 0
+  plains/streets/straight_04 2 -3 0 9
+  plains/streets/crossroad_05 2 -9 0 -2
+  plains/streets/straight_04 3 1 0 -3
+  plains/streets/corner_03 0 -5 0 -12
+  plains/streets/crossroad_01 2 4 0 25
+  plains/terminators/terminator_02 3 -11 0 -1
+  plains/streets/straight_03 2 -10 0 -7
+  plains/streets/straight_02 1 -14 0 -5
+  plains/houses/plains_small_farm_1 3 1 1 -6
+  plains/streets/crossroad_05 2 14 0 -2
+  plains/terminators/terminator_02 2 -1 0 -11
+  plains/houses/plains_big_house_1 0 -2 0 13
+  plains/plains_lamp_1 1 -8 1 12
+  plains/streets/straight_06 2 5 0 43
+  plains/streets/crossroad_06 0 -16 0 15
+  plains/houses/plains_small_house_1 2 -13 1 -7
+  plains/streets/crossroad_04 0 -13 0 -22
+  plains/streets/corner_03 0 -33 0 -5
+  plains/houses/plains_small_house_3 1 -19 1 -2
+  plains/streets/straight_03 0 11 0 -17
+  plains/streets/straight_05 1 31 0 -5
+  plains/streets/crossroad_04 0 10 0 -1
+  plains/houses/plains_animal_pen_1 0 -1 -4 38
+  plains/houses/plains_animal_pen_1 0 -2 0 32
+  plains/houses/plains_temple_4 2 -5 1 43
+  plains/houses/plains_tannery_1 2 -6 1 35
+  plains/streets/turn_01 2 5 0 51
+  plains/streets/straight_04 1 -17 0 16
+  plains/streets/crossroad_06 0 -16 0 20
+  plains/streets/crossroad_04 3 -16 0 14
+  plains/streets/crossroad_06 2 -14 0 -18
+  plains/streets/straight_06 0 -20 0 -40
+  plains/streets/straight_05 2 -31 0 15
+  plains/houses/plains_small_farm_1 0 14 1 -16
+  plains/streets/crossroad_03 0 1 0 -33
+  plains/streets/straight_02 1 47 0 -5
+  plains/streets/crossroad_04 2 9 0 3
+  plains/streets/crossroad_06 0 10 0 4
+  plains/houses/plains_small_house_4 2 -5 1 50
+  plains/streets/straight_05 2 1 0 68
+  plains/streets/straight_04 1 -26 0 16
+  plains/houses/plains_small_house_2 1 -18 1 19
+  plains/streets/corner_03 2 -13 0 28
+  plains/plains_lamp_1 1 -13 1 21
+  plains/streets/corner_03 0 -20 0 21
+  plains/streets/corner_03 0 -20 0 11
+  feature:pile_hay 0 -16 0 -20
+  plains/streets/crossroad_04 1 -19 0 -22
+  plains/houses/plains_tannery_1 0 -9 1 -32
+  plains/plains_lamp_1 0 -12 1 -32
+  plains/houses/plains_small_farm_1 2 -14 0 -32
+  plains/houses/plains_small_house_2 0 -10 1 -40
+  plains/houses/plains_small_house_1 2 -13 1 -23
+  plains/streets/crossroad_01 0 -20 0 -56
+  plains/plains_lamp_1 0 -13 0 -38
+  plains/houses/plains_small_farm_1 2 -34 1 11
+  plains/streets/crossroad_01 1 32 0 -33
+  plains/streets/straight_04 0 4 0 -42
+  plains/houses/plains_temple_3 1 42 1 -2
+  plains/streets/straight_01 3 48 0 3
+  plains/terminators/terminator_02 1 7 0 -2
+  plains/streets/crossroad_05 0 5 0 4
+  plains/streets/crossroad_06 1 14 0 9
+  plains/streets/crossroad_04 2 14 0 3
+  plains/streets/turn_01 2 8 0 76
+  plains/houses/plains_small_house_4 1 -27 1 19
+  plains/streets/corner_03 0 -38 0 16
+  plains/streets/crossroad_05 1 -12 0 20
+  plains/streets/crossroad_05 1 -17 0 25
+  plains/streets/corner_03 2 -18 0 28
+  plains/terminators/terminator_02 3 -19 0 15
+  plains/streets/crossroad_03 1 -24 0 -24
+  plains/terminators/terminator_02 1 -21 0 -23
+  plains/houses/plains_animal_pen_1 0 -10 0 -54
+  plains/streets/straight_03 3 -4 0 -47
+  plains/streets/straight_03 2 -11 0 -57
+  plains/houses/plains_small_farm_1 2 -14 1 -41
+  plains/houses/plains_small_house_2 3 22 1 -27
+  plains/terminators/terminator_02 3 24 0 -17
+  plains/streets/straight_06 3 33 0 -17
+  plains/streets/crossroad_04 3 3 0 -43
+  plains/streets/crossroad_04 1 7 0 -33
+  plains/streets/turn_01 1 71 0 -12
+  plains/plains_lamp_1 0 53 1 -9
+  plains/streets/crossroad_06 0 5 0 9
+  plains/streets/corner_03 0 1 0 5
+  plains/streets/crossroad_05 0 10 0 14
+  plains/terminators/terminator_02 3 -37 0 20
+  plains/terminators/terminator_01 0 -23 0 26
+  plains/terminators/terminator_01 2 -15 0 28
+  plains/terminators/terminator_04 3 -20 0 33
+  plains/terminators/terminator_04 3 -33 0 -5
+  plains/terminators/terminator_04 2 -20 0 -19
+  plains/terminators/terminator_02 1 -32 0 -25
+  plains/terminators/terminator_04 0 -43 0 -14
+  plains/terminators/terminator_04 2 10 0 -47
+  plains/terminators/terminator_01 1 -11 0 -69
+  plains/terminators/terminator_03 2 53 0 -25
+  plains/terminators/terminator_03 2 10 0 -44
+  plains/terminators/terminator_02 0 2 0 -45
+  plains/terminators/terminator_04 0 -1 0 -32
+  plains/terminators/terminator_03 2 10 0 -30
+  plains/terminators/terminator_02 0 63 0 -4
+  plains/terminators/terminator_03 2 74 0 -6
+  plains/terminators/terminator_03 3 6 0 16
+  plains/terminators/terminator_02 3 2 0 9
+  plains/terminators/terminator_02 0 9 0 16
+  plains/terminators/terminator_01 2 16 0 17
+  plains/terminators/terminator_01 3 11 0 20
+
+layout 109
+  plains/town_centers/plains_meeting_point_1 0 0 0 0
+  common/well_bottom 2 9 -3 3
+  plains/streets/straight_06 1 27 0 -4
+  plains/streets/straight_04 2 5 0 18
+  plains/streets/straight_04 2 6 0 -1
+  plains/streets/crossroad_04 2 -1 0 6
+  plains/streets/corner_03 0 6 0 4
+  plains/streets/turn_01 3 28 0 9
+  plains/streets/corner_02 0 3 0 19
+  plains/houses/plains_small_house_8 2 2 -1 18
+  plains/streets/straight_04 2 6 0 -10
+  plains/terminators/terminator_02 3 5 0 0
+  plains/terminators/terminator_01 1 -2 0 0
+  plains/terminators/terminator_03 3 -4 0 9
+  plains/streets/crossroad_05 0 23 0 2
+  plains/streets/straight_05 3 36 0 2
+  plains/streets/straight_03 1 29 0 32
+  plains/streets/crossroad_02 3 -3 0 -19
+  plains/streets/crossroad_04 0 3 0 -9
+  plains/streets/crossroad_05 0 18 0 2
+  plains/streets/corner_03 2 26 0 10
+  plains/streets/crossroad_04 2 27 0 1
+  plains/houses/plains_meeting_point_5 3 38 0 -1
+  plains/streets/corner_03 1 56 0 0
+  plains/streets/straight_03 1 40 0 32
+  plains/streets/straight_01 1 18 0 26
+  plains/plains_lamp_1 0 1 1 -31
+  plains/streets/turn_01 3 13 0 -22
+  plains/streets/straight_05 2 6 0 -35
+  feature:pile_hay 0 9 0 -32
+  feature:pile_hay 0 -2 0 -24
+  plains/streets/crossroad_06 0 -8 0 -29
+  plains/plains_lamp_1 1 3 1 -23
+  plains/streets/corner_03 3 4 0 -1
+  plains/streets/crossroad_05 0 -2 0 -9
+  plains/streets/crossroad_06 1 17 0 2
+  plains/streets/crossroad_06 0 18 0 -3
+  plains/streets/crossroad_06 3 18 0 11
+  plains/streets/crossroad_05 1 27 0 -8
+  plains/plains_lamp_1 0 39 1 -9
+  plains/streets/corner_01 0 48 0 4
+  plains/houses/plains_armorer_house_1 1 38 1 35
+  plains/streets/crossroad_01 2 56 0 41
+  plains/streets/corner_03 0 26 0 32
+  plains/streets/straight_05 1 2 0 32
+  plains/streets/straight_01 1 36 0 -37
+  plains/houses/plains_animal_pen_3 2 3 0 -38
+  plains/streets/straight_06 0 -4 0 -69
+  plains/streets/straight_05 1 -9 0 -28
+  plains/streets/crossroad_06 1 -4 0 -34
+  plains/streets/crossroad_04 0 -8 0 -24
+  plains/streets/crossroad_05 2 1 0 -25
+  plains/streets/corner_03 1 11 0 -3
+  plains/streets/crossroad_05 0 8 0 2
+  plains/streets/crossroad_06 2 17 0 1
+  plains/streets/corner_03 2 16 0 10
+  plains/streets/corner_03 1 21 0 -7
+  plains/terminators/terminator_02 2 23 0 -1
+  plains/streets/crossroad_04 1 22 0 12
+  plains/plains_lamp_1 1 21 1 8
+  plains/terminators/terminator_02 0 17 0 9
+  plains/streets/turn_01 2 30 0 -9
+  plains/terminators/terminator_02 0 22 0 -6
+  plains/streets/turn_01 3 40 0 20
+  feature:pile_hay 0 61 0 13
+  feature:pile_hay 0 51 0 8
+  plains/plains_lamp_1 2 59 1 8
+  plains/streets/corner_03 1 49 0 22
+  plains/streets/straight_03 0 47 0 42
+  plains/streets/crossroad_05 2 29 0 40
+  plains/streets/straight_03 1 -15 0 32
+  plains/houses/plains_big_house_1 1 -1 0 35
+  plains/streets/crossroad_04 1 41 0 -32
+  feature:pile_hay 0 30 0 -26
+  plains/plains_lamp_1 3 22 1 -34
+  feature:pile_hay 0 32 0 -25
+  feature:pile_hay 0 -1 0 -41
+  plains/houses/plains_small_house_1 2 2 1 -62
+  plains/plains_lamp_1 3 3 -4 -65
+  plains/houses/plains_small_house_2 0 7 1 -62
+  plains/streets/corner_03 1 5 0 -73
+  plains/houses/plains_temple_3 0 6 1 -69
+  plains/streets/straight_04 1 -26 0 -28
+  plains/houses/plains_small_house_2 1 -13 1 -25
+  plains/streets/crossroad_04 1 -9 0 -34
+  plains/streets/crossroad_04 0 -8 0 -19
+  plains/streets/crossroad_04 3 3 0 0
+  plains/terminators/terminator_02 3 10 0 1
+  plains/terminators/terminator_01 1 16 0 -5
+  plains/terminators/terminator_02 0 12 0 -1
+  plains/terminators/terminator_02 0 17 0 -6
+  plains/terminators/terminator_01 0 16 0 13
+  plains/terminators/terminator_01 2 24 0 15
+  plains/terminators/terminator_02 1 22 0 -17
+  plains/terminators/terminator_04 0 36 0 14
+  plains/terminators/terminator_04 2 51 0 13
+  plains/terminators/terminator_04 3 47 0 29
+  plains/terminators/terminator_01 0 44 0 22
+  plains/terminators/terminator_04 1 49 0 38
+  plains/terminators/terminator_02 3 48 0 53
+  plains/terminators/terminator_02 1 27 0 35
+  plains/terminators/terminator_01 0 -27 0 32
+  plains/terminators/terminator_03 2 44 0 -29
+  plains/terminators/terminator_03 1 40 0 -35
+  plains/terminators/terminator_03 0 -1 0 -73
+  plains/terminators/terminator_03 0 -37 0 -28
+  plains/terminators/terminator_04 0 -17 0 -33
+  plains/terminators/terminator_02 3 -6 0 -14
+  plains/terminators/terminator_02 3 5 0 1
+
+layout 83
+  plains/town_centers/plains_meeting_point_3 0 0 0 0
+  plains/streets/straight_05 3 -17 0 6
+  plains/streets/straight_04 2 6 0 19
+  plains/streets/crossroad_05 3 11 0 7
+  plains/houses/plains_stable_2 3 -17 0 3
+  plains/streets/straight_01 1 -18 0 -2
+  plains/houses/plains_small_house_2 2 3 1 18
+  plains/streets/corner_01 1 13 0 20
+  plains/streets/crossroad_05 1 20 0 3
+  plains/streets/crossroad_04 2 15 0 2
+  plains/streets/straight_04 0 12 0 8
+  plains/plains_lamp_1 1 -24 1 1
+  plains/streets/straight_06 3 -51 0 14
+  plains/plains_lamp_1 0 9 1 29
+  plains/plains_lamp_1 0 3 1 32
+  plains/plains_lamp_1 2 10 1 24
+  plains/plains_lamp_1 0 -1 1 22
+  plains/streets/straight_05 1 30 0 26
+  plains/streets/straight_04 0 17 0 -6
+  plains/streets/corner_03 2 24 0 6
+  plains/terminators/terminator_02 2 16 0 0
+  plains/streets/crossroad_06 2 15 0 -3
+  plains/houses/plains_small_farm_1 0 15 1 8
+  plains/terminators/terminator_03 3 12 0 19
+  plains/streets/crossroad_04 3 -33 0 7
+  plains/streets/crossroad_03 3 -67 0 17
+  plains/streets/straight_03 3 31 0 28
+  plains/houses/plains_shepherds_house_1 1 27 0 29
+  plains/streets/straight_03 0 17 0 -17
+  plains/houses/plains_small_house_3 0 20 1 -5
+  plains/streets/straight_03 2 14 0 -8
+  plains/streets/corner_03 3 7 0 -4
+  plains/plains_lamp_1 3 12 1 -4
+  plains/terminators/terminator_02 2 16 0 -5
+  plains/streets/straight_03 2 -58 0 1
+  plains/streets/turn_01 1 -68 0 8
+  plains/streets/crossroad_04 0 -51 0 4
+  plains/streets/corner_01 1 -51 0 18
+  plains/houses/plains_small_house_7 2 -61 1 10
+  plains/streets/crossroad_05 0 42 0 25
+  feature:pile_hay 0 26 0 37
+  plains/houses/plains_small_house_2 0 20 1 -13
+  plains/streets/crossroad_06 1 20 0 -22
+  plains/streets/straight_05 2 14 0 -19
+  plains/houses/plains_small_house_7 2 11 1 -8
+  plains/houses/plains_accessory_1 2 -61 1 -3
+  plains/streets/straight_03 0 -60 0 -20
+  plains/houses/plains_accessory_1 3 -74 1 14
+  plains/houses/plains_small_house_2 1 -69 1 18
+  plains/streets/crossroad_04 2 -47 0 3
+  plains/streets/crossroad_05 2 -47 0 13
+  plains/plains_lamp_1 0 -55 1 27
+  plains/plains_lamp_1 1 -59 1 30
+  plains/streets/corner_01 3 -50 0 32
+  plains/streets/crossroad_05 2 41 0 29
+  plains/streets/straight_02 0 43 0 9
+  plains/streets/straight_06 0 36 0 30
+  plains/streets/corner_03 1 50 0 26
+  plains/streets/corner_03 2 19 0 -14
+  plains/plains_lamp_1 2 19 1 -19
+  plains/streets/crossroad_05 3 21 0 -18
+  plains/terminators/terminator_02 0 15 0 -20
+  plains/streets/corner_03 1 19 0 -26
+  plains/houses/plains_small_house_4 2 11 1 -23
+  plains/streets/crossroad_05 1 15 0 -18
+  plains/streets/straight_03 0 12 0 -46
+  plains/terminators/terminator_04 1 -58 0 -24
+  plains/terminators/terminator_03 2 -44 0 2
+  plains/terminators/terminator_02 1 -49 0 -2
+  plains/terminators/terminator_01 3 -50 0 15
+  plains/terminators/terminator_01 2 -45 0 12
+  plains/terminators/terminator_02 3 -42 0 33
+  plains/terminators/terminator_04 1 40 0 21
+  plains/terminators/terminator_01 0 35 0 26
+  plains/terminators/terminator_01 1 45 0 7
+  plains/terminators/terminator_03 3 44 0 50
+  plains/terminators/terminator_04 0 12 0 -16
+  plains/terminators/terminator_01 1 24 0 -24
+  plains/terminators/terminator_03 3 22 0 -15
+  plains/terminators/terminator_01 2 27 0 -19
+  plains/terminators/terminator_02 0 15 0 -25
+  plains/terminators/terminator_03 0 8 0 -17
+  plains/terminators/terminator_03 1 14 0 -49
+
+layout 115
+  plains/town_centers/plains_fountain_01 1 0 0 0
+  plains/streets/straight_05 0 -5 0 -17
+  plains/streets/crossroad_01 3 -12 0 24
+  plains/streets/straight_03 3 -19 0 5
+  plains/streets/crossroad_04 1 5 0 2
+  plains/streets/crossroad_01 0 -12 0 -33
+  plains/houses/plains_small_house_1 0 -2 1 -10
+  plains/houses/plains_small_farm_1 1 -4 1 18
+  plains/streets/straight_01 3 -28 0 23
+  plains/plains_lamp_1 0 -1 1 10
+  plains/streets/corner_03 2 7 0 17
+  plains/streets/corner_03 3 -23 0 5
+  plains/houses/plains_small_house_2 3 -19 1 2
+  plains/streets/straight_04 1 14 0 3
+  plains/streets/crossroad_05 1 0 0 2
+  plains/streets/crossroad_05 3 1 0 1
+  plains/houses/plains_medium_house_2 2 -6 1 -20
+  plains/plains_lamp_1 3 0 2 -20
+  plains/streets/straight_05 3 4 0 -24
+  plains/streets/corner_03 0 -5 0 -37
+  feature:pile_hay 0 -24 0 11
+  plains/plains_lamp_1 1 -20 1 18
+  plains/streets/crossroad_05 2 -29 0 18
+  plains/streets/straight_04 2 -21 0 1
+  plains/streets/corner_03 2 18 0 5
+  plains/houses/plains_small_house_1 1 13 1 6
+  plains/streets/crossroad_05 3 -4 0 11
+  plains/streets/crossroad_05 0 -4 0 -3
+  plains/streets/crossroad_04 3 -4 0 1
+  plains/houses/plains_weaponsmith_1 3 9 1 -27
+  plains/streets/straight_01 3 21 0 -18
+  plains/streets/crossroad_05 3 -6 0 -29
+  plains/streets/crossroad_06 1 3 0 -38
+  plains/streets/crossroad_03 2 -34 0 24
+  plains/streets/crossroad_04 0 -33 0 19
+  plains/streets/crossroad_05 2 -29 0 13
+  plains/streets/turn_01 0 -30 0 -15
+  plains/streets/straight_05 0 16 0 -15
+  plains/streets/crossroad_05 0 1 0 7
+  plains/streets/corner_03 0 -3 0 3
+  plains/streets/crossroad_04 2 0 0 -4
+  plains/streets/crossroad_06 3 37 0 -23
+  feature:pile_hay 0 34 0 -29
+  plains/streets/crossroad_05 3 -6 0 -24
+  plains/streets/crossroad_04 2 -7 0 -29
+  plains/streets/crossroad_05 0 -1 0 -33
+  plains/plains_lamp_1 2 2 1 -35
+  plains/streets/corner_02 2 2 0 -39
+  plains/plains_lamp_1 0 -38 1 10
+  plains/houses/plains_small_house_4 1 -42 1 18
+  plains/streets/straight_04 3 -58 0 17
+  plains/streets/straight_02 2 -37 0 40
+  plains/streets/straight_04 0 -46 0 0
+  plains/streets/straight_03 0 -32 0 24
+  plains/streets/crossroad_04 2 -29 0 8
+  plains/streets/corner_01 3 -33 0 -16
+  plains/houses/plains_accessory_1 2 -24 1 -9
+  plains/streets/corner_03 2 -21 0 -4
+  plains/houses/plains_small_house_4 0 -20 1 -14
+  plains/houses/plains_weaponsmith_1 0 19 1 -10
+  plains/streets/crossroad_06 1 19 0 -20
+  plains/streets/crossroad_04 0 15 0 2
+  plains/terminators/terminator_02 1 3 0 6
+  plains/streets/crossroad_05 0 37 0 -22
+  plains/streets/straight_06 1 59 0 -34
+  plains/streets/corner_03 1 40 0 -31
+  plains/streets/crossroad_04 3 -1 0 -24
+  plains/streets/crossroad_05 2 -2 0 -19
+  plains/streets/crossroad_04 2 -7 0 -24
+  plains/streets/corner_03 0 -10 0 -37
+  plains/streets/crossroad_04 1 3 0 -28
+  plains/streets/corner_02 0 -29 0 -67
+  plains/houses/plains_small_farm_1 3 -58 1 14
+  plains/streets/crossroad_06 2 -59 0 18
+  plains/streets/turn_01 0 -43 0 41
+  plains/streets/straight_03 0 -46 0 -11
+  plains/houses/plains_small_house_7 0 -29 1 24
+  plains/streets/crossroad_06 2 -29 0 39
+  plains/terminators/terminator_01 1 -30 0 2
+  plains/streets/crossroad_04 1 -24 0 4
+  feature:pile_hay 0 -29 0 -19
+  plains/houses/plains_small_house_3 3 -30 1 -25
+  feature:pile_hay 0 -30 0 -26
+  plains/streets/crossroad_04 2 -34 0 -21
+  plains/plains_lamp_1 0 -21 1 -20
+  plains/streets/crossroad_05 0 -29 0 -7
+  plains/terminators/terminator_02 0 14 0 -18
+  plains/terminators/terminator_02 2 20 0 -18
+  plains/terminators/terminator_01 1 18 0 -22
+  plains/streets/crossroad_06 1 19 0 7
+  plains/terminators/terminator_02 3 39 0 -17
+  plains/terminators/terminator_01 2 61 0 -25
+  plains/terminators/terminator_01 0 -3 0 -27
+  plains/terminators/terminator_03 3 0 0 -21
+  plains/terminators/terminator_02 2 -6 0 -36
+  plains/terminators/terminator_02 2 -13 0 -53
+  plains/terminators/terminator_04 1 -27 0 -71
+  plains/terminators/terminator_04 0 -67 0 15
+  plains/terminators/terminator_01 1 -60 0 12
+  plains/terminators/terminator_01 3 -62 0 20
+  plains/terminators/terminator_02 3 -35 0 49
+  plains/terminators/terminator_03 1 -37 0 38
+  plains/terminators/terminator_01 1 -44 0 -13
+  plains/terminators/terminator_04 1 -30 0 31
+  plains/terminators/terminator_04 2 -25 0 38
+  plains/terminators/terminator_01 0 -35 0 36
+  plains/terminators/terminator_02 3 -31 0 40
+  plains/terminators/terminator_01 1 -25 0 2
+  plains/terminators/terminator_02 2 -23 0 6
+  plains/terminators/terminator_02 1 -36 0 -26
+  plains/terminators/terminator_03 3 -37 0 -18
+  plains/terminators/terminator_01 2 -23 0 -4
+  plains/terminators/terminator_02 1 17 0 6
+  plains/terminators/terminator_02 2 20 0 9
+  plains/terminators/terminator_01 3 16 0 13
+
+layout 54
+  plains/town_centers/plains_fountain_01 2 0 0 0
+  plains/streets/straight_03 3 -19 0 -3
+  plains/streets/straight_02 0 -5 0 1
+  plains/streets/corner_03 1 -3 0 -12
+  plains/streets/straight_03 3 1 0 -3
+  plains/houses/plains_small_house_3 3 -18 1 -6
+  plains/streets/straight_03 3 -30 0 -3
+  plains/streets/straight_04 0 -5 0 17
+  plains/terminators/terminator_02 0 -7 0 -11
+  plains/houses/plains_small_house_4 3 4 1 -6
+  plains/streets/straight_06 1 29 0 -13
+  plains/houses/plains_tannery_1 3 -30 -11 -6
+  plains/streets/corner_01 1 -31 0 -11
+  plains/streets/turn_01 2 4 0 33
+  plains/houses/plains_small_house_3 0 -2 1 18
+  plains/streets/straight_05 1 46 0 -6
+  plains/houses/plains_small_house_6 3 18 1 -6
+  plains/houses/plains_small_house_7 1 29 1 -3
+  plains/plains_lamp_1 2 21 1 -3
+  plains/houses/plains_armorer_house_1 1 19 1 -2
+  plains/streets/corner_01 3 -30 0 3
+  feature:pile_hay 0 -35 0 -8
+  plains/streets/straight_03 2 -38 0 -12
+  plains/houses/plains_animal_pen_1 2 -6 0 31
+  plains/streets/straight_03 2 0 0 44
+  plains/houses/plains_temple_3 1 41 1 -3
+  plains/streets/straight_04 3 47 0 -4
+  plains/streets/straight_03 2 -21 0 14
+  plains/streets/straight_05 0 -40 0 -39
+  plains/houses/plains_temple_4 2 -41 1 -13
+  plains/houses/plains_small_farm_1 2 -3 1 43
+  plains/streets/straight_03 0 -2 0 45
+  plains/streets/straight_01 1 71 0 -12
+  plains/streets/crossroad_03 3 -30 0 30
+  plains/streets/corner_03 1 -21 0 0
+  plains/streets/corner_03 0 -40 0 -43
+  plains/houses/plains_temple_4 0 -37 1 -33
+  plains/houses/plains_small_farm_1 0 1 1 47
+  plains/streets/crossroad_01 3 -9 0 71
+  feature:pile_hay 0 58 0 -1
+  plains/streets/crossroad_04 3 51 0 -3
+  plains/streets/corner_03 2 75 0 -4
+  plains/terminators/terminator_04 3 -23 0 34
+  plains/terminators/terminator_03 1 -21 0 12
+  plains/terminators/terminator_04 0 -34 0 25
+  plains/terminators/terminator_04 2 -11 0 20
+  plains/terminators/terminator_04 0 -28 0 0
+  plains/terminators/terminator_02 2 -36 0 -42
+  plains/terminators/terminator_04 3 -40 0 -36
+  plains/terminators/terminator_01 0 -11 0 62
+  plains/terminators/terminator_04 2 10 0 64
+  plains/terminators/terminator_03 0 48 0 -6
+  plains/terminators/terminator_04 3 52 0 1
+  plains/terminators/terminator_04 1 75 0 -11
+
+layout 113
+  plains/town_centers/plains_meeting_point_2 1 0 0 0
+  plains/streets/straight_02 2 -6 0 -1
+  plains/streets/straight_04 0 -4 0 8
+  plains/streets/straight_05 1 -15 0 4
+  plains/streets/straight_02 3 1 0 6
+  plains/houses/plains_weaponsmith_1 2 -9 1 -6
+  plains/streets/straight_04 2 -6 0 -17
+  plains/streets/corner_01 1 5 0 17
+  plains/houses/plains_small_house_2 0 -1 1 9
+  plains/streets/straight_04 1 -6 0 4
+  plains/streets/crossroad_06 3 -36 0 7
+  plains/houses/plains_small_house_3 1 -19 1 7
+  plains/houses/plains_tannery_1 3 2 1 3
+  plains/streets/straight_02 1 32 0 4
+  plains/streets/corner_01 3 -15 0 -26
+  plains/houses/plains_small_house_2 2 -9 1 -18
+  plains/streets/straight_05 1 22 0 23
+  plains/houses/plains_small_house_2 1 2 1 26
+  plains/streets/crossroad_05 2 -27 0 7
+  plains/streets/crossroad_05 0 -36 0 8
+  plains/streets/crossroad_06 0 -36 0 -2
+  plains/streets/straight_03 3 -47 0 6
+  plains/streets/straight_04 3 33 0 6
+  plains/houses/plains_small_farm_1 3 -13 1 -35
+  plains/streets/straight_02 3 -31 0 -32
+  plains/houses/plains_animal_pen_3 1 17 0 26
+  plains/streets/crossroad_05 2 27 0 26
+  plains/streets/crossroad_05 0 -31 0 8
+  plains/streets/crossroad_04 0 -26 0 3
+  plains/streets/crossroad_05 0 -31 0 -2
+  plains/streets/straight_02 2 -33 0 28
+  plains/streets/crossroad_06 2 -37 0 12
+  plains/plains_lamp_1 0 -35 1 -1
+  plains/streets/corner_03 0 -35 0 -6
+  plains/streets/straight_03 3 -58 0 6
+  plains/houses/plains_small_house_4 3 34 1 3
+  plains/streets/straight_02 1 57 0 4
+  plains/streets/crossroad_04 3 28 0 7
+  plains/streets/straight_03 3 -42 0 -32
+  feature:pile_hay 0 7 0 27
+  plains/streets/corner_02 2 43 0 38
+  plains/streets/corner_03 0 24 0 18
+  plains/streets/crossroad_04 1 22 0 22
+  plains/streets/crossroad_06 3 23 0 31
+  plains/streets/corner_03 2 -23 0 11
+  plains/streets/corner_03 3 -30 0 16
+  plains/streets/crossroad_04 2 -22 0 2
+  plains/streets/corner_03 0 -30 0 -6
+  plains/streets/corner_03 2 -23 0 1
+  plains/houses/plains_medium_house_2 2 -36 1 26
+  plains/streets/straight_03 2 -33 0 39
+  plains/terminators/terminator_02 1 -39 0 7
+  plains/streets/crossroad_04 3 -46 0 12
+  plains/plains_lamp_1 3 -40 3 11
+  plains/terminators/terminator_02 2 -31 0 -5
+  plains/houses/plains_small_house_2 3 -55 1 3
+  plains/streets/crossroad_04 1 -43 0 3
+  plains/streets/corner_01 2 -59 0 13
+  plains/streets/corner_02 2 73 0 19
+  plains/houses/plains_masons_house_1 1 52 1 7
+  plains/streets/crossroad_05 3 37 0 7
+  plains/streets/crossroad_04 2 27 0 7
+  plains/streets/corner_03 3 29 0 11
+  plains/houses/plains_small_house_3 3 -39 1 -35
+  plains/streets/crossroad_02 1 -16 0 -41
+  plains/streets/crossroad_04 3 -47 0 -31
+  plains/houses/plains_tannery_1 1 41 1 27
+  plains/streets/straight_06 0 34 0 39
+  plains/terminators/terminator_02 1 20 0 21
+  feature:pile_hay 0 25 0 29
+  plains/streets/corner_03 3 24 0 35
+  plains/streets/corner_03 2 -23 0 16
+  plains/terminators/terminator_02 3 -24 0 3
+  plains/streets/corner_03 0 -25 0 -6
+  plains/terminators/terminator_02 2 -21 0 0
+  plains/terminators/terminator_02 2 -26 0 -5
+  plains/streets/corner_03 0 -30 0 -1
+  plains/houses/plains_small_house_1 2 -36 1 37
+  plains/streets/turn_01 2 -26 0 47
+  plains/streets/crossroad_06 0 -51 0 8
+  plains/streets/crossroad_04 2 -43 0 2
+  plains/streets/crossroad_04 0 -42 0 3
+  plains/houses/plains_big_house_1 2 -68 0 12
+  plains/streets/straight_02 2 -65 0 29
+  feature:pile_hay 0 -62 0 9
+  plains/streets/straight_03 2 73 0 30
+  plains/houses/plains_fletcher_house_1 1 70 0 8
+  plains/streets/crossroad_05 2 41 0 12
+  plains/streets/straight_01 2 32 0 2
+  plains/streets/corner_03 2 26 0 11
+  plains/streets/straight_04 1 41 0 9
+  plains/terminators/terminator_04 1 -23 0 -45
+  plains/terminators/terminator_01 3 -25 0 -24
+  plains/terminators/terminator_04 0 -51 0 -34
+  plains/terminators/terminator_02 3 -45 0 -30
+  plains/terminators/terminator_01 2 -41 0 -32
+  plains/terminators/terminator_04 3 42 0 60
+  plains/terminators/terminator_03 0 -29 0 14
+  plains/terminators/terminator_02 1 -24 0 12
+  plains/terminators/terminator_02 3 -31 0 48
+  plains/terminators/terminator_01 3 -50 0 14
+  plains/terminators/terminator_02 1 -49 0 7
+  plains/terminators/terminator_03 0 -54 0 9
+  plains/terminators/terminator_02 2 -42 0 0
+  plains/terminators/terminator_04 1 -44 0 -6
+  plains/terminators/terminator_04 0 -46 0 4
+  plains/terminators/terminator_03 1 -39 0 0
+  plains/terminators/terminator_02 3 -66 0 30
+  plains/terminators/terminator_02 3 72 0 31
+  plains/terminators/terminator_02 1 39 0 7
+  plains/terminators/terminator_02 3 39 0 13
+  plains/terminators/terminator_04 2 45 0 11
+  plains/terminators/terminator_03 1 26 0 -16
+

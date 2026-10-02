@@ -116,6 +116,10 @@ pub(super) enum UseKind {
     Crossbow { quick_charge: i32 },
     /// Трезубец занесён для броска.
     Trident,
+    /// Око Края: оригинал держит «использует предмет», пока кнопку не
+    /// отпустят, — и после броска, и без крепости (чёрный ящик,
+    /// eye-of-ender-far, eye-of-ender-none: Metadata 8=1).
+    EnderEye,
 }
 
 /// Использование предмета, которое тянется: щит поднят, лук натянут.
@@ -704,6 +708,19 @@ pub(super) fn start_using(shared: &Shared, player: &mut PlayerState, hand: i32, 
     true
 }
 
+/// Правая кнопка с оком Края: «использует предмет» до отпускания кнопки
+/// (eye-of-ender-none: Metadata 8=1 и без броска).
+pub(super) fn start_using_eye(player: &mut PlayerState, hand: i32, now: u64) {
+    let stack = if hand == 1 { player.inventory.slot(inventory::OFFHAND) } else { player.inventory.held() };
+
+    if stack.and_then(|stack| crate::combat::item_name(stack.item)) != Some("ender_eye") || player.vit.dead || player.net.using.is_some() || player.game_mode == GAME_MODE_SPECTATOR {
+        return;
+    }
+
+    player.net.using = Some(Using { hand, since: now, kind: UseKind::EnderEye });
+    player.net.last_hand = hand;
+}
+
 /// Отпустили кнопку: щит опущен, лук спущен (выстрел — arrows).
 pub(super) fn release_use(player: &mut PlayerState, shared: &Shared) {
     let Some(using) = player.net.using.take() else {
@@ -718,7 +735,7 @@ pub(super) fn release_use(player: &mut PlayerState, shared: &Shared) {
         UseKind::Trident => super::bow::throw_trident(shared, player, using.hand, held),
         // Арбалет заряжается сам, пока кнопка держится (`tick_crossbow`);
         // отпустили — только опустили руки.
-        UseKind::Crossbow { .. } | UseKind::Shield => {}
+        UseKind::Crossbow { .. } | UseKind::Shield | UseKind::EnderEye => {}
     }
 }
 

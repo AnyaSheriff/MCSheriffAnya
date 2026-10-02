@@ -1,0 +1,3660 @@
+# Деревни (savanna) — замер мира оригинала 26.1.2 (6 деревень, семя 1234567890),
+# tools/measure/village.py export. Образец: рамка в его собственном повороте
+# (a — x, b — z, y — от низа); «.» — рельеф остаётся, «_» — пусто. У образцов
+# terrain_matching (улицы) два слоя: верх рельефа столбца и над ним.
+# layout — раскладка одной деревни: образец, поворот (четверти по часовой),
+# начало куска от угла чанка старта по x и z и высота над землёй вокруг.
+
+template plains/terminators/terminator_01 2 3 2 terrain_matching 22
+  A dirt_path
+layer 0
+  .A
+  AA
+  .A
+layer 1
+  ..
+  ..
+  ..
+
+template plains/terminators/terminator_02 1 1 2 terrain_matching 58
+  A dirt_path
+layer 0
+  A
+layer 1
+  .
+
+template plains/terminators/terminator_03 3 3 2 terrain_matching 22
+  A dirt_path
+layer 0
+  A.A
+  .AA
+  ...
+layer 1
+  ...
+  ...
+  ...
+
+template plains/terminators/terminator_04 4 4 2 terrain_matching 18
+  A dirt_path
+layer 0
+  ..AA
+  .AAA
+  AAAA
+  AA..
+layer 1
+  ....
+  ....
+  ....
+  ....
+
+template savanna/houses/savanna_animal_pen_1 9 9 5 rigid 3
+  A short_grass
+  B acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  C wheat[age=0]
+  D acacia_log[axis=y]
+  E dirt
+  F grass_block[snowy=false]
+  G acacia_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  H acacia_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  I acacia_fence_gate[facing=south,in_wall=false,open=false,powered=false]
+  J acacia_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  K acacia_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  L acacia_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  M acacia_planks
+  N water[level=0]
+  O acacia_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  P acacia_fence[east=true,north=true,south=false,waterlogged=false,west=true]
+  Q acacia_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  R acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  S acacia_slab[type=top,waterlogged=false]
+  T acacia_slab[type=double,waterlogged=false]
+  U acacia_slab[type=bottom,waterlogged=false]
+layer 0
+  _AAABA__C
+  DDDDDDDDD
+  DEEFEEFFD
+  DEFFFEFFD
+  DEFEFFFFD
+  DEEFEFEED
+  DEEFFFEFD
+  DEEEEEEFD
+  DDDDDDDDD
+layer 1
+  _________
+  GHHHIHHHJ
+  KA______K
+  KA______K
+  KA__L___K
+  K_MMMMM_K
+  K_MNNNM_K
+  K_DDDDD_K
+  OHPPPPPHQ
+layer 2
+  _________
+  _________
+  _________
+  _________
+  R___R___R
+  _________
+  _________
+  SSTTTTTSS
+  UUUUUUUUU
+layer 3
+  _________
+  _________
+  _________
+  _________
+  R___R___R
+  SSSSSSSSS
+  UUUUUUUUU
+  _________
+  _________
+layer 4
+  _________
+  _________
+  _________
+  _________
+  UUUUUUUUU
+  _________
+  _________
+  _________
+  _________
+
+template savanna/houses/savanna_animal_pen_3 8 9 5 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  D acacia_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  E acacia_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  F acacia_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  G short_grass
+  H acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  I acacia_log[axis=y]
+  J acacia_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  K acacia_fence_gate[facing=north,in_wall=false,open=false,powered=false]
+  L acacia_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  M torch
+  N acacia_slab[type=bottom,waterlogged=false]
+  O acacia_slab[type=double,waterlogged=false]
+layer 0
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AABAAAAA
+  AAAAAAAA
+  AAAAAAAA
+layer 1
+  CDDDDDDE
+  F___G_GF
+  FGGGGGGF
+  FGHG_HGF
+  F_GGGG_F
+  F_GG_G_F
+  F_IG_GGF
+  F__G__GF
+  JDKDDDDL
+layer 2
+  __HMMH__
+  ________
+  ________
+  __H__H__
+  ________
+  ________
+  __I_____
+  ________
+  ________
+layer 3
+  __H__H__
+  ________
+  ________
+  __H__H__
+  ________
+  ________
+  __I_____
+  ________
+  ________
+layer 4
+  __NNNN__
+  __NOON__
+  __NOON__
+  __NNNN__
+  ________
+  ________
+  __I_____
+  ________
+  ________
+
+template savanna/houses/savanna_armorer_1 7 7 7 rigid 4
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_planks
+  D orange_terracotta
+  E dirt_path
+  F acacia_log[axis=x]
+  G short_grass
+  H acacia_log[axis=y]
+  I acacia_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  J blast_furnace[facing=west,lit=false]
+  K acacia_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  L orange_glazed_terracotta[facing=west]
+  M acacia_log[axis=z]
+  N wall_torch[facing=east]
+  O acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  P acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  Q acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  R acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  S acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  T acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  U acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  V acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAA
+  AABBBAA
+  ABCDBBA
+  EFCDBBA
+  ABCDBBA
+  AABBBAA
+  AAAAAAA
+layer 1
+  GGGGGGG
+  GGHHH.G
+  _H__DHG
+  _I__JH.
+  _H__DH_
+  _.HHH_.
+  G__G...
+layer 2
+  _______
+  __HHH__
+  _H__DH_
+  _K__LH_
+  _H__DH_
+  __HHH__
+  _______
+layer 3
+  _______
+  __HHH__
+  _H___H_
+  _MN_DH_
+  _H___H_
+  __HHH__
+  _______
+layer 4
+  _OOOOO_
+  PCCCCCQ
+  PC___CQ
+  PC__DCQ
+  PC___CQ
+  PCCCCCQ
+  _RRRRR_
+layer 5
+  _______
+  _SOOOT_
+  _PCCCQ_
+  _PCCDQ_
+  _PCCCQ_
+  _URRRV_
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+
+template savanna/houses/savanna_butchers_shop_2 13 9 10 rigid 2
+  A grass_block[snowy=false]
+  B dirt
+  C short_grass
+  D acacia_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  E acacia_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  F acacia_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  G acacia_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  H acacia_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  I acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  J acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  K acacia_planks
+  L torch
+  M acacia_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  N acacia_slab[type=top,waterlogged=false]
+  O acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  P acacia_wood[axis=x]
+  Q acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  R acacia_wood[axis=y]
+  S smoker[facing=east,lit=false]
+  T acacia_door[facing=west,half=lower,hinge=left,open=false,powered=false]
+  U acacia_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  V chest[facing=north,type=single,waterlogged=false]
+  W glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  X wall_torch[facing=west]
+  Y acacia_door[facing=west,half=upper,hinge=left,open=false,powered=false]
+  Z acacia_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  a acacia_wood[axis=z]
+  b wall_torch[facing=east]
+  c acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  d acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  e acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  f acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  g acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAAAAAAAA
+  AAAAAAAAAAAAA
+  AAAAAAAAAAAAA
+  BBAAAAAAAAAAA
+  BBAAAAAAAAAAA
+  BBAAAAAAAAAAA
+  AAAAAAAAAABAA
+  C...AAAAAAAAA
+  ACCAAAAAAAAAA
+layer 1
+  .C_CDEEEEEEEF
+  CCCCGC.CCCC_G
+  CDEEH..IC_.CG
+  JK_.CC._CCCCG
+  JK.CIL.IC_C.G
+  JK.__CC.ICCCG
+  CMEEFCCI_NOCG
+  __._GCCCCCC.G
+  .__CMEEEEEEEH
+layer 2
+  ____________L
+  _____________
+  ____I__I_____
+  _JN__________
+  _JN_I__I_____
+  _JN_____I____
+  ____I__INO___
+  _____________
+  ____L_______L
+layer 3
+  _____________
+  _____________
+  ____KKKK_____
+  __JKKKKKN____
+  __JKPKKPN____
+  __JKKKKKQ____
+  ____KKKK_____
+  _____________
+  _____________
+layer 4
+  _____________
+  _____________
+  ____RPPR_____
+  ____RQQRS____
+  ____T__U_____
+  ____R_VR_____
+  ____RPPR_____
+  _____________
+  _____________
+layer 5
+  _____________
+  _____________
+  ____RWWR_____
+  ___XR__R_____
+  ____Y__Z_____
+  ___XR__R_____
+  ____RWWR____.
+  ___________..
+  ___________..
+layer 6
+  _____________
+  _____________
+  ____RPPR_____
+  ____R__R_____
+  ____a_Xab___.
+  ____R__R____.
+  ____RPPR___..
+  __________...
+  _________....
+layer 7
+  _____________
+  ____cccc_____
+  ___JKKKKO____
+  ___JK__KO___.
+  ___JK__KO___.
+  ___JK__KO__..
+  ___JKKKKO_...
+  ____QQQQ__...
+  _________....
+layer 8
+  _____________
+  _____________
+  ____dcce_____
+  ____JKKO_____
+  ____JKKO____.
+  ____JKKO___..
+  ____fQQg__...
+  __________...
+  _________....
+layer 9
+  _____________
+  _____________
+  _____________
+  _____________
+  ____________.
+  _____________
+  _____________
+  _____________
+  ____________.
+
+template savanna/houses/savanna_cartographer_1 8 9 8 rigid 12
+  A short_grass
+  B acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  C acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  D acacia_planks
+  E acacia_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  F acacia_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  G acacia_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  H acacia_slab[type=double,waterlogged=false]
+  I acacia_slab[type=bottom,waterlogged=false]
+  J brown_wall_banner[facing=north]
+  K acacia_wood[axis=y]
+  L acacia_log[axis=z]
+  M acacia_log[axis=x]
+  N cartography_table
+  O acacia_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  P chest[facing=north,type=single,waterlogged=false]
+  Q brown_wall_banner[facing=south]
+  R torch
+  S glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  T acacia_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  U brown_wall_banner[facing=west]
+  V wall_torch[facing=west]
+  W acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  X acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  Y acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  Z acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  a acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  b acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  c acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  d acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  e acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  f acacia_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  .......A
+  __B_B_B_
+  A..A._._
+  CDE._.B_
+  CD___.__
+  CDE.._B.
+  .____.._
+  ..B_B.B.
+  ________
+layer 1
+  ________
+  __B_B_B_
+  ________
+  _CF___B_
+  _CD_____
+  _CG___B_
+  ________
+  __B_B_B_
+  ________
+layer 2
+  ________
+  __HHHHH_
+  __IHHHH_
+  __IHHHH_
+  __IHHHH_
+  __IHHHH_
+  __IHHHH_
+  __HHHHH_
+  ________
+layer 3
+  ___JJJ__
+  __KLLLK_
+  ___MKNM_
+  ___M__M_
+  ___O__M_
+  ___M__M_
+  ___MPKM_
+  __KLLLK_
+  ___QQQ__
+layer 4
+  ________
+  __KLLLK_
+  ___MR_M_
+  ___M__S_
+  ___T__M_
+  ___M__S_
+  ___M_RM_
+  __KLLLK_
+  ________
+layer 5
+  ________
+  __KLLLK_
+  ___M__M_
+  __UM__M_
+  __VM__M_
+  __UM__M_
+  ___M__M_
+  __KLLLK_
+  ________
+layer 6
+  _WXXXXXY
+  _CDDDDDZ
+  _CDD__DZ
+  _CDD__DZ
+  _CDD__DZ
+  _CDD__DZ
+  _CDD__DZ
+  _CDDDDDZ
+  _abbbbbc
+layer 7
+  ________
+  __WXXXd_
+  __CDDDZ_
+  __CDDDZ_
+  __CDDDZ_
+  __CDDDZ_
+  __CDDDZ_
+  __ebbbf_
+  ________
+
+template savanna/houses/savanna_fletcher_house_1 11 9 7 rigid 1
+  A gravel
+  B grass_block[snowy=false]
+  C dirt
+  D acacia_planks
+  E dirt_path
+  F short_grass
+  G yellow_terracotta
+  H acacia_log[axis=y]
+  I poppy
+  J acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  K acacia_log[axis=z]
+  L fletching_table
+  M acacia_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  N acacia_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  O acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  P acacia_door[facing=south,half=lower,hinge=right,open=false,powered=false]
+  Q acacia_door[facing=south,half=lower,hinge=left,open=false,powered=false]
+  R acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  S glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  T torch
+  U glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  V acacia_pressure_plate[powered=false]
+  W acacia_door[facing=south,half=upper,hinge=right,open=false,powered=false]
+  X acacia_door[facing=south,half=upper,hinge=left,open=false,powered=false]
+  Y wall_torch[facing=south]
+  Z brown_wall_banner[facing=north]
+  a brown_wall_banner[facing=west]
+  b brown_wall_banner[facing=east]
+  c acacia_slab[type=top,waterlogged=false]
+  d acacia_slab[type=double,waterlogged=false]
+  e acacia_slab[type=bottom,waterlogged=false]
+  f brown_wall_banner[facing=south]
+  g acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  h acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  i acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  j acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  k acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  l acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  m acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  n acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  o acacia_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  ABBBBBBBBBB
+  BBCCCCCCCBB
+  BCDDDDDDDCB
+  BCDDDDDDDCB
+  BCDDDDDDDCB
+  BBCDCCCDCBB
+  BBBEBBBEBBB
+  BBBEBBBEBBB
+  BBBEBBBEBBB
+layer 1
+  _FFFF_FF__F
+  FFGGGHGGG_F
+  IGJ_KLK_JGF
+  FGM_____NGF
+  _GO_____OGF
+  FFGPGHGQGFF
+  F_F_FFF___F
+  FR___RF_FRF
+  _FF_FF__F_F
+layer 2
+  ___________
+  __GSGHGSG__
+  _G__T_T__G_
+  _UV_____VU_
+  _G_______G_
+  __GWGHGXG__
+  ___________
+  _R___R___R_
+  ___________
+layer 3
+  ___________
+  __GSGHGSG__
+  _G_______G_
+  _U_______U_
+  _G_______G_
+  __GGGHGGG__
+  ___Y___Y___
+  _R___R___R_
+  ___________
+layer 4
+  ___Z___Z___
+  __GGGHGGG__
+  _G_______G_
+  aG_______Gb
+  _G_______G_
+  _cGGGHGGGc_
+  _ccccccccc_
+  _deeedeeed_
+  _f___f___f_
+layer 5
+  gOOOOOOOOOh
+  iDDDDDDDDDj
+  iD_______Dj
+  iD_______Dj
+  iD_______Dj
+  iDDDDDDDDDj
+  kJJJJJJJJJl
+  ___________
+  ___________
+layer 6
+  ___________
+  _mOOOOOOOh_
+  _iDDDDDDDj_
+  _iDDDDDDDj_
+  _iDDDDDDDj_
+  _nJJJJJJJo_
+  ___________
+  ___________
+  ___________
+
+template savanna/houses/savanna_large_farm_1 9 9 6 rigid 4
+  A grass_block[snowy=false]
+  B dirt
+  C composter[level=0]
+  D acacia_log[axis=y]
+  E acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  F farmland[moisture=7]
+  G acacia_planks
+  H water[level=0]
+  I acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  J acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  K short_grass
+  L acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  M wheat[age=7]
+layer 0
+  ABBBABBBA
+  BAAABAAAB
+  BAAABAAAB
+  BAAABBAAB
+  ABBBBBBBA
+  BAAABAAAB
+  BAAABAAAB
+  BAAABAA.B
+  ABBBABBBA
+layer 1
+  CDDDEDDD.
+  DFFFGFFFD
+  DFFFGFFFD
+  DFFHGHFFD
+  IGGGGGGGJ
+  DFFHGHFFD
+  DFFFGFFFD
+  DFFFGFFFD
+  KDDDLDDDC
+layer 2
+  _________
+  _MMM_MMM_
+  _M.M_MM._
+  _MM___MM_
+  _________
+  _MM___MM_
+  _MMM_MMM_
+  _MMM_MMM_
+  _________
+layer 3
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+layer 4
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+layer 5
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+
+template savanna/houses/savanna_library_1 10 8 8 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C sand
+  D short_grass
+  E acacia_log[axis=y]
+  F acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  G acacia_planks
+  H acacia_log[axis=z]
+  I torch
+  J acacia_sapling[stage=1]
+  K poppy
+  L tall_grass[half=lower]
+  M tall_grass[half=upper]
+  N orange_terracotta
+  O acacia_door[facing=north,half=lower,hinge=left,open=false,powered=false]
+  P acacia_door[facing=north,half=lower,hinge=right,open=true,powered=false]
+  Q acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  R white_carpet
+  S orange_carpet
+  T bookshelf
+  U lectern[facing=west,has_book=false,powered=false]
+  V acacia_door[facing=north,half=upper,hinge=left,open=false,powered=false]
+  W acacia_door[facing=north,half=upper,hinge=right,open=true,powered=false]
+  X glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  Y acacia_log[axis=x]
+  Z wall_torch[facing=north]
+  a acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  b acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  c acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  d acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  e acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  f acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AABBBBBBAA
+  ABBBBBBBBA
+  ABBBBBBBBC
+  AABBAABBCC
+  ABAAAAACCC
+  ABAAAAACCC
+  AABBBBBCC_
+  AAAAAACCCC
+layer 1
+  DDEEFFEEDD
+  DEAAGGAAED
+  _EAAGGAAE_
+  D_EEDDEE__
+  DED_D_D_E_
+  _H__D___H_
+  __HEHEHE__
+  DDD_______
+layer 2
+  ___I__I___
+  __JKFFDJ__
+  __DLEELK__
+  __EEEEEE__
+  _EGGGGGGE_
+  _HGGGGGGH_
+  __EHEHEH__
+  __________
+layer 3
+  __________
+  __________
+  ___M__M___
+  __NEOPEN__
+  _NQ_RS_TN_
+  _NT_SR_UN_
+  __NNNNNN__
+  __________
+layer 4
+  __________
+  __________
+  __________
+  __NEVWEN__
+  _N_____TN_
+  _NT_____N_
+  __NXNNXN__
+  __________
+layer 5
+  __________
+  __________
+  __________
+  __NEYYEN__
+  _N_____TN_
+  _NTZ__Z_N_
+  __NNNNNN__
+  __________
+layer 6
+  __________
+  __________
+  _FFFFFFFF_
+  aGGGGGGGGQ
+  aG_____TGQ
+  aGT_____GQ
+  aGGGGGGGGQ
+  _bbbbbbbb_
+layer 7
+  __________
+  __________
+  __________
+  _cFFFFFFd_
+  _aGGGGGGQ_
+  _aGGGGGGQ_
+  _ebbbbbbf_
+  __________
+
+template savanna/houses/savanna_mason_1 8 10 7 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_planks
+  D acacia_log[axis=x]
+  E short_grass
+  F melon_stem[age=0]
+  G wheat[age=0]
+  H acacia_log[axis=y]
+  I stonecutter[facing=north]
+  J acacia_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  K acacia_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  L clay
+  M acacia_door[facing=west,half=lower,hinge=left,open=false,powered=false]
+  N chest[facing=west,type=single,waterlogged=false]
+  O acacia_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  P glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  Q acacia_pressure_plate[powered=false]
+  R glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  S acacia_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  T acacia_door[facing=west,half=upper,hinge=left,open=false,powered=false]
+  U yellow_glazed_terracotta[facing=south]
+  V wall_torch[facing=west]
+  W acacia_log[axis=z]
+  X yellow_glazed_terracotta[facing=east]
+  Y acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  Z acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  a acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  b acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  c acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  d acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  e acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  f acacia_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  AAAAAAAA
+  AAABBBAA
+  AABCCCBA
+  ABCCCCBA
+  ADCCCCBA
+  BDCCCCBA
+  ABCCCCBA
+  AABCCCBA
+  AAABBBAA
+  AAAAAAAA
+layer 1
+  EEEFEE__
+  EGEHHH__
+  E_H_I_H_
+  EHJ___H_
+  _KE__LH_
+  EM___NH_
+  EHOE_LH_
+  EEH_LLH_
+  E_EHHH__
+  _E_E__E_
+layer 2
+  ________
+  ___HPH__
+  __H___H_
+  _HQ___R_
+  _S____H_
+  _T____H_
+  _HQ___R_
+  __H__LH_
+  ___HPH__
+  ________
+layer 3
+  ________
+  ___HDH__
+  __U___H_
+  _U___VW_
+  _X____H_
+  _U____H_
+  _X___VW_
+  __X__LH_
+  ___HDH__
+  ________
+layer 4
+  ___YYY__
+  __ZCCCa_
+  _ZC___Ca
+  ZC____Ca
+  ZC____Ca
+  ZC____Ca
+  ZC____Ca
+  _ZC___Ca
+  __ZCCCa_
+  ___bbb__
+layer 5
+  ________
+  ___cYd__
+  __ZCCCa_
+  _ZCCCCa_
+  _ZCCCCa_
+  _ZCCCCa_
+  _ZCCCCa_
+  __ZCCCa_
+  ___ebf__
+  ________
+layer 6
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+
+template savanna/houses/savanna_medium_house_2 10 11 8 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_planks
+  D dirt_path
+  E acacia_wood[axis=y]
+  F farmland[moisture=7]
+  G water[level=0]
+  H short_grass
+  I acacia_wood[axis=x]
+  J crafting_table
+  K orange_bed[facing=east,occupied=false,part=foot]
+  L orange_bed[facing=east,occupied=false,part=head]
+  M acacia_door[facing=south,half=lower,hinge=left,open=true,powered=false]
+  N acacia_wood[axis=z]
+  O acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  P wheat[age=0]
+  Q orange_bed[facing=north,occupied=false,part=head]
+  R chest[facing=west,type=single,waterlogged=false]
+  S wheat[age=1]
+  T orange_bed[facing=north,occupied=false,part=foot]
+  U acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  V acacia_door[facing=south,half=lower,hinge=right,open=false,powered=false]
+  W glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  X acacia_door[facing=south,half=upper,hinge=left,open=true,powered=false]
+  Y glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  Z potted_dandelion
+  a acacia_door[facing=south,half=upper,hinge=right,open=false,powered=false]
+  b wall_torch[facing=west]
+  c wall_torch[facing=south]
+  d acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  e acacia_stairs[facing=south,half=bottom,shape=inner_right,waterlogged=false]
+  f acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  g acacia_stairs[facing=north,half=bottom,shape=inner_right,waterlogged=false]
+  h acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  i acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  j acacia_slab[type=top,waterlogged=false]
+  k acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  l acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  m acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAAAAA
+  AABBBAAAAA
+  ABCCCBAAAA
+  DECCCBAAAA
+  DBCCCBAAAA
+  BABBBBBBAA
+  DDFGBCCCBA
+  ADFFBCCCBA
+  AADFBCCCBA
+  AADDABEBAA
+  DDAADDDAAA
+layer 1
+  H_H__HH___
+  HHEIE_H___
+  HEJKLE_H__
+  _M___N_H__
+  _EOOCEH___
+  __EIEEIEH_
+  H_P_EQ_REH
+  H_PSNT__NH
+  __HPEU__E_
+  __H__EVEH_
+  __H__H___H
+layer 2
+  __________
+  __EWE_____
+  _E___E____
+  _X___Y____
+  _E__ZE____
+  __EWEEWE__
+  ____E___E_
+  ____Y___Y_
+  ____E___E_
+  _____EaE__
+  __________
+layer 3
+  __________
+  __EIE_____
+  _E___E____
+  _N__bN____
+  _E___E____
+  __EIEEIE__
+  ____E_c_E_
+  ____N___N_
+  ____E___E_
+  _____EIE__
+  __________
+layer 4
+  _OOOOO____
+  dCCCCCU___
+  dC___CU___
+  dC___CU___
+  dC___CeOO_
+  dCCCCCCCCU
+  _ffgC___CU
+  ___dC___CU
+  ___dC___CU
+  ___dCCCCCU
+  ____fffff_
+layer 5
+  __________
+  _hOOOi____
+  _djjjU____
+  _djjjU____
+  _djjjU____
+  _kffgeOOi_
+  ____djjjU_
+  ____djjjU_
+  ____djjjU_
+  ____lfffm_
+  __________
+layer 6
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+layer 7
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+
+template savanna/houses/savanna_small_farm 6 9 7 rigid 2
+  A dirt
+  B grass_block[snowy=false]
+  C farmland[moisture=7]
+  D farmland[moisture=0]
+  E water[level=0]
+  F tall_grass[half=lower]
+  G wheat[age=0]
+  H wheat[age=7]
+  I wheat[age=1]
+  J wheat[age=6]
+  K wheat[age=5]
+  L composter[level=0]
+  M short_grass
+  N melon
+  O tall_grass[half=upper]
+layer 0
+  AABB..
+  AABBB.
+  ABBBBA
+  .BBBB.
+  BBABBB
+  B.BBAA
+  ABBBB.
+  BBBBAA
+  .ABBA.
+layer 1
+  BACCDC
+  BBCCEC
+  BCECCB
+  CCCCCC
+  CCBCCC
+  CCECBB
+  BCCCC.
+  CCCCBB
+  CBCCA.
+layer 2
+  F.G.GH
+  .F.H_H
+  .H_.GF
+  ..HGHH
+  HHFI..
+  JK.HLF
+  FHGH._
+  K..GFM
+  JMGGN_
+layer 3
+  O_____
+  _O____
+  _____O
+  ______
+  __O___
+  _____O
+  O_____
+  ____O_
+  ______
+layer 4
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+layer 5
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+layer 6
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+
+template savanna/houses/savanna_small_house_1 7 7 7 rigid 4
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_wood[axis=z]
+  D short_grass
+  E yellow_terracotta
+  F tall_grass[half=lower]
+  G acacia_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  H orange_bed[facing=north,occupied=false,part=head]
+  I orange_bed[facing=north,occupied=false,part=foot]
+  J acacia_door[facing=south,half=lower,hinge=right,open=false,powered=false]
+  K glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  L tall_grass[half=upper]
+  M acacia_pressure_plate[powered=false]
+  N glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  O acacia_door[facing=south,half=upper,hinge=right,open=false,powered=false]
+  P wall_torch[facing=south]
+  Q acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  R acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  S acacia_planks
+  T acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  U acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  V acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  W acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  X acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  Y acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  Z acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  a acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAA
+  AABBBAA
+  ABCCCBA
+  ABCCCBA
+  ABCCCBA
+  AABCBAA
+  AAABAAA
+layer 1
+  DDDDDDD
+  .DEEED.
+  FEG_HED
+  DE_.IE.
+  .E___ED
+  .DEJE..
+  _D__D._
+layer 2
+  _______
+  __EKE__
+  LEM__E_
+  _N___N_
+  _E___E_
+  __EOE__
+  _______
+layer 3
+  _______
+  __EEE__
+  _E_P_E_
+  _E___E_
+  _E___E_
+  __EEE__
+  _______
+layer 4
+  _QQQQQ_
+  RSSSSST
+  RS___ST
+  RS___ST
+  RS___ST
+  RSSSSST
+  _UUUUU_
+layer 5
+  _______
+  _VQQQW_
+  _RSSST_
+  _RSSST_
+  _RSSST_
+  _XUUUY_
+  _______
+layer 6
+  _______
+  _______
+  __ZQa__
+  __RST__
+  __XUY__
+  _______
+  _______
+
+template savanna/houses/savanna_small_house_2 7 7 7 rigid 6
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_wood[axis=z]
+  D dirt_path
+  E short_grass
+  F red_terracotta
+  G chest[facing=south,type=single,waterlogged=false]
+  H red_bed[facing=north,occupied=false,part=head]
+  I red_bed[facing=north,occupied=false,part=foot]
+  J acacia_door[facing=south,half=lower,hinge=right,open=false,powered=false]
+  K glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  L glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  M acacia_door[facing=south,half=upper,hinge=right,open=false,powered=false]
+  N wall_torch[facing=south]
+  O acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  P acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  Q acacia_planks
+  R acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  S acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  T acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  U acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  V acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  W acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  X acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  Y acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAA
+  AABBBAA
+  ABCCCBA
+  ABCCCBA
+  ABCCCBA
+  AABCBAA
+  AAADBAA
+layer 1
+  EE_EEEE
+  .EFFFE.
+  EFG_HFE
+  _F__IF.
+  .F___FE
+  _EFJFE.
+  EE____.
+layer 2
+  _______
+  __FKF__
+  _F___F_
+  _L___L_
+  _F___F_
+  __FMF__
+  _______
+layer 3
+  _______
+  __FFF__
+  _F_N_F_
+  _F___F_
+  _F___F_
+  __FFF__
+  ___N___
+layer 4
+  _OOOOO_
+  PQQQQQR
+  PQ___QR
+  PQ___QR
+  PQ___QR
+  PQQQQQR
+  _SSSSS_
+layer 5
+  _______
+  _TOOOU_
+  _PQQQR_
+  _PQQQR_
+  _PQQQR_
+  _VSSSW_
+  _______
+layer 6
+  _______
+  _______
+  __XOY__
+  __PQR__
+  __VSW__
+  _______
+  _______
+
+template savanna/houses/savanna_small_house_3 7 7 7 rigid 6
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_wood[axis=z]
+  D short_grass
+  E orange_terracotta
+  F red_bed[facing=north,occupied=false,part=head]
+  G crafting_table
+  H red_bed[facing=north,occupied=false,part=foot]
+  I acacia_door[facing=south,half=lower,hinge=right,open=false,powered=false]
+  J glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  K glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  L acacia_door[facing=south,half=upper,hinge=right,open=false,powered=false]
+  M wall_torch[facing=south]
+  N wall_torch[facing=north]
+  O acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  P acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  Q acacia_planks
+  R acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  S acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  T acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  U acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  V acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  W acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  X acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  Y acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAA
+  AABBBAA
+  ABCCCBA
+  ABCCCBA
+  ABCCCBA
+  AABCBAA
+  AAABAAA
+layer 1
+  DDD.DDD
+  .DEEED_
+  _EF_GED
+  .EH__E_
+  .E___ED
+  _DEIED.
+  DD._D__
+layer 2
+  _______
+  __EJE__
+  _E___E_
+  _K___K_
+  _E___E_
+  __ELE__
+  _______
+layer 3
+  _______
+  __EEE__
+  _E_M_E_
+  _E___E_
+  _EN_NE_
+  __EEE__
+  _______
+layer 4
+  _OOOOO_
+  PQQQQQR
+  PQ___QR
+  PQ___QR
+  PQ___QR
+  PQQQQQR
+  _SSSSS_
+layer 5
+  _______
+  _TOOOU_
+  _PQQQR_
+  _PQQQR_
+  _PQQQR_
+  _VSSSW_
+  _______
+layer 6
+  _______
+  _______
+  __XOY__
+  __PQR__
+  __VSW__
+  _______
+  _______
+
+template savanna/houses/savanna_small_house_4 10 7 8 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_planks
+  D acacia_wood[axis=x]
+  E acacia_wood[axis=z]
+  F dirt_path
+  G short_grass
+  H tall_grass[half=lower]
+  I acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  J acacia_log[axis=y]
+  K acacia_log[axis=x]
+  L orange_bed[facing=north,occupied=false,part=head]
+  M acacia_door[facing=west,half=lower,hinge=left,open=false,powered=false]
+  N orange_bed[facing=north,occupied=false,part=foot]
+  O acacia_log[axis=z]
+  P chest[facing=west,type=single,waterlogged=false]
+  Q acacia_door[facing=south,half=lower,hinge=left,open=false,powered=false]
+  R tall_grass[half=upper]
+  S glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  T acacia_door[facing=west,half=upper,hinge=left,open=false,powered=false]
+  U glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  V acacia_door[facing=south,half=upper,hinge=left,open=false,powered=false]
+  W wall_torch[facing=south]
+  X wall_torch[facing=north]
+  Y brown_wall_banner[facing=north]
+  Z oak_leaves[distance=3,persistent=false,waterlogged=false]
+  a brown_wall_banner[facing=west]
+  b acacia_slab[type=top,waterlogged=false]
+  c acacia_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  d acacia_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  e brown_wall_banner[facing=south]
+  f acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  g acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  h acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  i acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  j acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  k acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  l acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  m acacia_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+  n acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  o acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAAAAA
+  AAAAABBBAA
+  AAAABCCCBA
+  AAAADCCCBA
+  AAAABCCCBA
+  AAAAABEBAA
+  AAAAABFAAA
+layer 1
+  G_GG_GGGGH
+  _I_GGJKJGG
+  GG_GJ__LJG
+  GGGGM__NO_
+  G__GJ__PJ_
+  _IGG_JQJ_G
+  GG_G_G___G
+layer 2
+  _________R
+  _I___JSJ__
+  ____J___J_
+  ____T___U_
+  ____J___J_
+  _I___JVJ__
+  __________
+layer 3
+  __________
+  _I___JKJ__
+  ____J_W_J_
+  ____O___O_
+  ____J_X_J_
+  _I___JKJ__
+  ______W___
+layer 4
+  _YYY_____Z
+  aCbb_JcJ__
+  abb_J___J_
+  abb_d___d_
+  abb_J___J_
+  aCbb_JcJ__
+  _eee______
+layer 5
+  ____fffffZ
+  ___gCCCCCh
+  ___gC___Ch
+  ___gC___Ch
+  ___gC___Ch
+  ___gCCCCCh
+  ____iiiii_
+layer 6
+  __________
+  ____jfffk_
+  ____gCCCh_
+  ____gCCCh_
+  ____gCCCh_
+  ____liiim_
+  __________
+layer 7
+  __________
+  __________
+  _____nfk__
+  _____gCh__
+  _____lio__
+  __________
+  __________
+
+template savanna/houses/savanna_small_house_5 7 7 10 rigid 4
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_planks
+  D acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  E short_grass
+  F acacia_log[axis=y]
+  G acacia_log[axis=x]
+  H acacia_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  I acacia_log[axis=z]
+  J orange_bed[facing=south,occupied=false,part=foot]
+  K acacia_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  L orange_bed[facing=south,occupied=false,part=head]
+  M glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  N acacia_pressure_plate[powered=false]
+  O glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  P acacia_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  Q wall_torch[facing=east]
+  R wall_torch[facing=west]
+  S yellow_terracotta
+  T acacia_slab[type=bottom,waterlogged=false]
+  U acacia_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  V acacia_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  W acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  X acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  Y acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  Z acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  a acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  b acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  c acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  d acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  e acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  f acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  g acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  h acacia_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  AAAAAAA
+  AABBBAA
+  ABCCCBA
+  ABCCCCB
+  ABCCCBA
+  AABBBAA
+  AAAAAAA
+layer 1
+  _D.E_DE
+  D_FGF_D
+  EFH__FE
+  _IJ__K.
+  .FL__FE
+  D_FGFED
+  EDE.EDE
+layer 2
+  _D___D_
+  D_FMF_D
+  _FN__F_
+  _O___P_
+  _F___F_
+  D_FMF_D
+  _D___D_
+layer 3
+  _D___D_
+  D_FGF_D
+  _F___F_
+  _IQ_RIQ
+  _F___F_
+  D_FGF_D
+  _D___D_
+layer 4
+  _D___D_
+  D_SSS_D
+  _S___S_
+  _S___S_
+  _S___S_
+  D_SSS_D
+  _D___D_
+layer 5
+  _TTTTT_
+  TTTTTTT
+  TTSSSTT
+  TTS_STT
+  TTSSSTT
+  TTTTTTT
+  _TTTTT_
+layer 6
+  _______
+  _______
+  __SUS__
+  __V_V__
+  __SUS__
+  _______
+  _______
+layer 7
+  _______
+  _______
+  __SSS__
+  __S_S__
+  __SSS__
+  _______
+  _______
+layer 8
+  _______
+  _WXXXY_
+  _ZCCCa_
+  _ZCCCa_
+  _ZCCCa_
+  _bcccd_
+  _______
+layer 9
+  _______
+  _______
+  __eXf__
+  __ZCa__
+  __gch__
+  _______
+  _______
+
+template savanna/houses/savanna_small_house_6 7 7 7 rigid 4
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_planks
+  D dirt_path
+  E short_grass
+  F acacia_log[axis=y]
+  G acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  H acacia_wood[axis=y]
+  I acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  J acacia_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  K orange_bed[facing=east,occupied=false,part=foot]
+  L orange_bed[facing=east,occupied=false,part=head]
+  M acacia_log[axis=z]
+  N glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  O acacia_log[axis=x]
+  P acacia_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  Q glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  R wall_torch[facing=west]
+  S acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  T acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  U acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  V acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  W acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  X acacia_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+  Y acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAA
+  AABBBAA
+  ABCCCBA
+  DCCCCBA
+  ABCCCBA
+  AABBBAA
+  AAAAAAA
+layer 1
+  ._...E_
+  E_FFF_.
+  EFGHIF.
+  _J___F_
+  EF_KLF.
+  __FFF..
+  _._E.__
+layer 2
+  _______
+  __MNM__
+  _O___O_
+  _P___Q_
+  _O___O_
+  __MNM__
+  _______
+layer 3
+  _______
+  __FOF__
+  _F___F_
+  _M__RM_
+  _F___F_
+  __FOF__
+  _______
+layer 4
+  _SSSSS_
+  ICCCCCG
+  IC___CG
+  IC___CG
+  IC___CG
+  ICCCCCG
+  _TTTTT_
+layer 5
+  _______
+  _USSSV_
+  _ICCCG_
+  _ICCCG_
+  _ICCCG_
+  _WTTTX_
+  _______
+layer 6
+  _______
+  _______
+  __USV__
+  __ICG__
+  __WTY__
+  _______
+  _______
+
+template savanna/houses/savanna_small_house_7 7 7 7 rigid 7
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_wood[axis=y]
+  D acacia_wood[axis=z]
+  E dirt_path
+  F short_grass
+  G acacia_log[axis=y]
+  H orange_bed[facing=north,occupied=false,part=head]
+  I acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  J orange_bed[facing=north,occupied=false,part=foot]
+  K chest[facing=east,type=single,waterlogged=false]
+  L acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  M acacia_door[facing=north,half=lower,hinge=left,open=false,powered=false]
+  N glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  O glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  P torch
+  Q acacia_door[facing=north,half=upper,hinge=left,open=false,powered=false]
+  R wall_torch[facing=south]
+  S acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  T acacia_planks
+  U acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  V acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  W acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  X acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  Y acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  Z acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  a acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAA
+  AABBBAA
+  ABCCCBA
+  ABDCCBA
+  ABCCCBA
+  AABDBAA
+  AABEAAA
+layer 1
+  FF._.FF
+  .FGCGF.
+  .GH.IGF
+  FCJ_CC.
+  .GK_LG.
+  _FGMG..
+  FF._F._
+layer 2
+  _______
+  __GNG__
+  _G___G_
+  _O__PO_
+  _G___G_
+  __GQG__
+  _______
+layer 3
+  _______
+  __GCG__
+  _G___G_
+  _C___C_
+  _G___G_
+  __GCG__
+  ___R___
+layer 4
+  _LLLLL_
+  STTTTTU
+  ST___TU
+  ST___TU
+  ST___TU
+  STTTTTU
+  _IIIII_
+layer 5
+  _______
+  _VLLLW_
+  _STTTU_
+  _STTTU_
+  _STTTU_
+  _XIIIY_
+  _______
+layer 6
+  _______
+  _______
+  __ZLa__
+  __STU__
+  __XIY__
+  _______
+  _______
+
+template savanna/houses/savanna_small_house_8 6 7 7 rigid 5
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_log[axis=x]
+  D dirt_path
+  E acacia_log[axis=y]
+  F yellow_terracotta
+  G orange_bed[facing=east,occupied=false,part=foot]
+  H orange_bed[facing=east,occupied=false,part=head]
+  I acacia_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  J acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  K acacia_wood[axis=y]
+  L acacia_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  M glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  N wall_torch[facing=west]
+  O wall_torch[facing=east]
+  P acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  Q acacia_planks
+  R acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  S acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  T acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  U acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  V acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  W acacia_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  AAAAAA
+  AABBAA
+  ABCCBA
+  DCEEBA
+  ABCCBA
+  AABBAA
+  AAAAAA
+layer 1
+  ..._..
+  __FF._
+  .FGHF.
+  _I__F.
+  .FJJF.
+  _.FF_.
+  _.._..
+layer 2
+  ______
+  __KK__
+  _K__K_
+  _L__M_
+  _K__K_
+  __KK__
+  ______
+layer 3
+  ______
+  __FF__
+  _F__F_
+  NFO_F_
+  _F__F_
+  __FF__
+  ______
+layer 4
+  _JJJJ_
+  PQQQQR
+  PQ__QR
+  PQ__QR
+  PQ__QR
+  PQQQQR
+  _SSSS_
+layer 5
+  ______
+  _TJJU_
+  _PQQR_
+  _PQQR_
+  _PQQR_
+  _VSSW_
+  ______
+layer 6
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+
+template savanna/houses/savanna_tannery_1 8 9 6 rigid 3
+  A grass_block[snowy=false]
+  B dirt_path
+  C dirt
+  D acacia_log[axis=z]
+  E acacia_log[axis=y]
+  F acacia_log[axis=x]
+  G short_grass
+  H yellow_terracotta
+  I water_cauldron[level=3]
+  J acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  K acacia_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  L chest[facing=north,type=single,waterlogged=false]
+  M smooth_stone
+  N glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  O acacia_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  P acacia_slab[type=top,waterlogged=false]
+  Q acacia_planks
+  R brown_wall_banner[facing=east]
+  S wall_torch[facing=east]
+  T wall_torch[facing=west]
+  U acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  V acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  W acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  X acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  Y acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  Z acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  a acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  b acacia_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  AAAAAAAB
+  AACCAAAB
+  ACDDCAAB
+  ACEECAAA
+  ACEEFBBB
+  ACEECAAB
+  ACDDCAAB
+  AACCAAAB
+  AAAAAAAB
+layer 1
+  _GGG_GG_
+  G_HH__G_
+  GHIIH_G_
+  GH__HGJG
+  GH__K___
+  GH__H_J_
+  GHLMH_G_
+  __HHG_G_
+  __G_GGG_
+layer 2
+  ________
+  __HH____
+  _H__H___
+  _N__H_J_
+  _H__O___
+  _N__H_J_
+  _H__H___
+  __HH____
+  ________
+layer 3
+  ________
+  __HH____
+  _H__H___
+  _H__HPQR
+  _HSTHSP_
+  _H__HPQR
+  _H__H___
+  __HH____
+  ________
+layer 4
+  _UUUU___
+  VQQQQW__
+  VQ__QW__
+  VQ__QW__
+  VQ__QW__
+  VQ__QW__
+  VQ__QW__
+  VQQQQW__
+  _XXXX___
+layer 5
+  ________
+  _YUUZ___
+  _VQQW___
+  _VQQW___
+  _VQQW___
+  _VQQW___
+  _VQQW___
+  _aXXb___
+  ________
+
+template savanna/houses/savanna_temple_2 7 9 7 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_wood[axis=y]
+  D acacia_wood[axis=z]
+  E acacia_wood[axis=x]
+  F red_terracotta
+  G short_grass
+  H acacia_log[axis=y]
+  I brewing_stand[has_bottle_0=false,has_bottle_1=false,has_bottle_2=false]
+  J acacia_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  K acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  L glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  M wall_torch[facing=east]
+  N glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  O acacia_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  P wall_torch[facing=west]
+  Q acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  R acacia_planks
+  S acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  T yellow_terracotta
+  U acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAA
+  AABBBAA
+  ABCCCBA
+  ABDCDBA
+  BEFFFBA
+  ABCCCBA
+  ABCCCBA
+  AABBBAA
+  AAAAAAA
+layer 1
+  GG_GG_G
+  __HEC__
+  _C_I_C_
+  _C___D_
+  GJ___C_
+  GC___D_
+  _CKKKC_
+  __CECGG
+  ___GG_G
+layer 2
+  _______
+  __CLC__
+  _C___C_
+  _CM__N_
+  _O__PC_
+  _CM__N_
+  _C___C_
+  __CLC__
+  _______
+layer 3
+  _______
+  __CEC__
+  _C___C_
+  _C___D_
+  _D___C_
+  _C___D_
+  _C___C_
+  __CEC__
+  _______
+layer 4
+  _KKKKK_
+  QRRRRRS
+  QRRRRRS
+  _FTFTF_
+  PT___TM
+  _FTFTF_
+  QRRRRRS
+  QRRRRRS
+  _UUUUU_
+layer 5
+  _______
+  _______
+  _______
+  _CCCCC_
+  _C___C_
+  _CCCCC_
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _KKKKK_
+  QRRRRRS
+  QRRRRRS
+  QRRRRRS
+  _UUUUU_
+  _______
+  _______
+
+template savanna/houses/savanna_tool_smith_1 7 11 7 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C acacia_planks
+  D dirt_path
+  E short_grass
+  F acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  G acacia_log[axis=y]
+  H acacia_door[facing=north,half=lower,hinge=left,open=false,powered=false]
+  I acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  J acacia_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  K smithing_table
+  L acacia_door[facing=south,half=lower,hinge=left,open=false,powered=false]
+  M acacia_door[facing=north,half=upper,hinge=left,open=false,powered=false]
+  N acacia_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  O glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  P acacia_door[facing=south,half=upper,hinge=left,open=false,powered=false]
+  Q acacia_log[axis=x]
+  R wall_torch[facing=west]
+  S acacia_log[axis=z]
+  T brown_wall_banner[facing=north]
+  U brown_wall_banner[facing=west]
+  V brown_wall_banner[facing=east]
+  W acacia_slab[type=top,waterlogged=false]
+  X acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  Y brown_wall_banner[facing=south]
+  Z acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  a acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  b acacia_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  c acacia_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  d acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  e acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AABCBAA
+  BBCCCBA
+  DCCCCBA
+  ABCCCBA
+  AABCBAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  EEEE___
+  __FEF__
+  __EEEE_
+  EEGHGE_
+  _G__IGE
+  _J__KGE
+  EG__IGE
+  EEGLGEE
+  EEEEEEE
+  EEFEFEE
+  EE_EEEE
+layer 2
+  _______
+  __F_F__
+  _______
+  __GMG__
+  _G___G_
+  _N___O_
+  _G___G_
+  __GPG__
+  _______
+  __F_F__
+  _______
+layer 3
+  _______
+  __F_F__
+  _______
+  __GQG__
+  _G___G_
+  RS__RS_
+  _G___G_
+  __GQG__
+  _______
+  __F_F__
+  _______
+layer 4
+  __TTT__
+  _UCCCV_
+  _UCWCV_
+  ICCCCCX
+  IC___CX
+  IC___CX
+  IC___CX
+  ICCCCCX
+  _UCWCV_
+  _UCCCV_
+  __YYY__
+layer 5
+  _______
+  _______
+  _______
+  _Zaaab_
+  _ICCCX_
+  _ICCCX_
+  _ICCCX_
+  _cddde_
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  __Zab__
+  __ICX__
+  __cde__
+  _______
+  _______
+  _______
+  _______
+
+template savanna/houses/savanna_weaponsmith_1 8 9 6 rigid 3
+  A grass_block[snowy=false]
+  B dirt
+  C stripped_acacia_log[axis=y]
+  D stripped_acacia_log[axis=x]
+  E dirt_path
+  F short_grass
+  G acacia_log[axis=y]
+  H acacia_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  I acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  J acacia_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  K acacia_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  L acacia_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  M acacia_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  N acacia_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  O grindstone[face=floor,facing=south]
+  P white_carpet
+  Q glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  R acacia_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  S acacia_log[axis=z]
+  T wall_torch[facing=east]
+  U brown_wall_banner[facing=east]
+  V acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  W acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  X acacia_planks
+  Y acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  Z acacia_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  a acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  b acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  c acacia_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  AAAAAAAA
+  AABBAAAA
+  ABCCBAAA
+  ABDDBAAA
+  ABCCCEEE
+  ABDDBAAA
+  ABCCBAAA
+  AABBAAAA
+  FAFAAAAA
+layer 1
+  ____.FFF
+  __GGFF__
+  _GHIGJJK
+  _G__GFFL
+  _G__M___
+  _GF_GFFN
+  _GO_GJJH
+  __GG_F__
+  _______.
+layer 2
+  ________
+  __GG____
+  _GP_G___
+  _Q__G___
+  _G__R___
+  _Q__G___
+  _G__G___
+  __GG____
+  ________
+layer 3
+  ________
+  __GG____
+  _G__G___
+  _ST_GU__
+  _G__S___
+  _ST_GU__
+  _G__G___
+  __GG____
+  ________
+layer 4
+  _VVVV___
+  WXXXXY__
+  WX__XY__
+  WX__XY__
+  WX__XY__
+  WX__XY__
+  WX__XY__
+  WXXXXY__
+  _IIII___
+layer 5
+  ________
+  _ZVVa___
+  _WXXY___
+  _WXXY___
+  _WXXY___
+  _WXXY___
+  _WXXY___
+  _bIIc___
+  ________
+
+template savanna/houses/savanna_weaponsmith_2 9 13 7 rigid 1
+  A grass_block[snowy=false]
+  B short_grass
+  C dirt
+  D acacia_wood[axis=y]
+  E smooth_stone
+  F smooth_stone_slab[type=bottom,waterlogged=false]
+  G acacia_planks
+  H acacia_wood[axis=z]
+  I acacia_wood[axis=x]
+  J lava[level=0]
+  K grindstone[face=wall,facing=east]
+  L grindstone[face=floor,facing=east]
+  M acacia_door[facing=west,half=lower,hinge=left,open=false,powered=false]
+  N acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  O chest[facing=east,type=single,waterlogged=false]
+  P acacia_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  Q acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  R iron_bars[east=true,north=false,south=true,waterlogged=false,west=false]
+  S iron_bars[east=true,north=false,south=false,waterlogged=false,west=true]
+  T iron_bars[east=false,north=true,south=true,waterlogged=false,west=false]
+  U iron_bars[east=false,north=true,south=false,waterlogged=false,west=false]
+  V glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  W acacia_door[facing=west,half=upper,hinge=left,open=false,powered=false]
+  X acacia_log[axis=y]
+  Y acacia_pressure_plate[powered=false]
+  Z wall_torch[facing=west]
+  a glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  b acacia_log[axis=z]
+  c wall_torch[facing=east]
+  d acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  e acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  f acacia_stairs[facing=east,half=bottom,shape=inner_right,waterlogged=false]
+  g acacia_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  h acacia_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  i acacia_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  j acacia_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAAAB
+  AAAAACCAB
+  AACCCCCCB
+  AACCCCCCB
+  ACCCCCCC_
+  ACCCCCCCA
+  CCCCCCCCA
+  ACCCCCCCA
+  AACCCCCCA
+  ACCCCCCCA
+  ACCCCCCCA
+  AACCCCCAA
+  AAAAAAAAA
+layer 1
+  _________
+  _____DDB_
+  __EEEEED_
+  __EEEEED_
+  FFEEEEED_
+  FEEEDGGD_
+  FEEEDGGD_
+  FEEEHGGD_
+  FFDIGGGI_
+  BDGGGGGI_
+  BDGGGGGD_
+  __DDDDD__
+  _________
+layer 2
+  _________
+  _____DD__
+  __EEE__D_
+  __EJEK_I_
+  __EEE__D_
+  ____D__D_
+  __L_M__D_
+  ____D__D_
+  __DD__ND_
+  _DO___PD_
+  _D____QD_
+  __DDDDD__
+  _________
+layer 3
+  _________
+  _____ED__
+  __RSE__D_
+  __T_E__H_
+  __U_E__V_
+  ____E__H_
+  ____W__H_
+  ____X__H_
+  __DD___V_
+  _D____YH_
+  _D_____D_
+  _ZDIaII__
+  _________
+layer 4
+  _________
+  _____ED__
+  __RSE__D_
+  __T_E__D_
+  __U_E_ZD_
+  ____E__D_
+  ___Zb__D_
+  ____X__D_
+  __DD__ZD_
+  _Dc____D_
+  _D_____D_
+  __DDDDD__
+  _________
+layer 5
+  ____FFQQ_
+  ___FEEGGd
+  __FFE__Gd
+  __FFE__Gd
+  __FFE__Gd
+  ___FE__Gd
+  ___eG__Gd
+  _QQfG__Gd
+  eGGGG__Gd
+  eG_____Gd
+  eG_____Gd
+  eGGGGGGGd
+  _NNNNNNN_
+layer 6
+  _________
+  ____gQQh_
+  ____eGGd_
+  ____eGGd_
+  ____eGGd_
+  ____eGGd_
+  ____eGGd_
+  ____eGGd_
+  _gQQfGGd_
+  _eGGGGGd_
+  _eGGGGGd_
+  _iNNNNNj_
+  _________
+
+template savanna/savanna_lamp_post_01 1 1 2 rigid 20
+  A acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  B torch
+layer 0
+  A
+layer 1
+  B
+
+template savanna/streets/corner_01 16 16 2 terrain_matching 4
+  A dirt_path
+layer 0
+  ......AAA.......
+  ......A.........
+  ......AAA.......
+  ......AA........
+  ......A.........
+  ......AA........
+  ......AAA.......
+  A.AAAAAA........
+  AAAA.AAA........
+  AA..............
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template savanna/streets/corner_03 4 4 2 terrain_matching 20
+  A dirt_path
+layer 0
+  ..AA
+  ..AA
+  ..AA
+  A...
+layer 1
+  ....
+  ....
+  ....
+  ....
+
+template savanna/streets/crossroad_02 7 10 2 terrain_matching 4
+  A dirt_path
+layer 0
+  .......
+  .......
+  .......
+  .......
+  AA....A
+  AA...AA
+  A....AA
+  .....A.
+  ....AA.
+  ....AA.
+layer 1
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+
+template savanna/streets/crossroad_03 16 16 2 terrain_matching 3
+  A dirt_path
+  B acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  C acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  D acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  E orange_terracotta
+  F acacia_planks
+  G acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  H acacia_log[axis=y]
+layer 0
+  .A.A....BBBBB...
+  .AAA...C.....D..
+  .AAA...C..E..D..
+  .AAA...C.....D..
+  ...A...C.F.F.D..
+  .AAA...C.....D..
+  .AA.....GGGGG...
+  ..AAAAAAAAAAAAAA
+  AAAAAAAA.AAAAAAA
+  AA.AAAA.A.AA.AAA
+  ...........AA...
+  ..........AAA...
+  ..........AAA...
+  ...H......AAA...
+  ..........AAA...
+  ..........AAA...
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template savanna/streets/crossroad_04 4 5 2 terrain_matching 21
+  A dirt_path
+layer 0
+  .AAA
+  AAAA
+  AAAA
+  AAAA
+  .AAA
+layer 1
+  ....
+  ....
+  ....
+  ....
+  ....
+
+template savanna/streets/crossroad_05 5 5 2 terrain_matching 17
+  A dirt_path
+layer 0
+  ...A.
+  ...AA
+  .A.A.
+  A..A.
+  .AAA.
+layer 1
+  .....
+  .....
+  .....
+  .....
+  .....
+
+template savanna/streets/crossroad_06 5 5 2 terrain_matching 18
+  A dirt_path
+layer 0
+  ..AA.
+  AA.AA
+  .A..A
+  .AAA.
+  .A.A.
+layer 1
+  .....
+  .....
+  .....
+  .....
+  .....
+
+template savanna/streets/crossroad_07 15 14 2 terrain_matching 4
+  A dirt_path
+  B wheat[age=2]
+  C melon_stem[age=2]
+  D wheat[age=1]
+  E wheat[age=0]
+  F melon_stem[age=0]
+  G melon_stem[age=1]
+layer 0
+  ............A..
+  ...........A.AB
+  ..........CAA.D
+  .........E.AAEE
+  .........FAA.GB
+  ...........AF.E
+  .........AAAA.A
+  ..........A.A..
+  ...........D.DA
+  ...........EE.D
+  .........AACBBE
+  ........AA..DE.
+  ..........EBD..
+  ......AA.......
+layer 1
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+
+template savanna/streets/split_01 8 6 2 terrain_matching 10
+  A dirt_path
+layer 0
+  .....A..
+  ....AA..
+  ....A..A
+  .A......
+  ..A.....
+  ........
+layer 1
+  ........
+  ........
+  ........
+  ........
+  ........
+  ........
+
+template savanna/streets/split_02 14 9 2 terrain_matching 6
+  A dirt_path
+layer 0
+  .........AA...
+  ........AAA...
+  ........AA....
+  ........AA....
+  ........A.A.A.
+  ........AAAAA.
+  ..........AA..
+  .........A.A..
+  ...........A..
+layer 1
+  ..............
+  ..............
+  ..............
+  ..............
+  ..............
+  ..............
+  ..............
+  ..............
+  ..............
+
+template savanna/streets/straight_02 16 16 2 terrain_matching 11
+  A dirt_path
+layer 0
+  AAA.............
+  AAA.............
+  AAA.............
+  .A..............
+  .A..............
+  ..A.............
+  ..A.............
+  .AA.............
+  .AA.............
+  AAA.............
+  .AA.............
+  AAA.............
+  .AA.............
+  AA..............
+  AA..............
+  A.A.............
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template savanna/streets/straight_04 11 9 2 terrain_matching 25
+  A dirt_path
+layer 0
+  A..........
+  .AA........
+  AAA........
+  AA.........
+  ..A........
+  AAA........
+  ..A........
+  .AA........
+  AAA........
+layer 1
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+
+template savanna/streets/straight_05 20 17 2 terrain_matching 11
+  A dirt_path
+layer 0
+  A.A.................
+  .AA.................
+  A.A.................
+  .A..................
+  ..A.................
+  A.A.................
+  AA..................
+  A.A.................
+  A...................
+  ....................
+  ..A.................
+  AA..................
+  ..A.................
+  .AA.................
+  ..A.................
+  .A..................
+  .A..................
+layer 1
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+
+template savanna/streets/straight_06 9 14 2 terrain_matching 9
+  A melon_stem[age=0]
+  B melon_stem[age=2]
+  C dirt_path
+  D wheat[age=0]
+  E wheat[age=1]
+  F melon_stem[age=1]
+  G wheat[age=2]
+layer 0
+  .........
+  .........
+  ...AB.C..
+  ..D.E.C.D
+  ..DD...AD
+  .AAF..A.D
+  .D....EA.
+  .DD..DDE.
+  DEEC.E.EE
+  E.CCCDDDE
+  DCCCAFGDD
+  DC.AB.DD.
+  C..EDGD..
+  .........
+layer 1
+  .........
+  .........
+  .........
+  .........
+  .........
+  .........
+  .........
+  .........
+  .........
+  .........
+  .........
+  .........
+  .........
+  .........
+
+template savanna/streets/straight_08 10 16 2 terrain_matching 12
+  A dirt_path
+  B wheat[age=0]
+  C wheat[age=1]
+layer 0
+  .AA....B..
+  AAA...BBB.
+  AAA...B.B.
+  AAA....CB.
+  AAA.......
+  AAA.......
+  ..A.......
+  A.A.......
+  ..........
+  ..A.......
+  A.........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+layer 1
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+  ..........
+
+template savanna/streets/straight_09 23 16 2 terrain_matching 8
+  A dirt_path
+layer 0
+  ........AAA............
+  ........AA.............
+  .........A.A...........
+  .......................
+  ...........A...........
+  .......................
+  ..........AA...........
+  ..........AA...........
+  ..........AA...........
+  ...........A...........
+  ..........A............
+  ...........A...........
+  .......................
+  ............AA.........
+  ...........AA..........
+  ...........A...........
+layer 1
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+  .......................
+
+template savanna/streets/straight_10 6 11 2 terrain_matching 25
+  A dirt_path
+layer 0
+  ...A.A
+  ....A.
+  ..AA..
+  ..A...
+  ..AA..
+  ..AA..
+  .AA...
+  .AA...
+  .AA...
+  AA....
+  A.A...
+layer 1
+  ......
+  ......
+  ......
+  ......
+  ......
+  ......
+  ......
+  ......
+  ......
+  ......
+  ......
+
+template savanna/streets/straight_11 17 17 2 terrain_matching 12
+  A dirt_path
+  B wheat[age=0]
+  C melon_stem[age=0]
+  D melon_stem[age=1]
+  E wheat[age=1]
+  F farmland[moisture=7]
+layer 0
+  AAA......B...B...
+  AAA.BB..BBCC.BBC.
+  AAABB.BBBBCBB.BDB
+  ..ABBBEB.BEBBBBBB
+  ...BBBECBBBBBB.BB
+  ...B.BC.CBB.BEBB.
+  ...FEDCCC....BB..
+  ..BFECC.......B..
+  ...BB............
+  ..B..............
+  ..E..............
+  .................
+  .................
+  .................
+  .................
+  ..A..............
+  A................
+layer 1
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+  .................
+
+template savanna/streets/turn_01 19 11 2 terrain_matching 11
+  A dirt_path
+layer 0
+  .....A.A...........
+  ......A.A..........
+  ........A..........
+  ........AAA........
+  ........AAA........
+  ........AA.........
+  .........AA........
+  ........AAA........
+  ........AAA........
+  ........AAA........
+  ........A.A........
+layer 1
+  ...................
+  ...................
+  ...................
+  ...................
+  ...................
+  ...................
+  ...................
+  ...................
+  ...................
+  ...................
+  ...................
+
+template savanna/terminators/terminator_05 16 16 2 terrain_matching 5
+layer 0
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template savanna/town_centers/savanna_meeting_point_1 14 12 5 rigid 3
+  A dirt_path
+  B grass_block[snowy=false]
+  C dirt
+  D short_grass
+  E acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  F acacia_log[axis=y]
+  G tall_grass[half=lower]
+  H bell[attachment=floor,facing=east,powered=false]
+  I torch
+  J tall_grass[half=upper]
+  K brown_wall_banner[facing=north]
+  L acacia_slab[type=bottom,waterlogged=false]
+  M acacia_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  N acacia_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  O acacia_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  P brown_wall_banner[facing=east]
+  Q acacia_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  R brown_wall_banner[facing=south]
+layer 0
+  AAAAABBAABABBB
+  BBBBBA.AABABA.
+  AACCBAAAAAAA.B
+  ABAABAAAAAABA.
+  AAAAAAAAABBBBB
+  AABAAAAABAACBB
+  AAABABBBAAA.AB
+  BAAAAAAAAABABB
+  ABAABABBAAAABB
+  BBCCBAAABABABB
+  ABAABABAAAABBB
+  BAABBAABAABBBB
+layer 1
+  __D__E__DD_D__
+  DED_ED_D_D_D_.
+  __FFD_D_____._
+  _E__ED____D__.
+  _________DE_E_
+  __D_____D__F_G
+  D__D_DHD___F__
+  D_________E_E_
+  _E__E_DD______
+  DDFFD_____D___
+  _E__E_D____E_D
+  E__DD__D______
+layer 2
+  _____I________
+  _E__E_________
+  ______________
+  _E__E_________
+  __________E_E_
+  _____________J
+  ______________
+  __________E_E_
+  _E__E_________
+  ______________
+  _E__E______I__
+  I_____________
+layer 3
+  ______________
+  _E__E_________
+  ______________
+  _E__E_________
+  __________E_E_
+  ______________
+  ______________
+  __________E_E_
+  _E__E_________
+  ______________
+  _E__E_________
+  ______________
+layer 4
+  __KK__________
+  _LMNL_________
+  _LMNL_________
+  _LMNL_________
+  __________LLL_
+  __________OOOP
+  __________QQQP
+  __________LLL_
+  _LMNL_________
+  _LMNL_________
+  _LMNL_________
+  __RR__________
+
+template savanna/town_centers/savanna_meeting_point_3 9 11 6 rigid 3
+  A grass_block[snowy=false]
+  B dirt_path
+  C acacia_wood[axis=y]
+  D acacia_wood[axis=x]
+  E short_grass
+  F water[level=0]
+  G torch
+  H acacia_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  I bell[attachment=ceiling,facing=east,powered=false]
+  J acacia_slab[type=bottom,waterlogged=false]
+  K acacia_slab[type=double,waterlogged=false]
+layer 0
+  AAABBBAAA
+  AABBBBBAA
+  AABBBBBAA
+  ABBBCBBBA
+  BBBBBBBBB
+  BBBBBBBBB
+  BBBBBBBBB
+  ABBBDBBBA
+  AABBBBBAA
+  AABBBBBAA
+  AAABBBAAA
+layer 1
+  EE__E_EEE
+  ________E
+  ___CDC__E
+  ___CFC___
+  EE_CDC___
+  _________
+  ___CDC___
+  ___CFC__.
+  E__CDC__E
+  _E_____E_
+  E.E___E__
+layer 2
+  _________
+  _________
+  ___G_G___
+  _________
+  ___H_H___
+  _________
+  ___H_H___
+  _________
+  ___G_G___
+  _________
+  _________
+layer 3
+  _________
+  _________
+  _________
+  _________
+  ___H_H___
+  ____I____
+  ___H_H___
+  _________
+  _________
+  _________
+  _________
+layer 4
+  _________
+  _________
+  _________
+  _________
+  ___JJJ___
+  ___JKJ___
+  ___JJJ___
+  _________
+  _________
+  _________
+  _________
+layer 5
+  _________
+  _________
+  _________
+  _________
+  _________
+  ____G____
+  _________
+  _________
+  _________
+  _________
+  _________
+
+layout 69
+  savanna/town_centers/savanna_meeting_point_1 2 0 0 0
+  savanna/streets/corner_03 3 -8 0 4
+  savanna/streets/corner_01 0 1 0 -13
+  savanna/streets/crossroad_06 1 -6 0 -16
+  savanna/streets/corner_03 2 -1 0 4
+  savanna/houses/savanna_small_house_1 2 9 0 2
+  feature:pile_hay 0 11 0 -10
+  savanna/streets/straight_06 0 7 0 -27
+  savanna/savanna_lamp_post_01 0 14 1 -4
+  savanna/houses/savanna_small_house_2 1 16 0 -11
+  savanna/streets/crossroad_05 3 -5 0 -12
+  savanna/streets/turn_01 0 -17 0 -27
+  savanna/streets/crossroad_06 3 -15 0 -12
+  feature:pile_hay 0 -8 0 -14
+  savanna/streets/straight_05 1 -5 0 2
+  feature:pile_hay 0 8 0 -15
+  savanna/streets/straight_04 2 15 0 -28
+  savanna/streets/straight_10 1 10 0 -15
+  savanna/streets/corner_03 0 -9 0 -15
+  savanna/streets/straight_10 0 -7 0 -11
+  savanna/streets/crossroad_04 2 -9 0 -28
+  savanna/streets/straight_10 0 -12 0 -16
+  savanna/streets/straight_02 1 -16 0 -15
+  savanna/houses/savanna_small_house_5 3 -15 0 11
+  savanna/streets/straight_04 1 -22 0 2
+  savanna/streets/straight_08 0 13 0 -27
+  savanna/streets/straight_04 0 13 0 -45
+  savanna/streets/straight_04 0 -12 0 -41
+  savanna/streets/corner_03 3 -12 0 -24
+  savanna/streets/crossroad_05 0 -8 0 -32
+  savanna/houses/savanna_butchers_shop_2 1 -16 0 -12
+  savanna/streets/turn_01 1 -32 0 -20
+  savanna/houses/savanna_small_house_8 1 -23 0 5
+  savanna/streets/straight_11 1 -31 0 2
+  savanna/houses/savanna_small_house_6 0 16 0 -44
+  savanna/streets/straight_10 0 13 0 -56
+  savanna/streets/turn_01 2 -5 0 -42
+  savanna/streets/straight_08 1 7 0 -26
+  plains/terminators/terminator_02 3 -6 0 -27
+  savanna/streets/corner_03 2 0 0 -29
+  savanna/houses/savanna_small_house_7 2 -35 0 -3
+  savanna/houses/savanna_armorer_1 3 -41 0 -13
+  savanna/streets/crossroad_07 3 -56 0 -3
+  savanna/houses/savanna_animal_pen_1 0 -47 1 5
+  savanna/streets/split_02 0 -61 0 -1
+  savanna/streets/corner_03 0 16 0 -60
+  savanna/houses/savanna_small_house_3 3 -22 0 -43
+  savanna/houses/savanna_small_house_7 1 -6 0 -50
+  savanna/streets/straight_02 0 -15 0 -68
+  savanna/streets/crossroad_05 3 8 0 -23
+  savanna/savanna_lamp_post_01 1 -6 1 -21
+  plains/terminators/terminator_02 1 -1 0 -33
+  plains/terminators/terminator_02 3 -43 0 -9
+  savanna/streets/crossroad_05 1 -47 0 -22
+  savanna/streets/split_02 3 -65 0 -6
+  savanna/savanna_lamp_post_01 2 -44 1 -10
+  plains/terminators/terminator_04 2 -44 0 4
+  plains/terminators/terminator_04 3 -52 0 11
+  plains/terminators/terminator_02 1 -52 0 -2
+  plains/terminators/terminator_04 2 23 0 -58
+  savanna/terminators/terminator_05 3 -22 0 -69
+  plains/terminators/terminator_04 3 9 0 -19
+  plains/terminators/terminator_02 3 -49 0 -17
+  plains/terminators/terminator_02 1 -49 0 -23
+  plains/terminators/terminator_01 2 -45 0 -19
+  plains/terminators/terminator_02 0 -52 0 -20
+  plains/terminators/terminator_03 2 -54 0 -15
+  plains/terminators/terminator_02 1 -61 0 -20
+  plains/terminators/terminator_01 0 -67 0 -16
+
+layout 88
+  savanna/town_centers/savanna_meeting_point_3 0 0 0 0
+  savanna/streets/straight_04 2 5 0 19
+  savanna/streets/turn_01 2 10 0 -1
+  savanna/streets/crossroad_05 3 -5 0 7
+  savanna/streets/straight_10 3 9 0 9
+  savanna/streets/crossroad_04 1 6 0 20
+  savanna/houses/savanna_small_house_7 3 -4 0 17
+  savanna/houses/savanna_tool_smith_1 2 -1 0 -1
+  savanna/streets/straight_10 2 5 0 -12
+  savanna/streets/straight_10 0 0 0 0
+  plains/terminators/terminator_01 1 -2 0 1
+  plains/terminators/terminator_03 3 -4 0 10
+  savanna/streets/crossroad_04 3 -10 0 7
+  savanna/streets/split_01 2 27 0 11
+  savanna/streets/corner_03 0 -2 0 21
+  savanna/streets/crossroad_04 3 7 0 24
+  savanna/streets/straight_02 2 5 0 -23
+  savanna/streets/straight_08 0 0 0 -11
+  savanna/streets/crossroad_05 1 -6 0 8
+  savanna/streets/crossroad_07 1 -11 0 -8
+  savanna/streets/crossroad_06 3 21 0 16
+  plains/terminators/terminator_02 2 27 0 7
+  savanna/savanna_lamp_post_01 2 23 1 7
+  savanna/streets/turn_01 1 19 0 2
+  savanna/streets/crossroad_03 3 -9 0 40
+  savanna/streets/straight_05 1 28 0 21
+  savanna/streets/crossroad_04 2 11 0 29
+  savanna/houses/savanna_weaponsmith_2 2 2 0 -25
+  savanna/streets/straight_09 0 -5 0 -22
+  savanna/streets/straight_04 0 3 0 -47
+  savanna/streets/straight_08 1 -11 0 9
+  plains/terminators/terminator_02 2 -5 0 10
+  savanna/streets/crossroad_06 3 -10 0 17
+  plains/terminators/terminator_01 3 -19 0 8
+  savanna/streets/straight_05 3 -41 0 1
+  plains/terminators/terminator_02 1 -24 0 -2
+  savanna/houses/savanna_small_house_5 1 -14 0 -6
+  savanna/streets/corner_03 2 24 0 20
+  savanna/streets/straight_10 3 26 0 18
+  plains/terminators/terminator_02 0 20 0 14
+  plains/terminators/terminator_02 0 8 0 11
+  savanna/houses/savanna_armorer_1 2 -3 0 33
+  savanna/streets/straight_05 2 0 0 57
+  savanna/streets/straight_04 3 -18 0 39
+  plains/terminators/terminator_02 2 7 0 29
+  savanna/houses/savanna_temple_2 1 22 0 24
+  savanna/streets/straight_10 1 39 0 21
+  savanna/streets/corner_03 3 8 0 33
+  savanna/streets/crossroad_04 0 5 0 -6
+  savanna/houses/savanna_large_farm_1 1 15 0 -20
+  feature:pile_hay 0 6 0 -9
+  savanna/streets/straight_10 2 8 0 -48
+  savanna/streets/split_01 0 -34 0 7
+  feature:pile_hay 0 -24 0 14
+  savanna/savanna_lamp_post_01 2 -17 1 14
+  savanna/savanna_lamp_post_01 0 -8 1 15
+  savanna/streets/crossroad_04 2 -6 0 22
+  savanna/houses/savanna_small_house_7 0 -35 0 -8
+  savanna/streets/straight_10 1 -42 0 -4
+  plains/terminators/terminator_02 0 20 0 19
+  savanna/streets/straight_11 3 37 0 18
+  savanna/streets/straight_04 0 -2 0 58
+  savanna/houses/savanna_cartographer_1 2 -3 1 54
+  savanna/houses/savanna_small_house_5 1 -11 0 30
+  savanna/streets/split_01 0 -26 0 35
+  savanna/streets/straight_04 1 48 0 24
+  savanna/streets/straight_04 0 6 0 -67
+  feature:pile_hay 0 -30 0 11
+  savanna/streets/corner_03 1 -29 0 3
+  plains/terminators/terminator_02 0 -34 0 11
+  plains/terminators/terminator_01 3 -9 0 24
+  plains/terminators/terminator_02 2 -5 0 20
+  savanna/streets/crossroad_03 1 -53 0 -5
+  savanna/streets/crossroad_07 1 67 0 9
+  savanna/houses/savanna_mason_1 3 44 0 15
+  plains/terminators/terminator_03 3 -2 0 69
+  plains/terminators/terminator_01 1 -21 0 33
+  plains/terminators/terminator_02 0 -26 0 39
+  plains/terminators/terminator_01 2 50 0 26
+  plains/terminators/terminator_01 1 8 0 -69
+  savanna/terminators/terminator_05 1 15 0 -58
+  plains/terminators/terminator_01 0 -34 0 3
+  plains/terminators/terminator_03 0 -71 0 5
+  plains/terminators/terminator_04 1 -60 0 -9
+  plains/terminators/terminator_02 3 -61 0 11
+  plains/terminators/terminator_02 3 60 0 24
+  plains/terminators/terminator_02 1 54 0 15
+  plains/terminators/terminator_03 2 70 0 23
+
+layout 73
+  savanna/town_centers/savanna_meeting_point_3 0 0 0 0
+  savanna/streets/crossroad_05 3 -5 0 7
+  savanna/streets/straight_08 2 5 0 26
+  savanna/streets/corner_03 0 3 0 -4
+  savanna/streets/split_01 2 16 0 8
+  plains/terminators/terminator_03 3 -4 0 10
+  savanna/streets/straight_02 1 -6 0 4
+  savanna/streets/straight_11 2 -2 0 2
+  savanna/savanna_lamp_post_01 1 0 1 13
+  savanna/savanna_lamp_post_01 2 0 1 20
+  savanna/streets/straight_11 2 5 0 43
+  feature:pile_hay 0 -1 0 22
+  savanna/streets/straight_04 3 7 0 -2
+  savanna/streets/straight_04 0 11 0 9
+  plains/terminators/terminator_02 2 16 0 4
+  savanna/houses/savanna_large_farm_1 2 -7 0 15
+  savanna/streets/corner_01 2 -22 0 13
+  savanna/streets/crossroad_06 0 -5 0 3
+  savanna/streets/crossroad_06 1 -1 0 -19
+  savanna/houses/savanna_animal_pen_1 1 -5 0 -14
+  savanna/houses/savanna_weaponsmith_1 0 -5 0 27
+  savanna/streets/straight_10 2 5 0 54
+  savanna/streets/straight_04 3 16 0 -2
+  savanna/houses/savanna_cartographer_1 0 14 1 9
+  savanna/streets/split_01 3 9 0 25
+  savanna/houses/savanna_tannery_1 0 -37 0 3
+  savanna/streets/straight_02 2 -28 0 29
+  savanna/savanna_lamp_post_01 3 -25 1 9
+  savanna/houses/savanna_small_house_7 0 -29 0 -2
+  feature:pile_hay 0 -30 0 1
+  savanna/savanna_lamp_post_01 0 -3 1 5
+  savanna/streets/straight_05 3 0 0 -16
+  savanna/streets/split_01 0 -13 0 -20
+  savanna/streets/corner_03 1 -2 0 -23
+  savanna/streets/straight_04 2 2 0 63
+  savanna/houses/savanna_small_house_1 0 17 0 -11
+  savanna/streets/turn_01 3 25 0 3
+  feature:pile_hay 0 13 0 21
+  plains/terminators/terminator_02 3 13 0 25
+  plains/terminators/terminator_02 0 8 0 21
+  savanna/houses/savanna_small_house_3 3 -37 0 21
+  savanna/streets/straight_02 0 -30 0 30
+  savanna/streets/straight_04 3 17 0 -16
+  savanna/houses/savanna_tannery_1 1 14 0 -25
+  savanna/streets/corner_01 2 -2 0 -21
+  savanna/savanna_lamp_post_01 2 -9 1 -16
+  plains/terminators/terminator_02 0 -13 0 -16
+  savanna/houses/savanna_small_house_2 3 -7 0 63
+  savanna/streets/straight_05 0 0 0 64
+  savanna/streets/corner_03 1 39 0 -7
+  savanna/houses/savanna_small_house_3 0 26 0 -14
+  savanna/houses/savanna_library_1 0 26 0 -4
+  savanna/houses/savanna_small_house_7 1 -21 0 30
+  savanna/houses/savanna_small_house_6 0 -27 0 37
+  savanna/streets/split_01 3 -32 0 53
+  savanna/streets/crossroad_05 1 -27 0 25
+  savanna/streets/straight_11 3 26 0 -16
+  savanna/houses/savanna_small_house_1 0 18 0 -25
+  plains/terminators/terminator_02 2 -1 0 -29
+  feature:pile_hay 0 -12 0 -24
+  savanna/savanna_lamp_post_01 1 -5 1 -25
+  feature:pile_hay 0 -10 0 -33
+  savanna/houses/savanna_small_house_6 0 3 0 69
+  savanna/streets/corner_03 2 2 0 84
+  savanna/streets/straight_11 0 37 0 -3
+  plains/terminators/terminator_03 0 -35 0 48
+  plains/terminators/terminator_02 3 -28 0 53
+  plains/terminators/terminator_02 0 -32 0 27
+  plains/terminators/terminator_01 2 -25 0 28
+  plains/terminators/terminator_03 1 -28 0 22
+  plains/terminators/terminator_03 2 45 0 -16
+  plains/terminators/terminator_03 0 -4 0 82
+  plains/terminators/terminator_04 3 37 0 17
+
+layout 68
+  savanna/town_centers/savanna_meeting_point_3 1 0 0 0
+  savanna/streets/straight_09 1 -11 0 -5
+  savanna/streets/split_01 2 -1 0 -1
+  savanna/streets/straight_05 0 -6 0 9
+  savanna/streets/straight_02 3 1 0 5
+  savanna/houses/savanna_weaponsmith_1 1 -12 0 -5
+  savanna/houses/savanna_small_house_1 2 -19 0 15
+  savanna/houses/savanna_small_house_2 2 -12 0 13
+  savanna/streets/straight_04 1 -27 0 6
+  plains/terminators/terminator_01 0 -10 0 -5
+  plains/terminators/terminator_02 2 -1 0 -5
+  savanna/houses/savanna_small_house_4 1 3 0 13
+  savanna/streets/turn_01 0 -11 0 26
+  savanna/houses/savanna_cartographer_1 3 5 1 2
+  savanna/streets/straight_04 1 25 0 3
+  savanna/houses/savanna_small_house_2 2 -27 0 15
+  savanna/streets/straight_04 1 -36 0 6
+  savanna/houses/savanna_cartographer_1 2 -4 1 36
+  savanna/houses/savanna_small_house_8 0 0 0 27
+  savanna/streets/crossroad_05 0 -4 0 37
+  savanna/streets/straight_09 1 41 0 -8
+  savanna/streets/straight_10 1 16 0 0
+  savanna/streets/crossroad_06 0 -49 0 5
+  savanna/houses/savanna_tannery_1 3 -44 0 15
+  feature:pile_hay 0 0 0 27
+  savanna/streets/split_02 2 8 0 50
+  savanna/streets/crossroad_04 2 -5 0 41
+  savanna/streets/crossroad_05 0 1 0 37
+  savanna/houses/savanna_animal_pen_3 2 34 -7 14
+  savanna/streets/straight_05 1 58 0 0
+  feature:pile_hay 0 28 0 3
+  savanna/houses/savanna_small_farm 0 35 -1 4
+  savanna/houses/savanna_large_farm_1 0 28 0 -7
+  savanna/streets/turn_01 3 -60 0 16
+  savanna/streets/crossroad_06 1 -45 0 10
+  savanna/streets/straight_02 0 -48 0 -11
+  savanna/houses/savanna_small_house_2 1 7 0 42
+  savanna/streets/crossroad_06 3 -3 0 55
+  savanna/streets/straight_02 1 -6 0 45
+  plains/terminators/terminator_03 3 -8 0 44
+  savanna/streets/crossroad_04 0 6 0 37
+  savanna/houses/savanna_butchers_shop_2 1 52 0 3
+  savanna/streets/straight_09 3 59 0 10
+  savanna/houses/savanna_small_house_3 0 -58 0 -1
+  savanna/houses/savanna_small_house_7 2 -52 0 15
+  savanna/streets/straight_11 3 -77 0 11
+  savanna/streets/crossroad_04 1 -45 0 15
+  savanna/houses/savanna_fletcher_house_1 1 -37 0 -11
+  savanna/streets/straight_05 2 -46 0 -12
+  feature:pile_hay 0 -1 0 53
+  savanna/streets/crossroad_06 1 1 0 56
+  plains/terminators/terminator_01 0 -5 0 52
+  savanna/streets/straight_08 1 17 0 52
+  savanna/streets/straight_06 3 -35 0 47
+  savanna/houses/savanna_cartographer_1 1 -13 1 48
+  plains/terminators/terminator_02 1 8 0 36
+  savanna/houses/savanna_small_house_3 0 67 0 -10
+  savanna/houses/savanna_medium_house_2 1 74 0 1
+  feature:pile_hay 0 62 0 1
+  plains/terminators/terminator_02 2 75 0 -2
+  plains/terminators/terminator_01 0 -79 0 9
+  plains/terminators/terminator_02 0 -50 0 17
+  plains/terminators/terminator_02 2 -44 0 17
+  savanna/terminators/terminator_05 3 -55 0 -29
+  plains/terminators/terminator_02 3 -1 0 61
+  plains/terminators/terminator_01 0 -5 0 57
+  savanna/terminators/terminator_05 0 18 0 45
+  plains/terminators/terminator_01 0 -37 0 39
+
+layout 110
+  savanna/town_centers/savanna_meeting_point_1 2 0 0 0
+  savanna/streets/straight_02 2 -6 0 16
+  savanna/streets/corner_03 1 4 0 -6
+  savanna/streets/straight_10 0 -9 0 -22
+  savanna/houses/savanna_cartographer_1 2 -9 1 10
+  savanna/streets/crossroad_04 3 -9 0 0
+  savanna/streets/straight_04 2 -6 0 25
+  savanna/streets/crossroad_04 1 5 0 -2
+  savanna/streets/straight_04 0 -6 0 -31
+  savanna/streets/corner_03 3 -13 0 -1
+  savanna/streets/crossroad_05 0 -9 0 12
+  savanna/streets/straight_06 2 -6 0 39
+  savanna/streets/straight_10 2 7 0 -3
+  savanna/streets/straight_10 1 16 0 -1
+  savanna/streets/straight_09 2 4 0 -32
+  savanna/houses/savanna_armorer_1 0 -3 0 -30
+  savanna/streets/crossroad_04 2 -10 0 16
+  savanna/streets/straight_06 1 9 0 13
+  savanna/streets/crossroad_02 2 -3 0 25
+  savanna/streets/straight_08 0 -14 0 40
+  savanna/savanna_lamp_post_01 3 -7 -1 27
+  savanna/streets/split_02 0 -4 0 -22
+  savanna/streets/crossroad_05 3 1 0 2
+  savanna/streets/straight_04 3 17 0 4
+  savanna/houses/savanna_small_house_3 3 -14 0 -34
+  savanna/savanna_lamp_post_01 2 -5 1 -35
+  savanna/streets/crossroad_05 2 -6 0 -48
+  savanna/houses/savanna_small_house_2 1 3 0 -41
+  savanna/streets/crossroad_06 3 -14 0 11
+  savanna/streets/corner_03 2 -11 0 20
+  savanna/streets/turn_01 1 20 0 11
+  savanna/savanna_lamp_post_01 3 -3 1 14
+  plains/terminators/terminator_02 0 -10 0 20
+  savanna/streets/crossroad_06 2 2 0 22
+  savanna/streets/crossroad_02 0 -17 0 30
+  savanna/streets/straight_11 2 -12 0 72
+  savanna/savanna_lamp_post_01 3 -8 1 44
+  plains/terminators/terminator_02 1 5 0 -23
+  savanna/streets/split_02 1 18 0 -28
+  savanna/streets/straight_04 0 5 0 -13
+  savanna/houses/savanna_cartographer_1 2 3 1 -14
+  savanna/streets/crossroad_05 0 1 0 3
+  savanna/streets/straight_06 3 3 0 4
+  savanna/streets/straight_05 3 26 0 4
+  savanna/streets/straight_11 3 -5 0 -49
+  savanna/streets/straight_11 3 -27 0 -49
+  savanna/streets/crossroad_05 1 -6 0 -57
+  savanna/savanna_lamp_post_01 3 -12 -9 9
+  savanna/streets/crossroad_04 2 -10 0 16
+  savanna/streets/crossroad_04 1 -5 0 7
+  savanna/streets/crossroad_06 0 -19 0 7
+  savanna/streets/straight_08 2 -11 0 6
+  savanna/streets/straight_10 3 -25 0 20
+  savanna/houses/savanna_small_house_8 1 19 0 22
+  savanna/streets/corner_03 3 6 0 21
+  savanna/streets/crossroad_05 1 25 0 15
+  savanna/streets/straight_10 2 4 0 17
+  savanna/streets/corner_03 1 6 0 19
+  savanna/streets/crossroad_06 1 2 0 23
+  savanna/streets/straight_09 3 -33 0 47
+  savanna/streets/split_01 2 -3 0 38
+  feature:pile_hay 0 -16 0 32
+  savanna/streets/straight_06 0 -14 0 16
+  savanna/houses/savanna_animal_pen_1 1 -15 1 56
+  plains/terminators/terminator_02 3 -13 0 73
+  savanna/streets/straight_06 0 -14 0 42
+  savanna/houses/savanna_cartographer_1 3 10 1 -21
+  plains/terminators/terminator_02 3 14 0 -14
+  savanna/streets/crossroad_04 0 19 0 -21
+  plains/terminators/terminator_02 2 6 0 5
+  savanna/streets/crossroad_04 3 -4 0 7
+  savanna/streets/crossroad_06 0 1 0 8
+  feature:pile_hay 0 15 0 3
+  savanna/streets/straight_11 1 25 0 2
+  savanna/streets/straight_08 1 58 0 2
+  savanna/streets/straight_10 1 22 0 -51
+  savanna/houses/savanna_small_house_8 3 -18 0 -52
+  savanna/streets/corner_01 1 -28 0 -57
+  savanna/streets/crossroad_04 3 -10 0 -58
+  plains/terminators/terminator_02 2 -4 0 9
+  plains/terminators/terminator_04 0 -23 0 8
+  plains/terminators/terminator_02 2 -14 0 9
+  plains/terminators/terminator_04 1 -16 0 3
+  plains/terminators/terminator_04 3 -18 0 15
+  plains/terminators/terminator_03 2 -12 0 20
+  plains/terminators/terminator_03 0 -28 0 15
+  plains/terminators/terminator_03 1 8 0 15
+  plains/terminators/terminator_01 2 27 0 18
+  plains/terminators/terminator_04 3 22 0 23
+  plains/terminators/terminator_02 1 23 0 14
+  plains/terminators/terminator_01 1 4 0 5
+  plains/terminators/terminator_04 3 4 0 26
+  plains/terminators/terminator_01 1 1 0 21
+  plains/terminators/terminator_02 3 0 0 28
+  plains/terminators/terminator_02 2 3 0 25
+  savanna/terminators/terminator_05 2 -34 0 46
+  plains/terminators/terminator_03 2 -15 0 36
+  plains/terminators/terminator_02 3 -7 0 39
+  plains/terminators/terminator_02 0 -11 0 35
+  plains/terminators/terminator_04 3 -14 0 33
+  plains/terminators/terminator_04 1 22 0 -25
+  plains/terminators/terminator_03 3 20 0 -14
+  plains/terminators/terminator_02 0 -5 0 5
+  plains/terminators/terminator_04 3 -3 0 11
+  plains/terminators/terminator_03 2 8 0 11
+  plains/terminators/terminator_02 1 3 0 7
+  plains/terminators/terminator_04 2 62 0 4
+  plains/terminators/terminator_03 0 40 0 2
+  plains/terminators/terminator_03 2 25 0 -46
+  plains/terminators/terminator_04 1 -35 0 -61
+
+layout 74
+  savanna/town_centers/savanna_meeting_point_1 2 0 0 0
+  savanna/streets/straight_10 1 11 0 -6
+  savanna/streets/straight_04 2 -6 0 9
+  savanna/streets/straight_09 2 1 0 -12
+  savanna/streets/crossroad_06 2 0 0 -3
+  savanna/streets/straight_08 3 12 0 -1
+  savanna/streets/straight_09 0 -16 0 10
+  savanna/streets/straight_08 2 -6 0 0
+  savanna/houses/savanna_cartographer_1 2 -9 1 9
+  savanna/streets/straight_10 0 -12 0 -38
+  savanna/houses/savanna_small_house_8 2 -13 0 -20
+  savanna/savanna_lamp_post_01 3 -10 1 -25
+  savanna/houses/savanna_small_farm 1 -11 -1 -18
+  savanna/houses/savanna_small_house_6 0 -6 0 -20
+  feature:pile_hay 0 -2 0 -5
+  savanna/streets/corner_03 2 -1 0 1
+  feature:pile_hay 0 16 0 -7
+  savanna/streets/turn_01 3 28 0 4
+  feature:pile_hay 0 18 0 -6
+  savanna/streets/straight_02 2 -3 0 41
+  savanna/savanna_lamp_post_01 1 -5 1 23
+  savanna/houses/savanna_weaponsmith_1 2 3 0 19
+  savanna/houses/savanna_large_farm_1 3 -15 0 23
+  savanna/streets/crossroad_06 2 -6 0 -39
+  plains/terminators/terminator_02 0 -5 0 0
+  savanna/streets/straight_10 3 17 0 -1
+  savanna/houses/savanna_small_house_5 1 35 0 -13
+  savanna/streets/straight_05 3 39 0 -4
+  savanna/houses/savanna_cartographer_1 2 -6 1 41
+  savanna/streets/turn_01 2 5 0 52
+  savanna/streets/split_01 2 -4 0 -44
+  savanna/streets/crossroad_04 1 -11 0 -43
+  savanna/streets/crossroad_04 1 -1 0 -43
+  savanna/streets/crossroad_02 0 56 0 -10
+  savanna/houses/savanna_cartographer_1 3 42 1 -7
+  savanna/streets/straight_10 2 0 0 63
+  savanna/streets/crossroad_04 2 -2 0 41
+  savanna/houses/savanna_cartographer_1 2 -6 1 52
+  savanna/streets/straight_08 3 -27 0 -46
+  savanna/streets/crossroad_03 1 -16 0 -43
+  plains/terminators/terminator_02 1 -13 0 -44
+  savanna/streets/straight_06 1 13 0 -42
+  savanna/streets/straight_10 0 -4 0 -54
+  savanna/streets/crossroad_06 2 62 0 -11
+  savanna/streets/crossroad_05 2 62 0 4
+  feature:pile_hay 0 57 0 -8
+  savanna/streets/straight_04 1 71 0 -6
+  feature:pile_hay 0 59 0 -4
+  savanna/streets/straight_04 0 -5 0 64
+  savanna/streets/crossroad_02 1 8 0 35
+  savanna/streets/crossroad_07 1 -28 0 -60
+  savanna/streets/split_02 0 -45 0 -36
+  savanna/houses/savanna_armorer_1 0 -22 0 -36
+  plains/terminators/terminator_02 1 -24 0 -44
+  savanna/streets/straight_10 2 -23 0 -17
+  savanna/savanna_lamp_post_01 2 9 1 -36
+  savanna/streets/straight_06 3 14 0 -28
+  savanna/streets/straight_11 0 -1 0 -71
+  plains/terminators/terminator_02 1 60 0 -16
+  plains/terminators/terminator_01 2 64 0 -12
+  plains/terminators/terminator_02 0 57 0 -13
+  plains/terminators/terminator_02 3 60 0 5
+  plains/terminators/terminator_02 0 57 0 2
+  plains/terminators/terminator_01 2 73 0 -4
+  plains/terminators/terminator_01 3 -5 0 74
+  plains/terminators/terminator_04 1 4 0 31
+  plains/terminators/terminator_01 2 10 0 40
+  plains/terminators/terminator_03 3 -36 0 -43
+  plains/terminators/terminator_02 0 -42 0 -52
+  plains/terminators/terminator_02 3 -35 0 -27
+  plains/terminators/terminator_03 1 -35 0 -39
+  plains/terminators/terminator_03 3 -28 0 -14
+  plains/terminators/terminator_02 2 28 0 -29
+  plains/terminators/terminator_04 1 1 0 -75
+

@@ -27,6 +27,7 @@ pub mod nether_bastion;
 pub mod nether_fortress;
 pub mod end_city;
 pub mod stronghold;
+pub mod village;
 pub mod the_end;
 pub mod noise;
 pub mod ocean;
@@ -192,6 +193,9 @@ pub enum WorldEvent {
     /// Ракета фейерверка взорвалась: событие сущности 17 тем, кто её видит
     /// (firework.rs).
     RocketBlast { entity_id: i32 },
+    /// Брошено око Края: оригинал показывает его сразу, раньше звука броска
+    /// (чёрный ящик, eye-of-ender-far: появление, предмет, звук).
+    EyeLaunch { entity_id: i32 },
     /// Метка «здесь слежение рассылает брошенные зелья и облака» (thrown.rs):
     /// `early` — в начале их хода (облака, которые слежение видит на такт
     /// позже), иначе — в конце.
@@ -572,6 +576,7 @@ impl Chunk {
         stronghold::build(generator, &mut chunk, chunk_x, chunk_z);
         generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
+        village::build(generator, &mut chunk, chunk_x, chunk_z);
         ocean::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         cave_biomes::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns, grid.as_ref());
 
@@ -628,6 +633,14 @@ impl Chunk {
 
         if over || unpack(*place) == AIR {
             *place = pack(state);
+        }
+    }
+
+    /// Хранилище, сложенное генерацией (сундук постройки с добычей):
+    /// x, z — внутри чанка.
+    fn put_generated_container(&mut self, x: i32, y: i32, z: i32, container: containers::Container) {
+        if (0..CHUNK_SIZE).contains(&x) && (0..CHUNK_SIZE).contains(&z) {
+            self.containers.insert((x, y, z), container);
         }
     }
 
@@ -1828,6 +1841,10 @@ impl World {
     /// Точка такта, где слежение рассылает брошенные зелья и облака.
     pub fn note_rocket_blast(&mut self, entity_id: i32) {
         self.events.push(WorldEvent::RocketBlast { entity_id });
+    }
+
+    pub fn note_eye_launch(&mut self, entity_id: i32) {
+        self.events.push(WorldEvent::EyeLaunch { entity_id });
     }
 
     pub fn note_thrown_tracker(&mut self, early: bool) {
@@ -3213,6 +3230,11 @@ impl World {
             return stronghold::nearest(terrain, chunk_x, chunk_z);
         }
 
+        // Деревни — по областям 34×34 чанка (village.rs).
+        if let (Generator::Normal(terrain), Some(kind)) = (&*self.generator, name.strip_prefix("village_").and_then(|kind| village::Kind::ALL.into_iter().find(|known| known.name() == kind))) {
+            return village::nearest(terrain, kind, chunk_x, chunk_z, regions.max(1) * 27 / village::SPACING + 1);
+        }
+
         let (size, start): (i32, Start<'_>) = match (&*self.generator, name) {
             (Generator::Nether(nether), "fortress") => (27, Box::new(|x, z| nether.fortress_start(x, z))),
             (Generator::Nether(nether), "bastion_remnant") => (27, Box::new(|x, z| nether.bastion_start(x, z))),
@@ -3248,6 +3270,30 @@ impl World {
         }
 
         best
+    }
+
+    /// Куда зовёт око Края из точки (x, z): угол чанка старта ближайшей
+    /// крепости (вики, Eye of Ender: «chunk coordinates 0, ~, 0») на высоте
+    /// верха её винтовой лестницы [проверить высоту: оригинал зовёт вниз
+    /// всякий раз, как крепость ближе 12 блоков, eye-of-ender-near]. Для
+    /// чёрного ящика в ровном мире крепость задаётся переменной окружения
+    /// `MCSA_STRONGHOLD_AT=x,z` (ровный мир оригинала на 25566 без построек,
+    /// а полёт снимается со своей копии оригинала — eye-of-ender-far).
+    pub fn stronghold_target(&self, x: f64, z: f64) -> Option<(f64, f64, f64)> {
+        if let Ok(text) = std::env::var("MCSA_STRONGHOLD_AT") {
+            let numbers: Vec<f64> = text.split(',').filter_map(|part| part.trim().parse().ok()).collect();
+
+            if let [sx, sz] = numbers[..] {
+                return Some((sx, -20.0, sz));
+            }
+        }
+
+        let Generator::Normal(terrain) = &*self.generator else {
+            return None;
+        };
+        let (chunk_x, chunk_z) = stronghold::nearest(terrain, (x.floor() as i32).div_euclid(16), (z.floor() as i32).div_euclid(16))?;
+
+        Some((f64::from(chunk_x * 16), f64::from(stronghold::entrance_y(terrain.seed(), chunk_x, chunk_z)), f64::from(chunk_z * 16)))
     }
 
     /// Ставит биом клеткам 4×4×4 в загруженных чанках (`fillbiome`): только

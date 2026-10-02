@@ -58,7 +58,12 @@ const rel = (p) => [p.x - ORIGIN.x, p.y - ORIGIN.y, p.z - ORIGIN.z];
 // Ракеты взлетают выше площадки: их пишем, пока они над ней (до 64 ввысь).
 const highPad = (p) => p && Math.abs(p.x - ORIGIN.x) <= PAD && p.y - ORIGIN.y >= -PAD && p.y - ORIGIN.y <= 64 && Math.abs(p.z - ORIGIN.z) <= PAD;
 const trackedAt = (id) => (entKind.get(id) === 'firework_rocket' ? highPad : inPad)(cartAt.get(id));
-const inPad = (p) => Math.abs(p.x - ORIGIN.x) <= PAD && Math.abs(p.y - ORIGIN.y) <= PAD && Math.abs(p.z - ORIGIN.z) <= PAD;
+// `pad_up` в сценарии — площадка выше 8 блоков (око Края взлетает на ~8 над
+// глазами робота и падает предметом оттуда же).
+// `pad_wide` — шире 8 блоков вбок (око улетает на ~12).
+const PAD_UP = scenario.pad_up || PAD;
+const PAD_W = scenario.pad_wide || PAD;
+const inPad = (p) => Math.abs(p.x - ORIGIN.x) <= PAD_W && p.y - ORIGIN.y >= -PAD && p.y - ORIGIN.y <= PAD_UP && Math.abs(p.z - ORIGIN.z) <= PAD_W;
 
 const bot = mineflayer.createBot({ host, port, username: USER, version: '26.1', auth: 'offline', respawn: !scenario.manual_respawn });
 // Второй робот (`"second": true` в сценарии): нужен драке игроков. Заходит
@@ -203,7 +208,7 @@ const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
 // Край: кристалл, дракон, его огненный шар и облако дыхания — пишутся как мобы.
-const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket']);
+const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket', 'eye_of_ender']);
 const padDrops = new Set();
 const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {

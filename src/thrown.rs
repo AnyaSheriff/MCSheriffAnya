@@ -300,6 +300,9 @@ pub struct Thrown {
     /// Ракеты фейерверка (firework.rs) и их взрывы последнего такта.
     pub rockets: Vec<crate::firework::Rocket>,
     pub blasts: Vec<crate::firework::Blast>,
+    /// Брошенные оки Края (ender_eye.rs) и пропавшие в последнем такте.
+    pub eyes: Vec<crate::ender_eye::Eye>,
+    pub eyes_gone: Vec<crate::ender_eye::Gone>,
 }
 
 impl Thrown {
@@ -314,6 +317,8 @@ impl Thrown {
             || self.faded.iter().any(|c| c.dimension == dimension)
             || self.rockets.iter().any(|r| r.dimension == dimension)
             || self.blasts.iter().any(|b| b.dimension == dimension)
+            || self.eyes.iter().any(|e| e.dimension == dimension)
+            || self.eyes_gone.iter().any(|g| g.last.dimension == dimension)
     }
 }
 
@@ -501,6 +506,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
     thrown.impacts.retain(|impact| impact.dimension != dimension);
     thrown.blasts.retain(|blast| blast.dimension != dimension);
+    thrown.eyes_gone.retain(|gone| gone.last.dimension != dimension);
 
     // Дракон стреляет и дышит (mob/dragon.rs ставит заказ).
     let mut shots = Vec::new();
@@ -777,6 +783,38 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     for strike in strikes {
         world.note_player_strike(strike);
     }
+
+    // Оки Края: полёт, через 80 тактов — предмет (80 %) или раскол (вики, Eye
+    // of Ender; чёрный ящик, eye-of-ender-far).
+    let mut eyes_gone = Vec::new();
+
+    thrown.eyes.retain_mut(|eye| {
+        if eye.dimension != dimension || !world.has_chunk((eye.x.floor() as i32).div_euclid(16), (eye.z.floor() as i32).div_euclid(16)) {
+            return true;
+        }
+
+        if !eye.step() {
+            return true;
+        }
+
+        let shattered = world.random_unit() >= crate::ender_eye::SURVIVE;
+
+        eyes_gone.push(crate::ender_eye::Gone { last: eye.clone(), shattered });
+        false
+    });
+
+    // Упавшее око — предмет с обычным толчком выпавшего: вбок до ±0,1,
+    // вверх 0,2 (eye-of-ender-far: скорость 0,058/0,200/0,076).
+    for gone in &eyes_gone {
+        if !gone.shattered {
+            let eye = &gone.last;
+            let velocity = (f64::from(world.random_unit()) * 0.2 - 0.1, 0.2, f64::from(world.random_unit()) * 0.2 - 0.1);
+
+            items.drop_item(shared.next_entity_id(), eye.stack, (eye.x, eye.y, eye.z), velocity, 0);
+        }
+    }
+
+    thrown.eyes_gone.extend(eyes_gone);
 
     // Облака: ожидание, таяние, наложение раз в 5 тактов [проверить период].
     let mut faded = Vec::new();

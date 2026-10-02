@@ -4001,6 +4001,7 @@ async fn send_pending_world_events(
             WorldEvent::ArrowTracker => bow::send_arrow_ticks(stream, shared, player).await?,
             WorldEvent::ThrownTracker { early } => thrown::send_thrown_ticks(stream, shared, player, *early).await?,
             WorldEvent::RocketBlast { entity_id } => thrown::send_rocket_blast(stream, player, *entity_id).await?,
+            WorldEvent::EyeLaunch { entity_id } => thrown::send_eye_launch(stream, shared, player, *entity_id).await?,
             // Эффект от зелья или облака: пакет эффекта сразу, частицы и
             // атрибуты — на такт позже, частицы даже без перемен (чёрный ящик,
             // splash-potion-feet: Effect на +2, Metadata 10 и Attributes на +3;
@@ -8143,6 +8144,16 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
 
     // Взрывное или оседающее зелье: бросок (thrown.rs).
     if thrown::throw_potion(shared, player, hand) {
+        return Some(answer);
+    }
+
+    // Око Края: летит к крепости (ender_eye.rs); рука — «использует» и без
+    // броска.
+    let thrown_eye = thrown::throw_eye(shared, player, hand);
+
+    vitals::start_using_eye(player, hand, *shared.ticks.borrow());
+
+    if thrown_eye {
         return Some(answer);
     }
 

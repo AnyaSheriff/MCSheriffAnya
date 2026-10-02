@@ -34,6 +34,8 @@ mod mob;
 mod arrow;
 mod thrown;
 mod firework;
+mod ender_eye;
+mod loot;
 mod playerdata;
 mod redstone;
 mod tnt;

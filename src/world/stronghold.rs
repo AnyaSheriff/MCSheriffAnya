@@ -507,7 +507,6 @@ struct Template {
     cells: Vec<Cell>,
     /// Палитра по сторонам и её тексты (по тексту ищутся рамки портала).
     states: [Vec<i32>; 4],
-    #[cfg_attr(not(test), allow(dead_code))]
     texts: Vec<String>,
 }
 
@@ -757,6 +756,61 @@ pub fn paint(seed: i64, pieces: &[Placed], chunk: [i32; 4], put: &mut dyn FnMut(
     }
 }
 
+/// Что в куске требует своих данных: сундук с добычей или рассадник.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Special {
+    /// Сундук с добычей таблицы: коридор с сундуком — алтарь, кладовая
+    /// большой комнаты, библиотека (вики, Stronghold: «Loot»).
+    Chest(crate::loot::Table),
+    /// Рассадник чешуйниц портальной комнаты.
+    Spawner,
+}
+
+/// Сундуки и рассадники кусков в пределах чанка `chunk` (мировые x, z).
+pub fn specials(pieces: &[Placed], chunk: [i32; 4], found: &mut dyn FnMut((i32, i32, i32), Special)) {
+    let templates = templates();
+
+    for piece in pieces {
+        let b = &piece.bounds;
+
+        if b[0] > chunk[2] || chunk[0] > b[3] || b[2] > chunk[3] || chunk[1] > b[5] {
+            continue;
+        }
+
+        let template = &templates.pieces[piece.template];
+        let table = match piece.kind {
+            Kind::ChestCorridor => crate::loot::Table::StrongholdCorridor,
+            Kind::RoomCrossing => crate::loot::Table::StrongholdCrossing,
+            Kind::Library => crate::loot::Table::StrongholdLibrary,
+            Kind::PortalRoom => crate::loot::Table::StrongholdCorridor,
+            _ => continue,
+        };
+
+        for y in 0..template.height {
+            for bb in 0..template.length {
+                for a in 0..template.width {
+                    let Cell::Block(index) = template.cell(a, y, bb) else {
+                        continue;
+                    };
+                    let text = &template.texts[index as usize];
+                    let special = if text.starts_with("chest[") {
+                        Special::Chest(table)
+                    } else if text == "spawner" {
+                        Special::Spawner
+                    } else {
+                        continue;
+                    };
+                    let (x, wy, z) = piece.world(a, y, bb);
+
+                    if x >= chunk[0] && x <= chunk[2] && z >= chunk[1] && z <= chunk[3] {
+                        found((x, wy, z), special);
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Суша ли под серединой чанка — туда тянется старт крепости (вики:
 /// #stronghold_biased_to — суша; у нас — всё, кроме океанов и рек).
 fn land(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> bool {
@@ -805,7 +859,23 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
         paint(seed, &pieces, [x0, z0, x0 + 15, z0 + 15], &mut |x, y, z, state| {
             chunk.put_generated(x - x0, y, z - z0, state, true);
         });
+
+        // Сундуки — с добычей, брошенной по месту сундука.
+        specials(&pieces, [x0, z0, x0 + 15, z0 + 15], &mut |(x, y, z), special| {
+            if let Special::Chest(table) = special {
+                let mut dice = crate::loot::Dice::new(scramble((seed as u64) ^ (x as u64).wrapping_mul(0x9E37_79B9) ^ (y as u64).wrapping_mul(0x85EB_CA6B) ^ (z as u64).wrapping_mul(0xC2B2_AE35) ^ 0x1007));
+                let mut chest = crate::containers::Container::new(crate::containers::Kind::Chest);
+
+                chest.slots = crate::loot::fill(table.pools(), chest.slots.len(), &mut dice);
+                chunk.put_generated_container(x - x0, y, z - z0, chest);
+            }
+        });
     }
+}
+
+/// Верх винтовой лестницы старта крепости (куда зовёт око Края).
+pub fn entrance_y(seed: i64, chunk_x: i32, chunk_z: i32) -> i32 {
+    plan_cached(seed, chunk_x, chunk_z).first().map_or(0, |start| start.bounds[4])
 }
 
 /// Ближайший к точке старт крепости (`locate`, око Края): чанк старта.
@@ -981,6 +1051,32 @@ mod tests {
         println!("око в рамке: {:.3}", share);
         assert!((0.04..0.18).contains(&share), "око в {:.3} рамок", share);
         assert!(bad.is_empty(), "{:?}", bad);
+    }
+
+    /// Сундуки — в коридоре с сундуком, кладовой и библиотеке (у высокой
+    /// два), рассадник — один, в портальной комнате.
+    #[test]
+    fn chests_and_the_spawner_are_found() {
+        let pieces = plan(1_234_567_890, 99, 30);
+        let (mut chests, mut spawners) = (0, 0);
+
+        specials(&pieces, [i32::MIN, i32::MIN, i32::MAX, i32::MAX], &mut |_, special| match special {
+            Special::Chest(table) => {
+                assert!(!table.pools().is_empty());
+                chests += 1;
+            }
+            Special::Spawner => spawners += 1,
+        });
+
+        let expected = pieces.iter().map(|piece| match piece.kind {
+            Kind::ChestCorridor => 1,
+            Kind::Library => if templates().pieces[piece.template].key.ends_with("Tall=1") { 2 } else { 1 },
+            Kind::RoomCrossing => usize::from(templates().pieces[piece.template].key.ends_with("Type=2")),
+            _ => 0,
+        }).sum::<usize>();
+
+        assert_eq!(spawners, 1);
+        assert_eq!(chests, expected);
     }
 
     /// Рамки портала в комнате смотрят внутрь кольца при любой стороне

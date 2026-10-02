@@ -1,0 +1,36 @@
+{
+ "track_mobs": true,
+ "track_self": true,
+ "inventory": true,
+ "item_components": true,
+ "blocks": [],
+ "setup": [
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "tp $(bot) $(0.5,0,0.5) 0 0",
+  "!wait 10",
+  "!stopfly",
+  "!look 0 0",
+  "give $(bot) minecraft:ender_eye 2",
+  "!hotbar 0",
+  "!wait 25"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  }
+ ],
+ "record_ticks": 30,
+ "cleanup": [
+  "kill @e[type=eye_of_ender,distance=..64]",
+  "kill @e[type=item,distance=..64]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "name": "eye-of-ender-none",
+ "about": "Око Края в мире без крепостей (общий оригинал: generate-structures=false, ровный мир): бросок не происходит, око остаётся в руке."
+}

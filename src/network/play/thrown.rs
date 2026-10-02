@@ -49,6 +49,9 @@ const CLOUD_SYNC: u32 = 60;
 #[derive(Clone, Copy, Debug)]
 pub(super) enum Shown {
     Flying { grid: (i64, i64, i64) },
+    /// Око Края: `fresh` — появление ушло при броске, слежение ещё не
+    /// присылало первого (нулевого) сдвига.
+    Eye { grid: (i64, i64, i64), fresh: bool },
     /// Облако: первый сдвиг уже ушёл, какие радиус и ожидание клиент знает.
     Cloud { started: bool, radius: f32, waiting: bool },
 }
@@ -105,6 +108,142 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
     }
 
     true
+}
+
+/// Раз во сколько тактов око Края сверяет место (eye-of-ender-far: скорость
+/// и сдвиг на +4, +8…).
+const EYE_SYNC: u32 = 4;
+
+/// Правая кнопка с оком Края в руке `hand`: бросок к ближайшей крепости.
+/// Нет крепости (ровный мир без построек) — ничего (чёрный ящик,
+/// eye-of-ender-none). Возвращает, был ли бросок.
+pub(super) fn throw_eye(shared: &Shared, player: &mut PlayerState, hand: i32) -> bool {
+    let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+    let Some(stack) = player.inventory.slot(slot) else {
+        return false;
+    };
+
+    if crate::combat::item_name(stack.item) != Some("ender_eye") || player.game_mode == GAME_MODE_SPECTATOR || player.vit.dead {
+        return false;
+    }
+
+    let dimension = player.dimension;
+    let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+    let Some(stronghold) = world.stronghold_target(player.x, player.z) else {
+        return false;
+    };
+    // Появляется на середине роста бросившего (eye-of-ender-far: +0,9).
+    let at = (player.x, player.y + if player.sneaking { 0.75 } else { 0.9 }, player.z);
+    let eye = crate::ender_eye::Eye::thrown(shared.next_entity_id(), dimension, stack.with_count(1), at, stronghold);
+    let entity_id = eye.entity_id;
+
+    shared.thrown.lock().expect("снаряды захвачены другим потоком").eyes.push(eye);
+
+    // Порядок оригинала: появление с предметом, звук броска (раздел
+    // «нейтральные», громкость 1, высота 0,4 / (0,8…1,2)), взмах руки
+    // (eye-of-ender-far; вики: «pitch 1⁄3-0.5»).
+    let pitch = 0.4 / (world.random_unit() * 0.4 + 0.8);
+
+    world.note_eye_launch(entity_id);
+    world.note_sound_neutral_at((player.x, player.y, player.z), "minecraft:entity.ender_eye.launch", 1.0, pitch);
+    world.note_animation(player.entity_id, 0);
+    drop(world);
+
+    if player.game_mode != GAME_MODE_CREATIVE {
+        player.inventory.set(slot, inventory::remainder(stack, stack.count - 1));
+        player.net.slot_changed(slot);
+    }
+
+    true
+}
+
+/// Появление брошенного ока и его предмет — сразу при броске.
+pub(super) async fn send_eye_launch(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, entity_id: i32) -> io::Result<()> {
+    let eye = shared.thrown.lock().expect("снаряды захвачены другим потоком").eyes.iter().find(|eye| eye.entity_id == entity_id).cloned();
+    let Some(eye) = eye else {
+        return Ok(());
+    };
+    let range = f64::from(shared.properties.view_distance.clamp(2, 10)) * 16.0;
+
+    if eye.dimension != player.dimension || (eye.x - player.x).abs() > range || (eye.z - player.z).abs() > range {
+        return Ok(());
+    }
+
+    send_eye_spawn(stream, &eye, eye.prev).await?;
+    player.seen_thrown.insert(entity_id, Shown::Eye { grid: grid_of(eye.prev.0), fresh: true });
+    Ok(())
+}
+
+/// Появление ока (без поворота, номер бросившего не шлётся — 0) и его
+/// предмет (свойство 8).
+async fn send_eye_spawn(stream: &mut Outgoing<'_>, eye: &crate::ender_eye::Eye, (at, velocity): crate::ender_eye::State) -> io::Result<()> {
+    let mut body = encode_varint(ADD_ENTITY);
+
+    body.extend_from_slice(&encode_varint(eye.entity_id));
+    body.extend_from_slice(&eye.uuid);
+    body.extend_from_slice(&encode_varint(crate::ender_eye::EYE_TYPE));
+    push_f64(&mut body, at.0);
+    push_f64(&mut body, at.1);
+    push_f64(&mut body, at.2);
+    types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
+    body.push(0);
+    body.push(0);
+    body.push(0);
+    body.extend_from_slice(&encode_varint(0));
+    write_body(stream, body).await?;
+    send_eye_item(stream, eye).await
+}
+
+async fn send_eye_item(stream: &mut Outgoing<'_>, eye: &crate::ender_eye::Eye) -> io::Result<()> {
+    let mut body = encode_varint(SET_ENTITY_DATA);
+
+    body.extend_from_slice(&encode_varint(eye.entity_id));
+    body.push(ITEM_PROPERTY);
+    body.extend_from_slice(&encode_varint(PROPERTY_SLOT));
+    push_slot(&mut body, Some(eye.stack));
+    body.push(PROPERTIES_END);
+    write_body(stream, body).await
+}
+
+/// Очередной такт слежения за оком: первый раз — нулевой сдвиг и предмет;
+/// раз в 4 такта — скорость и сдвиг без поворота к месту до хода.
+async fn update_eye(stream: &mut Outgoing<'_>, player: &mut PlayerState, eye: &crate::ender_eye::Eye) -> io::Result<()> {
+    match player.seen_thrown.get(&eye.entity_id).copied() {
+        None => {
+            // Подошёл позже броска: появление там, где око до хода [проверить].
+            send_eye_spawn(stream, eye, eye.prev).await?;
+            send_zero_move(stream, eye.entity_id).await?;
+            send_eye_item(stream, eye).await?;
+            player.seen_thrown.insert(eye.entity_id, Shown::Eye { grid: grid_of(eye.prev.0), fresh: false });
+        }
+        Some(Shown::Eye { grid, fresh: true }) => {
+            send_zero_move(stream, eye.entity_id).await?;
+            send_eye_item(stream, eye).await?;
+            player.seen_thrown.insert(eye.entity_id, Shown::Eye { grid, fresh: false });
+        }
+        Some(Shown::Eye { grid, fresh: false }) if eye.age > 1 && (eye.age - 1).is_multiple_of(EYE_SYNC) => {
+            let (at, velocity) = eye.prev;
+            let mut body = encode_varint(ENTITY_VELOCITY);
+
+            body.extend_from_slice(&encode_varint(eye.entity_id));
+            types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
+            write_body(stream, body).await?;
+
+            let next = grid_of(at);
+            let mut body = encode_varint(ENTITY_POSITION);
+
+            body.extend_from_slice(&encode_varint(eye.entity_id));
+            push_i16(&mut body, (next.0 - grid.0).clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16);
+            push_i16(&mut body, (next.1 - grid.1).clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16);
+            push_i16(&mut body, (next.2 - grid.2).clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16);
+            body.push(0);
+            write_body(stream, body).await?;
+            player.seen_thrown.insert(eye.entity_id, Shown::Eye { grid: next, fresh: false });
+        }
+        _ => {}
+    }
+
+    Ok(())
 }
 
 /// Ракета фейерверка в основной руке щёлкнута по блоку: пуск из точки
@@ -207,6 +346,15 @@ pub(super) fn fill_breath(shared: &Shared, player: &mut PlayerState, hand: i32) 
 /// начале хода: только облака, которые слежение видит на такт позже (их
 /// прошлый радиус, в том числе у только что истаявших).
 pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, early: bool) -> io::Result<()> {
+    let (eyes, eyes_gone) = {
+        let thrown = shared.thrown.lock().expect("снаряды захвачены другим потоком");
+        let dimension = player.dimension;
+
+        (
+            thrown.eyes.iter().filter(|e| e.dimension == dimension).cloned().collect::<Vec<_>>(),
+            thrown.eyes_gone.iter().filter(|g| g.last.dimension == dimension).cloned().collect::<Vec<_>>(),
+        )
+    };
     let (flying, clouds, impacts, faded, rockets, blasts) = {
         let thrown = shared.thrown.lock().expect("снаряды захвачены другим потоком");
         let dimension = player.dimension;
@@ -230,7 +378,8 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
     }
 
     let range = f64::from(shared.properties.view_distance.clamp(2, 10)) * 16.0;
-    let near = |at: (f64, f64, f64)| (at.0 - player.x).abs() <= range && (at.2 - player.z).abs() <= range;
+    let (viewer_x, viewer_z) = (player.x, player.z);
+    let near = |at: (f64, f64, f64)| (at.0 - viewer_x).abs() <= range && (at.2 - viewer_z).abs() <= range;
 
     // Расколы такта: облако, событие мира, уход снаряда (lingering-potion).
     for impact in &impacts {
@@ -258,6 +407,47 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
         }
     }
 
+    // Пропавшие оки: последняя сверка, звук, уход, у расколотого — событие
+    // 2003 (eye-of-ender-far).
+    for gone in &eyes_gone {
+        let eye = &gone.last;
+
+        if !player.seen_thrown.contains_key(&eye.entity_id) {
+            continue;
+        }
+
+        update_eye(stream, player, eye).await?;
+        player.seen_thrown.remove(&eye.entity_id);
+
+        // Звук — и у раскола, и у упавшего предметом (eye-of-ender-far:
+        // оба исхода со звуком).
+        let sound = crate::world::WorldSound {
+            x: eye.x.floor() as i32,
+            y: eye.y.floor() as i32,
+            z: eye.z.floor() as i32,
+            name: "minecraft:entity.ender_eye.death",
+            volume: 1.0,
+            pitch: 1.0,
+            exact: Some((eye.x, eye.y, eye.z)),
+            of_block: false,
+            of_player: false,
+            except: None,
+        };
+
+        send_sound(stream, &sound).await?;
+        send_remove_entity(stream, eye.entity_id).await?;
+
+        if gone.shattered {
+            let mut body = encode_varint(WORLD_EVENT);
+
+            push_i32(&mut body, 2003);
+            push_packed_position(&mut body, eye.x.floor() as i32, eye.y.floor() as i32, eye.z.floor() as i32);
+            push_i32(&mut body, 0);
+            body.push(0);
+            write_body(stream, body).await?;
+        }
+    }
+
     // Ушедшие без раскола (истаявшие облака, улетевшие снаряды).
     let present: HashSet<i32> = flying
         .iter()
@@ -265,6 +455,7 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
         .map(|f| f.entity_id)
         .chain(clouds.iter().filter(|c| near((c.x, c.y, c.z))).map(|c| c.entity_id))
         .chain(rockets.iter().filter(|r| near((r.x, r.y, r.z))).map(|r| r.entity_id))
+        .chain(eyes.iter().filter(|e| near((e.x, e.y, e.z))).map(|e| e.entity_id))
         .collect();
     // Взорвавшиеся в этом такте ракеты: сверка места такта — до ухода.
     for rocket in &blasts {
@@ -349,6 +540,10 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
 
     for rocket in rockets.iter().filter(|r| present.contains(&r.entity_id)) {
         update_rocket(stream, player, rocket).await?;
+    }
+
+    for eye in eyes.iter().filter(|e| present.contains(&e.entity_id)) {
+        update_eye(stream, player, eye).await?;
     }
 
     for cloud in clouds.iter().filter(|c| present.contains(&c.entity_id)) {

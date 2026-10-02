@@ -1,0 +1,2621 @@
+# Деревни (desert) — замер мира оригинала 26.1.2 (6 деревень, семя 1234567890),
+# tools/measure/village.py export. Образец: рамка в его собственном повороте
+# (a — x, b — z, y — от низа); «.» — рельеф остаётся, «_» — пусто. У образцов
+# terrain_matching (улицы) два слоя: верх рельефа столбца и над ним.
+# layout — раскладка одной деревни: образец, поворот (четверти по часовой),
+# начало куска от угла чанка старта по x и z и высота над землёй вокруг.
+
+template desert/camel_spawn 1 2 4 rigid 6
+layer 0
+  _
+  _
+layer 1
+  _
+  _
+layer 2
+  _
+  _
+layer 3
+  _
+  _
+
+template desert/desert_lamp_1 1 1 4 rigid 63
+  A cut_sandstone
+  B terracotta
+  C torch
+layer 0
+  A
+layer 1
+  A
+layer 2
+  B
+layer 3
+  C
+
+template desert/houses/desert_animal_pen_1 10 7 6 rigid 2
+  A smooth_sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  B cut_sandstone
+  C grass_block[snowy=false]
+  D dirt
+  E sandstone_wall[east=low,north=none,south=low,up=true,waterlogged=false,west=none]
+  F sandstone_wall[east=low,north=none,south=none,up=false,waterlogged=false,west=low]
+  G jungle_fence_gate[facing=south,in_wall=true,open=false,powered=false]
+  H sandstone_wall[east=none,north=none,south=low,up=true,waterlogged=false,west=low]
+  I sandstone_wall[east=none,north=low,south=low,up=false,waterlogged=false,west=none]
+  J smooth_sandstone_stairs[facing=north,half=bottom,shape=inner_left,waterlogged=true]
+  K smooth_sandstone_stairs[facing=east,half=bottom,shape=inner_left,waterlogged=true]
+  L sandstone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+  M sandstone_wall[east=none,north=low,south=low,up=true,waterlogged=false,west=none]
+  N smooth_sandstone_stairs[facing=west,half=bottom,shape=inner_left,waterlogged=true]
+  O smooth_sandstone_stairs[facing=south,half=bottom,shape=inner_left,waterlogged=true]
+  P sandstone_wall[east=low,north=low,south=none,up=true,waterlogged=false,west=none]
+  Q sandstone_wall[east=low,north=none,south=none,up=true,waterlogged=false,west=low]
+  R sandstone_wall[east=none,north=low,south=none,up=true,waterlogged=false,west=low]
+  S smooth_sandstone_slab[type=bottom,waterlogged=false]
+layer 0
+  ____AA____
+  BBBBBBBBBB
+  BCCCCCCCCB
+  BCCCC.CCCB
+  BCCCCDCCCB
+  BCCCCCCCCB
+  BBBBBBBBBB
+layer 1
+  __________
+  EFFFGGFFFH
+  I___.____I
+  I___JK_L_M
+  I___NO___I
+  I________I
+  PFFFFFFQFR
+layer 2
+  __________
+  __________
+  __________
+  _______L_L
+  __________
+  __________
+  _______L_L
+layer 3
+  __________
+  __________
+  __________
+  _______L_L
+  __________
+  __________
+  _______L_L
+layer 4
+  __________
+  __________
+  __________
+  _______SSS
+  _______SSS
+  _______SSS
+  _______SSS
+layer 5
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+
+template desert/houses/desert_cartographer_house_1 7 7 7 rigid 2
+  A potted_cactus
+  B cut_sandstone
+  C smooth_sandstone
+  D smooth_sandstone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  E smooth_sandstone_slab[type=bottom,waterlogged=false]
+  F smooth_sandstone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  G smooth_sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  H wall_torch[facing=south]
+  I jungle_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  J cartography_table
+  K jungle_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  L wall_torch[facing=north]
+  M jungle_door[facing=west,half=lower,hinge=left,open=false,powered=false]
+  N jungle_door[facing=west,half=upper,hinge=left,open=false,powered=false]
+layer 0
+  ABCCBCD
+  C___CCE
+  CCCCCCE
+  CCC_CCB
+  FC____C
+  _CC___C
+  _BCBCCB
+layer 1
+  _BCCB__
+  CCCCCG_
+  CCCCCC_
+  FCC_CCB
+  _CH___C
+  _CC___C
+  _BCBCCB
+layer 2
+  _BCCB__
+  _I__C__
+  _B_JCG_
+  _CGCCCB
+  _CCCCCC
+  _CCCCCC
+  _BCBCCB
+layer 3
+  _BCCB__
+  _K__C__
+  _B_LB__
+  _E_B__B
+  _E_M__C
+  _EAC__C
+  _BEBCCB
+layer 4
+  _BCCB__
+  _C__C__
+  _B__B__
+  ___B__B
+  ___N__C
+  ___C__C
+  ___BCCB
+layer 5
+  _BEEB__
+  _EEEE__
+  _BEEB__
+  ___BCCB
+  ___C_HC
+  ___C__C
+  ___BCCB
+layer 6
+  _______
+  _______
+  _______
+  ___BEEB
+  ___EEEE
+  ___EEEE
+  ___BEEB
+
+template desert/houses/desert_farm_1 5 7 6 rigid 11
+  A smooth_sandstone_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  B smooth_sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  C cut_sandstone
+  D smooth_sandstone_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  E smooth_sandstone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  F farmland[moisture=7]
+  G smooth_sandstone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  H water[level=0]
+  I dirt
+  J smooth_sandstone_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  K smooth_sandstone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  L smooth_sandstone_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  M wheat[age=0]
+  N wheat[age=7]
+  O composter[level=0]
+layer 0
+  ABCBD
+  EFFFG
+  CHHHC
+  CFFFC
+  CHHHC
+  EFIFG
+  JKCKL
+layer 1
+  _____
+  _.M._
+  _____
+  _N.._
+  _____
+  _MO._
+  _____
+layer 2
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+layer 3
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+layer 4
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+layer 5
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+  _____
+
+template desert/houses/desert_farm_2 7 10 7 rigid 3
+  A sand
+  B smooth_sandstone
+  C smooth_sandstone_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  D smooth_sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  E smooth_sandstone_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  F smooth_sandstone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G farmland[moisture=7]
+  H smooth_sandstone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I water[level=0]
+  J smooth_sandstone_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  K smooth_sandstone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  L smooth_sandstone_stairs[facing=north,half=bottom,shape=inner_right,waterlogged=false]
+  M smooth_sandstone_stairs[facing=north,half=bottom,shape=inner_left,waterlogged=false]
+  N smooth_sandstone_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  O smooth_sandstone_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+  P beetroots[age=0]
+  Q wheat[age=1]
+  R wheat[age=0]
+  S wheat[age=2]
+  T wheat[age=3]
+  U jungle_trapdoor[facing=north,half=bottom,open=true,powered=false,waterlogged=false]
+  V jungle_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  W composter[level=0]
+  X jungle_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  Y jungle_trapdoor[facing=south,half=bottom,open=true,powered=false,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AABBBAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  CDDDDDE
+  FGGGGGH
+  FGGGGGH
+  FGGIGGH
+  FGGGGGH
+  FGGGGGH
+  JKLBMKN
+  __FBH__
+  __FBH__
+  __JKO__
+layer 2
+  _______
+  _.PQQR_
+  _R.QR._
+  _RS_RR_
+  _QSQQQ_
+  _SRRRT_
+  _______
+  ___U___
+  __VWX__
+  ___Y___
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+
+template desert/houses/desert_fisher_1 8 11 6 rigid 1
+  A sand
+  B cut_sandstone
+  C smooth_sandstone
+  D terracotta
+  E water[level=0]
+  F barrel[facing=up,open=false]
+  G potted_dead_bush
+  H barrel[facing=south,open=false]
+  I potted_cactus
+  J jungle_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  K hay_block[axis=x]
+  L barrel[facing=east,open=false]
+  M barrel[facing=west,open=false]
+  N hay_block[axis=y]
+  O hay_block[axis=z]
+  P wall_torch[facing=south]
+  Q jungle_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  R wall_torch[facing=north]
+  S barrel[facing=north,open=false]
+  T smooth_sandstone_slab[type=top,waterlogged=false]
+  U wall_torch[facing=west]
+  V smooth_sandstone_slab[type=bottom,waterlogged=false]
+layer 0
+  AAAAAAAA
+  AAAAAAAA
+  ABBBAAAA
+  ABBBAAAA
+  AAAAACCA
+  ADAACCCA
+  ADAACCCA
+  CCCCCCCA
+  DAAACCCA
+  ADAAAAAA
+  ADDDDDDD
+layer 1
+  BBBBB___
+  BEEEB___
+  BEEEB___
+  BEEEBBCB
+  BBBBBCFC
+  G_HBC__C
+  __IC___C
+  ___J___C
+  _K_C_LMC
+  __NBCCCB
+  O_______
+layer 2
+  ___GB___
+  ________
+  I___B___
+  _____BCB
+  B_B_BCPC
+  __FBC__C
+  ___C___C
+  ___Q___C
+  ___C_RSC
+  __OBCCCB
+  ________
+layer 3
+  ____B___
+  ________
+  ____B___
+  _____BCB
+  B_B_BC_C
+  ___BC__T
+  ___C___C
+  __UC___T
+  ___C___C
+  ___BCTCB
+  ________
+layer 4
+  ____B___
+  ________
+  ____B___
+  _____BVB
+  B_B_BVVV
+  ___BVVVV
+  ___VVVVV
+  ___VVVVV
+  ___VVVVV
+  ___BVVVB
+  ________
+layer 5
+  ____B___
+  ____T___
+  ____B___
+  ____T___
+  BTBTB___
+  ________
+  ________
+  ________
+  ________
+  ________
+  D_______
+
+template desert/houses/desert_fletcher_house_1 6 12 12 rigid 1
+  A sand
+  B smooth_sandstone
+  C cut_sandstone
+  D fletching_table
+  E jungle_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  F smooth_sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  G jungle_door[facing=south,half=lower,hinge=right,open=false,powered=false]
+  H potted_cactus
+  I wall_torch[facing=west]
+  J jungle_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  K jungle_door[facing=south,half=upper,hinge=right,open=false,powered=false]
+  L ladder[facing=north,waterlogged=false]
+  M smooth_sandstone_slab[type=top,waterlogged=false]
+  N smooth_sandstone_slab[type=bottom,waterlogged=false]
+  O wall_torch[facing=north]
+  P smooth_sandstone_slab[type=double,waterlogged=false]
+  Q sandstone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+  R torch
+layer 0
+  AAAAAA
+  AABBBA
+  AABBBA
+  BBBBBA
+  AABBBA
+  AABBBA
+  AABBBA
+  AABBBA
+  AABBBA
+  AAABAA
+  AAABAA
+  AAAAAA
+layer 1
+  _CBBBC
+  _BBDBB
+  _B___B
+  _E___B
+  _B___B
+  _B___B
+  _B___B
+  _B___B
+  _CF_FC
+  __CGC_
+  __B_B_
+  __CBC_
+layer 2
+  _CBHBC
+  _B___B
+  IB__IB
+  _J___B
+  _B___H
+  _B___B
+  _H__IB
+  _B___B
+  _C___C
+  __CKC_
+  __BLB_
+  __CBC_
+layer 3
+  _CBMBC
+  _BMMMB
+  _BMMMB
+  _BMMMB
+  _BMMMM
+  _BMMMB
+  _MMMMB
+  _BMMMB
+  _CMMMC
+  __CBC_
+  __BLB_
+  __CBC_
+layer 4
+  _C_N_C
+  ______
+  _N___N
+  ______
+  _N___N
+  ______
+  _N___N
+  ______
+  _C___C
+  __CBC_
+  __BLB_
+  __CBC_
+layer 5
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  __CBC_
+  __BLB_
+  __CBC_
+layer 6
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  __CBC_
+  __BLB_
+  __CBC_
+layer 7
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  __CBC_
+  __BOB_
+  __CBC_
+layer 8
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  __CBC_
+  __B_B_
+  __CBC_
+layer 9
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  __CNC_
+  __NPN_
+  __CNC_
+layer 10
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ___Q__
+  ______
+layer 11
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ___R__
+  ______
+
+template desert/houses/desert_mason_1 7 8 5 rigid 1
+  A sand
+  B smooth_sandstone
+  C cut_sandstone
+  D lime_terracotta
+  E clay
+  F sandstone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+  G white_glazed_terracotta[facing=south]
+  H jungle_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  I jungle_door[facing=west,half=lower,hinge=left,open=false,powered=false]
+  J stonecutter[facing=north]
+  K smooth_sandstone_slab[type=bottom,waterlogged=false]
+  L wall_torch[facing=west]
+  M jungle_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  N jungle_door[facing=west,half=upper,hinge=left,open=false,powered=false]
+  O wall_torch[facing=south]
+  P wall_torch[facing=north]
+layer 0
+  AAAAAAA
+  AAABBBA
+  AAABBBA
+  BBBBBBA
+  BBBBBBA
+  AAABBBA
+  AAABBBA
+  AAAAAAA
+layer 1
+  __CBBBC
+  __BDDEB
+  F_CG__B
+  __H___B
+  __I___B
+  F_C___B
+  __B_J_B
+  __CBBBC
+layer 2
+  __CBKBC
+  __BD__B
+  FLC___K
+  __M___K
+  __N___K
+  FLC___K
+  __B___B
+  __CBKBC
+layer 3
+  __CBBBC
+  __B_O_B
+  F_C___B
+  __C___B
+  __C___B
+  F_C___B
+  __B_P_B
+  __CBBBC
+layer 4
+  __CKKKC
+  __KKKKK
+  KKKKKKK
+  KKKKKKK
+  KKKKKKK
+  KKKKKKK
+  __KKKKK
+  __CKKKC
+
+template desert/houses/desert_medium_house_1 6 7 6 rigid 1
+  A sand
+  B smooth_sandstone
+  C potted_cactus
+  D chest[facing=south,type=single,waterlogged=false]
+  E lime_bed[facing=east,occupied=false,part=foot]
+  F lime_bed[facing=east,occupied=false,part=head]
+  G short_dry_grass
+  H jungle_door[facing=west,half=lower,hinge=right,open=true,powered=false]
+  I terracotta
+  J sandstone_slab[type=bottom,waterlogged=false]
+  K wall_torch[facing=west]
+  L jungle_door[facing=west,half=upper,hinge=right,open=true,powered=false]
+  M sandstone_slab[type=top,waterlogged=false]
+  N wall_torch[facing=east]
+  O cut_sandstone
+layer 0
+  AAAAAA
+  AABBBA
+  AABBBA
+  ABBBBA
+  AABBBA
+  AABBBA
+  AAAAAA
+layer 1
+  _BBBBB
+  CBDEFB
+  _B___B
+  GH__IB
+  _B___B
+  _B_EFB
+  _BBBBB
+layer 2
+  _BBJBB
+  _J___B
+  KB___J
+  _L__CB
+  KB___J
+  _J___B
+  _BBJBB
+layer 3
+  _BBMBB
+  _M__KB
+  _B___M
+  _BN__B
+  _B___M
+  _M__KB
+  _BBMBB
+layer 4
+  _OOOOO
+  _OOOOO
+  _OOOOO
+  _OOOOO
+  _OOOOO
+  _OOOOO
+  _OOOOO
+layer 5
+  _J_J_J
+  ______
+  ______
+  _J___J
+  ______
+  ______
+  _J_J_J
+
+template desert/houses/desert_medium_house_2 11 7 9 rigid 1
+  A sand
+  B smooth_sandstone
+  C potted_cactus
+  D smooth_sandstone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E smooth_sandstone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  F jungle_door[facing=north,half=lower,hinge=right,open=false,powered=false]
+  G green_bed[facing=south,occupied=false,part=foot]
+  H green_bed[facing=south,occupied=false,part=head]
+  I jungle_door[facing=north,half=upper,hinge=right,open=false,powered=false]
+  J wall_torch[facing=east]
+  K ladder[facing=west,waterlogged=false]
+  L jungle_button[face=wall,facing=north,powered=false]
+  M jungle_button[face=wall,facing=west,powered=false]
+  N jungle_button[face=wall,facing=east,powered=false]
+  O lime_bed[facing=west,occupied=false,part=head]
+  P lime_bed[facing=west,occupied=false,part=foot]
+  Q chest[facing=north,type=single,waterlogged=false]
+  R jungle_button[face=wall,facing=south,powered=false]
+  S smooth_sandstone_slab[type=bottom,waterlogged=false]
+  T wall_torch[facing=south]
+  U wall_torch[facing=north]
+  V smooth_sandstone_slab[type=top,waterlogged=false]
+  W smooth_sandstone_slab[type=double,waterlogged=false]
+layer 0
+  AAAABAAAAAA
+  AAAABAAAAAA
+  AABBBAAAAAA
+  AABBBAAAAAA
+  AABBBAAAAAA
+  AAAAAAAAAAA
+  AAAAAAAAAAA
+layer 1
+  ___C_DBBBE_
+  _BBBFBBBBB_
+  _B___BBBBB_
+  _BG__BBBBB_
+  _BH__BBBBB_
+  _BBBBB_____
+  ___________
+layer 2
+  ______DBE__
+  _BBBIBBBBB_
+  _B___BBBBB_
+  _BJ__BBBBB_
+  _B__KBBBBB_
+  _BBBBB_____
+  ___________
+layer 3
+  _LLLLLL_LL_
+  MBBBBBBFBBN
+  MBBBBB___BN
+  MBBBBBOPQBN
+  MBBBKBBBBBN
+  MBBBBBRRRR_
+  _RRRRR_____
+layer 4
+  ___________
+  _SSSSBBIBB_
+  _S__CBT_TB_
+  _BBFBB___B_
+  _B___BBBBB_
+  _BBBBB_____
+  ___________
+layer 5
+  _______U___
+  _____BBBBB_
+  _____BVVVB_
+  _BBIBBVVVB_
+  _BJ__BBBBB_
+  _BBBBB_____
+  ___________
+layer 6
+  ___________
+  _____S___S_
+  _LLLLL_____
+  MBBBBBN____
+  MB___BS__S_
+  MBBBBBN____
+  _RRRRR_____
+layer 7
+  ___________
+  ___________
+  ___________
+  _WSSSW_____
+  _SSSSS_____
+  _WSSSW_____
+  ___________
+layer 8
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+
+template desert/houses/desert_shepherd_house_1 11 5 6 rigid 1
+  A sand
+  B water[level=0]
+  C smooth_sandstone
+  D cut_sandstone
+  E sandstone_wall[east=low,north=none,south=none,up=false,waterlogged=false,west=low]
+  F sandstone_wall[east=none,north=low,south=low,up=false,waterlogged=false,west=none]
+  G hay_block[axis=y]
+  H hay_block[axis=x]
+  I loom[facing=east]
+  J jungle_door[facing=south,half=lower,hinge=right,open=false,powered=false]
+  K sandstone_slab[type=bottom,waterlogged=false]
+  L jungle_door[facing=south,half=upper,hinge=right,open=false,powered=false]
+  M potted_cactus
+  N wall_torch[facing=west]
+  O sandstone_slab[type=top,waterlogged=false]
+  P wall_torch[facing=east]
+  Q wall_torch[facing=south]
+layer 0
+  AAAAAAAAAAA
+  ABAAAACCCAA
+  AAAACCCCCCA
+  AAAAAACAAAA
+  AAAAAAAAAAA
+layer 1
+  DEEEDCCCCCD
+  F___GH___IC
+  F________IC
+  DEEEDCJCCCD
+  ____D___D__
+layer 2
+  D___DCKCKCD
+  __________C
+  __________C
+  D___DCLCKCD
+  ____M___M__
+layer 3
+  D__NDCOCOCD
+  ____CP___NC
+  ____C____NC
+  D__NDCCCOCD
+  ______Q____
+layer 4
+  DKKKDCCCCCD
+  KKKKC_____C
+  KKKKC_____C
+  DKKKDCCCCCD
+  ___________
+layer 5
+  ____DKKKKKD
+  ____KKKKKKK
+  ____KKKKKKK
+  ____DKKKKKD
+  ___________
+
+template desert/houses/desert_small_house_1 6 5 6 rigid 10
+  A sand
+  B smooth_sandstone
+  C sandstone
+  D smooth_sandstone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E jungle_door[facing=west,half=lower,hinge=left,open=false,powered=false]
+  F cyan_bed[facing=east,occupied=false,part=foot]
+  G cyan_bed[facing=east,occupied=false,part=head]
+  H jungle_door[facing=west,half=upper,hinge=left,open=false,powered=false]
+  I potted_cactus
+  J wall_torch[facing=west]
+  K sandstone_slab[type=double,waterlogged=false]
+  L sandstone_slab[type=top,waterlogged=false]
+  M sandstone_slab[type=bottom,waterlogged=false]
+  N wall_torch[facing=east]
+layer 0
+  AAAAAA
+  AABBBA
+  BBBBBA
+  AABBBA
+  AAAAAA
+layer 1
+  _CBBBC
+  _B__DB
+  _E___C
+  _B_FGB
+  _CBBBC
+layer 2
+  _BBBBB
+  _B___B
+  _H___I
+  _B___B
+  _BBBBB
+layer 3
+  _BBBBB
+  _B___B
+  JK___L
+  _B___B
+  _BBBBB
+layer 4
+  _MBBBM
+  _B___B
+  _BN__B
+  _B___B
+  _MBBBM
+layer 5
+  __MMM_
+  _MMMMM
+  _MMMMM
+  _MMMMM
+  __MMM_
+
+template desert/houses/desert_small_house_2 7 5 6 rigid 8
+  A sand
+  B smooth_sandstone
+  C sandstone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+  D cut_sandstone
+  E green_carpet
+  F chiseled_sandstone
+  G jungle_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  H green_bed[facing=south,occupied=false,part=foot]
+  I green_bed[facing=south,occupied=false,part=head]
+  J torch
+  K jungle_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  L potted_cactus
+  M wall_torch[facing=west]
+  N smooth_sandstone_slab[type=top,waterlogged=false]
+  O smooth_sandstone_slab[type=bottom,waterlogged=false]
+  P smooth_sandstone_slab[type=double,waterlogged=false]
+layer 0
+  A.AAAAA
+  .AABBBA
+  BBBBBBA
+  A.ABBBA
+  A.AAAAA
+layer 1
+  C.DBBBD
+  __BE_FB
+  __G__HB
+  __BE_IB
+  C_DBBBD
+layer 2
+  C_DBBBD
+  __B__JB
+  __K___L
+  __B___B
+  C_DBBBD
+layer 3
+  C_DBBBD
+  __B___B
+  _MB___N
+  __B___B
+  C_DBBBD
+layer 4
+  OPDDDDD
+  ONB___D
+  ONB___D
+  ONB___D
+  OPDDDDD
+layer 5
+  _______
+  __OOOOO
+  __POOOP
+  __OOOOO
+  _______
+
+template desert/houses/desert_small_house_3 5 6 5 rigid 9
+  A sand
+  B smooth_sandstone
+  C cut_sandstone
+  D smooth_sandstone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  E green_bed[facing=north,occupied=false,part=head]
+  F green_bed[facing=north,occupied=false,part=foot]
+  G smooth_sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  H jungle_door[facing=south,half=lower,hinge=left,open=false,powered=false]
+  I potted_dead_bush
+  J wall_torch[facing=north]
+  K jungle_door[facing=south,half=upper,hinge=left,open=false,powered=false]
+  L smooth_sandstone_slab[type=top,waterlogged=false]
+  M smooth_sandstone_slab[type=double,waterlogged=false]
+  N jungle_button[face=wall,facing=south,powered=false]
+  O smooth_sandstone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  P smooth_sandstone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  Q smooth_sandstone_slab[type=bottom,waterlogged=false]
+layer 0
+  AAAAA
+  ABBBA
+  ABBBA
+  ABBBA
+  AABAA
+  AABAA
+layer 1
+  CBBBC
+  BD_EB
+  BC_FB
+  BG__B
+  CBHBC
+  _____
+layer 2
+  CBBBC
+  B___B
+  BI__B
+  BJ_JB
+  CBKBC
+  _____
+layer 3
+  CBLBC
+  BLLLB
+  LLLLL
+  BLLLB
+  CMBMC
+  _NNN_
+layer 4
+  OPQOP
+  _____
+  _____
+  _____
+  OPQOP
+  _____
+
+template desert/houses/desert_small_house_4 5 5 5 rigid 10
+  A sand
+  B smooth_sandstone
+  C terracotta
+  D cut_sandstone
+  E cyan_bed[facing=west,occupied=false,part=head]
+  F cyan_bed[facing=west,occupied=false,part=foot]
+  G chest[facing=south,type=single,waterlogged=false]
+  H jungle_door[facing=south,half=lower,hinge=left,open=false,powered=false]
+  I jungle_door[facing=south,half=upper,hinge=left,open=false,powered=false]
+  J smooth_sandstone_slab[type=top,waterlogged=false]
+  K wall_torch[facing=north]
+  L smooth_sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  M smooth_sandstone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  N smooth_sandstone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  O smooth_sandstone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  AAAAA
+  ABBBA
+  ABCBA
+  ABBBA
+  AABAA
+layer 1
+  DBBBD
+  BEFGB
+  B___B
+  B___B
+  DBHBD
+layer 2
+  DB_BD
+  B___B
+  B___B
+  B___B
+  DBIBD
+layer 3
+  DBJBD
+  B___B
+  B___B
+  B_K_B
+  DBBBD
+layer 4
+  CLCLC
+  MJJJN
+  CJJJC
+  MJJJN
+  COCOC
+
+template desert/houses/desert_small_house_5 5 6 6 rigid 6
+  A sand
+  B smooth_sandstone
+  C terracotta
+  D potted_cactus
+  E jungle_door[facing=north,half=lower,hinge=left,open=false,powered=false]
+  F cut_sandstone
+  G crafting_table
+  H lime_bed[facing=south,occupied=false,part=foot]
+  I lime_bed[facing=south,occupied=false,part=head]
+  J jungle_door[facing=north,half=upper,hinge=left,open=false,powered=false]
+  K jungle_button[face=wall,facing=north,powered=false]
+  L wall_torch[facing=north]
+layer 0
+  AABAA
+  AABAA
+  ACBCA
+  ABCBA
+  ACBCA
+  AAAAA
+layer 1
+  _D___
+  BBEBB
+  FG__F
+  BH__B
+  FI__F
+  BFBFB
+layer 2
+  _____
+  BBJBB
+  F___F
+  B___B
+  F___F
+  BFBFB
+layer 3
+  _KKK_
+  BBBBB
+  F___F
+  B___B
+  F_L_F
+  B_B_B
+layer 4
+  _____
+  FFFFF
+  FFFFF
+  FFFFF
+  FFFFF
+  FFFFF
+layer 5
+  _____
+  F_F_F
+  _____
+  F___F
+  _____
+  F_F_F
+
+template desert/houses/desert_small_house_6 6 5 18 rigid 3
+  A sand
+  B smooth_sandstone
+  C cut_sandstone
+  D smooth_sandstone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E jungle_door[facing=west,half=lower,hinge=right,open=true,powered=false]
+  F green_bed[facing=south,occupied=false,part=foot]
+  G green_bed[facing=south,occupied=false,part=head]
+  H wall_torch[facing=east]
+  I jungle_door[facing=west,half=upper,hinge=right,open=true,powered=false]
+  J smooth_sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  K wall_torch[facing=west]
+  L smooth_sandstone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  M smooth_sandstone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  N wall_torch[facing=south]
+  O wall_torch[facing=north]
+  P chest[facing=west,type=single,waterlogged=false]
+  Q torch
+layer 0
+  AAAAAA
+  AABBAA
+  BBBBAA
+  AABBAA
+  AAAAAA
+layer 1
+  _CBBBC
+  _B_DBB
+  _E_FBB
+  _B_GBB
+  _CBBBC
+layer 2
+  _CBBBC
+  _BH__B
+  _I__JB
+  _B__BB
+  _CBBBC
+layer 3
+  _CBBBC
+  _B___B
+  KC___B
+  _BBL_B
+  _CBBBC
+layer 4
+  _CBBBC
+  _BB__B
+  _BM__B
+  _B__KB
+  _CBBBC
+layer 5
+  _CBBBC
+  _B_DBB
+  ___B_B
+  _B___B
+  _CBBBC
+layer 6
+  _CBBBC
+  _B___B
+  _B__JB
+  _B__BB
+  _CBBBC
+layer 7
+  _CBBBC
+  _B__NB
+  _C___B
+  _BBL_B
+  _CBBBC
+layer 8
+  _CBBBC
+  _BB__B
+  _BM__B
+  _B___B
+  _CBBBC
+layer 9
+  _CBBBC
+  _B_DBB
+  _____B
+  _BO__B
+  _CBBBC
+layer 10
+  _CBBBC
+  _B___B
+  _B__JB
+  _B__BB
+  _CBBBC
+layer 11
+  _CBBBC
+  _B___B
+  _C___B
+  _BBL_B
+  _CBBBC
+layer 12
+  _CBBBC
+  _BB__B
+  _BMB_B
+  _B__OB
+  _CBBBC
+layer 13
+  _CBBBC
+  _B_DBB
+  ___P_B
+  _B___B
+  _CBBBC
+layer 14
+  _CBBBC
+  _B___B
+  _B__JB
+  _B___B
+  _CBBBC
+layer 15
+  _CCCCC
+  _C___C
+  _CCC_C
+  _CCCJC
+  _CCCCC
+layer 16
+  _C_C_C
+  ______
+  _C___C
+  ______
+  _C_C_C
+layer 17
+  _Q___Q
+  ______
+  ______
+  ______
+  _Q___Q
+
+template desert/houses/desert_small_house_7 8 7 5 rigid 2
+  A sand
+  B smooth_sandstone
+  C sandstone_wall[east=low,north=none,south=none,up=true,waterlogged=false,west=none]
+  D sandstone_wall[east=low,north=none,south=none,up=false,waterlogged=false,west=low]
+  E sandstone_wall[east=low,north=none,south=none,up=true,waterlogged=false,west=low]
+  F jungle_door[facing=west,half=lower,hinge=left,open=false,powered=false]
+  G smooth_sandstone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  H sandstone_wall[east=low,north=none,south=low,up=true,waterlogged=false,west=none]
+  I cut_sandstone
+  J sandstone_wall[east=none,north=low,south=low,up=false,waterlogged=false,west=none]
+  K smooth_sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  L sandstone_wall[east=none,north=low,south=low,up=true,waterlogged=false,west=none]
+  M cactus[age=0]
+  N jungle_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  O lime_bed[facing=south,occupied=false,part=foot]
+  P lime_bed[facing=south,occupied=false,part=head]
+  Q sandstone_wall[east=low,north=low,south=none,up=true,waterlogged=false,west=none]
+  R torch
+  S smooth_sandstone_slab[type=bottom,waterlogged=false]
+  T jungle_door[facing=west,half=upper,hinge=left,open=false,powered=false]
+  U potted_dead_bush
+  V jungle_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  W smooth_sandstone_slab[type=top,waterlogged=false]
+layer 0
+  AAAAAAAA
+  BBBBBBBA
+  AAAAABBA
+  A...ABBA
+  A.A.BBBA
+  A...ABBA
+  AAAAAAAA
+layer 1
+  CDEDBBBB
+  ____F_GB
+  HDEDB_IB
+  J___B_KB
+  L_M_N_OB
+  J___B_PB
+  QDEDBBBB
+layer 2
+  __R_BSSB
+  ____T__B
+  __R_B_RS
+  ____B__B
+  U_M_V__S
+  ____B__B
+  __U_BSSB
+layer 3
+  ____BBBB
+  ____BWWB
+  ____BWWB
+  ____BWWB
+  __M_BWWB
+  ____BWWB
+  ____BBBB
+layer 4
+  ____S__S
+  ________
+  ____S__S
+  ________
+  ____S__S
+  ________
+  ____S__S
+
+template desert/houses/desert_small_house_8 5 5 5 rigid 5
+  A sand
+  B smooth_sandstone
+  C terracotta
+  D jungle_door[facing=north,half=lower,hinge=right,open=false,powered=false]
+  E sandstone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  F lime_bed[facing=north,occupied=false,part=head]
+  G lime_bed[facing=north,occupied=false,part=foot]
+  H sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  I crafting_table
+  J jungle_door[facing=north,half=upper,hinge=right,open=false,powered=false]
+  K sea_pickle[pickles=2,waterlogged=false]
+  L smooth_sandstone_slab[type=double,waterlogged=false]
+  M wall_torch[facing=south]
+  N smooth_sandstone_slab[type=top,waterlogged=false]
+  O sandstone_slab[type=bottom,waterlogged=false]
+  P smooth_sandstone_slab[type=bottom,waterlogged=false]
+layer 0
+  AABAA
+  ABBBA
+  ABBBA
+  ABBBA
+  AAAAA
+layer 1
+  CBDBC
+  BE_FB
+  BC_GB
+  BH_IB
+  CBBBC
+layer 2
+  CBJBC
+  B___B
+  BK__L
+  B___B
+  CBLBC
+layer 3
+  CBBBC
+  B_M_B
+  N___N
+  B___B
+  CBNBC
+layer 4
+  COOOC
+  OPPPO
+  OPPPO
+  OPPPO
+  COOOC
+
+template desert/houses/desert_tannery_1 7 6 10 rigid 4
+  A sand
+  B smooth_sandstone
+  C jungle_door[facing=north,half=lower,hinge=right,open=false,powered=false]
+  D jungle_door[facing=north,half=lower,hinge=left,open=false,powered=false]
+  E water_cauldron[level=3]
+  F smooth_sandstone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G wall_torch[facing=north]
+  H jungle_door[facing=north,half=upper,hinge=right,open=false,powered=false]
+  I jungle_door[facing=north,half=upper,hinge=left,open=false,powered=false]
+  J wall_torch[facing=east]
+  K cut_sandstone
+  L potted_cactus
+  M jungle_door[facing=west,half=lower,hinge=left,open=true,powered=false]
+  N smooth_sandstone_slab[type=bottom,waterlogged=false]
+  O jungle_door[facing=west,half=upper,hinge=left,open=true,powered=false]
+  P wall_torch[facing=west]
+  Q sandstone_slab[type=top,waterlogged=false]
+  R terracotta
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BBBBBBB
+  ABBBBBA
+  ABABABA
+  ABBBBBA
+  ABBBAAA
+  AAAAAAA
+layer 2
+  B_B_B_B
+  B_____B
+  BCBDBDB
+  B_____B
+  BE_FBBB
+  BBBBBBB
+layer 3
+  B_B_B_B
+  B_G_G_B
+  BHBIBIB
+  B_____B
+  BJ__FBB
+  BBBBBBB
+layer 4
+  KKKKKKK
+  BBBBBBK
+  BBBBBBK
+  BBBBBBK
+  BB___FK
+  KKKKKKK
+layer 5
+  _____L_
+  _L_____
+  BBMBCBB
+  B_____B
+  B_____B
+  BNBNBNB
+layer 6
+  _______
+  _G___G_
+  BBOBHBB
+  BJ___PB
+  B_____B
+  BQBQBQB
+layer 7
+  _______
+  _______
+  KKKKKKK
+  B_____K
+  B_____K
+  BBBBBBK
+layer 8
+  _______
+  _______
+  RBRBRBR
+  BBBBBBB
+  BBBBBBB
+  RBRBRBR
+layer 9
+  _______
+  _______
+  _RBRBR_
+  _B___B_
+  _B___B_
+  _RBRBR_
+
+template desert/houses/desert_temple_2 10 12 6 rigid 1
+  A sand
+  B smooth_sandstone
+  C lime_glazed_terracotta[facing=north]
+  D lime_glazed_terracotta[facing=east]
+  E lime_glazed_terracotta[facing=west]
+  F lime_glazed_terracotta[facing=south]
+  G smooth_sandstone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  H brewing_stand[has_bottle_0=false,has_bottle_1=false,has_bottle_2=false]
+  I potted_cactus
+  J smooth_sandstone_slab[type=bottom,waterlogged=false]
+  K sandstone_slab[type=bottom,waterlogged=false]
+  L smooth_sandstone_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  M smooth_sandstone_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  N sandstone_slab[type=top,waterlogged=false]
+  O smooth_sandstone_slab[type=top,waterlogged=false]
+  P wall_torch[facing=west]
+  Q wall_torch[facing=south]
+  R wall_torch[facing=north]
+  S smooth_sandstone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  T smooth_sandstone_slab[type=double,waterlogged=false]
+  U smooth_sandstone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAAAAA
+  AABBBAAAAA
+  AABBBAAAAA
+  AABBBAAAAA
+  AABBBABBAA
+  AABBBBCDBA
+  AABBBBEFBA
+  AABBBABBAA
+  AABBBAAAAA
+  AABBBAAAAA
+  AABBBAAAAA
+  AAAAAAAAAA
+layer 1
+  GBBBBB____
+  ____HB____
+  IB___B____
+  ____JBBB__
+  GB__J___B_
+  _________B
+  _________B
+  GB__J___B_
+  ____JBBB__
+  IB___B____
+  ___JJB____
+  GBBBBB____
+layer 2
+  _BBKBB____
+  _____K____
+  _B___B____
+  _____BKB__
+  _B___L__B_
+  _________B
+  _________B
+  _B___M__B_
+  _____BKB__
+  _B___B____
+  _____K____
+  _BBKBB____
+layer 3
+  _BBNBB____
+  _O___N____
+  _B___B____
+  ____PBNB__
+  PB___B__B_
+  _L___L__QB
+  _M___M__RB
+  PB___B__B_
+  ____PBNB__
+  _B___B____
+  _O___N____
+  _BBNBB____
+layer 4
+  _BJJJ_____
+  _BBBBJ____
+  _BBBBJ____
+  _BBBBBBB__
+  _BBBBB__B_
+  _SJJT____B
+  _UJJT____B
+  _BBBBB__B_
+  _BBBBBBB__
+  _BBBBJ____
+  _BBBBJ____
+  _BJJJ_____
+layer 5
+  _U________
+  _S________
+  __________
+  _U________
+  _S____JJ__
+  _____JTOJ_
+  _____JTOJ_
+  _U____JJ__
+  _S________
+  __________
+  _U________
+  _S________
+
+template desert/streets/corner_01 7 15 2 terrain_matching 12
+  A smooth_sandstone
+layer 0
+  ....AAA
+  ....AAA
+  ....AAA
+  AAAAAAA
+  AAAAAA.
+  AAAAA..
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+layer 1
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+  .......
+
+template desert/streets/corner_02 6 6 2 terrain_matching 28
+  A smooth_sandstone
+layer 0
+  AAAA..
+  AAAAA.
+  AAAAAA
+  ...AAA
+  ...AAA
+  ...AAA
+layer 1
+  ......
+  ......
+  ......
+  ......
+  ......
+  ......
+
+template desert/streets/crossroad_01 18 15 2 terrain_matching 8
+  A smooth_sandstone
+layer 0
+  ......AAA.........
+  ......AAA.........
+  ......AAA.........
+  ......AAA.........
+  ......AAA.........
+  ......AAA.........
+  AAAAAAAAA.........
+  AAAAAAAAA.........
+  AAAAAAAAA.........
+  .......AA.........
+  .......AA.........
+  .......AA.........
+  .......AA.........
+  .......AA.........
+  ......AAA.........
+layer 1
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+
+template desert/streets/crossroad_02 11 11 2 terrain_matching 14
+  A smooth_sandstone
+layer 0
+  ....AAA....
+  ....AAA....
+  ....AAA....
+  ....AAA....
+  AAAAAAAAAAA
+  AAAAA.AAAAA
+  AAAAAAAAAAA
+  ....AAA....
+  ....AAA....
+  ....AAA....
+  ....AAA....
+layer 1
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+
+template desert/streets/crossroad_03 5 5 2 terrain_matching 53
+  A smooth_sandstone
+layer 0
+  .AAA.
+  AAAAA
+  AAAAA
+  AAAAA
+  .AAA.
+layer 1
+  .....
+  .....
+  .....
+  .....
+  .....
+
+template desert/streets/square_01 13 28 2 terrain_matching 4
+  A smooth_sandstone
+layer 0
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .....AAAAAA..
+  .AAAAAAAAAAA.
+  AAAA.A.A.AAAA
+  AAAAA.A.AAAAA
+  AAA..A.A.AAAA
+  .AAAAAAAAAAA.
+  ..AAAAAAAAA..
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+layer 1
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+
+template desert/streets/square_02 16 19 2 terrain_matching 11
+  A smooth_sandstone
+layer 0
+  ................
+  ................
+  ................
+  ................
+  ................
+  ...AAAA.........
+  ..AAAAAA........
+  AAAAAAAA........
+  AAAA.AAA........
+  AAAAAAAA........
+  ..AAAAAA........
+  ...AAAA.........
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template desert/streets/straight_01 15 12 2 terrain_matching 22
+  A smooth_sandstone
+  B dead_bush
+layer 0
+  ...............
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+layer 1
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  .............B.
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+
+template desert/streets/straight_02 15 18 2 terrain_matching 14
+  A smooth_sandstone
+layer 0
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  ...............
+  ...............
+layer 1
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+
+template desert/streets/straight_03 4 3 2 terrain_matching 43
+  A smooth_sandstone
+layer 0
+  AAAA
+  AAAA
+  AAAA
+layer 1
+  ....
+  ....
+  ....
+
+template desert/streets/turn_01 4 4 2 terrain_matching 36
+  A smooth_sandstone
+layer 0
+  .AAA
+  AAAA
+  AAA.
+  AA..
+layer 1
+  ....
+  ....
+  ....
+  ....
+
+template desert/terminators/terminator_01 3 3 2 terrain_matching 58
+  A smooth_sandstone
+layer 0
+  A..
+  AAA
+  AA.
+layer 1
+  ...
+  ...
+  ...
+
+template desert/terminators/terminator_02 3 3 2 terrain_matching 32
+  A smooth_sandstone
+layer 0
+  AA.
+  AAA
+  AA.
+layer 1
+  ...
+  ...
+  ...
+
+template desert/town_centers/desert_meeting_point_1 17 9 6 rigid 5
+  A sand
+  B smooth_sandstone
+  C cut_sandstone
+  D water[level=0]
+  E potted_cactus
+  F bell[attachment=floor,facing=east,powered=false]
+  G terracotta
+  H torch
+layer 0
+  AAAAAAABBBBBBB...
+  AA..AAABBBBBBBBBA
+  AA.....BBBBAAABBA
+  AAB..A.BBBABBBABB
+  AA....ABBBABABABB
+  AA.....BBBABBBABB
+  AA...AABBBBAAABBA
+  AAAAAAABBBBBBBBBA
+  AAAAAAABBBBBBBAAA
+layer 1
+  _.....__._.______
+  _.....___________
+  _......____CCC___
+  _.....____CDDDC_.
+  _.....____CDCDC__
+  _.....____CDDDC__
+  _....._____CCC___
+  _.....___________
+  _________________
+layer 2
+  _...._____.______
+  _.....___________
+  _.__.._____E_____
+  _._...___________
+  _.....____F_C____
+  _._...___________
+  _._...___________
+  _.__.____________
+  _________________
+layer 3
+  _....____________
+  _.....___________
+  _......__________
+  _......__________
+  _......_____C____
+  _......__________
+  _.....___________
+  __._.____________
+  _________________
+layer 4
+  _.___.___________
+  _.__..___________
+  _.__..___________
+  _._...___________
+  _.....______G____
+  _._...___________
+  _.___.___________
+  _________________
+  _________________
+layer 5
+  _________________
+  _._._____________
+  _________________
+  _._______________
+  ____________H____
+  _____.___________
+  _________________
+  _________________
+  _________________
+
+template desert/town_centers/desert_meeting_point_2 12 12 6 rigid 1
+  A sand
+  B smooth_sandstone
+  C dead_bush
+  D bell[attachment=floor,facing=south,powered=false]
+  E cut_sandstone
+  F water[level=0]
+  G water[level=1]
+  H smooth_sandstone_slab[type=bottom,waterlogged=false]
+  I smooth_sandstone_slab[type=double,waterlogged=false]
+  J torch
+layer 0
+  AAAAABBBAAAA
+  ABBBBBBBBBBA
+  ABBBBBBBBBBA
+  ABBAAAAAABBA
+  BBBAAAAAABBA
+  BBBAAAAAABBB
+  BBBAAAAAABBB
+  ABBAAAAAABBB
+  ABBAAAAAABBA
+  ABBBBBBBBBBA
+  ABBBBBBBBBBA
+  AAAABBBAAAAA
+layer 1
+  _C__________
+  ___D________
+  ____________
+  ___BBBBBB___
+  ___BEFFEB___
+  ___BFFFFB___
+  ___BFFFFB___
+  ___BEGGEB___
+  ___BBBBBB___
+  ____________
+  ____________
+  ____________
+layer 2
+  ____________
+  ____________
+  ____________
+  ____________
+  ____E__E____
+  ____________
+  ____________
+  ____E__E____
+  ____________
+  ____________
+  ____________
+  ____________
+layer 3
+  ____________
+  ____________
+  ____________
+  ____________
+  ____E__E____
+  ____________
+  ____________
+  ____E__E____
+  ____________
+  ____________
+  ____________
+  ____________
+layer 4
+  ____________
+  ____________
+  ____________
+  ____________
+  ____EHHE____
+  ____HIIH____
+  ____HIIH____
+  ____EHHE____
+  ____________
+  ____________
+  ____________
+  ____________
+layer 5
+  ____________
+  ____________
+  ____________
+  ____________
+  ____J__J____
+  ____________
+  ____________
+  ____J__J____
+  ____________
+  ____________
+  ____________
+  ____________
+
+layout 157
+  desert/town_centers/desert_meeting_point_2 0 0 0 0
+  desert/streets/crossroad_02 1 22 0 1
+  desert/camel_spawn 3 6 1 1
+  desert/streets/straight_01 1 7 0 12
+  desert/streets/corner_02 3 -6 0 9
+  desert/streets/crossroad_03 0 4 0 -5
+  desert/streets/square_01 2 35 0 18
+  desert/streets/crossroad_03 3 15 0 0
+  desert/streets/turn_01 0 15 0 12
+  desert/streets/crossroad_02 1 10 0 27
+  desert/houses/desert_medium_house_2 1 3 0 15
+  desert/desert_lamp_1 0 7 2 13
+  desert/streets/crossroad_03 3 -7 0 14
+  desert/streets/crossroad_03 3 9 0 -1
+  desert/streets/straight_01 2 3 0 -1
+  desert/streets/crossroad_03 0 4 0 -10
+  desert/streets/corner_01 3 36 0 11
+  desert/houses/desert_small_house_4 0 24 0 -2
+  desert/desert_lamp_1 1 25 1 8
+  desert/houses/desert_small_house_6 1 27 0 10
+  desert/houses/desert_small_house_2 1 35 0 9
+  desert/desert_lamp_1 3 32 0 5
+  desert/streets/corner_02 3 16 0 -5
+  desert/terminators/terminator_01 0 20 0 -3
+  desert/streets/corner_02 3 9 0 18
+  desert/streets/crossroad_02 1 -1 0 27
+  desert/streets/turn_01 1 7 0 38
+  desert/streets/straight_03 1 6 0 23
+  desert/streets/corner_02 1 16 0 28
+  desert/streets/crossroad_03 1 -8 0 10
+  desert/streets/corner_02 3 10 0 -6
+  desert/streets/straight_03 0 -15 0 -4
+  desert/desert_lamp_1 1 2 0 -1
+  desert/streets/turn_01 2 8 0 -11
+  desert/houses/desert_medium_house_1 0 42 0 5
+  desert/desert_lamp_1 3 37 1 9
+  desert/streets/straight_01 3 38 0 26
+  desert/streets/corner_02 2 14 0 24
+  desert/desert_lamp_1 3 13 1 17
+  desert/streets/crossroad_02 1 -1 0 38
+  desert/streets/turn_01 3 -8 0 26
+  desert/streets/straight_01 0 -26 0 30
+  desert/streets/corner_02 0 8 0 39
+  desert/streets/crossroad_03 0 3 0 33
+  desert/terminators/terminator_02 3 14 0 27
+  desert/desert_lamp_1 0 12 1 29
+  desert/streets/corner_01 1 -6 0 15
+  desert/streets/straight_03 1 -9 0 6
+  desert/streets/straight_01 2 -13 0 14
+  desert/desert_lamp_1 2 14 1 -7
+  desert/streets/crossroad_03 3 -11 0 -1
+  desert/streets/straight_01 2 -16 0 -1
+  desert/streets/straight_03 0 9 0 -14
+  desert/desert_lamp_1 2 38 1 13
+  desert/houses/desert_cartographer_house_1 0 42 1 19
+  desert/streets/square_02 1 48 0 27
+  desert/streets/turn_01 0 15 0 21
+  desert/streets/corner_02 0 0 0 42
+  desert/streets/straight_03 0 -15 0 42
+  desert/desert_lamp_1 3 -2 1 47
+  desert/streets/straight_01 1 -4 0 49
+  desert/desert_lamp_1 2 -9 1 39
+  desert/desert_lamp_1 1 -5 1 23
+  desert/streets/turn_01 1 -4 0 27
+  desert/streets/corner_02 3 -14 0 28
+  desert/streets/crossroad_01 1 -27 0 25
+  desert/streets/corner_02 0 -11 0 31
+  desert/desert_lamp_1 2 9 1 43
+  desert/streets/straight_02 1 26 0 45
+  desert/terminators/terminator_01 2 2 0 36
+  desert/streets/straight_03 3 4 0 32
+  desert/streets/straight_03 2 11 0 36
+  desert/houses/desert_small_house_4 3 -16 0 21
+  desert/streets/straight_03 1 -9 0 11
+  desert/desert_lamp_1 2 -7 1 17
+  desert/streets/crossroad_03 0 -12 0 10
+  desert/streets/straight_03 3 -11 0 5
+  desert/streets/crossroad_03 0 -32 0 10
+  desert/houses/desert_small_house_5 2 -13 0 10
+  desert/houses/desert_small_house_5 2 -23 0 10
+  desert/houses/desert_small_house_3 0 -22 -1 5
+  desert/streets/straight_03 3 -10 0 -6
+  desert/streets/straight_03 2 -3 0 -2
+  desert/streets/square_02 2 -31 0 5
+  desert/houses/desert_small_house_2 3 -20 0 -5
+  desert/houses/desert_small_house_2 3 -30 0 -5
+  feature:pile_hay 0 -29 0 -1
+  desert/houses/desert_small_house_1 3 -25 -4 -5
+  desert/streets/crossroad_03 2 17 0 -11
+  feature:pile_hay 0 38 0 27
+  desert/houses/desert_small_house_4 2 43 0 39
+  desert/desert_lamp_1 3 40 1 31
+  desert/houses/desert_farm_1 2 36 1 35
+  desert/houses/desert_small_house_8 3 44 0 32
+  feature:pile_hay 0 18 0 24
+  desert/streets/crossroad_03 3 15 0 20
+  desert/streets/crossroad_03 1 14 0 21
+  desert/streets/crossroad_03 1 -1 0 41
+  desert/streets/turn_01 0 2 0 48
+  desert/desert_lamp_1 1 1 1 46
+  desert/streets/crossroad_03 3 -20 0 45
+  desert/streets/straight_03 0 -11 0 42
+  desert/houses/desert_small_house_2 2 -8 0 58
+  desert/houses/desert_small_house_5 1 -8 0 49
+  desert/streets/square_02 1 2 0 64
+  desert/desert_lamp_1 1 -4 1 50
+  desert/houses/desert_small_house_3 3 -13 0 63
+  desert/terminators/terminator_01 0 -3 0 28
+  feature:pile_hay 0 -7 0 30
+  desert/streets/turn_01 3 -26 0 34
+  desert/streets/crossroad_03 3 -36 0 24
+  desert/houses/desert_small_house_1 1 -28 0 34
+  desert/streets/straight_01 2 -42 0 34
+  desert/houses/desert_small_house_4 3 -40 0 31
+  desert/houses/desert_farm_1 0 14 -7 45
+  desert/houses/desert_fisher_1 0 14 0 46
+  desert/streets/corner_01 0 7 0 60
+  desert/streets/crossroad_03 3 12 0 37
+  desert/streets/turn_01 1 -28 0 15
+  desert/streets/crossroad_03 3 -37 0 14
+  desert/streets/straight_03 1 -29 0 6
+  desert/streets/straight_03 3 -10 0 -10
+  desert/streets/straight_03 0 -2 0 -4
+  desert/houses/desert_farm_1 3 -39 1 -7
+  feature:pile_hay 0 -35 0 -3
+  desert/houses/desert_tannery_1 1 -39 -1 -6
+  desert/streets/crossroad_03 0 18 0 -15
+  desert/streets/crossroad_02 2 20 0 -16
+  desert/terminators/terminator_01 3 16 0 15
+  desert/terminators/terminator_01 0 20 0 17
+  desert/terminators/terminator_01 2 14 0 19
+  desert/terminators/terminator_01 1 13 0 26
+  desert/terminators/terminator_01 2 9 0 24
+  desert/terminators/terminator_01 3 -4 0 40
+  desert/terminators/terminator_01 1 -2 0 46
+  desert/terminators/terminator_01 2 1 0 51
+  desert/terminators/terminator_01 3 -19 0 40
+  desert/terminators/terminator_01 2 -21 0 44
+  desert/terminators/terminator_02 1 -17 0 46
+  desert/terminators/terminator_01 1 -23 0 35
+  desert/terminators/terminator_01 0 -31 0 21
+  desert/terminators/terminator_01 3 -35 0 19
+  desert/terminators/terminator_02 2 -37 0 23
+  desert/terminators/terminator_02 2 -57 0 33
+  desert/terminators/terminator_01 3 11 0 59
+  desert/terminators/terminator_01 2 6 0 65
+  desert/terminators/terminator_01 0 17 0 34
+  desert/terminators/terminator_02 0 -27 0 16
+  desert/terminators/terminator_01 3 -36 0 9
+  desert/terminators/terminator_02 1 -34 0 15
+  desert/terminators/terminator_01 2 -38 0 13
+  desert/terminators/terminator_02 3 -10 0 -14
+  desert/terminators/terminator_01 2 -3 0 -2
+  desert/terminators/terminator_02 0 23 0 -14
+  desert/terminators/terminator_01 0 21 0 -22
+  desert/terminators/terminator_02 2 9 0 -20
+  desert/terminators/terminator_02 3 14 0 -27
+
+layout 51
+  desert/town_centers/desert_meeting_point_1 0 0 0 0
+  desert/streets/straight_03 3 11 0 12
+  desert/streets/square_02 3 4 0 -1
+  desert/camel_spawn 2 8 -4 4
+  desert/houses/desert_small_house_2 2 6 0 4
+  desert/streets/straight_03 0 17 0 3
+  desert/streets/straight_03 3 11 0 16
+  desert/streets/crossroad_03 2 25 0 6
+  desert/streets/crossroad_01 0 5 0 17
+  desert/streets/crossroad_03 0 21 0 7
+  desert/streets/crossroad_01 1 40 0 -3
+  desert/streets/crossroad_02 2 17 0 42
+  desert/houses/desert_small_house_1 0 14 -3 18
+  desert/houses/desert_farm_1 1 11 1 26
+  desert/houses/desert_small_house_7 0 14 0 23
+  desert/streets/straight_03 0 1 0 23
+  desert/streets/straight_03 0 17 0 8
+  desert/streets/crossroad_03 0 21 0 12
+  desert/houses/desert_farm_1 1 40 1 6
+  desert/houses/desert_small_house_1 0 35 0 -2
+  desert/streets/turn_01 0 41 0 2
+  desert/houses/desert_tannery_1 1 31 -1 -3
+  desert/desert_lamp_1 0 28 1 7
+  desert/streets/straight_01 1 35 0 -18
+  desert/desert_lamp_1 1 8 1 41
+  desert/streets/turn_01 2 6 0 39
+  desert/desert_lamp_1 3 12 1 37
+  desert/streets/corner_01 1 16 0 43
+  desert/streets/straight_03 2 21 0 38
+  desert/streets/straight_03 2 0 0 25
+  desert/streets/crossroad_03 2 20 0 16
+  desert/streets/crossroad_03 3 41 0 1
+  feature:pile_hay 0 35 0 -17
+  desert/streets/straight_01 3 31 0 -19
+  desert/desert_lamp_1 1 3 1 36
+  desert/terminators/terminator_01 1 5 0 40
+  desert/streets/straight_03 2 20 0 49
+  desert/streets/corner_02 0 22 0 36
+  desert/streets/square_02 2 -4 0 32
+  desert/streets/crossroad_01 0 36 0 -18
+  desert/streets/turn_01 0 46 0 -3
+  desert/houses/desert_fletcher_house_1 0 35 0 -30
+  desert/streets/crossroad_03 3 31 0 -14
+  desert/streets/straight_01 1 35 0 -48
+  desert/terminators/terminator_02 0 21 0 47
+  desert/terminators/terminator_01 2 16 0 49
+  desert/terminators/terminator_02 1 27 0 42
+  desert/terminators/terminator_01 0 36 0 -17
+  desert/terminators/terminator_01 2 30 0 -15
+  desert/terminators/terminator_01 1 34 0 -33
+  desert/terminators/terminator_01 3 32 0 -49
+
+layout 87
+  desert/town_centers/desert_meeting_point_1 0 0 0 0
+  desert/streets/straight_01 3 10 0 23
+  desert/houses/desert_small_house_3 3 1 0 4
+  desert/streets/straight_02 3 -2 0 -1
+  desert/streets/straight_01 2 31 0 6
+  desert/camel_spawn 2 8 1 4
+  desert/streets/crossroad_03 1 14 0 24
+  desert/desert_lamp_1 2 10 0 22
+  desert/houses/desert_small_house_3 1 19 0 19
+  desert/houses/desert_small_house_5 3 14 0 13
+  desert/houses/desert_animal_pen_1 1 10 1 -12
+  desert/streets/crossroad_03 1 14 0 -20
+  desert/streets/crossroad_01 3 32 0 11
+  desert/houses/desert_farm_2 3 21 0 2
+  desert/streets/corner_01 1 16 0 29
+  desert/streets/crossroad_03 1 19 0 24
+  desert/streets/corner_02 2 9 0 27
+  desert/streets/corner_01 1 9 0 -23
+  desert/streets/turn_01 3 15 0 -16
+  desert/streets/straight_03 1 13 0 -15
+  desert/streets/straight_03 3 11 0 -21
+  desert/houses/desert_small_house_1 0 41 0 7
+  desert/streets/turn_01 0 47 0 2
+  desert/houses/desert_farm_2 3 36 0 2
+  desert/houses/desert_small_house_1 2 37 0 11
+  desert/streets/crossroad_03 2 41 0 16
+  desert/houses/desert_small_house_4 3 6 0 35
+  desert/streets/straight_02 2 31 0 48
+  desert/streets/corner_02 0 20 0 25
+  desert/streets/crossroad_03 3 10 0 28
+  feature:pile_hay 0 8 0 23
+  desert/streets/turn_01 2 7 0 21
+  desert/streets/turn_01 2 7 0 -24
+  desert/houses/desert_tannery_1 1 3 -1 -23
+  desert/desert_lamp_1 2 8 1 -21
+  desert/streets/corner_02 2 21 0 -10
+  desert/desert_lamp_1 1 18 1 -19
+  desert/streets/straight_03 3 11 0 -8
+  desert/streets/corner_02 0 8 0 -30
+  desert/streets/turn_01 2 51 0 1
+  desert/desert_lamp_1 2 50 1 5
+  desert/streets/corner_02 3 31 0 18
+  desert/streets/crossroad_03 0 42 0 12
+  desert/streets/turn_01 1 41 0 17
+  desert/streets/square_02 0 32 0 26
+  desert/houses/desert_tannery_1 0 17 -1 36
+  desert/streets/crossroad_03 3 3 0 26
+  desert/desert_lamp_1 1 4 1 -27
+  desert/streets/crossroad_03 2 26 0 -9
+  desert/desert_lamp_1 3 9 1 -26
+  desert/streets/turn_01 1 7 0 -31
+  desert/streets/square_02 0 52 0 -9
+  desert/desert_lamp_1 2 48 1 -2
+  desert/streets/crossroad_03 2 41 0 16
+  desert/streets/corner_01 1 36 0 19
+  desert/streets/crossroad_03 1 51 0 12
+  desert/streets/straight_03 3 43 0 20
+  feature:pile_hay 0 38 0 20
+  desert/desert_lamp_1 2 32 1 36
+  desert/houses/desert_small_house_8 0 36 0 38
+  desert/streets/straight_02 0 -12 0 10
+  desert/streets/turn_01 3 27 0 -9
+  desert/streets/straight_03 3 23 0 -14
+  desert/terminators/terminator_01 1 25 0 -8
+  desert/streets/crossroad_03 2 7 0 -32
+  desert/desert_lamp_1 0 4 1 -28
+  desert/houses/desert_animal_pen_1 3 60 1 3
+  desert/desert_lamp_1 2 56 1 -1
+  desert/desert_lamp_1 0 52 1 1
+  desert/houses/desert_small_house_2 1 59 0 3
+  desert/streets/turn_01 0 37 0 22
+  desert/streets/turn_01 0 47 0 17
+  desert/streets/straight_02 2 66 0 28
+  desert/streets/turn_01 3 47 0 11
+  desert/streets/crossroad_03 0 42 0 21
+  desert/terminators/terminator_01 2 -13 0 25
+  desert/terminators/terminator_02 1 30 0 -8
+  desert/terminators/terminator_01 3 23 0 -18
+  desert/terminators/terminator_01 3 4 0 -37
+  desert/terminators/terminator_02 0 8 0 -35
+  desert/terminators/terminator_01 2 2 0 -33
+  desert/terminators/terminator_02 3 48 0 16
+  desert/terminators/terminator_01 2 46 0 20
+  desert/terminators/terminator_02 0 67 0 13
+  desert/terminators/terminator_01 2 41 0 24
+  desert/terminators/terminator_01 1 45 0 26
+  desert/terminators/terminator_01 0 47 0 22
+
+layout 81
+  desert/town_centers/desert_meeting_point_1 3 0 0 0
+  desert/houses/desert_small_house_5 0 1 0 -6
+  desert/streets/crossroad_03 1 6 0 -21
+  desert/streets/straight_01 2 -1 0 -10
+  desert/camel_spawn 1 4 1 -8
+  desert/streets/crossroad_01 0 9 0 -19
+  desert/streets/corner_01 3 0 0 -22
+  desert/houses/desert_small_house_1 3 -5 0 -14
+  feature:pile_hay 0 -2 0 -10
+  desert/streets/straight_01 2 -16 0 -10
+  desert/houses/desert_small_house_8 2 -7 0 -14
+  desert/houses/desert_small_house_6 1 13 0 -10
+  desert/houses/desert_small_house_1 0 18 0 -19
+  desert/desert_lamp_1 3 19 1 -7
+  desert/streets/corner_02 3 15 0 -20
+  desert/streets/straight_02 1 30 0 -4
+  desert/streets/straight_01 2 -1 0 -25
+  desert/houses/desert_farm_1 0 6 1 -28
+  feature:pile_hay 0 1 0 -24
+  desert/streets/straight_02 0 -45 0 -26
+  desert/desert_lamp_1 2 -29 1 -10
+  desert/houses/desert_small_house_2 3 -20 0 -14
+  desert/houses/desert_small_house_1 3 -25 -4 -14
+  desert/houses/desert_small_house_2 3 -30 0 -14
+  desert/desert_lamp_1 2 -17 1 -10
+  desert/streets/straight_01 2 35 0 -22
+  feature:pile_hay 0 19 0 -21
+  desert/desert_lamp_1 3 13 1 8
+  desert/houses/desert_temple_2 0 18 0 -2
+  desert/streets/turn_01 0 14 0 11
+  desert/streets/corner_02 2 -16 0 -26
+  desert/houses/desert_shepherd_house_1 0 -13 0 -33
+  feature:pile_hay 0 -2 0 -25
+  desert/houses/desert_small_house_3 0 -40 0 -19
+  desert/streets/straight_03 2 -46 0 -11
+  desert/houses/desert_small_house_4 0 -45 0 -18
+  desert/houses/desert_farm_2 3 25 0 -26
+  desert/desert_lamp_1 2 22 1 -22
+  desert/streets/crossroad_02 3 36 0 -19
+  desert/desert_lamp_1 1 17 1 14
+  desert/streets/turn_01 1 13 0 11
+  desert/desert_lamp_1 1 -17 1 -30
+  desert/streets/crossroad_03 2 -18 0 -32
+  desert/streets/turn_01 1 -50 0 -14
+  desert/streets/straight_01 2 61 0 -22
+  desert/streets/crossroad_02 0 36 0 -18
+  desert/desert_lamp_1 2 41 1 -24
+  feature:pile_hay 0 44 0 -20
+  feature:pile_hay 0 37 0 -28
+  desert/streets/straight_03 1 42 0 -33
+  desert/desert_lamp_1 1 10 1 14
+  desert/streets/turn_01 3 9 0 10
+  desert/streets/crossroad_03 0 -22 0 -41
+  desert/streets/straight_02 0 -37 0 -48
+  desert/streets/straight_02 3 -66 0 -15
+  desert/desert_lamp_1 0 48 1 -22
+  desert/houses/desert_small_house_7 3 53 0 -26
+  desert/desert_lamp_1 3 60 1 -22
+  desert/streets/crossroad_03 2 66 0 -22
+  desert/desert_lamp_1 1 37 1 -10
+  desert/streets/crossroad_03 1 35 0 -15
+  desert/streets/crossroad_01 0 47 0 -20
+  desert/streets/crossroad_03 0 39 0 -7
+  desert/streets/corner_01 2 46 0 -34
+  desert/streets/corner_02 2 8 0 9
+  desert/desert_lamp_1 1 12 1 7
+  desert/terminators/terminator_02 0 -17 0 -40
+  desert/terminators/terminator_01 3 -21 0 -42
+  desert/terminators/terminator_01 2 -38 0 -33
+  desert/terminators/terminator_02 3 -53 0 -30
+  desert/terminators/terminator_02 3 63 0 -27
+  desert/terminators/terminator_02 0 67 0 -25
+  desert/terminators/terminator_02 2 30 0 -12
+  desert/terminators/terminator_02 1 34 0 -10
+  desert/terminators/terminator_02 3 32 0 -16
+  desert/terminators/terminator_02 1 55 0 -5
+  desert/terminators/terminator_01 1 42 0 -2
+  desert/terminators/terminator_01 0 44 0 -6
+  desert/terminators/terminator_01 2 38 0 -4
+  desert/terminators/terminator_02 0 47 0 -39
+  desert/terminators/terminator_01 3 3 0 3
+
+layout 22
+  desert/town_centers/desert_meeting_point_1 0 0 0 0
+  desert/camel_spawn 2 8 1 4
+  desert/streets/corner_01 2 17 0 -1
+  desert/houses/desert_small_house_3 3 1 0 7
+  desert/streets/square_02 1 20 0 9
+  desert/streets/corner_02 0 17 0 3
+  desert/houses/desert_small_house_8 2 15 0 -7
+  desert/streets/crossroad_03 3 18 0 -3
+  desert/desert_lamp_1 0 15 1 -2
+  desert/streets/straight_03 3 19 0 1
+  desert/streets/turn_01 3 18 0 -8
+  desert/streets/corner_02 1 28 0 -9
+  desert/streets/crossroad_03 2 29 0 -10
+  desert/desert_lamp_1 1 24 1 -8
+  desert/terminators/terminator_01 2 24 0 -11
+  desert/streets/straight_01 1 29 0 -29
+  desert/streets/straight_03 2 33 0 -11
+  desert/houses/desert_small_house_8 1 25 0 -23
+  desert/streets/straight_02 1 41 0 -44
+  desert/streets/square_02 0 34 0 -20
+  desert/terminators/terminator_01 1 28 0 -29
+  desert/terminators/terminator_02 3 26 0 -45
+
+layout 111
+  desert/town_centers/desert_meeting_point_1 2 0 0 0
+  desert/houses/desert_small_house_3 1 -1 0 -6
+  desert/camel_spawn 0 -8 1 -4
+  desert/streets/crossroad_03 0 -21 0 -6
+  desert/streets/corner_01 2 -7 0 -9
+  desert/streets/straight_02 1 2 0 1
+  desert/streets/corner_02 0 -23 0 -12
+  desert/streets/straight_03 0 -16 0 -5
+  desert/streets/corner_02 3 -27 0 0
+  desert/streets/turn_01 1 -17 0 -1
+  desert/houses/desert_small_house_4 0 -13 0 -19
+  desert/streets/straight_03 0 -6 0 -14
+  desert/houses/desert_farm_1 0 -10 1 1
+  desert/streets/straight_01 3 -14 0 30
+  desert/desert_lamp_1 1 -14 1 6
+  desert/streets/crossroad_02 2 -24 0 -6
+  desert/streets/crossroad_03 1 -17 0 -6
+  desert/streets/crossroad_03 0 -21 0 -6
+  desert/streets/crossroad_02 1 -21 0 1
+  desert/streets/crossroad_03 2 -17 0 -2
+  desert/streets/straight_03 0 -16 0 0
+  desert/streets/straight_02 0 -2 0 -27
+  desert/streets/crossroad_03 3 -14 0 35
+  desert/desert_lamp_1 0 -14 1 29
+  desert/houses/desert_cartographer_house_1 0 -10 1 18
+  desert/streets/corner_02 3 -13 0 15
+  desert/streets/straight_03 1 -28 0 -5
+  desert/streets/square_02 3 -37 0 -17
+  desert/streets/corner_02 2 -35 0 -10
+  desert/desert_lamp_1 1 -26 1 6
+  desert/streets/crossroad_02 2 -21 0 22
+  desert/streets/straight_01 2 -32 0 8
+  desert/streets/turn_01 0 -20 0 4
+  desert/desert_lamp_1 1 -29 1 2
+  desert/streets/turn_01 2 -17 0 3
+  desert/streets/crossroad_02 1 23 0 -18
+  desert/houses/desert_small_house_4 0 -2 0 -19
+  desert/desert_lamp_1 0 3 1 -11
+  desert/streets/turn_01 3 -9 0 35
+  desert/streets/crossroad_01 2 -5 0 50
+  desert/streets/corner_01 1 -15 0 28
+  desert/desert_lamp_1 2 -9 1 14
+  desert/streets/corner_02 0 -7 0 10
+  desert/streets/crossroad_02 0 -34 0 -16
+  desert/streets/straight_03 3 -30 0 2
+  desert/streets/corner_02 0 -43 0 -21
+  desert/streets/straight_03 2 -32 0 18
+  desert/streets/straight_03 2 -17 0 18
+  desert/desert_lamp_1 3 -26 1 17
+  desert/desert_lamp_1 2 -30 1 21
+  desert/streets/straight_03 3 -27 0 26
+  desert/houses/desert_mason_1 3 -43 0 4
+  desert/desert_lamp_1 3 -33 1 8
+  desert/streets/straight_02 2 -47 0 20
+  desert/desert_lamp_1 0 22 1 -9
+  desert/streets/corner_02 3 17 0 -19
+  desert/streets/straight_01 0 24 0 -15
+  desert/streets/straight_02 3 4 0 7
+  feature:pile_hay 0 -6 0 32
+  desert/houses/desert_farm_1 1 -5 1 45
+  desert/houses/desert_farm_1 2 -14 1 50
+  desert/streets/square_01 3 -24 0 63
+  desert/houses/desert_small_house_3 0 -9 0 36
+  desert/streets/turn_01 0 -4 0 41
+  desert/desert_lamp_1 0 -15 1 38
+  desert/houses/desert_farm_1 2 -21 1 34
+  desert/desert_lamp_1 1 -16 1 30
+  desert/streets/crossroad_03 2 -17 0 27
+  desert/streets/crossroad_03 2 -27 0 -2
+  desert/streets/crossroad_02 2 -44 0 -15
+  desert/streets/straight_03 1 -38 0 -15
+  desert/desert_lamp_1 3 -42 1 -17
+  desert/streets/turn_01 1 -36 0 15
+  desert/streets/straight_03 0 -46 0 5
+  desert/streets/square_02 2 -62 0 14
+  feature:pile_hay 0 21 0 -20
+  desert/streets/crossroad_03 1 27 0 -25
+  desert/streets/square_01 2 51 0 -1
+  feature:pile_hay 0 25 0 -15
+  desert/houses/desert_small_house_5 0 24 0 -11
+  desert/houses/desert_small_house_4 2 34 0 -7
+  desert/desert_lamp_1 1 21 1 -5
+  desert/houses/desert_small_house_1 2 16 0 2
+  desert/desert_lamp_1 0 20 1 2
+  desert/streets/square_01 1 30 0 8
+  desert/houses/desert_small_house_3 1 -3 0 58
+  desert/desert_lamp_1 1 -11 1 60
+  desert/houses/desert_farm_1 2 -16 1 57
+  desert/houses/desert_small_house_4 3 -19 0 62
+  desert/houses/desert_small_house_6 0 -8 0 51
+  desert/streets/straight_03 1 -11 0 64
+  desert/streets/turn_01 2 0 0 40
+  desert/terminators/terminator_01 2 -22 0 26
+  desert/streets/turn_01 2 -17 0 22
+  desert/terminators/terminator_01 2 -32 0 -3
+  desert/terminators/terminator_01 1 -48 0 -14
+  desert/terminators/terminator_01 2 -55 0 -19
+  desert/terminators/terminator_02 3 -50 0 -26
+  desert/terminators/terminator_01 1 -38 0 -11
+  desert/terminators/terminator_01 0 -35 0 16
+  desert/terminators/terminator_02 3 -39 0 14
+  desert/terminators/terminator_01 3 24 0 -26
+  desert/terminators/terminator_02 0 28 0 -24
+  desert/terminators/terminator_01 1 26 0 -20
+  desert/terminators/terminator_01 2 22 0 -22
+  desert/terminators/terminator_01 2 38 0 -12
+  desert/terminators/terminator_02 0 52 0 -14
+  desert/terminators/terminator_02 1 19 0 21
+  desert/terminators/terminator_01 3 17 0 7
+  desert/terminators/terminator_01 1 -11 0 68
+  desert/terminators/terminator_02 0 1 0 37
+
