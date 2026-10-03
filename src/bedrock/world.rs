@@ -3282,7 +3282,12 @@ impl BedrockWorld {
     /// Level Chunk: так клиент рисует сундуки и спаривает половины. Если
     /// вторая половина большого сундука — в соседнем, уже отправленном чанке,
     /// ей актор уходит заново: пара там видна только теперь.
-    fn chunk_actors(&self, world: &world::World, chunk_x: i32, chunk_z: i32) -> Vec<Vec<u8>> {
+    /// Блок-акторы хранилищ чанка: свои — NBT для самого чанка (BDS кладёт
+    /// их в полезную нагрузку Level Chunk, отдельных Block Actor Data при
+    /// входе не шлёт — снято по сети, tmp/br-bds), а половины больших
+    /// сундуков в уже отправленных соседних чанках — пакетами.
+    fn chunk_actors(&self, world: &world::World, chunk_x: i32, chunk_z: i32) -> (Vec<Vec<u8>>, Vec<Vec<u8>>) {
+        let mut embedded = Vec::new();
         let mut packets = Vec::new();
 
         for (x, y, z, _) in world.chunk_containers(chunk_x, chunk_z) {
@@ -3292,7 +3297,9 @@ impl BedrockWorld {
                 continue;
             }
 
-            packets.extend(screens::actor_at(world, place));
+            if let (Some(packet), Some(kind)) = (screens::actor_at(world, place), containers::Kind::of(world.get_block(place.0, place.1, place.2))) {
+                embedded.push(stored_fields(kind, actor_nbt(&packet)));
+            }
 
             for (hx, hy, hz) in containers::halves(world, place) {
                 let other_chunk = (hx >> 4, hz >> 4);
@@ -3303,7 +3310,7 @@ impl BedrockWorld {
             }
         }
 
-        packets
+        (embedded, packets)
     }
 
     /// Рамки, что висят в этом чанке (в пределах высоты мира клиента): их
@@ -3399,8 +3406,8 @@ impl BedrockWorld {
 
         let mut batch = Vec::new();
 
-        for (x, z, (sections, biomes), actors, frames) in ready {
-            batch.push(encode_chunk(dimension, x, z, &sections, &biomes));
+        for (x, z, (sections, biomes), (embedded, actors), frames) in ready {
+            batch.push(encode_chunk(dimension, x, z, &sections, &biomes, &embedded));
             batch.extend(actors);
             batch.extend(super::pistons::chunk_actors(x, z, &sections, world::MIN_Y / 16, |y| heights(dimension).contains(&y)));
 
@@ -3561,7 +3568,7 @@ fn open_to_everyone(command: &str) -> bool {
 /// положение чанка, Dimension Id (число со знаком), число подчанков, кэш
 /// и сами данные. `sections` и `biomes` — во всю нашу высоту −64..320;
 /// клиенту уходят только подчанки его измерения (`sub_chunks`).
-fn encode_chunk(dimension: Dimension, x: i32, z: i32, sections: &[Option<Arc<[u16]>>], biomes: &[u16]) -> Vec<u8> {
+fn encode_chunk(dimension: Dimension, x: i32, z: i32, sections: &[Option<Arc<[u16]>>], biomes: &[u16], block_entities: &[Vec<u8>]) -> Vec<u8> {
     let (lowest, count) = sub_chunks(dimension);
     // Сколько наших секций лежит ниже нижнего подчанка клиента.
     let skip = (lowest - world::MIN_Y / 16) as usize;
@@ -3651,6 +3658,11 @@ fn encode_chunk(dimension: Dimension, x: i32, z: i32, sections: &[Option<Arc<[u1
 
     payload.u8(0); // блоков на краю мира нет
 
+    // Блок-акторы чанка — сетевые NBT подряд, как у BDS.
+    for nbt in block_entities {
+        payload.raw(nbt);
+    }
+
     let mut packet = Out::packet(session::LEVEL_CHUNK);
     packet
         .zigzag32(x)
@@ -3661,6 +3673,54 @@ fn encode_chunk(dimension: Dimension, x: i32, z: i32, sections: &[Option<Arc<[u1
         .varint(payload.bytes.len() as u32)
         .raw(&payload.bytes);
     packet.bytes
+}
+
+/// NBT из пакета Block Actor Data: без номера пакета и места блока.
+fn actor_nbt(packet: &[u8]) -> Vec<u8> {
+    let mut reader = In::new(packet);
+    let start = (|| {
+        reader.varint()?;
+        reader.zigzag32()?;
+        reader.zigzag32()?;
+        reader.zigzag32()?;
+        Some(packet.len() - reader.remaining())
+    })();
+
+    start.map_or_else(Vec::new, |start| packet[start..].to_vec())
+}
+
+/// Поля, которые BDS кладёт в блок-актор хранилища внутри чанка сверх
+/// Block Actor Data (снято по сети, tmp/br-bds): пустой Items (тип
+/// элементов — конец, длина 0), у сундука и бочки Findable, у воронки
+/// TransferCooldown, у крафтера disabled_slots.
+fn stored_fields(kind: containers::Kind, mut nbt: Vec<u8>) -> Vec<u8> {
+    use containers::Kind as K;
+
+    if matches!(kind, K::Jukebox | K::Lectern | K::Shelf | K::ChiseledBookshelf) || nbt.last() != Some(&0) {
+        return nbt;
+    }
+
+    nbt.pop();
+
+    let mut out = Out::default();
+    out.u8(9).string("Items").u8(0).zigzag32(0);
+
+    match kind {
+        K::Chest | K::TrappedChest | K::CopperChest | K::Barrel => {
+            out.u8(1).string("Findable").u8(0);
+        }
+        K::Hopper => {
+            out.u8(3).string("TransferCooldown").zigzag32(0);
+        }
+        K::Crafter => {
+            out.u8(2).string("disabled_slots").li16(0);
+        }
+        _ => {}
+    }
+
+    out.u8(0);
+    nbt.extend(out.bytes);
+    nbt
 }
 
 /// Палитровое хранилище: заголовок (биты << 1 | 1), слова little-endian,
@@ -4960,7 +5020,7 @@ mod tests {
         let (wastes, crimson) = (crate::world::terrain::Biome::NetherWastes, crate::world::terrain::Biome::CrimsonForest);
         biomes.fill(wastes.number() as u16);
         biomes[4 * 4 * 16..5 * 4 * 16].fill(crimson.number() as u16);
-        let (dimension, sub_chunks, biome_palettes) = read_chunk(&encode_chunk(Dimension::Nether, 3, -2, &sections, &biomes));
+        let (dimension, sub_chunks, biome_palettes) = read_chunk(&encode_chunk(Dimension::Nether, 3, -2, &sections, &biomes, &[]));
 
         assert_eq!(dimension, 1);
         assert_eq!(sub_chunks.iter().map(|(y, _)| *y).collect::<Vec<_>>(), (0..8).collect::<Vec<i8>>());
@@ -4978,7 +5038,7 @@ mod tests {
         let state = |name: &str| bedrock_state(crate::blocks::state_by_name(name).expect(name));
         let (sections, biomes) = tall_chunk();
         let (dimension, sub_chunks, biome_palettes) =
-            read_chunk(&encode_chunk(Dimension::Overworld, 3, -2, &sections, &biomes));
+            read_chunk(&encode_chunk(Dimension::Overworld, 3, -2, &sections, &biomes, &[]));
 
         assert_eq!(dimension, 0);
         assert_eq!(sub_chunks.iter().map(|(y, _)| *y).collect::<Vec<_>>(), (-4..20).collect::<Vec<i8>>());
@@ -5048,6 +5108,21 @@ mod tests {
 
         let chest = block_updates(2, -60, 0, state("chest"));
         assert_eq!(chest.len(), 2);
+    }
+
+    #[test]
+    fn stored_actor_carries_the_bds_fields() {
+        let barrel = stored_fields(containers::Kind::Barrel, actor_nbt(&screens::actor_packet(containers::Kind::Barrel, (1, 64, 2), None)));
+        let has = |nbt: &[u8], name: &[u8]| nbt.windows(name.len()).any(|w| w == name);
+
+        assert!(has(&barrel, b"Items") && has(&barrel, b"Findable") && has(&barrel, b"Barrel"));
+        assert_eq!(barrel.last(), Some(&0));
+
+        let hopper = stored_fields(containers::Kind::Hopper, actor_nbt(&screens::actor_packet(containers::Kind::Hopper, (1, 64, 2), None)));
+        assert!(has(&hopper, b"TransferCooldown") && !has(&hopper, b"Findable"));
+
+        // Пакет без места и номера: NBT начинается с компаунда без имени.
+        assert_eq!(&barrel[..2], &[10, 0]);
     }
 
     #[test]

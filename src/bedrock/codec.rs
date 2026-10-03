@@ -142,6 +142,11 @@ impl<'a> In<'a> {
         In { data, at: 0 }
     }
 
+    /// Сколько байт ещё не прочитано.
+    pub fn remaining(&self) -> usize {
+        self.data.len() - self.at
+    }
+
     pub fn take(&mut self, count: usize) -> Option<&'a [u8]> {
         let slice = self.data.get(self.at..self.at.checked_add(count)?)?;
         self.at += count;
