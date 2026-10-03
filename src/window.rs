@@ -220,6 +220,18 @@ impl Window<'_> {
         left == 0
     }
 
+    /// Перекладывает стопку из ячейки `slot` в ячейки `targets` по порядку
+    /// (сперва доливая начатые стопки). true — переложено хоть что-то.
+    pub fn move_some(&mut self, slot: usize, targets: &[usize]) -> bool {
+        let Some(stack) = self.get(slot) else {
+            return false;
+        };
+        let left = self.pour(stack, targets);
+
+        self.set(slot, remainder(stack, left));
+        left != stack.count
+    }
+
     /// Раскладывает стопку по слотам `targets` по порядку: сперва в начатые
     /// стопки того же предмета, потом в пустые. Возвращает, сколько не влезло.
     fn pour(&mut self, stack: Stack, targets: &[usize]) -> i32 {

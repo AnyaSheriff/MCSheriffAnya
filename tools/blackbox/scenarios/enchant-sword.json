@@ -1,0 +1,199 @@
+{
+ "name": "enchant-sword",
+ "about": "Стол зачарования и 15 полок: алмазный меч и 3 лазурита, у робота 30 уровней (выживание); зачарование третьим предложением (30 уровней): меч с зачарованиями, лазурит 0, уровень 27, звук стола, новое семя (свойство 3 — случайно у оригинала: семя меняется после каждого зачарования, перед записью нашему роботу ставится семя робота оригинала — sync_seed.py). Потом окно закрывается, меч возвращается в инвентарь.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:enchanting_table"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    -2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    -1
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    0
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    1
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    -2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    0,
+    0,
+    -2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    1,
+    0,
+    -2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    1,
+    0,
+    2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    2,
+    0,
+    -2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    2,
+    0,
+    -1
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    2,
+    0,
+    1
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    2,
+    0,
+    2
+   ],
+   "state": "minecraft:bookshelf"
+  }
+ ],
+ "setup": [
+  "clear $(bot)",
+  "give $(bot) minecraft:diamond_sword",
+  "give $(bot) minecraft:lapis_lazuli 3",
+  "tp $(bot) $(0.5,0,3.5) 180 0",
+  "gamemode survival $(bot)",
+  "!stopfly",
+  "experience add $(bot) 30 levels"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 10,
+   "window_click": {
+    "slot": 29,
+    "mode": 1
+   }
+  },
+  {
+   "after": 20,
+   "window_click": {
+    "slot": 30,
+    "mode": 1
+   }
+  },
+  {
+   "after": 30,
+   "button": 2
+  },
+  {
+   "after": 40,
+   "close": true
+  }
+ ],
+ "cleanup": [
+  "fill $(-2,0,-2) $(2,1,2) minecraft:air",
+  "kill @e[type=item,distance=..48]",
+  "clear $(bot)",
+  "gamemode creative $(bot)",
+  "experience set $(bot) 0 levels"
+ ],
+ "item_components": true,
+ "track_self": true,
+ "record_ticks": 60,
+ "random": [
+  {
+   "type": "values",
+   "name": "новое семя зачарования",
+   "kind": "property",
+   "match": "^свойство окна 3=",
+   "field": "value",
+   "range": [
+    -32768,
+    32767
+   ],
+   "why": "minecraft.wiki/w/Enchanting_mechanics: «After enchanting an item, the player's seed is regenerated» — новое семя случайно; свойство 3 — его младшие 16 бит (enchant-probe: 1407873423 → 29071). Оригинал против оригинала: 29071, -12730 и 26296 → другие после каждого зачарования."
+  }
+ ]
+}

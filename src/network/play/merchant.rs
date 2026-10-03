@@ -101,6 +101,7 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
         kind: None,
         props: Vec::new(),
         merchant: Some(Merchant::new(villager_id)),
+        station: None,
     });
     send_window_content(stream, player).await?;
     write_body(stream, offers_packet(id, &state)).await

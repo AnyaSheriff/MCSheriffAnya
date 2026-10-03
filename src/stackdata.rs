@@ -23,6 +23,11 @@ use crate::snbt::{self, Value};
 pub const COMPONENT_UNBREAKABLE: i32 = 4;
 pub const COMPONENT_DAMAGE: i32 = 3;
 pub const COMPONENT_ENCHANTMENTS: i32 = 13;
+/// Своё имя (переименование на наковальне), цена прошлых работ на
+/// наковальне и зачарования книги (protocol.json: 6, 19, 42).
+pub const COMPONENT_CUSTOM_NAME: i32 = 6;
+pub const COMPONENT_REPAIR_COST: i32 = 19;
+pub const COMPONENT_STORED_ENCHANTMENTS: i32 = 42;
 pub const COMPONENT_ATTRIBUTE_MODIFIERS: i32 = 16;
 pub const COMPONENT_POTION_CONTENTS: i32 = 51;
 /// Заряженные снаряды арбалета (minecraft-data, protocol.json: 49).
@@ -114,6 +119,13 @@ pub struct Data {
     pub fireworks: Option<Fireworks>,
     /// Звезда: её взрыв (компонент `firework_explosion`).
     pub explosion: Option<Explosion>,
+    /// Зачарования зачарованной книги (`stored_enchantments`), как `enchants`.
+    pub stored: Vec<(u16, i32)>,
+    /// Цена прошлых работ на наковальне (`repair_cost`, вики, Anvil
+    /// mechanics: «prior work penalty»).
+    pub repair_cost: i32,
+    /// Своё имя предмета (`custom_name`) простым текстом.
+    pub name: Option<String>,
 }
 
 impl Data {
@@ -138,12 +150,27 @@ impl Data {
 
     /// Ставит зачарование (уровень 0 — снимает), держа список по номерам.
     pub fn set_enchant(&mut self, number: u16, level: i32) {
-        self.enchants.retain(|(known, _)| *known != number);
+        put_enchant(&mut self.enchants, number, level);
+    }
 
-        if level > 0 {
-            self.enchants.push((number, level));
-            self.enchants.sort_unstable();
+    /// То же для зачарований книги (`stored_enchantments`).
+    pub fn set_stored(&mut self, number: u16, level: i32) {
+        put_enchant(&mut self.stored, number, level);
+    }
+}
+
+/// Ставит зачарование в список (уровень 0 — снимает). Порядок — порядок
+/// добавления, как у оригинала: стол зачарования шлёт зачарования в порядке
+/// выбора (чёрный ящик, enchant-sword: 35, 10, 18); прежнее остаётся на
+/// своём месте.
+fn put_enchant(list: &mut Vec<(u16, i32)>, number: u16, level: i32) {
+    match list.iter().position(|(known, _)| *known == number) {
+        Some(at) if level > 0 => list[at].1 = level,
+        Some(at) => {
+            list.remove(at);
         }
+        None if level > 0 => list.push((number, level)),
+        None => {}
     }
 }
 
@@ -261,6 +288,30 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
 
     if data.unbreakable {
         out.extend_from_slice(&encode_varint(COMPONENT_UNBREAKABLE));
+        count += 1;
+    }
+
+    if let Some(name) = &data.name {
+        out.extend_from_slice(&encode_varint(COMPONENT_CUSTOM_NAME));
+        out.extend_from_slice(&crate::network::nbt::text_component(name));
+        count += 1;
+    }
+
+    if data.repair_cost != 0 {
+        out.extend_from_slice(&encode_varint(COMPONENT_REPAIR_COST));
+        out.extend_from_slice(&encode_varint(data.repair_cost));
+        count += 1;
+    }
+
+    if !data.stored.is_empty() {
+        out.extend_from_slice(&encode_varint(COMPONENT_STORED_ENCHANTMENTS));
+        out.extend_from_slice(&encode_varint(data.stored.len() as i32));
+
+        for (number, level) in &data.stored {
+            out.extend_from_slice(&encode_varint(i32::from(*number)));
+            out.extend_from_slice(&encode_varint(*level));
+        }
+
         count += 1;
     }
 
@@ -469,7 +520,7 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
             }
         }
         COMPONENT_UNBREAKABLE => data.unbreakable = true,
-        COMPONENT_ENCHANTMENTS => {
+        COMPONENT_ENCHANTMENTS | COMPONENT_STORED_ENCHANTMENTS => {
             let Some(count) = reader.varint() else { return };
 
             for _ in 0..count.clamp(0, 64) {
@@ -479,8 +530,26 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
                     && usize::from(number) < ENCHANTMENTS.len()
                     && (1..=255).contains(&level)
                 {
-                    data.set_enchant(number, level);
+                    if kind == COMPONENT_ENCHANTMENTS {
+                        data.set_enchant(number, level);
+                    } else {
+                        data.set_stored(number, level);
+                    }
                 }
+            }
+        }
+        COMPONENT_REPAIR_COST => {
+            if let Some(cost) = reader.varint() {
+                data.repair_cost = cost.max(0);
+            }
+        }
+        COMPONENT_CUSTOM_NAME => {
+            // Простой текст — строковый тег NBT (8, длина в два байта).
+            if reader.take(1) == Some(&[8])
+                && let Some(length) = reader.take(2).map(|bytes| usize::from(u16::from_be_bytes([bytes[0], bytes[1]])))
+                && let Some(text) = reader.take(length).and_then(|bytes| String::from_utf8(bytes.to_vec()).ok())
+            {
+                data.name = Some(text);
             }
         }
         COMPONENT_ATTRIBUTE_MODIFIERS => {
@@ -584,7 +653,8 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.charged > 0) << 3)
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
-            | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6),
+            | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -620,6 +690,25 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     if let Some(explosion) = &data.explosion {
         explosion_to_bytes(&mut out, explosion);
+    }
+
+    // Хвост наковальни и книги: зачарования книги, цена работ, имя.
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() {
+        out.push(data.stored.len().min(255) as u8);
+
+        for (number, level) in data.stored.iter().take(255) {
+            out.extend_from_slice(&number.to_be_bytes());
+            out.extend_from_slice(&level.to_be_bytes());
+        }
+
+        out.extend_from_slice(&data.repair_cost.to_be_bytes());
+
+        let name = data.name.as_deref().unwrap_or("");
+        let length = name.len().min(u16::MAX as usize);
+
+        out.push(u8::from(data.name.is_some()));
+        out.extend_from_slice(&(length as u16).to_be_bytes());
+        out.extend_from_slice(&name.as_bytes()[..length]);
     }
 
     out
@@ -729,6 +818,25 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
         data.explosion = Some(explosion_from_bytes(&mut reader)?);
     }
 
+    if flags & 128 != 0 {
+        for _ in 0..reader.take(1)?[0] {
+            let number = u16::from_be_bytes(reader.take(2)?.try_into().ok()?);
+            let level = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
+
+            if usize::from(number) < ENCHANTMENTS.len() && level > 0 {
+                data.set_stored(number, level);
+            }
+        }
+
+        data.repair_cost = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
+
+        let named = reader.take(1)?[0] != 0;
+        let length = usize::from(u16::from_be_bytes(reader.take(2)?.try_into().ok()?));
+        let name = String::from_utf8(reader.take(length)?.to_vec()).ok()?;
+
+        data.name = named.then_some(name);
+    }
+
     Some(data)
 }
 
@@ -753,16 +861,21 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
         match key {
             "damage" => data.damage = value.as_f64().ok_or("damage — число")? as i32,
             "unbreakable" => data.unbreakable = true,
-            "enchantments" => {
-                let Value::Map(fields) = &value else { return Err("enchantments — {имя:уровень}".to_string()) };
+            "enchantments" | "stored_enchantments" => {
+                let Value::Map(fields) = &value else { return Err(format!("{key} — {{имя:уровень}}")) };
 
                 for (enchant, level) in fields {
                     let number = enchantment_number(enchant).ok_or_else(|| format!("нет зачарования {enchant}"))?;
                     let level = level.as_f64().ok_or("уровень — число")? as i32;
 
-                    data.set_enchant(number, level.clamp(0, 255));
+                    if key == "enchantments" {
+                        data.set_enchant(number, level.clamp(0, 255));
+                    } else {
+                        data.set_stored(number, level.clamp(0, 255));
+                    }
                 }
             }
+            "repair_cost" => data.repair_cost = value.as_f64().ok_or("repair_cost — число")?.max(0.0) as i32,
             "attribute_modifiers" => {
                 let Value::List(list) = &value else { return Err("attribute_modifiers — список".to_string()) };
                 let mut mods = Vec::new();
@@ -810,6 +923,11 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
             _ => {}
         }
     }
+
+    // В записи команды — по номерам, как было прежде [проверить порядок
+    // у оригинала].
+    data.enchants.sort_unstable();
+    data.stored.sort_unstable();
 
     Ok((name, data))
 }

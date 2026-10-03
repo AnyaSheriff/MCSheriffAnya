@@ -57,6 +57,7 @@ mod furnace;
 mod crafting;
 mod window;
 mod villager;
+mod enchanting;
 mod skins;
 mod tick;
 mod chat;

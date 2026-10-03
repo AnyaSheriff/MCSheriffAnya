@@ -1368,6 +1368,12 @@ fn land_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
         if redstone::free_to_fall_into(there) {
             world.set_block(x, y, z, hardened_in_water(state, there));
 
+            // Наковальня, упав, звенит (событие мира 1031, вики, World
+            // Event: «Anvil lands») [проверить порядок].
+            if crate::enchanting::Station::of(blocks::block_at_state(state).unwrap_or("")) == Some(crate::enchanting::Station::Anvil) {
+                world.note_level_event(x, y, z, 1031, 0);
+            }
+
             // Оригинал говорит о приземлившемся блоке дважды: сразу и ещё
             // раз общей рассылкой следующего такта (снято чёрным ящиком,
             // сценарий sand-into-water).

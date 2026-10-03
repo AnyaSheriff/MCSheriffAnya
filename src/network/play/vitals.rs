@@ -1027,7 +1027,7 @@ pub(super) async fn send_health(stream: &mut Outgoing<'_>, vit: &Vitals) -> io::
 }
 
 /// Set Experience: доля шкалы, уровень, всего очков.
-async fn send_experience(stream: &mut Outgoing<'_>, vit: &Vitals) -> io::Result<()> {
+pub(super) async fn send_experience(stream: &mut Outgoing<'_>, vit: &Vitals) -> io::Result<()> {
     let (level, bar) = survival::level_of(vit.xp);
     let mut body = encode_varint(SET_EXPERIENCE);
 

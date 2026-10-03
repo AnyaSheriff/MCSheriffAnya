@@ -66,6 +66,7 @@ mod bow;
 mod thrown;
 mod sleep;
 mod farm;
+mod station;
 
 /// Сторона чанка в блоках. По ней считается, в каком чанке стоит игрок.
 const CHUNK_SIZE: i32 = 16;
@@ -215,6 +216,9 @@ const CLOSE_CONTAINER: i32 = 0x13;
 /// Click Container Button: кнопка в окне — у кафедры листание и «взять
 /// книгу» (протокол 775, `enchant_item` в minecraft-data).
 const CLICK_CONTAINER_BUTTON: i32 = 0x11;
+
+/// Rename Item: имя в окне наковальни (протокол 775, `name_item`).
+const RENAME_ITEM: i32 = 0x30;
 
 /// Change Container Slot State: игрок включил или выключил ячейку крафтера
 /// (протокол 775, `set_slot_state` в minecraft-data: номер ячейки, номер
@@ -4202,6 +4206,13 @@ async fn open_window(
     };
 
     let Some(kind) = kind else {
+        // Станок без хранилища: стол зачарования, наковальня, точило.
+        let station = station::station_at(&shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком"), at);
+
+        if let Some(station) = station {
+            station::open_station(stream, shared, player, at, station).await?;
+        }
+
         return Ok(());
     };
 
@@ -4235,7 +4246,7 @@ async fn open_window(
         world.container(at.0, at.1, at.2).map(crate::furnace::properties).unwrap_or_default()
     };
 
-    player.window = Some(OpenWindow { id, halves, cart: None, shown: slots, lectern, crafter, kind: Some(kind), props: props.clone(), merchant: None });
+    player.window = Some(OpenWindow { id, halves, cart: None, shown: slots, lectern, crafter, kind: Some(kind), props: props.clone(), merchant: None, station: None });
     send_window_content(stream, player).await?;
 
     for (property, value) in props.into_iter().enumerate() {
@@ -4293,7 +4304,7 @@ async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &m
     body.extend_from_slice(&nbt::translated(title));
     write_body(stream, body).await?;
 
-    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None });
+    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None });
     send_window_content(stream, player).await
 }
 
@@ -4385,6 +4396,19 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
         return Ok(());
     };
 
+    // Окно станка живёт, пока стоит станок.
+    if window.station.is_some() {
+        if !station::still_there(shared, player, window) {
+            let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
+
+            body.extend_from_slice(&encode_varint(window.id));
+            write_body(stream, body).await?;
+            close_own_window(shared, player);
+        }
+
+        return Ok(());
+    }
+
     // Окно торговли: ячейки живут у игрока; пропал житель — окно закрыто.
     if let Some(trade) = &window.merchant {
         if merchant::villager_gone(shared, player, trade.villager) {
@@ -4473,6 +4497,15 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
     let Some(window) = player.window.take() else {
         return;
     };
+
+    // Станок: предметы из его ячеек возвращаются игроку.
+    if window.station.is_some() {
+        if station::give_back(shared, player, &window) {
+            player.inventory_after_window = true;
+        }
+
+        return;
+    }
 
     // Окно торговли: житель свободен; оплата, если осталась, — в инвентарь.
     if let Some(trade) = window.merchant {
@@ -6423,6 +6456,14 @@ async fn apply_reaction(
         send_window_property(stream, window, property, value).await?;
     }
 
+    for &(window, property, value) in &reaction.window_properties {
+        send_window_property(stream, window, property, value).await?;
+    }
+
+    if reaction.experience {
+        vitals::send_experience(stream, &player.vit).await?;
+    }
+
     if reaction.resync {
         send_player_position(stream, player).await?;
     }
@@ -6509,6 +6550,12 @@ struct Reaction {
 
     /// Окно, которое надо закрыть у клиента (с кафедры забрали книгу).
     close_window: Option<i32>,
+
+    /// Ещё свойства окна (стол зачарования, наковальня) — по порядку.
+    window_properties: Vec<(i32, i16, i16)>,
+
+    /// Опыт поменялся (зачарование, наковальня): прислать Set Experience.
+    experience: bool,
 
     /// Вернуть клиента на место, где он по серверу (его сдвинул поршень, а
     /// клиент прислал прежнее место).
@@ -6795,7 +6842,9 @@ fn handle_client_packet_inner(
         CLICK_CONTAINER_BUTTON => {
             let mut cursor = Cursor::new(payload);
 
-            if let (Some(window), Some(button)) = (cursor.varint(), cursor.varint()) {
+            if let (Some(window), Some(button)) = (cursor.varint(), cursor.varint())
+                && !station::button(shared, player, window, button, &mut reaction)
+            {
                 lectern_button(shared, player, window, button, &mut reaction);
             }
         }
@@ -6818,6 +6867,11 @@ fn handle_client_packet_inner(
             }
 
             reaction.inventory = true;
+        }
+        RENAME_ITEM => {
+            if let Some(name) = Cursor::new(payload).string() {
+                station::rename(shared, player, name, &mut reaction);
+            }
         }
         CLOSE_CONTAINER => {
             // Окно торговли: курсор и оплата — в инвентарь, поячеечно.
@@ -7980,6 +8034,19 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             return Some(Reaction::accepted(sequence));
         }
 
+        // Станок: окно открывается (station.rs). Порядок — как у хранилищ:
+        // окно, повтор блока и за гранью.
+        if station::station_at(&world, clicked).is_some() {
+            if player.window.is_none() {
+                world.note_open_window(player.entity_id, clicked_x, clicked_y, clicked_z);
+            }
+
+            world.tell_directly(clicked_x, clicked_y, clicked_z);
+            world.tell_directly(bx, by, bz);
+
+            return Some(Reaction::accepted(sequence));
+        }
+
         // Куст ягод: сбор (farming.rs).
         if player.game_mode != GAME_MODE_SPECTATOR {
             drop(world);
@@ -8703,6 +8770,13 @@ fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
         crate::stackdata::read_component(kind, data, &mut extras);
     }
 
+    // Имя особого динамита — от его вида, своим именем оно не хранится.
+    if let Some(kind) = stack.tnt.and_then(crate::custom_tnt::by_id)
+        && extras.name.as_deref() == Some(kind.title)
+    {
+        extras.name = None;
+    }
+
     Some(Some(stack.with_extras(extras)))
 }
 
@@ -8832,6 +8906,11 @@ fn crafter_slot_state(shared: &Shared, player: &mut PlayerState, window: i32, sl
 fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], reaction: &mut Reaction) {
     // В окне кафедры ячейку не трогают — книгу берут кнопкой.
     if player.window.as_ref().is_some_and(|window| window.lectern) {
+        return;
+    }
+
+    if player.window.as_ref().is_some_and(|window| window.station.is_some()) {
+        station::click(shared, player, payload, reaction);
         return;
     }
 
@@ -9421,6 +9500,10 @@ struct OpenWindow {
     /// Окно торговли с жителем: ячейки оплаты и выхода, выбранная сделка
     /// (merchant.rs). Тогда `shown` — эти три ячейки.
     merchant: Option<crate::villager::Merchant>,
+
+    /// Окно станка (стол зачарования, наковальня, точило): предметы лежат
+    /// в `shown`, хранилища нет (station.rs).
+    station: Option<station::StationWindow>,
 }
 
 impl OpenWindow {
@@ -9481,7 +9564,13 @@ impl PlayerState {
         };
 
         // Здоровье, еда, воздух и огонь — как при выходе.
-        let vit = saved.as_ref().map(|data| crate::survival::Vitals::restored(&data.vitals)).unwrap_or_default();
+        let mut vit = saved.as_ref().map(|data| crate::survival::Vitals::restored(&data.vitals)).unwrap_or_default();
+
+        // Семя зачарования 0 — не заведено: завести (вики, Enchanting
+        // mechanics: «seed of 0 … will be regenerated»).
+        if vit.xp_seed == 0 {
+            vit.xp_seed = crate::enchanting::new_seed(u64::from_be_bytes(uuid[..8].try_into().unwrap_or_default()));
+        }
 
         Self {
             spawn_point: spawn,
@@ -10059,7 +10148,7 @@ mod tests {
             pitch: 0.0,
             game_mode: 0,
             dimension: Default::default(),
-            vitals: crate::playerdata::SavedVitals { health: 6.0, food: 11, saturation: 2.0, exhaustion: 1.5, air: 200, fire: 80, fall: 0.0, experience: 21 },
+            vitals: crate::playerdata::SavedVitals { health: 6.0, food: 11, saturation: 2.0, exhaustion: 1.5, air: 200, fire: 80, fall: 0.0, experience: 21, xp_seed: 5 },
             respawn: None,
         };
 

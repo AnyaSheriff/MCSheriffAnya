@@ -1,0 +1,277 @@
+{
+ "name": "enchant-offers",
+ "about": "Стол зачарования и 15 книжных полок: в окно кладутся по очереди алмазный меч, книга, железная кирка, золотой шлем и лук; свойства окна (стоимости, семя, подсказки) сверяются; потом полки убираются (четырьмя fill вокруг стола) и меч кладётся снова (0 полок). Ничего не зачаровывается — семя робота остаётся прежним.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:enchanting_table"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    -2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    -1
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    0
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    1
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -2,
+    0,
+    2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    -2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    0,
+    0,
+    -2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    1,
+    0,
+    -2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    1,
+    0,
+    2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    2,
+    0,
+    -2
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    2,
+    0,
+    -1
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    2,
+    0,
+    1
+   ],
+   "state": "minecraft:bookshelf"
+  },
+  {
+   "at": [
+    2,
+    0,
+    2
+   ],
+   "state": "minecraft:bookshelf"
+  }
+ ],
+ "setup": [
+  "clear $(bot)",
+  "give $(bot) minecraft:diamond_sword",
+  "give $(bot) minecraft:lapis_lazuli 3",
+  "give $(bot) minecraft:book",
+  "give $(bot) minecraft:iron_pickaxe",
+  "give $(bot) minecraft:golden_helmet",
+  "give $(bot) minecraft:bow",
+  "tp $(bot) $(0.5,0,3.5) 180 0",
+  "gamemode survival $(bot)",
+  "!stopfly",
+  "experience add $(bot) 30 levels"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 10,
+   "window_click": {
+    "slot": 29,
+    "mode": 1
+   }
+  },
+  {
+   "after": 20,
+   "window_click": {
+    "slot": 30,
+    "mode": 1
+   }
+  },
+  {
+   "after": 30,
+   "window_click": {
+    "slot": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 40,
+   "window_click": {
+    "slot": 31,
+    "mode": 1
+   }
+  },
+  {
+   "after": 50,
+   "window_click": {
+    "slot": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 60,
+   "window_click": {
+    "slot": 32,
+    "mode": 1
+   }
+  },
+  {
+   "after": 70,
+   "window_click": {
+    "slot": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 80,
+   "window_click": {
+    "slot": 33,
+    "mode": 1
+   }
+  },
+  {
+   "after": 90,
+   "window_click": {
+    "slot": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 100,
+   "window_click": {
+    "slot": 34,
+    "mode": 1
+   }
+  },
+  {
+   "after": 110,
+   "window_click": {
+    "slot": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 120,
+   "cmd": "fill $(-2,0,-2) $(2,0,-2) minecraft:air"
+  },
+  {
+   "after": 121,
+   "cmd": "fill $(-2,0,2) $(2,0,2) minecraft:air"
+  },
+  {
+   "after": 122,
+   "cmd": "fill $(-2,0,-1) $(-2,0,1) minecraft:air"
+  },
+  {
+   "after": 123,
+   "cmd": "fill $(2,0,-1) $(2,0,1) minecraft:air"
+  },
+  {
+   "after": 130,
+   "window_click": {
+    "slot": 37,
+    "mode": 1
+   }
+  },
+  {
+   "after": 140,
+   "window_click": {
+    "slot": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 150,
+   "close": true
+  }
+ ],
+ "cleanup": [
+  "fill $(-2,0,-2) $(2,1,2) minecraft:air",
+  "kill @e[type=item,distance=..48]",
+  "clear $(bot)",
+  "gamemode creative $(bot)",
+  "experience set $(bot) 0 levels"
+ ],
+ "item_components": true,
+ "record_ticks": 170
+}

@@ -33,12 +33,21 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// хвост из `VITALS_SIZE` байт после измерения. Файлы версий 1–3 читаются:
 /// игрок зайдёт сытым и здоровым.
 ///
+/// Версия 6 — плюс семя зачарования перед точкой возрождения
+/// (`XP_SEED_SIZE`). Файлы ранних версий читаются с семенем 0: оно
+/// заведётся заново, как у оригинала («when joining a world with … seed of
+/// 0, it will be regenerated», вики, Enchanting mechanics).
+const FORMAT_VERSION: u32 = 6;
+
 /// Версия 5 — плюс личная точка возрождения (кровать, якорь, `spawnpoint`):
 /// постоянный хвост `bed::RespawnPoint::SIZE` после здоровья.
-const FORMAT_VERSION: u32 = 5;
+const RESPAWN_VERSION: u32 = 5;
 
 /// Версия со здоровьем, но без точки возрождения.
 const VITALS_VERSION: u32 = 4;
+
+/// Семя зачарования: четыре байта после здоровья.
+const XP_SEED_SIZE: usize = 4;
 
 /// Версия с измерением, но без здоровья.
 const DIMENSION_VERSION: u32 = 3;
@@ -73,12 +82,14 @@ pub struct SavedVitals {
     pub fall: f32,
     /// Всего очков опыта.
     pub experience: i32,
+    /// Семя зачарования (`XpSeed`).
+    pub xp_seed: i32,
 }
 
 impl Default for SavedVitals {
     /// Новорождённый: полное здоровье и еда, насыщение 5, воздуха 300.
     fn default() -> Self {
-        Self { health: 20.0, food: 20, saturation: 5.0, exhaustion: 0.0, air: 300, fire: 0, fall: 0.0, experience: 0 }
+        Self { health: 20.0, food: 20, saturation: 5.0, exhaustion: 0.0, air: 300, fire: 0, fall: 0.0, experience: 0, xp_seed: 0 }
     }
 }
 
@@ -110,6 +121,7 @@ impl SavedVitals {
             fire: i32::from_be_bytes(take(bytes, 20)?),
             fall: f32::from_be_bytes(take(bytes, 24)?),
             experience: i32::from_be_bytes(take(bytes, 28)?),
+            xp_seed: 0,
         };
 
         let sane = vitals.health.is_finite()
@@ -231,22 +243,31 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 
             (Inventory::from_bytes(inventory)?, dimension, Default::default(), None)
         }
-        VITALS_VERSION | FORMAT_VERSION => {
+        VITALS_VERSION | RESPAWN_VERSION | FORMAT_VERSION => {
             let mut tail = bytes.get(SIZE..)?;
             let mut respawn = None;
+            let mut seed = 0;
 
-            if version == FORMAT_VERSION {
+            if version >= RESPAWN_VERSION {
                 let (rest, point) = tail.split_at(tail.len().checked_sub(crate::bed::RespawnPoint::SIZE)?);
 
                 respawn = crate::bed::RespawnPoint::read(point)?;
                 tail = rest;
             }
 
+            if version == FORMAT_VERSION {
+                let (rest, bytes) = tail.split_at(tail.len().checked_sub(XP_SEED_SIZE)?);
+
+                seed = i32::from_be_bytes(bytes.try_into().ok()?);
+                tail = rest;
+            }
+
             let (rest, vitals) = tail.split_at(tail.len().checked_sub(VITALS_SIZE)?);
             let (last, inventory) = rest.split_last()?;
             let dimension = *crate::dimension::Dimension::ALL.get(*last as usize)?;
+            let vitals = SavedVitals { xp_seed: seed, ..SavedVitals::read(vitals)? };
 
-            (Inventory::from_bytes(inventory)?, dimension, SavedVitals::read(vitals)?, respawn)
+            (Inventory::from_bytes(inventory)?, dimension, vitals, respawn)
         }
         _ => return None,
     };
@@ -291,6 +312,7 @@ pub fn save(directory: &Path, uuid: &[u8; 16], data: &PlayerData) -> io::Result<
     out.extend_from_slice(&data.inventory.to_bytes());
     out.push(data.dimension.index() as u8);
     data.vitals.write(&mut out);
+    out.extend_from_slice(&data.vitals.xp_seed.to_be_bytes());
     crate::bed::RespawnPoint::write(data.respawn.as_ref(), &mut out);
 
     let temporary = path.with_extension("tmp");
@@ -480,7 +502,7 @@ mod tests {
     fn vitals_are_saved_with_the_player() {
         let directory = test_directory("vitals");
         let data = PlayerData {
-            vitals: SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234 },
+            vitals: SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234, xp_seed: -77 },
             ..sample()
         };
 
@@ -512,10 +534,17 @@ mod tests {
         let path = path_for(&directory, &[12; 16]);
         let mut bytes = fs::read(&path).expect("прочитать");
 
-        bytes.truncate(bytes.len() - crate::bed::RespawnPoint::SIZE);
+        // Четвёртая версия — без семени зачарования и точки возрождения:
+        // семя читается нулём и заведётся заново.
+        bytes.truncate(bytes.len() - crate::bed::RespawnPoint::SIZE - XP_SEED_SIZE);
         bytes[4..8].copy_from_slice(&VITALS_VERSION.to_be_bytes());
         fs::write(&path, &bytes).expect("записать");
-        assert_eq!(load(&directory, &[12; 16]), Some(data));
+
+        let mut expected = data;
+
+        expected.vitals.xp_seed = 0;
+        expected.respawn = None;
+        assert_eq!(load(&directory, &[12; 16]), Some(expected));
     }
 
     /// Файл третьей версии (без здоровья) читается: игрок сыт и здоров.

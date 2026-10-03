@@ -498,7 +498,7 @@ const hookWrites = (client) => {
   const write = client.write.bind(client);
   client.write = (name, params) => {
     if (process.env.BB_DEBUG && name !== 'position' && name !== 'position_look' && name !== 'look' && name !== 'keep_alive') console.error('→', name, JSON.stringify(params, (k, v) => typeof v === 'bigint' ? String(v) : v).slice(0, 160));
-    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item' || name === 'update_command_block' || name === 'select_trade')) {
+    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'name_item' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item' || name === 'update_command_block' || name === 'select_trade')) {
       // Такт нажатия берём из плана, а не из часов: в какой такт целились,
       // в тот оно и уходит. Часы на этом месте врать не должны, но нажатие
       // ложится ровно на границу счёта, и округление могло бы дрогнуть.
@@ -699,7 +699,7 @@ bot.once('spawn', async () => {
       // куда бы отправка ни дрогнула.
       const at = baseTick + (a.after || 0);
       await waitTick(at, 0);
-      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.select_trade !== undefined ? `select_trade ${a.select_trade}` : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : a.attack ? 'attack' : a.interact ? 'interact' : a.button !== undefined ? `button ${a.button}` : a.slot_state ? `slot_state ${a.slot_state.slot} ${a.slot_state.state}` : a.hotbar !== undefined ? `hotbar ${a.hotbar}` : a.control ? `control ${a.control.join('=')}` : a.fly !== undefined ? `fly ${a.fly}` : a.respawn ? 'respawn' : a.dig ? `dig ${a.dig.join(',')} ${a.status ?? 0}` : a.leave_bed ? 'leave_bed' : a.use ? 'use_item' : a.release ? 'release_use' : a.program ? `program ${a.program.at.join(',')} ${a.program.command}` : JSON.stringify(a);
+      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.select_trade !== undefined ? `select_trade ${a.select_trade}` : a.rename !== undefined ? `rename ${a.rename}` : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : a.attack ? 'attack' : a.interact ? 'interact' : a.button !== undefined ? `button ${a.button}` : a.slot_state ? `slot_state ${a.slot_state.slot} ${a.slot_state.state}` : a.hotbar !== undefined ? `hotbar ${a.hotbar}` : a.control ? `control ${a.control.join('=')}` : a.fly !== undefined ? `fly ${a.fly}` : a.respawn ? 'respawn' : a.dig ? `dig ${a.dig.join(',')} ${a.status ?? 0}` : a.leave_bed ? 'leave_bed' : a.use ? 'use_item' : a.release ? 'release_use' : a.program ? `program ${a.program.at.join(',')} ${a.program.command}` : JSON.stringify(a);
       pendingDo = { what: a.bot === 2 ? `2: ${what}` : what, tick: at };
       if (a.set) bot.chat(`/setblock ${ORIGIN.x + a.set.at[0]} ${ORIGIN.y + a.set.at[1]} ${ORIGIN.z + a.set.at[2]} ${a.set.state}`);
       if (a.cmd) bot.chat('/' + expand(a.cmd));
@@ -717,6 +717,8 @@ bot.once('spawn', async () => {
       // Кнопка в открытом окне (кафедра листает, стол зачарования): пакет
       // Click Container Button, в mineflayer он зовётся enchant_item.
       if (a.button !== undefined && openWindow !== null) bot._client.write('enchant_item', { windowId: openWindow, enchantment: a.button });
+      // Имя в окне наковальни (Rename Item, в mineflayer — name_item).
+      if (a.rename !== undefined) bot._client.write('name_item', { name: a.rename });
       // Щелчок по пустой ячейке крафтера: включить или выключить её
       // (пакет Change Container Slot State, в mineflayer — set_slot_state).
       if (a.slot_state && openWindow !== null) bot._client.write('set_slot_state', { slot_id: a.slot_state.slot, window_id: openWindow, state: a.slot_state.state });

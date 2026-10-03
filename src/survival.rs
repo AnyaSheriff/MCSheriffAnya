@@ -820,6 +820,10 @@ pub struct Vitals {
     /// Опыт: всего очков (по нему считаются уровень и шкала).
     pub xp: i32,
 
+    /// Семя зачарования (`XpSeed`): по нему стол предлагает зачарования
+    /// (enchanting.rs). 0 — ещё не заведено: заводится при входе.
+    pub xp_seed: i32,
+
     /// Действующие эффекты.
     pub effects: Vec<Effect>,
 
@@ -902,6 +906,7 @@ impl Vitals {
             dead: false,
             sprinting: false,
             xp: 0,
+            xp_seed: 0,
             effects: Vec::new(),
             absorption: 0.0,
             max_health: MAX_HEALTH,
@@ -921,6 +926,7 @@ impl Vitals {
             fire: self.fire,
             fall: self.fall,
             experience: self.xp,
+            xp_seed: self.xp_seed,
         }
     }
 
@@ -940,6 +946,7 @@ impl Vitals {
             fire: saved.fire,
             fall: saved.fall,
             xp: saved.experience,
+            xp_seed: saved.xp_seed,
             ..Self::new()
         }
     }
@@ -1326,8 +1333,10 @@ impl Vitals {
     /// Возрождение: всё заново.
     pub fn respawned(&mut self) {
         let effects = std::mem::take(&mut self.effects);
+        let xp_seed = self.xp_seed;
 
-        *self = Self::new();
+        // Семя зачарования переживает смерть [проверить].
+        *self = Self { xp_seed, ..Self::new() };
         drop(effects);
     }
 }
