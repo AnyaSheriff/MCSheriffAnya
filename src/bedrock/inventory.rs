@@ -230,6 +230,9 @@ pub struct Bag {
     events: Vec<Event>,
     /// Предложения стола, какими их знает клиент.
     offers: Option<(Option<Stack>, i32)>,
+    /// Сделки открытого окна торговли (trade.rs) и та, что выбрана запросом.
+    trade: Vec<super::trade::Price>,
+    trade_pick: Option<usize>,
 }
 
 /// Станок, открытый у игрока.
@@ -247,6 +250,8 @@ pub struct Station {
 pub enum Event {
     /// Потратить уровни (стол, наковальня).
     Levels(i32),
+    /// Состоялась сделка с жителем (номер сделки в его списке).
+    Traded(usize),
     /// Стол зачаровал: новое семя, звук.
     Enchanted((i32, i32, i32)),
     /// Наковальня сработала.
@@ -304,6 +309,8 @@ impl Bag {
             recipe: None,
             events: Vec::new(),
             offers: None,
+            trade: Vec::new(),
+            trade_pick: None,
         };
 
         for slot in 0..crate::inventory::SLOTS as i32 {
@@ -444,6 +451,11 @@ impl Bag {
         self.offers = None;
     }
 
+    /// Сделки открытого окна торговли: что житель просит и что отдаёт.
+    pub fn set_trade(&mut self, prices: Vec<super::trade::Price>) {
+        self.trade = prices;
+    }
+
     /// Станок закрылся (или закрыт инвентарь с сеткой 2×2): всё, что
     /// лежало в ячейках интерфейса, возвращается в инвентарь, лишнее
     /// отдаётся наружу — его бросают на землю. Слоты инвентаря, что
@@ -451,6 +463,7 @@ impl Bag {
     pub fn close_station(&mut self) -> (Vec<Stack>, Vec<i32>) {
         self.station = None;
         self.offers = None;
+        self.trade.clear();
 
         let places: Vec<u8> = self.ui.keys().copied().collect();
         let mut overflow = Vec::new();
@@ -721,6 +734,7 @@ impl Bag {
         self.consumed.clear();
         self.smithing = None;
         self.recipe = None;
+        self.trade_pick = None;
 
         if tail { Parsed::Whole } else { Parsed::Broken }
     }
@@ -973,8 +987,38 @@ impl Bag {
                 true
             }
             Some(stations::Kind::Smithing) => self.smith(id),
+            Some(stations::Kind::Trading) => self.trade_recipe(id, times),
             Some(_) => false,
         }
+    }
+
+    /// Сделка с жителем: «рецепт» — номер сделки из Update Trade (`netId`).
+    /// Итог рождается в выходе, оплата в ячейках должна покрывать цену —
+    /// расходует её сам запрос (consume), сверка — в `finish_station`.
+    fn trade_recipe(&mut self, id: u32, times: i32) -> bool {
+        let Some(index) = self.trade.iter().position(|price| price.net_id == id) else {
+            return false;
+        };
+        let price = &self.trade[index];
+
+        // Торговля пачкой (Shift) у клиента — несколько запросов по одному [проверить].
+        if times != 1 || !price.stocked {
+            return false;
+        }
+
+        let (first, second) = (self.get(Place::Ui(stations::UI_TRADE_FIRST)), self.get(Place::Ui(stations::UI_TRADE_SECOND)));
+
+        if !price.paid_by(first, second) {
+            return false;
+        }
+
+        let sell = price.sell;
+
+        self.trade_pick = Some(index);
+        self.craft_ready = true;
+        self.set(Place::CreativeOutput, Some(sell));
+        self.events.push(Event::Traded(index));
+        true
     }
 
     /// Зачарование предложением стола (вики, Enchanting mechanics): итог —
@@ -1114,6 +1158,17 @@ impl Bag {
             // сверяет, что израсходован набор рецепта. [проверить]
         }
 
+        // Сделка: израсходовано ровно столько, сколько стоит, и итог взят.
+        if let Some(index) = self.trade_pick {
+            let Some(price) = self.trade.get(index) else {
+                return false;
+            };
+
+            if self.get(Place::CreativeOutput).is_some() || !price.covers(&self.consumed) {
+                return false;
+            }
+        }
+
         if let Some(station) = self.station {
             let lapis = blocks::item_named("lapis_lazuli");
 
@@ -1236,6 +1291,12 @@ impl Bag {
         let mut groups: Vec<(ContainerKey, Vec<(u8, Place)>)> = Vec::new();
 
         for (named, place) in touched {
+            // Ответ BDS на сделку не называет выход (creative_output) —
+            // клиент знает его сам (запись tmp/br-trade).
+            if self.trade_pick.is_some() && *place == Place::CreativeOutput {
+                continue;
+            }
+
             let key = (named.container, named.dynamic);
             let at = match groups.iter().position(|(k, _)| *k == key) {
                 Some(at) => at,
@@ -2126,5 +2187,87 @@ mod tests {
 
         put(&mut bag, 1, stations::FURNACE_INGREDIENT, 0);
         assert_eq!(bag.window_slots().expect("окно")[0], Some(item("stone", 1)));
+    }
+
+    /// Сделка жителя: 24 бумаги за изумруд, как у библиотекаря новичка (BDS).
+    fn trading_bag() -> (Bag, u32) {
+        let mut bag = Bag::new(Inventory::new());
+        let (paper, emerald) = (item("paper", 24), item("emerald", 1));
+
+        bag.inventory.set(FIRST_HOTBAR, Some(item("paper", 40)));
+        bag.open_station(Station { kind: stations::Kind::Trading, pos: (7, 0, 0), seed: 0, shelves: 0 });
+        bag.set_trade(vec![crate::bedrock::trade::Price { net_id: 3000, a: (paper.item, 24), b: None, sell: emerald, stocked: true }]);
+        (bag, 3000)
+    }
+
+    /// Запрос сделки как у клиента: рецепт, итог, расход, взять итог в панель.
+    fn trade_request(bag: &mut Bag, net_id: u32, spend: u8) -> Handled {
+        let payload = request(-3, 4, |out| {
+            out.u8(12).varint(net_id).u8(1);
+            out.u8(19).varint(0).u8(1);
+            consume_action(out, spend, stations::TRADE2_INGREDIENT1, stations::UI_TRADE_FIRST);
+            out.u8(0).u8(1);
+            slot(out, CREATIVE_OUTPUT, 50);
+            slot(out, HOTBAR_AND_INVENTORY, 8);
+        });
+
+        bag.handle_requests(&payload, false)
+    }
+
+    #[test]
+    fn a_villager_trade_pays_and_hands_over_the_result() {
+        let (mut bag, id) = trading_bag();
+        let put = request(-1, 1, |out| {
+            out.u8(0).u8(24);
+            slot(out, HOTBAR_AND_INVENTORY, 0);
+            slot(out, stations::TRADE2_INGREDIENT1, stations::UI_TRADE_FIRST);
+        });
+
+        bag.handle_requests(&put, false);
+        assert_eq!(bag.get(Place::Ui(stations::UI_TRADE_FIRST)), Some(item("paper", 24)));
+
+        let handled = trade_request(&mut bag, id, 24);
+
+        assert_eq!(handled.events, vec![Event::Traded(0)]);
+        assert_eq!(bag.get(Place::Ui(stations::UI_TRADE_FIRST)), None);
+        assert_eq!(bag.inventory.slot(FIRST_HOTBAR + 8), Some(item("emerald", 1)));
+        // Ответ называет оплату и панель, но не выход (запись BDS).
+        assert_eq!(handled.response[1], 1);
+    }
+
+    #[test]
+    fn an_underpaid_or_unknown_trade_changes_nothing() {
+        let (mut bag, id) = trading_bag();
+
+        bag.set(Place::Ui(stations::UI_TRADE_FIRST), Some(item("paper", 23)));
+
+        let handled = trade_request(&mut bag, id, 23);
+
+        assert!(handled.events.is_empty());
+        assert_eq!(bag.get(Place::Ui(stations::UI_TRADE_FIRST)), Some(item("paper", 23)));
+        assert_eq!(bag.inventory.slot(FIRST_HOTBAR + 8), None);
+
+        bag.set(Place::Ui(stations::UI_TRADE_FIRST), Some(item("paper", 24)));
+        trade_request(&mut bag, id + 5, 24);
+        assert_eq!(bag.get(Place::Ui(stations::UI_TRADE_FIRST)), Some(item("paper", 24)));
+
+        // Взято меньше цены (потрачено 20 из 24) — отказ.
+        trade_request(&mut bag, id, 20);
+        assert_eq!(bag.get(Place::Ui(stations::UI_TRADE_FIRST)), Some(item("paper", 24)));
+    }
+
+    #[test]
+    fn a_sold_out_trade_is_refused_and_closing_returns_the_payment() {
+        let (mut bag, id) = trading_bag();
+
+        bag.set(Place::Ui(stations::UI_TRADE_FIRST), Some(item("paper", 24)));
+        bag.set_trade(vec![crate::bedrock::trade::Price { net_id: id, a: (item("paper", 1).item, 24), b: None, sell: item("emerald", 1), stocked: false }]);
+        assert!(trade_request(&mut bag, id, 24).events.is_empty());
+
+        let (overflow, changed) = bag.close_station();
+
+        assert!(overflow.is_empty() && !changed.is_empty());
+        assert_eq!(bag.get(Place::Ui(stations::UI_TRADE_FIRST)), None);
+        assert_eq!(bag.inventory.slot(FIRST_HOTBAR).map(|stack| stack.count), Some(64));
     }
 }

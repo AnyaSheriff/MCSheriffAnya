@@ -32,6 +32,8 @@ pub const UPDATE_BLOCK: u32 = 0x15;
 pub const INVENTORY_TRANSACTION: u32 = 0x1e;
 pub const INTERACT: u32 = 0x21;
 pub const CONTAINER_OPEN: u32 = 0x2e;
+/// Update Trade (minecraft-data 1.26.10, packet_update_trade): окно торговли.
+pub const UPDATE_TRADE: u32 = 0x50;
 pub const CONTAINER_CLOSE: u32 = 0x2f;
 pub const CONTAINER_SET_DATA: u32 = 0x33;
 pub const CRAFTING_DATA: u32 = 0x34;

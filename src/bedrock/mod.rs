@@ -33,6 +33,7 @@ pub mod skin;
 pub mod stations;
 pub mod tables;
 pub mod things;
+pub mod trade;
 pub mod tools;
 pub mod world;
 

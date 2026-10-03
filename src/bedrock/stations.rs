@@ -44,6 +44,9 @@ pub const GRINDSTONE_ADDITIONAL: u8 = 51;
 pub const SMITHING_INPUT: u8 = 3;
 pub const SMITHING_MATERIAL: u8 = 4;
 pub const SMITHING_TEMPLATE: u8 = 61;
+/// Ячейки оплаты экрана торговли (Trade2: новый экран, две оплаты; снято с BDS).
+pub const TRADE2_INGREDIENT1: u8 = 47;
+pub const TRADE2_INGREDIENT2: u8 = 48;
 
 /// Ячейки контейнера интерфейса (PlayerUIContainer.md).
 pub const UI_ANVIL_INPUT: u8 = 1;
@@ -57,6 +60,8 @@ pub const UI_GRINDSTONE_ADDITIONAL: u8 = 17;
 pub const UI_SMITHING_INPUT: u8 = 51;
 pub const UI_SMITHING_MATERIAL: u8 = 52;
 pub const UI_SMITHING_TEMPLATE: u8 = 53;
+pub const UI_TRADE_FIRST: u8 = 4;
+pub const UI_TRADE_SECOND: u8 = 5;
 pub const UI_GRID_2X2: u8 = 28;
 pub const UI_GRID_3X3: u8 = 32;
 
@@ -66,6 +71,8 @@ pub const ENCHANTMENT: u8 = 3;
 pub const ANVIL: u8 = 5;
 pub const GRINDSTONE: u8 = 26;
 pub const SMITHING: u8 = 33;
+/// Окно торговли открывается пакетом Update Trade, а не Container Open.
+pub const TRADING: u8 = 15;
 
 /// Станок игрока.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -75,6 +82,8 @@ pub enum Kind {
     Anvil,
     Grindstone,
     Smithing,
+    /// Торговля с жителем: место станка — номер жителя в первой координате.
+    Trading,
 }
 
 impl Kind {
@@ -99,6 +108,7 @@ impl Kind {
             Kind::Anvil => ANVIL,
             Kind::Grindstone => GRINDSTONE,
             Kind::Smithing => SMITHING,
+            Kind::Trading => TRADING,
         }
     }
 
@@ -110,6 +120,7 @@ impl Kind {
             Kind::Anvil => matches!(slot, UI_ANVIL_INPUT | UI_ANVIL_MATERIAL),
             Kind::Grindstone => matches!(slot, UI_GRINDSTONE_INPUT | UI_GRINDSTONE_ADDITIONAL),
             Kind::Smithing => matches!(slot, UI_SMITHING_INPUT | UI_SMITHING_MATERIAL | UI_SMITHING_TEMPLATE),
+            Kind::Trading => matches!(slot, UI_TRADE_FIRST | UI_TRADE_SECOND),
         }
     }
 }
@@ -128,6 +139,8 @@ pub fn ui_slot(container: u8, slot: u8) -> Option<u8> {
         SMITHING_INPUT => slot == UI_SMITHING_INPUT,
         SMITHING_MATERIAL => slot == UI_SMITHING_MATERIAL,
         SMITHING_TEMPLATE => slot == UI_SMITHING_TEMPLATE,
+        TRADE2_INGREDIENT1 => slot == UI_TRADE_FIRST,
+        TRADE2_INGREDIENT2 => slot == UI_TRADE_SECOND,
         _ => false,
     };
 

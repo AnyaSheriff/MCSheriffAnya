@@ -27,6 +27,10 @@ pub const PARTICLE_CROP_GROWTH: i32 = 2005;
 pub const SOUND_FIZZ: u32 = 27;
 pub const SOUND_EXPLODE: u32 = 48;
 pub const SOUND_FUSE: u32 = 51;
+/// Торг: житель согласен и отказывает (HaggleYes, HaggleNo; BDS играет первый
+/// при каждой сделке, tmp/br-trade).
+pub const SOUND_HAGGLE_YES: u32 = 122;
+pub const SOUND_HAGGLE_NO: u32 = 123;
 
 pub const SOUND_BOW: u32 = 21;
 pub const SOUND_GLASS: u32 = 127;
@@ -138,6 +142,9 @@ pub fn cue_for(name: &str, pitch: f32) -> Option<Cue> {
         "entity.arrow.hit" => return Some(Cue::new(SOUND_BOW_HIT, Extra::None)),
         "entity.splash_potion.throw" | "entity.lingering_potion.throw" => return Some(Cue::new(SOUND_THROW, Extra::Player)),
         "entity.player.burp" => return Some(Cue::new(SOUND_BURP, Extra::None)),
+        // Торг жителя (tmp/br-trade).
+        "entity.villager.yes" => return Some(Cue::new(SOUND_HAGGLE_YES, Extra::None)),
+        "entity.villager.no" => return Some(Cue::new(SOUND_HAGGLE_NO, Extra::None)),
         "entity.firework_rocket.launch" => return Some(Cue::new(SOUND_LAUNCH, Extra::None)),
         "block.lever.click" => {
             // Один звук у Java: высота 0,6 — включили, 0,5 — выключили.
@@ -533,5 +540,11 @@ mod tests {
         reader.take(12);
         assert_eq!(reader.zigzag32(), Some(0xff3c38c6u32 as i32));
         assert_eq!(read_sound(&splash[1]).0, SOUND_GLASS);
+    }
+
+    #[test]
+    fn villagers_haggle() {
+        assert_eq!(cue_for("minecraft:entity.villager.yes", 1.0).map(|cue| cue.id), Some(122));
+        assert_eq!(cue_for("minecraft:entity.villager.no", 1.0).map(|cue| cue.id), Some(123));
     }
 }

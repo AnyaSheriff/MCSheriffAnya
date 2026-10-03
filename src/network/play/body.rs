@@ -333,3 +333,56 @@ fn struck(shared: &Shared, p: &mut PlayerState, strike: &PlayerStrike, now: u64,
 
     p.net.pin = None;
 }
+
+// ---------------------------------------------------------------------------
+// Торговля и вагонетки-хранилища: окна Bedrock берут то же, что и Java
+// ---------------------------------------------------------------------------
+
+/// Житель с этим номером: его сделки и опыт (для окна торговли Bedrock).
+pub(crate) fn villager_state(shared: &Shared, dimension: Dimension, villager_id: i32) -> Option<crate::villager::State> {
+    shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").mobs().iter().find(|mob| mob.entity_id == villager_id).map(|mob| mob.villager.clone())
+}
+
+/// Жителя больше нет или он мёртв — окно торговли закрывается.
+pub(crate) fn villager_missing(shared: &Shared, dimension: Dimension, villager_id: i32) -> bool {
+    !shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").mobs().iter().any(|mob| mob.entity_id == villager_id && !mob.is_dead())
+}
+
+/// Сделка Bedrock состоялась: счёт, опыт, звук, шарик (merchant.rs).
+pub(crate) fn trade_paid(shared: &Shared, dimension: Dimension, villager_id: i32, index: usize) -> bool {
+    merchant::trade_paid(shared, dimension, villager_id, index)
+}
+
+/// Житель больше ни с кем не торгует.
+pub(crate) fn release_villager(shared: &Shared, dimension: Dimension, villager_id: i32) {
+    merchant::release(shared, dimension, villager_id);
+}
+
+/// Вагонетка-хранилище для окна: вид, место и ячейки.
+pub(crate) type CartInfo = (crate::minecart::Kind, (f64, f64, f64), Vec<Option<Stack>>);
+
+/// Вагонетка-хранилище: вид, место и ячейки.
+pub(crate) fn cart_info(shared: &Shared, dimension: Dimension, entity_id: i32) -> Option<CartInfo> {
+    shared
+        .items_in(dimension)
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .carts()
+        .iter()
+        .find(|cart| cart.entity_id == entity_id)
+        .map(|cart| (cart.kind, (cart.x, cart.y, cart.z), cart.slots.clone()))
+}
+
+/// Ячейки вагонетки, как их хранит мир.
+pub(crate) fn cart_contents(shared: &Shared, dimension: Dimension, entity_id: i32) -> Option<Vec<Option<Stack>>> {
+    cart_slots(shared, dimension, entity_id)
+}
+
+/// Кладёт ячейки в вагонетку (после запроса игрока).
+pub(crate) fn store_cart(shared: &Shared, dimension: Dimension, entity_id: i32, slots: &[Option<Stack>]) {
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    if let Some(cart) = items.carts_mut().iter_mut().find(|found| found.entity_id == entity_id) {
+        cart.slots.clone_from_slice(slots);
+    }
+}

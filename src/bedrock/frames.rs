@@ -54,7 +54,7 @@ pub fn block_state(frame: &Frame) -> u32 {
 
 /// Имя предмета Bedrock по его номеру (`item_names.txt`, делает
 /// make_bedrock_tables.py).
-fn bedrock_item_name(id: i32) -> Option<&'static str> {
+pub(super) fn bedrock_item_name(id: i32) -> Option<&'static str> {
     static NAMES: OnceLock<HashMap<i32, &'static str>> = OnceLock::new();
 
     NAMES

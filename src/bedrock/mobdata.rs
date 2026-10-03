@@ -24,6 +24,7 @@ const KEY_SCALE: u32 = 38;
 const KEY_ALWAYS_SHOW_NAMETAG: u32 = 81;
 const KEY_TRADE_TIER: u32 = 101;
 const KEY_MAX_TRADE_TIER: u32 = 102;
+const KEY_TRADE_EXPERIENCE: u32 = 103;
 const KEY_SKIN_ID: u32 = 104;
 
 /// Виды значений.
@@ -62,6 +63,9 @@ pub struct Look {
     pub profession: u8,
     pub village_type: u8,
     pub level: u8,
+    /// Опыт жителя: клиент рисует им полоску яруса (`trade_experience`;
+    /// BDS шлёт его после каждой сделки).
+    pub xp: i32,
     pub name: Option<String>,
 }
 
@@ -80,6 +84,7 @@ impl Look {
             profession: mob.villager.profession,
             village_type: mob.villager.kind,
             level: mob.villager.level,
+            xp: mob.villager.xp,
             name: None,
         }
     }
@@ -164,6 +169,7 @@ pub fn entries(look: &Look) -> Vec<(u32, Value)> {
             list.push((KEY_SKIN_ID, Value::Int(bedrock_village_type(look.village_type))));
             list.push((KEY_TRADE_TIER, Value::Int(i32::from(look.level.max(1)) - 1)));
             list.push((KEY_MAX_TRADE_TIER, Value::Int(if look.baby { 0 } else { 4 })));
+            list.push((KEY_TRADE_EXPERIENCE, Value::Int(look.xp)));
         }
         _ => {}
     }
@@ -210,7 +216,7 @@ mod tests {
     use super::*;
 
     fn look(kind: Kind) -> Look {
-        Look { kind, baby: false, in_love: false, sheared: false, color: 0, sitting: false, tamed: false, profession: 0, village_type: 2, level: 1, name: None }
+        Look { kind, baby: false, in_love: false, sheared: false, color: 0, sitting: false, tamed: false, profession: 0, village_type: 2, level: 1, xp: 0, name: None }
     }
 
     /// Набор флагов взрослой коровы побайтово как у BDS: лазит, ходит, дышит,

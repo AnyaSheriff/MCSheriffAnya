@@ -202,6 +202,24 @@ fn trade(shared: &Shared, items: &mut crate::items::Items, merchant: &mut Mercha
         return false;
     };
 
+    let villager = merchant.villager;
+
+    // Сперва выход по новой оплате (звук «да», если пора), потом сброс
+    // счёта голоса самой сделкой (чёрный ящик, villager-trade).
+    settle(shared, items, villager, index, |items| payments_changed(items, merchant));
+    true
+}
+
+/// Всё, что следует за оплаченной сделкой `index`: опыт жителю, отсчёт до
+/// повышения, частицы, звук (`sound` — его решает вызывающий: у Java он
+/// зависит от ячеек окна), шарик опыта игроку. Общее для Java (`trade`) и
+/// Bedrock (`trade_paid`): оплату и счётчик использований вызывающий уже
+/// списал.
+fn settle(shared: &Shared, items: &mut crate::items::Items, villager_id: i32, index: usize, sound: impl FnOnce(&mut crate::items::Items)) {
+    let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == villager_id) else {
+        return;
+    };
+
     let offer = mob.villager.offers[index].clone();
 
     mob.villager.xp += offer.xp;
@@ -222,11 +240,9 @@ fn trade(shared: &Shared, items: &mut crate::items::Items, merchant: &mut Mercha
     let at = (mob.x, mob.y + 0.5, mob.z);
     let mut rng = crate::mob::Rng::new(u64::from(mob.entity_id as u32) ^ mob.ticks.wrapping_mul(0x9E37) ^ (offer.uses as u64) << 32);
 
-    // Сперва выход по новой оплате (звук «да», если пора), потом сброс
-    // счёта голоса самой сделкой (чёрный ящик, villager-trade).
-    payments_changed(items, merchant);
+    sound(items);
 
-    if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == merchant.villager) {
+    if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == villager_id) {
         crate::mob::ai::hush(mob);
     }
 
@@ -238,6 +254,28 @@ fn trade(shared: &Shared, items: &mut crate::items::Items, merchant: &mut Mercha
 
         items.add_orb(shared.next_entity_id(), value, at, velocity);
     }
+}
+
+/// Сделка Bedrock: оплату списал сам запрос, здесь — счётчик использований
+/// и общий хвост (`settle`). Звук «да» — не чаще раза в 20 тактов (BDS:
+/// `HaggleYes` при каждой сделке). Возвращает, есть ли такой житель и такая
+/// сделка.
+pub(crate) fn trade_paid(shared: &Shared, dimension: crate::dimension::Dimension, villager_id: i32, index: usize) -> bool {
+    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+
+    let Some(offer) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == villager_id).and_then(|mob| mob.villager.offers.get_mut(index)) else {
+        return false;
+    };
+
+    offer.uses += 1;
+
+    settle(shared, &mut items, villager_id, index, |items| {
+        if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == villager_id)
+            && crate::mob::ai::trade_sound_due(mob)
+        {
+            mob.events.push(crate::mob::Event::Sound { name: "minecraft:entity.villager.yes", volume: 1.0, pitch: mob.voice_pitch() });
+        }
+    });
 
     true
 }

@@ -368,6 +368,9 @@ struct OpenWindow {
     halves: Vec<containers::Pos>,
     /// Свойства окна (печь, стойка), какими их знает клиент.
     props: Vec<(i32, i32)>,
+    /// Вагонетка-хранилище, чьё это окно: ячейки — её, мест в мире нет
+    /// (`halves` пусто), смотрящих не считают (как у Java, `cart`).
+    entity: Option<i32>,
 }
 
 impl BedrockWorld {
@@ -883,11 +886,17 @@ impl BedrockWorld {
 
                     // Закрыт станок или инвентарь: сетка и ячейки станка
                     // отдают вещи обратно.
+                    let trading = self.bag.station.is_some_and(|station| station.kind == stations::Kind::Trading);
+
                     if self.station_window.is_some() || window == 0 {
                         packets.extend(self.close_station());
                     }
 
-                    packets.push(screens::close_packet(window, kind, false)); // закрыл не сервер
+                    // Окно торговли BDS в ответ ничего не закрывает — только
+                    // сбрасывает метку у жителя (tmp/br-trade).
+                    if !trading {
+                        packets.push(screens::close_packet(window, kind, false)); // закрыл не сервер
+                    }
                     connection.send(&packets);
                 }
             }
@@ -1389,7 +1398,14 @@ impl BedrockWorld {
                 crate::items::Change::FrameSound { .. } => {}
                 // Удар и смерть моба: ActorEvent HURT (2) и DEATH (3).
                 // Удар и смерть показываем (ActorEvent); голоса и частицы — нет.
-                crate::items::Change::MobEvent { entity_id, event, .. } => match event {
+                crate::items::Change::MobEvent { entity_id, at, event } => match event {
+                    // Голоса — только те, что есть в таблице звуков (торг жителя:
+                    // HaggleYes и HaggleNo, tmp/br-trade).
+                    crate::mob::Event::Sound { name, .. } if self.within_earshot(at.0, at.2) => {
+                        if let Some(cue) = super::effects::cue_for(name, 1.0) {
+                            packets.push(super::effects::level_sound(cue.id, (at.0 as f32, at.1 as f32, at.2 as f32)));
+                        }
+                    }
                     crate::mob::Event::Hurt { source, .. } if self.items_shown.contains(&entity_id) => packets.push(health::hurt_event(entity_id as u64, source)),
                     crate::mob::Event::Death if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 3)),
                     // Сердечки любви: Actor Event love_particles (21, список ActorEvent minecraft-data) [проверить].
@@ -2004,8 +2020,8 @@ impl BedrockWorld {
     /// Действие по сущности: удар или щелчок. Удар идёт тем же кодом, что у
     /// игрока Java (`attack` в network/play.rs): игрок, моб, вагонетка — заряд
     /// руки, критический удар, рывок, зачарования, взмах меча, износ оружия.
-    /// Щелчок (кормление, стрижка, торговля, окна вагонеток) Bedrock пока не
-    /// обрабатывает [проверить].
+    /// Щелчок (кормление, стрижка) идёт общим `use_entity`; окна вагонеток и
+    /// торговли жителя открывают `open_cart` и `open_trade`.
     fn use_entity(&mut self, connection: &Connection, target: u64, action: u32) {
         /// Interact и Attack (InventoryTransaction, ItemUseOnEntity,
         /// описание протокола Mojang).
@@ -2020,17 +2036,32 @@ impl BedrockWorld {
         }
 
         // Interact — правая кнопка: общий код Java кормит, стрижёт, поджигает
-        // крипера; окна вагонетки и торговли Bedrock пока не открывает.
+        // крипера, открывает окна вагонетки и торговли жителя.
         let act = if action == ATTACK { crate::network::play::Act::Attack(target) } else { crate::network::play::Act::Interact(target) };
         let interact = action != ATTACK;
         let mut done = self.run(act);
         let mut packets = Vec::new();
 
-        if interact && (done.open_cart.is_some() || done.open_merchant.is_some()) {
-            // [проверить]: окна вагонетки и торговли — отдельная работа (UpdateTrade, окно сущности).
-            log_debug!("Bedrock: {} — окно сущности {} пока не открывается", self.identity.name, target);
-            done.open_cart = None;
-            done.open_merchant = None;
+        // Окна сущностей: вагонетка-хранилище (ячейки — её, как у Java) и
+        // торговля жителя (Update Trade). Открыть нельзя, пока открыто другое
+        // окно, — клиент сам закрыл бы его.
+        let (cart, merchant) = (done.open_cart.take(), done.open_merchant.take());
+
+        log_debug!("Bedrock: {} — окна сущности: вагонетка {:?}, житель {:?}", self.identity.name, cart, merchant);
+
+        if let Some(cart) = cart {
+            packets.extend(self.open_cart(cart));
+        }
+
+        if let Some(villager) = merchant {
+            let opened = self.open_trade(villager);
+
+            if opened.is_empty() {
+                // Не открылось (занято другое окно): житель свободен.
+                crate::network::play::release_villager(&self.shared, self.dimension, villager);
+            }
+
+            packets.extend(opened);
         }
 
         self.settle(done, &mut packets);
@@ -2464,7 +2495,7 @@ impl BedrockWorld {
                 packets.push(screens::lid_packet(clicked, true));
             }
 
-            packets.extend(self.open_window(kind, halves, &slots));
+            packets.extend(self.open_window(kind, halves, &slots, None));
             return Some(packets);
         }
 
@@ -2583,6 +2614,19 @@ impl BedrockWorld {
 
                     world.note_sound(pos.0, pos.1, pos.2, "minecraft:block.enchantment_table.use", 1.0, pitch);
                 }
+                Event::Traded(index) => {
+                    let Some(villager) = self.bag.station.filter(|station| station.kind == stations::Kind::Trading).map(|station| station.pos.0) else {
+                        continue;
+                    };
+
+                    // Счёт, опыт, звук и шарик — общий код Java (merchant.rs).
+                    crate::network::play::trade_paid(&self.shared, self.dimension, villager, index);
+
+                    // Сделки (запас, цены) — по новому состоянию жителя.
+                    if let Some(state) = crate::network::play::villager_state(&self.shared, self.dimension, villager) {
+                        self.bag.set_trade(super::trade::prices(&state));
+                    }
+                }
                 Event::AnvilUsed(pos) => self.anvil_used(pos),
                 Event::Smithed(pos) => {
                     self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком").note_level_event(pos.0, pos.1, pos.2, 1044, 0);
@@ -2651,11 +2695,22 @@ impl BedrockWorld {
     /// и стойки — в порядке Bedrock), у сундука крышка, затем рюкзак, броня,
     /// интерфейс, вторая рука, Player Hotbar и снова ячейки хранилища.
     /// Место — ведущая половина: её ячейки в окне первые.
-    fn open_window(&mut self, kind: containers::Kind, halves: Vec<containers::Pos>, slots: &[Option<crate::inventory::Stack>]) -> Vec<Vec<u8>> {
+    ///
+    /// `cart` — окно вагонетки-хранилища (номер сущности и её клетка):
+    /// Container Open с номером сущности (BDS: тип 0 у сундука, 8 у воронки,
+    /// место — клетка вагонетки), два Inventory Content подряд и больше
+    /// ничего — ни рюкзака, ни крышек (снято по сети, tmp/br-trade).
+    fn open_window(
+        &mut self,
+        kind: containers::Kind,
+        halves: Vec<containers::Pos>,
+        slots: &[Option<crate::inventory::Stack>],
+        cart: Option<(i32, containers::Pos)>,
+    ) -> Vec<Vec<u8>> {
         self.next_window = screens::next_window(self.next_window);
 
         let id = self.next_window;
-        let lead = halves[0];
+        let lead = cart.map_or_else(|| halves[0], |(_, place)| place);
         let lids: Vec<containers::Pos> = if kind.is_chest() { halves.clone() } else { Vec::new() };
 
         match stations::layout(kind) {
@@ -2664,15 +2719,25 @@ impl BedrockWorld {
         }
 
         self.opened_at = self.ticks;
-        self.window = Some(OpenWindow { id, kind, halves, props: Vec::new() });
+        self.window = Some(OpenWindow { id, kind, halves, props: Vec::new(), entity: cart.map(|(entity, _)| entity) });
 
         let mut packets = self.window_properties();
 
-        packets.push(screens::open_packet(id, kind, lead));
+        packets.push(match cart {
+            Some((entity, place)) => screens::open_entity_packet(id, kind, place, entity),
+            None => screens::open_packet(id, kind, lead),
+        });
 
         let content = self.bag.window_full_packet(id);
 
         packets.extend(content.iter().cloned());
+
+        // Вагонетка: рюкзак и повтор содержимого BDS не шлёт в этом же такте —
+        // второе содержимое придёт со следующим тактом (`resync_window`).
+        if cart.is_some() {
+            self.resync_window = true;
+            return packets;
+        }
 
         for place in lids {
             self.lids.insert(place, true);
@@ -2689,6 +2754,59 @@ impl BedrockWorld {
         packets
     }
 
+    /// Окно вагонетки с сундуком или воронкой: те же ячейки, что у Java
+    /// (`open_cart_window` в network/play.rs), окно — как у сундука и воронки
+    /// (`open_window`). Пусто — окна нет (вагонетка без хранилища, другое
+    /// окно уже открыто).
+    fn open_cart(&mut self, entity: i32) -> Vec<Vec<u8>> {
+        let Some((cart_kind, (x, y, z), slots)) = crate::network::play::cart_info(&self.shared, self.dimension, entity) else {
+            return Vec::new();
+        };
+        let kind = match cart_kind {
+            crate::minecart::Kind::Chest => containers::Kind::Chest,
+            crate::minecart::Kind::Hopper => containers::Kind::Hopper,
+            _ => return Vec::new(),
+        };
+
+        if self.window.is_some() || self.station_window.is_some() {
+            return Vec::new();
+        }
+
+        log_debug!("Bedrock: {} открыл вагонетку {} ({:?})", self.identity.name, entity, cart_kind);
+        self.open_window(kind, Vec::new(), &slots, Some((entity, (x.floor() as i32, y.floor() as i32, z.floor() as i32))))
+    }
+
+    /// Окно торговли с жителем в порядке BDS (tmp/br-trade): Update Trade,
+    /// пустое содержимое окна из трёх ячеек, метка «торгует с» у жителя.
+    /// Ячейки оплаты — в интерфейсе игрока (`Bag::station` с видом
+    /// `Trading`), а сделки и цены — те же, что у Java (villager.rs).
+    /// Пусто — окно не открылось.
+    fn open_trade(&mut self, villager: i32) -> Vec<Vec<u8>> {
+        if self.window.is_some() || self.station_window.is_some() {
+            return Vec::new();
+        }
+
+        let Some(state) = crate::network::play::villager_state(&self.shared, self.dimension, villager) else {
+            return Vec::new();
+        };
+
+        self.next_window = screens::next_window(self.next_window);
+
+        let id = self.next_window;
+
+        self.station_window = Some(id);
+        self.opened_at = self.ticks;
+        self.bag.open_station(super::inventory::Station { kind: stations::Kind::Trading, pos: (villager, 0, 0), seed: 0, shelves: 0 });
+        self.bag.set_trade(super::trade::prices(&state));
+        log_debug!("Bedrock: {} торгует с жителем {}: окно {}, сделок {}", self.identity.name, villager, id, state.offers.len());
+
+        vec![
+            super::trade::update_packet(id, villager, &state),
+            super::trade::content_packet(id),
+            super::trade::trading_player_packet(villager, self.runtime_id as i32),
+        ]
+    }
+
     /// Свойства окна печи и стойки (Container Set Data): что сменилось
     /// с прошлого раза.
     fn window_properties(&mut self) -> Vec<Vec<u8>> {
@@ -2697,7 +2815,9 @@ impl BedrockWorld {
         };
         let java = {
             let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
-            let (x, y, z) = window.halves[0];
+            let Some(&(x, y, z)) = window.halves.first() else {
+                return Vec::new();
+            };
 
             world.container(x, y, z).map(crate::furnace::properties).unwrap_or_default()
         };
@@ -2731,6 +2851,11 @@ impl BedrockWorld {
         let window = self.window.take()?;
 
         self.bag.close_window();
+
+        // У вагонетки смотрящих не считают.
+        if window.entity.is_some() {
+            return Some(window);
+        }
 
         let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
 
@@ -2772,11 +2897,20 @@ impl BedrockWorld {
         };
 
         let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
-        let now = containers::window_slots(&world, &window.halves);
+        let cart = window.entity;
+        let cart_now = cart.map(|entity| crate::network::play::cart_contents(&self.shared, self.dimension, entity));
+        let now = match &cart_now {
+            Some(slots) => slots.clone().unwrap_or_default(),
+            None => containers::window_slots(&world, &window.halves),
+        };
+        let gone = match &cart_now {
+            Some(slots) => slots.is_none(),
+            None => Self::window_gone(&world, window),
+        };
 
         // Хранилища уже нет (его содержимое высыпалось): окно закрывается,
         // запрос выполняется без него — иначе вещи бы размножились.
-        if Self::window_gone(&world, window) || Some(now.len()) != self.bag.window_slots().map(<[_]>::len) {
+        if gone || Some(now.len()) != self.bag.window_slots().map(<[_]>::len) {
             drop(world);
 
             let packets = self.close_window_by_server().into_iter().collect();
@@ -2791,7 +2925,17 @@ impl BedrockWorld {
         let after = self.bag.window_slots().map(<[_]>::to_vec).unwrap_or_default();
         let mut xp_points = 0;
 
-        if after != now {
+        if after != now && let Some(entity) = cart {
+            // Вагонетка: ячейки — у неё; снимок для окон — тоже, иначе
+            // ближайшая рассылка вернула бы клиенту прежнее.
+            crate::network::play::store_cart(&self.shared, self.dimension, entity, &after);
+
+            if let Some(published) = world.published_carts.get_mut(&entity)
+                && published.len() == after.len()
+            {
+                published.clone_from(&after);
+            }
+        } else if after != now {
             containers::store_window_slots(&mut world, &halves, &after);
 
             // Из выхода печи забрали выплавленное — игроку весь накопленный
@@ -2856,7 +3000,10 @@ impl BedrockWorld {
         let (Some(station), Some(id)) = (self.bag.station, self.station_window) else {
             return Vec::new();
         };
-        let gone = {
+        let gone = if station.kind == stations::Kind::Trading {
+            // Житель пропал или умер — окно закрывается (вики, Trading).
+            crate::network::play::villager_missing(&self.shared, self.dimension, station.pos.0)
+        } else {
             let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
             let (x, y, z) = station.pos;
 
@@ -2878,13 +3025,22 @@ impl BedrockWorld {
     fn close_station(&mut self) -> Vec<Vec<u8>> {
         self.station_window = None;
 
+        // Торговля закончилась: житель свободен и снова ни с кем не торгует.
+        let trade = self.bag.station.filter(|station| station.kind == stations::Kind::Trading);
         let (overflow, changed) = self.bag.close_station();
 
         for stack in overflow {
             self.throw_out(stack);
         }
 
-        changed.into_iter().filter_map(|slot| self.bag.slot_packet(slot)).collect()
+        let mut packets: Vec<Vec<u8>> = changed.into_iter().filter_map(|slot| self.bag.slot_packet(slot)).collect();
+
+        if let Some(station) = trade {
+            crate::network::play::release_villager(&self.shared, self.dimension, station.pos.0);
+            packets.push(super::trade::trading_player_packet(station.pos.0, 0));
+        }
+
+        packets
     }
 
     fn window_slot_changes(&mut self) -> Vec<Vec<u8>> {
@@ -2894,10 +3050,21 @@ impl BedrockWorld {
 
         let (gone, now) = {
             let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
-            let now: Option<Vec<Option<crate::inventory::Stack>>> =
-                window.halves.iter().map(|place| world.published.get(place).cloned()).collect::<Option<Vec<_>>>().map(|parts| parts.concat());
 
-            (Self::window_gone(&world, window), now)
+            match window.entity {
+                // Вагонетки нет в мире — окно закрывается (как у Java).
+                Some(entity) => {
+                    let alive = crate::network::play::cart_contents(&self.shared, self.dimension, entity).is_some();
+
+                    (!alive, world.published_carts.get(&entity).cloned())
+                }
+                None => {
+                    let now: Option<Vec<Option<crate::inventory::Stack>>> =
+                        window.halves.iter().map(|place| world.published.get(place).cloned()).collect::<Option<Vec<_>>>().map(|parts| parts.concat());
+
+                    (Self::window_gone(&world, window), now)
+                }
+            }
         };
 
         if gone {

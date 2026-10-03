@@ -69,7 +69,7 @@ mod farm;
 mod station;
 mod body;
 
-pub(crate) use body::{Act, Body, Done, Stance};
+pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
 
 /// Сторона чанка в блоках. По ней считается, в каком чанке стоит игрок.
 const CHUNK_SIZE: i32 = 16;
@@ -4322,7 +4322,7 @@ fn cart_menu(kind: crate::minecart::Kind) -> Option<(i32, &'static str)> {
 }
 
 /// Ячейки вагонетки с этим номером, если она ещё в мире.
-fn cart_slots(shared: &Shared, dimension: crate::dimension::Dimension, entity_id: i32) -> Option<Vec<Option<Stack>>> {
+pub(super) fn cart_slots(shared: &Shared, dimension: crate::dimension::Dimension, entity_id: i32) -> Option<Vec<Option<Stack>>> {
     shared
         .items_in(dimension)
         .lock()

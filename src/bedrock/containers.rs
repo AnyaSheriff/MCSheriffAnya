@@ -73,6 +73,16 @@ pub fn open_packet(window: u8, kind: Kind, (x, y, z): Pos) -> Vec<u8> {
     out.bytes
 }
 
+/// Container Open вагонетки-хранилища: место — клетка вагонетки, сущность —
+/// её номер (BDS 1.26.13: поле называется runtime id, значение — тот же
+/// номер, что в Add Actor; у блока там −1). Место при верном номере
+/// сущности клиент не использует.
+pub fn open_entity_packet(window: u8, kind: Kind, (x, y, z): Pos, entity: i32) -> Vec<u8> {
+    let mut out = Out::packet(session::CONTAINER_OPEN);
+    out.u8(window).u8(screen(kind)).block_position(x, y, z).zigzag64(i64::from(entity));
+    out.bytes
+}
+
 /// Container Close: номер окна, вид экрана, закрыл ли сервер.
 pub fn close_packet(window: u8, screen: u8, by_server: bool) -> Vec<u8> {
     let mut out = Out::packet(session::CONTAINER_CLOSE);
@@ -328,6 +338,22 @@ mod tests {
         assert_eq!(screen(Kind::Barrel), 0);
         assert_eq!(screen(Kind::Dispenser), 6);
         assert_eq!(screen(Kind::Dropper), 7);
+    }
+
+    /// Container Open вагонетки: сундучный вид (0) или воронки (8), клетка
+    /// вагонетки и её номер вместо −1 (запись BDS, tmp/br-trade).
+    #[test]
+    fn a_cart_window_names_its_entity() {
+        for (kind, screen_id) in [(Kind::Chest, 0), (Kind::Hopper, 8)] {
+            let packet = open_entity_packet(2, kind, (7100, -61, 7103), 96);
+            let mut reader = In::new(&packet);
+
+            assert_eq!(reader.varint(), Some(session::CONTAINER_OPEN));
+            assert_eq!((reader.u8(), reader.u8()), (Some(2), Some(screen_id)));
+            assert_eq!((reader.zigzag32(), reader.zigzag32(), reader.zigzag32()), (Some(7100), Some(-61), Some(7103)));
+            assert_eq!(reader.zigzag64(), Some(96));
+            assert_eq!(reader.u8(), None);
+        }
     }
 
     #[test]
