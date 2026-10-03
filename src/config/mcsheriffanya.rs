@@ -46,6 +46,10 @@ pub struct Settings {
     /// ops.json получают только подтверждённые.
     pub bedrock_online_mode: bool,
 
+    /// Координаты в углу экрана у игроков Bedrock (правило мира
+    /// `showcoordinates`). У Java они и так есть в F3.
+    pub bedrock_show_coordinates: bool,
+
     /// Редкие осенние пятна в обычном лесу — свой биом с осенней листвой.
     pub autumn_forests: bool,
 
@@ -91,6 +95,7 @@ impl Default for Settings {
             prefetch_at_once: 4,
             bedrock_port: 19132,
             bedrock_online_mode: false,
+            bedrock_show_coordinates: true,
             autumn_forests: true,
             pink_cherry_groves: true,
             text_info: true,
@@ -158,6 +163,7 @@ impl Settings {
             prefetch_at_once: take(&values, "prefetch-at-once", default.prefetch_at_once, path),
             bedrock_port: take(&values, "bedrock-port", default.bedrock_port, path),
             bedrock_online_mode: take(&values, "bedrock-online-mode", default.bedrock_online_mode, path),
+            bedrock_show_coordinates: take(&values, "bedrock-show-coordinates", default.bedrock_show_coordinates, path),
             autumn_forests: take(&values, "autumn-forests", default.autumn_forests, path),
             pink_cherry_groves: take(&values, "pink-cherry-groves", default.pink_cherry_groves, path),
             text_info: take(&values, "text-info", default.text_info, path),
@@ -184,7 +190,7 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 14] {
+    fn sections(self) -> [(&'static str, String); 15] {
         [
             ("debug", format!("\
 # Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
@@ -214,6 +220,10 @@ bedrock-port={}
 # false — пускать всех, неподтверждённым — только команды для всех.
 bedrock-online-mode={}
 ", self.bedrock_online_mode)),
+            ("bedrock-show-coordinates", format!("\
+# Координаты в углу экрана у игроков Bedrock (у Java они есть в F3).
+bedrock-show-coordinates={}
+", self.bedrock_show_coordinates)),
             ("autumn-forests", format!("\
 # Дополнения к миру, которых нет у оригинала (false — мир как у оригинала).
 # Редкие осенние пятна в обычном лесу: рыжая листва и пожухлая трава.

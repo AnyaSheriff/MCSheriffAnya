@@ -200,6 +200,15 @@ fn bedrock_game_mode(java: i32) -> i32 {
     }
 }
 
+/// Правила мира для StartGame (GameRuleVarint[] в описании протокола):
+/// число правил, затем у каждого имя, «можно менять», тип (1 — да/нет)
+/// и значение.
+fn game_rules(settings: &crate::config::mcsheriffanya::Settings) -> Vec<u8> {
+    let mut out = Out::default();
+    out.varint(1).string("showcoordinates").bool(false).varint(1).bool(settings.bedrock_show_coordinates);
+    out.bytes
+}
+
 /// Высота глаз игрока над ногами: Bedrock шлёт и ждёт положение глаз.
 const EYES: f32 = 1.62;
 
@@ -446,7 +455,7 @@ impl BedrockWorld {
             .zigzag32(4) // platform_broadcast_mode
             .bool(true) // enable_commands
             .bool(false) // is_texturepacks_required
-            .varint(0) // gamerules
+            .raw(&game_rules(&shared.settings))
             .li32(0) // experiments
             .bool(false) // experiments_previously_used
             .bool(false) // bonus_chest
