@@ -631,6 +631,14 @@ bot.once('spawn', async () => {
     if (corners.some(c => !bot.blockAt(c))) throw new Error('чанки площадки так и не пришли');
     await say(`fill ${ORIGIN.x - PAD} ${ORIGIN.y - 1} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${ORIGIN.y + PAD} ${ORIGIN.z + PAD} minecraft:air`);
     await say(`fill ${ORIGIN.x - PAD} ${ORIGIN.y - 1} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${ORIGIN.y - 1} ${ORIGIN.z + PAD} minecraft:stone`);
+    // Небо над площадкой: каменный пол чужой площадки повыше (сценарии с
+    // origin y=64 оставляют свой пол на 63) закрывает от дождя и дневного
+    // света площадку пониже: у нашего мира дождь не тушил огонь, а датчик
+    // дня показывал тень (rain-fire-player, daylight-shade). Чистим столб
+    // над площадкой заливками по 100 слоёв (предел заливки 32768 клеток).
+    for (let from = ORIGIN.y + PAD + 1; from < 318; from += 100) {
+      await say(`fill ${ORIGIN.x - PAD} ${from} ${ORIGIN.z - PAD} ${ORIGIN.x + PAD} ${Math.min(from + 99, 318)} ${ORIGIN.z + PAD} minecraft:air`);
+    }
     // Чужие сущности вокруг площадки — летучие мыши из пещер, предметы от
     // прошлых взрывов — шумят в записи: убрать и мобов больше не пускать.
     await say(`gamerule spawn_mobs false`);
