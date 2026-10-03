@@ -2482,6 +2482,8 @@ fn select_players(text: &str, source: &Source, shared: &Shared) -> Vec<([u8; 16]
     let mut distance: Option<(Option<f64>, Option<f64>)> = None;
     let mut limit: Option<usize> = None;
     let mut modes: Vec<(bool, i32)> = Vec::new();
+    // x, y, z — своя точка отсчёта вместо места источника (для distance).
+    let mut at: [Option<f64>; 3] = [None; 3];
 
     for pair in split_selector_arguments(inner) {
         let Some((key, value)) = pair.split_once('=') else {
@@ -2503,6 +2505,10 @@ fn select_players(text: &str, source: &Source, shared: &Shared) -> Vec<([u8; 16]
                 };
                 distance = Some((low, high));
             }
+            "x" | "y" | "z" => match value.parse::<f64>() {
+                Ok(coordinate) => at[usize::from(key.as_bytes()[0] - b'x')] = Some(coordinate),
+                Err(_) => return Vec::new(),
+            },
             "limit" => match value.parse() {
                 Ok(count) => limit = Some(count),
                 Err(_) => return Vec::new(),
@@ -2521,7 +2527,8 @@ fn select_players(text: &str, source: &Source, shared: &Shared) -> Vec<([u8; 16]
         }
     }
 
-    let from = origin_of(source, shared);
+    let source_at = origin_of(source, shared);
+    let from = (at[0].unwrap_or(source_at.0), at[1].unwrap_or(source_at.1), at[2].unwrap_or(source_at.2));
     let mut found: Vec<([u8; 16], String, f64)> = {
         let players = shared.players.lock().expect("список игроков захвачен другим потоком");
         players
