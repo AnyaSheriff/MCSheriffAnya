@@ -114,6 +114,14 @@ const MAX_STEP: f64 = 100.0;
 /// Как далеко от глаз можно ломать и ставить: у оригинала около 5 блоков
 /// в выживании и около 6 в творческом, здесь — с запасом на задержку сети.
 const REACH_SURVIVAL: f64 = 8.0;
+
+/// Сколько тактов после открытия окна Container Close с чужим номером ещё
+/// считается уборкой клиента, а не закрытием нашего окна (0,2 с).
+const EARLY_CLOSE_TICKS: u64 = 4;
+
+/// Через сколько тактов щелчок по блоку в мире доказывает, что экран, открытый
+/// у нас, у клиента уже закрыт: с экраном в руках по миру не щёлкнуть.
+const STALE_WINDOW_TICKS: u64 = 10;
 const REACH_CREATIVE: f64 = 12.0;
 
 /// Как часто файл игрока переписывается, если что-то изменилось (в тактах).
@@ -320,6 +328,9 @@ pub struct BedrockWorld {
     /// Номер окна станка (верстак, стол зачарования, наковальня, точило),
     /// открытого у клиента; сами ячейки — `Bag::station`.
     station_window: Option<u8>,
+    /// Такт, когда открыто последнее окно (хранилища или станка): ранний
+    /// Container Close с чужим номером — не закрытие этого окна.
+    opened_at: u64,
     /// Номер последнего открытого окна — следующее получит на один больше.
     next_window: u8,
     /// Крышки сундуков, как их последний раз показали клиенту: открыта ли.
@@ -580,6 +591,7 @@ impl BedrockWorld {
             portal_ready: false,
             window: None,
             station_window: None,
+            opened_at: 0,
             next_window: 0,
             lids: HashMap::new(),
             last_use: None,
@@ -742,7 +754,21 @@ impl BedrockWorld {
                 let mut reader = In::new(payload);
 
                 if reader.varint64().is_some() {
-                    match reader.zigzag32() {
+                    let action = reader.zigzag32();
+
+                    // Журнал для живой проверки экранов: что клиент шлёт
+                    // сразу после щелчка (поля PlayerActionPacket). Ломание
+                    // блока (ContinueDestroy = 18) слишком частое.
+                    if action != Some(18) && (self.window.is_some() || self.station_window.is_some() || self.ticks - self.opened_at < 100) {
+                        let position = (reader.zigzag32(), reader.zigzag32(), reader.zigzag32());
+
+                        log_debug!(
+                            "Bedrock: {} — PlayerAction {:?} по {:?}, через {} тактов после открытия окна",
+                            self.identity.name, action, position, self.ticks - self.opened_at
+                        );
+                    }
+
+                    match action {
                         Some(CHANGE_DIMENSION_ACK) => self.finish_change(connection, "подтвердил переход"),
                         Some(health::ACTION_RESPAWN) => self.respawn(connection),
                         _ => {}
@@ -803,11 +829,26 @@ impl BedrockWorld {
 
                 if let (Some(window), Some(kind)) = (reader.u8(), reader.u8()) {
                     let mut packets = Vec::new();
+                    let by_server = reader.bool();
+                    let since = self.ticks - self.opened_at;
+                    let ours = self.window.as_ref().map(|open| open.id).or(self.station_window);
 
                     log_debug!(
-                        "Bedrock: {} закрыл окно {} (экран {}); открыты у нас: хранилище {:?}, станок {:?}",
-                        self.identity.name, window, kind, self.window.as_ref().map(|open| open.id), self.station_window
+                        "Bedrock: {} закрыл окно {} (экран {} = {}, сервер {:?}), через {} тактов после открытия; открыты у нас: хранилище {:?}, станок {:?}",
+                        self.identity.name, window as i8, kind as i8, screens::screen_name(kind as i8), by_server, since,
+                        self.window.as_ref().map(|open| open.id), self.station_window
                     );
+
+                    // Закрытие сразу после открытия и не нашим номером —
+                    // клиент прибирает своё (инвентарь, сетку), а не наш
+                    // экран: у Bedrock вид «none» и окно 0 — это и закрытие
+                    // инвентаря. Без этой оговорки такое закрытие тут же
+                    // схлопывало бы только что открытый станок. Закрытие
+                    // нашим номером (клиент отверг экран) — настоящее.
+                    if ours.is_some() && Some(window) != ours && since <= EARLY_CLOSE_TICKS {
+                        log_debug!("Bedrock: {} — ранний Container Close с чужим номером, окно оставлено", self.identity.name);
+                        return;
+                    }
 
                     // Экран у клиента один: что бы он ни закрыл, открытое у
                     // нас окно закрыто. Живой клиент закрывает окно воронки
@@ -2115,6 +2156,11 @@ impl BedrockWorld {
             return None;
         }
 
+        // Щёлкнули по миру — экрана у клиента уже нет.
+        if self.window.is_some() || self.station_window.is_some() {
+            self.forget_stale_window();
+        }
+
         let reach = if self.creative() { REACH_CREATIVE } else { REACH_SURVIVAL };
         let eyes = (self.position.0 as f64, self.position.1 as f64, self.position.2 as f64);
         let center = (clicked.0 as f64 + 0.5, clicked.1 as f64 + 0.5, clicked.2 as f64 + 0.5);
@@ -2253,6 +2299,28 @@ impl BedrockWorld {
         Some(Vec::new())
     }
 
+    /// Клиент щёлкнул по блоку в мире, а окно у нас числится открытым: экран
+    /// у него уже закрыт (сообщение о закрытии потерялось или пришло с чужим
+    /// видом). Окно давнее — закрываем его у себя молча и говорим, что можно
+    /// открывать заново. Совсем свежее окно — это повтор щелчка, его не трогаем.
+    fn forget_stale_window(&mut self) -> bool {
+        if self.ticks - self.opened_at < STALE_WINDOW_TICKS {
+            return false;
+        }
+
+        log_debug!("Bedrock: {} — щелчок по миру при «открытом» окне, окно сброшено", self.identity.name);
+
+        if self.window.is_some() {
+            self.close_window();
+        }
+
+        if self.station_window.is_some() {
+            self.close_station();
+        }
+
+        true
+    }
+
     /// Открывает станок: Container Open с видом экрана; у стола — сразу его
     /// предложения.
     fn open_station(&mut self, kind: stations::Kind, at: containers::Pos, shelves: i32) -> Vec<Vec<u8>> {
@@ -2263,10 +2331,19 @@ impl BedrockWorld {
         open.u8(id).u8(kind.screen()).block_position(at.0, at.1, at.2).zigzag64(-1);
 
         self.station_window = Some(id);
+        self.opened_at = self.ticks;
         self.bag.open_station(super::inventory::Station { kind, pos: at, seed: self.health.vit.xp_seed, shelves });
 
-        let mut packets = vec![open.bytes];
+        // У стола зачарования в Bedrock есть блок-актор — клиенту он, как у
+        // хранилищ, нужен до экрана.
+        let mut packets = Vec::new();
 
+        if kind == stations::Kind::Enchanting {
+            packets.push(screens::enchant_table_actor(at));
+        }
+
+        log_debug!("Bedrock: {} — Container Open: окно {}, экран {} ({}), место {:?}", self.identity.name, id, kind.screen(), screens::screen_name(kind.screen() as i8), at);
+        packets.push(open.bytes);
         packets.extend(self.bag.enchant_options());
         packets
     }
@@ -2367,6 +2444,11 @@ impl BedrockWorld {
         }
 
         packets.extend(self.bag.window_content_packets(id, screens::slot_name(kind)));
+        self.opened_at = self.ticks;
+        log_debug!(
+            "Bedrock: {} — Container Open: окно {}, экран {} ({}), пакетов окна {}",
+            self.identity.name, id, screens::screen(kind), screens::screen_name(screens::screen(kind) as i8), packets.len()
+        );
         self.window = Some(OpenWindow { id, kind, halves, props: Vec::new() });
         packets.extend(self.window_properties());
         packets

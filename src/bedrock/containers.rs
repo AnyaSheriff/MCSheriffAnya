@@ -111,6 +111,7 @@ pub type Pair = (Pos, bool);
 /// оно приходит окном.
 pub fn actor_packet(kind: Kind, (x, y, z): Pos, pair: Option<Pair>) -> Vec<u8> {
     const BYTE: u8 = 1;
+    const SHORT: u8 = 2;
     const INT: u8 = 3;
     const STRING: u8 = 8;
     const COMPOUND: u8 = 10;
@@ -127,6 +128,26 @@ pub fn actor_packet(kind: Kind, (x, y, z): Pos, pair: Option<Pair>) -> Vec<u8> {
     out.u8(INT).string("z").zigzag32(z);
     out.u8(BYTE).string("isMovable").u8(1);
 
+    // Поля из minecraft.wiki («Bedrock Edition level format/Block entity
+    // format»): у печей — сроки горения и жарки и накопленный опыт, у
+    // стойки — варка и топливо. Нули — «пусто»; список Items приходит
+    // окном, а не актором. [проверить] нужны ли они клиенту для экрана.
+    match kind {
+        Kind::Furnace | Kind::BlastFurnace | Kind::Smoker => {
+            for name in ["BurnDuration", "BurnTime", "CookTime"] {
+                out.u8(SHORT).string(name).li16(0);
+            }
+
+            out.u8(INT).string("StoredXPInt").zigzag32(0);
+        }
+        Kind::BrewingStand => {
+            for name in ["CookTime", "FuelAmount", "FuelTotal"] {
+                out.u8(SHORT).string(name).li16(0);
+            }
+        }
+        _ => {}
+    }
+
     if let Some(((pair_x, _, pair_z), lead)) = pair {
         out.u8(BYTE).string("pairlead").u8(u8::from(lead));
         out.u8(INT).string("pairx").zigzag32(pair_x);
@@ -135,6 +156,51 @@ pub fn actor_packet(kind: Kind, (x, y, z): Pos, pair: Option<Pair>) -> Vec<u8> {
 
     out.u8(0);
     out.bytes
+}
+
+/// Block Actor Data стола зачарования: у него в Bedrock есть блок-актор
+/// (id `EnchantTable`, поворот книги `rott` — minecraft.wiki), хотя
+/// хранилища нет; чанки его не несут, поэтому уходит при открытии стола.
+pub fn enchant_table_actor((x, y, z): Pos) -> Vec<u8> {
+    const BYTE: u8 = 1;
+    const INT: u8 = 3;
+    const FLOAT: u8 = 5;
+    const STRING: u8 = 8;
+    const COMPOUND: u8 = 10;
+
+    let mut out = Out::packet(session::BLOCK_ACTOR_DATA);
+    out.block_position(x, y, z);
+    out.u8(COMPOUND).string("");
+    out.u8(STRING).string("id").string("EnchantTable");
+    out.u8(INT).string("x").zigzag32(x);
+    out.u8(INT).string("y").zigzag32(y);
+    out.u8(INT).string("z").zigzag32(z);
+    out.u8(BYTE).string("isMovable").u8(1);
+    out.u8(FLOAT).string("rott").lf32(0.0);
+    out.u8(0);
+    out.bytes
+}
+
+/// Название вида экрана для журнала (WindowType из minecraft-data).
+pub fn screen_name(kind: i8) -> &'static str {
+    match kind {
+        -9 => "none",
+        -1 => "inventory",
+        0 => "container",
+        1 => "workbench",
+        2 => "furnace",
+        3 => "enchantment",
+        4 => "brewing_stand",
+        5 => "anvil",
+        6 => "dispenser",
+        7 => "dropper",
+        8 => "hopper",
+        26 => "grindstone",
+        27 => "blast_furnace",
+        28 => "smoker",
+        36 => "crafter",
+        _ => "other",
+    }
 }
 
 /// Block Actor Data хранилища, которое стоит в мире в этом месте; None —
@@ -270,5 +336,52 @@ mod tests {
         assert!(is_chest_block(crate::blocks::block_id("chest").expect("сундук")));
         assert!(is_chest_block(crate::blocks::block_id("trapped_chest").expect("ловушка")));
         assert!(!is_chest_block(crate::blocks::block_id("piston").expect("поршень")));
+    }
+
+    /// Актор печи несёт поля из вики, актор стойки — свои; у стола зачарования — поворот книги.
+    #[test]
+    fn furnace_and_brewing_actors_carry_wiki_fields() {
+        let names = |packet: &[u8]| {
+            let mut reader = In::new(packet);
+            let mut names = Vec::new();
+
+            reader.varint();
+            reader.zigzag32();
+            reader.zigzag32();
+            reader.zigzag32();
+            reader.u8();
+            reader.string();
+
+            loop {
+                let tag = reader.u8().expect("тег");
+
+                if tag == 0 {
+                    break;
+                }
+
+                names.push(reader.string().expect("имя"));
+
+                match tag {
+                    1 => drop(reader.u8()),
+                    2 => drop(reader.take(2)),
+                    3 => drop(reader.zigzag32()),
+                    5 => drop(reader.take(4)),
+                    8 => drop(reader.string()),
+                    _ => panic!("тег {tag}"),
+                }
+            }
+
+            names
+        };
+
+        let furnace = names(&actor_packet(Kind::Smoker, (1, 64, 1), None));
+        assert!(furnace.contains(&"BurnTime".to_string()) && furnace.contains(&"StoredXPInt".to_string()));
+
+        let stand = names(&actor_packet(Kind::BrewingStand, (1, 64, 1), None));
+        assert!(stand.contains(&"FuelTotal".to_string()) && !stand.contains(&"BurnTime".to_string()));
+
+        let table = names(&enchant_table_actor((1, 64, 1)));
+        assert_eq!(table, ["id", "x", "y", "z", "isMovable", "rott"]);
+        assert_eq!(screen_name(-9), "none");
     }
 }

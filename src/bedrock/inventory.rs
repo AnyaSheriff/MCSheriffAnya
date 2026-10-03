@@ -639,6 +639,15 @@ impl Bag {
             })()
             .is_some();
 
+        // Журнал для живой проверки экранов: что именно просит клиент.
+        crate::log_debug!(
+            "Bedrock: запрос {} — действия {:?}, имена {:?}, разобран {}",
+            request_id,
+            actions.as_ref().map(|acts| acts.iter().map(Act::label).collect::<Vec<_>>()),
+            names,
+            tail
+        );
+
         let result = match actions {
             Some(actions) if tail => Some(self.run_actions(actions, &names, creative, &mut touched, &mut dropped) && self.window_allowed(&before)),
             _ => None,
@@ -1177,6 +1186,24 @@ enum Act {
     Anvil,
     Grind,
     Unsupported,
+}
+
+impl Act {
+    /// Короткое имя действия для журнала.
+    fn label(&self) -> &'static str {
+        match self {
+            Act::Move { .. } => "move",
+            Act::Swap(..) => "swap",
+            Act::Drop { .. } => "drop",
+            Act::Consume { .. } => "consume",
+            Act::Skip => "skip",
+            Act::CraftCreative(_) => "craft_creative",
+            Act::Recipe { .. } => "craft_recipe",
+            Act::Anvil => "anvil",
+            Act::Grind => "grind",
+            Act::Unsupported => "unsupported",
+        }
+    }
 }
 
 /// Пропускает ингредиент рецепта (RecipeIngredient): вид, описание, число.
