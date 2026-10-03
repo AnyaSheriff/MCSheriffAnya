@@ -804,13 +804,23 @@ impl BedrockWorld {
                 if let (Some(window), Some(kind)) = (reader.u8(), reader.u8()) {
                     let mut packets = Vec::new();
 
-                    if self.window.as_ref().is_some_and(|open| open.id == window) {
+                    log_debug!(
+                        "Bedrock: {} закрыл окно {} (экран {}); открыты у нас: хранилище {:?}, станок {:?}",
+                        self.identity.name, window, kind, self.window.as_ref().map(|open| open.id), self.station_window
+                    );
+
+                    // Экран у клиента один: что бы он ни закрыл, открытое у
+                    // нас окно закрыто. Живой клиент закрывает окно воронки
+                    // номером 0 и видом -9 (none), а не номером окна, — без
+                    // этого окно у нас висело открытым и ни одно хранилище
+                    // и ни один станок больше не открывались.
+                    if self.window.is_some() {
                         self.close_window();
                     }
 
                     // Закрыт станок или инвентарь: сетка и ячейки станка
                     // отдают вещи обратно.
-                    if self.station_window == Some(window) || (self.station_window.is_none() && window == 0) {
+                    if self.station_window.is_some() || window == 0 {
                         packets.extend(self.close_station());
                     }
 
@@ -1861,6 +1871,8 @@ impl BedrockWorld {
         let done = self.run(crate::network::play::Act::Use(0));
         let mut packets = Vec::new();
 
+        log_debug!("Bedrock: {} начал действие предметом {:?}, занят: {}", self.identity.name, self.bag.inventory.held(), self.body.busy());
+
         self.settle(done, &mut packets);
 
         if !packets.is_empty() {
@@ -1877,6 +1889,8 @@ impl BedrockWorld {
 
         let done = self.run(crate::network::play::Act::Release);
         let mut packets = Vec::new();
+
+        log_debug!("Bedrock: {} отпустил предмет, в руке {:?}, изменились ячейки {:?}", self.identity.name, self.bag.inventory.held(), done.slots);
 
         self.settle(done, &mut packets);
 
