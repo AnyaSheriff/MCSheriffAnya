@@ -5,7 +5,7 @@
 A Minecraft-compatible game server written from scratch in Rust.
 
 [![Java Edition 26.1.2](https://img.shields.io/badge/Java_Edition-26.1.2-62B47A?style=for-the-badge&logo=openjdk&logoColor=white)](#what-works)
-[![Bedrock 26.10–26.13](https://img.shields.io/badge/Bedrock-26.10–26.13-4E4E4E?style=for-the-badge&logo=xbox&logoColor=white)](#what-works)
+[![Bedrock 26.10–26.13](https://img.shields.io/badge/Bedrock_26.10–26.13-partial-F28C28?style=for-the-badge&logo=xbox&logoColor=white)](#status)
 [![Rust 2024](https://img.shields.io/badge/Rust-2024-CE422B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![MIT](https://img.shields.io/badge/License-MIT-3DA639?style=for-the-badge)](LICENSE)
 
@@ -61,8 +61,8 @@ endorsed by Mojang or Microsoft.
   (two caged) and the exit portal podium, the void gap, and outer islands from
   ~1000 blocks with chorus plants, all fitted to a measured vanilla End. End
   portal frames (twelve eyes open the portal, as in vanilla), the obsidian
-  arrival platform at 100, 49, 0, and the way back. No ender dragon or crystals
-  yet.
+  arrival platform at 100, 49, 0, and the way back. The ender dragon fight with
+  the end crystals works.
 - Redstone: wire, torches, repeaters, comparators, levers, buttons, pressure
   plates, observers, copper bulbs, lamps, doors, trapdoors, fence gates,
   pistons and sticky pistons with real two-tick movement and client-side
@@ -92,7 +92,8 @@ endorsed by Mojang or Microsoft.
   verification (signature check via OpenID discovery); an unverified player can
   only use `help`, `list`, and `say` commands. Flight is disabled in survival
   mode. Player skins from Bedrock can be uploaded to Mojang via MineSkin for
-  Java players to see; Bedrock players see Java capes. No crafting yet.
+  Java players to see; Bedrock players see Java capes. Crafting, furnaces and the other
+  workstations work, see [Status](#status).
 
 - Farm animals: cows, pigs, sheep and chickens (`summon cow|pig|sheep|chicken
   <x> <y> <z> {NoAI:1b,Age:-24000,…}`). They fall, take fall damage, wander,
@@ -100,7 +101,7 @@ endorsed by Mojang or Microsoft.
   hit, drop meat, leather, feathers and wool; sheep are sheared with shears and
   eat grass, chickens lay eggs. They also settle in newly generated chunks
   (rule `spawn_mobs`), press plates, are saved with the chunk and are visible
-  to Bedrock players (silent there, no hitting yet). Physics, damage, drops
+  to Bedrock players (they can hit, feed, breed and shear them). Physics, damage, drops
   and the packet stream are checked against the official server with the black
   box (`cow-physics`, `cow-hit`, `sheep-shear`, `mob-plate`, `chicken-fall`,
   `pig-baby`, `cow-feed`); the random behaviour (wandering, breeding walks,
@@ -122,7 +123,8 @@ endorsed by Mojang or Microsoft.
   `zombie-burn`, `creeper-explode`, `skeleton-stand`; `skeleton-arrow`,
   `zombie-attack`, `spider-climb` are random and match by structure). A
   hostile mob killed by a player drops 5 experience points plus 1–3 per
-  equipment item; Bedrock sees the mobs and arrows, silently.
+  equipment item; Bedrock players see the mobs and arrows and can fight them; main combat sounds
+  are sent, the rest of the sounds are not complete (see Status).
 - Experience orbs: real entities that fly to the nearest player and are picked
   up one per 2 ticks; the value is split greedily into 7, 3 and 1 (checked
   against the official server).
@@ -138,10 +140,54 @@ endorsed by Mojang or Microsoft.
   enchantments, durability, shields (blocking arc, axes disable them), bows and
   arrows, thorns, fire aspect. Not checked against the official server: thorns,
   bow enchantments (power, punch, flame, infinity), arrow pickup, netherite
-  knockback resistance. Potion effects (strength, weakness) are missing.
+  knockback resistance. Potion effects work, including strength, weakness and the full potion set.
 
-Not there yet: other mobs, furnaces, ender chests and shulker boxes, packet
-compression.
+Not there yet: plugins, multiple protocol versions, ender chests, shulker
+boxes, packet compression. See the full list below.
+
+## Status
+
+✅ works · 🟡 partial · ❌ not yet
+
+**Java Edition 26.1.2** — verified tick by tick against the official server
+with the black box (about 300 scenarios).
+
+| Area | State | Notes |
+| --- | --- | --- |
+| World generation | ✅ | Overworld, Nether, End with the dragon fight, strongholds, villages, end cities |
+| Redstone | ✅ | All components, pistons, containers, comparators |
+| Combat and PvP | ✅ | Melee, sweep, crits, shields, bow, crossbow, trident, mace |
+| Survival | ✅ | Hunger, XP, potions, beds, respawn anchor, farming, furnaces, brewing, enchanting, anvil, grindstone, smithing table, villagers and trading |
+| Mobs | ✅ | |
+| Commands | ✅ | Vanilla commands, command blocks, datapack functions, scoreboards |
+| Weather | ✅ | |
+| Known differences | 🟡 | Enderman stare, shulker bullets, riptide side effects, mace wind burst particles |
+| Plugins | ❌ | Planned |
+| Multiple protocol versions | ❌ | Planned |
+| Ender chests, shulker boxes | ❌ | |
+| Packet compression | ❌ | |
+
+**Bedrock Edition 26.10–26.13**
+
+| Area | State | Notes |
+| --- | --- | --- |
+| Join without a proxy, world and chunks | ✅ | |
+| Nether and End travel, chat | ✅ | |
+| Skins | ✅ | Both ways |
+| Java players | ✅ | Seeing and fighting them, PvP both ways |
+| Mobs | ✅ | Hit, feed, breed, shear; variants |
+| Inventory, placing and breaking | ✅ | |
+| Redstone blocks | ✅ | Levers, buttons, doors, pressure plates, pistons |
+| Containers | ✅ | Chests, barrels, hoppers, droppers, dispensers, crafter |
+| Workstations | ✅ | Furnaces, brewing stand, crafting table and 2×2 grid, enchanting table, anvil, grindstone, smithing table |
+| Villager trading, minecart windows | ✅ | Minecart with chest and with hopper |
+| Items | ✅ | Bow, crossbow, eating and drinking, bone meal, hoe, buckets, spawn eggs, thrown potions, fireworks |
+| World objects | ✅ | TNT, falling blocks, XP orbs |
+| Sounds | 🟡 | Main combat and block sounds work; crit and sweep particles and station sounds are missing |
+| Fireworks colours, piston animation | 🟡 | Colours are not complete; the piston arm does not move smoothly |
+| Shift-click trading | 🟡 | |
+| Screens | 🟡 | Many are checked only against the official Bedrock server's network traffic, not yet by players |
+| Xbox-only features | ❌ | Such as Realms; nothing else known to be missing |
 
 ## Download
 
@@ -179,10 +225,11 @@ creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
 a lever like a player would, records every block change, block action and
 sound with its tick, and diffs the two recordings. The official server is
 only *run* and observed over the network; its jar is never opened. The bot can
-record both servers at once (`--parallel`). Of 137 scenarios (redstone,
-pistons with slime, honey and flying machines, containers, rails and
-minecarts, TNT and lightning, sculk, the crafter, fluids, the Nether portal)
-All 137 match the original tick for tick in full. Where vanilla itself is random
+record both servers at once (`--parallel`). The whole suite is about 300
+scenarios. Redstone alone is 137 of them (pistons with slime, honey and flying
+machines, containers, rails and minecarts, TNT and lightning, sculk, the
+crafter, fluids, the Nether portal); all 137 match the original tick for tick
+in full. Where vanilla itself is random
 (blast spread, fuse from an explosion, particle colours), the scenario says so
 in a `random` rule backed by a wiki quote or vanilla-against-vanilla
 recordings, and everything else is still compared exactly. See `tools/blackbox/README.md`.
