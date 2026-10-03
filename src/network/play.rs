@@ -67,6 +67,9 @@ mod thrown;
 mod sleep;
 mod farm;
 mod station;
+mod body;
+
+pub(crate) use body::{Act, Body, Done, Stance};
 
 /// Сторона чанка в блоках. По ней считается, в каком чанке стоит игрок.
 const CHUNK_SIZE: i32 = 16;

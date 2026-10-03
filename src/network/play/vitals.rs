@@ -156,7 +156,7 @@ pub(super) enum Drink {
 
 impl Drink {
     /// Что остаётся в руке после питья.
-    fn remainder(self) -> &'static str {
+    pub(super) fn remainder(self) -> &'static str {
         match self {
             Drink::Milk => "bucket",
             Drink::Potion => "glass_bottle",
@@ -212,7 +212,7 @@ pub(super) struct Net {
     /// (чёрный ящик, void-death: скорости следующих ударов — десять тактов
     /// свободного падения от прошлой, хотя сам клиент после каждого пакета
     /// скорости падает заново).
-    pin: Option<f64>,
+    pub(super) pin: Option<f64>,
     /// После удара клиенту надо сообщить скорость: считается в рассылке —
     /// по последнему шагу клиента к этому моменту, а не к моменту удара
     /// (чёрный ящик, void-death: скорость на такт позже удара несёт шаг этого
@@ -240,9 +240,9 @@ pub(super) struct Net {
     pub spin_since: Option<u32>,
     pub spin_pose: bool,
     pub spin_from: (f64, f64, f64),
-    slot_update: Option<i32>,
+    pub(super) slot_update: Option<i32>,
     /// Слоты, которые сервер поменял сам (износ вещей) и которые надо показать клиенту.
-    slots_dirty: Vec<i32>,
+    pub(super) slots_dirty: Vec<i32>,
     /// Слоты, поменявшиеся в такте сущности, которые клиенту уходят
     /// следующим кругом (чёрный ящик, crossbow-shoot: зарядка на +25, ячейки
     /// арбалета и стрел — на +26).

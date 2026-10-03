@@ -269,6 +269,9 @@ pub struct BedrockWorld {
     /// Такт сервера, когда игрок последний раз ударил: сила удара растёт
     /// с перезарядкой руки, как у Java.
     last_attack: u64,
+    /// Тело для общего кода боя и использования предметов (network/play/body.rs):
+    /// в нём тянется натяжение лука, еда, поднятый щит.
+    body: crate::network::play::Body,
     radius: i32,
     sent: HashSet<(i32, i32)>,
     /// Кого из других игроков этот клиент видит: где, UUID, версия скина.
@@ -524,6 +527,7 @@ impl BedrockWorld {
         let (items_from, lying) = lying_items(&shared, dimension, reader);
         let (arrived_tx, arrived_rx) = mpsc::unbounded_channel();
 
+        let body = crate::network::play::Body::new(identity.uuid, identity.name.clone(), entity_id);
         let mut player = BedrockWorld {
             shared,
             dimension,
@@ -541,6 +545,7 @@ impl BedrockWorld {
             arrows_at: HashMap::new(),
             frames_at: HashMap::new(),
             last_attack: 0,
+            body,
             radius: START_RADIUS,
             sent: HashSet::new(),
             shown: HashMap::new(),
@@ -706,7 +711,8 @@ impl BedrockWorld {
             }
             session::INVENTORY_TRANSACTION => match read_item_use(payload) {
                 Some(action) => self.use_item(connection, action),
-                None if let Some((target, action)) = read_entity_use(payload) => self.use_entity(target, action),
+                None if let Some((target, action)) = read_entity_use(payload) => self.use_entity(connection, target, action),
+                None if is_release(payload) => self.release_item(connection),
                 None => crate::log_debug!("Bedrock: не разобрал действие предметом: {:02x?}", &payload[..payload.len().min(64)]),
             },
             session::TEXT => {
@@ -1223,9 +1229,13 @@ impl BedrockWorld {
                 // сам по блоку. [проверить]
                 crate::items::Change::Frame(_) | crate::items::Change::FrameItem { .. } | crate::items::Change::FrameRotation { .. } => {}
                 crate::items::Change::FrameSound { .. } => {}
-                // Удары, смерть и голоса мобов клиент Bedrock пока не получает:
-                // мобы для него показываются и двигаются, но молча. [проверить]
-                crate::items::Change::MobEvent { .. } => {}
+                // Удар и смерть моба: ActorEvent HURT (2) и DEATH (3).
+                // Удар и смерть показываем (ActorEvent); голоса и частицы — нет.
+                crate::items::Change::MobEvent { entity_id, event, .. } => match event {
+                    crate::mob::Event::Hurt { .. } if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 2)),
+                    crate::mob::Event::Death if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 3)),
+                    _ => {}
+                },
                 // Шарики опыта Bedrock пока не показываются [проверить].
                 crate::items::Change::Orb(_) => {}
                 crate::items::Change::Gone { entity_id } => {
@@ -1457,6 +1467,16 @@ impl BedrockWorld {
             return;
         }
 
+        // Правая кнопка в воздух: еда, лук, щит, бросок (повтор, пока кнопка
+        // зажата, начинает заново — пропускаем).
+        if action.kind == CLICK_AIR {
+            if action.trigger != SIMULATION_TICK {
+                self.use_held(connection);
+            }
+
+            return;
+        }
+
         let kind = match action.kind {
             START_BREAK if self.creative() => BREAK,
             START_BREAK => return,
@@ -1601,6 +1621,13 @@ impl BedrockWorld {
                 let claimed = if self.creative() { action.held.and_then(held_block) } else { None };
 
                 let Some((name, default_state)) = from_bag.or(claimed) else {
+                    // Не блок: еда, лук, щит, зелье — действие предметом.
+                    drop(world);
+
+                    if action.trigger != SIMULATION_TICK {
+                        self.use_held(connection);
+                    }
+
                     return;
                 };
                 let click = crate::placing::Click {
@@ -1647,11 +1674,12 @@ impl BedrockWorld {
     ///
     /// None — действия у блока нет (тогда щелчок — установка блока); иначе —
     /// что отправить клиенту.
-    /// Действие по сущности: удар или щелчок. Бить и щёлкать у нас можно
-    /// только вагонетки — как у Java (`strike_cart` в network/play.rs).
-    /// [проверить]: окна вагонеток с сундуком и воронкой Bedrock пока не
-    /// открывает — щелчок по ним ничего не делает.
-    fn use_entity(&mut self, target: u64, action: u32) {
+    /// Действие по сущности: удар или щелчок. Удар идёт тем же кодом, что у
+    /// игрока Java (`attack` в network/play.rs): игрок, моб, вагонетка — заряд
+    /// руки, критический удар, рывок, зачарования, взмах меча, износ оружия.
+    /// Щелчок (кормление, стрижка, торговля, окна вагонеток) Bedrock пока не
+    /// обрабатывает [проверить].
+    fn use_entity(&mut self, connection: &Connection, target: u64, action: u32) {
         /// Interact и Attack (InventoryTransaction, ItemUseOnEntity,
         /// описание протокола Mojang).
         const ATTACK: u32 = 1;
@@ -1660,18 +1688,110 @@ impl BedrockWorld {
             return;
         };
 
-        if action != ATTACK || self.game_mode == crate::commands::GAME_MODE_SPECTATOR {
+        if action != ATTACK || self.game_mode == crate::commands::GAME_MODE_SPECTATOR || self.health.vit.dead || self.changing.is_some() {
             return;
         }
 
-        let now = *self.shared.ticks.borrow();
-        let since = u32::try_from(now.saturating_sub(self.last_attack)).unwrap_or(u32::MAX);
-        let feet = (self.position.0 as f64, self.position.1 as f64 - EYES as f64, self.position.2 as f64);
+        let done = self.run(crate::network::play::Act::Attack(target));
+        let mut packets = Vec::new();
 
-        if crate::network::play::strike_cart(&self.shared, self.dimension, target, feet, self.creative(), since) {
-            self.last_attack = now;
-            log_debug!("Bedrock: {} ударил вагонетку {}", self.identity.name, target);
+        self.settle(done, &mut packets);
+        log_debug!("Bedrock: {} ударил сущность {}", self.identity.name, target);
+
+        if !packets.is_empty() {
+            connection.send(&packets);
         }
+    }
+
+    /// Место игрока для тела боя.
+    fn stance(&self) -> crate::network::play::Stance {
+        crate::network::play::Stance {
+            game_mode: self.game_mode,
+            feet: (self.position.0 as f64, (self.position.1 - EYES) as f64, self.position.2 as f64),
+            yaw: self.rotation.0,
+            pitch: self.rotation.1,
+            on_ground: self.on_ground,
+            sneaking: self.sneaking,
+            dimension: self.dimension,
+        }
+    }
+
+    /// Действие общим кодом Java: тело берёт инвентарь и здоровье, делает,
+    /// возвращает изменённое.
+    fn run(&mut self, act: crate::network::play::Act) -> crate::network::play::Done {
+        let stance = self.stance();
+
+        self.body.act(&self.shared, &stance, &mut self.bag.inventory, &mut self.health.vit, &mut self.last_attack, act)
+    }
+
+    /// Последствия действия для клиента: изменившиеся слоты, толчок, урон.
+    fn settle(&mut self, done: crate::network::play::Done, packets: &mut Vec<Vec<u8>>) {
+        if !done.slots.is_empty() {
+            self.bag.touched(&done.slots);
+            packets.extend(done.slots.iter().filter_map(|&slot| self.bag.slot_packet(slot)));
+        }
+
+        if let Some((vx, vy, vz)) = done.velocity {
+            packets.push(motion(self.runtime_id, (vx as f32, vy as f32, vz as f32)));
+        }
+
+        for (amount, source) in done.damage {
+            self.health.hurt(amount, source);
+        }
+    }
+
+    /// Правая кнопка в воздухе (или предметом, который блок не ставит):
+    /// натянуть лук, поднять щит, начать есть, бросить зелье, выстрелить
+    /// заряженным арбалетом — как Use Item у Java.
+    fn use_held(&mut self, connection: &Connection) {
+        if self.game_mode == crate::commands::GAME_MODE_SPECTATOR || self.health.vit.dead || self.changing.is_some() {
+            return;
+        }
+
+        let done = self.run(crate::network::play::Act::Use(0));
+        let mut packets = Vec::new();
+
+        self.settle(done, &mut packets);
+
+        if !packets.is_empty() {
+            connection.send(&packets);
+        }
+    }
+
+    /// Кнопка отпущена (Inventory Transaction, ItemRelease): лук спущен,
+    /// еда доедена или прервана.
+    fn release_item(&mut self, connection: &Connection) {
+        if self.health.vit.dead || self.changing.is_some() {
+            return;
+        }
+
+        let done = self.run(crate::network::play::Act::Release);
+        let mut packets = Vec::new();
+
+        self.settle(done, &mut packets);
+
+        if !packets.is_empty() {
+            connection.send(&packets);
+        }
+    }
+
+    /// Такт тела: еда, зарядка арбалета; и вещи с бойцом — другим игрокам
+    /// (щит, броня, неуязвимость нужны тем, кто бьёт этого игрока).
+    fn tick_body(&mut self, packets: &mut Vec<Vec<u8>>) {
+        if self.changing.is_some() {
+            return;
+        }
+
+        if self.body.busy() {
+            let done = self.run(crate::network::play::Act::Tick);
+
+            self.settle(done, packets);
+        }
+
+        let stance = self.stance();
+        let gear = self.body.gear(&self.shared, &stance, &self.bag.inventory, &self.health.vit, self.last_attack);
+
+        self.shared.players.lock().expect("список игроков захвачен другим потоком").set_gear(&self.identity.uuid, gear);
     }
 
     /// Что в руке у игрока: то, что знает сервер, а в творческом режиме,
@@ -2429,6 +2549,24 @@ impl BedrockWorld {
                 WorldEvent::Hurt { entity_id, amount, .. } if entity_id == self.runtime_id as i32 => {
                     self.health.hurt(amount, crate::survival::Source::Explosion);
                 }
+                // Удар моба или стрелы: урон — здоровью, толчок — клиенту
+                // (как у Java: 0,218 вдоль удара и 0,275 вверх с земли).
+                WorldEvent::MobHurt { entity_id, amount, source, push, .. } if entity_id == self.runtime_id as i32 => {
+                    self.health.hurt(amount, source);
+
+                    if let Some((ux, uz)) = push {
+                        let up = if self.on_ground { 0.275 } else { 0.0 };
+
+                        packets.push(motion(self.runtime_id, ((ux * 0.218) as f32, up, (uz * 0.218) as f32)));
+                    }
+                }
+                // Удар другого игрока (или стрела игрока): щит, броня, отдача —
+                // тем же кодом, что у Java (network/play/body.rs).
+                WorldEvent::PlayerStrike(strike) if strike.victim == self.runtime_id as i32 => {
+                    let done = self.run(crate::network::play::Act::Struck(&strike));
+
+                    self.settle(done, &mut packets);
+                }
                 // Зелья и облака: эффекты считаются, значка у Bedrock пока нет [проверить].
                 WorldEvent::PotionEffect { entity_id, effect } if entity_id == self.runtime_id as i32 => self.health.vit.give_effect_shown(effect),
                 WorldEvent::PotionHeal { entity_id, amount } if entity_id == self.runtime_id as i32 => self.health.vit.heal(amount),
@@ -2470,6 +2608,7 @@ impl BedrockWorld {
             packets.extend(self.window_changes());
         }
 
+        self.tick_body(&mut packets);
         self.tick_health(&mut packets);
 
         // Время суток — раз в секунду.
@@ -3600,6 +3739,7 @@ const START_BREAK: u32 = 100;
 
 /// Виды действия предметом (TransactionUseItem): щелчок по блоку и поломка.
 const CLICK: u32 = 0;
+const CLICK_AIR: u32 = 1;
 const BREAK: u32 = 2;
 
 /// Отчего действие (trigger_type у TransactionUseItem): 2 — «simulation
@@ -3851,6 +3991,24 @@ fn read_entity_use(payload: &[u8]) -> Option<(u64, u32)> {
     Some((target, action))
 }
 
+/// Inventory Transaction «предмет отпущен» (тип 4, ItemRelease): лук спущен,
+/// еда доедена.
+fn is_release(payload: &[u8]) -> bool {
+    const ITEM_RELEASE: u32 = 4;
+
+    let mut reader = In::new(payload);
+
+    skip_legacy(&mut reader).is_some() && reader.varint() == Some(ITEM_RELEASE)
+}
+
+/// Set Actor Motion: скорость сущности (блоков за такт).
+fn motion(runtime_id: u64, (x, y, z): (f32, f32, f32)) -> Vec<u8> {
+    let mut out = Out::packet(0x28);
+
+    out.varint64(runtime_id).vec3f(x, y, z).varint64(0); // такт — 0: не по тактам клиента
+    out.bytes
+}
+
 /// Тело «предмет применён»: что сделано, где, чем.
 fn read_use(reader: &mut In) -> Option<ItemUse> {
     let kind = reader.varint()?;
@@ -3878,6 +4036,35 @@ mod tests {
     fn stone(out: &mut Out) {
         out.zigzag32(1).lu16(1).varint(0).u8(0).zigzag32(2533);
         out.varint(10).lu16(0).li32(0).li32(0);
+    }
+
+    /// Set Actor Motion: номер, скорость и такт (протокол 944 добавил такт
+    /// в конец — без него клиент падает на разборе).
+    #[test]
+    fn motion_has_tick_at_the_end() {
+        let packet = motion(5, (1.0, 2.0, 3.0));
+        let mut reader = In::new(&packet[1..]);
+
+        assert_eq!(packet[0], 0x28);
+        assert_eq!(reader.varint64(), Some(5));
+        assert_eq!((reader.lf32(), reader.lf32(), reader.lf32()), (Some(1.0), Some(2.0), Some(3.0)));
+        assert_eq!(reader.varint64(), Some(0));
+    }
+
+    /// Отпускание предмета — Inventory Transaction типа 4; щелчок по блоку и
+    /// удар по сущности — нет.
+    #[test]
+    fn release_is_transaction_four() {
+        let make = |kind: u32| {
+            let mut out = Out::packet(session::INVENTORY_TRANSACTION);
+
+            out.zigzag32(0).varint(kind).varint(0);
+            out.bytes[1..].to_vec()
+        };
+
+        assert!(is_release(&make(4)));
+        assert!(!is_release(&make(2)));
+        assert!(!is_release(&make(3)));
     }
 
     /// Хвост «предмет применён» после предмета в руке.

@@ -1,0 +1,315 @@
+// Тело игрока Bedrock для общего кода боя и использования предметов.
+//
+// Бой, лук, арбалет, трезубец, еда и щит у Java живут в `PlayerState`
+// (play.rs): удар, натяжение, отпускание считают поля этого состояния.
+// Чтобы Bedrock-игрок бил, стрелял и ел ровно так же, а не по копии правил,
+// у него есть такое состояние-«тело»: подключение Bedrock перед каждым
+// действием кладёт в него то, чем владеет само (положение, инвентарь,
+// здоровье), вызывает тот же код, что у Java, и забирает изменённое обратно.
+// Тянущееся действие (лук натянут, щит поднят, еда идёт) хранится в самом
+// теле между вызовами.
+//
+// Что не сверено с оригиналом, помечено «[проверить]».
+
+use super::*;
+
+use crate::combat::PlayerStrike;
+use crate::combat;
+use crate::survival::{Source, Vitals};
+
+/// Сколько тактов до конца еды ещё считается «доел»: отпускание кнопки у
+/// клиента приходит раньше такта сервера на задержку сети [проверить].
+const EAT_SLACK: i32 = 6;
+
+/// Где игрок и в каком он состоянии — то, чем владеет Bedrock-подключение.
+pub(crate) struct Stance {
+    pub game_mode: i32,
+    pub feet: (f64, f64, f64),
+    pub yaw: f32,
+    pub pitch: f32,
+    pub on_ground: bool,
+    pub sneaking: bool,
+    pub dimension: Dimension,
+}
+
+/// Что сделал игрок (или с ним).
+pub(crate) enum Act<'a> {
+    /// Удар по сущности с этим номером (бой игроков, моб, вагонетка).
+    Attack(i32),
+    /// Правая кнопка в руке `hand`: бросок, еда, лук, арбалет, щит.
+    Use(i32),
+    /// Кнопка отпущена: лук спущен, еда либо доедена, либо прервана.
+    Release,
+    /// Такт: зарядка арбалета, еда.
+    Tick,
+    /// Удар игрока по этому игроку (из журнала мира): щит, броня, отдача.
+    Struck(&'a PlayerStrike),
+}
+
+/// Что изменилось после действия.
+#[derive(Default)]
+pub(crate) struct Done {
+    /// Слоты инвентаря, которые стали другими.
+    pub slots: Vec<i32>,
+    /// Скорость, которую надо сообщить клиенту (блоков за такт).
+    pub velocity: Option<(f64, f64, f64)>,
+    /// Урон, который надо принять: уже после брони и щита.
+    pub damage: Vec<(f32, Source)>,
+}
+
+pub(crate) struct Body {
+    state: Box<PlayerState>,
+}
+
+impl Body {
+    pub(crate) fn new(uuid: [u8; 16], name: String, entity_id: i32) -> Self {
+        let mut state = PlayerState::new(uuid, name, None, None, 0, 0, (0.0, 0.0, 0.0));
+
+        state.entity_id = entity_id;
+
+        Self { state: Box::new(state) }
+    }
+
+    /// Тянется ли что-то, чему нужен такт (еда, зарядка арбалета).
+    pub(crate) fn busy(&self) -> bool {
+        self.state.net.using.is_some() || self.state.net.eating.is_some()
+    }
+
+    fn load(&mut self, stance: &Stance, inventory: &Inventory, vit: &Vitals, last_attack: u64) {
+        let p = &mut *self.state;
+
+        p.game_mode = stance.game_mode;
+        (p.x, p.y, p.z) = stance.feet;
+        p.yaw = stance.yaw;
+        p.pitch = stance.pitch;
+        p.on_ground = stance.on_ground;
+        p.sneaking = stance.sneaking;
+        p.dimension = stance.dimension;
+        p.inventory = inventory.clone();
+        p.vit = vit.clone();
+        p.last_attack = last_attack;
+        p.net.velocity = None;
+        p.net.slot_update = None;
+        p.net.slots_dirty.clear();
+    }
+
+    /// Вещи на теле и бой — в том виде, в каком это видят остальные игроки.
+    pub(crate) fn gear(&mut self, shared: &Shared, stance: &Stance, inventory: &Inventory, vit: &Vitals, last_attack: u64) -> crate::players::Gear {
+        self.load(stance, inventory, vit, last_attack);
+        vitals::update_equipment(&mut self.state, *shared.ticks.borrow());
+        self.state.gear()
+    }
+
+    /// Выполняет действие общим кодом и возвращает изменённое.
+    pub(crate) fn act(&mut self, shared: &Shared, stance: &Stance, inventory: &mut Inventory, vit: &mut Vitals, last_attack: &mut u64, act: Act) -> Done {
+        self.load(stance, inventory, vit, *last_attack);
+
+        let now = *shared.ticks.borrow();
+        let p = &mut *self.state;
+        let mut done = Done::default();
+
+        match act {
+            Act::Attack(target) => attack(target, p, shared),
+            Act::Use(hand) => {
+                // Новая правая кнопка — старое натяжение, раз оно не
+                // кончилось отпусканием (клиент мог его бросить), забыто.
+                p.net.using = None;
+                p.net.eating = None;
+                use_held(shared, p, hand, now);
+            }
+            Act::Release => {
+                if let Some(eating) = p.net.eating.take()
+                    && eating.ticks_left <= EAT_SLACK
+                {
+                    finish(p, eating, &mut done);
+                }
+
+                vitals::release_use(p, shared);
+            }
+            Act::Tick => {
+                vitals::tick_crossbow(shared, p, now);
+
+                if let Some(eating) = &mut p.net.eating {
+                    eating.ticks_left -= 1;
+
+                    if eating.ticks_left <= 0
+                        && let Some(eating) = p.net.eating.take()
+                    {
+                        finish(p, eating, &mut done);
+                    }
+                }
+            }
+            Act::Struck(strike) => struck(shared, p, strike, now, &mut done),
+        }
+
+        done.velocity = p.net.velocity.take();
+
+        for slot in 0..inventory::SLOTS as i32 {
+            if p.inventory.slot(slot) != inventory.slot(slot) {
+                done.slots.push(slot);
+            }
+        }
+
+        *inventory = p.inventory.clone();
+        *vit = p.vit.clone();
+        *last_attack = p.last_attack;
+
+        done
+    }
+}
+
+/// Правая кнопка: то же, что Use Item у Java (`use_item` в play.rs), без
+/// ведра (его Bedrock ведёт своим путём).
+fn use_held(shared: &Shared, p: &mut PlayerState, hand: i32, now: u64) {
+    if thrown::throw_potion(shared, p, hand) {
+        return;
+    }
+
+    let thrown_eye = thrown::throw_eye(shared, p, hand);
+
+    vitals::start_using_eye(p, hand, now);
+
+    if thrown_eye || thrown::fill_breath(shared, p, hand) {
+        return;
+    }
+
+    if hand == 0 && vitals::start_eating(p) {
+        return;
+    }
+
+    if bow::crossbow_fire(shared, p, hand) {
+        return;
+    }
+
+    vitals::start_using(shared, p, hand, now);
+}
+
+/// Доел или допил: то же, что `finish_eating` и `finish_drinking` у Java,
+/// без пакетов — звуки еды клиент Bedrock играет сам [проверить].
+fn finish(p: &mut PlayerState, eating: vitals::Eating, done: &mut Done) {
+    let creative = p.game_mode == GAME_MODE_CREATIVE;
+
+    match eating.drink {
+        Some(drink) => {
+            if !creative {
+                let slot = p.inventory.selected_slot();
+
+                p.inventory.set(slot, blocks::item_named(drink.remainder()).map(|item| Stack::new(item, 1)));
+            }
+
+            if drink == vitals::Drink::Milk {
+                p.vit.effects.clear();
+            }
+        }
+        None => {
+            p.vit.eat(eating.nutrition, eating.saturation);
+
+            if !creative {
+                p.inventory.spend_held();
+            }
+        }
+    }
+
+    for effect in eating.effects {
+        match effect.kind {
+            crate::survival::EffectKind::InstantHealth => p.vit.heal((4 << effect.amplifier.clamp(0, 20)) as f32),
+            crate::survival::EffectKind::InstantDamage => done.damage.push(((6 << effect.amplifier.clamp(0, 20)) as f32, Source::Magic)),
+            _ => p.vit.give_effect_shown(effect),
+        }
+    }
+}
+
+/// Игрок-жертва получает удар из журнала мира: то же, что `take_strike` у
+/// Java (щит, броня, отдача, износ), но урон не применяется, а отдаётся
+/// наружу — его считает здоровье Bedrock.
+fn struck(shared: &Shared, p: &mut PlayerState, strike: &PlayerStrike, now: u64, done: &mut Done) {
+    let mortal = p.game_mode == GAME_MODE_SURVIVAL || p.game_mode == GAME_MODE_ADVENTURE;
+
+    if !mortal || p.vit.dead {
+        return;
+    }
+
+    vitals::update_equipment(p, now);
+
+    let mut damage = strike.damage;
+
+    // Щит (вики, Shield): держит удар из передней полусферы.
+    if strike.source != Source::Thorns
+        && !strike.ignores_shield
+        && damage > 0.0
+        && let Some(hand) = vitals::shield_up(p, now)
+        && combat::shield_covers(p.yaw, (p.x, p.z), (strike.from.0, strike.from.2))
+    {
+        let slot = if hand == 1 { inventory::OFFHAND } else { p.inventory.selected_slot() };
+
+        if let Some(shield) = p.inventory.slot(slot) {
+            let wear = combat::shield_wear(strike.damage);
+
+            if wear > 0 {
+                let dimension = p.dimension;
+                let mut roll = || vitals::world_random(shared, dimension);
+                let worn = combat::wear(&shield, wear, false, &mut roll);
+
+                if worn > 0 {
+                    pvp::replace_worn(shared, p, slot, shield, worn);
+                }
+            }
+        }
+
+        if strike.disables_shield_ticks > 0 {
+            p.net.shield_disabled_until = now + u64::from(strike.disables_shield_ticks);
+            p.net.using = None;
+        }
+
+        return;
+    }
+
+    if !combat::bypasses_armor(strike.source) {
+        let (armor, toughness) = (p.attrs.value(crate::attributes::ARMOR) as f32, p.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32);
+
+        damage = combat::after_armor_breached(damage, armor, toughness, strike.breach_scale);
+
+        let points: i32 = combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| p.inventory.slot(*slot)).map(|stack| combat::protection_points(&stack.extras(), strike.source)).sum();
+
+        damage = combat::after_protection(damage, points);
+    }
+
+    // Внутри неуязвимости проходит только то, что сильнее прошлого удара.
+    let landed = damage > 0.0 && !(p.vit.invulnerable > 10 && !strike.source.bypasses_cooldown() && damage <= p.vit.last_hurt());
+
+    done.damage.push((damage, strike.source));
+
+    if !landed {
+        return;
+    }
+
+    if !combat::bypasses_armor(strike.source) {
+        pvp::wear_armor(shared, p, strike.damage);
+    }
+
+    for slot in &strike.thorns_slots {
+        if let Some(stack) = p.inventory.slot(*slot) {
+            pvp::replace_worn(shared, p, *slot, stack, 2);
+        }
+    }
+
+    let (at, from) = ((p.x, p.z), strike.from);
+    let away = (at.0 - from.0, at.1 - from.2);
+    let length = away.0.hypot(away.1);
+    let dir = if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { crate::mob::look_direction(strike.yaw) };
+    let resistance = p.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE);
+
+    vitals::knock_back(p, dir, crate::mob::BASE_KNOCKBACK, resistance);
+
+    if strike.extra_knockback > 0.0 && strike.source != Source::Arrow {
+        let look = crate::mob::look_direction(strike.yaw);
+
+        vitals::knock_back(p, look, f64::from(strike.extra_knockback) * 0.5, resistance);
+    }
+
+    if strike.fire_ticks > 0 {
+        p.vit.ignite(strike.fire_ticks);
+    }
+
+    p.net.pin = None;
+}

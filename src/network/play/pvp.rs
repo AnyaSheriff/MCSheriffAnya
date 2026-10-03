@@ -447,7 +447,7 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
 }
 
 /// Изнашивает надетую броню от удара силы `damage`.
-fn wear_armor(shared: &Shared, player: &mut PlayerState, damage: f32) {
+pub(super) fn wear_armor(shared: &Shared, player: &mut PlayerState, damage: f32) {
     let wear = combat::armor_wear(damage);
 
     for (slot, _) in combat::ARMOR_SLOTS {
