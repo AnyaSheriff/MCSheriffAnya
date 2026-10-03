@@ -263,6 +263,12 @@ pub struct BedrockWorld {
     items_from: usize,
     items_shown: HashSet<i32>,
 
+    /// Показан ли клиенту флаг «использует предмет» (ест, тянет лук).
+    using_shown: bool,
+
+    /// Чужие игроки, чью смерть клиент уже видел (death_animation).
+    dead_shown: HashSet<i32>,
+
     /// Где клиент видит вагонетки: чтобы слать движение, только когда
     /// вагонетка сдвинулась.
     carts_at: HashMap<i32, (f32, f32, f32, f32)>,
@@ -570,6 +576,8 @@ impl BedrockWorld {
             bag,
             items_from,
             items_shown: HashSet::new(),
+            using_shown: false,
+            dead_shown: HashSet::new(),
             carts_at: HashMap::new(),
             primed_at: HashMap::new(),
             mobs_at: HashMap::new(),
@@ -1382,7 +1390,7 @@ impl BedrockWorld {
                 // Удар и смерть моба: ActorEvent HURT (2) и DEATH (3).
                 // Удар и смерть показываем (ActorEvent); голоса и частицы — нет.
                 crate::items::Change::MobEvent { entity_id, event, .. } => match event {
-                    crate::mob::Event::Hurt { .. } if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 2)),
+                    crate::mob::Event::Hurt { source, .. } if self.items_shown.contains(&entity_id) => packets.push(health::hurt_event(entity_id as u64, source)),
                     crate::mob::Event::Death if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 3)),
                     // Сердечки любви: Actor Event love_particles (21, список ActorEvent minecraft-data) [проверить].
                     crate::mob::Event::Hearts if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 21)),
@@ -1574,6 +1582,33 @@ impl BedrockWorld {
         (x - f64::from(self.position.0)).abs() <= 128.0 && (z - f64::from(self.position.2)).abs() <= 128.0
     }
 
+    /// Звук мира Java как пакеты Bedrock: то, что шлёт BDS (effects.rs).
+    /// Удар игрока по существу бьющий слышит от своего клиента, так что
+    /// звук удара из его же места ему не шлётся; звуки блоков идут всем,
+    /// и тому, кто щёлкнул (как у BDS).
+    fn sound_packets(&self, sound: &crate::world::WorldSound) -> Vec<Vec<u8>> {
+        let at = sound.exact.map_or((sound.x as f32 + 0.5, sound.y as f32 + 0.5, sound.z as f32 + 0.5), |(x, y, z)| (x as f32, y as f32, z as f32));
+        let Some(cue) = super::effects::cue_for(sound.name, sound.pitch) else {
+            return Vec::new();
+        };
+
+        if cue.extra == super::effects::Extra::Player
+            && sound.name.contains("attack")
+            && (f64::from(at.0) - f64::from(self.position.0)).abs() < 0.05
+            && (f64::from(at.2) - f64::from(self.position.2)).abs() < 0.05
+        {
+            return Vec::new();
+        }
+
+        let block = (cue.extra == super::effects::Extra::Block).then(|| {
+            let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+
+            bedrock_state(world.get_block(sound.x, sound.y, sound.z)) as i32
+        });
+
+        super::effects::sound_packets(sound.name, sound.pitch, at, block)
+    }
+
     /// Выживание и приключение: урон и голод работают.
     fn mortal(&self) -> bool {
         self.game_mode == crate::commands::GAME_MODE_SURVIVAL || self.game_mode == crate::commands::GAME_MODE_ADVENTURE
@@ -1612,6 +1647,16 @@ impl BedrockWorld {
         let outcome = self.health.tick(self.runtime_id, mortal, immune, difficulty, feet_y);
 
         packets.extend(outcome.packets);
+
+        // Остальным игрокам — Damage Event (Java) и «ранен» (Bedrock): у них
+        // игрок пострадал так же, как у Bedrock-соседа.
+        if !outcome.hurts.is_empty() {
+            let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+
+            for source in &outcome.hurts {
+                world.note_player_damaged(self.runtime_id as i32, source.type_id(), 0, 0);
+            }
+        }
 
         if let Some(source) = outcome.died {
             self.die(packets, source);
@@ -2030,6 +2075,32 @@ impl BedrockWorld {
 
         for (amount, source) in done.damage {
             self.health.hurt(amount, source);
+        }
+
+        // Флаг «использует предмет» у самого игрока: BDS шлёт его после щелчка
+        // (еда, лук) и снимает по окончании — иначе клиент не замедляется и не
+        // рисует еду. Флаги уходят целиком.
+        if self.body.busy() != self.using_shown {
+            self.using_shown = self.body.busy();
+            packets.push(own_flags(self.runtime_id, self.using_shown, self.sneaking));
+        }
+
+        // Доел или допил: клиенту — Completed Using Item (предмет и способ:
+        // 1 — еда, 3 — питьё), еда — ещё отрыжка у лица (BDS: Burp на 0,1
+        // ниже глаз, и самому игроку, и соседям; `of_player` — раздел «игроки»).
+        if let Some((item, food)) = done.consumed
+            && let Some((id, _, _)) = super::inventory::bedrock_item(item)
+        {
+            packets.push(super::effects::completed_using_item(id as i16, if food { 1 } else { 3 }));
+
+            // Отрыжка уходит через журнал мира: её слышат и Java-игроки (кроме
+            // самого едока — ему Java шлёт её сам), и Bedrock — все, и едок.
+            if food {
+                let at = (f64::from(self.position.0), f64::from(self.position.1) - 0.1, f64::from(self.position.2));
+                let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+
+                world.note_sound_player_except(at, "minecraft:entity.player.burp", 0.5, 1.0, self.runtime_id as i32);
+            }
         }
     }
 
@@ -3132,6 +3203,7 @@ impl BedrockWorld {
         let mut changed = Vec::new();
         let mut under_frames = Vec::new();
         let mut contents = false;
+        let mut late_sounds = Vec::new();
 
         for event in events {
             match event {
@@ -3192,11 +3264,23 @@ impl BedrockWorld {
                     packets.extend(super::effects::level_packets(x, y, z, effect, data));
                 }
                 WorldEvent::Sound(sound) if self.within_earshot(f64::from(sound.x), f64::from(sound.z)) => {
-                    if let Some(id) = super::effects::sound_for(sound.name) {
-                        let at = sound.exact.map_or((sound.x as f32 + 0.5, sound.y as f32 + 0.5, sound.z as f32 + 0.5), |(x, y, z)| (x as f32, y as f32, z as f32));
-
-                        packets.push(super::effects::level_sound(id, at));
+                    // Звук крышки — после самого движения крышки: BDS шлёт сперва
+                    // Block Event, потом звук (чёрный ящик, tmp/br-sounds).
+                    if super::effects::is_lid_sound(sound.name) {
+                        late_sounds.extend(self.sound_packets(&sound));
+                    } else {
+                        packets.extend(self.sound_packets(&sound));
                     }
+                }
+                // Чужой игрок ранен: остальные видят «ранен» — боль клиент
+                // играет сам (BDS не шлёт звука боли). Причина урона — по
+                // виду урона (ActorDamageCause).
+                WorldEvent::PlayerDamaged { entity_id, type_id, .. } if entity_id != self.runtime_id as i32 && self.shown.contains_key(&entity_id) => {
+                    packets.push(health::actor_event_data(entity_id as u64, 2, health::damage_cause_of_type(type_id)));
+                }
+                // Ракета фейерверка взорвалась: частицы (событие 25).
+                WorldEvent::RocketBlast { entity_id } if self.items_shown.contains(&entity_id) => {
+                    packets.push(health::actor_event(entity_id as u64, 25));
                 }
                 // Взрыв ранит и Bedrock-игрока; толчка ему пока нет [проверить].
                 WorldEvent::Hurt { entity_id, amount, .. } if entity_id == self.runtime_id as i32 => {
@@ -3226,6 +3310,8 @@ impl BedrockWorld {
                 _ => {}
             }
         }
+
+        packets.extend(late_sounds);
 
         if !under_frames.is_empty() {
             let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
@@ -3371,9 +3457,27 @@ impl BedrockWorld {
             }
         }
 
+        // Чужой игрок погиб: остальным — «умер» (BDS шлёт death_animation
+        // всем, кто видит); поднялся — снова может умереть.
+        {
+            let players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
+
+            for (id, shown) in &self.shown {
+                let dead = players.gear(&shown.uuid).health <= 0.0;
+
+                if dead && self.dead_shown.insert(*id) {
+                    packets.push(health::death_event(*id as u64));
+                } else if !dead {
+                    self.dead_shown.remove(id);
+                }
+            }
+        }
+
         let gone: Vec<i32> = self.shown.keys().copied().filter(|id| !present.contains(id)).collect();
 
         for id in gone {
+            self.dead_shown.remove(&id);
+
             if let Some(shown) = self.shown.remove(&id) {
                 packets.extend(forget_player(id, &shown));
             }
@@ -4185,6 +4289,27 @@ fn other_flags(member: &Member) -> i64 {
     let base: i64 = (1 << 14) | (1 << 15) | (1 << 19) | (1 << 35) | (1 << 48) | (1 << 49);
 
     if member.sneaking { base | (1 << 1) } else { base }
+}
+
+/// Флаги самого игрока: лазить, дышать, сталкиваться, тяжесть, а ещё «использует
+/// предмет» (4, у BDS — `action`) и «приседает» (1) (MetadataFlags1).
+fn own_flags(runtime_id: u64, using: bool, sneaking: bool) -> Vec<u8> {
+    let mut flags: i64 = (1 << 19) | (1 << 35) | (1 << 48) | (1 << 49);
+
+    if using {
+        flags |= 1 << 4;
+    }
+
+    if sneaking {
+        flags |= 1 << 1;
+    }
+
+    let mut out = Out::packet(session::SET_ENTITY_DATA);
+    out.varint64(runtime_id).varint(1);
+    out.varint(DATA_FLAGS).varint(DATA_LONG).zigzag64(flags);
+    out.varint(0).varint(0); // свойства: целые, дробные
+    out.varint64(0); // такт
+    out.bytes
 }
 
 /// Свойства сущности самого игрока: без флага тяжести он висит в воздухе

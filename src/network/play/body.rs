@@ -62,6 +62,9 @@ pub(crate) struct Done {
     pub open_cart: Option<i32>,
     /// Житель, с которым надо открыть торговлю.
     pub open_merchant: Option<i32>,
+    /// Доеденный или допитый предмет (номер Java): Bedrock-клиенту — Completed
+    /// Using Item и, для еды, отрыжка (так у BDS).
+    pub consumed: Option<(i32, bool)>,
 }
 
 pub(crate) struct Body {
@@ -203,6 +206,8 @@ fn use_held(shared: &Shared, p: &mut PlayerState, hand: i32, now: u64) {
 /// без пакетов — звуки еды клиент Bedrock играет сам [проверить].
 fn finish(p: &mut PlayerState, eating: vitals::Eating, done: &mut Done) {
     let creative = p.game_mode == GAME_MODE_CREATIVE;
+
+    done.consumed = p.inventory.held().map(|stack| (stack.item, eating.drink.is_none()));
 
     match eating.drink {
         Some(drink) => {

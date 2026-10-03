@@ -55,6 +55,8 @@ pub struct Health {
 pub struct Outcome {
     pub packets: Vec<Vec<u8>>,
     pub died: Option<Source>,
+    /// Виды урона, которые прошли в этот такт: остальным игрокам — «ранен».
+    pub hurts: Vec<Source>,
 }
 
 impl Health {
@@ -99,7 +101,7 @@ impl Health {
     /// `mortal` — выживание или приключение, `immune` — творческий или
     /// наблюдатель (бьёт только бездна).
     pub fn tick(&mut self, runtime_id: u64, mortal: bool, immune: bool, difficulty: u8, feet_y: f32) -> Outcome {
-        let mut out = Outcome { packets: Vec::new(), died: None };
+        let mut out = Outcome { packets: Vec::new(), died: None, hurts: Vec::new() };
 
         if self.vit.dead {
             self.hits.clear();
@@ -117,7 +119,8 @@ impl Health {
             }
 
             if let Some(hit) = self.vit.hurt(amount, source, immune) {
-                out.packets.push(actor_event(runtime_id, EVENT_HURT));
+                out.packets.push(hurt_event(runtime_id, source));
+                out.hurts.push(source);
 
                 if hit.died {
                     out.died = Some(source);
@@ -144,7 +147,8 @@ impl Health {
             if let Some(amount) = self.vit.food_tick(difficulty, true)
                 && let Some(hit) = self.vit.hurt(amount, Source::Starve, false)
             {
-                out.packets.push(actor_event(runtime_id, EVENT_HURT));
+                out.packets.push(hurt_event(runtime_id, Source::Starve));
+                out.hurts.push(Source::Starve);
 
                 if hit.died {
                     out.died = Some(Source::Starve);
@@ -167,10 +171,80 @@ impl Health {
 
 /// ActorEvent: номер сущности, событие, данные.
 pub fn actor_event(runtime_id: u64, event: u8) -> Vec<u8> {
+    actor_event_data(runtime_id, event, 0)
+}
+
+/// Actor Event с данными: у «ранен» (2) это причина урона (ActorDamageCause);
+/// BDS шлёт 2 («удар существа») при ударе и −1 («без причины») при команде
+/// `damage` (чёрный ящик Bedrock, tmp/br-sounds).
+pub fn actor_event_data(runtime_id: u64, event: u8, data: i32) -> Vec<u8> {
     let mut out = Out::packet(ACTOR_EVENT);
 
-    out.varint64(runtime_id).u8(event).zigzag32(0);
+    out.varint64(runtime_id).u8(event).zigzag32(data);
     out.bytes
+}
+
+/// Событие «ранен» с причиной урона вида `source`.
+pub fn hurt_event(runtime_id: u64, source: Source) -> Vec<u8> {
+    actor_event_data(runtime_id, EVENT_HURT, damage_cause(source))
+}
+
+/// Причина урона по номеру вида из Damage Event (`Source::type_id`).
+pub fn damage_cause_of_type(type_id: i32) -> i32 {
+    const ALL: [Source; 25] = [
+        Source::Arrow,
+        Source::Cactus,
+        Source::SweetBerryBush,
+        Source::Drown,
+        Source::Explosion,
+        Source::Fall,
+        Source::Generic,
+        Source::GenericKill,
+        Source::InFire,
+        Source::InWall,
+        Source::Lava,
+        Source::OnFire,
+        Source::OutOfWorld,
+        Source::MobAttack,
+        Source::PlayerExplosion,
+        Source::PlayerAttack,
+        Source::MaceSmash,
+        Source::Starve,
+        Source::Thorns,
+        Source::Magic,
+        Source::Wither,
+        Source::Trident,
+        Source::Fireworks,
+        Source::OutsideBorder,
+        Source::Lightning,
+    ];
+
+    ALL.iter().find(|source| source.type_id() == type_id).map_or(-1, |source| damage_cause(*source))
+}
+
+/// Причина урона Bedrock (ActorDamageCause) для вида урона. Сверено по BDS:
+/// удар существа 2, огонь горения 7, без причины −1; остальные номера —
+/// по порядку перечисления [проверить].
+pub fn damage_cause(source: Source) -> i32 {
+    match source {
+        Source::MobAttack | Source::PlayerAttack | Source::MaceSmash => 2,
+        Source::Cactus | Source::SweetBerryBush => 1,
+        Source::Arrow | Source::Trident => 3,
+        Source::InWall => 4,
+        Source::Fall => 5,
+        Source::InFire => 6,
+        Source::OnFire => 7,
+        Source::Lava => 8,
+        Source::Drown => 9,
+        Source::Explosion | Source::PlayerExplosion | Source::Fireworks => 11,
+        Source::OutOfWorld | Source::OutsideBorder => 12,
+        Source::Magic => 14,
+        Source::Wither => 15,
+        Source::Starve => 16,
+        Source::Thorns => 18,
+        Source::Lightning => 24,
+        Source::Generic | Source::GenericKill => -1,
+    }
 }
 
 pub fn death_event(runtime_id: u64) -> Vec<u8> {
@@ -219,6 +293,25 @@ pub fn attributes(runtime_id: u64, vit: &Vitals) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hurt_events_carry_the_damage_cause() {
+        // Снято с BDS: удар существа — 2, команда `damage` — −1, горение — 7.
+        assert_eq!(damage_cause(Source::PlayerAttack), 2);
+        assert_eq!(damage_cause(Source::MobAttack), 2);
+        assert_eq!(damage_cause(Source::Generic), -1);
+        assert_eq!(damage_cause(Source::OnFire), 7);
+        assert_eq!(damage_cause_of_type(Source::PlayerAttack.type_id()), 2);
+        assert_eq!(damage_cause_of_type(Source::Fall.type_id()), 5);
+        assert_eq!(damage_cause_of_type(-5), -1);
+
+        let packet = hurt_event(7, Source::PlayerAttack);
+        let (id, body) = crate::bedrock::codec::packet_id(&packet).expect("пакет");
+        let mut reader = crate::bedrock::codec::In::new(body);
+
+        assert_eq!(id, ACTOR_EVENT);
+        assert_eq!((reader.varint64(), reader.u8(), reader.zigzag32()), (Some(7), Some(EVENT_HURT), Some(2)));
+    }
 
     #[test]
     fn a_fall_hurts_once_on_landing() {
