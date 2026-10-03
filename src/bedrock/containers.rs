@@ -16,8 +16,20 @@ use crate::containers::{self, Kind, Pos};
 use crate::world::World;
 
 /// Номера окон хранилищ: CONTAINER_ID_FIRST … CONTAINER_ID_LAST (ContainerID).
-pub const FIRST_WINDOW: u8 = 1;
+/// Официальный BDS 1.26.13 (снято по сети, tmp/br-bds) первому открытому окну
+/// даёт номер 2 и дальше считает по одному: единицу не занимает никогда.
+pub const FIRST_WINDOW: u8 = 2;
 pub const LAST_WINDOW: u8 = 100;
+
+/// Следующий номер окна после `last` (0 — окон ещё не было): от
+/// `FIRST_WINDOW` до `LAST_WINDOW` по кругу.
+pub fn next_window(last: u8) -> u8 {
+    if (FIRST_WINDOW..LAST_WINDOW).contains(&last) { last + 1 } else { FIRST_WINDOW }
+}
+
+/// Имя контейнера (FullContainerName) в Inventory Content открытого окна:
+/// BDS шлёт нулевое для окон всех видов, как и для окон инвентаря.
+pub const WINDOW_CONTAINER: u8 = 0;
 
 /// Вид экрана (ContainerType): у сундука, ловушки и бочки — общий
 /// CONTAINER (0), у двойного сундука отдельного нет.
@@ -158,6 +170,49 @@ pub fn actor_packet(kind: Kind, (x, y, z): Pos, pair: Option<Pair>) -> Vec<u8> {
     out.bytes
 }
 
+/// Block Actor Data, каким его шлёт BDS, когда хранилище только что поставили
+/// или сменилось его состояние (снято по сети): у бочки и сундука —
+/// `{id, isMovable, x, y, z}` (и пара у половины большого сундука), у
+/// крафтера — только `crafting_ticks_remaining` и `disabled_slots`, у
+/// остальных (печи, воронка, раздатчик, выбрасыватель, стойка) пакета нет
+/// вовсе: клиент заводит их блок-акторы сам. Полный вид — `actor_packet` —
+/// уходит вслед за чанком.
+pub fn live_actor_packet(kind: Kind, (x, y, z): Pos, pair: Option<Pair>) -> Option<Vec<u8>> {
+    const BYTE: u8 = 1;
+    const SHORT: u8 = 2;
+    const INT: u8 = 3;
+    const STRING: u8 = 8;
+    const COMPOUND: u8 = 10;
+
+    let mut out = Out::packet(session::BLOCK_ACTOR_DATA);
+    out.block_position(x, y, z);
+    out.u8(COMPOUND).string("");
+
+    match kind {
+        Kind::Barrel | Kind::Chest | Kind::TrappedChest | Kind::CopperChest => {
+            out.u8(STRING).string("id").string(actor_id(kind));
+            out.u8(BYTE).string("isMovable").u8(1);
+            out.u8(INT).string("x").zigzag32(x);
+            out.u8(INT).string("y").zigzag32(y);
+            out.u8(INT).string("z").zigzag32(z);
+
+            if let Some(((pair_x, _, pair_z), lead)) = pair {
+                out.u8(BYTE).string("pairlead").u8(u8::from(lead));
+                out.u8(INT).string("pairx").zigzag32(pair_x);
+                out.u8(INT).string("pairz").zigzag32(pair_z);
+            }
+        }
+        Kind::Crafter => {
+            out.u8(INT).string("crafting_ticks_remaining").zigzag32(0);
+            out.u8(SHORT).string("disabled_slots").li16(0);
+        }
+        _ => return None,
+    }
+
+    out.u8(0);
+    Some(out.bytes)
+}
+
 /// Block Actor Data стола зачарования: у него в Bedrock есть блок-актор
 /// (id `EnchantTable`, поворот книги `rott` — minecraft.wiki), хотя
 /// хранилища нет; чанки его не несут, поэтому уходит при открытии стола.
@@ -215,6 +270,28 @@ pub fn actor_at(world: &World, pos: Pos) -> Option<Vec<u8>> {
     };
 
     Some(actor_packet(kind, pos, pair))
+}
+
+/// Открыта ли бочка в этом состоянии блока; None — это не бочка.
+pub fn barrel_open(state: i32) -> Option<bool> {
+    if Kind::of(state) != Some(Kind::Barrel) {
+        return None;
+    }
+
+    Some(crate::blocks::orientation_of(state)?.value(state, "open") == Some("true"))
+}
+
+/// То же, что `actor_at`, но в виде, в каком BDS шлёт актор при смене
+/// блока (`live_actor_packet`).
+pub fn live_actor_at(world: &World, pos: Pos) -> Option<Vec<u8>> {
+    let kind = Kind::of(world.get_block(pos.0, pos.1, pos.2))?;
+    let halves = containers::halves(world, pos);
+    let pair = match halves[..] {
+        [first, second] => Some(if first == pos { (second, true) } else { (first, false) }),
+        _ => None,
+    };
+
+    live_actor_packet(kind, pos, pair)
 }
 
 /// Сундук ли (или ловушка) этот номер блока — у Block Action крышки.
@@ -291,6 +368,11 @@ mod tests {
                 1 => reader.u8().expect("байт").to_string(),
                 3 => reader.zigzag32().expect("число").to_string(),
                 8 => reader.string().expect("строка"),
+                // Пустой список Items: тип элементов и нулевая длина.
+                9 => {
+                    assert_eq!((reader.u8(), reader.zigzag32()), (Some(10), Some(0)));
+                    "[]".to_string()
+                }
                 _ => panic!("неожиданный тег {tag}"),
             };
 
@@ -331,6 +413,85 @@ mod tests {
         assert_eq!(actor_at(&world, (9, 64, 0)), None);
     }
 
+    /// Что BDS шлёт при смене блока: у бочки и сундука — голый актор
+    /// `{id, isMovable, x, y, z}` в порядке BDS, у крафтера — два поля без
+    /// id, у печей, воронки, раздатчика и стойки — ничего.
+    #[test]
+    fn live_actors_match_the_official_server() {
+        let names = |packet: &[u8], skip_position: bool| {
+            let mut reader = In::new(packet);
+            let mut names = Vec::new();
+
+            reader.varint();
+
+            if skip_position {
+                reader.zigzag32();
+                reader.zigzag32();
+                reader.zigzag32();
+            }
+
+            assert_eq!(reader.u8(), Some(10));
+            assert_eq!(reader.string().as_deref(), Some(""));
+
+            loop {
+                let tag = reader.u8().expect("тег");
+
+                if tag == 0 {
+                    break;
+                }
+
+                names.push(reader.string().expect("имя"));
+
+                match tag {
+                    1 => drop(reader.u8()),
+                    2 => drop(reader.take(2)),
+                    3 => drop(reader.zigzag32()),
+                    8 => drop(reader.string()),
+                    _ => panic!("тег {tag}"),
+                }
+            }
+
+            assert_eq!(reader.u8(), None);
+            names
+        };
+
+        let barrel = live_actor_packet(Kind::Barrel, (2, -60, 0), None).expect("бочка");
+        assert_eq!(names(&barrel, true), ["id", "isMovable", "x", "y", "z"]);
+        // Точь-в-точь байты BDS: 38 04 77 00 0a 00 08 02 'id' 06 'Barrel' …
+        assert_eq!(&barrel[..6], &[0x38, 0x04, 0x77, 0x00, 0x0a, 0x00]);
+
+        let chest = live_actor_packet(Kind::Chest, (2, -60, 4), None).expect("сундук");
+        assert_eq!(names(&chest, true), ["id", "isMovable", "x", "y", "z"]);
+
+        let double = live_actor_packet(Kind::Chest, (2, -60, 4), Some(((3, -60, 4), true))).expect("половина");
+        assert_eq!(names(&double, true), ["id", "isMovable", "x", "y", "z", "pairlead", "pairx", "pairz"]);
+
+        let crafter = live_actor_packet(Kind::Crafter, (6, -60, 0), None).expect("крафтер");
+        assert_eq!(names(&crafter, true), ["crafting_ticks_remaining", "disabled_slots"]);
+        // 38 0c 77 00 0a 00 03 18 «crafting_ticks_remaining» 00 02 0e «disabled_slots» 00 00 00
+        assert_eq!(&crafter[..8], &[0x38, 0x0c, 0x77, 0x00, 0x0a, 0x00, 0x03, 0x18]);
+        assert_eq!(&crafter[crafter.len() - 3..], &[0, 0, 0]);
+
+        for kind in [Kind::Furnace, Kind::BlastFurnace, Kind::Smoker, Kind::Hopper, Kind::Dropper, Kind::Dispenser, Kind::BrewingStand] {
+            assert_eq!(live_actor_packet(kind, (0, 0, 0), None), None, "{kind:?}");
+        }
+    }
+
+    /// Номера окон хранилищ — с 2, как у BDS; у открытой бочки Open — true.
+    #[test]
+    fn windows_start_at_two_and_barrels_know_their_lid() {
+        assert_eq!(FIRST_WINDOW, 2);
+        assert_eq!((next_window(0), next_window(2), next_window(3), next_window(99), next_window(100)), (2, 3, 4, 100, 2));
+        assert_eq!(WINDOW_CONTAINER, 0);
+
+        let open = crate::blocks::state_from_text("barrel[facing=up,open=true]").expect("открытая");
+        let shut = crate::blocks::state_from_text("barrel[facing=up,open=false]").expect("закрытая");
+
+        assert_eq!(barrel_open(open), Some(true));
+        assert_eq!(barrel_open(shut), Some(false));
+        assert_eq!(barrel_open(crate::blocks::state_from_text("stone").expect("камень")), None);
+    }
+
     #[test]
     fn chest_blocks_are_known() {
         assert!(is_chest_block(crate::blocks::block_id("chest").expect("сундук")));
@@ -367,6 +528,7 @@ mod tests {
                     3 => drop(reader.zigzag32()),
                     5 => drop(reader.take(4)),
                     8 => drop(reader.string()),
+                    9 => drop((reader.u8(), reader.zigzag32())),
                     _ => panic!("тег {tag}"),
                 }
             }

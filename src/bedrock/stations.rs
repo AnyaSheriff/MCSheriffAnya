@@ -147,7 +147,7 @@ pub fn layout(kind: crate::containers::Kind) -> Option<Vec<(u8, u8)>> {
 }
 
 /// Container Set Data: свойство окна (печь: 0 — сколько жарится, 1 — сколько
-/// ещё горит, 2 — на сколько топлива; стойка: 0 — сколько варится, 1 —
+/// ещё горит, 2 — на сколько топлива, 3 — накопленный опыт; стойка: 0 — сколько варится, 1 —
 /// заряды порошка, 2 — всего зарядов).
 pub fn set_data_packet(window: u8, property: i32, value: i32) -> Vec<u8> {
     let mut out = Out::packet(session::CONTAINER_SET_DATA);
@@ -168,9 +168,13 @@ pub fn bedrock_properties(kind: crate::containers::Kind, java: &[i16]) -> Vec<(i
             let total = at(3);
             let cook = if total > 0 { at(2) * 200 / total } else { 0 };
 
-            vec![(0, cook), (1, at(0)), (2, at(1))]
+            // Четвёртое — накопленный опыт: BDS шлёт его вместе с тремя
+            // остальными (снято по сети, tmp/br-bds); опыт печи Bedrock
+            // пока не ведёт [проверить].
+            vec![(0, cook), (1, at(0)), (2, at(1)), (3, 0)]
         }
-        C::BrewingStand => vec![(0, at(0)), (1, at(1)), (2, 20)],
+        // Всего зарядов — 20, когда они есть; у пустой стойки BDS шлёт нули.
+        C::BrewingStand => vec![(0, at(0)), (1, at(1)), (2, if at(1) > 0 { 20 } else { 0 })],
         _ => Vec::new(),
     }
 }

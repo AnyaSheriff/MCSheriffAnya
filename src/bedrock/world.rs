@@ -333,6 +333,9 @@ pub struct BedrockWorld {
     opened_at: u64,
     /// Номер последнего открытого окна — следующее получит на один больше.
     next_window: u8,
+    /// Окну хранилища нужен ещё один полный Inventory Content в ближайшем
+    /// такте: так делает BDS у всех видов, кроме печей и стойки.
+    resync_window: bool,
     /// Крышки сундуков, как их последний раз показали клиенту: открыта ли.
     /// Оригинал повторяет крышку раз в 5 тактов — клиенту уходит только
     /// перемена.
@@ -595,6 +598,7 @@ impl BedrockWorld {
             station_window: None,
             opened_at: 0,
             next_window: 0,
+            resync_window: false,
             lids: HashMap::new(),
             last_use: None,
             health,
@@ -605,7 +609,8 @@ impl BedrockWorld {
 
         let mut status = Out::packet(session::PLAY_STATUS);
         status.i32_be(3);
-        let mut packets = player.bag.content_packets();
+        // При входе, как у BDS: рюкзак, броня, интерфейс, вторая рука и Player Hotbar.
+        let mut packets = player.bag.open_sync_packets();
 
         for (entity_id, packet) in lying {
             player.items_shown.insert(entity_id);
@@ -2241,13 +2246,12 @@ impl BedrockWorld {
                 return Some(Vec::new());
             }
 
-            // Как у Java: звук, повтор самого блока и того, что за гранью,
-            // потом общая рассылка (бочка «открыта», лампы у ловушки)
-            // и крышка в фазе блочных событий.
+            // Как у Java: звук, общая рассылка (бочка «открыта») и крышка в
+            // фазе блочных событий. Повтора самого блока и соседа клиенту
+            // не шлём: BDS на щелчок по хранилищу их не шлёт (снято по сети,
+            // tmp/br-bds).
             let first = containers::open_begin(&mut world, &halves);
 
-            world.tell_directly(x, y, z);
-            world.tell_directly(beyond.0, beyond.1, beyond.2);
             containers::open_finish(&mut world, &halves, first);
             crate::redstone::settle(&mut world);
 
@@ -2255,7 +2259,17 @@ impl BedrockWorld {
             drop(world);
 
             log_debug!("Bedrock: {} открыл {:?} в {:?}", self.identity.name, kind, clicked);
-            return Some(self.open_window(kind, halves, &slots));
+
+            // Бочка: BDS шлёт её крышку (Block Event 1) до Container Open.
+            let mut packets = Vec::new();
+
+            if kind == containers::Kind::Barrel {
+                self.lids.insert(clicked, true);
+                packets.push(screens::lid_packet(clicked, true));
+            }
+
+            packets.extend(self.open_window(kind, halves, &slots));
+            return Some(packets);
         }
 
         // Куст ягод: сбор любой рукой (farming.rs) — как у Java до рычагов.
@@ -2326,7 +2340,7 @@ impl BedrockWorld {
     /// Открывает станок: Container Open с видом экрана; у стола — сразу его
     /// предложения.
     fn open_station(&mut self, kind: stations::Kind, at: containers::Pos, shelves: i32) -> Vec<Vec<u8>> {
-        self.next_window = self.next_window % screens::LAST_WINDOW + screens::FIRST_WINDOW;
+        self.next_window = screens::next_window(self.next_window);
 
         let id = self.next_window;
         let mut open = Out::packet(session::CONTAINER_OPEN);
@@ -2430,29 +2444,49 @@ impl BedrockWorld {
         crate::redstone::settle(&mut world);
     }
 
-    /// Открывает клиенту окно хранилища: Container Open (номер окна 1–100,
-    /// вид экрана, место) и сразу Inventory Content с ячейками хранилища —
-    /// у двойного сундука все 54, в порядке окна Java (`containers::halves`).
+    /// Открывает клиенту окно хранилища в порядке официального BDS 1.26.13
+    /// (снято по сети, tmp/br-bds): у печей и стойки сперва Container Set
+    /// Data, потом Container Open (номер окна от 2, вид экрана, место),
+    /// Inventory Content с ячейками хранилища одним пакетом (у двойного
+    /// сундука все 54, в порядке окна Java — `containers::halves`; у печи
+    /// и стойки — в порядке Bedrock), у сундука крышка, затем рюкзак, броня,
+    /// интерфейс, вторая рука, Player Hotbar и снова ячейки хранилища.
     /// Место — ведущая половина: её ячейки в окне первые.
     fn open_window(&mut self, kind: containers::Kind, halves: Vec<containers::Pos>, slots: &[Option<crate::inventory::Stack>]) -> Vec<Vec<u8>> {
-        self.next_window = self.next_window % screens::LAST_WINDOW + screens::FIRST_WINDOW;
+        self.next_window = screens::next_window(self.next_window);
 
         let id = self.next_window;
-        let mut packets = vec![screens::open_packet(id, kind, halves[0])];
+        let lead = halves[0];
+        let lids: Vec<containers::Pos> = if kind.is_chest() { halves.clone() } else { Vec::new() };
 
         match stations::layout(kind) {
             Some(layout) => self.bag.open_window_for(slots, layout, Some(kind)),
             None => self.bag.open_window(slots),
         }
 
-        packets.extend(self.bag.window_content_packets(id, screens::slot_name(kind)));
         self.opened_at = self.ticks;
+        self.window = Some(OpenWindow { id, kind, halves, props: Vec::new() });
+
+        let mut packets = self.window_properties();
+
+        packets.push(screens::open_packet(id, kind, lead));
+
+        let content = self.bag.window_full_packet(id);
+
+        packets.extend(content.iter().cloned());
+
+        for place in lids {
+            self.lids.insert(place, true);
+            packets.push(screens::lid_packet(place, true));
+        }
+
+        packets.extend(self.bag.open_sync_packets());
+        packets.extend(content);
+        self.resync_window = !matches!(kind, containers::Kind::Furnace | containers::Kind::BlastFurnace | containers::Kind::Smoker | containers::Kind::BrewingStand);
         log_debug!(
-            "Bedrock: {} — Container Open: окно {}, экран {} ({}), пакетов окна {}",
+            "Bedrock: {} — Container Open: окно {}, экран {} ({}), пакетов {}",
             self.identity.name, id, screens::screen(kind), screens::screen_name(screens::screen(kind) as i8), packets.len()
         );
-        self.window = Some(OpenWindow { id, kind, halves, props: Vec::new() });
-        packets.extend(self.window_properties());
         packets
     }
 
@@ -2985,6 +3019,17 @@ impl BedrockWorld {
                         continue;
                     }
 
+                    // Крышка бочки: BDS шлёт её Block Event'ом перед самим
+                    // блоком (снято по сети, tmp/br-bds); открытие своего окна
+                    // уже сказало об этом при Container Open.
+                    if let Some(open) = screens::barrel_open(change.state) {
+                        let place = (change.x, change.y, change.z);
+
+                        if self.lids.insert(place, open).unwrap_or(false) != open {
+                            packets.push(screens::lid_packet(place, open));
+                        }
+                    }
+
                     packets.extend(block_updates(change.x, change.y, change.z, change.state));
 
                     // Основание поршня: рычаг рисует блок-актор (pistons.rs).
@@ -3084,7 +3129,17 @@ impl BedrockWorld {
                 }
             }
 
-            packets.extend(actors.into_iter().filter_map(|place| screens::actor_at(&world, place)));
+            // Как у BDS: после смены блока — только то, что шлёт он (бочка,
+            // сундук, крафтер); остальные блок-акторы клиент заводит сам.
+            packets.extend(actors.into_iter().filter_map(|place| screens::live_actor_at(&world, place)));
+        }
+
+        // Ещё один полный Inventory Content окна — после блока и актора, как у BDS.
+        if std::mem::take(&mut self.resync_window)
+            && let Some(window) = &self.window
+            && let Some(packet) = self.bag.window_full_packet(window.id)
+        {
+            packets.push(packet);
         }
 
         if contents {
@@ -3455,24 +3510,34 @@ fn teleport_packet(runtime_id: u64, eyes: (f32, f32, f32), rotation: (f32, f32),
 }
 
 /// Блок в обоих слоях Bedrock: сам блок и вода, если он затоплен.
-fn block_updates(x: i32, y: i32, z: i32, state: i32) -> [Vec<u8>; 2] {
+fn block_updates(x: i32, y: i32, z: i32, state: i32) -> Vec<Vec<u8>> {
     let mut update = Out::packet(session::UPDATE_BLOCK);
     update
         .block_position(x, y, z)
         .varint(bedrock_state(state))
-        .varint(2) // соседям по сети
+        .varint(UPDATE_NEIGHBORS | UPDATE_NETWORK) // как у BDS: соседям и по сети
         .varint(0); // основной слой
+
+    // У хранилищ (кроме сундуков) слоя воды нет: BDS шлёт им один слой.
+    if containers::Kind::of(state).is_some_and(|kind| !kind.is_chest()) {
+        return vec![update.bytes];
+    }
 
     // И слой воды: затоплен ли теперь этот блок.
     let mut liquid = Out::packet(session::UPDATE_BLOCK);
     liquid
         .block_position(x, y, z)
         .varint(if waterlogged(state) { still_water() } else { air() })
-        .varint(2)
+        .varint(UPDATE_NEIGHBORS | UPDATE_NETWORK)
         .varint(1);
 
-    [update.bytes, liquid.bytes]
+    vec![update.bytes, liquid.bytes]
 }
+
+/// Флаги Update Block (UpdateBlockFlags): «соседям» и «по сети». У BDS на
+/// каждое изменение стоят оба (снято по сети, tmp/br-bds).
+const UPDATE_NEIGHBORS: u32 = 1;
+const UPDATE_NETWORK: u32 = 2;
 
 /// Самое длинное сообщение в чат, как у оригинала.
 const MAX_CHAT: usize = 256;
@@ -4953,6 +5018,36 @@ mod tests {
         assert_eq!(packet[0], 0x3d);
         assert_eq!(packet[1], 0); // обычный мир
         assert_eq!(packet[2..], [&[0u8; 12][..], &[0, 0][..]].concat()[..]);
+    }
+
+    /// Update Block, как у BDS: флаги «соседям + по сети» (3), у хранилищ без
+    /// воды — один основной слой, у обычного блока — ещё и слой воды.
+    #[test]
+    fn block_updates_follow_the_official_server() {
+        let state = |text: &str| crate::blocks::state_from_text(text).expect(text);
+        let flags_and_layer = |packet: &[u8]| {
+            let mut reader = In::new(packet);
+
+            assert_eq!(reader.varint(), Some(session::UPDATE_BLOCK));
+            reader.zigzag32();
+            reader.varint();
+            reader.zigzag32();
+            reader.varint();
+
+            (reader.varint(), reader.varint())
+        };
+
+        let barrel = block_updates(2, -60, 0, state("barrel[facing=up,open=true]"));
+        assert_eq!(barrel.len(), 1);
+        assert_eq!(flags_and_layer(&barrel[0]), (Some(3), Some(0)));
+
+        let stone = block_updates(2, -60, 0, state("stone"));
+        assert_eq!(stone.len(), 2);
+        assert_eq!(flags_and_layer(&stone[0]), (Some(3), Some(0)));
+        assert_eq!(flags_and_layer(&stone[1]), (Some(3), Some(1)));
+
+        let chest = block_updates(2, -60, 0, state("chest"));
+        assert_eq!(chest.len(), 2);
     }
 
     #[test]

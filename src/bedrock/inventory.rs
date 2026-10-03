@@ -59,6 +59,13 @@ pub const CRAFTER: u8 = 62;
 const WINDOW_INVENTORY: u32 = 0;
 const WINDOW_OFFHAND: u32 = 119;
 const WINDOW_ARMOR: u32 = 120;
+const WINDOW_UI: u32 = 124;
+
+/// Сколько ячеек в окне интерфейса у BDS: курсор, сетка, предложения станков.
+const UI_SLOTS: usize = 54;
+
+/// Player Hotbar (PlayerHotbarPacket): номер ячейки, окно, «выбрать».
+const PLAYER_HOTBAR: u32 = 0x30;
 
 /// Первый слот брони в общей раскладке.
 const FIRST_ARMOR: i32 = 5;
@@ -498,28 +505,55 @@ impl Bag {
         changed
     }
 
-    /// Всё окно хранилища пакетом Inventory Content: номер окна из Container
-    /// Open, только ячейки хранилища (инвентарь игрока в это окно у Bedrock
-    /// не входит), имя контейнера, пустой storage item.
-    pub fn window_content_packets(&self, window: u8, container: u8) -> Vec<Vec<u8>> {
-        if self.layout.is_empty() {
-            return self.window_content_packet(window, container).into_iter().collect();
-        }
-
-        (0..self.layout.len()).filter_map(|slot| self.window_slot_packet(window, container, slot)).collect()
-    }
-
-    pub fn window_content_packet(&self, window: u8, container: u8) -> Option<Vec<u8>> {
+    /// Содержимое окна хранилища одним пакетом, ячейки — в порядке окна
+    /// Bedrock (у печи и стойки он не тот, что у Java: `layout` называет
+    /// место каждой ячейки), с нулевым именем контейнера, как у BDS.
+    pub fn window_full_packet(&self, window: u8) -> Option<Vec<u8>> {
         let slots = self.window.as_ref()?;
-        let mut out = Out::packet(super::session::INVENTORY_CONTENT);
-        out.varint(window as u32).varint(slots.len() as u32);
+        let mut order: Vec<Option<Stack>> = vec![None; slots.len()];
+        let mut ids = vec![0; slots.len()];
 
         for (slot, stack) in slots.iter().enumerate() {
-            write_item(&mut out, *stack, self.id(Place::Container(slot)));
+            let at = self.layout.get(slot).map_or(slot, |&(_, number)| usize::from(number));
+
+            if at < order.len() {
+                order[at] = *stack;
+                ids[at] = self.id(Place::Container(slot));
+            }
         }
 
-        out.u8(container).u8(0).zigzag32(0);
+        let mut out = Out::packet(super::session::INVENTORY_CONTENT);
+        out.varint(u32::from(window)).varint(order.len() as u32);
+
+        for (stack, id) in order.into_iter().zip(ids) {
+            write_item(&mut out, stack, id);
+        }
+
+        out.u8(super::containers::WINDOW_CONTAINER).u8(0).zigzag32(0);
         Some(out.bytes)
+    }
+
+    /// Всё, что BDS шлёт игроку при входе и сразу после Container Open: рюкзак,
+    /// броня, окно интерфейса (пустое, 54 ячейки), вторая рука и Player
+    /// Hotbar с выбранной ячейкой.
+    pub fn open_sync_packets(&self) -> Vec<Vec<u8>> {
+        let mut packets = self.content_packets();
+        let mut ui = Out::packet(super::session::INVENTORY_CONTENT);
+
+        ui.varint(WINDOW_UI).varint(UI_SLOTS as u32);
+
+        for _ in 0..UI_SLOTS {
+            ui.zigzag32(0);
+        }
+
+        ui.u8(super::containers::WINDOW_CONTAINER).u8(0).zigzag32(0);
+        // Порядок BDS: рюкзак, броня, интерфейс, вторая рука.
+        packets.insert(2, ui.bytes);
+
+        let mut hotbar = Out::packet(PLAYER_HOTBAR);
+        hotbar.varint(self.inventory.selected() as u32).u8(WINDOW_INVENTORY as u8).bool(true);
+        packets.push(hotbar.bytes);
+        packets
     }
 
     /// Одна ячейка окна хранилища пакетом Inventory Slot.
@@ -534,12 +568,18 @@ impl Bag {
 
     /// Весь инвентарь: рюкзак с панелью, броня, вторая рука.
     pub fn content_packets(&self) -> Vec<Vec<u8>> {
-        let window = |window: u32, container: u8, slots: &[i32]| {
+        // `padding` — пустые ячейки в конце: окно брони у BDS из пяти ячеек
+        // (четыре предмета и ещё одна, пока пустая), у нас предметов четыре.
+        let window = |window: u32, container: u8, slots: &[i32], padding: usize| {
             let mut out = Out::packet(super::session::INVENTORY_CONTENT);
-            out.varint(window).varint(slots.len() as u32);
+            out.varint(window).varint((slots.len() + padding) as u32);
 
             for &slot in slots {
                 write_item(&mut out, self.inventory.slot(slot), self.id(Place::Slot(slot)));
+            }
+
+            for _ in 0..padding {
+                out.zigzag32(0);
             }
 
             out.u8(container).u8(0); // FullContainerName без динамического номера
@@ -551,9 +591,9 @@ impl Bag {
         let armor: Vec<i32> = (FIRST_ARMOR..FIRST_ARMOR + 4).collect();
 
         vec![
-            window(WINDOW_INVENTORY, HOTBAR_AND_INVENTORY, &main),
-            window(WINDOW_ARMOR, ARMOR, &armor),
-            window(WINDOW_OFFHAND, OFFHAND_SLOT, &[OFFHAND]),
+            window(WINDOW_INVENTORY, HOTBAR_AND_INVENTORY, &main, 0),
+            window(WINDOW_ARMOR, ARMOR, &armor, 1),
+            window(WINDOW_OFFHAND, OFFHAND_SLOT, &[OFFHAND], 0),
         ]
     }
 
@@ -1529,6 +1569,66 @@ mod tests {
         assert!(!bag.ids.keys().any(|place| matches!(place, Place::Container(_))));
     }
 
+    /// Окно стойки одним пакетом, ячейки — в порядке Bedrock (ингредиент 0,
+    /// бутылки 1–3, порошок 4), а не Java; имя контейнера нулевое, как у BDS.
+    #[test]
+    fn brewing_window_is_one_packet_in_bedrock_order() {
+        let stone = crate::blocks::item_named("stone").expect("камень");
+        let mut bag = Bag::new(Inventory::new());
+        let mut slots = vec![None; 5];
+
+        // Java: 0–2 — бутылки, 3 — ингредиент, 4 — порошок.
+        slots[3] = Some(Stack::new(stone, 1));
+        bag.open_window_for(&slots, stations::layout(crate::containers::Kind::BrewingStand).expect("стойка"), None);
+
+        let packet = bag.window_full_packet(9).expect("окно открыто");
+        let mut reader = In::new(&packet);
+
+        assert_eq!(reader.varint(), Some(super::super::session::INVENTORY_CONTENT));
+        assert_eq!((reader.varint(), reader.varint()), (Some(9), Some(5)));
+        // Камень — первым (ингредиент), остальные пусты.
+        assert_eq!(reader.zigzag32(), Some(1));
+        reader.take(2).expect("количество");
+        reader.varint().expect("метаданные");
+        reader.u8().expect("есть ли номер");
+        reader.zigzag32().expect("номер стопки");
+        reader.zigzag32().expect("блок");
+        let extra = reader.varint().expect("длина") as usize;
+        reader.take(extra).expect("данные");
+
+        for _ in 1..5 {
+            assert_eq!(reader.zigzag32(), Some(0));
+        }
+
+        assert_eq!((reader.u8(), reader.u8(), reader.zigzag32()), (Some(0), Some(0), Some(0)));
+        assert_eq!(reader.u8(), None);
+    }
+
+    /// После Container Open BDS досылает рюкзак, броню, интерфейс (54 пустые
+    /// ячейки), вторую руку и Player Hotbar.
+    #[test]
+    fn open_sync_follows_the_official_order() {
+        let mut bag = Bag::new(Inventory::new());
+
+        bag.select(4);
+
+        let packets = bag.open_sync_packets();
+        let windows: Vec<(u32, u32)> = packets[..4]
+            .iter()
+            .map(|packet| {
+                let mut reader = In::new(packet);
+
+                assert_eq!(reader.varint(), Some(super::super::session::INVENTORY_CONTENT));
+                (reader.varint().expect("окно"), reader.varint().expect("ячеек"))
+            })
+            .collect();
+
+        assert_eq!(windows, [(0, 36), (120, 5), (124, 54), (119, 1)]);
+        assert_eq!(packets.len(), 5);
+        // 30 04 00 01: ячейка 4, окно рюкзака, «выбрать».
+        assert_eq!(packets[4], vec![0x30, 4, 0, 1]);
+    }
+
     /// Что изменилось без клиента, получает новый номер стопки; окно
     /// пакетом Inventory Content — номер окна, все ячейки, имя контейнера.
     #[test]
@@ -1543,7 +1643,7 @@ mod tests {
         assert_ne!(bag.id(Place::Container(2)), 0);
         assert_eq!(bag.update_window(&now), Vec::<usize>::new());
 
-        let packet = bag.window_content_packet(4, LEVEL_ENTITY).expect("окно открыто");
+        let packet = bag.window_full_packet(4).expect("окно открыто");
         let mut reader = In::new(&packet);
         assert_eq!(reader.varint(), Some(super::super::session::INVENTORY_CONTENT));
         assert_eq!(reader.varint(), Some(4));
@@ -1561,7 +1661,7 @@ mod tests {
         for _ in 3..9 {
             assert_eq!(reader.zigzag32(), Some(0));
         }
-        assert_eq!((reader.u8(), reader.u8(), reader.zigzag32()), (Some(LEVEL_ENTITY), Some(0), Some(0)));
+        assert_eq!((reader.u8(), reader.u8(), reader.zigzag32()), (Some(super::super::containers::WINDOW_CONTAINER), Some(0), Some(0)));
         assert_eq!(reader.u8(), None);
 
         // Очистка инвентаря окно не трогает.
