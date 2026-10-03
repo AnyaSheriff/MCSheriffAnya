@@ -3805,10 +3805,14 @@ impl BedrockWorld {
 
         let mut batch = Vec::new();
 
-        for (x, z, (sections, biomes), (embedded, actors), frames) in ready {
+        for (x, z, (sections, biomes), (mut embedded, actors), frames) in ready {
+            // Поршни тоже: актор PistonArm, пришедший пакетом после чанка,
+            // клиент после перезахода не принимает — головы не видно.
+            let pistons = super::pistons::chunk_actors(x, z, &sections, world::MIN_Y / 16, |y| heights(dimension).contains(&y));
+            embedded.extend(pistons.iter().map(|packet| actor_nbt(packet)));
+
             batch.push(encode_chunk(dimension, x, z, &sections, &biomes, &embedded));
             batch.extend(actors);
-            batch.extend(super::pistons::chunk_actors(x, z, &sections, world::MIN_Y / 16, |y| heights(dimension).contains(&y)));
 
             // Рамки: блоки поверх воздуха чанка, следом их данные.
             for frame in frames {
