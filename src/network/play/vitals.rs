@@ -683,7 +683,10 @@ pub(super) fn living_flags(player: &PlayerState) -> u8 {
 /// Правая кнопка со щитом или луком в руке `hand`: щит поднят, лук
 /// натягивается. Возвращает, началось ли использование.
 pub(super) fn start_using(shared: &Shared, player: &mut PlayerState, hand: i32, now: u64) -> bool {
-    if !mortal(player.game_mode) || player.vit.dead || player.net.using.is_some() || player.net.eating.is_some() {
+    // Творческий тоже натягивает лук (без стрел) и поднимает щит; не может
+    // только наблюдатель (вики, Bow: «Players in Creative mode do not need
+    // arrows»).
+    if player.game_mode == GAME_MODE_SPECTATOR || player.vit.dead || player.net.using.is_some() || player.net.eating.is_some() {
         return false;
     }
 
@@ -2228,6 +2231,68 @@ mod tests {
     fn only_survival_and_adventure_are_mortal() {
         assert!(mortal(GAME_MODE_SURVIVAL) && mortal(GAME_MODE_ADVENTURE));
         assert!(!mortal(GAME_MODE_CREATIVE) && !mortal(GAME_MODE_SPECTATOR));
+    }
+
+    fn bow_shared() -> Shared {
+        Shared::new(
+            crate::world::World::in_memory(),
+            crate::world::World::in_memory(),
+            std::path::PathBuf::new(),
+            std::path::PathBuf::new(),
+            Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("/tmp/mcsheriffanya-bow-ops.json")),
+            crate::skins::Settings::default(),
+        )
+    }
+
+    fn archer(mode: i32, arrows: bool) -> PlayerState {
+        let mut player = PlayerState::new([7; 16], "Анна".to_string(), None, None, 0x7F, 1, (0.5, 64.0, 0.5));
+        let bow = crate::blocks::item_named("bow").expect("лук");
+
+        player.game_mode = mode;
+        player.inventory.set(player.inventory.selected_slot(), Some(crate::inventory::Stack::new(bow, 1)));
+
+        if arrows {
+            player.inventory.set(inventory::FIRST_MAIN, Some(crate::inventory::Stack::new(crate::blocks::item_named("arrow").expect("стрела"), 5)));
+        }
+
+        player
+    }
+
+    #[test]
+    fn a_bow_is_drawn_in_survival_and_in_creative_but_not_by_a_spectator() {
+        let shared = bow_shared();
+
+        for (mode, drawn) in [(GAME_MODE_SURVIVAL, true), (GAME_MODE_ADVENTURE, true), (GAME_MODE_CREATIVE, true), (GAME_MODE_SPECTATOR, false)] {
+            let mut player = archer(mode, true);
+
+            assert_eq!(start_using(&shared, &mut player, 0, 10), drawn, "режим {mode}");
+        }
+    }
+
+    #[test]
+    fn a_creative_bow_shoots_without_arrows_and_keeps_the_stack() {
+        let shared = bow_shared();
+        let mut player = archer(GAME_MODE_CREATIVE, false);
+
+        assert!(start_using(&shared, &mut player, 0, 10));
+        shared.ticks.send_replace(30);
+        release_use(&mut player, &shared);
+
+        assert!(player.net.using.is_none());
+        assert!(player.inventory.held().is_some());
+    }
+
+    #[test]
+    fn a_survival_bow_spends_one_arrow() {
+        let shared = bow_shared();
+        let mut player = archer(GAME_MODE_SURVIVAL, true);
+
+        assert!(start_using(&shared, &mut player, 0, 10));
+        shared.ticks.send_replace(30);
+        release_use(&mut player, &shared);
+
+        assert_eq!(player.inventory.slot(inventory::FIRST_MAIN).map(|stack| stack.count), Some(4));
     }
 
     #[test]

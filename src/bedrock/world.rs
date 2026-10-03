@@ -1871,7 +1871,7 @@ impl BedrockWorld {
         let done = self.run(crate::network::play::Act::Use(0));
         let mut packets = Vec::new();
 
-        log_debug!("Bedrock: {} начал действие предметом {:?}, занят: {}", self.identity.name, self.bag.inventory.held(), self.body.busy());
+        log_debug!("Bedrock: {} начал действие предметом {:?}, режим {}, занят: {}", self.identity.name, self.bag.inventory.held(), self.game_mode, self.body.busy());
 
         self.settle(done, &mut packets);
 
