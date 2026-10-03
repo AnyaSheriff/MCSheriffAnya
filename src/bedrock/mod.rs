@@ -23,6 +23,7 @@ pub mod effects;
 pub mod frames;
 pub mod health;
 pub mod inventory;
+pub mod mobprops;
 pub mod pistons;
 pub mod png;
 pub mod raknet;

@@ -539,6 +539,8 @@ impl BedrockWorld {
         menu.raw(CREATIVE_CONTENT);
 
         connection.send(&[start.bytes, items.bytes, menu.bytes, stations::crafting_data_packet().to_vec(), biome_definitions()]);
+        // Определения свойств сущностей (свинья, корова, курица), как у BDS после Start Game.
+        connection.send(&super::mobprops::definitions());
 
         let reader = shared.next_reader();
         let events_from = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").watch_events(reader);
@@ -3781,10 +3783,9 @@ fn add_mob(entity_id: i32, kind: crate::mob::Kind, [x, y, z, yaw, pitch, head]: 
         .lf32(head)
         .lf32(yaw)
         .varint(0) // свойства-атрибуты
-        .varint(0) // данные сущности
-        .varint(0)
-        .varint(0) // свойства: целые, дробные
-        .varint(0); // связи
+        .varint(0); // данные сущности
+    super::mobprops::write_values(&mut out, kind); // свойства: целые, дробные
+    out.varint(0); // связи
     out.bytes
 }
 
