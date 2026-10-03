@@ -1,0 +1,105 @@
+{
+ "name": "smithing-upgrade",
+ "about": "Кузнечный стол: шаблон netherite_upgrade + алмазный нагрудник («защита III», износ 50) + незеритовый слиток — незеритовый нагрудник с теми же довесками; итог забирается мышкой (уходит по одному шаблона, вещи и слитка), второй раз — меч с «остротой II» и Shift-щелчком по итогу; железный меч на стол не ложится; закрытие возвращает остатки.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:smithing_table"
+  }
+ ],
+ "setup": [
+  "clear $(bot)",
+  "give $(bot) minecraft:netherite_upgrade_smithing_template 2",
+  "give $(bot) minecraft:diamond_chestplate[enchantments={protection:3},damage=50]",
+  "give $(bot) minecraft:netherite_ingot 2",
+  "give $(bot) minecraft:diamond_sword[enchantments={sharpness:2}]",
+  "give $(bot) minecraft:iron_sword",
+  "tp $(bot) $(0.5,0,3.5) 180 0",
+  "gamemode survival $(bot)",
+  "!stopfly"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 10,
+   "window_click": {
+    "slot": 31,
+    "mode": 1
+   }
+  },
+  {
+   "after": 20,
+   "window_click": {
+    "slot": 32,
+    "mode": 1
+   }
+  },
+  {
+   "after": 30,
+   "window_click": {
+    "slot": 33,
+    "mode": 1
+   }
+  },
+  {
+   "after": 40,
+   "window_click": {
+    "slot": 3,
+    "mode": 0
+   }
+  },
+  {
+   "after": 50,
+   "window_click": {
+    "slot": 20,
+    "mode": 0
+   }
+  },
+  {
+   "after": 60,
+   "window_click": {
+    "slot": 34,
+    "mode": 1
+   }
+  },
+  {
+   "after": 70,
+   "window_click": {
+    "slot": 3,
+    "mode": 1
+   }
+  },
+  {
+   "after": 80,
+   "window_click": {
+    "slot": 35,
+    "mode": 1
+   }
+  },
+  {
+   "after": 90,
+   "close": true
+  }
+ ],
+ "cleanup": [
+  "setblock $(0,0,0) minecraft:air",
+  "kill @e[type=item,distance=..48]",
+  "clear $(bot)",
+  "gamemode creative $(bot)"
+ ],
+ "item_components": true,
+ "track_self": true,
+ "track_mobs": true,
+ "record_ticks": 120
+}

@@ -253,6 +253,7 @@ pub fn screen_name(kind: i8) -> &'static str {
         26 => "grindstone",
         27 => "blast_furnace",
         28 => "smoker",
+        33 => "smithing_table",
         36 => "crafter",
         _ => "other",
     }

@@ -2584,6 +2584,9 @@ impl BedrockWorld {
                     world.note_sound(pos.0, pos.1, pos.2, "minecraft:block.enchantment_table.use", 1.0, pitch);
                 }
                 Event::AnvilUsed(pos) => self.anvil_used(pos),
+                Event::Smithed(pos) => {
+                    self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком").note_level_event(pos.0, pos.1, pos.2, 1044, 0);
+                }
                 Event::Ground(inputs, pos) => {
                     let mut rng = crate::mob::Rng::new(u64::from(self.shared.next_entity_id() as u32) ^ (*self.shared.ticks.borrow() << 20));
                     let points = crate::enchanting::grind_xp(&inputs, |half| rng.below(half as u32) as i32);

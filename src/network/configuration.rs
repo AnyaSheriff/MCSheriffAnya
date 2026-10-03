@@ -140,7 +140,7 @@ const DAMAGE_TYPES: [&str; 51] = [
 ///
 /// Имена записей даны без namespace — он всегда minecraft. Это идентификаторы
 /// из документации протокола, а не содержимое игровых файлов.
-pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 22] = [
+pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 23] = [
     // Зачарования: на них ссылаются довески предметов (`enchantments`); порядок —
     // номера для клиента (stackdata::ENCHANTMENTS).
     (
@@ -220,6 +220,15 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 22] = [
             "quartz",
             "redstone",
             "resin",
+        ],
+    ),
+    // Узоры отделки: на них ссылается компонент `trim` (кузнечный стол);
+    // порядок — номера для клиента (stackdata::TRIM_PATTERNS).
+    (
+        "minecraft:trim_pattern",
+        &[
+            "bolt", "coast", "dune", "eye", "flow", "host", "raiser", "rib", "sentry", "shaper", "silence", "snout", "spire", "tide", "vex",
+            "ward", "wayfinder", "wild",
         ],
     ),
     // Козий рог: значение по умолчанию для его компонента.

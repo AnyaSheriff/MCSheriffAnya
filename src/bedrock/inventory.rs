@@ -221,6 +221,9 @@ pub struct Bag {
     craft_ready: bool,
     /// Что по запросу израсходовано: предмет, сколько, из ячейки интерфейса ли.
     consumed: Vec<(i32, i32, bool)>,
+    /// Кузнечный стол: предметы, которые итог требует израсходовать (шаблон,
+    /// основа, добавка).
+    smithing: Option<[i32; 3]>,
     /// Рецепт верстака этого запроса и сколько раз.
     recipe: Option<(&'static crate::crafting::Recipe, i32)>,
     /// Что станок попросил сделать миру, когда запрос удался.
@@ -250,6 +253,8 @@ pub enum Event {
     AnvilUsed((i32, i32, i32)),
     /// Точило сработало: что лежало (для опыта), где.
     Ground([Option<Stack>; 2], (i32, i32, i32)),
+    /// Кузнечный стол сработал (звук — событие мира 1044).
+    Smithed((i32, i32, i32)),
 }
 
 /// Насколько разобран запрос.
@@ -295,6 +300,7 @@ impl Bag {
             level: 0,
             craft_ready: false,
             consumed: Vec::new(),
+            smithing: None,
             recipe: None,
             events: Vec::new(),
             offers: None,
@@ -695,6 +701,12 @@ impl Bag {
 
         if result == Some(true) {
             answers.u8(0).zigzag32(request_id);
+            // Ответ BDS на запрос кузнечного стола не называет выходную
+            // ячейку: только вход, добавку, шаблон и курсор (снято по сети).
+            if self.smithing.is_some() {
+                touched.retain(|(_, place)| *place != Place::CreativeOutput);
+            }
+
             self.write_containers(answers, &touched);
             thrown.extend(dropped);
         } else {
@@ -707,6 +719,7 @@ impl Bag {
         self.set(Place::CreativeOutput, None);
         self.craft_ready = false;
         self.consumed.clear();
+        self.smithing = None;
         self.recipe = None;
 
         if tail { Parsed::Whole } else { Parsed::Broken }
@@ -959,6 +972,7 @@ impl Bag {
                 self.set(Place::CreativeOutput, Some(Stack::new(recipe.result, (recipe.count * times).min(blocks::stack_size(recipe.result)))));
                 true
             }
+            Some(stations::Kind::Smithing) => self.smith(id),
             Some(_) => false,
         }
     }
@@ -1031,6 +1045,35 @@ impl Bag {
         true
     }
 
+    /// Итог кузнечного стола по его трём ячейкам (улучшение или отделка).
+    /// Клиент называет рецепт, а считает сервер: подойти должен набор
+    /// ячеек, а не номер (снято с BDS: craft_recipe, results_deprecated,
+    /// три consume, take из выходной ячейки; звука от сервера нет).
+    fn smith(&mut self, id: u32) -> bool {
+        let Some(station) = self.station.filter(|station| station.kind == stations::Kind::Smithing) else {
+            return false;
+        };
+
+        if !stations::is_smithing_recipe(id) {
+            return false;
+        }
+
+        let inputs = [
+            self.get(Place::Ui(stations::UI_SMITHING_TEMPLATE)),
+            self.get(Place::Ui(stations::UI_SMITHING_INPUT)),
+            self.get(Place::Ui(stations::UI_SMITHING_MATERIAL)),
+        ];
+        let Some(result) = crate::smithing::result(inputs[0], inputs[1], inputs[2]) else {
+            return false;
+        };
+
+        self.craft_ready = true;
+        self.smithing = Some(inputs.map(|stack| stack.map_or(0, |stack| stack.item)));
+        self.set(Place::CreativeOutput, Some(result));
+        self.events.push(Event::Smithed(station.pos));
+        true
+    }
+
     /// Итог точила.
     fn grind(&mut self) -> bool {
         let Some(station) = self.station.filter(|station| station.kind == stations::Kind::Grindstone) else {
@@ -1090,7 +1133,26 @@ impl Bag {
                         return false;
                     }
                 }
+                stations::Kind::Smithing => {
+                    let cells = [stations::UI_SMITHING_TEMPLATE, stations::UI_SMITHING_INPUT, stations::UI_SMITHING_MATERIAL];
+
+                    if cells.iter().enumerate().any(|(at, cell)| self.get(Place::Ui(*cell)).is_some_and(|stack| !crate::smithing::may_place(at, &stack))) {
+                        return false;
+                    }
+                }
                 _ => {}
+            }
+        }
+
+        // Стол расходует ровно по одному из трёх входов.
+        if let Some(mut wanted) = self.smithing {
+            let mut spent: Vec<i32> = self.consumed.iter().filter(|(_, _, in_ui)| *in_ui).flat_map(|&(item, count, _)| std::iter::repeat_n(item, count as usize)).collect();
+
+            wanted.sort_unstable();
+            spent.sort_unstable();
+
+            if spent != wanted {
+                return false;
             }
         }
 
@@ -1946,6 +2008,72 @@ mod tests {
 
         assert!(stone.get(Place::Cursor).is_some_and(|stack| stack.extras().enchants.is_empty()));
         assert!(matches!(handled.events[..], [Event::Ground(_, (7, 8, 9))]));
+    }
+
+    /// Кузнечный стол (BDS: craft_recipe, три consume, take из выходной
+    /// ячейки): улучшение и отделка; расходуется по одному из трёх входов.
+    #[test]
+    fn the_smithing_table_upgrades_and_trims() {
+        let id = stations::smithing_base();
+        let fill = |bag: &mut Bag, template: &str, base: Stack, addition: &str| {
+            bag.open_station(Station { kind: stations::Kind::Smithing, pos: (1, 2, 3), seed: 0, shelves: 0 });
+            bag.set(Place::Ui(stations::UI_SMITHING_TEMPLATE), Some(item(template, 2)));
+            bag.set(Place::Ui(stations::UI_SMITHING_INPUT), Some(base));
+            bag.set(Place::Ui(stations::UI_SMITHING_MATERIAL), Some(item(addition, 1)));
+        };
+        let craft = |all: bool| {
+            request(-21, 5, move |out| {
+                out.u8(12).varint(id).u8(1);
+                consume_action(out, 1, stations::SMITHING_TEMPLATE, stations::UI_SMITHING_TEMPLATE);
+                consume_action(out, 1, stations::SMITHING_INPUT, stations::UI_SMITHING_INPUT);
+
+                if all {
+                    consume_action(out, 1, stations::SMITHING_MATERIAL, stations::UI_SMITHING_MATERIAL);
+                } else {
+                    consume_action(out, 1, stations::SMITHING_INPUT, stations::UI_SMITHING_INPUT);
+                }
+
+                take_output(out, 1);
+            })
+        };
+        let mut bag = Bag::new(Inventory::new());
+
+        fill(&mut bag, "netherite_upgrade_smithing_template", item("diamond_sword", 1), "netherite_ingot");
+
+        let handled = bag.handle_requests(&craft(true), false);
+
+        assert_eq!(bag.get(Place::Cursor).map(|stack| stack.item), crate::blocks::item_named("netherite_sword"));
+        assert_eq!(bag.get(Place::Ui(stations::UI_SMITHING_TEMPLATE)).map(|stack| stack.count), Some(1));
+        assert_eq!(bag.get(Place::Ui(stations::UI_SMITHING_INPUT)), None);
+        assert_eq!(handled.events, vec![Event::Smithed((1, 2, 3))]);
+
+        // Отделка: тот же запрос, шаблон sentry, золото.
+        let mut trim = Bag::new(Inventory::new());
+
+        fill(&mut trim, "sentry_armor_trim_smithing_template", item("iron_helmet", 1), "gold_ingot");
+        trim.handle_requests(&craft(true), false);
+        assert_eq!(trim.get(Place::Cursor).and_then(|stack| stack.extras().trim), Some((4, 8)));
+
+        // Не всё израсходовано — отказ, ячейки на месте.
+        let mut cheat = Bag::new(Inventory::new());
+
+        fill(&mut cheat, "sentry_armor_trim_smithing_template", item("iron_helmet", 1), "gold_ingot");
+        cheat.handle_requests(&craft(false), false);
+        assert_eq!(cheat.get(Place::Cursor), None);
+        assert_eq!(cheat.get(Place::Ui(stations::UI_SMITHING_INPUT)).map(|stack| stack.count), Some(1));
+
+        // Чужой номер рецепта — тоже отказ.
+        let mut wrong = Bag::new(Inventory::new());
+
+        fill(&mut wrong, "sentry_armor_trim_smithing_template", item("iron_helmet", 1), "gold_ingot");
+        wrong.handle_requests(&request(-23, 5, |out| {
+            out.u8(12).varint(1).u8(1);
+            consume_action(out, 1, stations::SMITHING_TEMPLATE, stations::UI_SMITHING_TEMPLATE);
+            consume_action(out, 1, stations::SMITHING_INPUT, stations::UI_SMITHING_INPUT);
+            consume_action(out, 1, stations::SMITHING_MATERIAL, stations::UI_SMITHING_MATERIAL);
+            take_output(out, 1);
+        }), false);
+        assert_eq!(wrong.get(Place::Cursor), None);
     }
 
     /// Закрытие станка возвращает вещи в инвентарь.

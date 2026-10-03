@@ -41,6 +41,9 @@ pub const BLAST_FURNACE_INGREDIENT: u8 = 45;
 pub const SMOKER_INGREDIENT: u8 = 46;
 pub const GRINDSTONE_INPUT: u8 = 50;
 pub const GRINDSTONE_ADDITIONAL: u8 = 51;
+pub const SMITHING_INPUT: u8 = 3;
+pub const SMITHING_MATERIAL: u8 = 4;
+pub const SMITHING_TEMPLATE: u8 = 61;
 
 /// Ячейки контейнера интерфейса (PlayerUIContainer.md).
 pub const UI_ANVIL_INPUT: u8 = 1;
@@ -49,6 +52,11 @@ pub const UI_ENCHANTING_INPUT: u8 = 14;
 pub const UI_ENCHANTING_LAPIS: u8 = 15;
 pub const UI_GRINDSTONE_INPUT: u8 = 16;
 pub const UI_GRINDSTONE_ADDITIONAL: u8 = 17;
+/// Кузнечный стол: номера ячеек сняты с BDS (запросы стопок принимаются
+/// только с ними: шаблон 53, основа 51, добавка 52).
+pub const UI_SMITHING_INPUT: u8 = 51;
+pub const UI_SMITHING_MATERIAL: u8 = 52;
+pub const UI_SMITHING_TEMPLATE: u8 = 53;
 pub const UI_GRID_2X2: u8 = 28;
 pub const UI_GRID_3X3: u8 = 32;
 
@@ -57,6 +65,7 @@ pub const WORKBENCH: u8 = 1;
 pub const ENCHANTMENT: u8 = 3;
 pub const ANVIL: u8 = 5;
 pub const GRINDSTONE: u8 = 26;
+pub const SMITHING: u8 = 33;
 
 /// Станок игрока.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -65,6 +74,7 @@ pub enum Kind {
     Enchanting,
     Anvil,
     Grindstone,
+    Smithing,
 }
 
 impl Kind {
@@ -78,6 +88,7 @@ impl Kind {
             enchanting::Station::Enchanting => Kind::Enchanting,
             enchanting::Station::Anvil => Kind::Anvil,
             enchanting::Station::Grindstone => Kind::Grindstone,
+            enchanting::Station::Smithing => Kind::Smithing,
         })
     }
 
@@ -87,6 +98,7 @@ impl Kind {
             Kind::Enchanting => ENCHANTMENT,
             Kind::Anvil => ANVIL,
             Kind::Grindstone => GRINDSTONE,
+            Kind::Smithing => SMITHING,
         }
     }
 
@@ -97,6 +109,7 @@ impl Kind {
             Kind::Enchanting => matches!(slot, UI_ENCHANTING_INPUT | UI_ENCHANTING_LAPIS),
             Kind::Anvil => matches!(slot, UI_ANVIL_INPUT | UI_ANVIL_MATERIAL),
             Kind::Grindstone => matches!(slot, UI_GRINDSTONE_INPUT | UI_GRINDSTONE_ADDITIONAL),
+            Kind::Smithing => matches!(slot, UI_SMITHING_INPUT | UI_SMITHING_MATERIAL | UI_SMITHING_TEMPLATE),
         }
     }
 }
@@ -112,6 +125,9 @@ pub fn ui_slot(container: u8, slot: u8) -> Option<u8> {
         ENCHANTING_LAPIS => slot == UI_ENCHANTING_LAPIS,
         GRINDSTONE_INPUT => slot == UI_GRINDSTONE_INPUT,
         GRINDSTONE_ADDITIONAL => slot == UI_GRINDSTONE_ADDITIONAL,
+        SMITHING_INPUT => slot == UI_SMITHING_INPUT,
+        SMITHING_MATERIAL => slot == UI_SMITHING_MATERIAL,
+        SMITHING_TEMPLATE => slot == UI_SMITHING_TEMPLATE,
         _ => false,
     };
 
@@ -319,6 +335,47 @@ fn write_ingredient(out: &mut Out, cell: &Cell) {
     }
 }
 
+/// Рецепт кузнечного стола для клиента.
+enum Smithing {
+    /// Улучшение алмазной вещи до незеритовой.
+    Transform { name: String, base: i32, result: i32 },
+    /// Отделка брони (по тегам).
+    Trim,
+}
+
+/// Рецепты стола: улучшения по парам вещей, потом отделка.
+fn smithing_recipes() -> Vec<Smithing> {
+    let mut out: Vec<Smithing> = crate::smithing::upgrade_pairs()
+        .into_iter()
+        .filter(|&(base, result)| bedrock_item(base).is_some() && bedrock_item(result).is_some())
+        .filter_map(|(base, result)| {
+            let name = crate::blocks::item_name(result)?.to_string();
+
+            Some(Smithing::Transform { name, base, result })
+        })
+        .collect();
+
+    out.push(Smithing::Trim);
+    out
+}
+
+/// Номер первого рецепта стола: сразу за рецептами верстака.
+pub fn smithing_base() -> u32 {
+    variants().len() as u32 + 1
+}
+
+/// Назван ли этим номером рецепт кузнечного стола.
+pub fn is_smithing_recipe(id: u32) -> bool {
+    id >= smithing_base() && (id - smithing_base()) < smithing_recipes().len() as u32
+}
+
+/// Ингредиент «любой предмет с этим номером» (метаданные 32767).
+fn write_wildcard(out: &mut Out, java: i32) {
+    let (id, _, _) = bedrock_item(java).unwrap_or((0, 0, 0));
+
+    out.u8(1).li16(id as i16).li16(32767).zigzag32(1);
+}
+
 /// Предмет рецепта (ItemLegacy): без номера стопки.
 fn write_output(out: &mut Out, item: i32, count: i32) {
     let (id, metadata, block) = bedrock_item(item).unwrap_or((0, 0, 0));
@@ -342,7 +399,9 @@ pub fn crafting_data_packet() -> &'static [u8] {
         let mut out = Out::packet(session::CRAFTING_DATA);
         let all = variants();
 
-        out.varint(all.len() as u32);
+        let smithing = smithing_recipes();
+
+        out.varint((all.len() + smithing.len()) as u32);
 
         for (number, variant) in all.iter().enumerate() {
             let recipe = &crafting::recipes()[variant.recipe];
@@ -377,6 +436,30 @@ pub fn crafting_data_packet() -> &'static [u8] {
 
             // Всегда открыт (RecipeUnlockingRequirement: always_unlocked).
             out.u8(1).varint(network_id(number));
+        }
+
+        // Кузнечный стол: двенадцать улучшений и одна отделка (набор и вид
+        // записей — как у BDS 1.26.13, снято по сети).
+        for (number, recipe) in smithing.iter().enumerate() {
+            let id = smithing_base() + number as u32;
+
+            match recipe {
+                Smithing::Transform { name, base, result } => {
+                    out.zigzag32(8).string(&format!("minecraft:smithing_{name}"));
+                    write_wildcard(&mut out, crate::smithing::upgrade_template().unwrap_or(0));
+                    write_wildcard(&mut out, *base);
+                    write_wildcard(&mut out, crate::blocks::item_named("netherite_ingot").unwrap_or(0));
+                    write_output(&mut out, *result, 1);
+                    out.string("smithing_table").varint(id);
+                }
+                Smithing::Trim => {
+                    out.zigzag32(9).string("minecraft:smithing_armor_trim");
+                    write_ingredient(&mut out, &Cell::Tag("minecraft:trim_templates"));
+                    write_ingredient(&mut out, &Cell::Tag("minecraft:trimmable_armors"));
+                    write_ingredient(&mut out, &Cell::Tag("minecraft:trim_materials"));
+                    out.string("smithing_table").varint(id);
+                }
+            }
         }
 
         // Зелья, переливание, редукторы — нет; «очистить прежние» — да.
@@ -537,7 +620,7 @@ pub fn item_nbt(stack: &Stack) -> Option<Vec<u8>> {
         .filter_map(|&(number, level)| Some((bedrock_enchantment(crate::stackdata::ENCHANTMENTS.get(usize::from(number))?.0)?, level)))
         .collect();
 
-    if enchants.is_empty() && data.damage == 0 && data.repair_cost == 0 && data.name.is_none() {
+    if enchants.is_empty() && data.damage == 0 && data.repair_cost == 0 && data.name.is_none() && data.trim.is_none() {
         return None;
     }
 
@@ -571,6 +654,19 @@ pub fn item_nbt(stack: &Stack) -> Option<Vec<u8>> {
         out.push(INT);
         name(&mut out, "RepairCost");
         out.extend_from_slice(&data.repair_cost.to_le_bytes());
+    }
+
+    // Отделка: `Trim:{Material:"gold",Pattern:"sentry"}` (снято с BDS).
+    if let Some((material, pattern)) = data.trim {
+        out.push(COMPOUND);
+        name(&mut out, "Trim");
+        out.push(STRING);
+        name(&mut out, "Material");
+        name(&mut out, crate::stackdata::TRIM_MATERIALS[usize::from(material)]);
+        out.push(STRING);
+        name(&mut out, "Pattern");
+        name(&mut out, crate::stackdata::TRIM_PATTERNS[usize::from(pattern)]);
+        out.push(0);
     }
 
     if let Some(text) = &data.name {
@@ -664,6 +760,29 @@ mod tests {
     }
 
     #[test]
+    fn smithing_recipes_follow_the_crafting_ones() {
+        let all = smithing_recipes();
+
+        // Двенадцать улучшений и отделка (как у BDS).
+        assert_eq!(all.len(), 13);
+        assert!(is_smithing_recipe(smithing_base()) && is_smithing_recipe(smithing_base() + 12));
+        assert!(!is_smithing_recipe(smithing_base() + 13) && !is_smithing_recipe(1));
+    }
+
+    #[test]
+    fn trimmed_armor_carries_the_trim_tag() {
+        let data = crate::stackdata::Data { trim: Some((4, 8)), ..Default::default() };
+
+        let helmet = Stack::new(item_named("iron_helmet").expect("шлем"), 1).with_extras(data);
+        let nbt = item_nbt(&helmet).expect("данные");
+
+        // `Trim:{Material:"gold",Pattern:"sentry"}` (BDS 1.26.13).
+        assert!(nbt.windows(4).any(|w| w == b"Trim"));
+        assert!(nbt.windows(4).any(|w| w == b"gold"));
+        assert!(nbt.windows(6).any(|w| w == b"sentry"));
+    }
+
+    #[test]
     fn stations_know_their_cells() {
         assert!(Kind::Workbench.has_slot(32) && Kind::Workbench.has_slot(40) && !Kind::Workbench.has_slot(41));
         assert!(Kind::Anvil.has_slot(UI_ANVIL_MATERIAL) && !Kind::Anvil.has_slot(UI_ENCHANTING_LAPIS));
@@ -671,6 +790,10 @@ mod tests {
         assert_eq!(ui_slot(CRAFTING_INPUT, 41), None);
         assert_eq!(Kind::of("crafting_table"), Some(Kind::Workbench));
         assert_eq!(Kind::of("chipped_anvil"), Some(Kind::Anvil));
+        assert_eq!(Kind::of("smithing_table"), Some(Kind::Smithing));
+        assert!(Kind::Smithing.has_slot(UI_SMITHING_TEMPLATE) && !Kind::Smithing.has_slot(UI_ANVIL_INPUT));
+        assert_eq!(ui_slot(SMITHING_TEMPLATE, 53), Some(53));
+        assert_eq!(ui_slot(SMITHING_INPUT, 53), None);
         assert_eq!(Kind::of("stone"), None);
     }
 }

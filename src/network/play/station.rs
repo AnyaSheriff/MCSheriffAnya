@@ -1,4 +1,5 @@
-// Окна станков без своего хранилища: стол зачарования, наковальня, точило.
+// Окна станков без своего хранилища: стол зачарования, наковальня, точило,
+// кузнечный стол.
 //
 // Предметы лежат в самом окне (`OpenWindow::shown`), пока оно открыто, и
 // при закрытии возвращаются игроку. Расчёты — enchanting.rs. Порядок
@@ -8,6 +9,7 @@
 
 use super::*;
 use crate::enchanting::{self, Station};
+use crate::smithing;
 
 /// Станок, чьё это окно.
 pub(super) struct StationWindow {
@@ -106,6 +108,12 @@ fn compute(shared: &Shared, player: &mut PlayerState) -> (Option<Stack>, Vec<i16
             (outcome.result, vec![outcome.cost as i16])
         }
         Station::Grindstone => (enchanting::grind(window.shown[0], window.shown[1]), Vec::new()),
+        Station::Smithing => {
+            let result = smithing::result(window.shown[0], window.shown[1], window.shown[2]);
+
+            // Свойство 0 — «рецепта нет» (красный крест).
+            (result, vec![i16::from(smithing::recipe_error(&window.shown, result))])
+        }
     }
 }
 
@@ -121,9 +129,11 @@ fn refresh(shared: &Shared, player: &mut PlayerState, reaction: &mut Reaction) {
         return;
     };
 
-    if station.kind != Station::Enchanting && window.shown[2] != result {
-        window.shown[2] = result;
-        reaction.window_slots.push((2, result));
+    let result_slot = station.kind.inputs();
+
+    if station.kind != Station::Enchanting && window.shown[result_slot] != result {
+        window.shown[result_slot] = result;
+        reaction.window_slots.push((result_slot, result));
     }
 
     for (property, &value) in props.iter().enumerate() {
@@ -187,9 +197,10 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
     let before = snapshot(&window.shown, &player.inventory);
     let slot = slot as i16 as i32;
     let has_result = kind != Station::Enchanting;
+    let result_slot = kind.inputs();
     let mut taken = false;
 
-    if has_result && slot == 2 {
+    if has_result && slot == result_slot as i32 {
         taken = take_result(shared, player, mode, reaction);
     } else if mode == 1 && slot >= size as i32 && (slot as usize) < size + window::PLAYER_SLOTS {
         quick_move_in(player, kind, slot as usize);
@@ -197,12 +208,12 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
         generic_click(shared, player, kind, slot, button as i8, mode);
     }
 
-    let inputs_changed = player.window.as_ref().is_some_and(|window| window.shown[..2] != before[..2]);
+    let inputs_changed = player.window.as_ref().is_some_and(|window| window.shown[..result_slot] != before[..result_slot]);
 
     if inputs_changed || taken {
         refresh(shared, player, reaction);
         // Итог уйдёт ниже, по порядку ячеек, как у оригинала (0, 2, 31).
-        reaction.window_slots.retain(|(slot, _)| *slot != 2 || !has_result);
+        reaction.window_slots.retain(|(slot, _)| *slot != result_slot || !has_result);
     }
 
     let Some(window) = player.window.as_ref() else {
@@ -238,16 +249,29 @@ fn generic_click(shared: &Shared, player: &mut PlayerState, kind: Station, slot:
     let Some(window) = player.window.as_mut() else {
         return;
     };
-    let mut inputs = [window.shown[0], window.shown[1]];
+    let count = kind.inputs();
+    let mut inputs = window.shown[..count].to_vec();
     let inventory_before = player.inventory.clone();
-    // У наковальни и точила итог стоит между ячейками и инвентарём.
-    let slot = if kind != Station::Enchanting && slot > 2 { slot - 1 } else { slot };
-    let click = window::Window { container: &mut inputs, inventory: &mut player.inventory, kind: None }.click(slot, button, mode);
+    // У наковальни, точила и кузнечного стола итог стоит между ячейками и
+    // инвентарём.
+    let slot = if kind != Station::Enchanting && slot > count as i32 { slot - 1 } else { slot };
+    let mut view = window::Window { container: &mut inputs, inventory: &mut player.inventory, kind: None };
+    let click = if mode == 1 && kind != Station::Enchanting && (0..count as i32).contains(&slot) {
+        // Shift по входной ячейке: предмет идёт в инвентарь с первой ячейки
+        // вперёд (рюкзак, потом панель), а не с конца, как из хранилищ
+        // (чёрный ящик smithing-trim: 4, не 39) [проверить на точиле].
+        let moved = view.get(slot as usize).is_some_and(|_| view.move_some(slot as usize, &(count..count + window::PLAYER_SLOTS).collect::<Vec<_>>()));
+
+        inventory::Click { understood: moved, thrown: None }
+    } else {
+        view.click(slot, button, mode)
+    };
     let lapis = blocks::item_named("lapis_lazuli");
     let mut allowed = match kind {
         Station::Enchanting => inputs[1].is_none_or(|stack| Some(stack.item) == lapis),
         Station::Grindstone => inputs.iter().flatten().all(enchanting::grindable),
         Station::Anvil => true,
+        Station::Smithing => inputs.iter().enumerate().all(|(place, stack)| stack.is_none_or(|stack| smithing::may_place(place, &stack))),
     };
 
     // На стол — одна вещь: лишнее остаётся в курсоре.
@@ -271,8 +295,7 @@ fn generic_click(shared: &Shared, player: &mut PlayerState, kind: Station, slot:
     }
 
     if let Some(window) = player.window.as_mut() {
-        window.shown[0] = inputs[0];
-        window.shown[1] = inputs[1];
+        window.shown[..count].copy_from_slice(&inputs);
     }
 
     if let Some(stack) = click.thrown {
@@ -287,9 +310,10 @@ fn quick_move_in(player: &mut PlayerState, kind: Station, slot: usize) {
         return;
     };
     let size = kind.slots();
-    let mut inputs = [window.shown[0], window.shown[1]];
-    // В общем разборе у наковальни и точила итога нет: инвентарь — с 2.
-    let own = slot - size + 2;
+    let count = kind.inputs();
+    let mut inputs = window.shown[..count].to_vec();
+    // В общем разборе у станков итога нет: инвентарь — сразу за входами.
+    let own = slot - size + count;
     let mut view = window::Window { container: &mut inputs, inventory: &mut player.inventory, kind: None };
     let Some(stack) = view.get(own) else {
         return;
@@ -309,17 +333,18 @@ fn quick_move_in(player: &mut PlayerState, kind: Station, slot: usize) {
         }
         Station::Grindstone if !enchanting::grindable(&stack) => false,
         Station::Anvil | Station::Grindstone => view.move_some(own, &[0, 1]),
+        // В ту ячейку, куда предмет годится (шаблон, основа, добавка).
+        Station::Smithing => (0..3).find(|&place| smithing::may_place(place, &stack)).is_some_and(|place| view.move_some(own, &[place])),
     };
 
     if !moved {
         // Рюкзак → панель, панель → рюкзак.
-        let targets: Vec<usize> = if own < 2 + 27 { (29..38).collect() } else { (2..29).collect() };
+        let targets: Vec<usize> = if own < count + 27 { (count + 27..count + 36).collect() } else { (count..count + 27).collect() };
 
         view.move_some(own, &targets);
     }
 
-    window.shown[0] = inputs[0];
-    window.shown[1] = inputs[1];
+    window.shown[..count].copy_from_slice(&inputs);
 }
 
 /// Забрать итог наковальни или точила: в курсор (обычный щелчок) или в
@@ -333,7 +358,8 @@ fn take_result(shared: &Shared, player: &mut PlayerState, mode: i32, reaction: &
     let Some(station) = window.station.as_ref() else {
         return false;
     };
-    let Some(result) = window.shown[2] else {
+    let result_slot = station.kind.inputs();
+    let Some(result) = window.shown[result_slot] else {
         return false;
     };
 
@@ -367,7 +393,7 @@ fn take_result(shared: &Shared, player: &mut PlayerState, mode: i32, reaction: &
     let (kind, pos, cost, repair_items) = (station.kind, station.pos, station.cost, station.repair_items);
     let inputs = [window.shown[0], window.shown[1]];
 
-    window.shown[2] = None;
+    window.shown[result_slot] = None;
 
     match kind {
         Station::Anvil => {
@@ -402,6 +428,15 @@ fn take_result(shared: &Shared, player: &mut PlayerState, mode: i32, reaction: &
 
             // Звук точила — событием мира 1042 (вики, World Event).
             shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_level_event(pos.0, pos.1, pos.2, 1042, 0);
+        }
+        Station::Smithing => {
+            // Уходит по одному из каждой ячейки; звук — событием мира 1044
+            // (чёрный ящик smithing-upgrade).
+            for place in 0..3 {
+                window.shown[place] = window.shown[place].and_then(|stack| inventory::remainder(stack, stack.count - 1));
+            }
+
+            shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_level_event(pos.0, pos.1, pos.2, 1044, 0);
         }
         Station::Enchanting => {}
     }
@@ -534,7 +569,9 @@ pub(super) fn rename(shared: &Shared, player: &mut PlayerState, name: String, re
 pub(super) fn give_back(shared: &Shared, player: &mut PlayerState, window: &OpenWindow) -> bool {
     let mut changed = false;
 
-    for stack in window.shown.iter().take(2).flatten() {
+    let inputs = window.station.as_ref().map_or(2, |station| station.kind.inputs());
+
+    for stack in window.shown.iter().take(inputs).flatten() {
         let (_, left) = player.inventory.put(*stack);
 
         changed = true;

@@ -214,6 +214,13 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
                 "description",
                 translate(&format!("trim_material.minecraft.{}", name)),
             ),
+        // Узор отделки: имя набора картинок, название в подсказке; `decal`
+        // — рисуется поверх (у оригинала только у flow и bolt нет, у прочих
+        // false) [проверить].
+        "minecraft:trim_pattern" => Compound::new()
+            .string("asset_id", &format!("minecraft:{}", name))
+            .compound("description", translate(&format!("trim_pattern.minecraft.{}", name)))
+            .boolean("decal", false),
         // Козий рог: звук, дальность слышимости и время использования.
         "minecraft:instrument" => Compound::new()
             .compound(

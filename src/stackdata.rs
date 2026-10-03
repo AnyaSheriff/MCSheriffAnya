@@ -30,6 +30,8 @@ pub const COMPONENT_REPAIR_COST: i32 = 19;
 pub const COMPONENT_STORED_ENCHANTMENTS: i32 = 42;
 pub const COMPONENT_ATTRIBUTE_MODIFIERS: i32 = 16;
 pub const COMPONENT_POTION_CONTENTS: i32 = 51;
+/// Отделка брони (`trim`): материал и узор — записи реестров (26.1 protocol.json).
+pub const COMPONENT_TRIM: i32 = 56;
 /// Заряженные снаряды арбалета (minecraft-data, protocol.json: 49).
 pub const COMPONENT_CHARGED_PROJECTILES: i32 = 49;
 /// Снаряд, который нельзя подобрать (minecraft-data, protocol.json: 22).
@@ -94,6 +96,18 @@ impl ItemModifier {
     }
 }
 
+/// Материалы отделки по номерам реестра `trim_material` (по алфавиту, как у
+/// оригинала: чёрный ящик smithing-trim — золото 4, алмаз 2).
+pub const TRIM_MATERIALS: [&str; 11] =
+    ["amethyst", "copper", "diamond", "emerald", "gold", "iron", "lapis", "netherite", "quartz", "redstone", "resin"];
+
+/// Узоры отделки по номерам реестра `trim_pattern` (по алфавиту; sentry — 8,
+/// чёрный ящик smithing-trim).
+pub const TRIM_PATTERNS: [&str; 18] = [
+    "bolt", "coast", "dune", "eye", "flow", "host", "raiser", "rib", "sentry", "shaper", "silence", "snout", "spire", "tide", "vex", "ward",
+    "wayfinder", "wild",
+];
+
 /// Довески одной стопки.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub struct Data {
@@ -126,6 +140,9 @@ pub struct Data {
     pub repair_cost: i32,
     /// Своё имя предмета (`custom_name`) простым текстом.
     pub name: Option<String>,
+    /// Отделка брони (`trim`): номер материала и узора по `TRIM_MATERIALS` и
+    /// `TRIM_PATTERNS`.
+    pub trim: Option<(u8, u8)>,
 }
 
 impl Data {
@@ -380,6 +397,14 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         count += 1;
     }
 
+    if let Some((material, pattern)) = data.trim {
+        // Оба — записи реестров по номеру + 1 (0 значил бы «записано тут же»).
+        out.extend_from_slice(&encode_varint(COMPONENT_TRIM));
+        out.extend_from_slice(&encode_varint(i32::from(material) + 1));
+        out.extend_from_slice(&encode_varint(i32::from(pattern) + 1));
+        count += 1;
+    }
+
     if let Some(mods) = &data.attributes {
         out.extend_from_slice(&encode_varint(COMPONENT_ATTRIBUTE_MODIFIERS));
         out.extend_from_slice(&encode_varint(mods.len() as i32));
@@ -520,6 +545,14 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
             }
         }
         COMPONENT_UNBREAKABLE => data.unbreakable = true,
+        COMPONENT_TRIM => {
+            if let (Some(material), Some(pattern)) = (reader.varint(), reader.varint())
+                && (1..=TRIM_MATERIALS.len() as i32).contains(&material)
+                && (1..=TRIM_PATTERNS.len() as i32).contains(&pattern)
+            {
+                data.trim = Some(((material - 1) as u8, (pattern - 1) as u8));
+            }
+        }
         COMPONENT_ENCHANTMENTS | COMPONENT_STORED_ENCHANTMENTS => {
             let Some(count) = reader.varint() else { return };
 
@@ -654,7 +687,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -692,8 +725,9 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
         explosion_to_bytes(&mut out, explosion);
     }
 
-    // Хвост наковальни и книги: зачарования книги, цена работ, имя.
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() {
+    // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
+    // (её байты в конце: в старых файлах их нет).
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -709,6 +743,10 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
         out.push(u8::from(data.name.is_some()));
         out.extend_from_slice(&(length as u16).to_be_bytes());
         out.extend_from_slice(&name.as_bytes()[..length]);
+
+        if let Some((material, pattern)) = data.trim {
+            out.extend_from_slice(&[1, material, pattern]);
+        }
     }
 
     out
@@ -835,6 +873,14 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
         let name = String::from_utf8(reader.take(length)?.to_vec()).ok()?;
 
         data.name = named.then_some(name);
+
+        if reader.take(1).is_some_and(|flag| flag[0] == 1)
+            && let Some(pair) = reader.take(2)
+            && usize::from(pair[0]) < TRIM_MATERIALS.len()
+            && usize::from(pair[1]) < TRIM_PATTERNS.len()
+        {
+            data.trim = Some((pair[0], pair[1]));
+        }
     }
 
     Some(data)
@@ -919,6 +965,15 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
                 data.set_rocket(Fireworks { flight: flight.clamp(-128.0, 127.0) as i8, explosions });
             }
             "firework_explosion" => data.explosion = Some(parse_explosion(&value)?),
+            // Отделка: `trim={material:"minecraft:gold",pattern:"minecraft:sentry"}`
+            // (вики, Data component format: trim).
+            "trim" => {
+                let short = |key: &str| value.get(key).and_then(Value::as_str).map(|name| name.strip_prefix("minecraft:").unwrap_or(name).to_string());
+                let material = short("material").and_then(|name| TRIM_MATERIALS.iter().position(|known| *known == name)).ok_or("trim: нет material")?;
+                let pattern = short("pattern").and_then(|name| TRIM_PATTERNS.iter().position(|known| *known == name)).ok_or("trim: нет pattern")?;
+
+                data.trim = Some((material as u8, pattern as u8));
+            }
             // Прочие довески пока не ведутся.
             _ => {}
         }
