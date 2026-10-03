@@ -23,6 +23,7 @@ pub mod effects;
 pub mod frames;
 pub mod health;
 pub mod inventory;
+pub mod mobdata;
 pub mod mobprops;
 pub mod pistons;
 pub mod png;
@@ -31,6 +32,7 @@ pub mod session;
 pub mod skin;
 pub mod stations;
 pub mod tables;
+pub mod things;
 pub mod tools;
 pub mod world;
 

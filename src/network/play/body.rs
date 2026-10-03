@@ -36,6 +36,9 @@ pub(crate) struct Stance {
 pub(crate) enum Act<'a> {
     /// Удар по сущности с этим номером (бой игроков, моб, вагонетка).
     Attack(i32),
+    /// Правая кнопка на сущности: кормление, стрижка, огниво, рамка, окно
+    /// вагонетки и торговля жителя — тот же `use_entity`, что у Java.
+    Interact(i32),
     /// Правая кнопка в руке `hand`: бросок, еда, лук, арбалет, щит.
     Use(i32),
     /// Кнопка отпущена: лук спущен, еда либо доедена, либо прервана.
@@ -55,6 +58,10 @@ pub(crate) struct Done {
     pub velocity: Option<(f64, f64, f64)>,
     /// Урон, который надо принять: уже после брони и щита.
     pub damage: Vec<(f32, Source)>,
+    /// Вагонетка-хранилище, чьё окно надо открыть.
+    pub open_cart: Option<i32>,
+    /// Житель, с которым надо открыть торговлю.
+    pub open_merchant: Option<i32>,
 }
 
 pub(crate) struct Body {
@@ -110,6 +117,14 @@ impl Body {
 
         match act {
             Act::Attack(target) => attack(target, p, shared),
+            Act::Interact(target) => {
+                let reaction = use_entity(target, p, shared);
+
+                log_debug!("Bedrock-тело: щелчок по {}, в руке {:?}, режим {}", target, p.inventory.held().and_then(|stack| blocks::item_name(stack.item)), p.game_mode);
+
+                done.open_cart = reaction.open_cart;
+                done.open_merchant = reaction.open_merchant;
+            }
             Act::Use(hand) => {
                 // Новая правая кнопка — старое натяжение, раз оно не
                 // кончилось отпусканием (клиент мог его бросить), забыто.

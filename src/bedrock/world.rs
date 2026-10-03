@@ -272,6 +272,11 @@ pub struct BedrockWorld {
 
     /// Где клиент видит мобов: место, поворот тела и головы, наклон.
     mobs_at: HashMap<i32, [f32; 6]>,
+    /// Что клиент знает о виде моба (детёныш, цвет овцы…): при перемене шлём
+    /// Set Actor Data.
+    mobs_look: HashMap<i32, super::mobdata::Look>,
+    /// Где клиент видит зелья, оки Края, ракеты, падающие блоки и шарики опыта.
+    things_at: HashMap<i32, [f32; 6]>,
 
     /// Где клиент видит стрелы (mob-стрелка: arrow.rs): место и поворот.
     arrows_at: HashMap<i32, [f32; 6]>,
@@ -568,6 +573,8 @@ impl BedrockWorld {
             carts_at: HashMap::new(),
             primed_at: HashMap::new(),
             mobs_at: HashMap::new(),
+            mobs_look: HashMap::new(),
+            things_at: HashMap::new(),
             arrows_at: HashMap::new(),
             frames_at: HashMap::new(),
             last_attack: 0,
@@ -1250,11 +1257,11 @@ impl BedrockWorld {
             };
 
             let range = f64::from(self.shared.properties.view_distance.clamp(2, 10)) * 16.0;
-            let mobs: Vec<(i32, crate::mob::Kind, bool, [f32; 6])> = items
+            let mobs: Vec<(i32, super::mobdata::Look, [f32; 6])> = items
                 .mobs()
                 .iter()
                 .filter(|mob| (mob.x - f64::from(self.position.0)).abs() <= range && (mob.z - f64::from(self.position.2)).abs() <= range)
-                .map(|mob| (mob.entity_id, mob.kind, mob.is_baby(), [mob.x as f32, mob.y as f32, mob.z as f32, mob.yaw, mob.pitch, mob.head_yaw]))
+                .map(|mob| (mob.entity_id, super::mobdata::Look::of(mob), [mob.x as f32, mob.y as f32, mob.z as f32, mob.yaw, mob.pitch, mob.head_yaw]))
                 .collect();
 
             // Замок стрел — после предметов.
@@ -1280,9 +1287,65 @@ impl BedrockWorld {
                 .filter_map(|tnt| Some((tnt.entity_id, (tnt.x as f32, tnt.y as f32, tnt.z as f32), (tnt.vx as f32, tnt.vy as f32, tnt.vz as f32), tnt.fuse?)))
                 .collect();
 
-            (changes, carts, frames, (mobs, arrows, primed))
+            // Падающие блоки и шарики опыта (things.rs).
+            let mut things: Vec<super::things::Thing> = items
+                .items()
+                .iter()
+                .filter(|item| item.fuse.is_none())
+                .filter_map(|item| Some(super::things::falling_block(item.entity_id, bedrock_state(item.block?), (item.x, item.y, item.z), (item.vx, item.vy, item.vz))))
+                .collect();
+
+            things.extend(
+                items
+                    .orbs()
+                    .iter()
+                    .map(|orb| super::things::orb(orb.entity_id, orb.value, (orb.x, orb.y, orb.z), (orb.vx, orb.vy, orb.vz))),
+            );
+
+            (changes, carts, frames, (mobs, arrows, primed, things))
         };
-        let (changes, carts, frames, (mobs, arrows, primed)) = changes;
+        let (changes, carts, frames, (mobs, arrows, primed, mut things)) = changes;
+        let mut firework_blasts = Vec::new();
+
+        // Снаряды: захват после предметов (как у стрел).
+        {
+            let thrown = self.shared.thrown.lock().expect("снаряды захвачены другим потоком");
+            let range = f64::from(self.shared.properties.view_distance.clamp(2, 10)) * 16.0;
+            let near = |x: f64, z: f64| (x - f64::from(self.position.0)).abs() <= range && (z - f64::from(self.position.2)).abs() <= range;
+
+            for flying in thrown.flying.iter().filter(|flying| flying.dimension == self.dimension && near(flying.x, flying.z)) {
+                let velocity = (flying.vx, flying.vy, flying.vz);
+                let at = (flying.x, flying.y, flying.z);
+
+                match flying.kind {
+                    crate::thrown::Kind::Splash | crate::thrown::Kind::Lingering => {
+                        let name = flying
+                            .stack
+                            .as_ref()
+                            .and_then(|stack| stack.extras().potion)
+                            .and_then(|number| crate::survival::POTIONS.get(usize::from(number)))
+                            .copied()
+                            .unwrap_or("water");
+
+                        things.push(super::things::potion(flying.entity_id, flying.kind == crate::thrown::Kind::Lingering, name, at, velocity));
+                    }
+                    // Огненный шар дракона у Bedrock — своя сущность [проверить].
+                    crate::thrown::Kind::DragonFireball => {}
+                }
+            }
+
+            for eye in thrown.eyes.iter().filter(|eye| eye.dimension == self.dimension && near(eye.x, eye.z)) {
+                things.push(super::things::eye(eye.entity_id, (eye.x, eye.y, eye.z), (eye.vx, eye.vy, eye.vz)));
+            }
+
+            for rocket in thrown.rockets.iter().filter(|rocket| rocket.dimension == self.dimension && near(rocket.x, rocket.z)) {
+                things.push(super::things::rocket(rocket.entity_id, (rocket.x, rocket.y, rocket.z), (rocket.vx, rocket.vy, rocket.vz)));
+            }
+
+            for blast in thrown.blasts.iter().filter(|blast| blast.dimension == self.dimension) {
+                firework_blasts.push(blast.rocket);
+            }
+        }
         let mut vanished = Vec::new();
 
         slots.sort_unstable();
@@ -1321,6 +1384,8 @@ impl BedrockWorld {
                 crate::items::Change::MobEvent { entity_id, event, .. } => match event {
                     crate::mob::Event::Hurt { .. } if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 2)),
                     crate::mob::Event::Death if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 3)),
+                    // Сердечки любви: Actor Event love_particles (21, список ActorEvent minecraft-data) [проверить].
+                    crate::mob::Event::Hearts if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 21)),
                     _ => {}
                 },
                 // Шарики опыта Bedrock пока не показываются [проверить].
@@ -1329,6 +1394,8 @@ impl BedrockWorld {
                     self.carts_at.remove(&entity_id);
                     self.primed_at.remove(&entity_id);
                     self.mobs_at.remove(&entity_id);
+                    self.mobs_look.remove(&entity_id);
+                    self.things_at.remove(&entity_id);
 
                     if let Some(place) = self.frames_at.remove(&entity_id) {
                         vanished.push(place);
@@ -1354,6 +1421,15 @@ impl BedrockWorld {
         self.show_mobs(mobs, packets);
         self.show_arrows(arrows, packets);
 
+        // Взрыв ракеты: событие — до того, как ракета пропадёт из списка.
+        for rocket in firework_blasts {
+            if self.items_shown.contains(&rocket) {
+                packets.push(health::actor_event(rocket as u64, super::things::EVENT_FIREWORK_PARTICLES));
+            }
+        }
+
+        self.show_things(things, packets);
+
         // Рамки: блок и блок-актор — в тех чанках, что клиент уже получил.
         for frame in frames {
             if self.sent.contains(&(frame.pos.0 >> 4, frame.pos.2 >> 4)) && heights(self.dimension).contains(&frame.pos.1) {
@@ -1374,25 +1450,63 @@ impl BedrockWorld {
     /// переносом, ушедшие — убираются. Голоса и удары Bedrock пока не
     /// получает [проверить]: AddActor с `minecraft:cow` и прочими показывает
     /// нужную модель; детёныш и цвет овцы — без данных сущности.
-    fn show_mobs(&mut self, mobs: Vec<(i32, crate::mob::Kind, bool, [f32; 6])>, packets: &mut Vec<Vec<u8>>) {
+    fn show_mobs(&mut self, mobs: Vec<(i32, super::mobdata::Look, [f32; 6])>, packets: &mut Vec<Vec<u8>>) {
         let present: HashSet<i32> = mobs.iter().map(|(id, ..)| *id).collect();
         let gone: Vec<i32> = self.mobs_at.keys().filter(|id| !present.contains(id)).copied().collect();
 
         for entity_id in gone {
             self.mobs_at.remove(&entity_id);
+            self.mobs_look.remove(&entity_id);
 
             if self.items_shown.remove(&entity_id) {
                 packets.push(remove_entity(entity_id));
             }
         }
 
-        for (entity_id, kind, _baby, place) in mobs {
+        for (entity_id, look, place) in mobs {
             match self.mobs_at.insert(entity_id, place) {
                 None => {
-                    packets.push(add_mob(entity_id, kind, place));
+                    packets.push(add_mob(entity_id, &look, place));
                     self.items_shown.insert(entity_id);
+                    self.mobs_look.insert(entity_id, look);
                 }
-                Some(before) if before != place => packets.push(move_mob(entity_id, place)),
+                Some(before) => {
+                    if before != place {
+                        packets.push(move_mob(entity_id, place));
+                    }
+
+                    // Вырос, остригли, влюбился: клиенту — новые данные.
+                    if self.mobs_look.get(&entity_id) != Some(&look) {
+                        packets.push(super::mobdata::set_data_packet(entity_id, &super::mobdata::entries(&look)));
+                        self.mobs_look.insert(entity_id, look);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Зелья, оки Края, ракеты, падающие блоки и шарики опыта: вошедшие в
+    /// дальность появляются (Add Actor со скоростью), летящие — переносом,
+    /// пропавшие из списка — убираются.
+    fn show_things(&mut self, things: Vec<super::things::Thing>, packets: &mut Vec<Vec<u8>>) {
+        let present: HashSet<i32> = things.iter().map(|thing| thing.id).collect();
+        let gone: Vec<i32> = self.things_at.keys().filter(|id| !present.contains(id)).copied().collect();
+
+        for entity_id in gone {
+            self.things_at.remove(&entity_id);
+
+            if self.items_shown.remove(&entity_id) {
+                packets.push(remove_entity(entity_id));
+            }
+        }
+
+        for thing in things {
+            match self.things_at.insert(thing.id, thing.place) {
+                None => {
+                    packets.push(super::things::add_packet(&thing));
+                    self.items_shown.insert(thing.id);
+                }
+                Some(before) if before != thing.place => packets.push(move_mob(thing.id, thing.place)),
                 Some(_) => {}
             }
         }
@@ -1856,15 +1970,26 @@ impl BedrockWorld {
             return;
         };
 
-        if action != ATTACK || self.game_mode == crate::commands::GAME_MODE_SPECTATOR || self.health.vit.dead || self.changing.is_some() {
+        if self.game_mode == crate::commands::GAME_MODE_SPECTATOR || self.health.vit.dead || self.changing.is_some() {
             return;
         }
 
-        let done = self.run(crate::network::play::Act::Attack(target));
+        // Interact — правая кнопка: общий код Java кормит, стрижёт, поджигает
+        // крипера; окна вагонетки и торговли Bedrock пока не открывает.
+        let act = if action == ATTACK { crate::network::play::Act::Attack(target) } else { crate::network::play::Act::Interact(target) };
+        let interact = action != ATTACK;
+        let mut done = self.run(act);
         let mut packets = Vec::new();
 
+        if interact && (done.open_cart.is_some() || done.open_merchant.is_some()) {
+            // [проверить]: окна вагонетки и торговли — отдельная работа (UpdateTrade, окно сущности).
+            log_debug!("Bedrock: {} — окно сущности {} пока не открывается", self.identity.name, target);
+            done.open_cart = None;
+            done.open_merchant = None;
+        }
+
         self.settle(done, &mut packets);
-        log_debug!("Bedrock: {} ударил сущность {}", self.identity.name, target);
+        log_debug!("Bedrock: {} {} сущность {}", self.identity.name, if interact { "щёлкнул по" } else { "ударил" }, target);
 
         if !packets.is_empty() {
             connection.send(&packets);
@@ -3896,7 +4021,8 @@ fn add_cart(cart: &crate::minecart::Minecart) -> Vec<u8> {
 }
 
 /// Моб появился (Add Actor): имя вида Bedrock, место, поворот тела и головы.
-fn add_mob(entity_id: i32, kind: crate::mob::Kind, [x, y, z, yaw, pitch, head]: [f32; 6]) -> Vec<u8> {
+fn add_mob(entity_id: i32, look: &super::mobdata::Look, [x, y, z, yaw, pitch, head]: [f32; 6]) -> Vec<u8> {
+    let kind = look.kind;
     let mut out = Out::packet(ADD_ACTOR);
     out.zigzag64(i64::from(entity_id))
         .varint64(entity_id as u64)
@@ -3907,8 +4033,8 @@ fn add_mob(entity_id: i32, kind: crate::mob::Kind, [x, y, z, yaw, pitch, head]: 
         .lf32(yaw)
         .lf32(head)
         .lf32(yaw)
-        .varint(0) // свойства-атрибуты
-        .varint(0); // данные сущности
+        .varint(0); // свойства-атрибуты
+    super::mobdata::write(&mut out, &super::mobdata::entries(look)); // данные сущности
     super::mobprops::write_values(&mut out, kind); // свойства: целые, дробные
     out.varint(0); // связи
     out.bytes
@@ -4691,7 +4817,7 @@ mod tests {
         let place = [1.5, 64.0, -2.5, 90.0, 10.0, 90.0];
 
         for kind in crate::mob::Kind::ALL {
-            let packet = add_mob(7, kind, place);
+            let packet = add_mob(7, &crate::bedrock::mobdata::Look::of(&crate::mob::Mob::new(7, kind, (0.0, 0.0, 0.0))), place);
             let text = String::from_utf8_lossy(&packet);
 
             assert!(text.contains(kind.bedrock_name()), "{}", kind.name());
