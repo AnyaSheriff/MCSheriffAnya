@@ -258,6 +258,9 @@ pub struct BedrockWorld {
     /// вагонетка сдвинулась.
     carts_at: HashMap<i32, (f32, f32, f32, f32)>,
 
+    /// Где клиент видит подожжённый динамит (effects.rs).
+    primed_at: HashMap<i32, (f32, f32, f32)>,
+
     /// Где клиент видит мобов: место, поворот тела и головы, наклон.
     mobs_at: HashMap<i32, [f32; 6]>,
 
@@ -541,6 +544,7 @@ impl BedrockWorld {
             items_from,
             items_shown: HashSet::new(),
             carts_at: HashMap::new(),
+            primed_at: HashMap::new(),
             mobs_at: HashMap::new(),
             arrows_at: HashMap::new(),
             frames_at: HashMap::new(),
@@ -964,6 +968,7 @@ impl BedrockWorld {
         // Окно хранилища закрывается: хранилище осталось в старом мире.
         packets.extend(self.close_window_by_server());
         packets.extend(self.items_shown.drain().map(remove_entity));
+        self.primed_at.clear();
         for (id, shown) in std::mem::take(&mut self.shown) {
             packets.extend(forget_player(id, &shown));
         }
@@ -1193,9 +1198,16 @@ impl BedrockWorld {
                 })
                 .collect();
 
-            (changes, carts, frames, (mobs, arrows))
+            // Подожжённый динамит: номер, место, скорость, запал.
+            let primed: Vec<PrimedShown> = items
+                .items()
+                .iter()
+                .filter_map(|tnt| Some((tnt.entity_id, (tnt.x as f32, tnt.y as f32, tnt.z as f32), (tnt.vx as f32, tnt.vy as f32, tnt.vz as f32), tnt.fuse?)))
+                .collect();
+
+            (changes, carts, frames, (mobs, arrows, primed))
         };
-        let (changes, carts, frames, (mobs, arrows)) = changes;
+        let (changes, carts, frames, (mobs, arrows, primed)) = changes;
         let mut vanished = Vec::new();
 
         slots.sort_unstable();
@@ -1240,6 +1252,7 @@ impl BedrockWorld {
                 crate::items::Change::Orb(_) => {}
                 crate::items::Change::Gone { entity_id } => {
                     self.carts_at.remove(&entity_id);
+                    self.primed_at.remove(&entity_id);
                     self.mobs_at.remove(&entity_id);
 
                     if let Some(place) = self.frames_at.remove(&entity_id) {
@@ -1262,6 +1275,7 @@ impl BedrockWorld {
         }
 
         self.move_carts(carts, packets);
+        self.show_primed(primed, packets);
         self.show_mobs(mobs, packets);
         self.show_arrows(arrows, packets);
 
@@ -1349,6 +1363,26 @@ impl BedrockWorld {
                 packets.push(move_cart(entity_id, place));
             }
         }
+    }
+
+    /// Подожжённый динамит: появился — Add Actor с запалом, сдвинулся —
+    /// Move Actor. Пропадает записью журнала `Gone` (взрыв), как и прочее.
+    fn show_primed(&mut self, primed: Vec<PrimedShown>, packets: &mut Vec<Vec<u8>>) {
+        for (entity_id, at, velocity, fuse) in primed {
+            match self.primed_at.insert(entity_id, at) {
+                None => {
+                    packets.push(super::effects::add_primed(entity_id, at, velocity, fuse));
+                    self.items_shown.insert(entity_id);
+                }
+                Some(before) if before != at => packets.push(super::effects::move_primed(entity_id, at)),
+                Some(_) => {}
+            }
+        }
+    }
+
+    /// Рядом ли место с игроком настолько, чтобы слышать и видеть событие.
+    fn within_earshot(&self, x: f64, z: f64) -> bool {
+        (x - f64::from(self.position.0)).abs() <= 128.0 && (z - f64::from(self.position.2)).abs() <= 128.0
     }
 
     /// Выживание и приключение: урон и голод работают.
@@ -1592,10 +1626,28 @@ impl BedrockWorld {
                     .map(|stack| stack.item)
                     .or_else(|| if self.creative() { action.held.and_then(java_item) } else { None });
 
+                // Огненный заряд по динамиту — поджог, как у Java (play.rs):
+                // заряд тратится, огня рядом он не ставит.
+                let fire_charge = crate::blocks::item_named("fire_charge");
+
+                if held_item.is_some() && held_item == fire_charge && !self.sneaking && crate::tnt::ignite(&mut world, action.position) {
+                    crate::redstone::settle(&mut world);
+                    drop(world);
+
+                    if !self.creative()
+                        && let Some(slot) = self.bag.inventory.spend_held()
+                    {
+                        self.bag.touched(&[slot]);
+                        connection.send(&self.bag.slot_packet(slot).into_iter().collect::<Vec<_>>());
+                    }
+
+                    return;
+                }
+
                 if held_item.is_some() && held_item == crate::blocks::item_named("flint_and_steel") {
                     // По динамиту — поджог, присевший ставит огонь рядом
-                    // (вики, TNT). Сущность динамита Bedrock-клиенту пока
-                    // не показывается — он увидит только взрыв.
+                    // (вики, TNT). Сущность динамита клиенту показывает
+                    // tick_items (подожжённый динамит — Add Actor tnt).
                     if !self.sneaking && crate::tnt::ignite(&mut world, action.position) {
                         crate::redstone::settle(&mut world);
                         return;
@@ -1612,6 +1664,47 @@ impl BedrockWorld {
                     }
 
                     return;
+                }
+
+                // Костная мука, мотыга, вёдра, яйца призыва: тот же код, что у
+                // игрока Java (bedrock/tools.rs).
+                if let Some(item) = held_item {
+                    let who = super::tools::Who { game_mode: self.game_mode, yaw: self.rotation.0 };
+                    let shared = &self.shared;
+
+                    if let Some(used) = super::tools::use_on_block(&mut self.bag, &who, &mut world, item, action.position, action.face, || shared.next_entity_id()) {
+                        let mut packets = if used.refused { self.restore(&world, &[action.position, target]) } else { Vec::new() };
+                        drop(world);
+
+                        {
+                            let mut items = self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком");
+
+                            for (stack, at, velocity) in used.drops {
+                                items.drop_item(self.shared.next_entity_id(), stack, at, velocity, crate::items::MINED_DELAY);
+                            }
+
+                            if let Some(mob) = used.mob {
+                                items.add_mob(mob);
+                            }
+                        }
+
+                        for stack in used.thrown {
+                            self.throw_out(stack);
+                        }
+
+                        let mut slots = used.slots;
+
+                        slots.sort_unstable();
+                        slots.dedup();
+                        self.bag.touched(&slots);
+                        packets.extend(slots.iter().filter_map(|&slot| self.bag.slot_packet(slot)));
+
+                        if !packets.is_empty() {
+                            connection.send(&packets);
+                        }
+
+                        return;
+                    }
                 }
 
                 // Что в руке — знает сервер: инвентарь у него. Если там пусто,
@@ -2065,6 +2158,33 @@ impl BedrockWorld {
 
             log_debug!("Bedrock: {} открыл {:?} в {:?}", self.identity.name, kind, clicked);
             return Some(self.open_window(kind, halves, &slots));
+        }
+
+        // Куст ягод: сбор любой рукой (farming.rs) — как у Java до рычагов.
+        if let Some(stack) = crate::farming::pick_berries(&mut world, clicked) {
+            let (at, velocity) = crate::tick::scattered(clicked, || f64::from(world.random_unit()));
+
+            world.tell_directly(x, y, z);
+            world.tell_directly(beyond.0, beyond.1, beyond.2);
+            drop(world);
+            self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком").drop_item(
+                self.shared.next_entity_id(),
+                stack,
+                at,
+                velocity,
+                crate::items::MINED_DELAY,
+            );
+
+            return Some(Vec::new());
+        }
+
+        // Статуя медного голема: следующая поза (redstone/statue.rs).
+        if crate::redstone::statue::use_statue(&mut world, clicked) {
+            world.tell_directly(x, y, z);
+            world.tell_directly(beyond.0, beyond.1, beyond.2);
+            crate::redstone::settle(&mut world);
+
+            return Some(Vec::new());
         }
 
         if !crate::redstone::use_block_on(&mut world, clicked, face) {
@@ -2528,6 +2648,12 @@ impl BedrockWorld {
                     }
 
                     packets.extend(block_updates(change.x, change.y, change.z, change.state));
+
+                    // Основание поршня: рычаг рисует блок-актор (pistons.rs).
+                    if let Some(base) = super::pistons::base_of(change.state) {
+                        packets.push(super::pistons::actor_packet((change.x, change.y, change.z), base));
+                    }
+
                     changed.push((change.x, change.y, change.z));
                 }
                 // Крышка сундука (Block Action 1, параметр — число
@@ -2545,6 +2671,25 @@ impl BedrockWorld {
                     }
                 }
                 WorldEvent::Contents => contents = true,
+                // Взрыв: звук и вспышка (effects.rs), своему игроку — толчок.
+                WorldEvent::Explosion(blast) if self.within_earshot(blast.centre.0, blast.centre.2) => {
+                    packets.extend(super::effects::explosion_packets(&blast));
+
+                    if let Some((_, (vx, vy, vz))) = blast.pushed.iter().find(|(id, _)| *id == self.runtime_id as i32) {
+                        packets.push(super::effects::motion(self.runtime_id, (*vx as f32, *vy as f32, *vz as f32)));
+                    }
+                }
+                // Событие мира (частицы роста костной муки) и звук сервера.
+                WorldEvent::Level { x, y, z, effect, data } if self.within_earshot(f64::from(x), f64::from(z)) => {
+                    packets.extend(super::effects::level_packets(x, y, z, effect, data));
+                }
+                WorldEvent::Sound(sound) if self.within_earshot(f64::from(sound.x), f64::from(sound.z)) => {
+                    if let Some(id) = super::effects::sound_for(sound.name) {
+                        let at = sound.exact.map_or((sound.x as f32 + 0.5, sound.y as f32 + 0.5, sound.z as f32 + 0.5), |(x, y, z)| (x as f32, y as f32, z as f32));
+
+                        packets.push(super::effects::level_sound(id, at));
+                    }
+                }
                 // Взрыв ранит и Bedrock-игрока; толчка ему пока нет [проверить].
                 WorldEvent::Hurt { entity_id, amount, .. } if entity_id == self.runtime_id as i32 => {
                     self.health.hurt(amount, crate::survival::Source::Explosion);
@@ -2863,6 +3008,7 @@ impl BedrockWorld {
         for (x, z, (sections, biomes), actors, frames) in ready {
             batch.push(encode_chunk(dimension, x, z, &sections, &biomes));
             batch.extend(actors);
+            batch.extend(super::pistons::chunk_actors(x, z, &sections, world::MIN_Y / 16, |y| heights(dimension).contains(&y)));
 
             // Рамки: блоки поверх воздуха чанка, следом их данные.
             for frame in frames {
@@ -2883,6 +3029,9 @@ impl BedrockWorld {
         }
     }
 }
+
+/// Подожжённый динамит для показа: номер, место, скорость, запал.
+type PrimedShown = (i32, (f32, f32, f32), (f32, f32, f32), i32);
 
 fn chunk_of(position: (f32, f32, f32)) -> (i32, i32) {
     ((position.0.floor() as i32) >> 4, (position.2.floor() as i32) >> 4)
@@ -3800,7 +3949,7 @@ fn held_block(held: Held) -> Option<(&'static str, i32)> {
 }
 
 /// Соседний блок с той стороны, по которой щёлкнули.
-fn offset((x, y, z): (i32, i32, i32), face: i32) -> (i32, i32, i32) {
+pub(super) fn offset((x, y, z): (i32, i32, i32), face: i32) -> (i32, i32, i32) {
     match face {
         0 => (x, y - 1, z),
         1 => (x, y + 1, z),
