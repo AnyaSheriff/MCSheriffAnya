@@ -135,6 +135,29 @@ impl Grid {
     }
 }
 
+/// Все рецепты по порядку таблицы: Bedrock нумерует их для клиента
+/// (bedrock/stations.rs).
+pub fn recipes() -> &'static [Recipe] {
+    table::RECIPES
+}
+
+impl Recipe {
+    /// Хватает ли этих предметов (по одному на клетку) на рецепт, без
+    /// учёта формы: у Bedrock клиент сам раскладывает сетку, сервер
+    /// сверяет израсходованное.
+    pub fn covered_by(&self, items: &[i32]) -> bool {
+        let wanted: Vec<&[i32]> = self.cells.iter().copied().filter(|cell| !cell.is_empty()).collect();
+
+        if items.len() != wanted.len() {
+            return false;
+        }
+
+        let mut used = vec![false; wanted.len()];
+
+        assign(items, &wanted, &mut used)
+    }
+}
+
 /// Что получится из сетки 3×3 (ячейки по рядам, слева направо): первый
 /// подходящий рецепт. None — сетка пуста или рецепта нет.
 pub fn craft(slots: &[Option<Stack>]) -> Option<Stack> {

@@ -34,10 +34,10 @@ pub fn screen(kind: Kind) -> u8 {
         // (world.rs, use_block).
         // [проверить] у полки и резного шкафа на Bedrock окна тоже нет.
         Kind::Jukebox | Kind::Lectern | Kind::Shelf | Kind::ChiseledBookshelf => 0,
-        // FURNACE (2), BREWING_STAND (5), BLAST_FURNACE (27), SMOKER (28).
+        // FURNACE (2), BREWING_STAND (4), BLAST_FURNACE (27), SMOKER (28).
         // [проверить] живым клиентом: ячейки печи и стойки на Bedrock.
         Kind::Furnace => 2,
-        Kind::BrewingStand => 5,
+        Kind::BrewingStand => 4,
         Kind::BlastFurnace => 27,
         Kind::Smoker => 28,
     }

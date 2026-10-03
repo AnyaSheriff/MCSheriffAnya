@@ -15,7 +15,8 @@ use super::codec::{In, Out};
 use super::containers as screens;
 use super::health;
 use super::session::{self, Connection, Identity};
-use super::inventory::Bag;
+use super::inventory::{Bag, Event};
+use super::stations;
 use super::skin;
 use crate::containers;
 use crate::dimension::Dimension;
@@ -316,6 +317,9 @@ pub struct BedrockWorld {
     portal_ready: bool,
     /// Открытое окно хранилища, если есть.
     window: Option<OpenWindow>,
+    /// Номер окна станка (верстак, стол зачарования, наковальня, точило),
+    /// открытого у клиента; сами ячейки — `Bag::station`.
+    station_window: Option<u8>,
     /// Номер последнего открытого окна — следующее получит на один больше.
     next_window: u8,
     /// Крышки сундуков, как их последний раз показали клиенту: открыта ли.
@@ -337,6 +341,8 @@ struct OpenWindow {
     kind: containers::Kind,
     /// Места хранилища (половины сундука) в порядке ячеек окна.
     halves: Vec<containers::Pos>,
+    /// Свойства окна (печь, стойка), какими их знает клиент.
+    props: Vec<(i32, i32)>,
 }
 
 impl BedrockWorld {
@@ -521,7 +527,7 @@ impl BedrockWorld {
         let mut menu = Out::packet(session::CREATIVE_CONTENT);
         menu.raw(CREATIVE_CONTENT);
 
-        connection.send(&[start.bytes, items.bytes, menu.bytes, biome_definitions()]);
+        connection.send(&[start.bytes, items.bytes, menu.bytes, stations::crafting_data_packet().to_vec(), biome_definitions()]);
 
         let reader = shared.next_reader();
         let events_from = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").watch_events(reader);
@@ -573,6 +579,7 @@ impl BedrockWorld {
             // Зашёл, стоя в портале, — не переносить сразу (как у Java).
             portal_ready: false,
             window: None,
+            station_window: None,
             next_window: 0,
             lids: HashMap::new(),
             last_use: None,
@@ -659,6 +666,7 @@ impl BedrockWorld {
             session::ITEM_STACK_REQUEST => {
                 let (handled, mut packets) = self.stack_requests(payload);
                 packets.push(handled.response);
+                packets.extend(self.station_events(handled.events));
                 connection.send(&packets);
 
                 for stack in handled.thrown {
@@ -794,11 +802,20 @@ impl BedrockWorld {
                 let mut reader = In::new(payload);
 
                 if let (Some(window), Some(kind)) = (reader.u8(), reader.u8()) {
+                    let mut packets = Vec::new();
+
                     if self.window.as_ref().is_some_and(|open| open.id == window) {
                         self.close_window();
                     }
 
-                    connection.send(&[screens::close_packet(window, kind, false)]); // закрыл не сервер
+                    // Закрыт станок или инвентарь: сетка и ячейки станка
+                    // отдают вещи обратно.
+                    if self.station_window == Some(window) || (self.station_window.is_none() && window == 0) {
+                        packets.extend(self.close_station());
+                    }
+
+                    packets.push(screens::close_packet(window, kind, false)); // закрыл не сервер
+                    connection.send(&packets);
                 }
             }
             _ => {}
@@ -2130,6 +2147,25 @@ impl BedrockWorld {
             return Some(packets);
         }
 
+        // Верстак, стол зачарования, наковальня, точило: окно без хранилища
+        // в мире, ячейки — в интерфейсе игрока (stations.rs).
+        if let Some(station) = crate::blocks::block_at_state(world.get_block(x, y, z)).and_then(stations::Kind::of) {
+            if self.window.is_some() || self.station_window.is_some() {
+                return Some(Vec::new());
+            }
+
+            let shelves = if station == stations::Kind::Enchanting {
+                crate::enchanting::bookshelves(|(bx, by, bz)| world.get_block(bx, by, bz), clicked)
+            } else {
+                0
+            };
+
+            drop(world);
+
+            log_debug!("Bedrock: {} открыл {:?} в {:?}", self.identity.name, station, clicked);
+            return Some(self.open_station(station, clicked, shelves));
+        }
+
         // Полка и резной шкаф на Bedrock пока не разбираются: окна у них
         // нет, щелчок идёт дальше. [проверить] живым клиентом.
         let kind = kind.filter(|kind| !matches!(kind, containers::Kind::Shelf | containers::Kind::ChiseledBookshelf));
@@ -2203,6 +2239,104 @@ impl BedrockWorld {
         Some(Vec::new())
     }
 
+    /// Открывает станок: Container Open с видом экрана; у стола — сразу его
+    /// предложения.
+    fn open_station(&mut self, kind: stations::Kind, at: containers::Pos, shelves: i32) -> Vec<Vec<u8>> {
+        self.next_window = self.next_window % screens::LAST_WINDOW + screens::FIRST_WINDOW;
+
+        let id = self.next_window;
+        let mut open = Out::packet(session::CONTAINER_OPEN);
+        open.u8(id).u8(kind.screen()).block_position(at.0, at.1, at.2).zigzag64(-1);
+
+        self.station_window = Some(id);
+        self.bag.open_station(super::inventory::Station { kind, pos: at, seed: self.health.vit.xp_seed, shelves });
+
+        let mut packets = vec![open.bytes];
+
+        packets.extend(self.bag.enchant_options());
+        packets
+    }
+
+    /// Что станок попросил сделать миру после удавшегося запроса: уровни,
+    /// звуки, износ наковальни, опыт точила, новое семя стола. Возвращает
+    /// пакеты для клиента.
+    fn station_events(&mut self, events: Vec<Event>) -> Vec<Vec<u8>> {
+        for event in events {
+            match event {
+                Event::Levels(levels) => {
+                    self.health.vit.command_xp(false, -levels, true);
+                }
+                Event::Enchanted(pos) => {
+                    self.health.vit.xp_seed = crate::enchanting::new_seed(self.runtime_id);
+
+                    if let Some(mut station) = self.bag.station {
+                        station.seed = self.health.vit.xp_seed;
+                        self.bag.station = Some(station);
+                    }
+
+                    let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+                    let mut rng = crate::mob::Rng::new(u64::from(self.shared.next_entity_id() as u32));
+                    let pitch = rng.unit() as f32 * 0.1 + 0.9;
+
+                    world.note_sound(pos.0, pos.1, pos.2, "minecraft:block.enchantment_table.use", 1.0, pitch);
+                }
+                Event::AnvilUsed(pos) => self.anvil_used(pos),
+                Event::Ground(inputs, pos) => {
+                    let mut rng = crate::mob::Rng::new(u64::from(self.shared.next_entity_id() as u32) ^ (*self.shared.ticks.borrow() << 20));
+                    let points = crate::enchanting::grind_xp(&inputs, |half| rng.below(half as u32) as i32);
+                    let at = (pos.0 as f64 + 0.5, pos.1 as f64 + 0.5, pos.2 as f64 + 0.5);
+
+                    if points > 0 {
+                        self.shared
+                            .items_in(self.dimension)
+                            .lock()
+                            .expect("предметы захвачены другим потоком")
+                            .drop_experience(points, at, &mut || self.shared.next_entity_id(), &mut rng);
+                    }
+
+                    // Звук точила — событие мира 1042 (вики, World Event).
+                    self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком").note_level_event(pos.0, pos.1, pos.2, 1042, 0);
+                }
+            }
+        }
+
+        self.bag.enchant_options().into_iter().collect()
+    }
+
+    /// Наковальня отработала: 12 % — на ступень хуже (разрушенная исчезает,
+    /// событие 1029), иначе звук работы (событие 1030); в творческом не
+    /// портится (как у Java, network/play/station.rs, anvil_used).
+    fn anvil_used(&mut self, (x, y, z): containers::Pos) {
+        let creative = self.creative();
+        let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+        let state = world.get_block(x, y, z);
+        let name = crate::blocks::block_at_state(state).unwrap_or("anvil");
+        let mut rng = crate::mob::Rng::new(u64::from(self.shared.next_entity_id() as u32) ^ (*self.shared.ticks.borrow() << 20));
+
+        if creative || rng.unit() >= crate::enchanting::ANVIL_DAMAGE_CHANCE {
+            world.note_level_event(x, y, z, 1030, 0);
+            return;
+        }
+
+        match crate::enchanting::anvil_damaged(name) {
+            Some(next) => {
+                let facing = crate::blocks::orientation_of(state).and_then(|block| block.value(state, "facing")).unwrap_or("north");
+
+                if let Some(worse) = crate::blocks::state_from_text(&format!("minecraft:{next}[facing={facing}]")) {
+                    world.set_block(x, y, z, worse);
+                }
+
+                world.note_level_event(x, y, z, 1030, 0);
+            }
+            None => {
+                world.set_block(x, y, z, world::AIR);
+                world.note_level_event(x, y, z, 1029, 0);
+            }
+        }
+
+        crate::redstone::settle(&mut world);
+    }
+
     /// Открывает клиенту окно хранилища: Container Open (номер окна 1–100,
     /// вид экрана, место) и сразу Inventory Content с ячейками хранилища —
     /// у двойного сундука все 54, в порядке окна Java (`containers::halves`).
@@ -2213,9 +2347,42 @@ impl BedrockWorld {
         let id = self.next_window;
         let mut packets = vec![screens::open_packet(id, kind, halves[0])];
 
-        self.bag.open_window(slots);
-        packets.extend(self.bag.window_content_packet(id, screens::slot_name(kind)));
-        self.window = Some(OpenWindow { id, kind, halves });
+        match stations::layout(kind) {
+            Some(layout) => self.bag.open_window_for(slots, layout, Some(kind)),
+            None => self.bag.open_window(slots),
+        }
+
+        packets.extend(self.bag.window_content_packets(id, screens::slot_name(kind)));
+        self.window = Some(OpenWindow { id, kind, halves, props: Vec::new() });
+        packets.extend(self.window_properties());
+        packets
+    }
+
+    /// Свойства окна печи и стойки (Container Set Data): что сменилось
+    /// с прошлого раза.
+    fn window_properties(&mut self) -> Vec<Vec<u8>> {
+        let Some(window) = &self.window else {
+            return Vec::new();
+        };
+        let java = {
+            let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+            let (x, y, z) = window.halves[0];
+
+            world.container(x, y, z).map(crate::furnace::properties).unwrap_or_default()
+        };
+        let now = stations::bedrock_properties(window.kind, &java);
+        let id = window.id;
+        let packets = now
+            .iter()
+            .enumerate()
+            .filter(|(index, value)| window.props.get(*index) != Some(value))
+            .map(|(_, &(property, value))| stations::set_data_packet(id, property, value))
+            .collect();
+
+        if let Some(window) = &mut self.window {
+            window.props = now;
+        }
+
         packets
     }
 
@@ -2266,6 +2433,9 @@ impl BedrockWorld {
     /// сервер.
     fn stack_requests(&mut self, payload: &[u8]) -> (super::inventory::Handled, Vec<Vec<u8>>) {
         let creative = self.creative();
+
+        self.bag.level = crate::survival::level_of(self.health.vit.xp).0;
+
         let Some(window) = &self.window else {
             return (self.bag.handle_requests(payload, creative), Vec::new());
         };
@@ -2282,15 +2452,27 @@ impl BedrockWorld {
             return (self.bag.handle_requests(payload, creative), packets);
         }
 
-        let (id, name, halves) = (window.id, screens::slot_name(window.kind), window.halves.clone());
+        let (id, name, halves, kind) = (window.id, screens::slot_name(window.kind), window.halves.clone(), window.kind);
         let mut world = world;
         let packets: Vec<Vec<u8>> =
             self.bag.update_window(&now).into_iter().filter_map(|slot| self.bag.window_slot_packet(id, name, slot)).collect();
         let handled = self.bag.handle_requests(payload, creative);
         let after = self.bag.window_slots().map(<[_]>::to_vec).unwrap_or_default();
+        let mut xp_points = 0;
 
         if after != now {
             containers::store_window_slots(&mut world, &halves, &after);
+
+            // Из выхода печи забрали выплавленное — игроку весь накопленный
+            // опыт (как у Java, network/play.rs, click_window).
+            if crate::furnace::is_oven(kind) {
+                let count = |slots: &[Option<crate::inventory::Stack>]| slots.get(crate::furnace::OUTPUT).copied().flatten().map_or(0, |stack| stack.count);
+
+                if count(&after) < count(&now) {
+                    xp_points = crate::furnace::take_experience(&mut world, halves[0]);
+                }
+            }
+
             crate::redstone::settle(&mut world);
 
             // Так это уже видит и этот клиент: снимок для окон — тоже, иначе
@@ -2310,6 +2492,19 @@ impl BedrockWorld {
             }
         }
 
+        drop(world);
+
+        if xp_points > 0 {
+            let feet = (self.position.0 as f64, (self.position.1 - EYES) as f64, self.position.2 as f64);
+            let mut rng = crate::mob::Rng::new(u64::from(self.shared.next_entity_id() as u32) ^ (*self.shared.ticks.borrow() << 20));
+
+            self.shared
+                .items_in(self.dimension)
+                .lock()
+                .expect("предметы захвачены другим потоком")
+                .drop_experience(xp_points, feet, &mut || self.shared.next_entity_id(), &mut rng);
+        }
+
         (handled, packets)
     }
 
@@ -2317,6 +2512,51 @@ impl BedrockWorld {
     /// мгновению такта (`World::published`), — как send_window_changes у
     /// Java. Хранилища больше нет — окно закрывается.
     fn window_changes(&mut self) -> Vec<Vec<u8>> {
+        let mut packets = self.window_slot_changes();
+
+        packets.extend(self.window_properties());
+        packets.extend(self.station_check());
+        packets
+    }
+
+    /// Станок игрока стоит на месте? Нет (сломали, ушёл далеко) — окно
+    /// закрывается сервером, вещи из ячеек возвращаются.
+    fn station_check(&mut self) -> Vec<Vec<u8>> {
+        let (Some(station), Some(id)) = (self.bag.station, self.station_window) else {
+            return Vec::new();
+        };
+        let gone = {
+            let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
+            let (x, y, z) = station.pos;
+
+            crate::blocks::block_at_state(world.get_block(x, y, z)).and_then(stations::Kind::of) != Some(station.kind)
+        };
+
+        if !gone {
+            return Vec::new();
+        }
+
+        let mut packets = vec![screens::close_packet(id, station.kind.screen(), true)];
+
+        packets.extend(self.close_station());
+        packets
+    }
+
+    /// Закрывает станок: вещи из ячеек — в инвентарь, лишнее — на землю.
+    /// Возвращает пакеты слотов инвентаря.
+    fn close_station(&mut self) -> Vec<Vec<u8>> {
+        self.station_window = None;
+
+        let (overflow, changed) = self.bag.close_station();
+
+        for stack in overflow {
+            self.throw_out(stack);
+        }
+
+        changed.into_iter().filter_map(|slot| self.bag.slot_packet(slot)).collect()
+    }
+
+    fn window_slot_changes(&mut self) -> Vec<Vec<u8>> {
         let Some(window) = &self.window else {
             return Vec::new();
         };
@@ -2868,6 +3108,7 @@ impl BedrockWorld {
 
         // Открытое хранилище теряет смотрящего.
         self.close_window();
+        self.close_station();
 
         // В файл игрока — где он, куда смотрит, в каком режиме, что при нём.
         if let Some(left) = self.bag.put_cursor_back() {

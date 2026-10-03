@@ -28,6 +28,7 @@ pub mod png;
 pub mod raknet;
 pub mod session;
 pub mod skin;
+pub mod stations;
 pub mod tables;
 pub mod tools;
 pub mod world;

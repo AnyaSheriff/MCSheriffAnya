@@ -33,6 +33,9 @@ pub const INVENTORY_TRANSACTION: u32 = 0x1e;
 pub const INTERACT: u32 = 0x21;
 pub const CONTAINER_OPEN: u32 = 0x2e;
 pub const CONTAINER_CLOSE: u32 = 0x2f;
+pub const CONTAINER_SET_DATA: u32 = 0x33;
+pub const CRAFTING_DATA: u32 = 0x34;
+pub const PLAYER_ENCHANT_OPTIONS: u32 = 0x92;
 // Хранилища — номера из документации Mojang к r/26_u1 ([cereal:packet]).
 pub const BLOCK_EVENT: u32 = 0x1a;
 pub const BLOCK_ACTOR_DATA: u32 = 0x38;
