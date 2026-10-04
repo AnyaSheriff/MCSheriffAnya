@@ -810,6 +810,8 @@ pub struct Vitals {
     /// Высота падения до последнего шага приземления (для частиц), 0 — не
     /// приземлялся в этом шаге.
     pub landed_from: f32,
+    /// Весь пролёт до приземления, с последним шагом (для частиц после булавы).
+    pub landed_total: f32,
 
     /// Игрок мёртв и ждёт возрождения.
     pub dead: bool,
@@ -903,6 +905,7 @@ impl Vitals {
             fall: 0.0,
             smash_forgives: false,
             landed_from: 0.0,
+            landed_total: 0.0,
             dead: false,
             sprinting: false,
             xp: 0,
@@ -1252,6 +1255,7 @@ impl Vitals {
     /// приземлении (вики, Fall damage: `ceil(distance − 3)`).
     pub fn land(&mut self, dy: f64, on_ground: bool, soft: bool, multiplier: f32) -> Option<f32> {
         self.landed_from = 0.0;
+        self.landed_total = 0.0;
 
         if soft {
             self.fall = 0.0;
@@ -1274,6 +1278,7 @@ impl Vitals {
         let distance = std::mem::take(&mut self.fall);
 
         self.landed_from = before;
+        self.landed_total = distance;
 
         if std::mem::take(&mut self.smash_forgives) {
             return None;

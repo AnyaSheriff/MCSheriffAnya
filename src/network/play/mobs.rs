@@ -681,7 +681,12 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
 
         let speed = (mob.vx, mob.vy, mob.vz);
         let impulse = mob.impulses != shown.impulses;
-        let due = mob.ticks % EVERY == 0;
+        // Изменившиеся свойства гонят слежение вне очереди: скорость, сдвиг и
+        // поворот уходят в тот же такт (чёрный ящик, enderman-stare: скорость
+        // 0,-0.078 вместе с 18=true на +1, а не на +3; shulker-ai: поворот
+        // головы вместе с раскрытием).
+        let dirty = !shown.first && properties(mob) != shown.properties;
+        let due = mob.ticks % EVERY == 0 || dirty;
 
         if due || impulse {
             let change = (speed.0 - shown.speed.0).powi(2) + (speed.1 - shown.speed.1).powi(2) + (speed.2 - shown.speed.2).powi(2);

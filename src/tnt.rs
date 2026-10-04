@@ -323,12 +323,20 @@ pub fn wind_burst_knockback(level: i32) -> f64 {
 /// клеток уходит в пакет, как у динамита (чёрный ящик, pvp-mace-wind-burst:
 /// «блоков 835» на пустой площадке) [проверить: рычаги и двери лучи
 /// должны переключать].
-pub fn wind_burst(world: &mut World, items: &mut Items, players: &[Target], centre: (f64, f64, f64), knockback: f64) {
+pub fn wind_burst(world: &mut World, items: &mut Items, players: &[Target], centre: (f64, f64, f64), knockback: f64, source: i32) {
     let reached = rays(world, centre, WIND_BURST_POWER).1.len();
     let reach = 2.0 * f64::from(WIND_BURST_POWER);
     let mut pushed = Vec::new();
 
     for player in players {
+        // Нападающий взлетает ровно на заявленную скорость, без ослабления с
+        // расстоянием: у оригинала отдача ему 0; 1,2; 0 при уровне 1 (чёрный
+        // ящик, pvp-mace-wind-burst, три записи; вики, Wind Burst: 1,2 / 1,75 / 2,2).
+        if player.entity_id == source {
+            pushed.push((player.entity_id, (0.0, knockback, 0.0)));
+            continue;
+        }
+
         let (height, eyes) = if player.sneaking { (1.5, SNEAKING_EYES) } else { (1.8, PLAYER_EYES) };
         let Some(impact) = impact(world, centre, reach, (player.x, player.y, player.z), (0.6, height)) else {
             continue;
@@ -999,7 +1007,7 @@ mod tests {
         let me = Target { entity_id: 7, x: 0.5, y: 64.0, z: 0.5, sneaking: false };
         let reader = world.watch_events(READER);
 
-        wind_burst(&mut world, &mut items, &[me], (0.5, 63.9, 0.5), wind_burst_knockback(1));
+        wind_burst(&mut world, &mut items, &[me], (0.5, 63.9, 0.5), wind_burst_knockback(1), 7);
 
         let cow = &items.mobs()[0];
 
@@ -1018,8 +1026,8 @@ mod tests {
 
         assert!(blast.wind);
         assert_eq!(id, 7);
-        // Прямо вверх: (1 − 0,1/7) · 1,2 ≈ 1,18.
-        assert!(push.0.abs() < 1e-9 && (push.1 - (1.0 - 0.1 / 7.0) * 1.2).abs() < 1e-6, "толчок {:?}", push);
+        // Нападающий — ровно вверх на 1,2, без ослабления.
+        assert_eq!(push, (0.0, 1.2, 0.0));
     }
 
     /// Запал убывает на единицу за такт: динамит с запалом 80 взрывается

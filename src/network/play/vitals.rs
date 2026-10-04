@@ -194,7 +194,8 @@ pub(super) struct Net {
     pub announced_health: Option<f32>,
     /// Частицы приземления, ждущие своего места в такте: состояние блока
     /// под ногами и число.
-    pub landings: Vec<(i32, i32)>,
+    /// Третье поле — широкий разброс 0,3 (приземление после булавы).
+    pub landings: Vec<(i32, i32, bool)>,
     /// Опыт, который должен появиться шариками (добытая руда): место и очки.
     pub new_orbs: Vec<((f64, f64, f64), i32)>,
     /// Очки, подобранные шариками за этот такт: прибавятся в `orbs_tick`.
@@ -454,13 +455,15 @@ fn fluid_height(world: &World, x: i32, y: i32, z: i32, kind: fluids::Kind, level
     f64::from(8 - level) / 9.0
 }
 
-fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool) -> Env {
+fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool) -> Env {
     let (bx, bz) = (x.floor() as i32, z.floor() as i32);
     let mut env = Env { in_fire: false, cactus: false, berries: false, in_wall: false, in_lava: false, in_water: false, in_rain: false, eyes_in_water: false, soft: false, landing: 1.0, below: 0 };
 
     // Ящик игрока: от ног до макушки; жидкость считается, если её
     // поверхность выше ног.
-    let top = y + if sneaking { 1.5 } else { 1.8 };
+    // В позе вращения «тягуна» ящик 0,6 × 0,6, глаза на 0,4 (вики, Riptide;
+    // чёрный ящик, trident-riptide-hit: воздух 1=299… убывает, пока глаза в воде).
+    let top = y + if spin { 0.6 } else if sneaking { 1.5 } else { 1.8 };
 
     env.in_rain = world.in_rain(x, y, z, top - y);
 
@@ -501,14 +504,14 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool) -> Env {
         }
     }
 
-    let head = world.get_block(bx, (y + if sneaking { 1.27 } else { 1.62 }).floor() as i32, bz);
+    let head = world.get_block(bx, (y + if spin { 0.4 } else if sneaking { 1.27 } else { 1.62 }).floor() as i32, bz);
 
     env.in_wall = blocks::full_cube(head) && fluids::fluid_at(head).is_none();
 
     env.soft = env.in_water || env.in_lava || blocks::block_at_state(feet).is_some_and(soft_block);
 
     // Глаза: 1,62 у стоящего, 1,27 у присевшего.
-    let eye = y + if sneaking { 1.27 } else { 1.62 };
+    let eye = y + if spin { 0.4 } else if sneaking { 1.27 } else { 1.62 };
     let (ex, ey, ez) = (bx, eye.floor() as i32, bz);
 
     if let Some((fluids::Kind::Water, level)) = fluids::fluid_at(world.get_block(ex, ey, ez)) {
@@ -555,11 +558,12 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         let env = {
             let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
-            look_around(&world, player.x, player.y, player.z, player.sneaking)
+            look_around(&world, player.x, player.y, player.z, player.sneaking, player.net.spin_pose && player.net.spin_since.is_some_and(|since| since >= 3))
         };
 
         // Высота падения вместе с этим шагом — для грядки.
         let fallen = player.vit.fall + (-dy).max(0.0) as f32;
+        let smashed = player.vit.smash_forgives;
         let damage = player.vit.land(dy, on_ground, env.soft, env.landing);
 
         // Приземлился на грядку — может её вытоптать (farming.rs).
@@ -577,8 +581,19 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         // landing_particles).
         let count = survival::landing_particles(player.vit.landed_from);
 
+        if on_ground && player.vit.landed_from > 0.0 {
+            log_debug!("Play: {} встал на землю, падение до шага {:.2}, частиц {}", player.name, player.vit.landed_from, count);
+        }
+
+        // Встал на землю после сокрушающего удара: ещё частицы блока с
+        // разбросом 0,3 — раньше обычных (чёрный ящик, pvp-mace-wind-burst:
+        // `block 200 (0.3…)` и `block 90 (0…)` в одном такте).
+        if on_ground && smashed && !env.soft {
+            player.net.landings.push((env.below, smash_landing_particles(player.vit.landed_total), true));
+        }
+
         if count > 0 {
-            player.net.landings.push((env.below, count));
+            player.net.landings.push((env.below, count, false));
         }
 
         if let Some(damage) = damage {
@@ -996,8 +1011,16 @@ async fn send_sound_at(
     write_body(stream, body).await
 }
 
+/// Сколько частиц блока даёт приземление после сокрушающего удара сверх
+/// обычных: 42 на блок пролёта, не больше 200 (чёрный ящик: пролёт 2,5 —
+/// 105, пролёт ~9 с «порывом ветра» — 200; две точки, формула подогнана
+/// [проверить]).
+fn smash_landing_particles(fall: f32) -> i32 {
+    ((fall * 42.0).round() as i32).clamp(0, 200)
+}
+
 /// Частицы блока под ногами при приземлении.
-async fn send_landing_particles(stream: &mut Outgoing<'_>, at: (f64, f64, f64), block: i32, count: i32) -> io::Result<()> {
+async fn send_landing_particles(stream: &mut Outgoing<'_>, at: (f64, f64, f64), block: i32, count: i32, wide: bool) -> io::Result<()> {
     const PARTICLE_BLOCK: i32 = 1;
 
     let mut body = encode_varint(LEVEL_PARTICLES);
@@ -1008,7 +1031,9 @@ async fn send_landing_particles(stream: &mut Outgoing<'_>, at: (f64, f64, f64), 
         body.extend_from_slice(&v.to_be_bytes());
     }
     // Смещение 0, скорость 0,15 (чёрный ящик: probe-land-player).
-    for v in [0.0f32, 0.0, 0.0, 0.15] {
+    let spread = if wide { 0.3f32 } else { 0.0 };
+
+    for v in [spread, spread, spread, 0.15] {
         body.extend_from_slice(&v.to_be_bytes());
     }
     push_i32(&mut body, count);
@@ -1662,8 +1687,15 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     }
 
     // A. удары, ждавшие своего такта.
-    for (block, count) in std::mem::take(&mut player.net.landings) {
-        send_landing_particles(stream, (player.x, player.y, player.z), block, count).await?;
+    for (block, count, wide) in std::mem::take(&mut player.net.landings) {
+        send_landing_particles(stream, (player.x, player.y, player.z), block, count, wide).await?;
+
+        // Остальным рядом — то же (у оригинала частицы идут всем в округе:
+        // первый робот видит приземление второго).
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let spread = if wide { 0.3 } else { 0.0 };
+
+        world.note_particle_except(player.entity_id, 1, Some(block), (player.x, player.y, player.z), (spread, spread, spread), 0.15, count);
     }
 
     for pending in std::mem::take(&mut player.net.hits) {
@@ -1884,7 +1916,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
     let env = {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
-        look_around(&world, player.x, player.y, player.z, player.sneaking)
+        look_around(&world, player.x, player.y, player.z, player.sneaking, player.net.spin_pose && player.net.spin_since.is_some_and(|since| since >= 3))
     };
 
     player.vit.age = player.vit.age.wrapping_add(1);

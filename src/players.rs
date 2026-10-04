@@ -143,6 +143,8 @@ pub struct Gear {
     pub effect_colors: [i32; crate::survival::EFFECT_PARTICLES],
     /// Здоровье: остальным — свойством 9.
     pub health: f32,
+    /// Воздух в лёгких: остальным — свойством 1.
+    pub air: i32,
     /// Бежит ли и его скорость шага: остальным они уходят флагом и атрибутом.
     pub sprinting: bool,
     pub movement_speed: Option<crate::attributes::Attribute>,
@@ -575,7 +577,7 @@ impl Players {
 
     /// Броня и бой игрока (у неизвестного — пусто).
     pub fn gear(&self, uuid: &[u8; 16]) -> Gear {
-        self.gear.get(uuid).cloned().unwrap_or_else(|| Gear { health: crate::survival::MAX_HEALTH, ..Gear::default() })
+        self.gear.get(uuid).cloned().unwrap_or_else(|| Gear { health: crate::survival::MAX_HEALTH, air: crate::survival::MAX_AIR, ..Gear::default() })
     }
 
     /// Игрок по номеру его сущности: сам и его броня с боем.

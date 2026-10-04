@@ -1660,6 +1660,31 @@ fn a_shulker_bullet_homes_in_and_hits() {
 }
 
 #[test]
+fn a_shulker_bullet_flies_along_one_axis_with_the_black_box_ramp() {
+    // Чёрный ящик, shulker-ai: снаряд летит по одной оси, скорость за три такта
+    // 0,077, потом 0,123, 0,152 (сдвиг за три такта 672/4096 блока).
+    let view = Flat::new();
+    let players = [player_at(1, 3.5, 0.5)];
+    let ctx = ctx_for(&players, 2, 0, false);
+    let mut bullet = Mob::new(9, Kind::ShulkerBullet, (3.5, 1.0, 5.5));
+    let mut rng = Rng::new(1);
+
+    bullet.h.target = Some(1);
+
+    let mut speeds = Vec::new();
+
+    for _ in 0..10 {
+        bullet.tick(&view, &ctx, &mut rng);
+        speeds.push(bullet.vz);
+    }
+
+    assert!(bullet.vx == 0.0 && bullet.vy == 0.0);
+    assert_eq!((-speeds[2] * 1000.0).round(), 77.0);
+    assert_eq!((-speeds[5] * 1000.0).round(), 123.0);
+    assert_eq!((-speeds[8] * 1000.0).round(), 152.0);
+}
+
+#[test]
 fn a_hurt_witch_drinks_healing() {
     let view = Flat::new();
     let mut witch = Mob::new(5, Kind::Witch, (0.5, 1.0, 0.5));

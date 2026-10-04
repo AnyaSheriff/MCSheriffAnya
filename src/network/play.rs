@@ -567,6 +567,8 @@ struct Shown {
     effect_colors: [i32; crate::survival::EFFECT_PARTICLES],
     /// Здоровье (биты числа): остальным — свойством 9.
     health_bits: u32,
+    /// Воздух в лёгких: остальным — свойством 1 (чёрный ящик, trident-riptide-hit).
+    air: i32,
     sneaking: bool,
     /// Сколько взмахов рукой уже показано.
     swings: u32,
@@ -1006,6 +1008,7 @@ async fn enter_world(
                     living: 0,
                     effect_colors: [0; crate::survival::EFFECT_PARTICLES],
                     health_bits: crate::survival::MAX_HEALTH.to_bits(),
+                    air: crate::survival::MAX_AIR,
                     sneaking: other.sneaking,
                     swings: other.swings,
                     sleeping: None,
@@ -2975,6 +2978,7 @@ async fn send_other_moves(
                 living: players.gear(&member.uuid).living,
                 effect_colors: players.gear(&member.uuid).effect_colors,
                 health_bits: players.gear(&member.uuid).health.to_bits(),
+                air: players.gear(&member.uuid).air,
                 sneaking: member.sneaking,
                 swings: member.swings,
                 sleeping: players.gear(&member.uuid).sleeping,
@@ -3024,6 +3028,7 @@ async fn send_other_moves(
                 only.living = now.living;
                 only.effect_colors = now.effect_colors;
                 only.health_bits = now.health_bits;
+                only.air = now.air;
             } else {
                 (only.held, only.worn, only.speed_bits) = (now.held, now.worn, now.speed_bits);
             }
@@ -3060,10 +3065,18 @@ async fn send_other_moves(
             // Использует предмет (щит, лук), вращается «тягуном»: флаги
             // живой сущности и поза вращения одним пакетом (чёрный ящик,
             // trident-riptide: «6=0 8=0» на +20).
-            if only.living != shown.living {
+            // Воздух (свойство 1) идёт в одном пакете с позой и флагами: на +20
+            // у оригинала `1=282 6=0 8=0` (чёрный ящик, trident-riptide-hit).
+            if only.living != shown.living || only.air != shown.air {
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(entity_id));
+
+                if only.air != shown.air {
+                    data.push(1);
+                    data.extend_from_slice(&encode_varint(PROPERTY_INT));
+                    data.extend_from_slice(&encode_varint(only.air));
+                }
 
                 if (only.living ^ shown.living) & crate::players::SPIN_POSE_BIT != 0 {
                     data.push(POSE_PROPERTY);
@@ -3134,7 +3147,7 @@ async fn send_other_moves(
             continue;
         }
 
-        (now.swings, now.held, now.worn, now.speed_bits, now.sprinting, now.living, now.effect_colors, now.health_bits) = (shown.swings, shown.held, shown.worn, shown.speed_bits, shown.sprinting, shown.living, shown.effect_colors, shown.health_bits);
+        (now.swings, now.held, now.worn, now.speed_bits, now.sprinting, now.living, now.effect_colors, now.health_bits, now.air) = (shown.swings, shown.held, shown.worn, shown.speed_bits, shown.sprinting, shown.living, shown.effect_colors, shown.health_bits, shown.air);
 
         if now == shown {
             continue;
@@ -4106,13 +4119,14 @@ async fn send_pending_world_events(
             WorldEvent::MobEffect { entity_id, effect } if *entity_id == player.entity_id => vitals::give_effect(stream, player, *effect).await?,
             WorldEvent::MobEffect { .. } => {}
             WorldEvent::PlayerStrike(strike) => pvp::take_strike(stream, shared, player, strike).await?,
-            WorldEvent::Particle { kind, block, at, offset, speed, count } => {
+            WorldEvent::Particle { kind, block, at, offset, speed, count, skip } if *skip != player.entity_id => {
                 let near = (at.0 - player.x).powi(2) + (at.1 - player.y).powi(2) + (at.2 - player.z).powi(2) <= 32.0 * 32.0;
 
                 if near {
                     mobs::send_particles(stream, *kind, *block, *at, *offset, *speed, *count).await?;
                 }
             }
+            WorldEvent::Particle { .. } => {}
             WorldEvent::PlayerDamaged { entity_id, type_id, culprit, direct } if *entity_id != player.entity_id => {
                 let here = shared.players.lock().expect("список игроков захвачен другим потоком").by_entity(*entity_id).is_some_and(|(member, _)| member.dimension == player.dimension);
 
@@ -4160,6 +4174,14 @@ async fn send_pending_world_events(
 
                 if dx * dx + dy * dy + dz * dz < EXPLOSION_HEARD * EXPLOSION_HEARD {
                     let own = blast.pushed.iter().find(|(id, _)| *id == player.entity_id).map(|(_, push)| *push);
+
+                    // Нападающему со «порывом ветра» скорость (0; 0,01; 0) от
+                    // сокрушающего удара уходит сразу, до взрыва: иначе она
+                    // затирает подброс (чёрный ящик, pvp-mace-wind-burst: у
+                    // оригинала «Velocity» перед «Explosion»).
+                    if own.is_some() && blast.wind && let Some(velocity) = player.net.velocity.take() {
+                        send_velocity(stream, player.entity_id, velocity).await?;
+                    }
 
                     send_explosion(stream, blast, own).await?;
 
@@ -4852,6 +4874,7 @@ async fn send_pending_player_changes(
                     living: 0,
                     effect_colors: [0; crate::survival::EFFECT_PARTICLES],
                     health_bits: crate::survival::MAX_HEALTH.to_bits(),
+                    air: crate::survival::MAX_AIR,
                     sneaking: member.sneaking,
                     swings: member.swings,
                     sleeping: None,
@@ -4899,6 +4922,7 @@ async fn send_pending_player_changes(
                         living: 0,
                     effect_colors: [0; crate::survival::EFFECT_PARTICLES],
                     health_bits: crate::survival::MAX_HEALTH.to_bits(),
+                    air: crate::survival::MAX_AIR,
                         sneaking: member.sneaking,
                         swings: member.swings,
                         sleeping: None,
@@ -9760,6 +9784,7 @@ impl PlayerState {
             attack_speed: self.attrs.get(crate::attributes::ATTACK_SPEED).cloned(),
             speed_touch: self.speed_touch,
             living: vitals::living_flags(self) | if self.net.spin_pose { crate::players::SPIN_POSE_BIT } else { 0 },
+            air: self.vit.air,
             sleeping: self.sleeping,
             effect_colors: self.vit.effect_colors(),
             health: self.net.announced_health.unwrap_or(self.vit.health),

@@ -269,7 +269,7 @@ pub enum WorldEvent {
 
     /// Частицы (Level Particles): вид, блок для частицы блока, место,
     /// разброс, скорость, число.
-    Particle { kind: i32, block: Option<i32>, at: (f64, f64, f64), offset: (f32, f32, f32), speed: f32, count: i32 },
+    Particle { kind: i32, block: Option<i32>, at: (f64, f64, f64), offset: (f32, f32, f32), speed: f32, count: i32, skip: i32 },
 
     /// Анимация сущности (Entity Animation): 4 — критический удар, 5 —
     /// удар с зачарованием.
@@ -2259,7 +2259,13 @@ impl World {
 
     /// Частицы для всех, кто рядом.
     pub fn note_particle(&mut self, kind: i32, block: Option<i32>, at: (f64, f64, f64), offset: (f32, f32, f32), speed: f32, count: i32) {
-        self.events.push(WorldEvent::Particle { kind, block, at, offset, speed, count });
+        self.events.push(WorldEvent::Particle { kind, block, at, offset, speed, count, skip: 0 });
+    }
+
+    /// Частицы для всех рядом, кроме сущности `skip` (ей они уже ушли).
+    #[allow(clippy::too_many_arguments)]
+    pub fn note_particle_except(&mut self, skip: i32, kind: i32, block: Option<i32>, at: (f64, f64, f64), offset: (f32, f32, f32), speed: f32, count: i32) {
+        self.events.push(WorldEvent::Particle { kind, block, at, offset, speed, count, skip });
     }
 
     /// Подбор стрелы игроком.

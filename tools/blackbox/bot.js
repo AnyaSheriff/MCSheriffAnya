@@ -363,6 +363,13 @@ if (bot2) bot2._client.on('packet', (p, meta) => {
   if (!scenario.track_second || !recording || meta.state !== 'play') return;
   const text = selfText(bot2, p, meta);
   if (text) note('sv', { text: `b: ${text}` });
+  // Отдача взрыва второму (порыв ветра подбрасывает нападающего).
+  if (meta.name === 'explosion' && p.playerKnockback) note('sv', { text: `b: Explosion knockback ${vec(p.playerKnockback)}` });
+});
+// `track_second_pos`: где второй робот (по физике клиента) — высота и скорость каждый такт.
+if (bot2) bot2.on('move', () => {
+  if (!scenario.track_second_pos || !recording) return;
+  note('sv', { text: `b: pos y=${round3(bot2.entity.position.y)} vy=${round3(bot2.entity.velocity.y)} ground=${bot2.entity.onGround}` });
 });
 // `track_second_slots`: и ячейки инвентаря второго (заряженный арбалет, износ оружия).
 if (bot2) bot2._client.on('set_slot', (p) => {

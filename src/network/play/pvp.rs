@@ -249,7 +249,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
                             .collect();
                         let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
 
-                        crate::tnt::wind_burst(&mut world, &mut items, &targets, (from.0, from.1 - 0.1, from.2), crate::tnt::wind_burst_knockback(wind));
+                        crate::tnt::wind_burst(&mut world, &mut items, &targets, (from.0, from.1 - 0.1, from.2), crate::tnt::wind_burst_knockback(wind), player.entity_id);
                     }
                 }
 

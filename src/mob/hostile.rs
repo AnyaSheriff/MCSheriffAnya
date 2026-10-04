@@ -180,8 +180,12 @@ pub struct State {
     /// первым закрытием).
     pub covered: bool,
 
-    /// Снаряд шалкера: кто выпустил.
+    /// Снаряд шалкера: кто выпустил, ось полёта (0 x, 1 y, 2 z) и сколько
+    /// тактов летит по ней.
     pub owner: i32,
+    pub quiet: bool,
+    pub axis: u8,
+    pub leg: i32,
 
     /// Ведьма: сколько тактов ещё пьёт и какое зелье (номер в `POTIONS`).
     pub drinking: i32,
@@ -275,7 +279,9 @@ fn choose_target(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Op
 
     // Выбор цели — с шансом 1 к 10 за такт: у оригинала зомби в 6 блоках от
     // игрока трогается на 21-м такте (чёрный ящик, zombie-attack) [проверить].
-    if rng.below(10) != 0 {
+    // Шалкер берёт цель сразу: у оригинала раскрывается на 1-м или 2-м такте
+    // после появления (чёрный ящик, shulker-ai, два замера).
+    if rng.below(if mob.kind == Kind::Shulker { 2 } else { 10 }) != 0 {
         return None;
     }
 
@@ -826,17 +832,57 @@ fn stare(mob: &mut Mob, view: &dyn View, ctx: &Ctx) {
 
     mob.h.stare = if staring.is_some() { mob.h.stare + 1 } else { 0 };
 
+    // Тело поворачивается к смотрящему на 10° за шаг: на втором такте взгляда
+    // −10° (в пакете сверки на +3 у оригинала yaw −10), к моменту, когда
+    // эндермен злится, — −20° и наклон на глаза игрока (rot −15/6 в байтах
+    // угла, сверка 8,811°) (чёрный ящик, enderman-stare, три записи).
+    let watcher = staring.and_then(|id| ctx.players.iter().find(|player| player.id == id));
+
+    if let Some(player) = watcher
+        && mob.h.target.is_none()
+        && mob.h.stare == 2
+    {
+        turn_body(mob, player, 10.0);
+    }
+
     if let Some(id) = staring
         && mob.h.target.is_none()
         && mob.h.stare >= STARE_TICKS
     {
         mob.h.target = Some(id);
         mob.h.provoked = true;
+
+        if let Some(player) = watcher {
+            turn_body(mob, player, 10.0);
+
+            let horizontal = ((player.x - mob.x).powi(2) + (player.z - mob.z).powi(2)).sqrt().max(1.0e-6);
+
+            mob.pitch = (-((player.y + player.eye) - (mob.y + ENDERMAN_EYE)).atan2(horizontal)).to_degrees() as f32;
+        }
     }
 
     // «На него смотрят» — сразу, ещё не сердит (чёрный ящик, enderman-stare:
     // 18=true на такт раньше 17=true).
     mob.h.stared_at = staring.is_some();
+}
+
+/// Повернуть тело к игроку не больше чем на `step` градусов; при развороте
+/// ровно на 180° — в отрицательную сторону (как у оригинала).
+fn turn_body(mob: &mut Mob, player: &Watcher, step: f32) {
+    let want = (-(player.x - mob.x).atan2(player.z - mob.z)).to_degrees() as f32;
+    let mut diff = (want - mob.yaw) % 360.0;
+
+    if diff > 180.0 {
+        diff -= 360.0;
+    } else if diff <= -180.0 {
+        diff += 360.0;
+    }
+
+    if (diff.abs() - 180.0).abs() < 1.0e-3 {
+        diff = -180.0;
+    }
+
+    mob.yaw += diff.clamp(-step, step);
 }
 
 /// Видна ли клетка блока из точки: луч до её середины не входит в твёрдое,
@@ -1097,13 +1143,21 @@ fn shulker(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         return plan;
     };
 
+    // Снаряд — через 18 тактов после раскрытия (чёрный ящик, shulker-ai:
+    // раскрытие на +1 и +2, снаряд на +19 и +20).
     if had.is_none() {
-        mob.h.cooldown = 20;
+        mob.h.cooldown = 19;
     }
 
     // Тело шалкера не поворачивается, голова смотрит на цель сразу
     // (чёрный ящик, shulker-ai: поворот головы одним пакетом, тела — нет).
     mob.head_yaw = (-(target.x - mob.x).atan2(target.z - mob.z)).to_degrees() as f32;
+
+    // Ровно назад — чуть меньше +180° (байт 127, не −128): чёрный ящик, shulker-ai.
+    if mob.head_yaw <= -179.999 {
+        mob.head_yaw = 179.999;
+    }
+
     set_peek(mob, 100);
     mob.h.peek_timer = 0;
 
@@ -1119,18 +1173,46 @@ fn shulker(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     plan
 }
 
-/// Скорость снаряда шалкера, блоков за такт [проверить].
-pub const BULLET_SPEED: f64 = 0.15;
+/// Скорость снаряда по оси за такт от начала участка: чёрный ящик, shulker-ai
+/// (пакеты скорости раз в 3 такта: 0,077 0,123 0,152 0,174 0,193 0,211 0,228
+/// 0,247, сдвиги за три такта сходятся до 1/4096; промежуточные такты —
+/// гладкая подгонка). Это не формула оригинала, а таблица: точный закон разгона
+/// неизвестен [проверить]; дальше таблицы (с 25-го такта) — подгонка по
+/// длинному полёту второго снаряда: 0,259 / 0,279 / 0,301 / 0,324 на 26 / 29 /
+/// 32 / 35-м такте участка.
+const BULLET_RAMP: [f64; 24] = [
+    0.03, 0.0571, 0.077, 0.0945, 0.1099, 0.123, 0.134, 0.1437, 0.152, 0.1604, 0.1678, 0.174, 0.181, 0.1873, 0.193, 0.1987, 0.2047, 0.211, 0.2168, 0.2225, 0.228, 0.2339, 0.2403, 0.247,
+];
 
-/// Сколько тактов снаряд живёт без попадания [проверить].
-pub const BULLET_LIFE: u64 = 300;
+fn bullet_speed(leg: i32) -> f64 {
+    let n = leg.max(1) as usize;
+
+    if n <= BULLET_RAMP.len() {
+        return BULLET_RAMP[n - 1];
+    }
+
+    let k = (n - BULLET_RAMP.len()) as f64;
+
+    0.247 + 0.0058 * k + 0.00012 * k * k
+}
+
+/// Какая-то из сторон снаряда после сворачивания на другую ось гаснет: ×0,8
+/// за такт (чёрный ящик, zz-shulker-side: 0,211 → 0,108 → 0,055 за три такта).
+pub const BULLET_FADE: f64 = 0.8;
+
+/// Сколько тактов снаряд живёт без попадания: у оригинала второй снаряд
+/// ушёл на 119-м такте после появления (чёрный ящик, shulker-ai).
+pub const BULLET_LIFE: u64 = 119;
 
 /// Урон снаряда и срок левитации (вики, Shulker: «4HP», «Levitation for 10 seconds»).
 pub const BULLET_DAMAGE: f32 = 4.0;
 pub const LEVITATION_TICKS: i32 = 200;
 
-/// Такт снаряда: летит к цели, сворачивая к ней; в блоке гаснет, в цели —
-/// попадание.
+/// Такт снаряда: летит вдоль одной оси к цели (вики, Shulker Bullet: «follows
+/// the targeted entity along the X, Y, or Z axis»), по таблице разгона; в блоке
+/// гаснет, в цели — попадание. Ось — по самому дальнему расстоянию, меняется,
+/// когда по ней осталось меньше полублока [проверить: у оригинала участки
+/// случайной длины — 18 и 10 тактов в двух замерах].
 pub fn bullet(mob: &mut Mob, view: &dyn View, ctx: &Ctx) -> Plan {
     let mut plan = Plan::default();
     let target = mob.h.target.and_then(|id| ctx.players.iter().find(|player| player.id == id && victim(player)));
@@ -1140,29 +1222,67 @@ pub fn bullet(mob: &mut Mob, view: &dyn View, ctx: &Ctx) -> Plan {
         return plan;
     };
 
-    let aim = (target.x - mob.x, target.y + 0.9 - mob.y, target.z - mob.z);
-    let len = (aim.0 * aim.0 + aim.1 * aim.1 + aim.2 * aim.2).sqrt().max(1.0e-6);
+    // Первый такт после появления снаряд стоит (чёрный ящик, shulker-ai:
+    // сдвиг 0 на такт после появления).
+    if mob.ticks < 1 {
+        return plan;
+    }
 
-    mob.vx += (aim.0 / len * BULLET_SPEED - mob.vx) * 0.2;
-    mob.vy += (aim.1 / len * BULLET_SPEED - mob.vy) * 0.2;
-    mob.vz += (aim.2 / len * BULLET_SPEED - mob.vz) * 0.2;
+    let aim = [target.x - mob.x, target.y + 0.9 - mob.y, target.z - mob.z];
+    let first = mob.h.leg == 0;
+
+    if first || aim[usize::from(mob.h.axis)].abs() < 0.5 {
+        let best = (0..3).max_by(|a, b| aim[*a].abs().total_cmp(&aim[*b].abs())).unwrap_or(2);
+
+        if first || best != usize::from(mob.h.axis) {
+            mob.h.axis = best as u8;
+            mob.h.leg = 0;
+        }
+    }
+
+    mob.h.leg += 1;
+
+    // Наклон при первом движении −1 в байтах угла (чёрный ящик, shulker-ai:
+    // первый сдвиг «поворот 0/-1»).
+    if mob.h.leg == 1 && mob.pitch == 0.0 {
+        mob.pitch = -1.0;
+    }
+
+    let axis = usize::from(mob.h.axis);
+    let mut v = [mob.vx * BULLET_FADE, mob.vy * BULLET_FADE, mob.vz * BULLET_FADE];
+
+    v[axis] = bullet_speed(mob.h.leg) * aim[axis].signum();
+    (mob.vx, mob.vy, mob.vz) = (v[0], v[1], v[2]);
     mob.x += mob.vx;
     mob.y += mob.vy;
     mob.z += mob.vz;
 
+    // Снаряд молчащего шалкера молчит: у оригинала при попадании звука нет
+    // (чёрный ящик, shulker-ai, шалкер с Silent:1b).
     let hit_sound = Event::Sound { name: "minecraft:entity.shulker_bullet.hit", volume: 1.0, pitch: 1.0 };
 
     if super::solid(view.block(mob.x.floor() as i32, mob.y.floor() as i32, mob.z.floor() as i32)) {
         mob.h.despawn = true;
-        mob.events.push(hit_sound);
+
+        if !mob.h.quiet {
+            mob.events.push(hit_sound);
+        }
+
         return plan;
     }
 
-    let reach = 0.3 + mob.kind.width() / 2.0;
+    // Ящик игрока, раздутый на 0,3 (как у снарядов), против ящика снаряда:
+    // у оригинала снаряд ушёл на такте, где его середина ещё в 0,76 от оси
+    // игрока (чёрный ящик, shulker-ai).
+    let reach = 0.3 + 0.3 + mob.kind.width() / 2.0;
 
-    if (mob.x - target.x).abs() < reach && (mob.z - target.z).abs() < reach && mob.y > target.y - mob.kind.height() && mob.y < target.y + 1.8 {
+    if (mob.x - target.x).abs() < reach && (mob.z - target.z).abs() < reach && mob.y + mob.kind.height() > target.y - 0.3 && mob.y < target.y + 1.8 + 0.3 {
         mob.h.despawn = true;
-        mob.events.push(hit_sound);
+
+        if !mob.h.quiet {
+            mob.events.push(hit_sound);
+        }
+
         plan.bullet_hit = Some(target.id);
     }
 

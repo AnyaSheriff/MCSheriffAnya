@@ -1975,6 +1975,7 @@ pub fn step_all(
             shot.h.target = Some(target);
             shot.h.owner = mob.entity_id;
             shot.persistent = false;
+            shot.h.quiet = mob.silent;
             born.push(shot);
         }
 
