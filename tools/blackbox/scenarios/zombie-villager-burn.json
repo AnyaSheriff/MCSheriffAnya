@@ -1,0 +1,164 @@
+{
+ "about": "Зомби-житель с ИИ на солнце (площадка на высоте 5) загорается.",
+ "track_mobs": true,
+ "exclusive": true,
+ "origin": [
+  100,
+  5,
+  100
+ ],
+ "blocks": [
+  {
+   "at": [
+    2,
+    0,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    1,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    0,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    1,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    0,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    1,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    0,
+    4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    1,
+    4
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "time set noon",
+  "tp $(bot) $(-6.5,1,-6.5)",
+  "!wait 5"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon zombie_villager $(3.5,0,3.5) {Silent:1b}"
+  }
+ ],
+ "record_ticks": 300,
+ "cleanup": [
+  "kill @e[type=zombie_villager,distance=..48]",
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "difficulty peaceful",
+  "xp set $(bot) 0 points",
+  "xp set $(bot) 0 levels",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "time set noon",
+  "fill $(2,0,2) $(4,2,4) minecraft:air"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "удары огня",
+   "match": "damage_event",
+   "range": [
+    6,
+    20
+   ],
+   "anytick": true,
+   "why": "Зомби на солнце загорается в случайный такт и перезажигается с шансом за такт: удары огня идут раз в 20 тактов с перебивкой фазы (замер оригинала: удары на тактах 35, 55, 76, 91, 115, 132… и 9, 30, 40, 52, 72…), поэтому сверяется число"
+  },
+  {
+   "type": "count",
+   "name": "здоровье и флаг огня",
+   "match": "^meta (0=1 )?9=",
+   "range": [
+    6,
+    20
+   ],
+   "anytick": true,
+   "why": "Зомби на солнце загорается в случайный такт и перезажигается с шансом за такт: удары огня идут раз в 20 тактов с перебивкой фазы (замер оригинала: удары на тактах 35, 55, 76, 91, 115, 132… и 9, 30, 40, 52, 72…), поэтому сверяется число"
+  },
+  {
+   "type": "count",
+   "name": "скорость после удара",
+   "match": "cart zombie_villager скорость",
+   "range": [
+    4,
+    22
+   ],
+   "anytick": true,
+   "why": "Зомби на солнце загорается в случайный такт и перезажигается с шансом за такт: удары огня идут раз в 20 тактов с перебивкой фазы (замер оригинала: удары на тактах 35, 55, 76, 91, 115, 132… и 9, 30, 40, 52, 72…), поэтому сверяется число"
+  },
+  {
+   "type": "count",
+   "name": "поворот головы",
+   "match": "entity_head_rotation",
+   "range": [
+    0,
+    80
+   ],
+   "anytick": true,
+   "why": "вики, Mob AI: «Look around» — зомби без цели оглядывается случайно"
+  },
+  {
+   "type": "count",
+   "name": "погасание и новое зажигание",
+   "match": "^meta 0=[01]$",
+   "range": [
+    0,
+    4
+   ],
+   "anytick": true,
+   "why": "огонь от солнца держится 160 тактов и продлевается случайным зажиганием за такт; если за 160 тактов зажигания не выпало, флаг огня гаснет и зажигается снова — случайно у обеих сторон (шанс у оригинала не замерен, в mob/hostile.rs SUN_CHANCE [проверить])"
+  }
+ ],
+ "name": "zombie-villager-burn"
+}

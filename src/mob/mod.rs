@@ -51,12 +51,15 @@ pub enum Kind {
     Witch,
     /// Житель (вики, Villager): торговля — src/villager.rs.
     Villager,
+    /// Зомби-житель (вики, Zombie Villager): зомби, что помнит профессию,
+    /// сделки и опыт жителя; лечится золотым яблоком под слабостью.
+    ZombieVillager,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 15] = [
+    pub const ALL: [Kind; 16] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -72,11 +75,12 @@ impl Kind {
         Kind::ShulkerBullet,
         Kind::Witch,
         Kind::Villager,
+        Kind::ZombieVillager,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
     pub fn hostile(self) -> bool {
-        matches!(self, Kind::Zombie | Kind::Skeleton | Kind::Creeper | Kind::Spider | Kind::Enderman | Kind::Shulker | Kind::Witch)
+        matches!(self, Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton | Kind::Creeper | Kind::Spider | Kind::Enderman | Kind::Shulker | Kind::Witch)
     }
 
     /// Не живое существо, а «сущность-другое»: кристалл и снаряд шалкера.
@@ -102,6 +106,7 @@ impl Kind {
             "shulker_bullet" => Kind::ShulkerBullet,
             "witch" => Kind::Witch,
             "villager" => Kind::Villager,
+            "zombie_villager" => Kind::ZombieVillager,
             _ => return None,
         })
     }
@@ -123,6 +128,7 @@ impl Kind {
             Kind::ShulkerBullet => "shulker_bullet",
             Kind::Witch => "witch",
             Kind::Villager => "villager",
+            Kind::ZombieVillager => "zombie_villager",
         }
     }
 
@@ -144,6 +150,8 @@ impl Kind {
             Kind::ShulkerBullet => 113,
             Kind::Witch => 144,
             Kind::Villager => 139,
+            // minecraft-data 26.1: zombie_villager 153 (чёрный ящик, zombie-villager-stand).
+            Kind::ZombieVillager => 153,
         }
     }
 
@@ -165,6 +173,7 @@ impl Kind {
             Kind::ShulkerBullet => "minecraft:shulker_bullet",
             Kind::Witch => "minecraft:witch",
             Kind::Villager => "minecraft:villager_v2",
+            Kind::ZombieVillager => "minecraft:zombie_villager_v2",
         }
     }
 
@@ -172,7 +181,7 @@ impl Kind {
     pub fn width(self) -> f64 {
         match self {
             Kind::Chicken => 0.4,
-            Kind::Zombie | Kind::Skeleton | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
             Kind::Shulker => 1.0,
             Kind::ShulkerBullet => 0.3125,
@@ -189,7 +198,7 @@ impl Kind {
             Kind::Cow => 1.4,
             Kind::Pig => 0.9,
             Kind::Sheep => 1.3,
-            Kind::Zombie => 1.95,
+            Kind::Zombie | Kind::ZombieVillager => 1.95,
             Kind::Skeleton => 1.99,
             Kind::Creeper => 1.7,
             Kind::Spider => 0.9,
@@ -208,7 +217,7 @@ impl Kind {
             Kind::Cow | Kind::Pig => 10.0,
             Kind::Sheep => 8.0,
             Kind::Chicken => 4.0,
-            Kind::Zombie | Kind::Skeleton | Kind::Creeper => 20.0,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton | Kind::Creeper => 20.0,
             Kind::Spider => 16.0,
             // У кристалла здоровья нет: любой удар его взрывает (вики, End Crystal).
             Kind::EndCrystal => 1.0,
@@ -230,7 +239,7 @@ impl Kind {
         match self {
             Kind::Cow => 0.2,
             Kind::Pig | Kind::Chicken => 0.25,
-            Kind::Sheep | Kind::Zombie => 0.23,
+            Kind::Sheep | Kind::Zombie | Kind::ZombieVillager => 0.23,
             Kind::Skeleton | Kind::Creeper => 0.25,
             Kind::Spider => 0.3,
             Kind::EndCrystal => 0.0,
@@ -261,7 +270,7 @@ impl Kind {
     /// 2 очках брони: `урон · (1 − max(брони/5, брони − урон/2) / 25)`).
     pub fn armor(self) -> f32 {
         match self {
-            Kind::Zombie => 2.0,
+            Kind::Zombie | Kind::ZombieVillager => 2.0,
             _ => 0.0,
         }
     }
@@ -274,6 +283,8 @@ impl Kind {
             Kind::Sheep => ("minecraft:entity.sheep.ambient", "minecraft:entity.sheep.hurt", "minecraft:entity.sheep.death"),
             Kind::Chicken => ("minecraft:entity.chicken.ambient", "minecraft:entity.chicken.hurt", "minecraft:entity.chicken.death"),
             Kind::Zombie => ("minecraft:entity.zombie.ambient", "minecraft:entity.zombie.hurt", "minecraft:entity.zombie.death"),
+            // Чёрный ящик, zombie-villager-cure: ambient и hurt — zombie_villager.
+            Kind::ZombieVillager => ("minecraft:entity.zombie_villager.ambient", "minecraft:entity.zombie_villager.hurt", "minecraft:entity.zombie_villager.death"),
             Kind::Skeleton => ("minecraft:entity.skeleton.ambient", "minecraft:entity.skeleton.hurt", "minecraft:entity.skeleton.death"),
             // У крипера голоса в покое нет (вики, Creeper, «Sounds»).
             Kind::Creeper => ("", "minecraft:entity.creeper.hurt", "minecraft:entity.creeper.death"),
@@ -301,6 +312,7 @@ impl Kind {
             Kind::Sheep => "minecraft:entity.sheep.step",
             Kind::Chicken => "minecraft:entity.chicken.step",
             Kind::Zombie => "minecraft:entity.zombie.step",
+            Kind::ZombieVillager => "minecraft:entity.zombie_villager.step",
             Kind::Skeleton => "minecraft:entity.skeleton.step",
             // Шаги крипера играются звуком блока [проверить]; молча.
             Kind::Creeper => "",
@@ -720,7 +732,7 @@ impl Mob {
     /// на 1,64 = глаза − 0,1), крипер 1,445, паук 0,65 [проверить].
     pub fn eye(&self) -> f64 {
         match self.kind {
-            Kind::Zombie | Kind::Skeleton => 1.74,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton => 1.74,
             Kind::Creeper => 1.445,
             Kind::Spider => 0.65,
             Kind::Enderman => hostile::ENDERMAN_EYE,
@@ -790,7 +802,8 @@ impl Mob {
         self.vitals.tick_invulnerable();
 
         // Рост и пауза после разведения (вики, Breeding).
-        if self.age < 0 {
+        // Детёныш-зомби не растёт (вики, Zombie: «baby zombies never grow up»).
+        if self.age < 0 && !self.kind.hostile() {
             self.age += 1;
         } else if self.age > 0 {
             self.age -= 1;
@@ -843,6 +856,10 @@ impl Mob {
 
         // Житель: эффекты (регенерация после нового уровня) и голос в покое —
         // и без ИИ (чёрный ящик, villager-trade: NoAI-житель подаёт голос).
+        if self.kind == Kind::ZombieVillager {
+            self.vitals.effects_tick();
+        }
+
         if self.kind == Kind::Villager {
             self.vitals.effects_tick();
 
@@ -1319,6 +1336,7 @@ impl Mob {
             Kind::ShulkerBullet => 12,
             Kind::Witch => 13,
             Kind::Villager => 14,
+            Kind::ZombieVillager => 15,
         });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -1335,7 +1353,7 @@ impl Mob {
         match self.kind {
             Kind::Enderman => out.extend_from_slice(&self.h.carried.unwrap_or(-1).to_be_bytes()),
             Kind::Shulker => out.extend_from_slice(&[self.h.face, self.h.shell_color]),
-            Kind::Villager => crate::villager::write(&self.villager, out),
+            Kind::Villager | Kind::ZombieVillager => crate::villager::write(&self.villager, out),
             _ => {}
         }
     }
@@ -1364,6 +1382,7 @@ impl Mob {
             12 => Kind::ShulkerBullet,
             13 => Kind::Witch,
             14 => Kind::Villager,
+            15 => Kind::ZombieVillager,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -1378,7 +1397,7 @@ impl Mob {
         let egg_timer = i32::from_be_bytes(take(4)?.try_into().ok()?);
         let carried = if kind == Kind::Enderman { Some(i32::from_be_bytes(take(4)?.try_into().ok()?)).filter(|state| *state >= 0) } else { None };
         let shell = if kind == Kind::Shulker { take(2)?.to_vec() } else { vec![0, 16] };
-        let villager = if kind == Kind::Villager { Some(crate::villager::read(bytes)?) } else { None };
+        let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
             return None;
@@ -1469,6 +1488,9 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         // крипер — 0–2 пороха, паук — 0–2 нити и 0–1 паучий глаз (глаз — только
         // если убил игрок).
         Kind::Zombie => give("rotten_flesh", 0, 2, rng),
+        // Вики, Zombie Villager: гнилая плоть и редко железо, морковь, картофель
+        // [проверить: шансы редкого].
+        Kind::ZombieVillager => give("rotten_flesh", 0, 2, rng),
         Kind::Skeleton => {
             give("bone", 0, 2, rng);
             give("arrow", 0, 2, rng);
@@ -1894,8 +1916,33 @@ pub fn step_all(
     // Занятые жителями рабочие блоки: второй их не займёт.
     let mut claimed: Vec<(i32, i32, i32)> = mobs.iter().filter_map(|mob| mob.villager.job_site).collect();
 
-    for mob in &mut mobs {
+    let mut cured: Vec<usize> = Vec::new();
+
+    for (index, mob) in mobs.iter_mut().enumerate() {
         let plan = mob.tick(view, &ctx, rng);
+
+        // Призванный уже лечащимся (`ConversionTime`): сила от лечения ложится на
+        // следующем такте (чёрный ящик, zombie-villager-cured) [проверить: уровень].
+        if mob.villager.fresh_cure && mob.kind == Kind::ZombieVillager {
+            mob.villager.fresh_cure = false;
+            mob.vitals.give_effect_shown(crate::survival::Effect {
+                kind: crate::survival::EffectKind::Strength,
+                amplifier: i32::from(env.difficulty.saturating_sub(1)).min(2),
+                ticks_left: mob.villager.conversion,
+                ambient: false,
+                visible: true,
+            });
+        }
+
+        // Лечение зомби-жителя: счёт вниз, на нуле он снова житель (вики,
+        // Zombie Villager, «Curing»; чёрный ящик, zombie-villager-cured).
+        if mob.kind == Kind::ZombieVillager && mob.villager.conversion > 0 && !mob.is_dead() {
+            mob.villager.conversion -= 1;
+
+            if mob.villager.conversion == 0 {
+                cured.push(index);
+            }
+        }
 
         if mob.kind == Kind::Villager && !mob.no_ai && !mob.is_dead() {
             crate::villager::step(mob, view, env.clock, &claimed, rng);
@@ -1960,6 +2007,13 @@ pub fn step_all(
         }
     }
 
+    for index in cured {
+        let villager = cure(&mut mobs[index], next_id());
+
+        mobs[index].h.despawn = true;
+        born.push(villager);
+    }
+
     // Разведение: оба родителя в паузу, детёныш рождается у первого. Пара,
     // из которой один уже занят, пропускается [проверить].
     let mut used: Vec<i32> = Vec::new();
@@ -2008,10 +2062,61 @@ pub fn step_all(
 
     for mut baby in born {
         baby.late = true;
+
+        // Вылеченный житель: появление — без эффектов, на следующем такте в
+        // слежении тошнота и сила, ещё через такт — одна тошнота (чёрный ящик,
+        // zombie-villager-cured): эффекты ложатся уже после снимка.
+        let cured = baby.kind == Kind::Villager && std::mem::take(&mut baby.villager.fresh_cure);
+
         items.add_mob_late(baby);
+
+        if let Some(mob) = items.mobs_mut().last_mut().filter(|_| cured) {
+            mob.vitals.give_effect_shown(crate::survival::Effect { kind: crate::survival::EffectKind::Nausea, amplifier: 0, ticks_left: CURED_NAUSEA, ambient: false, visible: true });
+            mob.vitals.give_effect_shown(crate::survival::Effect { kind: crate::survival::EffectKind::Strength, amplifier: 0, ticks_left: 1, ambient: false, visible: true });
+        }
     }
 
     outcome
+}
+
+/// Сколько тактов тошнит вылеченного жителя (чёрный ящик, zombie-villager-cured:
+/// тошнота в частицах сразу после превращения) [проверить: срок].
+pub const CURED_NAUSEA: i32 = 200;
+
+/// Репутация вылечившего: чёрный ящик, zombie-villager-cured-discount: цена
+/// ниже на 6 при множителе 0,05 — `⌊репутация · 0,05⌋ = 6`, то есть от 120 до
+/// 139; вики, Trading, «Gossip»: major_positive 20 · вес 5 и minor_positive
+/// 25 · вес 1 дают 125 [проверить: части].
+pub const CURE_REPUTATION: i32 = 125;
+
+/// Из вылеченного зомби-жителя — житель с теми же профессией, опытом и
+/// сделками. Вид — по биому (у нас плоский мир — равнинный: у оригинала при
+/// таёжном зомби-жителе вышел равнинный) [проверить]. Вылечивший получает
+/// молву «major_positive» 20 (вики, Trading, «Gossip»).
+pub fn cure(zombie: &mut Mob, entity_id: i32) -> Mob {
+    let mut villager = Mob::new(entity_id, Kind::Villager, (zombie.x, zombie.y, zombie.z));
+
+    villager.yaw = zombie.yaw;
+    villager.head_yaw = zombie.head_yaw;
+    villager.pitch = zombie.pitch;
+    villager.age = zombie.age;
+    villager.no_ai = zombie.no_ai;
+    villager.silent = zombie.silent;
+    villager.on_ground = zombie.on_ground;
+    villager.villager = std::mem::take(&mut zombie.villager);
+    villager.villager.kind = crate::villager::PLAINS;
+    villager.villager.finalized = true;
+    villager.villager.conversion = 0;
+
+    if let Some(uuid) = villager.villager.converter.take() {
+        villager.villager.gossip.push((uuid, CURE_REPUTATION));
+    }
+
+    // Эффекты — на следующем такте (чёрный ящик, zombie-villager-cured: при
+    // появлении частиц нет, через такт — тошнота и сила, ещё через такт — одна
+    // тошнота): `fresh_cure`, см. `step_all`.
+    villager.villager.fresh_cure = true;
+    villager
 }
 
 /// Сколько нельзя поднимать выпавшее из моба: полсекунды, как у выпавшего

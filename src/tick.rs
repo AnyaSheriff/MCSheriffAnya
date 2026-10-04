@@ -964,6 +964,8 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         items.add_mob(mob);
     }
 
+    step_spawners(shared, world, &mut items, &watchers, difficulty, shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed), skyless, time, rng);
+
     // Шалкеры энд-городов: при сложении чанка, на местах стражей
     // (end_city::sentries) — к соседней твёрдой грани.
     if dimension == Dimension::End {
@@ -1005,6 +1007,12 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     let outcome = crate::mob::step_all(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id());
 
     for strike in outcome.strikes {
+        // Зомби бьёт жителя: убитый превращается в зомби-жителя (вики, Zombie
+        // Villager, «Conversion»: лёгкая 0 %, обычная 50 %, трудная 100 %).
+        if strike_villager(&mut items, world, &strike, difficulty, rng, &mut || shared.next_entity_id()) {
+            continue;
+        }
+
         world.note_mob_hurt(
             strike.melee.target,
             strike.melee.damage,
@@ -1082,6 +1090,158 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     dragon_xp(&mut items, rng, &mut || shared.next_entity_id());
     drop(items);
     creeper_blasts(shared, dimension, world, &outcome.blasts);
+}
+
+/// Спавнеры (spawner.rs): раз в такт задержка убывает, пока игрок ближе
+/// `RequiredPlayerRange`; на нуле ставится до `SpawnCount` мобов в коробке
+/// дальности — если рядом меньше `MaxNearbyEntities` того же вида; задержка
+/// берётся заново из `MinSpawnDelay…MaxSpawnDelay`. Вики, Monster Spawner;
+/// чёрный ящик, spawner-zombie. Правило игры `spawn_mobs` и мирная сложность
+/// (для враждебных) останавливают постановку. Частицы — событие мира 2004 у
+/// блока и у каждого моба; у моба ещё событие сущности 20 («пуф»).
+#[allow(clippy::too_many_arguments)]
+fn step_spawners(shared: &Shared, world: &mut World, items: &mut items::Items, watchers: &[crate::mob::ai::Watcher], difficulty: u8, spawn_mobs: bool, skyless: bool, time: i64, rng: &mut crate::mob::Rng) {
+    world.flush_spawner_followups();
+
+    for (x, y, z) in world.spawner_places() {
+        let Some(data) = world.spawner(x, y, z).cloned() else {
+            continue;
+        };
+
+        // Игрок в шаре дальности (вики: «a player within 16 blocks»).
+        let (cx, cy, cz) = (f64::from(x) + 0.5, f64::from(y) + 0.5, f64::from(z) + 0.5);
+        let range = f64::from(data.required_range);
+
+        if !watchers.iter().any(|player| !player.spectator && (player.x - cx).powi(2) + (player.y - cy).powi(2) + (player.z - cz).powi(2) <= range * range) {
+            continue;
+        }
+
+        // Задержка убывает, пока больше нуля; постановка — в такте, когда она уже нуль.
+        if data.delay > 0 {
+            world.with_spawner(x, y, z, |data| data.delay -= 1);
+            continue;
+        }
+
+        let kind = data.kind();
+        let hostile = kind.is_some_and(|kind| kind.hostile());
+        let mut spawned = Vec::new();
+
+        if let Some(kind) = kind
+            && spawn_mobs
+            && !(hostile && difficulty == crate::survival::PEACEFUL)
+        {
+            // Сколько таких рядом: коробка дальности ±SpawnRange по сторонам и ±1 по высоте.
+            let reach = f64::from(data.spawn_range);
+            let nearby = items
+                .mobs()
+                .iter()
+                .filter(|mob| mob.kind == kind && !mob.is_dead() && (mob.x - cx).abs() <= reach + 0.5 && (mob.z - cz).abs() <= reach + 0.5 && (mob.y - cy).abs() <= 2.0)
+                .count();
+            let ambient = if skyless { 0 } else { world.weather.spawn_sky(redstone::ambient_sky(time)) };
+
+            if nearby < usize::try_from(data.max_nearby).unwrap_or(0) {
+                for _ in 0..data.spawn_count {
+                    let Some(mob) = crate::spawner::try_spawn(&data, kind, (x, y, z), &MobView(world), rng, &mut || shared.next_entity_id()) else {
+                        continue;
+                    };
+
+                    // Враждебным нужна темнота: небесный свет ниже случайного 0…31 и
+                    // общий не выше 7 (вики, Monster Spawner: «light level 7 or less»)
+                    // [проверить: порог у оригинала].
+                    if hostile {
+                        let (mx, my, mz) = mob.cell();
+                        let (sky, block) = world.light_full(mx, my, mz);
+                        let sky = (i32::from(sky) - (15 - ambient).max(0)).max(0);
+
+                        if sky > rng.below(32) as i32 || sky.max(i32::from(block)) > 7 {
+                            continue;
+                        }
+                    }
+
+                    spawned.push(mob);
+                }
+            }
+        }
+
+        // Постановка удалась: частицы у блока (одно событие мира на залп), «пуф»
+        // у каждого моба (событие сущности 20), задержка заново; без постановки
+        // (темно не вышло, места нет) спавнер пробует каждый такт (вики,
+        // Monster Spawner; чёрный ящик, spawner-zombie, spawner-light).
+        if spawned.is_empty() {
+            continue;
+        }
+
+        for mut mob in spawned {
+            mob.events.push(crate::mob::Event::Status(20));
+            items.add_mob(mob);
+        }
+
+        world.note_level_event(x, y, z, crate::spawner::SPAWN_PARTICLES, 0);
+        world.with_spawner(x, y, z, |data| data.reset_delay(rng));
+
+        // Клиентам — блок, данные и событие на такт позже.
+        world.queue_spawner_followup(x, y, z);
+    }
+}
+
+/// Удар зомби по жителю. Урон по жителю — 3 при любой сложности: поправка по
+/// сложности только для игроков (чёрный ящик, zombie-villager-infect: на трудной
+/// здоровье жителя 20, 17, 14, 11, 8, 5, 2).
+/// Удар, что убил бы жителя, на обычной с шансом 50 % и на трудной всегда
+/// превращает его в зомби-жителя с теми же профессией, опытом и сделками:
+/// житель пропадает, на его месте встаёт зомби-житель (детёныш остаётся
+/// детёнышем), клиентам — событие мира 1026 (вики, Zombie Villager;
+/// чёрный ящик, zombie-villager-infect). Возвращает, был ли удар по жителю.
+fn strike_villager(items: &mut items::Items, world: &mut World, strike: &crate::mob::Strike, difficulty: u8, rng: &mut crate::mob::Rng, next_id: &mut dyn FnMut() -> i32) -> bool {
+    use crate::mob::Kind;
+
+    let Some(index) = items.mobs().iter().position(|mob| mob.entity_id == strike.melee.target && mob.kind == Kind::Villager) else {
+        return false;
+    };
+
+    let damage = strike.melee.damage;
+    let mob = &mut items.mobs_mut()[index];
+
+    if mob.is_dead() {
+        return true;
+    }
+
+    let infects = mob.vitals.health - damage <= 0.0 && matches!(strike.kind, Kind::Zombie | Kind::ZombieVillager) && (difficulty >= 3 || (difficulty == 2 && rng.below(2) == 0));
+
+    if !infects {
+        let push = crate::mob::Push { dir: strike.melee.push, strength: 0.4, cause: strike.attacker };
+
+        mob.hurt(damage, crate::survival::Source::MobAttack, Some(push));
+
+        return true;
+    }
+
+    // Удар прошёл, но смерть отменена: клиентам — урон, потом превращение
+    // (чёрный ящик, zombie-villager-infect: damage_event, затем появление
+    // зомби-жителя со скоростью жителя).
+    mob.events.push(crate::mob::Event::Hurt { source: crate::survival::Source::MobAttack, cause: strike.attacker, at: (mob.x, mob.y, mob.z) });
+
+    let mut zombie = crate::mob::Mob::new(next_id(), Kind::ZombieVillager, (mob.x, mob.y, mob.z));
+
+    (zombie.vx, zombie.vy, zombie.vz) = (mob.vx, mob.vy, mob.vz);
+
+    zombie.yaw = mob.yaw;
+    zombie.head_yaw = mob.head_yaw;
+    zombie.pitch = mob.pitch;
+    zombie.age = mob.age;
+    zombie.no_ai = mob.no_ai;
+    zombie.silent = mob.silent;
+    zombie.on_ground = mob.on_ground;
+    zombie.villager = std::mem::take(&mut mob.villager);
+    zombie.villager.finalized = true;
+    zombie.villager.trading = None;
+    let (id, (x, y, z)) = (mob.entity_id, mob.cell());
+
+    items.flush_mob_events(next_id, rng);
+    world.note_level_event(x, y, z, 1026, 0);
+    items.remove_mobs(|gone| gone.entity_id == id);
+    items.add_mob_late(zombie);
+    true
 }
 
 /// Опыт умирающего дракона: с 154-го такта подъёма десять шариков по 8 %

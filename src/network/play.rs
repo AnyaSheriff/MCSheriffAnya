@@ -5034,6 +5034,13 @@ async fn send_chunk(
             })
             .collect();
 
+        // Спавнеры несут вид моба: по нему клиент крутит зверька внутри.
+        let mut shelves = shelves;
+
+        for ((x, y, z), nbt) in world.chunk_spawners(chunk_x, chunk_z) {
+            shelves.insert((x, y, z), nbt);
+        }
+
         (taken, entities, shelves)
     };
 
@@ -7395,7 +7402,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         && (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) <= REACH * REACH
         && !mob.is_dead()
     {
-        reaction.open_merchant = merchant::use_villager(&mut items, index, player.entity_id, shared);
+        reaction.open_merchant = merchant::use_villager(&mut items, index, player.entity_id, player.uuid, shared);
         return true;
     }
 
@@ -7436,6 +7443,38 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
 
                 items.drop_item(shared.next_entity_id(), Stack::new(wool, 1), (at.0, at.1 + 1.0, at.2), velocity, items::MINED_DELAY);
             }
+        }
+
+        return true;
+    }
+
+    // Золотое яблоко зомби-жителю под слабостью: начинается лечение, 3600–6000
+    // тактов, яблоко съедено, слабость снята, дана сила (вики, Zombie Villager,
+    // «Curing»; чёрный ящик, zombie-villager-cure: событие 16, свойство 19).
+    if held == Some("golden_apple")
+        && mob.kind == crate::mob::Kind::ZombieVillager
+        && mob.villager.conversion == 0
+        && mob.vitals.effects.iter().any(|effect| effect.kind == crate::survival::EffectKind::Weakness)
+    {
+        let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
+        let mut rng = crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32) ^ mob.ticks.wrapping_mul(0x9E37));
+        let mob = &mut items.mobs_mut()[index];
+
+        mob.villager.conversion = 3600 + rng.below(2401) as i32;
+        mob.villager.converter = Some(player.uuid);
+        mob.vitals.effects.retain(|effect| effect.kind != crate::survival::EffectKind::Weakness);
+        mob.vitals.give_effect_shown(crate::survival::Effect {
+            kind: crate::survival::EffectKind::Strength,
+            amplifier: i32::from(difficulty.saturating_sub(1)).min(2),
+            ticks_left: mob.villager.conversion,
+            ambient: false,
+            visible: true,
+        });
+        mob.events.push(crate::mob::Event::Status(16));
+        items.flush_mob_events(&mut || shared.next_entity_id(), &mut rng);
+
+        if survival && let Some(slot) = player.inventory.spend_held() {
+            reaction.slots.push(slot);
         }
 
         return true;
@@ -7925,6 +7964,29 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             drop(world);
 
             let slots = if took { spend_placed(player) } else { Vec::new() };
+
+            return Some(Reaction { slots, ..Reaction::accepted(sequence) });
+        }
+
+        // Яйцо призыва по спавнеру меняет его вид; яйцо тратится в выживании
+        // (вики, Monster Spawner; чёрный ящик, spawner-egg: блок, блок за гранью,
+        // блок, данные блока, ячейка).
+        if let Some(entity) = player.inventory.held().and_then(|stack| blocks::item_name(stack.item)).and_then(crate::spawner::egg_entity).map(str::to_string)
+            && blocks::block_at_state(world.get_block(clicked_x, clicked_y, clicked_z)) == Some("spawner")
+            && crate::mob::Kind::from_name(&entity).is_some()
+        {
+            world.with_spawner(clicked_x, clicked_y, clicked_z, |data| data.entity = format!("minecraft:{entity}"));
+
+            if let Some(nbt) = world.spawner(clicked_x, clicked_y, clicked_z).map(crate::spawner::Data::nbt) {
+                world.tell_directly(clicked_x, clicked_y, clicked_z);
+                world.tell_directly(bx, by, bz);
+                world.tell_directly(clicked_x, clicked_y, clicked_z);
+                world.note_block_entity(clicked_x, clicked_y, clicked_z, crate::spawner::BLOCK_ENTITY, nbt);
+            }
+
+            drop(world);
+
+            let slots = spend_placed(player);
 
             return Some(Reaction { slots, ..Reaction::accepted(sequence) });
         }

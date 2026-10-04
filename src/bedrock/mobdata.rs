@@ -174,6 +174,12 @@ pub fn entries(look: &Look) -> Vec<(u32, Value)> {
             list.push((KEY_MAX_TRADE_TIER, Value::Int(if look.baby { 0 } else { 4 })));
             list.push((KEY_TRADE_EXPERIENCE, Value::Int(look.xp)));
         }
+        // Зомби-житель: профессия и вид деревни, как у жителя, но без торговли
+        // [проверить: у BDS не снято].
+        Kind::ZombieVillager => {
+            list.push((KEY_VARIANT, Value::Int(bedrock_profession(look.profession))));
+            list.push((KEY_SKIN_ID, Value::Int(bedrock_village_type(look.village_type))));
+        }
         _ => {}
     }
 
@@ -261,6 +267,19 @@ mod tests {
 
         villager.profession = 5;
         assert!(entries(&villager).contains(&(KEY_VARIANT, Value::Int(1))));
+    }
+
+    #[test]
+    fn a_zombie_villager_carries_profession_and_village_but_no_trades() {
+        let mut zombie = look(Kind::ZombieVillager);
+
+        zombie.profession = 5;
+
+        let list = entries(&zombie);
+
+        assert!(list.contains(&(KEY_VARIANT, Value::Int(1))));
+        assert!(list.iter().any(|(key, _)| *key == KEY_SKIN_ID));
+        assert!(!list.iter().any(|(key, _)| *key == KEY_TRADE_TIER));
     }
 
     #[test]

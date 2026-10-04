@@ -29,7 +29,7 @@ use super::{Event, Kind, Mob, Rng, View};
 /// Дальность слежения за целью (вики, Zombie: «Follow range 35»; у прочих 16).
 pub fn follow_range(kind: Kind) -> f64 {
     match kind {
-        Kind::Zombie => 35.0,
+        Kind::Zombie | Kind::ZombieVillager => 35.0,
         // Вики, Enderman: злится на взгляд с 64 блоков и гонится за целью там же.
         Kind::Enderman => 64.0,
         _ => 16.0,
@@ -69,6 +69,7 @@ pub fn arrow_error(difficulty: u8) -> f64 {
 pub fn killer_key(kind: Kind) -> &'static str {
     match kind {
         Kind::Zombie => "entity.minecraft.zombie",
+        Kind::ZombieVillager => "entity.minecraft.zombie_villager",
         Kind::Skeleton => "entity.minecraft.skeleton",
         Kind::Creeper => "entity.minecraft.creeper",
         Kind::Spider => "entity.minecraft.spider",
@@ -255,12 +256,18 @@ fn eligible(mob: &Mob, view: &dyn View, ctx: &Ctx, watcher: &Watcher, need_sight
 }
 
 /// Выбор цели раз в 10 тактов; держится, пока игрок годится.
-fn choose_target<'a>(mob: &mut Mob, view: &dyn View, ctx: &'a Ctx, rng: &mut Rng) -> Option<&'a Watcher> {
+fn choose_target(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Option<Watcher> {
     if let Some(id) = mob.h.target {
         let current = ctx.players.iter().find(|player| player.id == id);
 
         if let Some(player) = current.filter(|player| eligible(mob, view, ctx, player, false)) {
-            return Some(player);
+            return Some(*player);
+        }
+
+        // Зомби идёт и на жителя (вики, Zombie: цели — игрок, житель, железный
+        // голем); видеть его не обязан.
+        if let Some(villager) = prey(mob, ctx).into_iter().find(|villager| villager.id == id) {
+            return Some(villager);
         }
 
         mob.h.target = None;
@@ -278,8 +285,33 @@ fn choose_target<'a>(mob: &mut Mob, view: &dyn View, ctx: &'a Ctx, rng: &mut Rng
         .filter(|player| eligible(mob, view, ctx, player, true))
         .min_by(|a, b| dist2(mob, a.x, a.y, a.z).total_cmp(&dist2(mob, b.x, b.y, b.z)));
 
+    // Игрока нет — ближайший житель в дальности слежения.
+    if near.is_none() {
+        let villager = prey(mob, ctx).into_iter().min_by(|a, b| dist2(mob, a.x, a.y, a.z).total_cmp(&dist2(mob, b.x, b.y, b.z)));
+
+        mob.h.target = villager.map(|villager| villager.id);
+
+        return villager;
+    }
+
     mob.h.target = near.map(|player| player.id);
-    near
+    near.copied()
+}
+
+/// Жители, на которых зомби может пойти: цели зомби и зомби-жителя
+/// (вики, Zombie: «villagers»).
+fn prey(mob: &Mob, ctx: &Ctx) -> Vec<Watcher> {
+    if !matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager) {
+        return Vec::new();
+    }
+
+    let range = follow_range(mob.kind);
+
+    ctx.mates
+        .iter()
+        .filter(|mate| mate.kind == Kind::Villager && dist2(mob, mate.x, mate.y, mate.z) <= range * range)
+        .map(|mate| Watcher { id: mate.id, x: mate.x, y: mate.y, z: mate.z, eye: if mate.baby { 0.81 } else { 1.62 }, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false })
+        .collect()
 }
 
 /// Мысль враждебного моба за такт.
@@ -321,7 +353,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
 
     // В воздухе путь ведётся, новый не строится (как у животных).
     let grounded = mob.on_ground || in_water || mob.kind == Kind::Spider;
-    let target = choose_target(mob, view, ctx, rng).copied();
+    let target = choose_target(mob, view, ctx, rng);
 
     // Паук: днём цель забывается с шансом 1/100 за такт (вики, Spider).
     if mob.kind == Kind::Spider && target.is_some() && !spider_bold(mob, view, ctx) && rng.below(100) == 0 {
@@ -344,7 +376,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     mob.h.seen = if sight { 0 } else { mob.h.seen + 1 };
 
     match mob.kind {
-        Kind::Zombie | Kind::Spider => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
+        Kind::Zombie | Kind::ZombieVillager | Kind::Spider => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
         Kind::Creeper => creeper(mob, view, &target, &mut plan, dist_sq, sight, grounded),
         Kind::Skeleton if mob.h.bow => skeleton(mob, view, ctx, &target, &mut plan, dist_sq, sight, rng, grounded),
         Kind::Skeleton => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
@@ -590,7 +622,7 @@ pub fn burn(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, sun: bool)
         return false;
     }
 
-    let burns = matches!(mob.kind, Kind::Zombie | Kind::Skeleton) && !mob.h.helmet;
+    let burns = matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton) && !mob.h.helmet;
 
     if sun && burns && ctx.sun_up && view.open_sky(x, y, z) && rng.below(SUN_CHANCE) == 0 {
         mob.vitals.ignite(SUN_FIRE_TICKS);
@@ -1042,7 +1074,7 @@ fn shulker(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     }
 
     let had = mob.h.target;
-    let target = choose_target(mob, view, ctx, rng).copied();
+    let target = choose_target(mob, view, ctx, rng);
 
     let Some(target) = target else {
         if mob.h.peek == 100 {

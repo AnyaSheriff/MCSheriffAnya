@@ -1,0 +1,576 @@
+{
+ "about": "Зомби-житель NoAI со слабостью: щелчок золотым яблоком — яблоко съедено, дрожь (событие 16, свойство «обращается»), звук; повторное яблоко ничего не меняет.",
+ "track_mobs": true,
+ "inventory": true,
+ "blocks": [
+  {
+   "at": [
+    0,
+    3,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    3,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    3,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    3,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    3,
+    4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    3,
+    5
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    3,
+    6
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    3,
+    7
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    0,
+    3,
+    8
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    3,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    3,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    3,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    3,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    3,
+    4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    3,
+    5
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    3,
+    6
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    3,
+    7
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    1,
+    3,
+    8
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    3,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    3,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    3,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    3,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    3,
+    4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    3,
+    5
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    3,
+    6
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    3,
+    7
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    2,
+    3,
+    8
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    3,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    3,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    3,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    3,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    3,
+    4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    3,
+    5
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    3,
+    6
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    3,
+    7
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    3,
+    3,
+    8
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    3,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    3,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    3,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    3,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    3,
+    4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    3,
+    5
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    3,
+    6
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    3,
+    7
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    4,
+    3,
+    8
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    5,
+    3,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    5,
+    3,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    5,
+    3,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    5,
+    3,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    5,
+    3,
+    4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    5,
+    3,
+    5
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    5,
+    3,
+    6
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    5,
+    3,
+    7
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    5,
+    3,
+    8
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    6,
+    3,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    6,
+    3,
+    1
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    6,
+    3,
+    2
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    6,
+    3,
+    3
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    6,
+    3,
+    4
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    6,
+    3,
+    5
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    6,
+    3,
+    6
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    6,
+    3,
+    7
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    6,
+    3,
+    8
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "difficulty hard",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "xp set $(bot) 0 points",
+  "xp set $(bot) 0 levels",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0",
+  "give $(bot) minecraft:golden_apple 4"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon zombie_villager $(3.5,0,3.5) {NoAI:1b,VillagerData:{type:\"minecraft:taiga\",profession:\"minecraft:farmer\",level:2},Offers:{Recipes:[{buy:{id:\"minecraft:wheat\",count:20},sell:{id:\"minecraft:emerald\",count:1},maxUses:16,xp:2,priceMultiplier:0.05f},{buy:{id:\"minecraft:emerald\",count:1},sell:{id:\"minecraft:bread\",count:6},maxUses:16,xp:1,priceMultiplier:0.05f}]}}"
+  },
+  {
+   "after": 5,
+   "cmd": "effect give @e[type=zombie_villager,distance=..48] minecraft:weakness 60"
+  },
+  {
+   "after": 20,
+   "interact": true
+  },
+  {
+   "after": 30,
+   "interact": true
+  },
+  {
+   "after": 60,
+   "cmd": "kill @e[type=zombie_villager,distance=..48]"
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=zombie_villager,distance=..48]",
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "difficulty peaceful",
+  "xp set $(bot) 0 points",
+  "xp set $(bot) 0 levels",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(0,3,0) $(6,3,8) minecraft:air"
+ ],
+ "name": "zombie-villager-cure",
+ "random": [
+  {
+   "type": "count",
+   "name": "добыча",
+   "match": "^spawn item|^meta 8=",
+   "range": [
+    0,
+    6
+   ],
+   "anytick": true,
+   "why": "вики, Zombie Villager: гнилая плоть 0–2 штуки, редко железо, морковь, картофель — число случайно"
+  }
+ ]
+}

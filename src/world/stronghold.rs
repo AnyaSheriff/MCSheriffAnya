@@ -869,6 +869,12 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
                 chest.slots = crate::loot::fill(table.pools(), chest.slots.len(), &mut dice);
                 chunk.put_generated_container(x - x0, y, z - z0, chest);
             }
+
+            // Спавнер крепости — с серебрянкой (вики, Monster Spawner: «silverfish
+            // in strongholds»); самой серебрянки у нас ещё нет, вид — для клиента.
+            if matches!(special, Special::Spawner) {
+                chunk.put_generated_spawner(x - x0, y, z - z0, crate::spawner::Data::of("silverfish"));
+            }
         });
     }
 }

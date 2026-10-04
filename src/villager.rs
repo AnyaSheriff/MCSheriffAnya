@@ -214,6 +214,19 @@ pub struct State {
     pub restocks_today: u8,
     pub restock_day: i64,
     pub last_restock: i64,
+
+    /// Зомби-житель: сколько тактов до конца лечения (0 — не лечится) и кто
+    /// лечит (`ConversionPlayer`); вики, Zombie Villager, «Curing».
+    pub conversion: i32,
+    pub converter: Option<[u8; 16]>,
+
+    /// Молва об игроках: UUID и взвешенная репутация (вики, Trading,
+    /// «Gossip»); у вылечившего цены ниже на `⌊репутация · множитель⌋`.
+    pub gossip: Vec<([u8; 16], i32)>,
+
+    /// Только что вылечен: эффекты (тошнота, сила на такт) ложатся на следующем
+    /// такте, а не при появлении (чёрный ящик, zombie-villager-cured). Не сохраняется.
+    pub fresh_cure: bool,
 }
 
 impl State {
@@ -523,6 +536,26 @@ pub fn apply_data(state: &mut State, data: &crate::snbt::Value) {
         state.xp = xp.max(0.0) as i32;
     }
 
+    // Зомби-житель: `ConversionTime` (тактов до лечения) и `ConversionPlayer`
+    // (UUID вылечившего — четыре целых).
+    if let Some(time) = data.get("ConversionTime").and_then(|value| value.as_f64()) {
+        state.conversion = time.max(0.0) as i32;
+    }
+
+    if let Some(crate::snbt::Value::List(ints)) = data.get("ConversionPlayer") {
+        let words: Vec<i32> = ints.iter().filter_map(|value| value.as_f64()).map(|value| value as i32).collect();
+
+        if let Ok(words) = <[i32; 4]>::try_from(words) {
+            let mut uuid = [0u8; 16];
+
+            for (index, word) in words.iter().enumerate() {
+                uuid[index * 4..index * 4 + 4].copy_from_slice(&word.to_be_bytes());
+            }
+
+            state.converter = Some(uuid);
+        }
+    }
+
     if let Some(crate::snbt::Value::List(recipes)) = data.get("Offers").and_then(|offers| offers.get("Recipes")) {
         state.offers = recipes.iter().filter_map(read_offer).collect();
     }
@@ -816,7 +849,8 @@ pub fn work_sound(profession: u8) -> Option<&'static str> {
 
 /// Запись жителя для файла региона (хвост записи моба).
 pub fn write(state: &State, out: &mut Vec<u8>) {
-    out.extend_from_slice(&[state.kind, state.profession, state.level, u8::from(state.finalized)]);
+    // Бит 1 четвёртого байта — «есть хвост лечения и молвы» (старые записи без него).
+    out.extend_from_slice(&[state.kind, state.profession, state.level, u8::from(state.finalized) | 2]);
     out.extend_from_slice(&state.xp.to_be_bytes());
 
     let site = state.job_site.unwrap_or((i32::MIN, 0, 0));
@@ -839,6 +873,23 @@ pub fn write(state: &State, out: &mut Vec<u8>) {
 
         out.extend_from_slice(&offer.multiplier.to_be_bytes());
         out.push(u8::from(offer.reward_exp));
+    }
+
+    out.extend_from_slice(&state.conversion.to_be_bytes());
+
+    match state.converter {
+        Some(uuid) => {
+            out.push(1);
+            out.extend_from_slice(&uuid);
+        }
+        None => out.push(0),
+    }
+
+    out.push(state.gossip.len().min(255) as u8);
+
+    for (uuid, value) in state.gossip.iter().take(255) {
+        out.extend_from_slice(uuid);
+        out.extend_from_slice(&value.to_be_bytes());
     }
 }
 
@@ -883,11 +934,30 @@ pub fn read(bytes: &mut &[u8]) -> Option<State> {
         });
     }
 
+    let (mut conversion, mut converter, mut gossip) = (0, None, Vec::new());
+
+    if head[3] & 2 != 0 {
+        conversion = i32::from_be_bytes(take(4)?.try_into().ok()?);
+
+        if take(1)?[0] != 0 {
+            converter = Some(<[u8; 16]>::try_from(take(16)?).ok()?);
+        }
+
+        for _ in 0..take(1)?[0] {
+            let uuid = <[u8; 16]>::try_from(take(16)?).ok()?;
+
+            gossip.push((uuid, i32::from_be_bytes(take(4)?.try_into().ok()?)));
+        }
+    }
+
     Some(State {
+        conversion,
+        converter,
+        gossip,
         kind: head[0].min(TYPES.len() as u8 - 1),
         profession: head[1].min(PROFESSIONS.len() as u8 - 1),
         level: head[2].clamp(1, 5),
-        finalized: head[3] != 0,
+        finalized: head[3] & 1 != 0,
         xp,
         offers,
         job_site: (site.0 != i32::MIN).then_some(site),
@@ -1060,6 +1130,42 @@ mod tests {
 
         assert_eq!((back.kind, back.profession, back.level, back.xp, back.job_site, back.finalized), (2, 5, 2, 12, Some((1, -60, 3)), true));
         assert_eq!(back.offers, state.offers);
+    }
+
+    /// Лечение и молва переживают запись в файл; старая запись без хвоста читается.
+    #[test]
+    fn cure_and_gossip_round_trip() {
+        let state = State { profession: 5, conversion: 1234, converter: Some([7; 16]), gossip: vec![([9; 16], 125)], ..State::new() };
+        let mut bytes = Vec::new();
+
+        write(&state, &mut bytes);
+
+        let back = read(&mut bytes.as_slice()).unwrap();
+
+        assert_eq!((back.conversion, back.converter, back.gossip), (1234, Some([7; 16]), vec![([9; 16], 125)]));
+
+        // Запись без бита хвоста: головной байт без 2, хвоста нет.
+        let mut old = Vec::new();
+
+        write(&State::new(), &mut old);
+        old[3] &= !2;
+        old.truncate(old.len() - (4 + 1 + 1));
+
+        let back = read(&mut old.as_slice()).unwrap();
+
+        assert_eq!((back.conversion, back.converter, back.gossip.len()), (0, None, 0));
+    }
+
+    /// SNBT призыва зомби-жителя: время лечения и вылечивший.
+    #[test]
+    fn conversion_comes_from_the_summon_data() {
+        let mut state = State::new();
+        let data = crate::snbt::parse("{ConversionTime:40,ConversionPlayer:[I;651459017,1212431114,-1168536378,1449273976]}").unwrap();
+
+        apply_data(&mut state, &data);
+
+        assert_eq!(state.conversion, 40);
+        assert_eq!(state.converter.map(|uuid| uuid[0]), Some(0x26));
     }
 
     /// Опыт игроку: 3–6, при повышении ещё 5.

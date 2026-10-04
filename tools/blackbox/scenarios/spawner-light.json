@@ -1,0 +1,51 @@
+{
+ "about": "Спавнер зомби без крыши в дневной свет: зомби не появляются (светло), но спавнер работает.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "gamerule spawn_mobs true",
+  "difficulty normal",
+  "time set noon",
+  "gamemode creative $(bot)",
+  "tp $(bot) $(3.5,0,7.5)",
+  "!wait 5"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "setblock $(3,0,3) minecraft:spawner{SpawnData:{entity:{id:\"minecraft:zombie\"}},Delay:20s,MinSpawnDelay:20s,MaxSpawnDelay:20s,SpawnCount:3s,SpawnRange:4s,RequiredPlayerRange:16s,MaxNearbyEntities:6s}"
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=pig,distance=..48]",
+  "kill @e[type=creeper,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(0,0,0) $(8,4,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block",
+  "time set noon",
+  "gamerule spawn_mobs false"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "всё случайное",
+   "match": "^cart|^meta|^spawn|^sound|^level",
+   "range": [
+    0,
+    100000
+   ],
+   "anytick": true,
+   "why": "спавнер ставит мобов в случайные места, а они бродят"
+  }
+ ],
+ "exclusive": true,
+ "name": "spawner-light"
+}

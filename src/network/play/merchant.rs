@@ -34,7 +34,7 @@ const HOTBAR: std::ops::Range<usize> = 30..39;
 /// Щелчок по жителю: детёныш, безработный, бестолковый и житель без сделок
 /// мотают головой со звуком «нет» (чёрный ящик, villager-shake), прочие
 /// открывают окно торговли. Возвращает номер жителя, чьё окно открыть.
-pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player_id: i32, shared: &Shared) -> Option<i32> {
+pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player_id: i32, uuid: [u8; 16], shared: &Shared) -> Option<i32> {
     let mob = &mut items.mobs_mut()[index];
 
     // С жителем уже торгуют [проверить: у оригинала второму отказ молча].
@@ -58,6 +58,17 @@ pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player
         None
     } else {
         mob.villager.trading = Some(player_id);
+
+        // Скидка вылечившему (чёрный ящик, zombie-villager-cured-discount:
+        // special = −⌊репутация · множитель⌋ у каждой сделки).
+        let reputation = mob.villager.gossip.iter().find(|(who, _)| *who == uuid).map_or(0, |(_, value)| *value);
+
+        if reputation != 0 {
+            for offer in &mut mob.villager.offers {
+                offer.special = -((reputation as f32 * offer.multiplier).floor() as i32);
+            }
+        }
+
         Some(mob.entity_id)
     };
 

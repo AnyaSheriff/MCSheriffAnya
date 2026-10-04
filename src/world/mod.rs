@@ -384,6 +384,9 @@ struct Chunk {
     /// Данные командных блоков (command_block.rs) по месту внутри чанка, как
     /// у хранилищ. Запись живёт, пока на месте стоит любой из трёх видов.
     command_blocks: HashMap<(i32, i32, i32), crate::command_block::Data>,
+
+    /// Данные спавнеров (spawner.rs) по месту внутри чанка.
+    spawners: HashMap<(i32, i32, i32), crate::spawner::Data>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
@@ -476,6 +479,7 @@ impl Chunk {
             frames: Vec::new(),
             mobs: Vec::new(),
             command_blocks: HashMap::new(),
+            spawners: HashMap::new(),
         }
     }
 
@@ -665,6 +669,57 @@ impl Chunk {
         if over || unpack(*place) == AIR {
             *place = pack(state);
         }
+
+        // Спавнер, поставленный генерацией: вид по месту — подземелье и
+        // крепость выбирают его случайно (вики, Monster Spawner: скелет,
+        // зомби ×2, паук) [проверить: доли].
+        if crate::blocks::block_at_state(state) == Some("spawner") {
+            let pick = (x.wrapping_mul(73_856_093) ^ y.wrapping_mul(19_349_663) ^ z.wrapping_mul(83_492_791)).rem_euclid(4);
+            let kind = ["skeleton", "zombie", "zombie", "spider"][pick as usize];
+
+            self.spawners.insert((x, y, z), crate::spawner::Data::of(kind));
+        }
+    }
+
+    /// Даёт данные спавнерам-блокам, у которых их нет: в Незере — ифрит
+    /// (вики, Monster Spawner: «blaze in Nether fortresses»), иначе — по месту,
+    /// как у `put_generated`.
+    fn fill_missing_spawners(&mut self, nether: bool) {
+        let Some(spawner) = crate::blocks::state_by_name("spawner") else {
+            return;
+        };
+        let mut found = Vec::new();
+
+        for (index, section) in self.sections.iter().enumerate() {
+            let Some(states) = section.as_deref() else {
+                continue;
+            };
+
+            for (at, state) in states.iter().enumerate() {
+                if unpack(*state) == spawner {
+                    found.push((at as i32 & 15, MIN_Y + index as i32 * 16 + (at as i32 >> 8), (at as i32 >> 4) & 15));
+                }
+            }
+        }
+
+        for place in found {
+            if self.spawners.contains_key(&place) {
+                continue;
+            }
+
+            let (x, y, z) = place;
+            let pick = (x.wrapping_mul(73_856_093) ^ y.wrapping_mul(19_349_663) ^ z.wrapping_mul(83_492_791)).rem_euclid(4);
+            let kind = if nether { "blaze" } else { ["skeleton", "zombie", "zombie", "spider"][pick as usize] };
+
+            self.spawners.insert(place, crate::spawner::Data::of(kind));
+        }
+    }
+
+    /// Спавнер, сложенный генерацией, с видом моба: x, z — внутри чанка.
+    fn put_generated_spawner(&mut self, x: i32, y: i32, z: i32, data: crate::spawner::Data) {
+        if (0..CHUNK_SIZE).contains(&x) && (0..CHUNK_SIZE).contains(&z) {
+            self.spawners.insert((x, y, z), data);
+        }
     }
 
     /// Хранилище, сложенное генерацией (сундук постройки с добычей):
@@ -750,6 +805,19 @@ impl Chunk {
                 self.command_blocks.insert(place, crate::command_block::Data::default());
             } else {
                 self.command_blocks.remove(&place);
+            }
+        }
+
+        // Спавнер: данные рождаются с блоком и уходят вместе с ним.
+        let (spawner, was_spawner) = (crate::blocks::block_at_state(state) == Some("spawner"), crate::blocks::block_at_state(old) == Some("spawner"));
+
+        if spawner != was_spawner {
+            let place = (x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
+
+            if spawner {
+                self.spawners.insert(place, crate::spawner::Data::default());
+            } else {
+                self.spawners.remove(&place);
             }
         }
 
@@ -1117,6 +1185,11 @@ pub struct World {
     /// такт уже без замка мира (command_block::run_queued).
     command_runs: Vec<(i32, i32, i32)>,
 
+    /// Спавнеры, что поставили мобов в прошлом такте: в этом клиентам уходят
+    /// блок, новые данные (задержка) и событие блока 1/0 (чёрный ящик,
+    /// spawner-zombie: на такт позже постановки).
+    spawner_followups: Vec<(i32, i32, i32)>,
+
     /// Сколько игроков смотрят в хранилище (по месту каждой половины).
     viewers: HashMap<(i32, i32, i32), u32>,
 
@@ -1281,6 +1354,7 @@ impl World {
             container_order: Vec::new(),
             contents_changed: Vec::new(),
             command_runs: Vec::new(),
+            spawner_followups: Vec::new(),
             sky_cache: HashMap::new(),
             _session: None,
         }
@@ -1435,6 +1509,7 @@ impl World {
             container_order: Vec::new(),
             contents_changed: Vec::new(),
             command_runs: Vec::new(),
+            spawner_followups: Vec::new(),
             sky_cache: HashMap::new(),
             _session: Some(session),
         };
@@ -1832,6 +1907,59 @@ impl World {
         self.dirty.insert(chunk_key(x, z));
 
         Some(result)
+    }
+
+    /// Данные спавнера в этом месте, если он там стоит и чанк в памяти.
+    pub fn spawner(&self, x: i32, y: i32, z: i32) -> Option<&crate::spawner::Data> {
+        self.chunks.get(&chunk_key(x, z))?.spawners.get(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))
+    }
+
+    /// Правит данные спавнера; чанк помечается изменённым. None — спавнера тут нет.
+    pub fn with_spawner<R>(&mut self, x: i32, y: i32, z: i32, change: impl FnOnce(&mut crate::spawner::Data) -> R) -> Option<R> {
+        let chunk = self.chunks.get_mut(&chunk_key(x, z))?;
+        let data = chunk.spawners.get_mut(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))?;
+        let result = change(data);
+
+        self.dirty.insert(chunk_key(x, z));
+
+        Some(result)
+    }
+
+    /// Все спавнеры загруженных чанков: место в мире.
+    pub fn spawner_places(&self) -> Vec<(i32, i32, i32)> {
+        let mut found = Vec::new();
+
+        for (&(chunk_x, chunk_z), chunk) in &self.chunks {
+            found.extend(chunk.spawners.keys().map(|&(x, y, z)| (chunk_x * CHUNK_SIZE + x, y, chunk_z * CHUNK_SIZE + z)));
+        }
+
+        found.sort_unstable();
+        found
+    }
+
+    /// Данные спавнеров чанка для пакета чанка: место внутри чанка и NBT.
+    pub fn chunk_spawners(&self, chunk_x: i32, chunk_z: i32) -> Vec<((i32, i32, i32), Vec<u8>)> {
+        self.chunks.get(&(chunk_x, chunk_z)).map(|chunk| chunk.spawners.iter().map(|(&place, data)| (place, data.nbt())).collect()).unwrap_or_default()
+    }
+
+    /// Спавнер поставил мобов: рассказать клиентам в следующем такте.
+    pub fn queue_spawner_followup(&mut self, x: i32, y: i32, z: i32) {
+        self.spawner_followups.push((x, y, z));
+    }
+
+    /// Забирает спавнеры, о которых пора рассказать: блок, данные, событие 1/0.
+    pub fn flush_spawner_followups(&mut self) {
+        for (x, y, z) in std::mem::take(&mut self.spawner_followups) {
+            let state = self.get_block(x, y, z);
+
+            let (Some(block), Some(nbt)) = (crate::blocks::block_at_state(state).and_then(crate::blocks::block_id), self.spawner(x, y, z).map(crate::spawner::Data::nbt)) else {
+                continue;
+            };
+
+            self.tell_directly(x, y, z);
+            self.note_block_entity(x, y, z, crate::spawner::BLOCK_ENTITY, nbt);
+            self.note_action(BlockAction { x, y, z, action: 1, param: 0, block });
+        }
     }
 
     /// Командный блок дождался своего такта: команду выполнит такт.
@@ -2524,6 +2652,14 @@ impl World {
         wake: &[((i32, i32, i32), u64)],
     ) {
         let key = (chunk_x, chunk_z);
+        let mut chunk = chunk;
+
+        // Спавнеры, что генерация поставила блоком без данных (крепость Незера
+        // и прочие плоские холсты): вид по измерению.
+        if !from_disk {
+            chunk.fill_missing_spawners(self.is_nether());
+        }
+
         let mut places: Vec<_> = chunk
             .containers
             .keys()

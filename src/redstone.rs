@@ -4911,6 +4911,7 @@ pub fn block_entity_type(state: i32) -> Option<i32> {
         (0..=i32::from(u16::MAX))
             .map(|state| match blocks::block_at_state(state) {
                 Some(name) if head_of(name).is_some() => SKULL_ENTITY,
+                Some("spawner") => crate::spawner::BLOCK_ENTITY as u8,
                 Some("sculk_sensor") => 35,
                 Some("calibrated_sculk_sensor") => 36,
                 Some("sculk_shrieker") => 38,

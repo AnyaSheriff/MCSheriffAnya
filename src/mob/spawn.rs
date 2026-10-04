@@ -264,7 +264,15 @@ pub fn hostile_attempt(
             continue;
         }
 
-        let mut mob = Mob::new(next_id(), kind, at);
+        // Вики, Zombie Villager: «5% chance when regular zombies spawn»; у зомби-жителя
+        // случайная профессия [проверить: тип по биому].
+        let each = if kind == Kind::Zombie && rng.below(100) < 5 { Kind::ZombieVillager } else { kind };
+        let mut mob = Mob::new(next_id(), each, at);
+
+        if each == Kind::ZombieVillager {
+            mob.villager.profession = rng.below(crate::villager::PROFESSIONS.len() as u32) as u8;
+            mob.villager.finalized = true;
+        }
 
         mob.face((rng.unit() * 360.0) as f32);
         group.push(mob);

@@ -963,6 +963,11 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
         mob.sheared = on;
     }
 
+    // Детёныш-зомби: `IsBaby:1b`, остаётся детёнышем навсегда.
+    if mob.kind.hostile() && flag_in(data, "IsBaby:") == Some(true) {
+        mob.age = -24000;
+    }
+
     if let Some(age) = int_after(data, "Age:") {
         mob.age = age;
     }
@@ -1022,7 +1027,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     }
 
     // Житель: `VillagerData`, `Offers`, `Xp` (src/villager.rs).
-    if mob.kind == crate::mob::Kind::Villager
+    if matches!(mob.kind, crate::mob::Kind::Villager | crate::mob::Kind::ZombieVillager)
         && let Some(value) = crate::snbt::parse(data)
     {
         crate::villager::apply_data(&mut mob.villager, &value);
@@ -1079,8 +1084,13 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
 
     // Свойство 20 у жителя: призванный без данных или с VillagerData — да,
     // с прочими данными — нет (чёрный ящик, villager-shake, villager-claim).
-    if kind == crate::mob::Kind::Villager {
+    if matches!(kind, crate::mob::Kind::Villager | crate::mob::Kind::ZombieVillager) {
         mob.villager.finalized = data.is_empty() || data.contains("VillagerData");
+    }
+
+    // Призванный зомби-житель с `ConversionTime` лечится: сила — на следующем такте.
+    if kind == crate::mob::Kind::ZombieVillager && mob.villager.conversion > 0 {
+        mob.villager.fresh_cure = true;
     }
 
     if kind == crate::mob::Kind::Chicken {
@@ -1428,6 +1438,31 @@ fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             let Some(kind) = crate::survival::EffectKind::from_name(name) else {
                 return Answer::saying(format!("Такого эффекта пока нет: {}", name));
             };
+            // Мобам эффект даёт селектор сущностей `@e[type=…]` (зомби-житель под
+            // слабостью лечится золотым яблоком).
+            if who.starts_with("@e")
+                && let Some(chosen) = Selector::parse(who)
+            {
+                let ticks = match rest.first().copied() {
+                    Some("infinite") => crate::survival::INFINITE,
+                    other => other.and_then(|value| value.parse::<i32>().ok()).unwrap_or(30).max(1) * 20,
+                };
+                let amplifier: i32 = rest.get(1).and_then(|value| value.parse().ok()).unwrap_or(0);
+                let hidden = rest.get(2).copied() == Some("true");
+                let (x, y, z) = origin_of(source, shared);
+                let mut items = shared.items_in(dimension_of(source, shared)).lock().expect("предметы захвачены другим потоком");
+                let mut changed = 0;
+
+                for mob in items.mobs_mut() {
+                    if chosen.takes(mob.kind.name()) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z)) {
+                        mob.vitals.give_effect_shown(crate::survival::Effect { kind, amplifier: amplifier.clamp(0, 255), ticks_left: ticks, ambient: false, visible: !hidden });
+                        changed += 1;
+                    }
+                }
+
+                return Answer::saying(format!("Эффект {} наложен: {} сущностей", name, changed));
+            }
+
             let targets = find_targets(who, source, shared);
 
             if targets.is_empty() {
@@ -1792,7 +1827,9 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
     };
     // Командному блоку — его поля (command_block.rs), прочим — ячейки.
     let command_block = blocks::state_from_text(block).and_then(crate::command_block::mode_of).is_some();
-    let items = match data.filter(|_| !command_block).map(crate::containers::items_from_text) {
+    let spawner = blocks::state_from_text(block).and_then(blocks::block_at_state) == Some("spawner");
+    let command_block_or_spawner = command_block || spawner;
+    let items = match data.filter(|_| !command_block_or_spawner).map(crate::containers::items_from_text) {
         Some(Some(items)) => Some(items),
         Some(None) => return Answer::saying(format!("Не понял данные блока: {}", data.unwrap_or(""))),
         None => None,
@@ -1800,6 +1837,13 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
 
     if let Some(text) = data.filter(|_| command_block)
         && let Err(why) = crate::command_block::Data::default().apply_snbt(text)
+    {
+        note_result(0);
+        return Answer::saying(why);
+    }
+
+    if let Some(text) = data.filter(|_| spawner)
+        && let Err(why) = crate::spawner::Data::default().apply_snbt(text)
     {
         note_result(0);
         return Answer::saying(why);
@@ -1861,6 +1905,23 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
                 if world.get_block(x, y, z) != state && world.set_block(x, y, z, state) {
                     changed += 1;
                     placed.push((x, y, z));
+                }
+
+                // Спавнер с данными: поля из SNBT; клиентам — данные блока, как
+                // у оригинала после постановки (чёрный ящик, spawner-egg).
+                if let Some(text) = data.filter(|_| spawner)
+                    && world.get_block(x, y, z) == state
+                {
+                    let applied = world.with_spawner(x, y, z, |spawner| spawner.apply_snbt(text));
+                    let nbt = world.spawner(x, y, z).map(crate::spawner::Data::nbt);
+
+                    if let (Some(Ok(())), Some(nbt)) = (applied, nbt) {
+                        world.note_block_entity(x, y, z, crate::spawner::BLOCK_ENTITY, nbt);
+
+                        if !placed.contains(&(x, y, z)) {
+                            changed += 1;
+                        }
+                    }
                 }
 
                 // Командный блок с данными: поля — из записи, как у

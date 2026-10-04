@@ -468,7 +468,7 @@ fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uu
                 Struck::Mob(id) => {
                     if let Some(mob) = mobs.iter_mut().find(|mob| mob.entity_id == id) {
                         // Нежить лечится уроном и ранится лечением (вики, Instant Health).
-                        let undead = matches!(mob.kind, crate::mob::Kind::Zombie | crate::mob::Kind::Skeleton);
+                        let undead = matches!(mob.kind, crate::mob::Kind::Zombie | crate::mob::Kind::ZombieVillager | crate::mob::Kind::Skeleton);
 
                         if (effect.kind == EffectKind::InstantDamage) != undead {
                             mob.hurt(amount, Source::Magic, None);

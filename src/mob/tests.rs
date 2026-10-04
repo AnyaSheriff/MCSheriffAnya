@@ -785,7 +785,7 @@ fn hostile_kinds_have_the_wiki_numbers() {
     assert_eq!((Kind::Creeper.width(), Kind::Creeper.height()), (0.6, 1.7));
     assert_eq!((Kind::Spider.width(), Kind::Spider.height()), (1.4, 0.9));
     assert_eq!((Kind::Zombie.java_type(), Kind::Skeleton.java_type(), Kind::Creeper.java_type(), Kind::Spider.java_type()), (150, 115, 32, 124));
-    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 7);
+    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 8);
     assert!(!Kind::Cow.hostile());
 }
 
@@ -1877,4 +1877,68 @@ fn a_villager_survives_the_chunk_file() {
     assert_eq!(back.kind, Kind::Villager);
     assert_eq!((back.villager.profession, back.villager.level), (9, 3));
     assert_eq!(back.villager.offers, mob.villager.offers);
+}
+
+/// Вылеченный зомби-житель: житель с теми же профессией и сделками; вылечивший
+/// получает репутацию, вид — равнинный (чёрный ящик, zombie-villager-cured).
+#[test]
+fn a_cured_zombie_villager_keeps_trades_and_remembers_its_healer() {
+    let mut rng = Rng::new(3);
+    let mut zombie = Mob::new(10, Kind::ZombieVillager, (1.5, 1.0, 1.5));
+
+    zombie.villager.profession = 5;
+    zombie.villager.kind = 6;
+    zombie.villager.level = 2;
+    zombie.villager.xp = 5;
+    zombie.villager.add_trades(1, &mut rng);
+    zombie.villager.converter = Some([4; 16]);
+    zombie.no_ai = true;
+
+    let offers = zombie.villager.offers.clone();
+    let villager = cure(&mut zombie, 11);
+
+    assert_eq!((villager.kind, villager.entity_id, villager.no_ai), (Kind::Villager, 11, true));
+    assert_eq!((villager.villager.profession, villager.villager.level, villager.villager.xp, villager.villager.kind), (5, 2, 5, crate::villager::PLAINS));
+    assert_eq!(villager.villager.offers, offers);
+    assert_eq!(villager.villager.gossip, vec![([4; 16], CURE_REPUTATION)]);
+    assert!(villager.villager.fresh_cure);
+}
+
+/// Зомби-житель записывается в файл и читается: профессия и счёт лечения целы.
+#[test]
+fn a_zombie_villager_survives_the_region_file() {
+    let mut zombie = Mob::new(10, Kind::ZombieVillager, (1.5, 1.0, 1.5));
+
+    zombie.villager.profession = 9;
+    zombie.villager.conversion = 777;
+
+    let mut bytes = Vec::new();
+
+    zombie.write(&mut bytes);
+
+    let back = Mob::read(&mut bytes.as_slice()).unwrap();
+
+    assert_eq!((back.kind, back.villager.profession, back.villager.conversion), (Kind::ZombieVillager, 9, 777));
+}
+
+/// Зомби идёт на жителя, когда игрока нет (вики, Zombie: цели — житель).
+#[test]
+fn a_zombie_without_players_walks_to_a_villager() {
+    let view = Flat::new();
+    let mut rng = Rng::new(1);
+    let mut zombie = Mob::new(1, Kind::Zombie, (0.5, 1.0, 0.5));
+    let mates = [ai::Mate { id: 2, kind: Kind::Villager, x: 6.5, y: 1.0, z: 0.5, love: 0, baby: false, ready: true }];
+    let ctx = ai::Ctx { players: &[], mates: &mates, difficulty: 2, sky: 0, sun_up: false };
+
+    zombie.on_ground = true;
+
+    for _ in 0..400 {
+        zombie.tick(&view, &ctx, &mut rng);
+
+        if zombie.h.target.is_some() {
+            break;
+        }
+    }
+
+    assert_eq!(zombie.h.target, Some(2));
 }

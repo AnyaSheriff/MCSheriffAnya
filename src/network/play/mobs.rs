@@ -82,7 +82,7 @@ fn attributes_at(kind: Kind) -> u64 {
 /// Шлются ли атрибуты сразу при появлении и ещё раз в первом прогоне
 /// слежения (чёрный ящик, zombie-hit и enderman-stand).
 fn attributes_at_spawn(kind: Kind) -> bool {
-    matches!(kind, Kind::Zombie | Kind::Enderman)
+    matches!(kind, Kind::Zombie | Kind::ZombieVillager | Kind::Enderman)
 }
 
 /// Меньшие сдвиги и перемены скорости не сообщаются.
@@ -173,7 +173,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
 
     // Частицы эффектов (10): у ведьмы — от выпитых зелий (чёрный ящик,
     // witch-stand: `10=[entity_effect]` в такте конца питья).
-    if matches!(mob.kind, Kind::Witch | Kind::Villager) {
+    if matches!(mob.kind, Kind::Witch | Kind::Villager | Kind::ZombieVillager) {
         let mut particles = Vec::new();
 
         super::vitals::push_effect_particles(&mut particles, &mob.vitals.effect_colors());
@@ -204,6 +204,19 @@ fn properties(mob: &Mob) -> Vec<Property> {
             out.push((19, TYPE_CHICKEN_SOUND, encode_varint(0)));
         }
         Kind::Zombie => out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())])),
+        // Зомби-житель (чёрный ящик, zombie-villager-stand/-cure): 19 — обращается,
+        // 20 — данные жителя, 21 — «villager_finalized».
+        Kind::ZombieVillager => {
+            let data = &mob.villager;
+            let mut value = encode_varint(i32::from(data.kind));
+
+            value.extend_from_slice(&encode_varint(i32::from(data.profession)));
+            value.extend_from_slice(&encode_varint(i32::from(data.level)));
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((19, TYPE_BOOL, vec![u8::from(data.conversion > 0)]));
+            out.push((20, TYPE_VILLAGER_DATA, value));
+            out.push((21, TYPE_BOOL, vec![u8::from(data.finalized)]));
+        }
         Kind::Skeleton => out.push((16, TYPE_BOOL, vec![0])),
         Kind::Creeper => {
             out.push((16, TYPE_INT, encode_varint(if mob.h.swell_dir == 0 { -1 } else { mob.h.swell_dir })));
@@ -270,6 +283,9 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (17 | 18, Kind::Enderman | Kind::Shulker | Kind::Witch) => value.iter().all(|byte| *byte == 0),
         // Житель по умолчанию — равнинный без профессии, новичок (чёрный ящик,
         // villager-shake: призванный без данных шлёт только 9 и 15).
+        (19, Kind::ZombieVillager) => value.as_slice() == [0],
+        (20, Kind::ZombieVillager) => value.as_slice() == [crate::villager::PLAINS, crate::villager::NONE, 1],
+        (21, Kind::ZombieVillager) => value.as_slice() == [0],
         (19, Kind::Villager) => value.as_slice() == [crate::villager::PLAINS, crate::villager::NONE, 1],
         (17 | 18 | 20, Kind::Villager) => value.iter().all(|byte| *byte == 0),
         (0 | 4 | 6 | 15 | 16, _) => value.iter().all(|byte| *byte == 0),
@@ -372,8 +388,11 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     // эндермен — «minecraft:attacking» +0,15; оба — сложением (чёрный ящик,
     // witch-stand, enderman-stare).
     let modifier = match mob.kind {
-        Kind::Witch if mob.h.drinking > 0 => Some(("minecraft:drinking", -0.25)),
-        Kind::Enderman if mob.h.target.is_some() => Some(("minecraft:attacking", crate::mob::hostile::ATTACKING_BONUS)),
+        Kind::Witch if mob.h.drinking > 0 => Some(("minecraft:drinking", -0.25, 0)),
+        Kind::Enderman if mob.h.target.is_some() => Some(("minecraft:attacking", crate::mob::hostile::ATTACKING_BONUS, 0)),
+        // Детёныш-зомби быстрее: «minecraft:baby» +50 % базы, операция 1
+        // (чёрный ящик, zombie-villager-stand).
+        Kind::Zombie | Kind::ZombieVillager if mob.is_baby() => Some(("minecraft:baby", 0.5, 1)),
         _ => None,
     };
 
@@ -382,13 +401,13 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
 }
 
 /// Модификаторы атрибута: ни одного или один (имя, прибавка, сложение).
-fn push_modifiers(body: &mut Vec<u8>, modifier: Option<(&str, f64)>) {
+fn push_modifiers(body: &mut Vec<u8>, modifier: Option<(&str, f64, u8)>) {
     match modifier {
-        Some((name, amount)) => {
+        Some((name, amount, operation)) => {
             body.extend_from_slice(&encode_varint(1));
             body.extend_from_slice(&encode_string(name));
             push_f64(body, amount);
-            body.push(0);
+            body.push(operation);
         }
         None => body.extend_from_slice(&encode_varint(0)),
     }
@@ -403,7 +422,7 @@ async fn send_shulker_armor(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<
     body.extend_from_slice(&encode_varint(1));
     body.extend_from_slice(&encode_varint(ATTRIBUTE_ARMOR));
     push_f64(&mut body, 0.0);
-    push_modifiers(&mut body, mob.h.covered.then_some(("minecraft:covered", 20.0)));
+    push_modifiers(&mut body, mob.h.covered.then_some(("minecraft:covered", 20.0, 0)));
     write_body(stream, body).await
 }
 
@@ -412,6 +431,7 @@ async fn send_shulker_armor(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<
 fn modded(mob: &Mob) -> bool {
     match mob.kind {
         Kind::Witch => mob.h.drinking > 0,
+        Kind::Zombie | Kind::ZombieVillager => mob.is_baby(),
         Kind::Enderman => mob.h.target.is_some(),
         Kind::Shulker => mob.h.peek == 0,
         _ => false,
