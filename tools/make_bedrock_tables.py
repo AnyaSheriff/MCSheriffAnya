@@ -31,6 +31,8 @@
 - src/bedrock/java_waterlogged.bin — по биту на состояние Java: есть ли в
   блоке вода (водоросли, морская трава, пузырьковый столб — всегда; прочее —
   при waterlogged=true). У Bedrock такая вода — второй слой подчанка;
+- src/bedrock/block_nbt.bin — имя и свойства каждого состояния Bedrock по
+  сетевому номеру (для блок-актора MovingBlock у поршней);
 - src/bedrock/tables.rs — номера биомов и прочие мелкие таблицы.
 """
 
@@ -166,6 +168,7 @@ def main():
 
     write_items()
     write_creative(mapping, states)
+    write_block_nbt(states)
     write_tables(len(states))
 
 
@@ -420,6 +423,48 @@ BIOME_ALIASES = {
 
 # Биомы Незера: в нашем реестре они идут после своих (`Biome::NETHER`).
 NETHER_BIOMES = ["nether_wastes", "crimson_forest", "warped_forest", "soul_sand_valley", "basalt_deltas"]
+
+
+def write_block_nbt(states):
+    """src/bedrock/block_nbt.bin — имя и свойства каждого состояния Bedrock по
+    сетевому номеру: блок, который едет по ходу поршня, клиенту описывают
+    именем и свойствами (блок-актор MovingBlock), а не номером.
+
+    Раскладка (little-endian): три таблицы строк (имена блоков, ключи
+    свойств, строковые значения) — u16 число, затем u8 длина и байты; потом
+    u32 число состояний и для каждого u16 имя, u8 число свойств и на каждое
+    свойство три байта: ключ, тип (1 byte, 3 int, 8 string), значение
+    (число или номер строки)."""
+    names, keys, texts = {}, {}, {}
+
+    def intern(table, text):
+        return table.setdefault(text, len(table))
+
+    body = bytearray()
+    body += struct.pack("<I", len(states))
+
+    for state in states:
+        props = sorted(state["states"].items())
+        body += struct.pack("<HB", intern(names, state["name"]), len(props))
+
+        for key, prop in props:
+            kind = {"byte": 1, "int": 3, "string": 8}[prop["type"]]
+            value = intern(texts, prop["value"]) if kind == 8 else int(prop["value"])
+            assert 0 <= value < 256, (state["name"], key, value)
+            body += bytes([intern(keys, key), kind, value])
+
+    head = bytearray()
+
+    for table in (names, keys, texts):
+        assert len(table) < 65536
+        head += struct.pack("<H", len(table))
+
+        for text in table:
+            raw = text.encode("utf8")
+            head += bytes([len(raw)]) + raw
+
+    (OUT / "block_nbt.bin").write_bytes(bytes(head) + bytes(body))
+    print(f"block_nbt.bin: {len(head) + len(body)} байт")
 
 
 def write_tables(state_count):

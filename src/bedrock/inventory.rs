@@ -233,6 +233,8 @@ pub struct Bag {
     /// Сделки открытого окна торговли (trade.rs) и та, что выбрана запросом.
     trade: Vec<super::trade::Price>,
     trade_pick: Option<usize>,
+    /// Сколько сделок в запросе (пачка по Shift).
+    trade_times: i32,
 }
 
 /// Станок, открытый у игрока.
@@ -311,6 +313,7 @@ impl Bag {
             offers: None,
             trade: Vec::new(),
             trade_pick: None,
+            trade_times: 1,
         };
 
         for slot in 0..crate::inventory::SLOTS as i32 {
@@ -449,6 +452,11 @@ impl Bag {
     pub fn open_station(&mut self, station: Station) {
         self.station = Some(station);
         self.offers = None;
+    }
+
+    /// Есть ли у сделки запас — перед тем, как посчитать очередную сделку пачки.
+    pub fn trade_stocked(&self, index: usize) -> bool {
+        self.trade.get(index).is_none_or(|price| price.stocked)
     }
 
     /// Сделки открытого окна торговли: что житель просит и что отдаёт.
@@ -735,6 +743,7 @@ impl Bag {
         self.smithing = None;
         self.recipe = None;
         self.trade_pick = None;
+        self.trade_times = 1;
 
         if tail { Parsed::Whole } else { Parsed::Broken }
     }
@@ -995,29 +1004,43 @@ impl Bag {
     /// Сделка с жителем: «рецепт» — номер сделки из Update Trade (`netId`).
     /// Итог рождается в выходе, оплата в ячейках должна покрывать цену —
     /// расходует её сам запрос (consume), сверка — в `finish_station`.
+    /// Пачка по Shift — тот же запрос с `times` > 1 (BDS принимает, запись
+    /// tmp/br-polish/bds-tr2.jsonl): итог и оплата умножаются, а каждая
+    /// сделка потом считается отдельно (`Event::Traded` на каждую). Больше,
+    /// чем хватает запаса или оплаты, клиент не просит; если просит — отказ.
     fn trade_recipe(&mut self, id: u32, times: i32) -> bool {
         let Some(index) = self.trade.iter().position(|price| price.net_id == id) else {
             return false;
         };
         let price = &self.trade[index];
 
-        // Торговля пачкой (Shift) у клиента — несколько запросов по одному [проверить].
-        if times != 1 || !price.stocked {
+        if times < 1 || !price.stocked {
             return false;
         }
 
         let (first, second) = (self.get(Place::Ui(stations::UI_TRADE_FIRST)), self.get(Place::Ui(stations::UI_TRADE_SECOND)));
 
-        if !price.paid_by(first, second) {
+        if times > price.left || !price.paid_times(first, second, times) {
             return false;
         }
 
+        // Итог пачки — одна стопка: больше предел стопки не вместит.
         let sell = price.sell;
+        let total = sell.count.saturating_mul(times);
+
+        if total > blocks::stack_size(sell.item) {
+            return false;
+        }
 
         self.trade_pick = Some(index);
+        self.trade_times = times;
         self.craft_ready = true;
-        self.set(Place::CreativeOutput, Some(sell));
-        self.events.push(Event::Traded(index));
+        self.set(Place::CreativeOutput, Some(sell.with_count(total)));
+
+        for _ in 0..times {
+            self.events.push(Event::Traded(index));
+        }
+
         true
     }
 
@@ -1164,7 +1187,7 @@ impl Bag {
                 return false;
             };
 
-            if self.get(Place::CreativeOutput).is_some() || !price.covers(&self.consumed) {
+            if self.get(Place::CreativeOutput).is_some() || !price.covers_times(&self.consumed, self.trade_times) {
                 return false;
             }
         }
@@ -2196,7 +2219,7 @@ mod tests {
 
         bag.inventory.set(FIRST_HOTBAR, Some(item("paper", 40)));
         bag.open_station(Station { kind: stations::Kind::Trading, pos: (7, 0, 0), seed: 0, shelves: 0 });
-        bag.set_trade(vec![crate::bedrock::trade::Price { net_id: 3000, a: (paper.item, 24), b: None, sell: emerald, stocked: true }]);
+        bag.set_trade(vec![crate::bedrock::trade::Price { net_id: 3000, a: (paper.item, 24), b: None, sell: emerald, stocked: true, left: 16 }]);
         (bag, 3000)
     }
 
@@ -2235,6 +2258,55 @@ mod tests {
         assert_eq!(handled.response[1], 1);
     }
 
+    /// Пачка по Shift: два раза по 24 бумаги за изумруд одним запросом.
+    fn batch_request(bag: &mut Bag, net_id: u32, times: u8, spend: u8, take: u8) -> Handled {
+        let payload = request(-3, 4, |out| {
+            out.u8(12).varint(net_id).u8(times);
+            out.u8(19).varint(0).u8(times);
+            consume_action(out, spend, stations::TRADE2_INGREDIENT1, stations::UI_TRADE_FIRST);
+            out.u8(0).u8(take);
+            slot(out, CREATIVE_OUTPUT, 50);
+            slot(out, HOTBAR_AND_INVENTORY, 8);
+        });
+
+        bag.handle_requests(&payload, false)
+    }
+
+    #[test]
+    fn a_shift_click_batch_pays_and_settles_each_trade() {
+        let (mut bag, id) = trading_bag();
+
+        bag.inventory.set(FIRST_HOTBAR, Some(item("paper", 64)));
+        bag.set(Place::Ui(stations::UI_TRADE_FIRST), Some(item("paper", 48)));
+
+        let handled = batch_request(&mut bag, id, 2, 48, 2);
+
+        // Каждая сделка — своё событие, итог — одна стопка из двух.
+        assert_eq!(handled.events, vec![Event::Traded(0), Event::Traded(0)]);
+        assert_eq!(bag.get(Place::Ui(stations::UI_TRADE_FIRST)), None);
+        assert_eq!(bag.inventory.slot(FIRST_HOTBAR + 8), Some(item("emerald", 2)));
+    }
+
+    #[test]
+    fn a_batch_beyond_the_stock_or_the_payment_is_refused() {
+        let (mut bag, id) = trading_bag();
+
+        // Оплаты на полторы сделки: две не проходят, ничего не меняется.
+        bag.set(Place::Ui(stations::UI_TRADE_FIRST), Some(item("paper", 36)));
+        assert!(batch_request(&mut bag, id, 2, 36, 2).events.is_empty());
+        assert_eq!(bag.get(Place::Ui(stations::UI_TRADE_FIRST)), Some(item("paper", 36)));
+        assert_eq!(bag.inventory.slot(FIRST_HOTBAR + 8), None);
+
+        // Запаса на одну: две не проходят, хотя оплаты хватает.
+        bag.set(Place::Ui(stations::UI_TRADE_FIRST), Some(item("paper", 48)));
+        bag.set_trade(vec![crate::bedrock::trade::Price { net_id: id, a: (item("paper", 1).item, 24), b: None, sell: item("emerald", 1), stocked: true, left: 1 }]);
+        assert!(batch_request(&mut bag, id, 2, 48, 2).events.is_empty());
+        assert_eq!(bag.get(Place::Ui(stations::UI_TRADE_FIRST)), Some(item("paper", 48)));
+
+        // Одна из одной проходит.
+        assert_eq!(batch_request(&mut bag, id, 1, 24, 1).events, vec![Event::Traded(0)]);
+    }
+
     #[test]
     fn an_underpaid_or_unknown_trade_changes_nothing() {
         let (mut bag, id) = trading_bag();
@@ -2261,7 +2333,7 @@ mod tests {
         let (mut bag, id) = trading_bag();
 
         bag.set(Place::Ui(stations::UI_TRADE_FIRST), Some(item("paper", 24)));
-        bag.set_trade(vec![crate::bedrock::trade::Price { net_id: id, a: (item("paper", 1).item, 24), b: None, sell: item("emerald", 1), stocked: false }]);
+        bag.set_trade(vec![crate::bedrock::trade::Price { net_id: id, a: (item("paper", 1).item, 24), b: None, sell: item("emerald", 1), stocked: false, left: 0 }]);
         assert!(trade_request(&mut bag, id, 24).events.is_empty());
 
         let (overflow, changed) = bag.close_station();

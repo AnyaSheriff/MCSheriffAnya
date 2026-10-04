@@ -33,6 +33,7 @@ const TYPE_SHORT: u32 = 1;
 const TYPE_INT: u32 = 2;
 const TYPE_FLOAT: u32 = 3;
 const TYPE_STRING: u32 = 4;
+const TYPE_COMPOUND: u32 = 5;
 const TYPE_LONG: u32 = 7;
 
 /// Биты флагов (MetadataFlags1).
@@ -135,6 +136,8 @@ pub enum Value {
     Float(f32),
     Str(String),
     Long(i64),
+    /// Составной тег (сетевой NBT с корнем без имени): данные фейерверка.
+    Nbt(Vec<u8>),
 }
 
 /// Флаги живого моба: то, что BDS ставит всем (лазит, сталкивается, падает,
@@ -196,6 +199,7 @@ pub fn write(out: &mut Out, list: &[(u32, Value)]) {
             Value::Float(float) => out.varint(TYPE_FLOAT).lf32(*float),
             Value::Str(text) => out.varint(TYPE_STRING).string(text),
             Value::Long(long) => out.varint(TYPE_LONG).zigzag64(*long),
+            Value::Nbt(bytes) => out.varint(TYPE_COMPOUND).raw(bytes),
         };
     }
 }

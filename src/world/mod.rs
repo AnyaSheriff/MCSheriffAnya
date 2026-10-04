@@ -112,6 +112,28 @@ pub struct BlockAction {
     pub block: i32,
 }
 
+/// Едущий блок: откуда, куда, состояние Java.
+pub type PistonCargo = ((i32, i32, i32), (i32, i32, i32), i32);
+
+/// Ход поршня, как его видит Bedrock: у Java клиент рисует ход сам по
+/// Block Action, а Bedrock нужно сказать, какие блоки едут, откуда и куда.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PistonMove {
+    /// Основание поршня.
+    pub base: (i32, i32, i32),
+    pub extending: bool,
+
+    /// Липкий ли поршень (основание, не «бросивший блок»).
+    pub sticky: bool,
+
+    /// Клетка головы и состояние головы Java, если она встаёт (выдвигание).
+    pub head: (i32, i32, i32),
+    pub head_state: Option<i32>,
+
+    /// Едущие блоки, дальний от поршня первым: откуда, куда, состояние Java.
+    pub cargo: Vec<PistonCargo>,
+}
+
 /// Звук в точке мира: щелчок рычага, ход поршня.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WorldSound {
@@ -155,6 +177,10 @@ pub enum WorldEvent {
     BossBar(Option<f32>),
     Change(BlockChange),
     Action(BlockAction),
+
+    /// Ход поршня начался (сразу после его Block Action): для Bedrock, у
+    /// которого поршень и едущие блоки — блок-акторы (bedrock/pistons.rs).
+    Piston(std::sync::Arc<PistonMove>),
 
     /// Звук, который слышно в этом месте.
     Sound(WorldSound),
@@ -2743,6 +2769,11 @@ impl World {
     #[cfg(test)]
     pub fn watch_actions(&mut self, reader: journal::Reader) -> usize {
         self.watch_events(reader)
+    }
+
+    /// Сообщает клиентам Bedrock, какие блоки едут по ходу поршня.
+    pub fn note_piston_move(&mut self, piston: PistonMove) {
+        self.events.push(WorldEvent::Piston(std::sync::Arc::new(piston)));
     }
 
     /// Сообщает всем клиентам о действии блока.

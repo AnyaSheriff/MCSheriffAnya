@@ -633,6 +633,19 @@ pub fn item_nbt(stack: &Stack) -> Option<Vec<u8>> {
         .filter_map(|&(number, level)| Some((bedrock_enchantment(crate::stackdata::ENCHANTMENTS.get(usize::from(number))?.0)?, level)))
         .collect();
 
+    // Ракета фейерверка всегда с тегом `Fireworks` (у BDS и простая: пустой
+    // список взрывов и `Flight` 1), звезда — `FireworksItem` и `customColor`
+    // (things.rs, творческое меню BDS).
+    match crate::combat::item_name(stack.item) {
+        Some("firework_rocket") => return Some(super::things::rocket_tag(&data.rocket(), super::things::NbtStyle::Little)),
+        Some("firework_star") => {
+            if let Some(explosion) = &data.explosion {
+                return Some(super::things::star_tag(explosion, super::things::NbtStyle::Little));
+            }
+        }
+        _ => {}
+    }
+
     if enchants.is_empty() && data.damage == 0 && data.repair_cost == 0 && data.name.is_none() && data.trim.is_none() {
         return None;
     }

@@ -76,6 +76,15 @@ const JAVA_BONE_MEAL: i32 = crate::farming::BONE_MEAL_EVENT;
 /// События мира Java: 2001 — блок сломан (данные — состояние блока),
 /// 2002 — зелье разбилось (данные — цвет).
 const JAVA_BLOCK_BREAK: i32 = 2001;
+/// Наковальня (вики, World Event): сломалась 1029, работает 1030, упала 1031.
+/// У Bedrock — LevelEvent 1020 `sound_anvil_break`, 1021 `sound_anvil_use`,
+/// 1022 `sound_anvil_fall`.
+const JAVA_ANVIL_BREAK: i32 = 1029;
+const JAVA_ANVIL_USE: i32 = 1030;
+const JAVA_ANVIL_LAND: i32 = 1031;
+const EVENT_ANVIL_BREAK: i32 = 1020;
+const EVENT_ANVIL_USE: i32 = 1021;
+const EVENT_ANVIL_FALL: i32 = 1022;
 const JAVA_POTION_SPLASH: i32 = 2002;
 
 /// Level Event: событие, место, число.
@@ -290,6 +299,13 @@ pub fn level_packets(x: i32, y: i32, z: i32, effect: i32, data: i32) -> Vec<Vec<
 
     match effect {
         JAVA_BONE_MEAL => vec![level_event(PARTICLE_CROP_GROWTH, centre, data)],
+        // Упавшая наковальня: BDS шлёт LevelEvent 1022 с данными 0 в клетке,
+        // куда она встала (чёрный ящик, tmp/br-polish/bds-af*.jsonl: место —
+        // угол блока). Работа и поломка — те же имена событий Bedrock,
+        // у BDS не снято [проверить].
+        JAVA_ANVIL_LAND => vec![level_event(EVENT_ANVIL_FALL, (x as f32, y as f32, z as f32), 0)],
+        JAVA_ANVIL_USE => vec![level_event(EVENT_ANVIL_USE, (x as f32, y as f32, z as f32), 0)],
+        JAVA_ANVIL_BREAK => vec![level_event(EVENT_ANVIL_BREAK, (x as f32, y as f32, z as f32), 0)],
         // Блок сломан: частицы с его номером Bedrock (звук поломки клиент
         // играет по ним сам; BDS шлёт их и тому, кто сломал).
         JAVA_BLOCK_BREAK => vec![level_event(EVENT_PARTICLE_DESTROY, centre, super::world::bedrock_state(data) as i32)],
@@ -391,6 +407,16 @@ mod tests {
 
         assert_eq!(In::new(body).zigzag32(), Some(PARTICLE_CROP_GROWTH));
         assert!(level_packets(1, 2, 3, 1000, 0).is_empty());
+
+        // Упавшая наковальня — LevelEvent 1022 на углу блока, данные 0 (BDS).
+        let landed = level_packets(1, 2, 3, 1031, 0);
+
+        assert_eq!(landed.len(), 1);
+
+        let (id, body) = packet_id(&landed[0]).expect("пакет");
+
+        assert_eq!(id, LEVEL_EVENT);
+        assert_eq!(In::new(body).zigzag32(), Some(1022));
     }
 
     #[test]

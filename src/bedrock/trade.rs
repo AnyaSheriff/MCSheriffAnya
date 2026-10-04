@@ -21,7 +21,15 @@
 // - после сделки сервер шлёт шарики опыта, звук `HaggleYes` и Set Actor Data
 //   жителя с `trade_experience` (ключ 103); на десятом очке опыта у новичка —
 //   `trade_tier` 1 сразу; Update Trade заново не шлётся;
-// - закрытие: сервер отвечает только `trading_player_eid` = 0.
+// - закрытие: сервер отвечает только `trading_player_eid` = 0;
+// - пачка (Shift): тот же запрос с `craft_recipe` `times_crafted` = N —
+//   оплата N·цена в ячейке, `results_deprecated` и `take` на N итогов
+//   (запись tmp/br-polish/bds-tr2.jsonl, 2 сделки по 24 бумаги за изумруд:
+//   ответ «ok», в курсоре 2 изумруда, одно `HaggleYes`, опыт жителя
+//   `trade_experience` 4 одним сообщением, опыт игроку одним взрывом из
+//   трёх шариков 1+1+7). Сервер при этом считает каждую сделку по очереди
+//   общим кодом (`Event::Traded` на каждую), останавливаясь, когда запас
+//   кончился;
 //
 // Что не сверено, помечено «[проверить]».
 
@@ -54,6 +62,8 @@ pub struct Price {
     pub b: Option<(i32, i32)>,
     pub sell: Stack,
     pub stocked: bool,
+    /// Сколько сделок ещё можно сделать до конца запаса.
+    pub left: i32,
 }
 
 impl Price {
@@ -64,15 +74,22 @@ impl Price {
             b: offer.buy_b.map(|stack| (stack.item, stack.count)),
             sell: offer.sell,
             stocked: !offer.out_of_stock(),
+            left: (offer.max_uses - offer.uses).max(0),
         }
     }
 
     /// Хватает ли оплаты в двух ячейках — в этом порядке или наоборот
     /// (как `Merchant::matching` у Java).
+    #[cfg(test)]
     pub fn paid_by(&self, first: Option<Stack>, second: Option<Stack>) -> bool {
+        self.paid_times(first, second, 1)
+    }
+
+    /// То же для пачки из `times` сделок: нужно `times` цен.
+    pub fn paid_times(&self, first: Option<Stack>, second: Option<Stack>, times: i32) -> bool {
         let fits = |want: Option<(i32, i32)>, have: Option<Stack>| match (want, have) {
             (None, _) => true,
-            (Some((item, count)), Some(have)) => have.item == item && have.count >= count,
+            (Some((item, count)), Some(have)) => have.item == item && have.count >= count.saturating_mul(times),
             (Some(_), None) => false,
         };
 
@@ -81,16 +98,22 @@ impl Price {
 
     /// Израсходовано ли ровно столько, сколько стоит сделка, и только из
     /// ячеек интерфейса: (предмет, сколько, из интерфейса ли).
+    #[cfg(test)]
     pub fn covers(&self, consumed: &[(i32, i32, bool)]) -> bool {
+        self.covers_times(consumed, 1)
+    }
+
+    /// То же для пачки из `times` сделок.
+    pub fn covers_times(&self, consumed: &[(i32, i32, bool)], times: i32) -> bool {
         if consumed.iter().any(|&(_, _, in_ui)| !in_ui) {
             return false;
         }
 
-        let mut want: Vec<(i32, i32)> = vec![self.a];
+        let mut want: Vec<(i32, i32)> = vec![(self.a.0, self.a.1.saturating_mul(times))];
 
         match (self.b, want.iter_mut().find(|(item, _)| Some(*item) == self.b.map(|b| b.0))) {
-            (Some((_, count)), Some(same)) => same.1 += count,
-            (Some(extra), None) => want.push(extra),
+            (Some((_, count)), Some(same)) => same.1 += count.saturating_mul(times),
+            (Some((item, count)), None) => want.push((item, count.saturating_mul(times))),
             (None, _) => {}
         }
 
@@ -332,6 +355,35 @@ mod tests {
         assert!(!price.covers(&[(e, 7, true)]));
         assert!(!price.covers(&[(e, 7, true), (b, 1, false)]));
         assert!(!price.covers(&[(e, 7, true), (b, 1, true), (e, 1, true)]));
+    }
+
+    #[test]
+    fn a_batch_needs_the_price_times_over() {
+        let mut state = state();
+
+        state.offers[0].uses = 14;
+
+        let price = &prices(&state)[0];
+        let paper = |count| Some(Stack::new(state.offers[0].buy.item, count));
+        let cost = price.a.1;
+
+        // Запаса на две сделки (16 − 14); оплаты на две хватает, на меньше — нет.
+        assert_eq!(price.left, 2);
+        assert!(price.paid_times(paper(cost * 2), None, 2));
+        assert!(!price.paid_times(paper(cost * 2 - 1), None, 2));
+        assert!(price.paid_times(paper(cost + 1), None, 1));
+        assert!(!price.paid_times(paper(cost - 1), None, 1));
+    }
+
+    #[test]
+    fn a_batch_must_consume_exactly_the_price_times_over() {
+        let state = state();
+        let price = &prices(&state)[1];
+        let (e, b) = (state.offers[1].buy.item, state.offers[1].buy_b.expect("вторая оплата").item);
+
+        assert!(price.covers_times(&[(e, 14, true), (b, 2, true)], 2));
+        assert!(!price.covers_times(&[(e, 7, true), (b, 1, true)], 2));
+        assert!(!price.covers_times(&[(e, 14, true), (b, 1, true)], 2));
     }
 
     #[test]

@@ -47,6 +47,10 @@ pub(crate) enum Act<'a> {
     Tick,
     /// Удар игрока по этому игроку (из журнала мира): щит, броня, отдача.
     Struck(&'a PlayerStrike),
+    /// Предмет в руке щёлкнут по блоку: ракета фейерверка летит из точки
+    /// щелчка `at` от грани `face` (тот же пуск, что у Java; тратится не в
+    /// творческом режиме).
+    UseOnBlock { at: (f64, f64, f64), face: i32 },
 }
 
 /// Что изменилось после действия.
@@ -127,6 +131,14 @@ impl Body {
 
                 done.open_cart = reaction.open_cart;
                 done.open_merchant = reaction.open_merchant;
+            }
+            Act::UseOnBlock { at, face } => {
+                if super::thrown::launch_rocket(shared, p, at, face)
+                    && p.game_mode != crate::commands::GAME_MODE_CREATIVE
+                    && let Some(slot) = p.inventory.spend_held()
+                {
+                    done.slots.push(slot);
+                }
             }
             Act::Use(hand) => {
                 // Новая правая кнопка — старое натяжение, раз оно не

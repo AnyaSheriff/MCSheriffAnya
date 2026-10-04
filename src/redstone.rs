@@ -3299,6 +3299,30 @@ pub fn block_event(world: &mut World, pos: Pos, kind: u8, param: u8) {
         set_moved(world, pos, state);
     }
 
+    // Bedrock рисует ход блок-акторами: ему отдельно говорим, какие блоки
+    // едут (src/bedrock/pistons.rs).
+    let step_back = if extending { facing.opposite() } else { facing };
+    let head_state = extending
+        .then(|| {
+            blocks::orientation("piston_head").and_then(|head| {
+                head.state(&[
+                    ("facing", facing.name()),
+                    ("type", if block.name.starts_with("sticky") { "sticky" } else { "normal" }),
+                    ("short", "false"),
+                ])
+            })
+        })
+        .flatten();
+
+    world.note_piston_move(crate::world::PistonMove {
+        base: pos,
+        extending,
+        sticky: block.name.starts_with("sticky"),
+        head: moving.head,
+        head_state,
+        cargo: moving.cargo.iter().rev().map(|(place, state)| (step(*place, step_back), *place, *state)).collect(),
+    });
+
     let mut moving = moving;
 
     moving.due = world.tick() + PISTON_MOVE;

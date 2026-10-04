@@ -3977,6 +3977,8 @@ async fn send_pending_world_events(
                     send_block_entity(stream, (x, y, z), kind, &nbt).await?;
                 }
             }
+            // Ход поршня для Bedrock: у Java клиент рисует его по Block Action.
+            WorldEvent::Piston(_) => {}
             WorldEvent::BlockEntity { x, y, z, kind, nbt } => entities.push((*x, *y, *z, *kind, nbt.clone())),
             WorldEvent::Action(action) => {
                 let mut body = encode_varint(BLOCK_ACTION);

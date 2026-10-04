@@ -351,6 +351,11 @@ pub struct BedrockWorld {
     /// Оригинал повторяет крышку раз в 5 тактов — клиенту уходит только
     /// перемена.
     lids: HashMap<(i32, i32, i32), bool>,
+    /// Ходы поршней в пути: номер такта, когда они кончатся, и сам ход —
+    /// изменения блоков в их клетках клиенту не шлются (pistons.rs).
+    piston_moves: Vec<(u64, std::sync::Arc<crate::world::PistonMove>)>,
+    /// Пакеты хода поршня, ждущие своего такта: конец хода и настоящие блоки.
+    piston_later: Vec<(u64, Vec<Vec<u8>>)>,
     /// Блок, по которому последний щелчок сработал как действие (рычаг,
     /// сундук): повторы щелчка по нему, пока кнопка зажата, пропускаются.
     last_use: Option<(i32, i32, i32)>,
@@ -618,6 +623,8 @@ impl BedrockWorld {
             next_window: 0,
             resync_window: false,
             lids: HashMap::new(),
+            piston_moves: Vec::new(),
+            piston_later: Vec::new(),
             last_use: None,
             health,
         };
@@ -1083,6 +1090,8 @@ impl BedrockWorld {
         self.sent.clear();
         self.loading.clear();
         self.lids.clear();
+        self.piston_moves.clear();
+        self.piston_later.clear();
         self.frames_at.clear();
         self.published = None;
         self.in_portal = 0;
@@ -1322,7 +1331,7 @@ impl BedrockWorld {
             (changes, carts, frames, (mobs, arrows, primed, things))
         };
         let (changes, carts, frames, (mobs, arrows, primed, mut things)) = changes;
-        let mut firework_blasts = Vec::new();
+        let mut firework_blasts: Vec<(i32, crate::stackdata::Fireworks)> = Vec::new();
 
         // Снаряды: захват после предметов (как у стрел).
         {
@@ -1356,11 +1365,11 @@ impl BedrockWorld {
             }
 
             for rocket in thrown.rockets.iter().filter(|rocket| rocket.dimension == self.dimension && near(rocket.x, rocket.z)) {
-                things.push(super::things::rocket(rocket.entity_id, (rocket.x, rocket.y, rocket.z), (rocket.vx, rocket.vy, rocket.vz)));
+                things.push(super::things::rocket(rocket.entity_id, (rocket.x, rocket.y, rocket.z), (rocket.vx, rocket.vy, rocket.vz), &rocket.fireworks));
             }
 
             for blast in thrown.blasts.iter().filter(|blast| blast.dimension == self.dimension) {
-                firework_blasts.push(blast.rocket);
+                firework_blasts.push((blast.rocket, blast.last.fireworks.clone()));
             }
         }
         let mut vanished = Vec::new();
@@ -1446,9 +1455,12 @@ impl BedrockWorld {
         self.show_arrows(arrows, packets);
 
         // Взрыв ракеты: событие — до того, как ракета пропадёт из списка.
-        for rocket in firework_blasts {
+        // Как у BDS: событие 25, следом данные ракеты (по ним клиент рисует
+        // цвета, форму, след и мерцание), и только потом ракета уходит.
+        for (rocket, fireworks) in firework_blasts {
             if self.items_shown.contains(&rocket) {
                 packets.push(health::actor_event(rocket as u64, super::things::EVENT_FIREWORK_PARTICLES));
+                packets.push(super::things::rocket_data_packet(rocket, &fireworks));
             }
         }
 
@@ -1815,6 +1827,11 @@ impl BedrockWorld {
             return;
         }
 
+        // Ракета фейерверка в руке летит из точки щелчка (Java: тот же пуск).
+        if kind == CLICK && action.trigger != SIMULATION_TICK && self.launch_rocket(connection, &action) {
+            return;
+        }
+
         let target = if kind == BREAK { action.position } else { offset(action.position, action.face) };
         let mut world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
 
@@ -2155,7 +2172,33 @@ impl BedrockWorld {
         }
     }
 
-    /// Кнопка отпущена (Inventory Transaction, ItemRelease): лук спущен,
+    /// Ракета фейерверка щёлкнута по блоку: пуск общим кодом. Точка щелчка —
+    /// угол блока плюс доля грани, которую прислал клиент. true — пущена.
+    fn launch_rocket(&mut self, connection: &Connection, action: &ItemUse) -> bool {
+        if self.game_mode == crate::commands::GAME_MODE_SPECTATOR || self.health.vit.dead || self.changing.is_some() {
+            return false;
+        }
+
+        if self.bag.inventory.held().and_then(|stack| crate::combat::item_name(stack.item)) != Some("firework_rocket") {
+            return false;
+        }
+
+        let (x, y, z) = action.position;
+        let at = (f64::from(x) + f64::from(action.click.0), f64::from(y) + f64::from(action.click.1), f64::from(z) + f64::from(action.click.2));
+        let done = self.run(crate::network::play::Act::UseOnBlock { at, face: action.face });
+        let launched = !done.slots.is_empty() || self.game_mode == crate::commands::GAME_MODE_CREATIVE;
+        let mut packets = Vec::new();
+
+        self.settle(done, &mut packets);
+
+        if !packets.is_empty() {
+            connection.send(&packets);
+        }
+
+        launched
+    }
+
+    /// Кнопка отпущена (Inventory Transaction, ItemRelease)    /// Кнопка отпущена (Inventory Transaction, ItemRelease): лук спущен,
     /// еда доедена или прервана.
     fn release_item(&mut self, connection: &Connection) {
         if self.health.vit.dead || self.changing.is_some() {
@@ -2618,6 +2661,11 @@ impl BedrockWorld {
                     let Some(villager) = self.bag.station.filter(|station| station.kind == stations::Kind::Trading).map(|station| station.pos.0) else {
                         continue;
                     };
+
+                    // Пачка по Shift — сделки одна за другой: кончился запас — стоп.
+                    if !self.bag.trade_stocked(index) {
+                        continue;
+                    }
 
                     // Счёт, опыт, звук и шарик — общий код Java (merchant.rs).
                     crate::network::play::trade_paid(&self.shared, self.dimension, villager, index);
@@ -3374,6 +3422,7 @@ impl BedrockWorld {
         let mut under_frames = Vec::new();
         let mut contents = false;
         let mut late_sounds = Vec::new();
+        let mut held_piston_sound = None;
 
         for event in events {
             match event {
@@ -3383,6 +3432,12 @@ impl BedrockWorld {
                     // В клетке рамки у клиента блок рамки — мир там не показываем.
                     if self.frames_at.values().any(|place| *place == (change.x, change.y, change.z)) {
                         under_frames.push((change.x, change.y, change.z));
+                        continue;
+                    }
+
+                    // Ход поршня клиенту рисуют свои пакеты (pistons.rs): блоки
+                    // хода, голову и покой основания отдельно не шлём.
+                    if self.piston_moves.iter().any(|(_, mv)| super::pistons::hides(mv, (change.x, change.y, change.z), change.state)) {
                         continue;
                     }
 
@@ -3433,6 +3488,38 @@ impl BedrockWorld {
                 WorldEvent::Level { x, y, z, effect, data } if self.within_earshot(f64::from(x), f64::from(z)) => {
                     packets.extend(super::effects::level_packets(x, y, z, effect, data));
                 }
+                // Звук поршня идёт у BDS не в начале хода, а в его конце, вместе с
+                // последним состоянием актора: придерживаем до сообщения о ходе.
+                WorldEvent::Sound(sound) if is_piston_sound(sound.name) && self.within_earshot(f64::from(sound.x), f64::from(sound.z)) => {
+                    held_piston_sound = Some(sound);
+                }
+                // Ход поршня: актор в пути и блоки хода сейчас, конец и
+                // настоящие блоки — на следующих тактах (pistons.rs).
+                WorldEvent::Piston(mv)
+                    if self.within_earshot(f64::from(mv.base.0), f64::from(mv.base.2)) && heights(self.dimension).contains(&mv.base.1) =>
+                {
+                    packets.extend(super::pistons::start_packets(&mv));
+
+                    let mut end = Vec::new();
+
+                    // Сперва звук (у BDS «PistonOut» и «PistonIn» на углу блока), потом актор.
+                    if let Some(sound) = held_piston_sound.take() {
+                        let corner = (f64::from(sound.x), f64::from(sound.y), f64::from(sound.z));
+
+                        end.extend(self.sound_packets(&crate::world::WorldSound { exact: Some(corner), ..sound }));
+                    }
+
+                    end.extend(super::pistons::end_packets(&mv));
+                    self.piston_later.push((self.ticks + super::pistons::END_AFTER, end));
+
+                    let last = self.ticks + super::pistons::FINAL_AFTER;
+
+                    if !mv.cargo.is_empty() {
+                        self.piston_later.push((last, super::pistons::final_packets(&mv)));
+                    }
+
+                    self.piston_moves.push((last + 2, mv));
+                }
                 WorldEvent::Sound(sound) if self.within_earshot(f64::from(sound.x), f64::from(sound.z)) => {
                     // Звук крышки — после самого движения крышки: BDS шлёт сперва
                     // Block Event, потом звук (чёрный ящик, tmp/br-sounds).
@@ -3479,6 +3566,22 @@ impl BedrockWorld {
                 WorldEvent::PotionHeal { entity_id, amount } if entity_id == self.runtime_id as i32 => self.health.vit.heal(amount),
                 _ => {}
             }
+        }
+
+        // Звук поршня, о ходе которого сообщения не было, — как есть.
+        if let Some(sound) = held_piston_sound {
+            packets.extend(self.sound_packets(&sound));
+        }
+
+        // Пакеты хода поршня, чей такт пришёл.
+        if !self.piston_later.is_empty() || !self.piston_moves.is_empty() {
+            let now = self.ticks;
+
+            for (_, due) in self.piston_later.extract_if(.., |(when, _)| *when <= now) {
+                packets.extend(due);
+            }
+
+            self.piston_moves.retain(|(until, _)| *until >= now);
         }
 
         packets.extend(late_sounds);
@@ -3866,6 +3969,11 @@ fn distance(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
 
 fn distance_f32(a: (f32, f32, f32), b: (f32, f32, f32)) -> f64 {
     distance((a.0 as f64, a.1 as f64, a.2 as f64), (b.0 as f64, b.1 as f64, b.2 as f64))
+}
+
+/// Звук хода поршня: у BDS он идёт в конце хода (pistons.rs).
+fn is_piston_sound(name: &str) -> bool {
+    matches!(name, "minecraft:block.piston.extend" | "minecraft:block.piston.contract")
 }
 
 /// Блоки, которые в выживании не ломаются (прочность −1 на minecraft.wiki).
@@ -4794,6 +4902,8 @@ struct ItemUse {
     held: Option<Held>,
     /// Высота точки щелчка внутри блока (0 — низ, 1 — верх).
     click_y: f32,
+    /// Точка щелчка внутри блока целиком (доли грани).
+    click: (f32, f32, f32),
 }
 
 /// Предмет в руке, как его описал клиент.
@@ -4952,8 +5062,8 @@ fn read_input_actions(reader: &mut In, bag: &mut Bag, creative: bool) -> Input {
                     // «Предсказал поломку» — клиент докопал. Творческий режим
                     // ломает с первого удара: такие отмечены отдельно.
                     match action {
-                        26 => found.push(ItemUse { kind: BREAK, trigger: 0, position, face, held: None, click_y: 0.0 }),
-                        0 => found.push(ItemUse { kind: START_BREAK, trigger: 0, position, face, held: None, click_y: 0.0 }),
+                        26 => found.push(ItemUse { kind: BREAK, trigger: 0, position, face, held: None, click_y: 0.0, click: (0.0, 0.0, 0.0) }),
+                        0 => found.push(ItemUse { kind: START_BREAK, trigger: 0, position, face, held: None, click_y: 0.0, click: (0.0, 0.0, 0.0) }),
                         _ => {}
                     }
                 }
@@ -5062,7 +5172,7 @@ fn read_use(reader: &mut In) -> Option<ItemUse> {
     let _prediction = reader.varint()?;
     let _cooldown = reader.u8()?;
 
-    Some(ItemUse { kind, trigger, position, face, held, click_y: click.1 })
+    Some(ItemUse { kind, trigger, position, face, held, click_y: click.1, click })
 }
 
 #[cfg(test)]
