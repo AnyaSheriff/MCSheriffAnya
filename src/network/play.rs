@@ -1510,6 +1510,7 @@ fn pick_up_items(shared: &Shared, player: &mut PlayerState) -> Vec<i32> {
         });
 
     for item in taken {
+        player.progress.picked_up(item.stack.item, item.stack.count);
         log_debug!(
             "Play: {} поднял предмет {} ({} шт.)",
             player.name,
@@ -4243,6 +4244,21 @@ async fn open_window(
         return Ok(());
     };
 
+    // Статистика открытий (вики, Statistics).
+    match kind {
+        containers::Kind::Chest | containers::Kind::CopperChest => player.progress.custom("open_chest", 1),
+        containers::Kind::TrappedChest => {
+            player.progress.custom("open_chest", 1);
+            player.progress.custom("trigger_trapped_chest", 1);
+        }
+        containers::Kind::Barrel => player.progress.custom("open_barrel", 1),
+        containers::Kind::Hopper => player.progress.custom("inspect_hopper", 1),
+        containers::Kind::Dropper => player.progress.custom("inspect_dropper", 1),
+        containers::Kind::Dispenser => player.progress.custom("inspect_dispenser", 1),
+        containers::Kind::Lectern => player.progress.custom("interact_with_lectern", 1),
+        _ => {}
+    }
+
     player.window_counter = player.window_counter % WINDOW_IDS + 1;
 
     let id = player.window_counter;
@@ -4987,6 +5003,90 @@ fn note_criteria(shared: &Shared, player: &PlayerState, seen: &mut Option<[i32; 
     }
 }
 
+/// Раз в такт: счётчики времени, условия по вещам, табло по статистике,
+/// ответ на запрос экрана статистики, достижения (пакет, объявление,
+/// награда) и запись на диск раз в пять минут (progress.rs).
+async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    if !player.vit.dead {
+        player.progress.tick(player.sneaking);
+    }
+
+    // Предметы у игрока: набор сверяется с таблицей «есть предмет».
+    if player.progress.ticks.is_multiple_of(4) {
+        let mut names: Vec<&str> = Vec::new();
+
+        for slot in 0..inventory::SLOTS as i32 {
+            if let Some(stack) = player.inventory.slot(slot)
+                && let Some(name) = blocks::item_name(stack.item)
+            {
+                names.push(name);
+            }
+        }
+
+        player.progress.scan_items(&names);
+    }
+
+    // Биом под ногами раз в секунду.
+    if player.progress.ticks.is_multiple_of(20) {
+        let biome = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").surface_biome(player.x.floor() as i32, player.z.floor() as i32);
+
+        player.progress.biome(player.dimension, biome);
+    }
+
+    {
+        let mut board = shared.scoreboard.lock().expect("табло захвачено другим потоком");
+
+        if !board.stat_criteria().is_empty() {
+            player.progress.stats.sync_board(&player.name, &mut board);
+        }
+    }
+
+    if std::mem::take(&mut player.progress.stats_requested) {
+        let body = player.progress.stats.award_body();
+
+        write_body(stream, body).await?;
+    }
+
+    // Первый пакет — полный (сброс); позже — только разница.
+    if !player.progress.adv.started()
+        && let Some(body) = player.progress.adv.update_body(true)
+    {
+        write_body(stream, body).await?;
+    }
+
+    let done = player.progress.adv.take_completed();
+    let announce = shared.announce_advancements.load(std::sync::atomic::Ordering::Relaxed);
+
+    if let Some(body) = player.progress.adv.update_body(false) {
+        write_body(stream, body).await?;
+    }
+
+    for def in done {
+        // Корни не объявляются и окна не дают; опыт — у всех, у кого есть.
+        if def.xp > 0 {
+            vitals::command_xp(stream, player, false, def.xp, false).await?;
+        }
+
+        if announce && !def.is_root() {
+            let component = crate::advancements::announcement(&player.name, def);
+            let line = format!("{} has made the {} [{}]", player.name, match def.frame {
+                1 => "challenge",
+                2 => "goal",
+                _ => "advancement",
+            }, def.title);
+
+            shared.chat.lock().expect("чат захвачен другим потоком").push_rich(line.clone(), None, Some(crate::scoreboard::encode_component(&component)));
+            log_info!("{}", line);
+        }
+    }
+
+    if player.progress.ticks.is_multiple_of(crate::progress::SAVE_EVERY) {
+        player.progress.save(&player.uuid);
+    }
+
+    Ok(())
+}
+
 async fn send_pending_chat(
     stream: &mut Outgoing<'_>,
     shared: &Shared,
@@ -5722,6 +5822,19 @@ async fn read_and_log_play_packets(
                 Order::ClearEffects => vitals::clear_effects(stream, player, None).await?,
                 Order::ClearEffect(kind) => vitals::clear_effects(stream, player, Some(kind)).await?,
                 Order::XpTaken { points } => player.net.xp_taken += points,
+                Order::KilledPlayer => player.progress.killed_player(),
+                Order::Advancement { grant, ids, criterion } => {
+                    for id in ids {
+                        let changed = match (grant, &criterion) {
+                            (true, Some(criterion)) => player.progress.adv.grant(id, criterion),
+                            (true, None) => player.progress.adv.grant_all(id),
+                            (false, Some(criterion)) => player.progress.adv.revoke(id, criterion),
+                            (false, None) => player.progress.adv.revoke_all(id),
+                        };
+
+                        let _ = changed;
+                    }
+                }
                 Order::Experience { set, amount, levels } => vitals::command_xp(stream, player, set, amount, levels).await?,
                 Order::Kick { reason } => {
                     log_info!("{} выгнан: {}", player.name, reason);
@@ -5784,6 +5897,7 @@ async fn read_and_log_play_packets(
                     }
 
                     player.dimension = dimension;
+                    player.progress.entered(dimension);
                     player.x = x;
                     player.y = y;
                     player.z = z;
@@ -6147,6 +6261,7 @@ async fn read_and_log_play_packets(
                 }
                 sleep::tick(shared, player);
                 vitals::tick(stream, shared, player).await?;
+                progress_tick(stream, shared, player).await?;
 
                 // Экипировка чужих игроков — следом за здоровьем.
                 send_other_moves(stream, shared, player, &mut seen, Phase::Gear).await?;
@@ -6780,8 +6895,21 @@ fn handle_client_packet_inner(
         }
         vitals::CLIENT_COMMAND => {
             // Действие 0 — «возродиться»; живому возрождаться незачем.
-            if Cursor::new(payload).varint() == Some(0) && player.vit.dead {
-                player.net.respawn = true;
+            // Действие 1 — экран статистики: ответ — Award Statistics.
+            match Cursor::new(payload).varint() {
+                Some(0) if player.vit.dead => player.net.respawn = true,
+                Some(1) => player.progress.stats_requested = true,
+                _ => {}
+            }
+        }
+        // Seen Advancements: 0 — открыта вкладка (с её названием), 1 — закрыто.
+        crate::advancements::SEEN_ADVANCEMENTS => {
+            let mut cursor = Cursor::new(payload);
+
+            if cursor.varint() == Some(0)
+                && let Some(tab) = cursor.string()
+            {
+                player.progress.adv.tab = Some(tab);
             }
         }
         // Разобрать пакет могло и не получиться: тогда отвечать не на что.
@@ -6899,6 +7027,7 @@ fn handle_client_packet_inner(
 
             // Выброшенное падает на землю рядом с игроком.
             if let Some(stack) = click.thrown {
+                player.progress.dropped(stack.item, stack.count);
                 throw_out(shared, player, stack);
             }
 
@@ -7151,6 +7280,14 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
         mob.hurt(damage, source, Some(push))
     };
     let landed = hit.is_some();
+
+    if let Some(hit) = &hit {
+        player.progress.dealt(hit.taken);
+
+        if mob.is_dead() {
+            player.progress.killed_mob(mob.kind.name());
+        }
+    }
 
     if smash && landed {
         player.vit.fall = 0.0;
@@ -7605,6 +7742,7 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
             held.with_count(1)
         };
 
+        player.progress.dropped(thrown.item, thrown.count);
         throw_out(shared, player, thrown);
 
         return Some(Reaction {
@@ -7715,6 +7853,11 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     };
 
     log_debug!("Play: сломан блок в {} {} {}", x, y, z);
+
+    // Творческий ничего не «добывает» (вики, Statistics: BLOCK_MINED).
+    if player.game_mode != GAME_MODE_CREATIVE {
+        player.progress.mined(broken);
+    }
 
     if let Some(plan) = &bed {
         let (ex, ey, ez) = plan.event_at;
@@ -8783,6 +8926,11 @@ fn swap_held(player: &mut PlayerState, item: i32, shared: &Shared) -> Vec<i32> {
 /// Возвращает слоты, о которых надо рассказать клиенту. В творческом режиме
 /// не расходуется ничего — там запас бесконечный.
 fn spend_placed(player: &mut PlayerState) -> Vec<i32> {
+    // «Использовано» считается и в творческом (вики, Statistics: ITEM_USED).
+    if let Some(held) = player.inventory.held() {
+        player.progress.used(held.item);
+    }
+
     if player.game_mode == GAME_MODE_CREATIVE {
         return Vec::new();
     }
@@ -9114,6 +9262,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
     };
 
     if let Some(stack) = thrown {
+        player.progress.dropped(stack.item, stack.count);
         throw_out(shared, player, stack);
     }
 
@@ -9557,6 +9706,9 @@ struct PlayerState {
     /// Сколько раз перестанавливались модификаторы скорости удара: чужим
     /// клиентам это повод повторить атрибут.
     speed_touch: u32,
+
+    /// Статистика и достижения игрока (progress.rs).
+    progress: crate::progress::Progress,
 }
 
 /// Окно хранилища, открытое у клиента.
@@ -9721,6 +9873,7 @@ impl PlayerState {
             attrs_touched: Vec::new(),
             speed_due: Vec::new(),
             speed_touch: 0,
+            progress: crate::progress::Progress::load(&uuid),
             skin,
             skin_parts,
             main_hand: configuration::RIGHT_HAND,
@@ -9929,6 +10082,8 @@ impl PlayerState {
             vitals: self.vit.saved(),
             respawn: self.respawn,
         };
+
+        self.progress.save(&self.uuid);
 
         match playerdata::save(directory, &self.uuid, &data) {
             Ok(()) => self.saved = Some(data),

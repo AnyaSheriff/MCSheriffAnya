@@ -262,6 +262,12 @@ pub enum Order {
     /// NBT): «[@: …]» операторам от командного блока.
     Message { component: Vec<u8> },
 
+    /// Этот игрок убил игрока: статистика `player_kills`.
+    KilledPlayer,
+
+    /// Команда `advancement`: выдать или отнять достижения (все условия, либо одно).
+    Advancement { grant: bool, ids: Vec<&'static str>, criterion: Option<String> },
+
     ChangeDimension {
         dimension: crate::dimension::Dimension,
         x: f64,

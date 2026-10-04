@@ -37,6 +37,13 @@ pub(super) async fn open_station(
     at: (i32, i32, i32),
     kind: Station,
 ) -> io::Result<()> {
+    match kind {
+        Station::Anvil => player.progress.custom("interact_with_anvil", 1),
+        Station::Grindstone => player.progress.custom("interact_with_grindstone", 1),
+        Station::Smithing => player.progress.custom("interact_with_smithing_table", 1),
+        Station::Enchanting => {}
+    }
+
     player.window_counter = player.window_counter % WINDOW_IDS + 1;
 
     let id = player.window_counter;
@@ -524,6 +531,7 @@ pub(super) fn button(shared: &Shared, player: &mut PlayerState, window: i32, but
     };
 
     player.vit.command_xp(false, -need, true);
+    player.progress.enchanted();
     reaction.experience = true;
     player.vit.xp_seed = enchanting::new_seed(u64::from(player.entity_id as u32));
 

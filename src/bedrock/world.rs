@@ -943,6 +943,8 @@ impl BedrockWorld {
                 crate::players::Order::Message { .. } => {}
                 // Опыт у Bedrock пока не считается [проверить].
                 crate::players::Order::Experience { .. } | crate::players::Order::XpTaken { .. } => {}
+                // Статистика и достижения Bedrock пока не ведутся [Bedrock: потом].
+                crate::players::Order::KilledPlayer | crate::players::Order::Advancement { .. } => {}
                 // Пакеты и правки команд мира — пока только у Java [проверить].
                 crate::players::Order::Packet(_) | crate::players::Order::Attribute(_) | crate::players::Order::Enchant { .. } | crate::players::Order::Spectate { .. } => {}
                 // Эффекты голода и насыщения считаются, значка у Bedrock пока нет [проверить].

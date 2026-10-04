@@ -112,6 +112,10 @@ pub struct Shared {
     /// животные сами в новых чанках. Призванные командой — всегда.
     pub spawn_mobs: std::sync::atomic::AtomicBool,
 
+    /// Правило `announce_advancements` (прежнее announceAdvancements): писать ли
+    /// в чат о полученных достижениях.
+    pub announce_advancements: std::sync::atomic::AtomicBool,
+
     /// Правило `natural_health_regeneration`: лечит ли сытость.
     pub natural_regeneration: std::sync::atomic::AtomicBool,
 
@@ -189,6 +193,7 @@ impl Shared {
             difficulty,
             keep_inventory: std::sync::atomic::AtomicBool::new(false),
             spawn_mobs: std::sync::atomic::AtomicBool::new(true),
+            announce_advancements: std::sync::atomic::AtomicBool::new(true),
             natural_regeneration: std::sync::atomic::AtomicBool::new(true),
             command_block_rules: crate::command_block::Rules::default(),
             scoreboard: Mutex::new(crate::scoreboard::Scoreboard::new()),

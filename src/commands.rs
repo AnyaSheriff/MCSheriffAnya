@@ -526,6 +526,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         "damage" => damage(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "difficulty" => difficulty(parts.collect::<Vec<&str>>().as_slice(), shared),
         "effect" => effect(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "advancement" => crate::commands_progress::advancement(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "experience" | "xp" => experience(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "gamerule" => gamerule(parts.collect::<Vec<&str>>().as_slice(), shared),
         "scoreboard" | "team" | "tag" | "bossbar" | "trigger" | "teammsg" | "tm" | "function" | "schedule" | "datapack" | "return" => crate::commands_score::run(command, source, shared),
@@ -1579,6 +1580,11 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
             shared.spawn_mobs.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
 
             Answer::saying(format!("Правило spawn_mobs: {}", value))
+        }
+        ["announce_advancements" | "announceAdvancements", value] => {
+            shared.announce_advancements.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+
+            Answer::saying(format!("Правило announce_advancements: {}", value))
         }
         ["natural_health_regeneration" | "naturalRegeneration", value] => {
             shared.natural_regeneration.store(*value == "true", std::sync::atomic::Ordering::Relaxed);

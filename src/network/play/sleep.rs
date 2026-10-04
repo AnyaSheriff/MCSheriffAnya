@@ -191,6 +191,7 @@ fn fall_asleep(world: &mut World, shared: &Shared, player: &mut PlayerState, hea
     bed::note_entities(world, head);
 
     player.sleeping = Some(head);
+    player.progress.slept();
     player.x = f64::from(head.0) + 0.5;
     player.y = f64::from(head.1) + SLEEP_HEIGHT;
     player.z = f64::from(head.2) + 0.5;

@@ -557,6 +557,14 @@ impl Scoreboard {
         }
     }
 
+    /// Условия-статистики у целей (`minecraft.custom:minecraft.jump`).
+    pub fn stat_criteria(&self) -> Vec<String> {
+        let mut list: Vec<String> = self.objectives.iter().filter(|objective| objective.criteria.contains(':')).map(|objective| objective.criteria.clone()).collect();
+        list.sort();
+        list.dedup();
+        list
+    }
+
     /// Есть ли цели с таким условием — чтобы не считать зря.
     pub fn watches(&self, criteria: &str) -> bool {
         self.objectives.iter().any(|objective| objective.criteria == criteria)

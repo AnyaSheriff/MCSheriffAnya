@@ -546,8 +546,14 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         return;
     }
 
+    let jumped = player.net.prev_ground && !on_ground && dy > 0.0;
+
+    if !player.vit.dead && player.sleeping.is_none() {
+        player.progress.moved(dx, dy, dz, on_ground, player.vit.sprinting, player.sneaking, jumped);
+    }
+
     if mortal(player.game_mode) && !player.vit.dead {
-        if player.net.prev_ground && !on_ground && dy > 0.0 {
+        if jumped {
             player.vit.jumped();
         }
 
@@ -1383,6 +1389,13 @@ async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerStat
 
     send_entity_event(stream, player.entity_id, EVENT_DEATH).await?;
 
+    // Статистика: смерть, и кому засчитано убийство игрока.
+    player.progress.died(killer.as_ref().map(|_| "player"));
+
+    if let Some(killer) = &killer {
+        shared.players.lock().expect("список игроков захвачен другим потоком").order(&killer.uuid, crate::players::Order::KilledPlayer);
+    }
+
     // Табло: смерти и убийства (вики, Scoreboard#Criteria: deathCount,
     // playerKillCount, totalKillCount, teamkill.<цвет>, killedByTeam.<цвет>).
     {
@@ -1520,6 +1533,12 @@ pub(super) async fn hit_by(
         result.died = false;
         player.vit.dead = false;
         player.vit.health = 1.0;
+        player.progress.used_totem();
+    }
+
+    // `/kill` и пустота урона не считают (чёрный ящик: после /kill damage_taken не менялся).
+    if !matches!(source, Source::GenericKill | Source::OutOfWorld) {
+        player.progress.took(result.taken);
     }
 
     send_damage_event(stream, player.entity_id, source, direct, cause).await?;
@@ -2102,6 +2121,10 @@ async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
 
     player.vit.eat(nutrition, saturation);
 
+    if let Some(held) = player.inventory.held() {
+        player.progress.consumed(held.item);
+    }
+
     if player.game_mode != GAME_MODE_CREATIVE {
         player.net.slot_update = player.inventory.spend_held();
     }
@@ -2121,6 +2144,10 @@ async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
 /// Допили: молоко снимает эффекты, в руке остаётся посуда (в творческом
 /// режиме — прежний предмет). Звук питья клиент играет сам [проверить].
 async fn finish_drinking(stream: &mut Outgoing<'_>, player: &mut PlayerState, drink: Drink) -> io::Result<()> {
+    if let Some(held) = player.inventory.held() {
+        player.progress.consumed(held.item);
+    }
+
     if player.game_mode != GAME_MODE_CREATIVE {
         let slot = player.inventory.selected_slot();
 

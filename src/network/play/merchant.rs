@@ -454,6 +454,7 @@ fn take_result(shared: &Shared, items: &mut crate::items::Items, player: &mut Pl
             };
 
             if fits && trade(shared, items, merchant) {
+                player.progress.traded();
                 player.inventory.set_cursor(Some(result.with_count(cursor.map_or(0, |held| held.count) + result.count)));
             }
         }
@@ -485,6 +486,8 @@ fn take_result(shared: &Shared, items: &mut crate::items::Items, player: &mut Pl
                     player.inventory = saved;
                     break;
                 }
+
+                player.progress.traded();
             }
         }
         _ => {}
