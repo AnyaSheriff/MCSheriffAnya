@@ -47,6 +47,10 @@ pub struct Watcher {
     /// взгляд злит эндермена, тыква — нет (вики, Enderman).
     pub look: (f32, f32),
     pub pumpkin: bool,
+
+    /// Хотя бы одна вещь брони из золота на нём: пиглины такого не трогают
+    /// (вики, Piglin: «wearing any piece of golden armor»).
+    pub gold_armor: bool,
 }
 
 /// Сородич рядом: для разведения и следования за родителем.
@@ -116,6 +120,9 @@ pub struct Plan {
     /// Эндермен взял блок из клетки; поставил блок (клетка, состояние).
     pub take: Option<(i32, i32, i32)>,
     pub put: Option<((i32, i32, i32), i32)>,
+
+    /// Огненный шар ифрита или гаста (mob/nether.rs).
+    pub launch: Option<super::nether::Launch>,
 }
 
 /// Состояние мыслей.

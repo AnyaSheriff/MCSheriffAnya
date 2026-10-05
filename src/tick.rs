@@ -855,6 +855,8 @@ fn watchers(shared: &Shared, dimension: Dimension) -> Vec<crate::mob::ai::Watche
             look: (member.position.yaw, member.position.pitch),
             // Тыква на голове (вики, Enderman: «carved pumpkin»).
             pumpkin: players.gear(&member.uuid).worn[1].and_then(|stack| blocks::item_name(stack.item)) == Some("carved_pumpkin"),
+            // Золотая броня усмиряет пиглинов (вики, Piglin); worn[1..] — шлем, нагрудник, штаны, ботинки.
+            gold_armor: players.gear(&member.uuid).worn[1..].iter().flatten().any(|stack| matches!(blocks::item_name(stack.item), Some("golden_helmet" | "golden_chestplate" | "golden_leggings" | "golden_boots"))),
         })
         .collect()
 }
@@ -913,7 +915,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     let spawning = dimension == Dimension::Overworld && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed);
     // Враждебные в темноте — в Обычном мире и в Энде (там одни эндермены:
     // вики, Enderman, «Spawning»).
-    let hostile_spawning = matches!(dimension, Dimension::Overworld | Dimension::End) && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed);
+    let hostile_spawning = matches!(dimension, Dimension::Overworld | Dimension::End | Dimension::Nether) && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed);
     let kinds = if dimension == Dimension::End { &crate::mob::spawn::END_HOSTILE[..] } else { &crate::mob::spawn::HOSTILE[..] };
     let mut natural: Vec<crate::mob::Mob> = Vec::new();
 
@@ -936,7 +938,23 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
                 y + 1
             };
-            natural = crate::mob::spawn::hostile_attempt(&MobView(world), &players, &surface, kinds, rng, &mut || shared.next_entity_id());
+            // Незер: виды по биому, а на кирпиче крепости — свои (вики, Nether
+            // Fortress); нужен только блочный свет не выше 11 (вики, Mob spawning).
+            natural = if nether {
+                let kinds_at = |x: i32, y: i32, z: i32| {
+                    let on_bricks = blocks::block_at_state(world.get_block(x, y - 1, z)) == Some("nether_bricks");
+
+                    if on_bricks && world.in_fortress(x, y, z) {
+                        return crate::mob::spawn::FORTRESS.to_vec();
+                    }
+
+                    crate::mob::spawn::nether_kinds(world.surface_biome(x, z)).to_vec()
+                };
+
+                crate::mob::spawn::hostile_attempt_in(&MobView(world), &players, &surface, &kinds_at, 48, rng, &mut || shared.next_entity_id())
+            } else {
+                crate::mob::spawn::hostile_attempt(&MobView(world), &players, &surface, kinds, rng, &mut || shared.next_entity_id())
+            };
 
             // Свет каждой найденной точки: небесный с поправкой на час и
             // блочный; в темноте (блочный 0, небесный ≤ случайного 0…7)
@@ -946,7 +964,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 let (sky, block) = world.light_full(x, y, z);
                 let sky = (i32::from(sky) - (15 - ambient).max(0)).max(0) as u8;
 
-                crate::mob::spawn::dark_enough(sky, block, rng)
+                if nether { block <= 11 } else { crate::mob::spawn::dark_enough(sky, block, rng) }
             });
         }
     }
@@ -1022,6 +1040,13 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             Some(strike.melee.push),
             strike.at,
         );
+
+        // Иссушитель: 10 секунд иссушения (вики, Wither Skeleton).
+        if strike.melee.wither {
+            let wither = crate::survival::Effect { kind: crate::survival::EffectKind::Wither, amplifier: 0, ticks_left: 200, ambient: false, visible: true };
+
+            world.note_mob_effect(strike.melee.target, wither);
+        }
     }
 
     for fired in outcome.shots {
@@ -1036,6 +1061,14 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
         // Замок стрел — после предметов (shared.rs).
         shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
+    }
+
+    // Огненные шары ифритов и гастов (mob/nether.rs): летят как шар дракона.
+    for (shooter, launch) in outcome.launches {
+        let kind = if launch.small { crate::thrown::Kind::SmallFireball } else { crate::thrown::Kind::GhastFireball };
+        let flying = crate::thrown::Flying::mob_fireball(shared.next_entity_id(), dimension, kind, launch.from, launch.dir, shooter, launch.power);
+
+        shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(flying);
     }
 
     for (shooter, target, at) in outcome.bullet_hits {
@@ -1083,6 +1116,8 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         }
     }
 
+    barter(&mut items, shared, &watchers, rng);
+
     if ticks.is_multiple_of(200) {
         world.store_mobs(items.mobs());
     }
@@ -1090,6 +1125,81 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     dragon_xp(&mut items, rng, &mut || shared.next_entity_id());
     drop(items);
     creeper_blasts(shared, dimension, world, &outcome.blasts);
+}
+
+/// Обмен с пиглинами (вики, Bartering): пиглин без дела подбирает золотой
+/// слиток рядом, 6 секунд рассматривает его и бросает в сторону игрока одну
+/// вещь из таблицы обмена (`mob::nether::BARTER`).
+fn barter(items: &mut items::Items, shared: &Shared, watchers: &[crate::mob::ai::Watcher], rng: &mut crate::mob::Rng) {
+    use crate::mob::Kind;
+
+    let Some(gold) = blocks::item_named("gold_ingot") else {
+        return;
+    };
+
+    // Рассмотрел — бросает добычу туда, куда смотрит [проверить: к игроку, что бросил слиток].
+    // Чёрный ящик, piglin-barter: вещь вылетает на 1,49 выше ног в сторону
+    // ближайшего игрока, скорость 0,3 вдоль (dx, dy + 1, dz) [проверить: одна точка].
+    let done: Vec<(f64, f64, f64, f32)> = items
+        .mobs_mut()
+        .iter_mut()
+        .filter(|mob| mob.kind == Kind::Piglin && mob.nether.barter_done && !mob.is_dead())
+        .map(|mob| {
+            mob.nether.barter_done = false;
+            mob.nether.held.clear();
+
+            (mob.x, mob.y + 1.0, mob.z, mob.yaw)
+        })
+        .collect();
+
+    for (x, y, z, yaw) in done {
+        let rad = f64::from(yaw).to_radians();
+        let y = y + 0.49;
+        let velocity = watchers
+            .iter()
+            .filter(|player| !player.spectator)
+            .min_by(|a, b| ((a.x - x).powi(2) + (a.z - z).powi(2)).total_cmp(&((b.x - x).powi(2) + (b.z - z).powi(2))))
+            .map(|player| {
+                let (dx, dy, dz) = (player.x - x, player.y - (y - 1.49) + 1.0, player.z - z);
+                let length = (dx * dx + dy * dy + dz * dz).sqrt().max(1.0e-9);
+
+                (dx / length * 0.3, dy / length * 0.3, dz / length * 0.3)
+            })
+            .unwrap_or((-rad.sin() * 0.3, 0.2, rad.cos() * 0.3));
+
+        for stack in crate::mob::nether::barter_loot(rng) {
+            items.drop_item(shared.next_entity_id(), stack, (x, y, z), velocity, items::MINED_DELAY);
+        }
+    }
+
+    // Подбор слитка: тем, кто свободен.
+    let idle: Vec<(usize, i32, (f64, f64, f64))> = items
+        .mobs()
+        .iter()
+        .enumerate()
+        .filter(|(_, mob)| mob.kind == Kind::Piglin && !mob.is_dead() && !mob.no_ai && mob.nether.admiring == 0 && mob.nether.held.is_empty())
+        .map(|(index, mob)| (index, mob.entity_id, (mob.x, mob.y, mob.z)))
+        .collect();
+
+    for (index, id, at) in idle {
+        let mut taken_one = false;
+        let taken = items.take_near(at, id, |stack| {
+            if stack.item == gold && !taken_one {
+                taken_one = true;
+                1
+            } else {
+                0
+            }
+        });
+
+        if !taken.is_empty() {
+            let mob = &mut items.mobs_mut()[index];
+
+            mob.nether.admiring = crate::mob::nether::ADMIRE_TICKS;
+            mob.nether.held = vec![crate::inventory::Stack::new(gold, 1)];
+            mob.brain.stop();
+        }
+    }
 }
 
 /// Спавнеры (spawner.rs): раз в такт задержка убывает, пока игрок ближе

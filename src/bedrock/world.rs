@@ -1009,7 +1009,7 @@ impl BedrockWorld {
                     self.change_dimension(connection, packets, dimension, (x, y, z));
                 }
                 // [проверить] ячейку по команде на Bedrock пока не кладём.
-                crate::players::Order::SetSlot { .. } => {}
+                crate::players::Order::SetSlot { .. } | crate::players::Order::SetEnderSlot { .. } => {}
                 crate::players::Order::Hold { stack } => {
                     let slot = crate::inventory::FIRST_HOTBAR + self.bag.inventory.selected();
 
@@ -1358,7 +1358,8 @@ impl BedrockWorld {
                         things.push(super::things::potion(flying.entity_id, flying.kind == crate::thrown::Kind::Lingering, name, at, velocity));
                     }
                     // Огненный шар дракона у Bedrock — своя сущность [проверить].
-                    crate::thrown::Kind::DragonFireball => {}
+                    // [Bedrock: потом] шары ифрита и гаста.
+                    crate::thrown::Kind::DragonFireball | crate::thrown::Kind::SmallFireball | crate::thrown::Kind::GhastFireball => {}
                 }
             }
 
@@ -4390,6 +4391,9 @@ fn add_cart(cart: &crate::minecart::Minecart) -> Vec<u8> {
         crate::minecart::Kind::Tnt => "minecraft:tnt_minecart",
         // У Bedrock вагонетки с печью нет: показываем обычную.
         crate::minecart::Kind::Furnace => "minecraft:minecart",
+        // [Bedrock: потом] у лодки Bedrock порода — свойство Variant, сидение
+        // и вёсла не рассказываются: показываем дубовую.
+        crate::minecart::Kind::Boat(index) => if crate::minecart::BOATS[index as usize].2 { "minecraft:chest_boat" } else { "minecraft:boat" },
     };
 
     let mut out = Out::packet(ADD_ACTOR);

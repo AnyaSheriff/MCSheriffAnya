@@ -13,6 +13,9 @@
 use crate::blocks;
 use crate::inventory::Stack;
 
+mod boat;
+pub use boat::{BOATS, SEATS as BOAT_SEATS, boat_kinds};
+
 /// Вид вагонетки.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Kind {
@@ -21,11 +24,21 @@ pub enum Kind {
     Hopper,
     Tnt,
     Furnace,
+    /// Лодка, плот или лодка с сундуком: номер строки в `BOATS` (boat.rs).
+    /// Лодки живут в том же списке, что вагонетки: у них те же появление,
+    /// слежение, удар и поломка (чёрный ящик, boat-break), а сидение и ход —
+    /// своё (riding.rs, minecart/boat.rs).
+    Boat(u8),
 }
 
 impl Kind {
-    /// Все виды — для подсказок в командах.
+    /// Все виды вагонеток — для подсказок в командах (лодки — `boat_kinds`).
     pub const ALL: [Kind; 5] = [Kind::Plain, Kind::Chest, Kind::Hopper, Kind::Tnt, Kind::Furnace];
+
+    /// Лодка ли это (с сундуком или без).
+    pub fn is_boat(self) -> bool {
+        matches!(self, Kind::Boat(_))
+    }
 
     /// По имени сущности, как в командах: `minecart`, `chest_minecart`…
     pub fn from_name(name: &str) -> Option<Kind> {
@@ -35,7 +48,7 @@ impl Kind {
             "hopper_minecart" => Kind::Hopper,
             "tnt_minecart" => Kind::Tnt,
             "furnace_minecart" => Kind::Furnace,
-            _ => return None,
+            other => return boat::from_name(other),
         })
     }
 
@@ -48,6 +61,7 @@ impl Kind {
             Kind::Hopper => "hopper_minecart",
             Kind::Tnt => "tnt_minecart",
             Kind::Furnace => "furnace_minecart",
+            Kind::Boat(index) => BOATS[index as usize].0,
         }
     }
 
@@ -60,6 +74,7 @@ impl Kind {
             Kind::Hopper => 65,
             Kind::Tnt => 133,
             Kind::Furnace => 56,
+            Kind::Boat(index) => BOATS[index as usize].1,
         }
     }
 
@@ -69,6 +84,7 @@ impl Kind {
         match self {
             Kind::Chest => 27,
             Kind::Hopper => 5,
+            Kind::Boat(index) if BOATS[index as usize].2 => 27,
             _ => 0,
         }
     }
@@ -311,6 +327,14 @@ pub struct Minecart {
     /// Сколько пролетела вниз с последней опоры.
     fall: f64,
 
+    /// Лодка: что под ней (вода, воздух, суша), уровень воды и вёсла (левое,
+    /// правое — по пакету Paddle Boat от гребущего игрока).
+    pub water: boat::Water,
+    pub paddle: (bool, bool),
+    /// Номер игрока, ведущего лодку: пока он есть, лодка стоит на месте
+    /// сервера, а место ей шлёт клиент (Move Vehicle).
+    pub driver: Option<i32>,
+
     /// Через какую ступень ящик перешагивает на этом шаге (на рельсах —
     /// `STEP_UP`, иначе 0).
     step_up: f64,
@@ -349,12 +373,16 @@ pub struct Snapshot {
     /// Сколько раз поджигали и горит ли печь.
     pub primes: u32,
     pub burning: bool,
+
+    /// Вёсла лодки (свойства 11 и 12).
+    pub paddle: (bool, bool),
 }
 
 /// Биты изменившихся свойств удара.
 pub const DIRTY_HURT: u8 = 1;
 pub const DIRTY_DIR: u8 = 2;
 pub const DIRTY_DAMAGE: u8 = 4;
+pub const DIRTY_PADDLE: u8 = 8;
 
 /// Что на рельсе под вагонеткой.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -543,6 +571,9 @@ impl Minecart {
             shove_x: 0.0,
             shove_z: 0.0,
             fall: 0.0,
+            water: boat::Water::default(),
+            paddle: (false, false),
+            driver: None,
             step_up: 0.0,
             last: Snapshot {
                 x,
@@ -562,6 +593,7 @@ impl Minecart {
                 impulses: 0,
                 primes: 0,
                 burning: false,
+                paddle: (false, false),
             },
         };
 
@@ -589,6 +621,7 @@ impl Minecart {
             impulses: self.impulses,
             primes: self.primes,
             burning: self.fuel > 0,
+            paddle: self.paddle,
         };
 
         self.dirty = 0;
@@ -614,13 +647,15 @@ impl Minecart {
     /// удара (сила удара растёт с перезарядкой руки). Возвращает true, если
     /// вагонетка сломана: урон перевалил за предел, а творческий игрок
     /// ломает её сразу (зонд minecart-hit).
-    pub fn hit(&mut self, creative: bool, since_attack: u32) -> bool {
+    pub fn hit(&mut self, creative: bool, since_attack: u32, attack: f32) -> bool {
         let charge = hand_charge(since_attack);
 
         self.hurt_dir = -self.hurt_dir;
         self.hurt_time = HURT_TIME;
         self.hits += 1;
-        self.damage += HIT * (0.2 + 0.8 * charge * charge);
+        // Урон удара — сила атаки (рука 1, алмазный меч 7) на перезарядку, вдесятеро
+        // (вики, Boat: «weapons dealing more than 4 damage break a boat in one attack»).
+        self.damage += HIT * attack * (0.2 + 0.8 * charge * charge);
         self.dirty |= DIRTY_HURT | DIRTY_DIR | DIRTY_DAMAGE;
 
         creative || self.damage > BREAKS_OVER
@@ -716,6 +751,11 @@ impl Minecart {
         if self.damage > 0.0 {
             self.damage -= 1.0;
             self.dirty |= DIRTY_DAMAGE;
+        }
+
+        if self.kind.is_boat() {
+            self.step_boat(view);
+            return;
         }
 
         let (from_x, from_y, from_z) = (self.x, self.y, self.z);
@@ -1121,15 +1161,21 @@ impl Minecart {
         }
     }
 
+    /// Ширина и высота ящика: у лодки 1,375 × 0,5625 (minecraft-data 26.1).
+    pub fn dims(&self) -> (f64, f64) {
+        if self.kind.is_boat() { (boat::WIDTH, boat::HEIGHT) } else { (WIDTH, HEIGHT) }
+    }
+
     /// Насколько ящик может сдвинуться по оси, не входя в блок впереди.
     fn sweep<V: View>(&self, view: &V, axis: Axis, wanted: f64) -> f64 {
         if wanted == 0.0 {
             return 0.0;
         }
 
-        let half = WIDTH / 2.0;
+        let (width, height) = self.dims();
+        let half = width / 2.0;
         let low = [self.x - half, self.y, self.z - half];
-        let high = [self.x + half, self.y + HEIGHT, self.z + half];
+        let high = [self.x + half, self.y + height, self.z + half];
         let along = axis as usize;
 
         // Клетки, которые ящик заденет по пути.
@@ -1331,13 +1377,15 @@ pub fn step_all<V: View>(carts: &mut [Minecart], view: &V, players: &[(f64, f64,
                 (&mut right[0], &mut left[other])
             };
 
-            if this.touches(grow, that) {
+            if !this.kind.is_boat() && !that.kind.is_boat() && this.touches(grow, that) {
                 this.meet(that);
             }
         }
 
-        for &player in players {
-            carts[index].pushed_by(player, grow);
+        if !carts[index].kind.is_boat() {
+            for &player in players {
+                carts[index].pushed_by(player, grow);
+            }
         }
     }
 }
@@ -1701,11 +1749,11 @@ mod tests {
     fn hits_add_damage_by_the_hand_charge() {
         let mut cart = Minecart::new(1, Kind::Plain, (0.5, 0.0, 0.5));
 
-        assert!(!cart.hit(false, 100));
+        assert!(!cart.hit(false, 100, 1.0));
         assert_eq!((cart.damage, cart.hurt_time, cart.hurt_dir), (10.0, 10, -1));
-        assert!(!cart.hit(false, 1));
+        assert!(!cart.hit(false, 1, 1.0));
         assert!((cart.damage - 12.72).abs() < 1e-5);
-        assert!(cart.hit(true, 0));
+        assert!(cart.hit(true, 0, 1.0));
     }
 
     /// Вагонетка с динамитом на запитанной активирующей рельсе: в первом

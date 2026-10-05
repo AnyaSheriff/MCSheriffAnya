@@ -1,0 +1,35 @@
+{
+ "about": "Элитры в слоте груди: прыжок в воздухе — полёт: флаги, поза, износ раз в секунду, приземление.",
+ "track_mobs": true,
+ "track_self": true,
+ "inventory": true,
+ "item_components": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,2,-1.5) 0 50",
+  "!wait 20",
+  "item replace entity $(bot) armor.chest with minecraft:elytra",
+  "tp $(bot) $(3.5,200,3.5) 0 20",
+  "!stopfly",
+  "!wait 2"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "elytra": true
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "tp $(bot) $(3.5,2,-1.5) 0 0",
+  "kill @e[type=!player,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)"
+ ],
+ "name": "elytra-glide"
+}

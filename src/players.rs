@@ -126,6 +126,9 @@ pub struct CombatView {
 /// три (1, 2, 4), поза едет рядом, чтобы уйти с ними одним пакетом.
 pub const SPIN_POSE_BIT: u8 = 0x80;
 
+/// Бит полёта на элитрах там же (флаг сущности 0x80 и поза «летит»).
+pub const GLIDE_BIT: u8 = 0x40;
+
 /// Снаряжение и бой игрока, видимые остальным: вторая рука и броня (шлем,
 /// нагрудник, штаны, ботинки) — их клиенты показывают на чужом игроке.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -205,6 +208,10 @@ pub enum Order {
     /// Положить в ячейку инвентаря (номер как в окне игрока: панель —
     /// 36–44) ровно это (`item replace entity`).
     SetSlot { slot: i32, stack: Option<crate::inventory::Stack> },
+
+    /// Положить в ячейку эндер-сундука игрока (0–26) ровно это
+    /// (`item replace entity <игрок> enderchest.<N>`).
+    SetEnderSlot { slot: usize, stack: Option<crate::inventory::Stack> },
 
     /// Сменить режим игры: подключение само скажет об этом своему клиенту.
     GameMode { mode: i32 },

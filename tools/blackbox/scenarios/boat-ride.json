@@ -1,0 +1,77 @@
+{
+ "name": "boat-ride",
+ "about": "Лодка: ставится на воду по правой кнопке (предмет уходит), игрок садится (Set Passengers), отпускается сидящим на 30 тактов, выходит приседанием.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,2,-1.5) 0 50",
+  "!wait 20",
+  "fill $(-1,0,-1) $(7,3,7) minecraft:air",
+  "fill $(0,0,0) $(6,1,6) minecraft:stone",
+  "fill $(1,0,1) $(5,1,5) minecraft:water",
+  "tp $(bot) $(3.5,2,0.5) 0 50",
+  "!stopfly",
+  "give $(bot) minecraft:oak_boat 1",
+  "!hotbar 0",
+  "!wait 30"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  },
+  {
+   "after": 12,
+   "interact": true
+  },
+  {
+   "after": 40,
+   "raw": {
+    "name": "player_input",
+    "params": {
+     "inputs": {
+      "forward": false,
+      "backward": false,
+      "left": false,
+      "right": false,
+      "jump": false,
+      "shift": true,
+      "sprint": false
+     }
+    }
+   }
+  },
+  {
+   "after": 42,
+   "raw": {
+    "name": "player_input",
+    "params": {
+     "inputs": {
+      "forward": false,
+      "backward": false,
+      "left": false,
+      "right": false,
+      "jump": false,
+      "shift": false,
+      "sprint": false
+     }
+    }
+   }
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=oak_boat,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "fill $(0,0,0) $(6,1,6) minecraft:air",
+  "fill $(-1,0,-1) $(7,3,7) minecraft:air",
+  "gamemode creative $(bot)",
+  "clear $(bot)"
+ ]
+}

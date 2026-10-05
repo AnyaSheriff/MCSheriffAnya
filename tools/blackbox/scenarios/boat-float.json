@@ -1,0 +1,35 @@
+{
+ "about": "Пустая лодка на воде: из воздуха падает в бассейн и всплывает; положение каждые 3 такта.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,2,-1.5) 0 50",
+  "!wait 20",
+  "fill $(-1,0,-1) $(7,6,7) minecraft:air",
+  "fill $(0,0,0) $(6,1,6) minecraft:stone",
+  "fill $(1,0,1) $(5,1,5) minecraft:water",
+  "tp $(bot) $(3.5,2,-1.5) 0 50",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:oak_boat $(3.5,4,3.5)"
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "kill @e[type=!player,distance=..48]",
+  "fill $(0,0,0) $(6,1,6) minecraft:air",
+  "fill $(-1,0,-1) $(7,6,7) minecraft:air",
+  "gamemode creative $(bot)",
+  "clear $(bot)"
+ ],
+ "name": "boat-float"
+}

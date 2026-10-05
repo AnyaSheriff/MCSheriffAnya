@@ -61,6 +61,7 @@ const POSE_DYING: i32 = 7;
 /// Номера атрибутов «скорость движения» и «броня» (registry attribute 26.1).
 const ATTRIBUTE_MOVEMENT_SPEED: i32 = 22;
 const ATTRIBUTE_ARMOR: i32 = 0;
+const ATTRIBUTE_MAX_HEALTH: i32 = 19;
 
 /// Раз во сколько тактов от появления моб рассылает место и скорость, и раз
 /// во сколько — место, даже если оно не изменилось (как у вагонеток).
@@ -82,7 +83,7 @@ fn attributes_at(kind: Kind) -> u64 {
 /// Шлются ли атрибуты сразу при появлении и ещё раз в первом прогоне
 /// слежения (чёрный ящик, zombie-hit и enderman-stand).
 fn attributes_at_spawn(kind: Kind) -> bool {
-    matches!(kind, Kind::Zombie | Kind::ZombieVillager | Kind::Enderman)
+    matches!(kind, Kind::Zombie | Kind::ZombieVillager | Kind::Enderman | Kind::ZombifiedPiglin | Kind::Piglin | Kind::MagmaCube)
 }
 
 /// Меньшие сдвиги и перемены скорости не сообщаются.
@@ -218,6 +219,31 @@ fn properties(mob: &Mob) -> Vec<Property> {
             out.push((21, TYPE_BOOL, vec![u8::from(data.finalized)]));
         }
         Kind::Skeleton => out.push((16, TYPE_BOOL, vec![0])),
+        // Мобы Незера (minecraft-data 26.1, metadataKeys) [проверить по чёрному ящику, *-stand]:
+        // ифрит — флаги (1 — горит заряд), гаст — заряжает, куб — размер,
+        // пиглин — неуязвим к превращению, детёныш, арбалет, танец; хоглин —
+        // неуязвим, детёныш; страйдер — ускорение, мёрзнет, седло.
+        Kind::Blaze => out.push((16, TYPE_BYTE, vec![u8::from(mob.nether.charging)])),
+        Kind::Ghast => out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.charging)])),
+        Kind::MagmaCube => out.push((16, TYPE_INT, encode_varint(mob.nether.size.max(1)))),
+        Kind::WitherSkeleton => {}
+        Kind::ZombifiedPiglin => out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())])),
+        Kind::Piglin => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.immune)]));
+            out.push((17, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((18, TYPE_BOOL, vec![0]));
+            out.push((19, TYPE_BOOL, vec![0]));
+        }
+        Kind::PiglinBrute => out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.immune)])),
+        Kind::Hoglin => {
+            out.push((17, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((18, TYPE_BOOL, vec![u8::from(mob.nether.immune)]));
+        }
+        Kind::Strider => {
+            out.push((16, TYPE_INT, encode_varint(0)));
+            out.push((17, TYPE_BOOL, vec![u8::from(mob.nether.cold)]));
+            out.push((18, TYPE_BOOL, vec![u8::from(mob.nether.saddled)]));
+        }
         Kind::Creeper => {
             out.push((16, TYPE_INT, encode_varint(if mob.h.swell_dir == 0 { -1 } else { mob.h.swell_dir })));
             out.push((17, TYPE_BOOL, vec![0]));
@@ -277,6 +303,8 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
     match (*key, kind) {
         (8, Kind::EndCrystal) => value.as_slice() == [0],
         (9, Kind::EndCrystal) => value.as_slice() == [1],
+        (16, Kind::MagmaCube) => value.as_slice() == encode_varint(1).as_slice(),
+        (17..=19, Kind::Piglin | Kind::Hoglin | Kind::Strider) => value.iter().all(|byte| *byte == 0),
         (16, Kind::EnderDragon) => value.as_slice() == encode_varint(DRAGON_PHASE_HOVER).as_slice(),
         (16, Kind::Creeper) => value.as_slice() == encode_varint(-1).as_slice(),
         (18, Kind::Shulker) => value.as_slice() == [16],
@@ -371,7 +399,7 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
 /// Скорость шага в пакете атрибутов: как у вида, но у шалкера, что не
 /// ходит, — 0,7, значение атрибута по умолчанию (чёрный ящик, shulker-stand).
 fn attribute_speed(kind: Kind) -> f64 {
-    if kind == Kind::Shulker { 0.7 } else { kind.speed() }
+    if matches!(kind, Kind::Shulker | Kind::Ghast) { 0.7 } else { kind.speed() }
 }
 
 /// Атрибуты: сообщается одна скорость шага (у оригинала так же: клиенту
@@ -380,6 +408,26 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     let mut body = encode_varint(UPDATE_ATTRIBUTES);
 
     body.extend_from_slice(&encode_varint(mob.entity_id));
+
+    // Магмовый куб: броня 3·размер, скорость 0,2 + 0,1·размер, здоровье
+    // размер² (чёрный ящик, magma-cube-stand).
+    if mob.kind == Kind::MagmaCube {
+        let size = f64::from(mob.nether.size.max(1));
+
+        body.extend_from_slice(&encode_varint(3));
+        body.extend_from_slice(&encode_varint(ATTRIBUTE_ARMOR));
+        push_f64(&mut body, 3.0 * size);
+        push_modifiers(&mut body, None);
+        body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
+        push_f64(&mut body, f64::from((0.2 + 0.1 * size) as f32));
+        push_modifiers(&mut body, None);
+        body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
+        push_f64(&mut body, size * size);
+        push_modifiers(&mut body, None);
+
+        return write_body(stream, body).await;
+    }
+
     body.extend_from_slice(&encode_varint(1));
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
     push_f64(&mut body, f64::from(attribute_speed(mob.kind) as f32));

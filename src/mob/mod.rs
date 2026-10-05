@@ -17,6 +17,7 @@
 pub mod ai;
 pub mod dragon;
 pub mod hostile;
+pub mod nether;
 pub mod path;
 pub mod spawn;
 
@@ -54,12 +55,30 @@ pub enum Kind {
     /// Зомби-житель (вики, Zombie Villager): зомби, что помнит профессию,
     /// сделки и опыт жителя; лечится золотым яблоком под слабостью.
     ZombieVillager,
+    /// Ифрит (вики, Blaze): парит, стреляет тройкой малых огненных шаров.
+    Blaze,
+    /// Скелет-иссушитель (вики, Wither Skeleton): каменный меч, иссушение.
+    WitherSkeleton,
+    /// Магмовый куб (вики, Magma Cube): прыгает, делится при смерти.
+    MagmaCube,
+    /// Гаст (вики, Ghast): летает, огненные шары силой 1.
+    Ghast,
+    /// Зомби-пиглин (вики, Zombified Piglin): нейтрален, злится стаей.
+    ZombifiedPiglin,
+    /// Пиглин (вики, Piglin): меняет золото на добычу, нейтрален к золотой броне.
+    Piglin,
+    /// Брут пиглинов (вики, Piglin Brute): стерегёт бастион, броня не усмиряет.
+    PiglinBrute,
+    /// Хоглин (вики, Hoglin): бодает вверх, боится искажённого гриба.
+    Hoglin,
+    /// Страйдер (вики, Strider): ходит по лаве, мёрзнет вне её.
+    Strider,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 16] = [
+    pub const ALL: [Kind; 25] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -76,11 +95,46 @@ impl Kind {
         Kind::Witch,
         Kind::Villager,
         Kind::ZombieVillager,
+        Kind::Blaze,
+        Kind::WitherSkeleton,
+        Kind::MagmaCube,
+        Kind::Ghast,
+        Kind::ZombifiedPiglin,
+        Kind::Piglin,
+        Kind::PiglinBrute,
+        Kind::Hoglin,
+        Kind::Strider,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
     pub fn hostile(self) -> bool {
-        matches!(self, Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton | Kind::Creeper | Kind::Spider | Kind::Enderman | Kind::Shulker | Kind::Witch)
+        matches!(
+            self,
+            Kind::Zombie
+                | Kind::ZombieVillager
+                | Kind::Skeleton
+                | Kind::Creeper
+                | Kind::Spider
+                | Kind::Enderman
+                | Kind::Shulker
+                | Kind::Witch
+                | Kind::Blaze
+                | Kind::WitherSkeleton
+                | Kind::MagmaCube
+                | Kind::Ghast
+                | Kind::ZombifiedPiglin
+                | Kind::Piglin
+                | Kind::PiglinBrute
+                | Kind::Hoglin
+        )
+    }
+
+    /// Моб Незера (mob/nether.rs): у них своя мысль.
+    pub fn nether(self) -> bool {
+        matches!(
+            self,
+            Kind::Blaze | Kind::WitherSkeleton | Kind::MagmaCube | Kind::Ghast | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute | Kind::Hoglin
+        )
     }
 
     /// Не живое существо, а «сущность-другое»: кристалл и снаряд шалкера.
@@ -107,6 +161,15 @@ impl Kind {
             "witch" => Kind::Witch,
             "villager" => Kind::Villager,
             "zombie_villager" => Kind::ZombieVillager,
+            "blaze" => Kind::Blaze,
+            "wither_skeleton" => Kind::WitherSkeleton,
+            "magma_cube" => Kind::MagmaCube,
+            "ghast" => Kind::Ghast,
+            "zombified_piglin" => Kind::ZombifiedPiglin,
+            "piglin" => Kind::Piglin,
+            "piglin_brute" => Kind::PiglinBrute,
+            "hoglin" => Kind::Hoglin,
+            "strider" => Kind::Strider,
             _ => return None,
         })
     }
@@ -129,6 +192,15 @@ impl Kind {
             Kind::Witch => "witch",
             Kind::Villager => "villager",
             Kind::ZombieVillager => "zombie_villager",
+            Kind::Blaze => "blaze",
+            Kind::WitherSkeleton => "wither_skeleton",
+            Kind::MagmaCube => "magma_cube",
+            Kind::Ghast => "ghast",
+            Kind::ZombifiedPiglin => "zombified_piglin",
+            Kind::Piglin => "piglin",
+            Kind::PiglinBrute => "piglin_brute",
+            Kind::Hoglin => "hoglin",
+            Kind::Strider => "strider",
         }
     }
 
@@ -152,6 +224,16 @@ impl Kind {
             Kind::Villager => 139,
             // minecraft-data 26.1: zombie_villager 153 (чёрный ящик, zombie-villager-stand).
             Kind::ZombieVillager => 153,
+            // minecraft-data 26.1, entities.json.
+            Kind::Blaze => 14,
+            Kind::WitherSkeleton => 146,
+            Kind::MagmaCube => 80,
+            Kind::Ghast => 57,
+            Kind::ZombifiedPiglin => 154,
+            Kind::Piglin => 101,
+            Kind::PiglinBrute => 102,
+            Kind::Hoglin => 64,
+            Kind::Strider => 129,
         }
     }
 
@@ -174,6 +256,16 @@ impl Kind {
             Kind::Witch => "minecraft:witch",
             Kind::Villager => "minecraft:villager_v2",
             Kind::ZombieVillager => "minecraft:zombie_villager_v2",
+            // [Bedrock: потом] имена видов Незера для клиента Bedrock.
+            Kind::Blaze => "minecraft:blaze",
+            Kind::WitherSkeleton => "minecraft:wither_skeleton",
+            Kind::MagmaCube => "minecraft:magma_cube",
+            Kind::Ghast => "minecraft:ghast",
+            Kind::ZombifiedPiglin => "minecraft:zombie_pigman",
+            Kind::Piglin => "minecraft:piglin",
+            Kind::PiglinBrute => "minecraft:piglin_brute",
+            Kind::Hoglin => "minecraft:hoglin",
+            Kind::Strider => "minecraft:strider",
         }
     }
 
@@ -183,6 +275,14 @@ impl Kind {
             Kind::Chicken => 0.4,
             Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
+            Kind::Blaze | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 0.6,
+            Kind::WitherSkeleton => 0.7,
+            Kind::Ghast => 4.0,
+            Kind::Hoglin => 1.3964844,
+            Kind::Strider => 0.9,
+            // Размер куба: 0,52 на единицу размера (minecraft-data: 0,52 при размере 1);
+            // настоящую ширину даёт `Mob::size`.
+            Kind::MagmaCube => 0.52,
             Kind::Shulker => 1.0,
             Kind::ShulkerBullet => 0.3125,
             Kind::EndCrystal => 2.0,
@@ -208,6 +308,13 @@ impl Kind {
             Kind::Shulker => 1.0,
             Kind::ShulkerBullet => 0.3125,
             Kind::Witch | Kind::Villager => 1.95,
+            Kind::Blaze => 1.8,
+            Kind::WitherSkeleton => 2.4,
+            Kind::MagmaCube => 0.52,
+            Kind::Ghast => 4.0,
+            Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 1.95,
+            Kind::Hoglin => 1.4,
+            Kind::Strider => 1.7,
         }
     }
 
@@ -230,6 +337,14 @@ impl Kind {
             Kind::Witch => 26.0,
             // Вики, Villager: «Health points 20»; чёрный ящик, villager-trade: 9=20.
             Kind::Villager => 20.0,
+            // Вики: ифрит 20, иссушитель 20, гаст 10, зомби-пиглин 20, пиглин 16,
+            // брут 50, хоглин 40, страйдер 20; куб — `Mob::new` по размеру.
+            Kind::Blaze | Kind::WitherSkeleton | Kind::ZombifiedPiglin | Kind::Strider => 20.0,
+            Kind::Ghast => 10.0,
+            Kind::Piglin => 16.0,
+            Kind::PiglinBrute => 50.0,
+            Kind::Hoglin => 40.0,
+            Kind::MagmaCube => 1.0,
         }
     }
 
@@ -250,6 +365,17 @@ impl Kind {
             Kind::Witch => 0.25,
             // Чёрный ящик, villager-trade: атрибут скорости 0,5.
             Kind::Villager => 0.5,
+            // Вики, «Attributes»: ифрит 0,23; иссушитель 0,25; куб 0,2 (с размером
+            // `Mob::new` не меняет); зомби-пиглин 0,23; пиглин 0,35; брут 0,35;
+            // хоглин 0,3; страйдер 0,175. Гаст и ифрит летают сами (nether.rs).
+            Kind::Blaze => 0.23,
+            Kind::WitherSkeleton => 0.25,
+            Kind::MagmaCube => 0.2,
+            Kind::Ghast => 0.0,
+            Kind::ZombifiedPiglin => 0.23,
+            Kind::Piglin | Kind::PiglinBrute => 0.35,
+            Kind::Hoglin => 0.3,
+            Kind::Strider => 0.175,
             Kind::Shulker | Kind::ShulkerBullet => 0.0,
         }
     }
@@ -270,7 +396,7 @@ impl Kind {
     /// 2 очках брони: `урон · (1 − max(брони/5, брони − урон/2) / 25)`).
     pub fn armor(self) -> f32 {
         match self {
-            Kind::Zombie | Kind::ZombieVillager => 2.0,
+            Kind::Zombie | Kind::ZombieVillager | Kind::ZombifiedPiglin => 2.0,
             _ => 0.0,
         }
     }
@@ -301,6 +427,16 @@ impl Kind {
             Kind::Witch => ("minecraft:entity.witch.ambient", "minecraft:entity.witch.hurt", "minecraft:entity.witch.death"),
             // Чёрный ящик, villager-shake: голос в покое и смерть; удар — hurt [проверить].
             Kind::Villager => ("minecraft:entity.villager.ambient", "minecraft:entity.villager.hurt", "minecraft:entity.villager.death"),
+            // Вики, «Sounds» страниц мобов Незера.
+            Kind::Blaze => ("minecraft:entity.blaze.ambient", "minecraft:entity.blaze.hurt", "minecraft:entity.blaze.death"),
+            Kind::WitherSkeleton => ("minecraft:entity.wither_skeleton.ambient", "minecraft:entity.wither_skeleton.hurt", "minecraft:entity.wither_skeleton.death"),
+            Kind::MagmaCube => ("", "minecraft:entity.magma_cube.hurt", "minecraft:entity.magma_cube.death"),
+            Kind::Ghast => ("minecraft:entity.ghast.ambient", "minecraft:entity.ghast.hurt", "minecraft:entity.ghast.death"),
+            Kind::ZombifiedPiglin => ("minecraft:entity.zombified_piglin.ambient", "minecraft:entity.zombified_piglin.hurt", "minecraft:entity.zombified_piglin.death"),
+            Kind::Piglin => ("minecraft:entity.piglin.ambient", "minecraft:entity.piglin.hurt", "minecraft:entity.piglin.death"),
+            Kind::PiglinBrute => ("minecraft:entity.piglin_brute.ambient", "minecraft:entity.piglin_brute.hurt", "minecraft:entity.piglin_brute.death"),
+            Kind::Hoglin => ("minecraft:entity.hoglin.ambient", "minecraft:entity.hoglin.hurt", "minecraft:entity.hoglin.death"),
+            Kind::Strider => ("minecraft:entity.strider.ambient", "minecraft:entity.strider.hurt", "minecraft:entity.strider.death"),
         }
     }
 
@@ -317,6 +453,12 @@ impl Kind {
             // Шаги крипера играются звуком блока [проверить]; молча.
             Kind::Creeper => "",
             Kind::Spider => "minecraft:entity.spider.step",
+            Kind::WitherSkeleton => "minecraft:entity.wither_skeleton.step",
+            Kind::ZombifiedPiglin => "minecraft:entity.zombified_piglin.step",
+            Kind::Piglin => "minecraft:entity.piglin.step",
+            Kind::PiglinBrute => "minecraft:entity.piglin_brute.step",
+            Kind::Hoglin => "minecraft:entity.hoglin.step",
+            Kind::Strider => "minecraft:entity.strider.step",
             // У эндермена и ведьмы шаги — звуком блока [проверить]; молча.
             _ => "",
         }
@@ -393,6 +535,37 @@ pub trait View {
     /// и блочный свет в клетке.
     fn light(&self, _x: i32, _y: i32, _z: i32, _sky: i32) -> (u8, u8) {
         (0, 0)
+    }
+}
+
+/// Взгляд страйдера: поверхность лавы — твёрдый пол.
+pub struct LavaFloor<'a>(pub &'a dyn View);
+
+impl View for LavaFloor<'_> {
+    fn block(&self, x: i32, y: i32, z: i32) -> i32 {
+        let state = self.0.block(x, y, z);
+
+        if is_lava(state) && !is_lava(self.0.block(x, y + 1, z)) {
+            return blocks::state_by_name("stone").unwrap_or(state);
+        }
+
+        state
+    }
+
+    fn loaded(&self, chunk_x: i32, chunk_z: i32) -> bool {
+        self.0.loaded(chunk_x, chunk_z)
+    }
+
+    fn open_sky(&self, x: i32, y: i32, z: i32) -> bool {
+        self.0.open_sky(x, y, z)
+    }
+
+    fn rain(&self, x: i32, y: i32, z: i32) -> bool {
+        self.0.rain(x, y, z)
+    }
+
+    fn light(&self, x: i32, y: i32, z: i32, sky: i32) -> (u8, u8) {
+        self.0.light(x, y, z, sky)
     }
 }
 
@@ -622,6 +795,13 @@ pub struct Mob {
 
     /// Житель: профессия, сделки, опыт (src/villager.rs).
     pub villager: crate::villager::State,
+
+    /// Мобы Незера: размер куба, гнев, торг пиглина и пр. (mob/nether.rs).
+    pub nether: nether::State,
+
+    /// Уровень «Добычи» оружия убившего: число добавляется к верхней границе
+    /// выпадения (вики, Looting).
+    pub looting: i32,
 }
 
 impl Mob {
@@ -630,6 +810,16 @@ impl Mob {
 
         vitals.health = kind.max_health();
         vitals.max_health = kind.max_health();
+
+        // Магмовый куб рождается размера 2 (у призванного без `Size` в оригинале
+        // размер случайный 1/2/4 при естественном появлении — `nether::roll_size`).
+        let mut nether = nether::State::default();
+
+        if kind == Kind::MagmaCube {
+            nether.size = 2;
+            vitals.health = 4.0;
+            vitals.max_health = 4.0;
+        }
 
         // Шалкер без цвета — 16 (minecraft-data: color; замер мира оригинала:
         // у всех шалкеров городов Color 16).
@@ -681,6 +871,8 @@ impl Mob {
             exploding: false,
             dragon: dragon::State::default(),
             villager: crate::villager::State::new(),
+            nether,
+            looting: 0,
         }
     }
 
@@ -724,6 +916,13 @@ impl Mob {
     pub fn size(&self) -> (f64, f64) {
         let scale = if self.is_baby() { 0.5 } else { 1.0 };
 
+        // Куб: 0,52 · размер (вики, Magma Cube, «Hitbox»).
+        if self.kind == Kind::MagmaCube {
+            let cube = 0.52 * f64::from(self.nether.size.max(1));
+
+            return (cube, cube);
+        }
+
         (self.kind.width() * scale, self.kind.height() * scale)
     }
 
@@ -732,7 +931,11 @@ impl Mob {
     /// на 1,64 = глаза − 0,1), крипер 1,445, паук 0,65 [проверить].
     pub fn eye(&self) -> f64 {
         match self.kind {
-            Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton => 1.74,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 1.74,
+            // [проверить] высота глаз: ифрит 1,53, иссушитель 2,1, гаст 2,6.
+            Kind::Blaze => 1.53,
+            Kind::WitherSkeleton => 2.1,
+            Kind::Ghast => 2.6,
             Kind::Creeper => 1.445,
             Kind::Spider => 0.65,
             Kind::Enderman => hostile::ENDERMAN_EYE,
@@ -880,6 +1083,15 @@ impl Mob {
             return plan;
         }
 
+        // Страйдер ходит по лаве, как по полу (вики, Strider): для него верх
+        // лавового блока твёрд.
+        if self.kind == Kind::Strider {
+            nether::strider_tick(self, view);
+        }
+
+        let lava_floor = LavaFloor(view);
+        let view: &dyn View = if self.kind == Kind::Strider { &lava_floor } else { view };
+
         let mut plan = ai::think(self, view, ctx, rng);
 
         // Пьющая ведьма стоит: модификатор «drinking» −0,25 к скорости 0,25
@@ -889,7 +1101,15 @@ impl Mob {
         }
 
         // Шалкер сидит на грани: ни тяжести, ни шагов (вики, Shulker).
-        if self.kind != Kind::Shulker && !self.is_dead() {
+        if self.kind == Kind::Ghast && !self.is_dead() {
+            nether::drift(self, view);
+        } else if self.kind != Kind::Shulker && !self.is_dead() {
+            if self.kind == Kind::Blaze {
+                let eye = self.h.target.and_then(|id| ctx.players.iter().find(|player| player.id == id)).map(|player| player.y + player.eye);
+
+                nether::blaze_lift(self, eye);
+            }
+
             self.physics(view, plan.speed, plan.jump);
         }
 
@@ -1174,6 +1394,14 @@ impl Mob {
 
         self.events.push(Event::Hurt { source, cause: push.map_or(0, |push| push.cause), at: (self.x, self.y, self.z) });
 
+        // Ударили зомби-пиглина: злится и зовёт стаю (вики, Zombified Piglin).
+        if self.kind == Kind::ZombifiedPiglin && push.is_some_and(|push| push.cause != 0) && !self.no_ai {
+            let mut anger = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks.wrapping_mul(0x51));
+
+            self.nether.anger = nether::anger_ticks(&mut anger);
+            self.nether.alert = true;
+        }
+
         // Ударил игрок: враждебный мстит ему (паук нападает и при свете).
         if let Some(push) = push.filter(|push| push.cause != 0) {
             self.by_player = matches!(source, Source::PlayerAttack | Source::MaceSmash);
@@ -1229,6 +1457,7 @@ impl Mob {
     pub fn armor(&self) -> f32 {
         match self.kind {
             Kind::Shulker if self.h.covered => 20.0,
+            Kind::MagmaCube => nether::cube_armor(self.nether.size),
             kind => kind.armor(),
         }
     }
@@ -1241,6 +1470,10 @@ impl Mob {
         if self.kind == Kind::Shulker {
             return;
         }
+
+        // Хоглин держит отдачу: чёрный ящик, hoglin-stand — скорость после
+        // удара 0,16 вместо 0,4, то есть сопротивление 0,6.
+        let strength = if self.kind == Kind::Hoglin { strength * 0.4 } else { strength };
 
         self.vx = self.vx / 2.0 + ux * strength;
         self.vz = self.vz / 2.0 + uz * strength;
@@ -1296,7 +1529,10 @@ impl Mob {
         } else if self.xp_until > self.ticks && !self.is_baby() {
             let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xE4B);
 
-            self.pending_xp = if self.kind.hostile() {
+            self.pending_xp = if self.kind == Kind::MagmaCube {
+                // Вики, Magma Cube: опыт равен размеру (чёрный ящик, magma-cube-stand).
+                self.nether.size
+            } else if self.kind.hostile() {
                 let worn = u32::from(self.h.bow) + u32::from(self.h.helmet);
 
                 5 + (0..worn).map(|_| crate::survival::passive_mob_xp(rng.unit() as f32)).sum::<i32>()
@@ -1337,6 +1573,15 @@ impl Mob {
             Kind::Witch => 13,
             Kind::Villager => 14,
             Kind::ZombieVillager => 15,
+            Kind::Blaze => 16,
+            Kind::WitherSkeleton => 17,
+            Kind::MagmaCube => 18,
+            Kind::Ghast => 19,
+            Kind::ZombifiedPiglin => 20,
+            Kind::Piglin => 21,
+            Kind::PiglinBrute => 22,
+            Kind::Hoglin => 23,
+            Kind::Strider => 24,
         });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -1383,6 +1628,15 @@ impl Mob {
             13 => Kind::Witch,
             14 => Kind::Villager,
             15 => Kind::ZombieVillager,
+            16 => Kind::Blaze,
+            17 => Kind::WitherSkeleton,
+            18 => Kind::MagmaCube,
+            19 => Kind::Ghast,
+            20 => Kind::ZombifiedPiglin,
+            21 => Kind::Piglin,
+            22 => Kind::PiglinBrute,
+            23 => Kind::Hoglin,
+            24 => Kind::Strider,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -1503,6 +1757,56 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
                 give("spider_eye", 0, 1, rng);
             }
         }
+        // Вики, Blaze: 0–1 стержня ифрита (только от игрока; «Looting» +1 за уровень).
+        Kind::Blaze => {
+            if mob.by_player {
+                give("blaze_rod", 0, 1 + mob.looting, rng);
+            }
+        }
+        // Вики, Wither Skeleton: 0–2 костей, 0–1 угля (+ «Looting»); череп 2,5 %
+        // (+1 % за уровень) только от игрока.
+        Kind::WitherSkeleton => {
+            give("bone", 0, 2 + mob.looting, rng);
+            give("coal", 0, 1 + mob.looting, rng);
+
+            if mob.by_player && rng.below(1000) < 25 + 10 * mob.looting as u32 {
+                give("wither_skeleton_skull", 1, 1, rng);
+            }
+        }
+        // Вики, Magma Cube: 0–1 магмового сгустка у кубов размера 2 и больше (+ «Looting»).
+        Kind::MagmaCube => {
+            if mob.nether.size > 1 {
+                give("magma_cream", 0, 1 + mob.looting, rng);
+            }
+        }
+        // Вики, Ghast: 0–1 слезы гаста и 0–2 пороха (+ «Looting»).
+        Kind::Ghast => {
+            give("ghast_tear", 0, 1 + mob.looting, rng);
+            give("gunpowder", 0, 2 + mob.looting, rng);
+        }
+        // Вики, Zombified Piglin: 0–1 гнилой плоти, 0–1 золотого самородка,
+        // золотой слиток 2,5 % (только от игрока).
+        Kind::ZombifiedPiglin => {
+            give("rotten_flesh", 0, 1 + mob.looting, rng);
+            give("gold_nugget", 0, 1 + mob.looting, rng);
+
+            if mob.by_player && rng.below(1000) < 25 + 10 * mob.looting as u32 {
+                give("gold_ingot", 1, 1, rng);
+            }
+        }
+        // Вики, Piglin/Piglin Brute: сами ничего не роняют, только то, что держат.
+        Kind::Piglin | Kind::PiglinBrute => {
+            for stack in &mob.nether.held {
+                drops.push(*stack);
+            }
+        }
+        // Вики, Hoglin: 2–4 сырой свинины, 0–1 кожи.
+        Kind::Hoglin => {
+            give("porkchop", 2, 4 + mob.looting, rng);
+            give("leather", 0, 1 + mob.looting, rng);
+        }
+        // Вики, Strider: 2–5 нитей.
+        Kind::Strider => give("string", 2, 5 + mob.looting, rng),
         // Кристалл и дракон предметов не роняют (вики: у дракона только опыт,
         // яйцо — блок на портале).
         // Житель ничего не роняет (вики, Villager: «Drops: none»).
@@ -1838,6 +2142,9 @@ pub struct Outcome {
     /// Блоки, взятые эндерменами, и поставленные ими (клетка, состояние).
     pub grabs: Vec<(i32, i32, i32)>,
     pub puts: Vec<((i32, i32, i32), i32)>,
+
+    /// Огненные шары ифритов и гастов: кто пустил и какой.
+    pub launches: Vec<(i32, nether::Launch)>,
 }
 
 /// Удар моба в ближнем бою.
@@ -1957,6 +2264,10 @@ pub fn step_all(
             outcome.shots.push(Fired { shooter: mob.entity_id, shot });
         }
 
+        if let Some(launch) = plan.launch {
+            outcome.launches.push((mob.entity_id, launch));
+        }
+
         if let Some(power) = plan.blast {
             outcome.blasts.push(Blast { shooter: mob.entity_id, at: (mob.x, mob.y, mob.z), power });
             mob.h.despawn = true;
@@ -2005,6 +2316,47 @@ pub fn step_all(
         if plan.lay_egg {
             outcome.eggs.push((mob.x, mob.y, mob.z));
             mob.events.push(Event::Sound { name: "minecraft:entity.chicken.egg", volume: 1.0, pitch: (rng.unit() - rng.unit()) as f32 * 0.2 + 1.0 });
+        }
+    }
+
+    // Зомби-пиглины зовут стаю: все в 32 блоках злятся на обидчика (вики,
+    // Zombified Piglin: «all zombified piglins within … become angry»).
+    let alerts: Vec<(usize, Option<i32>)> = mobs.iter().enumerate().filter(|(_, mob)| mob.nether.alert).map(|(index, mob)| (index, mob.h.target)).collect();
+
+    for (index, target) in alerts {
+        let (x, y, z) = (mobs[index].x, mobs[index].y, mobs[index].z);
+
+        mobs[index].nether.alert = false;
+
+        for mate in mobs.iter_mut().filter(|mate| mate.kind == Kind::ZombifiedPiglin && !mate.is_dead() && !mate.no_ai) {
+            if (mate.x - x).powi(2) + (mate.y - y).powi(2) + (mate.z - z).powi(2) <= nether::CALL_RANGE * nether::CALL_RANGE {
+                if mate.nether.anger == 0 {
+                    mate.nether.anger = nether::anger_ticks(rng);
+                }
+
+                mate.h.target = target;
+            }
+        }
+    }
+
+    // Магмовый куб, лежавший своё, делится на 2–4 меньших (вики, Magma Cube,
+    // «Splitting»): появляются, когда тело пропадает.
+    for parent in mobs.iter().filter(|mob| mob.kind == Kind::MagmaCube && mob.gone() && mob.nether.size > 1 && !mob.h.despawn).cloned().collect::<Vec<_>>() {
+        {
+            let size = parent.nether.size / 2;
+            let count = 2 + rng.below(3) as i32;
+
+            for i in 0..count {
+                let spread = 0.52 * f64::from(parent.nether.size) / 2.0;
+                let at = (parent.x + (f64::from(i % 2) - 0.5) * spread, parent.y + 0.5, parent.z + (f64::from(i / 2) - 0.5) * spread);
+                let mut child = Mob::new(next_id(), Kind::MagmaCube, at);
+
+                nether::set_size(&mut child, size);
+                child.no_ai = parent.no_ai;
+                child.silent = parent.silent;
+                child.face((rng.unit() * 360.0) as f32);
+                born.push(child);
+            }
         }
     }
 

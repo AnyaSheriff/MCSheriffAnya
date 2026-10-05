@@ -1,0 +1,43 @@
+{
+ "about": "Удочка: заброс, поплавок летит и садится на воду, подёргивается; убирается.",
+ "track_mobs": true,
+ "track_self": true,
+ "inventory": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,2,-1.5) 0 50",
+  "!wait 20",
+  "fill $(-1,0,-1) $(7,6,7) minecraft:air",
+  "fill $(0,0,0) $(6,1,6) minecraft:stone",
+  "fill $(1,0,1) $(5,1,5) minecraft:water",
+  "tp $(bot) $(3.5,2,0.5) 0 25",
+  "!stopfly",
+  "give $(bot) minecraft:fishing_rod 1",
+  "!hotbar 0",
+  "!wait 30"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  },
+  {
+   "after": 60,
+   "use": true
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "kill @e[type=!player,distance=..48]",
+  "fill $(0,0,0) $(6,1,6) minecraft:air",
+  "fill $(-1,0,-1) $(7,6,7) minecraft:air",
+  "gamemode creative $(bot)",
+  "clear $(bot)"
+ ],
+ "name": "fishing-cast"
+}

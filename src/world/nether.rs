@@ -612,6 +612,14 @@ impl Nether {
         })
     }
 
+    /// Лежит ли клетка в ящике какого-либо куска крепости.
+    pub fn in_fortress(&self, x: i32, y: i32, z: i32) -> bool {
+        self.fortresses_near(x.div_euclid(16), z.div_euclid(16))
+            .iter()
+            .flatten()
+            .any(|piece| piece.bounds[0] <= x && x <= piece.bounds[3] && piece.bounds[1] <= y && y <= piece.bounds[4] && piece.bounds[2] <= z && z <= piece.bounds[5])
+    }
+
     /// Биом столбца.
     pub fn biome_at(&self, x: i32, z: i32) -> Biome {
         let fit = self.fit();

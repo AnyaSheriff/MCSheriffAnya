@@ -211,7 +211,7 @@ const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
 // Край: кристалл, дракон, его огненный шар и облако дыхания — пишутся как мобы.
-const MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket', 'eye_of_ender', 'villager', 'wandering_trader', 'zombie_villager']);
+const MOB_TYPES = new Set(['oak_boat', 'spruce_boat', 'birch_boat', 'jungle_boat', 'acacia_boat', 'dark_oak_boat', 'mangrove_boat', 'cherry_boat', 'pale_oak_boat', 'bamboo_raft', 'oak_chest_boat', 'bamboo_chest_raft', 'fishing_bobber', 'cow', 'pig', 'sheep', 'chicken', 'zombie', 'skeleton', 'creeper', 'spider', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket', 'eye_of_ender', 'villager', 'wandering_trader', 'zombie_villager', 'blaze', 'wither_skeleton', 'magma_cube', 'ghast', 'zombified_piglin', 'piglin', 'piglin_brute', 'hoglin', 'strider', 'small_fireball', 'fireball']);
 const padDrops = new Set();
 const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {
@@ -774,6 +774,12 @@ bot.once('spawn', async () => {
       // Поворот взгляда (градусы: yaw по сторонам света Minecraft, pitch вниз +).
       if (a.look) await (a.bot === 2 ? bot2 : bot).look(a.look[0], a.look[1], true);
       if (a.fly !== undefined) { if (a.fly) bot.creative.startFlying(); else bot.creative.stopFlying(); }
+      // Сырые пакеты (`raw`: {name, params} или список): седло, лодка, ввод — то,
+      // чего у mineflayer нет. В параметрах `"$self"` заменяется номером робота.
+      if (a.raw) for (const r of [].concat(a.raw)) (a.bot === 2 ? bot2 : bot)._client.write(r.name, JSON.parse(JSON.stringify(r.params || {}).replace(/"@([xyz]):(-?[\d.]+)"/g, (_, c, v) => String(ORIGIN[c] + Number(v))).replace(/"\$self"/g, String((a.bot === 2 ? bot2 : bot).entity.id))));
+      // Взлететь на элитрах (прыжок в воздухе).
+      // mineflayer шлёт для 26.1 устаревший номер действия: шлём «start_fall_flying» сами.
+      if (a.elytra) bot._client.write('entity_action', { entityId: bot.entity.id, actionId: 'start_fall_flying', jumpBoost: 0 });
       if ((a.control || a.fly !== undefined || a.look) && pendingDo) { events.push({ tick: pendingDo.tick, ms: Date.now() - t0, kind: 'do', what: pendingDo.what, phase: null }); pendingDo = null; }
       if (a.respawn) bot._client.write('client_command', { actionId: 0 });
       // Ломать блок (`dig`: [x,y,z]): Player Action — 0 начать (в творческом

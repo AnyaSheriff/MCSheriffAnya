@@ -150,13 +150,35 @@ pub const MAX_DISTANCE: f64 = 128.0;
 /// «10⁄515», «5»).
 pub const HOSTILE: [(Kind, u32); 6] = [(Kind::Zombie, 95), (Kind::Skeleton, 100), (Kind::Creeper, 100), (Kind::Spider, 100), (Kind::Enderman, 10), (Kind::Witch, 5)];
 
+/// Незер: виды и веса по биомам (вики, Mob spawning, «Nether»). Страйдеры
+/// рождаются в лаве — естественного появления в лаве у нас пока нет
+/// [проверить: Strider, «Spawning»].
+pub fn nether_kinds(biome: &str) -> &'static [(Kind, u32)] {
+    match biome {
+        "soul_sand_valley" => &[(Kind::Skeleton, 20), (Kind::Ghast, 50), (Kind::Enderman, 1)],
+        "crimson_forest" => &[(Kind::ZombifiedPiglin, 1), (Kind::Hoglin, 9), (Kind::Piglin, 5)],
+        "warped_forest" => &[(Kind::Enderman, 1)],
+        "basalt_deltas" => &[(Kind::Ghast, 40), (Kind::MagmaCube, 100)],
+        _ => &[(Kind::Ghast, 50), (Kind::ZombifiedPiglin, 100), (Kind::MagmaCube, 2), (Kind::Enderman, 1), (Kind::Piglin, 15)],
+    }
+}
+
+/// Крепость Незера: на кирпиче крепости (вики, Nether Fortress, «Mob spawning»).
+pub const FORTRESS: [(Kind, u32); 5] = [(Kind::Blaze, 10), (Kind::ZombifiedPiglin, 5), (Kind::WitherSkeleton, 8), (Kind::Skeleton, 2), (Kind::MagmaCube, 3)];
+
 /// Энд: одни эндермены (вики, Enderman, «Spawning»).
 pub const END_HOSTILE: [(Kind, u32); 1] = [(Kind::Enderman, 10)];
 
 /// Сколько мобов в группе не больше: ведьма одна (вики, Witch: «Group size: 1»),
 /// прочие — до четырёх.
 fn hostile_group(kind: Kind) -> u32 {
-    if kind == Kind::Witch { 1 } else { 4 }
+    match kind {
+        Kind::Witch | Kind::Ghast | Kind::Enderman => 1,
+        // Вики: ифрит 2–3, иссушитель и скелет 5, хоглин 3–4, куб 4.
+        Kind::Blaze => 3,
+        Kind::WitherSkeleton => 5,
+        _ => 4,
+    }
 }
 
 /// Годится ли клетка для появления: воздух в ногах и над головой, пол — целый.
@@ -201,6 +223,21 @@ pub fn hostile_attempt(
     rng: &mut Rng,
     next_id: &mut dyn FnMut() -> i32,
 ) -> Vec<Mob> {
+    hostile_attempt_in(view, players, surface_of, &|_, _, _| kinds.to_vec(), 12, rng, next_id)
+}
+
+/// То же, но виды зависят от места (биом, крепость): `kinds_at(x, y, z)`; в
+/// Незере попыток больше — свободных мест там мало.
+#[allow(clippy::too_many_arguments)]
+pub fn hostile_attempt_in(
+    view: &dyn View,
+    players: &[(f64, f64, f64)],
+    surface_of: &dyn Fn(i32, i32) -> i32,
+    kinds_at: &dyn Fn(i32, i32, i32) -> Vec<(Kind, u32)>,
+    tries: u32,
+    rng: &mut Rng,
+    next_id: &mut dyn FnMut() -> i32,
+) -> Vec<Mob> {
     if players.is_empty() {
         return Vec::new();
     }
@@ -214,7 +251,7 @@ pub fn hostile_attempt(
     // от дна до поверхности, поэтому пещеры тоже в счёт).
     let mut found = None;
 
-    for _ in 0..12 {
+    for _ in 0..tries {
         let x = centre.0.floor() as i32 + rng.below(reach * 2 + 1) as i32 - reach as i32;
         let z = centre.2.floor() as i32 + rng.below(reach * 2 + 1) as i32 - reach as i32;
 
@@ -240,7 +277,13 @@ pub fn hostile_attempt(
         return Vec::new();
     };
 
-    let kind = pick_hostile(kinds, rng);
+    let kinds = kinds_at(x, y, z);
+
+    if kinds.is_empty() {
+        return Vec::new();
+    }
+
+    let kind = pick_hostile(&kinds, rng);
     let (width, height) = (kind.width(), kind.height());
     let block_height = height.ceil() as i32;
     let far_enough = |px: f64, py: f64, pz: f64| {
@@ -268,6 +311,10 @@ pub fn hostile_attempt(
         // случайная профессия [проверить: тип по биому].
         let each = if kind == Kind::Zombie && rng.below(100) < 5 { Kind::ZombieVillager } else { kind };
         let mut mob = Mob::new(next_id(), each, at);
+
+        if each == Kind::MagmaCube {
+            super::nether::set_size(&mut mob, super::nether::roll_size(rng));
+        }
 
         if each == Kind::ZombieVillager {
             mob.villager.profession = rng.below(crate::villager::PROFESSIONS.len() as u32) as u8;

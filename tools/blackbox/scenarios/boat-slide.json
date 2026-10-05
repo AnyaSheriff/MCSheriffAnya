@@ -1,0 +1,39 @@
+{
+ "about": "Пустая лодка с толчком по суше (камень) и льду: затухание скорости.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,2,-1.5) 0 50",
+  "!wait 20",
+  "fill $(-1,0,-1) $(9,6,9) minecraft:air",
+  "fill $(-1,-1,-1) $(9,-1,9) minecraft:stone",
+  "fill $(0,-1,4) $(9,-1,4) minecraft:packed_ice",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:oak_boat $(1.5,0,1.5) {Motion:[0.4d,0d,0d]}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon minecraft:birch_boat $(1.5,0,4.5) {Motion:[0.4d,0d,0d]}"
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=!player,distance=..48]",
+  "fill $(0,0,0) $(6,1,6) minecraft:air",
+  "fill $(-1,0,-1) $(7,6,7) minecraft:air",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "fill $(-1,-1,-1) $(9,-1,9) minecraft:stone"
+ ],
+ "name": "boat-slide"
+}

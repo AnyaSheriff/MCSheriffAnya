@@ -1,0 +1,67 @@
+{
+ "about": "Спавнер ифритов: данные блока и первый залп.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:diamond_sword 1",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0",
+  "fill $(-9,3,-9) $(17,3,17) minecraft:stone",
+  "gamerule spawn_mobs true"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "setblock $(3,0,3) minecraft:spawner{SpawnData:{entity:{id:\"minecraft:blaze\"}},Delay:40s,MinSpawnDelay:200s,MaxSpawnDelay:200s,SpawnCount:3s,SpawnRange:4s,RequiredPlayerRange:16s,MaxNearbyEntities:6s}"
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "kill @e[type=blaze,distance=..48]",
+  "kill @e[type=wither_skeleton,distance=..48]",
+  "kill @e[type=magma_cube,distance=..48]",
+  "kill @e[type=ghast,distance=..48]",
+  "kill @e[type=zombified_piglin,distance=..48]",
+  "kill @e[type=piglin,distance=..48]",
+  "kill @e[type=piglin_brute,distance=..48]",
+  "kill @e[type=hoglin,distance=..48]",
+  "kill @e[type=strider,distance=..48]",
+  "kill @e[type=small_fireball,distance=..48]",
+  "kill @e[type=fireball,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=skeleton,distance=..48]",
+  "gamerule spawn_mobs false",
+  "fill $(-9,3,-9) $(17,3,17) minecraft:air",
+  "setblock $(3,0,3) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block"
+ ],
+ "name": "spawner-blaze",
+ "random": [
+  {
+   "type": "count",
+   "name": "всё случайное",
+   "match": "^(cart|meta|spawn|sound|level|sv|particle)",
+   "range": [
+    0,
+    100000
+   ],
+   "anytick": true,
+   "why": "ИИ моба с самого начала случаен (идёт за роботом сам), как в zombie-attack"
+  }
+ ],
+ "exclusive": true
+}

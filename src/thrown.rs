@@ -25,6 +25,9 @@ pub const SPLASH_TYPE: i32 = 105;
 pub const LINGERING_TYPE: i32 = 106;
 pub const CLOUD_TYPE: i32 = 3;
 pub const FIREBALL_TYPE: i32 = 37;
+/// Малый шар ифрита и большой шар гаста (minecraft-data: small_fireball, fireball).
+pub const SMALL_FIREBALL_TYPE: i32 = 118;
+pub const GHAST_FIREBALL_TYPE: i32 = 52;
 
 /// Скорость броска зелья и поправка вверх (вики, Splash Potion: «about 0.5
 /// blocks/tick», «–20°»).
@@ -53,6 +56,10 @@ pub enum Kind {
     Splash,
     Lingering,
     DragonFireball,
+    /// Малый огненный шар ифрита: 5 урона и огонь (вики, Small Fireball).
+    SmallFireball,
+    /// Огненный шар гаста: взрыв силой `power` с огнём (вики, Fireball).
+    GhastFireball,
 }
 
 /// Место, скорость и поворот снаряда.
@@ -80,6 +87,8 @@ pub struct Flying {
     pub prev: Snapshot,
     /// Направление разгона огненного шара.
     pub push: (f64, f64, f64),
+    /// Сила взрыва шара гаста.
+    pub power: i32,
     pub owner: i32,
     /// Зелье ещё внутри бросившего: его не задевает (splash-potion-feet:
     /// брошенное под ноги летит сквозь робота на пол).
@@ -95,7 +104,21 @@ impl Flying {
             Kind::Splash => SPLASH_TYPE,
             Kind::Lingering => LINGERING_TYPE,
             Kind::DragonFireball => FIREBALL_TYPE,
+            Kind::SmallFireball => SMALL_FIREBALL_TYPE,
+            Kind::GhastFireball => GHAST_FIREBALL_TYPE,
         }
+    }
+
+    /// Огненный шар любого вида: летит с разгоном, а не по броску.
+    pub fn is_fireball(&self) -> bool {
+        matches!(self.kind, Kind::DragonFireball | Kind::SmallFireball | Kind::GhastFireball)
+    }
+
+    /// Шар ифрита или гаста: из точки `at`, разгон — по `direction`. Скорость
+    /// при появлении нулевая, как у шара дракона [проверить по blaze-attack,
+    /// ghast-attack].
+    pub fn mob_fireball(entity_id: i32, dimension: Dimension, kind: Kind, at: (f64, f64, f64), direction: (f64, f64, f64), owner: i32, power: i32) -> Self {
+        Self { kind, power, ..Self::fireball(entity_id, dimension, at, (0.0, 0.0, 0.0), direction, owner) }
     }
 
     /// Брошенное игроком зелье: из глаз (−0,1) по взгляду с поправкой.
@@ -117,6 +140,7 @@ impl Flying {
             rot,
             prev: (at, velocity, rot),
             push: (0.0, 0.0, 0.0),
+            power: 0,
             owner,
             in_owner: true,
             age: 0,
@@ -543,6 +567,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     let mut gone: Vec<i32> = Vec::new();
     let mut new_clouds: Vec<Cloud> = Vec::new();
     let mut impacts: Vec<Impact> = Vec::new();
+    let mut blasts: Vec<(i32, (f64, f64, f64), f32)> = Vec::new();
     let height = |sneaking: bool| if sneaking { 1.5 } else { 1.8 };
 
     for flying in thrown.flying.iter_mut().filter(|f| f.dimension == dimension) {
@@ -553,7 +578,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         flying.prev = ((flying.x, flying.y, flying.z), (flying.vx, flying.vy, flying.vz), flying.rot);
         flying.age += 1;
 
-        let fireball = flying.kind == Kind::DragonFireball;
+        let fireball = flying.is_fireball();
+        let dragon_ball = flying.kind == Kind::DragonFireball;
 
         // Такт полёта: у зелья тяжесть, сопротивление, ход; у шара — разгон,
         // сопротивление, ход.
@@ -595,7 +621,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         }
 
         for mob in items.mobs().iter() {
-            if mob.is_dead() || mob.entity_id == flying.owner || (fireball && mob.kind == crate::mob::Kind::EnderDragon) {
+            if mob.is_dead() || mob.entity_id == flying.owner || (dragon_ball && mob.kind == crate::mob::Kind::EnderDragon) {
                 continue;
             }
 
@@ -647,6 +673,43 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         gone.push(flying.entity_id);
 
         let block_at = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
+
+        // Малый шар ифрита: 5 урона и огонь на 5 секунд; о блок — огонь в
+        // соседней клетке (вики, Small Fireball).
+        if flying.kind == Kind::SmallFireball {
+            small_fireball_hit(shared, world, &mut items, flying, at, struck, block_at);
+            continue;
+        }
+
+        // Шар гаста: взрыв силой 1 с огнём там, где ударил (вики, Fireball).
+        if flying.kind == Kind::GhastFireball {
+            // Прямое попадание в моба: 6 урона, а отбитый игроком шар убивает
+            // гаста с одного удара (вики, Ghast: «deals 1000 damage»).
+            let deflected = !items.mobs().iter().any(|mob| mob.entity_id == flying.owner);
+            let owner = flying.owner;
+            let centre = match struck {
+                Some(Struck::Mob(id)) => {
+                    let (vx, vz) = (flying.vx, flying.vz);
+
+                    items.mobs_mut().iter_mut().find(|mob| mob.entity_id == id).map_or(at, |mob| {
+                        let length = vx.hypot(vz).max(1.0e-9);
+                        let push = crate::mob::Push { dir: (vx / length, vz / length), strength: crate::mob::BASE_KNOCKBACK, cause: owner };
+
+                        if deflected {
+                            mob.credit_player();
+                        }
+
+                        mob.hurt(if deflected && mob.kind == crate::mob::Kind::Ghast { 1000.0 } else { 6.0 }, Source::Fireball, Some(push));
+
+                        (mob.x, mob.y + mob.size().1 / 2.0, mob.z)
+                    })
+                }
+                _ => at,
+            };
+
+            blasts.push((flying.owner, centre, flying.power.max(1) as f32));
+            continue;
+        }
 
         if fireball {
             // Шар разбивается облаком дыхания (dragon-fireball: событие 2006/1
@@ -725,6 +788,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 
     thrown.flying.retain(|f| !gone.contains(&f.entity_id));
+
+    // Огненные шары гаста взрываются после хода всех снарядов.
+    let fireball_blasts = std::mem::take(&mut blasts);
 
     // Ракеты фейерверка: полёт и взрывы (firework.rs).
     let mut strikes = Vec::new();
@@ -895,6 +961,18 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     drop(thrown);
     drop(items);
 
+    // Взрывы шаров гаста: сила 1, огонь (вики, Fireball).
+    for (owner, centre, power) in fireball_blasts {
+        let players = crate::tick::blast_targets(shared, dimension);
+        let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+        let mut next_id = || shared.next_entity_id();
+
+        world.blast_source = owner;
+        world.blast_killer = crate::mob::hostile::killer_key(crate::mob::Kind::Ghast);
+        crate::tnt::explode_with_fire(world, &mut items, &players, centre, power, &mut next_id);
+        world.blast_killer = "";
+    }
+
     let mut hurts = Vec::new();
 
     for deed in deeds {
@@ -913,6 +991,69 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
         for (uuid, amount) in hurts {
             players.order(&uuid, crate::players::Order::Hurt { amount, source: Source::Magic });
+        }
+    }
+}
+
+/// Попадание малого шара ифрита: урон 5 и огонь на 5 секунд цели; о блок —
+/// огонь в клетке перед ним, если там воздух (вики, Small Fireball; Blaze).
+fn small_fireball_hit(shared: &Shared, world: &mut World, items: &mut crate::items::Items, flying: &Flying, at: (f64, f64, f64), struck: Option<Struck>, block_at: (i32, i32, i32)) {
+    let _ = shared;
+
+    match struck {
+        Some(Struck::Player(id)) => {
+            let from = (flying.x, flying.y, flying.z);
+
+            world.note_player_strike(crate::combat::PlayerStrike {
+                victim: id,
+                attacker: flying.owner,
+                attacker_uuid: [0; 16],
+                attacker_name: String::new(),
+                from,
+                yaw: angles((flying.vx, flying.vy, flying.vz)).0,
+                damage: 5.0,
+                source: Source::Fireball,
+                extra_knockback: 0.0,
+                weapon: None,
+                disables_shield_ticks: 0,
+                breach_scale: 1.0,
+                fire_ticks: 100,
+                thorns_slots: Vec::new(),
+                ignores_shield: false,
+            });
+        }
+        Some(Struck::Mob(id)) => {
+            if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == id) {
+                let length = flying.vx.hypot(flying.vz).max(1.0e-9);
+                let push = crate::mob::Push { dir: (flying.vx / length, flying.vz / length), strength: crate::mob::BASE_KNOCKBACK, cause: flying.owner };
+
+                mob.hurt(5.0, Source::Fireball, Some(push));
+
+                if !mob.is_dead() && !matches!(mob.kind, crate::mob::Kind::Blaze | crate::mob::Kind::Ghast | crate::mob::Kind::MagmaCube | crate::mob::Kind::Strider) {
+                    mob.vitals.ignite(100);
+                }
+            }
+        }
+        None => {
+            // Клетка перед блоком: откуда пришёл шар (противоположно скорости по главной оси).
+            let mut cell = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
+
+            if block_at == cell {
+                let back = [(-flying.vx, 0), (-flying.vy, 1), (-flying.vz, 2)].into_iter().max_by(|a, b| a.0.abs().total_cmp(&b.0.abs())).unwrap_or((0.0, 1));
+                let sign = if back.0 >= 0.0 { 1 } else { -1 };
+
+                match back.1 {
+                    0 => cell.0 += sign,
+                    1 => cell.1 += sign,
+                    _ => cell.2 += sign,
+                }
+            }
+
+            if world.get_block(cell.0, cell.1, cell.2) == crate::world::AIR
+                && let Some(fire) = crate::blocks::state_by_name("fire")
+            {
+                world.set_block(cell.0, cell.1, cell.2, fire);
+            }
         }
     }
 }

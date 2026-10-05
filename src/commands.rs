@@ -779,13 +779,20 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return usage();
     };
 
-    let items = match data.map(crate::containers::items_from_text) {
+    // Данные с одним `Motion` — не содержимое (boat-slide).
+    let only_motion = data.is_some_and(|text| text.contains("Motion:") && !text.contains("Items"));
+    let items = match data.filter(|_| !only_motion).map(crate::containers::items_from_text) {
         Some(Some(items)) => items,
         Some(None) => return Answer::saying(format!("Не понял данные сущности: {}", data.unwrap_or(""))),
         None => Vec::new(),
     };
 
     let mut cart = crate::minecart::Minecart::new(shared.next_entity_id(), kind, place);
+
+    // `{Motion:[x,y,z]}`: начальная скорость (чёрный ящик, boat-slide).
+    if let Some((vx, vy, vz)) = data.and_then(motion_of) {
+        (cart.vx, cart.vy, cart.vz) = (vx, vy, vz);
+    }
 
     for (slot, stack) in items {
         if let Some(cell) = cart.slots.get_mut(slot) {
@@ -962,6 +969,19 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
 
     if let Some(on) = flag_in(data, "Sheared:") {
         mob.sheared = on;
+    }
+
+    // Магмовый куб: `Size:2` — размер 3 (вики, Magma Cube: размер = Size + 1;
+    // чёрный ящик, magma-cube-stand: свойство 16=3, здоровье 9, броня 9).
+    if mob.kind == crate::mob::Kind::MagmaCube
+        && let Some(size) = int_after(data, "Size:")
+    {
+        crate::mob::nether::set_size(mob, size.clamp(0, 126) + 1);
+    }
+
+    // Пиглины и хоглины: `IsImmuneToZombification:1b` (чёрный ящик, piglin-stand).
+    if let Some(on) = flag_in(data, "IsImmuneToZombification:") {
+        mob.nether.immune = on;
     }
 
     // Детёныш-зомби: `IsBaby:1b`, остаётся детёнышем навсегда.
@@ -2108,7 +2128,7 @@ fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) 
     }
 }
 
-/// `item replace entity <игрок> hotbar.<N>|inventory.<N>|weapon.mainhand
+/// `item replace entity <игрок> hotbar.<N>|inventory.<N>|enderchest.<N>|weapon.mainhand
 /// with <предмет> [сколько]`: кладёт предмет в ячейку инвентаря игрока
 /// (воздух — опустошает её).
 fn item_entity(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
@@ -2119,6 +2139,7 @@ fn item_entity(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     };
 
     let number = |prefix: &str| slot.strip_prefix(prefix).and_then(|n| n.parse::<i32>().ok());
+    let ender = number("enderchest.").filter(|n| (0..crate::playerdata::ENDER_SLOTS as i32).contains(n));
     let slot = match (number("hotbar."), number("inventory."), *slot) {
         (Some(n), _, _) if (0..9).contains(&n) => crate::inventory::FIRST_HOTBAR + n,
         (_, Some(n), _) if (0..27).contains(&n) => crate::inventory::FIRST_MAIN + n,
@@ -2128,6 +2149,8 @@ fn item_entity(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         (_, _, "armor.chest") => 6,
         (_, _, "armor.legs") => 7,
         (_, _, "armor.feet") => 8,
+        // Эндер-сундук — не окно игрока: номер ячейки свой, 0–26.
+        _ if ender.is_some() => -1,
         _ => return usage(),
     };
     // Основная рука — выбранная ячейка панели: её номер знает только
@@ -2157,7 +2180,10 @@ fn item_entity(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
         for (uuid, _) in &targets {
-            players.order(uuid, Order::SetSlot { slot, stack });
+            match ender {
+                Some(n) => players.order(uuid, Order::SetEnderSlot { slot: n as usize, stack }),
+                None => players.order(uuid, Order::SetSlot { slot, stack }),
+            };
         }
     }
 

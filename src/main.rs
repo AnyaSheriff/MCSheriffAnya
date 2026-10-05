@@ -30,6 +30,7 @@ mod inventory;
 mod journal;
 mod items;
 mod minecart;
+mod riding;
 mod frame;
 mod mob;
 mod arrow;

@@ -89,6 +89,10 @@ pub enum Source {
     /// Молния (damage_type lightning_bolt; чёрный ящик, trident-channeling:
     /// Damage Event type=25).
     Lightning,
+    /// Огненный шар ифрита (damage_type fireball, 14 по алфавиту реестра).
+    Fireball,
+    /// Удар о стену на элитрах (damage_type fly_into_wall).
+    FlyIntoWall,
 }
 
 impl Source {
@@ -126,6 +130,9 @@ impl Source {
             // 33, player_attack 34.
             Source::OutsideBorder => 33,
             Source::Lightning => 25,
+            Source::Fireball => 14,
+            // Реестр по алфавиту: fireworks 15, fly_into_wall 16.
+            Source::FlyIntoWall => 16,
         }
     }
 
@@ -156,14 +163,16 @@ impl Source {
             Source::Wither => "death.attack.wither",
             Source::Trident => "death.attack.trident",
             Source::Fireworks => "death.attack.fireworks",
+            Source::FlyIntoWall => "death.attack.flyIntoWall",
             Source::OutsideBorder => "death.attack.outsideBorder",
             Source::Lightning => "death.attack.lightningBolt",
+            Source::Fireball => "death.attack.fireball",
         }
     }
 
     /// Снаряд: стрела или брошенный трезубец (тег is_projectile).
     pub fn is_projectile(self) -> bool {
-        matches!(self, Source::Arrow | Source::Trident)
+        matches!(self, Source::Arrow | Source::Trident | Source::Fireball)
     }
 
     /// Урон не ждёт конца неуязвимости после прошлого удара (`bypasses_cooldown`).
@@ -241,8 +250,10 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::Wither => "withered away",
         Source::Trident => "was impaled",
         Source::Fireworks => "went off with a bang",
+        Source::FlyIntoWall => "experienced kinetic energy",
         Source::OutsideBorder => "left the confines of this world",
         Source::Lightning => "was struck by lightning",
+        Source::Fireball => "was fireballed",
     };
 
     format!("{} {}", name, what)
@@ -274,6 +285,7 @@ pub fn death_text_by(source: Source, name: &str, killer: &str, item: Option<&str
         Source::Thorns => "was killed trying to hurt",
         Source::MaceSmash => "was smashed by",
         Source::Trident => "was impaled by",
+        Source::Fireball => "was fireballed by",
         _ => "was slain by",
     };
 

@@ -507,6 +507,21 @@ impl Chunk {
         // У Незера пол и потолок — он складывается целиком своим путём.
         if let Generator::Nether(nether) = generator {
             let mut chunk = nether.chunk(chunk_x, chunk_z);
+
+            // Спавнеры ифритов в комнатах трона крепости (вики, Nether Fortress:
+            // «blaze spawner»): блок в образце уже лежит, блок-сущность — здесь.
+            if let Some(spawner) = crate::blocks::state_by_name("spawner") {
+                for y in 1..127 {
+                    for z in 0..CHUNK_SIZE {
+                        for x in 0..CHUNK_SIZE {
+                            if chunk.block(x, y, z) == spawner {
+                                chunk.put_generated_spawner(x, y, z, crate::spawner::Data::of("blaze"));
+                            }
+                        }
+                    }
+                }
+            }
+
             chunk.light_up();
             return chunk;
         }
@@ -3474,6 +3489,14 @@ impl World {
     /// Семя мира.
     pub fn seed(&self) -> i64 {
         self.seed
+    }
+
+    /// Внутри ли клетка куска крепости Незера (для появления мобов крепости).
+    pub fn in_fortress(&self, x: i32, y: i32, z: i32) -> bool {
+        match &*self.generator {
+            Generator::Nether(nether) => nether.in_fortress(x, y, z),
+            _ => false,
+        }
     }
 
     /// Биом поверхности столбца по генератору (команда `locate biome`):

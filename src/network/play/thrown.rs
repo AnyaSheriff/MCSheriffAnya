@@ -477,7 +477,7 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
             // первый ход), потом предмет, нулевой сдвиг, предмет ещё раз
             // (splash-potion). Увиденное позже — там, где оно до хода.
             let ((sx, sy, sz), (svx, svy, svz)) = if flying.age <= 1 { flying.start } else { (flying.prev.0, flying.prev.1) };
-            let (yaw, pitch) = if flying.kind == Kind::DragonFireball { (0.0, 0.0) } else if flying.age <= 1 { crate::thrown::angles(flying.start.1) } else { flying.prev.2 };
+            let (yaw, pitch) = if flying.is_fireball() { (0.0, 0.0) } else if flying.age <= 1 { crate::thrown::angles(flying.start.1) } else { flying.prev.2 };
             let mut body = encode_varint(ADD_ENTITY);
 
             body.extend_from_slice(&encode_varint(flying.entity_id));
@@ -495,7 +495,7 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
 
             send_item(stream, flying).await?;
 
-            if flying.owner == player.entity_id && flying.age <= 1 && flying.kind != Kind::DragonFireball {
+            if flying.owner == player.entity_id && flying.age <= 1 && !flying.is_fireball() {
                 send_container_content(stream, player).await?;
             }
 

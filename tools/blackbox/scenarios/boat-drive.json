@@ -1,0 +1,289 @@
+{
+ "about": "Игрок в лодке шлёт Move Vehicle и Paddle: как сервер пересказывает движение лодки.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(3.5,2,-1.5) 0 50",
+  "!wait 20",
+  "fill $(-1,0,-1) $(7,6,7) minecraft:air",
+  "fill $(0,0,0) $(6,1,6) minecraft:stone",
+  "fill $(1,0,1) $(5,1,5) minecraft:water",
+  "tp $(bot) $(3.5,2,0.5) 0 50",
+  "!stopfly",
+  "give $(bot) minecraft:spruce_boat 1",
+  "!hotbar 0",
+  "!wait 30"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  },
+  {
+   "after": 12,
+   "interact": true
+  },
+  {
+   "after": 20,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:1.4",
+      "z": "@z:2.1",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 21,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:1.4",
+      "z": "@z:2.2",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 22,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:1.4",
+      "z": "@z:2.3",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 23,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:1.4",
+      "z": "@z:2.4",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 24,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:1.4",
+      "z": "@z:2.5",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 25,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:1.4",
+      "z": "@z:2.6",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 26,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:1.4",
+      "z": "@z:2.7",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 27,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:1.4",
+      "z": "@z:2.8",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 28,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:1.4",
+      "z": "@z:2.9",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 29,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:1.4",
+      "z": "@z:3.0",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 40,
+   "raw": {
+    "name": "player_input",
+    "params": {
+     "inputs": {
+      "forward": false,
+      "backward": false,
+      "left": false,
+      "right": false,
+      "jump": false,
+      "shift": true,
+      "sprint": false
+     }
+    }
+   }
+  }
+ ],
+ "record_ticks": 70,
+ "cleanup": [
+  "kill @e[type=!player,distance=..48]",
+  "fill $(0,0,0) $(6,1,6) minecraft:air",
+  "fill $(-1,0,-1) $(7,6,7) minecraft:air",
+  "gamemode creative $(bot)",
+  "clear $(bot)"
+ ],
+ "name": "boat-drive"
+}

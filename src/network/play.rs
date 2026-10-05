@@ -70,6 +70,8 @@ mod station;
 mod body;
 mod signs;
 mod cauldron;
+mod vehicle;
+mod glide;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
 
@@ -1871,7 +1873,7 @@ async fn send_cart_data(stream: &mut Outgoing<'_>, entity_id: i32, now: &crate::
     const DAMAGE: u8 = 10;
     const PROPERTY_FLOAT: i32 = 3;
 
-    use crate::minecart::{DIRTY_DAMAGE, DIRTY_DIR, DIRTY_HURT};
+    use crate::minecart::{DIRTY_DAMAGE, DIRTY_DIR, DIRTY_HURT, DIRTY_PADDLE};
 
     if now.dirty == 0 {
         return Ok(());
@@ -1897,6 +1899,11 @@ async fn send_cart_data(stream: &mut Outgoing<'_>, entity_id: i32, now: &crate::
         data.push(DAMAGE);
         data.extend_from_slice(&encode_varint(PROPERTY_FLOAT));
         push_f32(&mut data, now.damage);
+    }
+
+    // Вёсла лодки (boat-drive: «11=true 12=true»).
+    if now.dirty & DIRTY_PADDLE != 0 {
+        vehicle::push_paddles(&mut data, now.paddle);
     }
 
     data.push(PROPERTIES_END);
@@ -3081,16 +3088,34 @@ async fn send_other_moves(
                     data.extend_from_slice(&encode_varint(only.air));
                 }
 
-                if (only.living ^ shown.living) & crate::players::SPIN_POSE_BIT != 0 {
-                    data.push(POSE_PROPERTY);
-                    data.extend_from_slice(&encode_varint(PROPERTY_POSE));
-                    data.extend_from_slice(&encode_varint(if only.living & crate::players::SPIN_POSE_BIT != 0 { vitals::POSE_SPIN_ATTACK } else if now.sneaking { POSE_CROUCHING } else { POSE_STANDING }));
+                const POSE_BITS: u8 = crate::players::SPIN_POSE_BIT | crate::players::GLIDE_BIT;
+
+                // Полёт на элитрах: флаг сущности 0x80 (с бегом и приседанием
+                // в том же байте) и поза «летит» (1).
+                if (only.living ^ shown.living) & crate::players::GLIDE_BIT != 0 {
+                    data.push(FLAGS_PROPERTY);
+                    data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
+                    data.push(if only.living & crate::players::GLIDE_BIT != 0 { 0x80 } else { 0 } | if only.sprinting { 0x08 } else { 0 } | if now.sneaking { FLAG_CROUCHING } else { 0 });
                 }
 
-                if (only.living ^ shown.living) & !crate::players::SPIN_POSE_BIT != 0 {
+                if (only.living ^ shown.living) & POSE_BITS != 0 {
+                    data.push(POSE_PROPERTY);
+                    data.extend_from_slice(&encode_varint(PROPERTY_POSE));
+                    data.extend_from_slice(&encode_varint(if only.living & crate::players::SPIN_POSE_BIT != 0 {
+                        vitals::POSE_SPIN_ATTACK
+                    } else if only.living & crate::players::GLIDE_BIT != 0 {
+                        1
+                    } else if now.sneaking {
+                        POSE_CROUCHING
+                    } else {
+                        POSE_STANDING
+                    }));
+                }
+
+                if (only.living ^ shown.living) & !POSE_BITS != 0 {
                     data.push(LIVING_FLAGS_PROPERTY_ID);
                     data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
-                    data.push(only.living & !crate::players::SPIN_POSE_BIT);
+                    data.push(only.living & !POSE_BITS);
                 }
 
                 data.push(PROPERTIES_END);
@@ -3652,6 +3677,7 @@ fn hints_for(text: &str, typed: &str, shared: &Shared, who: &[u8; 16]) -> Vec<St
         // есть вагонетки, предметы, динамит и падающие блоки.
         ("summon", 1) => crate::minecart::Kind::ALL
             .into_iter()
+            .chain(crate::minecart::boat_kinds())
             .map(|kind| kind.name())
             .chain(["lightning_bolt"])
             .map(|name| name.to_string())
@@ -4382,6 +4408,7 @@ fn cart_menu(kind: crate::minecart::Kind) -> Option<(i32, &'static str)> {
     match kind {
         crate::minecart::Kind::Chest => Some((containers::menu(containers::Kind::Chest, 1).0, "entity.minecraft.chest_minecart")),
         crate::minecart::Kind::Hopper => Some((containers::menu(containers::Kind::Hopper, 1).0, "entity.minecraft.hopper_minecart")),
+        crate::minecart::Kind::Boat(index) if crate::minecart::BOATS[index as usize].2 => Some((containers::menu(containers::Kind::Chest, 1).0, "entity.minecraft.chest_boat")),
         _ => None,
     }
 }
@@ -5806,6 +5833,7 @@ async fn read_and_log_play_packets(
         }
 
         send_pending_player_changes(stream, shared, player, &mut player_changes, &mut seen).await?;
+        vehicle::send_riding(stream, shared, player).await?;
         send_other_moves(stream, shared, player, &mut seen, Phase::Moves).await?;
         send_pending_chat(stream, shared, &player.uuid, &mut chat_lines).await?;
         note_criteria(shared, player, &mut criteria_seen);
@@ -6210,6 +6238,11 @@ async fn read_and_log_play_packets(
                     send_container_slot(stream, player, slot).await?;
                 }
 
+                Order::SetEnderSlot { slot, stack } => {
+                    player.ender[slot] = stack;
+                    player.save(&shared.playerdata);
+                }
+
                 // Готовый пакет команд мира (рамка, такт, наездники).
                 Order::Packet(body) => write_body(stream, body).await?,
 
@@ -6311,6 +6344,11 @@ async fn read_and_log_play_packets(
                 sleep::tick(shared, player);
                 vitals::tick(stream, shared, player).await?;
                 progress_tick(stream, shared, player).await?;
+                glide::tick(shared, player);
+
+                if let Some(speed) = glide::boost(player) {
+                    send_velocity(stream, player.entity_id, speed).await?;
+                }
 
                 // Экипировка чужих игроков — следом за здоровьем.
                 send_other_moves(stream, shared, player, &mut seen, Phase::Gear).await?;
@@ -6862,6 +6900,11 @@ fn handle_client_packet_inner(
                 return reaction;
             }
 
+            // Едущий сидит там, куда его посадили: место ведёт транспорт.
+            if player.ride.vehicle.is_some() {
+                return reaction;
+            }
+
             // Как у оригинала: не число, бесконечность и место за границей
             // мира не принимаются — они ушли бы в файл игрока и всем
             // остальным, а огромные координаты переполняли бы счёт чанков.
@@ -6915,6 +6958,8 @@ fn handle_client_packet_inner(
             let flags = if packet.id == SET_PLAYER_POSITION { POSITION_BYTES } else { POSITION_BYTES + ROTATION_BYTES };
             if let Some(&flag) = payload.get(flags) {
                 player.set_on_ground(flag & ON_GROUND_FLAG != 0);
+                // Бит 2 — упёрся в стену (нужен элитрам: удар о стену).
+                player.glide.wall = flag & 0x02 != 0;
             }
 
             // Прыжок, бег и приземление считает здоровье (vitals.rs).
@@ -6943,6 +6988,7 @@ fn handle_client_packet_inner(
         vitals::PLAYER_COMMAND => {
             sleep::player_command(payload, player, shared);
             vitals::player_command(payload, player);
+            glide::command(payload, player, shared);
         }
         vitals::CLIENT_COMMAND => {
             // Действие 0 — «возродиться»; живому возрождаться незачем.
@@ -7131,9 +7177,17 @@ fn handle_client_packet_inner(
                 reaction = answer;
             }
         }
+        vehicle::VEHICLE_MOVE => vehicle::vehicle_move(payload, player, shared),
+        vehicle::STEER_BOAT => vehicle::steer_boat(payload, player, shared),
         PLAYER_INPUT => {
             if let Some(flags) = payload.first() {
                 let sneaking = flags & INPUT_SNEAK != 0;
+
+                // Приседание в лодке или вагонетке — слезть (вики, Boat: «can
+                // be exited by sneaking»).
+                if sneaking && player.ride.vehicle.is_some() {
+                    vehicle::dismount(shared, player);
+                }
 
                 // Остальным — через общий список: их подключения увидят
                 // перемену и перескажут своим клиентам.
@@ -7247,7 +7301,7 @@ fn attack(target: i32, player: &mut PlayerState, shared: &Shared) {
         return;
     }
 
-    if strike_cart(shared, player.dimension, target, (player.x, player.y, player.z), player.game_mode == GAME_MODE_CREATIVE, since) {
+    if strike_cart(shared, player.dimension, target, (player.x, player.y, player.z), player.game_mode == GAME_MODE_CREATIVE, since, player.attrs.value(crate::attributes::ATTACK_DAMAGE) as f32) {
         player.last_attack = now;
     }
 }
@@ -7259,6 +7313,25 @@ fn attack(target: i32, player: &mut PlayerState, shared: &Shared) {
 fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32) -> bool {
     /// Дальше этого ударить нельзя (с запасом на задержку).
     const REACH: f64 = 6.0;
+
+    // Удар по огненному шару гаста отбивает его по взгляду, и он становится
+    // шаром ударившего (вики, Fireball: «can be deflected»).
+    {
+        let mut thrown = shared.thrown.lock().expect("снаряды захвачены другим потоком");
+
+        if let Some(ball) = thrown.flying.iter_mut().find(|ball| ball.entity_id == target && ball.dimension == player.dimension && ball.kind == crate::thrown::Kind::GhastFireball) {
+            let (yaw, pitch) = (f64::from(player.yaw).to_radians(), f64::from(player.pitch).to_radians());
+            let dir = (-yaw.sin() * pitch.cos(), -pitch.sin(), yaw.cos() * pitch.cos());
+
+            if (ball.x - player.x).powi(2) + (ball.y - player.y).powi(2) + (ball.z - player.z).powi(2) <= REACH * REACH {
+                ball.push = dir;
+                (ball.vx, ball.vy, ball.vz) = (dir.0 * 0.1, dir.1 * 0.1, dir.2 * 0.1);
+                ball.owner = player.entity_id;
+
+                return true;
+            }
+        }
+    }
 
     let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
 
@@ -7320,6 +7393,7 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     let dir = if length > 1.0e-6 { (away_x / length, away_z / length) } else { crate::mob::look_direction(player.yaw) };
     let push = crate::mob::Push { dir, strength: crate::mob::BASE_KNOCKBACK, cause: player.entity_id };
     mob.credit_player();
+    mob.looting = data.level("looting");
 
     // Звук рывка — до удара (чёрный ящик, pvp-sprint-knockback).
     if sprint_hit {
@@ -7479,7 +7553,7 @@ fn strike_frame(shared: &Shared, dimension: crate::dimension::Dimension, target:
 /// Удар игрока в `from` по вагонетке `target`: `since` — сколько тактов
 /// прошло с его прошлого удара. Общий для Java и Bedrock. Возвращает, был
 /// ли удар (вагонетка есть и достаётся рукой).
-pub(crate) fn strike_cart(shared: &Shared, dimension: crate::dimension::Dimension, target: i32, from: (f64, f64, f64), creative: bool, since: u32) -> bool {
+pub(crate) fn strike_cart(shared: &Shared, dimension: crate::dimension::Dimension, target: i32, from: (f64, f64, f64), creative: bool, since: u32, attack: f32) -> bool {
     /// Дальше этого ударить нельзя (вики, Player: досягаемость сущностей 3
     /// блока, у творческого — 5; с запасом на задержку).
     const REACH: f64 = 6.0;
@@ -7494,7 +7568,7 @@ pub(crate) fn strike_cart(shared: &Shared, dimension: crate::dimension::Dimensio
         return false;
     }
 
-    let broken = cart.hit(creative, since);
+    let broken = cart.hit(creative, since, attack);
 
     // Удар слышен всем: сильный при полной руке, иначе слабый (зонд
     // minecart-hit: удар через 4 такта — уже слабый).
@@ -7505,6 +7579,9 @@ pub(crate) fn strike_cart(shared: &Shared, dimension: crate::dimension::Dimensio
     };
 
     if broken {
+        // Седоки слезают (riding.rs): подключения сами заметят и перенесут их.
+        shared.riding.lock().expect("учёт седоков захвачен другим потоком").clear_vehicle(target);
+
         for broken in items.remove_carts(|cart| cart.entity_id == target) {
             if creative {
                 continue;
@@ -7566,6 +7643,11 @@ fn use_entity(target: i32, player: &mut PlayerState, shared: &Shared) -> Reactio
         return reaction;
     }
 
+    // Лодка и пустая вагонетка: сесть (riding.rs).
+    if vehicle::mount(shared, player, target) {
+        return reaction;
+    }
+
     let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
 
     let Some(cart) = items.carts_mut().iter_mut().find(|cart| cart.entity_id == target) else {
@@ -7578,6 +7660,7 @@ fn use_entity(target: i32, player: &mut PlayerState, shared: &Shared) -> Reactio
 
     match cart.kind {
         crate::minecart::Kind::Chest | crate::minecart::Kind::Hopper => reaction.open_cart = Some(target),
+        crate::minecart::Kind::Boat(index) if crate::minecart::BOATS[index as usize].2 => reaction.open_cart = Some(target),
         crate::minecart::Kind::Furnace => {
             let coal = player.inventory.held().is_some_and(|stack| crate::minecart::is_furnace_fuel(stack.item));
 
@@ -8768,6 +8851,16 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
         player.set_rotation(yaw, pitch);
     }
 
+    // Ракета при полёте на элитрах: разгон (glide.rs).
+    if glide::use_rocket(shared, player, hand) {
+        return Some(answer);
+    }
+
+    // Лодка или плот: на воду или землю по лучу взгляда (vehicle.rs).
+    if vehicle::place_boat(shared, player, hand) {
+        return Some(answer);
+    }
+
     // Взрывное или оседающее зелье: бросок (thrown.rs).
     if thrown::throw_potion(shared, player, hand) {
         return Some(answer);
@@ -9698,6 +9791,12 @@ struct PlayerState {
     /// Мобы, показанные клиенту (mob/mod.rs).
     seen_mobs: HashMap<i32, mobs::ShownMob>,
 
+    /// Сидение: на чём едет игрок и каких седоков клиент уже видит (riding.rs).
+    ride: vehicle::Ride,
+
+    /// Полёт на элитрах (play/glide.rs).
+    glide: glide::Glide,
+
     /// Стрелы, показанные клиенту (arrow.rs).
     seen_bow_arrows: HashMap<i32, bow::ShownArrow>,
     /// Брошенные зелья, огненные шары и облака, о которых клиент знает.
@@ -9969,6 +10068,8 @@ impl PlayerState {
             seen_carts: HashMap::new(),
             seen_frames: HashMap::new(),
             seen_mobs: HashMap::new(),
+            ride: vehicle::Ride::default(),
+            glide: glide::Glide::default(),
             seen_bow_arrows: HashMap::new(),
             seen_thrown: HashMap::new(),
             last_attack: 0,
@@ -10062,7 +10163,7 @@ impl PlayerState {
             },
             attack_speed: self.attrs.get(crate::attributes::ATTACK_SPEED).cloned(),
             speed_touch: self.speed_touch,
-            living: vitals::living_flags(self) | if self.net.spin_pose { crate::players::SPIN_POSE_BIT } else { 0 },
+            living: vitals::living_flags(self) | if self.net.spin_pose { crate::players::SPIN_POSE_BIT } else { 0 } | if self.glide.active { crate::players::GLIDE_BIT } else { 0 },
             air: self.vit.air,
             sleeping: self.sleeping,
             effect_colors: self.vit.effect_colors(),

@@ -377,6 +377,8 @@ pub fn protection_points(data: &Data, source: Source) -> i32 {
         // Ракета — тоже взрыв (тег is_explosion; вики, Blast Protection) [проверить].
         Source::Explosion | Source::Fireworks => points += 2 * data.level("blast_protection"),
         Source::Arrow | Source::Trident => points += 2 * data.level("projectile_protection"),
+        // Огненный шар — огонь и снаряд сразу (теги is_fire, is_projectile).
+        Source::Fireball => points += 2 * data.level("fire_protection") + 2 * data.level("projectile_protection"),
         Source::Fall => points += 3 * data.level("feather_falling"),
         _ => {}
     }

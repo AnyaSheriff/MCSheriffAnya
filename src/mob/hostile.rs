@@ -32,6 +32,9 @@ pub fn follow_range(kind: Kind) -> f64 {
         Kind::Zombie | Kind::ZombieVillager => 35.0,
         // Вики, Enderman: злится на взгляд с 64 блоков и гонится за целью там же.
         Kind::Enderman => 64.0,
+        Kind::Blaze | Kind::Ghast => super::nether::follow_range(kind),
+        Kind::WitherSkeleton => 16.0,
+        Kind::ZombifiedPiglin => 35.0,
         _ => 16.0,
     }
 }
@@ -84,6 +87,15 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::ShulkerBullet => "entity.minecraft.shulker_bullet",
         Kind::Witch => "entity.minecraft.witch",
         Kind::Villager => "entity.minecraft.villager",
+        Kind::Blaze => "entity.minecraft.blaze",
+        Kind::WitherSkeleton => "entity.minecraft.wither_skeleton",
+        Kind::MagmaCube => "entity.minecraft.magma_cube",
+        Kind::Ghast => "entity.minecraft.ghast",
+        Kind::ZombifiedPiglin => "entity.minecraft.zombified_piglin",
+        Kind::Piglin => "entity.minecraft.piglin",
+        Kind::PiglinBrute => "entity.minecraft.piglin_brute",
+        Kind::Hoglin => "entity.minecraft.hoglin",
+        Kind::Strider => "entity.minecraft.strider",
     }
 }
 
@@ -93,6 +105,9 @@ pub struct Melee {
     pub target: i32,
     pub damage: f32,
     pub push: (f64, f64),
+
+    /// Удар иссушает: 10 секунд «иссушения» (вики, Wither Skeleton).
+    pub wither: bool,
 }
 
 /// Выстрел скелета: откуда, куда целится (точка на цели) и скорость.
@@ -256,11 +271,16 @@ fn eligible(mob: &Mob, view: &dyn View, ctx: &Ctx, watcher: &Watcher, need_sight
         return false;
     }
 
+    // Зомби-пиглин спокоен без гнева, пиглин не трогает золотую броню.
+    if super::nether::spares(mob, watcher) {
+        return false;
+    }
+
     !need_sight || line_of_sight(mob, view, watcher)
 }
 
 /// Выбор цели раз в 10 тактов; держится, пока игрок годится.
-fn choose_target(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Option<Watcher> {
+pub(super) fn choose_target(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Option<Watcher> {
     if let Some(id) = mob.h.target {
         let current = ctx.players.iter().find(|player| player.id == id);
 
@@ -316,7 +336,7 @@ fn prey(mob: &Mob, ctx: &Ctx) -> Vec<Watcher> {
     ctx.mates
         .iter()
         .filter(|mate| mate.kind == Kind::Villager && dist2(mob, mate.x, mate.y, mate.z) <= range * range)
-        .map(|mate| Watcher { id: mate.id, x: mate.x, y: mate.y, z: mate.z, eye: if mate.baby { 0.81 } else { 1.62 }, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false })
+        .map(|mate| Watcher { id: mate.id, x: mate.x, y: mate.y, z: mate.z, eye: if mate.baby { 0.81 } else { 1.62 }, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false })
         .collect()
 }
 
@@ -352,6 +372,11 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         }
         Kind::Shulker => return shulker(mob, view, ctx, rng),
         _ => {}
+    }
+
+    // Мобы Незера думают в nether.rs.
+    if mob.kind.nether() {
+        return super::nether::think(mob, view, ctx, rng, plan);
     }
 
     let here = mob.cell();
@@ -392,6 +417,11 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     }
 
     plan
+}
+
+/// То же для мобов Незера (nether.rs).
+pub(super) fn idle_walk(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, plan: Plan, grounded: bool) -> Plan {
+    idle(mob, view, ctx, rng, plan, grounded)
 }
 
 /// Нет цели: запал крипера гаснет, лук опускается, моб бродит.
@@ -441,7 +471,7 @@ fn idle(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, mut plan: Plan
 
 /// К цели: путь раз в 10 тактов, прямо — если цель рядом; у паука без пути
 /// прямо на цель (он лезет по стенам).
-fn approach(mob: &mut Mob, view: &dyn View, target: &Watcher, speed: f64) {
+pub(super) fn approach(mob: &mut Mob, view: &dyn View, target: &Watcher, speed: f64) {
     let here = mob.cell();
 
     mob.brain.repath -= 1;
@@ -462,7 +492,7 @@ fn approach(mob: &mut Mob, view: &dyn View, target: &Watcher, speed: f64) {
 
 /// Зомби и паук: подойти и ударить.
 #[allow(clippy::too_many_arguments)]
-fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist_sq: f64, flat: f64, rng: &mut Rng, grounded: bool) {
+pub(super) fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist_sq: f64, flat: f64, rng: &mut Rng, grounded: bool) {
     // Досягаемость: (2·ширина)² + ширина цели, от ног до ног (вики, Mob AI,
     // «Melee attack») [проверить: по замеру zombie-hit].
     let (width, _) = mob.size();
@@ -480,11 +510,12 @@ fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist
             let damage = match mob.kind {
                 Kind::Spider | Kind::Skeleton => 2.0,
                 Kind::Enderman => 7.0,
+                Kind::WitherSkeleton | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute | Kind::Hoglin => super::nether::melee_damage(mob),
                 _ => 3.0,
             };
 
             mob.events.push(Event::Swing);
-            plan.melee = Some(Melee { target: target.id, damage, push: (ux, uz) });
+            plan.melee = Some(Melee { target: target.id, damage, push: (ux, uz), wither: mob.kind == Kind::WitherSkeleton });
         }
 
         return;

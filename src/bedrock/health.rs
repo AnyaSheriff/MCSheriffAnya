@@ -191,7 +191,7 @@ pub fn hurt_event(runtime_id: u64, source: Source) -> Vec<u8> {
 
 /// Причина урона по номеру вида из Damage Event (`Source::type_id`).
 pub fn damage_cause_of_type(type_id: i32) -> i32 {
-    const ALL: [Source; 25] = [
+    const ALL: [Source; 27] = [
         Source::Arrow,
         Source::Cactus,
         Source::SweetBerryBush,
@@ -217,6 +217,8 @@ pub fn damage_cause_of_type(type_id: i32) -> i32 {
         Source::Fireworks,
         Source::OutsideBorder,
         Source::Lightning,
+        Source::Fireball,
+        Source::FlyIntoWall,
     ];
 
     ALL.iter().find(|source| source.type_id() == type_id).map_or(-1, |source| damage_cause(*source))
@@ -236,14 +238,15 @@ pub fn damage_cause(source: Source) -> i32 {
         Source::OnFire => 7,
         Source::Lava => 8,
         Source::Drown => 9,
-        Source::Explosion | Source::PlayerExplosion | Source::Fireworks => 11,
+        Source::Explosion | Source::PlayerExplosion | Source::Fireworks | Source::Fireball => 11,
         Source::OutOfWorld | Source::OutsideBorder => 12,
         Source::Magic => 14,
         Source::Wither => 15,
         Source::Starve => 16,
         Source::Thorns => 18,
         Source::Lightning => 24,
-        Source::Generic | Source::GenericKill => -1,
+        // [Bedrock: потом] причина «о стену на элитрах» не сверена.
+        Source::Generic | Source::GenericKill | Source::FlyIntoWall => -1,
     }
 }
 
