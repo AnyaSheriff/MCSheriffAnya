@@ -678,6 +678,9 @@ pub fn drops_by_luck(state: i32, tool: Option<i32>, luck: f32) -> Option<crate::
     let some = |item: Option<i32>, count: i32| item.filter(|_| count > 0).map(|item| Stack::new(item, count));
 
     match name {
+        // Шулкер-ящик выпадает сам вместе с содержимым — предмет собирает
+        // `tick::spill_containers`, а не таблица выпадений.
+        _ if name.ends_with("shulker_box") => return None,
         "short_grass" | "fern" | "tall_grass" | "large_fern" => {
             if shears {
                 return match name {

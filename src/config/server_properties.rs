@@ -36,6 +36,10 @@ pub struct ServerProperties {
     /// Сложность: 0 — мирная, 1 — лёгкая, 2 — обычная, 3 — сложная.
     /// От неё зависит, зажигает ли молния огонь.
     pub difficulty: u8,
+
+    /// Порог сжатия пакетов, `network-compression-threshold`: пакеты не
+    /// короче него идут сжатыми; −1 (или любое отрицательное) — без сжатия.
+    pub compression_threshold: i32,
 }
 
 /// Обычная сложность: с неё молния зажигает огонь (вики, Lightning).
@@ -64,6 +68,7 @@ impl Default for ServerProperties {
             level_seed: None,
             world_kind: WorldKind::Normal,
             difficulty: 1,
+            compression_threshold: 256,
         }
     }
 }
@@ -121,6 +126,10 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
         level_seed,
         world_kind,
         difficulty: values.get("difficulty").and_then(|value| difficulty_of(value)).unwrap_or(defaults.difficulty),
+        compression_threshold: values
+            .get("network-compression-threshold")
+            .and_then(|value| value.trim().parse::<i32>().ok())
+            .map_or(defaults.compression_threshold, |value| value.max(-1)),
     })
 }
 

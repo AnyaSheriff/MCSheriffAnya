@@ -1,0 +1,180 @@
+{
+ "name": "ender-chest-open",
+ "about": "Эндер-сундук: открыть, положить Shift-щелчком камень и землю из панели, закрыть; открыть второй сундук — те же вещи (личное хранилище), забрать обратно. Третий под блоком — не открывается. Звук, крышка, окно.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:ender_chest[facing=north,waterlogged=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "minecraft:ender_chest[facing=north,waterlogged=false]"
+  },
+  {
+   "at": [
+    6,
+    0,
+    0
+   ],
+   "state": "minecraft:ender_chest[facing=north,waterlogged=false]"
+  },
+  {
+   "at": [
+    6,
+    1,
+    0
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "item replace entity $(bot) enderchest.0 with minecraft:air",
+  "item replace entity $(bot) enderchest.1 with minecraft:air",
+  "item replace entity $(bot) enderchest.2 with minecraft:air",
+  "item replace entity $(bot) enderchest.3 with minecraft:air",
+  "item replace entity $(bot) enderchest.4 with minecraft:air",
+  "item replace entity $(bot) enderchest.5 with minecraft:air",
+  "item replace entity $(bot) enderchest.6 with minecraft:air",
+  "item replace entity $(bot) enderchest.7 with minecraft:air",
+  "item replace entity $(bot) enderchest.8 with minecraft:air",
+  "item replace entity $(bot) enderchest.9 with minecraft:air",
+  "item replace entity $(bot) enderchest.10 with minecraft:air",
+  "item replace entity $(bot) enderchest.11 with minecraft:air",
+  "item replace entity $(bot) enderchest.12 with minecraft:air",
+  "item replace entity $(bot) enderchest.13 with minecraft:air",
+  "item replace entity $(bot) enderchest.14 with minecraft:air",
+  "item replace entity $(bot) enderchest.15 with minecraft:air",
+  "item replace entity $(bot) enderchest.16 with minecraft:air",
+  "item replace entity $(bot) enderchest.17 with minecraft:air",
+  "item replace entity $(bot) enderchest.18 with minecraft:air",
+  "item replace entity $(bot) enderchest.19 with minecraft:air",
+  "item replace entity $(bot) enderchest.20 with minecraft:air",
+  "item replace entity $(bot) enderchest.21 with minecraft:air",
+  "item replace entity $(bot) enderchest.22 with minecraft:air",
+  "item replace entity $(bot) enderchest.23 with minecraft:air",
+  "item replace entity $(bot) enderchest.24 with minecraft:air",
+  "item replace entity $(bot) enderchest.25 with minecraft:air",
+  "item replace entity $(bot) enderchest.26 with minecraft:air",
+  "clear $(bot)",
+  "give $(bot) minecraft:stone 20",
+  "give $(bot) minecraft:dirt 5",
+  "gamemode survival $(bot)",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 10,
+   "window_click": {
+    "slot": 54,
+    "button": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 14,
+   "window_click": {
+    "slot": 55,
+    "button": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 20,
+   "close": true
+  },
+  {
+   "after": 30,
+   "click": [
+    6,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 40,
+   "click": [
+    3,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 50,
+   "window_click": {
+    "slot": 0,
+    "button": 0,
+    "mode": 0
+   }
+  },
+  {
+   "after": 54,
+   "window_click": {
+    "slot": 3,
+    "button": 0,
+    "mode": 0
+   }
+  },
+  {
+   "after": 58,
+   "window_click": {
+    "slot": 1,
+    "button": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 64,
+   "close": true
+  }
+ ],
+ "cleanup": [
+  "item replace entity $(bot) enderchest.0 with minecraft:air",
+  "item replace entity $(bot) enderchest.1 with minecraft:air",
+  "item replace entity $(bot) enderchest.2 with minecraft:air",
+  "item replace entity $(bot) enderchest.3 with minecraft:air",
+  "item replace entity $(bot) enderchest.4 with minecraft:air",
+  "item replace entity $(bot) enderchest.5 with minecraft:air",
+  "item replace entity $(bot) enderchest.6 with minecraft:air",
+  "item replace entity $(bot) enderchest.7 with minecraft:air",
+  "item replace entity $(bot) enderchest.8 with minecraft:air",
+  "item replace entity $(bot) enderchest.9 with minecraft:air",
+  "item replace entity $(bot) enderchest.10 with minecraft:air",
+  "item replace entity $(bot) enderchest.11 with minecraft:air",
+  "item replace entity $(bot) enderchest.12 with minecraft:air",
+  "item replace entity $(bot) enderchest.13 with minecraft:air",
+  "item replace entity $(bot) enderchest.14 with minecraft:air",
+  "item replace entity $(bot) enderchest.15 with minecraft:air",
+  "item replace entity $(bot) enderchest.16 with minecraft:air",
+  "item replace entity $(bot) enderchest.17 with minecraft:air",
+  "item replace entity $(bot) enderchest.18 with minecraft:air",
+  "item replace entity $(bot) enderchest.19 with minecraft:air",
+  "item replace entity $(bot) enderchest.20 with minecraft:air",
+  "item replace entity $(bot) enderchest.21 with minecraft:air",
+  "item replace entity $(bot) enderchest.22 with minecraft:air",
+  "item replace entity $(bot) enderchest.23 with minecraft:air",
+  "item replace entity $(bot) enderchest.24 with minecraft:air",
+  "item replace entity $(bot) enderchest.25 with minecraft:air",
+  "item replace entity $(bot) enderchest.26 with minecraft:air",
+  "clear $(bot)",
+  "gamemode creative $(bot)"
+ ],
+ "record_ticks": 90
+}

@@ -54,6 +54,17 @@ pub enum Kind {
     /// Варочная стойка: три бутылки, ингредиент, огненный порошок
     /// (furnace.rs).
     BrewingStand,
+
+    /// Шулкер-ящик любого цвета: 27 ячеек, при поломке содержимое остаётся
+    /// в предмете (компонент `container`), внутрь другой шулкер не кладётся
+    /// (вики, Shulker Box).
+    ShulkerBox,
+
+    /// Эндер-сундук: у блока своих ячеек нет — окно показывает личное
+    /// хранилище игрока (`PlayerState::ender`, файл игрока). Здесь он только
+    /// ради крышки и смотрящих; воронки и сравнители его не видят
+    /// (вики, Ender Chest).
+    EnderChest,
 }
 
 impl Kind {
@@ -74,6 +85,8 @@ impl Kind {
             "blast_furnace" => Kind::BlastFurnace,
             "smoker" => Kind::Smoker,
             "brewing_stand" => Kind::BrewingStand,
+            "ender_chest" => Kind::EnderChest,
+            name if name.ends_with("shulker_box") => Kind::ShulkerBox,
             name if name.ends_with("copper_chest") => Kind::CopperChest,
             name if name.ends_with("_shelf") => Kind::Shelf,
             _ => return None,
@@ -89,7 +102,7 @@ impl Kind {
     /// Сколько ячеек у хранилища.
     pub fn size(self) -> usize {
         match self {
-            Kind::Chest | Kind::TrappedChest | Kind::Barrel | Kind::CopperChest => 27,
+            Kind::Chest | Kind::TrappedChest | Kind::Barrel | Kind::CopperChest | Kind::ShulkerBox | Kind::EnderChest => 27,
             Kind::Shelf => 3,
             Kind::ChiseledBookshelf => 6,
             Kind::Hopper | Kind::BrewingStand => 5,
@@ -120,6 +133,8 @@ impl Kind {
             Kind::BlastFurnace => 29,
             Kind::Smoker => 28,
             Kind::BrewingStand => 12,
+            Kind::ShulkerBox => 24,
+            Kind::EnderChest => 3,
         }
     }
 
@@ -142,6 +157,8 @@ impl Kind {
             Kind::BlastFurnace => 13,
             Kind::Smoker => 14,
             Kind::BrewingStand => 15,
+            Kind::ShulkerBox => 16,
+            Kind::EnderChest => 17,
         }
     }
 
@@ -163,6 +180,8 @@ impl Kind {
             13 => Kind::BlastFurnace,
             14 => Kind::Smoker,
             15 => Kind::BrewingStand,
+            16 => Kind::ShulkerBox,
+            17 => Kind::EnderChest,
             _ => return None,
         })
     }
@@ -203,6 +222,11 @@ pub struct Container {
 
     /// Печь и варочная стойка: жар (furnace.rs).
     pub heat: crate::furnace::Heat,
+
+    /// Состояние блока, от которого хранилище осталось, когда его блок
+    /// убрали (`World::set`): по нему шулкер-ящик выпадает своего цвета.
+    /// У стоящего блока — 0.
+    pub block: i32,
 }
 
 impl Container {
@@ -220,6 +244,7 @@ impl Container {
             disabled: 0,
             crafting: 0,
             heat: crate::furnace::Heat::default(),
+            block: 0,
         }
     }
 
@@ -477,6 +502,11 @@ pub fn halves(world: &World, pos: Pos) -> Vec<Pos> {
         return Vec::new();
     };
 
+    // Эндер-сундук воронкам и выбрасывателям не хранилище.
+    if kind == Kind::EnderChest {
+        return Vec::new();
+    }
+
     if !kind.is_chest() {
         return vec![pos];
     }
@@ -522,8 +552,64 @@ pub fn can_open(world: &World, halves: &[Pos]) -> bool {
     halves.iter().all(|&(x, y, z)| {
         let state = world.get_block(x, y, z);
 
-        !Kind::of(state).is_some_and(Kind::is_chest) || !blocks::conductive(world.get_block(x, y + 1, z))
+        match Kind::of(state) {
+            // Эндер-сундук закрыт так же, как сундук (вики, Ender Chest).
+            Some(kind) if kind.is_chest() || kind == Kind::EnderChest => !blocks::conductive(world.get_block(x, y + 1, z)),
+            // Шулкер-ящик: крышке нужно место — полблока перед гранью
+            // `facing` (вики, Shulker Box: «cannot be opened if … blocked»).
+            // [проверить] нижняя плита сверху: у оригинала она мешает
+            // (проверка по коллизии), здесь — любой блок с ящиком.
+            Some(Kind::ShulkerBox) => {
+                world.viewers(x, y, z) > 0
+                    || property(state, "facing").and_then(facing_offset).is_none_or(|(dx, dy, dz)| {
+                        let beyond = world.get_block(x + dx, y + dy, z + dz);
+
+                        !blocks::has_box(beyond)
+                    })
+            }
+            _ => true,
+        }
     })
+}
+
+/// Шулкер-ящик ли предмет: в шулкер-ящик такой не кладётся (вики, Shulker
+/// Box: «shulker boxes … cannot be placed inside other shulker boxes»).
+pub fn is_shulker_item(item: i32) -> bool {
+    blocks::item_name(item).is_some_and(|name| name.ends_with("shulker_box"))
+}
+
+/// Ячейки шулкер-ящика из довесков предмета (компонент `container`).
+pub fn contents_of(stack: &Stack) -> Vec<Option<Stack>> {
+    let mut slots = vec![None; 27];
+
+    for content in &stack.extras().contents {
+        if let Some(place) = slots.get_mut(usize::from(content.slot)) {
+            let mut item = Stack::new(content.item, content.count);
+
+            item.data = content.data;
+            *place = Some(item);
+        }
+    }
+
+    slots
+}
+
+/// Предмет шулкер-ящика с этим содержимым: пустой — без довесков.
+pub fn with_contents(stack: Stack, slots: &[Option<Stack>]) -> Stack {
+    let mut data = stack.extras();
+
+    data.contents = slots
+        .iter()
+        .enumerate()
+        .filter_map(|(slot, found)| {
+            found.map(|found| crate::stackdata::Content { slot: slot as u8, item: found.item, count: found.count, data: found.data })
+        })
+        .collect();
+
+    match crate::stackdata::intern(data) {
+        Some(id) => Stack { data: Some(id), ..stack },
+        None => Stack { data: None, ..stack },
+    }
 }
 
 /// Номер вида окна (реестр `minecraft:menu`) и ключ заголовка.
@@ -546,6 +632,8 @@ pub fn menu(kind: Kind, halves: usize) -> (i32, &'static str) {
         Kind::BlastFurnace => (10, "container.blast_furnace"),
         Kind::Smoker => (22, "container.smoker"),
         Kind::BrewingStand => (11, "container.brewing"),
+        Kind::ShulkerBox => (20, "container.shulkerBox"),
+        Kind::EnderChest => (2, "container.enderchest"),
         // Своего окна у проигрывателя, полки и шкафа нет: сюда не доходит.
         Kind::Jukebox => (0, "container.jukebox"),
         Kind::Shelf => (0, "container.shelf"),
@@ -631,6 +719,8 @@ fn lid_sounds(state: i32) -> Option<(&'static str, &'static str)> {
         }),
         Kind::Chest | Kind::TrappedChest => Some(("minecraft:block.chest.open", "minecraft:block.chest.close")),
         Kind::Barrel => Some(("minecraft:block.barrel.open", "minecraft:block.barrel.close")),
+        Kind::ShulkerBox => Some(("minecraft:block.shulker_box.open", "minecraft:block.shulker_box.close")),
+        Kind::EnderChest => Some(("minecraft:block.ender_chest.open", "minecraft:block.ender_chest.close")),
         _ => None,
     }
 }
@@ -772,6 +862,22 @@ pub fn close(world: &mut World, halves: &[Pos]) {
 /// Что следует за сменой числа смотрящих.
 fn after_viewers(world: &mut World, kind: Kind, halves: &[Pos], edge: bool) {
     match kind {
+        // Шулкер-ящик: только крышка, повторов нет. [проверить] чёрным
+        // ящиком (shulker-box-open).
+        Kind::ShulkerBox => {
+            for &(hx, hy, hz) in halves {
+                queue_lid(world, (hx, hy, hz));
+            }
+        }
+        Kind::EnderChest => {
+            for &(hx, hy, hz) in halves {
+                queue_lid(world, (hx, hy, hz));
+
+                if world.viewers(hx, hy, hz) > 0 {
+                    world.schedule_block_once(hx, hy, hz, LID_RECHECK);
+                }
+            }
+        }
         Kind::Chest | Kind::TrappedChest | Kind::CopperChest => {
             for &(hx, hy, hz) in halves {
                 queue_lid(world, (hx, hy, hz));
@@ -799,7 +905,7 @@ fn after_viewers(world: &mut World, kind: Kind, halves: &[Pos], edge: bool) {
 /// Такт сундука: повторить крышку клиентам и, пока открыт, завести
 /// следующий повтор.
 pub fn recheck_lid(world: &mut World, (x, y, z): Pos) {
-    if !Kind::of(world.get_block(x, y, z)).is_some_and(Kind::is_chest) {
+    if !Kind::of(world.get_block(x, y, z)).is_some_and(|kind| kind.is_chest() || kind == Kind::EnderChest) {
         return;
     }
 
@@ -823,7 +929,7 @@ fn queue_lid(world: &mut World, (x, y, z): Pos) {
 pub fn tell_lid(world: &mut World, (x, y, z): Pos, viewers: u8) {
     let state = world.get_block(x, y, z);
 
-    if !Kind::of(state).is_some_and(Kind::is_chest) {
+    if !Kind::of(state).is_some_and(|kind| kind.is_chest() || matches!(kind, Kind::EnderChest | Kind::ShulkerBox)) {
         return;
     }
 
@@ -945,6 +1051,7 @@ pub fn insert_stack(world: &mut World, halves: &[Pos], stack: Stack, travel: (i3
 }
 
 /// Берёт ли хранилище этот предмет снаружи — от воронки, выбрасывателя.
+/// Шулкер-ящик не берёт другой шулкер-ящик.
 /// Проигрыватель — только пластинку и только пустой (вики, Hopper: «A
 /// jukebox accepts a music disc if it is empty»), кафедра — ничего
 /// (вики, Hopper: «Lectern — no interaction»).
@@ -953,6 +1060,7 @@ fn accepts(world: &World, (x, y, z): Pos, item: i32) -> bool {
         Some(Kind::Jukebox) => crate::redstone::jukebox_song(item).is_some() && is_empty_at(world, (x, y, z)),
         Some(Kind::Lectern) => false,
         Some(Kind::ChiseledBookshelf) => crate::redstone::bookshelf::is_book(item),
+        Some(Kind::ShulkerBox) => !is_shulker_item(item),
         _ => true,
     }
 }
@@ -1587,6 +1695,8 @@ pub fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
             Kind::Crafter => return Some(crate::redstone::crafter::reading(world, pos)),
             Kind::Shelf => return Some(crate::redstone::shelf::reading(world, pos)),
             Kind::ChiseledBookshelf => return Some(crate::redstone::bookshelf::reading(world, pos)),
+            // Эндер-сундук не отдаёт сигнал: у блока нет ячеек.
+            Kind::EnderChest => return None,
             _ => {}
         }
 
@@ -1635,6 +1745,30 @@ mod tests {
 
     /// Медный сундук: звуки по стадии, большой из разных стадий — наименее
     /// окисленный, вощёный только из двух вощёных (сценарий copper-chest).
+    #[test]
+    fn shulker_contents_live_in_the_item() {
+        let state = |name: &str| blocks::state_by_name(name).unwrap();
+        let stone = blocks::item_named("stone").unwrap();
+        let shulker = blocks::item_named("red_shulker_box").unwrap();
+
+        assert_eq!(Kind::of(state("red_shulker_box")), Some(Kind::ShulkerBox));
+        assert_eq!(Kind::of(state("ender_chest")), Some(Kind::EnderChest));
+        assert!(is_shulker_item(shulker) && !is_shulker_item(stone));
+
+        let mut slots = vec![None; 27];
+
+        slots[3] = Some(Stack::new(stone, 7));
+
+        let packed = with_contents(Stack::new(shulker, 1), &slots);
+
+        assert_eq!(contents_of(&packed), slots);
+        // Через файл довесков содержимое тоже проходит.
+        let bytes = crate::stackdata::to_bytes(&packed.extras());
+
+        assert_eq!(crate::stackdata::from_bytes(&bytes).map(|data| data.contents), Some(packed.extras().contents));
+        assert_eq!(with_contents(Stack::new(shulker, 1), &vec![None; 27]), Stack::new(shulker, 1));
+    }
+
     #[test]
     fn copper_chests_sound_and_merge_by_stage() {
         let state = |name: &str| blocks::state_by_name(name).unwrap();

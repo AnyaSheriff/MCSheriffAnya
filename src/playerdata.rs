@@ -37,7 +37,14 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// (`XP_SEED_SIZE`). Файлы ранних версий читаются с семенем 0: оно
 /// заведётся заново, как у оригинала («when joining a world with … seed of
 /// 0, it will be regenerated», вики, Enchanting mechanics).
-const FORMAT_VERSION: u32 = 6;
+///
+/// Версия 7 — плюс эндер-сундук игрока в самом конце: записи ячеек и после
+/// них четыре байта длины записи (`write_ender`). Файлы версий 1–6 читаются
+/// с пустым эндер-сундуком.
+const FORMAT_VERSION: u32 = 7;
+
+/// Версия с семенем зачарования, но без эндер-сундука.
+const XP_SEED_VERSION: u32 = 6;
 
 /// Версия 5 — плюс личная точка возрождения (кровать, якорь, `spawnpoint`):
 /// постоянный хвост `bed::RespawnPoint::SIZE` после здоровья.
@@ -168,6 +175,70 @@ pub struct PlayerData {
 
     /// Личная точка возрождения: хвост файла версии 5.
     pub respawn: Option<crate::bed::RespawnPoint>,
+
+    /// Эндер-сундук игрока, 27 ячеек: хвост файла версии 7.
+    pub ender: Vec<Option<crate::inventory::Stack>>,
+}
+
+/// Ячеек в эндер-сундуке.
+pub const ENDER_SLOTS: usize = 27;
+
+/// Пустой эндер-сундук.
+pub fn empty_ender() -> Vec<Option<crate::inventory::Stack>> {
+    vec![None; ENDER_SLOTS]
+}
+
+/// Записывает эндер-сундук: число занятых ячеек, у каждой номер, предмет,
+/// число и довески; в конце — длина записи, чтобы читать файл с хвоста.
+fn write_ender(slots: &[Option<crate::inventory::Stack>], out: &mut Vec<u8>) {
+    let start = out.len();
+    let filled: Vec<_> = slots.iter().enumerate().filter_map(|(slot, stack)| stack.map(|stack| (slot, stack))).collect();
+
+    out.push(filled.len() as u8);
+
+    for (slot, stack) in filled {
+        out.push(slot as u8);
+        out.extend_from_slice(&stack.stored_item().to_be_bytes());
+        out.extend_from_slice(&stack.count.to_be_bytes());
+        stack.write_extras(out);
+    }
+
+    let length = (out.len() - start) as u32;
+
+    out.extend_from_slice(&length.to_be_bytes());
+}
+
+/// Читает эндер-сундук из записи без хвоста длины. None — запись испорчена.
+fn read_ender(bytes: &[u8]) -> Option<Vec<Option<crate::inventory::Stack>>> {
+    use crate::inventory::Stack;
+
+    let mut slots = empty_ender();
+    let mut at = 1;
+
+    for _ in 0..*bytes.first()? {
+        let mut take = |count: usize| -> Option<&[u8]> {
+            let part = bytes.get(at..at + count)?;
+
+            at += count;
+
+            Some(part)
+        };
+        let slot = usize::from(take(1)?[0]);
+        let item = i32::from_be_bytes(take(4)?.try_into().ok()?);
+        let count = i32::from_be_bytes(take(4)?.try_into().ok()?);
+        let extras = Stack::read_extras(item, &mut take)?;
+        let mut stack = Stack::from_stored(item, count);
+
+        if let Some(extras) = extras {
+            stack = stack.with_extras(extras);
+        }
+
+        if count > 0 && crate::blocks::stack_size(stack.item) > 0 {
+            *slots.get_mut(slot)? = Some(stack.with_count(count.min(crate::blocks::stack_size(stack.item))));
+        }
+    }
+
+    Some(slots)
 }
 
 /// Путь к файлу игрока внутри директории.
@@ -234,6 +305,7 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 
     // Файл первой версии — без инвентаря, и длина у него постоянная;
     // второй — без измерения; в третьей измерение — последний байт.
+    let mut ender = empty_ender();
     let (inventory, dimension, vitals, respawn) = match version {
         OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default(), Default::default(), None),
         INVENTORY_VERSION => (Inventory::from_bytes(bytes.get(SIZE..)?)?, Default::default(), Default::default(), None),
@@ -243,10 +315,20 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 
             (Inventory::from_bytes(inventory)?, dimension, Default::default(), None)
         }
-        VITALS_VERSION | RESPAWN_VERSION | FORMAT_VERSION => {
+        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | FORMAT_VERSION => {
             let mut tail = bytes.get(SIZE..)?;
             let mut respawn = None;
             let mut seed = 0;
+
+            // Эндер-сундук — самый конец файла: длина записи и сама запись.
+            if version == FORMAT_VERSION {
+                let (rest, length) = tail.split_at(tail.len().checked_sub(4)?);
+                let length = u32::from_be_bytes(length.try_into().ok()?) as usize;
+                let (rest, stored) = rest.split_at(rest.len().checked_sub(length)?);
+
+                ender = read_ender(stored)?;
+                tail = rest;
+            }
 
             if version >= RESPAWN_VERSION {
                 let (rest, point) = tail.split_at(tail.len().checked_sub(crate::bed::RespawnPoint::SIZE)?);
@@ -255,7 +337,7 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
                 tail = rest;
             }
 
-            if version == FORMAT_VERSION {
+            if version >= XP_SEED_VERSION {
                 let (rest, bytes) = tail.split_at(tail.len().checked_sub(XP_SEED_SIZE)?);
 
                 seed = i32::from_be_bytes(bytes.try_into().ok()?);
@@ -283,6 +365,7 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
         dimension,
         vitals,
         respawn,
+        ender,
     })
 }
 
@@ -314,6 +397,7 @@ pub fn save(directory: &Path, uuid: &[u8; 16], data: &PlayerData) -> io::Result<
     data.vitals.write(&mut out);
     out.extend_from_slice(&data.vitals.xp_seed.to_be_bytes());
     crate::bed::RespawnPoint::write(data.respawn.as_ref(), &mut out);
+    write_ender(&data.ender, &mut out);
 
     let temporary = path.with_extension("tmp");
     fs::write(&temporary, &out)?;
@@ -348,6 +432,7 @@ mod tests {
             dimension: Default::default(),
             vitals: Default::default(),
             respawn: None,
+            ender: empty_ender(),
         }
     }
 
@@ -359,6 +444,29 @@ mod tests {
 
         save(&directory, &[1; 16], &sample()).expect("записать");
         assert_eq!(load(&directory, &[1; 16]), Some(sample()));
+    }
+
+    /// Эндер-сундук переживает файл: ячейки с довесками читаются такими же,
+    /// а файл прежней версии читается с пустым сундуком.
+    #[test]
+    fn the_ender_chest_is_saved_with_the_player() {
+        let directory = test_directory("ender");
+        let stone = crate::blocks::item_named("stone").expect("камень");
+        let mut data = sample();
+
+        data.ender[0] = Some(crate::inventory::Stack::new(stone, 12));
+        data.ender[26] = Some(crate::inventory::Stack::new(stone, 64));
+        save(&directory, &[8; 16], &data).expect("записать");
+        assert_eq!(load(&directory, &[8; 16]), Some(data));
+
+        // Прежняя версия (6): тот же файл без хвоста эндер-сундука.
+        let mut old = fs::read(path_for(&directory, &[8; 16])).expect("прочитать");
+        let tail = u32::from_be_bytes(old[old.len() - 4..].try_into().expect("длина")) as usize;
+
+        old.truncate(old.len() - 4 - tail);
+        old[4..8].copy_from_slice(&XP_SEED_VERSION.to_be_bytes());
+        fs::write(path_for(&directory, &[9; 16]), &old).expect("записать");
+        assert_eq!(load(&directory, &[9; 16]).map(|loaded| loaded.ender), Some(empty_ender()));
     }
 
     /// Файла нет — игрок заходит впервые, и это не ошибка.
@@ -536,7 +644,8 @@ mod tests {
 
         // Четвёртая версия — без семени зачарования и точки возрождения:
         // семя читается нулём и заведётся заново.
-        bytes.truncate(bytes.len() - crate::bed::RespawnPoint::SIZE - XP_SEED_SIZE);
+        // Пустой эндер-сундук — число ячеек и длина записи: пять байт.
+        bytes.truncate(bytes.len() - 5 - crate::bed::RespawnPoint::SIZE - XP_SEED_SIZE);
         bytes[4..8].copy_from_slice(&VITALS_VERSION.to_be_bytes());
         fs::write(&path, &bytes).expect("записать");
 

@@ -431,6 +431,47 @@ pub fn state_for(orientation: &Orientation, click: &Click) -> Option<i32> {
             orientation.state(&[("facing", opposite_direction(direction_from_yaw(click.yaw))), ("type", "single")])
         }
 
+        // Настенная табличка смотрит от стены — в сторону грани, по которой
+        // щёлкнули; стоящая поворачивается по взгляду игрока на 16 румбов
+        // (вики, Sign: «rotation … 0 … 15»; рыскание + 180).
+        Family::Other if orientation.name.ends_with("_wall_sign") => {
+            let facing = match click.face {
+                2 => "north",
+                3 => "south",
+                4 => "west",
+                _ => "east",
+            };
+
+            orientation.state(&[("facing", facing)])
+        }
+        Family::Other if orientation.name.ends_with("_sign") && !orientation.name.contains("hanging") => {
+            let turn = (((180.0 + click.yaw) * 16.0 / 360.0 + 0.5).floor() as i32).rem_euclid(16);
+
+            orientation.state(&[("rotation", &turn.to_string())])
+        }
+
+        // Эндер-сундук смотрит как сундук: защёлкой на игрока (вики, Ender
+        // Chest: «facing … opposite the direction the player faces»).
+        Family::Other if orientation.name == "ender_chest" => {
+            orientation.state(&[("facing", opposite_direction(direction_from_yaw(click.yaw)))])
+        }
+
+        // Шулкер-ящик открывается от той грани, по которой щёлкнули: «facing»
+        // — сторона крышки (вики, Shulker Box: «the face of the block it was
+        // placed against»).
+        Family::Other if orientation.name.ends_with("shulker_box") => {
+            let facing = match click.face {
+                0 => "down",
+                1 => "up",
+                2 => "north",
+                3 => "south",
+                4 => "west",
+                _ => "east",
+            };
+
+            orientation.state(&[("facing", facing)])
+        }
+
         // Бочка, выбрасыватель и раздатчик — лицом к игроку по всем шести
         // сторонам, как поршень (вики, Dropper: «The opposite from the
         // direction the player faces»; Barrel — так же).

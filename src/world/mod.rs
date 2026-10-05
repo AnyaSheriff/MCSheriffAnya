@@ -200,6 +200,8 @@ pub enum WorldEvent {
     /// Игрок `viewer` (номер его сущности) открыл хранилище: окно уходит
     /// ему в этом месте потока — после звука открытия, до повтора блока.
     OpenWindow { viewer: i32, x: i32, y: i32, z: i32 },
+    /// Окно правки таблички (Open Sign Editor): сторона — передняя или нет.
+    OpenSign { viewer: i32, x: i32, y: i32, z: i32, front: bool },
 
     /// Метка «здесь изменения блоков уходят клиентам пачкой». У оригинала
     /// изменения блоков копятся и рассылаются в одной точке такта — после
@@ -387,6 +389,9 @@ struct Chunk {
 
     /// Данные спавнеров (spawner.rs) по месту внутри чанка.
     spawners: HashMap<(i32, i32, i32), crate::spawner::Data>,
+
+    /// Таблички с текстом (sign.rs): место внутри чанка.
+    signs: HashMap<(i32, i32, i32), crate::sign::Data>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
@@ -480,6 +485,7 @@ impl Chunk {
             mobs: Vec::new(),
             command_blocks: HashMap::new(),
             spawners: HashMap::new(),
+            signs: HashMap::new(),
         }
     }
 
@@ -785,13 +791,19 @@ impl Chunk {
         if kind != was {
             let place = (x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
 
-            if let Some(gone) = self.containers.remove(&place) {
+            if let Some(mut gone) = self.containers.remove(&place) {
+                gone.block = old;
                 self.spilled.push(((x, y, z), gone));
             }
 
             if let Some(kind) = kind {
                 self.containers.insert(place, containers::Container::new(kind));
             }
+        }
+
+        // Текст таблички уходит вместе с блоком.
+        if !self.signs.is_empty() && !crate::redstone::is_sign(state) {
+            self.signs.remove(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)));
         }
 
         // Командный блок: данные переживают смену вида (окно меняет режим —
@@ -2065,6 +2077,39 @@ impl World {
     /// Окно хранилища для игрока — в общем потоке событий.
     pub fn note_open_window(&mut self, viewer: i32, x: i32, y: i32, z: i32) {
         self.events.push(WorldEvent::OpenWindow { viewer, x, y, z });
+    }
+
+    /// Окно правки таблички открыто игроку `viewer`.
+    pub fn note_open_sign(&mut self, viewer: i32, x: i32, y: i32, z: i32, front: bool) {
+        self.events.push(WorldEvent::OpenSign { viewer, x, y, z, front });
+    }
+
+    /// Данные таблички в этом месте, если они есть (у чистой их нет).
+    pub fn sign(&self, x: i32, y: i32, z: i32) -> Option<&crate::sign::Data> {
+        self.chunks.get(&chunk_key(x, z))?.signs.get(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))
+    }
+
+    /// Правит данные таблички (заводит, если их не было); чанк помечается
+    /// изменённым. Табличка без текста данных не держит.
+    pub fn with_sign<R>(&mut self, x: i32, y: i32, z: i32, change: impl FnOnce(&mut crate::sign::Data) -> R) -> Option<R> {
+        let chunk = self.chunks.get_mut(&chunk_key(x, z))?;
+        let place = (x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
+        let data = chunk.signs.entry(place).or_default();
+        let result = change(data);
+
+        if data.is_default() {
+            chunk.signs.remove(&place);
+        }
+
+        self.dirty.insert(chunk_key(x, z));
+
+        Some(result)
+    }
+
+    /// Таблички чанка с их данными для клиента: место внутри чанка и сетевой
+    /// NBT.
+    pub fn chunk_signs(&self, chunk_x: i32, chunk_z: i32) -> Vec<((i32, i32, i32), Vec<u8>)> {
+        self.chunks.get(&(chunk_x, chunk_z)).map(|chunk| chunk.signs.iter().map(|(&place, data)| (place, data.nbt())).collect()).unwrap_or_default()
     }
 
     /// Выброшенный предмет: сущность заведёт такт.

@@ -3319,6 +3319,8 @@ impl BedrockWorld {
             vitals: self.health.vit.saved(),
             // Точку возрождения Bedrock-игрок пока не ставит: сохраняем прежнюю.
             respawn: self.saved.as_ref().and_then(|data| data.respawn),
+            // Эндер-сундук Bedrock-игрока: [Bedrock: потом] — сохраняем прежний.
+            ender: self.saved.as_ref().map_or_else(crate::playerdata::empty_ender, |data| data.ender.clone()),
         }
     }
 

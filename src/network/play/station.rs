@@ -68,6 +68,7 @@ pub(super) async fn open_station(
         props: Vec::new(),
         merchant: None,
         station: Some(station),
+        ender: false,
     });
     send_window_content(stream, player).await?;
 

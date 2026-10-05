@@ -1,0 +1,92 @@
+{
+ "name": "cauldron-fill",
+ "about": "Котёл: ведро воды в пустой (уровень 3), пустое ведро забирает воду, снова вода, стеклянная бутылка черпает уровни, цветной шулкер-ящик в воде становится простым.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:cauldron"
+  }
+ ],
+ "setup": [
+  "clear $(bot)",
+  "give $(bot) minecraft:water_bucket",
+  "give $(bot) minecraft:glass_bottle 2",
+  "give $(bot) minecraft:red_shulker_box",
+  "gamemode survival $(bot)",
+  "tp $(bot) $(0.5,0,2.5)",
+  "!stopfly",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "hotbar": 0
+  },
+  {
+   "after": 4,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 12,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 20,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 28,
+   "hotbar": 1
+  },
+  {
+   "after": 32,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 40,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 48,
+   "hotbar": 2
+  },
+  {
+   "after": 52,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  }
+ ],
+ "cleanup": [
+  "clear $(bot)",
+  "setblock $(0,0,0) minecraft:air",
+  "gamemode creative $(bot)"
+ ],
+ "record_ticks": 80
+}

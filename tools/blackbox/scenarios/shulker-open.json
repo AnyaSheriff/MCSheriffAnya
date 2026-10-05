@@ -1,0 +1,135 @@
+{
+ "name": "shulker-open",
+ "about": "Шулкер-ящик: открыть, взять Shift-щелчком, положить камень, попытка положить шулкер-ящик внутрь (нельзя), закрыть; закрытый блоком сверху — не открывается; красный ящик со стороны. Звук, крышка, окно.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:shulker_box[facing=up]{Items:[{Slot:0b,id:\"minecraft:stone\",count:5},{Slot:13b,id:\"minecraft:diamond\",count:3}]}"
+  },
+  {
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "minecraft:shulker_box[facing=up]"
+  },
+  {
+   "at": [
+    3,
+    1,
+    0
+   ],
+   "state": "minecraft:stone"
+  },
+  {
+   "at": [
+    6,
+    0,
+    0
+   ],
+   "state": "minecraft:red_shulker_box[facing=north]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    6
+   ],
+   "state": "minecraft:comparator[facing=south]"
+  }
+ ],
+ "setup": [
+  "clear $(bot)",
+  "give $(bot) minecraft:stone 20",
+  "give $(bot) minecraft:white_shulker_box 1",
+  "give $(bot) minecraft:dirt 5",
+  "gamemode survival $(bot)",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 10,
+   "window_click": {
+    "slot": 0,
+    "button": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 14,
+   "window_click": {
+    "slot": 27,
+    "button": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 18,
+   "window_click": {
+    "slot": 54,
+    "button": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 22,
+   "window_click": {
+    "slot": 55,
+    "button": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 26,
+   "window_click": {
+    "slot": 56,
+    "button": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 34,
+   "close": true
+  },
+  {
+   "after": 44,
+   "click": [
+    3,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 54,
+   "click": [
+    6,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 64,
+   "close": true
+  }
+ ],
+ "cleanup": [
+  "clear $(bot)",
+  "gamemode creative $(bot)"
+ ],
+ "record_ticks": 90
+}

@@ -490,6 +490,8 @@ bot._client.on('world_event', (p) => {
 });
 bot._client.on('craft_progress_bar', (p) => note('property', { property: p.property, value: p.value }));
 bot._client.on('close_window', () => note('close', {}));
+// Окно правки таблички (Open Sign Editor).
+bot._client.on('open_sign_entity', (p) => { if (inPad(p.location)) note('sign_editor', { at: rel(p.location), front: p.isFrontText }); });
 bot._client.on('tile_entity_data', (p) => {
   // Данные — без обёрток типов (prismarine-nbt `simplify`): так видно
   // содержимое полки целиком, а не первые байты.
@@ -505,7 +507,7 @@ const hookWrites = (client) => {
   const write = client.write.bind(client);
   client.write = (name, params) => {
     if (process.env.BB_DEBUG && name !== 'position' && name !== 'position_look' && name !== 'look' && name !== 'keep_alive') console.error('→', name, JSON.stringify(params, (k, v) => typeof v === 'bigint' ? String(v) : v).slice(0, 160));
-    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'name_item' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item' || name === 'update_command_block' || name === 'select_trade')) {
+    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'update_sign' || name === 'name_item' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item' || name === 'update_command_block' || name === 'select_trade')) {
       // Такт нажатия берём из плана, а не из часов: в какой такт целились,
       // в тот оно и уходит. Часы на этом месте врать не должны, но нажатие
       // ложится ровно на границу счёта, и округление могло бы дрогнуть.
@@ -714,7 +716,7 @@ bot.once('spawn', async () => {
       // куда бы отправка ни дрогнула.
       const at = baseTick + (a.after || 0);
       await waitTick(at, 0);
-      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.select_trade !== undefined ? `select_trade ${a.select_trade}` : a.rename !== undefined ? `rename ${a.rename}` : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : a.attack ? 'attack' : a.interact ? 'interact' : a.button !== undefined ? `button ${a.button}` : a.slot_state ? `slot_state ${a.slot_state.slot} ${a.slot_state.state}` : a.hotbar !== undefined ? `hotbar ${a.hotbar}` : a.control ? `control ${a.control.join('=')}` : a.fly !== undefined ? `fly ${a.fly}` : a.respawn ? 'respawn' : a.dig ? `dig ${a.dig.join(',')} ${a.status ?? 0}` : a.leave_bed ? 'leave_bed' : a.use ? 'use_item' : a.release ? 'release_use' : a.program ? `program ${a.program.at.join(',')} ${a.program.command}` : JSON.stringify(a);
+      const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.sign_update ? `sign_update ${a.sign_update.at.join(',')}` : a.select_trade !== undefined ? `select_trade ${a.select_trade}` : a.rename !== undefined ? `rename ${a.rename}` : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : a.attack ? 'attack' : a.interact ? 'interact' : a.button !== undefined ? `button ${a.button}` : a.slot_state ? `slot_state ${a.slot_state.slot} ${a.slot_state.state}` : a.hotbar !== undefined ? `hotbar ${a.hotbar}` : a.control ? `control ${a.control.join('=')}` : a.fly !== undefined ? `fly ${a.fly}` : a.respawn ? 'respawn' : a.dig ? `dig ${a.dig.join(',')} ${a.status ?? 0}` : a.leave_bed ? 'leave_bed' : a.use ? 'use_item' : a.release ? 'release_use' : a.program ? `program ${a.program.at.join(',')} ${a.program.command}` : JSON.stringify(a);
       pendingDo = { what: a.bot === 2 ? `2: ${what}` : what, tick: at };
       if (a.set) bot.chat(`/setblock ${ORIGIN.x + a.set.at[0]} ${ORIGIN.y + a.set.at[1]} ${ORIGIN.z + a.set.at[2]} ${a.set.state}`);
       if (a.cmd) bot.chat('/' + expand(a.cmd));
@@ -741,6 +743,8 @@ bot.once('spawn', async () => {
       if (a.hotbar !== undefined) (a.bot === 2 ? bot2 : bot)._client.write('held_item_slot', { slotId: a.hotbar });
       // Выбор сделки в окне торговли (пакет Select Trade).
       if (a.select_trade !== undefined) bot._client.write('select_trade', { slot: a.select_trade });
+      // Текст таблички: пакет Update Sign (в mineflayer — update_sign).
+      if (a.sign_update) bot._client.write('update_sign', { location: new Vec3(ORIGIN.x + a.sign_update.at[0], ORIGIN.y + a.sign_update.at[1], ORIGIN.z + a.sign_update.at[2]), isFrontText: a.sign_update.front !== false, text1: a.sign_update.lines[0] || '', text2: a.sign_update.lines[1] || '', text3: a.sign_update.lines[2] || '', text4: a.sign_update.lines[3] || '' });
       if (a.close && openWindow !== null) { bot._client.write('close_window', { windowId: openWindow }); openWindow = null; }
       // Щелчок (правой кнопкой) по последней появившейся на площадке
       // вагонетке — основной рукой, в середину её ящика.

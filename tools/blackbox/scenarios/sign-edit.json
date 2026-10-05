@@ -1,0 +1,150 @@
+{
+ "name": "sign-edit",
+ "about": "Табличка: щелчок спереди — окно правки передней стороны, Update Sign с текстом; со спины — задняя сторона; настенная; затем соты — воск (данные блока), правка и щелчок навощённой — отказ.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:oak_sign[rotation=0,waterlogged=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    0
+   ],
+   "state": "minecraft:birch_wall_sign[facing=south,waterlogged=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    -1
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "clear $(bot)",
+  "gamemode survival $(bot)",
+  "tp $(bot) $(0.5,0,2.5)",
+  "!stopfly",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 8,
+   "sign_update": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "front": true,
+    "lines": [
+     "Привет",
+     "второй",
+     "",
+     "hello"
+    ]
+   }
+  },
+  {
+   "after": 16,
+   "cmd": "tp $(bot) $(0.5,0,-1.5) 0 0"
+  },
+  {
+   "after": 26,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 34,
+   "sign_update": {
+    "at": [
+     0,
+     0,
+     0
+    ],
+    "front": false,
+    "lines": [
+     "back",
+     "",
+     "",
+     ""
+    ]
+   }
+  },
+  {
+   "after": 44,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 180 0"
+  },
+  {
+   "after": 54,
+   "click": [
+    3,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 62,
+   "sign_update": {
+    "at": [
+     3,
+     0,
+     0
+    ],
+    "front": true,
+    "lines": [
+     "wall",
+     "sign",
+     "",
+     ""
+    ]
+   }
+  },
+  {
+   "after": 70,
+   "cmd": "give $(bot) minecraft:honeycomb 1"
+  },
+  {
+   "after": 76,
+   "click": [
+    3,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 84,
+   "click": [
+    3,
+    0,
+    0
+   ]
+  }
+ ],
+ "cleanup": [
+  "clear $(bot)",
+  "setblock $(0,0,0) minecraft:air",
+  "setblock $(3,0,0) minecraft:air",
+  "setblock $(3,0,-1) minecraft:air",
+  "gamemode creative $(bot)"
+ ],
+ "record_ticks": 110
+}

@@ -46,6 +46,7 @@ impl Window<'_> {
     /// Можно ли положить этот предмет в слот окна рукой.
     fn may_place(&self, slot: usize, item: i32) -> bool {
         match self.kind {
+            Some(crate::containers::Kind::ShulkerBox) if slot < self.container.len() => !crate::containers::is_shulker_item(item),
             Some(kind) if slot < self.container.len() => crate::furnace::may_place(kind, slot, item),
             _ => true,
         }
@@ -54,6 +55,7 @@ impl Window<'_> {
     /// Сколько этого предмета влезает в слот окна.
     fn limit(&self, slot: usize, stack: &Stack) -> i32 {
         match self.kind {
+            Some(crate::containers::Kind::ShulkerBox) if slot < self.container.len() && crate::containers::is_shulker_item(stack.item) => 0,
             Some(kind) if slot < self.container.len() => crate::furnace::slot_limit(kind, slot, stack.item).min(stack.limit()),
             _ => stack.limit(),
         }
@@ -262,8 +264,10 @@ impl Window<'_> {
             if self.get(target).is_none() {
                 let moved = left.min(blocks::stack_size(stack.item)).min(self.limit(target, &stack));
 
-                self.set(target, Some(stack.with_count(moved)));
-                left -= moved;
+                if moved > 0 {
+                    self.set(target, Some(stack.with_count(moved)));
+                    left -= moved;
+                }
             }
         }
 

@@ -146,6 +146,26 @@ fn escape_json(text: &str) -> String {
     escaped
 }
 
+/// Отправляет Set Compression (clientbound, 0x03) с порогом из настроек:
+/// с него и всё дальнейшее идёт в сжатом виде (вики, Java Edition protocol,
+/// «Set Compression»). Сам он уходит ещё несжатым. Порог −1 — пакета нет.
+pub async fn send_set_compression(stream: &mut TcpStream) -> io::Result<()> {
+    let threshold = super::packet::compression_threshold();
+
+    if threshold < 0 {
+        return Ok(());
+    }
+
+    let mut body = encode_varint(0x03);
+    body.extend_from_slice(&encode_varint(threshold));
+
+    let mut packet = encode_varint(body.len() as i32);
+    packet.extend_from_slice(&body);
+
+    stream.write_all(&packet).await?;
+    stream.flush().await
+}
+
 /// Отправляет пакет Login Success: подтверждает вход игрока под указанным
 /// именем и UUID. Список properties пуст (свойства профиля не поддерживаются).
 pub async fn send_login_success(
@@ -159,9 +179,10 @@ pub async fn send_login_success(
     body.extend_from_slice(&encode_string(username));
     body.extend_from_slice(&encode_varint(0)); // properties count = 0
 
-    // Полный пакет: VarInt длина тела + само тело.
-    let mut packet = encode_varint(body.len() as i32);
-    packet.extend_from_slice(&body);
+    // Полный пакет: длина тела + само тело, в сжатом виде, если оно включено.
+    let mut packet = Vec::with_capacity(body.len() + 8);
+
+    super::packet::frame(&mut packet, &body, super::packet::compression_threshold());
 
     stream.write_all(&packet).await?;
     stream.flush().await?;

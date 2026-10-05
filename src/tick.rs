@@ -1965,7 +1965,32 @@ fn continue_blasts(shared: &Shared, dimension: Dimension, world: &mut World) {
 /// Хранилища, чей блок сломали, высыпают содержимое на месте блока.
 fn spill_containers(shared: &Shared, dimension: Dimension, world: &mut World) {
     for ((x, y, z), container) in world.take_spilled() {
-        for stack in container.slots.into_iter().flatten() {
+        // Эндер-сундук ничего не высыпает: его содержимое у игрока.
+        if container.kind == containers::Kind::EnderChest {
+            continue;
+        }
+
+        // Шулкер-ящик выпадает сам, с содержимым внутри (вики, Shulker Box:
+        // «retains its inventory when broken»).
+        let slots = if container.kind == containers::Kind::ShulkerBox
+            && let Some(item) = blocks::block_at_state(container.block).and_then(blocks::item_for_block)
+        {
+            let stack = containers::with_contents(Stack::new(item, 1), &container.slots);
+            let entity_id = shared.next_entity_id();
+            let (dx, dz) = (world.random_unit() as f64 * 0.5 + 0.25, world.random_unit() as f64 * 0.5 + 0.25);
+
+            shared
+                .items_in(dimension)
+                .lock()
+                .expect("предметы захвачены другим потоком")
+                .drop_item(entity_id, stack, (x as f64 + dx, y as f64 + 0.25, z as f64 + dz), (0.0, 0.2, 0.0), items::MINED_DELAY);
+
+            Vec::new()
+        } else {
+            container.slots
+        };
+
+        for stack in slots.into_iter().flatten() {
             let entity_id = shared.next_entity_id();
             let (dx, dz) = (world.random_unit() as f64 * 0.8 + 0.1, world.random_unit() as f64 * 0.8 + 0.1);
 

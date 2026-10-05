@@ -57,6 +57,7 @@ mod furnace;
 mod crafting;
 mod window;
 mod villager;
+mod sign;
 mod spawner;
 mod enchanting;
 mod smithing;
@@ -182,6 +183,8 @@ async fn server() -> io::Result<()> {
         properties.view_distance,
         properties.simulation_distance
     );
+
+    network::packet::set_compression_threshold(properties.compression_threshold);
 
     let bind_address = format!("0.0.0.0:{}", properties.server_port);
     let listener = TcpListener::bind(&bind_address).await?;
@@ -597,6 +600,8 @@ async fn handle_connection(
             }
 
             commands_admin::note_address(&login.uuid, addr.ip());
+            // Сжатие включается до Login Success: он уже идёт в новом виде.
+            network::login::send_set_compression(&mut socket).await?;
             send_login_success(&mut socket, &login.username, &login.uuid).await?;
             log_debug!("Login Success отправлен игроку {}", login.username);
 

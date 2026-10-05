@@ -11,7 +11,55 @@ use std::io;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use super::varint::{encode_varint, read_varint};
+use super::varint::read_varint;
+
+/// Порог сжатия пакетов (`network-compression-threshold`): −1 — сжатия нет.
+/// Один на весь сервер; включается для подключения пакетом Set Compression
+/// в конце входа, поэтому всё, что читают и пишут эти функции (Configuration
+/// и Play), уже идёт в сжатом виде, а статус и сам вход — нет
+/// (вики, Java Edition protocol, «Packet format»).
+static COMPRESSION: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(-1);
+
+/// Задаёт порог сжатия из server.properties.
+pub fn set_compression_threshold(threshold: i32) {
+    COMPRESSION.store(threshold.max(-1), std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Порог сжатия: пакеты не короче него идут сжатыми; −1 — не сжимаются.
+pub fn compression_threshold() -> i32 {
+    COMPRESSION.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Упаковывает тело пакета в кадр: длина, при сжатии — ещё длина до сжатия
+/// (0 — тело не сжато, оно короче порога) и само тело, сжатое zlib.
+pub fn frame(out: &mut Vec<u8>, body: &[u8], threshold: i32) {
+    if threshold < 0 {
+        push_varint(out, body.len() as i32);
+        out.extend_from_slice(body);
+        return;
+    }
+
+    if (body.len() as i32) < threshold {
+        // Нулевая длина до сжатия — один байт перед телом.
+        push_varint(out, body.len() as i32 + 1);
+        out.push(0);
+        out.extend_from_slice(body);
+        return;
+    }
+
+    use std::io::Write;
+
+    let mut packed = flate2::write::ZlibEncoder::new(Vec::with_capacity(body.len() / 2 + 16), flate2::Compression::fast());
+    // Запись в память не отказывает.
+    let _ = packed.write_all(body);
+    let packed = packed.finish().unwrap_or_default();
+    let mut size = Vec::with_capacity(5);
+
+    push_varint(&mut size, body.len() as i32);
+    push_varint(out, (size.len() + packed.len()) as i32);
+    out.extend_from_slice(&size);
+    out.extend_from_slice(&packed);
+}
 
 /// Разобранные сведения о прочитанном пакете.
 pub struct PacketInfo {
@@ -60,6 +108,11 @@ pub async fn read_packet<R: AsyncRead + Unpin>(stream: &mut R) -> io::Result<Pac
     let mut body = vec![0u8; length as usize];
     stream.read_exact(&mut body).await?;
 
+    if compression_threshold() >= 0 {
+        body = unpack(&body, compression_threshold())?;
+    }
+
+    let length = body.len() as i32;
     let (packet_id, _) = decode_varint(&body)?;
 
     Ok(PacketInfo {
@@ -69,11 +122,40 @@ pub async fn read_packet<R: AsyncRead + Unpin>(stream: &mut R) -> io::Result<Pac
     })
 }
 
+/// Снимает сжатие с тела кадра: длина до сжатия (0 — не сжато) и данные.
+fn unpack(frame: &[u8], threshold: i32) -> io::Result<Vec<u8>> {
+    use std::io::Read;
+
+    let (size, read) = decode_varint(frame)?;
+    let data = &frame[read..];
+
+    if size == 0 {
+        return Ok(data.to_vec());
+    }
+
+    // Как у оригинала, длиннее предела распаковывать нельзя: иначе
+    // крошечный пакет раздулся бы в гигабайты.
+    if !(1..=8 * 1024 * 1024).contains(&size) || size < threshold {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Недопустимая длина сжатого пакета: {size}")));
+    }
+
+    let mut body = Vec::with_capacity(size as usize);
+
+    flate2::read::ZlibDecoder::new(data).take(size as u64 + 1).read_to_end(&mut body)?;
+
+    if body.len() != size as usize {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "Длина распакованного пакета не сошлась"));
+    }
+
+    Ok(body)
+}
+
 /// Записывает тело пакета в поток, добавив перед ним VarInt длину,
 /// и сбрасывает буфер.
 pub async fn write_body(stream: &mut TcpStream, body: Vec<u8>) -> io::Result<()> {
-    let mut packet = encode_varint(body.len() as i32);
-    packet.extend_from_slice(&body);
+    let mut packet = Vec::with_capacity(body.len() + 8);
+
+    frame(&mut packet, &body, compression_threshold());
 
     stream.write_all(&packet).await?;
     stream.flush().await
@@ -104,8 +186,7 @@ impl<'a> Outgoing<'a> {
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
     pub async fn send(&mut self, body: &[u8]) -> io::Result<()> {
-        push_varint(&mut self.buffer, body.len() as i32);
-        self.buffer.extend_from_slice(body);
+        frame(&mut self.buffer, body, compression_threshold());
 
         if self.buffer.len() >= OUTGOING_LIMIT {
             self.flush().await?;
@@ -230,6 +311,29 @@ mod tests {
             push_varint(&mut out, value);
 
             assert_eq!(&out[1..], encode_varint(value).as_slice());
+        }
+    }
+
+    /// Кадр со сжатием читается обратно: короткое тело идёт как есть (длина
+    /// до сжатия 0), длинное — zlib.
+    #[test]
+    fn compressed_frames_round_trip() {
+        for size in [1usize, 10, 255, 256, 5000] {
+            let body: Vec<u8> = (0..size).map(|i| (i % 7) as u8).collect();
+            let mut out = Vec::new();
+
+            frame(&mut out, &body, 256);
+
+            let (length, read) = decode_varint(&out).unwrap();
+
+            assert_eq!(length as usize, out.len() - read);
+            assert_eq!(unpack(&out[read..], 256).unwrap(), body);
+
+            if size >= 256 {
+                assert!(out.len() < size, "длинное тело сжато");
+            } else {
+                assert_eq!(out[read], 0, "короткое не сжато");
+            }
         }
     }
 

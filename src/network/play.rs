@@ -68,6 +68,8 @@ mod sleep;
 mod farm;
 mod station;
 mod body;
+mod signs;
+mod cauldron;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
 
@@ -4073,6 +4075,10 @@ async fn send_pending_world_events(
                 open_window(stream, shared, player, (*x, *y, *z)).await?;
             }
             WorldEvent::OpenWindow { .. } => {}
+            WorldEvent::OpenSign { viewer, x, y, z, front } if *viewer == player.entity_id => {
+                signs::send_editor(stream, (*x, *y, *z), *front).await?;
+            }
+            WorldEvent::OpenSign { .. } => {}
             WorldEvent::Contents => send_window_changes(stream, shared, player).await?,
             WorldEvent::Tracker => {
                 mobs::send_mob_ticks(stream, shared, player).await?;
@@ -4226,9 +4232,16 @@ async fn open_window(
 ) -> io::Result<()> {
     let (halves, slots, kind) = {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
-        let halves = containers::halves(&world, at);
-        let slots = containers::window_slots(&world, &halves);
         let kind = containers::Kind::of(world.get_block(at.0, at.1, at.2));
+        // У эндер-сундука ячейки личные: в окне — хранилище игрока.
+        let (halves, slots) = if kind == Some(containers::Kind::EnderChest) {
+            (vec![at], player.ender.clone())
+        } else {
+            let halves = containers::halves(&world, at);
+            let slots = containers::window_slots(&world, &halves);
+
+            (halves, slots)
+        };
 
         (halves, slots, kind)
     };
@@ -4289,7 +4302,19 @@ async fn open_window(
         world.container(at.0, at.1, at.2).map(crate::furnace::properties).unwrap_or_default()
     };
 
-    player.window = Some(OpenWindow { id, halves, cart: None, shown: slots, lectern, crafter, kind: Some(kind), props: props.clone(), merchant: None, station: None });
+    player.window = Some(OpenWindow {
+        id,
+        halves,
+        cart: None,
+        shown: slots,
+        lectern,
+        crafter,
+        kind: Some(kind),
+        props: props.clone(),
+        merchant: None,
+        station: None,
+        ender: kind == containers::Kind::EnderChest,
+    });
     send_window_content(stream, player).await?;
 
     for (property, value) in props.into_iter().enumerate() {
@@ -4347,7 +4372,7 @@ async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &m
     body.extend_from_slice(&nbt::translated(title));
     write_body(stream, body).await?;
 
-    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None });
+    player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false });
     send_window_content(stream, player).await
 }
 
@@ -4442,6 +4467,25 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
     // Окно станка живёт, пока стоит станок.
     if window.station.is_some() {
         if !station::still_there(shared, player, window) {
+            let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
+
+            body.extend_from_slice(&encode_varint(window.id));
+            write_body(stream, body).await?;
+            close_own_window(shared, player);
+        }
+
+        return Ok(());
+    }
+
+    // Окно эндер-сундука: ячейки личные, со стороны мира они не меняются;
+    // сломали блок — окно закрывается.
+    if window.ender {
+        let there = window.halves.first().is_some_and(|&(x, y, z)| {
+            containers::Kind::of(shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").get_block(x, y, z))
+                == Some(containers::Kind::EnderChest)
+        });
+
+        if !there {
             let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
 
             body.extend_from_slice(&encode_varint(window.id));
@@ -5162,6 +5206,11 @@ async fn send_chunk(
         let mut shelves = shelves;
 
         for ((x, y, z), nbt) in world.chunk_spawners(chunk_x, chunk_z) {
+            shelves.insert((x, y, z), nbt);
+        }
+
+        // Таблички несут текст.
+        for ((x, y, z), nbt) in world.chunk_signs(chunk_x, chunk_z) {
             shelves.insert((x, y, z), nbt);
         }
 
@@ -6397,6 +6446,8 @@ fn is_gated(packet_id: i32) -> bool {
             | SWING_ARM | SET_CARRIED_ITEM
             // Окно командного блока меняет мир — тоже в начале такта.
             | PROGRAM_COMMAND_BLOCK
+            // Правка таблички меняет мир.
+            | signs::SIGN_UPDATE
     )
 }
 
@@ -6924,6 +6975,7 @@ fn handle_client_packet_inner(
                 reaction = answer;
             }
         }
+        signs::SIGN_UPDATE => signs::update(payload, player, shared),
         USE_ITEM_ON => {
             if let Some(answer) = place_block(payload, player, shared) {
                 reaction = answer;
@@ -8158,6 +8210,13 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             return Some(Reaction { slots, ..Reaction::accepted(sequence) });
         }
 
+        // Табличка: краситель, чернила, соты — или окно правки (signs.rs).
+        if let Some(reaction) = signs::use_sign(&mut world, player, clicked, face, held_name, sequence) {
+            redstone::settle(&mut world);
+
+            return Some(reaction);
+        }
+
         // Кафедра без книги: книга из руки ложится на неё. С книгой —
         // окно, как у хранилища; пустая и без книги в руке — щелчок идёт
         // дальше.
@@ -8250,7 +8309,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         }
 
         if kind.is_some() {
-            let halves = containers::halves(&world, clicked);
+            let halves = if kind == Some(containers::Kind::EnderChest) { vec![clicked] } else { containers::halves(&world, clicked) };
 
             if player.window.is_none() && containers::can_open(&world, &halves) {
                 let first = containers::open_begin(&mut world, &halves);
@@ -8263,6 +8322,14 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
                 world.tell_directly(x, y, z);
                 containers::open_finish(&mut world, &halves, first);
                 redstone::settle(&mut world);
+            } else if player.window.is_none() {
+                // Закрытый блоком сундук не открывается, но клиенту повторяют
+                // сам блок и то, что за гранью (чёрный ящик, ender-chest-open).
+                world.tell_directly(clicked_x, clicked_y, clicked_z);
+
+                let (x, y, z) = offset_towards(clicked_x, clicked_y, clicked_z, face);
+
+                world.tell_directly(x, y, z);
             }
 
             return Some(Reaction::accepted(sequence));
@@ -8525,6 +8592,13 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         return Some(Reaction::accepted(sequence));
     };
 
+    // Котёл: ведро, бутылка, шулкер-ящик (cauldron.rs).
+    if !player.sneaking
+        && let Some(reaction) = cauldron::use_cauldron((clicked_x, clicked_y, clicked_z), face, sequence, player, shared)
+    {
+        return Some(reaction);
+    }
+
     // Вёдра блоков не ставят, но именно ими в мире появляется вода и лава.
     if let Some(reaction) = use_bucket(
         item,
@@ -8545,6 +8619,13 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         log_debug!("Play: предмет {} блоком не является — ставить нечего", item);
         return Some(Reaction::accepted(sequence));
     };
+
+    // Табличка, поставленная на бок блока, — настенная (вики, Sign: «wall
+    // sign»). Подвесная ставится по умолчанию. [проверить] подвесные.
+    let wall_sign = (name.ends_with("_sign") && !name.contains("hanging") && !name.contains("wall") && (2..=5).contains(&face))
+        .then(|| name.replace("_sign", "_wall_sign"))
+        .and_then(|wall| Some((blocks::orientation(&wall)?.name, blocks::state_by_name(&wall)?)));
+    let (name, default_state) = wall_sign.unwrap_or((name, default_state));
 
     let click = placing::Click {
         face,
@@ -8576,6 +8657,34 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
 
         world.tell_directly(clicked_x, clicked_y, clicked_z);
         world.tell_directly(x, y, z);
+    }
+
+    // Поставленная табличка сразу открывает игроку окно правки передней
+    // стороны (вики, Sign: «automatically opens the editing interface»).
+    if matches!(placed, placing::Placement::Placed) {
+        let near = offset_towards(clicked_x, clicked_y, clicked_z, face);
+
+        if redstone::is_sign(world.get_block(near.0, near.1, near.2)) {
+            player.sign_editor = Some(near);
+            world.note_open_sign(player.entity_id, near.0, near.1, near.2, true);
+        }
+    }
+
+    // Шулкер-ящик с содержимым в предмете ставится с ним (вики, Shulker Box).
+    if matches!(placed, placing::Placement::Placed)
+        && containers::is_shulker_item(item)
+        && let Some(held) = player.inventory.held()
+        && !held.extras().contents.is_empty()
+    {
+        let contents = containers::contents_of(&held);
+        let near = offset_towards(clicked_x, clicked_y, clicked_z, face);
+
+        for (x, y, z) in [near, (clicked_x, clicked_y, clicked_z)] {
+            if world.container(x, y, z).is_some_and(|found| found.kind == containers::Kind::ShulkerBox) {
+                world.with_container(x, y, z, |found| found.slots.clone_from(&contents));
+                break;
+            }
+        }
     }
 
     match placed {
@@ -9192,6 +9301,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
 
     let halves = window.halves.clone();
     let cart = window.cart;
+    let ender = window.ender;
     let size = window.shown.len();
     let kind = window.kind;
     let feet = (player.x, player.y, player.z);
@@ -9201,6 +9311,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
         let mut slots = match cart {
             Some(cart) => cart_slots(shared, player.dimension, cart).unwrap_or_default(),
+            None if ender => player.ender.clone(),
             None => containers::window_slots(&world, &halves),
         };
 
@@ -9241,6 +9352,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
                     cart.slots.clone_from(&slots);
                 }
             }
+            None if ender => player.ender.clone_from(&slots),
             None => containers::store_window_slots(&mut world, &halves, &slots),
         }
 
@@ -9650,6 +9762,14 @@ struct PlayerState {
     /// Личная точка возрождения: кровать, якорь, `spawnpoint` (bed.rs).
     respawn: Option<crate::bed::RespawnPoint>,
 
+    /// Табличка, чьё окно правки открыто у игрока (Update Sign принимается
+    /// только для неё).
+    sign_editor: Option<(i32, i32, i32)>,
+
+    /// Эндер-сундук игрока: один на всех эндер-сундуков мира, лежит в файле
+    /// игрока (вики, Ender Chest).
+    ender: Vec<Option<Stack>>,
+
     /// Спит: изголовье кровати (play/sleep.rs).
     sleeping: Option<(i32, i32, i32)>,
 
@@ -9747,6 +9867,10 @@ struct OpenWindow {
     /// Окно станка (стол зачарования, наковальня, точило): предметы лежат
     /// в `shown`, хранилища нет (station.rs).
     station: Option<station::StationWindow>,
+
+    /// Окно эндер-сундука: ячейки — личные, `PlayerState::ender`; `halves` —
+    /// только сам блок (смотрящие и крышка).
+    ender: bool,
 }
 
 impl OpenWindow {
@@ -9818,6 +9942,8 @@ impl PlayerState {
         Self {
             spawn_point: spawn,
             respawn: saved.as_ref().and_then(|data| data.respawn),
+            ender: saved.as_ref().map_or_else(playerdata::empty_ender, |data| data.ender.clone()),
+            sign_editor: None,
             sleeping: None,
             wake_due: false,
             uuid,
@@ -10054,6 +10180,7 @@ impl PlayerState {
             || (saved.pitch - self.pitch).abs() >= SAVED_TURN
             || saved.game_mode != self.game_mode
             || saved.inventory != self.inventory
+            || saved.ender != self.ender
             || saved.vitals.health != self.vit.health
             || saved.vitals.food != self.vit.food
     }
@@ -10081,6 +10208,7 @@ impl PlayerState {
             dimension: self.dimension,
             vitals: self.vit.saved(),
             respawn: self.respawn,
+            ender: self.ender.clone(),
         };
 
         self.progress.save(&self.uuid);
@@ -10332,6 +10460,7 @@ mod tests {
             dimension: Default::default(),
             vitals: Default::default(),
             respawn: None,
+            ender: playerdata::empty_ender(),
         };
 
         PlayerState::new([7; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN)
@@ -10372,6 +10501,7 @@ mod tests {
             dimension: Default::default(),
             vitals: Default::default(),
             respawn: None,
+            ender: playerdata::empty_ender(),
         };
 
         let player = PlayerState::new([2; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN);
@@ -10397,6 +10527,7 @@ mod tests {
             dimension: Default::default(),
             vitals: crate::playerdata::SavedVitals { health: 6.0, food: 11, saturation: 2.0, exhaustion: 1.5, air: 200, fire: 80, fall: 0.0, experience: 21, xp_seed: 5 },
             respawn: None,
+            ender: playerdata::empty_ender(),
         };
 
         let mut player = PlayerState::new([3; 16], "Игрок".to_string(), Some(saved), None, 0x7F, 1, SPAWN);

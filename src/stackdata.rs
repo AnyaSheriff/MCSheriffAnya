@@ -39,6 +39,21 @@ pub const COMPONENT_INTANGIBLE_PROJECTILE: i32 = 22;
 /// Взрыв звезды фейерверка и ракета: полёт и взрывы (protocol.json: 68, 69).
 pub const COMPONENT_FIREWORK_EXPLOSION: i32 = 68;
 pub const COMPONENT_FIREWORKS: i32 = 69;
+/// Содержимое шулкер-ящика (`container`, registries.json: 75) клиенту пока
+/// не шлётся — см. `encode_components`.
+#[allow(dead_code)]
+pub const COMPONENT_CONTAINER: i32 = 75;
+
+/// Одна занятая ячейка содержимого шулкер-ящика в предмете. Хранится
+/// плоско (номер предмета, число, номер довесков), чтобы довески оставались
+/// сравнимыми и хешируемыми; вложенные довески лежат в той же таблице.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct Content {
+    pub slot: u8,
+    pub item: i32,
+    pub count: i32,
+    pub data: Option<DataId>,
+}
 
 /// Формы взрыва (вики, Data component format: firework_explosion), номер — место.
 pub const EXPLOSION_SHAPES: [&str; 5] = ["small_ball", "large_ball", "star", "creeper", "burst"];
@@ -143,6 +158,8 @@ pub struct Data {
     /// Отделка брони (`trim`): номер материала и узора по `TRIM_MATERIALS` и
     /// `TRIM_PATTERNS`.
     pub trim: Option<(u8, u8)>,
+    /// Содержимое шулкер-ящика (`container`): занятые ячейки по порядку.
+    pub contents: Vec<Content>,
 }
 
 impl Data {
@@ -443,6 +460,12 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         count += 1;
     }
 
+    // Содержимое шулкер-ящика (`container`) клиенту пока не шлётся: по
+    // protocol.json (26.1) это список `option<ItemStackTemplate>`, но
+    // разбор записи оригинала у mineflayer на нём падает (чёрный ящик,
+    // shulker-break), и неверный формат отключил бы клиента. Предмет
+    // показывается без подсказки о содержимом; содержимое хранит сервер.
+    // [проверить]
     (count, out)
 }
 
@@ -687,7 +710,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -727,7 +750,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -746,6 +769,24 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
         if let Some((material, pattern)) = data.trim {
             out.extend_from_slice(&[1, material, pattern]);
+        }
+
+        // Содержимое шулкер-ящика: метка 2, число ячеек, у каждой номер,
+        // предмет, число и довески (длина и запись; 0 — без довесков).
+        if !data.contents.is_empty() {
+            out.push(2);
+            out.push(data.contents.len().min(27) as u8);
+
+            for content in data.contents.iter().take(27) {
+                out.push(content.slot);
+                out.extend_from_slice(&content.item.to_be_bytes());
+                out.extend_from_slice(&content.count.to_be_bytes());
+
+                let extras = content.data.map(|id| to_bytes(&get(id))).unwrap_or_default();
+
+                out.extend_from_slice(&(extras.len() as u16).to_be_bytes());
+                out.extend_from_slice(&extras);
+            }
         }
     }
 
@@ -874,12 +915,32 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
 
         data.name = named.then_some(name);
 
-        if reader.take(1).is_some_and(|flag| flag[0] == 1)
-            && let Some(pair) = reader.take(2)
-            && usize::from(pair[0]) < TRIM_MATERIALS.len()
-            && usize::from(pair[1]) < TRIM_PATTERNS.len()
-        {
-            data.trim = Some((pair[0], pair[1]));
+        // Метки хвоста: 1 — отделка, 2 — содержимое шулкер-ящика.
+        while let Some(mark) = reader.take(1).map(|mark| mark[0]) {
+            match mark {
+                1 => {
+                    let pair = reader.take(2)?;
+
+                    if usize::from(pair[0]) < TRIM_MATERIALS.len() && usize::from(pair[1]) < TRIM_PATTERNS.len() {
+                        data.trim = Some((pair[0], pair[1]));
+                    }
+                }
+                2 => {
+                    for _ in 0..reader.take(1)?[0].min(27) {
+                        let slot = reader.take(1)?[0];
+                        let item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
+                        let count = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
+                        let length = usize::from(u16::from_be_bytes(reader.take(2)?.try_into().ok()?));
+                        let extras = reader.take(length)?;
+                        let nested = if extras.is_empty() { None } else { intern(from_bytes(extras)?) };
+
+                        if slot < 27 && count > 0 {
+                            data.contents.push(Content { slot, item, count, data: nested });
+                        }
+                    }
+                }
+                _ => break,
+            }
         }
     }
 

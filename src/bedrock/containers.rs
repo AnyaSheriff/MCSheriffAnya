@@ -36,6 +36,9 @@ pub const WINDOW_CONTAINER: u8 = 0;
 pub fn screen(kind: Kind) -> u8 {
     match kind {
         Kind::Chest | Kind::TrappedChest | Kind::Barrel | Kind::CopperChest => 0,
+        // [Bedrock: потом] шулкер-ящик и личный эндер-сундук: окно общее,
+        // содержимое эндер-сундука игрока на Bedrock ещё не ведётся.
+        Kind::ShulkerBox | Kind::EnderChest => 0,
         Kind::Dispenser => 6,
         Kind::Dropper => 7,
         Kind::Hopper => 8,
@@ -120,6 +123,8 @@ fn actor_id(kind: Kind) -> &'static str {
         Kind::BlastFurnace => "BlastFurnace",
         Kind::Smoker => "Smoker",
         Kind::BrewingStand => "BrewingStand",
+        Kind::ShulkerBox => "ShulkerBox",
+        Kind::EnderChest => "EnderChest",
     }
 }
 

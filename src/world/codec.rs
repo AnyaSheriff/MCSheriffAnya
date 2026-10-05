@@ -231,7 +231,7 @@ impl Chunk {
         // Хранилища — последними, и только если они есть. Порядок — по
         // месту, чтобы одинаковый чанк давал одинаковые байты. Если дальше
         // идёт что-то ещё, число хранилищ пишется и нулём.
-        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() {
+        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() {
             let mut places: Vec<_> = self.containers.keys().copied().collect();
 
             places.sort_unstable();
@@ -245,7 +245,7 @@ impl Chunk {
         // Особый динамит — после хранилищ (их число тогда пишется и
         // нулём): сколько, потом место и номер вида. Если дальше рамки —
         // число пишется и нулём.
-        if !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() {
+        if !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() {
             let mut places: Vec<_> = self.custom_tnt.iter().map(|&(place, kind)| (place, kind.0)).collect();
 
             places.sort_unstable();
@@ -261,7 +261,7 @@ impl Chunk {
         // Рамки для предметов (frame.rs): сколько и записи по порядку места,
         // чтобы одинаковый чанк давал одинаковые байты. Если дальше мобы —
         // число пишется и нулём.
-        if !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() {
+        if !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() {
             let mut frames: Vec<&crate::frame::Frame> = self.frames.iter().collect();
 
             frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
@@ -274,7 +274,7 @@ impl Chunk {
 
         // Мобы (mob/mod.rs): сколько и записи по порядку. Если дальше
         // командные блоки — число пишется и нулём.
-        if !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() {
+        if !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() {
             out.extend_from_slice(&(self.mobs.len() as u16).to_be_bytes());
 
             for mob in &self.mobs {
@@ -284,7 +284,7 @@ impl Chunk {
 
         // Командные блоки (command_block.rs), по порядку места. Если дальше
         // спавнеры — число пишется и нулём.
-        if !self.command_blocks.is_empty() || !self.spawners.is_empty() {
+        if !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() {
             let mut places: Vec<_> = self.command_blocks.keys().copied().collect();
 
             places.sort_unstable();
@@ -295,8 +295,9 @@ impl Chunk {
             }
         }
 
-        // Спавнеры (spawner.rs) — последними, по порядку места.
-        if !self.spawners.is_empty() {
+        // Спавнеры (spawner.rs), по порядку места. Если дальше таблички —
+        // число пишется и нулём.
+        if !self.spawners.is_empty() || !self.signs.is_empty() {
             let mut places: Vec<_> = self.spawners.keys().copied().collect();
 
             places.sort_unstable();
@@ -304,6 +305,18 @@ impl Chunk {
 
             for place in places {
                 self.spawners[&place].write(place, &mut out);
+            }
+        }
+
+        // Таблички (sign.rs) — последними, по порядку места.
+        if !self.signs.is_empty() {
+            let mut places: Vec<_> = self.signs.keys().copied().collect();
+
+            places.sort_unstable();
+            out.extend_from_slice(&(places.len() as u16).to_be_bytes());
+
+            for place in places {
+                self.signs[&place].write(place, &mut out);
             }
         }
 
@@ -441,6 +454,21 @@ impl Chunk {
             }
         }
 
+        // Таблички, если записаны. Запись на месте другого блока пропускается.
+        if rest.len() >= 2 {
+            let count = u16::from_be_bytes([rest[0], rest[1]]);
+
+            rest = &rest[2..];
+
+            for _ in 0..count {
+                let (place, data) = crate::sign::Data::read(&mut rest)?;
+
+                if in_bounds(place.1) && crate::redstone::is_sign(chunk.block(place.0, place.1, place.2)) {
+                    chunk.signs.insert(place, data);
+                }
+            }
+        }
+
         Some(chunk)
     }
 
@@ -469,7 +497,7 @@ impl Chunk {
         my_frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
         their_frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
 
-        blocks && self.biomes == other.biomes && self.containers == other.containers && mine == theirs && my_frames == their_frames && self.command_blocks == other.command_blocks && self.spawners == other.spawners
+        blocks && self.biomes == other.biomes && self.containers == other.containers && mine == theirs && my_frames == their_frames && self.command_blocks == other.command_blocks && self.spawners == other.spawners && self.signs == other.signs
     }
 }
 

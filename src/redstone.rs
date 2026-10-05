@@ -563,7 +563,10 @@ fn kind_of(name: &str) -> Kind {
         "redstone_lamp" => Kind::Lamp,
         "command_block" | "chain_command_block" | "repeating_command_block" => Kind::CommandBlock,
         "note_block" => Kind::NoteBlock,
-        "chest" | "barrel" => Kind::Chest,
+        // Эндер-сундук и шулкер-ящик — с крышкой, как сундук (блочное
+        // событие 1 с числом смотрящих).
+        "chest" | "barrel" | "ender_chest" => Kind::Chest,
+        _ if name.ends_with("shulker_box") => Kind::Chest,
         // Медный сундук любой стадии — как сундук (вики, Copper Chest).
         _ if name.ends_with("copper_chest") => Kind::Chest,
         "trapped_chest" => Kind::TrappedChest,

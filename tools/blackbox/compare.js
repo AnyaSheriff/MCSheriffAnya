@@ -78,6 +78,7 @@ const describe = (e) => {
     case 'spawn': return `сущность ${at} ${e.type} ${e.data}${e.extra ? ' ' + e.extra : ''}`;
     case 'destroy': return `убрана сущность`;
     case 'block_entity': return `данные блока ${at} ${e.type} ${e.data}`;
+    case 'sign_editor': return `окно правки таблички ${at} ${e.front ? 'спереди' : 'сзади'}`;
     case 'window': return `окно ${e.type}`;
     case 'slots': return `содержимое окна ${e.items}`;
     case 'slot': return `ячейка ${e.window === 'курсор' ? 'курсора' : e.slot}: ${e.item}`;
@@ -128,6 +129,7 @@ const key = (e) => {
       : `spawn ${e.at.join(',')} ${e.type} ${e.data}${e.extra ? ' ' + e.extra : ''}`;
     case 'block_entity': return `block_entity ${e.at.join(',')} ${e.type}`;
     // Заголовок окна у сервера свой («Chest» или перевод) — сравниваем тип.
+    case 'sign_editor': return `sign_editor ${e.at.join(',')} ${e.front}`;
     case 'window': return `window ${e.type}`;
     case 'slots': return `slots ${e.items}`;
     case 'slot': return `slot ${e.window} ${e.slot} ${e.item}`;
