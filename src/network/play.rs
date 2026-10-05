@@ -7301,7 +7301,12 @@ fn attack(target: i32, player: &mut PlayerState, shared: &Shared) {
         return;
     }
 
-    if strike_cart(shared, player.dimension, target, (player.x, player.y, player.z), player.game_mode == GAME_MODE_CREATIVE, since, player.attrs.value(crate::attributes::ATTACK_DAMAGE) as f32) {
+    // Мечом при полной руке, стоя и не на бегу — взмах, как по мобу
+    // (чёрный ящик, boat-break).
+    let sword = player.inventory.held().and_then(|stack| blocks::item_name(stack.item)).is_some_and(|name| name.ends_with("_sword"));
+    let sweep = (sword && crate::minecart::hand_charge(since) > 0.9 && player.on_ground && !player.vit.sprinting).then_some(player.yaw);
+
+    if strike_cart(shared, player.dimension, target, (player.x, player.y, player.z), player.game_mode == GAME_MODE_CREATIVE, since, player.attrs.value(crate::attributes::ATTACK_DAMAGE) as f32, sweep) {
         player.last_attack = now;
     }
 }
@@ -7552,8 +7557,10 @@ fn strike_frame(shared: &Shared, dimension: crate::dimension::Dimension, target:
 
 /// Удар игрока в `from` по вагонетке `target`: `since` — сколько тактов
 /// прошло с его прошлого удара. Общий для Java и Bedrock. Возвращает, был
-/// ли удар (вагонетка есть и достаётся рукой).
-pub(crate) fn strike_cart(shared: &Shared, dimension: crate::dimension::Dimension, target: i32, from: (f64, f64, f64), creative: bool, since: u32, attack: f32) -> bool {
+/// ли удар (вагонетка есть и достаётся рукой). `sweep` — взгляд игрока,
+/// если удар мечом размашистый.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn strike_cart(shared: &Shared, dimension: crate::dimension::Dimension, target: i32, from: (f64, f64, f64), creative: bool, since: u32, attack: f32, sweep: Option<f32>) -> bool {
     /// Дальше этого ударить нельзя (вики, Player: досягаемость сущностей 3
     /// блока, у творческого — 5; с запасом на задержку).
     const REACH: f64 = 6.0;
@@ -7572,7 +7579,9 @@ pub(crate) fn strike_cart(shared: &Shared, dimension: crate::dimension::Dimensio
 
     // Удар слышен всем: сильный при полной руке, иначе слабый (зонд
     // minecart-hit: удар через 4 такта — уже слабый).
-    let sound = if crate::minecart::hand_charge(since) > 0.9 {
+    let sound = if sweep.is_some() {
+        "minecraft:entity.player.attack.sweep"
+    } else if crate::minecart::hand_charge(since) > 0.9 {
         "minecraft:entity.player.attack.strong"
     } else {
         "minecraft:entity.player.attack.weak"
@@ -7596,7 +7605,25 @@ pub(crate) fn strike_cart(shared: &Shared, dimension: crate::dimension::Dimensio
     }
 
     drop(items);
-    shared.world_in(dimension).lock().expect("мир захвачен другим потоком").note_player_sound(from, sound);
+    let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+
+    world.note_player_sound(from, sound);
+
+    // Взмах: частица перед игроком по взгляду, как при ударе по мобу.
+    // Задеть соседей взмахом пока не умеем. [проверить]
+    if let Some(yaw) = sweep {
+        let rad = f64::from(yaw).to_radians();
+
+        world.note_particle(
+            crate::mob::Particle::SweepAttack.id(),
+            None,
+            (from.0 - rad.sin(), from.1 + 0.9, from.2 + rad.cos()),
+            ((-rad.sin()) as f32, 0.0, rad.cos() as f32),
+            0.0,
+            0,
+        );
+    }
+
     true
 }
 
