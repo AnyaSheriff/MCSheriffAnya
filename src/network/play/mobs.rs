@@ -25,6 +25,7 @@ use crate::xp::XpOrb;
 
 /// Место снаряжения «голова».
 const EQUIPMENT_HEAD: u8 = 5;
+const EQUIPMENT_OFF_HAND: u8 = 1;
 
 /// Пакеты: событие сущности, урон, поворот головы, атрибуты, звук сущности.
 const ENTITY_EVENT: i32 = 0x22;
@@ -83,7 +84,7 @@ fn attributes_at(kind: Kind) -> u64 {
 /// Шлются ли атрибуты сразу при появлении и ещё раз в первом прогоне
 /// слежения (чёрный ящик, zombie-hit и enderman-stand).
 fn attributes_at_spawn(kind: Kind) -> bool {
-    matches!(kind, Kind::Zombie | Kind::ZombieVillager | Kind::Enderman | Kind::ZombifiedPiglin | Kind::Piglin | Kind::MagmaCube)
+    matches!(kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Enderman | Kind::ZombifiedPiglin | Kind::Piglin | Kind::MagmaCube)
 }
 
 /// Меньшие сдвиги и перемены скорости не сообщаются.
@@ -172,6 +173,12 @@ fn properties(mob: &Mob) -> Vec<Property> {
         (15, TYPE_BYTE, vec![u8::from(mob.no_ai) | aggressive]),
     ];
 
+    // Утопленник с занесённым трезубцем «использует предмет» (чёрный ящик,
+    // drowned-trident: 8=1 с захвата цели).
+    if mob.kind == Kind::Drowned {
+        out.insert(3, (8, TYPE_BYTE, vec![u8::from(mob.h.using)]));
+    }
+
     // Частицы эффектов (10): у ведьмы — от выпитых зелий (чёрный ящик,
     // witch-stand: `10=[entity_effect]` в такте конца питья).
     if matches!(mob.kind, Kind::Witch | Kind::Villager | Kind::ZombieVillager) {
@@ -204,7 +211,12 @@ fn properties(mob: &Mob) -> Vec<Property> {
             out.push((18, TYPE_CHICKEN_VARIANT, encode_varint(1)));
             out.push((19, TYPE_CHICKEN_SOUND, encode_varint(0)));
         }
-        Kind::Zombie => out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())])),
+        // Зомби, кадавр и утопленник (чёрный ящик, zombie-to-drowned: 18=true на
+        // 602-м такте — зомби трясётся перед превращением).
+        Kind::Zombie | Kind::Husk | Kind::Drowned => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((18, TYPE_BOOL, vec![u8::from(mob.h.converting > 0)]));
+        }
         // Зомби-житель (чёрный ящик, zombie-villager-stand/-cure): 19 — обращается,
         // 20 — данные жителя, 21 — «villager_finalized».
         Kind::ZombieVillager => {
@@ -301,7 +313,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
     let (key, _, value) = entry;
 
     match (*key, kind) {
-        (8, Kind::EndCrystal) => value.as_slice() == [0],
+        (8, Kind::EndCrystal | Kind::Drowned) => value.as_slice() == [0],
         (9, Kind::EndCrystal) => value.as_slice() == [1],
         (16, Kind::MagmaCube) => value.as_slice() == encode_varint(1).as_slice(),
         (17..=19, Kind::Piglin | Kind::Hoglin | Kind::Strider) => value.iter().all(|byte| *byte == 0),
@@ -440,7 +452,7 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
         Kind::Enderman if mob.h.target.is_some() => Some(("minecraft:attacking", crate::mob::hostile::ATTACKING_BONUS, 0)),
         // Детёныш-зомби быстрее: «minecraft:baby» +50 % базы, операция 1
         // (чёрный ящик, zombie-villager-stand).
-        Kind::Zombie | Kind::ZombieVillager if mob.is_baby() => Some(("minecraft:baby", 0.5, 1)),
+        Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk if mob.is_baby() => Some(("minecraft:baby", 0.5, 1)),
         _ => None,
     };
 
@@ -479,7 +491,7 @@ async fn send_shulker_armor(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<
 fn modded(mob: &Mob) -> bool {
     match mob.kind {
         Kind::Witch => mob.h.drinking > 0,
-        Kind::Zombie | Kind::ZombieVillager => mob.is_baby(),
+        Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => mob.is_baby(),
         Kind::Enderman => mob.h.target.is_some(),
         Kind::Shulker => mob.h.peek == 0,
         _ => false,
@@ -565,6 +577,15 @@ async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<
 
     if mob.kind == Kind::Skeleton && mob.h.bow && let Some(bow) = blocks::item_named("bow") {
         slots.push((EQUIPMENT_MAIN_HAND, Stack::new(bow, 1)));
+    }
+
+    // Утопленник: основная рука — трезубец, ракушка или удочка; вторая — ракушка.
+    if let Some(item) = crate::mob::hostile::hand_item(mob.h.hand).and_then(blocks::item_named) {
+        slots.push((EQUIPMENT_MAIN_HAND, Stack::new(item, 1)));
+    }
+
+    if mob.h.offhand_shell && let Some(shell) = blocks::item_named("nautilus_shell") {
+        slots.push((EQUIPMENT_OFF_HAND, Stack::new(shell, 1)));
     }
 
     if mob.h.helmet && let Some(helmet) = blocks::item_named("iron_helmet") {

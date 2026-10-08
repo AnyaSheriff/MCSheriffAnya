@@ -1,0 +1,60 @@
+{
+ "name": "husk-hunger",
+ "about": "Кадавр (husk) с ИИ в 6 блоках от робота в выживании на нормальной: подходит, бьёт; на удар накладывается Голод (7 с · сложность у вики [проверить по записи]); днём не горит (на высоте площадки 5, как у zombie-burn).",
+ "track_mobs": true,
+ "track_self": true,
+ "exclusive": true,
+ "origin": [100, 5, 100],
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "time set noon",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon husk $(6.5,0,0.5) {Silent:1b,equipment:{head:{id:\"minecraft:iron_helmet\",count:1}}}"
+  },
+  {
+   "after": 0,
+   "cmd": "summon husk $(6.5,0,3.5) {Silent:1b}"
+  }
+ ],
+ "record_ticks": 200,
+ "cleanup": [
+  "kill @e[type=husk,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "effect clear $(bot)",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "time set noon"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "ходьба кадавров",
+   "match": "^cart husk|^meta ",
+   "range": [0, 600],
+   "anytick": true,
+   "why": "как у zombie-attack: цель выбирается не каждый такт, старт погони случаен; дальше ходьба"
+  },
+  {
+   "type": "count",
+   "name": "удары и их последствия",
+   "match": "^sv |^self ",
+   "range": [0, 300],
+   "anytick": true,
+   "why": "как у zombie-attack: старт погони случаен, удары и Голод идут за ним; точные числа смотреть в записи [проверить]"
+  }
+ ]
+}

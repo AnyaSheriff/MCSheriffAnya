@@ -1047,6 +1047,33 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
         mob.h.helmet = data[at..].contains("_helmet") || data[at..].contains("_head");
     }
 
+    // Утопленник: что в основной руке и во второй (`equipment:{mainhand:{id:…},
+    // offhand:{id:…}}`) и шанс выпасть основной (`drop_chances:{mainhand:0.0f}`).
+    if mob.kind == crate::mob::Kind::Drowned {
+        let held = |slot: &str| -> Option<&str> {
+            let at = data.find(&format!("{slot}:{{"))?;
+            let tail = &data[at..];
+
+            tail.split("id:\"").nth(1).and_then(|rest| rest.split('"').next()).map(|id| id.strip_prefix("minecraft:").unwrap_or(id))
+        };
+
+        mob.h.hand = match held("mainhand") {
+            Some("trident") => crate::mob::hostile::HAND_TRIDENT,
+            Some("nautilus_shell") => crate::mob::hostile::HAND_SHELL,
+            Some("fishing_rod") => crate::mob::hostile::HAND_ROD,
+            _ => crate::mob::hostile::HAND_NONE,
+        };
+        mob.h.offhand_shell = held("offhand") == Some("nautilus_shell");
+
+        if let Some(at) = data.find("drop_chances:{") {
+            let tail = &data[at..];
+
+            if let Some(chance) = tail.split("mainhand:").nth(1).and_then(|rest| rest.split([',', '}']).next()).and_then(|number| number.trim().trim_end_matches('f').parse::<f32>().ok()) {
+                mob.h.hand_drop = chance;
+            }
+        }
+    }
+
     // Житель: `VillagerData`, `Offers`, `Xp` (src/villager.rs).
     if matches!(mob.kind, crate::mob::Kind::Villager | crate::mob::Kind::ZombieVillager)
         && let Some(value) = crate::snbt::parse(data)

@@ -1,0 +1,41 @@
+{
+ "name": "zombie-to-drowned",
+ "about": "Зомби с ИИ в закрытом бассейне 3×3×3 с водой: 30 с под водой — отсчёт, ещё 15 с — превращение в утопленника (вики, Zombie: «Drowning conversion»; звуки и метаданные; замеры [проверить]).",
+ "track_mobs": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "time set midnight",
+  "tp $(bot) $(-6.5,1,-6.5)",
+  "fill $(2,-1,2) $(6,4,6) minecraft:stone",
+  "fill $(3,0,3) $(5,2,5) minecraft:water",
+  "!wait 5"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon zombie $(4.5,0,4.5) {Silent:1b,CanBreakDoors:0b}"
+  }
+ ],
+ "record_ticks": 1100,
+ "cleanup": [
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=drowned,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "!wait 4",
+  "fill $(2,-1,2) $(6,4,6) minecraft:air",
+  "time set noon"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "движения в воде",
+   "match": "^cart |^meta ",
+   "range": [0, 4000],
+   "anytick": true,
+   "why": "зомби в воде плавает случайно (вики, Zombie: «moves randomly»); точное — только появление утопленника и звук превращения [проверить]"
+  }
+ ]
+}

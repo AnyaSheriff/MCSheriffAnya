@@ -690,7 +690,7 @@ pub fn voice(mob: &mut Mob, rng: &mut Rng) {
     mob.brain.ambient += 1;
 
     if rng.below(1000) < mob.brain.ambient.max(0) as u32 {
-        let (ambient, _, _) = mob.kind.sounds();
+        let (ambient, _, _) = mob.sounds();
         // Торгующий житель вместо голоса в покое — «торгует» (чёрный ящик,
         // villager-trade-ai: entity.villager.trade при открытом окне).
         let ambient = if mob.kind == Kind::Villager && mob.villager.trading.is_some() { "minecraft:entity.villager.trade" } else { ambient };

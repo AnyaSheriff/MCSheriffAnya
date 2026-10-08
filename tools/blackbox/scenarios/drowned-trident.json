@@ -1,0 +1,69 @@
+{
+ "name": "drowned-trident",
+ "about": "Утопленник с трезубцем в пруду, робот в выживании на берегу в 8 блоках: бросает трезубец (дальняя атака, вики: Drowned «may throw a trident»); бросок, полёт, попадание, урон [проверить по записи].",
+ "track_mobs": true,
+ "track_self": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "time set midnight",
+  "tp $(bot) $(4.5,2,6.5)",
+  "!wait 5",
+  "fill $(0,-3,0) $(8,-2,12) minecraft:stone",
+  "fill $(0,-1,0) $(8,-1,12) minecraft:stone",
+  "fill $(2,-2,0) $(6,-1,4) minecraft:air",
+  "fill $(2,-2,0) $(6,-1,4) minecraft:water",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(4.5,0,5.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon drowned $(4.5,-1,0.5) {Silent:1b,PersistenceRequired:1b,equipment:{mainhand:{id:\"minecraft:trident\",count:1}},drop_chances:{mainhand:0.0f}}"
+  }
+ ],
+ "record_ticks": 200,
+ "cleanup": [
+  "kill @e[type=drowned,distance=..48]",
+  "kill @e[type=trident,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(0,-1,0) $(8,0,12) minecraft:air",
+  "fill $(0,-2,0) $(8,-2,12) minecraft:stone",
+  "time set noon"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "цель и плавание",
+   "match": "^cart drowned|^meta ",
+   "range": [
+    0,
+    1000
+   ],
+   "anytick": true,
+   "why": "старт погони случаен (шанс выбора цели 1 к 10 за такт), бросок идёт за ним [проверить]"
+  },
+  {
+   "type": "count",
+   "name": "трезубец и его последствия",
+   "match": "^cart trident|^sv |^self |^spawn ",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "момент броска случаен (интервал перезарядки 40 тактов с разбросом, вики, Drowned) [проверить]"
+  }
+ ]
+}

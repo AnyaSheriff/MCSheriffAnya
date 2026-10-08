@@ -272,6 +272,10 @@ pub(super) struct Net {
     /// (чёрный ящик: Set Health в такте удара, Metadata и скорость — в
     /// следующем).
     pub hold_meta: bool,
+
+    /// Последний удар моба нанёс урон (не погашен неуязвимостью): эффекты «от
+    /// удара» (иссушение, голод) ложатся только тогда.
+    pub mob_hit_landed: bool,
 }
 
 impl Net {
@@ -335,6 +339,7 @@ impl Net {
             hurt_from: None,
             arrow_timer: 0,
             hold_meta: false,
+            mob_hit_landed: false,
         }
     }
 
@@ -1475,6 +1480,7 @@ pub(super) async fn mob_hit(
 
     player.net.hurt_from = None;
     player.net.hold_meta = done.is_some();
+    player.net.mob_hit_landed = done.is_some();
 
     // Стрела застряла в теле: счёт в свойстве 12, убывает через 20·(30 − число)
     // тактов (вики, Arrow: «stuck in the body») [проверить].
@@ -1566,7 +1572,7 @@ pub(super) async fn hit_by(
     // Удар моба или стрелы: анимация «ранен» с направлением на виновника,
     // у стрелы ещё звук попадания (чёрный ящик, skeleton-arrow).
     if let Some(from) = player.net.hurt_from
-        && matches!(source, Source::MobAttack | Source::Arrow)
+        && matches!(source, Source::MobAttack | Source::Arrow | Source::Trident)
     {
         let yaw = ((from.2 - player.z).atan2(from.0 - player.x).to_degrees() - f64::from(player.yaw)) as f32;
         let mut body = encode_varint(HURT_ANIMATION);

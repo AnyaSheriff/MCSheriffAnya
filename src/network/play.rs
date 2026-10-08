@@ -4170,6 +4170,12 @@ async fn send_pending_world_events(
             WorldEvent::MobHurt { .. } => {}
             WorldEvent::MobEffect { entity_id, effect } if *entity_id == player.entity_id => vitals::give_effect(stream, player, *effect).await?,
             WorldEvent::MobEffect { .. } => {}
+            WorldEvent::MobHitEffect { entity_id, effect } if *entity_id == player.entity_id => {
+                if std::mem::take(&mut player.net.mob_hit_landed) {
+                    vitals::give_effect(stream, player, *effect).await?;
+                }
+            }
+            WorldEvent::MobHitEffect { .. } => {}
             WorldEvent::PlayerStrike(strike) => pvp::take_strike(stream, shared, player, strike).await?,
             WorldEvent::Particle { kind, block, at, offset, speed, count, skip } if *skip != player.entity_id => {
                 let near = (at.0 - player.x).powi(2) + (at.1 - player.y).powi(2) + (at.2 - player.z).powi(2) <= 32.0 * 32.0;

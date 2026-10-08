@@ -73,12 +73,17 @@ pub enum Kind {
     Hoglin,
     /// Страйдер (вики, Strider): ходит по лаве, мёрзнет вне её.
     Strider,
+    /// Утопленник (вики, Drowned): зомби воды — плавает, кидает трезубец,
+    /// горит на солнце вне воды.
+    Drowned,
+    /// Кадавр (вики, Husk): зомби пустыни — не горит, бьёт голодом.
+    Husk,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 25] = [
+    pub const ALL: [Kind; 27] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -104,6 +109,8 @@ impl Kind {
         Kind::PiglinBrute,
         Kind::Hoglin,
         Kind::Strider,
+        Kind::Drowned,
+        Kind::Husk,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -112,6 +119,8 @@ impl Kind {
             self,
             Kind::Zombie
                 | Kind::ZombieVillager
+                | Kind::Drowned
+                | Kind::Husk
                 | Kind::Skeleton
                 | Kind::Creeper
                 | Kind::Spider
@@ -170,6 +179,8 @@ impl Kind {
             "piglin_brute" => Kind::PiglinBrute,
             "hoglin" => Kind::Hoglin,
             "strider" => Kind::Strider,
+            "drowned" => Kind::Drowned,
+            "husk" => Kind::Husk,
             _ => return None,
         })
     }
@@ -201,6 +212,8 @@ impl Kind {
             Kind::PiglinBrute => "piglin_brute",
             Kind::Hoglin => "hoglin",
             Kind::Strider => "strider",
+            Kind::Drowned => "drowned",
+            Kind::Husk => "husk",
         }
     }
 
@@ -234,6 +247,10 @@ impl Kind {
             Kind::PiglinBrute => 102,
             Kind::Hoglin => 64,
             Kind::Strider => 129,
+            // minecraft-data 26.1, entities.json: drowned 38, husk 67 (чёрный ящик,
+            // drowned-attack и husk-hunger: тип в пакете появления).
+            Kind::Drowned => 38,
+            Kind::Husk => 67,
         }
     }
 
@@ -266,6 +283,9 @@ impl Kind {
             Kind::PiglinBrute => "minecraft:piglin_brute",
             Kind::Hoglin => "minecraft:hoglin",
             Kind::Strider => "minecraft:strider",
+            // [Bedrock: потом] утопленник и кадавр для клиента Bedrock: имена есть, плавания и трезубца нет.
+            Kind::Drowned => "minecraft:drowned",
+            Kind::Husk => "minecraft:husk",
         }
     }
 
@@ -273,7 +293,7 @@ impl Kind {
     pub fn width(self) -> f64 {
         match self {
             Kind::Chicken => 0.4,
-            Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
             Kind::Blaze | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 0.6,
             Kind::WitherSkeleton => 0.7,
@@ -298,7 +318,7 @@ impl Kind {
             Kind::Cow => 1.4,
             Kind::Pig => 0.9,
             Kind::Sheep => 1.3,
-            Kind::Zombie | Kind::ZombieVillager => 1.95,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 1.95,
             Kind::Skeleton => 1.99,
             Kind::Creeper => 1.7,
             Kind::Spider => 0.9,
@@ -324,7 +344,7 @@ impl Kind {
             Kind::Cow | Kind::Pig => 10.0,
             Kind::Sheep => 8.0,
             Kind::Chicken => 4.0,
-            Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton | Kind::Creeper => 20.0,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Creeper => 20.0,
             Kind::Spider => 16.0,
             // У кристалла здоровья нет: любой удар его взрывает (вики, End Crystal).
             Kind::EndCrystal => 1.0,
@@ -354,7 +374,7 @@ impl Kind {
         match self {
             Kind::Cow => 0.2,
             Kind::Pig | Kind::Chicken => 0.25,
-            Kind::Sheep | Kind::Zombie | Kind::ZombieVillager => 0.23,
+            Kind::Sheep | Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 0.23,
             Kind::Skeleton | Kind::Creeper => 0.25,
             Kind::Spider => 0.3,
             Kind::EndCrystal => 0.0,
@@ -396,7 +416,7 @@ impl Kind {
     /// 2 очках брони: `урон · (1 − max(брони/5, брони − урон/2) / 25)`).
     pub fn armor(self) -> f32 {
         match self {
-            Kind::Zombie | Kind::ZombieVillager | Kind::ZombifiedPiglin => 2.0,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::ZombifiedPiglin => 2.0,
             _ => 0.0,
         }
     }
@@ -437,6 +457,10 @@ impl Kind {
             Kind::PiglinBrute => ("minecraft:entity.piglin_brute.ambient", "minecraft:entity.piglin_brute.hurt", "minecraft:entity.piglin_brute.death"),
             Kind::Hoglin => ("minecraft:entity.hoglin.ambient", "minecraft:entity.hoglin.hurt", "minecraft:entity.hoglin.death"),
             Kind::Strider => ("minecraft:entity.strider.ambient", "minecraft:entity.strider.hurt", "minecraft:entity.strider.death"),
+            // Вики, Drowned и Husk, «Sounds»: у утопленника на суше — entity.drowned.*,
+            // в воде — `Mob::sounds`; у кадавра свои.
+            Kind::Drowned => ("minecraft:entity.drowned.ambient", "minecraft:entity.drowned.hurt", "minecraft:entity.drowned.death"),
+            Kind::Husk => ("minecraft:entity.husk.ambient", "minecraft:entity.husk.hurt", "minecraft:entity.husk.death"),
         }
     }
 
@@ -459,11 +483,21 @@ impl Kind {
             Kind::PiglinBrute => "minecraft:entity.piglin_brute.step",
             Kind::Hoglin => "minecraft:entity.hoglin.step",
             Kind::Strider => "minecraft:entity.strider.step",
+            Kind::Drowned => "minecraft:entity.drowned.step",
+            Kind::Husk => "minecraft:entity.husk.step",
             // У эндермена и ведьмы шаги — звуком блока [проверить]; молча.
             _ => "",
         }
     }
 }
+
+/// Тяга плывущего утопленника на единицу скорости шага: по замеру (чёрный ящик,
+/// drowned-swim: к цели в воде 0,0365 блока за такт при сопротивлении 0,9)
+/// [проверить: у оригинала разгон быстрее — сопротивление, видимо, меньше].
+pub const SWIM_THRUST: f64 = 0.0159;
+
+/// Шанс выпасть вещи из руки по умолчанию (вики, Drops: «8.5%»).
+pub const DEFAULT_DROP: f32 = 0.085;
 
 /// Сколько тактов детёныш растёт: 20 минут (вики, Breeding: «-24000»).
 pub const BABY_AGE: i32 = -24000;
@@ -823,7 +857,7 @@ impl Mob {
 
         // Шалкер без цвета — 16 (minecraft-data: color; замер мира оригинала:
         // у всех шалкеров городов Color 16).
-        let h = hostile::State { bow: kind == Kind::Skeleton, shell_color: 16, ..hostile::State::default() };
+        let h = hostile::State { bow: kind == Kind::Skeleton, shell_color: 16, hand_drop: DEFAULT_DROP, ..hostile::State::default() };
 
         Self {
             entity_id,
@@ -931,7 +965,7 @@ impl Mob {
     /// на 1,64 = глаза − 0,1), крипер 1,445, паук 0,65 [проверить].
     pub fn eye(&self) -> f64 {
         match self.kind {
-            Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 1.74,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 1.74,
             // [проверить] высота глаз: ифрит 1,53, иссушитель 2,1, гаст 2,6.
             Kind::Blaze => 1.53,
             Kind::WitherSkeleton => 2.1,
@@ -954,6 +988,16 @@ impl Mob {
     /// Чанк, в котором стоит моб.
     pub fn chunk(&self) -> (i32, i32) {
         ((self.x.floor() as i32).div_euclid(16), (self.z.floor() as i32).div_euclid(16))
+    }
+
+    /// Голоса моба: у утопленника в воде — свои (вики, Drowned, «Sounds»:
+    /// ambient_water, hurt_water, death_water).
+    pub fn sounds(&self) -> (&'static str, &'static str, &'static str) {
+        if self.kind == Kind::Drowned && self.h.wet {
+            return ("minecraft:entity.drowned.ambient_water", "minecraft:entity.drowned.hurt_water", "minecraft:entity.drowned.death_water");
+        }
+
+        self.kind.sounds()
     }
 
     /// Ставит поворот тела по направлению взгляда.
@@ -1003,6 +1047,33 @@ impl Mob {
         }
 
         self.vitals.tick_invulnerable();
+
+        // Зомби и кадавр: голова 30 секунд в воде — 15 секунд трясётся — и они
+        // утопленник и зомби (вики, Drowned, «Spawning»; Husk; чёрный ящик,
+        // zombie-to-drowned). Без ИИ не превращаются.
+        if matches!(self.kind, Kind::Zombie | Kind::Husk) && !self.no_ai {
+            if self.h.converting > 0 {
+                self.h.converting -= 1;
+
+                if self.h.converting == 0 {
+                    self.h.converted = Some(if self.kind == Kind::Husk { Kind::Zombie } else { Kind::Drowned });
+                }
+            } else {
+                let head = ((self.x).floor() as i32, (self.y + self.eye()).floor() as i32, (self.z).floor() as i32);
+
+                if self.ticks <= hostile::CONVERT_FROM_TICK {
+                    // счёт ещё не начался
+                } else if is_water(view.block(head.0, head.1, head.2)) {
+                    self.h.water_ticks += 1;
+
+                    if self.h.water_ticks >= hostile::CONVERT_AFTER {
+                        self.h.converting = hostile::CONVERT_SHAKE;
+                    }
+                } else {
+                    self.h.water_ticks = -1;
+                }
+            }
+        }
 
         // Рост и пауза после разведения (вики, Breeding).
         // Детёныш-зомби не растёт (вики, Zombie: «baby zombies never grow up»).
@@ -1147,12 +1218,43 @@ impl Mob {
             self.vy = 0.42;
         }
 
+        // Утопленник плывёт к цели в воде: тяга `SWIM_THRUST · скорость` вперёд и
+        // `скорость · подъём · 0,1` по вертикали, сопротивление 0,9, тяжести нет
+        // (вики, Drowned; чёрный ящик, drowned-attack: скорость 0,02–0,04) [проверить].
+        let swimming = self.kind == Kind::Drowned && in_water && self.h.swim && speed != 0.0;
+
         let slip = if self.on_ground { slipperiness(view.block(cell_x, (self.y - 0.5000001).floor() as i32, cell_z)) } else { 1.0 };
         let friction = if self.on_ground { slip * 0.91 } else { 0.91 };
 
+        if swimming {
+            let effective = speed * self.kind.speed();
+            let rad = f64::from(self.yaw).to_radians();
+
+            self.vx += -rad.sin() * SWIM_THRUST * effective;
+            self.vz += rad.cos() * SWIM_THRUST * effective;
+            self.vy += effective * self.h.swim_rise * 0.1;
+            self.vitals.fall = 0.0;
+            self.step(view, self.vx, self.vy, self.vz);
+            self.vx *= 0.9;
+            self.vy *= 0.9;
+            self.vz *= 0.9;
+
+            return;
+        }
+
+        // Зомби и родня идут по воде с тягой `0,02 · скорость` — около 0,023
+        // блока за такт на дне (чёрный ящик, drowned-attack: сдвиг 282/4096 за 3 такта).
+        let wades = in_water && matches!(self.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Drowned);
+
         if speed != 0.0 {
             let effective = speed * self.kind.speed();
-            let accel = if self.on_ground { effective * effective * (0.6 / slip).powi(3) } else { 0.02 };
+            let accel = if wades {
+                0.02 * effective
+            } else if self.on_ground {
+                effective * effective * (0.6 / slip).powi(3)
+            } else {
+                0.02
+            };
             let rad = f64::from(self.yaw).to_radians();
 
             self.vx += -rad.sin() * accel;
@@ -1183,8 +1285,10 @@ impl Mob {
             self.vz *= drag;
             self.vy = self.vy * drag - 0.02;
 
-            // «Float»: животное всплывает (вики, Mob AI: «Float» — плавать).
-            if !in_lava && self.vy < 0.04 {
+            // «Float»: животное всплывает (вики, Mob AI: «Float» — плавать);
+            // зомби, кадавр и утопленник тонут и ходят по дну (вики, Drowned; чёрный ящик,
+            // zombie-to-drowned: зомби в воде стоит на дне).
+            if !in_lava && self.vy < 0.04 && !matches!(self.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Drowned) {
                 self.vy += 0.04;
             }
 
@@ -1435,7 +1539,7 @@ impl Mob {
         if hit.died {
             self.die();
         } else {
-            let (_, hurt, _) = self.kind.sounds();
+            let (_, hurt, _) = self.sounds();
             let hurt = if self.kind == Kind::Shulker && self.h.peek == 0 { "minecraft:entity.shulker.hurt_closed" } else { hurt };
 
             self.events.push(Event::Sound { name: hurt, volume: self.sound_volume(), pitch: self.voice_pitch() });
@@ -1512,7 +1616,7 @@ impl Mob {
         }
 
         self.dead_for = 1;
-        let (_, _, death) = self.kind.sounds();
+        let (_, _, death) = self.sounds();
         let drops = loot(self, &mut Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0x5EED));
 
         self.events.push(Event::Sound { name: death, volume: self.sound_volume(), pitch: self.voice_pitch() });
@@ -1582,6 +1686,8 @@ impl Mob {
             Kind::PiglinBrute => 22,
             Kind::Hoglin => 23,
             Kind::Strider => 24,
+            Kind::Drowned => 25,
+            Kind::Husk => 26,
         });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -1590,7 +1696,7 @@ impl Mob {
         out.extend_from_slice(&self.vitals.health.to_be_bytes());
         out.extend_from_slice(&self.age.to_be_bytes());
         out.extend_from_slice(&self.love.to_be_bytes());
-        out.push(u8::from(self.no_ai) | (u8::from(self.sheared) << 1) | (u8::from(self.h.helmet) << 2) | (u8::from(self.h.lit) << 3) | (u8::from(self.h.bow) << 4));
+        out.push(u8::from(self.no_ai) | (u8::from(self.sheared) << 1) | (u8::from(self.h.helmet) << 2) | (u8::from(self.h.lit) << 3) | (u8::from(self.h.bow) << 4) | (self.h.hand << 5) | (u8::from(self.h.offhand_shell) << 7));
         out.push(self.color);
         out.extend_from_slice(&self.egg_timer.to_be_bytes());
 
@@ -1637,6 +1743,8 @@ impl Mob {
             22 => Kind::PiglinBrute,
             23 => Kind::Hoglin,
             24 => Kind::Strider,
+            25 => Kind::Drowned,
+            26 => Kind::Husk,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -1669,6 +1777,8 @@ impl Mob {
         mob.h.helmet = flags & 4 != 0;
         mob.h.lit = flags & 8 != 0;
         mob.h.bow = flags & 16 != 0;
+        mob.h.hand = (flags >> 5) & 3;
+        mob.h.offhand_shell = flags & 128 != 0;
         mob.color = color;
         mob.egg_timer = egg_timer;
         mob.h.carried = carried;
@@ -1741,7 +1851,27 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         // Вики: зомби — 0–2 гнилой плоти, скелет — 0–2 костей и 0–2 стрел,
         // крипер — 0–2 пороха, паук — 0–2 нити и 0–1 паучий глаз (глаз — только
         // если убил игрок).
-        Kind::Zombie => give("rotten_flesh", 0, 2, rng),
+        Kind::Zombie | Kind::Husk => give("rotten_flesh", 0, 2, rng),
+        // Вики, Drowned: 0–2 гнилой плоти, медный слиток (11 %, +2 % за уровень
+        // «Добычи», только от игрока) [проверить: шанс], вещь из основной руки по
+        // её шансу и ракушка из второй всегда.
+        Kind::Drowned => {
+            give("rotten_flesh", 0, 2 + mob.looting, rng);
+
+            if mob.by_player && rng.below(100) < 11 + 2 * mob.looting as u32 {
+                give("copper_ingot", 1, 1, rng);
+            }
+
+            if let Some(item) = hostile::hand_item(mob.h.hand).and_then(blocks::item_named)
+                && rng.unit() < f64::from(mob.h.hand_drop)
+            {
+                drops.push(Stack::new(item, 1));
+            }
+
+            if mob.h.offhand_shell && let Some(item) = blocks::item_named("nautilus_shell") {
+                drops.push(Stack::new(item, 1));
+            }
+        }
         // Вики, Zombie Villager: гнилая плоть и редко железо, морковь, картофель
         // [проверить: шансы редкого].
         Kind::ZombieVillager => give("rotten_flesh", 0, 2, rng),
@@ -2145,6 +2275,10 @@ pub struct Outcome {
 
     /// Огненные шары ифритов и гастов: кто пустил и какой.
     pub launches: Vec<(i32, nether::Launch)>,
+
+    /// События мира: клетка и номер (1040 — зомби стал утопленником, 1041 —
+    /// кадавр стал зомби).
+    pub level_events: Vec<((i32, i32, i32), i32)>,
 }
 
 /// Удар моба в ближнем бою.
@@ -2224,9 +2358,14 @@ pub fn step_all(
     let mut claimed: Vec<(i32, i32, i32)> = mobs.iter().filter_map(|mob| mob.villager.job_site).collect();
 
     let mut cured: Vec<usize> = Vec::new();
+    let mut converted: Vec<(usize, Kind)> = Vec::new();
 
     for (index, mob) in mobs.iter_mut().enumerate() {
         let plan = mob.tick(view, &ctx, rng);
+
+        if let Some(kind) = mob.h.converted.take() {
+            converted.push((index, kind));
+        }
 
         // Призванный уже лечащимся (`ConversionTime`): сила от лечения ложится на
         // следующем такте (чёрный ящик, zombie-villager-cured) [проверить: уровень].
@@ -2360,6 +2499,19 @@ pub fn step_all(
         }
     }
 
+    // Зомби стал утопленником, кадавр — зомби: тот же моб, новый номер (вики,
+    // Drowned; чёрный ящик, zombie-to-drowned).
+    for (index, kind) in converted {
+        let mob = convert(&mobs[index], kind, next_id());
+
+        if !mobs[index].silent {
+            outcome.level_events.push((mobs[index].cell(), if kind == Kind::Drowned { 1040 } else { 1041 }));
+        }
+
+        mobs[index].h.despawn = true;
+        born.push(mob);
+    }
+
     for index in cured {
         let villager = cure(&mut mobs[index], next_id());
 
@@ -2470,6 +2622,27 @@ pub fn cure(zombie: &mut Mob, entity_id: i32) -> Mob {
     // тошнота): `fresh_cure`, см. `step_all`.
     villager.villager.fresh_cure = true;
     villager
+}
+
+/// Превращение зомби в утопленника или кадавра в зомби: место, поворот,
+/// скорость, возраст, снаряжение и признаки остаются (здоровье — полное).
+pub fn convert(old: &Mob, kind: Kind, entity_id: i32) -> Mob {
+    let mut new = Mob::new(entity_id, kind, (old.x, old.y, old.z));
+
+    (new.vx, new.vy, new.vz) = (old.vx, old.vy, old.vz);
+    new.yaw = old.yaw;
+    new.head_yaw = old.head_yaw;
+    new.pitch = old.pitch;
+    new.age = old.age;
+    new.no_ai = old.no_ai;
+    new.silent = old.silent;
+    new.on_ground = old.on_ground;
+    new.persistent = old.persistent;
+    new.h.helmet = old.h.helmet;
+    new.h.hand = old.h.hand;
+    new.h.offhand_shell = old.h.offhand_shell;
+    new.h.hand_drop = old.h.hand_drop;
+    new
 }
 
 /// Сколько нельзя поднимать выпавшее из моба: полсекунды, как у выпавшего

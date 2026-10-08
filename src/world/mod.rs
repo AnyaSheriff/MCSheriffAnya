@@ -265,6 +265,10 @@ pub enum WorldEvent {
     /// игрока даёт его, как команда `effect give`.
     MobEffect { entity_id: i32, effect: crate::survival::Effect },
 
+    /// То же, но только если удар моба, что шёл перед этим, нанёс урон (вики,
+    /// Husk и Wither Skeleton: эффект — только от удара, что ранил).
+    MobHitEffect { entity_id: i32, effect: crate::survival::Effect },
+
     /// Игрок бьёт игрока (или стрела попала): жертвино подключение считает
     /// щит, броню и отдачу в этом месте потока (combat.rs).
     PlayerStrike(std::sync::Arc<crate::combat::PlayerStrike>),
@@ -2178,6 +2182,11 @@ impl World {
     /// Эффект игроку от моба: см. `WorldEvent::MobEffect`.
     pub fn note_mob_effect(&mut self, entity_id: i32, effect: crate::survival::Effect) {
         self.events.push(WorldEvent::MobEffect { entity_id, effect });
+    }
+
+    /// Эффект от удара моба: см. `WorldEvent::MobHitEffect`.
+    pub fn note_mob_hit_effect(&mut self, entity_id: i32, effect: crate::survival::Effect) {
+        self.events.push(WorldEvent::MobHitEffect { entity_id, effect });
     }
 
     /// Открыто ли небо над клеткой: выше только воздух и прозрачное (стекло

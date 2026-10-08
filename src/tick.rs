@@ -952,8 +952,17 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 };
 
                 crate::mob::spawn::hostile_attempt_in(&MobView(world), &players, &surface, &kinds_at, 48, rng, &mut || shared.next_entity_id())
-            } else {
+            } else if dimension == Dimension::End {
                 crate::mob::spawn::hostile_attempt(&MobView(world), &players, &surface, kinds, rng, &mut || shared.next_entity_id())
+            } else {
+                // Обычный мир: пустыня даёт кадавров, реки и океаны — утопленников.
+                let kinds_at = |x: i32, y: i32, z: i32| {
+                    let wet = crate::mob::is_water(world.get_block(x, y, z));
+
+                    crate::mob::spawn::overworld_kinds(world.surface_biome(x, z), wet)
+                };
+
+                crate::mob::spawn::hostile_attempt_in(&MobView(world), &players, &surface, &kinds_at, 12, rng, &mut || shared.next_entity_id())
             };
 
             // Свет каждой найденной точки: небесный с поправкой на час и
@@ -1045,8 +1054,24 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         if strike.melee.wither {
             let wither = crate::survival::Effect { kind: crate::survival::EffectKind::Wither, amplifier: 0, ticks_left: 200, ambient: false, visible: true };
 
-            world.note_mob_effect(strike.melee.target, wither);
+            world.note_mob_hit_effect(strike.melee.target, wither);
         }
+
+        // Кадавр: «Голод» (вики, Husk; чёрный ящик, husk-hunger).
+        if strike.melee.hunger {
+            let ticks = crate::mob::hostile::hunger_ticks(difficulty);
+
+            if ticks > 0 {
+                let hunger = crate::survival::Effect { kind: crate::survival::EffectKind::Hunger, amplifier: 0, ticks_left: ticks, ambient: false, visible: true };
+
+                world.note_mob_hit_effect(strike.melee.target, hunger);
+            }
+        }
+    }
+
+    // Превращения зомби: звук события мира (вики, Drowned).
+    for ((x, y, z), id) in outcome.level_events {
+        world.note_level_event(x, y, z, id, 0);
     }
 
     for fired in outcome.shots {
@@ -1057,7 +1082,13 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         };
         let error = crate::mob::hostile::arrow_error(difficulty);
         let velocity = crate::arrow::launch(fired.shot.from, fired.shot.aim, fired.shot.speed, error, &mut gauss);
-        let arrow = crate::arrow::Arrow::from_mob(shared.next_entity_id(), dimension, fired.shot.from, velocity, fired.shooter, crate::mob::hostile::killer_key(crate::mob::Kind::Skeleton));
+        let killer = crate::mob::hostile::killer_key(if fired.shot.trident { crate::mob::Kind::Drowned } else { crate::mob::Kind::Skeleton });
+        let mut arrow = crate::arrow::Arrow::from_mob(shared.next_entity_id(), dimension, fired.shot.from, velocity, fired.shooter, killer);
+
+        // Утопленник бросает трезубец, а не стрелу (вики, Drowned).
+        if fired.shot.trident {
+            arrow.trident = blocks::item_named("trident").map(|item| crate::inventory::Stack::new(item, 1));
+        }
 
         // Замок стрел — после предметов (shared.rs).
         shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);

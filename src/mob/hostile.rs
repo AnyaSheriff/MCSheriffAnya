@@ -29,7 +29,7 @@ use super::{Event, Kind, Mob, Rng, View};
 /// Дальность слежения за целью (вики, Zombie: «Follow range 35»; у прочих 16).
 pub fn follow_range(kind: Kind) -> f64 {
     match kind {
-        Kind::Zombie | Kind::ZombieVillager => 35.0,
+        Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 35.0,
         // Вики, Enderman: злится на взгляд с 64 блоков и гонится за целью там же.
         Kind::Enderman => 64.0,
         Kind::Blaze | Kind::Ghast => super::nether::follow_range(kind),
@@ -96,6 +96,8 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::PiglinBrute => "entity.minecraft.piglin_brute",
         Kind::Hoglin => "entity.minecraft.hoglin",
         Kind::Strider => "entity.minecraft.strider",
+        Kind::Drowned => "entity.minecraft.drowned",
+        Kind::Husk => "entity.minecraft.husk",
     }
 }
 
@@ -108,6 +110,9 @@ pub struct Melee {
 
     /// Удар иссушает: 10 секунд «иссушения» (вики, Wither Skeleton).
     pub wither: bool,
+
+    /// Удар кадавра: «Голод» (вики, Husk; чёрный ящик, husk-hunger: id 16, 140 тактов).
+    pub hunger: bool,
 }
 
 /// Выстрел скелета: откуда, куда целится (точка на цели) и скорость.
@@ -116,6 +121,9 @@ pub struct Shot {
     pub from: (f64, f64, f64),
     pub aim: (f64, f64, f64),
     pub speed: f64,
+
+    /// Бросок трезубца утопленника (вики, Drowned).
+    pub trident: bool,
 }
 
 /// Состояние охоты.
@@ -205,6 +213,71 @@ pub struct State {
     /// Ведьма: сколько тактов ещё пьёт и какое зелье (номер в `POTIONS`).
     pub drinking: i32,
     pub potion: u16,
+
+    /// Утопленник и кадавр (вики, Drowned и Husk): что в основной руке (`HAND_*`),
+    /// ракушка во второй, шанс выпасть основной (у призванного без данных 8,5 %),
+    /// ноги в воде, плывёт (флаг сущности 0x10), «использует предмет» (занесён
+    /// трезубец; свойство 8), такты до броска, сколько тактов цель на виду.
+    pub hand: u8,
+    pub offhand_shell: bool,
+    pub hand_drop: f32,
+    pub wet: bool,
+    pub swim: bool,
+    pub using: bool,
+    pub throw_wait: i32,
+    pub see_time: i32,
+
+    /// Доля подъёма к цели при плавании (dy / расстояние): тяга вверх и вниз.
+    pub swim_rise: f64,
+
+    /// Зомби и кадавр: сколько тактов голова в воде подряд, сколько тактов ещё
+    /// трясётся до превращения (0 — не превращается) и во что превратился.
+    pub water_ticks: i32,
+    pub converting: i32,
+    pub converted: Option<Kind>,
+}
+
+/// Что в основной руке утопленника.
+pub const HAND_NONE: u8 = 0;
+pub const HAND_TRIDENT: u8 = 1;
+pub const HAND_SHELL: u8 = 2;
+pub const HAND_ROD: u8 = 3;
+
+/// Имя предмета в руке по коду.
+pub fn hand_item(code: u8) -> Option<&'static str> {
+    match code {
+        HAND_TRIDENT => Some("trident"),
+        HAND_SHELL => Some("nautilus_shell"),
+        HAND_ROD => Some("fishing_rod"),
+        _ => None,
+    }
+}
+
+/// Сколько тактов трясётся зомби перед превращением в воде и сколько
+/// тактов голова должна быть в воде: 15 и 30 секунд (вики, Drowned,
+/// «Spawning»: «zombie ... underwater for 30 seconds ... shakes for 15»).
+pub const CONVERT_AFTER: i32 = 600;
+pub const CONVERT_SHAKE: i32 = 302;
+
+/// Счёт воды у оригинала идёт со 3-го такта жизни: флаг «трясётся» встаёт на
+/// 602-м такте записи, превращение — на 903-м (чёрный ящик, zombie-to-drowned).
+pub const CONVERT_FROM_TICK: u64 = 2;
+
+/// Расстояние броска трезубца и пауза между бросками (вики, Drowned:
+/// «throws ... every 2 seconds»; чёрный ящик, drowned-trident: 40 тактов).
+pub const TRIDENT_RANGE: f64 = 10.0;
+pub const TRIDENT_PAUSE: i32 = 40;
+pub const TRIDENT_SPEED: f64 = 1.6;
+
+/// «Голод» от кадавра: 7 секунд на нормальной (чёрный ящик, husk-hunger: 140
+/// тактов, амплитуда 0), на трудной вдвое дольше [проверить: местная сложность
+/// не ведётся], на лёгкой нет.
+pub fn hunger_ticks(difficulty: u8) -> i32 {
+    match difficulty {
+        0 | 1 => 0,
+        2 => 140,
+        _ => 280,
+    }
 }
 
 /// Игрок, которого можно атаковать: жив и в выживании.
@@ -271,6 +344,12 @@ fn eligible(mob: &Mob, view: &dyn View, ctx: &Ctx, watcher: &Watcher, need_sight
         return false;
     }
 
+    // Утопленник нападает на игрока ночью или в воде (вики, Drowned: «attack
+    // players ... at night or if the player is in water»).
+    if mob.kind == Kind::Drowned && ctx.sky >= 12 && !in_water_at(view, watcher) {
+        return false;
+    }
+
     // Зомби-пиглин спокоен без гнева, пиглин не трогает золотую броню.
     if super::nether::spares(mob, watcher) {
         return false;
@@ -327,7 +406,7 @@ pub(super) fn choose_target(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut
 /// Жители, на которых зомби может пойти: цели зомби и зомби-жителя
 /// (вики, Zombie: «villagers»).
 fn prey(mob: &Mob, ctx: &Ctx) -> Vec<Watcher> {
-    if !matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager) {
+    if !matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk) {
         return Vec::new();
     }
 
@@ -349,7 +428,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     mob.h.ambient += 1;
 
     if rng.below(1000) < mob.h.ambient.max(0) as u32 {
-        let (ambient, _, _) = mob.kind.sounds();
+        let (ambient, _, _) = mob.sounds();
 
         mob.h.ambient = -80;
 
@@ -382,6 +461,8 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     let here = mob.cell();
     let in_water = super::is_water(view.block(here.0, here.1, here.2));
 
+    mob.h.wet = in_water;
+
     // В воздухе путь ведётся, новый не строится (как у животных).
     let grounded = mob.on_ground || in_water || mob.kind == Kind::Spider;
     let target = choose_target(mob, view, ctx, rng);
@@ -407,7 +488,8 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     mob.h.seen = if sight { 0 } else { mob.h.seen + 1 };
 
     match mob.kind {
-        Kind::Zombie | Kind::ZombieVillager | Kind::Spider => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
+        Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Spider => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
+        Kind::Drowned => drowned(mob, view, ctx, &target, &mut plan, dist_sq, flat, sight, rng, grounded),
         Kind::Creeper => creeper(mob, view, &target, &mut plan, dist_sq, sight, grounded),
         Kind::Skeleton if mob.h.bow => skeleton(mob, view, ctx, &target, &mut plan, dist_sq, sight, rng, grounded),
         Kind::Skeleton => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
@@ -428,6 +510,10 @@ pub(super) fn idle_walk(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng
 fn idle(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, mut plan: Plan, grounded: bool) -> Plan {
     mob.h.drawing = 0;
     mob.strafe = (0.0, 0.0);
+    mob.h.swim = false;
+    mob.h.using = false;
+    mob.h.throw_wait = 0;
+    mob.h.see_time = 0;
 
     if mob.kind == Kind::Creeper {
         swell(mob, None, &mut plan);
@@ -515,7 +601,7 @@ pub(super) fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut
             };
 
             mob.events.push(Event::Swing);
-            plan.melee = Some(Melee { target: target.id, damage, push: (ux, uz), wither: mob.kind == Kind::WitherSkeleton });
+            plan.melee = Some(Melee { target: target.id, damage, push: (ux, uz), wither: mob.kind == Kind::WitherSkeleton, hunger: mob.kind == Kind::Husk });
         }
 
         return;
@@ -537,6 +623,74 @@ pub(super) fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut
     }
 
     *plan = ai::walk(mob, std::mem::take(plan));
+}
+
+/// Вода ли в клетке ног игрока.
+fn in_water_at(view: &dyn View, watcher: &Watcher) -> bool {
+    super::is_water(view.block(watcher.x.floor() as i32, (watcher.y + 1.0e-3).floor() as i32, watcher.z.floor() as i32))
+}
+
+/// Утопленник (вики, Drowned): с трезубцем в руке стоит и бросает его с десяти
+/// блоков раз в 40 тактов; иначе, когда цель в воде, плывёт к ней по прямой
+/// (на ходу — `Mob::physics`), а когда нет — ходит по дну, как зомби.
+#[allow(clippy::too_many_arguments)]
+fn drowned(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &mut Plan, dist_sq: f64, flat: f64, sight: bool, rng: &mut Rng, grounded: bool) {
+    mob.h.see_time = if sight { mob.h.see_time + 1 } else { 0 };
+
+    let (width, _) = mob.size();
+    let reach_sq = (width * 2.0).powi(2) + 0.6;
+    let target_wet = in_water_at(view, target);
+
+    // Трезубец: цель на виду уже 5 тактов и ближе десяти блоков — стоит
+    // и целится; иначе идёт к ней. Счёт до броска идёт всё время охоты
+    // (чёрный ящик, drowned-trident: бросок на 40-м такте после захвата цели, затем раз в 40).
+    if mob.h.hand == HAND_TRIDENT {
+        mob.h.using = true;
+        mob.h.swim = false;
+
+        if mob.h.throw_wait == 0 {
+            mob.h.throw_wait = TRIDENT_PAUSE;
+        } else {
+            mob.h.throw_wait -= 1;
+
+            if mob.h.throw_wait == 0 && sight {
+                mob.h.throw_wait = TRIDENT_PAUSE;
+                mob.events.push(Event::Swing);
+                mob.events.push(Event::Sound { name: "minecraft:entity.drowned.shoot", volume: 1.0, pitch: 1.0 });
+                plan.shot = Some(Shot { from: (mob.x, mob.y + mob.eye() - 0.1, mob.z), aim: (target.x, target.y + 0.6, target.z), speed: TRIDENT_SPEED, trident: true });
+            }
+        }
+
+        if dist_sq <= TRIDENT_RANGE * TRIDENT_RANGE && mob.h.see_time >= 5 {
+            mob.brain.stop();
+            ai::look_at_point(mob, target.x, target.y + target.eye, target.z);
+
+            let want = (-(target.x - mob.x).atan2(target.z - mob.z)).to_degrees() as f32;
+
+            mob.yaw = ai::turn(mob.yaw, want, 30.0);
+
+            return;
+        }
+    }
+
+    if dist_sq <= reach_sq || !(mob.h.wet && target_wet) {
+        mob.h.swim = false;
+        melee(mob, view, target, plan, dist_sq, flat, rng, grounded);
+        return;
+    }
+
+    // Плывёт к цели напрямую: тело поворачивается к ней, тяга — вперёд и по
+    // вертикали на долю подъёма (вики, Drowned; `Mob::physics`).
+    mob.brain.stop();
+    ai::look_at_point(mob, target.x, target.y + target.eye, target.z);
+
+    let want = (-(target.x - mob.x).atan2(target.z - mob.z)).to_degrees() as f32;
+
+    mob.yaw = ai::turn(mob.yaw, want, 30.0);
+    mob.h.swim = true;
+    mob.h.swim_rise = (target.y - mob.y) / dist_sq.sqrt().max(1.0e-6);
+    plan.speed = 1.0;
+    let _ = ctx;
 }
 
 /// Запал крипера: растёт рядом с целью, гаснет вдали (вики, Creeper).
@@ -640,6 +794,7 @@ fn skeleton(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &
                 from: (mob.x, mob.y + mob.eye() - 0.1, mob.z),
                 aim: (target.x, target.y + 0.6, target.z),
                 speed: ARROW_SPEED,
+                trident: false,
             });
         }
     } else if mob.h.cooldown == 0 && sight && in_range {
@@ -659,7 +814,9 @@ pub fn burn(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, sun: bool)
         return false;
     }
 
-    let burns = matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Skeleton) && !mob.h.helmet;
+    // Кадавр не горит (вики, Husk: «immune to burning in daylight»), утопленник горит
+    // вне воды (вики, Drowned).
+    let burns = matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Skeleton) && !mob.h.helmet;
 
     if sun && burns && ctx.sun_up && view.open_sky(x, y, z) && rng.below(SUN_CHANCE) == 0 {
         mob.vitals.ignite(SUN_FIRE_TICKS);

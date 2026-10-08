@@ -26,7 +26,7 @@ const randomRules = Array.isArray(scenarioJson.random) ? scenarioJson.random : [
 const portFlag = process.argv.indexOf('--ours-port');
 const oursPort = portFlag > 0 ? Number(process.argv[portFlag + 1]) : 25567;
 const sides = [
-  { title: 'оригинал', port: 25566, file: path.join(HERE, 'reports', `vanilla-${name}.json`) },
+  { title: 'оригинал', port: Number(process.env.VANILLA_PORT || 25566), file: path.join(HERE, 'reports', `vanilla-${name}.json`) },
   { title: 'у нас',    port: oursPort, file: path.join(HERE, 'reports', `ours-${name}.json`) },
 ];
 // `--files A B` — сравнить две готовые записи, ничего не записывая: так

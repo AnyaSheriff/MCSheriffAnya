@@ -150,6 +150,31 @@ pub const MAX_DISTANCE: f64 = 128.0;
 /// «10⁄515», «5»).
 pub const HOSTILE: [(Kind, u32); 6] = [(Kind::Zombie, 95), (Kind::Skeleton, 100), (Kind::Creeper, 100), (Kind::Spider, 100), (Kind::Enderman, 10), (Kind::Witch, 5)];
 
+/// Виды Обычного мира по биому и месту (вики, Husk: «Husks spawn ... in
+/// deserts» вместо зомби, вес 80 против 19; Drowned: «rivers» вес 100,
+/// «oceans» вес 5; в воде рождаются только утопленники) [проверить: веса
+/// по вики, группа утопленника — один].
+pub fn overworld_kinds(biome: &str, wet: bool) -> Vec<(Kind, u32)> {
+    if wet {
+        return match biome {
+            "river" | "frozen_river" => vec![(Kind::Drowned, 100)],
+            name if name.ends_with("ocean") => vec![(Kind::Drowned, 5)],
+            _ => Vec::new(),
+        };
+    }
+
+    if biome == "desert" {
+        return HOSTILE.iter().map(|&(kind, weight)| if kind == Kind::Zombie { (Kind::Zombie, 19) } else { (kind, weight) }).chain([(Kind::Husk, 80)]).collect();
+    }
+
+    HOSTILE.to_vec()
+}
+
+/// Годится ли клетка для утопленника: вода в ногах и над головой, пол — твёрдый.
+pub fn wet_spot(view: &dyn View, x: i32, y: i32, z: i32) -> bool {
+    super::is_water(view.block(x, y, z)) && super::is_water(view.block(x, y + 1, z)) && solid(view.block(x, y - 1, z))
+}
+
 /// Незер: виды и веса по биомам (вики, Mob spawning, «Nether»). Страйдеры
 /// рождаются в лаве — естественного появления в лаве у нас пока нет
 /// [проверить: Strider, «Spawning»].
@@ -173,7 +198,7 @@ pub const END_HOSTILE: [(Kind, u32); 1] = [(Kind::Enderman, 10)];
 /// прочие — до четырёх.
 fn hostile_group(kind: Kind) -> u32 {
     match kind {
-        Kind::Witch | Kind::Ghast | Kind::Enderman => 1,
+        Kind::Witch | Kind::Ghast | Kind::Enderman | Kind::Drowned => 1,
         // Вики: ифрит 2–3, иссушитель и скелет 5, хоглин 3–4, куб 4.
         Kind::Blaze => 3,
         Kind::WitherSkeleton => 5,
@@ -267,8 +292,15 @@ pub fn hostile_attempt_in(
 
         let y = low + rng.below((top - low + 1) as u32) as i32;
 
-        if spawnable(view, x, y, z, 2) {
+        if spawnable(view, x, y, z, 2) || wet_spot(view, x, y, z) {
             found = Some((x, y, z));
+            break;
+        }
+
+        // Дно реки или моря: воды над ним мало в выборе высоты — смотрим сразу
+        // над дном.
+        if wet_spot(view, x, top, z) {
+            found = Some((x, top, z));
             break;
         }
     }
@@ -297,7 +329,9 @@ pub fn hostile_attempt_in(
         // Разброс пачки: сумма двух равномерных — «треугольный», до 5 блоков.
         let (gx, gz) = (x + rng.below(6) as i32 - rng.below(6) as i32, z + rng.below(6) as i32 - rng.below(6) as i32);
 
-        if !view.loaded(gx.div_euclid(16), gz.div_euclid(16)) || !spawnable(view, gx, y, gz, block_height) {
+        let fits = if kind == Kind::Drowned { wet_spot(view, gx, y, gz) } else { spawnable(view, gx, y, gz, block_height) };
+
+        if !view.loaded(gx.div_euclid(16), gz.div_euclid(16)) || !fits {
             continue;
         }
 
@@ -311,6 +345,16 @@ pub fn hostile_attempt_in(
         // случайная профессия [проверить: тип по биому].
         let each = if kind == Kind::Zombie && rng.below(100) < 5 { Kind::ZombieVillager } else { kind };
         let mut mob = Mob::new(next_id(), each, at);
+
+        // Вики, Drowned: 3 % — ракушка в левой руке (выпадает всегда); 10 % —
+        // трезубец (10 из 16) или удочка (6 из 16) в основной.
+        if each == Kind::Drowned {
+            if rng.unit() > 0.9 {
+                mob.h.hand = if rng.below(16) < 10 { super::hostile::HAND_TRIDENT } else { super::hostile::HAND_ROD };
+            }
+
+            mob.h.offhand_shell = rng.unit() < 0.03;
+        }
 
         if each == Kind::MagmaCube {
             super::nether::set_size(&mut mob, super::nether::roll_size(rng));

@@ -652,7 +652,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     let Shooter::Mob { killer } = arrow.shooter else { unreachable!() };
                     let flat = arrow.vx.hypot(arrow.vz).max(1.0e-9);
 
-                    world.note_mob_hurt(entity_id, damage, Source::Arrow, arrow.owner, killer, Some((arrow.vx / flat, arrow.vz / flat)), (arrow.x, arrow.y, arrow.z));
+                    world.note_mob_hurt(entity_id, damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, arrow.owner, killer, Some((arrow.vx / flat, arrow.vz / flat)), (arrow.x, arrow.y, arrow.z));
                 }
                 Target::Player { entity_id } => {
                     world.note_game_event(arrow.owner, 6, 0.0);
@@ -725,7 +725,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             }
 
             // Игроку, раненому мобом, звук попадания уходит из `vitals::mob_hit`.
-            if !(arrow.is_mob_shot() && on_player) {
+            // Трезубец утопленника звучит сам: item.trident.hit (чёрный ящик, drowned-trident).
+            if !(arrow.is_mob_shot() && on_player && arrow.trident.is_none()) {
                 world.note_sound_neutral_at((arrow.x, arrow.y, arrow.z), arrow.hit_sound(), 1.0, 1.0);
             }
 

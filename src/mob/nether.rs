@@ -220,7 +220,7 @@ fn blaze(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist
 
             let (ux, uz) = if flat > 1.0e-6 { ((target.x - mob.x) / flat, (target.z - mob.z) / flat) } else { (0.0, 1.0) };
 
-            plan.melee = Some(hostile::Melee { target: target.id, damage: melee_damage(mob), push: (ux, uz), wither: false });
+            plan.melee = Some(hostile::Melee { target: target.id, damage: melee_damage(mob), push: (ux, uz), wither: false, hunger: false });
         }
 
         *plan = super::ai::walk(mob, std::mem::take(plan));
@@ -357,7 +357,7 @@ fn cube(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist_
         let (dx, dz) = (target.x - mob.x, target.z - mob.z);
         let flat = (dx * dx + dz * dz).sqrt().max(1.0e-6);
 
-        plan.melee = Some(hostile::Melee { target: target.id, damage: cube_damage(mob.nether.size), push: (dx / flat, dz / flat), wither: false });
+        plan.melee = Some(hostile::Melee { target: target.id, damage: cube_damage(mob.nether.size), push: (dx / flat, dz / flat), wither: false, hunger: false });
     }
 
     if mob.on_ground && mob.nether.hop <= 0 {

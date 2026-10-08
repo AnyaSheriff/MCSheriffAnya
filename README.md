@@ -121,7 +121,15 @@ endorsed by Mojang or Microsoft.
   far away. Damage, armor, drops, burning, fuse, explosion and arrow packets
   are checked against the official server with the black box (`zombie-hit`,
   `zombie-burn`, `creeper-explode`, `skeleton-stand`; `skeleton-arrow`,
-  `zombie-attack`, `spider-climb` are random and match by structure). A
+  `zombie-attack`, `spider-climb` are random and match by structure).
+  Drowned and husk are zombie variants: a husk does not burn in the sun and its
+  hit gives Hunger (140 ticks on Normal); a drowned walks the bottom or swims
+  straight to a target in water, attacks players at night or in water, throws
+  a trident every 40 ticks from 10 blocks, burns in the sun out of water, drops
+  copper ingots and what it holds; a zombie 30 s underwater shakes for 15 s and
+  becomes a drowned (a husk becomes a zombie); husks spawn in deserts, drowned
+  in rivers and oceans (`drowned-attack`, `drowned-swim`, `drowned-trident`,
+  `zombie-to-drowned`, `husk-hunger`). A
   hostile mob killed by a player drops 5 experience points plus 1–3 per
   equipment item; Bedrock players see the mobs and arrows and can fight them; main combat sounds
   are sent, the rest of the sounds are not complete (see Status).
