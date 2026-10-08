@@ -1463,6 +1463,22 @@ fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) {
     );
 }
 
+/// Взгляд как у оригинала: синус и косинус по таблице на 65536 делений
+/// одинарной точности (boat-ride: лодка на воде встаёт в z = 1,95264, а не
+/// в 1,95257 точного счёта при наклоне 50°).
+fn looking_table(yaw: f32, pitch: f32) -> (f64, f64, f64) {
+    const RADIANS: f32 = std::f32::consts::PI / 180.0;
+    const INDEX: f32 = 10430.378;
+
+    let at = |index: i32| ((index & 65535) as f64 * std::f64::consts::TAU / 65536.0).sin() as f32;
+    let sin = |angle: f32| at((angle * INDEX) as i32);
+    let cos = |angle: f32| at((angle * INDEX + 16384.0) as i32);
+    let (turn, tilt) = (-yaw * RADIANS, pitch * RADIANS);
+    let flat = cos(tilt);
+
+    (f64::from(sin(turn) * flat), f64::from(-sin(tilt)), f64::from(cos(turn) * flat))
+}
+
 /// Куда смотрит игрок — единичным направлением.
 ///
 /// Север в игре — это минус Z, а наклон вниз — положительный, поэтому
@@ -1804,9 +1820,12 @@ async fn send_cart_moves(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
             shown.speed = speed;
         }
 
-        // Такт с появления: сразу после появления — нулевой.
+        // Такт с появления: сразу после появления — нулевой. Изменились
+        // свойства — место и скорость уходят вместе с ними вне очереди
+        // (boat-drive: вёсла опущены на +20 — в том же такте и сдвиг, хотя
+        // очередь на +18 и +21).
         let tick = age.saturating_sub(1);
-        let due = tick % EVERY == 0;
+        let due = tick % EVERY == 0 || now.dirty != 0;
 
         if due || pushed {
             let change = (speed.0 - shown.speed.0).powi(2) + (speed.1 - shown.speed.1).powi(2) + (speed.2 - shown.speed.2).powi(2);
@@ -6946,6 +6965,16 @@ fn handle_client_packet_inner(
                 let off = (x - player.x).powi(2) + (y - player.y).powi(2) + (z - player.z).powi(2);
 
                 reaction.resync = off > 1.0;
+                return reaction;
+            }
+
+            // Лодка для игрока — твёрдое тело: шаг, после которого его ящик
+            // вошёл в лодку, где не был, не принимается — сверка обратно
+            // (boat-ride: слезший стоит на верху лодки, робот, не знающий
+            // о ней, падает в воду, а оригинал через такт возвращает его
+            // на (3,5; 2,018; 1,953)). [проверить]: допуск и прочие тела.
+            if vehicle::into_boat(shared, player, (x, y, z)) {
+                reaction.resync = true;
                 return reaction;
             }
 

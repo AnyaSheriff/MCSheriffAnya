@@ -226,7 +226,7 @@ pub enum Change {
     Fuse { entity_id: i32, fuse: i32 },
 
     /// Появилась вагонетка (minecart.rs). Пропадает она записью `Gone`.
-    Cart(crate::minecart::Minecart),
+    Cart(Box<crate::minecart::Minecart>),
 
     /// Ударила молния (lightning.rs). Пропадает она записью `Gone`.
     Lightning(crate::lightning::Bolt),
@@ -403,7 +403,7 @@ impl Items {
 
     /// Ставит вагонетку в мир.
     pub fn add_cart(&mut self, cart: crate::minecart::Minecart) {
-        self.changes.push(Change::Cart(cart.clone()));
+        self.changes.push(Change::Cart(Box::new(cart.clone())));
         self.carts.push(cart);
     }
 

@@ -1444,7 +1444,25 @@ fn step_carts(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 
     items.remove_carts(|cart| cart.lost());
+
     prime_sounds(world, &mut items);
+    boat_sounds(world, &mut items);
+}
+
+/// Звуки лодок за такт: плеск входа в воду (высота — как у предметов,
+/// 1 ± 0,4) и вёсла (0,8…1,2 [проверить]).
+fn boat_sounds(world: &mut World, items: &mut items::Items) {
+    for cart in items.carts_mut().iter_mut().filter(|cart| !cart.sounds.is_empty()) {
+        for (name, at, volume) in std::mem::take(&mut cart.sounds) {
+            let pitch = if name == crate::minecart::boat::SPLASH_SOUND {
+                1.0 + (world.random_unit() - world.random_unit()) * 0.4
+            } else {
+                0.8 + world.random_unit() * 0.4
+            };
+
+            world.note_sound_at(at, name, volume, pitch);
+        }
+    }
 }
 
 /// Звук поджога у вагонеток с динамитом, подожжённых в этом такте — там,

@@ -108,7 +108,7 @@ pub(super) fn place_boat(shared: &Shared, player: &mut PlayerState, hand: i32) -
     }
 
     let eye = (player.x, player.y + if player.sneaking { 1.27 } else { 1.62 }, player.z);
-    let direction = looking(player.yaw, player.pitch);
+    let direction = looking_table(player.yaw, player.pitch);
     let reach = if player.game_mode == GAME_MODE_CREATIVE { REACH } else { 4.5 };
     let hit = {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
@@ -132,6 +132,33 @@ pub(super) fn place_boat(shared: &Shared, player: &mut PlayerState, hand: i32) -
     }
 
     true
+}
+
+/// Войдёт ли ящик игрока при шаге в `to` в лодку, в которой его не было.
+pub(super) fn into_boat(shared: &Shared, player: &PlayerState, to: (f64, f64, f64)) -> bool {
+    const HALF: f64 = 0.3;
+    const EPSILON: f64 = 1.0e-7;
+
+    let tall = if player.sneaking { 1.5 } else { 1.8 };
+    let inside = |at: (f64, f64, f64), boat: (f64, f64, f64)| {
+        let reach = crate::minecart::boat::WIDTH / 2.0 + HALF - EPSILON;
+
+        (at.0 - boat.0).abs() < reach
+            && (at.2 - boat.2).abs() < reach
+            && at.1 < boat.1 + crate::minecart::boat::HEIGHT - EPSILON
+            && at.1 + tall > boat.1 + EPSILON
+    };
+    let from = (player.x, player.y, player.z);
+
+    shared
+        .items_in(player.dimension)
+        .lock()
+        .expect("предметы захвачены другим потоком")
+        .carts()
+        .iter()
+        .filter(|cart| cart.kind.is_boat())
+        .map(|cart| (cart.x, cart.y, cart.z))
+        .any(|boat| inside(to, boat) && !inside(from, boat))
 }
 
 /// Сколько мест у транспорта-лодки или вагонетки; None — не оседлать.
@@ -264,7 +291,7 @@ const PROPERTY_BOOLEAN_KIND: i32 = 8;
 /// Место выхода: с лодки в `at` (низ ящика) игрок, смотрящий по `yaw`,
 /// ставится на сушу рядом, если есть, иначе — на верх лодки (чёрный ящик,
 /// boat-drive: лодка на воде, выход в (3,5; 1,962; 3) — верх ящика
-/// 1,4 + 0,5625). Рядом ищется по сторонам: вперёд, вбок, назад
+/// 1,4 + 0,5625; boat-ride — (3,5; 2,018; 1,953)). Рядом ищется по сторонам: вперёд, вбок, назад
 /// [проверить: порядок и расстояние у оригинала].
 fn exit_place(world: &World, at: (f64, f64, f64), height: f64, yaw: f32) -> (f64, f64, f64) {
     let (sin, cos) = f64::from(yaw).to_radians().sin_cos();
@@ -276,7 +303,10 @@ fn exit_place(world: &World, at: (f64, f64, f64), height: f64, yaw: f32) -> (f64
         let (x, z) = (at.0 + dx * reach, at.2 + dz * reach);
         let (bx, bz) = (x.floor() as i32, z.floor() as i32);
 
-        for by in [at.1.floor() as i32 + 1, at.1.floor() as i32, at.1.floor() as i32 - 1] {
+        // Ступить можно в клетку лодки или ниже, но не на уступ выше неё
+        // (boat-ride: лодка в бассейне, рядом каменный бортик в её клетке —
+        // оригинал ставит не на бортик, а на верх лодки).
+        for by in [at.1.floor() as i32, at.1.floor() as i32 - 1] {
             let below = world.get_block(bx, by - 1, bz);
             let feet = world.get_block(bx, by, bz);
             let head = world.get_block(bx, by + 1, bz);

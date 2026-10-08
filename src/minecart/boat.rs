@@ -58,11 +58,20 @@ pub fn from_name(name: &str) -> Option<Kind> {
 /// Сколько седоков помещается (вики, Boat: «can hold two entities»).
 pub const SEATS: usize = 2;
 
+/// Звуки лодки (minecraft-data 26.1, sounds.json).
+pub const SPLASH_SOUND: &str = "minecraft:entity.generic.splash";
+pub const PADDLE_WATER_SOUND: &str = "minecraft:entity.boat.paddle_water";
+pub const PADDLE_LAND_SOUND: &str = "minecraft:entity.boat.paddle_land";
+
 /// Что под лодкой и вокруг неё.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Status {
-    /// В воздухе.
+    /// Только что появилась: прошлого такта не было. Поставленная на воду
+    /// лодка не «плюхается» с высоты, а садится плавно (boat-ride: с 8/9
+    /// воды за 12 тактов −0,433, скорость −0,061 / −0,054 / −0,022 / +0,003).
     #[default]
+    Fresh,
+    /// В воздухе.
     Air,
     /// Стоит на суше.
     Land,
@@ -100,6 +109,18 @@ const DAMPING: f64 = 0.75;
 /// Всплывшая из воздуха лодка ставится на воду так: верх клетки воды минус
 /// высота ящика плюс 0,101 (boat-float: 1,5385 при воде в клетке 1…2).
 const SPLASH_LIFT: f64 = 0.101;
+/// Вёсла: поворот весла за такт гребли — π/8, полный оборот — 16 тактов;
+/// весло бьёт по воде, когда его угол проходит π/4. Счёт одинарной
+/// точности: в первом обороте угол ровно π/4 попадает в окно два такта
+/// подряд (boat-drive: плеск вёсел на +21, +22 и +37 от начала гребли
+/// на +20).
+const PADDLE_STEP: f32 = std::f32::consts::FRAC_PI_8;
+const PADDLE_TURN: f32 = std::f32::consts::TAU;
+const PADDLE_HIT: f32 = std::f32::consts::FRAC_PI_4;
+/// Где слышен плеск весла: сбоку от лодки на 1 блок (левое — слева по
+/// ходу), на высоте низа ящика (boat-drive: лодка в x = 3,5 — звуки в 4,5
+/// и 2,5).
+const PADDLE_SIDE: f64 = 1.0;
 
 /// Скольжение блока: лёд, плотный лёд, голубой лёд, слизь; прочее — 0,6.
 /// Вики, Boat: 0,98 / 0,989 / 0,8 / 0,6.
@@ -212,9 +233,25 @@ impl Minecart {
             self.vy = 0.0;
             self.vz = 0.0;
             self.on_ground = false;
+            self.paddle_sounds(view);
 
             return;
         }
+
+        // Впервые коснулась воды — плеск, как у предметов: громкость по
+        // скорости (вертикаль весит впятеро больше). Проверка — в начале
+        // такта, по месту и скорости после прошлого шага (boat-ride:
+        // поставленная на воду — на +1, 0,006 = 0,2 · 0,03, в 1,859; boat-mob:
+        // призванная на 1,9 — на +1, 0,008 = 0,2 · 0,04, в 1,86).
+        let wet = self.touches_water(view);
+
+        if wet && !self.wet {
+            let volume = ((self.vx * self.vx * 0.2 + self.vy * self.vy + self.vz * self.vz * 0.2).sqrt() * 0.2).min(1.0) as f32;
+
+            self.sounds.push((SPLASH_SOUND, (self.x, self.y, self.z), volume));
+        }
+
+        self.wet = wet;
 
         let old = self.water.status;
         let (mut water, top) = self.boat_status(view);
@@ -235,6 +272,76 @@ impl Minecart {
         self.set_paddle((false, false));
         self.move_by(view, self.vx, self.vy, self.vz);
         self.on_ground = self.on_ground && matches!(self.water.status, Status::Land);
+    }
+
+    /// Касается ли ящик лодки воды: ящик, ужатый на 0,001 со всех сторон,
+    /// ниже поверхности хоть одной клетки (boat-ride: лодка, поставленная
+    /// ровно на поверхность 8/9, в первый такт воды ещё не касается — плеск
+    /// только тактом позже, когда она осела на 0,03).
+    fn touches_water<V: View>(&self, view: &V) -> bool {
+        const SHRINK: f64 = 0.001;
+
+        let half = WIDTH / 2.0 - SHRINK;
+        let (low, high) = (self.y + SHRINK, self.y + HEIGHT - SHRINK);
+        let cells = |from: f64, to: f64| (from.floor() as i32)..=(to.floor() as i32);
+
+        cells(self.x - half, self.x + half).any(|bx| {
+            cells(self.z - half, self.z + half).any(|bz| {
+                cells(low, high).any(|by| {
+                    fluid_height(view.block(bx, by, bz), view.block(bx, by + 1, bz)).is_some_and(|height| low < f64::from(by) + height)
+                })
+            })
+        })
+    }
+
+    /// Вёсла гребущего: опущенное весло поворачивается на π/8 за такт, на
+    /// проходе угла π/4 — плеск (по воде) или стук (по суше).
+    /// [проверить]: что с углом поднятого весла и звук в воздухе.
+    fn paddle_sounds<V: View>(&mut self, view: &V) {
+        let sound = match self.boat_status(view).0.status {
+            Status::InWater | Status::Under | Status::UnderFlowing => PADDLE_WATER_SOUND,
+            Status::Land => PADDLE_LAND_SOUND,
+            Status::Air | Status::Fresh => return,
+        };
+        let (sin, cos) = f64::from(self.yaw).to_radians().sin_cos();
+
+        for (index, down) in [self.paddle.0, self.paddle.1].into_iter().enumerate() {
+            if !down {
+                continue;
+            }
+
+            let phase = self.paddle_phase[index];
+
+            if phase % PADDLE_TURN <= PADDLE_HIT && (phase + PADDLE_STEP) % PADDLE_TURN >= PADDLE_HIT {
+                // Левое весло — слева по ходу: при взгляде на юг (+z) это +x.
+                let side = if index == 0 { PADDLE_SIDE } else { -PADDLE_SIDE };
+
+                self.sounds.push((sound, (self.x + cos * side, self.y, self.z + sin * side), 1.0));
+            }
+
+            self.paddle_phase[index] = phase + PADDLE_STEP;
+        }
+    }
+
+    /// Стоящий на лодке игрок для неё — твёрдое тело: всплывать сквозь него
+    /// она не может (boat-ride, boat-drive: слезший встаёт на верх лодки, и
+    /// та, сидящая глубже покоя, больше не всплывает — ни сдвига, ни
+    /// скорости 220 тактов). `below` — низ ящика до шага.
+    /// [проверить]: игрок сбоку и снизу, мобы.
+    pub(super) fn held_by(&mut self, players: &[(f64, f64, f64)], below: f64) {
+        const PLAYER_HALF: f64 = 0.3;
+        const EPSILON: f64 = 1.0e-7;
+
+        let reach = WIDTH / 2.0 + PLAYER_HALF;
+
+        for &(x, y, z) in players {
+            let over = (x - self.x).abs() < reach && (z - self.z).abs() < reach;
+
+            if over && y >= below + HEIGHT - EPSILON && self.y + HEIGHT > y {
+                self.y = y - HEIGHT;
+                self.vy = 0.0;
+            }
+        }
     }
 
     /// Вёсла: весло опущено или поднято (Paddle Boat от водителя).
@@ -265,7 +372,7 @@ impl Minecart {
                 lift = 0.01;
                 friction = UNDER_FRICTION;
             }
-            Status::Air => {}
+            Status::Air | Status::Fresh => {}
             Status::Land => friction = self.water.ground,
         }
 
@@ -315,6 +422,59 @@ mod tests {
         }
 
         assert!((boat.y - 1.5226).abs() < 0.002, "y в покое: {}", boat.y);
+    }
+
+    #[test]
+    fn placed_on_the_surface_settles_softly_and_splashes_a_tick_later() {
+        // boat-ride: поставлена на 1 + 8/9 — без броска вниз; за 3 такта
+        // −0,141, скорость −0,061; плеск — на втором шаге, громкость 0,006.
+        let surface = 1.0 + f64::from(8.0_f32 / 9.0) - 1.0e-9;
+        let mut boat = Minecart::new(1, Kind::Boat(0), (3.5, surface, 3.5));
+
+        boat.step(&pool);
+        assert!(boat.sounds.is_empty(), "в первый такт плеска нет");
+        boat.step(&pool);
+        let (name, _, volume) = boat.sounds[0];
+        assert_eq!(name, SPLASH_SOUND);
+        assert!((volume - 0.006).abs() < 1.0e-4, "громкость {}", volume);
+        boat.step(&pool);
+        assert!((boat.y - (surface - 0.1411)).abs() < 0.0003, "y: {}", boat.y);
+        assert!((boat.vy + 0.061).abs() < 0.0005, "vy: {}", boat.vy);
+    }
+
+    #[test]
+    fn paddles_splash_on_ticks_two_three_and_eighteen() {
+        // boat-drive: гребля с +20 — плеск вёсел на +21, +22 и +37.
+        let mut boat = Minecart::new(1, Kind::Boat(0), (3.5, 1.4, 3.5));
+        let mut heard = Vec::new();
+
+        boat.driver = Some(7);
+        boat.paddle = (true, true);
+
+        for tick in 0..30 {
+            boat.step(&pool);
+
+            if !std::mem::take(&mut boat.sounds).is_empty() {
+                heard.push(tick);
+            }
+        }
+
+        assert_eq!(heard, vec![1, 2, 17]);
+    }
+
+    #[test]
+    fn player_on_top_holds_a_rising_boat() {
+        // boat-ride: слезший стоит на верху лодки — она больше не всплывает.
+        let mut boat = Minecart::new(1, Kind::Boat(0), (3.5, 1.4556, 3.5));
+
+        for _ in 0..20 {
+            let below = boat.y;
+
+            boat.step(&pool);
+            boat.held_by(&[(3.5, 1.4556 + HEIGHT, 3.5)], below);
+        }
+
+        assert!((boat.y - 1.4556).abs() < 1.0e-9 && boat.vy == 0.0, "y {} vy {}", boat.y, boat.vy);
     }
 
     #[test]

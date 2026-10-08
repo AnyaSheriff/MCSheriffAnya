@@ -42,6 +42,10 @@ const POSE_PROPERTY: u8 = 6;
 /// pose, spin_attack — 4).
 const PROPERTY_POSE: i32 = 20;
 pub(super) const POSE_SPIN_ATTACK: i32 = 4;
+/// Поза «полёт на элитрах» (minecraft-data 26.1: pose 1, fall_flying).
+const POSE_FALL_FLYING: i32 = 1;
+/// Флаг сущности «летит на элитрах».
+const FLAG_FALL_FLYING: u8 = 0x80;
 // Поза «спит», свойство 14 «место кровати» и его вид 11 — в play.rs
 // (minecraft-data, protocol.json, entityMetadataEntry).
 
@@ -1762,13 +1766,27 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         flags |= FLAG_GLOWING;
     }
 
+    // Полёт на элитрах: флаг 0x80 — в такте начала, поза «полёт» (1) —
+    // тактом позже (elytra-glide: Metadata 0=-128 на +0, 6=1 на +1).
+    if player.glide.active {
+        flags |= FLAG_FALL_FLYING;
+    }
+
     let now = Meta {
         score: player.vit.xp,
         arrows: player.net.arrows,
         health: player.vit.health,
         air: player.vit.air,
         flags,
-        pose: if player.sleeping.is_some() { POSE_SLEEPING } else if player.net.spin_pose { POSE_SPIN_ATTACK } else { 0 },
+        pose: if player.sleeping.is_some() {
+            POSE_SLEEPING
+        } else if player.net.spin_pose {
+            POSE_SPIN_ATTACK
+        } else if player.glide.active && player.glide.ticks > 0 {
+            POSE_FALL_FLYING
+        } else {
+            0
+        },
         living: living_flags(player),
         effects: player.vit.effect_colors(),
         ambient: player.vit.effects_ambient().unwrap_or(player.net.meta.ambient),
@@ -1778,12 +1796,10 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
 
     let held = std::mem::take(&mut player.net.hold_meta);
 
+    // Флаг «крадётся» оригинал шлёт и самому (boat-ride, boat-drive:
+    // приседание в лодке — Metadata 0=2, в следующий такт 0=0).
     if !held && now != player.net.meta && tick_now >= player.net.meta_hold {
         let before = player.net.meta;
-
-        // Флаг «крадётся» клиент знает сам; учитываем его в «было».
-        let mut before = before;
-        before.flags = (before.flags & !0x02) | (now.flags & 0x02);
 
         if now != before {
             send_meta(stream, entity, now, before).await?;

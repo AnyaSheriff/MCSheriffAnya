@@ -13,7 +13,7 @@
 use crate::blocks;
 use crate::inventory::Stack;
 
-mod boat;
+pub mod boat;
 pub use boat::{BOATS, SEATS as BOAT_SEATS, boat_kinds};
 
 /// Вид вагонетки.
@@ -331,6 +331,12 @@ pub struct Minecart {
     /// правое — по пакету Paddle Boat от гребущего игрока).
     pub water: boat::Water,
     pub paddle: (bool, bool),
+    /// Угол каждого весла (левое, правое): от него — плеск вёсел.
+    paddle_phase: [f32; 2],
+    /// Касалась ли воды в прошлый такт (для плеска).
+    wet: bool,
+    /// Звуки этого такта: имя, место, громкость (лодка: плеск, вёсла).
+    pub sounds: Vec<(&'static str, (f64, f64, f64), f32)>,
     /// Номер игрока, ведущего лодку: пока он есть, лодка стоит на месте
     /// сервера, а место ей шлёт клиент (Move Vehicle).
     pub driver: Option<i32>,
@@ -573,6 +579,9 @@ impl Minecart {
             fall: 0.0,
             water: boat::Water::default(),
             paddle: (false, false),
+            paddle_phase: [0.0; 2],
+            wet: false,
+            sounds: Vec::new(),
             driver: None,
             step_up: 0.0,
             last: Snapshot {
@@ -1360,7 +1369,13 @@ pub fn step_all<V: View>(carts: &mut [Minecart], view: &V, players: &[(f64, f64,
             continue;
         }
 
+        let below = carts[index].y;
+
         carts[index].step(view);
+
+        if carts[index].kind.is_boat() {
+            carts[index].held_by(players, below);
+        }
 
         let grow = carts[index].reaches();
 
