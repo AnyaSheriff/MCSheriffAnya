@@ -125,6 +125,14 @@ pub struct State {
     /// Кто ударил этого моба в этом такте (номер сущности, 0 — никто): по
     /// нему волки хозяина выбирают цель. Ставит `on_hurt`, снимает `step_all`.
     pub hurt_by: i32,
+
+    /// Кошка: блок, на который идёт сесть (сундук, подножие кровати, горящая
+    /// печь), и сидит ли уже на нём (поза по ИИ, не по приказу).
+    pub perch: Option<(i32, i32, i32)>,
+    pub perched: bool,
+
+    /// Тактов осталось искать путь к блоку.
+    pub perch_wait: i32,
 }
 
 impl Default for State {
@@ -146,6 +154,9 @@ impl Default for State {
             armor: None,
             wet: false,
             hurt_by: 0,
+            perch: None,
+            perched: false,
+            perch_wait: 0,
         }
     }
 }
@@ -266,6 +277,9 @@ pub fn on_hurt(mob: &mut Mob, cause: i32) {
 
     if mob.kind == Kind::Cat {
         mob.tame.ordered_sit = false;
+        // Удар сгоняет кошку с блока (вики, Cat: «Attacking it moves it»).
+        mob.tame.perched = false;
+        mob.tame.perch = None;
     }
 }
 
@@ -447,7 +461,11 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
 
     // Позу сидя ставит ИИ по приказу (чёрный ящик, wolf-sit-follow: у NoAI
     // поза не меняется).
-    mob.tame.sitting = mob.tame.ordered_sit && mob.tame.tamed();
+    if mob.kind == Kind::Cat {
+        perch_check(mob, view);
+    }
+
+    mob.tame.sitting = (mob.tame.ordered_sit && mob.tame.tamed()) || mob.tame.perched;
     mob.tame.cooldown = (mob.tame.cooldown - 1).max(0);
 
     shake(mob, view);
@@ -458,6 +476,15 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         mob.tame.melee = false;
         ai::voice(mob, rng);
         return plan;
+    }
+
+    // Ручная кошка лезет на сундук, подножие кровати или горящую печь рядом и
+    // садится (вики, Cat: «attempts to climb onto a chest, the foot of a bed, or an active furnace»).
+    if mob.kind == Kind::Cat
+        && mob.tame.tamed()
+        && let Some(done) = seek_perch(mob, view, plan.clone(), rng)
+    {
+        return done;
     }
 
     // Выпрашивание: игрок в 8 блоках с костью или мясом (вики, Wolf: «begging»).
@@ -545,6 +572,121 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     }
 
     ai::think(mob, view, ctx, rng)
+}
+
+/// Что кошка кладёт в подарок: таблица cat_morning_gift (вики, Cat: кроличья лапка,
+/// кроличья шкура, курятина, перо, гнилая плоть, нить — по 10; мембрана — 2).
+pub fn morning_gift(rng: &mut Rng) -> &'static str {
+    match rng.below(62) {
+        0..=9 => "rabbit_hide",
+        10..=19 => "rabbit_foot",
+        20..=29 => "chicken",
+        30..=39 => "feather",
+        40..=49 => "rotten_flesh",
+        50..=59 => "string",
+        _ => "phantom_membrane",
+    }
+}
+
+/// Годится ли блок кошке в сиденья: сундук, подножие кровати, горящая печь
+/// (вики, Cat, «Sitting»).
+pub fn perch_block(state: i32) -> bool {
+    let Some(name) = crate::blocks::block_at_state(state) else {
+        return false;
+    };
+
+    match name {
+        "chest" | "trapped_chest" => true,
+        "furnace" | "blast_furnace" | "smoker" => crate::blocks::orientation_of(state).and_then(|o| o.value(state, "lit")) == Some("true"),
+        _ if name.ends_with("_bed") => crate::blocks::orientation_of(state).and_then(|o| o.value(state, "part")) == Some("foot"),
+        _ => false,
+    }
+}
+
+/// Сидящая на блоке кошка слезает, если блока нет или над ним что-то есть
+/// (вики, Cat: «won't sit on a block that has another block above it»).
+fn perch_check(mob: &mut Mob, view: &dyn View) {
+    if !mob.tame.perched {
+        return;
+    }
+
+    let (x, y, z) = (mob.x.floor() as i32, (mob.y - 0.1).floor() as i32, mob.z.floor() as i32);
+
+    if !perch_block(view.block(x, y, z)) || mob.tame.ordered_sit {
+        mob.tame.perched = false;
+    }
+}
+
+/// Поиск сиденья в 4 блоках на том же уровне и ход к нему; Some — кошка занята
+/// этим в такт (вики, Cat: «within a 4-block square radius»). Раз в ~400 тактов
+/// [проверить: частота и дальность поиска у оригинала].
+fn seek_perch(mob: &mut Mob, view: &dyn View, plan: Plan, rng: &mut Rng) -> Option<Plan> {
+    if mob.tame.ordered_sit || mob.tame.perched {
+        return None;
+    }
+
+    let here = mob.cell();
+
+    // Уже стоит на сиденье — садится сразу (чёрный ящик, cat-chest-block: после
+    // Sitting:0b кошка на сундуке села снова через 2 такта).
+    if mob.on_ground && perch_block(view.block(here.0, here.1 - 1, here.2)) {
+        mob.tame.perched = true;
+        mob.tame.perch = None;
+        mob.brain.stop();
+
+        return Some(plan);
+    }
+
+    if mob.tame.perch.is_none() {
+        if rng.below(400) != 0 {
+            return None;
+        }
+
+        // Сиденье — блок на уровне ног; кошка встаёт на его верх.
+        let found = (-4..=4)
+            .flat_map(|dx| (-4..=4).map(move |dz| (here.0 + dx, here.1, here.2 + dz)))
+            .filter(|&(x, y, z)| perch_block(view.block(x, y, z)) && view.block(x, y + 1, z) == 0)
+            .min_by_key(|&(x, _, z)| (x - here.0).pow(2) + (z - here.2).pow(2));
+        let block = found?;
+        let route = path::find(view, here, (block.0, block.1 + 1, block.2), path::MAX_NODES);
+
+        if route.is_empty() {
+            return None;
+        }
+
+        mob.tame.perch = Some(block);
+        mob.tame.perch_wait = 200;
+        mob.brain.go(route, 0.8);
+    }
+
+    let (bx, by, bz) = mob.tame.perch?;
+    mob.tame.perch_wait -= 1;
+
+    // Блок исчез или время вышло — отказ.
+    if mob.tame.perch_wait <= 0 || !perch_block(view.block(bx, by, bz)) {
+        mob.tame.perch = None;
+        mob.brain.stop();
+
+        return None;
+    }
+
+    // Пришла: на верху блока — садится.
+    if (mob.x - (f64::from(bx) + 0.5)).abs() < 0.7 && (mob.z - (f64::from(bz) + 0.5)).abs() < 0.7 && mob.y >= f64::from(by) + 0.5 {
+        mob.tame.perch = None;
+        mob.tame.perched = true;
+        mob.tame.sitting = true;
+        mob.brain.stop();
+
+        return Some(plan);
+    }
+
+    if !mob.brain.walking() {
+        mob.tame.perch = None;
+
+        return None;
+    }
+
+    Some(ai::walk(mob, plan))
 }
 
 /// Нападение: идти к цели, с 2–4 блоков прыгнуть, вблизи укусить.
@@ -719,6 +861,9 @@ pub fn apply_data(mob: &mut Mob, data: &str) {
 
     if let Some(rest) = data.split("Sitting:").nth(1) {
         mob.tame.ordered_sit = rest.starts_with('1') || rest.starts_with("true");
+        // Поза ставится сразу, и у NoAI тоже (чёрный ящик, cat-chest-block: 18=5 в такт призыва).
+        mob.tame.sitting = mob.tame.ordered_sit && mob.tame.tamed();
+        mob.tame.perched = false;
     }
 
     if let Some(rest) = data.split("CollarColor:").nth(1)

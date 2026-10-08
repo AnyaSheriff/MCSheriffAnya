@@ -1685,6 +1685,16 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
 
             Answer::saying(format!("Правило spawn_mobs: {}", value))
         }
+        ["spawn_monsters", value] => {
+            shared.spawn_monsters.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+
+            Answer::saying(format!("Правило spawn_monsters: {}", value))
+        }
+        ["spawn_phantoms" | "doInsomnia", value] => {
+            shared.spawn_phantoms.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+
+            Answer::saying(format!("Правило spawn_phantoms: {}", value))
+        }
         ["mob_griefing" | "mobGriefing", value] => {
             shared.mob_griefing.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
             Answer::saying(format!("Правило mob_griefing: {}", value))

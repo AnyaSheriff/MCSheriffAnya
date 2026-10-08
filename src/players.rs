@@ -294,6 +294,10 @@ pub struct Players {
     /// Броня, вторая рука и бой игроков (`Gear`).
     gear: HashMap<[u8; 16], Gear>,
 
+    /// Тактов с последнего сна (статистика time_since_rest): фантомам нужно
+    /// 72000 (вики, Phantom). Подключение обновляет его раз в такт и при сне.
+    rest: HashMap<[u8; 16], i32>,
+
     /// Такт последнего показанного взмаха каждого игрока.
     swung: HashMap<[u8; 16], u64>,
 
@@ -314,6 +318,7 @@ impl Players {
             changes: Journal::new(),
             orders: HashMap::new(),
             gear: HashMap::new(),
+            rest: HashMap::new(),
             swung: HashMap::new(),
             wakes: HashMap::new(),
             sleepers: HashMap::new(),
@@ -376,6 +381,7 @@ impl Players {
         self.members.retain(|member| &member.uuid != uuid);
         self.orders.remove(uuid);
         self.gear.remove(uuid);
+        self.rest.remove(uuid);
         self.swung.remove(uuid);
         self.wakes.remove(uuid);
         self.sleepers.remove(uuid);
@@ -572,6 +578,16 @@ impl Players {
         if let Some(member) = self.members.iter_mut().find(|member| &member.uuid == uuid) {
             member.sneaking = sneaking;
         }
+    }
+
+    /// Запоминает, сколько тактов игрок не спал.
+    pub fn set_rest(&mut self, uuid: &[u8; 16], ticks: i32) {
+        self.rest.insert(*uuid, ticks);
+    }
+
+    /// Сколько тактов игрок не спал (0, если не знаем).
+    pub fn rest(&self, uuid: &[u8; 16]) -> i32 {
+        self.rest.get(uuid).copied().unwrap_or(0)
     }
 
     /// Запоминает броню, вторую руку и бой игрока.

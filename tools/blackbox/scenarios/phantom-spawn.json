@@ -1,0 +1,42 @@
+{
+ "name": "phantom-spawn",
+ "about": "Выживание, сложная, время стоит (gamerule advance_time false), time_since_rest = 800000 (шанс попытки ≈ 91 %), полночь, робот на каменной площадке на высоте 70 (выше уровня моря, небо открыто), time_since_rest = 90000 (файл статистики заранее). Ждём 3600 тактов: первая попытка спавна — через 1200–2400 тактов после старта; смотрим, появляются ли фантомы, сколько, где (20–34 блока над игроком, ±10 по горизонтали), размер.",
+ "track_mobs": true,
+ "exclusive": true,
+ "pad_up": 60,
+ "pad_wide": 40,
+ "timeout_ms": 540000,
+ "origin": [100, 70, 100],
+ "blocks": [],
+ "setup": [
+  "difficulty hard",
+  "gamerule advance_time false",
+  "gamerule spawn_mobs true",
+  "time set midnight",
+  "gamemode survival $(bot)",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!wait 20",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [],
+ "record_ticks": 6500,
+ "cleanup": [
+  "kill @e[type=phantom,distance=..128]",
+  "kill @e[type=zombie,distance=..128]",
+  "kill @e[type=skeleton,distance=..128]",
+  "kill @e[type=creeper,distance=..128]",
+  "kill @e[type=spider,distance=..128]",
+  "kill @e[type=item,distance=..128]",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:air",
+  "gamerule advance_time true",
+  "gamerule spawn_mobs false",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!wait 4",
+  "!startfly",
+  "time set noon"
+ ]
+}

@@ -271,6 +271,7 @@ async fn run(shared: Arc<Shared>) {
             // команды).
             if dimension == Dimension::Overworld && std::mem::take(&mut morning_due) {
                 morning(&shared, &mut world);
+                morning_gifts(&shared, &world);
             }
 
             world.tick_weather(shared.advance_weather.load(std::sync::atomic::Ordering::Relaxed));
@@ -925,7 +926,9 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     let spawning = dimension == Dimension::Overworld && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed);
     // Враждебные в темноте — в Обычном мире и в Энде (там одни эндермены:
     // вики, Enderman, «Spawning»).
-    let hostile_spawning = matches!(dimension, Dimension::Overworld | Dimension::End | Dimension::Nether) && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed);
+    let hostile_spawning = matches!(dimension, Dimension::Overworld | Dimension::End | Dimension::Nether)
+        && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed)
+        && shared.spawn_monsters.load(std::sync::atomic::Ordering::Relaxed);
     let kinds = if dimension == Dimension::End { &crate::mob::spawn::END_HOSTILE[..] } else { &crate::mob::spawn::HOSTILE[..] };
     let mut natural: Vec<crate::mob::Mob> = Vec::new();
 
@@ -1034,6 +1037,44 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             }
         }
     }
+
+    // Фантомы: попытка раз в 1200–2400 тактов на мир (mob/phantom.rs).
+    if dimension == Dimension::Overworld && spawning && shared.spawn_monsters.load(std::sync::atomic::Ordering::Relaxed) && shared.spawn_phantoms.load(std::sync::atomic::Ordering::Relaxed) && difficulty > crate::survival::PEACEFUL {
+        let wait = shared.phantom_wait.fetch_sub(1, std::sync::atomic::Ordering::Relaxed) - 1;
+
+        if wait <= 0 {
+            shared.phantom_wait.store(crate::mob::phantom::WAIT_MIN + rng.below(crate::mob::phantom::WAIT_SPREAD) as i32, std::sync::atomic::Ordering::Relaxed);
+
+            // Ночь или гроза: небо темнее хотя бы на 5 (вики, Phantom).
+            let ambient = world.weather.spawn_sky(redstone::ambient_sky(time));
+
+            if 15 - ambient >= 5 {
+                let spots: Vec<crate::mob::phantom::Spot> = {
+                    let players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+                    players
+                        .members()
+                        .iter()
+                        .filter(|member| member.dimension == dimension && member.game_mode != 3)
+                        .map(|member| crate::mob::phantom::Spot { x: member.position.x, y: member.position.y, z: member.position.z, rest: players.rest(&member.uuid) })
+                        .collect()
+                };
+                let day = world.clock() / 24_000;
+                let regional = crate::mob::phantom::regional(difficulty, world.clock(), 0, crate::mob::phantom::moon_brightness(day));
+
+                for spot in spots {
+                    if let Some(at) = crate::mob::phantom::try_spot(&MobView(world), &spot, regional, rng) {
+                        for _ in 0..crate::mob::phantom::group_size(difficulty, rng) {
+                            items.add_mob(crate::mob::phantom::spawn(shared.next_entity_id(), at));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Кошки, что сидят: сундук под ними не открывается (mob/tame.rs).
+    world.sitting_cats = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Cat && mob.tame.sitting && !mob.is_dead()).map(|mob| (mob.x, mob.y, mob.z)).collect();
 
     if items.mobs().is_empty() {
         // Слежению есть о чём рассказать, пока у клиентов остались показанные
@@ -1990,12 +2031,48 @@ fn wake_sleepers(shared: &Shared) -> bool {
         return false;
     }
 
+    let mut gifts = shared.morning_gifts.lock().expect("подарки захвачены другим потоком");
+
     for uuid in players.sleepers() {
+        if let Some(member) = players.members().iter().find(|member| member.uuid == uuid) {
+            gifts.push((uuid, (member.position.x, member.position.y, member.position.z)));
+        }
+
         players.set_sleeping(&uuid, None);
         players.order(&uuid, crate::players::Order::WakeUp);
     }
 
     true
+}
+
+/// Подарки кошек: каждая ручная кошка проснувшегося хозяина в 10 блоках от кровати,
+/// что не сидит по приказу, с шансом 70 % кладёт подарок (вики, Cat, «Morning gifts»).
+fn morning_gifts(shared: &Shared, world: &World) {
+    let gifts: Vec<([u8; 16], (f64, f64, f64))> = std::mem::take(&mut *shared.morning_gifts.lock().expect("подарки захвачены другим потоком"));
+
+    if gifts.is_empty() {
+        return;
+    }
+
+    let mut rng = crate::mob::Rng::new(world.tick() ^ 0x05ee_dc47);
+    let mut items = shared.items_in(Dimension::Overworld).lock().expect("предметы захвачены другим потоком");
+    let mut cats: Vec<(f64, f64, f64)> = Vec::new();
+
+    for (owner, bed) in gifts {
+        for mob in items.mobs() {
+            let near = (mob.x - bed.0).powi(2) + (mob.y - bed.1).powi(2) + (mob.z - bed.2).powi(2) <= 100.0;
+
+            if mob.kind == crate::mob::Kind::Cat && mob.tame.owner == Some(owner) && !mob.tame.ordered_sit && !mob.is_dead() && near && rng.below(100) < 70 {
+                cats.push((mob.x, mob.y, mob.z));
+            }
+        }
+    }
+
+    for (x, y, z) in cats {
+        if let Some(item) = blocks::item_named(crate::mob::tame::morning_gift(&mut rng)) {
+            items.drop_item(shared.next_entity_id(), crate::inventory::Stack::new(item, 1), (x, y + 0.5, z), (0.0, 0.2, 0.0), items::MINED_DELAY);
+        }
+    }
 }
 
 /// Утро после сна: часы — на начало следующих суток, а дождь кончается и

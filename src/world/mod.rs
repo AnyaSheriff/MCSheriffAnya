@@ -1055,6 +1055,11 @@ pub struct World {
     /// Ключ имени виновника взрыва для сообщения о смерти (крипер): пусто — нет.
     pub blast_killer: &'static str,
 
+    /// Где сидят кошки (середина ног): сундук под сидящей кошкой не открывается
+    /// (вики, Cat: «A chest with a cat sitting on top of it becomes unusable»).
+    /// Обновляется каждый такт (tick.rs).
+    pub sitting_cats: Vec<(f64, f64, f64)>,
+
     /// Места, о которых клиентам скажут позже: (место, такт, как есть).
     /// «Как есть» — служебный блок не подменяется пустотой.
     late: Vec<((i32, i32, i32), u64, bool)>,
@@ -1342,6 +1347,7 @@ impl World {
             blast_source: 0,
             blast_by_player: false,
             blast_killer: "",
+            sitting_cats: Vec::new(),
             late: Vec::new(),
             chunks: HashMap::default(),
             events: Journal::new(),
@@ -1491,6 +1497,7 @@ impl World {
             blast_source: 0,
             blast_by_player: false,
             blast_killer: "",
+            sitting_cats: Vec::new(),
             late: Vec::new(),
             chunks: HashMap::default(),
             events: Journal::new(),
@@ -3500,6 +3507,14 @@ impl World {
 
         writer::write_file(TICKS, move || write_atomically(&path, TICKS, &text));
         self.ticks_written.set(print);
+    }
+
+    /// Сидит ли кошка на блоке: ящик кошки (0,6 × 0,7) задевает ящик над
+    /// блоком — как у оригинала, где сундук ищет кошек в ящике над собой.
+    pub fn cat_sits_above(&self, x: i32, y: i32, z: i32) -> bool {
+        let (fx, fy, fz) = (f64::from(x), f64::from(y + 1), f64::from(z));
+
+        self.sitting_cats.iter().any(|&(cx, cy, cz)| cx + 0.3 > fx && cx - 0.3 < fx + 1.0 && cy + 0.7 > fy && cy < fy + 1.0 && cz + 0.3 > fz && cz - 0.3 < fz + 1.0)
     }
 
     /// Который сейчас час в мире: такты суток, от 0 до 23 999.

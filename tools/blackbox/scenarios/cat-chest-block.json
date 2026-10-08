@@ -1,0 +1,51 @@
+{
+ "name": "cat-chest-block",
+ "about": "Сундук под сидящей кошкой не открывается (вики, Cat: «A chest with a cat sitting on top of it becomes unusable unless the cat is commanded to stand»). Щелчок в такте 2 — окно открывается; в 8-м призывается ручная кошка с приказом сидеть прямо на сундуке; щелчки в 40-м и 80-м — окна нет; в 100-м кошке велено встать (Sitting:0b, NoAI — на сундуке остаётся, но не сидит); щелчок в 130-м — окно открывается. Сама кошка на сундук за 260 тактов у оригинала не залезла (первая запись: окно открывалось все три раза), поэтому сидит по приказу.",
+ "track_mobs": true,
+ "timeout_ms": 200000,
+ "blocks": [
+  { "at": [2, 0, 0], "state": "minecraft:chest[facing=south]" }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(2.5,0,2.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 180 0"
+ ],
+ "actions": [
+  { "after": 2, "click": [2, 0, 0] },
+  { "after": 6, "close": true },
+  { "after": 8, "cmd": "summon cat $(2.5,1,0.5) {Silent:1b,NoAI:1b,Sitting:1b,Owner:[I;651459017,1212431114,-1168536378,1449273976],CollarColor:14b}" },
+  { "after": 40, "click": [2, 0, 0] },
+  { "after": 44, "close": true },
+  { "after": 80, "click": [2, 0, 0] },
+  { "after": 84, "close": true },
+  { "after": 100, "cmd": "data merge entity @e[type=cat,distance=..48,limit=1] {Sitting:0b,NoAI:0b}" },
+  { "after": 130, "click": [2, 0, 0] },
+  { "after": 134, "close": true }
+ ],
+ "record_ticks": 160,
+ "cleanup": [
+  "kill @e[type=cat,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "setblock $(2,0,0) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "движение кошки после «встать»",
+   "match": "^cart cat (скорость|сдвиг|сверка|поворот|entity_head_rotation)",
+   "range": [0, 200],
+   "anytick": true,
+   "why": "после Sitting:0b/NoAI:0b ИИ кошки оживает: прогулка и прыжки случайны (вики, Mob AI)"
+  }
+ ]
+}

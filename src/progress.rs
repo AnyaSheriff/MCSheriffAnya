@@ -198,6 +198,8 @@ impl Progress {
     /// Лёг в кровать.
     pub fn slept(&mut self) {
         self.stats.custom("sleep_in_bed", 1);
+        // Вики, Phantom: «Entering a bed … resets» время без сна.
+        self.stats.set_custom("time_since_rest", 0);
         self.adv.grant("adventure/sleep_in_bed", "slept_in_bed");
     }
 

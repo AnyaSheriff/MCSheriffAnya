@@ -5109,6 +5109,10 @@ fn note_criteria(shared: &Shared, player: &PlayerState, seen: &mut Option<[i32; 
 async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     if !player.vit.dead {
         player.progress.tick(player.sneaking);
+        // Фантомам нужно знать, сколько игрок не спал (src/mob/phantom.rs).
+        let rest = player.progress.stats.get(crate::stats::Cat::Custom, "time_since_rest");
+
+        shared.players.lock().expect("список игроков захвачен другим потоком").set_rest(&player.uuid, rest);
     }
 
     // Предметы у игрока: набор сверяется с таблицей «есть предмет».

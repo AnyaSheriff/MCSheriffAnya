@@ -248,6 +248,8 @@ fn properties(mob: &Mob) -> Vec<Property> {
         // неуязвим, детёныш; страйдер — ускорение, мёрзнет, седло.
         Kind::Blaze => out.push((16, TYPE_BYTE, vec![u8::from(mob.nether.charging)])),
         Kind::Ghast => out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.charging)])),
+        // Фантом: размер (свойство 16, по умолчанию 0) [проверить по чёрному ящику, phantom-swoop].
+        Kind::Phantom => out.push((16, TYPE_INT, encode_varint(mob.phantom.size))),
         Kind::MagmaCube | Kind::Slime => out.push((16, TYPE_INT, encode_varint(mob.nether.size.max(1)))),
         Kind::WitherSkeleton | Kind::Silverfish => {}
         Kind::ZombifiedPiglin => out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())])),
@@ -395,6 +397,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (16, Kind::IronGolem) => value.as_slice() == [0],
         (16, Kind::SnowGolem) => value.as_slice() == [0x10],
         (9, Kind::EndCrystal) => value.as_slice() == [1],
+        (16, Kind::Phantom) => value.as_slice() == [0],
         (16, Kind::MagmaCube | Kind::Slime) => value.as_slice() == encode_varint(1).as_slice(),
         (17..=19, Kind::Piglin | Kind::Hoglin | Kind::Strider) => value.iter().all(|byte| *byte == 0),
         (16, Kind::EnderDragon) => value.as_slice() == encode_varint(DRAGON_PHASE_HOVER).as_slice(),
@@ -538,7 +541,7 @@ async fn send_leash(stream: &mut Outgoing<'_>, entity_id: i32, holder: i32) -> i
 /// Скорость шага в пакете атрибутов: как у вида, но у шалкера, что не
 /// ходит, — 0,7, значение атрибута по умолчанию (чёрный ящик, shulker-stand).
 fn attribute_speed(kind: Kind) -> f64 {
-    if matches!(kind, Kind::Shulker | Kind::Ghast) { 0.7 } else { kind.speed() }
+    if matches!(kind, Kind::Shulker | Kind::Ghast | Kind::Phantom) { 0.7 } else { kind.speed() }
 }
 
 /// Атрибуты: сообщается одна скорость шага (у оригинала так же: клиенту
@@ -677,11 +680,11 @@ pub(super) async fn send_mob_event(
         Event::Status(status) => send_status(stream, entity_id, *status).await?,
         Event::Leash(holder) => send_leash(stream, entity_id, *holder).await?,
         Event::Sound { name, volume, pitch } if heard(at) => {
-            let category = if name.starts_with("minecraft:entity.slime.") { 5 } else { SOUND_NEUTRAL };
+            let category = if name.starts_with("minecraft:entity.slime.") || name.starts_with("minecraft:entity.phantom.") { 5 } else { SOUND_NEUTRAL };
             send_sound(stream, name, category, at, *volume, *pitch).await?;
         }
         Event::SoundAt { name, volume, pitch, at: place } if heard(*place) => {
-            let category = if name.starts_with("minecraft:entity.slime.") { 5 } else { SOUND_NEUTRAL };
+            let category = if name.starts_with("minecraft:entity.slime.") || name.starts_with("minecraft:entity.phantom.") { 5 } else { SOUND_NEUTRAL };
             send_sound(stream, name, category, *place, *volume, *pitch).await?;
         }
         Event::PlayerSound { name, at: place } if heard(*place) => send_sound(stream, name, SOUND_PLAYERS, *place, 1.0, 1.0).await?,

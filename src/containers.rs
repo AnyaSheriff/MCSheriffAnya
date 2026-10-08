@@ -554,7 +554,7 @@ pub fn can_open(world: &World, halves: &[Pos]) -> bool {
 
         match Kind::of(state) {
             // Эндер-сундук закрыт так же, как сундук (вики, Ender Chest).
-            Some(kind) if kind.is_chest() || kind == Kind::EnderChest => !blocks::conductive(world.get_block(x, y + 1, z)),
+            Some(kind) if kind.is_chest() || kind == Kind::EnderChest => !blocks::conductive(world.get_block(x, y + 1, z)) && !world.cat_sits_above(x, y, z),
             // Шулкер-ящик: крышке нужно место — полблока перед гранью
             // `facing` (вики, Shulker Box: «cannot be opened if … blocked»).
             // [проверить] нижняя плита сверху: у оригинала она мешает

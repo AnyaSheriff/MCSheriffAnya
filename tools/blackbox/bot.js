@@ -211,7 +211,7 @@ const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
 // Край: кристалл, дракон, его огненный шар и облако дыхания — пишутся как мобы.
-const MOB_TYPES = new Set(['oak_boat', 'spruce_boat', 'birch_boat', 'jungle_boat', 'acacia_boat', 'dark_oak_boat', 'mangrove_boat', 'cherry_boat', 'pale_oak_boat', 'bamboo_raft', 'oak_chest_boat', 'bamboo_chest_raft', 'fishing_bobber', 'cow', 'pig', 'sheep', 'chicken', 'zombie', 'drowned', 'husk', 'skeleton', 'creeper', 'spider', 'cave_spider', 'silverfish', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket', 'eye_of_ender', 'villager', 'wandering_trader', 'zombie_villager', 'blaze', 'wither_skeleton', 'magma_cube', 'ghast', 'zombified_piglin', 'piglin', 'piglin_brute', 'hoglin', 'strider', 'wolf', 'cat', 'leash_knot', 'small_fireball', 'fireball', 'iron_golem', 'snow_golem', 'snowball']);
+const MOB_TYPES = new Set(['oak_boat', 'spruce_boat', 'birch_boat', 'jungle_boat', 'acacia_boat', 'dark_oak_boat', 'mangrove_boat', 'cherry_boat', 'pale_oak_boat', 'bamboo_raft', 'oak_chest_boat', 'bamboo_chest_raft', 'fishing_bobber', 'cow', 'pig', 'sheep', 'chicken', 'zombie', 'drowned', 'husk', 'skeleton', 'creeper', 'spider', 'cave_spider', 'silverfish', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket', 'eye_of_ender', 'villager', 'wandering_trader', 'zombie_villager', 'blaze', 'wither_skeleton', 'magma_cube', 'ghast', 'zombified_piglin', 'piglin', 'piglin_brute', 'hoglin', 'strider', 'wolf', 'cat', 'leash_knot', 'small_fireball', 'fireball', 'iron_golem', 'snow_golem', 'snowball', 'phantom']);
 const padDrops = new Set();
 const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {
@@ -839,4 +839,4 @@ if (bot2) {
 }
 bot.on('error', (e) => { console.error('ошибка:', e.message); process.exit(1); });
 bot.on('message', (m) => { const s = m.toString(); if (s && (process.env.BB_CHAT || !/blackbox/.test(s))) console.error('  чат:', s); });
-setTimeout(() => { console.error('время вышло'); process.exit(1); }, 120000);
+setTimeout(() => { console.error('время вышло'); process.exit(1); }, scenario.timeout_ms || 120000);

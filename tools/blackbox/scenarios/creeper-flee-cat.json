@@ -1,0 +1,31 @@
+{
+ "name": "creeper-flee-cat",
+ "about": "Крипер с ИИ в 4 блоках от робота (выживание) и дикая кошка без ИИ в 2 блоках от крипера, между ним и роботом: крипер держится от кошек за 6 блоков (вики, Cat: «Creepers keep a distance of 6 blocks from any cat») — не идёт к роботу и не взрывается, отходит. Контроль — тот же крипер без кошки подходит и подрывается (сценарий creeper-explode).",
+ "track_mobs": true,
+ "track_self": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(0.5,0,0.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  { "after": 0, "cmd": "summon cat $(2.5,0,0.5) {NoAI:1b,Silent:1b}" },
+  { "after": 1, "cmd": "summon creeper $(4.5,0,0.5) {Silent:1b}" }
+ ],
+ "record_ticks": 200,
+ "cleanup": [
+  "kill @e[type=cat,distance=..48]",
+  "kill @e[type=creeper,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

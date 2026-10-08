@@ -21,6 +21,7 @@ pub mod golem;
 pub mod hostile;
 pub mod leash;
 pub mod nether;
+pub mod phantom;
 pub mod path;
 pub mod spawn;
 pub mod slime;
@@ -91,6 +92,8 @@ pub enum Kind {
     Wolf,
     /// Кошка (вики, Cat): приручается сырой рыбой, пугает криперов (mob/tame.rs).
     Cat,
+    /// Фантом (вики, Phantom): летает над игроком, что давно не спал, и пикирует (mob/phantom.rs).
+    Phantom,
     /// Узел поводка на заборе (вики, Lead, «Leash knot»): не живое, как
     /// кристалл, но в списке мобов — ради слежения (mob/leash.rs).
     LeashKnot,
@@ -103,7 +106,7 @@ pub enum Kind {
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 35] = [
+    pub const ALL: [Kind; 36] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -136,6 +139,7 @@ impl Kind {
         Kind::Husk,
         Kind::Wolf,
         Kind::Cat,
+        Kind::Phantom,
         Kind::LeashKnot,
         Kind::IronGolem,
         Kind::SnowGolem,
@@ -166,6 +170,7 @@ impl Kind {
                 | Kind::Piglin
                 | Kind::PiglinBrute
                 | Kind::Hoglin
+                | Kind::Phantom
         )
     }
 
@@ -222,6 +227,7 @@ impl Kind {
             "husk" => Kind::Husk,
             "wolf" => Kind::Wolf,
             "cat" => Kind::Cat,
+            "phantom" => Kind::Phantom,
             "leash_knot" => Kind::LeashKnot,
             "iron_golem" => Kind::IronGolem,
             "snow_golem" => Kind::SnowGolem,
@@ -263,6 +269,7 @@ impl Kind {
             Kind::Husk => "husk",
             Kind::Wolf => "wolf",
             Kind::Cat => "cat",
+            Kind::Phantom => "phantom",
             Kind::LeashKnot => "leash_knot",
             Kind::IronGolem => "iron_golem",
             Kind::SnowGolem => "snow_golem",
@@ -310,6 +317,8 @@ impl Kind {
             // (чёрный ящик, wolf-tame, cat-tame, lead-attach).
             Kind::Wolf => 148,
             Kind::Cat => 21,
+            // minecraft-data 26.1: phantom 99.
+            Kind::Phantom => 99,
             Kind::LeashKnot => 76,
             // minecraft-data 26.1, entities.json: iron_golem 70, snow_golem 121.
             Kind::IronGolem => 70,
@@ -357,6 +366,7 @@ impl Kind {
             // [Bedrock: потом] приручение, ошейник и узел поводка для клиента Bedrock.
             Kind::Wolf => "minecraft:wolf",
             Kind::Cat => "minecraft:cat",
+            Kind::Phantom => "minecraft:phantom",
             Kind::LeashKnot => "minecraft:leash_knot",
             // [Bedrock: потом] големы для клиента Bedrock: имена есть, свойств нет.
             Kind::IronGolem => "minecraft:iron_golem",
@@ -386,6 +396,7 @@ impl Kind {
             Kind::EnderDragon => 16.0,
             // minecraft-data: wolf 0,6 × 0,85, cat 0,6 × 0,7, leash_knot 0,375 × 0,5.
             Kind::Wolf | Kind::Cat => 0.6,
+            Kind::Phantom => 0.9,
             Kind::LeashKnot => 0.375,
             // minecraft-data: iron_golem 1,4 × 2,7, snow_golem 0,7 × 1,9.
             Kind::IronGolem => 1.4,
@@ -422,6 +433,7 @@ impl Kind {
             Kind::Strider => 1.7,
             Kind::Wolf => 0.85,
             Kind::Cat => 0.7,
+            Kind::Phantom => 0.5,
             Kind::LeashKnot => 0.5,
             Kind::IronGolem => 2.7,
             Kind::SnowGolem => 1.9,
@@ -461,6 +473,7 @@ impl Kind {
             // wolf-tame: 9=8, после приручения 9=40. Cat: 10 (cat-tame: 9=10).
             Kind::Wolf => 8.0,
             Kind::Cat => 10.0,
+            Kind::Phantom => 20.0,
             Kind::LeashKnot => 1.0,
             // Вики, Iron Golem: «Health points 100»; Snow Golem: «4».
             Kind::IronGolem => golem::IRON_HEALTH,
@@ -505,6 +518,7 @@ impl Kind {
             // Вики, «Attributes»: железный голем 0,25, снежный 0,2.
             Kind::IronGolem => 0.25,
             Kind::SnowGolem => 0.2,
+            Kind::Phantom => 0.0,
         }
     }
 
@@ -575,6 +589,7 @@ impl Kind {
             // состояния (`Mob::sounds`: злой рычит, раненый скулит, приручённая мурлычет).
             Kind::Wolf => ("minecraft:entity.wolf.ambient", "minecraft:entity.wolf.hurt", "minecraft:entity.wolf.death"),
             Kind::Cat => ("minecraft:entity.cat.stray_ambient", "minecraft:entity.cat.hurt", "minecraft:entity.cat.death"),
+            Kind::Phantom => ("minecraft:entity.phantom.ambient", "minecraft:entity.phantom.hurt", "minecraft:entity.phantom.death"),
             Kind::LeashKnot => ("", "", ""),
             // Вики, Iron Golem и Snow Golem, «Sounds»: у железного голоса в покое нет.
             Kind::IronGolem => ("", "minecraft:entity.iron_golem.hurt", "minecraft:entity.iron_golem.death"),
@@ -996,6 +1011,8 @@ pub struct Mob {
 
     /// Големы: цель, «построен игроком», тыква снежного (mob/golem.rs).
     pub golem: golem::State,
+    /// Фантом: размер, якорь кружения, пике (mob/phantom.rs).
+    pub phantom: phantom::State,
 }
 
 /// Бит в байте вида записи моба: за записью идёт общий хвост (имя, поводок).
@@ -1081,6 +1098,7 @@ impl Mob {
             leash: None,
             tame: tame::State { variant: tame::default_variant(kind), ..tame::State::default() },
             golem: golem::State::default(),
+            phantom: phantom::State::default(),
         }
     }
 
@@ -1144,6 +1162,8 @@ impl Mob {
             Kind::Blaze => 1.53,
             Kind::WitherSkeleton => 2.1,
             Kind::Ghast => 2.6,
+            // [проверить] высота глаз фантома.
+            Kind::Phantom => 0.175,
             Kind::Slime => self.size().1 * 0.625,
             Kind::Creeper => 1.445,
             Kind::Spider => 0.65,
@@ -1378,6 +1398,8 @@ impl Mob {
         // Шалкер сидит на грани: ни тяжести, ни шагов (вики, Shulker).
         if self.kind == Kind::Ghast && !self.is_dead() {
             nether::drift(self, view);
+        } else if self.kind == Kind::Phantom && !self.is_dead() {
+            phantom::fly(self, view);
         } else if self.kind != Kind::Shulker && !self.is_dead() {
             if self.kind == Kind::Blaze {
                 let eye = self.h.target.and_then(|id| ctx.players.iter().find(|player| player.id == id)).map(|player| player.y + player.eye);
@@ -1938,6 +1960,7 @@ impl Mob {
             Kind::LeashKnot => 30,
             Kind::IronGolem => 33,
             Kind::SnowGolem => 34,
+            Kind::Phantom => 35,
         } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -2016,6 +2039,7 @@ impl Mob {
             30 => Kind::LeashKnot,
             33 => Kind::IronGolem,
             34 => Kind::SnowGolem,
+            35 => Kind::Phantom,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -2256,6 +2280,12 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
             give("iron_ingot", 3, 5, rng);
         }
         Kind::SnowGolem => give("snowball", 0, 15, rng),
+        // Вики, Phantom: мембрана — 0–1 (+ «Looting»), только если убил игрок или прирученный волк.
+        Kind::Phantom => {
+            if mob.by_player {
+                give("phantom_membrane", 0, 1 + mob.looting, rng);
+            }
+        }
         Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager | Kind::Wolf | Kind::LeashKnot => {}
         // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
         Kind::Enderman => {
@@ -2742,6 +2772,11 @@ pub fn step_all(
         }
 
         if let Some(melee) = plan.melee {
+            // Укус фантома: событие мира 1039 в его клетке (чёрный ящик, phantom-swoop).
+            if mob.kind == Kind::Phantom {
+                outcome.level_events.push((mob.cell(), 1039));
+            }
+
             outcome.strikes.push(Strike { attacker: mob.entity_id, at: (mob.x, mob.y, mob.z), kind: mob.kind, melee });
         }
 

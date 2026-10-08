@@ -16,6 +16,9 @@ use crate::ops::Ops;
 use crate::players::Players;
 use crate::world::World;
 
+/// Место в мире: x, y, z.
+pub type Place = (f64, f64, f64);
+
 /// То, что видят все подключения сразу.
 ///
 /// **Порядок замков.** Если нужно держать несколько замков сразу, брать их
@@ -116,6 +119,17 @@ pub struct Shared {
     /// животные сами в новых чанках. Призванные командой — всегда.
     pub spawn_mobs: std::sync::atomic::AtomicBool,
 
+    /// Правила 26.1 `spawn_monsters` (враждебные сами) и `spawn_phantoms`
+    /// (фантомы ночью, вики, Phantom).
+    pub spawn_monsters: std::sync::atomic::AtomicBool,
+    pub spawn_phantoms: std::sync::atomic::AtomicBool,
+
+    /// Тактов до следующей попытки появления фантомов (mob/phantom.rs).
+    pub phantom_wait: std::sync::atomic::AtomicI32,
+
+    /// Кто только что проснулся и где (хозяева кошек ждут подарков, mob/tame.rs).
+    pub morning_gifts: std::sync::Mutex<Vec<([u8; 16], Place)>>,
+
     /// Правила чешуйниц: изменение блоков мобами и выход из заражённых блоков.
     pub mob_griefing: std::sync::atomic::AtomicBool,
     pub block_drops: std::sync::atomic::AtomicBool,
@@ -201,6 +215,10 @@ impl Shared {
             difficulty,
             keep_inventory: std::sync::atomic::AtomicBool::new(false),
             spawn_mobs: std::sync::atomic::AtomicBool::new(true),
+            spawn_monsters: std::sync::atomic::AtomicBool::new(true),
+            spawn_phantoms: std::sync::atomic::AtomicBool::new(true),
+            phantom_wait: std::sync::atomic::AtomicI32::new(0),
+            morning_gifts: std::sync::Mutex::new(Vec::new()),
             mob_griefing: std::sync::atomic::AtomicBool::new(true),
             block_drops: std::sync::atomic::AtomicBool::new(true),
             announce_advancements: std::sync::atomic::AtomicBool::new(true),

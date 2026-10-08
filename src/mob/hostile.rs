@@ -33,6 +33,7 @@ pub fn follow_range(kind: Kind) -> f64 {
         // Вики, Enderman: злится на взгляд с 64 блоков и гонится за целью там же.
         Kind::Enderman => 64.0,
         Kind::Blaze | Kind::Ghast => super::nether::follow_range(kind),
+        Kind::Phantom => 64.0,
         Kind::WitherSkeleton => 16.0,
         Kind::ZombifiedPiglin => 35.0,
         _ => 16.0,
@@ -103,6 +104,7 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Husk => "entity.minecraft.husk",
         Kind::Wolf => "entity.minecraft.wolf",
         Kind::Cat => "entity.minecraft.cat",
+        Kind::Phantom => "entity.minecraft.phantom",
         Kind::LeashKnot => "entity.minecraft.leash_knot",
         Kind::IronGolem => "entity.minecraft.iron_golem",
         Kind::SnowGolem => "entity.minecraft.snow_golem",
@@ -468,6 +470,11 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         _ => {}
     }
 
+    // Фантом летает по-своему (phantom.rs).
+    if mob.kind == Kind::Phantom {
+        return super::phantom::think(mob, view, ctx, rng, plan);
+    }
+
     // Мобы Незера думают в nether.rs.
     if mob.kind.nether() {
         return super::nether::think(mob, view, ctx, rng, plan);
@@ -505,7 +512,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     match mob.kind {
         Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Spider | Kind::CaveSpider | Kind::Silverfish => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
         Kind::Drowned => drowned(mob, view, ctx, &target, &mut plan, dist_sq, flat, sight, rng, grounded),
-        Kind::Creeper => creeper(mob, view, &target, &mut plan, dist_sq, sight, grounded),
+        Kind::Creeper => creeper(mob, view, ctx, &target, &mut plan, dist_sq, sight, grounded),
         Kind::Skeleton if mob.h.bow => skeleton(mob, view, ctx, &target, &mut plan, dist_sq, sight, rng, grounded),
         Kind::Skeleton => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
         Kind::Enderman => enderman_chase(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
@@ -733,7 +740,13 @@ pub fn swell(mob: &mut Mob, target: Option<(f64, bool)>, plan: &mut Plan) {
 }
 
 /// Крипер: идти к цели, пока запал не пошёл; во время запала стоит.
-fn creeper(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist_sq: f64, sight: bool, grounded: bool) {
+/// Крипер держится от кошек в 6 блоках, пока не запалён (вики, Cat: «Creepers
+/// keep a distance of 6 blocks from any cat»); ближе 7 — бегом [проверить:
+/// скорости 1,0 и 1,2 и точка бегства].
+pub const CAT_AVOID: f64 = 6.0;
+
+#[allow(clippy::too_many_arguments)]
+fn creeper(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &mut Plan, dist_sq: f64, sight: bool, grounded: bool) {
     swell(mob, Some((dist_sq, sight)), plan);
     ai::look_at_point(mob, target.x, target.y + target.eye, target.z);
 
@@ -742,7 +755,26 @@ fn creeper(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, di
         return;
     }
 
-    if grounded {
+    let cat = ctx
+        .mates
+        .iter()
+        .filter(|mate| mate.kind == Kind::Cat)
+        .map(|mate| (mate, dist2(mob, mate.x, mate.y, mate.z)))
+        .filter(|(_, dist)| *dist < CAT_AVOID * CAT_AVOID)
+        .min_by(|a, b| a.1.total_cmp(&b.1));
+
+    if let Some((cat, _)) = cat {
+        // Прочь от кошки: точка в 8 блоках по линии от неё.
+        if grounded && !mob.brain.walking() {
+            let (dx, dz) = (mob.x - cat.x, mob.z - cat.z);
+            let length = (dx * dx + dz * dz).sqrt().max(1.0e-6);
+            let here = mob.cell();
+            let away = ai::settle(view, (here.0 + (dx / length * 8.0).round() as i32, here.1, here.2 + (dz / length * 8.0).round() as i32), here.1);
+            let route = path::find(view, here, away, path::MAX_NODES);
+
+            mob.brain.go(route, 1.2);
+        }
+    } else if grounded {
         approach(mob, view, target, 1.0);
     }
 
@@ -832,7 +864,7 @@ pub fn burn(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, sun: bool)
 
     // Кадавр не горит (вики, Husk: «immune to burning in daylight»), утопленник горит
     // вне воды (вики, Drowned).
-    let burns = matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Skeleton) && !mob.h.helmet;
+    let burns = matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Skeleton | Kind::Phantom) && !mob.h.helmet;
 
     if sun && burns && ctx.sun_up && view.open_sky(x, y, z) && rng.below(SUN_CHANCE) == 0 {
         mob.vitals.ignite(SUN_FIRE_TICKS);
