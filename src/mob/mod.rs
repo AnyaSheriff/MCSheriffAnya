@@ -18,6 +18,7 @@ pub mod ai;
 pub mod arthropod;
 pub mod dragon;
 pub mod golem;
+pub mod guardian;
 pub mod hostile;
 pub mod leash;
 pub mod nether;
@@ -101,12 +102,16 @@ pub enum Kind {
     IronGolem,
     /// Снежный голем (вики, Snow Golem): кидает снежки во врагов (mob/golem.rs).
     SnowGolem,
+    /// Страж и древний страж (вики, Guardian, Elder Guardian): луч, шипы,
+    /// проклятие (mob/guardian.rs).
+    Guardian,
+    ElderGuardian,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 36] = [
+    pub const ALL: [Kind; 38] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -143,6 +148,8 @@ impl Kind {
         Kind::LeashKnot,
         Kind::IronGolem,
         Kind::SnowGolem,
+        Kind::Guardian,
+        Kind::ElderGuardian,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -171,6 +178,8 @@ impl Kind {
                 | Kind::PiglinBrute
                 | Kind::Hoglin
                 | Kind::Phantom
+                | Kind::Guardian
+                | Kind::ElderGuardian
         )
     }
 
@@ -231,6 +240,8 @@ impl Kind {
             "leash_knot" => Kind::LeashKnot,
             "iron_golem" => Kind::IronGolem,
             "snow_golem" => Kind::SnowGolem,
+            "guardian" => Kind::Guardian,
+            "elder_guardian" => Kind::ElderGuardian,
             _ => return None,
         })
     }
@@ -273,6 +284,8 @@ impl Kind {
             Kind::LeashKnot => "leash_knot",
             Kind::IronGolem => "iron_golem",
             Kind::SnowGolem => "snow_golem",
+            Kind::Guardian => "guardian",
+            Kind::ElderGuardian => "elder_guardian",
         }
     }
 
@@ -323,6 +336,9 @@ impl Kind {
             // minecraft-data 26.1, entities.json: iron_golem 70, snow_golem 121.
             Kind::IronGolem => 70,
             Kind::SnowGolem => 121,
+            // minecraft-data 26.1, entities.json.
+            Kind::Guardian => 63,
+            Kind::ElderGuardian => 40,
         }
     }
 
@@ -371,6 +387,8 @@ impl Kind {
             // [Bedrock: потом] големы для клиента Bedrock: имена есть, свойств нет.
             Kind::IronGolem => "minecraft:iron_golem",
             Kind::SnowGolem => "minecraft:snow_golem",
+            Kind::Guardian => "minecraft:guardian",
+            Kind::ElderGuardian => "minecraft:elder_guardian",
         }
     }
 
@@ -401,6 +419,9 @@ impl Kind {
             // minecraft-data: iron_golem 1,4 × 2,7, snow_golem 0,7 × 1,9.
             Kind::IronGolem => 1.4,
             Kind::SnowGolem => 0.7,
+            // minecraft-data 26.1: 0,85 и 1,9975.
+            Kind::Guardian => 0.85,
+            Kind::ElderGuardian => 1.9975,
             _ => 0.9,
         }
     }
@@ -437,6 +458,8 @@ impl Kind {
             Kind::LeashKnot => 0.5,
             Kind::IronGolem => 2.7,
             Kind::SnowGolem => 1.9,
+            Kind::Guardian => 0.85,
+            Kind::ElderGuardian => 1.9975,
         }
     }
 
@@ -478,6 +501,9 @@ impl Kind {
             // Вики, Iron Golem: «Health points 100»; Snow Golem: «4».
             Kind::IronGolem => golem::IRON_HEALTH,
             Kind::SnowGolem => golem::SNOW_HEALTH,
+            // Вики: страж 30, древний 80.
+            Kind::Guardian => 30.0,
+            Kind::ElderGuardian => 80.0,
         }
     }
 
@@ -519,6 +545,9 @@ impl Kind {
             Kind::IronGolem => 0.25,
             Kind::SnowGolem => 0.2,
             Kind::Phantom => 0.0,
+            // [проверить] атрибут скорости: страж 0,5, древний 0,3.
+            Kind::Guardian => 0.5,
+            Kind::ElderGuardian => 0.3,
         }
     }
 
@@ -594,6 +623,9 @@ impl Kind {
             // Вики, Iron Golem и Snow Golem, «Sounds»: у железного голоса в покое нет.
             Kind::IronGolem => ("", "minecraft:entity.iron_golem.hurt", "minecraft:entity.iron_golem.death"),
             Kind::SnowGolem => ("minecraft:entity.snow_golem.ambient", "minecraft:entity.snow_golem.hurt", "minecraft:entity.snow_golem.death"),
+            // Голоса в воде; на суше — свои (guardian::sounds).
+            Kind::Guardian => ("minecraft:entity.guardian.ambient", "minecraft:entity.guardian.hurt", "minecraft:entity.guardian.death"),
+            Kind::ElderGuardian => ("minecraft:entity.elder_guardian.ambient", "minecraft:entity.elder_guardian.hurt", "minecraft:entity.elder_guardian.death"),
         }
     }
 
@@ -1013,6 +1045,9 @@ pub struct Mob {
     pub golem: golem::State,
     /// Фантом: размер, якорь кружения, пике (mob/phantom.rs).
     pub phantom: phantom::State,
+
+    /// Стражи: луч, шипы, проклятие (mob/guardian.rs).
+    pub guardian: guardian::State,
 }
 
 /// Бит в байте вида записи моба: за записью идёт общий хвост (имя, поводок).
@@ -1099,6 +1134,7 @@ impl Mob {
             tame: tame::State { variant: tame::default_variant(kind), ..tame::State::default() },
             golem: golem::State::default(),
             phantom: phantom::State::default(),
+            guardian: guardian::State::default(),
         }
     }
 
@@ -1174,6 +1210,8 @@ impl Mob {
             // Ведьма — как игрок; шалкер смотрит из середины [проверить].
             Kind::Witch => 1.62,
             Kind::Shulker => 0.5,
+            // Страж смотрит из середины (вики, Guardian: луч из глаза) [проверить].
+            Kind::Guardian | Kind::ElderGuardian => self.size().1 * 0.5,
             _ => self.size().1 * 0.85,
         }
     }
@@ -1193,6 +1231,10 @@ impl Mob {
     pub fn sounds(&self) -> (&'static str, &'static str, &'static str) {
         if matches!(self.kind, Kind::Wolf | Kind::Cat) {
             return tame::sounds(self);
+        }
+
+        if guardian::guardian(self.kind) {
+            return guardian::sounds(self);
         }
 
         if self.kind == Kind::Drowned && self.h.wet {
@@ -1249,6 +1291,11 @@ impl Mob {
         }
 
         self.vitals.tick_invulnerable();
+
+        // Страж: в воде ли — и без ИИ (голоса суши и воды).
+        if guardian::guardian(self.kind) {
+            guardian::sense(self, view);
+        }
 
         // Зомби и кадавр: голова 30 секунд в воде — 15 секунд трясётся — и они
         // утопленник и зомби (вики, Drowned, «Spawning»; Husk; чёрный ящик,
@@ -1385,6 +1432,8 @@ impl Mob {
             tame::think(self, view, ctx, rng)
         } else if golem::golem(self.kind) {
             golem::think(self, view, ctx, rng)
+        } else if guardian::guardian(self.kind) {
+            guardian::think(self, view, ctx, rng)
         } else {
             ai::think(self, view, ctx, rng)
         };
@@ -1400,6 +1449,8 @@ impl Mob {
             nether::drift(self, view);
         } else if self.kind == Kind::Phantom && !self.is_dead() {
             phantom::fly(self, view);
+        } else if guardian::guardian(self.kind) && !self.is_dead() {
+            guardian::physics(self, view, rng);
         } else if self.kind != Kind::Shulker && !self.is_dead() {
             if self.kind == Kind::Blaze {
                 let eye = self.h.target.and_then(|id| ctx.players.iter().find(|player| player.id == id)).map(|player| player.y + player.eye);
@@ -1900,6 +1951,8 @@ impl Mob {
             self.pending_xp = if slime::cube(self.kind) {
                 // Вики, Magma Cube: опыт равен размеру (чёрный ящик, magma-cube-stand).
                 self.nether.size
+            } else if guardian::guardian(self.kind) {
+                guardian::XP
             } else if self.kind.hostile() {
                 let worn = u32::from(self.h.bow) + u32::from(self.h.helmet);
 
@@ -1961,6 +2014,8 @@ impl Mob {
             Kind::IronGolem => 33,
             Kind::SnowGolem => 34,
             Kind::Phantom => 35,
+            Kind::Guardian => 36,
+            Kind::ElderGuardian => 37,
         } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -2040,6 +2095,8 @@ impl Mob {
             33 => Kind::IronGolem,
             34 => Kind::SnowGolem,
             35 => Kind::Phantom,
+            36 => Kind::Guardian,
+            37 => Kind::ElderGuardian,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -2286,6 +2343,7 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
                 give("phantom_membrane", 0, 1 + mob.looting, rng);
             }
         }
+        Kind::Guardian | Kind::ElderGuardian => guardian::loot(mob, rng, &mut give),
         Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager | Kind::Wolf | Kind::LeashKnot => {}
         // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
         Kind::Enderman => {
@@ -2631,6 +2689,9 @@ pub struct Outcome {
 
     /// Клетки, куда снежные големы кладут снег (если разрешено mobGriefing).
     pub snow: Vec<(i32, i32, i32)>,
+
+    /// Проклятия древних стражей: игрок и тихий ли страж (mob/guardian.rs).
+    pub curses: Vec<(i32, bool)>,
 }
 
 /// Удар моба в ближнем бою.
@@ -2769,6 +2830,10 @@ pub fn step_all(
                     outcome.strikes.push(Strike { attacker: mob.entity_id, at: (mob.x, mob.y, mob.z), kind: mob.kind, melee });
                 }
             }
+        }
+
+        for player in std::mem::take(&mut mob.guardian.cursed) {
+            outcome.curses.push((player, mob.silent));
         }
 
         if let Some(melee) = plan.melee {

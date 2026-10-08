@@ -972,6 +972,12 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 let kinds_at = |x: i32, y: i32, z: i32| {
                     let wet = crate::mob::is_water(world.get_block(x, y, z));
 
+                    // В воде в рамке подводной крепости — стражи (вики, Guardian,
+                    // «Spawning»: «only in ocean monuments»).
+                    if wet && world.in_monument(x, y, z) {
+                        return crate::mob::spawn::MONUMENT.to_vec();
+                    }
+
                     crate::mob::spawn::overworld_kinds(world.surface_biome(x, z), wet)
                 };
 
@@ -986,7 +992,11 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 let (sky, block) = world.light_full(x, y, z);
                 let sky = (i32::from(sky) - (15 - ambient).max(0)).max(0) as u8;
 
-                if mob.kind == crate::mob::Kind::Slime {
+                if mob.kind == crate::mob::Kind::Guardian {
+                    // Стражу свет не нужен; под открытым небом — 1 к 20 (вики,
+                    // Guardian: «spawning fails 95% of the time») [проверить].
+                    !world.open_sky(x, y, z) || rng.below(20) == 0
+                } else if mob.kind == crate::mob::Kind::Slime {
                     crate::mob::slime::can_spawn(world.seed(), (x, y, z), world.mob_biome(x, y, z), sky.max(block), world.clock(), rng)
                 } else if dimension == Dimension::Overworld && matches!(world.mob_biome(x, y, z), "mushroom_fields" | "deep_dark") {
                     false
@@ -1009,6 +1019,21 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     }
 
     step_spawners(shared, world, &mut items, &watchers, difficulty, shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed), skyless, time, rng);
+
+    // Древние стражи подводных крепостей: при сложении чанка, по три на
+    // крепость (вики, Elder Guardian: «spawned with the ocean monument»;
+    // замер, monument.rs), не исчезают.
+    if dimension == Dimension::Overworld {
+        for (chunk_x, chunk_z) in &fresh {
+            for at in world.monument_elders(*chunk_x, *chunk_z) {
+                let mut elder = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::ElderGuardian, at);
+
+                elder.persistent = true;
+                elder.persistent_tag = true;
+                items.add_mob(elder);
+            }
+        }
+    }
 
     // Шалкеры энд-городов: при сложении чанка, на местах стражей
     // (end_city::sentries) — к соседней твёрдой грани.
@@ -1112,7 +1137,8 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         world.note_mob_hurt(
             strike.melee.target,
             strike.melee.damage,
-            crate::survival::Source::MobAttack,
+            // Луч стража — магия от существа (mob/guardian.rs).
+            if crate::mob::guardian::guardian(strike.kind) { crate::survival::Source::IndirectMagic } else { crate::survival::Source::MobAttack },
             strike.attacker,
             crate::mob::hostile::killer_key(strike.kind),
             Some(strike.melee.push),
@@ -1136,6 +1162,11 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 world.note_mob_hit_effect(strike.melee.target, hunger);
             }
         }
+    }
+
+    // Проклятия древних стражей (mob/guardian.rs).
+    for (player, silent) in outcome.curses {
+        world.note_elder_curse(player, silent);
     }
 
     // Превращения зомби: звук события мира (вики, Drowned).

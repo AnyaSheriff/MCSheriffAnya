@@ -1,0 +1,70 @@
+{
+ "name": "guardian-beam",
+ "about": "Страж с ИИ в пруду 5×3×5, робот в выживании на столбике у берега: страж берёт цель (метаданные 17), событие 21 (звук атаки), луч заряжается и бьёт; урон по сложности normal.",
+ "track_mobs": true,
+ "track_self": true,
+ "exclusive": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "tp $(bot) $(4.5,2,7.5)",
+  "!wait 5",
+  "fill $(0,-3,0) $(8,-1,8) minecraft:stone",
+  "fill $(2,-3,0) $(6,-1,4) minecraft:water",
+  "setblock $(4,0,6) minecraft:stone",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(4.5,1,6.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 180 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon guardian $(4.5,-2,2.5) {Silent:1b}"
+  }
+ ],
+ "record_ticks": 260,
+ "cleanup": [
+  "kill @e[type=guardian,distance=..48]",
+  "kill @e[type=elder_guardian,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(0,0,0) $(8,1,8) minecraft:air",
+  "fill $(0,-3,0) $(8,-2,8) minecraft:stone",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "плавание и взгляд стража",
+   "match": "^(cart guardian|meta 16=)",
+   "range": [
+    0,
+    1000
+   ],
+   "anytick": true,
+   "why": "страж плывёт и вертит головой случайно; оригинал против оригинала: 16=true на +4 и +2 после выстрела, повороты головы в разные такты"
+  },
+  {
+   "type": "count",
+   "name": "захват цели и выстрел",
+   "match": "^(meta (16=\\S+ )?17=|sv |self )",
+   "range": [
+    0,
+    300
+   ],
+   "anytick": true,
+   "why": "захват цели случаен: оригинал против оригинала — 17=номер на +30 и +21 от призыва, повторный захват через 33 и 19 тактов; выстрел — всегда через 79 тактов после 17, урон 6 (type=23), толчок (0; 0,275; 0,218)"
+  }
+ ]
+}

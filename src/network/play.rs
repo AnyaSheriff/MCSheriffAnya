@@ -417,6 +417,10 @@ const ON_GROUND_FLAG: u8 = 0x01;
 
 /// Clientbound Game Event.
 const GAME_EVENT: i32 = 0x26;
+
+/// Событие игры 10: появление древнего стража (вики, Java Edition protocol,
+/// Game Event: «Play elder guardian mob appearance»; чёрный ящик, elder-fatigue).
+const GAME_EVENT_ELDER_CURSE: u8 = 10;
 const SET_HEALTH: i32 = 0x68;
 
 /// Clientbound Set Center Chunk.
@@ -4212,6 +4216,30 @@ async fn send_pending_world_events(
                 write_body(stream, body).await?;
             }
             WorldEvent::GameEvent { .. } => {}
+            // Древний страж: только выживание и приключение, и не тем, у кого
+            // «Утомление» III ещё на минуту и дольше (вики, Elder Guardian);
+            // эффект, потом событие 10 (чёрный ящик, elder-fatigue).
+            WorldEvent::ElderCurse { entity_id, silent } if *entity_id == player.entity_id => {
+                let fatigued = player.vit.effects.iter().any(|effect| {
+                    effect.kind == crate::survival::EffectKind::MiningFatigue && effect.amplifier >= crate::mob::guardian::CURSE_AMPLIFIER && effect.ticks_left >= crate::mob::guardian::CURSE_EVERY as i32
+                });
+
+                if matches!(player.game_mode, GAME_MODE_SURVIVAL | GAME_MODE_ADVENTURE) && !fatigued && !player.vit.dead {
+                    let curse = crate::survival::Effect {
+                        kind: crate::survival::EffectKind::MiningFatigue,
+                        amplifier: crate::mob::guardian::CURSE_AMPLIFIER,
+                        ticks_left: crate::mob::guardian::CURSE_TICKS,
+                        ambient: false,
+                        visible: true,
+                    };
+
+                    vitals::give_effect(stream, player, curse).await?;
+                    // Скорость удара уходит на такт позже эффекта (elder-fatigue).
+                    player.attrs_touched.push((crate::attributes::ATTACK_SPEED, *shared.ticks.borrow() + 1));
+                    send_game_event(stream, GAME_EVENT_ELDER_CURSE, if *silent { 0.0 } else { 1.0 }).await?;
+                }
+            }
+            WorldEvent::ElderCurse { .. } => {}
             WorldEvent::Weather { reason, value } => send_game_event(stream, *reason, *value).await?,
             WorldEvent::Struck { entity_id } if *entity_id == player.entity_id => vitals::struck(stream, shared, player).await?,
             WorldEvent::Struck { .. } => {}
@@ -7448,6 +7476,15 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
         mob.events.push(crate::mob::Event::PlayerSound { name: "minecraft:entity.player.attack.knockback", at: (player.x, player.y, player.z) });
     }
 
+    // Шипы стража: ударившего вплотную колет раньше, чем страж получит урон
+    // (вики, Guardian, «Spikes defense»; чёрный ящик, guardian-spikes);
+    // ставятся в очередь, когда склад мобов отпущен (замки мира — до склада).
+    let spikes = crate::mob::guardian::spikes_out(mob).then_some(((mob.x, mob.y, mob.z), mob.entity_id));
+
+    if spikes.is_some() {
+        mob.events.push(crate::mob::Event::PlayerSound { name: "minecraft:enchant.thorns.hit", at: (player.x, player.y, player.z) });
+    }
+
     let hit = if mob.kind == crate::mob::Kind::EnderDragon {
         mob.hurt_part(damage, head, source, Some(push))
     } else {
@@ -7544,6 +7581,10 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
 
     items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
     drop(items);
+
+    if let Some((at, guardian)) = spikes {
+        pvp::guardian_spikes(shared, player, at, guardian);
+    }
 
     // Оружие изнашивается и об мобов, как об игроков (pvp::strike_player):
     // износ меняет вещь в руке, и её атрибуты уходят клиенту заново

@@ -597,6 +597,45 @@ pub(super) fn sweep_mobs(items: &mut crate::items::Items, player: &PlayerState, 
     }
 }
 
+/// Шипы стража (вики, Guardian, «Spikes defense»: 2 урона ударившему в
+/// ближнем бою): как шипы брони — урон вида thorns в очередь ударов и толчок
+/// прочь от стража (чёрный ящик,
+/// guardian-spikes: (0; 0,361; −0,4)).
+pub(super) fn guardian_spikes(shared: &Shared, player: &mut PlayerState, guardian_at: (f64, f64, f64), guardian: i32) {
+    let at = (player.x, player.y, player.z);
+    let toward = (guardian_at.2 - player.z).atan2(guardian_at.0 - player.x).to_degrees() as f32;
+    let amount = crate::mob::guardian::SPIKES;
+    let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+    let mut probe = player.vit.clone();
+    let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
+    let announced = probe.hurt(amount, Source::Thorns, immune).is_some();
+
+    if announced {
+        let (type_id, culprit, direct) = vitals::damage_fields(Source::Thorns, guardian, 0);
+
+        world.note_player_damaged(player.entity_id, type_id, culprit, direct);
+        player.net.announced_health = Some(probe.health);
+        shared.players.lock().expect("список игроков захвачен другим потоком").set_health(&player.uuid, probe.health);
+        world.note_sound_player_except(at, "minecraft:entity.player.hurt", 1.0, 1.0, player.entity_id);
+    }
+
+    // Звук шипов ушёл раньше — событием стража (play.rs, strike_mob).
+    drop(world);
+
+    let away = (player.x - guardian_at.0, player.z - guardian_at.2);
+    let length = away.0.hypot(away.1);
+
+    player.net.hits.push(vitals::Pending {
+        amount,
+        source: Source::Thorns,
+        direct: guardian,
+        hurt_yaw: Some((toward - player.yaw).rem_euclid(360.0)),
+        push: Some(if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { crate::mob::look_direction(player.yaw) }),
+        announced,
+        killer: None,
+    });
+}
+
 /// Бросает шипы жертвы по её опубликованным уровням: сработавшим кладёт урон
 /// в очередь ударов нападающего; возвращает слоты сработавших.
 fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players::CombatView, victim_at: (f64, f64, f64), victim: i32) -> Vec<i32> {

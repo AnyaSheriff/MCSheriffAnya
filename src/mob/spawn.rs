@@ -235,6 +235,10 @@ pub fn nether_kinds(biome: &str) -> &'static [(Kind, u32)] {
 /// Крепость Незера: на кирпиче крепости (вики, Nether Fortress, «Mob spawning»).
 pub const FORTRESS: [(Kind, u32); 5] = [(Kind::Blaze, 10), (Kind::ZombifiedPiglin, 5), (Kind::WitherSkeleton, 8), (Kind::Skeleton, 2), (Kind::MagmaCube, 3)];
 
+/// Подводная крепость: стражи в воде её рамки (вики, Guardian, «Spawning»;
+/// группа 2–4 [проверить]).
+pub const MONUMENT: [(Kind, u32); 1] = [(Kind::Guardian, 1)];
+
 /// Энд: одни эндермены (вики, Enderman, «Spawning»).
 pub const END_HOSTILE: [(Kind, u32); 1] = [(Kind::Enderman, 10)];
 
@@ -373,7 +377,9 @@ pub fn hostile_attempt_in(
         // Разброс пачки: сумма двух равномерных — «треугольный», до 5 блоков.
         let (gx, gz) = (x + rng.below(6) as i32 - rng.below(6) as i32, z + rng.below(6) as i32 - rng.below(6) as i32);
 
-        let spot_ok = if kind == Kind::Drowned { wet_spot(view, gx, y, gz) } else { spawnable(view, gx, y, gz, block_height) };
+        let spot_ok = if kind == Kind::Guardian {
+            super::is_water(view.block(gx, y, gz)) && super::is_water(view.block(gx, y + 1, gz))
+        } else if kind == Kind::Drowned { wet_spot(view, gx, y, gz) } else { spawnable(view, gx, y, gz, block_height) };
 
         if !view.loaded(gx.div_euclid(16), gz.div_euclid(16)) || !spot_ok {
             continue;

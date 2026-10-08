@@ -1,0 +1,56 @@
+{
+ "name": "guardian-spikes",
+ "about": "Страж NoAI на суше (шипы выставлены, не движется); робот в выживании бьёт деревянным мечом 4 раза: урон стражу и шипы по роботу (2 на normal), звуки суши.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "tp $(bot) $(3.5,2,0.5)",
+  "!wait 5",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "give $(bot) minecraft:wooden_sword 1",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon guardian $(3.5,0,2.5) {NoAI:1b}"
+  },
+  {
+   "after": 20,
+   "attack": true
+  },
+  {
+   "after": 45,
+   "attack": true
+  },
+  {
+   "after": 70,
+   "attack": true
+  },
+  {
+   "after": 95,
+   "attack": true
+  }
+ ],
+ "record_ticks": 150,
+ "cleanup": [
+  "kill @e[type=guardian,distance=..48]",
+  "kill @e[type=elder_guardian,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

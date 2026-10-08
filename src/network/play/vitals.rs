@@ -979,7 +979,7 @@ pub(super) fn damage_fields(source: Source, direct: i32, cause: i32) -> (i32, i3
     // крипера — он сам (чёрный ящик: cause=entity); у динамита и прочего — нет.
     let culprit = if cause != 0 {
         cause + 1
-    } else if matches!(source, Source::MobAttack | Source::Arrow | Source::Trident | Source::PlayerExplosion | Source::Thorns) && direct != 0 {
+    } else if matches!(source, Source::MobAttack | Source::Arrow | Source::Trident | Source::PlayerExplosion | Source::Thorns | Source::IndirectMagic) && direct != 0 {
         direct + 1
     } else {
         0
@@ -2282,7 +2282,9 @@ pub(super) fn apply_effect_modifiers(player: &mut PlayerState) {
         let Some((attribute, id, per_level, operation)) = kind.modifier() else { continue };
 
         match player.vit.effects.iter().find(|effect| effect.kind == kind) {
-            Some(effect) => player.attrs.set_modifier(attribute, Modifier::new(id, f64::from(per_level as f32 * (effect.amplifier + 1) as f32), operation)),
+            // Множитель уровня — в двойной точности (чёрный ящик, elder-fatigue:
+            // «Утомление» III — −0,30000000447 = 3·(−0,1f), а не −0,3000000119).
+            Some(effect) => player.attrs.set_modifier(attribute, Modifier::new(id, f64::from(per_level as f32) * f64::from(effect.amplifier + 1), operation)),
             None => player.attrs.remove_modifier(attribute, id),
         }
     }

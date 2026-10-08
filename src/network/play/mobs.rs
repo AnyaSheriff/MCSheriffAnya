@@ -174,7 +174,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
     }
     // «Агрессивен» (бит 4) у эндермена и шалкера не ставится: у первого
     // злость — свойство 17 (чёрный ящик, enderman-stare, shulker-ai).
-    let aggressive = u8::from((mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube) && mob.h.target.is_some()) || (mob.kind == Kind::Wolf && mob.tame.melee) || (mob.kind == Kind::IronGolem && mob.golem.target.is_some())) << 2;
+    let aggressive = u8::from((mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube | Kind::Guardian | Kind::ElderGuardian) && mob.h.target.is_some()) || (mob.kind == Kind::Wolf && mob.tame.melee) || (mob.kind == Kind::IronGolem && mob.golem.target.is_some())) << 2;
     let mut out: Vec<Property> = vec![
         (0, TYPE_BYTE, vec![fire]),
         (2, TYPE_OPT_COMPONENT, custom_name(mob)),
@@ -283,6 +283,12 @@ fn properties(mob: &Mob) -> Vec<Property> {
         // ящик, iron-golem-build: 16=1 у построенного, snow-golem-shear: 16=0
         // после ножниц).
         Kind::IronGolem | Kind::SnowGolem => out.push((16, TYPE_BYTE, vec![crate::mob::golem::flags(mob)])),
+        // Страж (вики, Entity metadata: 16 — «is retracting spikes», 17 — номер
+        // цели луча; чёрный ящик, guardian-beam: 17=номер робота при захвате).
+        Kind::Guardian | Kind::ElderGuardian => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.guardian.moving)]));
+            out.push((17, TYPE_INT, encode_varint(mob.guardian.target.unwrap_or(0))));
+        }
         // Волк (minecraft-data: flags, owneruuid, interested, collar_color,
         // anger_end_time, variant, sound_variant; чёрный ящик, wolf-tame,
         // wolf-defend, probe-cats). Голос — всегда обычный [проверить: у
@@ -395,6 +401,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (20, Kind::Cat) => value.as_slice() == encode_varint(i32::from(crate::mob::tame::CAT_DEFAULT)).as_slice(),
         (8, Kind::EndCrystal | Kind::Drowned) => value.as_slice() == [0],
         (16, Kind::IronGolem) => value.as_slice() == [0],
+        (16 | 17, Kind::Guardian | Kind::ElderGuardian) => value.as_slice() == [0],
         (16, Kind::SnowGolem) => value.as_slice() == [0x10],
         (9, Kind::EndCrystal) => value.as_slice() == [1],
         (16, Kind::Phantom) => value.as_slice() == [0],

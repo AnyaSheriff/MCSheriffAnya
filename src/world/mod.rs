@@ -28,6 +28,7 @@ pub mod nether_fortress;
 pub mod end_city;
 pub mod stronghold;
 pub mod village;
+pub mod monument;
 pub mod the_end;
 pub mod noise;
 pub mod ocean;
@@ -296,6 +297,9 @@ pub enum WorldEvent {
     /// Game Event одному игроку (6 — стрела попала в игрока: стрелку звук
     /// попадания; чёрный ящик, pvp-bow-power).
     GameEvent { entity_id: i32, reason: u8, value: f32 },
+    /// Проклятие древнего стража игроку `entity_id`: «Утомление» III и событие
+    /// игры 10 (mob/guardian.rs); у тихого стража — без звука.
+    ElderCurse { entity_id: i32, silent: bool },
 
     /// Game Event погоды всем игрокам мира (weather.rs).
     Weather { reason: u8, value: f32 },
@@ -643,6 +647,9 @@ impl Chunk {
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         village::build(generator, &mut chunk, chunk_x, chunk_z);
         ocean::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
+        // Подводные крепости — после украшений океана: в рамке всё уходит под
+        // воду и призмарин (monument.rs).
+        monument::build(generator, &mut chunk, chunk_x, chunk_z);
         cave_biomes::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns, grid.as_ref());
 
         // Свет — когда все блоки на местах.
@@ -2410,6 +2417,10 @@ impl World {
     }
 
     /// Game Event игроку `entity_id`.
+    pub fn note_elder_curse(&mut self, entity_id: i32, silent: bool) {
+        self.events.push(WorldEvent::ElderCurse { entity_id, silent });
+    }
+
     pub fn note_game_event(&mut self, entity_id: i32, reason: u8, value: f32) {
         self.events.push(WorldEvent::GameEvent { entity_id, reason, value });
     }
@@ -3595,6 +3606,11 @@ impl World {
             return stronghold::nearest(terrain, chunk_x, chunk_z);
         }
 
+        // Подводные крепости — по областям 32×32 чанка (monument.rs).
+        if let (Generator::Normal(terrain), "monument") = (&*self.generator, name) {
+            return monument::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / monument::SPACING + 1);
+        }
+
         // Деревни — по областям 34×34 чанка (village.rs).
         if let (Generator::Normal(terrain), Some(kind)) = (&*self.generator, name.strip_prefix("village_").and_then(|kind| village::Kind::ALL.into_iter().find(|known| known.name() == kind))) {
             return village::nearest(terrain, kind, chunk_x, chunk_z, regions.max(1) * 27 / village::SPACING + 1);
@@ -3705,6 +3721,22 @@ impl World {
     /// Энд ли это: ни солнца, ни неба.
     pub fn is_end(&self) -> bool {
         self.kind == WorldKind::End
+    }
+
+    /// Древние стражи подводных крепостей в только что сложенном чанке.
+    pub fn monument_elders(&self, chunk_x: i32, chunk_z: i32) -> Vec<(f64, f64, f64)> {
+        match &*self.generator {
+            Generator::Normal(terrain) => monument::elders(terrain, chunk_x, chunk_z),
+            _ => Vec::new(),
+        }
+    }
+
+    /// В рамке ли подводной крепости клетка (правило появления стражей).
+    pub fn in_monument(&self, x: i32, y: i32, z: i32) -> bool {
+        match &*self.generator {
+            Generator::Normal(terrain) => monument::inside(terrain, x, y, z),
+            _ => false,
+        }
     }
 
     /// Шалкеры энд-городов в только что сложенном чанке (в прочих мирах — нет).
