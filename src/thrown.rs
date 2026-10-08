@@ -505,7 +505,18 @@ fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uu
             continue;
         }
 
-        // Мобы обычных эффектов пока не носят [проверить].
+        // Членистоногие: яд чешуйницы зовёт соседей; пауки к яду невосприимчивы.
+        if let Struck::Mob(id) = target {
+            if let Some(mob) = mobs.iter_mut().find(|mob| mob.entity_id == id)
+                && matches!(mob.kind, crate::mob::Kind::CaveSpider | crate::mob::Kind::Silverfish)
+                && !(mob.kind.spider() && effect.kind == EffectKind::Poison)
+                && let Some(ticks) = scaled_ticks(effect.ticks_left, scale * duration_scale)
+            {
+                mob.vitals.give_effect_shown(Effect { ticks_left: ticks, ..*effect });
+            }
+            continue;
+        }
+
         let Struck::Player(id) = target else { continue };
         let Some(ticks) = scaled_ticks(effect.ticks_left, scale * duration_scale) else { continue };
 

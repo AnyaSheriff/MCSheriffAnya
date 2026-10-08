@@ -58,6 +58,8 @@ use crate::world::light::{ChunkLight, LightJob, LightSection};
 use crate::world::{self, World, WorldEvent, WorldSound};
 use crate::{log_debug, log_error, log_info};
 
+#[cfg(test)]
+mod arthropod_tests;
 mod vitals;
 mod mobs;
 mod merchant;
@@ -4129,6 +4131,7 @@ async fn send_pending_world_events(
             WorldEvent::Tracker => {
                 mobs::send_mob_ticks(stream, shared, player).await?;
             }
+            WorldEvent::MobSpawn(mob) => mobs::send_released_mob(stream, shared, player, mob).await?,
             WorldEvent::ArrowTracker => bow::send_arrow_ticks(stream, shared, player).await?,
             WorldEvent::ThrownTracker { early } => thrown::send_thrown_ticks(stream, shared, player, *early).await?,
             WorldEvent::RocketBlast { entity_id } => thrown::send_rocket_blast(stream, player, *entity_id).await?,
@@ -7987,6 +7990,9 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     // В творческом блок ломается сразу. В выживании — когда клиент докопал,
     // а мгновенные (трава, цветы, факелы) — на «начал копать»: «докопал»
     // для них клиент не шлёт вовсе.
+    // Заражённые блоки не мгновенны: вики, Infested Block — с 1.17 твёрдость
+    // вдвое меньше, чем у обычного блока; время копания считает клиент, так
+    // что они ломаются, как любой блок, по «докопал».
     let breaks_now = if creative {
         status == STARTED_DIGGING
     } else {
@@ -8030,10 +8036,28 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         return Some(Reaction::default());
     }
 
+    // Заражённый блок: чешуйница выходит раньше, чем блок исчезает: у оригинала
+    // сперва пакеты сущности, затем блок (чёрный ящик, silverfish-infested).
+    // Silk Touch даёт обычный блок, в творческом и при doTileDrops=false не выходит никто.
+    let infested = crate::mob::arthropod::host(state).is_some();
+    let silk = infested && player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
+    let drops = shared.block_drops.load(std::sync::atomic::Ordering::Relaxed);
+    let release = infested && crate::mob::arthropod::releases(state, !creative, silk, drops);
+
+    let released = release.then(|| crate::mob::arthropod::released(shared.next_entity_id(), (x, y, z)));
+
+    if let Some(mob) = &released {
+        shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").add_mob_late(mob.clone());
+    }
+
     let mut world = shared
         .world_in(player.dimension)
         .lock()
         .expect("мир захвачен другим потоком");
+
+    if let Some(mob) = released {
+        world.note_mob_spawn(mob);
+    }
 
     // Растяжку, срезанную ножницами, сперва обезвреживают: крючки теряют
     // цепь без импульса (вики, String).
@@ -8055,6 +8079,27 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         log_debug!("Play: в {} {} {} и так пусто", x, y, z);
         return Some(answer);
     };
+
+    // Заражённый блок: что выпадает — Silk Touch даёт обычный блок.
+    if crate::mob::arthropod::host(broken).is_some() {
+        let stack = if !creative && silk && drops { crate::mob::arthropod::silk_drop(broken) } else { None };
+
+        if !creative {
+            player.progress.mined(broken);
+        }
+
+        // Предмет выпадает, как из любого блока: случайная точка и толчок
+        // (чёрный ящик, silverfish-infested: предмет вылетает, робот его подбирает).
+        let placed = stack.map(|stack| (stack, crate::tick::scattered((x, y, z), || f64::from(world.random_unit()))));
+
+        drop(world);
+
+        if let Some((stack, (at, velocity))) = placed {
+            drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
+        }
+
+        return Some(Reaction::accepted(sequence));
+    }
 
     log_debug!("Play: сломан блок в {} {} {}", x, y, z);
 
@@ -9156,7 +9201,7 @@ fn use_spawn_egg(
         mob.egg_timer = 6000 + (mob.entity_id as u32 % 6001) as i32;
     }
 
-    shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").add_mob(mob);
+    shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").add_mob_late(mob);
 
     let mut reaction = Reaction::accepted(sequence);
 

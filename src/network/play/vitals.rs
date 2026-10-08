@@ -1472,6 +1472,25 @@ pub(super) async fn mob_hit(
 ) -> io::Result<()> {
     player.net.killer = killer;
 
+    // Вики, Shield: передний удар моба поглощается; укус, остановленный
+    // щитом, не накладывает яд. Износ — тот же, что в бою игроков.
+    let now = *shared.ticks.borrow();
+    if source == Source::MobAttack && amount > 0.0 && !player.vit.dead
+        && matches!(player.game_mode, GAME_MODE_SURVIVAL | GAME_MODE_ADVENTURE)
+        && let Some(hand) = shield_up(player, now)
+        && crate::combat::shield_covers(player.yaw, (player.x, player.z), (at.0, at.2))
+    {
+        let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+        let scaled = survival::scaled(amount, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed));
+        if let Some(shield) = player.inventory.slot(slot) {
+            super::pvp::wear_slot(shared, player, slot, shield, crate::combat::shield_wear(scaled), false);
+        }
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let pitch = 0.8 + world.random_unit() * 0.4;
+        world.note_sound_player_at((player.x, player.y, player.z), "minecraft:item.shield.block", 1.0, pitch);
+        return Ok(());
+    }
+
     // Направление на виновника для «Hurt Animation» и звук стрелы — раньше
     // пакетов урона: они уходят изнутри `hit` (чёрный ящик, skeleton-arrow).
     player.net.hurt_from = Some(at);
@@ -1496,6 +1515,19 @@ pub(super) async fn mob_hit(
         }
     }
 
+    // Вики, Cave Spider: яд только после состоявшегося укуса, не от
+    // отклонённого урона (творческий, неуязвимость). Срок — по сложности.
+    if done.is_some() && source == Source::MobAttack && killer == "entity.minecraft.cave_spider"
+        && let Some(effect) = crate::mob::arthropod::poison(shared.difficulty.load(std::sync::atomic::Ordering::Relaxed))
+    {
+        give_effect(stream, player, effect).await?;
+    }
+
+    if done.is_some() && source == Source::MobAttack {
+        let scaled = survival::scaled(amount, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed));
+        super::pvp::wear_armor(shared, player, scaled);
+    }
+
     // Стрела застряла в теле: счёт в свойстве 12, убывает через 20·(30 − число)
     // тактов (вики, Arrow: «stuck in the body») [проверить].
     if done.is_some() && source == Source::Arrow {
@@ -1515,6 +1547,9 @@ pub(super) async fn mob_hit(
         let up = if player.on_ground { 0.275 } else { dy };
 
         player.net.velocity = Some((dx / 2.0 * 0.546 + ux * 0.218, up, dz / 2.0 * 0.546 + uz * 0.218));
+        // Иначе конец такта заменит отдачу «скоростью после удара без толчка»
+        // (чёрный ящик, cavespider-poison: укус толкает на 0,275 вверх).
+        player.net.velocity_due = false;
     }
 
     Ok(())
@@ -1548,6 +1583,16 @@ pub(super) async fn hit_by(
 ) -> io::Result<Option<survival::Hit>> {
     if source.scales_with_difficulty() {
         amount = survival::scaled(amount, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed));
+    }
+
+    // Вики, Armor: укус/удар моба сначала масштабируется по сложности,
+    // затем уменьшается бронёй и защитой; яд броню обходит.
+    if source == Source::MobAttack {
+        let armor = player.attrs.value(crate::attributes::ARMOR) as f32;
+        let toughness = player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32;
+        amount = crate::combat::after_armor_breached(amount, armor, toughness, 1.0);
+        let points: i32 = crate::combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot)).map(|stack| crate::combat::protection_points(&stack.extras(), source)).sum();
+        amount = crate::combat::after_protection(amount, points);
     }
 
     let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;

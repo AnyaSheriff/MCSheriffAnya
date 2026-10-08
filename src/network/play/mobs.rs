@@ -192,7 +192,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
 
     // Частицы эффектов (10): у ведьмы — от выпитых зелий (чёрный ящик,
     // witch-stand: `10=[entity_effect]` в такте конца питья).
-    if matches!(mob.kind, Kind::Witch | Kind::Villager | Kind::ZombieVillager) {
+    if matches!(mob.kind, Kind::Witch | Kind::Villager | Kind::ZombieVillager | Kind::CaveSpider | Kind::Silverfish) {
         let mut particles = Vec::new();
 
         super::vitals::push_effect_particles(&mut particles, &mob.vitals.effect_colors());
@@ -249,7 +249,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
         Kind::Blaze => out.push((16, TYPE_BYTE, vec![u8::from(mob.nether.charging)])),
         Kind::Ghast => out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.charging)])),
         Kind::MagmaCube | Kind::Slime => out.push((16, TYPE_INT, encode_varint(mob.nether.size.max(1)))),
-        Kind::WitherSkeleton => {}
+        Kind::WitherSkeleton | Kind::Silverfish => {}
         Kind::ZombifiedPiglin => out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())])),
         Kind::Piglin => {
             out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.immune)]));
@@ -272,7 +272,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
             out.push((17, TYPE_BOOL, vec![0]));
             out.push((18, TYPE_BOOL, vec![u8::from(mob.h.lit)]));
         }
-        Kind::Spider => out.push((16, TYPE_BYTE, vec![u8::from(mob.h.climbing)])),
+        Kind::Spider | Kind::CaveSpider => out.push((16, TYPE_BYTE, vec![u8::from(mob.h.climbing)])),
         // Фаза дракона: 10 — висит (minecraft-data: phase; чёрный ящик,
         // dragon-summon: призванный фазы не шлёт — она по умолчанию).
         Kind::EnderDragon => out.push((16, TYPE_INT, encode_varint(i32::from(mob.dragon.phase)))),
@@ -461,6 +461,10 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
     send_properties(stream, mob.entity_id, &changed).await?;
 
     send_mob_equipment(stream, mob).await?;
+
+    if mob.spawn_poof {
+        send_status(stream, mob.entity_id, 20).await?;
+    }
 
     // Зомби и эндермен — атрибуты сразу при появлении (чёрный ящик,
     // zombie-hit, enderman-stand).
@@ -827,6 +831,21 @@ pub(super) async fn send_particles(
     }
 
     write_body(stream, body).await
+}
+
+/// Показывает только что вышедшего с облачком моба (`WorldEvent::MobSpawn`):
+/// появление, данные и событие 20; сверка места — позже, в слежении. Моб
+/// приходит копией: в мирной сложности его уберут в этом же такте.
+pub(super) async fn send_released_mob(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mob: &Mob) -> io::Result<()> {
+    let range = tracking_range(shared);
+
+    if (mob.x - player.x).abs() <= range && (mob.z - player.z).abs() <= range && !player.seen_mobs.contains_key(&mob.entity_id) {
+        let shown = send_mob(stream, mob).await?;
+
+        player.seen_mobs.insert(mob.entity_id, shown);
+    }
+
+    Ok(())
 }
 
 /// Конец такта у мобов: те, кто вошёл в дальность, показываются; ушедшие —

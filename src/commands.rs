@@ -1548,7 +1548,9 @@ fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
                 let mut changed = 0;
 
                 for mob in items.mobs_mut() {
-                    if chosen.takes(mob.kind.name()) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z)) {
+                    if chosen.takes(mob.kind.name()) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z))
+                        && !(mob.kind.spider() && kind == crate::survival::EffectKind::Poison)
+                    {
                         mob.vitals.give_effect_shown(crate::survival::Effect { kind, amplifier: amplifier.clamp(0, 255), ticks_left: ticks, ambient: false, visible: !hidden });
                         changed += 1;
                     }
@@ -1673,6 +1675,14 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
             shared.spawn_mobs.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
 
             Answer::saying(format!("Правило spawn_mobs: {}", value))
+        }
+        ["mob_griefing" | "mobGriefing", value] => {
+            shared.mob_griefing.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+            Answer::saying(format!("Правило mob_griefing: {}", value))
+        }
+        ["block_drops" | "doTileDrops", value] => {
+            shared.block_drops.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+            Answer::saying(format!("Правило block_drops: {}", value))
         }
         ["announce_advancements" | "announceAdvancements", value] => {
             shared.announce_advancements.store(*value == "true", std::sync::atomic::Ordering::Relaxed);

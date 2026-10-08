@@ -205,6 +205,7 @@ const [a, b] = sides.map(s => load(s.file));
 //   ключу для событий, что идут каждый такт, пока длится задержка (отсчёт
 //   запала): их число зависит от задержки, лишние с любой стороны в допуске,
 //   а общие сверяются по тактам относительно `to`.
+//   `allow_zero: true` — `to` может прийти в одном такте с `from` (задержка 0).
 //   `shift_between: false` — события ожидания не сдвигать, а сверять по
 //   тактам от `from` (движение вагонетки после толчка идёт от первого взрыва,
 //   а не ко второму).
@@ -261,7 +262,7 @@ function applyRandom(A, B) {
           const ev = list.filter(e => e.step === st && e.kind !== 'do');
           const i = ev.findIndex(e => from.test(e.key));
           if (i < 0) return null;
-          const j = ev.findIndex((e, k) => k > i && e.dt > ev[i].dt && to.test(e.key));
+          const j = ev.findIndex((e, k) => k > i && (rule.allow_zero ? e.dt >= ev[i].dt : e.dt > ev[i].dt) && to.test(e.key));
           return j < 0 ? null : { ev, t1: ev[i].dt, t2: ev[j].dt, i, j };
         };
         const fa = find(A), fb = find(B);

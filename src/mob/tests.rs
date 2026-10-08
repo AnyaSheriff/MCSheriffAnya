@@ -788,7 +788,7 @@ fn hostile_kinds_have_the_wiki_numbers() {
     assert_eq!((Kind::Creeper.width(), Kind::Creeper.height()), (0.6, 1.7));
     assert_eq!((Kind::Spider.width(), Kind::Spider.height()), (1.4, 0.9));
     assert_eq!((Kind::Zombie.java_type(), Kind::Skeleton.java_type(), Kind::Creeper.java_type(), Kind::Spider.java_type()), (150, 115, 32, 124));
-    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 19);
+    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 21);
     assert!(!Kind::Cow.hostile());
 }
 
@@ -2258,4 +2258,135 @@ fn slime_spawn_needs_space_for_the_whole_size() {
     assert!(spawn::fits(&view, &mob));
     slime::set_size(&mut mob, 4);
     assert!(!spawn::fits(&view, &mob));
+}
+
+#[test]
+fn small_arthropods_stats_eggs_and_persistence() {
+    for (kind, name, id, health, size, speed) in [
+        (Kind::CaveSpider, "cave_spider", 22, 12.0, (0.7, 0.5), 0.3),
+        (Kind::Silverfish, "silverfish", 114, 8.0, (0.4, 0.3), 0.25),
+    ] {
+        assert_eq!(Kind::from_name(&format!("minecraft:{name}")), Some(kind));
+        assert_eq!(kind.java_type(), id);
+        assert_eq!(kind.max_health(), health);
+        assert_eq!(kind.speed(), speed);
+        assert!(kind.hostile());
+        assert!(blocks::item_named(&format!("{name}_spawn_egg")).is_some());
+        let mob = Mob::new(1, kind, (1.5, 64.0, -2.5));
+        assert_eq!(mob.size(), size);
+        let mut saved = Vec::new();
+        mob.write(&mut saved);
+        assert_eq!(Mob::read(&mut saved.as_slice()), Some(mob));
+        assert_eq!(crate::spawner::Data::of(name).kind(), Some(kind));
+    }
+    assert_eq!(Kind::CaveSpider.sounds(), Kind::Spider.sounds());
+    assert_eq!(Kind::Silverfish.step_sound(), "minecraft:entity.silverfish.step");
+}
+
+#[test]
+fn cave_spider_climbs_but_silverfish_does_not() {
+    let mut flat = Flat::new();
+    flat.stone = (1..=6).map(|y| (1, y, 0)).collect();
+    for kind in [Kind::CaveSpider, Kind::Silverfish] {
+        let mut mob = Mob::new(1, kind, (0.5, 1.0, 0.5));
+        mob.on_ground = true;
+        mob.face(270.0);
+        let mut climbed = false;
+        let mut top = mob.y;
+        for _ in 0..80 {
+            mob.physics(&flat, 1.0, false);
+            climbed |= mob.h.climbing;
+            top = top.max(mob.y);
+        }
+        assert_eq!(climbed, kind == Kind::CaveSpider);
+        assert_eq!(top > 2.0, kind == Kind::CaveSpider);
+    }
+}
+
+#[test]
+fn silverfish_surviving_damage_schedules_one_call() {
+    let mut mob = Mob::new(1, Kind::Silverfish, (0.0, 1.0, 0.0));
+    mob.hurt(1.0, Source::PlayerAttack, None).unwrap();
+    assert_eq!(mob.h.silverfish_call, arthropod::CALL_DELAY);
+    mob.h.silverfish_call = 7;
+    mob.vitals.tick_invulnerable();
+    mob.hurt(2.0, Source::PlayerAttack, None).unwrap();
+    assert_eq!(mob.h.silverfish_call, 7);
+
+    for source in [Source::PlayerAttack, Source::Magic] {
+        let mut killed = Mob::new(2, Kind::Silverfish, (0.0, 1.0, 0.0));
+        killed.hurt(8.0, source, None).unwrap();
+        assert!(killed.is_dead());
+        assert_eq!(killed.h.silverfish_call, 0);
+    }
+    let mut projectile = Mob::new(4, Kind::Silverfish, (0.0, 1.0, 0.0));
+    projectile.hurt(1.0, Source::Fireball, Some(Push { cause: 42, dir: (1.0, 0.0), strength: 0.0 })).unwrap();
+    assert_eq!(projectile.h.silverfish_call, arthropod::CALL_DELAY);
+
+    for source in [Source::Fall, Source::OnFire, Source::InWall] {
+        let mut quiet = Mob::new(3, Kind::Silverfish, (0.0, 1.0, 0.0));
+        quiet.hurt(1.0, source, None).unwrap();
+        assert_eq!(quiet.h.silverfish_call, 0);
+    }
+}
+
+#[test]
+fn poison_hurts_silverfish_and_cave_spider_is_immune() {
+    for kind in [Kind::Silverfish, Kind::CaveSpider] {
+        let mut mob = Mob::new(1, kind, (0.0, 1.0, 0.0));
+        mob.no_ai = true;
+        mob.vitals.give_effect(crate::survival::EffectKind::Poison, 0, 25);
+        mob.tick(&Flat::new(), &ctx(), &mut Rng::new(4));
+        assert_eq!(mob.vitals.health, kind.max_health() - if kind == Kind::Silverfish { 1.0 } else { 0.0 });
+        assert_eq!(mob.h.silverfish_call, if kind == Kind::Silverfish { arthropod::CALL_DELAY } else { 0 });
+    }
+}
+
+#[test]
+fn arthropod_loot_and_xp_credit() {
+    let mut rng = Rng::new(17);
+    for kind in [Kind::CaveSpider, Kind::Silverfish] {
+        let mut mob = Mob::new(1, kind, (0.0, 1.0, 0.0));
+        mob.credit_player();
+        mob.hurt(100.0, Source::PlayerAttack, None).unwrap();
+        assert_eq!(mob.pending_xp, 5);
+        if kind == Kind::Silverfish {
+            assert!(loot(&mob, &mut rng).is_empty());
+        }
+    }
+    let mut cave = Mob::new(2, Kind::CaveSpider, (0.0, 1.0, 0.0));
+    let eye = blocks::item_named("spider_eye").unwrap();
+    let string = blocks::item_named("string").unwrap();
+    for _ in 0..200 {
+        assert!(loot(&cave, &mut rng).iter().all(|stack| stack.item == string && stack.count <= 2));
+    }
+    cave.by_player = true;
+    cave.looting = 3;
+    let mut saw_eye = false;
+    for _ in 0..200 {
+        for stack in loot(&cave, &mut rng) {
+            assert!(stack.count > 0);
+            assert!(stack.item == string && stack.count <= 5 || stack.item == eye && stack.count <= 4);
+            saw_eye |= stack.item == eye;
+        }
+    }
+    assert!(saw_eye);
+}
+
+#[test]
+fn small_arthropod_melee_damage() {
+    let target = ai::Watcher { id: 20, x: 0.5, y: 1.0, z: 0.9, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false };
+    let players = [target];
+    let context = ai::Ctx { players: &players, ..ctx() };
+    for (kind, damage) in [(Kind::CaveSpider, 2.0), (Kind::Silverfish, 1.0)] {
+        let mut mob = Mob::new(1, kind, (0.5, 1.0, 0.5));
+        mob.on_ground = true;
+        mob.h.target = Some(target.id);
+        mob.h.provoked = true;
+        let plan = hostile::think(&mut mob, &Flat::new(), &context, &mut Rng::new(18));
+        assert_eq!(plan.melee.unwrap().damage, damage);
+        assert_eq!(mob.h.cooldown, hostile::MELEE_COOLDOWN);
+        assert_eq!(crate::survival::scaled(damage, 1), damage);
+        assert_eq!(crate::survival::scaled(damage, 3), damage * 1.5);
+    }
 }

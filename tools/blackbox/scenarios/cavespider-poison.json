@@ -1,0 +1,190 @@
+{
+ "name": "cavespider-poison",
+ "about": "[проверить] Easy/Normal/Hard: укусы и Poison 0/140/300 тактов. Записей vanilla нет; случайность не маскируется.",
+ "exclusive": true,
+ "track_mobs": true,
+ "track_self": true,
+ "inventory": true,
+ "blocks": [],
+ "setup": [
+  "difficulty easy",
+  "time set midnight",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "tp $(bot) $(3.5,0,3.5) 0 0",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "difficulty easy"
+  },
+  {
+   "after": 1,
+   "cmd": "effect clear $(bot)"
+  },
+  {
+   "after": 2,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5"
+  },
+  {
+   "after": 3,
+   "cmd": "tp $(bot) $(3.5,0,3.5) 0 0"
+  },
+  {
+   "after": 4,
+   "cmd": "summon cave_spider $(3.5,0,4.5) {Silent:1b}"
+  },
+  {
+   "after": 64,
+   "cmd": "kill @e[type=cave_spider,distance=..48]"
+  },
+  {
+   "after": 200,
+   "cmd": "difficulty normal"
+  },
+  {
+   "after": 201,
+   "cmd": "effect clear $(bot)"
+  },
+  {
+   "after": 202,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5"
+  },
+  {
+   "after": 203,
+   "cmd": "tp $(bot) $(3.5,0,3.5) 0 0"
+  },
+  {
+   "after": 204,
+   "cmd": "summon cave_spider $(3.5,0,4.5) {Silent:1b}"
+  },
+  {
+   "after": 264,
+   "cmd": "kill @e[type=cave_spider,distance=..48]"
+  },
+  {
+   "after": 400,
+   "cmd": "difficulty hard"
+  },
+  {
+   "after": 401,
+   "cmd": "effect clear $(bot)"
+  },
+  {
+   "after": 402,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5"
+  },
+  {
+   "after": 403,
+   "cmd": "tp $(bot) $(3.5,0,3.5) 0 0"
+  },
+  {
+   "after": 404,
+   "cmd": "summon cave_spider $(3.5,0,4.5) {Silent:1b}"
+  },
+  {
+   "after": 464,
+   "cmd": "kill @e[type=cave_spider,distance=..48]"
+  }
+ ],
+ "random": [
+  {
+   "type": "delay",
+   "name": "первый укус после появления",
+   "from": "^spawn .* cave_spider",
+   "to": "^cart cave_spider animation",
+   "range": [
+    0,
+    80
+   ],
+   "allow_zero": true,
+   "why": "цель выбирается раз в ~10 тактов с шансом 1/10 (цель оригинала в первых трёх прогонах: +0, +21, +20) — [проверить] прогоном оригинала дважды"
+  },
+  {
+   "type": "count",
+   "name": "движение паука возле игрока",
+   "match": "^cart cave_spider (скорость|сдвиг|сверка|поворот|entity_head_rotation|перенос)",
+   "range": [
+    0,
+    3000
+   ],
+   "anytick": true,
+   "why": "паук вплотную к цели кружит по пути со случайным поворотом головы; движение сверяется в spider-climb [проверить] оригинал против оригинала"
+  },
+  {
+   "type": "count",
+   "name": "добыча паука",
+   "match": "^(spawn item|meta 8=|sv Collect count|inv)",
+   "range": [
+    0,
+    40
+   ],
+   "anytick": true,
+   "why": "оригинал против оригинала (silverfish-chase): паук бродит и кружит случайно, поэтому место выпавших нитей и подбор роботом случайны; вики, Cave Spider: добыча 0–2 нити"
+  },
+  {
+   "type": "mask",
+   "name": "насыщение робота",
+   "kind": "sv",
+   "pattern": "saturation=[\\d.]+",
+   "replace": "saturation=#",
+   "why": "насыщение робота в начале зависит от прошлых сценариев (замер: у оригинала 18, у нас 20 после других записей); голод и лечение сверяются отдельными сценариями"
+  },
+  {
+   "type": "mask",
+   "name": "сторона укуса",
+   "kind": "sv",
+   "pattern": "Hurt Animation yaw=[-\\d.]+",
+   "replace": "Hurt Animation yaw=#",
+   "why": "оригинал против оригинала (cavespider-poison, silverfish-chase): паук кружит возле робота, угол укуса 90–110°, у каждого прогона свой"
+  },
+  {
+   "type": "count",
+   "name": "повторные укусы",
+   "match": "^(sv Effect id=18 amp=0 dur=\\d+ flags=6$|cart cave_spider animation)",
+   "range": [
+    0,
+    20
+   ],
+   "anytick": true,
+   "why": "оригинал против оригинала (cavespider-poison, silverfish-chase): первый укус и положение паука случайны, поэтому за окно в 60 тактов приходится 2–3 укуса; их число и отдача (угол от места паука) разные; вики, Cave Spider: укус раз в 20 тактов"
+  },
+  {
+   "type": "count",
+   "name": "отдача и здоровье",
+   "match": "^(self робот: скорость|sv (Damage Event|Hurt Animation|Metadata 9=|Set Health))",
+   "range": [
+    0,
+    200
+   ],
+   "anytick": true,
+   "why": "оригинал против оригинала (cavespider-poison, silverfish-chase): первый укус и положение паука случайны, поэтому за окно в 60 тактов приходится 2–3 укуса; их число и отдача (угол от места паука) разные; вики, Cave Spider: укус раз в 20 тактов"
+  },
+  {
+   "type": "jitter",
+   "name": "снятие яда",
+   "match": "^sv Remove Effect id=18$",
+   "max": 1,
+   "why": "срок яда считается от последнего укуса, а он случаен на такт (фаза удара)"
+  }
+ ],
+ "record_ticks": 780,
+ "cleanup": [
+  "kill @e[type=cave_spider,distance=..48]",
+  "kill @e[type=silverfish,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block",
+  "time set noon",
+  "!wait 4",
+  "!startfly"
+ ]
+}

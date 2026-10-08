@@ -76,6 +76,8 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Skeleton => "entity.minecraft.skeleton",
         Kind::Creeper => "entity.minecraft.creeper",
         Kind::Spider => "entity.minecraft.spider",
+        Kind::CaveSpider => "entity.minecraft.cave_spider",
+        Kind::Silverfish => "entity.minecraft.silverfish",
         Kind::Cow => "entity.minecraft.cow",
         Kind::Pig => "entity.minecraft.pig",
         Kind::Sheep => "entity.minecraft.sheep",
@@ -135,6 +137,9 @@ pub struct Shot {
 pub struct State {
     /// Номер игрока-цели.
     pub target: Option<i32>,
+
+    /// [проверить] задержка зова чешуйницы после урона.
+    pub silverfish_call: i32,
 
     /// Тактов до следующего удара или выстрела.
     pub cooldown: i32,
@@ -339,7 +344,7 @@ fn eligible(mob: &Mob, view: &dyn View, ctx: &Ctx, watcher: &Watcher, need_sight
         return false;
     }
 
-    if mob.kind == Kind::Spider && !mob.h.provoked && !spider_bold(mob, view, ctx) {
+    if mob.kind.spider() && !mob.h.provoked && !spider_bold(mob, view, ctx) {
         return false;
     }
 
@@ -359,7 +364,8 @@ fn eligible(mob: &Mob, view: &dyn View, ctx: &Ctx, watcher: &Watcher, need_sight
         return false;
     }
 
-    !need_sight || line_of_sight(mob, view, watcher)
+    // Вики, Silverfish: «can see the player through walls».
+    mob.kind == Kind::Silverfish || !need_sight || line_of_sight(mob, view, watcher)
 }
 
 /// Выбор цели раз в 10 тактов; держится, пока игрок годится.
@@ -471,11 +477,11 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     mob.h.wet = in_water;
 
     // В воздухе путь ведётся, новый не строится (как у животных).
-    let grounded = mob.on_ground || in_water || mob.kind == Kind::Spider;
+    let grounded = mob.on_ground || in_water || mob.kind.spider();
     let target = choose_target(mob, view, ctx, rng);
 
     // Паук: днём цель забывается с шансом 1/100 за такт (вики, Spider).
-    if mob.kind == Kind::Spider && target.is_some() && !spider_bold(mob, view, ctx) && rng.below(100) == 0 {
+    if mob.kind.spider() && target.is_some() && !spider_bold(mob, view, ctx) && rng.below(100) == 0 {
         mob.h.target = None;
         mob.brain.stop();
 
@@ -495,7 +501,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     mob.h.seen = if sight { 0 } else { mob.h.seen + 1 };
 
     match mob.kind {
-        Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Spider => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
+        Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Spider | Kind::CaveSpider | Kind::Silverfish => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
         Kind::Drowned => drowned(mob, view, ctx, &target, &mut plan, dist_sq, flat, sight, rng, grounded),
         Kind::Creeper => creeper(mob, view, &target, &mut plan, dist_sq, sight, grounded),
         Kind::Skeleton if mob.h.bow => skeleton(mob, view, ctx, &target, &mut plan, dist_sq, sight, rng, grounded),
@@ -578,7 +584,7 @@ pub(super) fn approach(mob: &mut Mob, view: &dyn View, target: &Watcher, speed: 
     let goal = (target.x.floor() as i32, (target.y + 1.0e-3).floor() as i32, target.z.floor() as i32);
 
     // Паук идёт напрямую: путь по земле ему не нужен, стена — не преграда.
-    let route = if mob.kind == Kind::Spider { vec![goal] } else { path::find(view, here, goal, path::MAX_NODES) };
+    let route = if mob.kind.spider() { vec![goal] } else { path::find(view, here, goal, path::MAX_NODES) };
 
     mob.brain.go(route, speed);
 }
@@ -601,7 +607,8 @@ pub(super) fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut
             let (ux, uz) = if flat > 1.0e-6 { ((target.x - mob.x) / flat, (target.z - mob.z) / flat) } else { (0.0, 1.0) };
             // Вики: паук и скелет 2, зомби 3, эндермен 7 (на нормальной).
             let damage = match mob.kind {
-                Kind::Spider | Kind::Skeleton => 2.0,
+                Kind::Spider | Kind::CaveSpider | Kind::Skeleton => 2.0,
+                Kind::Silverfish => 1.0,
                 Kind::Enderman => 7.0,
                 Kind::WitherSkeleton | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute | Kind::Hoglin => super::nether::melee_damage(mob),
                 _ => 3.0,
@@ -615,7 +622,7 @@ pub(super) fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut
     }
 
     // Прыжок паука: на земле, цель в 2–4 блоках (вики, Spider: «leap»).
-    if mob.kind == Kind::Spider && mob.on_ground && (4.0..=16.0).contains(&dist_sq) && rng.below(5) == 0 {
+    if mob.kind.spider() && mob.on_ground && (4.0..=16.0).contains(&dist_sq) && rng.below(5) == 0 {
         let (ux, uz) = (target.x - mob.x, target.z - mob.z);
         let len = (ux * ux + uz * uz).sqrt().max(1.0e-6);
 

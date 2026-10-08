@@ -975,12 +975,11 @@ impl Vitals {
         }
 
         // Сопротивление (вики, Resistance): −20 % за уровень, кроме голода,
-        // пустоты и команды kill; на пятом уровне урон пропадает.
+        // пустоты и команды kill; на пятом уровне урон пропадает. Удар при этом
+        // всё равно состоялся: у оригинала робот с сопротивлением V получает
+        // событие урона, анимацию и отдачу, здоровье не меняется (чёрный ящик,
+        // silverfish-chase) [проверить: у остальных источников].
         let amount = after_resistance(amount, self.resistance_level(), source);
-
-        if amount <= 0.0 {
-            return None;
-        }
 
         if immune && !source.bypasses_invulnerability() {
             return None;
@@ -1007,7 +1006,10 @@ impl Vitals {
 
         self.absorption -= absorbed;
         self.health -= taken - absorbed;
-        self.add_exhaustion(source.exhaustion());
+
+        if taken > 0.0 {
+            self.add_exhaustion(source.exhaustion());
+        }
 
         if self.health <= 0.0 {
             self.health = 0.0;
@@ -1934,6 +1936,21 @@ mod tests {
         // Пятый уровень гасит урон целиком.
         assert_eq!(after_resistance(10.0, 5, Source::Fall), 0.0);
         assert_eq!(after_resistance(7.0, 2, Source::Fall), 4.2);
+    }
+
+    #[test]
+    fn resistance_five_still_counts_as_a_hit_without_damage() {
+        // Чёрный ящик, silverfish-chase: укус чешуйницы по роботу с сопротивлением V —
+        // событие урона и отдача есть, здоровье не меняется.
+        let mut v = Vitals::new();
+
+        v.give_effect(EffectKind::Resistance, 4, 100);
+
+        let hit = v.hurt(1.0, Source::MobAttack, false).expect("удар состоялся");
+
+        assert_eq!((hit.taken, hit.died, v.health), (0.0, false, 20.0));
+        // Дальше действует неуязвимость после удара.
+        assert!(v.hurt(1.0, Source::MobAttack, false).is_none());
     }
 
     #[test]

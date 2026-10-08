@@ -1,0 +1,354 @@
+{
+ "name": "silverfish-infested",
+ "about": "Все 7 заражённых блоков: выживание без Silk Touch (копание голой рукой, «докопал» в такт, когда оригинал сам ломает блок), мирная сложность, Silk Touch, творческий. Чешуйница убивается через 4 такта: ходьба и преследование у оригинала случайны.",
+ "exclusive": true,
+ "track_mobs": true,
+ "track_self": true,
+ "inventory": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "effect give $(bot) minecraft:instant_health 1 5",
+  "effect give $(bot) minecraft:resistance 60 4",
+  "item replace entity $(bot) hotbar.1 with minecraft:diamond_pickaxe[minecraft:enchantments={\"minecraft:silk_touch\":1},minecraft:unbreakable={}]",
+  "fill $(1,-1,1) $(7,-1,7) minecraft:glass",
+  "tp $(bot) $(3.5,0,5.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "setblock $(3,0,3) minecraft:infested_stone"
+  },
+  {
+   "after": 2,
+   "dig": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 24,
+   "dig": [
+    3,
+    0,
+    3
+   ],
+   "status": 2
+  },
+  {
+   "after": 28,
+   "cmd": "kill @e[type=silverfish,distance=..48]"
+  },
+  {
+   "after": 36,
+   "cmd": "setblock $(3,0,3) minecraft:infested_cobblestone"
+  },
+  {
+   "after": 38,
+   "dig": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 67,
+   "dig": [
+    3,
+    0,
+    3
+   ],
+   "status": 2
+  },
+  {
+   "after": 71,
+   "cmd": "kill @e[type=silverfish,distance=..48]"
+  },
+  {
+   "after": 79,
+   "cmd": "setblock $(3,0,3) minecraft:infested_stone_bricks"
+  },
+  {
+   "after": 81,
+   "dig": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 103,
+   "dig": [
+    3,
+    0,
+    3
+   ],
+   "status": 2
+  },
+  {
+   "after": 107,
+   "cmd": "kill @e[type=silverfish,distance=..48]"
+  },
+  {
+   "after": 115,
+   "cmd": "setblock $(3,0,3) minecraft:infested_mossy_stone_bricks"
+  },
+  {
+   "after": 117,
+   "dig": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 139,
+   "dig": [
+    3,
+    0,
+    3
+   ],
+   "status": 2
+  },
+  {
+   "after": 143,
+   "cmd": "kill @e[type=silverfish,distance=..48]"
+  },
+  {
+   "after": 151,
+   "cmd": "setblock $(3,0,3) minecraft:infested_cracked_stone_bricks"
+  },
+  {
+   "after": 153,
+   "dig": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 175,
+   "dig": [
+    3,
+    0,
+    3
+   ],
+   "status": 2
+  },
+  {
+   "after": 179,
+   "cmd": "kill @e[type=silverfish,distance=..48]"
+  },
+  {
+   "after": 187,
+   "cmd": "setblock $(3,0,3) minecraft:infested_chiseled_stone_bricks"
+  },
+  {
+   "after": 189,
+   "dig": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 211,
+   "dig": [
+    3,
+    0,
+    3
+   ],
+   "status": 2
+  },
+  {
+   "after": 215,
+   "cmd": "kill @e[type=silverfish,distance=..48]"
+  },
+  {
+   "after": 223,
+   "cmd": "setblock $(3,0,3) minecraft:infested_deepslate"
+  },
+  {
+   "after": 225,
+   "dig": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 269,
+   "dig": [
+    3,
+    0,
+    3
+   ],
+   "status": 2
+  },
+  {
+   "after": 273,
+   "cmd": "kill @e[type=silverfish,distance=..48]"
+  },
+  {
+   "after": 281,
+   "cmd": "difficulty peaceful"
+  },
+  {
+   "after": 282,
+   "cmd": "setblock $(3,0,3) minecraft:infested_stone"
+  },
+  {
+   "after": 284,
+   "dig": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 306,
+   "dig": [
+    3,
+    0,
+    3
+   ],
+   "status": 2
+  },
+  {
+   "after": 316,
+   "cmd": "difficulty normal"
+  },
+  {
+   "after": 322,
+   "hotbar": 1
+  },
+  {
+   "after": 321,
+   "cmd": "tp $(bot) $(3.5,0,4.5)"
+  },
+  {
+   "after": 327,
+   "cmd": "setblock $(3,0,3) minecraft:infested_deepslate[axis=x]"
+  },
+  {
+   "after": 329,
+   "dig": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 335,
+   "dig": [
+    3,
+    0,
+    3
+   ],
+   "status": 2
+  },
+  {
+   "after": 355,
+   "cmd": "gamemode creative $(bot)"
+  },
+  {
+   "after": 357,
+   "cmd": "setblock $(3,0,3) minecraft:infested_stone"
+  },
+  {
+   "after": 359,
+   "dig": [
+    3,
+    0,
+    3
+   ]
+  }
+ ],
+ "record_ticks": 379,
+ "cleanup": [
+  "kill @e[type=silverfish,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block",
+  "time set noon",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "name": "поворот головы при появлении",
+   "kind": "spawn",
+   "pattern": "head=\\d+",
+   "replace": "head=#",
+   "why": "оригинал против оригинала (infested-mining-time): у вышедшей чешуйницы головной поворот в пакете появления 0…4 (замеры 0, 1, 2, 3, 4)"
+  },
+  {
+   "type": "count",
+   "name": "ходьба чешуйницы",
+   "match": "^cart silverfish (скорость |сверка |сдвиг (?!0,0,0$)|поворот|entity_head_rotation|animation)",
+   "range": [
+    0,
+    200
+   ],
+   "anytick": true,
+   "why": "оригинал против оригинала (silverfish-chase, silverfish-infested): вышедшая чешуйница бродит или начинает преследование в случайный такт (замеры: первый шаг на +9, +21, +43 такте); вики, Silverfish: «idle» бродит, цель выбирается не каждый такт"
+  },
+  {
+   "type": "mask",
+   "name": "место звука чешуйницы",
+   "kind": "sound",
+   "pattern": "^sound \\S+ (?:minecraft:)?(entity\\.silverfish\\.\\S+ )",
+   "replace": "sound # $1",
+   "why": "оригинал против оригинала (silverfish-chase, silverfish-infested): вышедшая чешуйница бродит или начинает преследование в случайный такт (замеры: первый шаг на +9, +21, +43 такте); вики, Silverfish: «idle» бродит, цель выбирается не каждый такт"
+  },
+  {
+   "type": "count",
+   "name": "голос и шаги чешуйницы",
+   "match": "^sound .*entity\\.silverfish\\.(ambient|step) ",
+   "range": [
+    0,
+    10
+   ],
+   "anytick": true,
+   "why": "вики, Silverfish (Sounds): hiss — «Randomly»; шаг звучит раз в 1,6 блока пути, путь случаен"
+  },
+  {
+   "type": "mask",
+   "name": "флаг «агрессивен» при гибели",
+   "kind": "meta",
+   "pattern": " 15=\\d+$",
+   "replace": "",
+   "why": "оригинал против оригинала (silverfish-chase, silverfish-infested): вышедшая чешуйница бродит или начинает преследование в случайный такт (замеры: первый шаг на +9, +21, +43 такте); вики, Silverfish: «idle» бродит, цель выбирается не каждый такт"
+  },
+  {
+   "type": "jitter",
+   "name": "данные гибели",
+   "match": "^meta 6=7 9=0$",
+   "max": 1,
+   "why": "оригинал против оригинала (две записи silverfish-infested): свойства гибели (поза, здоровье 0) идут в такт команды или на такт позже, как выпадет фаза"
+  },
+  {
+   "type": "count",
+   "name": "флаг «агрессивен»",
+   "match": "^meta 15=",
+   "range": [
+    0,
+    20
+   ],
+   "anytick": true,
+   "why": "оригинал против оригинала (silverfish-chase, silverfish-infested): вышедшая чешуйница бродит или начинает преследование в случайный такт (замеры: первый шаг на +9, +21, +43 такте); вики, Silverfish: «idle» бродит, цель выбирается не каждый такт"
+  }
+ ]
+}

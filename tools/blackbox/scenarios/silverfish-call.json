@@ -1,0 +1,164 @@
+{
+ "name": "silverfish-call",
+ "about": "Раненая чешуйница зовёт соседей из заражённого блока (через 19 тактов после удара); убитая одним ударом — нет. Блок один: обход в оригинале обрывается с шансом 1/2 после каждого найденного, поэтому второй блок был бы случаен.",
+ "exclusive": true,
+ "track_mobs": true,
+ "track_self": true,
+ "inventory": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "effect give $(bot) minecraft:instant_health 1 5",
+  "effect give $(bot) minecraft:resistance 60 4",
+  "fill $(1,-1,1) $(7,-1,7) minecraft:glass",
+  "setblock $(4,0,3) minecraft:infested_stone",
+  "item replace entity $(bot) hotbar.1 with minecraft:diamond_sword[minecraft:enchantments={\"minecraft:sharpness\":5}]",
+  "tp $(bot) $(3.5,0,5.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon silverfish $(3.5,0,3.5) {Silent:1b}"
+  },
+  {
+   "after": 20,
+   "attack": true
+  },
+  {
+   "after": 130,
+   "cmd": "kill @e[type=silverfish,distance=..48]"
+  },
+  {
+   "after": 150,
+   "cmd": "setblock $(3,0,3) minecraft:infested_stone"
+  },
+  {
+   "after": 152,
+   "cmd": "summon silverfish $(3.5,1,3.5) {Silent:1b}"
+  },
+  {
+   "after": 155,
+   "hotbar": 1
+  },
+  {
+   "after": 175,
+   "attack": true
+  }
+ ],
+ "record_ticks": 260,
+ "cleanup": [
+  "kill @e[type=cave_spider,distance=..48]",
+  "kill @e[type=silverfish,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block",
+  "time set noon",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "name": "поворот головы при появлении",
+   "kind": "spawn",
+   "pattern": "head=\\d+",
+   "replace": "head=#",
+   "why": "оригинал против оригинала (infested-mining-time): у вышедшей чешуйницы головной поворот в пакете появления 0…4"
+  },
+  {
+   "type": "mask",
+   "name": "место звука чешуйницы",
+   "kind": "sound",
+   "pattern": "^sound \\S+ (?:minecraft:)?(entity\\.silverfish\\.\\S+ )",
+   "replace": "sound # $1",
+   "why": "оригинал против оригинала (silverfish-chase, silverfish-infested): чешуйница бродит или начинает преследование в случайный такт (замеры: первый шаг на +9, +21, +43 такте); вики, Silverfish: цель выбирается не каждый такт"
+  },
+  {
+   "type": "mask",
+   "name": "флаг «агрессивен» при гибели",
+   "kind": "meta",
+   "pattern": "(?<=\\d) 15=\\d+$",
+   "replace": "",
+   "why": "оригинал против оригинала (silverfish-chase, silverfish-infested): чешуйница бродит или начинает преследование в случайный такт (замеры: первый шаг на +9, +21, +43 такте); вики, Silverfish: цель выбирается не каждый такт"
+  },
+  {
+   "type": "jitter",
+   "name": "данные гибели",
+   "match": "^meta 6=7 9=0$",
+   "max": 1,
+   "why": "оригинал против оригинала (две записи silverfish-infested): свойства гибели идут в такт команды или на такт позже, как выпадет фаза"
+  },
+  {
+   "type": "count",
+   "name": "ходьба чешуйницы",
+   "match": "^cart silverfish (скорость |сверка |сдвиг (?!0,0,0$)|поворот|entity_head_rotation|animation)",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "оригинал против оригинала (silverfish-chase, silverfish-infested): чешуйница бродит или начинает преследование в случайный такт (замеры: первый шаг на +9, +21, +43 такте); вики, Silverfish: цель выбирается не каждый такт"
+  },
+  {
+   "type": "count",
+   "name": "голос и шаги чешуйницы",
+   "match": "^sound .*entity\\.silverfish\\.(ambient|step) ",
+   "range": [
+    0,
+    10
+   ],
+   "anytick": true,
+   "why": "вики, Silverfish (Sounds): hiss — «Randomly»; шаг звучит раз в 1,6 блока пути, путь случаен"
+  },
+  {
+   "type": "count",
+   "name": "флаг «агрессивен»",
+   "match": "^meta 15=",
+   "range": [
+    0,
+    20
+   ],
+   "anytick": true,
+   "why": "оригинал против оригинала (silverfish-chase, silverfish-infested): чешуйница бродит или начинает преследование в случайный такт (замеры: первый шаг на +9, +21, +43 такте); вики, Silverfish: цель выбирается не каждый такт"
+  },
+  {
+   "type": "count",
+   "name": "опыт чешуйницы",
+   "match": "^(spawn .* experience_orb|cart experience_orb|meta 8=|sv (Collect count|Set Experience|Metadata 18=)|inv)",
+   "range": [
+    0,
+    60
+   ],
+   "anytick": true,
+   "why": "вики, Experience: убитая игроком чешуйница даёт 5 опыта шариками; место шариков зависит от случайной ходьбы"
+  },
+  {
+   "type": "jitter",
+   "name": "зов в такт фазы",
+   "match": "^(level 4,0,3 |spawn 4\\.5,0,3\\.5|meta 9=8|cart silverfish (status|move)|block 4,0,3 )",
+   "max": 1,
+   "why": "оригинал против оригинала (две записи silverfish-call): блок и облачко зова идут на +19 или +20 такт от удара, в зависимости от фазы такта удара"
+  },
+  {
+   "type": "count",
+   "name": "укусы чешуйницы по роботу",
+   "match": "^sv (Damage Event|Hurt Animation)|^self робот: скорость",
+   "range": [
+    0,
+    60
+   ],
+   "anytick": true,
+   "why": "оригинал против оригинала (silverfish-chase, silverfish-infested): чешуйница бродит или начинает преследование в случайный такт (замеры: первый шаг на +9, +21, +43 такте); вики, Silverfish: цель выбирается не каждый такт; укус — следствие погони"
+  }
+ ]
+}

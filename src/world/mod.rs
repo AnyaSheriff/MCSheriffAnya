@@ -215,6 +215,11 @@ pub enum WorldEvent {
     /// идут после пакетов мобов (чёрный ящик, mob-plate).
     Tracker,
 
+    /// Появление моба с облачком (чешуйница из заражённого блока): пакеты
+    /// сущности уходят сразу, раньше пакета блока, остальное — в слежении
+    /// конца такта (чёрный ящик, silverfish-infested).
+    MobSpawn(Box<crate::mob::Mob>),
+
     /// Метка «здесь слежение рассылает стрелы»: после хода стрел (arrow.rs).
     ArrowTracker,
 
@@ -2043,6 +2048,11 @@ impl World {
     /// Точка такта, где слежение рассылает клиентам мобов.
     pub fn note_tracker(&mut self) {
         self.events.push(WorldEvent::Tracker);
+    }
+
+    /// Точка такта, где клиентам показывается только что вышедший моб.
+    pub fn note_mob_spawn(&mut self, mob: crate::mob::Mob) {
+        self.events.push(WorldEvent::MobSpawn(Box::new(mob)));
     }
 
     /// Точка такта, где слежение рассылает клиентам стрелы.

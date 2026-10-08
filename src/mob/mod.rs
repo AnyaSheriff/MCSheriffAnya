@@ -15,6 +15,7 @@
 // Что не сверено, помечено «[проверить]».
 
 pub mod ai;
+pub mod arthropod;
 pub mod dragon;
 pub mod hostile;
 pub mod leash;
@@ -39,6 +40,8 @@ pub enum Kind {
     Skeleton,
     Creeper,
     Spider,
+    CaveSpider,
+    Silverfish,
     /// Кристалл Края: не живое существо, а «сущность-другое» (minecraft-data:
     /// end_crystal), но живёт в списке мобов ради слежения и ударов.
     EndCrystal,
@@ -95,7 +98,7 @@ pub enum Kind {
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 31] = [
+    pub const ALL: [Kind; 33] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -104,6 +107,8 @@ impl Kind {
         Kind::Skeleton,
         Kind::Creeper,
         Kind::Spider,
+        Kind::CaveSpider,
+        Kind::Silverfish,
         Kind::EndCrystal,
         Kind::EnderDragon,
         Kind::Enderman,
@@ -140,6 +145,8 @@ impl Kind {
                 | Kind::Skeleton
                 | Kind::Creeper
                 | Kind::Spider
+                | Kind::CaveSpider
+                | Kind::Silverfish
                 | Kind::Enderman
                 | Kind::Shulker
                 | Kind::Witch
@@ -153,6 +160,11 @@ impl Kind {
                 | Kind::PiglinBrute
                 | Kind::Hoglin
         )
+    }
+
+    /// Оба паука используют лазание и охоту (вики, Cave Spider: «inherit»).
+    pub fn spider(self) -> bool {
+        matches!(self, Kind::Spider | Kind::CaveSpider)
     }
 
     /// Моб Незера (mob/nether.rs): у них своя мысль.
@@ -179,6 +191,8 @@ impl Kind {
             "skeleton" => Kind::Skeleton,
             "creeper" => Kind::Creeper,
             "spider" => Kind::Spider,
+            "cave_spider" => Kind::CaveSpider,
+            "silverfish" => Kind::Silverfish,
             "end_crystal" => Kind::EndCrystal,
             "ender_dragon" => Kind::EnderDragon,
             "enderman" => Kind::Enderman,
@@ -216,6 +230,8 @@ impl Kind {
             Kind::Skeleton => "skeleton",
             Kind::Creeper => "creeper",
             Kind::Spider => "spider",
+            Kind::CaveSpider => "cave_spider",
+            Kind::Silverfish => "silverfish",
             Kind::EndCrystal => "end_crystal",
             Kind::EnderDragon => "ender_dragon",
             Kind::Enderman => "enderman",
@@ -249,6 +265,8 @@ impl Kind {
             Kind::Creeper => 32,
             Kind::Skeleton => 115,
             Kind::Spider => 124,
+            Kind::CaveSpider => 22,
+            Kind::Silverfish => 114,
             Kind::Zombie => 150,
             Kind::Cow => 30,
             Kind::Pig => 100,
@@ -296,6 +314,9 @@ impl Kind {
             Kind::Skeleton => "minecraft:skeleton",
             Kind::Creeper => "minecraft:creeper",
             Kind::Spider => "minecraft:spider",
+            // [Bedrock: потом] отдельная проверка метаданных и поведения.
+            Kind::CaveSpider => "minecraft:cave_spider",
+            Kind::Silverfish => "minecraft:silverfish",
             Kind::EndCrystal => "minecraft:ender_crystal",
             Kind::EnderDragon => "minecraft:ender_dragon",
             Kind::Enderman => "minecraft:enderman",
@@ -332,6 +353,8 @@ impl Kind {
             Kind::Chicken => 0.4,
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
+            Kind::CaveSpider => 0.7,
+            Kind::Silverfish => 0.4,
             Kind::Blaze | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 0.6,
             Kind::WitherSkeleton => 0.7,
             Kind::Ghast => 4.0,
@@ -362,6 +385,8 @@ impl Kind {
             Kind::Skeleton => 1.99,
             Kind::Creeper => 1.7,
             Kind::Spider => 0.9,
+            Kind::CaveSpider => 0.5,
+            Kind::Silverfish => 0.3,
             Kind::EndCrystal => 2.0,
             Kind::EnderDragon => 8.0,
             Kind::Enderman => 2.9,
@@ -389,6 +414,8 @@ impl Kind {
             Kind::Chicken => 4.0,
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Creeper => 20.0,
             Kind::Spider => 16.0,
+            Kind::CaveSpider => 12.0,
+            Kind::Silverfish => 8.0,
             // У кристалла здоровья нет: любой удар его взрывает (вики, End Crystal).
             Kind::EndCrystal => 1.0,
             // Вики, Ender Dragon: «Health: 200»; чёрный ящик, dragon-summon: 9=200.
@@ -425,6 +452,8 @@ impl Kind {
             Kind::Sheep | Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 0.23,
             Kind::Skeleton | Kind::Creeper => 0.25,
             Kind::Spider => 0.3,
+            Kind::CaveSpider => 0.3,
+            Kind::Silverfish => 0.25,
             Kind::EndCrystal => 0.0,
             // Дракон летает (вики, Ender Dragon); ходьбы у него нет.
             Kind::EnderDragon => 0.0,
@@ -485,7 +514,8 @@ impl Kind {
             Kind::Skeleton => ("minecraft:entity.skeleton.ambient", "minecraft:entity.skeleton.hurt", "minecraft:entity.skeleton.death"),
             // У крипера голоса в покое нет (вики, Creeper, «Sounds»).
             Kind::Creeper => ("", "minecraft:entity.creeper.hurt", "minecraft:entity.creeper.death"),
-            Kind::Spider => ("minecraft:entity.spider.ambient", "minecraft:entity.spider.hurt", "minecraft:entity.spider.death"),
+            Kind::Spider | Kind::CaveSpider => ("minecraft:entity.spider.ambient", "minecraft:entity.spider.hurt", "minecraft:entity.spider.death"),
+            Kind::Silverfish => ("minecraft:entity.silverfish.ambient", "minecraft:entity.silverfish.hurt", "minecraft:entity.silverfish.death"),
             // Кристалл молчит: его единственный звук — взрыв.
             Kind::EndCrystal => ("", "", ""),
             // Чёрный ящик, dragon-summon: голос в покое — entity.ender_dragon.ambient, громкость 5.
@@ -533,7 +563,8 @@ impl Kind {
             Kind::Skeleton => "minecraft:entity.skeleton.step",
             // Шаги крипера играются звуком блока [проверить]; молча.
             Kind::Creeper => "",
-            Kind::Spider => "minecraft:entity.spider.step",
+            Kind::Spider | Kind::CaveSpider => "minecraft:entity.spider.step",
+            Kind::Silverfish => "minecraft:entity.silverfish.step",
             Kind::WitherSkeleton => "minecraft:entity.wither_skeleton.step",
             Kind::ZombifiedPiglin => "minecraft:entity.zombified_piglin.step",
             Kind::Piglin => "minecraft:entity.piglin.step",
@@ -864,6 +895,10 @@ pub struct Mob {
     /// Родился во время хода мобов: слежение покажет его в следующем такте.
     pub late: bool,
 
+    /// При показе клиентам сразу за появлением идёт событие 20 (облачко
+    /// появления): чешуйница из заражённого блока (чёрный ящик, silverfish-infested).
+    pub spawn_poof: bool,
+
     /// Сколько раз ему правили данные (`summon … {…}`, `data merge`):
     /// клиентам после этого уходит пакет атрибутов.
     pub attr_changes: u32,
@@ -984,6 +1019,7 @@ impl Mob {
             h,
             by_player: false,
             late: false,
+            spawn_poof: false,
             attr_changes: 0,
             teleports: 0,
             xp_until: 0,
@@ -1066,6 +1102,9 @@ impl Mob {
             Kind::Slime => self.size().1 * 0.625,
             Kind::Creeper => 1.445,
             Kind::Spider => 0.65,
+            // [проверить] глаза малых членистоногих.
+            Kind::CaveSpider => 0.45,
+            Kind::Silverfish => 0.13,
             Kind::Enderman => hostile::ENDERMAN_EYE,
             // Ведьма — как игрок; шалкер смотрит из середины [проверить].
             Kind::Witch => 1.62,
@@ -1226,6 +1265,21 @@ impl Mob {
             hostile::witch_drink(self, view, ctx, rng);
         }
 
+        // Вики, Silverfish: «Poison damage» будит соседей; пауки яд не носят.
+        if matches!(self.kind, Kind::CaveSpider | Kind::Silverfish) {
+            if self.kind.spider() {
+                self.vitals.effects.retain(|effect| effect.kind != crate::survival::EffectKind::Poison);
+            }
+
+            for (amount, source) in self.vitals.effects_tick().hurt {
+                self.hurt(amount, source, None);
+            }
+
+            if self.is_dead() {
+                return ai::Plan::default();
+            }
+        }
+
         // Житель: эффекты (регенерация после нового уровня) и голос в покое —
         // и без ИИ (чёрный ящик, villager-trade: NoAI-житель подаёт голос).
         if self.kind == Kind::ZombieVillager {
@@ -1305,7 +1359,7 @@ impl Mob {
 
         // Паук лезет вверх, пока упирается в стену: 0,2 за такт (вики, Spider:
         // «can climb any solid block»; скорость лестницы) [проверить].
-        if self.kind == Kind::Spider {
+        if self.kind.spider() {
             self.h.climbing = self.wall && speed != 0.0;
 
             // Лезет: перед сдвигом скорость — 0,2 после тяжести и сопротивления,
@@ -1425,7 +1479,7 @@ impl Mob {
             }
         }
 
-        if !(self.kind == Kind::Spider && self.h.climbing) {
+        if !(self.kind.spider() && self.h.climbing) {
             self.vy = (self.vy - GRAVITY) * VERTICAL_DRAG;
         }
 
@@ -1610,6 +1664,12 @@ impl Mob {
             dragon::on_hurt(self, hit.taken, push.map(|push| push.cause).filter(|cause| *cause != 0), &mut rng);
         }
 
+        if self.kind == Kind::Silverfish && !hit.died && self.h.silverfish_call == 0
+            && (arthropod::calls_for_help(source) || push.is_some_and(|push| push.cause != 0))
+        {
+            self.h.silverfish_call = arthropod::CALL_DELAY;
+        }
+
         self.events.push(Event::Hurt { source, cause: push.map_or(0, |push| push.cause), at: (self.x, self.y, self.z) });
 
         // Ударили зомби-пиглина: злится и зовёт стаю (вики, Zombified Piglin).
@@ -1789,6 +1849,8 @@ impl Mob {
             Kind::Skeleton => 5,
             Kind::Creeper => 6,
             Kind::Spider => 7,
+            Kind::CaveSpider => 31,
+            Kind::Silverfish => 32,
             Kind::EndCrystal => 8,
             Kind::EnderDragon => 9,
             Kind::Enderman => 10,
@@ -1862,6 +1924,8 @@ impl Mob {
             5 => Kind::Skeleton,
             6 => Kind::Creeper,
             7 => Kind::Spider,
+            31 => Kind::CaveSpider,
+            32 => Kind::Silverfish,
             8 => Kind::EndCrystal,
             9 => Kind::EnderDragon,
             10 => Kind::Enderman,
@@ -2036,6 +2100,15 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
             give("arrow", 0, 2, rng);
         }
         Kind::Creeper => give("gunpowder", 0, 2, rng),
+        Kind::CaveSpider => {
+            give("string", 0, 2 + mob.looting, rng);
+
+            if mob.by_player || mob.xp_until > mob.ticks {
+                // Вики, Cave Spider: «-1–1», с Looting верхняя граница растёт.
+                give("spider_eye", -1, 1 + mob.looting, rng);
+            }
+        }
+        Kind::Silverfish => {}
         Kind::Spider => {
             give("string", 0, 2, rng);
 
@@ -2593,8 +2666,14 @@ pub fn step_all(
 
         // Шалкер не исчезает вдали от игроков (вики, Shulker: «does not despawn»)
         // [проверить: на мирной].
-        if mob.kind.hostile() && mob.kind != Kind::Shulker && !mob.is_dead() && !mob.persistent_tag {
-            hostile::despawn_check(mob, players, rng, env.difficulty == crate::survival::PEACEFUL);
+        // Труп враждебного исчезает на мирной тоже, без облачка: у оригинала
+        // убитая чешуйница пропала в такт команды `difficulty peaceful`
+        // (чёрный ящик, silverfish-infested) [проверить: остальные мобы].
+        // Живой с именной биркой не исчезает (persistent_tag).
+        let peaceful = env.difficulty == crate::survival::PEACEFUL;
+
+        if mob.kind.hostile() && mob.kind != Kind::Shulker && ((!mob.is_dead() && !mob.persistent_tag) || (peaceful && mob.is_dead())) {
+            hostile::despawn_check(mob, players, rng, peaceful);
         }
 
         if let Some(target) = plan.bullet {

@@ -1052,6 +1052,11 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     let outcome = crate::mob::step_all(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id());
 
+    crate::mob::arthropod::step(&mut items, world, crate::mob::arthropod::Rules {
+        griefing: shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed),
+        drops: shared.block_drops.load(std::sync::atomic::Ordering::Relaxed),
+    }, rng, &mut || shared.next_entity_id());
+
     for strike in outcome.strikes {
         // Зомби бьёт жителя: убитый превращается в зомби-жителя (вики, Zombie
         // Villager, «Conversion»: лёгкая 0 %, обычная 50 %, трудная 100 %).
@@ -1313,7 +1318,20 @@ fn step_spawners(shared: &Shared, world: &mut World, items: &mut items::Items, w
                         let (sky, block) = world.light_full(mx, my, mz);
                         let sky = (i32::from(sky) - (15 - ambient).max(0)).max(0);
 
-                        if sky > rng.below(32) as i32 || sky.max(i32::from(block)) > 7 {
+                        if kind == crate::mob::Kind::Silverfish {
+                            let nearest = watchers.iter().filter(|player| !player.spectator).map(|player| {
+                                (player.x - mob.x).powi(2) + (player.y - mob.y).powi(2) + (player.z - mob.z).powi(2)
+                            }).fold(f64::INFINITY, f64::min);
+
+                            if !crate::mob::arthropod::silverfish_spawn(sky.max(i32::from(block)) as u8, world.get_block(mx, my - 1, mz), nearest) {
+                                continue;
+                            }
+                        } else if kind == crate::mob::Kind::CaveSpider {
+                            // Вики, Cave Spider: «light level of 0» (блочный свет).
+                            if !crate::mob::spawn::dark_enough(sky as u8, block, rng) {
+                                continue;
+                            }
+                        } else if sky > rng.below(32) as i32 || sky.max(i32::from(block)) > 7 {
                             continue;
                         }
                     }
