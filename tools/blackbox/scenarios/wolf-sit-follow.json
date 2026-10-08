@@ -1,0 +1,66 @@
+{
+ "name": "wolf-sit-follow",
+ "about": "Прирученный роботом волк (Owner) NoAI: щелчок пустой рукой — сел, ещё щелчок — встал; потом ИИ включён, робот уходит на 15 блоков — волк телепортируется к хозяину.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon wolf $(3.5,0,3.5) {NoAI:1b,Silent:1b,Owner:[I;651459017,1212431114,-1168536378,1449273976]}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 20,
+   "interact": true
+  },
+  {
+   "after": 30,
+   "cmd": "data merge entity @e[type=wolf,distance=..48,limit=1] {NoAI:0b}"
+  },
+  {
+   "after": 32,
+   "cmd": "tp $(bot) $(-7.5,0,-7.5)"
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "kill @e[type=wolf,distance=..48]",
+  "kill @e[type=cat,distance=..48]",
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=sheep,distance=..48]",
+  "kill @e[type=leash_knot,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "ходьба и прыжок волка к хозяину",
+   "match": "^cart wolf (сверка|сдвиг|скорость|поворот|перенос|entity_head_rotation)",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "вики, Wolf: прогулка случайна; прыжок к хозяину — в случайную клетку рядом и не в один такт (оригинал против оригинала: через 2 и через 4 такта после ухода, в (+3,−3) и (−2,−2) от хозяина)"
+  }
+ ],
+ "pad_wide": 14
+}

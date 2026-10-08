@@ -1,0 +1,82 @@
+{
+ "name": "lead-attach",
+ "about": "Две коровы NoAI. Поводок на первую, щелчок по забору — она привязана к узлу; поводок на вторую, робот уходит на 17 блоков — поводок рвётся и выпадает.",
+ "track_mobs": true,
+ "blocks": [
+  {
+   "at": [
+    1,
+    0,
+    3
+   ],
+   "state": "minecraft:oak_fence"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:lead 2",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 2,
+   "cmd": "summon cow $(5.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true,
+   "which": 0
+  },
+  {
+   "after": 20,
+   "click": [
+    1,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 30,
+   "interact": true,
+   "which": 1
+  },
+  {
+   "after": 40,
+   "cmd": "tp $(bot) $(-7.5,0,-7.5)"
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=wolf,distance=..48]",
+  "kill @e[type=cat,distance=..48]",
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=sheep,distance=..48]",
+  "kill @e[type=leash_knot,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "name": "номер держателя поводка",
+   "kind": "cart",
+   "pattern": "\"vehicleId\":\\d+",
+   "replace": "\"vehicleId\":N",
+   "why": "номер сущности игрока у каждого сервера свой (не случайность, а нумерация)"
+  }
+ ]
+}

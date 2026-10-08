@@ -880,6 +880,12 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     // Список игроков берётся до замка предметов: два замка разом не держим.
     let watchers = watchers(shared, dimension);
+    // Хозяева приручённых и держатели поводков — по UUID (mob/tame.rs).
+    let owners: Vec<([u8; 16], i32)> = {
+        let players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+        players.members().iter().filter(|member| member.dimension == dimension).map(|member| (member.uuid, member.entity_id)).collect()
+    };
     let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
     let time = world.time_of_day();
     let nether = world.is_nether();
@@ -1015,6 +1021,13 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             for mob in crate::mob::spawn::for_new_chunk(&MobView(world), chunk_x, chunk_z, rng, &mut || shared.next_entity_id()) {
                 items.add_mob(mob);
             }
+
+            // Волки в лесах и тайгах (mob/spawn.rs).
+            let biome = world.surface_biome(chunk_x * 16 + 8, chunk_z * 16 + 8);
+
+            for wolf in crate::mob::spawn::wolves_for_new_chunk(&MobView(world), chunk_x, chunk_z, biome, rng, &mut || shared.next_entity_id()) {
+                items.add_mob(wolf);
+            }
         }
     }
 
@@ -1034,6 +1047,8 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     // хода (чёрный ящик, cow-physics).
     items.snapshot_mobs();
     world.note_tracker();
+
+    crate::mob::tame::bind_owners(items.mobs_mut(), &owners);
 
     let outcome = crate::mob::step_all(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id());
 

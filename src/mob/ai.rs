@@ -123,6 +123,9 @@ pub struct Plan {
 
     /// Огненный шар ифрита или гаста (mob/nether.rs).
     pub launch: Option<super::nether::Launch>,
+
+    /// Укус волка по мобу: цель, урон, направление толчка (mob/tame.rs).
+    pub bite: Option<(i32, f32, (f64, f64))>,
 }
 
 /// Состояние мыслей.

@@ -1026,6 +1026,15 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
                 data.set_rocket(Fireworks { flight: flight.clamp(-128.0, 127.0) as i8, explosions });
             }
             "firework_explosion" => data.explosion = Some(parse_explosion(&value)?),
+            // Своё имя (`custom_name="Бобик"` или `{text:"Бобик"}`): бирка (вики, Name Tag).
+            "custom_name" => {
+                data.name = match &value {
+                    Value::Str(text) => Some(text.clone()),
+                    Value::Map(_) => value.get("text").and_then(|text| if let Value::Str(text) = text { Some(text.clone()) } else { None }),
+                    _ => None,
+                }
+                .filter(|name| !name.is_empty());
+            }
             // Отделка: `trim={material:"minecraft:gold",pattern:"minecraft:sentry"}`
             // (вики, Data component format: trim).
             "trim" => {

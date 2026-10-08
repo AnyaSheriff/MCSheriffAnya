@@ -1,0 +1,98 @@
+{
+ "name": "cat-tame",
+ "about": "Бродячая кошка NoAI; 12 щелчков сырой треской раз в 4 такта: шанс 1/3 (дым 6, сердечки 7), прирученная садится; дальше треска её лечит/сажает.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:cod 12",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon cat $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 14,
+   "interact": true
+  },
+  {
+   "after": 18,
+   "interact": true
+  },
+  {
+   "after": 22,
+   "interact": true
+  },
+  {
+   "after": 26,
+   "interact": true
+  },
+  {
+   "after": 30,
+   "interact": true
+  },
+  {
+   "after": 34,
+   "interact": true
+  },
+  {
+   "after": 38,
+   "interact": true
+  },
+  {
+   "after": 42,
+   "interact": true
+  },
+  {
+   "after": 46,
+   "interact": true
+  },
+  {
+   "after": 50,
+   "interact": true
+  },
+  {
+   "after": 54,
+   "interact": true
+  }
+ ],
+ "record_ticks": 70,
+ "cleanup": [
+  "kill @e[type=wolf,distance=..48]",
+  "kill @e[type=cat,distance=..48]",
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=sheep,distance=..48]",
+  "kill @e[type=leash_knot,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "приручение и что после",
+   "match": "^cart cat|^meta |^status",
+   "range": [
+    0,
+    200
+   ],
+   "anytick": true,
+   "why": "вики, Cat: «1⁄3 chance» на каждую рыбу — такт приручения случаен"
+  }
+ ]
+}

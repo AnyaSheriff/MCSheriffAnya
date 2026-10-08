@@ -191,7 +191,9 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 23] = [
             "wind_burst",
         ],
     ),
-    ("minecraft:cat_variant", &["tabby"]),
+    // Все варианты кошки и волка, по алфавиту: номера в свойствах — как у
+    // оригинала (чёрный ящик, probe-cats: ashen 0, tabby 9, white 10).
+    ("minecraft:cat_variant", &["all_black", "black", "british_shorthair", "calico", "jellie", "persian", "ragdoll", "red", "siamese", "tabby", "white"]),
     ("minecraft:cat_sound_variant", &["classic"]),
     // Клиент ссылается на все три записи напрямую.
     ("minecraft:chicken_variant", &["cold", "temperate", "warm"]),
@@ -202,7 +204,7 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 23] = [
     ("minecraft:painting_variant", &["kebab"]),
     ("minecraft:pig_variant", &["temperate"]),
     ("minecraft:pig_sound_variant", &["classic"]),
-    ("minecraft:wolf_variant", &["pale"]),
+    ("minecraft:wolf_variant", &["ashen", "black", "chestnut", "pale", "rusty", "snowy", "spotted", "striped", "woods"]),
     ("minecraft:wolf_sound_variant", &["classic"]),
     ("minecraft:zombie_nautilus_variant", &["temperate"]),
     // Материалы отделки брони: на них ссылаются компоненты предметов.

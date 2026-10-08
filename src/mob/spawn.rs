@@ -126,6 +126,50 @@ pub fn for_new_chunk(view: &dyn View, chunk_x: i32, chunk_z: i32, rng: &mut Rng,
     mobs
 }
 
+/// Стая волков в новом чанке леса, тайги, рощи, плато саванны (вики, Wolf,
+/// «Spawning»: стаей по 4, в саванне и бесплодных землях 4–8, в джунглях 2–4;
+/// вариант — по биому). Доля среди животных — по весу вида против суммы весов
+/// прочих (40) [проверить].
+pub fn wolves_for_new_chunk(view: &dyn View, chunk_x: i32, chunk_z: i32, biome: &str, rng: &mut Rng, next_id: &mut dyn FnMut() -> i32) -> Vec<Mob> {
+    let Some((weight, low, high)) = super::tame::wolf_spawn(biome) else {
+        return Vec::new();
+    };
+
+    if rng.unit() >= CHUNK_CHANCE * f64::from(weight) / f64::from(weight + 40) {
+        return Vec::new();
+    }
+
+    let want = low + rng.below(high - low + 1);
+    let (base_x, base_z) = (chunk_x * 16 + rng.below(16) as i32, chunk_z * 16 + rng.below(16) as i32);
+    let variant = super::tame::wolf_variant_for(biome);
+    let mut mobs = Vec::new();
+
+    for _ in 0..want * 4 {
+        if mobs.len() as u32 >= want {
+            break;
+        }
+
+        let x = (base_x + rng.below(11) as i32 - 5).clamp(chunk_x * 16, chunk_x * 16 + 15);
+        let z = (base_z + rng.below(11) as i32 - 5).clamp(chunk_z * 16, chunk_z * 16 + 15);
+
+        let Some(y) = surface(view, x, z) else {
+            continue;
+        };
+
+        if (y + 1..=y + 2).any(|above| solid(view.block(x, above, z))) {
+            continue;
+        }
+
+        let mut wolf = Mob::new(next_id(), Kind::Wolf, (f64::from(x) + 0.5, f64::from(y + 1), f64::from(z) + 0.5));
+
+        wolf.face((rng.unit() * 360.0) as f32);
+        wolf.tame.variant = variant;
+        mobs.push(wolf);
+    }
+
+    mobs
+}
+
 // ---------------------------------------------------------------------------
 // Враждебные: появление в темноте
 // ---------------------------------------------------------------------------

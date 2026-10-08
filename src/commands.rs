@@ -963,6 +963,22 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
         mob.no_ai = on;
     }
 
+    // Имя (`CustomName:"…"`, простой текст) и «не исчезать» (вики, Entity format).
+    if let Some(rest) = data.split("CustomName:\"").nth(1)
+        && let Some(name) = rest.split('"').next()
+    {
+        mob.name = Some(name.to_string());
+    }
+
+    if let Some(on) = flag_in(data, "PersistenceRequired:") {
+        mob.persistent_tag = on;
+    }
+
+    // Волк и кошка: хозяин, сидение, ошейник, вариант (mob/tame.rs).
+    if matches!(mob.kind, crate::mob::Kind::Wolf | crate::mob::Kind::Cat) {
+        crate::mob::tame::apply_data(mob, data);
+    }
+
     if let Some(on) = flag_in(data, "Silent:") {
         mob.silent = on;
     }

@@ -1,0 +1,45 @@
+{
+ "name": "name-tag",
+ "about": "Корова NoAI; бирка «Бобик»: щелчок — имя (свойство 2), бирка уходит; щелчок пустой рукой — ничего.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:name_tag[custom_name=\"Бобик\"] 1",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 20,
+   "interact": true
+  }
+ ],
+ "record_ticks": 40,
+ "cleanup": [
+  "kill @e[type=wolf,distance=..48]",
+  "kill @e[type=cat,distance=..48]",
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=sheep,distance=..48]",
+  "kill @e[type=leash_knot,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ]
+}

@@ -72,6 +72,7 @@ mod signs;
 mod cauldron;
 mod vehicle;
 mod glide;
+mod tame;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
 
@@ -7771,6 +7772,12 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         return true;
     }
 
+    // Бирка, поводок, волк и кошка (play/tame.rs).
+    if tame::use_on_mob(&mut items, index, player, shared, reaction) {
+        return true;
+    }
+
+    let mob = &items.mobs()[index];
     let held = player.inventory.held().and_then(|stack| blocks::item_name(stack.item));
     let survival = player.game_mode != GAME_MODE_CREATIVE;
     let at = (mob.x, mob.y, mob.z);
@@ -8303,6 +8310,11 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         }
 
         if let Some(reaction) = sleep::use_anchor(&mut world, shared, player, clicked, face, held_name, sequence) {
+            return Some(reaction);
+        }
+
+        // Забор с мобами на поводке: узел (play/tame.rs).
+        if let Some(reaction) = tame::use_fence(&mut world, shared, player, clicked, face, sequence) {
             return Some(reaction);
         }
 

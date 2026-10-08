@@ -34,10 +34,16 @@ const ROTATE_HEAD: i32 = 0x53;
 const UPDATE_ATTRIBUTES: i32 = 0x83;
 const LEVEL_PARTICLES: i32 = 0x2F;
 const ENTITY_SOUND: i32 = 0x74;
+const LINK_ENTITIES: i32 = 0x64;
 
 /// Виды значений свойств (protocol.json, entityMetadataEntry).
 const TYPE_BYTE: i32 = 0;
 const TYPE_INT: i32 = 1;
+const TYPE_LONG: i32 = 2;
+const TYPE_OPT_COMPONENT: i32 = 6;
+const TYPE_OPT_UUID: i32 = 13;
+const TYPE_CAT_VARIANT: i32 = 21;
+const TYPE_WOLF_VARIANT: i32 = 25;
 const TYPE_FLOAT: i32 = 3;
 const TYPE_BOOL: i32 = 8;
 const TYPE_OPT_BLOCK_POS: i32 = 11;
@@ -76,7 +82,7 @@ fn attributes_at(kind: Kind) -> u64 {
         Kind::Creeper => 1,
         // Кристаллу и дракону атрибуты не шлются вовсе (чёрный ящик,
         // end-crystal-explode, dragon-summon).
-        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet => u64::MAX,
+        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::LeashKnot => u64::MAX,
         _ => 3,
     }
 }
@@ -124,6 +130,10 @@ pub(super) struct ShownMob {
     /// Слежение ещё не прогонялось: свойства уйдут ещё раз целиком.
     first: bool,
     properties: Vec<Property>,
+
+    /// Наибольшее здоровье, как показано (у волка оно меняется при
+    /// приручении — атрибут max_health; чёрный ящик, wolf-tame).
+    max_health: f32,
 }
 
 fn float(value: f32) -> Vec<u8> {
@@ -157,16 +167,17 @@ fn properties(mob: &Mob) -> Vec<Property> {
         return vec![(0, TYPE_BYTE, vec![fire]), (4, TYPE_BOOL, vec![u8::from(mob.silent)]), (8, TYPE_OPT_BLOCK_POS, beam), (9, TYPE_BOOL, vec![1])];
     }
 
-    // Снаряд шалкера — тоже не живое: флаги и тишина (minecraft-data:
-    // shulker_bullet — только общие свойства сущности).
-    if mob.kind == Kind::ShulkerBullet {
+    // Снаряд шалкера и узел поводка — тоже не живые: флаги и тишина
+    // (minecraft-data: shulker_bullet и leash_knot — только общие свойства).
+    if matches!(mob.kind, Kind::ShulkerBullet | Kind::LeashKnot) {
         return vec![(0, TYPE_BYTE, vec![fire]), (4, TYPE_BOOL, vec![u8::from(mob.silent)])];
     }
     // «Агрессивен» (бит 4) у эндермена и шалкера не ставится: у первого
     // злость — свойство 17 (чёрный ящик, enderman-stare, shulker-ai).
-    let aggressive = u8::from(mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube) && mob.h.target.is_some()) << 2;
+    let aggressive = u8::from((mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube) && mob.h.target.is_some()) || (mob.kind == Kind::Wolf && mob.tame.melee)) << 2;
     let mut out: Vec<Property> = vec![
         (0, TYPE_BYTE, vec![fire]),
+        (2, TYPE_OPT_COMPONENT, custom_name(mob)),
         (4, TYPE_BOOL, vec![u8::from(mob.silent)]),
         (6, TYPE_POSE, encode_varint(if mob.is_dead() { POSE_DYING } else { 0 })),
         (9, TYPE_FLOAT, float(mob.vitals.health)),
@@ -176,7 +187,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
     // Утопленник с занесённым трезубцем «использует предмет» (чёрный ящик,
     // drowned-trident: 8=1 с захвата цели).
     if mob.kind == Kind::Drowned {
-        out.insert(3, (8, TYPE_BYTE, vec![u8::from(mob.h.using)]));
+        out.insert(4, (8, TYPE_BYTE, vec![u8::from(mob.h.using)]));
     }
 
     // Частицы эффектов (10): у ведьмы — от выпитых зелий (чёрный ящик,
@@ -187,7 +198,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
         super::vitals::push_effect_particles(&mut particles, &mob.vitals.effect_colors());
         // Ключ и вид уже в записи — оставляем одно значение.
         particles.drain(..1 + encode_varint(TYPE_PARTICLES).len());
-        out.insert(4, (10, TYPE_PARTICLES, particles));
+        out.insert(5, (10, TYPE_PARTICLES, particles));
     }
 
     match mob.kind {
@@ -265,7 +276,35 @@ fn properties(mob: &Mob) -> Vec<Property> {
         // Фаза дракона: 10 — висит (minecraft-data: phase; чёрный ящик,
         // dragon-summon: призванный фазы не шлёт — она по умолчанию).
         Kind::EnderDragon => out.push((16, TYPE_INT, encode_varint(i32::from(mob.dragon.phase)))),
-        Kind::EndCrystal | Kind::ShulkerBullet => {}
+        Kind::EndCrystal | Kind::ShulkerBullet | Kind::LeashKnot => {}
+        // Волк (minecraft-data: flags, owneruuid, interested, collar_color,
+        // anger_end_time, variant, sound_variant; чёрный ящик, wolf-tame,
+        // wolf-defend, probe-cats). Голос — всегда обычный [проверить: у
+        // естественных волков он случаен].
+        Kind::Wolf => {
+            let tame = &mob.tame;
+
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((18, TYPE_BYTE, vec![tame.flags()]));
+            out.push((19, TYPE_OPT_UUID, owner_uuid(tame.owner)));
+            out.push((20, TYPE_BOOL, vec![u8::from(tame.begging)]));
+            out.push((21, TYPE_INT, encode_varint(i32::from(tame.collar))));
+            out.push((22, TYPE_LONG, encode_varlong(if tame.anger_until > tame.clock { tame.anger_until } else { -1 })));
+            out.push((23, TYPE_WOLF_VARIANT, encode_varint(i32::from(tame.variant))));
+        }
+        // Кошка (minecraft-data: flags, owneruuid, variant, is_lying,
+        // relax_state_one, collar_color, sound_variant; чёрный ящик, cat-tame).
+        Kind::Cat => {
+            let tame = &mob.tame;
+
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((18, TYPE_BYTE, vec![tame.flags()]));
+            out.push((19, TYPE_OPT_UUID, owner_uuid(tame.owner)));
+            out.push((20, TYPE_CAT_VARIANT, encode_varint(i32::from(tame.variant))));
+            out.push((21, TYPE_BOOL, vec![0]));
+            out.push((22, TYPE_BOOL, vec![0]));
+            out.push((23, TYPE_INT, encode_varint(i32::from(tame.collar))));
+        }
         // Эндермен (minecraft-data: carry_state, creepy, stared_at): блок в
         // руках — Optional BlockState: само состояние, 0 (воздух) — пусто
         // (чёрный ящик, enderman-stand: дёрн без снега — 16=9); кричит
@@ -306,6 +345,33 @@ fn properties(mob: &Mob) -> Vec<Property> {
     out
 }
 
+/// Имя моба (свойство 2, Optional Text Component): нет — 0, есть — 1 и текст
+/// (чёрный ящик, name-tag: `2={"type":"string","value":"Бобик"}`).
+fn custom_name(mob: &Mob) -> Vec<u8> {
+    match &mob.name {
+        None => vec![0],
+        Some(name) => {
+            let mut out = vec![1];
+
+            out.extend_from_slice(&nbt::text_component(name));
+            out
+        }
+    }
+}
+
+/// Хозяин (Optional UUID): нет — 0, есть — 1 и 16 байт.
+fn owner_uuid(owner: Option<[u8; 16]>) -> Vec<u8> {
+    match owner {
+        None => vec![0],
+        Some(uuid) => {
+            let mut out = vec![1];
+
+            out.extend_from_slice(&uuid);
+            out
+        }
+    }
+}
+
 /// Значения по умолчанию: пока свойство такое, при появлении оно не
 /// присылается. Варианты животных у нас всегда обычные, и клиент знает
 /// их сам.
@@ -313,6 +379,14 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
     let (key, _, value) = entry;
 
     match (*key, kind) {
+        (2, _) => value.as_slice() == [0],
+        // Волк и кошка: ошейник красный, вариант — бледный и чёрная, злости нет
+        // (чёрный ящик, probe-cats).
+        (18..=20, Kind::Wolf) | (18 | 19 | 21 | 22, Kind::Cat) => value.iter().all(|byte| *byte == 0),
+        (21, Kind::Wolf) | (23, Kind::Cat) => value.as_slice() == encode_varint(i32::from(crate::mob::tame::RED)).as_slice(),
+        (22, Kind::Wolf) => value.as_slice() == encode_varlong(-1).as_slice(),
+        (23, Kind::Wolf) => value.as_slice() == encode_varint(i32::from(crate::mob::tame::WOLF_DEFAULT)).as_slice(),
+        (20, Kind::Cat) => value.as_slice() == encode_varint(i32::from(crate::mob::tame::CAT_DEFAULT)).as_slice(),
         (8, Kind::EndCrystal | Kind::Drowned) => value.as_slice() == [0],
         (9, Kind::EndCrystal) => value.as_slice() == [1],
         (16, Kind::MagmaCube | Kind::Slime) => value.as_slice() == encode_varint(1).as_slice(),
@@ -365,9 +439,13 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
     body.extend_from_slice(&encode_varint(mob.entity_id));
     body.extend_from_slice(&mob.uuid);
     body.extend_from_slice(&encode_varint(mob.kind.java_type()));
-    push_f64(&mut body, mob.x);
-    push_f64(&mut body, mob.y);
-    push_f64(&mut body, mob.z);
+    // Узел поводка появляется в углу своего блока (чёрный ящик, lead-attach:
+    // появление в целых x, y, z забора).
+    let place = if mob.kind == Kind::LeashKnot { (mob.x.floor(), mob.y.floor(), mob.z.floor()) } else { (mob.x, mob.y, mob.z) };
+
+    push_f64(&mut body, place.0);
+    push_f64(&mut body, place.1);
+    push_f64(&mut body, place.2);
     types::push_velocity(&mut body, mob.vx, mob.vy, mob.vz);
     body.push(cart_angle(mob.pitch));
     body.push(cart_angle(mob.yaw));
@@ -390,6 +468,17 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         send_attributes(stream, mob).await?;
     }
 
+    // Дикий волк — наибольшее здоровье сразу (чёрный ящик, wolf-tame:
+    // max_health 8 при появлении; у призванного с хозяином — нет).
+    if wild_wolf(mob) {
+        send_max_health(stream, mob).await?;
+    }
+
+    // На поводке: связь с держателем (Link Entities).
+    if let Some(holder) = mob.leash {
+        send_leash(stream, mob.entity_id, holder.id()).await?;
+    }
+
     Ok(ShownMob {
         place: (mob.x, mob.y, mob.z),
         grid: grid_of((mob.x, mob.y, mob.z)),
@@ -405,7 +494,35 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         modded: modded(mob),
         first: true,
         properties,
+        max_health: mob.vitals.max_health,
     })
+}
+
+/// Дикий волк: ему наибольшее здоровье шлётся при появлении.
+fn wild_wolf(mob: &Mob) -> bool {
+    mob.kind == Kind::Wolf && !mob.tame.tamed()
+}
+
+/// Атрибут «наибольшее здоровье» один (чёрный ящик, wolf-tame).
+async fn send_max_health(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+    let mut body = encode_varint(UPDATE_ATTRIBUTES);
+
+    body.extend_from_slice(&encode_varint(mob.entity_id));
+    body.extend_from_slice(&encode_varint(1));
+    body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
+    push_f64(&mut body, f64::from(mob.vitals.max_health));
+    push_modifiers(&mut body, None);
+    write_body(stream, body).await
+}
+
+/// Link Entities (0x64): моб на поводке у держателя; 0 — поводок снят
+/// (чёрный ящик, lead-attach: `vehicleId 0` при обрыве).
+async fn send_leash(stream: &mut Outgoing<'_>, entity_id: i32, holder: i32) -> io::Result<()> {
+    let mut body = encode_varint(LINK_ENTITIES);
+
+    body.extend_from_slice(&entity_id.to_be_bytes());
+    body.extend_from_slice(&holder.to_be_bytes());
+    write_body(stream, body).await
 }
 
 /// Скорость шага в пакете атрибутов: как у вида, но у шалкера, что не
@@ -548,6 +665,7 @@ pub(super) async fn send_mob_event(
         Event::Eating => send_status(stream, entity_id, 10).await?,
         Event::Swing => send_animation(stream, entity_id).await?,
         Event::Status(status) => send_status(stream, entity_id, *status).await?,
+        Event::Leash(holder) => send_leash(stream, entity_id, *holder).await?,
         Event::Sound { name, volume, pitch } if heard(at) => {
             let category = if name.starts_with("minecraft:entity.slime.") { 5 } else { SOUND_NEUTRAL };
             send_sound(stream, name, category, at, *volume, *pitch).await?;
@@ -782,7 +900,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
                 // шлётся (чёрный ящик, dragon-crystal-heal: кристалл стоял 80 тактов, у оригинала
                 // на +60 ничего, у дракона рядом — шлётся); сдвиг при появлении (такт 0) — как у всех
                 // [проверить: другие неживые].
-                let forced = mob.ticks % FORCED == 0 && (mob.kind != Kind::EndCrystal || mob.ticks == 0);
+                let forced = mob.ticks % FORCED == 0 && (!matches!(mob.kind, Kind::EndCrystal | Kind::LeashKnot) || mob.ticks == 0);
                 let (yaw, pitch) = (cart_angle(mob.yaw), cart_angle(mob.pitch));
                 let turned = yaw != shown.yaw || pitch != shown.pitch;
                 let step = (grid.0 - shown.grid.0, grid.1 - shown.grid.1, grid.2 - shown.grid.2);
@@ -871,6 +989,13 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
             send_attributes(stream, mob).await?;
         }
 
+        // Волк: наибольшее здоровье — второй раз в первом прогоне (дикий) и
+        // при перемене (приручение: 40; чёрный ящик, wolf-tame).
+        if (shown.first && wild_wolf(mob)) || (mob.kind == Kind::Wolf && mob.vitals.max_health != shown.max_health) {
+            send_max_health(stream, mob).await?;
+            shown.max_health = mob.vitals.max_health;
+        }
+
         // Снаряжение уходит и второй раз в первом проходе (чёрный ящик,
         // skeleton-stand и zombie-attack).
         if shown.first {
@@ -946,6 +1071,7 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         modded: false,
         first: true,
         properties,
+        max_health: 0.0,
     })
 }
 

@@ -17,10 +17,12 @@
 pub mod ai;
 pub mod dragon;
 pub mod hostile;
+pub mod leash;
 pub mod nether;
 pub mod path;
 pub mod spawn;
 pub mod slime;
+pub mod tame;
 
 use crate::blocks;
 use crate::inventory::Stack;
@@ -81,12 +83,19 @@ pub enum Kind {
     Drowned,
     /// Кадавр (вики, Husk): зомби пустыни — не горит, бьёт голодом.
     Husk,
+    /// Волк (вики, Wolf): приручается костью, защищает хозяина (mob/tame.rs).
+    Wolf,
+    /// Кошка (вики, Cat): приручается сырой рыбой, пугает криперов (mob/tame.rs).
+    Cat,
+    /// Узел поводка на заборе (вики, Lead, «Leash knot»): не живое, как
+    /// кристалл, но в списке мобов — ради слежения (mob/leash.rs).
+    LeashKnot,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 28] = [
+    pub const ALL: [Kind; 31] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -115,6 +124,9 @@ impl Kind {
         Kind::Strider,
         Kind::Drowned,
         Kind::Husk,
+        Kind::Wolf,
+        Kind::Cat,
+        Kind::LeashKnot,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -153,7 +165,7 @@ impl Kind {
 
     /// Не живое существо, а «сущность-другое»: кристалл и снаряд шалкера.
     pub fn object(self) -> bool {
-        matches!(self, Kind::EndCrystal | Kind::ShulkerBullet)
+        matches!(self, Kind::EndCrystal | Kind::ShulkerBullet | Kind::LeashKnot)
     }
 
     /// По имени сущности, как в командах.
@@ -187,6 +199,9 @@ impl Kind {
             "strider" => Kind::Strider,
             "drowned" => Kind::Drowned,
             "husk" => Kind::Husk,
+            "wolf" => Kind::Wolf,
+            "cat" => Kind::Cat,
+            "leash_knot" => Kind::LeashKnot,
             _ => return None,
         })
     }
@@ -221,6 +236,9 @@ impl Kind {
             Kind::Strider => "strider",
             Kind::Drowned => "drowned",
             Kind::Husk => "husk",
+            Kind::Wolf => "wolf",
+            Kind::Cat => "cat",
+            Kind::LeashKnot => "leash_knot",
         }
     }
 
@@ -259,6 +277,11 @@ impl Kind {
             // drowned-attack и husk-hunger: тип в пакете появления).
             Kind::Drowned => 38,
             Kind::Husk => 67,
+            // minecraft-data 26.1, entities.json: wolf 148, cat 21, leash_knot 76
+            // (чёрный ящик, wolf-tame, cat-tame, lead-attach).
+            Kind::Wolf => 148,
+            Kind::Cat => 21,
+            Kind::LeashKnot => 76,
         }
     }
 
@@ -296,6 +319,10 @@ impl Kind {
             // [Bedrock: потом] утопленник и кадавр для клиента Bedrock: имена есть, плавания и трезубца нет.
             Kind::Drowned => "minecraft:drowned",
             Kind::Husk => "minecraft:husk",
+            // [Bedrock: потом] приручение, ошейник и узел поводка для клиента Bedrock.
+            Kind::Wolf => "minecraft:wolf",
+            Kind::Cat => "minecraft:cat",
+            Kind::LeashKnot => "minecraft:leash_knot",
         }
     }
 
@@ -317,6 +344,9 @@ impl Kind {
             Kind::ShulkerBullet => 0.3125,
             Kind::EndCrystal => 2.0,
             Kind::EnderDragon => 16.0,
+            // minecraft-data: wolf 0,6 × 0,85, cat 0,6 × 0,7, leash_knot 0,375 × 0,5.
+            Kind::Wolf | Kind::Cat => 0.6,
+            Kind::LeashKnot => 0.375,
             _ => 0.9,
         }
     }
@@ -345,6 +375,9 @@ impl Kind {
             Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 1.95,
             Kind::Hoglin => 1.4,
             Kind::Strider => 1.7,
+            Kind::Wolf => 0.85,
+            Kind::Cat => 0.7,
+            Kind::LeashKnot => 0.5,
         }
     }
 
@@ -375,6 +408,11 @@ impl Kind {
             Kind::PiglinBrute => 50.0,
             Kind::Hoglin => 40.0,
             Kind::MagmaCube | Kind::Slime => 1.0,
+            // Вики, Wolf: дикий 8, приручённый 40 (`tame::TAME_HEALTH`); чёрный ящик,
+            // wolf-tame: 9=8, после приручения 9=40. Cat: 10 (cat-tame: 9=10).
+            Kind::Wolf => 8.0,
+            Kind::Cat => 10.0,
+            Kind::LeashKnot => 1.0,
         }
     }
 
@@ -407,7 +445,9 @@ impl Kind {
             Kind::Piglin | Kind::PiglinBrute => 0.35,
             Kind::Hoglin => 0.3,
             Kind::Strider => 0.175,
-            Kind::Shulker | Kind::ShulkerBullet => 0.0,
+            Kind::Shulker | Kind::ShulkerBullet | Kind::LeashKnot => 0.0,
+            // Чёрный ящик, wolf-tame и cat-tame: атрибут скорости 0,3.
+            Kind::Wolf | Kind::Cat => 0.3,
         }
     }
 
@@ -473,6 +513,11 @@ impl Kind {
             // в воде — `Mob::sounds`; у кадавра свои.
             Kind::Drowned => ("minecraft:entity.drowned.ambient", "minecraft:entity.drowned.hurt", "minecraft:entity.drowned.death"),
             Kind::Husk => ("minecraft:entity.husk.ambient", "minecraft:entity.husk.hurt", "minecraft:entity.husk.death"),
+            // Вики, Wolf и Cat, «Sounds»: голос в покое у волка и кошки зависит от
+            // состояния (`Mob::sounds`: злой рычит, раненый скулит, приручённая мурлычет).
+            Kind::Wolf => ("minecraft:entity.wolf.ambient", "minecraft:entity.wolf.hurt", "minecraft:entity.wolf.death"),
+            Kind::Cat => ("minecraft:entity.cat.stray_ambient", "minecraft:entity.cat.hurt", "minecraft:entity.cat.death"),
+            Kind::LeashKnot => ("", "", ""),
         }
     }
 
@@ -497,6 +542,7 @@ impl Kind {
             Kind::Strider => "minecraft:entity.strider.step",
             Kind::Drowned => "minecraft:entity.drowned.step",
             Kind::Husk => "minecraft:entity.husk.step",
+            Kind::Wolf => "minecraft:entity.wolf.step",
             // У эндермена и ведьмы шаги — звуком блока [проверить]; молча.
             _ => "",
         }
@@ -721,6 +767,11 @@ pub enum Event {
     /// Прочее событие сущности (Entity Event): 46 — частицы прыжка
     /// эндермена и шалкера [проверить].
     Status(u8),
+
+    /// Поводок: держатель (номер сущности, 0 — снят) — пакет Link Entities
+    /// в такте события (чёрный ящик, lead-attach).
+    Leash(i32),
+
 }
 
 /// Моб в мире.
@@ -852,7 +903,25 @@ pub struct Mob {
     /// Уровень «Добычи» оружия убившего: число добавляется к верхней границе
     /// выпадения (вики, Looting).
     pub looting: i32,
+
+    /// Имя с бирки или из команды (`CustomName`, простой текст): видно над
+    /// головой, такой моб не исчезает (вики, Name Tag).
+    pub name: Option<String>,
+
+    /// Пометка «не исчезать» из бирки или `PersistenceRequired` (вики, Name Tag:
+    /// «named mobs do not despawn»).
+    pub persistent_tag: bool,
+
+    /// На поводке: у кого (mob/leash.rs).
+    pub leash: Option<leash::Holder>,
+
+    /// Приручение волка и кошки (mob/tame.rs).
+    pub tame: tame::State,
 }
+
+/// Бит в байте вида записи моба: за записью идёт общий хвост (имя, поводок).
+/// Старые записи его не имеют — читаются как раньше.
+const EXTENDED: u8 = 0x80;
 
 impl Mob {
     pub fn new(entity_id: i32, kind: Kind, at: (f64, f64, f64)) -> Self {
@@ -927,6 +996,10 @@ impl Mob {
             villager: crate::villager::State::new(),
             nether,
             looting: 0,
+            name: None,
+            persistent_tag: false,
+            leash: None,
+            tame: tame::State { variant: tame::default_variant(kind), ..tame::State::default() },
         }
     }
 
@@ -1014,6 +1087,10 @@ impl Mob {
     /// Голоса моба: у утопленника в воде — свои (вики, Drowned, «Sounds»:
     /// ambient_water, hurt_water, death_water).
     pub fn sounds(&self) -> (&'static str, &'static str, &'static str) {
+        if matches!(self.kind, Kind::Wolf | Kind::Cat) {
+            return tame::sounds(self);
+        }
+
         if self.kind == Kind::Drowned && self.h.wet {
             return ("minecraft:entity.drowned.ambient_water", "minecraft:entity.drowned.hurt_water", "minecraft:entity.drowned.death_water");
         }
@@ -1121,7 +1198,7 @@ impl Mob {
 
         // Кристалл Края стоит, где поставлен: ни тяжести, ни мыслей, ни голоса
         // (вики, End Crystal; чёрный ящик, end-crystal-explode: висит без сверок скорости).
-        if self.kind == Kind::EndCrystal {
+        if matches!(self.kind, Kind::EndCrystal | Kind::LeashKnot) {
             return ai::Plan::default();
         }
 
@@ -1185,7 +1262,7 @@ impl Mob {
         let view: &dyn View = if self.kind == Kind::Strider { &lava_floor } else { view };
 
         let was_on_ground = self.on_ground;
-        let mut plan = ai::think(self, view, ctx, rng);
+        let mut plan = if matches!(self.kind, Kind::Wolf | Kind::Cat) { tame::think(self, view, ctx, rng) } else { ai::think(self, view, ctx, rng) };
 
         // Пьющая ведьма стоит: модификатор «drinking» −0,25 к скорости 0,25
         // (чёрный ящик, witch-stand).
@@ -1551,6 +1628,9 @@ impl Mob {
                 self.h.target = Some(push.cause);
                 self.h.provoked = true;
             }
+
+            // Волк мстит и встаёт, кошка вскакивает (mob/tame.rs).
+            tame::on_hurt(self, push.cause);
         }
 
         // Всякий урон — «толчок» для слежения: скорость уходит клиентам вне
@@ -1584,7 +1664,7 @@ impl Mob {
 
             // Паника — только от удара существа: падение и команда не пугают
             // (чёрный ящик, cow-physics: упавшая корова стоит).
-            if let Some(push) = push.filter(|push| push.cause != 0 && !self.kind.hostile()) {
+            if let Some(push) = push.filter(|push| push.cause != 0 && !self.kind.hostile() && self.kind != Kind::Wolf) {
                 self.fright = Some((self.x - push.dir.0 * 8.0, self.z - push.dir.1 * 8.0));
                 self.brain.panic(PANIC_TICKS);
             }
@@ -1729,7 +1809,10 @@ impl Mob {
             Kind::Drowned => 25,
             Kind::Husk => 26,
             Kind::Slime => 27,
-        });
+            Kind::Wolf => 28,
+            Kind::Cat => 29,
+            Kind::LeashKnot => 30,
+        } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -1750,7 +1833,13 @@ impl Mob {
             Kind::Enderman => out.extend_from_slice(&self.h.carried.unwrap_or(-1).to_be_bytes()),
             Kind::Shulker => out.extend_from_slice(&[self.h.face, self.h.shell_color]),
             Kind::Villager | Kind::ZombieVillager => crate::villager::write(&self.villager, out),
+            Kind::Wolf | Kind::Cat => tame::write(&self.tame, out),
             _ => {}
+        }
+
+        // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
+        if self.name.is_some() || self.leash.is_some() || self.persistent_tag {
+            leash::write_tail(self, out);
         }
     }
 
@@ -1762,7 +1851,9 @@ impl Mob {
             Some(head)
         };
 
-        let kind = match take(1)?[0] {
+        let head = take(1)?[0];
+        let extended = head & EXTENDED != 0;
+        let kind = match head & !EXTENDED {
             0 => Kind::Cow,
             1 => Kind::Pig,
             2 => Kind::Sheep,
@@ -1791,6 +1882,9 @@ impl Mob {
             25 => Kind::Drowned,
             26 => Kind::Husk,
             27 => Kind::Slime,
+            28 => Kind::Wolf,
+            29 => Kind::Cat,
+            30 => Kind::LeashKnot,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -1807,6 +1901,8 @@ impl Mob {
         let shell = if kind == Kind::Shulker { take(2)?.to_vec() } else { vec![0, 16] };
         let slime_data = if kind == Kind::Slime { Some((i32::from_be_bytes(take(4)?.try_into().ok()?), take(1)?[0])) } else { None };
         let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
+        let tamed = if matches!(kind, Kind::Wolf | Kind::Cat) { Some(tame::read(bytes)?) } else { None };
+        let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
             return None;
@@ -1821,7 +1917,7 @@ impl Mob {
             mob.silent = flags & 1 != 0;
             mob.nether.persistence_required = flags & 2 != 0;
         }
-        mob.vitals.health = health.clamp(0.5, mob.vitals.max_health);
+        mob.vitals.health = health.clamp(0.5, if kind == Kind::Wolf { tame::TAME_HEALTH } else { mob.vitals.max_health });
         mob.age = age;
         mob.love = love.max(0);
         mob.no_ai = flags & 1 != 0;
@@ -1839,6 +1935,14 @@ impl Mob {
 
         if let Some(villager) = villager {
             mob.villager = villager;
+        }
+
+        if let Some(tamed) = tamed {
+            tame::apply_read(&mut mob, tamed);
+        }
+
+        if let Some(tail) = tail {
+            leash::apply_tail(&mut mob, tail);
         }
 
         // Снаряд без цели не живёт: прочитанный из файла гаснет.
@@ -1998,7 +2102,9 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         // Кристалл и дракон предметов не роняют (вики: у дракона только опыт,
         // яйцо — блок на портале).
         // Житель ничего не роняет (вики, Villager: «Drops: none»).
-        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager => {}
+        // Волк ничего не роняет, кошка — 0–2 нити (вики, Wolf и Cat, «Drops»).
+        Kind::Cat => give("string", 0, 2, rng),
+        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager | Kind::Wolf | Kind::LeashKnot => {}
         // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
         Kind::Enderman => {
             give("ender_pearl", 0, 1, rng);
@@ -2417,9 +2523,16 @@ pub fn step_all(
 
     let mut cured: Vec<usize> = Vec::new();
     let mut converted: Vec<(usize, Kind)> = Vec::new();
+    let mut bites: Vec<(i32, i32, f32, (f64, f64))> = Vec::new();
 
     for (index, mob) in mobs.iter_mut().enumerate() {
+        mob.tame.clock = env.clock;
+
         let plan = mob.tick(view, &ctx, rng);
+
+        if let Some((target, damage, push)) = plan.bite {
+            bites.push((mob.entity_id, target, damage, push));
+        }
 
         if let Some(kind) = mob.h.converted.take() {
             converted.push((index, kind));
@@ -2480,7 +2593,7 @@ pub fn step_all(
 
         // Шалкер не исчезает вдали от игроков (вики, Shulker: «does not despawn»)
         // [проверить: на мирной].
-        if mob.kind.hostile() && mob.kind != Kind::Shulker && !mob.is_dead() {
+        if mob.kind.hostile() && mob.kind != Kind::Shulker && !mob.is_dead() && !mob.persistent_tag {
             hostile::despawn_check(mob, players, rng, env.difficulty == crate::survival::PEACEFUL);
         }
 
@@ -2523,6 +2636,22 @@ pub fn step_all(
             mob.events.push(Event::Sound { name: "minecraft:entity.chicken.egg", volume: 1.0, pitch: (rng.unit() - rng.unit()) as f32 * 0.2 + 1.0 });
         }
     }
+
+    // Укусы волков по мобам (mob/tame.rs): урон от моба с толчком.
+    for (attacker, target, damage, dir) in bites {
+        if let Some(victim) = mobs.iter_mut().find(|mob| mob.entity_id == target) {
+            victim.hurt(damage, Source::MobAttack, Some(Push { dir, strength: BASE_KNOCKBACK, cause: attacker }));
+        }
+    }
+
+    // Волки хозяев: кого хозяин ударил и кто ударил хозяина; дикая стая;
+    // поводки (mob/leash.rs).
+    let owner_hits: Vec<(i32, i32)> = outcome.strikes.iter().map(|strike| (strike.attacker, strike.melee.target)).collect();
+
+    tame::orders(&mut mobs, &owner_hits);
+    tame::pack_anger(&mut mobs);
+    leash::bind_knots(&mut mobs);
+    leash::step_all(&mut mobs, &players.iter().map(|player| (player.id, (player.x, player.y, player.z))).collect::<Vec<_>>());
 
     // Зомби-пиглины зовут стаю: все в 32 блоках злятся на обидчика (вики,
     // Zombified Piglin: «all zombified piglins within … become angry»).
