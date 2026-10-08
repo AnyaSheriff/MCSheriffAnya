@@ -1,0 +1,60 @@
+{
+ "name": "iron-golem-heal",
+ "about": "Железный голем NoAI с 50 здоровья: железный слиток лечит на 25 (звук починки), слиток тратится; удар игрока — звук и урон; потом лечение до полного и лишний слиток не тратится.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:iron_ingot 8",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon iron_golem $(3.5,0,3.5) {NoAI:1b,Health:50f}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 20,
+   "attack": true
+  },
+  {
+   "after": 40,
+   "interact": true
+  },
+  {
+   "after": 50,
+   "interact": true
+  },
+  {
+   "after": 60,
+   "interact": true
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=iron_golem,distance=..48]",
+  "kill @e[type=snow_golem,distance=..48]",
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=blaze,distance=..48]",
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=snowball,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": []
+}

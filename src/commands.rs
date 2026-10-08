@@ -979,6 +979,15 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
         crate::mob::tame::apply_data(mob, data);
     }
 
+    // Големы: «построен игроком», тыква снежного (mob/golem.rs).
+    if let Some(on) = flag_in(data, "PlayerCreated:") {
+        mob.golem.player_made = on;
+    }
+
+    if let Some(on) = flag_in(data, "Pumpkin:") {
+        mob.golem.pumpkin = on;
+    }
+
     if let Some(on) = flag_in(data, "Silent:") {
         mob.silent = on;
     }

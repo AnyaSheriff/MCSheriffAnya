@@ -392,7 +392,16 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
 
         let ((x, y, z), effect, data) = impact.event;
 
-        if near((f64::from(x), f64::from(y), f64::from(z))) {
+        // Снежок: событие сущности 3 (частицы) до ухода (чёрный ящик, snow-golem-shoot).
+        if let Some(status) = impact.status {
+            if player.seen_thrown.contains_key(&impact.flying) {
+                let mut body = encode_varint(ENTITY_EVENT);
+
+                push_i32(&mut body, impact.flying);
+                body.push(status);
+                write_body(stream, body).await?;
+            }
+        } else if near((f64::from(x), f64::from(y), f64::from(z))) {
             let mut body = encode_varint(WORLD_EVENT);
 
             push_i32(&mut body, effect);

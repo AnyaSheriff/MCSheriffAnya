@@ -17,6 +17,7 @@
 pub mod ai;
 pub mod arthropod;
 pub mod dragon;
+pub mod golem;
 pub mod hostile;
 pub mod leash;
 pub mod nether;
@@ -93,12 +94,16 @@ pub enum Kind {
     /// Узел поводка на заборе (вики, Lead, «Leash knot»): не живое, как
     /// кристалл, но в списке мобов — ради слежения (mob/leash.rs).
     LeashKnot,
+    /// Железный голем (вики, Iron Golem): строится из железа и тыквы (mob/golem.rs).
+    IronGolem,
+    /// Снежный голем (вики, Snow Golem): кидает снежки во врагов (mob/golem.rs).
+    SnowGolem,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 33] = [
+    pub const ALL: [Kind; 35] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -132,6 +137,8 @@ impl Kind {
         Kind::Wolf,
         Kind::Cat,
         Kind::LeashKnot,
+        Kind::IronGolem,
+        Kind::SnowGolem,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -216,6 +223,8 @@ impl Kind {
             "wolf" => Kind::Wolf,
             "cat" => Kind::Cat,
             "leash_knot" => Kind::LeashKnot,
+            "iron_golem" => Kind::IronGolem,
+            "snow_golem" => Kind::SnowGolem,
             _ => return None,
         })
     }
@@ -255,6 +264,8 @@ impl Kind {
             Kind::Wolf => "wolf",
             Kind::Cat => "cat",
             Kind::LeashKnot => "leash_knot",
+            Kind::IronGolem => "iron_golem",
+            Kind::SnowGolem => "snow_golem",
         }
     }
 
@@ -300,6 +311,9 @@ impl Kind {
             Kind::Wolf => 148,
             Kind::Cat => 21,
             Kind::LeashKnot => 76,
+            // minecraft-data 26.1, entities.json: iron_golem 70, snow_golem 121.
+            Kind::IronGolem => 70,
+            Kind::SnowGolem => 121,
         }
     }
 
@@ -344,6 +358,9 @@ impl Kind {
             Kind::Wolf => "minecraft:wolf",
             Kind::Cat => "minecraft:cat",
             Kind::LeashKnot => "minecraft:leash_knot",
+            // [Bedrock: потом] големы для клиента Bedrock: имена есть, свойств нет.
+            Kind::IronGolem => "minecraft:iron_golem",
+            Kind::SnowGolem => "minecraft:snow_golem",
         }
     }
 
@@ -370,6 +387,9 @@ impl Kind {
             // minecraft-data: wolf 0,6 × 0,85, cat 0,6 × 0,7, leash_knot 0,375 × 0,5.
             Kind::Wolf | Kind::Cat => 0.6,
             Kind::LeashKnot => 0.375,
+            // minecraft-data: iron_golem 1,4 × 2,7, snow_golem 0,7 × 1,9.
+            Kind::IronGolem => 1.4,
+            Kind::SnowGolem => 0.7,
             _ => 0.9,
         }
     }
@@ -403,6 +423,8 @@ impl Kind {
             Kind::Wolf => 0.85,
             Kind::Cat => 0.7,
             Kind::LeashKnot => 0.5,
+            Kind::IronGolem => 2.7,
+            Kind::SnowGolem => 1.9,
         }
     }
 
@@ -440,6 +462,9 @@ impl Kind {
             Kind::Wolf => 8.0,
             Kind::Cat => 10.0,
             Kind::LeashKnot => 1.0,
+            // Вики, Iron Golem: «Health points 100»; Snow Golem: «4».
+            Kind::IronGolem => golem::IRON_HEALTH,
+            Kind::SnowGolem => golem::SNOW_HEALTH,
         }
     }
 
@@ -477,6 +502,9 @@ impl Kind {
             Kind::Shulker | Kind::ShulkerBullet | Kind::LeashKnot => 0.0,
             // Чёрный ящик, wolf-tame и cat-tame: атрибут скорости 0,3.
             Kind::Wolf | Kind::Cat => 0.3,
+            // Вики, «Attributes»: железный голем 0,25, снежный 0,2.
+            Kind::IronGolem => 0.25,
+            Kind::SnowGolem => 0.2,
         }
     }
 
@@ -548,6 +576,9 @@ impl Kind {
             Kind::Wolf => ("minecraft:entity.wolf.ambient", "minecraft:entity.wolf.hurt", "minecraft:entity.wolf.death"),
             Kind::Cat => ("minecraft:entity.cat.stray_ambient", "minecraft:entity.cat.hurt", "minecraft:entity.cat.death"),
             Kind::LeashKnot => ("", "", ""),
+            // Вики, Iron Golem и Snow Golem, «Sounds»: у железного голоса в покое нет.
+            Kind::IronGolem => ("", "minecraft:entity.iron_golem.hurt", "minecraft:entity.iron_golem.death"),
+            Kind::SnowGolem => ("minecraft:entity.snow_golem.ambient", "minecraft:entity.snow_golem.hurt", "minecraft:entity.snow_golem.death"),
         }
     }
 
@@ -574,6 +605,7 @@ impl Kind {
             Kind::Drowned => "minecraft:entity.drowned.step",
             Kind::Husk => "minecraft:entity.husk.step",
             Kind::Wolf => "minecraft:entity.wolf.step",
+            Kind::IronGolem => "minecraft:entity.iron_golem.step",
             // У эндермена и ведьмы шаги — звуком блока [проверить]; молча.
             _ => "",
         }
@@ -654,6 +686,11 @@ pub trait View {
         false
     }
 
+    /// Температура биома (снежный голем: снег и таяние); по умолчанию — равнины.
+    fn temperature(&self, _x: i32, _y: i32, _z: i32) -> f32 {
+        0.8
+    }
+
     /// Небесный (с поправкой на час: `sky` — свет под открытым небом сейчас)
     /// и блочный свет в клетке.
     fn light(&self, _x: i32, _y: i32, _z: i32, _sky: i32) -> (u8, u8) {
@@ -685,6 +722,10 @@ impl View for LavaFloor<'_> {
 
     fn rain(&self, x: i32, y: i32, z: i32) -> bool {
         self.0.rain(x, y, z)
+    }
+
+    fn temperature(&self, x: i32, y: i32, z: i32) -> f32 {
+        self.0.temperature(x, y, z)
     }
 
     fn light(&self, x: i32, y: i32, z: i32, sky: i32) -> (u8, u8) {
@@ -952,6 +993,9 @@ pub struct Mob {
 
     /// Приручение волка и кошки (mob/tame.rs).
     pub tame: tame::State,
+
+    /// Големы: цель, «построен игроком», тыква снежного (mob/golem.rs).
+    pub golem: golem::State,
 }
 
 /// Бит в байте вида записи моба: за записью идёт общий хвост (имя, поводок).
@@ -1036,6 +1080,7 @@ impl Mob {
             persistent_tag: false,
             leash: None,
             tame: tame::State { variant: tame::default_variant(kind), ..tame::State::default() },
+            golem: golem::State::default(),
         }
     }
 
@@ -1316,7 +1361,13 @@ impl Mob {
         let view: &dyn View = if self.kind == Kind::Strider { &lava_floor } else { view };
 
         let was_on_ground = self.on_ground;
-        let mut plan = if matches!(self.kind, Kind::Wolf | Kind::Cat) { tame::think(self, view, ctx, rng) } else { ai::think(self, view, ctx, rng) };
+        let mut plan = if matches!(self.kind, Kind::Wolf | Kind::Cat) {
+            tame::think(self, view, ctx, rng)
+        } else if golem::golem(self.kind) {
+            golem::think(self, view, ctx, rng)
+        } else {
+            ai::think(self, view, ctx, rng)
+        };
 
         // Пьющая ведьма стоит: модификатор «drinking» −0,25 к скорости 0,25
         // (чёрный ящик, witch-stand).
@@ -1474,7 +1525,10 @@ impl Mob {
                 let name = if cube { "minecraft:block.stone.step" } else { self.kind.step_sound() };
 
                 if !name.is_empty() {
-                    self.events.push(Event::Sound { name, volume: 0.15, pitch: 1.0 });
+                    // Железный голем топает громко: 1,0 (чёрный ящик, iron-golem-attack).
+                    let volume = if self.kind == Kind::IronGolem { 1.0 } else { 0.15 };
+
+                    self.events.push(Event::Sound { name, volume, pitch: 1.0 });
                 }
             }
         }
@@ -1599,7 +1653,8 @@ impl Mob {
 
         // Урон падения: ceil(высота − 3) (вики, Fall damage); курица не
         // разбивается (вики, Chicken).
-        if fall > crate::survival::SAFE_FALL && self.kind != Kind::Chicken {
+        // Големы падения не боятся (вики, Iron Golem, Snow Golem).
+        if fall > crate::survival::SAFE_FALL && self.kind != Kind::Chicken && !golem::golem(self.kind) {
             let damage = (fall - crate::survival::SAFE_FALL - 1.0e-4).ceil();
 
             self.hurt(damage, Source::Fall, None);
@@ -1691,6 +1746,9 @@ impl Mob {
 
             // Волк мстит и встаёт, кошка вскакивает (mob/tame.rs).
             tame::on_hurt(self, push.cause);
+
+            // Железный голем мстит (mob/golem.rs).
+            golem::on_hurt(self, push.cause, self.by_player);
         }
 
         // Всякий урон — «толчок» для слежения: скорость уходит клиентам вне
@@ -1715,16 +1773,18 @@ impl Mob {
 
         if hit.died {
             self.die();
+            golem::crack_sound(self, before);
         } else {
             let (_, hurt, _) = self.sounds();
             let hurt = if self.kind == Kind::Slime { slime::sound(self.nether.size, "hurt") } else { hurt };
             let hurt = if self.kind == Kind::Shulker && self.h.peek == 0 { "minecraft:entity.shulker.hurt_closed" } else { hurt };
 
             self.events.push(Event::Sound { name: hurt, volume: self.sound_volume(), pitch: self.voice_pitch() });
+            golem::crack_sound(self, before);
 
             // Паника — только от удара существа: падение и команда не пугают
             // (чёрный ящик, cow-physics: упавшая корова стоит).
-            if let Some(push) = push.filter(|push| push.cause != 0 && !self.kind.hostile() && self.kind != Kind::Wolf) {
+            if let Some(push) = push.filter(|push| push.cause != 0 && !self.kind.hostile() && self.kind != Kind::Wolf && !golem::golem(self.kind)) {
                 self.fright = Some((self.x - push.dir.0 * 8.0, self.z - push.dir.1 * 8.0));
                 self.brain.panic(PANIC_TICKS);
             }
@@ -1749,7 +1809,9 @@ impl Mob {
     pub fn knockback(&mut self, ux: f64, uz: f64, strength: f64) {
         // Шалкер не сдвигается (чёрный ящик, shulker-stand: скорость после
         // удара мечом — 0).
-        if self.kind == Kind::Shulker {
+        // Железный голем не сдвигается: сопротивление отдаче 100 % (вики, Iron
+        // Golem; чёрный ящик, iron-golem-heal: скорость после удара 0).
+        if matches!(self.kind, Kind::Shulker | Kind::IronGolem) {
             return;
         }
 
@@ -1874,6 +1936,8 @@ impl Mob {
             Kind::Wolf => 28,
             Kind::Cat => 29,
             Kind::LeashKnot => 30,
+            Kind::IronGolem => 33,
+            Kind::SnowGolem => 34,
         } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -1896,6 +1960,7 @@ impl Mob {
             Kind::Shulker => out.extend_from_slice(&[self.h.face, self.h.shell_color]),
             Kind::Villager | Kind::ZombieVillager => crate::villager::write(&self.villager, out),
             Kind::Wolf | Kind::Cat => tame::write(&self.tame, out),
+            Kind::IronGolem | Kind::SnowGolem => golem::write(&self.golem, out),
             _ => {}
         }
 
@@ -1949,6 +2014,8 @@ impl Mob {
             28 => Kind::Wolf,
             29 => Kind::Cat,
             30 => Kind::LeashKnot,
+            33 => Kind::IronGolem,
+            34 => Kind::SnowGolem,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -1966,6 +2033,7 @@ impl Mob {
         let slime_data = if kind == Kind::Slime { Some((i32::from_be_bytes(take(4)?.try_into().ok()?), take(1)?[0])) } else { None };
         let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
         let tamed = if matches!(kind, Kind::Wolf | Kind::Cat) { Some(tame::read(bytes)?) } else { None };
+        let golem_state = if golem::golem(kind) { Some(golem::read(bytes)?) } else { None };
         let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
@@ -2003,6 +2071,10 @@ impl Mob {
 
         if let Some(tamed) = tamed {
             tame::apply_read(&mut mob, tamed);
+        }
+
+        if let Some(state) = golem_state {
+            mob.golem = state;
         }
 
         if let Some(tail) = tail {
@@ -2177,6 +2249,13 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         // Житель ничего не роняет (вики, Villager: «Drops: none»).
         // Волк ничего не роняет, кошка — 0–2 нити (вики, Wolf и Cat, «Drops»).
         Kind::Cat => give("string", 0, 2, rng),
+        // Вики, Iron Golem: 3–5 железных слитков и 0–2 мака; Snow Golem: 0–15 снежков
+        // («Looting» не влияет).
+        Kind::IronGolem => {
+            give("poppy", 0, 2, rng);
+            give("iron_ingot", 3, 5, rng);
+        }
+        Kind::SnowGolem => give("snowball", 0, 15, rng),
         Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager | Kind::Wolf | Kind::LeashKnot => {}
         // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
         Kind::Enderman => {
@@ -2516,6 +2595,12 @@ pub struct Outcome {
     /// События мира: клетка и номер (1040 — зомби стал утопленником, 1041 —
     /// кадавр стал зомби).
     pub level_events: Vec<((i32, i32, i32), i32)>,
+
+    /// Снежки снежных големов: кто бросил, откуда, скорость (mob/golem.rs).
+    pub snowballs: Vec<(i32, golem::Throw)>,
+
+    /// Клетки, куда снежные големы кладут снег (если разрешено mobGriefing).
+    pub snow: Vec<(i32, i32, i32)>,
 }
 
 /// Удар моба в ближнем бою.
@@ -2596,15 +2681,24 @@ pub fn step_all(
 
     let mut cured: Vec<usize> = Vec::new();
     let mut converted: Vec<(usize, Kind)> = Vec::new();
-    let mut bites: Vec<(i32, i32, f32, (f64, f64))> = Vec::new();
+    // Укус: кто, кого, урон, толчок и место железного голема (его удар подбрасывает).
+    type Bite = (i32, i32, f32, (f64, f64), Option<(f64, f64, f64)>);
+    let mut bites: Vec<Bite> = Vec::new();
 
     for (index, mob) in mobs.iter_mut().enumerate() {
         mob.tame.clock = env.clock;
 
         let plan = mob.tick(view, &ctx, rng);
 
+        // Снежный голем: след и таяние — и без ИИ (snow-golem-shear).
+        outcome.snow.extend(golem::snow_tick(mob, view, true));
+
         if let Some((target, damage, push)) = plan.bite {
-            bites.push((mob.entity_id, target, damage, push));
+            bites.push((mob.entity_id, target, damage, push, plan.fling.then_some((mob.x, mob.y, mob.z))));
+        }
+
+        if let Some((from, velocity)) = plan.snowball {
+            outcome.snowballs.push((mob.entity_id, (from, velocity)));
         }
 
         if let Some(kind) = mob.h.converted.take() {
@@ -2717,9 +2811,19 @@ pub fn step_all(
     }
 
     // Укусы волков по мобам (mob/tame.rs): урон от моба с толчком.
-    for (attacker, target, damage, dir) in bites {
+    // Удар железного голема подбрасывает цель на 0,4, звук удара — после
+    // урона и смерти цели (чёрный ящик, iron-golem-attack).
+    for (attacker, target, damage, dir, golem_at) in bites {
         if let Some(victim) = mobs.iter_mut().find(|mob| mob.entity_id == target) {
-            victim.hurt(damage, Source::MobAttack, Some(Push { dir, strength: BASE_KNOCKBACK, cause: attacker }));
+            let hit = victim.hurt(damage, Source::MobAttack, Some(Push { dir, strength: BASE_KNOCKBACK, cause: attacker }));
+
+            if let Some(at) = golem_at {
+                if hit.is_some() {
+                    victim.vy += golem::FLING;
+                }
+
+                victim.events.push(Event::SoundAt { name: "minecraft:entity.iron_golem.attack", volume: 1.0, pitch: 1.0, at });
+            }
         }
     }
 

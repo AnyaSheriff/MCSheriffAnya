@@ -1,0 +1,55 @@
+{
+ "name": "snow-golem-shoot",
+ "about": "Снежный голем с ИИ и ифрит NoAI в 5 блоках: снежки раз в 20 тактов, урон ифриту 3, звук броска.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon snow_golem $(1.5,0,4.5)"
+  },
+  {
+   "after": 1,
+   "cmd": "summon blaze $(6.5,0,4.5) {NoAI:1b,Silent:1b,PersistenceRequired:1b}"
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "kill @e[type=iron_golem,distance=..48]",
+  "kill @e[type=snow_golem,distance=..48]",
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=blaze,distance=..48]",
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=snowball,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "ход, броски и попадания",
+   "match": "^cart|^meta |^status|^destroy|^sound|^spawn [-0-9,.]+ snowball|^block",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "вики, Mob AI: цель ищется с шансом 1/10 за такт, снежок летит с разбросом; оригинал против оригинала: первый бросок на +23 и на +29"
+  }
+ ]
+}

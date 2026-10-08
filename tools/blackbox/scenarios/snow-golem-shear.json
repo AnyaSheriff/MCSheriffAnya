@@ -1,0 +1,68 @@
+{
+ "name": "snow-golem-shear",
+ "about": "Снежный голем NoAI: ножницы снимают тыкву (свойство 16, звук, тыква выпадает), второй щелчок ничего не делает; удар — смерть, снежки.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:shears 1",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon snow_golem $(3.5,0,3.5) {NoAI:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 30,
+   "interact": true
+  },
+  {
+   "after": 40,
+   "attack": true
+  },
+  {
+   "after": 52,
+   "attack": true
+  }
+ ],
+ "record_ticks": 90,
+ "cleanup": [
+  "kill @e[type=iron_golem,distance=..48]",
+  "kill @e[type=snow_golem,distance=..48]",
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=blaze,distance=..48]",
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=snowball,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "толчок выпавшей тыквы",
+   "match": "^cart item",
+   "range": [
+    0,
+    20
+   ],
+   "anytick": true,
+   "why": "выпавший предмет получает случайный толчок (как sheep-shear)"
+  }
+ ]
+}

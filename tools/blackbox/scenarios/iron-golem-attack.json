@@ -1,0 +1,56 @@
+{
+ "name": "iron-golem-attack",
+ "about": "Железный голем с ИИ и паук NoAI рядом: голем идёт и бьёт паука (урон 7,5–21,5, подброс вверх 0,4), звук удара после урона, событие 4.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon iron_golem $(2.5,0,5.5)"
+  },
+  {
+   "after": 1,
+   "cmd": "summon spider $(5.5,0,5.5) {NoAI:1b,Silent:1b,PersistenceRequired:1b}"
+  }
+ ],
+ "record_ticks": 120,
+ "cleanup": [
+  "kill @e[type=spider,distance=..48]",
+  "kill @e[type=iron_golem,distance=..48]",
+  "kill @e[type=snow_golem,distance=..48]",
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=blaze,distance=..48]",
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=snowball,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "погоня и удары",
+   "match": "^cart|^meta |^status|^destroy|^sound|^spawn item",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "вики, Mob AI: цель ищется с шансом 1/10 за такт, урон 7,5–21,5 случаен (оригинал: паук/зомби убит с первого удара в одном прогоне и со второго — в другом)"
+  }
+ ]
+}

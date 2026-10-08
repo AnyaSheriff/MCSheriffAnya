@@ -2250,6 +2250,34 @@ impl World {
         biome.is_some_and(|biome| biome.climate().0 < 2.0 && !biome.snows_at(y))
     }
 
+    /// Температура биома в клетке с поправкой на высоту (выше 80 холоднее на
+    /// 1/800 за блок, как у `snows_at`): по ней снежный голем оставляет снег
+    /// и тает (вики, Snow Golem). Незер жарок (2,0), Энд — 0,5; неизвестный
+    /// биом — как равнины (0,8) [проверить].
+    pub fn temperature_at(&self, x: i32, y: i32, z: i32) -> f32 {
+        if self.is_nether() {
+            return 2.0;
+        }
+
+        if self.is_end() {
+            return 0.5;
+        }
+
+        let (chunk_x, chunk_z) = chunk_key(x, z);
+        let Some(chunk) = self.chunks.get(&(chunk_x, chunk_z)) else {
+            return 0.8;
+        };
+
+        if !(MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&y) {
+            return 0.8;
+        }
+
+        let number = chunk.biome(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
+        let biome = if number == terrain::autumn_forest_number() { Some(terrain::Biome::Forest) } else { terrain::Biome::ALL.get(usize::from(number)).copied() };
+
+        biome.map_or(0.8, |biome| biome.climate().0 - 0.00125 * ((y - 80).max(0) as f32))
+    }
+
     /// Клетка над самым верхним блоком столбца, что держит движение или
     /// жидкость (вики, Lightning: «the block just above the highest block
     /// that is liquid or obstructs movement»). Незагруженный — None.

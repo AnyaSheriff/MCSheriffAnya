@@ -824,6 +824,10 @@ impl crate::mob::View for MobView<'_> {
         self.0.rain_at(x, y, z)
     }
 
+    fn temperature(&self, x: i32, y: i32, z: i32) -> f32 {
+        self.0.temperature_at(x, y, z)
+    }
+
     fn light(&self, x: i32, y: i32, z: i32, sky: i32) -> (u8, u8) {
         match self.0.light_cached(x, y, z) {
             Some((s, b)) => ((i32::from(s) - (15 - sky).max(0)).max(0) as u8, b),
@@ -1116,6 +1120,25 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
         // Замок стрел — после предметов (shared.rs).
         shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
+    }
+
+    // Снежки снежных големов (mob/golem.rs): летят, как брошенные игроком.
+    for (shooter, (from, velocity)) in outcome.snowballs {
+        let flying = crate::thrown::Flying::snowball(shared.next_entity_id(), dimension, from, velocity, shooter);
+
+        shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(flying);
+    }
+
+    // След снежного голема: слой снега, если правило mobGriefing позволяет
+    // (вики, Snow Golem).
+    if shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed)
+        && let Some(snow) = blocks::state_by_name("snow")
+    {
+        for (x, y, z) in outcome.snow {
+            if world.get_block(x, y, z) == crate::world::AIR {
+                world.set_block(x, y, z, snow);
+            }
+        }
     }
 
     // Огненные шары ифритов и гастов (mob/nether.rs): летят как шар дракона.

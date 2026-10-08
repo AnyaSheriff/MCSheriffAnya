@@ -1,0 +1,165 @@
+{
+ "name": "snow-golem-build",
+ "about": "Снежный голем из 2 блоков снега и тыквы (щелчок игрока); в равнинах (0,8) снега под собой не оставляет; затем фонарь Джека.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:carved_pumpkin 1",
+  "give $(bot) minecraft:jack_o_lantern 1",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     3,
+     0,
+     3
+    ],
+    "state": "minecraft:snow_block"
+   }
+  },
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     3,
+     1,
+     3
+    ],
+    "state": "minecraft:snow_block"
+   }
+  },
+  {
+   "after": 5,
+   "click": [
+    3,
+    1,
+    3
+   ],
+   "face": 1
+  },
+  {
+   "after": 30,
+   "cmd": "kill @e[type=snow_golem,distance=..48]"
+  },
+  {
+   "after": 62,
+   "cmd": "kill @e[type=item,distance=..48]"
+  },
+  {
+   "after": 65,
+   "set": {
+    "at": [
+     3,
+     0,
+     3
+    ],
+    "state": "minecraft:snow_block"
+   }
+  },
+  {
+   "after": 65,
+   "set": {
+    "at": [
+     3,
+     1,
+     3
+    ],
+    "state": "minecraft:snow_block"
+   }
+  },
+  {
+   "after": 66,
+   "cmd": "item replace entity $(bot) hotbar.0 with minecraft:jack_o_lantern"
+  },
+  {
+   "after": 70,
+   "click": [
+    3,
+    1,
+    3
+   ],
+   "face": 1
+  },
+  {
+   "after": 95,
+   "cmd": "kill @e[type=snow_golem,distance=..48]"
+  }
+ ],
+ "record_ticks": 130,
+ "cleanup": [
+  "kill @e[type=iron_golem,distance=..48]",
+  "kill @e[type=snow_golem,distance=..48]",
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=blaze,distance=..48]",
+  "kill @e[type=villager,distance=..48]",
+  "kill @e[type=snowball,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "name": "поворот головы при появлении",
+   "kind": "spawn",
+   "pattern": "head=\\d+",
+   "replace": "head=N",
+   "why": "оригинал против оригинала (iron-golem-build, snow-golem-build): у построенного голема head=0…3 в разных прогонах"
+  },
+  {
+   "type": "count",
+   "name": "осмотр по сторонам",
+   "match": "^cart snow_golem (поворот|entity_head_rotation)",
+   "range": [
+    0,
+    200
+   ],
+   "anytick": true,
+   "why": "вики, Mob AI, «Look around»/«Look at player»: начало и угол случайны; оригинал против оригинала — разные такты"
+  },
+  {
+   "type": "mask",
+   "name": "число предметов в стопке",
+   "kind": "meta",
+   "pattern": "\"itemCount\":\\d+",
+   "replace": "\"itemCount\":N",
+   "why": "вики: железный голем 3–5 слитков и 0–2 мака, снежный 0–15 снежков"
+  },
+  {
+   "type": "count",
+   "name": "мак и снежки могут не выпасть",
+   "match": "^spawn item|^cart item",
+   "range": [
+    0,
+    8
+   ],
+   "anytick": true,
+   "why": "вики: мака 0–2, снежков 0–15 — стопки может не быть; толчок предмета случаен"
+  },
+  {
+   "type": "count",
+   "name": "голос снежного голема",
+   "match": "entity.snow_golem.ambient",
+   "range": [
+    0,
+    6
+   ],
+   "anytick": true,
+   "why": "вики, Mob: голос в покое случаен (1/1000 за такт с нарастанием); оригинал: в одном прогоне на +3, в другом нет"
+  }
+ ]
+}

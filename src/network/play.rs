@@ -7780,6 +7780,11 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         return true;
     }
 
+    // Големы: слиток лечит железного, ножницы снимают тыкву со снежного.
+    if use_golem(shared, player, &mut items, index, reaction) {
+        return true;
+    }
+
     let mob = &items.mobs()[index];
     let held = player.inventory.held().and_then(|stack| blocks::item_name(stack.item));
     let survival = player.game_mode != GAME_MODE_CREATIVE;
@@ -7886,6 +7891,54 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     }
 
     true
+}
+
+/// Щелчок по голему. Железный слиток раненому железному — +25 здоровья, звук
+/// починки, слиток тратится; здоровому — ничего (вики, Iron Golem; чёрный
+/// ящик, iron-golem-heal). Ножницы снежному с тыквой — тыква падает с высоты
+/// глаз 1,7, звук стрижки (snow-golem-shear).
+fn use_golem(shared: &Shared, player: &mut PlayerState, items: &mut items::Items, index: usize, reaction: &mut Reaction) -> bool {
+    let mob = &items.mobs()[index];
+    let held = player.inventory.held().and_then(|stack| blocks::item_name(stack.item));
+    let mut rng = crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32) ^ mob.ticks.wrapping_mul(0x9E37));
+
+    if mob.kind == crate::mob::Kind::IronGolem && held == Some("iron_ingot") {
+        if mob.vitals.health >= mob.vitals.max_health {
+            return false;
+        }
+
+        let mob = &mut items.mobs_mut()[index];
+        let pitch = 1.0 + ((rng.unit() - rng.unit()) * 0.2) as f32;
+
+        mob.vitals.health = (mob.vitals.health + crate::mob::golem::INGOT_HEAL).min(mob.vitals.max_health);
+        mob.events.push(crate::mob::Event::Sound { name: "minecraft:entity.iron_golem.repair", volume: 1.0, pitch });
+        items.flush_mob_events(&mut || shared.next_entity_id(), &mut rng);
+
+        if player.game_mode != GAME_MODE_CREATIVE && let Some(slot) = player.inventory.spend_held() {
+            reaction.slots.push(slot);
+        }
+
+        return true;
+    }
+
+    if mob.kind == crate::mob::Kind::SnowGolem && held == Some("shears") && mob.golem.pumpkin {
+        let at = (mob.x, mob.y + crate::mob::golem::SNOW_EYE, mob.z);
+        let mob = &mut items.mobs_mut()[index];
+
+        mob.golem.pumpkin = false;
+        mob.events.push(crate::mob::Event::EntitySound { name: "minecraft:entity.snow_golem.shear", category: SOUND_PLAYERS, volume: 1.0, pitch: 1.0 });
+        items.flush_mob_events(&mut || shared.next_entity_id(), &mut rng);
+
+        if let Some(pumpkin) = blocks::item_named("carved_pumpkin") {
+            let velocity = (rng.unit() * 0.2 - 0.1, 0.2, rng.unit() * 0.2 - 0.1);
+
+            items.drop_item(shared.next_entity_id(), Stack::new(pumpkin, 1), at, velocity, items::MINED_DELAY);
+        }
+
+        return true;
+    }
+
+    false
 }
 
 /// Обрабатывает Player Action: ломание блока.
@@ -8851,6 +8904,12 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         player.inventory.held().and_then(|stack| stack.tnt),
     );
 
+    // Тыква на столбе из снега или железа — голем (mob/golem.rs; чёрный ящик,
+    // iron-golem-build, snow-golem-build).
+    if matches!(placed, placing::Placement::Placed) {
+        build_golem(shared, player.dimension, &mut world, offset_towards(clicked_x, clicked_y, clicked_z, face));
+    }
+
     // Как у оригинала после установки: сразу повтор блока, по которому
     // щёлкнули, и того, что встал за гранью, — а общая пачка потом
     // (чёрный ящик, chest-place).
@@ -8896,6 +8955,29 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         }),
         placing::Placement::Merged | placing::Placement::Nothing => Some(Reaction::accepted(sequence)),
         placing::Placement::Refused(places) => Some(Reaction::refused(sequence, &places)),
+    }
+}
+
+/// Голем из только что поставленной тыквы: события 2001 по клеткам узора,
+/// голем, потом блоки уходят воздухом (чёрный ящик, iron-golem-build).
+/// [проверить] тыква, поставленная командой или раздатчиком.
+fn build_golem(shared: &Shared, dimension: crate::dimension::Dimension, world: &mut World, at: (i32, i32, i32)) {
+    let Some(build) = crate::mob::golem::find(&crate::tick::MobView(world), at) else {
+        return;
+    };
+
+    for ((x, y, z), state) in &build.cells {
+        world.note_level_event(*x, *y, *z, 2001, *state);
+    }
+
+    let mut mob = crate::mob::Mob::new(shared.next_entity_id(), build.kind, build.at);
+
+    mob.golem.player_made = build.kind == crate::mob::Kind::IronGolem;
+    shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").add_mob_late(mob.clone());
+    world.note_mob_spawn(mob);
+
+    for (x, y, z) in build.clear {
+        world.set_block(x, y, z, crate::world::AIR);
     }
 }
 

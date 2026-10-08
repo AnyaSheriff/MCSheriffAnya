@@ -126,6 +126,12 @@ pub struct Plan {
 
     /// Укус волка по мобу: цель, урон, направление толчка (mob/tame.rs).
     pub bite: Option<(i32, f32, (f64, f64))>,
+
+    /// Удар железного голема: цель подбрасывает (mob/golem.rs).
+    pub fling: bool,
+
+    /// Снежок снежного голема: откуда и с какой скоростью (mob/golem.rs).
+    pub snowball: Option<super::golem::Throw>,
 }
 
 /// Состояние мыслей.

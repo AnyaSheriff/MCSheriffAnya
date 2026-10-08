@@ -28,6 +28,14 @@ pub const FIREBALL_TYPE: i32 = 37;
 /// Малый шар ифрита и большой шар гаста (minecraft-data: small_fireball, fireball).
 pub const SMALL_FIREBALL_TYPE: i32 = 118;
 pub const GHAST_FIREBALL_TYPE: i32 = 52;
+/// Снежок (minecraft-data: snowball 120).
+pub const SNOWBALL_TYPE: i32 = 120;
+
+/// Тяжесть снежка (вики, Entity: брошенные предметы — 0,03).
+const SNOWBALL_GRAVITY: f64 = 0.03;
+
+/// Урон снежка ифриту (вики, Snowball: «3 damage to blazes»).
+pub const SNOWBALL_BLAZE_DAMAGE: f32 = 3.0;
 
 /// Скорость броска зелья и поправка вверх (вики, Splash Potion: «about 0.5
 /// blocks/tick», «–20°»).
@@ -60,6 +68,8 @@ pub enum Kind {
     SmallFireball,
     /// Огненный шар гаста: взрыв силой `power` с огнём (вики, Fireball).
     GhastFireball,
+    /// Снежок снежного голема: урона нет (ифриту — 3), отбрасывает (вики, Snowball).
+    Snowball,
 }
 
 /// Место, скорость и поворот снаряда.
@@ -106,6 +116,7 @@ impl Flying {
             Kind::DragonFireball => FIREBALL_TYPE,
             Kind::SmallFireball => SMALL_FIREBALL_TYPE,
             Kind::GhastFireball => GHAST_FIREBALL_TYPE,
+            Kind::Snowball => SNOWBALL_TYPE,
         }
     }
 
@@ -155,6 +166,14 @@ impl Flying {
         let push = if length < 1.0e-9 { (0.0, 0.0, 0.0) } else { (direction.0 / length, direction.1 / length, direction.2 / length) };
 
         Self { kind: Kind::DragonFireball, stack: None, push, in_owner: false, rot: (0.0, 0.0), prev: (at, velocity, (0.0, 0.0)), ..Self::potion(entity_id, dimension, Kind::Splash, Stack::new(0, 1), at, velocity, owner) }
+    }
+
+    /// Снежок: из точки `at` со скоростью `velocity`; предмет — снежок (его
+    /// свойство 8 оригинал шлёт, чёрный ящик, snow-golem-shoot).
+    pub fn snowball(entity_id: i32, dimension: Dimension, at: (f64, f64, f64), velocity: (f64, f64, f64), owner: i32) -> Self {
+        let stack = crate::blocks::item_named("snowball").map_or(Stack::new(0, 1), |item| Stack::new(item, 1));
+
+        Self { kind: Kind::Snowball, in_owner: false, ..Self::potion(entity_id, dimension, Kind::Splash, stack, at, velocity, owner) }
     }
 
     /// Эффекты зелья.
@@ -309,6 +328,8 @@ pub struct Impact {
     pub cloud: Option<i32>,
     /// Событие мира: блок, номер, данные.
     pub event: ((i32, i32, i32), i32, i32),
+    /// Вместо события мира — событие сущности снаряда (снежок: 3).
+    pub status: Option<u8>,
 }
 
 /// Все снаряды и облака сервера.
@@ -599,7 +620,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             flying.vy = (flying.vy + flying.push.1 * FIREBALL_POWER) * FIREBALL_DRAG;
             flying.vz = (flying.vz + flying.push.2 * FIREBALL_POWER) * FIREBALL_DRAG;
         } else {
-            flying.vy -= GRAVITY;
+            flying.vy -= if flying.kind == Kind::Snowball { SNOWBALL_GRAVITY } else { GRAVITY };
             flying.vx *= DRAG;
             flying.vy *= DRAG;
             flying.vz *= DRAG;
@@ -685,6 +706,45 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
         let block_at = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
 
+        // Снежок: о сущность — урон (ифриту 3, прочим 0) с толчком по полёту;
+        // разлетается частицами — событие сущности 3 (чёрный ящик, snow-golem-shoot).
+        if flying.kind == Kind::Snowball {
+            let length = flying.vx.hypot(flying.vz).max(1.0e-9);
+            let dir = (flying.vx / length, flying.vz / length);
+
+            match struck {
+                Some(Struck::Mob(id)) => {
+                    if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == id) {
+                        let damage = if mob.kind == crate::mob::Kind::Blaze { SNOWBALL_BLAZE_DAMAGE } else { 0.0 };
+
+                        mob.hurt(damage, Source::Thrown, Some(crate::mob::Push { dir, strength: crate::mob::BASE_KNOCKBACK, cause: flying.owner }));
+                    }
+                }
+                // [проверить] снежок по игроку: урона нет, толчок.
+                Some(Struck::Player(id)) => world.note_player_strike(crate::combat::PlayerStrike {
+                    victim: id,
+                    attacker: flying.owner,
+                    attacker_uuid: [0; 16],
+                    attacker_name: String::new(),
+                    from: (flying.x, flying.y, flying.z),
+                    yaw: angles((flying.vx, flying.vy, flying.vz)).0,
+                    damage: 0.0,
+                    source: Source::Thrown,
+                    extra_knockback: 0.0,
+                    weapon: None,
+                    disables_shield_ticks: 0,
+                    breach_scale: 1.0,
+                    fire_ticks: 0,
+                    ignores_shield: false,
+                    thorns_slots: Vec::new(),
+                }),
+                None => {}
+            }
+
+            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at, 0, 0), status: Some(3) });
+            continue;
+        }
+
         // Малый шар ифрита: 5 урона и огонь на 5 секунд; о блок — огонь в
         // соседней клетке (вики, Small Fireball).
         if flying.kind == Kind::SmallFireball {
@@ -727,7 +787,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             // в блоке удара, облако в точке удара).
             let cloud = Cloud::dragon_breath(shared.next_entity_id(), dimension, at, flying.owner);
 
-            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: Some(cloud.entity_id), event: (block_at, 2006, 1) });
+            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: Some(cloud.entity_id), event: (block_at, 2006, 1), status: None });
             new_clouds.push(cloud);
             continue;
         }
@@ -739,7 +799,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         if flying.kind == Kind::Lingering {
             let cloud = Cloud::lingering(shared.next_entity_id(), dimension, at, effects, flying.owner, struck.is_none());
 
-            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: Some(cloud.entity_id), event: (block_at, 2002, color) });
+            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: Some(cloud.entity_id), event: (block_at, 2002, color), status: None });
             new_clouds.push(cloud);
             continue;
         }
@@ -795,7 +855,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             }
         }
 
-        impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at, if instant { 2007 } else { 2002 }, color) });
+        impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at, if instant { 2007 } else { 2002 }, color), status: None });
     }
 
     thrown.flying.retain(|f| !gone.contains(&f.entity_id));
