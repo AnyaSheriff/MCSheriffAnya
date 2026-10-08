@@ -20,6 +20,7 @@ pub mod hostile;
 pub mod nether;
 pub mod path;
 pub mod spawn;
+pub mod slime;
 
 use crate::blocks;
 use crate::inventory::Stack;
@@ -61,6 +62,8 @@ pub enum Kind {
     WitherSkeleton,
     /// Магмовый куб (вики, Magma Cube): прыгает, делится при смерти.
     MagmaCube,
+    /// Слизень (вики, Slime).
+    Slime,
     /// Гаст (вики, Ghast): летает, огненные шары силой 1.
     Ghast,
     /// Зомби-пиглин (вики, Zombified Piglin): нейтрален, злится стаей.
@@ -83,7 +86,7 @@ pub enum Kind {
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 27] = [
+    pub const ALL: [Kind; 28] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -103,6 +106,7 @@ impl Kind {
         Kind::Blaze,
         Kind::WitherSkeleton,
         Kind::MagmaCube,
+        Kind::Slime,
         Kind::Ghast,
         Kind::ZombifiedPiglin,
         Kind::Piglin,
@@ -130,6 +134,7 @@ impl Kind {
                 | Kind::Blaze
                 | Kind::WitherSkeleton
                 | Kind::MagmaCube
+                | Kind::Slime
                 | Kind::Ghast
                 | Kind::ZombifiedPiglin
                 | Kind::Piglin
@@ -173,6 +178,7 @@ impl Kind {
             "blaze" => Kind::Blaze,
             "wither_skeleton" => Kind::WitherSkeleton,
             "magma_cube" => Kind::MagmaCube,
+            "slime" => Kind::Slime,
             "ghast" => Kind::Ghast,
             "zombified_piglin" => Kind::ZombifiedPiglin,
             "piglin" => Kind::Piglin,
@@ -206,6 +212,7 @@ impl Kind {
             Kind::Blaze => "blaze",
             Kind::WitherSkeleton => "wither_skeleton",
             Kind::MagmaCube => "magma_cube",
+            Kind::Slime => "slime",
             Kind::Ghast => "ghast",
             Kind::ZombifiedPiglin => "zombified_piglin",
             Kind::Piglin => "piglin",
@@ -241,6 +248,7 @@ impl Kind {
             Kind::Blaze => 14,
             Kind::WitherSkeleton => 146,
             Kind::MagmaCube => 80,
+            Kind::Slime => 117,
             Kind::Ghast => 57,
             Kind::ZombifiedPiglin => 154,
             Kind::Piglin => 101,
@@ -277,6 +285,8 @@ impl Kind {
             Kind::Blaze => "minecraft:blaze",
             Kind::WitherSkeleton => "minecraft:wither_skeleton",
             Kind::MagmaCube => "minecraft:magma_cube",
+            // [Bedrock: потом] размер и анимация слизня.
+            Kind::Slime => "minecraft:slime",
             Kind::Ghast => "minecraft:ghast",
             Kind::ZombifiedPiglin => "minecraft:zombie_pigman",
             Kind::Piglin => "minecraft:piglin",
@@ -302,7 +312,7 @@ impl Kind {
             Kind::Strider => 0.9,
             // Размер куба: 0,52 на единицу размера (minecraft-data: 0,52 при размере 1);
             // настоящую ширину даёт `Mob::size`.
-            Kind::MagmaCube => 0.52,
+            Kind::MagmaCube | Kind::Slime => 0.52,
             Kind::Shulker => 1.0,
             Kind::ShulkerBullet => 0.3125,
             Kind::EndCrystal => 2.0,
@@ -330,7 +340,7 @@ impl Kind {
             Kind::Witch | Kind::Villager => 1.95,
             Kind::Blaze => 1.8,
             Kind::WitherSkeleton => 2.4,
-            Kind::MagmaCube => 0.52,
+            Kind::MagmaCube | Kind::Slime => 0.52,
             Kind::Ghast => 4.0,
             Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 1.95,
             Kind::Hoglin => 1.4,
@@ -364,7 +374,7 @@ impl Kind {
             Kind::Piglin => 16.0,
             Kind::PiglinBrute => 50.0,
             Kind::Hoglin => 40.0,
-            Kind::MagmaCube => 1.0,
+            Kind::MagmaCube | Kind::Slime => 1.0,
         }
     }
 
@@ -391,6 +401,7 @@ impl Kind {
             Kind::Blaze => 0.23,
             Kind::WitherSkeleton => 0.25,
             Kind::MagmaCube => 0.2,
+            Kind::Slime => slime::speed(1),
             Kind::Ghast => 0.0,
             Kind::ZombifiedPiglin => 0.23,
             Kind::Piglin | Kind::PiglinBrute => 0.35,
@@ -450,6 +461,7 @@ impl Kind {
             // Вики, «Sounds» страниц мобов Незера.
             Kind::Blaze => ("minecraft:entity.blaze.ambient", "minecraft:entity.blaze.hurt", "minecraft:entity.blaze.death"),
             Kind::WitherSkeleton => ("minecraft:entity.wither_skeleton.ambient", "minecraft:entity.wither_skeleton.hurt", "minecraft:entity.wither_skeleton.death"),
+            Kind::Slime => ("", "minecraft:entity.slime.hurt", "minecraft:entity.slime.death"),
             Kind::MagmaCube => ("", "minecraft:entity.magma_cube.hurt", "minecraft:entity.magma_cube.death"),
             Kind::Ghast => ("minecraft:entity.ghast.ambient", "minecraft:entity.ghast.hurt", "minecraft:entity.ghast.death"),
             Kind::ZombifiedPiglin => ("minecraft:entity.zombified_piglin.ambient", "minecraft:entity.zombified_piglin.hurt", "minecraft:entity.zombified_piglin.death"),
@@ -671,6 +683,10 @@ pub enum Event {
     /// Звук в месте моба: имя, громкость, высота.
     Sound { name: &'static str, volume: f32, pitch: f32 },
 
+    /// То же, но в точке, взятой до сдвига такта (прыжок куба: чёрный ящик,
+    /// slime-hop — звук прыжка играет там, где куб стоял).
+    SoundAt { name: &'static str, volume: f32, pitch: f32, at: (f64, f64, f64) },
+
     /// Звук игрока в его точке — удар по животному (раздел «игроки»): к
     /// моб-журналу привязан ради порядка пакетов (чёрный ящик, cow-hit).
     PlayerSound { name: &'static str, at: (f64, f64, f64) },
@@ -855,6 +871,10 @@ impl Mob {
             vitals.max_health = 4.0;
         }
 
+        if kind == Kind::Slime {
+            nether.size = 1;
+        }
+
         // Шалкер без цвета — 16 (minecraft-data: color; замер мира оригинала:
         // у всех шалкеров городов Color 16).
         let h = hostile::State { bow: kind == Kind::Skeleton, shell_color: 16, hand_drop: DEFAULT_DROP, ..hostile::State::default() };
@@ -951,7 +971,7 @@ impl Mob {
         let scale = if self.is_baby() { 0.5 } else { 1.0 };
 
         // Куб: 0,52 · размер (вики, Magma Cube, «Hitbox»).
-        if self.kind == Kind::MagmaCube {
+        if slime::cube(self.kind) {
             let cube = 0.52 * f64::from(self.nether.size.max(1));
 
             return (cube, cube);
@@ -970,6 +990,7 @@ impl Mob {
             Kind::Blaze => 1.53,
             Kind::WitherSkeleton => 2.1,
             Kind::Ghast => 2.6,
+            Kind::Slime => self.size().1 * 0.625,
             Kind::Creeper => 1.445,
             Kind::Spider => 0.65,
             Kind::Enderman => hostile::ENDERMAN_EYE,
@@ -1163,6 +1184,7 @@ impl Mob {
         let lava_floor = LavaFloor(view);
         let view: &dyn View = if self.kind == Kind::Strider { &lava_floor } else { view };
 
+        let was_on_ground = self.on_ground;
         let mut plan = ai::think(self, view, ctx, rng);
 
         // Пьющая ведьма стоит: модификатор «drinking» −0,25 к скорости 0,25
@@ -1182,6 +1204,10 @@ impl Mob {
             }
 
             self.physics(view, plan.speed, plan.jump);
+        }
+
+        if slime::cube(self.kind) && self.on_ground && !was_on_ground {
+            slime::landed(self, rng);
         }
 
         plan
@@ -1215,7 +1241,7 @@ impl Mob {
 
         if jump && self.on_ground {
             // Прыжок: 0,42 вверх (вики, Jumping: «0.42»).
-            self.vy = 0.42;
+            self.vy = if self.kind == Kind::MagmaCube { 0.42 + 0.1 * f64::from(self.nether.size) } else { 0.42 };
         }
 
         // Утопленник плывёт к цели в воде: тяга `SWIM_THRUST · скорость` вперёд и
@@ -1247,11 +1273,14 @@ impl Mob {
         let wades = in_water && matches!(self.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Drowned);
 
         if speed != 0.0 {
-            let effective = speed * self.kind.speed();
+            let effective = speed * if slime::cube(self.kind) { slime::speed(self.nether.size) } else { self.kind.speed() };
+            // Куб: в воздухе 0,01·ввод — замер slime-hop (оригинал, три записи): прыжок 0,95 блока [проверить].
             let accel = if wades {
                 0.02 * effective
             } else if self.on_ground {
                 effective * effective * (0.6 / slip).powi(3)
+            } else if slime::cube(self.kind) {
+                0.01 * effective
             } else {
                 0.02
             };
@@ -1299,14 +1328,22 @@ impl Mob {
 
         // Шаги: звук раз в 1/0,6 пройденного по земле (чёрный ящик,
         // probe-cow-plain: громкость 0,15, шаг раз в 1,6 блока).
-        if self.on_ground {
+        // Куб считает и полёт: порог набегает в прыжке, а звук играет при
+        // приземлении, перед «squish» (чёрный ящик, slime-hop: звук блока
+        // камня 0,15 на 59-м, 111-м, 137-м тактах — примерно через раз).
+        let cube = slime::cube(self.kind);
+
+        if self.on_ground || cube {
             self.move_dist += ((self.x - before.0).powi(2) + (self.z - before.1).powi(2)).sqrt() * 0.6;
 
-            if self.move_dist > self.next_step {
+            if self.on_ground && self.move_dist > self.next_step {
                 self.next_step = self.move_dist.floor() + 1.0;
 
-                if !self.kind.step_sound().is_empty() {
-                    self.events.push(Event::Sound { name: self.kind.step_sound(), volume: 0.15, pitch: 1.0 });
+                // [проверить] У куба звук шага берётся у блока под ногами; пока только камень.
+                let name = if cube { "minecraft:block.stone.step" } else { self.kind.step_sound() };
+
+                if !name.is_empty() {
+                    self.events.push(Event::Sound { name, volume: 0.15, pitch: 1.0 });
                 }
             }
         }
@@ -1540,6 +1577,7 @@ impl Mob {
             self.die();
         } else {
             let (_, hurt, _) = self.sounds();
+            let hurt = if self.kind == Kind::Slime { slime::sound(self.nether.size, "hurt") } else { hurt };
             let hurt = if self.kind == Kind::Shulker && self.h.peek == 0 { "minecraft:entity.shulker.hurt_closed" } else { hurt };
 
             self.events.push(Event::Sound { name: hurt, volume: self.sound_volume(), pitch: self.voice_pitch() });
@@ -1593,6 +1631,7 @@ impl Mob {
     pub fn sound_volume(&self) -> f32 {
         match self.kind {
             Kind::Cow => 0.4,
+            Kind::Slime => 0.4 * self.nether.size as f32,
             // Чёрный ящик, dragon-summon: голос дракона громкостью 5,00.
             Kind::EnderDragon => 5.0,
             _ => 1.0,
@@ -1617,6 +1656,7 @@ impl Mob {
 
         self.dead_for = 1;
         let (_, _, death) = self.sounds();
+        let death = if self.kind == Kind::Slime { slime::sound(self.nether.size, "death") } else { death };
         let drops = loot(self, &mut Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0x5EED));
 
         self.events.push(Event::Sound { name: death, volume: self.sound_volume(), pitch: self.voice_pitch() });
@@ -1633,7 +1673,7 @@ impl Mob {
         } else if self.xp_until > self.ticks && !self.is_baby() {
             let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xE4B);
 
-            self.pending_xp = if self.kind == Kind::MagmaCube {
+            self.pending_xp = if slime::cube(self.kind) {
                 // Вики, Magma Cube: опыт равен размеру (чёрный ящик, magma-cube-stand).
                 self.nether.size
             } else if self.kind.hostile() {
@@ -1688,6 +1728,7 @@ impl Mob {
             Kind::Strider => 24,
             Kind::Drowned => 25,
             Kind::Husk => 26,
+            Kind::Slime => 27,
         });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -1702,6 +1743,10 @@ impl Mob {
 
         // Хвост по виду: блок в руках эндермена (−1 — пусто), грань и цвет шалкера.
         match self.kind {
+            Kind::Slime => {
+                out.extend_from_slice(&self.nether.size.to_be_bytes());
+                out.push(u8::from(self.silent) | (u8::from(self.nether.persistence_required) << 1));
+            }
             Kind::Enderman => out.extend_from_slice(&self.h.carried.unwrap_or(-1).to_be_bytes()),
             Kind::Shulker => out.extend_from_slice(&[self.h.face, self.h.shell_color]),
             Kind::Villager | Kind::ZombieVillager => crate::villager::write(&self.villager, out),
@@ -1745,6 +1790,7 @@ impl Mob {
             24 => Kind::Strider,
             25 => Kind::Drowned,
             26 => Kind::Husk,
+            27 => Kind::Slime,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -1759,6 +1805,7 @@ impl Mob {
         let egg_timer = i32::from_be_bytes(take(4)?.try_into().ok()?);
         let carried = if kind == Kind::Enderman { Some(i32::from_be_bytes(take(4)?.try_into().ok()?)).filter(|state| *state >= 0) } else { None };
         let shell = if kind == Kind::Shulker { take(2)?.to_vec() } else { vec![0, 16] };
+        let slime_data = if kind == Kind::Slime { Some((i32::from_be_bytes(take(4)?.try_into().ok()?), take(1)?[0])) } else { None };
         let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
@@ -1769,7 +1816,12 @@ impl Mob {
 
         mob.yaw = yaw;
         mob.head_yaw = yaw;
-        mob.vitals.health = health.clamp(0.5, kind.max_health());
+        if let Some((size, flags)) = slime_data {
+            slime::set_size(&mut mob, size);
+            mob.silent = flags & 1 != 0;
+            mob.nether.persistence_required = flags & 2 != 0;
+        }
+        mob.vitals.health = health.clamp(0.5, mob.vitals.max_health);
         mob.age = age;
         mob.love = love.max(0);
         mob.no_ai = flags & 1 != 0;
@@ -1901,6 +1953,12 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
 
             if mob.by_player && rng.below(1000) < 25 + 10 * mob.looting as u32 {
                 give("wither_skeleton_skull", 1, 1, rng);
+            }
+        }
+        Kind::Slime => {
+            if mob.nether.size == 1 {
+                let count = slime::slimeballs(mob.looting, rng);
+                give("slime_ball", count, count, rng);
             }
         }
         // Вики, Magma Cube: 0–1 магмового сгустка у кубов размера 2 и больше (+ «Looting»).
@@ -2395,6 +2453,14 @@ pub fn step_all(
             claimed.extend(mob.villager.job_site);
         }
 
+        if slime::cube(mob.kind) && env.difficulty != crate::survival::PEACEFUL {
+            for player in players {
+                if let Some(melee) = slime::contact(mob, view, player) {
+                    outcome.strikes.push(Strike { attacker: mob.entity_id, at: (mob.x, mob.y, mob.z), kind: mob.kind, melee });
+                }
+            }
+        }
+
         if let Some(melee) = plan.melee {
             outcome.strikes.push(Strike { attacker: mob.entity_id, at: (mob.x, mob.y, mob.z), kind: mob.kind, melee });
         }
@@ -2478,25 +2544,9 @@ pub fn step_all(
         }
     }
 
-    // Магмовый куб, лежавший своё, делится на 2–4 меньших (вики, Magma Cube,
-    // «Splitting»): появляются, когда тело пропадает.
-    for parent in mobs.iter().filter(|mob| mob.kind == Kind::MagmaCube && mob.gone() && mob.nether.size > 1 && !mob.h.despawn).cloned().collect::<Vec<_>>() {
-        {
-            let size = parent.nether.size / 2;
-            let count = 2 + rng.below(3) as i32;
-
-            for i in 0..count {
-                let spread = 0.52 * f64::from(parent.nether.size) / 2.0;
-                let at = (parent.x + (f64::from(i % 2) - 0.5) * spread, parent.y + 0.5, parent.z + (f64::from(i / 2) - 0.5) * spread);
-                let mut child = Mob::new(next_id(), Kind::MagmaCube, at);
-
-                nether::set_size(&mut child, size);
-                child.no_ai = parent.no_ai;
-                child.silent = parent.silent;
-                child.face((rng.unit() * 360.0) as f32);
-                born.push(child);
-            }
-        }
+    // Оба куба делятся при удалении трупа; исчезновение на мирной не делит.
+    for parent in mobs.iter().filter(|mob| slime::cube(mob.kind) && mob.gone()) {
+        born.extend(slime::split(parent, rng, next_id));
     }
 
     // Зомби стал утопленником, кадавр — зомби: тот же моб, новый номер (вики,

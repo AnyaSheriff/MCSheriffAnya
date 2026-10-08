@@ -1,0 +1,97 @@
+{
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty peaceful",
+  "!wait 25",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:stone",
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect give $(bot) minecraft:instant_health 1 10",
+  "tp $(bot) $(4.5,0,1.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "cleanup": [
+  "difficulty peaceful",
+  "!wait 25",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!startfly",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block"
+ ],
+ "name": "slime-split",
+ "about": "Большой слизень (Size:3 = размер 4): смерть, 2–4 средних; затем смерть средних и маленьких. Без допусков до vanilla-vs-vanilla.",
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:slime $(4.5,0,4.5) {Size:3,NoAI:1b}"
+  },
+  {
+   "after": 20,
+   "cmd": "kill @e[type=minecraft:slime,distance=..16]"
+  },
+  {
+   "after": 60,
+   "cmd": "kill @e[type=minecraft:slime,distance=..16]"
+  },
+  {
+   "after": 100,
+   "cmd": "kill @e[type=minecraft:slime,distance=..16]"
+  }
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "число детей слизня",
+   "match": "^spawn [-0-9,.]+ slime",
+   "range": [7, 21],
+   "why": "вики, Slime: «2–4 smaller slimes»; два прогона оригинала: 7 и 10 слизней (3 и 4 ребёнка у разных родителей)"
+  },
+  {
+   "type": "count",
+   "name": "звуки смерти слизней",
+   "match": "^sound [-0-9,.]+ minecraft:entity.slime.death",
+   "range": [7, 21],
+   "why": "по одному звуку на каждого слизня; число слизней случайно (2–4 ребёнка)"
+  },
+  {
+   "type": "count",
+   "name": "выпавшие шарики",
+   "match": "^spawn item",
+   "range": [0, 32],
+   "why": "вики, Slime: «0–2 slimeballs» от каждого маленького; маленьких 4–16"
+  },
+  {
+   "type": "mask",
+   "name": "число шариков в стопке",
+   "kind": "meta",
+   "pattern": "\"itemCount\":\\d+",
+   "replace": "\"itemCount\":N",
+   "why": "вики, Slime: «0–2 slimeballs»"
+  },
+  {
+   "type": "count",
+   "name": "свойства стопок шариков",
+   "match": "^meta 8=\\{",
+   "range": [0, 80],
+   "anytick": true,
+   "why": "стопки то сливаются, то разлетаются: случайный толчок при появлении (как zombie-hit)"
+  },
+  {
+   "type": "count",
+   "name": "подбор шариков роботом",
+   "match": "^sv Collect",
+   "range": [0, 16],
+   "anytick": true,
+   "why": "предмет получает случайный толчок при появлении: у оригинала Collect на +10, на +13 у второго прогона"
+  }
+ ],
+ "record_ticks": 140,
+ "exclusive": true
+}

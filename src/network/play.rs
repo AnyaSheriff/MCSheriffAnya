@@ -9130,6 +9130,12 @@ fn use_spawn_egg(
     let (x, y, z) = offset_towards(clicked.0, clicked.1, clicked.2, face);
     let mut mob = crate::mob::Mob::new(shared.next_entity_id(), kind, (f64::from(x) + 0.5, f64::from(y), f64::from(z) + 0.5));
 
+    if kind == crate::mob::Kind::Slime {
+        let mut rng = crate::mob::Rng::new(mob.entity_id as u64);
+        let size = crate::mob::slime::roll_size(&mut rng);
+        crate::mob::slime::set_size(&mut mob, size);
+    }
+
     // Смотрит туда же, куда игрок, как призванный с яйца у оригинала.
     mob.yaw = player.yaw;
     mob.head_yaw = player.yaw;

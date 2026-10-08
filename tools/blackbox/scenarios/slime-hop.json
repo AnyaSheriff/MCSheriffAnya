@@ -1,0 +1,64 @@
+{
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty peaceful",
+  "!wait 25",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:stone",
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect give $(bot) minecraft:instant_health 1 10",
+  "tp $(bot) $(4.5,0,1.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "cleanup": [
+  "difficulty peaceful",
+  "!wait 25",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!startfly",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block"
+ ],
+ "name": "slime-hop",
+ "about": "Средний слизень прыгает к игроку по плоскому полу; звуки, повороты, скорость и приземления. Случайность ещё не измерена.",
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:slime $(4.5,0,7.5) {Size:1}"
+  }
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "прыжки и приземления слизня",
+   "match": "^sound [-0-9,.]+ minecraft:entity.slime.(squish|jump)",
+   "range": [10, 24],
+   "anytick": true,
+   "why": "три записи оригинала: 15, 15, 16 звуков; сначала слизень бродит в случайную сторону и берёт цель в случайный момент, задержки прыжков случайны (10–29 тактов, у цели треть)"
+  },
+  {
+   "type": "count",
+   "name": "шаги слизня по камню",
+   "match": "^sound [-0-9,.]+ minecraft:block.stone.step",
+   "range": [0, 8],
+   "anytick": true,
+   "why": "три записи оригинала: по 4; число зависит от пройденного пути, а он от случайных прыжков"
+  },
+  {
+   "type": "count",
+   "name": "укусы слизня",
+   "match": "^(sound [-0-9,.]+ minecraft:entity.slime.attack|sv |self )",
+   "range": [0, 160],
+   "anytick": true,
+   "why": "первый укус в 109-й, 136-й, 155-й такт трёх записей оригинала: слизень берёт цель и долетает до игрока в случайный момент; дальше укус каждые 10 тактов"
+  }
+ ],
+ "record_ticks": 180,
+ "exclusive": true
+}

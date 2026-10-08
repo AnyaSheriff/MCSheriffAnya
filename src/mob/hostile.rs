@@ -90,6 +90,7 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Blaze => "entity.minecraft.blaze",
         Kind::WitherSkeleton => "entity.minecraft.wither_skeleton",
         Kind::MagmaCube => "entity.minecraft.magma_cube",
+        Kind::Slime => "entity.minecraft.slime",
         Kind::Ghast => "entity.minecraft.ghast",
         Kind::ZombifiedPiglin => "entity.minecraft.zombified_piglin",
         Kind::Piglin => "entity.minecraft.piglin",
@@ -421,6 +422,9 @@ fn prey(mob: &Mob, ctx: &Ctx) -> Vec<Watcher> {
 
 /// Мысль враждебного моба за такт.
 pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
+    if super::slime::cube(mob.kind) {
+        return super::slime::think(mob, view, ctx, rng);
+    }
     let mut plan = Plan::default();
 
 
@@ -849,6 +853,10 @@ pub fn despawn_check(mob: &mut Mob, players: &[Watcher], rng: &mut Rng, peaceful
     // Мирная сложность: враждебные исчезают сразу (вики, Peaceful).
     if peaceful {
         mob.h.despawn = true;
+        return;
+    }
+
+    if mob.kind == Kind::Slime && mob.nether.persistence_required {
         return;
     }
 

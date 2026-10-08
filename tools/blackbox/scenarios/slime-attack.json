@@ -1,0 +1,72 @@
+{
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty peaceful",
+  "!wait 25",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:stone",
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect give $(bot) minecraft:instant_health 1 10",
+  "tp $(bot) $(4.5,0,1.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "cleanup": [
+  "difficulty peaceful",
+  "!wait 25",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!startfly",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block"
+ ],
+ "name": "slime-attack",
+ "about": "Маленький слизень касается игрока без урона; затем средний наносит контактный урон. NoAI отделяет касания от прыжков.",
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:slime $(4.5,0,1.5) {Size:0,NoAI:1b}"
+  },
+  {
+   "after": 35,
+   "cmd": "kill @e[type=minecraft:slime,distance=..16]"
+  },
+  {
+   "after": 65,
+   "cmd": "summon minecraft:slime $(4.5,0,1.5) {Size:1,NoAI:1b}"
+  },
+  {
+   "after": 90,
+   "cmd": "tp $(bot) $(4.5,0,1.5)"
+  },
+  {
+   "after": 110,
+   "cmd": "tp $(bot) $(4.5,0,1.5)"
+  }
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "name": "число шариков в стопке",
+   "kind": "meta",
+   "pattern": "\"itemCount\":\\d+",
+   "replace": "\"itemCount\":N",
+   "why": "вики, Slime: «0–2 slimeballs» от маленького; оригинал выбросил 2, у нас 1"
+  },
+  {
+   "type": "mask",
+   "name": "число подобранных шариков",
+   "kind": "sv",
+   "pattern": "Collect count=\\d+",
+   "replace": "Collect count=N",
+   "why": "то же число шариков (0–2)"
+  }
+ ],
+ "record_ticks": 140,
+ "exclusive": true
+}

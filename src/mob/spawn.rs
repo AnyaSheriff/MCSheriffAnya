@@ -148,7 +148,7 @@ pub const MAX_DISTANCE: f64 = 128.0;
 
 /// Виды и веса враждебных: эндермен 10, ведьма 5 (вики, Enderman и Witch:
 /// «10⁄515», «5»).
-pub const HOSTILE: [(Kind, u32); 6] = [(Kind::Zombie, 95), (Kind::Skeleton, 100), (Kind::Creeper, 100), (Kind::Spider, 100), (Kind::Enderman, 10), (Kind::Witch, 5)];
+pub const HOSTILE: [(Kind, u32); 7] = [(Kind::Zombie, 95), (Kind::Skeleton, 100), (Kind::Creeper, 100), (Kind::Spider, 100), (Kind::Enderman, 10), (Kind::Witch, 5), (Kind::Slime, 100)];
 
 /// Виды Обычного мира по биому и месту (вики, Husk: «Husks spawn ... in
 /// deserts» вместо зомби, вес 80 против 19; Drowned: «rivers» вес 100,
@@ -329,9 +329,9 @@ pub fn hostile_attempt_in(
         // Разброс пачки: сумма двух равномерных — «треугольный», до 5 блоков.
         let (gx, gz) = (x + rng.below(6) as i32 - rng.below(6) as i32, z + rng.below(6) as i32 - rng.below(6) as i32);
 
-        let fits = if kind == Kind::Drowned { wet_spot(view, gx, y, gz) } else { spawnable(view, gx, y, gz, block_height) };
+        let spot_ok = if kind == Kind::Drowned { wet_spot(view, gx, y, gz) } else { spawnable(view, gx, y, gz, block_height) };
 
-        if !view.loaded(gx.div_euclid(16), gz.div_euclid(16)) || !fits {
+        if !view.loaded(gx.div_euclid(16), gz.div_euclid(16)) || !spot_ok {
             continue;
         }
 
@@ -356,7 +356,7 @@ pub fn hostile_attempt_in(
             mob.h.offhand_shell = rng.unit() < 0.03;
         }
 
-        if each == Kind::MagmaCube {
+        if super::slime::cube(each) {
             super::nether::set_size(&mut mob, super::nether::roll_size(rng));
         }
 
@@ -365,6 +365,9 @@ pub fn hostile_attempt_in(
             mob.villager.finalized = true;
         }
 
+        if super::slime::cube(each) && !fits(view, &mob) {
+            continue;
+        }
         mob.face((rng.unit() * 360.0) as f32);
         group.push(mob);
     }
@@ -376,4 +379,24 @@ pub fn hostile_attempt_in(
 #[cfg(test)]
 pub fn pick_hostile_for_test(kinds: &[(Kind, u32)], rng: &mut Rng) -> Kind {
     pick_hostile(kinds, rng)
+}
+
+/// Полный ящик куба: большой слизень должен помещаться и по ширине.
+pub fn fits(view: &dyn View, mob: &Mob) -> bool {
+    let (width, height) = mob.size();
+    let half = width / 2.0;
+    for x in (mob.x - half).floor() as i32..=(mob.x + half - 1.0e-7).floor() as i32 {
+        for z in (mob.z - half).floor() as i32..=(mob.z + half - 1.0e-7).floor() as i32 {
+            if !view.loaded(x.div_euclid(16), z.div_euclid(16)) {
+                return false;
+            }
+            for y in mob.y.floor() as i32..=(mob.y + height - 1.0e-7).floor() as i32 {
+                let state = view.block(x, y, z);
+                if solid(state) || super::is_water(state) || super::is_lava(state) {
+                    return false;
+                }
+            }
+        }
+    }
+    true
 }

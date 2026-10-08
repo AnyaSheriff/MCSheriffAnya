@@ -84,7 +84,7 @@ fn attributes_at(kind: Kind) -> u64 {
 /// Шлются ли атрибуты сразу при появлении и ещё раз в первом прогоне
 /// слежения (чёрный ящик, zombie-hit и enderman-stand).
 fn attributes_at_spawn(kind: Kind) -> bool {
-    matches!(kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Enderman | Kind::ZombifiedPiglin | Kind::Piglin | Kind::MagmaCube)
+    matches!(kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Enderman | Kind::ZombifiedPiglin | Kind::Piglin | Kind::MagmaCube | Kind::Slime)
 }
 
 /// Меньшие сдвиги и перемены скорости не сообщаются.
@@ -164,7 +164,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
     }
     // «Агрессивен» (бит 4) у эндермена и шалкера не ставится: у первого
     // злость — свойство 17 (чёрный ящик, enderman-stare, shulker-ai).
-    let aggressive = u8::from(mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker) && mob.h.target.is_some()) << 2;
+    let aggressive = u8::from(mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube) && mob.h.target.is_some()) << 2;
     let mut out: Vec<Property> = vec![
         (0, TYPE_BYTE, vec![fire]),
         (4, TYPE_BOOL, vec![u8::from(mob.silent)]),
@@ -237,7 +237,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
         // неуязвим, детёныш; страйдер — ускорение, мёрзнет, седло.
         Kind::Blaze => out.push((16, TYPE_BYTE, vec![u8::from(mob.nether.charging)])),
         Kind::Ghast => out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.charging)])),
-        Kind::MagmaCube => out.push((16, TYPE_INT, encode_varint(mob.nether.size.max(1)))),
+        Kind::MagmaCube | Kind::Slime => out.push((16, TYPE_INT, encode_varint(mob.nether.size.max(1)))),
         Kind::WitherSkeleton => {}
         Kind::ZombifiedPiglin => out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())])),
         Kind::Piglin => {
@@ -315,7 +315,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
     match (*key, kind) {
         (8, Kind::EndCrystal | Kind::Drowned) => value.as_slice() == [0],
         (9, Kind::EndCrystal) => value.as_slice() == [1],
-        (16, Kind::MagmaCube) => value.as_slice() == encode_varint(1).as_slice(),
+        (16, Kind::MagmaCube | Kind::Slime) => value.as_slice() == encode_varint(1).as_slice(),
         (17..=19, Kind::Piglin | Kind::Hoglin | Kind::Strider) => value.iter().all(|byte| *byte == 0),
         (16, Kind::EnderDragon) => value.as_slice() == encode_varint(DRAGON_PHASE_HOVER).as_slice(),
         (16, Kind::Creeper) => value.as_slice() == encode_varint(-1).as_slice(),
@@ -423,15 +423,17 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
 
     // Магмовый куб: броня 3·размер, скорость 0,2 + 0,1·размер, здоровье
     // размер² (чёрный ящик, magma-cube-stand).
-    if mob.kind == Kind::MagmaCube {
+    if crate::mob::slime::cube(mob.kind) {
         let size = f64::from(mob.nether.size.max(1));
 
-        body.extend_from_slice(&encode_varint(3));
-        body.extend_from_slice(&encode_varint(ATTRIBUTE_ARMOR));
-        push_f64(&mut body, 3.0 * size);
-        push_modifiers(&mut body, None);
+        body.extend_from_slice(&encode_varint(if mob.kind == Kind::MagmaCube { 3 } else { 2 }));
+        if mob.kind == Kind::MagmaCube {
+            body.extend_from_slice(&encode_varint(ATTRIBUTE_ARMOR));
+            push_f64(&mut body, 3.0 * size);
+            push_modifiers(&mut body, None);
+        }
         body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
-        push_f64(&mut body, f64::from((0.2 + 0.1 * size) as f32));
+        push_f64(&mut body, crate::mob::slime::speed(mob.nether.size));
         push_modifiers(&mut body, None);
         body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
         push_f64(&mut body, size * size);
@@ -546,7 +548,14 @@ pub(super) async fn send_mob_event(
         Event::Eating => send_status(stream, entity_id, 10).await?,
         Event::Swing => send_animation(stream, entity_id).await?,
         Event::Status(status) => send_status(stream, entity_id, *status).await?,
-        Event::Sound { name, volume, pitch } if heard(at) => send_sound(stream, name, SOUND_NEUTRAL, at, *volume, *pitch).await?,
+        Event::Sound { name, volume, pitch } if heard(at) => {
+            let category = if name.starts_with("minecraft:entity.slime.") { 5 } else { SOUND_NEUTRAL };
+            send_sound(stream, name, category, at, *volume, *pitch).await?;
+        }
+        Event::SoundAt { name, volume, pitch, at: place } if heard(*place) => {
+            let category = if name.starts_with("minecraft:entity.slime.") { 5 } else { SOUND_NEUTRAL };
+            send_sound(stream, name, category, *place, *volume, *pitch).await?;
+        }
         Event::PlayerSound { name, at: place } if heard(*place) => send_sound(stream, name, SOUND_PLAYERS, *place, 1.0, 1.0).await?,
         Event::EntitySound { name, category, volume, pitch } if heard(at) => {
             let mut body = encode_varint(ENTITY_SOUND);
@@ -563,7 +572,7 @@ pub(super) async fn send_mob_event(
         }
         Event::Landing { block, count } => send_particles(stream, PARTICLE_BLOCK, Some(*block), at, (0.0, 0.0, 0.0), 0.15, *count).await?,
         Event::Particle { kind, at: place, offset, speed, count } => send_particles(stream, kind.id(), None, *place, *offset, *speed, *count).await?,
-        Event::Sound { .. } | Event::PlayerSound { .. } | Event::EntitySound { .. } | Event::Loot(_) => {}
+        Event::Sound { .. } | Event::SoundAt { .. } | Event::PlayerSound { .. } | Event::EntitySound { .. } | Event::Loot(_) => {}
     }
 
     Ok(())
@@ -997,4 +1006,23 @@ async fn send_orb_ticks(stream: &mut Outgoing<'_>, player: &mut PlayerState, orb
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod slime_tests {
+    use super::*;
+
+    #[test]
+    fn slime_metadata_uses_size_not_baby_and_omits_aggressive_flag() {
+        let mut mob = Mob::new(1, Kind::Slime, (0.0, 0.0, 0.0));
+        crate::mob::slime::set_size(&mut mob, 4);
+        mob.h.target = Some(7);
+        let props = properties(&mob);
+        assert!(props.contains(&(16, TYPE_INT, encode_varint(4))));
+        assert!(props.contains(&(9, TYPE_FLOAT, float(16.0))));
+        assert!(props.contains(&(15, TYPE_BYTE, vec![0])));
+        assert!(attributes_at_spawn(Kind::Slime));
+        assert!(!is_default(&(16, TYPE_INT, encode_varint(4)), Kind::Slime));
+        assert!(is_default(&(16, TYPE_INT, encode_varint(1)), Kind::Slime));
+    }
 }

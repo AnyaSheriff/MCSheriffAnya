@@ -25,8 +25,11 @@ const randomRules = Array.isArray(scenarioJson.random) ? scenarioJson.random : [
 // копии проекта), не трогая сервер чёрного ящика на 25567.
 const portFlag = process.argv.indexOf('--ours-port');
 const oursPort = portFlag > 0 ? Number(process.argv[portFlag + 1]) : 25567;
+// `--vanilla-port N` (или VANILLA_PORT) — оригинал на другом порту.
+const vpFlag = process.argv.indexOf('--vanilla-port');
+const vanillaPort = vpFlag > 0 ? Number(process.argv[vpFlag + 1]) : Number(process.env.VANILLA_PORT || 25566);
 const sides = [
-  { title: 'оригинал', port: Number(process.env.VANILLA_PORT || 25566), file: path.join(HERE, 'reports', `vanilla-${name}.json`) },
+  { title: 'оригинал', port: vanillaPort, file: path.join(HERE, 'reports', `vanilla-${name}.json`) },
   { title: 'у нас',    port: oursPort, file: path.join(HERE, 'reports', `ours-${name}.json`) },
 ];
 // `--files A B` — сравнить две готовые записи, ничего не записывая: так

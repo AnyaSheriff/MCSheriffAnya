@@ -1,0 +1,38 @@
+{
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty peaceful",
+  "!wait 25",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:stone",
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "effect give $(bot) minecraft:instant_health 1 10",
+  "tp $(bot) $(4.5,0,1.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "cleanup": [
+  "difficulty peaceful",
+  "!wait 25",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!startfly",
+  "fill $(0,0,0) $(8,6,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block"
+ ],
+ "name": "slime-idle",
+ "about": "Средний слизень без цели (игрок в творческом): интервалы прыжков и повороты.",
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:slime $(4.5,0,7.5) {Size:1}"
+  }
+ ],
+ "record_ticks": 500,
+ "exclusive": true
+}

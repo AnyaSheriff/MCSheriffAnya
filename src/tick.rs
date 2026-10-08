@@ -973,7 +973,11 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 let (sky, block) = world.light_full(x, y, z);
                 let sky = (i32::from(sky) - (15 - ambient).max(0)).max(0) as u8;
 
-                if nether { block <= 11 } else { crate::mob::spawn::dark_enough(sky, block, rng) }
+                if mob.kind == crate::mob::Kind::Slime {
+                    crate::mob::slime::can_spawn(world.seed(), (x, y, z), world.mob_biome(x, y, z), sky.max(block), world.clock(), rng)
+                } else if dimension == Dimension::Overworld && matches!(world.mob_biome(x, y, z), "mushroom_fields" | "deep_dark") {
+                    false
+                } else if nether { block <= 11 } else { crate::mob::spawn::dark_enough(sky, block, rng) }
             });
         }
     }

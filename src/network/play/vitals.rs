@@ -1482,6 +1482,20 @@ pub(super) async fn mob_hit(
     player.net.hold_meta = done.is_some();
     player.net.mob_hit_landed = done.is_some();
 
+    // Слизень звучит только после принятого контактного урона; иммунитет
+    // игрока гасит повторные касания. Чёрный ящик, slime-hop: звук уходит в том
+    // же такте, что и урон, из точки слизня.
+    if done.is_some() && killer == "entity.minecraft.slime" {
+        let pitch = {
+            let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+            items.mobs_mut().iter_mut().find(|mob| mob.entity_id == attacker).map(|mob| mob.voice_pitch())
+        };
+
+        if let Some(pitch) = pitch {
+            send_sound_at(stream, "minecraft:entity.slime.attack", 5, at, 1.0, pitch).await?;
+        }
+    }
+
     // Стрела застряла в теле: счёт в свойстве 12, убывает через 20·(30 − число)
     // тактов (вики, Arrow: «stuck in the body») [проверить].
     if done.is_some() && source == Source::Arrow {
@@ -1489,7 +1503,11 @@ pub(super) async fn mob_hit(
         player.net.arrow_timer = 20 * (30 - player.net.arrows);
     }
 
-    if let (Some(_), Some((ux, uz))) = (done, push) {
+    // Слизень отбрасывает полным ударом 0,4 без трения такта: у оригинала
+    // (0,-0.03; 0,361; -0,399) при стоящем игроке (чёрный ящик, slime-hop).
+    if let (Some(_), Some(dir), true) = (done, push, killer == "entity.minecraft.slime") {
+        knock_back(player, dir, 0.4, 0.0);
+    } else if let (Some(_), Some((ux, uz))) = (done, push) {
         // Клиенту уходит скорость уже после трения такта: 0,4 · 0,546 = 0,218
         // по горизонтали и 0,275 вверх (чёрный ящик, skeleton-arrow: стоящий
         // игрок после стрелы получает (0,218; 0,275)) [проверить: на ходу].

@@ -41,6 +41,9 @@ pub struct State {
     /// Размер магмового куба: 1, 2 или 4.
     pub size: i32,
 
+    /// Слизень: PersistenceRequired сохраняется при делении.
+    pub persistence_required: bool,
+
     /// Сколько тактов ещё злится зомби-пиглин (0 — спокоен).
     pub anger: i32,
 
@@ -90,14 +93,12 @@ pub fn anger_ticks(rng: &mut Rng) -> i32 {
 /// Размер нового куба при естественном появлении: 1, 2 или 4 поровну
 /// (вики, Magma Cube, «Spawning»).
 pub fn roll_size(rng: &mut Rng) -> i32 {
-    [1, 2, 4][rng.below(3) as usize]
+    super::slime::roll_size(rng)
 }
 
 /// Ставит размер куба: здоровье равно квадрату размера (вики, Magma Cube).
 pub fn set_size(mob: &mut Mob, size: i32) {
-    mob.nether.size = size;
-    mob.vitals.max_health = (size * size) as f32;
-    mob.vitals.health = mob.vitals.max_health;
+    super::slime::set_size(mob, size);
 }
 
 /// Урон куба: по размеру 3, 4, 6 при обычной сложности (вики, Magma Cube).
@@ -199,7 +200,6 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, mut plan:
     match mob.kind {
         Kind::Blaze => blaze(mob, view, &target, &mut plan, dist_sq, sight, flat, rng, grounded),
         Kind::Ghast => ghast(mob, view, &target, &mut plan, dist_sq, sight, rng),
-        Kind::MagmaCube => cube(mob, view, &target, &mut plan, dist_sq, flat, rng),
         _ => hostile::melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
     }
 
@@ -336,45 +336,6 @@ fn float(mob: &mut Mob, view: &dyn View, rng: &mut Rng, plan: Plan) -> Plan {
     }
 
     plan
-}
-
-/// Магмовый куб: прыгает к цели, вплотную кусает (вики, Magma Cube).
-fn cube(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist_sq: f64, _flat: f64, rng: &mut Rng) {
-    let _ = view;
-
-    ai_look(mob, target);
-
-    let size = f64::from(mob.nether.size.max(1));
-    let reach = 0.6 * size;
-
-    mob.nether.hop -= 1;
-
-    // Укус: касание ящиками, раз в 20 тактов, только на земле (вики, Magma Cube:
-    // «attacks by jumping into the player»).
-    if dist_sq <= (reach + 0.3).powi(2) + 1.0 && mob.h.cooldown == 0 {
-        mob.h.cooldown = hostile::MELEE_COOLDOWN;
-
-        let (dx, dz) = (target.x - mob.x, target.z - mob.z);
-        let flat = (dx * dx + dz * dz).sqrt().max(1.0e-6);
-
-        plan.melee = Some(hostile::Melee { target: target.id, damage: cube_damage(mob.nether.size), push: (dx / flat, dz / flat), wither: false, hunger: false });
-    }
-
-    if mob.on_ground && mob.nether.hop <= 0 {
-        // Прыжок: 0,42 + 0,1 на единицу размера [проверить], вперёд 0,2+0,1·размер.
-        mob.nether.hop = 10 + rng.below(21) as i32;
-
-        let (dx, dz) = (target.x - mob.x, target.z - mob.z);
-        let flat = (dx * dx + dz * dz).sqrt().max(1.0e-6);
-        let speed = 0.2 + 0.1 * size;
-
-        mob.vy = 0.42 + 0.1 * size.min(2.0);
-        mob.vx += dx / flat * speed;
-        mob.vz += dz / flat * speed;
-        mob.on_ground = false;
-
-        mob.events.push(Event::Sound { name: "minecraft:entity.magma_cube.jump", volume: 1.0, pitch: 1.0 });
-    }
 }
 
 /// Куда плывёт летун в этом такте: разгон к точке и торможение (гаст).

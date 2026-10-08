@@ -3519,6 +3519,18 @@ impl World {
         }
     }
 
+    /// Биом загруженной клетки, включая пещерные биомы и fillbiome.
+    /// Слизни не появляются в deep_dark (вики, Slime).
+    pub fn mob_biome(&self, x: i32, y: i32, z: i32) -> &'static str {
+        if (MIN_Y..MIN_Y + WORLD_HEIGHT).contains(&y)
+            && let Some(chunk) = self.chunks.get(&(x.div_euclid(CHUNK_SIZE), z.div_euclid(CHUNK_SIZE)))
+            && let Some(biome) = terrain::Biome::ALL.get(usize::from(chunk.biome(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE))))
+        {
+            return biome.name();
+        }
+        self.surface_biome(x, z)
+    }
+
     /// Ближайшая к чанку постройка этого вида, какую кладёт наша генерация
     /// (`locate structure`): чанк старта. Ищется по регионам до `regions`
     /// регионов вокруг. В обычном мире — крепости (stronghold.rs).

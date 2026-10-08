@@ -973,10 +973,27 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
 
     // Магмовый куб: `Size:2` — размер 3 (вики, Magma Cube: размер = Size + 1;
     // чёрный ящик, magma-cube-stand: свойство 16=3, здоровье 9, броня 9).
-    if mob.kind == crate::mob::Kind::MagmaCube
-        && let Some(size) = int_after(data, "Size:")
+    if crate::mob::slime::cube(mob.kind)
+        && let Some(size) = crate::snbt::parse(data).and_then(|value| value.get("Size").and_then(|size| size.as_f64()).map(|size| size as i32))
     {
         crate::mob::nether::set_size(mob, size.clamp(0, 126) + 1);
+    }
+
+    if mob.kind == crate::mob::Kind::Slime
+        && let Some(value) = crate::snbt::parse(data)
+    {
+        if let Some(on) = value.get("PersistenceRequired").and_then(|flag| flag.as_f64()) {
+            mob.nether.persistence_required = on != 0.0;
+        }
+        if value.get("CustomName").is_some() {
+            mob.nether.persistence_required = true;
+        }
+        if let Some(on) = value.get("NoAI").and_then(|flag| flag.as_f64()) {
+            mob.no_ai = on != 0.0;
+        }
+        if let Some(on) = value.get("Silent").and_then(|flag| flag.as_f64()) {
+            mob.silent = on != 0.0;
+        }
     }
 
     // Пиглины и хоглины: `IsImmuneToZombification:1b` (чёрный ящик, piglin-stand).
@@ -1082,7 +1099,15 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     }
 
     if let Some(health) = int_after(data, "Health:") {
-        mob.vitals.health = (health as f32).clamp(0.5, mob.kind.max_health());
+        mob.vitals.health = (health as f32).clamp(0.5, mob.vitals.max_health);
+    }
+
+    if mob.kind == crate::mob::Kind::Slime {
+        // Age/IsBaby не относятся к слизням: маленький — отдельный размер.
+        mob.age = 0;
+        if let Some(health) = crate::snbt::parse(data).and_then(|value| value.get("Health").and_then(|health| health.as_f64())) {
+            mob.vitals.health = (health as f32).clamp(0.0, mob.vitals.max_health);
+        }
     }
 
     if let Some(at) = data.find("Rotation:[") {
@@ -1128,6 +1153,11 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
         }
     }
 
+    if kind == crate::mob::Kind::Slime && data.is_empty() {
+        let mut rng = crate::mob::Rng::new(mob.entity_id as u64);
+        let size = crate::mob::slime::roll_size(&mut rng);
+        crate::mob::slime::set_size(&mut mob, size);
+    }
     apply_mob_data(&mut mob, data);
 
     // Свойство 20 у жителя: призванный без данных или с VillagerData — да,
@@ -3374,4 +3404,21 @@ mod tests {
         assert_eq!(stack.count, 64);
         assert!(item_from_text("{Motion:[0.0,0.0,0.0]}").is_none());
     }
+    #[test]
+    fn slime_summon_size_is_zero_based_and_health_uses_the_size() {
+        for (nbt, size) in [(0, 1), (1, 2), (3, 4), (-1, 1), (999, 127)] {
+            let mut mob = crate::mob::Mob::new(1, crate::mob::Kind::Slime, (0.0, 0.0, 0.0));
+            apply_mob_data(&mut mob, &format!("{{Size: {nbt}, NoAI: true, Silent: 1b, PersistenceRequired: 1b}}"));
+            assert_eq!(mob.nether.size, size);
+            assert_eq!(mob.vitals.max_health, (size * size) as f32);
+            assert!(mob.no_ai && mob.silent && mob.nether.persistence_required);
+        }
+        let mut mob = crate::mob::Mob::new(1, crate::mob::Kind::Slime, (0.0, 0.0, 0.0));
+        apply_mob_data(&mut mob, "{Size:3,Health:12.5f,Age:-24000,IsBaby:1b,PersistenceRequired:1b}");
+        assert_eq!(mob.vitals.health, 12.5);
+        assert!(!mob.is_baby());
+        apply_mob_data(&mut mob, "{Silent:1b}");
+        assert!(mob.nether.persistence_required, "частичная правка не сбрасывает PersistenceRequired");
+    }
+
 }

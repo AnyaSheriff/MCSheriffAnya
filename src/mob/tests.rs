@@ -787,7 +787,7 @@ fn hostile_kinds_have_the_wiki_numbers() {
     assert_eq!((Kind::Creeper.width(), Kind::Creeper.height()), (0.6, 1.7));
     assert_eq!((Kind::Spider.width(), Kind::Spider.height()), (1.4, 0.9));
     assert_eq!((Kind::Zombie.java_type(), Kind::Skeleton.java_type(), Kind::Creeper.java_type(), Kind::Spider.java_type()), (150, 115, 32, 124));
-    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 18);
+    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 19);
     assert!(!Kind::Cow.hostile());
 }
 
@@ -1269,7 +1269,9 @@ fn natural_spawning_needs_dark_air_over_a_solid_floor() {
 
         if !found.is_empty() {
             groups += 1;
-            assert!(found.len() <= 4 && found.iter().all(|mob| mob.kind == found[0].kind));
+            // Зомби-житель — 5 % обычной группы зомби, а не отдельная группа.
+            let family = |kind| if kind == Kind::ZombieVillager { Kind::Zombie } else { kind };
+            assert!(found.len() <= 4 && found.iter().all(|mob| family(mob.kind) == family(found[0].kind)));
         }
     }
 
@@ -2007,4 +2009,252 @@ fn a_magma_cube_scales_with_its_size() {
 
     assert_eq!(cube.vitals.max_health, 16.0);
     assert!((cube.size().0 - 2.08).abs() < 1e-9);
+}
+
+/// Вики, Slime: квадрат здоровья, размер ящика и скорость по размеру.
+#[test]
+fn slime_size_stats_and_registry() {
+    assert_eq!(Kind::from_name("minecraft:slime"), Some(Kind::Slime));
+    assert_eq!(Kind::Slime.java_type(), 117);
+    assert!(Kind::Slime.hostile() && !Kind::Slime.nether());
+    for (size, hp, width, damage, speed) in [(1, 1.0, 0.52, 0.0, 0.3), (2, 4.0, 1.04, 2.0, 0.4), (4, 16.0, 2.08, 4.0, 0.6)] {
+        let mut mob = Mob::new(7, Kind::Slime, (0.5, 1.0, 0.5));
+        slime::set_size(&mut mob, size);
+        assert_eq!((mob.vitals.health, mob.vitals.max_health), (hp, hp));
+        assert_eq!(mob.size(), (width, width));
+        assert_eq!(mob.armor(), 0.0);
+        assert_eq!(slime::damage(size), damage);
+        assert!((slime::speed(size) - speed).abs() < 1.0e-7);
+    }
+}
+
+/// Контрольные точки отдельно вычислены по формуле вики с int32/long64.
+#[test]
+fn slime_chunks_use_seed_signed_coordinates_and_java_overflow() {
+    for (seed, x, z, expected) in [
+        (0, 0, 0, false), (0, -2, 0, true), (0, 2, 2, true),
+        (0, -5, 5, true), (0, 1, -3, true), (1, -30, 14, true),
+        (0, -30, 14, false), (-1, -1, -1, false),
+        (123456789, 1875000, -1875000, false),
+        (i64::MAX, i32::MAX, i32::MIN, false),
+        (i64::MIN, 1874982, -1875000, true), (-42, 1874995, -1875000, true),
+    ] {
+        assert_eq!(slime::is_slime_chunk(seed, x, z), expected, "{seed}, {x}, {z}");
+    }
+    // Примерно десятая часть чанков; никакого цикла из 16 блоков.
+    let count = (-100..100).flat_map(|x| (-100..100).map(move |z| (x, z))).filter(|&(x, z)| slime::is_slime_chunk(42, x, z)).count();
+    assert!((3500..4500).contains(&count), "{count}");
+}
+
+#[test]
+fn slime_split_is_two_to_four_half_size_children_only_after_death() {
+    let mut rng = Rng::new(9123);
+    let mut id = 100;
+    let mut next_id = || { id += 1; id };
+    let mut counts = std::collections::HashSet::new();
+    for size in [1, 2, 4] {
+        let mut parent = Mob::new(1, Kind::Slime, (0.5, 1.0, 0.5));
+        slime::set_size(&mut parent, size);
+        assert!(slime::split(&parent, &mut rng, &mut next_id).is_empty());
+        parent.no_ai = true;
+        parent.silent = true;
+        parent.nether.persistence_required = true;
+        parent.dead_for = DEATH_TICKS;
+        assert!(slime::split(&parent, &mut rng, &mut next_id).is_empty());
+        parent.dead_for += 1;
+        for _ in 0..60 {
+            let children = slime::split(&parent, &mut rng, &mut next_id);
+            if size == 1 {
+                assert!(children.is_empty());
+                continue;
+            }
+            assert!((2..=4).contains(&children.len()));
+            counts.insert(children.len());
+            for child in children {
+                assert_eq!(child.kind, Kind::Slime);
+                assert_eq!(child.nether.size, size / 2);
+                assert_eq!(child.vitals.health, ((size / 2).pow(2)) as f32);
+                assert!(child.no_ai && child.silent && child.nether.persistence_required);
+                assert_eq!(child.pending_xp, 0);
+                assert_eq!(child.xp_until, 0);
+            }
+        }
+        parent.h.despawn = true;
+        assert!(slime::split(&parent, &mut rng, &mut next_id).is_empty());
+    }
+    assert_eq!(counts.len(), 3);
+}
+
+#[test]
+fn slime_contact_has_no_melee_cooldown_and_small_is_harmless() {
+    let view = Flat::new();
+    let player = player_at(90, 0.6, 0.5);
+    let mut mob = Mob::new(3, Kind::Slime, (0.5, 1.0, 0.5));
+    assert!(slime::contact(&mob, &view, &player).is_none());
+    slime::set_size(&mut mob, 2);
+    mob.h.cooldown = 20;
+    let hit = slime::contact(&mob, &view, &player).unwrap();
+    assert_eq!((hit.target, hit.damage), (90, 2.0));
+    assert!(slime::contact(&mob, &view, &player).is_some());
+    assert!(slime::contact(&mob, &view, &ai::Watcher { targetable: false, ..player }).is_none());
+    assert!(slime::contact(&mob, &view, &ai::Watcher { spectator: true, ..player }).is_none());
+    assert!(slime::contact(&mob, &view, &ai::Watcher { x: 1.6, ..player }).is_none(), "нет касания");
+    mob.die();
+    assert!(slime::contact(&mob, &view, &player).is_none());
+}
+
+#[test]
+fn slime_with_no_ai_does_not_touch_players() {
+    let mut items = Items::new();
+    let mut mob = Mob::new(3, Kind::Slime, (0.5, 1.0, 0.5));
+    slime::set_size(&mut mob, 2);
+    mob.no_ai = true;
+    items.add_mob(mob);
+    let players = [player_at(90, 0.6, 0.5), player_at(91, 0.4, 0.5)];
+    let env = Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 };
+    let outcome = step_all(&mut items, &Flat::new(), &players, env, &mut Rng::new(8), &mut || 123);
+    assert!(outcome.strikes.is_empty(), "чёрный ящик, slime-attack: NoAI не бьёт");
+}
+
+#[test]
+fn slime_hops_at_target_and_waits_on_ground() {
+    let view = Flat::new();
+    let mut mob = Mob::new(3, Kind::Slime, (0.5, 1.0, 0.5));
+    slime::set_size(&mut mob, 2);
+    mob.nether.hop = 0;
+    mob.on_ground = true;
+    mob.h.target = Some(90);
+    let players = [player_at(90, 8.5, 0.5)];
+    let ctx = ctx_for(&players, 2, 15, false);
+    let mut rng = Rng::new(8);
+    let plan = mob.tick(&view, &ctx, &mut rng);
+    assert!(plan.jump && mob.x > 0.5 && mob.y > 1.0);
+    assert!((7..=19).contains(&mob.nether.hop) && mob.nether.hop % 2 == 1, "2·(10..29)/3 + 1");
+    let delay = mob.nether.hop;
+    mob.tick(&view, &ctx, &mut rng);
+    assert_eq!(mob.nether.hop, delay, "в воздухе задержка не убывает");
+    let mut landed = false;
+    for _ in 0..30 {
+        mob.tick(&view, &ctx, &mut rng);
+        if mob.on_ground { landed = true; break; }
+    }
+    assert!(landed);
+    assert!(!mob.tick(&view, &ctx, &mut rng).jump, "ждёт после приземления");
+    assert!(mob.events.iter().any(|event| matches!(event, Event::SoundAt { name: "minecraft:entity.slime.jump", .. })));
+    assert!(mob.events.iter().any(|event| matches!(event, Event::Sound { name: "minecraft:entity.slime.squish", .. })));
+}
+
+#[test]
+fn slime_hop_lands_about_a_block_from_takeoff() {
+    // Чёрный ящик, slime-hop: прыжок среднего слизня ≈0,95 блока (0,875–1,0).
+    let view = Flat::new();
+    let mut mob = Mob::new(3, Kind::Slime, (0.5, 1.0, 0.5));
+    slime::set_size(&mut mob, 2);
+    mob.nether.hop = 0;
+    mob.on_ground = true;
+    mob.yaw = 0.0;
+    mob.h.target = Some(90);
+    let players = [player_at(90, 0.5, 20.5)];
+    let ctx = ctx_for(&players, 2, 15, false);
+    let mut rng = Rng::new(8);
+    mob.tick(&view, &ctx, &mut rng);
+    for _ in 0..30 {
+        if mob.on_ground { break; }
+        mob.tick(&view, &ctx, &mut rng);
+    }
+    assert!(mob.on_ground);
+    let hop = (mob.x - 0.5).hypot(mob.z - 0.5);
+    assert!((0.85..1.05).contains(&hop), "{hop}");
+}
+
+#[test]
+fn slime_size_and_flags_survive_region_round_trip() {
+    let mut mob = Mob::new(3, Kind::Slime, (0.5, 1.0, 0.5));
+    slime::set_size(&mut mob, 4);
+    mob.vitals.health = 11.0;
+    mob.silent = true;
+    mob.no_ai = true;
+    mob.nether.persistence_required = true;
+    let mut bytes = Vec::new();
+    mob.write(&mut bytes);
+    let mut input = bytes.as_slice();
+    let restored = Mob::read(&mut input).unwrap();
+    assert!(input.is_empty());
+    assert_eq!(restored.nether.size, 4);
+    assert_eq!((restored.vitals.health, restored.vitals.max_health), (11.0, 16.0));
+    assert!(restored.silent && restored.no_ai && restored.nether.persistence_required);
+}
+
+#[test]
+fn slime_drops_only_small_and_xp_tracks_size() {
+    let mut rng = Rng::new(12);
+    for size in [1, 2, 4] {
+        let mut mob = Mob::new(3, Kind::Slime, (0.5, 1.0, 0.5));
+        slime::set_size(&mut mob, size);
+        mob.looting = 3;
+        for _ in 0..100 {
+            let drops = loot(&mob, &mut rng);
+            if size > 1 { assert!(drops.is_empty()); }
+            for drop in drops {
+                assert_eq!(blocks::item_name(drop.item), Some("slime_ball"));
+                assert!((1..=5).contains(&drop.count));
+            }
+        }
+        mob.credit_player();
+        mob.hurt(100.0, Source::PlayerAttack, None);
+        assert_eq!(mob.pending_xp, size);
+    }
+    let mut mob = Mob::new(3, Kind::Slime, (0.5, 1.0, 0.5));
+    mob.die();
+    assert_eq!(mob.pending_xp, 0);
+    let mean = (0..10000).map(|_| slime::slimeballs(3, &mut rng)).sum::<i32>() as f64 / 10000.0;
+    assert!((mean - 2.5).abs() < 0.1);
+}
+
+#[test]
+fn slime_spawning_obeys_chunk_moon_light_height_and_biome() {
+    let mut rng = Rng::new(12);
+    // Чанк (-2, 0) при семени 0 — слизневый, любой свет.
+    assert!((0..200).any(|_| slime::can_spawn(0, (-32, 39, 0), "plains", 15, 0, &mut rng)));
+    for _ in 0..100 {
+        assert!(!slime::can_spawn(0, (-32, 40, 0), "plains", 0, 0, &mut rng));
+        assert!(!slime::can_spawn(0, (0, 20, 0), "plains", 0, 0, &mut rng));
+        assert!(!slime::can_spawn(0, (-32, 20, 0), "mushroom_fields", 0, 0, &mut rng));
+        assert!(!slime::can_spawn(0, (-32, 20, 0), "deep_dark", 0, 0, &mut rng));
+        assert!(!slime::can_spawn(0, (0, 60, 0), "swamp", 0, 4 * 24000, &mut rng));
+        assert!(!slime::can_spawn(0, (0, 60, 0), "swamp", 8, 0, &mut rng));
+        assert!(!slime::can_spawn(0, (0, 50, 0), "swamp", 0, 0, &mut rng));
+        assert!(!slime::can_spawn(0, (0, 70, 0), "swamp", 0, 0, &mut rng));
+    }
+    for biome in ["swamp", "mangrove_swamp"] {
+        assert!((0..200).any(|_| slime::can_spawn(0, (0, 60, 0), biome, 7, 18000, &mut rng)));
+    }
+    assert_eq!(slime::moon_brightness(8 * 24000), 1.0);
+    assert_eq!(slime::moon_brightness(4 * 24000), 0.0);
+}
+
+#[test]
+fn slime_despawns_peaceful_or_far_without_splitting() {
+    let mut mob = Mob::new(3, Kind::Slime, (0.5, 1.0, 0.5));
+    slime::set_size(&mut mob, 4);
+    let mut rng = Rng::new(8);
+    hostile::despawn_check(&mut mob, &[player_at(90, 130.0, 0.5)], &mut rng, false);
+    assert!(mob.h.despawn);
+    assert!(slime::split(&mob, &mut rng, &mut || 99).is_empty());
+    mob.h.despawn = false;
+    mob.nether.persistence_required = true;
+    hostile::despawn_check(&mut mob, &[player_at(90, 130.0, 0.5)], &mut rng, false);
+    assert!(!mob.h.despawn);
+    hostile::despawn_check(&mut mob, &[], &mut rng, true);
+    assert!(mob.h.despawn);
+}
+
+#[test]
+fn slime_spawn_needs_space_for_the_whole_size() {
+    let mut view = Flat::new();
+    view.stone.push((1, 1, 0));
+    let mut mob = Mob::new(3, Kind::Slime, (0.5, 1.0, 0.5));
+    assert!(spawn::fits(&view, &mob));
+    slime::set_size(&mut mob, 4);
+    assert!(!spawn::fits(&view, &mob));
 }
