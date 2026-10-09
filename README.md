@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo.png" alt="MCSheriffAnya" width="160">
+
 # MCSheriffAnya
 
 A Minecraft-compatible game server written from scratch in Rust.

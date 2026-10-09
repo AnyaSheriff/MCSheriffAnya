@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo.png" alt="MCSheriffAnya" width="160">
+
 # MCSheriffAnya
 
 Игровой сервер, совместимый с Minecraft, написанный на Rust с нуля.
