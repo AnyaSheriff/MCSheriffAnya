@@ -11,7 +11,7 @@
 // Стрелы хранятся общим списком в `Shared::arrows` (у каждой своё
 // измерение); такт двигает их из tick.rs, подключения рассказывают о них
 // клиентам (network/play/bow.rs), Bedrock — bedrock/world.rs. Стрела скелета
-// отличается тем, кто стрелок (`Shooter::Mob`): она бьёт только игроков, ранит
+// отличается тем, кто стрелок (`Shooter::Mob`): она ранит
 // их как моб (пакеты урона уходят из `vitals::mob_hit`) и не подбирается;
 // выпущенная в такт мобов, она начинает полёт со следующего такта (`fresh`).
 
@@ -93,6 +93,11 @@ pub struct Arrow {
     pub owner_uuid: [u8; 16],
     pub owner_name: String,
     pub shooter: Shooter,
+    /// Эффекты наконечника: готовый срок попадания (вики, Tipped Arrow).
+    /// [Bedrock: потом] Цвет стрелы и частицы ещё не передаются Bedrock.
+    pub effects: Vec<crate::survival::Effect>,
+    /// Исходное зелье для подбора стрелы игрока; собственный эффект моба — None.
+    pub potion: Option<u16>,
     /// Полностью натянутая стрела бьёт сильнее и летит с искрами.
     pub crit: bool,
     /// Уровни «силы» и «отдачи» лука, «горящая стрела».
@@ -142,7 +147,45 @@ pub struct Arrow {
     pub start: ((f64, f64, f64), (f64, f64, f64)),
 }
 
+/// Зелье на стреле игрока: длительность в восемь раз меньше питьевой
+/// (вики, Tipped Arrow: «1/8 the time»). Стрелы мобов задают срок напрямую.
+pub fn tipped_effects(potion: Option<u16>) -> Vec<crate::survival::Effect> {
+    potion.map(crate::survival::potion_effects).unwrap_or_default().into_iter().map(|mut effect| {
+        effect.ticks_left = (effect.ticks_left / 8).max(1);
+        effect
+    }).collect()
+}
+
+/// Эффекты стрелы на мобе; нежить не принимает яд/регенерацию (вики, Undead).
+pub fn apply_effects(mob: &mut crate::mob::Mob, effects: &[crate::survival::Effect]) {
+    use crate::survival::EffectKind;
+    let undead = crate::combat::mob_traits(mob.kind.name()).0;
+    for effect in effects {
+        if (undead && matches!(effect.kind, EffectKind::Poison | EffectKind::Regeneration))
+            || (mob.kind.spider() && effect.kind == EffectKind::Poison)
+        {
+            continue;
+        }
+        if effect.kind.instant() {
+            let amount = crate::thrown::instant_amount(effect.kind, effect.amplifier, 1.0);
+            if (effect.kind == EffectKind::InstantDamage) != undead {
+                mob.hurt(amount, Source::Magic, None);
+            } else {
+                mob.vitals.health = (mob.vitals.health + amount).min(mob.vitals.max_health);
+            }
+        } else {
+            mob.vitals.give_effect_shown(*effect);
+        }
+    }
+}
+
 impl Arrow {
+    /// Подбирается тот же наконечник, что был выпущен.
+    pub fn pickup_stack(&self) -> Stack {
+        let name = if self.potion.is_some() { "tipped_arrow" } else { "arrow" };
+        Stack::new(crate::blocks::item_named(name).unwrap_or(0), 1).with_extras(crate::stackdata::Data { potion: self.potion, ..Default::default() })
+    }
+
     /// Стрела выпущена мобом.
     pub fn is_mob_shot(&self) -> bool {
         matches!(self.shooter, Shooter::Mob { .. })
@@ -164,6 +207,8 @@ impl Arrow {
             owner_uuid: [0; 16],
             owner_name: String::new(),
             shooter: Shooter::Mob { killer },
+            effects: Vec::new(),
+            potion: None,
             crit: false,
             power: 0,
             punch: 0,
@@ -543,7 +588,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     match arrow.trident {
                         Some(stack) if arrow.pickup == Pickup::Yes => pickups.push((*uuid, stack)),
                         Some(_) => {}
-                        None => pickups.push((*uuid, Stack::new(crate::blocks::item_named("arrow").unwrap_or(0), 1))),
+                        None => pickups.push((*uuid, arrow.pickup_stack())),
                     }
                     world.note_collect(arrow.entity_id, *entity_id, 1);
                     // Стрела исчезнет в следующем такте: клиентам её убирает сам
@@ -583,13 +628,13 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             }
         }
 
-        // Мобы (стрелы мобов их не задевают). Эндермена стрела не берёт: он
+        // Мобы тоже принимают стрелы скелетов. Эндермена стрела не берёт: он
         // прыгает прочь прежде попадания, а стрела летит дальше (вики,
         // Enderman: «immune to most projectiles»).
         let mut dodgers = Vec::new();
 
-        for mob in items.mobs().iter().filter(|_| !arrow.is_mob_shot()) {
-            if arrow.dealt || mob.is_dead() || arrow.pierced.contains(&mob.entity_id) {
+        for mob in items.mobs().iter() {
+            if arrow.dealt || mob.is_dead() || arrow.pierced.contains(&mob.entity_id) || (mob.entity_id == arrow.owner && arrow.age < OWNER_SAFE) {
                 continue;
             }
 
@@ -659,6 +704,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     let flat = arrow.vx.hypot(arrow.vz).max(1.0e-9);
 
                     world.note_mob_hurt(entity_id, damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, arrow.owner, killer, Some((arrow.vx / flat, arrow.vz / flat)), (arrow.x, arrow.y, arrow.z));
+                    for effect in &arrow.effects {
+                        world.note_mob_hit_effect(entity_id, *effect);
+                    }
                 }
                 Target::Player { entity_id } => {
                     world.note_game_event(arrow.owner, 6, 0.0);
@@ -677,6 +725,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         breach_scale: 1.0,
                         fire_ticks: if arrow.flame { 100 } else { 0 },
                         thorns_slots: Vec::new(),
+                        effects: arrow.effects.clone(),
                         ignores_shield: arrow.pierce_left > 0 || !arrow.pierced.is_empty(),
                     });
                 }
@@ -690,7 +739,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == entity_id) {
                         // Стрела без стрелка (призванная командой) опыта за
                         // убийство не сулит (wither-half-armor).
-                        if arrow.owner != 0 {
+                        if arrow.owner != 0 && !arrow.is_mob_shot() {
                             mob.credit_player();
                         }
 
@@ -722,6 +771,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                             if arrow.trident.is_none() && arrow.pierce_left == 0 {
                                 mob.stick_arrow();
                             }
+
+                            apply_effects(mob, &arrow.effects);
                         }
                     }
 
@@ -928,6 +979,8 @@ mod tests {
             owner_uuid: [0; 16],
             owner_name: String::new(),
             shooter: Shooter::Player,
+            effects: Vec::new(),
+            potion: None,
             crit: false,
             power: 0,
             punch: 0,

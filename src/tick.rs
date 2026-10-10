@@ -1182,8 +1182,10 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         };
         let error = crate::mob::hostile::arrow_error(difficulty);
         let velocity = crate::arrow::launch(fired.shot.from, fired.shot.aim, fired.shot.speed, error, &mut gauss);
-        let killer = crate::mob::hostile::killer_key(if fired.shot.trident { crate::mob::Kind::Drowned } else { crate::mob::Kind::Skeleton });
+        let killer = crate::mob::hostile::killer_key(fired.kind);
         let mut arrow = crate::arrow::Arrow::from_mob(shared.next_entity_id(), dimension, fired.shot.from, velocity, fired.shooter, killer);
+
+        arrow.effects.extend(crate::mob::skeleton::arrow_effect(fired.kind));
 
         // Утопленник бросает трезубец, а не стрелу (вики, Drowned).
         if fired.shot.trident {

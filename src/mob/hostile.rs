@@ -75,6 +75,8 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Zombie => "entity.minecraft.zombie",
         Kind::ZombieVillager => "entity.minecraft.zombie_villager",
         Kind::Skeleton => "entity.minecraft.skeleton",
+        Kind::Stray => "entity.minecraft.stray",
+        Kind::Bogged => "entity.minecraft.bogged",
         Kind::Creeper => "entity.minecraft.creeper",
         Kind::Spider => "entity.minecraft.spider",
         Kind::CaveSpider => "entity.minecraft.cave_spider",
@@ -251,6 +253,8 @@ pub struct State {
     pub water_ticks: i32,
     pub converting: i32,
     pub converted: Option<Kind>,
+    /// Скелет в дрожи уже один такт вне снега (сброс дрожи позже на такт, skeleton-to-stray).
+    pub snow_gap: bool,
 }
 
 /// Что в основной руке утопленника.
@@ -516,8 +520,8 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Spider | Kind::CaveSpider | Kind::Silverfish => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
         Kind::Drowned => drowned(mob, view, ctx, &target, &mut plan, dist_sq, flat, sight, rng, grounded),
         Kind::Creeper => creeper(mob, view, ctx, &target, &mut plan, dist_sq, sight, grounded),
-        Kind::Skeleton if mob.h.bow => skeleton(mob, view, ctx, &target, &mut plan, dist_sq, sight, rng, grounded),
-        Kind::Skeleton => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
+        Kind::Skeleton | Kind::Stray | Kind::Bogged if mob.h.bow => skeleton(mob, view, ctx, &target, &mut plan, dist_sq, sight, rng, grounded),
+        Kind::Skeleton | Kind::Stray | Kind::Bogged => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
         Kind::Enderman => enderman_chase(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
         Kind::Witch => witch_keep(mob, view, &target, &mut plan, dist_sq, grounded),
         _ => {}
@@ -619,7 +623,7 @@ pub(super) fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut
             let (ux, uz) = if flat > 1.0e-6 { ((target.x - mob.x) / flat, (target.z - mob.z) / flat) } else { (0.0, 1.0) };
             // Вики: паук и скелет 2, зомби 3, эндермен 7 (на нормальной).
             let damage = match mob.kind {
-                Kind::Spider | Kind::CaveSpider | Kind::Skeleton => 2.0,
+                Kind::Spider | Kind::CaveSpider | Kind::Skeleton | Kind::Stray | Kind::Bogged => 2.0,
                 Kind::Silverfish => 1.0,
                 Kind::Enderman => 7.0,
                 Kind::WitherSkeleton | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute | Kind::Hoglin => super::nether::melee_damage(mob),
@@ -839,8 +843,10 @@ fn skeleton(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &
 
         if mob.h.drawing > DRAW_TICKS && sight {
             mob.h.drawing = 0;
-            mob.h.cooldown = shoot_pause(ctx.difficulty);
+            mob.h.cooldown = super::skeleton::shoot_pause(mob.kind, ctx.difficulty);
             mob.events.push(Event::Swing);
+            // Вики, Skeleton/Stray/Bogged: общий звук выстрела, pitch 5/6…1,25.
+            mob.events.push(Event::Sound { name: "minecraft:entity.skeleton.shoot", volume: 1.0, pitch: (1.0 / (rng.unit() * 0.4 + 0.8)) as f32 });
             plan.shot = Some(Shot {
                 from: (mob.x, mob.y + mob.eye() - 0.1, mob.z),
                 aim: (target.x, target.y + 0.6, target.z),
@@ -867,7 +873,7 @@ pub fn burn(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, sun: bool)
 
     // Кадавр не горит (вики, Husk: «immune to burning in daylight»), утопленник горит
     // вне воды (вики, Drowned).
-    let burns = matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Skeleton | Kind::Phantom) && !mob.h.helmet;
+    let burns = matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Phantom) && !mob.h.helmet;
 
     if sun && burns && ctx.sun_up && view.open_sky(x, y, z) && rng.below(SUN_CHANCE) == 0 {
         mob.vitals.ignite(SUN_FIRE_TICKS);

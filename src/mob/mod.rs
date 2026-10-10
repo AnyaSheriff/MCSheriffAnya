@@ -27,6 +27,7 @@ pub mod phantom;
 pub mod path;
 pub mod spawn;
 pub mod slime;
+pub mod skeleton;
 pub mod tame;
 
 use crate::blocks;
@@ -42,6 +43,9 @@ pub enum Kind {
     Chicken,
     Zombie,
     Skeleton,
+    /// Зимогор и болотник: общий ИИ скелета (вики, Stray, Bogged).
+    Stray,
+    Bogged,
     Creeper,
     Spider,
     CaveSpider,
@@ -114,13 +118,15 @@ pub enum Kind {
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 39] = [
+    pub const ALL: [Kind; 41] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
         Kind::Chicken,
         Kind::Zombie,
         Kind::Skeleton,
+        Kind::Stray,
+        Kind::Bogged,
         Kind::Creeper,
         Kind::Spider,
         Kind::CaveSpider,
@@ -165,6 +171,8 @@ impl Kind {
                 | Kind::Drowned
                 | Kind::Husk
                 | Kind::Skeleton
+                | Kind::Stray
+                | Kind::Bogged
                 | Kind::Creeper
                 | Kind::Spider
                 | Kind::CaveSpider
@@ -186,6 +194,11 @@ impl Kind {
                 | Kind::ElderGuardian
                 | Kind::Wither
         )
+    }
+
+    /// Скелеты с луком используют один ИИ и одно снаряжение.
+    pub fn skeleton(self) -> bool {
+        matches!(self, Kind::Skeleton | Kind::Stray | Kind::Bogged)
     }
 
     /// Оба паука используют лазание и охоту (вики, Cave Spider: «inherit»).
@@ -215,6 +228,8 @@ impl Kind {
             "chicken" => Kind::Chicken,
             "zombie" => Kind::Zombie,
             "skeleton" => Kind::Skeleton,
+            "stray" => Kind::Stray,
+            "bogged" => Kind::Bogged,
             "creeper" => Kind::Creeper,
             "spider" => Kind::Spider,
             "cave_spider" => Kind::CaveSpider,
@@ -260,6 +275,8 @@ impl Kind {
             Kind::Chicken => "chicken",
             Kind::Zombie => "zombie",
             Kind::Skeleton => "skeleton",
+            Kind::Stray => "stray",
+            Kind::Bogged => "bogged",
             Kind::Creeper => "creeper",
             Kind::Spider => "spider",
             Kind::CaveSpider => "cave_spider",
@@ -302,6 +319,8 @@ impl Kind {
             Kind::Chicken => 26,
             Kind::Creeper => 32,
             Kind::Skeleton => 115,
+            Kind::Stray => 128,
+            Kind::Bogged => 16,
             Kind::Spider => 124,
             Kind::CaveSpider => 22,
             Kind::Silverfish => 114,
@@ -359,6 +378,9 @@ impl Kind {
             Kind::Chicken => "minecraft:chicken",
             Kind::Zombie => "minecraft:zombie",
             Kind::Skeleton => "minecraft:skeleton",
+            // [Bedrock: потом] Свойства и эффекты новых вариантов ещё не сверены.
+            Kind::Stray => "minecraft:stray",
+            Kind::Bogged => "minecraft:bogged",
             Kind::Creeper => "minecraft:creeper",
             Kind::Spider => "minecraft:spider",
             // [Bedrock: потом] отдельная проверка метаданных и поведения.
@@ -405,7 +427,7 @@ impl Kind {
     pub fn width(self) -> f64 {
         match self {
             Kind::Chicken => 0.4,
-            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
             Kind::CaveSpider => 0.7,
             Kind::Silverfish => 0.4,
@@ -445,7 +467,7 @@ impl Kind {
             Kind::Pig => 0.9,
             Kind::Sheep => 1.3,
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 1.95,
-            Kind::Skeleton => 1.99,
+            Kind::Skeleton | Kind::Stray | Kind::Bogged => 1.99,
             Kind::Creeper => 1.7,
             Kind::Spider => 0.9,
             Kind::CaveSpider => 0.5,
@@ -482,7 +504,8 @@ impl Kind {
             Kind::Cow | Kind::Pig => 10.0,
             Kind::Sheep => 8.0,
             Kind::Chicken => 4.0,
-            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Creeper => 20.0,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Creeper => 20.0,
+            Kind::Bogged => 16.0,
             Kind::Spider => 16.0,
             Kind::CaveSpider => 12.0,
             Kind::Silverfish => 8.0,
@@ -529,7 +552,7 @@ impl Kind {
             Kind::Cow => 0.2,
             Kind::Pig | Kind::Chicken => 0.25,
             Kind::Sheep | Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 0.23,
-            Kind::Skeleton | Kind::Creeper => 0.25,
+            Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Creeper => 0.25,
             Kind::Spider => 0.3,
             Kind::CaveSpider => 0.3,
             Kind::Silverfish => 0.25,
@@ -602,6 +625,8 @@ impl Kind {
             // Чёрный ящик, zombie-villager-cure: ambient и hurt — zombie_villager.
             Kind::ZombieVillager => ("minecraft:entity.zombie_villager.ambient", "minecraft:entity.zombie_villager.hurt", "minecraft:entity.zombie_villager.death"),
             Kind::Skeleton => ("minecraft:entity.skeleton.ambient", "minecraft:entity.skeleton.hurt", "minecraft:entity.skeleton.death"),
+            Kind::Bogged => ("minecraft:entity.bogged.ambient", "minecraft:entity.bogged.hurt", "minecraft:entity.bogged.death"),
+            Kind::Stray => ("minecraft:entity.stray.ambient", "minecraft:entity.stray.hurt", "minecraft:entity.stray.death"),
             // У крипера голоса в покое нет (вики, Creeper, «Sounds»).
             Kind::Creeper => ("", "minecraft:entity.creeper.hurt", "minecraft:entity.creeper.death"),
             Kind::Spider | Kind::CaveSpider => ("minecraft:entity.spider.ambient", "minecraft:entity.spider.hurt", "minecraft:entity.spider.death"),
@@ -659,6 +684,8 @@ impl Kind {
             Kind::Zombie => "minecraft:entity.zombie.step",
             Kind::ZombieVillager => "minecraft:entity.zombie_villager.step",
             Kind::Skeleton => "minecraft:entity.skeleton.step",
+            Kind::Bogged => "minecraft:entity.bogged.step",
+            Kind::Stray => "minecraft:entity.stray.step",
             // Шаги крипера играются звуком блока [проверить]; молча.
             Kind::Creeper => "",
             Kind::Spider | Kind::CaveSpider => "minecraft:entity.spider.step",
@@ -1105,7 +1132,7 @@ impl Mob {
 
         // Шалкер без цвета — 16 (minecraft-data: color; замер мира оригинала:
         // у всех шалкеров городов Color 16).
-        let h = hostile::State { bow: kind == Kind::Skeleton, shell_color: 16, hand_drop: DEFAULT_DROP, ..hostile::State::default() };
+        let h = hostile::State { bow: kind.skeleton(), shell_color: 16, hand_drop: DEFAULT_DROP, ..hostile::State::default() };
 
         Self {
             entity_id,
@@ -1230,7 +1257,7 @@ impl Mob {
     /// на 1,64 = глаза − 0,1), крипер 1,445, паук 0,65 [проверить].
     pub fn eye(&self) -> f64 {
         match self.kind {
-            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 1.74,
+            Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute => 1.74,
             // [проверить] высота глаз: ифрит 1,53, иссушитель 2,1, гаст 2,6.
             Kind::Blaze => 1.53,
             Kind::WitherSkeleton => 2.1,
@@ -1345,6 +1372,8 @@ impl Mob {
             guardian::sense(self, view);
         }
 
+        skeleton::snow_tick(self, view);
+
         // Зомби и кадавр: голова 30 секунд в воде — 15 секунд трясётся — и они
         // утопленник и зомби (вики, Drowned, «Spawning»; Husk; чёрный ящик,
         // zombie-to-drowned). Без ИИ не превращаются.
@@ -1415,6 +1444,17 @@ impl Mob {
             }
 
             return ai::Plan::default();
+        }
+
+        // Эффекты наконечников на прочих мобах; отдельные такты ниже не дублируем.
+        if !self.vitals.effects.is_empty() && !matches!(self.kind, Kind::Witch | Kind::Villager | Kind::ZombieVillager | Kind::CaveSpider | Kind::Silverfish) {
+            let effects = self.vitals.effects_tick();
+            for (amount, source) in effects.hurt {
+                self.hurt(amount, source, None);
+            }
+            if self.is_dead() {
+                return ai::Plan::default();
+            }
         }
 
         // Ведьма пьёт зелья и без ИИ: это её такт, а не мысль (чёрный ящик,
@@ -1535,6 +1575,8 @@ impl Mob {
     /// на земле `speed²·(0,6/f)³` (чёрный ящик, probe-cow-plain: у коровы
     /// 0,2 даёт 0,04 за такт — шаг 0,088 блока), в воздухе 0,02.
     pub fn physics(&mut self, view: &dyn View, speed: f64, jump: bool) {
+        let effect_speed = (1.0 - 0.15 * f64::from(self.vitals.effect_level(crate::survival::EffectKind::Slowness))).max(0.0);
+        let speed = speed * effect_speed;
         let (cell_x, cell_y, cell_z) = self.cell();
         let here = view.block(cell_x, cell_y, cell_z);
         let in_water = is_water(here);
@@ -1606,7 +1648,7 @@ impl Mob {
             // Шаг вбок и вперёд-назад: тело смотрит на цель, идёт боком.
             let (forward, left) = self.strafe;
             let length = (forward * forward + left * left).sqrt();
-            let effective = length * self.kind.speed();
+            let effective = length * self.kind.speed() * effect_speed;
             let accel = if self.on_ground { effective * effective * (0.6 / slip).powi(3) } else { 0.02 };
             let rad = f64::from(self.yaw).to_radians();
             let (fx, fz) = (-rad.sin(), rad.cos());
@@ -2053,7 +2095,9 @@ impl Mob {
             Kind::Sheep => 2,
             Kind::Chicken => 3,
             Kind::Zombie => 4,
-            Kind::Skeleton => 5,
+            Kind::Skeleton => if self.h.water_ticks != 0 || self.h.converting != 0 { 63 } else { 5 },
+            Kind::Stray => 61,
+            Kind::Bogged => 62,
             Kind::Creeper => 6,
             Kind::Spider => 7,
             Kind::CaveSpider => 31,
@@ -2088,6 +2132,7 @@ impl Mob {
             Kind::ElderGuardian => 37,
             // Номер с запасом: другие новые мобы берут 38 и дальше.
             Kind::Wither => 60,
+            // Зимогор, болотник и скелет-замерзающий (хвост с таймерами) — следом.
         } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -2114,6 +2159,11 @@ impl Mob {
             _ => {}
         }
 
+        if self.kind == Kind::Skeleton && (self.h.water_ticks != 0 || self.h.converting != 0) {
+            out.extend_from_slice(&self.h.water_ticks.to_be_bytes());
+            out.extend_from_slice(&self.h.converting.to_be_bytes());
+        }
+
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
         if self.name.is_some() || self.leash.is_some() || self.persistent_tag {
             leash::write_tail(self, out);
@@ -2136,7 +2186,9 @@ impl Mob {
             2 => Kind::Sheep,
             3 => Kind::Chicken,
             4 => Kind::Zombie,
-            5 => Kind::Skeleton,
+            5 | 63 => Kind::Skeleton,
+            61 => Kind::Stray,
+            62 => Kind::Bogged,
             6 => Kind::Creeper,
             7 => Kind::Spider,
             31 => Kind::CaveSpider,
@@ -2188,6 +2240,7 @@ impl Mob {
         let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
         let tamed = if matches!(kind, Kind::Wolf | Kind::Cat) { Some(tame::read(bytes)?) } else { None };
         let golem_state = if golem::golem(kind) { Some(golem::read(bytes)?) } else { None };
+        let snow_state = if head & !EXTENDED == 63 { Some(skeleton::read_snow(bytes)?) } else { None };
         let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
@@ -2215,6 +2268,10 @@ impl Mob {
         mob.h.offhand_shell = flags & 128 != 0;
         mob.color = color;
         mob.egg_timer = egg_timer;
+        if let Some((ticks, converting)) = snow_state {
+            mob.h.water_ticks = ticks;
+            mob.h.converting = converting;
+        }
         mob.h.carried = carried;
         mob.h.face = shell[0].min(5);
         mob.h.shell_color = shell[1].min(16);
@@ -2321,10 +2378,7 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         // Вики, Zombie Villager: гнилая плоть и редко железо, морковь, картофель
         // [проверить: шансы редкого].
         Kind::ZombieVillager => give("rotten_flesh", 0, 2, rng),
-        Kind::Skeleton => {
-            give("bone", 0, 2, rng);
-            give("arrow", 0, 2, rng);
-        }
+        Kind::Skeleton | Kind::Stray | Kind::Bogged => return skeleton::loot(mob, rng),
         Kind::Creeper => give("gunpowder", 0, 2, rng),
         Kind::CaveSpider => {
             give("string", 0, 2 + mob.looting, rng);
@@ -2784,6 +2838,7 @@ pub struct Strike {
 /// Выстрел скелета.
 #[derive(Debug)]
 pub struct Fired {
+    pub kind: Kind,
     pub shooter: i32,
     pub shot: hostile::Shot,
 }
@@ -2928,7 +2983,7 @@ pub fn step_all(
         }
 
         if let Some(shot) = plan.shot {
-            outcome.shots.push(Fired { shooter: mob.entity_id, shot });
+            outcome.shots.push(Fired { kind: mob.kind, shooter: mob.entity_id, shot });
         }
 
         if let Some(launch) = plan.launch {
@@ -3049,7 +3104,7 @@ pub fn step_all(
         let mob = convert(&mobs[index], kind, next_id());
 
         if !mobs[index].silent {
-            outcome.level_events.push((mobs[index].cell(), if kind == Kind::Drowned { 1040 } else { 1041 }));
+            outcome.level_events.push((mobs[index].cell(), if kind == Kind::Stray { 1048 } else if kind == Kind::Drowned { 1040 } else { 1041 }));
         }
 
         mobs[index].h.despawn = true;
@@ -3182,6 +3237,9 @@ pub fn convert(old: &Mob, kind: Kind, entity_id: i32) -> Mob {
     new.silent = old.silent;
     new.on_ground = old.on_ground;
     new.persistent = old.persistent;
+    new.name = old.name.clone();
+    new.persistent_tag = old.persistent_tag;
+    new.h.bow = old.h.bow;
     new.h.helmet = old.h.helmet;
     new.h.hand = old.h.hand;
     new.h.offhand_shell = old.h.offhand_shell;

@@ -1036,7 +1036,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
         mob.silent = on;
     }
 
-    if let Some(on) = flag_in(data, "Sheared:") {
+    if let Some(on) = flag_in(data, "Sheared:").or_else(|| flag_in(data, "sheared:")) {
         mob.sheared = on;
     }
 
@@ -1119,12 +1119,22 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
 
     // Призванный с данными скелет без лука в руке — с луком он только если он
     // назван в данных (`equipment:{mainhand:{id:"minecraft:bow"}}`).
-    if mob.kind == crate::mob::Kind::Skeleton && !data.is_empty() {
+    if mob.kind.skeleton() && !data.is_empty() {
         mob.h.bow = data.contains("bow");
+    }
+
+    if mob.kind == crate::mob::Kind::Skeleton && let Some(ticks) = int_after(data, "StrayConversionTime:") {
+        mob.h.converting = ticks.max(0);
     }
 
     if let Some(on) = flag_in(data, "ignited:") {
         mob.h.lit = on;
+    }
+
+    if mob.kind.skeleton() && let Some(value) = crate::snbt::parse(data)
+        && let Some(chance) = value.get("drop_chances").and_then(|value| value.get("mainhand")).and_then(|value| value.as_f64())
+    {
+        mob.h.hand_drop = chance as f32;
     }
 
     // Шлем: `ArmorItems` (четвёртый элемент, голова) или `equipment:{head:…}` (с
@@ -2895,6 +2905,21 @@ mod tests {
         assert_eq!(motion_of("{Motion:[0.0d,-0.2d,0.0d],acceleration_power:0.1d}"), Some((0.0, -0.2, 0.0)));
         assert_eq!(motion_of("{Motion:[1,2]}"), None);
         assert_eq!(motion_of(""), None);
+    }
+
+    #[test]
+    fn skeleton_variant_summon_data_accepts_shearing_and_conversion() {
+        for kind in [crate::mob::Kind::Stray, crate::mob::Kind::Bogged] {
+            let mut mob = crate::mob::Mob::new(1, kind, (0.0, 64.0, 0.0));
+            apply_mob_data(&mut mob, r#"{NoAI:1b,sheared:1b,equipment:{mainhand:{id:"minecraft:bow",count:1}},drop_chances:{mainhand:0.0f}}"#);
+            assert!(mob.no_ai && mob.sheared && mob.h.bow);
+            assert_eq!(mob.h.hand_drop, 0.0);
+        }
+        let mut mob = crate::mob::Mob::new(1, crate::mob::Kind::Skeleton, (0.0, 64.0, 0.0));
+        apply_mob_data(&mut mob, "{StrayConversionTime:123}");
+        assert_eq!(mob.h.converting, 123);
+        apply_mob_data(&mut mob, "{StrayConversionTime:-1}");
+        assert_eq!(mob.h.converting, 0);
     }
 
     /// Данные призываемого предмета: вид и число.

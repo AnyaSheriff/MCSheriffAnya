@@ -68,6 +68,7 @@ const POSE_DYING: i32 = 7;
 /// Номера атрибутов «скорость движения» и «броня» (registry attribute 26.1).
 const ATTRIBUTE_MOVEMENT_SPEED: i32 = 22;
 const ATTRIBUTE_ARMOR: i32 = 0;
+const ATTRIBUTE_ARMOR_TOUGHNESS: i32 = 1;
 const ATTRIBUTE_MAX_HEALTH: i32 = 19;
 
 /// Раз во сколько тактов от появления моб рассылает место и скорость, и раз
@@ -191,13 +192,13 @@ fn properties(mob: &Mob) -> Vec<Property> {
 
     // Утопленник с занесённым трезубцем «использует предмет» (чёрный ящик,
     // drowned-trident: 8=1 с захвата цели).
-    if mob.kind == Kind::Drowned {
-        out.insert(4, (8, TYPE_BYTE, vec![u8::from(mob.h.using)]));
+    if mob.kind == Kind::Drowned || mob.kind.skeleton() {
+        out.insert(4, (8, TYPE_BYTE, vec![u8::from(mob.h.using || mob.h.drawing > 0)]));
     }
 
     // Частицы эффектов (10): у ведьмы — от выпитых зелий (чёрный ящик,
     // witch-stand: `10=[entity_effect]` в такте конца питья).
-    if matches!(mob.kind, Kind::Witch | Kind::Villager | Kind::ZombieVillager | Kind::CaveSpider | Kind::Silverfish) {
+    {
         let mut particles = Vec::new();
 
         super::vitals::push_effect_particles(&mut particles, &mob.vitals.effect_colors());
@@ -246,7 +247,9 @@ fn properties(mob: &Mob) -> Vec<Property> {
             out.push((20, TYPE_VILLAGER_DATA, value));
             out.push((21, TYPE_BOOL, vec![u8::from(data.finalized)]));
         }
-        Kind::Skeleton => out.push((16, TYPE_BOOL, vec![0])),
+        Kind::Skeleton => out.push((16, TYPE_BOOL, vec![u8::from(mob.h.converting > 0)])),
+        Kind::Bogged => out.push((16, TYPE_BOOL, vec![u8::from(mob.sheared)])),
+        Kind::Stray => {}
         // Мобы Незера (minecraft-data 26.1, metadataKeys) [проверить по чёрному ящику, *-stand]:
         // ифрит — флаги (1 — горит заряд), гаст — заряжает, куб — размер,
         // пиглин — неуязвим к превращению, детёныш, арбалет, танец; хоглин —
@@ -415,6 +418,8 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (23, Kind::Wolf) => value.as_slice() == encode_varint(i32::from(crate::mob::tame::WOLF_DEFAULT)).as_slice(),
         (20, Kind::Cat) => value.as_slice() == encode_varint(i32::from(crate::mob::tame::CAT_DEFAULT)).as_slice(),
         (8, Kind::EndCrystal | Kind::Drowned) => value.as_slice() == [0],
+        // Скелеты и их родня: без натяжки при появлении 8 не шлют (чёрный ящик, skeleton-arrow, stray-slowness: `4=true 9=20`).
+        (8, kind) if kind.skeleton() => value.as_slice() == [0],
         (16, Kind::IronGolem) => value.as_slice() == [0],
         (16 | 17, Kind::Guardian | Kind::ElderGuardian) => value.as_slice() == [0],
         (16..=19, Kind::Wither) => value.as_slice() == [0],
@@ -654,7 +659,10 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
         return write_body(stream, body).await;
     }
 
-    body.extend_from_slice(&encode_varint(1));
+    // Железный шлем на мобе: к скорости добавляются стойкость и броня с
+    // модификатором «minecraft:armor.helmet» (0 и +2) — чёрный ящик,
+    // stray-slowness, bogged-shear.
+    body.extend_from_slice(&encode_varint(if mob.h.helmet { 3 } else { 1 }));
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
     // У иссушителя скорость — ровно 0,6 в двойной точности (wither-summon).
     push_f64(&mut body, if mob.kind == Kind::Wither { 0.6 } else { f64::from(attribute_speed(mob.kind) as f32) });
@@ -672,6 +680,15 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     };
 
     push_modifiers(&mut body, modifier);
+
+    if mob.h.helmet {
+        for (attribute, amount) in [(ATTRIBUTE_ARMOR_TOUGHNESS, 0.0), (ATTRIBUTE_ARMOR, 2.0)] {
+            body.extend_from_slice(&encode_varint(attribute));
+            push_f64(&mut body, 0.0);
+            push_modifiers(&mut body, Some(("minecraft:armor.helmet", amount, 0)));
+        }
+    }
+
     write_body(stream, body).await
 }
 
@@ -798,7 +815,7 @@ pub(super) async fn send_mob_event(
 async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
     let mut slots: Vec<(u8, Stack)> = Vec::new();
 
-    if mob.kind == Kind::Skeleton && mob.h.bow && let Some(bow) = blocks::item_named("bow") {
+    if mob.kind.skeleton() && mob.h.bow && let Some(bow) = blocks::item_named("bow") {
         slots.push((EQUIPMENT_MAIN_HAND, Stack::new(bow, 1)));
     }
 
@@ -1263,6 +1280,22 @@ async fn send_orb_ticks(stream: &mut Outgoing<'_>, player: &mut PlayerState, orb
 #[cfg(test)]
 mod slime_tests {
     use super::*;
+
+    #[test]
+    fn skeleton_variant_metadata_has_conversion_shearing_and_drawing_flags() {
+        let mut skeleton = Mob::new(1, Kind::Skeleton, (0.0, 0.0, 0.0));
+        skeleton.h.converting = 300;
+        assert!(properties(&skeleton).contains(&(16, TYPE_BOOL, vec![1])));
+        let stray = Mob::new(2, Kind::Stray, (0.0, 0.0, 0.0));
+        assert!(!properties(&stray).iter().any(|(index, _, _)| *index == 16));
+        let mut bogged = Mob::new(3, Kind::Bogged, (0.0, 0.0, 0.0));
+        assert!(is_default(&(16, TYPE_BOOL, vec![0]), Kind::Bogged));
+        bogged.sheared = true;
+        bogged.h.drawing = 10;
+        assert!(properties(&bogged).contains(&(16, TYPE_BOOL, vec![1])));
+        assert!(properties(&bogged).contains(&(8, TYPE_BYTE, vec![1])));
+        assert!(!is_default(&(16, TYPE_BOOL, vec![1]), Kind::Bogged));
+    }
 
     #[test]
     fn slime_metadata_uses_size_not_baby_and_omits_aggressive_flag() {

@@ -524,7 +524,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         let prey = ctx
             .mates
             .iter()
-            .filter(|mate| (!mob.tame.tamed() && mate.kind == Kind::Sheep) || matches!(mate.kind, Kind::Skeleton | Kind::WitherSkeleton))
+            .filter(|mate| (!mob.tame.tamed() && mate.kind == Kind::Sheep) || matches!(mate.kind, Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::WitherSkeleton))
             .map(|mate| (mate.id, (mate.x - mob.x).powi(2) + (mate.y - mob.y).powi(2) + (mate.z - mob.z).powi(2)))
             .filter(|(_, dist)| *dist <= 16.0 * 16.0)
             .min_by(|a, b| a.1.total_cmp(&b.1));

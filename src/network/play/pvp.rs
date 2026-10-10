@@ -145,6 +145,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         breach_scale: if smash { combat::breach_scale(data.level("breach")) } else { 1.0 },
         fire_ticks: fire * 80,
         thorns_slots,
+        effects: Vec::new(),
         ignores_shield: false,
     });
 
@@ -377,6 +378,10 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
     match result {
         None => {}
         Some(_) => {
+            for effect in &strike.effects {
+                vitals::give_effect(stream, player, *effect).await?;
+            }
+
             // Износ надетой брони: каждой детали 1 за каждые 4 единицы урона.
             if !combat::bypasses_armor(strike.source) {
                 wear_armor(shared, player, strike.damage);
@@ -569,6 +574,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
             breach_scale: 1.0,
             fire_ticks: 0,
             thorns_slots: Vec::new(),
+            effects: Vec::new(),
             ignores_shield: false,
         });
     }

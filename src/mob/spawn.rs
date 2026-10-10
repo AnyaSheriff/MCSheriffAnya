@@ -211,6 +211,12 @@ pub fn overworld_kinds(biome: &str, wet: bool) -> Vec<(Kind, u32)> {
         return HOSTILE.iter().map(|&(kind, weight)| if kind == Kind::Zombie { (Kind::Zombie, 19) } else { (kind, weight) }).chain([(Kind::Husk, 80)]).collect();
     }
 
+    if super::skeleton::snowy_biome(biome) {
+        return HOSTILE.iter().map(|&(kind, weight)| if kind == Kind::Skeleton { (kind, 20) } else { (kind, weight) }).chain([(Kind::Stray, 80)]).collect();
+    }
+    if matches!(biome, "swamp" | "mangrove_swamp") {
+        return HOSTILE.iter().copied().chain([(Kind::Bogged, 50)]).collect();
+    }
     HOSTILE.to_vec()
 }
 
@@ -382,6 +388,11 @@ pub fn hostile_attempt_in(
         } else if kind == Kind::Drowned { wet_spot(view, gx, y, gz) } else { spawnable(view, gx, y, gz, block_height) };
 
         if !view.loaded(gx.div_euclid(16), gz.div_euclid(16)) || !spot_ok {
+            continue;
+        }
+
+        // Вики, Stray: «directly under the sky»; болотнику небо не нужно.
+        if kind == Kind::Stray && !view.open_sky(gx, y, gz) {
             continue;
         }
 

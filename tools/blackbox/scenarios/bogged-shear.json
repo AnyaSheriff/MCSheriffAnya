@@ -1,0 +1,60 @@
+{
+ "name": "bogged-shear",
+ "about": "[проверить] Болотник: два гриба, свойство стрижки, звук, износ ножниц; повторный щелчок ничего не даёт. Без допусков random до замеров.",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:shears 1",
+  "fill $(2,3,2) $(4,3,4) stone",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon bogged $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 30,
+   "interact": true
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=bogged,distance=..48]",
+  "fill $(2,3,2) $(4,3,4) air",
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=sheep,distance=..48]",
+  "kill @e[type=pig,distance=..48]",
+  "kill @e[type=chicken,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_self": true,
+ "random": [
+  {
+   "type": "count",
+   "name": "вид грибов (красный/бурый)",
+   "match": "^meta .*itemId",
+   "range": [
+    2,
+    4
+   ],
+   "anytick": true,
+   "why": "шесть записей vanilla: у двух грибов вид выпадает независимо — 248+249, 248+248, 249+249 в разных прогонах"
+  }
+ ]
+}

@@ -527,7 +527,7 @@ fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uu
                 Struck::Mob(id) => {
                     if let Some(mob) = mobs.iter_mut().find(|mob| mob.entity_id == id) {
                         // Нежить лечится уроном и ранится лечением (вики, Instant Health).
-                        let undead = matches!(mob.kind, crate::mob::Kind::Zombie | crate::mob::Kind::ZombieVillager | crate::mob::Kind::Skeleton);
+                        let undead = crate::combat::mob_traits(mob.kind.name()).0;
 
                         if (effect.kind == EffectKind::InstantDamage) != undead {
                             mob.hurt(amount, Source::Magic, None);
@@ -764,6 +764,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     fire_ticks: 0,
                     ignores_shield: false,
                     thorns_slots: Vec::new(),
+                    effects: Vec::new(),
                 }),
                 None => {}
             }
@@ -944,6 +945,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     breach_scale: 1.0,
                     fire_ticks: 0,
                     thorns_slots: Vec::new(),
+                    effects: Vec::new(),
                     ignores_shield: false,
                 }),
             }
@@ -1190,6 +1192,7 @@ fn small_fireball_hit(shared: &Shared, world: &mut World, items: &mut crate::ite
                 breach_scale: 1.0,
                 fire_ticks: 100,
                 thorns_slots: Vec::new(),
+                effects: Vec::new(),
                 ignores_shield: false,
             });
         }

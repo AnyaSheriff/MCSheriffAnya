@@ -94,6 +94,8 @@ pub struct PlayerStrike {
     pub ignores_shield: bool,
     /// Слоты брони, чьи шипы сработали при этом ударе (бросок делает нападающий).
     pub thorns_slots: Vec<i32>,
+    /// Эффекты наконечника — только после успешного попадания.
+    pub effects: Vec<crate::survival::Effect>,
 }
 
 /// Свойства предмета по номеру.

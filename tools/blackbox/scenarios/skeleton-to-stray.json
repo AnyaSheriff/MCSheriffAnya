@@ -1,0 +1,67 @@
+{
+ "name": "skeleton-to-stray",
+ "about": "[проверить] Скелет в рыхлом снегу (ночью, без горения): 140 тактов до дрожи, затем 300 до зимогора. Второй выходит до порога и не трясётся; первый выходит в дрожи — дрожь снимается (16=false), превращения нет; третий остаётся и исчезает на 450-м такте (превращение).",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "time set midnight",
+  "gamemode creative $(bot)",
+  "tp $(bot) $(0.5,0,0.5)",
+  "fill $(3,0,3) $(5,2,5) glass",
+  "fill $(4,0,4) $(4,1,4) powder_snow",
+  "fill $(7,0,3) $(9,2,5) glass",
+  "fill $(8,0,4) $(8,1,4) powder_snow",
+  "fill $(3,0,7) $(5,2,9) glass",
+  "fill $(4,0,8) $(4,1,8) powder_snow"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon skeleton $(4.5,0,4.5) {Silent:1b,CustomName:\"Snow\",PersistenceRequired:1b,equipment:{mainhand:{id:\"minecraft:bow\",count:1}}}"
+  },
+  {
+   "after": 5,
+   "cmd": "summon skeleton $(8.5,0,4.5) {Silent:1b,PersistenceRequired:1b,equipment:{mainhand:{id:\"minecraft:bow\",count:1},head:{id:\"minecraft:iron_helmet\",count:1}}}"
+  },
+  {
+   "after": 10,
+   "cmd": "summon skeleton $(4.5,0,8.5) {Silent:1b,CustomName:\"Cold\",PersistenceRequired:1b,equipment:{mainhand:{id:\"minecraft:bow\",count:1}}}"
+  },
+  {
+   "after": 100,
+   "cmd": "fill $(8,0,4) $(8,1,4) air"
+  },
+  {
+   "after": 170,
+   "cmd": "fill $(4,0,4) $(4,1,4) air"
+  }
+ ],
+ "record_ticks": 560,
+ "cleanup": [
+  "kill @e[type=skeleton,distance=..48]",
+  "kill @e[type=stray,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(3,0,3) $(5,2,5) air",
+  "fill $(7,0,3) $(9,2,5) air",
+  "fill $(3,0,7) $(5,2,9) air",
+  "time set noon",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "взгляд и шаги скелета",
+   "match": "^cart skeleton",
+   "range": [
+    0,
+    200
+   ],
+   "anytick": true,
+   "why": "скелет без цели поворачивает голову и бродит сам: у vanilla в двух записях повороты головы идут в разные такты и в разные стороны"
+  }
+ ]
+}

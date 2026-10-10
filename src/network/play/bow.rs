@@ -37,10 +37,13 @@ pub(super) struct ShownArrow {
 
 /// Первый слот с обычной стрелой: вторая рука, панель, рюкзак.
 pub(super) fn arrow_slot(player: &PlayerState) -> Option<i32> {
-    let arrow = blocks::item_named("arrow")?;
+    arrow_slot_matching(player, true)
+}
+
+fn arrow_slot_matching(player: &PlayerState, tipped: bool) -> Option<i32> {
     let order = std::iter::once(inventory::OFFHAND).chain(inventory::FIRST_HOTBAR..=inventory::LAST_HOTBAR).chain(inventory::FIRST_MAIN..=inventory::LAST_MAIN);
 
-    order.into_iter().find(|slot| player.inventory.slot(*slot).is_some_and(|stack| stack.item == arrow))
+    order.into_iter().find(|slot| player.inventory.slot(*slot).is_some_and(|stack| matches!(blocks::item_name(stack.item), Some("arrow")) || (tipped && blocks::item_name(stack.item) == Some("tipped_arrow"))))
 }
 
 /// Чем заряжать арбалет в руке `hand`: сперва то, что в другой руке
@@ -54,7 +57,7 @@ pub(super) fn crossbow_ammo(player: &PlayerState, hand: i32) -> Option<(i32, boo
     match player.inventory.slot(other).and_then(|stack| combat::item_name(stack.item)) {
         Some("arrow") => Some((other, false)),
         Some("firework_rocket") => Some((other, true)),
-        _ => arrow_slot(player).map(|slot| (slot, false)),
+        _ => arrow_slot_matching(player, false).map(|slot| (slot, false)),
     }
 }
 
@@ -83,8 +86,11 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
         return;
     }
 
-    let infinity = data.level("infinity") > 0;
+    let ammo = slot.and_then(|slot| player.inventory.slot(slot));
+    let potion = ammo.filter(|stack| blocks::item_name(stack.item) == Some("tipped_arrow")).and_then(|stack| stack.extras().potion);
+    let infinity = data.level("infinity") > 0 && ammo.is_none_or(|stack| blocks::item_name(stack.item) == Some("arrow"));
     let shot = Shot {
+        potion,
         speed: combat::arrow_speed(power),
         crit: power >= 1.0,
         power: data.level("power"),
@@ -127,6 +133,7 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
 /// Чем и как стреляют: скорость, свойства стрелы.
 #[derive(Clone, Copy)]
 pub(super) struct Shot {
+    pub potion: Option<u16>,
     pub speed: f64,
     pub crit: bool,
     pub power: i32,
@@ -177,6 +184,8 @@ fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
         owner_uuid: player.uuid,
         owner_name: player.name.clone(),
         shooter: Shooter::Player,
+        effects: crate::arrow::tipped_effects(shot.potion),
+        potion: shot.potion,
         crit: shot.crit,
         power: shot.power,
         punch: shot.punch,
@@ -247,6 +256,7 @@ pub(super) fn throw_trident(shared: &Shared, player: &mut PlayerState, hand: i32
         }
     };
     let shot = Shot {
+        potion: None,
         speed: crate::arrow::TRIDENT_SPEED,
         crit: false,
         power: 0,
@@ -395,6 +405,7 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
     }
 
     let shot = Shot {
+        potion: None,
         speed: combat::CROSSBOW_SPEED,
         crit: true,
         power: 0,
@@ -691,7 +702,7 @@ const LANDING_SYNC_AGE: u32 = 2;
 fn arrow_data(arrow: &Arrow) -> Option<Vec<u8>> {
     let foil = arrow.trident.is_some_and(|trident| !trident.extras().enchants.is_empty());
 
-    if arrow.flags() == 0 && arrow.pierce_left <= 0 && arrow.loyalty <= 0 && !foil {
+    if arrow.flags() == 0 && arrow.pierce_left <= 0 && arrow.loyalty <= 0 && !foil && arrow.effects.is_empty() {
         return None;
     }
 
@@ -715,6 +726,13 @@ fn arrow_data(arrow: &Arrow) -> Option<Vec<u8>> {
         data.push(TRIDENT_LOYALTY);
         data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
         data.push(arrow.loyalty.clamp(0, 127) as u8);
+    }
+
+    if !arrow.effects.is_empty() && arrow.trident.is_none() {
+        // minecraft-data 26.1 entities.json: Arrow, effect_color = 11.
+        data.push(11);
+        data.extend_from_slice(&encode_varint(PROPERTY_INT));
+        data.extend_from_slice(&encode_varint(crate::thrown::potion_color(&arrow.effects)));
     }
 
     if foil {

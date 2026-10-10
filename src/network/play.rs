@@ -60,6 +60,8 @@ use crate::{log_debug, log_error, log_info};
 
 #[cfg(test)]
 mod arthropod_tests;
+#[cfg(test)]
+mod skeleton_tests;
 mod vitals;
 mod mobs;
 mod merchant;
@@ -4186,6 +4188,13 @@ async fn send_pending_world_events(
             WorldEvent::MobHitEffect { entity_id, effect } if *entity_id == player.entity_id => {
                 if std::mem::take(&mut player.net.mob_hit_landed) {
                     vitals::give_effect(stream, player, *effect).await?;
+
+                    // Атрибуты уходят тактом позже и при повторном наложении
+                    // того же срока (чёрный ящик, stray-slowness: Effect на +27,
+                    // Attributes на +28; повтор — Effect +89, Attributes +90).
+                    if let Some((attribute, ..)) = effect.kind.modifier() {
+                        player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                    }
                 }
             }
             WorldEvent::MobHitEffect { .. } => {}
@@ -7844,6 +7853,25 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     let held = player.inventory.held().and_then(|stack| blocks::item_name(stack.item));
     let survival = player.game_mode != GAME_MODE_CREATIVE;
     let at = (mob.x, mob.y, mob.z);
+
+    // Вики, Bogged: два гриба, один раз; износ ножниц — 1 [проверить]; грибы падают на высоте 1,99 от ног (чёрный ящик, bogged-shear).
+    if held == Some("shears") && mob.kind == crate::mob::Kind::Bogged {
+        let mut rng = crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32));
+        if let Some(drops) = crate::mob::skeleton::shear(&mut items.mobs_mut()[index], &mut rng) {
+            items.flush_mob_events(&mut || shared.next_entity_id(), &mut rng);
+            for stack in drops {
+                let velocity = (rng.unit() * 0.2 - 0.1, 0.2, rng.unit() * 0.2 - 0.1);
+                items.drop_item(shared.next_entity_id(), stack, (at.0, at.1 + 1.99, at.2), velocity, items::MINED_DELAY);
+            }
+            // wear_slot берёт мир: отпускаем оба замка до износа.
+            drop(items);
+            drop(world);
+            if survival && let Some(shears) = player.inventory.held() {
+                pvp::wear_slot(shared, player, player.inventory.selected_slot(), shears, 1, false);
+            }
+        }
+        return true;
+    }
 
     // Ножницы: овца теряет шерсть — 1–3 куска своего цвета (вики, Sheep,
     // «Shearing»); звук привязан к овце, куски падают выше её спины, как

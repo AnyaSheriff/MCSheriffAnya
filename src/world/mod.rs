@@ -2229,6 +2229,11 @@ impl World {
             return false;
         };
 
+        // Ниже дна мира (упавший в пустоту моб) неба над клеткой нет [проверить].
+        if y < MIN_Y {
+            return false;
+        }
+
         (y + 1..=chunk.highest()).all(|above| {
             let state = chunk.block(x, above, z);
 
