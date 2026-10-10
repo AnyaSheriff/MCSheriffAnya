@@ -50,6 +50,50 @@ pub(super) fn use_on_mob(items: &mut items::Items, index: usize, player: &mut Pl
         return true;
     }
 
+    // Броненосец: щётка всегда даёт один щиток взрослого, расход — 16.
+    // Вики, Armadillo: «brushing»; [проверить] звук и такт выпадения.
+    if items.mobs()[index].kind == Kind::Armadillo && held == Some("brush") {
+        if crate::mob::small::brush(&mut items.mobs_mut()[index]) {
+            if survival && let Some(stack) = held_stack {
+                let slot = player.inventory.selected_slot();
+                let wear=crate::combat::wear(&stack,16,false,||rng.unit() as f32);
+                player.inventory.set(slot, crate::combat::add_damage(stack, wear));
+                reaction.slots.push(slot);
+            }
+            flush(items, shared, &mut rng);
+        }
+        return true;
+    }
+    if items.mobs()[index].kind == Kind::Parrot {
+        let used = crate::mob::small::parrot_interact(&mut items.mobs_mut()[index], (player.uuid,player.entity_id), held, &mut rng);
+        if matches!(used,tame::Used::Spent) { spend(player,reaction); }
+        flush(items, shared, &mut rng);
+        return true;
+    }
+    if items.mobs()[index].kind == Kind::Allay {
+        let mob = &mut items.mobs_mut()[index];
+        if held == Some("amethyst_shard") && mob.small.dancing && mob.small.duplicate == 0 {
+            if let Some(copy)=crate::mob::small::duplicate(mob,shared.next_entity_id()) { items.add_mob(copy); }
+            spend(player,reaction);
+        } else if mob.small.held.is_none() && let Some(stack) = held_stack {
+            mob.small.held = Some(Stack { count:1,..stack });
+            mob.events.push(crate::mob::Event::Sound { name: "minecraft:entity.allay.item_given", volume: 2.0, pitch: 1.0 });
+            mob.tame.owner = Some(player.uuid); mob.tame.owner_id = player.entity_id;
+            spend(player,reaction);
+        } else if held_stack.is_none() {
+            if let Some(stack) = mob.small.held.take() {
+                mob.events.push(crate::mob::Event::Sound { name: "minecraft:entity.allay.item_taken", volume: 2.0, pitch: 1.0 });
+                let slot = player.inventory.selected_slot();
+                player.inventory.set(slot,Some(stack)); reaction.slots.push(slot);
+            }
+            if let Some(stack) = mob.small.cargo.take() { mob.events.push(crate::mob::Event::Loot(vec![stack])); }
+            mob.tame.owner=None; mob.tame.owner_id=0; mob.small.goal=None;
+        }
+        flush(items, shared, &mut rng);
+        return true;
+    }
+    if items.mobs()[index].kind == Kind::Armadillo && items.mobs()[index].small.roll != 0 { return true; }
+
     // Волк и кошка: приручение, лечение, ошейник, приказ.
     if matches!(items.mobs()[index].kind, Kind::Wolf | Kind::Cat) {
         let was_in_love = items.mobs()[index].love > 0;

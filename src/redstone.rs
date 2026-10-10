@@ -38,7 +38,7 @@ pub mod sculk_family;
 pub mod shelf;
 pub mod statue;
 
-pub use jukebox::{jukebox_contents_changed, jukebox_reading, jukebox_song, tick_jukebox, use_jukebox};
+pub use jukebox::{playing as jukebox_playing,jukebox_contents_changed, jukebox_reading, jukebox_song, tick_jukebox, use_jukebox};
 pub use lectern::lectern_reading;
 
 pub use components::{Occupant, ambient_sky, daylight_tick, disarm_tripwire, hook_broken_by_player, punched, random_ticks};
@@ -4070,6 +4070,7 @@ fn finish_move(world: &mut World, pos: Pos, moving: Moving) {
 /// Пришёл запланированный такт для детали в этом месте.
 pub fn ticked(world: &mut World, pos: Pos) {
     world.begin_tick(pos, crate::world::TickKind::Block);
+    if crate::mob::small_world::hatch_egg(world, pos) { return; }
 
     if matches!(blocks::block_at_state(world.get_block(pos.0, pos.1, pos.2)), Some("fire" | "soul_fire")) { crate::fire::tick(world, pos); return; }
     let block = Block::at(world, pos);
@@ -4331,6 +4332,7 @@ fn play_note(world: &mut World, pos: Pos, instrument: &'static str, note: i32) {
 
     // `note_block_play` — частота 10 (вики, Vibration).
     game_event(world, pos, FREQ_ACTIVATE);
+    world.allay_notes.push(pos);
 
     match head_sound(instrument) {
         Some(Some(sound)) => world.note_sound(pos.0, pos.1, pos.2, sound, 3.0, 1.0),

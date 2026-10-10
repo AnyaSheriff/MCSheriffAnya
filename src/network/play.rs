@@ -90,6 +90,7 @@ mod tame;
 mod gameplay;
 mod fishing;
 mod maps;
+mod small;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
 
@@ -131,6 +132,9 @@ const SET_PLAYER_ROTATION: i32 = 0x20;
 
 /// Serverbound Set Player On Ground — игрок встал на землю или оторвался от неё.
 const SET_PLAYER_ON_GROUND: i32 = 0x21;
+
+/// minecraft-data 26.1, abilities: бит 1 — творческий полёт.
+const SERVERBOUND_ABILITIES: i32 = 0x28;
 
 /// Serverbound Player Action — игрок копает блок или отменяет копание.
 const PLAYER_ACTION: i32 = 0x29;
@@ -4062,6 +4066,7 @@ async fn send_pending_world_events(
             }
             WorldEvent::Change(change) => pending.push(*change),
             WorldEvent::Broadcast => {
+                small::shoulders(stream, shared, player).await?;
                 send_block_changes(stream, &mut pending).await?;
 
                 // Данные блок-сущностей — после пачки, по одному разу на
@@ -6434,6 +6439,7 @@ async fn read_and_log_play_packets(
                     }
 
                     player.game_mode = mode;
+                    player.creative_flying = false;
                     send_game_event_game_mode(stream, mode).await?;
                     send_abilities(stream, mode).await?;
                     send_game_mode(stream, &player.uuid, mode).await?;
@@ -7082,6 +7088,11 @@ fn handle_client_packet_inner(
     let mut reaction = Reaction::default();
 
     match packet.id {
+        SERVERBOUND_ABILITIES => {
+            if let Some(flags)=payload.first() {
+                player.creative_flying=player.game_mode == GAME_MODE_CREATIVE && flags & 2 != 0;
+            }
+        }
         SERVERBOUND_KEEP_ALIVE => {
             log_debug!("Play: клиент ответил на Keep Alive");
             player.answered = Instant::now();
@@ -7321,6 +7332,7 @@ fn handle_client_packet_inner(
                     }
 
                     player.game_mode = mode;
+                    player.creative_flying = false;
                 }
             }
         }
@@ -10436,6 +10448,11 @@ impl<'a> Cursor<'a> {
 /// — тем же способом, каким сохраняются блоки. Поэтому игрок после перезапуска
 /// сервера оказывается там, где стоял, а не в точке появления.
 struct PlayerState {
+    shoulders: [Option<Vec<u8>>; 2],
+    shoulder_since: u64,
+    shoulder_health: f32,
+    shoulder_shown: HashMap<i32, [i32; 2]>,
+    creative_flying: bool,
     /// Опознаватель игрока — по нему он отличается от остальных в общем списке
     /// и по нему же назван его файл на диске.
     uuid: [u8; 16],
@@ -10812,6 +10829,11 @@ impl PlayerState {
             seen_carts: HashMap::new(),
             seen_frames: HashMap::new(),
             seen_mobs: HashMap::new(),
+            shoulders: saved.as_ref().map(|s| s.shoulders.clone()).unwrap_or([None,None]),
+            shoulder_since: 0,
+            shoulder_health: vit.health,
+            shoulder_shown: HashMap::new(),
+            creative_flying: false,
             ride: vehicle::Ride::default(),
             glide: glide::Glide::default(),
             seen_bow_arrows: HashMap::new(),
@@ -11032,6 +11054,7 @@ impl PlayerState {
             || saved.game_mode != self.game_mode
             || saved.inventory != self.inventory
             || saved.ender != self.ender
+            || saved.shoulders != self.shoulders
             || saved.vitals.health != self.vit.health
             || saved.vitals.food != self.vit.food
     }
@@ -11049,6 +11072,7 @@ impl PlayerState {
     /// записывается в любом случае, даже если ничего не изменилось.
     fn save(&mut self, directory: &Path) {
         let data = PlayerData {
+            shoulders: self.shoulders.clone(),
             x: self.x,
             y: self.y,
             z: self.z,
@@ -11301,6 +11325,7 @@ mod tests {
 
     fn settled_player_with_yaw(yaw: f32) -> PlayerState {
         let saved = PlayerData {
+            shoulders: [None,None],
             inventory: Inventory::new(),
             x: SPAWN.0,
             y: SPAWN.1,
@@ -11342,6 +11367,7 @@ mod tests {
     #[test]
     fn a_returning_player_resumes_where_he_left() {
         let saved = PlayerData {
+            shoulders: [None,None],
             inventory: Inventory::new(),
             x: 100.5,
             y: 70.0,
@@ -11368,6 +11394,7 @@ mod tests {
     #[test]
     fn a_returning_player_keeps_health_food_air_and_fire() {
         let saved = PlayerData {
+            shoulders: [None,None],
             inventory: Inventory::new(),
             x: 0.5,
             y: 64.0,

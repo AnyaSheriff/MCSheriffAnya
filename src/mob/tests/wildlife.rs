@@ -150,7 +150,7 @@ fn bee_without_ai_is_never_angered() {
 #[test]
 fn angry_bee_starts_chase_on_twentieth_tick_check_and_calms_after_sting() {
     let garden=Garden::new();let mut bee=animal(Kind::Bee);bee.wild.anger=500;bee.wild.attacker=Some(91);
-    let players=[mob::ai::Watcher{id:91,x:3.0,y:0.0,z:0.5,eye:1.62,holding:[None,None],spectator:false,targetable:true,look:(0.0,0.0),pumpkin:false,gold_armor:false}];
+    let players=[mob::ai::Watcher{id:91,x:3.0,y:0.0,z:0.5,eye:1.62,holding:[None,None],spectator:false,targetable:true,look:(0.0,0.0),pumpkin: false, sprinting: false, riding: false, gold_armor: false}];
     let mut ctx=context();ctx.players=&players;
     bee.ticks=1;think(&mut bee,&garden,&ctx,&mut Rng::new(1));
     assert!(bee.wild.chase&&bee.wild.flying);

@@ -1,0 +1,116 @@
+{
+  "name": "parrot-shoulder",
+  "about": "Tamed cyan parrot (cooldown 100 ticks) lands on the owner's shoulder; falling releases it. Shoulder variant metadata is tracked.",
+  "track_mobs": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "!stopfly",
+    "!wait 10",
+    "!look 0 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon parrot $(3.5,0,2.5) {Silent:1b,Variant:3}"
+    },
+    {
+      "after": 2,
+      "cmd": "data modify entity @e[type=parrot,sort=nearest,limit=1] Owner set from entity $(bot) UUID"
+    },
+    {
+      "after": 104,
+      "cmd": "tp @e[type=parrot,distance=..48] $(3.5,0,0.5)"
+    },
+    {
+      "after": 130,
+      "cmd": "tp $(bot) $(3.5,4,0.5)"
+    }
+  ],
+  "record_ticks": 220,
+  "cleanup": [
+    "tp $(bot) $(3.5,6,0.5)",
+    "!wait 40",
+    "kill @e[type=parrot,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly",
+    "!wait 30",
+    "kill @e[type=parrot,distance=..48]"
+  ],
+  "random": [
+    {
+      "type": "mask",
+      "name": "бездействие полёта (NoGravity)",
+      "kind": "meta",
+      "pattern": "5=(true|false) ",
+      "replace": "",
+      "why": "Свойство 5 (без тяжести) попугая включается и гаснет вместе с его случайным полётом: два прогона оригинала расходятся (5=true у призыва в одном, нет в другом)."
+    },
+    {
+      "type": "count",
+      "name": "NoGravity попугая",
+      "match": "^meta 5=(true|false)$",
+      "range": [
+        0,
+        10
+      ],
+      "anytick": true,
+      "why": "То же: переключение случайно."
+    },
+    {
+      "type": "count",
+      "name": "прогулка попугая",
+      "match": "parrot (сдвиг|скорость|сверка|поворот|entity_head_rotation)",
+      "range": [
+        0,
+        400
+      ],
+      "anytick": true,
+      "why": "Прогулка и повороты попугая случайны: два прогона оригинала расходятся."
+    },
+    {
+      "type": "delay",
+      "name": "посадка на плечо",
+      "from": "cmd tp @e\\[type=parrot",
+      "to": "parrot убран",
+      "range": [
+        0,
+        12
+      ],
+      "allow_zero": true,
+      "why": "Цель попугая проверяется раз в несколько тактов и посадка требует пересечения коробок: задержка от переноса к хозяину до посадки у оригинала разная."
+    },
+    {
+      "type": "jitter",
+      "name": "такт сброса с плеча",
+      "match": "^sv .*Metadata 19=0",
+      "max": 2,
+      "why": "Свойство плеча уходит на такт-два позже появления сброшенного попугая; граница такта у двух серверов дрожит."
+    },
+    {
+      "type": "mask",
+      "name": "точка схода с плеча",
+      "kind": "spawn",
+      "pattern": "^spawn 3\\.5,(?!0,)[-0-9.]+,0\\.5 parrot 0 [-0-9.,]+ yaw=-?\\d+ pitch=-?\\d+ head=-?\\d+$",
+      "replace": "spawn released parrot",
+      "why": "Высота схода зависит от того, на каком такте падения (0,37–0,46 блока) сработала проверка: два прогона оригинала дают 3,55 и 3,63."
+    },
+    {
+      "type": "mask",
+      "name": "скорость падения при уроне",
+      "kind": "self",
+      "pattern": "скорость 0,-[0-9.]+,0",
+      "replace": "скорость 0,V,0",
+      "why": "Скорость робота в пакете при уроне от падения зависит от такта приземления относительно такта сервера."
+    }
+  ]
+}

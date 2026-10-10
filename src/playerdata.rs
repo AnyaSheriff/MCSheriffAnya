@@ -41,7 +41,9 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// Версия 7 — плюс эндер-сундук игрока в самом конце: записи ячеек и после
 /// них четыре байта длины записи (`write_ender`). Файлы версий 1–6 читаются
 /// с пустым эндер-сундуком.
-const FORMAT_VERSION: u32 = 7;
+/// Версия 8 — после эндер-сундука сущности попугаев на плечах.
+const FORMAT_VERSION: u32 = 8;
+const ENDER_VERSION: u32 = 7;
 
 /// Версия с семенем зачарования, но без эндер-сундука.
 const XP_SEED_VERSION: u32 = 6;
@@ -151,6 +153,8 @@ impl SavedVitals {
 /// Что сервер помнит об игроке между заходами.
 #[derive(Clone, PartialEq, Debug)]
 pub struct PlayerData {
+    /// Сущности попугаев на плечах: независимые записи Mob.
+    pub shoulders: [Option<Vec<u8>>; 2],
     pub x: f64,
     pub y: f64,
     pub z: f64,
@@ -306,6 +310,7 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
     // Файл первой версии — без инвентаря, и длина у него постоянная;
     // второй — без измерения; в третьей измерение — последний байт.
     let mut ender = empty_ender();
+    let mut shoulders = [None,None];
     let (inventory, dimension, vitals, respawn) = match version {
         OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default(), Default::default(), None),
         INVENTORY_VERSION => (Inventory::from_bytes(bytes.get(SIZE..)?)?, Default::default(), Default::default(), None),
@@ -315,13 +320,20 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 
             (Inventory::from_bytes(inventory)?, dimension, Default::default(), None)
         }
-        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | FORMAT_VERSION => {
+        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | FORMAT_VERSION => {
             let mut tail = bytes.get(SIZE..)?;
             let mut respawn = None;
             let mut seed = 0;
 
-            // Эндер-сундук — самый конец файла: длина записи и сама запись.
             if version == FORMAT_VERSION {
+                let (rest,length) = tail.split_at(tail.len().checked_sub(4)?);
+                let length = u32::from_be_bytes(length.try_into().ok()?) as usize;
+                let (rest,stored) = rest.split_at(rest.len().checked_sub(length)?);
+                shoulders = serde_json::from_slice(stored).ok()?;
+                tail = rest;
+            }
+            // Эндер-сундук — самый конец файла: длина записи и сама запись.
+            if version >= ENDER_VERSION {
                 let (rest, length) = tail.split_at(tail.len().checked_sub(4)?);
                 let length = u32::from_be_bytes(length.try_into().ok()?) as usize;
                 let (rest, stored) = rest.split_at(rest.len().checked_sub(length)?);
@@ -355,6 +367,7 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
     };
 
     Some(PlayerData {
+        shoulders,
         x: f64::from_be_bytes(take(bytes, 8)?),
         y: f64::from_be_bytes(take(bytes, 16)?),
         z: f64::from_be_bytes(take(bytes, 24)?),
@@ -381,7 +394,13 @@ fn take<const N: usize>(bytes: &[u8], offset: usize) -> Option<[u8; N]> {
 /// а не половина нового.
 pub fn save(directory: &Path, uuid: &[u8; 16], data: &PlayerData) -> io::Result<()> {
     let path = path_for(directory, uuid);
+    let out = encode(data)?;
+    let temporary = path.with_extension("tmp");
+    fs::write(&temporary, &out)?;
+    fs::rename(&temporary, &path)
+}
 
+fn encode(data: &PlayerData) -> io::Result<Vec<u8>> {
     let mut out = Vec::with_capacity(SIZE);
 
     out.extend_from_slice(MAGIC);
@@ -398,10 +417,11 @@ pub fn save(directory: &Path, uuid: &[u8; 16], data: &PlayerData) -> io::Result<
     out.extend_from_slice(&data.vitals.xp_seed.to_be_bytes());
     crate::bed::RespawnPoint::write(data.respawn.as_ref(), &mut out);
     write_ender(&data.ender, &mut out);
+    let shoulders = serde_json::to_vec(&data.shoulders)?;
+    out.extend_from_slice(&shoulders);
+    out.extend_from_slice(&(shoulders.len() as u32).to_be_bytes());
 
-    let temporary = path.with_extension("tmp");
-    fs::write(&temporary, &out)?;
-    fs::rename(&temporary, &path)
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -422,6 +442,7 @@ mod tests {
 
     fn sample() -> PlayerData {
         PlayerData {
+            shoulders: [None,None],
             inventory: Inventory::new(),
             x: 12.5,
             y: 65.0,
@@ -464,9 +485,81 @@ mod tests {
         let tail = u32::from_be_bytes(old[old.len() - 4..].try_into().expect("длина")) as usize;
 
         old.truncate(old.len() - 4 - tail);
+        let tail = u32::from_be_bytes(old[old.len()-4..].try_into().expect("длина сундука")) as usize;
+        old.truncate(old.len()-4-tail);
         old[4..8].copy_from_slice(&XP_SEED_VERSION.to_be_bytes());
         fs::write(path_for(&directory, &[9; 16]), &old).expect("записать");
         assert_eq!(load(&directory, &[9; 16]).map(|loaded| loaded.ender), Some(empty_ender()));
+    }
+
+    /// Версии 7 и 8 разбираются вместе с переменным хвостом инвентаря.
+    #[test]
+    fn shoulders_round_trip_and_version_seven_still_loads() {
+        let uuid=[9;16];
+        let mut data=sample(); let mut parrot=crate::mob::Mob::new(1,crate::mob::Kind::Parrot,(0.0,1.0,0.0));
+        parrot.small.variant=4; parrot.tame.owner=Some(uuid);
+        let mut stored=Vec::new(); parrot.write(&mut stored); data.shoulders[0]=Some(stored);
+        let mut old=encode(&data).unwrap(); assert_eq!(parse(&old),Some(data.clone()));
+        let length=u32::from_be_bytes(old[old.len()-4..].try_into().unwrap()) as usize;
+        old.truncate(old.len()-4-length); old[4..8].copy_from_slice(&ENDER_VERSION.to_be_bytes());
+        data.shoulders=[None,None];
+        assert_eq!(parse(&old),Some(data));
+    }
+
+    /// Старые раскладки строим напрямую: новый писатель не должен менять
+    /// проверку совместимости при добавлении очередного хвоста файла.
+    #[test]
+    fn all_legacy_versions_preserve_their_saved_fields() {
+        let mut data = sample();
+        let stone = crate::blocks::item_named("stone").expect("камень");
+
+        data.inventory.set(crate::inventory::FIRST_HOTBAR, Some(crate::inventory::Stack::new(stone, 12)));
+        data.inventory.select(3);
+        data.dimension = crate::dimension::Dimension::Nether;
+        data.vitals = SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234, xp_seed: -77 };
+        data.respawn = Some(crate::bed::RespawnPoint { dimension: crate::dimension::Dimension::Nether, pos: (3, 70, -9), yaw: -90.0, forced: false });
+        data.ender[26] = Some(crate::inventory::Stack::new(stone, 64));
+
+        for version in OLD_FORMAT_VERSION..=ENDER_VERSION {
+            let mut bytes = Vec::new();
+            let mut expected = sample();
+
+            bytes.extend_from_slice(MAGIC);
+            bytes.extend_from_slice(&version.to_be_bytes());
+            bytes.extend_from_slice(&data.x.to_be_bytes());
+            bytes.extend_from_slice(&data.y.to_be_bytes());
+            bytes.extend_from_slice(&data.z.to_be_bytes());
+            bytes.extend_from_slice(&data.yaw.to_be_bytes());
+            bytes.extend_from_slice(&data.pitch.to_be_bytes());
+            bytes.extend_from_slice(&data.game_mode.to_be_bytes());
+
+            if version >= INVENTORY_VERSION {
+                bytes.extend_from_slice(&data.inventory.to_bytes());
+                expected.inventory = data.inventory.clone();
+            }
+            if version >= DIMENSION_VERSION {
+                bytes.push(data.dimension.index() as u8);
+                expected.dimension = data.dimension;
+            }
+            if version >= VITALS_VERSION {
+                data.vitals.write(&mut bytes);
+                expected.vitals = SavedVitals { xp_seed: 0, ..data.vitals };
+            }
+            if version >= XP_SEED_VERSION {
+                bytes.extend_from_slice(&data.vitals.xp_seed.to_be_bytes());
+                expected.vitals.xp_seed = data.vitals.xp_seed;
+            }
+            if version >= RESPAWN_VERSION {
+                crate::bed::RespawnPoint::write(data.respawn.as_ref(), &mut bytes);
+                expected.respawn = data.respawn;
+            }
+            if version >= ENDER_VERSION {
+                write_ender(&data.ender, &mut bytes);
+                expected.ender = data.ender.clone();
+            }
+
+            assert_eq!(parse(&bytes), Some(expected), "версия {version}");
+        }
     }
 
     /// Файла нет — игрок заходит впервые, и это не ошибка.
@@ -641,6 +734,10 @@ mod tests {
 
         let path = path_for(&directory, &[12; 16]);
         let mut bytes = fs::read(&path).expect("прочитать");
+
+        // Сначала убираем попугаев и длину их записи, добавленные в версии 8.
+        let shoulders = u32::from_be_bytes(bytes[bytes.len() - 4..].try_into().expect("длина попугаев")) as usize;
+        bytes.truncate(bytes.len() - 4 - shoulders);
 
         // Четвёртая версия — без семени зачарования и точки возрождения:
         // семя читается нулём и заведётся заново.

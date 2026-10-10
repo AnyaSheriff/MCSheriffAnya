@@ -51,6 +51,8 @@ pub struct Watcher {
     /// Хотя бы одна вещь брони из золота на нём: пиглины такого не трогают
     /// (вики, Piglin: «wearing any piece of golden armor»).
     pub gold_armor: bool,
+    pub sprinting: bool,
+    pub riding: bool,
 }
 
 /// Сородич рядом: для разведения и следования за родителем.
@@ -221,6 +223,15 @@ impl Brain {
     #[allow(dead_code)] // для проверок
     pub fn is_panicking(&self) -> bool {
         self.panic > 0
+    }
+
+    /// Летающие мирные мобы убегают в трёх измерениях, но используют тот же
+    /// счётчик паники, что наземные.
+    pub(super) fn panic_tick(&mut self) -> bool {
+        if self.panic <= 0 { return false; }
+        self.panic -= 1;
+        self.doing = Doing::Panic;
+        true
     }
 
     /// Идёт ли моб по пути.

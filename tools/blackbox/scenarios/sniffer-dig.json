@@ -1,0 +1,88 @@
+{
+  "name": "sniffer-dig",
+  "about": "Adult sniffer sniff/search/dig and seed drop on moss. Random timing is intentionally not masked. [unverified]",
+  "track_mobs": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "!stopfly",
+    "!wait 10",
+    "!look 0 0",
+    "fill $(0,-1,0) $(12,-1,12) moss_block"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon sniffer $(3.5,0,3.5) {Silent:1b}"
+    }
+  ],
+  "record_ticks": 1600,
+  "cleanup": [
+    "kill @e[type=sniffer,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "fill $(0,-1,0) $(12,-1,12) stone",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ],
+  "random": [
+    {
+      "type": "mask",
+      "name": "такт падения семени (19)",
+      "kind": "meta",
+      "pattern": "19=\\d+",
+      "replace": "19=N",
+      "why": "Свойство 19 нюхача — игровое время падения семени (у оригинала мировое время, у нас возраст); значение зависит от возраста мира."
+    },
+    {
+      "type": "count",
+      "name": "состояния нюхача",
+      "match": "^meta 18=[0-6]",
+      "range": [
+        0,
+        200
+      ],
+      "anytick": true,
+      "why": "Пять прогонов оригинала (sniffer-dig + vanilla-vs-vanilla): первое «принюхивание» на 10…82-м такте, длительности 44–85, «нюхает» один раз за ~4–5 «принюхиваний», копает 170–181 тактов, место и время поиска случайны."
+    },
+    {
+      "type": "count",
+      "name": "прогулка нюхача",
+      "match": "sniffer (сдвиг|скорость|сверка|поворот|entity_head_rotation)",
+      "range": [
+        0,
+        3000
+      ],
+      "anytick": true,
+      "why": "Пять прогонов оригинала (sniffer-dig + vanilla-vs-vanilla): первое «принюхивание» на 10…82-м такте, длительности 44–85, «нюхает» один раз за ~4–5 «принюхиваний», копает 170–181 тактов, место и время поиска случайны."
+    },
+    {
+      "type": "count",
+      "name": "семя нюхача",
+      "match": "^(spawn [-0-9.,]+ item|spawn item|meta 8=|destroy$)",
+      "range": [
+        0,
+        60
+      ],
+      "anytick": true,
+      "why": "Семя (факел-цветок или стручок питчера) выбирается случайно; предмет может слиться с соседним."
+    },
+    {
+      "type": "count",
+      "name": "статус копания",
+      "match": "sniffer событие 63",
+      "range": [
+        0,
+        2
+      ],
+      "anytick": true,
+      "why": "Статус 63 уходит за такт до состояния «копает»; копание начинается не в каждом прогоне (в трёх из пяти прогонов оригинала нюхач не успел до конца записи)."
+    }
+  ]
+}

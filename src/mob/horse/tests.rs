@@ -218,7 +218,7 @@ fn skeleton_trap_has_four_riders_and_expires_without_trigger() {
     let mut m = mob(Kind::SkeletonHorse); m.horse.trap = true; items.add_mob(m);
     let mut riding = crate::riding::Riding::default(); let mut rng = Rng::new(41); let mut id = 200;
     let mut next = || { id += 1; id };
-    let mut watcher = super::super::ai::Watcher { id: 5, x: 0.5, y: 0.0, z: 0.5, eye: 1.62, holding: [None;2], spectator: true, targetable: true, look: (0.0,0.0), pumpkin: false, gold_armor: false };
+    let mut watcher = super::super::ai::Watcher { id: 5, x: 0.5, y: 0.0, z: 0.5, eye: 1.62, holding: [None;2], spectator: true, targetable: true, look: (0.0,0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
     traps(&mut items, &mut riding, &[watcher], &mut rng, &mut next);
     assert_eq!(items.mobs().len(), 1);
     watcher.spectator = false;

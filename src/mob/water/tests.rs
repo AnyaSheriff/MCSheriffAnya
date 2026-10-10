@@ -11,7 +11,7 @@ impl View for Pool {
 }
 fn pool()->Pool {Pool{wet:true,biome:"lush_caves",substrate:"clay"}}
 fn ctx()->ai::Ctx<'static> {ai::Ctx{players:&[],mates:&[],difficulty:2,sky:15,sun_up:false}}
-fn player()->ai::Watcher {ai::Watcher{id:100,x:0.5,y:1.0,z:1.0,eye:1.62,holding:[None,None],spectator:false,targetable:true,look:(0.0,0.0),pumpkin:false,gold_armor:false}}
+fn player()->ai::Watcher {ai::Watcher{id:100,x:0.5,y:1.0,z:1.0,eye:1.62,holding:[None,None],spectator:false,targetable:true,look:(0.0,0.0),pumpkin: false, sprinting: false, riding: false, gold_armor: false}}
 
 #[test]
 fn all_tropical_patterns_are_unique_and_roundtrip() {

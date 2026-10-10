@@ -5,7 +5,7 @@ use super::*;
 use crate::mob::phantom as ph;
 
 fn survivor(id: i32, at: (f64, f64, f64)) -> ai::Watcher {
-    ai::Watcher { id, x: at.0, y: at.1, z: at.2, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false }
+    ai::Watcher { id, x: at.0, y: at.1, z: at.2, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false }
 }
 
 #[test]

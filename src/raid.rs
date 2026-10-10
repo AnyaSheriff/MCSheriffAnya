@@ -734,7 +734,7 @@ mod tests {
         }
 
         let mut raids = Raids::default();
-        let player = Watcher { id: 5, x: 0.5, y: -60.0, z: 0.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false };
+        let player = Watcher { id: 5, x: 0.5, y: -60.0, z: 0.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
         let rules = Rules { difficulty: 2, raids: true, patrols: false, day: 0 };
         let mut rng = Rng::new(1);
         let mut id = 100;
@@ -787,7 +787,7 @@ mod tests {
         }
 
         let mut raids = Raids::default();
-        let player = Watcher { id: 5, x: 0.5, y: -60.0, z: 0.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false };
+        let player = Watcher { id: 5, x: 0.5, y: -60.0, z: 0.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
         let rules = Rules { difficulty: 2, raids: true, patrols: false, day: 0 };
         let mut rng = Rng::new(3);
         let mut id = 0;

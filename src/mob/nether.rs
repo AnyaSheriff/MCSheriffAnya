@@ -466,7 +466,7 @@ mod tests {
     #[test]
     fn a_piglin_spares_the_gold_clad_unless_provoked() {
         let mut piglin = Mob::new(1, Kind::Piglin, (0.0, 0.0, 0.0));
-        let player = Watcher { id: 2, x: 1.0, y: 0.0, z: 1.0, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: true };
+        let player = Watcher { id: 2, x: 1.0, y: 0.0, z: 1.0, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: true };
 
         assert!(spares(&piglin, &player));
 

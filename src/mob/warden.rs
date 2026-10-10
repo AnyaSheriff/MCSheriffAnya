@@ -137,7 +137,7 @@ fn targets(ctx: &Ctx) -> Vec<Watcher> {
     let mut targets: Vec<_> = ctx.players.iter().filter(|p| p.targetable && !p.spectator).copied().collect();
     targets.extend(ctx.mates.iter().filter(|m| !m.kind.object() && m.kind != Kind::Warden).map(|m| Watcher {
         id: m.id, x: m.x, y: m.y, z: m.z, eye: m.kind.height() * 0.85,
-        holding: [None; 2], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false,
+        holding: [None; 2], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false,
     }));
     targets
 }
@@ -413,7 +413,7 @@ mod tests {
 
     fn watcher(id: i32, x: f64) -> Watcher {
         Watcher { id, x, y: 0.0, z: 0.0, eye: 1.62, holding: [None; 2], spectator: false, targetable: true,
-            look: (0.0, 0.0), pumpkin: false, gold_armor: false }
+            look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false }
     }
 
     #[test]

@@ -390,7 +390,7 @@ fn a_tempting_player_draws_the_animal_in() {
     let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
     let mut rng = Rng::new(9);
     let wheat = blocks::item_name(blocks::item_named("wheat").expect("пшеница")).expect("имя");
-    let player = ai::Watcher { x: 8.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some(wheat), None], spectator: false, id: 1, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false };
+    let player = ai::Watcher { x: 8.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some(wheat), None], spectator: false, id: 1, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
     let players = [player];
     let ctx = ai::Ctx { players: &players, mates: &[], difficulty: 2, sky: 15, sun_up: false };
 
@@ -417,7 +417,7 @@ fn a_spectator_does_not_attract() {
     let view = Flat::new();
     let mut pig = Mob::new(1, Kind::Pig, (0.5, 1.0, 0.5));
     let mut rng = Rng::new(9);
-    let players = [ai::Watcher { x: 5.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some("carrot"), None], spectator: true, id: 1, targetable: false, look: (0.0, 0.0), pumpkin: false, gold_armor: false }];
+    let players = [ai::Watcher { x: 5.5, y: 1.0, z: 0.5, eye: 1.62, holding: [Some("carrot"), None], spectator: true, id: 1, targetable: false, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false }];
     let ctx = ai::Ctx { players: &players, mates: &[], difficulty: 2, sky: 15, sun_up: false };
 
     for _ in 0..20 {
@@ -761,7 +761,7 @@ impl View for Sunny {
 }
 
 fn player_at(id: i32, x: f64, z: f64) -> ai::Watcher {
-    ai::Watcher { id, x, y: 1.0, z, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false }
+    ai::Watcher { id, x, y: 1.0, z, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false }
 }
 
 fn ctx_for<'a>(players: &'a [ai::Watcher], difficulty: u8, sky: i32, sun_up: bool) -> ai::Ctx<'a> {
@@ -2382,7 +2382,7 @@ fn arthropod_loot_and_xp_credit() {
 
 #[test]
 fn small_arthropod_melee_damage() {
-    let target = ai::Watcher { id: 20, x: 0.5, y: 1.0, z: 0.9, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false };
+    let target = ai::Watcher { id: 20, x: 0.5, y: 1.0, z: 0.9, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
     let players = [target];
     let context = ai::Ctx { players: &players, ..ctx() };
     for (kind, damage) in [(Kind::CaveSpider, 2.0), (Kind::Silverfish, 1.0)] {

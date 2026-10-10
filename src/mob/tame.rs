@@ -275,7 +275,7 @@ pub fn on_hurt(mob: &mut Mob, cause: i32) {
         }
     }
 
-    if mob.kind == Kind::Cat {
+    if matches!(mob.kind, Kind::Cat | Kind::Parrot) {
         mob.tame.ordered_sit = false;
         // Удар сгоняет кошку с блока (вики, Cat: «Attacking it moves it»).
         mob.tame.perched = false;
@@ -360,6 +360,15 @@ pub fn interact(mob: &mut Mob, who: ([u8; 16], i32), held: Option<&str>, rng: &m
     if mob.kind == Kind::Wolf && held == Some("wolf_armor") && mob.tame.armor.is_none() && !mob.is_baby() {
         mob.tame.armor = Some(ARMOR_DURABILITY);
         mob.events.push(Event::Sound { name: "minecraft:item.armor.equip_wolf", volume: 1.0, pitch: 1.0 });
+        return Used::Spent;
+    }
+
+    // Вики, Wolf Armor: щиток чинит четверть прочности сидящему волку.
+    if mob.kind == Kind::Wolf && held == Some("armadillo_scute") && mob.tame.ordered_sit
+        && let Some(durability) = mob.tame.armor.as_mut().filter(|d| **d < ARMOR_DURABILITY)
+    {
+        *durability = (*durability + ARMOR_DURABILITY / 4).min(ARMOR_DURABILITY);
+        mob.events.push(Event::Sound { name: "minecraft:item.wolf_armor.repair", volume: 1.0, pitch: 1.0 });
         return Used::Spent;
     }
 
@@ -744,7 +753,7 @@ pub(crate) fn attack(mob: &mut Mob, view: &dyn View, target: Target, at: (f64, f
 /// Прыжок к хозяину: случайная клетка в 3 блоках по x и z (не вплотную), по
 /// высоте ±1, где можно стоять (вики, Wolf: «teleports to its owner»; чёрный
 /// ящик, probe-follow: на 3 блока в сторону). 10 попыток.
-fn teleport_near(mob: &mut Mob, view: &dyn View, owner: (f64, f64, f64), rng: &mut Rng) -> bool {
+pub(super) fn teleport_near(mob: &mut Mob, view: &dyn View, owner: (f64, f64, f64), rng: &mut Rng) -> bool {
     let base = (owner.0.floor() as i32, owner.1.floor() as i32, owner.2.floor() as i32);
 
     for _ in 0..10 {

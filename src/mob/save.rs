@@ -105,6 +105,11 @@ save_kinds! {
     Rabbit => 98,
     Fox => 99,
     Bee => 100,
+    Armadillo => 101,
+    Sniffer => 102,
+    Parrot => 103,
+    Bat => 104,
+    Allay => 105,
 }
 
 // 0x7f/0xff раньше не обозначали ни один вид. Теперь за ними идёт u16 BE;

@@ -1055,7 +1055,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     }
 
     // Волк и кошка: хозяин, сидение, ошейник, вариант (mob/tame.rs).
-    if matches!(mob.kind, crate::mob::Kind::Wolf | crate::mob::Kind::Cat) {
+    if matches!(mob.kind, crate::mob::Kind::Wolf | crate::mob::Kind::Cat | crate::mob::Kind::Parrot) {
         crate::mob::tame::apply_data(mob, data);
     }
 
@@ -1072,6 +1072,8 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     {
         mob.warden.calm = memory.get("ttl").and_then(|ttl| ttl.as_f64()).map_or(crate::mob::warden::CALM, |ttl| ttl as i32);
     }
+
+    crate::mob::small::apply_data(mob, data);
 
     // Големы: «построен игроком», тыква снежного (mob/golem.rs).
     if let Some(on) = flag_in(data, "PlayerCreated:") {
@@ -1350,8 +1352,18 @@ fn data_command(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return Answer::saying(if changed { "Данные маяка обновлены" } else { "Нет маяка или данные неверны" }.to_string());
     }
 
-    let ["merge", "entity", who, data] = parts else {
-        return Answer::saying("Нужно: data merge entity @e[type=cow,limit=1] {NoAI:0b}".to_string());
+    let copied;
+    let (who,data) = match parts {
+        ["merge", "entity", who, data] => (*who,*data),
+        // Вики, Commands/data: копирование UUID игрока в Owner приручаемого.
+        ["modify", "entity", who, "Owner", "set", "from", "entity", player, "UUID"] => {
+            let targets=find_targets(player,source,shared);
+            let [(uuid,_)] = targets.as_slice() else { return Answer::saying("Нужен один игрок".to_string()); };
+            let words: Vec<_> = uuid.as_chunks::<4>().0.iter().map(|b| i32::from_be_bytes(*b).to_string()).collect();
+            copied=format!("{{Owner:[I;{}]}}",words.join(","));
+            (*who,copied.as_str())
+        }
+        _ => return Answer::saying("Нужно: data merge entity @e[type=cow,limit=1] {NoAI:0b}".to_string()),
     };
 
     let Some(chosen) = Selector::parse(who) else {
@@ -1363,7 +1375,13 @@ fn data_command(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let mut items = shared.items_in(dimension_of(source, shared)).lock().expect("предметы захвачены другим потоком");
     let mut changed = 0;
 
-    for mob in items.mobs_mut() {
+    let mut order: Vec<usize> = (0..items.mobs().len()).collect();
+    order.sort_by(|a, b| {
+        let d = |m: &crate::mob::Mob| (m.x - x).powi(2) + (m.y - y).powi(2) + (m.z - z).powi(2);
+        d(&items.mobs()[*a]).total_cmp(&d(&items.mobs()[*b]))
+    });
+    for index in order {
+        let mob = &mut items.mobs_mut()[index];
         if left > 0 && chosen.takes(mob.kind.name()) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z)) {
             apply_mob_data(mob, data);
             // Правка данных — как перезагрузка из NBT: голова смотрит по телу,
@@ -1997,7 +2015,7 @@ impl Selector {
                 // `..N`, `M..N` или `N` — важна только верхняя граница.
                 ("distance", range) => chosen.distance = Some(range.rsplit("..").next()?.parse().ok()?),
                 ("limit", count) => chosen.limit = Some(count.parse().ok()?),
-                // Порядок не важен, пока выбор — единственная сущность [проверить: nearest при нескольких].
+                // Порядок (`sort=nearest`, `random`…): правка данных идёт от ближнего.
                 ("sort", "nearest" | "arbitrary" | "furthest" | "random") => {}
                 _ => return None,
             }
@@ -3221,6 +3239,19 @@ mod tests {
     }
 
     /// Выгнать игрока: поручение уходит именно ему, с причиной.
+    #[test]
+    fn small_mobs_summon_and_parrot_owner_copies_from_player_uuid() {
+        let shared=server();
+        for name in ["armadillo","sniffer","parrot","bat","allay"] {
+            let reply=run(&format!("summon {name} 1 64 2 {{NoAI:1b}}"),&Source::Console,&shared);
+            assert!(reply.reply.contains("Призвана"));
+        }
+        run("data modify entity @e[type=parrot,limit=1] Owner set from entity Первый UUID",&Source::Console,&shared);
+        let items=shared.items_in(Dimension::Overworld).lock().unwrap();
+        assert_eq!(items.mobs().len(),5);
+        assert_eq!(items.mobs().iter().find(|m| m.kind==crate::mob::Kind::Parrot).unwrap().tame.owner,Some([1;16]));
+    }
+
     #[test]
     fn kick_sends_an_order_with_a_reason() {
         let shared = server();

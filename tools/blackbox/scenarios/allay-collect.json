@@ -1,0 +1,113 @@
+{
+  "name": "allay-collect",
+  "about": "Give allay a diamond, collect matching drops only, deliver to player then recent note block. [unverified]",
+  "track_mobs": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "!stopfly",
+    "!wait 10",
+    "!look 0 0",
+    "give $(bot) minecraft:diamond 1"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon allay $(3.5,0,3.5) {Silent:1b}"
+    },
+    {
+      "after": 10,
+      "interact": true
+    },
+    {
+      "after": 30,
+      "cmd": "summon item $(4.5,0,3.5) {Item:{id:\"minecraft:diamond\",count:3}}"
+    },
+    {
+      "after": 30,
+      "cmd": "summon item $(4.5,0,4.5) {Item:{id:\"minecraft:dirt\",count:2}}"
+    },
+    {
+      "after": 120,
+      "cmd": "setblock $(3,0,5) note_block"
+    },
+    {
+      "after": 130,
+      "cmd": "setblock $(3,0,6) redstone_block"
+    },
+    {
+      "after": 150,
+      "cmd": "summon item $(4.5,0,3.5) {Item:{id:\"minecraft:diamond\",count:2}}"
+    }
+  ],
+  "record_ticks": 400,
+  "cleanup": [
+    "kill @e[type=allay,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "setblock $(3,0,5) air",
+    "setblock $(3,0,6) air",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ],
+  "random": [
+    {
+      "type": "mask",
+      "name": "бездействие полёта (NoGravity)",
+      "kind": "meta",
+      "pattern": "5=(true|false) ",
+      "replace": "",
+      "why": "Свойство 5 включается вместе со случайным полётом тихони."
+    },
+    {
+      "type": "count",
+      "name": "NoGravity тихони",
+      "match": "^meta 5=(true|false)$",
+      "range": [
+        0,
+        20
+      ],
+      "anytick": true,
+      "why": "То же."
+    },
+    {
+      "type": "count",
+      "name": "полёт тихони",
+      "match": "allay (сдвиг|скорость|сверка|поворот|entity_head_rotation)",
+      "range": [
+        0,
+        3000
+      ],
+      "anytick": true,
+      "why": "Полёт и подбор тихони случайны: пять прогонов оригинала дают разные тактов подбора (30, 50, 70, 72), броска (99, 134, 260, 400) и маршрута."
+    },
+    {
+      "type": "count",
+      "name": "предметы у тихони",
+      "match": "^(spawn [-0-9.,]+ item|spawn item|meta 8=|destroy$)",
+      "range": [
+        0,
+        300
+      ],
+      "anytick": true,
+      "why": "Полёт и подбор тихони случайны: пять прогонов оригинала дают разные тактов подбора (30, 50, 70, 72), броска (99, 134, 260, 400) и маршрута. Выброшенные тихоней предметы появляются по одному за такт и сливаются случайно."
+    },
+    {
+      "type": "count",
+      "name": "звук броска",
+      "match": "item_thrown",
+      "range": [
+        0,
+        6
+      ],
+      "anytick": true,
+      "why": "Высота звука (k/16) и число бросков зависят от того же случайного подбора."
+    }
+  ]
+}

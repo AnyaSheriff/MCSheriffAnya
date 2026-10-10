@@ -25,6 +25,7 @@ fn group(kind: Kind) -> (u32, u32) {
     match kind {
         Kind::Chicken => (4, 4),
         Kind::Rabbit => (2, 3),
+        Kind::Parrot => (1, 2),
         _ => (2, 4),
     }
 }
@@ -89,7 +90,7 @@ pub fn for_new_chunk_in(view: &dyn View, chunk_x: i32, chunk_z: i32, biome: &str
     let total: u32 = weights.iter().map(|(_, weight)| weight).sum();
     // Кролики и лисы добавляют свой вес к прочим животным биома; в биомах без
     // прочих животных (пустыня, снежные равнины) остаются одни они.
-    let wild: u32 = weights.iter().filter(|(kind, _)| matches!(kind, Kind::Rabbit | Kind::Fox)).map(|(_, weight)| weight).sum();
+    let wild: u32 = weights.iter().filter(|(kind, _)| matches!(kind, Kind::Rabbit | Kind::Fox | Kind::Armadillo | Kind::Parrot)).map(|(_, weight)| weight).sum();
     let (horse_weight, donkey_weight, donkey_low, donkey_high, others) = equine_spawn(biome);
     let others = if total == wild { total } else { others + wild };
     if others + horse_weight + donkey_weight == 0 { return Vec::new(); }
@@ -109,7 +110,7 @@ pub fn for_new_chunk_in(view: &dyn View, chunk_x: i32, chunk_z: i32, biome: &str
     }
 
     kind = chosen.unwrap_or(kind);
-    let (low, high) = if kind == Kind::Horse { (2, 6) } else if kind == Kind::Donkey { (donkey_low, donkey_high) } else { group(kind) };
+    let (low, high) = if kind == Kind::Horse { (2, 6) } else if kind == Kind::Donkey { (donkey_low, donkey_high) } else if kind == Kind::Armadillo { if biome.contains("badlands") { (1, 2) } else { (2, 3) } } else { group(kind) };
     let want = low + rng.below(high - low + 1);
     let (base_x, base_z) = (chunk_x * 16 + rng.below(16) as i32, chunk_z * 16 + rng.below(16) as i32);
     let mut mobs = Vec::new();
@@ -572,10 +573,15 @@ pub fn passive_weights(biome: &str) -> Vec<(Kind,u32)> {
     };
     if rabbit>0 { weights.push((Kind::Rabbit,rabbit)); }
     if matches!(biome,"taiga"|"snowy_taiga"|"old_growth_pine_taiga"|"old_growth_spruce_taiga"|"grove") { weights.push((Kind::Fox,8)); }
+    // Вики, Armadillo/Parrot, «Spawning»: в бедленде других животных нет.
+    if biome.contains("badlands") { weights.clear(); }
+    if biome.contains("savanna") || biome.contains("badlands") { weights.push((Kind::Armadillo,6)); }
+    if matches!(biome,"jungle"|"bamboo_jungle"|"sparse_jungle") { weights.push((Kind::Parrot,40)); }
     weights
 }
 
 fn animal_surface(view: &dyn View,x: i32,z: i32,kind: Kind) -> Option<i32> {
+    if matches!(kind,Kind::Parrot|Kind::Armadillo) { return small_surface(view,x,z,kind); }
     if !matches!(kind,Kind::Rabbit|Kind::Fox) { return surface(view,x,z); }
     for y in (-64..320).rev() {
         let state=view.block(x,y,z);
@@ -588,4 +594,41 @@ fn animal_surface(view: &dyn View,x: i32,z: i32,kind: Kind) -> Option<i32> {
         }
     }
     None
+}
+
+fn small_surface(view: &dyn View, x: i32, z: i32, kind: Kind) -> Option<i32> {
+    if !matches!(kind,Kind::Parrot|Kind::Armadillo) { return surface(view,x,z); }
+    for y in (-64..320).rev() {
+        let state=view.block(x,y,z);
+        if solid(state) || super::is_water(state) || super::is_lava(state) {
+            let name=blocks::block_at_state(state).unwrap_or("");
+            let allowed=if kind == Kind::Parrot { name == "grass_block" || name.ends_with("_leaves") || name.ends_with("_log") }
+                else { matches!(name,"grass_block"|"dirt"|"coarse_dirt"|"red_sand") };
+            return allowed.then_some(y);
+        }
+    }
+    None
+}
+
+/// Вики, Bat: Halloween — с 20 октября по 3 ноября, включительно.
+pub fn halloween(month: i32, day: i32) -> bool { (month == 10 && day >= 20) || (month == 11 && day <= 3) }
+
+pub fn bat_light(light: u8, holiday: bool, rng: &mut Rng) -> bool {
+    if !holiday && rng.below(2) == 0 { return false; }
+    u32::from(light) <= rng.below(if holiday { 7 } else { 4 })
+}
+
+pub fn bat_holiday() -> bool {
+    #[cfg(unix)] {
+        let seconds=std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs() as libc::time_t;
+        // SAFETY: localtime_r пишет только в выделенную структуру.
+        let mut date: libc::tm=unsafe { std::mem::zeroed() };
+        if !unsafe { libc::localtime_r(&seconds,&mut date) }.is_null() { return halloween(date.tm_mon+1,date.tm_mday); }
+    }
+    #[cfg(windows)] {
+        let mut date=windows_sys::Win32::Foundation::SYSTEMTIME::default();
+        unsafe { windows_sys::Win32::System::SystemInformation::GetLocalTime(&mut date) };
+        return halloween(i32::from(date.wMonth),i32::from(date.wDay));
+    }
+    #[allow(unreachable_code)] false
 }

@@ -363,7 +363,7 @@ mod tests {
     fn strafing_dragon_shoots_a_fireball_within_64_blocks() {
         let mut mob = dragon();
         let mut rng = Rng::new(1);
-        let player = ai::Watcher { id: 1, x: 30.0, y: 100.0, z: 0.0, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false };
+        let player = ai::Watcher { id: 1, x: 30.0, y: 100.0, z: 0.0, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
 
         mob.dragon.enter(STRAFING);
         think(&mut mob, &[player], &mut rng);
@@ -407,7 +407,7 @@ mod tests {
     fn scanning_roars_at_close_player_after_25_ticks() {
         let mut mob = dragon();
         let mut rng = Rng::new(1);
-        let player = ai::Watcher { id: 1, x: 5.0, y: 62.0, z: 0.0, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false };
+        let player = ai::Watcher { id: 1, x: 5.0, y: 62.0, z: 0.0, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
 
         mob.dragon.enter(SCANNING);
         mob.y = PERCH_Y;

@@ -15,6 +15,8 @@
 // Что не сверено, помечено «[проверить]».
 
 pub mod ai;
+pub mod small;
+pub mod small_world;
 pub mod arthropod;
 pub mod dragon;
 pub mod breeze;
@@ -164,12 +166,17 @@ pub enum Kind {
     Mule,
     SkeletonHorse,
     ZombieHorse,
+    Armadillo,
+    Sniffer,
+    Parrot,
+    Bat,
+    Allay,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 78] = [
+    pub const ALL: [Kind; 83] = [
         Kind::Rabbit, Kind::Fox, Kind::Bee,
         Kind::Cow,
         Kind::Pig,
@@ -246,6 +253,7 @@ impl Kind {
         Kind::Mule,
         Kind::SkeletonHorse,
         Kind::ZombieHorse,
+        Kind::Armadillo, Kind::Sniffer, Kind::Parrot, Kind::Bat, Kind::Allay,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -328,6 +336,11 @@ impl Kind {
             "rabbit" => Kind::Rabbit,
             "fox" => Kind::Fox,
             "bee" => Kind::Bee,
+            "armadillo" => Kind::Armadillo,
+            "sniffer" => Kind::Sniffer,
+            "parrot" => Kind::Parrot,
+            "bat" => Kind::Bat,
+            "allay" => Kind::Allay,
             "cow" => Kind::Cow,
             "pig" => Kind::Pig,
             "sheep" => Kind::Sheep,
@@ -412,6 +425,11 @@ impl Kind {
             Kind::Rabbit => "rabbit",
             Kind::Fox => "fox",
             Kind::Bee => "bee",
+            Kind::Armadillo => "armadillo",
+            Kind::Sniffer => "sniffer",
+            Kind::Parrot => "parrot",
+            Kind::Bat => "bat",
+            Kind::Allay => "allay",
             Kind::Cow => "cow",
             Kind::Pig => "pig",
             Kind::Sheep => "sheep",
@@ -496,6 +514,11 @@ impl Kind {
             Kind::Rabbit => 108,
             Kind::Fox => 54,
             Kind::Bee => 11,
+            Kind::Armadillo => 4,
+            Kind::Sniffer => 119,
+            Kind::Parrot => 98,
+            Kind::Bat => 10,
+            Kind::Allay => 2,
             Kind::Chicken => 26,
             Kind::Creeper => 32,
             Kind::Skeleton => 115,
@@ -592,6 +615,11 @@ impl Kind {
             Kind::Rabbit => "minecraft:rabbit",
             Kind::Fox => "minecraft:fox",
             Kind::Bee => "minecraft:bee",
+            Kind::Armadillo => "minecraft:armadillo",
+            Kind::Sniffer => "minecraft:sniffer",
+            Kind::Parrot => "minecraft:parrot",
+            Kind::Bat => "minecraft:bat",
+            Kind::Allay => "minecraft:allay",
             Kind::Cow => "minecraft:cow",
             Kind::Pig => "minecraft:pig",
             Kind::Sheep => "minecraft:sheep",
@@ -698,6 +726,11 @@ impl Kind {
             Kind::Rabbit => 0.49,
             Kind::Fox => 0.6,
             Kind::Bee => 0.7,
+            Kind::Armadillo => 0.7,
+            Kind::Sniffer => 1.9,
+            Kind::Parrot => 0.5,
+            Kind::Bat => 0.5,
+            Kind::Allay => 0.35,
             Kind::Chicken => 0.4,
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
@@ -764,6 +797,11 @@ impl Kind {
             Kind::Tadpole => 0.3,
             Kind::Rabbit | Kind::Bee => 0.6,
             Kind::Fox => 0.7,
+            Kind::Armadillo => 0.65,
+            Kind::Sniffer => 1.75,
+            Kind::Parrot => 0.9,
+            Kind::Bat => 0.9,
+            Kind::Allay => 0.6,
             Kind::Chicken => 0.7,
             Kind::Cow => 1.4,
             Kind::Pig => 0.9,
@@ -835,6 +873,11 @@ impl Kind {
             Kind::Tadpole => 6.0,
             Kind::Rabbit => 3.0,
             Kind::Fox | Kind::Bee => 10.0,
+            Kind::Armadillo => 12.0,
+            Kind::Sniffer => 14.0,
+            Kind::Parrot => 6.0,
+            Kind::Bat => 6.0,
+            Kind::Allay => 20.0,
             Kind::Cow | Kind::Pig => 10.0,
             Kind::Sheep => 8.0,
             Kind::Chicken => 4.0,
@@ -910,6 +953,11 @@ impl Kind {
             Kind::Tadpole => 1.0,
             Kind::Rabbit | Kind::Fox => 0.3,
             Kind::Bee => 0.6,
+            Kind::Armadillo => 0.14,
+            Kind::Sniffer => 0.1,
+            Kind::Parrot => 0.2,
+            Kind::Bat => 0.1,
+            Kind::Allay => 0.1,
             Kind::Cow => 0.2,
             Kind::Pig | Kind::Chicken => 0.25,
             Kind::Sheep | Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 0.23,
@@ -961,6 +1009,8 @@ impl Kind {
     /// Съедобное для разведения (вики, Breeding).
     pub fn likes(self, item: &str) -> bool {
         match self {
+            Kind::Armadillo => item == "spider_eye",
+            Kind::Sniffer => item == "torchflower_seeds",
             Kind::Cow | Kind::Sheep | Kind::Goat | Kind::Mooshroom => item == "wheat",
             Kind::Horse | Kind::Donkey => matches!(item, "golden_carrot" | "golden_apple" | "enchanted_golden_apple"),
             Kind::Llama | Kind::TraderLlama => item == "hay_block",
@@ -1018,6 +1068,11 @@ impl Kind {
             Kind::Rabbit => ("minecraft:entity.rabbit.ambient", "minecraft:entity.rabbit.hurt", "minecraft:entity.rabbit.death"),
             Kind::Fox => ("minecraft:entity.fox.ambient", "minecraft:entity.fox.hurt", "minecraft:entity.fox.death"),
             Kind::Bee => ("", "minecraft:entity.bee.hurt", "minecraft:entity.bee.death"),
+            Kind::Armadillo => ("minecraft:entity.armadillo.ambient", "minecraft:entity.armadillo.hurt", "minecraft:entity.armadillo.death"),
+            Kind::Sniffer => ("minecraft:entity.sniffer.ambient", "minecraft:entity.sniffer.hurt", "minecraft:entity.sniffer.death"),
+            Kind::Parrot => ("minecraft:entity.parrot.ambient", "minecraft:entity.parrot.hurt", "minecraft:entity.parrot.death"),
+            Kind::Bat => ("minecraft:entity.bat.ambient", "minecraft:entity.bat.hurt", "minecraft:entity.bat.death"),
+            Kind::Allay => ("minecraft:entity.allay.ambient_without_item", "minecraft:entity.allay.hurt", "minecraft:entity.allay.death"),
             Kind::Cow => ("minecraft:entity.cow.ambient", "minecraft:entity.cow.hurt", "minecraft:entity.cow.death"),
             Kind::Pig => ("minecraft:entity.pig.ambient", "minecraft:entity.pig.hurt", "minecraft:entity.pig.death"),
             Kind::Sheep => ("minecraft:entity.sheep.ambient", "minecraft:entity.sheep.hurt", "minecraft:entity.sheep.death"),
@@ -1554,6 +1609,9 @@ pub struct Mob {
 
     /// Кролик, лиса и пчела (mob/wildlife.rs).
     pub wild: wildlife::State,
+
+    /// Малые мирные мобы [Bedrock: потом — особые свойства].
+    pub small: small::State,
 }
 
 impl Mob {
@@ -1649,6 +1707,7 @@ impl Mob {
             warden: warden::State::default(),
             horse: horse::State::default(),
             wild: wildlife::State::default(),
+            small: small::State::new(kind, entity_id),
         };
         horse::defaults(&mut mob);
         mob
@@ -1782,6 +1841,9 @@ impl Mob {
         }
         if self.kind == Kind::Fox && self.wild.sleeping {
             return ("minecraft:entity.fox.sleep", "minecraft:entity.fox.hurt", "minecraft:entity.fox.death");
+        }
+        if self.kind == Kind::Allay && self.small.held.is_some() {
+            return ("minecraft:entity.allay.ambient_with_item", "minecraft:entity.allay.hurt", "minecraft:entity.allay.death");
         }
 
         if self.kind == Kind::Drowned && self.h.wet {
@@ -2034,6 +2096,10 @@ impl Mob {
             ai::voice(self, rng);
         }
 
+        if small::kind(self.kind) {
+            small::tick(self, rng);
+        }
+
         if self.no_ai {
             // Запал крипера — не мысль, а его такт: подожжённый NoAI взрывается
             // (чёрный ящик, creeper-explode).
@@ -2067,7 +2133,9 @@ impl Mob {
         }
 
         let was_on_ground = self.on_ground;
-        let mut plan = if land::animal(self.kind) || self.kind == Kind::WanderingTrader {
+        let mut plan = if small::kind(self.kind) {
+            small::think(self, view, ctx, rng)
+        } else if land::animal(self.kind) || self.kind == Kind::WanderingTrader {
             land::think(self, view, ctx, rng)
         } else if water::creature(self.kind) {
             water::think(self, view, ctx, rng)
@@ -2104,7 +2172,9 @@ impl Mob {
         }
 
         // Шалкер сидит на грани: ни тяжести, ни шагов (вики, Shulker).
-        if water::creature(self.kind) && !self.is_dead() {
+        if small::flying(self.kind) && !self.is_dead() {
+            small::fly(self, view);
+        } else if water::creature(self.kind) && !self.is_dead() {
             water::physics(self, view, &plan, rng);
         // Пчела, ещё не пошедшая в полёт, падает и стоит как всякий моб (чёрный ящик,
         // bee-sting: упала с 1 до 0, откинута ударом по земле, взлетела на +11).
@@ -2430,6 +2500,17 @@ impl Mob {
 
         if self.kind == Kind::Warden && (matches!(source, Source::InFire | Source::OnFire | Source::Lava)
             || (self.warden.invulnerable() && source != Source::GenericKill)) { return None; }
+        if self.kind == Kind::Allay && self.small.held.is_some() && push.is_some_and(|p| p.cause == self.tame.owner_id && p.cause != 0) {
+            return None;
+        }
+        if small::flying(self.kind) && source == Source::Fall {
+            return None;
+        }
+        let amount = if self.kind == Kind::Armadillo && self.small.roll != 0 && !matches!(source, Source::GenericKill | Source::OutOfWorld) {
+            (amount - 1.0).max(0.0) / 2.0
+        } else { amount };
+        if self.kind == Kind::Bat { self.small.resting = false; }
+        if self.kind == Kind::Armadillo && !self.no_ai { self.small.threat = 100; }
 
         // Кристалл: любой урон — взрыв, даже нулевой (вики, End Crystal:
         // «explode when attacked or damaged in most ways, even by attacks that
@@ -2558,6 +2639,7 @@ impl Mob {
         } else {
             let (_, hurt, _) = self.sounds();
             let hurt = if self.kind == Kind::Slime { slime::sound(self.nether.size, "hurt") } else { hurt };
+            let hurt = if self.kind == Kind::Armadillo && self.small.roll != 0 { "minecraft:entity.armadillo.hurt_reduced" } else { hurt };
             let hurt = if self.kind == Kind::Shulker && self.h.peek == 0 { "minecraft:entity.shulker.hurt_closed" } else { hurt };
 
             self.events.push(Event::Sound { name: hurt, volume: self.sound_volume(), pitch: self.voice_pitch() });
@@ -2565,7 +2647,7 @@ impl Mob {
 
             // Паника — только от удара существа: падение и команда не пугают
             // (чёрный ящик, cow-physics: упавшая корова стоит).
-            if let Some(push) = push.filter(|push| push.cause != 0 && !self.kind.hostile() && self.kind != Kind::Wolf && !golem::golem(self.kind)) {
+            if let Some(push) = push.filter(|push| push.cause != 0 && !self.kind.hostile() && !matches!(self.kind, Kind::Wolf | Kind::Armadillo) && !golem::golem(self.kind)) {
                 self.fright = Some((self.x - push.dir.0 * 8.0, self.z - push.dir.1 * 8.0));
                 self.brain.panic(PANIC_TICKS);
             }
@@ -2617,6 +2699,8 @@ impl Mob {
         match self.kind {
             Kind::Cow | Kind::Mooshroom | Kind::Bee => 0.4,
             Kind::Warden => 4.0,
+            // Вики, Bat, Sounds: «0.1».
+            Kind::Bat => 0.1,
             kind if horse::equine(kind) => 0.8,
             Kind::Slime => 0.4 * self.nether.size as f32,
             // Чёрный ящик, dragon-summon: голос дракона громкостью 5,00.
@@ -2632,7 +2716,8 @@ impl Mob {
         let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks.wrapping_mul(0x9E37) ^ ((self.events.len() as u64) << 40));
         let spread = ((rng.unit() - rng.unit()) * 0.2) as f32;
 
-        if self.is_baby() { 1.5 + spread } else { 1.0 + spread }
+        if self.kind == Kind::Bat { (1.0 + spread) * 0.95 }
+        else if self.is_baby() { 1.5 + spread } else { 1.0 + spread }
     }
 
     /// Вики, Sculk Catalyst: опыт без требования последнего удара игрока.
@@ -2673,7 +2758,7 @@ impl Mob {
         } else if self.xp_until > self.ticks && !self.is_baby() && self.kind != Kind::WanderingTrader {
             let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xE4B);
 
-            self.pending_xp = if matches!(self.kind,Kind::Axolotl | Kind::Tadpole) {
+            self.pending_xp = if matches!(self.kind,Kind::Axolotl | Kind::Tadpole | Kind::Bat | Kind::Allay) {
                 0
             } else if slime::cube(self.kind) {
                 // Вики, Magma Cube: опыт равен размеру (чёрный ящик, magma-cube-stand).
@@ -2737,6 +2822,7 @@ impl Mob {
                 let mut state=self.wild.clone(); state.silent=self.silent;
                 wildlife::write(&state, out);
             }
+            Kind::Armadillo | Kind::Sniffer | Kind::Parrot | Kind::Bat | Kind::Allay => small::write(self, out),
             Kind::IronGolem | Kind::SnowGolem => golem::write(&self.golem, out),
             kind if horse::equine(kind) => horse::write(self, out),
             _ => {}
@@ -2794,6 +2880,7 @@ impl Mob {
         let water_state = if water::creature(kind) { Some(water::read(bytes)?) } else { None };
         let mut horse_mob = Mob::new(0, kind, (x, y, z));
         if horse::equine(kind) { horse::read(&mut horse_mob, bytes)?; }
+        let small_state = if small::kind(kind) { Some(small::read(bytes)?) } else { None };
         let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
@@ -2802,6 +2889,11 @@ impl Mob {
 
         let mut mob = horse_mob;
 
+        if let Some((state, tame)) = small_state {
+            if let Some(uuid) = state.saved_uuid { mob.uuid = uuid; }
+            mob.silent = state.silent;
+            mob.small = state; mob.tame = tame;
+        }
         mob.yaw = yaw;
         mob.head_yaw = yaw;
         if let Some((size, flags)) = slime_data {
@@ -3078,6 +3170,9 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         Kind::Wither => give("nether_star", 1, 1, rng),
         Kind::Cod | Kind::Salmon | Kind::TropicalFish | Kind::Pufferfish | Kind::Squid | Kind::GlowSquid | Kind::Dolphin | Kind::Turtle | Kind::Axolotl | Kind::Frog | Kind::Tadpole => water::loot(mob, rng, &mut give),
         Kind::Warden => give("sculk_catalyst", 1, 1, rng),
+        Kind::Armadillo | Kind::Sniffer | Kind::Bat => {}
+        Kind::Parrot => give("feather", 1, 2 + mob.looting, rng),
+        Kind::Allay => { drops.extend(mob.small.held); drops.extend(mob.small.cargo); }
         Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager | Kind::Wolf | Kind::LeashKnot => {}
         // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
         Kind::Enderman => {
@@ -3687,6 +3782,9 @@ pub fn step_all(
         if water::creature(mob.kind) && !matches!(mob.kind,Kind::Turtle | Kind::Frog | Kind::Tadpole) && !mob.persistent_tag && !mob.water.from_bucket && !mob.is_dead() {
             hostile::despawn_check(mob,players,rng,false);
         }
+        if mob.kind == Kind::Bat && !mob.is_dead() && !mob.persistent_tag {
+            hostile::despawn_check(mob, players, rng, false);
+        }
         if mob.kind.hostile() && !matches!(mob.kind, Kind::Shulker | Kind::Warden) && ((!mob.is_dead() && !mob.persistent_tag) || (peaceful && mob.is_dead())) {
             hostile::despawn_check(mob, players, rng, peaceful);
         }
@@ -3893,6 +3991,8 @@ pub fn step_all(
         }
         if matches!(baby.kind,Kind::Turtle | Kind::Frog) {
             mobs[ia].water.has_egg = true;
+        } else if mobs[ia].kind == Kind::Sniffer {
+            small::drop(&mut mobs[ia], "sniffer_egg");
         } else { born.push(baby); }
     }
 

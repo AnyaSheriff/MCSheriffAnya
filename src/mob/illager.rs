@@ -982,7 +982,7 @@ mod tests {
         }
 
         let mut evoker = Mob::new(1, Kind::Evoker, (7.5, 0.0, 0.5));
-        let target = Watcher { id: 2, x: 0.5, y: 0.0, z: 0.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false };
+        let target = Watcher { id: 2, x: 0.5, y: 0.0, z: 0.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false };
 
         fangs_spell(&mut evoker, &Flat, &target);
 

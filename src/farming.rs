@@ -81,6 +81,7 @@ fn crop_max_age(name: &str) -> Option<i32> {
         "wheat" | "carrots" | "potatoes" | "melon_stem" | "pumpkin_stem" => 7,
         "beetroots" => 3,
         "torchflower_crop" => 1,
+        "pitcher_crop" => 4,
         _ => return None,
     })
 }
@@ -286,6 +287,14 @@ fn light(world: &mut World, x: i32, y: i32, z: i32) -> u8 {
 /// Ставит выросшее состояние (None — свойства нет, ничего).
 fn grow_to(world: &mut World, (x, y, z): (i32, i32, i32), state: Option<i32>) {
     if let Some(state) = state {
+        if name_of(state) == "pitcher_crop" {
+            if value(state,"half") == Some("upper") { return; }
+            if number(state,"age") >= 3 {
+                let above = world.get_block(x,y+1,z);
+                if above != AIR && name_of(above) != "pitcher_crop" { return; }
+                if let Some(upper) = with(state,"half","upper") { world.set_block(x,y+1,z,upper); }
+            }
+        }
         world.set_block(x, y, z, state);
     }
 }
@@ -435,6 +444,7 @@ fn growth_points(world: &World, (x, y, z): (i32, i32, i32), name: &str) -> f32 {
 /// Beetroot Seeds: «1/3 chance of not advancing»). Спелый стебель
 /// пробует поставить плод рядом.
 fn crop_tick(world: &mut World, pos: (i32, i32, i32), state: i32, name: &str) {
+    if name == "pitcher_crop" && value(state,"half") == Some("upper") { return; }
     if light(world, pos.0, pos.1, pos.2) < 9 {
         return;
     }
@@ -962,6 +972,13 @@ pub fn bone_meal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<()> {
     match name {
         // Пшеница, морковь, картофель, стебли — на 2…5 стадий (вики, Bone
         // Meal); свёкла — на одну с шансом 75 %; цветок-факел — на одну.
+        "torchflower_crop" if number(state,"age") >= 1 => {
+            world.set_block(x,y,z,state_of("torchflower"));
+            world.note_level_event(x,y,z,BONE_MEAL_EVENT,15);
+        }
+        "pitcher_crop" if value(state,"half") == Some("upper") => {
+            return bone_meal(world, (x,y-1,z));
+        }
         name if crop_max_age(name).is_some() => {
             let age = number(state, "age");
             let max = crop_max_age(name).unwrap_or(7);
@@ -972,7 +989,7 @@ pub fn bone_meal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<()> {
 
             let step = match name {
                 "beetroots" => i32::from(chance(world, 0.75)),
-                "torchflower_crop" => 1,
+                "torchflower_crop" | "pitcher_crop" => 1,
                 _ => 2 + roll(world, 4),
             };
 
@@ -1103,6 +1120,7 @@ pub fn harvest(world: &mut World, state: i32, fortune: i32) -> Option<Vec<Stack>
             _ => Vec::new(),
         },
         "torchflower_crop" => vec![item("torchflower_seeds", 1)],
+        "pitcher_crop" => vec![item(if age >= 4 { "pitcher_plant" } else { "pitcher_pod" }, 1)],
         _ => return None,
     };
 
@@ -1139,6 +1157,7 @@ pub fn planted_by(item: &str) -> Option<&'static str> {
         "melon_seeds" => "melon_stem",
         "pumpkin_seeds" => "pumpkin_stem",
         "torchflower_seeds" => "torchflower_crop",
+        "pitcher_pod" => "pitcher_crop",
         "sweet_berries" => "sweet_berry_bush",
         _ => return None,
     })
@@ -1281,6 +1300,44 @@ mod tests {
         world.set_block(0, 1, 0, state("wheat[age=7]"));
         assert!(bone_meal(&mut world, (0, 1, 0)).is_none(), "спелой мука не нужна");
         assert!(bone_meal(&mut world, (5, 0, 5)).is_none(), "земле тоже");
+    }
+
+    #[test]
+    fn ancient_crops_grow_and_both_pitcher_halves_drop_the_harvest() {
+        let mut world=world();
+        world.set_block(0,0,0,state("farmland"));
+        world.set_block(0,1,0,state("torchflower_crop"));
+        bone_meal(&mut world,(0,1,0));
+        assert_eq!(number(world.get_block(0,1,0),"age"),1);
+        bone_meal(&mut world,(0,1,0));
+        assert_eq!(name_of(world.get_block(0,1,0)),"torchflower");
+        world.set_block(0,1,0,state("pitcher_crop"));
+        for age in 1..=4 {
+            bone_meal(&mut world,(0,1,0));
+            assert_eq!(number(world.get_block(0,1,0),"age"),age);
+            if age < 3 { assert_eq!(world.get_block(0,2,0),AIR); }
+            else {
+                assert_eq!(number(world.get_block(0,2,0),"age"),age);
+                assert_eq!(value(world.get_block(0,2,0),"half"),Some("upper"));
+            }
+        }
+        for half in ["lower","upper"] {
+            let drops=harvest(&mut world,state(&format!("pitcher_crop[age=4,half={half}]")),3).unwrap();
+            assert_eq!(drops,vec![Stack::new(blocks::item_named("pitcher_plant").unwrap(),1)]);
+        }
+        assert_eq!(harvest(&mut world,state("pitcher_crop[age=2]"),0),Some(vec![Stack::new(blocks::item_named("pitcher_pod").unwrap(),1)]));
+        assert!(bone_meal(&mut world,(0,2,0)).is_none());
+    }
+
+    #[test]
+    fn pitcher_waits_for_space_above_before_growing_tall() {
+        let mut world=world();
+        world.set_block(0,0,0,state("farmland"));
+        world.set_block(0,1,0,state("pitcher_crop[age=2]"));
+        world.set_block(0,2,0,state("stone"));
+        bone_meal(&mut world,(0,1,0));
+        assert_eq!(number(world.get_block(0,1,0),"age"),2);
+        assert_eq!(world.get_block(0,2,0),state("stone"));
     }
 
     #[test]

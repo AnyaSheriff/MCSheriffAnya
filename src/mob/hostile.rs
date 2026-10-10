@@ -154,6 +154,11 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Mule => "entity.minecraft.mule",
         Kind::SkeletonHorse => "entity.minecraft.skeleton_horse",
         Kind::ZombieHorse => "entity.minecraft.zombie_horse",
+        Kind::Armadillo => "entity.minecraft.armadillo",
+        Kind::Sniffer => "entity.minecraft.sniffer",
+        Kind::Parrot => "entity.minecraft.parrot",
+        Kind::Bat => "entity.minecraft.bat",
+        Kind::Allay => "entity.minecraft.allay",
 
     }
 }
@@ -486,7 +491,7 @@ fn prey(mob: &Mob, ctx: &Ctx) -> Vec<Watcher> {
     ctx.mates
         .iter()
         .filter(|mate| (mate.kind == Kind::Villager || (johnny && !crate::raid::joins(mate.kind) && mate.kind != Kind::Vex && !mate.kind.object())) && dist2(mob, mate.x, mate.y, mate.z) <= range * range)
-        .map(|mate| Watcher { id: mate.id, x: mate.x, y: mate.y, z: mate.z, eye: if mate.baby { 0.81 } else { 1.62 }, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false })
+        .map(|mate| Watcher { id: mate.id, x: mate.x, y: mate.y, z: mate.z, eye: if mate.baby { 0.81 } else { 1.62 }, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false })
         .collect()
 }
 

@@ -101,7 +101,9 @@ pub fn survives(world: &World, state: i32, x: i32, y: i32, z: i32) -> bool {
     }
 
     // Нижняя половина без верхней тоже не живёт: сломали верх — ломается и низ.
-    if half(name, state) == Some("lower") && blocks::block_at_state(world.get_block(x, y + 1, z)) != Some(name) {
+    if half(name, state) == Some("lower")
+        && !(name == "pitcher_crop" && blocks::orientation_of(state).and_then(|o| o.value(state,"age")).is_some_and(|a| matches!(a,"0"|"1"|"2")))
+        && blocks::block_at_state(world.get_block(x, y + 1, z)) != Some(name) {
         return false;
     }
 
@@ -220,6 +222,11 @@ fn lost_its_pair(world: &World, state: i32, x: i32, y: i32, z: i32) -> bool {
         return false;
     };
 
+    // Молодой кувшинчик ещё не имеет пары, но при потере грядки даёт семя.
+    if name == "pitcher_crop" && blocks::orientation_of(state).and_then(|o| o.value(state,"age")).is_some_and(|age| matches!(age,"0"|"1"|"2")) {
+        return false;
+    }
+
     let other_y = match half(name, state) {
         Some("upper") => y - 1,
         Some("lower") => y + 1,
@@ -272,6 +279,17 @@ mod tests {
     }
 
     /// Цветок и трава ставятся на землю, но не на камень и не в воздух.
+    #[test]
+    fn young_pitcher_drops_pod_when_farmland_is_removed() {
+        let mut world=World::in_memory();
+        world.set_block(0,0,0,state("farmland"));
+        world.set_block(0,1,0,state("pitcher_crop[age=1]"));
+        assert!(survives(&world,world.get_block(0,1,0),0,1,0));
+        world.set_block(0,0,0,0);
+        check(&mut world,0,1,0,false);
+        assert_eq!(world.take_destroyed().len(),1);
+    }
+
     #[test]
     fn flowers_need_soil() {
         let world = world();

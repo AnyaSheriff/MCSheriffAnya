@@ -333,7 +333,7 @@ mod tests {
     }
 
     fn watcher(id: i32, at: (f64, f64, f64)) -> ai::Watcher {
-        ai::Watcher { id, x: at.0, y: at.1, z: at.2, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false }
+        ai::Watcher { id, x: at.0, y: at.1, z: at.2, eye: 1.62, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false }
     }
 
     /// Луч бьёт на 80-м такте после захвата (свойство 17 видно на такт позже:

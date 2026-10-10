@@ -80,7 +80,7 @@ pub fn attach(mob: &mut Mob, holder: Holder) {
 pub fn leashable(kind: Kind) -> bool {
     if super::horse::equine(kind) { return true; }
     !kind.hostile() && !kind.object() && !super::water::fish(kind)
-        && !matches!(kind, Kind::EnderDragon | Kind::Villager | Kind::WanderingTrader | Kind::ZombieVillager | Kind::Turtle | Kind::Tadpole)
+        && !matches!(kind, Kind::EnderDragon | Kind::Villager | Kind::WanderingTrader | Kind::ZombieVillager | Kind::Turtle | Kind::Tadpole | Kind::Bat)
 }
 
 /// Что сделал поводок за такт.

@@ -296,6 +296,7 @@ pub enum Order {
 
 /// Список игроков на сервере и журнал изменений.
 pub struct Players {
+    shoulders: HashMap<[u8;16],[i32;2]>,
     members: Vec<Member>,
     changes: Journal<Change>,
 
@@ -323,8 +324,11 @@ pub struct Players {
 }
 
 impl Players {
+    pub fn set_shoulders(&mut self, uuid: [u8;16], variants: [i32;2]) { self.shoulders.insert(uuid,variants); }
+    pub fn shoulders(&self, uuid: &[u8;16]) -> [i32;2] { self.shoulders.get(uuid).copied().unwrap_or([-1,-1]) }
     pub fn new() -> Self {
         Self {
+            shoulders: HashMap::new(),
             members: Vec::new(),
             changes: Journal::new(),
             orders: HashMap::new(),
@@ -392,6 +396,7 @@ impl Players {
         self.members.retain(|member| &member.uuid != uuid);
         self.orders.remove(uuid);
         self.gear.remove(uuid);
+        self.shoulders.remove(uuid);
         self.rest.remove(uuid);
         self.swung.remove(uuid);
         self.wakes.remove(uuid);

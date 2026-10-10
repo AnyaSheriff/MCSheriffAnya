@@ -3327,6 +3327,8 @@ impl BedrockWorld {
     /// то, что держали курсором, пропало бы.
     fn player_data(&self) -> crate::playerdata::PlayerData {
         crate::playerdata::PlayerData {
+            // [Bedrock: потом] Попугаи на плечах пока только сохраняются.
+            shoulders: self.saved.as_ref().map(|s| s.shoulders.clone()).unwrap_or([None,None]),
             x: self.position.0 as f64,
             y: (self.position.1 - EYES) as f64,
             z: self.position.2 as f64,

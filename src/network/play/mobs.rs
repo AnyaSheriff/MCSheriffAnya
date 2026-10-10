@@ -148,6 +148,8 @@ pub(super) struct ShownMob {
     /// Снаряжение, как показано (разбойник: заряд и износ арбалета).
     gear: u32,
     mouth: Option<Stack>,
+    /// Предмет в руке тихони, как показан (mob/small.rs).
+    held: Option<Stack>,
 }
 
 fn float(value: f32) -> Vec<u8> {
@@ -330,7 +332,26 @@ fn properties(mob: &Mob) -> Vec<Property> {
                 }
             }
         }
-
+        // minecraft-data 26.1, metadataKeys и entityMetadataEntry. [проверить]
+        Kind::Armadillo => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((18, 36, encode_varint(i32::from(mob.small.roll))));
+        }
+        Kind::Sniffer => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((18, 35, encode_varint(i32::from(mob.small.sniff))));
+            out.push((19, TYPE_INT, encode_varint(mob.small.drop_seed_at)));
+        }
+        Kind::Bat => out.push((16, TYPE_BYTE, vec![u8::from(mob.small.resting)])),
+        Kind::Parrot => {
+            out.push((18, TYPE_BYTE, vec![mob.tame.flags()]));
+            out.push((19, TYPE_OPT_UUID, owner_uuid(mob.tame.owner)));
+            out.push((20, TYPE_INT, encode_varint(i32::from(mob.small.variant))));
+        }
+        Kind::Allay => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.small.dancing)]));
+            out.push((17, TYPE_BOOL, vec![u8::from(mob.small.duplicate == 0)]));
+        }
         Kind::Cow => {
             out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
             out.push((18, TYPE_COW_VARIANT, encode_varint(0)));
@@ -569,6 +590,8 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (18 | 19, kind) if crate::mob::horse::equine(kind) => value.iter().all(|byte| *byte == 0),
         (18, Kind::Rabbit | Kind::Fox | Kind::Bee) | (19..=21, Kind::Fox) => value.iter().all(|byte| *byte == 0),
         (19, Kind::Bee) => value.as_slice() == encode_varlong(-1).as_slice(),
+        (17, Kind::Allay) => value.as_slice() == [1],
+        (16..=20, Kind::Armadillo | Kind::Sniffer | Kind::Parrot | Kind::Bat | Kind::Allay) => value.as_slice() == [0],
         // Волк и кошка: ошейник красный, вариант — бледный и чёрная, злости нет
         // (чёрный ящик, probe-cats).
         (18..=20, Kind::Wolf) | (18 | 19 | 21 | 22, Kind::Cat) => value.iter().all(|byte| *byte == 0),
@@ -717,6 +740,7 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         boss,
         gear: mob.illager.gear,
         mouth: mob.wild.mouth,
+        held: mob.small.held,
     })
 }
 
@@ -839,7 +863,7 @@ fn attribute_speed(kind: Kind) -> f64 {
     if kind == Kind::WanderingTrader { return 0.7; }
     // Пчела: скорость шага 0,3, летит она по летучей скорости 0,6 (чёрный ящик, bee-sting).
     if kind == Kind::Bee { return 0.3; }
-    if matches!(kind, Kind::Shulker | Kind::Ghast | Kind::Phantom) { 0.7 } else { kind.speed() }
+    if matches!(kind, Kind::Shulker | Kind::Ghast | Kind::Phantom | Kind::Bat) { 0.7 } else { kind.speed() }
 }
 
 /// Атрибуты: сообщается одна скорость шага (у оригинала так же: клиенту
@@ -965,6 +989,7 @@ fn modded(mob: &Mob) -> bool {
 /// появились раньше.
 pub(super) async fn send_all_mobs(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     player.seen_mobs.clear();
+    player.shoulder_shown.clear();
     player.seen_bow_arrows.clear();
     player.seen_thrown.clear();
     send_mob_ticks(stream, shared, player).await
@@ -1066,6 +1091,7 @@ async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool)
         return send_equipment(stream, mob.entity_id, &gear).await;
     }
     let mut slots: Vec<(u8, Stack)> = Vec::new();
+    if mob.kind == Kind::Allay && let Some(held) = mob.small.held { slots.push((EQUIPMENT_MAIN_HAND, held)); }
 
     if mob.kind.skeleton() && mob.h.bow && let Some(bow) = blocks::item_named("bow") {
         slots.push((EQUIPMENT_MAIN_HAND, Stack::new(bow, 1)));
@@ -1448,10 +1474,11 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         let land_gear = (crate::mob::land::rideable(mob.kind) || matches!(mob.kind, Kind::WanderingTrader | Kind::Panda)) && shown.attr_changes != mob.attr_changes;
         let horse_gear = crate::mob::horse::equine(mob.kind) && mob.horse.gear_version != shown.gear_version;
 
-        if shown.first || mob.illager.gear != shown.gear || land_gear || horse_gear {
+        if shown.first || mob.illager.gear != shown.gear || land_gear || horse_gear || shown.held != mob.small.held {
             send_mob_equipment(stream, mob, shown.attr_changes != mob.attr_changes).await?;
             shown.gear = mob.illager.gear;
             shown.gear_version = mob.horse.gear_version;
+            shown.held = mob.small.held;
         }
 
         if mob.kind == Kind::Fox && mob.wild.mouth != shown.mouth {
@@ -1535,6 +1562,7 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         boss: false,
         gear: 0,
         mouth: None,
+        held: None,
     })
 }
 
@@ -1630,6 +1658,28 @@ pub(super) fn water_test_properties(mob: &Mob) -> Vec<Property> { properties(mob
 #[cfg(test)]
 pub(super) fn water_test_spawn_properties(mob: &Mob) -> Vec<Property> {
     properties(mob).into_iter().filter(|entry| !is_default(entry,mob.kind)).collect()
+}
+
+#[cfg(test)]
+mod small_tests {
+    use super::*;
+    #[test]
+    fn small_mob_metadata_uses_the_26_1_layout() {
+        let mut mob=Mob::new(1,Kind::Armadillo,(0.0,1.0,0.0)); mob.small.roll=2;
+        assert!(properties(&mob).contains(&(18,36,encode_varint(2))));
+        mob.kind=Kind::Sniffer; mob.small.sniff=5; mob.small.drop_seed_at=120;
+        assert!(properties(&mob).contains(&(18,35,encode_varint(5))));
+        assert!(properties(&mob).contains(&(19,TYPE_INT,encode_varint(120))));
+        mob.kind=Kind::Bat; mob.small.resting=true;
+        assert!(properties(&mob).contains(&(16,TYPE_BYTE,vec![1])));
+        mob.kind=Kind::Parrot; mob.small.variant=4; mob.tame.owner=Some([1;16]); mob.tame.sitting=true;
+        assert!(properties(&mob).contains(&(18,TYPE_BYTE,vec![5])));
+        assert!(properties(&mob).contains(&(20,TYPE_INT,encode_varint(4))));
+        mob.kind=Kind::Allay; mob.small.dancing=true; mob.small.duplicate=1;
+        assert!(properties(&mob).contains(&(16,TYPE_BOOL,vec![1])));
+        assert!(properties(&mob).contains(&(17,TYPE_BOOL,vec![0])));
+        assert!(!is_default(&(17,TYPE_BOOL,vec![0]),Kind::Allay));
+    }
 }
 
 #[cfg(test)]

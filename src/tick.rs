@@ -762,6 +762,7 @@ fn occupants(shared: &Shared, dimension: Dimension) -> (Vec<redstone::Occupant>,
             .expect("предметы захвачены другим потоком")
             .mobs()
             .iter()
+            .filter(|mob| mob.kind != crate::mob::Kind::Bat)
             .map(|mob| {
                 let (width, height) = mob.size();
 
@@ -968,6 +969,7 @@ fn watchers(shared: &Shared, dimension: Dimension) -> Vec<crate::mob::ai::Watche
     /// Режим наблюдателя.
     const SPECTATOR: i32 = 3;
 
+    let riders: Vec<i32> = shared.riding.lock().expect("седоки").vehicles().flat_map(|(_,ids)| ids.iter().copied()).collect();
     let players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
     players
@@ -987,6 +989,8 @@ fn watchers(shared: &Shared, dimension: Dimension) -> Vec<crate::mob::ai::Watche
             // Тыква на голове (вики, Enderman: «carved pumpkin»).
             pumpkin: players.gear(&member.uuid).worn[1].and_then(|stack| blocks::item_name(stack.item)) == Some("carved_pumpkin"),
             // Золотая броня усмиряет пиглинов (вики, Piglin); worn[1..] — шлем, нагрудник, штаны, ботинки.
+            sprinting: players.gear(&member.uuid).sprinting,
+            riding: riders.contains(&member.entity_id),
             gold_armor: players.gear(&member.uuid).worn[1..].iter().flatten().any(|stack| matches!(blocks::item_name(stack.item), Some("golden_helmet" | "golden_chestplate" | "golden_leggings" | "golden_boots"))),
         })
         .collect()
@@ -1460,6 +1464,12 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     // Кошки, что сидят: сундук под ними не открывается (mob/tame.rs).
     world.sitting_cats = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Cat && mob.tame.sitting && !mob.is_dead()).map(|mob| (mob.x, mob.y, mob.z)).collect();
+
+    if dimension == Dimension::Overworld && spawning && ticks.is_multiple_of(20) {
+        crate::mob::small_world::spawn_bats(&mut items,world,&watchers,shared,rng);
+    }
+    crate::mob::tame::bind_owners(items.mobs_mut(), &owners);
+    crate::mob::small_world::step(&mut items, world, &watchers, shared, dimension, rng);
 
     if items.mobs().is_empty() {
         // Слежению есть о чём рассказать, пока у клиентов остались показанные

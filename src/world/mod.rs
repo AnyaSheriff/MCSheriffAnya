@@ -1159,6 +1159,9 @@ const CHUNK_VERSION_WIDE: u8 = 1;
 pub struct World {
     pub fire_tick: bool,
     pub fire_difficulty: u8,
+    /// Ноты для тихонь и вылупившиеся нюхачи (mob/small_world.rs).
+    pub allay_notes: Vec<(i32, i32, i32)>,
+    pub snifflet_births: Vec<(i32, i32, i32)>,
     /// Состояние генератора случайных чисел — см. `random_unit`.
     noise: u32,
 
@@ -1475,6 +1478,8 @@ impl World {
             fire_tick: true,
             fire_difficulty: 2,
             noise: 0x9E37_79B9,
+            allay_notes: Vec::new(),
+            snifflet_births: Vec::new(),
             actor: None,
             blast_source: 0,
             blast_by_player: false,
@@ -1628,6 +1633,8 @@ impl World {
         let mut world = Self {
             fire_tick: true,
             fire_difficulty: 2,
+            allay_notes: Vec::new(),
+            snifflet_births: Vec::new(),
             noise: 0x9E37_79B9 ^ std::process::id(),
             actor: None,
             blast_source: 0,
@@ -1885,6 +1892,9 @@ impl World {
             // Соседей надо пересчитать: рядом могла стоять вода, которой
             // теперь есть куда течь, — или наоборот, её путь перекрыли.
             self.schedule_around(x, y, z);
+            if crate::blocks::block_at_state(state) == Some("sniffer_egg") && crate::blocks::block_at_state(old) != Some("sniffer_egg") {
+                crate::mob::small_world::schedule_egg(self, (x,y,z));
+            }
 
             // А редстоун узнает об изменении при ближайшем разборе.
             self.changed.push(((x, y, z), old));
