@@ -4,8 +4,7 @@
 // Дерево составлено по таблицам вики (названия — ключами перевода
 // `advancements.<путь>.title/.description`, значок, рамка, родитель, опыт
 // награды); расклад по экрану (x, y) оригинал считает при загрузке, тут —
-// своё выравнивание деревом [проверить]. Рецепты (книга рецептов) в награды
-// пока не входят: книги рецептов в ядре нет.
+// своё выравнивание деревом [проверить]. Книга рецептов — recipe_book.rs.
 //
 // Файл — `world/players/advancements/<uuid>.json`, как у оригинала 26.1:
 // `{"minecraft:<путь>": {"criteria": {"<условие>": "<время>"}, "done": bool},
@@ -138,8 +137,7 @@ const FOODS: [&str; 40] = [
     "salmon", "spider_eye", "suspicious_stew", "sweet_berries", "tropical_fish",
 ];
 
-/// Биомы обычного мира, нужные «Время приключений»: 54 для 26.1.2 (в вики —
-/// 56, но sulfur_caves приходит в 26.2, dappled_forest — в 26.3) [проверить].
+/// Биомы обычного мира для «Время приключений», срез 26.1.2 [проверить].
 pub const BIOMES: [&str; 54] = [
     "minecraft:badlands", "minecraft:bamboo_jungle", "minecraft:beach", "minecraft:birch_forest", "minecraft:cherry_grove",
     "minecraft:cold_ocean", "minecraft:dark_forest", "minecraft:deep_cold_ocean", "minecraft:deep_dark", "minecraft:deep_frozen_ocean",
@@ -194,13 +192,13 @@ pub const TREE: &[Def] = &[
     Def { id: "nether/obtain_blaze_rod", title: "Into Fire", parent: Some("nether/find_fortress"), icon: "blaze_rod", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("blaze_rod") },
     Def { id: "nether/charge_respawn_anchor", title: "Not Quite \"Nine\" Lives", parent: Some("nether/obtain_crying_obsidian"), icon: "respawn_anchor", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("charged_respawn_anchor") },
     Def { id: "nether/ride_strider_in_overworld_lava", title: "Feels Like Home", parent: Some("nether/ride_strider"), icon: "warped_fungus_on_a_stick", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("ride_entity_distance") },
-    Def { id: "nether/explore_nether", title: "Hot Tourist Destinations", parent: Some("nether/ride_strider"), icon: "netherite_boots", frame: 1, hidden: false, xp: 0, criteria: Criteria::All(&["nether_wastes", "soul_sand_valley", "crimson_forest", "warped_forest", "basalt_deltas"]) },
+    Def { id: "nether/explore_nether", title: "Hot Tourist Destinations", parent: Some("nether/ride_strider"), icon: "netherite_boots", frame: 1, hidden: false, xp: 500, criteria: Criteria::All(&["nether_wastes", "soul_sand_valley", "crimson_forest", "warped_forest", "basalt_deltas"]) },
     Def { id: "nether/summon_wither", title: "Withering Heights", parent: Some("nether/get_wither_skull"), icon: "nether_star", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("summoned_entity") },
     Def { id: "nether/brew_potion", title: "Local Brewery", parent: Some("nether/obtain_blaze_rod"), icon: "potion", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("potion") },
     Def { id: "nether/create_beacon", title: "Bring Home the Beacon", parent: Some("nether/summon_wither"), icon: "beacon", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("construct_beacon") },
-    Def { id: "nether/all_potions", title: "A Furious Cocktail", parent: Some("nether/brew_potion"), icon: "milk_bucket", frame: 1, hidden: false, xp: 0, criteria: Criteria::One("all_effects") },
+    Def { id: "nether/all_potions", title: "A Furious Cocktail", parent: Some("nether/brew_potion"), icon: "milk_bucket", frame: 1, hidden: false, xp: 100, criteria: Criteria::One("all_effects") },
     Def { id: "nether/create_full_beacon", title: "Beaconator", parent: Some("nether/create_beacon"), icon: "beacon", frame: 2, hidden: false, xp: 0, criteria: Criteria::One("construct_beacon") },
-    Def { id: "nether/all_effects", title: "How Did We Get Here?", parent: Some("nether/all_potions"), icon: "bucket", frame: 1, hidden: true, xp: 0, criteria: Criteria::One("all_effects") },
+    Def { id: "nether/all_effects", title: "How Did We Get Here?", parent: Some("nether/all_potions"), icon: "bucket", frame: 1, hidden: true, xp: 1000, criteria: Criteria::One("all_effects") },
     Def { id: "end/root", title: "The End", parent: None, icon: "end_stone", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("entered_end") },
     Def { id: "end/kill_dragon", title: "Free the End", parent: Some("end/root"), icon: "dragon_head", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("killed_dragon") },
     Def { id: "end/dragon_egg", title: "The Next Generation", parent: Some("end/kill_dragon"), icon: "dragon_egg", frame: 2, hidden: false, xp: 0, criteria: Criteria::One("dragon_egg") },
@@ -210,7 +208,7 @@ pub const TREE: &[Def] = &[
     Def { id: "end/find_end_city", title: "The City at the End of the Game", parent: Some("end/enter_end_gateway"), icon: "purpur_block", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("in_city") },
     Def { id: "end/elytra", title: "Sky's the Limit", parent: Some("end/find_end_city"), icon: "elytra", frame: 2, hidden: false, xp: 0, criteria: Criteria::One("elytra") },
     Def { id: "end/levitate", title: "Great View From Up Here", parent: Some("end/find_end_city"), icon: "shulker_shell", frame: 1, hidden: false, xp: 50, criteria: Criteria::One("levitated") },
-    Def { id: "adventure/root", title: "Adventure", parent: None, icon: "map", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("killed_something") },
+    Def { id: "adventure/root", title: "Adventure", parent: None, icon: "map", frame: 0, hidden: false, xp: 0, criteria: Criteria::Any(&["killed_something", "killed_by_something"]) },
     Def { id: "adventure/heart_transplanter", title: "Heart Transplanter", parent: Some("adventure/root"), icon: "creaking_heart", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("place_creaking_heart") },
     Def { id: "adventure/voluntary_exile", title: "Voluntary Exile", parent: Some("adventure/root"), icon: "white_banner", frame: 0, hidden: true, xp: 0, criteria: Criteria::One("voluntary_exile") },
     Def { id: "adventure/use_lodestone", title: "Country Lode, Take Me Home", parent: Some("adventure/root"), icon: "lodestone", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("use_lodestone") },
@@ -231,7 +229,7 @@ pub const TREE: &[Def] = &[
     Def { id: "adventure/throw_trident", title: "A Throwaway Joke", parent: Some("adventure/kill_a_mob"), icon: "trident", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("shot_trident") },
     Def { id: "adventure/kill_mob_near_sculk_catalyst", title: "It Spreads", parent: Some("adventure/kill_a_mob"), icon: "sculk_catalyst", frame: 1, hidden: false, xp: 0, criteria: Criteria::One("kill_mob_near_sculk_catalyst") },
     Def { id: "adventure/shoot_arrow", title: "Take Aim", parent: Some("adventure/kill_a_mob"), icon: "bow", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("shot_arrow") },
-    Def { id: "adventure/kill_all_mobs", title: "Monsters Hunted", parent: Some("adventure/kill_a_mob"), icon: "diamond_sword", frame: 1, hidden: false, xp: 0, criteria: Criteria::All(&MOBS) },
+    Def { id: "adventure/kill_all_mobs", title: "Monsters Hunted", parent: Some("adventure/kill_a_mob"), icon: "diamond_sword", frame: 1, hidden: false, xp: 100, criteria: Criteria::All(&MOBS) },
     Def { id: "adventure/totem_of_undying", title: "Postmortal", parent: Some("adventure/kill_a_mob"), icon: "totem_of_undying", frame: 2, hidden: false, xp: 0, criteria: Criteria::One("used_totem") },
     Def { id: "adventure/spear_many_mobs", title: "Mob Kabob", parent: Some("adventure/kill_a_mob"), icon: "iron_spear", frame: 2, hidden: false, xp: 0, criteria: Criteria::One("spear_many_mobs") },
     Def { id: "adventure/summon_iron_golem", title: "Hired Help", parent: Some("adventure/trade"), icon: "carved_pumpkin", frame: 2, hidden: false, xp: 0, criteria: Criteria::One("summoned_golem") },
@@ -241,7 +239,7 @@ pub const TREE: &[Def] = &[
     Def { id: "adventure/whos_the_pillager_now", title: "Who's the Pillager Now?", parent: Some("adventure/ol_betsy"), icon: "crossbow", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("kill_pillager") },
     Def { id: "adventure/arbalistic", title: "Arbalistic", parent: Some("adventure/ol_betsy"), icon: "crossbow", frame: 1, hidden: true, xp: 85, criteria: Criteria::One("arbalistic") },
     Def { id: "adventure/craft_decorated_pot_using_only_sherds", title: "Careful Restoration", parent: Some("adventure/salvage_sherd"), icon: "decorated_pot", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("pot_crafted_using_only_sherds") },
-    Def { id: "adventure/adventuring_time", title: "Adventuring Time", parent: Some("adventure/sleep_in_bed"), icon: "diamond_boots", frame: 1, hidden: false, xp: 0, criteria: Criteria::All(&BIOMES) },
+    Def { id: "adventure/adventuring_time", title: "Adventuring Time", parent: Some("adventure/sleep_in_bed"), icon: "diamond_boots", frame: 1, hidden: false, xp: 500, criteria: Criteria::All(&BIOMES) },
     Def { id: "adventure/play_jukebox_in_meadows", title: "Sound of Music", parent: Some("adventure/sleep_in_bed"), icon: "jukebox", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("play_jukebox_in_meadows") },
     Def { id: "adventure/walk_on_powder_snow_with_leather_boots", title: "Light as a Rabbit", parent: Some("adventure/sleep_in_bed"), icon: "leather_boots", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("walk_on_powder_snow_with_leather_boots") },
     Def { id: "adventure/spyglass_at_dragon", title: "Is It a Plane?", parent: Some("adventure/spyglass_at_ghast"), icon: "spyglass", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("spyglass_at_dragon") },
@@ -271,13 +269,13 @@ pub const TREE: &[Def] = &[
     Def { id: "husbandry/obtain_sniffer_egg", title: "Smells Interesting", parent: Some("husbandry/root"), icon: "sniffer_egg", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("sniffer_egg") },
     Def { id: "husbandry/plant_seed", title: "A Seedy Place", parent: Some("husbandry/root"), icon: "wheat", frame: 0, hidden: false, xp: 0, criteria: Criteria::Any(&["wheat", "pumpkin_stem", "melon_stem", "beetroots", "nether_wart", "torchflower", "pitcher_pod"]) },
     Def { id: "husbandry/wax_on", title: "Wax On", parent: Some("husbandry/safely_harvest_honey"), icon: "honeycomb", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("wax_on") },
-    Def { id: "husbandry/bred_all_animals", title: "Two by Two", parent: Some("husbandry/breed_an_animal"), icon: "golden_carrot", frame: 1, hidden: false, xp: 0, criteria: Criteria::All(&ANIMALS) },
+    Def { id: "husbandry/bred_all_animals", title: "Two by Two", parent: Some("husbandry/breed_an_animal"), icon: "golden_carrot", frame: 1, hidden: false, xp: 100, criteria: Criteria::All(&ANIMALS) },
     Def { id: "husbandry/allay_deliver_cake_to_note_block", title: "Birthday Song", parent: Some("husbandry/allay_deliver_item_to_player"), icon: "note_block", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("allay_deliver_cake_to_note_block") },
-    Def { id: "husbandry/complete_catalogue", title: "A Complete Catalogue", parent: Some("husbandry/tame_an_animal"), icon: "cod", frame: 1, hidden: false, xp: 0, criteria: Criteria::All(&CATS) },
+    Def { id: "husbandry/complete_catalogue", title: "A Complete Catalogue", parent: Some("husbandry/tame_an_animal"), icon: "cod", frame: 1, hidden: false, xp: 50, criteria: Criteria::All(&CATS) },
     Def { id: "husbandry/tactical_fishing", title: "Tactical Fishing", parent: Some("husbandry/fishy_business"), icon: "pufferfish_bucket", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("pufferfish_bucket") },
     Def { id: "husbandry/leash_all_frog_variants", title: "When the Squad Hops into Town", parent: Some("husbandry/tadpole_in_a_bucket"), icon: "lead", frame: 0, hidden: false, xp: 0, criteria: Criteria::All(&["temperate", "warm", "cold"]) },
     Def { id: "husbandry/feed_snifflet", title: "Little Sniffs", parent: Some("husbandry/obtain_sniffer_egg"), icon: "torchflower_seeds", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("feed_snifflet") },
-    Def { id: "husbandry/balanced_diet", title: "A Balanced Diet", parent: Some("husbandry/plant_seed"), icon: "apple", frame: 1, hidden: false, xp: 0, criteria: Criteria::All(&FOODS) },
+    Def { id: "husbandry/balanced_diet", title: "A Balanced Diet", parent: Some("husbandry/plant_seed"), icon: "apple", frame: 1, hidden: false, xp: 100, criteria: Criteria::All(&FOODS) },
     Def { id: "husbandry/obtain_netherite_hoe", title: "Serious Dedication", parent: Some("husbandry/plant_seed"), icon: "netherite_hoe", frame: 1, hidden: false, xp: 100, criteria: Criteria::One("netherite_hoe") },
     Def { id: "husbandry/wax_off", title: "Wax Off", parent: Some("husbandry/wax_on"), icon: "stone_axe", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("wax_off") },
     Def { id: "husbandry/axolotl_in_a_bucket", title: "The Cutest Predator", parent: Some("husbandry/tactical_fishing"), icon: "axolotl_bucket", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("axolotl_in_a_bucket") },
@@ -285,7 +283,7 @@ pub const TREE: &[Def] = &[
     Def { id: "husbandry/plant_any_sniffer_seed", title: "Planting the Past", parent: Some("husbandry/feed_snifflet"), icon: "pitcher_plant", frame: 0, hidden: false, xp: 0, criteria: Criteria::Any(&["torchflower", "pitcher_pod"]) },
     Def { id: "husbandry/kill_axolotl_target", title: "The Healing Power of Friendship!", parent: Some("husbandry/axolotl_in_a_bucket"), icon: "axolotl_bucket", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("killed_axolotl_target") },
     Def { id: "husbandry/repair_wolf_armor", title: "Good as New", parent: Some("husbandry/tame_an_animal"), icon: "wolf_armor", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("repair_wolf_armor") },
-    Def { id: "husbandry/whole_pack", title: "The Whole Pack", parent: Some("husbandry/tame_an_animal"), icon: "bone", frame: 1, hidden: false, xp: 0, criteria: Criteria::All(&WOLVES) },
+    Def { id: "husbandry/whole_pack", title: "The Whole Pack", parent: Some("husbandry/tame_an_animal"), icon: "bone", frame: 1, hidden: false, xp: 50, criteria: Criteria::All(&WOLVES) },
     Def { id: "husbandry/remove_wolf_armor", title: "Shear Brilliance", parent: Some("husbandry/tame_an_animal"), icon: "shears", frame: 0, hidden: false, xp: 0, criteria: Criteria::One("remove_wolf_armor") },
 ];
 
@@ -778,7 +776,6 @@ pub const HAS_ITEM: &[(&str, &str, &[&str])] = &[
     ("nether/netherite_armor", "netherite_leggings", &["netherite_leggings"]),
     ("nether/netherite_armor", "netherite_boots", &["netherite_boots"]),
     ("end/dragon_egg", "dragon_egg", &["dragon_egg"]),
-    ("end/dragon_breath", "dragon_breath", &["dragon_breath"]),
     ("end/elytra", "elytra", &["elytra"]),
     ("husbandry/obtain_netherite_hoe", "netherite_hoe", &["netherite_hoe"]),
     ("husbandry/obtain_sniffer_egg", "sniffer_egg", &["sniffer_egg"]),

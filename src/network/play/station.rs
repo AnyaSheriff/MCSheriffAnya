@@ -307,6 +307,7 @@ fn generic_click(shared: &Shared, player: &mut PlayerState, kind: Station, slot:
     }
 
     if let Some(stack) = click.thrown {
+        player.progress.dropped(stack.item, stack.count);
         throw_out(shared, player, stack);
     }
 }
@@ -438,6 +439,10 @@ fn take_result(shared: &Shared, player: &mut PlayerState, mode: i32, reaction: &
             shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_level_event(pos.0, pos.1, pos.2, 1042, 0);
         }
         Station::Smithing => {
+            player.progress.crafted(result.item, result.count);
+            if let Some(template) = inputs[0].and_then(|stack| blocks::item_name(stack.item)) {
+                player.progress.trimmed(template);
+            }
             // Уходит по одному из каждой ячейки; звук — событием мира 1044
             // (чёрный ящик smithing-upgrade).
             for place in 0..3 {

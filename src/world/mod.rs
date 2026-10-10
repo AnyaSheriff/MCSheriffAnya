@@ -174,6 +174,8 @@ pub struct WorldSound {
 /// обгоняло бы изменения более раннего.
 #[derive(Clone)]
 pub enum WorldEvent {
+    /// Достижение для игроков в заданной рамке; [Bedrock: потом].
+    ProgressNear { id: &'static str, at: (f64, f64, f64), radius: (f64, f64, f64) },
     /// Полоса босса дракона: доля здоровья; None — убрать.
     BossBar(Option<f32>),
     /// Полоса босса иссушителя `entity_id`: новая доля (mob/wither.rs) — тем,
@@ -2064,6 +2066,10 @@ impl World {
     }
 
     /// Полоса босса дракона для всех в этом мире.
+    pub fn note_progress_near(&mut self, id: &'static str, at: (f64, f64, f64), radius: (f64, f64, f64)) {
+        self.events.push(WorldEvent::ProgressNear { id, at, radius });
+    }
+
     pub fn note_boss_bar(&mut self, share: Option<f32>) {
         self.events.push(WorldEvent::BossBar(share));
     }
@@ -3587,6 +3593,17 @@ impl World {
         match &*self.generator {
             Generator::Nether(nether) => nether.in_fortress(x, y, z),
             _ => false,
+        }
+    }
+
+    /// Вики, Advancement: «Enter a ...» — внутри рамки строения, а не рядом
+    /// с похожими блоками. Рамки нашей генерации; [проверить] границы оригинала.
+    pub fn progress_structure(&self, x: i32, y: i32, z: i32) -> Option<&'static str> {
+        match &*self.generator {
+            Generator::Nether(nether) => nether.progress_structure(x, y, z),
+            Generator::Normal(terrain) if stronghold::contains(terrain, x, y, z) => Some("story/follow_ender_eye"),
+            Generator::End(end) if end.in_city(x, y, z) => Some("end/find_end_city"),
+            _ => None,
         }
     }
 
@@ -7514,4 +7531,10 @@ mod speed {
         println!("  под морем:  1-10 воздух 0,0001 вода 0,027; 11-30 — 0,014 / 0,040; 31-60 — 0,044 / 0,050; 61+ — 0,054 / 0,002");
         println!("  под сушей:  1-10 воздух 0,023 вода 0,007; 11-30 — 0,005 / 0,008; 31-60 — 0,069 / 0,010; 61+ — 0,093 / 0,002");
     }
+}
+
+/// Точка в общей рамке непустого набора частей строения.
+fn in_structure_bounds(bounds: impl Iterator<Item = [i32; 6]>, at: (i32, i32, i32)) -> bool {
+    let bounds = bounds.reduce(|a, b| [a[0].min(b[0]), a[1].min(b[1]), a[2].min(b[2]), a[3].max(b[3]), a[4].max(b[4]), a[5].max(b[5])]);
+    bounds.is_some_and(|b| b[0] <= at.0 && at.0 <= b[3] && b[1] <= at.1 && at.1 <= b[4] && b[2] <= at.2 && at.2 <= b[5])
 }

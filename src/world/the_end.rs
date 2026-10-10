@@ -623,6 +623,12 @@ impl End {
         out
     }
 
+    pub fn in_city(&self, x: i32, y: i32, z: i32) -> bool {
+        end_city::regions_near(x.div_euclid(16), z.div_euclid(16)).into_iter()
+            .filter_map(|(rx, rz)| self.city_at(rx, rz))
+            .any(|(cx, cz, height)| super::in_structure_bounds(end_city::plan(self.seed, cx, cz, height).iter().map(|p| p.bounds), (x, y, z)))
+    }
+
     /// Энд-города, задевающие чанк.
     fn cities(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
         let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);

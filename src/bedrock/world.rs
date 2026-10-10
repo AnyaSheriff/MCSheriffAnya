@@ -936,6 +936,7 @@ impl BedrockWorld {
         for order in orders {
             match order {
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
+                crate::players::Order::MagicHit { amount, .. } => self.health.hurt(amount, crate::survival::Source::Magic),
                 crate::players::Order::Respawn => {}
                 // Сон у Bedrock пока не ведётся [проверить].
                 crate::players::Order::WakeUp => {}
@@ -944,7 +945,7 @@ impl BedrockWorld {
                 // Опыт у Bedrock пока не считается [проверить].
                 crate::players::Order::Experience { .. } | crate::players::Order::XpTaken { .. } => {}
                 // Статистика и достижения Bedrock пока не ведутся [Bedrock: потом].
-                crate::players::Order::KilledPlayer | crate::players::Order::Advancement { .. } => {}
+                crate::players::Order::KilledPlayer | crate::players::Order::Progress(_) | crate::players::Order::Advancement { .. } => {}
                 // Пакеты и правки команд мира — пока только у Java [проверить].
                 crate::players::Order::Packet(_) | crate::players::Order::Attribute(_) | crate::players::Order::Enchant { .. } | crate::players::Order::Spectate { .. } => {}
                 // Эффекты голода и насыщения считаются, значка у Bedrock пока нет [проверить].

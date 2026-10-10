@@ -28,6 +28,7 @@ use crate::world::{AIR, World};
 
 pub mod bookshelf;
 mod components;
+pub use components::{target_hit, target_power};
 pub mod crafter;
 mod jukebox;
 pub mod lectern;
@@ -4955,6 +4956,33 @@ fn is_wooden(name: &str) -> bool {
 
 fn yes_no(value: bool) -> &'static str {
     if value { "true" } else { "false" }
+}
+
+/// Вики, Advancement: «Sneak within 8 blocks from a sculk sensor».
+pub fn near_sculk_sensor(world: &World, at: (f64, f64, f64)) -> bool {
+    world.redstone.sensors.keys().any(|pos| {
+        (at.0 - f64::from(pos.0) - 0.5).powi(2) + (at.1 - f64::from(pos.1) - 0.5).powi(2) + (at.2 - f64::from(pos.2) - 0.5).powi(2) <= 64.0
+            && sculk::is_sensor_state(world.get_block(pos.0, pos.1, pos.2))
+    })
+}
+
+/// Вики, Advancement: сравнитель должен смотреть от резной книжной полки.
+pub fn reads_bookshelf(world: &World, placed: Pos) -> bool {
+    std::iter::once(placed).chain([Dir::North, Dir::South, Dir::East, Dir::West].map(|dir| step(placed, dir))).any(|pos| {
+        let block = Block::at(world, pos);
+        block.kind == Kind::Comparator && block.facing().is_some_and(|dir| Block::at(world, step(pos, dir)).name == "chiseled_bookshelf")
+    })
+}
+
+/// Попадание любого снаряда в мишень (вики, Target: «projectile»).
+/// Координаты попадания — мировые; грань исключаем из расстояния до центра.
+pub fn projectile_target(world: &mut World, pos: (i32, i32, i32), at: (f64, f64, f64), arrow: bool) -> Option<u8> {
+    if blocks::block_at_state(world.get_block(pos.0, pos.1, pos.2)) != Some("target") { return None; }
+    let mut offsets = [(at.0 - pos.0 as f64 - 0.5).abs(), (at.1 - pos.1 as f64 - 0.5).abs(), (at.2 - pos.2 as f64 - 0.5).abs()];
+    offsets.sort_by(f64::total_cmp);
+    let power = target_power(offsets[0], offsets[1]);
+    target_hit(world, pos, power, arrow);
+    Some(power)
 }
 
 #[cfg(test)]

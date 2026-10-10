@@ -76,6 +76,7 @@ mod signs;
 mod cauldron;
 mod vehicle;
 mod glide;
+mod progression;
 mod tame;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
@@ -723,6 +724,7 @@ pub async fn play_session(
         // есть, обрыв случился уже там, и из списка надо убрать самим —
         // вызывающий уберёт только вошедшего.
         if entered.is_err() && player.entity_id != 0 {
+            player.progress.custom("leave_game", 1);
             player.save(&shared.playerdata);
             player_left(shared, &player.name, &player.uuid);
         }
@@ -753,6 +755,7 @@ pub async fn play_session(
 
     // При выходе записываем положение в любом случае — в том числе когда
     // соединение оборвалось ошибкой. Иначе последние метры пути пропали бы.
+    player.progress.custom("leave_game", 1);
     player.save(&shared.playerdata);
     log_debug!(
         "Play: положение игрока {} записано при выходе: {:.2} {:.2} {:.2}",
@@ -1462,7 +1465,7 @@ fn throw_out(shared: &Shared, player: &PlayerState, stack: Stack) {
         look_z * items::THROW_SPEED,
     );
 
-    drop_into_world(shared, player.dimension, stack, from, velocity, items::THROWN_DELAY);
+    shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").drop_from_player(shared.next_entity_id(), stack, from, velocity, player.uuid);
 
     log_debug!(
         "Play: {} выбросил предмет {} ({} шт.)",
@@ -4257,6 +4260,11 @@ async fn send_pending_world_events(
             WorldEvent::Weather { reason, value } => send_game_event(stream, *reason, *value).await?,
             WorldEvent::Struck { entity_id } if *entity_id == player.entity_id => vitals::struck(stream, shared, player).await?,
             WorldEvent::Struck { .. } => {}
+            WorldEvent::ProgressNear { id, at, radius } => {
+                if (player.x - at.0).abs() <= radius.0 && (player.y - at.1).abs() <= radius.1 && (player.z - at.2).abs() <= radius.2 {
+                    player.progress.trigger(id);
+                }
+            }
             WorldEvent::BossBar(share) => send_boss_bar(stream, player, *share).await?,
             WorldEvent::WitherBar { entity_id, share } => {
                 if player.seen_mobs.contains_key(entity_id) {
@@ -4371,6 +4379,12 @@ async fn open_window(
         containers::Kind::Dropper => player.progress.custom("inspect_dropper", 1),
         containers::Kind::Dispenser => player.progress.custom("inspect_dispenser", 1),
         containers::Kind::Lectern => player.progress.custom("interact_with_lectern", 1),
+        containers::Kind::EnderChest => player.progress.custom("open_enderchest", 1),
+        containers::Kind::ShulkerBox => player.progress.custom("open_shulker_box", 1),
+        containers::Kind::Furnace => player.progress.custom("interact_with_furnace", 1),
+        containers::Kind::BlastFurnace => player.progress.custom("interact_with_blast_furnace", 1),
+        containers::Kind::Smoker => player.progress.custom("interact_with_smoker", 1),
+        containers::Kind::BrewingStand => player.progress.custom("interact_with_brewingstand", 1),
         _ => {}
     }
 
@@ -5154,19 +5168,20 @@ fn note_criteria(shared: &Shared, player: &PlayerState, seen: &mut Option<[i32; 
 /// ответ на запрос экрана статистики, достижения (пакет, объявление,
 /// награда) и запись на диск раз в пять минут (progress.rs).
 async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    player.progress.tick_player(player.sneaking, !player.vit.dead, player.sleeping.is_some());
     if !player.vit.dead {
-        player.progress.tick(player.sneaking);
         // Фантомам нужно знать, сколько игрок не спал (src/mob/phantom.rs).
         let rest = player.progress.stats.get(crate::stats::Cat::Custom, "time_since_rest");
 
         shared.players.lock().expect("список игроков захвачен другим потоком").set_rest(&player.uuid, rest);
     }
 
+    progression::effects(player);
     // Предметы у игрока: набор сверяется с таблицей «есть предмет».
-    if player.progress.ticks.is_multiple_of(4) {
+    {
         let mut names: Vec<&str> = Vec::new();
 
-        for slot in 0..inventory::SLOTS as i32 {
+        for slot in 5..inventory::SLOTS as i32 {
             if let Some(stack) = player.inventory.slot(slot)
                 && let Some(name) = blocks::item_name(stack.item)
             {
@@ -5175,13 +5190,17 @@ async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
         }
 
         player.progress.scan_items(&names);
+        player.progress.recipes.scan(&names, names.len(), player.net.in_water);
     }
+
+    if !player.progress.adv.started() {
+        write_body(stream, player.progress.recipes.settings_body()).await?;
+    }
+    if let Some(body) = player.progress.recipes.update() { write_body(stream, body).await?; }
 
     // Биом под ногами раз в секунду.
     if player.progress.ticks.is_multiple_of(20) {
-        let biome = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").surface_biome(player.x.floor() as i32, player.z.floor() as i32);
-
-        player.progress.biome(player.dimension, biome);
+        progression::location(shared, player);
     }
 
     {
@@ -5192,7 +5211,7 @@ async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
         }
     }
 
-    if std::mem::take(&mut player.progress.stats_requested) {
+    if player.progress.stats_requested && player.progress.stats.has_updates() {
         let body = player.progress.stats.award_body();
 
         write_body(stream, body).await?;
@@ -5980,6 +5999,8 @@ async fn read_and_log_play_packets(
                 Order::ClearEffect(kind) => vitals::clear_effects(stream, player, Some(kind)).await?,
                 Order::XpTaken { points } => player.net.xp_taken += points,
                 Order::KilledPlayer => player.progress.killed_player(),
+                Order::MagicHit { amount, killer } => player.net.hits.push(vitals::Pending { amount, source: crate::survival::Source::Magic, direct: 0, hurt_yaw: None, killer, push: None, announced: false }),
+                Order::Progress(event) => player.progress.event(event),
                 Order::Advancement { grant, ids, criterion } => {
                     for id in ids {
                         let changed = match (grant, &criterion) {
@@ -6053,6 +6074,7 @@ async fn read_and_log_play_packets(
                         shared.items_in(old).lock().expect("предметы захвачены другим потоком").forget_reader(reader);
                     }
 
+                    progression::changed_dimension(player, dimension, (x, y, z));
                     player.dimension = dimension;
                     player.progress.entered(dimension);
                     player.x = x;
@@ -7089,6 +7111,12 @@ fn handle_client_packet_inner(
                 _ => {}
             }
         }
+        crate::recipe_book::CLIENT_SETTINGS => {
+            let mut cursor = Cursor::new(payload);
+            if let (Some(book), Some(open), Some(filter)) = (cursor.varint(), cursor.u8(), cursor.u8()) {
+                player.progress.recipes.set_settings(book, open != 0, filter != 0);
+            }
+        }
         // Seen Advancements: 0 — открыта вкладка (с её названием), 1 — закрыто.
         crate::advancements::SEEN_ADVANCEMENTS => {
             let mut cursor = Cursor::new(payload);
@@ -7512,11 +7540,11 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     let landed = hit.is_some();
 
     if let Some(hit) = &hit {
-        player.progress.dealt(hit.taken);
+        player.progress.damage_dealt(*hit);
 
-        if mob.is_dead() {
-            player.progress.killed_mob(mob.kind.name());
-        }
+        mob.credit_to(player.uuid);
+        if let Some(stack) = player.inventory.held() { player.progress.used_weapon(stack.item); }
+        if smash && damage >= 100.0 { player.progress.trigger("adventure/overoverkill"); }
     }
 
     if smash && landed {
@@ -7828,6 +7856,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         && (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) <= REACH * REACH
         && !mob.is_dead()
     {
+        player.progress.custom("talked_to_villager", 1);
         reaction.open_merchant = merchant::use_villager(&mut items, index, player.entity_id, player.uuid, shared);
         return true;
     }
@@ -7858,6 +7887,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     if held == Some("shears") && mob.kind == crate::mob::Kind::Bogged {
         let mut rng = crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32));
         if let Some(drops) = crate::mob::skeleton::shear(&mut items.mobs_mut()[index], &mut rng) {
+            if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
             items.flush_mob_events(&mut || shared.next_entity_id(), &mut rng);
             for stack in drops {
                 let velocity = (rng.unit() * 0.2 - 0.1, 0.2, rng.unit() * 0.2 - 0.1);
@@ -7881,6 +7911,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         let count = 1 + (world.random_unit() * 3.0) as i32;
         let wool = blocks::item_named(crate::mob::WOOL[usize::from(color) % 16]);
 
+        if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
         items.mobs_mut()[index].sheared = true;
         items.mobs_mut()[index].events.push(crate::mob::Event::EntitySound {
             name: "minecraft:entity.sheep.shear",
@@ -7916,6 +7947,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         let mut rng = crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32) ^ mob.ticks.wrapping_mul(0x9E37));
         let mob = &mut items.mobs_mut()[index];
 
+        if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
         mob.villager.conversion = 3600 + rng.below(2401) as i32;
         mob.villager.converter = Some(player.uuid);
         mob.vitals.effects.retain(|effect| effect.kind != crate::survival::EffectKind::Weakness);
@@ -7941,6 +7973,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     if held == Some("flint_and_steel") && mob.kind == crate::mob::Kind::Creeper && !mob.h.lit {
         let mob = &mut items.mobs_mut()[index];
 
+        if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
         mob.h.lit = true;
         mob.events.push(crate::mob::Event::EntitySound { name: "minecraft:item.flintandsteel.use", category: SOUND_PLAYERS, volume: 1.0, pitch: 1.0 });
         items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
@@ -7955,10 +7988,13 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         let mob = &mut items.mobs_mut()[index];
 
         if mob.is_baby() {
+            if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
             mob.age = (mob.age + (-mob.age as f32 * 0.1) as i32).min(0);
             mob.events.push(crate::mob::Event::Hearts);
         } else if mob.age == 0 && mob.love == 0 {
+            if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
             mob.love = crate::mob::LOVE_TICKS;
+            mob.love_player = Some(player.uuid);
             mob.events.push(crate::mob::Event::Hearts);
         } else {
             return true;
@@ -7993,6 +8029,7 @@ fn use_golem(shared: &Shared, player: &mut PlayerState, items: &mut items::Items
         let mob = &mut items.mobs_mut()[index];
         let pitch = 1.0 + ((rng.unit() - rng.unit()) * 0.2) as f32;
 
+        if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
         mob.vitals.health = (mob.vitals.health + crate::mob::golem::INGOT_HEAL).min(mob.vitals.max_health);
         mob.events.push(crate::mob::Event::Sound { name: "minecraft:entity.iron_golem.repair", volume: 1.0, pitch });
         items.flush_mob_events(&mut || shared.next_entity_id(), &mut rng);
@@ -8008,6 +8045,7 @@ fn use_golem(shared: &Shared, player: &mut PlayerState, items: &mut items::Items
         let at = (mob.x, mob.y + crate::mob::golem::SNOW_EYE, mob.z);
         let mob = &mut items.mobs_mut()[index];
 
+        if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
         mob.golem.pumpkin = false;
         mob.events.push(crate::mob::Event::EntitySound { name: "minecraft:entity.snow_golem.shear", category: SOUND_PLAYERS, volume: 1.0, pitch: 1.0 });
         items.flush_mob_events(&mut || shared.next_entity_id(), &mut rng);
@@ -8142,6 +8180,7 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
         redstone::punched(&mut world, (x, y, z));
+        if blocks::block_at_state(state) == Some("note_block") { player.progress.custom("play_noteblock", 1); }
     }
 
     if !breaks_now {
@@ -8500,6 +8539,12 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         }
 
         if let Some(spend) = redstone::use_with_item(&mut world, clicked, held_name, player.game_mode == GAME_MODE_CREATIVE) {
+            if blocks::block_at_state(clicked_state) == Some("respawn_anchor") && spend
+                && crate::bed::anchor_charges(world.get_block(clicked_x, clicked_y, clicked_z)) == Some(4)
+            {
+                player.progress.trigger("nether/charge_respawn_anchor");
+            }
+            if blocks::block_at_state(clicked_state) == Some("cake") { player.progress.custom("eat_cake_slice", 1); }
             world.tell_directly(clicked_x, clicked_y, clicked_z);
             world.tell_directly(bx, by, bz);
             redstone::settle(&mut world);
@@ -8520,6 +8565,12 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             world.tell_directly(bx, by, bz);
             drop(world);
 
+            if took {
+                player.progress.custom("play_record", 1);
+                if shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").mob_biome(clicked_x, clicked_y, clicked_z) == "meadow" {
+                    player.progress.trigger("adventure/play_jukebox_in_meadows");
+                }
+            }
             let slots = if took { spend_placed(player) } else { Vec::new() };
 
             return Some(Reaction { slots, ..Reaction::accepted(sequence) });
@@ -8713,6 +8764,11 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         world.actor = None;
 
         if used {
+            match blocks::block_at_state(clicked_state) {
+                Some("note_block") => player.progress.custom("tune_noteblock", 1),
+                Some("bell") => player.progress.custom("bell_ring", 1),
+                _ => {}
+            }
             log_debug!("Play: {} щёлкнул по {} {} {}", player.name, clicked_x, clicked_y, clicked_z);
 
             // Как у оригинала: после щелчка клиенту повторяют, что стоит
@@ -8764,7 +8820,10 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             drop(world);
             log_debug!("Play: {} поджёг динамит в {} {} {}", player.name, clicked_x, clicked_y, clicked_z);
 
-            let slots = if held == fire_charge { spend_placed(player) } else { Vec::new() };
+            let slots = if held == fire_charge { spend_placed(player) } else {
+                if let Some(item) = held { player.progress.used(item); }
+                Vec::new()
+            };
 
             return Some(Reaction {
                 confirm: vec![clicked],
@@ -8895,6 +8954,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
         if world.get_block(target.0, target.1, target.2) == world::AIR {
+            if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
             if crate::portal::light(&mut world, target, shared.settings.portal_sizes()) {
                 log_info!("{} зажёг портал в {} {} {}", player.name, target.0, target.1, target.2);
             } else if let Some(fire) = blocks::state_by_name("fire") {
@@ -8999,6 +9059,8 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     // щёлкнули, и того, что встал за гранью, — а общая пачка потом
     // (чёрный ящик, chest-place).
     if matches!(placed, placing::Placement::Placed) {
+        player.progress.planted(name);
+        progression::placed(&world, player, name, offset_towards(clicked_x, clicked_y, clicked_z, face));
         let (x, y, z) = offset_towards(clicked_x, clicked_y, clicked_z, face);
 
         world.tell_directly(clicked_x, clicked_y, clicked_z);
@@ -9069,6 +9131,13 @@ fn build_golem(shared: &Shared, dimension: crate::dimension::Dimension, world: &
         mob.head_yaw = 1.5 + world.random_unit() * 4.5;
     }
     shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").add_mob_late(mob.clone());
+    // Вики, Advancement: свидетели постройки тоже получают достижение.
+    if kind == crate::mob::Kind::Wither {
+        world.note_progress_near("nether/summon_wither", (mob.x, mob.y + 1.75, mob.z), (50.45, 51.75, 50.45));
+    } else if kind == crate::mob::Kind::IronGolem {
+        // [проверить] границы: объём голема, расширенный на 5 блоков.
+        world.note_progress_near("adventure/summon_iron_golem", (mob.x, mob.y + 1.35, mob.z), (5.7, 6.35, 5.7));
+    }
     world.note_mob_spawn(mob);
 
     for (x, y, z) in build.clear {
@@ -9294,6 +9363,7 @@ fn use_bucket(
             redstone::settle(&mut world);
         }
 
+        player.progress.used(item);
         log_debug!("Play: {} набрал ведро в {} {} {}", player.name, x, y, z);
 
         return Some(Reaction {
@@ -9341,6 +9411,7 @@ fn use_bucket(
         }
     }
 
+    player.progress.used(item);
     log_debug!("Play: {} вылил ведро в {} {} {}", player.name, x, y, z);
     player.poured = Some(sequence);
 
@@ -9363,6 +9434,7 @@ fn use_spawn_egg(
     shared: &Shared,
 ) -> Option<Reaction> {
     let kind = crate::mob::Kind::from_name(blocks::item_name(item)?.strip_suffix("_spawn_egg")?)?;
+    player.progress.used(item);
     let (x, y, z) = offset_towards(clicked.0, clicked.1, clicked.2, face);
     let mut mob = crate::mob::Mob::new(shared.next_entity_id(), kind, (f64::from(x) + 0.5, f64::from(y), f64::from(z) + 0.5));
 
@@ -9761,10 +9833,23 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
             let count = |slots: &[Option<Stack>]| slots.get(crate::furnace::OUTPUT).copied().flatten().map_or(0, |stack| stack.count);
 
             if count(&slots) < count(&slots_before) {
+                if let Some(stack) = slots_before[crate::furnace::OUTPUT] {
+                    player.progress.crafted(stack.item, count(&slots_before) - count(&slots));
+                }
                 xp_points = crate::furnace::take_experience(&mut world, place);
             }
         }
 
+        if kind == Some(containers::Kind::BrewingStand) {
+            for index in 0..3 {
+                if let Some(stack) = slots_before[index]
+                    && slots[index] != Some(stack)
+                    && slots[index].is_none_or(|after| !after.stacks_with(&stack) || after.count < stack.count)
+                {
+                    player.progress.brewed(stack.item);
+                }
+            }
+        }
         redstone::settle(&mut world);
 
         (before, snapshot(&slots, &player.inventory), click.thrown)
@@ -10232,6 +10317,7 @@ struct PlayerState {
 
     /// Статистика и достижения игрока (progress.rs).
     progress: crate::progress::Progress,
+    progress_location: progression::Location,
 }
 
 /// Окно хранилища, открытое у клиента.
@@ -10405,6 +10491,7 @@ impl PlayerState {
             speed_due: Vec::new(),
             speed_touch: 0,
             progress: crate::progress::Progress::load(&uuid),
+            progress_location: progression::Location::default(),
             skin,
             skin_parts,
             main_hand: configuration::RIGHT_HAND,

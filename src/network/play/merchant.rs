@@ -456,6 +456,9 @@ fn take_result(shared: &Shared, items: &mut crate::items::Items, player: &mut Pl
 
             if fits && trade(shared, items, merchant) {
                 player.progress.traded();
+                if player.dimension == Dimension::Overworld && player.y >= 319.0 {
+                    player.progress.trigger("adventure/trade_at_world_height");
+                }
                 player.inventory.set_cursor(Some(result.with_count(cursor.map_or(0, |held| held.count) + result.count)));
             }
         }
@@ -489,6 +492,9 @@ fn take_result(shared: &Shared, items: &mut crate::items::Items, player: &mut Pl
                 }
 
                 player.progress.traded();
+                if player.dimension == Dimension::Overworld && player.y >= 319.0 {
+                    player.progress.trigger("adventure/trade_at_world_height");
+                }
             }
         }
         _ => {}

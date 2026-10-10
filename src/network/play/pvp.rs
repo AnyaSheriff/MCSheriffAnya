@@ -98,6 +98,8 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
     let lands = matches!(outcome, combat::Outcome::Taken(_));
 
     if lands {
+        if let Some(stack) = held { player.progress.used_weapon(stack.item); }
+        if smash && strike.damage >= 100.0 { player.progress.trigger("adventure/overoverkill"); }
         player.vit.add_exhaustion(0.1);
     }
 
@@ -313,6 +315,7 @@ pub(super) fn replace_worn(shared: &Shared, player: &mut PlayerState, slot: i32,
             player.inventory.set(slot, Some(next));
         }
         None => {
+            player.progress.broken(stack.item);
             player.inventory.set(slot, None);
             shared
                 .world_in(player.dimension)
@@ -470,6 +473,8 @@ pub(super) fn wear_armor(shared: &Shared, player: &mut PlayerState, damage: f32)
 /// Щит принял удар: событие «щит принял» всем, износ щита, отключение
 /// топором; нападающий слышит обычный звук удара. Урона жертве нет.
 async fn block_with_shield(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, strike: &PlayerStrike, hand: i32, now: u64) -> io::Result<()> {
+    player.progress.custom("damage_blocked_by_shield", (strike.damage * 10.0).round() as i32);
+    if strike.source.is_projectile() { player.progress.trigger("story/deflect_arrow"); }
     let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
     if let Some(shield) = player.inventory.slot(slot) {
         let wear = combat::shield_wear(strike.damage);
@@ -581,7 +586,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
 }
 
 /// Взмах по мобам: урон и отдача, как у обычного удара, и ещё толчок вдоль взгляда.
-pub(super) fn sweep_mobs(items: &mut crate::items::Items, player: &PlayerState, main: &MainTarget, damage: f32) {
+pub(super) fn sweep_mobs(items: &mut crate::items::Items, player: &mut PlayerState, main: &MainTarget, damage: f32) {
     let attacker = (player.x, player.y, player.z);
     let look = crate::mob::look_direction(player.yaw);
 
@@ -597,7 +602,9 @@ pub(super) fn sweep_mobs(items: &mut crate::items::Items, player: &PlayerState, 
 
         mob.credit_player();
 
-        if mob.hurt(damage, Source::PlayerAttack, Some(push)).is_some() {
+        if let Some(hit) = mob.hurt(damage, Source::PlayerAttack, Some(push)) {
+            player.progress.damage_dealt(hit);
+            mob.credit_to(player.uuid);
             mob.knockback(look.0, look.1, crate::mob::BASE_KNOCKBACK);
         }
     }

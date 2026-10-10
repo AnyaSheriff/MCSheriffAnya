@@ -612,6 +612,15 @@ impl Nether {
         })
     }
 
+    pub fn progress_structure(&self, x: i32, y: i32, z: i32) -> Option<&'static str> {
+        if self.fortresses_near(x.div_euclid(16), z.div_euclid(16)).iter().any(|parts| super::in_structure_bounds(parts.iter().map(|p| p.bounds), (x, y, z))) {
+            return Some("nether/find_fortress");
+        }
+        self.bastions_near(x.div_euclid(16), z.div_euclid(16)).iter()
+            .any(|parts| super::in_structure_bounds(parts.iter().map(|p| p.bounds), (x, y, z)))
+            .then_some("nether/find_bastion")
+    }
+
     /// Лежит ли клетка в ящике какого-либо куска крепости.
     pub fn in_fortress(&self, x: i32, y: i32, z: i32) -> bool {
         self.fortresses_near(x.div_euclid(16), z.div_euclid(16))

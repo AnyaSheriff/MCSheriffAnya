@@ -96,6 +96,12 @@ pub(super) fn use_cauldron(clicked: (i32, i32, i32), face: i32, sequence: i32, p
 
     let state = state_of(next)?;
 
+    player.progress.used(held.item);
+    player.progress.custom(match item {
+        "bucket" | "glass_bottle" => "use_cauldron",
+        name if name.ends_with("_shulker_box") => "clean_shulker_box",
+        _ => "fill_cauldron",
+    }, 1);
     world.set_block(x, y, z, state);
 
     if !sound.is_empty() {

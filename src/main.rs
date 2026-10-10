@@ -78,6 +78,7 @@ mod scoreboard;
 mod stats;
 mod advancements;
 mod progress;
+mod recipe_book;
 mod commands_progress;
 mod functions;
 mod commands_admin;

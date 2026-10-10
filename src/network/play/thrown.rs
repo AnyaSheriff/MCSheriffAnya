@@ -100,6 +100,7 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
     let flying = Flying::potion(shared.next_entity_id(), dimension, kind, stack.with_count(1), at, velocity, player.entity_id);
 
     shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(flying);
+    player.progress.used(stack.item);
 
     // Инвентарь целиком клиент получает от слежения, между появлением зелья
     // и его первым сдвигом (splash-potion: «инвентарь все» там).
@@ -138,6 +139,7 @@ pub(super) fn throw_eye(shared: &Shared, player: &mut PlayerState, hand: i32) ->
     let entity_id = eye.entity_id;
 
     shared.thrown.lock().expect("снаряды захвачены другим потоком").eyes.push(eye);
+    player.progress.used(stack.item);
 
     // Порядок оригинала: появление с предметом, звук броска (раздел
     // «нейтральные», громкость 1, высота 0,4 / (0,8…1,2)), взмах руки
@@ -283,6 +285,7 @@ pub(super) fn launch_rocket(shared: &Shared, player: &mut PlayerState, at: (f64,
     let rocket = crate::firework::Rocket::new(shared.next_entity_id(), dimension, stack, at, velocity, false, (player.entity_id, player.uuid, player.name.clone()), lifetime);
 
     shared.thrown.lock().expect("снаряды захвачены другим потоком").rockets.push(rocket);
+    player.progress.used(stack.item);
 
     true
 }
@@ -316,6 +319,8 @@ pub(super) fn fill_breath(shared: &Shared, player: &mut PlayerState, hand: i32) 
         return false;
     }
 
+    player.progress.used(stack.item);
+    player.progress.trigger("end/dragon_breath");
     let Some(breath) = blocks::item_named("dragon_breath") else {
         return false;
     };

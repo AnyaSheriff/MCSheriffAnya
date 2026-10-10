@@ -508,12 +508,14 @@ type Bystander = (i32, (f64, f64, f64), bool, i32, [u8; 16]);
 enum Deed {
     Effect(i32, Effect),
     Heal(i32, f32),
-    Hurt([u8; 16], f32),
+    Hurt([u8; 16], f32, Option<(i32, [u8; 16])>),
+    Progress([u8; 16], crate::progress::Event),
 }
 
 /// Наложить эффекты `effects` с силой `scale` (срок × `duration_scale`,
 /// мгновенные × `scale`) на игрока или моба.
-fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uuid: [u8; 16], effects: &[Effect], scale: f64, duration_scale: f64) {
+#[allow(clippy::too_many_arguments)]
+fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uuid: [u8; 16], effects: &[Effect], scale: f64, duration_scale: f64, owner: Option<(i32, [u8; 16])>) {
     for effect in effects {
         if effect.kind.instant() {
             let amount = instant_amount(effect.kind, effect.amplifier, scale);
@@ -523,14 +525,17 @@ fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uu
             }
 
             match target {
-                Struck::Player(id) => deeds.push(if effect.kind == EffectKind::InstantHealth { Deed::Heal(id, amount) } else { Deed::Hurt(uuid, amount) }),
+                Struck::Player(id) => deeds.push(if effect.kind == EffectKind::InstantHealth { Deed::Heal(id, amount) } else { Deed::Hurt(uuid, amount, owner) }),
                 Struck::Mob(id) => {
                     if let Some(mob) = mobs.iter_mut().find(|mob| mob.entity_id == id) {
                         // Нежить лечится уроном и ранится лечением (вики, Instant Health).
                         let undead = crate::combat::mob_traits(mob.kind.name()).0;
 
                         if (effect.kind == EffectKind::InstantDamage) != undead {
-                            mob.hurt(amount, Source::Magic, None);
+                            if let Some(hit) = mob.hurt(amount, Source::Magic, None) && let Some((_, uuid)) = owner {
+                                mob.credit_to(uuid);
+                                deeds.push(Deed::Progress(uuid, crate::progress::Event::DamageDealt(hit)));
+                            }
                         } else {
                             mob.vitals.health = (mob.vitals.health + amount).min(mob.kind.max_health());
                         }
@@ -729,6 +734,16 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             continue;
         };
 
+        // Вики, Target: не только стрелы — яйца, снежки, зелья и шары тоже.
+        if !entity_first && let Some((_, cell)) = block
+            && let Some(power) = crate::redstone::projectile_target(world, cell, at, false)
+            && let Some(owner) = members.iter().find(|m| m.0 == flying.owner)
+        {
+            deeds.push(Deed::Progress(owner.4, crate::progress::Event::Stat(crate::stats::Cat::Custom, "target_hit", 1)));
+            if power == 15 && (owner.1.0 - at.0).hypot(owner.1.2 - at.2) >= 30.0 {
+                deeds.push(Deed::Progress(owner.4, crate::progress::Event::Trigger("adventure/bullseye")));
+            }
+        }
         gone.push(flying.entity_id);
 
         let block_at = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
@@ -744,7 +759,12 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == id) {
                         let damage = if mob.kind == crate::mob::Kind::Blaze { SNOWBALL_BLAZE_DAMAGE } else { 0.0 };
 
-                        mob.hurt(damage, Source::Thrown, Some(crate::mob::Push { dir, strength: crate::mob::BASE_KNOCKBACK, cause: flying.owner }));
+                        if let Some(hit) = mob.hurt(damage, Source::Thrown, Some(crate::mob::Push { dir, strength: crate::mob::BASE_KNOCKBACK, cause: flying.owner }))
+                            && let Some(member) = members.iter().find(|m| m.0 == flying.owner)
+                        {
+                            mob.credit_to(member.4);
+                            deeds.push(Deed::Progress(member.4, crate::progress::Event::DamageDealt(hit)));
+                        }
                     }
                 }
                 // [проверить] снежок по игроку: урона нет, толчок.
@@ -804,7 +824,17 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                             mob.credit_player();
                         }
 
-                        mob.hurt(if deflected && mob.kind == crate::mob::Kind::Ghast { 1000.0 } else { 6.0 }, Source::Fireball, Some(push));
+                        if let Some(hit) = mob.hurt(if deflected && mob.kind == crate::mob::Kind::Ghast { 1000.0 } else { 6.0 }, Source::Fireball, Some(push)) {
+                            let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+                            if let Some(uuid) = players.members().iter().find(|member| member.entity_id == owner).map(|member| member.uuid) {
+                                use crate::progress::Event;
+                                players.order(&uuid, crate::players::Order::Progress(crate::progress::Event::DamageDealt(hit)));
+                                mob.credit_to(uuid);
+                                if hit.died && mob.kind == crate::mob::Kind::Ghast {
+                                    players.order(&uuid, crate::players::Order::Progress(Event::Trigger("nether/return_to_sender")));
+                                }
+                            }
+                        }
 
                         (mob.x, mob.y + mob.size().1 / 2.0, mob.z)
                     })
@@ -869,7 +899,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
                 let scale = splash_scale(distance, struck == Some(Struck::Player(*id)));
 
-                apply(&mut deeds, &mut [], Struck::Player(*id), *uuid, &effects, scale, 1.0);
+                apply(&mut deeds, &mut [], Struck::Player(*id), *uuid, &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)));
             }
 
             let targets: Vec<(i32, f64)> = items
@@ -885,7 +915,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 .collect();
 
             for (id, scale) in targets {
-                apply(&mut deeds, items.mobs_mut(), Struck::Mob(id), [0; 16], &effects, scale, 1.0);
+                apply(&mut deeds, items.mobs_mut(), Struck::Mob(id), [0; 16], &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)));
             }
         }
 
@@ -927,7 +957,11 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                             mob.credit_player();
                         }
 
-                        mob.hurt(wound.damage, crate::firework::SOURCE, push);
+                        if let Some(hit) = mob.hurt(wound.damage, crate::firework::SOURCE, push) {
+                            mob.credit_to(rocket.owner_uuid);
+                            shared.players.lock().expect("список игроков захвачен другим потоком").order(&rocket.owner_uuid,
+                                crate::players::Order::Progress(crate::progress::Event::DamageDealt(hit)));
+                        }
                     }
                 }
                 crate::firework::Struck::Player(id) => strikes.push(crate::combat::PlayerStrike {
@@ -1044,7 +1078,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             cloud.victims.push((id, age + cloud.delay));
             // Облако даёт четверть срока и половину мгновенного (вики,
             // Area Effect Cloud).
-            apply(&mut deeds, items.mobs_mut(), target, uuid, &cloud.effects, 0.5, 0.5);
+            apply(&mut deeds, items.mobs_mut(), target, uuid, &cloud.effects, 0.5, 0.5, members.iter().find(|m| m.0 == cloud.owner).map(|m| (m.0, m.4)));
 
             if cloud.on_use != 0.0 {
                 cloud.radius += cloud.on_use;
@@ -1087,7 +1121,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         match deed {
             Deed::Effect(id, effect) => world.note_potion_effect(id, effect),
             Deed::Heal(id, amount) => world.note_potion_heal(id, amount),
-            Deed::Hurt(uuid, amount) => hurts.push((uuid, amount)),
+            Deed::Hurt(uuid, amount, owner) => hurts.push((uuid, amount, owner)),
+            Deed::Progress(uuid, event) => shared.players.lock().expect("список игроков захвачен другим потоком").order(&uuid, crate::players::Order::Progress(event)),
         }
     }
 
@@ -1097,8 +1132,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     if !hurts.is_empty() {
         let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
-        for (uuid, amount) in hurts {
-            players.order(&uuid, crate::players::Order::Hurt { amount, source: Source::Magic });
+        for (uuid, amount, owner) in hurts {
+            let killer = owner.and_then(|(id, uuid)| players.members().iter().find(|m| m.entity_id == id).map(|m| (m.name.clone(), uuid)));
+            players.order(&uuid, crate::players::Order::MagicHit { amount, killer });
         }
     }
 }

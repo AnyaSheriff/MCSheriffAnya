@@ -218,6 +218,8 @@ pub enum Order {
 
     /// Нанести урон (`kill`, `damage`): приходит как обычный удар своего вида.
     Hurt { amount: f32, source: crate::survival::Source },
+    /// Мгновенный урон зелья с известным бросившим игроком.
+    MagicHit { amount: f32, killer: Option<(String, [u8; 16])> },
     /// Команда `experience`: добавить или задать очки либо уровни.
     Experience { set: bool, amount: i32, levels: bool },
     /// Игрок подобрал шарики опыта на такте мира: очки прибавляются, клиент
@@ -271,6 +273,9 @@ pub enum Order {
 
     /// Этот игрок убил игрока: статистика `player_kills`.
     KilledPlayer,
+
+    /// Подтверждённое событие прогресса из общего такта.
+    Progress(crate::progress::Event),
 
     /// Команда `advancement`: выдать или отнять достижения (все условия, либо одно).
     Advancement { grant: bool, ids: Vec<&'static str>, criterion: Option<String> },

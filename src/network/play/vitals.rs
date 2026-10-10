@@ -571,8 +571,21 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
 
     let jumped = player.net.prev_ground && !on_ground && dy > 0.0;
 
-    if !player.vit.dead && player.sleeping.is_none() {
-        player.progress.moved(dx, dy, dz, on_ground, player.vit.sprinting, player.sneaking, jumped);
+    if !player.vit.dead && player.sleeping.is_none() && player.ride.vehicle.is_none() {
+        let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let env = look_around(&world, player.x, player.y, player.z, player.sneaking, player.net.spin_pose);
+        let feet = blocks::block_at_state(world.get_block(player.x.floor() as i32, player.y.floor() as i32, player.z.floor() as i32));
+        let mode = if player.glide.active { Some("aviate_one_cm") }
+            else if env.eyes_in_water { Some(if player.vit.sprinting { "swim_one_cm" } else { "walk_under_water_one_cm" }) }
+            else if env.in_water { Some("walk_on_water_one_cm") }
+            else if feet.is_some_and(|name| matches!(name, "ladder" | "vine" | "scaffolding" | "weeping_vines" | "weeping_vines_plant" | "twisting_vines" | "twisting_vines_plant")) { Some("climb_one_cm") }
+            else { None };
+        if let Some(mode) = mode {
+            let metres = match mode { "climb_one_cm" => dy.max(0.0), "walk_on_water_one_cm" => dx.hypot(dz), _ => dx.hypot(dy).hypot(dz) };
+            player.progress.custom(mode, (metres * 100.0).round() as i32);
+        } else {
+            player.progress.moved(dx, dy, dz, on_ground, player.vit.sprinting, player.sneaking, jumped);
+        }
     }
 
     if mortal(player.game_mode) && !player.vit.dead {
@@ -594,6 +607,10 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         let fallen = player.vit.fall + (-dy).max(0.0) as f32;
         let smashed = player.vit.smash_forgives;
         let damage = player.vit.land(dy, on_ground, env.soft, env.landing);
+        if on_ground && fallen >= 2.0 {
+            player.progress.custom("fall_one_cm", (fallen * 100.0).round() as i32);
+        }
+        if on_ground || env.soft { super::progression::landed(player, fallen); }
 
         // Приземлился на грядку — может её вытоптать (farming.rs).
         if on_ground && !env.soft && fallen > 0.5 && blocks::block_at_state(env.below) == Some("farmland") {
@@ -1428,7 +1445,7 @@ async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerStat
     send_entity_event(stream, player.entity_id, EVENT_DEATH).await?;
 
     // Статистика: смерть, и кому засчитано убийство игрока.
-    player.progress.died(killer.as_ref().map(|_| "player"));
+    player.progress.died(killer.as_ref().map(|_| "player").or_else(|| mob.strip_prefix("entity.minecraft.")));
 
     if let Some(killer) = &killer {
         shared.players.lock().expect("список игроков захвачен другим потоком").order(&killer.uuid, crate::players::Order::KilledPlayer);
@@ -1504,13 +1521,15 @@ pub(super) async fn mob_hit(
     // Вики, Shield: передний удар моба поглощается; укус, остановленный
     // щитом, не накладывает яд. Износ — тот же, что в бою игроков.
     let now = *shared.ticks.borrow();
-    if source == Source::MobAttack && amount > 0.0 && !player.vit.dead
+    if (source == Source::MobAttack || source.is_projectile()) && amount > 0.0 && !player.vit.dead
         && matches!(player.game_mode, GAME_MODE_SURVIVAL | GAME_MODE_ADVENTURE)
         && let Some(hand) = shield_up(player, now)
         && crate::combat::shield_covers(player.yaw, (player.x, player.z), (at.0, at.2))
     {
         let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
         let scaled = survival::scaled(amount, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed));
+        player.progress.custom("damage_blocked_by_shield", (scaled * 10.0).round() as i32);
+        if source.is_projectile() { player.progress.trigger("story/deflect_arrow"); }
         if let Some(shield) = player.inventory.slot(slot) {
             super::pvp::wear_slot(shared, player, slot, shield, crate::combat::shield_wear(scaled), false);
         }
@@ -1657,9 +1676,24 @@ pub(super) async fn hit_by(
         return Ok(None);
     };
 
+    let absorbed = result.absorbed;
+    let resisted = result.resisted;
+    player.progress.custom("damage_absorbed", (absorbed * 10.0).round() as i32);
+    player.progress.custom("damage_resisted", (resisted * 10.0).round() as i32);
+    if let Some(killer) = &killer {
+        let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+        for (name, value) in [("damage_dealt", result.taken - absorbed), ("damage_dealt_absorbed", absorbed), ("damage_dealt_resisted", resisted)] {
+            players.order(&killer.uuid, crate::players::Order::Progress(crate::progress::Event::Stat(crate::stats::Cat::Custom, name, (value * 10.0).round() as i32)));
+        }
+        if matches!(source, Source::Arrow | Source::Trident) {
+            players.order(&killer.uuid, crate::players::Order::Progress(crate::progress::Event::ProjectileHit {
+                trident: source == Source::Trident, kind: "player", killed: result.died, distance: 0.0, crossbow: false,
+            }));
+        }
+    }
     if quiet && !result.died {
         shared.players.lock().expect("список игроков захвачен другим потоком").set_health(&player.uuid, player.vit.health);
-        player.progress.took(result.taken);
+        player.progress.took(result.taken - absorbed);
 
         return Ok(Some(result));
     }
@@ -1674,7 +1708,7 @@ pub(super) async fn hit_by(
 
     // `/kill` и пустота урона не считают (чёрный ящик: после /kill damage_taken не менялся).
     if !matches!(source, Source::GenericKill | Source::OutOfWorld) {
-        player.progress.took(result.taken);
+        player.progress.took(result.taken - absorbed);
     }
 
     send_damage_event(stream, player.entity_id, source, direct, cause).await?;

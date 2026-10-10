@@ -14,6 +14,7 @@ pub(super) fn use_on_mob(items: &mut items::Items, index: usize, player: &mut Pl
     let survival = player.game_mode != GAME_MODE_CREATIVE;
     let mut rng = crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32) ^ items.mobs()[index].ticks.wrapping_mul(0x9E37_79B9));
     let spend = |player: &mut PlayerState, reaction: &mut Reaction| {
+        if let Some(stack) = held_stack { player.progress.used(stack.item); }
         if survival && let Some(slot) = player.inventory.spend_held() {
             reaction.slots.push(slot);
         }
@@ -51,8 +52,18 @@ pub(super) fn use_on_mob(items: &mut items::Items, index: usize, player: &mut Pl
 
     // Волк и кошка: приручение, лечение, ошейник, приказ.
     if matches!(items.mobs()[index].kind, Kind::Wolf | Kind::Cat) {
+        let was_in_love = items.mobs()[index].love > 0;
+        let was_tamed = items.mobs()[index].tame.tamed();
         let used = tame::interact(&mut items.mobs_mut()[index], (player.uuid, player.entity_id), held, &mut rng);
 
+        if !was_in_love && items.mobs()[index].love > 0 { items.mobs_mut()[index].love_player = Some(player.uuid); }
+        let mob = &items.mobs()[index];
+        if !was_tamed && mob.tame.tamed() {
+            let variants = if mob.kind == Kind::Wolf { &tame::WOLF_VARIANTS[..] } else { &tame::CAT_VARIANTS[..] };
+            if let Some(variant) = variants.get(usize::from(mob.tame.variant)) {
+                player.progress.tamed(mob.kind.name(), variant);
+            }
+        }
         flush(items, shared, &mut rng);
 
         match used {

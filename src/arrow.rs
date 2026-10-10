@@ -108,6 +108,7 @@ pub struct Arrow {
     /// (второй раз не бьёт) (вики, Piercing).
     pub pierce_left: i32,
     pub pierced: Vec<i32>,
+    pub killed: Vec<&'static str>,
     /// Выпущена из арбалета: попадание звучит иначе (чёрный ящик,
     /// crossbow-shoot: item.crossbow.hit).
     pub crossbow: bool,
@@ -215,6 +216,7 @@ impl Arrow {
             flame: false,
             pierce_left: 0,
             pierced: Vec::new(),
+            killed: Vec::new(),
             crossbow: false,
             trident: None,
             loyalty: 0,
@@ -463,6 +465,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     let mut arrows = shared.arrows.lock().expect("стрелы захвачены другим потоком");
     let mut pickups: Vec<([u8; 16], Stack)> = Vec::new();
     let mut removed: Vec<i32> = Vec::new();
+    let mut progress = Vec::new();
 
     for arrow in arrows.list.iter_mut().filter(|arrow| arrow.dimension == dimension) {
         if arrow.fresh {
@@ -737,6 +740,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     let mut burn = false;
 
                     if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == entity_id) {
+                        let mut damage_result = None;
                         // Стрела без стрелка (призванная командой) опыта за
                         // убийство не сулит (wither-half-armor).
                         if arrow.owner != 0 && !arrow.is_mob_shot() {
@@ -755,9 +759,10 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                                 bounced = true;
                                 burn = true;
                             } else {
-                                mob.hurt_part(damage, false, Source::Arrow, Some(push));
+                                damage_result = mob.hurt_part(damage, false, Source::Arrow, Some(push));
                             }
-                        } else if mob.hurt(damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, Some(push)).is_some() {
+                        } else if let Some(hit) = mob.hurt(damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, Some(push)) {
+                            damage_result = Some(hit);
                             // Без стрелка виновник — сама стрела (wither-half-armor:
                             // Damage Event с причиной-сущностью).
                             if arrow.owner == 0
@@ -773,6 +778,24 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                             }
 
                             apply_effects(mob, &arrow.effects);
+                        }
+                        if !arrow.is_mob_shot() && arrow.owner != 0 && let Some(hit) = damage_result {
+                            use crate::progress::Event;
+                            let distance = members.iter().find(|m| m.0 == arrow.owner).map_or(0.0, |m| (m.1.0 - mob.x).hypot(m.1.2 - mob.z));
+                            progress.push((arrow.owner_uuid, Event::ProjectileHit { trident: arrow.trident.is_some(), kind: mob.kind.name(), killed: mob.is_dead(), distance, crossbow: arrow.crossbow }));
+                            progress.push((arrow.owner_uuid, Event::DamageDealt(hit)));
+                            mob.credit_to(arrow.owner_uuid);
+                            if mob.is_dead() {
+                                arrow.killed.push(mob.kind.name());
+                                if arrow.crossbow {
+                                    if arrow.killed.iter().filter(|k| **k == "phantom").count() >= 2 {
+                                        progress.push((arrow.owner_uuid, Event::Trigger("adventure/two_birds_one_arrow")));
+                                    }
+                                    if arrow.killed.iter().collect::<std::collections::HashSet<_>>().len() >= 5 {
+                                        progress.push((arrow.owner_uuid, Event::Trigger("adventure/arbalistic")));
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -810,7 +833,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             let bolt = channeling_bolt(arrow, world, target_place);
 
             if let Some(place) = bolt {
-                items.add_bolt(crate::lightning::Bolt::new(shared.next_entity_id(), place));
+                let mut bolt = crate::lightning::Bolt::new(shared.next_entity_id(), place);
+                if !arrow.is_mob_shot() && arrow.owner != 0 { bolt.channeler = Some(arrow.owner_uuid); }
+                items.add_bolt(bolt);
                 world.note_sound_neutral_at(place, "minecraft:item.trident.thunder", 5.0, 1.0);
             }
 
@@ -867,6 +892,14 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             arrow.y = from.1 + (to.1 - from.1) * part;
             arrow.z = from.2 + (to.2 - from.2) * part;
             arrow.ground_block = block_cell;
+            if let Some(power) = crate::redstone::projectile_target(world, block_cell, (arrow.x, arrow.y, arrow.z), true)
+                && !arrow.is_mob_shot() && arrow.owner != 0
+            {
+                progress.push((arrow.owner_uuid, crate::progress::Event::Stat(crate::stats::Cat::Custom, "target_hit", 1)));
+                if power == 15 && members.iter().any(|m| m.0 == arrow.owner && (m.1.0 - arrow.x).hypot(m.1.2 - arrow.z) >= 30.0) {
+                    progress.push((arrow.owner_uuid, crate::progress::Event::Trigger("adventure/bullseye")));
+                }
+            }
 
             // Стрела и трезубец отступают от точки удара на 0,05 по каждой оси
             // (чёрный ящик, trident-throw и arrow-pickup: сели на высоте 0,05
@@ -917,10 +950,17 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     drop(arrows);
     drop(items);
 
+    if !progress.is_empty() {
+        let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+        for (uuid, event) in progress { players.order(&uuid, crate::players::Order::Progress(event)); }
+    }
     if !pickups.is_empty() {
         let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
         for (uuid, stack) in pickups {
+            if let Some(name) = crate::blocks::item_name(stack.item) {
+                players.order(&uuid, crate::players::Order::Progress(crate::progress::Event::Stat(crate::stats::Cat::PickedUp, name, stack.count)));
+            }
             players.order(&uuid, crate::players::Order::Give { stack });
         }
     }
@@ -987,6 +1027,7 @@ mod tests {
             flame: false,
             pierce_left: 0,
             pierced: Vec::new(),
+            killed: Vec::new(),
             crossbow: false,
             trident: None,
             loyalty: 0,

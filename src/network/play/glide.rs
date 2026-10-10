@@ -124,6 +124,7 @@ pub(super) fn use_rocket(shared: &Shared, player: &mut PlayerState, hand: i32) -
     // [проверить] ракета-сущность, привязанная к игроку, не создаётся; разгон —
     // по правилу вики: к 1,5 блока/такт вдоль взгляда за время полёта.
     player.glide.boost = 10 * (flight + 1);
+    player.progress.used(stack.item);
 
     if player.game_mode != GAME_MODE_CREATIVE {
         player.inventory.set(slot, inventory::remainder(stack, stack.count - 1));

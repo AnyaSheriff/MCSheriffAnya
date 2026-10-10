@@ -1044,6 +1044,8 @@ pub struct Mob {
 
     /// Сколько тактов ещё влюблён (0 — нет).
     pub love: i32,
+    /// Кто покормил родителя; сбрасывается после рождения [проверить: сохранение].
+    pub love_player: Option<[u8; 16]>,
 
     /// Овца: остригнута ли, цвет шерсти (0 — белая).
     pub sheared: bool,
@@ -1115,6 +1117,8 @@ pub struct Mob {
     /// До какого такта жизни смерть моба даёт опыт: игрок ударил его не
     /// раньше чем за 100 тактов (вики, Experience, «Sources»); 0 — не бил.
     pub xp_until: u64,
+    /// Игрок, которому принадлежит недавний успешный удар (вики, Statistics).
+    pub kill_credit: Option<[u8; 16]>,
 
     /// Опыт, который надо ронять шариками: ставит смерть, забирает
     /// `Items::flush_mob_events`.
@@ -1220,6 +1224,7 @@ impl Mob {
             silent: false,
             age: 0,
             love: 0,
+            love_player: None,
             sheared: false,
             color: WHITE,
             egg_timer: 0,
@@ -1243,6 +1248,7 @@ impl Mob {
             attr_changes: 0,
             teleports: 0,
             xp_until: 0,
+            kill_credit: None,
             pending_xp: 0,
             first_dragon: false,
             beam_target: None,
@@ -1292,6 +1298,11 @@ impl Mob {
     pub fn stick_arrow(&mut self) {
         self.arrows += 1;
         self.arrow_timer = 20 * (30 - self.arrows);
+    }
+
+    pub fn credit_to(&mut self, uuid: [u8; 16]) {
+        self.kill_credit = Some(uuid);
+        self.credit_player();
     }
 
     pub fn credit_player(&mut self) {
@@ -1484,6 +1495,7 @@ impl Mob {
 
         if self.love > 0 {
             self.love -= 1;
+            if self.love == 0 { self.love_player = None; }
         }
 
         // NoAI: ни мысли, ни хода — и тяжести тоже: призванный в воздухе
@@ -1970,7 +1982,7 @@ impl Mob {
         let mut hit = self.vitals.hurt(amount, source, false)?;
 
         // Снято на самом деле — не больше оставшегося здоровья.
-        hit.taken = hit.taken.min(before);
+        hit.taken = hit.taken.min(before + hit.absorbed);
 
         if self.kind == Kind::Wither {
             wither::on_hurt(self);
@@ -2901,6 +2913,7 @@ impl Rng {
 /// Что мобы просят у мира за такт: съеденная овцами трава и снесённые яйца.
 #[derive(Default, Debug)]
 pub struct Outcome {
+    pub progress: Vec<([u8; 16], crate::progress::Event)>,
     pub eaten: Vec<ai::Eat>,
     pub eggs: Vec<(f64, f64, f64)>,
 
@@ -3193,8 +3206,10 @@ pub fn step_all(
     // Удар железного голема подбрасывает цель на 0,4, звук удара — после
     // урона и смерти цели (чёрный ящик, iron-golem-attack).
     for (attacker, target, damage, dir, golem_at) in bites {
+        let owner = mobs.iter().find(|m| m.entity_id == attacker && m.kind == Kind::Wolf).and_then(|m| m.tame.owner);
         if let Some(victim) = mobs.iter_mut().find(|mob| mob.entity_id == target) {
             let hit = victim.hurt(damage, Source::MobAttack, Some(Push { dir, strength: BASE_KNOCKBACK, cause: attacker }));
+            if hit.is_some() && let Some(uuid) = owner { victim.credit_to(uuid); }
 
             if let Some(at) = golem_at {
                 if hit.is_some() {
@@ -3261,6 +3276,9 @@ pub fn step_all(
     }
 
     for index in cured {
+        if let Some(uuid) = mobs[index].villager.converter {
+            outcome.progress.push((uuid, crate::progress::Event::Trigger("story/cure_zombie_villager")));
+        }
         let villager = cure(&mut mobs[index], next_id());
 
         mobs[index].h.despawn = true;
@@ -3290,7 +3308,11 @@ pub fn step_all(
         baby.color = if mobs[ia].kind == Kind::Sheep { if rng.below(2) == 0 { mobs[ia].color } else { mobs[ib].color } } else { WHITE };
         baby.egg_timer = 6000 + rng.below(6001) as i32;
 
+        if let Some(uuid) = mobs[ia].love_player.or(mobs[ib].love_player) {
+            outcome.progress.push((uuid, crate::progress::Event::Bred(baby.kind.name())));
+        }
         for index in [ia, ib] {
+            mobs[index].love_player = None;
             mobs[index].age = BREED_COOLDOWN;
             mobs[index].love = 0;
             mobs[index].brain.stop();

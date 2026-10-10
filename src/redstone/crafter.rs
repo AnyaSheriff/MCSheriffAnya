@@ -129,6 +129,11 @@ pub fn craft(world: &mut World, pos: Pos) {
         return;
     };
 
+    if blocks::item_name(result.item) == Some("crafter") {
+        // Вики, Advancement: находиться рядом с крафтером, делающим крафтер.
+        // [проверить] границы радиуса в оригинале.
+        world.note_progress_near("adventure/crafters_crafting_crafters", (x as f64 + 0.5, y as f64 + 0.5, z as f64 + 0.5), (8.0, 8.0, 8.0));
+    }
     let face = front(state).unwrap_or("north");
     let Some(facing) = containers::facing_offset(face) else {
         return;

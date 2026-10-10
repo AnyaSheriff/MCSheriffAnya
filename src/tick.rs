@@ -362,6 +362,13 @@ async fn run(shared: Arc<Shared>) {
 
             // Брошенные зелья, огненные шары, облака (thrown.rs).
             crate::thrown::step(&shared, dimension, &mut world);
+            let kills = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").take_progress_kills();
+            if !kills.is_empty() {
+                let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+                for (uuid, kind) in kills {
+                    players.order(&uuid, crate::players::Order::Progress(crate::progress::Event::Killed { kind, dimension }));
+                }
+            }
 
             // Плиты, растяжки и руда слушают не только сигнал, но и мир: на
             // них встают игроки и падают предметы. Список — заново: только
@@ -1183,6 +1190,9 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         drops: shared.block_drops.load(std::sync::atomic::Ordering::Relaxed),
     }, rng, &mut || shared.next_entity_id());
 
+    for (uuid, event) in outcome.progress {
+        shared.players.lock().expect("список игроков захвачен другим потоком").order(&uuid, crate::players::Order::Progress(event));
+    }
     for strike in outcome.strikes {
         // Зомби бьёт жителя: убитый превращается в зомби-жителя (вики, Zombie
         // Villager, «Conversion»: лёгкая 0 %, обычная 50 %, трудная 100 %).
@@ -1462,6 +1472,11 @@ fn barter(items: &mut items::Items, shared: &Shared, watchers: &[crate::mob::ai:
         });
 
         if !taken.is_empty() {
+            // Вики, Advancement: gold pickup credited to its thrower.
+            for uuid in taken.iter().filter_map(|item| item.thrower) {
+                shared.players.lock().expect("список игроков захвачен другим потоком").order(&uuid,
+                    crate::players::Order::Progress(crate::progress::Event::Trigger("nether/distract_piglin")));
+            }
             let mob = &mut items.mobs_mut()[index];
 
             mob.nether.admiring = crate::mob::nether::ADMIRE_TICKS;
@@ -2346,16 +2361,31 @@ fn step_bolts(shared: &Shared, dimension: Dimension, world: &mut World) {
     let fire = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed) >= crate::config::server_properties::DIFFICULTY_NORMAL;
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
     let mut lit: Vec<crate::lightning::Bolt> = Vec::new();
+    let mut ended = Vec::new();
+    let living: Vec<_> = items.mobs().iter().filter(|m| !m.is_dead()).map(|m| (m.entity_id, (m.x, m.y, m.z))).collect();
 
     items.step_bolts(|bolt| {
         let alive = crate::lightning::step(world, bolt, fire);
 
         if alive && bolt.is_lit() {
+            for &(id, at) in &living {
+                if bolt.reaches(at) && !bolt.struck_entities.contains(&id) { bolt.struck_entities.push(id); }
+            }
             lit.push(bolt.clone());
         }
+        if !alive { ended.push(bolt.clone()); }
 
         alive
     });
+
+    for bolt in ended {
+        if items.mobs().iter().any(|m| m.kind == crate::mob::Kind::Villager && !m.is_dead() && bolt.protects(m.entity_id, (m.x, m.y, m.z))) {
+            let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+            let nearby: Vec<_> = players.members().iter().filter(|m| m.dimension == dimension
+                && (m.position.x - bolt.x).powi(2) + (m.position.y - bolt.y).powi(2) + (m.position.z - bolt.z).powi(2) <= 900.0).map(|m| m.uuid).collect();
+            for uuid in nearby { players.order(&uuid, crate::players::Order::Progress(crate::progress::Event::Trigger("adventure/lightning_rod_with_villager_no_fire"))); }
+        }
+    }
 
     if lit.is_empty() {
         return;
@@ -2368,6 +2398,12 @@ fn step_bolts(shared: &Shared, dimension: Dimension, world: &mut World) {
             mob.vitals.ignite(crate::lightning::STRIKE_FIRE_TICKS);
         }
 
+        for uuid in lit.iter().filter(|bolt| bolt.reaches((mob.x, mob.y, mob.z))).filter_map(|bolt| bolt.channeler) {
+            if mob.kind == crate::mob::Kind::Villager {
+                shared.players.lock().expect("список игроков захвачен другим потоком").order(&uuid,
+                    crate::players::Order::Progress(crate::progress::Event::Trigger("adventure/very_very_frightening")));
+            }
+        }
         mob.hurt(crate::lightning::STRIKE_DAMAGE, crate::survival::Source::Lightning, None);
     }
 

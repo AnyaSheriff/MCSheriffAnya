@@ -144,6 +144,8 @@ pub struct Dropped {
 
     /// Что это за предмет и сколько его.
     pub stack: Stack,
+    /// Бросивший игрок: для подбора золота пиглином (вики, Advancement).
+    pub thrower: Option<[u8; 16]>,
 
     /// Если это падающий блок — какой именно. Обычный лежащий предмет
     /// здесь ничего не хранит.
@@ -300,6 +302,7 @@ pub struct Items {
     xp_delay: std::collections::HashMap<i32, u32>,
 
     changes: Journal<Change>,
+    progress_kills: Vec<([u8; 16], &'static str)>,
 }
 
 impl Items {
@@ -315,7 +318,12 @@ impl Items {
             orb_view: Vec::new(),
             xp_delay: std::collections::HashMap::new(),
             changes: Journal::new(),
+            progress_kills: Vec::new(),
         }
+    }
+
+    pub fn take_progress_kills(&mut self) -> Vec<([u8; 16], &'static str)> {
+        std::mem::take(&mut self.progress_kills)
     }
 
     /// Ставит моба в мир: клиентам его покажет конец такта (`send_mob_ticks`).
@@ -348,6 +356,10 @@ impl Items {
                         // Опыт падает шариками после добычи, прямо перед
                         // событием смерти (чёрный ящик, cow-hit).
                         if matches!(event, crate::mob::Event::Death) {
+                            let mob = &self.mobs[index];
+                            if mob.xp_until > mob.ticks && let Some(uuid) = mob.kill_credit {
+                                self.progress_kills.push((uuid, mob.kind.name()));
+                            }
                             let points = std::mem::take(&mut self.mobs[index].pending_xp);
 
                             self.drop_experience(points, at, next_id, rng);
@@ -522,6 +534,13 @@ impl Items {
         self.changes.push(Change::Dropped(dropped));
     }
 
+    pub fn drop_from_player(&mut self, entity_id: i32, stack: Stack, at: (f64, f64, f64), velocity: (f64, f64, f64), thrower: [u8; 16]) {
+        let mut dropped = Self::new_item(entity_id, stack, at, velocity, THROWN_DELAY);
+        dropped.thrower = Some(thrower);
+        self.items.push(dropped.clone());
+        self.changes.push(Change::Dropped(dropped));
+    }
+
     /// Выпавший предмет, ещё не положенный в мир.
     fn new_item(
         entity_id: i32,
@@ -534,6 +553,7 @@ impl Items {
             entity_id,
             uuid: uuid_for(entity_id),
             stack,
+            thrower: None,
             block: None,
             fuse: None,
             custom: None,
@@ -569,6 +589,7 @@ impl Items {
             entity_id,
             uuid: uuid_for(entity_id),
             stack,
+            thrower: None,
             block: Some(state),
             fuse: None,
             custom: None,
@@ -609,6 +630,7 @@ impl Items {
             entity_id,
             uuid: uuid_for(entity_id),
             stack: Stack::new(0, 0),
+            thrower: None,
             block: Some(state),
             fuse: Some(fuse),
             custom,
@@ -1920,5 +1942,44 @@ mod tests {
         assert!((1..=3).contains(&points), "{points}");
         assert!(order.iter().position(|c| *c == 'O') > order.iter().position(|c| *c == 'D'));
         assert!(order.iter().position(|c| *c == 'O') < order.iter().position(|c| *c == 'X'));
+    }
+}
+
+#[cfg(test)]
+mod progress_tests {
+    use super::*;
+    use crate::mob::{Kind, Mob, Rng};
+    use crate::survival::Source;
+
+    #[test]
+    fn kills_are_credited_once_across_melee_projectiles_and_delayed_death() {
+        for kind in [Kind::Cow, Kind::Zombie, Kind::Wither, Kind::EnderDragon] {
+            for source in [Source::PlayerAttack, Source::Arrow, Source::Fall] {
+                if kind == Kind::EnderDragon && source == Source::Fall { continue; }
+                let mut mob = Mob::new(1, kind, (0.0, 64.0, 0.0));
+                mob.credit_to([1; 16]);
+                mob.hurt(10000.0, source, None);
+                assert!(mob.is_dead(), "{kind:?} {source:?}");
+                let mut items = Items::new();
+                items.add_mob(mob);
+                let mut id = 100;
+                items.flush_mob_events(&mut || { id += 1; id }, &mut Rng::new(1));
+                assert_eq!(items.take_progress_kills(), vec![([1; 16], kind.name())]);
+                items.flush_mob_events(&mut || { id += 1; id }, &mut Rng::new(1));
+                assert!(items.take_progress_kills().is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn expired_credit_does_not_award_a_kill() {
+        let mut mob = Mob::new(1, Kind::Cow, (0.0, 64.0, 0.0));
+        mob.credit_to([1; 16]);
+        mob.ticks = mob.xp_until;
+        mob.hurt(100.0, Source::Fall, None);
+        let mut items = Items::new();
+        items.add_mob(mob);
+        items.flush_mob_events(&mut || 100, &mut Rng::new(1));
+        assert!(items.take_progress_kills().is_empty());
     }
 }

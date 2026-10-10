@@ -104,6 +104,7 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
     };
 
     shoot(shared, player, &shot, 0.0);
+    player.progress.used(bow.item);
 
     // Стрела тратится (кроме творческого и «бесконечности»).
     if let Some(slot) = slot
@@ -192,6 +193,7 @@ fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
         flame: shot.flame,
         pierce_left: shot.pierce,
         pierced: Vec::new(),
+            killed: Vec::new(),
         crossbow: shot.crossbow,
         trident: shot.trident,
         loyalty: shot.loyalty,
@@ -270,6 +272,7 @@ pub(super) fn throw_trident(shared: &Shared, player: &mut PlayerState, hand: i32
     };
 
     shoot(shared, player, &shot, 0.0);
+    player.progress.used(trident.item);
 
     // Звук броска шлёт слежение за трезубцем (`send_arrow_ticks`).
     if !creative {
@@ -282,6 +285,7 @@ pub(super) fn throw_trident(shared: &Shared, player: &mut PlayerState, hand: i32
 /// игрока, вращение на 20 тактов (вики, Riptide; чёрный ящик,
 /// trident-riptide: на +0 звук, 8=4, ячейка и экипировка с износом).
 fn riptide(shared: &Shared, player: &mut PlayerState, slot: i32, trident: Stack, creative: bool, level: i32) {
+    player.progress.used(trident.item);
     let dimension = player.dimension;
 
     if !creative {
@@ -379,6 +383,8 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
 
     let creative = player.game_mode == GAME_MODE_CREATIVE;
     let count = data.charged;
+    player.progress.used(crossbow.item);
+    player.progress.trigger("adventure/ol_betsy");
 
     if let Some(rocket) = data.charged_rocket.take() {
         fire_rockets(shared, player, &rocket, count);

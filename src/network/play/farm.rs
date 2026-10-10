@@ -58,6 +58,7 @@ pub(super) fn use_on_block(player: &mut PlayerState, shared: &Shared, clicked: (
         world.tell_directly(beyond.0, beyond.1, beyond.2);
         redstone::settle(&mut world);
 
+        player.progress.used(held.item);
         // Мотыга изнашивается на единицу (вики, Hoe: «uses 1 durability»).
         let mut slots = Vec::new();
 
@@ -65,7 +66,9 @@ pub(super) fn use_on_block(player: &mut PlayerState, shared: &Shared, clicked: (
             let worn = combat::wear(&held, 1, false, || world.random_unit());
             let slot = inventory::FIRST_HOTBAR + player.inventory.selected();
 
-            player.inventory.set(slot, combat::add_damage(held, worn));
+            let next = combat::add_damage(held, worn);
+            if next.is_none() { player.progress.broken(held.item); }
+            player.inventory.set(slot, next);
             slots.push(slot);
         }
 

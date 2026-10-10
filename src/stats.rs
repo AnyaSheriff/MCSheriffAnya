@@ -294,6 +294,10 @@ impl Stats {
         }
     }
 
+    pub fn has_updates(&self) -> bool {
+        self.sent.as_ref().is_none_or(|sent| self.values.iter().any(|(key, value)| sent.get(key) != Some(value)))
+    }
+
     /// Тело пакета Award Statistics: первый раз — всё ненулевое, потом —
     /// только то, что изменилось с прошлого ответа (вики: «Will only send
     /// the changed values if previously requested»).

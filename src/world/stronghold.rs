@@ -898,6 +898,12 @@ fn texts_of(piece: &Placed) -> &'static [String] {
     &templates().pieces[piece.template].texts
 }
 
+/// Вход в рамку крепости: план уже закэширован генератором.
+pub fn contains(terrain: &super::terrain::Terrain, x: i32, y: i32, z: i32) -> bool {
+    starts_of(terrain).iter().filter(|(cx, cz)| (cx - x.div_euclid(16)).abs() <= RADIUS_CHUNKS && (cz - z.div_euclid(16)).abs() <= RADIUS_CHUNKS)
+        .any(|&(cx, cz)| super::in_structure_bounds(plan_cached(terrain.seed(), cx, cz).iter().map(|p| p.bounds), (x, y, z)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

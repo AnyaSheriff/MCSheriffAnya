@@ -123,6 +123,7 @@ pub(super) fn place_boat(shared: &Shared, player: &mut PlayerState, hand: i32) -
     };
     let mut boat = Minecart::new(shared.next_entity_id(), kind, at);
 
+    player.progress.used(stack.item);
     boat.yaw = player.yaw;
     shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").add_cart(boat);
 
@@ -254,6 +255,8 @@ pub(super) fn vehicle_move(payload: &[u8], player: &mut PlayerState, shared: &Sh
         return;
     }
 
+    let cm = ((x - cart.x).hypot(y - cart.y).hypot(z - cart.z) * 100.0).round() as i32;
+    player.progress.custom(if cart.kind.is_boat() { "boat_one_cm" } else { "minecart_one_cm" }, cm);
     cart.drive_to((x, y, z), yaw);
     player.set_position(x, y + riding::BOAT_SEAT_DROP, z);
 }
@@ -384,12 +387,13 @@ pub(super) async fn send_riding(stream: &mut Outgoing<'_>, shared: &Shared, play
             }
         }
     } else if let Some(vehicle) = player.ride.vehicle
-        && let Some((at, ..)) = place_of(vehicle)
+        && let Some((at, _, kind, _)) = place_of(vehicle)
     {
         // Едет: за транспортом (вагонетка катится сама, лодку ведёт он).
         let seat = riding::boat_seat(at);
 
         if (seat.0 - player.x).abs() + (seat.1 - player.y).abs() + (seat.2 - player.z).abs() > 1.0e-9 {
+            player.progress.custom(if kind.is_boat() { "boat_one_cm" } else { "minecart_one_cm" }, ((seat.0 - player.x).hypot(seat.1 - player.y).hypot(seat.2 - player.z) * 100.0).round() as i32);
             player.set_position(seat.0, seat.1, seat.2);
             publish_player(shared, player);
         }

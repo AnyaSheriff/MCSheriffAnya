@@ -428,8 +428,15 @@ pub fn after_resistance(amount: f32, level: i32, source: Source) -> f32 {
 pub struct Hit {
     /// Сколько здоровья снято на самом деле.
     pub taken: f32,
+    /// Поглощение и сопротивление отдельно для статистики (вики, Statistics).
+    pub absorbed: f32,
+    pub resisted: f32,
     /// Игрок умер от этого удара.
     pub died: bool,
+}
+
+impl Hit {
+    pub fn health_damage(self) -> f32 { (self.taken - self.absorbed).max(0.0) }
 }
 
 /// Сколько частиц эффектов ведётся (по одной на эффект; видов 29).
@@ -1023,7 +1030,8 @@ impl Vitals {
         // всё равно состоялся: у оригинала робот с сопротивлением V получает
         // событие урона, анимацию и отдачу, здоровье не меняется (чёрный ящик,
         // silverfish-chase) [проверить: у остальных источников].
-        let amount = after_resistance(amount, self.resistance_level(), source);
+        let resisted = amount - after_resistance(amount, self.resistance_level(), source);
+        let amount = amount - resisted;
 
         if immune && !source.bypasses_invulnerability() {
             return None;
@@ -1060,7 +1068,7 @@ impl Vitals {
             self.dead = true;
         }
 
-        Some(Hit { taken, died: self.dead })
+        Some(Hit { taken, absorbed, resisted, died: self.dead })
     }
 
     /// Самый сильный удар за время неуязвимости (нападающему видно, пройдёт ли его удар).

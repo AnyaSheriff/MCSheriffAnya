@@ -76,6 +76,11 @@ pub struct Bolt {
 
     /// Сколько вспышек осталось; None — удара ещё не было.
     flashes: Option<i32>,
+    /// Вики, Advancement: «doesn't set any blocks on fire» за всю жизнь молнии.
+    fires: u32,
+    pub struck_entities: Vec<i32>,
+    /// Игрок с Channeling; [Bedrock: потом] достижения получает Java-подключение.
+    pub channeler: Option<[u8; 16]>,
 }
 
 impl Bolt {
@@ -88,7 +93,18 @@ impl Bolt {
             z,
             life: START_LIFE,
             flashes: None,
+            fires: 0,
+            struck_entities: Vec::new(),
+            channeler: None,
         }
+    }
+
+    /// Вики, Advancement: незадетый житель в расширенной области молнии.
+    /// [проверить] границы ящика на оригинале.
+    pub fn protects(&self, id: i32, (x, y, z): (f64, f64, f64)) -> bool {
+        self.fires == 0 && !self.struck_entities.contains(&id)
+            && (x - self.x).abs() <= 15.0 && (z - self.z).abs() <= 15.0
+            && y >= self.y - 15.0 && y <= self.y + 21.0
     }
 
     /// Блок, в который бьёт молния: тот, на котором она стоит. Призванная
@@ -169,7 +185,7 @@ pub fn step(world: &mut World, bolt: &mut Bolt, fire: bool) -> bool {
     match phase {
         Phase::Strike => {
             if fire {
-                ignite(world, bolt);
+                bolt.fires += ignite(world, bolt);
             }
 
             strike(world, bolt.struck_block());
@@ -178,7 +194,7 @@ pub fn step(world: &mut World, bolt: &mut Bolt, fire: bool) -> bool {
         // [проверить]: зажигают ли огонь повторные вспышки.
         Phase::Flash => {
             if fire {
-                ignite(world, bolt);
+                bolt.fires += ignite(world, bolt);
             }
 
             true
@@ -324,11 +340,11 @@ pub fn cleaned(state: i32, layers: usize) -> Option<i32> {
 /// Огонь от молнии: в клетке молнии и в нескольких случайных рядом —
 /// где пусто и есть твёрдый верх снизу. Громоотвод и блок под ним не
 /// загораются сами собой: они не пустые.
-fn ignite(world: &mut World, bolt: &Bolt) {
+fn ignite(world: &mut World, bolt: &Bolt) -> u32 {
     let Some(fire) = blocks::state_by_name("fire") else {
-        return;
+        return 0;
     };
-
+    let mut lit = 0;
     let cell = bolt.cell();
     let mut places = vec![cell];
 
@@ -345,8 +361,10 @@ fn ignite(world: &mut World, bolt: &Bolt) {
     for (x, y, z) in places {
         if world.get_block(x, y, z) == AIR && blocks::solid_top(world.get_block(x, y - 1, z)) {
             world.set_block(x, y, z, fire);
+            lit += 1;
         }
     }
+    lit
 }
 
 /// Шанс попытки удара за такт на загруженный чанк в грозу: «every tick
@@ -589,5 +607,34 @@ mod tests {
         let (x, y, z) = natural_target(&mut world, (0, 0), &[]).expect("под дождём бьёт");
         assert_eq!(y, 1.0);
         assert!((0.0..16.0).contains(&x) && (0.0..16.0).contains(&z));
+    }
+}
+
+#[cfg(test)]
+mod progress_tests {
+    use super::*;
+
+    #[test]
+    fn protection_requires_an_unstruck_villager_and_no_fire_in_any_flash() {
+        let mut bolt = Bolt::new(1, (0.0, 64.0, 0.0));
+        for (at, expected) in [((6.0, 64.0, 0.0), true), ((15.0, 85.0, 15.0), true), ((15.01, 64.0, 0.0), false), ((0.0, 48.99, 0.0), false)] {
+            assert_eq!(bolt.protects(2, at), expected, "{at:?}");
+        }
+        bolt.struck_entities.push(2);
+        assert!(!bolt.protects(2, (6.0, 64.0, 0.0)));
+        assert!(bolt.protects(3, (6.0, 64.0, 0.0)));
+        bolt.fires = 1;
+        assert!(!bolt.protects(3, (6.0, 64.0, 0.0)));
+    }
+
+    #[test]
+    fn fire_count_records_successful_ignition_and_survives_flashes() {
+        let mut world = World::in_memory();
+        let mut bolt = Bolt::new(1, (0.5, 64.0, 0.5));
+        world.set_block(0, 63, 0, blocks::state_by_name("stone").unwrap());
+        assert!(step(&mut world, &mut bolt, true));
+        assert!(bolt.fires > 0);
+        world.set_block(0, 64, 0, AIR);
+        assert!(!bolt.protects(2, (6.0, 64.0, 0.0)));
     }
 }

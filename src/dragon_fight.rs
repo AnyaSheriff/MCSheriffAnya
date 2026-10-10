@@ -370,6 +370,8 @@ fn respawn_step(world: &mut World, items: &mut items::Items, next_id: &mut dyn F
     }
 
     items.add_mob_late(new_dragon(false, next_id));
+    // Вики, Advancement: рядом с призванным драконом [проверить: радиус].
+    world.note_progress_near("end/respawn_dragon", (0.0, 128.0, 0.0), (192.0, 192.0, 192.0));
 }
 
 #[cfg(test)]

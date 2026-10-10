@@ -2393,3 +2393,39 @@ fn small_arthropod_melee_damage() {
         assert_eq!(crate::survival::scaled(damage, 3), damage * 1.5);
     }
 }
+
+#[test]
+fn breeding_and_curing_send_progress_only_to_the_responsible_player() {
+    for kind in [Kind::Cow, Kind::Pig, Kind::Sheep, Kind::Chicken, Kind::Wolf, Kind::Cat] {
+        let view = Flat::new();
+        let mut items = Items::new();
+        for (id, x) in [(1, 0.5), (2, 1.5)] {
+            let mut mob = Mob::new(id, kind, (x, 1.0, 0.5));
+            mob.love = LOVE_TICKS;
+            mob.love_player = Some([id as u8; 16]);
+            if matches!(kind, Kind::Wolf | Kind::Cat) { mob.tame.owner = Some([1; 16]); }
+            items.add_mob(mob);
+        }
+        let mut rng = Rng::new(11);
+        let mut next = 100;
+        let mut events = Vec::new();
+        for _ in 0..100 {
+            let out = step_all(&mut items, &view, &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 }, &mut rng, &mut || { next += 1; next });
+            events.extend(out.progress);
+        }
+        assert_eq!(events.len(), 1, "{kind:?}: {events:?}");
+        assert!(events[0].0 == [1; 16] || events[0].0 == [2; 16]);
+        assert!(matches!(events[0].1, crate::progress::Event::Bred(name) if name == kind.name()));
+        assert!(items.mobs().iter().all(|m| m.love_player.is_none()));
+    }
+    let mut items = Items::new();
+    let mut zombie = Mob::new(1, Kind::ZombieVillager, (0.5, 1.0, 0.5));
+    zombie.no_ai = true;
+    zombie.villager.conversion = 1;
+    zombie.villager.converter = Some([3; 16]);
+    items.add_mob(zombie);
+    let out = step_all(&mut items, &Flat::new(), &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 }, &mut Rng::new(11), &mut || 100);
+    assert_eq!(out.progress.len(), 1);
+    assert_eq!(out.progress[0].0, [3; 16]);
+    assert!(matches!(out.progress[0].1, crate::progress::Event::Trigger("story/cure_zombie_villager")));
+}

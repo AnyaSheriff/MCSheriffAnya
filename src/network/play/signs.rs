@@ -80,6 +80,7 @@ pub(super) fn use_sign(
                 Some("minecraft:item.dye.use")
             }
             Tool::Glow if !side.glowing => {
+                player.progress.trigger("husbandry/make_a_sign_glow");
                 next.side_mut(front).glowing = true;
                 Some("minecraft:item.glow_ink_sac.use")
             }
