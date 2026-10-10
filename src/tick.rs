@@ -832,6 +832,8 @@ impl crate::mob::View for MobView<'_> {
         self.0.rain_at(x, y, z)
     }
 
+    fn thunder(&self) -> bool { self.0.weather.is_thundering() }
+
     fn temperature(&self, x: i32, y: i32, z: i32) -> f32 {
         self.0.temperature_at(x, y, z)
     }
@@ -1016,7 +1018,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     for mut mob in loaded {
         mob.entity_id = shared.next_entity_id();
-        mob.uuid = crate::mob::uuid_for(mob.entity_id);
+        mob.uuid = mob.land.saved_uuid.unwrap_or_else(|| crate::mob::uuid_for(mob.entity_id));
         mob.brain = crate::mob::ai::Brain::new(mob.entity_id);
         items.add_mob(mob);
     }
@@ -1057,7 +1059,11 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     if spawning {
         for (chunk_x, chunk_z) in fresh {
-            for mob in crate::mob::spawn::for_new_chunk(&MobView(world), chunk_x, chunk_z, rng, &mut || shared.next_entity_id()) {
+            let biome = world.surface_biome(chunk_x * 16 + 8, chunk_z * 16 + 8);
+            let animals = if crate::mob::spawn::land_table(biome).is_empty() {
+                crate::mob::spawn::for_new_chunk(&MobView(world), chunk_x, chunk_z, rng, &mut || shared.next_entity_id())
+            } else { crate::mob::spawn::land_for_new_chunk(&MobView(world), chunk_x, chunk_z, biome, rng, &mut || shared.next_entity_id()) };
+            for mob in animals {
                 items.add_mob(mob);
             }
 
@@ -1161,6 +1167,36 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         }
     }
 
+    if dimension == Dimension::Overworld && shared.trader_spawner.lock().expect("торговец").tick(shared.spawn_traders.load(std::sync::atomic::Ordering::Relaxed), spawning, watchers.iter().any(|p| !p.spectator), rng) {
+        let eligible: Vec<_>=watchers.iter().filter(|p| !p.spectator).collect();
+        let player=eligible[rng.below(eligible.len() as u32) as usize];
+        for _ in 0..10 {
+            let x=player.x.floor() as i32 + rng.below(96) as i32-48;
+            let z=player.z.floor() as i32 + rng.below(96) as i32-48;
+            if !world.has_chunk(x.div_euclid(16),z.div_euclid(16)) || world.surface_biome(x,z)=="deep_dark" { continue; }
+            let y=world.rain_top(x,z).filter(|y| crate::mob::spawn::spawnable(&MobView(world),x,*y,z,3));
+            let Some(y)=y else { continue; };
+            let mut trader=crate::mob::Mob::new(shared.next_entity_id(),crate::mob::Kind::WanderingTrader,(f64::from(x)+0.5,f64::from(y),f64::from(z)+0.5));
+            trader.land.despawn=48000; trader.villager.offers=crate::mob::trader::offers(rng);
+            let (id,uuid)=(trader.entity_id,trader.uuid);
+            let mut llamas=Vec::new();
+            for _ in 0..2 {
+                for _ in 0..10 {
+                    let lx=x+rng.below(8) as i32-4; let lz=z+rng.below(8) as i32-4;
+                    let Some(ly)=world.rain_top(lx,lz).filter(|y| crate::mob::spawn::spawnable(&MobView(world),lx,*y,lz,2)) else { continue; };
+                    let mut llama=crate::mob::Mob::new(shared.next_entity_id(),crate::mob::Kind::TraderLlama,(f64::from(lx)+0.5,f64::from(ly),f64::from(lz)+0.5));
+                    crate::mob::land::initialize(&mut llama,rng); llama.land.trader=Some(id);
+                    if crate::mob::spawn::fits(&MobView(world),&llama) {
+                        crate::mob::leash::attach(&mut llama,crate::mob::leash::Holder::Player { id,uuid }); llamas.push(llama); break;
+                    }
+                }
+            }
+            if llamas.len()!=2 { continue; }
+            items.add_mob(trader); for llama in llamas { items.add_mob(llama); }
+            shared.trader_spawner.lock().expect("торговец").spawned(); break;
+        }
+    }
+
     // Кошки, что сидят: сундук под ними не открывается (mob/tame.rs).
     world.sitting_cats = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Cat && mob.tame.sitting && !mob.is_dead()).map(|mob| (mob.x, mob.y, mob.z)).collect();
 
@@ -1183,8 +1219,19 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     crate::mob::tame::bind_owners(items.mobs_mut(), &owners);
 
+    {
+        let riding=shared.riding.lock().expect("седоки");
+        for mob in items.mobs_mut().iter_mut().filter(|m| crate::mob::land::rideable(m.kind)) { mob.land.rider=riding.driver(mob.entity_id); }
+    }
+    let rideables: Vec<_>=items.mobs().iter().filter(|m| crate::mob::land::rideable(m.kind)).map(|m| m.entity_id).collect();
     let outcome = crate::mob::step_all(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id());
 
+    {
+        let mut riding=shared.riding.lock().expect("седоки");
+        for id in rideables {
+            if items.mobs().iter().find(|m| m.entity_id==id).is_none_or(|m| m.is_dead() || (crate::mob::land::llama(m.kind) && m.land.rider.is_none())) { riding.clear_vehicle(id); }
+        }
+    }
     crate::mob::arthropod::step(&mut items, world, crate::mob::arthropod::Rules {
         griefing: shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed),
         drops: shared.block_drops.load(std::sync::atomic::Ordering::Relaxed),
@@ -1266,6 +1313,11 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
     }
 
+    for (shooter, (from, velocity)) in outcome.spits {
+        let flying = crate::thrown::Flying::spit(shared.next_entity_id(), dimension, from, velocity, shooter);
+        shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(flying);
+    }
+
     // Снежки снежных големов (mob/golem.rs): летят, как брошенные игроком.
     for (shooter, (from, velocity)) in outcome.snowballs {
         let flying = crate::thrown::Flying::snowball(shared.next_entity_id(), dimension, from, velocity, shooter);
@@ -1339,6 +1391,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     }
 
     barter(&mut items, shared, &watchers, rng);
+    crate::mob::land::pickup_food(&mut items);
 
     if ticks.is_multiple_of(200) {
         world.store_mobs(items.mobs());
@@ -2392,6 +2445,8 @@ fn step_bolts(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 
     for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && lit.iter().any(|bolt| bolt.reaches((mob.x, mob.y, mob.z)))) {
+        let strikes: Vec<_>=lit.iter().filter(|b| b.reaches((mob.x,mob.y,mob.z))).map(|b| b.entity_id).collect();
+        for bolt in strikes { crate::mob::land::lightning(mob,bolt); }
         if mob.vitals.fire > 0 {
             mob.vitals.fire += 1;
         } else {

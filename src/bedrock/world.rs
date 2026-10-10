@@ -1359,8 +1359,8 @@ impl BedrockWorld {
                         things.push(super::things::potion(flying.entity_id, flying.kind == crate::thrown::Kind::Lingering, name, at, velocity));
                     }
                     // Огненный шар дракона у Bedrock — своя сущность [проверить].
-                    // [Bedrock: потом] шары ифрита и гаста, снежок голема, череп иссушителя.
-                    crate::thrown::Kind::DragonFireball | crate::thrown::Kind::SmallFireball | crate::thrown::Kind::GhastFireball | crate::thrown::Kind::Snowball | crate::thrown::Kind::WitherSkull => {}
+                    // [Bedrock: потом] шары ифрита и гаста, снежок голема, череп иссушителя, плевок ламы.
+                    crate::thrown::Kind::DragonFireball | crate::thrown::Kind::SmallFireball | crate::thrown::Kind::GhastFireball | crate::thrown::Kind::Snowball | crate::thrown::Kind::WitherSkull | crate::thrown::Kind::LlamaSpit => {}
                 }
             }
 

@@ -43,7 +43,7 @@ pub(super) struct Ride {
 type Seats = Vec<(i32, Vec<i32>)>;
 
 /// Где транспорт: место, высота ящика, вид, поворот.
-type Spot = ((f64, f64, f64), f64, Kind, f32);
+type Spot = ((f64, f64, f64), f64, f64, f32);
 
 /// Куда ведёт луч от глаз: точка на поверхности воды или твёрдого блока.
 /// Воздух и всё прочее пропускается; луч идёт мелкими шагами, последний
@@ -220,6 +220,7 @@ pub(super) fn dismount(shared: &Shared, player: &PlayerState) {
 fn release_driver(shared: &Shared, dimension: Dimension, vehicle: i32, rider: i32) {
     let next = shared.riding.lock().expect("учёт седоков захвачен другим потоком").driver(vehicle);
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+    if let Some(mob) = items.mobs_mut().iter_mut().find(|m| m.entity_id == vehicle) { mob.land.rider = next; }
 
     if let Some(cart) = items.carts_mut().iter_mut().find(|cart| cart.entity_id == vehicle)
         && cart.driver == Some(rider)
@@ -246,6 +247,13 @@ pub(super) fn vehicle_move(payload: &[u8], player: &mut PlayerState, shared: &Sh
     }
 
     let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+    if let Some(mob) = items.mobs_mut().iter_mut().find(|m| m.entity_id == vehicle && m.kind == crate::mob::Kind::Camel) {
+        if mob.land.rider == Some(player.entity_id) && mob.land.saddle && !mob.land.sitting && !mob.is_dead()
+            && (x-mob.x).hypot(z-mob.z) <= 5.0 && (y-mob.y).abs() <= 5.0 {
+            mob.x=x; mob.y=y; mob.z=z; mob.face(yaw);
+        }
+        return;
+    }
     let Some(cart) = items.carts_mut().iter_mut().find(|cart| cart.entity_id == vehicle) else {
         return;
     };
@@ -258,7 +266,8 @@ pub(super) fn vehicle_move(payload: &[u8], player: &mut PlayerState, shared: &Sh
     let cm = ((x - cart.x).hypot(y - cart.y).hypot(z - cart.z) * 100.0).round() as i32;
     player.progress.custom(if cart.kind.is_boat() { "boat_one_cm" } else { "minecart_one_cm" }, cm);
     cart.drive_to((x, y, z), yaw);
-    player.set_position(x, y + riding::BOAT_SEAT_DROP, z);
+    let seat = riding::boat_seat((x,y,z));
+    player.set_position(seat.0,seat.1,seat.2);
 }
 
 /// Paddle Boat: левое и правое весло.
@@ -343,21 +352,22 @@ pub(super) async fn send_riding(stream: &mut Outgoing<'_>, shared: &Shared, play
 
     // Транспорт под седоком: где он (лодки и вагонетки — из предметов).
     let place_of = |vehicle: i32| -> Option<Spot> {
-        shared
+        let cart_spot = shared
             .items_in(player.dimension)
             .lock()
             .expect("предметы захвачены другим потоком")
             .carts()
             .iter()
             .find(|cart| cart.entity_id == vehicle)
-            .map(|cart| ((cart.x, cart.y, cart.z), cart.dims().1, cart.kind, cart.yaw))
+            .map(|cart| ((cart.x, cart.y, cart.z), cart.dims().1, riding::BOAT_SEAT_DROP, cart.yaw));
+        cart_spot.or_else(|| shared.items_in(player.dimension).lock().expect("мобы").mobs().iter().find(|m| m.entity_id == vehicle && !m.is_dead()).map(|m| ((m.x,m.y,m.z),m.size().1,if m.kind == crate::mob::Kind::Camel { if m.land.sitting { 0.8 } else { 1.85 } } else { 1.37 },m.yaw)))
     };
 
     if mine != player.ride.vehicle {
         match mine {
             Some(vehicle) => {
-                if let Some((at, ..)) = place_of(vehicle) {
-                    let seat = riding::boat_seat(at);
+                if let Some((at, _, offset, _)) = place_of(vehicle) {
+                    let seat = (at.0, at.1+offset, at.2);
 
                     player.ride.vehicle = Some(vehicle);
                     player.set_position(seat.0, seat.1, seat.2);
@@ -387,13 +397,19 @@ pub(super) async fn send_riding(stream: &mut Outgoing<'_>, shared: &Shared, play
             }
         }
     } else if let Some(vehicle) = player.ride.vehicle
-        && let Some((at, _, kind, _)) = place_of(vehicle)
+        && let Some((at, _, offset, _)) = place_of(vehicle)
     {
         // Едет: за транспортом (вагонетка катится сама, лодку ведёт он).
-        let seat = riding::boat_seat(at);
+        let seat = (at.0, at.1+offset, at.2);
 
         if (seat.0 - player.x).abs() + (seat.1 - player.y).abs() + (seat.2 - player.z).abs() > 1.0e-9 {
-            player.progress.custom(if kind.is_boat() { "boat_one_cm" } else { "minecart_one_cm" }, ((seat.0 - player.x).hypot(seat.1 - player.y).hypot(seat.2 - player.z) * 100.0).round() as i32);
+            // Статистика пути — только у лодок и вагонеток, не у верховых мобов.
+            let kind = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").carts().iter().find(|cart| cart.entity_id == vehicle).map(|cart| cart.kind);
+
+            if let Some(kind) = kind {
+                player.progress.custom(if kind.is_boat() { "boat_one_cm" } else { "minecart_one_cm" }, ((seat.0 - player.x).hypot(seat.1 - player.y).hypot(seat.2 - player.z) * 100.0).round() as i32);
+            }
+
             player.set_position(seat.0, seat.1, seat.2);
             publish_player(shared, player);
         }
@@ -445,4 +461,24 @@ pub(super) async fn send_riding(stream: &mut Outgoing<'_>, shared: &Shared, play
     }
 
     Ok(())
+}
+
+// 26.1 player_command: start_riding_jump=3, stop_riding_jump=4.
+pub(super) fn mount_command(payload: &[u8], player: &PlayerState, shared: &Shared) {
+    let mut c=Cursor::new(payload);
+    let (Some(_),Some(action),Some(charge))=(c.varint(),c.varint(),c.varint()) else { return; };
+    if action!=3 { return; }
+    let Some(id)=player.ride.vehicle else { return; };
+    let mut items=shared.items_in(player.dimension).lock().expect("мобы");
+    if let Some(mob)=items.mobs_mut().iter_mut().find(|m| m.entity_id==id && m.land.rider==Some(player.entity_id)) { crate::mob::land::dash(mob,charge); }
+}
+
+// Первое нажатие движения поднимает сидящего верблюда (вики, Camel).
+pub(super) fn input(flags:u8, player:&PlayerState, shared:&Shared) {
+    if flags & 15 == 0 { return; }
+    let Some(id)=player.ride.vehicle else { return; };
+    let mut items=shared.items_in(player.dimension).lock().expect("мобы");
+    if let Some(m)=items.mobs_mut().iter_mut().find(|m| m.entity_id==id && m.kind==crate::mob::Kind::Camel && m.land.rider==Some(player.entity_id) && m.land.saddle && m.land.sitting) {
+        m.land.sitting=false; m.land.pose_tick=m.tame.clock.abs();
+    }
 }

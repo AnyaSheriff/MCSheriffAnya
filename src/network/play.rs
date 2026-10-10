@@ -62,8 +62,11 @@ use crate::{log_debug, log_error, log_info};
 mod arthropod_tests;
 #[cfg(test)]
 mod skeleton_tests;
+#[cfg(test)]
+mod land_tests;
 mod vitals;
 mod mobs;
+mod land;
 mod merchant;
 mod pvp;
 mod bow;
@@ -4462,30 +4465,23 @@ async fn open_window(
 /// Chest: «27 slots», как у сундука; Minecart with Hopper: 5 ячеек, окно
 /// воронки). Заголовок — имя сущности. [проверить]: заголовок.
 async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, entity_id: i32) -> io::Result<()> {
-    let found = shared
-        .items_in(player.dimension)
-        .lock()
-        .expect("предметы захвачены другим потоком")
-        .carts()
-        .iter()
-        .find(|cart| cart.entity_id == entity_id)
-        .map(|cart| (cart.kind, cart.slots.clone()));
-
-    let Some((kind, slots)) = found else {
-        return Ok(());
+    let found = {
+        let items=shared.items_in(player.dimension).lock().expect("предметы");
+        if let Some(mob)=items.mobs().iter().find(|m| m.entity_id==entity_id && crate::mob::land::llama(m.kind) && m.land.tamed && !m.is_dead()) {
+            Some((0,"entity.minecraft.llama",land::slots(mob),true,mob.land.strength))
+        } else {
+            items.carts().iter().find(|c| c.entity_id==entity_id).and_then(|c| cart_menu(c.kind).map(|(menu,title)| (menu,title,c.slots.clone(),false,0)))
+        }
     };
-    let Some((menu, title)) = cart_menu(kind) else {
-        return Ok(());
-    };
+    let Some((menu,title,slots,llama,strength))=found else { return Ok(()); };
 
     player.window_counter = player.window_counter % WINDOW_IDS + 1;
 
     let id = player.window_counter;
-    let mut body = encode_varint(OPEN_SCREEN);
-
+    let mut body = encode_varint(if llama { 0x29 } else { OPEN_SCREEN });
     body.extend_from_slice(&encode_varint(id));
-    body.extend_from_slice(&encode_varint(menu));
-    body.extend_from_slice(&nbt::translated(title));
+    if llama { body.extend_from_slice(&encode_varint(if slots.len()>2 { i32::from(strength) } else { 0 })); body.extend_from_slice(&entity_id.to_be_bytes()); }
+    else { body.extend_from_slice(&encode_varint(menu)); body.extend_from_slice(&nbt::translated(title)); }
     write_body(stream, body).await?;
 
     player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false });
@@ -4505,14 +4501,9 @@ fn cart_menu(kind: crate::minecart::Kind) -> Option<(i32, &'static str)> {
 
 /// Ячейки вагонетки с этим номером, если она ещё в мире.
 pub(super) fn cart_slots(shared: &Shared, dimension: crate::dimension::Dimension, entity_id: i32) -> Option<Vec<Option<Stack>>> {
-    shared
-        .items_in(dimension)
-        .lock()
-        .expect("предметы захвачены другим потоком")
-        .carts()
-        .iter()
-        .find(|cart| cart.entity_id == entity_id)
-        .map(|cart| cart.slots.clone())
+    let items=shared.items_in(dimension).lock().expect("предметы");
+    items.carts().iter().find(|c| c.entity_id==entity_id).map(|c| c.slots.clone())
+        .or_else(|| items.mobs().iter().find(|m| m.entity_id==entity_id && crate::mob::land::llama(m.kind) && !m.is_dead()).map(land::slots))
 }
 
 /// Всё окно хранилища целиком: ячейки хранилища (как их знает клиент),
@@ -4627,7 +4618,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
     }
 
     let now: Option<Vec<Option<Stack>>> = if let Some(cart) = window.cart {
-        shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").published_carts.get(&cart).cloned()
+        cart_slots(shared, player.dimension, cart)
     } else {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
@@ -7101,6 +7092,9 @@ fn handle_client_packet_inner(
             sleep::player_command(payload, player, shared);
             vitals::player_command(payload, player);
             glide::command(payload, player, shared);
+            vehicle::mount_command(payload, player, shared);
+            let mut command=Cursor::new(payload);
+            if let (Some(_),Some(5))=(command.varint(),command.varint()) { reaction.open_cart=player.ride.vehicle; }
         }
         vitals::CLIENT_COMMAND => {
             // Действие 0 — «возродиться»; живому возрождаться незачем.
@@ -7299,6 +7293,7 @@ fn handle_client_packet_inner(
         vehicle::STEER_BOAT => vehicle::steer_boat(payload, player, shared),
         PLAYER_INPUT => {
             if let Some(flags) = payload.first() {
+                vehicle::input(*flags,player,shared);
                 let sneaking = flags & INPUT_SNEAK != 0;
 
                 // Приседание в лодке или вагонетке — слезть (вики, Boat: «can
@@ -7852,7 +7847,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     let mob = &items.mobs()[index];
 
     // Житель: торговля или мотание головой (merchant.rs); в приключении тоже.
-    if mob.kind == crate::mob::Kind::Villager
+    if matches!(mob.kind, crate::mob::Kind::Villager | crate::mob::Kind::WanderingTrader)
         && (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) <= REACH * REACH
         && !mob.is_dead()
     {
@@ -7872,6 +7867,8 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     if tame::use_on_mob(&mut items, index, player, shared, reaction) {
         return true;
     }
+
+    if land::use_on(&mut items, index, &world, player, shared, reaction) { return true; }
 
     // Големы: слиток лечит железного, ножницы снимают тыкву со снежного.
     if use_golem(shared, player, &mut items, index, reaction) {
@@ -9444,6 +9441,8 @@ fn use_spawn_egg(
         crate::mob::slime::set_size(&mut mob, size);
     }
 
+    if crate::mob::land::animal(kind) { crate::mob::land::initialize(&mut mob, &mut crate::mob::Rng::new(shared.next_entity_id() as u64)); }
+
     // Смотрит туда же, куда игрок, как призванный с яйца у оригинала.
     mob.yaw = player.yaw;
     mob.head_yaw = player.yaw;
@@ -9800,7 +9799,9 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
 
         let before = snapshot(&slots, &player.inventory);
         let (slots_before, inventory_before) = (slots.clone(), player.inventory.clone());
-        let mut click = window::Window { container: &mut slots, inventory: &mut player.inventory, kind }.click(slot as i16 as i32, button as i8, mode);
+        let llama=cart.is_some_and(|id| shared.items_in(player.dimension).lock().expect("мобы").mobs().iter().any(|m| m.entity_id==id && crate::mob::land::llama(m.kind)));
+        let mut click = if llama && mode==1 { land::quick_move(&mut slots,&mut player.inventory,slot as i16 as i32) }
+            else { window::Window { container: &mut slots, inventory: &mut player.inventory, kind }.click(slot as i16 as i32, button as i8, mode) };
 
         // В выключенную ячейку крафтера ничего не кладётся (вики, Crafter:
         // «Disabled slots cannot have items put in them») — такой щелчок
@@ -9809,7 +9810,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
             && slots.iter().enumerate().any(|(index, stack)| stack.is_some() && crafter.is_disabled(index))
         {
             slots.clone_from(&slots_before);
-            player.inventory = inventory_before;
+            player.inventory = inventory_before.clone();
             click.thrown = None;
         }
 
@@ -9819,6 +9820,9 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
 
                 if let Some(cart) = items.carts_mut().iter_mut().find(|found| found.entity_id == cart) {
                     cart.slots.clone_from(&slots);
+                } else if let Some(mob)=items.mobs_mut().iter_mut().find(|m| m.entity_id==cart && crate::mob::land::llama(m.kind)) {
+                    if land::valid(mob,&slots) { land::store(mob,&slots); }
+                    else { slots.clone_from(&slots_before); player.inventory=inventory_before; click.thrown=None; }
                 }
             }
             None if ender => player.ender.clone_from(&slots),

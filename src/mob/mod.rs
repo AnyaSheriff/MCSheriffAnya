@@ -23,6 +23,8 @@ pub mod wither;
 pub mod hostile;
 pub mod illager;
 pub mod leash;
+pub mod land;
+pub mod trader;
 pub mod nether;
 pub mod phantom;
 pub mod path;
@@ -123,12 +125,21 @@ pub enum Kind {
     Ravager,
     /// Челюсти заклинателя: не живое, как снаряд шалкера (вики, Evoker Fangs).
     EvokerFangs,
+    Llama,
+    TraderLlama,
+    WanderingTrader,
+    Camel,
+    Goat,
+    PolarBear,
+    Panda,
+    Ocelot,
+    Mooshroom,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 48] = [
+    pub const ALL: [Kind; 57] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -177,6 +188,15 @@ impl Kind {
         Kind::Illusioner,
         Kind::Ravager,
         Kind::EvokerFangs,
+        Kind::Llama,
+        Kind::TraderLlama,
+        Kind::WanderingTrader,
+        Kind::Camel,
+        Kind::Goat,
+        Kind::PolarBear,
+        Kind::Panda,
+        Kind::Ocelot,
+        Kind::Mooshroom,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -245,6 +265,15 @@ impl Kind {
     /// По имени сущности, как в командах.
     pub fn from_name(name: &str) -> Option<Kind> {
         Some(match name.strip_prefix("minecraft:").unwrap_or(name) {
+            "llama" => Kind::Llama,
+            "trader_llama" => Kind::TraderLlama,
+            "wandering_trader" => Kind::WanderingTrader,
+            "camel" => Kind::Camel,
+            "goat" => Kind::Goat,
+            "polar_bear" => Kind::PolarBear,
+            "panda" => Kind::Panda,
+            "ocelot" => Kind::Ocelot,
+            "mooshroom" => Kind::Mooshroom,
             "cow" => Kind::Cow,
             "pig" => Kind::Pig,
             "sheep" => Kind::Sheep,
@@ -299,6 +328,15 @@ impl Kind {
 
     pub fn name(self) -> &'static str {
         match self {
+            Kind::Llama => "llama",
+            Kind::TraderLlama => "trader_llama",
+            Kind::WanderingTrader => "wandering_trader",
+            Kind::Camel => "camel",
+            Kind::Goat => "goat",
+            Kind::PolarBear => "polar_bear",
+            Kind::Panda => "panda",
+            Kind::Ocelot => "ocelot",
+            Kind::Mooshroom => "mooshroom",
             Kind::Cow => "cow",
             Kind::Pig => "pig",
             Kind::Sheep => "sheep",
@@ -353,6 +391,15 @@ impl Kind {
     /// Номер вида сущности для клиента Java (minecraft-data 26.1, entities.json).
     pub fn java_type(self) -> i32 {
         match self {
+            Kind::Llama => 78,
+            Kind::TraderLlama => 134,
+            Kind::WanderingTrader => 141,
+            Kind::Camel => 19,
+            Kind::Goat => 62,
+            Kind::PolarBear => 104,
+            Kind::Panda => 96,
+            Kind::Ocelot => 91,
+            Kind::Mooshroom => 86,
             Kind::Chicken => 26,
             Kind::Creeper => 32,
             Kind::Skeleton => 115,
@@ -416,6 +463,16 @@ impl Kind {
     /// Имя вида для клиента Bedrock (AddActor).
     pub fn bedrock_name(self) -> &'static str {
         match self {
+            // [Bedrock: потом] поведение и свойства новых наземных мобов.
+            Kind::Llama => "minecraft:llama",
+            Kind::TraderLlama => "minecraft:trader_llama",
+            Kind::WanderingTrader => "minecraft:wandering_trader",
+            Kind::Camel => "minecraft:camel",
+            Kind::Goat => "minecraft:goat",
+            Kind::PolarBear => "minecraft:polar_bear",
+            Kind::Panda => "minecraft:panda",
+            Kind::Ocelot => "minecraft:ocelot",
+            Kind::Mooshroom => "minecraft:mooshroom",
             Kind::Cow => "minecraft:cow",
             Kind::Pig => "minecraft:pig",
             Kind::Sheep => "minecraft:sheep",
@@ -478,6 +535,15 @@ impl Kind {
     /// Ширина ящика (minecraft-data, entities.json).
     pub fn width(self) -> f64 {
         match self {
+            Kind::Llama => 0.9,
+            Kind::TraderLlama => 0.9,
+            Kind::WanderingTrader => 0.6,
+            Kind::Camel => 1.7,
+            Kind::Goat => 0.9,
+            Kind::PolarBear => 1.4,
+            Kind::Panda => 1.3,
+            Kind::Ocelot => 0.6,
+            Kind::Mooshroom => 0.9,
             Kind::Chicken => 0.4,
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
@@ -519,6 +585,15 @@ impl Kind {
     /// Высота ящика взрослого (minecraft-data, entities.json).
     pub fn height(self) -> f64 {
         match self {
+            Kind::Llama => 1.87,
+            Kind::TraderLlama => 1.87,
+            Kind::WanderingTrader => 1.95,
+            Kind::Camel => 2.375,
+            Kind::Goat => 1.3,
+            Kind::PolarBear => 1.4,
+            Kind::Panda => 1.25,
+            Kind::Ocelot => 0.7,
+            Kind::Mooshroom => 1.4,
             Kind::Chicken => 0.7,
             Kind::Cow => 1.4,
             Kind::Pig => 0.9,
@@ -561,6 +636,15 @@ impl Kind {
     /// Здоровье (вики: корова и свинья 10, овца 8, курица 4).
     pub fn max_health(self) -> f32 {
         match self {
+            Kind::Llama => 30.0,
+            Kind::TraderLlama => 30.0,
+            Kind::WanderingTrader => 20.0,
+            Kind::Camel => 32.0,
+            Kind::Goat => 10.0,
+            Kind::PolarBear => 30.0,
+            Kind::Panda => 20.0,
+            Kind::Ocelot => 10.0,
+            Kind::Mooshroom => 10.0,
             Kind::Cow | Kind::Pig => 10.0,
             Kind::Sheep => 8.0,
             Kind::Chicken => 4.0,
@@ -610,6 +694,15 @@ impl Kind {
     /// Chicken, «Attributes»: 0,2; 0,25; 0,23; 0,25).
     pub fn speed(self) -> f64 {
         match self {
+            Kind::Llama => 0.175,
+            Kind::TraderLlama => 0.175,
+            Kind::WanderingTrader => 0.5,
+            Kind::Camel => 0.09,
+            Kind::Goat => 0.2,
+            Kind::PolarBear => 0.25,
+            Kind::Panda => 0.15,
+            Kind::Ocelot => 0.3,
+            Kind::Mooshroom => 0.2,
             Kind::Cow => 0.2,
             Kind::Pig | Kind::Chicken => 0.25,
             Kind::Sheep | Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 0.23,
@@ -656,7 +749,11 @@ impl Kind {
     /// Съедобное для разведения (вики, Breeding).
     pub fn likes(self, item: &str) -> bool {
         match self {
-            Kind::Cow | Kind::Sheep => item == "wheat",
+            Kind::Cow | Kind::Sheep | Kind::Goat | Kind::Mooshroom => item == "wheat",
+            Kind::Llama | Kind::TraderLlama => item == "hay_block",
+            Kind::Camel => item == "cactus",
+            Kind::Panda => item == "bamboo",
+            Kind::Ocelot => matches!(item, "cod" | "salmon"),
             Kind::Pig => matches!(item, "carrot" | "potato" | "beetroot"),
             Kind::Chicken => {
                 matches!(item, "wheat_seeds" | "beetroot_seeds" | "melon_seeds" | "pumpkin_seeds" | "torchflower_seeds" | "pitcher_pod")
@@ -679,6 +776,15 @@ impl Kind {
     /// Звук в покое, при ударе и при смерти (вики, Sounds).
     pub fn sounds(self) -> (&'static str, &'static str, &'static str) {
         match self {
+            Kind::Llama => ("minecraft:entity.llama.ambient", "minecraft:entity.llama.hurt", "minecraft:entity.llama.death"),
+            Kind::TraderLlama => ("minecraft:entity.llama.ambient", "minecraft:entity.llama.hurt", "minecraft:entity.llama.death"),
+            Kind::WanderingTrader => ("minecraft:entity.wandering_trader.ambient", "minecraft:entity.wandering_trader.hurt", "minecraft:entity.wandering_trader.death"),
+            Kind::Camel => ("minecraft:entity.camel.ambient", "minecraft:entity.camel.hurt", "minecraft:entity.camel.death"),
+            Kind::Goat => ("minecraft:entity.goat.ambient", "minecraft:entity.goat.hurt", "minecraft:entity.goat.death"),
+            Kind::PolarBear => ("minecraft:entity.polar_bear.ambient", "minecraft:entity.polar_bear.hurt", "minecraft:entity.polar_bear.death"),
+            Kind::Panda => ("minecraft:entity.panda.ambient", "minecraft:entity.panda.hurt", "minecraft:entity.panda.death"),
+            Kind::Ocelot => ("minecraft:entity.ocelot.ambient", "minecraft:entity.ocelot.hurt", "minecraft:entity.ocelot.death"),
+            Kind::Mooshroom => ("minecraft:entity.cow.ambient", "minecraft:entity.cow.hurt", "minecraft:entity.cow.death"),
             Kind::Cow => ("minecraft:entity.cow.ambient", "minecraft:entity.cow.hurt", "minecraft:entity.cow.death"),
             Kind::Pig => ("minecraft:entity.pig.ambient", "minecraft:entity.pig.hurt", "minecraft:entity.pig.death"),
             Kind::Sheep => ("minecraft:entity.sheep.ambient", "minecraft:entity.sheep.hurt", "minecraft:entity.sheep.death"),
@@ -846,6 +952,8 @@ pub trait View {
     }
 
     /// Температура биома (снежный голем: снег и таяние); по умолчанию — равнины.
+    fn thunder(&self) -> bool { false }
+
     fn temperature(&self, _x: i32, _y: i32, _z: i32) -> f32 {
         0.8
     }
@@ -1174,6 +1282,8 @@ pub struct Mob {
     pub wither: wither::State,
     /// Разбойники: заклинания, арбалет, рёв, жизнь вредины и челюстей (mob/illager.rs).
     pub illager: illager::State,
+    /// Наземные животные и странствующий торговец (mob/land.rs).
+    pub land: land::State,
 }
 
 /// Бит в байте вида записи моба: за записью идёт общий хвост (имя, поводок).
@@ -1267,6 +1377,7 @@ impl Mob {
             guardian: guardian::State::default(),
             wither: wither::State::default(),
             illager: illager::State::default(),
+            land: land::State::new(kind),
         }
     }
 
@@ -1372,6 +1483,9 @@ impl Mob {
     /// Голоса моба: у утопленника в воде — свои (вики, Drowned, «Sounds»:
     /// ambient_water, hurt_water, death_water).
     pub fn sounds(&self) -> (&'static str, &'static str, &'static str) {
+        if self.kind==Kind::Goat && self.land.screaming {
+            return ("minecraft:entity.goat.screaming.ambient","minecraft:entity.goat.screaming.hurt","minecraft:entity.goat.screaming.death");
+        }
         if matches!(self.kind, Kind::Wolf | Kind::Cat) {
             return tame::sounds(self);
         }
@@ -1450,6 +1564,7 @@ impl Mob {
         }
 
         self.vitals.tick_invulnerable();
+        land::tick(self, rng);
 
         // Страж: в воде ли — и без ИИ (голоса суши и воды).
         if guardian::guardian(self.kind) {
@@ -1617,7 +1732,9 @@ impl Mob {
         let view: &dyn View = if self.kind == Kind::Strider { &lava_floor } else { view };
 
         let was_on_ground = self.on_ground;
-        let mut plan = if matches!(self.kind, Kind::Wolf | Kind::Cat) {
+        let mut plan = if land::animal(self.kind) || self.kind == Kind::WanderingTrader {
+            land::think(self, view, ctx, rng)
+        } else if matches!(self.kind, Kind::Wolf | Kind::Cat) {
             tame::think(self, view, ctx, rng)
         } else if golem::golem(self.kind) {
             golem::think(self, view, ctx, rng)
@@ -1845,7 +1962,7 @@ impl Mob {
         // проходим тот же путь, потом опускаемся до опоры [проверить: у
         // оригинала так же].
         if bumped && (was_on_ground || landed) {
-            let lift = clip_y(view, start, half, height, STEP_HEIGHT);
+            let lift = clip_y(view, start, half, height, if self.kind == Kind::Camel { 1.5 } else { STEP_HEIGHT });
             let mut up = (start.0, start.1 + lift, start.2);
             let (ux, uz) = slide(view, &mut up, half, height, dx, dz);
             let down = clip_y(view, up, half, height, dy.min(0.0) - lift);
@@ -1920,8 +2037,9 @@ impl Mob {
         // Урон падения: ceil(высота − 3) (вики, Fall damage); курица не
         // разбивается (вики, Chicken).
         // Големы падения не боятся (вики, Iron Golem, Snow Golem).
-        if fall > crate::survival::SAFE_FALL && self.kind != Kind::Chicken && !golem::golem(self.kind) {
-            let damage = (fall - crate::survival::SAFE_FALL - 1.0e-4).ceil();
+        let safe_fall=if self.kind==Kind::Goat { 10.0 } else if self.kind==Kind::Camel { 6.0 } else { crate::survival::SAFE_FALL };
+        if fall > safe_fall && self.kind != Kind::Chicken && !golem::golem(self.kind) {
+            let damage = ((fall - safe_fall - 1.0e-4) * if self.kind==Kind::Camel { 0.5 } else { 1.0 }).ceil();
 
             self.hurt(damage, Source::Fall, None);
         }
@@ -2026,6 +2144,7 @@ impl Mob {
 
             // Волк мстит и встаёт, кошка вскакивает (mob/tame.rs).
             tame::on_hurt(self, push.cause);
+            land::on_hurt(self, push.cause);
 
             // Железный голем мстит (mob/golem.rs).
             golem::on_hurt(self, push.cause, self.by_player);
@@ -2112,7 +2231,7 @@ impl Mob {
     /// коровы при смерти — 0,4).
     pub fn sound_volume(&self) -> f32 {
         match self.kind {
-            Kind::Cow => 0.4,
+            Kind::Cow | Kind::Mooshroom => 0.4,
             Kind::Slime => 0.4 * self.nether.size as f32,
             // Чёрный ящик, dragon-summon: голос дракона громкостью 5,00.
             Kind::EnderDragon => 5.0,
@@ -2152,7 +2271,7 @@ impl Mob {
         if self.kind == Kind::EnderDragon {
             // Шарики — по ходу анимации смерти (tick.rs, dragon_xp).
             self.dragon.xp = if self.first_dragon { DRAGON_XP_FIRST } else { DRAGON_XP };
-        } else if self.xp_until > self.ticks && !self.is_baby() {
+        } else if self.xp_until > self.ticks && !self.is_baby() && self.kind != Kind::WanderingTrader {
             let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xE4B);
 
             self.pending_xp = if slime::cube(self.kind) {
@@ -2237,6 +2356,15 @@ impl Mob {
             // Номер с запасом: другие новые мобы берут 38 и дальше.
             Kind::Wither => 60,
             // Зимогор, болотник и скелет-замерзающий (хвост с таймерами) — следом.
+            Kind::Llama => 71,
+            Kind::TraderLlama => 72,
+            Kind::WanderingTrader => 73,
+            Kind::Camel => 74,
+            Kind::Goat => 75,
+            Kind::PolarBear => 76,
+            Kind::Panda => 77,
+            Kind::Ocelot => 78,
+            Kind::Mooshroom => 79,
         } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -2266,6 +2394,10 @@ impl Mob {
         if self.kind == Kind::Skeleton && (self.h.water_ticks != 0 || self.h.converting != 0) {
             out.extend_from_slice(&self.h.water_ticks.to_be_bytes());
             out.extend_from_slice(&self.h.converting.to_be_bytes());
+        }
+
+        if land::animal(self.kind) || self.kind == Kind::WanderingTrader {
+            land::write(self, out);
         }
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
@@ -2333,6 +2465,15 @@ impl Mob {
             36 => Kind::Guardian,
             37 => Kind::ElderGuardian,
             60 => Kind::Wither,
+            71 => Kind::Llama,
+            72 => Kind::TraderLlama,
+            73 => Kind::WanderingTrader,
+            74 => Kind::Camel,
+            75 => Kind::Goat,
+            76 => Kind::PolarBear,
+            77 => Kind::Panda,
+            78 => Kind::Ocelot,
+            79 => Kind::Mooshroom,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -2352,6 +2493,7 @@ impl Mob {
         let tamed = if matches!(kind, Kind::Wolf | Kind::Cat) { Some(tame::read(bytes)?) } else { None };
         let golem_state = if golem::golem(kind) { Some(golem::read(bytes)?) } else { None };
         let snow_state = if head & !EXTENDED == 63 { Some(skeleton::read_snow(bytes)?) } else { None };
+        let land_state = if land::animal(kind) || kind == Kind::WanderingTrader { Some(land::read(bytes)?) } else { None };
         let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
@@ -2397,6 +2539,14 @@ impl Mob {
 
         if let Some(state) = golem_state {
             mob.golem = state;
+        }
+
+        if let Some((state, trader)) = land_state {
+            mob.land = state;
+            if let Some(uuid)=mob.land.saved_uuid { mob.uuid=uuid; }
+            mob.villager = trader;
+            land::health(&mut mob);
+            mob.vitals.health = health.clamp(0.5, mob.vitals.max_health);
         }
 
         if let Some(tail) = tail {
@@ -2456,10 +2606,14 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
     };
 
     match mob.kind {
-        Kind::Cow => {
+        Kind::Cow | Kind::Mooshroom => {
             give("leather", 0, 2, rng);
             give("beef", 1, 3, rng);
         }
+        Kind::Llama | Kind::TraderLlama => give("leather", 0, 2 + mob.looting, rng),
+        Kind::PolarBear => give(if rng.below(4) < 3 { "cod" } else { "salmon" }, 0, 2 + mob.looting, rng),
+        Kind::Panda => give("bamboo", 1, 1, rng),
+        Kind::WanderingTrader | Kind::Camel | Kind::Goat | Kind::Ocelot => {},
         Kind::Pig => give("porkchop", 1, 3, rng),
         Kind::Sheep => {
             if !mob.sheared {
@@ -2623,6 +2777,12 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         }
     }
 
+    if land::llama(mob.kind) {
+        drops.extend(mob.land.cargo.iter().flatten().copied());
+        if mob.land.chest && let Some(id)=blocks::item_named("chest") { drops.push(Stack::new(id,1)); }
+        if let Some(c)=mob.land.decor && let Some(id)=blocks::item_named(&WOOL[usize::from(c)].replace("_wool","_carpet")) { drops.push(Stack::new(id,1)); }
+    }
+    if mob.kind==Kind::Camel && mob.land.saddle && let Some(id)=blocks::item_named("saddle") { drops.push(Stack::new(id,1)); }
     drops
 }
 
@@ -2856,7 +3016,7 @@ pub(crate) fn clip_z(view: &dyn View, min: (f64, f64, f64), half: f64, height: f
 /// Действует ли броня на урон: не действует на падение, огонь, лаву,
 /// удушье и пустоту (вики, Armor: «bypasses armor»).
 fn armored(source: Source) -> bool {
-    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::Arrow | Source::Explosion | Source::PlayerExplosion)
+    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::MobAttackNoAggro | Source::Arrow | Source::Explosion | Source::PlayerExplosion)
 }
 
 /// Урон после брони (вики, Armor, «Damage protection»).
@@ -2938,6 +3098,7 @@ pub struct Outcome {
 
     /// Снежки снежных големов: кто бросил, откуда, скорость (mob/golem.rs).
     pub snowballs: Vec<(i32, golem::Throw)>,
+    pub spits: Vec<(i32, golem::Throw)>,
 
     /// Клетки, куда снежные големы кладут снег (если разрешено mobGriefing).
     pub snow: Vec<(i32, i32, i32)>,
@@ -3035,6 +3196,7 @@ pub fn step_all(
     // Синие овцы — для «вололо» заклинателя (mob/illager.rs).
     let blue_sheep: Vec<(i32, (f64, f64, f64))> = mobs.iter().filter(|mob| mob.kind == Kind::Sheep && mob.color == illager::WOLOLO_FROM && !mob.is_dead()).map(|mob| (mob.entity_id, (mob.x, mob.y, mob.z))).collect();
     let mut recolor: Vec<i32> = Vec::new();
+    land::herd(&mut mobs, players, view);
 
     for (index, mob) in mobs.iter_mut().enumerate() {
         mob.tame.clock = env.clock;
@@ -3050,6 +3212,10 @@ pub fn step_all(
 
         if let Some((target, damage, push)) = plan.bite {
             bites.push((mob.entity_id, target, damage, push, plan.fling.then_some((mob.x, mob.y, mob.z))));
+        }
+
+        if let Some(spit) = plan.spit {
+            outcome.spits.push((mob.entity_id, spit));
         }
 
         if let Some((from, velocity)) = plan.snowball {
@@ -3207,8 +3373,10 @@ pub fn step_all(
     // урона и смерти цели (чёрный ящик, iron-golem-attack).
     for (attacker, target, damage, dir, golem_at) in bites {
         let owner = mobs.iter().find(|m| m.entity_id == attacker && m.kind == Kind::Wolf).and_then(|m| m.tame.owner);
+        let goat = mobs.iter().any(|mob| mob.entity_id == attacker && mob.kind == Kind::Goat);
         if let Some(victim) = mobs.iter_mut().find(|mob| mob.entity_id == target) {
-            let hit = victim.hurt(damage, Source::MobAttack, Some(Push { dir, strength: BASE_KNOCKBACK, cause: attacker }));
+            let source = if goat { Source::MobAttackNoAggro } else { Source::MobAttack };
+            let hit = victim.hurt(damage, source, Some(Push { dir, strength: BASE_KNOCKBACK, cause: attacker }));
             if hit.is_some() && let Some(uuid) = owner { victim.credit_to(uuid); }
 
             if let Some(at) = golem_at {
@@ -3302,6 +3470,7 @@ pub fn step_all(
 
         let mut baby = Mob::new(next_id(), mobs[ia].kind, (mobs[ia].x, mobs[ia].y, mobs[ia].z));
 
+        land::inherit(&mut baby, &mobs[ia], &mobs[ib], rng);
         baby.age = BABY_AGE;
         baby.yaw = mobs[ia].yaw;
         baby.head_yaw = mobs[ia].yaw;

@@ -1003,6 +1003,7 @@ fn flag_in(data: &str, key: &str) -> Option<bool> {
 /// Правит моба по данным: `NoAI`, `Silent`, `Age`, `Sheared`, `Color`,
 /// `Health`, `Rotation:[yaw,pitch]`.
 fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
+    crate::mob::land::apply_data(mob, data);
     if let Some(on) = flag_in(data, "NoAI:") {
         mob.no_ai = on;
     }
@@ -1236,6 +1237,14 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
         let mut rng = crate::mob::Rng::new(mob.entity_id as u64);
         let size = crate::mob::slime::roll_size(&mut rng);
         crate::mob::slime::set_size(&mut mob, size);
+    }
+    if crate::mob::land::animal(kind) {
+        if data.is_empty() { crate::mob::land::initialize(&mut mob, &mut crate::mob::Rng::new(shared.next_entity_id() as u64)); }
+        else if crate::mob::land::llama(kind) {
+            // Чёрный ящик, llama-spit/llama-caravan: /summon с данными не бросает жребий
+            // (без finalizeSpawn) — здоровье 53 у всех, вариант и сила из данных.
+            mob.land.max_health = 53.0; crate::mob::land::health(&mut mob); mob.vitals.health = 53.0;
+        }
     }
     apply_mob_data(&mut mob, data);
 
@@ -1751,6 +1760,11 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
 
             Answer::saying(format!("Правило spawn_monsters: {}", value))
         }
+        ["spawn_wandering_traders" | "doTraderSpawning", value] => {
+            shared.spawn_traders.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+            Answer::saying(format!("Правило spawn_wandering_traders: {}", value))
+        }
+        ["spawn_wandering_traders" | "doTraderSpawning"] => Answer::saying(format!("{}", shared.spawn_traders.load(std::sync::atomic::Ordering::Relaxed))),
         ["spawn_phantoms" | "doInsomnia", value] => {
             shared.spawn_phantoms.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
 

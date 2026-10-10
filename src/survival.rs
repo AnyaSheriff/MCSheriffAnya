@@ -67,6 +67,8 @@ pub enum Source {
     OutOfWorld,
     /// Удар моба в ближнем бою.
     MobAttack,
+    /// Удар моба без гнева цели — таран козла (чёрный ящик, goat-ram: тип урона 29).
+    MobAttackNoAggro,
     /// Взрыв, вызванный существом (крипер).
     PlayerExplosion,
     /// Удар игрока по существу.
@@ -122,6 +124,7 @@ impl Source {
             Source::OnFire => 31,
             Source::OutOfWorld => 32,
             Source::MobAttack => 28,
+            Source::MobAttackNoAggro => 29,
             Source::PlayerExplosion => 35,
             Source::PlayerAttack => 34,
             Source::MaceSmash => 26,
@@ -167,6 +170,7 @@ impl Source {
             Source::OnFire => "death.attack.onFire",
             Source::OutOfWorld => "death.attack.outOfWorld",
             Source::MobAttack => "death.attack.mob",
+            Source::MobAttackNoAggro => "death.attack.mob",
             Source::PlayerExplosion => "death.attack.explosion.player",
             Source::PlayerAttack => "death.attack.player",
             Source::MaceSmash => "death.attack.mace_smash",
@@ -218,7 +222,7 @@ impl Source {
     /// лёгкая — min(d/2+1, d), нормальная — d, трудная — 1,5d.
     pub fn scales_with_difficulty(self) -> bool {
         // Луч стража — тоже (вики, Guardian: 4/6/9 по сложности).
-        matches!(self, Source::Explosion | Source::PlayerExplosion | Source::MobAttack | Source::Arrow | Source::IndirectMagic | Source::WitherSkull)
+        matches!(self, Source::Explosion | Source::PlayerExplosion | Source::MobAttack | Source::MobAttackNoAggro | Source::Arrow | Source::IndirectMagic | Source::WitherSkull)
     }
 }
 
@@ -259,7 +263,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::Generic => "died",
         Source::PlayerAttack => "was slain",
         Source::MaceSmash => "was smashed",
-        Source::MobAttack => "was slain by a monster",
+        Source::MobAttack | Source::MobAttackNoAggro => "was slain by a monster",
         Source::Arrow => "was shot",
         Source::PlayerExplosion => "was blown up",
         Source::Thorns => "was killed",

@@ -75,6 +75,15 @@ pub fn arrow_error(difficulty: u8) -> f64 {
 /// Ключ имени для сообщения о смерти игрока (вики, Death messages).
 pub fn killer_key(kind: Kind) -> &'static str {
     match kind {
+        Kind::Llama => "entity.minecraft.llama",
+        Kind::TraderLlama => "entity.minecraft.trader_llama",
+        Kind::WanderingTrader => "entity.minecraft.wandering_trader",
+        Kind::Camel => "entity.minecraft.camel",
+        Kind::Goat => "entity.minecraft.goat",
+        Kind::PolarBear => "entity.minecraft.polar_bear",
+        Kind::Panda => "entity.minecraft.panda",
+        Kind::Ocelot => "entity.minecraft.ocelot",
+        Kind::Mooshroom => "entity.minecraft.mooshroom",
         Kind::Zombie => "entity.minecraft.zombie",
         Kind::ZombieVillager => "entity.minecraft.zombie_villager",
         Kind::Skeleton => "entity.minecraft.skeleton",

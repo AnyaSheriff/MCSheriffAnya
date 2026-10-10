@@ -74,6 +74,7 @@ pub enum Kind {
     Snowball,
     /// Череп иссушителя: урон, иссушение, взрыв силой 1 (mob/wither.rs).
     WitherSkull,
+    LlamaSpit,
 }
 
 /// Место, скорость и поворот снаряда.
@@ -124,6 +125,7 @@ impl Flying {
             Kind::GhastFireball => GHAST_FIREBALL_TYPE,
             Kind::Snowball => SNOWBALL_TYPE,
             Kind::WitherSkull => WITHER_SKULL_TYPE,
+            Kind::LlamaSpit => 79,
         }
     }
 
@@ -188,6 +190,10 @@ impl Flying {
         let stack = crate::blocks::item_named("snowball").map_or(Stack::new(0, 1), |item| Stack::new(item, 1));
 
         Self { kind: Kind::Snowball, in_owner: false, ..Self::potion(entity_id, dimension, Kind::Splash, stack, at, velocity, owner) }
+    }
+
+    pub fn spit(entity_id: i32, dimension: Dimension, at: (f64, f64, f64), velocity: (f64, f64, f64), owner: i32) -> Self {
+        Self { kind: Kind::LlamaSpit, stack: None, ..Self::snowball(entity_id, dimension, at, velocity, owner) }
     }
 
     /// Эффекты зелья.
@@ -750,14 +756,14 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
         // Снежок: о сущность — урон (ифриту 3, прочим 0) с толчком по полёту;
         // разлетается частицами — событие сущности 3 (чёрный ящик, snow-golem-shoot).
-        if flying.kind == Kind::Snowball {
+        if matches!(flying.kind, Kind::Snowball | Kind::LlamaSpit) {
             let length = flying.vx.hypot(flying.vz).max(1.0e-9);
             let dir = (flying.vx / length, flying.vz / length);
 
             match struck {
                 Some(Struck::Mob(id)) => {
                     if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == id) {
-                        let damage = if mob.kind == crate::mob::Kind::Blaze { SNOWBALL_BLAZE_DAMAGE } else { 0.0 };
+                        let damage = if flying.kind == Kind::LlamaSpit { 1.0 } else if mob.kind == crate::mob::Kind::Blaze { SNOWBALL_BLAZE_DAMAGE } else { 0.0 };
 
                         if let Some(hit) = mob.hurt(damage, Source::Thrown, Some(crate::mob::Push { dir, strength: crate::mob::BASE_KNOCKBACK, cause: flying.owner }))
                             && let Some(member) = members.iter().find(|m| m.0 == flying.owner)
@@ -775,7 +781,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     attacker_name: String::new(),
                     from: (flying.x, flying.y, flying.z),
                     yaw: angles((flying.vx, flying.vy, flying.vz)).0,
-                    damage: 0.0,
+                    damage: if flying.kind == Kind::LlamaSpit { 1.0 } else { 0.0 },
                     source: Source::Thrown,
                     extra_knockback: 0.0,
                     weapon: None,
@@ -789,7 +795,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 None => {}
             }
 
-            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at, 0, 0), status: Some(3) });
+            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at, 0, 0), status: (flying.kind == Kind::Snowball).then_some(3) });
             continue;
         }
 

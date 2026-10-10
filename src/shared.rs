@@ -126,6 +126,8 @@ pub struct Shared {
 
     /// Тактов до следующей попытки появления фантомов (mob/phantom.rs).
     pub phantom_wait: std::sync::atomic::AtomicI32,
+    pub trader_spawner: Mutex<crate::mob::trader::Spawner>,
+    pub spawn_traders: std::sync::atomic::AtomicBool,
 
     /// Кто только что проснулся и где (хозяева кошек ждут подарков, mob/tame.rs).
     pub morning_gifts: std::sync::Mutex<Vec<([u8; 16], Place)>>,
@@ -222,6 +224,8 @@ impl Shared {
             spawn_monsters: std::sync::atomic::AtomicBool::new(true),
             spawn_phantoms: std::sync::atomic::AtomicBool::new(true),
             phantom_wait: std::sync::atomic::AtomicI32::new(0),
+            trader_spawner: Mutex::new(crate::mob::trader::Spawner::default()),
+            spawn_traders: std::sync::atomic::AtomicBool::new(true),
             morning_gifts: std::sync::Mutex::new(Vec::new()),
             mob_griefing: std::sync::atomic::AtomicBool::new(true),
             raids: std::sync::atomic::AtomicBool::new(true),

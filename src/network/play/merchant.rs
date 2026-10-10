@@ -37,6 +37,10 @@ const HOTBAR: std::ops::Range<usize> = 30..39;
 pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player_id: i32, uuid: [u8; 16], shared: &Shared) -> Option<i32> {
     let mob = &mut items.mobs_mut()[index];
 
+    let wandering = mob.kind == crate::mob::Kind::WanderingTrader;
+    if wandering && mob.villager.offers.is_empty() {
+        mob.villager.offers = crate::mob::trader::offers(&mut crate::mob::Rng::new(mob.entity_id as u64 ^ mob.ticks));
+    }
     // С жителем уже торгуют [проверить: у оригинала второму отказ молча].
     if mob.villager.trading.is_some() {
         return None;
@@ -44,7 +48,7 @@ pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player
 
     // Сделок нет, а профессия есть (призван без Offers): сделки уровней до
     // нынешнего (вики, Trading) [проверить].
-    if !mob.is_baby() && villager::trades(mob.villager.profession) && mob.villager.offers.is_empty() {
+    if !wandering && !mob.is_baby() && villager::trades(mob.villager.profession) && mob.villager.offers.is_empty() {
         let mut rng = crate::mob::Rng::new(u64::from(mob.entity_id as u32) ^ mob.ticks.wrapping_mul(0x77));
 
         for level in 1..=mob.villager.level {
@@ -52,7 +56,7 @@ pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player
         }
     }
 
-    let opened = if mob.is_baby() || !villager::trades(mob.villager.profession) || mob.villager.offers.is_empty() {
+    let opened = if mob.is_baby() || (!wandering && !villager::trades(mob.villager.profession)) || mob.villager.offers.is_empty() {
         mob.villager.unhappy = villager::UNHAPPY_TICKS;
         mob.events.push(crate::mob::Event::Sound { name: "minecraft:entity.villager.no", volume: 1.0, pitch: mob.voice_pitch() });
         None
@@ -86,9 +90,9 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
         .mobs()
         .iter()
         .find(|mob| mob.entity_id == villager_id)
-        .map(|mob| mob.villager.clone());
+        .map(|mob| (mob.villager.clone(), mob.kind == crate::mob::Kind::WanderingTrader));
 
-    let Some(state) = found else {
+    let Some((state, wandering)) = found else {
         return Ok(());
     };
 
@@ -99,7 +103,7 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
 
     body.extend_from_slice(&encode_varint(id));
     body.extend_from_slice(&encode_varint(MERCHANT_MENU));
-    body.extend_from_slice(&nbt::translated(&state.title()));
+    body.extend_from_slice(&nbt::translated(&if wandering { "entity.minecraft.wandering_trader".to_string() } else { state.title() }));
     write_body(stream, body).await?;
 
     player.window = Some(OpenWindow {
@@ -116,13 +120,13 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
         ender: false,
     });
     send_window_content(stream, player).await?;
-    write_body(stream, offers_packet(id, &state)).await
+    write_body(stream, offers_packet(id, &state, wandering)).await
 }
 
 /// Merchant Offers (minecraft-data 26.1, `trade_list`): сделки с ценой без
 /// поправок (её считает клиент по спросу и особой цене), уровень и опыт
 /// жителя, «обычный житель» и «пополняется».
-fn offers_packet(window: i32, state: &villager::State) -> Vec<u8> {
+fn offers_packet(window: i32, state: &villager::State, wandering: bool) -> Vec<u8> {
     let mut body = encode_varint(MERCHANT_OFFERS);
 
     body.extend_from_slice(&encode_varint(window));
@@ -131,7 +135,8 @@ fn offers_packet(window: i32, state: &villager::State) -> Vec<u8> {
     for offer in &state.offers {
         body.extend_from_slice(&encode_varint(offer.buy.item));
         body.extend_from_slice(&encode_varint(offer.buy.count));
-        body.extend_from_slice(&encode_varint(0));
+        let (count,components)=crate::stackdata::encode_components(&offer.buy.extras());
+        body.extend_from_slice(&encode_varint(count)); body.extend_from_slice(&components);
         push_slot(&mut body, Some(offer.sell));
 
         match offer.buy_b {
@@ -139,7 +144,8 @@ fn offers_packet(window: i32, state: &villager::State) -> Vec<u8> {
                 body.push(1);
                 body.extend_from_slice(&encode_varint(extra.item));
                 body.extend_from_slice(&encode_varint(extra.count));
-                body.extend_from_slice(&encode_varint(0));
+                let (count,components)=crate::stackdata::encode_components(&extra.extras());
+                body.extend_from_slice(&encode_varint(count)); body.extend_from_slice(&components);
             }
             None => body.push(0),
         }
@@ -156,8 +162,8 @@ fn offers_packet(window: i32, state: &villager::State) -> Vec<u8> {
 
     body.extend_from_slice(&encode_varint(i32::from(state.level)));
     body.extend_from_slice(&encode_varint(state.xp));
-    body.push(1);
-    body.push(1);
+    body.push(u8::from(!wandering));
+    body.push(u8::from(!wandering));
     body
 }
 
@@ -196,7 +202,10 @@ fn payments_changed(items: &mut crate::items::Items, merchant: &mut Merchant) {
     merchant.update_result(&mob.villager.offers);
 
     if crate::mob::ai::trade_sound_due(mob) {
-        let name = if merchant.slots[RESULT].is_some() { "minecraft:entity.villager.yes" } else { "minecraft:entity.villager.no" };
+        let name = match (mob.kind == crate::mob::Kind::WanderingTrader, merchant.slots[RESULT].is_some()) {
+            (true,true) => "minecraft:entity.wandering_trader.yes", (true,false) => "minecraft:entity.wandering_trader.no",
+            (false,true) => "minecraft:entity.villager.yes", (false,false) => "minecraft:entity.villager.no",
+        };
 
         mob.events.push(crate::mob::Event::Sound { name, volume: 1.0, pitch: mob.voice_pitch() });
     }
@@ -236,7 +245,7 @@ fn settle(shared: &Shared, items: &mut crate::items::Items, villager_id: i32, in
 
     mob.villager.xp += offer.xp;
 
-    let levels_up = villager::should_level_up(mob.villager.level, mob.villager.xp);
+    let levels_up = mob.kind != crate::mob::Kind::WanderingTrader && villager::should_level_up(mob.villager.level, mob.villager.xp);
 
     // Повышение — через 40 тактов без торговли (чёрный ящик,
     // villager-levelup-ai); у NoAI таймер стоит (villager-levelup).

@@ -132,6 +132,7 @@ pub struct Plan {
 
     /// Снежок снежного голема: откуда и с какой скоростью (mob/golem.rs).
     pub snowball: Option<super::golem::Throw>,
+    pub spit: Option<super::golem::Throw>,
 }
 
 /// Состояние мыслей.
@@ -369,7 +370,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         let mate = ctx
             .mates
             .iter()
-            .filter(|other| other.kind == mob.kind && other.love > 0 && other.ready && other.id != mob.entity_id)
+            .filter(|other| (other.kind == mob.kind || super::land::llama(other.kind) && super::land::llama(mob.kind)) && other.love > 0 && other.ready && other.id != mob.entity_id)
             .map(|other| (other, (other.x - mob.x).powi(2) + (other.y - mob.y).powi(2) + (other.z - mob.z).powi(2)))
             .filter(|(_, dist)| *dist <= 64.0)
             .min_by(|a, b| a.1.total_cmp(&b.1));
@@ -412,7 +413,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     let lured = ctx
         .players
         .iter()
-        .filter(|player| !player.spectator && tempting(mob.kind, player))
+        .filter(|player| !player.spectator && !super::land::llama(mob.kind) && tempting(mob.kind, player))
         .map(|player| (player, (player.x - mob.x).powi(2) + (player.y - mob.y).powi(2) + (player.z - mob.z).powi(2)))
         .filter(|(_, dist)| *dist <= 100.0)
         .min_by(|a, b| a.1.total_cmp(&b.1));
@@ -702,7 +703,7 @@ pub fn voice(mob: &mut Mob, rng: &mut Rng) {
         let (ambient, _, _) = mob.sounds();
         // Торгующий житель вместо голоса в покое — «торгует» (чёрный ящик,
         // villager-trade-ai: entity.villager.trade при открытом окне).
-        let ambient = if mob.kind == Kind::Villager && mob.villager.trading.is_some() { "minecraft:entity.villager.trade" } else { ambient };
+        let ambient = if mob.villager.trading.is_some() { match mob.kind { Kind::Villager => "minecraft:entity.villager.trade", Kind::WanderingTrader => "minecraft:entity.wandering_trader.trade", _ => ambient } } else { ambient };
 
         if ambient.is_empty() {
             return;

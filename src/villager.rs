@@ -162,13 +162,14 @@ impl Offer {
 
     /// Хватает ли оплаты в ячейках `a` и `b` (в этом порядке).
     fn paid_by(&self, a: Option<Stack>, b: Option<Stack>) -> bool {
-        let fits = |want: Option<(i32, i32)>, have: Option<Stack>| match (want, have) {
+        let fits = |want: Option<(Stack, i32)>, have: Option<Stack>| match (want, have) {
             (None, _) => true,
-            (Some((item, count)), Some(have)) => have.item == item && have.count >= count,
+            (Some((want, count)), Some(have)) => have.item == want.item && have.count >= count
+                && want.extras().potion.is_none_or(|potion| have.extras().potion.unwrap_or(0)==potion),
             (Some(_), None) => false,
         };
 
-        fits(Some((self.buy.item, self.cost_a())), a) && fits(self.buy_b.map(|stack| (stack.item, stack.count)), b)
+        fits(Some((self.buy, self.cost_a())), a) && fits(self.buy_b.map(|stack| (stack, stack.count)), b)
     }
 
     /// Пополнение у рабочего места: спрос `d + uses − (maxUses − uses)`

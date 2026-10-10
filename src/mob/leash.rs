@@ -34,7 +34,7 @@ pub const BROKEN: &str = "minecraft:item.lead.break";
 /// Кто держит поводок.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Holder {
-    /// Игрок: номер сущности (0 — пока не найден после загрузки) и UUID.
+    /// Игрок или торговец: номер (0 — не найден после загрузки) и UUID.
     Player { id: i32, uuid: [u8; 16] },
 
     /// Узел на заборе: номер сущности узла (0 — ещё не заведён) и блок.
@@ -78,7 +78,7 @@ pub fn attach(mob: &mut Mob, holder: Holder) {
 /// Можно ли взять моба на поводок (вики, Lead: «most passive and neutral
 /// mobs»; враждебных — нет) [проверить: полный список].
 pub fn leashable(kind: Kind) -> bool {
-    !kind.hostile() && !kind.object() && !matches!(kind, Kind::EnderDragon | Kind::Villager | Kind::ZombieVillager)
+    !kind.hostile() && !kind.object() && !matches!(kind, Kind::EnderDragon | Kind::Villager | Kind::WanderingTrader | Kind::ZombieVillager)
 }
 
 /// Что сделал поводок за такт.
@@ -135,6 +135,7 @@ pub fn drop_leash(mob: &mut Mob, drop: bool) {
 /// пропадают. Возвращает точки обрывов (для проверок).
 pub fn step_all(mobs: &mut [Mob], players: &[(i32, (f64, f64, f64))]) -> Vec<(f64, f64, f64)> {
     let knots: Vec<(i32, (f64, f64, f64))> = mobs.iter().filter(|mob| mob.kind == Kind::LeashKnot && !mob.h.despawn).map(|mob| (mob.entity_id, (mob.x, mob.y, mob.z))).collect();
+    let holders: Vec<_> = mobs.iter().filter(|m| !m.is_dead() && !m.h.despawn).map(|m| (m.entity_id,m.uuid,(m.x,m.y,m.z))).collect();
     let mut broke = Vec::new();
 
     for mob in mobs.iter_mut() {
@@ -149,7 +150,7 @@ pub fn step_all(mobs: &mut [Mob], players: &[(i32, (f64, f64, f64))]) -> Vec<(f6
         }
 
         let at = match holder {
-            Holder::Player { id, .. } => players.iter().find(|(player, _)| *player == id).map(|(_, at)| (at.0, at.1, at.2)),
+            Holder::Player { id, uuid } => players.iter().find(|(player, _)| *player == id).map(|(_, at)| (at.0, at.1, at.2)).or_else(|| holders.iter().find(|h| h.1 == uuid).map(|h| h.2)),
             Holder::Knot { id, .. } => knots.iter().find(|(knot, _)| *knot == id).map(|(_, at)| *at),
         };
 

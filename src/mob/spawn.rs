@@ -461,3 +461,54 @@ pub fn fits(view: &dyn View, mob: &Mob) -> bool {
     }
     true
 }
+
+// Биомные таблицы новых животных (вики, страницы мобов, «Spawning»).
+// [проверить] Общий алгоритм размещения использует существующую модель чанков.
+pub fn land_table(biome: &str) -> Vec<(Kind,u32,u32,u32)> {
+    match biome {
+        "snowy_slopes" | "jagged_peaks" | "frozen_peaks" => vec![(Kind::Goat,5,1,3)],
+        "snowy_plains" | "ice_spikes" | "frozen_ocean" | "deep_frozen_ocean" => vec![(Kind::PolarBear,1,1,2)],
+        "mushroom_fields" => vec![(Kind::Mooshroom,8,4,8)],
+        "savanna" | "savanna_plateau" | "windswept_savanna" => vec![(Kind::Llama,8,4,6)],
+        "windswept_hills" | "windswept_forest" | "windswept_gravelly_hills" => vec![(Kind::Llama,5,4,6)],
+        "jungle" => vec![(Kind::Panda,1,1,2),(Kind::Ocelot,2,1,3)],
+        "bamboo_jungle" => vec![(Kind::Panda,80,1,2),(Kind::Ocelot,2,1,3)],
+        "sparse_jungle" => vec![(Kind::Ocelot,2,1,3)],
+        _ => Vec::new(),
+    }
+}
+pub fn land_for_new_chunk(view: &dyn View, cx: i32, cz: i32, biome: &str, rng: &mut Rng, next: &mut dyn FnMut()->i32) -> Vec<Mob> {
+    let mut table=land_table(biome);
+    let exclusive=matches!(biome,"snowy_slopes"|"jagged_peaks"|"frozen_peaks"|"snowy_plains"|"ice_spikes"|"frozen_ocean"|"deep_frozen_ocean"|"mushroom_fields");
+    if !exclusive { table.extend(WEIGHTS.iter().map(|(k,w)| { let (a,b)=group(*k); (*k,*w,a,b) })); }
+    if table.is_empty() || rng.unit()>=CHUNK_CHANCE { return Vec::new(); }
+    let mut pick=rng.below(table.iter().map(|t| t.1).sum());
+    let mut chosen=table[0];
+    for t in table { if pick<t.1 { chosen=t; break; } pick-=t.1; }
+    let (kind,_,low,high)=chosen;
+    let count=low+rng.below(high-low+1);
+    let mut result=Vec::new();
+    for _ in 0..count*4 {
+        if result.len()>=count as usize { break; }
+        let x=cx*16+rng.below(16) as i32; let z=cz*16+rng.below(16) as i32;
+        for y in (-63..319).rev() {
+            let below=view.block(x,y-1,z);
+            if !solid(below) { continue; }
+            let block=blocks::block_at_state(below).unwrap_or("");
+            let ground=match kind {
+                Kind::Mooshroom=>block=="mycelium",
+                Kind::Goat=>matches!(block,"grass_block"|"snow_block"|"stone"|"packed_ice"|"ice"),
+                Kind::PolarBear=>matches!(block,"grass_block"|"snow_block"|"ice"|"packed_ice"),
+                _=>block=="grass_block",
+            };
+            if !ground || solid(view.block(x,y,z)) || solid(view.block(x,y+1,z)) || (y+2..320).any(|yy| solid(view.block(x,yy,z))) { break; }
+            let mut mob=Mob::new(next(),kind,(f64::from(x)+0.5,f64::from(y),f64::from(z)+0.5));
+            super::land::initialize(&mut mob,rng);
+            if kind==Kind::Sheep { mob.color=wild_colour(rng); }
+            if kind==Kind::PolarBear && !result.is_empty() || matches!(kind,Kind::Panda|Kind::Goat|Kind::Llama) && rng.below(20)==0 { mob.age=super::BABY_AGE; }
+            if fits(view,&mob) { result.push(mob); }
+            break;
+        }
+    }
+    result
+}

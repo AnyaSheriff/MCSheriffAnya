@@ -1,0 +1,52 @@
+{
+  "name": "goat-ram",
+  "about": "Screaming goat with ready ram memory, stationary cow and stone wall; observe ram and horns. [проверить] Not recorded; no random allowances before vanilla-vs-vanilla measurements.",
+  "track_mobs": true,
+  "exclusive": true,
+  "blocks": [
+    [
+      3,
+      0,
+      7,
+      "stone"
+    ],
+    [
+      3,
+      1,
+      7,
+      "stone"
+    ]
+  ],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "!stopfly",
+    "!wait 10",
+    "gamemode creative $(bot)",
+    "tp $(bot) $(0.5,0,0.5)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon cow $(3.5,0,6.5) {NoAI:1b,Silent:1b}"
+    },
+    {
+      "after": 2,
+      "cmd": "summon goat $(3.5,0,1.5) {IsScreamingGoat:1b,Brain:{memories:{\"minecraft:ram_cooldown_ticks\":{value:1}}}}"
+    }
+  ],
+  "record_ticks": 700,
+  "cleanup": [
+    "kill @e[type=goat,distance=..48]",
+    "kill @e[type=cow,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ]
+}

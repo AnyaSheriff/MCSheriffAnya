@@ -378,6 +378,15 @@ fn slot_list(seed: i32, slot: usize, item: &str, enchantability: i32, cost: i32)
     (list, random)
 }
 
+/// Зачарованный товар: тот же подбор на заданный уровень, без меню стола.
+pub fn merchant_enchant(stack: Stack, level: i32, seed: i64) -> Stack {
+    let Some(name)=blocks::item_name(stack.item) else { return stack; };
+    let mut random=JavaRandom::new(seed);
+    let mut data=stack.extras();
+    for (id,level) in select(&mut random,name,enchantability(stack.item),level) { data.set_enchant(id,level); }
+    stack.with_extras(data)
+}
+
 /// Можно ли зачаровать на столе: зачаровываемый и ещё без зачарований.
 fn enchantable_here(stack: &Stack) -> Option<(&'static str, i32)> {
     let name = blocks::item_name(stack.item)?;

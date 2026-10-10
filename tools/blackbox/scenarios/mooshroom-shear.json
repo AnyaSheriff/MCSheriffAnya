@@ -1,0 +1,54 @@
+{
+  "name": "mooshroom-shear",
+  "about": "Adult red and brown mooshrooms shear into cows and drop five matching mushrooms; baby cannot shear. [проверить] Not recorded; no random allowances before vanilla-vs-vanilla measurements.",
+  "track_mobs": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "!stopfly",
+    "!wait 10",
+    "give $(bot) minecraft:shears 1"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon mooshroom $(3.5,0,3.5) {NoAI:1b,Silent:1b,Type:\"red\"}"
+    },
+    {
+      "after": 10,
+      "interact": true
+    },
+    {
+      "after": 30,
+      "cmd": "summon mooshroom $(2.5,0,3.5) {NoAI:1b,Silent:1b,Type:\"brown\"}"
+    },
+    {
+      "after": 40,
+      "interact": true
+    },
+    {
+      "after": 60,
+      "cmd": "summon mooshroom $(4.5,0,3.5) {NoAI:1b,Silent:1b,Age:-24000}"
+    },
+    {
+      "after": 70,
+      "interact": true
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "kill @e[type=mooshroom,distance=..48]",
+    "kill @e[type=cow,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ]
+}

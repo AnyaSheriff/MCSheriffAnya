@@ -231,7 +231,7 @@ pub fn damage_cause_of_type(type_id: i32) -> i32 {
 /// по порядку перечисления [проверить].
 pub fn damage_cause(source: Source) -> i32 {
     match source {
-        Source::MobAttack | Source::PlayerAttack | Source::MaceSmash => 2,
+        Source::MobAttack | Source::MobAttackNoAggro | Source::PlayerAttack | Source::MaceSmash => 2,
         Source::Cactus | Source::SweetBerryBush => 1,
         Source::Arrow | Source::Trident | Source::Thrown => 3,
         Source::InWall => 4,

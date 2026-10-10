@@ -1,0 +1,53 @@
+{
+  "name": "panda-sneeze",
+  "about": "Weak baby pandas: observe sneeze metadata and possible slime ball drops without random filtering. [проверить] Not recorded; no random allowances before vanilla-vs-vanilla measurements.",
+  "track_mobs": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "!stopfly",
+    "!wait 10",
+    "gamemode creative $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon panda $(2.5,0,2.5) {Age:-24000,MainGene:\"weak\",HiddenGene:\"weak\"}"
+    },
+    {
+      "after": 2,
+      "cmd": "summon panda $(3.5,0,2.5) {Age:-24000,MainGene:\"weak\",HiddenGene:\"weak\"}"
+    },
+    {
+      "after": 4,
+      "cmd": "summon panda $(4.5,0,2.5) {Age:-24000,MainGene:\"weak\",HiddenGene:\"weak\"}"
+    },
+    {
+      "after": 6,
+      "cmd": "summon panda $(2.5,0,3.5) {Age:-24000,MainGene:\"weak\",HiddenGene:\"weak\"}"
+    },
+    {
+      "after": 8,
+      "cmd": "summon panda $(3.5,0,3.5) {Age:-24000,MainGene:\"weak\",HiddenGene:\"weak\"}"
+    },
+    {
+      "after": 10,
+      "cmd": "summon panda $(4.5,0,3.5) {Age:-24000,MainGene:\"weak\",HiddenGene:\"weak\"}"
+    }
+  ],
+  "record_ticks": 1200,
+  "cleanup": [
+    "kill @e[type=panda,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ]
+}

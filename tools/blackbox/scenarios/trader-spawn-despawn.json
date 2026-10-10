@@ -1,0 +1,41 @@
+{
+  "name": "trader-spawn-despawn",
+  "about": "Summoned trader with short DespawnDelay: open/close trading pauses the timer, then despawn. Natural spawn timer tested by unit tests. [проверить] Not recorded; no random allowances before vanilla-vs-vanilla measurements.",
+  "track_mobs": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "!stopfly",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon wandering_trader $(3.5,0,3.5) {NoAI:1b,Silent:1b,DespawnDelay:80}"
+    },
+    {
+      "after": 10,
+      "interact": true
+    },
+    {
+      "after": 70,
+      "close": true
+    }
+  ],
+  "record_ticks": 180,
+  "cleanup": [
+    "kill @e[type=wandering_trader,distance=..48]",
+    "kill @e[type=trader_llama,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ]
+}

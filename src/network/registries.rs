@@ -227,7 +227,7 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
                 "description",
                 translate(&format!("instrument.minecraft.{}", name)),
             )
-            .compound("sound_event", sound("minecraft:item.goat_horn.sound.0"))
+            .compound("sound_event", sound(&format!("minecraft:item.goat_horn.sound.{}", crate::stackdata::HORNS.iter().position(|id| *id == name).unwrap_or(0))))
             .float("use_duration", 7.0)
             .float("range", 256.0),
         "minecraft:jukebox_song" => {

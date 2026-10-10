@@ -1,0 +1,88 @@
+{
+  "name": "llama-caravan",
+  "about": "Leashed llama attracts a chain of nearby llamas; detach the lead and observe breakup. [проверить] Not recorded; no random allowances before vanilla-vs-vanilla measurements.",
+  "track_mobs": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "!stopfly",
+    "!wait 10",
+    "give $(bot) minecraft:lead 1"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon llama $(3.5,0,3.5) {Tame:1b,Strength:3,Variant:0}"
+    },
+    {
+      "after": 10,
+      "interact": true,
+      "which": 0
+    },
+    {
+      "after": 15,
+      "cmd": "summon llama $(6.5,0,2.5) {Strength:3,Variant:0}"
+    },
+    {
+      "after": 17,
+      "cmd": "summon llama $(7.5,0,2.5) {Strength:3,Variant:0}"
+    },
+    {
+      "after": 19,
+      "cmd": "summon llama $(8.5,0,2.5) {Strength:3,Variant:0}"
+    },
+    {
+      "after": 21,
+      "cmd": "summon llama $(6.5,0,3.5) {Strength:3,Variant:0}"
+    },
+    {
+      "after": 23,
+      "cmd": "summon llama $(7.5,0,3.5) {Strength:3,Variant:0}"
+    },
+    {
+      "after": 25,
+      "cmd": "summon llama $(8.5,0,3.5) {Strength:3,Variant:0}"
+    },
+    {
+      "after": 27,
+      "cmd": "summon llama $(6.5,0,4.5) {Strength:3,Variant:0}"
+    },
+    {
+      "after": 29,
+      "cmd": "summon llama $(7.5,0,4.5) {Strength:3,Variant:0}"
+    },
+    {
+      "after": 31,
+      "cmd": "summon llama $(8.5,0,4.5) {Strength:3,Variant:0}"
+    },
+    {
+      "after": 33,
+      "cmd": "summon llama $(6.5,0,5.5) {Strength:3,Variant:0}"
+    },
+    {
+      "after": 50,
+      "cmd": "tp $(bot) $(0.5,0,0.5)"
+    },
+    {
+      "after": 150,
+      "interact": true,
+      "which": 0
+    }
+  ],
+  "record_ticks": 220,
+  "cleanup": [
+    "kill @e[type=llama,distance=..48]",
+    "kill @e[type=leash_knot,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ]
+}

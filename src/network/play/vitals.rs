@@ -416,7 +416,7 @@ fn food_of(name: &str) -> Option<Food> {
         "golden_apple" | "enchanted_golden_apple" => (4, 9.6),
         "golden_carrot" => (6, 14.4),
         "melon_slice" => (2, 1.2),
-        "mushroom_stew" => (6, 7.2),
+        "mushroom_stew" | "suspicious_stew" => (6, 7.2),
         "mutton" => (2, 1.2),
         "porkchop" => (3, 1.8),
         "potato" => (1, 0.6),
@@ -2380,6 +2380,14 @@ async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
     let at = (player.x, player.y, player.z);
 
     player.vit.eat(nutrition, saturation);
+    if let Some(stack)=player.inventory.held().filter(|s| blocks::item_name(s.item)==Some("suspicious_stew")) {
+        for (id,ticks) in stack.extras().stew {
+            if let Some(kind)=survival::EffectKind::ALL.into_iter().find(|k| k.id()==i32::from(id)) {
+                give_effect(stream,player,survival::Effect { kind,amplifier:0,ticks_left:ticks,ambient:false,visible:true }).await?;
+            }
+        }
+    }
+    let stew=player.inventory.held().is_some_and(|s| matches!(blocks::item_name(s.item),Some("suspicious_stew"|"mushroom_stew")));
 
     if let Some(held) = player.inventory.held() {
         player.progress.consumed(held.item);
@@ -2389,6 +2397,14 @@ async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
         player.net.slot_update = player.inventory.spend_held();
     }
 
+    if stew && player.game_mode!=GAME_MODE_CREATIVE && let Some(id)=blocks::item_named("bowl") {
+        if player.inventory.held().is_none() {
+            let slot=player.inventory.selected_slot(); player.inventory.set(slot,Some(Stack::new(id,1))); player.net.slot_changed(slot);
+        } else {
+            let (slots,left)=player.inventory.put(Stack::new(id,1)); for slot in slots { player.net.slot_changed(slot); }
+            if let Some(stack)=left { super::throw_out(shared,player,stack); }
+        }
+    }
     send_entity_event(stream, player.entity_id, EVENT_FINISHED_EATING).await?;
 
     let (a, b, c) = {

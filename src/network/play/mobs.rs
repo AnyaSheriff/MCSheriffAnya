@@ -155,8 +155,9 @@ fn float(value: f32) -> Vec<u8> {
 /// 17 — заряжен, 18 — подожжён; у паука 16 — флаги (1 — лезет по стене);
 /// у скелета 16 — превращение в бродягу.
 fn properties(mob: &Mob) -> Vec<Property> {
-    // Свечение (0x40): у разбойников после звона колокола (raid.rs).
-    let fire = u8::from(mob.vitals.fire > 0) | if mob.vitals.has_effect(crate::survival::EffectKind::Glowing) { 0x40 } else { 0 };
+    // Свечение (0x40): у разбойников после звона колокола (raid.rs);
+    // невидимость (0x20): торговец, выпивший зелье.
+    let fire = u8::from(mob.vitals.fire > 0) | if mob.vitals.has_effect(crate::survival::EffectKind::Glowing) { 0x40 } else { 0 } | if mob.land.invisible { 0x20 } else { 0 };
 
     // Кристалл Края — не живое: флаги, тишина, цель луча (11 — Optional
     // BlockPos: 0 — нет), «показывать подножие» (minecraft-data: beam_target,
@@ -188,7 +189,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
         (0, TYPE_BYTE, vec![fire]),
         (2, TYPE_OPT_COMPONENT, custom_name(mob)),
         (4, TYPE_BOOL, vec![u8::from(mob.silent)]),
-        (6, TYPE_POSE, encode_varint(if mob.is_dead() { POSE_DYING } else { 0 })),
+        (6, TYPE_POSE, encode_varint(if mob.is_dead() { POSE_DYING } else if mob.kind == Kind::Camel && mob.land.sitting { 10 } else { 0 })),
         (9, TYPE_FLOAT, float(mob.vitals.health)),
         // Стрел в теле (wither-half-armor: 9=… 12=1 после попадания).
         (12, TYPE_INT, encode_varint(mob.arrows)),
@@ -199,6 +200,11 @@ fn properties(mob: &Mob) -> Vec<Property> {
     // drowned-trident: 8=1 с захвата цели).
     if mob.kind == Kind::Drowned || mob.kind.skeleton() {
         out.insert(4, (8, TYPE_BYTE, vec![u8::from(mob.h.using || mob.h.drawing > 0)]));
+    }
+
+    // Торговец пьёт зелье невидимости или молоко.
+    if mob.kind == Kind::WanderingTrader {
+        out.insert(4, (8, TYPE_BYTE, vec![u8::from(mob.land.drinking > 0)]));
     }
 
     // Разбойник заряжает арбалет — «рука занята» (чёрный ящик, pillager-crossbow: 8=1 17=true).
@@ -218,6 +224,42 @@ fn properties(mob: &Mob) -> Vec<Property> {
     }
 
     match mob.kind {
+        Kind::Llama | Kind::TraderLlama | Kind::Camel | Kind::Goat | Kind::Panda | Kind::PolarBear | Kind::Ocelot | Kind::Mooshroom | Kind::WanderingTrader => {
+            let s = &mob.land;
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            match mob.kind {
+                Kind::Llama | Kind::TraderLlama => {
+                    out.push((18, TYPE_BYTE, vec![u8::from(s.tamed) << 1]));
+                    out.push((19, TYPE_BOOL, vec![u8::from(s.chest)]));
+                    out.push((20, TYPE_INT, encode_varint(i32::from(s.strength))));
+                    out.push((21, TYPE_INT, encode_varint(i32::from(s.variant))));
+                }
+                Kind::Camel => {
+                    out.push((18, TYPE_BYTE, vec![4 * u8::from(s.saddle)]));
+                    out.push((19, TYPE_BOOL, vec![u8::from(s.dash > 0)]));
+                    let v=encode_varlong(s.pose_tick);
+                    out.push((20, TYPE_LONG, v));
+                }
+                Kind::Goat => {
+                    out.push((18, TYPE_BOOL, vec![u8::from(s.screaming)]));
+                    out.push((19, TYPE_BOOL, vec![u8::from(s.horns[0] && !mob.is_baby())]));
+                    out.push((20, TYPE_BOOL, vec![u8::from(s.horns[1] && !mob.is_baby())]));
+                }
+                Kind::Panda => {
+                    out.push((18, TYPE_INT, encode_varint(0)));
+                    out.push((19, TYPE_INT, encode_varint(s.sneeze)));
+                    out.push((20, TYPE_INT, encode_varint(s.eating)));
+                    out.push((21, TYPE_BYTE, vec![s.main_gene])); out.push((22, TYPE_BYTE, vec![s.hidden_gene]));
+                    out.push((23, TYPE_BYTE, vec![(u8::from(s.sneeze>0)*2) | (u8::from(s.sitting)*4) | (u8::from(s.eating>0 || s.worried)*8) | (u8::from(s.rolling>0)*16)]));
+                }
+                Kind::PolarBear => out.push((18, TYPE_BOOL, vec![u8::from(s.standing)])),
+                Kind::Ocelot => out.push((18, TYPE_BOOL, vec![u8::from(s.trusting)])),
+                // Чёрный ящик, mooshroom-shear: вид — число (красный 0, бурый 1), не строка.
+                Kind::Mooshroom => out.push((18, TYPE_INT, encode_varint(i32::from(s.brown)))),
+                Kind::WanderingTrader => out.push((18, TYPE_INT, encode_varint(0))),
+                _ => {}
+            }
+        }
         Kind::Cow => {
             out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
             out.push((18, TYPE_COW_VARIANT, encode_varint(0)));
@@ -472,6 +514,10 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (10, _) => value.as_slice() == [0],
         (18, Kind::Sheep) => value.iter().all(|byte| *byte == 0),
         (18, Kind::Creeper) | (17, Kind::Creeper) => value.iter().all(|byte| *byte == 0),
+        (8, Kind::WanderingTrader) => value.as_slice() == [0],
+        (18, Kind::Mooshroom) => value.as_slice()==encode_varint(0).as_slice(),
+        (19 | 20, Kind::Goat) => value.as_slice()==[1],
+        (18..=23, Kind::Llama | Kind::TraderLlama | Kind::Camel | Kind::Goat | Kind::Panda | Kind::PolarBear | Kind::Ocelot | Kind::WanderingTrader) => value.iter().all(|b| *b==0),
         (18..=20, _) => true,
         _ => false,
     }
@@ -525,7 +571,7 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
 
     send_properties(stream, mob.entity_id, &changed).await?;
 
-    send_mob_equipment(stream, mob).await?;
+    send_mob_equipment(stream, mob, false).await?;
 
     if mob.spawn_poof {
         send_status(stream, mob.entity_id, 20).await?;
@@ -539,7 +585,8 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
 
     // Дикий волк — наибольшее здоровье сразу (чёрный ящик, wolf-tame:
     // max_health 8 при появлении; у призванного с хозяином — нет).
-    if wild_wolf(mob) {
+    // Призванная лама (53) и панда не шлют (чёрный ящик, llama-spit, panda-sneeze).
+    if wild_wolf(mob) || (crate::mob::land::llama(mob.kind) && mob.vitals.max_health != 53.0) {
         send_max_health(stream, mob).await?;
     }
 
@@ -657,6 +704,8 @@ async fn send_leash(stream: &mut Outgoing<'_>, entity_id: i32, holder: i32) -> i
 /// Скорость шага в пакете атрибутов: как у вида, но у шалкера, что не
 /// ходит, — 0,7, значение атрибута по умолчанию (чёрный ящик, shulker-stand).
 fn attribute_speed(kind: Kind) -> f64 {
+    // Чёрный ящик, trader-spawn-despawn: у торговца в пакете 0,7.
+    if kind == Kind::WanderingTrader { return 0.7; }
     if matches!(kind, Kind::Shulker | Kind::Ghast | Kind::Phantom) { 0.7 } else { kind.speed() }
 }
 
@@ -841,7 +890,7 @@ pub(super) async fn send_mob_event(
 /// Что у моба в руках и на голове: лук у скелета (основная рука, место 0) и
 /// шлем на голове (место 5) — по одному пакету на моба; шлем показывается
 /// железным [проверить: вид шлема не хранится].
-async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool) -> io::Result<()> {
     let mut slots: Vec<(u8, Stack)> = Vec::new();
 
     if mob.kind.skeleton() && mob.h.bow && let Some(bow) = blocks::item_named("bow") {
@@ -880,6 +929,25 @@ async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<
         slots.push((EQUIPMENT_HEAD, Stack::new(helmet, 1)));
     }
 
+    if crate::mob::land::llama(mob.kind) {
+        if mob.land.decor.is_none() && !changed { return Ok(()); }
+        let decor=mob.land.decor.and_then(|c| blocks::item_named(&crate::mob::WOOL[usize::from(c)].replace("_wool","_carpet"))).map(|id| Stack::new(id,1));
+        return super::send_equipment(stream,mob.entity_id,&[(6,decor)]).await;
+    }
+    if mob.kind==Kind::Camel {
+        if !mob.land.saddle && !changed { return Ok(()); }
+        let saddle=mob.land.saddle.then(|| blocks::item_named("saddle")).flatten().map(|id| Stack::new(id,1));
+        return super::send_equipment(stream,mob.entity_id,&[(7,saddle)]).await;
+    }
+    if mob.kind==Kind::Panda && mob.land.held.is_none() && !changed { return Ok(()); }
+    if mob.kind==Kind::Panda { return super::send_equipment(stream,mob.entity_id,&[(0,mob.land.held)]).await; }
+    if mob.kind==Kind::WanderingTrader {
+        if mob.land.drinking<=0 && !changed { return Ok(()); }
+        let hand=if mob.land.drinking>0 { blocks::item_named(if mob.land.invisible { "milk_bucket" } else { "potion" }).map(|id| {
+            let mut stack=Stack::new(id,1); if !mob.land.invisible { let mut d=stack.extras(); d.potion=Some(6); stack=stack.with_extras(d); } stack
+        }) } else { None };
+        return super::send_equipment(stream,mob.entity_id,&[(0,hand)]).await;
+    }
     if slots.is_empty() {
         return Ok(());
     }
@@ -1179,7 +1247,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
 
         // Волк: наибольшее здоровье — второй раз в первом прогоне (дикий) и
         // при перемене (приручение: 40; чёрный ящик, wolf-tame).
-        if (shown.first && wild_wolf(mob)) || (mob.kind == Kind::Wolf && mob.vitals.max_health != shown.max_health) {
+        if (shown.first && wild_wolf(mob)) || (matches!(mob.kind,Kind::Wolf|Kind::Llama|Kind::TraderLlama|Kind::Panda) && mob.vitals.max_health != shown.max_health) {
             send_max_health(stream, mob).await?;
             shown.max_health = mob.vitals.max_health;
         }
@@ -1188,8 +1256,10 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         // skeleton-stand и zombie-attack).
         // Разбойник: арбалет заряжен или выстрелил — снаряжение заново
         // (чёрный ящик, pillager-crossbow: charged_projectiles, затем damage).
-        if shown.first || mob.illager.gear != shown.gear {
-            send_mob_equipment(stream, mob).await?;
+        let land_gear = (crate::mob::land::rideable(mob.kind) || matches!(mob.kind, Kind::WanderingTrader | Kind::Panda)) && shown.attr_changes != mob.attr_changes;
+
+        if shown.first || mob.illager.gear != shown.gear || land_gear {
+            send_mob_equipment(stream, mob, shown.attr_changes != mob.attr_changes).await?;
             shown.gear = mob.illager.gear;
         }
 
@@ -1387,5 +1457,33 @@ mod slime_tests {
         assert!(attributes_at_spawn(Kind::Slime));
         assert!(!is_default(&(16, TYPE_INT, encode_varint(4)), Kind::Slime));
         assert!(is_default(&(16, TYPE_INT, encode_varint(1)), Kind::Slime));
+    }
+}
+
+#[cfg(test)]
+mod land_metadata_tests {
+    use super::*;
+
+    #[test]
+    fn land_fields_use_their_own_types_and_are_not_filtered_as_cow_defaults() {
+        let mut llama=Mob::new(1,Kind::Llama,(0.0,0.0,0.0));
+        llama.land.strength=5; llama.land.variant=3; llama.land.chest=true; llama.land.tamed=true;
+        let props=properties(&llama);
+        for property in [(18,TYPE_BYTE,vec![2]),(19,TYPE_BOOL,vec![1]),(20,TYPE_INT,encode_varint(5)),(21,TYPE_INT,encode_varint(3))] {
+            assert!(props.contains(&property)); assert!(!is_default(&property,Kind::Llama));
+        }
+        let mut cow=Mob::new(2,Kind::Mooshroom,(0.0,0.0,0.0)); cow.land.brown=true;
+        let brown=(18,TYPE_INT,encode_varint(1)); assert!(properties(&cow).contains(&brown)); assert!(!is_default(&brown,cow.kind));
+        assert!(!properties(&cow).iter().any(|(_,t,_)| *t==TYPE_COW_VARIANT));
+    }
+
+    #[test]
+    fn baby_goat_has_no_visible_horns_and_trader_drinking_sets_use_flag() {
+        let mut goat=Mob::new(1,Kind::Goat,(0.0,0.0,0.0)); goat.age= -100;
+        assert!(properties(&goat).contains(&(19,TYPE_BOOL,vec![0])));
+        assert!(properties(&goat).contains(&(20,TYPE_BOOL,vec![0])));
+        let mut trader=Mob::new(2,Kind::WanderingTrader,(0.0,0.0,0.0)); trader.land.drinking=12; trader.land.invisible=true;
+        assert!(properties(&trader).contains(&(8,TYPE_BYTE,vec![1])));
+        assert!(properties(&trader).contains(&(0,TYPE_BYTE,vec![32])));
     }
 }

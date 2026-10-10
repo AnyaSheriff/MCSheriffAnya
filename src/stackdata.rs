@@ -30,6 +30,9 @@ pub const COMPONENT_REPAIR_COST: i32 = 19;
 pub const COMPONENT_STORED_ENCHANTMENTS: i32 = 42;
 pub const COMPONENT_ATTRIBUTE_MODIFIERS: i32 = 16;
 pub const COMPONENT_POTION_CONTENTS: i32 = 51;
+pub const COMPONENT_STEW: i32 = 53;
+pub const COMPONENT_INSTRUMENT: i32 = 61;
+pub const HORNS: [&str; 8] = ["ponder_goat_horn","sing_goat_horn","seek_goat_horn","feel_goat_horn","admire_goat_horn","call_goat_horn","yearn_goat_horn","dream_goat_horn"];
 /// Отделка брони (`trim`): материал и узор — записи реестров (26.1 protocol.json).
 pub const COMPONENT_TRIM: i32 = 56;
 /// Заряженные снаряды арбалета (minecraft-data, protocol.json: 49).
@@ -180,6 +183,10 @@ pub struct Data {
     pub ominous: Option<u8>,
     /// Зловещий флаг (вики, Ominous Banner): узор, имя, редкость.
     pub ominous_banner: bool,
+    /// Эффекты подозрительного рагу: номер эффекта и длительность.
+    pub stew: Vec<(u8, i32)>,
+    /// Козий рог: запись реестра instrument.
+    pub instrument: Option<u8>,
 }
 
 impl Data {
@@ -334,6 +341,16 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
     let mut count = 0;
     let mut out = Vec::new();
 
+    if !data.stew.is_empty() {
+        out.extend_from_slice(&encode_varint(COMPONENT_STEW));
+        out.extend_from_slice(&encode_varint(data.stew.len() as i32));
+        for (id,ticks) in &data.stew { out.extend_from_slice(&encode_varint(i32::from(*id))); out.extend_from_slice(&encode_varint(*ticks)); }
+        count += 1;
+    }
+    if let Some(id)=data.instrument {
+        out.extend_from_slice(&encode_varint(COMPONENT_INSTRUMENT)); out.push(1);
+        out.extend_from_slice(&encode_varint(i32::from(id)+1)); count += 1;
+    }
     if data.damage > 0 {
         out.extend_from_slice(&encode_varint(COMPONENT_DAMAGE));
         out.extend_from_slice(&encode_varint(data.damage));
@@ -610,6 +627,18 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
     let mut reader = Reader { bytes: body, at: 0 };
 
     match kind {
+        COMPONENT_STEW => {
+            let Some(n)=reader.varint().filter(|n| (0..=32).contains(n)) else { return; };
+            let mut effects=Vec::new();
+            for _ in 0..n {
+                let (Some(id),Some(ticks))=(reader.varint(),reader.varint()) else { return; };
+                if (0..=32).contains(&id) && ticks>0 { effects.push((id as u8,ticks)); }
+            }
+            data.stew=effects;
+        }
+        COMPONENT_INSTRUMENT => {
+            if reader.take(1)==Some(&[1]) && let Some(id)=reader.varint().filter(|n| (1..=8).contains(n)) { data.instrument=Some((id-1) as u8); }
+        }
         COMPONENT_DAMAGE => {
             if let Some(damage) = reader.varint() {
                 data.damage = damage.max(0);
@@ -759,7 +788,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -799,7 +828,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -820,6 +849,11 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             out.extend_from_slice(&[1, material, pattern]);
         }
 
+        if !data.stew.is_empty() {
+            out.extend_from_slice(&[5,data.stew.len().min(32) as u8]);
+            for (id,ticks) in data.stew.iter().take(32) { out.push(*id); out.extend_from_slice(&ticks.to_be_bytes()); }
+        }
+        if let Some(id)=data.instrument { out.extend_from_slice(&[6,id]); }
         // Содержимое шулкер-ящика: метка 2, число ячеек, у каждой номер,
         // предмет, число и довески (длина и запись; 0 — без довесков).
         if !data.contents.is_empty() {
@@ -838,7 +872,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             }
         }
 
-        // Метка 3 — уровень зловещей бутылки, 4 — зловещий флаг.
+        // Метка 3 — уровень зловещей бутылки, 4 — зловещий флаг (5 — рагу, 6 — рог выше).
         if let Some(level) = data.ominous {
             out.extend_from_slice(&[3, level]);
         }
@@ -999,6 +1033,11 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                 }
                 3 => data.ominous = Some(reader.take(1)?[0].min(4)),
                 4 => data.ominous_banner = true,
+                5 => {
+                    let n=reader.take(1)?[0]; if n>32 { return None; }
+                    for _ in 0..n { let id=reader.take(1)?[0]; let ticks=i32::from_be_bytes(reader.take(4)?.try_into().ok()?); data.stew.push((id,ticks)); }
+                }
+                6 => { let id=reader.take(1)?[0]; if id>=8 { return None; } data.instrument=Some(id); }
                 _ => break,
             }
         }
