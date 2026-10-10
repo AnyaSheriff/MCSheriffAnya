@@ -29,6 +29,7 @@ pub mod end_city;
 pub mod stronghold;
 pub mod village;
 pub mod monument;
+pub mod trial_chambers;
 pub mod the_end;
 pub mod noise;
 pub mod ocean;
@@ -336,6 +337,21 @@ pub struct Blast {
     /// Взрыв ветра («порыв ветра» булавы): свои частицы и звук, без дыма,
     /// толчок — только в самом пакете.
     pub wind: bool,
+    /// Чей взрыв ветра: у заряда игрока вихрь малый, у бриза свой звук
+    /// (чёрный ящик, wind-charge-throw, breeze-charge-flight).
+    pub gust: Gust,
+}
+
+/// Чей взрыв ветра.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Gust {
+    /// «Порыв ветра» булавы: вихрь gust_emitter_large, звук wind_charge.wind_burst.
+    #[default]
+    Mace,
+    /// Заряд ветра игрока: вихрь gust_emitter_small, тот же звук.
+    Charge,
+    /// Заряд бриза: вихрь gust_emitter_large, звук breeze.wind_burst.
+    Breeze,
 }
 
 /// Блоки одного чанка — по секциям.
@@ -407,6 +423,9 @@ struct Chunk {
 
     /// Данные спавнеров (spawner.rs) по месту внутри чанка.
     spawners: HashMap<(i32, i32, i32), crate::spawner::Data>,
+
+    /// Испытательные спавнеры и хранилища (trial.rs): место в чанке → данные.
+    trials: HashMap<(i32, i32, i32), crate::trial::Data>,
 
     /// Таблички с текстом (sign.rs): место внутри чанка.
     signs: HashMap<(i32, i32, i32), crate::sign::Data>,
@@ -503,6 +522,7 @@ impl Chunk {
             mobs: Vec::new(),
             command_blocks: HashMap::new(),
             spawners: HashMap::new(),
+            trials: HashMap::new(),
             signs: HashMap::new(),
         }
     }
@@ -656,6 +676,18 @@ impl Chunk {
         // воду и призмарин (monument.rs).
         monument::build(generator, &mut chunk, chunk_x, chunk_z);
         cave_biomes::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns, grid.as_ref());
+        // Испытательные камеры — последними: в своих кусках они важнее и
+        // породы, и пещерных украшений (trial_chambers.rs).
+        trial_chambers::build(generator, &mut chunk, chunk_x, chunk_z);
+
+        // Спавнеры и хранилища камер — со своими данными по замеру (trial.rs).
+        if let Generator::Normal(terrain) = generator {
+            for (x, y, z, kind, data) in trial_chambers::block_entities(terrain, chunk_x, chunk_z) {
+                if let Some(entry) = crate::trial::Data::generated(kind, data) {
+                    chunk.put_generated_trial(x - chunk_x * CHUNK_SIZE, y, z - chunk_z * CHUNK_SIZE, entry);
+                }
+            }
+        }
 
         // Свет — когда все блоки на местах.
         chunk.light_up();
@@ -758,6 +790,14 @@ impl Chunk {
     }
 
     /// Спавнер, сложенный генерацией, с видом моба: x, z — внутри чанка.
+    /// Сгенерированный испытательный блок (испытательные залы): данные по
+    /// месту внутри чанка.
+    fn put_generated_trial(&mut self, x: i32, y: i32, z: i32, data: crate::trial::Data) {
+        if (0..CHUNK_SIZE).contains(&x) && (0..CHUNK_SIZE).contains(&z) {
+            self.trials.insert((x, y, z), data);
+        }
+    }
+
     fn put_generated_spawner(&mut self, x: i32, y: i32, z: i32, data: crate::spawner::Data) {
         if (0..CHUNK_SIZE).contains(&x) && (0..CHUNK_SIZE).contains(&z) {
             self.spawners.insert((x, y, z), data);
@@ -866,6 +906,23 @@ impl Chunk {
                 self.spawners.insert(place, crate::spawner::Data::default());
             } else {
                 self.spawners.remove(&place);
+            }
+        }
+
+        // Испытательный спавнер и хранилище: данные рождаются с блоком и
+        // уходят вместе с ним (смена состояния того же блока их не трогает).
+        let (name, was) = (crate::blocks::block_at_state(state), crate::blocks::block_at_state(old));
+
+        if name != was && (matches!(name, Some("trial_spawner" | "vault")) || matches!(was, Some("trial_spawner" | "vault"))) {
+            let place = (x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
+
+            match name.and_then(crate::trial::Data::for_block) {
+                Some(data) => {
+                    self.trials.insert(place, data);
+                }
+                None => {
+                    self.trials.remove(&place);
+                }
             }
         }
 
@@ -2001,6 +2058,51 @@ impl World {
     /// Данные спавнеров чанка для пакета чанка: место внутри чанка и NBT.
     pub fn chunk_spawners(&self, chunk_x: i32, chunk_z: i32) -> Vec<((i32, i32, i32), Vec<u8>)> {
         self.chunks.get(&(chunk_x, chunk_z)).map(|chunk| chunk.spawners.iter().map(|(&place, data)| (place, data.nbt())).collect()).unwrap_or_default()
+    }
+
+    /// Испытательный спавнер или хранилище в этом месте (trial.rs).
+    pub fn trial(&self, x: i32, y: i32, z: i32) -> Option<&crate::trial::Data> {
+        self.chunks.get(&chunk_key(x, z))?.trials.get(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))
+    }
+
+    /// Правит данные испытательного блока; чанк помечается изменённым.
+    pub fn with_trial<R>(&mut self, x: i32, y: i32, z: i32, change: impl FnOnce(&mut crate::trial::Data) -> R) -> Option<R> {
+        let chunk = self.chunks.get_mut(&chunk_key(x, z))?;
+        let data = chunk.trials.get_mut(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))?;
+        let result = change(data);
+
+        self.dirty.insert(chunk_key(x, z));
+
+        Some(result)
+    }
+
+    /// Все испытательные блоки загруженных чанков: место в мире.
+    pub fn trial_places(&self) -> Vec<(i32, i32, i32)> {
+        let mut found = Vec::new();
+
+        for (&(chunk_x, chunk_z), chunk) in &self.chunks {
+            found.extend(chunk.trials.keys().map(|&(x, y, z)| (chunk_x * CHUNK_SIZE + x, y, chunk_z * CHUNK_SIZE + z)));
+        }
+
+        found.sort_unstable();
+        found
+    }
+
+    /// Данные испытательных блоков чанка для пакета чанка: место и NBT.
+    pub fn chunk_trials(&self, chunk_x: i32, chunk_z: i32) -> Vec<((i32, i32, i32), Vec<u8>)> {
+        let Some(chunk) = self.chunks.get(&(chunk_x, chunk_z)) else {
+            return Vec::new();
+        };
+
+        chunk
+            .trials
+            .iter()
+            .map(|(&place, data)| {
+                let ominous = crate::trial::ominous_state(chunk.block(place.0, place.1, place.2));
+
+                (place, data.nbt(ominous).1)
+            })
+            .collect()
     }
 
     /// Спавнер поставил мобов: рассказать клиентам в следующем такте.
@@ -3646,6 +3748,11 @@ impl World {
             return monument::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / monument::SPACING + 1);
         }
 
+        // Испытательные камеры — по областям 34×34 чанка (trial_chambers.rs).
+        if let (Generator::Normal(terrain), "trial_chambers") = (&*self.generator, name) {
+            return trial_chambers::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / trial_chambers::SPACING + 1);
+        }
+
         // Деревни — по областям 34×34 чанка (village.rs).
         if let (Generator::Normal(terrain), Some(kind)) = (&*self.generator, name.strip_prefix("village_").and_then(|kind| village::Kind::ALL.into_iter().find(|known| known.name() == kind))) {
             return village::nearest(terrain, kind, chunk_x, chunk_z, regions.max(1) * 27 / village::SPACING + 1);
@@ -3762,6 +3869,17 @@ impl World {
     pub fn monument_elders(&self, chunk_x: i32, chunk_z: i32) -> Vec<(f64, f64, f64)> {
         match &*self.generator {
             Generator::Normal(terrain) => monument::elders(terrain, chunk_x, chunk_z),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Сущности-блоки испытательных камер в только что сложенном чанке:
+    /// x, y, z мира, вид («spawner», «vault», «chest», «barrel», «dispenser»,
+    /// «decorated_pot») и данные (trial_chambers::block_entities).
+    #[allow(dead_code)] // [проверить] спавнеры и хранилища заберут их, когда будут готовы
+    pub fn trial_chamber_block_entities(&self, chunk_x: i32, chunk_z: i32) -> Vec<(i32, i32, i32, &'static str, &'static str)> {
+        match &*self.generator {
+            Generator::Normal(terrain) => trial_chambers::block_entities(terrain, chunk_x, chunk_z),
             _ => Vec::new(),
         }
     }

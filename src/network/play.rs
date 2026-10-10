@@ -203,8 +203,12 @@ const PARTICLE_EXPLOSION: i32 = 23;
 const PARTICLE_POOF: i32 = 59;
 /// Вихрь взрыва ветра (minecraft-data 26.1, particles.json).
 const PARTICLE_GUST_EMITTER_LARGE: i32 = 26;
+/// Малый вихрь взрыва заряда ветра игрока (minecraft-data 26.1: gust_emitter_small 27).
+const PARTICLE_GUST_EMITTER_SMALL: i32 = 27;
 /// Звук взрыва «порыва ветра» (вики, Wind Burst).
 const WIND_BURST_SOUND: &str = "minecraft:entity.wind_charge.wind_burst";
+/// Взрыв заряда бриза (вики, Breeze, «Sounds»; чёрный ящик, breeze-charge-flight).
+const BREEZE_WIND_BURST_SOUND: &str = "minecraft:entity.breeze.wind_burst";
 const PARTICLE_SMOKE: i32 = 62;
 const PARTICLE_VIBRATION: i32 = 48;
 
@@ -4939,7 +4943,9 @@ async fn send_explosion(stream: &mut Outgoing<'_>, blast: &world::Blast, own: Op
 
     // Взрыв ветра: вихрь gust_emitter_large и звук wind_burst, дыма нет
     // (чёрный ящик, pvp-mace-wind-burst).
-    let flash = if blast.wind {
+    let flash = if blast.wind && blast.gust == world::Gust::Charge {
+        PARTICLE_GUST_EMITTER_SMALL
+    } else if blast.wind {
         PARTICLE_GUST_EMITTER_LARGE
     } else if blast.power >= 2.0 {
         PARTICLE_EXPLOSION_EMITTER
@@ -4949,7 +4955,11 @@ async fn send_explosion(stream: &mut Outgoing<'_>, blast: &world::Blast, own: Op
     body.extend_from_slice(&encode_varint(flash));
 
     body.extend_from_slice(&encode_varint(0)); // звук назван словом, а не номером
-    body.extend_from_slice(&encode_string(if blast.wind { WIND_BURST_SOUND } else { crate::tnt::EXPLODE_SOUND }));
+    body.extend_from_slice(&encode_string(match (blast.wind, blast.gust) {
+        (true, world::Gust::Breeze) => BREEZE_WIND_BURST_SOUND,
+        (true, _) => WIND_BURST_SOUND,
+        _ => crate::tnt::EXPLODE_SOUND,
+    }));
     body.push(0); // своей дальности слышимости у него нет
 
     let smoke: &[(i32, f32, f32, i32)] = if blast.wind { &[] } else { &[(PARTICLE_POOF, 0.5, 1.0, 1), (PARTICLE_SMOKE, 1.0, 1.0, 1)] };
@@ -5328,6 +5338,11 @@ async fn send_chunk(
 
         // Таблички несут текст.
         for ((x, y, z), nbt) in world.chunk_signs(chunk_x, chunk_z) {
+            shelves.insert((x, y, z), nbt);
+        }
+
+        // Испытательные спавнеры — моба, хранилища — подошедших (trial.rs).
+        for ((x, y, z), nbt) in world.chunk_trials(chunk_x, chunk_z) {
             shelves.insert((x, y, z), nbt);
         }
 
@@ -8754,6 +8769,37 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             return Some(Reaction::accepted(sequence));
         }
 
+        // Хранилище: ключ испытаний открывает его (trial.rs; чёрный ящик,
+        // vault-open: блок, блок за гранью, ключ из руки).
+        if player.game_mode != GAME_MODE_SPECTATOR {
+            let held = player.inventory.held().and_then(|stack| blocks::item_name(stack.item));
+            let now = *shared.ticks.borrow();
+            let seed = (u64::from(world.random_bits()) << 32) | u64::from(world.random_bits());
+
+            if let Some(spend) = crate::trial::use_vault(&mut world, clicked, player.uuid, held, now, seed) {
+                // Взмах рукой — дважды и самому игроку (vault-open: два
+                // «Animate» до повтора блока).
+                if spend {
+                    world.note_animation(player.entity_id, ANIMATION_SWING_MAIN_ARM);
+                    world.note_animation(player.entity_id, ANIMATION_SWING_MAIN_ARM);
+                }
+
+                world.tell_directly(clicked_x, clicked_y, clicked_z);
+                world.tell_directly(bx, by, bz);
+
+                let mut reaction = Reaction::accepted(sequence);
+
+                if spend
+                    && player.game_mode != GAME_MODE_CREATIVE
+                    && let Some(slot) = player.inventory.spend_held()
+                {
+                    reaction.slots.push(slot);
+                }
+
+                return Some(reaction);
+            }
+        }
+
         // Звуки, вызванные рукой (дверь, люк, калитка), щёлкнувшему не
         // шлются: его клиент играет их сам.
         world.actor = Some(player.entity_id);
@@ -9227,6 +9273,14 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
 
     // Взрывное или оседающее зелье: бросок (thrown.rs).
     if thrown::throw_potion(shared, player, hand) {
+        return Some(answer);
+    }
+
+    // Заряд ветра: бросок и откат 10 тактов (thrown.rs).
+    if let Some(cooldown) = thrown::throw_wind_charge(shared, player, hand) {
+        let mut answer = answer;
+
+        answer.packets.push(cooldown);
         return Some(answer);
     }
 
@@ -10194,6 +10248,9 @@ struct PlayerState {
     seen_bow_arrows: HashMap<i32, bow::ShownArrow>,
     /// Брошенные зелья, огненные шары и облака, о которых клиент знает.
     seen_thrown: HashMap<i32, thrown::Shown>,
+    /// Откат предметов: группа (имя предмета) → такт, до которого её нельзя
+    /// использовать (пакет Set Cooldown; заряд ветра — thrown.rs).
+    item_cooldowns: HashMap<&'static str, u64>,
 
     /// Такт мира, когда игрок последний раз бил: сила удара зависит от
     /// того, сколько прошло.
@@ -10466,6 +10523,7 @@ impl PlayerState {
             glide: glide::Glide::default(),
             seen_bow_arrows: HashMap::new(),
             seen_thrown: HashMap::new(),
+            item_cooldowns: HashMap::new(),
             last_attack: 0,
             dimension: saved.as_ref().map(|data| data.dimension).unwrap_or_default(),
             in_portal: 0,

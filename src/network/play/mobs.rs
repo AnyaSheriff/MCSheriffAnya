@@ -184,12 +184,12 @@ fn properties(mob: &Mob) -> Vec<Property> {
     }
     // «Агрессивен» (бит 4) у эндермена и шалкера не ставится: у первого
     // злость — свойство 17 (чёрный ящик, enderman-stare, shulker-ai).
-    let aggressive = u8::from((mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube | Kind::Guardian | Kind::ElderGuardian | Kind::Pillager | Kind::Evoker | Kind::Illusioner | Kind::Vex) && mob.h.target.is_some() && !mob.illager.calm) || (mob.kind == Kind::Wolf && mob.tame.melee) || (mob.kind == Kind::IronGolem && mob.golem.target.is_some())) << 2;
+    let aggressive = u8::from((mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube | Kind::Guardian | Kind::ElderGuardian | Kind::Pillager | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Breeze) && mob.h.target.is_some() && !mob.illager.calm) || (mob.kind == Kind::Wolf && mob.tame.melee) || (mob.kind == Kind::IronGolem && mob.golem.target.is_some())) << 2;
     let mut out: Vec<Property> = vec![
         (0, TYPE_BYTE, vec![fire]),
         (2, TYPE_OPT_COMPONENT, custom_name(mob)),
         (4, TYPE_BOOL, vec![u8::from(mob.silent)]),
-        (6, TYPE_POSE, encode_varint(if mob.is_dead() { POSE_DYING } else if mob.kind == Kind::Camel && mob.land.sitting { 10 } else { 0 })),
+        (6, TYPE_POSE, encode_varint(if mob.is_dead() { POSE_DYING } else if mob.kind == Kind::Camel && mob.land.sitting { 10 } else if mob.kind == Kind::Breeze { mob.breeze.pose } else { 0 })),
         (9, TYPE_FLOAT, float(mob.vitals.health)),
         // Стрел в теле (wither-half-armor: 9=… 12=1 после попадания).
         (12, TYPE_INT, encode_varint(mob.arrows)),
@@ -311,7 +311,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
         // Фантом: размер (свойство 16, по умолчанию 0) [проверить по чёрному ящику, phantom-swoop].
         Kind::Phantom => out.push((16, TYPE_INT, encode_varint(mob.phantom.size))),
         Kind::MagmaCube | Kind::Slime => out.push((16, TYPE_INT, encode_varint(mob.nether.size.max(1)))),
-        Kind::WitherSkeleton | Kind::Silverfish => {}
+        Kind::WitherSkeleton | Kind::Silverfish | Kind::Breeze => {}
         Kind::ZombifiedPiglin => out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())])),
         Kind::Piglin => {
             out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.immune)]));

@@ -757,6 +757,12 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return summon_projectile(base, rest, source, shared);
     }
 
+    // Заряды ветра: летят по прямой со скоростью из `Motion` (wind.rs;
+    // чёрный ящик, breeze-charge-flight).
+    if let charge @ ("wind_charge" | "breeze_wind_charge") = name.strip_prefix("minecraft:").unwrap_or(name) {
+        return summon_wind_charge(charge == "breeze_wind_charge", rest, source, shared);
+    }
+
     if name.strip_prefix("minecraft:").unwrap_or(name) == "lightning_bolt" {
         return summon_lightning(rest, source, shared);
     }
@@ -874,6 +880,30 @@ fn summon_projectile(kind: &str, rest: &[&str], source: &Source, shared: &Shared
     }
 
     Answer::saying(format!("Призвана сущность {}", kind))
+}
+
+fn summon_wind_charge(breeze: bool, rest: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let origin = origin_of(source, shared);
+    let (place, data) = match rest {
+        [] => (Some(origin), ""),
+        [x, y, z] => (entity_place(&[*x, *y, *z], origin), ""),
+        [x, y, z, data @ ..] => (entity_place(&[*x, *y, *z], origin), *data.first().unwrap_or(&"")),
+        _ => (None, ""),
+    };
+    let Some(place) = place else {
+        return Answer::saying("Нужно: summon wind_charge <x> <y> <z> [{Motion:[x,y,z]}]".to_string());
+    };
+    let motion = motion_of(data).unwrap_or((0.0, 0.0, 0.0));
+    let dimension = dimension_of(source, shared);
+    let mut charge = crate::thrown::Flying::wind_charge(shared.next_entity_id(), dimension, place, motion, 0, breeze);
+
+    // Призванный ни в ком не сидит. Первый ход — в такте призыва: у
+    // оригинала взрыв то на +13, то на +14 (breeze-charge-flight, три прогона:
+    // +13, +14, +13).
+    charge.in_owner = false;
+    shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(charge);
+
+    Answer::saying(format!("Призвана сущность {}", if breeze { "breeze_wind_charge" } else { "wind_charge" }))
 }
 
 /// `Motion:[a,b,c]` из данных сущности (числа с `d` на конце или без).
@@ -2044,7 +2074,9 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
     // Командному блоку — его поля (command_block.rs), прочим — ячейки.
     let command_block = blocks::state_from_text(block).and_then(crate::command_block::mode_of).is_some();
     let spawner = blocks::state_from_text(block).and_then(blocks::block_at_state) == Some("spawner");
-    let command_block_or_spawner = command_block || spawner;
+    // Испытательный спавнер и хранилище — свои поля (trial.rs).
+    let trial = matches!(blocks::state_from_text(block).and_then(blocks::block_at_state), Some("trial_spawner" | "vault"));
+    let command_block_or_spawner = command_block || spawner || trial;
     let items = match data.filter(|_| !command_block_or_spawner).map(crate::containers::items_from_text) {
         Some(Some(items)) => Some(items),
         Some(None) => return Answer::saying(format!("Не понял данные блока: {}", data.unwrap_or(""))),
@@ -2060,6 +2092,14 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
 
     if let Some(text) = data.filter(|_| spawner)
         && let Err(why) = crate::spawner::Data::default().apply_snbt(text)
+    {
+        note_result(0);
+        return Answer::saying(why);
+    }
+
+    if let Some(text) = data.filter(|_| trial)
+        && let Some(name) = blocks::state_from_text(block).and_then(blocks::block_at_state)
+        && let Err(why) = trial_apply(&mut crate::trial::Data::for_block(name), text)
     {
         note_result(0);
         return Answer::saying(why);
@@ -2137,6 +2177,28 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
                         if !placed.contains(&(x, y, z)) {
                             changed += 1;
                         }
+                    }
+                }
+
+                // Испытательный блок: данные из SNBT; клиентам — данные блока
+                // сразу после постановки, даже без SNBT (чёрный ящик,
+                // trial-spawner-wave: `{}`, vault-open: `{"shared_data":{}}`).
+                if trial && world.get_block(x, y, z) == state {
+                    if let Some(text) = data {
+                        world.with_trial(x, y, z, |entry| {
+                            let mut wrapped = Some(entry.clone());
+                            let result = trial_apply(&mut wrapped, text);
+
+                            if let Some(new) = wrapped {
+                                *entry = new;
+                            }
+
+                            result
+                        });
+                    }
+
+                    if let Some((kind, nbt)) = world.trial(x, y, z).map(|entry| entry.nbt(crate::trial::ominous_state(state))) {
+                        world.note_block_entity(x, y, z, kind, nbt);
                     }
                 }
 
@@ -2902,6 +2964,15 @@ fn game_mode_name(mode: i32) -> &'static str {
         GAME_MODE_ADVENTURE => "приключение",
         GAME_MODE_SPECTATOR => "наблюдатель",
         _ => "неизвестный",
+    }
+}
+
+/// Поля испытательного блока из SNBT команды (trial.rs).
+fn trial_apply(entry: &mut Option<crate::trial::Data>, text: &str) -> Result<(), String> {
+    match entry {
+        Some(crate::trial::Data::Spawner(spawner)) => spawner.apply_snbt(text),
+        Some(crate::trial::Data::Vault(vault)) => vault.apply_snbt(text),
+        None => Ok(()),
     }
 }
 

@@ -1732,7 +1732,7 @@ pub(super) async fn hit_by(
     // Удар моба или стрелы: анимация «ранен» с направлением на виновника,
     // у стрелы ещё звук попадания (чёрный ящик, skeleton-arrow).
     if let Some(from) = player.net.hurt_from
-        && matches!(source, Source::MobAttack | Source::Arrow | Source::Trident)
+        && matches!(source, Source::MobAttack | Source::Arrow | Source::Trident | Source::WindCharge)
     {
         let yaw = ((from.2 - player.z).atan2(from.0 - player.x).to_degrees() - f64::from(player.yaw)) as f32;
         let mut body = encode_varint(HURT_ANIMATION);

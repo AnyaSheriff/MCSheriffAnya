@@ -17,6 +17,7 @@
 pub mod ai;
 pub mod arthropod;
 pub mod dragon;
+pub mod breeze;
 pub mod golem;
 pub mod guardian;
 pub mod wither;
@@ -134,12 +135,14 @@ pub enum Kind {
     Panda,
     Ocelot,
     Mooshroom,
+    /// Бриз (вики, Breeze): скользит, стреляет зарядами ветра, прыгает (mob/breeze.rs).
+    Breeze,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 57] = [
+    pub const ALL: [Kind; 58] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -197,6 +200,7 @@ impl Kind {
         Kind::Panda,
         Kind::Ocelot,
         Kind::Mooshroom,
+        Kind::Breeze,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -236,6 +240,7 @@ impl Kind {
                 | Kind::Vex
                 | Kind::Illusioner
                 | Kind::Ravager
+                | Kind::Breeze
         )
     }
 
@@ -309,6 +314,7 @@ impl Kind {
             "wolf" => Kind::Wolf,
             "cat" => Kind::Cat,
             "phantom" => Kind::Phantom,
+            "breeze" => Kind::Breeze,
             "leash_knot" => Kind::LeashKnot,
             "iron_golem" => Kind::IronGolem,
             "snow_golem" => Kind::SnowGolem,
@@ -372,6 +378,7 @@ impl Kind {
             Kind::Wolf => "wolf",
             Kind::Cat => "cat",
             Kind::Phantom => "phantom",
+            Kind::Breeze => "breeze",
             Kind::LeashKnot => "leash_knot",
             Kind::IronGolem => "iron_golem",
             Kind::SnowGolem => "snow_golem",
@@ -442,6 +449,8 @@ impl Kind {
             Kind::Cat => 21,
             // minecraft-data 26.1: phantom 99.
             Kind::Phantom => 99,
+            // minecraft-data 26.1: breeze 17.
+            Kind::Breeze => 17,
             Kind::LeashKnot => 76,
             // minecraft-data 26.1, entities.json: iron_golem 70, snow_golem 121.
             Kind::IronGolem => 70,
@@ -514,6 +523,8 @@ impl Kind {
             Kind::Wolf => "minecraft:wolf",
             Kind::Cat => "minecraft:cat",
             Kind::Phantom => "minecraft:phantom",
+            // [Bedrock: потом] бриз для клиента Bedrock: имя есть, поз нет.
+            Kind::Breeze => "minecraft:breeze",
             Kind::LeashKnot => "minecraft:leash_knot",
             // [Bedrock: потом] големы для клиента Bedrock: имена есть, свойств нет.
             Kind::IronGolem => "minecraft:iron_golem",
@@ -564,6 +575,8 @@ impl Kind {
             // minecraft-data: wolf 0,6 × 0,85, cat 0,6 × 0,7, leash_knot 0,375 × 0,5.
             Kind::Wolf | Kind::Cat => 0.6,
             Kind::Phantom => 0.9,
+            // minecraft-data: breeze 0,6 × 1,77.
+            Kind::Breeze => 0.6,
             Kind::LeashKnot => 0.375,
             // minecraft-data: iron_golem 1,4 × 2,7, snow_golem 0,7 × 1,9.
             Kind::IronGolem => 1.4,
@@ -620,6 +633,7 @@ impl Kind {
             Kind::Wolf => 0.85,
             Kind::Cat => 0.7,
             Kind::Phantom => 0.5,
+            Kind::Breeze => 1.77,
             Kind::LeashKnot => 0.5,
             Kind::IronGolem => 2.7,
             Kind::SnowGolem => 1.9,
@@ -677,6 +691,7 @@ impl Kind {
             Kind::Wolf => 8.0,
             Kind::Cat => 10.0,
             Kind::Phantom => 20.0,
+            Kind::Breeze => breeze::HEALTH,
             Kind::LeashKnot => 1.0,
             // Вики, Iron Golem: «Health points 100»; Snow Golem: «4».
             Kind::IronGolem => golem::IRON_HEALTH,
@@ -738,6 +753,7 @@ impl Kind {
             Kind::SnowGolem => 0.2,
             Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Ravager | Kind::EvokerFangs => illager::speed(self),
             Kind::Phantom => 0.0,
+            Kind::Breeze => breeze::SPEED,
             // [проверить] атрибут скорости: страж 0,5, древний 0,3.
             Kind::Guardian => 0.5,
             Kind::ElderGuardian => 0.3,
@@ -831,6 +847,8 @@ impl Kind {
             Kind::Wolf => ("minecraft:entity.wolf.ambient", "minecraft:entity.wolf.hurt", "minecraft:entity.wolf.death"),
             Kind::Cat => ("minecraft:entity.cat.stray_ambient", "minecraft:entity.cat.hurt", "minecraft:entity.cat.death"),
             Kind::Phantom => ("minecraft:entity.phantom.ambient", "minecraft:entity.phantom.hurt", "minecraft:entity.phantom.death"),
+            // Вики, Breeze, «Sounds»: на земле — idle_ground [проверить: в воздухе idle_air].
+            Kind::Breeze => ("minecraft:entity.breeze.idle_ground", "minecraft:entity.breeze.hurt", "minecraft:entity.breeze.death"),
             Kind::LeashKnot => ("", "", ""),
             // Вики, Iron Golem и Snow Golem, «Sounds»: у железного голоса в покое нет.
             Kind::IronGolem => ("", "minecraft:entity.iron_golem.hurt", "minecraft:entity.iron_golem.death"),
@@ -1274,6 +1292,8 @@ pub struct Mob {
     pub golem: golem::State,
     /// Фантом: размер, якорь кружения, пике (mob/phantom.rs).
     pub phantom: phantom::State,
+    /// Бриз: поза, выстрел, прыжок (mob/breeze.rs).
+    pub breeze: breeze::State,
 
     /// Стражи: луч, шипы, проклятие (mob/guardian.rs).
     pub guardian: guardian::State,
@@ -1374,6 +1394,7 @@ impl Mob {
             tame: tame::State { variant: tame::default_variant(kind), ..tame::State::default() },
             golem: golem::State::default(),
             phantom: phantom::State::default(),
+            breeze: breeze::State::default(),
             guardian: guardian::State::default(),
             wither: wither::State::default(),
             illager: illager::State::default(),
@@ -1740,6 +1761,8 @@ impl Mob {
             golem::think(self, view, ctx, rng)
         } else if guardian::guardian(self.kind) {
             guardian::think(self, view, ctx, rng)
+        } else if self.kind == Kind::Breeze {
+            breeze::think(self, view, ctx, rng)
         } else {
             ai::think(self, view, ctx, rng)
         };
@@ -1759,6 +1782,8 @@ impl Mob {
             guardian::physics(self, view, rng);
         } else if self.kind == Kind::Vex && !self.is_dead() {
             illager::vex_fly(self);
+        } else if self.kind == Kind::Breeze && !self.is_dead() && breeze::leap(self, view) {
+            // Длинный прыжок бриза — своим ходом (mob/breeze.rs).
         } else if self.kind != Kind::Shulker && !self.is_dead() {
             if self.kind == Kind::Blaze {
                 let eye = self.h.target.and_then(|id| ctx.players.iter().find(|player| player.id == id)).map(|player| player.y + player.eye);
@@ -2038,7 +2063,7 @@ impl Mob {
         // разбивается (вики, Chicken).
         // Големы падения не боятся (вики, Iron Golem, Snow Golem).
         let safe_fall=if self.kind==Kind::Goat { 10.0 } else if self.kind==Kind::Camel { 6.0 } else { crate::survival::SAFE_FALL };
-        if fall > safe_fall && self.kind != Kind::Chicken && !golem::golem(self.kind) {
+        if fall > safe_fall && self.kind != Kind::Chicken && self.kind != Kind::Breeze && !golem::golem(self.kind) {
             let damage = ((fall - safe_fall - 1.0e-4) * if self.kind==Kind::Camel { 0.5 } else { 1.0 }).ceil();
 
             self.hurt(damage, Source::Fall, None);
@@ -2365,6 +2390,7 @@ impl Mob {
             Kind::Panda => 77,
             Kind::Ocelot => 78,
             Kind::Mooshroom => 79,
+            Kind::Breeze => 80,
         } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -2474,6 +2500,7 @@ impl Mob {
             77 => Kind::Panda,
             78 => Kind::Ocelot,
             79 => Kind::Mooshroom,
+            80 => Kind::Breeze,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -2744,6 +2771,13 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         Kind::Phantom => {
             if mob.by_player {
                 give("phantom_membrane", 0, 1 + mob.looting, rng);
+            }
+        }
+        // Вики, Breeze: 1–2 стержня бриза (+1 за уровень «Looting» к верху и
+        // низу: 2–4, 3–6, 4–8), только если убил игрок или прирученный волк.
+        Kind::Breeze => {
+            if mob.by_player {
+                give("breeze_rod", 1 + mob.looting, 2 + 2 * mob.looting, rng);
             }
         }
         Kind::Guardian | Kind::ElderGuardian => guardian::loot(mob, rng, &mut give),
@@ -3099,6 +3133,8 @@ pub struct Outcome {
     /// Снежки снежных големов: кто бросил, откуда, скорость (mob/golem.rs).
     pub snowballs: Vec<(i32, golem::Throw)>,
     pub spits: Vec<(i32, golem::Throw)>,
+    /// Заряды ветра бризов (mob/breeze.rs).
+    pub wind_charges: Vec<(i32, golem::Throw)>,
 
     /// Клетки, куда снежные големы кладут снег (если разрешено mobGriefing).
     pub snow: Vec<(i32, i32, i32)>,
@@ -3216,6 +3252,10 @@ pub fn step_all(
 
         if let Some(spit) = plan.spit {
             outcome.spits.push((mob.entity_id, spit));
+        }
+
+        if let Some(throw) = plan.wind_charge {
+            outcome.wind_charges.push((mob.entity_id, throw));
         }
 
         if let Some((from, velocity)) = plan.snowball {

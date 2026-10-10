@@ -1,0 +1,63 @@
+{
+ "name": "breeze-charge-flight",
+ "about": "Заряд бриза, вызванный командой, летит в стену с дверью, рычагом, кнопкой, калиткой, свечой и железной дверью: полёт без тяжести, взрыв силой 3, что переключилось, толчок робота.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "fill $(0,0,0) $(8,4,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:stone",
+  "fill $(0,0,7) $(6,3,7) minecraft:stone",
+  "setblock $(3,0,6) minecraft:oak_door[half=lower,facing=north]",
+  "setblock $(3,1,6) minecraft:oak_door[half=upper,facing=north]",
+  "setblock $(0,1,6) minecraft:lever[face=wall,facing=north]",
+  "setblock $(1,2,6) minecraft:stone_button[face=wall,facing=north]",
+  "setblock $(5,0,6) minecraft:oak_fence_gate[facing=north]",
+  "setblock $(4,0,6) minecraft:candle[lit=true]",
+  "setblock $(6,0,6) minecraft:iron_door[half=lower,facing=north]",
+  "setblock $(6,1,6) minecraft:iron_door[half=upper,facing=north]",
+  "tp $(bot) $(5.5,0,4.5) 0 0",
+  "!wait 10",
+  "!stopfly",
+  "!look 0 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon breeze_wind_charge $(3.5,1.2,1.5) {Motion:[0.0,0.0,0.4],acceleration_power:0.0d}"
+  }
+ ],
+ "record_ticks": 50,
+ "cleanup": [
+  "kill @e[type=breeze_wind_charge,distance=..48]",
+  "fill $(0,0,0) $(8,4,8) minecraft:air",
+  "difficulty peaceful",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "name": "половина двери в звуке",
+   "kind": "sound",
+   "pattern": "^sound 3\\.5,[01]\\.5,6\\.5 ",
+   "replace": "sound 3.5,Y,6.5 ",
+   "why": "список задетых взрывом блоков перемешан (вики, Explosion: «the list of blocks … is shuffled»): звук двери у оригинала то от верхней половины (wind-charge-throw, первый прогон: 1,5), то от нижней (breeze-charge-flight: 0,5)"
+  },
+  {
+   "type": "jitter",
+   "name": "такт призыва",
+   "match": "^(sound|explosion|block|cart|destroy)",
+   "max": 1,
+   "why": "у оригинала призванный командой заряд взрывается то на +13, то на +14 (три прогона: +13, +14, +13; сверка скорости на +10 и +11): команда попадает то до хода сущностей, то после"
+  }
+ ]
+}

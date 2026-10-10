@@ -32,6 +32,12 @@ pub const GHAST_FIREBALL_TYPE: i32 = 52;
 pub const SNOWBALL_TYPE: i32 = 120;
 /// Череп иссушителя (minecraft-data: wither_skull 147).
 pub const WITHER_SKULL_TYPE: i32 = 147;
+/// Заряды ветра игрока и бриза (minecraft-data 26.1: wind_charge 143,
+/// breeze_wind_charge 18).
+pub const WIND_CHARGE_TYPE: i32 = 143;
+pub const BREEZE_WIND_CHARGE_TYPE: i32 = 18;
+/// Полуширина заряда ветра (minecraft-data: 0,3125 × 0,3125).
+const WIND_HALF: f64 = 0.15625;
 
 /// Тяжесть снежка (вики, Entity: брошенные предметы — 0,03).
 const SNOWBALL_GRAVITY: f64 = 0.03;
@@ -75,6 +81,10 @@ pub enum Kind {
     /// Череп иссушителя: урон, иссушение, взрыв силой 1 (mob/wither.rs).
     WitherSkull,
     LlamaSpit,
+    /// Заряд ветра игрока: по прямой, взрыв ветра силой 1,2 (wind.rs).
+    WindCharge,
+    /// Заряд бриза: по прямой, взрыв ветра силой 3 (wind.rs).
+    BreezeWindCharge,
 }
 
 /// Место, скорость и поворот снаряда.
@@ -126,7 +136,14 @@ impl Flying {
             Kind::Snowball => SNOWBALL_TYPE,
             Kind::WitherSkull => WITHER_SKULL_TYPE,
             Kind::LlamaSpit => 79,
+            Kind::WindCharge => WIND_CHARGE_TYPE,
+            Kind::BreezeWindCharge => BREEZE_WIND_CHARGE_TYPE,
         }
+    }
+
+    /// Заряд ветра любого вида: летит по прямой, без тяжести.
+    pub fn is_wind(&self) -> bool {
+        matches!(self.kind, Kind::WindCharge | Kind::BreezeWindCharge)
     }
 
     /// Огненный шар любого вида: летит с разгоном, а не по броску.
@@ -194,6 +211,14 @@ impl Flying {
 
     pub fn spit(entity_id: i32, dimension: Dimension, at: (f64, f64, f64), velocity: (f64, f64, f64), owner: i32) -> Self {
         Self { kind: Kind::LlamaSpit, stack: None, ..Self::snowball(entity_id, dimension, at, velocity, owner) }
+    }
+
+    /// Заряд ветра: из точки `at` со скоростью `velocity`; предмета у него
+    /// нет (wind-charge-throw: свойств заряд не шлёт) [проверить].
+    pub fn wind_charge(entity_id: i32, dimension: Dimension, at: (f64, f64, f64), velocity: (f64, f64, f64), owner: i32, breeze: bool) -> Self {
+        let kind = if breeze { Kind::BreezeWindCharge } else { Kind::WindCharge };
+
+        Self { kind, stack: None, ..Self::potion(entity_id, dimension, Kind::Splash, Stack::new(0, 1), at, velocity, owner) }
     }
 
     /// Эффекты зелья.
@@ -626,6 +651,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     let mut impacts: Vec<Impact> = Vec::new();
     let mut blasts: Vec<(i32, (f64, f64, f64), f32)> = Vec::new();
     let mut skull_hits: Vec<SkullHit> = Vec::new();
+    let mut winds: Vec<((f64, f64, f64), bool)> = Vec::new();
     let height = |sneaking: bool| if sneaking { 1.5 } else { 1.8 };
 
     for flying in thrown.flying.iter_mut().filter(|f| f.dimension == dimension) {
@@ -652,7 +678,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             flying.vx = (flying.vx + flying.push.0 * FIREBALL_POWER) * drag;
             flying.vy = (flying.vy + flying.push.1 * FIREBALL_POWER) * drag;
             flying.vz = (flying.vz + flying.push.2 * FIREBALL_POWER) * drag;
-        } else {
+        } else if !flying.is_wind() {
             flying.vy -= if flying.kind == Kind::Snowball { SNOWBALL_GRAVITY } else { GRAVITY };
             flying.vx *= DRAG;
             flying.vy *= DRAG;
@@ -662,7 +688,15 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         // Череп иссушителя бьёт точкой своего места в ящик цели, раздутый на
         // 0,3 (wither-skull-hit: взрыв на 1,1 — грань робота 0,8 и ещё 0,3).
         let skull = flying.kind == Kind::WitherSkull;
-        let (half, tall) = if skull { (0.3, 0.6) } else if fireball { (0.5, 1.0) } else { (POTION_HALF, 2.0 * POTION_HALF) };
+        let (half, tall) = if skull {
+            (0.3, 0.6)
+        } else if fireball {
+            (0.5, 1.0)
+        } else if flying.is_wind() {
+            (WIND_HALF, 2.0 * WIND_HALF)
+        } else {
+            (POTION_HALF, 2.0 * POTION_HALF)
+        };
         let from = (flying.x, flying.y, flying.z);
         let to = (flying.x + flying.vx, flying.y + flying.vy, flying.z + flying.vz);
         let centre = |p: (f64, f64, f64)| (p.0, p.1 + tall / 2.0, p.2);
@@ -702,7 +736,10 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             }
         }
 
-        let block = first_block(world, from, to);
+        // Заряд ветра ударяется о настоящую форму блока (дверь тонкая) и
+        // взрывается у грани (wind.rs).
+        let wind_hit = if flying.is_wind() { crate::wind::first_hit(world, from, to) } else { None };
+        let block = if flying.is_wind() { wind_hit.map(|(part, cell, _)| (part, cell)) } else { first_block(world, from, to) };
         let entity_first = match (best, block) {
             (Some((part, _)), Some((block_part, _))) => part <= block_part,
             (Some(_), None) => true,
@@ -753,6 +790,45 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         gone.push(flying.entity_id);
 
         let block_at = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
+
+        // Заряд ветра: прямое попадание ранит на 1 (вики, Wind Charge), взрыв
+        // ветра — в точке до хода у сущности или у грани блока (wind.rs).
+        if flying.is_wind() {
+            let centre = match (struck, wind_hit) {
+                (None, Some((_, _, normal))) => crate::wind::burst_point(at, normal),
+                _ => at,
+            };
+
+            match struck {
+                Some(Struck::Mob(id)) => {
+                    if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == id) {
+                        mob.hurt(crate::wind::HIT_DAMAGE, Source::WindCharge, None);
+                    }
+                }
+                Some(Struck::Player(id)) => world.note_player_strike(crate::combat::PlayerStrike {
+                    victim: id,
+                    attacker: flying.owner,
+                    attacker_uuid: [0; 16],
+                    attacker_name: String::new(),
+                    from: (flying.x, flying.y, flying.z),
+                    yaw: angles((flying.vx, flying.vy, flying.vz)).0,
+                    damage: crate::wind::HIT_DAMAGE,
+                    source: Source::WindCharge,
+                    extra_knockback: 0.0,
+                    weapon: None,
+                    disables_shield_ticks: 0,
+                    breach_scale: 1.0,
+                    fire_ticks: 0,
+                    ignores_shield: false,
+                    thorns_slots: Vec::new(),
+                    effects: Vec::new(),
+                }),
+                None => {}
+            }
+
+            winds.push((centre, flying.kind == Kind::BreezeWindCharge));
+            continue;
+        }
 
         // Снежок: о сущность — урон (ифриту 3, прочим 0) с толчком по полёту;
         // разлетается частицами — событие сущности 3 (чёрный ящик, snow-golem-shoot).
@@ -929,6 +1005,29 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 
     thrown.flying.retain(|f| !gone.contains(&f.entity_id));
+
+    // Взрывы зарядов ветра — после хода всех снарядов, как у шаров гаста.
+    if !winds.is_empty() {
+        let targets: Vec<crate::tnt::Target> = members
+            .iter()
+            .filter(|m| m.3 != 3)
+            .map(|m| crate::tnt::Target { entity_id: m.0, x: m.1.0, y: m.1.1, z: m.1.2, sneaking: m.2 })
+            .collect();
+        let griefing = shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed);
+
+        for (centre, breeze) in winds {
+            let (power, knockback, gust) = if breeze {
+                (crate::wind::BREEZE_POWER, crate::wind::BREEZE_KNOCKBACK, crate::world::Gust::Breeze)
+            } else {
+                (crate::wind::CHARGE_POWER, crate::wind::CHARGE_KNOCKBACK, crate::world::Gust::Charge)
+            };
+            let mut doors = Vec::new();
+
+            crate::tnt::wind_charge_burst(world, &mut items, &targets, centre, power, knockback, gust, &mut |world, pos| {
+                crate::wind::interact(world, pos, &mut doors, griefing || !breeze);
+            });
+        }
+    }
 
     // Огненные шары гаста взрываются после хода всех снарядов.
     let fireball_blasts = std::mem::take(&mut blasts);

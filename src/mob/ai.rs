@@ -133,6 +133,9 @@ pub struct Plan {
     /// Снежок снежного голема: откуда и с какой скоростью (mob/golem.rs).
     pub snowball: Option<super::golem::Throw>,
     pub spit: Option<super::golem::Throw>,
+
+    /// Заряд ветра бриза: откуда и с какой скоростью (mob/breeze.rs).
+    pub wind_charge: Option<super::golem::Throw>,
 }
 
 /// Состояние мыслей.

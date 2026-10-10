@@ -386,7 +386,7 @@ mod tests {
 
     #[test]
     fn explosion_makes_a_sound_and_a_flash() {
-        let blast = crate::world::Blast { centre: (1.0, 64.0, 2.0), power: 4.0, blocks: 3, pushed: Vec::new(), wind: false };
+        let blast = crate::world::Blast { centre: (1.0, 64.0, 2.0), power: 4.0, blocks: 3, pushed: Vec::new(), wind: false, gust: crate::world::Gust::Mace };
         let packets = explosion_packets(&blast);
 
         assert_eq!(packets.len(), 2);

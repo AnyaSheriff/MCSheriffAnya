@@ -233,7 +233,7 @@ pub fn damage_cause(source: Source) -> i32 {
     match source {
         Source::MobAttack | Source::MobAttackNoAggro | Source::PlayerAttack | Source::MaceSmash => 2,
         Source::Cactus | Source::SweetBerryBush => 1,
-        Source::Arrow | Source::Trident | Source::Thrown => 3,
+        Source::Arrow | Source::Trident | Source::Thrown | Source::WindCharge => 3,
         Source::InWall => 4,
         Source::Fall => 5,
         Source::InFire => 6,

@@ -128,6 +128,18 @@ fn button_click_off(name: &str) -> &'static str {
     }
 }
 
+/// Звук нажатой кнопки — пара к `button_click_off` (заряд ветра жмёт кнопку
+/// не рукой: звук слышат все; чёрный ящик, wind-charge-throw).
+pub(crate) fn button_click_on(name: &str) -> &'static str {
+    match button_click_off(name) {
+        "minecraft:block.cherry_wood_button.click_off" => "minecraft:block.cherry_wood_button.click_on",
+        "minecraft:block.bamboo_wood_button.click_off" => "minecraft:block.bamboo_wood_button.click_on",
+        "minecraft:block.nether_wood_button.click_off" => "minecraft:block.nether_wood_button.click_on",
+        "minecraft:block.wooden_button.click_off" => "minecraft:block.wooden_button.click_on",
+        _ => "minecraft:block.stone_button.click_on",
+    }
+}
+
 /// Через сколько тактов падает песок, оставшийся без опоры.
 const FALL_DELAY: u64 = 2;
 
@@ -4916,6 +4928,8 @@ pub fn block_entity_type(state: i32) -> Option<i32> {
             .map(|state| match blocks::block_at_state(state) {
                 Some(name) if head_of(name).is_some() => SKULL_ENTITY,
                 Some("spawner") => crate::spawner::BLOCK_ENTITY as u8,
+                Some("trial_spawner") => crate::trial::SPAWNER_ENTITY as u8,
+                Some("vault") => crate::trial::VAULT_ENTITY as u8,
                 Some("sculk_sensor") => 35,
                 Some("calibrated_sculk_sensor") => 36,
                 Some("sculk_shrieker") => 38,

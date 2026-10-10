@@ -1,0 +1,53 @@
+{
+ "name": "breeze-wind-charge",
+ "about": "Бриз в 7 блоках от робота в выживании: прыжки, вдох, выстрел зарядом ветра, взрыв у робота, звуки.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "fill $(-4,0,-4) $(12,6,12) minecraft:air",
+  "fill $(-4,-1,-4) $(12,-1,12) minecraft:stone",
+  "tp $(bot) $(3.5,0,0.5) 0 0",
+  "!wait 10",
+  "!stopfly",
+  "!look 3.14159 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon breeze $(3.5,0,7.5) {PersistenceRequired:1b}"
+  }
+ ],
+ "record_ticks": 140,
+ "cleanup": [
+  "kill @e[type=breeze,distance=..48]",
+  "kill @e[type=breeze_wind_charge,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(-4,0,-4) $(12,6,12) minecraft:air",
+  "difficulty peaceful",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "всё, что делает бриз",
+   "match": "^(cart|meta|sound|spawn|explosion|destroy|sv|self)",
+   "range": [
+    0,
+    1000
+   ],
+   "anytick": true,
+   "why": "ИИ бриза случаен с первого такта: оригинал против оригинала — в одном прогоне скользил 25 тактов к роботу и выстрелил на +41, в другом сжался на +13, прыгнул через робота на +24 и выстрелил на +64; точки прыжков 10 и 1,2 блока"
+  }
+ ]
+}

@@ -102,6 +102,9 @@ pub enum Source {
     FlyIntoWall,
     /// Брошенное: снежок (вики, Snowball; реестр damage_type: thrown).
     Thrown,
+    /// Заряд ветра — игрока или бриза (вики, Wind Charge: «wind_charge»;
+    /// чёрный ящик, breeze-wind-charge: Damage Event type=47).
+    WindCharge,
 }
 
 impl Source {
@@ -140,6 +143,8 @@ impl Source {
             Source::Trident => 45,
             // Реестр по алфавиту: thorns 43, thrown 44, trident 45.
             Source::Thrown => 44,
+            // Реестр по алфавиту: unattributed_fireball 46, wind_charge 47.
+            Source::WindCharge => 47,
             // Место в реестре damage_type (configuration.rs: 15).
             Source::Fireworks => 15,
             // Реестр damage_type по алфавиту: out_of_world 32, outside_border
@@ -182,6 +187,7 @@ impl Source {
             Source::Wither => "death.attack.wither",
             Source::Trident => "death.attack.trident",
             Source::Thrown => "death.attack.thrown",
+            Source::WindCharge => "death.attack.mob",
             Source::Fireworks => "death.attack.fireworks",
             Source::FlyIntoWall => "death.attack.flyIntoWall",
             Source::OutsideBorder => "death.attack.outsideBorder",
@@ -192,7 +198,7 @@ impl Source {
 
     /// Снаряд: стрела или брошенный трезубец (тег is_projectile).
     pub fn is_projectile(self) -> bool {
-        matches!(self, Source::Arrow | Source::Trident | Source::Fireball | Source::Thrown)
+        matches!(self, Source::Arrow | Source::Trident | Source::Fireball | Source::Thrown | Source::WindCharge)
     }
 
     /// Урон не ждёт конца неуязвимости после прошлого удара (`bypasses_cooldown`).
@@ -222,7 +228,7 @@ impl Source {
     /// лёгкая — min(d/2+1, d), нормальная — d, трудная — 1,5d.
     pub fn scales_with_difficulty(self) -> bool {
         // Луч стража — тоже (вики, Guardian: 4/6/9 по сложности).
-        matches!(self, Source::Explosion | Source::PlayerExplosion | Source::MobAttack | Source::MobAttackNoAggro | Source::Arrow | Source::IndirectMagic | Source::WitherSkull)
+        matches!(self, Source::Explosion | Source::PlayerExplosion | Source::MobAttack | Source::MobAttackNoAggro | Source::Arrow | Source::IndirectMagic | Source::WitherSkull | Source::WindCharge)
     }
 }
 
@@ -272,6 +278,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::WitherSkull => "was shot by a skull",
         Source::Trident => "was impaled",
         Source::Thrown => "was pummeled",
+        Source::WindCharge => "was slain",
         Source::Fireworks => "went off with a bang",
         Source::FlyIntoWall => "experienced kinetic energy",
         Source::OutsideBorder => "left the confines of this world",
@@ -309,6 +316,7 @@ pub fn death_text_by(source: Source, name: &str, killer: &str, item: Option<&str
         Source::MaceSmash => "was smashed by",
         Source::Trident => "was impaled by",
         Source::Thrown => "was pummeled by",
+        Source::WindCharge => "was slain by",
         Source::Fireball => "was fireballed by",
         _ => "was slain by",
     };

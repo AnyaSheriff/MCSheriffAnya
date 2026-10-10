@@ -1029,6 +1029,9 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     step_spawners(shared, world, &mut items, &watchers, difficulty, shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed), skyless, time, rng);
 
+    // Испытательные спавнеры и хранилища (trial.rs).
+    step_trials(shared, world, &mut items, dimension, difficulty, rng);
+
     // Древние стражи подводных крепостей: при сложении чанка, по три на
     // крепость (вики, Elder Guardian: «spawned with the ocean monument»;
     // замер, monument.rs), не исчезают.
@@ -1337,6 +1340,13 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         }
     }
 
+    // Заряды ветра бризов (mob/breeze.rs): по прямой, взрыв ветра силой 3.
+    for (shooter, (from, velocity)) in outcome.wind_charges {
+        let flying = crate::thrown::Flying::wind_charge(shared.next_entity_id(), dimension, from, velocity, shooter, true);
+
+        shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(flying);
+    }
+
     // Огненные шары ифритов и гастов (mob/nether.rs): летят как шар дракона.
     for (shooter, launch) in outcome.launches {
         let kind = if launch.small { crate::thrown::Kind::SmallFireball } else { crate::thrown::Kind::GhastFireball };
@@ -1546,6 +1556,70 @@ fn barter(items: &mut items::Items, shared: &Shared, watchers: &[crate::mob::ai:
 /// чёрный ящик, spawner-zombie. Правило игры `spawn_mobs` и мирная сложность
 /// (для враждебных) останавливают постановку. Частицы — событие мира 2004 у
 /// блока и у каждого моба; у моба ещё событие сущности 20 («пуф»).
+/// Такт испытательных спавнеров и хранилищ: игроки рядом, мобы волны,
+/// выброшенная награда (trial.rs).
+fn step_trials(shared: &Shared, world: &mut World, items: &mut items::Items, dimension: Dimension, difficulty: u8, rng: &mut crate::mob::Rng) {
+    if world.trial_places().is_empty() {
+        return;
+    }
+
+    let visitors: Vec<crate::trial::Visitor> = shared
+        .players
+        .lock()
+        .expect("список игроков захвачен другим потоком")
+        .members()
+        .iter()
+        .filter(|member| member.dimension == dimension && member.game_mode != 3)
+        .map(|member| crate::trial::Visitor {
+            id: member.entity_id,
+            uuid: member.uuid,
+            at: (member.position.x, member.position.y, member.position.z),
+            eye: if member.sneaking { 1.27 } else { 1.62 },
+            counts: matches!(member.game_mode, 0 | 2),
+        })
+        .collect();
+    // Спавнер молчит на мирной и без правила spawnMobs (вики, Trial Spawner).
+    let can_spawn = shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed) && difficulty != crate::survival::PEACEFUL;
+    let now = *shared.ticks.borrow();
+    let mut born: Vec<crate::mob::Mob> = Vec::new();
+    let mut drops: Vec<crate::trial::Ejected> = Vec::new();
+    let states: std::collections::HashMap<i32, bool> = items.mobs().iter().map(|mob| (mob.entity_id, !mob.is_dead())).collect();
+
+    crate::trial::step(
+        world,
+        &visitors,
+        now,
+        can_spawn,
+        rng,
+        &|id| states.get(&id).copied(),
+        &mut |_world, spawn| {
+            let mut mob = crate::mob::Mob::new(shared.next_entity_id(), spawn.kind, spawn.at);
+
+            mob.face(spawn.yaw);
+            // Голова у поставленного не повёрнута (trial-spawner-wave: head=0).
+            mob.head_yaw = 0.0;
+            mob.no_ai = spawn.no_ai;
+            mob.silent = spawn.silent;
+            // Мобы испытаний не исчезают (вики: «do not naturally despawn»).
+            mob.persistent = true;
+
+            let id = mob.entity_id;
+
+            born.push(mob);
+            id
+        },
+        &mut |ejected| drops.push(ejected),
+    );
+
+    for mob in born {
+        items.add_mob(mob);
+    }
+
+    for (stack, at, velocity) in drops {
+        items.drop_item(shared.next_entity_id(), stack, at, velocity, crate::items::MINED_DELAY);
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn step_spawners(shared: &Shared, world: &mut World, items: &mut items::Items, watchers: &[crate::mob::ai::Watcher], difficulty: u8, spawn_mobs: bool, skyless: bool, time: i64, rng: &mut crate::mob::Rng) {
     world.flush_spawner_followups();

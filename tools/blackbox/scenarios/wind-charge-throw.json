@@ -1,0 +1,58 @@
+{
+ "name": "wind-charge-throw",
+ "about": "Игрок бросает заряд ветра в стену с люком, рычагом, кнопкой, колоколом и свечой (редстоун их не связывает): полёт, взрыв ветра, что переключилось.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "fill $(0,0,0) $(8,4,8) minecraft:air",
+  "fill $(0,-1,0) $(8,-1,8) minecraft:stone",
+  "fill $(0,0,6) $(6,3,6) minecraft:stone",
+  "setblock $(3,1,5) minecraft:oak_trapdoor[facing=north,half=top]",
+  "setblock $(2,0,5) minecraft:bell[attachment=floor,facing=north]",
+  "setblock $(4,0,5) minecraft:candle[lit=true,candles=2]",
+  "setblock $(2,2,5) minecraft:lever[face=wall,facing=north]",
+  "setblock $(4,2,5) minecraft:oak_button[face=wall,facing=north]",
+  "tp $(bot) $(3.5,0,0.5) 0 0",
+  "!wait 10",
+  "!stopfly",
+  "!look 3.14159 0",
+  "give $(bot) minecraft:wind_charge 2",
+  "!hotbar 0",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  }
+ ],
+ "record_ticks": 60,
+ "cleanup": [
+  "kill @e[type=wind_charge,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "fill $(0,0,0) $(8,4,8) minecraft:air",
+  "difficulty peaceful",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "item_components": true,
+ "inventory": true,
+ "random": [
+  {
+   "type": "mask",
+   "name": "номер бросившего и поворот заряда",
+   "kind": "spawn",
+   "pattern": "wind_charge \\d+ ([-0-9.,]+) yaw=-?\\d+ pitch=-?\\d+",
+   "replace": "wind_charge N $1 yaw=Y pitch=P",
+   "why": "заряд летит с разбросом (вики, Wind Charge: «random offset within a cone-shaped spread»): у оригинала центр взрыва 3,48/1,575 и 3,475/1,646 в двух прогонах, клеток 66 и 60; номер в появлении — номер сущности бросившего"
+  }
+ ]
+}

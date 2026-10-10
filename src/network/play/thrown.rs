@@ -111,6 +111,61 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
     true
 }
 
+/// Пакет Set Cooldown (protocol.json 26.1: 0x16 — группа, такты).
+const SET_COOLDOWN: i32 = 0x16;
+
+/// Правая кнопка с зарядом ветра в руке `hand`: бросок по взгляду из глаз
+/// (wind-charge-throw: появился в 1,62 над ногами, скорость 1,5 с малым
+/// разбросом), звук броска, откат 10 тактов. Возвращает тело пакета отката,
+/// если бросок был; в откате бросок не идёт.
+pub(super) fn throw_wind_charge(shared: &Shared, player: &mut PlayerState, hand: i32) -> Option<Vec<u8>> {
+    let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+    let stack = player.inventory.slot(slot)?;
+
+    if crate::combat::item_name(stack.item) != Some("wind_charge") || player.game_mode == GAME_MODE_SPECTATOR || player.vit.dead {
+        return None;
+    }
+
+    let now = *shared.ticks.borrow();
+
+    if player.item_cooldowns.get("wind_charge").is_some_and(|until| now < *until) {
+        return None;
+    }
+
+    let dimension = player.dimension;
+    let roll = || vitals::world_random(shared, dimension);
+    let wobble = || f64::from(roll() + roll() + roll() + roll() - 2.0) * 0.0172275 * 1.732;
+    let (yaw, pitch) = (f64::from(player.yaw).to_radians(), f64::from(player.pitch.clamp(-90.0, 90.0)).to_radians());
+    let dir = (-yaw.sin() * pitch.cos(), -pitch.sin(), yaw.cos() * pitch.cos());
+    let length = (dir.0 * dir.0 + dir.1 * dir.1 + dir.2 * dir.2).sqrt().max(1.0e-9);
+    let speed = crate::wind::THROW_SPEED;
+    let (dx, dy, dz) = ((dir.0 / length + wobble()) * speed, (dir.1 / length + wobble()) * speed, (dir.2 / length + wobble()) * speed);
+    let (last_x, last_y, last_z) = player.net.last_delta;
+    let velocity = (dx + last_x, dy + if player.on_ground { 0.0 } else { last_y }, dz + last_z);
+    let at = (player.x, player.y + if player.sneaking { 1.27 } else { 1.62 }, player.z);
+    // Звук броска: «нейтральные», 0,5, высота 0,4 / (0,8…1,2) (вики, Wind
+    // Charge: «1/3–0.5»; wind-charge-throw: 0,387).
+    let pitch = 0.4 / (roll() * 0.4 + 0.8);
+
+    shared.world_in(dimension).lock().expect("мир захвачен другим потоком").note_sound_neutral_at((player.x, player.y, player.z), "minecraft:entity.wind_charge.throw", 0.5, pitch);
+
+    let flying = Flying::wind_charge(shared.next_entity_id(), dimension, at, velocity, player.entity_id, false);
+
+    shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(flying);
+
+    if player.game_mode != GAME_MODE_CREATIVE {
+        player.inventory.set(slot, inventory::remainder(stack, stack.count - 1));
+    }
+
+    player.item_cooldowns.insert("wind_charge", now + crate::wind::COOLDOWN as u64);
+
+    let mut body = encode_varint(SET_COOLDOWN);
+
+    body.extend_from_slice(&encode_string("minecraft:wind_charge"));
+    body.extend_from_slice(&encode_varint(crate::wind::COOLDOWN));
+    Some(body)
+}
+
 /// Раз во сколько тактов око Края сверяет место (eye-of-ender-far: скорость
 /// и сдвиг на +4, +8…).
 const EYE_SYNC: u32 = 4;

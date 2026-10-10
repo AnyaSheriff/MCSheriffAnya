@@ -314,6 +314,7 @@ fn blast(
         blocks: reached as i32,
         pushed,
         wind: false,
+        gust: crate::world::Gust::Mace,
     });
 
     world.blast_source = 0;
@@ -381,7 +382,75 @@ pub fn wind_burst(world: &mut World, items: &mut Items, players: &[Target], cent
         }
     }
 
-    world.note_explosion(Blast { centre, power: WIND_BURST_POWER, blocks: reached as i32, pushed, wind: true });
+    world.note_explosion(Blast { centre, power: WIND_BURST_POWER, blocks: reached as i32, pushed, wind: true, gust: crate::world::Gust::Mace });
+}
+
+/// Взрыв заряда ветра — брошенного игроком или выпущенного бризом (вики,
+/// Wind Charge): блоков не рушит и не ранит, толкает игроков, мобов и
+/// предметы в радиусе 2·сила, сильнее в `knockback` раз. Блоки, до которых
+/// дошли лучи (тот же перемешанный список, что рушил бы динамит), отдаются
+/// `interact` — двери, рычаги, кнопки, колокола, свечи (wind.rs); их звуки у
+/// оригинала раньше пакета взрыва (чёрный ящик, wind-charge-throw).
+#[allow(clippy::too_many_arguments)]
+pub fn wind_charge_burst(
+    world: &mut World,
+    items: &mut Items,
+    players: &[Target],
+    centre: (f64, f64, f64),
+    power: f32,
+    knockback: f64,
+    gust: crate::world::Gust,
+    interact: &mut dyn FnMut(&mut World, Pos),
+) {
+    let (doomed, touched) = rays_with(world, centre, power, None, false);
+    let reach = 2.0 * f64::from(power);
+    let mut pushed = Vec::new();
+
+    // Толчок — пока блоки стоят, как у динамита (заслоняют они).
+    for player in players {
+        let (height, eyes) = if player.sneaking { (1.5, SNEAKING_EYES) } else { (1.8, PLAYER_EYES) };
+        let Some(impact) = impact(world, centre, reach, (player.x, player.y, player.z), (0.6, height)) else {
+            continue;
+        };
+
+        if let Some(push) = push_towards(centre, (player.x, player.y + eyes, player.z), impact * knockback) {
+            pushed.push((player.entity_id, push));
+        }
+    }
+
+    for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && !mob.h.despawn) {
+        let size = mob.size();
+        let Some(impact) = impact(world, centre, reach, (mob.x, mob.y, mob.z), size) else {
+            continue;
+        };
+
+        if let Some(push) = push_towards(centre, (mob.x, mob.y + size.1 * EYES_SHARE, mob.z), impact * knockback) {
+            mob.vx += push.0;
+            mob.vy += push.1;
+            mob.vz += push.2;
+            mob.on_ground = false;
+        }
+    }
+
+    // Предметы толкаются, но не ломаются [проверить].
+    for item in items.items_mut() {
+        let Some(impact) = impact(world, centre, reach, (item.x, item.y, item.z), (0.25, 0.25)) else {
+            continue;
+        };
+
+        if let Some(push) = push_towards(centre, (item.x, item.y + 0.25 * EYES_SHARE, item.z), impact * knockback) {
+            item.vx += push.0;
+            item.vy += push.1;
+            item.vz += push.2;
+            item.on_ground = false;
+        }
+    }
+
+    for pos in doomed {
+        interact(world, pos);
+    }
+
+    world.note_explosion(Blast { centre, power, blocks: touched.len() as i32, pushed, wind: true, gust });
 }
 
 /// Рушит следующую часть отложенного большим взрывом (`BLAST_BATCH`).
@@ -417,6 +486,14 @@ pub fn blocks_to_destroy(world: &mut World, centre: (f64, f64, f64), power: f32)
 /// вместе, — это число оригинал кладёт в пакет взрыва (чёрный ящик,
 /// tnt-lever: ~550 клеток при 11 сломанных блоках).
 fn rays(world: &mut World, centre: (f64, f64, f64), power: f32, cap: Option<f32>) -> (Vec<Pos>, Vec<Pos>) {
+    rays_with(world, centre, power, cap, true)
+}
+
+/// Лучи; `resist` — гасят ли их блоки. Лучи заряда ветра блоками не
+/// гасятся: у оригинала взрыв силой 1,2 у люка задел 60–66 клеток, а с
+/// гашением задел бы одну (чёрный ящик, wind-charge-throw) [проверить:
+/// бедрок и барьер, вероятно, гасят].
+fn rays_with(world: &mut World, centre: (f64, f64, f64), power: f32, cap: Option<f32>, resist: bool) -> (Vec<Pos>, Vec<Pos>) {
     // Хеш — быстрый (`CoordHash`): у ядерного динамита клеток сотни тысяч.
     let mut seen: HashSet<Pos, CoordHash> = HashSet::default();
     let mut reached: HashSet<Pos, CoordHash> = HashSet::default();
@@ -455,7 +532,7 @@ fn rays(world: &mut World, centre: (f64, f64, f64), power: f32, cap: Option<f32>
 
                     let state = world.get_block(cell.0, cell.1, cell.2);
 
-                    if state != AIR {
+                    if state != AIR && resist {
                         // Синий череп иссушителя: прочность не больше 0,8, кроме
                         // неразрушимого (mob/wither.rs).
                         let resistance = match cap {

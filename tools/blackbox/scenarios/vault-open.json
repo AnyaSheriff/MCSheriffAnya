@@ -1,0 +1,89 @@
+{
+ "name": "vault-open",
+ "about": "Хранилище с ключом: робот подходит (активация), вставляет ключ (открытие и выброс награды), вставляет второй раз (отказ награждённому), пустой рукой.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "fill $(-2,0,-2) $(10,5,10) minecraft:air",
+  "fill $(-2,-1,-2) $(10,-1,10) minecraft:stone",
+  "tp $(bot) $(3.5,0,-4.5) 0 0",
+  "!wait 10",
+  "!stopfly",
+  "!look 3.14159 0",
+  "give $(bot) minecraft:trial_key 2",
+  "!hotbar 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "setblock $(3,0,3) minecraft:vault[facing=north]"
+  },
+  {
+   "after": 23,
+   "cmd": "tp $(bot) $(3.5,0,1.5) 0 0"
+  },
+  {
+   "after": 53,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 143,
+   "click": [
+    3,
+    0,
+    3
+   ]
+  },
+  {
+   "after": 167,
+   "cmd": "tp $(bot) $(3.5,0,-6.5) 0 0"
+  }
+ ],
+ "record_ticks": 220,
+ "cleanup": [
+  "kill @e[type=item,distance=..48]",
+  "setblock $(3,0,3) minecraft:air",
+  "fill $(-2,0,-2) $(10,5,10) minecraft:air",
+  "difficulty peaceful",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "inventory": true,
+ "random": [
+  {
+   "type": "count",
+   "name": "предметы награды",
+   "match": "^meta 8=|^spawn item|^level 3,0,3 3017|^sound 3\\.5,0\\.5,3\\.5 minecraft:block\\.vault\\.(eject_item|close_shutter)|^level 3,0,3 3016|^block 3,0,3 vault\\[facing=north,ominous=false,vault_state=(ejecting|inactive)\\]",
+   "range": [
+    0,
+    40
+   ],
+   "anytick": true,
+   "why": "награда — бросок таблицы (вики, Vault, «Loot»): у оригинала в трёх прогонах 2, 2 и 4 стопки разных предметов (бутылка, щит; диск, стрелы, мёд, стрелы яда); свойства предмета слежение шлёт на +0 и +1; число стопок 2–5 (вики, Vault: «2 to 5 stacks»), от него — такт закрытия и сна"
+  },
+  {
+   "type": "count",
+   "name": "витрина ожившего хранилища",
+   "match": "^block 3,0,3 vault\\[facing=north,ominous=false,vault_state=active\\]|^block_entity 3,0,3 45",
+   "range": [
+    1,
+    12
+   ],
+   "anytick": true,
+   "why": "ожившее хранилище листает случайные предметы таблицы в витрине и повторяет блок с данными в случайные такты (оригинал: через 4 и через 8 тактов после оживления в двух прогонах) [проверить закон]; у нас витрина пуста"
+  }
+ ]
+}

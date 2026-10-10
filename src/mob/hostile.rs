@@ -37,6 +37,8 @@ pub fn follow_range(kind: Kind) -> f64 {
         // Вики, Pillager: «32 blocks»; заклинатель 12, поборник 12 [проверить].
         Kind::Pillager | Kind::Ravager => 32.0,
         Kind::Evoker | Kind::Vindicator | Kind::Illusioner => 12.0,
+        // [проверить] дальность слежения бриза: вики называет 16 для выстрела.
+        Kind::Breeze => 24.0,
         Kind::WitherSkeleton => 16.0,
         Kind::ZombifiedPiglin => 35.0,
         _ => 16.0,
@@ -119,6 +121,7 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Wolf => "entity.minecraft.wolf",
         Kind::Cat => "entity.minecraft.cat",
         Kind::Phantom => "entity.minecraft.phantom",
+        Kind::Breeze => "entity.minecraft.breeze",
         Kind::LeashKnot => "entity.minecraft.leash_knot",
         Kind::IronGolem => "entity.minecraft.iron_golem",
         Kind::SnowGolem => "entity.minecraft.snow_golem",

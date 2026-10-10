@@ -1,0 +1,97 @@
+{
+ "name": "trial-spawner-wave",
+ "about": "Испытательный спавнер с зомби NoAI (2 всего, 1 разом, раз в 20 тактов): замечает робота, волна, убиваем, награда ключом, остывание.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule spawn_mobs true",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "fill $(-2,0,-2) $(10,5,10) minecraft:air",
+  "fill $(-2,-1,-2) $(10,-1,10) minecraft:stone",
+  "tp $(bot) $(3.5,0,0.5) 0 0",
+  "!wait 10",
+  "!stopfly",
+  "!look 3.14159 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "setblock $(3,0,5) minecraft:trial_spawner{normal_config:{spawn_potentials:[{data:{entity:{id:\"minecraft:zombie\",NoAI:1b,Silent:1b}},weight:1}],total_mobs:2.0f,simultaneous_mobs:1.0f,total_mobs_added_per_player:0.0f,simultaneous_mobs_added_per_player:0.0f,ticks_between_spawn:20,loot_tables_to_eject:[{data:\"minecraft:spawners/trial_chamber/key\",weight:1}]}}"
+  },
+  {
+   "after": 60,
+   "cmd": "kill @e[type=zombie,distance=..24]"
+  },
+  {
+   "after": 100,
+   "cmd": "kill @e[type=zombie,distance=..24]"
+  },
+  {
+   "after": 140,
+   "cmd": "kill @e[type=zombie,distance=..24]"
+  }
+ ],
+ "record_ticks": 260,
+ "cleanup": [
+  "gamerule spawn_mobs false",
+  "kill @e[type=zombie,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "setblock $(3,0,5) minecraft:air",
+  "fill $(-2,0,-2) $(10,5,10) minecraft:air",
+  "difficulty peaceful",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "inventory": true,
+ "exclusive": true,
+ "random": [
+  {
+   "type": "delay",
+   "name": "когда спавнер замечает робота",
+   "from": "^block 3,0,5 trial_spawner\\[ominous=false,trial_spawner_state=waiting_for_players\\]",
+   "to": "^level 3,0,5 3013 1",
+   "range": [
+    0,
+    20
+   ],
+   "why": "оригинал замечает игроков не каждый такт: в двух прогонах на +10 и +12 после перехода в waiting_for_players (игровое время ≡ 11 по модулю 20 в обоих) [проверить закон]",
+   "allow_zero": true
+  },
+  {
+   "type": "mask",
+   "name": "место моба волны",
+   "kind": "spawn",
+   "pattern": "^spawn [-0-9.,]+ zombie 0 [-0-9.,]+ yaw=-?\\d+ pitch=-?\\d+ head=-?\\d+",
+   "replace": "spawn P zombie 0 P yaw=Y pitch=P head=H",
+   "why": "место моба — случайное в 4 блоках от спавнера (вики, Trial Spawner): у оригинала 3,36/6,61, 1,45/5,78, 2,2/7,41, 5,33/5,54"
+  },
+  {
+   "type": "mask",
+   "name": "клетка моба в событии 3012",
+   "kind": "level",
+   "pattern": "^level -?\\d+,-?\\d+,-?\\d+ 3012 0",
+   "replace": "level M 3012 0",
+   "why": "то же место моба"
+  },
+  {
+   "type": "count",
+   "name": "добыча зомби и награда",
+   "match": "^spawn item|^meta 8=",
+   "range": [
+    0,
+    20
+   ],
+   "anytick": true,
+   "why": "гнилая плоть убитого командой зомби — в его случайном месте и случайного числа (вики, Zombie: 0–2); предмет награды падает со случайной скоростью"
+  }
+ ]
+}
