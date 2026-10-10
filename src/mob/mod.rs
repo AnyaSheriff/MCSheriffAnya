@@ -21,6 +21,7 @@ pub mod breeze;
 pub mod golem;
 pub mod guardian;
 pub mod wither;
+pub mod water;
 pub mod hostile;
 pub mod illager;
 pub mod leash;
@@ -137,12 +138,24 @@ pub enum Kind {
     Mooshroom,
     /// Бриз (вики, Breeze): скользит, стреляет зарядами ветра, прыгает (mob/breeze.rs).
     Breeze,
+    // Водные мобы (вики; minecraft-data 26.1).
+    Cod,
+    Salmon,
+    TropicalFish,
+    Pufferfish,
+    Squid,
+    GlowSquid,
+    Dolphin,
+    Turtle,
+    Axolotl,
+    Frog,
+    Tadpole,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 58] = [
+    pub const ALL: [Kind; 69] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -201,6 +214,17 @@ impl Kind {
         Kind::Ocelot,
         Kind::Mooshroom,
         Kind::Breeze,
+        Kind::Cod,
+        Kind::Salmon,
+        Kind::TropicalFish,
+        Kind::Pufferfish,
+        Kind::Squid,
+        Kind::GlowSquid,
+        Kind::Dolphin,
+        Kind::Turtle,
+        Kind::Axolotl,
+        Kind::Frog,
+        Kind::Tadpole,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -328,6 +352,17 @@ impl Kind {
             "illusioner" => Kind::Illusioner,
             "ravager" => Kind::Ravager,
             "evoker_fangs" => Kind::EvokerFangs,
+            "cod" => Kind::Cod,
+            "salmon" => Kind::Salmon,
+            "tropical_fish" => Kind::TropicalFish,
+            "pufferfish" => Kind::Pufferfish,
+            "squid" => Kind::Squid,
+            "glow_squid" => Kind::GlowSquid,
+            "dolphin" => Kind::Dolphin,
+            "turtle" => Kind::Turtle,
+            "axolotl" => Kind::Axolotl,
+            "frog" => Kind::Frog,
+            "tadpole" => Kind::Tadpole,
             _ => return None,
         })
     }
@@ -392,6 +427,17 @@ impl Kind {
             Kind::Illusioner => "illusioner",
             Kind::Ravager => "ravager",
             Kind::EvokerFangs => "evoker_fangs",
+            Kind::Cod => "cod",
+            Kind::Salmon => "salmon",
+            Kind::TropicalFish => "tropical_fish",
+            Kind::Pufferfish => "pufferfish",
+            Kind::Squid => "squid",
+            Kind::GlowSquid => "glow_squid",
+            Kind::Dolphin => "dolphin",
+            Kind::Turtle => "turtle",
+            Kind::Axolotl => "axolotl",
+            Kind::Frog => "frog",
+            Kind::Tadpole => "tadpole",
         }
     }
 
@@ -466,6 +512,17 @@ impl Kind {
             Kind::Illusioner => 68,
             Kind::Ravager => 109,
             Kind::EvokerFangs => 47,
+            Kind::Cod => 27,
+            Kind::Salmon => 110,
+            Kind::TropicalFish => 136,
+            Kind::Pufferfish => 107,
+            Kind::Squid => 127,
+            Kind::GlowSquid => 61,
+            Kind::Dolphin => 35,
+            Kind::Turtle => 137,
+            Kind::Axolotl => 7,
+            Kind::Frog => 55,
+            Kind::Tadpole => 130,
         }
     }
 
@@ -540,6 +597,18 @@ impl Kind {
             Kind::Illusioner => "minecraft:illusioner",
             Kind::Ravager => "minecraft:ravager",
             Kind::EvokerFangs => "minecraft:evoker_fangs",
+            // [Bedrock: потом] свойства вариантов, ведра и анимации.
+            Kind::Cod => "minecraft:cod",
+            Kind::Salmon => "minecraft:salmon",
+            Kind::TropicalFish => "minecraft:tropical_fish",
+            Kind::Pufferfish => "minecraft:pufferfish",
+            Kind::Squid => "minecraft:squid",
+            Kind::GlowSquid => "minecraft:glow_squid",
+            Kind::Dolphin => "minecraft:dolphin",
+            Kind::Turtle => "minecraft:turtle",
+            Kind::Axolotl => "minecraft:axolotl",
+            Kind::Frog => "minecraft:frog",
+            Kind::Tadpole => "minecraft:tadpole",
         }
     }
 
@@ -555,6 +624,17 @@ impl Kind {
             Kind::Panda => 1.3,
             Kind::Ocelot => 0.6,
             Kind::Mooshroom => 0.9,
+            Kind::Cod => 0.5,
+            Kind::Salmon => 0.7,
+            Kind::TropicalFish => 0.5,
+            Kind::Pufferfish => 0.7,
+            Kind::Squid => 0.8,
+            Kind::GlowSquid => 0.8,
+            Kind::Dolphin => 0.9,
+            Kind::Turtle => 1.2,
+            Kind::Axolotl => 0.75,
+            Kind::Frog => 0.5,
+            Kind::Tadpole => 0.4,
             Kind::Chicken => 0.4,
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
@@ -607,6 +687,17 @@ impl Kind {
             Kind::Panda => 1.25,
             Kind::Ocelot => 0.7,
             Kind::Mooshroom => 1.4,
+            Kind::Cod => 0.3,
+            Kind::Salmon => 0.4,
+            Kind::TropicalFish => 0.4,
+            Kind::Pufferfish => 0.7,
+            Kind::Squid => 0.8,
+            Kind::GlowSquid => 0.8,
+            Kind::Dolphin => 0.6,
+            Kind::Turtle => 0.4,
+            Kind::Axolotl => 0.42,
+            Kind::Frog => 0.5,
+            Kind::Tadpole => 0.3,
             Kind::Chicken => 0.7,
             Kind::Cow => 1.4,
             Kind::Pig => 0.9,
@@ -659,6 +750,17 @@ impl Kind {
             Kind::Panda => 20.0,
             Kind::Ocelot => 10.0,
             Kind::Mooshroom => 10.0,
+            Kind::Cod => 3.0,
+            Kind::Salmon => 3.0,
+            Kind::TropicalFish => 3.0,
+            Kind::Pufferfish => 3.0,
+            Kind::Squid => 10.0,
+            Kind::GlowSquid => 10.0,
+            Kind::Dolphin => 10.0,
+            Kind::Turtle => 30.0,
+            Kind::Axolotl => 14.0,
+            Kind::Frog => 10.0,
+            Kind::Tadpole => 6.0,
             Kind::Cow | Kind::Pig => 10.0,
             Kind::Sheep => 8.0,
             Kind::Chicken => 4.0,
@@ -718,6 +820,17 @@ impl Kind {
             Kind::Panda => 0.15,
             Kind::Ocelot => 0.3,
             Kind::Mooshroom => 0.2,
+            Kind::Cod => 0.7,
+            Kind::Salmon => 0.7,
+            Kind::TropicalFish => 0.7,
+            Kind::Pufferfish => 0.7,
+            Kind::Squid => 0.7,
+            Kind::GlowSquid => 0.7,
+            Kind::Dolphin => 1.2,
+            Kind::Turtle => 0.25,
+            Kind::Axolotl => 1.0,
+            Kind::Frog => 1.0,
+            Kind::Tadpole => 1.0,
             Kind::Cow => 0.2,
             Kind::Pig | Kind::Chicken => 0.25,
             Kind::Sheep | Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 0.23,
@@ -770,6 +883,9 @@ impl Kind {
             Kind::Camel => item == "cactus",
             Kind::Panda => item == "bamboo",
             Kind::Ocelot => matches!(item, "cod" | "salmon"),
+            Kind::Turtle => item == "seagrass",
+            Kind::Axolotl => item == "tropical_fish_bucket",
+            Kind::Frog | Kind::Tadpole => item == "slime_ball",
             Kind::Pig => matches!(item, "carrot" | "potato" | "beetroot"),
             Kind::Chicken => {
                 matches!(item, "wheat_seeds" | "beetroot_seeds" | "melon_seeds" | "pumpkin_seeds" | "torchflower_seeds" | "pitcher_pod")
@@ -801,6 +917,17 @@ impl Kind {
             Kind::Panda => ("minecraft:entity.panda.ambient", "minecraft:entity.panda.hurt", "minecraft:entity.panda.death"),
             Kind::Ocelot => ("minecraft:entity.ocelot.ambient", "minecraft:entity.ocelot.hurt", "minecraft:entity.ocelot.death"),
             Kind::Mooshroom => ("minecraft:entity.cow.ambient", "minecraft:entity.cow.hurt", "minecraft:entity.cow.death"),
+            Kind::Cod => ("minecraft:entity.cod.ambient", "minecraft:entity.cod.hurt", "minecraft:entity.cod.death"),
+            Kind::Salmon => ("minecraft:entity.salmon.ambient", "minecraft:entity.salmon.hurt", "minecraft:entity.salmon.death"),
+            Kind::TropicalFish => ("minecraft:entity.tropical_fish.ambient", "minecraft:entity.tropical_fish.hurt", "minecraft:entity.tropical_fish.death"),
+            Kind::Pufferfish => ("minecraft:entity.puffer_fish.ambient", "minecraft:entity.puffer_fish.hurt", "minecraft:entity.puffer_fish.death"),
+            Kind::Squid => ("minecraft:entity.squid.ambient", "minecraft:entity.squid.hurt", "minecraft:entity.squid.death"),
+            Kind::GlowSquid => ("minecraft:entity.glow_squid.ambient", "minecraft:entity.glow_squid.hurt", "minecraft:entity.glow_squid.death"),
+            Kind::Dolphin => ("minecraft:entity.dolphin.ambient", "minecraft:entity.dolphin.hurt", "minecraft:entity.dolphin.death"),
+            Kind::Turtle => ("minecraft:entity.turtle.ambient_land", "minecraft:entity.turtle.hurt", "minecraft:entity.turtle.death"),
+            Kind::Axolotl => ("minecraft:entity.axolotl.ambient", "minecraft:entity.axolotl.hurt", "minecraft:entity.axolotl.death"),
+            Kind::Frog => ("minecraft:entity.frog.ambient", "minecraft:entity.frog.hurt", "minecraft:entity.frog.death"),
+            Kind::Tadpole => ("minecraft:entity.tadpole.ambient", "minecraft:entity.tadpole.hurt", "minecraft:entity.tadpole.death"),
             Kind::Cow => ("minecraft:entity.cow.ambient", "minecraft:entity.cow.hurt", "minecraft:entity.cow.death"),
             Kind::Pig => ("minecraft:entity.pig.ambient", "minecraft:entity.pig.hurt", "minecraft:entity.pig.death"),
             Kind::Sheep => ("minecraft:entity.sheep.ambient", "minecraft:entity.sheep.hurt", "minecraft:entity.sheep.death"),
@@ -864,6 +991,8 @@ impl Kind {
     /// Звук шага (вики, Sounds).
     pub fn step_sound(self) -> &'static str {
         match self {
+            Kind::Turtle => "minecraft:entity.turtle.shamble",
+            Kind::Frog => "minecraft:entity.frog.step",
             Kind::Cow => "minecraft:entity.cow.step",
             Kind::Pig => "minecraft:entity.pig.step",
             Kind::Sheep => "minecraft:entity.sheep.step",
@@ -965,6 +1094,8 @@ pub trait View {
     }
 
     /// Идёт ли в клетке дождь (World::rain_at). Без мира — нет.
+    fn biome(&self, _x: i32, _y: i32, _z: i32) -> &'static str { "plains" }
+
     fn rain(&self, _x: i32, _y: i32, _z: i32) -> bool {
         false
     }
@@ -1050,6 +1181,8 @@ pub fn is_lava(state: i32) -> bool {
 pub enum Particle {
     DamageIndicator,
     SweepAttack,
+    SquidInk,
+    GlowSquidInk,
 }
 
 impl Particle {
@@ -1057,6 +1190,8 @@ impl Particle {
         match self {
             Particle::DamageIndicator => 7,
             Particle::SweepAttack => 67,
+            Particle::SquidInk => 66,
+            Particle::GlowSquidInk => 99,
         }
     }
 }
@@ -1304,6 +1439,7 @@ pub struct Mob {
     pub illager: illager::State,
     /// Наземные животные и странствующий торговец (mob/land.rs).
     pub land: land::State,
+    pub water: water::State,
 }
 
 /// Бит в байте вида записи моба: за записью идёт общий хвост (имя, поводок).
@@ -1399,6 +1535,7 @@ impl Mob {
             wither: wither::State::default(),
             illager: illager::State::default(),
             land: land::State::new(kind),
+            water: water::State::new(kind, at),
         }
     }
 
@@ -1451,6 +1588,8 @@ impl Mob {
 
     /// Ширина и высота ящика: у детёныша вдвое меньше (вики, Baby mobs).
     pub fn size(&self) -> (f64, f64) {
+        if let Some(size) = water::size(self) { return size; }
+
         let scale = if self.is_baby() { 0.5 } else { 1.0 };
 
         // Куб: 0,52 · размер (вики, Magma Cube, «Hitbox»).
@@ -1621,10 +1760,17 @@ impl Mob {
             }
         }
 
+        if water::creature(self.kind) {
+            water::sense(self, view);
+            water::vitals(self, view);
+            if self.is_dead() { return ai::Plan::default(); }
+        }
+
         // Рост и пауза после разведения (вики, Breeding).
         // Детёныш-зомби не растёт (вики, Zombie: «baby zombies never grow up»).
         if self.age < 0 && !self.kind.hostile() {
             self.age += 1;
+            if self.age == 0 && self.kind == Kind::Turtle { water::scute(self); }
         } else if self.age > 0 {
             self.age -= 1;
         }
@@ -1755,6 +1901,8 @@ impl Mob {
         let was_on_ground = self.on_ground;
         let mut plan = if land::animal(self.kind) || self.kind == Kind::WanderingTrader {
             land::think(self, view, ctx, rng)
+        } else if water::creature(self.kind) {
+            water::think(self, view, ctx, rng)
         } else if matches!(self.kind, Kind::Wolf | Kind::Cat) {
             tame::think(self, view, ctx, rng)
         } else if golem::golem(self.kind) {
@@ -1767,6 +1915,16 @@ impl Mob {
             ai::think(self, view, ctx, rng)
         };
 
+        if let Some((x,_,z)) = self.water.egg_target.filter(|_| self.h.target.is_none()) {
+            let dx = f64::from(x)+0.5-self.x;
+            let dz = f64::from(z)+0.5-self.z;
+            if dx*dx+dz*dz > 0.3 {
+                self.face((-dx.atan2(dz).to_degrees()) as f32);
+                plan.speed = 1.0;
+                plan.jump = self.wall;
+            }
+        }
+
         // Пьющая ведьма стоит: модификатор «drinking» −0,25 к скорости 0,25
         // (чёрный ящик, witch-stand).
         if self.kind == Kind::Witch && self.h.drinking > 0 {
@@ -1774,7 +1932,9 @@ impl Mob {
         }
 
         // Шалкер сидит на грани: ни тяжести, ни шагов (вики, Shulker).
-        if self.kind == Kind::Ghast && !self.is_dead() {
+        if water::creature(self.kind) && !self.is_dead() {
+            water::physics(self, view, &plan, rng);
+        } else if self.kind == Kind::Ghast && !self.is_dead() {
             nether::drift(self, view);
         } else if self.kind == Kind::Phantom && !self.is_dead() {
             phantom::fly(self, view);
@@ -2062,7 +2222,8 @@ impl Mob {
         // Урон падения: ceil(высота − 3) (вики, Fall damage); курица не
         // разбивается (вики, Chicken).
         // Големы падения не боятся (вики, Iron Golem, Snow Golem).
-        let safe_fall=if self.kind==Kind::Goat { 10.0 } else if self.kind==Kind::Camel { 6.0 } else { crate::survival::SAFE_FALL };
+        // Вики, Frog: «5 ... less fall damage».
+        let safe_fall=if self.kind==Kind::Goat { 10.0 } else if self.kind==Kind::Camel { 6.0 } else if self.kind==Kind::Frog { crate::survival::SAFE_FALL+5.0 } else { crate::survival::SAFE_FALL };
         if fall > safe_fall && self.kind != Kind::Chicken && self.kind != Kind::Breeze && !golem::golem(self.kind) {
             let damage = ((fall - safe_fall - 1.0e-4) * if self.kind==Kind::Camel { 0.5 } else { 1.0 }).ceil();
 
@@ -2126,10 +2287,13 @@ impl Mob {
 
         // Снято на самом деле — не больше оставшегося здоровья.
         hit.taken = hit.taken.min(before + hit.absorbed);
+        self.water.last_attacker = push.map(|p| p.cause).filter(|id| *id != 0);
 
         if self.kind == Kind::Wither {
             wither::on_hurt(self);
         }
+
+        if water::creature(self.kind) { water::on_hurt(self, source, push, hit.taken, hit.died); }
 
         if self.kind == Kind::EnderDragon {
             let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xD4A);
@@ -2299,7 +2463,9 @@ impl Mob {
         } else if self.xp_until > self.ticks && !self.is_baby() && self.kind != Kind::WanderingTrader {
             let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xE4B);
 
-            self.pending_xp = if slime::cube(self.kind) {
+            self.pending_xp = if matches!(self.kind,Kind::Axolotl | Kind::Tadpole) {
+                0
+            } else if slime::cube(self.kind) {
                 // Вики, Magma Cube: опыт равен размеру (чёрный ящик, magma-cube-stand).
                 self.nether.size
             } else if guardian::guardian(self.kind) {
@@ -2391,6 +2557,17 @@ impl Mob {
             Kind::Ocelot => 78,
             Kind::Mooshroom => 79,
             Kind::Breeze => 80,
+            Kind::Cod => 81,
+            Kind::Salmon => 82,
+            Kind::TropicalFish => 83,
+            Kind::Pufferfish => 84,
+            Kind::Squid => 85,
+            Kind::GlowSquid => 86,
+            Kind::Dolphin => 87,
+            Kind::Turtle => 88,
+            Kind::Axolotl => 89,
+            Kind::Frog => 90,
+            Kind::Tadpole => 91,
         } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -2425,6 +2602,7 @@ impl Mob {
         if land::animal(self.kind) || self.kind == Kind::WanderingTrader {
             land::write(self, out);
         }
+        if water::creature(self.kind) { water::write(&self.water, out); }
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
         if self.name.is_some() || self.leash.is_some() || self.persistent_tag {
@@ -2501,6 +2679,17 @@ impl Mob {
             78 => Kind::Ocelot,
             79 => Kind::Mooshroom,
             80 => Kind::Breeze,
+            81 => Kind::Cod,
+            82 => Kind::Salmon,
+            83 => Kind::TropicalFish,
+            84 => Kind::Pufferfish,
+            85 => Kind::Squid,
+            86 => Kind::GlowSquid,
+            87 => Kind::Dolphin,
+            88 => Kind::Turtle,
+            89 => Kind::Axolotl,
+            90 => Kind::Frog,
+            91 => Kind::Tadpole,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -2521,6 +2710,7 @@ impl Mob {
         let golem_state = if golem::golem(kind) { Some(golem::read(bytes)?) } else { None };
         let snow_state = if head & !EXTENDED == 63 { Some(skeleton::read_snow(bytes)?) } else { None };
         let land_state = if land::animal(kind) || kind == Kind::WanderingTrader { Some(land::read(bytes)?) } else { None };
+        let water_state = if water::creature(kind) { Some(water::read(bytes)?) } else { None };
         let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
@@ -2575,6 +2765,7 @@ impl Mob {
             land::health(&mut mob);
             mob.vitals.health = health.clamp(0.5, mob.vitals.max_health);
         }
+        if let Some(state) = water_state { mob.water = state; }
 
         if let Some(tail) = tail {
             leash::apply_tail(&mut mob, tail);
@@ -2783,6 +2974,7 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         Kind::Guardian | Kind::ElderGuardian => guardian::loot(mob, rng, &mut give),
         // Вики, Wither: звезда Незера всегда (и убитому командой).
         Kind::Wither => give("nether_star", 1, 1, rng),
+        Kind::Cod | Kind::Salmon | Kind::TropicalFish | Kind::Pufferfish | Kind::Squid | Kind::GlowSquid | Kind::Dolphin | Kind::Turtle | Kind::Axolotl | Kind::Frog | Kind::Tadpole => water::loot(mob, rng, &mut give),
         Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager | Kind::Wolf | Kind::LeashKnot => {}
         // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
         Kind::Enderman => {
@@ -3144,6 +3336,9 @@ pub struct Outcome {
 
     /// Заказы иссушителей: кто и что (mob/wither.rs; tick.rs, wither_deeds).
     pub withers: Vec<(i32, wither::Deed)>,
+    pub water_effects: Vec<(i32,crate::survival::Effect)>,
+    pub stings: Vec<water::Sting>,
+    pub axolotl_assists: Vec<i32>,
 }
 
 /// Удар моба в ближнем бою.
@@ -3216,6 +3411,10 @@ pub fn step_all(
         .collect();
 
     let ctx = ai::Ctx { players, mates: &mates, difficulty: env.difficulty, sky: env.sky, sun_up: env.sun_up };
+    let guardian_targets = water::predator_targets(items.mobs(),players,true);
+    let drowned_targets = water::predator_targets(items.mobs(),players,false);
+    let guardian_ctx = ai::Ctx { players: &guardian_targets, ..ctx };
+    let drowned_ctx = ai::Ctx { players: &drowned_targets, ..ctx };
     let mut mobs = std::mem::take(items.mobs_vec());
     let mut breeds: Vec<(i32, i32)> = Vec::new();
     let mut born = Vec::new();
@@ -3241,7 +3440,8 @@ pub fn step_all(
             mob.illager.sheep = blue_sheep.iter().filter(|(_, at)| hostile::dist2(mob, at.0, at.1, at.2) <= illager::WOLOLO_RANGE * illager::WOLOLO_RANGE).map(|(id, _)| *id).next();
         }
 
-        let plan = mob.tick(view, &ctx, rng);
+        let sense = if guardian::guardian(mob.kind) { &guardian_ctx } else if mob.kind==Kind::Drowned { &drowned_ctx } else { &ctx };
+        let plan = mob.tick(view, sense, rng);
 
         // Снежный голем: след и таяние — и без ИИ (snow-golem-shear).
         outcome.snow.extend(golem::snow_tick(mob, view, true));
@@ -3303,7 +3503,7 @@ pub fn step_all(
         }
 
         for player in std::mem::take(&mut mob.guardian.cursed) {
-            outcome.curses.push((player, mob.silent));
+            if players.iter().any(|p| p.id==player) { outcome.curses.push((player, mob.silent)); }
         }
 
         for deed in std::mem::take(&mut mob.wither.deeds) {
@@ -3364,6 +3564,9 @@ pub fn step_all(
         // Живой с именной биркой не исчезает (persistent_tag).
         let peaceful = env.difficulty == crate::survival::PEACEFUL;
 
+        if water::creature(mob.kind) && !matches!(mob.kind,Kind::Turtle | Kind::Frog | Kind::Tadpole) && !mob.persistent_tag && !mob.water.from_bucket && !mob.is_dead() {
+            hostile::despawn_check(mob,players,rng,false);
+        }
         if mob.kind.hostile() && mob.kind != Kind::Shulker && ((!mob.is_dead() && !mob.persistent_tag) || (peaceful && mob.is_dead())) {
             hostile::despawn_check(mob, players, rng, peaceful);
         }
@@ -3429,6 +3632,9 @@ pub fn step_all(
         }
     }
 
+    water::predator_strikes(&mut mobs,&mut outcome);
+    water::interactions(&mut mobs,view,players,&mut outcome,rng);
+
     // Волки хозяев: кого хозяин ударил и кто ударил хозяина; дикая стая;
     // поводки (mob/leash.rs).
     let owner_hits: Vec<(i32, i32)> = outcome.strikes.iter().map(|strike| (strike.attacker, strike.melee.target)).collect();
@@ -3473,9 +3679,16 @@ pub fn step_all(
     }
 
     for (index, kind) in converted {
-        let mob = convert(&mobs[index], kind, next_id());
+        let mut mob = convert(&mobs[index], kind, next_id());
+        if kind == Kind::Frog {
+            let (x,y,z) = mob.cell();
+            water::initialize(&mut mob,view.biome(x,y,z),rng);
+            mob.age = 0;
+            mob.persistent_tag = true;
+            mob.name = mobs[index].name.clone();
+        }
 
-        if !mobs[index].silent {
+        if !mobs[index].silent && kind != Kind::Frog {
             outcome.level_events.push((mobs[index].cell(), if kind == Kind::Stray { 1048 } else if kind == Kind::Drowned { 1040 } else { 1041 }));
         }
 
@@ -3512,6 +3725,7 @@ pub fn step_all(
 
         land::inherit(&mut baby, &mobs[ia], &mobs[ib], rng);
         baby.age = BABY_AGE;
+        if baby.kind == Kind::Axolotl { baby.water.variant=water::child_variant(mobs[ia].water.variant,mobs[ib].water.variant,rng); }
         baby.yaw = mobs[ia].yaw;
         baby.head_yaw = mobs[ia].yaw;
         baby.color = if mobs[ia].kind == Kind::Sheep { if rng.below(2) == 0 { mobs[ia].color } else { mobs[ib].color } } else { WHITE };
@@ -3529,7 +3743,13 @@ pub fn step_all(
 
         // Сердечки — событием сущности 18 у первого родителя (чёрный ящик, cow-breed).
         mobs[ia].events.push(Event::Hearts);
-        born.push(baby);
+        if matches!(baby.kind,Kind::Turtle | Kind::Axolotl | Kind::Frog) {
+            // Вики, Breeding: «1–7 experience»; выдача через общий склад.
+            items.drop_experience(1+rng.below(7) as i32,(mobs[ia].x,mobs[ia].y,mobs[ia].z),next_id,rng);
+        }
+        if matches!(baby.kind,Kind::Turtle | Kind::Frog) {
+            mobs[ia].water.has_egg = true;
+        } else { born.push(baby); }
     }
 
     *items.mobs_vec() = mobs;

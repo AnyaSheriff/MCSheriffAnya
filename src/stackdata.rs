@@ -187,6 +187,8 @@ pub struct Data {
     pub stew: Vec<(u8, i32)>,
     /// Козий рог: запись реестра instrument.
     pub instrument: Option<u8>,
+    pub bucket: Option<crate::mob::water::bucket::BucketData>,
+    pub mob_variants: Vec<(i32,i32)>,
 }
 
 impl Data {
@@ -340,6 +342,7 @@ pub fn enchantment_number(name: &str) -> Option<u16> {
 pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
     let mut count = 0;
     let mut out = Vec::new();
+    count += crate::mob::water::bucket::encode(data, &mut out);
 
     if !data.stew.is_empty() {
         out.extend_from_slice(&encode_varint(COMPONENT_STEW));
@@ -639,6 +642,13 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
         COMPONENT_INSTRUMENT => {
             if reader.take(1)==Some(&[1]) && let Some(id)=reader.varint().filter(|n| (1..=8).contains(n)) { data.instrument=Some((id-1) as u8); }
         }
+        59 => data.bucket = crate::mob::water::bucket::BucketData::from_nbt(body),
+        86 | 88..=90 | 104 => {
+            if let Some(value) = reader.varint().filter(|value| crate::mob::water::bucket::valid_variant(kind,*value)) {
+                data.mob_variants.retain(|(key,_)| *key != kind);
+                data.mob_variants.push((kind,value));
+            }
+        }
         COMPONENT_DAMAGE => {
             if let Some(damage) = reader.varint() {
                 data.damage = damage.max(0);
@@ -788,7 +798,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -828,7 +838,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -854,6 +864,21 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             for (id,ticks) in data.stew.iter().take(32) { out.push(*id); out.extend_from_slice(&ticks.to_be_bytes()); }
         }
         if let Some(id)=data.instrument { out.extend_from_slice(&[6,id]); }
+        if let Some(bucket) = &data.bucket {
+            let nbt = bucket.nbt();
+            out.push(7);
+            out.extend_from_slice(&(nbt.len() as u16).to_be_bytes());
+            out.extend(nbt);
+        }
+        if !data.mob_variants.is_empty() {
+            out.push(8);
+            out.push(data.mob_variants.len().min(16) as u8);
+            for (key,value) in data.mob_variants.iter().take(16) {
+                out.extend_from_slice(&key.to_be_bytes());
+                out.extend_from_slice(&value.to_be_bytes());
+            }
+        }
+
         // Содержимое шулкер-ящика: метка 2, число ячеек, у каждой номер,
         // предмет, число и довески (длина и запись; 0 — без довесков).
         if !data.contents.is_empty() {
@@ -1038,6 +1063,17 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                     for _ in 0..n { let id=reader.take(1)?[0]; let ticks=i32::from_be_bytes(reader.take(4)?.try_into().ok()?); data.stew.push((id,ticks)); }
                 }
                 6 => { let id=reader.take(1)?[0]; if id>=8 { return None; } data.instrument=Some(id); }
+                7 => {
+                    let length = usize::from(u16::from_be_bytes(reader.take(2)?.try_into().ok()?));
+                    data.bucket = Some(crate::mob::water::bucket::BucketData::from_nbt(reader.take(length)?)?);
+                }
+                8 => {
+                    for _ in 0..reader.take(1)?[0] {
+                        let key = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
+                        let value = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
+                        if crate::mob::water::bucket::valid_variant(key,value) { data.mob_variants.push((key,value)); }
+                    }
+                }
                 _ => break,
             }
         }
@@ -1065,6 +1101,12 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
         let value = snbt::parse(value.trim()).ok_or_else(|| format!("не разобрать значение {value}"))?;
 
         match key {
+            "bucket_entity_data" => data.bucket = Some(crate::mob::water::bucket::BucketData::parse(&value)),
+            "salmon/size" | "axolotl/variant" | "tropical_fish/pattern" | "tropical_fish/base_color" | "tropical_fish/pattern_color" => {
+                let (id,value)=crate::mob::water::bucket::parse_variant(key,&value)?;
+                data.mob_variants.retain(|(key,_)|*key!=id);
+                data.mob_variants.push((id,value));
+            }
             "damage" => data.damage = value.as_f64().ok_or("damage — число")? as i32,
             "unbreakable" => data.unbreakable = true,
             "ominous_bottle_amplifier" => data.ominous = Some(value.as_f64().ok_or("ominous_bottle_amplifier — число")?.clamp(0.0, 4.0) as u8),

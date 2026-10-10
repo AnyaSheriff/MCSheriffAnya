@@ -110,7 +110,8 @@ fn ticks_randomly(state: u16) -> bool {
                     || (is_leaves(name) && value(state, "persistent") == Some("false"))
                     || matches!(
                         name,
-                        "farmland"
+                        "turtle_egg"
+                            | "farmland"
                             | "sugar_cane"
                             | "cactus"
                             | "kelp"
@@ -190,8 +191,13 @@ pub fn random_ticks(world: &mut World, players: &[(i32, i32)], distance: i32, sp
 
     for (pos, state) in due {
         // Место могло смениться ходом соседа в этом же такте.
-        if world.get_block(pos.0, pos.1, pos.2) == state {
+        let now = world.get_block(pos.0, pos.1, pos.2);
+        if now == state {
             random_tick(world, pos, state);
+        } else if name_of(now) == "turtle_egg" && name_of(state) == "turtle_egg" {
+            // Несколько случайных тактов на одно яйцо за такт мира: каждый видит
+            // уже треснувшее (чёрный ящик turtle-egg-hatch: трещина и вылупление в одном такте).
+            random_tick(world, pos, now);
         }
     }
 }
@@ -223,6 +229,7 @@ pub fn random_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
     let name = name_of(state);
 
     match name {
+        "turtle_egg" => crate::mob::water::eggs::turtle_tick(world,pos,state),
         "farmland" => farmland_tick(world, pos, state),
         "sugar_cane" | "cactus" => column_tick(world, pos, state, name),
         "kelp" => kelp_tick(world, pos, state),
@@ -711,6 +718,7 @@ fn leaves_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
 
 /// Такт блока, запланированный соседским обновлением (redstone::ticked).
 pub fn ticked(world: &mut World, pos: (i32, i32, i32), state: i32) {
+    if name_of(state) == "frogspawn" { crate::mob::water::eggs::frog_tick(world,pos); return; }
     if is_leaves(name_of(state)) {
         leaves_recount(world, pos, state);
     }
@@ -723,6 +731,10 @@ pub fn on_neighbour(world: &mut World, pos: (i32, i32, i32)) -> bool {
     let state = world.get_block(pos.0, pos.1, pos.2);
     let name = name_of(state);
 
+    if name == "frogspawn" && !crate::mob::water::eggs::supports_frogspawn(world.get_block(pos.0,pos.1-1,pos.2)) {
+        world.set_block(pos.0,pos.1,pos.2,AIR);
+        return true;
+    }
     if is_leaves(name) {
         if leaf_distance(world, pos) != number(state, "distance") {
             world.schedule_once(pos.0, pos.1, pos.2, 1, 0);

@@ -1,0 +1,60 @@
+{
+  "name": "turtle-egg-hatch",
+  "about": "Turtle egg on sand inside the hatch window with fast random ticks: cracking, hatch, baby turtles (random tick order, so timing may jitter).",
+  "track_mobs": true,
+  "track_self": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,1,6.5)",
+    "!wait 5",
+    "fill $(0,-2,0) $(7,2,7) minecraft:stone",
+    "fill $(1,0,1) $(6,2,6) minecraft:air",
+    "fill $(2,-1,2) $(4,-1,4) minecraft:sand"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "gamerule random_tick_speed 4096"
+    },
+    {
+      "after": 0,
+      "cmd": "time set 21050"
+    },
+    {
+      "after": 1,
+      "cmd": "setblock $(3,0,3) minecraft:turtle_egg[eggs=4,hatch=0]"
+    }
+  ],
+  "record_ticks": 400,
+  "cleanup": [
+    "gamerule random_tick_speed 3",
+    "gamemode creative $(bot)",
+    "tp $(bot) $(3.5,3,6.5)",
+    "!startfly",
+    "kill @e[type=cod,distance=..48]",
+    "kill @e[type=salmon,distance=..48]",
+    "kill @e[type=tropical_fish,distance=..48]",
+    "kill @e[type=pufferfish,distance=..48]",
+    "kill @e[type=squid,distance=..48]",
+    "kill @e[type=glow_squid,distance=..48]",
+    "kill @e[type=dolphin,distance=..48]",
+    "kill @e[type=turtle,distance=..48]",
+    "kill @e[type=axolotl,distance=..48]",
+    "kill @e[type=frog,distance=..48]",
+    "kill @e[type=tadpole,distance=..48]",
+    "kill @e[type=slime,distance=..48]",
+    "kill @e[type=magma_cube,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "fill $(0,-1,0) $(7,2,7) minecraft:air",
+    "fill $(0,-1,0) $(7,-1,7) minecraft:stone",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "difficulty peaceful",
+    "time set noon"
+  ]
+}

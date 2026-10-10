@@ -1034,6 +1034,7 @@ fn flag_in(data: &str, key: &str) -> Option<bool> {
 /// `Health`, `Rotation:[yaw,pitch]`.
 fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     crate::mob::land::apply_data(mob, data);
+    crate::mob::water::apply_data(mob,data);
     if let Some(on) = flag_in(data, "NoAI:") {
         mob.no_ai = on;
     }
@@ -1276,6 +1277,8 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
             mob.land.max_health = 53.0; crate::mob::land::health(&mut mob); mob.vitals.health = 53.0;
         }
     }
+    // /summon без данных не даёт водным видам случайный вид (чёрный ящик water-spawn-all:
+    // рыба без Variant, аксолотль без Variant — по умолчанию); случайный вид — у яиц и естественного появления.
     apply_mob_data(&mut mob, data);
 
     // Свойство 20 у жителя: призванный без данных или с VillagerData — да,
@@ -1589,6 +1592,11 @@ fn damage(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let Some(chosen) = Selector::parse(who) else {
         return Answer::saying("Не понял, кому наносить урон".to_string());
     };
+    // `… by <игрок>`: виновник — этот игрок, моба отбрасывает от него на 0,4
+    // (чёрный ящик squid-ink, axolotl-play-dead: damage … player_attack by).
+    let attacker = (parts.get(3).copied() == Some("by")).then(|| parts.get(4).copied()).flatten().and_then(|name| {
+        shared.players.lock().expect("список игроков захвачен другим потоком").find(name).map(|member| (member.entity_id, member.position.x, member.position.z))
+    });
     let origin = origin_of(source, shared);
     let dimension = dimension_of(source, shared);
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
@@ -1604,7 +1612,14 @@ fn damage(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         }
 
         if left > 0 && chosen.takes(mob.kind.name()) && chosen.reaches(origin, (mob.x, mob.y, mob.z)) && !mob.is_dead() {
-            mob.hurt(amount, kind, None);
+            let push = attacker.map(|(id, ax, az)| {
+                let (dx, dz) = (mob.x - ax, mob.z - az);
+                let len = (dx * dx + dz * dz).sqrt();
+
+                crate::mob::Push { dir: if len > 1.0e-4 { (dx / len, dz / len) } else { (0.0, 0.0) }, strength: 0.4, cause: id }
+            });
+
+            mob.hurt(amount, kind, push);
             left -= 1;
             hurt += 1;
         }

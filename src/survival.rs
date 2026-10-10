@@ -55,6 +55,7 @@ pub enum Source {
     /// Куст сладких ягод (вики, Sweet Berry Bush: «1♥ damage» в движении).
     SweetBerryBush,
     Drown,
+    DryOut,
     Explosion,
     Fall,
     /// Прочий урон (команда `damage` без вида).
@@ -117,6 +118,7 @@ impl Source {
             // sweet_berry_bush 42, thorns 43.
             Source::SweetBerryBush => 42,
             Source::Drown => 6,
+            Source::DryOut => 7,
             Source::Explosion => 9,
             Source::Fall => 10,
             Source::Generic => 18,
@@ -164,6 +166,7 @@ impl Source {
             Source::Cactus => "death.attack.cactus",
             Source::SweetBerryBush => "death.attack.sweetBerryBush",
             Source::Drown => "death.attack.drown",
+            Source::DryOut => "death.attack.dryout",
             Source::Explosion => "death.attack.explosion",
             // Падение без лестницы под ногами: «fell from a high place».
             Source::Fall => "death.fell.accident.generic",
@@ -257,6 +260,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::Fall => "fell from a high place",
         Source::Lava => "tried to swim in lava",
         Source::Drown => "drowned",
+        Source::DryOut => "died from dehydration",
         Source::OutOfWorld => "fell out of the world",
         Source::Explosion => "blew up",
         Source::GenericKill => "was killed",
@@ -526,6 +530,7 @@ pub enum EffectKind {
     RaidOmen,
     /// Герой деревни: скидки у жителей (вики, Hero of the Village).
     HeroOfTheVillage,
+    DolphinsGrace,
 }
 
 impl EffectKind {
@@ -560,6 +565,7 @@ impl EffectKind {
             EffectKind::Luck => 25,
             EffectKind::Unluck => 26,
             EffectKind::SlowFalling => 27,
+            EffectKind::DolphinsGrace => 29,
             EffectKind::Darkness => 32,
             // minecraft-data 26.1, effects.json: bad_omen 30, hero_of_the_village 31, raid_omen 34.
             EffectKind::BadOmen => 30,
@@ -569,14 +575,14 @@ impl EffectKind {
     }
 
     /// Все виды (для перебора модификаторов).
-    pub const ALL: [EffectKind; 32] = [
+    pub const ALL: [EffectKind; 33] = [
         EffectKind::Speed, EffectKind::Slowness, EffectKind::Haste, EffectKind::MiningFatigue, EffectKind::Strength,
         EffectKind::InstantHealth, EffectKind::InstantDamage, EffectKind::JumpBoost, EffectKind::Nausea, EffectKind::Regeneration,
         EffectKind::Resistance, EffectKind::FireResistance, EffectKind::WaterBreathing, EffectKind::Invisibility, EffectKind::Blindness,
         EffectKind::NightVision, EffectKind::Hunger, EffectKind::Weakness, EffectKind::Poison, EffectKind::Wither,
         EffectKind::HealthBoost, EffectKind::Absorption, EffectKind::Saturation, EffectKind::Glowing, EffectKind::Levitation,
         EffectKind::Luck, EffectKind::Unluck, EffectKind::SlowFalling, EffectKind::Darkness, EffectKind::BadOmen,
-        EffectKind::RaidOmen, EffectKind::HeroOfTheVillage,
+        EffectKind::RaidOmen, EffectKind::HeroOfTheVillage, EffectKind::DolphinsGrace,
     ];
 
     /// Мгновенный: действует при наложении, не хранится.
@@ -617,6 +623,7 @@ impl EffectKind {
             EffectKind::Luck => 0x59C106,
             EffectKind::Unluck => 0xC0A44D,
             EffectKind::SlowFalling => 0xF3CFB9,
+            EffectKind::DolphinsGrace => 0x88A3BE,
             EffectKind::Darkness => 0x292721,
             // Чёрный ящик, raid-start-wave1: entity_effect −16031432 = 0x0B6138.
             EffectKind::BadOmen => 0x0B6138,
@@ -686,6 +693,7 @@ impl EffectKind {
 
     pub fn from_name(name: &str) -> Option<Self> {
         match name.strip_prefix("minecraft:").unwrap_or(name) {
+            "dolphins_grace" => Some(EffectKind::DolphinsGrace),
             "hunger" => Some(EffectKind::Hunger),
             "saturation" => Some(EffectKind::Saturation),
             "speed" => Some(EffectKind::Speed),

@@ -612,6 +612,12 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         }
         if on_ground || env.soft { super::progression::landed(player, fallen); }
 
+        if on_ground && player.game_mode != GAME_MODE_SPECTATOR {
+            let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+            let egg = (player.x.floor() as i32,player.y.floor() as i32,player.z.floor() as i32);
+            crate::mob::water::eggs::trample(&mut world,egg,fallen > 0.0);
+        }
+
         // Приземлился на грядку — может её вытоптать (farming.rs).
         if on_ground && !env.soft && fallen > 0.5 && blocks::block_at_state(env.below) == Some("farmland") {
             let below = (player.x.floor() as i32, (player.y - 0.2).floor() as i32, player.z.floor() as i32);
@@ -1517,6 +1523,7 @@ pub(super) async fn mob_hit(
     at: (f64, f64, f64),
 ) -> io::Result<()> {
     player.net.killer = killer;
+    player.net.mob_hit_landed = false;
 
     // Вики, Shield: передний удар моба поглощается; укус, остановленный
     // щитом, не накладывает яд. Износ — тот же, что в бою игроков.
@@ -1582,6 +1589,16 @@ pub(super) async fn mob_hit(
         }
     }
 
+    // Вики, Pufferfish: «When a pufferfish attacks something». [проверить] Порядок пакетов.
+    if done.is_some() && killer == "entity.minecraft.pufferfish" {
+        // Silent:1b глушит и укол (чёрный ящик pufferfish-sting).
+        let silent={
+            let items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+            items.mobs().iter().find(|mob| mob.entity_id == attacker).is_some_and(|mob| mob.silent)
+        };
+        if !silent { send_sound_at(stream,"minecraft:entity.puffer_fish.sting",6,at,1.0,1.0).await?; }
+    }
+
     // Вики, Cave Spider: яд только после состоявшегося укуса, не от
     // отклонённого урона (творческий, неуязвимость). Срок — по сложности.
     if done.is_some() && source == Source::MobAttack && killer == "entity.minecraft.cave_spider"
@@ -1604,7 +1621,7 @@ pub(super) async fn mob_hit(
 
     // Слизень отбрасывает полным ударом 0,4 без трения такта: у оригинала
     // (0,-0.03; 0,361; -0,399) при стоящем игроке (чёрный ящик, slime-hop).
-    if let (Some(_), Some(dir), true) = (done, push, killer == "entity.minecraft.slime") {
+    if let (Some(_), Some(dir), true) = (done, push, killer == "entity.minecraft.slime" || killer == "entity.minecraft.pufferfish") {
         knock_back(player, dir, 0.4, 0.0);
     } else if let (Some(_), Some((ux, uz))) = (done, push) {
         // Клиенту уходит скорость уже после трения такта: 0,4 · 0,546 = 0,218

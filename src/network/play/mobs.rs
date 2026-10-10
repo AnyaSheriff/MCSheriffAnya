@@ -70,6 +70,7 @@ const ATTRIBUTE_MOVEMENT_SPEED: i32 = 22;
 const ATTRIBUTE_ARMOR: i32 = 0;
 const ATTRIBUTE_ARMOR_TOUGHNESS: i32 = 1;
 const ATTRIBUTE_MAX_HEALTH: i32 = 19;
+const ATTRIBUTE_OXYGEN_BONUS: i32 = 23;
 
 /// Раз во сколько тактов от появления моб рассылает место и скорость, и раз
 /// во сколько — место, даже если оно не изменилось (как у вагонеток).
@@ -78,8 +79,11 @@ const FORCED: u64 = 60;
 
 /// На каком такте жизни уходят атрибуты: у животных на третьем, у крипера на
 /// первом (чёрный ящик, creeper-explode); у зомби — сразу при появлении.
-fn attributes_at(kind: Kind) -> u64 {
-    match kind {
+fn attributes_at(mob: &Mob) -> u64 {
+    match mob.kind {
+        // Чёрный ящик water-spawn-all: у дельфина и взрослой черепахи на 2-м такте.
+        Kind::Dolphin => 1,
+        Kind::Turtle if !mob.is_baby() => 1,
         Kind::Creeper => 1,
         // Вредина: атрибуты через 2 такта после появления (чёрный ящик, evoker-vex) [проверить].
         Kind::Vex => 1,
@@ -189,12 +193,14 @@ fn properties(mob: &Mob) -> Vec<Property> {
         (0, TYPE_BYTE, vec![fire]),
         (2, TYPE_OPT_COMPONENT, custom_name(mob)),
         (4, TYPE_BOOL, vec![u8::from(mob.silent)]),
-        (6, TYPE_POSE, encode_varint(if mob.is_dead() { POSE_DYING } else if mob.kind == Kind::Camel && mob.land.sitting { 10 } else if mob.kind == Kind::Breeze { mob.breeze.pose } else { 0 })),
+        (6, TYPE_POSE, encode_varint(if mob.is_dead() { POSE_DYING } else if mob.kind == Kind::Camel && mob.land.sitting { 10 } else if mob.kind == Kind::Breeze { mob.breeze.pose } else if mob.kind == Kind::Frog && mob.water.tongue > 0 { 9 } else { 0 })),
         (9, TYPE_FLOAT, float(mob.vitals.health)),
         // Стрел в теле (wither-half-armor: 9=… 12=1 после попадания).
         (12, TYPE_INT, encode_varint(mob.arrows)),
         (15, TYPE_BYTE, vec![u8::from(mob.no_ai) | aggressive]),
     ];
+
+    if crate::mob::water::creature(mob.kind) { out.push((1,TYPE_INT,encode_varint(mob.water.air))); }
 
     // Утопленник с занесённым трезубцем «использует предмет» (чёрный ящик,
     // drowned-trident: 8=1 с захвата цели).
@@ -257,6 +263,35 @@ fn properties(mob: &Mob) -> Vec<Property> {
                 // Чёрный ящик, mooshroom-shear: вид — число (красный 0, бурый 1), не строка.
                 Kind::Mooshroom => out.push((18, TYPE_INT, encode_varint(i32::from(s.brown)))),
                 Kind::WanderingTrader => out.push((18, TYPE_INT, encode_varint(0))),
+                _ => {}
+            }
+        }
+        Kind::Cod | Kind::Salmon | Kind::TropicalFish | Kind::Pufferfish | Kind::Tadpole => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.water.from_bucket)]));
+            let value = match mob.kind { Kind::Salmon => Some(i32::from(mob.water.salmon_size)), Kind::TropicalFish => Some(mob.water.variant), Kind::Pufferfish => Some(i32::from(mob.water.puff)), _ => None };
+            if let Some(value) = value { out.push((17, TYPE_INT, encode_varint(value))); }
+        }
+        Kind::Squid | Kind::GlowSquid | Kind::Dolphin | Kind::Turtle | Kind::Axolotl | Kind::Frog => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            match mob.kind {
+                Kind::GlowSquid => out.push((18, TYPE_INT, encode_varint(mob.water.dark_ticks))),
+                Kind::Dolphin => {
+                    out.push((18, TYPE_BOOL, vec![u8::from(mob.water.got_fish)]));
+                    out.push((19, TYPE_INT, encode_varint(mob.water.moisture)));
+                }
+                Kind::Turtle => {
+                    out.push((18, TYPE_BOOL, vec![u8::from(mob.water.has_egg)]));
+                    out.push((19, TYPE_BOOL, vec![u8::from(mob.water.laying > 0)]));
+                }
+                Kind::Axolotl => {
+                    out.push((18, TYPE_INT, encode_varint(mob.water.variant)));
+                    out.push((19, TYPE_BOOL, vec![u8::from(mob.water.playing_dead > 0)]));
+                    out.push((20, TYPE_BOOL, vec![u8::from(mob.water.from_bucket)]));
+                }
+                Kind::Frog => {
+                    out.push((18, 27, encode_varint(match mob.water.variant { 1=>2, 2=>0, _=>1 })));
+                    out.push((19, 19, encode_varint(if mob.water.tongue > 0 { mob.water.target.unwrap_or(-1)+1 } else { 0 })));
+                }
                 _ => {}
             }
         }
@@ -479,6 +514,15 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
     match (*key, kind) {
         (2, _) => value.as_slice() == [0],
         (12, _) => value.as_slice() == [0],
+        // Водные виды: общий хвост 18..20 ниже к ним не относится.
+        // Иначе при первом показе теряются вариант аксолотля и лягушки.
+        (1, Kind::Dolphin) => value.as_slice() == encode_varint(crate::mob::water::DOLPHIN_AIR),
+        (1, kind) if crate::mob::water::creature(kind) => value.as_slice() == encode_varint(300),
+        (17, Kind::Salmon) => value.as_slice() == encode_varint(1),
+        (17, Kind::TropicalFish | Kind::Pufferfish) => value.as_slice() == [0],
+        (18, Kind::Frog) => value.as_slice() == encode_varint(1),
+        (19, Kind::Dolphin) => value.as_slice() == encode_varint(crate::mob::water::DOLPHIN_MOISTURE),
+        (18..=20, kind) if crate::mob::water::creature(kind) => value.iter().all(|byte| *byte == 0),
         // Волк и кошка: ошейник красный, вариант — бледный и чёрная, злости нет
         // (чёрный ящик, probe-cats).
         (18..=20, Kind::Wolf) | (18 | 19 | 21 | 22, Kind::Cat) => value.iter().all(|byte| *byte == 0),
@@ -737,10 +781,18 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
         return write_body(stream, body).await;
     }
 
+    // Дельфин шлёт ещё «кислородный бонус» 0: у взрослого он первым, у детёныша
+    // вторым (чёрный ящик water-spawn-all).
+    let dolphin = mob.kind == Kind::Dolphin;
     // Железный шлем на мобе: к скорости добавляются стойкость и броня с
     // модификатором «minecraft:armor.helmet» (0 и +2) — чёрный ящик,
     // stray-slowness, bogged-shear.
-    body.extend_from_slice(&encode_varint(if mob.h.helmet { 3 } else { 1 }));
+    body.extend_from_slice(&encode_varint(if dolphin { 2 } else if mob.h.helmet { 3 } else { 1 }));
+    if dolphin && !mob.is_baby() {
+        body.extend_from_slice(&encode_varint(ATTRIBUTE_OXYGEN_BONUS));
+        push_f64(&mut body, 0.0);
+        push_modifiers(&mut body, None);
+    }
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
     // У иссушителя скорость — ровно 0,6 в двойной точности (wither-summon).
     push_f64(&mut body, if mob.kind == Kind::Wither { 0.6 } else { f64::from(attribute_speed(mob.kind) as f32) });
@@ -767,6 +819,11 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
         }
     }
 
+    if dolphin && mob.is_baby() {
+        body.extend_from_slice(&encode_varint(ATTRIBUTE_OXYGEN_BONUS));
+        push_f64(&mut body, 0.0);
+        push_modifiers(&mut body, None);
+    }
     write_body(stream, body).await
 }
 
@@ -1217,9 +1274,11 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         let changed: Vec<&Property> = if shown.first {
             // У дракона здоровье в первый прогон уходит и равное единице: оно
             // «грязное» с рождения (чёрный ящик, dragon-death: `9=1 15=1`).
-            now.iter().filter(|entry| !is_default(entry, mob.kind) || (mob.kind == Kind::EnderDragon && entry.0 == 9)).collect()
+            now.iter().filter(|entry| (!is_default(entry, mob.kind) && !(mob.kind == Kind::Dolphin && entry.0 == 1)) || (mob.kind == Kind::EnderDragon && entry.0 == 9)).collect()
         } else {
-            now.iter().filter(|entry| !shown.properties.contains(entry)).collect()
+            // Воздух дельфина уходит заново каждый такт (чёрный ящик water-spawn-all: `1=4800`
+            // даже у NoAI, начиная со 2-го такта).
+            now.iter().filter(|entry| !shown.properties.contains(entry) || (mob.kind == Kind::Dolphin && entry.0 == 1)).collect()
         };
 
         send_properties(stream, mob.entity_id, &changed).await?;
@@ -1266,7 +1325,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         shown.first = false;
 
         // Атрибуты: на третьем такте жизни и после каждой правки данных.
-        let attributes_due = if mob.kind == Kind::Wither && mob.wither.built { 1 } else { attributes_at(mob.kind) };
+        let attributes_due = if mob.kind == Kind::Wither && mob.wither.built { 1 } else { attributes_at(mob) };
 
         if (!shown.attributes_sent && mob.ticks >= attributes_due) || mob.attr_changes != shown.attr_changes {
             send_attributes(stream, mob).await?;
@@ -1423,6 +1482,14 @@ fn sound_category(name: &str) -> i32 {
     } else {
         SOUND_NEUTRAL
     }
+}
+
+#[cfg(test)]
+pub(super) fn water_test_properties(mob: &Mob) -> Vec<Property> { properties(mob) }
+
+#[cfg(test)]
+pub(super) fn water_test_spawn_properties(mob: &Mob) -> Vec<Property> {
+    properties(mob).into_iter().filter(|entry| !is_default(entry,mob.kind)).collect()
 }
 
 #[cfg(test)]

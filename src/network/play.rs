@@ -67,6 +67,9 @@ mod land_tests;
 mod vitals;
 mod mobs;
 mod land;
+mod water;
+#[cfg(test)]
+mod water_tests;
 mod merchant;
 mod pvp;
 mod bow;
@@ -4193,8 +4196,18 @@ async fn send_pending_world_events(
                 vitals::mob_hit(stream, shared, player, *amount, *source, *attacker, killer, *push, *at).await?;
             }
             WorldEvent::MobHurt { .. } => {}
-            WorldEvent::MobEffect { entity_id, effect } if *entity_id == player.entity_id => vitals::give_effect(stream, player, *effect).await?,
+            WorldEvent::MobEffect { entity_id, effect } if *entity_id == player.entity_id => {
+                if effect.kind!=crate::survival::EffectKind::DolphinsGrace || (player.vit.sprinting && player.net.in_water) {
+                    vitals::give_effect(stream, player, *effect).await?;
+                }
+            }
             WorldEvent::MobEffect { .. } => {}
+            WorldEvent::AxolotlAssist { entity_id } if *entity_id == player.entity_id => {
+                let effect=crate::mob::water::assist_effect(&player.vit);
+                vitals::clear_effects(stream,player,Some(crate::survival::EffectKind::MiningFatigue)).await?;
+                vitals::give_effect(stream,player,effect).await?;
+            }
+            WorldEvent::AxolotlAssist { .. } => {}
             WorldEvent::MobHitEffect { entity_id, effect } if *entity_id == player.entity_id => {
                 if std::mem::take(&mut player.net.mob_hit_landed) {
                     vitals::give_effect(stream, player, *effect).await?;
@@ -7512,7 +7525,8 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     let smash_fall = player.vit.fall;
     let bonus = if smash { crate::combat::smash_bonus(smash_fall, data.level("density")) } else { 0.0 };
     let source = if smash { crate::survival::Source::MaceSmash } else { crate::survival::Source::PlayerAttack };
-    let blow = crate::combat::strike(player.attrs.value(crate::attributes::ATTACK_DAMAGE), bonus, crate::combat::enchant_bonus(&data, undead, arthropod), charge, crit_ok);
+    let enchanted = crate::combat::enchant_bonus(&data, undead, arthropod) + crate::mob::water::impaling(mob.kind,data.level("impaling"));
+    let blow = crate::combat::strike(player.attrs.value(crate::attributes::ATTACK_DAMAGE), bonus, enchanted, charge, crit_ok);
     let (damage, crit) = (blow.damage, blow.crit);
     // Рывок (бег при полном заряде) и зачарование «отдача» толкают ещё, вдоль
     // взгляда; рывок сбрасывает бег (вики, Knockback).
@@ -7878,6 +7892,8 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         return true;
     }
 
+    if water::use_on_mob(&mut items, index, player, &mut world, reaction) { return true; }
+
     // Бирка, поводок, волк и кошка (play/tame.rs).
     if tame::use_on_mob(&mut items, index, player, shared, reaction) {
         return true;
@@ -8014,7 +8030,11 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
 
         items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
 
-        if survival && let Some(slot) = player.inventory.spend_held() {
+        if survival && food == "tropical_fish_bucket" {
+            let slot = inventory::FIRST_HOTBAR + player.inventory.selected();
+            player.inventory.set(slot, blocks::item_named("water_bucket").map(|item| Stack::new(item, 1)));
+            reaction.slots.push(slot);
+        } else if survival && let Some(slot) = player.inventory.spend_held() {
             reaction.slots.push(slot);
         }
 
@@ -8221,6 +8241,20 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
             z
         );
         return Some(Reaction::default());
+    }
+
+    if blocks::block_at_state(state) == Some("turtle_egg") {
+        let silk = player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
+        let drop_egg = !creative && silk && shared.block_drops.load(std::sync::atomic::Ordering::Relaxed);
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        if creative { world.set_block(x,y,z,world::AIR); }
+        else { crate::mob::water::eggs::break_one(&mut world,(x,y,z)); }
+        redstone::settle(&mut world);
+        drop(world);
+        if drop_egg && let Some(item) = blocks::item_named("turtle_egg") {
+            drop_into_world(shared,player.dimension,Stack::new(item,1),(f64::from(x)+0.5,f64::from(y)+0.5,f64::from(z)+0.5),(0.0,0.2,0.0),items::MINED_DELAY);
+        }
+        return Some(answer);
     }
 
     // Заражённый блок: чешуйница выходит раньше, чем блок исчезает: у оригинала
@@ -9389,6 +9423,8 @@ fn use_bucket(
     let with_lava = blocks::item_named("lava_bucket")?;
     let with_snow = blocks::item_named("powder_snow_bucket")?;
 
+    let fish_kind = blocks::item_name(item).and_then(crate::mob::water::bucket_kind);
+    let fish_data = player.inventory.held().map(|stack| stack.extras()).unwrap_or_default();
     let (x, y, z) = clicked;
 
     // Зачерпнуть можно источник жидкости или рыхлый снег: из текущей воды
@@ -9425,7 +9461,7 @@ fn use_bucket(
 
     // Что выльется из ведра. Рыхлый снег не жидкость — он просто встаёт
     // блоком, никуда не течёт и сам по себе не тает.
-    let poured = if item == with_water {
+    let poured = if item == with_water || fish_kind.is_some() {
         fluids::state_of(fluids::Kind::Water, fluids::SOURCE)
     } else if item == with_lava {
         fluids::state_of(fluids::Kind::Lava, fluids::SOURCE)
@@ -9443,21 +9479,42 @@ fn use_bucket(
         world.get_block(x, y, z)
     };
 
-    let (x, y, z) = if here == world::AIR {
+    let can_waterlog = |state| blocks::orientation_of(state).and_then(|o|o.value(state,"waterlogged"))==Some("false");
+    let (x, y, z) = if here == world::AIR || (fish_kind.is_some() && can_waterlog(here)) {
         (x, y, z)
     } else {
         offset_towards(x, y, z, face)
     };
 
+    if fish_kind.is_some() {
+        let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let target = world.get_block(x,y,z);
+        if !blocks::replaceable(target) && !crate::mob::is_water(target) && !can_waterlog(target) { return Some(Reaction::accepted(sequence)); }
+    }
+
     {
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
         // В Незере вода из ведра испаряется с шипением (вики, Water).
-        if world.is_nether() && item == with_water {
+        if world.is_nether() && (item == with_water || fish_kind.is_some()) {
             let pitch = 2.6 + (world.random_unit() - world.random_unit()) * 0.8;
             world.note_sound(x, y, z, "minecraft:block.fire.extinguish", 0.5, pitch);
         } else {
-            world.set_block(x, y, z, poured);
+            let target=world.get_block(x,y,z);
+            let placed=if fish_kind.is_some() && can_waterlog(target) {
+                blocks::orientation_of(target).and_then(|o|o.with(target,"waterlogged","true")).unwrap_or(poured)
+            } else {poured};
+            world.set_block(x, y, z, placed);
+            if let Some(kind)=fish_kind {
+                let sound=match kind {
+                    crate::mob::Kind::Axolotl=>"minecraft:item.bucket.empty_axolotl",
+                    crate::mob::Kind::Tadpole=>"minecraft:item.bucket.empty_tadpole",
+                    _=>"minecraft:item.bucket.empty_fish",
+                };
+                world.actor=Some(player.entity_id);
+                world.note_sound_by_hand(x,y,z,sound,1.0,1.0);
+                world.actor=None;
+            }
             redstone::settle(&mut world);
         }
     }
@@ -9465,6 +9522,11 @@ fn use_bucket(
     player.progress.used(item);
     log_debug!("Play: {} вылил ведро в {} {} {}", player.name, x, y, z);
     player.poured = Some(sequence);
+    if let Some(kind) = fish_kind {
+        let mut mob = crate::mob::Mob::new(shared.next_entity_id(),kind,(f64::from(x)+0.5,f64::from(y),f64::from(z)+0.5));
+        crate::mob::water::bucket::release(&mut mob,&fish_data);
+        shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").add_mob_late(mob);
+    }
 
     Some(Reaction {
         slots: swap_held(player, empty, shared),
@@ -9496,6 +9558,11 @@ fn use_spawn_egg(
     }
 
     if crate::mob::land::animal(kind) { crate::mob::land::initialize(&mut mob, &mut crate::mob::Rng::new(shared.next_entity_id() as u64)); }
+    if crate::mob::water::creature(kind) {
+        let biome = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").mob_biome(x,y,z);
+        let mut rng = crate::mob::Rng::new(*shared.ticks.borrow() ^ mob.entity_id as u64);
+        crate::mob::water::initialize(&mut mob,biome,&mut rng);
+    }
 
     // Смотрит туда же, куда игрок, как призванный с яйца у оригинала.
     mob.yaw = player.yaw;

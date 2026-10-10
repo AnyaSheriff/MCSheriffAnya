@@ -1,0 +1,63 @@
+{
+  "name": "pufferfish-sting",
+  "about": "[проверить] Fully puffed NoAI pufferfish: contact damage and Poison, with no contact Nausea in Java. Fixed position keeps contact reproducible.",
+  "track_mobs": true,
+  "track_self": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,1,6.5)",
+    "!wait 5",
+    "fill $(0,-1,0) $(7,2,7) minecraft:stone",
+    "fill $(1,0,1) $(6,2,6) minecraft:air",
+    "fill $(1,0,1) $(6,1,6) minecraft:water",
+    "gamemode survival $(bot)",
+    "effect give $(bot) minecraft:water_breathing 30 0 true",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon pufferfish $(3.5,0,3.5) {NoAI:1b,Silent:1b,PuffState:2}"
+    },
+    {
+      "after": 50,
+      "cmd": "tp $(bot) $(3.5,0,4.2)"
+    },
+    {
+      "after": 90,
+      "cmd": "tp $(bot) $(3.5,3,6.5)"
+    }
+  ],
+  "record_ticks": 260,
+  "cleanup": [
+    "gamemode creative $(bot)",
+    "tp $(bot) $(3.5,3,6.5)",
+    "!startfly",
+    "kill @e[type=cod,distance=..48]",
+    "kill @e[type=salmon,distance=..48]",
+    "kill @e[type=tropical_fish,distance=..48]",
+    "kill @e[type=pufferfish,distance=..48]",
+    "kill @e[type=squid,distance=..48]",
+    "kill @e[type=glow_squid,distance=..48]",
+    "kill @e[type=dolphin,distance=..48]",
+    "kill @e[type=turtle,distance=..48]",
+    "kill @e[type=axolotl,distance=..48]",
+    "kill @e[type=frog,distance=..48]",
+    "kill @e[type=tadpole,distance=..48]",
+    "kill @e[type=slime,distance=..48]",
+    "kill @e[type=magma_cube,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "fill $(0,-1,0) $(7,2,7) minecraft:air",
+    "fill $(0,-1,0) $(7,-1,7) minecraft:stone",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "difficulty peaceful",
+    "time set noon"
+  ]
+}

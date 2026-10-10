@@ -746,6 +746,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         if arrow.owner != 0 && !arrow.is_mob_shot() {
                             mob.credit_player();
                         }
+                        let damage=damage+arrow.trident.map_or(0.0,|stack|crate::mob::water::impaling(mob.kind,stack.extras().level("impaling")));
 
                         // Иссушитель в броне (половина здоровья и меньше): стрела
                         // отскакивает без урона (вики, Wither; wither-half-armor).

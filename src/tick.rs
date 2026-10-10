@@ -816,6 +816,7 @@ fn step_frames(shared: &Shared, dimension: Dimension, world: &mut World) {
 pub struct MobView<'a>(pub &'a World);
 
 impl crate::mob::View for MobView<'_> {
+    fn biome(&self, x: i32, y: i32, z: i32) -> &'static str { self.0.mob_biome(x,y,z) }
     fn block(&self, x: i32, y: i32, z: i32) -> i32 {
         self.0.get_block(x, y, z)
     }
@@ -1031,6 +1032,10 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     for mob in natural {
         items.add_mob(mob);
+    }
+
+    if spawning && ticks.is_multiple_of(20) {
+        for mob in crate::mob::water::spawn::attempt(world,&watchers,items.mobs(),rng,&mut || shared.next_entity_id()) { items.add_mob(mob); }
     }
 
     step_spawners(shared, world, &mut items, &watchers, difficulty, shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed), skyless, time, rng);
@@ -1295,6 +1300,12 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     items.snapshot_mobs();
     world.note_tracker();
 
+    crate::mob::water::eggs::mob_steps(world,items.mobs_mut(),shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed));
+    let boats: Vec<_> = items.carts().iter().filter(|cart| matches!(cart.kind,crate::minecart::Kind::Boat(_)) && cart.vx*cart.vx+cart.vz*cart.vz > 0.0001)
+        .map(|cart|(cart.x,cart.y-0.5,cart.z)).collect();
+    for mob in items.mobs_mut().iter_mut().filter(|mob| mob.kind==crate::mob::Kind::Dolphin && mob.water.anger==0) {
+        mob.water.boat=boats.iter().find(|at| (at.0-mob.x).powi(2)+(at.1-mob.y).powi(2)+(at.2-mob.z).powi(2)<100.0).copied();
+    }
     crate::mob::tame::bind_owners(items.mobs_mut(), &owners);
 
     {
@@ -1354,6 +1365,14 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             }
         }
     }
+
+    for (player,attacker,at,puff,push) in outcome.stings {
+        if difficulty == crate::survival::PEACEFUL { continue; }
+        world.note_mob_hurt(player,f32::from(1+puff),crate::survival::Source::MobAttack,attacker,"entity.minecraft.pufferfish",Some(push),at);
+        world.note_mob_hit_effect(player,crate::survival::Effect { kind: crate::survival::EffectKind::Poison,amplifier:0,ticks_left:60*i32::from(puff),ambient:false,visible:true });
+    }
+    for (player,effect) in outcome.water_effects { world.note_mob_effect(player,effect); }
+    for player in outcome.axolotl_assists {world.note_axolotl_assist(player);}
 
     // Проклятия древних стражей (mob/guardian.rs).
     for (player, silent) in outcome.curses {

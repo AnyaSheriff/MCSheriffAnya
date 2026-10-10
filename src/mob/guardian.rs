@@ -151,9 +151,12 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
                     && super::hostile::sees(view, eye, at)
             });
 
-        if !keep && mob.guardian.after == 0 {
+        // Исчезнувшая цель (в том числе притворившийся мёртвым аксолотль)
+        // не оставляет луч висеть в паузе после выстрела. [проверить] Пакеты.
+        if !keep && (mob.guardian.after == 0 || !ctx.players.iter().any(|p|p.id==id)) {
             mob.guardian.target = None;
             mob.guardian.beam = 0;
+            mob.guardian.after = 0;
         }
     }
 

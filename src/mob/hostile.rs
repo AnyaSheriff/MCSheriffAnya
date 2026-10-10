@@ -134,6 +134,17 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Vex => "entity.minecraft.vex",
         Kind::Illusioner => "entity.minecraft.illusioner",
         Kind::Ravager => "entity.minecraft.ravager",
+        Kind::Cod => "entity.minecraft.cod",
+        Kind::Salmon => "entity.minecraft.salmon",
+        Kind::TropicalFish => "entity.minecraft.tropical_fish",
+        Kind::Pufferfish => "entity.minecraft.pufferfish",
+        Kind::Squid => "entity.minecraft.squid",
+        Kind::GlowSquid => "entity.minecraft.glow_squid",
+        Kind::Dolphin => "entity.minecraft.dolphin",
+        Kind::Turtle => "entity.minecraft.turtle",
+        Kind::Axolotl => "entity.minecraft.axolotl",
+        Kind::Frog => "entity.minecraft.frog",
+        Kind::Tadpole => "entity.minecraft.tadpole",
     }
 }
 

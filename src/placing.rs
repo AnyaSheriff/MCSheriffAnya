@@ -65,6 +65,17 @@ pub fn place_tagged(
     };
 
     let orientation = blocks::orientation(name);
+    if name == "turtle_egg" {
+        let state = world.get_block(clicked_x,clicked_y,clicked_z);
+        if blocks::block_at_state(state) == Some("turtle_egg") && let Some(o) = orientation {
+            let eggs = o.value(state,"eggs").and_then(|v|v.parse::<i32>().ok()).unwrap_or(1);
+            if eggs < 4 && let Some(next) = o.with(state,"eggs",&(eggs+1).to_string()) {
+                world.set_block(clicked_x,clicked_y,clicked_z,next);
+                return Placement::Merged;
+            }
+        }
+    }
+
 
     // Плита, поставленная на плиту того же вида, слипается с ней в двойную:
     // занимает место того же блока, а не соседнего.

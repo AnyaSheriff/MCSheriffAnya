@@ -284,6 +284,9 @@ pub enum WorldEvent {
     /// игрока даёт его, как команда `effect give`.
     MobEffect { entity_id: i32, effect: crate::survival::Effect },
 
+    /// Помощь аксолотлю: накопить регенерацию и снять усталость (вики, Axolotl).
+    AxolotlAssist { entity_id: i32 },
+
     /// То же, но только если удар моба, что шёл перед этим, нанёс урон (вики,
     /// Husk и Wither Skeleton: эффект — только от удара, что ранил).
     MobHitEffect { entity_id: i32, effect: crate::survival::Effect },
@@ -1828,6 +1831,19 @@ impl World {
         let changed = self.set_block_silently(x, y, z, state);
 
         if changed {
+            if crate::blocks::block_at_state(state) == Some("frogspawn") {
+                let delay = 3600 + (self.random_unit() * 8401.0) as u64;
+                self.schedule_once(x,y,z,delay,0);
+            }
+
+            // Яйцо черепахи на песке: при постановке — событие мира 2012/15 раньше
+            // самого блока (чёрный ящик turtle-egg-hatch).
+            if crate::blocks::block_at_state(state) == Some("turtle_egg") && crate::blocks::block_at_state(old) != Some("turtle_egg")
+                && matches!(crate::blocks::block_at_state(self.get_block(x, y - 1, z)), Some("sand" | "red_sand"))
+            {
+                self.note_level_event(x, y, z, 2012, 15);
+            }
+
             self.events.push(WorldEvent::Change(BlockChange { x, y, z, state, direct: false }));
 
             // Соседей надо пересчитать: рядом могла стоять вода, которой
@@ -1944,6 +1960,8 @@ impl World {
     }
 
     /// Мобы, что пришли вместе с загруженными чанками, — забирает такт.
+    pub fn queue_water_hatch(&mut self, mob: crate::mob::Mob) { self.loaded_mobs.push(mob); }
+
     pub fn take_loaded_mobs(&mut self) -> Vec<crate::mob::Mob> {
         std::mem::take(&mut self.loaded_mobs)
     }
@@ -2351,6 +2369,10 @@ impl World {
     /// Эффект игроку от моба: см. `WorldEvent::MobEffect`.
     pub fn note_mob_effect(&mut self, entity_id: i32, effect: crate::survival::Effect) {
         self.events.push(WorldEvent::MobEffect { entity_id, effect });
+    }
+
+    pub fn note_axolotl_assist(&mut self, entity_id: i32) {
+        self.events.push(WorldEvent::AxolotlAssist { entity_id });
     }
 
     /// Эффект от удара моба: см. `WorldEvent::MobHitEffect`.
@@ -5663,6 +5685,27 @@ mod tests {
 
         // Второй раз тот же чанк не складывается заново.
         assert!(!world.ensure(6, 6));
+    }
+
+    /// Яйцо черепахи на песке: событие мира 2012/15 раньше самого блока
+    /// (чёрный ящик turtle-egg-hatch); на камне события нет.
+    #[test]
+    fn a_turtle_egg_on_sand_announces_itself() {
+        let mut world = World::in_memory();
+        assert!(world.ensure(0, 0));
+        let sand = crate::blocks::state_by_name("sand").unwrap();
+        let egg = crate::blocks::state_from_text("turtle_egg[eggs=4,hatch=0]").unwrap();
+        let y = flat::SURFACE;
+        let start = world.watch_events(0);
+
+        world.set_block(1, y, 1, sand);
+        world.set_block(1, y + 1, 1, egg);
+        world.set_block(3, y + 1, 3, egg);
+
+        let (events, _) = world.events_since(start, 0);
+        let levels: Vec<_> = events.iter().filter_map(|event| match event { WorldEvent::Level { x, y, z, effect, data } => Some((*x, *y, *z, *effect, *data)), _ => None }).collect();
+
+        assert_eq!(levels, vec![(1, y + 1, 1, 2012, 15)]);
     }
 
     /// Построенное игроком остаётся: земля складывается только там, где

@@ -200,7 +200,7 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 23] = [
     ("minecraft:chicken_sound_variant", &["classic"]),
     ("minecraft:cow_variant", &["temperate"]),
     ("minecraft:cow_sound_variant", &["classic"]),
-    ("minecraft:frog_variant", &["temperate"]),
+    ("minecraft:frog_variant", &["cold", "temperate", "warm"]),
     ("minecraft:painting_variant", &["kebab"]),
     ("minecraft:pig_variant", &["temperate"]),
     ("minecraft:pig_sound_variant", &["classic"]),
