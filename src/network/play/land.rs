@@ -131,7 +131,7 @@ pub(super) fn store(mob:&mut crate::mob::Mob, slots:&[Option<Stack>]) {
 // Shift: груз идёт в грузовые ячейки, а ковёр — в единственную ячейку декора.
 pub(super) fn quick_move(slots:&mut [Option<Stack>], inventory:&mut Inventory, slot:i32)->inventory::Click {
     let n=slots.len();
-    let mut window=window::Window { container:slots,inventory,kind:None };
+    let mut window=window::Window { container:slots,inventory,kind:None,horse:None };
     let Ok(slot)=usize::try_from(slot) else { return inventory::Click::default(); };
     if slot>=window.len() { return inventory::Click::default(); }
     if slot<n { window.move_some(slot,&(n..n+window::PLAYER_SLOTS).rev().collect::<Vec<_>>()); }

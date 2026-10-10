@@ -369,11 +369,11 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     }
 
     // 2. Разведение: влюблённый идёт к влюблённому сородичу.
-    if mob.love > 0 && mob.age == 0 {
+    if mob.love > 0 && mob.age == 0 && (!super::horse::equine(mob.kind) || super::horse::can_parent(mob)) {
         let mate = ctx
             .mates
             .iter()
-            .filter(|other| (other.kind == mob.kind || super::land::llama(other.kind) && super::land::llama(mob.kind)) && other.love > 0 && other.ready && other.id != mob.entity_id)
+            .filter(|other| (other.kind == mob.kind || super::land::llama(other.kind) && super::land::llama(mob.kind) || super::horse::compatible(other.kind, mob.kind)) && other.love > 0 && other.ready && other.id != mob.entity_id)
             .map(|other| (other, (other.x - mob.x).powi(2) + (other.y - mob.y).powi(2) + (other.z - mob.z).powi(2)))
             .filter(|(_, dist)| *dist <= 64.0)
             .min_by(|a, b| a.1.total_cmp(&b.1));

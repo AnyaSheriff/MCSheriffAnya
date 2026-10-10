@@ -1,0 +1,137 @@
+{
+ "name": "donkey-chest",
+ "about": "[\u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c] Attach chest, sneak-open horse screen, transfer inventory stack and kill donkey to observe drops.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5) 0 0",
+  "!stopfly",
+  "!wait 10",
+  "give $(bot) minecraft:chest 1",
+  "give $(bot) minecraft:stone 8",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon donkey $(3.5,0,3) {Tame:1b,NoAI:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 20,
+   "raw": {
+    "name": "player_input",
+    "params": {
+     "inputs": {
+      "forward": false,
+      "backward": false,
+      "left": false,
+      "right": false,
+      "jump": false,
+      "shift": true,
+      "sprint": false
+     }
+    }
+   }
+  },
+  {
+   "after": 22,
+   "interact": true,
+   "sneaking": true
+  },
+  {
+   "after": 28,
+   "window_click": {
+    "slot": 45,
+    "button": 0,
+    "mode": 1
+   }
+  },
+  {
+   "after": 35,
+   "close": true
+  },
+  {
+   "after": 38,
+   "raw": {
+    "name": "player_input",
+    "params": {
+     "inputs": {
+      "forward": false,
+      "backward": false,
+      "left": false,
+      "right": false,
+      "jump": false,
+      "shift": false,
+      "sprint": false
+     }
+    }
+   }
+  },
+  {
+   "after": 45,
+   "cmd": "kill @e[type=donkey,distance=..8,limit=1]"
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=horse,distance=..48]",
+  "kill @e[type=donkey,distance=..48]",
+  "kill @e[type=mule,distance=..48]",
+  "kill @e[type=skeleton_horse,distance=..48]",
+  "kill @e[type=zombie_horse,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "\u043a\u043e\u0436\u0430 \u043e\u0441\u043b\u0430: \u0441\u0432\u043e\u0439\u0441\u0442\u0432\u0430",
+   "match": "^meta 8=.*\"itemId\":1018",
+   "range": [
+    0,
+    4
+   ],
+   "why": "wiki Donkey: drops 0-2 leather, so 0-2 item entities and two metadata packets each"
+  },
+  {
+   "type": "count",
+   "name": "\u0447\u0438\u0441\u043b\u043e \u0432\u044b\u043f\u0430\u0432\u0448\u0438\u0445 \u043f\u0440\u0435\u0434\u043c\u0435\u0442\u043e\u0432",
+   "match": "^spawn item ",
+   "range": [
+    2,
+    3
+   ],
+   "why": "chest and stone always drop, leather 0-2 stacks: 2 or 3 item entities"
+  },
+  {
+   "type": "count",
+   "name": "\u0433\u043e\u043b\u043e\u0441 \u0432 \u0441\u043b\u0443\u0447\u0430\u0439\u043d\u044b\u0439 \u0442\u0430\u043a\u0442",
+   "match": "^sound [^ ]+ minecraft:entity\\.(horse|donkey|mule|skeleton_horse|zombie_horse)\\.ambient",
+   "range": [
+    0,
+    3
+   ],
+   "anytick": true,
+   "why": "ambient voice is rolled at random ticks (vanilla vs vanilla: mount tick +15 in one run, +40 in another)"
+  },
+  {
+   "type": "mask",
+   "name": "\u0434\u044b\u0431\u044b \u043f\u0440\u0438 \u0441\u043c\u0435\u0440\u0442\u0438",
+   "kind": "meta",
+   "pattern": " 18=34",
+   "replace": "",
+   "why": "a dying equine sometimes rears (18=34 in the death metadata in one vanilla run, absent in another, same scenario)"
+  }
+ ]
+}

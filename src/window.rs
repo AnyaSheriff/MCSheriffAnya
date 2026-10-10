@@ -24,6 +24,9 @@ pub struct Window<'a> {
     /// Вид хранилища: у печи и варочной стойки свои правила ячеек
     /// (furnace::may_place, furnace::slot_limit). None — без правил.
     pub kind: Option<crate::containers::Kind>,
+
+    /// Лошадь: седло, броня, затем груз (вики, Horse, Donkey).
+    pub horse: Option<crate::mob::Kind>,
 }
 
 impl Window<'_> {
@@ -45,6 +48,7 @@ impl Window<'_> {
 
     /// Можно ли положить этот предмет в слот окна рукой.
     fn may_place(&self, slot: usize, item: i32) -> bool {
+        if let Some(kind) = self.horse && slot < self.container.len() { return crate::mob::horse::may_place(kind, slot, item); }
         match self.kind {
             Some(crate::containers::Kind::ShulkerBox) if slot < self.container.len() => !crate::containers::is_shulker_item(item),
             Some(kind) if slot < self.container.len() => crate::furnace::may_place(kind, slot, item),
@@ -54,6 +58,9 @@ impl Window<'_> {
 
     /// Сколько этого предмета влезает в слот окна.
     fn limit(&self, slot: usize, stack: &Stack) -> i32 {
+        if self.horse.is_some() && slot < self.container.len() {
+            return if !self.may_place(slot, stack.item) { 0 } else if slot < 2 { 1 } else { stack.limit() };
+        }
         match self.kind {
             Some(crate::containers::Kind::ShulkerBox) if slot < self.container.len() && crate::containers::is_shulker_item(stack.item) => 0,
             Some(kind) if slot < self.container.len() => crate::furnace::slot_limit(kind, slot, stack.item).min(stack.limit()),
@@ -200,12 +207,17 @@ impl Window<'_> {
         let targets: Vec<usize> = match self.kind.filter(|kind| crate::furnace::is_oven(*kind) || matches!(kind, crate::containers::Kind::BrewingStand | crate::containers::Kind::Beacon)) {
             Some(kind) => special_targets(kind, index, size, self.len(), stack.item),
             None if index < size => (size..self.len()).rev().collect(),
+            None if self.horse.is_some() => [1, 0].into_iter().chain(2..size).collect(),
             None => (0..size).collect(),
         };
 
         let left = self.pour(stack, &targets);
 
         self.set(index, remainder(stack, left));
+        if self.horse.is_some() && index >= size && left == stack.count {
+            let targets: Vec<usize> = if index < size + 27 { (size + 27..self.len()).collect() } else { (size..size + 27).collect() };
+            self.move_some(index, &targets);
+        }
         true
     }
 
@@ -430,7 +442,7 @@ mod tests {
 
         chest[0] = Some(Stack::new(STONE, 10));
 
-        let mut window = Window { container: &mut chest, inventory: &mut inventory, kind: None };
+        let mut window = Window { container: &mut chest, inventory: &mut inventory, kind: None, horse: None };
 
         assert!(window.click(0, 0, 1).understood);
         assert_eq!(window.get(0), None);
@@ -447,7 +459,7 @@ mod tests {
         chest[5] = Some(Stack::new(STONE, 60));
         inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(STONE, 10)));
 
-        let mut window = Window { container: &mut chest, inventory: &mut inventory, kind: None };
+        let mut window = Window { container: &mut chest, inventory: &mut inventory, kind: None, horse: None };
         let hotbar_in_window = 27 + 27;
 
         assert!(window.click(hotbar_in_window, 0, 1).understood);
@@ -465,7 +477,7 @@ mod tests {
 
         hopper[2] = Some(Stack::new(STONE, 7));
 
-        let mut window = Window { container: &mut hopper, inventory: &mut inventory, kind: None };
+        let mut window = Window { container: &mut hopper, inventory: &mut inventory, kind: None, horse: None };
 
         window.click(2, 1, 0);
         assert_eq!(window.get(2), Some(Stack::new(STONE, 3)));
@@ -484,7 +496,7 @@ mod tests {
         inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(id("coal"), 5)));
         inventory.set(inventory::FIRST_HOTBAR + 1, Some(Stack::new(id("iron_ore"), 3)));
 
-        let mut window = Window { container: &mut furnace, inventory: &mut inventory, kind: Some(crate::containers::Kind::Furnace) };
+        let mut window = Window { container: &mut furnace, inventory: &mut inventory, kind: Some(crate::containers::Kind::Furnace), horse: None };
         let hotbar_in_window = 3 + 27;
 
         window.click(hotbar_in_window, 0, 1);
@@ -507,7 +519,7 @@ mod tests {
 
         inventory.set_cursor(Some(Stack::new(bottle, 4)));
 
-        let mut window = Window { container: &mut stand, inventory: &mut inventory, kind: Some(crate::containers::Kind::BrewingStand) };
+        let mut window = Window { container: &mut stand, inventory: &mut inventory, kind: Some(crate::containers::Kind::BrewingStand), horse: None };
 
         window.click(0, 0, 0);
         window.click(crate::furnace::POWDER as i32, 0, 0);

@@ -81,6 +81,9 @@ pub struct Bolt {
     pub struck_entities: Vec<i32>,
     /// Игрок с Channeling; [Bedrock: потом] достижения получает Java-подключение.
     pub channeler: Option<[u8; 16]>,
+
+    /// Молния ловушки скелетов — только видимая вспышка, без урона и огня.
+    pub visual_only: bool,
 }
 
 impl Bolt {
@@ -96,6 +99,7 @@ impl Bolt {
             fires: 0,
             struck_entities: Vec::new(),
             channeler: None,
+            visual_only: false,
         }
     }
 
@@ -181,6 +185,8 @@ pub fn step(world: &mut World, bolt: &mut Bolt, fire: bool) -> bool {
         let mut roll = |n: u32| world.random_bits() % n;
         advance(bolt, &mut roll)
     };
+
+    if bolt.visual_only { return phase != Phase::Gone; }
 
     match phase {
         Phase::Strike => {
@@ -378,8 +384,8 @@ pub const NATURAL_CHANCE: u32 = 100_000;
 /// только если там идёт дождь (не снег): «Rain (not snow) is falling in the
 /// target block». `living` — места живых сущностей мира.
 ///
-/// Громоотводы (притягивают удары в 128 блоках) и ловушка скелетов-всадников
-/// пока не учитываются [проверить].
+/// Притяжение громоотводов в 128 блоках пока не учитывается [проверить].
+/// Ловушка скелетов-всадников выбирается в tick после выбора места молнии.
 pub fn natural_target(world: &mut World, (chunk_x, chunk_z): (i32, i32), living: &[(f64, f64, f64)]) -> Option<(f64, f64, f64)> {
     let bits = world.random_bits();
     let x = chunk_x * 16 + (bits % 16) as i32;

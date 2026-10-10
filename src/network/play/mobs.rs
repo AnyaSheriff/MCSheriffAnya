@@ -129,6 +129,7 @@ pub(super) struct ShownMob {
     impulses: u32,
     teleports: u32,
     attr_changes: u32,
+    gear_version: u32,
     attributes_sent: bool,
 
     /// `modded` — как показано клиенту (атрибуты, у ведьмы и рука).
@@ -230,6 +231,13 @@ fn properties(mob: &Mob) -> Vec<Property> {
         out.insert(5, (10, TYPE_PARTICLES, particles));
     }
 
+    if crate::mob::horse::equine(mob.kind) {
+        out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+        out.push((18, TYPE_BYTE, vec![mob.horse.flags()]));
+        if mob.kind == Kind::Horse { out.push((19, TYPE_INT, encode_varint(mob.horse.variant))); }
+        if crate::mob::horse::pack(mob.kind) { out.push((19, TYPE_BOOL, vec![u8::from(mob.horse.chest && !mob.is_dead())])); }
+    }
+
     match mob.kind {
         Kind::Llama | Kind::TraderLlama | Kind::Camel | Kind::Goat | Kind::Panda | Kind::PolarBear | Kind::Ocelot | Kind::Mooshroom | Kind::WanderingTrader => {
             let s = &mob.land;
@@ -297,6 +305,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
             }
         }
         Kind::Warden => {},
+        Kind::Horse | Kind::Donkey | Kind::Mule | Kind::SkeletonHorse | Kind::ZombieHorse => {}
         Kind::Cow => {
             out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
             out.push((18, TYPE_COW_VARIANT, encode_varint(0)));
@@ -525,6 +534,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (18, Kind::Frog) => value.as_slice() == encode_varint(1),
         (19, Kind::Dolphin) => value.as_slice() == encode_varint(crate::mob::water::DOLPHIN_MOISTURE),
         (18..=20, kind) if crate::mob::water::creature(kind) => value.iter().all(|byte| *byte == 0),
+        (18 | 19, kind) if crate::mob::horse::equine(kind) => value.iter().all(|byte| *byte == 0),
         // Волк и кошка: ошейник красный, вариант — бледный и чёрная, злости нет
         // (чёрный ящик, probe-cats).
         (18..=20, Kind::Wolf) | (18 | 19 | 21 | 22, Kind::Cat) => value.iter().all(|byte| *byte == 0),
@@ -617,6 +627,10 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
 
     send_properties(stream, mob.entity_id, &changed).await?;
 
+    if crate::mob::horse::equine(mob.kind) && mob.horse.explicit != 0 {
+        send_horse_attributes(stream, mob, true).await?;
+    }
+
     send_mob_equipment(stream, mob, false).await?;
 
     if mob.spawn_poof {
@@ -660,7 +674,8 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         impulses: mob.impulses,
         teleports: mob.teleports,
         attr_changes: mob.attr_changes,
-        attributes_sent: attributes_at_spawn(mob.kind),
+        gear_version: mob.horse.gear_version,
+        attributes_sent: attributes_at_spawn(mob.kind) || (crate::mob::horse::equine(mob.kind) && mob.horse.explicit != 0),
         modded: modded(mob),
         first: true,
         properties,
@@ -747,6 +762,41 @@ async fn send_leash(stream: &mut Outgoing<'_>, entity_id: i32, holder: i32) -> i
     write_body(stream, body).await
 }
 
+/// Атрибуты лошадиных. Заданные данными уходят при появлении двумя пакетами
+/// в разном порядке (чёрный ящик, horse-saddle-ride: сперва прыжок, скорость,
+/// здоровье, затем здоровье, прыжок, скорость), после правки данных — вторым
+/// порядком; остальным — одна скорость (после 3-го такта и после правки).
+async fn send_horse_attributes(stream: &mut Outgoing<'_>, mob: &Mob, first_order: bool) -> io::Result<()> {
+    let explicit = mob.horse.explicit;
+    let health = (ATTRIBUTE_MAX_HEALTH, f64::from(mob.vitals.max_health));
+    let jump = (crate::attributes::JUMP_STRENGTH, mob.horse.jump);
+    let speed = (ATTRIBUTE_MOVEMENT_SPEED, mob.horse.speed);
+    let mut list: Vec<(i32, f64)> = Vec::new();
+
+    if first_order {
+        if explicit & 4 != 0 { list.push(jump); }
+        list.push(speed);
+        if explicit & 1 != 0 { list.push(health); }
+    } else {
+        if explicit & 1 != 0 { list.push(health); }
+        if explicit & 4 != 0 { list.push(jump); }
+        list.push(speed);
+    }
+
+    let mut body = encode_varint(UPDATE_ATTRIBUTES);
+
+    body.extend_from_slice(&encode_varint(mob.entity_id));
+    body.extend_from_slice(&encode_varint(list.len() as i32));
+
+    for (id, value) in list {
+        body.extend_from_slice(&encode_varint(id));
+        push_f64(&mut body, value);
+        push_modifiers(&mut body, None);
+    }
+
+    write_body(stream, body).await
+}
+
 /// Скорость шага в пакете атрибутов: как у вида, но у шалкера, что не
 /// ходит, — 0,7, значение атрибута по умолчанию (чёрный ящик, shulker-stand).
 fn attribute_speed(kind: Kind) -> f64 {
@@ -761,6 +811,13 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     let mut body = encode_varint(UPDATE_ATTRIBUTES);
 
     body.extend_from_slice(&encode_varint(mob.entity_id));
+
+    // Лошадиные: без заданных данными атрибутов — одна скорость (чёрный ящик,
+    // donkey-chest: attributes на 3-м такте, только скорость), с заданными —
+    // и здоровье с прыжком (horse-saddle-ride).
+    if crate::mob::horse::equine(mob.kind) {
+        return send_horse_attributes(stream, mob, false).await;
+    }
 
     // Магмовый куб: броня 3·размер, скорость 0,2 + 0,1·размер, здоровье
     // размер² (чёрный ящик, magma-cube-stand).
@@ -797,7 +854,7 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     }
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
     // У иссушителя скорость — ровно 0,6 в двойной точности (wither-summon).
-    push_f64(&mut body, if mob.kind == Kind::Wither { 0.6 } else { f64::from(attribute_speed(mob.kind) as f32) });
+    push_f64(&mut body, if crate::mob::horse::equine(mob.kind) { mob.horse.speed } else if mob.kind == Kind::Wither { 0.6 } else { f64::from(attribute_speed(mob.kind) as f32) });
 
     // Пьющая ведьма: модификатор «minecraft:drinking» −0,25; сердитый
     // эндермен — «minecraft:attacking» +0,15; оба — сложением (чёрный ящик,
@@ -954,6 +1011,18 @@ pub(super) async fn send_mob_event(
 /// шлем на голове (место 5) — по одному пакету на моба; шлем показывается
 /// железным [проверить: вид шлема не хранится].
 async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool) -> io::Result<()> {
+    if crate::mob::horse::equine(mob.kind) {
+        // С 1.21.6 седло — снаряжение, не бит свойства лошади; тело — слот 6.
+        // Пустое снаряжение не шлётся (чёрный ящик, donkey-chest/horse-tame).
+        if mob.horse.slots.iter().all(|slot| slot.is_none()) {
+            return Ok(());
+        }
+        // Уходят только занятые места (чёрный ящик, horse-saddle-ride: седло —
+        // один пакет с местом 7); опустевшее снаряжение — оба места пустыми.
+        let mut gear: Vec<(u8, Option<Stack>)> = [(7, mob.horse.slots[0]), (6, mob.horse.slots[1])].into_iter().filter(|(_, s)| s.is_some()).collect();
+        if gear.is_empty() { gear = vec![(7, None), (6, None)]; }
+        return send_equipment(stream, mob.entity_id, &gear).await;
+    }
     let mut slots: Vec<(u8, Stack)> = Vec::new();
 
     if mob.kind.skeleton() && mob.h.bow && let Some(bow) = blocks::item_named("bow") {
@@ -1193,7 +1262,8 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         // поворот уходят в тот же такт (чёрный ящик, enderman-stare: скорость
         // 0,-0.078 вместе с 18=true на +1, а не на +3; shulker-ai: поворот
         // головы вместе с раскрытием).
-        let dirty = !shown.first && properties(mob) != shown.properties;
+        // Лошадь на свойствах слежение вне очереди не гонит (чёрный ящик, horse-jump: 18=34 на +42, сверка на +45).
+        let dirty = !shown.first && !crate::mob::horse::equine(mob.kind) && properties(mob) != shown.properties;
         let due = mob.ticks % EVERY == 0 || dirty;
 
         if due || impulse {
@@ -1319,13 +1389,19 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
 
         // Снаряжение уходит и второй раз в первом проходе (чёрный ящик,
         // skeleton-stand и zombie-attack).
+        if shown.first && crate::mob::horse::equine(mob.kind) && mob.horse.explicit != 0 {
+            send_horse_attributes(stream, mob, false).await?;
+        }
+
         // Разбойник: арбалет заряжен или выстрелил — снаряжение заново
         // (чёрный ящик, pillager-crossbow: charged_projectiles, затем damage).
         let land_gear = (crate::mob::land::rideable(mob.kind) || matches!(mob.kind, Kind::WanderingTrader | Kind::Panda)) && shown.attr_changes != mob.attr_changes;
+        let horse_gear = crate::mob::horse::equine(mob.kind) && mob.horse.gear_version != shown.gear_version;
 
-        if shown.first || mob.illager.gear != shown.gear || land_gear {
+        if shown.first || mob.illager.gear != shown.gear || land_gear || horse_gear {
             send_mob_equipment(stream, mob, shown.attr_changes != mob.attr_changes).await?;
             shown.gear = mob.illager.gear;
+            shown.gear_version = mob.horse.gear_version;
         }
 
         shown.first = false;
@@ -1395,6 +1471,7 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         impulses: 0,
         teleports: 0,
         attr_changes: 0,
+        gear_version: 0,
         attributes_sent: true,
         modded: false,
         first: true,
@@ -1559,5 +1636,26 @@ mod land_metadata_tests {
         let mut trader=Mob::new(2,Kind::WanderingTrader,(0.0,0.0,0.0)); trader.land.drinking=12; trader.land.invisible=true;
         assert!(properties(&trader).contains(&(8,TYPE_BYTE,vec![1])));
         assert!(properties(&trader).contains(&(0,TYPE_BYTE,vec![32])));
+    }
+}
+#[cfg(test)]
+mod horse_tests {
+    use super::*;
+
+    #[test]
+    fn horse_spawn_metadata_preserves_tame_variant_and_chest() {
+        let mut horse = Mob::new(1, Kind::Horse, (0.0, 0.0, 0.0));
+        horse.horse.tamed = true;
+        horse.horse.variant = 4 | (3 << 8);
+        let props = properties(&horse);
+        assert!(props.contains(&(18, TYPE_BYTE, vec![2])));
+        assert!(props.contains(&(19, TYPE_INT, encode_varint(772))));
+        assert!(!is_default(&(18, TYPE_BYTE, vec![2]), Kind::Horse));
+        assert!(!is_default(&(19, TYPE_INT, encode_varint(772)), Kind::Horse));
+        assert!(is_default(&(18, TYPE_BYTE, vec![0]), Kind::Horse));
+        let mut donkey = Mob::new(2, Kind::Donkey, (0.0, 0.0, 0.0));
+        donkey.horse.chest = true;
+        assert!(properties(&donkey).contains(&(19, TYPE_BOOL, vec![1])));
+        assert!(!is_default(&(19, TYPE_BOOL, vec![1]), Kind::Donkey));
     }
 }

@@ -61,7 +61,8 @@ fn kinds_have_the_wiki_numbers() {
     assert_eq!((Kind::Chicken.width(), Kind::Chicken.height()), (0.4, 0.7));
     assert_eq!(Kind::from_name("minecraft:sheep"), Some(Kind::Sheep));
     assert_eq!(Kind::from_name("zombie"), Some(Kind::Zombie));
-    assert_eq!(Kind::from_name("horse"), None);
+    assert_eq!(Kind::from_name("horse"), Some(Kind::Horse));
+    assert_eq!(Kind::from_name("unsupported_mob"), None);
 }
 
 #[test]

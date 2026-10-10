@@ -81,6 +81,7 @@ mod body;
 mod signs;
 mod cauldron;
 mod vehicle;
+mod horse;
 mod glide;
 mod progression;
 mod tame;
@@ -4175,6 +4176,10 @@ async fn send_pending_world_events(
             WorldEvent::OpenSign { .. } => {}
             WorldEvent::Contents => send_window_changes(stream, shared, player).await?,
             WorldEvent::Tracker => {
+                if std::mem::take(&mut player.swing_pending) {
+                    send_swing(stream, player.entity_id).await?;
+                }
+
                 mobs::send_mob_ticks(stream, shared, player).await?;
             }
             WorldEvent::MobSpawn(mob) => mobs::send_released_mob(stream, shared, player, mob).await?,
@@ -4518,7 +4523,7 @@ async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &m
             items.carts().iter().find(|c| c.entity_id==entity_id).and_then(|c| cart_menu(c.kind).map(|(menu,title)| (menu,title,c.slots.clone(),false,0)))
         }
     };
-    let Some((menu,title,slots,llama,strength))=found else { return Ok(()); };
+    let Some((menu,title,slots,llama,strength))=found else { return horse::open(stream, shared, player, entity_id).await; };
 
     player.window_counter = player.window_counter % WINDOW_IDS + 1;
 
@@ -4549,6 +4554,7 @@ pub(super) fn cart_slots(shared: &Shared, dimension: crate::dimension::Dimension
     let items=shared.items_in(dimension).lock().expect("предметы");
     items.carts().iter().find(|c| c.entity_id==entity_id).map(|c| c.slots.clone())
         .or_else(|| items.mobs().iter().find(|m| m.entity_id==entity_id && crate::mob::land::llama(m.kind) && !m.is_dead()).map(land::slots))
+        .or_else(|| items.mobs().iter().find(|mob| mob.entity_id == entity_id && crate::mob::horse::equine(mob.kind) && !mob.is_dead()).map(|mob| mob.horse.inventory()))
 }
 
 /// Всё окно хранилища целиком: ячейки хранилища (как их знает клиент),
@@ -4666,7 +4672,8 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
         let world = shared.world_in(player.dimension).lock().expect("мир");
         window.halves.first().filter(|p| world.container(p.0, p.1, p.2).is_some_and(|c| c.kind == containers::Kind::Beacon)).map(|_| window.shown.clone())
     } else if let Some(cart) = window.cart {
-        cart_slots(shared, player.dimension, cart)
+        let equine = shared.items_in(player.dimension).lock().expect("предметы").mobs().iter().any(|m| m.entity_id == cart && crate::mob::horse::equine(m.kind));
+        if equine { horse::slots(shared, player, cart) } else { cart_slots(shared, player.dimension, cart) }
     } else {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
@@ -7187,6 +7194,7 @@ fn handle_client_packet_inner(
             vehicle::mount_command(payload, player, shared);
             let mut command=Cursor::new(payload);
             if let (Some(_),Some(5))=(command.varint(),command.varint()) { reaction.open_cart=player.ride.vehicle; }
+            horse::command(payload, player, shared, &mut reaction);
         }
         vitals::CLIENT_COMMAND => {
             // Действие 0 — «возродиться»; живому возрождаться незачем.
@@ -7246,7 +7254,9 @@ fn handle_client_packet_inner(
 
             // Вторая рука пробует, только если основной делать нечего: у
             // вагонеток всё делает основная.
-            if let (Some(target), Some(0)) = (cursor.varint(), cursor.varint()) {
+            if let Some(used) = horse::packet(payload, player, shared) {
+                reaction = used;
+            } else if let (Some(target), Some(0)) = (cursor.varint(), cursor.varint()) {
                 reaction = use_entity(target, player, shared);
             }
         }
@@ -7381,11 +7391,14 @@ fn handle_client_packet_inner(
                 reaction = answer;
             }
         }
-        vehicle::VEHICLE_MOVE => vehicle::vehicle_move(payload, player, shared),
+        vehicle::VEHICLE_MOVE => {
+            if !horse::vehicle_move(payload, player, shared, &mut reaction) { vehicle::vehicle_move(payload, player, shared); }
+        }
         vehicle::STEER_BOAT => vehicle::steer_boat(payload, player, shared),
         PLAYER_INPUT => {
             if let Some(flags) = payload.first() {
                 vehicle::input(*flags,player,shared);
+                horse::input(shared, player, *flags);
                 let sneaking = flags & INPUT_SNEAK != 0;
 
                 // Приседание в лодке или вагонетке — слезть (вики, Boat: «can
@@ -7950,7 +7963,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     }
 
     if (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) > REACH * REACH
-        || player.game_mode == GAME_MODE_ADVENTURE
+        || (player.game_mode == GAME_MODE_ADVENTURE && !crate::mob::horse::equine(mob.kind))
         || mob.is_dead()
     {
         return true;
@@ -7964,6 +7977,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     }
 
     if land::use_on(&mut items, index, &world, player, shared, reaction) { return true; }
+    if horse::interact(&mut items, index, player, shared, reaction, 0) { return true; }
 
     // Големы: слиток лечит железного, ножницы снимают тыкву со снежного.
     if use_golem(shared, player, &mut items, index, reaction) {
@@ -9668,6 +9682,13 @@ fn use_spawn_egg(
         let mut rng = crate::mob::Rng::new(*shared.ticks.borrow() ^ mob.entity_id as u64);
         crate::mob::water::initialize(&mut mob,biome,&mut rng);
     }
+    if crate::mob::horse::equine(kind) {
+        let mut rng = crate::mob::Rng::new(mob.entity_id as u64 ^ (*shared.ticks.borrow() << 16));
+        crate::mob::horse::initialize(&mut mob, &mut rng);
+        if kind == crate::mob::Kind::Horse { mob.horse.variant = crate::mob::horse::wild_variant(&mut rng); }
+        // Вики, Mule: «20% chance of spawning as foals». Нежить — взрослая.
+        if !crate::mob::horse::undead(kind) && rng.below(5) == 0 { mob.age = crate::mob::BABY_AGE; }
+    }
 
     // Смотрит туда же, куда игрок, как призванный с яйца у оригинала.
     mob.yaw = player.yaw;
@@ -9995,6 +10016,11 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
 
     let halves = window.halves.clone();
     let cart = window.cart;
+    let horse_kind = cart.and_then(|id| {
+        shared.items_in(player.dimension).lock().expect("предметы").mobs().iter()
+            .find(|mob| mob.entity_id == id && crate::mob::horse::equine(mob.kind)).map(|mob| mob.kind)
+    });
+    if horse_kind.is_some() && cart.and_then(|id| horse::slots(shared, player, id)).is_none() { return; }
     let ender = window.ender;
     let size = window.shown.len();
     let kind = window.kind;
@@ -10028,7 +10054,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
         let (slots_before, inventory_before) = (slots.clone(), player.inventory.clone());
         let llama=cart.is_some_and(|id| shared.items_in(player.dimension).lock().expect("мобы").mobs().iter().any(|m| m.entity_id==id && crate::mob::land::llama(m.kind)));
         let mut click = if llama && mode==1 { land::quick_move(&mut slots,&mut player.inventory,slot as i16 as i32) }
-            else { window::Window { container: &mut slots, inventory: &mut player.inventory, kind }.click(slot as i16 as i32, button as i8, mode) };
+            else { window::Window { container: &mut slots, inventory: &mut player.inventory, kind, horse: horse_kind }.click(slot as i16 as i32, button as i8, mode) };
 
         // В выключенную ячейку крафтера ничего не кладётся (вики, Crafter:
         // «Disabled slots cannot have items put in them») — такой щелчок
@@ -10050,6 +10076,21 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
                 } else if let Some(mob)=items.mobs_mut().iter_mut().find(|m| m.entity_id==cart && crate::mob::land::llama(m.kind)) {
                     if land::valid(mob,&slots) { land::store(mob,&slots); }
                     else { slots.clone_from(&slots_before); player.inventory=inventory_before; click.thrown=None; }
+                } else if horse_kind.is_some() {
+                    let found = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == cart && !mob.is_dead()
+                        && mob.horse.tamed && !mob.is_baby() && mob.horse.inventory() == slots_before);
+                    if let Some(mob) = found {
+                        let old = mob.horse.slots;
+                        mob.horse.slots[..slots.len()].copy_from_slice(&slots);
+                        crate::mob::horse::equipment_changed(mob, old);
+                        items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(cart as u64));
+                    } else {
+                        // Между чтением и записью команда могла убить лошадь
+                        // или сменить снаряжение: предмет не должен удвоиться.
+                        slots.clone_from(&slots_before);
+                        player.inventory = inventory_before;
+                        click.thrown = None;
+                    }
                 }
             }
             None if kind == Some(containers::Kind::Beacon) => {},
@@ -10376,6 +10417,10 @@ struct PlayerState {
     /// места — принять их значило бы вернуть игрока назад.
     teleport: i32,
     awaiting_teleport: bool,
+    /// Взмах руки самому игроку: уходит перед слежением за мобами (после звуков).
+    swing_pending: bool,
+    /// Такт последнего взмаха, показанного самому игроку (взмах не чаще раза в 3 такта).
+    last_swing: u64,
 
     /// Присылал ли клиент пакет места после последнего переноса. Оригинал
     /// замечает портал, только когда игрок двигается (`move` → блоки
@@ -10568,7 +10613,7 @@ struct OpenWindow {
     /// Места хранилища (половины сундука) в порядке ячеек окна.
     halves: Vec<(i32, i32, i32)>,
 
-    /// Вагонетка, чьё это окно (тогда мест нет).
+    /// Транспорт (вагонетка или лошадь), чьё это окно (тогда мест нет).
     cart: Option<i32>,
 
     /// Ячейки хранилища, какими их знает клиент: по ним видно, что
@@ -10690,6 +10735,8 @@ impl PlayerState {
             sneaking: false,
             teleport: 0,
             awaiting_teleport: false,
+            swing_pending: false,
+            last_swing: 0,
             moved_since_tp: true,
             portal_trip: false,
             vitals_due: 0,

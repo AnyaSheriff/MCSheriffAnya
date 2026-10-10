@@ -1315,7 +1315,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         for (chunk_x, chunk_z) in fresh {
             let biome = world.surface_biome(chunk_x * 16 + 8, chunk_z * 16 + 8);
             let animals = if crate::mob::spawn::land_table(biome).is_empty() {
-                crate::mob::spawn::for_new_chunk(&MobView(world), chunk_x, chunk_z, rng, &mut || shared.next_entity_id())
+                crate::mob::spawn::for_new_chunk_in(&MobView(world), chunk_x, chunk_z, biome, rng, &mut || shared.next_entity_id())
             } else { crate::mob::spawn::land_for_new_chunk(&MobView(world), chunk_x, chunk_z, biome, rng, &mut || shared.next_entity_id()) };
             for mob in animals {
                 items.add_mob(mob);
@@ -1485,7 +1485,16 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         for mob in items.mobs_mut().iter_mut().filter(|m| crate::mob::land::rideable(m.kind)) { mob.land.rider=riding.driver(mob.entity_id); }
     }
     let rideables: Vec<_>=items.mobs().iter().filter(|m| crate::mob::land::rideable(m.kind)).map(|m| m.entity_id).collect();
+    let mut rider_hurt = {
+        let mut riding = shared.riding.lock().expect("учёт седоков");
+        crate::mob::horse::traps(&mut items, &mut riding, &watchers, rng, &mut || shared.next_entity_id());
+        crate::mob::horse::sync_riding(&mut items, &mut riding, &owners, &MobView(world))
+    };
     let outcome = crate::mob::step_all(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id());
+    rider_hurt.extend(crate::mob::horse::sync_riding(&mut items, &mut shared.riding.lock().expect("учёт седоков"), &owners, &MobView(world)));
+    for (id, damage) in rider_hurt {
+        world.note_mob_hurt(id, damage, crate::survival::Source::Fall, 0, "", None, (0.0, 0.0, 0.0));
+    }
 
     {
         let mut riding=shared.riding.lock().expect("седоки");
@@ -2756,7 +2765,23 @@ fn natural_lightning(shared: &Shared, dimension: Dimension, world: &mut World, p
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
 
     for at in strikes {
-        items.add_bolt(crate::lightning::Bolt::new(shared.next_entity_id(), at));
+        let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
+        // Вики, Skeleton Horse: грозовые молнии, 0,75–6,75 % в зависимости
+        // от местной сложности. [проверить] местной сложности пока нет:
+        // используем нижнюю границу диапазона сложности мира.
+        let chance = match difficulty { 1 => 0.0075, 2 => 0.015, 3 => 0.0225, _ => 0.0 };
+        // Вики, Tutorial:Skeleton horse farming: «lightning rods will not
+        // spawn skeleton trap horses». Притяжение громоотвода ещё не ведётся.
+        let rod = blocks::block_at_state(world.get_block(at.0.floor() as i32, at.1.floor() as i32 - 1, at.2.floor() as i32)).is_some_and(|name| name.ends_with("lightning_rod"));
+        let trap = !rod && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed) && world.random_unit() < chance;
+        let mut bolt = crate::lightning::Bolt::new(shared.next_entity_id(), at);
+        if trap {
+            let mut horse = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::SkeletonHorse, at);
+            horse.horse.trap = true;
+            items.add_mob(horse);
+            bolt.visual_only = true;
+        }
+        items.add_bolt(bolt);
     }
 }
 
@@ -2774,7 +2799,7 @@ fn step_bolts(shared: &Shared, dimension: Dimension, world: &mut World) {
     items.step_bolts(|bolt| {
         let alive = crate::lightning::step(world, bolt, fire);
 
-        if alive && bolt.is_lit() {
+        if alive && bolt.is_lit() && !bolt.visual_only {
             for &(id, at) in &living {
                 if bolt.reaches(at) && !bolt.struck_entities.contains(&id) { bolt.struck_entities.push(id); }
             }

@@ -211,7 +211,7 @@ const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
 // Край: кристалл, дракон, его огненный шар и облако дыхания — пишутся как мобы.
-const MOB_TYPES = new Set(['llama', 'trader_llama', 'llama_spit', 'camel', 'goat', 'polar_bear', 'panda', 'ocelot', 'mooshroom', 'oak_boat', 'spruce_boat', 'birch_boat', 'jungle_boat', 'acacia_boat', 'dark_oak_boat', 'mangrove_boat', 'cherry_boat', 'pale_oak_boat', 'bamboo_raft', 'oak_chest_boat', 'bamboo_chest_raft', 'fishing_bobber', 'cow', 'pig', 'sheep', 'chicken', 'zombie', 'drowned', 'husk', 'skeleton', 'stray', 'bogged', 'creeper', 'spider', 'cave_spider', 'silverfish', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket', 'eye_of_ender', 'villager', 'wandering_trader', 'zombie_villager', 'blaze', 'wither_skeleton', 'magma_cube', 'ghast', 'zombified_piglin', 'piglin', 'piglin_brute', 'hoglin', 'strider', 'wolf', 'cat', 'leash_knot', 'small_fireball', 'fireball', 'iron_golem', 'snow_golem', 'snowball', 'phantom', 'guardian', 'elder_guardian', 'wither', 'wither_skull', 'pillager', 'vindicator', 'evoker', 'evoker_fangs', 'vex', 'illusioner', 'ravager']);
+const MOB_TYPES = new Set(['horse', 'donkey', 'mule', 'skeleton_horse', 'zombie_horse', 'llama', 'trader_llama', 'llama_spit', 'camel', 'goat', 'polar_bear', 'panda', 'ocelot', 'mooshroom', 'oak_boat', 'spruce_boat', 'birch_boat', 'jungle_boat', 'acacia_boat', 'dark_oak_boat', 'mangrove_boat', 'cherry_boat', 'pale_oak_boat', 'bamboo_raft', 'oak_chest_boat', 'bamboo_chest_raft', 'fishing_bobber', 'cow', 'pig', 'sheep', 'chicken', 'zombie', 'drowned', 'husk', 'skeleton', 'stray', 'bogged', 'creeper', 'spider', 'cave_spider', 'silverfish', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket', 'eye_of_ender', 'villager', 'wandering_trader', 'zombie_villager', 'blaze', 'wither_skeleton', 'magma_cube', 'ghast', 'zombified_piglin', 'piglin', 'piglin_brute', 'hoglin', 'strider', 'wolf', 'cat', 'leash_knot', 'small_fireball', 'fireball', 'iron_golem', 'snow_golem', 'snowball', 'phantom', 'guardian', 'elder_guardian', 'wither', 'wither_skull', 'pillager', 'vindicator', 'evoker', 'evoker_fangs', 'vex', 'illusioner', 'ravager']);
 // Бриз и заряды ветра (сценарии breeze-*, wind-charge-*).
 for (const t of ['breeze', 'wind_charge', 'breeze_wind_charge']) MOB_TYPES.add(t);
 // Водные мобы.
@@ -451,6 +451,8 @@ bot._client.on('packet', (p, meta) => {
   // Номера сущностей у каждого сервера свои: причина и источник урона — просто «есть / нет».
   if (meta.name === 'damage_event') { rest.sourceCauseId = rest.sourceCauseId > 0 ? 'entity' : 0; rest.sourceDirectId = rest.sourceDirectId > 0 ? 'entity' : 0; }
   if (meta.name === 'entity_sound_effect') { const s = p.sound || {}; rest.sound = s.soundId !== undefined ? (SOUNDS[String(s.soundId)] || `#${s.soundId}`) : (s.data && s.data.soundName) || jstr(s); }
+  // Пассажиры: номера у серверов свои — «bot» (сам робот) или «entity».
+  if (meta.name === 'set_passengers') rest.passengers = (p.passengers || []).map(x => x === bot.entity.id ? 'bot' : 'entity');
   const text = `${meta.name} ${jstr(rest, (k, v) => v)}`;
   note('cart', { ent: entKind.get(id), what: 'text', text: text.replace(/\d+\.\d{4,}/g, (m) => String(Math.round(Number(m) * 1000) / 1000)) });
 });
@@ -480,6 +482,7 @@ const itemName = (it) => {
 };
 let openWindow = null;
 bot._client.on('open_window', (p) => { openWindow = Number(p.windowId); });
+bot._client.on('open_horse_window', (p) => { openWindow = Number(p.windowId); note('window', { type: 'horse', slots: p.nbSlots, entity: entKind.get(p.entityId) || 'horse' }); });
 // Заголовок окна — ключ перевода, если он есть: у окна вагонетки заголовок
 // несёт ещё и её опознаватель, а он у каждого сервера свой.
 const titleOf = (t) => { const j = JSON.stringify(t ?? ''); const m = /"translate":\{"type":"string","value":"([^"]+)"/.exec(j) || /"translate":"([^"]+)"/.exec(j); return m ? m[1] : j.slice(0, 60); };
@@ -774,7 +777,7 @@ bot.once('spawn', async () => {
       if (a.interact) {
         const ids = [...padCarts];
         const id = a.which === undefined ? ids.pop() : ids[a.which];
-        if (id !== undefined) { bot._client.write('use_entity', { target: id, hand: 0, location: { x: 0, y: 0.35, z: 0 }, sneaking: false }); bot.swingArm(); }
+        if (id !== undefined) { bot._client.write('use_entity', { target: id, hand: 0, location: { x: 0, y: 0.35, z: 0 }, sneaking: a.sneaking === true }); bot.swingArm(); }
       }
       // Удар по последней появившейся на площадке вагонетке.
       // С `"bot": 2` бьёт второй робот и целится в первого; первый с

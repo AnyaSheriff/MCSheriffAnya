@@ -1,0 +1,668 @@
+{
+ "name": "horse-saddle-ride",
+ "about": "[\u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c] Equip saddle, mount, explicit client steering at fixed speed attribute, sprint input, excessive movement correction, open ridden inventory, dismount.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5) 0 0",
+  "!stopfly",
+  "!wait 10",
+  "give $(bot) minecraft:saddle 1",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon horse $(3.5,0,3) {Tame:1b,NoAI:1b,Variant:0,attributes:[{id:\"minecraft:max_health\",base:30d},{id:\"minecraft:movement_speed\",base:0.225d},{id:\"minecraft:jump_strength\",base:0.7d}]}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 14,
+   "interact": true
+  },
+  {
+   "after": 18,
+   "cmd": "data merge entity @e[type=horse,sort=nearest,limit=1,distance=..16] {NoAI:0b}"
+  },
+  {
+   "after": 20,
+   "control": [
+    "forward",
+    true
+   ]
+  },
+  {
+   "after": 21,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:3.100000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 22,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:3.200000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 23,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:3.300000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 24,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:3.400000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 25,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:3.500000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 26,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:3.600000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 27,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:3.700000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 28,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:3.800000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 29,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:3.900000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 30,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:4.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 31,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:4.100000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 32,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:4.200000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 33,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:4.300000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 34,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:4.400000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 35,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:4.500000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 36,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:4.600000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 37,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:4.700000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 38,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:4.800000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 39,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:4.900000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 40,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.500000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 45,
+   "control": [
+    "sprint",
+    true
+   ]
+  },
+  {
+   "after": 46,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.600000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 47,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.700000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 48,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.800000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 49,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:3.900000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 50,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:4.000000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 51,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:4.100000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 52,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:4.200000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 53,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:4.300000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 54,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:4.400000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 55,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:4.500000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 56,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:4.600000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 57,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:4.700000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 58,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:4.800000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 59,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:4.900000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 60,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:5.000000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 65,
+   "control": [
+    "forward",
+    false
+   ]
+  },
+  {
+   "after": 66,
+   "control": [
+    "sprint",
+    false
+   ]
+  },
+  {
+   "after": 68,
+   "raw": {
+    "name": "vehicle_move",
+    "params": {
+     "x": "@x:100.000000",
+     "y": "@y:0.000000",
+     "z": "@z:5.000000",
+     "yaw": 0,
+     "pitch": 0,
+     "onGround": true
+    }
+   }
+  },
+  {
+   "after": 72,
+   "raw": {
+    "name": "entity_action",
+    "params": {
+     "entityId": "$self",
+     "actionId": "open_inventory",
+     "jumpBoost": 0
+    }
+   }
+  },
+  {
+   "after": 76,
+   "close": true
+  },
+  {
+   "after": 78,
+   "cmd": "data merge entity @e[type=horse,sort=nearest,limit=1,distance=..16] {NoAI:1b}"
+  },
+  {
+   "after": 80,
+   "raw": {
+    "name": "player_input",
+    "params": {
+     "inputs": {
+      "forward": false,
+      "backward": false,
+      "left": false,
+      "right": false,
+      "jump": false,
+      "shift": true,
+      "sprint": false
+     }
+    }
+   }
+  },
+  {
+   "after": 82,
+   "raw": {
+    "name": "player_input",
+    "params": {
+     "inputs": {
+      "forward": false,
+      "backward": false,
+      "left": false,
+      "right": false,
+      "jump": false,
+      "shift": false,
+      "sprint": false
+     }
+    }
+   }
+  }
+ ],
+ "record_ticks": 110,
+ "cleanup": [
+  "kill @e[type=horse,distance=..48]",
+  "kill @e[type=donkey,distance=..48]",
+  "kill @e[type=mule,distance=..48]",
+  "kill @e[type=skeleton_horse,distance=..48]",
+  "kill @e[type=zombie_horse,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "\u0433\u043e\u043b\u043e\u0441 \u0432 \u0441\u043b\u0443\u0447\u0430\u0439\u043d\u044b\u0439 \u0442\u0430\u043a\u0442",
+   "match": "^sound [^ ]+ minecraft:entity\\.(horse|donkey|mule|skeleton_horse|zombie_horse)\\.ambient",
+   "range": [
+    0,
+    3
+   ],
+   "anytick": true,
+   "why": "ambient voice is rolled at random ticks (vanilla vs vanilla: mount tick +15 in one run, +40 in another)"
+  },
+  {
+   "type": "count",
+   "name": "\u043f\u043e\u0440\u044f\u0434\u043e\u043a \u0430\u0442\u0440\u0438\u0431\u0443\u0442\u043e\u0432",
+   "match": "^cart horse entity_update_attributes",
+   "range": [
+    2,
+    8
+   ],
+   "anytick": false,
+   "why": "vanilla lists attributes in hash order that differs run to run: [jump,speed,health] in horse-saddle-ride but [speed,jump,health] in horse-jump (same NBT)"
+  },
+  {
+   "type": "count",
+   "name": "\u0442\u043e\u043b\u0447\u043e\u043a \u0438\u0433\u0440\u043e\u043a\u043e\u043c",
+   "match": "^cart horse \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c",
+   "range": [
+    0,
+    4
+   ],
+   "anytick": true,
+   "why": "the dismounted player stands against the horse and nudges it (velocity packets +1..+2 ticks after the dismount); the amount depends on sub-tick overlap"
+  }
+ ]
+}

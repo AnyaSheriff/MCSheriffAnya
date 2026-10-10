@@ -568,7 +568,7 @@ fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uu
                                 deeds.push(Deed::Progress(uuid, crate::progress::Event::DamageDealt(hit)));
                             }
                         } else {
-                            mob.vitals.health = (mob.vitals.health + amount).min(mob.kind.max_health());
+                            mob.vitals.health = (mob.vitals.health + amount).min(mob.vitals.max_health);
                         }
                     }
                 }
@@ -579,8 +579,9 @@ fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uu
         // Членистоногие: яд чешуйницы зовёт соседей; пауки к яду невосприимчивы.
         if let Struck::Mob(id) = target {
             if let Some(mob) = mobs.iter_mut().find(|mob| mob.entity_id == id)
-                && matches!(mob.kind, crate::mob::Kind::CaveSpider | crate::mob::Kind::Silverfish)
+                && (matches!(mob.kind, crate::mob::Kind::CaveSpider | crate::mob::Kind::Silverfish) || crate::mob::horse::equine(mob.kind))
                 && !(mob.kind.spider() && effect.kind == EffectKind::Poison)
+                && !(crate::mob::horse::undead(mob.kind) && matches!(effect.kind, EffectKind::Poison | EffectKind::Regeneration))
                 && let Some(ticks) = scaled_ticks(effect.ticks_left, scale * duration_scale)
             {
                 mob.vitals.give_effect_shown(Effect { ticks_left: ticks, ..*effect });

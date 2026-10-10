@@ -78,6 +78,7 @@ pub fn attach(mob: &mut Mob, holder: Holder) {
 /// Можно ли взять моба на поводок (вики, Lead: «most passive and neutral
 /// mobs»; враждебных — нет) [проверить: полный список].
 pub fn leashable(kind: Kind) -> bool {
+    if super::horse::equine(kind) { return true; }
     !kind.hostile() && !kind.object() && !super::water::fish(kind)
         && !matches!(kind, Kind::EnderDragon | Kind::Villager | Kind::WanderingTrader | Kind::ZombieVillager | Kind::Turtle | Kind::Tadpole)
 }

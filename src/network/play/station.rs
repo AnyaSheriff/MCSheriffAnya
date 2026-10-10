@@ -263,7 +263,7 @@ fn generic_click(shared: &Shared, player: &mut PlayerState, kind: Station, slot:
     // У наковальни, точила и кузнечного стола итог стоит между ячейками и
     // инвентарём.
     let slot = if kind != Station::Enchanting && slot > count as i32 { slot - 1 } else { slot };
-    let mut view = window::Window { container: &mut inputs, inventory: &mut player.inventory, kind: None };
+    let mut view = window::Window { container: &mut inputs, inventory: &mut player.inventory, kind: None, horse: None };
     let click = if mode == 1 && kind != Station::Enchanting && (0..count as i32).contains(&slot) {
         // Shift по входной ячейке: предмет идёт в инвентарь с первой ячейки
         // вперёд (рюкзак, потом панель), а не с конца, как из хранилищ
@@ -323,7 +323,7 @@ fn quick_move_in(player: &mut PlayerState, kind: Station, slot: usize) {
     let mut inputs = window.shown[..count].to_vec();
     // В общем разборе у станков итога нет: инвентарь — сразу за входами.
     let own = slot - size + count;
-    let mut view = window::Window { container: &mut inputs, inventory: &mut player.inventory, kind: None };
+    let mut view = window::Window { container: &mut inputs, inventory: &mut player.inventory, kind: None, horse: None };
     let Some(stack) = view.get(own) else {
         return;
     };
@@ -389,7 +389,7 @@ fn take_result(shared: &Shared, player: &mut PlayerState, mode: i32, reaction: &
             let mut only = [Some(result)];
             let inventory_before = player.inventory.clone();
 
-            window::Window { container: &mut only, inventory: &mut player.inventory, kind: None }.click(0, 0, 1);
+            window::Window { container: &mut only, inventory: &mut player.inventory, kind: None, horse: None }.click(0, 0, 1);
 
             if only[0].is_some() {
                 player.inventory = inventory_before;

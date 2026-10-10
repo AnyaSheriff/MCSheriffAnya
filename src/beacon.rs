@@ -144,7 +144,7 @@ mod tests {
         let iron = crate::inventory::Stack::new(blocks::item_named("iron_ingot").unwrap(), 64);
         let mut slots = vec![None];
         inventory.set(9, Some(stone));
-        let mut window = crate::window::Window { container: &mut slots, inventory: &mut inventory, kind: Some(Kind::Beacon) };
+        let mut window = crate::window::Window { container: &mut slots, inventory: &mut inventory, kind: Some(Kind::Beacon), horse: None };
         window.click(1, 0, 1);
         assert_eq!(window.container[0], None);
         assert_eq!(window.inventory.slot(9), None);

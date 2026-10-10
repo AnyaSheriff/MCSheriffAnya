@@ -63,13 +63,33 @@ fn surface(view: &dyn View, x: i32, z: i32) -> Option<i32> {
 }
 
 /// Группа животных для нового чанка (пустая — не повезло или негде).
+#[cfg(test)]
 pub fn for_new_chunk(view: &dyn View, chunk_x: i32, chunk_z: i32, rng: &mut Rng, next_id: &mut dyn FnMut() -> i32) -> Vec<Mob> {
+    for_new_chunk_in(view, chunk_x, chunk_z, "", rng, next_id)
+}
+
+/// Веса равнин и саванн — вики, Plains/Savanna, «Mobs». Отсутствующие
+/// виды (броненосец, кролик) сохраняют долю, но пока не создаются.
+pub fn equine_spawn(biome: &str) -> (u32, u32, u32, u32, u32) {
+    match biome {
+        "plains" | "sunflower_plains" => (5, 1, 1, 3, 40),
+        "savanna" | "savanna_plateau" | "windswept_savanna" => (1, 1, 1, 1, 50),
+        // [проверить] стадо ослов луга и вес остальных животных.
+        "meadow" => (0, 1, 1, 2, 4),
+        _ => (0, 0, 0, 0, 40),
+    }
+}
+
+pub fn for_new_chunk_in(view: &dyn View, chunk_x: i32, chunk_z: i32, biome: &str, rng: &mut Rng, next_id: &mut dyn FnMut() -> i32) -> Vec<Mob> {
     if rng.unit() >= CHUNK_CHANCE {
         return Vec::new();
     }
 
-    let total: u32 = WEIGHTS.iter().map(|(_, weight)| weight).sum();
-    let mut pick = rng.below(total);
+    let (horse_weight, donkey_weight, donkey_low, donkey_high, others) = equine_spawn(biome);
+    let mut pick = rng.below(others + horse_weight + donkey_weight);
+    let chosen = if pick < horse_weight { Some(Kind::Horse) } else if pick < horse_weight + donkey_weight { Some(Kind::Donkey) } else { None };
+    pick = pick.saturating_sub(horse_weight + donkey_weight);
+    if chosen.is_none() && (pick >= 40 || (biome == "meadow" && pick >= 2)) { return Vec::new(); }
     let mut kind = Kind::Sheep;
 
     for (candidate, weight) in WEIGHTS {
@@ -81,11 +101,13 @@ pub fn for_new_chunk(view: &dyn View, chunk_x: i32, chunk_z: i32, rng: &mut Rng,
         pick -= weight;
     }
 
-    let (low, high) = group(kind);
+    kind = chosen.unwrap_or(kind);
+    let (low, high) = if kind == Kind::Horse { (2, 6) } else if kind == Kind::Donkey { (donkey_low, donkey_high) } else { group(kind) };
     let want = low + rng.below(high - low + 1);
     let (base_x, base_z) = (chunk_x * 16 + rng.below(16) as i32, chunk_z * 16 + rng.below(16) as i32);
     let mut mobs = Vec::new();
     let colour = wild_colour(rng);
+    let coat = rng.below(7) as i32;
 
     for _ in 0..want * 4 {
         if mobs.len() as u32 >= want {
@@ -111,6 +133,11 @@ pub fn for_new_chunk(view: &dyn View, chunk_x: i32, chunk_z: i32, rng: &mut Rng,
         let yaw = (rng.unit() * 360.0) as f32;
 
         mob.face(yaw);
+        if super::horse::equine(kind) {
+            super::horse::initialize(&mut mob, rng);
+            mob.horse.variant = coat | ((rng.below(5) as i32) << 8);
+            if rng.below(5) == 0 { mob.age = super::BABY_AGE; }
+        }
 
         if kind == Kind::Sheep {
             mob.color = colour;

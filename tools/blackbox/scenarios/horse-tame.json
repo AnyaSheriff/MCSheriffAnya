@@ -1,0 +1,99 @@
+{
+ "name": "horse-tame",
+ "about": "Untamed horse, NoAI so nothing is random: empty-hand mounting, dismount by sneaking, apple feeding (eat sound, mouth flag). Random run-around/taming is horse-tame-run.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5) 0 0",
+  "!stopfly",
+  "!wait 10",
+  "give $(bot) minecraft:apple 3",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon horse $(3.5,0,3) {Temper:0,Variant:0,NoAI:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 30,
+   "raw": {
+    "name": "player_input",
+    "params": {
+     "inputs": {
+      "forward": false,
+      "backward": false,
+      "left": false,
+      "right": false,
+      "jump": false,
+      "shift": true,
+      "sprint": false
+     }
+    }
+   }
+  },
+  {
+   "after": 32,
+   "raw": {
+    "name": "player_input",
+    "params": {
+     "inputs": {
+      "forward": false,
+      "backward": false,
+      "left": false,
+      "right": false,
+      "jump": false,
+      "shift": false,
+      "sprint": false
+     }
+    }
+   }
+  },
+  {
+   "after": 45,
+   "interact": true
+  },
+  {
+   "after": 90,
+   "interact": true
+  },
+  {
+   "after": 140,
+   "interact": true
+  }
+ ],
+ "record_ticks": 200,
+ "cleanup": [
+  "kill @e[type=horse,distance=..48]",
+  "kill @e[type=donkey,distance=..48]",
+  "kill @e[type=mule,distance=..48]",
+  "kill @e[type=skeleton_horse,distance=..48]",
+  "kill @e[type=zombie_horse,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "\u0433\u043e\u043b\u043e\u0441 \u0432 \u0441\u043b\u0443\u0447\u0430\u0439\u043d\u044b\u0439 \u0442\u0430\u043a\u0442",
+   "match": "^sound [^ ]+ minecraft:entity\\.(horse|donkey|mule|skeleton_horse|zombie_horse)\\.ambient",
+   "range": [
+    0,
+    3
+   ],
+   "anytick": true,
+   "why": "ambient voice is rolled at random ticks (vanilla vs vanilla: mount tick +15 in one run, +40 in another)"
+  }
+ ]
+}

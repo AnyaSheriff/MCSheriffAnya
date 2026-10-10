@@ -146,6 +146,12 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Frog => "entity.minecraft.frog",
         Kind::Tadpole => "entity.minecraft.tadpole",
         Kind::Warden => "entity.minecraft.warden",
+        Kind::Horse => "entity.minecraft.horse",
+        Kind::Donkey => "entity.minecraft.donkey",
+        Kind::Mule => "entity.minecraft.mule",
+        Kind::SkeletonHorse => "entity.minecraft.skeleton_horse",
+        Kind::ZombieHorse => "entity.minecraft.zombie_horse",
+
     }
 }
 

@@ -1035,6 +1035,9 @@ fn flag_in(data: &str, key: &str) -> Option<bool> {
 fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     crate::mob::land::apply_data(mob, data);
     crate::mob::water::apply_data(mob,data);
+    if crate::mob::horse::equine(mob.kind) && let Some(value) = crate::snbt::parse(data) {
+        crate::mob::horse::apply_data(mob, &value);
+    }
     if let Some(on) = flag_in(data, "NoAI:") {
         mob.no_ai = on;
     }
@@ -1290,6 +1293,13 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
             // (без finalizeSpawn) — здоровье 53 у всех, вариант и сила из данных.
             mob.land.max_health = 53.0; crate::mob::land::health(&mut mob); mob.vitals.health = 53.0;
         }
+    }
+    // Лошадиные без данных бросают кости, как при естественном рождении.
+    if crate::mob::horse::equine(kind) && data.is_empty() {
+        let seed = (mob.entity_id as u64).wrapping_mul(0x9E3779B97F4A7C15);
+        let mut rng = crate::mob::Rng::new(seed);
+        crate::mob::horse::initialize(&mut mob, &mut rng);
+        if kind == crate::mob::Kind::Horse { mob.horse.variant = crate::mob::horse::wild_variant(&mut rng); }
     }
     // /summon без данных не даёт водным видам случайный вид (чёрный ящик water-spawn-all:
     // рыба без Variant, аксолотль без Variant — по умолчанию); случайный вид — у яиц и естественного появления.
@@ -1960,6 +1970,8 @@ impl Selector {
                 // `..N`, `M..N` или `N` — важна только верхняя граница.
                 ("distance", range) => chosen.distance = Some(range.rsplit("..").next()?.parse().ok()?),
                 ("limit", count) => chosen.limit = Some(count.parse().ok()?),
+                // Порядок не важен, пока выбор — единственная сущность [проверить: nearest при нескольких].
+                ("sort", "nearest" | "arbitrary" | "furthest" | "random") => {}
                 _ => return None,
             }
         }
@@ -3651,7 +3663,7 @@ mod tests {
 
         // Неведомый вид и нехватка чисел — понятный ответ.
         assert!(run("summon cow 1 2", &Source::Console, &shared).reply.contains("Нужно"));
-        assert!(run("summon horse 1 2 3", &Source::Console, &shared).reply.contains("Пока"));
+        assert!(run("summon unsupported_mob 1 2 3", &Source::Console, &shared).reply.contains("Пока"));
     }
 
     /// Правило `spawn_mobs` (26.1) выключает появление в новых чанках.

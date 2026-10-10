@@ -44,6 +44,7 @@ const PROPERTY_POSE: i32 = 20;
 pub(super) const POSE_SPIN_ATTACK: i32 = 4;
 /// Поза «полёт на элитрах» (minecraft-data 26.1: pose 1, fall_flying).
 const POSE_FALL_FLYING: i32 = 1;
+const POSE_CROUCHING: i32 = 5;
 /// Флаг сущности «летит на элитрах».
 const FLAG_FALL_FLYING: u8 = 0x80;
 // Поза «спит», свойство 14 «место кровати» и его вид 11 — в play.rs
@@ -248,6 +249,11 @@ pub(super) struct Net {
     /// задетые вращением.
     pub spin_since: Option<u32>,
     pub spin_pose: bool,
+    /// Сидел ли игрок в транспорте в прошлом такте (поза «присел» тогда не ставится).
+    pub riding_prev: bool,
+    pub sneak_riding: bool,
+    /// С какого такта флаг «крадётся» скрыт после схода с транспорта (кнопка ещё зажата).
+    pub hide_sneak_from: Option<u64>,
     pub spin_from: (f64, f64, f64),
     pub(super) slot_update: Option<i32>,
     /// Слоты, которые сервер поменял сам (износ вещей) и которые надо показать клиенту.
@@ -338,6 +344,9 @@ impl Net {
             shield_disabled_until: 0,
             spin_since: None,
             spin_pose: false,
+            riding_prev: false,
+            sneak_riding: false,
+            hide_sneak_from: None,
             spin_from: (0.0, 0.0, 0.0),
             slot_update: None,
             slots_dirty: Vec::new(),
@@ -556,6 +565,8 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool
 
 /// Пакет движения от клиента: прыжок, бег по земле и приземление.
 pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, f64)) {
+    // Едущий не бежит ногами и не получает вторично урон падения транспорта.
+    if player.ride.vehicle.is_some() { player.vit.fall = 0.0; return; }
     let (dx, dy, dz) = (player.x - from.0, player.y - from.1, player.z - from.2);
     let on_ground = player.on_ground;
 
@@ -1164,6 +1175,26 @@ pub(super) fn push_effect_particles(body: &mut Vec<u8>, colors: &[i32]) {
     }
 }
 
+/// Сошедший с транспорта нажатием «присесть» получает флаг «крадётся» раньше
+/// списка седоков и сверки места, а в следующий такт флаг снимается, пока
+/// кнопка зажата (чёрный ящик, horse-jump: Metadata 0=2 перед Passengers,
+/// 0=0 на такт позже; boat-ride — так же).
+pub(super) async fn announce_dismount_sneak(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    if !player.sneaking || player.net.meta.flags & 0x02 != 0 {
+        return Ok(());
+    }
+
+    let before = player.net.meta;
+    let mut now = before;
+
+    now.flags |= 0x02;
+    send_meta(stream, player.entity_id, now, before).await?;
+    player.net.meta = now;
+    player.net.sneak_riding = true;
+    player.net.hide_sneak_from = Some(*shared.ticks.borrow() + 1);
+    Ok(())
+}
+
 /// Set Entity Data: только то, что изменилось.
 async fn send_meta(stream: &mut Outgoing<'_>, entity_id: i32, now: Meta, before: Meta) -> io::Result<()> {
     let mut body = encode_varint(SET_ENTITY_DATA);
@@ -1431,6 +1462,7 @@ pub(super) fn respawned(player: &mut PlayerState) {
 
 /// Смерть: сообщение, событие и выпавшие вещи.
 async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, source: Source, killer: Option<Killer<'_>>) -> io::Result<()> {
+    super::vehicle::dismount(shared, player);
     let mob = player.net.killer;
     let message = death_message(source, player, mob, killer);
 
@@ -1976,7 +2008,11 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         flags |= FLAG_ON_FIRE;
     }
 
-    if player.sneaking {
+    if !player.sneaking {
+        player.net.hide_sneak_from = None;
+    }
+
+    if player.sneaking && !player.net.hide_sneak_from.is_some_and(|from| tick_now >= from) {
         flags |= 0x02;
     }
 
@@ -1998,6 +2034,11 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         flags |= FLAG_FALL_FLYING;
     }
 
+    // Начал приседать, сидя в транспорте (или сойдя в этом же такте), — позы нет.
+    if flags & 0x02 != 0 && player.net.meta.flags & 0x02 == 0 {
+        player.net.sneak_riding = player.net.riding_prev || player.ride.vehicle.is_some();
+    }
+
     let now = Meta {
         score: player.vit.xp,
         arrows: player.net.arrows,
@@ -2010,6 +2051,10 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
             POSE_SPIN_ATTACK
         } else if player.glide.active && player.glide.ticks > 0 {
             POSE_FALL_FLYING
+        } else if player.net.meta.flags & 0x02 != 0 && player.ride.vehicle.is_none() && !player.net.sneak_riding {
+            // Поза «присел» — тактом позже флага и не у седока (чёрный ящик,
+            // donkey-chest: 0=2 на +20, 6=5 на +21; на лошади позы нет).
+            POSE_CROUCHING
         } else {
             0
         },
@@ -2020,6 +2065,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         bed: player.sleeping,
     };
 
+    player.net.riding_prev = player.ride.vehicle.is_some();
     let held = std::mem::take(&mut player.net.hold_meta);
 
     // Флаг «крадётся» оригинал шлёт и самому (boat-ride, boat-drive:

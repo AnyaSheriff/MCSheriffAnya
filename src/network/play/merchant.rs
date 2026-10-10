@@ -323,7 +323,7 @@ pub(super) fn select_trade(shared: &Shared, player: &mut PlayerState, payload: &
 
     let result = merchant.slots[RESULT].take();
     let targets: Vec<usize> = (SLOTS..SLOTS + window::PLAYER_SLOTS).rev().collect();
-    let mut window = window::Window { container: &mut merchant.slots, inventory: &mut player.inventory, kind: None };
+    let mut window = window::Window { container: &mut merchant.slots, inventory: &mut player.inventory, kind: None, horse: None };
     let cleared = window.move_to(0, &targets) && window.move_to(1, &targets);
 
     if cleared {
@@ -399,7 +399,7 @@ pub(super) fn click(
             // Выход щелчок по прочим ячейкам не трогает.
             let result = merchant.slots[RESULT].take();
             let payments = (merchant.slots[0], merchant.slots[1]);
-            let mut window = window::Window { container: &mut merchant.slots, inventory: &mut player.inventory, kind: None };
+            let mut window = window::Window { container: &mut merchant.slots, inventory: &mut player.inventory, kind: None, horse: None };
             let index = usize::try_from(slot).ok();
 
             match (mode, index) {
@@ -485,7 +485,7 @@ fn take_result(shared: &Shared, items: &mut crate::items::Items, player: &mut Pl
                 }
 
                 let saved = player.inventory.clone();
-                let mut window = window::Window { container: &mut merchant.slots, inventory: &mut player.inventory, kind: None };
+                let mut window = window::Window { container: &mut merchant.slots, inventory: &mut player.inventory, kind: None, horse: None };
 
                 if !window.move_to(RESULT, &targets) {
                     player.inventory = saved;

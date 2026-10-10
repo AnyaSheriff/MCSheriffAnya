@@ -1,0 +1,93 @@
+{
+ "name": "horse-breed",
+ "about": "[\u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c] Feed tamed horse and donkey golden carrots; expect one mule foal and parent cooldown. Both animals are in love and walk to each other by AI: steps, turns, positions and the moment of breeding are random, foal stats too; the deterministic part is feeding (hearts, eat sound, flags) and the foal's existence.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5) 0 0",
+  "!stopfly",
+  "!wait 10",
+  "give $(bot) minecraft:golden_carrot 4",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon horse $(2.5,0,3) {Tame:1b,Variant:0}"
+  },
+  {
+   "after": 2,
+   "cmd": "summon donkey $(4.5,0,3) {Tame:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true,
+   "which": 0
+  },
+  {
+   "after": 12,
+   "interact": true,
+   "which": 1
+  }
+ ],
+ "record_ticks": 160,
+ "cleanup": [
+  "kill @e[type=horse,distance=..48]",
+  "kill @e[type=donkey,distance=..48]",
+  "kill @e[type=mule,distance=..48]",
+  "kill @e[type=skeleton_horse,distance=..48]",
+  "kill @e[type=zombie_horse,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "\u0445\u043e\u0434\u044c\u0431\u0430 \u0436\u0438\u0432\u043e\u0442\u043d\u044b\u0445",
+   "match": "^cart (horse|donkey|mule) (\u0441\u0434\u0432\u0438\u0433|\u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c|\u043f\u043e\u0432\u043e\u0440\u043e\u0442|\u0441\u0432\u0435\u0440\u043a\u0430|\u043f\u0435\u0440\u0435\u043d\u043e\u0441|entity_head_rotation|entity_update_attributes)",
+   "range": [
+    0,
+    5000
+   ],
+   "anytick": true,
+   "why": "love-mode pathing walks to the partner (vanilla vs vanilla differs in every run)"
+  },
+  {
+   "type": "count",
+   "name": "\u0448\u0430\u0433\u0438 \u0438 \u0433\u043e\u043b\u043e\u0441\u0430",
+   "match": "^sound [^ ]+ minecraft:entity\\.(horse|donkey|mule)\\.(ambient|step|step_wood|gallop)",
+   "range": [
+    0,
+    30
+   ],
+   "anytick": true,
+   "why": "steps follow the random walk, ambient voice is random"
+  },
+  {
+   "type": "mask",
+   "name": "\u043c\u0435\u0441\u0442\u043e \u0437\u0432\u0443\u043a\u0430 \u0435\u0434\u044b",
+   "kind": "sound",
+   "pattern": "^sound \\S+ ",
+   "replace": "sound P ",
+   "why": "the animal has already moved when it eats; its position is random"
+  },
+  {
+   "type": "count",
+   "name": "\u0440\u043e\u0436\u0434\u0435\u043d\u0438\u0435 \u0436\u0435\u0440\u0435\u0431\u0451\u043d\u043a\u0430",
+   "match": "^spawn \\S+ (mule|experience_orb) |^meta 9=[0-9.]+( 16=true)?$|^meta 8=\\d+$|^sv (Collect|Set Experience|Metadata 18)|^cart (experience_orb|mule) |^cart (horse|donkey) \u0441\u043e\u0431\u044b\u0442\u0438\u0435 18$|^cart (horse|donkey) \u0432\u043e\u043a\u0440\u0443\u0433|^sound \\S+ minecraft:entity\\.(experience_orb|item)",
+   "range": [
+    0,
+    60
+   ],
+   "anytick": true,
+   "why": "breeding happens when the walkers meet; the foal's stats, position and the experience dropped (1-7) are random"
+  }
+ ]
+}

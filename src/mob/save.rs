@@ -97,6 +97,11 @@ save_kinds! {
     Frog => 90,
     Tadpole => 91,
     Warden => 92,
+    Horse => 93,
+    Donkey => 94,
+    Mule => 95,
+    SkeletonHorse => 96,
+    ZombieHorse => 97,
 }
 
 // 0x7f/0xff раньше не обозначали ни один вид. Теперь за ними идёт u16 BE;

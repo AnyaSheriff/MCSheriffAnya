@@ -25,6 +25,7 @@ pub mod water;
 pub mod warden;
 pub mod hostile;
 pub mod illager;
+pub mod horse;
 pub mod leash;
 pub mod land;
 pub mod trader;
@@ -154,12 +155,17 @@ pub enum Kind {
     Tadpole,
     /// Хранитель: появляется только от крикуна (mob/warden.rs).
     Warden,
+    Horse,
+    Donkey,
+    Mule,
+    SkeletonHorse,
+    ZombieHorse,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 70] = [
+    pub const ALL: [Kind; 75] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -230,6 +236,11 @@ impl Kind {
         Kind::Frog,
         Kind::Tadpole,
         Kind::Warden,
+        Kind::Horse,
+        Kind::Donkey,
+        Kind::Mule,
+        Kind::SkeletonHorse,
+        Kind::ZombieHorse,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -370,6 +381,11 @@ impl Kind {
             "frog" => Kind::Frog,
             "tadpole" => Kind::Tadpole,
             "warden" => Kind::Warden,
+            "horse" => Kind::Horse,
+            "donkey" => Kind::Donkey,
+            "mule" => Kind::Mule,
+            "skeleton_horse" => Kind::SkeletonHorse,
+            "zombie_horse" => Kind::ZombieHorse,
             _ => return None,
         })
     }
@@ -446,6 +462,11 @@ impl Kind {
             Kind::Frog => "frog",
             Kind::Tadpole => "tadpole",
             Kind::Warden => "warden",
+            Kind::Horse => "horse",
+            Kind::Donkey => "donkey",
+            Kind::Mule => "mule",
+            Kind::SkeletonHorse => "skeleton_horse",
+            Kind::ZombieHorse => "zombie_horse",
         }
     }
 
@@ -532,6 +553,11 @@ impl Kind {
             Kind::Frog => 55,
             Kind::Tadpole => 130,
             Kind::Warden => 142,
+            Kind::Horse => 66,
+            Kind::Donkey => 36,
+            Kind::Mule => 87,
+            Kind::SkeletonHorse => 116,
+            Kind::ZombieHorse => 151,
         }
     }
 
@@ -619,6 +645,12 @@ impl Kind {
             Kind::Frog => "minecraft:frog",
             Kind::Tadpole => "minecraft:tadpole",
             Kind::Warden => "minecraft:warden", // [Bedrock: потом] свойства и позы.
+            // [Bedrock: потом] седло, броня, окно и управление лошадьми.
+            Kind::Horse => "minecraft:horse",
+            Kind::Donkey => "minecraft:donkey",
+            Kind::Mule => "minecraft:mule",
+            Kind::SkeletonHorse => "minecraft:skeleton_horse",
+            Kind::ZombieHorse => "minecraft:zombie_horse",
         }
     }
 
@@ -681,6 +713,7 @@ impl Kind {
             Kind::Vex => 0.4,
             Kind::Ravager => 1.95,
             Kind::EvokerFangs => 0.5,
+            Kind::Horse | Kind::Donkey | Kind::Mule | Kind::SkeletonHorse | Kind::ZombieHorse => 1.3964844,
             _ => 0.9,
         }
     }
@@ -746,6 +779,11 @@ impl Kind {
             Kind::Vex | Kind::EvokerFangs => 0.8,
             Kind::Ravager => 2.2,
             Kind::Warden => 2.9,
+            Kind::Horse => 1.6,
+            Kind::Donkey => 1.5,
+            Kind::Mule => 1.6,
+            Kind::SkeletonHorse => 1.6,
+            Kind::ZombieHorse => 1.6,
         }
     }
 
@@ -816,6 +854,8 @@ impl Kind {
             Kind::Wither => wither::HEALTH,
             Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Ravager | Kind::EvokerFangs => illager::max_health(self),
             Kind::Warden => 500.0,
+            Kind::Horse | Kind::Donkey | Kind::Mule => 22.0,
+            Kind::SkeletonHorse | Kind::ZombieHorse => 15.0,
         }
     }
 
@@ -885,6 +925,9 @@ impl Kind {
             // Вики, Wither: скорость 0,6.
             Kind::Wither => 0.6,
             Kind::Warden => 0.3,
+            Kind::Horse => 0.225,
+            Kind::Donkey | Kind::Mule => 0.175,
+            Kind::SkeletonHorse | Kind::ZombieHorse => 0.2,
         }
     }
 
@@ -892,6 +935,7 @@ impl Kind {
     pub fn likes(self, item: &str) -> bool {
         match self {
             Kind::Cow | Kind::Sheep | Kind::Goat | Kind::Mooshroom => item == "wheat",
+            Kind::Horse | Kind::Donkey => matches!(item, "golden_carrot" | "golden_apple" | "enchanted_golden_apple"),
             Kind::Llama | Kind::TraderLlama => item == "hay_block",
             Kind::Camel => item == "cactus",
             Kind::Panda => item == "bamboo",
@@ -999,6 +1043,11 @@ impl Kind {
             Kind::Wither => ("minecraft:entity.wither.ambient", "minecraft:entity.wither.hurt", "minecraft:entity.wither.death"),
             Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Ravager | Kind::EvokerFangs => illager::sounds(self),
             Kind::Warden => ("minecraft:entity.warden.ambient", "minecraft:entity.warden.hurt", "minecraft:entity.warden.death"),
+            Kind::Horse => ("minecraft:entity.horse.ambient", "minecraft:entity.horse.hurt", "minecraft:entity.horse.death"),
+            Kind::Donkey => ("minecraft:entity.donkey.ambient", "minecraft:entity.donkey.hurt", "minecraft:entity.donkey.death"),
+            Kind::Mule => ("minecraft:entity.mule.ambient", "minecraft:entity.mule.hurt", "minecraft:entity.mule.death"),
+            Kind::SkeletonHorse => ("minecraft:entity.skeleton_horse.ambient", "minecraft:entity.skeleton_horse.hurt", "minecraft:entity.skeleton_horse.death"),
+            Kind::ZombieHorse => ("minecraft:entity.zombie_horse.ambient", "minecraft:entity.zombie_horse.hurt", "minecraft:entity.zombie_horse.death"),
         }
     }
 
@@ -1007,6 +1056,7 @@ impl Kind {
         match self {
             Kind::Turtle => "minecraft:entity.turtle.shamble",
             Kind::Frog => "minecraft:entity.frog.step",
+            Kind::Horse | Kind::Donkey | Kind::Mule | Kind::SkeletonHorse | Kind::ZombieHorse => "minecraft:entity.horse.step",
             Kind::Cow => "minecraft:entity.cow.step",
             Kind::Warden => "minecraft:entity.warden.step",
             Kind::Pig => "minecraft:entity.pig.step",
@@ -1458,6 +1508,9 @@ pub struct Mob {
     pub land: land::State,
     pub water: water::State,
     pub warden: warden::State,
+
+    /// Лошади, ослы, мулы и нежить-лошади (mob/horse.rs).
+    pub horse: horse::State,
 }
 
 impl Mob {
@@ -1485,7 +1538,7 @@ impl Mob {
         // у всех шалкеров городов Color 16).
         let h = hostile::State { bow: kind.skeleton(), shell_color: 16, hand_drop: DEFAULT_DROP, ..hostile::State::default() };
 
-        Self {
+        let mut mob = Self {
             entity_id,
             uuid: uuid_for(entity_id),
             kind,
@@ -1551,7 +1604,10 @@ impl Mob {
             land: land::State::new(kind),
             water: water::State::new(kind, at),
             warden: warden::State::default(),
-        }
+            horse: horse::State::default(),
+        };
+        horse::defaults(&mut mob);
+        mob
     }
 
     /// Лечение кристаллом: ближайший живой кристалл не дальше 32 блоков по
@@ -1591,6 +1647,10 @@ impl Mob {
 
     pub fn credit_player(&mut self) {
         self.xp_until = self.ticks + XP_CREDIT_TICKS;
+    }
+
+    pub fn movement_speed(&self) -> f64 {
+        if horse::equine(self.kind) { self.horse.speed } else { self.kind.speed() }
     }
 
     pub fn is_baby(&self) -> bool {
@@ -1806,6 +1866,8 @@ impl Mob {
             if self.love == 0 { self.love_player = None; }
         }
 
+        if horse::equine(self.kind) { horse::tick(self, rng); }
+
         // NoAI: ни мысли, ни хода — и тяжести тоже: призванный в воздухе
         // висит, а толчок скорость копит, но не двигает (чёрный ящик,
         // cow-physics и cow-hit: корова NoAI висит на месте, скорость после
@@ -1939,6 +2001,12 @@ impl Mob {
         let lava_floor = LavaFloor(view);
         let view: &dyn View = if self.kind == Kind::Strider { &lava_floor } else { view };
 
+        if horse::equine(self.kind) && self.horse.rider.is_some() && self.horse.tamed && self.horse.saddled() {
+            self.brain.stop();
+            ai::voice(self, rng);
+            return ai::Plan::default();
+        }
+
         let was_on_ground = self.on_ground;
         let mut plan = if land::animal(self.kind) || self.kind == Kind::WanderingTrader {
             land::think(self, view, ctx, rng)
@@ -2046,7 +2114,7 @@ impl Mob {
         let friction = if self.on_ground { slip * 0.91 } else { 0.91 };
 
         if swimming {
-            let effective = speed * self.kind.speed();
+            let effective = speed * self.movement_speed();
             let rad = f64::from(self.yaw).to_radians();
 
             self.vx += -rad.sin() * SWIM_THRUST * effective;
@@ -2066,7 +2134,7 @@ impl Mob {
         let wades = in_water && matches!(self.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Drowned);
 
         if speed != 0.0 {
-            let effective = speed * if slime::cube(self.kind) { slime::speed(self.nether.size) } else { self.kind.speed() };
+            let effective = speed * if slime::cube(self.kind) { slime::speed(self.nether.size) } else { self.movement_speed() };
             // Куб: в воздухе 0,01·ввод — замер slime-hop (оригинал, три записи): прыжок 0,95 блока [проверить].
             let accel = if wades {
                 0.02 * effective
@@ -2085,7 +2153,7 @@ impl Mob {
             // Шаг вбок и вперёд-назад: тело смотрит на цель, идёт боком.
             let (forward, left) = self.strafe;
             let length = (forward * forward + left * left).sqrt();
-            let effective = length * self.kind.speed() * effect_speed;
+            let effective = length * self.movement_speed() * effect_speed;
             let accel = if self.on_ground { effective * effective * (0.6 / slip).powi(3) } else { 0.02 };
             let rad = f64::from(self.yaw).to_radians();
             let (fx, fz) = (-rad.sin(), rad.cos());
@@ -2190,7 +2258,7 @@ impl Mob {
         // проходим тот же путь, потом опускаемся до опоры [проверить: у
         // оригинала так же].
         if bumped && (was_on_ground || landed) {
-            let lift = clip_y(view, start, half, height, if self.kind == Kind::Camel { 1.5 } else { STEP_HEIGHT });
+            let lift = clip_y(view, start, half, height, if self.kind == Kind::Camel { 1.5 } else if horse::equine(self.kind) { 1.0 } else { STEP_HEIGHT });
             let mut up = (start.0, start.1 + lift, start.2);
             let (ux, uz) = slide(view, &mut up, half, height, dx, dz);
             let down = clip_y(view, up, half, height, dy.min(0.0) - lift);
@@ -2268,7 +2336,8 @@ impl Mob {
         // Вики, Frog: «5 ... less fall damage».
         let safe_fall=if self.kind==Kind::Goat { 10.0 } else if self.kind==Kind::Camel { 6.0 } else if self.kind==Kind::Frog { crate::survival::SAFE_FALL+5.0 } else { crate::survival::SAFE_FALL };
         if fall > safe_fall && self.kind != Kind::Chicken && self.kind != Kind::Breeze && !golem::golem(self.kind) {
-            let damage = ((fall - safe_fall - 1.0e-4) * if self.kind==Kind::Camel { 0.5 } else { 1.0 }).ceil();
+            let damage = if horse::equine(self.kind) { horse::fall_damage(fall) } else { ((fall - safe_fall - 1.0e-4) * if self.kind==Kind::Camel { 0.5 } else { 1.0 }).ceil() };
+            if horse::equine(self.kind) && self.horse.rider.is_some() { self.horse.rider_fall += damage; }
 
             self.hurt(damage, Source::Fall, None);
         }
@@ -2289,6 +2358,7 @@ impl Mob {
     /// команда). Возвращает исход или None, если удар не прошёл (вики,
     /// Damage: «Invulnerability frames»).
     pub fn hurt(&mut self, amount: f32, source: Source, push: Option<Push>) -> Option<Hit> {
+        if horse::undead(self.kind) && source == Source::Drown { return None; }
         if self.is_dead() {
             return None;
         }
@@ -2334,7 +2404,9 @@ impl Mob {
         // Ведьма: магия на 85 % слабее (вики, Witch).
         let amount = if self.kind == Kind::Witch && source == Source::Magic { amount * 0.15 } else { amount };
         let before = self.vitals.health;
-        let amount = if armored(source) { after_armor(amount, self.armor()) } else { amount };
+        let amount = if armored(source) {
+            if horse::equine(self.kind) { crate::combat::after_armor(amount, self.armor(), horse::toughness(self)) } else { after_armor(amount, self.armor()) }
+        } else { amount };
         let mut hit = self.vitals.hurt(amount, source, false)?;
 
         // Снято на самом деле — не больше оставшегося здоровья.
@@ -2442,6 +2514,7 @@ impl Mob {
         match self.kind {
             Kind::Shulker if self.h.covered => 20.0,
             Kind::MagmaCube => nether::cube_armor(self.nether.size),
+            Kind::Horse => self.horse.slots[1].and_then(|s| blocks::item_name(s.item)).map_or(0.0, horse::armor),
             kind => kind.armor(),
         }
     }
@@ -2476,6 +2549,7 @@ impl Mob {
         match self.kind {
             Kind::Cow | Kind::Mooshroom => 0.4,
             Kind::Warden => 4.0,
+            kind if horse::equine(kind) => 0.8,
             Kind::Slime => 0.4 * self.nether.size as f32,
             // Чёрный ящик, dragon-summon: голос дракона громкостью 5,00.
             Kind::EnderDragon => 5.0,
@@ -2592,6 +2666,7 @@ impl Mob {
             Kind::Villager | Kind::ZombieVillager => crate::villager::write(&self.villager, out),
             Kind::Wolf | Kind::Cat => tame::write(&self.tame, out),
             Kind::IronGolem | Kind::SnowGolem => golem::write(&self.golem, out),
+            kind if horse::equine(kind) => horse::write(self, out),
             _ => {}
         }
 
@@ -2644,13 +2719,15 @@ impl Mob {
         let snow_state = if id == save::SNOW_SKELETON { Some(skeleton::read_snow(bytes)?) } else { None };
         let land_state = if land::animal(kind) || kind == Kind::WanderingTrader { Some(land::read(bytes)?) } else { None };
         let water_state = if water::creature(kind) { Some(water::read(bytes)?) } else { None };
+        let mut horse_mob = Mob::new(0, kind, (x, y, z));
+        if horse::equine(kind) { horse::read(&mut horse_mob, bytes)?; }
         let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
             return None;
         }
 
-        let mut mob = Mob::new(0, kind, (x, y, z));
+        let mut mob = horse_mob;
 
         mob.yaw = yaw;
         mob.head_yaw = yaw;
@@ -2766,6 +2843,9 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         Kind::Panda => give("bamboo", 1, 1, rng),
         Kind::WanderingTrader | Kind::Camel | Kind::Goat | Kind::Ocelot => {},
         Kind::Pig => give("porkchop", 1, 3, rng),
+        Kind::Horse | Kind::Donkey | Kind::Mule => give("leather", 0, 2 + mob.looting, rng),
+        Kind::SkeletonHorse => give("bone", 0, 2 + mob.looting, rng),
+        Kind::ZombieHorse => give("rotten_flesh", 0, 2 + mob.looting, rng),
         Kind::Sheep => {
             if !mob.sheared {
                 give(WOOL[usize::from(mob.color) % 16], 1, 1, rng);
@@ -2943,6 +3023,16 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         if let Some(c)=mob.land.decor && let Some(id)=blocks::item_named(&WOOL[usize::from(c)].replace("_wool","_carpet")) { drops.push(Stack::new(id,1)); }
     }
     if mob.kind==Kind::Camel && mob.land.saddle && let Some(id)=blocks::item_named("saddle") { drops.push(Stack::new(id,1)); }
+    if horse::equine(mob.kind) {
+        // Снаряжение, заданное данными призыва, выпадает с шансом 8,5 % на место;
+        // надетое игроком — всегда (чёрный ящик, probe-ride: седло из `equipment`
+        // у убитой лошади не выпало) [проверить: шанс].
+        for (index, slot) in mob.horse.slots.iter().enumerate() {
+            if let Some(stack) = slot && (index >= 2 || !mob.horse.gear_by_data || rng.below(1000) < 85) { drops.push(*stack); }
+        }
+        if mob.horse.chest && let Some(item) = blocks::item_named("chest") { drops.push(Stack::new(item, 1)); }
+    }
+
     drops
 }
 
@@ -3342,7 +3432,7 @@ pub fn step_all(
             z: mob.z,
             love: mob.love,
             baby: mob.is_baby(),
-            ready: mob.age == 0,
+            ready: mob.age == 0 && (!horse::equine(mob.kind) || horse::can_parent(mob)),
         })
         .collect();
 
@@ -3663,7 +3753,9 @@ pub fn step_all(
 
         used.extend([a, b]);
 
-        let mut baby = Mob::new(next_id(), mobs[ia].kind, (mobs[ia].x, mobs[ia].y, mobs[ia].z));
+        let mut baby = if horse::compatible(mobs[ia].kind, mobs[ib].kind) {
+            horse::child(&mobs[ia], &mobs[ib], next_id(), rng)
+        } else { Mob::new(next_id(), mobs[ia].kind, (mobs[ia].x, mobs[ia].y, mobs[ia].z)) };
 
         land::inherit(&mut baby, &mobs[ia], &mobs[ib], rng);
         baby.age = BABY_AGE;
