@@ -208,13 +208,13 @@ fn names_leashes_and_tame_state_survive_saving() {
     assert!(back.persistent_tag || back.name.is_some());
     assert_eq!(back.leash, Some(leash::Holder::Knot { id: 0, at: (1, 2, 3) }));
 
-    // Старая запись (без хвоста) читается как раньше.
+    // Широкий номер без общего хвоста не добавляет имени и поводка.
     let cow = Mob::new(6, Kind::Cow, (0.5, 1.0, 0.5));
-    let mut old = Vec::new();
+    let mut saved = Vec::new();
 
-    cow.write(&mut old);
-    assert_eq!(old[0], 0);
-    assert!(Mob::read(&mut old.as_slice()).is_some_and(|cow| cow.name.is_none() && cow.leash.is_none()));
+    cow.write(&mut saved);
+    assert_eq!(&saved[..3], &[0x7f, 0, 0]);
+    assert!(Mob::read(&mut saved.as_slice()).is_some_and(|cow| cow.name.is_none() && cow.leash.is_none()));
 }
 
 #[test]

@@ -1274,6 +1274,44 @@ mod tests {
     use super::*;
 
     #[test]
+    fn file_tail_tags_are_distinct_and_keep_their_old_numbers() {
+        let variants = [
+            Data { trim: Some((0, 0)), ..Data::default() },
+            Data { contents: vec![Content { slot: 0, item: 1, count: 1, data: None }], ..Data::default() },
+            Data { ominous: Some(2), ..Data::default() },
+            Data { ominous_banner: true, ..Data::default() },
+            Data { stew: vec![(1, 40)], ..Data::default() },
+            Data { instrument: Some(2), ..Data::default() },
+            Data { bucket: Some(crate::mob::water::bucket::BucketData::default()), ..Data::default() },
+            Data { mob_variants: vec![(86, 1)], ..Data::default() },
+        ];
+        // Старый заголовок: damage, flags, enchants, stored, repair_cost,
+        // named, name_length. После него идут однобайтные метки 1..=8.
+        let prefix = [0, 0, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let mut tags = std::collections::HashSet::new();
+        let mut combined = prefix.to_vec();
+        for (index, data) in variants.into_iter().enumerate() {
+            let bytes = to_bytes(&data);
+            assert_eq!(&bytes[..prefix.len()], &prefix);
+            let tag = bytes[prefix.len()];
+            assert_eq!(usize::from(tag), index + 1);
+            assert!(tags.insert(tag));
+            assert_eq!(from_bytes(&bytes), Some(data));
+            combined.extend(&bytes[prefix.len()..]);
+        }
+        let loaded = from_bytes(&combined).unwrap();
+        assert_eq!(loaded.trim, Some((0, 0)));
+        assert_eq!(loaded.contents.len(), 1);
+        assert_eq!(loaded.ominous, Some(2));
+        assert!(loaded.ominous_banner);
+        assert_eq!(loaded.stew, [(1, 40)]);
+        assert_eq!(loaded.instrument, Some(2));
+        assert!(loaded.bucket.is_some());
+        assert_eq!(loaded.mob_variants, [(86, 1)]);
+        assert_eq!(from_bytes(&to_bytes(&loaded)), Some(loaded));
+    }
+
+    #[test]
     fn equal_data_share_one_entry_and_plain_stacks_have_none() {
         assert_eq!(intern(Data::default()), None);
 

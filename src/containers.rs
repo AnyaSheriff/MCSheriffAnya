@@ -1769,6 +1769,26 @@ pub fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn disk_kind_ids_are_unique_and_round_trip() {
+        let kinds = [
+            Kind::Chest, Kind::TrappedChest, Kind::Barrel, Kind::Hopper,
+            Kind::Dropper, Kind::Dispenser, Kind::Jukebox, Kind::Lectern,
+            Kind::Crafter, Kind::CopperChest, Kind::Shelf, Kind::ChiseledBookshelf,
+            Kind::Furnace, Kind::BlastFurnace, Kind::Smoker, Kind::BrewingStand,
+            Kind::ShulkerBox, Kind::EnderChest, Kind::Campfire, Kind::Beacon,
+        ];
+        let mut ids = std::collections::HashSet::new();
+        for (id, kind) in kinds.iter().copied().enumerate() {
+            assert_eq!(usize::from(kind.number()), id, "старый номер изменился");
+            assert!(ids.insert(kind.number()));
+            assert_eq!(Kind::by_number(kind.number()), Some(kind));
+        }
+        for id in 0..=u8::MAX {
+            assert_eq!(Kind::by_number(id), kinds.get(usize::from(id)).copied());
+        }
+    }
+
     /// Медный сундук: звуки по стадии, большой из разных стадий — наименее
     /// окисленный, вощёный только из двух вощёных (сценарий copper-chest).
     #[test]

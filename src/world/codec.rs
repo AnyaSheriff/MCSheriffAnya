@@ -628,6 +628,51 @@ mod tests {
     }
 
     #[test]
+    fn old_and_mixed_mob_records_load_in_the_same_chunk_version() {
+        let plain = Chunk::flat().to_bytes();
+        // Полная старая запись коровы с именем и флагом «не исчезать».
+        // Не используем Mob::write: совместимость проверяется независимо.
+        let mut old = vec![0x80];
+        for value in [3.5f64, 70.0, 4.5] { old.extend(value.to_be_bytes()); }
+        old.extend(90.0f32.to_be_bytes());
+        old.extend(6.0f32.to_be_bytes());
+        old.extend((-500i32).to_be_bytes());
+        old.extend(30i32.to_be_bytes());
+        old.extend([1, 0]);
+        old.extend(1234i32.to_be_bytes());
+        old.extend([3, 0, 3, b'O', b'l', b'd', 0]);
+
+        for mixed in [false, true] {
+            let mut bytes = plain.clone();
+            bytes.extend([0, 0, 0, 0, 0, 0, 0, if mixed { 2 } else { 1 }]);
+            bytes.extend(&old);
+            if mixed {
+                crate::mob::Mob::new(0, crate::mob::Kind::Warden, (1.5, 70.0, 1.5)).write(&mut bytes);
+            }
+            // Четыре пустых раздела после мобов: командные блоки, спавнеры,
+            // таблички, испытания. Ошибка длины моба сдвинет их чтение.
+            bytes.extend([0; 8]);
+            let compressed = region::compress(&bytes).unwrap();
+            let payload = region::decompress(&compressed).unwrap();
+            let chunk = Chunk::from_bytes(&payload).expect("старый чанк читается");
+            assert_eq!(chunk.mobs.len(), if mixed { 2 } else { 1 });
+            let cow = &chunk.mobs[0];
+            assert_eq!(cow.kind, crate::mob::Kind::Cow);
+            assert_eq!(cow.name.as_deref(), Some("Old"));
+            assert!(cow.persistent_tag && cow.no_ai);
+            assert_eq!((cow.age, cow.love, cow.vitals.health, cow.egg_timer), (-500, 30, 6.0, 1234));
+            if mixed { assert_eq!(chunk.mobs[1].kind, crate::mob::Kind::Warden); }
+            let upgraded = assert_round_trip(&chunk);
+            assert_eq!(upgraded[0], bytes[0]);
+            assert_eq!(&upgraded[plain.len() + 8..plain.len() + 11], &[0xff, 0, 0]);
+
+            let mut damaged = upgraded;
+            damaged[plain.len() + 9..plain.len() + 11].copy_from_slice(&4096u16.to_be_bytes());
+            assert!(Chunk::from_bytes(&damaged).is_none());
+        }
+    }
+
+    #[test]
     fn overworld_chunks_round_trip() {
         let generator = Generator::Normal(Terrain::new(12345, terrain::Style::Vanilla));
 

@@ -34,6 +34,7 @@ pub mod path;
 pub mod spawn;
 pub mod slime;
 pub mod skeleton;
+mod save;
 pub mod tame;
 
 use crate::blocks;
@@ -1459,10 +1460,6 @@ pub struct Mob {
     pub warden: warden::State,
 }
 
-/// Бит в байте вида записи моба: за записью идёт общий хвост (имя, поводок).
-/// Старые записи его не имеют — читаются как раньше.
-const EXTENDED: u8 = 0x80;
-
 impl Mob {
     pub fn new(entity_id: i32, kind: Kind, at: (f64, f64, f64)) -> Self {
         let mut vitals = Vitals::new();
@@ -2567,80 +2564,12 @@ impl Mob {
     /// Запись для файла региона: вид, место, скорость не пишется, здоровье,
     /// возраст, любовь, признаки, цвет, яйцо.
     pub fn write(&self, out: &mut Vec<u8>) {
-        out.push(match self.kind {
-            Kind::Cow => 0,
-            Kind::Pig => 1,
-            Kind::Sheep => 2,
-            Kind::Chicken => 3,
-            Kind::Zombie => 4,
-            Kind::Skeleton => if self.h.water_ticks != 0 || self.h.converting != 0 { 63 } else { 5 },
-            Kind::Stray => 61,
-            Kind::Bogged => 62,
-            Kind::Creeper => 6,
-            Kind::Spider => 7,
-            Kind::CaveSpider => 31,
-            Kind::Silverfish => 32,
-            Kind::EndCrystal => 8,
-            Kind::EnderDragon => 9,
-            Kind::Enderman => 10,
-            Kind::Shulker => 11,
-            Kind::ShulkerBullet => 12,
-            Kind::Witch => 13,
-            Kind::Villager => 14,
-            Kind::ZombieVillager => 15,
-            Kind::Blaze => 16,
-            Kind::WitherSkeleton => 17,
-            Kind::MagmaCube => 18,
-            Kind::Ghast => 19,
-            Kind::ZombifiedPiglin => 20,
-            Kind::Piglin => 21,
-            Kind::PiglinBrute => 22,
-            Kind::Hoglin => 23,
-            Kind::Strider => 24,
-            Kind::Drowned => 25,
-            Kind::Husk => 26,
-            Kind::Slime => 27,
-            Kind::Wolf => 28,
-            Kind::Cat => 29,
-            Kind::LeashKnot => 30,
-            Kind::IronGolem => 33,
-            Kind::SnowGolem => 34,
-            Kind::Pillager => 64,
-            Kind::Vindicator => 65,
-            Kind::Evoker => 66,
-            Kind::Vex => 67,
-            Kind::Illusioner => 68,
-            Kind::Ravager => 69,
-            Kind::EvokerFangs => 70,
-            Kind::Phantom => 35,
-            Kind::Guardian => 36,
-            Kind::ElderGuardian => 37,
-            // Номер с запасом: другие новые мобы берут 38 и дальше.
-            Kind::Wither => 60,
-            // Зимогор, болотник и скелет-замерзающий (хвост с таймерами) — следом.
-            Kind::Llama => 71,
-            Kind::TraderLlama => 72,
-            Kind::WanderingTrader => 73,
-            Kind::Camel => 74,
-            Kind::Goat => 75,
-            Kind::PolarBear => 76,
-            Kind::Panda => 77,
-            Kind::Ocelot => 78,
-            Kind::Mooshroom => 79,
-            Kind::Breeze => 80,
-            Kind::Cod => 81,
-            Kind::Salmon => 82,
-            Kind::TropicalFish => 83,
-            Kind::Pufferfish => 84,
-            Kind::Squid => 85,
-            Kind::GlowSquid => 86,
-            Kind::Dolphin => 87,
-            Kind::Turtle => 88,
-            Kind::Axolotl => 89,
-            Kind::Frog => 90,
-            Kind::Tadpole => 91,
-            Kind::Warden => 92,
-        } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
+        let id = if self.kind == Kind::Skeleton && (self.h.water_ticks != 0 || self.h.converting != 0) {
+            save::SNOW_SKELETON
+        } else {
+            self.kind.save_id()
+        };
+        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag);
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -2684,87 +2613,18 @@ impl Mob {
 
     /// Читает запись `write`; None — она испорчена.
     pub fn read(bytes: &mut &[u8]) -> Option<Mob> {
+        let (id, extended) = save::read_head(bytes)?;
+        let kind = if id == save::SNOW_SKELETON {
+            Kind::Skeleton
+        } else {
+            Kind::from_save_id(id)?
+        };
         let mut take = |count: usize| -> Option<&[u8]> {
             let (head, rest) = bytes.split_at_checked(count)?;
             *bytes = rest;
             Some(head)
         };
 
-        let head = take(1)?[0];
-        let extended = head & EXTENDED != 0;
-        let kind = match head & !EXTENDED {
-            0 => Kind::Cow,
-            1 => Kind::Pig,
-            2 => Kind::Sheep,
-            3 => Kind::Chicken,
-            4 => Kind::Zombie,
-            5 | 63 => Kind::Skeleton,
-            61 => Kind::Stray,
-            62 => Kind::Bogged,
-            6 => Kind::Creeper,
-            7 => Kind::Spider,
-            31 => Kind::CaveSpider,
-            32 => Kind::Silverfish,
-            8 => Kind::EndCrystal,
-            9 => Kind::EnderDragon,
-            10 => Kind::Enderman,
-            11 => Kind::Shulker,
-            12 => Kind::ShulkerBullet,
-            13 => Kind::Witch,
-            14 => Kind::Villager,
-            15 => Kind::ZombieVillager,
-            16 => Kind::Blaze,
-            17 => Kind::WitherSkeleton,
-            18 => Kind::MagmaCube,
-            19 => Kind::Ghast,
-            20 => Kind::ZombifiedPiglin,
-            21 => Kind::Piglin,
-            22 => Kind::PiglinBrute,
-            23 => Kind::Hoglin,
-            24 => Kind::Strider,
-            25 => Kind::Drowned,
-            26 => Kind::Husk,
-            27 => Kind::Slime,
-            28 => Kind::Wolf,
-            29 => Kind::Cat,
-            30 => Kind::LeashKnot,
-            33 => Kind::IronGolem,
-            34 => Kind::SnowGolem,
-            64 => Kind::Pillager,
-            65 => Kind::Vindicator,
-            66 => Kind::Evoker,
-            67 => Kind::Vex,
-            68 => Kind::Illusioner,
-            69 => Kind::Ravager,
-            70 => Kind::EvokerFangs,
-            35 => Kind::Phantom,
-            36 => Kind::Guardian,
-            37 => Kind::ElderGuardian,
-            60 => Kind::Wither,
-            71 => Kind::Llama,
-            72 => Kind::TraderLlama,
-            73 => Kind::WanderingTrader,
-            74 => Kind::Camel,
-            75 => Kind::Goat,
-            76 => Kind::PolarBear,
-            77 => Kind::Panda,
-            78 => Kind::Ocelot,
-            79 => Kind::Mooshroom,
-            80 => Kind::Breeze,
-            81 => Kind::Cod,
-            82 => Kind::Salmon,
-            83 => Kind::TropicalFish,
-            84 => Kind::Pufferfish,
-            85 => Kind::Squid,
-            86 => Kind::GlowSquid,
-            87 => Kind::Dolphin,
-            88 => Kind::Turtle,
-            89 => Kind::Axolotl,
-            90 => Kind::Frog,
-            91 => Kind::Tadpole,
-            92 => Kind::Warden,
-            _ => return None,
-        };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
         let y = f64::from_be_bytes(take(8)?.try_into().ok()?);
         let z = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -2781,7 +2641,7 @@ impl Mob {
         let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
         let tamed = if matches!(kind, Kind::Wolf | Kind::Cat) { Some(tame::read(bytes)?) } else { None };
         let golem_state = if golem::golem(kind) { Some(golem::read(bytes)?) } else { None };
-        let snow_state = if head & !EXTENDED == 63 { Some(skeleton::read_snow(bytes)?) } else { None };
+        let snow_state = if id == save::SNOW_SKELETON { Some(skeleton::read_snow(bytes)?) } else { None };
         let land_state = if land::animal(kind) || kind == Kind::WanderingTrader { Some(land::read(bytes)?) } else { None };
         let water_state = if water::creature(kind) { Some(water::read(bytes)?) } else { None };
         let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
