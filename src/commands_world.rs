@@ -2378,6 +2378,19 @@ fn locate(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             // оригинала: шахта со стартом в чанке −7, −10 — «[-112, ~, -160]»,
             // хижина — «[4816, ~, 1600]»).
             let corner = short.starts_with("village_") || matches!(short, "mineshaft" | "mineshaft_mesa" | "desert_pyramid" | "jungle_pyramid" | "swamp_hut" | "igloo");
+            // оригинала: «[288, ~, 1984]» у старта в чанке 18, 124); так же
+            // разрушенные порталы, кораблекрушения, руины в океане и руины
+            // тропы (свой мир оригинала: все 924 ответа locate — кратны 16).
+            let corner = corner || ["village_", "ruined_portal", "shipwreck", "ocean_ruin", "trail_ruins"].iter().any(|prefix| short.starts_with(prefix));
+
+            // Клад оригинал называет клеткой 9, 9 чанка (вики, Structure set:
+            // «locate_offset of x:9, y:0, z:9»).
+            if short == "buried_treasure" {
+                return match world.nearest_structure(short, chunk.0, chunk.1, 6) {
+                    Some((chunk_x, chunk_z)) => located("commands.locate.structure.success", "minecraft:buried_treasure", (chunk_x * 16 + 9, None, chunk_z * 16 + 9), origin),
+                    None => fail("commands.locate.structure.not_found", &[s("minecraft:buried_treasure")]),
+                };
+            }
 
             // Оригинал ищет до 100 чанков вокруг (вики, Commands/locate).
             match world.nearest_structure(short, chunk.0, chunk.1, 6) {

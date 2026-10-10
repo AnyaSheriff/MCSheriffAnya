@@ -1,0 +1,1893 @@
+# ruined_portal — образцы по замеру мира оригинала 26.1.2 (tools/measure/template_merge.py),
+# клетка — то, что стоит в ней у большинства экземпляров. Слои снизу вверх,
+# строки — по b (z без поворота), знаки — по a (x). «.» — не трогать, «_» — воздух.
+
+template ruined_portal/giant_portal_1 11 16 17 6
+  A chest[facing=west,type=single,waterlogged=false]
+  B chiseled_stone_bricks
+  C gold_block
+  D iron_bars[east=false,north=false,south=false,waterlogged=false,west=false]
+  E iron_bars[east=false,north=false,south=true,waterlogged=false,west=false]
+  F iron_bars[east=false,north=true,south=false,waterlogged=false,west=false]
+  G iron_bars[east=false,north=true,south=true,waterlogged=false,west=false]
+  H lava[level=0]
+  I lava[level=8]
+  J netherrack
+  K obsidian
+  L stone_brick_slab[type=bottom,waterlogged=false]
+  M stone_brick_slab[type=double,waterlogged=false]
+  N stone_brick_slab[type=top,waterlogged=false]
+  O stone_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  P stone_brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  Q stone_brick_stairs[facing=north,half=bottom,shape=inner_left,waterlogged=false]
+  R stone_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  S stone_brick_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  T stone_brick_stairs[facing=south,half=bottom,shape=inner_right,waterlogged=false]
+  U stone_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  V stone_brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  W stone_brick_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  X stone_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  Y stone_brick_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  Z stone_bricks
+  a stone_slab[type=bottom,waterlogged=false]
+  loot 4 3 3 ruined_portal
+layer 0
+  ..JJJJJJJJ.
+  .JJJJJJJJJJ
+  JJJJJJJJJJJ
+  JJJJJJJJJJJ
+  JJJJJJJJJJJ
+  JJJJJJJJJJJ
+  JJJJJJJJJJJ
+  JJJJJJJJJJJ
+  JJJJJJJJJJJ
+  JJJJJJJJJJJ
+  JJJJJJJJJJJ
+  JJJJJJJJJJJ
+  JJJJJJJJJJ.
+  JJJJJJJJJ..
+  JJJJJJJJJ..
+  ..JJJJJJ...
+layer 1
+  .__________
+  ..._JJJJJ__
+  _..JJJJJHJ_
+  __JJJJJJJJJ
+  _JHJJJJJJJJ
+  _JJJJJJIJJJ
+  _JJJJJJJJJJ
+  _JHJJJJJJJJ
+  _JJJJJJJJJK
+  _JJJJJJJJKL
+  _JHJJJJJJL_
+  _JHJJJJJLL_
+  _JJJJJJJKK.
+  _.JJJJJZ_..
+  .._JJJ_....
+  .._______._
+layer 2
+  .._........
+  ...____KK..
+  ..__LLUW_..
+  .._LZZZXU..
+  .__LZZZHZL_
+  ._LOZZZHZL_
+  ._LOZZZHZX_
+  .__OZVHHZL_
+  __LORZZZL__
+  __LOSZZX_K_
+  ___aZZUa___
+  .__OZXSX___
+  ._LLZVXa_K.
+  .__LLML__..
+  ._._____...
+  ......_....
+layer 3
+  ......_....
+  .._______..
+  ..___Z___..
+  .___AZ____.
+  ____LKL____
+  .___LKL____
+  .___LKL___.
+  ____LK_____
+  ____LKL___.
+  ____LKL___.
+  ____LKL____
+  ____LKL____
+  .____Z_____
+  ..___Z____.
+  ..______...
+  ..._...._._
+layer 4
+  .....___...
+  .._______..
+  .____Z___..
+  _____G_____
+  _____K_____
+  ___________
+  .__________
+  ._________.
+  ._________.
+  ___________
+  ___________
+  _____K_____
+  _____G_____
+  _____Z_____
+  ._________.
+  ..___..._..
+layer 5
+  ...______..
+  ._________.
+  _____Y_____
+  ___________
+  ___________
+  .__________
+  .__________
+  .__________
+  .__________
+  .__________
+  .__________
+  _____K_____
+  _____G_____
+  _____Z_____
+  ._________.
+  .____..___.
+layer 6
+  ..________.
+  ___________
+  _____Z_____
+  ___________
+  .__________
+  .._________
+  .._________
+  .._________
+  .._________
+  .__________
+  .__________
+  _____K_____
+  _____B_____
+  _____Z_____
+  .__________
+  .____..___.
+layer 7
+  .._______..
+  .__________
+  _____Z_____
+  _____F_____
+  .__________
+  ._________.
+  ..________.
+  ..________.
+  .._________
+  .._________
+  .__________
+  .____K_____
+  _____G_____
+  .____Z_____
+  .__________
+  .____.____.
+layer 8
+  .__...._...
+  .__________
+  .____P_____
+  _____G_____
+  _____K____.
+  .________..
+  .._______..
+  .._______..
+  ..________.
+  ._________.
+  ._________.
+  _____K_____
+  _____G_____
+  _____Z_____
+  .__________
+  ._________.
+layer 9
+  .__....._..
+  .__....____
+  .____Z_____
+  _____B_____
+  _____K____.
+  ._________.
+  .________..
+  .._______..
+  .________..
+  _________..
+  __________.
+  _____K____.
+  _____B_____
+  ___________
+  ___________
+  ._._______.
+layer 10
+  .___....._.
+  ____....___
+  _____Z_____
+  _____G_____
+  _____K_____
+  __________.
+  ._________.
+  .________..
+  .________..
+  _________..
+  __________.
+  ___________
+  _____E_____
+  _____Z_____
+  ___________
+  ._._______.
+layer 11
+  ..___...__.
+  ._________.
+  ___________
+  _____E_____
+  _____K_____
+  ___________
+  ___________
+  __________.
+  __________.
+  __________.
+  __________.
+  ___________
+  _____E_____
+  _____Z_____
+  ._________.
+  ....__.__..
+layer 12
+  ...______..
+  .._______..
+  .____Z_____
+  _____Z_____
+  _____K_____
+  _____K____.
+  _____K_____
+  _____K_____
+  ___________
+  ___________
+  ___________
+  ___________
+  _____B_____
+  .__________
+  .._______..
+  ...___.__..
+layer 13
+  ....___....
+  ...______..
+  ..___Z____.
+  .____G_____
+  _____F_____
+  __________.
+  _____E____.
+  .____G_____
+  _____F_____
+  ___________
+  ___________
+  ___________
+  .____D_____
+  .________..
+  .._______..
+  ....._._...
+layer 14
+  .....__....
+  ....___._..
+  ...__U___._
+  ..___Q_____
+  .____X_____
+  _____T____.
+  _____G____.
+  _____Z___..
+  _____Z___..
+  __________.
+  ___________
+  __________.
+  .._______..
+  ..________.
+  ...____....
+  ...........
+layer 15
+  ...........
+  ....._.....
+  ....___....
+  ..._____...
+  .._______..
+  .____Z____.
+  _____Z___..
+  ____NCN__..
+  _____CN__..
+  _________..
+  ._________.
+  .._______..
+  ..._____...
+  ....___....
+  ....._.....
+  ...........
+layer 16
+  ...........
+  ..._____...
+  ..______...
+  ..________.
+  ._________.
+  ._________.
+  __________.
+  _____a____.
+  __________.
+  ._________.
+  ._________.
+  ._________.
+  ._________.
+  ..________.
+  ..._______.
+  ...........
+
+template ruined_portal/giant_portal_2 11 16 16 7
+  A chest[facing=east,type=single,waterlogged=false]
+  B chiseled_stone_bricks
+  C gold_block
+  D iron_bars[east=false,north=false,south=false,waterlogged=false,west=false]
+  E iron_bars[east=false,north=false,south=true,waterlogged=false,west=false]
+  F iron_bars[east=false,north=true,south=false,waterlogged=false,west=false]
+  G iron_bars[east=false,north=true,south=true,waterlogged=false,west=false]
+  H lava[level=0]
+  I netherrack
+  J obsidian
+  K stone_brick_slab[type=bottom,waterlogged=false]
+  L stone_brick_slab[type=double,waterlogged=false]
+  M stone_brick_slab[type=top,waterlogged=false]
+  N stone_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  O stone_brick_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  P stone_brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  Q stone_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  R stone_brick_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  S stone_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  T stone_brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  U stone_brick_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  V stone_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  W stone_brick_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  X stone_bricks
+  Y stone_slab[type=bottom,waterlogged=false]
+  loot 9 1 9 ruined_portal
+layer 0
+  ..IIIIIIIII
+  .IIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIIIII
+  IIIIIIIII.I
+  .IIIIIIII..
+  ...III.....
+layer 1
+  ___________
+  ___XXIIII__
+  ___IIIIIHI_
+  __IIIIIIII_
+  _IHIIHHHII_
+  _IIIIHHHII_
+  _IIIIHHHII_
+  _IHIIHHHII_
+  _IIIIIHHII_
+  _IIIIIIIIA_
+  _IHIIIIII__
+  _IHIIIIIK__
+  _IIIIIII__I
+  __IIIIIX__.
+  ___III_I__.
+  .__________
+layer 2
+  ___________
+  _______JJ__
+  ____JKSU___
+  ___KXOXVS__
+  ___KX___Y__
+  __KJX___VK_
+  __KNW___VK_
+  ___NX___Q__
+  __KKX___K__
+  __KNXWXK___
+  ___NXXXV___
+  ___NXXRK___
+  __KKXXXV___
+  ___KKLK____
+  ___________
+  ___________
+layer 3
+  ___________
+  ___________
+  _____X_____
+  _____X_____
+  ____KJ_____
+  ___JKJ_____
+  ____KJ_____
+  ____KJ_____
+  ____KJ_____
+  ____KJ_____
+  ____KJK____
+  ____KJK____
+  _____B_____
+  _____X_____
+  ___________
+  ___________
+layer 4
+  ___________
+  ___________
+  ___________
+  _____E_____
+  _____J_____
+  ___J_______
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  _____J_____
+  _____G_____
+  _____X_____
+  ___________
+  _________..
+layer 5
+  ___________
+  ___________
+  ___________
+  _____D_____
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  _____J_____
+  _____G_____
+  _____X_____
+  ___________
+  __________.
+layer 6
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  _____J_____
+  _____B_____
+  _____X_____
+  ___________
+  ___________
+layer 7
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  _____J_____
+  _____G_____
+  _____X_____
+  ___________
+  ___________
+layer 8
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  _____J_____
+  _____F_____
+  _____W_____
+  ___________
+  ___________
+layer 9
+  ___________
+  ___________
+  _____V_____
+  _____T_____
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  _____J_____
+  _____B_____
+  _____X_____
+  ___________
+  ___________
+layer 10
+  ___________
+  ___________
+  _____X_____
+  _____G_____
+  _____J_____
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  _____J_____
+  _____G_____
+  _____X_____
+  ___________
+  ___________
+layer 11
+  ___________
+  ___________
+  _____X_____
+  _____G_____
+  _____J_____
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  _____J_____
+  _____G_____
+  _____X_____
+  ___________
+  ___________
+layer 12
+  ___________
+  ___________
+  _____X_____
+  _____B_____
+  _____J_____
+  ___________
+  ___________
+  _____J_____
+  _____J_____
+  ___________
+  ___________
+  _____J_____
+  _____B_____
+  _____X_____
+  ___________
+  ___________
+layer 13
+  ___________
+  ___________
+  _____N_____
+  _____G_____
+  _____G_____
+  _____G_____
+  _____G_____
+  _____G_____
+  _____G_____
+  _____G_____
+  _____G_____
+  _____G_____
+  _____G_____
+  _____X_____
+  ___________
+  ___________
+layer 14
+  ___________
+  ___________
+  _____X_____
+  _____X_____
+  _____X_____
+  _____X_____
+  _____G_____
+  _____X_____
+  _____X_____
+  _____G_____
+  _____X_____
+  _____X_____
+  _____X_____
+  _____X_____
+  ___________
+  ___________
+layer 15
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+  _____X_____
+  ____PX_____
+  ____MC_____
+  _____C_____
+  _____L_____
+  _____X_____
+  ___________
+  ___________
+  ___________
+  ___________
+  ___________
+
+template ruined_portal/giant_portal_3 16 16 16 6
+  A chest[facing=south,type=single,waterlogged=false]
+  B chiseled_stone_bricks
+  C gold_block
+  D iron_bars[east=false,north=false,south=false,waterlogged=false,west=false]
+  E iron_bars[east=false,north=false,south=true,waterlogged=false,west=false]
+  F iron_bars[east=false,north=false,south=true,waterlogged=false,west=true]
+  G iron_bars[east=false,north=true,south=false,waterlogged=false,west=false]
+  H iron_bars[east=false,north=true,south=false,waterlogged=false,west=true]
+  I iron_bars[east=false,north=true,south=true,waterlogged=false,west=false]
+  J lava[level=0]
+  K lava[level=2]
+  L mossy_stone_brick_slab[type=bottom,waterlogged=false]
+  M netherrack
+  N obsidian
+  O stone
+  P stone_brick_slab[type=bottom,waterlogged=false]
+  Q stone_brick_slab[type=bottom,waterlogged=true]
+  R stone_brick_slab[type=double,waterlogged=false]
+  S stone_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  T stone_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=true]
+  U stone_brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  V stone_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  W stone_brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  X stone_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  Y stone_bricks
+  loot 9 2 3 ruined_portal
+layer 0
+  ...MMMMMMMMM....
+  .MMMMMMMMMMMM...
+  MMMMMMMMMMMMMMM.
+  MMMMMMMMMMMMMM..
+  MMMMMMMMMMMMMMO.
+  MMMMMMMMMMMMMMMM
+  MMMMMMMMMMMMMMMM
+  MMMMMMMMMMMMMMMM
+  MMMMMMMMMMMMMMMM
+  MMMMMMMMMMMMMMMM
+  MMMMMMMMMMMMMMMM
+  MMMMMMMCMMMMMMMM
+  MMMMMMMMMMMMMMMM
+  MMMMMMMMMMMMM.M.
+  .MMMMMMMMMMMMM..
+  ..MMMMMMMMMM....
+layer 1
+  .___________._..
+  _..NMMMMM___.__.
+  _..MMMMMJMYYY___
+  __MMMMMMMMMMYM__
+  _MJMMMMMMMMMYMMM
+  _MMMMMMMMMMMMYMM
+  _MMMMMMMMMMMMCXM
+  _MJMMMCMMMMMMCYM
+  _MMMMJJJJMMMMPMM
+  _MMMMJJJJNMMM__.
+  _MJKJJJJCJMM____
+  _MJKJJJJJJJM___.
+  _MMJKJJJJMM___..
+  _.MMMMMYM.._....
+  ...MMM_...__....
+  ....___..._.....
+layer 2
+  _._........____.
+  _..N_____..____.
+  ____PPMMMURPP___
+  ___PYYMMMA._P.__
+  .._QYYYM__NFP_..
+  __PSYYMM__NHPPP_
+  __PSYUYM__.__.S_
+  ___TYVYM______D_
+  __PSY___________
+  __PSY____N_Y___.
+  ___________Y____
+  _._________.____
+  ._P_____________
+  ___PPRP_._.____.
+  ________..._.__.
+  .__..._....___..
+layer 3
+  _._._.___.._____
+  ___N___________.
+  _____Y__________
+  _____B__________
+  ____PNL_________
+  ____PNP_________
+  ____PNP_________
+  ____PNP_________
+  ____PNP_________
+  ____PNP__N.E____
+  ____PNP____G____
+  ____PNP_________
+  _____B__________
+  _____Y__________
+  ____________.___
+  ____._________._
+layer 4
+  _________.._____
+  ________________
+  _____W__________
+  _____I__________
+  _____N__________
+  ________________
+  ________________
+  ________________
+  ________________
+  _________N______
+  ________________
+  _____N__________
+  _____I__________
+  _____Y__________
+  ________________
+  _____.____._____
+layer 5
+  _________.._____
+  ________________
+  _____Y__________
+  _____G__________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  _____N__________
+  _____I__________
+  _____Y__________
+  __________._____
+  _____..___.___..
+layer 6
+  __________._____
+  ________________
+  _____Y__________
+  _____B__________
+  ________________
+  ________________
+  _.______________
+  _.______________
+  _.______________
+  ________________
+  ________________
+  _____N__________
+  _____S__________
+  _____Y__________
+  ________________
+  ______________..
+layer 7
+  _________..____.
+  ________________
+  _____Y__________
+  _____G__________
+  ________________
+  ________________
+  _.______________
+  _.______________
+  _.______________
+  _.______________
+  ________________
+  _____N__________
+  _____I__________
+  _____Y__________
+  ________________
+  ______________..
+layer 8
+  ________..______
+  ________________
+  ________________
+  _____D__________
+  ________________
+  ________________
+  _.______________
+  _.______________
+  _.______________
+  ________________
+  _______________.
+  _____N__________
+  _____I__________
+  _____Y__________
+  ________________
+  ________________
+layer 9
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  _.______________
+  ________________
+  ________________
+  _______________.
+  _____N__________
+  _____B__________
+  _____Y__________
+  ________________
+  ________________
+layer 10
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ._______________
+  ._______________
+  ________________
+  ________________
+  ________________
+  _____D__________
+  _____V__________
+  ________________
+  __._____________
+layer 11
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  _____E__________
+  _____Y__________
+  ________________
+  ___.____________
+layer 12
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  _____E__________
+  _____N__________
+  ________________
+  ________________
+  _____B__________
+  _____Y__________
+  ________________
+  ________________
+layer 13
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ._______________
+  _____E__________
+  _____I__________
+  _____I__________
+  _____I__________
+  .____I__________
+  _____V__________
+  ________________
+  ________________
+layer 14
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  .______________.
+  ._______________
+  _____C__________
+  .____I__________
+  _____Y__________
+  _____Y__________
+  _____Y__________
+  ..___S__________
+  ________________
+  ________________
+layer 15
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+  _______________.
+  ._______________
+  .______________.
+  .____R__________
+  _____Y__________
+  ________________
+  ________________
+  ________________
+  ________________
+  ________________
+
+template ruined_portal/portal_1 6 6 10 18
+  A chest[facing=west,type=single,waterlogged=false]
+  B chiseled_stone_bricks
+  C gold_block
+  D netherrack
+  E obsidian
+  F stone
+  G stone_brick_slab[type=bottom,waterlogged=false]
+  H stone_brick_slab[type=top,waterlogged=false]
+  I stone_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  J stone_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  K stone_brick_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  L stone_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  M stone_brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  N stone_bricks
+  O stone_slab[type=bottom,waterlogged=false]
+  P stone_slab[type=double,waterlogged=false]
+  loot 2 2 0 ruined_portal
+layer 0
+  DDDDDD
+  DDDDDD
+  DDDDDD
+  DDDDDD
+  DDDDDD
+  DDDDDD
+layer 1
+  .OPNO.
+  OFFDDD
+  OFF_DD
+  OFFDDD
+  OFPDDD
+  .OPNDD
+layer 2
+  __AN..
+  __KE__
+  __IED_
+  __GED_
+  __JED_
+  ___ND_
+layer 3
+  ___B__
+  ___E__
+  ______
+  ____D_
+  ___ED_
+  ___M_.
+layer 4
+  ___N__
+  ___E__
+  ______
+  ______
+  ____D_
+  ___N__
+layer 5
+  ___B__
+  ___E__
+  ______
+  ______
+  ______
+  ______
+layer 6
+  ___N__
+  ___E__
+  ___E__
+  ___E__
+  ______
+  ______
+layer 7
+  ___N__
+  ___N__
+  __HC__
+  ___C__
+  ______
+  ______
+layer 8
+  ______
+  ______
+  ___L__
+  ___J__
+  ______
+  ______
+layer 9
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+
+template ruined_portal/portal_10 12 10 8 17
+  A chest[facing=west,type=single,waterlogged=false]
+  B chiseled_stone_bricks
+  C gold_block
+  D iron_bars[east=false,north=false,south=true,waterlogged=false,west=false]
+  E iron_bars[east=true,north=true,south=true,waterlogged=false,west=true]
+  F lava[level=0]
+  G netherrack
+  H obsidian
+  I stone_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  J stone_brick_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  K stone_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  L stone_bricks
+  loot 2 1 7 ruined_portal
+layer 0
+  G.GGGGGGG..G
+  GGGGGGGGGG..
+  GGGGGGGGGGGG
+  GGGGGGGGGGGG
+  GGGGGGGGGGGG
+  GGGGGGGGGGGG
+  GGGGGGGGGGGG
+  GGGGGGGGGGGG
+  GGGGGGGGGGGG
+  GGGGGGGGGGGG
+layer 1
+  .__________.
+  ____G__B____
+  ___GGGGGG___
+  _GLHFFHHHG__
+  _ILHFFFFHFG_
+  _IGHFFFFHFC_
+  _JLHFHFHHFG_
+  __AGGGFFFFG_
+  ___LGGGGGG__
+  ..____GGEL..
+layer 2
+  .__________.
+  ____________
+  ______L_____
+  ___H________
+  ____________
+  ____________
+  ____________
+  ___BG_______
+  ___LGG______
+  .__________.
+layer 3
+  .__________.
+  ____________
+  ______L_____
+  ____________
+  ____________
+  ____________
+  ____________
+  ___D________
+  ___KG_______
+  ____________
+layer 4
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ___D________
+  ___L________
+  ____________
+layer 5
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ___B________
+  ___L________
+  ____________
+layer 6
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+layer 7
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+  ____________
+
+template ruined_portal/portal_2 9 9 12 24
+  A chest[facing=east,type=single,waterlogged=false]
+  B chiseled_stone_bricks
+  C gold_block
+  D iron_bars[east=false,north=false,south=false,waterlogged=false,west=false]
+  E lava[level=0]
+  F netherrack
+  G obsidian
+  H smooth_stone_slab[type=bottom,waterlogged=false]
+  I smooth_stone_slab[type=double,waterlogged=false]
+  J smooth_stone_slab[type=top,waterlogged=false]
+  K stone_brick_slab[type=bottom,waterlogged=false]
+  L stone_brick_slab[type=top,waterlogged=false]
+  M stone_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  N stone_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  O stone_bricks
+  loot 8 2 6 ruined_portal
+layer 0
+  FFFFFFFFF
+  FFFFFFFFF
+  FFFFFFFFF
+  FFFFFFFFF
+  FFFFFFFFF
+  FFFFFFFFF
+  FFFFFFFFF
+  FFFFFFFFF
+  FFFFFFFFF
+layer 1
+  ..F.FFFF.
+  FFFFFFEF.
+  IFFFEEEFF
+  MOEEEEEEF
+  MOEEEEECF
+  IOEEEEEEF
+  FFFGEEEFF
+  .FEEFFFF.
+  ..FFFF...
+layer 2
+  ...__O...
+  ._...__..
+  _HJ______
+  _KL_____.
+  _KL____..
+  _HJ____O.
+  ._.G___OA
+  .._._O_O.
+  ...__....
+layer 3
+  _..__O_..
+  _________
+  ___HH___.
+  ___KK__..
+  ___KK__..
+  ___HH__..
+  ._______.
+  .____O__.
+  ...___...
+layer 4
+  _____O___
+  _________
+  _____G___
+  _________
+  _________
+  _________
+  _________
+  _.___O___
+  _.______.
+layer 5
+  _____B___
+  _________
+  _____G___
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+layer 6
+  _____O___
+  _________
+  _____G___
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+layer 7
+  _____O___
+  _________
+  _____G___
+  _________
+  _________
+  _____G___
+  _________
+  _________
+  _________
+layer 8
+  _____O___
+  _________
+  _____G___
+  _____G___
+  _____G___
+  _____G___
+  _________
+  _________
+  _________
+layer 9
+  _____O___
+  _________
+  _____D___
+  _________
+  _________
+  _____D___
+  _________
+  _________
+  _________
+layer 10
+  _____O___
+  _____O___
+  ____LO___
+  ____LC___
+  ____L____
+  ____LO___
+  _________
+  _________
+  _________
+layer 11
+  _________
+  _________
+  _____K___
+  _____N___
+  _____K___
+  _____K___
+  _________
+  _________
+  _________
+
+template ruined_portal/portal_3 8 9 9 37
+  A chest[facing=west,type=single,waterlogged=false]
+  B lava[level=0]
+  C netherrack
+  D obsidian
+  E stone_brick_slab[type=bottom,waterlogged=false]
+  F stone_brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  G stone_bricks
+  loot 3 3 6 ruined_portal
+layer 0
+  CCCCCCCC
+  CCCCCCCC
+  CCCCCCCC
+  CCCCCCCC
+  CCC_CCCC
+  CCCCCCCC
+  CCCCCCCC
+  CCCCCCCC
+  CCCCCCCC
+layer 1
+  ..CCCCC.
+  .CBCCCCC
+  CCCCCCCC
+  CCCCCCCC
+  CCCCCCCC
+  CCCCCCCC
+  GCCCCCCC
+  CCCCBCC.
+  .CCCCC..
+layer 2
+  ._._EE..
+  .__GGG_.
+  __GGGGD.
+  _EGGGGG_
+  _GGGGGG_
+  EGGGGGG_
+  GGGGGG_.
+  EFGG_E__
+  .EE.....
+layer 3
+  .____.._
+  ____G__.
+  ___EDE__
+  ___EDED_
+  ___EDE__
+  ___EDE__
+  ___AG__.
+  _______.
+  .___....
+layer 4
+  _____._.
+  _______.
+  ________
+  ________
+  ________
+  ____D___
+  _______.
+  _______.
+  ____....
+layer 5
+  _______.
+  _______.
+  ________
+  ________
+  ________
+  ____D___
+  ________
+  _______.
+  ______..
+layer 6
+  .______.
+  _______.
+  ________
+  ________
+  ________
+  ____D___
+  _______.
+  _______.
+  _______.
+layer 7
+  ..____..
+  .______.
+  _______.
+  ________
+  ____D___
+  ____D___
+  _______.
+  _______.
+  ..____..
+layer 8
+  ..._....
+  ..____..
+  .______.
+  _______.
+  _______.
+  _______.
+  ._____..
+  ..____..
+  ..._....
+
+template ruined_portal/portal_4 8 9 9 22
+  A chest[facing=west,type=single,waterlogged=false]
+  B gold_block
+  C lava[level=0]
+  D netherrack
+  E obsidian
+  F stone_brick_slab[type=bottom,waterlogged=false]
+  G stone_brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  H stone_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I stone_bricks
+  loot 3 3 2 ruined_portal
+layer 0
+  DDDDDDDD
+  DDDDDDDD
+  DDDDDDDD
+  DDDDDDDD
+  DDDDDDDD
+  DDDDDDDD
+  DDDDDDDD
+  DDDDDDDD
+  DDDDDDD.
+layer 1
+  ..DDDDD.
+  _DCDDDD.
+  DCIDDDDD
+  DDDDDDDD
+  DDDDDDDD
+  DDDDDDDD
+  DDDDDDDE
+  DDDDCDD.
+  .DDDDD..
+layer 2
+  ....FF..
+  ._.IIII.
+  ..IIIGI.
+  .FIIIIIF
+  .IIIIIEI
+  FHIIIIIF
+  .IIIIIF.
+  .FII.FB.
+  .__.__..
+layer 3
+  ._______
+  ___.I___
+  ___AEF_.
+  ___FEF__
+  ___FEF__
+  ___FEF_.
+  .___I__.
+  .._____.
+  .______.
+layer 4
+  ________
+  ________
+  ____E___
+  ________
+  ________
+  ____E___
+  ________
+  ________
+  ________
+layer 5
+  ________
+  ________
+  ____E___
+  ________
+  ________
+  ____E___
+  ________
+  ________
+  _______.
+layer 6
+  ________
+  ________
+  ____E___
+  ________
+  ________
+  ________
+  ________
+  ________
+  ____.__.
+layer 7
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+layer 8
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+  ________
+
+template ruined_portal/portal_5 10 7 10 34
+  A chest[facing=south,type=single,waterlogged=false]
+  B cracked_stone_bricks
+  C gold_block
+  D lava[level=0]
+  E netherrack
+  F obsidian
+  G stone
+  H stone_brick_slab[type=bottom,waterlogged=false]
+  I stone_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  J stone_bricks
+  K stone_slab[type=bottom,waterlogged=false]
+  loot 4 3 2 ruined_portal
+layer 0
+  EEEEEEEEEE
+  EEEEEEEEEE
+  EEEEEEEEEE
+  EEEEEEEEEE
+  EEEEEEEEEE
+  EEEEEEEEEE
+  EEEEEEEEEE
+layer 1
+  EEJEEEEEEE
+  EEEEEEEEEE
+  EEEEEEEEEE
+  EEEEEEEEEE
+  EEEEECEEEE
+  _EEEEEEEE.
+  ...EEEEE._
+layer 2
+  ..._HJJJJH
+  KGGJJJJBEJ
+  JG.JJJGECE
+  JGJJJJEEEE
+  HHGJJDEEEC
+  ._IK_EEE_.
+  .....__...
+layer 3
+  ..____HHH.
+  __FJKFFFF.
+  _HFJA_HHFH
+  __FH__JKFK
+  __F___EE__
+  ._________
+  .______...
+layer 4
+  .._______.
+  __________
+  __________
+  __________
+  ._F_______
+  ._________
+  ._______..
+layer 5
+  ..________
+  ._________
+  __________
+  __________
+  ._F_______
+  ._________
+  ._______._
+layer 6
+  ...______.
+  .________.
+  __________
+  __________
+  __F_______
+  .________.
+  .________.
+layer 7
+  .._____...
+  ._______..
+  __________
+  __________
+  __F_______
+  .________.
+  ._______..
+layer 8
+  .._______.
+  .________.
+  __________
+  __________
+  __F_______
+  __________
+  ._______..
+layer 9
+  ...___....
+  .________.
+  ._________
+  ._________
+  .________.
+  _.______..
+  __.___....
+
+template ruined_portal/portal_6 5 7 7 17
+  A chest[facing=west,type=single,waterlogged=false]
+  B gold_block
+  C netherrack
+  D obsidian
+  E stone_brick_slab[type=bottom,waterlogged=false]
+  F stone_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  G stone_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  loot 1 1 4 ruined_portal
+layer 0
+  CCCCC
+  CCCCC
+  CCCCC
+  CCCCC
+  CCCCC
+  .CCCC
+  .CCC.
+layer 1
+  ..D_.
+  _ED_.
+  _EDC_
+  _EDCD
+  _ADCC
+  __CCC
+  .___.
+layer 2
+  ._D_.
+  _____
+  _____
+  ___C_
+  __DC_
+  ___C_
+  .___.
+layer 3
+  __D__
+  _____
+  _____
+  _____
+  __DC_
+  _____
+  _____
+layer 4
+  __D__
+  _____
+  _____
+  _____
+  __D__
+  _____
+  _____
+layer 5
+  ._D__
+  __D__
+  _____
+  __D__
+  __D__
+  _____
+  .__._
+layer 6
+  ..E__
+  ._G__
+  __B__
+  __F__
+  _____
+  ____.
+  ...._
+
+template ruined_portal/portal_7 9 9 7 32
+  A chest[facing=west,type=single,waterlogged=false]
+  B gold_block
+  C lava[level=0]
+  D netherrack
+  E obsidian
+  F stone_brick_slab[type=bottom,waterlogged=false]
+  G stone_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  H stone_bricks
+  loot 0 1 2 ruined_portal
+layer 0
+  DDDDDDDDD
+  DDDDDDDDD
+  DDDEDDDDD
+  DDDEDDDDD
+  DDDEDDDDD
+  DDDDDDDDD
+  DDDDDDDDD
+  DDDDDDDDD
+  DDDDDDDDD
+layer 1
+  .D_DD___.
+  _DDCCD__.
+  ADCECDDDD
+  _DCCCCBCD
+  _DCCCCCCD
+  _DCECCCD_
+  _DDCCEHD.
+  ._DDDDD_.
+  ..______.
+layer 2
+  ._______.
+  _________
+  ___E_D___
+  _________
+  _________
+  ___E_____
+  _________
+  _____F___
+  .________
+layer 3
+  .________
+  _________
+  ___E_____
+  _________
+  _________
+  _________
+  _________
+  _________
+  _________
+layer 4
+  ._______.
+  _________
+  ___E_____
+  ___E_____
+  ___E_____
+  _________
+  _________
+  _________
+  _________
+layer 5
+  .________
+  _________
+  ___G_____
+  ___B_____
+  _________
+  _________
+  _________
+  _________
+  _________
+layer 6
+  _________
+  _________
+  _________
+  ___F_____
+  ___F_____
+  _________
+  _________
+  _________
+  _________
+
+template ruined_portal/portal_8 14 9 9 16
+  A chest[facing=west,type=single,waterlogged=false]
+  B chiseled_stone_bricks
+  C gold_block
+  D lava[level=0]
+  E netherrack
+  F obsidian
+  G stone_brick_slab[type=bottom,waterlogged=false]
+  H stone_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  I stone_brick_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  J stone_brick_wall[east=none,north=none,south=low,up=true,waterlogged=false,west=none]
+  K stone_brick_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+  L stone_brick_wall[east=none,north=tall,south=none,up=true,waterlogged=false,west=none]
+  M stone_bricks
+  loot 4 4 2 ruined_portal
+layer 0
+  E.EEEEEEEEE...
+  ..EEEEEEEEEE.E
+  .EEEEEEEEEEEEE
+  .EEEEEEEEEEEEE
+  EEEEEEEEEEEEEE
+  EEEEEEEEEEEEEE
+  EEEEEEEEEEEEEE
+  EEEEEEEEEEEEEE
+  EEEEE.EE.EEEEE
+layer 1
+  .__..EE.__M__.
+  __.EEEEEEEE.__
+  __EMEEEDDDDEE.
+  __EECDDDDFCDE_
+  _.EEDDDDDFCDE_
+  ._HEDDDDDFDDE_
+  ..MEEEEDDDDE__
+  ._._.E.EEEE._.
+  ._____.___GM._
+layer 2
+  ______________
+  ____EEEEB_____
+  ___EMEE_______
+  __.E__________
+  ___H__________
+  ___H__________
+  ___IM_________
+  _____M___.M___
+  ______________
+layer 3
+  ______________
+  _____ME_K_____
+  ___.MF________
+  ____HF________
+  ____HF________
+  ____HF________
+  ____MF________
+  _____M________
+  ______________
+layer 4
+  ______________
+  _____J________
+  ____AF________
+  ______________
+  ______________
+  ______________
+  _____F________
+  _____L________
+  ______________
+layer 5
+  ______________
+  ______________
+  _____F________
+  ______________
+  ______________
+  ______________
+  _____F________
+  _____B________
+  ______________
+layer 6
+  ______________
+  ______________
+  _____F________
+  ______________
+  ______________
+  ______________
+  _____F________
+  _____L________
+  ______________
+layer 7
+  ______________
+  ______________
+  _____F________
+  ______________
+  ______________
+  ______________
+  _____F________
+  _____M________
+  ______________
+layer 8
+  ______________
+  ______________
+  ______________
+  ______________
+  ______________
+  ______________
+  _____F________
+  ______________
+  ______________
+
+template ruined_portal/portal_9 10 9 8 30
+  A chest[facing=west,type=single,waterlogged=false]
+  B gold_block
+  C netherrack
+  D obsidian
+  E stone_brick_slab[type=bottom,waterlogged=false]
+  F stone_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G stone_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  H stone_brick_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+  I stone_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  loot 4 1 0 ruined_portal
+layer 0
+  CC..CC..CC
+  .CCCCCCCCC
+  ..CCCCCCCC
+  CCCCCCCCCC
+  CCCCCCCCCC
+  CCCCCCCCCC
+  CCCCCCCCCC
+  CCCCCCCCCC
+  CCC.CCCCCC
+layer 1
+  .___A____.
+  __________
+  ___CCI_._.
+  ___CDI_D_.
+  ___FDI__B.
+  ___FDI___.
+  ___FD___..
+  ___GGH_...
+  ._______..
+layer 2
+  .________.
+  __________
+  __________
+  ____D_____
+  __________
+  __________
+  ____D_____
+  __________
+  _________.
+layer 3
+  _________.
+  __________
+  __________
+  __________
+  __________
+  __________
+  ____D_____
+  __________
+  _________.
+layer 4
+  __________
+  __________
+  __________
+  __________
+  __________
+  __________
+  ____D_____
+  __________
+  _________.
+layer 5
+  __________
+  __________
+  __________
+  __________
+  ____D_____
+  ____D_____
+  ____D_____
+  __________
+  ________._
+layer 6
+  __________
+  __________
+  __________
+  __________
+  __________
+  ____B_____
+  ____G_____
+  __________
+  __________
+layer 7
+  __________
+  __________
+  __________
+  __________
+  __________
+  ____E_____
+  __________
+  __________
+  ._________

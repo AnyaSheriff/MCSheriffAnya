@@ -1050,6 +1050,17 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 elder.persistent_tag = true;
                 items.add_mob(elder);
             }
+
+            // Утопленники руин в океане: при сложении чанка, на местах замера
+            // (ocean_ruin.rs; вики, Ocean Ruins: «many of the structures spawn
+            // with drowned … persistent»).
+            for at in world.ruin_drowned(*chunk_x, *chunk_z) {
+                let mut drowned = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Drowned, at);
+
+                drowned.persistent = true;
+                drowned.persistent_tag = true;
+                items.add_mob(drowned);
+            }
         }
     }
 

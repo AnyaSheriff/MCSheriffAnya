@@ -32,6 +32,11 @@ pub mod monument;
 pub mod trial_chambers;
 pub mod mineshaft;
 pub mod temples;
+pub mod ocean_ruin;
+pub mod ruined_portal;
+pub mod shipwreck;
+pub mod template;
+pub mod trail_ruins;
 pub mod the_end;
 pub mod noise;
 pub mod ocean;
@@ -548,6 +553,9 @@ impl Chunk {
         if let Generator::Nether(nether) = generator {
             let mut chunk = nether.chunk(chunk_x, chunk_z);
 
+            // Разрушенные порталы Незера (ruined_portal.rs).
+            ruined_portal::build_nether(nether, &mut chunk, chunk_x, chunk_z);
+
             // Спавнеры ифритов в комнатах трона крепости (вики, Nether Fortress:
             // «blaze spawner»): блок в образце уже лежит, блок-сущность — здесь.
             if let Some(spawner) = crate::blocks::state_by_name("spawner") {
@@ -673,6 +681,15 @@ impl Chunk {
         // над пустотой — мосты (mineshaft.rs).
         mineshaft::build(generator, &mut chunk, chunk_x, chunk_z);
         stronghold::build(generator, &mut chunk, chunk_x, chunk_z);
+        // Разрушенные порталы — до деревьев: у оригинала строения раньше
+        // растительности (ruined_portal.rs).
+        ruined_portal::build(generator, &mut chunk, chunk_x, chunk_z);
+        // Кораблекрушения и зарытые сокровища (shipwreck.rs).
+        shipwreck::build(generator, &mut chunk, chunk_x, chunk_z);
+        // Руины в океане (ocean_ruin.rs).
+        ocean_ruin::build(generator, &mut chunk, chunk_x, chunk_z);
+        // Руины тропы (trail_ruins.rs).
+        trail_ruins::build(generator, &mut chunk, chunk_x, chunk_z);
         generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         village::build(generator, &mut chunk, chunk_x, chunk_z);
@@ -3775,6 +3792,31 @@ impl World {
             return temples::nearest(kind, terrain, chunk_x, chunk_z, regions.max(1) * 27 / temples::SPACING + 1);
         }
 
+        // Разрушенные порталы — по областям 40×40 чанков (ruined_portal.rs).
+        if let Some(variant) = ruined_portal::Variant::by_name(name) {
+            return ruined_portal::nearest(&self.generator, variant, chunk_x, chunk_z, regions.max(1) * 27 / ruined_portal::SPACING + 1);
+        }
+
+        // Кораблекрушения — по областям 24×24 чанка, клады — по чанкам
+        // (shipwreck.rs).
+        if let (Generator::Normal(terrain), "shipwreck" | "shipwreck_beached") = (&*self.generator, name) {
+            return shipwreck::nearest(terrain, name == "shipwreck_beached", chunk_x, chunk_z, regions.max(1) * 27 / shipwreck::SPACING + 1);
+        }
+
+        // Руины в океане — по областям 20×20 чанков (ocean_ruin.rs).
+        if let (Generator::Normal(terrain), "ocean_ruin_cold" | "ocean_ruin_warm") = (&*self.generator, name) {
+            return ocean_ruin::nearest(terrain, name == "ocean_ruin_warm", chunk_x, chunk_z, regions.max(1) * 27 / ocean_ruin::SPACING + 1);
+        }
+
+        // Руины тропы — по областям 34×34 чанка (trail_ruins.rs).
+        if let (Generator::Normal(terrain), "trail_ruins") = (&*self.generator, name) {
+            return trail_ruins::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / trail_ruins::SPACING + 1);
+        }
+
+        if let (Generator::Normal(terrain), "buried_treasure") = (&*self.generator, name) {
+            return shipwreck::nearest_treasure(terrain, chunk_x, chunk_z, 100);
+        }
+
         // Деревни — по областям 34×34 чанка (village.rs).
         if let (Generator::Normal(terrain), Some(kind)) = (&*self.generator, name.strip_prefix("village_").and_then(|kind| village::Kind::ALL.into_iter().find(|known| known.name() == kind))) {
             return village::nearest(terrain, kind, chunk_x, chunk_z, regions.max(1) * 27 / village::SPACING + 1);
@@ -3935,6 +3977,14 @@ impl World {
     pub fn trial_chamber_block_entities(&self, chunk_x: i32, chunk_z: i32) -> Vec<(i32, i32, i32, &'static str, &'static str)> {
         match &*self.generator {
             Generator::Normal(terrain) => trial_chambers::block_entities(terrain, chunk_x, chunk_z),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Утопленники руин в океане в только что сложенном чанке.
+    pub fn ruin_drowned(&self, chunk_x: i32, chunk_z: i32) -> Vec<(f64, f64, f64)> {
+        match &*self.generator {
+            Generator::Normal(terrain) => ocean_ruin::drowned(terrain, chunk_x, chunk_z),
             _ => Vec::new(),
         }
     }

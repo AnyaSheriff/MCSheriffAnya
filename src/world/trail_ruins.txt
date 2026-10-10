@@ -1,0 +1,4036 @@
+# Руины тропы — замер мира оригинала 26.1.2 (tools/measure/template_merge.py
+# templates trail_ruins): куски — по большинству экземпляров (камень и земля —
+# от рельефа, подозрительный гравий — гравий: его кладёт постановка), и
+# раскладки 14 руин: кусок, поворот, угол рамки от угла башни.
+
+layout -254 -45
+  trail_ruins/tower/tower_2 0 0 0 0
+  trail_ruins/roads/long_road_end 1 0 0 -10
+  trail_ruins/tower/large_hall_4 1 5 0 -5
+  trail_ruins/tower/tower_top_2 0 0 13 0
+  trail_ruins/roads/road_spacer_1 1 0 -1 5
+  trail_ruins/tower/hall_4 1 -10 0 -4
+  trail_ruins/roads/road_section_4 1 -1 -1 10
+  trail_ruins/tower/stable_1 1 -11 1 5
+  trail_ruins/roads/road_section_1 1 0 -2 15
+  trail_ruins/decor/decor_4 3 5 -1 10
+  trail_ruins/roads/road_section_4 1 -1 -2 20
+  trail_ruins/decor/decor_7 3 5 -2 21
+  trail_ruins/buildings/large_room_4 1 -12 -2 19
+  trail_ruins/roads/road_section_1 1 0 -3 25
+  trail_ruins/roads/road_section_1 1 0 -4 30
+  trail_ruins/buildings/one_room_5 3 -7 -4 28
+  trail_ruins/roads/road_section_2 1 0 -5 35
+layout -204 4
+  trail_ruins/tower/tower_1 0 0 0 0
+  trail_ruins/tower/platform_2 1 5 0 -1
+  trail_ruins/roads/road_spacer_1 1 0 -1 5
+  trail_ruins/tower/tower_top_1 0 0 13 0
+  trail_ruins/roads/long_road_end 1 0 0 -10
+  trail_ruins/tower/hall_2 1 -10 0 -4
+  trail_ruins/roads/road_section_3 1 -1 -1 10
+  trail_ruins/tower/one_room_2 0 -5 0 5
+  trail_ruins/decor/decor_7 3 5 -1 12
+  trail_ruins/buildings/one_room_5 3 -8 -1 10
+  trail_ruins/roads/road_section_1 1 0 -2 15
+  trail_ruins/roads/road_section_1 1 0 -3 20
+  trail_ruins/buildings/one_room_1 3 -7 -3 20
+  trail_ruins/roads/road_section_1 1 0 -4 25
+  trail_ruins/roads/road_section_1 1 0 -5 30
+  trail_ruins/buildings/large_room_1 1 -11 -5 28
+  trail_ruins/roads/road_section_2 1 0 -6 35
+layout -197 195
+  trail_ruins/tower/tower_2 0 0 0 0
+  trail_ruins/roads/long_road_end 1 0 0 -10
+  trail_ruins/tower/hall_3 1 -10 0 -4
+  trail_ruins/tower/tower_top_2 0 0 13 0
+  trail_ruins/tower/platform_1 1 5 0 -1
+  trail_ruins/roads/road_spacer_1 1 0 -1 5
+  trail_ruins/tower/stable_2 1 -11 1 5
+  trail_ruins/roads/road_section_1 1 0 -2 10
+  trail_ruins/roads/road_section_4 1 -1 -2 15
+  trail_ruins/buildings/one_room_1 3 -8 -2 15
+  trail_ruins/decor/decor_4 3 5 -2 13
+  trail_ruins/roads/road_section_1 1 0 -3 20
+  trail_ruins/roads/road_section_2 1 0 -4 25
+  trail_ruins/buildings/large_room_4 1 -11 -4 23
+  trail_ruins/roads/road_section_1 1 0 -5 30
+  trail_ruins/roads/road_section_1 1 0 -6 35
+layout -190 75
+  trail_ruins/tower/tower_5 1 0 0 0
+  trail_ruins/tower/tower_top_5 1 0 13 0
+  trail_ruins/tower/platform_4 2 1 0 7
+  trail_ruins/roads/road_spacer_1 2 -5 -1 1
+  trail_ruins/tower/hall_1 2 1 0 -6
+  trail_ruins/roads/long_road_end 2 7 0 1
+  trail_ruins/roads/road_section_2 2 -10 -2 1
+  trail_ruins/tower/one_room_5 1 -4 -1 -5
+  trail_ruins/tower/stable_4 3 1 0 -13
+  trail_ruins/roads/road_section_1 2 -15 -3 1
+  trail_ruins/buildings/large_room_1 2 -13 -2 -10
+  trail_ruins/roads/road_section_2 2 -20 -4 1
+  trail_ruins/roads/road_section_3 2 -25 -4 0
+  trail_ruins/buildings/one_room_2 0 -20 -4 -6
+  trail_ruins/decor/decor_7 0 -25 -4 6
+  trail_ruins/roads/road_section_1 2 -30 -5 1
+  trail_ruins/buildings/one_room_2 0 -27 -4 -7
+  trail_ruins/roads/road_section_4 2 -35 -5 0
+layout -184 -68
+  trail_ruins/tower/tower_4 3 0 0 0
+  trail_ruins/roads/road_spacer_1 0 7 -1 1
+  trail_ruins/roads/long_road_end 0 -10 0 1
+  trail_ruins/tower/tower_top_4 3 0 13 0
+  trail_ruins/tower/large_hall_5 0 -4 0 -8
+  trail_ruins/tower/hall_5 0 -3 0 7
+  trail_ruins/roads/road_section_3 0 12 -1 1
+  trail_ruins/tower/stable_4 0 6 1 11
+  trail_ruins/roads/road_section_4 0 17 -1 1
+  trail_ruins/decor/decor_6 2 14 -1 -1
+  trail_ruins/buildings/large_room_4 0 16 -1 7
+  trail_ruins/roads/road_section_3 0 22 -1 1
+  trail_ruins/decor/decor_7 2 24 -1 -4
+  trail_ruins/roads/road_section_3 0 27 -1 1
+  trail_ruins/buildings/one_room_3 2 27 -1 7
+  trail_ruins/decor/decor_7 2 29 -1 -4
+  trail_ruins/roads/road_section_4 0 32 -1 1
+  trail_ruins/roads/road_section_2 0 37 -2 1
+layout -169 -55
+  trail_ruins/tower/tower_4 3 0 0 0
+  trail_ruins/tower/hall_2 0 -3 0 7
+  trail_ruins/roads/road_spacer_1 0 7 -1 1
+  trail_ruins/tower/tower_top_4 3 0 13 0
+  trail_ruins/roads/long_road_end 0 -10 0 1
+  trail_ruins/tower/platform_4 0 0 0 -7
+  trail_ruins/tower/one_room_3 3 6 -1 7
+  trail_ruins/roads/road_section_3 0 12 -1 1
+  trail_ruins/decor/decor_1 0 13 -1 -2
+  trail_ruins/buildings/large_room_1 0 11 -1 7
+  trail_ruins/roads/road_section_2 0 17 -2 1
+  trail_ruins/roads/road_section_2 0 22 -3 1
+  trail_ruins/buildings/one_room_5 2 22 -3 6
+  trail_ruins/roads/road_section_2 0 27 -4 1
+  trail_ruins/roads/road_section_4 0 32 -4 1
+  trail_ruins/decor/decor_3 2 32 -4 -2
+  trail_ruins/roads/road_section_2 0 37 -5 1
+  trail_ruins/buildings/large_room_4 0 29 -4 7
+layout -157 113
+  trail_ruins/tower/tower_4 3 0 0 0
+  trail_ruins/tower/hall_5 0 -3 0 7
+  trail_ruins/tower/tower_top_4 3 0 13 0
+  trail_ruins/tower/platform_5 0 0 0 -7
+  trail_ruins/roads/long_road_end 0 -10 0 1
+  trail_ruins/roads/road_spacer_1 0 7 -1 1
+  trail_ruins/tower/one_room_3 3 6 0 11
+  trail_ruins/roads/road_section_1 0 12 -2 1
+  trail_ruins/buildings/one_room_5 2 11 -2 6
+  trail_ruins/roads/road_section_1 0 17 -3 1
+  trail_ruins/roads/road_section_1 0 22 -4 1
+  trail_ruins/buildings/large_room_3 0 19 -11 6
+  trail_ruins/roads/road_section_1 0 27 -5 1
+  trail_ruins/roads/road_section_3 0 32 -5 1
+  trail_ruins/decor/decor_7 2 34 -5 -4
+  trail_ruins/buildings/one_room_2 2 32 -5 7
+  trail_ruins/roads/road_section_4 0 37 -5 1
+layout -83 54
+  trail_ruins/tower/tower_3 3 0 0 0
+  trail_ruins/roads/road_spacer_1 0 7 -1 1
+  trail_ruins/roads/long_road_end 0 -10 0 1
+  trail_ruins/tower/hall_3 0 -3 0 7
+  trail_ruins/tower/large_hall_3 0 -4 0 -8
+  trail_ruins/tower/tower_top_3 3 0 13 0
+  trail_ruins/roads/road_section_1 0 12 -2 1
+  trail_ruins/tower/one_room_5 3 6 0 11
+  trail_ruins/roads/road_section_2 0 17 -3 1
+  trail_ruins/buildings/large_room_1 0 12 -2 6
+  trail_ruins/roads/road_section_4 0 22 -3 1
+  trail_ruins/decor/decor_2 0 23 -3 -2
+  trail_ruins/roads/road_section_1 0 27 -4 1
+  trail_ruins/buildings/one_room_2 2 22 -3 7
+  trail_ruins/roads/road_section_2 0 32 -5 1
+  trail_ruins/buildings/one_room_4 2 30 -5 6
+  trail_ruins/roads/road_section_2 0 37 -6 1
+layout -49 49
+  trail_ruins/tower/tower_2 0 0 0 0
+  trail_ruins/tower/hall_4 1 -10 0 -4
+  trail_ruins/roads/road_spacer_1 1 0 -1 5
+  trail_ruins/roads/long_road_end 1 0 0 -10
+  trail_ruins/tower/tower_top_2 0 0 13 0
+  trail_ruins/tower/large_hall_4 1 5 0 -5
+  trail_ruins/tower/one_room_5 0 -9 0 5
+  trail_ruins/roads/road_section_2 1 0 -2 10
+  trail_ruins/roads/road_section_2 1 0 -3 15
+  trail_ruins/buildings/one_room_5 3 -7 -2 10
+  trail_ruins/roads/road_section_3 1 -1 -3 20
+  trail_ruins/roads/road_section_2 1 0 -4 25
+  trail_ruins/buildings/one_room_3 3 -8 -3 20
+  trail_ruins/decor/decor_6 3 5 -3 20
+  trail_ruins/roads/road_section_1 1 0 -5 30
+  trail_ruins/buildings/large_room_1 1 -11 -5 30
+  trail_ruins/roads/road_section_2 1 0 -6 35
+layout 16 -223
+  trail_ruins/tower/tower_1 3 0 0 0
+  trail_ruins/tower/tower_top_1 3 0 13 0
+  trail_ruins/tower/large_hall_3 0 -5 0 -8
+  trail_ruins/roads/long_road_end 0 -10 0 0
+  trail_ruins/tower/hall_1 0 -4 0 5
+  trail_ruins/roads/road_spacer_1 0 5 -1 0
+  trail_ruins/tower/stable_2 1 -2 0 11
+  trail_ruins/tower/one_room_5 3 5 -1 5
+  trail_ruins/roads/road_section_1 0 10 -2 0
+  trail_ruins/buildings/large_room_1 0 10 -2 5
+  trail_ruins/roads/road_section_2 0 15 -3 0
+  trail_ruins/roads/road_section_4 0 20 -3 0
+  trail_ruins/roads/road_section_2 0 25 -4 0
+  trail_ruins/buildings/one_room_3 2 20 -3 6
+  trail_ruins/decor/decor_1 0 19 -3 -3
+  trail_ruins/roads/road_section_3 0 30 -4 0
+  trail_ruins/roads/road_section_3 0 35 -4 0
+  trail_ruins/decor/decor_5 0 27 -4 -3
+  trail_ruins/buildings/large_room_2 0 28 -4 6
+layout 39 -90
+  trail_ruins/tower/tower_4 3 0 0 0
+  trail_ruins/roads/road_spacer_1 0 7 -1 1
+  trail_ruins/tower/hall_2 0 -3 0 7
+  trail_ruins/tower/tower_top_4 3 0 13 0
+  trail_ruins/roads/long_road_end 0 -10 0 1
+  trail_ruins/tower/large_hall_2 0 -4 0 -8
+  trail_ruins/roads/road_section_2 0 12 -2 1
+  trail_ruins/tower/one_room_1 3 6 0 7
+  trail_ruins/roads/road_section_2 0 17 -3 1
+  trail_ruins/buildings/one_room_5 2 11 -2 6
+  trail_ruins/roads/road_section_1 0 22 -4 1
+  trail_ruins/roads/road_section_1 0 27 -5 1
+  trail_ruins/buildings/one_room_5 2 22 -4 6
+  trail_ruins/roads/road_section_1 0 32 -6 1
+  trail_ruins/buildings/one_room_4 2 31 -6 6
+  trail_ruins/roads/road_section_1 0 37 -7 1
+layout 106 71
+  trail_ruins/tower/tower_2 2 0 0 0
+  trail_ruins/roads/long_road_end 3 0 0 5
+  trail_ruins/tower/platform_1 3 -7 0 0
+  trail_ruins/tower/tower_top_2 2 0 13 0
+  trail_ruins/roads/road_spacer_1 3 0 -1 -5
+  trail_ruins/tower/hall_1 3 5 0 0
+  trail_ruins/roads/road_section_1 3 0 -2 -10
+  trail_ruins/tower/stable_1 0 11 0 0
+  trail_ruins/tower/stable_4 3 5 0 -7
+  trail_ruins/roads/road_section_2 3 0 -3 -15
+  trail_ruins/buildings/large_room_4 3 5 -3 -16
+  trail_ruins/roads/road_section_2 3 0 -4 -20
+  trail_ruins/roads/road_section_2 3 0 -5 -25
+  trail_ruins/buildings/one_room_5 1 5 -5 -25
+  trail_ruins/roads/road_section_4 3 0 -5 -30
+  trail_ruins/decor/decor_3 1 -3 -5 -31
+  trail_ruins/roads/road_section_1 3 0 -6 -35
+  trail_ruins/buildings/one_room_5 1 6 -5 -32
+layout 151 91
+  trail_ruins/tower/tower_1 0 0 0 0
+  trail_ruins/roads/road_spacer_1 1 0 -1 5
+  trail_ruins/tower/tower_top_1 0 0 13 0
+  trail_ruins/tower/hall_3 1 -10 0 -4
+  trail_ruins/tower/platform_4 1 5 0 -1
+  trail_ruins/roads/long_road_end 1 0 0 -10
+  trail_ruins/roads/road_section_4 1 -1 -1 10
+  trail_ruins/tower/one_room_1 0 -9 1 5
+  trail_ruins/buildings/one_room_5 3 -8 -1 10
+  trail_ruins/decor/decor_3 3 5 -1 8
+  trail_ruins/roads/road_section_1 1 0 -2 15
+  trail_ruins/roads/road_section_2 1 0 -3 20
+  trail_ruins/buildings/one_room_5 3 -7 -3 18
+  trail_ruins/roads/road_section_3 1 -1 -3 25
+  trail_ruins/decor/decor_3 3 5 -3 27
+  trail_ruins/buildings/large_room_1 1 -12 -3 25
+  trail_ruins/roads/road_section_2 1 0 -4 30
+  trail_ruins/roads/road_section_4 1 -1 -4 35
+layout 191 238
+  trail_ruins/tower/tower_2 2 0 0 0
+  trail_ruins/tower/tower_top_2 2 0 13 0
+  trail_ruins/roads/road_spacer_1 3 0 -1 -5
+  trail_ruins/tower/large_hall_3 3 -8 0 -2
+  trail_ruins/roads/long_road_end 3 0 0 5
+  trail_ruins/tower/hall_3 3 5 0 0
+  trail_ruins/roads/road_section_2 3 0 -2 -10
+  trail_ruins/tower/one_room_2 2 9 1 -5
+  trail_ruins/roads/road_section_3 3 0 -2 -15
+  trail_ruins/decor/decor_7 1 -5 -2 -13
+  trail_ruins/buildings/one_room_5 1 6 -2 -16
+  trail_ruins/roads/road_section_2 3 0 -3 -20
+  trail_ruins/roads/road_section_2 3 0 -4 -25
+  trail_ruins/buildings/group_hall_5 3 5 -7 -31
+  trail_ruins/roads/road_section_1 3 0 -5 -30
+  trail_ruins/buildings/group_lower_1 3 11 -7 -31
+  trail_ruins/buildings/group_room_2 1 11 -4 -21
+  trail_ruins/buildings/group_room_2 3 6 -4 -31
+  trail_ruins/buildings/group_lower_5 1 6 -7 -21
+  trail_ruins/roads/road_section_2 3 0 -6 -35
+
+# trail_ruins — образцы по замеру мира оригинала 26.1.2 (tools/measure/template_merge.py),
+# клетка — то, что стоит в ней у большинства экземпляров. Слои снизу вверх,
+# строки — по b (z без поворота), знаки — по a (x). «.» — не трогать, «_» — воздух.
+
+template trail_ruins/buildings/group_hall_5 15 11 15 1
+  A black_glazed_terracotta[facing=east]
+  B black_glazed_terracotta[facing=south]
+  C black_glazed_terracotta[facing=west]
+  D blue_terracotta
+  E brick_slab[type=bottom,waterlogged=false]
+  F bricks
+  G coarse_dirt
+  H cyan_terracotta
+  I gravel
+  J light_gray_terracotta
+  K mud_brick_slab[type=top,waterlogged=false]
+  L mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  M mud_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  N mud_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  O mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  P mud_bricks
+  Q packed_mud
+  R red_terracotta
+  S gravel
+  T white_terracotta
+layer 0
+  ...............
+  ..F............
+  FFF............
+  FFFF...........
+  FFFF...........
+  .FFFF..........
+  ..........PPPP.
+  ...........PPPP
+  ...........PPPP
+  ............PPP
+  ............P..
+layer 1
+  ...............
+  .FF............
+  FIS............
+  F.SE...........
+  FIEF...........
+  FFFFF..........
+  ..........PPPPP
+  ...........PKSP
+  ...........MIIP
+  ............I.P
+  ............QP.
+layer 2
+  ...............
+  FFF............
+  FI.............
+  FEIIF..........
+  FEESF..........
+  FFFFF..........
+  ..........QPPPP
+  ..........PILKP
+  ..........PIIKP
+  ............IIP
+  ............PPP
+layer 3
+  ....FFFFFFF....
+  FFFF.FFFFFPQPP.
+  FEG.FFFFFFPPPP.
+  FESIFFFFFFPPPP.
+  FIIIFFFFFFPQPPP
+  FFFFFFFFFF..PPP
+  PPQ..FFFFFPPPQP
+  PQPPPFFFFFPGIIP
+  .PQPPFFFFFP.INP
+  .PPPP.FFFFP.GKQ
+  .PPPPFFFFF.PPPP
+layer 4
+  ....FFFFFFF....
+  FFFFFFFFFFQPPPP
+  IIEFFFFFFFPPPQQ
+  IIEEFFBSCFPPPPQ
+  F.GIFFIIIFPQPPP
+  FFFFFFFIIFPPPPP
+  PPPPPFIIAFPPPPP
+  PPPPPFB..FPIIIP
+  PPPPPFIBIFPKKII
+  PPPPPFFFFFPPOSI
+  PPPPPFFFFFPPPPP
+layer 5
+  ....IIG.IFI....
+  .FFFFFI.FFPQPPP
+  ..IIF.FIIIIPPQT
+  IIGG..III..LPQP
+  .GIGFIIII.PPIIP
+  FFFFFFI..FPPPPP
+  PPPPPFIIIFPPPPP
+  PISPPIII..P.ISI
+  PPPO...II..GI.G
+  TPPP.FIII.PIISI
+  PPPPPFFFIFPPPQ.
+layer 6
+  ....I.IIII.....
+  .JJJFIIIIFI.ITI
+  IIIIJ.FSIII.IST
+  .IGIIGIIGIIH.SI
+  JSIIJI.IIITKKIT
+  FJIIFGGI.FPTTTP
+  PTTTP.IIIFQISRP
+  TGKKTIISGIRSGIR
+  .IIHII.IIII.ISI
+  TIS.SFIIIIRIIG.
+  ITIIII..IFPRRR.
+layer 7
+  .....I...I.....
+  .SRRFII.IFS.HH.
+  .SI.RG.IIGSSSIH
+  II.IIIGIIGII.I.
+  .IIIRIIIGIHIHII
+  FSIIFIIIIFPHHHQ
+  PHHHPIIIIFPIIIP
+  G.HIHI.IIIDIIII
+  IIGIII.SII.I.IS
+  HSII.III.IDG.I.
+  GHHISIIIIFQDDI.
+layer 8
+  ......II.S.....
+  RRRRRII.IFHIHH.
+  .IIIII.GIFHISIH
+  .IGIRIII.IHIISH
+  S..IRI.I.FHI.SH
+  RIII.IGIIFHHHHH
+  HHHHHIIS.FI.IID
+  HSIGHI.I.FD..II
+  HS.IH.IIIIDIIG.
+  HIIIH.IIIFSIII.
+  IHHSHIGI.FDDDDD
+layer 9
+  ...............
+  .....II.I......
+  .I.RRIS.IFH.II.
+  .IIIFGGIIF.II..
+  .IIRRI.IIFH....
+  .....III.I.....
+  .....S.III.....
+  ....HIII.FDDDD.
+  ..IS.FFFFFQDDD.
+  .I..HIISIFDDDD.
+  ......III......
+layer 10
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  .......II......
+  ...............
+  ...............
+  .......I.......
+  ......II.......
+  ......GI.......
+layer 11
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+layer 12
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+layer 13
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+layer 14
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+  ...............
+
+template trail_ruins/buildings/group_lower_1 5 5 10 1
+  A blue_terracotta
+  B coarse_dirt
+  C gravel
+  D mud_brick_slab[type=top,waterlogged=false]
+  E mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  F mud_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  G mud_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  H mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I mud_bricks
+  J packed_mud
+  K red_terracotta
+  L gravel
+layer 0
+  IIII.
+  .IIII
+  .IIII
+  ..III
+  ..I..
+layer 1
+  IIIII
+  .IDLI
+  .FCCI
+  ..C.I
+  ..JI.
+layer 2
+  JIIII
+  ICEDI
+  ICCDI
+  ..CCI
+  ..III
+layer 3
+  IIIJI
+  IBCCI
+  I.CGI
+  I.BDJ
+  .IIII
+layer 4
+  IIIII
+  ICCCI
+  IDDCC
+  IIHLC
+  IIIII
+layer 5
+  IIIII
+  I.CLC
+  .BC.B
+  ICCLC
+  IIIJ.
+layer 6
+  JCLKI
+  KLBCK
+  C.CLC
+  KCCB.
+  IKKK.
+layer 7
+  ICCCI
+  ACCCC
+  .C.CL
+  AB.C.
+  JAAC.
+layer 8
+  C.CCA
+  A..CC
+  ACCB.
+  LCCC.
+  AAAAA
+layer 9
+  .....
+  AAAA.
+  JAAA.
+  AAAA.
+  .....
+
+template trail_ruins/buildings/group_lower_5 5 5 10 1
+  A brick_slab[type=bottom,waterlogged=false]
+  B bricks
+  C coarse_dirt
+  D gravel
+  E light_gray_terracotta
+  F red_terracotta
+  G gravel
+layer 0
+  BBBB.
+  .BBBB
+  .BBBB
+  ..BBB
+  ..B..
+layer 1
+  BBBBB
+  .BADB
+  .AG.B
+  ..GDB
+  ..BB.
+layer 2
+  BBBBB
+  BGAAB
+  BDDAB
+  ...DB
+  ..BBB
+layer 3
+  BBBBB
+  BDDDB
+  BDGAB
+  B.CAB
+  .BBBB
+layer 4
+  BBBBB
+  BDC.B
+  BAADD
+  BBADD
+  BBBBB
+layer 5
+  BBBBB
+  BCDC.
+  .CCDD
+  BDD..
+  BBBB.
+layer 6
+  BDDEB
+  EDDGE
+  DDCD.
+  EDDDD
+  BEEE.
+layer 7
+  BDDGB
+  FDDD.
+  DD.DD
+  F.DG.
+  BFFG.
+layer 8
+  .DDDF
+  FD..G
+  FDCD.
+  DDDD.
+  FFFFF
+layer 9
+  .....
+  FFDD.
+  BDDD.
+  FF.D.
+  .....
+
+template trail_ruins/buildings/group_room_2 5 5 7 2
+  A coarse_dirt
+  B cyan_terracotta
+  C gravel
+  D mud_brick_slab[type=top,waterlogged=false]
+  E mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  F mud_bricks
+  G packed_mud
+  H gravel
+  I white_terracotta
+layer 0
+  FFFF.
+  FFFF.
+  FFGF.
+  FFFGF
+  ..GFF
+layer 1
+  FFFFF
+  FFFFF
+  FFFFF
+  FFFFF
+  FFFFF
+layer 2
+  FFFFF
+  CFFFI
+  .EFFF
+  FFHCF
+  FFFFF
+layer 3
+  CCCIC
+  H.HCI
+  CBCCC
+  IDDAI
+  FIIIF
+layer 4
+  HCBBA
+  HCCHB
+  CCACC
+  BCBCA
+  FBBBF
+layer 5
+  BHBBC
+  BCCCB
+  BCCHB
+  BACHB
+  BBBBB
+layer 6
+  .....
+  B.CC.
+  .HC..
+  B....
+  .....
+
+template trail_ruins/buildings/large_room_1 9 11 6 7
+  A blue_terracotta
+  B coarse_dirt
+  C gravel
+  D mud_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  E mud_bricks
+  F red_terracotta
+  G smooth_stone_slab[type=double,waterlogged=false]
+  H yellow_glazed_terracotta[facing=east]
+  I yellow_glazed_terracotta[facing=north]
+  J yellow_glazed_terracotta[facing=south]
+  K yellow_glazed_terracotta[facing=west]
+layer 0
+  ..EEEE...
+  .EEEEEE..
+  .EEEEEE..
+  EEEEEEE..
+  EEEKJEEE.
+  EEEJKEEEE
+  EEEHIEEEE
+  EEEEEEEEE
+  EEEEEEEEE
+  .EEEEEEEE
+  ....EEEEE
+layer 1
+  ..EEEE...
+  .EEEEEE..
+  .EEDDEE..
+  ECC.BCE..
+  EECCBCEE.
+  EFCCCCCCE
+  ECC.CC.CE
+  EAGCCCCCE
+  EAAACCEEE
+  .EEECC.CE
+  ....EEEEE
+layer 2
+  ..E.CE...
+  .ECCCAE..
+  .ECCCCE..
+  ECCCCCE..
+  EECCCCEE.
+  ECCC.CCCE
+  ECCCCCCCC
+  ECCCCCCCE
+  EAC.C.CCE
+  .EEECC.CE
+  ....CEE.E
+layer 3
+  ..FCCA...
+  .FCCCCF..
+  .FCCCCF..
+  FCCCCCF..
+  FECCCCEF.
+  CCC.C.CCF
+  FCCCCCCCC
+  CCCCC.CCF
+  CCCCCCCCF
+  .FFFCCECF
+  ....CFF.F
+layer 4
+  ..CCC....
+  .CCCCCC..
+  .CCCCCA..
+  .CC.CCC..
+  AAEEEEAC.
+  .CCCCCEC.
+  ACCCCCECC
+  .CCCCCECC
+  .CCCCCECA
+  ._____A_A
+  ....__A__
+layer 5
+  .........
+  .........
+  ...AA....
+  ..AAAA...
+  .AAAAA...
+  ..AAAA...
+  ...AAAA..
+  ....AAAA.
+  .........
+  .........
+  .........
+
+template trail_ruins/buildings/large_room_2 9 11 6 1
+  A coarse_dirt
+  B cyan_terracotta
+  C gravel
+  D light_gray_glazed_terracotta[facing=east]
+  E light_gray_glazed_terracotta[facing=north]
+  F light_gray_glazed_terracotta[facing=south]
+  G light_gray_glazed_terracotta[facing=west]
+  H mud_brick_slab[type=bottom,waterlogged=false]
+  I mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  J mud_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  K mud_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  L mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  M mud_brick_wall[east=low,north=none,south=none,up=true,waterlogged=false,west=none]
+  N mud_brick_wall[east=none,north=none,south=low,up=true,waterlogged=false,west=low]
+  O mud_brick_wall[east=none,north=none,south=tall,up=true,waterlogged=false,west=none]
+  P mud_brick_wall[east=none,north=none,south=tall,up=true,waterlogged=false,west=tall]
+  Q mud_brick_wall[east=none,north=tall,south=none,up=true,waterlogged=false,west=tall]
+  R mud_brick_wall[east=tall,north=tall,south=none,up=true,waterlogged=false,west=none]
+  S mud_bricks
+  T packed_mud
+  U gravel
+  V white_terracotta
+layer 0
+  ...SSS...
+  ..SSSSS..
+  .SSSSSSS.
+  SSSSSSSSS
+  TSSTTTSTT
+  SSSTTTSTS
+  SSSTTTSSS
+  TSSSSSSSS
+  .SSSSSSS.
+  ..SSSSS..
+  .........
+layer 1
+  ...SJS...
+  ....CCA..
+  .O.HJJCP.
+  .CACCU...
+  CCAHHCCI.
+  CLCH.HCCC
+  CLCHHCCIC
+  CB.CC.CC.
+  .R.KKKCQ.
+  .....CU..
+  .........
+layer 2
+  ...S.S...
+  ....CC...
+  .O...CCN.
+  .A.CCC.C.
+  CCAA.CCC.
+  U.C..CCCC
+  CCCCCACC.
+  ACCCACCC.
+  .RCC.CCC.
+  ...CAC...
+  .........
+layer 3
+  ...MAN...
+  ....CCU..
+  .BB.CCC..
+  .BCUC....
+  ACCUCUCC.
+  ACCCCCC..
+  CCCC.AC..
+  CCU.CC.B.
+  .BBC..BB.
+  .........
+  .........
+layer 4
+  ....C....
+  ....C....
+  ..VVV....
+  .VVCCCC..
+  .VACCCC..
+  .VC.CUCV.
+  .VCCA.CV.
+  .VV.CCVV.
+  ..VVVVV..
+  .........
+  .........
+layer 5
+  .........
+  .........
+  .........
+  ..VVF....
+  ..VFFF...
+  ..DF.FG..
+  ..VFGFV..
+  ..VVEVV..
+  .........
+  .........
+  .........
+
+template trail_ruins/buildings/large_room_3 13 9 15 1
+  A coarse_dirt
+  B cyan_terracotta
+  C gravel
+  D mud_bricks
+  E orange_glazed_terracotta[facing=east]
+  F orange_glazed_terracotta[facing=north]
+  G orange_glazed_terracotta[facing=south]
+  H orange_glazed_terracotta[facing=west]
+  I orange_terracotta
+  J packed_mud
+  K gravel
+  L white_terracotta
+  M yellow_terracotta
+layer 0
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+layer 1
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+layer 2
+  .............
+  .............
+  .............
+  ....DDJDD....
+  ...DDDDDDD...
+  ....DDDDD....
+  .............
+  .............
+  ........CCC..
+layer 3
+  .............
+  .............
+  ....DDDDD....
+  ..DDCCCACDJ..
+  ..DADCC..CD..
+  ..DDDCCAAD...
+  ....DDJDD....
+  .............
+  .......CCCC..
+layer 4
+  .............
+  .............
+  ....JDDDD....
+  ..DDC.CCKDD..
+  ..DDC.C..CD..
+  ..DDDC..CD...
+  ....DDDDD....
+  .............
+  .............
+layer 5
+  .............
+  .............
+  ....JJD.D....
+  ..DD.CCCCCD..
+  ..JLCCCC.CD..
+  ..DDDC.JCC...
+  ....DDDDD....
+  .............
+  .............
+layer 6
+  .............
+  ....DDDDD....
+  ..DD.CKC.....
+  .JDCCCCCCCC..
+  .DCCCCCKC.CD.
+  .DCLCCCCC..J.
+  ..DDCCCC.DD..
+  ....DDDDD....
+  .............
+layer 7
+  .............
+  ....DDDDD....
+  ..DDDC.C.JD..
+  .DCCC.CC.A.D.
+  .DA.A.CCAA.D.
+  .DCCCACCCC.D.
+  ..DDC...CDD..
+  ....JDDDD....
+  .............
+layer 8
+  ....DDDDD....
+  ..DDDDDMDDD..
+  ..CCCDMIMDDD.
+  .CC.CMILIMDJJ
+  D.CCMILLLIMDD
+  JCCDDMILIMDDD
+  .DDDDJMIMDJD.
+  ..DDDDDMDDD..
+  ....DDDDD....
+layer 9
+  ....DD.DD....
+  ..JDCCCCCDD..
+  ..C.CCCCCKDD.
+  ...ACCCCL.D.D
+  D..ACCC.CCC.D
+  JCCCCC.CACCCD
+  .DCCCC..CCCJ.
+  ..DJC.CCCDD..
+  ....DDDDD....
+layer 10
+  ....LCCBB....
+  ..LL.CCCCBB..
+  ..LC.CCC.ACJ.
+  ..CCCCC.L..CB
+  .LCCCA.ACCCCB
+  LLCCC.CCCCC.B
+  .LLLC.C.CCCD.
+  ..LLLBCC.BB..
+  ....LLBBB....
+layer 11
+  ....LCABC....
+  ..LLLBKCCBG..
+  ...LLB.ACCCC.
+  .CLLLBC.LCCC.
+  ..LCCBCC.C.C.
+  CLLALBCCCCBBB
+  .LLLLBBB.CBJ.
+  ..LLLBBBBBB..
+  ....LLBBB....
+layer 12
+  .....HC......
+  .....GCCCCC..
+  ....CCCCCCC..
+  ..CCCCC.L.AA.
+  ..CCCHC..A...
+  ..CCACACC.CCH
+  ....CHCCCCAD.
+  ...ACFCCACH..
+  ....ACFEF....
+layer 13
+  .....IIC.....
+  .....I.CC....
+  .....IKCKCC..
+  .....ICCL.CC.
+  ...C.IKCCCC..
+  ........CCCCI
+  .....ICCKCCI.
+  .....ICC.II..
+  .....CIII....
+layer 14
+  .............
+  ......LL.C...
+  ......LCLLA..
+  ......C.CAL..
+  ......LLLLLL.
+  ......LLLLLL.
+  ......LLLLL..
+  ......LLL....
+  .............
+
+template trail_ruins/buildings/large_room_4 9 11 6 5
+  A blue_terracotta
+  B brick_slab[type=bottom,waterlogged=false]
+  C brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  D brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  E brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  F brick_wall[east=low,north=none,south=none,up=true,waterlogged=false,west=none]
+  G brick_wall[east=none,north=none,south=low,up=true,waterlogged=false,west=low]
+  H brick_wall[east=none,north=none,south=tall,up=true,waterlogged=false,west=tall]
+  I brick_wall[east=none,north=tall,south=none,up=true,waterlogged=false,west=tall]
+  J brick_wall[east=tall,north=none,south=tall,up=true,waterlogged=false,west=tall]
+  K brick_wall[east=tall,north=tall,south=none,up=true,waterlogged=false,west=none]
+  L bricks
+  M coarse_dirt
+  N gravel
+  O packed_mud
+  P gravel
+  Q white_terracotta
+layer 0
+  ...LLL...
+  ..LLLLL..
+  .LLLLLLL.
+  LLLLLLLLL
+  LLLOOOLLL
+  LNNNOOLLL
+  LLN.NOLLL
+  LLN.NLLLL
+  .LNNMNLL.
+  ..LLLLL..
+  .........
+layer 1
+  ...LDL...
+  ....NNN..
+  NJNBDDNH.
+  .PNPNNNN.
+  NNNNNMNCN
+  NENNNNNNN
+  NENPNNNC.
+  NANNNNNNN
+  .KNNNN.I.
+  ..NNNMN..
+  .........
+layer 2
+  ...L.N...
+  ....NNN..
+  NJNNNNNG.
+  .N.NNNNN.
+  NNNNNN.NN
+  NNNNNNNNN
+  NNNN.N...
+  NN.NNNNN.
+  .KNNN.NN.
+  ...NNNN..
+  .........
+layer 3
+  ...FNG...
+  ....NMN..
+  NNNNMNN..
+  .NN.NNN..
+  NNNNNNNNN
+  NNNNNNNM.
+  NNNNNNNN.
+  .NNNNNNN.
+  .AANNNNM.
+  .........
+  .........
+layer 4
+  ....N....
+  ....NM...
+  .NNNNN...
+  .NNNNNN..
+  .MNNNNN..
+  .QNNNNNN.
+  .N..NNNN.
+  .NNNNNNN.
+  .NNNNNNN.
+  .........
+  .........
+layer 5
+  .........
+  .........
+  ...N.....
+  ..NN.P...
+  ..NNNM...
+  ..NNNNN..
+  ....NNN..
+  ..NNN.N..
+  ...N.....
+  .........
+  .........
+
+template trail_ruins/buildings/one_room_1 7 7 7 2
+  A blue_terracotta
+  B coarse_dirt
+  C gravel
+  D mud_bricks
+  E packed_mud
+  F red_terracotta
+  G gravel
+layer 0
+  ..DDD..
+  .EDEDD.
+  DDDDDDE
+  DDDDDED
+  DDEDEDD
+  .DDDDD.
+  ..DDD..
+layer 1
+  ..DDD..
+  .DCCBD.
+  DCC.CCD
+  CCCGCCF
+  DCCECDD
+  .DDDDD.
+  ..DED..
+layer 2
+  ..DDD..
+  .ECBCD.
+  DCBCBCD
+  DCCCCCD
+  DBCC.GD
+  .DGGCD.
+  ..D.C..
+layer 3
+  ..FFF..
+  .F.CCF.
+  FBCCCCF
+  FGCCCCF
+  FCCCCGF
+  .FCCCF.
+  ..FGC..
+layer 4
+  ..AAA..
+  .C...A.
+  G.CCCCA
+  C.CCCCA
+  A.CC.CA
+  .A.BBA.
+  ..ACG..
+layer 5
+  ..CCC..
+  ...AA..
+  ..CCCAC
+  .ACCCAG
+  CA...AG
+  .CAAAC.
+  ..CA...
+layer 6
+  .......
+  .......
+  ..AAA..
+  ..AAA..
+  ..AAA..
+  .......
+  .......
+
+template trail_ruins/buildings/one_room_2 7 7 7 4
+  A coarse_dirt
+  B cyan_terracotta
+  C gravel
+  D mud_brick_slab[type=top,waterlogged=false]
+  E mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  F mud_bricks
+  G packed_mud
+  H gravel
+  I white_terracotta
+layer 0
+  ..FFF..
+  .FFFFF.
+  FFFFFFF
+  FFFFFFF
+  FFFFFFG
+  .FFFFF.
+  ..FFF..
+layer 1
+  ..FFF..
+  .FFFFF.
+  FFFFFFF
+  FFFFFFB
+  FFFFFFF
+  .FFFFF.
+  ..FFF..
+layer 2
+  ..FFF..
+  .FCCCF.
+  FDC.CCF
+  FDCHECF
+  FDCCCCF
+  .FHHCF.
+  ..F.C..
+layer 3
+  ..BBB..
+  .BCCCB.
+  BCCCCCB
+  BCCCCCB
+  BCHHCCB
+  .BCHCB.
+  ..BCC..
+layer 4
+  ..III..
+  .C.C.I.
+  C.CCCCI
+  CACCCCI
+  I.CCCCI
+  .I.CCI.
+  ..ICC..
+layer 5
+  ..CH...
+  ....IC.
+  ....CIC
+  ...CCIC
+  CI...IC
+  .CIIIC.
+  ..CI...
+layer 6
+  .......
+  .......
+  ....I..
+  ...CI..
+  ..III..
+  .......
+  .......
+
+template trail_ruins/buildings/one_room_3 7 7 7 3
+  A coarse_dirt
+  B gravel
+  C mud_brick_slab[type=top,waterlogged=false]
+  D mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  E mud_bricks
+  F orange_terracotta
+  G packed_mud
+  H gravel
+  I white_terracotta
+layer 0
+  ..EEE..
+  .EEEEE.
+  EEEEEEE
+  EEEEEEE
+  EEEEEEE
+  .EEEEE.
+  ..EEE..
+layer 1
+  ..EEE..
+  .EB.BE.
+  EEDBBEE
+  EEBB.EI
+  EEEEEEE
+  .EEEEE.
+  ..EEE..
+layer 2
+  ..EEE..
+  .EABBE.
+  E.BBBCE
+  EBBBACE
+  EBBB.CE
+  .E.BBE.
+  ..G.B..
+layer 3
+  ..III..
+  .IBBBI.
+  IBBHACI
+  IBBBBCI
+  IBB.BCI
+  .IBBHI.
+  ..IBB..
+layer 4
+  ..FFF..
+  .BBB.F.
+  AB.BBBF
+  B.BBBBF
+  F.B..BF
+  .F.BBF.
+  ..FBB..
+layer 5
+  .......
+  ....FH.
+  ...BBFB
+  ..BHBFB
+  BFBH.FB
+  .BFFFB.
+  ..BF...
+layer 6
+  .......
+  .......
+  ....F..
+  ...BF..
+  ..FFF..
+  .......
+  .......
+
+template trail_ruins/buildings/one_room_4 7 7 10 2
+  A blue_terracotta
+  B brick_slab[type=top,waterlogged=false]
+  C brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  D brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  E brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  F brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  G bricks
+  H coarse_dirt
+  I gravel
+  J light_gray_terracotta
+  K gravel
+  L white_terracotta
+layer 0
+  __GGG..
+  _GGGGG.
+  GGGGGGG
+  GGGGGGG
+  GGGGGGG
+  _GGGGG.
+  __GGG..
+layer 1
+  ..GGG..
+  _GGGGG.
+  GGGGGGG
+  GGGGGGG
+  GGGGGGG
+  _GGGGG.
+  __GGG..
+layer 2
+  ..AAI..
+  .AILIA.
+  AIIIGGA
+  ABJKKGA
+  AFJHCGA
+  _AIIIA.
+  __A.A..
+layer 3
+  ..AHA..
+  .AIIIA.
+  AIIHGGA
+  LKIHIDL
+  ALHIIIA
+  .AKIIA.
+  ..AIA..
+layer 4
+  ..L.I..
+  .LIIII.
+  LIKGIIL
+  LHHIIIL
+  LKIIIIL
+  .LIIIL.
+  ..LLL..
+layer 5
+  ..LII..
+  .LIIII.
+  LIGFIIL
+  AIGIIIA
+  LIIIIHL
+  .LIIKL.
+  ..LAL..
+layer 6
+  ..LHI..
+  .LJIII.
+  LJHHIIL
+  LIEJJJL
+  LIKJJJL
+  .LJJJL.
+  ..LLL..
+layer 7
+  .......
+  ..JLII.
+  .JIHHI.
+  .LI.IL.
+  .IIIIJ.
+  ..JLJ..
+  .......
+layer 8
+  .......
+  ..LJH..
+  .LIIKI.
+  .JKIIJ.
+  .LIIIL.
+  ..LJL..
+  .......
+layer 9
+  .......
+  .......
+  ..LKI..
+  ..L.I..
+  ..LLL..
+  .......
+  .......
+
+template trail_ruins/buildings/one_room_5 7 7 7 12
+  A bricks
+  B gravel
+  C gray_terracotta
+  D red_terracotta
+layer 0
+  ..AAA..
+  .AAAAA.
+  AABBAAA
+  AABBAAA
+  AABBBAA
+  BAAAAA.
+  .BAAAB.
+layer 1
+  ..AAA..
+  .ABBBB.
+  ABBBBBA
+  ABBBBBD
+  ABBBBBA
+  BBBBBB.
+  .BBBB..
+layer 2
+  ..AAA..
+  .ABBBB.
+  ABB.BBA
+  BBBBBBA
+  BBB.BBA
+  .BBBBB.
+  .BB.B..
+layer 3
+  ..DDD..
+  .BBBBB.
+  BBB.BBD
+  BBB.BBD
+  BBB..BD
+  .BBBBB.
+  ..BBB..
+layer 4
+  ..BCB..
+  .BBBBB.
+  BBB.BBB
+  BBB.BBC
+  BB...BC
+  .BBBBB.
+  ..CBB..
+layer 5
+  ..BB...
+  .BBBBB.
+  BBB.BBB
+  .B..BBB
+  BB...CB
+  .BCBCB.
+  ..BCB..
+layer 6
+  .......
+  .......
+  .......
+  ....BB.
+  .B.CC..
+  .......
+  .......
+
+template trail_ruins/decor/decor_1 7 3 5 2
+  A coarse_dirt
+  B cobblestone
+  C gravel
+  D red_terracotta
+  E gravel
+layer 0
+  .BBBBB.
+  .BBBBB.
+  .BBBBB.
+layer 1
+  .BBBBB.
+  .BBBBB.
+  .BBBBB.
+layer 2
+  .DDDDD.
+  .DAAAD.
+  .DDDDD.
+layer 3
+  .EAEEA.
+  .AEEEE.
+  .AEAEC.
+layer 4
+  ...EC..
+  ..CEE..
+  ...E...
+
+template trail_ruins/decor/decor_2 5 3 6 1
+  A cobblestone
+  B gravel
+  C red_terracotta
+  D gravel
+  E white_terracotta
+layer 0
+  .AAA.
+  .AAA.
+  .AAA.
+layer 1
+  .AAA.
+  .AAA.
+  .AAA.
+layer 2
+  .ECC.
+  .CCE.
+  .CCC.
+layer 3
+  .DEE.
+  .DDE.
+  .EEE.
+layer 4
+  .DDD.
+  .B.E.
+  .D...
+layer 5
+  ...D.
+  ..EE.
+  .D.B.
+
+template trail_ruins/decor/decor_3 5 3 5 4
+  A coarse_dirt
+  B cobblestone
+  C gravel
+  D gravel
+layer 0
+  .BBB.
+  .BBB.
+  .BB..
+layer 1
+  .BBB.
+  .BBD.
+  .DD..
+layer 2
+  .A_D.
+  .CDD.
+  .CA..
+layer 3
+  .DAD.
+  .CDD.
+  .DC..
+layer 4
+  ..D..
+  ..D..
+  .....
+
+template trail_ruins/decor/decor_4 5 3 4 2
+  A blue_terracotta
+  B coarse_dirt
+  C cobblestone
+  D gravel
+  E gravel
+  F white_terracotta
+layer 0
+  .CCC.
+  .CCC.
+  .CCC.
+layer 1
+  .CCC.
+  .CCC.
+  DCCC.
+layer 2
+  .E_E.
+  DEAB.
+  D.EF.
+layer 3
+  .EEB.
+  DEFE.
+  DDE..
+
+template trail_ruins/decor/decor_5 7 3 5 1
+  A coarse_dirt
+  B cobblestone
+  C gravel
+  D red_terracotta
+  E gravel
+layer 0
+  .BBBBB.
+  .BBBBB.
+  .BBBBB.
+layer 1
+  ..DCBB.
+  .BCBBB.
+  .BDBBB.
+layer 2
+  ...CE..
+  .EAEAD.
+  .ACDDD.
+layer 3
+  .E.EC..
+  .EC.C..
+  .CE.EA.
+layer 4
+  .......
+  ...E...
+  ..C....
+
+template trail_ruins/decor/decor_6 5 2 5 2
+  A brick_slab[type=bottom,waterlogged=false]
+  B brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  C brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  D brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  E bricks
+  F cobblestone
+  G cyan_glazed_terracotta[facing=west]
+  H gravel
+layer 0
+  .FFF.
+  .FFF.
+layer 1
+  .FFF.
+  .FFF.
+layer 2
+  .C_C.
+  .EEE.
+layer 3
+  .HHH.
+  .DGB.
+layer 4
+  .HHH.
+  .AAA.
+
+template trail_ruins/decor/decor_7 5 5 5 7
+  A brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  B brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  C cobblestone
+  D gravel
+  E red_terracotta
+  F gravel
+layer 0
+  CCCCC
+  CCCCC
+  CCCCC
+  CCCCC
+  CCCCC
+layer 1
+  CCCCC
+  CC.CC
+  CCCCC
+  CC.CC
+  CCCCC
+layer 2
+  F.E..
+  DADB.
+  DFFDD
+  DADBD
+  .FFD.
+layer 3
+  .....
+  .FFDD
+  DDDDD
+  .DDD.
+  .....
+layer 4
+  .....
+  .....
+  ..F..
+  .F...
+  .....
+
+template trail_ruins/roads/long_road_end 10 5 5 14
+  A cobblestone
+  B cracked_stone_bricks
+  C gravel
+  D stone_bricks
+layer 0
+  .AAAAAAAAA
+  .AAAAAAAAA
+  .AAAAAAAAA
+  AAAAAAAAAA
+  .AAAAAAAAA
+layer 1
+  .CAAADBA.A
+  .BDAAA.ADA
+  .CABDAADBA
+  CCCAA.AAAA
+  .CCDA.DB.A
+layer 2
+  ..CCCCCCCC
+  .CCCCCCCCC
+  .CCCCCCCCC
+  .CCCCCCCCC
+  ..CCCCCCCC
+layer 3
+  ....CCCCC.
+  ...CCCCCCC
+  ..CCCCCCCC
+  ..CCCCCCCC
+  ...CCCCC..
+layer 4
+  ..........
+  .....CC..C
+  .....CCCCC
+  ......CC..
+  ..........
+
+template trail_ruins/roads/road_section_1 5 5 5 29
+  A cobblestone
+  B cracked_stone_bricks
+  C gravel
+layer 0
+  AA..A
+  A..AA
+  .AAAA
+  .....
+  A..AA
+layer 1
+  ..A..
+  AAAAA
+  B.A.A
+  AAAA.
+  ...A.
+layer 2
+  CCCCC
+  CCCCC
+  _CCCC
+  CCCCC
+  C___C
+layer 3
+  CCC.C
+  CCCCC
+  CCCCC
+  CCCCC
+  .CCC.
+layer 4
+  .....
+  CCCC.
+  CCCCC
+  .CCCC
+  .....
+
+template trail_ruins/roads/road_section_2 5 5 5 30
+  A cobblestone
+  B cracked_stone_bricks
+  C gravel
+  D stone_bricks
+layer 0
+  AAAAA
+  AAAAA
+  AAAAA
+  AAAAA
+  AAAAA
+layer 1
+  BDDA.
+  AABBA
+  ..BDA
+  AAABA
+  ..BAA
+layer 2
+  CCCCC
+  CCCCC
+  ACCCC
+  CCCCC
+  C___C
+layer 3
+  .CCCC
+  CCCCC
+  CCCCC
+  CCCCC
+  CCCCC
+layer 4
+  .....
+  CCCC.
+  CCCCC
+  .CCCC
+  .....
+
+template trail_ruins/roads/road_section_3 5 6 5 12
+  A coarse_dirt
+  B cobblestone
+  C gravel
+layer 0
+  BBBBB
+  BBBBB
+  BBBBB
+  BBBBB
+  BBBBB
+  BBBB.
+layer 1
+  BB.BB
+  .....
+  BBBBB
+  BBB.B
+  .BBB.
+  BB...
+layer 2
+  ___C_
+  CCCCC
+  CCCAC
+  CCCCC
+  CCCCC
+  .___.
+layer 3
+  CC.CC
+  CCCC.
+  CCCCC
+  CCCCC
+  .CCCC
+  .CCC.
+layer 4
+  .....
+  C....
+  CCCCC
+  CCCC.
+  .....
+  .....
+
+template trail_ruins/roads/road_section_4 5 6 5 13
+  A cobblestone
+  B gravel
+layer 0
+  AAAAA
+  AAAAA
+  AAAAA
+  AAAAA
+  AAAAA
+  AAAAA
+layer 1
+  AA.AA
+  .....
+  AAAAA
+  AAA.A
+  .AAA.
+  .A...
+layer 2
+  _B__B
+  BBBBB
+  BBBBB
+  BBBBB
+  BBBBB
+  .___.
+layer 3
+  BBBB.
+  BBBBB
+  BBBBB
+  BBBBB
+  BBBB.
+  .BBB.
+layer 4
+  .....
+  .BB..
+  BBBBB
+  BBBBB
+  BBB..
+  .....
+
+template trail_ruins/roads/road_spacer_1 5 5 5 14
+  A cobblestone
+  B cracked_stone_bricks
+  C gravel
+  D stone_bricks
+layer 0
+  AAAAA
+  AAAAA
+  AAAAA
+  AAAAA
+  AAAAA
+layer 1
+  ..DDB
+  ...B.
+  .D..A
+  .DBDB
+  .D.B.
+layer 2
+  CCCCC
+  CCCCC
+  ACCCC
+  CCCCC
+  CCCCC
+layer 3
+  .CCCC
+  CCCCC
+  CCCCC
+  C.CCC
+  CCCC.
+layer 4
+  .....
+  ..CC.
+  .CCCC
+  ..CC.
+  .....
+
+template trail_ruins/tower/hall_1 9 6 7 3
+  A blue_terracotta
+  B coarse_dirt
+  C cobblestone
+  D cracked_stone_bricks
+  E gravel
+  F mud_bricks
+  G packed_mud
+  H red_terracotta
+  I stone_bricks
+  J gravel
+  K yellow_glazed_terracotta[facing=east]
+  L yellow_glazed_terracotta[facing=north]
+  M yellow_glazed_terracotta[facing=south]
+  N yellow_glazed_terracotta[facing=west]
+  O yellow_terracotta
+layer 0
+  CCCCFFFFF
+  FFFFFFGFF
+  FFFFFFFFF
+  FFFFFFFFF
+  FFFFFFFFF
+  FFFFFFFFF
+layer 1
+  I.DIFFFFF
+  FFFFFFFFF
+  KLKLKFFFF
+  FFFFFFFFF
+  MNMNMFFFF
+  FFFFFFFFF
+layer 2
+  .EEEFFEFF
+  FJEEFEE.F
+  EEEEEEEEE
+  EEEAE..FF
+  EEAEEEJAF
+  FAEEFEEFF
+layer 3
+  .EEEHHEHH
+  HEEEHEEEH
+  EEEEEEEEE
+  E.EEEEE.H
+  EEEEEBEEH
+  HEEBHE.HH
+layer 4
+  .EJEFFFFF
+  FEE.FE..F
+  J.EEEEEBE
+  EEEEEEE.F
+  EEEEEBEEE
+  FEJEGEEF.
+layer 5
+  .E..FOOOF
+  AEAAAEEEF
+  .EE.EEEEF
+  .E.EEEEEF
+  ..EJEEE..
+  AAAAAAA..
+layer 6
+  ....AAAAA
+  .....AA.A
+  .AAAAAAAA
+  ..BAEAAA.
+  ...AAAA..
+  .........
+
+template trail_ruins/tower/hall_2 9 10 7 3
+  A coarse_dirt
+  B cobblestone
+  C cracked_stone_bricks
+  D cyan_terracotta
+  E gravel
+  F light_gray_glazed_terracotta[facing=east]
+  G light_gray_glazed_terracotta[facing=north]
+  H light_gray_glazed_terracotta[facing=south]
+  I light_gray_glazed_terracotta[facing=west]
+  J mud_bricks
+  K packed_mud
+  L stone_bricks
+  M gravel
+  N white_terracotta
+layer 0
+  BBBBJJJJJ
+  JJJJJJJJJ
+  JJKJJJJJJ
+  JJJJJJJJJ
+  JJJJJJJJK
+  JKKJJJJJJ
+  JJJJJJJJ.
+  .JKJJJJJ.
+  ..JJKJJ..
+  ..JJJJ...
+layer 1
+  LCLLJJJJJ
+  JJJJJJJJK
+  JJGIGJJJJ
+  JHFGFHJJJ
+  JIGEGIJJJ
+  JHFIIGJJJ
+  JJGIHJJK.
+  .JJJJJJJ.
+  ..JJJJJ..
+  ..JJJJ...
+layer 2
+  ..E.JJEJJ
+  JEEJ.EEAJ
+  EJNEEEEEE
+  EENEMEJMJ
+  EEEEEEJDJ
+  EEEEEED.J
+  JEEEE.NJ.
+  .EN.A.EJ.
+  ..NMEEJ..
+  ..JJJJ...
+layer 3
+  ....JJEJJ
+  .EEJEEM.J
+  ENEAEEAE.
+  EEE.EMEEJ
+  .EE.EEEEJ
+  EEEEEEEEJ
+  JEAAEEEN.
+  .EEEE.EE.
+  ..NEEEJ..
+  ...J.J...
+layer 4
+  ....DDDDD
+  .EEDEEEED
+  MEEEEEEEE
+  EMEAEEEED
+  EEEEEEEED
+  EE.EEEEED
+  .EEEMEEA.
+  ..EAE.AE.
+  ..EEEED..
+  ...D.D...
+layer 5
+  ....DDDDD
+  ..EE.EEAD
+  .EE.EEEED
+  EEEEEEAED
+  .EEEEEE..
+  .AEEE.EEE
+  .NNNN.EE.
+  ..EENAEE.
+  ..E.NN...
+  .........
+layer 6
+  ....NNNNN
+  ....NNE.N
+  ...NNNNNN
+  ..NNNNNNN
+  .NNNNNNN.
+  .NNNNNE..
+  .........
+  .........
+  .........
+  .........
+
+template trail_ruins/tower/hall_3 9 10 7 4
+  A coarse_dirt
+  B gravel
+  C mud
+  D mud_brick_slab[type=bottom,waterlogged=false]
+  E mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  F mud_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  G mud_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  H mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I mud_bricks
+  J orange_glazed_terracotta[facing=east]
+  K orange_glazed_terracotta[facing=north]
+  L orange_glazed_terracotta[facing=south]
+  M orange_glazed_terracotta[facing=west]
+  N orange_terracotta
+  O packed_mud
+  P gravel
+  Q white_terracotta
+layer 0
+  IIIIIIIII
+  IIIIIIIII
+  IIIIIIIII
+  IIIIIIOII
+  IIIIIIIII
+  IIIIIIIII
+  OIIIIIIII
+  IIIIIIIIO
+  IIIIIIIII
+  IIIIIIIII
+layer 1
+  IIINNNIII
+  IIIIIIIII
+  IIIIIIIIN
+  IIIOOOIIN
+  IIIOCOIIN
+  IIOOCCIIN
+  IIIOCCIIN
+  IIIIIIIII
+  IIIIIIIII
+  IIINNNIII
+layer 2
+  IBBBBBBII
+  QBIBBABID
+  IBQGBKQIB
+  BBEOOOHBB
+  BIEOOOHIB
+  BBEOOOKBB
+  BBEOOOHBI
+  BBQFFFBBB
+  BABBBBBBB
+  IBBBB.BBI
+layer 3
+  IBBBBBBII
+  BBBBBBBIB
+  BBBBBBBAB
+  BBBBBBBBB
+  BBB.BBBBB
+  BBBBBBBBB
+  BBBBBBBBA
+  BBBBBBBBP
+  BBBBBBBAB
+  IBBBBBBBI
+layer 4
+  ..BBBPBIQ
+  ..ABBBBAB
+  BBBBBB..B
+  BBB.BBBBB
+  BBBBB.BB.
+  BBBBBBB..
+  BBBBBBBB.
+  BBBBABBBB
+  BBBBBPBBB
+  QB....BBQ
+layer 5
+  ...BBBBPI
+  ...BBBB..
+  .BBBBBB..
+  BBBBBBBB.
+  BBB..BBB.
+  PBBBB.B..
+  BBBBBBBB.
+  BBBABBBBB
+  BBA..BBBB
+  OB.....BI
+layer 6
+  .....II..
+  ....IOI..
+  .....MK..
+  .IM...JI.
+  .IL...BI.
+  .IM...MI.
+  .IL...LI.
+  .IMKMKMI.
+  IIIIIIIII
+  II.....II
+
+template trail_ruins/tower/hall_4 9 10 7 2
+  A bricks
+  B coarse_dirt
+  C gravel
+  D light_blue_glazed_terracotta[facing=east]
+  E light_blue_glazed_terracotta[facing=south]
+  F mud
+  G mud_brick_slab[type=bottom,waterlogged=false]
+  H mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  I mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  J mud_bricks
+  K orange_terracotta
+  L packed_mud
+  M gravel
+  N white_terracotta
+layer 0
+  AAAAAAAAA
+  AAAAAAAAA
+  AAAAAAAAA
+  AAAAAAAAA
+  AAAAAAAAA
+  AAAAAAAAA
+  AAAAAAAAA
+  AAAAAAAAA
+  AAAAAAAAA
+  AAAAAAAAA
+layer 1
+  AAAAAALAA
+  AAAAAAAAA
+  AAAAAAAAK
+  AAALLLAAK
+  AAALFLAAK
+  AAALAFAAK
+  AAALAFAAK
+  AAAAAAAAA
+  AAAAAAAAA
+  AAAKKKAAA
+layer 2
+  ACMCCCCAA
+  NCACBCCAG
+  AC.BCCNAC
+  CCACLLICC
+  CAHLLLIAC
+  CCHLALEBC
+  CAHCALICJ
+  CCNDCCCCC
+  CCACCACMC
+  AC.CCCCCA
+layer 3
+  AC.CCBCC.
+  CCCCCCMAC
+  CCC.BCCCC
+  CCCCCMCCC
+  CBBAEAACC
+  CCCCCCACM
+  CCACAACCC
+  BCCCCCMCC
+  CCCCBCCCB
+  ABCC.CCCA
+layer 4
+  ..CCCCCCC
+  ..CCCCCC.
+  CCCCCCB.C
+  CCBCBCCCC
+  CMCECCBB.
+  CCCCCCC..
+  CBCCBCCC.
+  .CBCCCCC.
+  CCCCBCCCC
+  NC....CCN
+layer 5
+  ...BCCCBB
+  ...CCMC..
+  .CBCCC...
+  .CCMCCCC.
+  CCC..CCC.
+  CCBB..C..
+  CCCCCCCB.
+  CCC.CCCCC
+  C.C.CCCCB
+  AM.....CA
+layer 6
+  .........
+  ....C....
+  .........
+  .A.....A.
+  .A.....A.
+  .A.....A.
+  .A.....A.
+  .A.....A.
+  AAA....AA
+  AA.....AA
+
+template trail_ruins/tower/hall_5 9 10 7 2
+  A black_glazed_terracotta[facing=north]
+  B brick_slab[type=bottom,waterlogged=false]
+  C bricks
+  D coarse_dirt
+  E gravel
+  F mud
+  G mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  H mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I mud_bricks
+  J packed_mud
+  K red_terracotta
+  L gravel
+layer 0
+  CCCCCCCCC
+  CCCCCCCCC
+  CCCCCCCCC
+  CCCCCCCCC
+  CCCCCCCCC
+  CCCCCCCCC
+  CCCCCCCCC
+  CCCCCCCCC
+  CCCCCCCCC
+  CCCCCCCCC
+layer 1
+  CCCCCCICC
+  CCCCCCCCC
+  CCCCCCCCK
+  CCCJJJCCK
+  CCCJFJCCK
+  CCCJCFCCK
+  CCCJCFCCK
+  CCCCCCCCC
+  CCCCCCCCC
+  CCCKKKCCC
+layer 2
+  CEEEEEECC
+  KECLEEECB
+  CEEDEEKCE
+  ELCEJJHEE
+  ECGJJJHCE
+  EEGJCJAEE
+  LCGECJHEI
+  EEKAEEEEL
+  EECEECEED
+  CEEEEDEEC
+layer 3
+  CEEDEEDEE
+  EDDEEEDCE
+  EDEELEEEE
+  EEE.EEEEE
+  DEECEECED
+  EEEELEED.
+  EECEEE...
+  EEEEEE...
+  EELEE...E
+  CEEE.E.EC
+layer 4
+  ..EEEEEDE
+  ..EEEEDE.
+  EDDELEE.E
+  EEEEEEEE.
+  EEEDEE...
+  EEEEEE...
+  EEEEEE...
+  EE.LEE...
+  EE......E
+  KD......K
+layer 5
+  ...EEEEEE
+  ...EEEE..
+  .EEEEEE..
+  ELELEE.E.
+  EEDDE....
+  EDEE.....
+  EEEE.....
+  DD.......
+  EE.......
+  CE......C
+layer 6
+  .........
+  ....E....
+  .........
+  .C.....C.
+  .C.....C.
+  .C.....C.
+  .C.....C.
+  .C.....C.
+  CCC....CC
+  CC.....CC
+
+template trail_ruins/tower/large_hall_2 12 8 7 1
+  A coarse_dirt
+  B cyan_terracotta
+  C gravel
+  D mud_brick_slab[type=top,waterlogged=false]
+  E mud_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  F mud_brick_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  G mud_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  H mud_brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  I mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  J mud_bricks
+  K packed_mud
+  L gravel
+  M white_terracotta
+layer 0
+  ...JKJJJJ...
+  .JJJJJJJJJJ.
+  JKJJJJJJJJJJ
+  JJKKJJJKJJJJ
+  JJJJJJJKKJJJ
+  KJJJJJJJJJJJ
+  .JJKJJJJJJJ.
+  ..JJJJJJJJ..
+layer 1
+  ...JKJJJJ...
+  .KJJJKMCCJJ.
+  JJJJIFM.CCCJ
+  JJJJK.MMMCCJ
+  JJJJJ.L.CCBJ
+  JJJKIA...CBJ
+  .JJJJJCCCJJ.
+  ..JJJJJ.JJ..
+layer 2
+  ...JJJJJJ...
+  .JJDDJ.CCJJ.
+  J_CCAJM.CC.K
+  J_GGCC..CC.J
+  J_EEC.CCC.CJ
+  J_MMLALCCCBJ
+  .JJDDKCCCJJ.
+  ..KJJJC.CK..
+layer 3
+  ...BBBBCB...
+  .JBC.JCC.JB.
+  B_LCCCCC.F.B
+  __ACCC.CCCC.
+  __MC.CCCCCCL
+  B_CMCCCC.H.L
+  .JBCCKCCCKC.
+  ..BBBBCACB..
+layer 4
+  ...BBBBBB...
+  .JB.CALACBB.
+  B_CCACCCCJBL
+  B_ACLCC..KCC
+  B_C..CCACJC.
+  B_...H.CCJ..
+  .JBCAJCCCB..
+  ..BBBBBBBB..
+layer 5
+  ............
+  ...MMM.C....
+  .MM..JCC.M..
+  .MMC.JCC.M..
+  .M.CCJC.CM..
+  ...CCJCCCM..
+  ...C.MC.CM..
+  ....CCMMMM..
+layer 6
+  ............
+  ............
+  ...MMMC.....
+  ...MMMCCC...
+  ....MMMCM...
+  .....MMMM...
+  ......MMMM..
+  ......MMMM..
+
+template trail_ruins/tower/large_hall_3 12 8 7 3
+  A coarse_dirt
+  B gravel
+  C mud_brick_slab[type=top,waterlogged=false]
+  D mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E mud_brick_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  F mud_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  G mud_brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  H mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I mud_brick_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  J mud_bricks
+  K orange_terracotta
+  L packed_mud
+  M gravel
+  N white_terracotta
+layer 0
+  ..JJJJJJJ...
+  .JJJJJJJJJJ.
+  JJJJJJJJJJJJ
+  JJJJJJJJJJJJ
+  JJJJJJJJJJJJ
+  LJJJJJJJJJJJ
+  .JJJJJJJJJJ.
+  ..JJJLJJJJ..
+layer 1
+  ..JJJJJJJ...
+  .JJB.JBBBJJ.
+  JJBBMBB.BJJJ
+  JJBBJJBBMDJJ
+  JJJFJJ.BBDJJ
+  JJJJJHBBBJJJ
+  .JJJJJJJJJJ.
+  ..JJJJJ.JJ..
+layer 2
+  ..JJJJJJJ...
+  .JJCCJA.BJJ.
+  JJCBABMBBCCJ
+  JJC.BBBBBBBJ
+  JJCBBB.BB.BJ
+  JJCBBBBB.CCJ
+  .JJCCJBBBJJ.
+  ..JJJJBBBJ..
+layer 3
+  ..NBNNNBN...
+  .NJBKJBABJN.
+  NNBBBBB.BBBN
+  BBB.BBBBBBBM
+  ...BBB.BBBBB
+  NNBBAABB.BBN
+  .NJBBJBBBJN.
+  ..NNNNBBBN..
+layer 4
+  ...KKKKKK...
+  .KJBAJBMAJK.
+  KKEBBEBBBBBK
+  KKBBBBBBABBK
+  KKBBBB.BBBBK
+  KKGBBGBBBGBK
+  .KJIBJBBBJK.
+  ..KKKKBBBK..
+layer 5
+  ............
+  ...KBB.KKB..
+  .KJBBJMBBJKB
+  .KJBBJBBAJKB
+  .KJBBJMBBJKB
+  ...BJJBBBJK.
+  .....KKKKKB.
+  .....KKKKK..
+layer 6
+  ............
+  ............
+  ..KKKKKKKKB.
+  ..KKKKKBAK..
+  ..KKKKBBBBB.
+  ....KKKBBBBB
+  ............
+  ............
+
+template trail_ruins/tower/large_hall_4 12 8 7 2
+  A blue_terracotta
+  B brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  C brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  D bricks
+  E coarse_dirt
+  F gravel
+  G mud_brick_slab[type=top,waterlogged=false]
+  H gravel
+  I white_terracotta
+layer 0
+  ..DDDDDDD...
+  .DDDDDDDDDD.
+  DDDDDDDDDDDD
+  DDDDDDDDDDDD
+  DDDDDDDDDDDD
+  DDDDDDDDDDDD
+  .DDDDDDDDDD.
+  ..DDDDDDDD..
+layer 1
+  ..DDDDDDD...
+  .DDFFDFFFDD.
+  DDFFFFF.FDDD
+  DDFEDDFH.BDD
+  DDDBDDFEFBDD
+  DDDDDBFEFDDD
+  .DDDDDDDDDD.
+  ..DDDDD.DD..
+layer 2
+  ..DDDDDDD...
+  .DDGGDHFFDD.
+  DDGFFFHFEGGD
+  DDGFFFHHFEFD
+  DDGF.FFFFFFD
+  DDG.FFEFEGGD
+  .DDGGDFFFDD.
+  ..DDDDFFFD..
+layer 3
+  ..AFAAAFA...
+  .ADEIDFHFDA.
+  AAFFFFFEFFFA
+  FFFFFFFFEFEF
+  ..F...FFFFFF
+  AA.FIIFF.FFA
+  .ADFFDFFEDA.
+  ..AAAAFFFA..
+layer 4
+  ...IIIIII...
+  .IDFFDFFFDI.
+  I.BFFBFFFFHI
+  I.FFI.FFFFFI
+  I.....HFFFHI
+  I...II.FHCFI
+  ...BFDF.FDI.
+  ..IIIIFFHI..
+layer 5
+  ............
+  ...IFFFIIF..
+  .I..FDIFFDIE
+  ....I.IF.DIF
+  ......FFFDIF
+  .......EFDI.
+  .....IIII.F.
+  .....IIIII..
+layer 6
+  .........FF.
+  ............
+  ....I.......
+  ............
+  ......FF...F
+  ..........FF
+  ............
+  ............
+
+template trail_ruins/tower/large_hall_5 12 8 7 1
+  A brick_slab[type=bottom,waterlogged=false]
+  B brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  C bricks
+  D coarse_dirt
+  E gravel
+  F gray_terracotta
+  G red_terracotta
+  H gravel
+layer 0
+  ..CCCC_CC...
+  .CEEEEECCCC.
+  CCEEEECCCCCC
+  C_EEDEECCCCC
+  CC.EEEECCCCC
+  CCEEEEEECCCC
+  .CCCECECCCC.
+  ..CCCCCCCC..
+layer 1
+  ..C.CCCCC...
+  .C_EED..ECC.
+  CEEDEDEEHCCC
+  C_EE.E.EDBCC
+  CEEDHEE..HCC
+  CCEEEED.H.CC
+  _CCCEEEEECC.
+  ..CCCCE.DC..
+layer 2
+  ..CCCCCCC...
+  .C__D..EECC.
+  CCEEEEEE.EAC
+  CC.EEEEEEDEC
+  CCDDE.EEEEEC
+  CCEEEDE.EEAC
+  .CEEEEEEE.C.
+  ..EEEEEEEC..
+layer 3
+  ..FEFFFEF...
+  .F__D__EHCF.
+  FF.ED_DEEEEF
+  E.E_E__DEEE.
+  .E_____EEEEE
+  FF__E.__EEEF
+  .FCE_D_EEEF.
+  ..FE.E.EEEEE
+layer 4
+  ..EEGGGGG...
+  _GC____EDCG.
+  GD____E.EE.G
+  GE_____EEDEG
+  GE_____HEE.G
+  GE______EEEG
+  .EED_._DEEGE
+  ..GG.EHEEEEE
+layer 5
+  ....E.......
+  ..EG___GGE..
+  .G____.EECGE
+  EE_____EEDGE
+  .._____EHEGE
+  ..______.EGH
+  .EEE_E_DEE.E
+  ..E.EEEEEEEE
+layer 6
+  .._.D.......
+  ...E_.......
+  ..___.._.EE.
+  .E_._..EEE..
+  .E......EEEE
+  ....__..EEEE
+  .........EEE
+  ...E..E.EEEE
+
+template trail_ruins/tower/one_room_1 5 5 5 2
+  A blue_terracotta
+  B coarse_dirt
+  C gravel
+  D mud_bricks
+  E packed_mud
+  F red_terracotta
+  G gravel
+layer 0
+  .DDD.
+  DDDDD
+  DEDDD
+  DDEDD
+  .DDD.
+layer 1
+  .DCE.
+  DABAD
+  DC.AD
+  DCCFD
+  .DDDC
+layer 2
+  .D.E.
+  DGGAD
+  DCGCD
+  DGBCD
+  .DDDC
+layer 3
+  .FGF.
+  FGC.C
+  FBCBG
+  FGGCF
+  .FF..
+layer 4
+  .AAA.
+  .AGCG
+  .ACBG
+  .AA..
+  .....
+
+template trail_ruins/tower/one_room_2 5 5 5 2
+  A coarse_dirt
+  B cyan_terracotta
+  C gravel
+  D light_gray_terracotta
+  E mud_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  F mud_brick_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  G mud_bricks
+  H packed_mud
+  I red_terracotta
+  J gravel
+layer 0
+  .GGG.
+  GGGGG
+  GGGGG
+  GGGGG
+  .GGG.
+layer 1
+  .GCG.
+  GBDJG
+  GJ.CG
+  GFCAE
+  .GGG.
+layer 2
+  .GCG.
+  CCCCC
+  CCBCG
+  H.JCC
+  .CAJ.
+layer 3
+  .AAI.
+  AJCJC
+  JJCCC
+  CCCAJ
+  .CC..
+layer 4
+  ..CJ.
+  .CCCC
+  .CAJC
+  .....
+  .....
+
+template trail_ruins/tower/one_room_3 5 5 5 2
+  A coarse_dirt
+  B cyan_terracotta
+  C gravel
+  D mud_bricks
+  E orange_terracotta
+  F packed_mud
+  G gravel
+layer 0
+  .DDD.
+  DDDDD
+  DDDFF
+  DDDDD
+  .DDD.
+layer 1
+  .DDD.
+  DGCAD
+  DACBD
+  DG.GD
+  .DDD.
+layer 2
+  .DGD.
+  DGGCD
+  D.CCD
+  FAAGD
+  .DFD.
+layer 3
+  .EGC.
+  EGAAE
+  EC.CE
+  EGGCE
+  .EEE.
+layer 4
+  .....
+  .B...
+  .BBB.
+  .BBB.
+  .....
+
+template trail_ruins/tower/one_room_5 5 5 5 4
+  A bricks
+  B red_terracotta
+  C gravel
+layer 0
+  ._._.
+  A.._A
+  A__BA
+  AAAAA
+  .AAA.
+layer 1
+  ____.
+  C___C
+  B._BB
+  AAAB_
+  _____
+layer 2
+  __C_.
+  ____C
+  BC_CC
+  _ACC_
+  _____
+layer 3
+  _____
+  _____
+  _____
+  _C_C_
+  _____
+layer 4
+  ._...
+  .___.
+  .___.
+  .___.
+  .....
+
+template trail_ruins/tower/platform_1 6 7 7 2
+  A blue_terracotta
+  B coarse_dirt
+  C gravel
+  D mud_brick_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  E mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  F mud_brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  G mud_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  H mud_brick_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  I mud_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  J mud_brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  K mud_brick_stairs[facing=west,half=bottom,shape=inner_left,waterlogged=false]
+  L mud_brick_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  M mud_brick_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+  N mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  O mud_brick_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  P mud_bricks
+  Q packed_mud
+  R red_terracotta
+  S gravel
+  T yellow_glazed_terracotta[facing=east]
+  U yellow_glazed_terracotta[facing=north]
+  V yellow_glazed_terracotta[facing=south]
+  W yellow_glazed_terracotta[facing=west]
+  X yellow_terracotta
+layer 0
+  PPPPPP
+  PPPPQP
+  PPPPPP
+  PPPPPQ
+  PPPQPP
+  PPPPPP
+  ..PP..
+layer 1
+  PPPPPP
+  PPVCPP
+  PVUCWP
+  PTWVUP
+  PPCUPP
+  QPPPPP
+  ..PP..
+layer 2
+  PNSARP
+  GMSC.G
+  BCCCCC
+  .ACCBC
+  ILCCDI
+  PKI.EP
+  ..CC..
+layer 3
+  R.....
+  .CCCCC
+  .CCCCC
+  .CSCCC
+  .CCCCC
+  RSCCCR
+  ..CC..
+layer 4
+  PO....
+  HCCB..
+  .BSC..
+  .CSSSC
+  JCCSCJ
+  PSBCFP
+  ..CC..
+layer 5
+  PP....
+  PCC...
+  .CCC..
+  .CSCS.
+  P.CCBP
+  ...CPC
+  ..CCCC
+layer 6
+  .A....
+  AAA...
+  RAXX..
+  R..XA.
+  A..AAA
+  ..RRAC
+  ..CCCC
+
+template trail_ruins/tower/platform_2 6 7 7 1
+  A coarse_dirt
+  B gravel
+  C light_gray_glazed_terracotta[facing=east]
+  D light_gray_glazed_terracotta[facing=north]
+  E light_gray_glazed_terracotta[facing=south]
+  F light_gray_glazed_terracotta[facing=west]
+  G mud_brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  H mud_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  I mud_brick_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  J mud_brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  K mud_brick_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  L mud_bricks
+  M packed_mud
+  N gravel
+  O white_terracotta
+layer 0
+  LLLLLL
+  LLLLLL
+  MLLLLL
+  LLMLLL
+  LLLLLM
+  LLLLLL
+  ..LL..
+layer 1
+  LLMLLL
+  LCBCEL
+  LFDFDL
+  LECLCL
+  LDFDFL
+  LLLLMM
+  ..LL..
+layer 2
+  LBNN.L
+  BL.OBH
+  BOOBLB
+  B.BBLA
+  .BB.B.
+  LB.BBL
+  ..AA..
+layer 3
+  L.....
+  ..BBBO
+  BBBBLB
+  ..BNA.
+  .BB.BB
+  LB..BL
+  ..BA..
+layer 4
+  OK....
+  INBBB.
+  .BBBA.
+  .B.BBB
+  JBBBBJ
+  OBNBGO
+  ..BB..
+layer 5
+  OO....
+  OB..B.
+  N.NBN.
+  BBBBN.
+  OBBB.O
+  O.BBOO
+  ......
+layer 6
+  BB....
+  B.B...
+  BBBA..
+  BBBBB.
+  BBBABB
+  .BBBB.
+  ......
+
+template trail_ruins/tower/platform_4 6 7 7 3
+  A blue_terracotta
+  B brick_slab[type=bottom,waterlogged=false]
+  C brick_slab[type=top,waterlogged=false]
+  D brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  F brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  G brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  H brick_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  I bricks
+  J coarse_dirt
+  K gravel
+  L light_blue_glazed_terracotta[facing=south]
+  M light_blue_glazed_terracotta[facing=west]
+  N light_gray_terracotta
+  O mud_bricks
+  P gravel
+  Q white_terracotta
+layer 0
+  IIIIII
+  IIIIII
+  IIIIII
+  IIIIII
+  IIIIII
+  IIIIII
+  IIIIII
+layer 1
+  IIIIII
+  IIIIII
+  IIIIII
+  IIIIII
+  INNNNI
+  INNNNI
+  IIIOII
+layer 2
+  IIIIII
+  IQQQQI
+  IQQQKI
+  IFFFFI
+  KKKKKK
+  KIPKK.
+  IB.KPI
+layer 3
+  AMLMLA
+  .JGDPK
+  KA.KKK
+  K.KJKK
+  KKKK.K
+  KKKKK.
+  .KKKKI
+layer 4
+  ALMLMA
+  .KKKKK
+  KKKJKK
+  KKPKKK
+  K.JKK.
+  .KKJK.
+  .PPKKI
+layer 5
+  ..LMLA
+  .JKK..
+  KK.KK.
+  .KKPK.
+  .KKPK.
+  ..KK..
+  ...CIG
+layer 6
+  ...AA.
+  ......
+  ...K..
+  ..K...
+  ..JK..
+  ......
+  ..HEG.
+
+template trail_ruins/tower/platform_5 6 7 8 1
+  A bricks
+  B coarse_dirt
+  C gravel
+  D gray_terracotta
+  E light_gray_terracotta
+  F mud_bricks
+  G red_terracotta
+  H gravel
+layer 0
+  AAAAAA
+  AAAAAA
+  AAAAAA
+  AAAAAA
+  AAAAAA
+  AAAAAA
+  AAAAAA
+layer 1
+  AAAAAA
+  AAAAAA
+  AAAAAA
+  AAAAAA
+  AAAAAA
+  CAAAAA
+  CBAFAA
+layer 2
+  .C..HC
+  CAAAA.
+  CADDAC
+  CADDAC
+  CBCAA.
+  CCCCCH
+  BHBCCC
+layer 3
+  .HCCC.
+  .EGC.C
+  .G..GB
+  C...GC
+  .BCGEC
+  BBCC..
+  CCCBCC
+layer 4
+  .CCCCC
+  .EG.C.
+  CGCH..
+  CH.CG.
+  CCCCEC
+  .C.CB.
+  .CCCCC
+layer 5
+  ..CCC.
+  .GGC..
+  HHCCCC
+  ..B.CC
+  ...B..
+  ...H..
+  ...C.B
+layer 6
+  ...C..
+  ..GG..
+  C.....
+  ......
+  ....C.
+  ......
+  ......
+layer 7
+  ......
+  ...G..
+  ......
+  ......
+  ......
+  ......
+  ......
+
+template trail_ruins/tower/stable_1 7 7 7 2
+  A blue_terracotta
+  B coarse_dirt
+  C gravel
+  D mud_brick_wall[east=tall,north=tall,south=tall,up=false,waterlogged=false,west=tall]
+  E mud_bricks
+  F packed_mud
+  G red_terracotta
+  H gravel
+layer 0
+  EEEFEE.
+  EEEEEEE
+  EEEEEEE
+  EEEEEEF
+  EEEEEEE
+  EEEEEEE
+  .EEEEE.
+layer 1
+  EEEEFE.
+  EEEBBBE
+  .FEBBBF
+  EEEEEEE
+  EEEBBBE
+  EEFBBBE
+  .EEEEF.
+layer 2
+  CCCEEA.
+  CCCA.BE
+  CCCAAHE
+  CCAEEEF
+  ECCCCCE
+  E.HCCBE
+  .EEEEE.
+layer 3
+  .HCGG..
+  CBCBCCG
+  CCCBCCG
+  CCCEDDG
+  GCBHHCG
+  GCCCCCG
+  .GG.CG.
+layer 4
+  ..CAA..
+  .CCHCHA
+  CCCCCCC
+  BCCE.CC
+  HCCCCCC
+  ACCCCHA
+  .A...C.
+layer 5
+  ..CCCA.
+  ..CCCCA
+  ..CCCCA
+  HHCECCA
+  HCCCCBA
+  AHCCHCA
+  .AAA...
+layer 6
+  AA...C.
+  AAC..A.
+  AACCAAC
+  AAAAAAC
+  AAAAAAC
+  .AAAAAC
+  .......
+
+template trail_ruins/tower/stable_2 7 7 7 2
+  A coarse_dirt
+  B cyan_terracotta
+  C gravel
+  D mud_brick_wall[east=tall,north=tall,south=tall,up=false,waterlogged=false,west=tall]
+  E mud_bricks
+  F packed_mud
+  G gravel
+  H white_terracotta
+layer 0
+  EEEEEE.
+  EEEEEEE
+  EEEEEEE
+  EEEEFEE
+  EEEEEEE
+  EEEEEEF
+  .EEEEE.
+layer 1
+  EEEEEE.
+  EEFFFEE
+  .EEEEEE
+  EEEEEFF
+  EAAAAAE
+  EAAAAAE
+  .EEEEE.
+layer 2
+  EACECC.
+  ECCCGCE
+  CCCCCCE
+  ECGECCE
+  ECCDCCE
+  FAADCGE
+  .FEEEE_
+layer 3
+  BCABCC.
+  BCCGAGB
+  GCCCCCB
+  BCCBCCB
+  BCCAACB
+  BG.CCCB
+  .BBCCB_
+layer 4
+  ..CHCC.
+  HCACGCH
+  HGCCCCC
+  HCCHCCC
+  HCCCCAC
+  HCCCGCH
+  .H.C_C_
+layer 5
+  ..HHHH.
+  H.GCCCH
+  H.CCCCH
+  CCCHACH
+  CCCCCCH
+  HCCCCCH
+  .HHH...
+layer 6
+  HH...G.
+  HHG..HC
+  HHCCHHC
+  HHHHHHC
+  HHHHHHA
+  .HHHHHC
+  .......
+
+template trail_ruins/tower/stable_4 7 7 7 3
+  A blue_terracotta
+  B brick_wall[east=tall,north=tall,south=tall,up=false,waterlogged=false,west=tall]
+  C bricks
+  D coarse_dirt
+  E gravel
+  F light_gray_terracotta
+  G gravel
+  H white_terracotta
+layer 0
+  CCCCCC.
+  CCCCCCC
+  CCCCCCC
+  CCCCCCC
+  CCCCCCC
+  CCCCCCC
+  .CCCCC.
+layer 1
+  CCCCCC.
+  CCCCCCC
+  .CCCCCC
+  CCCCCCC
+  CDDDDDC
+  CDDDDDC
+  .CCCCC.
+layer 2
+  CEEEEE.
+  CEFFEEC
+  EEFEFFC
+  CBBBEFC
+  CEE.EEC
+  CEHEE.C
+  .CCCCC.
+layer 3
+  HEEEEE.
+  HE.EEEH
+  EEEEFFH
+  HGEE.EH
+  HEEEEEH
+  EEDEE.H
+  .EHHHH.
+layer 4
+  .AGEEE.
+  FEEEEEF
+  FEEEEEE
+  FEEDEEE
+  FDEEEGE
+  DEEEEGF
+  .EEEFF.
+layer 5
+  ..FEEE.
+  F.EEDEF
+  FA.EEEF
+  .DA.E.F
+  EGE.EEF
+  EEEEEEF
+  .EFF.F.
+layer 6
+  ....EE.
+  FFFEEE.
+  FF..E..
+  F...EE.
+  FFFFFF.
+  .FFFFF.
+  .......
+
+template trail_ruins/tower/tower_1 5 5 13 3
+  A blue_terracotta
+  B brown_stained_glass
+  C coarse_dirt
+  D cobblestone
+  E gravel
+  F mud_brick_slab[type=bottom,waterlogged=false]
+  G mud_bricks
+  H packed_mud
+  I red_terracotta
+  J gravel
+  K yellow_glazed_terracotta[facing=east]
+  L yellow_glazed_terracotta[facing=north]
+  M yellow_glazed_terracotta[facing=south]
+  N yellow_glazed_terracotta[facing=west]
+  O yellow_terracotta
+layer 0
+  DDDDD
+  DDDDD
+  DDDDD
+  DDDDD
+  DDDDD
+layer 1
+  DDDDD
+  .D...
+  D..DD
+  .....
+  DDDDD
+layer 2
+  GEEEG
+  EE.EC
+  EECEE
+  EL.N.
+  GJEEG
+layer 3
+  IECEI
+  EEEEE
+  EEEEE
+  EE.EE
+  IEECI
+layer 4
+  GJ.JG
+  EEE..
+  EJJEE
+  .ECEE
+  GEEEG
+layer 5
+  HGGHG
+  GEEEG
+  GEE.G
+  GECEG
+  GGGGG
+layer 6
+  GHHGG
+  GNMLG
+  GKGNG
+  GMLKG
+  GGGGG
+layer 7
+  MNGMN
+  KEGGL
+  GEEGG
+  ME.GN
+  KLGKL
+layer 8
+  IAFAI
+  AGGGA
+  FG.EB
+  AEEEA
+  IAEAI
+layer 9
+  IA.A.
+  AGJ.A
+  AEEEE
+  AGEEA
+  IAAAI
+layer 10
+  IOOO.
+  OEEEE
+  OCEEO
+  OEEGO
+  .OOOI
+layer 11
+  ...E.
+  IEGGJ
+  IJEEI
+  .EEEI
+  .IIII
+layer 12
+  .....
+  AGEE.
+  FGE.I
+  ..EEA
+  ..EAA
+
+template trail_ruins/tower/tower_2 5 5 13 5
+  A coarse_dirt
+  B cobblestone
+  C cracked_stone_bricks
+  D cyan_terracotta
+  E gravel
+  F light_gray_glazed_terracotta[facing=east]
+  G light_gray_glazed_terracotta[facing=north]
+  H light_gray_glazed_terracotta[facing=south]
+  I light_gray_glazed_terracotta[facing=west]
+  J light_gray_terracotta
+  K mud_brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  L mud_brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  M mud_bricks
+  N stone_bricks
+  O gravel
+  P white_terracotta
+layer 0
+  BBBBB
+  BBBBB
+  BBBBB
+  BBBBB
+  BBBBB
+layer 1
+  BBBBB
+  CC.C.
+  B.NCB
+  N.CB.
+  BNBNB
+layer 2
+  MEEEM
+  MMMEE
+  EMIEE
+  EEEME
+  MEE.M
+layer 3
+  DEEAD
+  EEEE.
+  EKMEE
+  EEEEE
+  DEEED
+layer 4
+  EEEEM
+  EEEEO
+  E.EEE
+  L.EEE
+  MEEEM
+layer 5
+  OEMMM
+  EEEEE
+  M.E.M
+  M..EM
+  DMMMD
+layer 6
+  EEDEE
+  .HIHE
+  DFEID
+  DGFGD
+  DDDDD
+layer 7
+  EDPDE
+  DEEED
+  PEEPP
+  EEEPD
+  EEDDD
+layer 8
+  DPPPD
+  PEPPP
+  EEEEP
+  EEE.P
+  EEPPD
+layer 9
+  ADDDD
+  EPEED
+  EEEAD
+  AEEED
+  EEEDD
+layer 10
+  EHFHF
+  EEEEG
+  FE.E.
+  EEP..
+  O.EHF
+layer 11
+  EJJJJ
+  EOEEJ
+  EE.P.
+  J.EP.
+  EJJJ.
+layer 12
+  .E.J.
+  E.PPJ
+  EEPE.
+  EEEE.
+  EJEJ.
+
+template trail_ruins/tower/tower_3 7 7 13 1
+  A coarse_dirt
+  B cobblestone
+  C cracked_stone_bricks
+  D cyan_terracotta
+  E gravel
+  F mud_brick_slab[type=bottom,waterlogged=false]
+  G mud_brick_slab[type=top,waterlogged=false]
+  H mud_brick_stairs[facing=east,half=top,shape=inner_right,waterlogged=false]
+  I mud_brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  J mud_brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  K mud_brick_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  L mud_brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  M mud_brick_stairs[facing=south,half=top,shape=inner_right,waterlogged=false]
+  N mud_brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  O mud_brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  P mud_brick_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  Q mud_bricks
+  R orange_glazed_terracotta[facing=east]
+  S orange_glazed_terracotta[facing=north]
+  T orange_glazed_terracotta[facing=south]
+  U orange_glazed_terracotta[facing=west]
+  V packed_mud
+  W stone_bricks
+  X gravel
+  Y white_terracotta
+layer 0
+  .BCWWB.
+  BBBBBBB
+  CBBBBBW
+  WBBBBBC
+  WBBBBBC
+  BBBBBBB
+  .BWWCB.
+layer 1
+  .BWVWB.
+  BWBWBBB
+  WWWCCWW
+  BCBCCCB
+  WCBCBCW
+  BBCWCBB
+  .BWBWB.
+layer 2
+  .QXE.Q.
+  QRJEDEV
+  O.EEEDD
+  EEEEEDE
+  ELE.E.E
+  QEEEEEQ
+  .QEEEQ.
+layer 3
+  .VEE.Q.
+  EEE.EED
+  EAEEEEE
+  EEEEEEE
+  E.EEEEE
+  VEE.AEQ
+  .QXX.V.
+layer 4
+  ..AEIQ.
+  EA..EE.
+  .EEEEA.
+  EEE.XEE
+  EEEE.EN
+  QXEAEEQ
+  .QE.IQ.
+layer 5
+  ...EVD.
+  .EEEK..
+  .E..EE.
+  .EEEEI.
+  QPXE.E.
+  DMNNNHD
+  .DQQQD.
+layer 6
+  ...DDD.
+  A.EDDE.
+  .EEREE.
+  EDSQE..
+  DDSUUD.
+  DDDDDDD
+  .DDDDD.
+layer 7
+  ...DSR.
+  EEDDDE.
+  EDEGED.
+  EE...D.
+  .D.EED.
+  UDDDDDT
+  ..TD.T.
+layer 8
+  .FFFFF.
+  FYYYYA.
+  FYEEEY.
+  .YEEGY.
+  ..EAEY.
+  .EEYYYF
+  .FFFFF.
+layer 9
+  .......
+  .DDDDD.
+  .D.EED.
+  .D.X.D.
+  .EEGED.
+  ...FDD.
+  .......
+layer 10
+  .......
+  ..DYDD.
+  .DEE.D.
+  .YG.EY.
+  .EEEED.
+  .EEEDD.
+  .......
+layer 11
+  .......
+  ...FY..
+  ..E....
+  .FAEEF.
+  .E.EEY.
+  ...XYY.
+  .......
+layer 12
+  .......
+  .TUES..
+  .RE.G..
+  .E..AE.
+  ..EEXU.
+  ...ERS.
+  .......
+
+template trail_ruins/tower/tower_4 7 7 13 4
+  A blue_terracotta
+  B brick_slab[type=bottom,waterlogged=false]
+  C brick_slab[type=top,waterlogged=false]
+  D brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  F brick_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  G brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  H brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  I brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  J brick_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  K bricks
+  L coarse_dirt
+  M cobblestone
+  N cracked_stone_bricks
+  O gravel
+  P light_blue_glazed_terracotta[facing=east]
+  Q light_blue_glazed_terracotta[facing=north]
+  R light_blue_glazed_terracotta[facing=south]
+  S light_blue_glazed_terracotta[facing=west]
+  T light_gray_terracotta
+  U mud_bricks
+  V stone_bricks
+  W gravel
+  X white_terracotta
+layer 0
+  .MNVVM.
+  MMMMMMM
+  NMMMMMV
+  VMMMMMN
+  VMMMMMN
+  MMMMMMM
+  .MVVNM.
+layer 1
+  .MVUVM.
+  MVMVMMM
+  VVVNNVV
+  MNMNNNM
+  VNMNMNV
+  MMNVNMM
+  .MVMVM.
+layer 2
+  .KOOLK.
+  KOOOOOK
+  OOOOOOO
+  OO.OOOO
+  OOOO.OO
+  KOOOOOK
+  .KOOOK.
+layer 3
+  .KOOOK.
+  KOO.OOK
+  OOOOOO.
+  OOOO.OL
+  OLOOOOO
+  KOOOWOO
+  .KOO.K.
+layer 4
+  .KOO.K.
+  KOOOOOK
+  OOOOOO.
+  OWOOOO.
+  OOOOOOW
+  OOOWOOO
+  .OOOOK.
+layer 5
+  .DJKEI.
+  GOOOOOG
+  FOOOOOF
+  KOOOOOK
+  HOO.OOO
+  KOOOOO.
+  .OJKEI.
+layer 6
+  ..BBB..
+  .OAAAA.
+  B.RSQAB
+  BAPRPAB
+  BAQPRA.
+  .AAAAO.
+  ..BBB..
+layer 7
+  .......
+  ..AAAX.
+  .O.OOA.
+  .OOOOA.
+  .AOOOO.
+  .XAAAO.
+  .......
+layer 8
+  .......
+  ..XXXO.
+  ..OOOX.
+  ..OOOO.
+  .XOOLO.
+  .AXXOO.
+  .......
+layer 9
+  .......
+  .XXBXX.
+  .XOOOX.
+  .BWOOO.
+  .XOOOO.
+  .XXBO..
+  .......
+layer 10
+  .......
+  .PQOSQ.
+  .ROOOP.
+  ..OOOO.
+  .SOOOO.
+  .QPO...
+  .......
+layer 11
+  .......
+  .OT.TO.
+  .TOOO..
+  .TC.OT.
+  .TOOOO.
+  .OTTT..
+  .......
+layer 12
+  .......
+  ....T..
+  .OOCOT.
+  .OWOOX.
+  ..OOOO.
+  .OTXT..
+  .......
+
+template trail_ruins/tower/tower_5 7 7 13 1
+  A black_glazed_terracotta[facing=east]
+  B black_glazed_terracotta[facing=north]
+  C black_glazed_terracotta[facing=south]
+  D black_glazed_terracotta[facing=west]
+  E brick_slab[type=bottom,waterlogged=false]
+  F brick_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G brick_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  H brick_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  I brick_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  J brick_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  K brick_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  L brick_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  M brick_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  N bricks
+  O coarse_dirt
+  P cobblestone
+  Q cracked_stone_bricks
+  R gravel
+  S gray_terracotta
+  T light_gray_terracotta
+  U mud_bricks
+  V red_terracotta
+  W stone_bricks
+  X gravel
+layer 0
+  .PQWWP.
+  PPPPPPP
+  QPPPPPW
+  WPPPPPQ
+  WPPPPPQ
+  PPPPPPP
+  .PWWQP.
+layer 1
+  .PWUWP.
+  PWPWPPP
+  WWWQQWW
+  PQPQQQP
+  WQPQPQW
+  PPQWQPP
+  .PWPWP.
+layer 2
+  .NR.ON.
+  NSRRRSN
+  RRRR.FR
+  RRHRROR
+  ..RORRR
+  NSRONSN
+  .N.RRNR
+layer 3
+  .NR....
+  NSRRRS.
+  ..RRRRR
+  R.R..O.
+  RRRR.RR
+  NSOROSN
+  .N.RRNR
+layer 4
+  .N.R...
+  .S.RRX.
+  RRRRRR.
+  ..ORRRX
+  RR.R.R.
+  NSRRRSN
+  .NRRRRR
+layer 5
+  ..MNG..
+  .RO.RR.
+  IR..R..
+  NRRRRR.
+  KRRRXRR
+  HS.R.SH
+  .FMRGRR
+layer 6
+  ...E...
+  ..SSO..
+  .XDBRO.
+  .SCACR.
+  .SDBDS.
+  .SSSSSR
+  ..EERRR
+layer 7
+  .......
+  ..DSOO.
+  ..NRRR.
+  RRHRRS.
+  RCX..A.
+  .D.SAA.
+  .......
+layer 8
+  .......
+  ..DSB..
+  .BRFNB.
+  .XRRRS.
+  .CR..A.
+  ...SAA.
+  .......
+layer 9
+  .......
+  ..SSSS.
+  .SRRRS.
+  .SRRJS.
+  .SX.NS.
+  ..RSSS.
+  .......
+layer 10
+  .......
+  ...VTT.
+  .VRRRT.
+  .TNNXT.
+  .TNLRV.
+  ..TVVV.
+  .......
+layer 11
+  .......
+  ....TT.
+  ..RRX..
+  .VRRR..
+  .T.ROV.
+  .TTVRR.
+  .......
+layer 12
+  .......
+  .......
+  ..RRR..
+  ..RRRV.
+  .VRRRR.
+  ...VR..
+  .......
+
+template trail_ruins/tower/tower_top_1 5 5 4 3
+  A blue_terracotta
+  B gravel
+  C mud_brick_slab[type=bottom,waterlogged=false]
+  D mud_bricks
+  E red_terracotta
+layer 0
+  A....
+  ABBB.
+  .BBB.
+  .DDBA
+  .ABAA
+layer 1
+  E....
+  E.B..
+  EBB..
+  EBBD.
+  EEEEE
+layer 2
+  .....
+  A....
+  EB...
+  ABB..
+  AAE..
+layer 3
+  ___._
+  ____.
+  C____
+  AB___
+  AA___
+
+template trail_ruins/tower/tower_top_2 5 5 4 5
+  A cyan_terracotta
+  B gravel
+  C light_gray_terracotta
+  D white_terracotta
+layer 0
+  .BBC.
+  BBBBC
+  BBBB.
+  CBBBC
+  CCBCC
+layer 1
+  ..BA.
+  .BBBA
+  .BBBA
+  BDBBA
+  AABAA
+layer 2
+  ...B.
+  ...BD
+  ..BDA
+  ..BBD
+  ..BDD
+layer 3
+  ____.
+  ___.D
+  ___.B
+  ___.D
+  ___BB
+
+template trail_ruins/tower/tower_top_3 7 7 4 1
+  A gravel
+  B mud_brick_slab[type=top,waterlogged=false]
+  C orange_terracotta
+  D gravel
+  E white_terracotta
+layer 0
+  ..__...
+  .CCBC..
+  .AAAA..
+  .AADAB.
+  ..AABC.
+  ...DCC.
+  .......
+layer 1
+  .____..
+  .E.AC..
+  ..AAAC.
+  ...AAC.
+  ...AAC.
+  ...ACE.
+  .......
+layer 2
+  _______
+  _._.._.
+  ....AC.
+  ....AA.
+  ....AA.
+  ....CC.
+  .......
+layer 3
+  _...___
+  _______
+  ____...
+  .......
+  .......
+  .....C.
+  .......
+
+template trail_ruins/tower/tower_top_4 7 7 4 4
+  A gravel
+  B light_gray_terracotta
+  C white_terracotta
+layer 0
+  .......
+  ..C.C..
+  .AAAAC.
+  .AAAAA.
+  .CAAA..
+  .ACB...
+  .......
+layer 1
+  .......
+  ..CCA..
+  ..AAAC.
+  .CAAAA.
+  .CAAA..
+  ..CC...
+  .......
+layer 2
+  .......
+  ..A....
+  .CA.._.
+  .CAA__.
+  ..AA___
+  ..CC.__
+  ...__..
+layer 3
+  .._____
+  ..___._
+  _C_____
+  _______
+  _______
+  __C____
+  _______
+
+template trail_ruins/tower/tower_top_5 7 7 4 1
+  A gravel
+  B light_gray_terracotta
+  C red_terracotta
+  D gravel
+layer 0
+  .......
+  .......
+  ..AAAC.
+  ..AAAA.
+  .CAADA.
+  ..BCAA.
+  .......
+layer 1
+  .......
+  .......
+  ....A..
+  ...AA..
+  ..AAA..
+  ...C...
+  .......
+layer 2
+  .......
+  ......_
+  ......_
+  ....A__
+  ...AA__
+  ...C___
+  ..._.__
+layer 3
+  _______
+  _______
+  _______
+  __.....
+  _...D..
+  _..C...
+  _......

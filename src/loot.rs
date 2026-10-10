@@ -190,6 +190,257 @@ pub const IGLOO: [Pool; 2] = [
     Pool { rolls: (1, 1), entries: &[("golden_apple", 1, 1, 1)], empty: 0 },
 ];
 
+
+// Таблицы строений из одного куска — вики, Module:LootChest/chests,
+// «poolsJava». Карты сокровищ («buried-treasure-map») пропущены: карт у нас
+// ещё нет [проверить: когда появятся — карта к ближнему кладу].
+
+/// Разрушенный портал (ruined_portal).
+pub const RUINED_PORTAL: [Pool; 2] = [
+    Pool {
+        rolls: (4, 8),
+        entries: &[
+            ("obsidian", 1, 2, 40),
+            ("flint", 1, 4, 40),
+            ("iron_nugget", 9, 18, 40),
+            ("flint_and_steel", 1, 1, 40),
+            ("fire_charge", 1, 1, 40),
+            ("golden_apple", 1, 1, 15),
+            ("gold_nugget", 4, 24, 15),
+            ("enchant:golden_sword", 1, 1, 15),
+            ("enchant:golden_axe", 1, 1, 15),
+            ("enchant:golden_hoe", 1, 1, 15),
+            ("enchant:golden_pickaxe", 1, 1, 15),
+            ("enchant:golden_shovel", 1, 1, 15),
+            ("enchant:golden_helmet", 1, 1, 15),
+            ("enchant:golden_chestplate", 1, 1, 15),
+            ("enchant:golden_leggings", 1, 1, 15),
+            ("enchant:golden_boots", 1, 1, 15),
+            ("glistering_melon_slice", 4, 12, 5),
+            ("golden_horse_armor", 1, 1, 5),
+            ("light_weighted_pressure_plate", 1, 1, 5),
+            ("golden_carrot", 4, 12, 5),
+            ("clock", 1, 1, 5),
+            ("gold_ingot", 2, 8, 5),
+            ("bell", 1, 1, 1),
+            ("enchanted_golden_apple", 1, 1, 1),
+            ("gold_block", 1, 2, 1),
+        ],
+        empty: 0,
+    },
+    Pool { rolls: (1, 1), entries: &[("lodestone", 1, 2, 2)], empty: 1 },
+];
+
+/// Пул брони наутилуса — общий у кораблекрушений, клада и руин в океане.
+const NAUTILUS_ARMOR: Pool = Pool {
+    rolls: (1, 1),
+    entries: &[("copper_nautilus_armor", 1, 1, 20), ("iron_nautilus_armor", 1, 1, 10), ("golden_nautilus_armor", 1, 1, 5), ("diamond_nautilus_armor", 1, 1, 2)],
+    empty: 148,
+};
+
+/// Шаблон отделки «берег» — у всех сундуков кораблекрушения.
+const COAST_TRIM: Pool = Pool { rolls: (1, 1), entries: &[("coast_armor_trim_smithing_template", 2, 2, 1)], empty: 5 };
+
+/// Кораблекрушение, сундук с картой (shipwreck_map).
+pub const SHIPWRECK_MAP: [Pool; 4] = [
+    Pool { rolls: (1, 1), entries: &[("buried_treasure_map", 1, 1, 1)], empty: 0 },
+    Pool {
+        rolls: (3, 3),
+        entries: &[("compass", 1, 1, 1), ("map", 1, 1, 1), ("clock", 1, 1, 1), ("paper", 1, 10, 20), ("feather", 1, 5, 10), ("book", 1, 5, 5)],
+        empty: 0,
+    },
+    COAST_TRIM,
+    NAUTILUS_ARMOR,
+];
+
+/// Кораблекрушение, сундук с припасами (shipwreck_supply).
+pub const SHIPWRECK_SUPPLY: [Pool; 3] = [
+    Pool {
+        rolls: (3, 10),
+        entries: &[
+            ("paper", 1, 12, 8),
+            ("potato", 2, 6, 7),
+            ("moss_block", 1, 4, 7),
+            ("poisonous_potato", 2, 6, 7),
+            ("carrot", 4, 8, 7),
+            ("wheat", 8, 21, 7),
+            ("coal", 2, 8, 6),
+            ("rotten_flesh", 5, 24, 5),
+            ("bamboo", 1, 3, 2),
+            ("suspicious_stew", 1, 1, 10),
+            ("pumpkin", 1, 3, 2),
+            ("gunpowder", 1, 5, 3),
+            ("tnt", 1, 2, 1),
+            ("enchant:leather_helmet", 1, 1, 3),
+            ("enchant:leather_chestplate", 1, 1, 3),
+            ("enchant:leather_leggings", 1, 1, 3),
+            ("enchant:leather_boots", 1, 1, 3),
+        ],
+        empty: 0,
+    },
+    COAST_TRIM,
+    NAUTILUS_ARMOR,
+];
+
+/// Кораблекрушение, сундук с сокровищем (shipwreck_treasure).
+pub const SHIPWRECK_TREASURE: [Pool; 4] = [
+    Pool {
+        rolls: (3, 6),
+        entries: &[("iron_ingot", 1, 5, 90), ("gold_ingot", 1, 5, 10), ("emerald", 1, 5, 40), ("diamond", 1, 1, 5), ("experience_bottle", 1, 1, 5)],
+        empty: 0,
+    },
+    Pool { rolls: (2, 5), entries: &[("iron_nugget", 1, 10, 50), ("gold_nugget", 1, 10, 10), ("lapis_lazuli", 1, 10, 20)], empty: 0 },
+    COAST_TRIM,
+    NAUTILUS_ARMOR,
+];
+
+/// Зарытое сокровище (buried_treasure).
+pub const BURIED_TREASURE: [Pool; 7] = [
+    Pool { rolls: (1, 1), entries: &[("heart_of_the_sea", 1, 1, 1)], empty: 0 },
+    Pool { rolls: (5, 8), entries: &[("iron_ingot", 1, 4, 20), ("gold_ingot", 1, 4, 10), ("tnt", 1, 2, 5)], empty: 0 },
+    Pool { rolls: (1, 3), entries: &[("emerald", 4, 8, 5), ("diamond", 1, 2, 5), ("prismarine_crystals", 1, 5, 5)], empty: 0 },
+    Pool { rolls: (0, 1), entries: &[("leather_chestplate", 1, 1, 1), ("iron_sword", 1, 1, 1), ("iron_spear", 1, 1, 1)], empty: 0 },
+    Pool { rolls: (2, 2), entries: &[("cooked_cod", 2, 4, 1), ("cooked_salmon", 2, 4, 1)], empty: 0 },
+    Pool { rolls: (0, 2), entries: &[("potion:water_breathing:potion", 1, 1, 1)], empty: 0 },
+    NAUTILUS_ARMOR,
+];
+
+/// Большие руины в океане (underwater_ruin_big).
+pub const UNDERWATER_RUIN_BIG: [Pool; 3] = [
+    Pool {
+        rolls: (2, 8),
+        entries: &[("coal", 1, 4, 10), ("gold_nugget", 1, 3, 10), ("emerald", 1, 1, 1), ("wheat", 2, 3, 10), ("stone_spear", 1, 1, 2)],
+        empty: 0,
+    },
+    Pool {
+        rolls: (1, 1),
+        entries: &[
+            ("golden_apple", 1, 1, 1),
+            ("enchanted_book", 1, 1, 5),
+            ("leather_chestplate", 1, 1, 1),
+            ("golden_helmet", 1, 1, 1),
+            ("enchant:fishing_rod", 1, 1, 5),
+            ("buried_treasure_map", 1, 1, 10),
+        ],
+        empty: 0,
+    },
+    NAUTILUS_ARMOR,
+];
+
+/// Малые руины в океане (underwater_ruin_small).
+pub const UNDERWATER_RUIN_SMALL: [Pool; 3] = [
+    Pool {
+        rolls: (2, 8),
+        entries: &[("coal", 1, 4, 10), ("stone_axe", 1, 1, 2), ("rotten_flesh", 1, 1, 5), ("emerald", 1, 1, 1), ("wheat", 2, 3, 10), ("stone_spear", 1, 1, 2)],
+        empty: 0,
+    },
+    Pool {
+        rolls: (1, 1),
+        entries: &[("leather_chestplate", 1, 1, 1), ("golden_helmet", 1, 1, 1), ("enchant:fishing_rod", 1, 1, 5), ("buried_treasure_map", 1, 1, 5)],
+        empty: 0,
+    },
+    NAUTILUS_ARMOR,
+];
+
+/// Подозрительный гравий холодных руин (archaeology/ocean_ruin_cold).
+#[allow(dead_code)] // добыча кисти — когда появится кисть [проверить]
+pub const ARCHAEOLOGY_OCEAN_RUIN_COLD: [Pool; 1] = [Pool {
+    rolls: (1, 1),
+    entries: &[
+        ("blade_pottery_sherd", 1, 1, 1),
+        ("explorer_pottery_sherd", 1, 1, 1),
+        ("mourner_pottery_sherd", 1, 1, 1),
+        ("plenty_pottery_sherd", 1, 1, 1),
+        ("iron_axe", 1, 1, 1),
+        ("emerald", 1, 1, 2),
+        ("wheat", 1, 1, 2),
+        ("wooden_hoe", 1, 1, 2),
+        ("coal", 1, 1, 2),
+        ("gold_nugget", 1, 1, 2),
+    ],
+    empty: 0,
+}];
+
+/// Подозрительный песок тёплых руин (archaeology/ocean_ruin_warm).
+#[allow(dead_code)] // добыча кисти — когда появится кисть [проверить]
+pub const ARCHAEOLOGY_OCEAN_RUIN_WARM: [Pool; 1] = [Pool {
+    rolls: (1, 1),
+    entries: &[
+        ("angler_pottery_sherd", 1, 1, 1),
+        ("shelter_pottery_sherd", 1, 1, 1),
+        ("snort_pottery_sherd", 1, 1, 1),
+        ("sniffer_egg", 1, 1, 1),
+        ("iron_axe", 1, 1, 1),
+        ("emerald", 1, 1, 2),
+        ("wheat", 1, 1, 2),
+        ("wooden_hoe", 1, 1, 2),
+        ("coal", 1, 1, 2),
+        ("gold_nugget", 1, 1, 2),
+    ],
+    empty: 0,
+}];
+
+/// Обычный подозрительный гравий руин тропы (archaeology/trail_ruins_common).
+#[allow(dead_code)] // добыча кисти — когда появится кисть [проверить]
+pub const ARCHAEOLOGY_TRAIL_RUINS_COMMON: [Pool; 1] = [Pool {
+    rolls: (1, 1),
+    entries: &[
+        ("emerald", 1, 1, 2),
+        ("wheat", 1, 1, 2),
+        ("wooden_hoe", 1, 1, 2),
+        ("clay", 1, 1, 2),
+        ("brick", 1, 1, 2),
+        ("yellow_dye", 1, 1, 2),
+        ("blue_dye", 1, 1, 2),
+        ("light_blue_dye", 1, 1, 2),
+        ("white_dye", 1, 1, 2),
+        ("orange_dye", 1, 1, 2),
+        ("red_candle", 1, 1, 2),
+        ("green_candle", 1, 1, 2),
+        ("purple_candle", 1, 1, 2),
+        ("brown_candle", 1, 1, 2),
+        ("magenta_stained_glass_pane", 1, 1, 1),
+        ("pink_stained_glass_pane", 1, 1, 1),
+        ("blue_stained_glass_pane", 1, 1, 1),
+        ("light_blue_stained_glass_pane", 1, 1, 1),
+        ("red_stained_glass_pane", 1, 1, 1),
+        ("yellow_stained_glass_pane", 1, 1, 1),
+        ("purple_stained_glass_pane", 1, 1, 1),
+        ("spruce_hanging_sign", 1, 1, 1),
+        ("oak_hanging_sign", 1, 1, 1),
+        ("gold_nugget", 1, 1, 1),
+        ("coal", 1, 1, 1),
+        ("wheat_seeds", 1, 1, 1),
+        ("beetroot_seeds", 1, 1, 1),
+        ("dead_bush", 1, 1, 1),
+        ("flower_pot", 1, 1, 1),
+        ("string", 1, 1, 1),
+        ("lead", 1, 1, 1),
+    ],
+    empty: 0,
+}];
+
+/// Редкий подозрительный гравий руин тропы (archaeology/trail_ruins_rare).
+#[allow(dead_code)] // добыча кисти — когда появится кисть [проверить]
+pub const ARCHAEOLOGY_TRAIL_RUINS_RARE: [Pool; 1] = [Pool {
+    rolls: (1, 1),
+    entries: &[
+        ("burn_pottery_sherd", 1, 1, 1),
+        ("danger_pottery_sherd", 1, 1, 1),
+        ("friend_pottery_sherd", 1, 1, 1),
+        ("heart_pottery_sherd", 1, 1, 1),
+        ("heartbreak_pottery_sherd", 1, 1, 1),
+        ("howl_pottery_sherd", 1, 1, 1),
+        ("sheaf_pottery_sherd", 1, 1, 1),
+        ("wayfinder_armor_trim_smithing_template", 1, 1, 1),
+        ("raiser_armor_trim_smithing_template", 1, 1, 1),
+        ("shaper_armor_trim_smithing_template", 1, 1, 1),
+        ("host_armor_trim_smithing_template", 1, 1, 1),
+        ("music_disc_relic", 1, 1, 1),
+    ],
+    empty: 0,
+}];
+
 /// Таблица добычи сундука (дальше к ним добавятся таблицы деревень).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -266,6 +517,29 @@ fn enchanted_book(item: i32, dice: &mut Dice) -> Stack {
     Stack::new(item, 1).with_extras(data)
 }
 
+/// Предмет с приставкой: «enchant:» — одно случайное подходящее зачарование
+/// (вики: «random-enchanted», функция enchant_randomly) [проверить: у нас —
+/// первое из подбора стола на случайный уровень 1–30]; «potion:<зелье>» —
+/// зелье этого вида.
+fn special(name: &str, item: i32, stack: Stack, dice: &mut Dice) -> Stack {
+    if let Some(potion) = name.strip_prefix("potion:").and_then(|rest| rest.split(':').next()) {
+        let data = crate::stackdata::Data { potion: crate::survival::POTIONS.iter().position(|known| *known == potion).map(|at| at as u16), ..Default::default() };
+
+        return Stack::new(item, stack.count).with_extras(data);
+    }
+
+    if name.starts_with("enchant:") {
+        let level = dice.between(1, 30);
+        let enchanted = crate::enchanting::merchant_enchant(stack, level, dice.next() as i64);
+        let mut data = enchanted.extras();
+
+        data.enchants.truncate(1);
+        return Stack::new(item, enchanted.count).with_extras(data);
+    }
+
+    stack
+}
+
 /// Бросок таблицы: предметы, как выпали.
 pub fn roll(table: &[Pool], dice: &mut Dice) -> Vec<Stack> {
     let mut out = Vec::new();
@@ -286,11 +560,11 @@ pub fn roll(table: &[Pool], dice: &mut Dice) -> Vec<Stack> {
             }) else {
                 continue;
             };
-            let Some(item) = crate::blocks::item_named(name) else {
+            let Some(item) = crate::blocks::item_named(name.rsplit(':').next().unwrap_or(name)) else {
                 continue;
             };
 
-            out.push(if name == "enchanted_book" { enchanted_book(item, dice) } else { Stack::new(item, dice.between(low, high)) });
+            out.push(if name == "enchanted_book" { enchanted_book(item, dice) } else { special(name, item, Stack::new(item, dice.between(low, high)), dice) });
         }
     }
 
