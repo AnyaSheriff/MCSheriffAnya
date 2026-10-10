@@ -30,6 +30,8 @@ pub mod stronghold;
 pub mod village;
 pub mod monument;
 pub mod trial_chambers;
+pub mod ancient_city;
+pub mod pillager_outpost;
 pub mod mineshaft;
 pub mod temples;
 pub mod ocean_ruin;
@@ -700,11 +702,16 @@ impl Chunk {
         village::build(generator, &mut chunk, chunk_x, chunk_z);
         // Храмы пустыни и джунглей, хижины ведьм (temples.rs).
         temples::build(generator, &mut chunk, chunk_x, chunk_z);
+        // Аванпосты разбойников (pillager_outpost.rs).
+        pillager_outpost::build(generator, &mut chunk, chunk_x, chunk_z);
         ocean::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         // Подводные крепости — после украшений океана: в рамке всё уходит под
         // воду и призмарин (monument.rs).
         monument::build(generator, &mut chunk, chunk_x, chunk_z);
         cave_biomes::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns, grid.as_ref());
+        // Древние города — после украшений глубокой тьмы: в кусках города
+        // порода и скалк уступают залам (ancient_city.rs).
+        ancient_city::build(generator, &mut chunk, chunk_x, chunk_z);
         // Испытательные камеры — последними: в своих кусках они важнее и
         // породы, и пещерных украшений (trial_chambers.rs).
         trial_chambers::build(generator, &mut chunk, chunk_x, chunk_z);
@@ -3801,6 +3808,16 @@ impl World {
             return monument::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / monument::SPACING + 1);
         }
 
+        // Древние города — по областям 24×24 чанка (ancient_city.rs).
+        if let (Generator::Normal(terrain), "ancient_city") = (&*self.generator, name) {
+            return ancient_city::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / ancient_city::SPACING + 1);
+        }
+
+        // Аванпосты разбойников — по областям 32×32 чанка (pillager_outpost.rs).
+        if let (Generator::Normal(terrain), "pillager_outpost") = (&*self.generator, name) {
+            return pillager_outpost::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / pillager_outpost::SPACING + 1);
+        }
+
         // Испытательные камеры — по областям 34×34 чанка (trial_chambers.rs).
         if let (Generator::Normal(terrain), "trial_chambers") = (&*self.generator, name) {
             return trial_chambers::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / trial_chambers::SPACING + 1);
@@ -4014,6 +4031,33 @@ impl World {
     pub fn ruin_drowned(&self, chunk_x: i32, chunk_z: i32) -> Vec<(f64, f64, f64)> {
         match &*self.generator {
             Generator::Normal(terrain) => ocean_ruin::drowned(terrain, chunk_x, chunk_z),
+            _ => Vec::new(),
+        }
+    }
+
+    /// В рамке ли древнего города клетка: там мобы сами не появляются
+    /// (ancient_city.rs).
+    pub fn in_ancient_city(&self, x: i32, y: i32, z: i32) -> bool {
+        match &*self.generator {
+            Generator::Normal(terrain) => ancient_city::inside(terrain, x, y, z),
+            _ => false,
+        }
+    }
+
+    /// В области появления разбойников аванпоста ли клетка
+    /// (pillager_outpost.rs).
+    pub fn in_outpost(&self, x: i32, y: i32, z: i32) -> bool {
+        match &*self.generator {
+            Generator::Normal(terrain) => pillager_outpost::inside(terrain, x, y, z),
+            _ => false,
+        }
+    }
+
+    /// Железные големы клеток аванпостов в только что сложенном чанке
+    /// (pillager_outpost.rs).
+    pub fn outpost_golems(&self, chunk_x: i32, chunk_z: i32) -> Vec<(f64, f64, f64)> {
+        match &*self.generator {
+            Generator::Normal(terrain) => pillager_outpost::golems(terrain, chunk_x, chunk_z),
             _ => Vec::new(),
         }
     }

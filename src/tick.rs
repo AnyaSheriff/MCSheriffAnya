@@ -1102,6 +1102,19 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                         return vec![(crate::mob::Kind::Witch, 1)];
                     }
 
+                    // В древнем городе мобы сами не появляются (вики, Ancient
+                    // City: «Mobs cannot spawn naturally»).
+                    if world.in_ancient_city(x, y, z) {
+                        return Vec::new();
+                    }
+
+                    // В области аванпоста — одни разбойники (вики, Pillager
+                    // Outpost: «72×58×72 area centered on the top level of
+                    // the watchtower»).
+                    if !wet && world.in_outpost(x, y, z) {
+                        return vec![(crate::mob::Kind::Pillager, 1)];
+                    }
+
                     crate::mob::spawn::overworld_kinds(world.surface_biome(x, z), wet)
                 };
 
@@ -1122,6 +1135,11 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                     !world.open_sky(x, y, z) || rng.below(20) == 0
                 } else if mob.kind == crate::mob::Kind::Slime {
                     crate::mob::slime::can_spawn(world.seed(), (x, y, z), world.mob_biome(x, y, z), sky.max(block), world.clock(), rng)
+                } else if mob.kind == crate::mob::Kind::Pillager && world.in_outpost(x, y, z) {
+                    // Разбойникам аванпоста небо не мешает: только блочный
+                    // свет не выше 8 (вики, Pillager: «if the block light
+                    // level is less than or equal to 8»).
+                    block <= 8
                 } else if dimension == Dimension::Overworld && matches!(world.mob_biome(x, y, z), "mushroom_fields" | "deep_dark") {
                     false
                 } else if nether { block <= 11 } else { crate::mob::spawn::dark_enough(sky, block, rng) }
@@ -1138,7 +1156,16 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         items.add_mob(mob);
     }
 
-    for mob in natural {
+    for mut mob in natural {
+        // Разбойник аванпоста — с долей 6 % капитан со зловещим флагом (вики,
+        // Pillager Outpost: «a 6% chance for a pillager to spawn as a patrol
+        // leader») [проверить: доля у появления в аванпосте].
+        if mob.kind == crate::mob::Kind::Pillager && rng.below(100) < 6 {
+            let (x, y, z) = mob.cell();
+
+            mob.illager.captain = world.in_outpost(x, y, z);
+        }
+
         items.add_mob(mob);
     }
 
@@ -1216,6 +1243,21 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 cat.persistent = true;
                 cat.persistent_tag = true;
                 items.add_mob(cat);
+            }
+        }
+    }
+
+    // Клетки аванпостов: железный голем (вики, Pillager Outpost: «An iron
+    // golem has a 85% chance of spawning»; замер entities), не исчезает.
+    // Аллаев у нас пока нет — клетка с аллаями пустая [проверить].
+    if dimension == Dimension::Overworld {
+        for (chunk_x, chunk_z) in &fresh {
+            for at in world.outpost_golems(*chunk_x, *chunk_z) {
+                let mut golem = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::IronGolem, at);
+
+                golem.persistent = true;
+                golem.persistent_tag = true;
+                items.add_mob(golem);
             }
         }
     }

@@ -441,6 +441,70 @@ pub const ARCHAEOLOGY_TRAIL_RUINS_RARE: [Pool; 1] = [Pool {
     empty: 0,
 }];
 
+/// Сундук древнего города (вики, Ancient City, chests/ancient_city: 5–10
+/// бросков с весом 84 и бросок шаблона отделки). Зачарования «enchant:» —
+/// наш закон enchant_with_levels [проверить: уровни 30–50 у алмазных поножей
+/// и мотыги, 20–39 у железных; износ мотыги 80–100 %]; книга — любое
+/// зачарование, и сокровищное («treasure:»), книга проворства — «swift_sneak:».
+pub const ANCIENT_CITY: [Pool; 2] = [
+    Pool {
+        rolls: (5, 10),
+        entries: &[
+            ("sculk_catalyst", 1, 2, 2),
+            ("diamond_horse_armor", 1, 1, 2),
+            ("potion:regeneration:potion", 1, 3, 5),
+            ("music_disc_otherside", 1, 1, 1),
+            ("coal", 6, 15, 7),
+            ("echo_shard", 1, 3, 4),
+            ("enchant:diamond_leggings", 1, 1, 2),
+            ("sculk_sensor", 1, 3, 3),
+            ("enchanted_golden_apple", 1, 2, 1),
+            ("compass", 1, 1, 2),
+            ("bone", 1, 15, 5),
+            ("candle", 1, 4, 3),
+            ("book", 3, 10, 5),
+            ("enchant:iron_leggings", 1, 1, 3),
+            ("treasure:enchanted_book", 1, 1, 5),
+            ("disc_fragment_5", 1, 3, 4),
+            ("swift_sneak:enchanted_book", 1, 1, 3),
+            ("enchant:diamond_hoe", 1, 1, 2),
+            ("leather", 1, 5, 2),
+            ("amethyst_shard", 1, 15, 3),
+            ("experience_bottle", 1, 3, 3),
+            ("sculk", 4, 10, 3),
+            ("glow_berries", 1, 15, 3),
+            ("music_disc_cat", 1, 1, 2),
+            ("lead", 1, 1, 2),
+            ("music_disc_13", 1, 1, 2),
+        ],
+        empty: 0,
+    },
+    Pool { rolls: (1, 1), entries: &[("ward_armor_trim_smithing_template", 1, 1, 4), ("silence_armor_trim_smithing_template", 1, 1, 1)], empty: 75 },
+];
+
+/// Ледник древнего города (вики, chests/ancient_city_ice_box: 4–10 бросков)
+/// [проверить: у тушёного супа — слепота 5–7 с или ночное зрение 7–10 с].
+pub const ANCIENT_CITY_ICE_BOX: [Pool; 1] = [Pool {
+    rolls: (4, 10),
+    entries: &[("snowball", 2, 6, 4), ("packed_ice", 2, 6, 2), ("baked_potato", 1, 10, 1), ("golden_carrot", 1, 10, 1), ("suspicious_stew", 2, 6, 1)],
+    empty: 0,
+}];
+
+/// Сундук аванпоста разбойников (вики, Pillager Outpost, «Chest loot»:
+/// шесть пулов).
+pub const PILLAGER_OUTPOST: [Pool; 6] = [
+    Pool { rolls: (0, 1), entries: &[("crossbow", 1, 1, 1)], empty: 0 },
+    Pool { rolls: (2, 3), entries: &[("wheat", 3, 5, 7), ("potato", 2, 5, 5), ("carrot", 3, 5, 5)], empty: 0 },
+    Pool { rolls: (1, 3), entries: &[("dark_oak_log", 2, 3, 1)], empty: 0 },
+    Pool {
+        rolls: (2, 3),
+        entries: &[("tripwire_hook", 1, 3, 3), ("experience_bottle", 1, 1, 7), ("arrow", 2, 7, 4), ("enchanted_book", 1, 1, 1), ("iron_ingot", 1, 3, 3), ("string", 1, 6, 4)],
+        empty: 0,
+    },
+    Pool { rolls: (0, 1), entries: &[("goat_horn", 1, 1, 1)], empty: 0 },
+    Pool { rolls: (1, 1), entries: &[("sentry_armor_trim_smithing_template", 2, 2, 1)], empty: 3 },
+];
+
 /// Таблица добычи сундука (дальше к ним добавятся таблицы деревень).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -517,6 +581,31 @@ fn enchanted_book(item: i32, dice: &mut Dice) -> Stack {
     Stack::new(item, 1).with_extras(data)
 }
 
+/// Книга с одним зачарованием случайного уровня 1…наибольший (функция
+/// enchant_randomly): «treasure» — любое, кроме проворства душ, быстрого
+/// подкрадывания и порыва ветра (вики, Ancient City: «Includes treasure
+/// enchantments except Soul Speed, Swift Sneak and Wind Burst»), иначе —
+/// названное.
+fn book_of(kind: &str, item: i32, dice: &mut Dice) -> Stack {
+    let mut data = crate::stackdata::Data::default();
+    let choices: Vec<(usize, i32)> = crate::stackdata::ENCHANTMENTS
+        .iter()
+        .enumerate()
+        .filter(|(_, (name, _))| if kind == "treasure" { !matches!(*name, "soul_speed" | "swift_sneak" | "wind_burst") } else { *name == kind })
+        .map(|(number, (_, top))| (number, *top))
+        .collect();
+
+    if choices.is_empty() {
+        return Stack::new(item, 1);
+    }
+
+    let (number, top) = choices[(dice.next() % choices.len() as u64) as usize];
+
+    data.set_enchant(number as u16, dice.between(1, top));
+
+    Stack::new(item, 1).with_extras(data)
+}
+
 /// Предмет с приставкой: «enchant:» — одно случайное подходящее зачарование
 /// (вики: «random-enchanted», функция enchant_randomly) [проверить: у нас —
 /// первое из подбора стола на случайный уровень 1–30]; «potion:<зелье>» —
@@ -564,7 +653,13 @@ pub fn roll(table: &[Pool], dice: &mut Dice) -> Vec<Stack> {
                 continue;
             };
 
-            out.push(if name == "enchanted_book" { enchanted_book(item, dice) } else { special(name, item, Stack::new(item, dice.between(low, high)), dice) });
+            out.push(if name == "enchanted_book" {
+                enchanted_book(item, dice)
+            } else if let Some(kind) = name.strip_suffix(":enchanted_book") {
+                book_of(kind, item, dice)
+            } else {
+                special(name, item, Stack::new(item, dice.between(low, high)), dice)
+            });
         }
     }
 
@@ -629,6 +724,39 @@ mod tests {
 
     /// Новые таблицы (вики, Module:LootChest/chests): все предметы есть в
     /// нашей таблице предметов, числа бросков как у вики.
+    #[test]
+    fn city_and_outpost_tables_follow_the_wiki() {
+        for table in [&ANCIENT_CITY[..], &ANCIENT_CITY_ICE_BOX[..], &PILLAGER_OUTPOST[..]] {
+            for pool in table {
+                for entry in pool.entries {
+                    assert!(crate::blocks::item_named(entry.0.rsplit(':').next().unwrap_or(entry.0)).is_some(), "нет предмета {}", entry.0);
+                }
+            }
+        }
+
+        let log = crate::blocks::item_named("dark_oak_log").expect("бревно есть");
+        let book = crate::blocks::item_named("enchanted_book").expect("книга есть");
+        let (mut trims, runs) = (0, 2000);
+
+        for seed in 0..runs {
+            let mut dice = Dice::new(seed);
+            let city = roll(&ANCIENT_CITY, &mut dice);
+
+            // 5–10 бросков и шаблон с долей 5 из 80.
+            assert!((5..=11).contains(&city.len()), "{}", city.len());
+            trims += city.iter().filter(|stack| crate::blocks::item_name(stack.item).is_some_and(|name| name.ends_with("_armor_trim_smithing_template"))).count();
+            assert!(city.iter().filter(|stack| stack.item == book).all(|stack| !stack.extras().enchants.is_empty()));
+            assert!((4..=10).contains(&roll(&ANCIENT_CITY_ICE_BOX, &mut dice).len()));
+
+            // У аванпоста бревно тёмного дуба — всегда (вики: 100 %).
+            assert!(roll(&PILLAGER_OUTPOST, &mut dice).iter().any(|stack| stack.item == log));
+        }
+
+        let share = trims as f64 / runs as f64;
+
+        assert!((0.03..0.09).contains(&share), "доля шаблонов {share}");
+    }
+
     #[test]
     fn structure_tables_follow_the_wiki() {
         for table in [Table::Mineshaft, Table::DesertPyramid, Table::JungleTemple, Table::JungleDispenser, Table::Igloo] {

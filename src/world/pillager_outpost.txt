@@ -1,0 +1,785 @@
+# Аванпосты разбойников — замер мира оригинала 26.1.2 (13 аванпостов),
+# tools/measure/pillager_outpost.py export. Сперва раскладки: layout — один
+# аванпост; кусок: образец, поворот (четверти по часовой), начало от угла
+# чанка старта по x и z, высота над медианой земли по кольцу вокруг рамки:
+# start — плиты старта 16×16 (у башни), ring — своей. Потом образцы (формат
+# src/world/template.rs): рамка
+# в собственном повороте куска, «.» — рельеф остаётся, «_» — пусто; loot —
+# таблица сундука; mob — моб клетки, место от начала куска и доля.
+
+layout 6
+  watchtower 3 0 0 -1 start
+  feature_tent2 2 -10 1 -25 ring
+  feature_logs 0 -4 1 -26 ring
+  feature_cage1 0 -12 1 -22 ring
+  feature_tent1 1 31 1 -21 ring
+  feature_tent2 2 29 1 -22 ring
+
+layout 5
+  watchtower 2 0 0 0 start
+  feature_targets 2 4 1 -14 ring
+  feature_targets 2 7 1 -13 ring
+  feature_cage2 3 -25 1 -19 ring
+  feature_logs 0 -17 1 -24 ring
+
+layout 9
+  watchtower 3 0 0 -1 start
+  feature_cage1 0 20 1 -27 ring
+  feature_targets 0 16 1 -29 ring
+  feature_cage_with_allays 0 -10 1 -29 ring
+  feature_targets 2 -10 1 -16 ring
+  feature_tent1 0 -16 1 -31 ring
+  feature_tent2 0 -2 1 -31 ring
+  feature_cage_with_allays 2 27 1 13 ring
+  feature_tent2 0 12 1 10 ring
+
+layout 6
+  watchtower 2 -1 0 0 start
+  feature_tent2 0 -31 1 10 ring
+  feature_cage2 3 -25 1 9 ring
+  feature_logs 1 -18 1 -3 ring
+  feature_cage2 2 8 1 -24 ring
+  feature_logs 3 9 1 -18 ring
+
+layout 6
+  watchtower 3 0 0 0 start
+  feature_tent1 0 -2 1 -23 ring
+  feature_tent2 0 -12 1 -25 ring
+  feature_tent1 2 -1 1 -25 ring
+  feature_logs 3 24 1 -25 ring
+  feature_cage2 1 30 1 -24 ring
+
+layout 5
+  watchtower 3 0 0 -1 start
+  feature_cage2 3 24 1 -24 ring
+  feature_tent1 1 31 1 -21 ring
+  feature_targets 0 16 1 -17 ring
+  feature_targets 3 18 1 -21 ring
+
+layout 5
+  watchtower 0 0 0 0 start
+  feature_cage_with_allays 3 14 1 22 ring
+  feature_logs 2 -4 0 23 ring
+  feature_cage_with_allays 3 -8 1 31 ring
+  feature_cage_with_allays 2 -10 0 27 ring
+
+layout 5
+  watchtower 1 0 0 1 start
+  feature_cage_with_allays 3 -30 1 29 ring
+  feature_cage_with_allays 2 -16 1 30 ring
+  feature_tent1 3 -23 1 21 ring
+  feature_logs 0 -30 1 11 ring
+
+layout 2
+  watchtower 1 0 0 0 start
+  feature_tent1 3 1 1 23 ring
+
+layout 8
+  watchtower 1 0 0 1 start
+  feature_cage2 2 -16 1 26 ring
+  feature_cage_with_allays 1 -23 1 22 ring
+  feature_tent2 1 -25 1 12 ring
+  feature_targets 3 -24 1 31 ring
+  feature_cage2 3 -30 1 -2 ring
+  feature_cage2 1 14 1 18 ring
+  feature_targets 0 2 1 24 ring
+
+layout 4
+  watchtower 0 1 0 0 start
+  feature_logs 0 -8 1 23 ring
+  feature_logs 2 -9 1 23 ring
+  feature_tent2 2 -11 1 31 ring
+
+layout 12
+  watchtower 2 0 0 0 start
+  feature_targets 2 11 -1 -15 ring
+  feature_cage1 1 8 1 -22 ring
+  feature_tent1 3 10 1 -25 ring
+  feature_targets 0 12 1 -22 ring
+  feature_targets 1 -14 1 -31 ring
+  feature_targets 1 -22 1 -28 ring
+  feature_tent2 2 -25 1 -17 ring
+  feature_tent1 1 -14 1 -25 ring
+  feature_tent2 0 -31 1 6 ring
+  feature_tent2 1 -17 1 10 ring
+  feature_cage1 3 -25 1 9 ring
+
+layout 4
+  watchtower 1 0 0 1 start
+  feature_cage2 3 -29 1 -8 ring
+  feature_logs 1 -13 1 -13 ring
+  feature_tent2 3 -3 1 23 ring
+
+template feature_cage1 7 7 4 4
+  A dark_oak_log[axis=y]
+  B dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  C dark_oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  D dark_oak_slab[type=bottom,waterlogged=false]
+  E dark_oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  F dark_oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G dark_oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  H dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  ._.....
+  _......
+  ..ABBA.
+  ._C..C.
+  ..C..C.
+  __ABBA.
+  __..._.
+layer 1
+  _______
+  _______
+  __ABBA_
+  __C__C_
+  __C__C_
+  __ABBA_
+  _______
+layer 2
+  _______
+  _______
+  __ABBA_
+  __C__C_
+  __C__C_
+  __ABBA_
+  _______
+layer 3
+  _______
+  _______
+  __DEED_
+  __F__G_
+  __F__G_
+  __DHHD_
+  _______
+
+template feature_cage2 7 7 4 9
+  A dark_oak_log[axis=y]
+  B dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  C dark_oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  D dark_oak_slab[type=bottom,waterlogged=false]
+  E dark_oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  F dark_oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G dark_oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  H dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  ..__...
+  .._..__
+  __ABBA.
+  ._C__C.
+  ..C._C_
+  _.ABBA_
+  __._.._
+layer 1
+  _______
+  _______
+  __ABBA_
+  __C__C_
+  __C__C_
+  __ABBA_
+  _______
+layer 2
+  _______
+  _______
+  __ABBA_
+  __C__C_
+  __C__C_
+  __ABBA_
+  _______
+layer 3
+  _______
+  _______
+  __DEED_
+  __F__G_
+  __F__G_
+  __DHHD_
+  _______
+
+template feature_cage_with_allays 7 7 4 8
+  A dark_oak_log[axis=y]
+  B dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  C dark_oak_fence[east=true,north=false,south=true,waterlogged=false,west=true]
+  D dark_oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  E dark_oak_fence[east=false,north=true,south=true,waterlogged=false,west=true]
+  F dark_oak_slab[type=bottom,waterlogged=false]
+  G dark_oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  H dark_oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  I dark_oak_fence[east=true,north=true,south=true,waterlogged=false,west=true]
+  J dark_oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  K dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  ...___.
+  _..._._
+  ..ABCA.
+  ..D__E.
+  ._D__D_
+  ._ABBA.
+  ..._.._
+layer 1
+  _______
+  _______
+  __ABBA_
+  __D__D_
+  __D__D_
+  __ABBA_
+  _______
+layer 2
+  _______
+  _______
+  __ABBA_
+  __D__D_
+  __D__D_
+  __ABBA_
+  _______
+layer 3
+  _______
+  _______
+  __FGGF_
+  __HIIJ_
+  __HIIJ_
+  __FKKF_
+  _______
+
+template feature_logs 6 7 3 10
+  A dark_oak_log[axis=z]
+layer 0
+  .__A_.
+  ..AAA_
+  ..AAA_
+  _.AAA_
+  ._AAA_
+  ___AA_
+  ___.A.
+layer 1
+  ______
+  ___A__
+  ___A__
+  ___A__
+  ___A__
+  ___A__
+  ______
+layer 2
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+  ______
+
+template feature_targets 3 7 3 12
+  A dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  B dark_oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  C hay_block[axis=y]
+  D dark_oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  E carved_pumpkin[facing=west]
+layer 0
+  ___
+  _A.
+  __.
+  _..
+  __.
+  .A_
+  ___
+layer 1
+  _B_
+  _C_
+  _D_
+  ___
+  _B_
+  _C_
+  _D_
+layer 2
+  ___
+  _E_
+  ___
+  ___
+  ___
+  _E_
+  ___
+
+template feature_tent1 6 7 4 9
+  A dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  B crafting_table
+  C white_wool
+  D dark_oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+layer 0
+  ______
+  _A__A_
+  ______
+  _A__A_
+  .__B__
+  .A__A_
+  _.____
+layer 1
+  ______
+  _CCCC_
+  ______
+  _A__A_
+  ______
+  _CCCC_
+  ______
+layer 2
+  ______
+  ______
+  _CCCC_
+  _D__D_
+  _CCCC_
+  ______
+  ______
+layer 3
+  ______
+  ______
+  ______
+  _CCCC_
+  ______
+  ______
+  ______
+
+template feature_tent2 6 7 4 12
+  A dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  B pumpkin
+  C crafting_table
+  D white_wool
+  E dark_oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+layer 0
+  __..__
+  .A_BA_
+  __BB__
+  _A__A_
+  .__C__
+  _A__A_
+  ._.__.
+layer 1
+  ______
+  _DDDD_
+  ___B__
+  _A__A_
+  ______
+  _DDDD_
+  ______
+layer 2
+  ______
+  ______
+  _DDDD_
+  _E__E_
+  _DDDD_
+  ______
+  ______
+layer 3
+  ______
+  ______
+  ______
+  _DDDD_
+  ______
+  ______
+  ______
+
+template watchtower 15 15 23 13
+  A dark_oak_log[axis=y]
+  B cobblestone
+  C birch_planks
+  D cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E dark_oak_slab[type=top,waterlogged=false]
+  F cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  G dark_oak_slab[type=bottom,waterlogged=false]
+  H dark_oak_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  I dark_oak_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  J dark_oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  K dark_oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  L dark_oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  M dark_oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  N dark_oak_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  O dark_oak_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  P dark_oak_planks
+  Q cobblestone_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  R cobblestone_slab[type=top,waterlogged=false]
+  S dark_oak_log[axis=z]
+  T cobblestone_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  U cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  V dark_oak_log[axis=x]
+  W cobblestone_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  X cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  Y cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  Z white_wall_banner[facing=north]
+  a white_wall_banner[facing=west]
+  b white_wall_banner[facing=east]
+  c white_wall_banner[facing=south]
+  d dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  e dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  f dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  g cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+  h dark_oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  i dark_oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  j dark_oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  k chest[facing=west,type=single,waterlogged=false]
+  l torch
+  loot 9 14 10 chests/pillager_outpost
+layer 0
+  ...............
+  ....A.....A....
+  ...BBBBBBBBB...
+  ..BBCCCCCCCCB..
+  .ABCCCCCCCCCBA.
+  ..BCCCCCCCCCB..
+  ..BCCCCCCCCCB..
+  ..BCCCCCCCCCB..
+  ..BCCCCCCCCCB..
+  ..BCCCCCCCCCB..
+  .ABCCCCCCCCCBA.
+  ..BBCCCCCCCBB..
+  ...BBBBCBBBB...
+  ....A.....A....
+  ...............
+layer 1
+  _..____..._._._
+  ____A_____A__._
+  ___BBBBBBBBB_..
+  __BB_______BB__
+  _AB______DC_BA_
+  __BE______B_B_.
+  __BE________B__
+  __BE________B__
+  __BE________B_.
+  __BE________B__
+  _AB_________BA_
+  __BB_______BB__
+  ___BBBB_BBBB__.
+  _.__A_____A____
+  .__________.___
+layer 2
+  _______________
+  ____A_____A____
+  ___BBB_B_BBB___
+  __BB_______BB__
+  _AB_________BA_
+  __B_______F_B__
+  __________B____
+  __B_________B__
+  _______________
+  __B_________B__
+  _AB_________BA_
+  __BB_______BB__
+  ___BBBB_BBBB___
+  ____A_____A____
+  _______________
+layer 3
+  _______________
+  ____G_____G____
+  ___HBBBBBBBI___
+  __HBJ_____KBI__
+  _GBL_______LBG_
+  __B_________B__
+  __B_______F_B__
+  __B_______B_B__
+  __B_________B__
+  __B_________B__
+  _GBM_______MBG_
+  __NBJ_____KBO__
+  ___NBBBBBBBO___
+  ____G_____G____
+  _______________
+layer 4
+  _______________
+  _______________
+  _____GGGGG_____
+  ____BPPPPPB____
+  ___B_______B___
+  __GP_______PG__
+  __GP_______PG__
+  __GP______FPG__
+  __GP______BPG__
+  __GP_______PG__
+  ___B_______B___
+  ____BPPPPPB____
+  _____GGGGG_____
+  _______________
+  _______________
+layer 5
+  _______________
+  _______________
+  ______QRQ______
+  ____APCSCPA____
+  ___ACCCCCCCA___
+  ___PCCCCC__P___
+  __TCCCCCCC_CU__
+  __RVCCCCCC_VR__
+  __TCCCCCCCFCU__
+  ___PCCCCCCCP___
+  ___ACCCCCCCA___
+  ____APCSCPA____
+  ______WRW______
+  _______________
+  _______________
+layer 6
+  _______________
+  _______________
+  _______________
+  ____AP___PA____
+  ___A_______A___
+  ___P_______P___
+  _______________
+  _______________
+  _______________
+  ___PB______P___
+  ___ACX_____A___
+  ____AP___PA____
+  _______________
+  _______________
+  _______________
+layer 7
+  _______________
+  _______________
+  _______________
+  ____AP___PA____
+  ___A_______A___
+  ___P_______P___
+  _______________
+  _______________
+  _______________
+  ___PY______P___
+  ___A_______A___
+  ____AP___PA____
+  _______________
+  _______________
+  _______________
+layer 8
+  _______________
+  _______________
+  _______________
+  ____APPEPPA____
+  ___A_______A___
+  ___P_______P___
+  ___P_______P___
+  ___E_______E___
+  ___PY______P___
+  ___P_______P___
+  ___A_______A___
+  ____APPEPPA____
+  _______________
+  _______________
+  _______________
+layer 9
+  _______________
+  _______________
+  _______________
+  ____APPSPPA____
+  ___ACCCCCCCA___
+  ___PCCCCCCCP___
+  ___PCCCCCCCP___
+  ___VYCCCCCCV___
+  ___P_CCCCCCP___
+  ___P_CCCCCCP___
+  ___A__CCCCCA___
+  ____APPSPPA____
+  _______________
+  _______________
+  _______________
+layer 10
+  _______________
+  _______________
+  _______________
+  ____APSPSPA____
+  ___A_______A___
+  ___P_____DCP___
+  ___V_______V___
+  ___P_______P___
+  ___V_______V___
+  ___P_______P___
+  ___A_______A___
+  ____APSPSPA____
+  _______________
+  _______________
+  _______________
+layer 11
+  _______________
+  _______________
+  _______________
+  ____BPPSPPB____
+  ___B_______B___
+  ___P_______P___
+  ___P______FP___
+  ___V_______V___
+  ___P_______P___
+  ___P_______P___
+  ___B_______B___
+  ____BPPSPPB____
+  _______________
+  _______________
+  _______________
+layer 12
+  _______________
+  _______________
+  ___EBMQQQMBE___
+  __EBBBBBBBBBE__
+  __BB_______BB__
+  __KB_______BJ__
+  __TB_______BU__
+  __TB______FBU__
+  __TB_______BU__
+  __KB_______BJ__
+  __BB_______BB__
+  __EBBBBBBBBBE__
+  ___EBLWWWLBE___
+  _______________
+  _______________
+layer 13
+  ____Z_____Z____
+  ___SVVVVVVVS___
+  __BCCCCCCCCCB__
+  _VCCCCCCCCCCCV_
+  aSCCCCCCCCCCCSb
+  _SCCCCCCC__CCS_
+  _SCCCCCCCC_CCS_
+  _SCCCCCCCC_CCS_
+  _SCCCCCCCCFCCS_
+  _SCCCCCCCCCCCS_
+  aSCCCCCCCCCCCSb
+  _VCCCCCCCCCCCV_
+  __BCCCCCCCCCB__
+  ___SVVVVVVVS___
+  ____c_____c____
+layer 14
+  _______________
+  ___Hdde_fddI___
+  __gh_______hg__
+  _He_________fI_
+  _i__A_____A__i_
+  _i___________i_
+  _h___________h_
+  _______________
+  _j___________j_
+  _i___________i_
+  _i__A____kA__i_
+  _Ne_________fO_
+  __gj_______jg__
+  ___Ndde_fddO___
+  _______________
+layer 15
+  _______________
+  _______________
+  __g_________g__
+  _______________
+  ____A_____A____
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ____A_____A____
+  _______________
+  __g_________g__
+  _______________
+  _______________
+layer 16
+  _______________
+  _______________
+  __P_________P__
+  _______________
+  ____A_____A____
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ____A_____A____
+  _______________
+  __P_________P__
+  _______________
+  _______________
+layer 17
+  _______________
+  _______________
+  __PP_______PP__
+  __PP_______PP__
+  ____A_____A____
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ____A_____A____
+  ___P_______PP__
+  __P________PP__
+  _______________
+  _______________
+layer 18
+  _______________
+  _______________
+  __lPPP___PPPl__
+  __PPPP___PPPP__
+  __PPPP___PPPP__
+  __PPPP___PPPP__
+  _______________
+  _______________
+  _______________
+  __PPPP___PPPP__
+  __PPPP___PPPP__
+  __PPPP___PPPP__
+  __lPPP___PPPl__
+  _______________
+  _______________
+layer 19
+  _______________
+  _______________
+  ____PPPPPPP____
+  ___PPPPPPPPP___
+  __PPPPPPPPPPP__
+  __PPPPP_PPPPP__
+  __PPPP___PPPP__
+  __PPP_____PPP__
+  __PPPP___PPPP__
+  __PPPPP_PPPPP__
+  __PPPPPPPPPPP__
+  ___PPPPPPPPP___
+  ____PPPPPPP____
+  _______________
+  _______________
+layer 20
+  _______________
+  _______________
+  _______________
+  _____PPPPP_____
+  ____PPPPPPP____
+  ___PPPPPPPPP___
+  ___PPPPPPPPP___
+  ___PPPPPPPPP___
+  ___PPPPPPPPP___
+  ___PPPPPPPPP___
+  ____PPPPPPP____
+  _____PPPPP_____
+  _______________
+  _______________
+  _______________
+layer 21
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 22
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+

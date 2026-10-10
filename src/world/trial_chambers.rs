@@ -51,34 +51,34 @@ const START_HIGH: i32 = -20;
 const REACH: i32 = 7;
 
 /// Клетки образца: порода как была, воздух, дальше — палитра.
-const KEEP: u16 = 0;
+pub(super) const KEEP: u16 = 0;
 const HOLLOW: u16 = 1;
 
-struct Template {
-    width: i32,
-    depth: i32,
-    height: i32,
+pub(super) struct Template {
+    pub(super) width: i32,
+    pub(super) depth: i32,
+    pub(super) height: i32,
     /// Низ рамки и низ стартового куска у замера (y).
-    bottom: i32,
-    start_bottom: i32,
+    pub(super) bottom: i32,
+    pub(super) start_bottom: i32,
     /// Угол рамки от угла чанка старта (блоки).
-    offset: (i32, i32),
+    pub(super) offset: (i32, i32),
     /// Палитра: текст состояния по номеру клетки (с 2).
-    names: Vec<&'static str>,
+    pub(super) names: Vec<&'static str>,
     /// Состояние по номеру клетки для каждого поворота.
-    states: [Vec<i32>; 4],
-    cells: Vec<u16>,
+    pub(super) states: [Vec<i32>; 4],
+    pub(super) cells: Vec<u16>,
     /// Сущности-блоки: от угла рамки, вид и данные.
-    entities: Vec<(i32, i32, i32, &'static str, &'static str)>,
+    pub(super) entities: Vec<(i32, i32, i32, &'static str, &'static str)>,
 }
 
 impl Template {
-    fn cell(&self, a: i32, y: i32, b: i32) -> u16 {
+    pub(super) fn cell(&self, a: i32, y: i32, b: i32) -> u16 {
         self.cells[((y * self.depth + b) * self.width + a) as usize]
     }
 }
 
-fn parse(text: &'static str) -> Vec<Template> {
+pub(super) fn parse(text: &'static str) -> Vec<Template> {
     let mut out: Vec<Template> = Vec::new();
     let mut symbols: HashMap<&'static str, u16> = HashMap::new();
     let mut layer = 0;
@@ -251,7 +251,7 @@ fn unturn_once((dx, dz): (i32, i32)) -> (i32, i32) {
     (dz, -dx - 1)
 }
 
-fn turn(mut at: (i32, i32), turns: u8) -> (i32, i32) {
+pub(super) fn turn(mut at: (i32, i32), turns: u8) -> (i32, i32) {
     for _ in 0..turns % 4 {
         at = turn_once(at);
     }
@@ -259,7 +259,7 @@ fn turn(mut at: (i32, i32), turns: u8) -> (i32, i32) {
     at
 }
 
-fn unturn(mut at: (i32, i32), turns: u8) -> (i32, i32) {
+pub(super) fn unturn(mut at: (i32, i32), turns: u8) -> (i32, i32) {
     for _ in 0..turns % 4 {
         at = unturn_once(at);
     }
