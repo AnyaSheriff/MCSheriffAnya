@@ -22,6 +22,7 @@ pub mod golem;
 pub mod guardian;
 pub mod wither;
 pub mod water;
+pub mod warden;
 pub mod hostile;
 pub mod illager;
 pub mod leash;
@@ -150,12 +151,14 @@ pub enum Kind {
     Axolotl,
     Frog,
     Tadpole,
+    /// Хранитель: появляется только от крикуна (mob/warden.rs).
+    Warden,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 69] = [
+    pub const ALL: [Kind; 70] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -225,6 +228,7 @@ impl Kind {
         Kind::Axolotl,
         Kind::Frog,
         Kind::Tadpole,
+        Kind::Warden,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -265,6 +269,7 @@ impl Kind {
                 | Kind::Illusioner
                 | Kind::Ravager
                 | Kind::Breeze
+                | Kind::Warden
         )
     }
 
@@ -363,6 +368,7 @@ impl Kind {
             "axolotl" => Kind::Axolotl,
             "frog" => Kind::Frog,
             "tadpole" => Kind::Tadpole,
+            "warden" => Kind::Warden,
             _ => return None,
         })
     }
@@ -438,6 +444,7 @@ impl Kind {
             Kind::Axolotl => "axolotl",
             Kind::Frog => "frog",
             Kind::Tadpole => "tadpole",
+            Kind::Warden => "warden",
         }
     }
 
@@ -523,6 +530,7 @@ impl Kind {
             Kind::Axolotl => 7,
             Kind::Frog => 55,
             Kind::Tadpole => 130,
+            Kind::Warden => 142,
         }
     }
 
@@ -609,6 +617,7 @@ impl Kind {
             Kind::Axolotl => "minecraft:axolotl",
             Kind::Frog => "minecraft:frog",
             Kind::Tadpole => "minecraft:tadpole",
+            Kind::Warden => "minecraft:warden", // [Bedrock: потом] свойства и позы.
         }
     }
 
@@ -735,6 +744,7 @@ impl Kind {
             Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner => 1.95,
             Kind::Vex | Kind::EvokerFangs => 0.8,
             Kind::Ravager => 2.2,
+            Kind::Warden => 2.9,
         }
     }
 
@@ -804,6 +814,7 @@ impl Kind {
             // Вики, Wither: 300 на любой сложности.
             Kind::Wither => wither::HEALTH,
             Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Ravager | Kind::EvokerFangs => illager::max_health(self),
+            Kind::Warden => 500.0,
         }
     }
 
@@ -872,6 +883,7 @@ impl Kind {
             Kind::ElderGuardian => 0.3,
             // Вики, Wither: скорость 0,6.
             Kind::Wither => 0.6,
+            Kind::Warden => 0.3,
         }
     }
 
@@ -985,6 +997,7 @@ impl Kind {
             Kind::ElderGuardian => ("minecraft:entity.elder_guardian.ambient", "minecraft:entity.elder_guardian.hurt", "minecraft:entity.elder_guardian.death"),
             Kind::Wither => ("minecraft:entity.wither.ambient", "minecraft:entity.wither.hurt", "minecraft:entity.wither.death"),
             Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Ravager | Kind::EvokerFangs => illager::sounds(self),
+            Kind::Warden => ("minecraft:entity.warden.ambient", "minecraft:entity.warden.hurt", "minecraft:entity.warden.death"),
         }
     }
 
@@ -994,6 +1007,7 @@ impl Kind {
             Kind::Turtle => "minecraft:entity.turtle.shamble",
             Kind::Frog => "minecraft:entity.frog.step",
             Kind::Cow => "minecraft:entity.cow.step",
+            Kind::Warden => "minecraft:entity.warden.step",
             Kind::Pig => "minecraft:entity.pig.step",
             Kind::Sheep => "minecraft:entity.sheep.step",
             Kind::Chicken => "minecraft:entity.chicken.step",
@@ -1183,6 +1197,7 @@ pub enum Particle {
     SweepAttack,
     SquidInk,
     GlowSquidInk,
+    SonicBoom,
 }
 
 impl Particle {
@@ -1192,6 +1207,7 @@ impl Particle {
             Particle::SweepAttack => 67,
             Particle::SquidInk => 66,
             Particle::GlowSquidInk => 99,
+            Particle::SonicBoom => 28,
         }
     }
 }
@@ -1440,6 +1456,7 @@ pub struct Mob {
     /// Наземные животные и странствующий торговец (mob/land.rs).
     pub land: land::State,
     pub water: water::State,
+    pub warden: warden::State,
 }
 
 /// Бит в байте вида записи моба: за записью идёт общий хвост (имя, поводок).
@@ -1536,6 +1553,7 @@ impl Mob {
             illager: illager::State::default(),
             land: land::State::new(kind),
             water: water::State::new(kind, at),
+            warden: warden::State::default(),
         }
     }
 
@@ -1590,6 +1608,7 @@ impl Mob {
     pub fn size(&self) -> (f64, f64) {
         if let Some(size) = water::size(self) { return size; }
 
+        if self.kind == Kind::Warden && self.warden.invulnerable() { return (0.9, 1.0); }
         let scale = if self.is_baby() { 0.5 } else { 1.0 };
 
         // Куб: 0,52 · размер (вики, Magma Cube, «Hitbox»).
@@ -1654,6 +1673,12 @@ impl Mob {
             return guardian::sounds(self);
         }
 
+        if self.kind == Kind::Warden {
+            let ambient = if self.warden.level() >= warden::ANGRY { "minecraft:entity.warden.angry" }
+                else if self.warden.level() >= warden::AGITATED { "minecraft:entity.warden.agitated" }
+                else { "minecraft:entity.warden.ambient" };
+            return (ambient, "minecraft:entity.warden.hurt", "minecraft:entity.warden.death");
+        }
         if self.kind == Kind::Drowned && self.h.wet {
             return ("minecraft:entity.drowned.ambient_water", "minecraft:entity.drowned.hurt_water", "minecraft:entity.drowned.death_water");
         }
@@ -1672,6 +1697,10 @@ impl Mob {
     pub fn tick(&mut self, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai::Plan {
         self.ticks += 1;
         self.late = false;
+        if self.kind == Kind::Warden && ctx.difficulty == crate::survival::PEACEFUL {
+            self.h.despawn = true;
+            return ai::Plan::default();
+        }
 
         // Застрявшие стрелы выпадают по одной [проверить: у мобов тот же счёт,
         // что у игрока].
@@ -1907,6 +1936,8 @@ impl Mob {
             tame::think(self, view, ctx, rng)
         } else if golem::golem(self.kind) {
             golem::think(self, view, ctx, rng)
+        } else if self.kind == Kind::Warden {
+            warden::think(self, view, ctx, rng)
         } else if guardian::guardian(self.kind) {
             guardian::think(self, view, ctx, rng)
         } else if self.kind == Kind::Breeze {
@@ -2054,7 +2085,7 @@ impl Mob {
 
         let before = (self.x, self.z);
 
-        if in_water || in_lava {
+        if (in_water || in_lava) && self.kind != Kind::Warden {
             self.vitals.fall = 0.0;
             self.step(view, self.vx, self.vy, self.vz);
 
@@ -2250,6 +2281,9 @@ impl Mob {
             return None;
         }
 
+        if self.kind == Kind::Warden && (matches!(source, Source::InFire | Source::OnFire | Source::Lava)
+            || (self.warden.invulnerable() && source != Source::GenericKill)) { return None; }
+
         // Кристалл: любой урон — взрыв, даже нулевой (вики, End Crystal:
         // «explode when attacked or damaged in most ways, even by attacks that
         // normally do zero damage»). Самого взрыва здесь нет: его делает
@@ -2331,6 +2365,8 @@ impl Mob {
                 self.h.provoked = true;
             }
 
+            if self.kind == Kind::Warden && !self.no_ai { warden::on_hurt(self, push.cause); }
+
             // Волк мстит и встаёт, кошка вскакивает (mob/tame.rs).
             tame::on_hurt(self, push.cause);
             land::on_hurt(self, push.cause);
@@ -2399,7 +2435,7 @@ impl Mob {
         // удара мечом — 0).
         // Железный голем не сдвигается: сопротивление отдаче 100 % (вики, Iron
         // Golem; чёрный ящик, iron-golem-heal: скорость после удара 0).
-        if matches!(self.kind, Kind::Shulker | Kind::IronGolem) {
+        if matches!(self.kind, Kind::Shulker | Kind::IronGolem | Kind::Warden) {
             return;
         }
 
@@ -2421,6 +2457,7 @@ impl Mob {
     pub fn sound_volume(&self) -> f32 {
         match self.kind {
             Kind::Cow | Kind::Mooshroom => 0.4,
+            Kind::Warden => 4.0,
             Kind::Slime => 0.4 * self.nether.size as f32,
             // Чёрный ящик, dragon-summon: голос дракона громкостью 5,00.
             Kind::EnderDragon => 5.0,
@@ -2436,6 +2473,19 @@ impl Mob {
         let spread = ((rng.unit() - rng.unit()) * 0.2) as f32;
 
         if self.is_baby() { 1.5 + spread } else { 1.0 + spread }
+    }
+
+    /// Вики, Sculk Catalyst: опыт без требования последнего удара игрока.
+    pub fn sculk_xp(&self, rng: &mut Rng) -> i32 {
+        if self.is_baby() || self.kind.object() || matches!(self.kind, Kind::Villager | Kind::IronGolem | Kind::SnowGolem) { return 0; }
+        if slime::cube(self.kind) { return self.nether.size; }
+        if guardian::guardian(self.kind) { return guardian::XP; }
+        if self.kind == Kind::EnderDragon { return 0; }
+        if self.kind.hostile() {
+            let worn = u32::from(self.h.bow) + u32::from(self.h.helmet);
+            return 5 + (0..worn).map(|_| crate::survival::passive_mob_xp(rng.unit() as f32)).sum::<i32>();
+        }
+        crate::survival::passive_mob_xp(rng.unit() as f32)
     }
 
     /// Смерть: клиентам — событие, миру — добыча.
@@ -2568,6 +2618,7 @@ impl Mob {
             Kind::Axolotl => 89,
             Kind::Frog => 90,
             Kind::Tadpole => 91,
+            Kind::Warden => 92,
         } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -2690,6 +2741,7 @@ impl Mob {
             89 => Kind::Axolotl,
             90 => Kind::Frog,
             91 => Kind::Tadpole,
+            92 => Kind::Warden,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -2975,6 +3027,7 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         // Вики, Wither: звезда Незера всегда (и убитому командой).
         Kind::Wither => give("nether_star", 1, 1, rng),
         Kind::Cod | Kind::Salmon | Kind::TropicalFish | Kind::Pufferfish | Kind::Squid | Kind::GlowSquid | Kind::Dolphin | Kind::Turtle | Kind::Axolotl | Kind::Frog | Kind::Tadpole => water::loot(mob, rng, &mut give),
+        Kind::Warden => give("sculk_catalyst", 1, 1, rng),
         Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager | Kind::Wolf | Kind::LeashKnot => {}
         // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
         Kind::Enderman => {
@@ -3339,6 +3392,8 @@ pub struct Outcome {
     pub water_effects: Vec<(i32,crate::survival::Effect)>,
     pub stings: Vec<water::Sting>,
     pub axolotl_assists: Vec<i32>,
+    pub darkness: Vec<i32>,
+    pub sonic_booms: Vec<warden::Boom>,
 }
 
 /// Удар моба в ближнем бою.
@@ -3502,6 +3557,10 @@ pub fn step_all(
             }
         }
 
+        outcome.darkness.extend(std::mem::take(&mut mob.warden.darkness));
+        if let Some((target, to)) = mob.warden.boom.take() {
+            outcome.sonic_booms.push(warden::Boom { attacker: mob.entity_id, target, from: (mob.x, mob.y + 1.6, mob.z), to });
+        }
         for player in std::mem::take(&mut mob.guardian.cursed) {
             if players.iter().any(|p| p.id==player) { outcome.curses.push((player, mob.silent)); }
         }
@@ -3567,7 +3626,7 @@ pub fn step_all(
         if water::creature(mob.kind) && !matches!(mob.kind,Kind::Turtle | Kind::Frog | Kind::Tadpole) && !mob.persistent_tag && !mob.water.from_bucket && !mob.is_dead() {
             hostile::despawn_check(mob,players,rng,false);
         }
-        if mob.kind.hostile() && mob.kind != Kind::Shulker && ((!mob.is_dead() && !mob.persistent_tag) || (peaceful && mob.is_dead())) {
+        if mob.kind.hostile() && !matches!(mob.kind, Kind::Shulker | Kind::Warden) && ((!mob.is_dead() && !mob.persistent_tag) || (peaceful && mob.is_dead())) {
             hostile::despawn_check(mob, players, rng, peaceful);
         }
 
@@ -3617,11 +3676,13 @@ pub fn step_all(
     for (attacker, target, damage, dir, golem_at) in bites {
         let owner = mobs.iter().find(|m| m.entity_id == attacker && m.kind == Kind::Wolf).and_then(|m| m.tame.owner);
         let goat = mobs.iter().any(|mob| mob.entity_id == attacker && mob.kind == Kind::Goat);
+        let warden = mobs.iter().any(|mob| mob.entity_id == attacker && mob.kind == Kind::Warden);
         if let Some(victim) = mobs.iter_mut().find(|mob| mob.entity_id == target) {
             let source = if goat { Source::MobAttackNoAggro } else { Source::MobAttack };
             let hit = victim.hurt(damage, source, Some(Push { dir, strength: BASE_KNOCKBACK, cause: attacker }));
             if hit.is_some() && let Some(uuid) = owner { victim.credit_to(uuid); }
 
+            if hit.is_some() && warden { victim.knockback(dir.0, dir.1, 0.75); }
             if let Some(at) = golem_at {
                 if hit.is_some() {
                     victim.vy += golem::FLING;

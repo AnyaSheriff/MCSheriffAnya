@@ -188,12 +188,12 @@ fn properties(mob: &Mob) -> Vec<Property> {
     }
     // «Агрессивен» (бит 4) у эндермена и шалкера не ставится: у первого
     // злость — свойство 17 (чёрный ящик, enderman-stare, shulker-ai).
-    let aggressive = u8::from((mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube | Kind::Guardian | Kind::ElderGuardian | Kind::Pillager | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Breeze) && mob.h.target.is_some() && !mob.illager.calm) || (mob.kind == Kind::Wolf && mob.tame.melee) || (mob.kind == Kind::IronGolem && mob.golem.target.is_some())) << 2;
+    let aggressive = u8::from((mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube | Kind::Guardian | Kind::ElderGuardian | Kind::Pillager | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Breeze | Kind::Warden) && mob.h.target.is_some() && !mob.illager.calm) || (mob.kind == Kind::Wolf && mob.tame.melee) || (mob.kind == Kind::IronGolem && mob.golem.target.is_some())) << 2;
     let mut out: Vec<Property> = vec![
         (0, TYPE_BYTE, vec![fire]),
         (2, TYPE_OPT_COMPONENT, custom_name(mob)),
         (4, TYPE_BOOL, vec![u8::from(mob.silent)]),
-        (6, TYPE_POSE, encode_varint(if mob.is_dead() { POSE_DYING } else if mob.kind == Kind::Camel && mob.land.sitting { 10 } else if mob.kind == Kind::Breeze { mob.breeze.pose } else if mob.kind == Kind::Frog && mob.water.tongue > 0 { 9 } else { 0 })),
+        (6, TYPE_POSE, encode_varint(if mob.is_dead() { POSE_DYING } else if mob.kind == Kind::Camel && mob.land.sitting { 10 } else if mob.kind == Kind::Breeze { mob.breeze.pose } else if mob.kind == Kind::Warden { mob.warden.pose.id() } else if mob.kind == Kind::Frog && mob.water.tongue > 0 { 9 } else { 0 })),
         (9, TYPE_FLOAT, float(mob.vitals.health)),
         // Стрел в теле (wither-half-armor: 9=… 12=1 после попадания).
         (12, TYPE_INT, encode_varint(mob.arrows)),
@@ -201,6 +201,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
     ];
 
     if crate::mob::water::creature(mob.kind) { out.push((1,TYPE_INT,encode_varint(mob.water.air))); }
+    if mob.kind == Kind::Warden { out.push((16, TYPE_INT, encode_varint(i32::from(mob.warden.client_anger)))); }
 
     // Утопленник с занесённым трезубцем «использует предмет» (чёрный ящик,
     // drowned-trident: 8=1 с захвата цели).
@@ -295,6 +296,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
                 _ => {}
             }
         }
+        Kind::Warden => {},
         Kind::Cow => {
             out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
             out.push((18, TYPE_COW_VARIANT, encode_varint(0)));
@@ -533,7 +535,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (8, Kind::EndCrystal | Kind::Drowned | Kind::Pillager) => value.as_slice() == [0],
         // Скелеты и их родня: без натяжки при появлении 8 не шлют (чёрный ящик, skeleton-arrow, stray-slowness: `4=true 9=20`).
         (8, kind) if kind.skeleton() => value.as_slice() == [0],
-        (16, Kind::IronGolem) => value.as_slice() == [0],
+        (16, Kind::IronGolem | Kind::Warden) => value.as_slice() == [0],
         (16 | 17, Kind::Guardian | Kind::ElderGuardian) => value.as_slice() == [0],
         (16..=19, Kind::Wither) => value.as_slice() == [0],
         (16, Kind::SnowGolem) => value.as_slice() == [0x10],
@@ -883,7 +885,11 @@ pub(super) async fn send_mob_event(
     shown: &HashMap<i32, ShownMob>,
     listener: (f64, f64, f64),
 ) -> io::Result<()> {
-    if !shown.contains_key(&entity_id) {
+    // Звук появления хранителя уходит в тот же такт, когда его самого клиент
+    // ещё не получил (сценарии warden-emerge, shrieker-warning).
+    let emerging = matches!(event, Event::Sound { name: "minecraft:entity.warden.emerge", .. });
+
+    if !shown.contains_key(&entity_id) && !emerging {
         return Ok(());
     }
 
@@ -1462,7 +1468,7 @@ async fn send_orb_ticks(stream: &mut Outgoing<'_>, player: &mut PlayerState, orb
 /// начало и середина зарядки арбалета разбойника — «игроки» (чёрный ящик,
 /// pillager-crossbow: loading_start/middle — player, loading_end — hostile).
 fn sound_category(name: &str) -> i32 {
-    const HOSTILE: [&str; 10] = [
+    const HOSTILE: [&str; 11] = [
         "minecraft:entity.wither.",
         "minecraft:entity.slime.",
         "minecraft:entity.phantom.",
@@ -1473,6 +1479,7 @@ fn sound_category(name: &str) -> i32 {
         "minecraft:entity.illusioner.",
         "minecraft:entity.ravager.",
         "minecraft:item.crossbow.",
+        "minecraft:entity.warden.",
     ];
 
     if matches!(name, "minecraft:item.crossbow.loading_start" | "minecraft:item.crossbow.loading_middle") {

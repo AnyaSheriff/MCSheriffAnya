@@ -1,0 +1,119 @@
+{
+ "track_mobs": true,
+ "track_self": true,
+ "exclusive": true,
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:sculk_shrieker[can_summon=true,shrieking=false,waterlogged=false]"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "effect clear $(bot)",
+  "clear $(bot)",
+  "fillbiome $(-8,-4,-8) $(12,8,12) minecraft:deep_dark"
+ ],
+ "cleanup": [
+  "kill @e[type=warden,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "difficulty peaceful",
+  "fill $(-6,0,-6) $(12,4,12) minecraft:air",
+  "fillbiome $(-8,-4,-8) $(12,8,12) minecraft:plains"
+ ],
+ "name": "shrieker-warning",
+ "about": "[unverified] Four player warnings, 200-tick cooldown, Darkness after 90 ticks; run twice before adding any random allowances. Precondition: use a fresh bot UUID/lane with warning level zero; effect clear does not reset warnings.",
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "gamemode survival $(bot)"
+  },
+  {
+   "after": 1,
+   "cmd": "tp $(bot) $(0.5,0.6,0.5)"
+  },
+  {
+   "after": 10,
+   "cmd": "tp $(bot) $(3.5,0,3.5)"
+  },
+  {
+   "after": 100,
+   "cmd": "tp $(bot) $(0.5,0.6,0.5)"
+  },
+  {
+   "after": 110,
+   "cmd": "tp $(bot) $(3.5,0,3.5)"
+  },
+  {
+   "after": 210,
+   "cmd": "tp $(bot) $(0.5,0.6,0.5)"
+  },
+  {
+   "after": 220,
+   "cmd": "tp $(bot) $(3.5,0,3.5)"
+  },
+  {
+   "after": 420,
+   "cmd": "tp $(bot) $(0.5,0.6,0.5)"
+  },
+  {
+   "after": 430,
+   "cmd": "tp $(bot) $(3.5,0,3.5)"
+  },
+  {
+   "after": 630,
+   "cmd": "tp $(bot) $(0.5,0.6,0.5)"
+  },
+  {
+   "after": 640,
+   "cmd": "tp $(bot) $(3.5,0,3.5)"
+  }
+ ],
+ "record_ticks": 750,
+ "random": [
+  {
+   "type": "values",
+   "name": "warden-voice-pitch",
+   "kind": "sound",
+   "field": "pitch",
+   "match": "entity\\.warden\\.(hurt|angry|agitated|ambient|attack_impact|tendril_clicks|listening|listening_angry|sniff|roar)",
+   "range": [
+    0.75,
+    1.3
+   ],
+   "why": "Голоса хранителя играют со случайной высотой: в одной записи оригинала attack_impact ~0.83, ~1.02, ~1.00, ~0.94, а между двумя прогонами одного события — 1.02 и 0.97."
+  },
+  {
+   "type": "count",
+   "name": "warning-sound-place",
+   "match": "entity\\.warden\\.nearby_close",
+   "range": [
+    3,
+    3
+   ],
+   "why": "Предупреждение звучит в случайной точке рядом с крикуном: у оригинала в двух прогонах (10,-5,-7), (-3,-8,2), (1,1,-4) и (-7,-4,-9), (9,9,4), (1,1,1) для трёх уровней."
+  },
+  {
+   "type": "count",
+   "name": "warden-spawn-place",
+   "match": "warden (?:0|1) |entity\\.warden\\.(agitated|emerge)",
+   "range": [
+    3,
+    3
+   ],
+   "why": "Хранитель появляется в случайной клетке вокруг крикуна: у оригинала в двух прогонах (-1.5,0,3.5) и (3.5,0,1.5)."
+  }
+ ],
+ "pad": 16,
+ "pad_wide": 16,
+ "pad_up": 16
+}

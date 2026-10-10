@@ -267,6 +267,7 @@ fn blast(
     cap: Option<f32>,
     next_id: &mut dyn FnMut() -> i32,
 ) {
+    crate::redstone::game_event_from(world, centre, 15, None, false);
     let (mut doomed, touched) = if breaks_blocks { rays(world, centre, power, cap) } else { (Vec::new(), Vec::new()) };
     let reached = touched.len();
 
@@ -424,7 +425,8 @@ pub fn wind_charge_burst(
             continue;
         };
 
-        if let Some(push) = push_towards(centre, (mob.x, mob.y + size.1 * EYES_SHARE, mob.z), impact * knockback) {
+        if mob.kind != crate::mob::Kind::Warden
+            && let Some(push) = push_towards(centre, (mob.x, mob.y + size.1 * EYES_SHARE, mob.z), impact * knockback) {
             mob.vx += push.0;
             mob.vy += push.1;
             mob.vz += push.2;
@@ -667,7 +669,8 @@ fn push_entities(
             continue;
         };
 
-        if let Some(push) = push_towards(centre, (mob.x, mob.y + size.1 * EYES_SHARE, mob.z), impact) {
+        if mob.kind != crate::mob::Kind::Warden
+            && let Some(push) = push_towards(centre, (mob.x, mob.y + size.1 * EYES_SHARE, mob.z), impact) {
             mob.vx += push.0;
             mob.vy += push.1;
             mob.vz += push.2;

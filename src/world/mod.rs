@@ -206,6 +206,8 @@ pub enum WorldEvent {
     /// Вибрация пошла от места `from` к датчику скалка `to` и долетит за
     /// `ticks` тактов: клиент рисует её частицей `vibration`.
     Vibration { from: (i32, i32, i32), to: (i32, i32, i32), ticks: i32 },
+    /// То же от точного места (событие сущности, хранитель слышит).
+    VibrationAt { from: (f64, f64, f64), to: (i32, i32, i32), ticks: i32 },
 
     /// Нота над играющим проигрывателем: частица `note` в точке `at`,
     /// `color` — её цвет (доля от 0 до 1, уходит разбросом по X).
@@ -2273,6 +2275,11 @@ impl World {
     /// Вибрация к датчику скалка — частица на месте события.
     pub fn note_vibration(&mut self, from: (i32, i32, i32), to: (i32, i32, i32), ticks: i32) {
         self.events.push(WorldEvent::Vibration { from, to, ticks });
+    }
+
+    /// Вибрация от точного места (хранитель слышит событие сущности).
+    pub fn note_vibration_at(&mut self, from: (f64, f64, f64), to: (i32, i32, i32), ticks: i32) {
+        self.events.push(WorldEvent::VibrationAt { from, to, ticks });
     }
 
     /// Нота над проигрывателем — частицей в общем потоке событий.

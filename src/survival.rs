@@ -86,6 +86,8 @@ pub enum Source {
     IndirectMagic,
     /// Череп иссушителя (damage_type wither_skull).
     WitherSkull,
+    /// Звуковой удар хранителя: броня, щит и чары не защищают.
+    SonicBoom,
     /// Иссушение (damage_type wither).
     Wither,
     /// Брошенный трезубец.
@@ -140,6 +142,7 @@ impl Source {
             Source::IndirectMagic => 23,
             // Реестр по алфавиту: wither 48, wither_skull 49 [проверить].
             Source::WitherSkull => 49,
+            Source::SonicBoom => 36,
             // Номер снят с оригинала (effect-regen: Damage Event type=48).
             Source::Wither => 48,
             Source::Trident => 45,
@@ -187,6 +190,7 @@ impl Source {
             Source::Magic => "death.attack.magic",
             Source::IndirectMagic => "death.attack.indirectMagic",
             Source::WitherSkull => "death.attack.witherSkull",
+            Source::SonicBoom => "death.attack.sonic_boom",
             Source::Wither => "death.attack.wither",
             Source::Trident => "death.attack.trident",
             Source::Thrown => "death.attack.thrown",
@@ -231,7 +235,7 @@ impl Source {
     /// лёгкая — min(d/2+1, d), нормальная — d, трудная — 1,5d.
     pub fn scales_with_difficulty(self) -> bool {
         // Луч стража — тоже (вики, Guardian: 4/6/9 по сложности).
-        matches!(self, Source::Explosion | Source::PlayerExplosion | Source::MobAttack | Source::MobAttackNoAggro | Source::Arrow | Source::IndirectMagic | Source::WitherSkull | Source::WindCharge)
+        matches!(self, Source::Explosion | Source::PlayerExplosion | Source::MobAttack | Source::MobAttackNoAggro | Source::Arrow | Source::IndirectMagic | Source::WitherSkull | Source::WindCharge | Source::SonicBoom)
     }
 }
 
@@ -278,6 +282,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::PlayerExplosion => "was blown up",
         Source::Thorns => "was killed",
         Source::Magic | Source::IndirectMagic => "was killed by magic",
+        Source::SonicBoom => "was obliterated by a sonically-charged shriek",
         Source::Wither => "withered away",
         Source::WitherSkull => "was shot by a skull",
         Source::Trident => "was impaled",
@@ -393,6 +398,8 @@ pub fn ore_xp(block: &str, roll: f32) -> i32 {
         "lapis_ore" | "deepslate_lapis_ore" | "nether_quartz_ore" => (2, 5),
         "redstone_ore" | "deepslate_redstone_ore" => (1, 5),
         "spawner" => (15, 43),
+        "sculk" => (1, 1),
+        "sculk_sensor" | "sculk_catalyst" | "sculk_shrieker" => (5, 5),
         _ => return 0,
     };
 

@@ -48,7 +48,7 @@ pub fn outcome(view: &CombatView, damage: f32, source: Source, now: u64, victim:
 
     let up = view.blocking_since.is_some_and(|since| now >= since + u64::from(SHIELD_DELAY)) && now >= view.shield_disabled_until;
 
-    if up && shield_covers(victim.2, (victim.0, victim.1), from) {
+    if up && source != Source::SonicBoom && shield_covers(victim.2, (victim.0, victim.1), from) {
         return Outcome::Blocked;
     }
 
@@ -338,7 +338,7 @@ pub fn breach_scale(level: i32) -> f32 {
 /// Виды урона, которые броня и её зачарования не смягчают (вики, Armor:
 /// «Armor does not protect against»).
 pub fn bypasses_armor(source: Source) -> bool {
-    matches!(source, Source::Thorns | Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::InWall | Source::Generic | Source::OutsideBorder)
+    matches!(source, Source::SonicBoom | Source::Thorns | Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::InWall | Source::Generic | Source::OutsideBorder)
 }
 
 /// Урон после брони и твёрдости (вики, Armor): `урон · (1 − min(20,

@@ -93,6 +93,7 @@ pub struct Shared {
     /// Директория, в которой лежат файлы игроков. Подключению она нужна,
     /// чтобы записывать положение игрока на диск и читать его при заходе.
     pub playerdata: PathBuf,
+    pub sculk_warnings: Mutex<std::collections::BTreeMap<[u8; 16], crate::redstone::sculk_family::Warning>>,
 
     /// Директория со скинами: там лежит своя таблица «кому чей скин» и то,
     /// что сервер запомнил из ответов Mojang.
@@ -253,6 +254,7 @@ impl Shared {
             entity_ids: AtomicI32::new(1),
             readers: AtomicU64::new(1),
             playerdata,
+            sculk_warnings: Mutex::new(std::collections::BTreeMap::new()),
             skins,
             properties,
             skin_settings,

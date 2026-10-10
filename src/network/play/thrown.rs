@@ -91,6 +91,7 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
     {
         let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
 
+        crate::redstone::game_event_from(&mut world, (player.x, player.y, player.z), 3, Some(player.entity_id), false);
         match kind {
             Kind::Lingering => world.note_sound_neutral_at((player.x, player.y, player.z), "minecraft:entity.lingering_potion.throw", 0.5, pitch),
             _ => world.note_sound_player_at((player.x, player.y, player.z), "minecraft:entity.splash_potion.throw", 0.5, pitch),

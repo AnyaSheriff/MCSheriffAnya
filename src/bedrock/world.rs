@@ -1882,7 +1882,10 @@ impl BedrockWorld {
                     let luck = world.random_unit();
                     drop(world);
 
-                    if let Some(stack) = crate::blocks::drops_by_luck(broken, tool, luck).map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
+                    let silk = self.bag.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
+                    let drops = crate::redstone::sculk_family::mined_drop(broken, silk)
+                        .unwrap_or_else(|| crate::blocks::drops_by_luck(broken, tool, luck));
+                    if let Some(stack) = drops.map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
                         self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком").drop_item(
                             self.shared.next_entity_id(),
                             stack,

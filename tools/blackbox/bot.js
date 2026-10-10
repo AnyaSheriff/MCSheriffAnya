@@ -216,6 +216,7 @@ const MOB_TYPES = new Set(['llama', 'trader_llama', 'llama_spit', 'camel', 'goat
 for (const t of ['breeze', 'wind_charge', 'breeze_wind_charge']) MOB_TYPES.add(t);
 // Водные мобы.
 for (const t of ['cod', 'salmon', 'tropical_fish', 'pufferfish', 'squid', 'glow_squid', 'dolphin', 'turtle', 'axolotl', 'frog', 'tadpole', 'slime']) MOB_TYPES.add(t);
+MOB_TYPES.add('warden');
 const padDrops = new Set();
 const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {

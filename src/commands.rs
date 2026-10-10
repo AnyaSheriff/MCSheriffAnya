@@ -1055,6 +1055,20 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
         crate::mob::tame::apply_data(mob, data);
     }
 
+    if mob.kind == crate::mob::Kind::Warden
+        && let Some(value) = crate::snbt::parse(data)
+        && let Some(memory) = value.get("Brain").and_then(|brain| brain.get("memories")).and_then(|memories| memories.get("minecraft:is_emerging"))
+    {
+        mob.warden.pending_emerge = Some(memory.get("ttl").and_then(|ttl| ttl.as_f64()).map_or(crate::mob::warden::EMERGE, |ttl| ttl as i32));
+    }
+
+    if mob.kind == crate::mob::Kind::Warden
+        && let Some(value) = crate::snbt::parse(data)
+        && let Some(memory) = value.get("Brain").and_then(|brain| brain.get("memories")).and_then(|memories| memories.get("minecraft:dig_cooldown"))
+    {
+        mob.warden.calm = memory.get("ttl").and_then(|ttl| ttl.as_f64()).map_or(crate::mob::warden::CALM, |ttl| ttl as i32);
+    }
+
     // Големы: «построен игроком», тыква снежного (mob/golem.rs).
     if let Some(on) = flag_in(data, "PlayerCreated:") {
         mob.golem.player_made = on;
@@ -1574,6 +1588,7 @@ fn damage(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     };
     let kind = match parts.get(2).map(|kind| kind.trim_start_matches("minecraft:")) {
         Some("explosion") => crate::survival::Source::Explosion,
+        Some("sonic_boom") => crate::survival::Source::SonicBoom,
         Some("player_attack") => crate::survival::Source::PlayerAttack,
         _ => crate::survival::Source::Generic,
     };

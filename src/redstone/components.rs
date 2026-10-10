@@ -25,6 +25,8 @@ use crate::world::World;
 /// игрок, моб или то, что лежит в мире (выброшенный предмет, падающий блок).
 #[derive(Clone, Copy, Debug)]
 pub struct Occupant {
+    /// Только игрок будит крикуна; 0 — игрок в проверке без подключения.
+    pub player: Option<i32>,
     /// Середина низа ящика сущности.
     pub x: f64,
     pub y: f64,
@@ -51,6 +53,7 @@ impl Occupant {
     /// `occupants`; `players::SETTLE_TICKS`).
     pub fn player(x: f64, y: f64, z: f64, sneaking: bool) -> Self {
         Self {
+            player: Some(0),
             x,
             y,
             z,
@@ -65,12 +68,13 @@ impl Occupant {
     /// Моб: живой, ящик по виду (mob/mod.rs). Стоит на земле — руду зажигает
     /// тот, кто на ней стоит.
     pub fn mob(x: f64, y: f64, z: f64, width: f64, height: f64, on_ground: bool) -> Self {
-        Self { x, y, z, width, height, living: true, sneaking: false, on_ground }
+        Self { player: None, x, y, z, width, height, living: true, sneaking: false, on_ground }
     }
 
     /// Выброшенный предмет: ящик 0,25 × 0,25 (вики, Item (entity)).
     pub fn item(x: f64, y: f64, z: f64, on_ground: bool) -> Self {
         Self {
+            player: None,
             x,
             y,
             z,

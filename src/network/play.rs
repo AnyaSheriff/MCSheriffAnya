@@ -4105,6 +4105,25 @@ async fn send_pending_world_events(
 
                 write_body(stream, body).await?;
             }
+            WorldEvent::VibrationAt { from, to, ticks } => {
+                let mut body = encode_varint(LEVEL_PARTICLES);
+
+                body.push(0); // не издалека
+                body.push(0); // не всегда
+                for v in [from.0, from.1, from.2] {
+                    body.extend_from_slice(&v.to_be_bytes());
+                }
+                for _ in 0..4 {
+                    body.extend_from_slice(&0f32.to_be_bytes()); // разброс и скорость
+                }
+                push_i32(&mut body, 1);
+                body.extend_from_slice(&encode_varint(PARTICLE_VIBRATION));
+                body.extend_from_slice(&encode_varint(0)); // цель — блок
+                push_packed_position(&mut body, to.0, to.1, to.2);
+                body.extend_from_slice(&encode_varint(*ticks));
+
+                write_body(stream, body).await?;
+            }
             WorldEvent::Vibration { from, to, ticks } => {
                 let mut body = encode_varint(LEVEL_PARTICLES);
 
@@ -4197,7 +4216,7 @@ async fn send_pending_world_events(
             }
             WorldEvent::MobHurt { .. } => {}
             WorldEvent::MobEffect { entity_id, effect } if *entity_id == player.entity_id => {
-                if effect.kind!=crate::survival::EffectKind::DolphinsGrace || (player.vit.sprinting && player.net.in_water) {
+                if (effect.kind != crate::survival::EffectKind::DolphinsGrace || (player.vit.sprinting && player.net.in_water)) && (effect.kind != crate::survival::EffectKind::Darkness || !player.vit.dead) {
                     vitals::give_effect(stream, player, *effect).await?;
                 }
             }
@@ -4738,7 +4757,9 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
 
     // Смотрящим он был, только пока хранилище стоит на месте.
     if window.halves.iter().all(|&(x, y, z)| world.container(x, y, z).is_some()) {
+        let actor = world.actor.replace(player.entity_id);
         containers::close(&mut world, &window.halves);
+        world.actor = actor;
         redstone::settle(&mut world);
     } else {
         for &(x, y, z) in &window.halves {
@@ -8296,7 +8317,10 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     // (play/sleep.rs).
     let bed = sleep::bed_break_plan(&world, (x, y, z), player.game_mode == GAME_MODE_CREATIVE);
 
-    let Some(broken) = placing::break_block(&mut world, x, y, z) else {
+    let actor = world.actor.replace(player.entity_id);
+    let broken = placing::break_block(&mut world, x, y, z);
+    world.actor = actor;
+    let Some(broken) = broken else {
         log_debug!("Play: в {} {} {} и так пусто", x, y, z);
         return Some(answer);
     };
@@ -8346,9 +8370,13 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         let tool = player.inventory.held().map(|stack| stack.item);
         let luck = world.random_unit();
 
-        // Руда даёт опыт шариками (вики, Experience, «Sources»); без
-        // «шёлкового касания» — его у нас пока нет [проверить].
-        let xp = blocks::block_at_state(broken).map_or(0, |name| crate::survival::ore_xp(name, world.random_unit()));
+        // Скалк с «шёлковым касанием» отдаёт блок вместо опыта (вики,
+        // Sculk: «Silk Touch»). Прочие руды сохраняют прежний расчёт.
+        let silk_sculk = player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
+        let sculk_drop = redstone::sculk_family::mined_drop(broken, silk_sculk);
+        let xp = if sculk_drop.is_some() && silk_sculk { 0 } else {
+            blocks::block_at_state(broken).map_or(0, |name| crate::survival::ore_xp(name, world.random_unit()))
+        };
 
         if xp > 0 && player.game_mode == GAME_MODE_SURVIVAL {
             player.net.new_orbs.push(((x as f64 + 0.5, y as f64 + 0.5, z as f64 + 0.5), xp));
@@ -8371,7 +8399,7 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
             return Some(Reaction::accepted(sequence));
         }
 
-        match blocks::drops_by_luck(broken, tool, luck).map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
+        match sculk_drop.unwrap_or_else(|| blocks::drops_by_luck(broken, tool, luck)).map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
             Some(stack) => {
                 // Мир отпускаем: класть предмет будем под другим замком.
                 drop(world);
@@ -8747,7 +8775,9 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             let halves = if kind == Some(containers::Kind::EnderChest) { vec![clicked] } else { containers::halves(&world, clicked) };
 
             if player.window.is_none() && containers::can_open(&world, &halves) {
+                let actor = world.actor.replace(player.entity_id);
                 let first = containers::open_begin(&mut world, &halves);
+                world.actor = actor;
 
                 world.note_open_window(player.entity_id, clicked_x, clicked_y, clicked_z);
                 world.tell_directly(clicked_x, clicked_y, clicked_z);
@@ -9114,6 +9144,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         .lock()
         .expect("мир захвачен другим потоком");
 
+    let actor = world.actor.replace(player.entity_id);
     let placed = placing::place_tagged(
         &mut world,
         name,
@@ -9123,6 +9154,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         (player.x, player.y, player.z),
         player.inventory.held().and_then(|stack| stack.tnt),
     );
+    world.actor = actor;
 
     // Тыква на столбе из снега или железа — голем (mob/golem.rs; чёрный ящик,
     // iron-golem-build, snow-golem-build).

@@ -215,6 +215,8 @@ fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
     };
 
     shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
+    let mut world = shared.world_in(player.dimension).lock().expect("мир");
+    crate::redstone::game_event_from(&mut world, (player.x, player.y, player.z), 3, Some(player.entity_id), false);
 }
 
 /// Трезубец в руке `hand` занесён `ticks` тактов и отпущен: бросок, если

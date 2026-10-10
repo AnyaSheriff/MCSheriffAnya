@@ -405,9 +405,9 @@ fn palette() -> &'static Palette {
                 state(&format!("sculk_vein[{},waterlogged=false]", faces.join(",")))
             }),
             sculk_sensor: state("sculk_sensor[power=0,sculk_sensor_phase=inactive,waterlogged=false]"),
-            // Природный крикун не зовёт стража: это умеют только крикуны
-            // древних городов.
-            sculk_shrieker: state("sculk_shrieker[can_summon=false,shrieking=false,waterlogged=false]"),
+            // Природный крикун зовёт хранителя и вне древнего города (вики,
+            // Sculk Shrieker: «naturally generated»).
+            sculk_shrieker: state("sculk_shrieker[can_summon=true,shrieking=false,waterlogged=false]"),
         }
     })
 }
@@ -1484,7 +1484,7 @@ mod tests {
         assert_eq!(crate::blocks::block_at_state(blocks.sculk_shrieker), Some("sculk_shrieker"));
         assert_eq!(
             crate::blocks::orientation_of(blocks.sculk_shrieker).and_then(|rule| rule.value(blocks.sculk_shrieker, "can_summon")),
-            Some("false")
+            Some("true")
         );
         assert_eq!(
             crate::blocks::orientation_of(blocks.pointed[1][TIP]).and_then(|rule| rule.value(blocks.pointed[1][TIP], "vertical_direction")),

@@ -166,7 +166,9 @@ pub fn place_tagged(
         world.set_custom_tnt((x, y, z), custom);
     }
 
-    crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_PLACE);
+    if !crate::redstone::sculk_family::quiet_block(name) {
+        crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_PLACE);
+    }
 
     // Соседние заборы, стенки и панели должны увидеть новый блок и срастись
     // с ним, а редстоун — узнать о нём.
@@ -255,6 +257,7 @@ fn place_pair(
 
     world.set_block(x, y, z, state);
     world.set_block(ox, oy, oz, other_state);
+    crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_PLACE);
     refresh_neighbours(world, x, y, z);
     refresh_neighbours(world, ox, oy, oz);
     crate::redstone::settle(world);
@@ -282,7 +285,9 @@ pub fn break_block(world: &mut World, x: i32, y: i32, z: i32) -> Option<i32> {
     crate::redstone::hook_broken_by_player(world, (x, y, z), broken);
 
     world.set_block(x, y, z, world::AIR);
-    crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_DESTROY);
+    if !blocks::block_at_state(broken).is_some_and(crate::redstone::sculk_family::quiet_block) {
+        crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_DESTROY);
+    }
 
     // Дверь, высокое растение и кровать занимают два блока и ломаются тоже
     // целиком: иначе от них осталась бы висеть вторая половинка. Вторая

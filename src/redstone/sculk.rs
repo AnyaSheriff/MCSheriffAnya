@@ -43,6 +43,7 @@ struct Vibration {
 
     /// Где событие случилось.
     from: Pos,
+    source: Option<i32>,
 }
 
 /// Что датчик помнит между тактами — у оригинала это его блок-сущность.
@@ -131,15 +132,21 @@ fn tuned_to(world: &World, pos: Pos, block: &Block) -> u8 {
 /// свободный датчик в радиусе запоминает его, если оно ближе уже выбранного
 /// в этом такте.
 pub fn game_event(world: &mut World, from: Pos, frequency: u8) {
-    if world.redstone.sensors.is_empty() {
-        return;
-    }
+    game_event_from(world, super::sculk_family::center(from), frequency, world.actor, false);
+}
 
+/// Тот же канал с виновником: крикуны слышат лишь события игрока.
+pub fn game_event_from(world: &mut World, at: (f64, f64, f64), frequency: u8, source: Option<i32>, projectile: bool) {
+    if !(1..=15).contains(&frequency) { return; }
+    let from = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
+    let sneaking = source.is_some_and(|id| world.redstone.sculk.players.iter().any(|p| p.id == id && p.sneaking));
+    if sneaking && frequency <= 3 && !projectile { return; }
+    world.redstone.sculk.events.push(super::sculk_family::GameEvent { at, source, frequency, projectile });
     let near: Vec<(Pos, f64)> = world
         .redstone
         .sensors
         .keys()
-        .filter(|pos| **pos != from)
+        .filter(|pos| **pos != from || !matches!(frequency, 12 | 13))
         .map(|pos| {
             let (dx, dy, dz) = (f64::from(pos.0 - from.0), f64::from(pos.1 - from.1), f64::from(pos.2 - from.2));
 
@@ -160,7 +167,7 @@ pub fn game_event(world: &mut World, from: Pos, frequency: u8) {
 
         // Занятый датчик не слышит: «cannot detect any other vibrations
         // while activated or while a signal is traveling to it».
-        if distance > range || !block.is("sculk_sensor_phase", "inactive") {
+        if distance > range || !block.is("sculk_sensor_phase", "inactive") || super::sculk_family::occluded(world, at, super::sculk_family::center(pos)) {
             continue;
         }
 
@@ -178,9 +185,9 @@ pub fn game_event(world: &mut World, from: Pos, frequency: u8) {
             continue;
         }
 
-        // При равных расстояниях остаётся более раннее.
-        if listener.chosen.is_none_or(|chosen| distance < chosen.distance) {
-            listener.chosen = Some(Vibration { frequency, distance, from });
+        // При равных расстояниях выбирается большая частота.
+        if listener.chosen.is_none_or(|chosen| distance < chosen.distance || (distance == chosen.distance && frequency > chosen.frequency)) {
+            listener.chosen = Some(Vibration { frequency, distance, from, source });
         }
     }
 }
@@ -188,6 +195,7 @@ pub fn game_event(world: &mut World, from: Pos, frequency: u8) {
 /// Фаза блок-сущностей: выбранные вибрации уходят в путь, долетевшие
 /// включают датчики. Порядок — по координатам.
 pub fn sensors_tick(world: &mut World) {
+    super::sculk_family::tick(world);
     if world.redstone.sensors.is_empty() {
         return;
     }
@@ -265,8 +273,20 @@ fn activate(world: &mut World, pos: Pos, vibration: Vibration) {
     world.schedule_block(pos.0, pos.1, pos.2, active, PRIORITY_NORMAL);
 
     // Громкость 1 — снято с оригинала (вики пишет 0,73).
-    let pitch = 0.8 + world.random_unit() * 0.2;
-    world.note_sound(pos.0, pos.1, pos.2, "minecraft:block.sculk_sensor.clicking", 1.0, pitch);
+    if !block.is("waterlogged", "true") {
+        let pitch = 0.8 + world.random_unit() * 0.2;
+        world.note_sound(pos.0, pos.1, pos.2, "minecraft:block.sculk_sensor.clicking", 1.0, pitch);
+    }
+    // Датчик крикуну вибрацию не передаёт: у оригинала крикун молчит (сценарий sculk-shrieker).
+    // Вики, Sculk Sensor: «vibration resonance» от соседнего аметиста.
+    // [проверить] громкость и высота звука каждой частоты.
+    for dir in NEIGHBOUR_ORDER {
+        let at = step(pos, dir);
+        if Block::at(world, at).name == "amethyst_block" {
+            world.note_sound(at.0, at.1, at.2, "minecraft:block.amethyst_block.resonate", 1.0, 1.0);
+            game_event_from(world, super::sculk_family::center(at), vibration.frequency, vibration.source, false);
+        }
+    }
 }
 
 /// Запланированный такт датчика: `active` → `cooldown` (сигнал снят),
@@ -287,8 +307,10 @@ pub fn ticked(world: &mut World, pos: Pos, block: &Block) {
         // Щелчок выключения — в конце отката, не в его начале, и громкостью
         // 1 (снято с оригинала: сценарий sculk-lever).
         Some("cooldown") => {
-            let pitch = 0.8 + world.random_unit() * 0.2;
-            world.note_sound(pos.0, pos.1, pos.2, "minecraft:block.sculk_sensor.clicking_stop", 1.0, pitch);
+            if !block.is("waterlogged", "true") {
+                let pitch = 0.8 + world.random_unit() * 0.2;
+                world.note_sound(pos.0, pos.1, pos.2, "minecraft:block.sculk_sensor.clicking_stop", 1.0, pitch);
+            }
 
             if let Some(state) = block.with("sculk_sensor_phase", "inactive") {
                 set(world, pos, state);
@@ -309,16 +331,15 @@ pub const SHRIEK_TICKS: u64 = 90;
 const SHRIEK_EVENT: i32 = 3007;
 
 /// Крикун начинает кричать, если ещё не кричит: `shrieking=true`, звук
-/// и через 90 тактов — тишина. Вызвать варден `can_summon=false` не
-/// может, а мобов у нас нет — предупреждений и тьмы тоже нет. [проверить]
-/// громкость и частицы `shriek`.
-pub fn shriek(world: &mut World, pos: Pos) -> bool {
+/// и через 90 тактов — тишина. Предупреждения даёт только can_summon=true.
+pub fn shriek_from(world: &mut World, pos: Pos, source: i32) -> bool {
     let block = Block::at(world, pos);
 
     if block.name != "sculk_shrieker" || block.is("shrieking", "true") {
         return false;
     }
 
+    if block.is("can_summon", "true") && !super::sculk_family::warn(world, pos, source) { return false; }
     let Some(state) = block.with("shrieking", "true") else {
         return false;
     };
@@ -341,6 +362,7 @@ pub fn shrieker_ticked(world: &mut World, pos: Pos, block: &Block) {
         && let Some(state) = block.with("shrieking", "false")
     {
         set(world, pos, state);
+        super::sculk_family::finish_shriek(world, pos);
     }
 }
 
@@ -349,7 +371,7 @@ pub fn shrieker_ticked(world: &mut World, pos: Pos, block: &Block) {
 /// крикуна — на половине блока.
 pub fn step_on_shriekers(world: &mut World, occupants: &[super::components::Occupant]) {
     for occupant in occupants {
-        if !occupant.living || !occupant.on_ground {
+        if occupant.player.is_none() || !occupant.on_ground {
             continue;
         }
 
@@ -362,7 +384,7 @@ pub fn step_on_shriekers(world: &mut World, occupants: &[super::components::Occu
             continue;
         }
 
-        if shriek(world, below) {
+        if shriek_from(world, below, occupant.player.unwrap_or(0)) {
             settle(world);
         }
     }

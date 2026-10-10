@@ -635,6 +635,8 @@ pub fn stack_size(item: i32) -> i32 {
 /// предмет, которым ломали: у части блоков без нужного инструмента не
 /// выпадает ничего (камень без кирки, руда без кирки).
 pub fn drop_of(state: i32, tool: Option<i32>) -> Option<i32> {
+    // Скалк требует зачарования: его отдельно учитывает mined_drop.
+    if crate::redstone::sculk_family::mined_drop(state, false).is_some() { return None; }
     if !tool_suits(state, tool) {
         return None;
     }

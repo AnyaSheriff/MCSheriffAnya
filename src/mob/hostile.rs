@@ -145,6 +145,7 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Axolotl => "entity.minecraft.axolotl",
         Kind::Frog => "entity.minecraft.frog",
         Kind::Tadpole => "entity.minecraft.tadpole",
+        Kind::Warden => "entity.minecraft.warden",
     }
 }
 
@@ -910,6 +911,7 @@ fn skeleton(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &
 /// Возвращает true, если пора нанести урон огнём.
 pub fn burn(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, sun: bool) -> bool {
     let (x, y, z) = mob.cell();
+    if mob.kind == Kind::Warden { mob.vitals.extinguish(); return false; }
 
     // Вода и дождь тушат (вики, Weather: «Extinguishes fires»).
     if super::is_water(view.block(x, y, z)) || in_rain(mob, view) {

@@ -788,6 +788,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             }
         }
         gone.push(flying.entity_id);
+        crate::redstone::game_event_from(world, at, 2, Some(flying.owner), true);
 
         let block_at = (at.0.floor() as i32, at.1.floor() as i32, at.2.floor() as i32);
 

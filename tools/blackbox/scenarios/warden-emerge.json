@@ -1,0 +1,39 @@
+{
+  "track_mobs": true,
+  "track_self": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "effect clear $(bot)",
+    "clear $(bot)"
+  ],
+  "cleanup": [
+    "kill @e[type=warden,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "effect clear $(bot)",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "difficulty peaceful",
+    "fill $(-6,0,-6) $(12,4,12) minecraft:air"
+  ],
+  "name": "warden-emerge",
+  "about": "[unverified] Emerging pose for 134 ticks, invulnerability while emerging, subsequent digging after inactivity. Brain memory uses documented entity NBT.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon warden $(3.5,0,3.5) {Brain:{memories:{\"minecraft:is_emerging\":{value:{},ttl:134L}}}}"
+    },
+    {
+      "after": 30,
+      "cmd": "damage @e[type=warden,distance=..32,limit=1] 10 minecraft:generic"
+    },
+    {
+      "after": 150,
+      "cmd": "damage @e[type=warden,distance=..32,limit=1] 10 minecraft:generic"
+    }
+  ],
+  "record_ticks": 1500
+}

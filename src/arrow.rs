@@ -696,6 +696,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             arrow.y = from.1 + (to.1 - from.1) * part;
             arrow.z = from.2 + (to.2 - from.2) * part;
 
+            crate::redstone::game_event_from(world, (arrow.x, arrow.y, arrow.z), 2, Some(arrow.owner), true);
             let roll = world.random_unit();
             let damage = damage_of(arrow, roll);
 
@@ -912,6 +913,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             arrow.z += bz;
 
             (arrow.vx, arrow.vy, arrow.vz) = (0.0, 0.0, 0.0);
+            crate::redstone::game_event_from(world, (arrow.x, arrow.y, arrow.z), 2, Some(arrow.owner), true);
             arrow.in_ground = true;
             arrow.ground_ticks = 0;
             arrow.landed = true;

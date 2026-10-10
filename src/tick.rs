@@ -260,6 +260,7 @@ async fn run(shared: Arc<Shared>) {
             // Удержанные чанки (`forceload`) тикают, как чанки у игрока.
             player_chunks.extend(crate::commands_world::forced_chunks(&shared, dimension));
             redstone::note_occupants(&mut world, present);
+            sculk_prepare(&shared, dimension, &mut world);
 
             // Где вагонетки — для детекторных рельс: их такт проверяет, не
             // уехала ли вагонетка (её могла увести команда в начале такта).
@@ -483,6 +484,7 @@ async fn run(shared: Arc<Shared>) {
             // воронок).
             redstone::daylight_tick(&mut world);
             redstone::sensors_tick(&mut world);
+            sculk_finish(&shared, dimension, &mut world, ticks);
             containers::tick_hoppers(
                 &mut world,
                 &mut shared.items_in(dimension).lock().expect("предметы захвачены другим потоком"),
@@ -587,6 +589,111 @@ impl PhaseStats {
     }
 }
 
+/// Снимки для скалка: UUID переживает выход и смену измерения; шаги берутся
+/// из движения, а не из звуков. [проверить] порог шага настоящего клиента.
+fn sculk_prepare(shared: &Shared, dimension: Dimension, world: &mut World) {
+    use redstone::sculk_family::{self, Player};
+    let players: Vec<_> = {
+        let members = shared.players.lock().expect("игроки");
+        members.members().iter().filter(|member| member.dimension == dimension && member.game_mode != 3)
+            .map(|member| (Player { id: member.entity_id, uuid: member.uuid,
+                at: (member.position.x, member.position.y, member.position.z),
+                survival: matches!(member.game_mode, 0 | 2) && members.gear(&member.uuid).health > 0.0,
+                sneaking: member.sneaking }, member.position.on_ground, member.unsettled))
+            .collect()
+    };
+    world.redstone.sculk.players = players.iter().map(|(p, _, _)| *p).collect();
+    world.redstone.sculk.enabled = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed) != crate::survival::PEACEFUL;
+    {
+        let mut warnings = shared.sculk_warnings.lock().expect("предупреждения");
+        world.redstone.sculk.warnings.clear();
+        for (player, _, _) in &players {
+            let warning = warnings.entry(player.uuid).or_insert_with(|| sculk_family::load_warning(&shared.playerdata, &player.uuid));
+            warning.tick();
+            world.redstone.sculk.warnings.insert(player.uuid, *warning);
+        }
+    }
+    world.redstone.sculk.footsteps.retain(|id, _| players.iter().any(|(p, _, _)| p.id == *id));
+    for (player, ground, unsettled) in players {
+        let old = world.redstone.sculk.footsteps.insert(player.id, (player.at, 0.0, ground));
+        if let Some((old, walked, was_ground)) = old {
+            let distance = crate::mob::warden::distance(old, player.at);
+            if unsettled > 0 || distance > 8.0 { continue; }
+            let cell = (player.at.0.floor() as i32, (player.at.1 - 0.2).floor() as i32, player.at.2.floor() as i32);
+            let floor = blocks::block_at_state(world.get_block(cell.0, cell.1, cell.2)).unwrap_or("air");
+            if sculk_family::quiet_block(floor) || player.sneaking { continue; }
+            let walked = walked + distance * 0.6;
+            if ground && (!was_ground || walked >= 1.0) {
+                redstone::game_event_from(world, player.at, if was_ground { 1 } else { 2 }, Some(player.id), false);
+            }
+            world.redstone.sculk.footsteps.insert(player.id, (player.at, if ground && walked >= 1.0 { walked.fract() } else { walked }, ground));
+        }
+    }
+    let mut items = shared.items_in(dimension).lock().expect("предметы");
+    items.sculk_catalysts = world.redstone.sculk.catalysts.iter().copied()
+        .filter(|p| world.has_chunk(p.0.div_euclid(16), p.2.div_euclid(16))).collect();
+    world.redstone.sculk.wardens = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Warden && !mob.is_dead())
+        .map(|mob| (mob.x, mob.y, mob.z)).collect();
+}
+
+fn sculk_finish(shared: &Shared, dimension: Dimension, world: &mut World, ticks: u64) {
+    {
+        let mut items = shared.items_in(dimension).lock().expect("предметы");
+        for charge in std::mem::take(&mut items.sculk_deaths) {
+            redstone::sculk_family::feed(world, charge.catalyst, charge.at, charge.amount);
+        }
+        for event in std::mem::take(&mut items.vibrations) {
+            // Шаги и приземления мобов на шерсти так же тихи, как у игроков.
+            let floor = world.get_block(event.at.0.floor() as i32, (event.at.1 - 0.2).floor() as i32, event.at.2.floor() as i32);
+            if matches!(event.frequency, 1 | 2) && blocks::block_at_state(floor).is_some_and(redstone::sculk_family::quiet_block) { continue; }
+            redstone::game_event_from(world, event.at, event.frequency, event.source, event.projectile);
+        }
+    }
+    let mut warnings = shared.sculk_warnings.lock().expect("предупреждения");
+    for (uuid, warning) in &world.redstone.sculk.warnings {
+        let changed = warnings.get(uuid).is_none_or(|old| old.level != warning.level);
+        warnings.insert(*uuid, *warning);
+        if (changed || ticks.is_multiple_of(200)) && let Err(error) = redstone::sculk_family::save_warning(&shared.playerdata, uuid, *warning) {
+            crate::log_warn!("Не записано предупреждение крикуна: {}", error);
+        }
+    }
+}
+
+fn sculk_deliver(world: &mut World, items: &mut crate::items::Items, rng: &mut crate::mob::Rng, next_id: &mut dyn FnMut() -> i32) {
+    use crate::mob::{Kind, warden};
+    let events = std::mem::take(&mut world.redstone.sculk.events);
+    for mob in items.mobs_mut().iter_mut().filter(|mob| mob.kind == Kind::Warden && !mob.is_dead() && !mob.no_ai) {
+        let at = (mob.x, mob.y + mob.eye(), mob.z);
+        let heard = events.iter().filter(|event| event.source != Some(mob.entity_id))
+            .filter(|event| warden::distance(event.at, at) <= 16.0 && !redstone::sculk_family::occluded(world, event.at, at))
+            .min_by(|a, b| warden::distance(a.at, at).total_cmp(&warden::distance(b.at, at)).then(b.frequency.cmp(&a.frequency)));
+        if let Some(event) = heard {
+            let distance = warden::distance(event.at, at);
+            let left = (distance.floor() as i32).max(1);
+            let was_free = mob.warden.heard.is_none();
+            mob.warden.hear(warden::Heard { source: event.source, at: event.at, projectile: event.projectile, left });
+            // Сценарии warden-melee и warden-sonic-boom: хранитель слышит вибрацию —
+            // частица летит от места события к нему.
+            if was_free && mob.warden.heard.is_some() {
+                world.note_vibration_at(event.at, (mob.x.floor() as i32, (mob.y + mob.eye()).floor() as i32, mob.z.floor() as i32), left);
+            }
+        }
+    }
+    for pos in std::mem::take(&mut world.redstone.sculk.summons) {
+        if !world.redstone.sculk.enabled || items.mobs().iter().any(|mob| mob.kind == Kind::Warden && !mob.is_dead()
+            && (mob.x - f64::from(pos.0)).abs() <= 48.0 && (mob.y - f64::from(pos.1)).abs() <= 48.0 && (mob.z - f64::from(pos.2)).abs() <= 48.0) { continue; }
+        if let Some(at) = warden::spawn_spot(&MobView(world), pos, rng) {
+            let mut mob = crate::mob::Mob::new(next_id(), Kind::Warden, at);
+            // Сценарий shrieker-warning: «agitated» в точке появления, затем emerge.
+            world.note_sound_at(at, "minecraft:entity.warden.agitated", 5.0, 1.0);
+            warden::emerge(&mut mob);
+            mob.warden.calm = warden::CALM;
+            mob.warden.darkness_phase = 115;
+            items.add_mob(mob);
+        }
+    }
+}
+
 /// Кто в этом мире может нажать плиту, задеть растяжку, встать на руду:
 /// игроки (кроме наблюдателей — они сквозь всё проходят) и то, что лежит
 /// в мире. Заодно — чанки, где стоят игроки: около них идут случайные такты.
@@ -613,6 +720,7 @@ fn occupants(shared: &Shared, dimension: Dimension) -> (Vec<redstone::Occupant>,
             // Только что перенесённый игрок ещё не стоит на блоке под ногами
             // (`players::SETTLE_TICKS`, sculk-shrieker).
             standing.push(redstone::Occupant {
+                player: Some(member.entity_id),
                 on_ground: member.unsettled == 0,
                 ..redstone::Occupant::player(x, y, z, member.sneaking)
             });
@@ -860,7 +968,7 @@ fn watchers(shared: &Shared, dimension: Dimension) -> Vec<crate::mob::ai::Watche
         .filter(|member| member.dimension == dimension)
         .map(|member| crate::mob::ai::Watcher {
             id: member.entity_id,
-            targetable: member.game_mode == 0 || member.game_mode == 2,
+            targetable: (member.game_mode == 0 || member.game_mode == 2) && players.gear(&member.uuid).health > 0.0,
             x: member.position.x,
             y: member.position.y,
             z: member.position.z,
@@ -1279,6 +1387,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             shared.trader_spawner.lock().expect("торговец").spawned(); break;
         }
     }
+    sculk_deliver(world, &mut items, rng, &mut || shared.next_entity_id());
 
     // Кошки, что сидят: сундук под ними не открывается (mob/tame.rs).
     world.sitting_cats = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Cat && mob.tame.sitting && !mob.is_dead()).map(|mob| (mob.x, mob.y, mob.z)).collect();
@@ -1373,6 +1482,20 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     }
     for (player,effect) in outcome.water_effects { world.note_mob_effect(player,effect); }
     for player in outcome.axolotl_assists {world.note_axolotl_assist(player);}
+    for player in outcome.darkness { redstone::sculk_family::darkness(world, player); }
+    for crate::mob::warden::Boom { attacker, target, from, to } in outcome.sonic_booms {
+        if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == target) {
+            if mob.hurt(crate::mob::warden::SONIC_DAMAGE, crate::survival::Source::SonicBoom,
+                Some(crate::mob::Push { dir: (0.0, 0.0), strength: 0.0, cause: attacker })).is_some() {
+                let resistance = if matches!(mob.kind, crate::mob::Kind::IronGolem | crate::mob::Kind::Shulker | crate::mob::Kind::Warden) { 1.0 } else { 0.0 };
+                let push = crate::mob::warden::sonic_velocity((to.0 - from.0, to.1 - from.1, to.2 - from.2), resistance);
+                mob.vx += push.0; mob.vy += push.1; mob.vz += push.2;
+            }
+        } else {
+            world.note_mob_hurt(target, crate::mob::warden::SONIC_DAMAGE, crate::survival::Source::SonicBoom,
+                attacker, "entity.minecraft.warden", None, from);
+        }
+    }
 
     // Проклятия древних стражей (mob/guardian.rs).
     for (player, silent) in outcome.curses {

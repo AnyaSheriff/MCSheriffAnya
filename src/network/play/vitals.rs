@@ -1024,7 +1024,7 @@ pub(super) fn damage_fields(source: Source, direct: i32, cause: i32) -> (i32, i3
     // крипера — он сам (чёрный ящик: cause=entity); у динамита и прочего — нет.
     let culprit = if cause != 0 {
         cause + 1
-    } else if matches!(source, Source::MobAttack | Source::Arrow | Source::Trident | Source::PlayerExplosion | Source::Thorns | Source::IndirectMagic) && direct != 0 {
+    } else if matches!(source, Source::MobAttack | Source::Arrow | Source::Trident | Source::PlayerExplosion | Source::Thorns | Source::IndirectMagic | Source::SonicBoom) && direct != 0 {
         direct + 1
     } else {
         0
@@ -1533,6 +1533,11 @@ pub(super) async fn mob_hit(
         && let Some(hand) = shield_up(player, now)
         && crate::combat::shield_covers(player.yaw, (player.x, player.z), (at.0, at.2))
     {
+        if killer == "entity.minecraft.warden" {
+            player.net.shield_disabled_until = now + 100;
+            player.net.using = None;
+            send_cooldown(stream, "minecraft:shield", 100).await?;
+        }
         let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
         let scaled = survival::scaled(amount, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed));
         player.progress.custom("damage_blocked_by_shield", (scaled * 10.0).round() as i32);
@@ -1621,7 +1626,28 @@ pub(super) async fn mob_hit(
 
     // Слизень отбрасывает полным ударом 0,4 без трения такта: у оригинала
     // (0,-0.03; 0,361; -0,399) при стоящем игроке (чёрный ящик, slime-hop).
-    if let (Some(_), Some(dir), true) = (done, push, killer == "entity.minecraft.slime" || killer == "entity.minecraft.pufferfish") {
+    if done.is_some() && source == Source::SonicBoom {
+        // Сценарий warden-sonic-boom: оригинал шлёт (0; 0,277; −1,583) стоящему
+        // игроку. Это обычный толчок удара 0,4 от хранителя (по вертикали 0,3606)
+        // плюс толчок звука, уже после трения такта: 0,546 по земле, тяжесть и
+        // 0,98 по вертикали.
+        let delta = (player.x - at.0, player.y + 1.62 - at.1, player.z - at.2);
+        let sonic = crate::mob::warden::sonic_velocity(delta, player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE));
+        let flat = (player.x - at.0).hypot(player.z - at.2).max(1.0e-9);
+        let (ux, uz) = ((player.x - at.0) / flat, (player.z - at.2) / flat);
+        player.net.velocity = Some(((ux * 0.4 + sonic.0) * 0.546, (0.3606 + sonic.1 - 0.08) * 0.98, (uz * 0.4 + sonic.2) * 0.546));
+        player.net.velocity_due = false;
+    } else if let (Some(_), Some(dir), true) = (done, push, killer == "entity.minecraft.warden") {
+        // Сценарий warden-melee: после двух толчков (0,4 и 0,75) клиенту уходит
+        // скорость после трения такта: (0; 0,314; 0,519).
+        let resistance = player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE);
+        knock_back(player, dir, 0.4, resistance);
+        knock_back(player, dir, 0.75, resistance);
+        if let Some((vx, _, vz)) = player.net.velocity {
+            player.net.velocity = Some((vx * 0.546, (0.4 - 0.08) * 0.98, vz * 0.546));
+        }
+        player.net.velocity_due = false;
+    } else if let (Some(_), Some(dir), true) = (done, push, killer == "entity.minecraft.slime" || killer == "entity.minecraft.pufferfish") {
         knock_back(player, dir, 0.4, 0.0);
     } else if let (Some(_), Some((ux, uz))) = (done, push) {
         // Клиенту уходит скорость уже после трения такта: 0,4 · 0,546 = 0,218
@@ -1739,6 +1765,8 @@ pub(super) async fn hit_by(
             shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_damaged(player.entity_id, type_id, culprit, direct);
         }
         shared.players.lock().expect("список игроков захвачен другим потоком").set_health(&player.uuid, player.vit.health);
+        let mut world = shared.world_in(player.dimension).lock().expect("мир");
+        crate::redstone::game_event_from(&mut world, (player.x, player.y, player.z), if result.died { 15 } else { 7 }, Some(player.entity_id), false);
     }
 
     // Анимация ушиба идёт сразу за событием урона, раньше сообщения о смерти.
@@ -1749,9 +1777,11 @@ pub(super) async fn hit_by(
     // Удар моба или стрелы: анимация «ранен» с направлением на виновника,
     // у стрелы ещё звук попадания (чёрный ящик, skeleton-arrow).
     if let Some(from) = player.net.hurt_from
-        && matches!(source, Source::MobAttack | Source::Arrow | Source::Trident | Source::WindCharge)
+        && matches!(source, Source::MobAttack | Source::Arrow | Source::Trident | Source::WindCharge | Source::SonicBoom)
     {
-        let yaw = ((from.2 - player.z).atan2(from.0 - player.x).to_degrees() - f64::from(player.yaw)) as f32;
+        // Угол приведён к [-180; 180): у оригинала игрок с рысканьем 180 видит 90, не −270.
+        let yaw = ((from.2 - player.z).atan2(from.0 - player.x).to_degrees() - f64::from(player.yaw) + 180.0).rem_euclid(360.0) - 180.0;
+        let yaw = yaw as f32;
         let mut body = encode_varint(HURT_ANIMATION);
 
         body.extend_from_slice(&encode_varint(player.entity_id));
@@ -2289,6 +2319,10 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
             let effects = std::mem::take(&mut eating.effects);
 
             player.net.eating = None;
+            {
+                let mut world = shared.world_in(player.dimension).lock().expect("мир");
+                crate::redstone::game_event_from(&mut world, (player.x, player.y, player.z), 8, Some(player.entity_id), false);
+            }
 
             match drink {
                 Some(drink) => finish_drinking(stream, player, drink).await?,

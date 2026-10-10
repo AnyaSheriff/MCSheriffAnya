@@ -290,6 +290,10 @@ pub struct Items {
 
     /// Мобы (mob/mod.rs): своя физика и мысли, журнал общий.
     mobs: Vec<crate::mob::Mob>,
+    /// Снимок катализаторов и очередь поглощённого опыта (redstone/sculk_family).
+    pub sculk_catalysts: Vec<(i32, i32, i32)>,
+    pub sculk_deaths: Vec<crate::redstone::sculk_family::DeathCharge>,
+    pub vibrations: Vec<crate::redstone::sculk_family::GameEvent>,
 
     /// Мобы на начало такта — по ним слежение рассылает клиентам (`snapshot_mobs`).
     mob_view: Vec<crate::mob::Mob>,
@@ -313,6 +317,9 @@ impl Items {
             bolts: Vec::new(),
             frames: Vec::new(),
             mobs: Vec::new(),
+            sculk_catalysts: Vec::new(),
+            sculk_deaths: Vec::new(),
+            vibrations: Vec::new(),
             mob_view: Vec::new(),
             orbs: Vec::new(),
             orb_view: Vec::new(),
@@ -341,6 +348,18 @@ impl Items {
             let at = (self.mobs[index].x, self.mobs[index].y, self.mobs[index].z);
 
             for event in std::mem::take(&mut self.mobs[index].events) {
+                if self.mobs[index].kind != crate::mob::Kind::Warden {
+                    let frequency = match &event {
+                        crate::mob::Event::Hurt { .. } => Some(7),
+                        crate::mob::Event::Death => Some(15),
+                        crate::mob::Event::Landing { .. } => Some(2),
+                        crate::mob::Event::Sound { name, .. } if *name == self.mobs[index].kind.step_sound() => Some(1),
+                        _ => None,
+                    };
+                    if let Some(frequency) = frequency {
+                        self.vibrations.push(crate::redstone::sculk_family::GameEvent { at, source: Some(entity_id), frequency, projectile: false });
+                    }
+                }
                 match event {
                     crate::mob::Event::Sound { .. } if silent => {}
                     crate::mob::Event::Loot(stacks) => {
@@ -362,7 +381,13 @@ impl Items {
                             }
                             let points = std::mem::take(&mut self.mobs[index].pending_xp);
 
-                            self.drop_experience(points, at, next_id, rng);
+                            let catalyst = self.sculk_catalysts.iter().copied()
+                                .filter(|pos| crate::mob::warden::distance(crate::redstone::sculk_family::center(*pos), at) <= 8.0)
+                                .min_by(|a, b| crate::mob::warden::distance(crate::redstone::sculk_family::center(*a), at).total_cmp(&crate::mob::warden::distance(crate::redstone::sculk_family::center(*b), at)));
+                            let charge = if catalyst.is_none() { 0 } else if points > 0 { points } else { self.mobs[index].sculk_xp(rng) };
+                            if let Some(catalyst) = catalyst.filter(|_| charge > 0) {
+                                self.sculk_deaths.push(crate::redstone::sculk_family::DeathCharge { catalyst, at, amount: charge });
+                            } else { self.drop_experience(points, at, next_id, rng); }
                         }
 
                         self.changes.push(Change::MobEvent { entity_id, at, event });
@@ -1942,6 +1967,36 @@ mod tests {
         assert!((1..=3).contains(&points), "{points}");
         assert!(order.iter().position(|c| *c == 'O') > order.iter().position(|c| *c == 'D'));
         assert!(order.iter().position(|c| *c == 'O') < order.iter().position(|c| *c == 'X'));
+    }
+
+    #[test]
+    fn closest_catalyst_absorbs_xp_even_without_player_credit() {
+        for credited in [false, true] {
+            let mut items = Items::new();
+            items.sculk_catalysts = vec![(7, 0, 0), (2, 0, 0), (20, 0, 0)];
+            let mut cow = crate::mob::Mob::new(1, crate::mob::Kind::Cow, (0.5, 0.5, 0.5));
+            if credited { cow.credit_player(); }
+            cow.hurt(f32::MAX, crate::survival::Source::GenericKill, None);
+            items.add_mob(cow);
+            items.flush_mob_events(&mut one_id(), &mut crate::mob::Rng::new(3));
+            assert!(items.orbs().is_empty());
+            assert_eq!(items.sculk_deaths.len(), 1);
+            assert_eq!(items.sculk_deaths[0].catalyst, (2, 0, 0));
+            assert!((1..=3).contains(&items.sculk_deaths[0].amount));
+        }
+    }
+
+    #[test]
+    fn catalyst_outside_eight_blocks_does_not_swallow_orbs() {
+        let mut items = Items::new();
+        items.sculk_catalysts = vec![(9, 0, 0)];
+        let mut cow = crate::mob::Mob::new(1, crate::mob::Kind::Cow, (0.5, 0.5, 0.5));
+        cow.credit_player();
+        cow.hurt(f32::MAX, crate::survival::Source::GenericKill, None);
+        items.add_mob(cow);
+        items.flush_mob_events(&mut one_id(), &mut crate::mob::Rng::new(3));
+        assert!(items.sculk_deaths.is_empty());
+        assert!(!items.orbs().is_empty());
     }
 }
 

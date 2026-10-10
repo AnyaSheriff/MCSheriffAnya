@@ -34,6 +34,7 @@ mod jukebox;
 pub mod lectern;
 mod rails;
 mod sculk;
+pub mod sculk_family;
 pub mod shelf;
 pub mod statue;
 
@@ -42,7 +43,7 @@ pub use lectern::lectern_reading;
 
 pub use components::{Occupant, ambient_sky, daylight_tick, disarm_tripwire, hook_broken_by_player, punched, random_ticks};
 pub use rails::{Cart, holds_rail};
-pub use sculk::{game_event, sensors_tick};
+pub use sculk::{game_event, game_event_from, sensors_tick};
 
 /// Место в мире.
 pub type Pos = (i32, i32, i32);
@@ -312,6 +313,7 @@ pub struct Memory {
 
     /// Датчики скалка и что они слышат — у оригинала это их блок-сущности.
     sensors: sculk::Sensors,
+    pub sculk: sculk_family::Memory,
 }
 
 impl Memory {
@@ -329,12 +331,14 @@ impl Memory {
             carts: Vec::new(),
             frames: Vec::new(),
             sensors: sculk::Sensors::new(),
+            sculk: sculk_family::Memory::default(),
         }
     }
 
     /// В этом месте встал блок: горящая руда и датчики света запоминаются,
     /// всё прочее — забывается. Зовёт мир при каждой правке блока.
     pub fn note_state(&mut self, pos: Pos, state: i32) {
+        self.sculk.note_state(pos, state);
         if components::is_lit_ore(state) {
             self.lit_ores.insert(pos);
         } else if !self.lit_ores.is_empty() {
@@ -3778,7 +3782,8 @@ pub fn repair_chunk(world: &mut World, chunk_x: i32, chunk_z: i32) {
                 found.pistons.push(pos);
             } else if within(state, &head_range) {
                 found.heads.push(pos);
-            } else if components::is_lit_ore(state) || components::is_daylight(state) {
+            } else if components::is_lit_ore(state) || components::is_daylight(state) || sculk::is_sensor_state(state)
+                || matches!(blocks::block_at_state(state), Some("sculk_shrieker" | "sculk_catalyst")) {
                 found.remembered.push((pos, state));
             }
         }
@@ -4238,6 +4243,7 @@ pub fn ticked(world: &mut World, pos: Pos) {
 
         // Крикун скалка докричал.
         Kind::Other if block.name == "sculk_shrieker" => sculk::shrieker_ticked(world, pos, &block),
+        Kind::Other if block.name == "sculk_catalyst" => sculk_family::catalyst_ticked(world, pos, &block),
 
         // Растяжка проверяет, не ушли ли с неё; крючок — цепь.
         Kind::Tripwire => components::tripwire_ticked(world, pos, &block),

@@ -781,6 +781,7 @@ pub fn open_begin(world: &mut World, halves: &[Pos]) -> bool {
         let at = sound_point(world, halves);
 
         world.note_sound_at_block(at, sound, 0.5, pitch);
+        crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_ACTIVATE);
     }
 
     if first && kind == Kind::Barrel {
@@ -854,6 +855,7 @@ pub fn close(world: &mut World, halves: &[Pos]) {
         let at = sound_point(world, halves);
 
         world.note_sound_at_block(at, sound, 0.5, pitch);
+        crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_DEACTIVATE);
     }
 
     after_viewers(world, kind, halves, last);
