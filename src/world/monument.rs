@@ -393,6 +393,25 @@ mod tests {
         }
     }
 
+    /// Независимые от подбора климата семена: глубокого океана должно
+    /// хватать не только точке старта, но и всей проверяемой окрестности.
+    #[test]
+    fn deep_oceans_allow_monument_placement() {
+        use super::super::terrain::{Style, Terrain};
+
+        let mut starts = 0;
+        for seed in [7, 314_159, 987_654_321, -20_261_010] {
+            let terrain = Terrain::new(seed, Style::Vanilla);
+            for rx in -16..16 {
+                for rz in -16..16 {
+                    starts += usize::from(start_in(&terrain, rx, rz).is_some());
+                }
+            }
+        }
+        println!("holdout monuments: {starts}/4096");
+        assert!((246..=574).contains(&starts), "крепостей {starts}/4096, ожидается 6–14%");
+    }
+
     /// Перепись блоков крепости — против замера оригинала (tools/measure/
     /// monument.py census, 10 крепостей, семя 1234567890): среднее на крепость
     /// по нашим четырём образцам в пределах разброса оригинала.

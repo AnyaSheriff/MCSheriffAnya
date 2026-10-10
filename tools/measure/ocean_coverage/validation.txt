@@ -1,0 +1,40 @@
+All cargo commands used CARGO_TARGET_DIR=$PWD/target CARGO_NET_OFFLINE=true TMPDIR=$PWD/tmp nice -n 19.
+
+Full suite (exit 101): cargo test --release -j 4
+    Finished `release` profile [optimized] target(s) in 0.28s
+test network::packet::tests::a_big_packet_goes_out_at_once ... FAILED
+test network::packet::tests::packets_leave_together_and_in_order ... FAILED
+test network::play::arthropod_tests::cave_spider_poison_requires_a_successful_unblocked_hit ... FAILED
+test world::monument::tests::deep_oceans_allow_monument_placement ... ok
+test world::terrain::census::ocean_distribution_and_land_relief ... ok
+thread 'network::packet::tests::a_big_packet_goes_out_at_once' (734) panicked at src/network/packet.rs:368:75:
+called `Result::unwrap()` on an `Err` value: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+thread 'network::packet::tests::packets_leave_together_and_in_order' (737) panicked at src/network/packet.rs:344:75:
+called `Result::unwrap()` on an `Err` value: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+thread 'network::play::arthropod_tests::cave_spider_poison_requires_a_successful_unblocked_hit' (740) panicked at src/network/play/arthropod_tests.rs:133:71:
+called `Result::unwrap()` on an `Err` value: Os { code: 1, kind: PermissionDenied, message: "Operation not permitted" }
+test result: FAILED. 1367 passed; 3 failed; 52 ignored; 0 measured; 0 filtered out; finished in 11.21s
+
+Offline subset (exit 0): cargo test --release -j 4 -- --test-threads=4 --skip network::packet::tests::a_big_packet_goes_out_at_once --skip network::packet::tests::packets_leave_together_and_in_order --skip network::play::arthropod_tests::cave_spider_poison_requires_a_successful_unblocked_hit
+    Finished `release` profile [optimized] target(s) in 0.15s
+test world::monument::tests::deep_oceans_allow_monument_placement ... ok
+test world::terrain::census::ocean_distribution_and_land_relief ... ok
+test result: ok. 1367 passed; 0 failed; 52 ignored; 0 measured; 3 filtered out; finished in 16.41s
+
+Clippy (exit 0): cargo clippy --release --all-targets -j 4
+    Finished `release` profile [optimized] target(s) in 2m 43s
+
+Holdout and ocean tests (exit 0): cargo test --release -j 4 ocean -- --nocapture
+    Finished `release` profile [optimized] target(s) in 0.29s
+holdout monuments: 375/4096
+test world::monument::tests::deep_oceans_allow_monument_placement ... ok
+holdout: ocean 0.4006, deep 0.1015
+holdout land heights: [59, 64, 70, 81, 136]
+test world::terrain::census::ocean_distribution_and_land_relief ... ok
+test result: ok. 7 passed; 0 failed; 2 ignored; 0 measured; 1413 filtered out; finished in 0.70s
+
+Actual monument chunks (exit 0): cargo test --release -j 4 monument_world -- --ignored --nocapture
+    Finished `release` profile [optimized] target(s) in 0.62s
+областей 1024, середина в глубоком океане 102, крепостей 88
+крепость -469,-476: prismarine=6883 prismarine_bricks=6102 dark_prismarine=230 sea_lantern=138 gold_block=8 wet_sponge=0 water=64011
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1421 filtered out; finished in 0.21s
