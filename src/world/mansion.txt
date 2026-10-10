@@ -1,0 +1,9145 @@
+# Лесной особняк: образцы кусков и раскладки, замер оригинала 26.1.2
+# (tools/measure/mansion.py build, 24 особняков). Не править руками.
+template 1x1_a1 7 7 8 19
+  A birch_planks
+  B cobblestone
+  C cobblestone_wall[east=none,north=tall,south=none,up=true,waterlogged=false,west=tall]
+  D cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  E cobblestone_wall[east=none,north=none,south=tall,up=true,waterlogged=false,west=tall]
+  F cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  G potted_oxeye_daisy
+  H potted_blue_orchid
+  I potted_allium
+  J potted_azure_bluet
+  K cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BBBBBBB
+  BB____B
+  BB_____
+  BB_____
+  BB_____
+  BB____B
+  BBBBBBB
+layer 2
+  BFBBBBB
+  DG____B
+  DH_____
+  DI_____
+  DJ_____
+  DI____B
+  BKBBBBB
+layer 3
+  C______
+  _______
+  _______
+  _______
+  _______
+  _______
+  E______
+layer 4
+  C______
+  _______
+  _______
+  .______
+  _______
+  _______
+  E______
+layer 5
+  C______
+  _______
+  _______
+  .______
+  _______
+  _______
+  E______
+layer 6
+  C______
+  _____._
+  _______
+  .______
+  _______
+  _______
+  E______
+layer 7
+  C______
+  _____._
+  _._____
+  .______
+  _______
+  _______
+  E______
+template 1x1_a2 7 7 8 13
+  A birch_planks
+  B cobblestone
+  C rail[shape=south_east,waterlogged=false]
+  D dark_oak_stairs[facing=west,half=top,shape=inner_right,waterlogged=false]
+  E cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  F cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  G rail[shape=north_south,waterlogged=false]
+  H dark_oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  I carved_pumpkin[facing=east]
+  J rail[shape=north_east,waterlogged=false]
+  K dark_oak_stairs[facing=west,half=top,shape=inner_left,waterlogged=false]
+  L cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  M cobblestone_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  N rail[shape=east_west,waterlogged=false]
+  O dark_oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  P cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  Q cobblestone_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  R dark_oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BLLLLLB
+  E______
+  E______
+  E______
+  E______
+  E______
+  BPPPPPB
+layer 2
+  B.....B
+  .______
+  .______
+  .______
+  .______
+  .______
+  B.....B
+layer 3
+  BMMMMMB
+  F______
+  F______
+  F______
+  F______
+  F______
+  BQQQQQB
+layer 4
+  CNNNNNN
+  G______
+  G______
+  I______
+  G______
+  G______
+  JNNNNNN
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  DOOOOOO
+  H______
+  H______
+  H______
+  H______
+  H______
+  KRRRRRR
+template 1x1_a3 7 7 8 21
+  A birch_planks
+  B oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  C cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  D cobblestone_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  E light_gray_carpet
+  F cobblestone
+  G potted_red_tulip
+  H cobblestone_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  I oak_planks
+  J oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  K cobblestone_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  L cobblestone_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  FF_I___
+  _______
+  _______
+  _______
+  __J____
+  HHHHDB_
+  FFFFC__
+layer 2
+  FFCB___
+  LLK____
+  _______
+  _______
+  _______
+  __E_E__
+  _G_G___
+layer 3
+  _GE____
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x1_a4 7 7 8 19
+  A birch_planks
+  B dark_oak_log[axis=y]
+  C dark_oak_log[axis=z]
+  D oak_fence[east=true,north=false,south=true,waterlogged=false,west=true]
+  E dark_oak_log[axis=x]
+  F oak_fence[east=false,north=true,south=true,waterlogged=false,west=true]
+  G gray_carpet
+  H light_gray_carpet
+  I oak_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  J chest[facing=west,type=single,waterlogged=false]
+  K oak_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  L oak_fence[east=true,north=true,south=false,waterlogged=false,west=true]
+  loot 6 6 3 woodland_mansion
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BLLLLLB
+  FGHGHGK
+  FHGHGHG
+  FGHGHGH
+  FHGHGHG
+  FGHGHGI
+  BDDDDDB
+layer 2
+  BLLLLLB
+  F_____K
+  F______
+  F______
+  F______
+  F_____I
+  BDDDDDB
+layer 3
+  BLLLLLB
+  F_____K
+  F______
+  F______
+  F______
+  F_____I
+  BDDDDDB
+layer 4
+  BLLLLLB
+  F_____K
+  F______
+  F______
+  F______
+  F_____I
+  BDDDDDB
+layer 5
+  CEEEEEC
+  C_____C
+  C_____C
+  C_____C
+  C_____C
+  C_____C
+  CEEEEEC
+layer 6
+  _______
+  _______
+  _______
+  ______J
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x1_a5 7 7 8 20
+  A birch_planks
+  B cobblestone
+  C dark_oak_stairs[facing=east,half=top,shape=inner_left,waterlogged=false]
+  D dark_oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  E dark_oak_planks
+  F dark_oak_stairs[facing=north,half=top,shape=inner_left,waterlogged=false]
+  G dark_oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  H cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  I cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  J dark_oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  K cobblestone_slab[type=bottom,waterlogged=false]
+  L potted_white_tulip
+  M cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  N cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  O dark_oak_stairs[facing=south,half=top,shape=inner_left,waterlogged=false]
+  P dark_oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  Q dark_oak_stairs[facing=west,half=top,shape=inner_left,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BBBBBBB
+  B___HBB
+  BKK____
+  BKK____
+  BKK____
+  B___HBB
+  BBBBBBB
+layer 2
+  BBBBBBB
+  B____HB
+  B______
+  L______
+  B______
+  B____HB
+  BBBBBBB
+layer 3
+  _______
+  I______
+  B______
+  M______
+  B______
+  N______
+  _______
+layer 4
+  _______
+  _______
+  I______
+  B______
+  N______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  FDDEDDC
+  J__E__G
+  J__E__G
+  J__E__G
+  J__E__G
+  J__E__G
+  QPPEPPO
+template 1x1_as1 7 7 8 3
+  A birch_planks
+  B cobblestone
+  C chest[facing=west,type=single,waterlogged=false]
+  loot 5 1 1 woodland_mansion
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BBBBBBB
+  B____CB
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  BBBBBBB
+layer 2
+  BB___BB
+  B_____B
+  _______
+  _______
+  _______
+  B_____B
+  BB___BB
+layer 3
+  B_B_B_B
+  _______
+  B_____B
+  _______
+  B_____B
+  _______
+  B_B_B_B
+layer 4
+  B__B__B
+  _______
+  _______
+  B_____B
+  _______
+  _______
+  B__B__B
+layer 5
+  B_B_B_B
+  _______
+  B_____B
+  _______
+  B_____B
+  _______
+  B_B_B_B
+layer 6
+  BB___BB
+  B_____B
+  _______
+  _______
+  _______
+  B_____B
+  BB___BB
+layer 7
+  BBBBBBB
+  B_B_B_B
+  BBBBBBB
+  B_B_B_B
+  BBBBBBB
+  B_B_B_B
+  BBBBBBB
+template 1x1_as2 7 7 8 3
+  A birch_planks
+  B cobweb
+  C spawner
+  spawner 4 1 3 spider 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  B__B___
+  ___BB__
+  B_B__B_
+  _BB_C__
+  B__B_BB
+  _BB_B__
+  _______
+layer 2
+  BB_B___
+  __BB___
+  B_B__B_
+  __B____
+  ___B___
+  __B____
+  _______
+layer 3
+  _______
+  BB_B__B
+  _______
+  B______
+  ___B___
+  ___B___
+  _BBB__B
+layer 4
+  B_BBB__
+  _______
+  B_____B
+  _______
+  _______
+  B_____B
+  B_BB___
+layer 5
+  B_BB__B
+  B_____B
+  B__B__B
+  B__B___
+  BBBB__B
+  BBB__BB
+  B_B_BB_
+layer 6
+  B___B__
+  ____B__
+  B______
+  B__BB__
+  B_____B
+  ______B
+  BB_B___
+layer 7
+  __B____
+  B___B_B
+  ______B
+  ______B
+  ______B
+  _______
+  _____B_
+template 1x1_as3 7 7 8 5
+  A birch_planks
+  B obsidian
+  C diamond_block
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _______
+  _______
+  __.B___
+  _______
+  _______
+  ______.
+layer 2
+  _______
+  ___B___
+  __BBB__
+  _BBCBB_
+  __BBB__
+  ___B___
+  _______
+layer 3
+  _______
+  _______
+  _._B___
+  __BBB__
+  ___B___
+  _______
+  _______
+layer 4
+  _._____
+  _______
+  _._____
+  ___B___
+  _______
+  _______
+  _______
+layer 5
+  _._____
+  _______
+  _._____
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _._____
+  _______
+  _._____
+  _______
+  __.____
+  _______
+  _______
+layer 7
+  _._____
+  _______
+  _._____
+  _____._
+  __.____
+  _______
+  _______
+template 1x1_as4 7 7 8 4
+  A birch_planks
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _A___A_
+  _______
+  _______
+  _______
+  _A___A_
+  _______
+layer 2
+  _______
+  _A___A_
+  _______
+  _______
+  _______
+  _A___A_
+  _______
+layer 3
+  _______
+  _A___A_
+  _______
+  _______
+  _______
+  _A___A_
+  _______
+layer 4
+  _______
+  _A___A_
+  _______
+  _______
+  _______
+  _A___A_
+  _______
+layer 5
+  _______
+  _A___A_
+  _______
+  _______
+  _______
+  _A___A_
+  _______
+layer 6
+  _______
+  _A___A_
+  _______
+  _______
+  _______
+  _A___A_
+  _______
+layer 7
+  _______
+  _AA_AA_
+  _A___A_
+  _______
+  _A___A_
+  _AA_AA_
+  _______
+template 1x1_b1 7 7 11 31
+  A birch_planks
+  B birch_stairs[facing=east,half=top,shape=inner_left,waterlogged=false]
+  C birch_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  D birch_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  E birch_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  F birch_stairs[facing=north,half=top,shape=inner_left,waterlogged=false]
+  G birch_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  H birch_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  I birch_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  J birch_slab[type=top,waterlogged=false]
+  K birch_slab[type=bottom,waterlogged=false]
+  L birch_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  M birch_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  N birch_stairs[facing=south,half=top,shape=outer_left,waterlogged=false]
+  O potted_azure_bluet
+  P birch_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  Q birch_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  R pink_carpet
+  S birch_stairs[facing=south,half=top,shape=inner_left,waterlogged=false]
+  T birch_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  U birch_stairs[facing=west,half=top,shape=inner_left,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  AD_____
+  IH_____
+  _______
+  _______
+  _______
+  MQ____N
+  AD___DG
+layer 2
+  E______
+  _______
+  _______
+  _______
+  _______
+  ______O
+  T_____R
+layer 3
+  E______
+  _______
+  _______
+  _______
+  _______
+  _______
+  T______
+layer 4
+  A______
+  _______
+  _______
+  _______
+  _______
+  _______
+  A______
+layer 5
+  E______
+  _______
+  _______
+  _______
+  _______
+  _______
+  T______
+layer 6
+  A______
+  J______
+  _______
+  _______
+  _______
+  J______
+  A______
+layer 7
+  ___.___
+  K______
+  M______
+  A______
+  I______
+  K______
+  _______
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 9
+  FCCCCCB
+  L_____G
+  L_____G
+  L_____G
+  L_____G
+  L_____G
+  UPPPPPS
+layer 10
+  AAAAAAA
+  A__C__A
+  A__J__A
+  ALJJJGA
+  A__J__A
+  A__P__A
+  AAAAAAA
+template 1x1_b2 7 7 11 26
+  A birch_planks
+  B dark_oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  C dark_oak_planks
+  D dark_oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  E oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  F dark_oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  G oak_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  H light_gray_carpet
+  I oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  J oak_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  K oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  L oak_planks
+  M black_carpet
+  N oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  O oak_stairs[facing=south,half=top,shape=outer_left,waterlogged=false]
+  P oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  Q oak_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  R oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  S dark_oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  T oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  ___T___
+  _______
+  _OPPQR_
+  _KLLN__
+  _GIIJ__
+  __E_E__
+  _______
+layer 2
+  _______
+  _______
+  _HHHH__
+  _HMMH__
+  _HHHH__
+  _______
+  _______
+layer 3
+  _____._
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  __BCD__
+  _______
+  _______
+  _______
+  _______
+  _______
+  __BCD__
+layer 7
+  ___C___
+  ___S___
+  _______
+  _______
+  _______
+  ___F___
+  ___C___
+layer 8
+  ___C___
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___C___
+layer 9
+  ___C___
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___C___
+layer 10
+  ___C___
+  _______
+  _______
+  _._____
+  _______
+  _______
+  ___C___
+template 1x1_b3 7 7 11 21
+  A birch_planks
+  B oak_planks
+  C dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  D dark_oak_leaves[distance=7,persistent=true,waterlogged=false]
+  E oak_slab[type=bottom,waterlogged=false]
+  F cobblestone
+  G cobblestone_slab[type=bottom,waterlogged=false]
+  H red_wool
+  I cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  J cobblestone_stairs[facing=west,half=top,shape=outer_left,waterlogged=false]
+  K cobblestone_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  L white_wool
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  LHHE___
+  LHHE___
+  EEEE___
+  _______
+  FGG____
+  FFG__B_
+  GFF____
+layer 2
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____C_
+  _______
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  GG___D_
+  FG_____
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  F______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  F______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  F______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  F______
+layer 8
+  _______
+  _______
+  _______
+  _______
+  ___.___
+  _______
+  F______
+layer 9
+  _______
+  _______
+  _______
+  _______
+  ___.___
+  _______
+  F______
+layer 10
+  _______
+  _______
+  _._.___
+  _______
+  ___.___
+  KJ_____
+  FI_____
+template 1x1_b4 7 7 11 23
+  A birch_planks
+  B oak_planks
+  C bookshelf
+  D oak_slab[type=bottom,waterlogged=false]
+  E dark_oak_stairs[facing=north,half=top,shape=inner_right,waterlogged=false]
+  F dark_oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  G oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  H dark_oak_stairs[facing=north,half=top,shape=inner_left,waterlogged=false]
+  I dark_oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  J dark_oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  K oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  L dark_oak_stairs[facing=south,half=top,shape=inner_left,waterlogged=false]
+  M dark_oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  N oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  O potted_allium
+  P dark_oak_stairs[facing=west,half=top,shape=inner_left,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BBGGGBB
+  B_____B
+  K______
+  K______
+  K______
+  B_____B
+  BBNNNBB
+layer 2
+  BC____C
+  C_____B
+  _______
+  _______
+  _______
+  ______B
+  O_____C
+layer 3
+  BC____C
+  C_____B
+  _______
+  _______
+  _______
+  ______B
+  ______C
+layer 4
+  BC____D
+  C_____D
+  _______
+  _______
+  _______
+  ______D
+  ______D
+layer 5
+  BC_____
+  C______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  DD_____
+  D______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 9
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 10
+  HFFFFFE
+  J_____I
+  J_____I
+  J_____I
+  J_____I
+  J_____I
+  PMMMMML
+template 1x1_b5 7 7 11 27
+  A birch_planks
+  B oak_fence[east=true,north=true,south=true,waterlogged=false,west=true]
+  C oak_planks
+  D oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  E potted_allium
+  F vine[east=false,north=true,south=false,up=false,west=false]
+  G vine[east=false,north=false,south=false,up=false,west=true]
+  H water_cauldron[level=3]
+  I chest[facing=north,type=single,waterlogged=false]
+  items 6 1 6 8:allium:1;10:allium:1;11:allium:1;12:allium:1;14:allium:1;15:allium:1;16:allium:1;18:allium:1 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _CCCC__
+  _C_____
+  _C_____
+  _C_____
+  _CH____
+  ______I
+layer 2
+  _______
+  _DEED__
+  _E_____
+  _E_____
+  _E_____
+  _D_____
+  _______
+layer 3
+  _______
+  _D__D__
+  _______
+  _______
+  _______
+  _D_____
+  _______
+layer 4
+  _._____
+  _CCCC__
+  _CFFF__
+  _CG____
+  _CG____
+  _CG____
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 9
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 10
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_a1 7 15 8 4
+  A birch_planks
+  B cobblestone
+  C chest[facing=south,type=single,waterlogged=false]
+  D cobblestone_slab[type=bottom,waterlogged=false]
+  E gray_wall_banner[facing=north]
+  F cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  loot 3 1 12 woodland_mansion
+  mob 3 1 3 vindicator 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BBBBBBB
+  B_____B
+  B______
+  B______
+  B______
+  BFFFFFB
+  B_BDB_B
+  B_BDB_B
+  B_BDB_B
+  B_BDB_B
+  B_BDB_B
+  B_BBB_B
+  B__C__B
+  B_____B
+  BBBBBBB
+layer 2
+  B_____B
+  _______
+  _______
+  _______
+  _______
+  _______
+  __F_F_B
+  __B_B__
+  __B_B__
+  __B_B__
+  __B_B__
+  __BBB__
+  _______
+  _______
+  B_____B
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __F_F__
+  __B_B__
+  __B_B__
+  __B_B__
+  __BBB__
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __F_F__
+  __B_B__
+  __BEB__
+  __BBB__
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __D_D__
+  __D_D__
+  __DDD__
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_a2 7 15 8 10
+  A birch_planks
+  B dark_oak_log[axis=y]
+  C farmland[moisture=7]
+  D water[level=0]
+  E lily_pad
+  F wall_torch[facing=south]
+  G wall_torch[facing=east]
+  H dark_oak_planks
+  I dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  J farmland[moisture=0]
+  K wall_torch[facing=west]
+  L wall_torch[facing=north]
+  M dark_oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  N oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  O oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  P white_carpet
+  Q oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  R oak_stairs[facing=west,half=top,shape=inner_right,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  RQ_____
+  O_N____
+  _______
+  _______
+  M__M__M
+  BBBBBBB
+  BCCDCCB
+  BCCDCCB
+  BCCDCCB
+  BCCDCCB
+  BCCDCCB
+  BCJDCCB
+  BCCDCCB
+  BCCDCCB
+  BBBBBBB
+layer 2
+  _______
+  P______
+  _______
+  _______
+  _______
+  _______
+  ___E___
+  ___E___
+  ___E___
+  ___E___
+  _..E___
+  _._E___
+  ___E___
+  __.E.__
+  _______
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___L___
+  __KHG__
+  ___H___
+  ___H___
+  __KHG__
+  ___F___
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___I___
+  _______
+  _______
+  ___I___
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___I___
+  _______
+  _______
+  ___I___
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___I___
+  _______
+  _______
+  ___I___
+  _______
+  _______
+  _______
+template 1x2_a3 7 15 8 14
+  A birch_planks
+  B polished_andesite
+  C smooth_stone_slab[type=double,waterlogged=false]
+  D smooth_stone_slab[type=bottom,waterlogged=false]
+  E smooth_stone_slab[type=top,waterlogged=false]
+  F damaged_anvil[facing=east]
+  G lava[level=0]
+  mob 3 2 8 vindicator 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BBBBBBB
+  BDDDDDC
+  BDDDDDD
+  BDDDDDD
+  BDDDDDD
+  BDDCBDC
+  BDDCBDB
+  BDDDDDB
+  BDDCBDB
+  BDDCBDB
+  BDDDDDB
+  BCCCDDB
+  BBBBDDB
+  BBBBBDB
+  BBBBBBB
+layer 2
+  BBBBBBB
+  B_____C
+  B______
+  B______
+  B______
+  B___B_C
+  B___B_B
+  B_____B
+  B___B_B
+  B___B_B
+  B_____B
+  B_____B
+  BBBB__B
+  BGGBF_B
+  BBBBBBB
+layer 3
+  _______
+  ______C
+  _______
+  _______
+  _______
+  ______C
+  _______
+  _______
+  B_____B
+  _______
+  _______
+  B______
+  B______
+  B______
+  BBBBB_B
+layer 4
+  _______
+  ______C
+  _______
+  _______
+  _______
+  ______C
+  _______
+  _______
+  B_____B
+  _______
+  _______
+  B______
+  B______
+  B______
+  BBBBB_B
+layer 5
+  _______
+  ______B
+  ______E
+  ______E
+  ______E
+  ______B
+  _______
+  _______
+  B_____B
+  _______
+  _______
+  _______
+  _______
+  _______
+  B_____B
+layer 6
+  _______
+  ______D
+  _______
+  ______B
+  _______
+  ______D
+  _______
+  _______
+  B_____B
+  _______
+  _______
+  _______
+  _______
+  _______
+  B_____B
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  BBBBBBB
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  BBBBBBB
+template 1x2_a4 7 15 8 7
+  A birch_planks
+  B oak_planks
+  C dirt
+  D dark_oak_sapling[stage=0]
+  E ladder[facing=south,waterlogged=false]
+  F green_carpet
+  G ladder[facing=east,waterlogged=false]
+  H chest[facing=west,type=single,waterlogged=false]
+  I ladder[facing=west,waterlogged=false]
+  items 6 1 5 4:dark_oak_sapling:9;10:dark_oak_sapling:10;23:dark_oak_sapling:9 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BBBBBBB
+  B_____E
+  BGFFFFF
+  B_FFFFF
+  B_FFFFF
+  B_FFF_H
+  B_FFFIB
+  BGFFF_B
+  B_FFF_B
+  B_FFF_B
+  B_FFF_B
+  B_FFF_B
+  BGFFFIB
+  B_____B
+  BBBBBBB
+layer 2
+  CCCCCCB
+  C_____E
+  BG_____
+  C______
+  C______
+  C______
+  C____IB
+  BG____C
+  C_____C
+  C_____C
+  C_____C
+  C_____C
+  BG___IB
+  C_____C
+  CCCCCCC
+layer 3
+  DDDDDDB
+  D_____E
+  BG_____
+  D______
+  D______
+  D______
+  D____IB
+  BG____D
+  D_____D
+  D_____D
+  D_____D
+  D_____D
+  BG___IB
+  D_____D
+  DDDDDDD
+layer 4
+  BBBBBBB
+  B_____E
+  BG_____
+  B______
+  B______
+  B______
+  B____IB
+  BG____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  BG___IB
+  B_____B
+  BBBBBBB
+layer 5
+  CCCCCCB
+  C_____E
+  BG_____
+  C______
+  C______
+  C______
+  C____IB
+  BG____C
+  C_____C
+  C_____C
+  C_____C
+  C_____C
+  BG___IB
+  C_____C
+  CCCCCCC
+layer 6
+  DDDDDDB
+  D_____E
+  BG_____
+  D______
+  D______
+  D______
+  D____IB
+  BG____D
+  D_____D
+  D_____D
+  D_____D
+  D_____D
+  BG___IB
+  D_____D
+  DDDDDDD
+layer 7
+  BBBBBBB
+  B_____E
+  BG_____
+  B______
+  B______
+  B______
+  B____IB
+  BG____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  BG___IB
+  B_____B
+  BBBBBBB
+template 1x2_a5 7 15 8 15
+  A birch_planks
+  B blue_wool
+  C light_blue_wool
+  D cyan_wool
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _______
+  _______
+  _______
+  _______
+  DD_____
+  DDD____
+  DDD____
+  DDCD__B
+  CCCCBBB
+  CCCCBBB
+  CCCCBBB
+  CCCCBBB
+  CCCBBBB
+  CCCCBBB
+layer 2
+  ___.___
+  _______
+  _______
+  _______
+  _______
+  _______
+  D______
+  DD_____
+  DD_____
+  C_CC__B
+  CCCCCB_
+  CCCC_BB
+  CCCCBBB
+  CCCBBBB
+  CCCBBBB
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  D______
+  D______
+  C______
+  CCC____
+  C______
+  C___B__
+  CC__BBB
+  C___BBB
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  D______
+  _______
+  _______
+  C______
+  _______
+  ______B
+  ____BBB
+layer 5
+  .______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_a6 7 15 8 15
+  A birch_planks
+  B dark_oak_planks
+  C chest[facing=north,type=single,waterlogged=false]
+  D dark_oak_log[axis=y]
+  E dark_oak_leaves[distance=7,persistent=false,waterlogged=false]
+  F dirt
+  items 2 1 8 10:iron_axe:1:efficiency=1 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  ______B
+  ______B
+  ______B
+  ______B
+  ______B
+  _______
+  _______
+  __C____
+  _DDDDD_
+  _DFFFD_
+  _DFFFD_
+  _DFFFD_
+  _DDDDD_
+  _______
+layer 2
+  _______
+  ______B
+  ______B
+  ______B
+  ______B
+  ______B
+  _______
+  _______
+  _______
+  _______
+  __..___
+  __.D___
+  ___.___
+  _______
+  _______
+layer 3
+  _______
+  ______B
+  ______B
+  ______B
+  ______B
+  ______B
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___D___
+  _______
+  _______
+  _______
+layer 4
+  _______
+  ______B
+  ______B
+  ______B
+  ______B
+  ______B
+  _______
+  _______
+  _______
+  __EEE__
+  _EEEEE_
+  _EEDEE_
+  _EEEEE_
+  __EEE__
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _EEEEE_
+  _EEEEE_
+  _EEDEE_
+  _EEEEE_
+  _EEEEE_
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _EEEEE_
+  _EEEEE_
+  _EEEEE_
+  _EEEEE_
+  _EEEEE_
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___E___
+  __EEE__
+  __EEE__
+  __EEE__
+  _______
+  _______
+template 1x2_a7 7 15 8 12
+  A birch_planks
+  B oak_planks
+  C oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  D oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  E oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  F dark_oak_log[axis=y]
+  G coarse_dirt
+  H red_mushroom
+  I brown_mushroom
+  J oak_fence[east=true,north=true,south=true,waterlogged=false,west=true]
+  K oak_fence[east=true,north=false,south=true,waterlogged=false,west=true]
+  L oak_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  M oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  N oak_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  O chest[facing=south,type=single,waterlogged=false]
+  P oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  ___OPP_
+  ____M__
+  _______
+  _______
+  _______
+  _BFFFB_
+  _F..GF_
+  _FGGGF_
+  _FGGGF_
+  _FGGGF_
+  _FGGGF_
+  _FGGGF_
+  _FGGGF_
+  _BFFFB_
+  _______
+layer 2
+  _______
+  _______
+  _______
+  _______
+  _______
+  _E___E_
+  __..___
+  ___I.__
+  __.I___
+  ___I___
+  ___H___
+  __IIH__
+  __HHI__
+  _E___E_
+  _______
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  _E___E_
+  ___.___
+  _._____
+  _______
+  _______
+  _______
+  _______
+  _______
+  _E___E_
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  KBBBBBK
+  JBBBBBJ
+  JBBBBBJ
+  JBBBBBJ
+  JBBBBBJ
+  JBBBBBJ
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+layer 5
+  _______
+  _______
+  _______
+  .______
+  _______
+  __LMN__
+  __CBD__
+  __CBD__
+  __CBD__
+  __CBD__
+  __CBD__
+  __CBD__
+  __CBD__
+  __CBD__
+  __CBD__
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  .______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _._____
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_a8 7 15 8 11
+  A birch_planks
+  B oak_planks
+  C oak_slab[type=bottom,waterlogged=false]
+  D dark_oak_log[axis=y]
+  E oak_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  F torch
+  G dark_oak_log[axis=z]
+  H dirt
+  I pumpkin
+  J dark_oak_planks
+  K melon
+  L farmland[moisture=7]
+  M attached_pumpkin_stem[facing=east]
+  N attached_melon_stem[facing=east]
+  O water[level=0]
+  P attached_pumpkin_stem[facing=west]
+  Q attached_melon_stem[facing=west]
+  R dark_oak_log[axis=x]
+  mob 2 1 2 vindicator 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  __.____
+  _______
+  _______
+  _______
+  _______
+  .______
+  DDDDDDC
+  HLOLHDB
+  HLOLHDB
+  HLOLHDB
+  HLOLHDB
+  HLOLHDB
+  HLOLHDB
+  HLOLHDB
+  HLOLHDB
+layer 2
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  IP_MI__
+  IP_MI_C
+  IP_MI_B
+  IP_MI_B
+  IP_MI_B
+  IP_MI_B
+  IP_MI_B
+  IP_MIEB
+layer 3
+  _._____
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ______C
+  ______B
+  ______B
+  ______B
+  _____FB
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  RRRRRG_
+  JJJJJG_
+  JJJJJG_
+  JJJJJG_
+  JJJJJG_
+  JJJJJG_
+  JJJJJGC
+  JJJJJGB
+  JJJJJGB
+layer 5
+  .______
+  _______
+  _______
+  _______
+  _______
+  _______
+  DDDDDD_
+  HLOLHD_
+  HLOLHD_
+  HLOLHD_
+  HLOLHD.
+  HLOLHD_
+  HLOLHD_
+  HLOLHD_
+  HLOLHDC
+layer 6
+  _______
+  _______
+  _______
+  ______.
+  _______
+  _______
+  _______
+  KQ_NK__
+  KQ_NK__
+  KQ_NK__
+  KQ_NK_.
+  KQ_NK__
+  KQ_NK__
+  KQ_NK__
+  KQ_NK__
+layer 7
+  ___.___
+  _______
+  _._.___
+  _______
+  _______
+  _______
+  _______
+  _______
+  __.____
+  _____._
+  ___.__.
+  _______
+  _______
+  _______
+  _______
+template 1x2_a9 7 15 8 10
+  A birch_planks
+  B oak_slab[type=top,waterlogged=false]
+  C oak_planks
+  D chest[facing=east,type=single,waterlogged=false]
+  E oak_slab[type=bottom,waterlogged=false]
+  F chest[facing=west,type=single,waterlogged=false]
+  G chest[facing=west,type=right,waterlogged=false]
+  H chest[facing=west,type=left,waterlogged=false]
+  mob 5 1 1 vindicator 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _______
+  C__C___
+  C__C___
+  C__C___
+  C__C_C_
+  C__C_C_
+  C__C_C_
+  C__C_C_
+  C__C_C_
+  C__C_C_
+  C__C_C_
+  C__C_C_
+  _______
+  _______
+layer 2
+  _______
+  _______
+  C__C___
+  D__D___
+  E__E___
+  D__D_C_
+  E__E_F_
+  D__D_E_
+  E__E_F_
+  D__D_E_
+  E__E_G_
+  D__D_H_
+  C__C_C_
+  _______
+  _______
+layer 3
+  _______
+  _______
+  C__C___
+  B__B___
+  B__B___
+  B__B_C_
+  B__B_B_
+  B__B_B_
+  B__B_B_
+  B__B_B_
+  B__B_B_
+  B__B_B_
+  C__C_C_
+  _______
+  _______
+layer 4
+  _______
+  _______
+  C__C___
+  D__D___
+  E__E___
+  D__D_C_
+  E__E_G.
+  D__D_H_
+  E__E_E_
+  D__D_F_
+  E__E_E.
+  D__D_F_
+  C__C_C_
+  _______
+  _______
+layer 5
+  _______
+  _______
+  C__C___
+  B__B___
+  B__B___
+  B__B_C_
+  B__B_B.
+  B__B_B_
+  B__B_B_
+  B__B_B_
+  B__B_B.
+  B__B_B_
+  C__C_C_
+  _______
+  _______
+layer 6
+  _______
+  _______
+  C__C___
+  D__D___
+  E__E___
+  D__D_C_
+  E__E_F.
+  D__D_E_
+  E__E_F_
+  D__D_E_
+  E__E_G.
+  D__D_H_
+  C__C_C_
+  _______
+  _______
+layer 7
+  B__B_B_
+  B__B_B_
+  C__C_B_
+  B__B_B_
+  B__B_B_
+  B__B_C_
+  B__B_B.
+  B__B_B_
+  B__B_B_
+  B__B_B_
+  B__B_B.
+  B__B_B_
+  C__C_C_
+  B__B_B_
+  B__B_B_
+template 1x2_b1 7 15 8 5
+  A birch_planks
+  B cobblestone
+  C cobblestone_slab[type=bottom,waterlogged=false]
+  D cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=tall]
+  E cobblestone_wall[east=none,north=low,south=low,up=true,waterlogged=false,west=tall]
+  F lever[face=wall,facing=south,powered=false]
+  G cobblestone_wall[east=tall,north=none,south=none,up=true,waterlogged=false,west=none]
+  H cobblestone_wall[east=tall,north=low,south=low,up=true,waterlogged=false,west=none]
+  I cobblestone_wall[east=low,north=none,south=none,up=false,waterlogged=false,west=low]
+  J iron_door[facing=north,half=lower,hinge=left,open=false,powered=false]
+  K iron_door[facing=north,half=upper,hinge=left,open=false,powered=false]
+  L iron_door[facing=north,half=lower,hinge=right,open=false,powered=false]
+  M iron_door[facing=north,half=upper,hinge=right,open=false,powered=false]
+  N redstone_wire[east=none,north=side,power=0,south=side,west=none]
+  O redstone_wire[east=side,north=none,power=0,south=side,west=none]
+  P redstone_wire[east=side,north=none,power=0,south=none,west=side]
+  Q redstone_wire[east=none,north=none,power=0,south=up,west=side]
+  R cobblestone_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  S cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  T brown_carpet
+  U cauldron
+  V cobblestone_wall[east=none,north=tall,south=none,up=true,waterlogged=false,west=none]
+  W cobblestone_wall[east=low,north=tall,south=none,up=true,waterlogged=false,west=low]
+  mob 3 1 13 vindicator 1.00
+layer 0
+  AAAAAAA
+  ABBBBBA
+  ABBBBBA
+  ABBBBBA
+  ABBBBBA
+  ABBBBBA
+  ABBBBBA
+  ABBBBBA
+  ABBBBBA
+  ABBBBBA
+  ABBBBBA
+  ABBBBBA
+  ABBBBBA
+  AABBBAA
+  AAAAAAA
+layer 1
+  BBBBBBB
+  BUT__TB
+  B_T__TB
+  B_____B
+  B_____B
+  B_RS_CB
+  B_RS__B
+  B_RS_CB
+  B_____B
+  B__OPQB
+  B__N_BB
+  BBBJLBB
+  BC___CB
+  BC___CB
+  BB___BB
+layer 2
+  B_V_V_B
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D____NG
+  __BKMB_
+  D____FG
+  _______
+  BB___BB
+layer 3
+  BBWBWBB
+  B_____B
+  E_____H
+  B_____B
+  E_____H
+  B_____B
+  E_____H
+  B_____B
+  E_____H
+  B_____B
+  E_____H
+  BIBBBBB
+  E_____H
+  B_____B
+  BB___BB
+layer 4
+  B_V_V_B
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  BB___BB
+layer 5
+  B_V_V_B
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  BB___BB
+layer 6
+  B_V_V_B
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  D_____G
+  _______
+  BB___BB
+layer 7
+  BBBBBBB
+  B__B__B
+  B__B__B
+  B__B__B
+  B__B__B
+  B__B__B
+  B__B__B
+  B__B__B
+  B__B__B
+  B__B__B
+  BBBBBBB
+  B_____B
+  B_____B
+  B_____B
+  BBBBBBB
+template 1x2_b2 7 15 8 5
+  A birch_planks
+  B cobblestone
+  C cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  D oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  E oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  F oak_planks
+  G oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  H cauldron
+  I oak_stairs[facing=west,half=top,shape=outer_left,waterlogged=false]
+  J oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  K oak_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  L brown_carpet
+  M cobblestone_wall[east=none,north=tall,south=none,up=true,waterlogged=false,west=none]
+  N cobblestone_wall[east=none,north=low,south=none,up=true,waterlogged=false,west=none]
+  O cobblestone_slab[type=bottom,waterlogged=false]
+  P lever[face=wall,facing=south,powered=false]
+  Q iron_door[facing=north,half=lower,hinge=right,open=false,powered=false]
+  R iron_door[facing=north,half=upper,hinge=right,open=false,powered=false]
+  S cobblestone_wall[east=tall,north=tall,south=none,up=true,waterlogged=false,west=none]
+  T cobblestone_wall[east=low,north=low,south=none,up=true,waterlogged=false,west=none]
+  mob 5 1 11 vindicator 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  __MOOOS
+  D__OOO_
+  _______
+  EI_____
+  FJ_____
+  FJ_____
+  GK_____
+  _______
+layer 2
+  BBBBBBB
+  B_L___B
+  B_L___B
+  B_____B
+  B_____B
+  BH____B
+  BBBBQBB
+  __M___S
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 3
+  BBBBBBB
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  BBBBRBB
+  __MP__S
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+  _______
+layer 4
+  BBBBBBB
+  B_____B
+  C_____B
+  C_____B
+  C_____B
+  B_____B
+  BBBBBBB
+  __N___T
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+  _______
+layer 5
+  BBBBBBB
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  BBBBBBB
+  _______
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+  _______
+layer 6
+  BBBBBBB
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  BBBBBBB
+  _______
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+  _______
+layer 7
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  _______
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+  _______
+template 1x2_b3 7 15 8 14
+  A birch_planks
+  B chest[facing=south,type=single,waterlogged=false]
+  C dark_oak_log[axis=x]
+  D dark_oak_log[axis=y]
+  loot 3 1 0 woodland_mansion
+  mob 3 1 4 vindicator 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  ___B___
+  _D___D_
+  _______
+  _______
+  _D___D_
+  _______
+  _______
+  _D___D_
+  _______
+  _______
+  _D___D_
+  _______
+  _______
+  _D___D_
+  _______
+layer 2
+  _______
+  _D___D_
+  _______
+  _______
+  _D___D_
+  _______
+  _______
+  _D___D_
+  _._____
+  _______
+  _D___D_
+  _______
+  _______
+  _D___D_
+  _______
+layer 3
+  ___.___
+  _D___D_
+  _______
+  _____..
+  _D___D_
+  _______
+  _______
+  _D___D_
+  _______
+  _______
+  _D___D_
+  _______
+  _______
+  _D___D_
+  _______
+layer 4
+  _______
+  CCCCCCC
+  _______
+  _______
+  CCCCCCC
+  _______
+  _______
+  CCCCCCC
+  _______
+  _______
+  CCCCCCC
+  _______
+  _______
+  CCCCCCC
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  ______.
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  ____.__
+  _______
+  _______
+  _______
+  _._____
+  ___._._
+  _______
+  _______
+  _______
+  _______
+  ____.__
+  _______
+  _______
+template 1x2_b4 7 15 8 7
+  A birch_planks
+  B oak_slab[type=bottom,waterlogged=false]
+  C oak_planks
+  D oak_slab[type=top,waterlogged=false]
+  E dark_oak_planks
+  F chest[facing=north,type=single,waterlogged=false]
+  loot 4 3 9 woodland_mansion
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BD_____
+  DEEEEE_
+  _E___E_
+  _E_E_E_
+  _E_E_E_
+  _E_E_E_
+  _E_E_E_
+  _EDE_E_
+  _EBE_E_
+  _EDEEE_
+  _E_EEE_
+  _E_EE_C
+  ___E__B
+  EEE____
+  EE_____
+layer 2
+  __BD___
+  _EEEEE_
+  BE___E_
+  DE_E_E_
+  _E_E_E_
+  _EDE_E_
+  _EBE_E_
+  _E_E_E_
+  _E_E_E_
+  _E_EEED
+  _EBEEEB
+  _EDEE__
+  ___E___
+  EEE____
+  EE_____
+layer 3
+  ____BD_
+  _EEEEE_
+  _E___E_
+  _EDE_E_
+  BEBE_E_
+  DE_E_E_
+  _E_E_E_
+  _E_EDED
+  _E_EBEB
+  _E_EFE_
+  _E_EEE_
+  _E_EE__
+  _DBE___
+  EEE____
+  EE_____
+layer 4
+  ______B
+  _EEEEED
+  _EBD_E_
+  _E_E_E_
+  _E_E_E_
+  _E_EDED
+  BE_EBEB
+  DE_E_E_
+  _E_E_E_
+  _E_E_E_
+  _E_EEE_
+  DE_EE__
+  B__E___
+  EEE____
+  EE_____
+layer 5
+  _______
+  _EEEEE_
+  _E__BEB
+  _E_EDED
+  _E_EBEB
+  _E_E_E_
+  _E_E_E_
+  _E_E_E_
+  BE_E_E_
+  DE_E_E_
+  BE_EEE_
+  _E_EE__
+  .__E___
+  EEE____
+  EE_____
+layer 6
+  _______
+  _EEEEE_
+  _E___E_
+  _E_E_E_
+  _E_E_E_
+  _E_E_E_
+  _E_E_E_
+  _E.E_E_
+  _E_E_E_
+  _E_E_E_
+  .E_EEE_
+  _E_EE__
+  ___E___
+  EEE____
+  EE_____
+layer 7
+  _______
+  _EEEEE_
+  _E___E_
+  _E_E_E_
+  _E_E_E_
+  _E_E_E_
+  _E_E_E.
+  _E_E_E_
+  _E_E_E_
+  _E_E_E_
+  _E_EEE_
+  _E_EE__
+  ___E___
+  EEE____
+  EE_____
+template 1x2_b5 7 15 8 11
+  A birch_planks
+  B dark_oak_planks
+  C light_gray_wool
+  D white_wool
+  E gray_wool
+  F green_wool
+  G black_wool
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BCCCCCB
+  ___G___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 2
+  BCCCCCB
+  ___G___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 3
+  BDFCFDB
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  BEEEEEB
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  BCCCCCB
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  BCCCCCB
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  BCCCCCB
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_c1 7 15 11 39
+  A birch_planks
+  B oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  C dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  D oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  E white_carpet
+  F dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  G torch
+  H gray_carpet
+  I oak_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  J oak_slab[type=top,waterlogged=false]
+  K potted_oxeye_daisy
+  L dark_oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  M dark_oak_fence[east=true,north=true,south=true,waterlogged=false,west=true]
+  N dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  O dark_oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  P oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  Q oak_planks
+  R oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  S dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  T oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  QQQQD__
+  QQQQD__
+  PPPPI__
+  HHHHH__
+  _______
+  _______
+  _______
+  _______
+  __RJD__
+  T_RJD_B
+  __RJD__
+  T_RJD_B
+  __RJD__
+  _______
+  _______
+layer 2
+  EEEEE__
+  EEEEE__
+  EEEEE__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __E_E__
+  ___K___
+  __E_E__
+  _______
+  _______
+  .______
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  ______.
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  ______.
+  ___O___
+  __SMF__
+  ___L___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  ______.
+  ___G___
+  __GNG__
+  ___G___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  ______.
+  _______
+  CCCCCCC
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _______
+  _.____.
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 9
+  _______
+  _______
+  _______
+  __.____
+  _______
+  _.____.
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ____.__
+  ____.__
+layer 10
+  _______
+  _______
+  ______.
+  __.____
+  _______
+  _.____.
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ____.__
+  _______
+template 1x2_c2 7 15 11 38
+  A birch_planks
+  B white_wool
+  C pink_carpet
+  D purple_carpet
+  E oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  F oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G white_carpet
+  H oak_slab[type=top,waterlogged=false]
+  I potted_allium
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  H______
+  .______
+  _______
+  _______
+  _______
+  _______
+  E______
+  EF_____
+  E______
+  _______
+  ____.__
+  .BB_BB_
+  _BB_BB_
+  _BB_BB_
+  _______
+layer 2
+  I______
+  _______
+  _______
+  _______
+  ____.__
+  _______
+  _______
+  G______
+  _______
+  _______
+  _______
+  _DD_DD_
+  _DD_DD_
+  _CC_CC_
+  _______
+layer 3
+  _______
+  _______
+  _______
+  _______
+  ____.__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  ___.___
+  _______
+  _______
+  _______
+  ____.__
+  _______
+  .______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  ___.___
+  _______
+  _______
+  _____._
+  ____.__
+  _______
+  _______
+  _______
+  _______
+  ___.___
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  ___.___
+  _______
+  _______
+  _____._
+  ____.__
+  _______
+  _______
+  _______
+  _______
+  ___.___
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  ___.___
+  _______
+  _______
+  _____._
+  ____.__
+  _______
+  _______
+  _______
+  .______
+  ___.___
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 8
+  ___.___
+  _______
+  _______
+  _____._
+  ____.__
+  _______
+  _______
+  _______
+  _______
+  ___.___
+  __.____
+  _______
+  ______.
+  _______
+  _______
+layer 9
+  ___.___
+  _______
+  _______
+  _____._
+  ____.__
+  _______
+  _______
+  _______
+  _______
+  ___.__.
+  __.____
+  _______
+  _______
+  _______
+  _______
+layer 10
+  _______
+  _______
+  _______
+  _____._
+  ____.__
+  _______
+  _______
+  ___.___
+  _______
+  ___.___
+  __.____
+  _______
+  _______
+  _______
+  _______
+template 1x2_c3 7 15 11 46
+  A birch_planks
+  B oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  C white_wool
+  D blue_carpet
+  E light_blue_carpet
+  F oak_planks
+  G potted_azure_bluet
+  H oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  mob 4 1 6 vindicator 1.00
+  mob 4 1 9 vindicator 1.00
+  mob 4 1 12 vindicator 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _______
+  _______
+  F_H____
+  F______
+  _______
+  _CCC___
+  _CCC___
+  ______B
+  _CCC__B
+  _CCC___
+  _______
+  _CCC__B
+  _CCC__B
+  _______
+layer 2
+  _______
+  _______
+  _______
+  _______
+  G______
+  _______
+  _EDD___
+  _EDD___
+  _______
+  _EDD___
+  _EDD___
+  _______
+  _EDD___
+  _EDD___
+  _______
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+layer 9
+  _____._
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+layer 10
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+  _______
+  __.____
+  _______
+template 1x2_c4 7 15 11 35
+  A birch_planks
+  B bookshelf
+  C oak_stairs[facing=east,half=top,shape=inner_left,waterlogged=false]
+  D oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  E oak_stairs[facing=west,half=top,shape=inner_right,waterlogged=false]
+  F oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  G oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  H oak_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  I oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  J oak_stairs[facing=south,half=top,shape=outer_left,waterlogged=false]
+  K oak_planks
+  L oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  M potted_oxeye_daisy
+  N oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  O potted_red_tulip
+  P potted_poppy
+  Q potted_dandelion
+  R oak_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  S oak_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  T oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  U oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BB___BB
+  _______
+  _______
+  _______
+  _______
+  K_JIH__
+  N_FKG_B
+  N_FKG_B
+  N_FKG__
+  K_FKG__
+  __SDR__
+  _______
+  _______
+  _______
+  _KUUUK_
+layer 2
+  BB___BB
+  _______
+  _______
+  _______
+  _______
+  L______
+  ___M__B
+  ___O__B
+  ___P___
+  L__Q___
+  _______
+  _______
+  _______
+  _______
+  _T___T_
+layer 3
+  BB___BB
+  _______
+  _______
+  _______
+  _______
+  L______
+  ______B
+  ______B
+  _______
+  L______
+  _______
+  _______
+  _______
+  _______
+  _T___T_
+layer 4
+  BB___BB
+  _______
+  _______
+  _______
+  _______
+  L______
+  ______B
+  ______B
+  _______
+  L______
+  _______
+  _______
+  _______
+  _______
+  _T___T_
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _____._
+  L______
+  _______
+  _______
+  _______
+  L______
+  _______
+  ______.
+  _______
+  _______
+  _T___T_
+layer 6
+  EDDDDDC
+  G_____F
+  G_____F
+  G_____F
+  G____.F
+  K_____F
+  G_____F
+  G_____F
+  G_____F
+  K_____F
+  G_____F
+  G_____F
+  G_____F
+  G_____F
+  KKIIIKK
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _____..
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 9
+  _______
+  _______
+  _______
+  _______
+  _____..
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 10
+  _______
+  _______
+  _____._
+  _______
+  _____..
+  _______
+  _______
+  _______
+  _____._
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_c_stairs 7 15 22 17
+  A birch_planks
+  B birch_stairs[facing=south,half=bottom,shape=inner_right,waterlogged=false]
+  C birch_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  D cobblestone
+  E cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  F dark_oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  G dark_oak_planks
+  H dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  I birch_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  J cobblestone_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  K cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  L light_gray_wool
+  M white_wool
+  N gray_wool
+  O red_carpet
+  P green_wool
+  Q cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  R black_wool
+  S cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  T cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  U birch_stairs[facing=east,half=bottom,shape=inner_right,waterlogged=false]
+  V birch_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  W cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=tall]
+  X cobblestone_wall[east=none,north=tall,south=none,up=true,waterlogged=false,west=tall]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  __DDDDD
+  __DDDDD
+  __DDDDD
+  __DDDDS
+  __DDDDS
+  ____DDD
+  _______
+  _______
+  _______
+  D__E__D
+  __KDS__
+  ___Q___
+  _______
+  _______
+  _______
+layer 2
+  _JDDDDD
+  _JDDDDD
+  _JDDDQQ
+  __DDDO_
+  __DDDO_
+  ____DDQ
+  _______
+  _______
+  _______
+  D_____D
+  ___D___
+  _______
+  _______
+  _______
+  _______
+layer 3
+  _DOOOOO
+  _DOOOOO
+  _DEEE__
+  _JDDD__
+  __DDD__
+  ____DW_
+  _______
+  _______
+  _______
+  D_____D
+  ___D___
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _K_____
+  _DEEE__
+  _JDDD__
+  __DDDW_
+  _______
+  _______
+  _______
+  D_____D
+  ___D___
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _K_____
+  _DEEED_
+  _JDDDX_
+  __DDD__
+  _______
+  _______
+  D_____D
+  ___D___
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _K___S_
+  _DEEED_
+  _JDDDT_
+  __DDD__
+  _______
+  D_____D
+  ___D___
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _K___S_
+  _DEEED_
+  _JDDDT_
+  __DDD__
+  D_____D
+  ___D___
+  _______
+  _______
+  _______
+  _______
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _K___S_
+  _DEEED_
+  _JDDDT_
+  D_DDD_D
+  __JDT__
+  _______
+  _______
+  _______
+  _______
+layer 9
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _K___S_
+  _DEEED_
+  DJDDDTD
+  _AAAAA_
+  _AAAAA_
+  _AAAAA_
+  __AAA__
+  _______
+layer 10
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _K___S_
+  DDOOODD
+  _COOOV_
+  _COOOV_
+  _COOOV_
+  _BIIIU_
+  _______
+layer 11
+  FFFFFFF
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  DD___DD
+  C_____V
+  C_____V
+  C_____V
+  C_____V
+  BIIIIIU
+layer 12
+  GLLLLLG
+  ___R___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  E_____E
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 13
+  GLLLLLG
+  ___R___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 14
+  GMPLPMG
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 15
+  GNNNNNG
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 16
+  GLLLLLG
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 17
+  GLLLLLG
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 18
+  GLLLLLG
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 19
+  HHHHHHH
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 20
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 21
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_d1 7 15 11 14
+  A birch_planks
+  B oak_planks
+  C bookshelf
+  D oak_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  E oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  F potted_oxeye_daisy
+  G oak_slab[type=top,waterlogged=false]
+  H oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I white_wool
+  J oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  K red_carpet
+  L oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  M oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  N oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  O oak_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  P oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  Q light_gray_carpet
+  R oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  S potted_birch_sapling
+  T oak_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  U birch_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  V birch_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _BBBBBB
+  _JIIIH_
+  _JIIIH_
+  _JIIIH_
+  _JIIIH_
+  _BMMMB_
+  _______
+  _______
+  _______
+  _______
+  _____ON
+  __.H_PB
+  _____TR
+  _______
+  _______
+layer 2
+  _E__FDC
+  _______
+  __KKK__
+  __KKK__
+  __KKK__
+  _L___L_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____Q_
+  ______S
+  _______
+  _______
+layer 3
+  _E___E_
+  _______
+  _______
+  _______
+  _______
+  _L___L_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  .E___E_
+  _______
+  _______
+  _______
+  _______
+  _L___L_
+  _______
+  _______
+  _______
+  _______
+  .______
+  _______
+  _______
+  _____._
+  _______
+layer 5
+  _E___E_
+  _______
+  _______
+  _______
+  _______
+  _L___L_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+  _______
+layer 6
+  .BGGGB_
+  .GGGGG_
+  .GGGGG_
+  .GGGGG_
+  _GGGGG_
+  _BGGGB_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+  ___V___
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __._.._
+  __AAA__
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___._._
+  __AAA__
+layer 9
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+  __UAU__
+layer 10
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+  ___U___
+template 1x2_d2 7 15 11 17
+  A birch_planks
+  B oak_planks
+  C potted_red_tulip
+  D white_wool
+  E cyan_carpet
+  F light_blue_carpet
+  G ladder[facing=north,waterlogged=false]
+  H chest[facing=west,type=single,waterlogged=false]
+  I oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  J oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  K red_carpet
+  L oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  M oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  N dark_oak_door[facing=north,half=lower,hinge=right,open=false,powered=false]
+  O dark_oak_door[facing=north,half=upper,hinge=right,open=false,powered=false]
+  loot 6 7 12 woodland_mansion
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _BBBBB_
+  _B_B_B_
+  _BNBNB_
+  _______
+  MMMMB__
+  DDDDL__
+  DDDDL__
+  DDDDL__
+  JJJJB__
+  _______
+  _______
+  _______
+  _G_____
+  _B_____
+layer 2
+  _______
+  _BBBBB_
+  _B_B_B_
+  _BOBOB_
+  _______
+  _______
+  _KKK___
+  _KKK___
+  _KKK___
+  _______
+  _______
+  _______
+  _______
+  _G_____
+  _B_____
+layer 3
+  _______
+  _BBBBB_
+  _B_B_B_
+  _BJBJB_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _G_____
+  _B_____
+layer 4
+  _______
+  _BBBBB_
+  _BBBBB_
+  _JJJJJ_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _G_____
+  _B_____
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _G_____
+  _B_____
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  BBBBBBB
+  BBBBBBB
+  BGBBBBB
+  BBBBBBB
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  IIIIIII
+  ______H
+  ____DDD
+  B___DDD
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ____EEF
+  C___EEF
+layer 9
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 10
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_d3 7 15 11 15
+  A birch_planks
+  B cobblestone
+  C cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  D cobblestone_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  E cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  F black_wall_banner[facing=south]
+  G cobblestone_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  H black_carpet
+  I white_carpet
+  J cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  K cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  L cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  M cobblestone_slab[type=bottom,waterlogged=false]
+  mob 2 2 10 vindicator 1.00
+  mob 3 3 3 evoker 1.00
+  mob 4 2 10 vindicator 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _BBBBB_
+  _BBBBB_
+  _BBBBB_
+  _BBBBB_
+  _BBBBB_
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  BBBBBBB
+  _BBBBB_
+  __LLL__
+  __MMM__
+  ___I___
+  ___I___
+layer 2
+  _______
+  __EEE__
+  __BBB__
+  __BBB__
+  __BBB__
+  K_BBB_J
+  K_LLL_J
+  K_MMM_J
+  K_MMM_J
+  K__I__J
+  ___I___
+  _______
+  _______
+  _______
+  _______
+layer 3
+  _______
+  _______
+  ___B___
+  _______
+  ___I___
+  ___I___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  ___H___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  __DBC__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _DBBBC_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 8
+  _BBBBB_
+  __FGF__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 9
+  _BBBBB_
+  __DBC__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 10
+  _BBBBB_
+  __BBB__
+  ___G___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_d4 7 15 11 12
+  A birch_planks
+  B black_wool
+  C white_wool
+  D lime_wool
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _BBBBB_
+  _BBBBB_
+  _BBBBB_
+  _BBBBB_
+  _CBBBC_
+  __BBB__
+  __BBB__
+  _BBBBB_
+  _BCCCB_
+  _B___B_
+  _B___B_
+  .C___C_
+  _______
+  _______
+layer 2
+  _______
+  _BBBBB_
+  _BBBBB_
+  _BBBBB_
+  __BBB__
+  __BBB__
+  __BBB__
+  _BBBBB_
+  _BBBBB_
+  __BCB__
+  _______
+  __.____
+  _______
+  _______
+  _______
+layer 3
+  _______
+  _BBBBB_
+  _BBBBB_
+  __BBB__
+  __BBB__
+  __BBB._
+  __BBB__
+  _BBBBB_
+  __BBB__
+  __BBB__
+  __BBB__
+  __BCB__
+  _______
+  _______
+  _______
+layer 4
+  _______
+  __BBB__
+  __BBB__
+  __BBB__
+  ___B___
+  ___B___
+  ___B___
+  ___B___
+  __BBB__
+  __BBB__
+  __BBB__
+  __DBD__
+  _______
+  _______
+  _______
+layer 5
+  _______
+  ___B___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __BBB__
+  __BBB__
+  __BBB__
+  _______
+  _______
+  _______
+layer 6
+  _______
+  ___B___
+  _______
+  _______
+  ___.___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _.C_C__
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  ___B___
+  ___B___
+  ___C___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 9
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 10
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+template 1x2_d5 7 15 11 14
+  A birch_planks
+  B orange_wool
+  C white_wool
+  D gray_wool
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __B_B__
+  __B_B__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 2
+  _______
+  _______
+  ______.
+  _______
+  _______
+  _______
+  __B_B__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  __CCC__
+  __BCB__
+  __CCC__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _.CCC__
+  _CCCCC_
+  _CCCCC_
+  _CCCCC_
+  __CCC__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  __CCC__
+  _CCCCC_
+  _CCCCC_
+  _CCCCC_
+  __CCC__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  __CCC__
+  _CCCCC_
+  _CCCCC_
+  _CCCCC_
+  __CCC__
+  __CCC__
+  __BBB__
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __CCC__
+  __CCC__
+  __CCC__
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 8
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __CCC__
+  __CCC__
+  __DCD__
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 9
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __CCC__
+  __CCC__
+  __CCC__
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 10
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___.___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _._.___
+  _______
+  _______
+  _______
+template 1x2_d_stairs 7 15 22 7
+  A birch_planks
+  B dark_oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  C dark_oak_planks
+  D dark_oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  E white_carpet
+  F light_gray_wool
+  G white_wool
+  H gray_wool
+  I red_carpet
+  J green_wool
+  K cobblestone
+  L cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  M cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  N black_wool
+  O cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  P cobblestone_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  Q cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  R birch_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  S birch_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  T birch_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  U birch_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  V birch_stairs[facing=north,half=bottom,shape=inner_left,waterlogged=false]
+  W birch_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  X birch_stairs[facing=east,half=bottom,shape=inner_left,waterlogged=false]
+  Y birch_stairs[facing=north,half=bottom,shape=inner_right,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _______
+  _______
+  _______
+  _______
+  K_____K
+  _______
+  _______
+  _______
+  _______
+  _______
+  __KKK__
+  _PKKKQ_
+  _KMMMK_
+  _EIIIE_
+layer 2
+  _______
+  _______
+  _______
+  _______
+  _______
+  K_____K
+  _______
+  _______
+  _______
+  _______
+  __KKK__
+  _PKKKQ_
+  _KMMMK_
+  _L___O_
+  _______
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  K_____K
+  _______
+  _______
+  _______
+  __KKK__
+  _PKKKQ_
+  _KMMMK_
+  _L___O_
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  K_____K
+  _______
+  _______
+  __KKK__
+  _PKKKQ_
+  _KMMMK_
+  _L___O_
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  ______.
+  _______
+  K_____K
+  _______
+  __KKK__
+  _PKKKQ_
+  _KMMMK_
+  _L___O_
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  K_____K
+  __KKK__
+  _PKKKQ_
+  _KMMMK_
+  _L___O_
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  K_KKK_K
+  _PKKKQ_
+  _KMMMK_
+  _L___O_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 8
+  _______
+  _______
+  _______
+  _______
+  __KKK__
+  KPKKKQK
+  _KMMMK_
+  _L___O_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 9
+  _KKKKK_
+  _KKKKK_
+  _KKKKK_
+  _KKKKK_
+  _KKKKKA
+  KKMMMKK
+  _L___O_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 10
+  RAAAAAU
+  RVWWWXU
+  RSIIITU
+  RSIIITU
+  RSIIITA
+  KK___KK
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 11
+  VWWWWWY
+  S_____T
+  S_____T
+  S_____T
+  S_____T
+  KK___KK
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  BBBBBBB
+layer 12
+  _______
+  _______
+  _______
+  _______
+  _______
+  M_____M
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___N___
+  CFFFFFC
+layer 13
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___N___
+  CFFFFFC
+layer 14
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  CGJFJGC
+layer 15
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  CHHHHHC
+layer 16
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  CFFFFFC
+layer 17
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  CFFFFFC
+layer 18
+  _______
+  _______
+  _______
+  _______
+  _._____
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  CFFFFFC
+layer 19
+  _______
+  _______
+  _______
+  _______
+  _._____
+  _______
+  ____.__
+  _______
+  _______
+  _______
+  _._____
+  _______
+  _______
+  _______
+  DDDDDDD
+layer 20
+  _______
+  _______
+  _______
+  _______
+  _._____
+  _______
+  ____.__
+  _______
+  _______
+  _______
+  _._____
+  _______
+  _______
+  _______
+  _______
+layer 21
+  _______
+  _______
+  __.____
+  _______
+  _._____
+  _______
+  ____.__
+  _______
+  _______
+  _______
+  _..____
+  _______
+  _______
+  _______
+  _______
+template 1x2_s1 7 15 8 5
+  A birch_planks
+  B dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  C torch
+  D chest[facing=south,type=single,waterlogged=false]
+  loot 3 1 4 woodland_mansion
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _B___B_
+  _______
+  _______
+  ___D___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _B___B_
+  _______
+layer 2
+  _______
+  _C___C_
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _C___C_
+  _______
+layer 3
+  _._____
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _____._
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _____._
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ____.__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_s2 7 15 8 2
+  A birch_planks
+  B infested_cobblestone
+  C green_wool
+  D tnt[unstable=false]
+  E trapped_chest[facing=south,type=single,waterlogged=false]
+  F orange_wool
+  G cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  items 3 4 5 11:ender_pearl:1;15:ender_pearl:1 1.00
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  BBBBBBB
+  B_____B
+  B_____B
+  _______
+  _______
+  _______
+  __FFF__
+  __FFF__
+  __FFF__
+  _______
+  __BBB__
+  __BBB__
+  __GGG__
+  B_____B
+  B_____B
+layer 2
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  __BBB__
+  __GGG__
+  _______
+  _______
+  _______
+layer 3
+  _______
+  _______
+  _______
+  _______
+  _______
+  __CCC__
+  _C___C_
+  _C___C_
+  _C___C_
+  __CCC__
+  __GGG__
+  _______
+  _______
+  _______
+  _______
+layer 4
+  _______
+  _______
+  _______
+  _______
+  _______
+  __DED__
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 7
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 1x2_se1 7 15 11 15
+  A birch_planks
+  B dark_oak_log[axis=z]
+  C dark_oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  D dark_oak_log[axis=y]
+  E dark_oak_planks
+  F dark_oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  G chest[facing=north,type=single,waterlogged=false]
+  H chest[facing=south,type=single,waterlogged=false]
+  loot 3 9 1 woodland_mansion
+  loot 3 9 13 woodland_mansion
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _D___D_
+  D_____D
+  _______
+  _______
+  _______
+  D_____D
+  _______
+  _______
+  _______
+  D_____D
+  _______
+  _______
+  _______
+  D_____D
+  .D___D_
+layer 2
+  _DEEED_
+  D_____D
+  E_____E
+  E_____E
+  E_____E
+  D_____D
+  _______
+  _______
+  _______
+  D_____D
+  E_____E
+  E_____E
+  E_____E
+  D_____D
+  .DEEED_
+layer 3
+  _DE_ED_
+  D_____D
+  E_____E
+  _______
+  E_____E
+  D_____D
+  _______
+  _______
+  _______
+  D_____D
+  E_____E
+  _______
+  E_____E
+  D_____D
+  _DE_ED_
+layer 4
+  _D_E_D_
+  D_____D
+  _______
+  E_____E
+  _______
+  D_____D
+  _______
+  _______
+  _______
+  D_____D
+  _______
+  E_____E
+  _______
+  D_____D
+  _D_E_D_
+layer 5
+  _DE_ED_
+  D_____D
+  E_____E
+  _______
+  E_____E
+  D_____D
+  _______
+  _______
+  _______
+  D_____D
+  E_____E
+  _______
+  E_____E
+  D_____D
+  _DE_ED_
+layer 6
+  _DEEED_
+  D_____D
+  E_____E
+  E_____E
+  E_____E
+  D_____D
+  ______E
+  ______E
+  ______E
+  D_____D
+  E_____E
+  E_____E
+  E_____E
+  D_____D
+  _DEEED_
+layer 7
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+  B_____B
+layer 8
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+  CEEEEEF
+layer 9
+  _______
+  ___H___
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  ___G___
+  _______
+layer 10
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+template 2x2_a1 15 15 8 29
+  A birch_planks
+  B cobblestone
+  C brown_carpet
+  D cobblestone_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  E cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  F cauldron
+  G cobblestone_wall[east=tall,north=none,south=none,up=false,waterlogged=false,west=tall]
+  H polished_andesite
+  I iron_door[facing=south,half=lower,hinge=right,open=false,powered=false]
+  J iron_door[facing=south,half=upper,hinge=right,open=false,powered=false]
+  K iron_bars[east=true,north=false,south=false,waterlogged=false,west=true]
+  L cobblestone_wall[east=tall,north=tall,south=none,up=true,waterlogged=false,west=none]
+  M cobblestone_wall[east=tall,north=none,south=tall,up=true,waterlogged=false,west=none]
+  N cobblestone_slab[type=bottom,waterlogged=false]
+  O lever[face=wall,facing=north,powered=false]
+  P cobblestone_wall[east=none,north=none,south=tall,up=true,waterlogged=false,west=none]
+  Q iron_bars[east=false,north=true,south=true,waterlogged=false,west=false]
+  R cobblestone_wall[east=none,north=tall,south=tall,up=false,waterlogged=false,west=none]
+  S iron_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  T iron_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  U cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=tall]
+  V cobblestone_wall[east=none,north=tall,south=none,up=true,waterlogged=false,west=tall]
+  W iron_door[facing=west,half=lower,hinge=left,open=false,powered=false]
+  X iron_door[facing=west,half=upper,hinge=left,open=false,powered=false]
+  Y lever[face=wall,facing=east,powered=false]
+  mob 2 2 8 allay 2.28
+  mob 4 2 2 allay 2.10
+  mob 5 2 12 allay 1.86
+  mob 12 1 3 vindicator 1.00
+  mob 12 2 12 allay 2.07
+layer 0
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+layer 1
+  BBBBBBBBBN_____
+  BBBBBBBBBB_____
+  BBBBBBBBBN_____
+  BBBBBBBBBN_____
+  BBBBBBBBBN_____
+  BBBBBBBBBN_____
+  BBBBBBBBBB_____
+  BBBBBBNNNN_____
+  BBBBBBNNNN_____
+  BBBBBBNNNBNNNNB
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+layer 2
+  BBBBBBBBB______
+  BCC_____BU_____
+  B_______B______
+  B_______W______
+  BCC_____B______
+  B___F___B______
+  BBBBBBBBBU__.__
+  BC___S_________
+  BC___B_________
+  B___FB___P____M
+  BBBBBBBIBBBBIBB
+  BF______BCC___B
+  B__C____BF____B
+  B__C__EDBCC___B
+  BBBBBBBBBBBBBBB
+layer 3
+  BBBBBBBBB______
+  B_______BU_____
+  B_______HY_____
+  B_______X______
+  B_______B______
+  B_______Q______
+  BBBBBBBBBU__.__
+  B____T_________
+  B____H.________
+  B____Q__OP___OM
+  BBBBBBBJHBKBJHB
+  B_____._B_____B
+  B_______B_____B
+  B_______B_____B
+  BBBBBBBBBBBBBBB
+layer 4
+  BBBBBBBBB______
+  B__.____BU_____
+  B_______B______
+  B_______B______
+  B_______B______
+  B_______B______
+  BBBBBBBBBU__.__
+  B____B_________
+  B____B_________
+  B____B___P____M
+  BBBBBBBBBBBBBBB
+  B_____._B_____B
+  B__.____B_____B
+  B_______B_____B
+  BBBBBBBBBBBBBBB
+layer 5
+  BBBBBBBBB______
+  B__.____BU_____
+  B_______B._____
+  B_______B______
+  B__.____B______
+  B_______B______
+  BBBBBBBBBU__.__
+  B____B_________
+  B____B_________
+  B____B___P____M
+  BBBBBBBBBBBBBBB
+  B_____..B_____B
+  B__.____B_____B
+  B_______B_____B
+  BBBBBBBBBBBBBBB
+layer 6
+  BBBBBBBBB______
+  BBBBBBBBBB_____
+  BBBBBBBBB._____
+  BBBBBBBBB______
+  BBBBBBBBB______
+  BBBBBBBBB______
+  BBBBBBBBBB__.__
+  BBBBBB_________
+  BBBBBB_________
+  BBBBBB___B____B
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+layer 7
+  ________R______
+  ________R______
+  ________R._____
+  ________R______
+  ________R______
+  ________R______
+  _____MGGV___.__
+  _____R_________
+  _____R_________
+  _____R_________
+  _____LGGGGGGGGG
+  _______________
+  _______________
+  _______________
+  _______________
+template 2x2_a2 15 15 8 15
+  A birch_planks
+  B oak_planks
+  C chest[facing=east,type=left,waterlogged=false]
+  D oak_slab[type=top,waterlogged=false]
+  E chest[facing=east,type=right,waterlogged=false]
+  F oak_slab[type=bottom,waterlogged=false]
+  G red_carpet
+  H potted_blue_orchid
+  I chest[facing=west,type=right,waterlogged=false]
+  J chest[facing=west,type=left,waterlogged=false]
+  mob 9 1 2 vindicator 1.00
+layer 0
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+layer 1
+  BB_____________
+  BF_____________
+  BF_________GGGG
+  BB_G_BB____GGGG
+  BF_G_FB____GGGG
+  BF_G_FB_BB_G_BB
+  BB_G_BB_BF_G_FB
+  BF_G_FB_BF_G_FB
+  BF_G_FB_BB_G_BB
+  BB_G_BB_BF_G_FB
+  BF_G_FB_BF_G_FB
+  BF_G_FB_BB_G_BB
+  BB_G_BB_BF_G_FB
+  ________BF_G_FB
+  ________BB_G_BB
+layer 2
+  B______________
+  C______________
+  E______________
+  B_____B________
+  C_____I________
+  E_____J_B_____B
+  B_____B_C_____I
+  C_____I_E_____J
+  E_____J_B_____B
+  B_____B_C_____I
+  C_____I_E_____J
+  E_____J_B_____B
+  B_____B_C_____I
+  ________E_____J
+  ________B_____B
+layer 3
+  B______________
+  D______________
+  D______________
+  B_____B________
+  D_____D________
+  D_____D_B_____B
+  B_____B_D_____D
+  D_____D_D_____D
+  D_____D_B_____B
+  B_____B_D_____D
+  D_____D_D_____D
+  D_____D_B_____B
+  B_____B_D_____D
+  ________D_____D
+  ________B_____B
+layer 4
+  B______________
+  D______________
+  D______________
+  B_____B________
+  D_____D________
+  D_____D_B_____B
+  B_____B_D_____D
+  D_____D_D_____D
+  D_____D_B_____B
+  B_____B_D_____D
+  D_____D_D_____D
+  D_____D_B_____B
+  B_____B_D_____D
+  ________D_____D
+  ________B_____B
+layer 5
+  _______________
+  _______________
+  _______________
+  ______H________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ______________H
+  _______________
+  _______________
+layer 6
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 7
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+template 2x2_a3 15 15 8 17
+  A birch_planks
+  B light_gray_wool
+  C yellow_wool
+  D black_wool
+  E white_wool
+  F gray_wool
+  G green_wool
+  H brown_wool
+  I lapis_block
+layer 0
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+layer 1
+  _______________
+  _______________
+  _______________
+  __BBB__________
+  __BDB__________
+  __BBB_____BBB__
+  _______________
+  _______D_______
+  _____BBBBB_____
+  __HHHBBBBBHHH__
+  __HHHBBBBBHHH__
+  __HHHBBBBBHHH__
+  _____BBBBB_____
+  _______________
+  _______________
+layer 2
+  _______________
+  _______________
+  _______________
+  _______________
+  ___D___________
+  __________BBB__
+  _______________
+  _______D_______
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _______________
+  _______________
+layer 3
+  _______________
+  _______________
+  _______________
+  _______________
+  ___D___________
+  __________BBB__
+  _______________
+  _______________
+  _____EGBGE_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _______________
+  _______________
+layer 4
+  _______________
+  _______________
+  _______________
+  _______________
+  ___D.__________
+  _______________
+  _______________
+  _______________
+  _____FFFFF_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _______________
+  _______________
+layer 5
+  _______._______
+  _______________
+  _______________
+  _______________
+  ___D__.________
+  _______________
+  _______________
+  _______________
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBIBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _______________
+  _______________
+layer 6
+  _______________
+  _______________
+  _______________
+  _______________
+  __CEC_.________
+  _______________
+  _______________
+  _______________
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _______________
+  _______________
+layer 7
+  _______________
+  _______________
+  _______________
+  _______________
+  __CEC_.________
+  _______________
+  _______________
+  _______________
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _____BBBBB_____
+  _______________
+  _______________
+template 2x2_a4 15 15 8 19
+  A birch_planks
+  B polished_andesite
+  C dark_oak_leaves[distance=7,persistent=false,waterlogged=false]
+  D smooth_stone_slab[type=bottom,waterlogged=false]
+  E dirt
+  F dark_oak_log[axis=y]
+  G water[level=0]
+  H water[level=1]
+  I water[level=2]
+  J water[level=3]
+  K water[level=4]
+  L water[level=5]
+  M water[level=6]
+  N water[level=7]
+layer 0
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+layer 1
+  _DDDDDDDDDDDDD_
+  _DBBBBBBBBBBBD_
+  _DBBBBBBBBBBBD_
+  _DBBBBBBBBBBBD_
+  _DBBBBBBBBBBBD_
+  _DBBBBDDDDDDDD_
+  _DBBBBD________
+  _DBBBBD________
+  _DBBBBD__BBBBB_
+  _DBBBBD__BEEEB_
+  _DBBBBD__BEEEB_
+  _DBBBBD__BEEEB_
+  _DDDDDD__BBBBB_
+  _______________
+  _______________
+layer 2
+  _______________
+  __BBBBBBBBBB___
+  __BNMLKJIHGB___
+  __BMBBBBBBBB___
+  __BLB__________
+  __BKB__________
+  __BJB__________
+  __BIB__________
+  __BHB__________
+  __BGB_______.__
+  ._BBB______F___
+  _______________
+  _______________
+  _______________
+  _______________
+layer 3
+  _____._________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ___________F___
+  _______________
+  _______________
+  _______________
+  ____.__________
+layer 4
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  .______________
+  ___________C___
+  __________CCC__
+  _________CCFCC_
+  __________CCC__
+  ___________C___
+  _______________
+  _______________
+layer 5
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  __________CCC__
+  _________CCCCC_
+  _________CCFCC_
+  _________CCCCC_
+  __________CCC__
+  _______________
+  _______________
+layer 6
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  __________CCC__
+  _________CCCCC_
+  _________CCCCC_
+  _________CCCCC_
+  __________CCC__
+  _______________
+  _______________
+layer 7
+  ___.___________
+  _______________
+  _______________
+  __________.____
+  _______._______
+  _______________
+  _______________
+  _______________
+  _______________
+  ___.______CCC__
+  __________CCC__
+  __________CCC__
+  _______________
+  __________.____
+  _______________
+template 2x2_b1 15 15 11 18
+  A birch_planks
+  B oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  C torch
+  D oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  E oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  F white_carpet
+  G oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  H oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  I oak_planks
+  J potted_birch_sapling
+  K oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  L oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  M oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  N oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  O oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  P oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  Q oak_fence[east=true,north=true,south=true,waterlogged=false,west=true]
+  R oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  S oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  T oak_slab[type=top,waterlogged=false]
+  U magenta_carpet
+  V oak_slab[type=bottom,waterlogged=false]
+  mob 2 1 8 evoker 1.00
+  mob 4 1 4 vindicator 1.00
+  mob 8 1 9 vindicator 1.00
+layer 0
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+layer 1
+  ________S______
+  TI_____________
+  TT_____MM______
+  TT__G_HIIK_____
+  TT____HIIK_____
+  TI_____EE__S___
+  ____S__________
+  _______D__MM___
+  ____MM___HIIK__
+  ___HIIK__HIIK_L
+  _G_HIIK___EE___
+  ____EE_________
+  __________D____
+  _____D_________
+  _______________
+layer 2
+  _______________
+  UU_____________
+  FF______F______
+  FF____F________
+  VF______J______
+  UU_____F_______
+  _______________
+  ___________F___
+  ____F_____J____
+  ____________F__
+  ___FJ_____F____
+  _____F_________
+  _______________
+  _______________
+  _______________
+layer 3
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 4
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 5
+  _______N_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  O_____________P
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______B_______
+layer 6
+  _______C_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  C_____________C
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______C_______
+layer 7
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______B_______
+  ______PQO______
+  _______N_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 8
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______C_______
+  ______CRC______
+  _______C_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 9
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______R_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 10
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______R_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+template 2x2_b2 15 15 11 23
+  A birch_planks
+  B oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  C oak_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  D oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  E white_carpet
+  F oak_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  G oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  H oak_planks
+  I potted_white_tulip
+  J oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  K oak_stairs[facing=south,half=top,shape=inner_right,waterlogged=false]
+  L oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  M oak_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  N oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  O oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  P torch
+  Q oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  R oak_fence[east=true,north=true,south=true,waterlogged=false,west=true]
+  S oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  T oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  U oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  V oak_stairs[facing=west,half=top,shape=inner_right,waterlogged=false]
+  W oak_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  X oak_stairs[facing=east,half=top,shape=outer_right,waterlogged=false]
+  Y oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  mob 2 1 7 evoker 1.00
+  mob 9 1 8 vindicator 1.00
+  mob 13 1 2 vindicator 1.00
+layer 0
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+layer 1
+  _.__Y__Y__Y____
+  _______________
+  ___XLLLLLLLM___
+  ___GHHHHHHHJ___
+  ___GHVDDDDDW___
+  _N_GHJ_________
+  _N_GHJ_________
+  ___GHJ_________
+  _N_GHJ_________
+  _N_GHJ_________
+  ___GHKLLLLLM___
+  ___GHHHHHHHJ___
+  ___CDDDDDDDF___
+  _______________
+  ____B__B__B___.
+layer 2
+  _______________
+  _______________
+  ____E__E__E____
+  ______I__I_____
+  _______________
+  ___EI__________
+  ___E___________
+  _______________
+  ___E___________
+  ___E___________
+  _______________
+  ______I__I_____
+  ____E__E__E____
+  _______________
+  _______________
+layer 3
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 4
+  _____________._
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 5
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 6
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ______________.
+  _______________
+layer 7
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ___U_______U___
+  __QRT_____QRT__
+  ___O_______O___
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 8
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ___P_______P___
+  __PSP_____PSP__
+  ___P_______P___
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 9
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ___S_______S___
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 10
+  _______________
+  _______________
+  _____._________
+  _______________
+  _______________
+  _______________
+  _______________
+  ___S____.__S___
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+template 2x2_b3 15 15 11 12
+  A birch_planks
+  B oak_planks
+  C bookshelf
+  D oak_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+  E oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  F oak_stairs[facing=west,half=bottom,shape=outer_left,waterlogged=false]
+  G oak_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  H oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  I oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  J oak_slab[type=top,waterlogged=false]
+layer 0
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+layer 1
+  BBBB___________
+  HHHB___________
+  _______________
+  JJB____________
+  _______________
+  IIIB___________
+  BBBB__BCCCCCCB_
+  ______BCCCCCCB_
+  BBBB___________
+  HHHB._BCCCCCCB_
+  ______BCCCCCCB_
+  JJB____________
+  ______BCCCCCCB_
+  IIIB__BCCCCCCB_
+  BBBB___________
+layer 2
+  IIIF___________
+  ___E___________
+  _______________
+  _______________
+  _______________
+  ___E___________
+  HHHG__BCCCCCCB_
+  ______BCCCCCCB_
+  IIIF___________
+  ___E__BCCCCCCB_
+  ______BCCCCCCB_
+  _______________
+  ______BCCCCCCB_
+  ___E__BCCCCCCB_
+  HHHD___________
+layer 3
+  ____.__________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ______BCCCCCCB_
+  ._____BCCCCCCB_
+  _______________
+  _____.BCCCCCCB_
+  ______BCCCCCCB_
+  _______________
+  ______BCCCCCCB_
+  ______BCCCCCCB_
+  _______________
+layer 4
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ______BCCCCCCB_
+  ______BCCCCCCB_
+  ______.________
+  ______BCCCCCCB_
+  ______BCCCCCCB_
+  _______________
+  ______BCCCCCCB_
+  ______BCCCCCCB_
+  _______________
+layer 5
+  _______________
+  _______________
+  _______________
+  _____._________
+  _______________
+  _______________
+  ______BCCCCCCB_
+  ______BCCCCCCB_
+  _______________
+  ______BCCCCCCB_
+  ______BCCCCCCB_
+  _______________
+  ______BCCCCCCB_
+  ______BCCCCCCB_
+  _______________
+layer 6
+  __________.____
+  _______________
+  _______________
+  _____._________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 7
+  _______________
+  _______________
+  _______________
+  _____._________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _____._________
+layer 8
+  _______________
+  _______________
+  _______________
+  _____._________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ______________.
+  _______________
+  _______________
+  .______________
+  _______________
+  _______________
+layer 9
+  _______________
+  _______________
+  _______________
+  _____._________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ____.__________
+layer 10
+  _______________
+  _______________
+  _______________
+  _____._________
+  __.____________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ________.______
+  ______.________
+  ____________.__
+  _______________
+template 2x2_b4 15 15 11 28
+  A birch_planks
+  B oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  C oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  D oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  E oak_planks
+  F lime_carpet
+  G yellow_carpet
+  H oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  I oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  J blue_carpet
+  K oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  L torch
+  M oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  N bookshelf
+  O oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  P oak_fence[east=true,north=true,south=true,waterlogged=false,west=true]
+  Q oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  R oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  S oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  T oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  U oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  mob 3 1 3 vindicator 1.00
+  mob 3 1 8 evoker 1.00
+  mob 4 1 11 vindicator 1.00
+layer 0
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+layer 1
+  _______________
+  _______________
+  ______I_I______
+  _______________
+  _____DDDDD_____
+  ____CEEEEET____
+  __B_CEEEEET_U__
+  ____CEEEEET____
+  __B_CEEEEET_U__
+  ____CEEEEET____
+  _____HHHHH_____
+  _______________
+  ______M__M_____
+  _______________
+  _____EEEEE_____
+layer 2
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _____FFGGF_____
+  _____FJFFF_____
+  _____FFFFJ_____
+  _____FFFJJ_____
+  _____GJJJJ_____
+  _______________
+  _______________
+  _______________
+  _______________
+  _____ENNNE_____
+layer 3
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _____ENNNE_____
+layer 4
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _____ENNNE_____
+layer 5
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 6
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______O_______
+  ______KPS______
+  _______R_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 7
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______L_______
+  ______LQL______
+  _______L_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 8
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______Q_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 9
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______Q_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 10
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______Q_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+template 2x2_b5 15 15 11 21
+  A birch_planks
+  B oak_planks
+  C oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  D chest[facing=north,type=single,waterlogged=false]
+  E oak_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  F oak_fence[east=false,north=false,south=false,waterlogged=false,west=false]
+  G oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  H oak_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  I oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  J smooth_stone_slab[type=double,waterlogged=false]
+  K dark_oak_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  L dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  M dark_oak_fence[east=true,north=false,south=true,waterlogged=false,west=false]
+  N dark_oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  O oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  P ladder[facing=west,waterlogged=false]
+  Q oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  R smooth_stone_slab[type=bottom,waterlogged=false]
+  S dark_oak_fence_gate[facing=east,in_wall=false,open=false,powered=false]
+  T dark_oak_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  U dark_oak_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  V oak_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  W oak_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  X oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  loot 7 7 0 woodland_mansion
+layer 0
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAA
+layer 1
+  _______________
+  _______________
+  _______________
+  _______________
+  ____JJJJJJJ____
+  ____JJJJJJJ____
+  ____JJJJJJJ____
+  ____JJJJJJJ__PB
+  ___RJJJJJJJ____
+  ___RJJJJJJJ____
+  ___RJJJJJJJ____
+  _______________
+  _______________
+  _______________
+  _______________
+layer 2
+  _______________
+  _______________
+  _______________
+  _______________
+  ____MLLLLLK____
+  ____N_____N____
+  ____N_____N____
+  ____N_____N__PB
+  ____N_____N____
+  ____S_____N____
+  ____ULLLLLT____
+  _______________
+  _______________
+  _______________
+  _______________
+layer 3
+  _______________
+  _______________
+  _______________
+  _______________
+  ____MLLLLLK____
+  ____N_____N____
+  ____N_____N____
+  ____N_____N__PB
+  ____N_____N____
+  ____S_____N____
+  ____ULLLLLT____
+  _______________
+  _______________
+  _______________
+  _______________
+layer 4
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _____________PB
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+layer 5
+  _______C_______
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  ______________O
+  Q____________PB
+  ______________O
+  _______________
+  _______________
+  _______________
+  _______________
+  _______________
+  _______X_______
+layer 6
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+  BBB_________BBB
+  BBB_________BBB
+  BBB_________BBB
+  BBB_________BBB
+  BBB_________BPB
+  BBB_________BBB
+  BBB_________BBB
+  BBB_________BBB
+  BBB_________BBB
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBB
+layer 7
+  _______D_______
+  _______________
+  __HGGGGGGGGGE__
+  __I_________I__
+  __I_________I__
+  __I_________I__
+  __I_________I__
+  __I_________IPB
+  __I_________I__
+  __I_________I__
+  __I_________I__
+  __I_________I__
+  __WGGGGGGGGGV__
+  _______________
+  _______________
+layer 8
+  _______________
+  _______________
+  __F_________F__
+  _______________
+  _______________
+  _______________
+  _______________
+  _____________PB
+  _______________
+  _______________
+  _______________
+  _______________
+  __F_________F__
+  _______________
+  _______________
+layer 9
+  _______________
+  _______________
+  __F_________F__
+  _______________
+  _______________
+  _______________
+  _______________
+  _____________PB
+  _______________
+  _______________
+  _______________
+  _______________
+  __F_________F__
+  _______________
+  _______________
+layer 10
+  _______________
+  _______________
+  __F_________F__
+  _______________
+  _______________
+  _______________
+  _______________
+  _____________PB
+  _______________
+  _______________
+  _______________
+  _______________
+  __F_________F__
+  _______________
+  _______________
+template carpet_east 2 5 1 773
+  A white_carpet
+  B red_carpet
+layer 0
+  AA
+  BB
+  BB
+  BB
+  AA
+template carpet_north 5 2 1 608
+  A white_carpet
+  B red_carpet
+layer 0
+  ABBBA
+  ABBBA
+template carpet_south_1 8 3 8 266
+  A birch_planks
+  B dark_oak_planks
+  C white_carpet
+  D dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  E torch
+  F red_carpet
+  G dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+layer 0
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+layer 1
+  B_CFFFC_
+  B_CFFFC_
+  BBCFFFCB
+layer 2
+  B_______
+  B_______
+  BB_____B
+layer 3
+  B_______
+  B_______
+  BB_____B
+layer 4
+  B_______
+  B_______
+  BBD___GB
+layer 5
+  B_______
+  B_______
+  BBE_._EB
+layer 6
+  B_______
+  B_______
+  BB__.__B
+layer 7
+  B_______
+  B_______
+  BB__.__B
+template carpet_south_2 8 3 11 341
+  A birch_planks
+  B dark_oak_planks
+  C dark_oak_log[axis=x]
+  D cobblestone
+  E white_carpet
+  F dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  G torch
+  H dark_oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  I red_carpet
+  J dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  K dark_oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+layer 0
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+layer 1
+  B_EIIIE.
+  B_EIIIE_
+  BBEIIIEB
+layer 2
+  C_______
+  B_______
+  BB_____B
+layer 3
+  C_______
+  B_______
+  BB_____B
+layer 4
+  C_______
+  B_______
+  BBF___JB
+layer 5
+  C_______
+  B_______
+  BBG___GB
+layer 6
+  C_______
+  B_______
+  BB_____B
+layer 7
+  B_______
+  B_______
+  BB_____B
+layer 8
+  D_..____
+  D_._____
+  BB_.___B
+layer 9
+  __..____
+  B_._____
+  BB__.__B
+layer 10
+  ._..____
+  B_._____
+  BBH_._KB
+template carpet_west_1 3 8 8 348
+  A birch_planks
+  B dark_oak_planks
+  C white_carpet
+  D dark_oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  E torch
+  F red_carpet
+  G dark_oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+layer 0
+  AAA
+  AAA
+  AAA
+  AAA
+  AAA
+  AAA
+  AAA
+  AAA
+layer 1
+  BB.
+  B_.
+  CCC
+  FFF
+  FFF
+  FFF
+  CCC
+  B_.
+layer 2
+  BB.
+  B__
+  ___
+  ___
+  ___
+  ___
+  ___
+  B__
+layer 3
+  BB.
+  B__
+  ___
+  ___
+  ___
+  ___
+  ___
+  B__
+layer 4
+  BB.
+  B__
+  D__
+  ___
+  ___
+  ___
+  G__
+  B__
+layer 5
+  BB.
+  B__
+  E__
+  ___
+  ___
+  ___
+  E__
+  B__
+layer 6
+  BB.
+  B__
+  ___
+  ___
+  ___
+  ___
+  ___
+  B__
+layer 7
+  BB.
+  B__
+  ___
+  ___
+  ___
+  ___
+  ___
+  B__
+template carpet_west_2 3 8 11 426
+  A birch_planks
+  B dark_oak_planks
+  C white_carpet
+  D dark_oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  E torch
+  F dark_oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  G red_carpet
+  H dark_oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]
+  I dark_oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+layer 0
+  AAA
+  AAA
+  AAA
+  AAA
+  AAA
+  AAA
+  AAA
+  AAA
+layer 1
+  BB.
+  B_.
+  CCC
+  GGG
+  GGG
+  GGG
+  CCC
+  B_.
+layer 2
+  BB.
+  B__
+  ___
+  ___
+  ___
+  ___
+  ___
+  B__
+layer 3
+  BB.
+  B__
+  ___
+  ___
+  ___
+  ___
+  ___
+  B__
+layer 4
+  BB.
+  B__
+  D__
+  ___
+  ___
+  ___
+  H__
+  B__
+layer 5
+  BB.
+  B__
+  E__
+  ___
+  .__
+  ___
+  E__
+  B__
+layer 6
+  BB.
+  B__
+  .__
+  ___
+  .__
+  ___
+  ___
+  B__
+layer 7
+  BB.
+  B__
+  ___
+  ___
+  .__
+  ___
+  ___
+  B__
+layer 8
+  B..
+  B__
+  ___
+  ___
+  ._.
+  __.
+  _._
+  B__
+layer 9
+  BB.
+  B__
+  ___
+  ___
+  ._.
+  __.
+  _._
+  B__
+layer 10
+  BB.
+  B__
+  F__
+  ___
+  ._.
+  __.
+  I._
+  B__
+template corridor_floor 7 7 8 1331
+  A birch_planks
+  B white_carpet
+  C red_carpet
+layer 0
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+  AAAAAAA
+layer 1
+  _______
+  _BBBBB_
+  _BCCCB_
+  _BCCCB_
+  _BCCCB_
+  _BBBBB_
+  ___.__.
+layer 2
+  ___....
+  _______
+  _______
+  _______
+  _______
+  _______
+  .__.___
+layer 3
+  .___...
+  .__.__.
+  ___..__
+  __.__._
+  ___.___
+  _______
+  .__.___
+layer 4
+  _..__._
+  ._..._.
+  .__..._
+  _......
+  ___.___
+  _______
+  .__..__
+layer 5
+  ...._._
+  ._.....
+  .__..._
+  _......
+  _..._._
+  __..__.
+  ....._.
+layer 6
+  ..._...
+  ._.....
+  .__..._
+  .......
+  _....._
+  __.._..
+  ....._.
+layer 7
+  .......
+  ._.....
+  .._..._
+  .......
+  .......
+  __.....
+  .......
+template entrance 21 16 19 24
+  A birch_planks
+  B dark_oak_planks
+  C dark_oak_log[axis=x]
+  D cobblestone
+  E dark_oak_log[axis=y]
+  F cobblestone_stairs[facing=south,half=bottom,shape=outer_left,waterlogged=false]
+  G dark_oak_stairs[facing=west,half=top,shape=inner_right,waterlogged=false]
+  H cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  I dark_oak_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  J cobblestone_stairs[facing=east,half=bottom,shape=outer_left,waterlogged=false]
+  K dark_oak_stairs[facing=south,half=top,shape=inner_right,waterlogged=false]
+  L dark_oak_log[axis=z]
+  M cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  N dark_oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  O red_carpet
+  P cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  Q dark_oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  R cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  S birch_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  T cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  U cobblestone_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  V birch_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  W cobblestone_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  X white_carpet
+  Y dark_oak_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  Z dark_oak_stairs[facing=west,half=top,shape=outer_left,waterlogged=false]
+  a cobblestone_stairs[facing=east,half=top,shape=inner_left,waterlogged=false]
+  b birch_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  c cobblestone_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  d birch_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  e cobblestone_stairs[facing=east,half=top,shape=inner_right,waterlogged=false]
+  f birch_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  g dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  h torch
+  i dark_oak_fence[east=true,north=false,south=false,waterlogged=false,west=false]
+  j dark_oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  k glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  l cobblestone_wall[east=none,north=low,south=none,up=true,waterlogged=false,west=low]
+  m cobblestone_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  n cobblestone_wall[east=none,north=none,south=low,up=true,waterlogged=false,west=low]
+  o cobblestone_wall[east=none,north=low,south=low,up=true,waterlogged=false,west=low]
+  p cobblestone_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  q cobblestone_stairs[facing=south,half=bottom,shape=inner_right,waterlogged=false]
+  r cobblestone_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  s cobblestone_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  t cobblestone_stairs[facing=north,half=bottom,shape=inner_left,waterlogged=false]
+  u cobblestone_slab[type=bottom,waterlogged=false]
+layer 0
+  AAAAAAAAAAAAAAAADD...
+  AAAAAAAAAAAAAAAADD...
+  AAAAAAAAAAAAAAAADDu..
+  AAAAAAAAAAAAAAAADDuu.
+  AAAAAAAAAAAAAAAADDuuD
+  AAAAAAAAAAAAAAAADDuuu
+  AAAAAAAAAAAAAAAADTuu.
+  AAAAAAAAAAAAAAAADTuu.
+  AAAAAAAAAAAAAAAADTuuu
+  AAAAAAAAAAAAAAAADDuuu
+  AAAAAAAAAAAAAAAADDuuD
+  AAAAAAAAAAAAAAAADDuu.
+  AAAAAAAAAAAAAAAADDu..
+  AAAAAAAAAAAAAAAADD_..
+  AAAAAAAAAAAAAAAADD...
+  AAAAAAAAAAAAAAAADD...
+layer 1
+  B_________XOOOX_Bl_..
+  B_________XOOOX_BT_._
+  B_________XOOOX_Bn___
+  B_________XOOOX_Bl___
+  B_________XOOOX_BT__h
+  B_______WDXOOOXXBq___
+  B______DDTOOOOOOO___.
+  B______DDTOOOOOOO___.
+  B______DDTOOOOOOO___.
+  B_______UDXOOOXXBt__.
+  B_________XOOOX_BT__.
+  B_________XOOOX_Bn__.
+  B_________XOOOX_Bl...
+  B_________XOOOX_BT...
+  B_________XOOOX_Bn...
+  BBBBBBBBBLXOOOXLBo...
+layer 2
+  C_______________B....
+  C_______________C....
+  C_______________k....
+  C_______________k....
+  C_______________C__..
+  C______WDM______B____
+  C______DT___________.
+  C______DT___________.
+  C____._DT____________
+  C______UDP______B___.
+  C_______________C___.
+  C_______________k___.
+  C_______________k_...
+  C_______________C_...
+  C_______________B_...
+  ELLLLLLLLL_____LB_...
+layer 3
+  B_______________B....
+  B_______________C....
+  B_______________k....
+  B_______________k_...
+  B_______________C___.
+  B_____WDM_______B___.
+  B_____DT____________.
+  B_____DT____________.
+  B____.DT_____________
+  B_____UDP_______B___.
+  B_______________C___.
+  B_______________k___.
+  B_______________k__..
+  B_______________C__..
+  B_______________B__..
+  BBBBBBBBBL_____LB....
+layer 4
+  B_______________B_...
+  B_______________Cg...
+  B_______________k_...
+  B_______________k___.
+  B_______________Cg___
+  B____DDM________B__..
+  B____DT_________N___.
+  B____DT____________..
+  B____DT_________Q__._
+  B____UDP________B___.
+  B_______________Cg__.
+  B_______________k__..
+  B_______________k_...
+  B_______________Cg_..
+  B_______________B_...
+  BBBBBBBBBL_____LB....
+layer 5
+  B_______________B_...
+  B_______________Cg...
+  B_______________k__..
+  B_______________k___.
+  B_______________Cg___
+  BDDDDDM_________B__..
+  BDDDDT__________Br__.
+  BDDDDT__________BT_..
+  BDDDDT__________Bs...
+  BDDDDDP_________B_...
+  B_______________Cg...
+  B_______________k....
+  B_______________k....
+  B_______________Cg...
+  B_______________B....
+  BBBBBBBBBL_____LB....
+layer 6
+  B_______________B_...
+  B_______________CL__.
+  B_______________CL__.
+  B_______________CL...
+  BDDDDR__________CL...
+  BDPPPD__________B....
+  BHOOO___________B....
+  BHOOO___________B....
+  BHOOO___________B....
+  BDMMMD__________B_...
+  BDDDDR__________CL...
+  B_______________CL...
+  B_______________CL...
+  B_______________CL...
+  B_______________B....
+  BBBBBBBBBBLLLLLBB....
+layer 7
+  BDDDDDDD________BR...
+  BDDDDDDD________Bm...
+  BDDDDDDD________B__..
+  BDDDDDDD________B__..
+  BDPPPDDR________Bp...
+  BH___T__________BR...
+  B_______________BR...
+  B_______________BR...
+  B_______________BR...
+  BH___T__________BR...
+  BDMMMDDR________Bm...
+  BDDDDDDD________B....
+  BDDDDDDD________B....
+  BDDDDDDD________Bp...
+  BDDDDDDD________BR...
+  BBBBBBBBBBBBBBBBBR...
+layer 8
+  DFMMMMMDAAAAAAAADD...
+  DHOOOOOHAAAAAAAADD...
+  DHOOOOOHAAAAAAAADD...
+  DHOOOOOHAAAAAAAADD_..
+  DH___DDDUUaAAAAADD_..
+  D_________cAAAAADD_..
+  D_________cAAAAADD_..
+  D_________cAAAAALD_..
+  D_________cAAAAADD...
+  D_________cAAAAADD...
+  DH___DDDWWeAAAAADD...
+  DHOOOOOHAAAAAAAADD...
+  DHOOOOOHAAAAAAAADD...
+  DHOOOOOHAAAAAAAADD...
+  DJPPPPPDAAAAAAAADD...
+  DDDDDDDDDDDDDDDDLD_..
+layer 9
+  B______DXXXOOOXXBl...
+  B_______OOOOOOOOBT...
+  B_______OOOOOOOOBn...
+  B_______OOOOOOOOBo...
+  B____SVVVVbOOOOOBl_..
+  B_________dOOOOOBT_..
+  B_________dOOOOOBn_..
+  B_________dOOOOOBo__.
+  B_________dOOOOOBl__.
+  B_________dOOOOOBT_..
+  B____SVVVVfOOOOOBn...
+  B_______OOOOOOOOBo...
+  B_______OOOOOOOOBl_..
+  B_______OOOOOOOOBT_..
+  B______DXXXOOOXXBn___
+  BBBBBBBBBBXOOOXBBo___
+layer 10
+  B_______________B....
+  B_______________C_...
+  B_______________k_...
+  B_______________k....
+  B_______________k....
+  B_______________C....
+  C_______________B....
+  B_______________B_...
+  C_______________B_...
+  B_______________C____
+  B_______________k___.
+  B_______________k___.
+  B_______________k____
+  B_______________C____
+  B_______________B____
+  BBBBBBBBBB_____BB____
+layer 11
+  B_______________B__..
+  B_______________C__..
+  B_______________k__..
+  B_______________k_...
+  B_______________k....
+  C_______________C....
+  B_______________B....
+  C_______________B....
+  B_______________B....
+  C_______________C__..
+  B_______________k____
+  B_______________k____
+  B_______________k____
+  B_______________C____
+  B_______________B____
+  BBBBBBBBBB_____BB____
+layer 12
+  B_______________B__..
+  B_______________Cg_..
+  B_______________k__..
+  B_______________k__..
+  B_______________k__..
+  C_______________Cg...
+  B_______________B_...
+  C_______________B__..
+  B_______________B___.
+  C_______________Cg___
+  B_______________k____
+  B_______________k____
+  B_______________k____
+  B_______________Cg___
+  B_______________B____
+  BBBBBBBBBBg___iBB____
+layer 13
+  B_______________B__..
+  B_______________Cg...
+  B_______________k_...
+  B_______________k_...
+  B_______________k_...
+  C_______________Cg_..
+  B_______________B__..
+  C_______________B__..
+  B_______________B____
+  C_______________Cg___
+  B_______________k____
+  B_______________k____
+  B_______________k____
+  B_______________Cg___
+  B_______________B____
+  BBBBBBBBBBh___hBB____
+layer 14
+  B_______________B_...
+  B_______________CL_..
+  B_______________CL...
+  B_______________CL...
+  B_______________CL...
+  B_______________CL...
+  C_______________B_...
+  B_______________B__..
+  C_______________B__..
+  B_______________CL___
+  B_______________CL___
+  B_______________CL___
+  B_______________CL___
+  B_______________CL___
+  B_______________B____
+  BBBBBBBBBB_____BB____
+layer 15
+  B_______________BR_..
+  B_______________Bm___
+  B_______________B____
+  B_______________B___.
+  B_______________B__..
+  B_______________Bp_..
+  B_______________BR__.
+  B_______________BR___
+  B_______________BR___
+  B_______________Bm___
+  B_______________B____
+  B_______________B____
+  B_______________B____
+  B_______________Bp___
+  B_______________BR___
+  BBBBBBBBBB_____BBR___
+layer 16
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C_______________D.___
+  C.______________D.___
+  CLLLLLLLLB_____BD.___
+layer 17
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  B_______________B.___
+  BBBBBBBBBB_____BB.___
+layer 18
+  BGNNNNNNNY______B.___
+  BI______________..___
+  BI______________B.___
+  BI______________..___
+  BI______________B.___
+  BI______________..___
+  BI______________B.___
+  BI______________B.___
+  BI______________B.___
+  BI______________..___
+  BI______________B.___
+  BI___.__________..___
+  BI______________B.___
+  BI______________..___
+  BKQQQQQQQZ______B.___
+  BBBBBBBBBBI___jBB.___
+template indoors_door_1 1 8 8 312
+  A birch_planks
+  B dark_oak_planks
+  C dark_oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  D dark_oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+layer 0
+  A
+  A
+  A
+  A
+  A
+  A
+  A
+  A
+layer 1
+  B
+  B
+  _
+  _
+  .
+  B
+  B
+  B
+layer 2
+  B
+  B
+  .
+  _
+  _
+  B
+  B
+  B
+layer 3
+  B
+  B
+  _
+  _
+  .
+  B
+  B
+  B
+layer 4
+  B
+  B
+  C
+  _
+  D
+  B
+  B
+  B
+layer 5
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+layer 6
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+layer 7
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+template indoors_door_2 1 8 11 484
+  A birch_planks
+  B dark_oak_planks
+  C dark_oak_log[axis=x]
+  D dark_oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  E dark_oak_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+layer 0
+  A
+  A
+  A
+  A
+  A
+  A
+  A
+  A
+layer 1
+  B
+  B
+  _
+  _
+  _
+  B
+  B
+  B
+layer 2
+  B
+  B
+  _
+  _
+  _
+  B
+  B
+  B
+layer 3
+  B
+  B
+  _
+  _
+  _
+  B
+  B
+  B
+layer 4
+  B
+  B
+  D
+  _
+  E
+  B
+  B
+  B
+layer 5
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+layer 6
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+layer 7
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+layer 8
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+layer 9
+  C
+  C
+  C
+  C
+  C
+  C
+  C
+  C
+layer 10
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+template indoors_wall_1 1 8 8 801
+  A birch_planks
+  B dark_oak_planks
+  C dark_oak_log[axis=x]
+layer 0
+  A
+  A
+  A
+  A
+  A
+  A
+  A
+  A
+layer 1
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+layer 2
+  B
+  B
+  B
+  C
+  B
+  B
+  B
+  B
+layer 3
+  B
+  B
+  B
+  C
+  B
+  B
+  B
+  B
+layer 4
+  B
+  C
+  C
+  B
+  C
+  C
+  B
+  B
+layer 5
+  B
+  B
+  B
+  C
+  B
+  B
+  B
+  B
+layer 6
+  B
+  B
+  B
+  C
+  B
+  B
+  B
+  B
+layer 7
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+template indoors_wall_2 1 8 11 1142
+  A birch_planks
+  B dark_oak_planks
+  C dark_oak_log[axis=x]
+layer 0
+  A
+  A
+  A
+  A
+  A
+  A
+  A
+  A
+layer 1
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+layer 2
+  B
+  B
+  B
+  C
+  B
+  B
+  B
+  B
+layer 3
+  B
+  B
+  B
+  C
+  B
+  B
+  B
+  B
+layer 4
+  B
+  C
+  C
+  B
+  C
+  C
+  B
+  B
+layer 5
+  B
+  B
+  B
+  C
+  B
+  B
+  B
+  B
+layer 6
+  B
+  B
+  B
+  C
+  B
+  B
+  B
+  B
+layer 7
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+layer 8
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+layer 9
+  C
+  C
+  C
+  C
+  C
+  C
+  C
+  C
+layer 10
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+  B
+template roof 8 8 1 1386
+  A dark_oak_planks
+layer 0
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+  AAAAAAAA
+template roof_corner 4 4 4 250
+  A dark_oak_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  B dark_oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  C dark_oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  D cobblestone
+  E dark_oak_planks
+  F dark_oak_stairs[facing=south,half=top,shape=inner_left,waterlogged=false]
+layer 0
+  _DD_
+  DDD_
+  DDD.
+  __..
+layer 1
+  _EEB
+  EEEB
+  EEEB
+  CCCA
+layer 2
+  FEB_
+  EEB.
+  CCA.
+  _.__
+layer 3
+  EB__
+  CA_.
+  ___.
+  ____
+template roof_front 4 8 4 1062
+  A dark_oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  B cobblestone
+  C dark_oak_planks
+  D dark_oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+layer 0
+  _BB.
+  _BB.
+  _BB.
+  _BB.
+  _BB.
+  .BB.
+  _BB.
+  .BB.
+layer 1
+  _CCA
+  .CCA
+  _CCA
+  _CCA
+  _CCA
+  _CCA
+  _CCA
+  .CCA
+layer 2
+  DCA.
+  DCA.
+  DCA.
+  DCA.
+  DCA.
+  DCA.
+  DCA.
+  DCA.
+layer 3
+  CA_.
+  CA_.
+  CA..
+  CA_.
+  CA_.
+  CA_.
+  CA_.
+  CA_.
+template roof_inner_corner 4 4 4 80
+  A dark_oak_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  B dark_oak_planks
+  C cobblestone
+  D dark_oak_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  E dark_oak_stairs[facing=south,half=bottom,shape=inner_right,waterlogged=false]
+  F dark_oak_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  G dark_oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+layer 0
+  _CC_
+  _CCC
+  _CCC
+  .___
+layer 1
+  _BBE
+  _BBB
+  _BBB
+  .___
+layer 2
+  GBF_
+  GBED
+  GBBB
+  AAAA
+layer 3
+  BF__
+  BF__
+  BEDD
+  BBBB
+template small_wall 2 8 4 260
+  A cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  B cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  C cobblestone
+  D dark_oak_planks
+  E cobblestone_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+  F cobblestone_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  G dark_oak_log[axis=x]
+  H cobblestone_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  I cobblestone_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+layer 0
+  CA
+  CE
+  C_
+  C_
+  C_
+  CH
+  CA
+  CA
+layer 1
+  D_
+  D_
+  D_
+  D_
+  D_
+  D_
+  D_
+  D_
+layer 2
+  D_
+  G_
+  D_
+  G_
+  D_
+  G_
+  D_
+  D_
+layer 3
+  DB
+  DF
+  D_
+  D_
+  D_
+  DI
+  DB
+  DB
+template small_wall_corner 2 2 4 42
+  A cobblestone
+  B cobblestone_wall[east=none,north=none,south=tall,up=true,waterlogged=false,west=tall]
+layer 0
+  AA
+  AA
+layer 1
+  AB
+  AA
+layer 2
+  AB
+  AA
+layer 3
+  AB
+  AA
+template wall_corner 9 2 8 420
+  A cobblestone
+  B dark_oak_planks
+  C cobblestone_wall[east=none,north=low,south=none,up=true,waterlogged=false,west=low]
+  D cobblestone_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  E dark_oak_log[axis=z]
+  F cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  G dark_oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]
+  H dark_oak_log[axis=x]
+  I cobblestone_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  J glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  K cobblestone_wall[east=low,north=low,south=none,up=true,waterlogged=false,west=none]
+  L cobblestone_wall[east=low,north=low,south=none,up=true,waterlogged=false,west=low]
+  M cobblestone_stairs[facing=east,half=top,shape=outer_left,waterlogged=false]
+  N cobblestone_wall[east=none,north=tall,south=none,up=true,waterlogged=false,west=tall]
+layer 0
+  AAAAAAAAA
+  AAAAAAAAA
+layer 1
+  BBBBBBBAA
+  CFKLCFKAN
+layer 2
+  BEJJJEBAA
+  _______AN
+layer 3
+  BEJJJEBAA
+  _______AN
+layer 4
+  BEJJJEBAA
+  _G___G_AN
+layer 5
+  BEJJJEBAA
+  _G___G_AN
+layer 6
+  BEEEEEBAA
+  _HHHHH_AN
+layer 7
+  BBBBBBBAA
+  DI___MDAN
+template wall_flat 2 8 8 724
+  A cobblestone
+  B dark_oak_planks
+  C dark_oak_log[axis=x]
+  D cobblestone_wall[east=none,north=low,south=none,up=true,waterlogged=false,west=low]
+  E cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  F cobblestone_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  G cobblestone_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+  H cobblestone_wall[east=none,north=none,south=low,up=true,waterlogged=false,west=low]
+  I cobblestone_wall[east=none,north=low,south=low,up=true,waterlogged=false,west=low]
+layer 0
+  AA
+  AA
+  AA
+  AA
+  AA
+  AA
+  AA
+  AA
+layer 1
+  BD
+  B_
+  B_
+  B_
+  B_
+  B_
+  BH
+  BI
+layer 2
+  B_
+  B_
+  B_
+  B_
+  B.
+  B.
+  B.
+  B.
+layer 3
+  B_
+  B_
+  B_
+  C_
+  B_
+  B_
+  B_
+  B.
+layer 4
+  B_
+  B_
+  C_
+  B_
+  C_
+  B_
+  B_
+  B.
+layer 5
+  B_
+  B_
+  B_
+  C_
+  B_
+  B_
+  B_
+  B.
+layer 6
+  B_
+  B_
+  B_
+  B_
+  B_
+  B_
+  B_
+  B.
+layer 7
+  BE
+  BF
+  B_
+  B_
+  B_
+  BG
+  BE
+  BE
+template wall_window 2 8 8 1274
+  A cobblestone
+  B dark_oak_planks
+  C dark_oak_log[axis=x]
+  D glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  E dark_oak_log[axis=z]
+  F cobblestone_wall[east=none,north=low,south=none,up=true,waterlogged=false,west=low]
+  G cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  H cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  I dark_oak_fence[east=false,north=false,south=false,waterlogged=false,west=true]
+  J cobblestone_stairs[facing=north,half=top,shape=outer_left,waterlogged=false]
+  K cobblestone_wall[east=none,north=none,south=low,up=true,waterlogged=false,west=low]
+  L cobblestone_wall[east=none,north=low,south=low,up=true,waterlogged=false,west=low]
+  M cobblestone_stairs[facing=south,half=top,shape=outer_right,waterlogged=false]
+layer 0
+  AA
+  AA
+  AA
+  AA
+  AA
+  AA
+  AA
+  EA
+layer 1
+  BF
+  BH
+  BK
+  BL
+  BF
+  BH
+  BK
+  BL
+layer 2
+  B_
+  C.
+  D.
+  D.
+  D.
+  C_
+  B_
+  B.
+layer 3
+  B_
+  C_
+  D.
+  D.
+  D.
+  C.
+  B.
+  B.
+layer 4
+  B.
+  CI
+  D.
+  D.
+  D_
+  CI
+  B_
+  B.
+layer 5
+  B_
+  CI
+  D.
+  D_
+  D_
+  CI
+  B_
+  B.
+layer 6
+  B_
+  CE
+  CE
+  CE
+  CE
+  CE
+  B_
+  B.
+layer 7
+  BG
+  BJ
+  B.
+  B.
+  B_
+  BM
+  BG
+  BG

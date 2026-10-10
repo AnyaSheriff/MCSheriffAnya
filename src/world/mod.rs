@@ -37,6 +37,7 @@ pub mod temples;
 pub mod ocean_ruin;
 pub mod ruined_portal;
 pub mod shipwreck;
+pub mod mansion;
 pub mod template;
 pub mod trail_ruins;
 pub mod the_end;
@@ -700,6 +701,9 @@ impl Chunk {
         generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         village::build(generator, &mut chunk, chunk_x, chunk_z);
+        // Лесные особняки — после деревьев: воздух комнат вырезает деревья
+        // в рамке, фундамент заливает стволы под полом (mansion.rs).
+        mansion::build(generator, &mut chunk, chunk_x, chunk_z);
         // Храмы пустыни и джунглей, хижины ведьм (temples.rs).
         temples::build(generator, &mut chunk, chunk_x, chunk_z);
         // Аванпосты разбойников (pillager_outpost.rs).
@@ -3884,6 +3888,11 @@ impl World {
             return ocean_ruin::nearest(terrain, name == "ocean_ruin_warm", chunk_x, chunk_z, regions.max(1) * 27 / ocean_ruin::SPACING + 1);
         }
 
+        // Лесные особняки — по областям 80×80 чанков (mansion.rs).
+        if let (Generator::Normal(terrain), "mansion") = (&*self.generator, name) {
+            return mansion::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / mansion::SPACING + 1);
+        }
+
         // Руины тропы — по областям 34×34 чанка (trail_ruins.rs).
         if let (Generator::Normal(terrain), "trail_ruins") = (&*self.generator, name) {
             return trail_ruins::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / trail_ruins::SPACING + 1);
@@ -4053,6 +4062,15 @@ impl World {
     pub fn trial_chamber_block_entities(&self, chunk_x: i32, chunk_z: i32) -> Vec<(i32, i32, i32, &'static str, &'static str)> {
         match &*self.generator {
             Generator::Normal(terrain) => trial_chambers::block_entities(terrain, chunk_x, chunk_z),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Поборники и вызыватели лесных особняков в только что сложенном чанке
+    /// (mansion.rs).
+    pub fn mansion_dwellers(&self, chunk_x: i32, chunk_z: i32) -> Vec<((f64, f64, f64), &'static str)> {
+        match &*self.generator {
+            Generator::Normal(terrain) => mansion::dwellers(terrain, chunk_x, chunk_z),
             _ => Vec::new(),
         }
     }

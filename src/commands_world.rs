@@ -2383,6 +2383,17 @@ fn locate(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             // тропы (свой мир оригинала: все 924 ответа locate — кратны 16).
             let corner = corner || ["village_", "ruined_portal", "shipwreck", "ocean_ruin", "trail_ruins"].iter().any(|prefix| short.starts_with(prefix));
 
+            // Лесные особняки оригинал находит и дальше 100 чанков и называет
+            // угол чанка старта (свой мир оригинала, семя 100554032945340:
+            // «[-4432, ~, -2112] (4701 blocks away)» из 0 0, «… (7945 blocks
+            // away)» из 20000 20000) — ищем на 100 областей вокруг.
+            if short == "mansion" {
+                return match world.nearest_structure(short, chunk.0, chunk.1, 100 * crate::world::mansion::SPACING / 27) {
+                    Some((chunk_x, chunk_z)) => located("commands.locate.structure.success", "minecraft:mansion", (chunk_x * 16, None, chunk_z * 16), origin),
+                    None => fail("commands.locate.structure.not_found", &[s("minecraft:mansion")]),
+                };
+            }
+
             // Клад оригинал называет клеткой 9, 9 чанка (вики, Structure set:
             // «locate_offset of x:9, y:0, z:9»).
             if short == "buried_treasure" {

@@ -1266,6 +1266,23 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         }
     }
 
+    // Лесные особняки: поборники и вызыватели при сложении чанка, на местах
+    // замера (mansion.rs; вики, Woodland Mansion: «Once all the vindicators
+    // and evokers are killed … they do not respawn»), не исчезают; на мирной
+    // сложности их нет.
+    if dimension == Dimension::Overworld && difficulty > crate::survival::PEACEFUL {
+        for (chunk_x, chunk_z) in &fresh {
+            for (at, kind) in world.mansion_dwellers(*chunk_x, *chunk_z) {
+                let kind = if kind == "evoker" { crate::mob::Kind::Evoker } else { crate::mob::Kind::Vindicator };
+                let mut illager = crate::mob::Mob::new(shared.next_entity_id(), kind, at);
+
+                illager.persistent = true;
+                illager.persistent_tag = true;
+                items.add_mob(illager);
+            }
+        }
+    }
+
     // Подвалы иглу: житель и зомби-житель (вики, Igloo; замер entities),
     // не исчезают.
     if dimension == Dimension::Overworld {

@@ -158,6 +158,11 @@ pub fn orient_text(text: &str, orient: Orient) -> String {
 
                 (key.to_string(), turned)
             }
+            // Рельсы: стороны в форме поворачиваются, запись — как у игры
+            // (north_south, east_west, south_east…, ascending_<сторона>).
+            "shape" if value.contains("north") || value.contains("south") || value.contains("east") || value.contains("west") => {
+                (key.to_string(), rail_shape(value, &turn))
+            }
             "shape" | "hinge" | "type" if orient.mirror => (key.to_string(), swap(value)),
             _ => (key.to_string(), value.to_string()),
         };
@@ -167,6 +172,22 @@ pub fn orient_text(text: &str, orient: Orient) -> String {
 
     props.sort();
     format!("{}[{}]", name, props.iter().map(|(k, v)| format!("{}={}", k, v)).collect::<Vec<_>>().join(","))
+}
+
+/// Форма рельса после поворота сторон `turn`.
+fn rail_shape(value: &str, turn: &dyn Fn(&str) -> Option<&'static str>) -> String {
+    if let Some(side) = value.strip_prefix("ascending_") {
+        return format!("ascending_{}", turn(side).unwrap_or(side));
+    }
+
+    let sides: Vec<&str> = value.split('_').map(|side| turn(side).unwrap_or(side)).collect();
+    let has = |side: &str| sides.contains(&side);
+
+    match (has("north"), has("south"), has("east"), has("west")) {
+        (true, true, _, _) => "north_south".to_string(),
+        (_, _, true, true) => "east_west".to_string(),
+        (north, _, east, _) => format!("{}_{}", if north { "north" } else { "south" }, if east { "east" } else { "west" }),
+    }
 }
 
 /// Разбор файла образцов: `template <имя> <a> <b> <y> [экземпляров]`,
@@ -343,6 +364,17 @@ mod tests {
 
             assert!(text.contains(&format!("facing={}", side(x1 - x0, z1 - z0))), "{orient:?}: {text}");
         }
+    }
+
+    /// Рельсы поворачиваются вместе с клетками.
+    #[test]
+    fn rails_turn() {
+        let once = Orient { turns: 1, mirror: false };
+
+        assert_eq!(orient_text("rail[shape=north_south]", once), "rail[shape=east_west]");
+        assert_eq!(orient_text("rail[shape=ascending_north]", once), "rail[shape=ascending_east]");
+        assert_eq!(orient_text("rail[shape=south_east]", once), "rail[shape=south_west]");
+        assert_eq!(orient_text("rail[shape=north_east]", Orient { turns: 0, mirror: true }), "rail[shape=north_west]");
     }
 
     #[test]

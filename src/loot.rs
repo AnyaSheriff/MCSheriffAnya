@@ -305,6 +305,45 @@ pub const BURIED_TREASURE: [Pool; 7] = [
     NAUTILUS_ARMOR,
 ];
 
+/// Лесной особняк (woodland_mansion; вики, Module:LootChest/chests,
+/// «woodland-mansion», poolsJava).
+pub const WOODLAND_MANSION: [Pool; 4] = [
+    Pool {
+        rolls: (1, 3),
+        entries: &[
+            ("lead", 1, 1, 20),
+            ("golden_apple", 1, 1, 15),
+            ("enchanted_golden_apple", 1, 1, 2),
+            ("music_disc_13", 1, 1, 15),
+            ("music_disc_cat", 1, 1, 15),
+            ("chainmail_chestplate", 1, 1, 10),
+            ("diamond_hoe", 1, 1, 15),
+            ("diamond_chestplate", 1, 1, 5),
+            ("enchanted_book", 1, 1, 10),
+        ],
+        empty: 0,
+    },
+    Pool {
+        rolls: (1, 4),
+        entries: &[
+            ("iron_ingot", 1, 4, 10),
+            ("gold_ingot", 1, 4, 5),
+            ("bread", 1, 1, 20),
+            ("wheat", 1, 4, 20),
+            ("bucket", 1, 1, 10),
+            ("redstone", 1, 4, 15),
+            ("coal", 1, 4, 15),
+            ("melon_seeds", 2, 4, 10),
+            ("pumpkin_seeds", 2, 4, 10),
+            ("beetroot_seeds", 2, 4, 10),
+            ("resin_clump", 2, 4, 50),
+        ],
+        empty: 0,
+    },
+    Pool { rolls: (3, 3), entries: &[("bone", 1, 8, 10), ("gunpowder", 1, 8, 10), ("rotten_flesh", 1, 8, 10), ("string", 1, 8, 10)], empty: 0 },
+    Pool { rolls: (1, 1), entries: &[("vex_armor_trim_smithing_template", 1, 1, 1)], empty: 1 },
+];
+
 /// Большие руины в океане (underwater_ruin_big).
 pub const UNDERWATER_RUIN_BIG: [Pool; 3] = [
     Pool {
