@@ -58,6 +58,7 @@ mod furnace;
 mod crafting;
 mod window;
 mod villager;
+mod raid;
 mod sign;
 mod spawner;
 mod enchanting;

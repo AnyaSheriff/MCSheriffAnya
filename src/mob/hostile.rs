@@ -34,6 +34,9 @@ pub fn follow_range(kind: Kind) -> f64 {
         Kind::Enderman => 64.0,
         Kind::Blaze | Kind::Ghast => super::nether::follow_range(kind),
         Kind::Phantom => 64.0,
+        // Вики, Pillager: «32 blocks»; заклинатель 12, поборник 12 [проверить].
+        Kind::Pillager | Kind::Ravager => 32.0,
+        Kind::Evoker | Kind::Vindicator | Kind::Illusioner => 12.0,
         Kind::WitherSkeleton => 16.0,
         Kind::ZombifiedPiglin => 35.0,
         _ => 16.0,
@@ -113,6 +116,12 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Guardian => "entity.minecraft.guardian",
         Kind::ElderGuardian => "entity.minecraft.elder_guardian",
         Kind::Wither => "entity.minecraft.wither",
+        Kind::Pillager => "entity.minecraft.pillager",
+        Kind::Vindicator => "entity.minecraft.vindicator",
+        Kind::Evoker | Kind::EvokerFangs => "entity.minecraft.evoker",
+        Kind::Vex => "entity.minecraft.vex",
+        Kind::Illusioner => "entity.minecraft.illusioner",
+        Kind::Ravager => "entity.minecraft.ravager",
     }
 }
 
@@ -139,6 +148,10 @@ pub struct Shot {
 
     /// Бросок трезубца утопленника (вики, Drowned).
     pub trident: bool,
+
+    /// Стрела из арбалета разбойника: звук попадания item.crossbow.hit
+    /// (чёрный ящик, pillager-crossbow).
+    pub crossbow: bool,
 }
 
 /// Состояние охоты.
@@ -306,7 +319,7 @@ fn victim(watcher: &Watcher) -> bool {
 }
 
 /// Расстояние в квадрате от ног моба до точки.
-fn dist2(mob: &Mob, x: f64, y: f64, z: f64) -> f64 {
+pub(super) fn dist2(mob: &Mob, x: f64, y: f64, z: f64) -> f64 {
     (x - mob.x).powi(2) + (y - mob.y).powi(2) + (z - mob.z).powi(2)
 }
 
@@ -330,7 +343,7 @@ pub fn sees(view: &dyn View, from: (f64, f64, f64), to: (f64, f64, f64)) -> bool
 }
 
 /// Видит ли моб этого игрока глазами.
-fn line_of_sight(mob: &Mob, view: &dyn View, watcher: &Watcher) -> bool {
+pub(super) fn line_of_sight(mob: &Mob, view: &dyn View, watcher: &Watcher) -> bool {
     sees(view, (mob.x, mob.y + mob.eye(), mob.z), (watcher.x, watcher.y + watcher.eye, watcher.z))
 }
 
@@ -427,15 +440,19 @@ pub(super) fn choose_target(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut
 /// Жители, на которых зомби может пойти: цели зомби и зомби-жителя
 /// (вики, Zombie: «villagers»).
 fn prey(mob: &Mob, ctx: &Ctx) -> Vec<Watcher> {
-    if !matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk) {
+    // Разбойники тоже идут на жителей (вики, Illager: «attack villagers»).
+    if !matches!(mob.kind, Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Pillager | Kind::Vindicator | Kind::Ravager | Kind::Evoker | Kind::Illusioner) {
         return Vec::new();
     }
 
     let range = follow_range(mob.kind);
+    // Поборник по имени «Johnny» нападает на всех мобов, кроме разбойников
+    // (вики, Vindicator: «Johnny … attacks any mob except other illagers»).
+    let johnny = mob.kind == Kind::Vindicator && mob.name.as_deref() == Some("Johnny");
 
     ctx.mates
         .iter()
-        .filter(|mate| mate.kind == Kind::Villager && dist2(mob, mate.x, mate.y, mate.z) <= range * range)
+        .filter(|mate| (mate.kind == Kind::Villager || (johnny && !crate::raid::joins(mate.kind) && mate.kind != Kind::Vex && !mate.kind.object())) && dist2(mob, mate.x, mate.y, mate.z) <= range * range)
         .map(|mate| Watcher { id: mate.id, x: mate.x, y: mate.y, z: mate.z, eye: if mate.baby { 0.81 } else { 1.62 }, holding: [None, None], spectator: false, targetable: true, look: (0.0, 0.0), pumpkin: false, gold_armor: false })
         .collect()
 }
@@ -480,6 +497,11 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     // Фантом летает по-своему (phantom.rs).
     if mob.kind == Kind::Phantom {
         return super::phantom::think(mob, view, ctx, rng, plan);
+    }
+
+    // Разбойники и вредина (illager.rs).
+    if super::illager::raider(mob.kind) || mob.kind == Kind::Vex {
+        return super::illager::think(mob, view, ctx, rng, plan);
     }
 
     // Мобы Незера думают в nether.rs.
@@ -687,7 +709,7 @@ fn drowned(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &m
                 mob.h.throw_wait = TRIDENT_PAUSE;
                 mob.events.push(Event::Swing);
                 mob.events.push(Event::Sound { name: "minecraft:entity.drowned.shoot", volume: 1.0, pitch: 1.0 });
-                plan.shot = Some(Shot { from: (mob.x, mob.y + mob.eye() - 0.1, mob.z), aim: (target.x, target.y + 0.6, target.z), speed: TRIDENT_SPEED, trident: true });
+                plan.shot = Some(Shot { from: (mob.x, mob.y + mob.eye() - 0.1, mob.z), aim: (target.x, target.y + 0.6, target.z), speed: TRIDENT_SPEED, trident: true, crossbow: false });
             }
         }
 
@@ -852,6 +874,7 @@ fn skeleton(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &
                 aim: (target.x, target.y + 0.6, target.z),
                 speed: ARROW_SPEED,
                 trident: false,
+                crossbow: false,
             });
         }
     } else if mob.h.cooldown == 0 && sight && in_range {

@@ -1070,6 +1070,10 @@ pub struct World {
     /// Обновляется каждый такт (tick.rs).
     pub sitting_cats: Vec<(f64, f64, f64)>,
 
+    /// Набеги, заявки на них и звоны колоколов (raid.rs). Не сохраняются
+    /// [проверить: у оригинала — raids.dat].
+    pub raids: crate::raid::Raids,
+
     /// Места, о которых клиентам скажут позже: (место, такт, как есть).
     /// «Как есть» — служебный блок не подменяется пустотой.
     late: Vec<((i32, i32, i32), u64, bool)>,
@@ -1358,6 +1362,7 @@ impl World {
             blast_by_player: false,
             blast_killer: "",
             sitting_cats: Vec::new(),
+            raids: crate::raid::Raids::default(),
             late: Vec::new(),
             chunks: HashMap::default(),
             events: Journal::new(),
@@ -1508,6 +1513,7 @@ impl World {
             blast_by_player: false,
             blast_killer: "",
             sitting_cats: Vec::new(),
+            raids: crate::raid::Raids::default(),
             late: Vec::new(),
             chunks: HashMap::default(),
             events: Journal::new(),

@@ -435,6 +435,10 @@ pub struct Hit {
 /// Сколько частиц эффектов ведётся (по одной на эффект; видов 29).
 pub const EFFECT_PARTICLES: usize = 32;
 
+/// Метка в списке частиц эффектов: вместо цветной entity_effect — частица
+/// raid_omen (у цвета без прозрачности не бывает: альфа всегда 0xFF).
+pub const RAID_OMEN_PARTICLE: i32 = 1;
+
 /// Вид эффекта, который считает сервер.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EffectKind {
@@ -497,6 +501,12 @@ pub enum EffectKind {
     SlowFalling,
     /// Тьма: только у клиента.
     Darkness,
+    /// Дурное знамение: в деревне становится «Знамением набега» (вики, Bad Omen; raid.rs).
+    BadOmen,
+    /// Знамение набега: по окончании начинается набег (вики, Raid Omen; raid.rs).
+    RaidOmen,
+    /// Герой деревни: скидки у жителей (вики, Hero of the Village).
+    HeroOfTheVillage,
 }
 
 impl EffectKind {
@@ -532,17 +542,22 @@ impl EffectKind {
             EffectKind::Unluck => 26,
             EffectKind::SlowFalling => 27,
             EffectKind::Darkness => 32,
+            // minecraft-data 26.1, effects.json: bad_omen 30, hero_of_the_village 31, raid_omen 34.
+            EffectKind::BadOmen => 30,
+            EffectKind::HeroOfTheVillage => 31,
+            EffectKind::RaidOmen => 34,
         }
     }
 
     /// Все виды (для перебора модификаторов).
-    pub const ALL: [EffectKind; 29] = [
+    pub const ALL: [EffectKind; 32] = [
         EffectKind::Speed, EffectKind::Slowness, EffectKind::Haste, EffectKind::MiningFatigue, EffectKind::Strength,
         EffectKind::InstantHealth, EffectKind::InstantDamage, EffectKind::JumpBoost, EffectKind::Nausea, EffectKind::Regeneration,
         EffectKind::Resistance, EffectKind::FireResistance, EffectKind::WaterBreathing, EffectKind::Invisibility, EffectKind::Blindness,
         EffectKind::NightVision, EffectKind::Hunger, EffectKind::Weakness, EffectKind::Poison, EffectKind::Wither,
         EffectKind::HealthBoost, EffectKind::Absorption, EffectKind::Saturation, EffectKind::Glowing, EffectKind::Levitation,
-        EffectKind::Luck, EffectKind::Unluck, EffectKind::SlowFalling, EffectKind::Darkness,
+        EffectKind::Luck, EffectKind::Unluck, EffectKind::SlowFalling, EffectKind::Darkness, EffectKind::BadOmen,
+        EffectKind::RaidOmen, EffectKind::HeroOfTheVillage,
     ];
 
     /// Мгновенный: действует при наложении, не хранится.
@@ -584,6 +599,10 @@ impl EffectKind {
             EffectKind::Unluck => 0xC0A44D,
             EffectKind::SlowFalling => 0xF3CFB9,
             EffectKind::Darkness => 0x292721,
+            // Чёрный ящик, raid-start-wave1: entity_effect −16031432 = 0x0B6138.
+            EffectKind::BadOmen => 0x0B6138,
+            EffectKind::RaidOmen => 0xDE4058,
+            EffectKind::HeroOfTheVillage => 0x44FF44,
         }
     }
 
@@ -640,6 +659,8 @@ impl EffectKind {
             EffectKind::MiningFatigue => 19,
             EffectKind::JumpBoost => 20,
             EffectKind::Haste => 21,
+            // Знамение набега — перед дурным (raid-start-wave1: [raid_omen, entity_effect]).
+            EffectKind::RaidOmen => 9,
             other => 30 + other.id() as u8,
         }
     }
@@ -675,6 +696,9 @@ impl EffectKind {
             "unluck" => Some(EffectKind::Unluck),
             "slow_falling" => Some(EffectKind::SlowFalling),
             "darkness" => Some(EffectKind::Darkness),
+            "bad_omen" => Some(EffectKind::BadOmen),
+            "raid_omen" => Some(EffectKind::RaidOmen),
+            "hero_of_the_village" => Some(EffectKind::HeroOfTheVillage),
             _ => None,
         }
     }
@@ -890,7 +914,7 @@ impl Vitals {
         kinds.sort_by_key(|kind| kind.particle_rank());
 
         for (slot, kind) in out.iter_mut().zip(kinds) {
-            *slot = (0xFF00_0000u32 | kind.color() as u32) as i32;
+            *slot = if kind == EffectKind::RaidOmen { RAID_OMEN_PARTICLE } else { (0xFF00_0000u32 | kind.color() as u32) as i32 };
         }
 
         out
@@ -2009,5 +2033,19 @@ mod tests {
         assert!(v.effect_replaced_by(EffectKind::Speed, 1, 601));
         assert!(v.effect_replaced_by(EffectKind::Speed, 2, 10));
         assert!(v.effect_replaced_by(EffectKind::Weakness, 0, 10));
+    }
+
+    #[test]
+    fn raid_omen_shows_its_own_particle_first() {
+        let mut v = Vitals::new();
+
+        v.give_effect_shown(Effect { kind: EffectKind::BadOmen, amplifier: 0, ticks_left: 100, ambient: false, visible: true });
+        v.give_effect_shown(Effect { kind: EffectKind::RaidOmen, amplifier: 0, ticks_left: 100, ambient: false, visible: true });
+
+        let colors = v.effect_colors();
+
+        // raid-start-wave1: [raid_omen, entity_effect −16031432].
+        assert_eq!(colors[0], RAID_OMEN_PARTICLE);
+        assert_eq!(colors[1], -16031432);
     }
 }

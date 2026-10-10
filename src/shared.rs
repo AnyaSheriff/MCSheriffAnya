@@ -132,6 +132,10 @@ pub struct Shared {
 
     /// Правила чешуйниц: изменение блоков мобами и выход из заражённых блоков.
     pub mob_griefing: std::sync::atomic::AtomicBool,
+    /// Правила 26.1 `raids` (прежнее disableRaids наоборот) и `spawn_patrols`
+    /// (doPatrolSpawning): набеги и патрули (raid.rs).
+    pub raids: std::sync::atomic::AtomicBool,
+    pub spawn_patrols: std::sync::atomic::AtomicBool,
     pub block_drops: std::sync::atomic::AtomicBool,
 
     /// Правило `announce_advancements` (прежнее announceAdvancements): писать ли
@@ -220,6 +224,8 @@ impl Shared {
             phantom_wait: std::sync::atomic::AtomicI32::new(0),
             morning_gifts: std::sync::Mutex::new(Vec::new()),
             mob_griefing: std::sync::atomic::AtomicBool::new(true),
+            raids: std::sync::atomic::AtomicBool::new(true),
+            spawn_patrols: std::sync::atomic::AtomicBool::new(true),
             block_drops: std::sync::atomic::AtomicBool::new(true),
             announce_advancements: std::sync::atomic::AtomicBool::new(true),
             natural_regeneration: std::sync::atomic::AtomicBool::new(true),

@@ -790,7 +790,8 @@ fn hostile_kinds_have_the_wiki_numbers() {
     assert_eq!((Kind::Creeper.width(), Kind::Creeper.height()), (0.6, 1.7));
     assert_eq!((Kind::Spider.width(), Kind::Spider.height()), (1.4, 0.9));
     assert_eq!((Kind::Zombie.java_type(), Kind::Skeleton.java_type(), Kind::Creeper.java_type(), Kind::Spider.java_type()), (150, 115, 32, 124));
-    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 27);
+    // С разбойниками, врединой и разорителем (mob/illager.rs): 27 + 6.
+    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 33);
     assert!(!Kind::Cow.hostile());
 }
 

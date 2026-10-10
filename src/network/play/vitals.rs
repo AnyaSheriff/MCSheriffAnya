@@ -156,6 +156,9 @@ pub(super) enum Drink {
     Milk,
     /// Зелье: даёт свои эффекты, остаётся пузырёк.
     Potion,
+    /// Зловещая бутылка: «Дурное знамение» своего уровня, ничего не остаётся
+    /// (вики, Ominous Bottle).
+    Ominous,
 }
 
 impl Drink {
@@ -164,6 +167,7 @@ impl Drink {
         match self {
             Drink::Milk => "bucket",
             Drink::Potion => "glass_bottle",
+            Drink::Ominous => "",
         }
     }
 }
@@ -276,6 +280,14 @@ pub(super) struct Net {
     /// Последний удар моба нанёс урон (не погашен неуязвимостью): эффекты «от
     /// удара» (иссушение, голод) ложатся только тогда.
     pub mob_hit_landed: bool,
+
+    /// Уровень «Знамения набега» (1…5): заявка на набег уходит, когда эффект
+    /// уже снят (raid.rs).
+    pub raid_omen_level: i32,
+
+    /// «Дурное знамение» сменилось «Знамением набега» в этом такте: в
+    /// следующем — повтор знамения и снятие дурного (omens).
+    pub omen_switch: bool,
 }
 
 impl Net {
@@ -340,6 +352,8 @@ impl Net {
             arrow_timer: 0,
             hold_meta: false,
             mob_hit_landed: false,
+            raid_omen_level: 0,
+            omen_switch: false,
         }
     }
 
@@ -667,6 +681,14 @@ pub(super) fn start_eating(player: &mut PlayerState) -> bool {
     let drink = match name {
         "milk_bucket" => Some((Drink::Milk, Vec::new())),
         "potion" => Some((Drink::Potion, survival::potion_effects(stack.extras().potion.unwrap_or(0)))),
+        // Вики, Ominous Bottle: «Bad Omen … 100 minutes», уровень — из бутылки.
+        "ominous_bottle" => Some((Drink::Ominous, vec![survival::Effect {
+            kind: survival::EffectKind::BadOmen,
+            amplifier: i32::from(stack.extras().ominous.unwrap_or(0)),
+            ticks_left: 120_000,
+            ambient: false,
+            visible: true,
+        }])),
         _ => None,
     };
 
@@ -1102,6 +1124,13 @@ pub(super) fn push_effect_particles(body: &mut Vec<u8>, colors: &[i32]) {
     body.extend_from_slice(&encode_varint(shown.len() as i32));
 
     for color in shown {
+        // Знамение набега — своя частица raid_omen без цвета
+        // (minecraft-data 26.1, particles.json: 113; raid-start-wave1).
+        if color == survival::RAID_OMEN_PARTICLE {
+            body.extend_from_slice(&encode_varint(113));
+            continue;
+        }
+
         body.extend_from_slice(&encode_varint(21));
         body.extend_from_slice(&color.to_be_bytes());
     }
@@ -1485,10 +1514,29 @@ pub(super) async fn mob_hit(
         if let Some(shield) = player.inventory.slot(slot) {
             super::pvp::wear_slot(shared, player, slot, shield, crate::combat::shield_wear(scaled), false);
         }
-        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
-        let pitch = 0.8 + world.random_unit() * 0.4;
-        world.note_sound_player_at((player.x, player.y, player.z), "minecraft:item.shield.block", 1.0, pitch);
-        return Ok(());
+        // Разоритель толкает и сквозь щит (mob/illager.rs, RAVAGER_SHOVE):
+        // толчок длиннее единицы — без оглушения, сильный.
+        if killer == "entity.minecraft.ravager" && let Some((ux, uz)) = push {
+            let strong = ux.hypot(uz) > 1.5;
+
+            player.net.velocity = Some((ux * 0.218, if strong { crate::mob::illager::RAVAGER_SHOVE_UP } else { 0.275 }, uz * 0.218));
+            player.net.velocity_due = false;
+            // Скорость уходит следующим тактом, как после обычного удара
+            // (ravager-roar: self vel на такт позже ravager.attack).
+            player.net.hold_meta = true;
+        }
+
+        // Звук щита — в такте удара: себе сразу, прочим — журналом (чёрный
+        // ящик, ravager-roar: item.shield.block в такте ravager.attack).
+        let pitch = {
+            let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+            let pitch = 0.8 + world.random_unit() * 0.4;
+
+            world.note_sound_player_except((player.x, player.y, player.z), "minecraft:item.shield.block", 1.0, pitch, player.entity_id);
+            pitch
+        };
+
+        return send_sound_at(stream, "minecraft:item.shield.block", SOUND_PLAYERS, (player.x, player.y, player.z), 1.0, pitch).await;
     }
 
     // Направление на виновника для «Hurt Animation» и звук стрелы — раньше
@@ -1545,6 +1593,9 @@ pub(super) async fn mob_hit(
         // игрок после стрелы получает (0,218; 0,275)) [проверить: на ходу].
         let (dx, dy, dz) = player.net.last_delta;
         let up = if player.on_ground { 0.275 } else { dy };
+        // Усиленный толчок разорителя — только сквозь щит; здесь — единичный.
+        let length = ux.hypot(uz).max(1.0);
+        let (ux, uz) = (ux / length, uz / length);
 
         player.net.velocity = Some((dx / 2.0 * 0.546 + ux * 0.218, up, dz / 2.0 * 0.546 + uz * 0.218));
         // Иначе конец такта заменит отдачу «скоростью после удара без толчка»
@@ -1659,7 +1710,13 @@ pub(super) async fn hit_by(
         if source == Source::Arrow {
             let pitch = 1.2 + (world_random(shared, player.dimension) - 0.5) * 0.4;
 
-            send_sound_at(stream, "minecraft:entity.arrow.hit", SOUND_PLAYERS, from, 1.0, pitch).await?;
+            // Стрела арбалета разбойника: item.crossbow.hit, раздел «нейтральные»
+            // (чёрный ящик, pillager-crossbow).
+            if player.net.killer == "entity.minecraft.pillager" {
+                send_sound_at(stream, "minecraft:item.crossbow.hit", SOUND_NEUTRAL, from, 1.0, pitch).await?;
+            } else {
+                send_sound_at(stream, "minecraft:entity.arrow.hit", SOUND_PLAYERS, from, 1.0, pitch).await?;
+            }
         }
     }
 
@@ -2151,6 +2208,8 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
 
     let survival::EffectTick { hurt, gone } = player.vit.effects_tick();
 
+    omens(stream, shared, player, difficulty, &gone).await?;
+
     for (amount, source) in hurt {
         hit(stream, shared, player, amount, source, 0).await?;
     }
@@ -2209,6 +2268,76 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
     Ok(())
 }
 
+/// Знамения (вики, Bad Omen и Raid Omen): «Дурное знамение» в деревне
+/// Обычного мира сменяется «Знамением набега» на 30 секунд того же уровня;
+/// кончилось «Знамение набега» — заявка на набег в мире (raid.rs).
+async fn omens(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8, gone: &[survival::EffectKind]) -> io::Result<()> {
+    let raids_on = shared.raids.load(std::sync::atomic::Ordering::Relaxed);
+
+    if gone.contains(&survival::EffectKind::RaidOmen) && raids_on && player.dimension == Dimension::Overworld && difficulty != survival::PEACEFUL {
+        // Уровень уже снятого эффекта не известен: берётся запомненный.
+        let level = player.net.raid_omen_level.max(1);
+
+        shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком").raids.requests.push(crate::raid::Request { player: player.entity_id, at: (player.x, player.y, player.z), level });
+    }
+
+    // Знамение набега пришло прошлым тактом: оригинал шлёт его ещё раз уже
+    // без плавного появления (flags 6) с тем же сроком и лишь теперь снимает
+    // «Дурное знамение» (чёрный ящик, raid-start-wave1: такт 1).
+    if player.net.omen_switch {
+        player.net.omen_switch = false;
+
+        if let Some(raid) = player.vit.effects.iter().find(|effect| effect.kind == survival::EffectKind::RaidOmen).copied() {
+            let mut body = encode_varint(ENTITY_EFFECT);
+
+            body.extend_from_slice(&encode_varint(player.entity_id));
+            body.extend_from_slice(&encode_varint(raid.kind.id()));
+            body.extend_from_slice(&encode_varint(raid.amplifier));
+            body.extend_from_slice(&encode_varint(raid.ticks_left));
+            body.push(raid.flags() & !0x08);
+            write_body(stream, body).await?;
+        }
+
+        return clear_effects(stream, player, Some(survival::EffectKind::BadOmen)).await;
+    }
+
+    let Some(bad) = player.vit.effects.iter().find(|effect| effect.kind == survival::EffectKind::BadOmen).copied() else {
+        return Ok(());
+    };
+
+    if !raids_on || player.dimension != Dimension::Overworld || difficulty == survival::PEACEFUL || player.game_mode == 3 {
+        return Ok(());
+    }
+
+    // Знамение набега уже есть: ждём его конца.
+    if player.vit.effects.iter().any(|effect| effect.kind == survival::EffectKind::RaidOmen) {
+        return Ok(());
+    }
+
+    let in_village = {
+        let items = shared.items_in(Dimension::Overworld).lock().expect("предметы захвачены другим потоком");
+        let pois: Vec<(i32, i32, i32)> = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Villager && !mob.is_dead()).filter_map(|mob| mob.villager.job_site).collect();
+
+        crate::raid::in_village(&pois, (player.x, player.y, player.z))
+    };
+
+    if !in_village {
+        return Ok(());
+    }
+
+    player.net.raid_omen_level = bad.amplifier + 1;
+    give_effect(stream, player, survival::Effect { kind: survival::EffectKind::RaidOmen, amplifier: bad.amplifier, ticks_left: crate::raid::RAID_OMEN_TICKS, ambient: false, visible: true }).await?;
+
+    // Первый такт новое знамение не убывает: снимается оно через 601 такт
+    // (raid-start-wave1: Remove Effect в такте 601).
+    if let Some(raid) = player.vit.effects.iter_mut().find(|effect| effect.kind == survival::EffectKind::RaidOmen) {
+        raid.ticks_left += 1;
+    }
+
+    player.net.omen_switch = true;
+    Ok(())
+}
+
 pub(super) fn world_random(shared: &Shared, dimension: Dimension) -> f32 {
     shared.world_in(dimension).lock().expect("мир захвачен другим потоком").random_unit()
 }
@@ -2248,7 +2377,12 @@ async fn finish_drinking(stream: &mut Outgoing<'_>, player: &mut PlayerState, dr
     if player.game_mode != GAME_MODE_CREATIVE {
         let slot = player.inventory.selected_slot();
 
-        player.inventory.set(slot, blocks::item_named(drink.remainder()).map(|item| Stack::new(item, 1)));
+        // Бутылки складываются стопкой: тратится одна (вики, Ominous Bottle).
+        if drink == Drink::Ominous {
+            player.inventory.spend_held();
+        } else {
+            player.inventory.set(slot, blocks::item_named(drink.remainder()).map(|item| Stack::new(item, 1)));
+        }
         player.net.slot_update = Some(slot);
     }
 
@@ -2274,6 +2408,14 @@ pub(super) async fn give_effect(stream: &mut Outgoing<'_>, player: &mut PlayerSt
     player.vit.give_effect_shown(effect);
     apply_effect_modifiers(player);
 
+    // Знамения звучат при наложении (чёрный ящик, raid-start-wave1:
+    // event.mob_effect.bad_omen и raid_omen, раздел «игроки»).
+    let omen = match effect.kind {
+        survival::EffectKind::BadOmen => Some("minecraft:event.mob_effect.bad_omen"),
+        survival::EffectKind::RaidOmen => Some("minecraft:event.mob_effect.raid_omen"),
+        _ => None,
+    };
+
     let mut body = encode_varint(ENTITY_EFFECT);
 
     body.extend_from_slice(&encode_varint(player.entity_id));
@@ -2282,7 +2424,12 @@ pub(super) async fn give_effect(stream: &mut Outgoing<'_>, player: &mut PlayerSt
     body.extend_from_slice(&encode_varint(if effect.kind.instant() { 1 } else { effect.ticks_left }));
     body.push(if renewed { effect.flags() & !0x08 } else { effect.flags() });
 
-    write_body(stream, body).await
+    write_body(stream, body).await?;
+
+    match omen {
+        Some(sound) if !renewed => send_sound_at(stream, sound, SOUND_PLAYERS, (player.x, player.y, player.z), 1.0, 1.0).await,
+        _ => Ok(()),
+    }
 }
 
 /// Модификаторы атрибутов от действующих эффектов (сила, слабость, скорость,

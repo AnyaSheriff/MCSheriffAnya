@@ -226,7 +226,11 @@ fn finish(p: &mut PlayerState, eating: vitals::Eating, done: &mut Done) {
             if !creative {
                 let slot = p.inventory.selected_slot();
 
-                p.inventory.set(slot, blocks::item_named(drink.remainder()).map(|item| Stack::new(item, 1)));
+                if drink == vitals::Drink::Ominous {
+                    p.inventory.spend_held();
+                } else {
+                    p.inventory.set(slot, blocks::item_named(drink.remainder()).map(|item| Stack::new(item, 1)));
+                }
             }
 
             if drink == vitals::Drink::Milk {

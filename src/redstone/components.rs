@@ -851,6 +851,8 @@ pub(super) const BELL_RING: u8 = 1;
 pub fn ring(world: &mut World, pos: Pos, from: Dir) {
     world.note_sound(pos.0, pos.1, pos.2, BELL_SOUND, BELL_VOLUME, BELL_PITCH);
     world.queue_block_event(pos.0, pos.1, pos.2, BELL_RING, from.number());
+    // Разбойники рядом засветятся (raid.rs, вики, Bell).
+    world.raids.bells.push(pos);
 }
 
 /// Блочное событие колокола: клиенту уходит качание.

@@ -1,0 +1,69 @@
+{
+ "about": "Набег: безработный житель с ИИ в стеклянной клетке занимает компостер (как villager-claim) (место работы — «деревня», вики Raid: «claimed POI»), робот с «Дурным знамением» рядом → «Знамение набега» (30 с) → набег: полоса босса «Набег», рог, первая волна (вики, Raid, Bad Omen, Raid Omen). Площадка поднята на высоту 1 (наша земля — на 0), пол ±68 из камня — чтобы волна в обоих мирах вышла на тот же пол.",
+ "track_mobs": true,
+ "track_self": true,
+ "track_score": true,
+ "exclusive": true,
+ "pad_wide": 96,
+ "pad_up": 40,
+ "timeout_ms": 300000,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamerule raids true",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(0.5,0,0.5)",
+  "fill $(-68,-1,-68) $(68,-1,68) minecraft:stone",
+  "!stopfly",
+  "!wait 10",
+  "setblock $(3,0,-3) minecraft:composter",
+  "fill $(1,0,-3) $(1,1,-3) minecraft:glass",
+  "fill $(2,0,-2) $(2,1,-2) minecraft:glass",
+  "fill $(2,0,-4) $(2,1,-4) minecraft:glass",
+  "setblock $(3,1,-3) minecraft:glass",
+  "setblock $(2,2,-3) minecraft:glass",
+  "summon villager $(2.5,0,-2.5) {PersistenceRequired:1b,Silent:1b}",
+  "!wait 100"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "effect give $(bot) minecraft:bad_omen 6000 0"
+  }
+ ],
+ "record_ticks": 1500,
+ "cleanup": [
+  "tp $(bot) $(0.5,0,0.5)",
+  "!wait 2",
+  "kill @e[type=pillager,distance=..96]",
+  "kill @e[type=vindicator,distance=..96]",
+  "kill @e[type=evoker,distance=..96]",
+  "kill @e[type=vex,distance=..96]",
+  "kill @e[type=ravager,distance=..96]",
+  "kill @e[type=witch,distance=..96]",
+  "kill @e[type=evoker_fangs,distance=..96]",
+  "kill @e[type=arrow,distance=..96]",
+  "kill @e[type=villager,distance=..96]",
+  "kill @e[type=item,distance=..96]",
+  "kill @e[type=experience_orb,distance=..96]",
+  "effect clear $(bot)",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "fill $(1,0,-4) $(3,2,-2) minecraft:air",
+  "fill $(-68,-1,-68) $(68,-1,68) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone",
+  "!startfly"
+ ],
+ "random": [],
+ "name": "raid-start-wave1",
+ "origin": [
+  100,
+  1,
+  100
+ ]
+}

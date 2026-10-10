@@ -1098,6 +1098,62 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         }
     }
 
+    // Набеги и патрули (raid.rs): места работы жителей — «деревня».
+    if dimension == Dimension::Overworld {
+        let pois: Vec<(i32, i32, i32)> = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Villager && !mob.is_dead()).filter_map(|mob| mob.villager.job_site).collect();
+        let rules = crate::raid::Rules {
+            difficulty,
+            raids: shared.raids.load(std::sync::atomic::Ordering::Relaxed),
+            patrols: spawning && shared.spawn_patrols.load(std::sync::atomic::Ordering::Relaxed),
+            day: world.clock() / 24_000,
+        };
+        let mut raids = std::mem::take(&mut world.raids);
+        let outcome = crate::raid::tick(&mut raids, items.mobs_mut(), &MobView(world), &watchers, &pois, rules, rng, &mut || shared.next_entity_id());
+
+        world.raids = raids;
+
+        for (viewer, body) in outcome.private {
+            world.note_private(viewer, body);
+        }
+
+        for (player, effect) in outcome.effects {
+            world.note_mob_effect(player, effect);
+        }
+
+        for (mob, effect) in outcome.mob_effects {
+            if let Some(mob) = items.mobs_mut().iter_mut().find(|known| known.entity_id == mob) {
+                mob.vitals.give_effect_shown(effect);
+            }
+        }
+
+        for (x, y, z) in outcome.resonate {
+            world.note_sound(x, y, z, "minecraft:block.bell.resonate", 1.0, 1.0);
+        }
+
+        for mob in outcome.born {
+            items.add_mob(mob);
+        }
+
+        // Разоритель, упёршись в листву или посевы, ломает их (вики, Ravager:
+        // «all leaves … beetroots, carrots, potatoes, wheat, pitcher crop,
+        // torchflower crop»; не при mob_griefing=false).
+        if shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed) {
+            let ravagers: Vec<(f64, f64, f64)> = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Ravager && mob.wall && !mob.is_dead() && !mob.no_ai).map(|mob| (mob.x, mob.y, mob.z)).collect();
+
+            for (x, y, z) in ravagers {
+                for (bx, by, bz) in crate::mob::illager::ravager_reach_cells((x, y, z)) {
+                    let state = world.get_block(bx, by, bz);
+
+                    if blocks::block_at_state(state).is_some_and(crate::mob::illager::ravager_breaks) {
+                        world.note_destroyed(bx, by, bz);
+                        world.set_block(bx, by, bz, blocks::state_by_name("air").expect("воздух"));
+                        world.note_level_event(bx, by, bz, 2001, state);
+                    }
+                }
+            }
+        }
+    }
+
     // Кошки, что сидят: сундук под ними не открывается (mob/tame.rs).
     world.sitting_cats = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Cat && mob.tame.sitting && !mob.is_dead()).map(|mob| (mob.x, mob.y, mob.z)).collect();
 
@@ -1186,6 +1242,10 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         let mut arrow = crate::arrow::Arrow::from_mob(shared.next_entity_id(), dimension, fired.shot.from, velocity, fired.shooter, killer);
 
         arrow.effects.extend(crate::mob::skeleton::arrow_effect(fired.kind));
+
+        // Стрела из арбалета разбойника (чёрный ящик, pillager-crossbow:
+        // item.crossbow.hit при попадании).
+        arrow.crossbow = fired.shot.crossbow;
 
         // Утопленник бросает трезубец, а не стрелу (вики, Drowned).
         if fired.shot.trident {

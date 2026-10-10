@@ -81,9 +81,11 @@ const FORCED: u64 = 60;
 fn attributes_at(kind: Kind) -> u64 {
     match kind {
         Kind::Creeper => 1,
+        // Вредина: атрибуты через 2 такта после появления (чёрный ящик, evoker-vex) [проверить].
+        Kind::Vex => 1,
         // Кристаллу и дракону атрибуты не шлются вовсе (чёрный ящик,
         // end-crystal-explode, dragon-summon).
-        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::LeashKnot => u64::MAX,
+        Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::LeashKnot | Kind::EvokerFangs => u64::MAX,
         _ => 3,
     }
 }
@@ -138,6 +140,8 @@ pub(super) struct ShownMob {
 
     /// Показана полоса босса (иссушитель): уходит вместе с ним.
     pub(super) boss: bool,
+    /// Снаряжение, как показано (разбойник: заряд и износ арбалета).
+    gear: u32,
 }
 
 fn float(value: f32) -> Vec<u8> {
@@ -151,7 +155,8 @@ fn float(value: f32) -> Vec<u8> {
 /// 17 — заряжен, 18 — подожжён; у паука 16 — флаги (1 — лезет по стене);
 /// у скелета 16 — превращение в бродягу.
 fn properties(mob: &Mob) -> Vec<Property> {
-    let fire = u8::from(mob.vitals.fire > 0);
+    // Свечение (0x40): у разбойников после звона колокола (raid.rs).
+    let fire = u8::from(mob.vitals.fire > 0) | if mob.vitals.has_effect(crate::survival::EffectKind::Glowing) { 0x40 } else { 0 };
 
     // Кристалл Края — не живое: флаги, тишина, цель луча (11 — Optional
     // BlockPos: 0 — нет), «показывать подножие» (minecraft-data: beam_target,
@@ -173,12 +178,12 @@ fn properties(mob: &Mob) -> Vec<Property> {
 
     // Снаряд шалкера и узел поводка — тоже не живые: флаги и тишина
     // (minecraft-data: shulker_bullet и leash_knot — только общие свойства).
-    if matches!(mob.kind, Kind::ShulkerBullet | Kind::LeashKnot) {
+    if matches!(mob.kind, Kind::ShulkerBullet | Kind::LeashKnot | Kind::EvokerFangs) {
         return vec![(0, TYPE_BYTE, vec![fire]), (4, TYPE_BOOL, vec![u8::from(mob.silent)])];
     }
     // «Агрессивен» (бит 4) у эндермена и шалкера не ставится: у первого
     // злость — свойство 17 (чёрный ящик, enderman-stare, shulker-ai).
-    let aggressive = u8::from((mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube | Kind::Guardian | Kind::ElderGuardian) && mob.h.target.is_some()) || (mob.kind == Kind::Wolf && mob.tame.melee) || (mob.kind == Kind::IronGolem && mob.golem.target.is_some())) << 2;
+    let aggressive = u8::from((mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube | Kind::Guardian | Kind::ElderGuardian | Kind::Pillager | Kind::Evoker | Kind::Illusioner | Kind::Vex) && mob.h.target.is_some() && !mob.illager.calm) || (mob.kind == Kind::Wolf && mob.tame.melee) || (mob.kind == Kind::IronGolem && mob.golem.target.is_some())) << 2;
     let mut out: Vec<Property> = vec![
         (0, TYPE_BYTE, vec![fire]),
         (2, TYPE_OPT_COMPONENT, custom_name(mob)),
@@ -194,6 +199,11 @@ fn properties(mob: &Mob) -> Vec<Property> {
     // drowned-trident: 8=1 с захвата цели).
     if mob.kind == Kind::Drowned || mob.kind.skeleton() {
         out.insert(4, (8, TYPE_BYTE, vec![u8::from(mob.h.using || mob.h.drawing > 0)]));
+    }
+
+    // Разбойник заряжает арбалет — «рука занята» (чёрный ящик, pillager-crossbow: 8=1 17=true).
+    if mob.kind == Kind::Pillager {
+        out.insert(4, (8, TYPE_BYTE, vec![u8::from(crate::mob::illager::charging(mob))]));
     }
 
     // Частицы эффектов (10): у ведьмы — от выпитых зелий (чёрный ящик,
@@ -286,7 +296,24 @@ fn properties(mob: &Mob) -> Vec<Property> {
         // Фаза дракона: 10 — висит (minecraft-data: phase; чёрный ящик,
         // dragon-summon: призванный фазы не шлёт — она по умолчанию).
         Kind::EnderDragon => out.push((16, TYPE_INT, encode_varint(i32::from(mob.dragon.phase)))),
-        Kind::EndCrystal | Kind::ShulkerBullet | Kind::LeashKnot => {}
+        Kind::EndCrystal | Kind::ShulkerBullet | Kind::LeashKnot | Kind::EvokerFangs => {}
+        // Разбойники (minecraft-data: is_celebrating; у разбойника
+        // is_charging_crossbow, у заклинателя и иллюзиониста spell_casting;
+        // чёрный ящик, pillager-crossbow: 17=true на зарядке, evoker-fangs: 17=1/2).
+        Kind::Pillager => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.illager.celebrating)]));
+            out.push((17, TYPE_BOOL, vec![u8::from(crate::mob::illager::charging(mob))]));
+        }
+        Kind::Evoker | Kind::Illusioner => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.illager.celebrating)]));
+            out.push((17, TYPE_BYTE, vec![mob.illager.spell]));
+        }
+        Kind::Vindicator | Kind::Ravager => out.push((16, TYPE_BOOL, vec![u8::from(mob.illager.celebrating)])),
+        // Вредина: без тяжести (5) и флаг рывка (16, бит 1; чёрный ящик, evoker-fangs).
+        Kind::Vex => {
+            out.push((5, TYPE_BOOL, vec![u8::from(mob.ticks >= 1)]));
+            out.push((16, TYPE_BYTE, vec![u8::from(mob.illager.charging)]));
+        }
         // Голем (minecraft-data: flags у железного, pumpkin у снежного; чёрный
         // ящик, iron-golem-build: 16=1 у построенного, snow-golem-shear: 16=0
         // после ножниц).
@@ -417,7 +444,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (22, Kind::Wolf) => value.as_slice() == encode_varlong(-1).as_slice(),
         (23, Kind::Wolf) => value.as_slice() == encode_varint(i32::from(crate::mob::tame::WOLF_DEFAULT)).as_slice(),
         (20, Kind::Cat) => value.as_slice() == encode_varint(i32::from(crate::mob::tame::CAT_DEFAULT)).as_slice(),
-        (8, Kind::EndCrystal | Kind::Drowned) => value.as_slice() == [0],
+        (8, Kind::EndCrystal | Kind::Drowned | Kind::Pillager) => value.as_slice() == [0],
         // Скелеты и их родня: без натяжки при появлении 8 не шлют (чёрный ящик, skeleton-arrow, stray-slowness: `4=true 9=20`).
         (8, kind) if kind.skeleton() => value.as_slice() == [0],
         (16, Kind::IronGolem) => value.as_slice() == [0],
@@ -426,6 +453,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (16, Kind::SnowGolem) => value.as_slice() == [0x10],
         (9, Kind::EndCrystal) => value.as_slice() == [1],
         (16, Kind::Phantom) => value.as_slice() == [0],
+        (5 | 16 | 17, Kind::Pillager | Kind::Evoker | Kind::Illusioner | Kind::Vindicator | Kind::Ravager | Kind::Vex) => value.iter().all(|byte| *byte == 0),
         (16, Kind::MagmaCube | Kind::Slime) => value.as_slice() == encode_varint(1).as_slice(),
         (17..=19, Kind::Piglin | Kind::Hoglin | Kind::Strider) => value.iter().all(|byte| *byte == 0),
         (16, Kind::EnderDragon) => value.as_slice() == encode_varint(DRAGON_PHASE_HOVER).as_slice(),
@@ -545,6 +573,7 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         properties,
         max_health: mob.vitals.max_health,
         boss,
+        gear: mob.illager.gear,
     })
 }
 
@@ -780,11 +809,11 @@ pub(super) async fn send_mob_event(
         Event::Status(status) => send_status(stream, entity_id, *status).await?,
         Event::Leash(holder) => send_leash(stream, entity_id, *holder).await?,
         Event::Sound { name, volume, pitch } if heard(at) => {
-            let category = if name.starts_with("minecraft:entity.slime.") || name.starts_with("minecraft:entity.phantom.") || name.starts_with("minecraft:entity.wither.") { 5 } else { SOUND_NEUTRAL };
+            let category = sound_category(name);
             send_sound(stream, name, category, at, *volume, *pitch).await?;
         }
         Event::SoundAt { name, volume, pitch, at: place } if heard(*place) => {
-            let category = if name.starts_with("minecraft:entity.slime.") || name.starts_with("minecraft:entity.phantom.") || name.starts_with("minecraft:entity.wither.") { 5 } else { SOUND_NEUTRAL };
+            let category = sound_category(name);
             send_sound(stream, name, category, *place, *volume, *pitch).await?;
         }
         Event::PlayerSound { name, at: place } if heard(*place) => send_sound(stream, name, SOUND_PLAYERS, *place, 1.0, 1.0).await?,
@@ -826,6 +855,25 @@ async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<
 
     if mob.h.offhand_shell && let Some(shell) = blocks::item_named("nautilus_shell") {
         slots.push((EQUIPMENT_OFF_HAND, Stack::new(shell, 1)));
+    }
+
+    // Разбойник с арбалетом, поборник с топором, вредина с мечом (mob/illager.rs).
+    if let Some(item) = crate::mob::illager::hand_item(mob.kind).and_then(blocks::item_named) {
+        let mut stack = Stack::new(item, 1);
+
+        if mob.kind == Kind::Pillager {
+            stack.data = crate::stackdata::intern(crate::stackdata::Data { damage: mob.illager.wear, charged: u8::from(mob.illager.charged), ..Default::default() });
+        }
+
+        slots.push((EQUIPMENT_MAIN_HAND, stack));
+    }
+
+    // Капитан: зловещий флаг на голове (чёрный ящик, evoker-fangs: слот 5).
+    if mob.illager.captain && let Some(banner) = blocks::item_named("white_banner") {
+        let mut stack = Stack::new(banner, 1);
+
+        stack.data = crate::stackdata::intern(crate::stackdata::Data { ominous_banner: true, ..Default::default() });
+        slots.push((EQUIPMENT_HEAD, stack));
     }
 
     if mob.h.helmet && let Some(helmet) = blocks::item_named("iron_helmet") {
@@ -1138,8 +1186,11 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
 
         // Снаряжение уходит и второй раз в первом проходе (чёрный ящик,
         // skeleton-stand и zombie-attack).
-        if shown.first {
+        // Разбойник: арбалет заряжен или выстрелил — снаряжение заново
+        // (чёрный ящик, pillager-crossbow: charged_projectiles, затем damage).
+        if shown.first || mob.illager.gear != shown.gear {
             send_mob_equipment(stream, mob).await?;
+            shown.gear = mob.illager.gear;
         }
 
         shown.first = false;
@@ -1215,6 +1266,7 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         properties,
         max_health: 0.0,
         boss: false,
+        gear: 0,
     })
 }
 
@@ -1275,6 +1327,32 @@ async fn send_orb_ticks(stream: &mut Outgoing<'_>, player: &mut PlayerState, orb
     }
 
     Ok(())
+}
+
+/// Раздел звука моба: слизень, фантом и разбойники — «враждебные» (5);
+/// начало и середина зарядки арбалета разбойника — «игроки» (чёрный ящик,
+/// pillager-crossbow: loading_start/middle — player, loading_end — hostile).
+fn sound_category(name: &str) -> i32 {
+    const HOSTILE: [&str; 10] = [
+        "minecraft:entity.wither.",
+        "minecraft:entity.slime.",
+        "minecraft:entity.phantom.",
+        "minecraft:entity.pillager.",
+        "minecraft:entity.vindicator.",
+        "minecraft:entity.evoker",
+        "minecraft:entity.vex.",
+        "minecraft:entity.illusioner.",
+        "minecraft:entity.ravager.",
+        "minecraft:item.crossbow.",
+    ];
+
+    if matches!(name, "minecraft:item.crossbow.loading_start" | "minecraft:item.crossbow.loading_middle") {
+        SOUND_PLAYERS
+    } else if HOSTILE.iter().any(|prefix| name.starts_with(prefix)) {
+        5
+    } else {
+        SOUND_NEUTRAL
+    }
 }
 
 #[cfg(test)]

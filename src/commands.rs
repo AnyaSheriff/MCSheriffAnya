@@ -1760,6 +1760,19 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
             shared.mob_griefing.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
             Answer::saying(format!("Правило mob_griefing: {}", value))
         }
+        // Набеги и патрули (raid.rs); прежнее disableRaids — наоборот.
+        ["raids", value] => {
+            shared.raids.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+            Answer::saying(format!("Правило raids: {}", value))
+        }
+        ["disableRaids", value] => {
+            shared.raids.store(*value != "true", std::sync::atomic::Ordering::Relaxed);
+            Answer::saying(format!("Правило raids: {}", *value != "true"))
+        }
+        ["spawn_patrols" | "doPatrolSpawning", value] => {
+            shared.spawn_patrols.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+            Answer::saying(format!("Правило spawn_patrols: {}", value))
+        }
         ["block_drops" | "doTileDrops", value] => {
             shared.block_drops.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
             Answer::saying(format!("Правило block_drops: {}", value))

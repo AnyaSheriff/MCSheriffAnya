@@ -39,6 +39,21 @@ pub const COMPONENT_INTANGIBLE_PROJECTILE: i32 = 22;
 /// Взрыв звезды фейерверка и ракета: полёт и взрывы (protocol.json: 68, 69).
 pub const COMPONENT_FIREWORK_EXPLOSION: i32 = 68;
 pub const COMPONENT_FIREWORKS: i32 = 69;
+/// Уровень зловещей бутылки и узор зловещего флага с его именем, подсказкой и
+/// редкостью (protocol.json: ominous_bottle_amplifier 63, banner_patterns 72,
+/// tooltip_display 18, item_name 9, rarity 12).
+pub const COMPONENT_OMINOUS_AMPLIFIER: i32 = 63;
+pub const COMPONENT_BANNER_PATTERNS: i32 = 72;
+pub const COMPONENT_TOOLTIP_DISPLAY: i32 = 18;
+pub const COMPONENT_ITEM_NAME: i32 = 9;
+pub const COMPONENT_RARITY: i32 = 12;
+
+/// Слои зловещего флага: узор (номер в реестре banner_pattern) и цвет
+/// (вики, Ominous Banner: голубой ромб, светло-серое основание, серый столб,
+/// светло-серая кайма, чёрный пояс, светло-серая верхняя половина,
+/// светло-серый круг, чёрная кайма; чёрный ящик, evoker-fangs: 23/9 31/8
+/// 32/7 1/8 36/15 17/8 3/8 1/15).
+pub const OMINOUS_BANNER_LAYERS: [(i32, i32); 8] = [(23, 9), (31, 8), (32, 7), (1, 8), (36, 15), (17, 8), (3, 8), (1, 15)];
 /// Содержимое шулкер-ящика (`container`, registries.json: 75) клиенту пока
 /// не шлётся — см. `encode_components`.
 #[allow(dead_code)]
@@ -160,6 +175,11 @@ pub struct Data {
     pub trim: Option<(u8, u8)>,
     /// Содержимое шулкер-ящика (`container`): занятые ячейки по порядку.
     pub contents: Vec<Content>,
+    /// Зловещая бутылка: уровень «Дурного знамения» 0…4
+    /// (`ominous_bottle_amplifier`, вики, Ominous Bottle).
+    pub ominous: Option<u8>,
+    /// Зловещий флаг (вики, Ominous Banner): узор, имя, редкость.
+    pub ominous_banner: bool,
 }
 
 impl Data {
@@ -466,6 +486,34 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
     // shulker-break), и неверный формат отключил бы клиента. Предмет
     // показывается без подсказки о содержимом; содержимое хранит сервер.
     // [проверить]
+    if let Some(level) = data.ominous {
+        out.extend_from_slice(&encode_varint(COMPONENT_OMINOUS_AMPLIFIER));
+        out.extend_from_slice(&encode_varint(i32::from(level)));
+        count += 1;
+    }
+
+    // Зловещий флаг: узор, подсказка без узора, имя и редкость «необычный»
+    // (чёрный ящик, evoker-fangs: четыре компонента в таком порядке).
+    if data.ominous_banner {
+        out.extend_from_slice(&encode_varint(COMPONENT_BANNER_PATTERNS));
+        out.extend_from_slice(&encode_varint(OMINOUS_BANNER_LAYERS.len() as i32));
+
+        for (pattern, color) in OMINOUS_BANNER_LAYERS {
+            out.extend_from_slice(&encode_varint(pattern + 1));
+            out.extend_from_slice(&encode_varint(color));
+        }
+
+        out.extend_from_slice(&encode_varint(COMPONENT_TOOLTIP_DISPLAY));
+        out.push(0);
+        out.extend_from_slice(&encode_varint(1));
+        out.extend_from_slice(&encode_varint(COMPONENT_BANNER_PATTERNS));
+        out.extend_from_slice(&encode_varint(COMPONENT_ITEM_NAME));
+        out.extend_from_slice(&crate::network::nbt::translated("block.minecraft.ominous_banner"));
+        out.extend_from_slice(&encode_varint(COMPONENT_RARITY));
+        out.extend_from_slice(&encode_varint(1));
+        count += 4;
+    }
+
     (count, out)
 }
 
@@ -568,6 +616,7 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
             }
         }
         COMPONENT_UNBREAKABLE => data.unbreakable = true,
+        COMPONENT_OMINOUS_AMPLIFIER => data.ominous = reader.varint().map(|level| level.clamp(0, 4) as u8),
         COMPONENT_TRIM => {
             if let (Some(material), Some(pattern)) = (reader.varint(), reader.varint())
                 && (1..=TRIM_MATERIALS.len() as i32).contains(&material)
@@ -710,7 +759,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -750,7 +799,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -787,6 +836,15 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
                 out.extend_from_slice(&(extras.len() as u16).to_be_bytes());
                 out.extend_from_slice(&extras);
             }
+        }
+
+        // Метка 3 — уровень зловещей бутылки, 4 — зловещий флаг.
+        if let Some(level) = data.ominous {
+            out.extend_from_slice(&[3, level]);
+        }
+
+        if data.ominous_banner {
+            out.push(4);
         }
     }
 
@@ -939,6 +997,8 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                         }
                     }
                 }
+                3 => data.ominous = Some(reader.take(1)?[0].min(4)),
+                4 => data.ominous_banner = true,
                 _ => break,
             }
         }
@@ -968,6 +1028,7 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
         match key {
             "damage" => data.damage = value.as_f64().ok_or("damage — число")? as i32,
             "unbreakable" => data.unbreakable = true,
+            "ominous_bottle_amplifier" => data.ominous = Some(value.as_f64().ok_or("ominous_bottle_amplifier — число")?.clamp(0.0, 4.0) as u8),
             "enchantments" | "stored_enchantments" => {
                 let Value::Map(fields) = &value else { return Err(format!("{key} — {{имя:уровень}}")) };
 
@@ -1216,6 +1277,18 @@ mod tests {
 
         assert_eq!(from_bytes(&to_bytes(&charged)), Some(charged));
         assert_eq!(to_bytes(&Data::default()).len(), 6);
+    }
+
+    #[test]
+    fn ominous_items_survive_the_file_and_encode() {
+        let bottle = Data { ominous: Some(3), ..Data::default() };
+        let banner = Data { ominous_banner: true, ..Data::default() };
+
+        assert_eq!(from_bytes(&to_bytes(&bottle)), Some(bottle.clone()));
+        assert_eq!(from_bytes(&to_bytes(&banner)), Some(banner.clone()));
+        assert_eq!(encode_components(&bottle).0, 1);
+        // Флаг: узор, подсказка, имя, редкость (чёрный ящик, evoker-fangs).
+        assert_eq!(encode_components(&banner).0, 4);
     }
 
     #[test]

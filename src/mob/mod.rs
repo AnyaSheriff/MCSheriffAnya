@@ -21,6 +21,7 @@ pub mod golem;
 pub mod guardian;
 pub mod wither;
 pub mod hostile;
+pub mod illager;
 pub mod leash;
 pub mod nether;
 pub mod phantom;
@@ -113,12 +114,21 @@ pub enum Kind {
     ElderGuardian,
     /// Иссушитель (вики, Wither): босс из черепов и песка душ (mob/wither.rs).
     Wither,
+    /// Разбойники (вики, Illager) и разоритель, вредина, челюсти заклинателя (mob/illager.rs).
+    Pillager,
+    Vindicator,
+    Evoker,
+    Vex,
+    Illusioner,
+    Ravager,
+    /// Челюсти заклинателя: не живое, как снаряд шалкера (вики, Evoker Fangs).
+    EvokerFangs,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 41] = [
+    pub const ALL: [Kind; 48] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -160,6 +170,13 @@ impl Kind {
         Kind::Guardian,
         Kind::ElderGuardian,
         Kind::Wither,
+        Kind::Pillager,
+        Kind::Vindicator,
+        Kind::Evoker,
+        Kind::Vex,
+        Kind::Illusioner,
+        Kind::Ravager,
+        Kind::EvokerFangs,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -193,6 +210,12 @@ impl Kind {
                 | Kind::Guardian
                 | Kind::ElderGuardian
                 | Kind::Wither
+                | Kind::Pillager
+                | Kind::Vindicator
+                | Kind::Evoker
+                | Kind::Vex
+                | Kind::Illusioner
+                | Kind::Ravager
         )
     }
 
@@ -216,7 +239,7 @@ impl Kind {
 
     /// Не живое существо, а «сущность-другое»: кристалл и снаряд шалкера.
     pub fn object(self) -> bool {
-        matches!(self, Kind::EndCrystal | Kind::ShulkerBullet | Kind::LeashKnot)
+        matches!(self, Kind::EndCrystal | Kind::ShulkerBullet | Kind::LeashKnot | Kind::EvokerFangs)
     }
 
     /// По имени сущности, как в командах.
@@ -263,6 +286,13 @@ impl Kind {
             "guardian" => Kind::Guardian,
             "elder_guardian" => Kind::ElderGuardian,
             "wither" => Kind::Wither,
+            "pillager" => Kind::Pillager,
+            "vindicator" => Kind::Vindicator,
+            "evoker" => Kind::Evoker,
+            "vex" => Kind::Vex,
+            "illusioner" => Kind::Illusioner,
+            "ravager" => Kind::Ravager,
+            "evoker_fangs" => Kind::EvokerFangs,
             _ => return None,
         })
     }
@@ -310,6 +340,13 @@ impl Kind {
             Kind::Guardian => "guardian",
             Kind::ElderGuardian => "elder_guardian",
             Kind::Wither => "wither",
+            Kind::Pillager => "pillager",
+            Kind::Vindicator => "vindicator",
+            Kind::Evoker => "evoker",
+            Kind::Vex => "vex",
+            Kind::Illusioner => "illusioner",
+            Kind::Ravager => "ravager",
+            Kind::EvokerFangs => "evoker_fangs",
         }
     }
 
@@ -366,6 +403,13 @@ impl Kind {
             Kind::Guardian => 63,
             Kind::ElderGuardian => 40,
             Kind::Wither => 145,
+            Kind::Pillager => 103,
+            Kind::Vindicator => 140,
+            Kind::Evoker => 46,
+            Kind::Vex => 138,
+            Kind::Illusioner => 68,
+            Kind::Ravager => 109,
+            Kind::EvokerFangs => 47,
         }
     }
 
@@ -420,6 +464,14 @@ impl Kind {
             Kind::Guardian => "minecraft:guardian",
             Kind::ElderGuardian => "minecraft:elder_guardian",
             Kind::Wither => "minecraft:wither",
+            // [Bedrock: потом] разбойники для клиента Bedrock: имена есть, свойств нет.
+            Kind::Pillager => "minecraft:pillager",
+            Kind::Vindicator => "minecraft:vindicator",
+            Kind::Evoker => "minecraft:evoker",
+            Kind::Vex => "minecraft:vex",
+            Kind::Illusioner => "minecraft:illusioner",
+            Kind::Ravager => "minecraft:ravager",
+            Kind::EvokerFangs => "minecraft:evoker_fangs",
         }
     }
 
@@ -455,6 +507,11 @@ impl Kind {
             Kind::ElderGuardian => 1.9975,
             // minecraft-data 26.1: 0,9 × 3,5.
             Kind::Wither => 0.9,
+            // minecraft-data: разбойники 0,6 × 1,95, вредина 0,4 × 0,8, разоритель 1,95 × 2,2, челюсти 0,5 × 0,8.
+            Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner => 0.6,
+            Kind::Vex => 0.4,
+            Kind::Ravager => 1.95,
+            Kind::EvokerFangs => 0.5,
             _ => 0.9,
         }
     }
@@ -495,6 +552,9 @@ impl Kind {
             Kind::ElderGuardian => 1.9975,
             // minecraft-data 26.1: 0,9 × 3,5.
             Kind::Wither => 3.5,
+            Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner => 1.95,
+            Kind::Vex | Kind::EvokerFangs => 0.8,
+            Kind::Ravager => 2.2,
         }
     }
 
@@ -542,6 +602,7 @@ impl Kind {
             Kind::ElderGuardian => 80.0,
             // Вики, Wither: 300 на любой сложности.
             Kind::Wither => wither::HEALTH,
+            Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Ravager | Kind::EvokerFangs => illager::max_health(self),
         }
     }
 
@@ -582,6 +643,7 @@ impl Kind {
             // Вики, «Attributes»: железный голем 0,25, снежный 0,2.
             Kind::IronGolem => 0.25,
             Kind::SnowGolem => 0.2,
+            Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Ravager | Kind::EvokerFangs => illager::speed(self),
             Kind::Phantom => 0.0,
             // [проверить] атрибут скорости: страж 0,5, древний 0,3.
             Kind::Guardian => 0.5,
@@ -671,6 +733,7 @@ impl Kind {
             Kind::Guardian => ("minecraft:entity.guardian.ambient", "minecraft:entity.guardian.hurt", "minecraft:entity.guardian.death"),
             Kind::ElderGuardian => ("minecraft:entity.elder_guardian.ambient", "minecraft:entity.elder_guardian.hurt", "minecraft:entity.elder_guardian.death"),
             Kind::Wither => ("minecraft:entity.wither.ambient", "minecraft:entity.wither.hurt", "minecraft:entity.wither.death"),
+            Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Ravager | Kind::EvokerFangs => illager::sounds(self),
         }
     }
 
@@ -700,6 +763,8 @@ impl Kind {
             Kind::Husk => "minecraft:entity.husk.step",
             Kind::Wolf => "minecraft:entity.wolf.step",
             Kind::IronGolem => "minecraft:entity.iron_golem.step",
+            // Чёрный ящик, ravager-roar: entity.ravager.step.
+            Kind::Ravager => "minecraft:entity.ravager.step",
             // У эндермена и ведьмы шаги — звуком блока [проверить]; молча.
             _ => "",
         }
@@ -1103,6 +1168,8 @@ pub struct Mob {
 
     /// Иссушитель: зарядка, головы, черепа (mob/wither.rs).
     pub wither: wither::State,
+    /// Разбойники: заклинания, арбалет, рёв, жизнь вредины и челюстей (mob/illager.rs).
+    pub illager: illager::State,
 }
 
 /// Бит в байте вида записи моба: за записью идёт общий хвост (имя, поводок).
@@ -1193,6 +1260,7 @@ impl Mob {
             phantom: phantom::State::default(),
             guardian: guardian::State::default(),
             wither: wither::State::default(),
+            illager: illager::State::default(),
         }
     }
 
@@ -1334,6 +1402,11 @@ impl Mob {
         // Снаряд шалкера — не живое: ни возраста, ни урона, только полёт.
         if self.kind == Kind::ShulkerBullet {
             return hostile::bullet(self, view, ctx);
+        }
+
+        // Челюсти заклинателя: ждут, кусают, исчезают (mob/illager.rs).
+        if self.kind == Kind::EvokerFangs {
+            return illager::fangs(self, ctx);
         }
 
         // Житель мотает головой и мёртвым: счёт идёт каждый такт (чёрный
@@ -1486,6 +1559,11 @@ impl Mob {
             self.vitals.effects_tick();
         }
 
+        // Разбойники: свечение от колокола проходит (raid.rs).
+        if illager::raider(self.kind) && !self.vitals.effects.is_empty() {
+            self.vitals.effects_tick();
+        }
+
         if self.kind == Kind::Villager {
             self.vitals.effects_tick();
 
@@ -1550,6 +1628,8 @@ impl Mob {
             phantom::fly(self, view);
         } else if guardian::guardian(self.kind) && !self.is_dead() {
             guardian::physics(self, view, rng);
+        } else if self.kind == Kind::Vex && !self.is_dead() {
+            illager::vex_fly(self);
         } else if self.kind != Kind::Shulker && !self.is_dead() {
             if self.kind == Kind::Blaze {
                 let eye = self.h.target.and_then(|id| ctx.players.iter().find(|player| player.id == id)).map(|player| player.y + player.eye);
@@ -1922,6 +2002,11 @@ impl Mob {
         if let Some(push) = push.filter(|push| push.cause != 0) {
             self.by_player = matches!(source, Source::PlayerAttack | Source::MaceSmash);
 
+            // Кто ударил разбойника — для героя деревни (raid.rs).
+            if self.by_player {
+                self.illager.hit_by = push.cause;
+            }
+
             if self.kind.hostile() && !self.no_ai {
                 self.h.target = Some(push.cause);
                 self.h.provoked = true;
@@ -2127,6 +2212,13 @@ impl Mob {
             Kind::LeashKnot => 30,
             Kind::IronGolem => 33,
             Kind::SnowGolem => 34,
+            Kind::Pillager => 64,
+            Kind::Vindicator => 65,
+            Kind::Evoker => 66,
+            Kind::Vex => 67,
+            Kind::Illusioner => 68,
+            Kind::Ravager => 69,
+            Kind::EvokerFangs => 70,
             Kind::Phantom => 35,
             Kind::Guardian => 36,
             Kind::ElderGuardian => 37,
@@ -2218,6 +2310,13 @@ impl Mob {
             30 => Kind::LeashKnot,
             33 => Kind::IronGolem,
             34 => Kind::SnowGolem,
+            64 => Kind::Pillager,
+            65 => Kind::Vindicator,
+            66 => Kind::Evoker,
+            67 => Kind::Vex,
+            68 => Kind::Illusioner,
+            69 => Kind::Ravager,
+            70 => Kind::EvokerFangs,
             35 => Kind::Phantom,
             36 => Kind::Guardian,
             37 => Kind::ElderGuardian,
@@ -2329,8 +2428,18 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
     let mut give = |name: &str, low: i32, high: i32, rng: &mut Rng| {
         let count = low + rng.below((high - low + 1) as u32) as i32;
 
+        // Зловещие флаг и бутылка — с довесками (mob/illager.rs, captain_loot).
+        let (name, data) = match name.split_once(':') {
+            Some(("ominous_bottle", level)) => ("ominous_bottle", crate::stackdata::Data { ominous: level.parse().ok(), ..Default::default() }),
+            _ if name == "ominous_banner" => ("white_banner", crate::stackdata::Data { ominous_banner: true, ..Default::default() }),
+            _ => (name, crate::stackdata::Data::default()),
+        };
+
         if let (Some(item), true) = (blocks::item_named(name), count > 0) {
-            drops.push(Stack::new(item, count));
+            let mut stack = Stack::new(item, count);
+
+            stack.data = crate::stackdata::intern(data);
+            drops.push(stack);
         }
     };
 
@@ -2464,6 +2573,7 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
             give("iron_ingot", 3, 5, rng);
         }
         Kind::SnowGolem => give("snowball", 0, 15, rng),
+        Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Ravager | Kind::EvokerFangs => illager::loot(mob, &mut give, rng),
         // Вики, Phantom: мембрана — 0–1 (+ «Looting»), только если убил игрок или прирученный волк.
         Kind::Phantom => {
             if mob.by_player {
@@ -2909,8 +3019,16 @@ pub fn step_all(
     type Bite = (i32, i32, f32, (f64, f64), Option<(f64, f64, f64)>);
     let mut bites: Vec<Bite> = Vec::new();
 
+    // Синие овцы — для «вололо» заклинателя (mob/illager.rs).
+    let blue_sheep: Vec<(i32, (f64, f64, f64))> = mobs.iter().filter(|mob| mob.kind == Kind::Sheep && mob.color == illager::WOLOLO_FROM && !mob.is_dead()).map(|mob| (mob.entity_id, (mob.x, mob.y, mob.z))).collect();
+    let mut recolor: Vec<i32> = Vec::new();
+
     for (index, mob) in mobs.iter_mut().enumerate() {
         mob.tame.clock = env.clock;
+
+        if mob.kind == Kind::Evoker {
+            mob.illager.sheep = blue_sheep.iter().filter(|(_, at)| hostile::dist2(mob, at.0, at.1, at.2) <= illager::WOLOLO_RANGE * illager::WOLOLO_RANGE).map(|(id, _)| *id).next();
+        }
 
         let plan = mob.tick(view, &ctx, rng);
 
@@ -2984,6 +3102,30 @@ pub fn step_all(
 
         if let Some(shot) = plan.shot {
             outcome.shots.push(Fired { kind: mob.kind, shooter: mob.entity_id, shot });
+        }
+
+        // Вредины и челюсти заклинателя (mob/illager.rs): вредина со сроком
+        // 30–119 секунд (вики, Vex: «start taking damage after 30 to 119
+        // seconds») [проверить].
+        recolor.extend(mob.illager.recolor.take());
+
+        for (kind, at, warmup, yaw) in std::mem::take(&mut mob.illager.summon) {
+            let mut summoned = Mob::new(next_id(), kind, at);
+
+            summoned.yaw = yaw;
+            summoned.head_yaw = yaw;
+            summoned.h.owner = mob.entity_id;
+            summoned.h.target = mob.h.target;
+            summoned.illager.warmup = warmup;
+            summoned.silent = mob.silent && kind == Kind::EvokerFangs;
+
+            if kind == Kind::Vex {
+                summoned.illager.life = 20 * (30 + rng.below(90) as i32);
+                // Не все сразу в рывок: у оригинала из трёх рванулась одна (evoker-fangs) [проверить].
+                summoned.illager.wander = rng.below(80) as i32;
+            }
+
+            born.push(summoned);
         }
 
         if let Some(launch) = plan.launch {
@@ -3100,6 +3242,13 @@ pub fn step_all(
 
     // Зомби стал утопленником, кадавр — зомби: тот же моб, новый номер (вики,
     // Drowned; чёрный ящик, zombie-to-drowned).
+    // «Вололо»: синяя овца становится красной (вики, Evoker).
+    for id in recolor {
+        if let Some(sheep) = mobs.iter_mut().find(|mob| mob.entity_id == id && mob.kind == Kind::Sheep && mob.color == illager::WOLOLO_FROM) {
+            sheep.color = illager::WOLOLO_TO;
+        }
+    }
+
     for (index, kind) in converted {
         let mob = convert(&mobs[index], kind, next_id());
 

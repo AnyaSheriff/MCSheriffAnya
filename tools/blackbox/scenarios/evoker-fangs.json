@@ -1,0 +1,50 @@
+{
+ "about": "Заклинатель с ИИ в 7 блоках от робота: заклинания (свойство 17), челюсти (evoker_fangs) линией или кругом, урон 6, звуки prepare_attack/cast_spell/fangs.attack (вики, Evoker, Evoker Fangs). Пол площадки расширен до ±16: у нашего ровного мира земля на высоте 0, у оригинала — на −61.",
+ "track_mobs": true,
+ "track_self": true,
+ "pad_wide": 16,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "kill $(bot)",
+  "!wait 20",
+  "tp $(bot) $(0.5,0,0.5)",
+  "fill $(-16,-1,-16) $(16,-1,16) minecraft:stone",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon evoker $(7.5,0,0.5)"
+  }
+ ],
+ "record_ticks": 240,
+ "cleanup": [
+  "tp $(bot) $(0.5,0,0.5)",
+  "!wait 2",
+  "kill @e[type=pillager,distance=..96]",
+  "kill @e[type=vindicator,distance=..96]",
+  "kill @e[type=evoker,distance=..96]",
+  "kill @e[type=vex,distance=..96]",
+  "kill @e[type=ravager,distance=..96]",
+  "kill @e[type=witch,distance=..96]",
+  "kill @e[type=evoker_fangs,distance=..96]",
+  "kill @e[type=arrow,distance=..96]",
+  "kill @e[type=villager,distance=..96]",
+  "kill @e[type=item,distance=..96]",
+  "kill @e[type=experience_orb,distance=..96]",
+  "effect clear $(bot)",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(-16,-1,-16) $(16,-1,16) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "random": [],
+ "name": "evoker-fangs"
+}
