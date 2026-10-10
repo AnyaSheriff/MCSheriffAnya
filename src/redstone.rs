@@ -4069,6 +4069,7 @@ fn finish_move(world: &mut World, pos: Pos, moving: Moving) {
 pub fn ticked(world: &mut World, pos: Pos) {
     world.begin_tick(pos, crate::world::TickKind::Block);
 
+    if matches!(blocks::block_at_state(world.get_block(pos.0, pos.1, pos.2)), Some("fire" | "soul_fire")) { crate::fire::tick(world, pos); return; }
     let block = Block::at(world, pos);
 
     match block.kind {

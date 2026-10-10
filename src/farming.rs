@@ -111,6 +111,7 @@ fn ticks_randomly(state: u16) -> bool {
                     || matches!(
                         name,
                         "turtle_egg"
+                            | "lava"
                             | "farmland"
                             | "sugar_cane"
                             | "cactus"
@@ -230,6 +231,7 @@ pub fn random_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
 
     match name {
         "turtle_egg" => crate::mob::water::eggs::turtle_tick(world,pos,state),
+        "lava" => crate::fire::lava_tick(world, pos),
         "farmland" => farmland_tick(world, pos, state),
         "sugar_cane" | "cactus" => column_tick(world, pos, state, name),
         "kelp" => kelp_tick(world, pos, state),

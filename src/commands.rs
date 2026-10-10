@@ -1317,6 +1317,22 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
 
 /// `data merge entity <кто> {NoAI:0b,…}` — правка данных мобов.
 fn data_command(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    if let ["merge", "block", x, y, z, data @ ..] = parts {
+        let Some((x, y, z)) = entity_place(&[x, y, z], origin_of(source, shared)) else {
+            return Answer::saying("Не понял место блока".to_string());
+        };
+        let p = (x.floor() as i32, y.floor() as i32, z.floor() as i32);
+        let mut world = shared.world_in(dimension_of(source, shared)).lock().expect("мир");
+        let changed = world.with_container(p.0, p.1, p.2, |c| crate::beacon::apply_text(c, &data.join(" "))).unwrap_or(false);
+        if changed {
+            let nbt = crate::beacon::nbt(world.container(p.0, p.1, p.2).unwrap());
+            // Оригинал перед данными шлёт и сам блок (чёрный ящик, beacon-effect).
+            world.tell_directly(p.0, p.1, p.2);
+            world.note_block_entity(p.0, p.1, p.2, crate::containers::Kind::Beacon.block_entity_type(), nbt);
+        }
+        return Answer::saying(if changed { "Данные маяка обновлены" } else { "Нет маяка или данные неверны" }.to_string());
+    }
+
     let ["merge", "entity", who, data] = parts else {
         return Answer::saying("Нужно: data merge entity @e[type=cow,limit=1] {NoAI:0b}".to_string());
     };
@@ -1801,6 +1817,11 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
     }
 
     match parts {
+        ["doFireTick" | "fire_tick" | "minecraft:fire_tick", value @ ("true" | "false")] => {
+            for dimension in crate::dimension::Dimension::ALL { shared.world_in(dimension).lock().expect("мир").fire_tick = *value == "true"; }
+            Answer::saying(format!("Правило doFireTick: {}", value))
+        }
+        ["doFireTick" | "fire_tick" | "minecraft:fire_tick"] => Answer::saying(format!("Правило doFireTick: {}", shared.world_in(crate::dimension::Dimension::Overworld).lock().expect("мир").fire_tick)),
         ["keepInventory" | "keep_inventory", value] => {
             let on = *value == "true";
 
@@ -2282,6 +2303,7 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
 
                             // Печь и стойка: жар из данных, чего нет — ноль.
                             crate::furnace::heat_from_text(container, text);
+                            crate::beacon::apply_text(container, text);
                         });
                     }
                 }

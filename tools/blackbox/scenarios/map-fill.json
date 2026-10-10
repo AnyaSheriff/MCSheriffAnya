@@ -1,0 +1,43 @@
+{
+ "track_mobs": true,
+ "track_self": true,
+ "inventory": true,
+ "blocks": [],
+ "name": "map-fill",
+ "setup": [
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,3.5)",
+  "execute at $(bot) run forceload add ~-44 ~-44 ~92 ~92",
+  "!wait 20",
+  "fill $(-40,59,-40) $(95,59,95) minecraft:air",
+  "fill $(-40,58,-40) $(95,58,95) minecraft:stone",
+  "fill $(0,58,0) $(6,58,6) minecraft:grass_block",
+  "fill $(0,-1,0) $(6,-1,6) minecraft:grass_block",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "give $(bot) minecraft:map",
+  "!hotbar 0",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "use": true
+  },
+  {
+   "after": 30,
+   "cmd": "tp $(bot) $(5.5,0,3.5)"
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "fill $(-40,58,-40) $(95,58,95) minecraft:air",
+  "execute at $(bot) run forceload remove ~-44 ~-44 ~92 ~92",
+  "fill $(0,-1,0) $(6,-1,6) minecraft:air",
+  "clear $(bot)",
+  "gamemode creative $(bot)"
+ ],
+ "about": "Empty map becomes a filled map with map_id; held map pixels and player marker update after movement. The ground is capped with stone at absolute y=-1 (ours has its ground at y=0, vanilla flat at -61) so both worlds show the same surface.",
+ "track_maps": true
+}

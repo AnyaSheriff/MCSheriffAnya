@@ -165,6 +165,11 @@ pub fn fluid_at(state: i32) -> Option<(Kind, i32)> {
         }
     }
 
+    // Костёр держит источник воды в waterlogged (вики, Campfire).
+    if crate::campfire::is_campfire(state)
+        && blocks::orientation_of(state).and_then(|o| o.value(state, "waterlogged")) == Some("true") {
+        return Some((Kind::Water, SOURCE));
+    }
     None
 }
 
@@ -201,7 +206,7 @@ pub fn can_flow_into(state: i32) -> bool {
 /// проходимым. То же с тем, что поток сносит (`washed_away`), и с огнём:
 /// «Spreading water extinguishes fire» (вики, Water).
 pub fn flows_through(state: i32) -> bool {
-    can_flow_into(state) || washed_away(state) || is_fire(state)
+    can_flow_into(state) || washed_away(state) || is_fire(state) || crate::campfire::is_campfire(state)
 }
 
 /// Сносит ли текущая жидкость этот блок.
@@ -290,6 +295,9 @@ where
 {
     let (x, y, z) = at;
     let here = block(x, y, z);
+
+    // Вода хранится внутри костра, а не заменяет его водяным блоком.
+    if crate::campfire::is_campfire(here) { return None; }
 
     // Встреча воды и лавы. Правила для разных сторон разные, поэтому
     // разбираются отдельно и раньше всего.
@@ -391,6 +399,12 @@ where
     F: Fn(i32, i32, i32) -> i32,
 {
     let here = block(at.0, at.1, at.2);
+
+    if crate::campfire::is_campfire(here) {
+        if kind != Kind::Water || fluid_at(here).is_some() { return None; }
+        let o = blocks::orientation_of(here)?;
+        return o.with(here, "waterlogged", "true").and_then(|s| o.with(s, "lit", "false"));
+    }
 
     if fluid_at(here).is_some() || !flows_through(here) {
         return None;
@@ -736,6 +750,17 @@ fn named_state(name: &'static str) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn waterlogs_campfire_without_replacing_it_and_lava_cannot_enter() {
+        let dry = named_state("campfire");
+        let wet = poured((0, 70, 0), Kind::Water, &|_, _, _| dry).unwrap();
+        assert_eq!(blocks::block_at_state(wet), Some("campfire"));
+        assert_eq!(fluid_at(wet), Some((Kind::Water, SOURCE)));
+        assert!(!crate::campfire::lit(wet));
+        assert!(poured((0, 70, 0), Kind::Lava, &|_, _, _| dry).is_none());
+        assert!(update((0, 70, 0), &|_, _, _| wet).is_none());
+    }
     use std::collections::HashMap;
 
     /// Камень.

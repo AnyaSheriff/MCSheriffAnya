@@ -2469,6 +2469,9 @@ impl BedrockWorld {
         }
 
         let kind = containers::Kind::of(world.get_block(x, y, z));
+        // [Bedrock: потом] интерфейс маяка и приготовление на костре.
+        if matches!(kind, Some(containers::Kind::Beacon | containers::Kind::Campfire)) { return None; }
+
 
         // Проигрыватель и кафедра — общий с Java ход (redstone/jukebox.rs,
         // redstone/lectern.rs): пластинка и книга из руки. Окна кафедры у

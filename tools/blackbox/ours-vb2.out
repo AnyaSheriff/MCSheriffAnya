@@ -1,0 +1,601 @@
+[18:45:43] [Server thread/INFO]: Запуск сервера MCSheriffAnya (Minecraft 26.1.2, протокол 775)
+[18:45:43] [Server thread/INFO]: Ядер: 12. Такту отведено ядро 11, остальные — сети и складыванию мира
+[18:45:43] [Server thread/INFO]: Загрузка настроек
+[18:45:43] [Server thread/INFO]: Создана директория: world
+[18:45:43] [Server thread/INFO]: Создана директория: logs
+[18:45:43] [Server thread/INFO]: Создана директория: world/playerdata
+[18:45:43] [Server thread/INFO]: Создана директория: skins
+[18:45:43] [Server thread/INFO]: Сервер запущен на *:25861
+[18:45:43] [Server thread/INFO]: Подготовка мира "world"
+[18:45:43] [Server thread/INFO]: Семя мира: 1791647143480951473
+[18:45:43] [Server thread/INFO]: Тип мира: minecraft:flat
+[18:45:43] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_nether"
+[18:45:43] [Server thread/INFO]: Семя мира: 1791647143480951473
+[18:45:43] [Server thread/INFO]: Тип мира: minecraft:the_nether
+[18:45:43] [Server thread/INFO]: Подготовка мира "world/dimensions/minecraft/the_end"
+[18:45:43] [Server thread/INFO]: Семя мира: 1791647143480951473
+[18:45:43] [Server thread/INFO]: Тип мира: minecraft:the_end
+[18:45:43] [Server thread/INFO]: Bedrock: приём на *:19132 (UDP), версия 1.26.10 (протокол 944)
+[18:45:43] [Server thread/INFO]: Готово (0.046 с)! Чтобы узнать команды, набери help
+[18:45:43] [Server thread/WARN]: Команды вводить негде: сервер запущен без консоли
+[18:46:17] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:46:18] [Server thread/INFO]: Скины: скин blackbox получен от Mojang
+[18:46:18] [Server thread/INFO]: blackbox[/127.0.0.1:34578 → 127.0.0.1:25861] вошёл с номером сущности 1 в (0.5, 63.0, 0.5)
+[18:46:18] [Server thread/INFO]: blackbox зашёл на сервер
+[18:46:23] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:46:23] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:46:23] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:46:23] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:46:24] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:46:24] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:46:26] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:46:26] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:46:26] [Server thread/INFO]: [blackbox: Заполнено блоков: 1156]
+[18:46:26] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:46:26] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:46:26] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:46:26] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[18:46:26] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[18:46:27] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:46:27] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:46:28] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:46:28] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:46:29] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:46:30] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:46:30] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:46:31] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:46:31] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[18:46:31] [Server thread/INFO]: [blackbox: Блок в 100, -59, 100 изменён]
+[18:46:31] [Server thread/INFO]: [blackbox: Блок в 101, -59, 100 изменён]
+[18:46:31] [Server thread/INFO]: [blackbox: Блок в 100, -58, 100 изменён]
+[18:46:31] [Server thread/INFO]: [blackbox: Блок в 100, -59, 103 изменён]
+[18:46:32] [Server thread/INFO]: [blackbox: Блок в 100, -58, 103 изменён]
+[18:46:42] [Server thread/INFO]: [blackbox: Убрано сущностей: 2]
+[18:46:42] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:46:42] [Server thread/INFO]: blackbox вышел
+[18:47:13] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:47:13] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 103.50 -58.00 103.50
+[18:47:13] [Server thread/INFO]: blackbox[/127.0.0.1:44550 → 127.0.0.1:25861] вошёл с номером сущности 148 в (103.5, -58.0, 103.5)
+[18:47:14] [Server thread/INFO]: blackbox зашёл на сервер
+[18:47:18] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:47:19] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:47:19] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:47:19] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:47:19] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:47:19] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:47:21] [Server thread/INFO]: [blackbox: Заполнено блоков: 294]
+[18:47:21] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:47:21] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:47:21] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:47:21] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:47:22] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:47:22] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[18:47:22] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[18:47:22] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:47:22] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:47:23] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:47:24] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:47:24] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:47:25] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:47:25] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:47:26] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:47:26] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[18:47:26] [Server thread/INFO]: [blackbox: Сложность: normal]
+[18:47:27] [Server thread/INFO]: [blackbox: Режим игры: выживание]
+[18:47:27] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:47:27] [Server thread/INFO]: [blackbox: Убит: blackbox]
+[18:47:27] [Server thread/INFO]: blackbox was killed
+[18:47:28] [Server thread/INFO]: blackbox was killed
+[18:47:28] [Server thread/INFO]: blackbox перешёл в minecraft:overworld (0.5, 1.0, 0.5)
+[18:47:28] [Server thread/INFO]: [blackbox: Переношу в 103.5 -57 98.5]
+[18:47:29] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:47:29] [Server thread/INFO]: [blackbox: Заполнено блоков: 98]
+[18:47:29] [Server thread/INFO]: [blackbox: Заполнено блоков: 50]
+[18:47:29] [Server thread/INFO]: [blackbox: Переношу в 103.5 -57 100.5]
+[18:47:30] [Server thread/INFO]: [blackbox: Выдано: minecraft:fishing_rod × 1 — игрокам: blackbox]
+[18:47:39] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:47:39] [Server thread/INFO]: [blackbox: Заполнено блоков: 98]
+[18:47:39] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:47:39] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:47:39] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:47:40] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:47:40] [Server thread/INFO]: blackbox вышел
+[18:48:50] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:48:50] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 103.50 -59.00 100.50
+[18:48:50] [Server thread/INFO]: blackbox[/127.0.0.1:49322 → 127.0.0.1:25861] вошёл с номером сущности 295 в (103.5, -59.0, 100.5)
+[18:48:51] [Server thread/INFO]: blackbox зашёл на сервер
+[18:48:56] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:48:56] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:48:56] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:48:56] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:48:56] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:48:56] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:48:58] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:48:58] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:48:58] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:48:59] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:48:59] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:48:59] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:48:59] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[18:48:59] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[18:48:59] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:48:59] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:49:00] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:49:01] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:49:01] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:49:02] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:49:03] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:49:03] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:49:04] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[18:49:04] [Server thread/INFO]: [blackbox: Режим игры: выживание]
+[18:49:04] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:49:04] [Server thread/INFO]: [blackbox: Заполнено блоков: 363]
+[18:49:04] [Server thread/INFO]: [blackbox: Заполнено блоков: 242]
+[18:49:04] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 97.5]
+[18:49:04] [Server thread/INFO]: [blackbox: Выдано: minecraft:fishing_rod × 1 — игрокам: blackbox]
+[18:49:39] [Server thread/INFO]: blackbox has made the advancement [Fishy Business]
+[18:49:39] [Server thread/INFO]: blackbox has made the advancement [Fishy Business]
+[18:49:58] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:49:58] [Server thread/INFO]: [blackbox: Заполнено блоков: 507]
+[18:49:58] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:49:59] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:49:59] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:49:59] [Server thread/INFO]: blackbox вышел
+[18:50:53] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:50:54] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 103.50 -59.15 97.50
+[18:50:54] [Server thread/INFO]: blackbox[/127.0.0.1:55586 → 127.0.0.1:25861] вошёл с номером сущности 378 в (103.5, -59.1, 97.5)
+[18:50:54] [Server thread/INFO]: blackbox зашёл на сервер
+[18:50:58] [Server thread/INFO]: blackbox fell out of the world
+[18:50:58] [Server thread/INFO]: blackbox fell out of the world
+[18:50:58] [Server thread/INFO]: blackbox перешёл в minecraft:overworld (0.5, 1.0, 0.5)
+[18:50:59] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:50:59] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:50:59] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:50:59] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:50:59] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:50:59] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:51:01] [Server thread/INFO]: [blackbox: Заполнено блоков: 145]
+[18:51:01] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:51:01] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:51:02] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:51:02] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:51:02] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:51:02] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[18:51:02] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[18:51:02] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:51:02] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:51:03] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:51:04] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:51:04] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:51:05] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:51:06] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:51:06] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:51:07] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[18:51:07] [Server thread/INFO]: [blackbox: Режим игры: выживание]
+[18:51:07] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:51:07] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:51:07] [Server thread/INFO]: [blackbox: Блок в 103, -59, 103 изменён]
+[18:51:07] [Server thread/INFO]: [blackbox: Переношу в 103.5 -59 100.5]
+[18:51:07] [Server thread/INFO]: [blackbox: Выдано: minecraft:beef × 4 — игрокам: blackbox]
+[18:51:45] [Server thread/INFO]: [blackbox: Убрано сущностей: 4]
+[18:51:45] [Server thread/INFO]: [blackbox: Заполнено блоков: 50]
+[18:51:45] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:51:45] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:51:45] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:51:45] [Server thread/INFO]: blackbox вышел
+[18:52:24] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:52:24] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 103.50 -60.59 100.50
+[18:52:24] [Server thread/INFO]: blackbox[/127.0.0.1:36460 → 127.0.0.1:25861] вошёл с номером сущности 506 в (103.5, -60.6, 100.5)
+[18:52:25] [Server thread/INFO]: blackbox зашёл на сервер
+[18:52:29] [Server thread/INFO]: blackbox fell out of the world
+[18:52:29] [Server thread/INFO]: blackbox перешёл в minecraft:overworld (0.5, 1.0, 0.5)
+[18:52:29] [Server thread/INFO]: blackbox fell out of the world
+[18:52:30] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:52:30] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:52:30] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:52:30] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:52:30] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:52:30] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:52:42] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:52:42] [Server thread/INFO]: blackbox вышел
+[18:53:26] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:53:26] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 0.50 1.00 0.50
+[18:53:26] [Server thread/INFO]: blackbox[/127.0.0.1:57908 → 127.0.0.1:25861] вошёл с номером сущности 628 в (0.5, 1.0, 0.5)
+[18:53:27] [Server thread/INFO]: blackbox зашёл на сервер
+[18:53:31] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:53:32] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:53:32] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:53:32] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:53:32] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:53:32] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:53:34] [Server thread/INFO]: [blackbox: Заполнено блоков: 240]
+[18:53:34] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:53:34] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:53:34] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:53:34] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:53:35] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:53:35] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[18:53:35] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[18:53:35] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:53:35] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:53:36] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:53:37] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:53:37] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:53:38] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:53:38] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:53:39] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:53:39] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[18:53:39] [Server thread/INFO]: [blackbox: Режим игры: выживание]
+[18:53:40] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:53:40] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:53:40] [Server thread/INFO]: [blackbox: Заполнено блоков: 9]
+[18:53:40] [Server thread/INFO]: [blackbox: Блок в 102, -59, 102 изменён]
+[18:53:40] [Server thread/INFO]: [blackbox: Переношу в 102.5 -59 100.5]
+[18:53:40] [Server thread/INFO]: [blackbox: Эффекты сняты: blackbox]
+[18:53:43] [Server thread/INFO]: blackbox has made the advancement [Bring Home the Beacon]
+[18:53:43] [Server thread/INFO]: blackbox has made the advancement [Bring Home the Beacon]
+[18:53:47] [Server thread/INFO]: [blackbox: Данные маяка обновлены]
+[18:53:55] [Server thread/INFO]: [blackbox: Блок в 102, -57, 102 изменён]
+[18:54:09] [Server thread/INFO]: [blackbox: Заполнено блоков: 27]
+[18:54:09] [Server thread/INFO]: [blackbox: Эффекты сняты: blackbox]
+[18:54:09] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:54:09] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:54:09] [Server thread/INFO]: blackbox вышел
+[18:54:36] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:54:36] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 102.50 -60.15 100.50
+[18:54:36] [Server thread/INFO]: blackbox[/127.0.0.1:35026 → 127.0.0.1:25861] вошёл с номером сущности 751 в (102.5, -60.1, 100.5)
+[18:54:36] [Server thread/INFO]: blackbox зашёл на сервер
+[18:54:41] [Server thread/INFO]: blackbox fell out of the world
+[18:54:41] [Server thread/INFO]: blackbox перешёл в minecraft:overworld (0.5, 1.0, 0.5)
+[18:54:41] [Server thread/INFO]: blackbox fell out of the world
+[18:54:41] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:54:41] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:54:41] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:54:42] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:54:42] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:54:42] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:54:44] [Server thread/INFO]: [blackbox: Заполнено блоков: 264]
+[18:54:44] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:54:44] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:54:44] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:54:44] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:54:44] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:54:45] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[18:54:45] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[18:54:45] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:54:45] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:54:46] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:54:47] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:54:47] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:54:48] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:54:48] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:54:49] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:54:49] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[18:54:49] [Server thread/INFO]: [blackbox: Режим игры: выживание]
+[18:54:49] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:54:49] [Server thread/INFO]: [blackbox: Переношу в 103.5 -59 103.5]
+[18:54:50] [Server thread/INFO]: [blackbox: Неверный довод команды: at]
+[18:54:51] [Server thread/INFO]: [blackbox: Заполнено блоков: 18207]
+[18:54:51] [Server thread/INFO]: [blackbox: Заполнено блоков: 18496]
+[18:54:51] [Server thread/INFO]: [blackbox: Заполнено блоков: 49]
+[18:54:51] [Server thread/INFO]: [blackbox: Заполнено блоков: 49]
+[18:54:51] [Server thread/INFO]: [blackbox: Переношу в 103.5 -59 103.5]
+[18:54:51] [Server thread/INFO]: [blackbox: Выдано: minecraft:map × 1 — игрокам: blackbox]
+[18:54:56] [Server thread/INFO]: [blackbox: Переношу в 105.5 -59 103.5]
+[18:55:00] [Server thread/INFO]: [blackbox: Заполнено блоков: 18496]
+[18:55:00] [Server thread/INFO]: [blackbox: Неверный довод команды: at]
+[18:55:01] [Server thread/INFO]: [blackbox: Заполнено блоков: 49]
+[18:55:01] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:55:01] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:55:01] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:55:01] [Server thread/INFO]: blackbox вышел
+[18:55:44] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:55:44] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 105.50 -60.59 103.50
+[18:55:44] [Server thread/INFO]: blackbox[/127.0.0.1:53536 → 127.0.0.1:25861] вошёл с номером сущности 874 в (105.5, -60.6, 103.5)
+[18:55:44] [Server thread/INFO]: blackbox зашёл на сервер
+[18:55:49] [Server thread/INFO]: blackbox fell out of the world
+[18:55:49] [Server thread/INFO]: blackbox fell out of the world
+[18:55:49] [Server thread/INFO]: blackbox перешёл в minecraft:overworld (0.5, 1.0, 0.5)
+[18:55:49] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:55:49] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:55:49] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:55:49] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:55:49] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:55:50] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:55:52] [Server thread/INFO]: [blackbox: Заполнено блоков: 240]
+[18:55:52] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:55:52] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:55:52] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:55:52] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:55:52] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:55:52] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[18:55:52] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[18:55:53] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:55:53] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:55:54] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:55:54] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:55:55] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:55:55] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:55:56] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:55:57] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:55:57] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[18:55:57] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:55:57] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:55:57] [Server thread/INFO]: [blackbox: Правило minecraft:fire_spread_radius_around_player: 128]
+[18:55:57] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:55:57] [Server thread/INFO]: [blackbox: Блок в 102, -60, 102 изменён]
+[18:55:58] [Server thread/INFO]: [blackbox: Блок в 103, -59, 102 изменён]
+[18:55:58] [Server thread/INFO]: [blackbox: Блок в 104, -59, 102 изменён]
+[18:55:58] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 98.5]
+[18:56:00] [Server thread/INFO]: [blackbox: Блок в 102, -59, 102 изменён]
+[18:56:21] [Server thread/INFO]: [blackbox: Заполнено блоков: 52]
+[18:56:21] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:56:21] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:56:21] [Server thread/INFO]: blackbox вышел
+[18:56:48] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:56:48] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 103.50 -58.00 98.50
+[18:56:48] [Server thread/INFO]: blackbox[/127.0.0.1:45546 → 127.0.0.1:25861] вошёл с номером сущности 999 в (103.5, -58.0, 98.5)
+[18:56:48] [Server thread/INFO]: blackbox зашёл на сервер
+[18:56:53] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:56:53] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:56:53] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:56:53] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:56:53] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:56:53] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:56:56] [Server thread/INFO]: [blackbox: Заполнено блоков: 240]
+[18:56:56] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:56:56] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:56:56] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:56:56] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:56:56] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:56:56] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[18:56:56] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[18:56:56] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:56:56] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:56:58] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:56:58] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:56:59] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:56:59] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:57:00] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:57:00] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:57:01] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[18:57:01] [Server thread/INFO]: [blackbox: Режим игры: выживание]
+[18:57:01] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:57:01] [Server thread/INFO]: [blackbox: Переношу в 103.5 -59 103.5]
+[18:57:01] [Server thread/INFO]: [blackbox: Неверный довод команды: at]
+[18:57:02] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:57:03] [Server thread/INFO]: [blackbox: Заполнено блоков: 18496]
+[18:57:03] [Server thread/INFO]: [blackbox: Заполнено блоков: 49]
+[18:57:03] [Server thread/INFO]: [blackbox: Заполнено блоков: 49]
+[18:57:03] [Server thread/INFO]: [blackbox: Переношу в 103.5 -59 103.5]
+[18:57:03] [Server thread/INFO]: [blackbox: Выдано: minecraft:map × 1 — игрокам: blackbox]
+[18:57:08] [Server thread/INFO]: [blackbox: Переношу в 105.5 -59 103.5]
+[18:57:12] [Server thread/INFO]: [blackbox: Заполнено блоков: 18496]
+[18:57:12] [Server thread/INFO]: [blackbox: Неверный довод команды: at]
+[18:57:12] [Server thread/INFO]: [blackbox: Заполнено блоков: 49]
+[18:57:12] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:57:12] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:57:13] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:57:13] [Server thread/INFO]: blackbox вышел
+[18:57:42] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:57:42] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 105.50 -60.59 103.50
+[18:57:42] [Server thread/INFO]: blackbox[/127.0.0.1:43346 → 127.0.0.1:25861] вошёл с номером сущности 1081 в (105.5, -60.6, 103.5)
+[18:57:43] [Server thread/INFO]: blackbox зашёл на сервер
+[18:57:47] [Server thread/INFO]: blackbox fell out of the world
+[18:57:47] [Server thread/INFO]: blackbox fell out of the world
+[18:57:47] [Server thread/INFO]: blackbox перешёл в minecraft:overworld (0.5, 1.0, 0.5)
+[18:57:47] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:57:47] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:57:48] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:57:48] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:57:48] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:57:48] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:57:50] [Server thread/INFO]: [blackbox: Заполнено блоков: 240]
+[18:57:50] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:57:50] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:57:50] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:57:50] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:57:50] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:57:51] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[18:57:51] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[18:57:51] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:57:51] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:57:52] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:57:53] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:57:53] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:57:54] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:57:54] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:57:55] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:57:55] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[18:57:55] [Server thread/INFO]: [blackbox: Сложность: normal]
+[18:57:55] [Server thread/INFO]: [blackbox: Режим игры: выживание]
+[18:57:56] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:57:56] [Server thread/INFO]: [blackbox: Убит: blackbox]
+[18:57:56] [Server thread/INFO]: blackbox was killed
+[18:57:57] [Server thread/INFO]: blackbox was killed
+[18:57:57] [Server thread/INFO]: blackbox перешёл в minecraft:overworld (0.5, 1.0, 0.5)
+[18:57:57] [Server thread/INFO]: [blackbox: Переношу в 103.5 -57 98.5]
+[18:57:59] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:57:59] [Server thread/INFO]: [blackbox: Заполнено блоков: 98]
+[18:57:59] [Server thread/INFO]: [blackbox: Заполнено блоков: 50]
+[18:57:59] [Server thread/INFO]: [blackbox: Переношу в 103.5 -57 100.5]
+[18:57:59] [Server thread/INFO]: [blackbox: Выдано: minecraft:fishing_rod × 1 — игрокам: blackbox]
+[18:58:08] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:58:08] [Server thread/INFO]: [blackbox: Заполнено блоков: 98]
+[18:58:08] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:58:08] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:58:08] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:58:08] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:58:09] [Server thread/INFO]: blackbox вышел
+[18:58:41] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:58:41] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 103.50 -59.00 100.50
+[18:58:41] [Server thread/INFO]: blackbox[/127.0.0.1:49730 → 127.0.0.1:25861] вошёл с номером сущности 1255 в (103.5, -59.0, 100.5)
+[18:58:41] [Server thread/INFO]: blackbox зашёл на сервер
+[18:58:46] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:58:46] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:58:46] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:58:46] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[18:58:46] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[18:58:46] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[18:58:48] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:58:49] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[18:58:49] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:58:49] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:58:49] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:58:49] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:58:49] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[18:58:49] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[18:58:49] [Server thread/INFO]: [blackbox: Погода: ясно]
+[18:58:49] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:58:51] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:58:51] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:58:52] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:58:52] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:58:53] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:58:53] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[18:58:54] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[18:58:54] [Server thread/INFO]: [blackbox: Сложность: normal]
+[18:58:54] [Server thread/INFO]: [blackbox: Режим игры: выживание]
+[18:58:54] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:58:54] [Server thread/INFO]: [blackbox: Убит: blackbox]
+[18:58:54] [Server thread/INFO]: blackbox was killed
+[18:58:54] [Server thread/INFO]: blackbox перешёл в minecraft:overworld (0.5, 1.0, 0.5)
+[18:58:54] [Server thread/INFO]: blackbox was killed
+[18:58:55] [Server thread/INFO]: [blackbox: Переношу в 103.5 -57 98.5]
+[18:58:56] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:58:56] [Server thread/INFO]: [blackbox: Заполнено блоков: 98]
+[18:58:57] [Server thread/INFO]: [blackbox: Заполнено блоков: 50]
+[18:58:57] [Server thread/INFO]: [blackbox: Переношу в 103.5 -57 100.5]
+[18:58:57] [Server thread/INFO]: [blackbox: Выдано: minecraft:fishing_rod × 1 — игрокам: blackbox]
+[18:59:06] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[18:59:07] [Server thread/INFO]: [blackbox: Заполнено блоков: 98]
+[18:59:07] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[18:59:07] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[18:59:07] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[18:59:07] [Server thread/INFO]: blackbox потерял соединение: отключился
+[18:59:07] [Server thread/INFO]: blackbox вышел
+[18:59:58] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[18:59:59] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 103.50 -59.00 100.50
+[18:59:59] [Server thread/INFO]: blackbox[/127.0.0.1:39990 → 127.0.0.1:25861] вошёл с номером сущности 1383 в (103.5, -59.0, 100.5)
+[18:59:59] [Server thread/INFO]: blackbox зашёл на сервер
+[19:00:04] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[19:00:04] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[19:00:04] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[19:00:04] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[19:00:04] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[19:00:04] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[19:00:06] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[19:00:06] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[19:00:06] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:00:07] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:00:07] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:00:07] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:00:07] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[19:00:07] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[19:00:07] [Server thread/INFO]: [blackbox: Погода: ясно]
+[19:00:07] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[19:00:08] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:00:09] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:00:09] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:00:10] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:00:11] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:00:11] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:00:12] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[19:00:12] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[19:00:12] [Server thread/INFO]: [blackbox: Погода: ясно]
+[19:00:12] [Server thread/INFO]: [blackbox: Правило minecraft:fire_spread_radius_around_player: 128]
+[19:00:12] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:00:12] [Server thread/INFO]: [blackbox: Блок в 102, -60, 102 изменён]
+[19:00:12] [Server thread/INFO]: [blackbox: Блок в 103, -59, 102 изменён]
+[19:00:12] [Server thread/INFO]: [blackbox: Блок в 104, -59, 102 изменён]
+[19:00:12] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 98.5]
+[19:00:15] [Server thread/INFO]: [blackbox: Блок в 102, -59, 102 изменён]
+[19:00:35] [Server thread/INFO]: [blackbox: Заполнено блоков: 52]
+[19:00:35] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[19:00:35] [Server thread/INFO]: blackbox потерял соединение: отключился
+[19:00:35] [Server thread/INFO]: blackbox вышел
+[19:01:15] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[19:01:15] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 103.50 -58.00 98.50
+[19:01:15] [Server thread/INFO]: blackbox[/127.0.0.1:53028 → 127.0.0.1:25861] вошёл с номером сущности 1465 в (103.5, -58.0, 98.5)
+[19:01:15] [Server thread/INFO]: blackbox зашёл на сервер
+[19:01:20] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[19:01:20] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[19:01:20] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[19:01:20] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[19:01:20] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[19:01:21] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[19:01:23] [Server thread/INFO]: [blackbox: Заполнено блоков: 240]
+[19:01:23] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[19:01:23] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:01:23] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:01:23] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:01:23] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:01:23] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[19:01:23] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[19:01:23] [Server thread/INFO]: [blackbox: Погода: ясно]
+[19:01:24] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[19:01:25] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:01:25] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:01:26] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:01:26] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:01:27] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:01:28] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:01:28] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[19:01:28] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[19:01:28] [Server thread/INFO]: [blackbox: Погода: ясно]
+[19:01:28] [Server thread/INFO]: [blackbox: Правило minecraft:fire_spread_radius_around_player: 128]
+[19:01:28] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:01:28] [Server thread/INFO]: [blackbox: Блок в 102, -60, 102 изменён]
+[19:01:29] [Server thread/INFO]: [blackbox: Блок в 103, -59, 102 изменён]
+[19:01:29] [Server thread/INFO]: [blackbox: Блок в 104, -59, 102 изменён]
+[19:01:29] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 98.5]
+[19:01:31] [Server thread/INFO]: [blackbox: Блок в 102, -59, 102 изменён]
+[19:01:52] [Server thread/INFO]: [blackbox: Заполнено блоков: 52]
+[19:01:52] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[19:01:52] [Server thread/INFO]: blackbox потерял соединение: отключился
+[19:01:52] [Server thread/INFO]: blackbox вышел
+[19:02:31] [Server thread/INFO]: Опознаватель игрока blackbox — 26d479c9-4844-3b0a-ba59-8cc656622a78
+[19:02:31] [Server thread/INFO]: Положение игрока прочитано из world/playerdata/26d479c948443b0aba598cc656622a78.mcrw: 103.50 -58.00 98.50
+[19:02:31] [Server thread/INFO]: blackbox[/127.0.0.1:59196 → 127.0.0.1:25861] вошёл с номером сущности 1543 в (103.5, -58.0, 98.5)
+[19:02:31] [Server thread/INFO]: blackbox зашёл на сервер
+[19:02:36] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[19:02:36] [Server thread/INFO]: [blackbox: Инвентарь очищен: blackbox]
+[19:02:36] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[19:02:36] [Server thread/INFO]: [blackbox: Опыт изменён: blackbox]
+[19:02:37] [Server thread/INFO]: [blackbox: The base value for attribute attribute.name.attack_damage for entity blackbox reset to default 1.0]
+[19:02:37] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 103.5]
+[19:02:39] [Server thread/INFO]: [blackbox: Заполнено блоков: 240]
+[19:02:39] [Server thread/INFO]: [blackbox: Заполнено блоков: 289]
+[19:02:39] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:02:39] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:02:39] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:02:39] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:02:39] [Server thread/INFO]: [blackbox: Правило spawn_mobs: false]
+[19:02:40] [Server thread/INFO]: [blackbox: Правило advance_time: true]
+[19:02:40] [Server thread/INFO]: [blackbox: Погода: ясно]
+[19:02:40] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[19:02:41] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:02:42] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:02:42] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:02:43] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:02:43] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:02:44] [Server thread/INFO]: [blackbox: Блок в 108, -59, 108 изменён]
+[19:02:44] [Server thread/INFO]: [blackbox: Там уже такой блок]
+[19:02:44] [Server thread/INFO]: [blackbox: Режим игры: творческий]
+[19:02:44] [Server thread/INFO]: [blackbox: Погода: ясно]
+[19:02:44] [Server thread/INFO]: [blackbox: Правило minecraft:fire_spread_radius_around_player: 128]
+[19:02:45] [Server thread/INFO]: [blackbox: Заполнено блоков: 0]
+[19:02:45] [Server thread/INFO]: [blackbox: Блок в 102, -60, 102 изменён]
+[19:02:45] [Server thread/INFO]: [blackbox: Блок в 103, -59, 102 изменён]
+[19:02:45] [Server thread/INFO]: [blackbox: Блок в 104, -59, 102 изменён]
+[19:02:45] [Server thread/INFO]: [blackbox: Переношу в 103.5 -58 98.5]
+[19:02:47] [Server thread/INFO]: [blackbox: Блок в 102, -59, 102 изменён]
+[19:03:08] [Server thread/INFO]: [blackbox: Заполнено блоков: 53]
+[19:03:08] [Server thread/INFO]: [blackbox: Убрано сущностей: 0]
+[19:03:08] [Server thread/INFO]: blackbox потерял соединение: отключился
+[19:03:08] [Server thread/INFO]: blackbox вышел
+[19:03:13] [Server thread/INFO]: Остановка сервера по сигналу
+[19:03:13] [Server thread/INFO]: Остановка сервера
+[19:03:13] [Server thread/INFO]: Сохранение игроков
+[19:03:13] [Server thread/INFO]: Сохранение мира
+[19:03:13] [Server thread/INFO]: Мир сохранён

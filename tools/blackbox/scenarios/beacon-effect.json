@@ -1,0 +1,43 @@
+{
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "blocks": [],
+  "name": "beacon-effect",
+  "align": 80,
+  "setup": [
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "fill $(0,-1,0) $(4,-1,4) minecraft:stone",
+    "fill $(1,-1,1) $(3,-1,3) minecraft:iron_block",
+    "setblock $(2,0,2) minecraft:beacon",
+    "tp $(bot) $(2.5,0,0.5)",
+    "!stopfly",
+    "effect clear $(bot)",
+    "!wait 20"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "data merge block $(2,0,2) {primary_effect:\"minecraft:speed\"}"
+    },
+    {
+      "after": 170,
+      "set": {
+        "at": [
+          2,
+          2,
+          2
+        ],
+        "state": "minecraft:stone"
+      }
+    }
+  ],
+  "record_ticks": 420,
+  "cleanup": [
+    "fill $(0,-1,0) $(4,2,4) minecraft:air",
+    "effect clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "about": "Level-one speed beacon, 80-tick refresh, then opaque beam obstruction. GUI/payment requires a separate interactive probe."
+}

@@ -443,9 +443,8 @@ fn can_brew(slots: &[Option<Stack>]) -> bool {
 
 /// Сколько влезает в ячейку: в бутылочные ячейки стойки — по одной.
 pub fn slot_limit(kind: Kind, slot: usize, item: i32) -> i32 {
-    if kind == Kind::BrewingStand && slot < 3 {
-        return 1;
-    }
+    if kind == Kind::Beacon { return i32::from(slot == 0 && crate::beacon::payment(item)); }
+    if kind == Kind::BrewingStand && slot < 3 { return 1; }
 
     blocks::stack_size(item)
 }
@@ -455,6 +454,8 @@ pub fn slot_limit(kind: Kind, slot: usize, item: i32) -> i32 {
 /// в 3, огненный порошок в 4 (вики, Furnace и Brewing Stand).
 pub fn may_place(kind: Kind, slot: usize, item: i32) -> bool {
     match kind {
+        Kind::Beacon => slot == 0 && crate::beacon::payment(item),
+        Kind::Campfire => false,
         Kind::Furnace | Kind::BlastFurnace | Kind::Smoker => match slot {
             INPUT => true,
             FUEL => burn_time(item).is_some() || name_of(item) == "bucket",
@@ -583,6 +584,7 @@ pub fn properties(container: &Container) -> Vec<i16> {
             vec![short(heat.lit), short(heat.lit_total), short(heat.cook), short(heat.cook_total)]
         }
         Kind::BrewingStand => vec![short(heat.lit), short(heat.lit_total)],
+        Kind::Beacon => container.beacon.iter().map(|v| short(*v)).collect(),
         _ => Vec::new(),
     }
 }

@@ -144,6 +144,8 @@ pub const TRIM_PATTERNS: [&str; 18] = [
 /// Довески одной стопки.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub struct Data {
+    /// Номер заполненной карты (minecraft:map_id, protocol.json: 46).
+    pub map_id: Option<i32>,
     /// Износ (компонент `damage`).
     pub damage: i32,
     /// Не изнашивается.
@@ -354,6 +356,7 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         out.extend_from_slice(&encode_varint(COMPONENT_INSTRUMENT)); out.push(1);
         out.extend_from_slice(&encode_varint(i32::from(id)+1)); count += 1;
     }
+    if let Some(id) = data.map_id { out.extend_from_slice(&encode_varint(46)); out.extend_from_slice(&encode_varint(id)); count += 1; }
     if data.damage > 0 {
         out.extend_from_slice(&encode_varint(COMPONENT_DAMAGE));
         out.extend_from_slice(&encode_varint(data.damage));
@@ -649,6 +652,7 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
                 data.mob_variants.push((kind,value));
             }
         }
+        46 => { data.map_id = reader.varint().filter(|id| *id >= 0); }
         COMPONENT_DAMAGE => {
             if let Some(damage) = reader.varint() {
                 data.damage = damage.max(0);
@@ -798,7 +802,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -838,7 +842,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -878,6 +882,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
                 out.extend_from_slice(&value.to_be_bytes());
             }
         }
+        if let Some(id) = data.map_id { out.push(9); out.extend_from_slice(&id.to_be_bytes()); }
 
         // Содержимое шулкер-ящика: метка 2, число ячеек, у каждой номер,
         // предмет, число и довески (длина и запись; 0 — без довесков).
@@ -1035,6 +1040,7 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
         // Метки хвоста: 1 — отделка, 2 — содержимое шулкер-ящика.
         while let Some(mark) = reader.take(1).map(|mark| mark[0]) {
             match mark {
+                9 => { data.map_id = Some(i32::from_be_bytes(reader.take(4)?.try_into().ok()?)); }
                 1 => {
                     let pair = reader.take(2)?;
 
@@ -1107,6 +1113,7 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
                 data.mob_variants.retain(|(key,_)|*key!=id);
                 data.mob_variants.push((id,value));
             }
+            "map_id" => data.map_id = Some(value.as_f64().ok_or("map_id — число")?.max(0.0) as i32),
             "damage" => data.damage = value.as_f64().ok_or("damage — число")? as i32,
             "unbreakable" => data.unbreakable = true,
             "ominous_bottle_amplifier" => data.ominous = Some(value.as_f64().ok_or("ominous_bottle_amplifier — число")?.clamp(0.0, 4.0) as u8),

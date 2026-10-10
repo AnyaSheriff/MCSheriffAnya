@@ -62,6 +62,7 @@ pub enum Source {
     Generic,
     GenericKill,
     InFire,
+    Campfire,
     InWall,
     Lava,
     OnFire,
@@ -126,6 +127,7 @@ impl Source {
             Source::Generic => 18,
             Source::GenericKill => 19,
             Source::InFire => 21,
+            Source::Campfire => 3,
             Source::InWall => 22,
             Source::Lava => 24,
             Source::OnFire => 31,
@@ -175,7 +177,7 @@ impl Source {
             Source::Fall => "death.fell.accident.generic",
             Source::Generic => "death.attack.generic",
             Source::GenericKill => "death.attack.genericKill",
-            Source::InFire => "death.attack.inFire",
+            Source::InFire | Source::Campfire => "death.attack.inFire",
             Source::InWall => "death.attack.inWall",
             Source::Lava => "death.attack.lava",
             Source::OnFire => "death.attack.onFire",
@@ -270,7 +272,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::GenericKill => "was killed",
         Source::Starve => "starved to death",
         Source::OnFire => "burned to death",
-        Source::InFire => "went up in flames",
+        Source::InFire | Source::Campfire => "went up in flames",
         Source::Cactus => "was pricked to death",
         Source::SweetBerryBush => "was poked to death by a sweet berry bush",
         Source::InWall => "suffocated in a wall",
@@ -943,12 +945,18 @@ impl Vitals {
     pub fn effect_colors(&self) -> [i32; EFFECT_PARTICLES] {
         let mut out = [0; EFFECT_PARTICLES];
 
-        let mut kinds: Vec<EffectKind> = self.effects.iter().filter(|effect| effect.visible).map(|effect| effect.kind).collect();
+        let mut kinds: Vec<(EffectKind, bool)> = self.effects.iter().filter(|effect| effect.visible).map(|effect| (effect.kind, effect.ambient)).collect();
 
-        kinds.sort_by_key(|kind| kind.particle_rank());
+        kinds.sort_by_key(|(kind, _)| kind.particle_rank());
 
-        for (slot, kind) in out.iter_mut().zip(kinds) {
-            *slot = if kind == EffectKind::RaidOmen { RAID_OMEN_PARTICLE } else { (0xFF00_0000u32 | kind.color() as u32) as i32 };
+        // Фоновые (маяк) — полупрозрачные: альфа 0x26 (чёрный ящик,
+        // beacon-effect: 640936959 = 0x2633EBFF для скорости).
+        for (slot, (kind, ambient)) in out.iter_mut().zip(kinds) {
+            *slot = if kind == EffectKind::RaidOmen {
+                RAID_OMEN_PARTICLE
+            } else {
+                ((if ambient { 0x2600_0000u32 } else { 0xFF00_0000u32 }) | kind.color() as u32) as i32
+            };
         }
 
         out

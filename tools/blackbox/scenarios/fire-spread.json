@@ -1,0 +1,50 @@
+{
+ "track_mobs": true,
+ "track_self": true,
+ "inventory": true,
+ "blocks": [],
+ "name": "fire-spread",
+ "exclusive": true,
+ "setup": [
+  "gamemode creative $(bot)",
+  "weather clear",
+  "gamerule minecraft:fire_spread_radius_around_player 128",
+  "fill $(0,-1,0) $(6,-1,6) minecraft:stone",
+  "setblock $(2,-1,2) minecraft:netherrack",
+  "setblock $(3,0,2) minecraft:oak_planks",
+  "setblock $(4,0,2) minecraft:white_wool",
+  "tp $(bot) $(3.5,1,-1.5)"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "set": {
+    "at": [
+     2,
+     0,
+     2
+    ],
+    "state": "minecraft:fire"
+   }
+  }
+ ],
+ "record_ticks": 400,
+ "cleanup": [
+  "fill $(0,-1,0) $(6,5,6) minecraft:air",
+  "kill @e[type=item,distance=..16]"
+ ],
+ "about": "[unverified] Eternal fire, adjacent wood/wool consumption and spread. No random masks until vanilla-vs-vanilla evidence.",
+ "random": [
+  {
+   "type": "count",
+   "name": "случайное распространение и выгорание огня",
+   "match": "^block (?!2,0,2 )\\d,[01],\\d ",
+   "range": [
+    0,
+    12
+   ],
+   "anytick": true,
+   "why": "огонь распространяется и сжигает соседние блоки по случайным броскам (вики, Fire: spread/burn chance); замер: 4 прогона оригинала дали по одному событию в разных местах и тактах ((3,0,1) fire age 4 на такте 321, (3,0,2) air на 72, (3,0,2) fire на 305)"
+  }
+ ]
+}

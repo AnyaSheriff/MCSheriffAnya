@@ -47,6 +47,8 @@ pub struct Shared {
     /// Брошенные зелья, огненные шары и облака (thrown.rs), всех измерений.
     /// Замок — после предметов.
     pub thrown: Mutex<crate::thrown::Thrown>,
+    pub fishing: Mutex<Vec<crate::fishing::Bobber>>,
+    pub maps: Mutex<crate::maps::Maps>,
 
     /// Кто на ком едет (riding.rs): лодки, вагонетки, позже лошади.
     /// Замок — после предметов.
@@ -245,6 +247,8 @@ impl Shared {
             items: [Mutex::new(Items::new()), Mutex::new(Items::new()), Mutex::new(Items::new())],
             arrows: Mutex::new(crate::arrow::Arrows::new()),
             thrown: Mutex::new(crate::thrown::Thrown::new()),
+            fishing: Mutex::new(Vec::new()),
+            maps: Mutex::new(crate::maps::Maps::default()),
             riding: Mutex::new(crate::riding::Riding::new()),
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,

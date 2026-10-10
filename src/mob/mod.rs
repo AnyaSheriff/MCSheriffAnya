@@ -1816,8 +1816,23 @@ impl Mob {
         // Огонь: раз в 20 тактов на 1 (вики, Fire) — и у NoAI; а солнце
         // поджигает только мобов с ИИ (чёрный ящик, zombie-burn: зомби NoAI
         // в полдень цел).
-        if self.kind.hostile() && hostile::burn(self, view, ctx, rng, !self.no_ai) {
+        if !self.kind.object() && hostile::burn(self, view, ctx, rng, !self.no_ai) && !self.vitals.has_effect(crate::survival::EffectKind::FireResistance) {
             self.hurt(1.0, Source::OnFire, None);
+        }
+
+        let fireproof = self.kind.object() || matches!(self.kind, Kind::EnderDragon | Kind::Blaze | Kind::MagmaCube | Kind::Ghast | Kind::WitherSkeleton | Kind::ZombifiedPiglin);
+        if fireproof { self.vitals.extinguish(); }
+        if !fireproof && !self.vitals.has_effect(crate::survival::EffectKind::FireResistance) {
+            let (x, y, z) = self.cell();
+            let state = view.block(x, y, z);
+            let name = blocks::block_at_state(state);
+            let campfire = crate::campfire::damage(state).max(crate::campfire::damage(view.block(x, (self.y - 0.01).floor() as i32, z)));
+            if campfire > 0.0 { self.hurt(campfire, Source::Campfire, None); }
+            if matches!(name, Some("fire" | "soul_fire")) {
+                self.vitals.ignite(160);
+                self.hurt(if name == Some("soul_fire") { 2.0 } else { 1.0 }, Source::InFire, None);
+            }
+            if name == Some("lava") { self.vitals.ignite(300); self.hurt(4.0, Source::Lava, None); }
         }
 
         // Кристалл Края стоит, где поставлен: ни тяжести, ни мыслей, ни голоса
@@ -2310,6 +2325,12 @@ impl Mob {
 
         // Иссушитель: в зарядке неуязвим, иссушению и воде не поддаётся (mob/wither.rs).
         if self.kind == Kind::Wither && wither::ignores(self, source) {
+            return None;
+        }
+
+        if matches!(source, Source::InFire | Source::Campfire | Source::OnFire | Source::Lava)
+            && (matches!(self.kind, Kind::Blaze | Kind::MagmaCube | Kind::Ghast | Kind::WitherSkeleton | Kind::ZombifiedPiglin)
+                || self.vitals.has_effect(crate::survival::EffectKind::FireResistance)) {
             return None;
         }
 
@@ -3295,7 +3316,7 @@ pub(crate) fn clip_z(view: &dyn View, min: (f64, f64, f64), half: f64, height: f
 /// Действует ли броня на урон: не действует на падение, огонь, лаву,
 /// удушье и пустоту (вики, Armor: «bypasses armor»).
 fn armored(source: Source) -> bool {
-    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::MobAttackNoAggro | Source::Arrow | Source::Explosion | Source::PlayerExplosion)
+    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::MobAttackNoAggro | Source::Arrow | Source::Explosion | Source::PlayerExplosion | Source::Campfire | Source::InFire | Source::Lava)
 }
 
 /// Урон после брони (вики, Armor, «Damage protection»).

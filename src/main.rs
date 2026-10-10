@@ -57,6 +57,11 @@ mod custom_tnt;
 mod permissions;
 mod containers;
 mod furnace;
+mod campfire;
+mod beacon;
+mod fire;
+mod fishing;
+mod maps;
 mod crafting;
 mod window;
 mod villager;
@@ -225,6 +230,7 @@ async fn server() -> io::Result<()> {
         ops::Ops::open(std::path::Path::new(ops::FILE)),
         skins::Settings::load(Path::new(skins::SETTINGS_FILE)),
     );
+    shared.maps = std::sync::Mutex::new(maps::Maps::open(Path::new(WORLD_PATH))?);
     shared.settings = settings;
     shared.scoreboard = std::sync::Mutex::new(scoreboard::Scoreboard::open(Path::new(WORLD_PATH)));
     shared.functions = std::sync::Mutex::new(functions::Functions::new(Path::new(WORLD_PATH)));

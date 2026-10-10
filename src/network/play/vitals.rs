@@ -447,7 +447,8 @@ fn mortal(mode: i32) -> bool {
 
 /// Что вокруг игрока: лава, вода в ногах и на уровне глаз, туловище в блоке.
 struct Env {
-    in_fire: bool,
+    in_fire: f32,
+    campfire: f32,
     cactus: bool,
     /// Ящик игрока в кусте ягод не младше первой стадии.
     berries: bool,
@@ -480,7 +481,7 @@ fn fluid_height(world: &World, x: i32, y: i32, z: i32, kind: fluids::Kind, level
 
 fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool) -> Env {
     let (bx, bz) = (x.floor() as i32, z.floor() as i32);
-    let mut env = Env { in_fire: false, cactus: false, berries: false, in_wall: false, in_lava: false, in_water: false, in_rain: false, eyes_in_water: false, soft: false, landing: 1.0, below: 0 };
+    let mut env = Env { in_fire: 0.0, campfire: 0.0, cactus: false, berries: false, in_wall: false, in_lava: false, in_water: false, in_rain: false, eyes_in_water: false, soft: false, landing: 1.0, below: 0 };
 
     // Ящик игрока: от ног до макушки; жидкость считается, если её
     // поверхность выше ног.
@@ -506,6 +507,7 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool
     }
 
     let feet = world.get_block(bx, y.floor() as i32, bz);
+    env.campfire = crate::campfire::damage(feet);
 
     // Куст ягод: в клетке ног, возраст от 1 (вики, Sweet Berry Bush:
     // «except when it is in its first stage»).
@@ -514,9 +516,12 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool
     // Огонь в клетке ног или головы; кактус в клетках вокруг ног (ящик
     // шириной 0,6 задевает соседние клетки у края); туловище в целом блоке.
     for by in (y.floor() as i32)..=((y + 1.0).floor() as i32) {
-        if blocks::block_at_state(world.get_block(bx, by, bz)).is_some_and(|name| name == "fire" || name == "soul_fire") {
-            env.in_fire = true;
-        }
+        let fire = match blocks::block_at_state(world.get_block(bx, by, bz)) {
+            Some("soul_fire") => 2.0_f32,
+            Some("fire") => 1.0,
+            _ => 0.0,
+        };
+        env.in_fire = env.in_fire.max(fire);
 
         for (cx, cz) in [(x - 0.31, z), (x + 0.31, z), (x, z - 0.31), (x, z + 0.31)] {
             let name = blocks::block_at_state(world.get_block(cx.floor() as i32, by, cz.floor() as i32));
@@ -1700,10 +1705,12 @@ pub(super) async fn hit_by(
 
     // Вики, Armor: укус/удар моба сначала масштабируется по сложности,
     // затем уменьшается бронёй и защитой; яд броню обходит.
-    if source == Source::MobAttack {
+    if matches!(source, Source::MobAttack | Source::Campfire | Source::InFire | Source::Lava) {
         let armor = player.attrs.value(crate::attributes::ARMOR) as f32;
         let toughness = player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32;
         amount = crate::combat::after_armor_breached(amount, armor, toughness, 1.0);
+    }
+    if matches!(source, Source::MobAttack | Source::Campfire | Source::InFire | Source::Lava | Source::OnFire) {
         let points: i32 = crate::combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot)).map(|stack| crate::combat::protection_points(&stack.extras(), source)).sum();
         amount = crate::combat::after_protection(amount, points);
     }
@@ -2203,9 +2210,14 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
     // 2 такта), а погасший от времени гаснет сразу (pvp-fire-aspect: +80).
     player.net.fire_flag = player.vit.fire > 0;
 
-    if env.in_fire && !player.vit.dead {
+    if env.in_fire > 0.0 && !player.vit.dead && !player.vit.has_effect(survival::EffectKind::FireResistance) {
         player.vit.ignite(160);
-        hit(stream, shared, player, 1.0, Source::InFire, 0).await?;
+        hit(stream, shared, player, env.in_fire, Source::InFire, 0).await?;
+    }
+
+    if env.campfire > 0.0 && !player.vit.dead && !player.vit.has_effect(survival::EffectKind::FireResistance)
+        && !player.inventory.slot(8).is_some_and(|s| s.extras().level("frost_walker") > 0) {
+        hit(stream, shared, player, env.campfire, Source::Campfire, 0).await?;
     }
 
     if env.cactus && !player.vit.dead {

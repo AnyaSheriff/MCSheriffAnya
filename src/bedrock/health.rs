@@ -191,7 +191,7 @@ pub fn hurt_event(runtime_id: u64, source: Source) -> Vec<u8> {
 
 /// Причина урона по номеру вида из Damage Event (`Source::type_id`).
 pub fn damage_cause_of_type(type_id: i32) -> i32 {
-    const ALL: [Source; 30] = [
+    const ALL: [Source; 31] = [
         Source::Arrow,
         Source::Cactus,
         Source::SweetBerryBush,
@@ -201,6 +201,7 @@ pub fn damage_cause_of_type(type_id: i32) -> i32 {
         Source::Generic,
         Source::GenericKill,
         Source::InFire,
+        Source::Campfire,
         Source::InWall,
         Source::Lava,
         Source::OnFire,
@@ -237,7 +238,7 @@ pub fn damage_cause(source: Source) -> i32 {
         Source::Arrow | Source::Trident | Source::Thrown | Source::WindCharge => 3,
         Source::InWall => 4,
         Source::Fall => 5,
-        Source::InFire => 6,
+        Source::InFire | Source::Campfire => 6,
         Source::OnFire => 7,
         Source::Lava => 8,
         Source::Drown => 9,

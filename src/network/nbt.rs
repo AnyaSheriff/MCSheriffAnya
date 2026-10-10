@@ -66,6 +66,14 @@ impl Compound {
         self
     }
 
+    /// Добавляет поле-byte.
+    pub fn byte(mut self, name: &str, value: i8) -> Self {
+        self.bytes.push(TAG_BYTE);
+        write_name(&mut self.bytes, name);
+        self.bytes.push(value as u8);
+        self
+    }
+
     /// Добавляет поле-int.
     pub fn int(mut self, name: &str, value: i32) -> Self {
         self.bytes.push(TAG_INT);

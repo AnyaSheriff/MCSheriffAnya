@@ -197,7 +197,7 @@ impl Window<'_> {
         };
 
         let size = self.container.len();
-        let targets: Vec<usize> = match self.kind.filter(|kind| crate::furnace::is_oven(*kind) || *kind == crate::containers::Kind::BrewingStand) {
+        let targets: Vec<usize> = match self.kind.filter(|kind| crate::furnace::is_oven(*kind) || matches!(kind, crate::containers::Kind::BrewingStand | crate::containers::Kind::Beacon)) {
             Some(kind) => special_targets(kind, index, size, self.len(), stack.item),
             None if index < size => (size..self.len()).rev().collect(),
             None => (0..size).collect(),
@@ -370,7 +370,7 @@ fn special_targets(kind: crate::containers::Kind, index: usize, size: usize, len
     use crate::furnace;
 
     if index < size {
-        return if furnace::is_oven(kind) && index == furnace::OUTPUT {
+        return if kind == crate::containers::Kind::Beacon || (furnace::is_oven(kind) && index == furnace::OUTPUT) {
             (size..len).rev().collect()
         } else {
             (size..len).collect()
@@ -384,6 +384,10 @@ fn special_targets(kind: crate::containers::Kind, index: usize, size: usize, len
             (size..size + 27).collect()
         }
     };
+
+    if kind == crate::containers::Kind::Beacon {
+        return if crate::beacon::payment(item) { vec![0] } else { own_side() };
+    }
 
     if furnace::is_oven(kind) {
         if furnace::smelt(kind, item).is_some() {

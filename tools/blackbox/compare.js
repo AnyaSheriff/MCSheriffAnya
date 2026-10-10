@@ -52,6 +52,9 @@ const record = async () => {
   const args = (s) => [path.join(HERE, 'bot.js'), '127.0.0.1', String(s.port), scenario, s.file, lane];
   if (!process.argv.includes('--parallel')) {
     for (const s of sides) {
+      // ONLY_OURS=1 — оригинал не перезаписывать (его запись уже есть).
+      if (process.env.ONLY_OURS && s.title === 'оригинал') continue;
+      if (process.env.ONLY_VANILLA && s.title !== 'оригинал') continue;
       const r = spawnSync('node', args(s), { stdio: ['ignore', 'inherit', 'pipe'] });
       if (r.status !== 0) { console.error(`запись «${s.title}» не удалась:\n${r.stderr}`); process.exit(1); }
     }

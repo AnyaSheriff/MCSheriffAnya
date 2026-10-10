@@ -65,6 +65,8 @@ pub enum Kind {
     /// ради крышки и смотрящих; воронки и сравнители его не видят
     /// (вики, Ender Chest).
     EnderChest,
+    Campfire,
+    Beacon,
 }
 
 impl Kind {
@@ -86,6 +88,8 @@ impl Kind {
             "smoker" => Kind::Smoker,
             "brewing_stand" => Kind::BrewingStand,
             "ender_chest" => Kind::EnderChest,
+            "campfire" | "soul_campfire" => Kind::Campfire,
+            "beacon" => Kind::Beacon,
             name if name.ends_with("shulker_box") => Kind::ShulkerBox,
             name if name.ends_with("copper_chest") => Kind::CopperChest,
             name if name.ends_with("_shelf") => Kind::Shelf,
@@ -103,6 +107,8 @@ impl Kind {
     pub fn size(self) -> usize {
         match self {
             Kind::Chest | Kind::TrappedChest | Kind::Barrel | Kind::CopperChest | Kind::ShulkerBox | Kind::EnderChest => 27,
+            Kind::Campfire => 4,
+            Kind::Beacon => 1,
             Kind::Shelf => 3,
             Kind::ChiseledBookshelf => 6,
             Kind::Hopper | Kind::BrewingStand => 5,
@@ -135,6 +141,8 @@ impl Kind {
             Kind::BrewingStand => 12,
             Kind::ShulkerBox => 24,
             Kind::EnderChest => 3,
+            Kind::Campfire => 33,
+            Kind::Beacon => 15,
         }
     }
 
@@ -159,6 +167,8 @@ impl Kind {
             Kind::BrewingStand => 15,
             Kind::ShulkerBox => 16,
             Kind::EnderChest => 17,
+            Kind::Campfire => 18,
+            Kind::Beacon => 19,
         }
     }
 
@@ -182,6 +192,8 @@ impl Kind {
             15 => Kind::BrewingStand,
             16 => Kind::ShulkerBox,
             17 => Kind::EnderChest,
+            18 => Kind::Campfire,
+            19 => Kind::Beacon,
             _ => return None,
         })
     }
@@ -227,6 +239,11 @@ pub struct Container {
     /// убрали (`World::set`): по нему шулкер-ящик выпадает своего цвета.
     /// У стоящего блока — 0.
     pub block: i32,
+    /// Костёр: отдельное время каждой ячейки. Маяк: уровень и выбранные силы.
+    pub cooking: [i32; 4],
+    /// Костёр: данные блока уходят клиенту на такт позже выпавшего предмета.
+    pub publish_due: bool,
+    pub beacon: [i32; 3],
 }
 
 impl Container {
@@ -245,6 +262,9 @@ impl Container {
             crafting: 0,
             heat: crate::furnace::Heat::default(),
             block: 0,
+            cooking: [0; 4],
+            publish_due: false,
+            beacon: [0, -1, -1],
         }
     }
 
@@ -308,6 +328,8 @@ impl Container {
 
         // Своё у проигрывателя и кафедры — после ячеек.
         match self.kind {
+            Kind::Campfire => { for value in self.cooking { out.extend_from_slice(&value.to_be_bytes()); } }
+            Kind::Beacon => { for value in self.beacon { out.extend_from_slice(&value.to_be_bytes()); } }
             Kind::Jukebox => out.push(u8::from(self.started > 0)),
             Kind::Lectern => {
                 out.extend_from_slice(&(self.page.clamp(0, i16::MAX as i32) as i16).to_be_bytes());
@@ -361,6 +383,8 @@ impl Container {
         }
 
         match kind {
+            Kind::Campfire => { for value in &mut container.cooking { *value = i32::from_be_bytes(take(4)?.try_into().ok()?); } }
+            Kind::Beacon => { for value in &mut container.beacon { *value = i32::from_be_bytes(take(4)?.try_into().ok()?); } }
             // Играющая песня после запуска начинается сначала. [проверить]
             // у оригинала она продолжается с `ticks_since_song_started`.
             Kind::Jukebox => container.started = u64::from(take(1)?[0] != 0),
@@ -503,7 +527,7 @@ pub fn halves(world: &World, pos: Pos) -> Vec<Pos> {
     };
 
     // Эндер-сундук воронкам и выбрасывателям не хранилище.
-    if kind == Kind::EnderChest {
+    if matches!(kind, Kind::EnderChest | Kind::Campfire | Kind::Beacon) {
         return Vec::new();
     }
 
@@ -634,6 +658,8 @@ pub fn menu(kind: Kind, halves: usize) -> (i32, &'static str) {
         Kind::BrewingStand => (11, "container.brewing"),
         Kind::ShulkerBox => (20, "container.shulkerBox"),
         Kind::EnderChest => (2, "container.enderchest"),
+        Kind::Beacon => (9, "container.beacon"),
+        Kind::Campfire => (0, "container.campfire"),
         // Своего окна у проигрывателя, полки и шкафа нет: сюда не доходит.
         Kind::Jukebox => (0, "container.jukebox"),
         Kind::Shelf => (0, "container.shelf"),
@@ -1060,7 +1086,7 @@ pub fn insert_stack(world: &mut World, halves: &[Pos], stack: Stack, travel: (i3
 fn accepts(world: &World, (x, y, z): Pos, item: i32) -> bool {
     match world.container(x, y, z).map(|c| c.kind) {
         Some(Kind::Jukebox) => crate::redstone::jukebox_song(item).is_some() && is_empty_at(world, (x, y, z)),
-        Some(Kind::Lectern) => false,
+        Some(Kind::Lectern | Kind::Campfire | Kind::Beacon) => false,
         Some(Kind::ChiseledBookshelf) => crate::redstone::bookshelf::is_book(item),
         Some(Kind::ShulkerBox) => !is_shulker_item(item),
         _ => true,
@@ -1069,7 +1095,7 @@ fn accepts(world: &World, (x, y, z): Pos, item: i32) -> bool {
 
 /// Можно ли вытянуть предмет из хранилища снизу: из кафедры — нельзя.
 fn gives(world: &World, (x, y, z): Pos) -> bool {
-    world.container(x, y, z).is_some_and(|c| c.kind != Kind::Lectern)
+    world.container(x, y, z).is_some_and(|c| !matches!(c.kind, Kind::Lectern | Kind::Campfire | Kind::Beacon))
 }
 
 /// Убирает один предмет из ячейки.
@@ -1143,6 +1169,7 @@ pub fn tick_hoppers(world: &mut World, items: &mut crate::items::Items) {
             // Печи и варочная стойка — свой такт (furnace.rs).
             Some(Kind::Furnace | Kind::BlastFurnace | Kind::Smoker) => crate::furnace::tick_oven(world, pos),
             Some(Kind::BrewingStand) => crate::furnace::tick_brewing(world, pos),
+            Some(Kind::Campfire) => crate::campfire::tick(world, pos),
             _ => {}
         }
     }
@@ -1662,14 +1689,11 @@ fn dispense_special(world: &mut World, pos: Pos, facing: (i32, i32, i32), slot: 
         "flint_and_steel" => {
             // Перед ним динамит — поджигает (вики, Dispenser: «If the
             // dispenser is facing TNT, it ignites the TNT»).
-            if crate::tnt::ignite(world, front) {
+            if crate::campfire::set_lit(world, front, true) || crate::tnt::ignite(world, front) {
                 return Some(true);
             }
 
-            if there == crate::world::AIR
-                && let Some(fire) = blocks::state_by_name("fire")
-            {
-                world.set_block(front.0, front.1, front.2, fire);
+            if crate::fire::ignite(world, front) {
                 return Some(true);
             }
 
@@ -1698,7 +1722,7 @@ pub fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
             Kind::Shelf => return Some(crate::redstone::shelf::reading(world, pos)),
             Kind::ChiseledBookshelf => return Some(crate::redstone::bookshelf::reading(world, pos)),
             // Эндер-сундук не отдаёт сигнал: у блока нет ячеек.
-            Kind::EnderChest => return None,
+            Kind::EnderChest | Kind::Campfire | Kind::Beacon => return None,
             _ => {}
         }
 

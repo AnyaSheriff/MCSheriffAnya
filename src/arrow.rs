@@ -894,6 +894,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             arrow.y = from.1 + (to.1 - from.1) * part;
             arrow.z = from.2 + (to.2 - from.2) * part;
             arrow.ground_block = block_cell;
+            if arrow.flame { crate::campfire::set_lit(world, block_cell, true); }
             if let Some(power) = crate::redstone::projectile_target(world, block_cell, (arrow.x, arrow.y, arrow.z), true)
                 && !arrow.is_mob_shot() && arrow.owner != 0
             {

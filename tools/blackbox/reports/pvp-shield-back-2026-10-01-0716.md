@@ -1,0 +1,34 @@
+# pvp-shield-back: оригинал против нас
+
+| такт | оригинал                                                       | у нас                                                          |
+|------|----------------------------------------------------------------|----------------------------------------------------------------|
+| | **▶ use_item** (первый отклик через 0 / 0 такт.) | **▶ use_item** |
+| +0 | робот: Metadata 8=3                                            | робот: Metadata 8=3                                            |
+| | **▶ 2: attack** (первый отклик через 0 / 0 такт.) | **▶ 2: attack** |
+| +0 | звук (3.5,0,3.5) item.shield.block 1.00 ~0.93                  | звук (3.5,0,3.5) item.shield.block 1.00 ~1.14                  |
+| +0 | звук (3.5,0,1.5) entity.player.attack.nodamage 1.00 ~1.00      | звук (3.5,0,1.5) entity.player.attack.nodamage 1.00 ~1.00      |
+| +0 | робот: other animation {"animation":0}                         | робот: other animation {"animation":0}                         |
+| | **▶ 2: hotbar 1** (первый отклик через 0 / 0 такт.) | **▶ 2: hotbar 1** |
+| +0 | робот: other entity_equipment {"equipments":["0:iron_axe×1"]}  | робот: other entity_equipment {"equipments":["0:iron_axe×1"]}  |
+| +1 | робот: other entity_update_attributes {"properties":[{"key":"generic.attack_speed","value":4,"modifiers":[{"uuid":"minecraft:base_attack_speed","amount":-3.1,"operation":0}]}]} | робот: other entity_update_attributes {"properties":[{"key":"generic.attack_speed","value":4,"modifiers":[{"uuid":"minecraft:base_attack_speed","amount":-3.1,"operation":0}]}]} |
+| +1 | робот: b: Attributes [{"key":"generic.attack_speed","value":4,"modifiers":[{"uuid":"minecraft:base_attack_speed","amount":-3.0999999046325684,"operation":0}]}] | робот: b: Attributes [{"key":"generic.attack_speed","value":4,"modifiers":[{"uuid":"minecraft:base_attack_speed","amount":-3.0999999046325684,"operation":0}]}]  ← у нас позже на 1 |
+| | **▶ 2: attack** (первый отклик через 0 / 0 такт.) | **▶ 2: attack** |
+| +0 | звук (3.5,0,3.5) item.shield.break 0.80 ~0.90                  | звук (3.5,0,3.5) item.shield.break 0.80 ~1.14                  |
+| +0 | звук (3.5,0,3.5) item.shield.block 1.00 ~0.99                  | звук (3.5,0,3.5) item.shield.block 1.00 ~1.14                  |
+| +0 | звук (3.5,0,1.5) entity.player.attack.nodamage 1.00 ~1.00      | звук (3.5,0,1.5) entity.player.attack.nodamage 1.00 ~1.00      |
+| +0 | робот: other animation {"animation":0}                         | робот: other animation {"animation":0}                         |
+| +0 | робот: Metadata 8=2                                            | робот: Metadata 8=2                                            |
+| | **▶ 2: attack** (первый отклик через 0 / 0 такт.) | **▶ 2: attack** |
+| +0 | робот: Damage Event type=34 cause=entity direct=entity pos=none | робот: Damage Event type=34 cause=entity direct=entity pos=none |
+| +0 | робот: Hurt Animation yaw=90                                   | робот: Hurt Animation yaw=90                                   |
+| +0 | робот: скорость 0,0.361,0.4                                    | робот: скорость 0,0.361,0.4                                    |
+| +0 | звук (3.5,0,1.5) entity.player.attack.strong 1.00 ~1.00        | звук (3.5,0,1.5) entity.player.attack.strong 1.00 ~1.00        |
+| +0 | частица (3.5,0.9,3.5) damage_indicator 4 шт. скорость 0.2 (0.1,0,0.1) | частица (3.5,0.9,3.5) damage_indicator 4 шт. скорость 0.2 (0.1,0,0.1) |
+| +0 | робот: other animation {"animation":0}                         | робот: other animation {"animation":0}                         |
+| +0 | робот: Metadata 9=11                                           | робот: Metadata 9=11                                           |
+| +0 | робот: Set Health health=11 food=20 saturation=5               | робот: Set Health health=11 food=20 saturation=5               |
+| +0 | робот: other entity_equipment {"equipments":["0:iron_axe×1 {damage=2}"]} | робот: other entity_equipment {"equipments":["0:iron_axe×1 {damage=2}"]} |
+| +1 | робот: other entity_update_attributes {"properties":[{"key":"generic.attack_speed","value":4,"modifiers":[{"uuid":"minecraft:base_attack_speed","amount":-3.1,"operation":0}]}]} | робот: other entity_update_attributes {"properties":[{"key":"generic.attack_speed","value":4,"modifiers":[{"uuid":"minecraft:base_attack_speed","amount":-3.1,"operation":0}]}]} |
+| +1 | робот: b: Attributes [{"key":"generic.attack_speed","value":4,"modifiers":[{"uuid":"minecraft:base_attack_speed","amount":-3.0999999046325684,"operation":0}]}] | робот: b: Attributes [{"key":"generic.attack_speed","value":4,"modifiers":[{"uuid":"minecraft:base_attack_speed","amount":-3.0999999046325684,"operation":0}]}]  ← у нас позже на 1 |
+
+Совпало: 21. Сдвинуто по тактам: 2. Нет у нас: 0. Лишнее у нас: 0.

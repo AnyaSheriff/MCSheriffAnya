@@ -39,5 +39,34 @@
   "gamemode creative $(bot)",
   "clear $(bot)"
  ],
- "name": "fishing-cast"
+ "name": "fishing-cast",
+ "random": [
+  {
+   "type": "mask",
+   "name": "плеск воды",
+   "kind": "sound",
+   "pattern": "^sound \\S+ (minecraft:entity.generic.splash) \\S+$",
+   "replace": "sound $1",
+   "why": "место и громкость всплеска зависят от случайной скорости броска (вики, Fishing Rod: звуки 0,6–1,4); замер: два прогона оригинала дали 4.375 и 1.375 по z"
+  },
+  {
+   "type": "mask",
+   "name": "полёт и покачивание поплавка",
+   "kind": "cart",
+   "pattern": "^cart fishing_bobber (скорость|сдвиг).*$",
+   "replace": "cart fishing_bobber $1",
+   "why": "начальная скорость броска с гауссовым шумом и поворот поплавка у оригинала случайны (замер: два броска дали -0,491/-0,4879 по y и 1,0407/1,0423 по z); подгонка модели — по среднему"
+  },
+  {
+   "type": "count",
+   "name": "фоновые всплески",
+   "match": "^(sound minecraft:entity.generic.splash|sound \\S+ minecraft:entity.generic.splash|частица \\S+ splash )",
+   "range": [
+    0,
+    12
+   ],
+   "anytick": true,
+   "why": "поплавок в воде плещется со случайной громкостью, дождевые всплески — в случайных местах"
+  }
+ ]
 }

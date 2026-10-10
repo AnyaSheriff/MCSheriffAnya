@@ -1139,6 +1139,8 @@ const CHUNK_VERSION_WIDE: u8 = 1;
 
 /// Мир целиком: чанки и список изменений.
 pub struct World {
+    pub fire_tick: bool,
+    pub fire_difficulty: u8,
     /// Состояние генератора случайных чисел — см. `random_unit`.
     noise: u32,
 
@@ -1451,6 +1453,8 @@ impl World {
     #[cfg(test)]
     pub fn in_memory() -> Self {
         Self {
+            fire_tick: true,
+            fire_difficulty: 2,
             noise: 0x9E37_79B9,
             actor: None,
             blast_source: 0,
@@ -1602,6 +1606,8 @@ impl World {
         log_info!("Тип мира: {}", kind.name());
 
         let mut world = Self {
+            fire_tick: true,
+            fire_difficulty: 2,
             noise: 0x9E37_79B9 ^ std::process::id(),
             actor: None,
             blast_source: 0,
@@ -1913,6 +1919,10 @@ impl World {
         // очереди, а сам (случайный такт и раз в 20 тактов).
         if changed {
             self.redstone.note_state((x, y, z), state);
+            if matches!(crate::blocks::block_at_state(state), Some("fire" | "soul_fire")) {
+                let delay = 30 + (self.random_bits() % 10) as u64;
+                self.schedule_block_once(x, y, z, delay);
+            }
         }
 
         changed
@@ -2499,6 +2509,14 @@ impl World {
         Some(y + 1)
     }
 
+    /// Верхняя непустая клетка столбца для карты; незагруженный чанк не рисуется.
+    pub fn column_top(&self, x: i32, z: i32) -> Option<i32> {
+        let chunk = self.chunks.get(&chunk_key(x, z))?;
+        let mut y = chunk.highest();
+        while y >= MIN_Y && chunk.block(x, y, z) == AIR { y -= 1; }
+        Some(y)
+    }
+
     /// Под дождём ли сущность: в клетке ног или макушки (`height` — рост)
     /// [проверить]: какие клетки смотрит оригинал.
     pub fn in_rain(&self, x: f64, y: f64, z: f64, height: f64) -> bool {
@@ -3005,6 +3023,18 @@ impl World {
         // прочитанное с диска чинится: сервер могли остановить посреди хода
         // поршня. Жидкостям, которым есть куда течь, — свой такт.
         self.after_chunk_arrived(chunk_x, chunk_z, from_disk);
+        let mut fires = Vec::new();
+        for section in 0..SECTIONS as usize {
+            if let Some(states) = self.section_blocks(chunk_x, chunk_z, section) {
+                for (index, &state) in states.iter().enumerate() {
+                    if matches!(crate::blocks::block_at_state(state as i32), Some("fire" | "soul_fire")) {
+                        fires.push((chunk_x * 16 + (index as i32 & 15), MIN_Y + section as i32 * 16 + (index as i32 >> 8), chunk_z * 16 + ((index as i32 >> 4) & 15)));
+                    }
+                }
+            }
+        }
+        for (x, y, z) in fires { let delay = 30 + (self.random_bits() % 10) as u64; self.schedule_block_once(x, y, z, delay); }
+
         self.wake_fluids(wake);
         self.wake_border(chunk_x, chunk_z);
     }

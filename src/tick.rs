@@ -275,6 +275,7 @@ async fn run(shared: Arc<Shared>) {
                 morning_gifts(&shared, &world);
             }
 
+            world.fire_difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
             world.tick_weather(shared.advance_weather.load(std::sync::atomic::Ordering::Relaxed));
 
             let due = world.advance(PER_TICK);
@@ -360,6 +361,7 @@ async fn run(shared: Arc<Shared>) {
 
             // Стрелы: полёт, попадание, застревание (arrow.rs).
             crate::arrow::step(&shared, dimension, &mut world);
+            crate::fishing::step(&shared, dimension, &mut world);
 
             // Брошенные зелья, огненные шары, облака (thrown.rs).
             crate::thrown::step(&shared, dimension, &mut world);
@@ -482,6 +484,7 @@ async fn run(shared: Arc<Shared>) {
             // Фаза блок-сущностей: датчики света (раз в 20 тактов), воронки,
             // потом ходы поршней, которым пора кончиться (они появились позже
             // воронок).
+            crate::beacon::tick(&shared, dimension, &mut world);
             redstone::daylight_tick(&mut world);
             redstone::sensors_tick(&mut world);
             sculk_finish(&shared, dimension, &mut world, ticks);
@@ -497,6 +500,7 @@ async fn run(shared: Arc<Shared>) {
 
             if ticks.is_multiple_of(SAVE_EVERY) {
                 world.save_if_needed();
+                if dimension == Dimension::Overworld && let Err(e) = shared.maps.lock().expect("карты").save() { log_warn!("Карты не записаны: {}", e); }
             }
 
             if ticks.is_multiple_of(UNLOAD_EVERY) {
@@ -2948,6 +2952,7 @@ pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
             world.note_destroyed(tx, ty, tz);
         }
 
+        if crate::campfire::lit(there) && !crate::campfire::lit(state) { crate::campfire::set_lit(world, (tx, ty, tz), false); }
         world.set_block(tx, ty, tz, state);
     }
 }

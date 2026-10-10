@@ -84,6 +84,9 @@ mod vehicle;
 mod glide;
 mod progression;
 mod tame;
+mod gameplay;
+mod fishing;
+mod maps;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
 
@@ -4176,7 +4179,10 @@ async fn send_pending_world_events(
             }
             WorldEvent::MobSpawn(mob) => mobs::send_released_mob(stream, shared, player, mob).await?,
             WorldEvent::ArrowTracker => bow::send_arrow_ticks(stream, shared, player).await?,
-            WorldEvent::ThrownTracker { early } => thrown::send_thrown_ticks(stream, shared, player, *early).await?,
+            WorldEvent::ThrownTracker { early } => {
+                thrown::send_thrown_ticks(stream, shared, player, *early).await?;
+                if !early { fishing::send_ticks(stream, shared, player).await?; }
+            }
             WorldEvent::RocketBlast { entity_id } => thrown::send_rocket_blast(stream, player, *entity_id).await?,
             WorldEvent::EyeLaunch { entity_id } => thrown::send_eye_launch(stream, shared, player, *entity_id).await?,
             // Эффект от зелья или облака: пакет эффекта сразу, частицы и
@@ -4385,6 +4391,8 @@ async fn open_window(
         // У эндер-сундука ячейки личные: в окне — хранилище игрока.
         let (halves, slots) = if kind == Some(containers::Kind::EnderChest) {
             (vec![at], player.ender.clone())
+        } else if kind == Some(containers::Kind::Beacon) {
+            (vec![at], vec![None])
         } else {
             let halves = containers::halves(&world, at);
             let slots = containers::window_slots(&world, &halves);
@@ -4424,6 +4432,7 @@ async fn open_window(
         containers::Kind::BlastFurnace => player.progress.custom("interact_with_blast_furnace", 1),
         containers::Kind::Smoker => player.progress.custom("interact_with_smoker", 1),
         containers::Kind::BrewingStand => player.progress.custom("interact_with_brewingstand", 1),
+        containers::Kind::Beacon => player.progress.custom("interact_with_beacon", 1),
         _ => {}
     }
 
@@ -4653,7 +4662,10 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
         return Ok(());
     }
 
-    let now: Option<Vec<Option<Stack>>> = if let Some(cart) = window.cart {
+    let now: Option<Vec<Option<Stack>>> = if window.kind == Some(containers::Kind::Beacon) {
+        let world = shared.world_in(player.dimension).lock().expect("мир");
+        window.halves.first().filter(|p| world.container(p.0, p.1, p.2).is_some_and(|c| c.kind == containers::Kind::Beacon)).map(|_| window.shown.clone())
+    } else if let Some(cart) = window.cart {
         cart_slots(shared, player.dimension, cart)
     } else {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
@@ -4736,6 +4748,13 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
         }
 
         return;
+    }
+
+    if window.kind == Some(containers::Kind::Beacon) {
+        for stack in window.shown.iter().flatten() {
+            if let Some(rest) = player.inventory.put(*stack).1 { throw_out(shared, player, rest); }
+        }
+        player.inventory_after_window = true;
     }
 
     // Окно торговли: житель свободен; оплата, если осталась, — в инвентарь.
@@ -5353,7 +5372,7 @@ async fn send_chunk(
         // Полки показывают свои предметы всем — их данные идут и в пакете
         // чанка, иначе вошедший увидит пустые полки. [проверить] так ли у
         // оригинала.
-        let shelves: HashMap<(i32, i32, i32), Vec<u8>> = entities
+        let mut shelves: HashMap<(i32, i32, i32), Vec<u8>> = entities
             .iter()
             .filter(|(_, _, _, kind)| *kind == containers::Kind::Shelf)
             .filter_map(|&(x, y, z, _)| {
@@ -5363,9 +5382,18 @@ async fn send_chunk(
             })
             .collect();
 
-        // Спавнеры несут вид моба: по нему клиент крутит зверька внутри.
-        let mut shelves = shelves;
+        for &(x, y, z, kind) in &entities {
+            let data = world.container(chunk_x * 16 + x, y, chunk_z * 16 + z);
+            if let Some(c) = data {
+                match kind {
+                    containers::Kind::Campfire => { shelves.insert((x, y, z), crate::campfire::nbt(c)); }
+                    containers::Kind::Beacon => { shelves.insert((x, y, z), crate::beacon::nbt(c)); }
+                    _ => {}
+                }
+            }
+        }
 
+        // Спавнеры несут вид моба: по нему клиент крутит зверька внутри.
         for ((x, y, z), nbt) in world.chunk_spawners(chunk_x, chunk_z) {
             shelves.insert((x, y, z), nbt);
         }
@@ -6034,7 +6062,20 @@ async fn read_and_log_play_packets(
                     write_body(stream, body).await?;
                 }
                 Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false }),
-                Order::Effect(effect) => vitals::give_effect(stream, player, effect).await?,
+                Order::Effect(effect) => {
+                    vitals::give_effect(stream, player, effect).await?;
+                    // Маяк (фоновый эффект) обновляет частицы и атрибуты на такт
+                    // позже каждый раз (чёрный ящик, beacon-effect: +158 эффект,
+                    // +159 Metadata 10 и Attributes).
+                    if effect.ambient {
+                        player.net.hold_meta = true;
+                        player.net.renew_effect_particles();
+
+                        if let Some((attribute, ..)) = effect.kind.modifier() {
+                            player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
+                        }
+                    }
+                }
                 Order::ClearEffects => vitals::clear_effects(stream, player, None).await?,
                 Order::ClearEffect(kind) => vitals::clear_effects(stream, player, Some(kind)).await?,
                 Order::XpTaken { points } => player.net.xp_taken += points,
@@ -6486,6 +6527,7 @@ async fn read_and_log_play_packets(
                 sleep::tick(shared, player);
                 vitals::tick(stream, shared, player).await?;
                 progress_tick(stream, shared, player).await?;
+                maps::send_ticks(stream, shared, player).await?;
                 glide::tick(shared, player);
 
                 if let Some(speed) = glide::boost(player) {
@@ -7137,6 +7179,7 @@ fn handle_client_packet_inner(
                 vitals::moved(player, shared, (player.x, player.y, player.z));
             }
         }
+        0x34 => { gameplay::beacon_select(payload, player, shared); }
         vitals::PLAYER_COMMAND => {
             sleep::player_command(payload, player, shared);
             vitals::player_command(payload, player);
@@ -8683,7 +8726,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // Кафедра без книги: книга из руки ложится на неё. С книгой —
         // окно, как у хранилища; пустая и без книги в руке — щелчок идёт
         // дальше.
-        let mut kind = kind.filter(|kind| *kind != containers::Kind::Jukebox);
+        let mut kind = kind.filter(|kind| !matches!(kind, containers::Kind::Jukebox | containers::Kind::Campfire));
 
         if kind == Some(containers::Kind::Lectern) {
             match redstone::lectern::place_book(&mut world, clicked, player.inventory.held(), 0) {
@@ -8772,7 +8815,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         }
 
         if kind.is_some() {
-            let halves = if kind == Some(containers::Kind::EnderChest) { vec![clicked] } else { containers::halves(&world, clicked) };
+            let halves = if matches!(kind, Some(containers::Kind::EnderChest | containers::Kind::Beacon)) { vec![clicked] } else { containers::halves(&world, clicked) };
 
             if player.window.is_none() && containers::can_open(&world, &halves) {
                 let actor = world.actor.replace(player.entity_id);
@@ -8904,6 +8947,8 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             return Some(Reaction::accepted(sequence));
         }
     }
+
+    if let Some(reaction) = gameplay::campfire_use(player, shared, (clicked_x, clicked_y, clicked_z), face, sequence) { return Some(reaction); }
 
     // Мотыга и костная мука (farming.rs).
     if let Some(reaction) = farm::use_on_block(player, shared, (clicked_x, clicked_y, clicked_z), face, sequence) {
@@ -9056,16 +9101,18 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     // не менял», и клиент уберёт свой предсказанный блок, если он его показал.
     // Зажигалка: по обсидиану внутри рамки — портал, иначе огонь на месте
     // рядом с гранью, по которой щёлкнули.
-    if player.inventory.held().map(|stack| stack.item) == blocks::item_named("flint_and_steel") {
+    if player.inventory.held().and_then(|stack| blocks::item_name(stack.item)).is_some_and(|name| matches!(name, "flint_and_steel" | "fire_charge")) {
         let target = offset_towards(clicked_x, clicked_y, clicked_z, face);
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
+        let mut ignited = false;
         if world.get_block(target.0, target.1, target.2) == world::AIR {
             if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
             if crate::portal::light(&mut world, target, shared.settings.portal_sizes()) {
                 log_info!("{} зажёг портал в {} {} {}", player.name, target.0, target.1, target.2);
-            } else if let Some(fire) = blocks::state_by_name("fire") {
-                world.set_block(target.0, target.1, target.2, fire);
+                ignited = true;
+            } else {
+                ignited = crate::fire::ignite(&mut world, target);
             }
 
             redstone::settle(&mut world);
@@ -9076,8 +9123,20 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         // nether-portal).
         world.tell_directly(clicked_x, clicked_y, clicked_z);
         world.tell_directly(target.0, target.1, target.2);
+        if ignited {
+            let charge = player.inventory.held().and_then(|s| blocks::item_name(s.item)) == Some("fire_charge");
+            let pitch = 0.8 + world.random_unit() * 0.4;
+            world.note_sound(target.0, target.1, target.2, if charge { "minecraft:item.firecharge.use" } else { "minecraft:item.flintandsteel.use" }, 1.0, pitch);
+        }
 
-        return Some(Reaction::accepted(sequence));
+        drop(world);
+        let mut slots = Vec::new();
+        if ignited && let Some(stack) = player.inventory.held() {
+            player.progress.used(stack.item);
+            if blocks::item_name(stack.item) == Some("fire_charge") { slots = spend_placed(player); }
+            else if player.game_mode != GAME_MODE_CREATIVE { pvp::wear_slot(shared, player, player.inventory.selected_slot(), stack, 1, false); }
+        }
+        return Some(Reaction { slots, ..Reaction::accepted(sequence) });
     }
 
     let Some(item) = player.inventory.held().map(|stack| stack.item) else {
@@ -9327,6 +9386,17 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
         player.set_rotation(yaw, pitch);
     }
 
+    if let Some(resync) = fishing::use_rod(shared, player, hand) {
+        let mut answer = answer;
+        answer.inventory = resync;
+        return Some(answer);
+    }
+    if maps::fill(shared, player, hand).is_some() {
+        let mut answer = answer;
+        answer.inventory = true;
+        return Some(answer);
+    }
+
     // Ракета при полёте на элитрах: разгон (glide.rs).
     if glide::use_rocket(shared, player, hand) {
         return Some(answer);
@@ -9478,7 +9548,10 @@ fn use_bucket(
         {
             let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
-            world.set_block(x, y, z, world::AIR);
+            let replacement = if crate::campfire::is_campfire(clicked_state) {
+                blocks::orientation_of(clicked_state).and_then(|o| o.with(clicked_state, "waterlogged", "false")).unwrap_or(clicked_state)
+            } else { world::AIR };
+            world.set_block(x, y, z, replacement);
             redstone::settle(&mut world);
         }
 
@@ -9932,6 +10005,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
         let mut slots = match cart {
             Some(cart) => cart_slots(shared, player.dimension, cart).unwrap_or_default(),
+            None if kind == Some(containers::Kind::Beacon) => window.shown.clone(),
             None if ender => player.ender.clone(),
             None => containers::window_slots(&world, &halves),
         };
@@ -9978,6 +10052,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
                     else { slots.clone_from(&slots_before); player.inventory=inventory_before; click.thrown=None; }
                 }
             }
+            None if kind == Some(containers::Kind::Beacon) => {},
             None if ender => player.ender.clone_from(&slots),
             None => containers::store_window_slots(&mut world, &halves, &slots),
         }
@@ -10350,6 +10425,11 @@ struct PlayerState {
     /// Откат предметов: группа (имя предмета) → такт, до которого её нельзя
     /// использовать (пакет Set Cooldown; заряд ветра — thrown.rs).
     item_cooldowns: HashMap<&'static str, u64>,
+    seen_fishing: HashMap<i32, fishing::Shown>,
+    seen_maps: HashMap<i32, Vec<u8>>,
+    /// Такт, когда карта впервые ушла клиенту: столбец 0 доходит через 15 тактов.
+    map_first: HashMap<i32, u64>,
+    seen_map_icons: HashMap<i32, Vec<(i32, i8, i8, u8)>>,
 
     /// Такт мира, когда игрок последний раз бил: сила удара зависит от
     /// того, сколько прошло.
@@ -10623,6 +10703,10 @@ impl PlayerState {
             seen_bow_arrows: HashMap::new(),
             seen_thrown: HashMap::new(),
             item_cooldowns: HashMap::new(),
+            seen_fishing: HashMap::new(),
+            seen_maps: HashMap::new(),
+            map_first: HashMap::new(),
+            seen_map_icons: HashMap::new(),
             last_attack: 0,
             dimension: saved.as_ref().map(|data| data.dimension).unwrap_or_default(),
             in_portal: 0,

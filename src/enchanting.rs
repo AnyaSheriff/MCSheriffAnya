@@ -302,6 +302,10 @@ pub fn costs(seed: i32, shelves: i32, enchantability: i32) -> [i32; 3] {
 /// Подбор зачарований на уровень `cost` (вики, Enchanting mechanics:
 /// «Step two – Find possible enchantments», «Step three – Select a set»).
 fn select(random: &mut JavaRandom, item: &str, enchantability: i32, cost: i32) -> Vec<(u16, i32)> {
+    select_with_treasure(random, item, enchantability, cost, false)
+}
+
+fn select_with_treasure(random: &mut JavaRandom, item: &str, enchantability: i32, cost: i32, treasure: bool) -> Vec<(u16, i32)> {
     if enchantability <= 0 {
         return Vec::new();
     }
@@ -316,7 +320,16 @@ fn select(random: &mut JavaRandom, item: &str, enchantability: i32, cost: i32) -
     let kinds = kinds(item);
     let mut candidates: Vec<(&'static Def, i32)> = Vec::new();
 
-    for def in DEFS.iter().filter(|def| def.primary != 0 && (book || def.primary & kinds != 0)) {
+    for def in DEFS.iter().filter(|def| {
+        let treasure_kind = match def.name {
+            "mending" | "vanishing_curse" => DURABLE,
+            "binding_curse" => ARMOR,
+            "frost_walker" => FEET,
+            _ => 0,
+        };
+        let allowed = def.primary | if treasure { treasure_kind } else { 0 };
+        allowed != 0 && (book || allowed & kinds != 0)
+    }) {
         let Some(number) = stackdata::enchantment_number(def.name) else { continue };
 
         if let Some(found) = (1..=max_level(number)).rev().find(|&l| def.min_cost(l) <= level && level <= def.max_cost(l)) {
@@ -821,6 +834,23 @@ impl Station {
             _ => 2,
         }
     }
+}
+
+/// Рыболовные сокровища: уровень 30, включая сокровищные чары (вики,
+/// Fishing: «enchanted at level 30»). [проверить] распределение на оригинале.
+pub fn fishing_treasure(seed: i64, stack: Stack) -> Stack {
+    let Some(name) = blocks::item_name(stack.item) else { return stack; };
+    let mut random = JavaRandom::new(seed);
+    let enchants = select_with_treasure(&mut random, name, enchantability(stack.item), 30, true);
+    let mut data = stack.extras();
+    let mut result = stack;
+    if name == "book" {
+        result.item = blocks::item_named("enchanted_book").unwrap_or(stack.item);
+        for (number, level) in enchants { data.set_stored(number, level); }
+    } else {
+        for (number, level) in enchants { data.set_enchant(number, level); }
+    }
+    result.with_extras(data)
 }
 
 #[cfg(test)]

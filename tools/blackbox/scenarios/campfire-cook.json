@@ -1,0 +1,64 @@
+{
+ "track_mobs": true,
+ "track_self": true,
+ "inventory": true,
+ "blocks": [],
+ "name": "campfire-cook",
+ "setup": [
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "fill $(0,-1,0) $(6,-1,6) minecraft:stone",
+  "setblock $(3,0,3) minecraft:campfire",
+  "tp $(bot) $(3.5,0,0.5) 0 35",
+  "!stopfly",
+  "give $(bot) minecraft:beef 4",
+  "!hotbar 0",
+  "!wait 20"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    3,
+    0,
+    3
+   ],
+   "face": 1
+  },
+  {
+   "after": 10,
+   "click": [
+    3,
+    0,
+    3
+   ],
+   "face": 1
+  },
+  {
+   "after": 20,
+   "click": [
+    3,
+    0,
+    3
+   ],
+   "face": 1
+  },
+  {
+   "after": 30,
+   "click": [
+    3,
+    0,
+    3
+   ],
+   "face": 1
+  }
+ ],
+ "record_ticks": 660,
+ "cleanup": [
+  "kill @e[type=item,distance=..16]",
+  "fill $(0,-1,0) $(6,1,6) minecraft:air",
+  "clear $(bot)",
+  "gamemode creative $(bot)"
+ ],
+ "about": "Four individual cooking slots, each completing 600 ticks after insertion."
+}

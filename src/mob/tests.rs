@@ -2,6 +2,7 @@ use super::*;
 use crate::items::Items;
 
 mod drowned;
+mod fire;
 mod phantom;
 mod skeleton;
 mod tame;

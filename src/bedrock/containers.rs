@@ -55,6 +55,8 @@ pub fn screen(kind: Kind) -> u8 {
         Kind::BrewingStand => 4,
         Kind::BlastFurnace => 27,
         Kind::Smoker => 28,
+        // [Bedrock: потом] Java-окна маяка и костра не открываются.
+        Kind::Beacon | Kind::Campfire => 0,
     }
 }
 
@@ -125,6 +127,9 @@ fn actor_id(kind: Kind) -> &'static str {
         Kind::BrewingStand => "BrewingStand",
         Kind::ShulkerBox => "ShulkerBox",
         Kind::EnderChest => "EnderChest",
+        // [Bedrock: потом] дополнительные поля актора.
+        Kind::Campfire => "Campfire",
+        Kind::Beacon => "Beacon",
     }
 }
 

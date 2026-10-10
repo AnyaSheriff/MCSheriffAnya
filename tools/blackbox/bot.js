@@ -228,6 +228,7 @@ bot._client.on('spawn_entity', (p) => {
   // `track_items` в сценарии: движение выпавших предметов пишется так же,
   // как у вагонеток (поршень толкает предметы). Предметы, лежавшие до записи,
   // тоже в счёт: их кладут командой перед записью.
+  if (scenario.track_fishing && inPad(pos) && type === 'fishing_bobber') { padCarts.add(p.entityId); cartAt.set(p.entityId, pos); entKind.set(p.entityId, type); }
   if (scenario.track_items && inPad(pos) && type === 'item') { padCarts.add(p.entityId); cartAt.set(p.entityId, pos); entKind.set(p.entityId, 'предмет'); }
   // `track_mobs` в сценарии: мобы на площадке пишутся как вагонетки — движение,
   // скорость, события, свойства; а также всё, что сервер говорит о них
@@ -237,9 +238,18 @@ bot._client.on('spawn_entity', (p) => {
   if (scenario.track_mobs && recording && inPad(pos) && type === 'item') padDrops.add(p.entityId);
   // Рамки: точное место и углы пакета появления (у рамки они несут сторону).
   const frameExtra = (type === 'item_frame' || type === 'glow_item_frame' || MOB_TYPES.has(type)) ? { extra: `${rel(pos).map(v => Math.round(v * 100000) / 100000).join(',')} yaw=${p.yaw} pitch=${p.pitch} head=${p.headPitch}` } : {};
-  if (inPad(pos)) note('spawn', { at: rel(pos).map(v => Math.round(v * 100) / 100), type, data: p.objectData, id: p.entityId, velocity: p.velocity, ...frameExtra });
+  if (inPad(pos)) note('spawn', { at: rel(pos).map(v => Math.round(v * 100) / 100), type, data: type === 'fishing_bobber' && bot.entity && p.objectData === bot.entity.id ? 'self' : p.objectData, id: p.entityId, velocity: p.velocity, ...frameExtra });
 });
+let reeledOnBite = false;
 bot._client.on('entity_metadata', (p) => {
+  // Реакция на поклёвку, а не угаданный случайный срок: пригодно для
+  // проверки самой добычи. Время поклёвки остаётся в записи без допусков.
+  if (recording && scenario.reel_on_bite && !reeledOnBite && entKind.get(p.entityId) === 'fishing_bobber'
+      && (p.metadata || []).some(m => m.key === 9 && m.value === true)) {
+    reeledOnBite = true;
+    pendingDo = { what: 'reel_on_bite', tick: tickNow() };
+    bot._client.write('use_item', { hand: 0, sequence: placeSeq++, rotation: { x: (Math.PI - bot.entity.yaw) * 180 / Math.PI, y: -bot.entity.pitch * 180 / Math.PI } });
+  }
   if (!padTnt.has(p.entityId) && !padDrops.has(p.entityId) && !(padCarts.has(p.entityId) && trackedAt(p.entityId))) return;
   const fields = (p.metadata || []).map(m => `${m.key}=${typeof m.value === 'object' ? JSON.stringify(m.value) : m.value}`);
   if (fields.length) note('meta', { id: p.entityId, fields: fields.join(' ') });
@@ -298,6 +308,14 @@ bot._client.on('entity_velocity', (p) => {
 // сервера свои и не пишутся.
 const simp = (v) => { try { return JSON.stringify(require('prismarine-nbt').simplify(v)); } catch (e) { return JSON.stringify(v, (k, x) => typeof x === 'bigint' ? String(x) : x); } };
 const jstr = (v) => JSON.stringify(v, (k, x) => typeof x === 'bigint' ? String(x) : x);
+// `track_maps`: карта целиком в журнале; номер нормализуется по порядку
+// появления, поскольку сохранённые миры могут иметь разные счётчики карт.
+const mapIds = new Map();
+bot._client.on('map', (p) => {
+  if (!scenario.track_maps || !recording) return;
+  if (!mapIds.has(p.itemDamage)) mapIds.set(p.itemDamage, mapIds.size);
+  note('sv', { text: `Map id=${mapIds.get(p.itemDamage)} scale=${p.scale} locked=${p.locked} icons=${jstr(p.icons)} rect=${p.x ?? 0},${p.y ?? 0},${p.columns},${p.rows ?? 0} pixels=${Buffer.from(p.data || []).toString('hex')}` });
+});
 const isSelfOf = (b) => (id) => b.entity && Number(id) === b.entity.id;
 const isSelf = isSelfOf(bot);
 const rnd = (v) => (typeof v === 'number' ? Math.round(v * 1000) / 1000 : v);
