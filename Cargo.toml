@@ -4,7 +4,7 @@ version = "0.1.0-alpha"
 edition = "2024"
 license = "MIT"
 description = "A Minecraft-compatible game server written from scratch in Rust"
-repository = "https://github.com/AnyaSheriff/MCSheriffAnya"
+repository = "https://github.com/MCSheriffAnya-Rust/MCSheriffAnya"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }

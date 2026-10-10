@@ -98,7 +98,7 @@ fn describe(properties: &ServerProperties, shared: &Shared) -> String {
         count => format!("Игроков: {} из {} — {}", count, properties.max_players, names.join(", ")),
     });
     lines.push(String::new());
-    lines.push("https://github.com/AnyaSheriff/MCSheriffAnya".to_string());
+    lines.push("https://github.com/MCSheriffAnya-Rust/MCSheriffAnya".to_string());
     lines.push(String::new());
 
     lines.join("\r\n")
