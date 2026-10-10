@@ -77,6 +77,45 @@ pub fn place_tagged(
     }
 
 
+    // Вики, Candle: «up to four candles» одного цвета в одной клетке.
+    if (name == "candle" || name.ends_with("_candle"))
+        && let Some(rule) = orientation
+    {
+        let here = world.get_block(clicked_x, clicked_y, clicked_z);
+        if blocks::block_at_state(here) == Some(name)
+            && let Some(count) = rule.value(here, "candles").and_then(|v| v.parse::<u8>().ok())
+            && count < 4
+            && let Some(next) = rule.with(here, "candles", &(count + 1).to_string())
+        {
+            world.set_block(clicked_x, clicked_y, clicked_z, next);
+            crate::redstone::settle(world);
+            return Placement::Placed;
+        }
+    }
+
+
+    // Вики, Snow/Pink Petals/Leaf Litter: наращиваем количество в клетке.
+    // Снег наращивается сверху; в соседней клетке тоже может лежать слой.
+    if crate::vegetation::count_property(name).is_some() {
+        let here = world.get_block(clicked_x, clicked_y, clicked_z);
+        let direct = blocks::block_at_state(here) == Some(name) && (name != "snow" || click.face == 1);
+        let (sx, sy, sz) = if direct { clicked } else { match click.face {
+            0 => (clicked_x, clicked_y - 1, clicked_z), 1 => (clicked_x, clicked_y + 1, clicked_z),
+            2 => (clicked_x, clicked_y, clicked_z - 1), 3 => (clicked_x, clicked_y, clicked_z + 1),
+            4 => (clicked_x - 1, clicked_y, clicked_z), _ => (clicked_x + 1, clicked_y, clicked_z),
+        } };
+        let target = world.get_block(sx, sy, sz);
+        if blocks::block_at_state(target) == Some(name)
+            && let Some(next) = crate::vegetation::stack_more(target)
+        {
+            if blocks_player(sx, sy, sz, next, px, py, pz) { return Placement::Refused(vec![(sx, sy, sz)]); }
+            world.set_block(sx, sy, sz, next);
+            crate::redstone::game_event(world, (sx, sy, sz), crate::redstone::FREQ_PLACE);
+            crate::redstone::settle(world);
+            return Placement::Placed;
+        }
+    }
+
     // Плита, поставленная на плиту того же вида, слипается с ней в двойную:
     // занимает место того же блока, а не соседнего.
     if let Some(orientation) = orientation
@@ -109,7 +148,11 @@ pub fn place_tagged(
     // рядом: такой блок заменяется поставленным. Воздух и жидкость щелчком
     // не выбираются — по ним не щёлкают.
     let clicked_state = world.get_block(clicked_x, clicked_y, clicked_z);
-    let (x, y, z) = if clicked_state != world::AIR && fluids::fluid_at(clicked_state).is_none() && is_replaceable(clicked_state) {
+    let (x, y, z) = if name == "scaffolding" && blocks::block_at_state(clicked_state) == Some("scaffolding") {
+        let Some(target) = crate::scaffolding::extension(world, clicked, click.face, click.yaw) else { return Placement::Nothing; };
+        target
+    } else if clicked_state != world::AIR && fluids::fluid_at(clicked_state).is_none() && is_replaceable(clicked_state)
+        && !(blocks::block_at_state(clicked_state) == Some(name) && crate::vegetation::count_property(name).is_some()) {
         (clicked_x, clicked_y, clicked_z)
     } else {
         (clicked_x + dx, clicked_y + dy, clicked_z + dz)
@@ -117,7 +160,8 @@ pub fn place_tagged(
 
     // Ставить можно в пустое место или туда, где стоит жидкость: блок её
     // вытесняет, как в игре.
-    if !is_replaceable(world.get_block(x, y, z)) {
+    if !is_replaceable(world.get_block(x, y, z))
+        || blocks::block_at_state(world.get_block(x, y, z)) == Some(name) && crate::vegetation::count_property(name).is_some() {
         return Placement::Nothing;
     }
 
@@ -130,6 +174,7 @@ pub fn place_tagged(
 
     // Лист, поставленный игроком, не гниёт (farming.rs).
     let state = crate::farming::placed(world, state, (x, y, z));
+    let state = crate::block_behaviour::placed(world, (x, y, z), state, click.face);
 
     // Проводу, факелу, рычагу нужна опора: в воздухе они не держатся.
     if !has_support(orientation, state, world, x, y, z) {
@@ -284,7 +329,7 @@ pub fn break_block(world: &mut World, x: i32, y: i32, z: i32) -> Option<i32> {
     // Крючок растяжки, сломанный игроком, звучит «detach».
     crate::redstone::hook_broken_by_player(world, (x, y, z), broken);
 
-    world.set_block(x, y, z, world::AIR);
+    world.set_block(x, y, z, crate::vegetation::fluid_left(broken));
     if !blocks::block_at_state(broken).is_some_and(crate::redstone::sculk_family::quiet_block) {
         crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_DESTROY);
     }
@@ -296,7 +341,8 @@ pub fn break_block(world: &mut World, x: i32, y: i32, z: i32) -> Option<i32> {
     if let Some((ox, oy, oz)) = blocks::pair_partner(broken, (x, y, z))
         && blocks::is_pair(broken, (x, y, z), world.get_block(ox, oy, oz), (ox, oy, oz))
     {
-        world.set_block(ox, oy, oz, world::AIR);
+        let other = world.get_block(ox, oy, oz);
+        world.set_block(ox, oy, oz, crate::vegetation::fluid_left(other));
         refresh_neighbours(world, ox, oy, oz);
     }
 
@@ -595,6 +641,18 @@ pub fn block_for_face(
     default_state: i32,
     face: i32,
 ) -> Option<(&'static str, i32)> {
+    if name == "cave_vines" && face != 0 { return None; }
+    // Вики, Coral Fan: на полу — веер, на боку — настенный, снизу нельзя.
+    if name.ends_with("_coral_fan") {
+        return match face {
+            0 => None,
+            1 => Some((name, default_state)),
+            _ => {
+                let wall = blocks::orientation(&name.replace("_coral_fan", "_coral_wall_fan"))?;
+                Some((wall.name, blocks::state_by_name(wall.name)?))
+            }
+        };
+    }
     if !name.ends_with("torch") || name.contains("wall") {
         return Some((name, default_state));
     }
@@ -618,6 +676,10 @@ pub fn block_for_face(
 ///
 /// Прочие блоки держатся сами по себе.
 pub fn has_support(orientation: Option<&Orientation>, state: i32, world: &World, x: i32, y: i32, z: i32) -> bool {
+    if !crate::block_behaviour::supported(world, (x, y, z), state) { return false; }
+    // Свече опора нужна при постановке, но не при обновлении формы (candles-stacking).
+    if blocks::block_at_state(state).is_some_and(|n| n == "candle" || n.ends_with("_candle"))
+        && !blocks::solid_top(world.get_block(x, y - 1, z)) { return false; }
     let Some(orientation) = orientation else {
         return true;
     };
@@ -1114,6 +1176,25 @@ mod tests {
 
     /// Бревно ложится поперёк грани: щелчок по боку кладёт его набок, щелчок
     /// сверху или снизу ставит стоймя. Взгляд игрока тут ни при чём.
+    #[test]
+    fn candles_stack_to_four_and_waterlogged_candles_stay_unlit() {
+        let mut w = World::in_memory();
+        w.set_block_silently(0, 9, 0, blocks::state_by_name("stone").unwrap());
+        let base = blocks::state_by_name("candle").unwrap();
+        let click = click(1, 0.5, 0.0);
+        for count in 1..=4 {
+            let clicked = (0, if count == 1 { 9 } else { 10 }, 0);
+            assert_eq!(place(&mut w, "candle", base, clicked, &click, (3.0, 10.0, 3.0)), Placement::Placed);
+            let here = w.get_block(0, 10, 0);
+            assert_eq!(blocks::orientation_of(here).unwrap().value(here, "candles"), Some(count.to_string().as_str()));
+        }
+        assert_ne!(place(&mut w, "candle", base, (0, 10, 0), &click, (3.0, 10.0, 3.0)), Placement::Placed);
+        // Свеча без опоры остаётся (чёрный ящик, candles-stacking).
+        w.set_block(0, 9, 0, world::AIR);
+        crate::redstone::settle(&mut w);
+        assert_ne!(w.get_block(0, 10, 0), world::AIR);
+    }
+
     #[test]
     fn a_log_lies_across_the_clicked_face() {
         assert_eq!(state("oak_log", &click(1, 0.5, 0.0)), 137); // сверху — стоймя

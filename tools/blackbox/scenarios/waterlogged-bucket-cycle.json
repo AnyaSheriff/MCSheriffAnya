@@ -1,0 +1,75 @@
+{
+  "name": "waterlogged-bucket-cycle",
+  "about": "[проверить] Ведро обводняет свечу с тушением, опустошает её; двойная плита не обводняется. Верхняя плита вместо свечи: луч бота идёт в центр блока и мимо низкой свечи.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:oak_slab[type=top,waterlogged=false]"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:oak_slab[type=double]"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "give $(bot) water_bucket",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 1,
+      "use": true
+    },
+    {
+      "after": 10,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 11,
+      "use": true
+    },
+    {
+      "after": 20,
+      "click": [
+        2,
+        0,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 21,
+      "use": true
+    }
+  ],
+  "record_ticks": 50,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(-8,0,-8) $(8,1,8) air",
+    "gamemode creative $(bot)"
+  ]
+}

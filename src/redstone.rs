@@ -2250,6 +2250,7 @@ fn itself_changed(world: &mut World, pos: Pos) {
 }
 
 fn react(world: &mut World, pos: Pos, itself: bool, from_signal: bool) {
+    crate::block_behaviour::changed(world, pos);
     let block = Block::at(world, pos);
 
     // Полка: ток — `powered` и сцепка с соседками (redstone/shelf.rs).
@@ -2693,6 +2694,7 @@ fn shape_changed(world: &mut World, pos: Pos, from: Dir) {
 /// Обновление формы; `loud` — ломается ли отвалившееся с событием слома
 /// (при постановке командой — нет).
 fn shape_update(world: &mut World, pos: Pos, from: Dir, loud: bool) {
+    if crate::block_behaviour::shape_changed(world, pos, loud) { return; }
     let block = Block::at(world, pos);
     let fall_off = |world: &mut World| if loud { pop_breaking(world, pos) } else { pop(world, pos) };
 
@@ -2857,6 +2859,13 @@ fn shape_update(world: &mut World, pos: Pos, from: Dir, loud: bool) {
             if crate::portal::is_portal(block.state) && !crate::portal::holds(world, pos, block.state) {
                 world.note_level_event(pos.0, pos.1, pos.2, 2001, block.state);
                 set(world, pos, AIR);
+                return;
+            }
+
+            // Бамбук без опоры не падает сразу: обновление формы ставит такт через 1,
+            // и цепочка рушится по блоку за такт (чёрный ящик, bamboo-support-chain).
+            if block.name == "bamboo" && !crate::plants::survives(world, block.state, pos.0, pos.1, pos.2) {
+                world.schedule_once(pos.0, pos.1, pos.2, 1, PRIORITY_NORMAL);
                 return;
             }
 
@@ -4084,6 +4093,8 @@ pub fn ticked(world: &mut World, pos: Pos) {
     }
 
     if matches!(blocks::block_at_state(world.get_block(pos.0, pos.1, pos.2)), Some("fire" | "soul_fire")) { crate::fire::tick(world, pos); return; }
+    if crate::block_behaviour::ticked(world, pos) { return; }
+
     let block = Block::at(world, pos);
 
     match block.kind {
@@ -4283,6 +4294,11 @@ pub fn ticked(world: &mut World, pos: Pos) {
         // заводит такт мира, здесь место только запоминается.
         _ if falls(block.state) && free_to_fall_into(world.get_block(pos.0, pos.1 - 1, pos.2)) => {
             world.note_falling(pos.0, pos.1, pos.2);
+        }
+
+        // Бамбук без опоры ломается по такту, а не сразу.
+        _ if block.name == "bamboo" => {
+            crate::plants::check(world, pos.0, pos.1, pos.2, true);
         }
 
         // Лист пересчитывает расстояние до бревна (farming.rs).

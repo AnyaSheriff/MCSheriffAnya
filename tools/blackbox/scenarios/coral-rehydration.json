@@ -1,0 +1,77 @@
+{
+  "name": "coral-rehydration",
+  "about": "[проверить] Источник возвращён до такта гибели, затем удалён: коралл должен пережить первый срок и погибнуть после второго. Сценарий подготовлен без запуска; random-правил нет.",
+  "exclusive": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        2,
+        1,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        1,
+        1,
+        -1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        1,
+        1,
+        1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        1,
+        2,
+        0
+      ],
+      "state": "minecraft:glass"
+    }
+  ],
+  "setup": [
+    "gamerule random_tick_speed 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(0,1,0) minecraft:tube_coral[waterlogged=false]"
+    },
+    {
+      "after": 20,
+      "cmd": "setblock $(1,1,0) minecraft:oak_slab[type=bottom,waterlogged=true]"
+    },
+    {
+      "after": 120,
+      "cmd": "setblock $(1,1,0) minecraft:stone"
+    }
+  ],
+  "record_ticks": 240,
+  "cleanup": [
+    "gamerule random_tick_speed 3",
+    "fill $(0,0,-1) $(2,2,1) minecraft:air"
+  ]
+}

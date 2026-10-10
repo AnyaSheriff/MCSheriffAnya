@@ -1,0 +1,51 @@
+{
+  "name": "block3-pumpkin",
+  "about": "Ножницы вырезают тыкву с направлением грани, выбрасывают четыре семени; повтор не расходует прочность [проверить] Java 26.1.2; подготовлено без запуска.",
+  "track_self": true,
+  "track_items": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:pumpkin"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) shears",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 3
+    },
+    {
+      "after": 10,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 3
+    }
+  ],
+  "record_ticks": 70,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(-2,0,-2) $(4,7,1) air",
+    "kill @e[type=item,distance=..12]",
+    "gamemode creative $(bot)"
+  ]
+}

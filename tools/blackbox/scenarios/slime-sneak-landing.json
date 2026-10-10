@@ -1,0 +1,47 @@
+{
+  "name": "slime-sneak-landing",
+  "about": "Падение на слизь с Shift должно наносить обычный урон. [проверить], без запуска.",
+  "track_self": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:slime_block"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "control": [
+        "sneak",
+        true
+      ]
+    },
+    {
+      "after": 2,
+      "cmd": "tp $(bot) $(0.5,8,0.5)"
+    },
+    {
+      "after": 55,
+      "control": [
+        "sneak",
+        false
+      ]
+    }
+  ],
+  "record_ticks": 70,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(0,0,0) $(3,0,0) air",
+    "gamemode creative $(bot)"
+  ]
+}

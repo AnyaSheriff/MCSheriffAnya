@@ -1,0 +1,34 @@
+{
+  "name": "bubble-column-air",
+  "about": "[проверить] Воздух убывает в трубе с обычной водой, после образования колонны восстанавливается. Робот под потолком; random-правил нет, запуск не выполнялся.",
+  "exclusive": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "gamemode creative $(bot)",
+    "fill $(-1,-1,-1) $(1,2,1) minecraft:glass",
+    "setblock $(0,0,0) minecraft:water",
+    "setblock $(0,1,0) minecraft:water",
+    "tp $(bot) $(0.5,0,0.5)",
+    "gamemode survival $(bot)",
+    "!stopfly"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "tp $(bot) $(0.5,0,0.5)"
+    },
+    {
+      "after": 60,
+      "cmd": "setblock $(0,-1,0) minecraft:soul_sand"
+    }
+  ],
+  "record_ticks": 130,
+  "cleanup": [
+    "gamemode creative $(bot)",
+    "!startfly",
+    "tp $(bot) $(3.5,1,3.5)",
+    "fill $(-1,0,-1) $(1,2,1) minecraft:air",
+    "fill $(-1,-1,-1) $(1,-1,1) minecraft:stone"
+  ]
+}

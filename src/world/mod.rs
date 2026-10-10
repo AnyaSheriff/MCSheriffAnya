@@ -204,7 +204,7 @@ pub enum WorldEvent {
 
     /// Событие мира, которое клиент проигрывает сам (World Event): звук и
     /// дым выбрасывателя, например. `effect` и `data` — как в пакете.
-    Level { x: i32, y: i32, z: i32, effect: i32, data: i32 },
+    Level { x: i32, y: i32, z: i32, effect: i32, data: i32, except: Option<i32> },
 
     /// Вибрация пошла от места `from` к датчику скалка `to` и долетит за
     /// `ticks` тактов: клиент рисует её частицей `vibration`.
@@ -2351,7 +2351,14 @@ impl World {
 
     /// Событие мира, которое клиент проигрывает сам (World Event).
     pub fn note_level_event(&mut self, x: i32, y: i32, z: i32, effect: i32, data: i32) {
-        self.events.push(WorldEvent::Level { x, y, z, effect, data });
+        self.events.push(WorldEvent::Level { x, y, z, effect, data, except: None });
+    }
+
+    /// Событие мира от руки игрока (`actor`): всем, кроме него самого.
+    pub fn note_level_event_by_hand(&mut self, x: i32, y: i32, z: i32, effect: i32, data: i32) {
+        let except = self.actor;
+
+        self.events.push(WorldEvent::Level { x, y, z, effect, data, except });
     }
 
     /// Вибрация к датчику скалка — частица на месте события.
@@ -5850,6 +5857,19 @@ mod mushroom_tests {
 mod tests {
     use super::*;
 
+    #[test]
+    fn wet_sponge_dries_only_in_the_nether() {
+        for kind in [WorldKind::Flat, WorldKind::Nether, WorldKind::End] {
+            let mut world = World::in_memory();
+            world.kind = kind;
+            let wet = crate::blocks::state_by_name("wet_sponge").unwrap();
+            world.set_block(0, 10, 0, wet);
+            crate::redstone::settle(&mut world);
+            let expected = if kind == WorldKind::Nether { "sponge" } else { "wet_sponge" };
+            assert_eq!(crate::blocks::block_at_state(world.get_block(0, 10, 0)), Some(expected));
+        }
+    }
+
     /// Чанк складывается сам, когда до него дошли: под ногами земля,
     /// над ней воздух.
     #[test]
@@ -5892,7 +5912,7 @@ mod tests {
         world.set_block(3, y + 1, 3, egg);
 
         let (events, _) = world.events_since(start, 0);
-        let levels: Vec<_> = events.iter().filter_map(|event| match event { WorldEvent::Level { x, y, z, effect, data } => Some((*x, *y, *z, *effect, *data)), _ => None }).collect();
+        let levels: Vec<_> = events.iter().filter_map(|event| match event { WorldEvent::Level { x, y, z, effect, data, .. } => Some((*x, *y, *z, *effect, *data)), _ => None }).collect();
 
         assert_eq!(levels, vec![(1, y + 1, 1, 2012, 15)]);
     }

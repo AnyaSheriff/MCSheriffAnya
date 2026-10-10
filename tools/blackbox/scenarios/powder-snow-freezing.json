@@ -1,0 +1,57 @@
+{
+  "name": "powder-snow-freezing",
+  "about": "[проверить] Рыхлый снег: 140 тактов замерзания, урон, одна кожаная вещь снимает замерзание; после выхода оттаивание.",
+  "track_self": true,
+  "exclusive": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:powder_snow"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:powder_snow"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "gamerule natural_health_regeneration false",
+    "tp $(bot) $(2.5,0,0.5)",
+    "!stopfly"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "tp $(bot) $(0.5,0,0.5)"
+    },
+    {
+      "after": 200,
+      "cmd": "item replace entity $(bot) armor.head with leather_helmet"
+    },
+    {
+      "after": 240,
+      "cmd": "item replace entity $(bot) armor.head with air"
+    },
+    {
+      "after": 270,
+      "cmd": "tp $(bot) $(2.5,0,0.5)"
+    }
+  ],
+  "record_ticks": 350,
+  "cleanup": [
+    "gamerule natural_health_regeneration true",
+    "gamerule freeze_damage true",
+    "clear $(bot)",
+    "fill $(0,0,0) $(0,1,0) air",
+    "gamemode creative $(bot)"
+  ]
+}

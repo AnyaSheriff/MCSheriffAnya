@@ -1,0 +1,69 @@
+{
+  "name": "scaffolding-extend",
+  "about": "Леса: щелчок в бок наращивает башню, верхняя грань продолжает мост по взгляду. [проверить], без запуска.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:scaffolding"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) scaffolding 16",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 3
+    },
+    {
+      "after": 6,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 3
+    },
+    {
+      "after": 12,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 3
+    },
+    {
+      "after": 18,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 3
+    }
+  ],
+  "record_ticks": 50,
+  "cleanup": [
+    "gamerule random_tick_speed 3",
+    "clear $(bot)",
+    "fill $(-1,-1,-1) $(8,20,1) air",
+    "kill @e[type=item,distance=..12]",
+    "gamemode creative $(bot)",
+    "fill $(-1,-1,-1) $(8,-1,1) stone"
+  ]
+}

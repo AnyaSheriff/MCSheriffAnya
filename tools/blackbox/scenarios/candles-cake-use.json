@@ -1,0 +1,116 @@
+{
+  "name": "candles-cake-use",
+  "about": "Свеча на целом торте, зажигание, тушение, еда голодным игроком; отдельная свеча. [проверить]: подготовлен без запуска black box.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:cake"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:candle[candles=1,lit=false,waterlogged=false]"
+    }
+  ],
+  "setup": [
+    "difficulty easy",
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) red_candle 2",
+    "give $(bot) flint_and_steel",
+    "effect give $(bot) hunger 5 200 true",
+    "!wait 110"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "hotbar": 0
+    },
+    {
+      "after": 2,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 8,
+      "hotbar": 1
+    },
+    {
+      "after": 10,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 16,
+      "click": [
+        2,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 22,
+      "hotbar": 8
+    },
+    {
+      "after": 24,
+      "click": [
+        2,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 30,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "cursor": [
+        0.5,
+        0.8,
+        0.5
+      ]
+    },
+    {
+      "after": 36,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "cursor": [
+        0.5,
+        0.2,
+        0.5
+      ]
+    }
+  ],
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "fill $(0,0,0) $(2,0,0) air",
+    "kill @e[type=item,distance=..8]",
+    "gamemode creative $(bot)",
+    "difficulty peaceful",
+    "effect clear $(bot)",
+    "effect give $(bot) saturation 5 10 true"
+  ],
+  "record_ticks": 65
+}

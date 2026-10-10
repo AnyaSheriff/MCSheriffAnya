@@ -97,6 +97,10 @@ pub(super) fn use_on_block(player: &mut PlayerState, shared: &Shared, clicked: (
         return refuse(&mut world);
     }
 
+    // Удачная костная мука: оригинал шлёт взмах рукой и самому игроку, дважды
+    // (чёрный ящик, block3-fern: два `Animate 0`; у листовой подстилки без роста их нет).
+    world.note_animation(player.entity_id, 0);
+    world.note_animation(player.entity_id, 0);
     world.tell_directly(clicked.0, clicked.1, clicked.2);
     world.tell_directly(beyond.0, beyond.1, beyond.2);
     redstone::settle(&mut world);

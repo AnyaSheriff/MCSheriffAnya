@@ -1,0 +1,104 @@
+{
+  "name": "copper-wax-scrape",
+  "about": "Медь: воск, снятие воска, три стадии очистки; сохранение свойств плиты и лампы. [проверить]: подготовлен без запуска black box.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:oxidized_cut_copper_slab[type=top,waterlogged=false]"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:weathered_copper_bulb[lit=true,powered=false]"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) honeycomb 2",
+    "give $(bot) iron_axe"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "hotbar": 0
+    },
+    {
+      "after": 2,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 8,
+      "hotbar": 1
+    },
+    {
+      "after": 10,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 18,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 26,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 34,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 42,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 50,
+      "click": [
+        2,
+        0,
+        0
+      ]
+    }
+  ],
+  "cleanup": [
+    "clear $(bot)",
+    "setblock $(0,0,0) minecraft:air",
+    "setblock $(2,0,0) minecraft:air",
+    "kill @e[type=item,distance=..8]",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 100
+}

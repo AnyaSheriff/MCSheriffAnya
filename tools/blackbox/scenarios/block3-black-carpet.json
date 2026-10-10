@@ -1,0 +1,51 @@
+{
+  "name": "block3-black-carpet",
+  "about": "Ковёр теряет опору и выпадает; нижний ковёр держит верхний [проверить] Java 26.1.2; подготовлено без запуска.",
+  "track_self": true,
+  "track_items": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:black_carpet"
+    },
+    {
+      "at": [
+        0,
+        2,
+        0
+      ],
+      "state": "minecraft:black_carpet"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(0,0,0) air"
+    }
+  ],
+  "record_ticks": 70,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(-2,0,-2) $(4,7,1) air",
+    "kill @e[type=item,distance=..12]",
+    "gamemode creative $(bot)"
+  ]
+}

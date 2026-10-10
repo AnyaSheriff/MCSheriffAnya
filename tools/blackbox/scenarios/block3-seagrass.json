@@ -1,0 +1,190 @@
+{
+  "name": "block3-seagrass",
+  "about": "Костная мука выращивает согласованную пару; разрушение одной половины убирает вторую; вода сохраняется [проверить] Java 26.1.2; подготовлено без запуска.",
+  "track_self": true,
+  "track_items": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:dirt"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:seagrass"
+    },
+    {
+      "at": [
+        0,
+        2,
+        0
+      ],
+      "state": "minecraft:water"
+    },
+    {
+      "at": [
+        -1,
+        1,
+        -1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        -1,
+        2,
+        -1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        -1,
+        1,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        -1,
+        2,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        -1,
+        1,
+        1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        -1,
+        2,
+        1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        0,
+        1,
+        -1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        0,
+        2,
+        -1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        0,
+        1,
+        1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        0,
+        2,
+        1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        1,
+        1,
+        -1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        1,
+        2,
+        -1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        1,
+        1,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        1,
+        2,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        1,
+        1,
+        1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        1,
+        2,
+        1
+      ],
+      "state": "minecraft:glass"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) bone_meal 8",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 10,
+      "cmd": "setblock $(0,2,0) water"
+    }
+  ],
+  "record_ticks": 70,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(-2,0,-2) $(4,7,1) air",
+    "kill @e[type=item,distance=..12]",
+    "gamemode creative $(bot)"
+  ]
+}

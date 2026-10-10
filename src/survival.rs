@@ -111,6 +111,8 @@ pub enum Source {
     /// Заряд ветра — игрока или бриза (вики, Wind Charge: «wind_charge»;
     /// чёрный ящик, breeze-wind-charge: Damage Event type=47).
     WindCharge,
+    /// Замерзание в рыхлом снегу (Powder Snow).
+    Freeze,
 }
 
 impl Source {
@@ -155,6 +157,7 @@ impl Source {
             Source::Thrown => 44,
             // Реестр по алфавиту: unattributed_fireball 46, wind_charge 47.
             Source::WindCharge => 47,
+            Source::Freeze => 17,
             // Место в реестре damage_type (configuration.rs: 15).
             Source::Fireworks => 15,
             // Реестр damage_type по алфавиту: out_of_world 32, outside_border
@@ -201,6 +204,7 @@ impl Source {
             Source::Trident => "death.attack.trident",
             Source::Thrown => "death.attack.thrown",
             Source::WindCharge => "death.attack.mob",
+            Source::Freeze => "death.attack.freeze",
             Source::Fireworks => "death.attack.fireworks",
             Source::FlyIntoWall => "death.attack.flyIntoWall",
             Source::OutsideBorder => "death.attack.outsideBorder",
@@ -232,7 +236,7 @@ impl Source {
         match self {
             // Магия и иссушение изнурения не дают (вики, Hunger: «Taking
             // damage… except… poison, wither») [проверить].
-            Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::Magic | Source::Wither => 0.0,
+            Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::Magic | Source::Wither | Source::Freeze => 0.0,
             _ => 0.1,
         }
     }
@@ -295,6 +299,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::Trident => "was impaled",
         Source::Thrown => "was pummeled",
         Source::WindCharge => "was slain",
+        Source::Freeze => "froze to death",
         Source::Fireworks => "went off with a bang",
         Source::FlyIntoWall => "experienced kinetic energy",
         Source::OutsideBorder => "left the confines of this world",

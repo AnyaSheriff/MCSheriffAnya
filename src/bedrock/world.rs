@@ -3511,7 +3511,7 @@ impl BedrockWorld {
                     }
                 }
                 // Событие мира (частицы роста костной муки) и звук сервера.
-                WorldEvent::Level { x, y, z, effect, data } if self.within_earshot(f64::from(x), f64::from(z)) => {
+                WorldEvent::Level { x, y, z, effect, data, .. } if self.within_earshot(f64::from(x), f64::from(z)) => {
                     packets.extend(super::effects::level_packets(x, y, z, effect, data));
                 }
                 // Звук поршня идёт у BDS не в начале хода, а в его конце, вместе с

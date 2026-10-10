@@ -46,6 +46,7 @@ const PROPERTY_POSE: i32 = 20;
 pub(super) const POSE_SPIN_ATTACK: i32 = 4;
 /// Поза «полёт на элитрах» (minecraft-data 26.1: pose 1, fall_flying).
 const POSE_FALL_FLYING: i32 = 1;
+/// Поза «крадётся».
 const POSE_CROUCHING: i32 = 5;
 /// Флаг сущности «летит на элитрах».
 const FLAG_FALL_FLYING: u8 = 0x80;
@@ -185,6 +186,7 @@ struct Meta {
     stingers: i32,
     health: f32,
     air: i32,
+    frozen: i32,
     flags: u8,
     /// Поза (свойство 6): своему клиенту уходит только поза вращения.
     pose: i32,
@@ -220,6 +222,8 @@ pub(super) struct Net {
     meta: Meta,
     /// Горит ли он для свойств: обновляется в начале такта сущности.
     fire_flag: bool,
+    /// [Bedrock: потом] ticks_frozen и замедление игрока Java.
+    frozen: i32,
     /// Скорость, которую надо сообщить после удара.
     pub velocity: Option<(f64, f64, f64)>,
     /// Вертикальная скорость, которую сервер ведёт сам после удара в воздухе:
@@ -337,8 +341,9 @@ impl Net {
             sent_health: survival::MAX_HEALTH,
             sent_food: 20,
             sent_saturation_zero: false,
-            meta: Meta { score: 0, arrows: 0, stingers: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, pose: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES], ambient: false, absorption: 0.0, bed: None },
+            meta: Meta { score: 0, arrows: 0, stingers: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, frozen: 0, flags: 0, pose: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES], ambient: false, absorption: 0.0, bed: None },
             fire_flag: false,
+            frozen: 0,
             velocity: None,
             pin: None,
             velocity_due: false,
@@ -466,10 +471,27 @@ fn mortal(mode: i32) -> bool {
     mode == GAME_MODE_SURVIVAL || mode == GAME_MODE_ADVENTURE
 }
 
+fn freezing_step(ticks: i32, inside: bool, leather: bool) -> i32 {
+    // С кожаной вещью лёд уходит так же, как вне снега: по 2 за такт (powder-snow-freezing).
+    if !leather && inside { (ticks + 1).min(140) } else { (ticks - 2).max(0) }
+}
+
+fn powder_contact(world: &World, x: f64, y: f64, z: f64, height: f64) -> bool {
+    for bx in ((x - 0.299).floor() as i32)..=((x + 0.299).floor() as i32) {
+        for bz in ((z - 0.299).floor() as i32)..=((z + 0.299).floor() as i32) {
+            for by in ((y + 0.001).floor() as i32)..=((y + height - 0.001).floor() as i32) {
+                if blocks::block_at_state(world.get_block(bx, by, bz)) == Some("powder_snow") { return true; }
+            }
+        }
+    }
+    false
+}
+
 /// Что вокруг игрока: лава, вода в ногах и на уровне глаз, туловище в блоке.
 struct Env {
     in_fire: f32,
     campfire: f32,
+    powder_snow: bool,
     cactus: bool,
     /// Ящик игрока в кусте ягод не младше первой стадии.
     berries: bool,
@@ -479,6 +501,8 @@ struct Env {
     /// Под дождём (World::in_rain): тушит, как вода.
     in_rain: bool,
     eyes_in_water: bool,
+    /// Вики, Bubble Column: воздух восстанавливается как вне воды.
+    in_bubbles: bool,
     soft: bool,
     landing: f32,
     below: i32,
@@ -511,7 +535,7 @@ fn fluid_height(world: &World, x: i32, y: i32, z: i32, kind: fluids::Kind, level
 
 fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool) -> Env {
     let (bx, bz) = (x.floor() as i32, z.floor() as i32);
-    let mut env = Env { in_fire: 0.0, campfire: 0.0, cactus: false, berries: false, in_wall: false, in_lava: false, in_water: false, in_rain: false, eyes_in_water: false, soft: false, landing: 1.0, below: 0 };
+    let mut env = Env { in_fire: 0.0, campfire: 0.0, powder_snow: false, cactus: false, berries: false, in_wall: false, in_lava: false, in_water: false, in_rain: false, eyes_in_water: false, in_bubbles: false, soft: false, landing: 1.0, below: 0 };
 
     // Ящик игрока: от ног до макушки; жидкость считается, если её
     // поверхность выше ног.
@@ -523,6 +547,8 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool
 
     for by in (y.floor() as i32)..=(top.floor() as i32) {
         let state = world.get_block(bx, by, bz);
+
+        if blocks::block_at_state(state) == Some("bubble_column") { env.in_bubbles = true; }
 
         if let Some((kind, level)) = fluids::fluid_at(state) {
             let surface = f64::from(by) + fluid_height(world, bx, by, bz, kind, level);
@@ -564,7 +590,9 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool
 
     let head = world.get_block(bx, (y + if spin { 0.4 } else if sneaking { 1.27 } else { 1.62 }).floor() as i32, bz);
 
-    env.in_wall = blocks::full_cube(head) && fluids::fluid_at(head).is_none();
+    // Снег задевает весь ящик; через его край тоже начинают замерзать.
+    env.powder_snow = powder_contact(world, x, y, z, top - y);
+    env.in_wall = blocks::full_cube(head) && fluids::fluid_at(head).is_none() && blocks::block_at_state(head) != Some("powder_snow");
 
     env.soft = env.in_water || env.in_lava || blocks::block_at_state(feet).is_some_and(soft_block);
 
@@ -580,6 +608,8 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool
 
     env.below = below;
     env.landing = blocks::block_at_state(below).map(landing_multiplier).unwrap_or(1.0);
+    // Слизь гасит урон и с Shift (чёрный ящик, slime-sneak-landing).
+
 
     env
 }
@@ -615,7 +645,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         let mode = if player.glide.active { Some("aviate_one_cm") }
             else if env.eyes_in_water { Some(if player.vit.sprinting { "swim_one_cm" } else { "walk_under_water_one_cm" }) }
             else if env.in_water { Some("walk_on_water_one_cm") }
-            else if feet.is_some_and(|name| matches!(name, "ladder" | "vine" | "scaffolding" | "weeping_vines" | "weeping_vines_plant" | "twisting_vines" | "twisting_vines_plant")) { Some("climb_one_cm") }
+            else if feet.is_some_and(|name| matches!(name, "ladder" | "vine" | "scaffolding" | "weeping_vines" | "weeping_vines_plant" | "twisting_vines" | "twisting_vines_plant" | "cave_vines" | "cave_vines_plant")) { Some("climb_one_cm") }
             else { None };
         if let Some(mode) = mode {
             let metres = match mode { "climb_one_cm" => dy.max(0.0), "walk_on_water_one_cm" => dx.hypot(dz), _ => dx.hypot(dy).hypot(dz) };
@@ -1231,6 +1261,12 @@ async fn send_meta(stream: &mut Outgoing<'_>, entity_id: i32, now: Meta, before:
         body.extend_from_slice(&encode_varint(now.air));
     }
 
+    if now.frozen != before.frozen {
+        body.push(7); // Entity format: ticks frozen, VarInt.
+        body.extend_from_slice(&encode_varint(PROPERTY_VARINT));
+        body.extend_from_slice(&encode_varint(now.frozen));
+    }
+
     if now.score != before.score {
         body.push(SCORE_PROPERTY);
         body.extend_from_slice(&encode_varint(PROPERTY_VARINT));
@@ -1314,6 +1350,14 @@ async fn sync_attributes(stream: &mut Outgoing<'_>, player: &mut PlayerState, no
         player.attrs.set_modifier(crate::attributes::MOVEMENT_SPEED, Modifier::new("minecraft:sprinting", f64::from(0.3f32), Operation::AddMultipliedTotal));
     } else {
         player.attrs.remove_modifier(crate::attributes::MOVEMENT_SPEED, "minecraft:sprinting");
+    }
+
+    if player.net.frozen > 0 && mortal(player.game_mode) {
+        // Как у оригинала, в одинарной точности (powder-snow-freezing: -0.0003571428533177823).
+        let amount = f64::from(-0.05f32 * (player.net.frozen as f32 / 140.0f32));
+        player.attrs.set_modifier(crate::attributes::MOVEMENT_SPEED, Modifier::new("minecraft:powder_snow", amount, Operation::AddValue));
+    } else {
+        player.attrs.remove_modifier(crate::attributes::MOVEMENT_SPEED, "minecraft:powder_snow");
     }
 
     // Изменённое предметами уходит через два такта после смены (чёрный
@@ -2128,6 +2172,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         stingers: player.net.stingers,
         health: player.vit.health,
         air: player.vit.air,
+        frozen: player.net.frozen,
         flags,
         pose: if player.sleeping.is_some() {
             POSE_SLEEPING
@@ -2137,7 +2182,8 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
             POSE_FALL_FLYING
         } else if player.net.meta.flags & 0x02 != 0 && player.ride.vehicle.is_none() && !player.net.sneak_riding {
             // Поза «присел» — тактом позже флага и не у седока (чёрный ящик,
-            // donkey-chest: 0=2 на +20, 6=5 на +21; на лошади позы нет).
+            // donkey-chest: 0=2 на +20, 6=5 на +21; на лошади позы нет) и сходит
+            // тоже тактом позже (чёрный ящик, slime-sneak-landing: 0=2 на +0, 6=5 на +1).
             POSE_CROUCHING
         } else {
             0
@@ -2195,6 +2241,8 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     for slot in std::mem::take(&mut player.net.slots_later) {
         player.net.slot_changed(slot);
     }
+
+    if !mortal(player.game_mode) { player.net.frozen = 0; }
 
     // C. такт сущности.
     if !player.vit.dead && mortal(player.game_mode) {
@@ -2321,6 +2369,30 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
 
     player.vit.age = player.vit.age.wrapping_add(1);
 
+    // Powder Snow: «140 game ticks», затем 1 HP раз в 40 тактов.
+    // Любая надетая кожаная вещь защищает, предмет в руке — нет.
+    // [проверить]: фаза первого урона и пакет замедления.
+    let leather = crate::combat::ARMOR_SLOTS.iter().any(|(slot, _)| {
+        player.inventory.slot(*slot).and_then(|s| blocks::item_name(s.item)).is_some_and(|n| matches!(n,
+            "leather_helmet" | "leather_chestplate" | "leather_leggings" | "leather_boots"))
+    });
+    player.net.frozen = freezing_step(player.net.frozen, env.powder_snow, leather);
+    if player.net.frozen == 140 && player.vit.age.is_multiple_of(40)
+        && shared.freeze_damage.load(std::sync::atomic::Ordering::Relaxed)
+    {
+        hit(stream, shared, player, 1.0, Source::Freeze, 0).await?;
+    }
+    if env.powder_snow && player.vit.fire > 0 {
+        player.vit.extinguish();
+        let mut w = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let (x, y, z) = (player.x.floor() as i32, player.y.floor() as i32, player.z.floor() as i32);
+        for by in y..=y + 1 {
+            if blocks::block_at_state(w.get_block(x, by, z)) == Some("powder_snow") { w.set_block(x, by, z, world::AIR); }
+        }
+        redstone::settle(&mut w);
+    }
+
+
     player.net.in_lava = env.in_lava;
     player.net.in_water = env.in_water;
 
@@ -2414,7 +2486,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         hit(stream, shared, player, 4.0, Source::OutOfWorld, 0).await?;
     }
 
-    if !player.vit.dead && player.vit.air_tick(env.eyes_in_water, false) {
+    if !player.vit.dead && player.vit.air_tick(env.eyes_in_water && !env.in_bubbles, false) {
         send_entity_event(stream, entity, EVENT_DROWN).await?;
         hit(stream, shared, player, 2.0, Source::Drown, 0).await?;
     }
@@ -2769,6 +2841,34 @@ mod tests {
     }
 
     #[test]
+    fn powder_snow_freezes_thaws_and_leather_protects() {
+        let mut frozen = 0;
+        for _ in 0..139 { frozen = freezing_step(frozen, true, false); }
+        assert_eq!(frozen, 139);
+        assert_eq!(freezing_step(frozen, true, false), 140);
+        assert_eq!(freezing_step(140, true, false), 140);
+        assert_eq!(freezing_step(140, true, true), 138);
+        assert_eq!(freezing_step(140, false, false), 138);
+        assert_eq!(freezing_step(1, false, false), 0);
+        assert_eq!(Source::Freeze.type_id(), 17);
+        assert!(crate::combat::bypasses_armor(Source::Freeze));
+        assert_eq!(death_text(Source::Freeze, "Anya"), "Anya froze to death");
+    }
+
+    #[test]
+    fn powder_snow_contacts_edges_but_not_boots_on_top() {
+        let mut w = World::in_memory();
+        w.set_block_silently(0, 10, 0, blocks::state_by_name("powder_snow").unwrap());
+        assert!(powder_contact(&w, 1.2, 10.0, 0.5, 1.8));
+        assert!(!powder_contact(&w, 1.4, 10.0, 0.5, 1.8));
+        assert!(!powder_contact(&w, 0.5, 11.0, 0.5, 1.8));
+        assert!(!look_around(&w, 0.5, 9.0, 0.5, false, false).in_wall);
+        w.set_block_silently(0, 9, 0, blocks::state_by_name("slime_block").unwrap());
+        assert_eq!(look_around(&w, 0.5, 10.0, 0.5, true, false).landing, 0.0);
+        assert_eq!(look_around(&w, 0.5, 10.0, 0.5, false, false).landing, 0.0);
+    }
+
+    #[test]
     fn foods_follow_the_wiki_table() {
         let bread = food_of("bread").expect("хлеб — еда");
 
@@ -2785,6 +2885,24 @@ mod tests {
         assert_eq!(landing_multiplier("slime_block"), 0.0);
         assert_eq!(landing_multiplier("red_bed"), 0.5);
         assert_eq!(landing_multiplier("stone"), 1.0);
+    }
+
+    #[test]
+    fn bubble_columns_are_water_but_supply_air() {
+        for drag in ["true", "false"] {
+            let mut world = World::in_memory();
+            let bubble = blocks::state_from_text(&format!("bubble_column[drag={drag}]")).unwrap();
+            world.set_block_silently(0, 0, 0, bubble);
+            world.set_block_silently(0, 1, 0, bubble);
+            let env = look_around(&world, 0.5, 0.0, 0.5, false, false);
+            assert!(env.in_water && env.eyes_in_water && env.in_bubbles && env.soft);
+
+            let water = fluids::state_of(fluids::Kind::Water, 0);
+            world.set_block_silently(0, 0, 0, water);
+            world.set_block_silently(0, 1, 0, water);
+            let env = look_around(&world, 0.5, 0.0, 0.5, false, false);
+            assert!(env.eyes_in_water && !env.in_bubbles);
+        }
     }
 
     #[test]

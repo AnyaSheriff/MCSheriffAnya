@@ -437,7 +437,7 @@ mod tests {
         events
             .into_iter()
             .filter_map(|event| match event {
-                crate::world::WorldEvent::Level { x, y, z, effect: SPARK_EVENT, data } => Some(((x, y, z), data)),
+                crate::world::WorldEvent::Level { x, y, z, effect: SPARK_EVENT, data, .. } => Some(((x, y, z), data)),
                 _ => None,
             })
             .collect()

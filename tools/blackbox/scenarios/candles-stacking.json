@@ -1,0 +1,69 @@
+{
+  "name": "candles-stacking",
+  "about": "Свечи: четыре в клетке, другой цвет отдельно, разрушение опоры. [проверить], без запуска.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) candle 8",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 6,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 12,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 18,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 30,
+      "cmd": "setblock $(0,0,0) air"
+    }
+  ],
+  "record_ticks": 55,
+  "cleanup": [
+    "gamerule random_tick_speed 3",
+    "clear $(bot)",
+    "fill $(-1,-1,-1) $(8,20,1) air",
+    "kill @e[type=item,distance=..12]",
+    "gamemode creative $(bot)",
+    "fill $(-1,-1,-1) $(8,-1,1) stone"
+  ]
+}

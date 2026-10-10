@@ -2347,7 +2347,11 @@ fn start_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
         // Пока место ждало своей очереди, всё могло измениться. Падает блок
         // сквозь всё заменяемое: воздух, воду, траву (вики, Falling Block:
         // «Block below is replaceable»).
-        if !redstone::falls(state) || !redstone::free_to_fall_into(world.get_block(x, y - 1, z)) {
+        let scaffold = blocks::block_at_state(state) == Some("scaffolding");
+        let dripstone = blocks::block_at_state(state) == Some("pointed_dripstone");
+        if dripstone && crate::dripstone::supported(world, (x, y, z), state) { continue; }
+        if scaffold && crate::scaffolding::distance(world, (x, y, z)) < 7 { continue; }
+        if !dripstone && ((!scaffold && !redstone::falls(state)) || !redstone::free_to_fall_into(world.get_block(x, y - 1, z))) {
             continue;
         }
 
@@ -2360,7 +2364,9 @@ fn start_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
         let stack = item.map_or(Stack::new(0, 0), |item| Stack::new(item, 1));
         let entity_id = shared.next_entity_id();
 
-        world.set_block(x, y, z, crate::world::AIR);
+        let water = (scaffold || dripstone) && blocks::orientation_of(state).and_then(|b| b.value(state, "waterlogged")) == Some("true");
+        let state = if water { blocks::orientation_of(state).and_then(|b| b.with(state, "waterlogged", "false")).unwrap_or(state) } else { state };
+        world.set_block(x, y, z, if water { blocks::state_by_name("water").unwrap() } else { crate::world::AIR });
 
         shared
             .items_in(dimension)
@@ -2402,8 +2408,15 @@ fn land_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
         // снежный слой) он просто занимает: так у оригинала.
         let there = world.get_block(x, y, z);
 
-        if redstone::free_to_fall_into(there) {
-            world.set_block(x, y, z, hardened_in_water(state, there));
+        let dripstone = blocks::block_at_state(state) == Some("pointed_dripstone");
+        if dripstone { world.note_level_event(x, y, z, 2001, state); }
+        if !dripstone && redstone::free_to_fall_into(there) {
+            // Леса приземляются с прежним состоянием (distance=7), а пересчёт идёт
+            // следующим тактом (чёрный ящик, scaffolding-support).
+            let scaffold = blocks::block_at_state(state) == Some("scaffolding");
+            let landed = if scaffold { state } else { hardened_in_water(state, there) };
+            world.set_block(x, y, z, landed);
+            if scaffold { world.schedule_block_once(x, y, z, 1); }
 
             // Наковальня, упав, звенит (событие мира 1031, вики, World
             // Event: «Anvil lands») [проверить порядок].
@@ -3591,6 +3604,28 @@ mod tests {
             crate::ops::Ops::open(&std::env::temp_dir().join(format!("mcsheriffanya-tick-mob-ops-{}.json", std::process::id()))),
             crate::skins::Settings::default(),
         )
+    }
+
+    #[test]
+    fn scaffolding_and_dripstone_enter_the_real_falling_entity_queue() {
+        let shared = mob_server();
+        let dimension = Dimension::Overworld;
+        let mut w = shared.world_in(dimension).lock().unwrap();
+        let scaffold = blocks::state_from_text("scaffolding[distance=7,waterlogged=true]").unwrap();
+        let drip = blocks::state_from_text("pointed_dripstone[vertical_direction=down]").unwrap();
+        w.set_block_silently(0, 10, 0, scaffold);
+        w.set_block_silently(2, 10, 0, drip);
+        w.set_block_silently(2, 9, 0, drip);
+        crate::scaffolding::ticked(&mut w, (0, 10, 0));
+        crate::dripstone::ticked(&mut w, (2, 10, 0));
+        start_falling(&shared, dimension, &mut w);
+        assert_eq!(fluids::fluid_at(w.get_block(0, 10, 0)), Some((fluids::Kind::Water, 0)));
+        assert_eq!(w.get_block(2, 10, 0), AIR);
+        assert_eq!(w.get_block(2, 9, 0), AIR);
+        let items = shared.items_in(dimension).lock().unwrap();
+        assert_eq!(items.items().len(), 3);
+        let first = items.items()[0].block.unwrap();
+        assert_eq!(blocks::orientation_of(first).unwrap().value(first, "waterlogged"), Some("false"));
     }
 
     /// Мобы в такте мира падают, встают на землю, получают урон падения

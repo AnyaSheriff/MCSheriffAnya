@@ -388,6 +388,10 @@ pub fn conductive(state: i32) -> bool {
 /// Полнота нужна там, где блок упирается в соседа: забор срастается только
 /// с полным кубом, а дверь только на полный куб и ставится.
 pub fn full_cube(state: i32) -> bool {
+    // minecraft-data «boundingBox=block» означает наличие столкновения,
+    // а не полный куб. Свеча/капельник не служат сплошной опорой.
+    if block_at_state(state).is_some_and(|n| matches!(n, "candle" | "cake" | "candle_cake" | "pointed_dripstone" | "scaffolding" | "powder_snow" | "flower_pot")
+        || n.ends_with("_candle") || n.ends_with("_candle_cake") || n.starts_with("potted_")) { return false; }
     if in_ranges(FULL_CUBES, state) {
         return true;
     }
@@ -407,6 +411,9 @@ pub fn full_cube(state: i32) -> bool {
 /// половину, и ставить на неё нечего. У забора, двери, панели и стенки верх
 /// тоже узкий.
 pub fn solid_top(state: i32) -> bool {
+    if block_at_state(state) == Some("snow") {
+        return orientation_of(state).and_then(|b| b.value(state, "layers")) == Some("8");
+    }
     if full_cube(state) {
         return true;
     }
@@ -699,6 +706,9 @@ pub fn drops_by_luck(state: i32, tool: Option<i32>, luck: f32) -> Option<crate::
             }
 
             return some(item_named("wheat_seeds"), (luck < 0.125) as i32);
+        }
+        "hanging_roots" | "seagrass" | "tall_seagrass" => {
+            return if shears { some(item_named(if name == "tall_seagrass" { "seagrass" } else { name }), if name == "tall_seagrass" { 2 } else { 1 }) } else { None };
         }
         "dead_bush" => {
             if shears {

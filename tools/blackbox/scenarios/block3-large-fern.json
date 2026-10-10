@@ -1,0 +1,58 @@
+{
+  "name": "block3-large-fern",
+  "about": "Ножницы по верхней половине дают два низких растения; обе половины исчезают. [проверить] Java 26.1.2; без запуска.",
+  "track_self": true,
+  "track_items": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:dirt"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:large_fern[half=lower]"
+    },
+    {
+      "at": [
+        0,
+        2,
+        0
+      ],
+      "state": "minecraft:large_fern[half=upper]"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) shears",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "dig": [
+        0,
+        2,
+        0
+      ],
+      "status": 0
+    }
+  ],
+  "record_ticks": 70,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(-2,0,-2) $(4,7,1) air",
+    "kill @e[type=item,distance=..12]",
+    "gamemode creative $(bot)"
+  ]
+}

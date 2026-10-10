@@ -146,6 +146,7 @@ pub fn in_world<R>(nether: bool, calculate: impl FnOnce() -> R) -> R {
 /// каждое место, — поэтому найденное запоминается раз и навсегда.
 static WATER_STATES: OnceLock<(i32, i32)> = OnceLock::new();
 static LAVA_STATES: OnceLock<(i32, i32)> = OnceLock::new();
+static BUBBLE_STATES: OnceLock<(i32, i32)> = OnceLock::new();
 static POWDER_SNOW_STATES: OnceLock<(i32, i32)> = OnceLock::new();
 
 /// Промежуток состояний блока с этим именем — с запоминанием.
@@ -157,6 +158,11 @@ fn range(cache: &'static OnceLock<(i32, i32)>, name: &'static str) -> (i32, i32)
 
 /// Жидкость и её уровень в этом состоянии блока. None — это не жидкость.
 pub fn fluid_at(state: i32) -> Option<(Kind, i32)> {
+    // Вики, Bubble Column: колонна содержит источник воды; жидкостный
+    // такт не должен её высушивать. Направление хранится в самом блоке.
+    let (low, high) = range(&BUBBLE_STATES, "bubble_column");
+    if (low..=high).contains(&state) { return Some((Kind::Water, SOURCE)); }
+
     for kind in [Kind::Water, Kind::Lava] {
         let (low, high) = kind.states();
 
@@ -171,6 +177,18 @@ pub fn fluid_at(state: i32) -> Option<(Kind, i32)> {
         return Some((Kind::Water, SOURCE));
     }
     None
+}
+
+/// Жидкость в состоянии с учётом обводнённых блоков: вода в них — источник,
+/// который тоже растекается вниз и в стороны (чёрный ящик, amethyst-support-faces,
+/// coral-drying: обводнённый блок в воздухе льёт воду).
+pub fn source_at(state: i32) -> Option<(Kind, i32)> {
+    if let Some(found) = fluid_at(state) {
+        return Some(found);
+    }
+
+    (state != AIR && crate::blocks::orientation_of(state).and_then(|rule| rule.value(state, "waterlogged")) == Some("true"))
+        .then_some((Kind::Water, SOURCE))
 }
 
 /// Рыхлый ли это снег.
@@ -363,7 +381,7 @@ where
     let (x, y, z) = from;
     let mut out = Vec::new();
 
-    let Some((kind, _)) = fluid_at(block(x, y, z)) else {
+    let Some((kind, _)) = source_at(block(x, y, z)) else {
         return out;
     };
 
@@ -539,7 +557,7 @@ where
     // Жидкость, над которой жидкость, — падающая, даже если под ней пол:
     // низ водопада у оригинала тоже падающий, а растекание от него
     // начинается с первого уровня (сценарий чёрного ящика waterfall).
-    if let Some((kind, _)) = fluid_at(block(x, y + 1, z))
+    if let Some((kind, _)) = source_at(block(x, y + 1, z))
         && own.is_none_or(|own| own == kind)
     {
         return Some((kind, FALLING));
@@ -550,7 +568,7 @@ where
     for (dx, dz) in SIDES {
         let neighbour = (x + dx, y, z + dz);
 
-        let Some((kind, level)) = fluid_at(block(neighbour.0, neighbour.1, neighbour.2)) else {
+        let Some((kind, level)) = source_at(block(neighbour.0, neighbour.1, neighbour.2)) else {
             continue;
         };
 
@@ -606,7 +624,7 @@ where
 
     // Источник разливается вбок даже над дырой, а текущая жидкость — нет:
     // она целиком уходит вниз.
-    let is_source = matches!(fluid_at(block(x, y, z)), Some((_, SOURCE)));
+    let is_source = matches!(source_at(block(x, y, z)), Some((_, SOURCE)));
 
     if !is_source && drains_into(block(x, y - 1, z)) {
         return false;
@@ -714,7 +732,7 @@ where
         .iter()
         .filter(|(dx, dz)| {
             matches!(
-                fluid_at(block(x + dx, y, z + dz)),
+                source_at(block(x + dx, y, z + dz)),
                 Some((Kind::Water, SOURCE))
             )
         })

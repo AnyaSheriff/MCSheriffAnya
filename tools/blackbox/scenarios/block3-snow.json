@@ -1,0 +1,117 @@
+{
+  "name": "block3-snow",
+  "about": "Снежные слои растут до восьми, затем кладутся выше; при потере основания разрушаются [проверить] Java 26.1.2; подготовлено без запуска.",
+  "track_self": true,
+  "track_items": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:snow[layers=1]"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) snow 16",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 5,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 10,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 15,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 20,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 25,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 30,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 35,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 50,
+      "cmd": "setblock $(0,0,0) air"
+    }
+  ],
+  "record_ticks": 70,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(-2,0,-2) $(4,7,1) air",
+    "kill @e[type=item,distance=..12]",
+    "gamemode creative $(bot)"
+  ]
+}

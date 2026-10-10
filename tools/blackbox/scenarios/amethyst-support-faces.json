@@ -1,0 +1,44 @@
+{
+  "name": "amethyst-support-faces",
+  "about": "[проверить] Почки на боках/снизу: отрыв после удаления опоры, обводнённая почка оставляет воду. Без запуска.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        1,
+        1,
+        0
+      ],
+      "state": "minecraft:amethyst_cluster[facing=east,waterlogged=true]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:small_amethyst_bud[facing=down]"
+    }
+  ],
+  "setup": [
+    "tp $(bot) $(2.5,0,2.5)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(0,1,0) air"
+    }
+  ],
+  "record_ticks": 35,
+  "cleanup": [
+    "fill $(-6,0,-6) $(7,2,6) air",
+    "kill @e[type=item,distance=..10]"
+  ]
+}

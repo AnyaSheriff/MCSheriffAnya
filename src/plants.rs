@@ -36,6 +36,8 @@ enum Needs {
     NetherSoil,
     /// Под водой на твёрдом — морская трава, ламинария.
     Underwater,
+    /// Бамбук держит всю цепочку над собой (вики, Bamboo).
+    Bamboo,
 }
 
 /// Правило для блока с этим именем; None — блок держится сам.
@@ -46,7 +48,8 @@ fn needs(name: &str) -> Option<Needs> {
         | "lily_of_the_valley" | "wither_rose" | "torchflower" | "golden_dandelion" | "sunflower" | "lilac"
         | "rose_bush" | "peony" | "pitcher_plant" | "sweet_berry_bush" | "bush" | "firefly_bush" | "pink_petals"
         | "wildflowers" | "leaf_litter" | "open_eyeblossom" | "closed_eyeblossom" | "azalea" | "flowering_azalea"
-        | "bamboo_sapling" | "pale_moss_carpet" => Needs::Soil,
+        | "pale_moss_carpet" => Needs::Soil,
+        "bamboo" | "bamboo_sapling" => Needs::Bamboo,
         name if name.ends_with("_sapling") => Needs::Soil,
         "dead_bush" | "short_dry_grass" | "tall_dry_grass" => Needs::DrySoil,
         "cactus" => Needs::Cactus,
@@ -118,6 +121,9 @@ fn ground_ok(world: &World, name: &str, below_state: i32, x: i32, y: i32, z: i32
     let below = blocks::block_at_state(below_state).unwrap_or("air");
 
     match needs {
+        Needs::Bamboo => matches!(below, "bamboo" | "bamboo_sapling" | "grass_block" | "dirt" | "coarse_dirt"
+            | "rooted_dirt" | "podzol" | "mycelium" | "moss_block" | "pale_moss_block" | "mud"
+            | "sand" | "red_sand" | "suspicious_sand" | "gravel" | "suspicious_gravel"),
         Needs::Soil => soil(below),
         Needs::DrySoil => soil(below) || sand(below) || below == "terracotta" || below.ends_with("_terracotta"),
         Needs::Cactus => {
@@ -212,7 +218,7 @@ pub fn check(world: &mut World, x: i32, y: i32, z: i32, loud: bool) -> bool {
         world.note_level_event(x, y, z, 2001, state);
     }
 
-    world.set_block(x, y, z, AIR);
+    world.set_block(x, y, z, crate::vegetation::fluid_left(state));
     true
 }
 
@@ -246,6 +252,7 @@ pub fn washed_away(name: &str) -> bool {
             !matches!(name, "azalea" | "flowering_azalea" | "pale_moss_carpet" | "leaf_litter")
         }
         Some(Needs::Solid) => name != "snow",
+        Some(Needs::Bamboo) => name == "bamboo_sapling",
         _ => false,
     }
 }
@@ -278,7 +285,30 @@ mod tests {
         settle(world);
     }
 
-    /// Цветок и трава ставятся на землю, но не на камень и не в воздух.
+    #[test]
+    fn bamboo_needs_its_substrate_and_breaks_the_chain_above() {
+        let mut world = World::in_memory();
+        for soil in ["sand", "red_sand", "gravel", "suspicious_gravel", "dirt", "mud", "moss_block"] {
+            world.set_block_silently(0, 0, 0, state(soil));
+            for plant in ["bamboo", "bamboo_sapling"] {
+                assert!(can_place(&world, state(plant), 0, 1, 0), "{plant} на {soil}");
+            }
+        }
+        for y in 1..=4 { world.set_block_silently(0, y, 0, state("bamboo")); }
+        put(&mut world, (0, 0, 0), AIR);
+        // Бамбук рушится по блоку за такт.
+        for _ in 0..8 {
+            for (p, _) in world.advance(1000) { crate::redstone::ticked(&mut world, p); }
+            settle(&mut world);
+        }
+        for y in 1..=4 { assert_eq!(world.get_block(0, y, 0), AIR); }
+        world.set_block_silently(0, 0, 0, state("stone"));
+        assert!(!can_place(&world, state("bamboo"), 0, 1, 0));
+        assert!(washed_away("bamboo_sapling"));
+        assert!(!washed_away("bamboo"));
+    }
+
+    /// Цветок и трава ставятся на земле, но не на камне и не в воздухе.
     #[test]
     fn young_pitcher_drops_pod_when_farmland_is_removed() {
         let mut world=World::in_memory();

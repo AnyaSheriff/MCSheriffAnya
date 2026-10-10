@@ -1,0 +1,123 @@
+{
+  "name": "bamboo-growth",
+  "about": "Бамбук: рост стебля, листья, ограничение высоты, костная мука по основанию. [проверить], без запуска. Без random_tick_speed 4096: случайные тики заглушали проверку костной муки.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        -1,
+        0
+      ],
+      "state": "minecraft:dirt"
+    },
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:bamboo_sapling"
+    },
+    {
+      "at": [
+        2,
+        -1,
+        0
+      ],
+      "state": "minecraft:dirt"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:bamboo[stage=1]"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) bone_meal 32",
+    "!hotbar 0",
+    "gamerule random_tick_speed 0"
+  ],
+  "actions": [
+    {
+      "after": 2,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 10,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 18,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 26,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 34,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 42,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 50,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 58,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 160,
+  "cleanup": [
+    "gamerule random_tick_speed 3",
+    "clear $(bot)",
+    "fill $(-1,-1,-1) $(8,20,1) air",
+    "kill @e[type=item,distance=..12]",
+    "gamemode creative $(bot)",
+    "fill $(-1,-1,-1) $(8,-1,1) stone"
+  ],
+  "exclusive": true
+}

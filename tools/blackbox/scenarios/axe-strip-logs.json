@@ -1,0 +1,79 @@
+{
+  "name": "axe-strip-logs",
+  "about": "Топор снимает кору, сохраняет ось; повторный щелчок не тратит прочность. [проверить], без запуска.",
+  "track_self": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:oak_log[axis=x]"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:crimson_hyphae[axis=z]"
+    },
+    {
+      "at": [
+        3,
+        0,
+        0
+      ],
+      "state": "minecraft:bamboo_block[axis=y]"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) iron_axe",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 8,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 16,
+      "click": [
+        2,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 24,
+      "click": [
+        3,
+        0,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 70,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(0,0,0) $(3,0,0) air",
+    "gamemode creative $(bot)"
+  ]
+}

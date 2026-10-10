@@ -1,0 +1,91 @@
+{
+  "name": "flower-pot-cycle",
+  "about": "[проверить] Посадка мака, щелчок другим растением без расхода, извлечение пустой рукой; без запуска.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:flower_pot"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) poppy",
+    "give $(bot) cactus"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "hotbar": 0
+    },
+    {
+      "after": 2,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 8,
+      "hotbar": 1
+    },
+    {
+      "after": 10,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 18,
+      "hotbar": 8
+    },
+    {
+      "after": 20,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 26,
+      "hotbar": 1
+    },
+    {
+      "after": 28,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 34,
+      "hotbar": 8
+    },
+    {
+      "after": 36,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "cleanup": [
+    "clear $(bot)",
+    "setblock $(0,0,0) minecraft:air",
+    "kill @e[type=item,distance=..8]",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 50
+}

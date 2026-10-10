@@ -253,7 +253,8 @@ pub fn damage_cause(source: Source) -> i32 {
         Source::Lightning => 24,
         // [Bedrock: потом] причина «о стену на элитрах» не сверена.
         // [Bedrock: потом] отдельный вид высыхания.
-        Source::DryOut | Source::Generic | Source::GenericKill | Source::FlyIntoWall => -1,
+        // [Bedrock: потом] причина замерзания не сверена.
+        Source::DryOut | Source::Generic | Source::GenericKill | Source::FlyIntoWall | Source::Freeze => -1,
     }
 }
 

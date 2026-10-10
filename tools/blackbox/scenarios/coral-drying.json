@@ -1,0 +1,69 @@
+{
+  "name": "coral-drying",
+  "about": "[проверить] Растение, веер, настенный веер и блок без воды отмирают при random_tick_speed=0; обводнённый коралл остаётся жив. Сценарий подготовлен без запуска; random-правил нет.",
+  "exclusive": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        2,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        4,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    },
+    {
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "state": "minecraft:stone"
+    }
+  ],
+  "setup": [
+    "gamerule random_tick_speed 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(0,1,0) minecraft:tube_coral[waterlogged=false]"
+    },
+    {
+      "after": 0,
+      "cmd": "setblock $(2,1,0) minecraft:brain_coral_fan[waterlogged=false]"
+    },
+    {
+      "after": 0,
+      "cmd": "setblock $(4,0,1) minecraft:fire_coral_wall_fan[facing=south,waterlogged=false]"
+    },
+    {
+      "after": 0,
+      "cmd": "setblock $(2,0,2) minecraft:horn_coral_block"
+    },
+    {
+      "after": 0,
+      "cmd": "setblock $(0,1,2) minecraft:bubble_coral[waterlogged=true]"
+    }
+  ],
+  "record_ticks": 120,
+  "cleanup": [
+    "gamerule random_tick_speed 3",
+    "fill $(0,0,0) $(4,2,2) minecraft:air"
+  ]
+}

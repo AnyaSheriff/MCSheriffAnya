@@ -1945,6 +1945,11 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
 
             Answer::saying(format!("Правило announce_advancements: {}", value))
         }
+        ["freeze_damage" | "freezeDamage", value] if matches!(*value, "true" | "false") => {
+            shared.freeze_damage.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+            Answer::saying(format!("Правило freeze_damage: {}", value))
+        }
+        ["freeze_damage" | "freezeDamage"] => Answer::saying(format!("Правило freeze_damage: {}", shared.freeze_damage.load(std::sync::atomic::Ordering::Relaxed))),
         ["natural_health_regeneration" | "naturalRegeneration", value] => {
             shared.natural_regeneration.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
 

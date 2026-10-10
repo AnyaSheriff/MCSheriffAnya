@@ -1,0 +1,46 @@
+{
+  "name": "copper-weathering",
+  "about": "Случайное окисление изолированной меди, вощёный контроль; без маски random. [проверить]: подготовлен без запуска black box.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:copper_block"
+    },
+    {
+      "at": [
+        6,
+        0,
+        0
+      ],
+      "state": "minecraft:waxed_copper_block"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "gamerule random_tick_speed 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "gamerule random_tick_speed 4096"
+    },
+    {
+      "after": 2,
+      "cmd": "say copper weathering start"
+    }
+  ],
+  "cleanup": [
+    "gamerule random_tick_speed 3",
+    "fill $(0,0,0) $(6,0,0) air",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 240,
+  "exclusive": true
+}

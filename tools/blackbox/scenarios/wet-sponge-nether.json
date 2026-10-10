@@ -1,0 +1,30 @@
+{
+  "name": "wet-sponge-nether",
+  "about": "[проверить] Мокрая губка мгновенно высыхает после установки в Незере. Робот наблюдает из Незера. Сценарий подготовлен без запуска; random-правил нет.",
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:the_nether run tp $(bot) $(3.5,1,1.5) 0 30",
+    "!wait 60",
+    "setblock $(0,0,0) minecraft:air",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(0,0,0) minecraft:wet_sponge"
+    }
+  ],
+  "record_ticks": 20,
+  "cleanup": [
+    "setblock $(0,0,0) minecraft:air",
+    "execute in minecraft:overworld run tp $(bot) $(3.5,1,3.5)",
+    "!wait 20",
+    "!startfly"
+  ],
+  "origin": [
+    100,
+    130,
+    100
+  ]
+}

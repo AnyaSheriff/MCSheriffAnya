@@ -1,0 +1,227 @@
+{
+  "name": "dripstone-cauldron",
+  "about": "[проверить] Капельник наполняет котлы водой/лавой и осушает грязь; без маски random и без запуска.",
+  "exclusive": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:cauldron"
+    },
+    {
+      "at": [
+        0,
+        3,
+        0
+      ],
+      "state": "minecraft:pointed_dripstone[vertical_direction=down,thickness=tip]"
+    },
+    {
+      "at": [
+        0,
+        4,
+        0
+      ],
+      "state": "minecraft:dripstone_block"
+    },
+    {
+      "at": [
+        0,
+        5,
+        0
+      ],
+      "state": "minecraft:water"
+    },
+    {
+      "at": [
+        1,
+        5,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        -1,
+        5,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        0,
+        5,
+        1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        0,
+        5,
+        -1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        3,
+        0,
+        0
+      ],
+      "state": "minecraft:cauldron"
+    },
+    {
+      "at": [
+        3,
+        3,
+        0
+      ],
+      "state": "minecraft:pointed_dripstone[vertical_direction=down,thickness=tip]"
+    },
+    {
+      "at": [
+        3,
+        4,
+        0
+      ],
+      "state": "minecraft:dripstone_block"
+    },
+    {
+      "at": [
+        3,
+        5,
+        0
+      ],
+      "state": "minecraft:lava"
+    },
+    {
+      "at": [
+        4,
+        5,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        2,
+        5,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        3,
+        5,
+        1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        3,
+        5,
+        -1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        6,
+        0,
+        0
+      ],
+      "state": "minecraft:cauldron"
+    },
+    {
+      "at": [
+        6,
+        3,
+        0
+      ],
+      "state": "minecraft:pointed_dripstone[vertical_direction=down,thickness=tip]"
+    },
+    {
+      "at": [
+        6,
+        4,
+        0
+      ],
+      "state": "minecraft:dripstone_block"
+    },
+    {
+      "at": [
+        6,
+        5,
+        0
+      ],
+      "state": "minecraft:mud"
+    },
+    {
+      "at": [
+        7,
+        5,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        5,
+        5,
+        0
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        6,
+        5,
+        1
+      ],
+      "state": "minecraft:glass"
+    },
+    {
+      "at": [
+        6,
+        5,
+        -1
+      ],
+      "state": "minecraft:glass"
+    }
+  ],
+  "setup": [
+    "tp $(bot) $(2.5,1,4.5)",
+    "gamerule random_tick_speed 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "gamerule random_tick_speed 4096"
+    },
+    {
+      "after": 2,
+      "cmd": "say dripstone start"
+    },
+    {
+      "after": 162,
+      "cmd": "setblock $(0,2,0) stone"
+    },
+    {
+      "after": 166,
+      "cmd": "setblock $(0,0,0) cauldron"
+    }
+  ],
+  "record_ticks": 260,
+  "cleanup": [
+    "gamerule random_tick_speed 3",
+    "fill $(-1,0,-1) $(7,6,1) air",
+    "kill @e[type=item,distance=..12]"
+  ]
+}

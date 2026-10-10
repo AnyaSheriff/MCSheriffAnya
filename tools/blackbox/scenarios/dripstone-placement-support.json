@@ -1,0 +1,53 @@
+{
+  "name": "dripstone-placement-support",
+  "about": "[проверить] Подвесить сталактит, продлить, убрать опору; без запуска.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        3,
+        0
+      ],
+      "state": "minecraft:stone"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "give $(bot) pointed_dripstone 8",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        3,
+        0
+      ],
+      "face": 0
+    },
+    {
+      "after": 8,
+      "click": [
+        0,
+        2,
+        0
+      ],
+      "face": 0
+    },
+    {
+      "after": 20,
+      "cmd": "setblock $(0,3,0) air"
+    }
+  ],
+  "record_ticks": 65,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(0,0,0) $(0,3,0) air",
+    "kill @e[type=item,distance=..8]",
+    "gamemode creative $(bot)"
+  ]
+}

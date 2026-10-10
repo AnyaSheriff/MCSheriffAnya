@@ -1230,6 +1230,20 @@ fn push(world: &mut World, items: &mut crate::items::Items, pos: Pos, state: i32
         return false;
     };
     let target = add(pos, facing);
+    // Компостер принимает только сверху, по одному подходящему предмету.
+    if let Some(level) = crate::compost::level(world.get_block(target.0, target.1, target.2)) {
+        if facing != (0, -1, 0) || level >= 7 { return false; }
+        let slots = world.container(pos.0, pos.1, pos.2).map(|c| c.slots.clone()).unwrap_or_default();
+        for (slot, stack) in slots.iter().enumerate() {
+            if let Some(item) = stack.and_then(|s| blocks::item_name(s.item))
+                && crate::compost::use_item(world, target, Some(item)) == Some(crate::compost::Used::Added)
+            {
+                remove_one(world, pos, slot);
+                return true;
+            }
+        }
+        return false;
+    }
     let target_halves = halves(world, target);
 
     if target_halves.is_empty() {
@@ -1258,6 +1272,16 @@ fn push(world: &mut World, items: &mut crate::items::Items, pos: Pos, state: i32
 /// подбирает лежащие предметы.
 fn pull(world: &mut World, items: &mut crate::items::Items, pos: Pos) -> bool {
     let above = add(pos, (0, 1, 0));
+    if let Some(level) = crate::compost::level(world.get_block(above.0, above.1, above.2)) {
+        if level == 8 {
+            let meal = Stack::new(blocks::item_named("bone_meal").expect("костная мука"), 1);
+            if insert_one(world, &[pos], meal).is_some() {
+                crate::compost::take(world, above);
+                return true;
+            }
+        }
+        return false;
+    }
     let source = halves(world, above);
 
     if !source.is_empty() {
@@ -1741,6 +1765,7 @@ pub fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
 
     Some(match name {
         "cake" => (7 - number("bites")?.min(7)) * 2,
+        n if n == "candle_cake" || n.ends_with("_candle_cake") => 14,
         "water_cauldron" | "powder_snow_cauldron" => number("level")?,
         "lava_cauldron" => 3,
         "composter" => number("level")?,
@@ -1791,6 +1816,29 @@ mod tests {
 
     /// Медный сундук: звуки по стадии, большой из разных стадий — наименее
     /// окисленный, вощёный только из двух вощёных (сценарий copper-chest).
+    #[test]
+    fn composter_hoppers_accept_from_top_and_extract_only_when_ready() {
+        let mut w = World::in_memory();
+        let mut items = crate::items::Items::new();
+        let state = |n: &str| blocks::state_from_text(n).unwrap();
+        let pie = Stack::new(blocks::item_named("pumpkin_pie").unwrap(), 7);
+        w.set_block_silently(0, 10, 0, state("composter"));
+        w.set_block_silently(0, 11, 0, state("hopper[facing=down]"));
+        w.set_block_silently(1, 10, 0, state("hopper[facing=west]"));
+        w.set_block_silently(0, 9, 0, state("hopper[facing=down]"));
+        w.with_container(0, 11, 0, |c| c.slots[0] = Some(pie));
+        w.with_container(1, 10, 0, |c| c.slots[0] = Some(pie));
+        assert!(!push(&mut w, &mut items, (1, 10, 0), state("hopper[facing=west]")));
+        for _ in 0..7 { assert!(push(&mut w, &mut items, (0, 11, 0), state("hopper[facing=down]"))); }
+        assert_eq!(w.container(0, 11, 0).unwrap().slots[0], None);
+        assert!(!pull(&mut w, &mut items, (0, 9, 0)));
+        crate::compost::ticked(&mut w, (0, 10, 0));
+        assert!(pull(&mut w, &mut items, (0, 9, 0)));
+        assert_eq!(w.container(0, 9, 0).unwrap().slots[0], Some(Stack::new(blocks::item_named("bone_meal").unwrap(), 1)));
+        assert_eq!(crate::compost::level(w.get_block(0, 10, 0)), Some(0));
+        assert!(!pull(&mut w, &mut items, (0, 9, 0)));
+    }
+
     #[test]
     fn shulker_contents_live_in_the_item() {
         let state = |name: &str| blocks::state_by_name(name).unwrap();

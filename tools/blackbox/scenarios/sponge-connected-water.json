@@ -1,0 +1,29 @@
+{
+  "name": "sponge-connected-water",
+  "about": "[проверить] Поглощение связанной воды и повторный контакт сухой губки; мокрая второй раз не поглощает. Сценарий подготовлен без запуска; random-правил нет.",
+  "exclusive": true,
+  "blocks": [],
+  "setup": [],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "fill $(0,0,0) $(4,0,0) minecraft:water"
+    },
+    {
+      "after": 2,
+      "cmd": "setblock $(0,0,0) minecraft:sponge"
+    },
+    {
+      "after": 10,
+      "cmd": "setblock $(1,0,0) minecraft:water"
+    },
+    {
+      "after": 20,
+      "cmd": "setblock $(0,0,0) minecraft:sponge"
+    }
+  ],
+  "record_ticks": 40,
+  "cleanup": [
+    "fill $(-7,0,-7) $(7,7,7) minecraft:air"
+  ]
+}

@@ -148,6 +148,7 @@ pub struct Shared {
     pub announce_advancements: std::sync::atomic::AtomicBool,
 
     /// Правило `natural_health_regeneration`: лечит ли сытость.
+    pub freeze_damage: std::sync::atomic::AtomicBool,
     pub natural_regeneration: std::sync::atomic::AtomicBool,
 
     /// Правила командных блоков (command_block.rs): `command_block_output`,
@@ -235,6 +236,7 @@ impl Shared {
             spawn_patrols: std::sync::atomic::AtomicBool::new(true),
             block_drops: std::sync::atomic::AtomicBool::new(true),
             announce_advancements: std::sync::atomic::AtomicBool::new(true),
+            freeze_damage: std::sync::atomic::AtomicBool::new(true),
             natural_regeneration: std::sync::atomic::AtomicBool::new(true),
             command_block_rules: crate::command_block::Rules::default(),
             scoreboard: Mutex::new(crate::scoreboard::Scoreboard::new()),

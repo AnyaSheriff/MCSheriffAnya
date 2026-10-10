@@ -83,6 +83,7 @@ mod station;
 mod body;
 mod signs;
 mod cauldron;
+mod block_use;
 mod vehicle;
 mod horse;
 mod glide;
@@ -4113,7 +4114,8 @@ async fn send_pending_world_events(
                 body.extend_from_slice(&0i64.to_be_bytes());
                 write_body(stream, body).await?;
             }
-            WorldEvent::Level { x, y, z, effect, data } => {
+            WorldEvent::Level { except: Some(id), .. } if *id == player.entity_id => {}
+            WorldEvent::Level { x, y, z, effect, data, .. } => {
                 let mut body = encode_varint(WORLD_EVENT);
 
                 push_i32(&mut body, *effect);
@@ -8433,6 +8435,18 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         crate::hive::disturb(&mut world, &mut items, (x, y, z), player.entity_id, &mut || shared.next_entity_id());
     }
 
+    // Верхняя половина высокого растения: об исчезнувшей нижней оригинал в
+    // выживании говорит событием слома 2001 (чёрный ящик, block3-large-fern,
+    // block3-tall-seagrass); в творческом — нет (событие исключает самого игрока).
+    let lower_half = {
+        let here = world.get_block(x, y, z);
+        let lower = world.get_block(x, y - 1, z);
+        let tall = blocks::block_at_state(here).filter(|n| !n.ends_with("_door"))
+            .is_some_and(|n| blocks::orientation_of(here).and_then(|b| b.value(here, "half")) == Some("upper")
+                && blocks::block_at_state(lower) == Some(n));
+        (tall && player.game_mode != GAME_MODE_CREATIVE).then_some(lower)
+    };
+
     let actor = world.actor.replace(player.entity_id);
     let broken = placing::break_block(&mut world, x, y, z);
     world.actor = actor;
@@ -8499,6 +8513,10 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
     // Творческий ничего не «добывает» (вики, Statistics: BLOCK_MINED).
     if player.game_mode != GAME_MODE_CREATIVE {
         player.progress.mined(broken);
+    }
+
+    if let Some(lower) = lower_half {
+        world.note_level_event(x, y - 1, z, 2001, lower);
     }
 
     if let Some(plan) = &bed {
@@ -8699,6 +8717,10 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     if !within_reach(player, (clicked_x, clicked_y, clicked_z)) {
         log_debug!("Play: {} тянется к {} {} {} слишком далеко", player.name, clicked_x, clicked_y, clicked_z);
         return Some(Reaction::accepted(sequence));
+    }
+
+    if let Some(reaction) = block_use::use_block(player, shared, (clicked_x, clicked_y, clicked_z), face, cursor_y, sequence) {
+        return Some(reaction);
     }
 
     // Щелчок по рычагу, кнопке, двери, повторителю — это не установка, а
@@ -9300,6 +9322,16 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
 
     let Some((name, default_state)) = blocks::block_for_item(item) else {
         log_debug!("Play: предмет {} блоком не является — ставить нечего", item);
+
+        // Оригинал и тут повторяет клиенту блок и блок за гранью (чёрный
+        // ящик, axe-strip-logs, block3-pumpkin: второй щелчок инструментом).
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let (x, y, z) = offset_towards(clicked_x, clicked_y, clicked_z, face);
+
+        world.tell_directly(clicked_x, clicked_y, clicked_z);
+        world.tell_directly(x, y, z);
+        redstone::settle(&mut world);
+
         return Some(Reaction::accepted(sequence));
     };
 
@@ -9673,6 +9705,25 @@ fn use_bucket(
     let fish_kind = blocks::item_name(item).and_then(crate::mob::water::bucket_kind);
     let fish_data = player.inventory.held().map(|stack| stack.extras()).unwrap_or_default();
     let (x, y, z) = clicked;
+
+    if item == empty || item == with_water {
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+        let here = world.get_block(x, y, z);
+        if !(item == with_water && world.is_nether())
+            && let Some(next) = crate::block_behaviour::bucket_water(here, item == with_water)
+        {
+            world.set_block(x, y, z, next);
+            world.note_sound(x, y, z, if item == empty { "minecraft:item.bucket.fill" } else { "minecraft:item.bucket.empty" }, 1.0, 1.0);
+            if blocks::orientation_of(here).is_some_and(|b| b.value(here, "lit") == Some("true") && b.value(next, "lit") == Some("false")) {
+                world.note_sound(x, y, z, if blocks::block_at_state(here).is_some_and(|n| n == "candle" || n.ends_with("_candle")) { "minecraft:block.candle.extinguish" } else { "minecraft:block.fire.extinguish" }, 1.0, 1.0);
+            }
+            world.tell_directly(x, y, z);
+            redstone::settle(&mut world);
+            drop(world);
+            player.progress.used(item);
+            return Some(Reaction { slots: swap_held(player, if item == empty { with_water } else { empty }, shared), ..Reaction::accepted(sequence) });
+        }
+    }
 
     // Зачерпнуть можно источник жидкости или рыхлый снег: из текущей воды
     // ведро не наполняется.

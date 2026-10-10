@@ -1,0 +1,51 @@
+{
+  "name": "block3-rooted-dirt",
+  "about": "Бутылка воды превращает почву в грязь, возвращая стеклянную бутылку; повторный щелчок по грязи не действует [проверить] Java 26.1.2; подготовлено без запуска.",
+  "track_self": true,
+  "track_items": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:rooted_dirt"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) potion[potion_contents={potion:\"minecraft:water\"}] 1",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 10,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 1
+    }
+  ],
+  "record_ticks": 70,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(-2,0,-2) $(4,7,1) air",
+    "kill @e[type=item,distance=..12]",
+    "gamemode creative $(bot)"
+  ]
+}

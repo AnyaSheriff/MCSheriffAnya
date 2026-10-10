@@ -106,7 +106,8 @@ fn ticks_randomly(state: u16) -> bool {
                     return false;
                 };
 
-                crop_max_age(name).is_some()
+                crate::copper::ticks_randomly(state)
+                    || crop_max_age(name).is_some()
                     || is_sapling(name)
                     || (is_leaves(name) && value(state, "persistent") == Some("false"))
                     || matches!(
@@ -114,6 +115,7 @@ fn ticks_randomly(state: u16) -> bool {
                         "turtle_egg"
                             | "lava"
                             | "farmland"
+                            | "snow"
                             | "sugar_cane"
                             | "cactus"
                             | "kelp"
@@ -125,7 +127,13 @@ fn ticks_randomly(state: u16) -> bool {
                             | "red_mushroom"
                             | "grass_block"
                             | "mycelium"
+                            | "bamboo"
                             | "bamboo_sapling"
+                            | "pointed_dripstone"
+                            | "budding_amethyst"
+                            | "twisting_vines"
+                            | "weeping_vines"
+                            | "cave_vines"
                     )
             })
             .collect()
@@ -230,12 +238,22 @@ fn tickable_sections(world: &mut World, cx: i32, cz: i32) -> Option<u32> {
 pub fn random_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
     let name = name_of(state);
 
+    if crate::copper::ticks_randomly(state) {
+        crate::copper::random_tick(world, pos, state);
+        return;
+    }
+
     match name {
         "turtle_egg" => crate::mob::water::eggs::turtle_tick(world,pos,state),
         "lava" => crate::fire::lava_tick(world, pos),
         "farmland" => farmland_tick(world, pos, state),
+        "snow" => crate::vegetation::snow_tick(world, pos),
         "sugar_cane" | "cactus" => column_tick(world, pos, state, name),
         "kelp" => kelp_tick(world, pos, state),
+        "pointed_dripstone" => crate::dripstone::random_tick(world, pos, state),
+        "budding_amethyst" => crate::block_behaviour::amethyst_tick(world, pos),
+        "twisting_vines" | "weeping_vines" => nether_vine_tick(world, pos, state),
+        "cave_vines" => cave_vine_tick(world, pos, state),
         "sweet_berry_bush" => berry_tick(world, pos, state),
         "nether_wart" => {
             // Вики, Nether Wart: «10% chance» за случайный такт.
@@ -252,6 +270,11 @@ pub fn random_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
         "brown_mushroom" | "red_mushroom" => mushroom_tick(world, pos, state),
         "grass_block" | "mycelium" => spread_tick(world, pos, state, name),
         "vine" => {}
+        "bamboo" => {
+            if value(state, "stage") == Some("0") && light(world, pos.0, pos.1 + 1, pos.2) >= 9 && roll(world, 3) == 0 {
+                grow_bamboo(world, pos);
+            }
+        }
         "bamboo_sapling" => {
             // Вики, Bamboo: «1/3» за такт, при свете у верхушки 9 и выше.
             if world.get_block(pos.0, pos.1 + 1, pos.2) == AIR && light(world, pos.0, pos.1 + 1, pos.2) >= 9 && roll(world, 3) == 0 {
@@ -268,6 +291,56 @@ pub fn random_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
         }
         name if crop_max_age(name).is_some() => crop_tick(world, pos, state, name),
         _ => {}
+    }
+}
+
+// Вики, Twisting Vines: «10% chance» и предел age=25; Weeping Vines
+// растут тем же способом вниз. Тикает только верхушка. [проверить]: пакеты.
+fn nether_vine_tick(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) {
+    let age = number(state, "age");
+    let (dy, body) = if name_of(state) == "twisting_vines" {
+        (1, "twisting_vines_plant")
+    } else { (-1, "weeping_vines_plant") };
+    let next_y = y + dy;
+    if age >= 25 || !(MIN_Y..MIN_Y + crate::world::WORLD_HEIGHT).contains(&next_y)
+        || world.get_block(x, next_y, z) != AIR || roll(world, 10) != 0
+    { return; }
+    if let Some(tip) = with(state, "age", age + 1)
+        && world.set_block(x, next_y, z, tip)
+    {
+        world.set_block(x, y, z, state_of(body));
+    }
+}
+
+/// Glow Berries: «10% chance», ягоды у нового звена с шансом 11%.
+/// [проверить]: случайный возраст при постановке/восстановлении верхушки.
+fn cave_vine_tick(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) {
+    let age = number(state, "age");
+    if age >= 25 || y <= MIN_Y || world.get_block(x, y - 1, z) != AIR || roll(world, 10) != 0 { return; }
+    let berries = chance(world, 0.11);
+    let next = blocks::orientation("cave_vines").unwrap().state(&[("age", &(age + 1).to_string()), ("berries", if berries { "true" } else { "false" })]).unwrap();
+    world.set_block(x, y - 1, z, next);
+    let body = blocks::orientation("cave_vines_plant").unwrap().state(&[("berries", value(state, "berries").unwrap_or("false"))]).unwrap();
+    world.set_block(x, y, z, body);
+}
+
+pub fn cave_vine_supported(world: &World, (x, y, z): (i32, i32, i32)) -> bool {
+    let above = world.get_block(x, y + 1, z);
+    blocks::full_cube(above) || matches!(name_of(above), "cave_vines" | "cave_vines_plant")
+}
+
+pub fn cave_vine_changed(world: &mut World, (x, y, z): (i32, i32, i32)) {
+    let state = world.get_block(x, y, z);
+    if !cave_vine_supported(world, (x, y, z)) {
+        world.schedule_block_once(x, y, z, 1);
+        return;
+    }
+    let below = name_of(world.get_block(x, y - 1, z));
+    let body = matches!(below, "cave_vines" | "cave_vines_plant");
+    let n = name_of(state);
+    if body && n == "cave_vines" || !body && n == "cave_vines_plant" {
+        let target = if body { "cave_vines_plant" } else { "cave_vines" };
+        if let Some(next) = crate::copper::corresponding(state, target) { world.set_block(x, y, z, next); }
     }
 }
 
@@ -731,6 +804,13 @@ fn leaves_tick(world: &mut World, pos: (i32, i32, i32), state: i32) {
 /// Такт блока, запланированный соседским обновлением (redstone::ticked).
 pub fn ticked(world: &mut World, pos: (i32, i32, i32), state: i32) {
     if name_of(state) == "frogspawn" { crate::mob::water::eggs::frog_tick(world,pos); return; }
+    if matches!(name_of(state), "cave_vines" | "cave_vines_plant") && !cave_vine_supported(world, pos) {
+        // Рушится с событием слома 2001 (чёрный ящик, cave-vines-cycle).
+        world.note_level_event(pos.0, pos.1, pos.2, 2001, state);
+        world.note_destroyed(pos.0, pos.1, pos.2);
+        world.set_block(pos.0, pos.1, pos.2, AIR);
+    }
+
     if is_leaves(name_of(state)) {
         leaves_recount(world, pos, state);
     }
@@ -747,6 +827,11 @@ pub fn on_neighbour(world: &mut World, pos: (i32, i32, i32)) -> bool {
         world.set_block(pos.0,pos.1,pos.2,AIR);
         return true;
     }
+    if name == "bamboo_sapling" && name_of(world.get_block(pos.0, pos.1 + 1, pos.2)) == "bamboo" {
+        world.set_block(pos.0, pos.1, pos.2, state_of("bamboo"));
+        return true;
+    }
+
     if is_leaves(name) {
         if leaf_distance(world, pos) != number(state, "distance") {
             world.schedule_once(pos.0, pos.1, pos.2, 1, 0);
@@ -763,6 +848,11 @@ pub fn on_neighbour(world: &mut World, pos: (i32, i32, i32)) -> bool {
 /// decay»).
 pub fn placed(world: &World, state: i32, (x, y, z): (i32, i32, i32)) -> i32 {
     let name = name_of(state);
+
+    if name == "bamboo" {
+        let below = name_of(world.get_block(x, y - 1, z));
+        if !matches!(below, "bamboo" | "bamboo_sapling") { return state_of("bamboo_sapling"); }
+    }
 
     if is_leaves(name) {
         let distance = leaf_distance(world, (x, y, z));
@@ -788,6 +878,44 @@ fn grow_bamboo_shoot(world: &mut World, (x, y, z): (i32, i32, i32)) {
         world.set_block(x, y, z, stalk);
         world.set_block(x, y + 1, z, top);
     }
+}
+
+/// Бамбук: 12–16 блоков, после 11 шанс остановки 1/4 за новый блок.
+/// Верхние два блока с крупными листьями, третий с мелкими (Bamboo).
+/// [проверить]: точная последовательность random и утолщение стебля.
+fn grow_bamboo(world: &mut World, (x, y, z): (i32, i32, i32)) -> bool {
+    let here = world.get_block(x, y, z);
+    if name_of(here) != "bamboo" || value(here, "stage") != Some("0")
+        || y >= 319 || world.get_block(x, y + 1, z) != AIR { return false; }
+    let mut height = 1;
+    while height < 16 && name_of(world.get_block(x, y - height, z)) == "bamboo" { height += 1; }
+    if height >= 16 { return false; }
+    let stopped = height >= 15 || height >= 11 && roll(world, 4) == 0;
+    let below = world.get_block(x, y - 1, z);
+    // Листья по чёрному ящику (bamboo-growth): новая верхушка крупнолистная, если
+    // под нынешней верхушкой лист есть; тогда тот, что под верхушкой, мельчает,
+    // а следующий теряет листья.
+    let leaves = if name_of(below) == "bamboo" && value(below, "leaves") != Some("none") { "large" } else { "small" };
+    let age = if number(here, "age") == 1 || name_of(below) == "bamboo" { "1" } else { "0" };
+    let target = blocks::orientation("bamboo").unwrap().state(&[
+        ("age", age), ("leaves", leaves), ("stage", if stopped { "1" } else { "0" }),
+    ]).unwrap();
+    world.set_block(x, y + 1, z, target);
+    // Утолщение берёт весь ствол: у оригинала при росте до трёх блоков все
+    // нижние тоже получают age=1 (чёрный ящик, bamboo-growth).
+    if age == "1" {
+        for dy in 0..height {
+            let seg = world.get_block(x, y - dy, z);
+            if name_of(seg) == "bamboo" && number(seg, "age") == 0 { grow_to(world, (x, y - dy, z), with(seg, "age", 1)); }
+        }
+    }
+    if leaves == "large" {
+        let below = world.get_block(x, y - 1, z);
+        grow_to(world, (x, y - 1, z), with(below, "leaves", "small"));
+        let older = world.get_block(x, y - 2, z);
+        if name_of(older) == "bamboo" { grow_to(world, (x, y - 2, z), with(older, "leaves", "none")); }
+    }
+    true
 }
 
 // ---------------------------------------------------------------------------
@@ -935,9 +1063,8 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
 /// корнями — земля и висячие корни. Над блоком должен быть воздух, а
 /// щёлкать — не по нижней грани.
 pub fn till(world: &mut World, (x, y, z): (i32, i32, i32), face: i32) -> Option<Option<Stack>> {
-    if face == 0 || world.get_block(x, y + 1, z) != AIR {
-        return None;
-    }
+    if name_of(world.get_block(x, y, z)) != "rooted_dirt"
+        && (face == 0 || world.get_block(x, y + 1, z) != AIR) { return None; }
 
     let (to, drop) = match name_of(world.get_block(x, y, z)) {
         "dirt" | "grass_block" | "dirt_path" => ("farmland", None),
@@ -969,7 +1096,38 @@ pub fn bone_meal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<()> {
     let name = name_of(state);
     let pos = (x, y, z);
 
+    if let Some(grown) = crate::vegetation::bone_meal(world, pos) {
+        if !grown { return None; }
+        world.note_level_event(x, y, z, BONE_MEAL_EVENT, 15);
+        return Some(());
+    }
+
     match name {
+        "cave_vines" | "cave_vines_plant" if value(state, "berries") == Some("false") => {
+            grow_to(world, pos, with(state, "berries", true));
+            world.note_level_event(x, y, z, BONE_MEAL_EVENT, 15);
+        }
+
+        "bamboo_sapling" if world.get_block(x, y + 1, z) == AIR => {
+            grow_bamboo_shoot(world, pos);
+            world.note_level_event(x, y, z, BONE_MEAL_EVENT, 15);
+        }
+        "bamboo" => {
+            let mut top = y;
+            while top < 319 && name_of(world.get_block(x, top + 1, z)) == "bamboo" { top += 1; }
+            let tip = world.get_block(x, top, z);
+            if value(tip, "stage") != Some("0") || world.get_block(x, top + 1, z) != AIR { return None; }
+            let growth = 1 + roll(world, 2);
+            let mut grew = false;
+            for _ in 0..growth {
+                if !grow_bamboo(world, (x, top, z)) { break; }
+                top += 1;
+                grew = true;
+            }
+            if !grew { return None; }
+            world.note_level_event(x, y, z, BONE_MEAL_EVENT, 15);
+        }
+
         // Пшеница, морковь, картофель, стебли — на 2…5 стадий (вики, Bone
         // Meal); свёкла — на одну с шансом 75 %; цветок-факел — на одну.
         "torchflower_crop" if number(state,"age") >= 1 => {
@@ -1091,6 +1249,20 @@ pub fn harvest(world: &mut World, state: i32, fortune: i32) -> Option<Vec<Stack>
     let p = 4.0 / 7.0;
 
     let drops = match name {
+        "cave_vines" | "cave_vines_plant" => vec![item("glow_berries", i32::from(value(state, "berries") == Some("true")))],
+
+        n if n.starts_with("potted_") => {
+            let plant = match n.trim_start_matches("potted_") {
+                "azalea_bush" => "azalea", "flowering_azalea_bush" => "flowering_azalea", n => n,
+            };
+            vec![item("flower_pot", 1), item(plant, 1)]
+        }
+        n if n == "candle" || n.ends_with("_candle") => vec![item(n, number(state, "candles"))],
+        n if n == "candle_cake" || n.ends_with("_candle_cake") => vec![item(n.trim_end_matches("_cake"), 1)],
+
+        "pink_petals" | "wildflowers" => vec![item(name, number(state, "flower_amount"))],
+        "leaf_litter" => vec![item(name, number(state, "segment_amount"))],
+
         "wheat" if age >= 7 => {
             let seeds = 1 + binomial(world, tries, p);
 
@@ -1133,6 +1305,12 @@ pub fn harvest(world: &mut World, state: i32, fortune: i32) -> Option<Vec<Stack>
 pub fn pick_berries(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<Stack> {
     let state = world.get_block(x, y, z);
 
+    if matches!(name_of(state), "cave_vines" | "cave_vines_plant") && value(state, "berries") == Some("true") {
+        grow_to(world, (x, y, z), with(state, "berries", false));
+        world.note_sound(x, y, z, "minecraft:block.cave_vines.pick_berries", 1.0, 1.0);
+        return blocks::item_named("glow_berries").map(|item| Stack::new(item, 1));
+    }
+
     if name_of(state) != "sweet_berry_bush" || number(state, "age") < 2 {
         return None;
     }
@@ -1159,6 +1337,7 @@ pub fn planted_by(item: &str) -> Option<&'static str> {
         "torchflower_seeds" => "torchflower_crop",
         "pitcher_pod" => "pitcher_crop",
         "sweet_berries" => "sweet_berry_bush",
+        "glow_berries" => "cave_vines",
         _ => return None,
     })
 }
@@ -1183,6 +1362,74 @@ mod tests {
         }
 
         world
+    }
+
+    #[test]
+    fn cave_vines_bonemeal_harvest_growth_and_support() {
+        let mut w = world();
+        w.set_block_silently(0, 12, 0, state("stone"));
+        w.set_block_silently(0, 11, 0, state("cave_vines[age=24,berries=false]"));
+        assert!(bone_meal(&mut w, (0, 11, 0)).is_some());
+        assert!(bone_meal(&mut w, (0, 11, 0)).is_none());
+        assert_eq!(w.get_block(0, 10, 0), AIR, "мука растит ягоды, не длину");
+        assert_eq!(pick_berries(&mut w, (0, 11, 0)).unwrap().count, 1);
+        assert!(pick_berries(&mut w, (0, 11, 0)).is_none());
+        for _ in 0..100 {
+            let s = w.get_block(0, 11, 0);
+            if name_of(s) == "cave_vines" { random_tick(&mut w, (0, 11, 0), s); }
+        }
+        assert_eq!(name_of(w.get_block(0, 11, 0)), "cave_vines_plant");
+        assert_eq!(number(w.get_block(0, 10, 0), "age"), 25);
+        let tip = w.get_block(0, 10, 0);
+        for _ in 0..100 { random_tick(&mut w, (0, 10, 0), tip); }
+        assert_eq!(w.get_block(0, 9, 0), AIR);
+        w.set_block(0, 12, 0, AIR);
+        settle(&mut w);
+        for _ in 0..3 {
+            for (p, _) in w.advance(1000) { crate::redstone::ticked(&mut w, p); }
+            settle(&mut w);
+        }
+        assert_eq!(w.get_block(0, 11, 0), AIR);
+        assert_eq!(w.get_block(0, 10, 0), AIR);
+    }
+
+    #[test]
+    fn bamboo_grows_leaves_stops_at_twelve_to_sixteen_and_bonemeal_uses_tip() {
+        for _ in 0..20 {
+            let mut w = world();
+            w.set_block_silently(0, 1, 0, state("bamboo_sapling"));
+            assert!(bone_meal(&mut w, (0, 1, 0)).is_some());
+            assert_eq!(name_of(w.get_block(0, 2, 0)), "bamboo");
+            for _ in 0..20 { bone_meal(&mut w, (0, 1, 0)); }
+            let mut top = 1;
+            while name_of(w.get_block(0, top + 1, 0)) == "bamboo" { top += 1; }
+            assert!((12..=16).contains(&top), "{top}");
+            assert_eq!(value(w.get_block(0, top, 0), "stage"), Some("1"));
+            assert_eq!(value(w.get_block(0, top, 0), "leaves"), Some("large"));
+            assert_eq!(value(w.get_block(0, top - 1, 0), "leaves"), Some("large"));
+            assert_eq!(value(w.get_block(0, top - 2, 0), "leaves"), Some("small"));
+            assert!(bone_meal(&mut w, (0, 1, 0)).is_none());
+        }
+    }
+
+    #[test]
+    fn bamboo_cannot_grow_through_a_ceiling_or_above_height_limit() {
+        let mut w = world();
+        w.set_block_silently(0, 1, 0, state("bamboo"));
+        w.set_block_silently(0, 2, 0, state("stone"));
+        assert!(!grow_bamboo(&mut w, (0, 1, 0)));
+        assert!(bone_meal(&mut w, (0, 1, 0)).is_none());
+        w.set_block_silently(0, 319, 0, state("bamboo"));
+        assert!(!grow_bamboo(&mut w, (0, 319, 0)));
+    }
+
+    #[test]
+    fn pots_and_candles_drop_their_complete_contents() {
+        let mut w = world();
+        let drops = harvest(&mut w, state("potted_azalea_bush"), 0).unwrap();
+        assert_eq!(drops.iter().map(|s| blocks::item_name(s.item).unwrap()).collect::<Vec<_>>(), vec!["flower_pot", "azalea"]);
+        assert_eq!(harvest(&mut w, state("red_candle[candles=4]"), 0).unwrap()[0].count, 4);
+        assert_eq!(harvest(&mut w, state("blue_candle_cake"), 0).unwrap(), vec![Stack::new(blocks::item_named("blue_candle").unwrap(), 1)]);
     }
 
     #[test]
@@ -1355,6 +1602,53 @@ mod tests {
         assert_eq!(young.len(), 1);
         assert_eq!(young[0].item, blocks::item_named("wheat_seeds").unwrap());
         assert!(harvest(&mut world, state("stone"), 0).is_none());
+    }
+
+    #[test]
+    fn nether_vines_grow_in_opposite_directions_and_stop_at_age_25() {
+        for (head, body, dy) in [("twisting_vines", "twisting_vines_plant", 1), ("weeping_vines", "weeping_vines_plant", -1)] {
+            let mut world = World::in_memory();
+            let tip = blocks::state_from_text(&format!("{head}[age=24]")).unwrap();
+            world.set_block_silently(0, 10, 0, tip);
+            assert!(ticks_randomly(tip as u16));
+            assert!(!ticks_randomly(state(body) as u16));
+            for _ in 0..1000 {
+                let here = world.get_block(0, 10, 0);
+                random_tick(&mut world, (0, 10, 0), here);
+            }
+            assert_eq!(name_of(world.get_block(0, 10, 0)), body);
+            assert_eq!(name_of(world.get_block(0, 10 + dy, 0)), head);
+            assert_eq!(number(world.get_block(0, 10 + dy, 0), "age"), 25);
+            for _ in 0..1000 {
+                let here = world.get_block(0, 10 + dy, 0);
+                random_tick(&mut world, (0, 10 + dy, 0), here);
+            }
+            assert_eq!(world.get_block(0, 10 + dy * 2, 0), AIR);
+        }
+    }
+
+    #[test]
+    fn nether_vines_do_not_replace_a_ceiling_or_floor() {
+        for (head, dy) in [("twisting_vines", 1), ("weeping_vines", -1)] {
+            let mut world = World::in_memory();
+            let tip = state(head);
+            world.set_block_silently(0, 10, 0, tip);
+            world.set_block_silently(0, 10 + dy, 0, state("stone"));
+            for _ in 0..1000 { random_tick(&mut world, (0, 10, 0), tip); }
+            assert_eq!(world.get_block(0, 10, 0), tip);
+            assert_eq!(world.get_block(0, 10 + dy, 0), state("stone"));
+        }
+    }
+
+    #[test]
+    fn random_tick_dispatch_reaches_budding_amethyst_only() {
+        let mut world = World::in_memory();
+        let budding = state("budding_amethyst");
+        assert!(ticks_randomly(budding as u16));
+        assert!(!ticks_randomly(state("amethyst_block") as u16));
+        world.set_block_silently(0, 10, 0, budding);
+        for _ in 0..2000 { random_tick(&mut world, (0, 10, 0), budding); }
+        assert_eq!(name_of(world.get_block(0, 11, 0)), "amethyst_cluster");
     }
 
     #[test]

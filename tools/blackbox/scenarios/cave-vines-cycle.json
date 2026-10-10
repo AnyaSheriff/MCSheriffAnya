@@ -1,0 +1,93 @@
+{
+  "name": "cave-vines-cycle",
+  "about": "[проверить] Посадка светящихся ягод, костная мука, сбор, рост, ножницы и потеря опоры. Без random-масок и без запуска.",
+  "exclusive": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        3,
+        0
+      ],
+      "state": "minecraft:stone"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "give $(bot) glow_berries 4",
+    "give $(bot) bone_meal 4",
+    "give $(bot) shears",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "!hotbar 0",
+    "gamerule random_tick_speed 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        3,
+        0
+      ],
+      "face": 0
+    },
+    {
+      "after": 5,
+      "hotbar": 1
+    },
+    {
+      "after": 8,
+      "click": [
+        0,
+        2,
+        0
+      ]
+    },
+    {
+      "after": 12,
+      "hotbar": 8
+    },
+    {
+      "after": 15,
+      "click": [
+        0,
+        2,
+        0
+      ]
+    },
+    {
+      "after": 20,
+      "cmd": "gamerule random_tick_speed 4096"
+    },
+    {
+      "after": 100,
+      "cmd": "gamerule random_tick_speed 0"
+    },
+    {
+      "after": 105,
+      "hotbar": 2
+    },
+    {
+      "after": 108,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 120,
+      "cmd": "setblock $(0,3,0) air"
+    }
+  ],
+  "record_ticks": 145,
+  "cleanup": [
+    "gamerule random_tick_speed 3",
+    "clear $(bot)",
+    "fill $(0,0,0) $(0,3,0) air",
+    "kill @e[type=item,distance=..8]",
+    "gamemode creative $(bot)"
+  ]
+}

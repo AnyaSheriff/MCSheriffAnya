@@ -1,0 +1,86 @@
+{
+  "name": "block3-wildflowers",
+  "about": "Ручное уплотнение до четырёх; дроп равен количеству и мука выдаёт копию при четырёх [проверить] Java 26.1.2; подготовлено без запуска.",
+  "track_self": true,
+  "track_items": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:dirt"
+    },
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "minecraft:wildflowers[flower_amount=1]"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5)",
+    "!stopfly",
+    "give $(bot) wildflowers 8",
+    "give $(bot) bone_meal 8",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 6,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 12,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 20,
+      "hotbar": 1
+    },
+    {
+      "after": 22,
+      "click": [
+        0,
+        1,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 35,
+      "cmd": "setblock $(0,0,0) air"
+    }
+  ],
+  "record_ticks": 70,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(-2,0,-2) $(4,7,1) air",
+    "kill @e[type=item,distance=..12]",
+    "gamemode creative $(bot)"
+  ]
+}
