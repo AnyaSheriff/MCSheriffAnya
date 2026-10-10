@@ -36,6 +36,7 @@ use super::types;
 use super::configuration;
 use super::varint::{encode_string, encode_varint, encode_varlong};
 use crate::blocks;
+use crate::combat;
 use crate::fluids;
 use crate::inventory::{self, Inventory, Stack};
 use crate::journal;
@@ -4143,6 +4144,17 @@ async fn send_pending_world_events(
 
                 write_body(stream, body).await?;
             }
+            WorldEvent::Trail { from, to, color, ticks } => {
+                let mut body=encode_varint(LEVEL_PARTICLES);
+                body.extend_from_slice(&[0,0]);
+                for v in [from.0,from.1,from.2] {body.extend_from_slice(&v.to_be_bytes());}
+                for _ in 0..4 {body.extend_from_slice(&0f32.to_be_bytes());}
+                push_i32(&mut body,1);
+                body.extend_from_slice(&encode_varint(49));
+                for v in [to.0,to.1,to.2] {body.extend_from_slice(&v.to_be_bytes());}
+                push_i32(&mut body,*color);body.extend_from_slice(&encode_varint(*ticks));
+                write_body(stream,body).await?;
+            }
             WorldEvent::Vibration { from, to, ticks } => {
                 let mut body = encode_varint(LEVEL_PARTICLES);
 
@@ -8006,6 +8018,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         return true;
     }
 
+    if use_new_mob(shared, player, &mut items, index, reaction) { return true; }
     if land::use_on(&mut items, index, &world, player, shared, reaction) { return true; }
     if horse::interact(&mut items, index, player, shared, reaction, 0) { return true; }
 
@@ -8461,6 +8474,23 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
         }
 
+        return Some(Reaction::accepted(sequence));
+    }
+
+    if blocks::block_at_state(broken)==Some("creaking_heart") {
+        if !creative && drops {
+            let held=player.inventory.held();
+            let silk=held.is_some_and(|stack|stack.extras().level("silk_touch")>0);
+            let fortune=held.map_or(0,|stack|stack.extras().level("fortune"));
+            let stack=crate::mob::newblocks::heart_drop(broken,silk,fortune,world.random_unit());
+            if player.game_mode==GAME_MODE_SURVIVAL && blocks::orientation_of(broken).and_then(|b|b.value(broken,"natural"))==Some("true") {
+                let xp=20+(world.random_unit()*5.0) as i32;
+                player.net.new_orbs.push(((f64::from(x)+0.5,f64::from(y)+0.5,f64::from(z)+0.5),xp));
+            }
+            player.progress.mined(broken);
+            drop(world);
+            if let Some(stack)=stack {drop_into_world(shared,player.dimension,stack,(f64::from(x)+0.5,f64::from(y)+0.25,f64::from(z)+0.5),(0.0,0.0,0.0),items::MINED_DELAY);}
+        }
         return Some(Reaction::accepted(sequence));
     }
 
@@ -8941,6 +8971,18 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
         }
 
+        if let Some(held)=player.inventory.held()
+            && let Some(name)=blocks::item_name(held.item)
+            && crate::mob::newblocks::statue_use(&mut world,clicked,name)
+        {
+            let slot=player.inventory.selected_slot();
+            if player.game_mode != GAME_MODE_CREATIVE {
+                let next=if name=="honeycomb" {inventory::remainder(held,held.count-1)} else {combat::add_damage(held,combat::wear(&held,1,false,||world.random_unit()))};
+                player.inventory.set(slot,next);
+            }
+            return Some(Reaction{slots:vec![slot],..Reaction::accepted(sequence)});
+        }
+
         // Статуя медного голема: следующая поза (redstone/statue.rs).
         if redstone::statue::use_statue(&mut world, clicked) {
             world.tell_directly(clicked_x, clicked_y, clicked_z);
@@ -9372,6 +9414,15 @@ fn build_golem(shared: &Shared, dimension: crate::dimension::Dimension, world: &
     let mut mob = crate::mob::Mob::new(shared.next_entity_id(), build.kind, build.at);
 
     mob.golem.player_made = build.kind == crate::mob::Kind::IronGolem;
+    let copper_body = if kind == crate::mob::Kind::CopperGolem {
+        let body = build.cells.iter().find(|(_,state)| blocks::block_at_state(*state).and_then(crate::mob::newmobs::copper_stage).is_some()).copied();
+        if let Some((_, state)) = body { mob.newmobs.oxidation = blocks::block_at_state(state).and_then(crate::mob::newmobs::copper_stage).unwrap_or(0); }
+        (mob.x, mob.y, mob.z) = (f64::from(at.0)+0.5, f64::from(at.1)+0.05, f64::from(at.2)+0.5);
+        // copper-golem-sort: первый осмотр сундуков — через ~90 тактов после рождения (copper-golem-sort).
+        mob.newmobs.chest_wait = -90;
+        body
+    } else { None };
+    let head_facing = blocks::orientation_of(world.get_block(at.0,at.1,at.2)).and_then(|b| b.value(world.get_block(at.0,at.1,at.2), "facing")).unwrap_or("north");
 
     // Иссушитель: треть здоровья, зарядка, поворот по оси Т (mob/wither.rs).
     if build.kind == crate::mob::Kind::Wither {
@@ -9391,12 +9442,21 @@ fn build_golem(shared: &Shared, dimension: crate::dimension::Dimension, world: &
         // [проверить] границы: объём голема, расширенный на 5 блоков.
         world.note_progress_near("adventure/summon_iron_golem", (mob.x, mob.y + 1.35, mob.z), (5.7, 6.35, 5.7));
     }
+    let born = (mob.x, mob.y, mob.z);
     world.note_mob_spawn(mob);
+    if kind == crate::mob::Kind::CopperGolem {
+        world.note_sound_neutral_at(born, "minecraft:entity.copper_golem.spawn", 1.0, 1.0);
+    }
 
     for (x, y, z) in build.clear {
         world.set_block(x, y, z, crate::world::AIR);
     }
 
+    if let Some((p, state)) = copper_body {
+        let stage = blocks::block_at_state(state).and_then(crate::mob::newmobs::copper_stage).unwrap_or(0);
+        let name = ["copper_chest", "exposed_copper_chest", "weathered_copper_chest", "oxidized_copper_chest"][stage as usize];
+        if let Some(state) = blocks::orientation(name).and_then(|b| b.state(&[("facing", head_facing)])) { world.set_block(p.0,p.1,p.2,state); }
+    }
     Some(kind)
 }
 
@@ -10561,6 +10621,7 @@ struct PlayerState {
     /// Такт мира, когда игрок последний раз бил: сила удара зависит от
     /// того, сколько прошло.
     last_attack: u64,
+    pearl_ready: u64,
 
     /// Когда клиент последний раз ответил на Keep Alive.
     answered: Instant,
@@ -10843,6 +10904,7 @@ impl PlayerState {
             seen_maps: HashMap::new(),
             map_first: HashMap::new(),
             seen_map_icons: HashMap::new(),
+            pearl_ready: 0,
             last_attack: 0,
             dimension: saved.as_ref().map(|data| data.dimension).unwrap_or_default(),
             in_portal: 0,
@@ -11190,6 +11252,48 @@ fn packet_name(packet_id: i32) -> &'static str {
         0x43 => "Use Item",
         _ => "неизвестный",
     }
+}
+
+/// Новые мобы: снежки, сбруя, воск и топор (minecraft.wiki) [проверить].
+fn use_new_mob(shared: &Shared, player: &mut PlayerState, items: &mut crate::items::Items, index: usize, reaction: &mut Reaction) -> bool {
+    let held = player.inventory.held();
+    let name = held.and_then(|s| blocks::item_name(s.item));
+    let mob = &mut items.mobs_mut()[index];
+    let mut consumed = false;
+    let mut used = false;
+    let mut wear = false;
+    if mob.kind == crate::mob::Kind::HappyGhast {
+        if name == Some("snowball") && crate::mob::newmobs::feed_snowball(mob) { consumed=true; used=true; }
+        else if !mob.is_baby() && mob.newmobs.harness.is_none() && let Some(c) = name.and_then(crate::mob::newmobs::harness_colour) {
+            mob.newmobs.harness=Some(c); mob.newmobs.home=Some((mob.x,mob.y,mob.z)); consumed=true; used=true;
+            mob.events.push(crate::mob::Event::Sound { name:"minecraft:entity.happy_ghast.equip",volume:1.0,pitch:1.0 });
+        } else if name == Some("shears") && mob.newmobs.harness.is_some() && !mob.newmobs.ridden {
+            let c=mob.newmobs.harness.take().unwrap();
+            mob.newmobs.home=Some((mob.x,mob.y,mob.z));
+            if let Some(item)=blocks::item_named(&format!("{}_harness",crate::mob::newmobs::COLOURS[c as usize])) {mob.events.push(crate::mob::Event::Loot(vec![Stack::new(item,1)]));}
+            used=true; wear=true;
+            mob.events.push(crate::mob::Event::Sound {name:"minecraft:entity.happy_ghast.unequip",volume:1.0,pitch:1.0});
+        } else if !mob.is_baby() && mob.newmobs.harness.is_some() && !player.sneaking {
+            shared.riding.lock().expect("учёт седоков").mount(player.entity_id,mob.entity_id,4);
+            used=true;
+        }
+    } else if mob.kind == crate::mob::Kind::CopperGolem && let Some(name)=name {
+        used=crate::mob::newmobs::copper_use(mob,name);
+        consumed=used && name=="honeycomb";
+        wear=used && name.ends_with("_axe");
+    }
+    if wear && player.game_mode != GAME_MODE_CREATIVE && let Some(stack)=held {
+        let mut rng=crate::mob::Rng::new(mob.ticks ^ mob.entity_id as u64);
+        let worn=combat::wear(&stack,1,false,||rng.unit() as f32);
+        let slot=player.inventory.selected_slot();
+        player.inventory.set(slot,combat::add_damage(stack,worn));reaction.slots.push(slot);
+    }
+    if consumed && player.game_mode != GAME_MODE_CREATIVE && let Some(stack)=held {
+        let slot=player.inventory.selected_slot();
+        player.inventory.set(slot,inventory::remainder(stack,stack.count-1));
+        reaction.slots.push(slot);
+    }
+    used
 }
 
 #[cfg(test)]

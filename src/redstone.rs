@@ -298,6 +298,7 @@ pub struct Memory {
     /// Горящая редстоуновая руда: гаснет на случайном такте. Случайных
     /// тактов по всему миру у нас нет, поэтому руда помнится поимённо.
     lit_ores: BTreeSet<Pos>,
+    pub mob_blocks: BTreeSet<Pos>,
 
     /// Датчики дневного света: у оригинала это блок-сущности, которые
     /// пересчитывают выход раз в 20 тактов. Порядок — по координатам.
@@ -327,6 +328,7 @@ impl Memory {
             burned_torches: std::collections::HashSet::new(),
             occupants: Vec::new(),
             lit_ores: BTreeSet::new(),
+            mob_blocks: BTreeSet::new(),
             daylight: BTreeSet::new(),
             carts: Vec::new(),
             frames: Vec::new(),
@@ -339,6 +341,10 @@ impl Memory {
     /// всё прочее — забывается. Зовёт мир при каждой правке блока.
     pub fn note_state(&mut self, pos: Pos, state: i32) {
         self.sculk.note_state(pos, state);
+        if matches!(blocks::block_at_state(state), Some("creaking_heart" | "dried_ghast")) {
+            self.mob_blocks.insert(pos);
+        } else { self.mob_blocks.remove(&pos); }
+
         if components::is_lit_ore(state) {
             self.lit_ores.insert(pos);
         } else if !self.lit_ores.is_empty() {
@@ -385,6 +391,7 @@ impl Memory {
         self.comparator_output.retain(|(x, _, z), _| keep(*x, *z));
         self.burned_torches.retain(|(x, _, z)| keep(*x, *z));
         self.lit_ores.retain(|(x, _, z)| keep(*x, *z));
+        self.mob_blocks.retain(|(x, _, z)| keep(*x, *z));
         self.daylight.retain(|(x, _, z)| keep(*x, *z));
         self.sensors.retain(|(x, _, z), _| keep(*x, *z));
         // Начатые ходы поршней не забываются: чанк вернётся — ход доиграется.
@@ -3785,7 +3792,7 @@ pub fn repair_chunk(world: &mut World, chunk_x: i32, chunk_z: i32) {
             } else if within(state, &head_range) {
                 found.heads.push(pos);
             } else if components::is_lit_ore(state) || components::is_daylight(state) || sculk::is_sensor_state(state)
-                || matches!(blocks::block_at_state(state), Some("sculk_shrieker" | "sculk_catalyst")) {
+                || matches!(blocks::block_at_state(state), Some("sculk_shrieker" | "sculk_catalyst" | "creaking_heart" | "dried_ghast")) {
                 found.remembered.push((pos, state));
             }
         }
@@ -4071,6 +4078,10 @@ fn finish_move(world: &mut World, pos: Pos, moving: Moving) {
 pub fn ticked(world: &mut World, pos: Pos) {
     world.begin_tick(pos, crate::world::TickKind::Block);
     if crate::mob::small_world::hatch_egg(world, pos) { return; }
+    if blocks::block_at_state(world.get_block(pos.0,pos.1,pos.2)) == Some("dried_ghast") {
+        crate::mob::newblocks::hydration_tick(world,pos);
+        return;
+    }
 
     if matches!(blocks::block_at_state(world.get_block(pos.0, pos.1, pos.2)), Some("fire" | "soul_fire")) { crate::fire::tick(world, pos); return; }
     let block = Block::at(world, pos);

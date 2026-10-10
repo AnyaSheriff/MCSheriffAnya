@@ -3,6 +3,7 @@ use crate::items::Items;
 
 mod drowned;
 mod fire;
+mod newmobs;
 mod phantom;
 mod skeleton;
 mod tame;
@@ -792,8 +793,8 @@ fn hostile_kinds_have_the_wiki_numbers() {
     assert_eq!((Kind::Creeper.width(), Kind::Creeper.height()), (0.6, 1.7));
     assert_eq!((Kind::Spider.width(), Kind::Spider.height()), (1.4, 0.9));
     assert_eq!((Kind::Zombie.java_type(), Kind::Skeleton.java_type(), Kind::Creeper.java_type(), Kind::Spider.java_type()), (150, 115, 32, 124));
-    // С разбойниками, врединой и разорителем (mob/illager.rs): 27 + 6; бриз: +1; хранитель: +1.
-    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 35);
+    // С разбойниками, врединой и разорителем (mob/illager.rs): 27 + 6; бриз: +1; хранитель: +1; эндермит, зоглин, скрипун: +3.
+    assert!(Kind::ALL.iter().filter(|kind| kind.hostile()).count() == 38);
     assert_eq!(Kind::Warden.max_health(), 500.0);
     assert_eq!((Kind::Warden.width(), Kind::Warden.height()), (0.9, 2.9));
     assert!(!Kind::Cow.hostile());

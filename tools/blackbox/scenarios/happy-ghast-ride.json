@@ -1,0 +1,93 @@
+{
+  "name": "happy-ghast-ride",
+  "about": "Unverified: equip a blue harness, mount, move vehicle and dismount. Ghastling growth uses happy_ghast Age.",
+  "track_mobs": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "give $(bot) minecraft:blue_harness",
+    "!look 3.141592653589793 0",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon minecraft:happy_ghast $(3.5,0,3.5) {NoAI:1b}"
+    },
+    {
+      "after": 10,
+      "interact": true
+    },
+    {
+      "after": 20,
+      "interact": true
+    },
+    {
+      "after": 30,
+      "raw": {
+        "name": "vehicle_move",
+        "params": {
+          "x": "@x:3.5",
+          "y": "@y:1",
+          "z": "@z:3.5",
+          "yaw": 0,
+          "pitch": 0,
+          "onGround": false
+        }
+      }
+    },
+    {
+      "after": 45,
+      "raw": {
+        "name": "player_input",
+        "params": {
+          "inputs": {
+            "forward": false,
+            "backward": false,
+            "left": false,
+            "right": false,
+            "jump": false,
+            "shift": true,
+            "sprint": false
+          }
+        }
+      }
+    },
+    {
+      "after": 47,
+      "raw": {
+        "name": "player_input",
+        "params": {
+          "inputs": {
+            "forward": false,
+            "backward": false,
+            "left": false,
+            "right": false,
+            "jump": false,
+            "shift": false,
+            "sprint": false
+          }
+        }
+      }
+    },
+    {
+      "after": 65,
+      "cmd": "summon minecraft:happy_ghast $(7,0,3) {Age:-20,NoAI:1b}"
+    }
+  ],
+  "record_ticks": 110,
+  "cleanup": [
+    "kill @e[type=happy_ghast,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "fill $(-8,0,-8) $(12,10,12) minecraft:air",
+    "time set day",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)"
+  ]
+}

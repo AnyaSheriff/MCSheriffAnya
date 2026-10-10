@@ -32,6 +32,8 @@ pub mod leash;
 pub mod land;
 pub mod trader;
 pub mod nether;
+pub mod newmobs;
+pub mod newblocks;
 pub mod phantom;
 pub mod path;
 pub mod spawn;
@@ -51,6 +53,11 @@ pub enum Kind {
     Rabbit,
     Fox,
     Bee,
+    Endermite,
+    Zoglin,
+    Creaking,
+    HappyGhast,
+    CopperGolem,
     Cow,
     Pig,
     Sheep,
@@ -176,8 +183,13 @@ pub enum Kind {
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 83] = [
+    pub const ALL: [Kind; 88] = [
         Kind::Rabbit, Kind::Fox, Kind::Bee,
+        Kind::Endermite,
+        Kind::Zoglin,
+        Kind::Creaking,
+        Kind::HappyGhast,
+        Kind::CopperGolem,
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -260,7 +272,7 @@ impl Kind {
     pub fn hostile(self) -> bool {
         matches!(
             self,
-            Kind::Zombie
+            Kind::Endermite | Kind::Zoglin | Kind::Creaking | Kind::Zombie
                 | Kind::ZombieVillager
                 | Kind::Drowned
                 | Kind::Husk
@@ -341,6 +353,11 @@ impl Kind {
             "parrot" => Kind::Parrot,
             "bat" => Kind::Bat,
             "allay" => Kind::Allay,
+            "endermite" => Kind::Endermite,
+            "zoglin" => Kind::Zoglin,
+            "creaking" => Kind::Creaking,
+            "happy_ghast" => Kind::HappyGhast,
+            "copper_golem" => Kind::CopperGolem,
             "cow" => Kind::Cow,
             "pig" => Kind::Pig,
             "sheep" => Kind::Sheep,
@@ -430,6 +447,11 @@ impl Kind {
             Kind::Parrot => "parrot",
             Kind::Bat => "bat",
             Kind::Allay => "allay",
+            Kind::Endermite => "endermite",
+            Kind::Zoglin => "zoglin",
+            Kind::Creaking => "creaking",
+            Kind::HappyGhast => "happy_ghast",
+            Kind::CopperGolem => "copper_golem",
             Kind::Cow => "cow",
             Kind::Pig => "pig",
             Kind::Sheep => "sheep",
@@ -519,6 +541,11 @@ impl Kind {
             Kind::Parrot => 98,
             Kind::Bat => 10,
             Kind::Allay => 2,
+            Kind::Endermite => 42,
+            Kind::Zoglin => 149,
+            Kind::Creaking => 31,
+            Kind::HappyGhast => 58,
+            Kind::CopperGolem => 28,
             Kind::Chicken => 26,
             Kind::Creeper => 32,
             Kind::Skeleton => 115,
@@ -620,6 +647,11 @@ impl Kind {
             Kind::Parrot => "minecraft:parrot",
             Kind::Bat => "minecraft:bat",
             Kind::Allay => "minecraft:allay",
+            Kind::Endermite => "minecraft:endermite", // [Bedrock: потом] свойства.
+            Kind::Zoglin => "minecraft:zoglin", // [Bedrock: потом] свойства.
+            Kind::Creaking => "minecraft:creaking", // [Bedrock: потом] свойства.
+            Kind::HappyGhast => "minecraft:happy_ghast", // [Bedrock: потом] свойства.
+            Kind::CopperGolem => "minecraft:copper_golem", // [Bedrock: потом] свойства.
             Kind::Cow => "minecraft:cow",
             Kind::Pig => "minecraft:pig",
             Kind::Sheep => "minecraft:sheep",
@@ -731,6 +763,11 @@ impl Kind {
             Kind::Parrot => 0.5,
             Kind::Bat => 0.5,
             Kind::Allay => 0.35,
+            Kind::Endermite => 0.4,
+            Kind::Zoglin => 1.3964844,
+            Kind::Creaking => 0.9,
+            Kind::HappyGhast => 4.0,
+            Kind::CopperGolem => 0.49,
             Kind::Chicken => 0.4,
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
@@ -802,6 +839,11 @@ impl Kind {
             Kind::Parrot => 0.9,
             Kind::Bat => 0.9,
             Kind::Allay => 0.6,
+            Kind::Endermite => 0.3,
+            Kind::Zoglin => 1.4,
+            Kind::Creaking => 2.7,
+            Kind::HappyGhast => 4.0,
+            Kind::CopperGolem => 0.98,
             Kind::Chicken => 0.7,
             Kind::Cow => 1.4,
             Kind::Pig => 0.9,
@@ -878,6 +920,11 @@ impl Kind {
             Kind::Parrot => 6.0,
             Kind::Bat => 6.0,
             Kind::Allay => 20.0,
+            Kind::Endermite => 8.0,
+            Kind::Zoglin => 40.0,
+            Kind::Creaking => 1.0,
+            Kind::HappyGhast => 20.0,
+            Kind::CopperGolem => 12.0,
             Kind::Cow | Kind::Pig => 10.0,
             Kind::Sheep => 8.0,
             Kind::Chicken => 4.0,
@@ -958,6 +1005,11 @@ impl Kind {
             Kind::Parrot => 0.2,
             Kind::Bat => 0.1,
             Kind::Allay => 0.1,
+            Kind::Endermite => 0.25,
+            Kind::Zoglin => 0.3,
+            Kind::Creaking => 0.4,
+            Kind::HappyGhast => 0.05,
+            Kind::CopperGolem => 0.2,
             Kind::Cow => 0.2,
             Kind::Pig | Kind::Chicken => 0.25,
             Kind::Sheep | Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 0.23,
@@ -1073,6 +1125,11 @@ impl Kind {
             Kind::Parrot => ("minecraft:entity.parrot.ambient", "minecraft:entity.parrot.hurt", "minecraft:entity.parrot.death"),
             Kind::Bat => ("minecraft:entity.bat.ambient", "minecraft:entity.bat.hurt", "minecraft:entity.bat.death"),
             Kind::Allay => ("minecraft:entity.allay.ambient_without_item", "minecraft:entity.allay.hurt", "minecraft:entity.allay.death"),
+            Kind::Endermite => ("minecraft:entity.endermite.ambient", "minecraft:entity.endermite.hurt", "minecraft:entity.endermite.death"),
+            Kind::Zoglin => ("minecraft:entity.zoglin.ambient", "minecraft:entity.zoglin.hurt", "minecraft:entity.zoglin.death"),
+            Kind::Creaking => ("minecraft:entity.creaking.ambient", "minecraft:entity.creaking.hurt", "minecraft:entity.creaking.death"),
+            Kind::HappyGhast => ("minecraft:entity.happy_ghast.ambient", "minecraft:entity.happy_ghast.hurt", "minecraft:entity.happy_ghast.death"),
+            Kind::CopperGolem => ("", "minecraft:entity.copper_golem.hurt", "minecraft:entity.copper_golem.death"),
             Kind::Cow => ("minecraft:entity.cow.ambient", "minecraft:entity.cow.hurt", "minecraft:entity.cow.death"),
             Kind::Pig => ("minecraft:entity.pig.ambient", "minecraft:entity.pig.hurt", "minecraft:entity.pig.death"),
             Kind::Sheep => ("minecraft:entity.sheep.ambient", "minecraft:entity.sheep.hurt", "minecraft:entity.sheep.death"),
@@ -1159,6 +1216,10 @@ impl Kind {
             Kind::Creeper => "",
             Kind::Spider | Kind::CaveSpider => "minecraft:entity.spider.step",
             Kind::Silverfish => "minecraft:entity.silverfish.step",
+            Kind::Endermite => "minecraft:entity.endermite.step",
+            Kind::Zoglin => "minecraft:entity.zoglin.step",
+            Kind::Creaking => "minecraft:entity.creaking.step",
+            Kind::CopperGolem => "minecraft:entity.copper_golem.step",
             Kind::WitherSkeleton => "minecraft:entity.wither_skeleton.step",
             Kind::ZombifiedPiglin => "minecraft:entity.zombified_piglin.step",
             Kind::Piglin => "minecraft:entity.piglin.step",
@@ -1240,6 +1301,9 @@ const EPS: f64 = 1.0e-7;
 pub trait View {
     fn block(&self, x: i32, y: i32, z: i32) -> i32;
     fn loaded(&self, chunk_x: i32, chunk_z: i32) -> bool;
+
+    fn piglin_safe(&self) -> bool { false }
+    fn clouds(&self) -> bool { false }
 
     /// Открыто ли небо над клеткой (для солнца). Без мира — нет.
     fn open_sky(&self, _x: i32, _y: i32, _z: i32) -> bool {
@@ -1607,6 +1671,8 @@ pub struct Mob {
     /// Лошади, ослы, мулы и нежить-лошади (mob/horse.rs).
     pub horse: horse::State,
 
+    pub newmobs: newmobs::State,
+
     /// Кролик, лиса и пчела (mob/wildlife.rs).
     pub wild: wildlife::State,
 
@@ -1708,6 +1774,7 @@ impl Mob {
             horse: horse::State::default(),
             wild: wildlife::State::default(),
             small: small::State::new(kind, entity_id),
+            newmobs: newmobs::State::default(),
         };
         horse::defaults(&mut mob);
         mob
@@ -1769,6 +1836,8 @@ impl Mob {
         if let Some(size) = water::size(self) { return size; }
 
         if self.kind == Kind::Warden && self.warden.invulnerable() { return (0.9, 1.0); }
+        if self.kind == Kind::HappyGhast && self.is_baby() { return (0.95, 0.95); }
+
         let scale = if self.is_baby() { 0.5 } else { 1.0 };
 
         // Куб: 0,52 · размер (вики, Magma Cube, «Hitbox»).
@@ -1844,6 +1913,9 @@ impl Mob {
         }
         if self.kind == Kind::Allay && self.small.held.is_some() {
             return ("minecraft:entity.allay.ambient_with_item", "minecraft:entity.allay.hurt", "minecraft:entity.allay.death");
+        }
+        if self.kind == Kind::HappyGhast && self.is_baby() {
+            return ("minecraft:entity.ghastling.ambient", "minecraft:entity.ghastling.hurt", "minecraft:entity.ghastling.death");
         }
 
         if self.kind == Kind::Drowned && self.h.wet {
@@ -1973,6 +2045,13 @@ impl Mob {
             if self.is_dead() { return ai::Plan::default(); }
         }
 
+        newmobs::lifecycle(self, view);
+        if self.is_dead() || self.h.despawn { return ai::Plan::default(); }
+
+        if self.kind == Kind::HappyGhast && self.vitals.health < self.vitals.max_health {
+            let fast = (view.clouds() && (187.0..197.0).contains(&self.y)) || (!is_water(view.block(self.cell().0,self.cell().1,self.cell().2)) && view.rain(self.cell().0,(self.y+self.size().1).floor() as i32,self.cell().2));
+            if self.ticks.is_multiple_of(if fast {20} else {600}) { self.vitals.health=(self.vitals.health+1.0).min(self.vitals.max_health); }
+        }
         // Рост и пауза после разведения (вики, Breeding).
         // Детёныш-зомби не растёт (вики, Zombie: «baby zombies never grow up»).
         if self.age < 0 && !self.kind.hostile() {
@@ -2126,9 +2205,15 @@ impl Mob {
         let lava_floor = LavaFloor(view);
         let view: &dyn View = if self.kind == Kind::Strider { &lava_floor } else { view };
 
+        if self.kind == Kind::HappyGhast {
+            return newmobs::happy_tick(self, view, ctx, rng);
+        }
         if horse::equine(self.kind) && self.horse.rider.is_some() && self.horse.tamed && self.horse.saddled() {
             self.brain.stop();
             ai::voice(self, rng);
+            return ai::Plan::default();
+        }
+        if self.kind == Kind::Creaking && newmobs::freeze(self, view, ctx) {
             return ai::Plan::default();
         }
 
@@ -2143,6 +2228,8 @@ impl Mob {
             wildlife::think(self, view, ctx, rng)
         } else if matches!(self.kind, Kind::Wolf | Kind::Cat) {
             tame::think(self, view, ctx, rng)
+        } else if self.kind == Kind::CopperGolem && self.newmobs.chest.is_some() {
+            ai::walk(self, ai::Plan::default())
         } else if golem::golem(self.kind) {
             golem::think(self, view, ctx, rng)
         } else if self.kind == Kind::Warden {
@@ -2340,7 +2427,7 @@ impl Mob {
 
                 if !name.is_empty() {
                     // Железный голем топает громко: 1,0 (чёрный ящик, iron-golem-attack).
-                    let volume = if self.kind == Kind::IronGolem { 1.0 } else { 0.15 };
+                    let volume = if matches!(self.kind, Kind::IronGolem | Kind::CopperGolem) { 1.0 } else { 0.15 };
 
                     self.events.push(Event::Sound { name, volume, pitch: 1.0 });
                 }
@@ -2494,7 +2581,14 @@ impl Mob {
     /// Damage: «Invulnerability frames»).
     pub fn hurt(&mut self, amount: f32, source: Source, push: Option<Push>) -> Option<Hit> {
         if horse::undead(self.kind) && source == Source::Drown { return None; }
-        if self.is_dead() {
+        if self.is_dead() { return None; }
+        if self.kind == Kind::Zoglin && matches!(source, Source::InFire | Source::OnFire | Source::Lava | Source::Drown) { return None; }
+        if matches!(self.kind,Kind::CopperGolem|Kind::HappyGhast) && source == Source::Fall { return None; }
+        if self.kind == Kind::CopperGolem && source == Source::Drown { return None; }
+        if self.kind == Kind::HappyGhast && self.is_baby() && source == Source::Drown { return None; }
+        if self.kind == Kind::Creaking && self.newmobs.heart.is_some() && source != Source::GenericKill {
+            self.newmobs.resin_hit |= matches!(source,Source::PlayerAttack|Source::MaceSmash|Source::Arrow|Source::Thrown|Source::PlayerExplosion);
+            self.events.push(Event::Sound { name: "minecraft:entity.creaking.sway", volume: 1.0, pitch: 1.0 });
             return None;
         }
 
@@ -2647,7 +2741,7 @@ impl Mob {
 
             // Паника — только от удара существа: падение и команда не пугают
             // (чёрный ящик, cow-physics: упавшая корова стоит).
-            if let Some(push) = push.filter(|push| push.cause != 0 && !self.kind.hostile() && !matches!(self.kind, Kind::Wolf | Kind::Armadillo) && !golem::golem(self.kind)) {
+            if let Some(push) = push.filter(|push| push.cause != 0 && !self.kind.hostile() && !matches!(self.kind, Kind::Wolf | Kind::Armadillo | Kind::HappyGhast | Kind::CopperGolem) && !golem::golem(self.kind)) {
                 self.fright = Some((self.x - push.dir.0 * 8.0, self.z - push.dir.1 * 8.0));
                 self.brain.panic(PANIC_TICKS);
             }
@@ -2676,13 +2770,13 @@ impl Mob {
         // удара мечом — 0).
         // Железный голем не сдвигается: сопротивление отдаче 100 % (вики, Iron
         // Golem; чёрный ящик, iron-golem-heal: скорость после удара 0).
-        if matches!(self.kind, Kind::Shulker | Kind::IronGolem | Kind::Warden) {
+        if matches!(self.kind, Kind::Shulker | Kind::IronGolem | Kind::Warden) || (self.kind == Kind::Creaking && self.newmobs.frozen) {
             return;
         }
 
         // Хоглин держит отдачу: чёрный ящик, hoglin-stand — скорость после
         // удара 0,16 вместо 0,4, то есть сопротивление 0,6.
-        let strength = if self.kind == Kind::Hoglin { strength * 0.4 } else { strength };
+        let strength = if matches!(self.kind, Kind::Hoglin | Kind::Zoglin) { strength * 0.4 } else { strength };
 
         self.vx = self.vx / 2.0 + ux * strength;
         self.vz = self.vz / 2.0 + uz * strength;
@@ -2755,7 +2849,7 @@ impl Mob {
         if self.kind == Kind::EnderDragon {
             // Шарики — по ходу анимации смерти (tick.rs, dragon_xp).
             self.dragon.xp = if self.first_dragon { DRAGON_XP_FIRST } else { DRAGON_XP };
-        } else if self.xp_until > self.ticks && !self.is_baby() && self.kind != Kind::WanderingTrader {
+        } else if self.xp_until > self.ticks && (!self.is_baby() || self.kind == Kind::Zoglin) && self.kind != Kind::WanderingTrader {
             let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xE4B);
 
             self.pending_xp = if matches!(self.kind,Kind::Axolotl | Kind::Tadpole | Kind::Bat | Kind::Allay) {
@@ -2767,6 +2861,10 @@ impl Mob {
                 guardian::XP
             } else if self.kind == Kind::Wither {
                 wither::XP
+            } else if self.kind == Kind::Endermite {
+                3
+            } else if matches!(self.kind, Kind::CopperGolem | Kind::Creaking) {
+                0
             } else if self.kind.hostile() {
                 let worn = u32::from(self.h.bow) + u32::from(self.h.helmet);
 
@@ -2796,7 +2894,7 @@ impl Mob {
         } else {
             self.kind.save_id()
         };
-        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag);
+        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute));
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -2837,9 +2935,10 @@ impl Mob {
             land::write(self, out);
         }
         if water::creature(self.kind) { water::write(&self.water, out); }
+        if newmobs::new_kind(self.kind) { newmobs::write(&self.newmobs, out); }
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
-        if self.name.is_some() || self.leash.is_some() || self.persistent_tag {
+        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) {
             leash::write_tail(self, out);
         }
     }
@@ -2881,6 +2980,7 @@ impl Mob {
         let mut horse_mob = Mob::new(0, kind, (x, y, z));
         if horse::equine(kind) { horse::read(&mut horse_mob, bytes)?; }
         let small_state = if small::kind(kind) { Some(small::read(bytes)?) } else { None };
+        let new_state = if newmobs::new_kind(kind) { Some(newmobs::read(bytes)?) } else { None };
         let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
 
         if !(x.is_finite() && y.is_finite() && z.is_finite() && health.is_finite()) || color > 15 {
@@ -2894,6 +2994,7 @@ impl Mob {
             mob.silent = state.silent;
             mob.small = state; mob.tame = tame;
         }
+        if let Some(state) = new_state { mob.newmobs=state; }
         mob.yaw = yaw;
         mob.head_yaw = yaw;
         if let Some((size, flags)) = slime_data {
@@ -3004,6 +3105,10 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
     };
 
     match mob.kind {
+        Kind::Endermite | Kind::Creaking => {},
+        Kind::HappyGhast => { if let Some(c) = mob.newmobs.harness { give(&format!("{}_harness", newmobs::COLOURS[c as usize]), 1, 1, rng); } },
+        Kind::Zoglin => give("rotten_flesh", 1, 3 + mob.looting, rng),
+        Kind::CopperGolem => give("copper_ingot", 1, 3 + mob.looting, rng),
         Kind::Rabbit => {
             give("rabbit_hide", 0, 1 + mob.looting.max(0), rng);
             give(if mob.vitals.fire > 0 { "cooked_rabbit" } else { "rabbit" }, 0, 1 + mob.looting.max(0), rng);
@@ -3217,6 +3322,7 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         if mob.horse.chest && let Some(item) = blocks::item_named("chest") { drops.push(Stack::new(item, 1)); }
     }
 
+    if let Some(stack) = mob.newmobs.cargo { drops.push(stack); }
     drops
 }
 
@@ -3923,7 +4029,9 @@ pub fn step_all(
             mob.name = mobs[index].name.clone();
         }
 
-        if !mobs[index].silent && kind != Kind::Frog {
+        if matches!(kind, Kind::Zoglin | Kind::ZombifiedPiglin) && !mobs[index].silent {
+            mob.events.push(Event::Sound { name: if kind == Kind::Zoglin { "minecraft:entity.hoglin.converted_to_zombified" } else { "minecraft:entity.piglin.converted_to_zombified" }, volume: 1.0, pitch: 1.0 });
+        } else if !matches!(kind, Kind::Zoglin | Kind::ZombifiedPiglin) && !mobs[index].silent && kind != Kind::Frog {
             outcome.level_events.push((mobs[index].cell(), if kind == Kind::Stray { 1048 } else if kind == Kind::Drowned { 1040 } else { 1041 }));
         }
 
@@ -4094,11 +4202,16 @@ pub fn convert(old: &Mob, kind: Kind, entity_id: i32) -> Mob {
     new.persistent = old.persistent;
     new.name = old.name.clone();
     new.persistent_tag = old.persistent_tag;
+    new.leash = old.leash;
     new.h.bow = old.h.bow;
     new.h.helmet = old.h.helmet;
     new.h.hand = old.h.hand;
     new.h.offhand_shell = old.h.offhand_shell;
     new.h.hand_drop = old.h.hand_drop;
+    if matches!(old.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) {
+        // Вики, Hoglin / Piglin: "Nausea ... for 10 seconds".
+        new.vitals.give_effect_shown(crate::survival::Effect {kind:crate::survival::EffectKind::Nausea,amplifier:0,ticks_left:200,ambient:false,visible:true});
+    }
     new
 }
 

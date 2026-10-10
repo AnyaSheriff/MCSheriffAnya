@@ -32,6 +32,7 @@ pub fn follow_range(kind: Kind) -> f64 {
         Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 35.0,
         // Вики, Enderman: злится на взгляд с 64 блоков и гонится за целью там же.
         Kind::Enderman => 64.0,
+        Kind::Creaking => 32.0,
         Kind::Blaze | Kind::Ghast => super::nether::follow_range(kind),
         Kind::Phantom => 64.0,
         // Вики, Pillager: «32 blocks»; заклинатель 12, поборник 12 [проверить].
@@ -86,6 +87,11 @@ pub fn killer_key(kind: Kind) -> &'static str {
         Kind::Panda => "entity.minecraft.panda",
         Kind::Ocelot => "entity.minecraft.ocelot",
         Kind::Mooshroom => "entity.minecraft.mooshroom",
+        Kind::Endermite => "entity.minecraft.endermite",
+        Kind::Zoglin => "entity.minecraft.zoglin",
+        Kind::Creaking => "entity.minecraft.creaking",
+        Kind::HappyGhast => "entity.minecraft.happy_ghast",
+        Kind::CopperGolem => "entity.minecraft.copper_golem",
         Kind::Zombie => "entity.minecraft.zombie",
         Kind::ZombieVillager => "entity.minecraft.zombie_villager",
         Kind::Skeleton => "entity.minecraft.skeleton",
@@ -396,7 +402,7 @@ fn spider_bold(mob: &Mob, view: &dyn View, ctx: &Ctx) -> bool {
 
 /// Подходит ли игрок в цели этому мобу.
 fn eligible(mob: &Mob, view: &dyn View, ctx: &Ctx, watcher: &Watcher, need_sight: bool) -> bool {
-    if !victim(watcher) {
+    if !victim(watcher) || (mob.kind == Kind::Zoglin && mob.leash.is_some_and(|holder| holder.id() == watcher.id)) {
         return false;
     }
 
@@ -554,6 +560,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
 
     // В воздухе путь ведётся, новый не строится (как у животных).
     let grounded = mob.on_ground || in_water || mob.kind.spider();
+    if let Some(plan) = super::newmobs::hunt_mob(mob, view, ctx, rng) { return plan; }
     let target = choose_target(mob, view, ctx, rng);
 
     // Паук: днём цель забывается с шансом 1/100 за такт (вики, Spider).
@@ -577,7 +584,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     mob.h.seen = if sight { 0 } else { mob.h.seen + 1 };
 
     match mob.kind {
-        Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Spider | Kind::CaveSpider | Kind::Silverfish => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
+        Kind::Zombie | Kind::ZombieVillager | Kind::Husk | Kind::Spider | Kind::CaveSpider | Kind::Silverfish | Kind::Endermite | Kind::Creaking | Kind::Zoglin => melee(mob, view, &target, &mut plan, dist_sq, flat, rng, grounded),
         Kind::Drowned => drowned(mob, view, ctx, &target, &mut plan, dist_sq, flat, sight, rng, grounded),
         Kind::Creeper => creeper(mob, view, ctx, &target, &mut plan, dist_sq, sight, grounded),
         Kind::Skeleton | Kind::Stray | Kind::Bogged if mob.h.bow => skeleton(mob, view, ctx, &target, &mut plan, dist_sq, sight, rng, grounded),
@@ -678,19 +685,24 @@ pub(super) fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut
         ai::look_at_point(mob, target.x, target.y + target.eye, target.z);
 
         if mob.h.cooldown == 0 && line_of_sight(mob, view, target) {
-            mob.h.cooldown = MELEE_COOLDOWN;
+            mob.h.cooldown = if mob.kind == Kind::Zoglin && !mob.is_baby() { 40 } else { MELEE_COOLDOWN };
 
             let (ux, uz) = if flat > 1.0e-6 { ((target.x - mob.x) / flat, (target.z - mob.z) / flat) } else { (0.0, 1.0) };
             // Вики: паук и скелет 2, зомби 3, эндермен 7 (на нормальной).
             let damage = match mob.kind {
                 Kind::Spider | Kind::CaveSpider | Kind::Skeleton | Kind::Stray | Kind::Bogged => 2.0,
                 Kind::Silverfish => 1.0,
+                Kind::Endermite => 2.0,
+                Kind::Zoglin => if mob.is_baby() { 0.5 } else { 3.0 + rng.below(6) as f32 },
                 Kind::Enderman => 7.0,
                 Kind::WitherSkeleton | Kind::ZombifiedPiglin | Kind::Piglin | Kind::PiglinBrute | Kind::Hoglin => super::nether::melee_damage(mob),
                 _ => 3.0,
             };
 
             mob.events.push(Event::Swing);
+            if matches!(mob.kind,Kind::Creaking|Kind::Zoglin) {
+                mob.events.push(Event::Sound{name:if mob.kind==Kind::Creaking {"minecraft:entity.creaking.attack"}else{"minecraft:entity.zoglin.attack"},volume:1.0,pitch:1.0});
+            }
             plan.melee = Some(Melee { target: target.id, damage, push: (ux, uz), wither: mob.kind == Kind::WitherSkeleton, hunger: mob.kind == Kind::Husk });
         }
 
@@ -970,6 +982,8 @@ pub fn despawn_check(mob: &mut Mob, players: &[Watcher], rng: &mut Rng, peaceful
         mob.h.despawn = true;
         return;
     }
+
+    if mob.kind == Kind::Creaking && mob.newmobs.heart.is_some() { return; }
 
     if mob.kind == Kind::Slime && mob.nether.persistence_required {
         return;

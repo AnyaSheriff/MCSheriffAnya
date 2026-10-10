@@ -208,6 +208,8 @@ pub enum WorldEvent {
 
     /// Вибрация пошла от места `from` к датчику скалка `to` и долетит за
     /// `ticks` тактов: клиент рисует её частицей `vibration`.
+    /// [Bedrock: потом] частица связи сердца (minecraft-data: trail).
+    Trail { from: (f64,f64,f64), to: (f64,f64,f64), color: i32, ticks: i32 },
     Vibration { from: (i32, i32, i32), to: (i32, i32, i32), ticks: i32 },
     /// То же от точного места (событие сущности, хранитель слышит).
     VibrationAt { from: (f64, f64, f64), to: (i32, i32, i32), ticks: i32 },
@@ -1954,6 +1956,10 @@ impl World {
                 let delay = 30 + (self.random_bits() % 10) as u64;
                 self.schedule_block_once(x, y, z, delay);
             }
+            // Сердце скрипуна рассылает пустые данные блока при каждой перемене (creaking-freeze: тип 10, {}).
+            if crate::blocks::block_at_state(state) == Some("creaking_heart") {
+                self.note_block_entity(x, y, z, 10, vec![0x0A, 0x00]);
+            }
         }
 
         changed
@@ -2349,6 +2355,10 @@ impl World {
     }
 
     /// Вибрация к датчику скалка — частица на месте события.
+    pub fn note_trail(&mut self, from: (f64,f64,f64), to: (f64,f64,f64), color: i32, ticks: i32) {
+        self.events.push(WorldEvent::Trail {from,to,color,ticks});
+    }
+
     pub fn note_vibration(&mut self, from: (i32, i32, i32), to: (i32, i32, i32), ticks: i32) {
         self.events.push(WorldEvent::Vibration { from, to, ticks });
     }

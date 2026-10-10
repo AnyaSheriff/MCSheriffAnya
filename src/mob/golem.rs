@@ -189,7 +189,8 @@ pub fn find(view: &dyn View, head: (i32, i32, i32)) -> Option<Build> {
         }
     }
 
-    None
+    let rows = vec![vec![Cell::Head], vec![Cell::Body]];
+    find_pattern(view, head, Kind::CopperGolem, &rows, &is_head, &|state| blocks::block_at_state(state).and_then(super::newmobs::copper_stage).is_some())
 }
 
 /// Узор иссушителя «^^^ / ### / ~#~»: три черепа на Т из песка или почвы душ

@@ -1369,7 +1369,8 @@ impl BedrockWorld {
                     | crate::thrown::Kind::WitherSkull
                     | crate::thrown::Kind::LlamaSpit
                     | crate::thrown::Kind::WindCharge
-                    | crate::thrown::Kind::BreezeWindCharge => {}
+                    | crate::thrown::Kind::BreezeWindCharge
+                    | crate::thrown::Kind::EnderPearl => {}
                 }
             }
 

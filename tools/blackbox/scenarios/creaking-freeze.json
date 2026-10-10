@@ -1,0 +1,98 @@
+{
+  "name": "creaking-freeze",
+  "about": "Unverified: summoned creaking freezes while observed, pursues when player turns away; nighttime heart activation and daytime dormancy.",
+  "track_mobs": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "time set midnight",
+    "gamemode survival $(bot)",
+    "effect give $(bot) minecraft:resistance 60 4 true",
+    "!look 3.141592653589793 0",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon minecraft:creaking $(3.5,0,4.5)"
+    },
+    {
+      "after": 40,
+      "look": [
+        0,
+        0
+      ]
+    },
+    {
+      "after": 80,
+      "look": [
+        3.141592653589793,
+        0
+      ]
+    },
+    {
+      "after": 100,
+      "set": {
+        "at": [
+          7,
+          0,
+          7
+        ],
+        "state": "minecraft:pale_oak_log[axis=y]"
+      }
+    },
+    {
+      "after": 100,
+      "set": {
+        "at": [
+          7,
+          2,
+          7
+        ],
+        "state": "minecraft:pale_oak_log[axis=y]"
+      }
+    },
+    {
+      "after": 100,
+      "set": {
+        "at": [
+          7,
+          1,
+          7
+        ],
+        "state": "minecraft:creaking_heart[axis=y,natural=false,creaking_heart_state=dormant]"
+      }
+    },
+    {
+      "after": 240,
+      "cmd": "time set day"
+    },
+    {
+      "after": 280,
+      "set": {
+        "at": [
+          7,
+          1,
+          7
+        ],
+        "state": "minecraft:air"
+      }
+    }
+  ],
+  "record_ticks": 320,
+  "cleanup": [
+    "kill @e[type=creaking,distance=..48]",
+    "effect clear $(bot)",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "fill $(-8,0,-8) $(12,10,12) minecraft:air",
+    "time set day",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)"
+  ]
+}

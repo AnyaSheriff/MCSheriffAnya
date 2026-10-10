@@ -66,6 +66,8 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
     let kind = match crate::combat::item_name(stack.item) {
         Some("splash_potion") => Kind::Splash,
         Some("lingering_potion") => Kind::Lingering,
+        Some("ender_pearl") => Kind::EnderPearl,
+        Some("snowball") => Kind::Snowball,
         _ => return false,
     };
 
@@ -73,11 +75,19 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
         return false;
     }
 
+    if kind == Kind::EnderPearl {
+        let now=*shared.ticks.borrow();
+        if now < player.pearl_ready { return true; }
+        player.pearl_ready=now+20;
+    }
     let dimension = player.dimension;
     let roll = || vitals::world_random(shared, dimension);
     // Неточность 1 — как у стрел (вики, Projectile: 0,0172275 на ось).
     let mut wobble = || f64::from(roll() + roll() + roll() + roll() - 2.0) * 0.0172275 * 1.732;
-    let (dx, dy, dz) = crate::thrown::throw_velocity(player.yaw, player.pitch, crate::thrown::POTION_SPEED, &mut wobble);
+    let (dx, dy, dz) = if matches!(kind,Kind::EnderPearl|Kind::Snowball) {
+        let (yaw,pitch)=(f64::from(player.yaw).to_radians(),f64::from(player.pitch).to_radians());
+        ((-yaw.sin()*pitch.cos()+wobble())*1.5,(-pitch.sin()+wobble())*1.5,(yaw.cos()*pitch.cos()+wobble())*1.5)
+    } else { crate::thrown::throw_velocity(player.yaw, player.pitch, crate::thrown::POTION_SPEED, &mut wobble) };
     let (last_x, last_y, last_z) = player.net.last_delta;
     // К скорости прибавляется скорость бросившего (по вертикали — в воздухе).
     let velocity = (dx + last_x, dy + if player.on_ground { 0.0 } else { last_y }, dz + last_z);
@@ -93,6 +103,8 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
 
         crate::redstone::game_event_from(&mut world, (player.x, player.y, player.z), 3, Some(player.entity_id), false);
         match kind {
+            Kind::EnderPearl => world.note_sound_neutral_at((player.x,player.y,player.z),"minecraft:entity.ender_pearl.throw",0.5,pitch),
+            Kind::Snowball => world.note_sound_neutral_at((player.x,player.y,player.z),"minecraft:entity.snowball.throw",0.5,pitch),
             Kind::Lingering => world.note_sound_neutral_at((player.x, player.y, player.z), "minecraft:entity.lingering_potion.throw", 0.5, pitch),
             _ => world.note_sound_player_at((player.x, player.y, player.z), "minecraft:entity.splash_potion.throw", 0.5, pitch),
         }
@@ -462,7 +474,7 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
                 body.push(status);
                 write_body(stream, body).await?;
             }
-        } else if near((f64::from(x), f64::from(y), f64::from(z))) {
+        } else if effect >= 0 && near((f64::from(x), f64::from(y), f64::from(z))) {
             let mut body = encode_varint(WORLD_EVENT);
 
             push_i32(&mut body, effect);

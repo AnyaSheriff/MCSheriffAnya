@@ -1,0 +1,75 @@
+{
+  "name": "endermite-pearl",
+  "about": "Unverified: player-thrown pearls, endermite lifetime, and enderman targeting. No random masks until vanilla-vs-vanilla evidence exists.",
+  "track_mobs": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "give $(bot) minecraft:ender_pearl 16",
+    "!look 3.141592653589793 -1.0471975511965976",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "use": true
+    },
+    {
+      "after": 25,
+      "use": true
+    },
+    {
+      "after": 50,
+      "use": true
+    },
+    {
+      "after": 75,
+      "use": true
+    },
+    {
+      "after": 100,
+      "use": true
+    },
+    {
+      "after": 125,
+      "use": true
+    },
+    {
+      "after": 150,
+      "use": true
+    },
+    {
+      "after": 175,
+      "use": true
+    },
+    {
+      "after": 220,
+      "cmd": "summon minecraft:endermite $(3.5,0,3.5) {Lifetime:2380}"
+    },
+    {
+      "after": 260,
+      "cmd": "summon minecraft:endermite $(3.5,0,3.5) {CustomName:\"test_mite\"}"
+    },
+    {
+      "after": 262,
+      "cmd": "summon minecraft:enderman $(5.5,0,3.5)"
+    }
+  ],
+  "record_ticks": 400,
+  "cleanup": [
+    "kill @e[type=endermite,distance=..48]",
+    "kill @e[type=enderman,distance=..48]",
+    "kill @e[type=ender_pearl,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "fill $(-8,0,-8) $(12,10,12) minecraft:air",
+    "time set day",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)"
+  ]
+}

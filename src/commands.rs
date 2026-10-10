@@ -1117,6 +1117,19 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
         }
     }
 
+    if let Some(age) = int_after(data, "Lifetime:") { mob.newmobs.lifetime = age.max(0); }
+    if let Some(ticks) = int_after(data, "TimeInOverworld:") { mob.newmobs.outside = ticks.max(0); }
+    if let Some(stage) = int_after(data, "Oxidation:") { mob.newmobs.oxidation = stage.clamp(0,3) as u8; }
+    if let Some(waxed) = flag_in(data, "Waxed:") { mob.newmobs.waxed = waxed; }
+
+    if let Some(value)=data.split("weather_state:").nth(1) {
+        let value=value.trim_start().trim_start_matches(['\"','\'']);
+        for (i,name) in ["unaffected","exposed","weathered","oxidized"].iter().enumerate() {
+            if value.starts_with(name) {mob.newmobs.oxidation=i as u8;}
+        }
+    }
+    if let Some(age)=int_after(data,"next_weather_age:") { mob.newmobs.waxed=age == -2; mob.newmobs.oxidize_at=i64::from(age.max(0)); }
+
     // Пиглины и хоглины: `IsImmuneToZombification:1b` (чёрный ящик, piglin-stand).
     if let Some(on) = flag_in(data, "IsImmuneToZombification:") {
         mob.nether.immune = on;

@@ -1,0 +1,55 @@
+{
+  "name": "copper-golem-sort",
+  "about": "Unverified: construct a copper golem and chest, load source, sort stone into matching wooden chest.",
+  "track_mobs": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)",
+    "give $(bot) minecraft:carved_pumpkin",
+    "setblock $(3,0,3) minecraft:copper_block",
+    "setblock $(5,0,3) minecraft:chest[facing=north]{Items:[{Slot:0b,id:\"minecraft:stone\",count:1}]}",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        3,
+        0,
+        3
+      ],
+      "face": 1
+    },
+    {
+      "after": 20,
+      "cmd": "item replace block $(3,0,3) container.0 with minecraft:stone 32"
+    },
+    {
+      "after": 260,
+      "click": [
+        5,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 275,
+      "close": true
+    }
+  ],
+  "record_ticks": 300,
+  "cleanup": [
+    "kill @e[type=copper_golem,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "fill $(-8,0,-8) $(12,10,12) minecraft:air",
+    "time set day",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)"
+  ]
+}

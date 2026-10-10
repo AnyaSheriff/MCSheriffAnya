@@ -239,7 +239,7 @@ pub fn enchant_bonus(data: &Data, undead: bool, arthropod: bool) -> f32 {
 /// зачарования оружия бьют по ним сильнее. Виды, которых здесь нет, — ни то
 /// ни другое; при добавлении враждебных мобов список пополняется.
 pub fn mob_traits(kind: &str) -> (bool, bool) {
-    let undead = matches!(kind, "zombie" | "skeleton" | "husk" | "stray" | "drowned" | "zombie_villager" | "zombified_piglin" | "wither_skeleton" | "phantom" | "wither" | "skeleton_horse" | "zombie_horse" | "bogged" | "parched");
+    let undead = matches!(kind, "zombie" | "skeleton" | "husk" | "stray" | "drowned" | "zombie_villager" | "zombified_piglin" | "zoglin" | "wither_skeleton" | "phantom" | "wither" | "skeleton_horse" | "zombie_horse" | "bogged" | "parched");
     let arthropod = matches!(kind, "spider" | "cave_spider" | "silverfish" | "endermite" | "bee");
 
     (undead, arthropod)

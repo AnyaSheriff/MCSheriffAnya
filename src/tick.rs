@@ -934,6 +934,8 @@ impl crate::mob::View for MobView<'_> {
     fn raining(&self) -> bool { !self.0.is_nether() && !self.0.is_end() && self.0.weather.is_raining() }
     fn always_day(&self) -> bool { self.0.is_nether() || self.0.is_end() }
 
+    fn piglin_safe(&self) -> bool { self.0.is_nether() }
+    fn clouds(&self) -> bool { !self.0.is_nether() && !self.0.is_end() }
     fn block(&self, x: i32, y: i32, z: i32) -> i32 {
         self.0.get_block(x, y, z)
     }
@@ -1461,6 +1463,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     sculk_deliver(world, &mut items, rng, &mut || shared.next_entity_id());
     world.wildlife_griefing = shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed);
     crate::hive::tick(world, &mut items, &mut || shared.next_entity_id());
+    crate::mob::newblocks::blocks_tick(world, &mut items, &watchers, spawning && difficulty > 0, rng, &mut || shared.next_entity_id());
 
     // Кошки, что сидят: сундук под ними не открывается (mob/tame.rs).
     world.sitting_cats = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Cat && mob.tame.sitting && !mob.is_dead()).map(|mob| (mob.x, mob.y, mob.z)).collect();
@@ -1497,6 +1500,22 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     crate::mob::tame::bind_owners(items.mobs_mut(), &owners);
     crate::mob::wildlife::bind_trust(items.mobs_mut(), &owners);
 
+    crate::mob::newblocks::copper_tick(world, &mut items, rng);
+    {
+        let riding = shared.riding.lock().expect("учёт седоков");
+        for mob in items.mobs_mut().iter_mut().filter(|m| m.kind == crate::mob::Kind::HappyGhast) {
+            let ridden = !riding.passengers(mob.entity_id).is_empty();
+            if mob.newmobs.ridden != ridden {
+                if !ridden { mob.newmobs.still = 10; }
+                mob.events.push(crate::mob::Event::Sound{name:if ridden {"minecraft:entity.happy_ghast.harness_goggles_down"}else{"minecraft:entity.happy_ghast.harness_goggles_up"},volume:1.0,pitch:1.0});
+                if !ridden {mob.newmobs.home=Some((mob.x,mob.y,mob.z));}
+            }
+            mob.newmobs.ridden = ridden;
+            // «Стоит смирно» считается и у NoAI (чёрный ящик, happy-ghast-ride: 19=true на такт после схода).
+            let near = watchers.iter().any(|p| !p.spectator && (p.x-mob.x).abs() <= 2.0 && (p.z-mob.z).abs() <= 2.0 && p.y >= mob.y+mob.size().1 && p.y < mob.y+mob.size().1+2.0);
+            if ridden {mob.newmobs.still=0;} else if near {mob.newmobs.still=10;} else {mob.newmobs.still=(mob.newmobs.still-1).max(0);}
+        }
+    }
     {
         let riding=shared.riding.lock().expect("седоки");
         for mob in items.mobs_mut().iter_mut().filter(|m| crate::mob::land::rideable(m.kind)) { mob.land.rider=riding.driver(mob.entity_id); }
@@ -2854,6 +2873,10 @@ fn step_bolts(shared: &Shared, dimension: Dimension, world: &mut World) {
                 shared.players.lock().expect("список игроков захвачен другим потоком").order(&uuid,
                     crate::players::Order::Progress(crate::progress::Event::Trigger("adventure/very_very_frightening")));
             }
+        }
+        if mob.kind == crate::mob::Kind::CopperGolem && !mob.newmobs.waxed {
+            mob.newmobs.oxidation=mob.newmobs.oxidation.saturating_sub(1);
+            mob.newmobs.oxidize_at=0;
         }
         mob.hurt(crate::lightning::STRIKE_DAMAGE, crate::survival::Source::Lightning, None);
     }

@@ -683,6 +683,7 @@ pub fn drops_by_luck(state: i32, tool: Option<i32>, luck: f32) -> Option<crate::
         // Вики, Frogspawn/Turtle Egg: икра ничего не роняет; яйцо требует
         // Silk Touch (обрабатывается отдельно при добыче игроком).
         "frogspawn" | "turtle_egg" => return None,
+        "creaking_heart" => return crate::mob::newblocks::heart_drop(state,false,0,luck),
         // Вики, Infested Block: без Silk Touch предмета нет.
         _ if crate::mob::arthropod::host(state).is_some() => return None,
         // Шулкер-ящик выпадает сам вместе с содержимым — предмет собирает

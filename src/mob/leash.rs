@@ -79,7 +79,8 @@ pub fn attach(mob: &mut Mob, holder: Holder) {
 /// mobs»; враждебных — нет) [проверить: полный список].
 pub fn leashable(kind: Kind) -> bool {
     if super::horse::equine(kind) { return true; }
-    !kind.hostile() && !kind.object() && !super::water::fish(kind)
+    // Зоглин на поводок берётся (копия), прочие враждебные — нет.
+    (kind == Kind::Zoglin || !kind.hostile()) && !kind.object() && !super::water::fish(kind)
         && !matches!(kind, Kind::EnderDragon | Kind::Villager | Kind::WanderingTrader | Kind::ZombieVillager | Kind::Turtle | Kind::Tadpole | Kind::Bat)
 }
 
@@ -199,7 +200,8 @@ pub fn bind_knots(mobs: &mut [Mob]) {
 pub fn write_tail(mob: &Mob, out: &mut Vec<u8>) {
     let name = mob.name.as_deref().unwrap_or("");
 
-    out.push(u8::from(mob.name.is_some()) | (u8::from(mob.persistent_tag) << 1));
+    let nether = matches!(mob.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute);
+    out.push(u8::from(mob.name.is_some()) | (u8::from(mob.persistent_tag) << 1) | (u8::from(nether) << 2));
     out.extend_from_slice(&(name.len() as u16).to_be_bytes());
     out.extend_from_slice(name.as_bytes());
 
@@ -217,6 +219,10 @@ pub fn write_tail(mob: &Mob, out: &mut Vec<u8>) {
             }
         }
     }
+    if nether {
+        out.extend_from_slice(&mob.newmobs.outside.to_be_bytes());
+        out.push(u8::from(mob.nether.immune));
+    }
 }
 
 /// Прочитанный хвост.
@@ -224,6 +230,7 @@ pub struct Tail {
     name: Option<String>,
     persistent: bool,
     leash: Option<Holder>,
+    nether: Option<(i32,bool)>,
 }
 
 /// Читает хвост `write_tail`; None — испорчен.
@@ -252,7 +259,8 @@ pub fn read_tail(bytes: &mut &[u8]) -> Option<Tail> {
         _ => return None,
     };
 
-    Some(Tail { name: (flags & 1 != 0).then_some(name), persistent: flags & 2 != 0, leash })
+    let nether=if flags & 4 != 0 {Some((i32::from_be_bytes(take(4)?.try_into().ok()?),take(1)?[0]!=0))} else {None};
+    Some(Tail { name: (flags & 1 != 0).then_some(name), persistent: flags & 2 != 0, leash, nether })
 }
 
 /// Кладёт прочитанный хвост в моба.
@@ -260,6 +268,7 @@ pub fn apply_tail(mob: &mut Mob, tail: Tail) {
     mob.name = tail.name;
     mob.persistent_tag = tail.persistent;
     mob.leash = tail.leash;
+    if let Some((outside,immune))=tail.nether {mob.newmobs.outside=outside;mob.nether.immune=immune;}
 }
 
 /// Бирка: имя мобу (вики, Name Tag: «renames the mob»; чёрный ящик, name-tag:

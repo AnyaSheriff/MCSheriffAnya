@@ -262,6 +262,16 @@ pub(super) fn vehicle_move(payload: &[u8], player: &mut PlayerState, shared: &Sh
         }
         return;
     }
+    if let Some(mob) = items.mobs_mut().iter_mut().find(|m| m.entity_id == vehicle && m.kind == crate::mob::Kind::HappyGhast && !m.is_dead()) {
+        if shared.riding.lock().expect("учёт седоков").driver(vehicle) == Some(player.entity_id) && mob.newmobs.harness.is_some() && !mob.is_baby() {
+            // [проверить] как лодка: движение управляемого транспорта ведёт клиент.
+            mob.x=x; mob.y=y; mob.z=z; mob.yaw=yaw; mob.pitch=pitch;
+            mob.vx=0.0; mob.vy=0.0; mob.vz=0.0;
+            let at=crate::mob::newmobs::seat((x,y,z),yaw,0);
+            player.set_position(at.0,at.1,at.2);
+        }
+        return;
+    }
     let Some(cart) = items.carts_mut().iter_mut().find(|cart| cart.entity_id == vehicle) else {
         return;
     };
@@ -362,15 +372,33 @@ pub(super) async fn send_riding(stream: &mut Outgoing<'_>, shared: &Shared, play
     };
 
     // Транспорт под седоком: где он (лодки и вагонетки — из предметов).
+    let passenger=player.entity_id;
     let place_of = |vehicle: i32| -> Option<Spot> {
         let items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
         items.carts().iter().find(|cart| cart.entity_id == vehicle)
             .map(|cart| ((cart.x, cart.y, cart.z), cart.dims().1, riding::BOAT_SEAT_DROP, cart.yaw))
             .or_else(|| items.mobs().iter().find(|m| m.entity_id == vehicle && !m.is_dead()).map(|m| {
                 let offset = if crate::mob::horse::equine(m.kind) { crate::mob::horse::seat(m).1 - m.y }
-                    else if m.kind == crate::mob::Kind::Camel { if m.land.sitting { 0.8 } else { 1.85 } } else { 1.37 };
+                    else if m.kind == crate::mob::Kind::Camel { if m.land.sitting { 0.8 } else { 1.85 } }
+                    // Радостный гаст: сиденья на спине, место зависит от номера седока (seat_of).
+                    else if m.kind == crate::mob::Kind::HappyGhast { crate::mob::newmobs::GHAST_SEAT_Y } else { 1.37 };
                 ((m.x, m.y, m.z), m.size().1, offset, m.yaw)
             }))
+    };
+
+    // Место седока в транспорте: лодка — своя посадка, радостный гаст — по номеру
+    // седока на спине (newmobs::seat), прочие — выше точки транспорта на offset.
+    let seat_of = |vehicle: i32, at: (f64, f64, f64), offset: f64, yaw: f32| {
+        if offset == riding::BOAT_SEAT_DROP {
+            riding::boat_seat(at)
+        } else if offset == crate::mob::newmobs::GHAST_SEAT_Y {
+            let riding = shared.riding.lock().expect("учёт седоков захвачен другим потоком");
+            let index = riding.passengers(vehicle).iter().position(|id| *id == passenger).unwrap_or(0);
+
+            crate::mob::newmobs::seat(at, yaw, index)
+        } else {
+            (at.0, at.1 + offset, at.2)
+        }
     };
 
     let mut late_exit = false;
@@ -378,8 +406,8 @@ pub(super) async fn send_riding(stream: &mut Outgoing<'_>, shared: &Shared, play
     if mine != player.ride.vehicle {
         match mine {
             Some(vehicle) => {
-                if let Some((at, _, offset, _)) = place_of(vehicle) {
-                    let seat = if offset == riding::BOAT_SEAT_DROP { riding::boat_seat(at) } else { (at.0, at.1 + offset, at.2) };
+                if let Some((at, _, offset, yaw)) = place_of(vehicle) {
+                    let seat = seat_of(vehicle, at, offset, yaw);
 
                     player.ride.vehicle = Some(vehicle);
                     player.set_position(seat.0, seat.1, seat.2);
@@ -396,6 +424,7 @@ pub(super) async fn send_riding(stream: &mut Outgoing<'_>, shared: &Shared, play
                 let side_reach = old.and_then(|vehicle| shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком").mobs().iter()
                     .find(|mob| mob.entity_id == vehicle && crate::mob::horse::equine(mob.kind)).map(|mob| mob.size().0 / 2.0 + 0.3));
                 let exit = match spot {
+                    Some((at, height, offset, _)) if offset == crate::mob::newmobs::GHAST_SEAT_Y => (at.0, at.1 + height, at.2),
                     Some((at, height, _, _)) => {
                         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
@@ -415,10 +444,10 @@ pub(super) async fn send_riding(stream: &mut Outgoing<'_>, shared: &Shared, play
             }
         }
     } else if let Some(vehicle) = player.ride.vehicle
-        && let Some((at, _, offset, _)) = place_of(vehicle)
+        && let Some((at, _, offset, yaw)) = place_of(vehicle)
     {
         // Едет: за транспортом (вагонетка катится сама, лодку ведёт он).
-        let seat = if offset == riding::BOAT_SEAT_DROP { riding::boat_seat(at) } else { (at.0, at.1 + offset, at.2) };
+        let seat = seat_of(vehicle, at, offset, yaw);
 
         if (seat.0 - player.x).abs() + (seat.1 - player.y).abs() + (seat.2 - player.z).abs() > 1.0e-9 {
             // Статистика пути — только у лодок и вагонеток, не у верховых мобов.

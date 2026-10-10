@@ -1,0 +1,46 @@
+{
+  "name": "hoglin-zombify",
+  "about": "Unverified: all three Nether mobs convert outside the Nether after 15 seconds; immune control remains unchanged.",
+  "track_mobs": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon minecraft:hoglin $(1,0,3) {Silent:1b}"
+    },
+    {
+      "after": 0,
+      "cmd": "summon minecraft:piglin $(3,0,3) {Silent:1b}"
+    },
+    {
+      "after": 0,
+      "cmd": "summon minecraft:piglin_brute $(5,0,3) {Silent:1b}"
+    },
+    {
+      "after": 0,
+      "cmd": "summon minecraft:hoglin $(7,0,3) {IsImmuneToZombification:1b,Silent:1b}"
+    }
+  ],
+  "record_ticks": 312,
+  "cleanup": [
+    "kill @e[type=hoglin,distance=..48]",
+    "kill @e[type=piglin,distance=..48]",
+    "kill @e[type=piglin_brute,distance=..48]",
+    "kill @e[type=zoglin,distance=..48]",
+    "kill @e[type=zombified_piglin,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "fill $(-8,0,-8) $(12,10,12) minecraft:air",
+    "time set day",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)"
+  ]
+}

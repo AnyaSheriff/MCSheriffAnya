@@ -142,6 +142,8 @@ pub(super) struct ShownMob {
     /// Наибольшее здоровье, как показано (у волка оно меняется при
     /// приручении — атрибут max_health; чёрный ящик, wolf-tame).
     max_health: f32,
+    harness: Option<u8>,
+    cargo: Option<Stack>,
 
     /// Показана полоса босса (иссушитель): уходит вместе с ним.
     pub(super) boss: bool,
@@ -403,7 +405,25 @@ fn properties(mob: &Mob) -> Vec<Property> {
         // Фантом: размер (свойство 16, по умолчанию 0) [проверить по чёрному ящику, phantom-swoop].
         Kind::Phantom => out.push((16, TYPE_INT, encode_varint(mob.phantom.size))),
         Kind::MagmaCube | Kind::Slime => out.push((16, TYPE_INT, encode_varint(mob.nether.size.max(1)))),
-        Kind::WitherSkeleton | Kind::Silverfish | Kind::Breeze => {}
+        Kind::WitherSkeleton | Kind::Silverfish | Kind::Breeze | Kind::Endermite => {}
+        Kind::Zoglin => out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())])),
+        Kind::CopperGolem => {
+            out.push((16, 38, encode_varint(i32::from(mob.newmobs.oxidation))));
+            // 1 — берёт из сундука-источника, 3 — кладёт в сундук (copper-golem-sort).
+            out.push((17, 37, encode_varint(if mob.newmobs.chest_wait > 0 { if mob.newmobs.cargo.is_some() { 3 } else { 1 } } else { 0 })));
+        }
+        Kind::Creaking => {
+            out.push((16, TYPE_BOOL, vec![u8::from(!mob.newmobs.frozen)]));
+            out.push((17, TYPE_BOOL, vec![u8::from(mob.newmobs.active)]));
+            out.push((18, TYPE_BOOL, vec![u8::from(mob.is_dead())]));
+            let mut home=vec![u8::from(mob.newmobs.heart.is_some())];
+            if let Some((x,y,z))=mob.newmobs.heart { push_packed_position(&mut home,x,y,z); }
+            out.push((19,TYPE_OPT_BLOCK_POS,home));
+        }
+        Kind::HappyGhast => {
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((19, TYPE_BOOL, vec![u8::from(mob.newmobs.still>0)]));
+        }
         Kind::ZombifiedPiglin => out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())])),
         Kind::Piglin => {
             out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.immune)]));
@@ -413,7 +433,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
         }
         Kind::PiglinBrute => out.push((16, TYPE_BOOL, vec![u8::from(mob.nether.immune)])),
         Kind::Hoglin => {
-            out.push((17, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
             out.push((18, TYPE_BOOL, vec![u8::from(mob.nether.immune)]));
         }
         Kind::Strider => {
@@ -501,7 +521,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
         // (сердит), на него смотрят.
         Kind::Enderman => {
             out.push((16, TYPE_OPT_BLOCK_STATE, encode_varint(mob.h.carried.unwrap_or(0))));
-            out.push((17, TYPE_BOOL, vec![u8::from(mob.h.target.is_some())]));
+            out.push((17, TYPE_BOOL, vec![u8::from(mob.h.target.is_some() || mob.newmobs.active)]));
             out.push((18, TYPE_BOOL, vec![u8::from(mob.h.stared_at)]));
         }
         // Шалкер (minecraft-data: attach_face, peek, color).
@@ -622,6 +642,9 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (21, Kind::ZombieVillager) => value.as_slice() == [0],
         (19, Kind::Villager) => value.as_slice() == [crate::villager::PLAINS, crate::villager::NONE, 1],
         (17 | 18 | 20, Kind::Villager) => value.iter().all(|byte| *byte == 0),
+        (16, Kind::Creaking) => value.as_slice() == [1],
+        (17, Kind::CopperGolem) => value.as_slice() == [0],
+        (17..=19, Kind::Creaking) | (16..=19, Kind::HappyGhast) => value.iter().all(|b|*b==0),
         (0 | 4 | 6 | 15 | 16, _) => value.iter().all(|byte| *byte == 0),
         (9, _) => value.as_slice() == float(1.0),
         (10, _) => value.as_slice() == [0],
@@ -737,6 +760,8 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         first: true,
         properties,
         max_health: mob.vitals.max_health,
+        harness: mob.newmobs.harness,
+        cargo: mob.newmobs.cargo,
         boss,
         gear: mob.illager.gear,
         mouth: mob.wild.mouth,
@@ -922,7 +947,7 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     // witch-stand, enderman-stare).
     let modifier = match mob.kind {
         Kind::Witch if mob.h.drinking > 0 => Some(("minecraft:drinking", -0.25, 0)),
-        Kind::Enderman if mob.h.target.is_some() => Some(("minecraft:attacking", crate::mob::hostile::ATTACKING_BONUS, 0)),
+        Kind::Enderman if mob.h.target.is_some() || mob.newmobs.active => Some(("minecraft:attacking", crate::mob::hostile::ATTACKING_BONUS, 0)),
         // Детёныш-зомби быстрее: «minecraft:baby» +50 % базы, операция 1
         // (чёрный ящик, zombie-villager-stand).
         Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk if mob.is_baby() => Some(("minecraft:baby", 0.5, 1)),
@@ -979,7 +1004,7 @@ fn modded(mob: &Mob) -> bool {
     match mob.kind {
         Kind::Witch => mob.h.drinking > 0,
         Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => mob.is_baby(),
-        Kind::Enderman => mob.h.target.is_some(),
+        Kind::Enderman => mob.h.target.is_some() || mob.newmobs.active,
         Kind::Shulker => mob.h.peek == 0,
         _ => false,
     }
@@ -1148,9 +1173,11 @@ async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool)
         }) } else { None };
         return super::send_equipment(stream,mob.entity_id,&[(0,hand)]).await;
     }
-    if slots.is_empty() {
-        return Ok(());
+    if let Some(c)=mob.newmobs.harness && let Some(item)=blocks::item_named(&format!("{}_harness",crate::mob::newmobs::COLOURS[c as usize])) {
+        slots.push((6,Stack::new(item,1)));
     }
+    if let Some(stack)=mob.newmobs.cargo { slots.push((EQUIPMENT_MAIN_HAND,stack)); }
+    if slots.is_empty() { return Ok(()); }
 
     send_equipment_slots(stream, mob.entity_id, &slots).await
 }
@@ -1189,7 +1216,7 @@ async fn send_equipment_slots(stream: &mut Outgoing<'_>, entity_id: i32, slots: 
     // Места идут подряд, старший бит номера — «за этим есть ещё».
     for (index, (slot, stack)) in slots.iter().enumerate() {
         body.push(if index + 1 < slots.len() { *slot | 0x80 } else { *slot });
-        push_slot(&mut body, Some(*stack));
+        push_slot(&mut body, (stack.count > 0).then_some(*stack));
     }
 
     write_body(stream, body).await
@@ -1372,7 +1399,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
                 let fits = |value: i64| i16::try_from(value).is_ok();
                 let whole = Position { x: mob.x, y: mob.y, z: mob.z, yaw: mob.yaw, pitch: mob.pitch, on_ground: mob.on_ground };
 
-                if mob.teleports != shown.teleports || mob.on_ground != shown.on_ground || !(fits(step.0) && fits(step.1) && fits(step.2)) {
+                if mob.teleports != shown.teleports || (mob.kind == Kind::HappyGhast && mob.newmobs.still > 0) || mob.on_ground != shown.on_ground || !(fits(step.0) && fits(step.1) && fits(step.2)) {
                     send_teleport_with_speed(stream, mob.entity_id, whole, speed).await?;
                     (shown.place, shown.grid, shown.yaw, shown.pitch) = (place, grid, yaw, pitch);
                     shown.on_ground = mob.on_ground;
@@ -1486,6 +1513,16 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
             shown.mouth = mob.wild.mouth;
         }
 
+        // Радостный гаст: упряжь и груз медного голема (отдельно от общего снаряжения).
+        if shown.harness != mob.newmobs.harness || shown.cargo != mob.newmobs.cargo {
+            if shown.harness.is_some() && mob.newmobs.harness.is_none() { send_equipment_slots(stream, mob.entity_id, &[(6, Stack::new(0, 0))]).await?; }
+            if shown.cargo.is_some() && mob.newmobs.cargo.is_none() { send_equipment_slots(stream, mob.entity_id, &[(0, Stack::new(0, 0))]).await?; }
+            // В первом проходе снаряжение уже ушло выше (там же и упряжь).
+            if !shown.first { send_mob_equipment(stream, mob, false).await?; }
+            shown.harness = mob.newmobs.harness;
+            shown.cargo = mob.newmobs.cargo;
+        }
+
         shown.first = false;
 
         // Атрибуты: на третьем такте жизни и после каждой правки данных.
@@ -1563,6 +1600,8 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         gear: 0,
         mouth: None,
         held: None,
+        harness: None,
+        cargo: None,
     })
 }
 
@@ -1629,7 +1668,7 @@ async fn send_orb_ticks(stream: &mut Outgoing<'_>, player: &mut PlayerState, orb
 /// начало и середина зарядки арбалета разбойника — «игроки» (чёрный ящик,
 /// pillager-crossbow: loading_start/middle — player, loading_end — hostile).
 fn sound_category(name: &str) -> i32 {
-    const HOSTILE: [&str; 11] = [
+    const HOSTILE: [&str; 14] = [
         "minecraft:entity.wither.",
         "minecraft:entity.slime.",
         "minecraft:entity.phantom.",
@@ -1641,6 +1680,9 @@ fn sound_category(name: &str) -> i32 {
         "minecraft:entity.ravager.",
         "minecraft:item.crossbow.",
         "minecraft:entity.warden.",
+        "minecraft:entity.endermite.",
+        "minecraft:entity.creaking.",
+        "minecraft:entity.zoglin.",
     ];
 
     if matches!(name, "minecraft:item.crossbow.loading_start" | "minecraft:item.crossbow.loading_middle") {
@@ -1763,5 +1805,24 @@ mod horse_tests {
         donkey.horse.chest = true;
         assert!(properties(&donkey).contains(&(19, TYPE_BOOL, vec![1])));
         assert!(!is_default(&(19, TYPE_BOOL, vec![1]), Kind::Donkey));
+    }
+}
+#[cfg(test)]
+mod new_mob_tests {
+    use super::*;
+
+    #[test]
+    fn new_metadata_uses_26_1_serializers() {
+        let mut copper=Mob::new(1,Kind::CopperGolem,(0.0,0.0,0.0));copper.newmobs.oxidation=2;
+        assert!(properties(&copper).contains(&(16,38,encode_varint(2))));
+        assert!(properties(&copper).iter().any(|(index,ty,_)| *index==17 && *ty==37));
+        let mut creaking=Mob::new(2,Kind::Creaking,(0.0,0.0,0.0));creaking.newmobs.frozen=true;creaking.newmobs.heart=Some((-4,64,9));
+        let props=properties(&creaking);
+        assert!(props.contains(&(16,TYPE_BOOL,vec![0])));
+        assert!(!is_default(&(16,TYPE_BOOL,vec![0]),Kind::Creaking));
+        let mut pos=vec![1];push_packed_position(&mut pos,-4,64,9);
+        assert!(props.contains(&(19,11,pos)));
+        let mut happy=Mob::new(3,Kind::HappyGhast,(0.0,0.0,0.0));happy.age = -100;
+        assert!(properties(&happy).contains(&(16,TYPE_BOOL,vec![1])));
     }
 }

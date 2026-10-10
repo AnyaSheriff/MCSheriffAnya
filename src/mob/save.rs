@@ -110,6 +110,11 @@ save_kinds! {
     Parrot => 103,
     Bat => 104,
     Allay => 105,
+    Endermite => 106,
+    Zoglin => 107,
+    Creaking => 108,
+    HappyGhast => 109,
+    CopperGolem => 110,
 }
 
 // 0x7f/0xff раньше не обозначали ни один вид. Теперь за ними идёт u16 BE;
@@ -221,7 +226,9 @@ mod tests {
                 mob.persistent_tag = extended;
                 let mut bytes = Vec::new();
                 mob.write(&mut bytes);
-                assert_eq!(bytes[0], if extended { 0xff } else { 0x7f });
+                // Хоглин и пиглины всегда пишут общий хвост (таймер превращения и иммунитет).
+                let tailed = extended || matches!(kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute);
+                assert_eq!(bytes[0], if tailed { 0xff } else { 0x7f });
                 let mut rest = bytes.as_slice();
                 let loaded = Mob::read(&mut rest).expect("новая запись читается");
                 assert!(rest.is_empty());

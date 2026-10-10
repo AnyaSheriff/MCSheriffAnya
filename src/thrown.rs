@@ -78,6 +78,7 @@ pub enum Kind {
     GhastFireball,
     /// Снежок снежного голема: урона нет (ифриту — 3), отбрасывает (вики, Snowball).
     Snowball,
+    EnderPearl,
     /// Череп иссушителя: урон, иссушение, взрыв силой 1 (mob/wither.rs).
     WitherSkull,
     LlamaSpit,
@@ -134,6 +135,7 @@ impl Flying {
             Kind::SmallFireball => SMALL_FIREBALL_TYPE,
             Kind::GhastFireball => GHAST_FIREBALL_TYPE,
             Kind::Snowball => SNOWBALL_TYPE,
+            Kind::EnderPearl => 44,
             Kind::WitherSkull => WITHER_SKULL_TYPE,
             Kind::LlamaSpit => 79,
             Kind::WindCharge => WIND_CHARGE_TYPE,
@@ -541,6 +543,7 @@ enum Deed {
     Heal(i32, f32),
     Hurt([u8; 16], f32, Option<(i32, [u8; 16])>),
     Progress([u8; 16], crate::progress::Event),
+    Pearl([u8; 16], (f64, f64, f64)),
 }
 
 /// Наложить эффекты `effects` с силой `scale` (срок × `duration_scale`,
@@ -680,7 +683,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             flying.vy = (flying.vy + flying.push.1 * FIREBALL_POWER) * drag;
             flying.vz = (flying.vz + flying.push.2 * FIREBALL_POWER) * drag;
         } else if !flying.is_wind() {
-            flying.vy -= if flying.kind == Kind::Snowball { SNOWBALL_GRAVITY } else { GRAVITY };
+            flying.vy -= if matches!(flying.kind, Kind::Snowball | Kind::EnderPearl) { SNOWBALL_GRAVITY } else { GRAVITY };
             flying.vx *= DRAG;
             flying.vy *= DRAG;
             flying.vz *= DRAG;
@@ -753,6 +756,10 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             best.map(|(part, target)| ((from.0 + (to.0 - from.0) * part, from.1 + (to.1 - from.1) * part, from.2 + (to.2 - from.2) * part), Some(target)))
         } else if entity_first {
             best.map(|(_, target)| (from, Some(target)))
+        } else if flying.kind == Kind::EnderPearl {
+            // Чёрный ящик (endermite-pearl): жемчуг о блок переносит игрока туда, где
+            // стоял в начале хода, а не в точку удара.
+            block.map(|_| (from, None))
         } else {
             block.map(|(part, _)| ((from.0 + (to.0 - from.0) * part, from.1 + (to.1 - from.1) * part, from.2 + (to.2 - from.2) * part), None))
         };
@@ -829,6 +836,19 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             }
 
             winds.push((centre, flying.kind == Kind::BreezeWindCharge));
+            continue;
+        }
+
+        if flying.kind == Kind::EnderPearl {
+            if let Some((_, origin, _, mode, uuid)) = members.iter().find(|m| m.0 == flying.owner) {
+                // Вики, Endermite: 5 %, у игрока ДО переноса, а не у жемчуга.
+                if *mode != 3 && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed) && world.random_unit() < 0.05 {
+                    items.add_mob(crate::mob::Mob::new(shared.next_entity_id(),crate::mob::Kind::Endermite,*origin));
+                }
+                world.note_sound_player_at(at,"minecraft:entity.player.teleport",1.0,1.0);
+                deeds.push(Deed::Pearl(*uuid,at));
+            }
+            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at,-1,0),status:None });
             continue;
         }
 
@@ -1230,6 +1250,11 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             Deed::Heal(id, amount) => world.note_potion_heal(id, amount),
             Deed::Hurt(uuid, amount, owner) => hurts.push((uuid, amount, owner)),
             Deed::Progress(uuid, event) => shared.players.lock().expect("список игроков захвачен другим потоком").order(&uuid, crate::players::Order::Progress(event)),
+            Deed::Pearl(uuid, at) => {
+                let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+                players.order(&uuid, crate::players::Order::Teleport { x: at.0, y: at.1, z: at.2 });
+                players.order(&uuid, crate::players::Order::Hurt { amount: 5.0, source: Source::Fall });
+            }
         }
     }
 

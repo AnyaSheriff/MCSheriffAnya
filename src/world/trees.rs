@@ -29,6 +29,7 @@ pub struct Tree {
     pub shape: Shape,
     /// Под кроной висит пчелиное гнездо: у дубов на равнине, у берёз на лугу.
     pub bees: bool,
+    pub heart: bool,
 }
 
 /// Форма дерева.
@@ -166,6 +167,18 @@ impl Tree {
 
         dirt_under_trunk(&mut blocks);
 
+        // Вики, Creaking Heart: 10 % естественных бледных дубов; саженцы — без сердца.
+        // [проверить] выбор клетки в верхней части ствола.
+        if self.heart {
+            let cell = blocks.iter().rev().find(|(x,y,z,part)| {
+                matches!(part, Part::Log(Axis::Y)) && *y >= 3
+                    && [-1,1].iter().all(|dy| blocks.iter().any(|b| b.0 == *x && b.1 == y+dy && b.2 == *z && b.3 == Part::Log(Axis::Y)))
+            }).map(|b| (b.0,b.1,b.2));
+            if let Some((x,y,z))=cell {
+                blocks.retain(|b| (b.0,b.1,b.2)!=(x,y,z));
+                blocks.push((x,y,z,Part::Block("creaking_heart[axis=y,natural=true,creaking_heart_state=dormant]")));
+            }
+        }
         blocks
     }
 
@@ -1172,7 +1185,7 @@ struct Species {
 /// Порода с таким стволом, кроной, формой и высотой ствола от `low`
 /// до `low + spread + extra - 2`.
 const fn species(log: &'static str, leaves: &'static str, shape: Shape, low: i32, spread: i32, extra: i32) -> Species {
-    Species { tree: Tree { log, leaves, trunk: low, shape, bees: false }, spread, extra }
+    Species { tree: Tree { log, leaves, trunk: low, shape, bees: false, heart: false }, spread, extra }
 }
 
 // Высоты — по замеру: у каждой породы указан замеренный разброс и среднее.
@@ -1360,7 +1373,8 @@ impl Terrain {
         let trunk = species.tree.trunk + roll(&mut random, species.spread) + roll(&mut random, species.extra);
         let bees = fraction(&mut random) < bees;
 
-        Some(Tree { trunk, bees, ..species.tree })
+        let heart = column.biome == Biome::PaleGarden && fraction(&mut random) < 0.1;
+        Some(Tree { trunk, bees, heart, ..species.tree })
     }
 }
 
@@ -1418,6 +1432,15 @@ const DENSEST_FOREST: f64 = 0.06;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pale_oak_heart_is_opt_in_and_supported_by_vertical_logs() {
+        let grown=PALE_OAK.tree.blocks(11,7);
+        assert!(!grown.iter().any(|b| matches!(b.3,Part::Block(s) if s.starts_with("creaking_heart"))));
+        let natural=Tree {heart:true,..PALE_OAK.tree}.blocks(11,7);
+        let heart=natural.iter().find(|b| matches!(b.3,Part::Block(s) if s.starts_with("creaking_heart"))).expect("сердце естественного дерева");
+        for dy in [-1,1] {assert!(natural.iter().any(|b| (b.0,b.1,b.2)==(heart.0,heart.1+dy,heart.2) && b.3==Part::Log(Axis::Y)));}
+    }
 
     /// Семя мира решает, где стоят деревья: в двух мирах места разные,
     /// в одном и том же — одинаковые.
