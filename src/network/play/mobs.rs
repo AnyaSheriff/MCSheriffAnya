@@ -932,7 +932,7 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     // Железный шлем на мобе: к скорости добавляются стойкость и броня с
     // модификатором «minecraft:armor.helmet» (0 и +2) — чёрный ящик,
     // stray-slowness, bogged-shear.
-    body.extend_from_slice(&encode_varint(if dolphin { 2 } else if mob.h.helmet { 3 } else { 1 }));
+    body.extend_from_slice(&encode_varint(if dolphin { 2 } else if mob.h.helmet || mob.h.trial_gear.is_some() { 3 } else { 1 }));
     if dolphin && !mob.is_baby() {
         body.extend_from_slice(&encode_varint(ATTRIBUTE_OXYGEN_BONUS));
         push_f64(&mut body, 0.0);
@@ -956,7 +956,11 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
 
     push_modifiers(&mut body, modifier);
 
-    if mob.h.helmet {
+    if let Some(gear)=&mob.h.trial_gear {
+        for (attribute,amount) in [(ATTRIBUTE_ARMOR_TOUGHNESS,crate::mob::trial_gear::bonus(gear,crate::attributes::ARMOR_TOUGHNESS)),(ATTRIBUTE_ARMOR,mob.armor())] {
+            body.extend_from_slice(&encode_varint(attribute));push_f64(&mut body,f64::from(amount));push_modifiers(&mut body,None);
+        }
+    } else if mob.h.helmet {
         for (attribute, amount) in [(ATTRIBUTE_ARMOR_TOUGHNESS, 0.0), (ATTRIBUTE_ARMOR, 2.0)] {
             body.extend_from_slice(&encode_varint(attribute));
             push_f64(&mut body, 0.0);
@@ -1101,6 +1105,7 @@ pub(super) async fn send_mob_event(
 /// шлем на голове (место 5) — по одному пакету на моба; шлем показывается
 /// железным [проверить: вид шлема не хранится].
 async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool) -> io::Result<()> {
+    if let Some(gear)=&mob.h.trial_gear {return send_equipment(stream,mob.entity_id,&[(0,gear[0]),(4,gear[1]),(5,gear[2])]).await;}
     // Лиса с пустым ртом снаряжения не шлёт (чёрный ящик, fox-feed, fox-hit).
     if mob.kind == Kind::Fox { return if mob.wild.mouth.is_some() { send_fox_hand(stream, mob).await } else { Ok(()) }; }
     if crate::mob::horse::equine(mob.kind) {

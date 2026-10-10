@@ -1661,72 +1661,7 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 mod damage_command;
 
 fn damage(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
-    // Формы `at <x> <y> <z>` и `by … from …` (прямой виновник и причина
-    // раздельно) ведёт damage_command; прежние формы — ниже, как были.
-    if parts.get(3).copied() == Some("at") || (parts.get(3).copied() == Some("by") && parts.get(5).copied() == Some("from")) {
-        return damage_command::run(parts, source, shared);
-    }
-
-    let (Some(who), Some(amount)) = (parts.first(), parts.get(1).and_then(|amount| amount.parse::<f32>().ok()).map(|amount| amount.max(0.0))) else {
-        return Answer::saying("Нужно: damage <кто> <сколько> [minecraft:generic|minecraft:explosion|minecraft:player_attack]".to_string());
-    };
-    let kind = match parts.get(2).map(|kind| kind.trim_start_matches("minecraft:")) {
-        Some("explosion") => crate::survival::Source::Explosion,
-        Some("sonic_boom") => crate::survival::Source::SonicBoom,
-        Some("player_attack") => crate::survival::Source::PlayerAttack,
-        _ => crate::survival::Source::Generic,
-    };
-
-    if !who.starts_with("@e") {
-        let targets = find_targets(who, source, shared);
-        let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
-
-        for (uuid, _) in &targets {
-            players.order(uuid, Order::Hurt { amount, source: kind });
-        }
-
-        return Answer::saying(format!("Нанесён урон: {}", names_of(&targets)));
-    }
-
-    let Some(chosen) = Selector::parse(who) else {
-        return Answer::saying("Не понял, кому наносить урон".to_string());
-    };
-    // `… by <игрок>`: виновник — этот игрок, моба отбрасывает от него на 0,4
-    // (чёрный ящик squid-ink, axolotl-play-dead: damage … player_attack by).
-    let attacker = (parts.get(3).copied() == Some("by")).then(|| parts.get(4).copied()).flatten().and_then(|name| {
-        shared.players.lock().expect("список игроков захвачен другим потоком").find(name).map(|member| (member.entity_id, member.position.x, member.position.z))
-    });
-    let origin = origin_of(source, shared);
-    let dimension = dimension_of(source, shared);
-    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
-    let mut left = chosen.limit.unwrap_or(usize::MAX);
-    let mut hurt = 0;
-
-    for mob in items.mobs_mut() {
-        // Дракону команда нипочём: урон он берёт только частями — от игрока
-        // и взрыва (чёрный ящик, dragon-probe: ни generic, ни player_attack,
-        // ни explosion, ни out_of_world его не берут).
-        if mob.kind == crate::mob::Kind::EnderDragon {
-            continue;
-        }
-
-        if left > 0 && chosen.takes(mob.kind.name()) && chosen.reaches(origin, (mob.x, mob.y, mob.z)) && !mob.is_dead() {
-            let push = attacker.map(|(id, ax, az)| {
-                let (dx, dz) = (mob.x - ax, mob.z - az);
-                let len = (dx * dx + dz * dz).sqrt();
-
-                crate::mob::Push { dir: if len > 1.0e-4 { (dx / len, dz / len) } else { (0.0, 0.0) }, strength: 0.4, cause: id }
-            });
-
-            mob.hurt(amount, kind, push);
-            left -= 1;
-            hurt += 1;
-        }
-    }
-
-    items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
-
-    Answer::saying(format!("Нанесён урон сущностям: {hurt}"))
+    damage_command::run(parts, source, shared)
 }
 
 /// `difficulty <peaceful|easy|normal|hard>` — сложность на ходу.
@@ -2204,7 +2139,8 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
     let trial = matches!(blocks::state_from_text(block).and_then(blocks::block_at_state), Some("trial_spawner" | "vault"));
     let hive = blocks::state_from_text(block).is_some_and(crate::hive::is_hive);
     if let Some(text) = data.filter(|_| hive) && crate::hive::from_snbt(text).is_none() { return Answer::saying("Не понял данные улья".into()); }
-    let command_block_or_spawner = command_block || spawner || trial || hive;
+    let brushable = blocks::state_from_text(block).is_some_and(crate::archaeology::suspicious);
+    let command_block_or_spawner = command_block || spawner || trial || hive || brushable;
     let items = match data.filter(|_| !command_block_or_spawner).map(crate::containers::items_from_text) {
         Some(Some(items)) => Some(items),
         Some(None) => return Answer::saying(format!("Не понял данные блока: {}", data.unwrap_or(""))),
@@ -2297,6 +2233,10 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
                     for bee in &mut data.bees { bee.ticks-=1; }
                     world.with_hive(x,y,z,|h|*h=data);
                     if !placed.contains(&(x,y,z)) { changed+=1; }
+                }
+
+                if crate::archaeology::suspicious(state) && let Some(text)=data && let Some(loot)=crate::archaeology::from_snbt(text) {
+                    world.with_archaeology((x,y,z),|d|*d=loot);
                 }
 
                 // Спавнер с данными: поля из SNBT; клиентам — данные блока, как

@@ -29,7 +29,7 @@
 // Сундук башни — chests/pillager_outpost (поле LootTable у экземпляров).
 // В клетке feature_cage1 — железный голем (замер: 4 из 4; вики: «An iron
 // golem has a 85% chance of spawning»), в клетке с аллаями — по два аллая
-// (замер; аллаев у нас пока нет). Разбойники появляются в области 72×58×72
+// (замер); число 1–3 берётся по вики. Разбойники появляются в области 72×58×72
 // вокруг верхнего яруса башни (вики: «centered on the top level of the
 // watchtower, the same level as the chest … extends 28 blocks upward and 30
 // blocks downward») — `inside`.
@@ -383,6 +383,24 @@ pub fn golems(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> 
     out
 }
 
+/// Вики, Allay: «one to three allays» в клетке аванпоста.
+/// [проверить] распределение числа и координаты внутри замеренного шаблона.
+pub fn allays(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(f64,f64,f64)> {
+    near(terrain,chunk_x,chunk_z).into_iter().flat_map(|(sx,sz)|allays_in(terrain.seed(),&plan_cached(terrain,sx,sz),chunk_x,chunk_z)).collect()
+}
+fn allays_in(seed:i64,pieces:&[Placed],chunk_x:i32,chunk_z:i32)->Vec<(f64,f64,f64)> {
+    let mut out=Vec::new();
+    for piece in pieces {
+        if library().templates[piece.template].name!="feature_cage_with_allays" {continue;}
+        let b=piece.bounds;
+        let (x,z)=(f64::from(b[0]+b[2]+1)/2.0,f64::from(b[1]+b[3]+1)/2.0);
+        if (x.floor() as i32).div_euclid(16)!=chunk_x || (z.floor() as i32).div_euclid(16)!=chunk_z {continue;}
+        let count=1+template::roll(seed,b[0],b[1],0x0B62)%3;
+        for _ in 0..count {out.push((x,f64::from(piece.origin.1)+1.0,z));}
+    }
+    out
+}
+
 /// Середина верхнего яруса башни аванпоста со стартом в чанке.
 fn top_of(terrain: &super::terrain::Terrain, start_x: i32, start_z: i32) -> Option<(i32, i32, i32)> {
     let library = library();
@@ -573,4 +591,23 @@ mod tests {
             assert!((195..=225).contains(&(counts[2] + counts[3])), "булыжник {}", counts[2] + counts[3]);
         }
     }
+    #[test]
+    fn each_generated_allay_cage_has_one_to_three_captives_in_its_chunk() {
+        let seed=100_554_032_945_340;
+        let mut cages=0;
+        for sx in -32..32 {
+            let pieces=plan(seed,sx,0,&|_,_|64);
+            for p in &pieces {
+                if library().templates[p.template].name!="feature_cage_with_allays" {continue;}
+                let b=p.bounds;let x=f64::from(b[0]+b[2]+1)/2.0;let z=f64::from(b[1]+b[3]+1)/2.0;
+                let cx=(x.floor() as i32).div_euclid(16);let cz=(z.floor() as i32).div_euclid(16);
+                let all=allays_in(seed,&pieces,cx,cz);
+                let count=all.iter().filter(|at|at.0==x && at.2==z && at.1==f64::from(p.origin.1)+1.0).count();
+                assert!((1..=3).contains(&count));cages+=1;
+                assert!(!allays_in(seed,&pieces,cx+1,cz).iter().any(|at|at.0==x && at.2==z));
+            }
+        }
+        assert!(cages>0);
+    }
+
 }

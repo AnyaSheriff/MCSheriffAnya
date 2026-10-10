@@ -255,6 +255,8 @@ pub fn damage_cause(source: Source) -> i32 {
         // [Bedrock: потом] отдельный вид высыхания.
         // [Bedrock: потом] причина замерзания не сверена.
         Source::DryOut | Source::Generic | Source::GenericKill | Source::FlyIntoWall | Source::Freeze => -1,
+        // [Bedrock: потом] новые Java damage_type пока имеют общую причину.
+        _ => -1,
     }
 }
 

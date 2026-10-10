@@ -122,7 +122,7 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         {
             drops.push(Stack::new(item, 1).with_extras(crate::stackdata::Data { potion: crate::survival::potion_number(potion), ..Default::default() }));
         }
-        if mob.h.bow && rng.unit() < f64::from(mob.h.hand_drop) + f64::from(looting) * 0.01
+        if mob.h.trial_gear.is_none() && mob.h.bow && rng.unit() < f64::from(mob.h.hand_drop) + f64::from(looting) * 0.01
             && let Some(item) = blocks::item_named("bow")
         {
             drops.push(Stack::new(item, 1).with_extras(crate::stackdata::Data { damage: 326 + rng.below(58) as i32, ..Default::default() }));

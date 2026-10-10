@@ -44,6 +44,8 @@ mod arrow;
 mod thrown;
 mod wind;
 mod trial;
+mod archaeology;
+mod ominous;
 mod firework;
 mod ender_eye;
 mod loot;

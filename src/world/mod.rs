@@ -449,6 +449,7 @@ struct Chunk {
     /// Таблички с текстом (sign.rs): место внутри чанка.
     signs: HashMap<(i32, i32, i32), crate::sign::Data>,
     hives: HashMap<(i32, i32, i32), crate::hive::Data>,
+    archaeology: HashMap<(i32,i32,i32),crate::archaeology::Data>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
@@ -545,6 +546,7 @@ impl Chunk {
             trials: HashMap::new(),
             signs: HashMap::new(),
             hives: HashMap::new(),
+            archaeology: HashMap::new(),
         }
     }
 
@@ -982,6 +984,12 @@ impl Chunk {
             }
         }
 
+        if name!=was {
+            let place=(x.rem_euclid(CHUNK_SIZE),y,z.rem_euclid(CHUNK_SIZE));
+            if crate::archaeology::suspicious(state) {self.archaeology.insert(place,crate::archaeology::Data::default());}
+            else {self.archaeology.remove(&place);}
+        }
+
         // Динамит сменился чем-то другим — вид его больше не нужен.
         if !self.custom_tnt.is_empty() && !crate::tnt::is_tnt(state) {
             let place = (x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE));
@@ -1163,6 +1171,7 @@ pub struct World {
     pub fire_difficulty: u8,
     /// Ноты для тихонь и вылупившиеся нюхачи (mob/small_world.rs).
     pub allay_notes: Vec<(i32, i32, i32)>,
+    pub ominous_births:Vec<(crate::inventory::Stack,(f64,f64,f64))>,
     pub snifflet_births: Vec<(i32, i32, i32)>,
     /// Состояние генератора случайных чисел — см. `random_unit`.
     noise: u32,
@@ -1481,6 +1490,7 @@ impl World {
             fire_difficulty: 2,
             noise: 0x9E37_79B9,
             allay_notes: Vec::new(),
+            ominous_births:Vec::new(),
             snifflet_births: Vec::new(),
             actor: None,
             blast_source: 0,
@@ -1636,6 +1646,7 @@ impl World {
             fire_tick: true,
             fire_difficulty: 2,
             allay_notes: Vec::new(),
+            ominous_births:Vec::new(),
             snifflet_births: Vec::new(),
             noise: 0x9E37_79B9 ^ std::process::id(),
             actor: None,
@@ -2184,6 +2195,15 @@ impl World {
     /// Данные спавнеров чанка для пакета чанка: место внутри чанка и NBT.
     pub fn chunk_spawners(&self, chunk_x: i32, chunk_z: i32) -> Vec<((i32, i32, i32), Vec<u8>)> {
         self.chunks.get(&(chunk_x, chunk_z)).map(|chunk| chunk.spawners.iter().map(|(&place, data)| (place, data.nbt())).collect()).unwrap_or_default()
+    }
+
+    pub fn with_archaeology<R>(&mut self, at:(i32,i32,i32), change:impl FnOnce(&mut crate::archaeology::Data)->R)->Option<R> {
+        let chunk=self.chunks.get_mut(&chunk_key(at.0,at.2))?;
+        let data=chunk.archaeology.get_mut(&(at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)))?;
+        let result=change(data);self.dirty.insert(chunk_key(at.0,at.2));Some(result)
+    }
+    pub fn archaeology_places(&self)->Vec<(i32,i32,i32)> {
+        self.chunks.iter().flat_map(|(&(cx,cz),c)|c.archaeology.iter().filter(|(_,d)|d.strokes>0 && d.last.is_some()).map(move |(&(x,y,z),_)|(cx*16+x,y,cz*16+z))).collect()
     }
 
     /// Испытательный спавнер или хранилище в этом месте (trial.rs).
@@ -3353,6 +3373,12 @@ impl World {
         self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch, exact: None, of_block: true, of_player: false, except: None }));
     }
 
+    /// Звук блока всем, кроме игрока `except` (кисть: сам чистящий его не
+    /// слышит — чёрный ящик, brush-sand).
+    pub fn note_sound_except(&mut self, (x, y, z): (i32, i32, i32), name: &'static str, volume: f32, pitch: f32, except: i32) {
+        self.events.push(WorldEvent::Sound(WorldSound { x, y, z, name, volume, pitch, exact: None, of_block: true, of_player: false, except: Some(except) }));
+    }
+
     /// Звук блока, вызванный рукой игрока (`actor`): всем, кроме него.
     pub fn note_sound_by_hand(&mut self, x: i32, y: i32, z: i32, name: &'static str, volume: f32, pitch: f32) {
         let except = self.actor;
@@ -4203,6 +4229,13 @@ impl World {
     pub fn outpost_golems(&self, chunk_x: i32, chunk_z: i32) -> Vec<(f64, f64, f64)> {
         match &*self.generator {
             Generator::Normal(terrain) => pillager_outpost::golems(terrain, chunk_x, chunk_z),
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn outpost_allays(&self, chunk_x: i32, chunk_z: i32) -> Vec<(f64,f64,f64)> {
+        match &*self.generator {
+            Generator::Normal(terrain) => pillager_outpost::allays(terrain,chunk_x,chunk_z),
             _ => Vec::new(),
         }
     }

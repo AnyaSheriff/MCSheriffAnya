@@ -95,7 +95,7 @@ fn a_phantom_circles_swoops_bites_and_waits_72_ticks() {
     // Чёрный ящик, phantom-swoop: звук пике на 27-м такте.
     assert_eq!(swooped, Some(27));
     assert!(bite.is_some(), "фантом укусил");
-    assert_eq!(phantom.phantom.wait, 72);
+    assert!(phantom.phantom.wait >= ph::BITE_WAIT);
     assert_eq!(phantom.phantom.phase, ph::Phase::Circle);
 }
 
@@ -159,4 +159,26 @@ fn a_sitting_cat_blocks_the_chest_under_it() {
 
     assert!(world.cat_sits_above(2, 0, 0));
     assert!(!world.cat_sits_above(5, 0, 0));
+}
+
+#[test]
+fn damage_interrupts_swoop_and_cats_prevent_contact_damage() {
+    let mut m=Mob::new(7,Kind::Phantom,(0.5,1.0,0.5));
+    m.phantom.phase=ph::Phase::Swoop;m.phantom.target=Some(1);m.vy = -0.4;
+    m.hurt(1.0,crate::survival::Source::Generic,None).unwrap();
+    assert_eq!(m.phantom.phase,ph::Phase::Circle);assert!(m.vy>0.0);
+    m.phantom.phase=ph::Phase::Swoop;
+    let players=[survivor(1,(0.5,1.0,0.5))];
+    let cats=[ai::Mate {id:9,kind:Kind::Cat,x:1.5,y:1.0,z:0.5,love:0,baby:false,ready:false,tamed:false}];
+    let ctx=ai::Ctx {players:&players,mates:&cats,difficulty:2,sky:4,sun_up:false};
+    assert!(ph::think(&mut m,&Flat::new(),&ctx,&mut Rng::new(3),ai::Plan::default()).melee.is_none());
+    assert_eq!(m.phantom.phase,ph::Phase::Circle);
+}
+#[test]
+fn creepers_flee_ocelots_without_a_player_target() {
+    let mut m=Mob::new(5,Kind::Creeper,(4.5,1.0,0.5));m.on_ground=true;
+    let cats=[ai::Mate {id:9,kind:Kind::Ocelot,x:2.5,y:1.0,z:0.5,love:0,baby:false,ready:false,tamed:false}];
+    let ctx=ai::Ctx {players:&[],mates:&cats,difficulty:2,sky:4,sun_up:false};
+    for _ in 0..40 {m.tick(&Flat::new(),&ctx,&mut Rng::new(4));}
+    assert!(m.x>5.5);assert_eq!(m.h.fuse,0);
 }

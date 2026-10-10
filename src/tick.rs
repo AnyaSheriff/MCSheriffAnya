@@ -1013,7 +1013,20 @@ pub fn store_mobs(shared: &Shared, dimension: Dimension, world: &mut World) {
 /// Раз в 200 тактов моб записывается в свой чанк.
 fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut crate::mob::Rng, ticks: u64) {
     let loaded = world.take_loaded_mobs();
+    crate::archaeology::decay(world,*shared.ticks.borrow());
     let fresh = world.take_new_chunks();
+    if dimension==Dimension::Overworld {
+        let mut maps=shared.maps.lock().expect("карты");
+        for &(cx,cz) in &fresh {
+            for (x,y,z,_) in world.chunk_containers(cx,cz) {
+                let (x,z)=(cx*16+x,cz*16+z);
+                let Some(mut slots)=world.container(x,y,z).map(|c|c.slots.clone()) else {continue;};
+                let mut changed=false;
+                for stack in slots.iter_mut().flatten() { changed |= crate::maps::resolve_explorer(stack,&mut maps,world,(x,z)); }
+                if changed {world.with_container(x,y,z,|c|c.slots=slots);}
+            }
+        }
+    }
 
     // Список игроков берётся до замка предметов: два замка разом не держим.
     let watchers = watchers(shared, dimension);
@@ -1263,9 +1276,14 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     // Клетки аванпостов: железный голем (вики, Pillager Outpost: «An iron
     // golem has a 85% chance of spawning»; замер entities), не исчезает.
-    // Аллаев у нас пока нет — клетка с аллаями пустая [проверить].
+    // Аллаи появляются с клетками один раз, в том числе на мирной сложности.
     if dimension == Dimension::Overworld {
         for (chunk_x, chunk_z) in &fresh {
+            for at in world.outpost_allays(*chunk_x, *chunk_z) {
+                let mut allay=crate::mob::Mob::new(shared.next_entity_id(),crate::mob::Kind::Allay,at);
+                allay.persistent=true; allay.persistent_tag=true;
+                items.add_mob(allay);
+            }
             for at in world.outpost_golems(*chunk_x, *chunk_z) {
                 let mut golem = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::IronGolem, at);
 
@@ -1280,10 +1298,11 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     // замера (mansion.rs; вики, Woodland Mansion: «Once all the vindicators
     // and evokers are killed … they do not respawn»), не исчезают; на мирной
     // сложности их нет.
-    if dimension == Dimension::Overworld && difficulty > crate::survival::PEACEFUL {
+    if dimension == Dimension::Overworld {
         for (chunk_x, chunk_z) in &fresh {
             for (at, kind) in world.mansion_dwellers(*chunk_x, *chunk_z) {
-                let kind = if kind == "evoker" { crate::mob::Kind::Evoker } else { crate::mob::Kind::Vindicator };
+                let kind = match kind { "allay"=>crate::mob::Kind::Allay,"evoker"=>crate::mob::Kind::Evoker,_=>crate::mob::Kind::Vindicator };
+                if kind.hostile() && difficulty==crate::survival::PEACEFUL {continue;}
                 let mut illager = crate::mob::Mob::new(shared.next_entity_id(), kind, at);
 
                 illager.persistent = true;
@@ -1627,6 +1646,9 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         let mut arrow = crate::arrow::Arrow::from_mob(shared.next_entity_id(), dimension, fired.shot.from, velocity, fired.shooter, killer);
 
         arrow.effects.extend(crate::mob::skeleton::arrow_effect(fired.kind));
+        if let Some(gear)=items.mobs().iter().find(|m|m.entity_id==fired.shooter).and_then(|m|m.h.trial_gear) && let Some(bow)=gear[0] {
+            arrow.power=bow.extras().level("power");arrow.punch=bow.extras().level("punch");
+        }
 
         // Стрела из арбалета разбойника (чёрный ящик, pillager-crossbow:
         // item.crossbow.hit при попадании).
@@ -1884,6 +1906,7 @@ fn barter(items: &mut items::Items, shared: &Shared, watchers: &[crate::mob::ai:
 /// Такт испытательных спавнеров и хранилищ: игроки рядом, мобы волны,
 /// выброшенная награда (trial.rs).
 fn step_trials(shared: &Shared, world: &mut World, items: &mut items::Items, dimension: Dimension, difficulty: u8, rng: &mut crate::mob::Rng) {
+    crate::ominous::step(shared,world,dimension,*shared.ticks.borrow(),rng);
     if world.trial_places().is_empty() {
         return;
     }
@@ -1910,9 +1933,11 @@ fn step_trials(shared: &Shared, world: &mut World, items: &mut items::Items, dim
     let mut drops: Vec<crate::trial::Ejected> = Vec::new();
     let states: std::collections::HashMap<i32, bool> = items.mobs().iter().map(|mob| (mob.entity_id, !mob.is_dead())).collect();
 
+    let mob_targets:Vec<_>=items.mobs().iter().filter(|m|!m.is_dead()).map(|m|(m.entity_id,(m.x,m.y,m.z))).collect();
     crate::trial::step(
         world,
         &visitors,
+        &mob_targets,
         now,
         can_spawn,
         rng,
@@ -1925,6 +1950,7 @@ fn step_trials(shared: &Shared, world: &mut World, items: &mut items::Items, dim
             mob.head_yaw = 0.0;
             mob.no_ai = spawn.no_ai;
             mob.silent = spawn.silent;
+            if spawn.ominous && !spawn.bare {let seed=now ^ mob.entity_id as u64;crate::mob::trial_gear::equip(&mut mob,&mut crate::mob::Rng::new(seed));}
             // Мобы испытаний не исчезают (вики: «do not naturally despawn»).
             mob.persistent = true;
 

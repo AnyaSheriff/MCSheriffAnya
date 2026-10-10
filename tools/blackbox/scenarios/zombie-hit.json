@@ -4,6 +4,8 @@
  "blocks": [],
  "setup": [
   "difficulty normal",
+  "time set midnight",
+  "weather clear",
   "gamemode survival $(bot)",
   "clear $(bot)",
   "give $(bot) minecraft:diamond_sword 1",
@@ -36,6 +38,7 @@
  ],
  "record_ticks": 140,
  "cleanup": [
+  "time set noon",
   "kill @e[type=zombie,distance=..48]",
   "kill @e[type=skeleton,distance=..48]",
   "kill @e[type=creeper,distance=..48]",

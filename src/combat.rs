@@ -30,13 +30,10 @@ pub enum Outcome {
 pub fn final_damage(view: &CombatView, damage: f32, source: Source) -> f32 {
     let damage = crate::survival::after_resistance(damage, view.resistance, source);
 
-    if bypasses_armor(source) {
-        return damage;
-    }
-
+    if matches!(source,Source::OutOfWorld|Source::GenericKill|Source::Starve|Source::SonicBoom) {return damage;}
     let points = view.protection + if source.is_projectile() { view.projectile_protection } else { 0 };
-
-    after_protection(after_armor(damage, view.armor, view.toughness), points)
+    let damage=if bypasses_armor(source) {damage} else {after_armor(damage,view.armor,view.toughness)};
+    after_protection(damage, points)
 }
 
 /// Предсказание исхода удара `damage` из точки `from` по жертве, которая
@@ -335,10 +332,15 @@ pub fn breach_scale(level: i32) -> f32 {
 // Броня
 // ---------------------------------------------------------------------------
 
-/// Виды урона, которые броня и её зачарования не смягчают (вики, Armor:
-/// «Armor does not protect against»).
+/// Вики, Damage type tag (Java Edition), bypasses_armor: 19 видов.
+/// Огонь блока, костёр и лава бронёй смягчаются; горение — нет.
+/// [проверить] сверка с 26.1.2 без выгрузки тегов оригинала.
 pub fn bypasses_armor(source: Source) -> bool {
-    matches!(source, Source::SonicBoom | Source::Thorns | Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::InWall | Source::Generic | Source::OutsideBorder | Source::Freeze)
+    matches!(source, Source::Cramming | Source::DragonBreath | Source::Drown
+        | Source::EnderPearl | Source::Fall | Source::FlyIntoWall | Source::Freeze
+        | Source::Generic | Source::GenericKill | Source::InWall | Source::IndirectMagic
+        | Source::Magic | Source::OnFire | Source::OutOfWorld | Source::OutsideBorder
+        | Source::SonicBoom | Source::Stalagmite | Source::Starve | Source::Wither)
 }
 
 /// Урон после брони и твёрдости (вики, Armor): `урон · (1 − min(20,
@@ -370,18 +372,18 @@ pub fn thorns_damage(_level: i32, roll: f32) -> f32 {
 pub fn protection_points(data: &Data, source: Source) -> i32 {
     let mut points = 0;
 
-    if !bypasses_armor(source) {
+    if !matches!(source,Source::OutOfWorld|Source::GenericKill|Source::Starve|Source::SonicBoom) {
         points += data.level("protection");
     }
 
     match source {
-        Source::InFire | Source::Campfire | Source::Lava | Source::OnFire => points += 2 * data.level("fire_protection"),
+        Source::InFire | Source::Campfire | Source::Lava | Source::OnFire | Source::HotFloor => points += 2 * data.level("fire_protection"),
         // Ракета — тоже взрыв (тег is_explosion; вики, Blast Protection) [проверить].
-        Source::Explosion | Source::Fireworks => points += 2 * data.level("blast_protection"),
-        Source::Arrow | Source::Trident => points += 2 * data.level("projectile_protection"),
+        Source::Explosion | Source::PlayerExplosion | Source::BadRespawnPoint | Source::Fireworks => points += 2 * data.level("blast_protection"),
+        Source::Arrow | Source::Trident | Source::MobProjectile | Source::Thrown | Source::WitherSkull | Source::Spit => points += 2 * data.level("projectile_protection"),
         // Огненный шар — огонь и снаряд сразу (теги is_fire, is_projectile).
-        Source::Fireball => points += 2 * data.level("fire_protection") + 2 * data.level("projectile_protection"),
-        Source::Fall => points += 3 * data.level("feather_falling"),
+        Source::Fireball | Source::UnattributedFireball => points += 2 * data.level("fire_protection") + 2 * data.level("projectile_protection"),
+        Source::Fall | Source::EnderPearl | Source::Stalagmite => points += 3 * data.level("feather_falling"),
         _ => {}
     }
 
@@ -785,7 +787,7 @@ mod tests {
 
         assert_eq!(protection_points(&data, Source::PlayerAttack), 4);
         assert_eq!(protection_points(&data, Source::Lava), 12);
-        assert_eq!(protection_points(&data, Source::Fall), 0);
+        assert_eq!(protection_points(&data, Source::Fall), 4);
     }
 
     #[test]
@@ -890,8 +892,13 @@ mod tests {
     }
 
     #[test]
-    fn thorns_ignore_armor() {
-        assert!(bypasses_armor(Source::Thorns));
+    fn armor_tags_distinguish_burning_from_contact_fire() {
+        for source in [Source::Thorns,Source::InFire,Source::Campfire,Source::Lava,Source::HotFloor,Source::Trident,Source::Cactus] {
+            assert!(!bypasses_armor(source), "{source:?}");
+        }
+        for source in [Source::OnFire,Source::Magic,Source::IndirectMagic,Source::Freeze,Source::Cramming,Source::DragonBreath,Source::EnderPearl,Source::Stalagmite] {
+            assert!(bypasses_armor(source), "{source:?}");
+        }
     }
 }
 

@@ -1,0 +1,71 @@
+{
+ "name": "brush-sand",
+ "about": "[проверить] Brushing, interrupted progress decay, loot and durability; not recorded.",
+ "exclusive": true,
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    2
+   ],
+   "state": "minecraft:suspicious_sand{LootTable:\"minecraft:archaeology/desert_pyramid\"}"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "tp $(bot) $(0.5,0,0.5)",
+  "gamemode survival $(bot)",
+  "!stopfly"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "give $(bot) brush"
+  },
+  {
+   "after": 10,
+   "click": [
+    0,
+    0,
+    2
+   ]
+  },
+  {
+   "after": 11,
+   "use": true
+  },
+  {
+   "after": 50,
+   "release": true
+  },
+  {
+   "after": 110,
+   "use": true
+  },
+  {
+   "after": 230,
+   "release": true
+  }
+ ],
+ "record_ticks": 260,
+ "cleanup": [
+  "kill @e[type=!player,distance=..48]",
+  "effect clear $(bot)",
+  "clear $(bot)",
+  "gamemode creative $(bot)",
+  "difficulty peaceful",
+  "fill $(-10,0,-10) $(10,12,10) minecraft:air",
+  "gamerule random_tick_speed 3",
+  "gamerule mob_griefing true",
+  "time set noon",
+  "!startfly"
+ ],
+ "inventory": true,
+ "item_components": true
+}

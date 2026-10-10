@@ -52,8 +52,10 @@ fn free(view: &dyn View, (x, y, z): Cell) -> bool {
 
 /// Можно ли стоять в клетке: клетка и клетка над ней свободны, под ногами —
 /// твёрдое (или вода, по ней плывут).
-pub fn standable(view: &dyn View, (x, y, z): Cell) -> bool {
-    if !free(view, (x, y, z)) || !free(view, (x, y + 1, z)) {
+pub fn standable(view: &dyn View, cell: Cell) -> bool { standable_height(view,cell,2) }
+
+fn standable_height(view:&dyn View,(x,y,z):Cell,height:i32)->bool {
+    if !(0..height).all(|dy|free(view,(x,y+dy,z))) {
         return false;
     }
 
@@ -68,21 +70,21 @@ fn cost_of(view: &dyn View, (x, y, z): Cell) -> f64 {
 }
 
 /// Куда можно шагнуть из клетки: (клетка, цена шага).
-fn neighbours(view: &dyn View, (x, y, z): Cell) -> Vec<(Cell, f64)> {
+fn neighbours(view: &dyn View, (x, y, z): Cell, height:i32) -> Vec<(Cell, f64)> {
     let mut out = Vec::with_capacity(12);
 
     for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)] {
         let diagonal = dx != 0 && dz != 0;
 
         // Диагональ — только если обе клетки рядом свободны (вики, Pathfinding).
-        if diagonal && !(standable_or_open(view, (x + dx, y, z)) && standable_or_open(view, (x, y, z + dz))) {
+        if diagonal && !(standable_or_open(view, (x + dx, y, z),height) && standable_or_open(view, (x, y, z + dz),height)) {
             continue;
         }
 
         let step = if diagonal { std::f64::consts::SQRT_2 } else { 1.0 };
         let there = (x + dx, y, z + dz);
 
-        if standable(view, there) {
+        if standable_height(view, there,height) {
             out.push((there, step + cost_of(view, there)));
             continue;
         }
@@ -90,7 +92,7 @@ fn neighbours(view: &dyn View, (x, y, z): Cell) -> Vec<(Cell, f64)> {
         // Шаг вверх на одну клетку: над головой должно быть свободно.
         let up = (x + dx, y + 1, z + dz);
 
-        if !diagonal && free(view, (x, y + 2, z)) && standable(view, up) && !tall(view.block(x + dx, y, z + dz)) {
+        if !diagonal && free(view, (x, y + height, z)) && standable_height(view, up,height) && !tall(view.block(x + dx, y, z + dz)) {
             out.push((up, step + 0.5 + cost_of(view, up)));
             continue;
         }
@@ -104,7 +106,7 @@ fn neighbours(view: &dyn View, (x, y, z): Cell) -> Vec<(Cell, f64)> {
                     break;
                 }
 
-                if standable(view, down) {
+                if standable_height(view, down,height) {
                     out.push((down, step + f64::from(drop) * 0.5 + cost_of(view, down)));
                     break;
                 }
@@ -116,8 +118,8 @@ fn neighbours(view: &dyn View, (x, y, z): Cell) -> Vec<(Cell, f64)> {
 }
 
 /// Клетка без твёрдого блока — через неё можно пройти по диагонали.
-fn standable_or_open(view: &dyn View, cell: Cell) -> bool {
-    !solid(view.block(cell.0, cell.1, cell.2)) && !solid(view.block(cell.0, cell.1 + 1, cell.2))
+fn standable_or_open(view: &dyn View, cell: Cell,height:i32) -> bool {
+    (0..height).all(|dy|!solid(view.block(cell.0,cell.1+dy,cell.2)))
 }
 
 /// Расстояние между клетками — прикидка для A*.
@@ -131,6 +133,11 @@ fn distance(a: Cell, b: Cell) -> f64 {
 /// некуда. Если цель недостижима, путь ведёт в самую близкую к ней
 /// достигнутую клетку (если она ближе, чем начало).
 pub fn find(view: &dyn View, from: Cell, to: Cell, max_nodes: usize) -> Vec<Cell> {
+    find_height(view,from,to,max_nodes,2)
+}
+
+/// Хранителю нужен проход высотой три блока (вики, Warden: «2.9 blocks»).
+pub fn find_height(view:&dyn View,from:Cell,to:Cell,max_nodes:usize,height:i32)->Vec<Cell> {
     // Цена в тысячных, чтобы упорядочивать целыми.
     let key = |cost: f64| (cost * 1000.0) as i64;
 
@@ -157,7 +164,7 @@ pub fn find(view: &dyn View, from: Cell, to: Cell, max_nodes: usize) -> Vec<Cell
 
         let cost = best[&at];
 
-        for (next, step) in neighbours(view, at) {
+        for (next, step) in neighbours(view, at,height) {
             let total = cost + step;
 
             if best.get(&next).is_none_or(|known| total < *known) {

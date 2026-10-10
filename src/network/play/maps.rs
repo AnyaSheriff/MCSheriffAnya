@@ -55,10 +55,11 @@ pub(super) async fn send_ticks(stream:&mut Outgoing<'_>,shared:&Shared,player:&m
             let Some(map)=maps.maps.get(&id) else{continue;};
             let mut body=encode_varint(0x33);body.extend(encode_varint(id));body.push(map.scale);body.push(u8::from(map.locked));
             let mut icons=Vec::new();
-            if carried.contains(&id)&&map.dimension==player.dimension.index() as u8 {
-                let (x,z,d)=crate::maps::marker(map,player.x,player.z,player.yaw);
-                icons.push((0,x,z,d));
+            if let Some((x,z,kind))=map.destination {
+                let (x,z,d)=crate::maps::marker(map,x as f64,z as f64,180.0);icons.push((kind,x,z,d));
             }
+            if carried.contains(&id)&&map.dimension==player.dimension.index() as u8
+                && let Some(icon)=crate::maps::player_marker(map,player.x,player.z,player.yaw) {icons.push(icon);}
             for (_,p,facing) in frames.iter().filter(|f|f.0==id) {
                 let yaw=match facing {2=>180.0,3=>0.0,4=>90.0,_=>270.0};
                 let (x,z,d)=crate::maps::marker(map,p.0 as f64,p.2 as f64,yaw);icons.push((1,x,z,d));

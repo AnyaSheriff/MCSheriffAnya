@@ -8,6 +8,7 @@ use crate::{blocks,dimension::Dimension,world::{self,World}};
 pub struct Map {
     pub id:i32, pub scale:u8, pub x:i32, pub z:i32, pub dimension:u8,
     pub locked:bool, pub colors:Vec<u8>,
+    #[serde(default)] pub destination:Option<(i32,i32,i32)>,
 }
 #[derive(Default,Serialize,Deserialize)]
 pub struct Maps {
@@ -35,7 +36,7 @@ impl Maps {
     pub fn create(&mut self,dimension:Dimension,x:i32,z:i32,scale:u8)->i32 {
         let id=self.next;self.next=self.next.saturating_add(1);
         let scale=scale.min(4);
-        self.maps.insert(id,Map{id,scale,x:centre(x,scale),z:centre(z,scale),dimension:dimension.index() as u8,locked:false,colors:vec![0;16384]});
+        self.maps.insert(id,Map{id,scale,x:centre(x,scale),z:centre(z,scale),dimension:dimension.index() as u8,locked:false,colors:vec![0;16384],destination:None});
         self.dirty=true;id
     }
     pub fn save(&mut self)->std::io::Result<()> {
@@ -194,4 +195,74 @@ mod tests {
     #[test] fn centres_use_euclidean_grid(){assert_eq!(centre(-65,0),-128);assert_eq!(centre(-64,0),0);assert_eq!(centre(63,0),0);assert_eq!(centre(64,0),128);assert_eq!(centre(0,4),960);}
     #[test] fn ids_and_pixels_survive_serialization(){let mut m=Maps::default();assert_eq!(m.create(Dimension::Overworld,0,0,0),0);assert_eq!(m.create(Dimension::End,1,1,4),1);m.maps.get_mut(&0).unwrap().colors[99]=127;let read:Maps=serde_json::from_slice(&serde_json::to_vec(&m).unwrap()).unwrap();assert_eq!(read.maps[&0].colors[99],127);assert_eq!(read.next,2);}
     #[test] fn palette_and_marker(){assert_eq!(base_color("water"),12);assert_eq!(base_color("red_wool"),28);assert_eq!(base_color("glass"),0);let mut m=Maps::default();let id=m.create(Dimension::Overworld,0,0,0);assert_eq!(marker(&m.maps[&id],10.0,-10.0,90.0),(20,-19,4));}
+}
+
+/// Карты сокровищ/исследователя (вики, Explorer Map). До привязки к миру
+/// предмет хранит название карты; координаты берём общим локатором /locate.
+/// [проверить] дальность поиска, береговая штриховка и маркеры 26.1.2.
+pub fn explorer_kind(name: &str) -> Option<(&'static str, &'static str, u8, i32)> {
+    match name {
+        "buried_treasure_map" | "Buried Treasure Map" => Some(("buried_treasure", "Buried Treasure Map", 1, 26)),
+        "ocean_explorer_map" | "Ocean Explorer Map" => Some(("monument", "Ocean Explorer Map", 2, 9)),
+        "woodland_explorer_map" | "Woodland Explorer Map" => Some(("mansion", "Woodland Explorer Map", 2, 8)),
+        "trial_explorer_map" | "Trial Explorer Map" => Some(("trial_chambers", "Trial Explorer Map", 2, 34)),
+        _ => None,
+    }
+}
+pub fn pending_explorer(name: &str) -> Option<crate::inventory::Stack> {
+    let (_, title, _, _) = explorer_kind(name)?;
+    Some(crate::inventory::Stack::new(blocks::item_named("filled_map")?,1)
+        .with_extras(crate::stackdata::Data { name:Some(title.into()), ..Default::default() }))
+}
+pub fn resolve_explorer(stack: &mut crate::inventory::Stack, maps: &mut Maps, world: &World, at:(i32,i32)) -> bool {
+    let mut data=stack.extras();
+    if data.map_id.is_some() || blocks::item_name(stack.item)!=Some("filled_map") {return false;}
+    let Some((structure,_,scale,icon))=data.name.as_deref().and_then(explorer_kind) else {return false;};
+    let rings=if structure=="mansion" {100*crate::world::mansion::SPACING/27} else {6};
+    let Some((cx,cz))=world.nearest_structure(structure,at.0.div_euclid(16),at.1.div_euclid(16),rings) else {return false;};
+    let offset=if structure=="buried_treasure" {9} else {8};
+    let (x,z)=(cx*16+offset,cz*16+offset);
+    let id=maps.create(Dimension::Overworld,x,z,scale);
+    maps.maps.get_mut(&id).unwrap().destination=Some((x,z,icon));
+    data.map_id=Some(id);*stack=stack.with_extras(data);
+    true
+}
+
+#[cfg(test)] mod explorer_tests {
+    use super::*;
+    #[test] fn treasure_chest_loot_keeps_maps_and_destination_survives_storage() {
+        for name in ["buried_treasure_map","ocean_explorer_map","woodland_explorer_map","trial_explorer_map"] {
+            let s=pending_explorer(name).unwrap();assert_eq!(blocks::item_name(s.item),Some("filled_map"));
+            assert!(s.extras().name.as_deref().and_then(explorer_kind).is_some());
+        }
+        let rolled=crate::loot::roll(&[crate::loot::Pool {rolls:(1,1),entries:&[("buried_treasure_map",1,1,1)],empty:0}],&mut crate::loot::Dice::new(3));
+        assert_eq!(rolled.len(),1);
+        let mut maps=Maps::default();let id=maps.create(Dimension::Overworld,1000,-1000,2);
+        maps.maps.get_mut(&id).unwrap().destination=Some((1000,-1000,8));
+        let back:Maps=serde_json::from_slice(&serde_json::to_vec(&maps).unwrap()).unwrap();
+        assert_eq!(back.maps[&id].destination,Some((1000,-1000,8)));
+    }
+}
+
+// Вики, Map: вне листа игрок становится белой точкой; вдали — маленькой.
+// Карта исследователя сохраняет дальний значок (trackingPosition/unlimitedTracking).
+// [проверить] округление на границе листа.
+pub fn player_marker(map:&Map,x:f64,z:f64,yaw:f32)->Option<(i32,i8,i8,u8)> {
+    let step=(1u32<<map.scale) as f64;
+    let distance=((x-map.x as f64)/step).abs().max(((z-map.z as f64)/step).abs());
+    let (mx,mz,dir)=marker(map,x,z,yaw);
+    if distance<=63.0 {Some((0,mx,mz,dir))}
+    else if distance<320.0 {Some((6,mx,mz,0))}
+    else if map.destination.is_some() {Some((7,mx,mz,0))} else {None}
+}
+#[cfg(test)] mod marker_tests {
+    use super::*;
+    #[test] fn explorer_retains_distant_player_dot() {
+        let mut maps=Maps::default();let id=maps.create(Dimension::Overworld,0,0,0);
+        let map=maps.maps.get_mut(&id).unwrap();
+        assert_eq!(player_marker(map,0.0,0.0,0.0).unwrap().0,0);
+        assert_eq!(player_marker(map,100.0,0.0,0.0).unwrap().0,6);
+        assert!(player_marker(map,10000.0,0.0,0.0).is_none());
+        map.destination=Some((0,0,26));assert_eq!(player_marker(map,10000.0,0.0,0.0).unwrap().0,7);
+    }
 }

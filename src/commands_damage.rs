@@ -22,9 +22,20 @@ fn entities(text: &str, source: &Source, shared: &Shared) -> Vec<Target> {
         let items = shared.items_in(dimension).lock().expect("сущности");
         found.extend(items.mobs().iter().filter(|mob| !mob.is_dead() && chosen.takes(mob.kind.name()) && chosen.reaches(origin, (mob.x, mob.y, mob.z)))
             .map(|mob| Target { id: mob.entity_id, at: (mob.x, mob.y, mob.z), player: None }));
+        found.extend(items.items().iter().filter(|e|chosen.takes("item") && chosen.reaches(origin,(e.x,e.y,e.z)))
+            .map(|e|Target {id:e.entity_id,at:(e.x,e.y,e.z),player:None}));
+        drop(items);
+        {
+            let arrows=shared.arrows.lock().expect("стрелы");
+            found.extend(arrows.list.iter().filter(|e|e.dimension==dimension && chosen.takes(if e.trident.is_some() {"trident"} else {"arrow"}) && chosen.reaches(origin,(e.x,e.y,e.z)))
+                .map(|e|Target {id:e.entity_id,at:(e.x,e.y,e.z),player:None}));
+        }
         if text.contains("sort=nearest") || text.starts_with("@n") {
             let distance = |p: &Target| (p.at.0 - origin.0).powi(2) + (p.at.1 - origin.1).powi(2) + (p.at.2 - origin.2).powi(2);
             found.sort_by(|a, b| distance(a).total_cmp(&distance(b)));
+        } else if text.contains("sort=furthest") {
+            let distance=|p:&Target|(p.at.0-origin.0).powi(2)+(p.at.1-origin.1).powi(2)+(p.at.2-origin.2).powi(2);
+            found.sort_by(|a,b|distance(b).total_cmp(&distance(a)));
         }
         if let Some(limit) = chosen.limit { found.truncate(limit); }
     }
@@ -38,6 +49,22 @@ fn single(text: &str, source: &Source, shared: &Shared) -> Option<Target> {
 
 fn damage_type(name: &str) -> Option<DamageType> {
     Some(match name.strip_prefix("minecraft:").unwrap_or(name) {
+        "bad_respawn_point" => DamageType::BadRespawnPoint,
+        "cramming" => DamageType::Cramming,
+        "dragon_breath" => DamageType::DragonBreath,
+        "ender_pearl" => DamageType::EnderPearl,
+        "falling_anvil" => DamageType::FallingAnvil,
+        "falling_block" => DamageType::FallingBlock,
+        "falling_stalactite" => DamageType::FallingStalactite,
+        "freeze" => DamageType::Freeze,
+        "hot_floor" => DamageType::HotFloor,
+        "mob_projectile" => DamageType::MobProjectile,
+        "spear" => DamageType::Spear,
+        "spit" => DamageType::Spit,
+        "stalagmite" => DamageType::Stalagmite,
+        "unattributed_fireball" => DamageType::UnattributedFireball,
+        "campfire" => DamageType::Campfire, "dry_out" => DamageType::DryOut,
+        "sting" => DamageType::Sting, "wind_charge" => DamageType::WindCharge,
         "generic" => DamageType::Generic, "generic_kill" => DamageType::GenericKill,
         "player_attack" => DamageType::PlayerAttack, "mob_attack" => DamageType::MobAttack,
         "mob_attack_no_aggro" => DamageType::MobAttackNoAggro,
@@ -85,10 +112,19 @@ pub(super) fn run(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == target.id) else { return fail(); };
     // Команда не выбирает части дракона (существующий проверенный путь).
     if mob.kind == crate::mob::Kind::EnderDragon { return Answer::saying("Цель не получила урон".into()); }
-    let push = origin.entity_at.or(origin.at).map(|at| {
+    // Позиция `at` отдачи не даёт (чёрный ящик, damage-forms: скорость 0,0,0).
+    let push = origin.entity_at.map(|at| {
         let (dx, dz) = (mob.x - at.0, mob.z - at.2);
         let length = dx.hypot(dz).max(1e-6);
         crate::mob::Push { dir: (dx / length, dz / length), strength: crate::mob::BASE_KNOCKBACK, cause: origin.cause }
+    });
+    // Без источника-сущности отдача идёт в случайную сторону у косвенной магии и шипов; у прочих её нет
+    // (чёрный ящик, damage-armor-bypass: два прогона оригинала — 0,304/−0,26 и 0,143/0,374 [проверить: полный список видов]).
+    let push = push.or_else(|| {
+        matches!(kind, DamageType::IndirectMagic | DamageType::Thorns).then(|| {
+            let angle = crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32).wrapping_mul(0x9E37_79B9)).unit() * std::f64::consts::TAU;
+            crate::mob::Push { dir: (angle.cos(), angle.sin()), strength: crate::mob::BASE_KNOCKBACK, cause: 0 }
+        })
     });
     let before = mob.events.len();
     let hit = mob.hurt(amount, kind, push);
@@ -99,6 +135,11 @@ pub(super) fn run(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
                 *event = crate::mob::Event::CommandHurt { source: kind, origin: origin.clone() };
             }
         }
+    }
+    // Шипы сопровождаются своим звуком (чёрный ящик, damage-armor-bypass).
+    if hit.is_some() && matches!(kind, DamageType::Thorns) {
+        let at = (mob.x, mob.y, mob.z);
+        mob.events.push(crate::mob::Event::SoundAt { name: "minecraft:enchant.thorns.hit", volume: 1.0, pitch: 1.0, at });
     }
     items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
     Answer::saying(if hit.is_some() { "Нанесён урон сущности" } else { "Цель не получила урон" }.into())
@@ -140,4 +181,24 @@ mod tests {
         let (events, _) = shared.items_in(dimension).lock().unwrap().changes_since(from, reader);
         assert!(events.iter().any(|event| matches!(event, crate::items::Change::MobEvent { event: crate::mob::Event::CommandHurt { origin, .. }, .. } if origin.at == Some((1.0, 64.0, 2.0)) && origin.direct == 0)));
     }
+    #[test]
+    fn dispatcher_uses_one_validated_path_for_every_form() {
+        let shared=super::super::tests::server();
+        for suffix in ["", " minecraft:campfire", " minecraft:generic at 1 64 2", " minecraft:arrow by Второй", " minecraft:arrow by Второй from Первый"] {
+            let answer=super::super::run(&format!("damage Первый 1{suffix}"),&Source::Console,&shared);
+            assert!(answer.reply.contains("Нанесён"),"{}",answer.reply);
+            assert!(matches!(shared.players.lock().unwrap().take_orders(&[1;16]).as_slice(),[Order::CommandDamage {..}]));
+        }
+        assert!(super::super::run("damage Первый NaN",&Source::Console,&shared).reply.contains("Нужно"));
+        assert!(super::super::run("damage @a 1",&Source::Console,&shared).reply.contains("Нужно"));
+    }
+
+    #[test]
+    fn projectile_direct_source_and_player_cause_are_separate() {
+        let shared=super::super::tests::server();
+        shared.arrows.lock().unwrap().spawn(crate::arrow::Arrow::from_mob(80,Dimension::Overworld,(0.0,64.0,0.0),(0.0,0.0,0.0),0,""));
+        let src=origin(&["by","@e[type=arrow,limit=1]","from","Первый"],&Source::Console,&shared).unwrap();
+        assert_eq!((src.direct,src.cause),(80,1));
+    }
+
 }

@@ -15,6 +15,7 @@
 // Что не сверено, помечено «[проверить]».
 
 pub mod ai;
+pub mod trial_gear;
 pub mod small;
 pub mod small_world;
 pub mod arthropod;
@@ -2645,13 +2646,20 @@ impl Mob {
         let amount = if self.kind == Kind::Witch && source == Source::Magic { amount * 0.15 } else { amount };
         let before = self.vitals.health;
         let amount = if armored(source) {
-            if horse::equine(self.kind) { crate::combat::after_armor(amount, self.armor(), horse::toughness(self)) } else { after_armor(amount, self.armor()) }
+            if let Some(gear)=&self.h.trial_gear { crate::combat::after_armor(amount,self.armor(),trial_gear::bonus(gear,crate::attributes::ARMOR_TOUGHNESS)) }
+            else if horse::equine(self.kind) { crate::combat::after_armor(amount, self.armor(), horse::toughness(self)) } else { after_armor(amount, self.armor()) }
         } else { amount };
+        let amount=if let Some(gear)=&self.h.trial_gear {
+            let points=gear[1..].iter().flatten().map(|s|crate::combat::protection_points(&s.extras(),source)).sum();
+            crate::combat::after_protection(amount,points)
+        } else {amount};
         let mut hit = self.vitals.hurt(amount, source, false)?;
 
         // Снято на самом деле — не больше оставшегося здоровья.
         hit.taken = hit.taken.min(before + hit.absorbed);
         self.water.last_attacker = push.map(|p| p.cause).filter(|id| *id != 0);
+
+        if self.kind == Kind::Phantom && !self.no_ai { phantom::retreat(self); }
 
         if self.kind == Kind::Wither {
             wither::on_hurt(self);
@@ -2754,7 +2762,8 @@ impl Mob {
     /// даёт закрытие после открытия (`covered`): призванный закрытым без брони
     /// (чёрный ящик, shulker-stand: NoAI-шалкер теряет от меча 7 из 30).
     pub fn armor(&self) -> f32 {
-        match self.kind {
+        let extra=self.h.trial_gear.as_ref().map_or(0.0,|gear|trial_gear::bonus(gear,crate::attributes::ARMOR));
+        extra + match self.kind {
             Kind::Rabbit if self.wild.variant == 99 => 8.0,
             Kind::Shulker if self.h.covered => 20.0,
             Kind::MagmaCube => nether::cube_armor(self.nether.size),
@@ -2894,7 +2903,7 @@ impl Mob {
         } else {
             self.kind.save_id()
         };
-        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute));
+        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute));
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -2938,7 +2947,7 @@ impl Mob {
         if newmobs::new_kind(self.kind) { newmobs::write(&self.newmobs, out); }
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
-        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) {
+        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) {
             leash::write_tail(self, out);
         }
     }
@@ -3553,10 +3562,9 @@ pub(crate) fn clip_z(view: &dyn View, min: (f64, f64, f64), half: f64, height: f
     allowed
 }
 
-/// Действует ли броня на урон: не действует на падение, огонь, лаву,
-/// удушье и пустоту (вики, Armor: «bypasses armor»).
+/// Общий тег bypasses_armor для игроков и мобов (вики, Damage type tag).
 fn armored(source: Source) -> bool {
-    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::MobAttackNoAggro | Source::Sting | Source::Arrow | Source::Explosion | Source::PlayerExplosion | Source::Campfire | Source::InFire | Source::Lava)
+    !crate::combat::bypasses_armor(source)
 }
 
 /// Урон после брони (вики, Armor, «Damage protection»).
@@ -4205,6 +4213,7 @@ pub fn convert(old: &Mob, kind: Kind, entity_id: i32) -> Mob {
     new.leash = old.leash;
     new.h.bow = old.h.bow;
     new.h.helmet = old.h.helmet;
+    new.h.trial_gear = old.h.trial_gear;
     new.h.hand = old.h.hand;
     new.h.offhand_shell = old.h.offhand_shell;
     new.h.hand_drop = old.h.hand_drop;

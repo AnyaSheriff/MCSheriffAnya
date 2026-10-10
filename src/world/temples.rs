@@ -371,6 +371,9 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
                     let wy = start.y + y;
 
                     chunk.put_generated(lx, wy, lz, state, true);
+                    if crate::archaeology::suspicious(state) {
+                        chunk.archaeology.insert((lx,wy,lz),crate::archaeology::generated("desert_pyramid",roll(seed,x,z,0xA2C2 ^ wy as u64)));
+                    }
 
                     match blocks::block_at_state(state) {
                         Some("chest") => {

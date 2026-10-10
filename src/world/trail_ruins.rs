@@ -221,6 +221,10 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
                     }
 
                     chunk.put_generated(x - cx0, wy, z - cz0, state_of(&text), true);
+                    if text.starts_with("suspicious_") {
+                        let loot_seed=template::roll(seed,x,z,0xA2C1 ^ wy as u64);
+                        chunk.archaeology.insert((x-cx0,wy,z-cz0),crate::archaeology::generated(if loot_seed.is_multiple_of(5) {"trail_ruins_rare"} else {"trail_ruins_common"},loot_seed));
+                    }
                 }
             }
         }

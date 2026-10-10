@@ -595,8 +595,11 @@ pub fn dwellers(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -
         for ((x, y, z), kind) in &built(&mansion).mobs {
             let (x, z) = (x0 + x, z0 + z);
 
-            if x.div_euclid(16) == chunk_x && z.div_euclid(16) == chunk_z && matches!(*kind, "vindicator" | "evoker") {
-                out.push(((f64::from(x) + 0.5, f64::from(y0 + y), f64::from(z) + 0.5), *kind));
+            if x.div_euclid(16) == chunk_x && z.div_euclid(16) == chunk_z && matches!(*kind, "vindicator" | "evoker" | "allay") {
+                // Вики, Allay: «one to three» в каждой тюремной камере.
+                // Маркеры замера — камеры; [проверить] распределение внутри них.
+                let count=if *kind=="allay" {1+template::roll(terrain.seed(),x,z,0xA11A ^ (y0+y) as u64)%3} else {1};
+                for _ in 0..count {out.push(((f64::from(x)+0.5,f64::from(y0+y),f64::from(z)+0.5),*kind));}
             }
         }
     }
@@ -710,6 +713,11 @@ mod tests {
                 assert!(name.ends_with("chest"), "{name}");
             }
         }
+    }
+
+    #[test]
+    fn prison_templates_have_allay_markers() {
+        assert!((0..library().layouts.len()).any(|layout|assemble(layout,0).mobs.iter().any(|(_,kind)|*kind=="allay")));
     }
 
     /// Предметы образцов: восемь аллиумов, топор с эффективностью I.

@@ -65,6 +65,8 @@ pub struct Config {
     pub entity: String,
     pub no_ai: bool,
     pub silent: bool,
+    /// Без снаряжения: заданный рукой `spawn_potentials` без `equipment` (чёрный ящик, ominous-spawner).
+    pub bare: bool,
     pub total_mobs: f32,
     pub simultaneous_mobs: f32,
     pub total_per_player: f32,
@@ -82,6 +84,7 @@ impl Default for Config {
             entity: String::new(),
             no_ai: false,
             silent: false,
+            bare: false,
             total_mobs: 6.0,
             simultaneous_mobs: 2.0,
             total_per_player: 2.0,
@@ -146,6 +149,7 @@ impl Config {
 
         self.no_ai = entity.get("NoAI").and_then(crate::snbt::Value::as_f64).is_some_and(|v| v != 0.0);
         self.silent = entity.get("Silent").and_then(crate::snbt::Value::as_f64).is_some_and(|v| v != 0.0);
+        self.bare = true;
     }
 
     /// Вид моба, если он нам знаком.
@@ -176,13 +180,14 @@ pub struct Spawner {
     /// Моб выбран (спавнер ушёл из «inactive»): только тогда клиент видит
     /// `spawn_data` (trial-spawner-wave: при постановке данные `{}`).
     pub picked: bool,
+    pub next_item_at:u64,
 }
 
 impl Default for Spawner {
     fn default() -> Self {
         Self {
             normal: Config::default(),
-            ominous: Config::default(),
+            ominous: Config {rewards:ominous_rewards(),..Config::default()},
             required_range: PLAYER_RANGE,
             cooldown_length: COOLDOWN,
             players: Vec::new(),
@@ -194,6 +199,7 @@ impl Default for Spawner {
             to_eject: 0,
             reward_table: String::new(),
             picked: false,
+            next_item_at:0,
         }
     }
 }
@@ -313,6 +319,7 @@ pub fn preset(id: &str) -> Option<Config> {
     let id = id.strip_prefix("minecraft:").unwrap_or(id);
     let rest = id.strip_prefix("trial_chamber/")?;
     let (group, variant) = rest.split_once('/').unwrap_or((rest, "normal"));
+    let variant = variant.split('/').next().unwrap_or(variant);
     let mob = match group {
         "breeze" => "breeze",
         "melee" => match variant {
@@ -338,13 +345,19 @@ pub fn preset(id: &str) -> Option<Config> {
         },
         _ => return None,
     };
-    let base = Config { entity: format!("minecraft:{mob}"), ticks_between_spawn: 20, simultaneous_mobs: 3.0, simultaneous_per_player: 0.5, ..Config::default() };
+    let base = Config { rewards:if id.ends_with("/ominous") {ominous_rewards()} else {Config::default().rewards}, entity: format!("minecraft:{mob}"), ticks_between_spawn: 20, simultaneous_mobs: 3.0, simultaneous_per_player: 0.5, ..Config::default() };
 
-    Some(match group {
+    let mut config = match group {
         "breeze" => Config { total_mobs: 2.0, total_per_player: 1.0, simultaneous_mobs: 1.0, simultaneous_per_player: 0.5, ..base },
         "slow_ranged" => Config { ticks_between_spawn: 160, simultaneous_mobs: 4.0, simultaneous_per_player: 2.0, ..base },
         _ => base,
-    })
+    };
+    // Вики, Ominous Trial Spawner: без снаряжения — вдвое больше мобов
+    // за волну и ещё один одновременно. [проверить] прибавка за игрока.
+    if id.ends_with("/ominous") && matches!(mob,"spider"|"cave_spider"|"silverfish"|"slime"|"breeze") {
+        config.total_mobs *= 2.0; config.total_per_player *= 2.0; config.simultaneous_mobs += 1.0;
+    }
+    Some(config)
 }
 
 fn write_config(config: &Config, out: &mut Vec<u8>) {
@@ -354,7 +367,7 @@ fn write_config(config: &Config, out: &mut Vec<u8>) {
     };
 
     text(out, &config.entity);
-    out.push(u8::from(config.no_ai) | (u8::from(config.silent) << 1));
+    out.push(u8::from(config.no_ai) | (u8::from(config.silent) << 1) | (u8::from(config.bare) << 2));
 
     for value in [config.total_mobs, config.simultaneous_mobs, config.total_per_player, config.simultaneous_per_player] {
         out.extend_from_slice(&value.to_be_bytes());
@@ -391,7 +404,7 @@ fn read_config(bytes: &mut &[u8]) -> Option<Config> {
         rewards.push((table, u32::from_be_bytes(take(bytes, 4)?.try_into().ok()?)));
     }
 
-    Some(Config { entity, no_ai: flags & 1 != 0, silent: flags & 2 != 0, total_mobs, simultaneous_mobs, total_per_player, simultaneous_per_player, ticks_between_spawn, spawn_range, rewards })
+    Some(Config { entity, no_ai: flags & 1 != 0, silent: flags & 2 != 0, bare: flags & 4 != 0, total_mobs, simultaneous_mobs, total_per_player, simultaneous_per_player, ticks_between_spawn, spawn_range, rewards })
 }
 
 /// Блок-сущность хранилища.
@@ -613,7 +626,7 @@ const OMINOUS_KEY: [Pool; 1] = [Pool { rolls: (1, 1), entries: &[("ominous_trial
 
 /// Награда хранилища (вики, Vault, «Loot», Java): обычная часть, редкая
 /// (1–3 броска) и особая (25 %) [проверить: зачарования предметов и книг
-/// пока не ложатся, зловещее хранилище — та же таблица].
+/// обычного хранилища].
 const VAULT_REWARD: [Pool; 3] = [
     Pool {
         rolls: (1, 1),
@@ -661,17 +674,72 @@ const VAULT_REWARD: [Pool; 3] = [
     },
 ];
 
+// Вики, Ominous Vault, Java loot; [проверить] уровни зачарований.
+const OMINOUS_CONSUMABLES:[Pool;1]=[Pool {rolls:(1,1),empty:0,entries:&[
+    ("cooked_beef",1,2,3),("baked_potato",2,4,3),("golden_carrot",1,2,2),
+    ("potion:regeneration:potion",1,1,1),("potion:strength:potion",1,1,1)]}];
+const OMINOUS_REWARD:[Pool;3]=[
+    Pool {rolls:(1,1),empty:0,entries:&[
+        ("diamond",2,3,58),("emerald",4,10,145),("wind_charge",8,12,116),("potion:strong_slowness:tipped_arrow",4,12,87),("ominous_bottle",1,1,29),
+        ("diamond_block",1,1,60),("emerald_block",1,1,300),("iron_block",1,1,240),("golden_apple",1,1,180),
+        ("enchant:crossbow",1,1,240),("enchant:diamond_axe",1,1,180),("enchant:diamond_chestplate",1,1,180),
+        ("enchanted_book",1,1,120),("breach:enchanted_book",1,1,60),("density:enchanted_book",1,1,60),("wind_burst:enchanted_book",1,1,120)]},
+    Pool {rolls:(1,3),empty:0,entries:&[("emerald",4,10,5),("wind_charge",8,12,4),("potion:strong_slowness:tipped_arrow",4,12,3),("diamond",2,3,2),("ominous_bottle",1,1,1)]},
+    Pool {rolls:(1,1),empty:10,entries:&[("enchanted_golden_apple",1,1,9),("flow_armor_trim_smithing_template",1,1,9),("flow_banner_pattern",1,1,6),("music_disc_creator",1,1,3),("heavy_core",1,1,3)]},
+];
+fn ominous_rewards()->Vec<(String,u32)> {
+    vec![("minecraft:spawners/ominous/trial_chamber/consumables".into(),7),("minecraft:spawners/ominous/trial_chamber/key".into(),3)]
+}
+
+/// Превращение обычного испытания от знамения. Возвращает старую волну,
+/// которую надо убрать без добычи. [проверить] обнаружение по тактам.
+pub fn make_ominous(world:&mut crate::world::World,at:(f64,f64,f64),now:u64)->Option<Vec<i32>> {
+    let places:Vec<_>=world.trial_places().into_iter().filter(|p| {
+        let block=world.get_block(p.0,p.1,p.2);
+        !ominous_state(block) && matches!(world.trial(p.0,p.1,p.2),Some(Data::Spawner(_)))
+            && crate::mob::warden::distance(at,(p.0 as f64+0.5,p.1 as f64+0.5,p.2 as f64+0.5))<PLAYER_RANGE
+            && clear(world,(p.0 as f64+0.5,p.1 as f64+0.5,p.2 as f64+0.5),(at.0,at.1+1.62,at.2))
+    }).collect();
+    if places.is_empty() {return None;}
+    let mut gone=Vec::new();
+    for p in places {
+        world.with_trial(p.0,p.1,p.2,|data|if let Data::Spawner(s)=data {
+            gone.append(&mut s.mobs);s.players.clear();s.total_spawned=0;s.cooldown_end_at=0;
+            s.next_spawn_at=now+40;s.next_item_at=now+160;
+            if s.ominous.entity.is_empty() {s.ominous.entity=s.normal.entity.clone();}
+        });
+        // Чёрный ящик, ominous-spawner: на такте эффекта события 3020 (у игрока 0, у спавнера 1), на следующем блок уже ominous+active, звука нет.
+        world.note_level_event(at.0.floor() as i32,(at.1+1.62).floor() as i32,at.2.floor() as i32,3020,0);world.note_level_event(p.0,p.1,p.2,3020,1);
+        set_prop(world,p,"ominous","true");set_prop(world,p,"trial_spawner_state","active");
+        note(world,p);
+    }
+    Some(gone)
+}
+
 /// Предметы по ссылке на таблицу; незнакомая таблица — пусто.
 pub fn roll_table(table: &str, dice: &mut Dice) -> Vec<Stack> {
     let pools: &[Pool] = match table.strip_prefix("minecraft:").unwrap_or(table) {
-        "spawners/trial_chamber/consumables" | "spawners/ominous/trial_chamber/consumables" => &CONSUMABLES,
+        "spawners/trial_chamber/consumables" => &CONSUMABLES,
+        "spawners/ominous/trial_chamber/consumables" => &OMINOUS_CONSUMABLES,
         "spawners/trial_chamber/key" => &KEY,
         "spawners/ominous/trial_chamber/key" => &OMINOUS_KEY,
-        "chests/trial_chambers/reward" | "chests/trial_chambers/reward_ominous" => &VAULT_REWARD,
+        "chests/trial_chambers/reward" => &VAULT_REWARD,
+        "chests/trial_chambers/reward_ominous" => &OMINOUS_REWARD,
         _ => return Vec::new(),
     };
 
-    crate::loot::roll(pools, dice)
+    let mut loot=crate::loot::roll(pools, dice);
+    if table.ends_with("reward_ominous") {
+        for stack in &mut loot {
+            let mut data=stack.extras();
+            if crate::blocks::item_name(stack.item)==Some("ominous_bottle") {data.ominous=Some(dice.between(2,4) as u8);}
+            if let Some((id,_))=crate::stackdata::ENCHANTMENTS.iter().enumerate().find(|(_,e)|e.0=="wind_burst")
+                && data.level("wind_burst")>0 {data.set_enchant(id as u16,1);}
+            if crate::blocks::item_name(stack.item)==Some("enchanted_book") {data.stored=std::mem::take(&mut data.enchants);}
+            *stack=stack.with_extras(data);
+        }
+    }
+    loot
 }
 
 /// Выбор таблицы награды спавнера по весам (`loot_tables_to_eject`).
@@ -736,11 +804,13 @@ pub type Ejected = (Stack, (f64, f64, f64), (f64, f64, f64));
 
 /// Что такт испытательных блоков просит у мира мобов: поставить моба.
 pub struct Spawn {
+    pub ominous: bool,
     pub kind: crate::mob::Kind,
     pub at: (f64, f64, f64),
     pub yaw: f32,
     pub no_ai: bool,
     pub silent: bool,
+    pub bare: bool,
 }
 
 /// Прямая видимость между точками: на пути нет полного блока. Клетка, из
@@ -776,6 +846,7 @@ fn note(world: &mut crate::world::World, (x, y, z): (i32, i32, i32)) {
 pub fn step(
     world: &mut crate::world::World,
     visitors: &[Visitor],
+    mob_targets: &[(i32, (f64,f64,f64))],
     now: u64,
     can_spawn: bool,
     rng: &mut crate::mob::Rng,
@@ -785,7 +856,7 @@ pub fn step(
 ) {
     for pos in world.trial_places() {
         match world.trial(pos.0, pos.1, pos.2) {
-            Some(Data::Spawner(_)) => step_spawner(world, pos, visitors, now, can_spawn, rng, alive, spawn, drop),
+            Some(Data::Spawner(_)) => step_spawner(world, pos, visitors, mob_targets, now, can_spawn, rng, alive, spawn, drop),
             Some(Data::Vault(_)) => step_vault(world, pos, visitors, now, rng, drop),
             None => {}
         }
@@ -797,6 +868,7 @@ fn step_spawner(
     world: &mut crate::world::World,
     pos: (i32, i32, i32),
     visitors: &[Visitor],
+    mob_targets: &[(i32, (f64,f64,f64))],
     now: u64,
     can_spawn: bool,
     rng: &mut crate::mob::Rng,
@@ -870,10 +942,26 @@ fn step_spawner(
             spawner.mobs.clear();
             spawner.total_spawned = 0;
             spawner.next_spawn_at = now + 40;
+            spawner.next_item_at = now + 160;
             set_prop(world, pos, "trial_spawner_state", "active");
             changed = true;
         }
         "active" => {
+            if ominous && now>=spawner.next_item_at && can_spawn {
+                let nearby=|at:(f64,f64,f64)| (at.0-centre.0).powi(2)+(at.1-centre.1).powi(2)+(at.2-centre.2).powi(2)<PLAYER_RANGE.powi(2);
+                let players:Vec<_>=visitors.iter().filter(|v|v.counts && nearby(v.at)).map(|v|(v.at,v.eye)).collect();
+                if !players.is_empty() {
+                    let mut candidates=players;
+                    candidates.extend(mob_targets.iter().filter(|(id,at)|spawner.mobs.contains(id) && nearby(*at)).map(|(_,at)|(*at,1.0)));
+                    let (target,eye)=candidates[rng.below(candidates.len() as u32) as usize];
+                    // Высота 2..=5 блоков над ногами, предмет в центре клетки (чёрный ящик, ominous-spawner: 4,5 и 5,5; вики: «random height 2 to 5»).
+                    let at=(target.0,target.1.floor()+2.0+f64::from(rng.below(4))+0.5,target.2);
+                    if clear(world,(target.0,target.1+eye,target.2),at) {
+                        world.ominous_births.push((crate::ominous::item(rng),at));
+                    }
+                }
+                spawner.next_item_at=now+160;
+            }
             for id in seen(world) {
                 if !spawner.players.contains(&id) {
                     spawner.players.push(id);
@@ -914,13 +1002,13 @@ fn step_spawner(
                     && clear(world, centre, (x, f64::from(y) + 0.5, z))
                 {
                     let yaw = (rng.unit() * 360.0) as f32;
-                    let id = spawn(world, Spawn { kind, at: (x, f64::from(y), z), yaw, no_ai: config.no_ai, silent: config.silent });
+                    let id = spawn(world, Spawn { ominous, kind, at: (x, f64::from(y), z), yaw, no_ai: config.no_ai, silent: config.silent, bare: config.bare });
 
                     spawner.mobs.push(id);
                     spawner.total_spawned += 1;
                     spawner.next_spawn_at = now + u64::from(config.ticks_between_spawn);
-                    world.note_level_event(pos.0, pos.1, pos.2, EVENT_SPAWN_AT_SPAWNER, 0);
-                    world.note_level_event(cell.0, cell.1, cell.2, EVENT_SPAWN_AT_MOB, 0);
+                    world.note_level_event(pos.0, pos.1, pos.2, EVENT_SPAWN_AT_SPAWNER, i32::from(ominous));
+                    world.note_level_event(cell.0, cell.1, cell.2, EVENT_SPAWN_AT_MOB, i32::from(ominous));
                     // Блок повторяется вместе с данными (trial-spawner-wave).
                     world.announce_change(pos.0, pos.1, pos.2, block);
                     changed = true;
@@ -978,6 +1066,7 @@ fn step_spawner(
             }
 
             set_prop(world, pos, "trial_spawner_state", "waiting_for_players");
+            if ominous {set_prop(world,pos,"ominous","false");}
             changed = true;
         }
         _ => return,
@@ -1187,6 +1276,7 @@ pub fn use_vault(world: &mut crate::world::World, pos: (i32, i32, i32), uuid: [u
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::blocks;
 
     #[test]
     fn snbt_sets_the_wave() {
@@ -1286,4 +1376,53 @@ mod tests {
         assert_eq!(vault.table(true), "minecraft:chests/trial_chambers/reward_ominous");
         assert_eq!(Data::generated("chest", "chests/trial_chambers/supply"), None);
     }
+    #[test]
+    fn ominous_conversion_resets_wave_once_and_keys_are_distinct() {
+        let mut world=crate::world::World::in_memory();let pos=(0,70,0);
+        world.set_block(pos.0,pos.1,pos.2,blocks::state_from_text("trial_spawner[trial_spawner_state=active]").unwrap());
+        world.with_trial(pos.0,pos.1,pos.2,|d|if let Data::Spawner(s)=d {s.mobs=vec![42];s.total_spawned=4;s.normal.entity="minecraft:zombie".into();});
+        assert_eq!(make_ominous(&mut world,(2.5,70.0,0.5),100),Some(vec![42]));
+        assert!(ominous_state(world.get_block(pos.0,pos.1,pos.2)));
+        assert!(make_ominous(&mut world,(2.5,70.0,0.5),101).is_none());
+        let Some(Data::Spawner(s))=world.trial(pos.0,pos.1,pos.2) else {panic!()};
+        assert_eq!(s.total_spawned,0);assert_eq!(s.ominous.entity,"minecraft:zombie");
+        assert_eq!(s.ominous.rewards,ominous_rewards());
+        let key=roll_table("spawners/ominous/trial_chamber/key",&mut Dice::new(2));
+        assert_eq!(blocks::item_name(key[0].item),Some("ominous_trial_key"));
+        let mut heavy=false;
+        for seed in 1..200 {
+            heavy |= roll_table("chests/trial_chambers/reward_ominous",&mut Dice::new(seed)).iter().any(|s|blocks::item_name(s.item)==Some("heavy_core"));
+            assert!(!roll_table("chests/trial_chambers/reward",&mut Dice::new(seed)).iter().any(|s|blocks::item_name(s.item)==Some("heavy_core")));
+        }
+        assert!(heavy);
+    }
+
+    #[test]
+    fn ominous_items_wait_eight_seconds_and_require_a_nearby_player() {
+        let mut world=crate::world::World::in_memory();let at=(0,70,0);
+        world.set_block(at.0,at.1,at.2,blocks::state_from_text("trial_spawner[ominous=true,trial_spawner_state=active]").unwrap());
+        world.with_trial(at.0,at.1,at.2,|d|if let Data::Spawner(s)=d {
+            s.players=vec![1];s.mobs=vec![42];s.total_spawned=1;s.next_item_at=260;
+            s.ominous.entity="minecraft:zombie".into();s.ominous.simultaneous_mobs=1.0;
+        });
+        let player=Visitor {id:1,uuid:[1;16],at:(2.5,70.0,0.5),eye:1.62,counts:true};
+        let mut rng=crate::mob::Rng::new(5);
+        for (now,count) in [(259,0),(260,1),(261,1),(419,1),(420,2)] {
+            step(&mut world,&[player],&[(42,(3.5,70.0,0.5))],now,true,&mut rng,&|_|Some(true),&mut |_,_|panic!("волна заполнена"),&mut |_|panic!("не время награды"));
+            assert_eq!(world.ominous_births.len(),count);
+        }
+        assert!(world.ominous_births.iter().all(|(_,at)|(72.5..=75.5).contains(&at.1)));
+        step(&mut world,&[],&[(42,(3.5,70.0,0.5))],580,true,&mut rng,&|_|Some(true),&mut |_,_|panic!(),&mut |_|panic!());
+        assert_eq!(world.ominous_births.len(),2);
+    }
+    #[test]
+    fn ominous_presets_preserve_species_and_increase_unarmored_waves() {
+        for name in ["melee/husk","ranged/stray","small_melee/cave_spider","breeze"] {
+            let normal=preset(&format!("trial_chamber/{name}/normal")).unwrap();
+            let ominous=preset(&format!("trial_chamber/{name}/ominous")).unwrap();
+            assert_eq!(normal.entity,ominous.entity);
+            if name.contains("cave_spider") || name=="breeze" {assert_eq!(ominous.total_mobs,normal.total_mobs*2.0);}
+        }
+    }
+
 }

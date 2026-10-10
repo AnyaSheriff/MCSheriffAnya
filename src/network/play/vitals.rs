@@ -120,6 +120,7 @@ pub(super) struct Pending {
 /// Чем занята рука, пока держится кнопка «использовать».
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum UseKind {
+    Brush,
     Shield,
     Bow,
     /// Арбалет заряжается; уровень «быстрой перезарядки».
@@ -904,7 +905,7 @@ pub(super) fn release_use(player: &mut PlayerState, shared: &Shared) {
         UseKind::Trident => super::bow::throw_trident(shared, player, using.hand, held),
         // Арбалет заряжается сам, пока кнопка держится (`tick_crossbow`);
         // отпустили — только опустили руки.
-        UseKind::Crossbow { .. } | UseKind::Shield | UseKind::EnderEye => {}
+        UseKind::Crossbow { .. } | UseKind::Shield | UseKind::EnderEye | UseKind::Brush => {}
     }
 }
 
@@ -2531,6 +2532,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
     }
 
     tick_crossbow(shared, player, *shared.ticks.borrow());
+    super::brush::tick(player,shared,*shared.ticks.borrow());
 
     // Недоеденное — после такта эффектов: эффект от еды впервые действует
     // в следующем такте (golden-apple: регенерация лечит на +1 после Effect).
@@ -2580,6 +2582,19 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
 /// Обычного мира сменяется «Знамением набега» на 30 секунд того же уровня;
 /// кончилось «Знамение набега» — заявка на набег в мире (raid.rs).
 async fn omens(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8, gone: &[survival::EffectKind]) -> io::Result<()> {
+    if matches!(player.game_mode,0|2) && difficulty!=survival::PEACEFUL {
+        let bad=player.vit.effects.iter().find(|e|e.kind==survival::EffectKind::BadOmen).copied();
+        if bad.is_some() || player.vit.has_effect(survival::EffectKind::TrialOmen) {
+            let removed=crate::trial::make_ominous(&mut shared.world_in(player.dimension).lock().expect("мир"),(player.x,player.y,player.z),*shared.ticks.borrow());
+            if let Some(ids)=removed {
+                shared.items_in(player.dimension).lock().expect("сущности").remove_mobs(|m|ids.contains(&m.entity_id));
+                if let Some(bad)=bad {
+                    clear_effects(stream,player,Some(survival::EffectKind::BadOmen)).await?;
+                    give_effect(stream,player,survival::Effect {kind:survival::EffectKind::TrialOmen,amplifier:0,ticks_left:18000*(bad.amplifier+1),ambient:false,visible:true}).await?;
+                }
+            }
+        }
+    }
     let raids_on = shared.raids.load(std::sync::atomic::Ordering::Relaxed);
 
     if gone.contains(&survival::EffectKind::RaidOmen) && raids_on && player.dimension == Dimension::Overworld && difficulty != survival::PEACEFUL {

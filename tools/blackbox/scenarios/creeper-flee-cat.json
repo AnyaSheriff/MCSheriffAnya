@@ -1,31 +1,46 @@
 {
  "name": "creeper-flee-cat",
- "about": "Крипер с ИИ в 4 блоках от робота (выживание) и дикая кошка без ИИ в 2 блоках от крипера, между ним и роботом: крипер держится от кошек за 6 блоков (вики, Cat: «Creepers keep a distance of 6 blocks from any cat») — не идёт к роботу и не взрывается, отходит. Контроль — тот же крипер без кошки подходит и подрывается (сценарий creeper-explode).",
+ "about": "[\u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c] Unrecorded regression; no random exceptions until vanilla-vs-vanilla evidence.",
+ "exclusive": true,
  "track_mobs": true,
  "track_self": true,
- "exclusive": true,
  "blocks": [],
  "setup": [
   "difficulty normal",
-  "gamemode survival $(bot)",
-  "clear $(bot)",
-  "tp $(bot) $(0.5,0,0.5)",
-  "!stopfly",
-  "!wait 10"
- ],
- "actions": [
-  { "after": 0, "cmd": "summon cat $(2.5,0,0.5) {NoAI:1b,Silent:1b}" },
-  { "after": 1, "cmd": "summon creeper $(4.5,0,0.5) {Silent:1b}" }
- ],
- "record_ticks": 200,
- "cleanup": [
-  "kill @e[type=cat,distance=..48]",
-  "kill @e[type=creeper,distance=..48]",
-  "kill @e[type=item,distance=..48]",
-  "difficulty peaceful",
   "gamemode creative $(bot)",
   "clear $(bot)",
-  "!wait 4",
+  "effect clear $(bot)",
+  "tp $(bot) $(0.5,0,0.5)"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon creeper $(4.5,0,4.5)"
+  },
+  {
+   "after": 10,
+   "cmd": "summon cat $(3.5,0,4.5) {NoAI:1b}"
+  },
+  {
+   "after": 100,
+   "cmd": "kill @e[type=cat,distance=..48]"
+  },
+  {
+   "after": 110,
+   "cmd": "summon ocelot $(4.5,0,4.5) {NoAI:1b}"
+  }
+ ],
+ "record_ticks": 240,
+ "cleanup": [
+  "kill @e[type=!player,distance=..48]",
+  "effect clear $(bot)",
+  "clear $(bot)",
+  "gamemode creative $(bot)",
+  "difficulty peaceful",
+  "fill $(-10,0,-10) $(10,12,10) minecraft:air",
+  "gamerule random_tick_speed 3",
+  "gamerule mob_griefing true",
+  "time set noon",
   "!startfly"
  ]
 }

@@ -92,6 +92,7 @@ mod tame;
 mod gameplay;
 mod fishing;
 mod maps;
+mod brush;
 mod small;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
@@ -9092,6 +9093,16 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     }
 
     // Мотыга и костная мука (farming.rs).
+    if brush::start(player,shared,hand) {
+        // Оригинал повторяет блок и клетку за гранью (brush-sand, +10).
+        let (bx, by, bz) = offset_towards(clicked_x, clicked_y, clicked_z, face);
+        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+        world.tell_directly(clicked_x, clicked_y, clicked_z);
+        world.tell_directly(bx, by, bz);
+
+        return Some(Reaction::accepted(sequence));
+    }
     if let Some(reaction) = farm::use_on_block(player, shared, (clicked_x, clicked_y, clicked_z), face, sequence) {
         return Some(reaction);
     }
@@ -9564,6 +9575,11 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
     }
 
     if let Some(resync) = fishing::use_rod(shared, player, hand) {
+        let mut answer = answer;
+        answer.inventory = resync;
+        return Some(answer);
+    }
+    if let Some(resync)=brush::idle_use(player,hand) {
         let mut answer = answer;
         answer.inventory = resync;
         return Some(answer);

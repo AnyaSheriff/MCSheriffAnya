@@ -319,7 +319,7 @@ fn fox(mob: &mut Mob, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai::Plan
         }
         if let Some(at)=mob.wild.target {
             let state=view.block(at.0,at.1,at.2);
-            if !berry_ready(state) { mob.wild.target=None; }
+            if !berry_ready(state) { mob.wild.target=None; mob.wild.hop=0; }
             else if distance(mob,center(at))<2.0 {
                 if blocks::block_at_state(state)!=Some("sweet_berry_bush") {
                     if let Some(old)=mob.wild.mouth.take() {mob.events.push(Event::Loot(vec![old]));sound(mob,"minecraft:entity.fox.spit");}
@@ -333,8 +333,10 @@ fn fox(mob: &mut Mob, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai::Plan
                 if mob.wild.hop>=42 {
                     mob.wild.hop=0; mob.wild.target=None; mob.wild.cooldown=100;
                     let mut count=1+rng.below(2) as i32+i32::from(number(state,"age")==3);
-                    if let Some(old)=mob.wild.mouth.take() {mob.events.push(Event::Loot(vec![old]));sound(mob,"minecraft:entity.fox.spit");}
-                    mob.wild.mouth=blocks::item_named("sweet_berries").map(|id|Stack::new(id,1)); mob.wild.eating=0;count-=1;
+                    // Вики, Fox: ягода во рту, только если рот пуст; остальное падает.
+                    if mob.wild.mouth.is_none() {
+                        mob.wild.mouth=blocks::item_named("sweet_berries").map(|id|Stack::new(id,1)); mob.wild.eating=0;count-=1;
+                    }
                     if count>0 && let Some(id)=blocks::item_named("sweet_berries") { mob.events.push(Event::Loot(vec![Stack::new(id,count)])); }
                     sound(mob,"minecraft:block.sweet_berry_bush.pick_berries");
                     return ai::Plan { put: with(state,"age","1").map(|state|(at,state)), ..Default::default() };

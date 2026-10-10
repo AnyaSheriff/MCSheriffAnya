@@ -688,6 +688,7 @@ pub fn roll(table: &[Pool], dice: &mut Dice) -> Vec<Stack> {
             }) else {
                 continue;
             };
+            if let Some(map)=crate::maps::pending_explorer(name) { out.push(map); continue; }
             let Some(item) = crate::blocks::item_named(name.rsplit(':').next().unwrap_or(name)) else {
                 continue;
             };

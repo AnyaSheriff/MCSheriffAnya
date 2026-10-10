@@ -49,7 +49,11 @@ pub const CAT_FEAR: f64 = 16.0;
 
 /// Пауза до первого пике и между пике после укуса (чёрный ящик, phantom-swoop).
 pub const FIRST_WAIT: i32 = 27;
-pub const BITE_WAIT: i32 = 72;
+/// Пике начинаются раз в 8–12 с (вики, Phantom, Java; чёрный ящик, phantom-swoop: 196 и 164 такта между звуками).
+pub const SWEEP_MIN: i32 = 160;
+pub const SWEEP_SPREAD: u32 = 81;
+/// Не меньше столько тактов отдыха после укуса или испуга.
+pub const BITE_WAIT: i32 = 40;
 
 /// Фаза полёта.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -226,6 +230,7 @@ pub fn think(mob: &mut Mob, _view: &dyn View, ctx: &Ctx, rng: &mut Rng, mut plan
             if mob.phantom.wait == 0 && !cat {
                 mob.phantom.phase = Phase::Swoop;
                 mob.phantom.swooping = 0;
+                mob.phantom.wait = SWEEP_MIN + rng.below(SWEEP_SPREAD) as i32;
 
                 let pitch = 0.95 + rng.unit() * 0.1;
 
@@ -240,27 +245,39 @@ pub fn think(mob: &mut Mob, _view: &dyn View, ctx: &Ctx, rng: &mut Rng, mut plan
             let (dx, dz) = (target.x - mob.x, target.z - mob.z);
             let touching = dx.abs() < 0.75 && dz.abs() < 0.75 && mob.y + 0.5 > target.y && mob.y < target.y + 1.8;
 
-            if touching {
+            if cat || mob.wall {
+                retreat(mob);
+            } else if touching {
                 // Укус: урон по сложности, толчок от фантома (вики, Phantom: «2 HP … 3 HP on Hard»).
                 let damage = if ctx.difficulty >= 3 { 3.0 } else { 2.0 };
                 let length = (dx * dx + dz * dz).sqrt().max(1.0e-6);
 
                 plan.melee = Some(super::hostile::Melee { target: target.id, damage, push: (dx / length, dz / length), wither: false, hunger: false });
                 mob.phantom.phase = Phase::Circle;
-                mob.phantom.wait = BITE_WAIT;
+                mob.phantom.wait = mob.phantom.wait.max(BITE_WAIT);
                 // После укуса уходит вверх: скорость разворачивается за 3–4 такта (чёрный
                 // ящик, phantom-swoop: vy −0,17 → +0,18 за 4 такта).
                 mob.vy = mob.vy.max(0.0) + 0.1;
                 mob.phantom.radius = 5.0 + f64::from(rng.below(8));
                 mob.phantom.height = 10.0 + f64::from(rng.below(20));
-            } else if mob.phantom.swooping > 400 || cat {
-                mob.phantom.phase = Phase::Circle;
-                mob.phantom.wait = BITE_WAIT;
+            } else if mob.phantom.swooping > 400 {
+                retreat(mob);
             }
         }
     }
 
     plan
+}
+
+/// После удара или испуга пике прерывается сразу (вики, Phantom).
+/// [проверить] точная траектория подъёма и пауза после испуга.
+pub fn retreat(mob: &mut Mob) {
+    mob.phantom.phase = Phase::Circle;
+    mob.phantom.wait = mob.phantom.wait.max(BITE_WAIT);
+    mob.phantom.swooping = 0;
+    mob.phantom.goal = Some((mob.x, mob.y + 10.0, mob.z));
+    mob.phantom.vmax = RETREAT_SPEED;
+    mob.vy = mob.vy.max(0.0) + 0.1;
 }
 
 /// Полёт: скорость тянется к скорости в сторону цели, тяжести нет (вики,

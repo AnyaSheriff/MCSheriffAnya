@@ -1,0 +1,91 @@
+{
+ "name": "damage-armor-bypass",
+ "about": "[\u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c] Unrecorded regression; no random exceptions until vanilla-vs-vanilla evidence.",
+ "exclusive": true,
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "tp $(bot) $(0.5,0,0.5)",
+  "time set midnight"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon zombie $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 10,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:in_fire"
+  },
+  {
+   "after": 35,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:campfire"
+  },
+  {
+   "after": 60,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:lava"
+  },
+  {
+   "after": 85,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:on_fire"
+  },
+  {
+   "after": 110,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:magic"
+  },
+  {
+   "after": 135,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:indirect_magic"
+  },
+  {
+   "after": 160,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:thorns"
+  },
+  {
+   "after": 185,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:fall"
+  },
+  {
+   "after": 210,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:freeze"
+  },
+  {
+   "after": 235,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:cramming"
+  },
+  {
+   "after": 260,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:dragon_breath"
+  },
+  {
+   "after": 285,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:ender_pearl"
+  },
+  {
+   "after": 310,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:stalagmite"
+  },
+  {
+   "after": 335,
+   "cmd": "damage @e[type=zombie,distance=..16,limit=1] 1 minecraft:hot_floor"
+  }
+ ],
+ "record_ticks": 400,
+ "cleanup": [
+  "kill @e[type=!player,distance=..48]",
+  "effect clear $(bot)",
+  "clear $(bot)",
+  "gamemode creative $(bot)",
+  "difficulty peaceful",
+  "fill $(-10,0,-10) $(10,12,10) minecraft:air",
+  "gamerule random_tick_speed 3",
+  "gamerule mob_griefing true",
+  "time set noon",
+  "!startfly"
+ ]
+}

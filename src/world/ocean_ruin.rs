@@ -248,6 +248,9 @@ fn paint(seed: i64, warm: bool, ruin: &Ruin, chunk: &mut super::Chunk, chunk_x: 
 
         chunk.put_generated(lx, wy, lz, state_of(&if wet { text.replace("waterlogged=false", "waterlogged=true") } else { text.clone() }), true);
 
+        if text.starts_with("suspicious_") {
+            chunk.archaeology.insert((lx,wy,lz),crate::archaeology::generated(if warm {"ocean_ruin_warm"} else {"ocean_ruin_cold"},template::roll(seed,x,z,0xA2C0 ^ wy as u64)));
+        }
         if text.starts_with("chest") {
             let mut dice = crate::loot::Dice::new(template::roll(seed, x, z, 0x0E5C ^ (wy as u64)));
             let mut chest = crate::containers::Container::new(crate::containers::Kind::Chest);

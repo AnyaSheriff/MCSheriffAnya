@@ -83,6 +83,18 @@ pub(super) fn use_villager(items: &mut crate::items::Items, index: usize, player
 /// Открывает окно торговли: Open Screen, содержимое окна, Merchant Offers
 /// (чёрный ящик, villager-trade: в этом порядке).
 pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, villager_id: i32) -> io::Result<()> {
+    let pending=shared.items_in(player.dimension).lock().expect("торговец").mobs().iter()
+        .find(|m|m.entity_id==villager_id).map(|m|((m.x as i32,m.z as i32),m.villager.offers.clone()));
+    if let Some((at,mut offers))=pending {
+        let changed={
+            let world=shared.world_in(player.dimension).lock().expect("мир");
+            let mut maps=shared.maps.lock().expect("карты");
+            let mut changed=false;
+            for offer in &mut offers {changed |= crate::maps::resolve_explorer(&mut offer.sell,&mut maps,&world,at);}
+            changed
+        };
+        if changed && let Some(mob)=shared.items_in(player.dimension).lock().expect("торговец").mobs_mut().iter_mut().find(|m|m.entity_id==villager_id) {mob.villager.offers=offers;}
+    }
     let found = shared
         .items_in(player.dimension)
         .lock()

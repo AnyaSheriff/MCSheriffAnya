@@ -312,7 +312,7 @@ impl Template {
                 Some((name, count)) => Some(Stack::new(blocks::item_named(name)?, count)),
                 None => None,
             },
-            sell: Stack::new(blocks::item_named(self.sell.0)?, self.sell.1),
+            sell: if let Some(map)=crate::maps::pending_explorer(self.sell.0) {map} else {Stack::new(blocks::item_named(self.sell.0)?, self.sell.1)},
             uses: 0,
             max_uses: self.max_uses,
             xp: self.xp,
@@ -343,6 +343,11 @@ const fn sell_range(low: i32, high: i32, item: &'static str, max_uses: i32, xp: 
 /// Обмен с доплатой: `n` штук и изумруды → `count` штук.
 const fn swap(item: &'static str, n: i32, emeralds: i32, out: &'static str, count: i32, max_uses: i32, xp: i32) -> Template {
     Template { buy: (item, n, n), buy_b: Some(("emerald", emeralds)), sell: (out, count), max_uses, xp, mult: 0.05 }
+}
+
+// Вики, Trading: карта + компас, запас 12. [проверить] выбор сделок 26.1.2.
+const fn explorer(price:i32,name:&'static str,xp:i32)->Template {
+    Template {buy:("emerald",price,price),buy_b:Some(("compass",1)),sell:(name,1),max_uses:12,xp,mult:0.2}
 }
 
 /// Цвета по порядку красителей (вики, Dye).
@@ -404,11 +409,11 @@ fn pool_of(profession: &str, level: u8) -> Vec<Template> {
         ("butcher", 3) => vec![buy("beef", 10, 16, 20), buy("mutton", 7, 16, 20)],
         ("butcher", 4) => vec![buy("dried_kelp_block", 10, 12, 30)],
         ("butcher", 5) => vec![buy("sweet_berries", 10, 12, 30)],
-        ("cartographer", 1) => vec![buy("paper", 24, 12, 2), sell(7, "map", 1, 12, 1, 0.05)],
-        ("cartographer", 2) => vec![buy("glass_pane", 11, 12, 10)],
-        ("cartographer", 3) => vec![buy("compass", 1, 12, 10)],
+        ("cartographer", 1) => vec![buy("paper", 24, 16, 2), sell(7, "map", 1, 12, 1, 0.05)],
+        ("cartographer", 2) => vec![buy("glass_pane", 11, 16, 10)],
+        ("cartographer", 3) => vec![buy("compass", 1, 12, 10), explorer(13,"ocean_explorer_map",10), explorer(12,"trial_explorer_map",10)],
         ("cartographer", 4) => vec![sell(7, "item_frame", 1, 12, 15, 0.05), sell(3, "white_banner", 1, 12, 15, 0.05)],
-        ("cartographer", 5) => vec![sell(8, "globe_banner_pattern", 1, 12, 30, 0.05)],
+        ("cartographer", 5) => vec![sell(8, "globe_banner_pattern", 1, 12, 30, 0.05), explorer(14,"woodland_explorer_map",30)],
         ("cleric", 1) => vec![buy("rotten_flesh", 32, 16, 2), sell(1, "redstone", 2, 12, 1, 0.05)],
         ("cleric", 2) => vec![buy("gold_ingot", 3, 12, 10), sell(1, "lapis_lazuli", 1, 12, 5, 0.05)],
         ("cleric", 3) => vec![buy("rabbit_foot", 2, 12, 20), sell(4, "glowstone", 1, 12, 10, 0.05)],

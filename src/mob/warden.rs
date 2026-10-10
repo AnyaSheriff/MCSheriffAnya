@@ -298,7 +298,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
             sound(mob, "minecraft:entity.warden.sonic_charge", 3.0);
             return plan;
         }
-        super::hostile::approach(mob, view, p, mob.kind.speed() * 1.2);
+        approach(mob,view,(p.x,p.y,p.z),1.2);
         return ai::walk(mob, plan);
     }
     mob.warden.calm -= 1;
@@ -335,15 +335,30 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         sound(mob, "minecraft:entity.warden.sniff", 5.0);
         return plan;
     }
+    // Вики, Warden: «24 blocks» — запах ведёт к цели и вне радиуса
+    // прибавки злости. [проверить] границы поиска и очередность со звуками.
+    if mob.warden.disturbance.is_none()
+        && let Some(p) = targets.iter().filter(|p| distance(at, (p.x, p.y, p.z)) <= 24.0)
+            .min_by(|a, b| distance(at, (a.x, a.y, a.z)).total_cmp(&distance(at, (b.x, b.y, b.z)))) {
+        mob.warden.disturbance = Some((p.x, p.y, p.z));
+        mob.warden.calm = CALM;
+    }
     if let Some(point) = mob.warden.disturbance {
         if distance(at, point) < 2.0 { mob.warden.disturbance = None; }
         else {
-            let goal = (point.0.floor() as i32, point.1.floor() as i32, point.2.floor() as i32);
-            if !mob.brain.walking() { mob.brain.go(super::path::find(view, mob.cell(), goal, super::path::MAX_NODES), mob.kind.speed()); }
+            approach(mob,view,point,1.0);
             return ai::walk(mob, plan);
         }
     }
     super::hostile::idle_walk(mob, view, ctx, rng, plan, mob.on_ground)
+}
+
+fn approach(mob:&mut Mob,view:&dyn View,point:(f64,f64,f64),speed:f64) {
+    mob.brain.repath-=1;
+    if mob.brain.walking() && mob.brain.repath>0 {return;}
+    let goal=(point.0.floor() as i32,point.1.floor() as i32,point.2.floor() as i32);
+    let route=super::path::find_height(view,mob.cell(),goal,super::path::MAX_NODES,3);
+    mob.brain.go(route,speed);mob.brain.repath=10;
 }
 
 pub fn distance(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
@@ -520,6 +535,33 @@ mod tests {
         let loot = super::super::loot(&mob, &mut Rng::new(1));
         assert_eq!(loot.len(), 1);
         assert_eq!(crate::blocks::item_name(loot[0].item), Some("sculk_catalyst"));
+    }
+
+    #[test]
+    fn warden_walks_to_sound_and_scent_with_a_speed_multiplier() {
+        let mut m=Mob::new(7,Kind::Warden,(0.5,0.0,0.5));m.on_ground=true;
+        m.warden.calm=CALM;m.warden.sniff_cooldown=200;m.warden.disturbance=Some((10.5,0.0,0.5));
+        let mut rng=Rng::new(5);let ctx=Ctx {players:&[],mates:&[],difficulty:2,sky:0,sun_up:false};
+        assert_eq!(think(&mut m,&Floor,&ctx,&mut rng).speed,1.0);
+        for _ in 0..40 {m.tick(&Floor,&ctx,&mut rng);}
+        assert!(m.x>4.0,"{}",m.x);
+        m.warden.disturbance=None;m.brain.stop();
+        let players=[watcher(1,20.0)];let ctx=Ctx {players:&players,..ctx};
+        assert!(think(&mut m,&Floor,&ctx,&mut rng).speed>0.0);
+        assert_eq!(m.warden.level(),0);
+    }
+
+    #[test]
+    fn path_avoids_two_block_high_passages() {
+        struct Tunnel;
+        impl View for Tunnel {
+            fn block(&self,x:i32,y:i32,z:i32)->i32 {
+                if y<0 || (y==2 && x==2 && z==0) {crate::blocks::state_by_name("stone").unwrap()} else {0}
+            }
+            fn loaded(&self,_x:i32,_z:i32)->bool {true}
+        }
+        let path=super::super::path::find_height(&Tunnel,(0,0,0),(4,0,0),400,3);
+        assert_eq!(path.last(),Some(&(4,0,0)));assert!(!path.contains(&(2,0,0)));
     }
 
 }

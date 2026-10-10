@@ -241,3 +241,16 @@ fn pollen_grows_vines_and_both_pitcher_halves() {
     let (at,upper)=crop_upper((0,0,0),grown).unwrap();
     assert_eq!(at,(0,1,0));assert_eq!(number(upper,"age"),3);assert!(crop_growth(upper).is_none());
 }
+
+#[test]
+fn berry_harvest_keeps_existing_mouth_item_and_respects_griefing() {
+    let mut garden=Garden::new();garden.put((0,0,0),"sweet_berry_bush[age=3]");
+    let held=Stack::new(blocks::item_named("emerald").unwrap(),1);
+    let mut fox=animal(Kind::Fox);fox.wild.target=Some((0,0,0));fox.wild.mouth=Some(held);
+    let mut ctx=context();ctx.sun_up=false;
+    garden.griefing=false;
+    for _ in 0..50 {assert!(think(&mut fox,&garden,&ctx,&mut Rng::new(5)).put.is_none());}
+    garden.griefing=true;fox.wild.target=Some((0,0,0));fox.wild.hop=41;fox.wild.cooldown=0;
+    assert!(think(&mut fox,&garden,&ctx,&mut Rng::new(5)).put.is_some());
+    assert_eq!(fox.wild.mouth,Some(held));
+}

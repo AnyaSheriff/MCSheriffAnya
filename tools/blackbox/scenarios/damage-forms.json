@@ -1,0 +1,58 @@
+{
+ "name": "damage-forms",
+ "about": "[проверить] Unrecorded regression; no random exceptions until vanilla-vs-vanilla evidence.",
+ "exclusive": true,
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "tp $(bot) $(0.5,0,0.5)"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b}"
+  },
+  {
+   "after": 10,
+   "cmd": "damage @e[type=cow,distance=..16,limit=1] 1"
+  },
+  {
+   "after": 40,
+   "cmd": "damage @e[type=cow,distance=..16,limit=1] 1 minecraft:in_fire"
+  },
+  {
+   "after": 70,
+   "cmd": "damage @e[type=cow,distance=..16,limit=1] 1 minecraft:generic at $(0,0,0)"
+  },
+  {
+   "after": 100,
+   "cmd": "damage @e[type=cow,distance=..16,limit=1] 1 minecraft:player_attack by $(bot)"
+  },
+  {
+   "after": 120,
+   "cmd": "summon pig $(2.5,0,3.5) {NoAI:1b}"
+  },
+  {
+   "after": 130,
+   "cmd": "damage @e[type=cow,distance=..16,limit=1] 1 minecraft:arrow by @e[type=pig,distance=..16,limit=1] from $(bot)"
+  }
+ ],
+ "record_ticks": 240,
+ "cleanup": [
+  "kill @e[type=!player,distance=..48]",
+  "effect clear $(bot)",
+  "clear $(bot)",
+  "gamemode creative $(bot)",
+  "difficulty peaceful",
+  "fill $(-10,0,-10) $(10,12,10) minecraft:air",
+  "gamerule random_tick_speed 3",
+  "gamerule mob_griefing true",
+  "time set noon",
+  "!startfly"
+ ]
+}

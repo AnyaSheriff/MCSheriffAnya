@@ -394,6 +394,7 @@ pub struct Thrown {
     pub blasts: Vec<crate::firework::Blast>,
     /// Брошенные оки Края (ender_eye.rs) и пропавшие в последнем такте.
     pub eyes: Vec<crate::ender_eye::Eye>,
+    pub ominous:Vec<crate::ominous::Spawner>,
     pub eyes_gone: Vec<crate::ender_eye::Gone>,
 }
 
@@ -403,7 +404,7 @@ impl Thrown {
     }
 
     pub fn any_in(&self, dimension: Dimension) -> bool {
-        self.flying.iter().any(|f| f.dimension == dimension)
+        self.ominous.iter().any(|s|s.dimension==dimension) || self.flying.iter().any(|f| f.dimension == dimension)
             || self.clouds.iter().any(|c| c.dimension == dimension)
             || self.impacts.iter().any(|i| i.dimension == dimension)
             || self.faded.iter().any(|c| c.dimension == dimension)

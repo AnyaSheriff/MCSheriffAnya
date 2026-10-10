@@ -201,6 +201,7 @@ pub struct Shot {
 /// Состояние охоты.
 #[derive(Clone, Debug, Default)]
 pub struct State {
+    pub trial_gear: Option<super::trial_gear::Gear>,
     /// Номер игрока-цели.
     pub target: Option<i32>,
 
@@ -561,6 +562,11 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     // В воздухе путь ведётся, новый не строится (как у животных).
     let grounded = mob.on_ground || in_water || mob.kind.spider();
     if let Some(plan) = super::newmobs::hunt_mob(mob, view, ctx, rng) { return plan; }
+    if mob.kind == Kind::Creeper && !mob.h.lit && mob.h.fuse == 0
+        && flee_cat(mob, view, ctx, grounded) {
+        swell(mob, None, &mut plan);
+        return ai::walk(mob, plan);
+    }
     let target = choose_target(mob, view, ctx, rng);
 
     // Паук: днём цель забывается с шансом 1/100 за такт (вики, Spider).
@@ -699,6 +705,9 @@ pub(super) fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut
                 _ => 3.0,
             };
 
+            let damage=damage+mob.h.trial_gear.as_ref().map_or(0.0,|gear| {
+                super::trial_gear::bonus(gear,crate::attributes::ATTACK_DAMAGE)+gear[0].map_or(0.0,|s|crate::combat::enchant_bonus(&s.extras(),false,false))
+            });
             mob.events.push(Event::Swing);
             if matches!(mob.kind,Kind::Creaking|Kind::Zoglin) {
                 mob.events.push(Event::Sound{name:if mob.kind==Kind::Creaking {"minecraft:entity.creaking.attack"}else{"minecraft:entity.zoglin.attack"},volume:1.0,pitch:1.0});
@@ -834,30 +843,33 @@ fn creeper(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &m
         return;
     }
 
-    let cat = ctx
-        .mates
-        .iter()
-        .filter(|mate| mate.kind == Kind::Cat)
-        .map(|mate| (mate, dist2(mob, mate.x, mate.y, mate.z)))
-        .filter(|(_, dist)| *dist < CAT_AVOID * CAT_AVOID)
-        .min_by(|a, b| a.1.total_cmp(&b.1));
-
-    if let Some((cat, _)) = cat {
-        // Прочь от кошки: точка в 8 блоках по линии от неё.
-        if grounded && !mob.brain.walking() {
-            let (dx, dz) = (mob.x - cat.x, mob.z - cat.z);
-            let length = (dx * dx + dz * dz).sqrt().max(1.0e-6);
-            let here = mob.cell();
-            let away = ai::settle(view, (here.0 + (dx / length * 8.0).round() as i32, here.1, here.2 + (dz / length * 8.0).round() as i32), here.1);
-            let route = path::find(view, here, away, path::MAX_NODES);
-
-            mob.brain.go(route, 1.2);
-        }
-    } else if grounded {
+    if !flee_cat(mob, view, ctx, grounded) && grounded {
         approach(mob, view, target, 1.0);
     }
 
     *plan = ai::walk(mob, std::mem::take(plan));
+}
+
+/// Вики, Creeper: «cats and ocelots»; бегство работает и без цели-игрока.
+/// [проверить] точка и скорость бегства.
+fn flee_cat(mob: &mut Mob, view: &dyn View, ctx: &Ctx, grounded: bool) -> bool {
+    let cat = ctx.mates.iter().filter(|m| matches!(m.kind, Kind::Cat | Kind::Ocelot))
+        .filter(|m| dist2(mob, m.x, m.y, m.z) < CAT_AVOID * CAT_AVOID)
+        .min_by(|a,b| dist2(mob,a.x,a.y,a.z).total_cmp(&dist2(mob,b.x,b.y,b.z)));
+    let Some(cat) = cat else { return false; };
+    if grounded {
+        mob.brain.repath -= 1;
+        if !mob.brain.walking() || mob.brain.repath <= 0 {
+            let (mut dx, mut dz) = (mob.x-cat.x, mob.z-cat.z);
+            if dx.hypot(dz) < 1e-6 { dx=1.0; dz=0.0; }
+            let length=dx.hypot(dz);
+            let here=mob.cell();
+            let away=ai::settle(view,(here.0+(dx/length*8.0).round() as i32,here.1,here.2+(dz/length*8.0).round() as i32),here.1);
+            mob.brain.go(path::find(view,here,away,path::MAX_NODES),1.2);
+            mob.brain.repath=10;
+        }
+    }
+    true
 }
 
 /// Скелет: стоит, целится и стреляет (вики, Skeleton). Если не видит цель или

@@ -201,7 +201,7 @@ pub fn write_tail(mob: &Mob, out: &mut Vec<u8>) {
     let name = mob.name.as_deref().unwrap_or("");
 
     let nether = matches!(mob.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute);
-    out.push(u8::from(mob.name.is_some()) | (u8::from(mob.persistent_tag) << 1) | (u8::from(nether) << 2));
+    out.push(u8::from(mob.name.is_some()) | (u8::from(mob.persistent_tag) << 1) | (u8::from(nether) << 2) | (u8::from(mob.h.trial_gear.is_some()) << 3));
     out.extend_from_slice(&(name.len() as u16).to_be_bytes());
     out.extend_from_slice(name.as_bytes());
 
@@ -223,6 +223,7 @@ pub fn write_tail(mob: &Mob, out: &mut Vec<u8>) {
         out.extend_from_slice(&mob.newmobs.outside.to_be_bytes());
         out.push(u8::from(mob.nether.immune));
     }
+    if let Some(gear)=&mob.h.trial_gear {super::trial_gear::write(gear,out);}
 }
 
 /// Прочитанный хвост.
@@ -231,6 +232,7 @@ pub struct Tail {
     persistent: bool,
     leash: Option<Holder>,
     nether: Option<(i32,bool)>,
+    trial_gear: Option<super::trial_gear::Gear>,
 }
 
 /// Читает хвост `write_tail`; None — испорчен.
@@ -260,11 +262,13 @@ pub fn read_tail(bytes: &mut &[u8]) -> Option<Tail> {
     };
 
     let nether=if flags & 4 != 0 {Some((i32::from_be_bytes(take(4)?.try_into().ok()?),take(1)?[0]!=0))} else {None};
-    Some(Tail { name: (flags & 1 != 0).then_some(name), persistent: flags & 2 != 0, leash, nether })
+    let trial_gear=if flags & 8 != 0 {Some(super::trial_gear::read(bytes)?)} else {None};
+    Some(Tail { trial_gear, name: (flags & 1 != 0).then_some(name), persistent: flags & 2 != 0, leash, nether })
 }
 
 /// Кладёт прочитанный хвост в моба.
 pub fn apply_tail(mob: &mut Mob, tail: Tail) {
+    mob.h.trial_gear=tail.trial_gear;
     mob.name = tail.name;
     mob.persistent_tag = tail.persistent;
     mob.leash = tail.leash;

@@ -509,7 +509,9 @@ pub fn land_table(biome: &str) -> Vec<(Kind,u32,u32,u32)> {
         "snowy_slopes" | "jagged_peaks" | "frozen_peaks" => vec![(Kind::Goat,5,1,3)],
         "snowy_plains" | "ice_spikes" | "frozen_ocean" | "deep_frozen_ocean" => vec![(Kind::PolarBear,1,1,2)],
         "mushroom_fields" => vec![(Kind::Mooshroom,8,4,8)],
-        "savanna" | "savanna_plateau" | "windswept_savanna" => vec![(Kind::Llama,8,4,6)],
+        "plains" | "sunflower_plains" => vec![(Kind::Horse,5,2,6),(Kind::Donkey,1,1,3)],
+        "savanna" | "windswept_savanna" => vec![(Kind::Horse,1,2,6),(Kind::Donkey,1,1,1),(Kind::Armadillo,6,2,3)],
+        "savanna_plateau" => vec![(Kind::Llama,8,4,6),(Kind::Horse,1,2,6),(Kind::Donkey,1,1,1),(Kind::Armadillo,6,2,3)],
         "windswept_hills" | "windswept_forest" | "windswept_gravelly_hills" => vec![(Kind::Llama,5,4,6)],
         "jungle" => vec![(Kind::Panda,1,1,2),(Kind::Ocelot,2,1,3)],
         "bamboo_jungle" => vec![(Kind::Panda,80,1,2),(Kind::Ocelot,2,1,3)],
@@ -528,6 +530,7 @@ pub fn land_for_new_chunk(view: &dyn View, cx: i32, cz: i32, biome: &str, rng: &
     let (kind,_,low,high)=chosen;
     let count=low+rng.below(high-low+1);
     let mut result=Vec::new();
+    let coat=rng.below(7) as i32;
     for _ in 0..count*4 {
         if result.len()>=count as usize { break; }
         let x=cx*16+rng.below(16) as i32; let z=cz*16+rng.below(16) as i32;
@@ -544,6 +547,7 @@ pub fn land_for_new_chunk(view: &dyn View, cx: i32, cz: i32, biome: &str, rng: &
             if !ground || solid(view.block(x,y,z)) || solid(view.block(x,y+1,z)) || (y+2..320).any(|yy| solid(view.block(x,yy,z))) { break; }
             let mut mob=Mob::new(next(),kind,(f64::from(x)+0.5,f64::from(y),f64::from(z)+0.5));
             super::land::initialize(&mut mob,rng);
+            if super::horse::equine(kind) { super::horse::initialize(&mut mob,rng); mob.horse.variant=coat | ((rng.below(5) as i32)<<8); }
             if kind==Kind::Sheep { mob.color=wild_colour(rng); }
             if kind==Kind::PolarBear && !result.is_empty() || matches!(kind,Kind::Panda|Kind::Goat|Kind::Llama) && rng.below(20)==0 { mob.age=super::BABY_AGE; }
             if fits(view,&mob) { result.push(mob); }
@@ -631,4 +635,17 @@ pub fn bat_holiday() -> bool {
         return halloween(i32::from(date.wMonth),i32::from(date.wDay));
     }
     #[allow(unreachable_code)] false
+}
+
+#[cfg(test)] mod equine_land_tests {
+    use super::*;
+    #[test] fn equines_share_land_tables_with_llamas_and_armadillos() {
+        for biome in ["savanna","savanna_plateau","windswept_savanna"] {
+            let t=land_table(biome);assert!(t.contains(&(Kind::Horse,1,2,6)));assert!(t.contains(&(Kind::Donkey,1,1,1)));
+            assert_eq!(t.iter().any(|e|e.0==Kind::Llama),biome=="savanna_plateau");
+        }
+        for biome in ["plains","sunflower_plains"] {
+            let t=land_table(biome);assert!(t.contains(&(Kind::Horse,5,2,6)));assert!(t.contains(&(Kind::Donkey,1,1,3)));
+        }
+    }
 }

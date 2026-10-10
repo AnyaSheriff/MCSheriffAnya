@@ -48,6 +48,7 @@ const CLOUD_SYNC: u32 = 60;
 /// Что клиенту о снаряде или облаке уже сказано.
 #[derive(Clone, Copy, Debug)]
 pub(super) enum Shown {
+    Ominous,
     Flying { grid: (i64, i64, i64) },
     /// Око Края: `fresh` — появление ушло при броске, слежение ещё не
     /// присылало первого (нулевого) сдвига.
@@ -419,6 +420,7 @@ pub(super) fn fill_breath(shared: &Shared, player: &mut PlayerState, hand: i32) 
 /// начале хода: только облака, которые слежение видит на такт позже (их
 /// прошлый радиус, в том числе у только что истаявших).
 pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, early: bool) -> io::Result<()> {
+    let ominous=shared.thrown.lock().expect("снаряды").ominous.iter().filter(|s|s.dimension==player.dimension).cloned().collect::<Vec<_>>();
     let (eyes, eyes_gone) = {
         let thrown = shared.thrown.lock().expect("снаряды захвачены другим потоком");
         let dimension = player.dimension;
@@ -538,6 +540,7 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
         .chain(clouds.iter().filter(|c| near((c.x, c.y, c.z))).map(|c| c.entity_id))
         .chain(rockets.iter().filter(|r| near((r.x, r.y, r.z))).map(|r| r.entity_id))
         .chain(eyes.iter().filter(|e| near((e.x, e.y, e.z))).map(|e| e.entity_id))
+        .chain(ominous.iter().filter(|s|near(s.at)).map(|s|s.id))
         .collect();
     // Взорвавшиеся в этом такте ракеты: сверка места такта — до ухода.
     for rocket in &blasts {
@@ -622,6 +625,19 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
 
     for rocket in rockets.iter().filter(|r| present.contains(&r.entity_id)) {
         update_rocket(stream, player, rocket).await?;
+    }
+
+    for s in ominous.iter().filter(|s|present.contains(&s.id)) {
+        if let std::collections::hash_map::Entry::Vacant(entry)=player.seen_thrown.entry(s.id) {
+            let mut body=encode_varint(ADD_ENTITY);body.extend(encode_varint(s.id));body.extend(crate::items::uuid_for(s.id));
+            body.extend(encode_varint(crate::ominous::ENTITY_TYPE));
+            push_f64(&mut body,s.at.0);push_f64(&mut body,s.at.1);push_f64(&mut body,s.at.2);
+            types::push_velocity(&mut body,0.0,0.0,0.0);body.extend([0,0,0]);body.extend(encode_varint(0));
+            write_body(stream,body).await?;
+            let mut body=encode_varint(SET_ENTITY_DATA);body.extend(encode_varint(s.id));body.push(8);body.extend(encode_varint(PROPERTY_SLOT));
+            push_slot(&mut body,Some(s.stack));body.push(PROPERTIES_END);write_body(stream,body).await?;
+            entry.insert(Shown::Ominous);
+        }
     }
 
     for eye in eyes.iter().filter(|e| present.contains(&e.entity_id)) {

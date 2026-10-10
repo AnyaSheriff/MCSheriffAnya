@@ -49,6 +49,21 @@ pub const LAVA_FIRE_TICKS: i32 = 300;
 /// (configuration.rs), они идут в пакете Damage Event.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Source {
+    BadRespawnPoint,
+    Cramming,
+    DragonBreath,
+    EnderPearl,
+    FallingAnvil,
+    FallingBlock,
+    FallingStalactite,
+    Freeze,
+    HotFloor,
+    MobProjectile,
+    Spear,
+    Spit,
+    Stalagmite,
+    UnattributedFireball,
+
     /// Стрела (скелет или игрок из лука).
     Arrow,
     Cactus,
@@ -111,14 +126,26 @@ pub enum Source {
     /// Заряд ветра — игрока или бриза (вики, Wind Charge: «wind_charge»;
     /// чёрный ящик, breeze-wind-charge: Damage Event type=47).
     WindCharge,
-    /// Замерзание в рыхлом снегу (Powder Snow).
-    Freeze,
 }
 
 impl Source {
     /// Номер вида в реестре damage_type.
     pub fn type_id(self) -> i32 {
         match self {
+            Source::BadRespawnPoint => 1,
+            Source::Cramming => 4,
+            Source::DragonBreath => 5,
+            Source::EnderPearl => 8,
+            Source::FallingAnvil => 11,
+            Source::FallingBlock => 12,
+            Source::FallingStalactite => 13,
+            Source::Freeze => 17,
+            Source::HotFloor => 20,
+            Source::MobProjectile => 30,
+            Source::Spear => 37,
+            Source::Spit => 38,
+            Source::Stalagmite => 39,
+            Source::UnattributedFireball => 46,
             Source::Arrow => 0,
             Source::Cactus => 2,
             // Реестр damage_type по алфавиту: starve 40, sting 41,
@@ -157,7 +184,6 @@ impl Source {
             Source::Thrown => 44,
             // Реестр по алфавиту: unattributed_fireball 46, wind_charge 47.
             Source::WindCharge => 47,
-            Source::Freeze => 17,
             // Место в реестре damage_type (configuration.rs: 15).
             Source::Fireworks => 15,
             // Реестр damage_type по алфавиту: out_of_world 32, outside_border
@@ -173,6 +199,20 @@ impl Source {
     /// Ключ сообщения о смерти (вики, Death messages).
     pub fn death_key(self) -> &'static str {
         match self {
+            Source::BadRespawnPoint => "death.attack.badRespawnPoint",
+            Source::Cramming => "death.attack.cramming",
+            Source::DragonBreath => "death.attack.dragonBreath",
+            Source::EnderPearl => "death.attack.fall",
+            Source::FallingAnvil => "death.attack.anvil",
+            Source::FallingBlock => "death.attack.fallingBlock",
+            Source::FallingStalactite => "death.attack.fallingStalactite",
+            Source::Freeze => "death.attack.freeze",
+            Source::HotFloor => "death.attack.hotFloor",
+            Source::MobProjectile => "death.attack.mob",
+            Source::Spear => "death.attack.spear",
+            Source::Spit => "death.attack.mob",
+            Source::Stalagmite => "death.attack.stalagmite",
+            Source::UnattributedFireball => "death.attack.onFire",
             Source::Arrow => "death.attack.arrow",
             Source::Cactus => "death.attack.cactus",
             Source::SweetBerryBush => "death.attack.sweetBerryBush",
@@ -204,7 +244,6 @@ impl Source {
             Source::Trident => "death.attack.trident",
             Source::Thrown => "death.attack.thrown",
             Source::WindCharge => "death.attack.mob",
-            Source::Freeze => "death.attack.freeze",
             Source::Fireworks => "death.attack.fireworks",
             Source::FlyIntoWall => "death.attack.flyIntoWall",
             Source::OutsideBorder => "death.attack.outsideBorder",
@@ -215,7 +254,7 @@ impl Source {
 
     /// Снаряд: стрела или брошенный трезубец (тег is_projectile).
     pub fn is_projectile(self) -> bool {
-        matches!(self, Source::Arrow | Source::Trident | Source::Fireball | Source::Thrown | Source::WindCharge)
+        matches!(self, Source::Arrow | Source::Trident | Source::Fireball | Source::Thrown | Source::WindCharge | Source::MobProjectile | Source::Spit | Source::UnattributedFireball | Source::WitherSkull | Source::Fireworks)
     }
 
     /// Урон не ждёт конца неуязвимости после прошлого удара (`bypasses_cooldown`).
@@ -305,6 +344,13 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::OutsideBorder => "left the confines of this world",
         Source::Lightning => "was struck by lightning",
         Source::Fireball => "was fireballed",
+        Source::BadRespawnPoint => "blew up", Source::Cramming => "was squished too much",
+        Source::DragonBreath => "was roasted in dragon breath", Source::EnderPearl => "fell from a high place",
+        Source::FallingAnvil => "was squashed by a falling anvil", Source::FallingBlock => "was squashed by a falling block",
+        Source::FallingStalactite => "was skewered by a falling stalactite",
+        Source::HotFloor => "discovered the floor was lava", Source::MobProjectile | Source::Spit => "was shot",
+        Source::Spear => "was impaled", Source::Stalagmite => "was impaled on a stalagmite",
+        Source::UnattributedFireball => "burned to death",
     };
 
     format!("{} {}", name, what)
@@ -545,6 +591,11 @@ pub enum EffectKind {
     Darkness,
     /// Дурное знамение: в деревне становится «Знамением набега» (вики, Bad Omen; raid.rs).
     BadOmen,
+    TrialOmen,
+    WindCharged,
+    Weaving,
+    Oozing,
+    Infested,
     /// Знамение набега: по окончании начинается набег (вики, Raid Omen; raid.rs).
     RaidOmen,
     /// Герой деревни: скидки у жителей (вики, Hero of the Village).
@@ -588,13 +639,18 @@ impl EffectKind {
             EffectKind::Darkness => 32,
             // minecraft-data 26.1, effects.json: bad_omen 30, hero_of_the_village 31, raid_omen 34.
             EffectKind::BadOmen => 30,
+            EffectKind::TrialOmen => 33,
+            EffectKind::WindCharged => 35,
+            EffectKind::Weaving => 36,
+            EffectKind::Oozing => 37,
+            EffectKind::Infested => 38,
             EffectKind::HeroOfTheVillage => 31,
             EffectKind::RaidOmen => 34,
         }
     }
 
     /// Все виды (для перебора модификаторов).
-    pub const ALL: [EffectKind; 33] = [
+    pub const ALL: [EffectKind; 38] = [
         EffectKind::Speed, EffectKind::Slowness, EffectKind::Haste, EffectKind::MiningFatigue, EffectKind::Strength,
         EffectKind::InstantHealth, EffectKind::InstantDamage, EffectKind::JumpBoost, EffectKind::Nausea, EffectKind::Regeneration,
         EffectKind::Resistance, EffectKind::FireResistance, EffectKind::WaterBreathing, EffectKind::Invisibility, EffectKind::Blindness,
@@ -602,6 +658,7 @@ impl EffectKind {
         EffectKind::HealthBoost, EffectKind::Absorption, EffectKind::Saturation, EffectKind::Glowing, EffectKind::Levitation,
         EffectKind::Luck, EffectKind::Unluck, EffectKind::SlowFalling, EffectKind::Darkness, EffectKind::BadOmen,
         EffectKind::RaidOmen, EffectKind::HeroOfTheVillage, EffectKind::DolphinsGrace,
+        EffectKind::TrialOmen,EffectKind::WindCharged,EffectKind::Weaving,EffectKind::Oozing,EffectKind::Infested,
     ];
 
     /// Мгновенный: действует при наложении, не хранится.
@@ -646,6 +703,9 @@ impl EffectKind {
             EffectKind::Darkness => 0x292721,
             // Чёрный ящик, raid-start-wave1: entity_effect −16031432 = 0x0B6138.
             EffectKind::BadOmen => 0x0B6138,
+            EffectKind::TrialOmen => 0x16A6A6,
+            EffectKind::WindCharged => 0xB8D2D4, EffectKind::Weaving => 0x78695A,
+            EffectKind::Oozing => 0x99FFA3, EffectKind::Infested => 0x8C9B8C,
             EffectKind::RaidOmen => 0xDE4058,
             EffectKind::HeroOfTheVillage => 0x44FF44,
         }
@@ -743,6 +803,8 @@ impl EffectKind {
             "slow_falling" => Some(EffectKind::SlowFalling),
             "darkness" => Some(EffectKind::Darkness),
             "bad_omen" => Some(EffectKind::BadOmen),
+            "trial_omen" => Some(EffectKind::TrialOmen), "wind_charged"=>Some(EffectKind::WindCharged),
+            "weaving"=>Some(EffectKind::Weaving), "oozing"=>Some(EffectKind::Oozing), "infested"=>Some(EffectKind::Infested),
             "raid_omen" => Some(EffectKind::RaidOmen),
             "hero_of_the_village" => Some(EffectKind::HeroOfTheVillage),
             _ => None,
@@ -831,6 +893,9 @@ pub fn potion_effects(number: u16) -> Vec<Effect> {
         "luck" => one(Luck, 0, 6000),
         "slow_falling" => one(SlowFalling, 0, 1800),
         "long_slow_falling" => one(SlowFalling, 0, 4800),
+        // Вики, Potion: три минуты; [проверить] вторичные реакции смерти/урона.
+        "wind_charged"=>one(WindCharged,0,3600),"weaving"=>one(Weaving,0,3600),
+        "oozing"=>one(Oozing,0,3600),"infested"=>one(Infested,0,3600),
         _ => Vec::new(),
     }
 }

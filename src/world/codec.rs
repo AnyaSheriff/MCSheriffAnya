@@ -231,7 +231,7 @@ impl Chunk {
         // Хранилища — последними, и только если они есть. Порядок — по
         // месту, чтобы одинаковый чанк давал одинаковые байты. Если дальше
         // идёт что-то ещё, число хранилищ пишется и нулём.
-        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() {
+        if !self.containers.is_empty() || !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() {
             let mut places: Vec<_> = self.containers.keys().copied().collect();
 
             places.sort_unstable();
@@ -245,7 +245,7 @@ impl Chunk {
         // Особый динамит — после хранилищ (их число тогда пишется и
         // нулём): сколько, потом место и номер вида. Если дальше рамки —
         // число пишется и нулём.
-        if !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() {
+        if !self.custom_tnt.is_empty() || !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() {
             let mut places: Vec<_> = self.custom_tnt.iter().map(|&(place, kind)| (place, kind.0)).collect();
 
             places.sort_unstable();
@@ -261,7 +261,7 @@ impl Chunk {
         // Рамки для предметов (frame.rs): сколько и записи по порядку места,
         // чтобы одинаковый чанк давал одинаковые байты. Если дальше мобы —
         // число пишется и нулём.
-        if !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() {
+        if !self.frames.is_empty() || !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() {
             let mut frames: Vec<&crate::frame::Frame> = self.frames.iter().collect();
 
             frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
@@ -274,7 +274,7 @@ impl Chunk {
 
         // Мобы (mob/mod.rs): сколько и записи по порядку. Если дальше
         // командные блоки — число пишется и нулём.
-        if !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() {
+        if !self.mobs.is_empty() || !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() {
             out.extend_from_slice(&(self.mobs.len() as u16).to_be_bytes());
 
             for mob in &self.mobs {
@@ -284,7 +284,7 @@ impl Chunk {
 
         // Командные блоки (command_block.rs), по порядку места. Если дальше
         // спавнеры — число пишется и нулём.
-        if !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() {
+        if !self.command_blocks.is_empty() || !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() {
             let mut places: Vec<_> = self.command_blocks.keys().copied().collect();
 
             places.sort_unstable();
@@ -297,7 +297,7 @@ impl Chunk {
 
         // Спавнеры (spawner.rs), по порядку места. Если дальше таблички —
         // число пишется и нулём.
-        if !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() {
+        if !self.spawners.is_empty() || !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() {
             let mut places: Vec<_> = self.spawners.keys().copied().collect();
 
             places.sort_unstable();
@@ -310,7 +310,7 @@ impl Chunk {
 
         // Таблички (sign.rs), по порядку места. Если дальше испытательные
         // блоки — число пишется и нулём.
-        if !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() {
+        if !self.signs.is_empty() || !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() {
             let mut places: Vec<_> = self.signs.keys().copied().collect();
 
             places.sort_unstable();
@@ -323,7 +323,7 @@ impl Chunk {
 
         // Испытательные спавнеры и хранилища (trial.rs), по порядку места.
         // Если дальше ульи — число пишется и нулём.
-        if !self.trials.is_empty() || !self.hives.is_empty() {
+        if !self.trials.is_empty() || !self.hives.is_empty() || !self.archaeology.is_empty() {
             let mut places: Vec<_> = self.trials.keys().copied().collect();
 
             places.sort_unstable();
@@ -335,7 +335,7 @@ impl Chunk {
         }
 
         // Ульи и гнёзда пчёл (hive.rs) — самыми последними, по порядку места.
-        if !self.hives.is_empty() {
+        if !self.hives.is_empty() || !self.archaeology.is_empty() {
             let mut places: Vec<_> = self.hives.keys().copied().collect();
             places.sort_unstable();
             out.extend_from_slice(&(places.len() as u16).to_be_bytes());
@@ -345,6 +345,16 @@ impl Chunk {
                 let data = self.hives[&(x, y, z)].bytes();
                 out.extend_from_slice(&(data.len() as u32).to_be_bytes());
                 out.extend_from_slice(&data);
+            }
+        }
+
+        if !self.archaeology.is_empty() {
+            let mut places:Vec<_>=self.archaeology.keys().copied().collect();places.sort_unstable();
+            out.extend_from_slice(&(places.len() as u16).to_be_bytes());
+            for (x,y,z) in places {
+                out.push(((x<<4)|z) as u8);out.extend_from_slice(&(y as i16).to_be_bytes());
+                let bytes=serde_json::to_vec(&self.archaeology[&(x,y,z)]).expect("археология");
+                out.extend_from_slice(&(bytes.len() as u32).to_be_bytes());out.extend_from_slice(&bytes);
             }
         }
 
@@ -534,6 +544,19 @@ impl Chunk {
             }
         }
 
+        if rest.len()>=2 {
+            let count=u16::from_be_bytes(rest[..2].try_into().ok()?);rest=&rest[2..];
+            for _ in 0..count {
+                let (head,tail)=rest.split_at_checked(7)?;
+                let place=(i32::from(head[0]>>4),i32::from(i16::from_be_bytes(head[1..3].try_into().ok()?)),i32::from(head[0]&15));
+                let len=u32::from_be_bytes(head[3..7].try_into().ok()?) as usize;
+                if len>1_048_576 || !in_bounds(place.1) {return None;}
+                let (bytes,tail)=tail.split_at_checked(len)?;rest=tail;
+                let data=serde_json::from_slice(bytes).ok()?;
+                if crate::archaeology::suspicious(chunk.block(place.0,place.1,place.2)) {chunk.archaeology.insert(place,data);}
+            }
+        }
+
         Some(chunk)
     }
 
@@ -562,13 +585,23 @@ impl Chunk {
         my_frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
         their_frames.sort_unstable_by_key(|frame| (frame.pos, frame.facing));
 
-        blocks && self.biomes == other.biomes && self.containers == other.containers && mine == theirs && my_frames == their_frames && self.command_blocks == other.command_blocks && self.spawners == other.spawners && self.signs == other.signs && self.hives == other.hives
+        blocks && self.biomes == other.biomes && self.containers == other.containers && mine == theirs && my_frames == their_frames && self.command_blocks == other.command_blocks && self.spawners == other.spawners && self.signs == other.signs && self.hives == other.hives && self.archaeology == other.archaeology
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn archaeology_loot_round_trip_and_removal() {
+        let mut chunk=Chunk::flat();
+        chunk.set(2,8,3,crate::blocks::state_by_name("suspicious_sand").unwrap());
+        chunk.archaeology.insert((2,8,3),crate::archaeology::generated("desert_well",173));
+        let back=Chunk::from_bytes(&chunk.to_bytes()).unwrap();
+        assert_eq!(back.archaeology,chunk.archaeology);
+        chunk.set(2,8,3,0);assert!(chunk.archaeology.is_empty());
+    }
 
     #[test]
     fn occupied_hive_round_trip_and_removal() {
