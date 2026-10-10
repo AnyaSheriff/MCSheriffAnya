@@ -753,6 +753,10 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return summon_fireball(rest, source, shared);
     }
 
+    if let base @ ("wither_skull" | "arrow") = name.strip_prefix("minecraft:").unwrap_or(name) {
+        return summon_projectile(base, rest, source, shared);
+    }
+
     if name.strip_prefix("minecraft:").unwrap_or(name) == "lightning_bolt" {
         return summon_lightning(rest, source, shared);
     }
@@ -830,6 +834,46 @@ fn summon_fireball(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
     shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(fireball);
 
     Answer::saying("Призвана сущность dragon_fireball".to_string())
+}
+
+/// `summon wither_skull|arrow <x> <y> <z> {Motion:[x,y,z],dangerous:1b}` —
+/// череп иссушителя (разгон вдоль Motion, синий с `dangerous`) или стрела без
+/// стрелка (чёрный ящик, wither-skull-hit, wither-half-armor).
+fn summon_projectile(kind: &str, rest: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let origin = origin_of(source, shared);
+    let (place, data) = match rest {
+        [] => (Some(origin), ""),
+        [x, y, z] => (entity_place(&[*x, *y, *z], origin), ""),
+        [x, y, z, data @ ..] => (entity_place(&[*x, *y, *z], origin), *data.first().unwrap_or(&"")),
+        _ => (None, ""),
+    };
+    let Some(place) = place else {
+        return Answer::saying(format!("Нужно: summon {} <x> <y> <z> [{{Motion:[x,y,z]}}]", kind));
+    };
+    let motion = motion_of(data).unwrap_or((0.0, 0.0, 0.0));
+    let dimension = dimension_of(source, shared);
+
+    if kind == "wither_skull" {
+        // Летит в том же такте (wither-skull-hit: взрыв на +8, синий — на +12
+        // в трёх записях оригинала из четырёх; в одной — на такт позже).
+        let skull = crate::thrown::Flying::wither_skull(shared.next_entity_id(), dimension, place, motion, motion, 0, flag_in(data, "dangerous:").unwrap_or(false));
+
+        shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(skull);
+    } else {
+        let mut arrow = crate::arrow::Arrow::from_mob(shared.next_entity_id(), dimension, place, motion, 0, "");
+
+        // Призванная командой летит в том же такте (wither-half-armor: удар
+        // через такт после призыва), стрелка у неё нет.
+        arrow.shooter = crate::arrow::Shooter::Player;
+        arrow.fresh = false;
+        // Призванная смотрит туда, куда велит поворот (0/0), а не по Motion,
+        // и доворачивается к полёту на пятую часть за такт (wither-half-armor:
+        // наклон −1 из 256 к удару, а не −2).
+        arrow.rot = Some((0.0, 0.0));
+        shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
+    }
+
+    Answer::saying(format!("Призвана сущность {}", kind))
 }
 
 /// `Motion:[a,b,c]` из данных сущности (числа с `d` на конце или без).
@@ -1406,6 +1450,13 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 
         before - arrows.list.len()
     };
+
+    // Последнюю стрелу клиентам убирает слежение стрел: в этом такте оно должно
+    // пройти, хоть стрел уже и нет (wither-half-armor: «arrow убран» в такт
+    // команды).
+    if shot > 0 {
+        world.note_arrow_tracker();
+    }
 
     let mut orbs = 0;
 

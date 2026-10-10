@@ -1,0 +1,103 @@
+{
+ "name": "wither-death-drop",
+ "about": "Иссушитель без ИИ (Health 30): робот бьёт мечом с «Небесной карой» V дважды — нежить, броня 4, смерть, звезда Незера и 50 опыта, полоса босса уходит. Робот сперва вылечен целиком: здоровье, оставшееся от прошлых сценариев, не мешает.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "xp set $(bot) 0 levels",
+  "xp set $(bot) 0 points",
+  "effect clear $(bot)",
+  "effect give $(bot) minecraft:instant_health 1 5 true",
+  "give $(bot) minecraft:diamond_sword[enchantments={smite:5}] 1",
+  "fill $(-6,-1,-6) $(12,-1,12) minecraft:obsidian",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon wither $(3.5,0,2.5) {NoAI:1b,Health:30f}"
+  },
+  {
+   "after": 10,
+   "attack": true
+  },
+  {
+   "after": 35,
+   "attack": true
+  }
+ ],
+ "record_ticks": 110,
+ "cleanup": [
+  "kill @e[type=wither,distance=..48]",
+  "kill @e[type=wither_skull,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(-6,0,-6) $(12,8,12) minecraft:air",
+  "fill $(-6,-1,-6) $(12,-1,12) minecraft:stone",
+  "effect clear $(bot)",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "name": "UUID полосы босса",
+   "kind": "sv",
+   "pattern": "\"insertion\":\"[^\"]*\"",
+   "replace": "\"insertion\":\"U\"",
+   "why": "UUID иссушителя случаен: оригинал против оригинала (два прогона, 2026-10-09) — разные insertion"
+  },
+  {
+   "type": "mask",
+   "name": "UUID в подсказке полосы",
+   "kind": "sv",
+   "pattern": "\"uuid\":\\[[^\\]]*\\]",
+   "replace": "\"uuid\":[U]",
+   "why": "UUID иссушителя случаен: оригинал против оригинала (два прогона, 2026-10-09)"
+  },
+  {
+   "type": "count",
+   "name": "голос иссушителя",
+   "match": "^sound \\S+ minecraft:entity\\.wither\\.ambient",
+   "range": [
+    0,
+    20
+   ],
+   "anytick": true,
+   "why": "голос в случайный такт: оригинал против оригинала (два прогона, 2026-10-09) — entity.wither.ambient на +68 и +41"
+  },
+  {
+   "type": "count",
+   "name": "подбор опыта роботом",
+   "match": "^sv (Collect count|Set Experience|Metadata 18)",
+   "range": [
+    9,
+    16
+   ],
+   "anytick": true,
+   "why": "шарики опыта получают случайный толчок, порядок подбора случаен: оригинал против оригинала (два прогона, 2026-10-09) — 37 первым у одного, 7 первым у другого"
+  },
+  {
+   "type": "count",
+   "name": "подбор шариков",
+   "match": "^cart experience_orb (collect|убран|gone)",
+   "range": [
+    0,
+    12
+   ],
+   "anytick": true,
+   "why": "порядок подбора шариков случаен: оригинал против оригинала (два прогона, 2026-10-09)"
+  }
+ ]
+}

@@ -191,7 +191,7 @@ pub fn hurt_event(runtime_id: u64, source: Source) -> Vec<u8> {
 
 /// Причина урона по номеру вида из Damage Event (`Source::type_id`).
 pub fn damage_cause_of_type(type_id: i32) -> i32 {
-    const ALL: [Source; 28] = [
+    const ALL: [Source; 29] = [
         Source::Arrow,
         Source::Cactus,
         Source::SweetBerryBush,
@@ -213,6 +213,7 @@ pub fn damage_cause_of_type(type_id: i32) -> i32 {
         Source::Thorns,
         Source::Magic,
         Source::IndirectMagic,
+        Source::WitherSkull,
         Source::Wither,
         Source::Trident,
         Source::Fireworks,
@@ -242,6 +243,8 @@ pub fn damage_cause(source: Source) -> i32 {
         Source::Explosion | Source::PlayerExplosion | Source::Fireworks | Source::Fireball => 11,
         Source::OutOfWorld | Source::OutsideBorder => 12,
         Source::Magic | Source::IndirectMagic => 14,
+        // [Bedrock: потом] причина «череп иссушителя» не сверена.
+        Source::WitherSkull => 13,
         Source::Wither => 15,
         Source::Starve => 16,
         Source::Thorns => 18,

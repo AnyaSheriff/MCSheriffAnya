@@ -1275,6 +1275,63 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     dragon_xp(&mut items, rng, &mut || shared.next_entity_id());
     drop(items);
     creeper_blasts(shared, dimension, world, &outcome.blasts);
+    wither_deeds(shared, dimension, world, outcome.withers);
+}
+
+/// Заказы иссушителей (mob/wither.rs): полоса босса — сразу, в ходе сущности;
+/// конец зарядки — взрыв силой 7 и глобальное событие 1023 (wither-summon:
+/// выпавшее, пакет взрыва, потом 1023); черепа летят снарядами; после удара —
+/// ломка блоков 3×4×3 со звуком 1022.
+fn wither_deeds(shared: &Shared, dimension: Dimension, world: &mut World, deeds: Vec<(i32, crate::mob::wither::Deed)>) {
+    use crate::mob::wither::Deed;
+
+    let griefing = shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed);
+
+    for (wither, deed) in deeds {
+        match deed {
+            Deed::Bar(share) => world.note_wither_bar(wither, share),
+            Deed::Charged { at, cell } => {
+                let players = blast_targets(shared, dimension);
+
+                {
+                    let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+                    let mut next_id = || shared.next_entity_id();
+
+                    world.blast_source = wither;
+                    world.blast_killer = crate::mob::hostile::killer_key(crate::mob::Kind::Wither);
+                    tnt::explode_wither(world, &mut items, &players, at, crate::mob::wither::SPAWN_POWER, griefing, None, &mut next_id);
+                    world.blast_killer = "";
+                }
+
+                redstone::settle(world);
+                drop_destroyed(shared, dimension, world);
+                world.note_level_event(cell.0, cell.1, cell.2, 1023, 0);
+            }
+            Deed::Skull { from, dir, dangerous } => {
+                let skull = crate::thrown::Flying::wither_skull(shared.next_entity_id(), dimension, from, (0.0, 0.0, 0.0), dir, wither, dangerous);
+
+                shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(skull);
+            }
+            Deed::Break { feet } if griefing => {
+                let cells = crate::mob::wither::break_cells(&MobView(world), feet);
+
+                for (x, y, z) in &cells {
+                    let state = world.get_block(*x, *y, *z);
+
+                    world.note_level_event(*x, *y, *z, 2001, state);
+                    world.note_destroyed(*x, *y, *z);
+                    world.set_block(*x, *y, *z, crate::world::AIR);
+                }
+
+                if !cells.is_empty() {
+                    world.note_level_event(feet.0, feet.1, feet.2, 1022, 0);
+                    redstone::settle(world);
+                    drop_destroyed(shared, dimension, world);
+                }
+            }
+            Deed::Break { .. } => {}
+        }
+    }
 }
 
 /// Обмен с пиглинами (вики, Bartering): пиглин без дела подбирает золотой

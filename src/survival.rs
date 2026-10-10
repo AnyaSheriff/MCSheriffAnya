@@ -81,6 +81,8 @@ pub enum Source {
     /// Магия от существа: луч стража (damage_type indirect_magic; чёрный ящик,
     /// guardian-beam: Damage Event type=23).
     IndirectMagic,
+    /// Череп иссушителя (damage_type wither_skull).
+    WitherSkull,
     /// Иссушение (damage_type wither).
     Wither,
     /// Брошенный трезубец.
@@ -128,6 +130,8 @@ impl Source {
             Source::Magic => 27,
             // Реестр по алфавиту: in_wall 22, indirect_magic 23, lava 24.
             Source::IndirectMagic => 23,
+            // Реестр по алфавиту: wither 48, wither_skull 49 [проверить].
+            Source::WitherSkull => 49,
             // Номер снят с оригинала (effect-regen: Damage Event type=48).
             Source::Wither => 48,
             Source::Trident => 45,
@@ -170,6 +174,7 @@ impl Source {
             Source::Thorns => "death.attack.thorns",
             Source::Magic => "death.attack.magic",
             Source::IndirectMagic => "death.attack.indirectMagic",
+            Source::WitherSkull => "death.attack.witherSkull",
             Source::Wither => "death.attack.wither",
             Source::Trident => "death.attack.trident",
             Source::Thrown => "death.attack.thrown",
@@ -213,7 +218,7 @@ impl Source {
     /// лёгкая — min(d/2+1, d), нормальная — d, трудная — 1,5d.
     pub fn scales_with_difficulty(self) -> bool {
         // Луч стража — тоже (вики, Guardian: 4/6/9 по сложности).
-        matches!(self, Source::Explosion | Source::PlayerExplosion | Source::MobAttack | Source::Arrow | Source::IndirectMagic)
+        matches!(self, Source::Explosion | Source::PlayerExplosion | Source::MobAttack | Source::Arrow | Source::IndirectMagic | Source::WitherSkull)
     }
 }
 
@@ -260,6 +265,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::Thorns => "was killed",
         Source::Magic | Source::IndirectMagic => "was killed by magic",
         Source::Wither => "withered away",
+        Source::WitherSkull => "was shot by a skull",
         Source::Trident => "was impaled",
         Source::Thrown => "was pummeled",
         Source::Fireworks => "went off with a bang",

@@ -2167,7 +2167,12 @@ async fn send_pending_item_changes(
             }
             items::Change::Gone { entity_id } => {
                 // Провалился в пустоту: просто убираем из мира, без показа
-                // подбора.
+                // подбора. Полоса иссушителя уходит перед ним самим
+                // (wither-death-drop: Boss Bar action=1, потом удаление).
+                if mobs.get(&entity_id).is_some_and(|shown| shown.boss) {
+                    mobs::send_boss_remove(stream, entity_id).await?;
+                }
+
                 send_remove_entity(stream, entity_id).await?;
                 seen.remove(&entity_id);
                 carts.remove(&entity_id);
@@ -4244,6 +4249,11 @@ async fn send_pending_world_events(
             WorldEvent::Struck { entity_id } if *entity_id == player.entity_id => vitals::struck(stream, shared, player).await?,
             WorldEvent::Struck { .. } => {}
             WorldEvent::BossBar(share) => send_boss_bar(stream, player, *share).await?,
+            WorldEvent::WitherBar { entity_id, share } => {
+                if player.seen_mobs.contains_key(entity_id) {
+                    mobs::send_wither_share(stream, *entity_id, *share).await?;
+                }
+            }
             WorldEvent::Private { viewer, body } if *viewer == player.entity_id => write_body(stream, body.to_vec()).await?,
             WorldEvent::Private { .. } => {}
             WorldEvent::Collect { entity_id, by, count } => {
@@ -8951,8 +8961,10 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
 
     // Тыква на столбе из снега или железа — голем (mob/golem.rs; чёрный ящик,
     // iron-golem-build, snow-golem-build).
-    if matches!(placed, placing::Placement::Placed) {
-        build_golem(shared, player.dimension, &mut world, offset_towards(clicked_x, clicked_y, clicked_z, face));
+    if matches!(placed, placing::Placement::Placed)
+        && let Some(kind) = build_golem(shared, player.dimension, &mut world, offset_towards(clicked_x, clicked_y, clicked_z, face))
+    {
+        player.progress.summoned(kind.name());
     }
 
     // Как у оригинала после установки: сразу повтор блока, по которому
@@ -9006,10 +9018,9 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
 /// Голем из только что поставленной тыквы: события 2001 по клеткам узора,
 /// голем, потом блоки уходят воздухом (чёрный ящик, iron-golem-build).
 /// [проверить] тыква, поставленная командой или раздатчиком.
-fn build_golem(shared: &Shared, dimension: crate::dimension::Dimension, world: &mut World, at: (i32, i32, i32)) {
-    let Some(build) = crate::mob::golem::find(&crate::tick::MobView(world), at) else {
-        return;
-    };
+fn build_golem(shared: &Shared, dimension: crate::dimension::Dimension, world: &mut World, at: (i32, i32, i32)) -> Option<crate::mob::Kind> {
+    let build = crate::mob::golem::find(&crate::tick::MobView(world), at)?;
+    let kind = build.kind;
 
     for ((x, y, z), state) in &build.cells {
         world.note_level_event(*x, *y, *z, 2001, *state);
@@ -9018,12 +9029,25 @@ fn build_golem(shared: &Shared, dimension: crate::dimension::Dimension, world: &
     let mut mob = crate::mob::Mob::new(shared.next_entity_id(), build.kind, build.at);
 
     mob.golem.player_made = build.kind == crate::mob::Kind::IronGolem;
+
+    // Иссушитель: треть здоровья, зарядка, поворот по оси Т (mob/wither.rs).
+    if build.kind == crate::mob::Kind::Wither {
+        let along_x = build.cells.first().zip(build.cells.last()).is_some_and(|(first, last)| first.0.0 != last.0.0);
+
+        crate::mob::wither::built(&mut mob, along_x);
+
+        // Голова с рождения чуть повёрнута — случайно, на 1–6° (wither-summon,
+        // четыре записи оригинала: head 1, 3, 3, 4 из 256) [проверить: откуда].
+        mob.head_yaw = 1.5 + world.random_unit() * 4.5;
+    }
     shared.items_in(dimension).lock().expect("предметы захвачены другим потоком").add_mob_late(mob.clone());
     world.note_mob_spawn(mob);
 
     for (x, y, z) in build.clear {
         world.set_block(x, y, z, crate::world::AIR);
     }
+
+    Some(kind)
 }
 
 /// «Выбор блока»: игрок навёл на постройку и просит такой же предмет в руку.

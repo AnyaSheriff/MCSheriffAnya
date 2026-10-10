@@ -176,6 +176,9 @@ pub struct WorldSound {
 pub enum WorldEvent {
     /// Полоса босса дракона: доля здоровья; None — убрать.
     BossBar(Option<f32>),
+    /// Полоса босса иссушителя `entity_id`: новая доля (mob/wither.rs) — тем,
+    /// кому он показан.
+    WitherBar { entity_id: i32, share: f32 },
     Change(BlockChange),
     Action(BlockAction),
 
@@ -2057,6 +2060,10 @@ impl World {
     /// Полоса босса дракона для всех в этом мире.
     pub fn note_boss_bar(&mut self, share: Option<f32>) {
         self.events.push(WorldEvent::BossBar(share));
+    }
+
+    pub fn note_wither_bar(&mut self, entity_id: i32, share: f32) {
+        self.events.push(WorldEvent::WitherBar { entity_id, share });
     }
 
     /// Точка такта, где слежение рассылает клиентам мобов.

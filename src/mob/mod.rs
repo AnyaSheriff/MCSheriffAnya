@@ -19,6 +19,7 @@ pub mod arthropod;
 pub mod dragon;
 pub mod golem;
 pub mod guardian;
+pub mod wither;
 pub mod hostile;
 pub mod leash;
 pub mod nether;
@@ -106,12 +107,14 @@ pub enum Kind {
     /// проклятие (mob/guardian.rs).
     Guardian,
     ElderGuardian,
+    /// Иссушитель (вики, Wither): босс из черепов и песка душ (mob/wither.rs).
+    Wither,
 }
 
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 38] = [
+    pub const ALL: [Kind; 39] = [
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -150,6 +153,7 @@ impl Kind {
         Kind::SnowGolem,
         Kind::Guardian,
         Kind::ElderGuardian,
+        Kind::Wither,
     ];
 
     /// Враждебный ли вид (вики, Monster): у него свои цели (mob/hostile.rs).
@@ -180,6 +184,7 @@ impl Kind {
                 | Kind::Phantom
                 | Kind::Guardian
                 | Kind::ElderGuardian
+                | Kind::Wither
         )
     }
 
@@ -242,6 +247,7 @@ impl Kind {
             "snow_golem" => Kind::SnowGolem,
             "guardian" => Kind::Guardian,
             "elder_guardian" => Kind::ElderGuardian,
+            "wither" => Kind::Wither,
             _ => return None,
         })
     }
@@ -286,6 +292,7 @@ impl Kind {
             Kind::SnowGolem => "snow_golem",
             Kind::Guardian => "guardian",
             Kind::ElderGuardian => "elder_guardian",
+            Kind::Wither => "wither",
         }
     }
 
@@ -339,6 +346,7 @@ impl Kind {
             // minecraft-data 26.1, entities.json.
             Kind::Guardian => 63,
             Kind::ElderGuardian => 40,
+            Kind::Wither => 145,
         }
     }
 
@@ -389,6 +397,7 @@ impl Kind {
             Kind::SnowGolem => "minecraft:snow_golem",
             Kind::Guardian => "minecraft:guardian",
             Kind::ElderGuardian => "minecraft:elder_guardian",
+            Kind::Wither => "minecraft:wither",
         }
     }
 
@@ -422,6 +431,8 @@ impl Kind {
             // minecraft-data 26.1: 0,85 и 1,9975.
             Kind::Guardian => 0.85,
             Kind::ElderGuardian => 1.9975,
+            // minecraft-data 26.1: 0,9 × 3,5.
+            Kind::Wither => 0.9,
             _ => 0.9,
         }
     }
@@ -460,6 +471,8 @@ impl Kind {
             Kind::SnowGolem => 1.9,
             Kind::Guardian => 0.85,
             Kind::ElderGuardian => 1.9975,
+            // minecraft-data 26.1: 0,9 × 3,5.
+            Kind::Wither => 3.5,
         }
     }
 
@@ -504,6 +517,8 @@ impl Kind {
             // Вики: страж 30, древний 80.
             Kind::Guardian => 30.0,
             Kind::ElderGuardian => 80.0,
+            // Вики, Wither: 300 на любой сложности.
+            Kind::Wither => wither::HEALTH,
         }
     }
 
@@ -548,6 +563,8 @@ impl Kind {
             // [проверить] атрибут скорости: страж 0,5, древний 0,3.
             Kind::Guardian => 0.5,
             Kind::ElderGuardian => 0.3,
+            // Вики, Wither: скорость 0,6.
+            Kind::Wither => 0.6,
         }
     }
 
@@ -568,6 +585,8 @@ impl Kind {
     pub fn armor(self) -> f32 {
         match self {
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::ZombifiedPiglin => 2.0,
+            // Вики, Wither: броня 4.
+            Kind::Wither => 4.0,
             _ => 0.0,
         }
     }
@@ -626,6 +645,7 @@ impl Kind {
             // Голоса в воде; на суше — свои (guardian::sounds).
             Kind::Guardian => ("minecraft:entity.guardian.ambient", "minecraft:entity.guardian.hurt", "minecraft:entity.guardian.death"),
             Kind::ElderGuardian => ("minecraft:entity.elder_guardian.ambient", "minecraft:entity.elder_guardian.hurt", "minecraft:entity.elder_guardian.death"),
+            Kind::Wither => ("minecraft:entity.wither.ambient", "minecraft:entity.wither.hurt", "minecraft:entity.wither.death"),
         }
     }
 
@@ -954,6 +974,11 @@ pub struct Mob {
     /// уходит сразу, вне очереди.
     pub impulses: u32,
 
+    /// Стрел в теле (свойство 12) и тактов до того, как выпадет одна (как у
+    /// игрока: 20·(30 − число); wither-half-armor).
+    pub arrows: i32,
+    pub arrow_timer: i32,
+
     /// Что произошло за такт — забирает `Items`.
     pub events: Vec<Event>,
 
@@ -1048,6 +1073,9 @@ pub struct Mob {
 
     /// Стражи: луч, шипы, проклятие (mob/guardian.rs).
     pub guardian: guardian::State,
+
+    /// Иссушитель: зарядка, головы, черепа (mob/wither.rs).
+    pub wither: wither::State,
 }
 
 /// Бит в байте вида записи моба: за записью идёт общий хвост (имя, поводок).
@@ -1106,6 +1134,8 @@ impl Mob {
             move_dist: 0.0,
             next_step: 1.0,
             impulses: 0,
+            arrows: 0,
+            arrow_timer: 0,
             events: Vec::new(),
             brain: ai::Brain::new(entity_id),
             fright: None,
@@ -1135,6 +1165,7 @@ impl Mob {
             golem: golem::State::default(),
             phantom: phantom::State::default(),
             guardian: guardian::State::default(),
+            wither: wither::State::default(),
         }
     }
 
@@ -1162,6 +1193,12 @@ impl Mob {
     }
 
     /// Ударил игрок: смерть в ближайшие 100 тактов даст опыт.
+    /// Стрела застряла в теле.
+    pub fn stick_arrow(&mut self) {
+        self.arrows += 1;
+        self.arrow_timer = 20 * (30 - self.arrows);
+    }
+
     pub fn credit_player(&mut self) {
         self.xp_until = self.ticks + XP_CREDIT_TICKS;
     }
@@ -1255,6 +1292,17 @@ impl Mob {
     pub fn tick(&mut self, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai::Plan {
         self.ticks += 1;
         self.late = false;
+
+        // Застрявшие стрелы выпадают по одной [проверить: у мобов тот же счёт,
+        // что у игрока].
+        if self.arrows > 0 {
+            self.arrow_timer -= 1;
+
+            if self.arrow_timer <= 0 {
+                self.arrows -= 1;
+                self.arrow_timer = 20 * (30 - self.arrows);
+            }
+        }
 
         // Снаряд шалкера — не живое: ни возраста, ни урона, только полёт.
         if self.kind == Kind::ShulkerBullet {
@@ -1406,6 +1454,12 @@ impl Mob {
             }
         }
 
+        // Иссушитель без ИИ тоже подаёт голос (чёрный ящик, wither-half-armor:
+        // entity.wither.ambient у NoAI).
+        if self.kind == Kind::Wither && self.no_ai {
+            ai::voice(self, rng);
+        }
+
         if self.no_ai {
             // Запал крипера — не мысль, а его такт: подожжённый NoAI взрывается
             // (чёрный ящик, creeper-explode).
@@ -1416,6 +1470,11 @@ impl Mob {
             }
 
             return plan;
+        }
+
+        // Иссушитель: зарядка, головы, полёт (mob/wither.rs).
+        if self.kind == Kind::Wither {
+            return wither::tick(self, view, ctx, rng);
         }
 
         // Страйдер ходит по лаве, как по полу (вики, Strider): для него верх
@@ -1777,6 +1836,11 @@ impl Mob {
             return None;
         }
 
+        // Иссушитель: в зарядке неуязвим, иссушению и воде не поддаётся (mob/wither.rs).
+        if self.kind == Kind::Wither && wither::ignores(self, source) {
+            return None;
+        }
+
         // Ведьма: магия на 85 % слабее (вики, Witch).
         let amount = if self.kind == Kind::Witch && source == Source::Magic { amount * 0.15 } else { amount };
         let before = self.vitals.health;
@@ -1785,6 +1849,10 @@ impl Mob {
 
         // Снято на самом деле — не больше оставшегося здоровья.
         hit.taken = hit.taken.min(before);
+
+        if self.kind == Kind::Wither {
+            wither::on_hurt(self);
+        }
 
         if self.kind == Kind::EnderDragon {
             let mut rng = Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0xD4A);
@@ -1953,6 +2021,8 @@ impl Mob {
                 self.nether.size
             } else if guardian::guardian(self.kind) {
                 guardian::XP
+            } else if self.kind == Kind::Wither {
+                wither::XP
             } else if self.kind.hostile() {
                 let worn = u32::from(self.h.bow) + u32::from(self.h.helmet);
 
@@ -2016,6 +2086,8 @@ impl Mob {
             Kind::Phantom => 35,
             Kind::Guardian => 36,
             Kind::ElderGuardian => 37,
+            // Номер с запасом: другие новые мобы берут 38 и дальше.
+            Kind::Wither => 60,
         } | if self.name.is_some() || self.leash.is_some() || self.persistent_tag { EXTENDED } else { 0 });
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
@@ -2097,6 +2169,7 @@ impl Mob {
             35 => Kind::Phantom,
             36 => Kind::Guardian,
             37 => Kind::ElderGuardian,
+            60 => Kind::Wither,
             _ => return None,
         };
         let x = f64::from_be_bytes(take(8)?.try_into().ok()?);
@@ -2344,6 +2417,8 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
             }
         }
         Kind::Guardian | Kind::ElderGuardian => guardian::loot(mob, rng, &mut give),
+        // Вики, Wither: звезда Незера всегда (и убитому командой).
+        Kind::Wither => give("nether_star", 1, 1, rng),
         Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager | Kind::Wolf | Kind::LeashKnot => {}
         // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
         Kind::Enderman => {
@@ -2692,6 +2767,9 @@ pub struct Outcome {
 
     /// Проклятия древних стражей: игрок и тихий ли страж (mob/guardian.rs).
     pub curses: Vec<(i32, bool)>,
+
+    /// Заказы иссушителей: кто и что (mob/wither.rs; tick.rs, wither_deeds).
+    pub withers: Vec<(i32, wither::Deed)>,
 }
 
 /// Удар моба в ближнем бою.
@@ -2834,6 +2912,10 @@ pub fn step_all(
 
         for player in std::mem::take(&mut mob.guardian.cursed) {
             outcome.curses.push((player, mob.silent));
+        }
+
+        for deed in std::mem::take(&mut mob.wither.deeds) {
+            outcome.withers.push((mob.entity_id, deed));
         }
 
         if let Some(melee) = plan.melee {

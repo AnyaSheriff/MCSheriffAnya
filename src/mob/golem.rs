@@ -163,8 +163,17 @@ const SIDES: [(i32, i32, i32); 6] = [(-1, 0, 0), (1, 0, 0), (0, 0, -1), (0, 0, 1
 
 /// Ищет голема, голова которого — только что поставленная тыква в `head`.
 /// Сперва снежный, потом железный [проверить: что раньше, если подходят оба].
+/// Череп скелета-иссушителя ищет иссушителя (mob/wither.rs) тем же обходом.
 pub fn find(view: &dyn View, head: (i32, i32, i32)) -> Option<Build> {
-    if !is_head(view.block(head.0, head.1, head.2)) {
+    let head_state = view.block(head.0, head.1, head.2);
+
+    if super::wither::is_skull(head_state) {
+        let rows: Vec<Vec<Cell>> = WITHER.iter().map(|row| row.to_vec()).collect();
+
+        return find_pattern(view, head, Kind::Wither, &rows, &super::wither::is_skull, &super::wither::is_soul);
+    }
+
+    if !is_head(head_state) {
         return None;
     }
 
@@ -174,9 +183,28 @@ pub fn find(view: &dyn View, head: (i32, i32, i32)) -> Option<Build> {
     for (kind, body) in [(Kind::SnowGolem, snow), (Kind::IronGolem, iron)] {
         let body = body?;
         let rows: Vec<Vec<Cell>> = if kind == Kind::SnowGolem { SNOW.iter().map(|row| row.to_vec()).collect() } else { IRON.iter().map(|row| row.to_vec()).collect() };
-        let width = rows[0].len() as i32;
-        let head_i = rows[0].iter().position(|cell| *cell == Cell::Head).unwrap_or(0) as i32;
 
+        if let Some(build) = find_pattern(view, head, kind, &rows, &is_head, &|state| state == body) {
+            return Some(build);
+        }
+    }
+
+    None
+}
+
+/// Узор иссушителя «^^^ / ### / ~#~»: три черепа на Т из песка или почвы душ
+/// (вики, Wither: «air must be on both sides of the base block»).
+const WITHER: [[Cell; 3]; 3] = [[Cell::Head, Cell::Head, Cell::Head], [Cell::Body, Cell::Body, Cell::Body], [Cell::Air, Cell::Body, Cell::Air]];
+
+/// Обход узора во всех положениях: голова узора — `head` (у иссушителя
+/// черепов три: годится любой из них).
+fn find_pattern(view: &dyn View, head: (i32, i32, i32), kind: Kind, rows: &[Vec<Cell>], is_head: &dyn Fn(i32) -> bool, is_body: &dyn Fn(i32) -> bool) -> Option<Build> {
+    let width = rows[0].len() as i32;
+    let heads: Vec<i32> = rows[0].iter().enumerate().filter(|(_, cell)| **cell == Cell::Head).map(|(i, _)| i as i32).collect();
+    // Ноги — под серединой нижнего ряда.
+    let middle = rows[rows.len() - 1].iter().position(|cell| *cell != Cell::Air).unwrap_or(0) as i32;
+
+    for head_i in heads {
         for up in UPS {
             for side in SIDES {
                 let dot = up.0 * side.0 + up.1 * side.1 + up.2 * side.2;
@@ -194,7 +222,7 @@ pub fn find(view: &dyn View, head: (i32, i32, i32)) -> Option<Build> {
 
                         match cell {
                             Cell::Head => is_head(state),
-                            Cell::Body => state == body,
+                            Cell::Body => is_body(state),
                             Cell::Air => is_air(state),
                         }
                     })
@@ -219,7 +247,7 @@ pub fn find(view: &dyn View, head: (i32, i32, i32)) -> Option<Build> {
                     }
                 }
 
-                let feet = at(head_i, rows.len() as i32 - 1);
+                let feet = at(middle, rows.len() as i32 - 1);
 
                 return Some(Build { kind, cells, clear, at: (f64::from(feet.0) + 0.5, f64::from(feet.1) + 0.05, f64::from(feet.2) + 0.5) });
             }

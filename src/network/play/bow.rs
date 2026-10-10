@@ -639,7 +639,9 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
 
             // Трезубец садится всегда полностью (чёрный ящик, trident-throw:
             // на 9-м такте скорость, сдвиг и «в блоке»).
-            let full = arrow.age <= LANDING_SYNC_AGE || arrow.trident.is_some();
+            // Отскочившая стрела — тоже (wither-half-armor: на +12 скорость,
+            // сдвиг с поворотом и «в блоке»).
+            let full = arrow.age <= LANDING_SYNC_AGE || arrow.trident.is_some() || arrow.resync.is_some();
 
             if arrow.in_ground && full {
                 send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), arrow.facing()).await?;
@@ -661,10 +663,11 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             // Раз в 20 тактов — сверка места (у оригинала так у всех
             // сущностей; замерено только до 18-го такта) [проверить].
             send_position_sync(stream, arrow).await?;
-        } else if arrow.in_ground && arrow.trident.is_some() && arrow.lived().is_multiple_of(ARROW_SYNC) {
+        } else if arrow.in_ground && (arrow.trident.is_some() || arrow.resync.is_some()) && arrow.lived().is_multiple_of(ARROW_SYNC) {
             // Лежащий трезубец раз в 20 тактов шлёт нулевой сдвиг с поворотом
             // через 20, 40, 60 тактов после броска (чёрный ящик, trident-throw:
-            // +20, +40, +60); у стрел так не бывает (skeleton-arrow).
+            // +20, +40, +60); у стрел так не бывает (skeleton-arrow), кроме
+            // отскочившей (wither-half-armor: нулевой сдвиг на +20).
             send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), arrow.facing()).await?;
         }
 

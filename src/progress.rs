@@ -97,6 +97,20 @@ impl Progress {
         }
     }
 
+    /// Игрок достроил моба из блоков (вики, Advancement: «Withering Heights»
+    /// и «Hired Help») [проверить: оригинал даёт всем игрокам рядом].
+    pub fn summoned(&mut self, name: &str) {
+        match name {
+            "wither" => {
+                self.adv.grant("nether/summon_wither", "summoned_entity");
+            }
+            "iron_golem" => {
+                self.adv.grant("adventure/summon_iron_golem", "summoned_golem");
+            }
+            _ => {}
+        }
+    }
+
     pub fn killed_player(&mut self) {
         self.stats.custom("player_kills", 1);
         self.stats.add(Cat::Killed, "player", 1);
@@ -240,5 +254,22 @@ impl Progress {
                 self.adv.grant(id, criterion);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn building_a_wither_or_a_golem_grants_its_advancement() {
+        let mut progress = Progress { stats: Stats::new(), adv: AdvState::new(), stats_requested: false, ticks: 0, items_seen: 0 };
+
+        progress.summoned("wither");
+        progress.summoned("snow_golem");
+        assert!(progress.adv.has("nether/summon_wither", "summoned_entity"));
+        assert!(!progress.adv.has("adventure/summon_iron_golem", "summoned_golem"));
+        progress.summoned("iron_golem");
+        assert!(progress.adv.has("adventure/summon_iron_golem", "summoned_golem"));
     }
 }

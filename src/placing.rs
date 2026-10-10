@@ -444,6 +444,14 @@ pub fn state_for(orientation: &Orientation, click: &Click) -> Option<i32> {
 
             orientation.state(&[("facing", facing)])
         }
+        // Череп или голова на полу — по взгляду игрока на 16 румбов, без
+        // поворота на 180° (чёрный ящик, wither-summon: рыскание −18° —
+        // rotation 15, рыскание 0 — rotation 0).
+        Family::Other if (orientation.name.ends_with("_skull") || (orientation.name.ends_with("_head") && orientation.name != "piston_head")) && !orientation.name.contains("wall") => {
+            let turn = ((click.yaw * 16.0 / 360.0 + 0.5).floor() as i32).rem_euclid(16);
+
+            orientation.state(&[("rotation", &turn.to_string())])
+        }
         Family::Other if orientation.name.ends_with("_sign") && !orientation.name.contains("hanging") => {
             let turn = (((180.0 + click.yaw) * 16.0 / 360.0 + 0.5).floor() as i32).rem_euclid(16);
 
@@ -1130,6 +1138,15 @@ mod tests {
         assert_eq!(property("oak_slab", state("oak_slab", &click(0, 0.5, 0.0)), "type"), "top");
         assert_eq!(property("oak_slab", state("oak_slab", &click(3, 0.8, 0.0)), "type"), "top");
         assert_eq!(property("oak_slab", state("oak_slab", &click(3, 0.2, 0.0)), "type"), "bottom");
+    }
+
+    /// Череп на полу — по взгляду на 16 румбов без поворота на 180°
+    /// (чёрный ящик, wither-summon: рыскание −18° — 15, рыскание 0 — 0).
+    #[test]
+    fn a_floor_skull_turns_with_the_look() {
+        assert_eq!(state("wither_skeleton_skull", &click(1, 0.5, -18.4)), 10986);
+        assert_eq!(state("wither_skeleton_skull", &click(1, 0.5, 0.0)), 10971);
+        assert_eq!(property("skeleton_skull", state("skeleton_skull", &click(1, 0.5, 90.0)), "rotation"), "4");
     }
 
     /// Калитка смотрит туда же, куда и игрок: открывается она от него.

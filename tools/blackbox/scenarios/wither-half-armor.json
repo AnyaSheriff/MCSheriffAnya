@@ -1,0 +1,96 @@
+{
+ "name": "wither-half-armor",
+ "about": "Иссушитель без ИИ на половине здоровья (100 из 300): стрела сбоку отскакивает; после Health 300 стрела ранит; полоса босса и свойства.",
+ "track_mobs": true,
+ "track_self": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "fill $(-6,-1,-6) $(12,-1,12) minecraft:obsidian",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon wither $(3.5,0,4.5) {NoAI:1b,Health:100f}"
+  },
+  {
+   "after": 10,
+   "cmd": "summon arrow $(3.5,2.5,1.5) {Motion:[0.0,0.0,1.5]}"
+  },
+  {
+   "after": 40,
+   "cmd": "kill @e[type=arrow,distance=..48]"
+  },
+  {
+   "after": 42,
+   "cmd": "data merge entity @e[type=wither,limit=1,distance=..48] {Health:300f}"
+  },
+  {
+   "after": 50,
+   "cmd": "summon arrow $(3.5,2.5,1.5) {Motion:[0.0,0.0,1.5]}"
+  },
+  {
+   "after": 80,
+   "cmd": "kill @e[type=wither,distance=..48]"
+  }
+ ],
+ "record_ticks": 110,
+ "cleanup": [
+  "kill @e[type=wither,distance=..48]",
+  "kill @e[type=wither_skull,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "fill $(-6,0,-6) $(12,8,12) minecraft:air",
+  "fill $(-6,-1,-6) $(12,-1,12) minecraft:stone",
+  "effect clear $(bot)",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "name": "UUID полосы босса",
+   "kind": "sv",
+   "pattern": "\"insertion\":\"[^\"]*\"",
+   "replace": "\"insertion\":\"U\"",
+   "why": "UUID иссушителя случаен: оригинал против оригинала (два прогона, 2026-10-09) — разные insertion"
+  },
+  {
+   "type": "mask",
+   "name": "UUID в подсказке полосы",
+   "kind": "sv",
+   "pattern": "\"uuid\":\\[[^\\]]*\\]",
+   "replace": "\"uuid\":[U]",
+   "why": "UUID иссушителя случаен: оригинал против оригинала (два прогона, 2026-10-09)"
+  },
+  {
+   "type": "count",
+   "name": "голос иссушителя",
+   "match": "^sound \\S+ minecraft:entity\\.wither\\.ambient",
+   "range": [
+    0,
+    20
+   ],
+   "anytick": true,
+   "why": "голос в случайный такт: оригинал против оригинала (два прогона, 2026-10-09) — entity.wither.ambient на +68 и +41"
+  },
+  {
+   "type": "mask",
+   "name": "разворот отскочившей стрелы",
+   "kind": "cart",
+   "pattern": "^(cart arrow .*поворот )-?\\d+/",
+   "replace": "$1N/",
+   "why": "отскок разворачивает стрелу на 170…190°: оригинал против оригинала (2026-10-09/10) — поворот −128, −125 и 125 из 256"
+  }
+ ]
+}

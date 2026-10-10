@@ -1597,9 +1597,21 @@ pub(super) async fn hit_by(
 
     let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
     let announced = std::mem::take(&mut player.net.announced);
+    // Взрыв во время неуязвимости снимает лишь разницу с прошлым ударом и
+    // молча: без события урона (чёрный ящик, wither-skull-hit: череп — магия
+    // 5 и событие, взрыв следом — только здоровье) [проверить: у остальных
+    // источников].
+    let quiet = player.vit.invulnerable > 10 && matches!(source, Source::Explosion | Source::PlayerExplosion);
     let Some(mut result) = player.vit.hurt(amount, source, immune) else {
         return Ok(None);
     };
+
+    if quiet && !result.died {
+        shared.players.lock().expect("список игроков захвачен другим потоком").set_health(&player.uuid, player.vit.health);
+        player.progress.took(result.taken);
+
+        return Ok(Some(result));
+    }
     let totem = result.died && !source.bypasses_invulnerability() && take_totem(player);
 
     if totem {

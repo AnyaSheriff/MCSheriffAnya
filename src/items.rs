@@ -117,6 +117,12 @@ const MAX_STEP: f64 = 0.2;
 /// Без этого брошенное копилось бы в памяти сервера до самой его остановки.
 const LIFETIME: u64 = 6000;
 
+/// Звезда Незера не пропадает от времени (вики, Nether Star: «does not
+/// despawn»); от взрывов её бережёт tnt.rs.
+fn never_despawns(item: &Dropped) -> bool {
+    item.block.is_none() && Some(item.stack.item) == crate::blocks::item_named("nether_star")
+}
+
 /// Здоровье лежащего предмета: 5 (вики, Item (entity): «Health: The health
 /// of the item, which starts at 5»). Его отнимает взрыв.
 pub const ITEM_HEALTH: f32 = 5.0;
@@ -793,7 +799,7 @@ impl Items {
         let bottom = crate::world::MIN_Y as f64 - LOST_BELOW;
         let gone: Vec<Dropped> = self
             .items
-            .extract_if(.., |item| item.y < bottom || item.age >= LIFETIME)
+            .extract_if(.., |item| item.y < bottom || (item.age >= LIFETIME && !never_despawns(item)))
             .collect();
 
         for item in &gone {

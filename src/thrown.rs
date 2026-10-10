@@ -30,6 +30,8 @@ pub const SMALL_FIREBALL_TYPE: i32 = 118;
 pub const GHAST_FIREBALL_TYPE: i32 = 52;
 /// Снежок (minecraft-data: snowball 120).
 pub const SNOWBALL_TYPE: i32 = 120;
+/// Череп иссушителя (minecraft-data: wither_skull 147).
+pub const WITHER_SKULL_TYPE: i32 = 147;
 
 /// Тяжесть снежка (вики, Entity: брошенные предметы — 0,03).
 const SNOWBALL_GRAVITY: f64 = 0.03;
@@ -70,6 +72,8 @@ pub enum Kind {
     GhastFireball,
     /// Снежок снежного голема: урона нет (ифриту — 3), отбрасывает (вики, Snowball).
     Snowball,
+    /// Череп иссушителя: урон, иссушение, взрыв силой 1 (mob/wither.rs).
+    WitherSkull,
 }
 
 /// Место, скорость и поворот снаряда.
@@ -100,6 +104,8 @@ pub struct Flying {
     /// Сила взрыва шара гаста.
     pub power: i32,
     pub owner: i32,
+    /// Синий череп иссушителя (свойство 8 «dangerous»).
+    pub dangerous: bool,
     /// Зелье ещё внутри бросившего: его не задевает (splash-potion-feet:
     /// брошенное под ноги летит сквозь робота на пол).
     pub in_owner: bool,
@@ -117,12 +123,13 @@ impl Flying {
             Kind::SmallFireball => SMALL_FIREBALL_TYPE,
             Kind::GhastFireball => GHAST_FIREBALL_TYPE,
             Kind::Snowball => SNOWBALL_TYPE,
+            Kind::WitherSkull => WITHER_SKULL_TYPE,
         }
     }
 
     /// Огненный шар любого вида: летит с разгоном, а не по броску.
     pub fn is_fireball(&self) -> bool {
-        matches!(self.kind, Kind::DragonFireball | Kind::SmallFireball | Kind::GhastFireball)
+        matches!(self.kind, Kind::DragonFireball | Kind::SmallFireball | Kind::GhastFireball | Kind::WitherSkull)
     }
 
     /// Шар ифрита или гаста: из точки `at`, разгон — по `direction`. Скорость
@@ -153,6 +160,7 @@ impl Flying {
             push: (0.0, 0.0, 0.0),
             power: 0,
             owner,
+            dangerous: false,
             in_owner: true,
             age: 0,
             start: (at, velocity),
@@ -166,6 +174,12 @@ impl Flying {
         let push = if length < 1.0e-9 { (0.0, 0.0, 0.0) } else { (direction.0 / length, direction.1 / length, direction.2 / length) };
 
         Self { kind: Kind::DragonFireball, stack: None, push, in_owner: false, rot: (0.0, 0.0), prev: (at, velocity, (0.0, 0.0)), ..Self::potion(entity_id, dimension, Kind::Splash, Stack::new(0, 1), at, velocity, owner) }
+    }
+
+    /// Череп иссушителя: из точки `at` со скоростью `velocity`, разгон — по
+    /// `direction` (wither-skull-hit: призванный с Motion разгоняется вдоль неё).
+    pub fn wither_skull(entity_id: i32, dimension: Dimension, at: (f64, f64, f64), velocity: (f64, f64, f64), direction: (f64, f64, f64), owner: i32, dangerous: bool) -> Self {
+        Self { kind: Kind::WitherSkull, dangerous, ..Self::fireball(entity_id, dimension, at, velocity, direction, owner) }
     }
 
     /// Снежок: из точки `at` со скоростью `velocity`; предмет — снежок (его
@@ -600,6 +614,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     let mut new_clouds: Vec<Cloud> = Vec::new();
     let mut impacts: Vec<Impact> = Vec::new();
     let mut blasts: Vec<(i32, (f64, f64, f64), f32)> = Vec::new();
+    let mut skull_hits: Vec<SkullHit> = Vec::new();
     let height = |sneaking: bool| if sneaking { 1.5 } else { 1.8 };
 
     for flying in thrown.flying.iter_mut().filter(|f| f.dimension == dimension) {
@@ -616,9 +631,16 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         // Такт полёта: у зелья тяжесть, сопротивление, ход; у шара — разгон,
         // сопротивление, ход.
         if fireball {
-            flying.vx = (flying.vx + flying.push.0 * FIREBALL_POWER) * FIREBALL_DRAG;
-            flying.vy = (flying.vy + flying.push.1 * FIREBALL_POWER) * FIREBALL_DRAG;
-            flying.vz = (flying.vz + flying.push.2 * FIREBALL_POWER) * FIREBALL_DRAG;
+            // Синий череп иссушителя медленнее: 0,73 (mob/wither.rs).
+            let drag = match (flying.kind, flying.dangerous) {
+                (Kind::WitherSkull, true) => crate::mob::wither::DANGEROUS_DRAG,
+                (Kind::WitherSkull, false) => crate::mob::wither::SKULL_DRAG,
+                _ => FIREBALL_DRAG,
+            };
+
+            flying.vx = (flying.vx + flying.push.0 * FIREBALL_POWER) * drag;
+            flying.vy = (flying.vy + flying.push.1 * FIREBALL_POWER) * drag;
+            flying.vz = (flying.vz + flying.push.2 * FIREBALL_POWER) * drag;
         } else {
             flying.vy -= if flying.kind == Kind::Snowball { SNOWBALL_GRAVITY } else { GRAVITY };
             flying.vx *= DRAG;
@@ -626,7 +648,10 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             flying.vz *= DRAG;
         }
 
-        let (half, tall) = if fireball { (0.5, 1.0) } else { (POTION_HALF, 2.0 * POTION_HALF) };
+        // Череп иссушителя бьёт точкой своего места в ящик цели, раздутый на
+        // 0,3 (wither-skull-hit: взрыв на 1,1 — грань робота 0,8 и ещё 0,3).
+        let skull = flying.kind == Kind::WitherSkull;
+        let (half, tall) = if skull { (0.3, 0.6) } else if fireball { (0.5, 1.0) } else { (POTION_HALF, 2.0 * POTION_HALF) };
         let from = (flying.x, flying.y, flying.z);
         let to = (flying.x + flying.vx, flying.y + flying.vy, flying.z + flying.vz);
         let centre = |p: (f64, f64, f64)| (p.0, p.1 + tall / 2.0, p.2);
@@ -675,7 +700,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
         // Попадание в сущность: место раскола — где зелье было до хода
         // (splash-potion: событие на высоте 2 при ударе о голову с 2,13).
-        let hit: Option<((f64, f64, f64), Option<Struck>)> = if entity_first {
+        let hit: Option<((f64, f64, f64), Option<Struck>)> = if entity_first && skull {
+            best.map(|(part, target)| ((from.0 + (to.0 - from.0) * part, from.1 + (to.1 - from.1) * part, from.2 + (to.2 - from.2) * part), Some(target)))
+        } else if entity_first {
             best.map(|(_, target)| (from, Some(target)))
         } else {
             block.map(|(part, _)| ((from.0 + (to.0 - from.0) * part, from.1 + (to.1 - from.1) * part, from.2 + (to.2 - from.2) * part), None))
@@ -749,6 +776,12 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         // соседней клетке (вики, Small Fireball).
         if flying.kind == Kind::SmallFireball {
             small_fireball_hit(shared, world, &mut items, flying, at, struck, block_at);
+            continue;
+        }
+
+        // Череп иссушителя: урон и взрыв — после хода всех снарядов.
+        if skull {
+            skull_hits.push(SkullHit { owner: flying.owner, at, struck, dangerous: flying.dangerous });
             continue;
         }
 
@@ -1032,6 +1065,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     drop(thrown);
     drop(items);
 
+    skull_blasts(shared, dimension, world, skull_hits);
+
     // Взрывы шаров гаста: сила 1, огонь (вики, Fireball).
     for (owner, centre, power) in fireball_blasts {
         let players = crate::tick::blast_targets(shared, dimension);
@@ -1063,6 +1098,71 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         for (uuid, amount) in hurts {
             players.order(&uuid, crate::players::Order::Hurt { amount, source: Source::Magic });
         }
+    }
+}
+
+/// Попадание черепа иссушителя: кто стрелял, где, в кого, синий ли.
+struct SkullHit {
+    owner: i32,
+    at: (f64, f64, f64),
+    struck: Option<Struck>,
+    dangerous: bool,
+}
+
+/// Черепа иссушителя: прямое попадание — урон (от иссушителя 8, без хозяина —
+/// магия 5) и иссушение II по сложности, потом взрыв силой 1 там, где череп
+/// ударил (вики, Wither Skull; wither-skull-hit: Damage Event, Effect, взрыв).
+fn skull_blasts(shared: &Shared, dimension: Dimension, world: &mut World, hits: Vec<SkullHit>) {
+    if hits.is_empty() {
+        return;
+    }
+
+    let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
+    let griefing = shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed);
+    let killer = crate::mob::hostile::killer_key(crate::mob::Kind::Wither);
+
+    for hit in hits {
+        let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
+        let owned = items.mobs().iter().any(|mob| mob.entity_id == hit.owner && mob.kind == crate::mob::Kind::Wither && !mob.is_dead());
+        let (amount, source) = if owned { (crate::mob::wither::SKULL_DAMAGE, Source::WitherSkull) } else { (crate::mob::wither::SKULL_DAMAGE_OWNERLESS, Source::Magic) };
+        let wither = crate::mob::wither::skull_wither_ticks(difficulty).map(|ticks| Effect { kind: EffectKind::Wither, amplifier: crate::mob::wither::SKULL_WITHER_AMPLIFIER, ticks_left: ticks, ambient: false, visible: true });
+        let mut killed = false;
+
+        match hit.struck {
+            Some(Struck::Player(id)) => {
+                world.note_mob_hurt(id, amount, source, if owned { hit.owner } else { 0 }, killer, None, hit.at);
+
+                if let Some(effect) = wither {
+                    world.note_mob_effect(id, effect);
+                }
+            }
+            Some(Struck::Mob(id)) => {
+                if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == id) {
+                    if mob.hurt(amount, source, None).is_some()
+                        && let Some(effect) = wither
+                        && !mob.is_dead()
+                    {
+                        mob.vitals.give_effect_shown(effect);
+                    }
+
+                    killed = mob.is_dead();
+                }
+            }
+            None => {}
+        }
+
+        // Убил черепом — иссушитель лечится (вики, Wither).
+        if killed && owned && let Some(owner) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == hit.owner) {
+            owner.vitals.heal(crate::mob::wither::KILL_HEAL);
+        }
+
+        let players = crate::tick::blast_targets(shared, dimension);
+        let mut next_id = || shared.next_entity_id();
+
+        world.blast_source = hit.owner;
+        world.blast_killer = killer;
+        crate::tnt::explode_wither(world, &mut items, &players, hit.at, crate::mob::wither::SKULL_POWER, griefing, hit.dangerous.then_some(crate::mob::wither::DANGEROUS_RESISTANCE), &mut next_id);
+        world.blast_killer = "";
     }
 }
 

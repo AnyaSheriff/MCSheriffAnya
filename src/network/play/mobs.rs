@@ -134,6 +134,9 @@ pub(super) struct ShownMob {
     /// Наибольшее здоровье, как показано (у волка оно меняется при
     /// приручении — атрибут max_health; чёрный ящик, wolf-tame).
     max_health: f32,
+
+    /// Показана полоса босса (иссушитель): уходит вместе с ним.
+    pub(super) boss: bool,
 }
 
 fn float(value: f32) -> Vec<u8> {
@@ -181,6 +184,8 @@ fn properties(mob: &Mob) -> Vec<Property> {
         (4, TYPE_BOOL, vec![u8::from(mob.silent)]),
         (6, TYPE_POSE, encode_varint(if mob.is_dead() { POSE_DYING } else { 0 })),
         (9, TYPE_FLOAT, float(mob.vitals.health)),
+        // Стрел в теле (wither-half-armor: 9=… 12=1 после попадания).
+        (12, TYPE_INT, encode_varint(mob.arrows)),
         (15, TYPE_BYTE, vec![u8::from(mob.no_ai) | aggressive]),
     ];
 
@@ -289,6 +294,15 @@ fn properties(mob: &Mob) -> Vec<Property> {
             out.push((16, TYPE_BOOL, vec![u8::from(mob.guardian.moving)]));
             out.push((17, TYPE_INT, encode_varint(mob.guardian.target.unwrap_or(0))));
         }
+        // Иссушитель (вики, Entity metadata: 16–18 — цели средней, левой и
+        // правой головы, 19 — такты неуязвимости).
+        Kind::Wither => {
+            for (index, target) in mob.wither.targets.iter().enumerate() {
+                out.push((16 + index as u8, TYPE_INT, encode_varint(*target)));
+            }
+
+            out.push((19, TYPE_INT, encode_varint(mob.wither.invul)));
+        }
         // Волк (minecraft-data: flags, owneruuid, interested, collar_color,
         // anger_end_time, variant, sound_variant; чёрный ящик, wolf-tame,
         // wolf-defend, probe-cats). Голос — всегда обычный [проверить: у
@@ -392,6 +406,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
 
     match (*key, kind) {
         (2, _) => value.as_slice() == [0],
+        (12, _) => value.as_slice() == [0],
         // Волк и кошка: ошейник красный, вариант — бледный и чёрная, злости нет
         // (чёрный ящик, probe-cats).
         (18..=20, Kind::Wolf) | (18 | 19 | 21 | 22, Kind::Cat) => value.iter().all(|byte| *byte == 0),
@@ -402,6 +417,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (8, Kind::EndCrystal | Kind::Drowned) => value.as_slice() == [0],
         (16, Kind::IronGolem) => value.as_slice() == [0],
         (16 | 17, Kind::Guardian | Kind::ElderGuardian) => value.as_slice() == [0],
+        (16..=19, Kind::Wither) => value.as_slice() == [0],
         (16, Kind::SnowGolem) => value.as_slice() == [0x10],
         (9, Kind::EndCrystal) => value.as_slice() == [1],
         (16, Kind::Phantom) => value.as_slice() == [0],
@@ -499,6 +515,14 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         send_leash(stream, mob.entity_id, holder.id()).await?;
     }
 
+    // Иссушитель: полоса босса тому, кому он показан (wither-summon: сразу
+    // после появления и свойств).
+    let boss = mob.kind == Kind::Wither;
+
+    if boss {
+        send_wither_bar(stream, mob).await?;
+    }
+
     Ok(ShownMob {
         place: (mob.x, mob.y, mob.z),
         grid: grid_of((mob.x, mob.y, mob.z)),
@@ -515,7 +539,58 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         first: true,
         properties,
         max_health: mob.vitals.max_health,
+        boss,
     })
+}
+
+/// Номер полосы босса иссушителя — его собственный UUID.
+fn boss_uuid(entity_id: i32) -> [u8; 16] {
+    crate::items::uuid_for(entity_id)
+}
+
+/// Полоса иссушителя: название — имя сущности с подсказкой «show_entity» и
+/// вставкой UUID (wither-summon: `{"insertion":…,"hover_event":{…},
+/// "translate":"entity.minecraft.wither"}`), фиолетовая (5), без делений,
+/// затемняет небо (флаг 1).
+async fn send_wither_bar(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+    let mut body = encode_varint(BOSS_EVENT);
+    let uuid = &mob.uuid;
+    let words: Vec<i32> = uuid.chunks(4).map(|word| i32::from_be_bytes([word[0], word[1], word[2], word[3]])).collect();
+    let key = "entity.minecraft.wither";
+    let title = nbt::Compound::new()
+        .string("insertion", &crate::network::login::format_uuid(uuid))
+        .compound(
+            "hover_event",
+            nbt::Compound::new().compound("name", nbt::Compound::new().string("translate", key)).string("action", "show_entity").string("id", "minecraft:wither").int_array("uuid", &words),
+        )
+        .string("translate", key);
+
+    body.extend_from_slice(&boss_uuid(mob.entity_id));
+    body.extend_from_slice(&encode_varint(0));
+    body.extend_from_slice(&title.encode_network());
+    body.extend_from_slice(&crate::mob::wither::bar(mob).to_be_bytes());
+    body.extend_from_slice(&encode_varint(5));
+    body.extend_from_slice(&encode_varint(0));
+    body.push(1);
+    write_body(stream, body).await
+}
+
+/// Новая доля полосы иссушителя.
+pub(super) async fn send_wither_share(stream: &mut Outgoing<'_>, entity_id: i32, share: f32) -> io::Result<()> {
+    let mut body = encode_varint(BOSS_EVENT);
+
+    body.extend_from_slice(&boss_uuid(entity_id));
+    body.extend_from_slice(&encode_varint(2));
+    body.extend_from_slice(&share.to_be_bytes());
+    write_body(stream, body).await
+}
+
+pub(super) async fn send_boss_remove(stream: &mut Outgoing<'_>, entity_id: i32) -> io::Result<()> {
+    let mut body = encode_varint(BOSS_EVENT);
+
+    body.extend_from_slice(&boss_uuid(entity_id));
+    body.extend_from_slice(&encode_varint(1));
+    write_body(stream, body).await
 }
 
 /// Дикий волк: ему наибольшее здоровье шлётся при появлении.
@@ -581,7 +656,8 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
 
     body.extend_from_slice(&encode_varint(1));
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
-    push_f64(&mut body, f64::from(attribute_speed(mob.kind) as f32));
+    // У иссушителя скорость — ровно 0,6 в двойной точности (wither-summon).
+    push_f64(&mut body, if mob.kind == Kind::Wither { 0.6 } else { f64::from(attribute_speed(mob.kind) as f32) });
 
     // Пьющая ведьма: модификатор «minecraft:drinking» −0,25; сердитый
     // эндермен — «minecraft:attacking» +0,15; оба — сложением (чёрный ящик,
@@ -687,11 +763,11 @@ pub(super) async fn send_mob_event(
         Event::Status(status) => send_status(stream, entity_id, *status).await?,
         Event::Leash(holder) => send_leash(stream, entity_id, *holder).await?,
         Event::Sound { name, volume, pitch } if heard(at) => {
-            let category = if name.starts_with("minecraft:entity.slime.") || name.starts_with("minecraft:entity.phantom.") { 5 } else { SOUND_NEUTRAL };
+            let category = if name.starts_with("minecraft:entity.slime.") || name.starts_with("minecraft:entity.phantom.") || name.starts_with("minecraft:entity.wither.") { 5 } else { SOUND_NEUTRAL };
             send_sound(stream, name, category, at, *volume, *pitch).await?;
         }
         Event::SoundAt { name, volume, pitch, at: place } if heard(*place) => {
-            let category = if name.starts_with("minecraft:entity.slime.") || name.starts_with("minecraft:entity.phantom.") { 5 } else { SOUND_NEUTRAL };
+            let category = if name.starts_with("minecraft:entity.slime.") || name.starts_with("minecraft:entity.phantom.") || name.starts_with("minecraft:entity.wither.") { 5 } else { SOUND_NEUTRAL };
             send_sound(stream, name, category, *place, *volume, *pitch).await?;
         }
         Event::PlayerSound { name, at: place } if heard(*place) => send_sound(stream, name, SOUND_PLAYERS, *place, 1.0, 1.0).await?,
@@ -889,6 +965,11 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
     let gone: Vec<i32> = player.seen_mobs.keys().filter(|id| !present.contains(id)).copied().collect();
 
     for entity_id in gone {
+        // Полоса иссушителя уходит перед ним самим (wither-summon).
+        if player.seen_mobs.get(&entity_id).is_some_and(|shown| shown.boss) {
+            send_boss_remove(stream, entity_id).await?;
+        }
+
         send_remove_entity(stream, entity_id).await?;
         player.seen_mobs.remove(&entity_id);
     }
@@ -921,8 +1002,15 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
 
         if due || impulse {
             let change = (speed.0 - shown.speed.0).powi(2) + (speed.1 - shown.speed.1).powi(2) + (speed.2 - shown.speed.2).powi(2);
+            // Иссушитель скорость сам по себе не шлёт — только после толчка
+            // (wither-summon: падение без пакетов скорости, при ударе — 0,4).
+            let tracked = mob.kind != Kind::Wither || impulse;
 
-            if change > SPED || (speed == (0.0, 0.0, 0.0) && shown.speed != (0.0, 0.0, 0.0)) {
+            if !tracked {
+                // Не шлёт, но знает: после /kill скорость уходит один раз, в
+                // конце (wither-summon).
+                shown.speed = speed;
+            } else if change > SPED || (speed == (0.0, 0.0, 0.0) && shown.speed != (0.0, 0.0, 0.0)) {
                 send_velocity(stream, mob.entity_id, speed).await?;
                 shown.speed = speed;
             }
@@ -1040,7 +1128,9 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         shown.first = false;
 
         // Атрибуты: на третьем такте жизни и после каждой правки данных.
-        if (!shown.attributes_sent && mob.ticks >= attributes_at(mob.kind)) || mob.attr_changes != shown.attr_changes {
+        let attributes_due = if mob.kind == Kind::Wither && mob.wither.built { 1 } else { attributes_at(mob.kind) };
+
+        if (!shown.attributes_sent && mob.ticks >= attributes_due) || mob.attr_changes != shown.attr_changes {
             send_attributes(stream, mob).await?;
             shown.attributes_sent = true;
             shown.attr_changes = mob.attr_changes;
@@ -1107,6 +1197,7 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         first: true,
         properties,
         max_health: 0.0,
+        boss: false,
     })
 }
 

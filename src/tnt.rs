@@ -169,7 +169,24 @@ pub fn explode(
     spare_rails: bool,
     next_id: &mut dyn FnMut() -> i32,
 ) {
-    blast(world, items, players, centre, power, true, false, spare_rails, false, next_id);
+    blast(world, items, players, centre, power, true, false, spare_rails, false, None, next_id);
+}
+
+/// Взрыв иссушителя и его черепов (mob/wither.rs): без огня; блоки — если
+/// позволяет mobGriefing; у синего черепа прочность блоков не больше `cap`.
+/// Сам иссушитель своим взрывом не задевается (`blast_source`).
+#[allow(clippy::too_many_arguments)]
+pub fn explode_wither(
+    world: &mut World,
+    items: &mut Items,
+    players: &[Target],
+    centre: (f64, f64, f64),
+    power: f32,
+    breaks_blocks: bool,
+    cap: Option<f32>,
+    next_id: &mut dyn FnMut() -> i32,
+) {
+    blast(world, items, players, centre, power, breaks_blocks, false, false, false, cap, next_id);
 }
 
 /// Взрыв с огнём — кровать вне обычного мира, якорь вне Незера (bed.rs):
@@ -185,7 +202,7 @@ pub fn explode_with_fire(
     power: f32,
     next_id: &mut dyn FnMut() -> i32,
 ) {
-    blast(world, items, players, centre, power, true, false, false, true, next_id);
+    blast(world, items, players, centre, power, true, false, false, true, None, next_id);
 }
 
 /// Взрыв догоревшего динамита: обычный — силы 4, особый — по своему виду
@@ -207,7 +224,7 @@ pub fn explode_primed(
         return;
     };
 
-    blast(world, items, players, centre, kind.power, kind.breaks_blocks, true, false, false, next_id);
+    blast(world, items, players, centre, kind.power, kind.breaks_blocks, true, false, false, None, next_id);
 
     // Кассетный: малые обычные заряды во все стороны — из места взрыва,
     // вверх и вбок со случайной скоростью, с коротким запалом.
@@ -247,9 +264,10 @@ fn blast(
     defer: bool,
     spare_rails: bool,
     fire: bool,
+    cap: Option<f32>,
     next_id: &mut dyn FnMut() -> i32,
 ) {
-    let (mut doomed, touched) = if breaks_blocks { rays(world, centre, power) } else { (Vec::new(), Vec::new()) };
+    let (mut doomed, touched) = if breaks_blocks { rays(world, centre, power, cap) } else { (Vec::new(), Vec::new()) };
     let reached = touched.len();
 
     // Вагонетка с динамитом рельсы и то, на чём они лежат, не рушит (вики,
@@ -324,7 +342,7 @@ pub fn wind_burst_knockback(level: i32) -> f64 {
 /// «блоков 835» на пустой площадке) [проверить: рычаги и двери лучи
 /// должны переключать].
 pub fn wind_burst(world: &mut World, items: &mut Items, players: &[Target], centre: (f64, f64, f64), knockback: f64, source: i32) {
-    let reached = rays(world, centre, WIND_BURST_POWER).1.len();
+    let reached = rays(world, centre, WIND_BURST_POWER, None).1.len();
     let reach = 2.0 * f64::from(WIND_BURST_POWER);
     let mut pushed = Vec::new();
 
@@ -347,7 +365,9 @@ pub fn wind_burst(world: &mut World, items: &mut Items, players: &[Target], cent
         }
     }
 
-    for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && !mob.h.despawn) {
+    let source = world.blast_source;
+
+    for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && !mob.h.despawn && !(mob.kind == crate::mob::Kind::Wither && mob.entity_id == source)) {
         let size = mob.size();
         let Some(impact) = impact(world, centre, reach, (mob.x, mob.y, mob.z), size) else {
             continue;
@@ -390,13 +410,13 @@ pub fn continue_blasts(world: &mut World, items: &mut Items, next_id: &mut dyn F
 /// и тот же.
 #[cfg(test)]
 pub fn blocks_to_destroy(world: &mut World, centre: (f64, f64, f64), power: f32) -> Vec<Pos> {
-    rays(world, centre, power).0
+    rays(world, centre, power, None).0
 }
 
 /// Лучи взрыва: что рушится и сколько клеток лучи задели вообще, с воздухом
 /// вместе, — это число оригинал кладёт в пакет взрыва (чёрный ящик,
 /// tnt-lever: ~550 клеток при 11 сломанных блоках).
-fn rays(world: &mut World, centre: (f64, f64, f64), power: f32) -> (Vec<Pos>, Vec<Pos>) {
+fn rays(world: &mut World, centre: (f64, f64, f64), power: f32, cap: Option<f32>) -> (Vec<Pos>, Vec<Pos>) {
     // Хеш — быстрый (`CoordHash`): у ядерного динамита клеток сотни тысяч.
     let mut seen: HashSet<Pos, CoordHash> = HashSet::default();
     let mut reached: HashSet<Pos, CoordHash> = HashSet::default();
@@ -436,7 +456,14 @@ fn rays(world: &mut World, centre: (f64, f64, f64), power: f32) -> (Vec<Pos>, Ve
                     let state = world.get_block(cell.0, cell.1, cell.2);
 
                     if state != AIR {
-                        intensity -= (blocks::blast_resistance(state) + 0.3) * 0.3;
+                        // Синий череп иссушителя: прочность не больше 0,8, кроме
+                        // неразрушимого (mob/wither.rs).
+                        let resistance = match cap {
+                            Some(cap) if !crate::mob::wither::wither_immune(state) => blocks::blast_resistance(state).min(cap),
+                            _ => blocks::blast_resistance(state),
+                        };
+
+                        intensity -= (resistance + 0.3) * 0.3;
                     }
 
                     if intensity > 0.0 {
@@ -554,7 +581,9 @@ fn push_entities(
 
     // Мобы получают урон и толчок, как игроки (вики, Explosion: «Damage»);
     // уходящий крипер сам себя не задевает. [проверить]
-    for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && !mob.h.despawn) {
+    let source = world.blast_source;
+
+    for mob in items.mobs_mut().iter_mut().filter(|mob| !mob.is_dead() && !mob.h.despawn && !(mob.kind == crate::mob::Kind::Wither && mob.entity_id == source)) {
         let size = mob.size();
 
         let Some(impact) = impact(world, centre, reach, (mob.x, mob.y, mob.z), size) else {

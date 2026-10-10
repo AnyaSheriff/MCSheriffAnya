@@ -359,6 +359,12 @@ fn sweep_box(from: (f64, f64, f64), to: (f64, f64, f64), (cx, low, cz): (f64, f6
         }
     }
 
+    // Отрезок лишь касается ящика в своём начале (стрела, отскочившая от
+    // грани, летит прочь): попадания нет (чёрный ящик, wither-half-armor).
+    if far <= 1.0e-7 {
+        return None;
+    }
+
     Some(near)
 }
 
@@ -679,29 +685,62 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     let push = crate::mob::Push { dir: (arrow.vx / speed, arrow.vz / speed), strength: crate::mob::BASE_KNOCKBACK, cause: arrow.owner };
 
                     let mut bounced = false;
+                    let mut burn = false;
 
                     if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == entity_id) {
-                        mob.credit_player();
+                        // Стрела без стрелка (призванная командой) опыта за
+                        // убийство не сулит (wither-half-armor).
+                        if arrow.owner != 0 {
+                            mob.credit_player();
+                        }
 
-                        if mob.kind == crate::mob::Kind::EnderDragon {
+                        // Иссушитель в броне (половина здоровья и меньше): стрела
+                        // отскакивает без урона (вики, Wither; wither-half-armor).
+                        if crate::mob::wither::powered(mob) {
+                            bounced = true;
+                        } else if mob.kind == crate::mob::Kind::EnderDragon {
                             // Сидящий дракон стрелам не по зубам: «they catch
                             // fire and bounce off» (вики, Ender Dragon); в полёте
                             // стрела бьёт в тело — четверть урона [проверить].
                             if matches!(mob.dragon.phase, crate::mob::dragon::SCANNING | crate::mob::dragon::ROAR | crate::mob::dragon::BREATH) {
                                 bounced = true;
+                                burn = true;
                             } else {
                                 mob.hurt_part(damage, false, Source::Arrow, Some(push));
                             }
-                        } else {
-                            mob.hurt(damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, Some(push));
+                        } else if mob.hurt(damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, Some(push)).is_some() {
+                            // Без стрелка виновник — сама стрела (wither-half-armor:
+                            // Damage Event с причиной-сущностью).
+                            if arrow.owner == 0
+                                && let Some(crate::mob::Event::Hurt { cause, .. }) = mob.events.iter_mut().rev().find(|event| matches!(event, crate::mob::Event::Hurt { .. }))
+                            {
+                                *cause = arrow.entity_id;
+                            }
+
+                            // Стрела, не трезубец, остаётся в теле (свойство 12;
+                            // wither-half-armor: 12=1 вместе с уроном).
+                            if arrow.trident.is_none() && arrow.pierce_left == 0 {
+                                mob.stick_arrow();
+                            }
                         }
                     }
 
+                    // Отскок: стрела встаёт в точку удара, скорость ×(−0,1),
+                    // разворот почти на 180° при прежнем наклоне, сопротивление и
+                    // тяжесть — в том же такте; клиентам — как перелом, на такт
+                    // позже (wither-half-armor: скорость (0; −0,045; −0,147) и
+                    // поворот −128/−1 через такт после удара).
                     if bounced {
-                        arrow.vx *= -0.1;
-                        arrow.vy *= -0.1;
-                        arrow.vz *= -0.1;
-                        arrow.flame = true;
+                        let (yaw, pitch) = arrow.facing();
+
+                        // Разворот — на 170…190°, как у трезубца (wither-half-armor:
+                        // −128 и −125 из 256 в двух записях оригинала).
+                        arrow.rot = Some((yaw + 170.0 + world.random_unit() * 20.0, pitch));
+                        arrow.vx *= -0.1 * AIR_DRAG;
+                        arrow.vy = arrow.vy * -0.1 * AIR_DRAG - GRAVITY;
+                        arrow.vz *= -0.1 * AIR_DRAG;
+                        arrow.impulse = true;
+                        arrow.flame |= burn;
                         continue;
                     }
                 }
@@ -817,6 +856,13 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         arrows.list.retain(|arrow| !removed.contains(&arrow.entity_id));
     }
 
+    // Раненные стрелами мобы: событие урона и звук уходят в такт попадания,
+    // а не со следующим тактом мобов (wither-half-armor: damage_event вместе
+    // со звуком попадания стрелы).
+    if items.mobs().iter().any(|mob| !mob.events.is_empty()) {
+        items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
+    }
+
     drop(arrows);
     drop(items);
 
@@ -845,6 +891,13 @@ mod tests {
 
         assert!((x + 3.0).abs() < 1e-9);
         assert!((aim(0.0, -90.0, 1.0).1 - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_ray_leaving_a_box_face_misses_it() {
+        // отскочившая от иссушителя стрела на его грани летит прочь
+        assert_eq!(sweep_box((3.5, 2.46, 4.05), (3.5, 2.42, 3.903), (3.5, 0.0, 4.5), 0.45, 3.5), None);
+        assert!(sweep_box((3.5, 2.46, 3.0), (3.5, 2.42, 4.5), (3.5, 0.0, 4.5), 0.45, 3.5).is_some());
     }
 
     #[test]
