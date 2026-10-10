@@ -71,6 +71,8 @@ pub enum Source {
     MobAttack,
     /// Удар моба без гнева цели — таран козла (чёрный ящик, goat-ram: тип урона 29).
     MobAttackNoAggro,
+    /// Жало пчелы (damage_type sting, 41 по алфавиту; чёрный ящик, bee-sting).
+    Sting,
     /// Взрыв, вызванный существом (крипер).
     PlayerExplosion,
     /// Удар игрока по существу.
@@ -134,6 +136,7 @@ impl Source {
             Source::OutOfWorld => 32,
             Source::MobAttack => 28,
             Source::MobAttackNoAggro => 29,
+            Source::Sting => 41,
             Source::PlayerExplosion => 35,
             Source::PlayerAttack => 34,
             Source::MaceSmash => 26,
@@ -184,6 +187,7 @@ impl Source {
             Source::OutOfWorld => "death.attack.outOfWorld",
             Source::MobAttack => "death.attack.mob",
             Source::MobAttackNoAggro => "death.attack.mob",
+            Source::Sting => "death.attack.sting",
             Source::PlayerExplosion => "death.attack.explosion.player",
             Source::PlayerAttack => "death.attack.player",
             Source::MaceSmash => "death.attack.mace_smash",
@@ -237,7 +241,7 @@ impl Source {
     /// лёгкая — min(d/2+1, d), нормальная — d, трудная — 1,5d.
     pub fn scales_with_difficulty(self) -> bool {
         // Луч стража — тоже (вики, Guardian: 4/6/9 по сложности).
-        matches!(self, Source::Explosion | Source::PlayerExplosion | Source::MobAttack | Source::MobAttackNoAggro | Source::Arrow | Source::IndirectMagic | Source::WitherSkull | Source::WindCharge | Source::SonicBoom)
+        matches!(self, Source::Explosion | Source::PlayerExplosion | Source::MobAttack | Source::MobAttackNoAggro | Source::Sting | Source::Arrow | Source::IndirectMagic | Source::WitherSkull | Source::WindCharge | Source::SonicBoom)
     }
 }
 
@@ -280,6 +284,7 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::PlayerAttack => "was slain",
         Source::MaceSmash => "was smashed",
         Source::MobAttack | Source::MobAttackNoAggro => "was slain by a monster",
+        Source::Sting => "was stung to death",
         Source::Arrow => "was shot",
         Source::PlayerExplosion => "was blown up",
         Source::Thorns => "was killed",
@@ -1450,6 +1455,13 @@ impl Vitals {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bee_sting_has_its_own_damage_type() {
+        // Чёрный ящик, bee-sting: Damage Event type=41, сообщение «stung to death».
+        assert_eq!(Source::Sting.type_id(), 41);
+        assert_eq!(Source::Sting.death_key(), "death.attack.sting");
+    }
 
     #[test]
     fn a_new_player_is_full() {

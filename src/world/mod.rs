@@ -444,6 +444,7 @@ struct Chunk {
 
     /// Таблички с текстом (sign.rs): место внутри чанка.
     signs: HashMap<(i32, i32, i32), crate::sign::Data>,
+    hives: HashMap<(i32, i32, i32), crate::hive::Data>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
@@ -539,6 +540,7 @@ impl Chunk {
             spawners: HashMap::new(),
             trials: HashMap::new(),
             signs: HashMap::new(),
+            hives: HashMap::new(),
         }
     }
 
@@ -784,6 +786,10 @@ impl Chunk {
             *place = pack(state);
         }
 
+        if crate::hive::is_hive(state) && self.block(x,y,z) == state {
+            self.hives.entry((x,y,z)).or_insert_with(||crate::hive::Data::generated((x as u64).wrapping_mul(73471) ^ (z as u64).wrapping_mul(317) ^ y as u64));
+        }
+
         // Спавнер, поставленный генерацией: вид по месту — подземелье и
         // крепость выбирают его случайно (вики, Monster Spawner: скелет,
         // зомби ×2, паук) [проверить: доли].
@@ -915,6 +921,12 @@ impl Chunk {
             if let Some(kind) = kind {
                 self.containers.insert(place, containers::Container::new(kind));
             }
+        }
+
+        if crate::hive::is_hive(state) != crate::hive::is_hive(old) {
+            let place=(x.rem_euclid(CHUNK_SIZE),y,z.rem_euclid(CHUNK_SIZE));
+            if crate::hive::is_hive(state) { self.hives.insert(place,crate::hive::Data::default()); }
+            else { self.hives.remove(&place); }
         }
 
         // Текст таблички уходит вместе с блоком.
@@ -1169,6 +1181,7 @@ pub struct World {
     /// Где сидят кошки (середина ног): сундук под сидящей кошкой не открывается
     /// (вики, Cat: «A chest with a cat sitting on top of it becomes unusable»).
     /// Обновляется каждый такт (tick.rs).
+    pub wildlife_griefing: bool,
     pub sitting_cats: Vec<(f64, f64, f64)>,
 
     /// Набеги, заявки на них и звоны колоколов (raid.rs). Не сохраняются
@@ -1464,6 +1477,7 @@ impl World {
             blast_source: 0,
             blast_by_player: false,
             blast_killer: "",
+            wildlife_griefing: true,
             sitting_cats: Vec::new(),
             raids: crate::raid::Raids::default(),
             late: Vec::new(),
@@ -1617,6 +1631,7 @@ impl World {
             blast_source: 0,
             blast_by_player: false,
             blast_killer: "",
+            wildlife_griefing: true,
             sitting_cats: Vec::new(),
             raids: crate::raid::Raids::default(),
             late: Vec::new(),
@@ -2090,6 +2105,34 @@ impl World {
         self.dirty.insert(chunk_key(x, z));
 
         Some(result)
+    }
+
+    /// Данные улья в этом месте, если он там стоит и чанк в памяти.
+    pub fn hive(&self, x: i32, y: i32, z: i32) -> Option<&crate::hive::Data> {
+        self.chunks.get(&chunk_key(x, z))?.hives.get(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))
+    }
+
+    /// Правит данные улья; чанк помечается изменённым. None — улья тут нет.
+    pub fn with_hive<R>(&mut self, x: i32, y: i32, z: i32, change: impl FnOnce(&mut crate::hive::Data) -> R) -> Option<R> {
+        let chunk = self.chunks.get_mut(&chunk_key(x, z))?;
+        let data = chunk.hives.get_mut(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))?;
+        let result = change(data);
+
+        self.dirty.insert(chunk_key(x, z));
+
+        Some(result)
+    }
+
+    /// Все ульи загруженных чанков: место в мире.
+    pub fn hive_places(&self) -> Vec<(i32, i32, i32)> {
+        let mut found = Vec::new();
+
+        for (&(chunk_x, chunk_z), chunk) in &self.chunks {
+            found.extend(chunk.hives.keys().map(|&(x, y, z)| (chunk_x * CHUNK_SIZE + x, y, chunk_z * CHUNK_SIZE + z)));
+        }
+
+        found.sort_unstable();
+        found
     }
 
     /// Данные спавнера в этом месте, если он там стоит и чанк в памяти.
@@ -3291,6 +3334,23 @@ impl World {
             pitch,
             exact: Some(at),
             of_block: false,
+            of_player: false,
+            except: None,
+        }));
+    }
+
+    /// Звук блока в точном месте (раздел «blocks»): улей жужжит из точки
+    /// (x+0,5; y; z+0,5), а не из середины блока.
+    pub fn note_sound_block_at(&mut self, at: (f64, f64, f64), name: &'static str, volume: f32, pitch: f32) {
+        self.events.push(WorldEvent::Sound(WorldSound {
+            x: at.0.floor() as i32,
+            y: at.1.floor() as i32,
+            z: at.2.floor() as i32,
+            name,
+            volume,
+            pitch,
+            exact: Some(at),
+            of_block: true,
             of_player: false,
             except: None,
         }));

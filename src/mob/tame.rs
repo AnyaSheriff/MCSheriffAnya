@@ -524,7 +524,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         let prey = ctx
             .mates
             .iter()
-            .filter(|mate| (!mob.tame.tamed() && mate.kind == Kind::Sheep) || matches!(mate.kind, Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::WitherSkeleton))
+            .filter(|mate| (!mob.tame.tamed() && matches!(mate.kind, Kind::Sheep | Kind::Rabbit | Kind::Fox)) || matches!(mate.kind, Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::WitherSkeleton))
             .map(|mate| (mate.id, (mate.x - mob.x).powi(2) + (mate.y - mob.y).powi(2) + (mate.z - mob.z).powi(2)))
             .filter(|(_, dist)| *dist <= 16.0 * 16.0)
             .min_by(|a, b| a.1.total_cmp(&b.1));
@@ -690,7 +690,7 @@ fn seek_perch(mob: &mut Mob, view: &dyn View, plan: Plan, rng: &mut Rng) -> Opti
 }
 
 /// Нападение: идти к цели, с 2–4 блоков прыгнуть, вблизи укусить.
-fn attack(mob: &mut Mob, view: &dyn View, target: Target, at: (f64, f64, f64, f64), mut plan: Plan, rng: &mut Rng) -> Plan {
+pub(crate) fn attack(mob: &mut Mob, view: &dyn View, target: Target, at: (f64, f64, f64, f64), mut plan: Plan, rng: &mut Rng) -> Plan {
     let (dx, dz) = (at.0 - mob.x, at.2 - mob.z);
     let flat = (dx * dx + dz * dz).sqrt();
 
@@ -707,9 +707,10 @@ fn attack(mob: &mut Mob, view: &dyn View, target: Target, at: (f64, f64, f64, f6
 
         let push = if flat > 1.0e-6 { (dx / flat, dz / flat) } else { (0.0, 0.0) };
 
+        let damage=if mob.kind==Kind::Fox {super::wildlife::fox_damage(mob,None)} else {BITE};
         match target {
-            Target::Player(id) => plan.melee = Some(super::hostile::Melee { target: id, damage: BITE, push, wither: false, hunger: false }),
-            Target::Mob(id) => plan.bite = Some((id, BITE, push)),
+            Target::Player(id) => plan.melee = Some(super::hostile::Melee { target: id, damage, push, wither: false, hunger: false }),
+            Target::Mob(id) => plan.bite = Some((id, damage, push)),
         }
     }
 

@@ -1038,6 +1038,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     if crate::mob::horse::equine(mob.kind) && let Some(value) = crate::snbt::parse(data) {
         crate::mob::horse::apply_data(mob, &value);
     }
+    crate::mob::wildlife::apply_data(mob, data);
     if let Some(on) = flag_in(data, "NoAI:") {
         mob.no_ai = on;
     }
@@ -1300,6 +1301,12 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
         let mut rng = crate::mob::Rng::new(seed);
         crate::mob::horse::initialize(&mut mob, &mut rng);
         if kind == crate::mob::Kind::Horse { mob.horse.variant = crate::mob::horse::wild_variant(&mut rng); }
+    }
+    if crate::mob::wildlife::kind(kind) && data.is_empty() {
+        let world = shared.world_in(dimension_of(source, shared)).lock().expect("мир захвачен другим потоком");
+        let biome = world.mob_biome(place.0.floor() as i32, place.1.floor() as i32, place.2.floor() as i32);
+        let mut rng = crate::mob::Rng::new(u64::from(mob.entity_id as u32));
+        crate::mob::wildlife::initialize(&mut mob, biome, &mut rng);
     }
     // /summon без данных не даёт водным видам случайный вид (чёрный ящик water-spawn-all:
     // рыба без Variant, аксолотль без Variant — по умолчанию); случайный вид — у яиц и естественного появления.
@@ -2139,7 +2146,9 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
     let spawner = blocks::state_from_text(block).and_then(blocks::block_at_state) == Some("spawner");
     // Испытательный спавнер и хранилище — свои поля (trial.rs).
     let trial = matches!(blocks::state_from_text(block).and_then(blocks::block_at_state), Some("trial_spawner" | "vault"));
-    let command_block_or_spawner = command_block || spawner || trial;
+    let hive = blocks::state_from_text(block).is_some_and(crate::hive::is_hive);
+    if let Some(text) = data.filter(|_| hive) && crate::hive::from_snbt(text).is_none() { return Answer::saying("Не понял данные улья".into()); }
+    let command_block_or_spawner = command_block || spawner || trial || hive;
     let items = match data.filter(|_| !command_block_or_spawner).map(crate::containers::items_from_text) {
         Some(Some(items)) => Some(items),
         Some(None) => return Answer::saying(format!("Не понял данные блока: {}", data.unwrap_or(""))),
@@ -2224,6 +2233,14 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
                 if world.get_block(x, y, z) != state && world.set_block(x, y, z, state) {
                     changed += 1;
                     placed.push((x, y, z));
+                }
+
+                if let Some(text)=data.filter(|_|hive) && let Some(mut data)=crate::hive::from_snbt(text) {
+                    // Тик блока-сущности у оригинала начинается со следующего такта
+                    // после постановки (чёрный ящик, hive-exit: выход на +21 при 20).
+                    for bee in &mut data.bees { bee.ticks-=1; }
+                    world.with_hive(x,y,z,|h|*h=data);
+                    if !placed.contains(&(x,y,z)) { changed+=1; }
                 }
 
                 // Спавнер с данными: поля из SNBT; клиентам — данные блока, как

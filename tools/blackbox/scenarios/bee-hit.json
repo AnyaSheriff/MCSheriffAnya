@@ -1,0 +1,118 @@
+{
+ "name": "bee-hit",
+ "about": "Пчела NoAI: удар кулаком — гнев (метаданные, время гнева), второй удар; звуки урона и смерти.",
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "effect clear $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon bee $(3.5,0,3.5) {NoAI:1b}"
+  },
+  {
+   "after": 20,
+   "attack": true
+  },
+  {
+   "after": 36,
+   "attack": true
+  },
+  {
+   "after": 52,
+   "attack": true
+  },
+  {
+   "after": 68,
+   "attack": true
+  },
+  {
+   "after": 84,
+   "attack": true
+  },
+  {
+   "after": 100,
+   "attack": true
+  }
+ ],
+ "record_ticks": 140,
+ "cleanup": [
+  "kill @e[type=rabbit,distance=..48]",
+  "kill @e[type=fox,distance=..48]",
+  "kill @e[type=bee,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "gamerule natural_regeneration true",
+  "gamerule random_tick_speed 3",
+  "time set day",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(-8,0,-8) $(8,8,8) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "голос в покое",
+   "match": "entity\\.bee\\.ambient",
+   "range": [
+    0,
+    6
+   ],
+   "anytick": true,
+   "why": "вики, Sounds: голос в покое по случайному счёту; два прогона оригинала расходятся"
+  },
+  {
+   "type": "mask",
+   "name": "время конца гнева",
+   "kind": "meta",
+   "pattern": "19=\\d+",
+   "replace": "19=T",
+   "why": "вики, Bee: гнев длится 20–39 с (случайно)"
+  },
+  {
+   "type": "count",
+   "name": "число шариков опыта",
+   "match": "^spawn [-0-9,.]+ experience_orb",
+   "range": [
+    0,
+    3
+   ],
+   "why": "вики, Bee: 1–3 очка опыта"
+  },
+  {
+   "type": "count",
+   "name": "свойства шариков опыта",
+   "match": "^meta 8=\\d+$",
+   "range": [
+    0,
+    6
+   ],
+   "why": "вики, Bee: 1–3 очка опыта"
+  },
+  {
+   "type": "count",
+   "name": "ход и подбор шариков опыта",
+   "match": "^cart experience_orb",
+   "range": [
+    0,
+    30
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении"
+  }
+ ]
+}

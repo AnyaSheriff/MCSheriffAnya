@@ -1,0 +1,125 @@
+{
+ "name": "rabbit-breed",
+ "about": "Two adult rabbits fed carrots; breeding, baby metadata and cooldown. Unrecorded.",
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:carrot 8",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!look 0 0",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon rabbit $(3.5,0,3) {Silent:1b}"
+  },
+  {
+   "after": 1,
+   "cmd": "summon rabbit $(3.5,0,4) {Silent:1b}"
+  },
+  {
+   "after": 10,
+   "interact": true,
+   "which": 0
+  },
+  {
+   "after": 14,
+   "interact": true,
+   "which": 1
+  }
+ ],
+ "record_ticks": 140,
+ "cleanup": [
+  "kill @e[type=rabbit,distance=..48]",
+  "kill @e[type=fox,distance=..48]",
+  "kill @e[type=bee,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamerule random_tick_speed 3",
+  "gamerule mob_griefing true",
+  "time set day",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(-8,0,-8) $(8,8,8) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "ход и повороты rabbit",
+   "match": "^cart rabbit (сдвиг|скорость|сверка|перенос|поворот|entity_head_rotation)",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "вики, Rabbit: движение прыжками, пауза и направление прыжка случайны (два прогона оригинала расходятся)"
+  },
+  {
+   "type": "count",
+   "name": "прыжки и голос кролика",
+   "match": "^cart rabbit событие 1$|entity\\.rabbit\\.(ambient|jump)",
+   "range": [
+    0,
+    40
+   ],
+   "anytick": true,
+   "why": "вики, Rabbit: прыжки (событие 1) и голос в покое случайны"
+  },
+  {
+   "type": "mask",
+   "name": "место рождения",
+   "kind": "spawn",
+   "pattern": "^spawn [-0-9.,]+ rabbit (\\d+) [-0-9.,]+ yaw=\\S+ pitch=\\S+ head=\\S+$",
+   "replace": "spawn rabbit $1 born",
+   "why": "детёныш рождается у родителя, а тот гуляет случайно"
+  },
+  {
+   "type": "count",
+   "name": "шарик опыта за рождение",
+   "match": "^spawn [-0-9,.]+ experience_orb",
+   "range": [
+    1,
+    1
+   ],
+   "why": "вики, Breeding: 1–7 очков опыта одним шариком"
+  },
+  {
+   "type": "count",
+   "name": "свойства шарика опыта",
+   "match": "^meta 8=\\d+$",
+   "range": [
+    2,
+    2
+   ],
+   "why": "вики, Breeding: 1–7 очков"
+  },
+  {
+   "type": "count",
+   "name": "ход и подбор шарика",
+   "match": "^cart experience_orb",
+   "range": [
+    2,
+    30
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении"
+  },
+  {
+   "type": "jitter",
+   "name": "рождение на такт раньше-позже",
+   "match": "^(cart rabbit событие 18|spawn rabbit 0 born|meta 9=3 16=true|cart rabbit entity_update_attributes.*)$",
+   "max": 1,
+   "why": "встреча пары и срок 60 тактов считаются от случайного прихода партнёра: рождение на +71 или +72 (две записи оригинала)"
+  }
+ ]
+}

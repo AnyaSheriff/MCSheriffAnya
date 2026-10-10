@@ -1535,6 +1535,8 @@ fn comparator_reading(world: &World, pos: Pos) -> Option<u8> {
         return crate::command_block::comparator_reading(world, pos);
     }
 
+    let state=world.get_block(pos.0,pos.1,pos.2);
+    if crate::hive::is_hive(state) {return Some(crate::hive::honey(state) as u8);}
     containers::comparator_reading(world, pos)
 }
 
@@ -5017,6 +5019,16 @@ mod tests {
             .expect("блок есть в таблице")
             .state(values)
             .expect("свойства подходят")
+    }
+
+    #[test]
+    fn comparator_reads_hive_honey_level() {
+        let mut w=World::in_memory();
+        for level in 0..=5 {
+            let state=blocks::state_from_text(&format!("beehive[honey_level={level}]")).unwrap();
+            w.set_block(0,4,0,state);
+            assert_eq!(comparator_reading(&w,(0,4,0)),Some(level));
+        }
     }
 
     /// Мир с каменным полом на высоте 0.

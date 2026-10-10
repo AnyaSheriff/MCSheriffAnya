@@ -5,8 +5,7 @@
 // на траву со светом не ниже 9. У овцы вес 12 (группа 2–4), у свиньи 10
 // (2–4), у курицы 10 (4), у коровы 8 (2–4). Здесь простая версия:
 //
-// - биом не учитывается [проверить: у оригинала виды и веса зависят от биома,
-//   в пустынях и океанах животных нет];
+// - таблица биома учитывает кроликов и лис; прочие списки неполны [проверить];
 // - свет — «над клеткой небо открыто» (снизу вверх нет твёрдого) [проверить:
 //   листва рассеивает свет по одному за блок, а не закрывает целиком];
 // - овцы получают цвет по вики (Sheep, «Spawning»: белая 81,836 %, чёрная,
@@ -25,6 +24,7 @@ const WEIGHTS: [(Kind, u32); 4] = [(Kind::Sheep, 12), (Kind::Pig, 10), (Kind::Ch
 fn group(kind: Kind) -> (u32, u32) {
     match kind {
         Kind::Chicken => (4, 4),
+        Kind::Rabbit => (2, 3),
         _ => (2, 4),
     }
 }
@@ -85,14 +85,21 @@ pub fn for_new_chunk_in(view: &dyn View, chunk_x: i32, chunk_z: i32, biome: &str
         return Vec::new();
     }
 
+    let weights = passive_weights(biome);
+    let total: u32 = weights.iter().map(|(_, weight)| weight).sum();
+    // Кролики и лисы добавляют свой вес к прочим животным биома; в биомах без
+    // прочих животных (пустыня, снежные равнины) остаются одни они.
+    let wild: u32 = weights.iter().filter(|(kind, _)| matches!(kind, Kind::Rabbit | Kind::Fox)).map(|(_, weight)| weight).sum();
     let (horse_weight, donkey_weight, donkey_low, donkey_high, others) = equine_spawn(biome);
+    let others = if total == wild { total } else { others + wild };
+    if others + horse_weight + donkey_weight == 0 { return Vec::new(); }
     let mut pick = rng.below(others + horse_weight + donkey_weight);
     let chosen = if pick < horse_weight { Some(Kind::Horse) } else if pick < horse_weight + donkey_weight { Some(Kind::Donkey) } else { None };
     pick = pick.saturating_sub(horse_weight + donkey_weight);
-    if chosen.is_none() && (pick >= 40 || (biome == "meadow" && pick >= 2)) { return Vec::new(); }
+    if chosen.is_none() && pick >= total { return Vec::new(); }
     let mut kind = Kind::Sheep;
 
-    for (candidate, weight) in WEIGHTS {
+    for (candidate, weight) in weights {
         if pick < weight {
             kind = candidate;
             break;
@@ -119,7 +126,7 @@ pub fn for_new_chunk_in(view: &dyn View, chunk_x: i32, chunk_z: i32, biome: &str
         let x = (base_x + rng.below(11) as i32 - 5).clamp(chunk_x * 16, chunk_x * 16 + 15);
         let z = (base_z + rng.below(11) as i32 - 5).clamp(chunk_z * 16, chunk_z * 16 + 15);
 
-        let Some(y) = surface(view, x, z) else {
+        let Some(y) = animal_surface(view, x, z, kind) else {
             continue;
         };
 
@@ -137,6 +144,11 @@ pub fn for_new_chunk_in(view: &dyn View, chunk_x: i32, chunk_z: i32, biome: &str
             super::horse::initialize(&mut mob, rng);
             mob.horse.variant = coat | ((rng.below(5) as i32) << 8);
             if rng.below(5) == 0 { mob.age = super::BABY_AGE; }
+        }
+        if super::wildlife::kind(kind) {
+            super::wildlife::initialize(&mut mob, biome, rng);
+            if kind == Kind::Fox && rng.below(20) == 0 { mob.age = super::BABY_AGE; }
+            if kind == Kind::Rabbit && !mobs.is_empty() { mob.age = super::BABY_AGE; }
         }
 
         if kind == Kind::Sheep {
@@ -538,4 +550,42 @@ pub fn land_for_new_chunk(view: &dyn View, cx: i32, cz: i32, biome: &str, rng: &
         }
     }
     result
+}
+
+/// Вики, страницы биомов, «Creature category». [проверить] веса горных
+/// биомов и общий предел животных; волки пока остаются в старой ветке.
+pub fn passive_weights(biome: &str) -> Vec<(Kind,u32)> {
+    let biome=biome.trim_start_matches("minecraft:");
+    let mut weights=match biome {
+        "desert" | "snowy_plains" | "ice_spikes" | "grove" | "snowy_slopes" => Vec::new(),
+        "meadow" => vec![(Kind::Sheep,2)],
+        "cherry_grove" => vec![(Kind::Pig,1),(Kind::Sheep,2)],
+        name if name.contains("ocean") || matches!(name,"river"|"frozen_river"|"beach"|"snowy_beach"|"stony_shore"|"mushroom_fields") => Vec::new(),
+        _=>WEIGHTS.to_vec(),
+    };
+    let rabbit=match biome {
+        "snowy_plains"|"ice_spikes"=>10,
+        "meadow"=>2,
+        "cherry_grove"=>3,
+        "desert"|"flower_forest"|"taiga"|"snowy_taiga"|"old_growth_pine_taiga"|"old_growth_spruce_taiga"|"grove"|"snowy_slopes"=>4,
+        _=>0,
+    };
+    if rabbit>0 { weights.push((Kind::Rabbit,rabbit)); }
+    if matches!(biome,"taiga"|"snowy_taiga"|"old_growth_pine_taiga"|"old_growth_spruce_taiga"|"grove") { weights.push((Kind::Fox,8)); }
+    weights
+}
+
+fn animal_surface(view: &dyn View,x: i32,z: i32,kind: Kind) -> Option<i32> {
+    if !matches!(kind,Kind::Rabbit|Kind::Fox) { return surface(view,x,z); }
+    for y in (-64..320).rev() {
+        let state=view.block(x,y,z);
+        let name=blocks::block_at_state(state).unwrap_or("");
+        if solid(state) || super::is_water(state) || super::is_lava(state) {
+            let floor=matches!(name,"grass_block"|"snow"|"snow_block")
+                || (kind==Kind::Rabbit && name=="sand")
+                || (kind==Kind::Fox && matches!(name,"podzol"|"coarse_dirt"));
+            return (floor && view.light(x,y+1,z,15).0.max(view.light(x,y+1,z,15).1)>=9).then_some(y);
+        }
+    }
+    None
 }

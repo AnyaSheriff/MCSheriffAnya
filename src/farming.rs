@@ -825,7 +825,7 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
     let square = square_of(world, (x, y, z), name);
     let seed = i64::from(world.random_bits()) << 32 | i64::from(world.random_bits());
 
-    let (tree, origin) = match (square, trees::from_sapling(name, true, seed)) {
+    let (mut tree, origin) = match (square, trees::from_sapling(name, true, seed)) {
         (Some(corner), Some(tree)) if tree.wide() => (tree, corner),
         _ => match trees::from_sapling(name, false, seed) {
             Some(tree) if !tree.wide() => (tree, (x, z)),
@@ -833,6 +833,11 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
         },
     };
 
+    // Вики, Bee: саженец дуба/берёзы у цветка, «5% chance» гнезда.
+    if matches!(name,"oak_sapling"|"birch_sapling") {
+        let nearby=(-2..=2).any(|dx|(-2..=2).any(|dz|(0..=1).any(|dy|crate::mob::wildlife::pollinatable(world.get_block(x+dx,y+dy,z+dz)))));
+        tree.bees=nearby && world.random_unit()<0.05;
+    }
     let ground = y - 1;
     let parts = tree.blocks_in(seed, origin.0, origin.1);
 
@@ -888,6 +893,11 @@ pub fn grow_tree(world: &mut World, (x, y, z): (i32, i32, i32), state: i32) -> b
 
         if let Some(put) = put {
             world.set_block(bx, by, bz, put);
+            if crate::hive::is_hive(put) {
+                let mut data=crate::hive::Data::generated(seed as u64);
+                if world.random_unit()<0.5 { data.bees.pop(); }
+                world.with_hive(bx,by,bz,|hive|*hive=data);
+            }
         }
     }
 

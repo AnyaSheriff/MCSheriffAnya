@@ -1,0 +1,87 @@
+{
+ "name": "hive-break",
+ "about": "Улей с пчелой, добыча без Silk Touch (пчела выходит, предмета нет). С Silk Touch предмет с компонентом bees бот mineflayer разобрать не умеет — только модульные тесты.",
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "effect clear $(bot)",
+  "clear $(bot)",
+  "time set noon",
+  "item replace entity $(bot) hotbar.0 with minecraft:diamond_axe[minecraft:unbreakable={}]",
+  "tp $(bot) $(3.5,0,4.5)",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "setblock $(2,0,2) minecraft:beehive[honey_level=3,facing=south]{bees:[{entity_data:{id:\"minecraft:bee\",NoAI:1b,Silent:1b},ticks_in_hive:0,min_ticks_in_hive:2400}]}"
+  },
+  {
+   "after": 4,
+   "dig": [
+    2,
+    0,
+    2
+   ]
+  },
+  {
+   "after": 10,
+   "dig": [
+    2,
+    0,
+    2
+   ],
+   "status": 2
+  }
+ ],
+ "record_ticks": 70,
+ "cleanup": [
+  "kill @e[type=rabbit,distance=..48]",
+  "kill @e[type=fox,distance=..48]",
+  "kill @e[type=bee,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "gamerule natural_regeneration true",
+  "gamerule random_tick_speed 3",
+  "time set day",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(-8,0,-8) $(8,8,8) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "track_self": true,
+ "random": [
+  {
+   "type": "count",
+   "name": "ход пчелы",
+   "match": "^cart bee (сдвиг|скорость|сверка|перенос|поворот|entity_head_rotation)",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "NoAI пчела стоит; но выведенная из улья летит по ИИ"
+  },
+  {
+   "type": "count",
+   "name": "подбор выпавшего улья",
+   "match": "^sv Collect",
+   "range": [
+    0,
+    1
+   ],
+   "anytick": true,
+   "why": "предмет вылетает в случайную сторону: подбирается не всегда за окно записи"
+  }
+ ]
+}

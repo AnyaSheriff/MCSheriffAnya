@@ -26,7 +26,7 @@ pub fn poison(difficulty: u8) -> Option<Effect> {
 /// Вики, Silverfish: урон существа и «Poison damage», но не падение/огонь.
 /// Magic включает вредящее зелье и яд (общая модель survival.rs).
 pub fn calls_for_help(source: Source) -> bool {
-    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::Arrow | Source::Trident | Source::Magic | Source::Thorns | Source::PlayerExplosion)
+    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::Sting | Source::Arrow | Source::Trident | Source::Magic | Source::Thorns | Source::PlayerExplosion)
 }
 
 const HOSTS: [(&str, &str); 7] = [

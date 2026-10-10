@@ -1964,7 +1964,7 @@ fn a_zombie_without_players_walks_to_a_villager() {
     let view = Flat::new();
     let mut rng = Rng::new(1);
     let mut zombie = Mob::new(1, Kind::Zombie, (0.5, 1.0, 0.5));
-    let mates = [ai::Mate { id: 2, kind: Kind::Villager, x: 6.5, y: 1.0, z: 0.5, love: 0, baby: false, ready: true }];
+    let mates = [ai::Mate { id: 2, kind: Kind::Villager, x: 6.5, y: 1.0, z: 0.5, love: 0, baby: false, ready: true, tamed: false }];
     let ctx = ai::Ctx { players: &[], mates: &mates, difficulty: 2, sky: 0, sun_up: false };
 
     zombie.on_ground = true;

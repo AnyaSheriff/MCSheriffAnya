@@ -147,6 +147,7 @@ pub(super) struct ShownMob {
     pub(super) boss: bool,
     /// Снаряжение, как показано (разбойник: заряд и износ арбалета).
     gear: u32,
+    mouth: Option<Stack>,
 }
 
 fn float(value: f32) -> Vec<u8> {
@@ -189,7 +190,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
     }
     // «Агрессивен» (бит 4) у эндермена и шалкера не ставится: у первого
     // злость — свойство 17 (чёрный ящик, enderman-stare, shulker-ai).
-    let aggressive = u8::from((mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube | Kind::Guardian | Kind::ElderGuardian | Kind::Pillager | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Breeze | Kind::Warden) && mob.h.target.is_some() && !mob.illager.calm) || (mob.kind == Kind::Wolf && mob.tame.melee) || (mob.kind == Kind::IronGolem && mob.golem.target.is_some())) << 2;
+    let aggressive = u8::from(((mob.kind == Kind::Bee && mob.wild.chase) || mob.kind.hostile() && !matches!(mob.kind, Kind::Enderman | Kind::Shulker | Kind::Slime | Kind::MagmaCube | Kind::Guardian | Kind::ElderGuardian | Kind::Pillager | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Breeze | Kind::Warden) && mob.h.target.is_some() && !mob.illager.calm) || (mob.kind == Kind::Wolf && mob.tame.melee) || (mob.kind == Kind::IronGolem && mob.golem.target.is_some())) << 2;
     let mut out: Vec<Property> = vec![
         (0, TYPE_BYTE, vec![fire]),
         (2, TYPE_OPT_COMPONENT, custom_name(mob)),
@@ -236,6 +237,11 @@ fn properties(mob: &Mob) -> Vec<Property> {
         out.push((18, TYPE_BYTE, vec![mob.horse.flags()]));
         if mob.kind == Kind::Horse { out.push((19, TYPE_INT, encode_varint(mob.horse.variant))); }
         if crate::mob::horse::pack(mob.kind) { out.push((19, TYPE_BOOL, vec![u8::from(mob.horse.chest && !mob.is_dead())])); }
+    }
+
+    // Пчела в полёте: «без гравитации» (чёрный ящик, bee-sting: 5=true на +12; hive-exit).
+    if mob.kind == Kind::Bee && mob.wild.flying {
+        out.insert(3, (5, TYPE_BOOL, vec![1]));
     }
 
     match mob.kind {
@@ -306,6 +312,25 @@ fn properties(mob: &Mob) -> Vec<Property> {
         }
         Kind::Warden => {},
         Kind::Horse | Kind::Donkey | Kind::Mule | Kind::SkeletonHorse | Kind::ZombieHorse => {}
+        Kind::Rabbit | Kind::Fox | Kind::Bee => {
+            // minecraft-data 26.1, metadataKeys; [проверить] значения флагов.
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            match mob.kind {
+                Kind::Rabbit => out.push((18, TYPE_INT, encode_varint(i32::from(mob.wild.variant)))),
+                Kind::Fox => {
+                    out.push((18, TYPE_INT, encode_varint(i32::from(mob.wild.variant))));
+                    out.push((19, TYPE_BYTE, vec![(u8::from(mob.wild.sleeping)<<5) | (u8::from(mob.wild.crouching)<<2) | (u8::from(mob.wild.pouncing)<<4)]));
+                    out.push((20, TYPE_OPT_UUID, owner_uuid(mob.wild.trusted[0])));
+                    out.push((21, TYPE_OPT_UUID, owner_uuid(mob.wild.trusted[1])));
+                }
+                _ => {
+                    // Флаги пчелы: 2 — катается, 4 — ужалила, 8 — с нектаром.
+                    out.push((18, TYPE_BYTE, vec![(u8::from(mob.wild.nectar)<<3) | (u8::from(mob.wild.stung)<<2) | (u8::from(mob.wild.roll)<<1)]));
+                    out.push((19, TYPE_LONG, encode_varlong(if mob.wild.anger>0 { mob.tame.clock+i64::from(mob.wild.anger) } else { -1 })));
+                }
+            }
+        }
+
         Kind::Cow => {
             out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
             out.push((18, TYPE_COW_VARIANT, encode_varint(0)));
@@ -519,12 +544,19 @@ fn owner_uuid(owner: Option<[u8; 16]>) -> Vec<u8> {
 /// Значения по умолчанию: пока свойство такое, при появлении оно не
 /// присылается. Варианты животных у нас всегда обычные, и клиент знает
 /// их сам.
+/// Вышедшая из улья с нектаром пчела в первом прогоне слежения получает
+/// флаги явно, даже нулевые: `18=0` (чёрный ящик, hive-exit).
+fn ghost_flag(mob: &Mob, entry: &Property) -> bool {
+    mob.kind == Kind::Bee && mob.wild.nectar_ghost && entry.0 == 18
+}
+
 fn is_default(entry: &Property, kind: Kind) -> bool {
     let (key, _, value) = entry;
 
     match (*key, kind) {
         (2, _) => value.as_slice() == [0],
         (12, _) => value.as_slice() == [0],
+        (5, Kind::Bee) => value.as_slice() == [0],
         // Водные виды: общий хвост 18..20 ниже к ним не относится.
         // Иначе при первом показе теряются вариант аксолотля и лягушки.
         (1, Kind::Dolphin) => value.as_slice() == encode_varint(crate::mob::water::DOLPHIN_AIR),
@@ -535,6 +567,8 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
         (19, Kind::Dolphin) => value.as_slice() == encode_varint(crate::mob::water::DOLPHIN_MOISTURE),
         (18..=20, kind) if crate::mob::water::creature(kind) => value.iter().all(|byte| *byte == 0),
         (18 | 19, kind) if crate::mob::horse::equine(kind) => value.iter().all(|byte| *byte == 0),
+        (18, Kind::Rabbit | Kind::Fox | Kind::Bee) | (19..=21, Kind::Fox) => value.iter().all(|byte| *byte == 0),
+        (19, Kind::Bee) => value.as_slice() == encode_varlong(-1).as_slice(),
         // Волк и кошка: ошейник красный, вариант — бледный и чёрная, злости нет
         // (чёрный ящик, probe-cats).
         (18..=20, Kind::Wolf) | (18 | 19 | 21 | 22, Kind::Cat) => value.iter().all(|byte| *byte == 0),
@@ -682,6 +716,7 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         max_health: mob.vitals.max_health,
         boss,
         gear: mob.illager.gear,
+        mouth: mob.wild.mouth,
     })
 }
 
@@ -802,6 +837,8 @@ async fn send_horse_attributes(stream: &mut Outgoing<'_>, mob: &Mob, first_order
 fn attribute_speed(kind: Kind) -> f64 {
     // Чёрный ящик, trader-spawn-despawn: у торговца в пакете 0,7.
     if kind == Kind::WanderingTrader { return 0.7; }
+    // Пчела: скорость шага 0,3, летит она по летучей скорости 0,6 (чёрный ящик, bee-sting).
+    if kind == Kind::Bee { return 0.3; }
     if matches!(kind, Kind::Shulker | Kind::Ghast | Kind::Phantom) { 0.7 } else { kind.speed() }
 }
 
@@ -1011,6 +1048,8 @@ pub(super) async fn send_mob_event(
 /// шлем на голове (место 5) — по одному пакету на моба; шлем показывается
 /// железным [проверить: вид шлема не хранится].
 async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool) -> io::Result<()> {
+    // Лиса с пустым ртом снаряжения не шлёт (чёрный ящик, fox-feed, fox-hit).
+    if mob.kind == Kind::Fox { return if mob.wild.mouth.is_some() { send_fox_hand(stream, mob).await } else { Ok(()) }; }
     if crate::mob::horse::equine(mob.kind) {
         // С 1.21.6 седло — снаряжение, не бит свойства лошади; тело — слот 6.
         // Пустое снаряжение не шлётся (чёрный ящик, donkey-chest/horse-tame).
@@ -1085,6 +1124,14 @@ async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool)
     }
 
     send_equipment_slots(stream, mob.entity_id, &slots).await
+}
+
+async fn send_fox_hand(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+    let mut body = encode_varint(SET_EQUIPMENT);
+    body.extend_from_slice(&encode_varint(mob.entity_id));
+    body.push(EQUIPMENT_MAIN_HAND);
+    push_slot(&mut body, mob.wild.mouth);
+    write_body(stream, body).await
 }
 
 /// Зелье в руке пьющей ведьмы (чёрный ящик, witch-stand: `potion` с
@@ -1350,7 +1397,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         let changed: Vec<&Property> = if shown.first {
             // У дракона здоровье в первый прогон уходит и равное единице: оно
             // «грязное» с рождения (чёрный ящик, dragon-death: `9=1 15=1`).
-            now.iter().filter(|entry| (!is_default(entry, mob.kind) && !(mob.kind == Kind::Dolphin && entry.0 == 1)) || (mob.kind == Kind::EnderDragon && entry.0 == 9)).collect()
+            now.iter().filter(|entry| (!is_default(entry, mob.kind) && !(mob.kind == Kind::Dolphin && entry.0 == 1)) || (mob.kind == Kind::EnderDragon && entry.0 == 9) || ghost_flag(mob, entry)).collect()
         } else {
             // Воздух дельфина уходит заново каждый такт (чёрный ящик water-spawn-all: `1=4800`
             // даже у NoAI, начиная со 2-го такта).
@@ -1402,6 +1449,11 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
             send_mob_equipment(stream, mob, shown.attr_changes != mob.attr_changes).await?;
             shown.gear = mob.illager.gear;
             shown.gear_version = mob.horse.gear_version;
+        }
+
+        if mob.kind == Kind::Fox && mob.wild.mouth != shown.mouth {
+            send_fox_hand(stream, mob).await?;
+            shown.mouth = mob.wild.mouth;
         }
 
         shown.first = false;
@@ -1479,6 +1531,7 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         max_health: 0.0,
         boss: false,
         gear: 0,
+        mouth: None,
     })
 }
 

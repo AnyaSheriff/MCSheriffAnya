@@ -102,6 +102,9 @@ save_kinds! {
     Mule => 95,
     SkeletonHorse => 96,
     ZombieHorse => 97,
+    Rabbit => 98,
+    Fox => 99,
+    Bee => 100,
 }
 
 // 0x7f/0xff раньше не обозначали ни один вид. Теперь за ними идёт u16 BE;

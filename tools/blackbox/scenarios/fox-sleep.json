@@ -1,0 +1,93 @@
+{
+ "name": "fox-sleep",
+ "about": "Shaded daytime fox with Sleeping NBT; wake at night. Unrecorded.",
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [
+  {
+   "at": [
+    3,
+    2,
+    3
+   ],
+   "state": "minecraft:stone"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "time set noon",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon fox $(3.5,0,3.5) {Sleeping:1b,Silent:1b}"
+  },
+  {
+   "after": 40,
+   "cmd": "time set midnight"
+  }
+ ],
+ "record_ticks": 100,
+ "cleanup": [
+  "kill @e[type=rabbit,distance=..48]",
+  "kill @e[type=fox,distance=..48]",
+  "kill @e[type=bee,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamerule random_tick_speed 3",
+  "gamerule mob_griefing true",
+  "time set day",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(-8,0,-8) $(8,8,8) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "origin": [
+  100,
+  5,
+  100
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "ход и повороты fox",
+   "match": "^cart fox (сдвиг|скорость|сверка|перенос|поворот|entity_head_rotation)",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "вики, Fox: бродит случайно, как только проснулась"
+  },
+  {
+   "type": "count",
+   "name": "голос лисы",
+   "match": "entity\\.fox\\.ambient",
+   "range": [
+    0,
+    3
+   ],
+   "anytick": true,
+   "why": "голос в покое по случайному счёту"
+  },
+  {
+   "type": "count",
+   "name": "сон и поза лисы",
+   "match": "^meta 19=(32|1|0)$",
+   "range": [
+    0,
+    10
+   ],
+   "anytick": true,
+   "why": "вики, Fox: уснуть лиса может, как только условия выполнены, через случайную паузу; встаёт при смене суток; присесть — случайно (замеры: сон снова на +21, сидит на +10 после полуночи)"
+  }
+ ]
+}

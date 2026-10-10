@@ -385,6 +385,11 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
                 vitals::give_effect(stream, player, *effect).await?;
             }
 
+            {
+                let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+                crate::mob::wildlife::defend(items.mobs_mut(), player.entity_id, crate::mob::tame::Target::Player(strike.attacker), false);
+            }
+
             // Износ надетой брони: каждой детали 1 за каждые 4 единицы урона.
             if !combat::bypasses_armor(strike.source) {
                 wear_armor(shared, player, strike.damage);

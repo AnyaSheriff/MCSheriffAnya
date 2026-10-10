@@ -24,6 +24,8 @@ pub(super) const CLIENT_COMMAND: i32 = 0x0C;
 /// Hurt Animation (клиентский пакет 0x2a) и свойство «число стрел в теле».
 const HURT_ANIMATION: i32 = 0x2A;
 const ARROW_COUNT_PROPERTY: u8 = 12;
+/// Жала пчёл в теле (свойство 13; чёрный ящик, bee-sting: `13=1` после жала).
+const STINGER_COUNT_PROPERTY: u8 = 13;
 
 const DAMAGE_EVENT: i32 = 0x19;
 const ENTITY_EVENT: i32 = 0x22;
@@ -160,6 +162,8 @@ pub(super) enum Drink {
     /// Зловещая бутылка: «Дурное знамение» своего уровня, ничего не остаётся
     /// (вики, Ominous Bottle).
     Ominous,
+    /// Мёд: снимает только яд, питательность 6, питьё 40 тактов.
+    Honey,
 }
 
 impl Drink {
@@ -167,7 +171,7 @@ impl Drink {
     pub(super) fn remainder(self) -> &'static str {
         match self {
             Drink::Milk => "bucket",
-            Drink::Potion => "glass_bottle",
+            Drink::Potion | Drink::Honey => "glass_bottle",
             Drink::Ominous => "",
         }
     }
@@ -178,6 +182,7 @@ impl Drink {
 struct Meta {
     score: i32,
     arrows: i32,
+    stingers: i32,
     health: f32,
     air: i32,
     flags: u8,
@@ -239,6 +244,9 @@ pub(super) struct Net {
     /// Сколько стрел торчит в игроке и с какого такта его свойства снова уходят
     /// (после попадания стрелы они идут на такт позже: чёрный ящик, pvp-bow).
     pub arrows: i32,
+    /// Жала пчёл в теле: число и такты до убыли одного (как у стрел).
+    pub stingers: i32,
+    pub stinger_timer: i32,
     pub meta_hold: u64,
     /// Скорость после попадания стрелы уходит на такт позже, уже пройдя шаг.
     pub delayed_velocity: Option<(u64, (f64, f64, f64))>,
@@ -328,7 +336,7 @@ impl Net {
             sent_health: survival::MAX_HEALTH,
             sent_food: 20,
             sent_saturation_zero: false,
-            meta: Meta { score: 0, arrows: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, pose: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES], ambient: false, absorption: 0.0, bed: None },
+            meta: Meta { score: 0, arrows: 0, stingers: 0, health: survival::MAX_HEALTH, air: survival::MAX_AIR, flags: 0, pose: 0, living: 0, effects: [0; survival::EFFECT_PARTICLES], ambient: false, absorption: 0.0, bed: None },
             fire_flag: false,
             velocity: None,
             pin: None,
@@ -339,6 +347,8 @@ impl Net {
             using: None,
             last_hand: 0,
             arrows: 0,
+            stingers: 0,
+            stinger_timer: 0,
             meta_hold: 0,
             delayed_velocity: None,
             shield_disabled_until: 0,
@@ -728,11 +738,12 @@ pub(super) fn start_eating(player: &mut PlayerState) -> bool {
             ambient: false,
             visible: true,
         }])),
+        "honey_bottle" => Some((Drink::Honey, Vec::new())),
         _ => None,
     };
 
     if let Some((drink, effects)) = drink {
-        player.net.eating = Some(Eating { ticks_left: 32, nutrition: 0, saturation: 0.0, effects, drink: Some(drink) });
+        player.net.eating = Some(Eating { ticks_left: if drink==Drink::Honey {40}else{32}, nutrition: 0, saturation: 0.0, effects, drink: Some(drink) });
 
         return true;
     }
@@ -1040,7 +1051,7 @@ pub(super) fn damage_fields(source: Source, direct: i32, cause: i32) -> (i32, i3
     // крипера — он сам (чёрный ящик: cause=entity); у динамита и прочего — нет.
     let culprit = if cause != 0 {
         cause + 1
-    } else if matches!(source, Source::MobAttack | Source::Arrow | Source::Trident | Source::PlayerExplosion | Source::Thorns | Source::IndirectMagic | Source::SonicBoom) && direct != 0 {
+    } else if matches!(source, Source::MobAttack | Source::Sting | Source::Arrow | Source::Trident | Source::PlayerExplosion | Source::Thorns | Source::IndirectMagic | Source::SonicBoom) && direct != 0 {
         direct + 1
     } else {
         0
@@ -1259,6 +1270,12 @@ async fn send_meta(stream: &mut Outgoing<'_>, entity_id: i32, now: Meta, before:
         body.push(ARROW_COUNT_PROPERTY);
         body.extend_from_slice(&encode_varint(PROPERTY_VARINT));
         body.extend_from_slice(&encode_varint(now.arrows));
+    }
+
+    if now.stingers != before.stingers {
+        body.push(STINGER_COUNT_PROPERTY);
+        body.extend_from_slice(&encode_varint(PROPERTY_VARINT));
+        body.extend_from_slice(&encode_varint(now.stingers));
     }
 
     // Место кровати: необязательное место блока (вид 11) — есть ли и само место.
@@ -1565,7 +1582,7 @@ pub(super) async fn mob_hit(
     // Вики, Shield: передний удар моба поглощается; укус, остановленный
     // щитом, не накладывает яд. Износ — тот же, что в бою игроков.
     let now = *shared.ticks.borrow();
-    if (source == Source::MobAttack || source.is_projectile()) && amount > 0.0 && !player.vit.dead
+    if (matches!(source, Source::MobAttack | Source::Sting) || source.is_projectile()) && amount > 0.0 && !player.vit.dead
         && matches!(player.game_mode, GAME_MODE_SURVIVAL | GAME_MODE_ADVENTURE)
         && let Some(hand) = shield_up(player, now)
         && crate::combat::shield_covers(player.yaw, (player.x, player.z), (at.0, at.2))
@@ -1606,6 +1623,9 @@ pub(super) async fn mob_hit(
 
         return send_sound_at(stream, "minecraft:item.shield.block", SOUND_PLAYERS, (player.x, player.y, player.z), 1.0, pitch).await;
     }
+
+    // Жало пчелы — свой вид урона (41), остальное как удар моба.
+    let source = if source == Source::MobAttack && killer == "entity.minecraft.bee" { Source::Sting } else { source };
 
     // Направление на виновника для «Hurt Animation» и звук стрелы — раньше
     // пакетов урона: они уходят изнутри `hit` (чёрный ящик, skeleton-arrow).
@@ -1649,7 +1669,28 @@ pub(super) async fn mob_hit(
         give_effect(stream, player, effect).await?;
     }
 
-    if done.is_some() && source == Source::MobAttack {
+    if done.is_some() && source == Source::Sting {
+        // Жало остаётся в теле: 13=1; убывает по одному, как стрелы [проверить: срок].
+        player.net.stingers += 1;
+        player.net.stinger_timer = 20 * (30 - player.net.stingers);
+        {
+            let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+            if let Some(bee) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == attacker) {
+                crate::mob::wildlife::sting(bee);
+            }
+        }
+        if let Some(effect) = crate::mob::wildlife::poison(shared.difficulty.load(std::sync::atomic::Ordering::Relaxed)) {
+            give_effect(stream, player, effect).await?;
+        }
+    }
+
+    if done.is_some() {
+        let mut items=shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+        let excluded=matches!(killer,"entity.minecraft.iron_golem"|"entity.minecraft.wolf"|"entity.minecraft.bee"|"entity.minecraft.rabbit"|"entity.minecraft.slime"|"entity.minecraft.magma_cube"|"entity.minecraft.hoglin");
+        crate::mob::wildlife::defend(items.mobs_mut(),player.entity_id,crate::mob::tame::Target::Mob(attacker),excluded);
+    }
+
+    if done.is_some() && matches!(source, Source::MobAttack | Source::Sting) {
         let scaled = survival::scaled(amount, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed));
         super::pvp::wear_armor(shared, player, scaled);
     }
@@ -1737,7 +1778,7 @@ pub(super) async fn hit_by(
 
     // Вики, Armor: укус/удар моба сначала масштабируется по сложности,
     // затем уменьшается бронёй и защитой; яд броню обходит.
-    if matches!(source, Source::MobAttack | Source::Campfire | Source::InFire | Source::Lava) {
+    if matches!(source, Source::MobAttack | Source::Sting | Source::Campfire | Source::InFire | Source::Lava) {
         let armor = player.attrs.value(crate::attributes::ARMOR) as f32;
         let toughness = player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32;
         amount = crate::combat::after_armor_breached(amount, armor, toughness, 1.0);
@@ -1816,7 +1857,7 @@ pub(super) async fn hit_by(
     // Удар моба или стрелы: анимация «ранен» с направлением на виновника,
     // у стрелы ещё звук попадания (чёрный ящик, skeleton-arrow).
     if let Some(from) = player.net.hurt_from
-        && matches!(source, Source::MobAttack | Source::Arrow | Source::Trident | Source::WindCharge | Source::SonicBoom)
+        && matches!(source, Source::MobAttack | Source::Sting | Source::Arrow | Source::Trident | Source::WindCharge | Source::SonicBoom)
     {
         // Угол приведён к [-180; 180): у оригинала игрок с рысканьем 180 видит 90, не −270.
         let yaw = ((from.2 - player.z).atan2(from.0 - player.x).to_degrees() - f64::from(player.yaw) + 180.0).rem_euclid(360.0) - 180.0;
@@ -2042,6 +2083,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     let now = Meta {
         score: player.vit.xp,
         arrows: player.net.arrows,
+        stingers: player.net.stingers,
         health: player.vit.health,
         air: player.vit.air,
         flags,
@@ -2185,6 +2227,15 @@ async fn creative_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
     }
 
     player.vit.tick_invulnerable();
+
+    if player.net.stingers > 0 {
+        player.net.stinger_timer -= 1;
+
+        if player.net.stinger_timer <= 0 {
+            player.net.stingers -= 1;
+            player.net.stinger_timer = 20 * (30 - player.net.stingers);
+        }
+    }
 
     // Застрявшие стрелы выпадают по одной.
     if player.net.arrows > 0 {
@@ -2383,7 +2434,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
             }
 
             match drink {
-                Some(drink) => finish_drinking(stream, player, drink).await?,
+                Some(drink) => finish_drinking(stream, shared, player, drink).await?,
                 None => finish_eating(stream, shared, player, nutrition, saturation).await?,
             }
 
@@ -2528,27 +2579,36 @@ async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
 
 /// Допили: молоко снимает эффекты, в руке остаётся посуда (в творческом
 /// режиме — прежний предмет). Звук питья клиент играет сам [проверить].
-async fn finish_drinking(stream: &mut Outgoing<'_>, player: &mut PlayerState, drink: Drink) -> io::Result<()> {
+async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, drink: Drink) -> io::Result<()> {
     if let Some(held) = player.inventory.held() {
         player.progress.consumed(held.item);
     }
 
     if player.game_mode != GAME_MODE_CREATIVE {
-        let slot = player.inventory.selected_slot();
-
         // Бутылки складываются стопкой: тратится одна (вики, Ominous Bottle).
         if drink == Drink::Ominous {
             player.inventory.spend_held();
+            player.net.slot_update = Some(player.inventory.selected_slot());
+        } else if drink == Drink::Honey {
+            if let Some(item) = blocks::item_named(drink.remainder()) {
+                let slots = swap_held(player, item, shared);
+                for slot in slots { player.net.slot_changed(slot); }
+            }
         } else {
+            let slot = player.inventory.selected_slot();
             player.inventory.set(slot, blocks::item_named(drink.remainder()).map(|item| Stack::new(item, 1)));
+            player.net.slot_update = Some(slot);
         }
-        player.net.slot_update = Some(slot);
     }
 
     send_entity_event(stream, player.entity_id, EVENT_FINISHED_EATING).await?;
 
     if drink == Drink::Milk {
         clear_effects(stream, player, None).await?;
+    } else if drink==Drink::Honey {
+        // Вики, Honey Bottle: «removes the Poison effect». [проверить] сроки пакетов.
+        player.vit.eat(6,1.2);
+        clear_effects(stream,player,Some(survival::EffectKind::Poison)).await?;
     }
 
     Ok(())
@@ -2639,6 +2699,17 @@ pub(super) async fn clear_effects(stream: &mut Outgoing<'_>, player: &mut Player
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn honey_drinks_at_full_food_for_forty_ticks() {
+        let mut player=PlayerState::new([8;16],"Honey".into(),None,None,0x7F,1,(0.5,64.0,0.5));
+        player.game_mode=GAME_MODE_SURVIVAL;
+        player.inventory.set(inventory::FIRST_HOTBAR,Some(Stack::new(blocks::item_named("honey_bottle").unwrap(),2)));
+        assert!(start_eating(&mut player));
+        let drink=player.net.eating.as_ref().unwrap();
+        assert_eq!(drink.ticks_left,40);assert_eq!(drink.drink,Some(Drink::Honey));
+        assert_eq!(Drink::Honey.remainder(),"glass_bottle");
+    }
 
     #[test]
     fn foods_follow_the_wiki_table() {

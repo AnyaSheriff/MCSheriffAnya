@@ -104,3 +104,46 @@ pub(super) fn use_on_block(player: &mut PlayerState, shared: &Shared, clicked: (
 
     Some(Reaction { slots: spend_placed(player), ..Reaction::accepted(sequence) })
 }
+
+/// Улей: стеклянная бутылка либо ножницы (вики, Beehive, «Harvesting»).
+pub(super) fn use_hive(player: &mut PlayerState, shared: &Shared, at: (i32,i32,i32), face: i32, sequence: i32) -> Option<Reaction> {
+    let held=player.inventory.held()?;
+    let name=blocks::item_name(held.item)?;
+    if !matches!(name,"glass_bottle"|"shears") || player.game_mode==GAME_MODE_SPECTATOR { return None; }
+    let mut world=shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+    let product=crate::hive::harvest(&mut world,at,name)?;
+    let beyond=offset_towards(at.0,at.1,at.2,face);
+    // Бутылка звучит всем, кроме щёлкнувшего (его клиент играет сам); ножницы —
+    // из точки игрока (чёрный ящик, bee-hive-honey: block.beehive.shear на (3.5,0,3.5)).
+    if name=="glass_bottle" {
+        world.actor=Some(player.entity_id);
+        world.note_sound_by_hand(at.0,at.1,at.2,"minecraft:item.bottle.fill",1.0,1.0);
+        world.actor=None;
+    } else {
+        world.note_sound_player_at((player.x,player.y,player.z),"minecraft:block.beehive.shear",1.0,1.0);
+    }
+    if !crate::hive::smoked(&world,at) {
+        let mut items=shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+        crate::hive::disturb(&mut world,&mut items,at,player.entity_id,&mut ||shared.next_entity_id());
+    }
+    let mut slots=Vec::new();
+    if name=="shears" && player.game_mode!=GAME_MODE_CREATIVE {
+        let worn=combat::wear(&held,1,false,||world.random_unit());
+        let slot=inventory::FIRST_HOTBAR+player.inventory.selected();
+        player.inventory.set(slot,combat::add_damage(held,worn)); slots.push(slot);
+    }
+    let scattered=crate::tick::scattered(at,||f64::from(world.random_unit()));
+    world.tell_directly(at.0,at.1,at.2);
+    world.tell_directly(beyond.0,beyond.1,beyond.2);
+    redstone::settle(&mut world);
+    drop(world);
+    if name=="glass_bottle" {
+        if player.game_mode==GAME_MODE_CREATIVE {
+            if !player.inventory.slots().iter().flatten().any(|s|s.item==product.item) {
+                let (changed,left)=player.inventory.put(product); slots.extend(changed);
+                if let Some(left)=left { throw_out(shared,player,left); }
+            }
+        } else { slots.extend(swap_held(player,product.item,shared)); }
+    } else { drop_into_world(shared,player.dimension,product,scattered.0,scattered.1,items::MINED_DELAY); }
+    Some(Reaction { slots,..Reaction::accepted(sequence) })
+}

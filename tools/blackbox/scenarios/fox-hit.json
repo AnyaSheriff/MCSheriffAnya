@@ -1,0 +1,134 @@
+{
+ "name": "fox-hit",
+ "about": "Лиса NoAI: два удара железным мечом, звуки урона и смерти.",
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "effect clear $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:iron_sword",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon fox $(3.5,0,3.5) {NoAI:1b,Type:\"red\"}"
+  },
+  {
+   "after": 20,
+   "attack": true
+  },
+  {
+   "after": 40,
+   "attack": true
+  }
+ ],
+ "record_ticks": 90,
+ "cleanup": [
+  "kill @e[type=rabbit,distance=..48]",
+  "kill @e[type=fox,distance=..48]",
+  "kill @e[type=bee,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "gamerule natural_regeneration true",
+  "gamerule random_tick_speed 3",
+  "time set day",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(-8,0,-8) $(8,8,8) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "голос в покое",
+   "match": "entity\\.fox\\.ambient",
+   "range": [
+    0,
+    3
+   ],
+   "anytick": true,
+   "why": "вики, Sounds: голос в покое по случайному счёту; два прогона оригинала расходятся"
+  },
+  {
+   "type": "count",
+   "name": "число выпавших стопок",
+   "match": "^spawn [-0-9,.]+ item|^spawn item",
+   "range": [
+    0,
+    3
+   ],
+   "why": "вики, Fox: добыча — то, что лиса держит во рту; без неё ничего"
+  },
+  {
+   "type": "mask",
+   "name": "число предметов в стопке",
+   "kind": "meta",
+   "pattern": "\"itemCount\":\\d+",
+   "replace": "\"itemCount\":N",
+   "why": "вики, Fox: добыча — то, что лиса держит во рту; без неё ничего"
+  },
+  {
+   "type": "count",
+   "name": "свойства выпавших стопок",
+   "match": "^meta 8=\\{",
+   "range": [
+    0,
+    6
+   ],
+   "why": "вики, Fox: добыча — то, что лиса держит во рту; без неё ничего"
+  },
+  {
+   "type": "count",
+   "name": "ход выпавших предметов",
+   "match": "^cart item",
+   "range": [
+    0,
+    40
+   ],
+   "anytick": true,
+   "why": "выпавший предмет получает случайный толчок"
+  },
+  {
+   "type": "count",
+   "name": "число шариков опыта",
+   "match": "^spawn [-0-9,.]+ experience_orb",
+   "range": [
+    0,
+    3
+   ],
+   "why": "вики, Fox: 1–3 очка опыта"
+  },
+  {
+   "type": "count",
+   "name": "свойства шариков опыта",
+   "match": "^meta 8=\\d+$",
+   "range": [
+    0,
+    6
+   ],
+   "why": "вики, Fox: 1–3 очка опыта"
+  },
+  {
+   "type": "count",
+   "name": "ход и подбор шариков опыта",
+   "match": "^cart experience_orb",
+   "range": [
+    0,
+    30
+   ],
+   "anytick": true,
+   "why": "шарик получает случайный толчок при появлении"
+  }
+ ]
+}

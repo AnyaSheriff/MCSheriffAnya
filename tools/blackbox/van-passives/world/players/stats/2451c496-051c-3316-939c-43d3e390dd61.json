@@ -1,0 +1,26 @@
+{
+  "stats": {
+    "minecraft:used": {
+      "minecraft:iron_axe": 3,
+      "minecraft:trident": 1,
+      "minecraft:diamond_sword": 22,
+      "minecraft:mace": 6,
+      "minecraft:bow": 5
+    },
+    "minecraft:custom": {
+      "minecraft:sprint_one_cm": 82,
+      "minecraft:time_since_rest": 17046,
+      "minecraft:fall_one_cm": 3538,
+      "minecraft:walk_one_cm": 85,
+      "minecraft:total_world_time": 17046,
+      "minecraft:leave_game": 35,
+      "minecraft:mob_kills": 1,
+      "minecraft:damage_taken": 44,
+      "minecraft:play_time": 17046,
+      "minecraft:damage_dealt": 2770,
+      "minecraft:player_kills": 2,
+      "minecraft:time_since_death": 17046
+    }
+  },
+  "DataVersion": 4790
+}

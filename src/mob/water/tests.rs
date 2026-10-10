@@ -405,7 +405,7 @@ fn pufferfish_recognizes_frog_as_non_aquatic_but_ignores_cod() {
     let mut fish=Mob::new(1,Kind::Pufferfish,(0.5,1.0,0.5));
     let mut frog=Mob::new(2,Kind::Frog,(0.7,1.0,0.5)); frog.no_ai=true;
     let cod=Mob::new(3,Kind::Cod,(0.7,1.0,0.5));
-    let mates=[ai::Mate{id:2,kind:Kind::Frog,x:0.7,y:1.0,z:0.5,love:0,baby:false,ready:true}];
+    let mates=[ai::Mate{id:2,kind:Kind::Frog,x:0.7,y:1.0,z:0.5,love:0,baby:false,ready:true,tamed:false}];
     think(&mut fish,&pool(),&ai::Ctx{mates:&mates,..ctx()},&mut Rng::new(1));
     assert_eq!(fish.water.puff,1);
     let mut mobs=vec![fish,frog,cod];

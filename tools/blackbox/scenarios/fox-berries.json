@@ -1,0 +1,123 @@
+{
+ "name": "fox-berries",
+ "about": "Fox visits a mature berry bush and holds berries; mobGriefing enabled. Unrecorded.",
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [
+  {
+   "at": [
+    3,
+    -1,
+    3
+   ],
+   "state": "minecraft:grass_block"
+  },
+  {
+   "at": [
+    3,
+    0,
+    3
+   ],
+   "state": "minecraft:sweet_berry_bush[age=3]"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "time set midnight",
+  "gamerule mob_griefing true",
+  "gamerule random_tick_speed 0",
+  "gamemode creative $(bot)",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon fox $(3.5,0,3.5) {Silent:1b}"
+  }
+ ],
+ "record_ticks": 240,
+ "cleanup": [
+  "kill @e[type=rabbit,distance=..48]",
+  "kill @e[type=fox,distance=..48]",
+  "kill @e[type=bee,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamerule random_tick_speed 3",
+  "gamerule mob_griefing true",
+  "time set day",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(-8,0,-8) $(8,8,8) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "ход и повороты fox",
+   "match": "^cart fox (сдвиг|скорость|сверка|перенос|поворот|entity_head_rotation)",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "вики, Fox: бродит случайно между сборами ягод"
+  },
+  {
+   "type": "count",
+   "name": "голос лисы",
+   "match": "entity\\.fox\\.(ambient|eat)",
+   "range": [
+    0,
+    6
+   ],
+   "anytick": true,
+   "why": "голос в покое по случайному счёту; еда звучит при жевании"
+  },
+  {
+   "type": "count",
+   "name": "выпавшие ягоды",
+   "match": "^spawn [-0-9,.]+ item|^spawn item",
+   "range": [
+    1,
+    2
+   ],
+   "why": "вики/замеры, Fox: сбор ягод вызывается и во второй раз до остановки цели (замеры: стопка 2 и ещё 1, склеились в 3; в другой записи — одна стопка по 1); сколько ягод упало — случайно (1 + 0…1 + 1 за спелый куст)"
+  },
+  {
+   "type": "mask",
+   "name": "число ягод в стопке",
+   "kind": "meta",
+   "pattern": "\"itemCount\":\\d+",
+   "replace": "\"itemCount\":N",
+   "why": "вики/замеры, Fox: сбор ягод вызывается и во второй раз до остановки цели (замеры: стопка 2 и ещё 1, склеились в 3; в другой записи — одна стопка по 1); сколько ягод упало — случайно (1 + 0…1 + 1 за спелый куст)"
+  },
+  {
+   "type": "count",
+   "name": "свойства выпавших ягод",
+   "match": "^meta 8=\\{",
+   "range": [
+    2,
+    6
+   ],
+   "why": "вики/замеры, Fox: сбор ягод вызывается и во второй раз до остановки цели (замеры: стопка 2 и ещё 1, склеились в 3; в другой записи — одна стопка по 1); сколько ягод упало — случайно (1 + 0…1 + 1 за спелый куст)"
+  },
+  {
+   "type": "count",
+   "name": "ход выпавших ягод",
+   "match": "^cart item",
+   "range": [
+    0,
+    40
+   ],
+   "anytick": true,
+   "why": "выпавший предмет получает случайный толчок"
+  }
+ ]
+}

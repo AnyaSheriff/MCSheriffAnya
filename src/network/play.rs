@@ -8087,6 +8087,12 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         return true;
     }
 
+    if mob.kind==crate::mob::Kind::Bee && let Some(effect)=held.and_then(crate::mob::wildlife::harmful_flower) {
+        items.mobs_mut()[index].vitals.give_effect_shown(effect);
+        if survival && let Some(slot)=player.inventory.spend_held() {reaction.slots.push(slot);}
+        return true;
+    }
+
     // Любимая еда: любовь у взрослого, готового к разведению.
     if let Some(food) = held
         && mob.kind.likes(food)
@@ -8095,12 +8101,14 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
 
         if mob.is_baby() {
             if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
+            // Детёныш: рост ускоряется, а сердечек сервер не шлёт — частицы
+            // рисует клиент (чёрный ящик, rabbit-feed, fox-feed).
             mob.age = (mob.age + (-mob.age as f32 * 0.1) as i32).min(0);
-            mob.events.push(crate::mob::Event::Hearts);
         } else if mob.age == 0 && mob.love == 0 {
             if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
             mob.love = crate::mob::LOVE_TICKS;
             mob.love_player = Some(player.uuid);
+            mob.wild.breeder = Some(player.uuid);
             mob.events.push(crate::mob::Event::Hearts);
         } else {
             return true;
@@ -8374,6 +8382,14 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     // (play/sleep.rs).
     let bed = sleep::bed_break_plan(&world, (x, y, z), player.game_mode == GAME_MODE_CREATIVE);
 
+    let hive_block = crate::hive::is_hive(state);
+    let hive_silk = player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
+    let hive_drop = if hive_block && hive_silk { crate::hive::silk_stack(&world, (x, y, z)) } else { None };
+    if hive_block && !hive_silk {
+        let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
+        crate::hive::disturb(&mut world, &mut items, (x, y, z), player.entity_id, &mut || shared.next_entity_id());
+    }
+
     let actor = world.actor.replace(player.entity_id);
     let broken = placing::break_block(&mut world, x, y, z);
     world.actor = actor;
@@ -8381,6 +8397,17 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         log_debug!("Play: в {} {} {} и так пусто", x, y, z);
         return Some(answer);
     };
+
+    if hive_block {
+        let stack=if !creative && drops {
+            hive_drop.or_else(|| (blocks::block_at_state(broken)==Some("beehive")).then(||blocks::item_named("beehive").map(|id|Stack::new(id,1))).flatten())
+        } else { None };
+        if !creative { player.progress.mined(broken); }
+        let scattered=crate::tick::scattered((x,y,z),||f64::from(world.random_unit()));
+        drop(world);
+        if let Some(stack)=stack { drop_into_world(shared,player.dimension,stack,scattered.0,scattered.1,items::MINED_DELAY); }
+        return Some(Reaction::accepted(sequence));
+    }
 
     // Заражённый блок: что выпадает — Silk Touch даёт обычный блок.
     if crate::mob::arthropod::host(broken).is_some() {
@@ -8963,6 +8990,9 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
     }
 
     if let Some(reaction) = gameplay::campfire_use(player, shared, (clicked_x, clicked_y, clicked_z), face, sequence) { return Some(reaction); }
+    if let Some(reaction) = farm::use_hive(player, shared, (clicked_x, clicked_y, clicked_z), face, sequence) {
+        return Some(reaction);
+    }
 
     // Мотыга и костная мука (farming.rs).
     if let Some(reaction) = farm::use_on_block(player, shared, (clicked_x, clicked_y, clicked_z), face, sequence) {
@@ -9258,6 +9288,14 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
             player.sign_editor = Some(near);
             world.note_open_sign(player.entity_id, near.0, near.1, near.2, true);
         }
+    }
+
+    if matches!(placed, placing::Placement::Placed) && let Some(held)=player.inventory.held()
+        && matches!(blocks::item_name(held.item),Some("beehive"|"bee_nest"))
+    {
+        let near=offset_towards(clicked_x,clicked_y,clicked_z,face);
+        let at=if crate::hive::is_hive(world.get_block(near.0,near.1,near.2)) {near} else {(clicked_x,clicked_y,clicked_z)};
+        crate::hive::place_contents(&mut world,at,&held);
     }
 
     // Шулкер-ящик с содержимым в предмете ставится с ним (вики, Shulker Box).
@@ -9688,6 +9726,10 @@ fn use_spawn_egg(
         if kind == crate::mob::Kind::Horse { mob.horse.variant = crate::mob::horse::wild_variant(&mut rng); }
         // Вики, Mule: «20% chance of spawning as foals». Нежить — взрослая.
         if !crate::mob::horse::undead(kind) && rng.below(5) == 0 { mob.age = crate::mob::BABY_AGE; }
+    }
+    if crate::mob::wildlife::kind(kind) {
+        let biome = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").mob_biome(x, y, z);
+        crate::mob::wildlife::initialize(&mut mob, biome, &mut crate::mob::Rng::new(shared.next_entity_id() as u64));
     }
 
     // Смотрит туда же, куда игрок, как призванный с яйца у оригинала.

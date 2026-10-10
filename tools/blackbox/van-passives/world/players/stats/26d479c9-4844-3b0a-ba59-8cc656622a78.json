@@ -1,0 +1,53 @@
+{
+  "stats": {
+    "minecraft:used": {
+      "minecraft:shears": 4,
+      "minecraft:glass_bottle": 8,
+      "minecraft:wooden_hoe": 12,
+      "minecraft:diamond_axe": 6,
+      "minecraft:bone_meal": 17,
+      "minecraft:shield": 6,
+      "minecraft:diamond_sword": 5,
+      "minecraft:iron_sword": 4,
+      "minecraft:wheat_seeds": 3
+    },
+    "minecraft:custom": {
+      "minecraft:damage_resisted": 112,
+      "minecraft:damage_blocked_by_shield": 270,
+      "minecraft:time_since_rest": 21169,
+      "minecraft:walk_one_cm": 294,
+      "minecraft:leave_game": 133,
+      "minecraft:mob_kills": 13,
+      "minecraft:damage_taken": 4300,
+      "minecraft:damage_dealt": 900,
+      "minecraft:play_time": 65015,
+      "minecraft:time_since_death": 21168,
+      "minecraft:open_chest": 3,
+      "minecraft:fall_one_cm": 6966,
+      "minecraft:total_world_time": 65015,
+      "minecraft:deaths": 37,
+      "minecraft:animals_bred": 4
+    },
+    "minecraft:picked_up": {
+      "minecraft:beehive": 1,
+      "minecraft:honeycomb": 6,
+      "minecraft:sweet_berries": 1,
+      "minecraft:wheat_seeds": 9,
+      "minecraft:wheat": 3,
+      "minecraft:hanging_roots": 2
+    },
+    "minecraft:mined": {
+      "minecraft:wheat": 3,
+      "minecraft:beehive": 6
+    },
+    "minecraft:killed_by": {
+      "minecraft:player": 2
+    },
+    "minecraft:killed": {
+      "minecraft:fox": 2,
+      "minecraft:rabbit": 2,
+      "minecraft:cow": 2
+    }
+  },
+  "DataVersion": 4790
+}

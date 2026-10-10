@@ -1,0 +1,146 @@
+{
+ "name": "bee-sting",
+ "about": "Survival player hits a bee (AI): anger time, chase, roll flag, sting (poison, damage type 41), calm. Bee flight is masked; the later death of the stung bee is out of the recording window (it flies out of the pad).",
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "effect clear $(bot)",
+  "effect give $(bot) minecraft:instant_health 1 10 true",
+  "effect give $(bot) minecraft:saturation 1 10 true",
+  "gamerule natural_regeneration false",
+  "clear $(bot)",
+  "time set noon",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!look 0 0",
+  "!stopfly",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon bee $(3.5,1,3) {Silent:1b}"
+  },
+  {
+   "after": 10,
+   "attack": true
+  }
+ ],
+ "record_ticks": 170,
+ "cleanup": [
+  "effect clear $(bot)",
+  "gamerule natural_regeneration true",
+  "kill @e[type=rabbit,distance=..48]",
+  "kill @e[type=fox,distance=..48]",
+  "kill @e[type=bee,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamerule random_tick_speed 3",
+  "gamerule mob_griefing true",
+  "time set day",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(-8,0,-8) $(8,8,8) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "track_self": true,
+ "origin": [
+  100,
+  5,
+  100
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "полёт пчелы",
+   "match": "^cart bee (сдвиг|скорость|сверка|перенос|поворот|entity_head_rotation)",
+   "range": [
+    0,
+    400
+   ],
+   "anytick": true,
+   "why": "вики, Bee: полёт по случайной траектории; траектория погони по ИИ у оригинала разнится от прогона к прогону"
+  },
+  {
+   "type": "mask",
+   "name": "время конца гнева",
+   "kind": "meta",
+   "pattern": "19=\\d+",
+   "replace": "19=T",
+   "why": "вики, Bee: гнев 20–39 с (случайно); значение — игровое время конца"
+  },
+  {
+   "type": "jitter",
+   "name": "время гнева ±2",
+   "match": "^meta 19=T$",
+   "max": 2,
+   "why": "гнев берётся ИИ через 1–2 такта после удара (две записи оригинала: +1 и +2)"
+  },
+  {
+   "type": "mask",
+   "name": "сторона жала",
+   "kind": "sv",
+   "pattern": "yaw=-?[0-9.]+",
+   "replace": "yaw=Y",
+   "why": "направление удара зависит от стороны, с которой пчела подлетела по случайной траектории"
+  },
+  {
+   "type": "mask",
+   "name": "толчок жала",
+   "kind": "self",
+   "pattern": "^(self робот: скорость) .*$",
+   "replace": "$1 V",
+   "why": "отдача от жала идёт от места пчелы в момент укола (траектория случайна)"
+  },
+  {
+   "type": "count",
+   "name": "агрессия пчелы",
+   "match": "^meta (5=true|15=4|5=true 15=4)$",
+   "range": [
+    1,
+    2
+   ],
+   "anytick": true,
+   "why": "цель берётся раз в 20 тактов, взлёт и «агрессивен» приходят то одним пакетом (+11), то двумя (+5 и +11): две записи оригинала"
+  },
+  {
+   "type": "delay",
+   "name": "полёт к игроку",
+   "from": "^meta (5=true|15=4|5=true 15=4)$",
+   "to": "^cart bee animation",
+   "between": "^meta 18=2$",
+   "range": [
+    10,
+    90
+   ],
+   "why": "траектория погони случайна: жало на +44 в одной записи оригинала и на +68 в другой; всё после взмаха сверяется точно относительно него"
+  },
+  {
+   "type": "jitter",
+   "name": "успокоение после жала",
+   "match": "^meta 15=0$",
+   "max": 8,
+   "why": "цель сбрасывается целью ИИ через 2–8 тактов после жала (замеры: +3 и +8)"
+  },
+  {
+   "type": "mask",
+   "name": "сытость робота",
+   "kind": "sv",
+   "pattern": "saturation=[0-9.]+",
+   "replace": "saturation=S",
+   "why": "сытость робота зависит от того, что он делал до записи"
+  },
+  {
+   "type": "jitter",
+   "name": "такт жала",
+   "match": "^(sv |bee animation|meta 18=|meta 15=0$|self )",
+   "max": 2,
+   "why": "момент укола зависит от траектории пчелы (±1 такт между записями)"
+  }
+ ]
+}

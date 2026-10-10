@@ -61,6 +61,8 @@ pub const OMINOUS_BANNER_LAYERS: [(i32, i32); 8] = [(23, 9), (31, 8), (32, 7), (
 /// не шлётся — см. `encode_components`.
 #[allow(dead_code)]
 pub const COMPONENT_CONTAINER: i32 = 75;
+pub const COMPONENT_BLOCK_STATE: i32 = 76;
+pub const COMPONENT_BEES: i32 = 77;
 
 /// Одна занятая ячейка содержимого шулкер-ящика в предмете. Хранится
 /// плоско (номер предмета, число, номер довесков), чтобы довески оставались
@@ -191,6 +193,9 @@ pub struct Data {
     pub instrument: Option<u8>,
     pub bucket: Option<crate::mob::water::bucket::BucketData>,
     pub mob_variants: Vec<(i32,i32)>,
+    /// Пчёлы в улье, запись hive::Data; [Bedrock: потом] компоненты.
+    pub bees: Vec<u8>,
+    pub honey: Option<u8>,
 }
 
 impl Data {
@@ -503,6 +508,21 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         count += 1;
     }
 
+    if let Some(hive)=crate::hive::Data::from_bytes(&data.bees) {
+        out.extend_from_slice(&encode_varint(COMPONENT_BEES));
+        crate::hive::encode_bees(&hive,&mut out);
+        count+=1;
+    }
+    if let Some(honey)=data.honey {
+        out.extend_from_slice(&encode_varint(COMPONENT_BLOCK_STATE));
+        out.extend_from_slice(&encode_varint(1));
+        for value in ["honey_level".to_string(),honey.to_string()] {
+            out.extend_from_slice(&encode_varint(value.len() as i32));
+            out.extend_from_slice(value.as_bytes());
+        }
+        count+=1;
+    }
+
     // Содержимое шулкер-ящика (`container`) клиенту пока не шлётся: по
     // protocol.json (26.1) это список `option<ItemStackTemplate>`, но
     // разбор записи оригинала у mineflayer на нём падает (чёрный ящик,
@@ -653,6 +673,16 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
             }
         }
         46 => { data.map_id = reader.varint().filter(|id| *id >= 0); }
+        76 => {
+            let Some(count)=reader.varint() else {return};
+            for _ in 0..count.clamp(0,64) {
+                let (Some(key),Some(value))=(reader.string(),reader.string()) else {return};
+                if key=="honey_level" {data.honey=value.parse::<u8>().ok().filter(|v|*v<=5);}
+            }
+        }
+        77 => {
+            if let Some(hive)=crate::hive::component::decode(body) {data.bees=hive.bytes();}
+        }
         COMPONENT_DAMAGE => {
             if let Some(damage) = reader.varint() {
                 data.damage = damage.max(0);
@@ -802,7 +832,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || !data.bees.is_empty() || data.honey.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -842,7 +872,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || !data.bees.is_empty() || data.honey.is_some() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -910,6 +940,13 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
         if data.ominous_banner {
             out.push(4);
         }
+    }
+
+    if !data.bees.is_empty() || data.honey.is_some() {
+        out.push(10);
+        out.push(data.honey.unwrap_or(255));
+        out.extend_from_slice(&(data.bees.len() as u16).to_be_bytes());
+        out.extend_from_slice(&data.bees);
     }
 
     out
@@ -1080,6 +1117,13 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                         if crate::mob::water::bucket::valid_variant(key,value) { data.mob_variants.push((key,value)); }
                     }
                 }
+                10 => {
+                    let honey=reader.take(1)?[0];
+                    data.honey=(honey<=5).then_some(honey);
+                    let len=usize::from(u16::from_be_bytes(reader.take(2)?.try_into().ok()?));
+                    data.bees=reader.take(len)?.to_vec();
+                    if !data.bees.is_empty() && crate::hive::Data::from_bytes(&data.bees).is_none() { return None; }
+                }
                 _ => break,
             }
         }
@@ -1114,6 +1158,16 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
                 data.mob_variants.push((id,value));
             }
             "map_id" => data.map_id = Some(value.as_f64().ok_or("map_id — число")?.max(0.0) as i32),
+            "bees" => {
+                let tag=Value::Map(vec![("bees".into(),value)]);
+                data.bees=crate::hive::from_value(&tag).ok_or("bees — список не более трёх пчёл")?.bytes();
+            }
+            "block_state" => {
+                if let Some(level)=value.get("honey_level") {
+                    let n=level.as_str().and_then(|s|s.parse::<u8>().ok()).or_else(||level.as_f64().map(|n|n as u8));
+                    data.honey=Some(n.filter(|v|*v<=5).ok_or("honey_level — 0..5")?);
+                }
+            }
             "damage" => data.damage = value.as_f64().ok_or("damage — число")? as i32,
             "unbreakable" => data.unbreakable = true,
             "ominous_bottle_amplifier" => data.ominous = Some(value.as_f64().ok_or("ominous_bottle_amplifier — число")?.clamp(0.0, 4.0) as u8),

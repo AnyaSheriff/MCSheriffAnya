@@ -540,7 +540,7 @@ mod tests {
     #[test]
     fn llama_spits_at_a_visible_attacker_then_cools_down() {
         let mut llama=mob(Kind::Llama); llama.land.target=Some(100);
-        let mates=[ai::Mate { id:100,kind:Kind::Zombie,x:6.5,y:1.0,z:0.5,love:0,baby:false,ready:false }];
+        let mates=[ai::Mate { id:100,kind:Kind::Zombie,x:6.5,y:1.0,z:0.5,love:0,baby:false,ready:false,tamed:false }];
         let ctx=Ctx { players:&[],mates:&mates,difficulty:2,sky:15,sun_up:true };
         let mut rng=Rng::new(10); let plan=think(&mut llama,&Flat,&ctx,&mut rng);
         assert!(plan.spit.is_some()); assert_eq!(llama.land.attack_wait,40);

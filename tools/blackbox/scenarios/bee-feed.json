@@ -1,0 +1,96 @@
+{
+ "name": "bee-feed",
+ "about": "Пчела NoAI: цветок — любовь, второй щелчок не тратит; детёныш ускоряет рост; иссушающая роза; пшеница не еда.",
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "effect clear $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:poppy 4",
+  "give $(bot) minecraft:wither_rose 2",
+  "give $(bot) minecraft:wheat 2",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon bee $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+  },
+  {
+   "after": 1,
+   "cmd": "summon bee $(2.5,0,3.5) {NoAI:1b,Silent:1b,Age:-24000}"
+  },
+  {
+   "after": 10,
+   "interact": true,
+   "which": 0
+  },
+  {
+   "after": 16,
+   "interact": true,
+   "which": 0
+  },
+  {
+   "after": 18,
+   "hotbar": 2
+  },
+  {
+   "after": 20,
+   "interact": true,
+   "which": 0
+  },
+  {
+   "after": 24,
+   "hotbar": 0
+  },
+  {
+   "after": 28,
+   "interact": true,
+   "which": 1
+  },
+  {
+   "after": 34,
+   "interact": true,
+   "which": 1
+  },
+  {
+   "after": 36,
+   "hotbar": 1
+  },
+  {
+   "after": 38,
+   "interact": true,
+   "which": 1
+  },
+  {
+   "after": 48,
+   "interact": true,
+   "which": 0
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=rabbit,distance=..48]",
+  "kill @e[type=fox,distance=..48]",
+  "kill @e[type=bee,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "effect clear $(bot)",
+  "gamerule natural_regeneration true",
+  "gamerule random_tick_speed 3",
+  "time set day",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(-8,0,-8) $(8,8,8) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ]
+}

@@ -104,7 +104,7 @@ fn a_cat_within_sixteen_blocks_keeps_the_phantom_from_swooping() {
     let view = Flat::new();
     let mut phantom = ph::spawn(5, (0, 28, 0));
     let players = [survivor(1, (0.5, 1.0, 0.5))];
-    let cat = [ai::Mate { id: 9, kind: Kind::Cat, x: 4.5, y: 27.0, z: 0.5, love: 0, baby: false, ready: false }];
+    let cat = [ai::Mate { id: 9, kind: Kind::Cat, x: 4.5, y: 27.0, z: 0.5, love: 0, baby: false, ready: false, tamed: false }];
     let ctx = ai::Ctx { players: &players, mates: &cat, difficulty: 2, sky: 4, sun_up: false };
     let mut rng = Rng::new(9);
 
@@ -138,7 +138,7 @@ fn a_creeper_walks_away_from_a_cat_instead_of_toward_the_player() {
     let mut creeper = Mob::new(5, Kind::Creeper, (4.5, 1.0, 0.5));
     let players = [survivor(1, (0.5, 1.0, 0.5))];
     // Кошка между игроком и крипером, в 2 блоках от него.
-    let cat = [ai::Mate { id: 9, kind: Kind::Cat, x: 2.5, y: 1.0, z: 0.5, love: 0, baby: false, ready: false }];
+    let cat = [ai::Mate { id: 9, kind: Kind::Cat, x: 2.5, y: 1.0, z: 0.5, love: 0, baby: false, ready: false, tamed: false }];
     let ctx = ai::Ctx { players: &players, mates: &cat, difficulty: 2, sky: 15, sun_up: false };
     let mut rng = Rng::new(4);
 

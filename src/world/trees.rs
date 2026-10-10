@@ -1273,10 +1273,10 @@ const MANGROVES: Mix = &[(0.85, MANGROVE), (0.15, TALL_MANGROVE)];
 /// деревьев с пчелиным гнездом.
 fn woodland(biome: Biome) -> Option<(f64, Mix, f64)> {
     Some(match biome {
-        Biome::Forest => (0.035, FOREST, 0.0),
+        Biome::Forest => (0.035, FOREST, 0.002),
         Biome::FlowerForest => (0.02, FOREST, 0.02),
-        Biome::BirchForest => (0.035, &[(1.0, BIRCH)], 0.0),
-        Biome::OldGrowthBirchForest => (0.045, &[(0.5, TALL_BIRCH), (0.5, BIRCH)], 0.0),
+        Biome::BirchForest => (0.035, &[(1.0, BIRCH)], 0.002),
+        Biome::OldGrowthBirchForest => (0.045, &[(0.5, TALL_BIRCH), (0.5, BIRCH)], 0.002),
         Biome::DarkForest => (0.06, DARK_FOREST, 0.0),
         Biome::PaleGarden => (0.05, &[(1.0, PALE_OAK)], 0.0),
         Biome::Taiga | Biome::SnowyTaiga => (0.03, TAIGA, 0.0),

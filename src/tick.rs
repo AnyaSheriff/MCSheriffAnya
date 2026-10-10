@@ -929,6 +929,10 @@ pub struct MobView<'a>(pub &'a World);
 
 impl crate::mob::View for MobView<'_> {
     fn biome(&self, x: i32, y: i32, z: i32) -> &'static str { self.0.mob_biome(x,y,z) }
+    fn griefing(&self) -> bool { self.0.wildlife_griefing }
+    fn raining(&self) -> bool { !self.0.is_nether() && !self.0.is_end() && self.0.weather.is_raining() }
+    fn always_day(&self) -> bool { self.0.is_nether() || self.0.is_end() }
+
     fn block(&self, x: i32, y: i32, z: i32) -> i32 {
         self.0.get_block(x, y, z)
     }
@@ -1451,6 +1455,8 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         }
     }
     sculk_deliver(world, &mut items, rng, &mut || shared.next_entity_id());
+    world.wildlife_griefing = shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed);
+    crate::hive::tick(world, &mut items, &mut || shared.next_entity_id());
 
     // Кошки, что сидят: сундук под ними не открывается (mob/tame.rs).
     world.sitting_cats = items.mobs().iter().filter(|mob| mob.kind == crate::mob::Kind::Cat && mob.tame.sitting && !mob.is_dead()).map(|mob| (mob.x, mob.y, mob.z)).collect();
@@ -1479,6 +1485,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         mob.water.boat=boats.iter().find(|at| (at.0-mob.x).powi(2)+(at.1-mob.y).powi(2)+(at.2-mob.z).powi(2)<100.0).copied();
     }
     crate::mob::tame::bind_owners(items.mobs_mut(), &owners);
+    crate::mob::wildlife::bind_trust(items.mobs_mut(), &owners);
 
     {
         let riding=shared.riding.lock().expect("седоки");

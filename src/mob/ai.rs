@@ -64,6 +64,7 @@ pub struct Mate {
     pub love: i32,
     pub baby: bool,
     pub ready: bool,
+    pub tamed: bool,
 }
 
 /// Что моб видит вокруг за такт.

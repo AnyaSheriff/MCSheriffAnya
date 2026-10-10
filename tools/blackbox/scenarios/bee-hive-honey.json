@@ -1,0 +1,127 @@
+{
+ "name": "bee-hive-honey",
+ "about": "Occupied full hive: smoke protects bottle and shears harvesting; removing smoke releases an angry bee. Unrecorded.",
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [
+  {
+   "at": [
+    2,
+    1,
+    2
+   ],
+   "state": "minecraft:beehive[honey_level=5,facing=south]"
+  },
+  {
+   "at": [
+    2,
+    -1,
+    2
+   ],
+   "state": "minecraft:campfire[lit=true]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    2
+   ],
+   "state": "minecraft:air"
+  }
+ ],
+ "setup": [
+  "difficulty normal",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "give $(bot) minecraft:glass_bottle 2",
+  "give $(bot) minecraft:shears",
+  "tp $(bot) $(3.5,0,3.5)",
+  "!stopfly",
+  "setblock $(2,1,2) minecraft:beehive[honey_level=5,facing=south]{bees:[{entity_data:{id:\"minecraft:bee\",NoAI:1b,Silent:1b},ticks_in_hive:0,min_ticks_in_hive:2400}]}",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    2,
+    1,
+    2
+   ]
+  },
+  {
+   "after": 10,
+   "cmd": "setblock $(2,1,2) minecraft:beehive[honey_level=5,facing=south]{bees:[{entity_data:{id:\"minecraft:bee\",NoAI:1b,Silent:1b},ticks_in_hive:0,min_ticks_in_hive:2400}]}"
+  },
+  {
+   "after": 15,
+   "hotbar": 1
+  },
+  {
+   "after": 20,
+   "click": [
+    2,
+    1,
+    2
+   ]
+  },
+  {
+   "after": 30,
+   "set": {
+    "at": [
+     2,
+     -1,
+     2
+    ],
+    "state": "minecraft:air"
+   }
+  },
+  {
+   "after": 35,
+   "cmd": "setblock $(2,1,2) minecraft:beehive[honey_level=5,facing=south]{bees:[{entity_data:{id:\"minecraft:bee\",NoAI:1b,Silent:1b},ticks_in_hive:0,min_ticks_in_hive:2400}]}"
+  },
+  {
+   "after": 40,
+   "hotbar": 0
+  },
+  {
+   "after": 45,
+   "click": [
+    2,
+    1,
+    2
+   ]
+  }
+ ],
+ "record_ticks": 90,
+ "cleanup": [
+  "kill @e[type=rabbit,distance=..48]",
+  "kill @e[type=fox,distance=..48]",
+  "kill @e[type=bee,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=experience_orb,distance=..48]",
+  "gamerule random_tick_speed 3",
+  "gamerule mob_griefing true",
+  "time set day",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly",
+  "fill $(-8,0,-8) $(8,8,8) minecraft:air",
+  "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
+ ],
+ "random": [
+  {
+   "type": "count",
+   "name": "жужжание улья",
+   "match": "block\\.beehive\\.work",
+   "range": [
+    0,
+    3
+   ],
+   "anytick": true,
+   "why": "вики, Beehive: звук work случаен"
+  }
+ ]
+}

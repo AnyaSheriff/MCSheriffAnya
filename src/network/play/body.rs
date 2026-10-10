@@ -152,7 +152,7 @@ impl Body {
                 if let Some(eating) = p.net.eating.take()
                     && eating.ticks_left <= EAT_SLACK
                 {
-                    finish(p, eating, &mut done);
+                    finish(shared, p, eating, &mut done);
                 }
 
                 vitals::release_use(p, shared);
@@ -166,7 +166,7 @@ impl Body {
                     if eating.ticks_left <= 0
                         && let Some(eating) = p.net.eating.take()
                     {
-                        finish(p, eating, &mut done);
+                        finish(shared, p, eating, &mut done);
                     }
                 }
             }
@@ -217,7 +217,7 @@ fn use_held(shared: &Shared, p: &mut PlayerState, hand: i32, now: u64) {
 
 /// Доел или допил: то же, что `finish_eating` и `finish_drinking` у Java,
 /// без пакетов — звуки еды клиент Bedrock играет сам [проверить].
-fn finish(p: &mut PlayerState, eating: vitals::Eating, done: &mut Done) {
+fn finish(shared: &Shared, p: &mut PlayerState, eating: vitals::Eating, done: &mut Done) {
     let creative = p.game_mode == GAME_MODE_CREATIVE;
 
     done.consumed = p.inventory.held().map(|stack| (stack.item, eating.drink.is_none()));
@@ -229,6 +229,10 @@ fn finish(p: &mut PlayerState, eating: vitals::Eating, done: &mut Done) {
 
                 if drink == vitals::Drink::Ominous {
                     p.inventory.spend_held();
+                } else if drink == vitals::Drink::Honey {
+                    if let Some(item) = blocks::item_named(drink.remainder()) {
+                        done.slots.extend(swap_held(p, item, shared));
+                    }
                 } else {
                     p.inventory.set(slot, blocks::item_named(drink.remainder()).map(|item| Stack::new(item, 1)));
                 }
@@ -236,6 +240,9 @@ fn finish(p: &mut PlayerState, eating: vitals::Eating, done: &mut Done) {
 
             if drink == vitals::Drink::Milk {
                 p.vit.effects.clear();
+            } else if drink==vitals::Drink::Honey {
+                p.vit.eat(6,1.2);
+                p.vit.effects.retain(|e|e.kind!=crate::survival::EffectKind::Poison);
             }
         }
         None => {

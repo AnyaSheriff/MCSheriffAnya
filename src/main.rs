@@ -68,6 +68,7 @@ mod villager;
 mod raid;
 mod sign;
 mod spawner;
+mod hive;
 mod enchanting;
 mod smithing;
 mod skins;
