@@ -987,6 +987,12 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                         return crate::mob::spawn::MONUMENT.to_vec();
                     }
 
+                    // В рамке хижины ведьмы — одни ведьмы (вики, Swamp Hut:
+                    // «witches can spawn at any block within the 7×7×9 area»).
+                    if !wet && world.in_swamp_hut(x, y, z) {
+                        return vec![(crate::mob::Kind::Witch, 1)];
+                    }
+
                     crate::mob::spawn::overworld_kinds(world.surface_biome(x, z), wet)
                 };
 
@@ -1043,6 +1049,64 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 elder.persistent = true;
                 elder.persistent_tag = true;
                 items.add_mob(elder);
+            }
+        }
+    }
+
+    // Вагонетки с сундуком заброшенных шахт: при сложении чанка, на рельсе
+    // (вики, Mineshaft: «Any chest found in a mineshaft always occurs as a
+    // minecart with chest that rests on top of some rails»; замер,
+    // mineshaft.rs), добыча — abandoned_mineshaft. Рельсы нет (кусок не лёг
+    // у воды) — нет и вагонетки.
+    if dimension == Dimension::Overworld {
+        for (chunk_x, chunk_z) in &fresh {
+            for ((x, y, z), luck) in world.mineshaft_carts(*chunk_x, *chunk_z) {
+                let Some(place) = crate::minecart::place_on_rail(world.get_block(x, y, z), (x, y, z)) else {
+                    continue;
+                };
+                let mut cart = crate::minecart::Minecart::new(shared.next_entity_id(), crate::minecart::Kind::Chest, place);
+
+                cart.slots = crate::loot::fill(crate::loot::Table::Mineshaft.pools(), cart.slots.len(), &mut crate::loot::Dice::new(luck));
+                items.add_cart(cart);
+            }
+        }
+    }
+
+    // Хижины ведьм: при сложении чанка — ведьма и чёрная кошка (вики, Swamp
+    // Hut, «Mobs»: «one witch and one stray black cat spawn inside the hut.
+    // These never naturally despawn»; ведьмы нет на мирной сложности).
+    if dimension == Dimension::Overworld {
+        for (chunk_x, chunk_z) in &fresh {
+            for at in world.hut_dwellers(*chunk_x, *chunk_z) {
+                if difficulty > crate::survival::PEACEFUL {
+                    let mut witch = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Witch, at);
+
+                    witch.persistent = true;
+                    witch.persistent_tag = true;
+                    items.add_mob(witch);
+                }
+
+                let mut cat = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Cat, at);
+
+                cat.tame.variant = crate::mob::tame::variant_named(crate::mob::Kind::Cat, "all_black").unwrap_or(0);
+                cat.persistent = true;
+                cat.persistent_tag = true;
+                items.add_mob(cat);
+            }
+        }
+    }
+
+    // Подвалы иглу: житель и зомби-житель (вики, Igloo; замер entities),
+    // не исчезают.
+    if dimension == Dimension::Overworld {
+        for (chunk_x, chunk_z) in &fresh {
+            for (at, zombie) in world.igloo_dwellers(*chunk_x, *chunk_z) {
+                let kind = if zombie { crate::mob::Kind::ZombieVillager } else { crate::mob::Kind::Villager };
+                let mut dweller = crate::mob::Mob::new(shared.next_entity_id(), kind, at);
+
+                dweller.persistent = true;
+                dweller.persistent_tag = true;
+                items.add_mob(dweller);
             }
         }
     }

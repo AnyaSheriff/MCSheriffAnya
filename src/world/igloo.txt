@@ -1,0 +1,162 @@
+# Иглу — замер мира оригинала 26.1.2 (tools/measure/temples.py igloo).
+# Образцы igloo/top, igloo/middle, igloo/bottom в рамке образца: a, b от точки
+# TP (поворот снят), слои снизу вверх от TPY. «.» — рельеф, «#» — первый знак.
+
+top 7 8 5 0 13
+  # snow_block
+  A furnace[facing=east,lit=false]
+  B white_carpet
+  C ice
+  D redstone_torch[lit=true]
+  E red_bed[facing=south,occupied=false,part=foot]
+  F crafting_table
+  G red_bed[facing=south,occupied=false,part=head]
+  H light_gray_carpet
+  I air
+layer 0
+  ..###..
+  ..###..
+  .#####.
+  #######
+  #######
+  ###.###
+  .#####.
+  ..###..
+layer 1
+  ..#.#..
+  ..#.#..
+  .#...#.
+  #ABBB.#
+  CDBBBEC
+  #FBBBG#
+  .#HHH#.
+  ..###..
+layer 2
+  ..#.#..
+  ..#.#..
+  .#...#.
+  #.....#
+  #.....#
+  #.....#
+  .#II.#.
+  ..###..
+layer 3
+  ...#...
+  ...#...
+  ..###..
+  .#...#.
+  .#...#.
+  .#...#.
+  ..###..
+  .......
+layer 4
+  .......
+  .....I.
+  ......I
+  ..###..
+  ..###..
+  ..###..
+  .......
+  II.....
+
+middle 3 3 3 0 66
+  # stone_bricks
+  A ladder[facing=north,waterlogged=false]
+layer 0
+  .#.
+  #A#
+  .#.
+layer 1
+  .#.
+  #A#
+  .#.
+layer 2
+  .#.
+  #A#
+  .#.
+
+bottom 7 9 6 0 9
+  # stone
+  A cracked_stone_bricks
+  B stone_bricks
+  C polished_andesite
+  D chiseled_stone_bricks
+  E infested_chiseled_stone_bricks
+  F infested_stone_bricks
+  G air
+  H mossy_stone_bricks
+  I iron_bars[east=true,north=false,south=false,waterlogged=false,west=true]
+  J red_carpet
+  K water_cauldron[level=2]
+  L spruce_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  M chest[facing=east,type=single,waterlogged=false]
+  N spruce_slab[type=top,waterlogged=false]
+  O spruce_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  P infested_mossy_stone_bricks
+  Q oak_wall_sign[facing=south,waterlogged=false]
+  R brewing_stand[has_bottle_0=false,has_bottle_1=true,has_bottle_2=false]
+  S ladder[facing=north,waterlogged=false]
+  T potted_cactus
+  U cobweb
+  V wall_torch[facing=south]
+  W wall_torch[facing=north]
+layer 0
+  #####..
+  ##A#A..
+  ##B#B#.
+  .CBDBE.
+  #BFBBB#
+  #DBDBD#
+  #BBBBF#
+  #DBDBD#
+  #######
+layer 1
+  #BBBBB.
+  #BGBGB.
+  #HIHIH.
+  HJGGGGH
+  HJGGGKH
+  HGGGGLH
+  HMGGGNH
+  HGGGGOH
+  .HPHHH#
+layer 2
+  #BBBBB#
+  #BGBGB.
+  .BIAIB.
+  AGGQGGB
+  BGGGGGB
+  BGGGGGA
+  AGGGGRF
+  BGGSGTB
+  .FBABA#
+layer 3
+  #BBBBB.
+  #BGBGB.
+  #BBBBB.
+  BUGVGGB
+  FGGGGGB
+  BGGGGGB
+  BGGGGGB
+  BGWSWGB
+  #BBBBB.
+layer 4
+  ###..##
+  ##BBB##
+  ##BBB#.
+  #BBBBB#
+  #BBBBB#
+  #BBEBB#
+  #BFBBB.
+  #BBSBB.
+  ##BBB##
+layer 5
+  ......#
+  ....###
+  ######.
+  #######
+  #######
+  #######
+  ###B###
+  ##BSB##
+  ###B###

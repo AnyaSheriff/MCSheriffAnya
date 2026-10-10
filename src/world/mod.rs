@@ -30,6 +30,8 @@ pub mod stronghold;
 pub mod village;
 pub mod monument;
 pub mod trial_chambers;
+pub mod mineshaft;
+pub mod temples;
 pub mod the_end;
 pub mod noise;
 pub mod ocean;
@@ -667,10 +669,15 @@ impl Chunk {
         // камень и где воздух. Деревья — после руды: им до неё дела нет.
         generator.lay_ores(&mut chunk, chunk_x, chunk_z);
         underground::dig(generator, &mut chunk, chunk_x, chunk_z);
+        // Заброшенные шахты — после пещер: проходы режут камень и пещеры,
+        // над пустотой — мосты (mineshaft.rs).
+        mineshaft::build(generator, &mut chunk, chunk_x, chunk_z);
         stronghold::build(generator, &mut chunk, chunk_x, chunk_z);
         generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         village::build(generator, &mut chunk, chunk_x, chunk_z);
+        // Храмы пустыни и джунглей, хижины ведьм (temples.rs).
+        temples::build(generator, &mut chunk, chunk_x, chunk_z);
         ocean::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
         // Подводные крепости — после украшений океана: в рамке всё уходит под
         // воду и призмарин (monument.rs).
@@ -3753,6 +3760,21 @@ impl World {
             return trial_chambers::nearest(terrain, chunk_x, chunk_z, regions.max(1) * 27 / trial_chambers::SPACING + 1);
         }
 
+        // Заброшенные шахты — 0,4 % чанков (mineshaft.rs).
+        if let (Generator::Normal(terrain), "mineshaft" | "mineshaft_mesa") = (&*self.generator, name) {
+            return mineshaft::nearest(terrain, name == "mineshaft_mesa", chunk_x, chunk_z, (regions.max(1) * 27).min(200));
+        }
+
+        // Иглу — по областям 32×32 чанка (temples.rs).
+        if let (Generator::Normal(terrain), "igloo") = (&*self.generator, name) {
+            return temples::nearest_igloo(terrain, chunk_x, chunk_z, regions.max(1) * 27 / temples::SPACING + 1);
+        }
+
+        // Храмы и хижины — по областям 32×32 чанка (temples.rs).
+        if let (Generator::Normal(terrain), Some(kind)) = (&*self.generator, temples::Kind::ALL.into_iter().find(|kind| kind.name() == name)) {
+            return temples::nearest(kind, terrain, chunk_x, chunk_z, regions.max(1) * 27 / temples::SPACING + 1);
+        }
+
         // Деревни — по областям 34×34 чанка (village.rs).
         if let (Generator::Normal(terrain), Some(kind)) = (&*self.generator, name.strip_prefix("village_").and_then(|kind| village::Kind::ALL.into_iter().find(|known| known.name() == kind))) {
             return village::nearest(terrain, kind, chunk_x, chunk_z, regions.max(1) * 27 / village::SPACING + 1);
@@ -3866,6 +3888,39 @@ impl World {
     }
 
     /// Древние стражи подводных крепостей в только что сложенном чанке.
+    /// Вагонетки с сундуком шахт, стоящие в чанке: клетка рельсы и случай
+    /// добычи (mineshaft.rs).
+    pub fn mineshaft_carts(&self, chunk_x: i32, chunk_z: i32) -> Vec<((i32, i32, i32), u64)> {
+        match &*self.generator {
+            Generator::Normal(terrain) => mineshaft::carts(terrain, chunk_x, chunk_z),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Ведьмы и чёрные кошки хижин, стоящих в чанке (temples.rs).
+    pub fn hut_dwellers(&self, chunk_x: i32, chunk_z: i32) -> Vec<(f64, f64, f64)> {
+        match &*self.generator {
+            Generator::Normal(terrain) => temples::hut_dwellers(terrain, chunk_x, chunk_z),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Житель и зомби-житель подвалов иглу в чанке (temples.rs).
+    pub fn igloo_dwellers(&self, chunk_x: i32, chunk_z: i32) -> Vec<((f64, f64, f64), bool)> {
+        match &*self.generator {
+            Generator::Normal(terrain) => temples::igloo_dwellers(terrain, chunk_x, chunk_z),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Внутри ли рамки хижины ведьмы клетка (правило появления ведьм).
+    pub fn in_swamp_hut(&self, x: i32, y: i32, z: i32) -> bool {
+        match &*self.generator {
+            Generator::Normal(terrain) => temples::in_hut(terrain, x, y, z),
+            _ => false,
+        }
+    }
+
     pub fn monument_elders(&self, chunk_x: i32, chunk_z: i32) -> Vec<(f64, f64, f64)> {
         match &*self.generator {
             Generator::Normal(terrain) => monument::elders(terrain, chunk_x, chunk_z),

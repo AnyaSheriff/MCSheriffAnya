@@ -2374,7 +2374,10 @@ fn locate(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 
             // Деревни оригинал называет углом чанка старта (свой мир
             // оригинала: «[288, ~, 1984]» у старта в чанке 18, 124).
-            let corner = short.starts_with("village_");
+            // Шахты, храмы, хижина и иглу — тоже угол чанка старта (свой мир
+            // оригинала: шахта со стартом в чанке −7, −10 — «[-112, ~, -160]»,
+            // хижина — «[4816, ~, 1600]»).
+            let corner = short.starts_with("village_") || matches!(short, "mineshaft" | "mineshaft_mesa" | "desert_pyramid" | "jungle_pyramid" | "swamp_hut" | "igloo");
 
             // Оригинал ищет до 100 чанков вокруг (вики, Commands/locate).
             match world.nearest_structure(short, chunk.0, chunk.1, 6) {
