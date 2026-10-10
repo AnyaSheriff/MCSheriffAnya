@@ -207,8 +207,8 @@ fn properties(mob: &Mob) -> Vec<Property> {
 
     // Утопленник с занесённым трезубцем «использует предмет» (чёрный ящик,
     // drowned-trident: 8=1 с захвата цели).
-    if mob.kind == Kind::Drowned || mob.kind.skeleton() {
-        out.insert(4, (8, TYPE_BYTE, vec![u8::from(mob.h.using || mob.h.drawing > 0)]));
+    if mob.kind == Kind::Drowned || mob.kind.skeleton() || mob.kind == Kind::WanderingTrader {
+        out.insert(4, (8, TYPE_BYTE, vec![u8::from(mob.h.using || mob.h.drawing > 0 || mob.land.drinking > 0)]));
     }
 
     // Торговец пьёт зелье невидимости или молоко.
@@ -990,6 +990,9 @@ pub(super) async fn send_mob_event(
     let heard = |place: (f64, f64, f64)| (place.0 - listener.0).powi(2) + (place.1 - listener.1).powi(2) + (place.2 - listener.2).powi(2) <= 48.0 * 48.0;
 
     match event {
+        Event::CommandHurt { source, origin } => {
+            write_body(stream, super::vitals::damage_packet(entity_id, *source, origin.direct, origin.cause, origin.at)).await?;
+        }
         Event::Hurt { source, cause, .. } => {
             let mut body = encode_varint(DAMAGE_EVENT);
 
@@ -1548,7 +1551,7 @@ async fn send_orb_ticks(stream: &mut Outgoing<'_>, player: &mut PlayerState, orb
 
         let speed = (orb.vx, orb.vy, orb.vz);
 
-        if orb.age % ORB_EVERY == 0 {
+        if orb.ticks % ORB_EVERY == 0 {
             let change = (speed.0 - shown.speed.0).powi(2) + (speed.1 - shown.speed.1).powi(2) + (speed.2 - shown.speed.2).powi(2);
 
             if change > SPED || (speed == (0.0, 0.0, 0.0) && shown.speed != (0.0, 0.0, 0.0)) {
@@ -1568,7 +1571,7 @@ async fn send_orb_ticks(stream: &mut Outgoing<'_>, player: &mut PlayerState, orb
                 send_teleport_with_speed(stream, orb.entity_id, whole, speed).await?;
                 (shown.place, shown.grid) = (place, grid);
                 shown.on_ground = orb.on_ground;
-            } else if moved || orb.age % FORCED == 0 {
+            } else if moved || orb.ticks % FORCED == 0 {
                 let mut body = encode_varint(ENTITY_POSITION);
 
                 body.extend_from_slice(&encode_varint(orb.entity_id));

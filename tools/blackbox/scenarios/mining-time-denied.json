@@ -1,0 +1,151 @@
+{
+  "exclusive": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!wait 10"
+  ],
+  "cleanup": [
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(0,0,0) $(8,4,8) minecraft:air",
+    "!startfly"
+  ],
+  "name": "mining-time-denied",
+  "about": "[проверить] Камень рукой: FINISH без START, ранний FINISH, отмена, около порога 70%, мгновенный факел и creative.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 2,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 5,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    },
+    {
+      "after": 6,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 7,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 1
+    },
+    {
+      "after": 12,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    },
+    {
+      "after": 13,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 1
+    },
+    {
+      "after": 130,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 135,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    },
+    {
+      "after": 238,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 250,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 260,
+      "cmd": "setblock $(3,0,3) torch"
+    },
+    {
+      "after": 262,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    },
+    {
+      "after": 270,
+      "cmd": "gamemode creative $(bot)"
+    },
+    {
+      "after": 272,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 274,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    }
+  ],
+  "record_ticks": 285
+}

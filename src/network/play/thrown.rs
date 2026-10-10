@@ -397,7 +397,7 @@ pub(super) fn fill_breath(shared: &Shared, player: &mut PlayerState, hand: i32) 
     } else {
         player.inventory.set(slot, inventory::remainder(stack, stack.count - 1));
         player.net.slot_changed(slot);
-        shared.players.lock().expect("список игроков захвачен другим потоком").order(&player.uuid, crate::players::Order::Give { stack: Stack::new(breath, 1) });
+        shared.players.lock().expect("список игроков захвачен другим потоком").order(&player.uuid, crate::players::Order::Pick { stack: Stack::new(breath, 1) });
     }
 
     true

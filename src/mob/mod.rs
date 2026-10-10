@@ -1317,6 +1317,7 @@ pub struct Push {
 pub enum Event {
     /// Урон: вид, номер ударившей сущности (0 — никто) и место.
     Hurt { source: Source, cause: i32, at: (f64, f64, f64) },
+    CommandHurt { source: Source, origin: crate::combat::DamageOrigin },
 
     /// Смерть: клиенты играют падение набок.
     Death,

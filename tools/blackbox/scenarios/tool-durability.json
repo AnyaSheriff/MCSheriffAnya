@@ -1,0 +1,157 @@
+{
+  "exclusive": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!wait 10"
+  ],
+  "cleanup": [
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(0,0,0) $(8,4,8) minecraft:air",
+    "!startfly"
+  ],
+  "name": "tool-durability",
+  "about": "[проверить] Кирка тратит 1, меч 2, факел 0; поломка кирки; Unbreaking; творческий без износа.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_pickaxe[damage=248]"
+    },
+    {
+      "after": 1,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 3,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    },
+    {
+      "after": 12,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 20,
+      "cmd": "setblock $(3,0,3) torch"
+    },
+    {
+      "after": 22,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    },
+    {
+      "after": 30,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 32,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    },
+    {
+      "after": 42,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 50,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_sword"
+    },
+    {
+      "after": 51,
+      "cmd": "setblock $(3,0,3) cobweb"
+    },
+    {
+      "after": 53,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    },
+    {
+      "after": 68,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 75,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe[enchantments={unbreaking:3}]"
+    },
+    {
+      "after": 76,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 78,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    },
+    {
+      "after": 88,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 95,
+      "cmd": "gamemode creative $(bot)"
+    },
+    {
+      "after": 96,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 98,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 0
+    }
+  ],
+  "record_ticks": 115
+}

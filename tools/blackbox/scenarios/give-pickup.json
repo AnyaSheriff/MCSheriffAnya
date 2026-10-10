@@ -1,0 +1,47 @@
+{
+  "exclusive": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!wait 10"
+  ],
+  "cleanup": [
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(0,0,0) $(8,4,8) minecraft:air",
+    "!startfly"
+  ],
+  "name": "give-pickup",
+  "about": "[проверить] /give: стопки, звук, анимация подбора, компоненты и остаток при полном инвентаре.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "give $(bot) stone 5"
+    },
+    {
+      "after": 15,
+      "cmd": "give $(bot) ender_pearl 20"
+    },
+    {
+      "after": 30,
+      "cmd": "give $(bot) iron_pickaxe[damage=3]"
+    },
+    {
+      "after": 45,
+      "cmd": "give $(bot) dirt 2304"
+    },
+    {
+      "after": 65,
+      "cmd": "give $(bot) diamond 2"
+    }
+  ],
+  "record_ticks": 95
+}

@@ -198,6 +198,10 @@ pub enum Order {
     /// упадёт на землю.
     Give { stack: crate::inventory::Stack },
 
+    /// То же без «визуальной» сущности команды /give: подобранное стрелой,
+    /// из лута и т. п. (чёрный ящик arrow-pickup: предмета-«подарка» нет).
+    Pick { stack: crate::inventory::Stack },
+
     /// Положить в основную руку (выбранную ячейку панели) это — или
     /// опустошить её: `item replace entity <игрок> weapon.mainhand`.
     Hold { stack: Option<crate::inventory::Stack> },
@@ -218,6 +222,8 @@ pub enum Order {
 
     /// Нанести урон (`kill`, `damage`): приходит как обычный удар своего вида.
     Hurt { amount: f32, source: crate::survival::Source },
+    /// /damage с прямым виновником, причиной или точкой источника.
+    CommandDamage { amount: f32, source: crate::survival::Source, origin: crate::combat::DamageOrigin },
     /// Мгновенный урон зелья с известным бросившим игроком.
     MagicHit { amount: f32, killer: Option<(String, [u8; 16])> },
     /// Команда `experience`: добавить или задать очки либо уровни.

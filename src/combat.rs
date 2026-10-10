@@ -894,3 +894,13 @@ mod tests {
         assert!(bypasses_armor(Source::Thorns));
     }
 }
+
+/// Источник команды /damage (вики, Commands/damage: «by», «from», «at»).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct DamageOrigin {
+    pub direct: i32,
+    pub cause: i32,
+    pub at: Option<(f64, f64, f64)>,
+    pub entity_at: Option<(f64, f64, f64)>,
+    pub player: Option<(String, [u8; 16])>,
+}

@@ -307,13 +307,15 @@ pub enum WorldEvent {
     /// Анимация сущности (Entity Animation): 4 — критический удар, 5 —
     /// удар с зачарованием.
     Animation { entity_id: i32, kind: u8 },
+    /// Поломка экипировки: клиент рисует частицы и играет звук.
+    EquipmentBreak { entity_id: i32, status: u8 },
     /// Звук от сущности (Entity Sound Effect).
     EntitySound { entity_id: i32, name: &'static str, volume: f32, pitch: f32 },
 
     /// Игрок `entity_id` получил урон: остальные игроки видят Damage Event
     /// (номер вида, виновник и прямой виновник уже со сдвигом +1; чёрный
     /// ящик, pvp-thorns: «other damage_event»).
-    PlayerDamaged { entity_id: i32, type_id: i32, culprit: i32, direct: i32 },
+    PlayerDamaged { entity_id: i32, type_id: i32, culprit: i32, direct: i32, at: Option<(f64, f64, f64)> },
 
     /// Game Event одному игроку (6 — стрела попала в игрока: стрелку звук
     /// попадания; чёрный ящик, pvp-bow-power).
@@ -2677,8 +2679,16 @@ impl World {
     }
 
     /// Урон игрока — остальным игрокам Damage Event.
+    pub fn note_command_damage(&mut self, entity_id: i32, type_id: i32, culprit: i32, direct: i32, at: Option<(f64, f64, f64)>) {
+        self.events.push(WorldEvent::PlayerDamaged { entity_id, type_id, culprit, direct, at });
+    }
+
+    pub fn note_equipment_break(&mut self, entity_id: i32, status: u8) {
+        self.events.push(WorldEvent::EquipmentBreak { entity_id, status });
+    }
+
     pub fn note_player_damaged(&mut self, entity_id: i32, type_id: i32, culprit: i32, direct: i32) {
-        self.events.push(WorldEvent::PlayerDamaged { entity_id, type_id, culprit, direct });
+        self.events.push(WorldEvent::PlayerDamaged { entity_id, type_id, culprit, direct, at: None });
     }
 
     /// Звук от самой сущности (раздел «игроки»): клиенты играют его там,

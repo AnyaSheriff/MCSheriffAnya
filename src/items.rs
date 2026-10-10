@@ -21,6 +21,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::inventory::Stack;
+mod merging;
 use crate::journal::{Journal, Reader};
 
 /// Докуда дотягивается игрок: его рамка (0.6 × 1.8), раздвинутая на блок
@@ -146,6 +147,10 @@ pub struct Dropped {
     pub stack: Stack,
     /// Бросивший игрок: для подбора золота пиглином (вики, Advancement).
     pub thrower: Option<[u8; 16]>,
+    /// Получатель /give; чужие игроки остаток не поднимают.
+    pub owner: Option<i32>,
+    /// Такты сущности, отдельно от омолаживаемого слиянием Age.
+    pub ticks: u64,
 
     /// Если это падающий блок — какой именно. Обычный лежащий предмет
     /// здесь ничего не хранит.
@@ -230,6 +235,9 @@ pub enum Change {
     /// Предмет пропал сам: провалился в пустоту.
     Gone { entity_id: i32 },
 
+    /// Размер стопки изменился при слиянии.
+    Stack { entity_id: i32, stack: Stack, no_gravity: bool },
+
     /// У динамита убыл запал: оригинал сообщает его клиентам каждый такт.
     Fuse { entity_id: i32, fuse: i32 },
 
@@ -271,6 +279,8 @@ pub enum Change {
 
         /// Сколько предметов в поднятой стопке — это тоже показывается.
         count: i32,
+        /// Слитый шарик опыта остаётся до последнего подбора.
+        remaining: bool,
     },
 }
 
@@ -559,6 +569,25 @@ impl Items {
         self.changes.push(Change::Dropped(dropped));
     }
 
+    /// Остаток /give: только получателю, без задержки подбора.
+    pub fn give_remainder(&mut self, entity_id: i32, stack: Stack, at: (f64, f64, f64), velocity: (f64, f64, f64), owner: i32) {
+        let mut item = Self::new_item(entity_id, stack, at, velocity, 0);
+        item.owner = Some(owner);
+        item.touchable = Some(at);
+        self.items.push(item.clone());
+        self.changes.push(Change::Dropped(item));
+    }
+
+    /// Визуальная сущность /give: в инвентаре уже есть выданное, повторно
+    /// подбирать нельзя. [проверить] Анимация подбора при удалении в следующий такт.
+    pub fn give_visual(&mut self, entity_id: i32, stack: Stack, at: (f64, f64, f64), velocity: (f64, f64, f64), owner: i32) {
+        let mut item = Self::new_item(entity_id, stack, at, velocity, u64::MAX);
+        item.age = LIFETIME - 1;
+        item.owner = Some(owner);
+        self.items.push(item.clone());
+        self.changes.push(Change::Dropped(item));
+    }
+
     pub fn drop_from_player(&mut self, entity_id: i32, stack: Stack, at: (f64, f64, f64), velocity: (f64, f64, f64), thrower: [u8; 16]) {
         let mut dropped = Self::new_item(entity_id, stack, at, velocity, THROWN_DELAY);
         dropped.thrower = Some(thrower);
@@ -579,6 +608,8 @@ impl Items {
             uuid: uuid_for(entity_id),
             stack,
             thrower: None,
+            owner: None,
+            ticks: 0,
             block: None,
             fuse: None,
             custom: None,
@@ -615,6 +646,8 @@ impl Items {
             uuid: uuid_for(entity_id),
             stack,
             thrower: None,
+            owner: None,
+            ticks: 0,
             block: Some(state),
             fuse: None,
             custom: None,
@@ -656,6 +689,8 @@ impl Items {
             uuid: uuid_for(entity_id),
             stack: Stack::new(0, 0),
             thrower: None,
+            owner: None,
+            ticks: 0,
             block: Some(state),
             fuse: Some(fuse),
             custom,
@@ -800,6 +835,7 @@ impl Items {
         W: Fn(i32, i32, i32) -> Option<ItemWater>,
     {
         let mut splashes = Vec::new();
+        let mut merge_due = Vec::new();
 
         for item in &mut self.items {
             item.impulse = false;
@@ -817,6 +853,7 @@ impl Items {
             // у него пока не считаем. [проверить]: течение сносит динамит
             // (вики, TNT: «can be pushed by flowing water»).
             let before = (item.vx, item.vy, item.vz);
+            let cell = (item.x.floor(), item.y.floor(), item.z.floor());
 
             if item.fuse.is_some() {
                 item.step(solid, &|_, _, _| None, None);
@@ -829,7 +866,7 @@ impl Items {
                 // лежащий предмет раз в 20 тактов сообщает скорость −0,04,
                 // −0,08 или −0,12 — смотря по фазе, — и сразу за ней ноль в
                 // такте, когда он «упал» на свой же пол.
-                let cycle = (item.age as i64 + item.entity_id as i64).rem_euclid(ITEM_MOVE_EVERY) == 0;
+                let cycle = (item.ticks as i64 + item.entity_id as i64).rem_euclid(ITEM_MOVE_EVERY) == 0;
 
                 if let Some(splash) = item.step(solid, water, Some(cycle)) {
                     splashes.push(splash);
@@ -839,20 +876,30 @@ impl Items {
             let change = (item.vx - before.0).powi(2) + (item.vy - before.1).powi(2) + (item.vz - before.2).powi(2);
 
             item.impulse = change > IMPULSE;
+            let moved_cell = cell != (item.x.floor(), item.y.floor(), item.z.floor());
+            // Возраст считается уже с этого такта: первая проверка стоящего
+            // предмета — на сороковом его такте (чёрный ящик item-merge:
+            // предмет, возникший в такте 0, исчезает в такте 39).
+            if (item.ticks + 1).is_multiple_of(if moved_cell { 2 } else { 40 }) {
+                merge_due.push(item.entity_id);
+            }
+            item.ticks += 1;
             item.age += 1;
         }
+
+        self.merge_items(&merge_due);
 
         // Пропадают провалившиеся в пустоту и пролежавшие слишком долго.
         let bottom = crate::world::MIN_Y as f64 - LOST_BELOW;
         let gone: Vec<Dropped> = self
             .items
-            .extract_if(.., |item| item.y < bottom || (item.age >= LIFETIME && !never_despawns(item)))
+            .extract_if(.., |item| item.y < bottom || (item.age >= LIFETIME && (item.pickup_delay == u64::MAX || !never_despawns(item))))
             .collect();
 
         for item in &gone {
-            self.changes.push(Change::Gone {
-                entity_id: item.entity_id,
-            });
+            // Визуальная сущность /give пропадает без пакета подбора:
+            // чёрный ящик give-pickup (оригинал шлёт только удаление).
+            self.changes.push(Change::Gone { entity_id: item.entity_id });
         }
 
         splashes
@@ -922,6 +969,17 @@ impl Items {
     /// командой (без толчка).
     pub fn drop_experience(&mut self, points: i32, at: (f64, f64, f64), next_id: &mut dyn FnMut() -> i32, rng: &mut crate::mob::Rng) {
         for value in crate::survival::orb_values(points) {
+            // Вики, Experience orb: новый шарик с вероятностью 1/40
+            // добавляет подбор соседу той же стоимости. [проверить] Фаза RNG.
+            let group = (rng.unit() * 40.0) as i32;
+            if let Some(orb) = self.orbs.iter_mut().find(|orb| orb.value == value && !orb.expired()
+                && orb.entity_id.rem_euclid(40) == group
+                && (orb.x - at.0).abs() < 1.0 && (orb.y - at.1).abs() < 1.0 && (orb.z - at.2).abs() < 1.0)
+            {
+                orb.count = orb.count.saturating_add(1);
+                orb.age = 0;
+                continue;
+            }
             let velocity = ((rng.unit() * 0.2 - 0.1) * 2.0, rng.unit() * 0.2 * 2.0, (rng.unit() * 0.2 - 0.1) * 2.0);
 
             self.add_orb(next_id(), value, at, velocity);
@@ -959,6 +1017,7 @@ impl Items {
             orb.step(crate::xp::nearest_pull((orb.x, orb.y, orb.z), &feet), solid);
         }
 
+        self.merge_orbs();
         self.remove_orbs(|orb| orb.expired() || orb.y < -64.0);
         self.xp_delay.retain(|id, _| players.iter().any(|&(player, _)| player == *id));
 
@@ -987,7 +1046,7 @@ impl Items {
         let value = self.orbs[index].value;
         let entity_id = self.orbs[index].entity_id;
 
-        self.changes.push(Change::Taken { entity_id, by, count: 1 });
+        self.changes.push(Change::Taken { entity_id, by, count: 1, remaining: self.orbs[index].count > 1 });
         self.orbs[index].count -= 1;
 
         if self.orbs[index].count <= 0 {
@@ -1007,7 +1066,7 @@ impl Items {
         while index < self.items.len() {
             let item = &self.items[index];
 
-            if item.block.is_some() || item.age < item.pickup_delay || !item.reaches(x, y, z) {
+            if item.block.is_some() || item.age < item.pickup_delay || item.owner.is_some_and(|owner| owner != by) || !item.reaches(x, y, z) {
                 index += 1;
                 continue;
             }
@@ -1023,6 +1082,7 @@ impl Items {
                 entity_id: item.entity_id,
                 by,
                 count,
+                remaining: false,
             });
 
             if count == item.stack.count {
@@ -1578,7 +1638,7 @@ mod tests {
 
         assert!(matches!(
             changes.first(),
-            Some(Change::Taken { entity_id: 1, by: 42, count: 3 })
+            Some(Change::Taken { entity_id: 1, by: 42, count: 3, .. })
         ));
     }
 
@@ -1820,7 +1880,7 @@ mod tests {
         // Клиентам: подбор двух штук и остаток, появившийся снова.
         let (changes, _) = items.changes_since(1, READER);
 
-        assert!(matches!(changes.first(), Some(Change::Taken { entity_id: 1, by: 42, count: 2 })));
+        assert!(matches!(changes.first(), Some(Change::Taken { entity_id: 1, by: 42, count: 2, .. })));
         assert!(matches!(changes.get(1), Some(Change::Dropped(left)) if left.stack.count == 1));
     }
 

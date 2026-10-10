@@ -12,6 +12,7 @@ fn shared() -> Shared {
 fn player() -> PlayerState {
     let mut player = PlayerState::new([17; 16], "ArthropodTest".to_string(), None, None, 0x7F, 11, (3.5, 64.0, 5.5));
     player.game_mode = GAME_MODE_SURVIVAL;
+    player.on_ground = true;
     player
 }
 
@@ -21,6 +22,12 @@ fn dig(at: (i32, i32, i32), status: i32) -> Vec<u8> {
     packet.push(1);
     packet.extend_from_slice(&encode_varint(1));
     packet
+}
+
+fn finish_mining(player: &mut PlayerState, shared: &Shared) -> Option<Reaction> {
+    break_block(&dig((3, 64, 3), 0), player, shared)?;
+    shared.ticks.send_modify(|tick| *tick += 200);
+    break_block(&dig((3, 64, 3), 2), player, shared)
 }
 
 #[test]
@@ -33,7 +40,7 @@ fn all_infested_kinds_release_from_the_survival_break_handler() {
         // Не мгновенны: «начал копать» блок не ломает, ломает «докопал».
         break_block(&dig((3, 64, 3), 0), &mut player, &shared).unwrap();
         assert_eq!(shared.world_in(player.dimension).lock().unwrap().get_block(3, 64, 3), state);
-        assert!(break_block(&dig((3, 64, 3), 2), &mut player, &shared).is_some());
+        assert!(finish_mining(&mut player, &shared).is_some());
         assert_eq!(shared.world_in(player.dimension).lock().unwrap().get_block(3, 64, 3), blocks::state_by_name("air").unwrap());
         let items = shared.items_in(player.dimension).lock().unwrap();
         assert_eq!(items.mobs().len(), 1, "{name}");
@@ -62,7 +69,7 @@ fn silk_creative_and_disabled_drops_suppress_release() {
             player.inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(blocks::item_named("wooden_hoe").unwrap(), 1).with_extras(extras)));
         }
         shared.world_in(player.dimension).lock().unwrap().set_block_silently(3, 64, 3, blocks::state_by_name("infested_stone").unwrap());
-        break_block(&dig((3, 64, 3), if creative { 0 } else { 2 }), &mut player, &shared).unwrap();
+        if creative { break_block(&dig((3, 64, 3), 0), &mut player, &shared).unwrap(); } else { finish_mining(&mut player, &shared).unwrap(); }
         let items = shared.items_in(player.dimension).lock().unwrap();
         assert!(items.mobs().is_empty());
         assert_eq!(items.items().len(), usize::from(expected_drop));
@@ -99,7 +106,7 @@ fn peaceful_difficulty_still_releases_the_silverfish() {
     let mut player = player();
     shared.difficulty.store(0, std::sync::atomic::Ordering::Relaxed);
     shared.world_in(player.dimension).lock().unwrap().set_block_silently(3, 64, 3, blocks::state_by_name("infested_stone").unwrap());
-    break_block(&dig((3, 64, 3), 2), &mut player, &shared).unwrap();
+    finish_mining(&mut player, &shared).unwrap();
     let items = shared.items_in(player.dimension).lock().unwrap();
     assert_eq!(items.mobs().len(), 1);
     assert!(items.mobs()[0].spawn_poof);
@@ -111,7 +118,7 @@ fn spawn_mobs_does_not_disable_infested_release() {
     let mut player = player();
     shared.spawn_mobs.store(false, std::sync::atomic::Ordering::Relaxed);
     shared.world_in(player.dimension).lock().unwrap().set_block_silently(3, 64, 3, blocks::state_by_name("infested_stone").unwrap());
-    break_block(&dig((3, 64, 3), 2), &mut player, &shared).unwrap();
+    finish_mining(&mut player, &shared).unwrap();
     assert_eq!(shared.items_in(player.dimension).lock().unwrap().mobs().len(), 1);
 }
 

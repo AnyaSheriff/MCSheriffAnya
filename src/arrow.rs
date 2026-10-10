@@ -965,7 +965,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             if let Some(name) = crate::blocks::item_name(stack.item) {
                 players.order(&uuid, crate::players::Order::Progress(crate::progress::Event::Stat(crate::stats::Cat::PickedUp, name, stack.count)));
             }
-            players.order(&uuid, crate::players::Order::Give { stack });
+            players.order(&uuid, crate::players::Order::Pick { stack });
         }
     }
 }

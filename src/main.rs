@@ -19,6 +19,7 @@ mod world;
 mod blocks;
 mod blocks_table;
 mod hardness_table;
+mod mining;
 mod placing;
 mod portal;
 mod plants;

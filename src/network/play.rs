@@ -45,7 +45,9 @@ use crate::commands::{
     self, Effect, GAME_MODE_ADVENTURE, GAME_MODE_CREATIVE, GAME_MODE_SPECTATOR, GAME_MODE_SURVIVAL,
     Source,
 };
-use crate::hardness_table::{INSTANT, UNBREAKABLE};
+use crate::hardness_table::UNBREAKABLE;
+mod mining;
+mod give;
 use crate::playerdata::{self, PlayerData};
 use crate::players::{Change, Member, Order, Position};
 use crate::placing;
@@ -2184,6 +2186,9 @@ async fn send_pending_item_changes(
                 send_dropped_item(stream, &item).await?;
                 seen.insert(item.entity_id, shown_item(&item));
             }
+            items::Change::Stack { entity_id, stack, no_gravity } => {
+                send_item_properties(stream, entity_id, stack, no_gravity).await?;
+            }
             items::Change::Gone { entity_id } => {
                 // Провалился в пустоту: просто убираем из мира, без показа
                 // подбора. Полоса иссушителя уходит перед ним самим
@@ -2262,10 +2267,15 @@ async fn send_pending_item_changes(
                     mobs.insert(orb.entity_id, shown);
                 }
             }
-            items::Change::Taken { entity_id, by, count } => {
+            items::Change::Taken { entity_id, by, count, remaining } => {
                 send_pick_up(stream, entity_id, by, count).await?;
-                send_remove_entity(stream, entity_id).await?;
-                seen.remove(&entity_id);
+                if !remaining {
+                    send_remove_entity(stream, entity_id).await?;
+                    seen.remove(&entity_id);
+                    // Из `mobs` номер не убираем: слежение само уберёт шарик,
+                    // иначе устаревший снимок шариков показал бы его заново
+                    // (чёрный ящик zombie-hit/cow-hit: лишний spawn после подбора).
+                }
             }
         }
     }
@@ -2354,7 +2364,7 @@ async fn send_item_ticks(
         .items()
         .iter()
         .filter(|item| item.block.is_none() && seen.contains_key(&item.entity_id))
-        .map(|item| (item.entity_id, item.age, item.impulse, shown_item(item), item.stack, item.no_gravity))
+        .map(|item| (item.entity_id, item.ticks, item.impulse, shown_item(item), item.stack, item.no_gravity))
         .collect();
 
     for (entity_id, age, impulse, now, stack, no_gravity) in items {
@@ -4260,7 +4270,7 @@ async fn send_pending_world_events(
                 }
             }
             WorldEvent::Particle { .. } => {}
-            WorldEvent::PlayerDamaged { entity_id, type_id, culprit, direct } if *entity_id != player.entity_id => {
+            WorldEvent::PlayerDamaged { entity_id, type_id, culprit, direct, at } if *entity_id != player.entity_id => {
                 let here = shared.players.lock().expect("список игроков захвачен другим потоком").by_entity(*entity_id).is_some_and(|(member, _)| member.dimension == player.dimension);
 
                 if here {
@@ -4270,7 +4280,8 @@ async fn send_pending_world_events(
                     body.extend_from_slice(&encode_varint(*type_id));
                     body.extend_from_slice(&encode_varint(*culprit));
                     body.extend_from_slice(&encode_varint(*direct));
-                    body.push(0);
+                    body.push(u8::from(at.is_some()));
+                    if let Some((x, y, z)) = at { push_f64(&mut body, *x); push_f64(&mut body, *y); push_f64(&mut body, *z); }
                     write_body(stream, body).await?;
                 }
             }
@@ -4328,6 +4339,12 @@ async fn send_pending_world_events(
                     send_pick_up(stream, *entity_id, *by, *count).await?;
                     send_remove_entity(stream, *entity_id).await?;
                 }
+            }
+            WorldEvent::EquipmentBreak { entity_id, status } => {
+                let mut body = encode_varint(0x22);
+                push_i32(&mut body, *entity_id);
+                body.push(*status);
+                write_body(stream, body).await?;
             }
             WorldEvent::Animation { entity_id, kind } => {
                 let mut body = encode_varint(ENTITY_ANIMATION);
@@ -6058,6 +6075,8 @@ async fn read_and_log_play_packets(
                 order
             };
 
+            let visual = matches!(order, Order::Give { .. });
+
             match order {
                 Order::Respawn => {}
                 Order::WakeUp => player.wake_due = true,
@@ -6067,6 +6086,9 @@ async fn read_and_log_play_packets(
                     body.extend_from_slice(&component);
                     body.push(0x00);
                     write_body(stream, body).await?;
+                }
+                Order::CommandDamage { amount, source, origin } => {
+                    vitals::command_hit(stream, shared, player, amount, source, origin).await?;
                 }
                 Order::Hurt { amount, source } => player.net.hits.push(vitals::Pending { amount, source, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false }),
                 Order::Effect(effect) => {
@@ -6378,9 +6400,9 @@ async fn read_and_log_play_packets(
 
                 // Выданные предметы кладутся в инвентарь; если места нет,
                 // лишнее падает на землю рядом с игроком.
-                Order::Give { stack } => {
+                Order::Give { stack } | Order::Pick { stack } => {
                     let (item, count) = (stack.item, stack.count);
-                    let (slots, left) = player.inventory.put(stack);
+                    let slots = give::give(shared, player, stack, visual);
 
                     let shown = slots.iter().any(|slot| *slot == player.inventory.selected_slot() || *slot == inventory::OFFHAND);
 
@@ -6393,11 +6415,6 @@ async fn read_and_log_play_packets(
                     // такт позже ячейки).
                     if shown {
                         publish_player(shared, player);
-                    }
-
-                    // Не влезло — падает рядом с игроком, а не пропадает.
-                    if let Some(left) = left {
-                        throw_out(shared, player, left);
                     }
 
                     log_debug!(
@@ -6515,6 +6532,7 @@ async fn read_and_log_play_packets(
             // его собственные действия: подтверждение должно идти после
             // изменения мира, иначе клиент на миг покажет пустое место.
             None => {
+                mining::tick(shared, player);
                 step_portal(shared, player);
 
                 let lagged =
@@ -8190,11 +8208,19 @@ fn use_golem(shared: &Shared, player: &mut PlayerState, items: &mut items::Items
 ///
 /// Возвращает ответ клиенту: подтверждение, если блок действительно изменился.
 fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option<Reaction> {
+    let held = player.inventory.held();
+    let mut mined = None;
+    let result = break_block_inner(payload, player, shared, &mut mined);
+    if player.game_mode == GAME_MODE_SURVIVAL && let Some(state) = mined {
+        if let Some(stack) = held { pvp::wear_held(shared, player, stack, crate::mining::wear(state, stack), false); }
+        player.vit.add_exhaustion(0.005);
+    }
+    result
+}
+
+fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, mined: &mut Option<i32>) -> Option<Reaction> {
     /// Начал копать.
     const STARTED_DIGGING: i32 = 0;
-
-    /// Докопал.
-    const FINISHED_DIGGING: i32 = 2;
 
     /// Выбросил всю стопку (клавиша выброса с Ctrl).
     const DROP_STACK: i32 = 3;
@@ -8279,17 +8305,7 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         world.get_block(x, y, z)
     };
 
-    // В творческом блок ломается сразу. В выживании — когда клиент докопал,
-    // а мгновенные (трава, цветы, факелы) — на «начал копать»: «докопал»
-    // для них клиент не шлёт вовсе.
-    // Заражённые блоки не мгновенны: вики, Infested Block — с 1.17 твёрдость
-    // вдвое меньше, чем у обычного блока; время копания считает клиент, так
-    // что они ломаются, как любой блок, по «докопал».
-    let breaks_now = if creative {
-        status == STARTED_DIGGING
-    } else {
-        status == FINISHED_DIGGING || (status == STARTED_DIGGING && in_spans(INSTANT, state))
-    };
+    let breaks_now = mining::allows(player, shared, (x, y, z), state, status);
 
     // Удар по редстоуновой руде зажигает её (вики, Redstone Ore: «pressing
     // either the break or the use control»). В творческом блок ломается
@@ -8298,12 +8314,14 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
         let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
         redstone::punched(&mut world, (x, y, z));
+        mining::punched(player, world.get_block(x, y, z));
         if blocks::block_at_state(state) == Some("note_block") { player.progress.custom("play_noteblock", 1); }
     }
 
     if !breaks_now {
-        // Начало копания, отмена копания и прочие действия мир не меняют.
-        return Some(Reaction::accepted(sequence));
+        // В выживании оригинал на START/CANCEL и на преждевременный FINISH
+        // блок не пересылает, только подтверждает (чёрный ящик mining-time-denied).
+        return Some(if creative { answer } else { Reaction::accepted(sequence) });
     }
 
     // Бедрок, барьер, порталы в выживании не ломаются.
@@ -8395,8 +8413,12 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     world.actor = actor;
     let Some(broken) = broken else {
         log_debug!("Play: в {} {} {} и так пусто", x, y, z);
-        return Some(answer);
+        // Оригинал на «начал копать» по воздуху в выживании блок не шлёт
+        // (чёрный ящик mining-time-denied).
+        return Some(if creative { answer } else { Reaction::accepted(sequence) });
     };
+
+    *mined = Some(broken);
 
     if hive_block {
         let stack=if !creative && drops {
@@ -8485,16 +8507,15 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
 
         match sculk_drop.unwrap_or_else(|| blocks::drops_by_luck(broken, tool, luck)).map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
             Some(stack) => {
+                let (at, velocity) = crate::tick::scattered((x, y, z), || f64::from(world.random_unit()));
                 // Мир отпускаем: класть предмет будем под другим замком.
                 drop(world);
 
-                // Выпавшее из блока не бросают — оно просто падает с того
-                // места, где был блок.
                 drop_into_world(
                     shared, player.dimension,
                     stack,
-                    (x as f64 + 0.5, y as f64 + 0.25, z as f64 + 0.5),
-                    (0.0, 0.0, 0.0),
+                    at,
+                    velocity,
                     items::MINED_DELAY,
                 );
 
@@ -10431,6 +10452,8 @@ struct PlayerState {
     yaw: f32,
     pitch: f32,
     on_ground: bool,
+    mining: Option<mining::Session>,
+    delayed: Option<mining::Session>,
 
     /// Номер сущности игрока. Его выдаёт список игроков при входе: тот же
     /// номер получают остальные, чтобы показать этого игрока.
@@ -10771,6 +10794,8 @@ impl PlayerState {
             yaw,
             pitch,
             on_ground: false,
+            mining: None,
+            delayed: None,
             entity_id: 0,
             // Инвентарь — тот, с которым игрок вышел в прошлый раз.
             reader,

@@ -67,6 +67,7 @@ pub struct XpOrb {
 
     /// Тактов жизни: по нему идёт и рассылка.
     pub age: u64,
+    pub ticks: u64,
 }
 
 impl XpOrb {
@@ -84,6 +85,7 @@ impl XpOrb {
             vz: velocity.2,
             on_ground: false,
             age: 0,
+            ticks: 0,
         }
     }
 
@@ -147,6 +149,7 @@ impl XpOrb {
         }
 
         self.age += 1;
+        self.ticks += 1;
     }
 
     /// Дотягивается ли до шарика игрок с ногами в `feet` (по месту шарика

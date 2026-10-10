@@ -25,6 +25,8 @@ pub const KNOCKBACK_RESISTANCE: i32 = 16;
 pub const LUCK: i32 = 17;
 pub const MAX_ABSORPTION: i32 = 18;
 pub const MAX_HEALTH: i32 = 19;
+pub const MINING_EFFICIENCY: i32 = 20;
+pub const SUBMERGED_MINING_SPEED: i32 = 29;
 pub const MOVEMENT_SPEED: i32 = 22;
 pub const OXYGEN_BONUS: i32 = 23;
 pub const SAFE_FALL_DISTANCE: i32 = 24;
@@ -144,6 +146,7 @@ pub fn player_base(attribute: i32) -> f64 {
         ATTACK_DAMAGE => 1.0,
         ATTACK_SPEED => 4.0,
         BLOCK_BREAK_SPEED => 1.0,
+        SUBMERGED_MINING_SPEED => 0.2,
         BLOCK_INTERACTION_RANGE => 4.5,
         ENTITY_INTERACTION_RANGE => 3.0,
         // Тяготение, сила прыжка и безопасная высота — по вики (Attribute,

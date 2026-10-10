@@ -936,6 +936,8 @@ impl BedrockWorld {
         for order in orders {
             match order {
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
+                // [Bedrock: потом] Атрибуция команды; само здоровье обновляется.
+                crate::players::Order::CommandDamage { amount, source, .. } => self.health.hurt(amount, source),
                 crate::players::Order::MagicHit { amount, .. } => self.health.hurt(amount, crate::survival::Source::Magic),
                 crate::players::Order::Respawn => {}
                 // Сон у Bedrock пока не ведётся [проверить].
@@ -988,7 +990,7 @@ impl BedrockWorld {
                         connection.send(&std::mem::take(packets));
                     }
                 }
-                crate::players::Order::Give { stack } => {
+                crate::players::Order::Give { stack } | crate::players::Order::Pick { stack } => {
                     let (slots, left) = self.bag.inventory.put(stack);
 
                     // Не влезло — падает рядом с игроком, а не пропадает.
@@ -1409,6 +1411,8 @@ impl BedrockWorld {
                 }
                 // [проверить]: качание ударенной вагонетки у Bedrock не
                 // показываем.
+                // [Bedrock: потом] Метаданные стопки после слияния.
+                crate::items::Change::Stack { .. } => {}
                 crate::items::Change::Dropped(_) | crate::items::Change::Fuse { .. } => {}
                 // Рамки у Bedrock — блоки с данными (bedrock/frames.rs):
                 // клиент получает блок и блок-актор, когда рамка появилась
@@ -1426,7 +1430,7 @@ impl BedrockWorld {
                             packets.push(super::effects::level_sound(cue.id, (at.0 as f32, at.1 as f32, at.2 as f32)));
                         }
                     }
-                    crate::mob::Event::Hurt { source, .. } if self.items_shown.contains(&entity_id) => packets.push(health::hurt_event(entity_id as u64, source)),
+                    crate::mob::Event::Hurt { source, .. } | crate::mob::Event::CommandHurt { source, .. } if self.items_shown.contains(&entity_id) => packets.push(health::hurt_event(entity_id as u64, source)),
                     crate::mob::Event::Death if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 3)),
                     // Сердечки любви: Actor Event love_particles (21, список ActorEvent minecraft-data) [проверить].
                     crate::mob::Event::Hearts if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 21)),

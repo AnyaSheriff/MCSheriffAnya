@@ -1,0 +1,223 @@
+{
+  "exclusive": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!wait 10"
+  ],
+  "cleanup": [
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(0,0,0) $(8,4,8) minecraft:air",
+    "!startfly"
+  ],
+  "name": "item-merge",
+  "about": "[проверить] Слияние 12+20, запрет 40+40 и разных компонентов, граница расстояния; опыт одинаковой стоимости. Без случайных масок.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon item $(1.2,0,1.2) {NoGravity:1b,Item:{id:\"minecraft:stone\",count:12}}"
+    },
+    {
+      "after": 1,
+      "cmd": "summon item $(1.4,0,1.2) {NoGravity:1b,Item:{id:\"minecraft:stone\",count:20}}"
+    },
+    {
+      "after": 50,
+      "cmd": "summon item $(3.2,0,1.2) {NoGravity:1b,Item:{id:\"minecraft:stone\",count:40}}"
+    },
+    {
+      "after": 51,
+      "cmd": "summon item $(3.4,0,1.2) {NoGravity:1b,Item:{id:\"minecraft:stone\",count:40}}"
+    },
+    {
+      "after": 100,
+      "cmd": "summon item $(5.2,0,1.2) {NoGravity:1b,Item:{id:\"minecraft:stone\",count:1,components:{\"minecraft:custom_name\":\"A\"}}}"
+    },
+    {
+      "after": 101,
+      "cmd": "summon item $(5.4,0,1.2) {NoGravity:1b,Item:{id:\"minecraft:stone\",count:1}}"
+    },
+    {
+      "after": 150,
+      "cmd": "summon item $(7,0,1) {NoGravity:1b,Item:{id:\"minecraft:dirt\",count:1}}"
+    },
+    {
+      "after": 151,
+      "cmd": "summon item $(8,0,1) {NoGravity:1b,Item:{id:\"minecraft:dirt\",count:1}}"
+    },
+    {
+      "after": 200,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 201,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 202,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 203,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 204,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 205,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 206,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 207,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 208,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 209,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 210,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 211,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 212,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 213,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 214,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 215,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 216,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 217,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 218,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 219,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 220,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 221,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 222,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 223,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 224,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 225,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 226,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 227,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 228,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 229,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 230,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 231,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 232,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 233,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 234,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 235,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 236,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 237,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 238,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 239,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    },
+    {
+      "after": 240,
+      "cmd": "summon experience_orb $(2,0,-8) {Value:1s}"
+    }
+  ],
+  "record_ticks": 290
+}

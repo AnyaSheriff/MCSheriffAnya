@@ -1438,25 +1438,36 @@ fn summon_lightning(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
     Answer::saying("Призвана сущность lightning_bolt".to_string())
 }
 
-/// Предмет из данных сущности: `{Item:{id:"minecraft:stone",count:5}}`.
-/// Прочие поля (Motion, PickupDelay) пропускаются.
+/// Предмет из данных сущности, включая компоненты: они участвуют в слиянии.
 fn item_from_text(text: &str) -> Option<crate::inventory::Stack> {
-    let inner = &text[text.find("Item:{")? + "Item:{".len()..];
-    let inner = &inner[..inner.find('}')?];
-    let (mut item, mut count) = (None, 1);
-
-    for field in inner.split(',') {
-        let (key, value) = field.split_once(':')?;
-        let value = value.trim().trim_matches('"');
-
-        match key.trim() {
-            "id" => item = blocks::item_named(value.strip_prefix("minecraft:").unwrap_or(value)),
-            "count" | "Count" => count = value.trim_end_matches('b').parse().ok()?,
-            _ => {}
+    let root = crate::snbt::parse(text)?;
+    let item = root.get("Item")?;
+    let name = item.get("id")?.as_str()?;
+    let count = item.get("count").or_else(|| item.get("Count")).and_then(crate::snbt::Value::as_f64).unwrap_or(1.0) as i32;
+    if count <= 0 { return None; }
+    let mut spec = name.to_string();
+    if let Some(crate::snbt::Value::Map(components)) = item.get("components") {
+        spec.push('[');
+        for (index, (key, value)) in components.iter().enumerate() {
+            if index > 0 { spec.push(','); }
+            spec.push_str(key);
+            spec.push('=');
+            spec.push_str(&component_text(value));
         }
+        spec.push(']');
     }
+    stack_from_spec(&spec, count).ok().flatten().map(|stack| stack.with_count(count))
+}
 
-    Some(crate::inventory::Stack::new(item?, count))
+/// JSON — подмножество SNBT; кавычки сохраняют вложенные строки компонентов.
+fn component_text(value: &crate::snbt::Value) -> String {
+    use crate::snbt::Value;
+    match value {
+        Value::Num(n) => n.to_string(),
+        Value::Str(s) => serde_json::to_string(s).expect("строка JSON"),
+        Value::List(values) => format!("[{}]", values.iter().map(component_text).collect::<Vec<_>>().join(",")),
+        Value::Map(fields) => format!("{{{}}}", fields.iter().map(|(key, value)| format!("{}:{}", serde_json::to_string(key).expect("ключ JSON"), component_text(value))).collect::<Vec<_>>().join(",")),
+    }
 }
 
 /// `kill @e[type=<вид>,distance=..<N>,limit=<N>]` — убрать сущности:
@@ -1615,7 +1626,16 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 /// Commands/damage); игрокам — как `Hurt`. У оригинала команда попадает то до
 /// такта игрока, то после: Set Health и свойства приходят на +0 или +1
 /// (effect-absorption, два прогона); у нас — всегда до такта (+0).
+#[path = "commands_damage.rs"]
+mod damage_command;
+
 fn damage(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    // Формы `at <x> <y> <z>` и `by … from …` (прямой виновник и причина
+    // раздельно) ведёт damage_command; прежние формы — ниже, как были.
+    if parts.get(3).copied() == Some("at") || (parts.get(3).copied() == Some("by") && parts.get(5).copied() == Some("from")) {
+        return damage_command::run(parts, source, shared);
+    }
+
     let (Some(who), Some(amount)) = (parts.first(), parts.get(1).and_then(|amount| amount.parse::<f32>().ok()).map(|amount| amount.max(0.0))) else {
         return Answer::saying("Нужно: damage <кто> <сколько> [minecraft:generic|minecraft:explosion|minecraft:player_attack]".to_string());
     };
@@ -3110,6 +3130,11 @@ mod tests {
         assert_eq!(stack.count, 3);
         assert_eq!(item_from_text(r#"{Item:{id:"dirt"}}"#).map(|stack| stack.count), Some(1));
         assert!(item_from_text("{}").is_none());
+        let named = item_from_text(r#"{Item:{id:"minecraft:stone",count:5,components:{"minecraft:custom_name":"A","minecraft:enchantments":{"minecraft:unbreaking":3}}}}"#).unwrap();
+        assert_eq!(named.extras().name.as_deref(), Some("A"));
+        assert_eq!(named.extras().level("unbreaking"), 3);
+        assert!(!named.stacks_with(&stack));
+
     }
 
     /// Свой файл прав на каждую проверку: проверки идут разом и общий файл
@@ -3131,7 +3156,7 @@ mod tests {
     }
 
     /// Сервер с двумя игроками для проверок команд.
-    fn server() -> Shared {
+    pub(super) fn server() -> Shared {
         let shared = Shared::new(
             World::in_memory(),
             crate::world::World::in_memory(),

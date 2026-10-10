@@ -2611,7 +2611,7 @@ fn loot(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             for target in &found {
                 if let Target::Player { uuid, .. } = target {
                     for stack in &stacks {
-                        players.order(uuid, Order::Give { stack: *stack });
+                        players.order(uuid, Order::Pick { stack: *stack });
                     }
                 }
             }

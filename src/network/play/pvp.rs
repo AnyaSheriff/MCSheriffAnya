@@ -321,7 +321,9 @@ pub(super) fn replace_worn(shared: &Shared, player: &mut PlayerState, slot: i32,
                 .world_in(player.dimension)
                 .lock()
                 .expect("мир захвачен другим потоком")
-                .note_sound_player_at((player.x, player.y, player.z), "minecraft:entity.item.break", 0.8, 1.0);
+                // Вики, Entity statuses: 47 — main hand, 48 — offhand,
+                // 49..52 — голова, грудь, ноги, ступни. [проверить] Порядок.
+                .note_equipment_break(player.entity_id, match slot { 5..=8 => (49 + slot - 5) as u8, inventory::OFFHAND => 48, _ => 47 });
         }
     }
 

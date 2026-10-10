@@ -284,6 +284,7 @@ pub(super) struct Net {
     pub killer: &'static str,
     /// Откуда пришёл удар моба или стрелы (только на время `mob_hit`).
     hurt_from: Option<(f64, f64, f64)>,
+    command_origin: Option<crate::combat::DamageOrigin>,
     /// Стрел, застрявших в теле, и тактов до убыли одной.
     arrow_timer: i32,
     /// Свойства и скорость после удара моба уходят на такт позже урона
@@ -368,6 +369,7 @@ impl Net {
             in_water: false,
             killer: "",
             hurt_from: None,
+            command_origin: None,
             arrow_timer: 0,
             hold_meta: false,
             mob_hit_landed: false,
@@ -480,6 +482,15 @@ struct Env {
     soft: bool,
     landing: f32,
     below: i32,
+}
+
+/// Голова под водой: для добычи важны глаза, а не касание ногами воды.
+pub(super) fn eyes_in_water(world: &World, player: &PlayerState) -> bool {
+    let eye = player.y + if player.sneaking { 1.27 } else { 1.62 };
+    let (x, y, z) = (player.x.floor() as i32, eye.floor() as i32, player.z.floor() as i32);
+    fluids::fluid_at(world.get_block(x, y, z)).is_some_and(|(kind, level)| {
+        kind == fluids::Kind::Water && eye < f64::from(y) + fluid_height(world, x, y, z, kind, level)
+    })
 }
 
 /// Высота жидкости в клетке: источник 8/9, течение — по уровню, под такой же
@@ -1060,17 +1071,13 @@ pub(super) fn damage_fields(source: Source, direct: i32, cause: i32) -> (i32, i3
     (source.type_id(), culprit, if direct == 0 { 0 } else { direct + 1 })
 }
 
-async fn send_damage_event(stream: &mut Outgoing<'_>, entity_id: i32, source: Source, direct: i32, cause: i32) -> io::Result<()> {
+pub(super) fn damage_packet(entity_id: i32, source: Source, direct: i32, cause: i32, at: Option<(f64, f64, f64)>) -> Vec<u8> {
     let (type_id, culprit, direct) = damage_fields(source, direct, cause);
     let mut body = encode_varint(DAMAGE_EVENT);
-
-    body.extend_from_slice(&encode_varint(entity_id));
-    body.extend_from_slice(&encode_varint(type_id));
-    body.extend_from_slice(&encode_varint(culprit)); // виновник
-    body.extend_from_slice(&encode_varint(direct)); // прямой виновник
-    body.push(0); // места удара нет
-
-    write_body(stream, body).await
+    for value in [entity_id, type_id, culprit, direct] { body.extend_from_slice(&encode_varint(value)); }
+    body.push(u8::from(at.is_some()));
+    if let Some((x, y, z)) = at { push_f64(&mut body, x); push_f64(&mut body, y); push_f64(&mut body, z); }
+    body
 }
 
 /// Звук в точке: раздел, громкость, высота.
@@ -1746,6 +1753,40 @@ pub(super) async fn mob_hit(
     Ok(())
 }
 
+/// /damage: тот же расчёт защиты и неуязвимости, с явным источником.
+/// [проверить] Отдача и порядок звуков команды относительно обычного удара.
+pub(super) async fn command_hit(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32, source: Source, origin: crate::combat::DamageOrigin) -> io::Result<()> {
+    if player.vit.dead || (matches!(player.game_mode, GAME_MODE_CREATIVE | GAME_MODE_SPECTATOR) && !source.bypasses_invulnerability()) { return Ok(()); }
+    update_equipment(player, *shared.ticks.borrow());
+    let at = origin.at.or(origin.entity_at);
+    if amount > 0.0 && at.is_some() && !crate::combat::bypasses_armor(source)
+        && let Some(hand) = shield_up(player, *shared.ticks.borrow())
+        && at.is_some_and(|at| crate::combat::shield_covers(player.yaw, (player.x, player.z), (at.0, at.2)))
+    {
+        let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+        if let Some(shield) = player.inventory.slot(slot) {
+            super::pvp::wear_slot(shared, player, slot, shield, crate::combat::shield_wear(amount), false);
+        }
+        shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x, player.y, player.z), "minecraft:item.shield.block", 1.0, 1.0);
+        return Ok(());
+    }
+    if source != Source::MobAttack {
+        if !crate::combat::bypasses_armor(source) {
+            super::pvp::wear_armor(shared, player, amount);
+            amount = crate::combat::after_armor_breached(amount, player.attrs.value(crate::attributes::ARMOR) as f32, player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32, 1.0);
+        }
+        let points = crate::combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot)).map(|stack| crate::combat::protection_points(&stack.extras(), source)).sum();
+        amount = crate::combat::after_protection(amount, points);
+    }
+    player.net.hurt_from = at;
+    player.net.command_origin = Some(origin.clone());
+    let killer = origin.player.as_ref().map(|(name, uuid)| Killer { name, uuid: *uuid, weapon: None });
+    let result = hit_by(stream, shared, player, amount, source, origin.direct, origin.cause, killer, None).await;
+    player.net.command_origin = None;
+    player.net.hurt_from = None;
+    result.map(|_| ())
+}
+
 /// Наносит удар прямо сейчас (Damage Event, гибель). Возвращает исход.
 pub(super) async fn hit(
     stream: &mut Outgoing<'_>,
@@ -1834,7 +1875,8 @@ pub(super) async fn hit_by(
         player.progress.took(result.taken - absorbed);
     }
 
-    send_damage_event(stream, player.entity_id, source, direct, cause).await?;
+    let damage_at = player.net.command_origin.as_ref().and_then(|origin| origin.at);
+    write_body(stream, damage_packet(player.entity_id, source, direct, cause, damage_at)).await?;
 
     {
         let (type_id, culprit, direct) = damage_fields(source, direct, cause);
@@ -1842,7 +1884,7 @@ pub(super) async fn hit_by(
         // Остальным о шипах сообщено в такт удара: здесь, в конце такта, их
         // рассылка уже ушла бы на такт позже (чёрный ящик, pvp-thorns).
         if !announced {
-            shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_player_damaged(player.entity_id, type_id, culprit, direct);
+            shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_command_damage(player.entity_id, type_id, culprit, direct, damage_at);
         }
         shared.players.lock().expect("список игроков захвачен другим потоком").set_health(&player.uuid, player.vit.health);
         let mut world = shared.world_in(player.dimension).lock().expect("мир");
@@ -2709,6 +2751,21 @@ mod tests {
         let drink=player.net.eating.as_ref().unwrap();
         assert_eq!(drink.ticks_left,40);assert_eq!(drink.drink,Some(Drink::Honey));
         assert_eq!(Drink::Honey.remainder(),"glass_bottle");
+    }
+
+    #[test]
+    fn command_damage_packet_preserves_direct_cause_and_optional_position() {
+        let body = damage_packet(10, Source::PlayerAttack, 20, 30, Some((1.25, 64.0, -2.5)));
+        let mut cursor = Cursor::new(&body);
+        assert_eq!(cursor.varint(), Some(DAMAGE_EVENT));
+        for value in [10, Source::PlayerAttack.type_id(), 31, 21] { assert_eq!(cursor.varint(), Some(value)); }
+        assert_eq!(cursor.u8(), Some(1));
+        for coordinate in [1.25, 64.0, -2.5] {
+            assert_eq!(f64::from_be_bytes(cursor.bytes(8).unwrap().try_into().unwrap()), coordinate);
+        }
+        assert_eq!(cursor.u8(), None);
+        let body = damage_packet(10, Source::Generic, 0, 0, None);
+        assert_eq!(body.last(), Some(&0));
     }
 
     #[test]
