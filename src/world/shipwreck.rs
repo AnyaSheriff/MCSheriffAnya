@@ -91,12 +91,12 @@ pub fn kind_of(biome: super::terrain::Biome) -> Option<bool> {
 
 /// Корабль области обычного мира.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Ship> {
-    type Starts = Mutex<HashMap<(i64, i32, i32), Option<Ship>>>;
+    type Starts = Mutex<HashMap<(i64, bool, i32, i32), Option<Ship>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), region_x, region_z);
+    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -117,7 +117,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
         // Срединная высота дна (суши у берега) по рамке, через 2 блока.
         for dx in (0..sx).step_by(2) {
             for dz in (0..sz).step_by(2) {
-                let height = terrain.column_in(x + dx, z + dz, None).height;
+                let height = terrain.column_at(x + dx, z + dz).height;
 
                 heights.push(if beached { height.max(super::terrain::SEA) } else { height });
             }
@@ -234,7 +234,7 @@ pub fn treasure_in(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32
         return None;
     }
 
-    let column = terrain.column_in(chunk_x * 16 + 9, chunk_z * 16 + 9, None);
+    let column = terrain.column_at(chunk_x * 16 + 9, chunk_z * 16 + 9);
 
     let depth = TREASURE_DEPTH[(template::roll(terrain.seed(), chunk_x, chunk_z, 0xB0_7EA7) % 3) as usize];
 

@@ -157,12 +157,12 @@ fn near_village(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -
 
 /// Стоит ли аванпост в этой области: чанк старта.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<(i32, i32)> {
-    type Starts = Mutex<HashMap<(i64, i32, i32), Option<(i32, i32)>>>;
+    type Starts = Mutex<HashMap<(i64, bool, i32, i32), Option<(i32, i32)>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), region_x, region_z);
+    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -248,7 +248,7 @@ fn plan(seed: i64, chunk_x: i32, chunk_z: i32, ground: &dyn Fn(i32, i32) -> i32)
     out
 }
 
-type Cache = OnceLock<Mutex<HashMap<(i64, i32, i32), Arc<Vec<Placed>>>>>;
+type Cache = OnceLock<Mutex<HashMap<(i64, bool, i32, i32), Arc<Vec<Placed>>>>>;
 
 /// Раскладка — одна на старт, хранится, пока мир жив.
 fn plan_cached(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Arc<Vec<Placed>> {
@@ -256,14 +256,15 @@ fn plan_cached(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) ->
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), chunk_x, chunk_z);
+    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, chunk_x, chunk_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return found.clone();
     }
 
-    let ground = |x: i32, z: i32| terrain.column_in(x, z, None).height;
+    let source = super::structure_terrain::Ground::new(terrain);
+    let ground = |x: i32, z: i32| source.height(x, z);
     let pieces = Arc::new(plan(terrain.seed(), chunk_x, chunk_z, &ground));
 
     #[cfg(not(seedmap_core))]
@@ -274,12 +275,13 @@ fn plan_cached(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) ->
 /// Старты аванпостов, чьи куски могут достать до чанка.
 fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i32, i32)> {
     let mut out = Vec::new();
+    let reach = REACH + 1;
 
-    for region_x in (chunk_x - REACH).div_euclid(SPACING)..=(chunk_x + REACH).div_euclid(SPACING) {
-        for region_z in (chunk_z - REACH).div_euclid(SPACING)..=(chunk_z + REACH).div_euclid(SPACING) {
+    for region_x in (chunk_x - reach).div_euclid(SPACING)..=(chunk_x + reach).div_euclid(SPACING) {
+        for region_z in (chunk_z - reach).div_euclid(SPACING)..=(chunk_z + reach).div_euclid(SPACING) {
             let (x, z) = attempt(terrain.seed(), region_x, region_z);
 
-            if (x - chunk_x).abs() > REACH || (z - chunk_z).abs() > REACH {
+            if (x - chunk_x).abs() > reach || (z - chunk_z).abs() > reach {
                 continue;
             }
 
@@ -301,6 +303,16 @@ fn mossy(text: &str) -> Option<String> {
     text.starts_with("cobblestone").then(|| format!("mossy_{text}"))
 }
 
+#[cfg(not(seedmap_core))]
+pub(super) fn beards_near(terrain: &super::terrain::Terrain, cx: i32, cz: i32) -> Vec<super::structure_terrain::Beard> {
+    near(terrain, cx, cz).into_iter().flat_map(|(sx, sz)| {
+        plan_cached(terrain, sx, sz).iter().map(|piece| super::structure_terrain::Beard {
+            bounds: piece.bounds, floor: piece.origin.1,
+            ceiling: piece.origin.1 + library().templates[piece.template].height - 1,
+        }).collect::<Vec<_>>()
+    }).collect()
+}
+
 /// Кладёт в сложенный чанк куски ближних аванпостов — после деревьев и
 /// растительности: куски вытесняют траву и листву.
 #[cfg(not(seedmap_core))]
@@ -314,7 +326,9 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
 
     for (start_x, start_z) in near(terrain, chunk_x, chunk_z) {
         let pieces = plan_cached(terrain, start_x, start_z);
-        let dirt = state_of("dirt");
+        let ground = super::structure_terrain::Ground::new(terrain);
+        let beards = super::structure_terrain::near(terrain, chunk_x, chunk_z);
+        let heights: Vec<_> = (0..256).map(|at| super::structure_terrain::height(&ground, x0 + at % 16, z0 + at / 16, &beards)).collect();
 
         for piece in pieces.iter() {
             let b = piece.bounds;
@@ -336,7 +350,11 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
 
                 let (lx, lz) = (x - x0, z - z0);
                 let Cell::Block(index) = cell else {
-                    chunk.put_generated(lx, wy, lz, super::AIR, true);
+                    // Как у деревни: воздух соседнего куска не срезает
+                    // уже рассчитанную опору более высокого пола.
+                    if wy > heights[(lz * 16 + lx) as usize] {
+                        chunk.put_generated(lx, wy, lz, super::AIR, true);
+                    }
                     continue;
                 };
                 let text = super::village::rotate_text(&template.texts[usize::from(index)], piece.turns);
@@ -346,15 +364,6 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
                 };
 
                 chunk.put_generated(lx, wy, lz, state_of(&text), true);
-
-                // Под полом — земля до рельефа.
-                if y == 0 {
-                    let floor = terrain.column_in(x, z, None).height;
-
-                    for fill in floor + 1..wy {
-                        chunk.put_generated(lx, fill, lz, dirt, true);
-                    }
-                }
 
                 if text.starts_with("chest") {
                     let mut dice = crate::loot::Dice::new(template::roll(seed, x, z, 0x0B60 ^ (wy as u64)));
@@ -439,6 +448,34 @@ pub fn nearest(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32, ri
 #[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn outpost_uses_original_ground_and_beard_support() {
+        use super::super::{Chunk, Generator, terrain::{Style, Terrain}};
+        let seed = 1_234_567_890;
+        let terrain = Terrain::new(seed, Style::Vanilla);
+        let (sx, sz) = nearest(&terrain, 0, 0, 12).unwrap();
+        let _ = plan_cached(&Terrain::new(seed, Style::Smooth), sx, sz);
+        let pieces = plan_cached(&terrain, sx, sz);
+        let direct = plan(seed, sx, sz, &|x, z| terrain.column_at(x, z).height);
+        assert_eq!(pieces.iter().map(|p| p.origin).collect::<Vec<_>>(), direct.iter().map(|p| p.origin).collect::<Vec<_>>());
+        let generator = Generator::Normal(Terrain::new(seed, Style::Vanilla));
+        let mut chunks = HashMap::new();
+        let mut supported = 0;
+        for piece in pieces.iter() {
+            for (a, y, b, cell) in library().templates[piece.template].cells() {
+                if y != 0 || !matches!(cell, Cell::Block(_)) { continue; }
+                let (dx, dz) = turn(a, b, piece.turns);
+                let (x, z) = (piece.origin.0 + dx, piece.origin.2 + dz);
+                let (cx, cz) = (x.div_euclid(16), z.div_euclid(16));
+                let chunk = chunks.entry((cx, cz)).or_insert_with(|| Chunk::generated(&generator, cx, cz));
+                assert_ne!(chunk.block(x.rem_euclid(16), piece.origin.1 - 1, z.rem_euclid(16)), super::super::AIR, "outpost {x},{},{z}", piece.origin.1);
+                supported += 1;
+            }
+        }
+        assert!(supported > 50);
+    }
+
     use crate::world::terrain::Biome;
 
     /// Раскладки и образцы: 13 снятых аванпостов, в каждом башня, все куски

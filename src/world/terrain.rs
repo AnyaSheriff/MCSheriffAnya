@@ -574,14 +574,19 @@ impl ReliefGrid {
 
     /// Камень ли в этом месте.
     pub fn solid(&self, x: i32, y: i32, z: i32) -> bool {
+        self.density(x, y, z) > 0.0
+    }
+
+    /// Та же плотность для локальной подгонки рельефа структур.
+    pub(super) fn density(&self, x: i32, y: i32, z: i32) -> f64 {
         if y < self.y0 {
-            return true;
+            return f64::from(self.y0 - y);
         }
 
         let layer = (y - self.y0) / CELL_HEIGHT;
 
         if layer >= self.layers - 1 {
-            return false;
+            return -f64::from(y - self.y0 - (self.layers - 1) * CELL_HEIGHT + 1);
         }
 
         let (cx, cz) = ((x - self.x0) / CELL_WIDTH, (z - self.z0) / CELL_WIDTH);
@@ -603,7 +608,7 @@ impl ReliefGrid {
             tz,
         );
 
-        lerp(bottom, top, ty) > 0.0
+        lerp(bottom, top, ty)
     }
 
     /// Высота верхнего камня в столбце.
@@ -2715,7 +2720,7 @@ impl Terrain {
     /// `None` — значит, дальше идёт камень. Пятна (подзол, лёд, кальцит,
     /// дно рек) решает мелкий шум по месту, полосы терракоты — высота.
     #[cfg(not(seedmap_core))]
-    fn surface(&self, column: &Column, x: i32, y: i32, z: i32, depth: i32) -> Option<&'static str> {
+    pub(super) fn surface(&self, column: &Column, x: i32, y: i32, z: i32, depth: i32) -> Option<&'static str> {
         let biome = column.biome;
         let height = column.height;
         let under_water = height < SEA;

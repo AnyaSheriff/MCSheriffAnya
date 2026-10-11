@@ -206,12 +206,12 @@ fn floor_height(height: &dyn Fn(i32, i32) -> i32, chunk_x: i32, chunk_z: i32, ro
 
 /// Особняк области обычного мира.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Mansion> {
-    type Starts = Mutex<HashMap<(i64, i32, i32), Option<Mansion>>>;
+    type Starts = Mutex<HashMap<(i64, bool, i32, i32), Option<Mansion>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), region_x, region_z);
+    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -221,7 +221,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     let seed = terrain.seed();
     let (chunk_x, chunk_z) = attempt(seed, region_x, region_z);
     let found = biome_fits(terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None).biome)
-        .then(|| place(seed, chunk_x, chunk_z, &|x, z| terrain.column_in(x, z, None).height));
+        .then(|| place(seed, chunk_x, chunk_z, &|x, z| terrain.column_at(x, z).height));
 
     #[cfg(not(seedmap_core))]
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, found);

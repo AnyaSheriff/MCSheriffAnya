@@ -231,12 +231,12 @@ impl Start {
 
 /// Стоит ли постройка вида в области.
 pub fn start_in(kind: Kind, terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Start> {
-    type Starts = Mutex<HashMap<(Kind, i64, i32, i32), Option<Start>>>;
+    type Starts = Mutex<HashMap<(Kind, i64, bool, i32, i32), Option<Start>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (kind, terrain.seed(), region_x, region_z);
+    let key = (kind, terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -270,11 +270,12 @@ fn decide(kind: Kind, terrain: &super::terrain::Terrain, region_x: i32, region_z
     // Рельеф вокруг рамки (кольцо в двух клетках, шаг 2): у хижины вода —
     // тоже поверхность.
     let mut heights = Vec::new();
+    let ground = super::structure_terrain::Ground::new(terrain);
 
     for x in (x0 - 2..=x1 + 2).step_by(2) {
         for z in (z0 - 2..=z1 + 2).step_by(2) {
             if x < x0 || x > x1 || z < z0 || z > z1 {
-                heights.push(terrain.column_in(x, z, None).height.max(super::terrain::SEA));
+                heights.push(ground.height(x, z).max(super::terrain::SEA));
             }
         }
     }
@@ -414,7 +415,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
                 if let Some(fill) = fill {
                     let mut y = start.y + template.low - 1;
 
-                    while y > super::MIN_Y && !solid(chunk.block(lx, y, lz)) && start.y + template.low - y < 48 {
+                    while y > super::MIN_Y && !solid(chunk.block(lx, y, lz)) && (start.kind == Kind::SwampHut || start.y + template.low - y < 48) {
                         chunk.put_generated(lx, y, lz, fill, true);
                         y -= 1;
                     }
@@ -506,7 +507,7 @@ pub fn igloo_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     let (sx, sz) = if rot.is_multiple_of(2) { (top.width, top.depth) } else { (top.depth, top.width) };
     let (x0, z0) = (chunk.0 * 16 + ((more >> 8) % 9) as i32, chunk.1 * 16 + ((more >> 16) % 9) as i32);
     let (x1, z1) = (x0 + sx - 1, z0 + sz - 1);
-    let column = terrain.column_in((x0 + x1) / 2, (z0 + z1) / 2, None);
+    let column = terrain.column_at((x0 + x1) / 2, (z0 + z1) / 2);
 
     if !matches!(column.biome, Biome::SnowyTaiga | Biome::SnowyPlains | Biome::SnowySlopes) {
         return None;
@@ -738,6 +739,50 @@ pub fn nearest(kind: Kind, terrain: &super::terrain::Terrain, chunk_x: i32, chun
 #[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reported_swamp_hut_uses_actual_swamp_surface() {
+        use super::super::{Chunk, Generator, terrain::{Style, Terrain, SEA}};
+        let seed = 1_791_716_133_710_533_940;
+        let terrain = Terrain::new(seed, Style::Vanilla);
+        let smooth = Terrain::new(seed, Style::Smooth);
+        // Кэш двух типов мира с одинаковым семенем не должен смешиваться.
+        let _ = start_in(Kind::SwampHut, &smooth, -1, 0);
+        let start = start_in(Kind::SwampHut, &terrain, -1, 0).unwrap();
+        let [x0, z0, x1, z1] = start.area();
+        assert!((x0 + 176).abs() < 32 && (z0 - 340).abs() < 32, "{start:?}");
+        assert!((63..=66).contains(&start.y), "base {}", start.y);
+        let wrong = terrain.column_in((x0 + x1) / 2, (z0 + z1) / 2, None).height;
+        assert!(wrong - start.y >= 10, "old {wrong} / new {}", start.y);
+        assert_eq!(decide(Kind::SwampHut, &terrain, -1, 0).unwrap().y, start.y);
+        let generator = Generator::Normal(Terrain::new(seed, Style::Vanilla));
+        let mut legs = 0;
+        let mut floor = 0;
+        for cx in x0.div_euclid(16)..=x1.div_euclid(16) {
+            for cz in z0.div_euclid(16)..=z1.div_euclid(16) {
+                let chunk = Chunk::generated(&generator, cx, cz);
+                for x in x0.max(cx * 16)..=x1.min(cx * 16 + 15) {
+                    for z in z0.max(cz * 16)..=z1.min(cz * 16 + 15) {
+                        let ground = terrain.column_at(x, z).height;
+                        let block = |y| blocks::block_at_state(chunk.block(x - cx * 16, y, z - cz * 16));
+                        if block(start.y + 1) == Some("spruce_planks") {
+                            floor += 1;
+                            assert!((1..=4).contains(&(start.y + 1 - ground.max(SEA))));
+                        }
+                        if block(start.y) == Some("oak_log") {
+                            legs += 1;
+                            for y in ground + 1..=start.y { assert_eq!(block(y), Some("oak_log")); }
+                            assert!(solid(chunk.block(x - cx * 16, ground, z - cz * 16)));
+                        }
+                    }
+                }
+            }
+        }
+        println!("hut base {}, old height {wrong}, legs {legs}, floor {floor}", start.y);
+        assert_eq!(legs, 4);
+        assert!(floor > 20);
+    }
+
 
     /// Образцы разобраны, все блоки палитр есть в нашей таблице.
     #[test]

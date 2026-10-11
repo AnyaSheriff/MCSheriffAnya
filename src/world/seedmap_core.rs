@@ -8,6 +8,7 @@ pub mod nether;
 pub mod the_end;
 #[path = "village.rs"]
 pub mod village;
+mod structure_terrain;
 #[path = "pillager_outpost.rs"]
 pub mod pillager_outpost;
 #[path = "temples.rs"]

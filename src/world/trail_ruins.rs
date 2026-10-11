@@ -132,12 +132,12 @@ fn turned_box(library: &Library, entry: &Entry, turns: u8) -> ((i32, i32), (i32,
 }
 
 pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Arc<Site>> {
-    type Sites = Mutex<HashMap<(i64, i32, i32), Option<Arc<Site>>>>;
+    type Sites = Mutex<HashMap<(i64, bool, i32, i32), Option<Arc<Site>>>>;
     static CACHE: OnceLock<Sites> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), region_x, region_z);
+    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -155,7 +155,7 @@ pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) 
         // Башня — первый кусок раскладки, её угол — угол чанка старта.
         let (tower_low, tower_size) = turned_box(library, &layout[0], turns);
         let shift = (x - tower_low.0, z - tower_low.1);
-        let ground = terrain.column_in(x + tower_size.0 / 2, z + tower_size.1 / 2, None).height;
+        let ground = terrain.column_at(x + tower_size.0 / 2, z + tower_size.1 / 2).height;
         let base = ground - BURIED - layout[0].offset.1;
         let pieces = layout
             .iter()

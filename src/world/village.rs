@@ -15,11 +15,12 @@
 // колокол) у неё тот же, что у деревень оригинала. Собирать раскладку
 // заново по стыкам, как оригинал, — следующий шаг [проверить].
 //
-// Рельеф: куски rigid (дома, колодец, фонари) встают на землю — высоту
-// берут как медиану земли вокруг рамки плюс снятая у оригинала разница;
-// под их полом пустота засыпается землёй до рельефа [проверить: оригинал
-// подгоняет рельеф под куски сам]. Куски terrain_matching (улицы) ложатся
-// на рельеф по столбцам: нижний слой образца заменяет верх земли.
+// Рельеф: terrain_matching следует каждому столбцу исходной плотности.
+// Rigid-дома привязаны к улице у входа; вокруг рамок structure_terrain
+// добавляет плотность снизу и убирает её внутри (вики, Structure definition:
+// «beard_thin»), со спадом наружу, без вертикальных земляных столбов.
+// В снятых раскладках нет jigsaw-стыков: ближайшая улица к двери —
+// приближение стыка [проверить], служебные куски сохраняют снятое смещение.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -289,7 +290,7 @@ fn library(kind: Kind) -> Option<&'static Library> {
 
 /// Поставленный кусок: образец, поворот, начало в мире (y — низ у rigid),
 /// рамка x0, z0, x1, z1.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Placed {
     template: usize,
     turns: u8,
@@ -308,8 +309,8 @@ fn turn(a: i32, b: i32, turns: u8) -> (i32, i32) {
 }
 
 /// Раскладка деревни со стартом в этом чанке: раскладка оригинала по
-/// случаю, повёрнутая на случайную четверть; высоты rigid-кусков — от
-/// земли `ground(x, z)`.
+/// случаю, повёрнутая на случайную четверть; дома — от улицы у двери,
+/// прочие rigid-куски — от земли `ground(x, z)` со снятым смещением.
 pub fn plan(seed: i64, kind: Kind, chunk_x: i32, chunk_z: i32, ground: &dyn Fn(i32, i32) -> i32) -> Vec<Placed> {
     let Some(library) = library(kind) else {
         return Vec::new();
@@ -363,10 +364,63 @@ pub fn plan(seed: i64, kind: Kind, chunk_x: i32, chunk_z: i32, ground: &dyn Fn(i
         out.push(Placed { template: entry.template, turns, origin: (ax, y, az), bounds });
     }
 
+    // Вики, Jigsaw structure: «moved vertically to align with the terrain».
+    // Высота дороги в точке примыкания, а не медиана рамки дома.
+    // Координаты стыков не сняты: ищем дорогу у нижней половины двери
+    // [проверить]. Обход и разрешение равных расстояний фиксированы.
+    let mut roads = Vec::new();
+    for piece in &out {
+        if piece.template == HAY_PILE { continue; }
+        let template = &library.templates[piece.template];
+        if template.rigid { continue; }
+        for b in 0..template.length {
+            for a in 0..template.width {
+                for y in 0..template.height {
+                    if let Cell::Block(index) = template.cell(a, y, b) {
+                        let name = blocks::block_at_state(template.states[0][index as usize]).unwrap_or("");
+                        if matches!(name, "dirt_path" | "smooth_sandstone") || name.ends_with("_planks") || name.ends_with("_stairs") {
+                            let (dx, dz) = turn(a, b, piece.turns);
+                            roads.push((piece.origin.0 + dx, piece.origin.2 + dz, y));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for piece in &mut out {
+        if piece.template == HAY_PILE { continue; }
+        let template = &library.templates[piece.template];
+        if !template.rigid || !template.key.contains("/houses/") { continue; }
+        let mut attachment = None;
+        for y in 1..template.height {
+            for b in 0..template.length {
+                for a in 0..template.width {
+                    let Cell::Block(index) = template.cell(a, y, b) else { continue };
+                    let name = blocks::block_at_state(template.states[0][index as usize]).unwrap_or("");
+                    if !name.ends_with("_door") { continue; }
+                    // Верхняя половина той же двери не задаёт высоту пола.
+                    if let Cell::Block(below) = template.cell(a, y - 1, b)
+                        && blocks::block_at_state(template.states[0][below as usize]) == Some(name) { continue; }
+                    let (dx, dz) = turn(a, b, piece.turns);
+                    let (x, z) = (piece.origin.0 + dx, piece.origin.2 + dz);
+                    for &(rx, rz, ry) in &roads {
+                        let distance = (rx - x).pow(2) + (rz - z).pow(2);
+                        let candidate = (distance, rx, rz, ry, y);
+                        if attachment.is_none_or(|old| candidate < old) { attachment = Some(candidate); }
+                    }
+                }
+            }
+        }
+        if let Some((_, x, z, road_y, door_y)) = attachment {
+            piece.origin.1 = ground(x, z) + road_y - (door_y - 1);
+        }
+    }
+
     out
 }
 
-/// Что поставить: блок в мире или «засыпать столбец землёй до рельефа».
+/// Блок образца в мировых координатах.
 pub enum Put {
     Block(i32, i32, i32, i32),
 }
@@ -378,7 +432,6 @@ pub fn paint(kind: Kind, pieces: &[Placed], chunk: [i32; 4], ground: &dyn Fn(i32
     let Some(library) = library(kind) else {
         return;
     };
-    let dirt = blocks::state_from_text("dirt").unwrap_or(super::AIR);
 
     for piece in pieces {
         let b = &piece.bounds;
@@ -420,6 +473,9 @@ pub fn paint(kind: Kind, pieces: &[Placed], chunk: [i32; 4], ground: &dyn Fn(i32
         }
 
         let template = &library.templates[piece.template];
+        // Пустые рамки появления мобов (desert/camel_spawn) не являются
+        // домами: снятый в них воздух не должен вырезать пол места сбора.
+        if !template.cells.iter().any(|cell| matches!(cell, Cell::Block(_))) { continue; }
         let states = &template.states[piece.turns as usize];
 
         for bb in 0..template.length {
@@ -431,24 +487,21 @@ pub fn paint(kind: Kind, pieces: &[Placed], chunk: [i32; 4], ground: &dyn Fn(i32
                     continue;
                 }
 
-                let base = if template.rigid { piece.origin.1 } else { ground(x, z) };
+                let surface = ground(x, z);
+                let base = if template.rigid { piece.origin.1 } else { surface };
 
                 for y in 0..template.height {
                     match template.cell(a, y, bb) {
                         Cell::Keep => {}
+                        // Воздух низкого куска не вырезает бороду под
+                        // соседним высоким полом при пересечении рамок.
+                        Cell::Air if template.rigid && base + y <= surface => {}
                         Cell::Air => put(Put::Block(x, base + y, z, super::AIR)),
                         Cell::Block(index) => put(Put::Block(x, base + y, z, states[index as usize])),
                     }
                 }
 
-                // Под полом rigid-куска — земля до рельефа.
-                if template.rigid && matches!(template.cell(a, 0, bb), Cell::Block(_)) {
-                    let floor = ground(x, z);
 
-                    for y in floor + 1..base {
-                        put(Put::Block(x, y, z, dirt));
-                    }
-                }
             }
         }
     }
@@ -458,15 +511,16 @@ type Cache<K, V> = OnceLock<Mutex<HashMap<K, Arc<V>>>>;
 
 /// Раскладка деревни — одна на старт, хранится, пока мир жив.
 fn plan_cached(terrain: &super::terrain::Terrain, kind: Kind, chunk_x: i32, chunk_z: i32) -> Arc<Vec<Placed>> {
-    static CACHE: Cache<(i64, i32, i32), Vec<Placed>> = OnceLock::new();
+    static CACHE: Cache<(i64, bool, Kind, i32, i32), Vec<Placed>> = OnceLock::new();
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-    let key = (terrain.seed(), chunk_x, chunk_z);
+    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, kind, chunk_x, chunk_z);
 
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return found.clone();
     }
 
-    let ground = |x: i32, z: i32| terrain.column_in(x, z, None).height;
+    let source = super::structure_terrain::Ground::new(terrain);
+    let ground = |x: i32, z: i32| source.supported_height(x, z);
     let pieces = Arc::new(plan(terrain.seed(), kind, chunk_x, chunk_z, &ground));
 
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, pieces.clone());
@@ -476,12 +530,13 @@ fn plan_cached(terrain: &super::terrain::Terrain, kind: Kind, chunk_x: i32, chun
 /// Старты деревень, чьи куски могут достать до этого чанка.
 fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i32, i32, Kind)> {
     let mut out = Vec::new();
+    let reach = RADIUS_CHUNKS + 1;
 
-    for region_x in (chunk_x - RADIUS_CHUNKS).div_euclid(SPACING)..=(chunk_x + RADIUS_CHUNKS).div_euclid(SPACING) {
-        for region_z in (chunk_z - RADIUS_CHUNKS).div_euclid(SPACING)..=(chunk_z + RADIUS_CHUNKS).div_euclid(SPACING) {
+    for region_x in (chunk_x - reach).div_euclid(SPACING)..=(chunk_x + reach).div_euclid(SPACING) {
+        for region_z in (chunk_z - reach).div_euclid(SPACING)..=(chunk_z + reach).div_euclid(SPACING) {
             let (x, z) = attempt(terrain.seed(), region_x, region_z);
 
-            if (x - chunk_x).abs() > RADIUS_CHUNKS || (z - chunk_z).abs() > RADIUS_CHUNKS {
+            if (x - chunk_x).abs() > reach || (z - chunk_z).abs() > reach {
                 continue;
             }
 
@@ -491,6 +546,22 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i
         }
     }
 
+    out
+}
+
+#[cfg(not(seedmap_core))]
+pub(super) fn beards_near(terrain: &super::terrain::Terrain, cx: i32, cz: i32) -> Vec<super::structure_terrain::Beard> {
+    let mut out = Vec::new();
+    for (sx, sz, kind) in near(terrain, cx, cz) {
+        let library = library(kind).expect("библиотека старта");
+        for piece in plan_cached(terrain, kind, sx, sz).iter() {
+            if piece.template == HAY_PILE { continue; }
+            let template = &library.templates[piece.template];
+            if template.rigid && template.cells.iter().any(|cell| matches!(cell, Cell::Block(_))) {
+                out.push(super::structure_terrain::Beard { bounds: piece.bounds, floor: piece.origin.1, ceiling: piece.origin.1 + template.height - 1 });
+            }
+        }
+    }
     out
 }
 
@@ -505,15 +576,9 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
 
     for (start_x, start_z, kind) in near(terrain, chunk_x, chunk_z) {
         let pieces = plan_cached(terrain, kind, start_x, start_z);
-        // Внутри чанка земля — по его же блокам (верх рельефа, без травы).
-        let heights: Vec<i32> = (0..256).map(|at| terrain.column_in(x0 + at % 16, z0 + at / 16, None).height).collect();
-        let ground = |x: i32, z: i32| {
-            if (x0..x0 + 16).contains(&x) && (z0..z0 + 16).contains(&z) {
-                heights[((z - z0) * 16 + (x - x0)) as usize]
-            } else {
-                terrain.column_in(x, z, None).height
-            }
-        };
+        let source = super::structure_terrain::Ground::new(terrain);
+        let beards = super::structure_terrain::near(terrain, chunk_x, chunk_z);
+        let ground = |x: i32, z: i32| super::structure_terrain::street_height(&source, x, z, &beards);
 
         paint(kind, &pieces, [x0, z0, x0 + 15, z0 + 15], &ground, &mut |Put::Block(x, y, z, state)| {
             chunk.put_generated(x - x0, y, z - z0, state, true);
@@ -555,8 +620,37 @@ pub fn nearest(terrain: &super::terrain::Terrain, kind: Kind, chunk_x: i32, chun
 }
 
 #[cfg(all(test, not(seedmap_core)))]
+#[path = "village_ground_tests.rs"]
+mod ground_tests;
+
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reported_village_streets_have_ground() {
+        use super::super::{Chunk, Generator, terrain::{Style, Terrain}};
+        let generator = Generator::Normal(Terrain::new(1_791_716_133_710_533_940, Style::Vanilla));
+        let mut streets = 0;
+        for cx in -12..=-9 {
+            for cz in 4..=7 {
+                let chunk = Chunk::generated(&generator, cx, cz);
+                for x in 0..16 {
+                    for z in 0..16 {
+                        for y in 50..120 {
+                            if blocks::block_at_state(chunk.block(x, y, z)) == Some("dirt_path") {
+                                streets += 1;
+                                let under = blocks::block_at_state(chunk.block(x, y - 1, z));
+                                assert!(matches!(under, Some("dirt" | "grass_block" | "stone" | "sand" | "sandstone")),
+                                    "street ({}, {}, {}) above {:?}", cx * 16 + x, y, cz * 16 + z, under);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assert!(streets > 100, "streets: {streets}");
+    }
 
     /// Поворот состояний: по часовой north → east, ось x ↔ z, у знамени
     /// rotation +4.

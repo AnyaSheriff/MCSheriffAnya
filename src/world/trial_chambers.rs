@@ -220,12 +220,12 @@ fn pick(seed: i64, chunk_x: i32, chunk_z: i32) -> (usize, u8, i32) {
 
 /// Стоит ли камера в этой области: чанк старта.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<(i32, i32)> {
-    type Starts = Mutex<HashMap<(i64, i32, i32), Option<(i32, i32)>>>;
+    type Starts = Mutex<HashMap<(i64, bool, i32, i32), Option<(i32, i32)>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), region_x, region_z);
+    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -234,7 +234,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
 
     let (chunk_x, chunk_z) = attempt(terrain.seed(), region_x, region_z);
     let (_, _, start_y) = pick(terrain.seed(), chunk_x, chunk_z);
-    let column = terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None);
+    let column = terrain.column_at(chunk_x * 16 + 8, chunk_z * 16 + 8);
     // Глубокая тьма в начале — камеры нет (вики: «except the deep dark»).
     let dark = super::cave_biomes::biome_at(&column, start_y).is_some_and(|biome| biome == super::terrain::Biome::DeepDark);
     let found = (!dark && !library().is_empty()).then_some((chunk_x, chunk_z));

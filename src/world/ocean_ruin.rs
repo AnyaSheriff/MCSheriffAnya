@@ -93,12 +93,12 @@ fn kinds(warm: bool, big: bool) -> Vec<usize> {
 
 /// Руины области обычного мира.
 pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Arc<Site>> {
-    type Sites = Mutex<HashMap<(i64, i32, i32), Option<Arc<Site>>>>;
+    type Sites = Mutex<HashMap<(i64, bool, i32, i32), Option<Arc<Site>>>>;
     static CACHE: OnceLock<Sites> = OnceLock::new();
     #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), region_x, region_z);
+    let key = (terrain.seed(), terrain.style() == super::terrain::Style::Vanilla, region_x, region_z);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -114,7 +114,7 @@ pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) 
 
 /// Высота дна под рамкой: срединный верх дна по рамке.
 fn floor(terrain: &super::terrain::Terrain, x: i32, z: i32, sx: i32, sz: i32) -> i32 {
-    let mut heights: Vec<i32> = [(0, 0), (sx - 1, 0), (0, sz - 1), (sx - 1, sz - 1), (sx / 2, sz / 2)].iter().map(|&(dx, dz)| terrain.column_in(x + dx, z + dz, None).height).collect();
+    let mut heights: Vec<i32> = [(0, 0), (sx - 1, 0), (0, sz - 1), (sx - 1, sz - 1), (sx / 2, sz / 2)].iter().map(|&(dx, dz)| terrain.column_at(x + dx, z + dz).height).collect();
 
     heights.sort_unstable();
     heights[heights.len() / 2]

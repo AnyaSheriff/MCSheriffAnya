@@ -23,7 +23,7 @@ pub fn start_at(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -
         return None;
     }
 
-    let column = terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None);
+    let column = terrain.column_at(chunk_x * 16 + 8, chunk_z * 16 + 8);
 
     // Глубокая тьма — пещерный биом: у оригинала проверка у старта в
     // толще [проверить: на какой высоте]; у нас — под серединой на y −40.

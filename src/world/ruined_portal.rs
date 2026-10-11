@@ -210,7 +210,7 @@ fn height_for(vertical: Vertical, top: i32, height: i32, dice: u64) -> i32 {
     }
 }
 
-type Starts = Mutex<HashMap<(i64, i32, i32, bool), Option<Portal>>>;
+type Starts = Mutex<HashMap<(i64, i32, i32, bool, bool), Option<Portal>>>;
 
 fn cache() -> &'static Starts {
     static CACHE: OnceLock<Starts> = OnceLock::new();
@@ -221,7 +221,7 @@ fn cache() -> &'static Starts {
 /// Портал области обычного мира.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Portal> {
     #[cfg(not(seedmap_core))]
-    let key = (terrain.seed(), region_x, region_z, false);
+    let key = (terrain.seed(), region_x, region_z, false, terrain.style() == super::terrain::Style::Vanilla);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache().lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
@@ -229,7 +229,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     }
 
     let found = decide(terrain.seed(), region_x, region_z, &|x, z| terrain.column_in(x, z, None).biome, &|x, z, floor| {
-        let height = terrain.column_in(x, z, None).height;
+        let height = terrain.column_at(x, z).height;
 
         if floor { height } else { height.max(super::terrain::SEA) }
     });
@@ -242,7 +242,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
 /// Портал области Незера.
 pub fn start_in_nether(nether: &super::nether::Nether, region_x: i32, region_z: i32) -> Option<Portal> {
     #[cfg(not(seedmap_core))]
-    let key = (nether.seed(), region_x, region_z, true);
+    let key = (nether.seed(), region_x, region_z, true, false);
 
     #[cfg(not(seedmap_core))]
     if let Some(found) = cache().lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {

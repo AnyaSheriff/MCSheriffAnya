@@ -34,6 +34,7 @@ pub mod nether_fortress;
 pub mod end_city;
 pub mod stronghold;
 pub mod village;
+mod structure_terrain;
 pub mod monument;
 pub mod trial_chambers;
 pub mod ancient_city;
@@ -710,6 +711,7 @@ impl Chunk {
         trail_ruins::build(generator, &mut chunk, chunk_x, chunk_z);
         generator.grow_trees(&mut chunk, chunk_x, chunk_z, &columns);
         vegetation::decorate(generator, &mut chunk, chunk_x, chunk_z, &columns);
+        structure_terrain::build(generator, &mut chunk, chunk_x, chunk_z);
         village::build(generator, &mut chunk, chunk_x, chunk_z);
         // Лесные особняки — после деревьев: воздух комнат вырезает деревья
         // в рамке, фундамент заливает стволы под полом (mansion.rs).
