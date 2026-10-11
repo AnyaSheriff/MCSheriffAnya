@@ -1,0 +1,114 @@
+{
+ "name": "place-facing-pink-petals",
+ "about": "pink_petals: робот в середине ставит по два на землю к северу, югу, западу и востоку от себя — куда смотрит первый сегмент (facing) и как растёт второй.",
+ "blocks": [
+  {
+   "at": [
+    5,
+    -1,
+    3
+   ],
+   "state": "minecraft:grass_block"
+  },
+  {
+   "at": [
+    5,
+    -1,
+    7
+   ],
+   "state": "minecraft:grass_block"
+  },
+  {
+   "at": [
+    3,
+    -1,
+    5
+   ],
+   "state": "minecraft:grass_block"
+  },
+  {
+   "at": [
+    7,
+    -1,
+    5
+   ],
+   "state": "minecraft:grass_block"
+  }
+ ],
+ "setup": [
+  "clear $(bot)",
+  "gamemode survival $(bot)",
+  "give $(bot) minecraft:pink_petals 16",
+  "tp $(bot) $(5.5,0,5.5) 0 30",
+  "!stopfly",
+  "!hotbar 0",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    5,
+    -1,
+    3
+   ]
+  },
+  {
+   "after": 10,
+   "click": [
+    5,
+    -1,
+    3
+   ]
+  },
+  {
+   "after": 20,
+   "click": [
+    5,
+    -1,
+    7
+   ]
+  },
+  {
+   "after": 30,
+   "click": [
+    5,
+    -1,
+    7
+   ]
+  },
+  {
+   "after": 40,
+   "click": [
+    3,
+    -1,
+    5
+   ]
+  },
+  {
+   "after": 50,
+   "click": [
+    3,
+    -1,
+    5
+   ]
+  },
+  {
+   "after": 60,
+   "click": [
+    7,
+    -1,
+    5
+   ]
+  },
+  {
+   "after": 70,
+   "click": [
+    7,
+    -1,
+    5
+   ]
+  }
+ ],
+ "record_ticks": 100
+}

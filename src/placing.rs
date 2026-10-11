@@ -579,6 +579,13 @@ pub fn state_for(orientation: &Orientation, click: &Click) -> Option<i32> {
             orientation.state(&[("shape", shape)])
         }
 
+        // Лепестки, полевые цветы и сухие листья: первый сегмент смотрит на
+        // игрока — поворот обратный взгляду (чёрный ящик, place-facing-*:
+        // взгляд на север — facing=south).
+        Family::Other if matches!(orientation.name, "pink_petals" | "wildflowers" | "leaf_litter") => {
+            orientation.state(&[("facing", opposite_direction(direction_from_yaw(click.yaw)))])
+        }
+
         // Правило не выяснено — состояние по умолчанию.
         Family::Other => None,
     }
@@ -1172,6 +1179,25 @@ mod tests {
     fn property(block: &str, state: i32, name: &str) -> &'static str {
         let orientation = blocks::orientation(block).expect("правило установки");
         orientation.value(state, name).expect("свойство есть")
+    }
+
+    /// Лепестки, полевые цветы и сухие листья ставятся лицом к игроку, второй
+    /// сегмент поворот не меняет (чёрный ящик, place-facing-*).
+    #[test]
+    fn flat_flowers_face_the_player() {
+        for (name, amount) in [("pink_petals", "flower_amount"), ("wildflowers", "flower_amount"), ("leaf_litter", "segment_amount")] {
+            for (yaw, facing) in [(180.0, "south"), (0.0, "north"), (90.0, "east"), (270.0, "west")] {
+                let mut w = World::in_memory();
+                w.set_block_silently(0, 9, 0, blocks::state_by_name("grass_block").unwrap());
+                let base = blocks::state_by_name(name).unwrap();
+                let click = click(1, 1.0, yaw);
+                assert_eq!(place(&mut w, name, base, (0, 9, 0), &click, (3.0, 10.0, 3.0)), Placement::Placed, "{name}");
+                assert_eq!(property(name, w.get_block(0, 10, 0), "facing"), facing, "{name} yaw {yaw}");
+                assert_eq!(place(&mut w, name, base, (0, 9, 0), &click, (3.0, 10.0, 3.0)), Placement::Placed, "{name}");
+                let here = w.get_block(0, 10, 0);
+                assert_eq!((property(name, here, "facing"), property(name, here, amount)), (facing, "2"), "{name}");
+            }
+        }
     }
 
     /// Бревно ложится поперёк грани: щелчок по боку кладёт его набок, щелчок
