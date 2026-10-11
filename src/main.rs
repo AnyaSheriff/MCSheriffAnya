@@ -94,6 +94,7 @@ mod chat;
 mod ops;
 mod players;
 mod shared;
+mod sessions;
 mod log;
 mod commands;
 mod command_block;
@@ -133,7 +134,7 @@ use network::login::{
     format_uuid, offline_uuid, read_login_start, send_login_disconnect, send_login_disconnect_json, send_login_success,
     valid_name,
 };
-use network::play::{play_session, player_left};
+use network::play::play_session;
 use network::status::handle_status;
 use shared::Shared;
 use world::World;
@@ -603,7 +604,8 @@ async fn handle_connection(
                 .lock()
                 .expect("список игроков захвачен другим потоком")
                 .online();
-            if online >= properties.max_players.max(0) as usize {
+            if online >= properties.max_players.max(0) as usize
+                && !shared.players.lock().expect("список игроков").name_taken(&login.username) {
                 log_info!("{} не пущен: сервер полон", login.username);
                 send_login_disconnect(&mut socket, "Сервер полон").await?;
                 return Ok(());
@@ -614,32 +616,6 @@ async fn handle_connection(
             let came_from = addr.to_string();
             let came_to = format!("{}:{}", handshake.server_address, handshake.server_port);
 
-            // Двух игроков с одним ником на сервере быть не должно: их не
-            // отличить ни в чате, ни в списке. Второго не пускаем сразу — так
-            // он хотя бы увидит причину, а не молчаливый обрыв связи.
-            //
-            // Проверка здесь не последняя: между ней и появлением игрока
-            // в мире идёт обмен с клиентом, и за это время ник мог занять
-            // кто-то другой. Окончательно решает список игроков — он и
-            // отказывает, если ник всё-таки заняли.
-            let taken = shared
-                .players
-                .lock()
-                .expect("список игроков захвачен другим потоком")
-                .name_taken(&login.username);
-
-            if taken {
-                log_info!("{} не пущен: ник уже занят", login.username);
-                send_login_disconnect(
-                    &mut socket,
-                    &format!("Игрок с ником {} уже на сервере", login.username),
-                )
-                .await?;
-
-                return Ok(());
-            }
-
-            commands_admin::note_address(&login.uuid, addr.ip());
             // Сжатие включается до Login Success: он уже идёт в новом виде.
             network::login::send_set_compression(&mut socket).await?;
             send_login_success(&mut socket, &login.username, &login.uuid).await?;
@@ -696,14 +672,6 @@ async fn handle_connection(
                     (&came_from, &came_to),
                 )
                 .await;
-
-                // Игрока убираем из списка, только если он в него попал.
-                // Отказанному убирать нечего, а по опознавателю он совпадает
-                // с тем, кто уже играет под тем же ником, — и убрал бы его.
-                if matches!(entered, Ok(true)) {
-                    player_left(&shared, &login.username, &login.uuid);
-                    log_debug!("Play: игрок {} вышел", login.username);
-                }
 
                 entered?;
             }

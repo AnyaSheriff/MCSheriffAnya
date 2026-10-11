@@ -47,6 +47,9 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_
 [workspace]
 members = ["tools/seedmap"]
 
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(seedmap_core)'] }
 

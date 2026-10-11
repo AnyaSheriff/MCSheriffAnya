@@ -315,6 +315,7 @@ pub struct Players {
 
     /// Поручения подключениям: кого выгнать, кого перенести.
     orders: HashMap<[u8; 16], Vec<Order>>,
+    connections: HashMap<[u8; 16], crate::sessions::Control>,
 
     /// Броня, вторая рука и бой игроков (`Gear`).
     gear: HashMap<[u8; 16], Gear>,
@@ -346,6 +347,7 @@ impl Players {
             published: Vec::new(),
             changes: Journal::new(),
             orders: HashMap::new(),
+            connections: HashMap::new(),
             gear: HashMap::new(),
             rest: HashMap::new(),
             swung: HashMap::new(),
@@ -417,6 +419,7 @@ impl Players {
 
         self.members.retain(|member| &member.uuid != uuid);
         self.orders.remove(uuid);
+        self.connections.remove(uuid);
         self.gear.remove(uuid);
         self.shoulders.remove(uuid);
         self.rest.remove(uuid);
@@ -691,16 +694,31 @@ impl Players {
             return;
         }
 
-        // Будить сразу — только перенос в своём измерении: смену измерения
-        // (порталы) оригинал делает на ходу игрока в такте, пакеты идут в конце
-        // такта (чёрный ящик, end-portal-enter: Respawn на +1).
-        let wake = matches!(order, Order::Teleport { .. });
+        // Kick прерывает и запись в сокет. Перенос будит чтение; смена
+        // измерения остаётся в такте (чёрный ящик, end-portal-enter: Respawn на +1).
+        if let Some(connection) = self.connections.get(uuid) {
+            let reason = match &order {
+                Order::Kick { reason } => Some(crate::sessions::Disconnect {
+                    component: crate::network::nbt::text_component(reason), plain: reason.clone(),
+                }),
+                Order::KickText { component, plain } => Some(crate::sessions::Disconnect {
+                    component: component.clone(), plain: plain.clone(),
+                }),
+                _ => None,
+            };
+            if let Some(reason) = reason { connection.disconnect(reason); }
+        }
+        let wake = matches!(order, Order::Teleport { .. } | Order::Kick { .. } | Order::KickText { .. });
 
         self.orders.entry(*uuid).or_default().push(order);
 
         if wake && let Some(wake) = self.wakes.get(uuid) {
             wake.notify_one();
         }
+    }
+
+    pub fn connection(&mut self, uuid: [u8; 16], control: crate::sessions::Control) {
+        self.connections.insert(uuid, control);
     }
 
     /// Будильник подключения этого игрока (см. `wakes`).

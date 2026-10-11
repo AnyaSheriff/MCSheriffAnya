@@ -8,7 +8,8 @@
 
 use std::io;
 
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::time::{Duration, Instant, timeout_at};
 use tokio::net::TcpStream;
 
 use super::varint::read_varint;
@@ -157,8 +158,22 @@ pub async fn write_body(stream: &mut TcpStream, body: Vec<u8>) -> io::Result<()>
 
     frame(&mut packet, &body, compression_threshold());
 
-    stream.write_all(&packet).await?;
-    stream.flush().await
+    write_bytes(stream, &packet).await
+}
+
+/// Предел одной записи вместе со сбросом. Это защита транспорта, а не
+/// новый срок ответа Keep Alive: его более ранняя граница учитывается ниже.
+pub const WRITE_TIMEOUT: Duration = Duration::from_secs(15);
+
+pub async fn write_bytes<W: AsyncWrite + Unpin>(stream: &mut W, bytes: &[u8]) -> io::Result<()> {
+    write_until(stream, bytes, Instant::now() + WRITE_TIMEOUT).await
+}
+
+async fn write_until<W: AsyncWrite + Unpin>(stream: &mut W, bytes: &[u8], deadline: Instant) -> io::Result<()> {
+    timeout_at(deadline, async {
+        stream.write_all(bytes).await?;
+        stream.flush().await
+    }).await.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "срок записи в сокет истёк"))?
 }
 
 /// Сколько байт исходящих пакетов копится, прежде чем уйти в сокет, даже
@@ -177,6 +192,9 @@ const OUTGOING_LIMIT: usize = 64 * 1024;
 pub struct Outgoing<'a> {
     stream: Transport<'a>,
     buffer: Vec<u8>,
+    control: Option<crate::sessions::Control>,
+    deadline: Option<Instant>,
+    failed: bool,
 }
 
 enum Transport<'a> {
@@ -189,16 +207,16 @@ enum Transport<'a> {
 
 impl<'a> Outgoing<'a> {
     pub fn new(stream: &'a mut TcpStream) -> Self {
-        Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT) }
+        Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false }
     }
 
     /// Проверки пакетов без сетевых сокетов и запущенного сервера.
     #[cfg(test)]
-    pub fn capture() -> Self { Self { stream: Transport::Capture, buffer: Vec::new() } }
+    pub fn capture() -> Self { Self { stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false } }
 
     #[cfg(test)]
-    fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
-        Self { stream: Transport::Duplex(stream), buffer: Vec::new() }
+    pub(crate) fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
+        Self { stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false }
     }
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
@@ -212,21 +230,56 @@ impl<'a> Outgoing<'a> {
         Ok(())
     }
 
-    /// Отправляет всё накопленное.
-    pub async fn flush(&mut self) -> io::Result<()> {
-        if self.buffer.is_empty() {
-            return Ok(());
-        }
+    pub fn session_control(&self) -> Option<crate::sessions::Control> { self.control.clone() }
 
-        match &mut self.stream {
-            Transport::Tcp(stream) => { stream.write_all(&self.buffer).await?; stream.flush().await?; }
-            #[cfg(test)]
-            Transport::Duplex(stream) => { stream.write_all(&self.buffer).await?; stream.flush().await?; }
-            #[cfg(test)]
-            Transport::Capture => return Ok(()),
+    pub fn control(&mut self, control: crate::sessions::Control) { self.control = Some(control); }
+
+    pub fn deadline(&mut self, deadline: Option<Instant>) { self.deadline = deadline; }
+
+    /// Отправляет всё накопленное. После частичной записи продолжать поток
+    /// нельзя: повтор с начала буфера испортил бы границы пакетов.
+    pub async fn flush(&mut self) -> io::Result<()> {
+        if self.failed {
+            return Err(io::Error::new(io::ErrorKind::BrokenPipe, "запись уже оборвана"));
         }
+        if self.buffer.is_empty() { return Ok(()); }
+        let deadline = self.deadline.map_or(Instant::now() + WRITE_TIMEOUT,
+            |deadline| deadline.min(Instant::now() + WRITE_TIMEOUT));
+        let control = self.control.clone();
+        let result = tokio::select! {
+            biased;
+            result = async {
+                match &mut self.stream {
+                    Transport::Tcp(stream) => write_until(*stream, &self.buffer, deadline).await,
+                    #[cfg(test)]
+                    Transport::Duplex(stream) => write_until(*stream, &self.buffer, deadline).await,
+                    #[cfg(test)]
+                    Transport::Capture => Ok(()),
+                }
+            } => result,
+            _ = async {
+                match control {
+                    Some(control) => control.cancelled().await,
+                    None => std::future::pending().await,
+                }
+            } => Err(io::Error::new(io::ErrorKind::ConnectionAborted, "подключение закрыто командой")),
+        };
+        if result.is_err() { self.failed = true; }
+        #[cfg(test)]
+        if matches!(self.stream, Transport::Capture) { return result; }
         self.buffer.clear();
-        Ok(())
+        result
+    }
+
+    /// Причина ухода — только в ещё целый поток, с коротким сроком.
+    /// Не ждём доставки прощания, чтобы сохранить и убрать игрока.
+    pub async fn disconnect(&mut self, body: &[u8]) {
+        if self.failed { return; }
+        self.buffer.clear();
+        frame(&mut self.buffer, body, compression_threshold());
+        self.control = None;
+        self.deadline = Some(Instant::now() + Duration::from_millis(250));
+        let _ = self.flush().await;
     }
 
     /// Сам сокет — для чтения после flush.
@@ -326,6 +379,86 @@ pub fn is_client_disconnect(error: &io::Error) -> bool {
 mod tests {
     use super::*;
     use crate::network::varint::encode_varint;
+
+    #[tokio::test(start_paused = true)]
+    async fn unread_peer_times_out_and_partial_frame_is_never_retried() {
+        let (mut writer, mut peer) = tokio::io::duplex(1);
+        let mut out = Outgoing::duplex(&mut writer);
+        out.send(&[1, 2, 3]).await.unwrap();
+        let start = Instant::now();
+        assert_eq!(out.flush().await.unwrap_err().kind(), io::ErrorKind::TimedOut);
+        assert_eq!(start.elapsed(), WRITE_TIMEOUT);
+        let mut byte = [0];
+        peer.read_exact(&mut byte).await.unwrap();
+        assert_eq!(out.flush().await.unwrap_err().kind(), io::ErrorKind::BrokenPipe);
+        out.disconnect(&[9]).await;
+        assert!(tokio::time::timeout(Duration::from_millis(1), peer.read_exact(&mut byte)).await.is_err());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn keep_alive_deadline_interrupts_an_already_blocked_write() {
+        use crate::network::keep_alive::{KeepAlive, KEEP_ALIVE_INTERVAL, KEEP_ALIVE_TIMEOUT};
+        let mut alive = KeepAlive::new();
+        tokio::time::advance(KEEP_ALIVE_INTERVAL).await;
+        alive.send_due().unwrap();
+        tokio::time::advance(KEEP_ALIVE_TIMEOUT - Duration::from_secs(2)).await;
+        let (mut writer, _peer) = tokio::io::duplex(1);
+        let mut out = Outgoing::duplex(&mut writer);
+        out.deadline(alive.deadline());
+        out.send(&[1, 2, 3]).await.unwrap();
+        let start = Instant::now();
+        assert_eq!(out.flush().await.unwrap_err().kind(), io::ErrorKind::TimedOut);
+        assert_eq!(start.elapsed(), Duration::from_secs(2));
+        assert!(alive.expired());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn kick_interrupts_blocked_output_without_waiting_for_timeout() {
+        let (mut writer, _peer) = tokio::io::duplex(1);
+        let mut out = Outgoing::duplex(&mut writer);
+        let control = crate::sessions::Control::default();
+        out.control(control.clone());
+        out.send(&[1, 2, 3]).await.unwrap();
+        let start = Instant::now();
+        let (result, ()) = tokio::join!(out.flush(), async {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            control.disconnect(crate::sessions::Disconnect::duplicate());
+        });
+        assert_eq!(result.unwrap_err().kind(), io::ErrorKind::ConnectionAborted);
+        assert_eq!(start.elapsed(), Duration::from_millis(10));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn configuration_write_and_pending_flush_are_bounded() {
+        use std::pin::Pin;
+        use std::task::{Context, Poll};
+        struct PendingFlush;
+        impl AsyncWrite for PendingFlush {
+            fn poll_write(self: Pin<&mut Self>, _: &mut Context<'_>, bytes: &[u8]) -> Poll<io::Result<usize>> {
+                Poll::Ready(Ok(bytes.len()))
+            }
+            fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> { Poll::Pending }
+            fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> { Poll::Pending }
+        }
+        let start = Instant::now();
+        assert_eq!(write_bytes(&mut PendingFlush, &[1]).await.unwrap_err().kind(), io::ErrorKind::TimedOut);
+        assert_eq!(start.elapsed(), WRITE_TIMEOUT);
+        let (mut writer, _peer) = tokio::io::duplex(1);
+        assert_eq!(write_bytes(&mut writer, &[1, 2]).await.unwrap_err().kind(), io::ErrorKind::TimedOut);
+    }
+
+    #[tokio::test]
+    async fn healthy_disconnect_contains_the_translation_key() {
+        let (mut writer, mut peer) = tokio::io::duplex(1024);
+        let mut out = Outgoing::duplex(&mut writer);
+        let reason = crate::sessions::Disconnect::duplicate();
+        let mut body = vec![0x20];
+        body.extend_from_slice(&reason.component);
+        out.disconnect(&body).await;
+        let packet = read_packet(&mut peer).await.unwrap();
+        assert_eq!(packet.payload(), reason.component);
+        assert_eq!(crate::network::nbt::string_field(packet.payload(), "translate").as_deref(), Some("multiplayer.disconnect.duplicate_login"));
+    }
 
     /// VarInt, дописанный в буфер, тот же, что и отдельным вектором.
     #[test]

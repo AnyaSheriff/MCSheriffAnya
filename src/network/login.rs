@@ -16,7 +16,7 @@
 
 use std::io;
 
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt};
 use tokio::net::TcpStream;
 
 use super::varint::{encode_string, encode_varint, read_string, read_varint};
@@ -107,8 +107,7 @@ pub async fn send_login_disconnect(stream: &mut TcpStream, reason: &str) -> io::
     let mut packet = encode_varint(body.len() as i32);
     packet.extend_from_slice(&body);
 
-    stream.write_all(&packet).await?;
-    stream.flush().await?;
+    super::packet::write_bytes(stream, &packet).await?;
 
     Ok(())
 }
@@ -121,8 +120,7 @@ pub async fn send_login_disconnect_json(stream: &mut TcpStream, json: &str) -> i
     let mut packet = encode_varint(body.len() as i32);
     packet.extend_from_slice(&body);
 
-    stream.write_all(&packet).await?;
-    stream.flush().await?;
+    super::packet::write_bytes(stream, &packet).await?;
 
     Ok(())
 }
@@ -162,8 +160,7 @@ pub async fn send_set_compression(stream: &mut TcpStream) -> io::Result<()> {
     let mut packet = encode_varint(body.len() as i32);
     packet.extend_from_slice(&body);
 
-    stream.write_all(&packet).await?;
-    stream.flush().await
+    super::packet::write_bytes(stream, &packet).await
 }
 
 /// Отправляет пакет Login Success: подтверждает вход игрока под указанным
@@ -184,8 +181,7 @@ pub async fn send_login_success(
 
     super::packet::frame(&mut packet, &body, super::packet::compression_threshold());
 
-    stream.write_all(&packet).await?;
-    stream.flush().await?;
+    super::packet::write_bytes(stream, &packet).await?;
 
     Ok(())
 }

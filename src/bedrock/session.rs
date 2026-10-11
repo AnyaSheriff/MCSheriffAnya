@@ -128,6 +128,8 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
     let mut connection = Connection { out, compressed: false };
     let mut identity: Option<Identity> = None;
     let mut world: Option<BedrockWorld> = None;
+    let mut lease = None;
+    let mut control = crate::sessions::Control::default();
 
     // Такт: пока игрок в мире, раз в 50 мс рассказываем ему, что изменилось.
     // Пропущенные такты не догоняются пачкой: после задержки — сразу
@@ -137,6 +139,14 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
 
     'session: loop {
         let body = tokio::select! {
+            _ = control.cancelled() => {
+                if let Some(reason) = control.reason() {
+                    let mut disconnect = Out::packet(DISCONNECT);
+                    disconnect.zigzag32(0).bool(false).string(&reason.plain).string("");
+                    connection.send_one(disconnect);
+                }
+                break;
+            }
             received = inbound.recv() => match received {
                 Some(body) => body,
                 None => break,
@@ -268,7 +278,10 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
                                 break 'session;
                             };
 
-                            match BedrockWorld::enter(Arc::clone(&shared), &connection, who) {
+                            let admitted = shared.sessions.acquire(&who.name, who.uuid).await;
+                            control = admitted.control();
+                            lease = Some(admitted);
+                            match BedrockWorld::enter(Arc::clone(&shared), &connection, who, control.clone()) {
                                 Some(entered) => world = Some(entered),
                                 None => {
                                     connection.close();
@@ -300,9 +313,11 @@ pub async fn run(shared: Arc<Shared>, addr: std::net::SocketAddr, mut inbound: m
         }
     }
 
+    connection.close();
     if let Some(world) = world {
         world.leave();
     }
+    drop(lease);
 }
 
 /// Разбирает пакет Login: имя, UUID и XUID из цепочки JWT, и то, чем вход

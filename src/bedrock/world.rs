@@ -417,8 +417,8 @@ struct OpenWindow {
 impl BedrockWorld {
     /// Отправляет всё, что нужно для появления в мире.
     ///
-    /// None — войти нельзя (ник уже занят): клиенту сказано почему.
-    pub fn enter(shared: Arc<Shared>, connection: &Connection, identity: Identity) -> Option<BedrockWorld> {
+    /// Вызывается после получения разрешения Sessions::acquire.
+    pub fn enter(shared: Arc<Shared>, connection: &Connection, identity: Identity, control: crate::sessions::Control) -> Option<BedrockWorld> {
         // Что осталось от прошлого захода — тот же файл игрока, что у Java:
         // измерение, место, поворот, режим игры, инвентарь. Впервые зашедший
         // появляется в точке появления обычного мира в творческом режиме,
@@ -461,10 +461,15 @@ impl BedrockWorld {
             unsettled: 0,
         };
 
-        if shared.players.lock().expect("список игроков захвачен другим потоком").join(member, entity_id).is_none() {
-            let mut disconnect = Out::packet(session::DISCONNECT);
-            disconnect.zigzag32(0).bool(false).string("Игрок с таким ником уже на сервере").string("");
-            connection.send_one(disconnect);
+        // acquire в session.rs уже дождался сохранения прежнего владельца.
+        let joined = {
+            let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+            let joined = players.join(member, entity_id).is_some();
+            if joined { players.connection(identity.uuid, control); }
+            joined
+        };
+        if !joined {
+            log_info!("Bedrock: вход без освобождения прежней сессии: {}", identity.name);
             return None;
         }
 

@@ -31,6 +31,7 @@ use tokio::net::TcpStream;
 use tokio::time::timeout;
 
 use super::nbt;
+use super::keep_alive::KeepAlive;
 use super::packet::{Outgoing, PacketInfo, decode_varint, is_client_disconnect, read_packet};
 use super::types;
 use super::configuration;
@@ -105,6 +106,8 @@ mod brush;
 mod bundle_use;
 #[cfg(test)]
 mod review_tests;
+#[cfg(test)]
+mod disconnect_tests;
 mod small;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
@@ -550,18 +553,6 @@ const BOSS_EVENT: i32 = 0x09;
 /// UUID полосы дракона — постоянный [проверить: у оригинала случайный].
 const DRAGON_BOSS_UUID: [u8; 16] = [0xD4, 0xA6, 0x0E, 0x4D, 0x1A, 0x7E, 0x4C, 0x0D, 0x9A, 0x33, 0x5E, 0x1C, 0xE2, 0xD1, 0x0B, 0xA1];
 
-/// Дальность прорисовки, которую сервер объявляет клиенту. Клиент ждёт, пока
-/// загрузятся все чанки в этом радиусе, поэтому она должна совпадать с числом
-/// реально отправленных чанков.
-/// Как часто напоминать клиенту о себе.
-///
-/// Клиент отключается, если не получал от сервера ни одного пакета дольше
-/// 30 секунд, поэтому интервал должен быть заметно меньше.
-const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(5);
-
-/// Сколько ждать ответа на Keep Alive, прежде чем отключить игрока.
-const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(30);
-
 // Режим игры при входе (для того, кто заходит впервые) — creative. Клиент
 // берёт его не из Login (Play), а из Player Info Update, поэтому он указывается
 // в обоих пакетах. Само значение — в модуле команд, вместе с остальными
@@ -682,8 +673,8 @@ struct Entered {
 }
 
 /// Проводит игрока через фазу Play: вводит в мир и обслуживает до выхода.
-/// Проводит игрока через игру. Возвращает false, если игрок в мир так и не
-/// попал — например, его ник успели занять, пока он проходил настройку.
+/// Возвращает false, если игрок в мир так и не попал. Уход, сохранение и
+/// освобождение имени завершаются здесь, до возврата вызывающему.
 pub async fn play_session(
     socket: &mut TcpStream,
     name: &str,
@@ -692,6 +683,13 @@ pub async fn play_session(
     shared: &Shared,
     (came_from, came_to): (&str, &str),
 ) -> io::Result<bool> {
+    // Смена сессии завершается до load: прежний владелец уже сохранил вещи
+    // и вышел из списка. Lease отпускается только после нашего ухода.
+    let lease = shared.sessions.acquire(name, *uuid).await;
+    let control = lease.control();
+    if let Ok(address) = came_from.parse::<std::net::SocketAddr>() {
+        crate::commands_admin::note_address(uuid, address.ip());
+    }
     let skin_parts = look.skin_parts;
     // Что осталось от прошлого захода: место, поворот и режим игры. Если
     // игрок здесь впервые, этого нет — он появится в точке появления.
@@ -734,13 +732,14 @@ pub async fn play_session(
     // Отписаться от журналов надо и когда вход оборвался ошибкой: иначе
     // журналы держали бы записи для этого читателя вечно.
     let mut out = Outgoing::new(socket);
+    out.control(control.clone());
     let stream = &mut out;
 
     let entered = enter_world(stream, &mut player, shared, (came_from, came_to)).await;
 
     // Что вход успел положить в очередь, уходит и при отказе: там может быть
     // сообщение об отключении.
-    let entered = match stream.flush().await {
+    let entered = match if entered.is_ok() { stream.flush().await } else { Ok(()) } {
         Ok(()) => entered,
         Err(error) => entered.and(Err(error)),
     };
@@ -748,24 +747,35 @@ pub async fn play_session(
     let Ok(Some(entered)) = entered else {
         log_debug!("Play: игрок {} в мир не попал", player.name);
 
-        forget_reader(shared, player.dimension, player.reader);
-
-        // Номер сущности выдаётся вместе с появлением в списке: если он
-        // есть, обрыв случился уже там, и из списка надо убрать самим —
-        // вызывающий уберёт только вошедшего.
-        if entered.is_err() && player.entity_id != 0 {
-            player.progress.custom("leave_game", 1);
-            player.save(&shared.playerdata);
-            player_left(shared, &player.name, &player.uuid);
+        // Если список уже пополнился, уход тот же, что из игры.
+        if player.entity_id != 0 {
+            finish_play(shared, &mut player);
+        } else {
+            forget_reader(shared, player.dimension, player.reader);
         }
 
+        if let Some(reason) = control.reason() {
+            let mut body = encode_varint(DISCONNECT);
+            body.extend_from_slice(&reason.component);
+            stream.disconnect(&body).await;
+        }
         return entered.map(|_| false);
     };
 
-    let result = read_and_log_play_packets(stream, shared, &mut player, entered).await;
+    let result = read_and_log_play_packets(stream, shared, &mut player, entered, &control).await;
 
     // Последнее (например, причина отключения) — клиенту, пока сокет жив.
-    let result = result.and(stream.flush().await);
+    let result = if let Some(reason) = control.reason() {
+        log_info!("{} выгнан: {}", player.name, reason.plain);
+        let mut body = encode_varint(DISCONNECT);
+        body.extend_from_slice(&reason.component);
+        stream.disconnect(&body).await;
+        result
+    } else if result.is_ok() {
+        stream.flush().await
+    } else {
+        result
+    };
 
     // Как у обычного сервера: «потерял соединение» с причиной, а «вышел»
     // добавит общий список игроков следом.
@@ -774,13 +784,19 @@ pub async fn play_session(
         Err(error) => log_info!("{} потерял соединение: {}", player.name, error.kind()),
     }
 
+    finish_play(shared, &mut player);
+    Ok(true)
+}
+
+/// Один путь ухода для обрыва, команды и смены подключения.
+fn finish_play(shared: &Shared, player: &mut PlayerState) {
     // Открытое хранилище теряет смотрящего.
-    close_own_window(shared, &mut player);
+    close_own_window(shared, player);
 
     // Курсор и сетка верстака при выходе возвращаются в инвентарь, а что
     // не влезло — на землю: в файл игрока они не пишутся.
     for stack in player.inventory.close_window().thrown {
-        throw_out(shared, &player, stack);
+        throw_out(shared, player, stack);
     }
 
     // При выходе записываем положение в любом случае — в том числе когда
@@ -799,9 +815,7 @@ pub async fn play_session(
 
     forget_reader(shared, player.dimension, player.reader);
 
-    // Игрок в мире был — значит, его надо убрать из списка при любом
-    // окончании, и оборванном тоже. Причина обрыва уже записана в лог выше.
-    Ok(true)
+    player_left(shared, &player.name, &player.uuid);
 }
 
 /// Сколько чанков вокруг слать игроку с такими настройками: его дальность,
@@ -884,9 +898,8 @@ pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
 /// Проводит игрока в мир, отправляет ему чанки вокруг точки появления и
 /// заводит запись в списке игроков.
 ///
-/// Возвращает None, если игрока не пустили: ник успели занять, пока он
-/// проходил настройку. Отказ здесь — окончательный, потому что он выносится
-/// тем же захватом списка, каким игрок в него добавляется.
+/// Вызывается с разрешением Sessions::acquire: прежняя сессия уже ушла.
+/// Проверка join остаётся защитой от нарушения этого порядка.
 async fn enter_world(
     stream: &mut Outgoing<'_>,
     player: &mut PlayerState,
@@ -931,14 +944,16 @@ async fn enter_world(
     // отличает себя от остальных. Остальные узнают о нём из журнала.
     let member = player.member();
 
-    let Some((member, others)) = shared
-        .players
-        .lock()
-        .expect("список игроков захвачен другим потоком")
-        .join(member, shared.next_entity_id())
-    else {
-        log_info!("{} не пущен: ник уже занят", player.name);
-        return Ok(None);
+    let joined = {
+        let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+        let joined = players.join(member, shared.next_entity_id());
+        if joined.is_some() && let Some(control) = stream.session_control() {
+            players.connection(player.uuid, control);
+        }
+        joined
+    };
+    let Some((member, others)) = joined else {
+        return Err(io::Error::new(io::ErrorKind::AlreadyExists, "вход без освобождения прежней сессии"));
     };
 
     // Строка входа как у обычного сервера, плюс адрес сервера после стрелки:
@@ -1139,10 +1154,7 @@ async fn enter_world(
     }
     .await;
 
-    if entered.is_err() {
-        player_left(shared, &player.name, &player.uuid);
-    }
-
+    // Сохранение и удаление из списка — только в play_session, в этом порядке.
     entered
 }
 
@@ -1371,8 +1383,20 @@ async fn read_confirm_teleportation(
     // Клиент подтвердит только то, что получил.
     stream.flush().await?;
 
+    let control = stream.session_control();
+    let deadline = tokio::time::Instant::now() + super::packet::WRITE_TIMEOUT;
     loop {
-        let packet = read_packet(stream.stream()).await?;
+        let packet = tokio::select! {
+            _ = async {
+                match &control {
+                    Some(control) => control.cancelled().await,
+                    None => std::future::pending().await,
+                }
+            } => return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "вход прерван")),
+            packet = tokio::time::timeout_at(deadline, read_packet(stream.stream())) => {
+                packet.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "нет подтверждения переноса"))??
+            }
+        };
 
         if packet.id == CONFIRM_TELEPORTATION {
             log_debug!("Play: клиент подтвердил телепортацию");
@@ -5974,22 +5998,19 @@ fn push_f64(out: &mut Vec<u8>, value: f64) {
 ///
 /// Keep Alive отправляется по часам, а не по молчанию клиента: клиент присылает
 /// пакет каждый игровой тик, поэтому «дождаться тишины» невозможно — а без
-/// пакетов от сервера клиент через 30 секунд рвёт соединение.
+/// Keep Alive от сервера клиент через 20 секунд рвёт соединение (вики).
 ///
-/// Ожидание начала пакета идёт через `peek`, который не забирает байты из
-/// потока. Поэтому прерванное по таймауту ожидание ничего не теряет: когда
-/// байты появятся, пакет будет прочитан целиком.
+/// Отдельный Inbound читает пакет целиком: отмена recv не теряет байты.
 async fn read_and_log_play_packets(
     stream: &mut Outgoing<'_>,
     shared: &Shared,
     player: &mut PlayerState,
     entered: Entered,
+    control: &crate::sessions::Control,
 ) -> io::Result<()> {
     /// Serverbound Client Tick End — приходит каждый тик и только засоряет лог.
     const CLIENT_TICK_END: i32 = 0x0D;
 
-    let mut keep_alive_id: i64 = 1;
-    let mut last_keep_alive = Instant::now();
     let mut last_time_age: i64 = -1;
     let mut clock_seen: Option<u64> = None;
 
@@ -6024,23 +6045,28 @@ async fn read_and_log_play_packets(
     loop {
         // Всё, что прошлый круг положил в очередь, уходит одной записью,
         // прежде чем ждать клиента или конца такта.
+        if control.reason().is_some() { return Ok(()); }
+        stream.deadline(player.keep_alive.deadline());
         stream.flush().await?;
 
         let ready = tokio::select! {
-            ready = timeout(KEEP_ALIVE_INTERVAL, inbound.packets.recv()) => Some(ready),
+            _ = control.cancelled() => return Ok(()),
+            ready = tokio::time::timeout_at(player.keep_alive.next_wake(), inbound.packets.recv()) => Some(ready),
             _ = ticks.changed() => None,
             // Поручение (перенос командой) — обработать сразу, как у оригинала,
             // где пакет переноса уходит в миг команды.
-            _ = wake.notified() => Some(timeout(Duration::ZERO, std::future::pending::<Option<io::Result<(PacketInfo, u64)>>>()).await),
+            _ = wake.notified() => Some(timeout(Duration::ZERO, std::future::pending::<Option<io::Result<Incoming>>>()).await),
         };
 
         // Связь пропала без закрытия соединения (Wi-Fi, NAT): TCP заметит это
         // через много минут, а до тех пор ник занят и вернуться нельзя. Как
         // у оригинала — отключаем, если на Keep Alive долго нет ответа.
-        if player.answered.elapsed() >= KEEP_ALIVE_TIMEOUT {
+        if player.keep_alive.expired() {
             log_info!("{} не отвечает — отключён по сроку", player.name);
-            send_disconnect(stream, "Время ожидания истекло").await?;
-            return Ok(());
+            let mut body = encode_varint(DISCONNECT);
+            body.extend_from_slice(&nbt::translated("disconnect.timeout"));
+            stream.disconnect(&body).await;
+            return Err(io::Error::new(io::ErrorKind::TimedOut, "нет ответа Keep Alive"));
         }
 
         if let Some(limit) = crate::commands_admin::idle_limit_ticks()
@@ -6056,16 +6082,9 @@ async fn read_and_log_play_packets(
             return Ok(());
         }
 
-        if last_keep_alive.elapsed() >= KEEP_ALIVE_INTERVAL {
-            send_keep_alive(stream, keep_alive_id).await?;
-            log_debug!(
-                "Play: Keep Alive отправлен (id {}, прошло {:?})",
-                keep_alive_id,
-                last_keep_alive.elapsed()
-            );
-
-            keep_alive_id += 1;
-            last_keep_alive = Instant::now();
+        if let Some(id) = player.keep_alive.send_due() {
+            stream.deadline(player.keep_alive.deadline());
+            send_keep_alive(stream, id).await?;
         }
 
         // Время суток клиент считает сам, но время от времени его надо
@@ -6768,7 +6787,7 @@ async fn read_and_log_play_packets(
                 log_debug!("Play: клиент закрыл соединение");
                 return Ok(());
             }
-            Some(Ok(Some(Ok((packet, arrived))))) => {
+            Some(Ok(Some(Ok((packet, arrived, permit))))) => {
                 if packet.id == CLIENT_TICK_END {
                     continue;
                 }
@@ -6796,8 +6815,19 @@ async fn read_and_log_play_packets(
                     stream.flush().await?;
 
                     while *starts.borrow_and_update() <= arrived {
-                        if starts.changed().await.is_err() {
-                            break;
+                        tokio::select! {
+                            _ = control.cancelled() => return Ok(()),
+                            _ = tokio::time::sleep_until(player.keep_alive.next_wake()) => {
+                                if player.keep_alive.expired() {
+                                    return Err(io::Error::new(io::ErrorKind::TimedOut, "нет ответа Keep Alive"));
+                                }
+                                if let Some(id) = player.keep_alive.send_due() {
+                                    stream.deadline(player.keep_alive.deadline());
+                                    send_keep_alive(stream, id).await?;
+                                    stream.flush().await?;
+                                }
+                            }
+                            changed = starts.changed() => if changed.is_err() { break; },
                         }
                     }
                 }
@@ -6828,9 +6858,7 @@ async fn read_and_log_play_packets(
                     publish_player(shared, player);
                 }
 
-                if gated {
-                    shared.waiting_for_tick[(arrived % 2) as usize].fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
-                }
+                drop(permit);
 
                 // Положение записываем сразу, как только оно изменилось
                 // заметно, — так же, как сохраняются блоки.
@@ -6873,6 +6901,34 @@ fn is_gated(packet_id: i32) -> bool {
     )
 }
 
+// Счётчик принадлежит пакету: ошибка записи, kick или закрытие очереди
+// освобождают его даже после извлечения из канала, до применения действия.
+struct TickPermit {
+    waiting: Option<Arc<[std::sync::atomic::AtomicUsize; 2]>>,
+    index: usize,
+}
+
+impl TickPermit {
+    fn new(waiting: &Arc<[std::sync::atomic::AtomicUsize; 2]>, arrived: u64, gated: bool) -> Self {
+        let index = (arrived % 2) as usize;
+        let waiting = gated.then(|| {
+            waiting[index].fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+            waiting.clone()
+        });
+        Self { waiting, index }
+    }
+}
+
+impl Drop for TickPermit {
+    fn drop(&mut self) {
+        if let Some(waiting) = &self.waiting {
+            waiting[self.index].fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
+        }
+    }
+}
+
+type Incoming = (PacketInfo, u64, TickPermit);
+
 /// Пакеты клиента, прочитанные отдельной задачей.
 ///
 /// Подключение и читает, и шлёт; пока оно отправляет клиенту итог такта,
@@ -6882,9 +6938,8 @@ fn is_gated(packet_id: i32) -> bool {
 /// сразу отмечает в `waiting_for_tick` и подписывает номером такта, во время
 /// которого оно пришло, — такт его дождётся.
 struct Inbound {
-    packets: tokio::sync::mpsc::UnboundedReceiver<io::Result<(PacketInfo, u64)>>,
+    packets: tokio::sync::mpsc::UnboundedReceiver<io::Result<Incoming>>,
     reader: tokio::task::JoinHandle<()>,
-    waiting: Arc<[std::sync::atomic::AtomicUsize; 2]>,
 }
 
 impl Inbound {
@@ -6910,7 +6965,6 @@ impl Inbound {
         let mut own = tokio::io::BufReader::new(TcpStream::from_std(own)?);
         let (sender, packets) = tokio::sync::mpsc::unbounded_channel();
         let waiting = shared.waiting_for_tick.clone();
-        let counted = waiting.clone();
         let starts = shared.tick_starts.subscribe();
 
         let reader = tokio::spawn(async move {
@@ -6919,19 +6973,17 @@ impl Inbound {
                 let arrived = *starts.borrow();
                 let failed = read.is_err();
 
-                if let Ok(packet) = &read
-                    && is_gated(packet.id)
-                {
-                    waiting[(arrived % 2) as usize].fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-                }
-
-                if sender.send(read.map(|packet| (packet, arrived))).is_err() || failed {
+                let read = read.map(|packet| {
+                    let permit = TickPermit::new(&waiting, arrived, is_gated(packet.id));
+                    (packet, arrived, permit)
+                });
+                if sender.send(read).is_err() || failed {
                     return;
                 }
             }
         });
 
-        Ok(Self { packets, reader, waiting: counted })
+        Ok(Self { packets, reader })
     }
 }
 
@@ -6939,14 +6991,8 @@ impl Drop for Inbound {
     fn drop(&mut self) {
         self.reader.abort();
 
-        // Прочитанные, но не применённые действия такт больше не ждёт.
-        while let Ok(read) = self.packets.try_recv() {
-            if let Ok((packet, arrived)) = read
-                && is_gated(packet.id)
-            {
-                self.waiting[(arrived % 2) as usize].fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
-            }
-        }
+        // При закрытии канала неприменённые пакеты отпустят TickPermit.
+        self.packets.close();
     }
 }
 
@@ -7296,7 +7342,7 @@ fn handle_client_packet_inner(
         }
         SERVERBOUND_KEEP_ALIVE => {
             log_debug!("Play: клиент ответил на Keep Alive");
-            player.answered = Instant::now();
+            player.keep_alive.answer(payload);
         }
         CONFIRM_TELEPORTATION => {
             if Cursor::new(payload).varint() == Some(player.teleport) {
@@ -11040,8 +11086,8 @@ struct PlayerState {
     /// того, сколько прошло.
     last_attack: u64,
 
-    /// Когда клиент последний раз ответил на Keep Alive.
-    answered: Instant,
+    /// Единственный ожидаемый ответ Keep Alive и его срок.
+    keep_alive: KeepAlive,
 
     /// Когда игрок последний раз что-то делал (`setidletimeout`).
     idle: Instant,
@@ -11331,7 +11377,7 @@ impl PlayerState {
             // Зашёл, стоя в портале, — не переносить сразу.
             portal_ready: false,
             boss_shown: false,
-            answered: Instant::now(),
+            keep_alive: KeepAlive::new(),
             idle: Instant::now(),
             inventory: saved
                 .as_ref()

@@ -33,6 +33,7 @@ pub struct Shared {
 
     /// Кто сейчас на сервере.
     pub players: Mutex<Players>,
+    pub sessions: crate::sessions::Sessions,
 
     /// Лента сообщений в чат.
     pub chat: Mutex<Chat>,
@@ -252,6 +253,7 @@ impl Shared {
             sleeping_percentage: std::sync::atomic::AtomicI32::new(100),
             worlds: [Mutex::new(world), Mutex::new(nether), Mutex::new(end)],
             players: Mutex::new(Players::new()),
+            sessions: crate::sessions::Sessions::default(),
             chat: Mutex::new(Chat::new()),
             items: [Mutex::new(Items::new()), Mutex::new(Items::new()), Mutex::new(Items::new())],
             arrows: Mutex::new(crate::arrow::Arrows::new()),

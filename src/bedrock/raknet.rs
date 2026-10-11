@@ -159,6 +159,7 @@ struct Session {
     generation: u64,
     connected: bool,
     last_seen: Instant,
+    ack_progress: Option<Instant>,
 
     // Отправка.
     send_sequence: u32,
@@ -215,6 +216,7 @@ impl Session {
             generation: GENERATION.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             connected: false,
             last_seen: Instant::now(),
+            ack_progress: None,
             send_sequence: 0,
             reliable_index: 0,
             order_index: 0,
@@ -237,6 +239,13 @@ impl Session {
             waiting_bytes: 0,
             inbound: None,
         }
+    }
+
+    // Пинги и пустые ACK не означают, что клиент принимает наши данные.
+    // [проверить] Для отсутствия продвижения используем тот же срок RakNet.
+    fn expired(&self, now: Instant) -> bool {
+        now.duration_since(self.last_seen) >= TIMEOUT
+            || self.ack_progress.is_some_and(|at| now.duration_since(at) >= TIMEOUT)
     }
 
     /// Кладёт сообщение в очередь на отправку, при надобности разбивая его.
@@ -329,6 +338,7 @@ impl Session {
 
         // Надёжные кадры храним до подтверждения.
         if frames.iter().any(|frame| frame[0] >> 5 != UNRELIABLE) {
+            self.ack_progress.get_or_insert_with(Instant::now);
             self.unacked.insert(sequence, Sent { at: Instant::now(), frames, resent });
         }
 
@@ -346,6 +356,7 @@ impl Session {
             return;
         };
 
+        self.ack_progress = if self.unacked.is_empty() { None } else { Some(Instant::now()) };
         self.backoff = 0;
 
         // По повторам время отклика не мерим: неясно, на какую отправку ответ.
@@ -491,6 +502,9 @@ where
     let mut buffer = vec![0u8; 2048];
     let mut flush = tokio::time::interval(FLUSH_EVERY);
 
+    // Запись UDP только неблокирующая: переполненный буфер не должен
+    // останавливать сроки всех сессий. Надёжные кадры остаются в unacked
+    // и повторяются, ACK и рукопожатие повторит протокол.
     loop {
         tokio::select! {
             received = socket.recv_from(&mut buffer) => {
@@ -516,7 +530,7 @@ where
                             // Прощание — сразу, мимо окна.
                             session.window = WINDOW_MAX;
                             for datagram in session.take_datagrams() {
-                                let _ = socket.send_to(&datagram, addr).await;
+                                let _ = socket.try_send_to(&datagram, addr);
                             }
                             sessions.remove(&addr);
                         }
@@ -528,14 +542,14 @@ where
                 let mut gone = Vec::new();
 
                 for (addr, session) in sessions.iter_mut() {
-                    if now.duration_since(session.last_seen) > TIMEOUT {
+                    if session.expired(now) {
                         gone.push(*addr);
                         continue;
                     }
 
                     if !session.to_ack.is_empty() {
                         let ack = encode_ranges(ACK, &mut session.to_ack);
-                        let _ = socket.send_to(&ack, *addr).await;
+                        let _ = socket.try_send_to(&ack, *addr);
                     }
 
                     // Повтор наборов, которые долго не подтверждают: не больше
@@ -561,12 +575,12 @@ where
 
                     for sequence in late {
                         if let Some(datagram) = session.resend(sequence) {
-                            let _ = socket.send_to(&datagram, *addr).await;
+                            let _ = socket.try_send_to(&datagram, *addr);
                         }
                     }
 
                     for datagram in session.take_datagrams() {
-                        let _ = socket.send_to(&datagram, *addr).await;
+                        let _ = socket.try_send_to(&datagram, *addr);
                     }
                 }
 
@@ -692,7 +706,7 @@ where
             out.extend_from_slice(&MAGIC);
             out.extend_from_slice(&(text.len() as u16).to_be_bytes());
             out.extend_from_slice(text.as_bytes());
-            let _ = socket.send_to(&out, addr).await;
+            let _ = socket.try_send_to(&out, addr);
         }
         OPEN_REQUEST_1 => {
             reader.take(16).ok_or("нет magic")?;
@@ -704,7 +718,7 @@ where
                 let mut out = vec![INCOMPATIBLE, RAKNET_VERSION];
                 out.extend_from_slice(&MAGIC);
                 out.extend_from_slice(&guid.to_be_bytes());
-                let _ = socket.send_to(&out, addr).await;
+                let _ = socket.try_send_to(&out, addr);
                 return Err("другая версия RakNet");
             }
 
@@ -714,7 +728,7 @@ where
             out.extend_from_slice(&guid.to_be_bytes());
             out.push(0); // без защиты cookie
             out.extend_from_slice(&mtu.to_be_bytes());
-            let _ = socket.send_to(&out, addr).await;
+            let _ = socket.try_send_to(&out, addr);
         }
         OPEN_REQUEST_2 => {
             reader.take(16).ok_or("нет magic")?;
@@ -737,7 +751,7 @@ where
             push_address(&mut out, addr);
             out.extend_from_slice(&mtu.to_be_bytes());
             out.push(0); // шифрования RakNet нет
-            let _ = socket.send_to(&out, addr).await;
+            let _ = socket.try_send_to(&out, addr);
         }
         ACK => {
             let Some(session) = sessions.get_mut(&addr) else { return Ok(()) };
@@ -761,7 +775,7 @@ where
 
             for number in numbers {
                 if let Some(datagram) = session.resend(number) {
-                    let _ = socket.send_to(&datagram, addr).await;
+                    let _ = socket.try_send_to(&datagram, addr);
                 }
             }
         }
@@ -778,7 +792,7 @@ where
             if gap > 0 && gap < 1024 {
                 let mut missing: Vec<u32> = (0..gap).map(|step| (session.expected_sequence + step) & U24).collect();
                 let nack = encode_ranges(NACK, &mut missing);
-                let _ = socket.send_to(&nack, addr).await;
+                let _ = socket.try_send_to(&nack, addr);
             }
 
             if gap < U24 / 2 {
@@ -1003,6 +1017,38 @@ fn now_millis() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn incoming_traffic_and_resends_do_not_hide_missing_ack_progress() {
+        let mut session = Session::new(1400, 1);
+        session.queue(&[GAME, 1], RELIABLE_ORDERED);
+        session.take_datagrams();
+        let stalled = Instant::now() - TIMEOUT;
+        session.ack_progress = Some(stalled);
+        session.last_seen = Instant::now();
+        assert!(session.expired(Instant::now()));
+        let sequence = *session.unacked.keys().next().unwrap();
+        session.resend(sequence).unwrap();
+        assert_eq!(session.ack_progress, Some(stalled));
+        assert!(session.expired(Instant::now()));
+        session.acked(sequence); // Старый номер ничего не подтверждает.
+        assert!(session.expired(Instant::now()));
+        let sequence = *session.unacked.keys().next().unwrap();
+        session.acked(sequence);
+        assert!(!session.expired(Instant::now()));
+        assert_eq!(session.ack_progress, None);
+    }
+
+    #[tokio::test]
+    async fn removing_timed_out_session_closes_game_channel() {
+        let (sender, mut receiver) = mpsc::channel(1);
+        let mut session = Session::new(1400, 1);
+        session.inbound = Some(sender);
+        session.last_seen = Instant::now() - TIMEOUT;
+        assert!(session.expired(Instant::now()));
+        drop(session);
+        assert_eq!(receiver.recv().await, None);
+    }
 
     /// Набор кадров, собранный сессией, разбирается обратно в те же
     /// сообщения — и маленькие, и разбитые на части.
