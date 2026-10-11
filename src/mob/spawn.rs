@@ -14,6 +14,10 @@
 use super::{Kind, Mob, Rng, View, solid};
 use crate::blocks;
 
+pub mod space;
+#[cfg(test)]
+mod fluid_tests;
+
 /// Шанс группы на новый чанк (вики, Spawn: «10 % chance per chunk»).
 pub const CHUNK_CHANCE: f64 = 0.1;
 
@@ -53,7 +57,7 @@ fn surface(view: &dyn View, x: i32, z: i32) -> Option<i32> {
     while y > -64 {
         let state = view.block(x, y, z);
 
-        if solid(state) || super::is_water(state) || super::is_lava(state) {
+        if solid(state) || space::has_fluid(state) {
             return (blocks::block_at_state(state) == Some("grass_block")).then_some(y);
         }
 
@@ -160,7 +164,7 @@ pub fn for_new_chunk_in(view: &dyn View, chunk_x: i32, chunk_z: i32, biome: &str
             mob.egg_timer = 6000 + rng.below(6001) as i32;
         }
 
-        mobs.push(mob);
+        if fits(view, &mob) { mobs.push(mob); }
     }
 
     mobs
@@ -204,7 +208,7 @@ pub fn wolves_for_new_chunk(view: &dyn View, chunk_x: i32, chunk_z: i32, biome: 
 
         wolf.face((rng.unit() * 360.0) as f32);
         wolf.tame.variant = variant;
-        mobs.push(wolf);
+        if fits(view, &wolf) { mobs.push(wolf); }
     }
 
     mobs
@@ -305,7 +309,7 @@ pub fn spawnable(view: &dyn View, x: i32, y: i32, z: i32, height: i32) -> bool {
     let free = |cy: i32| {
         let state = view.block(x, cy, z);
 
-        !solid(state) && !super::is_water(state) && !super::is_lava(state)
+        !solid(state) && !space::has_fluid(state)
     };
 
     (0..height).all(|dy| free(y + dy)) && blocks::solid_top(view.block(x, y - 1, z))
@@ -466,7 +470,7 @@ pub fn hostile_attempt_in(
             mob.villager.finalized = true;
         }
 
-        if super::slime::cube(each) && !fits(view, &mob) {
+        if !space::fits(view, &mob) {
             continue;
         }
         mob.face((rng.unit() * 360.0) as f32);
@@ -482,24 +486,9 @@ pub fn pick_hostile_for_test(kinds: &[(Kind, u32)], rng: &mut Rng) -> Kind {
     pick_hostile(kinds, rng)
 }
 
-/// Полный ящик куба: большой слизень должен помещаться и по ширине.
+/// Сухое свободное место для полного ящика, с учётом возраста и размера.
 pub fn fits(view: &dyn View, mob: &Mob) -> bool {
-    let (width, height) = mob.size();
-    let half = width / 2.0;
-    for x in (mob.x - half).floor() as i32..=(mob.x + half - 1.0e-7).floor() as i32 {
-        for z in (mob.z - half).floor() as i32..=(mob.z + half - 1.0e-7).floor() as i32 {
-            if !view.loaded(x.div_euclid(16), z.div_euclid(16)) {
-                return false;
-            }
-            for y in mob.y.floor() as i32..=(mob.y + height - 1.0e-7).floor() as i32 {
-                let state = view.block(x, y, z);
-                if solid(state) || super::is_water(state) || super::is_lava(state) {
-                    return false;
-                }
-            }
-        }
-    }
-    true
+    space::dry(view, (mob.x, mob.y, mob.z), mob.size())
 }
 
 // Биомные таблицы новых животных (вики, страницы мобов, «Spawning»).
@@ -544,7 +533,7 @@ pub fn land_for_new_chunk(view: &dyn View, cx: i32, cz: i32, biome: &str, rng: &
                 Kind::PolarBear=>matches!(block,"grass_block"|"snow_block"|"ice"|"packed_ice"),
                 _=>block=="grass_block",
             };
-            if !ground || solid(view.block(x,y,z)) || solid(view.block(x,y+1,z)) || (y+2..320).any(|yy| solid(view.block(x,yy,z))) { break; }
+            if !ground || !spawnable(view,x,y,z,kind.height().ceil() as i32) || (y+2..320).any(|yy| solid(view.block(x,yy,z))) { break; }
             let mut mob=Mob::new(next(),kind,(f64::from(x)+0.5,f64::from(y),f64::from(z)+0.5));
             super::land::initialize(&mut mob,rng);
             if super::horse::equine(kind) { super::horse::initialize(&mut mob,rng); mob.horse.variant=coat | ((rng.below(5) as i32)<<8); }
@@ -590,7 +579,7 @@ fn animal_surface(view: &dyn View,x: i32,z: i32,kind: Kind) -> Option<i32> {
     for y in (-64..320).rev() {
         let state=view.block(x,y,z);
         let name=blocks::block_at_state(state).unwrap_or("");
-        if solid(state) || super::is_water(state) || super::is_lava(state) {
+        if solid(state) || space::has_fluid(state) {
             let floor=matches!(name,"grass_block"|"snow"|"snow_block")
                 || (kind==Kind::Rabbit && name=="sand")
                 || (kind==Kind::Fox && matches!(name,"podzol"|"coarse_dirt"));
@@ -604,7 +593,7 @@ fn small_surface(view: &dyn View, x: i32, z: i32, kind: Kind) -> Option<i32> {
     if !matches!(kind,Kind::Parrot|Kind::Armadillo) { return surface(view,x,z); }
     for y in (-64..320).rev() {
         let state=view.block(x,y,z);
-        if solid(state) || super::is_water(state) || super::is_lava(state) {
+        if solid(state) || space::has_fluid(state) {
             let name=blocks::block_at_state(state).unwrap_or("");
             let allowed=if kind == Kind::Parrot { name == "grass_block" || name.ends_with("_leaves") || name.ends_with("_log") }
                 else { matches!(name,"grass_block"|"dirt"|"coarse_dirt"|"red_sand") };

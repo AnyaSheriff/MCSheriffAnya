@@ -1,0 +1,68 @@
+{
+  "name": "spawn-fluid-space",
+  "about": "[проверить] Sheep spawner: shallow water and waterlogged bottom slabs reject births; dry grass permits births. Final cod spawner tests aquatic births in water. No summon commands. Vanilla recording still required.",
+  "origin": [
+    0,
+    80,
+    0
+  ],
+  "exclusive": true,
+  "track_mobs": true,
+  "blocks": [],
+  "setup": [
+    "gamerule spawn_mobs true",
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "fill $(-1,-1,-1) $(9,4,9) minecraft:stone",
+    "fill $(0,-1,0) $(8,-1,8) minecraft:grass_block",
+    "fill $(0,0,0) $(8,5,8) minecraft:air",
+    "fill $(0,0,0) $(8,0,8) minecraft:water",
+    "fill $(4,1,4) $(4,4,4) minecraft:stone",
+    "tp $(bot) $(4.5,3,10.5)",
+    "!wait 5"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(4,0,4) minecraft:spawner{SpawnData:{entity:{id:\"minecraft:sheep\",NoAI:1b}},Delay:1s,MinSpawnDelay:20s,MaxSpawnDelay:20s,SpawnCount:8s,SpawnRange:3s,RequiredPlayerRange:16s,MaxNearbyEntities:30s}"
+    },
+    {
+      "after": 100,
+      "cmd": "fill $(0,0,0) $(8,0,8) minecraft:oak_slab[type=bottom,waterlogged=true] replace minecraft:water"
+    },
+    {
+      "after": 200,
+      "cmd": "fill $(0,0,0) $(8,0,8) minecraft:air replace minecraft:oak_slab"
+    },
+    {
+      "after": 300,
+      "cmd": "setblock $(4,0,4) minecraft:air"
+    },
+    {
+      "after": 301,
+      "cmd": "kill @e[type=sheep,distance=..48]"
+    },
+    {
+      "after": 302,
+      "cmd": "fill $(0,0,0) $(8,2,8) minecraft:water"
+    },
+    {
+      "after": 303,
+      "cmd": "setblock $(4,1,4) minecraft:spawner{SpawnData:{entity:{id:\"minecraft:cod\",NoAI:1b}},Delay:1s,MinSpawnDelay:20s,MaxSpawnDelay:20s,SpawnCount:4s,SpawnRange:3s,RequiredPlayerRange:16s,MaxNearbyEntities:12s}"
+    }
+  ],
+  "record_ticks": 420,
+  "cleanup": [
+    "setblock $(4,1,4) minecraft:air",
+    "setblock $(4,0,4) minecraft:air",
+    "kill @e[type=cod,distance=..48]",
+    "kill @e[type=sheep,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "fill $(-5,0,-5) $(13,5,13) minecraft:air",
+    "fill $(-5,-1,-5) $(13,-1,13) minecraft:grass_block",
+    "gamerule spawn_mobs false",
+    "difficulty peaceful",
+    "clear $(bot)"
+  ]
+}

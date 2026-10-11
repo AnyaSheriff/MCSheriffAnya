@@ -361,7 +361,7 @@ fn spawn_spot(view: &dyn View, center: (f64, f64, f64), pois: &[(i32, i32, i32)]
         let at = (f64::from(x) + 0.5, f64::from(y), f64::from(z) + 0.5);
         let floor = crate::blocks::block_at_state(view.block(x, y - 1, z)).unwrap_or("");
 
-        if y > bottom && !floor.contains("glass") && crate::mob::spawn::spawnable(view, x, y, z, 2) && !in_village(pois, at) {
+        if y > bottom && !floor.contains("glass") && crate::mob::spawn::spawnable(view, x, y, z, 2) && crate::mob::spawn::space::dry_kind(view, Kind::Ravager, at) && !in_village(pois, at) {
             return Some(at);
         }
     }
@@ -482,7 +482,9 @@ fn step(raid: &mut Raid, mobs: &mut [Mob], view: &dyn View, players: &[Watcher],
             if raid.cooldown <= 0 {
                 // Последняя надежда: 6 кругов по 20 мест, ближе к середине; не
                 // нашлось — набег кончается без победы (вики, Raid).
-                let spot = raid.spot.take().or_else(|| (0..LAST_GROUPS).find_map(|group| spawn_spot(view, raid.center, pois, 32.0 - 4.0 * group as f64, LAST_TRIES, rng)));
+                // Место могло затопить за паузу; ящик разорителя покрывает
+                // размеры остальных участников волны (вики, Raid: «ravager»).
+                let spot = raid.spot.take().filter(|at| crate::mob::spawn::space::dry_kind(view, Kind::Ravager, *at)).or_else(|| (0..LAST_GROUPS).find_map(|group| spawn_spot(view, raid.center, pois, 32.0 - 4.0 * group as f64, LAST_TRIES, rng)));
 
                 match spot {
                     Some(spot) => spawn_wave(raid, spot, mobs, players, rules, rng, next_id, out),
@@ -675,13 +677,14 @@ fn patrols(raids: &mut Raids, view: &dyn View, players: &[Watcher], rules: Rules
             y -= 1;
         }
 
-        if crate::mob::solid(view.block(px, y, pz)) || crate::mob::is_water(view.block(px, y, pz)) {
+        if !crate::mob::spawn::spawnable(view, px, y, pz, 2) {
             continue;
         }
 
         let mut mob = Mob::new(next_id(), Kind::Pillager, (f64::from(px) + 0.5, f64::from(y), f64::from(pz) + 0.5));
 
         mob.persistent = true;
+        if !crate::mob::spawn::fits(view, &mob) { continue; }
         mob.illager.captain = index == 0;
         mob.illager.patrol = Some((player.x, player.y, player.z));
         out.born.push(mob);
@@ -691,6 +694,32 @@ fn patrols(raids: &mut Raids, view: &dyn View, players: &[Watcher], rules: Rules
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn patrols_reject_fluid_at_feet_or_head() {
+        struct Pad { feet:i32, head:i32 }
+        impl View for Pad {
+            fn block(&self,_:i32,y:i32,_:i32)->i32 {if y<=60 {1} else if y==61 {self.feet} else if y==62 {self.head} else {0}}
+            fn loaded(&self,_:i32,_:i32)->bool {true}
+        }
+        let player=Watcher {id:1,x:0.5,y:61.0,z:0.5,eye:1.62,holding:[None,None],spectator:false,targetable:true,look:(0.0,0.0),pumpkin:false,sprinting:false,riding:false,gold_armor:false};
+        let rules=Rules {difficulty:2,raids:false,patrols:true,day:6};
+        let mut dry=0;
+        for seed in 0..100 {
+            let mut out=Outcome::default();
+            patrols(&mut Raids {patrol_wait:0,..Default::default()},&Pad {feet:0,head:0},&[player],rules,&mut Rng::new(seed),&mut || 1,&mut out);
+            dry+=out.born.len();
+            for name in ["water","lava","oak_sign[waterlogged=true]"] {
+                let fluid=crate::blocks::state_from_text(name).unwrap();
+                for pad in [Pad {feet:fluid,head:0},Pad {feet:0,head:fluid}] {
+                    let mut out=Outcome::default();
+                    patrols(&mut Raids {patrol_wait:0,..Default::default()},&pad,&[player],rules,&mut Rng::new(seed),&mut || 1,&mut out);
+                    assert!(out.born.is_empty(),"{name}");
+                }
+            }
+        }
+        assert!(dry>0);
+    }
 
     #[test]
     fn wave1_scenario_caged_villager_claims_composter() {

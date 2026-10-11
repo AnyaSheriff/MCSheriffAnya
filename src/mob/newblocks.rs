@@ -54,6 +54,7 @@ pub fn blocks_tick(world: &mut World, items: &mut Items, players: &[super::ai::W
                         let at = super::ai::settle(&crate::tick::MobView(world),at,p.1);
                         if super::path::standable(&crate::tick::MobView(world),at) && (0..3).all(|dy| !super::solid(world.get_block(at.0,at.1+dy,at.2))) {
                             let mut mob = Mob::new(next_id(),Kind::Creaking,(f64::from(at.0)+0.5,f64::from(at.1),f64::from(at.2)+0.5));
+                            if !super::spawn::fits(&crate::tick::MobView(world),&mob) {continue;}
                             mob.newmobs.heart=Some(p); items.add_mob(mob); break;
                         }
                     }

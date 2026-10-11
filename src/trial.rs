@@ -1017,15 +1017,9 @@ fn step_spawner(
                 let z = centre.2 + (rng.unit() - rng.unit()) * range;
                 let y = pos.1 + rng.below(3) as i32 - 1;
                 let cell = (x.floor() as i32, y, z.floor() as i32);
-                let free = |dy: i32| {
-                    let state = world.get_block(cell.0, cell.1 + dy, cell.2);
-
-                    !crate::mob::solid(state) && !crate::mob::is_water(state) && !crate::mob::is_lava(state)
-                };
-
                 if let Some(kind) = config.kind()
-                    && (0..kind.height().ceil() as i32).all(free)
-                    && crate::blocks::solid_top(world.get_block(cell.0, cell.1 - 1, cell.2))
+                    && crate::mob::spawn::space::spawner(&crate::tick::MobView(world),
+                        &crate::mob::Mob::new(0, kind, (x, f64::from(y), z)))
                     && clear(world, centre, (x, f64::from(y) + 0.5, z))
                 {
                     let yaw = (rng.unit() * 360.0) as f32;
@@ -1304,6 +1298,32 @@ pub fn use_vault(world: &mut crate::world::World, pos: (i32, i32, i32), uuid: [u
 mod tests {
     use super::*;
     use crate::blocks;
+
+    #[test]
+    fn trial_spawner_rejects_flooded_land_mobs_but_keeps_water_mobs() {
+        for (entity,medium,expected) in [("sheep","air",true),("sheep","water",false),("sheep","light[waterlogged=true]",false),("cod","water",true)] {
+            let mut world=crate::world::World::in_memory();
+            let floor=blocks::state_by_name("grass_block").unwrap();
+            let fluid=blocks::state_from_text(medium).unwrap();
+            for x in -5..=5 { for z in -5..=5 {
+                world.set_block_silently(x,60,z,floor);
+                for y in 61..=65 {world.set_block_silently(x,y,z,fluid);}
+            }}
+            let pos=(0,62,0);
+            world.set_block(pos.0,pos.1,pos.2,blocks::state_from_text("trial_spawner[trial_spawner_state=active]").unwrap());
+            world.with_trial(pos.0,pos.1,pos.2,|d| if let Data::Spawner(s)=d {
+                s.players=vec![1];s.picked=true;s.normal.entity=format!("minecraft:{entity}");
+            });
+            let player=Visitor {id:1,uuid:[1;16],at:(4.5,62.0,4.5),eye:1.62,counts:true};
+            let mut born=Vec::new();
+            let mut rng=crate::mob::Rng::new(71);
+            for now in 1..=40 {
+                step(&mut world,&[player],&[],now,true,&mut rng,&|_|Some(true),
+                    &mut |_,spawn| {born.push(spawn);born.len() as i32},&mut |_|{});
+            }
+            assert_eq!(!born.is_empty(),expected,"{entity} in {medium}");
+        }
+    }
 
     #[test]
     fn snbt_sets_the_wave() {

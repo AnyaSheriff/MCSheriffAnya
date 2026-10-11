@@ -164,24 +164,8 @@ pub fn try_spawn(data: &Data, kind: Kind, at: (i32, i32, i32), view: &dyn crate:
     let x = f64::from(at.0) + (rng.unit() - rng.unit()) * range + 0.5;
     let y = at.1 + rng.below(3) as i32 - 1;
     let z = f64::from(at.2) + (rng.unit() - rng.unit()) * range + 0.5;
-    let (cx, cz) = (x.floor() as i32, z.floor() as i32);
-
-    let free = |cy: i32| {
-        let state = view.block(cx, cy, cz);
-
-        !crate::mob::solid(state) && !crate::mob::is_water(state) && !crate::mob::is_lava(state)
-    };
-
-    if !(0..kind.height().ceil() as i32).all(|dy| free(y + dy)) {
-        return None;
-    }
-
-    // Под ногами — твёрдое [проверить: у оригинала правила своего вида].
-    if !crate::blocks::solid_top(view.block(cx, y - 1, cz)) {
-        return None;
-    }
-
     let mut mob = Mob::new(next_id(), kind, (x, f64::from(y), z));
+    if !crate::mob::spawn::space::spawner(view, &mob) { return None; }
 
     mob.face((rng.unit() * 360.0) as f32);
     Some(mob)

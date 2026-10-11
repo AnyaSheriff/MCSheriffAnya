@@ -166,7 +166,8 @@ pub fn try_spot(view: &dyn View, spot: &Spot, regional: f64, rng: &mut Rng) -> O
         return None;
     }
 
-    Some(at)
+    super::spawn::space::dry_kind(view, Kind::Phantom,
+        (f64::from(at.0) + 0.5, f64::from(at.1), f64::from(at.2) + 0.5)).then_some(at)
 }
 
 /// Сколько фантомов в группе: 1…(сложность + 1) (вики, Phantom: «1-2 in Easy, 1-3 in Normal, 1-4 in Hard»).

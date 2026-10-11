@@ -384,7 +384,7 @@ pub fn spawn_spot(view: &dyn View, origin: (i32, i32, i32), rng: &mut Rng) -> Op
             if !crate::blocks::solid_top(view.block(x, y - 1, z)) { continue; }
             if (0..3).all(|dy| {
                 let block = view.block(x, y + dy, z);
-                !super::solid(block) && !super::is_water(block) && !super::is_lava(block)
+                !super::solid(block) && !super::spawn::space::has_fluid(block)
             }) { return Some((f64::from(x) + 0.5, f64::from(y), f64::from(z) + 0.5)); }
         }
     }

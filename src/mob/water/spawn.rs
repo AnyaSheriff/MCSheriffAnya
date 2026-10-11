@@ -33,6 +33,8 @@ pub fn allowed(view:&dyn View,kind:Kind,at:(i32,i32,i32),biome:&str,light:(u8,u8
     let (x,y,z)=at;
     if !view.loaded(x.div_euclid(16),z.div_euclid(16)) {return false;}
     if kind!=Kind::GlowSquid && !table(biome).iter().any(|entry|entry.kind==kind) {return false;}
+    if matches!(kind,Kind::Turtle|Kind::Frog)
+        && !super::super::spawn::space::dry_kind(view,kind,(f64::from(x)+0.5,f64::from(y),f64::from(z)+0.5)) {return false;}
     if kind==Kind::Turtle {
         return biome=="beach" && y>62 && matches!(blocks::block_at_state(view.block(x,y-1,z)),Some("sand"))
             && view.block(x,y,z)==crate::world::AIR && light.0.max(light.1)>8;
@@ -90,6 +92,7 @@ pub fn attempt(world:&mut World,players:&[ai::Watcher],mobs:&[Mob],rng:&mut Rng,
                 let mut mob=Mob::new(next_id(),chosen.kind,at);
                 initialize(&mut mob,biome,rng);
                 if mob.kind==Kind::TropicalFish {mob.water.variant = *variant.get_or_insert(mob.water.variant);}
+                if !super::super::spawn::space::fits(&crate::tick::MobView(world),&mob) {continue;}
                 let cat=category(mob.kind) as usize;
                 if counts[cat]>=caps[cat] {break;}
                 counts[cat]+=1;

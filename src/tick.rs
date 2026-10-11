@@ -1284,7 +1284,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
                     witch.persistent = true;
                     witch.persistent_tag = true;
-                    items.add_mob(witch);
+                    if crate::mob::spawn::fits(&MobView(world), &witch) { items.add_mob(witch); }
                 }
 
                 let mut cat = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Cat, at);
@@ -1292,7 +1292,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 cat.tame.variant = crate::mob::tame::variant_named(crate::mob::Kind::Cat, "all_black").unwrap_or(0);
                 cat.persistent = true;
                 cat.persistent_tag = true;
-                items.add_mob(cat);
+                if crate::mob::spawn::fits(&MobView(world), &cat) { items.add_mob(cat); }
             }
         }
     }
@@ -1305,14 +1305,14 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             for at in world.outpost_allays(*chunk_x, *chunk_z) {
                 let mut allay=crate::mob::Mob::new(shared.next_entity_id(),crate::mob::Kind::Allay,at);
                 allay.persistent=true; allay.persistent_tag=true;
-                items.add_mob(allay);
+                if crate::mob::spawn::fits(&MobView(world), &allay) { items.add_mob(allay); }
             }
             for at in world.outpost_golems(*chunk_x, *chunk_z) {
                 let mut golem = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::IronGolem, at);
 
                 golem.persistent = true;
                 golem.persistent_tag = true;
-                items.add_mob(golem);
+                if crate::mob::spawn::fits(&MobView(world), &golem) { items.add_mob(golem); }
             }
         }
     }
@@ -1330,7 +1330,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
                 illager.persistent = true;
                 illager.persistent_tag = true;
-                items.add_mob(illager);
+                if crate::mob::spawn::fits(&MobView(world), &illager) { items.add_mob(illager); }
             }
         }
     }
@@ -1345,7 +1345,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
                 dweller.persistent = true;
                 dweller.persistent_tag = true;
-                items.add_mob(dweller);
+                if crate::mob::spawn::fits(&MobView(world), &dweller) { items.add_mob(dweller); }
             }
         }
     }
@@ -1358,7 +1358,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
                 let mut shulker = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Shulker, (f64::from(x) + 0.5, f64::from(y), f64::from(z) + 0.5));
 
                 shulker.h.face = crate::mob::hostile::attach_face(&MobView(world), (x, y, z), rng).unwrap_or(0);
-                items.add_mob(shulker);
+                if crate::mob::spawn::fits(&MobView(world), &shulker) { items.add_mob(shulker); }
             }
         }
     }
@@ -1483,6 +1483,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             let y=world.rain_top(x,z).filter(|y| crate::mob::spawn::spawnable(&MobView(world),x,*y,z,3));
             let Some(y)=y else { continue; };
             let mut trader=crate::mob::Mob::new(shared.next_entity_id(),crate::mob::Kind::WanderingTrader,(f64::from(x)+0.5,f64::from(y),f64::from(z)+0.5));
+            if !crate::mob::spawn::fits(&MobView(world),&trader) { continue; }
             trader.land.despawn=48000; trader.villager.offers=crate::mob::trader::offers(rng);
             let (id,uuid)=(trader.entity_id,trader.uuid);
             let mut llamas=Vec::new();
