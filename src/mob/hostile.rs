@@ -639,22 +639,7 @@ fn idle(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng, mut plan: Plan
     }
 
     if rng.below(120) == 0 {
-        for _ in 0..10 {
-            let here = mob.cell();
-            let target = (here.0 + rng.below(21) as i32 - 10, here.1, here.2 + rng.below(21) as i32 - 10);
-            let target = ai::settle(view, target, here.1);
-
-            if !path::standable(view, target) {
-                continue;
-            }
-
-            let route = path::find(view, here, target, path::MAX_NODES);
-
-            if !route.is_empty() {
-                mob.brain.go(route, 0.8);
-                break;
-            }
-        }
+        mob.brain.go(ai::stroll_route(mob.kind, view, mob.cell(), rng), 0.8);
     }
 
     let _ = ctx;
@@ -677,7 +662,7 @@ pub(super) fn approach(mob: &mut Mob, view: &dyn View, target: &Watcher, speed: 
     let goal = (target.x.floor() as i32, (target.y + 1.0e-3).floor() as i32, target.z.floor() as i32);
 
     // Паук идёт напрямую: путь по земле ему не нужен, стена — не преграда.
-    let route = if mob.kind.spider() { vec![goal] } else { path::find(view, here, goal, path::MAX_NODES) };
+    let route = if mob.kind.spider() { vec![goal] } else { path::find_for(view, here, goal, path::MAX_NODES, mob.kind) };
 
     mob.brain.go(route, speed);
 }
@@ -878,7 +863,7 @@ fn flee_cat(mob: &mut Mob, view: &dyn View, ctx: &Ctx, grounded: bool) -> bool {
     for angle in [0.0f64, std::f64::consts::FRAC_PI_4, -std::f64::consts::FRAC_PI_4] {
         let (sin, cos) = angle.sin_cos();
         let away=ai::settle(view,(here.0+((dx*cos-dz*sin)/length*8.0).round() as i32,here.1,here.2+((dx*sin+dz*cos)/length*8.0).round() as i32),here.1);
-        let route=path::find(view,here,away,path::MAX_NODES);
+        let route=path::find_for(view,here,away,path::MAX_NODES,mob.kind);
         if route.is_empty() { continue; }
         mob.brain.go(route,1.2);
         mob.h.cat_flee = true;

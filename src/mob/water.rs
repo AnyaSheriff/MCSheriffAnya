@@ -309,7 +309,7 @@ fn near_water(mob: &Mob, view: &dyn View) -> Option<(f64,f64,f64)> {
 fn walk_to(mob: &mut Mob,view: &dyn View,at: (f64,f64,f64),speed: f64) -> ai::Plan {
     if !mob.brain.walking() || mob.ticks.is_multiple_of(20) {
         let goal=(at.0.floor() as i32,at.1.floor() as i32,at.2.floor() as i32);
-        let route=super::path::find(view,mob.cell(),goal,super::path::MAX_NODES);
+        let route=super::path::find_for(view,mob.cell(),goal,super::path::MAX_NODES,mob.kind);
         mob.brain.go(route,speed);
     }
     ai::walk(mob,ai::Plan::default())

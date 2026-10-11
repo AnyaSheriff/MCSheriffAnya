@@ -20,6 +20,9 @@
 use super::path::{self, Cell};
 use super::{Kind, Mob, Rng, View};
 
+mod stroll;
+pub(super) use stroll::route as stroll_route;
+
 /// Сколько тактов подряд пара стоит рядом до детёныша: у оригинала он рождается
 /// на 70-м такте, когда корм дали на 10-м и 12-м (чёрный ящик, cow-breed).
 const BREED_TICKS: i32 = 59;
@@ -372,7 +375,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
             let target = (here.0 + (ux * 6.0 + jitter).round() as i32, here.1, here.2 + (uz * 6.0 - jitter).round() as i32);
             let target = settle(view, target, here.1);
 
-            let route = path::find(view, here, target, path::MAX_NODES);
+            let route = path::find_for(view, here, target, path::MAX_NODES, mob.kind);
 
             mob.brain.go(route, panic_speed(mob.kind));
         }
@@ -413,7 +416,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
                 let target = (other.x.floor() as i32, other.y.floor() as i32, other.z.floor() as i32);
 
                 mob.brain.repath = 10;
-                let route = path::find(view, here, target, path::MAX_NODES);
+                let route = path::find_for(view, here, target, path::MAX_NODES, mob.kind);
 
                 mob.brain.go(route, 1.0);
             }
@@ -448,7 +451,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
         if mob.brain.path.is_empty() || mob.brain.repath <= 0 {
             mob.brain.repath = 10;
             let target = (player.x.floor() as i32, player.y.floor() as i32, player.z.floor() as i32);
-            let route = path::find(view, here, target, path::MAX_NODES);
+            let route = path::find_for(view, here, target, path::MAX_NODES, mob.kind);
 
             mob.brain.go(route, tempt_speed(mob.kind));
         }
@@ -473,7 +476,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
             if mob.brain.path.is_empty() || mob.brain.repath <= 0 {
                 mob.brain.repath = 10;
                 let target = (other.x.floor() as i32, other.y.floor() as i32, other.z.floor() as i32);
-                let route = path::find(view, here, target, path::MAX_NODES);
+                let route = path::find_for(view, here, target, path::MAX_NODES, mob.kind);
 
                 mob.brain.go(route, 1.25);
             }
@@ -501,23 +504,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
 
     // 6. Прогулка: в среднем раз в 120 тактов (вики, Mob AI: «Wander»).
     if mob.brain.path.is_empty() && rng.below(120) == 0 {
-        for _ in 0..10 {
-            let dx = rng.below(21) as i32 - 10;
-            let dz = rng.below(21) as i32 - 10;
-            let dy = rng.below(15) as i32 - 7;
-            let target = settle(view, (here.0 + dx, here.1 + dy, here.2 + dz), here.1 + dy);
-
-            if !path::standable(view, target) {
-                continue;
-            }
-
-            let route = path::find(view, here, target, path::MAX_NODES);
-
-            if !route.is_empty() {
-                mob.brain.go(route, 1.0);
-                break;
-            }
-        }
+        mob.brain.go(stroll_route(mob.kind, view, here, rng), 1.0);
     }
 
     if !mob.brain.path.is_empty() {

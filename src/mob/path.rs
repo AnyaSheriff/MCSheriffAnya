@@ -14,7 +14,7 @@
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
 
-use super::{View, is_lava, is_water, solid};
+use super::{Kind, View, is_lava, is_water, solid};
 
 #[cfg(test)]
 #[allow(dead_code)]
@@ -89,13 +89,38 @@ fn standable_height(view:&dyn View,(x,y,z):Cell,height:i32)->bool {
     properties(below) & FLOOR != 0
 }
 
-/// Цена клетки: вода дороже (вики, Pathfinding: «water malus 8» у наземных).
-fn cost_of(view: &dyn View, (x, y, z): Cell) -> f64 {
-    if properties(view.block(x, y, z)) & WATER != 0 || properties(view.block(x, y - 1, z)) & WATER != 0 { 8.0 } else { 0.0 }
+/// Вода у ног или под ними: второй случай — узел на поверхности воды.
+pub(super) fn water_cell(view: &dyn View, (x, y, z): Cell) -> bool {
+    properties(view.block(x, y, z)) & WATER != 0 || properties(view.block(x, y - 1, z)) & WATER != 0
+}
+
+// Вики, Mob AI#Pathfinding penalties (oldid=3455147): «water», «water border»
+// — 8, переопределения видов — в следующей таблице. -1 запрещает вход.
+// https://minecraft.wiki/w/Mob_AI?oldid=3455147#Pathfinding_penalties
+fn water_malus(kind: Kind) -> f64 {
+    match kind {
+        Kind::Drowned | Kind::Guardian | Kind::ElderGuardian | Kind::Axolotl
+        | Kind::Turtle | Kind::Chicken | Kind::Cod | Kind::Salmon | Kind::TropicalFish
+        | Kind::Pufferfish | Kind::Squid | Kind::GlowSquid | Kind::Dolphin | Kind::Tadpole => 0.0,
+        Kind::Frog => 4.0,
+        Kind::Bee | Kind::Sniffer | Kind::Strider | Kind::Blaze | Kind::Enderman => f64::INFINITY,
+        _ => 8.0,
+    }
+}
+
+fn cost_of(view: &dyn View, (x, y, z): Cell, water: f64, border: f64) -> f64 {
+    if water_cell(view, (x, y, z)) { return water; }
+    // Вики: «neighboring block is water». [проверить] В наземной сетке
+    // проверяем четыре стороны на уровне ног; не штрафуем весь берег
+    // за воду ниже пола. Водные навигаторы используют свой набор штрафов.
+    if border != 0.0 && [(1, 0), (-1, 0), (0, 1), (0, -1)].iter()
+        .any(|&(dx, dz)| properties(view.block(x + dx, y, z + dz)) & WATER != 0) {
+        border
+    } else { 0.0 }
 }
 
 /// Куда можно шагнуть из клетки: (клетка, цена шага).
-fn neighbours(view: &dyn View, (x, y, z): Cell, height:i32, out: &mut Vec<(Cell, f64)>) {
+fn neighbours(view: &dyn View, (x, y, z): Cell, height:i32, water:f64, border:f64, out: &mut Vec<(Cell, f64)>) {
     out.clear();
 
     for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)] {
@@ -110,7 +135,7 @@ fn neighbours(view: &dyn View, (x, y, z): Cell, height:i32, out: &mut Vec<(Cell,
         let there = (x + dx, y, z + dz);
 
         if standable_height(view, there,height) {
-            out.push((there, step + cost_of(view, there)));
+            out.push((there, step + cost_of(view, there, water, border)));
             continue;
         }
 
@@ -118,7 +143,7 @@ fn neighbours(view: &dyn View, (x, y, z): Cell, height:i32, out: &mut Vec<(Cell,
         let up = (x + dx, y + 1, z + dz);
 
         if !diagonal && free(view, (x, y + height, z)) && standable_height(view, up,height) && properties(view.block(x + dx, y, z + dz)) & TALL == 0 {
-            out.push((up, step + 0.5 + cost_of(view, up)));
+            out.push((up, step + 0.5 + cost_of(view, up, water, border)));
             continue;
         }
 
@@ -132,7 +157,7 @@ fn neighbours(view: &dyn View, (x, y, z): Cell, height:i32, out: &mut Vec<(Cell,
                 }
 
                 if standable_height(view, down,height) {
-                    out.push((down, step + f64::from(drop) * 0.5 + cost_of(view, down)));
+                    out.push((down, step + f64::from(drop) * 0.5 + cost_of(view, down, water, border)));
                     break;
                 }
             }
@@ -160,8 +185,21 @@ pub fn find(view: &dyn View, from: Cell, to: Cell, max_nodes: usize) -> Vec<Cell
     find_height(view,from,to,max_nodes,2)
 }
 
+/// Наземный путь с водным штрафом конкретного вида, в том числе при погоне.
+pub fn find_for(view: &dyn View, from: Cell, to: Cell, max_nodes: usize, kind: Kind) -> Vec<Cell> {
+    let border = if kind == Kind::Bee { 16.0 }
+        else if super::water::creature(kind) && kind != Kind::Frog
+            || matches!(kind, Kind::Drowned | Kind::Guardian | Kind::ElderGuardian) { 0.0 }
+        else { 8.0 };
+    find_cost(view, from, to, max_nodes, 2, water_malus(kind), border)
+}
+
 /// Хранителю нужен проход высотой три блока (вики, Warden: «2.9 blocks»).
 pub fn find_height(view:&dyn View,from:Cell,to:Cell,max_nodes:usize,height:i32)->Vec<Cell> {
+    find_cost(view, from, to, max_nodes, height, 8.0, 8.0)
+}
+
+fn find_cost(view:&dyn View,from:Cell,to:Cell,max_nodes:usize,height:i32,water:f64,border:f64)->Vec<Cell> {
     // Цена в тысячных, чтобы упорядочивать целыми.
     let key = |cost: f64| (cost * 1000.0) as i64;
 
@@ -189,8 +227,9 @@ pub fn find_height(view:&dyn View,from:Cell,to:Cell,max_nodes:usize,height:i32)-
 
         let cost = best[&at];
 
-        neighbours(view, at, height, &mut adjacent);
+        neighbours(view, at, height, water, border, &mut adjacent);
         for &(next, step) in &adjacent {
+            if !step.is_finite() { continue; }
             let total = cost + step;
 
             if best.get(&next).is_none_or(|known| total < *known) {
@@ -253,10 +292,11 @@ mod perf_tests {
     }
 
     #[test]
-    fn paths_and_standability_match_original_search() {
-        let names = ["air", "air", "air", "stone", "water", "lava", "oak_fence",
+    fn dry_paths_and_standability_match_original_search() {
+        // Водные цены намеренно изменены; прежний поиск сверяем на суше.
+        let names = ["air", "air", "air", "stone", "air", "lava", "oak_fence",
             "oak_fence_gate", "cobweb", "snow", "oak_slab", "oak_stairs", "magma_block",
-            "fire", "powder_snow", "cactus", "bubble_column", "lily_pad"];
+            "fire", "powder_snow", "cactus", "air", "lily_pad"];
         for seed in 0..48 {
             let view = Terrain { seed, states: names.iter().map(|n| blocks::state_by_name(n).unwrap()).collect() };
             for x in -3..=3 { for z in -3..=3 { for y in -2..=4 {
@@ -270,5 +310,70 @@ mod perf_tests {
                 }
             }}
         }
+    }
+}
+
+#[cfg(test)]
+mod water_tests {
+    use super::*;
+
+    struct Pool { river: bool }
+    impl View for Pool {
+        fn block(&self, x: i32, y: i32, z: i32) -> i32 {
+            if y <= 0 { blocks::state_by_name("stone").unwrap() }
+            else if y == 1 && (1..=3).contains(&x) && (self.river || z.abs() <= 1) {
+                blocks::state_by_name("water").unwrap()
+            } else { 0 }
+        }
+        fn loaded(&self, _: i32, _: i32) -> bool { true }
+    }
+
+    #[test]
+    fn water_and_border_have_separate_costs_and_species_overrides() {
+        let view = Pool { river: false };
+        assert_eq!(cost_of(&view, (2, 1, 0), water_malus(Kind::Cow), 8.0), 8.0);
+        assert_eq!(cost_of(&view, (0, 1, 0), water_malus(Kind::Cow), 8.0), 8.0);
+        assert_eq!(cost_of(&view, (-1, 1, 0), water_malus(Kind::Cow), 8.0), 0.0);
+        assert_eq!(cost_of(&view, (2, 2, 0), water_malus(Kind::Cow), 8.0), 8.0);
+        for kind in [Kind::Drowned, Kind::Turtle, Kind::Axolotl, Kind::Chicken] {
+            assert_eq!(cost_of(&view, (2, 1, 0), water_malus(kind), 8.0), 0.0);
+        }
+        assert_eq!(cost_of(&view, (2, 1, 0), water_malus(Kind::Frog), 8.0), 4.0);
+        for kind in [Kind::Enderman, Kind::Sniffer, Kind::Strider, Kind::Blaze, Kind::Bee] {
+            assert!(!cost_of(&view, (2, 1, 0), water_malus(kind), 8.0).is_finite());
+        }
+    }
+
+    #[test]
+    fn land_route_goes_around_pond_but_drowned_can_cross_it() {
+        let view = Pool { river: false };
+        let start = (-2, 1, 0);
+        let goal = (6, 1, 0);
+        let cow = find_for(&view, start, goal, MAX_NODES, Kind::Cow);
+        assert_eq!(cow.last(), Some(&goal));
+        assert!(cow.iter().all(|&at| !water_cell(&view, at)), "{cow:?}");
+        let drowned = find_for(&view, start, goal, MAX_NODES, Kind::Drowned);
+        assert_eq!(drowned.last(), Some(&goal));
+        assert!(drowned.iter().any(|&at| water_cell(&view, at)));
+    }
+
+    #[test]
+    fn pursuit_can_still_cross_water_when_there_is_no_land_route() {
+        let view = Pool { river: true };
+        let goal = (5, 1, 0);
+        let mut at = (-1, 1, 0);
+        let mut crossed = false;
+        // Погоня повторяет поиск: бюджет может дать лишь часть пути через реку.
+        for _ in 0..8 {
+            let zombie = find_for(&view, at, goal, MAX_NODES, Kind::Zombie);
+            crossed |= zombie.iter().any(|&cell| water_cell(&view, cell));
+            at = *zombie.last().expect("погоня продвигается");
+            if at == goal { break; }
+        }
+        assert_eq!(at, goal);
+        assert!(crossed);
+        let enderman = find_for(&view, (-1, 1, 0), goal, MAX_NODES, Kind::Enderman);
+        assert_ne!(enderman.last(), Some(&goal));
+        assert!(enderman.iter().all(|&at| !water_cell(&view, at)));
     }
 }
