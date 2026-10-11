@@ -235,6 +235,7 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
     let kind = station.kind;
     let size = kind.slots();
     let before = snapshot(&window.shown, &player.inventory);
+    let cursor_before = player.inventory.cursor();
     let slot = slot as i16 as i32;
     let has_result = kind != Station::Enchanting;
     let result_slot = kind.inputs();
@@ -282,7 +283,8 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
         }
     }
 
-    if !readable || predicted_cursor != Some(as_pair(player.inventory.cursor())) {
+    if !readable || predicted_cursor != Some(as_pair(player.inventory.cursor()))
+        || (cursor_before != player.inventory.cursor() && player.inventory.cursor().is_some_and(|s| s.data.is_some())) {
         reaction.cursor = Some(player.inventory.cursor());
     }
 }

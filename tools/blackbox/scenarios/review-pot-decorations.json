@@ -1,0 +1,59 @@
+{
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:stone"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "!stopfly",
+    "give $(bot) minecraft:decorated_pot[pot_decorations=[minecraft:archer_pottery_sherd,minecraft:brick,minecraft:arms_up_pottery_sherd,minecraft:prize_pottery_sherd]]"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 20,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:diamond_pickaxe"
+    },
+    {
+      "after": 30,
+      "dig": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 100,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true,
+  "name": "review-pot-decorations",
+  "about": "Place a crafted-pattern pot, observe sherd NBT, shatter with a pickaxe and recover original ingredients; record block entity type."
+}

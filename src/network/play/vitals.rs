@@ -79,7 +79,7 @@ const EVENT_DEATH: i8 = 3;
 const EVENT_FINISHED_EATING: i8 = 9;
 const EVENT_DROWN: i8 = 67;
 /// Тотем бессмертия сработал (вики, Entity statuses: 35).
-const EVENT_TOTEM: i8 = 35;
+pub(super) const EVENT_TOTEM: i8 = 35;
 
 /// Номера свойств в пакете Update Attributes (порядок minecraft-data,
 /// названия там сдвинуты: 22 — скорость движения, 23 — кислородный бонус).
@@ -1107,7 +1107,7 @@ fn death_message(source: Source, player: &PlayerState, mob: &str, killer: Option
     nbt::Compound::new().compounds("with", with).string("translate", &key).encode_network()
 }
 
-async fn send_entity_event(stream: &mut Outgoing<'_>, entity_id: i32, status: i8) -> io::Result<()> {
+pub(super) async fn send_entity_event(stream: &mut Outgoing<'_>, entity_id: i32, status: i8) -> io::Result<()> {
     let mut body = encode_varint(ENTITY_EVENT);
 
     push_i32(&mut body, entity_id);

@@ -172,13 +172,13 @@ pub fn flags(id: u64, f: Flags) -> Vec<u8> {
 
 #[derive(Default)]
 pub struct View {
-    effects: Vec<Effect>,
+    /// Остаток и такт последней отправки: повторная выдача не сдвигает базу сравнения.
+    effects: Vec<(Effect, u64)>,
     /// Эффекты в том виде, как ушли клиенту (срок — из последнего пакета).
     sent: Vec<Effect>,
     /// Порядок наложения, свежие первыми: от него зависит упаковка `visible_effects`.
     order: Vec<EffectKind>,
     visible: i64,
-    tick: u64,
     environment: Option<(i32, i32)>,
     attributes: Vec<u8>,
     flags: Vec<u8>,
@@ -202,14 +202,14 @@ impl View {
         self.sent.retain(|old| vit.effects.iter().any(|e| e.kind == old.kind));
         self.order.retain(|kind| vit.effects.iter().any(|e| e.kind == *kind));
         for effect in &vit.effects {
-            let old = self.effects.iter().find(|e| e.kind == effect.kind);
-            let elapsed = tick.saturating_sub(self.tick).min(i32::MAX as u64) as i32;
+            let old = self.effects.iter().find(|(e, _)| e.kind == effect.kind);
             // Срок убывает на такт; фаза счётчика у клиента и у тела может расходиться
             // на единицу, поэтому «то же» — тот же уровень и вид, срок не вырос и не упал
-            // больше, чем на прошедшее (+2) [br-record: лишний update сразу после add].
-            let same = old.is_some_and(|old| {
+            // больше, чем на прошедшее (+2) с последнего пакета [br-record: лишний update сразу после add].
+            let same = old.is_some_and(|(old, sent_at)| {
+                let elapsed = tick.saturating_sub(*sent_at).min(i32::MAX as u64) as i32;
                 let decay = if old.ticks_left == -1 || effect.ticks_left == -1 { old.ticks_left == effect.ticks_left }
-                    else { effect.ticks_left <= old.ticks_left && old.ticks_left - effect.ticks_left <= elapsed.saturating_add(2) };
+                    else { effect.ticks_left <= old.ticks_left && old.ticks_left.saturating_sub(elapsed).abs_diff(effect.ticks_left) <= 2 };
                 decay && Effect { ticks_left: old.ticks_left, ..*effect } == *old
             });
             if same { continue; }
@@ -228,6 +228,8 @@ impl View {
             packets.extend(mob_effect(id, if known { 2 } else { 1 }, shown));
             self.sent.retain(|e| e.kind != effect.kind);
             self.sent.push(shown);
+            self.effects.retain(|(e, _)| e.kind != effect.kind);
+            self.effects.push((*effect, tick));
             if !known {
                 self.order.insert(0, effect.kind);
                 if let Some(n) = effect_sound(effect.kind, true) { sound(n, packets); }
@@ -236,8 +238,7 @@ impl View {
         let newest_first: Vec<Effect> = self.order.iter().filter_map(|kind| vit.effects.iter().find(|e| e.kind == *kind)).copied().collect();
         let visible = pack_visible(&newest_first);
         if visible != self.visible { self.visible = visible; packets.push(visible_effects(id, visible)); }
-        self.effects.clone_from(&vit.effects);
-        self.tick = tick;
+        self.effects.retain(|(e, _)| vit.effects.iter().any(|v| v.kind == e.kind));
         let env = (vit.air, frozen);
         if self.environment != Some(env) {
             packets.push(environment(id, env.0, env.1));
@@ -397,4 +398,16 @@ mod tests {
         assert_eq!((r.varint64(), r.u8(), r.zigzag32(), r.zigzag32(), r.bool(), r.zigzag32()), (Some(1), Some(3), Some(14), Some(3), Some(true), Some(600)));
         assert!(packets.iter().any(|p| p == &visible_effects(1, 0)));
     }
+    #[test]
+    fn continuously_renewed_effect_is_refreshed_before_client_expiry() {
+        let mut view = View::default(); let mut vit = Vitals::new(); let mut packets = Vec::new();
+        vit.give_effect_shown(Effect { ticks_left: 40, ..effect(EffectKind::NightVision) });
+        view.sync(1,&vit,0,0,(0.0,0.0,0.0),&mut packets); packets.clear();
+        for tick in 1..40 { view.sync(1,&vit,0,tick,(0.0,0.0,0.0),&mut packets); }
+        assert!(packets.iter().any(|p| packet_id(p).is_some_and(|(id,_)| id == 0x1c)));
+        packets.clear();
+        for tick in 40..80 { vit.effects_tick(); view.sync(1,&vit,0,tick,(0.0,0.0,0.0),&mut packets); }
+        assert!(!packets.iter().any(|p| p.get(2) == Some(&2)),"обычное убывание не требует обновлений");
+    }
+
 }

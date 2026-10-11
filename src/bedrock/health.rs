@@ -58,7 +58,7 @@ impl Sent {
 /// Здоровье игрока Bedrock.
 pub struct Health {
     pub vit: Vitals,
-    hits: Vec<(f32, Source, bool)>,
+    hits: Vec<(f32, Source, bool, Vec<survival::Effect>)>,
     sent: Option<Sent>,
 }
 
@@ -110,12 +110,13 @@ impl Health {
 
     /// Удар, который разберётся в ближайшем такте.
     pub fn hurt(&mut self, amount: f32, source: Source) {
-        self.hits.push((amount, source, false));
+        self.hits.push((amount, source, false, Vec::new()));
     }
 
     /// Урон после брони/сложности из общего тела: второй раз не ослабляем.
+    #[cfg(test)]
     pub fn hurt_final(&mut self, amount: f32, source: Source) {
-        self.hits.push((amount, source, true));
+        self.hurt_with_effects(amount, source, Vec::new());
     }
 
     /// Движение по вводу клиента: прыжок, бег, падение. `dy` — сдвиг ног по
@@ -135,8 +136,12 @@ impl Health {
         }
 
         if let Some(damage) = self.vit.land(dy, on_ground, soft, multiplier) {
-            self.hits.push((damage, Source::Fall, false));
+            self.hits.push((damage, Source::Fall, false, Vec::new()));
         }
+    }
+
+    pub fn hurt_with_effects(&mut self, amount: f32, source: Source, effects: Vec<survival::Effect>) {
+        self.hits.push((amount, source, true, effects));
     }
 
     /// Такт: удары, бездна, голод, лечение; изменившиеся атрибуты — клиенту.
@@ -151,10 +156,14 @@ impl Health {
     pub fn step(&mut self, runtime_id: u64, rules: Rules, inventory: &mut crate::inventory::Inventory, attrs: &crate::attributes::Attributes) -> Outcome {
         let mut out = Outcome { packets: Vec::new(), died: None, hurts: Vec::new(), slots: Vec::new() };
         if self.vit.dead { self.hits.clear(); return out; }
-        if rules.feet_y < VOID_BELOW { self.hits.push((4.0, Source::OutOfWorld, false)); }
+        if rules.feet_y < VOID_BELOW { self.hits.push((4.0, Source::OutOfWorld, false, Vec::new())); }
 
-        for (amount, source, final_damage) in std::mem::take(&mut self.hits) {
+        for (amount, source, final_damage, effects) in std::mem::take(&mut self.hits) {
+            let before = out.hurts.len();
             self.apply_hit(runtime_id, (amount, source, final_damage), &rules, inventory, attrs, &mut out);
+            if out.hurts.len() != before && out.died.is_none() {
+                for effect in effects { self.vit.give_effect_shown(effect); }
+            }
             if out.died.is_some() { break; }
         }
         if out.died.is_none() {
@@ -637,4 +646,14 @@ mod tests {
 
         assert!(hurt >= 2, "{hurt}");
     }
+    #[test]
+    fn tipped_arrow_resistance_applies_after_impact() {
+        let mut health = Health::new(None);
+        let effect = survival::Effect { kind: survival::EffectKind::Resistance, amplifier: 2, ticks_left: 100, ambient: false, visible: true, show_icon: true };
+        health.hurt_with_effects(10.0,Source::Arrow,vec![effect]);
+        health.tick(1,true,false,survival::NORMAL,64.0);
+        assert_eq!(health.vit.health,10.0);
+        assert!(health.vit.effects.iter().any(|e| e.kind == effect.kind));
+    }
+
 }

@@ -103,6 +103,8 @@ mod fishing;
 mod maps;
 mod brush;
 mod bundle_use;
+#[cfg(test)]
+mod review_tests;
 mod small;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
@@ -4139,7 +4141,10 @@ async fn send_pending_world_events(
                 }
             }
             // Ход поршня для Bedrock: у Java клиент рисует его по Block Action.
-            WorldEvent::Piston(_) | WorldEvent::Totem { .. } => {}
+            WorldEvent::Piston(_) => {}
+            WorldEvent::Totem { entity_id } => {
+                vitals::send_entity_event(stream, *entity_id, vitals::EVENT_TOTEM).await?;
+            }
             WorldEvent::BlockEntity { x, y, z, kind, nbt } => entities.push((*x, *y, *z, *kind, nbt.clone())),
             WorldEvent::Action(action) => {
                 let mut body = encode_varint(BLOCK_ACTION);
@@ -5522,6 +5527,8 @@ async fn send_chunk(
         for ((x, y, z), nbt) in world.chunk_signs(chunk_x, chunk_z) {
             shelves.insert((x, y, z), nbt);
         }
+
+        for (at, nbt) in world.chunk_pots(chunk_x, chunk_z) { shelves.insert(at, nbt); }
 
         // Испытательные спавнеры — моба, хранилища — подошедших (trial.rs).
         for ((x, y, z), nbt) in world.chunk_trials(chunk_x, chunk_z) {
@@ -7431,14 +7438,7 @@ fn handle_client_packet_inner(
         0x03 => {
             let mut c=Cursor::new(payload);
             if let (Some(slot),Some(index))=(c.varint(),c.varint()) {
-                if let Some(open)=player.window.as_mut() {
-                    let mut view=window::Window{container:&mut open.shown,inventory:&mut player.inventory,kind:open.kind,horse:None};
-                    if slot>=0 && let Some(s)=view.get(slot as usize).filter(|s|crate::bundle::is_bundle(s.item)) {
-                        view.set(slot as usize,Some(crate::bundle::select(s,index)));
-                    }
-                } else if let Some(s)=player.inventory.slot(slot).filter(|s|crate::bundle::is_bundle(s.item)) {
-                    player.inventory.set(slot,Some(crate::bundle::select(s,index)));
-                }
+                select_bundle(shared, player, slot, index);
             }
         }
         crate::recipe_book::CLIENT_SETTINGS => {
@@ -8710,6 +8710,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
     // (play/sleep.rs).
     let bed = sleep::bed_break_plan(&world, (x, y, z), player.game_mode == GAME_MODE_CREATIVE);
 
+    let pot = world.pot((x,y,z));
     let hive_block = crate::hive::is_hive(state);
     let hive_silk = player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
     let hive_drop = if hive_block && hive_silk { crate::hive::silk_stack(&world, (x, y, z)) } else { None };
@@ -8742,6 +8743,15 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
 
     *mined = Some(broken);
 
+    if let Some(sides) = pot {
+        if player.game_mode != GAME_MODE_CREATIVE && shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
+            for stack in crate::pottery::drops(sides,player.inventory.held()) {
+                let scattered = crate::tick::scattered((x,y,z),|| f64::from(world.random_unit()));
+                drop_into_world(shared,player.dimension,stack,scattered.0,scattered.1,items::MINED_DELAY);
+            }
+        }
+        return Some(Reaction::accepted(sequence));
+    }
     if hive_block {
         let stack=if !creative && drops {
             hive_drop.or_else(|| (blocks::block_at_state(broken)==Some("beehive")).then(||blocks::item_named("beehive").map(|id|Stack::new(id,1))).flatten())
@@ -9684,6 +9694,7 @@ crate::mob::armor_stand::place(&mut world,&mut items,shared,clicked,face,player.
         .expect("мир захвачен другим потоком");
 
     let actor = world.actor.replace(player.entity_id);
+    let pot_at = crate::pottery::placement_at(&world,(clicked_x,clicked_y,clicked_z),face);
     let placed = placing::place_tagged(
         &mut world,
         name,
@@ -9732,6 +9743,11 @@ crate::mob::armor_stand::place(&mut world,&mut items,shared,clicked,face,player.
         let near=offset_towards(clicked_x,clicked_y,clicked_z,face);
         let at=if crate::hive::is_hive(world.get_block(near.0,near.1,near.2)) {near} else {(clicked_x,clicked_y,clicked_z)};
         crate::hive::place_contents(&mut world,at,&held);
+    }
+
+    if matches!(placed, placing::Placement::Placed) && let Some(held) = player.inventory.held()
+        && blocks::item_name(held.item) == Some("decorated_pot") {
+        crate::pottery::place(&mut world,pot_at,held);
     }
 
     // Шулкер-ящик с содержимым в предмете ставится с ним (вики, Shulker Box).
@@ -10314,7 +10330,9 @@ fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
             stack.tnt = crate::custom_tnt::by_name(&name).map(|kind| kind.id);
         }
 
-        crate::stackdata::read_component(kind, data, &mut extras);
+        if kind == 50 {
+            if !crate::stackdata::read_bundle_component(data, &mut extras) { return None; }
+        } else { crate::stackdata::read_component(kind, data, &mut extras); }
     }
 
     // Имя особого динамита — от его вида, своим именем оно не хранится.
@@ -10451,6 +10469,36 @@ fn crafter_slot_state(shared: &Shared, player: &mut PlayerState, window: i32, sl
     if redstone::crafter::toggle_slot(&mut world, pos, slot, enabled) {
         reaction.window_property = Some((window, slot as i16, i16::from(!enabled)));
     }
+}
+
+fn select_bundle(shared: &Shared, player: &mut PlayerState, slot: i32, index: i32) {
+    if slot < 0 { return; }
+    let Some(open) = player.window.as_mut() else {
+        if let Some(s) = player.inventory.slot(slot).filter(|s| crate::bundle::is_bundle(s.item)) {
+            player.inventory.set(slot, Some(crate::bundle::select(s, index)));
+        }
+        return;
+    };
+    if slot as usize >= open.shown.len() || open.station.is_some() || open.merchant.is_some() {
+        let mut view = window::Window { container: &mut open.shown, inventory: &mut player.inventory, kind: open.kind, horse: None };
+        if let Some(s) = view.get(slot as usize).filter(|s| crate::bundle::is_bundle(s.item)) { view.set(slot as usize, Some(crate::bundle::select(s, index))); }
+        return;
+    }
+    let mut world = shared.world_in(player.dimension).lock().expect("мир");
+    let mut slots = if let Some(cart) = open.cart { cart_slots(shared, player.dimension, cart).unwrap_or_default() }
+        else if open.ender { player.ender.clone() } else { containers::window_slots(&world, &open.halves) };
+    let Some(s) = slots.get(slot as usize).copied().flatten().filter(|s| crate::bundle::is_bundle(s.item)) else { return; };
+    slots[slot as usize] = Some(crate::bundle::select(s, index));
+    if let Some(cart) = open.cart {
+        let mut items = shared.items_in(player.dimension).lock().expect("предметы");
+        if let Some(cart) = items.carts_mut().iter_mut().find(|c| c.entity_id == cart) { cart.slots.clone_from(&slots); }
+        else if let Some(mob) = items.mobs_mut().iter_mut().find(|m| m.entity_id == cart) {
+            if crate::mob::land::llama(mob.kind) { land::store(mob, &slots); }
+            else if crate::mob::horse::equine(mob.kind) { mob.horse.slots[..slots.len()].copy_from_slice(&slots); }
+        }
+    } else if open.ender { player.ender.clone_from(&slots); }
+    else { containers::store_window_slots(&mut world, &open.halves, &slots); }
+    open.shown = slots;
 }
 
 fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], reaction: &mut Reaction) {

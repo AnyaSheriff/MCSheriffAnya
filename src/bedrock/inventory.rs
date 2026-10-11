@@ -605,6 +605,11 @@ impl Bag {
         packets
     }
 
+    pub fn cartography_requests(&mut self, payload: &[u8], creative: bool) -> (Handled, Vec<Vec<u8>>) {
+        let handled = self.handle_requests(payload, creative);
+        (handled, self.crafting_sync_packets())
+    }
+
     /// Динамический итог несёт довески, которых нет в ItemStackResponse.
     /// Окно UI: курсор 0, сетки 28–40 (minecraft-data 1.26.10).
     pub fn crafting_sync_packets(&self) -> Vec<Vec<u8>> {
@@ -2197,7 +2202,8 @@ mod tests {
             out.u8(12).varint(stations::cartography_base()).u8(1);
             consume_action(out,1,55,12);consume_action(out,1,56,13);take_output(out,1);
         });
-        bag.handle_requests(&payload,false);
+        let (_,packets) = bag.cartography_requests(&payload,false);
+        assert!(packets.iter().any(|p| p.windows(8).any(|s| s == b"map_uuid")));
         assert_eq!(bag.cartography_maps.as_ref().unwrap().maps.len(),2);
         assert_eq!(bag.get(Place::Cursor).unwrap().extras().map_id,Some(id+1));
         assert!(bag.get(Place::Ui(12)).is_none());assert!(bag.get(Place::Ui(13)).is_none());

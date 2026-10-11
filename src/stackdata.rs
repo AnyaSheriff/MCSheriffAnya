@@ -677,11 +677,12 @@ fn read_fireworks(reader: &mut Reader) -> Option<Fireworks> {
 struct Reader<'a> {
     bytes: &'a [u8],
     at: usize,
+    failed: bool,
 }
 
 impl<'a> Reader<'a> {
     fn varint(&mut self) -> Option<i32> {
-        let (value, read) = decode_varint(self.bytes.get(self.at..)?).ok()?;
+        let Some((value, read)) = self.bytes.get(self.at..).and_then(|b| decode_varint(b).ok()) else { self.failed = true; return None; };
 
         self.at += read;
 
@@ -689,7 +690,7 @@ impl<'a> Reader<'a> {
     }
 
     fn take(&mut self, count: usize) -> Option<&'a [u8]> {
-        let part = self.bytes.get(self.at..self.at.checked_add(count)?)?;
+        let Some(part) = self.at.checked_add(count).and_then(|end| self.bytes.get(self.at..end)) else { self.failed = true; return None; };
 
         self.at += count;
 
@@ -703,22 +704,75 @@ impl<'a> Reader<'a> {
     }
 }
 
+// Вики, NBT format: «TAG_Compound», «TAG_List». Вложенные предметы не имеют
+// длины компонента: сначала находим границу NBT, затем читаем его обычным кодом.
+fn skip_nbt(reader: &mut Reader<'_>, depth: usize) -> Option<()> {
+    fn value(reader: &mut Reader<'_>, kind: u8, depth: usize) -> Option<()> {
+        if depth > 32 { return None; }
+        let count = |reader: &mut Reader<'_>| usize::try_from(i32::from_be_bytes(reader.take(4)?.try_into().ok()?)).ok();
+        match kind {
+            0 => {},
+            1..=6 => { reader.take([0,1,2,4,8,4,8][usize::from(kind)])?; }
+            7 | 11 | 12 => { let n = count(reader)?; reader.take(n.checked_mul(match kind {11=>4,12=>8,_=>1})?)?; }
+            8 => { let n = usize::from(u16::from_be_bytes(reader.take(2)?.try_into().ok()?)); reader.take(n)?; }
+            9 => {
+                let kind = reader.take(1)?[0]; let n = count(reader)?;
+                if n > 65536 { return None; }
+                for _ in 0..n { value(reader,kind,depth+1)?; }
+            }
+            10 => loop {
+                let kind = reader.take(1)?[0]; if kind == 0 { break; }
+                let n = usize::from(u16::from_be_bytes(reader.take(2)?.try_into().ok()?)); reader.take(n)?;
+                value(reader,kind,depth+1)?;
+            },
+            _ => return None,
+        }
+        Some(())
+    }
+    let kind = reader.take(1)?[0]; value(reader,kind,depth)
+}
+
 /// Читает один компонент, присланный клиентом (Untrusted Slot: тело
 /// известной длины), и записывает его в довески. Незнакомый пропускается.
 pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
-    let mut reader = Reader { bytes: body, at: 0 };
+    let _ = read_component_cursor(kind, &mut Reader { bytes: body, at: 0, failed: false }, data, 0);
+}
 
+pub fn read_bundle_component(body: &[u8], data: &mut Data) -> bool {
+    let mut reader = Reader { bytes: body, at: 0, failed: false };
+    read_component_cursor(50, &mut reader, data, 0) && reader.at == body.len()
+}
+
+fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, depth: usize) -> bool {
     match kind {
+        50 => {
+            if depth >= 16 { return false; }
+            let Some(count) = reader.varint().filter(|n| (0..=64).contains(n)) else { return false; };
+            let mut contents = Vec::new();
+            for _ in 0..count {
+                let (Some(item), Some(count), Some(added), Some(removed)) = (reader.varint(), reader.varint(), reader.varint(), reader.varint()) else { return false; };
+                if crate::blocks::item_name(item).is_none() || !(1..=99).contains(&count) || !(0..=256).contains(&added) || !(0..=256).contains(&removed) { return false; }
+                let mut extra = Data::default();
+                for _ in 0..added {
+                    let Some(kind) = reader.varint() else { return false; };
+                    if !read_component_cursor(kind, reader, &mut extra, depth + 1) { return false; }
+                }
+                for _ in 0..removed { if reader.varint().is_none() { return false; } }
+                let stack = crate::inventory::Stack::new(item,count).with_extras(extra);
+                contents.push(Content { slot: 0, item: stack.stored_item(), count, data: stack.data });
+            }
+            data.bundle = contents;
+        }
         44 => { data.dyed_color = reader.take(4).and_then(|b| b.try_into().ok()).map(i32::from_be_bytes); }
-        74 => { if reader.varint() == Some(4) { let mut sides = [0; 4]; for item in &mut sides { let Some(id) = reader.varint() else { return; }; *item = id; } data.pot_decorations = Some(sides); } }
+        74 => { if reader.varint() == Some(4) { let mut sides = [0; 4]; for item in &mut sides { let Some(id) = reader.varint() else { return false; }; *item = id; } data.pot_decorations = Some(sides); } }
 
-        57 => data.debug_properties = use_components::read_map(&mut reader),
-        66 => data.recipes = use_components::read_recipes(&mut reader),
+        57 => data.debug_properties = use_components::read_map(reader),
+        66 => data.recipes = use_components::read_recipes(reader),
         COMPONENT_STEW => {
-            let Some(n)=reader.varint().filter(|n| (0..=32).contains(n)) else { return; };
+            let Some(n)=reader.varint().filter(|n| (0..=32).contains(n)) else { return false; };
             let mut effects=Vec::new();
             for _ in 0..n {
-                let (Some(id),Some(ticks))=(reader.varint(),reader.varint()) else { return; };
+                let (Some(id),Some(ticks))=(reader.varint(),reader.varint()) else { return false; };
                 if crate::survival::EffectKind::ALL.into_iter().any(|kind| kind.id() == id) && ticks > 0 { effects.push((id as u8, ticks)); }
             }
             data.stew=effects;
@@ -726,7 +780,11 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
         COMPONENT_INSTRUMENT => {
             if reader.take(1)==Some(&[1]) && let Some(id)=reader.varint().filter(|n| (1..=8).contains(n)) { data.instrument=Some((id-1) as u8); }
         }
-        59 => data.bucket = crate::mob::water::bucket::BucketData::from_nbt(body),
+        59 => {
+            let start = reader.at;
+            if skip_nbt(reader, depth).is_none() { return false; }
+            data.bucket = crate::mob::water::bucket::BucketData::from_nbt(&reader.bytes[start..reader.at]);
+        }
         86 | 88..=90 | 104 => {
             if let Some(value) = reader.varint().filter(|value| crate::mob::water::bucket::valid_variant(kind,*value)) {
                 data.mob_variants.retain(|(key,_)| *key != kind);
@@ -735,38 +793,45 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
         }
         46 => { data.map_id = reader.varint().filter(|id| *id >= 0); }
         76 => {
-            let Some(count)=reader.varint() else {return};
+            let Some(count)=reader.varint() else {return false};
             for _ in 0..count.clamp(0,64) {
-                let (Some(key),Some(value))=(reader.string(),reader.string()) else {return};
+                let (Some(key),Some(value))=(reader.string(),reader.string()) else {return false};
                 if key=="honey_level" {data.honey=value.parse::<u8>().ok().filter(|v|*v<=5);}
             }
         }
         77 => {
-            if let Some(hive)=crate::hive::component::decode(body) {data.bees=hive.bytes();}
+            let start = reader.at;
+            let Some(count) = reader.varint().filter(|n| (0..=3).contains(n)) else { return false; };
+            for _ in 0..count {
+                if skip_nbt(reader, depth).is_none() || reader.varint().is_none() || reader.varint().is_none() { return false; }
+            }
+            let Some(hive) = crate::hive::component::decode(&reader.bytes[start..reader.at]) else { return false; };
+            data.bees = hive.bytes();
         }
         54 | 55 => {
             let mut book=crate::book::Book::default();
             if kind==55 {
-                let Some(title)=reader.string() else {return;}; book.title=Some(title);
-                if reader.take(1)==Some(&[1]) && reader.string().is_none() {return;}
-                let (Some(author),Some(generation))=(reader.string(),reader.varint()) else {return;}; book.author=author; book.generation=generation;
+                let Some(title)=reader.string() else {return false;}; book.title=Some(title);
+                if reader.take(1)==Some(&[1]) && reader.string().is_none() {return false;}
+                let (Some(author),Some(generation))=(reader.string(),reader.varint()) else {return false;}; book.author=author; book.generation=generation;
             }
-            let Some(n)=reader.varint().filter(|n|(0..=100).contains(n)) else {return;};
+            let Some(n)=reader.varint().filter(|n|(0..=100).contains(n)) else {return false;};
             for _ in 0..n {
-                let text=if kind==54 {reader.string()} else {read_book_text(&mut reader)};
-                let Some(text)=text else {return;}; book.pages.push(text);
-                let Some(filtered)=reader.take(1) else {return;};
-                if filtered==[1] && (if kind==54 {reader.string()} else {read_book_text(&mut reader)}).is_none() {return;}
+                let text=if kind==54 {reader.string()} else {read_book_text(reader)};
+                let Some(text)=text else {return false;}; book.pages.push(text);
+                let Some(filtered)=reader.take(1) else {return false;};
+                if filtered==[1] && (if kind==54 {reader.string()} else {read_book_text(reader)}).is_none() {return false;}
             }
+            if kind == 55 && reader.take(1).is_none() { return false; }
             data.book=Some(book);
         }
         73 => { data.base_color = reader.varint().filter(|c| (0..16).contains(c)).map(|c|c as u8); }
         COMPONENT_BANNER_PATTERNS => {
-            let Some(count) = reader.varint().filter(|n| (0..=255).contains(n)) else { return; };
+            let Some(count) = reader.varint().filter(|n| (0..=255).contains(n)) else { return false; };
             let mut layers = Vec::new();
             for _ in 0..count {
-                let (Some(p),Some(c)) = (reader.varint(),reader.varint()) else { return; };
-                if !(1..=43).contains(&p) || !(0..16).contains(&c) { return; }
+                let (Some(p),Some(c)) = (reader.varint(),reader.varint()) else { return false; };
+                if !(1..=43).contains(&p) || !(0..16).contains(&c) { return false; }
                 layers.push(((p-1) as u8,c as u8));
             }
             data.banner_patterns = layers;
@@ -787,10 +852,10 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
             }
         }
         COMPONENT_ENCHANTMENTS | COMPONENT_STORED_ENCHANTMENTS => {
-            let Some(count) = reader.varint() else { return };
+            let Some(count) = reader.varint() else { return false };
 
             for _ in 0..count.clamp(0, 64) {
-                let (Some(number), Some(level)) = (reader.varint(), reader.varint()) else { return };
+                let (Some(number), Some(level)) = (reader.varint(), reader.varint()) else { return false };
 
                 if let Ok(number) = u16::try_from(number)
                     && usize::from(number) < ENCHANTMENTS.len()
@@ -819,16 +884,16 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
             }
         }
         COMPONENT_ATTRIBUTE_MODIFIERS => {
-            let Some(count) = reader.varint() else { return };
+            let Some(count) = reader.varint() else { return false };
             let mut mods = Vec::new();
 
             for _ in 0..count.clamp(0, 64) {
-                let (Some(attribute), Some(id)) = (reader.varint(), reader.string()) else { return };
-                let Some(amount) = reader.take(8).and_then(|bytes| bytes.try_into().ok()).map(f64::from_be_bytes) else { return };
-                let (Some(operation), Some(slot), Some(display)) = (reader.varint(), reader.varint(), reader.varint()) else { return };
+                let (Some(attribute), Some(id)) = (reader.varint(), reader.string()) else { return false };
+                let Some(amount) = reader.take(8).and_then(|bytes| bytes.try_into().ok()).map(f64::from_be_bytes) else { return false };
+                let (Some(operation), Some(slot), Some(display)) = (reader.varint(), reader.varint(), reader.varint()) else { return false };
 
                 if display == 2 || attributes::name_of(attribute).is_none() {
-                    return;
+                    return false;
                 }
 
                 mods.push(ItemModifier {
@@ -842,11 +907,11 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
 
             data.attributes = Some(mods);
         }
-        COMPONENT_POTION_CONTENTS => { let _ = potion::read(&mut reader, data); }
+        COMPONENT_POTION_CONTENTS => { let _ = potion::read(reader, data); }
         COMPONENT_CHARGED_PROJECTILES => {
             // Обычные стрелы без довесков или ракеты (с `fireworks`); иное —
             // не заряжен.
-            let Some(count) = reader.varint() else { return };
+            let Some(count) = reader.varint() else { return false };
             let arrow = crate::blocks::item_named("arrow");
             let rocket_item = crate::blocks::item_named("firework_rocket");
             let mut loaded = 0u8;
@@ -854,10 +919,10 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
             let mut ammunition = None;
 
             for _ in 0..count.clamp(0, 3) {
-                let (Some(item), Some(_), Some(added), Some(removed)) = (reader.varint(), reader.varint(), reader.varint(), reader.varint()) else { return };
+                let (Some(item), Some(_), Some(added), Some(removed)) = (reader.varint(), reader.varint(), reader.varint(), reader.varint()) else { return false };
 
                 if removed != 0 || !(Some(item) == arrow || Some(item) == rocket_item || matches!(crate::blocks::item_name(item), Some("tipped_arrow" | "spectral_arrow"))) {
-                    return;
+                    return false;
                 }
 
                 let mut own = Fireworks::default();
@@ -865,19 +930,19 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
 
                 for _ in 0..added.clamp(0, 4) {
                     match reader.varint() {
-                        Some(COMPONENT_FIREWORKS) if Some(item) == rocket_item => match read_fireworks(&mut reader) {
+                        Some(COMPONENT_FIREWORKS) if Some(item) == rocket_item => match read_fireworks(reader) {
                             Some(read) => own = read,
-                            None => return,
+                            None => return false,
                         },
                         Some(COMPONENT_POTION_CONTENTS) => {
-                            if potion::read(&mut reader, &mut arrow_data).is_none() { return; }
+                            if potion::read(reader, &mut arrow_data).is_none() { return false; }
                         }
                         Some(COMPONENT_INTANGIBLE_PROJECTILE) => {
                             if reader.take(2).is_none() {
-                                return;
+                                return false;
                             }
                         }
-                        _ => return,
+                        _ => return false,
                     }
                 }
 
@@ -894,14 +959,15 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
             data.charged_arrow = ammunition.filter(|_| loaded > 0);
             data.charged_rocket = rocket.filter(|_| loaded > 0);
         }
-        COMPONENT_FIREWORK_EXPLOSION => data.explosion = read_explosion(&mut reader),
+        COMPONENT_FIREWORK_EXPLOSION => data.explosion = read_explosion(reader),
         COMPONENT_FIREWORKS => {
-            if let Some(fireworks) = read_fireworks(&mut reader) {
+            if let Some(fireworks) = read_fireworks(reader) {
                 data.set_rocket(fireworks);
             }
         }
-        _ => {}
+        _ => return false,
     }
+    !reader.failed
 }
 
 // ---------------------------------------------------------------------------
@@ -1131,7 +1197,7 @@ fn fireworks_from_bytes(reader: &mut Reader) -> Option<Fireworks> {
 
 /// Довески из файла; None — запись испорчена.
 pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
-    let mut reader = Reader { bytes, at: 0 };
+    let mut reader = Reader { bytes, at: 0, failed: false };
     let damage = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
     let flags = reader.take(1)?[0];
     let mut data = Data { damage, unbreakable: flags & 1 != 0, ..Data::default() };
@@ -1280,13 +1346,13 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                 }
                 13 | 14 => {
                     let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
-                    let mut nested = Reader { bytes: reader.take(length)?, at: 0 };
+                    let mut nested = Reader { bytes: reader.take(length)?, at: 0, failed: false };
                     if mark == 13 { data.debug_properties = Some(use_components::read_map(&mut nested)?); }
                     else { data.recipes = Some(use_components::read_recipes(&mut nested)?); }
                 }
                 12 => {
                     let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
-                    potion::read(&mut Reader { bytes: reader.take(length)?, at: 0 }, &mut data)?;
+                    potion::read(&mut Reader { bytes: reader.take(length)?, at: 0, failed: false }, &mut data)?;
                 }
                 11 => {
                     let item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
@@ -1786,4 +1852,32 @@ fn read_book_text(reader: &mut Reader<'_>) -> Option<String> {
     if reader.take(1)? != [8] { return None; }
     let len=u16::from_be_bytes(reader.take(2)?.try_into().ok()?) as usize;
     String::from_utf8(reader.take(len)?.to_vec()).ok()
+}
+
+#[cfg(test)]
+mod bundle_component_tests {
+    use super::*;
+    #[test]
+    fn bundle_component_roundtrips_nested_items_and_rejects_truncation() {
+        let item = |n| crate::inventory::Stack::new(crate::blocks::item_named(n).unwrap(),1);
+        let mut data = item("stone").extras(); data.name = Some("Blade".into());
+        let (inner,_) = crate::bundle::insert(item("bundle"),item("stone").with_extras(data));
+        let (outer,_) = crate::bundle::insert(item("red_bundle"),inner);
+        let data = outer.extras(); let (_,bytes) = encode_components(&data);
+        assert_eq!(bytes[0],50); let mut read = Data::default();
+        assert!(read_bundle_component(&bytes[1..],&mut read)); assert_eq!(read.bundle,data.bundle);
+        assert!(!read_bundle_component(&bytes[1..bytes.len()-1],&mut Data::default()));
+    }
+
+    #[test]
+    fn bundle_keeps_written_book_and_its_component_boundary() {
+        let (id,data) = parse_item_spec(r#"written_book[written_book_content={title:"Story",author:"Alex",pages:["First page"]}]"#).unwrap();
+        let book = crate::inventory::Stack::new(crate::blocks::item_named(&id).unwrap(),1).with_extras(data);
+        let bundle = crate::inventory::Stack::new(crate::blocks::item_named("bundle").unwrap(),1);
+        let (bundle,rest) = crate::bundle::insert(bundle,book); assert!(rest.is_none());
+        let data = bundle.extras(); let (_,bytes) = encode_components(&data);
+        let mut read = Data::default(); assert!(read_bundle_component(&bytes[1..],&mut read));
+        assert_eq!(read.bundle,data.bundle);
+    }
+
 }

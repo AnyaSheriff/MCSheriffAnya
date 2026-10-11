@@ -4968,6 +4968,7 @@ pub fn block_entity_type(state: i32) -> Option<i32> {
                 Some("spawner") => crate::spawner::BLOCK_ENTITY as u8,
                 Some("trial_spawner") => crate::trial::SPAWNER_ENTITY as u8,
                 Some("vault") => crate::trial::VAULT_ENTITY as u8,
+                Some("decorated_pot") => 42, // [проверить] номер пакетом оригинала 26.1.2.
                 Some("sculk_sensor") => 35,
                 Some("calibrated_sculk_sensor") => 36,
                 Some("sculk_shrieker") => 38,

@@ -21,6 +21,7 @@ mod blocks_table;
 mod hardness_table;
 mod mining;
 mod placing;
+mod pottery;
 mod portal;
 mod plants;
 mod farming;
@@ -248,7 +249,7 @@ async fn server() -> io::Result<()> {
         ops::Ops::open(std::path::Path::new(ops::FILE)),
         skins::Settings::load(Path::new(skins::SETTINGS_FILE)),
     );
-    shared.maps = std::sync::Mutex::new(maps::Maps::open(Path::new(WORLD_PATH))?);
+    *shared.maps.lock().expect("карты") = maps::Maps::open(Path::new(WORLD_PATH))?;
     shared.settings = settings;
     shared.scoreboard = std::sync::Mutex::new(scoreboard::Scoreboard::open(Path::new(WORLD_PATH)));
     shared.functions = std::sync::Mutex::new(functions::Functions::new(Path::new(WORLD_PATH)));

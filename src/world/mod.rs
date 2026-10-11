@@ -450,6 +450,7 @@ struct Chunk {
     signs: HashMap<(i32, i32, i32), crate::sign::Data>,
     hives: HashMap<(i32, i32, i32), crate::hive::Data>,
     archaeology: HashMap<(i32,i32,i32),crate::archaeology::Data>,
+    pots: HashMap<(i32,i32,i32), [i32; 4]>,
 }
 
 /// Выброшенный хранилищем предмет: откуда, с какой скоростью и что.
@@ -547,6 +548,7 @@ impl Chunk {
             signs: HashMap::new(),
             hives: HashMap::new(),
             archaeology: HashMap::new(),
+            pots: HashMap::new(),
         }
     }
 
@@ -929,6 +931,7 @@ impl Chunk {
             }
         }
 
+        if crate::blocks::block_at_state(state) != Some("decorated_pot") { self.pots.remove(&(x,y,z)); }
         if crate::hive::is_hive(state) != crate::hive::is_hive(old) {
             let place=(x.rem_euclid(CHUNK_SIZE),y,z.rem_euclid(CHUNK_SIZE));
             if crate::hive::is_hive(state) { self.hives.insert(place,crate::hive::Data::default()); }
@@ -1167,6 +1170,7 @@ const CHUNK_VERSION_WIDE: u8 = 1;
 
 /// Мир целиком: чанки и список изменений.
 pub struct World {
+    pub maps: std::sync::Arc<std::sync::Mutex<crate::maps::Maps>>,
     pub fire_tick: bool,
     pub fire_difficulty: u8,
     /// Ноты для тихонь и вылупившиеся нюхачи (mob/small_world.rs).
@@ -1488,6 +1492,7 @@ impl World {
     #[cfg(test)]
     pub fn in_memory() -> Self {
         Self {
+            maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
             noise: 0x9E37_79B9,
@@ -1646,6 +1651,7 @@ impl World {
         log_info!("Тип мира: {}", kind.name());
 
         let mut world = Self {
+            maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
             allay_notes: Vec::new(),
@@ -2149,6 +2155,23 @@ impl World {
     }
 
     /// Данные улья в этом месте, если он там стоит и чанк в памяти.
+    pub fn pot(&self, at: (i32,i32,i32)) -> Option<[i32;4]> {
+        if crate::blocks::block_at_state(self.get_block(at.0,at.1,at.2)) != Some("decorated_pot") { return None; }
+        Some(self.chunks.get(&chunk_key(at.0,at.2))?.pots.get(&(at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)))
+            .copied().unwrap_or([crate::blocks::item_named("brick")?;4]))
+    }
+    pub fn set_pot(&mut self, at: (i32,i32,i32), sides: [i32;4]) {
+        if self.pot(at).is_none() { return; }
+        self.chunks.get_mut(&chunk_key(at.0,at.2)).unwrap().pots.insert((at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)),sides);
+        self.dirty.insert(chunk_key(at.0,at.2));
+        if let Some(kind) = crate::redstone::block_entity_type(self.get_block(at.0,at.1,at.2)) {
+            self.note_block_entity(at.0,at.1,at.2,kind,crate::pottery::nbt(sides));
+        }
+    }
+    pub fn chunk_pots(&self, cx: i32, cz: i32) -> Vec<((i32,i32,i32),Vec<u8>)> {
+        self.chunks.get(&(cx,cz)).map(|c| c.pots.iter().map(|(at,sides)| (*at,crate::pottery::nbt(*sides))).collect()).unwrap_or_default()
+    }
+
     pub fn hive(&self, x: i32, y: i32, z: i32) -> Option<&crate::hive::Data> {
         self.chunks.get(&chunk_key(x, z))?.hives.get(&(x.rem_euclid(CHUNK_SIZE), y, z.rem_euclid(CHUNK_SIZE)))
     }

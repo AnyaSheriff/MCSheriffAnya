@@ -225,15 +225,19 @@ impl Book {
         }
     }
 
-    pub fn started(&self) -> bool { self.started }
-
-    /// Пакеты «рецепты добавлены» к отправке. Первый — со всем, что известно, с флагом замены.
-    pub fn update(&mut self) -> Vec<Vec<u8>> {
-        if self.started && !self.granted {
+    pub fn grant_initial(&mut self) {
+        if !self.granted {
             self.granted = true;
             self.dirty = true;
             self.known.extend(entries().iter().filter(|e| e.key.starts_with("crafting/crafting_table/")).map(|e| e.key.clone()));
         }
+    }
+
+    pub fn started(&self) -> bool { self.started }
+
+    /// Пакеты «рецепты добавлены» к отправке. Первый — со всем, что известно, с флагом замены.
+    pub fn update(&mut self) -> Vec<Vec<u8>> {
+        if self.started { self.grant_initial(); }
         let added: Vec<_> = entries().iter().enumerate().filter(|(_, e)| self.known.contains(&e.key) && !self.sent.contains(&e.key)).collect();
         if self.started && added.is_empty() { return Vec::new(); }
         let replace = !self.started;
@@ -455,4 +459,13 @@ mod tests {
         assert!(total > 0);
         assert!(entries().iter().any(|e| matches!(e.display, Display::Stonecutting { .. }) && book.known.contains(&e.key)));
     }
+    #[test]
+    fn initial_grant_without_java_packets_respects_later_revocation() {
+        let mut book = Book::default(); book.grant_initial();
+        let id = crafting::recipes().iter().position(|r| blocks::item_name(r.result) == Some("crafting_table")).unwrap();
+        assert!(book.knows_crafting(id));
+        book.take(&[]); book.grant_initial(); assert!(!book.knows_crafting(id));
+        book.give_all(); assert!(book.knows_crafting(id));
+    }
+
 }

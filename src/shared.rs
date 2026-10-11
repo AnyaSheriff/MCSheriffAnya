@@ -48,7 +48,7 @@ pub struct Shared {
     /// Замок — после предметов.
     pub thrown: Mutex<crate::thrown::Thrown>,
     pub fishing: Mutex<Vec<crate::fishing::Bobber>>,
-    pub maps: Mutex<crate::maps::Maps>,
+    pub maps: Arc<Mutex<crate::maps::Maps>>,
 
     /// Кто на ком едет (riding.rs): лодки, вагонетки, позже лошади.
     /// Замок — после предметов.
@@ -223,6 +223,9 @@ impl Shared {
         skin_settings: crate::skins::Settings,
     ) -> Self {
         let difficulty = std::sync::atomic::AtomicU8::new(properties.difficulty);
+        let maps = Arc::new(Mutex::new(crate::maps::Maps::default()));
+        let (mut world, mut nether, mut end) = (world, nether, end);
+        for world in [&mut world, &mut nether, &mut end] { world.maps = Arc::clone(&maps); }
 
         Self {
             difficulty,
@@ -254,7 +257,7 @@ impl Shared {
             arrows: Mutex::new(crate::arrow::Arrows::new()),
             thrown: Mutex::new(crate::thrown::Thrown::new()),
             fishing: Mutex::new(Vec::new()),
-            maps: Mutex::new(crate::maps::Maps::default()),
+            maps,
             riding: Mutex::new(crate::riding::Riding::new()),
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,

@@ -127,7 +127,7 @@ mod tests {
             assert_eq!(from_bytes(&to_bytes(&data)), Some(data.clone()));
             let mut bytes = Vec::new(); encode(&mut bytes, &data);
             let mut decoded = Data::default();
-            read(&mut Reader { bytes: &bytes, at: 0 }, &mut decoded).unwrap();
+            read(&mut Reader { bytes: &bytes, at: 0, failed: false }, &mut decoded).unwrap();
             assert_eq!(decoded, data);
         }
         for field in ["amplifier:-1", "amplifier:256", "amplifier:0.5", "duration:-2", "duration:1.5"] {

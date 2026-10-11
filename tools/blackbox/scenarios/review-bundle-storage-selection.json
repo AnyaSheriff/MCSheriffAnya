@@ -1,0 +1,85 @@
+{
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:chest[facing=south]"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "!stopfly",
+    "give $(bot) minecraft:bundle[bundle_contents=[{id:\"minecraft:dirt\",count:1},{id:\"minecraft:stone\",count:1}]]"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 10,
+      "window_click": {
+        "slot": 54,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 20,
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 30,
+      "raw": {
+        "name": "select_bundle_item",
+        "params": {
+          "slotId": 0,
+          "selectedItemIndex": 1
+        }
+      }
+    },
+    {
+      "after": 40,
+      "window_click": {
+        "slot": 0,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 60,
+      "close": true
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 100,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true,
+  "name": "review-bundle-storage-selection",
+  "about": "Select second bundle entry in authoritative chest slot 0, then right-click extract stone."
+}

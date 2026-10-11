@@ -1095,7 +1095,12 @@ impl BedrockWorld {
                 }
                 // Состояние эффектов уходит отдельной сверкой MobEffectPacket.
                 crate::players::Order::Effect(effect) => self.health.vit.give_effect_shown(effect),
-                crate::players::Order::Recipes { .. } => {} // [Bedrock: потом] книга рецептов Java
+                crate::players::Order::Recipes { give, names } => {
+                    self.progress.recipes.grant_initial();
+                    if give {
+                        if names.is_empty() { self.progress.recipes.give_all(); } else { self.progress.recipes.learn_named(&names); }
+                    } else { self.progress.recipes.take(&names); }
+                }
                 crate::players::Order::ClearEffects => { self.health.vit.remove_effects(None); }
                 crate::players::Order::ClearEffect(kind) => { self.health.vit.remove_effects(Some(kind)); }
                 crate::players::Order::Kick { reason } => {
@@ -2079,8 +2084,8 @@ impl BedrockWorld {
             let world = self.shared.world_in(self.dimension).lock().expect("мир");
             if super::brushing::target(&world,self.position,self.rotation).is_some() {
                 self.brush_since.get_or_insert(*self.shared.ticks.borrow());
+                return;
             }
-            return;
         }
 
         // Щелчок по хранилищу, рычагу, кнопке, двери, музыкальному блоку —
@@ -2166,6 +2171,7 @@ impl BedrockWorld {
                     }
                 }
                 // Особый динамит помнит свой вид до слома: выпадет он же.
+                let pot = world.pot((x,y,z));
                 let custom = world.custom_tnt_at((x, y, z));
                 let Some(broken) = crate::placing::break_block(&mut world, x, y, z) else {
                     // Ломать было нечего — но клиент мог показать поломку.
@@ -2179,6 +2185,14 @@ impl BedrockWorld {
                     return;
                 };
 
+                if let Some(sides) = pot {
+                    if !self.creative() && self.shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
+                        for stack in crate::pottery::drops(sides,self.bag.inventory.held()) {
+                            self.shared.items_in(self.dimension).lock().expect("предметы").drop_item(self.shared.next_entity_id(),stack,(x as f64+0.5,y as f64+0.25,z as f64+0.5),(0.0,0.2,0.0),crate::items::MINED_DELAY);
+                        }
+                    }
+                    return;
+                }
                 if !self.creative() {
                     let tool = self.bag.inventory.held().map(|stack| stack.item);
                     let luck = world.random_unit();
@@ -2326,10 +2340,14 @@ impl BedrockWorld {
                 }
 
                 let custom = if from_bag.is_some() { self.bag.inventory.held().and_then(|stack| stack.tnt) } else { None };
+                let pot_at = crate::pottery::placement_at(&world,action.position,action.face);
                 let refused = match crate::placing::place_tagged(&mut world, name, default_state, action.position, &click, feet, custom) {
                     crate::placing::Placement::Refused(places) => places,
                     crate::placing::Placement::Nothing => vec![target],
                     crate::placing::Placement::Placed => {
+                        if let Some(held) = self.bag.inventory.held() {
+                            crate::pottery::place(&mut world,pot_at,held);
+                        }
                         if crate::redstone::is_sign(world.get_block(target.0,target.1,target.2)) {
                             self.sign_editor=Some((target,true));
                             let mut packets=Vec::new();packets.extend(super::signs::actor(&world,target));packets.push(super::signs::editor(target,true));connection.send(&packets);
@@ -2452,7 +2470,7 @@ impl BedrockWorld {
             packets.push(motion(self.runtime_id, (vx as f32, vy as f32, vz as f32)));
         }
 
-        for (amount, source) in done.damage { self.health.hurt_final(amount, source); }
+        for (amount, source, effects) in done.damage { self.health.hurt_with_effects(amount, source, effects); }
         for (amount, source) in done.raw_damage { self.health.hurt(amount, source); }
         if let Some((category, ticks)) = done.cooldown { packets.push(super::player_state::cooldown(category, ticks)); }
         if done.shield_blocked {
@@ -3432,9 +3450,9 @@ impl BedrockWorld {
         let Some(window) = &self.window else {
             if self.bag.station.is_some_and(|s|s.kind==stations::Kind::Cartography) {
                 let mut maps=self.shared.maps.lock().expect("карты");self.bag.cartography_maps=Some(maps.clone());
-                let handled=self.bag.handle_requests(payload,creative);
+                let (handled,packets)=self.bag.cartography_requests(payload,creative);
                 if let Some(next)=self.bag.cartography_maps.take(){*maps=next;if let Err(e)=maps.save(){crate::log_warn!("Карты: {}",e);}}
-                return (handled,Vec::new());
+                return (handled,packets);
             }
             return (self.bag.handle_requests(payload, creative), Vec::new());
         };
@@ -3851,6 +3869,7 @@ impl BedrockWorld {
         self.ticks += 1;
         let names: Vec<_> = self.bag.inventory.slots().iter().flatten().filter_map(|s| crate::blocks::item_name(s.item)).collect();
         self.progress.scan_items(&names);
+        self.progress.recipes.grant_initial();
         self.progress.recipes.scan(&names, names.len(), false);
         self.bag.allowed_crafting = self.shared.limited_crafting.load(std::sync::atomic::Ordering::Relaxed).then(|| (0..crate::crafting::recipes().len()).filter(|i| self.progress.recipes.knows_crafting(*i)).collect());
 

@@ -68,7 +68,7 @@ pub(crate) struct Done {
     /// Скорость, которую надо сообщить клиенту (блоков за такт).
     pub velocity: Option<(f64, f64, f64)>,
     /// Урон, который надо принять: уже после брони и щита.
-    pub damage: Vec<(f32, Source)>,
+    pub damage: Vec<(f32, Source, Vec<survival::Effect>)>,
     /// Вагонетка-хранилище, чьё окно надо открыть.
     /// [Bedrock: потом] Java использует это поле и для конского окна.
     pub open_cart: Option<i32>,
@@ -301,6 +301,7 @@ impl Body {
                 }
                 vitals::tick_spin(shared, p, now);
                 vitals::tick_crossbow(shared, p, now);
+                super::bundle_use::tick(p, shared, now);
 
                 if p.net.eating.as_ref().is_some_and(|eating| !vitals::eating_matches(p, eating)) {
                     vitals::stop_eating(p);
@@ -469,11 +470,10 @@ fn struck(shared: &Shared, p: &mut PlayerState, strike: &PlayerStrike, now: u64,
     // Внутри неуязвимости проходит только то, что сильнее прошлого удара.
     let landed = p.vit.clone().hurt(damage, strike.source, false).is_some();
 
-    done.damage.push((damage, strike.source));
+    done.damage.push((damage, strike.source, if landed { strike.effects.clone() } else { Vec::new() }));
 
     if !landed { return; }
     done.landed = true;
-    for effect in &strike.effects { p.vit.give_effect_shown(*effect); }
 
     if !combat::bypasses_armor(strike.source) {
         pvp::wear_armor(shared, p, strike.damage);
@@ -703,4 +703,34 @@ mod combat_tests {
         assert_eq!(body.attributes().value(crate::attributes::ATTACK_DAMAGE), 7.0);
         assert!(vit.land(-10.0, true, false, 1.0).is_none());
     }
+    #[test]
+    fn bedrock_holding_bundle_empties_later_stacks() {
+        let shared = shared(); let mut body = Body::new([1;16],"Bundle".into(),1);
+        let item = |name| Stack::new(blocks::item_named(name).unwrap(),1);
+        let (bundle,_) = crate::bundle::insert(item("bundle"),item("stone"));
+        let (bundle,_) = crate::bundle::insert(bundle,item("dirt"));
+        let mut inventory = Inventory::new(); inventory.set(36,Some(bundle));
+        let mut vit = Vitals::new(); let mut last = 0;
+        shared.ticks.send_replace(100);
+        body.act(&shared,&stance(),&mut inventory,&mut vit,&mut last,Act::Use(0));
+        assert_eq!(inventory.slot(36).unwrap().extras().bundle.len(),1);
+        shared.ticks.send_replace(112);
+        body.act(&shared,&stance(),&mut inventory,&mut vit,&mut last,Act::Tick);
+        assert!(inventory.slot(36).unwrap().extras().bundle.is_empty());
+    }
+
+    #[test]
+    fn arrow_effect_is_deferred_with_its_damage() {
+        let shared = shared(); let mut body = Body::new([1;16],"Arrow".into(),1);
+        let mut inventory = Inventory::new(); let mut vit = Vitals::new(); let mut last = 0;
+        let effect = survival::Effect { kind: survival::EffectKind::Resistance, amplifier: 2, ticks_left: 100, ambient: false, visible: true, show_icon: true };
+        let strike = PlayerStrike { victim:1,attacker:2,attacker_uuid:[2;16],attacker_name:"Archer".into(),
+            from:(0.0,64.0,2.0),yaw:180.0,damage:10.0,source:Source::Arrow,extra_knockback:0.0,
+            weapon:None,disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,
+            thorns_slots:Vec::new(),effects:vec![effect] };
+        let done = body.act(&shared,&stance(),&mut inventory,&mut vit,&mut last,Act::Struck(&strike));
+        assert!(vit.effects.is_empty());
+        assert_eq!(done.damage,vec![(10.0,Source::Arrow,vec![effect])]);
+    }
+
 }

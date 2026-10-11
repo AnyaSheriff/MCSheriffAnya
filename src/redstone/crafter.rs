@@ -124,7 +124,12 @@ pub fn craft(world: &mut World, pos: Pos) {
         return;
     };
 
-    let Some(result) = crate::crafting::craft(&grid) else {
+    let result = crate::crafting::craft(&grid).and_then(|result| {
+        if result.extras().map_post != Some(1) { return Some(result); }
+        let mut data = result.extras(); data.map_post = None;
+        world.maps.lock().expect("карты").cartography(result.with_extras(data), Stack::new(blocks::item_named("paper")?, 1), true)
+    });
+    let Some(result) = result else {
         world.note_level_event(x, y, z, EVENT_FAIL, 0);
         return;
     };
@@ -320,4 +325,20 @@ mod tests {
         assert_eq!(read, stored);
         assert!(read.is_disabled(0) && read.is_disabled(8) && !read.is_disabled(4));
     }
+    #[test]
+    fn map_expansion_commits_and_rejects_locked_or_max_scale() {
+        for (scale,locked,works) in [(0,false,true),(4,false,false),(0,true,false)] {
+            let mut world = World::in_memory(); let pos = (0,70,0);
+            world.set_block(0,70,0,blocks::state_by_name("crafter").unwrap());
+            let id = world.maps.lock().unwrap().create(crate::dimension::Dimension::Overworld,0,0,scale);
+            world.maps.lock().unwrap().maps.get_mut(&id).unwrap().locked = locked;
+            let map = Stack::new(blocks::item_named("filled_map").unwrap(),1).with_extras(crate::stackdata::Data { map_id: Some(id), ..Default::default() });
+            world.with_container(0,70,0,|c| { c.slots.fill(Some(Stack::new(blocks::item_named("paper").unwrap(),1))); c.slots[4] = Some(map); });
+            craft(&mut world,pos);
+            let maps = world.maps.lock().unwrap(); assert_eq!(maps.maps.len(),if works {2} else {1});
+            assert_eq!(world.container(0,70,0).unwrap().slots[0].is_none(),works);
+            if works { assert_eq!(maps.maps[&(id+1)].scale,1); }
+        }
+    }
+
 }

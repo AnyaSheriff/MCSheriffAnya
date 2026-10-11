@@ -97,11 +97,12 @@ fn sync(player: &PlayerState, before: &[Option<Stack>], cursor_before: Option<St
     for (i, stack) in after.iter().enumerate() {
         if grid_changed && i == 0 { continue; }
         let expected = list.iter().rev().find(|(p, _)| *p == i).map_or(pair(before[i]), |(_, e)| *e);
-        if expected != pair(*stack) {
+        if expected != pair(*stack) || (before[i] != *stack && stack.is_some_and(|s| s.data.is_some())) {
             if is_table(player) { reaction.window_slots.push((i, *stack)); } else { reaction.slots.push(i as i32); }
         }
     }
-    if cursor.unwrap_or(pair(cursor_before)) != pair(player.inventory.cursor()) { reaction.cursor = Some(player.inventory.cursor()); }
+    if cursor.unwrap_or(pair(cursor_before)) != pair(player.inventory.cursor())
+        || (cursor_before != player.inventory.cursor() && player.inventory.cursor().is_some_and(|s| s.data.is_some())) { reaction.cursor = Some(player.inventory.cursor()); }
 }
 
 pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], reaction: &mut Reaction) {
@@ -346,4 +347,19 @@ mod tests {
         click(&shared,&mut p,&packet(0,1,0,0),&mut r);
         assert_eq!(r.result_sends,vec![None,None]);
     }
+    #[test]
+    fn map_component_corrections_reach_cursor_and_shift_destination() {
+        for shift in [false,true] {
+            let mut p = player(); let before = snapshot(&p); let mut reaction = Reaction::default();
+            let map = item("filled_map",1).with_extras(crate::stackdata::Data { map_id: Some(10), ..Default::default() });
+            let predicted = if shift {
+                p.inventory.set(44,Some(map)); Some((vec![(44,Some((map.item,1)))],Some(None)))
+            } else {
+                p.inventory.set_cursor(Some(map)); Some((vec![],Some(Some((map.item,1)))))
+            };
+            sync(&p,&before,None,&predicted,Vec::new(),&mut reaction);
+            if shift { assert!(reaction.slots.contains(&44)); } else { assert_eq!(reaction.cursor,Some(Some(map))); }
+        }
+    }
+
 }

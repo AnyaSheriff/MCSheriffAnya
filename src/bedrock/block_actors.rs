@@ -20,7 +20,8 @@ pub fn packet(pos: Pos, tag: &Tag) -> Vec<u8> {
 fn items(c: &Container) -> Tag {
     Tag::List(10, c.slots.iter().enumerate().filter_map(|(slot, stack)| {
         let mut item = actor_item((*stack)?);
-        item.put("Slot", Tag::Byte(slot as u8)); Some(item)
+        let slot = if c.kind == Kind::BrewingStand { [1, 2, 3, 0, 4][slot] } else { slot as u8 };
+        item.put("Slot", Tag::Byte(slot)); Some(item)
     }).collect())
 }
 fn container_fields(tag: &mut Tag, c: &Container, facing: Option<&str>) {
@@ -191,9 +192,11 @@ pub fn at(world: &World, pos: Pos) -> Option<Tag> {
                 let mut config = Tag::compound();
                 config.put("activation_range", Tag::Float(4.0)); config.put("deactivation_range", Tag::Float(4.5));
                 let mut key = Tag::compound();
-                key.put("Count", Tag::Byte(1)); key.put("Damage", Tag::Short(0)); key.string("Name", "minecraft:trial_key"); key.put("WasPickedUp", Tag::Byte(0));
+                key.put("Count", Tag::Byte(1)); key.put("Damage", Tag::Short(0)); key.string("Name", if crate::trial::ominous_state(state) { "minecraft:ominous_trial_key" } else { "minecraft:trial_key" }); key.put("WasPickedUp", Tag::Byte(0));
                 config.put("key_item", key);
-                config.string("loot_table", "loot_tables/chests/trial_chambers/reward.json"); config.string("override_loot_table_to_display", "");
+                let table = v.table(crate::trial::ominous_state(state));
+                let table = table.strip_prefix("minecraft:").unwrap_or(&table);
+                config.string("loot_table", &if table.starts_with("loot_tables/") { table.to_string() } else { format!("loot_tables/{table}.json") }); config.string("override_loot_table_to_display", "");
                 tag.put("config", config);
                 if let Some(first) = v.to_eject.first().copied() { data.put("display_item", actor_item(first)); }
                 data.put("items_to_eject", Tag::List(10, v.to_eject.iter().copied().map(actor_item).collect()));
@@ -224,9 +227,11 @@ pub fn at(world: &World, pos: Pos) -> Option<Tag> {
             let mut tag = base("FlowerPot",pos); tag.put("PlantBlock",nbt::decode(&out.bytes,Style::Network)?); Some(tag)
         }
         "decorated_pot" => {
-            // Общий мир пока не хранит шёрды. BDS: у поставленного горшка нет sherds, зато есть
-            // animation и пустой item.
+            // Вики, Block entity format: «sherds». [проверить] ориентация сторон у Bedrock.
             let mut tag = base("DecoratedPot", pos); tag.put("animation", Tag::Byte(0));
+            if let Some(sides) = world.pot(pos).filter(|s| s.iter().any(|id| blocks::item_name(*id) != Some("brick"))) {
+                tag.put("sherds", Tag::List(8,sides.into_iter().map(|id| Tag::String(format!("minecraft:{}",blocks::item_name(id).unwrap_or("brick")))).collect()));
+            }
             let mut item = Tag::compound();
             item.put("Count", Tag::Byte(0)); item.put("Damage", Tag::Short(0)); item.string("Name", ""); item.put("WasPickedUp", Tag::Byte(0));
             tag.put("item", item); Some(tag)
@@ -375,4 +380,27 @@ mod tests {
             if kind == Kind::ChiseledBookshelf { assert_eq!(tag.get("LastInteractedSlot"), Some(&Tag::Int(4))); }
         }
     }
+    #[test]
+    fn brewing_actor_reorders_slots_and_vault_uses_ominous_config() {
+        let mut world = World::in_memory();
+        world.set_block(0,70,0,blocks::state_by_name("brewing_stand").unwrap());
+        world.with_container(0,70,0,|c| {
+            c.slots[0] = Some(crate::inventory::Stack::new(blocks::item_named("potion").unwrap(),1));
+            c.slots[3] = Some(crate::inventory::Stack::new(blocks::item_named("nether_wart").unwrap(),1));
+        });
+        let actor = at(&world,(0,70,0)).unwrap();
+        let Some(Tag::List(_,items)) = actor.get("Items") else { panic!("items"); };
+        assert_eq!(items[0].get("Slot"),Some(&Tag::Byte(1)));
+        assert_eq!(items[1].get("Slot"),Some(&Tag::Byte(0)));
+        let state = blocks::state_by_name("vault").unwrap();
+        let state = blocks::orientation_of(state).unwrap().with(state,"ominous","true").unwrap();
+        world.set_block(1,70,0,state);
+        let actor = at(&world,(1,70,0)).unwrap(); let config = actor.get("config").unwrap();
+        assert_eq!(config.get("key_item").unwrap().get("Name"),Some(&Tag::String("minecraft:ominous_trial_key".into())));
+        assert_eq!(config.get("loot_table"),Some(&Tag::String("loot_tables/chests/trial_chambers/reward_ominous.json".into())));
+        world.with_trial(1,70,0,|d| if let crate::trial::Data::Vault(v) = d { v.loot = "minecraft:chests/custom".into(); });
+        assert_eq!(at(&world,(1,70,0)).unwrap().get("config").unwrap().get("loot_table"),Some(&Tag::String("loot_tables/chests/custom.json".into())));
+
+    }
+
 }
