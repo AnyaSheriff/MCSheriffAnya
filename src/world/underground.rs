@@ -89,6 +89,7 @@ const SALT_BUD: u64 = 7;
 const SALT_BUD_SIZE: u64 = 8;
 const SALT_DUNGEON: u64 = 9;
 const SALT_MOSS: u64 = 10;
+const SALT_DUNGEON_MOB: u64 = 11;
 
 /// Семена шумов жил — от числа мира.
 const SALT_NOISE_TOGGLE: u64 = 101;
@@ -858,7 +859,15 @@ fn try_dungeon(chunk: &mut Chunk, spot: DungeonSpot, seed: u64, palette: &Palett
     }
 
     // Спавнер — посередине, на полу.
-    chunk.put_generated(local_x + size_x / 2, y + 1, local_z + size_z / 2, palette.spawner, true);
+    let (sx, sy, sz) = (local_x + size_x / 2, y + 1, local_z + size_z / 2);
+    chunk.put_generated(sx, sy, sz, palette.spawner, true);
+    // Вики, Monster Room: «50% chance of being a zombie spawner».
+    // https://minecraft.wiki/w/Monster_Room#Generation
+    // Случай комнаты включает семя мира и чанк; местные x/y/z одни и те
+    // же в разных чанках и не должны навсегда задавать вид монстра.
+    let pick = hash(seed, 0, 0, 0, SALT_DUNGEON_MOB) % 4;
+    let mob = ["zombie", "zombie", "skeleton", "spider"][pick as usize];
+    chunk.put_generated_spawner(sx, sy, sz, crate::spawner::Data::of(mob));
 
     // Сундук встаёт в пустое место, у которого ровно одна твёрдая сторона
     // из четырёх, и смотрит от неё.
@@ -1174,6 +1183,28 @@ mod tests {
 
         assert!((1..=2).contains(&chests), "сундуков {}", chests);
         assert!(floor[0] > floor[1], "мха меньше, чем камня: {:?}", floor);
+    }
+
+    // При одинаковой геометрии другие семена комнат дают разные виды;
+    // повторное сложение той же комнаты сохраняет выбор.
+    #[test]
+    fn dungeon_spawner_uses_the_room_seed() {
+        let palette = Palette::new();
+        let spot = DungeonSpot { local_x: 3, local_z: 2, y: 20, size_x: 7, size_z: 9 };
+        let mut counts = std::collections::BTreeMap::<String, usize>::new();
+        for seed in 0..128 {
+            let mut chunk = stone_with_tunnel(20, true);
+            assert!(try_dungeon(&mut chunk, spot, seed, &palette));
+            let mob = chunk.spawners[&(6,21,6)].entity.clone();
+            *counts.entry(mob.clone()).or_default() += 1;
+            let mut again = stone_with_tunnel(20, true);
+            assert!(try_dungeon(&mut again, spot, seed, &palette));
+            assert_eq!(again.spawners[&(6,21,6)].entity, mob);
+        }
+        assert_eq!(counts.len(), 3);
+        assert!((48..=80).contains(&counts["minecraft:zombie"]), "{counts:?}");
+        assert!((18..=46).contains(&counts["minecraft:skeleton"]), "{counts:?}");
+        assert!((18..=46).contains(&counts["minecraft:spider"]), "{counts:?}");
     }
 
     /// Большая пещера — больше пяти выходов — данжу не подходит.

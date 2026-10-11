@@ -792,8 +792,16 @@ impl Chunk {
         let index = (z * CHUNK_SIZE + x) as usize;
         let place = &mut self.filled_section(section)[inside + index];
 
-        if over || unpack(*place) == AIR {
-            *place = pack(state);
+        if !over && unpack(*place) != AIR {
+            return;
+        }
+        *place = pack(state);
+
+        // Поздняя постройка может вырезать прежний спавнер. Данные
+        // принадлежат оставшемуся блоку, а не отвергнутой попытке.
+        let is_spawner = crate::blocks::block_at_state(state) == Some("spawner");
+        if !is_spawner {
+            self.spawners.remove(&(x, y, z));
         }
 
         if crate::hive::is_hive(state) && self.block(x,y,z) == state {
@@ -803,7 +811,7 @@ impl Chunk {
         // Спавнер, поставленный генерацией: вид по месту — подземелье и
         // крепость выбирают его случайно (вики, Monster Spawner: скелет,
         // зомби ×2, паук) [проверить: доли].
-        if crate::blocks::block_at_state(state) == Some("spawner") {
+        if is_spawner {
             let pick = (x.wrapping_mul(73_856_093) ^ y.wrapping_mul(19_349_663) ^ z.wrapping_mul(83_492_791)).rem_euclid(4);
             let kind = ["skeleton", "zombie", "zombie", "spider"][pick as usize];
 
@@ -8103,3 +8111,6 @@ fn in_structure_bounds(bounds: impl Iterator<Item = [i32; 6]>, at: (i32, i32, i3
     let bounds = bounds.reduce(|a, b| [a[0].min(b[0]), a[1].min(b[1]), a[2].min(b[2]), a[3].max(b[3]), a[4].max(b[4]), a[5].max(b[5])]);
     bounds.is_some_and(|b| b[0] <= at.0 && at.0 <= b[3] && b[1] <= at.1 && at.1 <= b[4] && b[2] <= at.2 && at.2 <= b[5])
 }
+
+#[cfg(test)]
+mod structures_audit;

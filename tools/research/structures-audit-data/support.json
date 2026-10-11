@@ -1,0 +1,1132 @@
+[
+  {
+    "air_below_exposed_cells": 548,
+    "anchor": [
+      -8376,
+      -8696
+    ],
+    "boundary_unknown_components": 0,
+    "changed_examples": [],
+    "chunks": 40,
+    "components": 305,
+    "kind": 0,
+    "structure_solid_cells": 4687,
+    "unsupported_components": [
+      {
+        "blocks": 2,
+        "example": [
+          -8380,
+          83,
+          -8708
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -8381,
+          83,
+          -8710
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -8422,
+          73,
+          -8717
+        ]
+      }
+    ]
+  },
+  {
+    "air_below_exposed_cells": 388,
+    "anchor": [
+      -8520,
+      376
+    ],
+    "boundary_unknown_components": 0,
+    "changed_examples": [],
+    "chunks": 5,
+    "components": 7,
+    "kind": 1,
+    "structure_solid_cells": 1232,
+    "unsupported_components": []
+  },
+  {
+    "air_below_exposed_cells": 6780,
+    "anchor": [
+      -7832,
+      -8648
+    ],
+    "boundary_unknown_components": 0,
+    "changed_examples": [],
+    "chunks": 133,
+    "components": 444,
+    "kind": 6,
+    "structure_solid_cells": 44656,
+    "unsupported_components": [
+      {
+        "blocks": 1,
+        "example": [
+          -7737,
+          -34,
+          -8677
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7738,
+          -36,
+          -8683
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7738,
+          -37,
+          -8682
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7738,
+          -51,
+          -8685
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7739,
+          -36,
+          -8674
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7739,
+          -36,
+          -8684
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7739,
+          -37,
+          -8683
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7739,
+          -44,
+          -8682
+        ]
+      },
+      {
+        "blocks": 153,
+        "example": [
+          -7740,
+          -44,
+          -8681
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7740,
+          -44,
+          -8683
+        ]
+      },
+      {
+        "blocks": 9,
+        "example": [
+          -7741,
+          -36,
+          -8673
+        ]
+      },
+      {
+        "blocks": 2,
+        "example": [
+          -7741,
+          -44,
+          -8677
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7741,
+          -47,
+          -8645
+        ]
+      },
+      {
+        "blocks": 10,
+        "example": [
+          -7742,
+          -38,
+          -8678
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7745,
+          -44,
+          -8681
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7746,
+          -49,
+          -8682
+        ]
+      },
+      {
+        "blocks": 2,
+        "example": [
+          -7747,
+          -49,
+          -8638
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7748,
+          -36,
+          -8683
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7748,
+          -37,
+          -8682
+        ]
+      },
+      {
+        "blocks": 5,
+        "example": [
+          -7749,
+          -36,
+          -8682
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7755,
+          -45,
+          -8737
+        ]
+      },
+      {
+        "blocks": 7,
+        "example": [
+          -7757,
+          -51,
+          -8649
+        ]
+      },
+      {
+        "blocks": 3,
+        "example": [
+          -7760,
+          -51,
+          -8653
+        ]
+      },
+      {
+        "blocks": 86,
+        "example": [
+          -7761,
+          -50,
+          -8645
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7763,
+          -48,
+          -8663
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7767,
+          -49,
+          -8731
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7775,
+          -36,
+          -8637
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7775,
+          -36,
+          -8645
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7776,
+          -36,
+          -8636
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7776,
+          -37,
+          -8637
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7776,
+          -37,
+          -8645
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7778,
+          -45,
+          -8657
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7782,
+          -49,
+          -8657
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7782,
+          -49,
+          -8663
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7783,
+          -36,
+          -8635
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7784,
+          -36,
+          -8636
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7784,
+          -36,
+          -8646
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7784,
+          -37,
+          -8637
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7784,
+          -37,
+          -8645
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7785,
+          -36,
+          -8637
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7785,
+          -36,
+          -8645
+        ]
+      },
+      {
+        "blocks": 3,
+        "example": [
+          -7785,
+          -37,
+          -8639
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7786,
+          -36,
+          -8638
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7788,
+          -49,
+          -8663
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7791,
+          -34,
+          -8677
+        ]
+      },
+      {
+        "blocks": 16,
+        "example": [
+          -7791,
+          -35,
+          -8681
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7792,
+          -36,
+          -8683
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7792,
+          -37,
+          -8682
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7793,
+          -36,
+          -8674
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7793,
+          -36,
+          -8684
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7793,
+          -37,
+          -8683
+        ]
+      },
+      {
+        "blocks": 164,
+        "example": [
+          -7795,
+          -37,
+          -8680
+        ]
+      },
+      {
+        "blocks": 6,
+        "example": [
+          -7795,
+          -38,
+          -8676
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7795,
+          -44,
+          -8677
+        ]
+      },
+      {
+        "blocks": 2,
+        "example": [
+          -7796,
+          -38,
+          -8677
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7799,
+          -44,
+          -8681
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7800,
+          -49,
+          -8731
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7802,
+          -36,
+          -8683
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7802,
+          -37,
+          -8682
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7803,
+          -45,
+          -8734
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7806,
+          -45,
+          -8731
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7814,
+          -45,
+          -8737
+        ]
+      },
+      {
+        "blocks": 8,
+        "example": [
+          -7816,
+          -49,
+          -8723
+        ]
+      },
+      {
+        "blocks": 2,
+        "example": [
+          -7816,
+          -51,
+          -8717
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7817,
+          -47,
+          -8567
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7818,
+          -46,
+          -8566
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7819,
+          -45,
+          -8668
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7819,
+          -51,
+          -8728
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7829,
+          -45,
+          -8650
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7830,
+          -45,
+          -8673
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7835,
+          -45,
+          -8650
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7837,
+          -49,
+          -8617
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7837,
+          -49,
+          -8635
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7840,
+          -43,
+          -8740
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7840,
+          -45,
+          -8567
+        ]
+      },
+      {
+        "blocks": 42,
+        "example": [
+          -7843,
+          -43,
+          -8736
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7843,
+          -45,
+          -8568
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7843,
+          -45,
+          -8627
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7843,
+          -49,
+          -8617
+        ]
+      },
+      {
+        "blocks": 2,
+        "example": [
+          -7845,
+          -46,
+          -8720
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7845,
+          -46,
+          -8740
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7847,
+          -45,
+          -8650
+        ]
+      },
+      {
+        "blocks": 43,
+        "example": [
+          -7857,
+          -44,
+          -8733
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7858,
+          -45,
+          -8671
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7868,
+          -45,
+          -8708
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7871,
+          -45,
+          -8707
+        ]
+      },
+      {
+        "blocks": 2,
+        "example": [
+          -7872,
+          -45,
+          -8674
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7873,
+          -45,
+          -8732
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7874,
+          -45,
+          -8746
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7874,
+          -45,
+          -8758
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7874,
+          -45,
+          -8760
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7874,
+          -49,
+          -8718
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7878,
+          -34,
+          -8678
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7879,
+          -36,
+          -8684
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7879,
+          -37,
+          -8683
+        ]
+      },
+      {
+        "blocks": 2,
+        "example": [
+          -7880,
+          -33,
+          -8678
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7880,
+          -36,
+          -8675
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7880,
+          -36,
+          -8685
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7880,
+          -37,
+          -8684
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7881,
+          -38,
+          -8676
+        ]
+      },
+      {
+        "blocks": 3,
+        "example": [
+          -7881,
+          -44,
+          -8676
+        ]
+      },
+      {
+        "blocks": 178,
+        "example": [
+          -7881,
+          -48,
+          -8683
+        ]
+      },
+      {
+        "blocks": 2,
+        "example": [
+          -7882,
+          -39,
+          -8675
+        ]
+      },
+      {
+        "blocks": 2,
+        "example": [
+          -7882,
+          -44,
+          -8678
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7882,
+          -49,
+          -8682
+        ]
+      },
+      {
+        "blocks": 6,
+        "example": [
+          -7883,
+          -38,
+          -8678
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7886,
+          -44,
+          -8682
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7887,
+          -45,
+          -8658
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7887,
+          -45,
+          -8664
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7889,
+          -36,
+          -8684
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7889,
+          -37,
+          -8683
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7891,
+          -45,
+          -8664
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7900,
+          -45,
+          -8731
+        ]
+      },
+      {
+        "blocks": 3,
+        "example": [
+          -7900,
+          -48,
+          -8731
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7901,
+          -45,
+          -8644
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7901,
+          -45,
+          -8655
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7901,
+          -45,
+          -8693
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7901,
+          -45,
+          -8699
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7901,
+          -49,
+          -8632
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7904,
+          -45,
+          -8694
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7904,
+          -45,
+          -8731
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7904,
+          -45,
+          -8737
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7907,
+          -45,
+          -8591
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7907,
+          -45,
+          -8680
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7907,
+          -48,
+          -8622
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7907,
+          -49,
+          -8750
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7913,
+          -45,
+          -8750
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7924,
+          -50,
+          -8621
+        ]
+      },
+      {
+        "blocks": 4,
+        "example": [
+          -7927,
+          -47,
+          -8621
+        ]
+      },
+      {
+        "blocks": 2,
+        "example": [
+          -7927,
+          -48,
+          -8696
+        ]
+      },
+      {
+        "blocks": 1,
+        "example": [
+          -7930,
+          -46,
+          -8699
+        ]
+      }
+    ]
+  },
+  {
+    "air_below_exposed_cells": 0,
+    "anchor": [
+      552,
+      -296
+    ],
+    "boundary_unknown_components": 0,
+    "changed_examples": [],
+    "chunks": 8,
+    "components": 4,
+    "kind": 14,
+    "structure_solid_cells": 3329,
+    "unsupported_components": []
+  }
+]
