@@ -20,6 +20,19 @@ pub(super) fn use_on_mob(items: &mut items::Items, index: usize, player: &mut Pl
         }
     };
 
+    if let Some(stack) = held_stack
+        && let Some((consume, shear)) = crate::mob::wolf_armor::interact(&mut items.mobs_mut()[index], player.uuid, stack)
+    {
+        if consume { spend(player, reaction); }
+        if shear && survival {
+            let slot = player.inventory.selected_slot();
+            let wear = crate::combat::wear(&stack, 1, false, || rng.unit() as f32);
+            player.inventory.set(slot, crate::combat::add_damage(stack, wear)); reaction.slots.push(slot);
+        }
+        flush(items, shared, &mut rng);
+        return true;
+    }
+
     // Бирка: имя мобу (вики, Name Tag; чёрный ящик, name-tag).
     if held == Some("name_tag") {
         let name = held_stack.and_then(|stack| stack.extras().name);

@@ -1605,7 +1605,7 @@ pub(crate) fn enchantable(enchantment: &str, item: &str) -> bool {
 /// Несовместимые зачарования (вики, Enchanting: «Incompatible enchantments»).
 pub(crate) fn exclusive(a: &str, b: &str) -> bool {
     const SETS: [&[&str]; 8] = [
-        &["sharpness", "smite", "bane_of_arthropods", "density", "breach"],
+        &["sharpness", "smite", "bane_of_arthropods", "density", "breach", "impaling"],
         &["protection", "fire_protection", "blast_protection", "projectile_protection"],
         &["depth_strider", "frost_walker"],
         &["silk_touch", "fortune"],

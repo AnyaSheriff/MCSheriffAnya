@@ -151,6 +151,7 @@ impl Body {
             Act::Release => {
                 if let Some(eating) = p.net.eating.take()
                     && eating.ticks_left <= EAT_SLACK
+                    && vitals::eating_matches(p, &eating)
                 {
                     finish(shared, p, eating, &mut done);
                 }
@@ -160,6 +161,9 @@ impl Body {
             Act::Tick => {
                 vitals::tick_crossbow(shared, p, now);
 
+                if p.net.eating.as_ref().is_some_and(|eating| !vitals::eating_matches(p, eating)) {
+                    vitals::stop_eating(p);
+                }
                 if let Some(eating) = &mut p.net.eating {
                     eating.ticks_left -= 1;
 
@@ -204,7 +208,7 @@ fn use_held(shared: &Shared, p: &mut PlayerState, hand: i32, now: u64) {
         return;
     }
 
-    if hand == 0 && vitals::start_eating(p) {
+    if vitals::start_eating_at(p, hand, *shared.ticks.borrow()) {
         return;
     }
 
@@ -218,46 +222,35 @@ fn use_held(shared: &Shared, p: &mut PlayerState, hand: i32, now: u64) {
 /// Доел или допил: то же, что `finish_eating` и `finish_drinking` у Java,
 /// без пакетов — звуки еды клиент Bedrock играет сам [проверить].
 fn finish(shared: &Shared, p: &mut PlayerState, eating: vitals::Eating, done: &mut Done) {
-    let creative = p.game_mode == GAME_MODE_CREATIVE;
-
-    done.consumed = p.inventory.held().map(|stack| (stack.item, eating.drink.is_none()));
+    done.consumed = p.inventory.slot(eating.slot).map(|stack| (stack.item, eating.drink.is_none()));
+    let name = blocks::item_name(eating.stack.item).unwrap_or("");
+    let remainder;
 
     match eating.drink {
         Some(drink) => {
-            if !creative {
-                let slot = p.inventory.selected_slot();
-
-                if drink == vitals::Drink::Ominous {
-                    p.inventory.spend_held();
-                } else if drink == vitals::Drink::Honey {
-                    if let Some(item) = blocks::item_named(drink.remainder()) {
-                        done.slots.extend(swap_held(p, item, shared));
-                    }
-                } else {
-                    p.inventory.set(slot, blocks::item_named(drink.remainder()).map(|item| Stack::new(item, 1)));
-                }
-            }
-
+            remainder = drink.remainder();
             if drink == vitals::Drink::Milk {
-                p.vit.effects.clear();
-            } else if drink==vitals::Drink::Honey {
-                p.vit.eat(6,1.2);
-                p.vit.effects.retain(|e|e.kind!=crate::survival::EffectKind::Poison);
+                p.vit.remove_effects(None);
+            } else if drink == vitals::Drink::Honey {
+                p.vit.eat(6, 1.2);
+                p.vit.remove_effects(Some(crate::survival::EffectKind::Poison));
             }
         }
         None => {
             p.vit.eat(eating.nutrition, eating.saturation);
 
-            if !creative {
-                p.inventory.spend_held();
-            }
+            remainder = if matches!(name, "suspicious_stew" | "mushroom_stew" | "rabbit_stew" | "beetroot_soup") { "bowl" } else { "" };
         }
+    }
+
+    if let Some(left) = vitals::consume_stack(p, eating.slot, remainder) {
+        super::throw_out(shared, p, left);
     }
 
     for effect in eating.effects {
         match effect.kind {
-            crate::survival::EffectKind::InstantHealth => p.vit.heal((4 << effect.amplifier.clamp(0, 20)) as f32),
-            crate::survival::EffectKind::InstantDamage => done.damage.push(((6 << effect.amplifier.clamp(0, 20)) as f32, Source::Magic)),
+            crate::survival::EffectKind::InstantHealth => p.vit.heal(crate::survival::instant_base(crate::survival::EffectKind::InstantHealth, effect.amplifier) as f32),
+            crate::survival::EffectKind::InstantDamage => done.damage.push((crate::survival::instant_base(crate::survival::EffectKind::InstantDamage, effect.amplifier) as f32, Source::Magic)),
             _ => p.vit.give_effect_shown(effect),
         }
     }
@@ -308,15 +301,9 @@ fn struck(shared: &Shared, p: &mut PlayerState, strike: &PlayerStrike, now: u64,
         return;
     }
 
-    if !combat::bypasses_armor(strike.source) {
-        let (armor, toughness) = (p.attrs.value(crate::attributes::ARMOR) as f32, p.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32);
-
-        damage = combat::after_armor_breached(damage, armor, toughness, strike.breach_scale);
-
-        let points: i32 = combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| p.inventory.slot(*slot)).map(|stack| combat::protection_points(&stack.extras(), strike.source)).sum();
-
-        damage = combat::after_protection(damage, points);
-    }
+    let (armor, toughness) = (p.attrs.value(crate::attributes::ARMOR) as f32, p.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32);
+    let points: i32 = combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| p.inventory.slot(*slot)).map(|stack| combat::protection_points(&stack.extras(), strike.source)).sum();
+    damage = combat::mitigated_damage(damage, armor, toughness, points, strike.source, strike.breach_scale);
 
     // Внутри неуязвимости проходит только то, что сильнее прошлого удара.
     let landed = damage > 0.0 && !(p.vit.invulnerable > 10 && !strike.source.bypasses_cooldown() && damage <= p.vit.last_hurt());
@@ -352,7 +339,7 @@ fn struck(shared: &Shared, p: &mut PlayerState, strike: &PlayerStrike, now: u64,
     }
 
     if strike.fire_ticks > 0 {
-        p.vit.ignite(strike.fire_ticks);
+        vitals::ignite(p, strike.fire_ticks);
     }
 
     p.net.pin = None;

@@ -56,19 +56,19 @@ pub(super) fn use_on(items: &mut items::Items, index: usize, world: &World, play
         mob.land.saddle = true; spend = true; mob.attr_changes = mob.attr_changes.wrapping_add(1);
     } else if land::llama(mob.kind) && held.is_some_and(|s| matches!(s,"wheat"|"hay_block")) {
         let hay = held == Some("hay_block");
-        if mob.is_baby() { mob.age = (mob.age + if hay { 1800 } else { 200 }).min(0); spend = true; }
+        if mob.is_baby() && !mob.age_locked { mob.age = (mob.age + if hay { 1800 } else { 200 }).min(0); spend = true; }
         if mob.vitals.health < mob.vitals.max_health { mob.vitals.health = (mob.vitals.health + if hay { 10.0 } else { 2.0 }).min(mob.vitals.max_health); spend = true; }
         if !mob.land.tamed && mob.land.temper < 30 { mob.land.temper = (mob.land.temper + if hay { 6 } else { 3 }).min(30); spend = true; }
         if hay && mob.land.tamed && mob.age == 0 && mob.love == 0 { mob.love = crate::mob::LOVE_TICKS; mob.events.push(Event::Hearts); spend = true; }
     } else if mob.kind == Kind::Panda && held.is_some_and(|s| matches!(s,"bamboo"|"cake")) {
         let nearby = land::bamboo_near(&MobWorld(world),mob);
-        if mob.is_baby() { mob.age = (mob.age + (-mob.age / 10)).min(0); }
+        if mob.is_baby() && !mob.age_locked { mob.age = (mob.age + (-mob.age / 10)).min(0); }
         else if held == Some("bamboo") && mob.age == 0 && nearby { mob.love = crate::mob::LOVE_TICKS; mob.events.push(Event::Hearts); }
         else { mob.land.eating = 32; mob.land.held=player.inventory.held().map(|s| s.with_count(1)); mob.attr_changes=mob.attr_changes.wrapping_add(1); }
         spend = true;
     } else if mob.kind==Kind::Camel && held==Some("cactus") {
         if mob.vitals.health<mob.vitals.max_health { mob.vitals.health=(mob.vitals.health+2.0).min(mob.vitals.max_health); spend=true; }
-        if mob.is_baby() { mob.age=(mob.age+(-mob.age/10)).min(0); spend=true; }
+        if mob.is_baby() && !mob.age_locked { mob.age=(mob.age+(-mob.age/10)).min(0); spend=true; }
         else if mob.age==0 && mob.love==0 { mob.love=crate::mob::LOVE_TICKS; mob.events.push(Event::Hearts); spend=true; }
     } else if mob.kind==Kind::Camel && held==Some("shears") && mob.land.saddle {
         mob.land.saddle=false; mob.attr_changes=mob.attr_changes.wrapping_add(1); wear=true;

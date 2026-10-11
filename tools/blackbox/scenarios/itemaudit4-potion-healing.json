@@ -1,0 +1,139 @@
+{
+  "name": "itemaudit4-potion-healing",
+  "about": "[проверить] healing: tipped 1/8, затем независимые splash и lingering 1/4 (instant 1/2). Перед доставками эффекты очищаются, позиции восстанавливаются; packet duration/amplifier. Не запускался.",
+  "second": true,
+  "track_self": true,
+  "track_players": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "gamemode survival $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "kill $(bot)",
+    "!wait 30",
+    "tp $(bot) $(3.5,0,3.5) 180 0",
+    "!stopfly",
+    "!wait 20",
+    "!hotbar2 0",
+    "!hotbar 0",
+    "give $(bot2) minecraft:crossbow 1",
+    "give $(bot2) minecraft:tipped_arrow[potion_contents={potion:\"minecraft:healing\"}] 5",
+    "tp $(bot2) $(3.5,0,-0.5) 0 0",
+    "!wait 20",
+    "!hotbar2 0",
+    "effect clear $(bot)",
+    "effect clear $(bot2)",
+    "damage $(bot) 10 minecraft:generic",
+    "!wait 20"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "use": true,
+      "bot": 2
+    },
+    {
+      "after": 30,
+      "release": true,
+      "bot": 2
+    },
+    {
+      "after": 36,
+      "use": true,
+      "bot": 2
+    },
+    {
+      "after": 50,
+      "cmd": "effect give $(bot) instant_health 1 5"
+    },
+    {
+      "after": 53,
+      "cmd": "damage $(bot) 10 minecraft:generic"
+    },
+    {
+      "after": 55,
+      "cmd": "effect clear $(bot)"
+    },
+    {
+      "after": 55,
+      "cmd": "effect clear $(bot2)"
+    },
+    {
+      "after": 55,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 180 0"
+    },
+    {
+      "after": 55,
+      "cmd": "tp $(bot2) $(3.5,0,0.5) 0 15"
+    },
+    {
+      "after": 57,
+      "cmd": "item replace entity $(bot2) weapon.mainhand with splash_potion[potion_contents={potion:\"minecraft:healing\"}]"
+    },
+    {
+      "after": 61,
+      "use": true,
+      "bot": 2
+    },
+    {
+      "after": 110,
+      "cmd": "effect give $(bot) instant_health 1 5"
+    },
+    {
+      "after": 113,
+      "cmd": "damage $(bot) 10 minecraft:generic"
+    },
+    {
+      "after": 115,
+      "cmd": "effect clear $(bot)"
+    },
+    {
+      "after": 115,
+      "cmd": "effect clear $(bot2)"
+    },
+    {
+      "after": 115,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 180 0"
+    },
+    {
+      "after": 115,
+      "cmd": "tp $(bot2) $(3.5,0,0.5) 0 15"
+    },
+    {
+      "after": 117,
+      "cmd": "item replace entity $(bot2) weapon.mainhand with lingering_potion[potion_contents={potion:\"minecraft:healing\"}]"
+    },
+    {
+      "after": 121,
+      "use": true,
+      "bot": 2
+    }
+  ],
+  "record_ticks": 180,
+  "cleanup": [
+    "kill @e[type=cow,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=arrow,distance=..48]",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "gamemode creative $(bot)",
+    "gamemode creative $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "tp $(bot2) $(6.5,0,6.5)",
+    "!wait 4",
+    "!startfly",
+    "kill @e[type=arrow,distance=..48]",
+    "effect clear $(bot)",
+    "effect clear $(bot2)",
+    "kill @e[type=area_effect_cloud,distance=..48]",
+    "kill @e[type=potion,distance=..48]"
+  ],
+  "item_components": true,
+  "track_second_slots": true,
+  "inventory": true
+}

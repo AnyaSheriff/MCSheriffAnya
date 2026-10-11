@@ -483,14 +483,13 @@ pub fn read(bytes: &mut &[u8]) -> Option<(State, crate::villager::State)> {
 
 // Вики, Suspicious Stew, «Flowers»: эффекты и длительности Java.
 pub fn flower(name: &str) -> Option<u8> {
-    Some(match name { "dandelion"|"blue_orchid"=>1,"poppy"|"torchflower"=>2,"allium"=>3,"azure_bluet"=>4,
+    Some(match name { "dandelion"|"blue_orchid"|"golden_dandelion"=>1,"poppy"|"torchflower"=>2,"allium"=>3,"azure_bluet"=>4,
         "red_tulip"|"orange_tulip"|"white_tulip"|"pink_tulip"=>5,"oxeye_daisy"=>6,"cornflower"=>7,
         "lily_of_the_valley"=>8,"wither_rose"=>9,"open_eyeblossom"=>10,"closed_eyeblossom"=>11,_=>return None })
 }
 pub fn stew(code:u8)->Option<(u8,i32)> {
-    use crate::survival::EffectKind::*;
-    let (effect,ticks)=match code { 1=>(Saturation,7),2=>(NightVision,100),3=>(FireResistance,80),4=>(Blindness,160),5=>(Weakness,180),6=>(Regeneration,160),7=>(JumpBoost,120),8=>(Poison,240),9=>(Wither,160),10=>(Blindness,220),11=>(Nausea,140),_=>return None };
-    Some((effect.id() as u8,ticks))
+    let flower=match code { 1=>"dandelion",2=>"poppy",3=>"allium",4=>"azure_bluet",5=>"red_tulip",6=>"oxeye_daisy",7=>"cornflower",8=>"lily_of_the_valley",9=>"wither_rose",10=>"open_eyeblossom",11=>"closed_eyeblossom",_=>return None };
+    crate::survival::stew_effect(flower)
 }
 pub fn lightning(mob:&mut Mob, bolt:i32) {
     if mob.kind==Kind::Mooshroom && mob.land.lightning!=Some(bolt) { mob.land.brown= !mob.land.brown; mob.land.lightning=Some(bolt); }

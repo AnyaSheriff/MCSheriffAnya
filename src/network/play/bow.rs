@@ -35,15 +35,15 @@ pub(super) struct ShownArrow {
     resynced: u32,
 }
 
-/// Первый слот с обычной стрелой: вторая рука, панель, рюкзак.
+/// Первая стрела любого типа: руки, панель, рюкзак (вики, Bow).
 pub(super) fn arrow_slot(player: &PlayerState) -> Option<i32> {
-    arrow_slot_matching(player, true)
+    arrow_slot_matching(player)
 }
 
-fn arrow_slot_matching(player: &PlayerState, tipped: bool) -> Option<i32> {
-    let order = std::iter::once(inventory::OFFHAND).chain(inventory::FIRST_HOTBAR..=inventory::LAST_HOTBAR).chain(inventory::FIRST_MAIN..=inventory::LAST_MAIN);
+fn arrow_slot_matching(player: &PlayerState) -> Option<i32> {
+    let order = [inventory::OFFHAND, player.inventory.selected_slot()].into_iter().chain(inventory::FIRST_HOTBAR..=inventory::LAST_HOTBAR).chain(inventory::FIRST_MAIN..=inventory::LAST_MAIN);
 
-    order.into_iter().find(|slot| player.inventory.slot(*slot).is_some_and(|stack| matches!(blocks::item_name(stack.item), Some("arrow")) || (tipped && blocks::item_name(stack.item) == Some("tipped_arrow"))))
+    order.into_iter().find(|slot| player.inventory.slot(*slot).is_some_and(|stack| matches!(blocks::item_name(stack.item), Some("arrow" | "tipped_arrow" | "spectral_arrow"))))
 }
 
 /// Чем заряжать арбалет в руке `hand`: сперва то, что в другой руке
@@ -55,9 +55,9 @@ pub(super) fn crossbow_ammo(player: &PlayerState, hand: i32) -> Option<(i32, boo
     let other = if hand == 1 { player.inventory.selected_slot() } else { inventory::OFFHAND };
 
     match player.inventory.slot(other).and_then(|stack| combat::item_name(stack.item)) {
-        Some("arrow") => Some((other, false)),
+        Some("arrow" | "tipped_arrow" | "spectral_arrow") => Some((other, false)),
         Some("firework_rocket") => Some((other, true)),
-        _ => arrow_slot_matching(player, false).map(|slot| (slot, false)),
+        _ => arrow_slot_matching(player).map(|slot| (slot, false)),
     }
 }
 
@@ -90,6 +90,7 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
     let potion = ammo.filter(|stack| blocks::item_name(stack.item) == Some("tipped_arrow")).and_then(|stack| stack.extras().potion);
     let infinity = data.level("infinity") > 0 && ammo.is_none_or(|stack| blocks::item_name(stack.item) == Some("arrow"));
     let shot = Shot {
+        ammo: ammo.map(|stack| stack.with_count(1)),
         potion,
         speed: combat::arrow_speed(power),
         crit: power >= 1.0,
@@ -134,6 +135,7 @@ pub(super) fn release(shared: &Shared, player: &mut PlayerState, hand: i32, tick
 /// Чем и как стреляют: скорость, свойства стрелы.
 #[derive(Clone, Copy)]
 pub(super) struct Shot {
+    pub ammo: Option<Stack>,
     pub potion: Option<u16>,
     pub speed: f64,
     pub crit: bool,
@@ -185,7 +187,8 @@ fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
         owner_uuid: player.uuid,
         owner_name: player.name.clone(),
         shooter: Shooter::Player,
-        effects: crate::arrow::tipped_effects(shot.potion),
+        ammo: shot.ammo,
+        effects: crate::arrow::ammunition_effects(shot.ammo, shot.potion),
         potion: shot.potion,
         crit: shot.crit,
         power: shot.power,
@@ -260,6 +263,7 @@ pub(super) fn throw_trident(shared: &Shared, player: &mut PlayerState, hand: i32
         }
     };
     let shot = Shot {
+        ammo: None,
         potion: None,
         speed: crate::arrow::TRIDENT_SPEED,
         crit: false,
@@ -351,6 +355,7 @@ pub(super) fn crossbow_load(player: &mut PlayerState, hand: i32) {
     // (вики, Multishot: «consumes only one arrow»); ракета ложится со своими
     // довесками (полёт, взрывы).
     data.charged = if data.level("multishot") > 0 { 3 } else { 1 };
+    data.charged_arrow = ammo.filter(|(_, rocket)| !rocket).and_then(|(slot, _)| player.inventory.slot(slot)).map(|stack| crate::stackdata::Content { slot: 0, item: stack.item, count: 1, data: stack.data });
     data.charged_rocket = ammo.filter(|(_, rocket)| *rocket).and_then(|(ammo_slot, _)| player.inventory.slot(ammo_slot)).map(|stack| stack.extras().rocket());
     player.inventory.set(slot, Some(crossbow.with_extras(data)));
     player.net.slot_changed_later(slot);
@@ -412,8 +417,10 @@ pub(super) fn crossbow_fire(shared: &Shared, player: &mut PlayerState, hand: i32
         return true;
     }
 
+    let ammo = data.charged_arrow.take().map(|ammo| Stack { data: ammo.data, ..Stack::new(ammo.item, 1) });
     let shot = Shot {
-        potion: None,
+        ammo,
+        potion: ammo.and_then(|stack| stack.extras().potion),
         speed: combat::CROSSBOW_SPEED,
         crit: true,
         power: 0,
@@ -736,11 +743,11 @@ fn arrow_data(arrow: &Arrow) -> Option<Vec<u8>> {
         data.push(arrow.loyalty.clamp(0, 127) as u8);
     }
 
-    if !arrow.effects.is_empty() && arrow.trident.is_none() {
+    if (!arrow.effects.is_empty() || arrow.ammo.is_some_and(|stack| stack.extras().potion_extra.as_ref().is_some_and(|extra| extra.color.is_some()))) && arrow.trident.is_none() && !arrow.spectral() {
         // minecraft-data 26.1 entities.json: Arrow, effect_color = 11.
         data.push(11);
         data.extend_from_slice(&encode_varint(PROPERTY_INT));
-        data.extend_from_slice(&encode_varint(crate::thrown::potion_color(&arrow.effects)));
+        data.extend_from_slice(&encode_varint(arrow.ammo.map(|stack| stack.extras().potion_color()).unwrap_or_else(|| crate::thrown::potion_color(&arrow.effects))));
     }
 
     if foil {

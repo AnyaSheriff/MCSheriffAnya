@@ -1,0 +1,136 @@
+{
+ "name": "itemaudit-reach-scan2",
+ "about": "Дальность удара игрока по игроку, дальше 5 блоков.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "exclusive": true,
+ "blocks": [],
+ "track_second": true,
+ "record_ticks": 140,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly",
+  "effect clear $(bot2)"
+ ],
+ "item_components": true,
+ "track_second_velocity": true,
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "kill $(bot)",
+  "!wait 30",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "tp $(bot2) $(3.5,0,1.5) 0 0",
+  "!stopfly",
+  "!wait 20",
+  "!hotbar2 0",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "tp $(bot2) $(3.5,0,-1.50) 0 0"
+  },
+  {
+   "after": 3,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 12,
+   "cmd": "tp $(bot2) $(3.5,0,-1.80) 0 0"
+  },
+  {
+   "after": 15,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 24,
+   "cmd": "tp $(bot2) $(3.5,0,-2.10) 0 0"
+  },
+  {
+   "after": 27,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 36,
+   "cmd": "tp $(bot2) $(3.5,0,-2.30) 0 0"
+  },
+  {
+   "after": 39,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 48,
+   "cmd": "tp $(bot2) $(3.5,0,-2.50) 0 0"
+  },
+  {
+   "after": 51,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 60,
+   "cmd": "tp $(bot2) $(3.5,0,-2.70) 0 0"
+  },
+  {
+   "after": 63,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 72,
+   "cmd": "tp $(bot2) $(3.5,0,-2.90) 0 0"
+  },
+  {
+   "after": 75,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 84,
+   "cmd": "tp $(bot2) $(3.5,0,-3.10) 0 0"
+  },
+  {
+   "after": 87,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 96,
+   "cmd": "tp $(bot2) $(3.5,0,-3.40) 0 0"
+  },
+  {
+   "after": 99,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 108,
+   "cmd": "tp $(bot2) $(3.5,0,-3.80) 0 0"
+  },
+  {
+   "after": 111,
+   "attack": true,
+   "bot": 2
+  }
+ ]
+}

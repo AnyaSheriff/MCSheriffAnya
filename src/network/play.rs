@@ -76,9 +76,13 @@ mod water_tests;
 mod merchant;
 mod pvp;
 mod bow;
+#[cfg(test)]
+mod bow_tests;
 mod thrown;
 mod sleep;
 mod farm;
+mod debug_stick;
+mod knowledge_book;
 mod station;
 mod body;
 mod signs;
@@ -4328,7 +4332,7 @@ async fn send_pending_world_events(
                         amplifier: crate::mob::guardian::CURSE_AMPLIFIER,
                         ticks_left: crate::mob::guardian::CURSE_TICKS,
                         ambient: false,
-                        visible: true,
+                        visible: true, show_icon: true,
                     };
 
                     vitals::give_effect(stream, player, curse).await?;
@@ -4377,7 +4381,7 @@ async fn send_pending_world_events(
                 let (dx, dy, dz) = (player.x - blast.centre.0, player.y - blast.centre.1, player.z - blast.centre.2);
 
                 if dx * dx + dy * dy + dz * dz < EXPLOSION_HEARD * EXPLOSION_HEARD {
-                    let own = blast.pushed.iter().find(|(id, _)| *id == player.entity_id).map(|(_, push)| *push);
+                    let own = blast.pushed.iter().find(|(id, _)| *id == player.entity_id).map(|(_, push)| vitals::protected_blast_push(player, *push));
 
                     // Нападающему со «порывом ветра» скорость (0; 0,01; 0) от
                     // сокрушающего удара уходит сразу, до взрыва: иначе она
@@ -6079,6 +6083,9 @@ async fn read_and_log_play_packets(
         }
 
         for (order, with_look) in merged {
+            let pearl_teleport = matches!(&order, Order::PearlTeleport { .. });
+            if let Order::PearlTeleport { dimension, .. } = &order
+                && (*dimension != player.dimension || player.vit.dead) { continue; }
             // Возрождение — тот же переход, что и в другое измерение: клиент
             // забывает мир и получает его заново, только у точки возрождения.
             let respawning = matches!(order, Order::Respawn);
@@ -6127,9 +6134,27 @@ async fn read_and_log_play_packets(
                 }
                 Order::ClearEffects => vitals::clear_effects(stream, player, None).await?,
                 Order::ClearEffect(kind) => vitals::clear_effects(stream, player, Some(kind)).await?,
-                Order::XpTaken { points } => player.net.xp_taken += points,
+                Order::XpTaken { points } => player.net.xp_taken.push(points),
                 Order::KilledPlayer => player.progress.killed_player(),
-                Order::MagicHit { amount, killer } => player.net.hits.push(vitals::Pending { amount, source: crate::survival::Source::Magic, direct: 0, hurt_yaw: None, killer, push: None, announced: false }),
+                // Брошенное зелье бьёт как indirect_magic: Damage Event с виновником и
+                // снарядом, анимация ушиба и отдача от точки удара (чёрный ящик,
+                // itemaudit2-instant-damage-undead: тип 23, скорость 0; 0,275; −0,218).
+                Order::MagicHit { amount, killer, from: Some((potion, at)) } => {
+                    let (dx, dz) = (player.x - at.0, player.z - at.2);
+                    let length = dx.hypot(dz);
+                    let yaw = ((at.2 - player.z).atan2(at.0 - player.x).to_degrees() - f64::from(player.yaw)) as f32;
+
+                    player.net.hits.push(vitals::Pending {
+                        amount,
+                        source: crate::survival::Source::IndirectMagic,
+                        direct: potion,
+                        hurt_yaw: Some(yaw),
+                        killer,
+                        push: (length > 1.0e-4).then(|| (dx / length, dz / length)),
+                        announced: false,
+                    });
+                }
+                Order::MagicHit { amount, killer, from: None } => player.net.hits.push(vitals::Pending { amount, source: crate::survival::Source::Magic, direct: 0, hurt_yaw: None, killer, push: None, announced: false }),
                 Order::Progress(event) => player.progress.event(event),
                 Order::Advancement { grant, ids, criterion } => {
                     for id in ids {
@@ -6371,7 +6396,16 @@ async fn read_and_log_play_packets(
                     publish_player(shared, player);
                 }
 
-                Order::Teleport { x, y, z } => {
+                Order::Teleport { x, y, z } | Order::PearlTeleport { x, y, z, .. } => {
+                    if pearl_teleport {
+                        vehicle::dismount(shared, player);
+                        // Звук телепорта — в точке прибытия (чёрный ящик, itemaudit3-ender_pearl-near: (3,375; 0,375; 4,375)).
+                        shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((x,y,z), "minecraft:entity.player.teleport", 1.0, 1.0);
+                        player.vit.fall = 0.0;
+                        player.vit.landed_from = 0.0;
+                        player.net.last_delta = (0.0, 0.0, 0.0);
+                        player.net.pin = None;
+                    }
                     player.x = x;
                     player.y = y;
                     player.z = z;
@@ -6408,6 +6442,9 @@ async fn read_and_log_play_packets(
                     )
                     .await?;
                     all_chunks_sent = false;
+                    if pearl_teleport {
+                        vitals::hit(stream, shared, player, 5.0, crate::survival::Source::EnderPearl, 0).await?;
+                    }
 
                     log_debug!(
                         "Play: игрок {} перенесён в {:.2} {:.2} {:.2}",
@@ -7601,6 +7638,7 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
         }
     }
 
+    let mut smash_event: Option<(i32, i32, i32)> = None;
     let mut items = shared.items_in(player.dimension).lock().expect("предметы захвачены другим потоком");
 
     // Части дракона: номера следом за ним, голова — первая (commands.rs,
@@ -7638,16 +7676,16 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     let charge = crate::combat::charge(since, player.attrs.value(crate::attributes::ATTACK_SPEED));
     // Критический удар (вики, Critical hit): полная рука, игрок падает —
     // не на земле, не бежит, не в воде; урон ×1,5 (чёрный ящик, cow-crit).
-    let crit_ok = player.vit.fall > 0.0 && !player.on_ground && !player.vit.sprinting && !player.net.in_water;
+    let crit_ok = pvp::may_crit(player);
     let (undead, arthropod) = crate::combat::mob_traits(mob.kind.name());
     // Сокрушающий удар булавы — как по игроку (pvp::strike_player): прибавка
     // за пролёт в основу, вид урона mace_smash, пролёт гасится [проверить
     // по мобу: снято только по игроку, pvp-mace].
-    let smash = crate::combat::smash_ready(held == Some("mace"), player.vit.fall, player.on_ground);
+    let smash = pvp::may_smash(player, held == Some("mace"));
     let smash_fall = player.vit.fall;
     let bonus = if smash { crate::combat::smash_bonus(smash_fall, data.level("density")) } else { 0.0 };
     let source = if smash { crate::survival::Source::MaceSmash } else { crate::survival::Source::PlayerAttack };
-    let enchanted = crate::combat::enchant_bonus(&data, undead, arthropod) + crate::mob::water::impaling(mob.kind,data.level("impaling"));
+    let enchanted = crate::combat::enchant_bonus(&data, undead, arthropod) + crate::combat::impaling_bonus(&data, mob.kind.name());
     let blow = crate::combat::strike(player.attrs.value(crate::attributes::ATTACK_DAMAGE), bonus, enchanted, charge, crit_ok);
     let (damage, crit) = (blow.damage, blow.crit);
     // Рывок (бег при полном заряде) и зачарование «отдача» толкают ещё, вдоль
@@ -7681,9 +7719,15 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     let hit = if mob.kind == crate::mob::Kind::EnderDragon {
         mob.hurt_part(damage, head, source, Some(push))
     } else {
-        mob.hurt(damage, source, Some(push))
+        mob.hurt_burning(damage, source, Some(push), if held == Some("mace") { crate::combat::breach_scale(data.level("breach")) } else { 1.0 }, data.level("fire_aspect") * 80)
     };
     let landed = hit.is_some();
+    if landed && data.level("bane_of_arthropods") > 0 {
+        let mut rng = crate::mob::Rng::new(mob.ticks ^ shared.next_entity_id() as u64);
+        if let Some(effect) = crate::combat::bane_effect(&data, mob.kind.name(), rng.unit() as f32) {
+            mob.vitals.give_effect_shown(effect);
+        }
+    }
 
     if let Some(hit) = &hit {
         player.progress.damage_dealt(*hit);
@@ -7747,6 +7791,12 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
             // мира 2013) — через журнал мира [проверить].
             if smash {
                 mob.events.push(crate::mob::Event::PlayerSound { name: crate::combat::smash_sound(smash_fall, mob.on_ground), at: from });
+
+                // Частицы из блока под мобом — событие мира 2013, как у игрока
+                // (чёрный ящик, itemaudit4-density); шлётся после сброса мобов.
+                if mob.on_ground {
+                    smash_event = Some((mob.x.floor() as i32, mob.y.floor() as i32 - 1, mob.z.floor() as i32));
+                }
             }
 
             if data.level("sharpness") > 0 || data.level("smite") > 0 || data.level("bane_of_arthropods") > 0 {
@@ -7774,6 +7824,10 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
 
     items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
     drop(items);
+
+    if let Some((x, y, z)) = smash_event {
+        shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_level_event(x, y, z, 2013, crate::combat::SMASH_PARTICLES);
+    }
 
     if let Some((at, guardian)) = spikes {
         pvp::guardian_spikes(shared, player, at, guardian);
@@ -8015,6 +8069,21 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     }
 
     if water::use_on_mob(&mut items, index, player, &mut world, reaction) { return true; }
+    // Вики, Golden Dandelion: переключает возраст только у растущих малышей.
+    // [Bedrock: потом] use/частицы; offhand маршрутизация use_entity [проверить].
+    if let Some(held) = player.inventory.held()
+        && blocks::item_name(held.item) == Some("golden_dandelion")
+        && crate::mob::growth::eligible(items.mobs()[index].kind)
+        && items.mobs()[index].is_baby()
+    {
+        if crate::mob::growth::toggle(&mut items.mobs_mut()[index]) {
+            player.progress.used(held.item);
+            if player.game_mode != GAME_MODE_CREATIVE && let Some(slot) = player.inventory.spend_held() { reaction.slots.push(slot); }
+            items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(world.random_bits())));
+        }
+        return true;
+    }
+    if items.mobs()[index].age_locked && player.inventory.held().and_then(|s| blocks::item_name(s.item)).is_some_and(|food| items.mobs()[index].kind.likes(food)) { return true; }
 
     // Бирка, поводок, волк и кошка (play/tame.rs).
     if tame::use_on_mob(&mut items, index, player, shared, reaction) {
@@ -8102,13 +8171,13 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         if let Some(stack) = player.inventory.held() { player.progress.used(stack.item); }
         mob.villager.conversion = 3600 + rng.below(2401) as i32;
         mob.villager.converter = Some(player.uuid);
-        mob.vitals.effects.retain(|effect| effect.kind != crate::survival::EffectKind::Weakness);
+        mob.vitals.remove_effects(Some(crate::survival::EffectKind::Weakness));
         mob.vitals.give_effect_shown(crate::survival::Effect {
             kind: crate::survival::EffectKind::Strength,
             amplifier: i32::from(difficulty.saturating_sub(1)).min(2),
             ticks_left: mob.villager.conversion,
             ambient: false,
-            visible: true,
+            visible: true, show_icon: true,
         });
         mob.events.push(crate::mob::Event::Status(16));
         items.flush_mob_events(&mut || shared.next_entity_id(), &mut rng);
@@ -8332,6 +8401,10 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         }
         world.get_block(x, y, z)
     };
+
+    if status == STARTED_DIGGING
+        && let Some(reaction) = debug_stick::interact(shared, player, (x,y,z), true, sequence)
+    { return Some(reaction); }
 
     let breaks_now = mining::allows(player, shared, (x, y, z), state, status);
 
@@ -9087,6 +9160,9 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         }
     }
 
+    if let Some(reaction) = debug_stick::interact(shared, player, (clicked_x,clicked_y,clicked_z), false, sequence) {
+        return Some(reaction);
+    }
     if let Some(reaction) = gameplay::campfire_use(player, shared, (clicked_x, clicked_y, clicked_z), face, sequence) { return Some(reaction); }
     if let Some(reaction) = farm::use_hive(player, shared, (clicked_x, clicked_y, clicked_z), face, sequence) {
         return Some(reaction);
@@ -9595,13 +9671,28 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
         return Some(answer);
     }
 
+    if knowledge_book::use_book(player, hand) {
+        let mut answer = answer;
+        answer.slots.push(if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() });
+        return Some(answer);
+    }
+
     // Лодка или плот: на воду или землю по лучу взгляда (vehicle.rs).
     if vehicle::place_boat(shared, player, hand) {
         return Some(answer);
     }
 
     // Взрывное или оседающее зелье: бросок (thrown.rs).
+    let pearl = (if hand == 1 { player.inventory.slot(inventory::OFFHAND) } else { player.inventory.held() })
+        .is_some_and(|stack| blocks::item_name(stack.item) == Some("ender_pearl"));
     if thrown::throw_potion(shared, player, hand) {
+        let mut answer = answer;
+        if pearl {
+            let mut packet = encode_varint(0x16);
+            packet.extend_from_slice(&encode_string("minecraft:ender_pearl"));
+            packet.extend_from_slice(&encode_varint(20));
+            answer.packets.push(packet);
+        }
         return Some(answer);
     }
 
@@ -9629,7 +9720,7 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
     }
 
     // Еда в руке: начать есть.
-    if hand == 0 && vitals::start_eating(player) {
+    if vitals::start_eating_at(player, hand, *shared.ticks.borrow()) {
         return Some(answer);
     }
 
@@ -10428,7 +10519,11 @@ fn read_click(payload: &[u8], player: &mut PlayerState) -> inventory::Click {
         return inventory::Click::default();
     };
 
-    player.inventory.click(slot as i16 as i32, button as i8, mode)
+    if player.game_mode == GAME_MODE_CREATIVE {
+        player.inventory.click_in_mode(slot as i16 as i32, button as i8, mode, true)
+    } else {
+        player.inventory.click(slot as i16 as i32, button as i8, mode)
+    }
 }
 
 /// Записывает байты в виде шестнадцатеричных чисел — для разбора неизвестных
@@ -10688,7 +10783,6 @@ struct PlayerState {
     /// Такт мира, когда игрок последний раз бил: сила удара зависит от
     /// того, сколько прошло.
     last_attack: u64,
-    pearl_ready: u64,
 
     /// Когда клиент последний раз ответил на Keep Alive.
     answered: Instant,
@@ -10971,7 +11065,6 @@ impl PlayerState {
             seen_maps: HashMap::new(),
             map_first: HashMap::new(),
             seen_map_icons: HashMap::new(),
-            pearl_ready: 0,
             last_attack: 0,
             dimension: saved.as_ref().map(|data| data.dimension).unwrap_or_default(),
             in_portal: 0,

@@ -1176,6 +1176,16 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
 
+    let reactions: Vec<_> = items.mobs_mut().iter_mut().map(|mob| {
+        let dead = mob.is_dead();
+        let height = mob.size().1;
+        crate::effect_reactions::take(&mut mob.vitals, dead, (mob.x, mob.y, mob.z), height, mob.yaw, false)
+    }).collect();
+    let targets: Vec<_> = watchers.iter().map(|p| crate::tnt::Target { entity_id: p.id, x: p.x, y: p.y, z: p.z, sneaking: false }).collect();
+    for reaction in reactions {
+        crate::effect_reactions::apply(world, &mut items, reaction, shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed), &targets, &mut || shared.next_entity_id(), rng);
+    }
+
     for mut mob in loaded {
         mob.entity_id = shared.next_entity_id();
         mob.uuid = mob.land.saved_uuid.unwrap_or_else(|| crate::mob::uuid_for(mob.entity_id));
@@ -1585,7 +1595,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
         // Иссушитель: 10 секунд иссушения (вики, Wither Skeleton).
         if strike.melee.wither {
-            let wither = crate::survival::Effect { kind: crate::survival::EffectKind::Wither, amplifier: 0, ticks_left: 200, ambient: false, visible: true };
+            let wither = crate::survival::Effect { kind: crate::survival::EffectKind::Wither, amplifier: 0, ticks_left: 200, ambient: false, visible: true, show_icon: true };
 
             world.note_mob_hit_effect(strike.melee.target, wither);
         }
@@ -1595,7 +1605,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             let ticks = crate::mob::hostile::hunger_ticks(difficulty);
 
             if ticks > 0 {
-                let hunger = crate::survival::Effect { kind: crate::survival::EffectKind::Hunger, amplifier: 0, ticks_left: ticks, ambient: false, visible: true };
+                let hunger = crate::survival::Effect { kind: crate::survival::EffectKind::Hunger, amplifier: 0, ticks_left: ticks, ambient: false, visible: true, show_icon: true };
 
                 world.note_mob_hit_effect(strike.melee.target, hunger);
             }
@@ -1605,7 +1615,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     for (player,attacker,at,puff,push) in outcome.stings {
         if difficulty == crate::survival::PEACEFUL { continue; }
         world.note_mob_hurt(player,f32::from(1+puff),crate::survival::Source::MobAttack,attacker,"entity.minecraft.pufferfish",Some(push),at);
-        world.note_mob_hit_effect(player,crate::survival::Effect { kind: crate::survival::EffectKind::Poison,amplifier:0,ticks_left:60*i32::from(puff),ambient:false,visible:true });
+        world.note_mob_hit_effect(player,crate::survival::Effect { kind: crate::survival::EffectKind::Poison,amplifier:0,ticks_left:60*i32::from(puff),ambient:false,visible:true, show_icon:true });
     }
     for (player,effect) in outcome.water_effects { world.note_mob_effect(player,effect); }
     for player in outcome.axolotl_assists {world.note_axolotl_assist(player);}
@@ -1708,7 +1718,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             amplifier: 0,
             ticks_left: crate::mob::hostile::LEVITATION_TICKS,
             ambient: false,
-            visible: true,
+            visible: true, show_icon: true,
         };
 
         world.note_mob_hurt(target, crate::mob::hostile::BULLET_DAMAGE, crate::survival::Source::MobAttack, shooter, crate::mob::hostile::killer_key(crate::mob::Kind::Shulker), None, at);

@@ -211,6 +211,17 @@ const cartAt = new Map();
 // Как называть сущность в записи движения: по умолчанию — вагонетка.
 const entKind = new Map();
 // Край: кристалл, дракон, его огненный шар и облако дыхания — пишутся как мобы.
+// Снаряд хранит в objectData номер хозяина: у двух серверов номера разные,
+// поэтому известного игрока или моба подписываем именем/видом (сверка снарядов).
+const OWNED = new Set(['arrow', 'spectral_arrow', 'trident', 'snowball', 'egg', 'ender_pearl', 'splash_potion', 'lingering_potion', 'experience_bottle', 'fireball', 'small_fireball', 'wind_charge', 'breeze_wind_charge', 'wither_skull', 'dragon_fireball', 'shulker_bullet', 'llama_spit', 'firework_rocket']);
+const ownerLabel = (type, data) => {
+  if (!OWNED.has(type) || typeof data !== 'number' || data === 0) return data;
+  const owner = bot.entities && bot.entities[data];
+  // Число, а не имя: правила `random` сценариев (маска «arrow \\d+») ждут цифры.
+  const label = owner ? (owner.type === 'player' ? owner.username : owner.name || owner.type) : null;
+  if (label) return [...label].reduce((sum, ch) => sum + ch.charCodeAt(0), owner.type === 'player' ? 9000000 : 8000000);
+  return data;
+};
 const MOB_TYPES = new Set(['horse', 'donkey', 'mule', 'skeleton_horse', 'zombie_horse', 'llama', 'trader_llama', 'llama_spit', 'camel', 'goat', 'polar_bear', 'panda', 'ocelot', 'mooshroom', 'oak_boat', 'spruce_boat', 'birch_boat', 'jungle_boat', 'acacia_boat', 'dark_oak_boat', 'mangrove_boat', 'cherry_boat', 'pale_oak_boat', 'bamboo_raft', 'oak_chest_boat', 'bamboo_chest_raft', 'fishing_bobber', 'cow', 'pig', 'sheep', 'chicken', 'zombie', 'drowned', 'husk', 'skeleton', 'stray', 'bogged', 'creeper', 'spider', 'cave_spider', 'silverfish', 'arrow', 'end_crystal', 'ender_dragon', 'dragon_fireball', 'area_effect_cloud', 'trident', 'enderman', 'shulker', 'shulker_bullet', 'witch', 'splash_potion', 'lingering_potion', 'firework_rocket', 'eye_of_ender', 'villager', 'wandering_trader', 'zombie_villager', 'blaze', 'wither_skeleton', 'magma_cube', 'ghast', 'zombified_piglin', 'piglin', 'piglin_brute', 'hoglin', 'strider', 'wolf', 'cat', 'leash_knot', 'small_fireball', 'fireball', 'iron_golem', 'snow_golem', 'snowball', 'phantom', 'guardian', 'elder_guardian', 'wither', 'wither_skull', 'pillager', 'vindicator', 'evoker', 'evoker_fangs', 'vex', 'illusioner', 'ravager', 'rabbit', 'fox', 'bee']);
 // Бриз и заряды ветра (сценарии breeze-*, wind-charge-*).
 for (const t of ['breeze', 'wind_charge', 'breeze_wind_charge']) MOB_TYPES.add(t);
@@ -242,7 +253,7 @@ bot._client.on('spawn_entity', (p) => {
   if (scenario.track_mobs && recording && inPad(pos) && type === 'item') padDrops.add(p.entityId);
   // Рамки: точное место и углы пакета появления (у рамки они несут сторону).
   const frameExtra = (type === 'item_frame' || type === 'glow_item_frame' || MOB_TYPES.has(type)) ? { extra: `${rel(pos).map(v => Math.round(v * 100000) / 100000).join(',')} yaw=${p.yaw} pitch=${p.pitch} head=${p.headPitch}` } : {};
-  if (inPad(pos)) note('spawn', { at: rel(pos).map(v => Math.round(v * 100) / 100), type, data: type === 'fishing_bobber' && bot.entity && p.objectData === bot.entity.id ? 'self' : p.objectData, id: p.entityId, velocity: p.velocity, ...frameExtra });
+  if (inPad(pos)) note('spawn', { at: rel(pos).map(v => Math.round(v * 100) / 100), type, data: type === 'fishing_bobber' && bot.entity && p.objectData === bot.entity.id ? 'self' : ownerLabel(type, p.objectData), id: p.entityId, velocity: p.velocity, ...frameExtra });
 });
 let reeledOnBite = false;
 bot._client.on('entity_metadata', (p) => {

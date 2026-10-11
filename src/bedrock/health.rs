@@ -237,12 +237,12 @@ pub fn damage_cause(source: Source) -> i32 {
         Source::Cactus | Source::SweetBerryBush => 1,
         Source::Arrow | Source::Trident | Source::Thrown | Source::WindCharge => 3,
         Source::InWall => 4,
-        Source::Fall => 5,
+        Source::Fall | Source::EnderPearl => 5,
         Source::InFire | Source::Campfire => 6,
         Source::OnFire => 7,
         Source::Lava => 8,
         Source::Drown => 9,
-        Source::Explosion | Source::PlayerExplosion | Source::Fireworks | Source::Fireball => 11,
+        Source::Explosion | Source::PlayerExplosion | Source::Fireworks | Source::Fireball | Source::LargeFireball => 11,
         Source::OutOfWorld | Source::OutsideBorder => 12,
         Source::Magic | Source::IndirectMagic | Source::SonicBoom => 14, // [Bedrock: потом] отдельный вид sonic_boom.
         // [Bedrock: потом] причина «череп иссушителя» не сверена.

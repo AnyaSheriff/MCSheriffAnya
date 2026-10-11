@@ -39,7 +39,7 @@ pub fn valid_selection(level: i32, primary: i32, secondary: i32) -> bool {
 pub fn effects(level: i32, primary: i32, secondary: i32) -> Vec<Effect> {
     if !valid_primary(level, primary) { return Vec::new(); }
     let kind = EffectKind::ALL.into_iter().find(|k| k.id() == primary).expect("сила маяка");
-    let first = Effect { kind, amplifier: i32::from(level == 4 && secondary == primary), ticks_left: (9 + 2 * level) * 20, ambient: true, visible: true };
+    let first = Effect { kind, amplifier: i32::from(level == 4 && secondary == primary), ticks_left: (9 + 2 * level) * 20, ambient: true, visible: true, show_icon: true };
     let mut result = vec![first];
     if level == 4 && secondary == 9 && primary != 9 { result.push(Effect { kind: EffectKind::Regeneration, amplifier: 0, ..first }); }
     result

@@ -52,6 +52,7 @@ pub enum Source {
     BadRespawnPoint,
     Cramming,
     DragonBreath,
+    /// Падение с жемчугом Края (damage_type ender_pearl; чёрный ящик, itemaudit3-ender_pearl-near: Damage Event 8).
     EnderPearl,
     FallingAnvil,
     FallingBlock,
@@ -119,6 +120,9 @@ pub enum Source {
     Lightning,
     /// Огненный шар ифрита (damage_type fireball, 14 по алфавиту реестра).
     Fireball,
+    /// Вики, Fire Resistance: прямой удар большого шара гаста не огненный.
+    /// Тот же wire damage type; различаем иммунитет внутри сервера [проверить].
+    LargeFireball,
     /// Удар о стену на элитрах (damage_type fly_into_wall).
     FlyIntoWall,
     /// Брошенное: снежок (вики, Snowball; реестр damage_type: thrown).
@@ -190,7 +194,7 @@ impl Source {
             // 33, player_attack 34.
             Source::OutsideBorder => 33,
             Source::Lightning => 25,
-            Source::Fireball => 14,
+            Source::Fireball | Source::LargeFireball => 14,
             // Реестр по алфавиту: fireworks 15, fly_into_wall 16.
             Source::FlyIntoWall => 16,
         }
@@ -248,13 +252,13 @@ impl Source {
             Source::FlyIntoWall => "death.attack.flyIntoWall",
             Source::OutsideBorder => "death.attack.outsideBorder",
             Source::Lightning => "death.attack.lightningBolt",
-            Source::Fireball => "death.attack.fireball",
+            Source::Fireball | Source::LargeFireball => "death.attack.fireball",
         }
     }
 
     /// Снаряд: стрела или брошенный трезубец (тег is_projectile).
     pub fn is_projectile(self) -> bool {
-        matches!(self, Source::Arrow | Source::Trident | Source::Fireball | Source::Thrown | Source::WindCharge | Source::MobProjectile | Source::Spit | Source::UnattributedFireball | Source::WitherSkull | Source::Fireworks)
+        matches!(self, Source::Arrow | Source::Trident | Source::Fireball | Source::LargeFireball | Source::Thrown | Source::WindCharge | Source::MobProjectile | Source::Spit | Source::UnattributedFireball | Source::WitherSkull | Source::Fireworks)
     }
 
     /// Урон не ждёт конца неуязвимости после прошлого удара (`bypasses_cooldown`).
@@ -275,7 +279,7 @@ impl Source {
         match self {
             // Магия и иссушение изнурения не дают (вики, Hunger: «Taking
             // damage… except… poison, wither») [проверить].
-            Source::Fall | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::Magic | Source::Wither | Source::Freeze => 0.0,
+            Source::Fall | Source::EnderPearl | Source::Drown | Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::Magic | Source::Wither | Source::Freeze => 0.0,
             _ => 0.1,
         }
     }
@@ -310,7 +314,7 @@ pub fn landing_multiplier(name: &str) -> f32 {
 /// Текст сообщения о смерти для остальных игроков.
 pub fn death_text(source: Source, name: &str) -> String {
     let what = match source {
-        Source::Fall => "fell from a high place",
+        Source::Fall | Source::EnderPearl => "fell from a high place",
         Source::Lava => "tried to swim in lava",
         Source::Drown => "drowned",
         Source::DryOut => "died from dehydration",
@@ -343,9 +347,9 @@ pub fn death_text(source: Source, name: &str) -> String {
         Source::FlyIntoWall => "experienced kinetic energy",
         Source::OutsideBorder => "left the confines of this world",
         Source::Lightning => "was struck by lightning",
-        Source::Fireball => "was fireballed",
+        Source::Fireball | Source::LargeFireball => "was fireballed",
         Source::BadRespawnPoint => "blew up", Source::Cramming => "was squished too much",
-        Source::DragonBreath => "was roasted in dragon breath", Source::EnderPearl => "fell from a high place",
+        Source::DragonBreath => "was roasted in dragon breath",
         Source::FallingAnvil => "was squashed by a falling anvil", Source::FallingBlock => "was squashed by a falling block",
         Source::FallingStalactite => "was skewered by a falling stalactite",
         Source::HotFloor => "discovered the floor was lava", Source::MobProjectile | Source::Spit => "was shot",
@@ -384,7 +388,7 @@ pub fn death_text_by(source: Source, name: &str, killer: &str, item: Option<&str
         Source::Trident => "was impaled by",
         Source::Thrown => "was pummeled by",
         Source::WindCharge => "was slain by",
-        Source::Fireball => "was fireballed by",
+        Source::Fireball | Source::LargeFireball => "was fireballed by",
         _ => "was slain by",
     };
 
@@ -600,7 +604,12 @@ pub enum EffectKind {
     RaidOmen,
     /// Герой деревни: скидки у жителей (вики, Hero of the Village).
     HeroOfTheVillage,
+    /// Вики, Conduit Power: дыхание и клиентские vision/mining [проверить].
+    ConduitPower,
+    /// Вики, Dolphin's Grace: плавание рассчитывает клиент Java [Bedrock: потом].
     DolphinsGrace,
+    /// Вики, Breath of the Nautilus: «freezing their oxygen bar» [проверить].
+    BreathOfTheNautilus,
 }
 
 impl EffectKind {
@@ -646,19 +655,22 @@ impl EffectKind {
             EffectKind::Infested => 38,
             EffectKind::HeroOfTheVillage => 31,
             EffectKind::RaidOmen => 34,
+            EffectKind::ConduitPower => 28,
+            EffectKind::BreathOfTheNautilus => 39,
         }
     }
 
     /// Все виды (для перебора модификаторов).
-    pub const ALL: [EffectKind; 38] = [
+    pub const ALL: [EffectKind; 40] = [
         EffectKind::Speed, EffectKind::Slowness, EffectKind::Haste, EffectKind::MiningFatigue, EffectKind::Strength,
         EffectKind::InstantHealth, EffectKind::InstantDamage, EffectKind::JumpBoost, EffectKind::Nausea, EffectKind::Regeneration,
         EffectKind::Resistance, EffectKind::FireResistance, EffectKind::WaterBreathing, EffectKind::Invisibility, EffectKind::Blindness,
         EffectKind::NightVision, EffectKind::Hunger, EffectKind::Weakness, EffectKind::Poison, EffectKind::Wither,
         EffectKind::HealthBoost, EffectKind::Absorption, EffectKind::Saturation, EffectKind::Glowing, EffectKind::Levitation,
         EffectKind::Luck, EffectKind::Unluck, EffectKind::SlowFalling, EffectKind::Darkness, EffectKind::BadOmen,
-        EffectKind::RaidOmen, EffectKind::HeroOfTheVillage, EffectKind::DolphinsGrace,
-        EffectKind::TrialOmen,EffectKind::WindCharged,EffectKind::Weaving,EffectKind::Oozing,EffectKind::Infested,
+        EffectKind::RaidOmen, EffectKind::HeroOfTheVillage,
+        EffectKind::ConduitPower, EffectKind::DolphinsGrace, EffectKind::BreathOfTheNautilus,
+        EffectKind::TrialOmen, EffectKind::WindCharged, EffectKind::Weaving, EffectKind::Oozing, EffectKind::Infested,
     ];
 
     /// Мгновенный: действует при наложении, не хранится.
@@ -703,11 +715,15 @@ impl EffectKind {
             EffectKind::Darkness => 0x292721,
             // Чёрный ящик, raid-start-wave1: entity_effect −16031432 = 0x0B6138.
             EffectKind::BadOmen => 0x0B6138,
-            EffectKind::TrialOmen => 0x16A6A6,
-            EffectKind::WindCharged => 0xB8D2D4, EffectKind::Weaving => 0x78695A,
-            EffectKind::Oozing => 0x99FFA3, EffectKind::Infested => 0x8C9B8C,
             EffectKind::RaidOmen => 0xDE4058,
+            EffectKind::TrialOmen => 0x16A6A6,
             EffectKind::HeroOfTheVillage => 0x44FF44,
+            EffectKind::ConduitPower => 0x1DC2D1,
+            EffectKind::WindCharged => 0xBDC9FF,
+            EffectKind::Weaving => 0x78695A,
+            EffectKind::Oozing => 0x99FFA3,
+            EffectKind::Infested => 0x8C9B8C,
+            EffectKind::BreathOfTheNautilus => 0x00FFEE,
         }
     }
 
@@ -770,9 +786,12 @@ impl EffectKind {
         }
     }
 
+    pub fn from_id(id: i32) -> Option<Self> {
+        Self::ALL.into_iter().find(|kind| kind.id() == id)
+    }
+
     pub fn from_name(name: &str) -> Option<Self> {
         match name.strip_prefix("minecraft:").unwrap_or(name) {
-            "dolphins_grace" => Some(EffectKind::DolphinsGrace),
             "hunger" => Some(EffectKind::Hunger),
             "saturation" => Some(EffectKind::Saturation),
             "speed" => Some(EffectKind::Speed),
@@ -789,6 +808,9 @@ impl EffectKind {
             "regeneration" => Some(EffectKind::Regeneration),
             "fire_resistance" => Some(EffectKind::FireResistance),
             "water_breathing" => Some(EffectKind::WaterBreathing),
+            "conduit_power" => Some(EffectKind::ConduitPower),
+            "dolphins_grace" => Some(EffectKind::DolphinsGrace),
+            "breath_of_the_nautilus" => Some(EffectKind::BreathOfTheNautilus),
             "invisibility" => Some(EffectKind::Invisibility),
             "blindness" => Some(EffectKind::Blindness),
             "night_vision" => Some(EffectKind::NightVision),
@@ -814,7 +836,7 @@ impl EffectKind {
 
 /// Эффекты еды (вики, Golden Apple и Enchanted Golden Apple).
 pub fn food_effects(name: &str) -> Vec<Effect> {
-    let effect = |kind, amplifier, seconds| Effect { kind, amplifier, ticks_left: seconds * 20, ambient: false, visible: true };
+    let effect = |kind, amplifier, seconds| Effect { kind, amplifier, ticks_left: seconds * 20, ambient: false, visible: true, show_icon: true };
 
     match name {
         "golden_apple" => vec![effect(EffectKind::Regeneration, 1, 5), effect(EffectKind::Absorption, 0, 120)],
@@ -824,8 +846,42 @@ pub fn food_effects(name: &str) -> Vec<Effect> {
             effect(EffectKind::Resistance, 0, 300),
             effect(EffectKind::FireResistance, 0, 300),
         ],
+        "spider_eye" => vec![effect(EffectKind::Poison, 0, 5)],
+        "pufferfish" => vec![effect(EffectKind::Poison, 1, 60), effect(EffectKind::Hunger, 2, 15), effect(EffectKind::Nausea, 0, 15)],
         _ => Vec::new(),
     }
+}
+
+/// Вики, Raw Chicken/Rotten Flesh/Poisonous Potato: «30%», «80%»,
+/// «60% chance». Бросок делается после еды, не при начале использования.
+/// [проверить]: случайные сценарии без vanilla-vs-vanilla не смягчаются.
+pub fn food_illness(name: &str, roll: f32) -> Option<Effect> {
+    let (kind, chance, ticks) = match name {
+        "chicken" => (EffectKind::Hunger, 0.3, 600),
+        "rotten_flesh" => (EffectKind::Hunger, 0.8, 600),
+        "poisonous_potato" => (EffectKind::Poison, 0.6, 100),
+        _ => return None,
+    };
+    (roll < chance).then_some(Effect { kind, amplifier: 0, ticks_left: ticks, ambient: false, visible: true, show_icon: true })
+}
+
+/// Вики, Suspicious Stew: таблица цветов Java 26.1.2; сроки в тактах.
+/// Один источник для крафта и кормления бурой грибной коровы [проверить].
+pub fn stew_effect(flower: &str) -> Option<(u8, i32)> {
+    let (kind, ticks) = match flower {
+        "allium" => (EffectKind::FireResistance, 60),
+        "azure_bluet" | "open_eyeblossom" => (EffectKind::Blindness, 220),
+        "blue_orchid" | "dandelion" | "golden_dandelion" => (EffectKind::Saturation, 7),
+        "closed_eyeblossom" => (EffectKind::Nausea, 140),
+        "cornflower" => (EffectKind::JumpBoost, 100),
+        "lily_of_the_valley" => (EffectKind::Poison, 220),
+        "oxeye_daisy" => (EffectKind::Regeneration, 140),
+        "poppy" | "torchflower" => (EffectKind::NightVision, 100),
+        "red_tulip" | "orange_tulip" | "white_tulip" | "pink_tulip" => (EffectKind::Weakness, 140),
+        "wither_rose" => (EffectKind::Wither, 140),
+        _ => return None,
+    };
+    Some((kind.id() as u8, ticks))
 }
 
 /// Зелья 26.1.2 по номерам реестра `minecraft:potion` (отчёт `--reports`
@@ -851,7 +907,7 @@ pub fn potion_number(name: &str) -> Option<u16> {
 pub fn potion_effects(number: u16) -> Vec<Effect> {
     use EffectKind::*;
 
-    let effect = |kind, amplifier, ticks| Effect { kind, amplifier, ticks_left: ticks, ambient: false, visible: true };
+    let effect = |kind, amplifier, ticks| Effect { kind, amplifier, ticks_left: ticks, ambient: false, visible: true, show_icon: true };
     let one = |kind, amplifier, ticks| vec![effect(kind, amplifier, ticks)];
 
     match POTIONS.get(usize::from(number)).copied().unwrap_or("water") {
@@ -892,12 +948,20 @@ pub fn potion_effects(number: u16) -> Vec<Effect> {
         "long_weakness" => one(Weakness, 0, 4800),
         "luck" => one(Luck, 0, 6000),
         "slow_falling" => one(SlowFalling, 0, 1800),
+        "wind_charged" => one(WindCharged, 0, 3600),
+        "weaving" => one(Weaving, 0, 3600),
+        "oozing" => one(Oozing, 0, 3600),
+        "infested" => one(Infested, 0, 3600),
         "long_slow_falling" => one(SlowFalling, 0, 4800),
-        // Вики, Potion: три минуты; [проверить] вторичные реакции смерти/урона.
-        "wind_charged"=>one(WindCharged,0,3600),"weaving"=>one(Weaving,0,3600),
-        "oozing"=>one(Oozing,0,3600),"infested"=>one(Infested,0,3600),
         _ => Vec::new(),
     }
+}
+
+/// Wiki, Instant Health: уровни «used modulo 32»; Java int shift
+/// сохраняет переполнение, произвольного ограничения amplifier 20 нет.
+pub fn instant_base(kind: EffectKind, amplifier: i32) -> i32 {
+    let base: i32 = if kind == EffectKind::InstantHealth { 4 } else { 6 };
+    base.wrapping_shl(amplifier.max(0) as u32)
 }
 
 /// Действующий эффект.
@@ -912,10 +976,16 @@ pub struct Effect {
     /// Показывать частицы и значок (`effect give … <секунды> <уровень> true`
     /// прячет и то и другое: чёрный ящик, hunger-probe-a — flags=8).
     pub visible: bool,
+    /// Значок независим от частиц (wiki, potion_contents/show_icon).
+    pub show_icon: bool,
 }
 
 /// Срок «бессрочно» (вики, Commands/effect: «infinite» — duration −1).
 pub const INFINITE: i32 = -1;
+
+fn lasts_longer(ticks: i32, than: i32) -> bool {
+    than != INFINITE && (ticks == INFINITE || ticks > than)
+}
 
 /// Итог такта эффектов.
 #[derive(Debug, Default)]
@@ -924,6 +994,8 @@ pub struct EffectTick {
     pub hurt: Vec<(f32, Source)>,
     /// Эффекты, у которых вышел срок.
     pub gone: Vec<EffectKind>,
+    /// Более слабые эффекты, снова ставшие активными после сильного.
+    pub restored: Vec<Effect>,
 }
 
 impl Effect {
@@ -939,8 +1011,10 @@ impl Effect {
         }
 
         if self.visible {
-            flags |= 0x02 | 0x04;
+            flags |= 0x02;
         }
+
+        if self.show_icon { flags |= 0x04; }
 
         flags
     }
@@ -995,6 +1069,9 @@ pub struct Vitals {
 
     /// Действующие эффекты.
     pub effects: Vec<Effect>,
+    /// Вики, Effect: «hidden effect» — срок идёт и под более сильным.
+    /// [проверить]: сохранение эффектов между входами пока не реализовано.
+    hidden_effects: Vec<Effect>,
 
     /// Поглощение (золотые сердца).
     pub absorption: f32,
@@ -1006,6 +1083,9 @@ pub struct Vitals {
     /// Возраст сущности в тактах: от него зависит лечение при мирной
     /// сложности (раз в 20 тактов).
     pub age: u32,
+    /// Вики, Infested: принятые удары обрабатываются миром, включая нулевые.
+    pub infested_hits: u32,
+    pub death_effects_handled: bool,
 }
 
 impl Default for Vitals {
@@ -1084,10 +1164,13 @@ impl Vitals {
             xp: 0,
             xp_seed: 0,
             effects: Vec::new(),
+            hidden_effects: Vec::new(),
             absorption: 0.0,
             max_health: MAX_HEALTH,
             safe_fall: SAFE_FALL,
             age: 0,
+            infested_hits: 0,
+            death_effects_handled: false,
         }
     }
 
@@ -1131,7 +1214,7 @@ impl Vitals {
     /// Возвращает исход или None, если удар не прошёл (вики, Damage:
     /// «Invulnerability frames»).
     pub fn hurt(&mut self, amount: f32, source: Source, immune: bool) -> Option<Hit> {
-        if self.dead || amount <= 0.0 {
+        if self.dead || amount < 0.0 || (amount == 0.0 && source != Source::Thrown) || (self.has_effect(EffectKind::FireResistance) && matches!(source, Source::InFire | Source::OnFire | Source::Lava | Source::Fireball)) {
             return None;
         }
 
@@ -1161,6 +1244,8 @@ impl Vitals {
             self.invulnerable = 20;
             taken = amount;
         }
+
+        if self.has_effect(EffectKind::Infested) { self.infested_hits = self.infested_hits.saturating_add(1); }
 
         // Поглощение принимает удар первым (вики, Absorption); голод и
         // пустота его обходят (bypasses_effects), как и сопротивление [проверить].
@@ -1267,7 +1352,11 @@ impl Vitals {
 
     /// Такт эффектов: голод копит изнурение, насыщение кормит, регенерация
     /// лечит, яд и иссушение бьют. Возвращает, кого бить и у кого вышел срок.
-    pub fn effects_tick(&mut self) -> EffectTick {
+    pub fn effects_tick(&mut self) -> EffectTick { self.effects_tick_for(false) }
+
+    /// Нежить меняет местами мгновенное лечение/урон и при /effect,
+    /// сохраняя исходный kind для удаления и сетевого отображения.
+    pub fn effects_tick_for(&mut self, undead: bool) -> EffectTick {
         let mut gone = Vec::new();
         let mut hurt = Vec::new();
         let mut exhaustion = 0.0f32;
@@ -1277,24 +1366,29 @@ impl Vitals {
         let health = self.health;
         let absorption = self.absorption;
 
+        for effect in &mut self.hidden_effects {
+            if effect.ticks_left != INFINITE { effect.ticks_left -= 1; }
+        }
+        self.hidden_effects.retain(|effect| effect.ticks_left == INFINITE || effect.ticks_left > 0);
+
         for effect in &mut self.effects {
             // Период считается по оставшемуся сроку (вики, Regeneration:
             // «every 50 ≫ amplifier ticks»); у бессрочного — по возрасту [проверить].
             let due = |period: i32| {
-                let period = period >> effect.amplifier.min(30);
+                let period = period >> effect.amplifier.clamp(0, 30);
                 let counter = if effect.ticks_left == INFINITE { age as i32 } else { effect.ticks_left };
 
                 period <= 0 || counter % period == 0
             };
 
-            match effect.kind {
+            match crate::thrown::instant_kind(effect.kind, undead) {
                 EffectKind::Hunger => exhaustion += 0.005 * (effect.amplifier + 1) as f32,
                 EffectKind::Saturation => fed += effect.amplifier + 1,
                 EffectKind::Regeneration if due(50) => heal += 1.0,
                 // Мгновенные: срок 1, действуют в такте наложения и тут же
                 // снимаются (effect-instant: Effect dur=1, Remove в том же такте).
-                EffectKind::InstantHealth => heal += (4 << effect.amplifier.min(20)) as f32,
-                EffectKind::InstantDamage => hurt.push(((6 << effect.amplifier.min(20)) as f32, Source::Magic)),
+                EffectKind::InstantHealth => heal += instant_base(EffectKind::InstantHealth, effect.amplifier) as f32,
+                EffectKind::InstantDamage => hurt.push((instant_base(EffectKind::InstantDamage, effect.amplifier) as f32, Source::Magic)),
                 // Поглощение снимается, когда золотые сердца кончились
                 // (effect-absorption: Remove Effect на такт после удара).
                 EffectKind::Absorption if absorption <= 0.0 => effect.ticks_left = 1,
@@ -1314,25 +1408,38 @@ impl Vitals {
 
         self.effects.retain(|effect| effect.ticks_left == INFINITE || effect.ticks_left > 0);
 
+        let mut restored = Vec::new();
+        gone.retain(|kind| {
+            let hidden = self.hidden_effects.iter().enumerate().filter(|(_, effect)| effect.kind == *kind).max_by_key(|(_, effect)| effect.amplifier).map(|(index, _)| index);
+            if let Some(index) = hidden {
+                let effect = self.hidden_effects.swap_remove(index);
+                self.give_effect_shown(effect);
+                restored.push(effect);
+                false
+            } else {
+                true
+            }
+        });
+
         if exhaustion > 0.0 {
             self.add_exhaustion(exhaustion);
         }
 
         if fed > 0 {
             self.food = (self.food + fed).min(20);
-            self.saturation = (self.saturation + fed as f32).min(self.food as f32);
+            self.saturation = (self.saturation + 2.0 * fed as f32).min(self.food as f32);
         }
 
         if heal > 0.0 {
             self.heal(heal);
         }
 
-        EffectTick { hurt, gone }
+        EffectTick { hurt, gone, restored }
     }
 
     /// Заменит ли новый эффект прежний того же вида: слабее по уровню или
-    /// не длиннее при том же уровне — нет (чёрный ящик, effect-speed: повторный
-    /// speed 0 при действующем speed 1 молчит; скрытые эффекты не хранятся [проверить]).
+    /// не длиннее при том же уровне — нет. Более слабый может остаться
+    /// скрытым, без пакета клиенту (вики, Effect: «hidden effect»).
     pub fn effect_replaced_by(&self, kind: EffectKind, amplifier: i32, ticks: i32) -> bool {
         self.effects.iter().find(|effect| effect.kind == kind).is_none_or(|old| {
             amplifier > old.amplifier || (amplifier == old.amplifier && old.ticks_left != INFINITE && (ticks == INFINITE || ticks > old.ticks_left))
@@ -1342,24 +1449,51 @@ impl Vitals {
     /// Дать видимый эффект (новый заменяет прежний того же вида).
     #[cfg(test)]
     pub fn give_effect(&mut self, kind: EffectKind, amplifier: i32, ticks: i32) {
-        self.give_effect_shown(Effect { kind, amplifier, ticks_left: ticks, ambient: false, visible: true });
+        self.give_effect_shown(Effect { kind, amplifier, ticks_left: ticks, ambient: false, visible: true, show_icon: true });
     }
 
     /// Дать эффект со всеми признаками (новый заменяет прежний того же вида).
     pub fn give_effect_shown(&mut self, effect: Effect) {
         if !self.effect_replaced_by(effect.kind, effect.amplifier, effect.ticks_left) {
+            if self.effects.iter().any(|old| old.kind == effect.kind && old.amplifier > effect.amplifier && lasts_longer(effect.ticks_left, old.ticks_left)) {
+                self.remember_effect(effect);
+            }
             return;
+        }
+
+        if let Some(old) = self.effects.iter().find(|old| old.kind == effect.kind).copied()
+            && effect.amplifier > old.amplifier && lasts_longer(old.ticks_left, effect.ticks_left)
+        {
+            self.remember_effect(old);
         }
 
         self.effects.retain(|old| old.kind != effect.kind);
         // У мгновенного срок 1 (effect-instant: dur=1 при любых секундах).
         self.effects.push(Effect { ticks_left: if effect.kind.instant() { 1 } else { effect.ticks_left }, ..effect });
+        self.hidden_effects.retain(|hidden| hidden.kind != effect.kind || (hidden.amplifier < effect.amplifier && lasts_longer(hidden.ticks_left, effect.ticks_left)));
 
         // Поглощение: золотые сердца по уровню, не меньше уже имеющихся
         // (вики, Absorption: «4 × level absorption health»).
         if effect.kind == EffectKind::Absorption {
             self.absorption = self.absorption.max(4.0 * (effect.amplifier + 1) as f32);
         }
+    }
+
+    fn remember_effect(&mut self, effect: Effect) {
+        if effect.kind.instant() { return; }
+        if let Some(old) = self.hidden_effects.iter_mut().find(|old| old.kind == effect.kind && old.amplifier == effect.amplifier) {
+            if lasts_longer(effect.ticks_left, old.ticks_left) { *old = effect; }
+        } else {
+            self.hidden_effects.push(effect);
+        }
+    }
+
+    /// Молоко, тотем и /effect clear снимают и активный, и скрытые слои.
+    pub fn remove_effects(&mut self, only: Option<EffectKind>) -> Vec<Effect> {
+        self.hidden_effects.retain(|effect| only.is_some_and(|kind| kind != effect.kind));
+        let (removed, kept) = std::mem::take(&mut self.effects).into_iter().partition(|effect: &Effect| only.is_none_or(|kind| kind == effect.kind));
+        self.effects = kept;
+        removed
     }
 
     /// Пересчёт после смены эффектов: наибольшее здоровье и поглощение
@@ -1383,7 +1517,8 @@ impl Vitals {
     /// `breathes` — игрок не тонет (творческий режим, водное дыхание).
     /// Возвращает true, если пришло время удара.
     pub fn air_tick(&mut self, eyes_in_water: bool, breathes: bool) -> bool {
-        if eyes_in_water && !breathes && !self.has_effect(EffectKind::WaterBreathing) {
+        if self.has_effect(EffectKind::BreathOfTheNautilus) { return false; }
+        if eyes_in_water && !breathes && !self.has_effect(EffectKind::WaterBreathing) && !self.has_effect(EffectKind::ConduitPower) {
             self.air -= 1;
 
             if self.air == DROWN_AT {
@@ -1396,6 +1531,17 @@ impl Vitals {
         }
 
         false
+    }
+
+    /// Вики, Attribute/Oxygen bonus: «1/(oxygen_bonus + 1)» за такт.
+    /// Неудачный бросок сохраняет воздух, но не восстанавливает его.
+    pub fn air_tick_with_bonus(&mut self, eyes_in_water: bool, breathes: bool, bonus: f64, roll: f32) -> bool {
+        if eyes_in_water && !breathes && !self.has_effect(EffectKind::WaterBreathing) && !self.has_effect(EffectKind::ConduitPower)
+            && bonus > 0.0 && f64::from(roll) >= 1.0 / (bonus + 1.0)
+        {
+            return false;
+        }
+        self.air_tick(eyes_in_water, breathes)
     }
 
     /// Поджечь на столько тактов (не сокращает уже идущий огонь).
@@ -1531,6 +1677,115 @@ mod tests {
         // Чёрный ящик, bee-sting: Damage Event type=41, сообщение «stung to death».
         assert_eq!(Source::Sting.type_id(), 41);
         assert_eq!(Source::Sting.death_key(), "death.attack.sting");
+    }
+
+    #[test]
+    fn poisonous_foods_have_java_durations_and_probability_boundaries() {
+        for (name, probability, kind, ticks) in [("chicken", 0.3, EffectKind::Hunger, 600), ("rotten_flesh", 0.8, EffectKind::Hunger, 600), ("poisonous_potato", 0.6, EffectKind::Poison, 100)] {
+            let effect = food_illness(name, probability - 0.0001).unwrap();
+            assert_eq!((effect.kind, effect.amplifier, effect.ticks_left), (kind, 0, ticks));
+            assert!(food_illness(name, probability).is_none());
+        }
+        let puffer = food_effects("pufferfish");
+        assert_eq!(puffer.iter().map(|effect| (effect.kind, effect.amplifier, effect.ticks_left)).collect::<Vec<_>>(), vec![(EffectKind::Poison, 1, 1200), (EffectKind::Hunger, 2, 300), (EffectKind::Nausea, 0, 300)]);
+        assert_eq!(food_effects("spider_eye")[0].ticks_left, 100);
+        assert!(food_illness("bread", 0.0).is_none());
+    }
+
+    #[test]
+    fn saturation_stew_adds_two_saturation_per_food_point() {
+        let mut v = Vitals::new();
+        v.food = 0;
+        v.saturation = 0.0;
+        v.eat(6, 7.2);
+        v.give_effect(EffectKind::Saturation, 0, 7);
+        for _ in 0..7 { v.effects_tick(); }
+        assert_eq!((v.food, v.saturation), (13, 13.0));
+        v.food = 20;
+        v.saturation = 0.0;
+        v.give_effect(EffectKind::Saturation, 2, 1);
+        v.effects_tick();
+        assert_eq!((v.food, v.saturation), (20, 6.0));
+    }
+
+    #[test]
+    fn respiration_skips_air_loss_without_refilling_and_replenishes_above_water() {
+        let mut v = Vitals::new();
+        v.air = 100;
+        assert!(!v.air_tick_with_bonus(true, false, 3.0, 0.25));
+        assert_eq!(v.air, 100);
+        assert!(!v.air_tick_with_bonus(true, false, 3.0, 0.249));
+        assert_eq!(v.air, 99);
+        assert!(!v.air_tick_with_bonus(false, false, 3.0, 0.9));
+        assert_eq!(v.air, 103);
+        v.air = -19;
+        assert!(!v.air_tick_with_bonus(true, false, 3.0, 0.9));
+        assert!(v.air_tick_with_bonus(true, false, 3.0, 0.0));
+        assert_eq!(v.air, 0);
+        v.give_effect(EffectKind::WaterBreathing, 0, 10);
+        assert!(!v.air_tick_with_bonus(true, false, 3.0, 0.9));
+        assert_eq!(v.air, 4);
+    }
+
+    #[test]
+    fn every_stew_flower_uses_the_java_effect_and_duration() {
+        for (flower, kind, ticks) in [("allium", EffectKind::FireResistance, 60), ("azure_bluet", EffectKind::Blindness, 220), ("golden_dandelion", EffectKind::Saturation, 7), ("closed_eyeblossom", EffectKind::Nausea, 140), ("cornflower", EffectKind::JumpBoost, 100), ("lily_of_the_valley", EffectKind::Poison, 220), ("oxeye_daisy", EffectKind::Regeneration, 140), ("torchflower", EffectKind::NightVision, 100), ("pink_tulip", EffectKind::Weakness, 140), ("wither_rose", EffectKind::Wither, 140)] {
+            let expected = Some((kind.id() as u8, ticks));
+            assert_eq!(stew_effect(flower), expected, "{flower}");
+            assert_eq!(crate::mob::land::flower(flower).and_then(crate::mob::land::stew), expected);
+        }
+        assert_eq!(stew_effect("sunflower"), None);
+    }
+
+    #[test]
+    fn stronger_effect_temporarily_hides_a_longer_weak_effect() {
+        let mut v = Vitals::new();
+        v.give_effect(EffectKind::Speed, 0, 200);
+        v.give_effect(EffectKind::Speed, 1, 40);
+        for _ in 0..39 { assert!(v.effects_tick().restored.is_empty()); }
+        let tick = v.effects_tick();
+        assert!(tick.gone.is_empty());
+        assert_eq!(tick.restored.len(), 1);
+        assert_eq!((tick.restored[0].amplifier, tick.restored[0].ticks_left), (0, 160));
+        assert_eq!(v.effect_level(EffectKind::Speed), 1);
+    }
+
+    #[test]
+    fn weaker_effects_applied_later_resume_through_multiple_layers() {
+        let mut v = Vitals::new();
+        v.give_effect(EffectKind::Strength, 2, 2);
+        v.give_effect(EffectKind::Strength, 1, 4);
+        v.give_effect(EffectKind::Strength, 0, INFINITE);
+        v.effects_tick();
+        assert_eq!(v.effects_tick().restored[0].amplifier, 1);
+        v.effects_tick();
+        let effect = v.effects_tick().restored[0];
+        assert_eq!((effect.amplifier, effect.ticks_left), (0, INFINITE));
+        for _ in 0..10 { assert!(v.effects_tick().gone.is_empty()); }
+    }
+
+    #[test]
+    fn milk_and_targeted_clearing_remove_hidden_effects_as_well() {
+        for only in [None, Some(EffectKind::Poison)] {
+            let mut v = Vitals::new();
+            v.give_effect(EffectKind::Poison, 0, 100);
+            v.give_effect(EffectKind::Poison, 1, 2);
+            v.give_effect(EffectKind::Strength, 0, 100);
+            assert!(!v.remove_effects(only).is_empty());
+            for _ in 0..5 { assert!(v.effects_tick().restored.is_empty()); }
+            assert!(!v.has_effect(EffectKind::Poison));
+            assert_eq!(v.has_effect(EffectKind::Strength), only.is_some());
+        }
+    }
+
+    #[test]
+    fn expired_hidden_effect_does_not_return_after_a_longer_strong_effect() {
+        let mut v = Vitals::new();
+        v.give_effect(EffectKind::Speed, 0, 5);
+        v.give_effect(EffectKind::Speed, 1, 2);
+        v.give_effect(EffectKind::Speed, 1, 8);
+        for _ in 0..8 { assert!(v.effects_tick().restored.is_empty()); }
+        assert!(!v.has_effect(EffectKind::Speed));
     }
 
     #[test]
@@ -1895,7 +2150,7 @@ mod tests {
 
         assert_eq!(v.effects_ambient(), None);
 
-        let hidden = Effect { kind: EffectKind::Hunger, amplifier: 255, ticks_left: 60, ambient: false, visible: false };
+        let hidden = Effect { kind: EffectKind::Hunger, amplifier: 255, ticks_left: 60, ambient: false, visible: false, show_icon: false };
 
         assert_eq!(hidden.flags(), 8);
         v.give_effect_shown(hidden);
@@ -2164,13 +2419,103 @@ mod tests {
     fn raid_omen_shows_its_own_particle_first() {
         let mut v = Vitals::new();
 
-        v.give_effect_shown(Effect { kind: EffectKind::BadOmen, amplifier: 0, ticks_left: 100, ambient: false, visible: true });
-        v.give_effect_shown(Effect { kind: EffectKind::RaidOmen, amplifier: 0, ticks_left: 100, ambient: false, visible: true });
+        v.give_effect_shown(Effect { kind: EffectKind::BadOmen, amplifier: 0, ticks_left: 100, ambient: false, visible: true, show_icon: true });
+        v.give_effect_shown(Effect { kind: EffectKind::RaidOmen, amplifier: 0, ticks_left: 100, ambient: false, visible: true, show_icon: true });
 
         let colors = v.effect_colors();
 
         // raid-start-wave1: [raid_omen, entity_effect −16031432].
         assert_eq!(colors[0], RAID_OMEN_PARTICLE);
         assert_eq!(colors[1], -16031432);
+    }
+}
+
+#[cfg(test)]
+mod itemaudit2_tests {
+    use super::*;
+
+    #[test]
+    fn fire_resistance_stops_all_fire_sources_but_not_explosion_or_melee() {
+        let mut v = Vitals::new();
+        v.give_effect(EffectKind::FireResistance, 0, 100);
+        for source in [Source::InFire, Source::OnFire, Source::Lava, Source::Fireball] {
+            assert!(v.hurt(5.0, source, false).is_none());
+            assert_eq!(v.health, 20.0);
+        }
+        assert_eq!(v.hurt(5.0, Source::PlayerAttack, false).unwrap().taken, 5.0);
+        v.invulnerable = 0;
+        assert_eq!(v.hurt(5.0, Source::Explosion, false).unwrap().taken, 5.0);
+    }
+
+    #[test]
+    fn ender_pearl_damage_is_its_own_wire_type_but_ignores_cooldown_like_a_fall() {
+        // Чёрный ящик, itemaudit3-ender_pearl-near: Damage Event type=8, 5 урона.
+        assert_eq!(Source::EnderPearl.type_id(), 8);
+        assert_eq!(Source::EnderPearl.death_key(), "death.attack.fall");
+        assert_eq!(Source::EnderPearl.exhaustion(), Source::Fall.exhaustion());
+    }
+
+    #[test]
+    fn enchanted_golden_apple_protects_from_fire_and_grants_expected_buffs() {
+        let mut v = Vitals::new();
+        for effect in food_effects("enchanted_golden_apple") { v.give_effect_shown(effect); }
+        assert_eq!(v.absorption, 16.0);
+        assert_eq!(v.effect_level(EffectKind::Regeneration), 2);
+        assert!(v.hurt(100.0, Source::Lava, false).is_none());
+        assert_eq!(v.health, 20.0);
+        let hit = v.hurt(10.0, Source::PlayerAttack, false).unwrap();
+        assert_eq!((hit.absorbed, hit.resisted), (8.0, 2.0));
+    }
+
+    #[test]
+    fn conduit_refills_air_and_nautilus_freezes_even_empty_air() {
+        let mut v = Vitals::new();
+        v.air = 0;
+        v.give_effect(EffectKind::ConduitPower, 0, 100);
+        for _ in 0..20 { assert!(!v.air_tick_with_bonus(true, false, 3.0, 0.9)); }
+        assert_eq!(v.air, 80);
+        v.remove_effects(None);
+        v.give_effect(EffectKind::BreathOfTheNautilus, 0, 100);
+        for air in [-19, 0, 100, 300] {
+            v.air = air;
+            for wet in [false, true] {
+                for _ in 0..30 { assert!(!v.air_tick(wet, false)); }
+                assert_eq!(v.air, air);
+            }
+        }
+        v.remove_effects(None);
+        v.air = -19;
+        assert!(v.air_tick(true, false));
+    }
+
+    #[test]
+    fn new_aquatic_effects_have_java_ids_and_distinct_particles() {
+        for (name, id, color) in [("conduit_power", 28, 0x1DC2D1), ("dolphins_grace", 29, 0x88A3BE), ("breath_of_the_nautilus", 39, 0x00FFEE)] {
+            let kind = EffectKind::from_name(name).unwrap();
+            assert_eq!(kind.id(), id);
+            assert_eq!(kind.color(), color);
+            assert!(EffectKind::ALL.contains(&kind));
+            let mut v = Vitals::new();
+            v.give_effect(kind, 0, 2);
+            assert!(v.effects_tick().gone.is_empty());
+            assert_eq!(v.effects_tick().gone, vec![kind]);
+        }
+    }
+}
+
+#[cfg(test)]
+mod itemaudit3_registry_tests {
+    use super::*;
+    #[test]
+    fn forty_effect_ids_are_unique_and_new_potions_have_real_payloads() {
+        let mut ids: Vec<_>=EffectKind::ALL.into_iter().map(|k|k.id()).collect();ids.sort_unstable();
+        assert_eq!(ids,(0..40).collect::<Vec<_>>());
+        for (name,kind,id,color) in [("wind_charged",EffectKind::WindCharged,35,0xBDC9FF),("weaving",EffectKind::Weaving,36,0x78695A),("oozing",EffectKind::Oozing,37,0x99FFA3),("infested",EffectKind::Infested,38,0x8C9B8C)] {
+            assert_eq!(EffectKind::from_name(name),Some(kind));assert_eq!(kind.id(),id);assert_eq!(kind.color(),color);
+            let e=potion_effects(potion_number(name).unwrap());assert_eq!(e.len(),1);
+            assert_eq!((e[0].kind,e[0].amplifier,e[0].ticks_left),(kind,0,3600));
+            let arrow=crate::arrow::tipped_effects(potion_number(name));assert_eq!(arrow[0].ticks_left,450);
+        }
+        assert_eq!(EffectKind::from_name("trial_omen"),Some(EffectKind::TrialOmen));
     }
 }

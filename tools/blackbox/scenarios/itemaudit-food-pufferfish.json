@@ -1,0 +1,47 @@
+{
+  "name": "itemaudit-food-pufferfish",
+  "about": "[проверить] pufferfish: nutrition, saturation, consume и food effects после еды. RNG не замаскирован; нужны vanilla-vs-vanilla измерения. Не запускался.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "kill $(bot)",
+    "!wait 20",
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!look 0 0",
+    "give $(bot) minecraft:pufferfish 1",
+    "!hotbar 0",
+    "!wait 10",
+    "!wait 25",
+    "effect give $(bot) minecraft:hunger 3 255 true",
+    "!wait 65"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "use": true
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "effect clear $(bot)",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly",
+    "kill @e[type=item,distance=..48]"
+  ],
+  "track_self": true,
+  "item_components": true,
+  "inventory": true,
+  "exclusive": true
+}

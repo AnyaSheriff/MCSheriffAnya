@@ -450,6 +450,26 @@ impl Inventory {
     /// вызывающий просто перешлёт клиенту содержимое инвентаря, каким оно у
     /// сервера было: пусть картинка вернётся назад, но не разойдётся.
     pub fn click(&mut self, slot: i32, button: i8, mode: i32) -> Click {
+        self.click_in_mode(slot, button, mode, false)
+    }
+
+    /// Вики, Curse of Binding: «cannot be removed from any armor slot».
+    /// Проверяется итог всех способов переноса, включая цифру и выброс;
+    /// неудачный перенос не меняет курсор и не создаёт выпавшую вещь.
+    pub fn click_in_mode(&mut self, slot: i32, button: i8, mode: i32, creative: bool) -> Click {
+        let bound: Vec<i32> = (5..=8).filter(|slot| !creative && self.slot(*slot).is_some_and(|stack| stack.extras().level("binding_curse") > 0)).collect();
+        let before = (!bound.is_empty()).then(|| self.clone());
+        let result = self.click_unchecked(slot, button, mode);
+        if let Some(before) = before
+            && bound.into_iter().any(|slot| self.slot(slot) != before.slot(slot))
+        {
+            *self = before;
+            return Click { understood: true, thrown: None };
+        }
+        result
+    }
+
+    fn click_unchecked(&mut self, slot: i32, button: i8, mode: i32) -> Click {
         match mode {
             0 => self.pick_up(slot, button),
             1 => Click { understood: self.quick_move(slot), thrown: None },
@@ -729,6 +749,37 @@ pub fn remainder(stack: Stack, count: i32) -> Option<Stack> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn binding_blocks_every_supported_way_out_of_an_armor_slot() {
+        let mut data = crate::stackdata::Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number("binding_curse").unwrap(), 1);
+        let helmet = Stack::new(crate::blocks::item_named("diamond_helmet").unwrap(), 1).with_extras(data);
+        for (button, mode) in [(0, 0), (1, 0), (0, 1), (0, 2), (40, 2), (0, 4), (1, 4)] {
+            let mut inventory = Inventory::new();
+            inventory.set(5, Some(helmet));
+            let click = inventory.click(5, button, mode);
+            assert!(click.understood);
+            assert_eq!(click.thrown, None);
+            assert_eq!(inventory.slot(5), Some(helmet));
+            assert_eq!(inventory.cursor(), None);
+            assert_eq!(inventory.held(), None);
+            assert_eq!(inventory.slot(OFFHAND), None);
+        }
+        let mut inventory = Inventory::new();
+        inventory.set(5, Some(helmet));
+        inventory.click_in_mode(5, 0, 0, true);
+        assert_eq!(inventory.slot(5), None);
+        assert_eq!(inventory.cursor(), Some(helmet));
+
+        // Проклятие не мешает надеть предмет или убрать его из рюкзака.
+        let mut inventory = Inventory::new();
+        inventory.set(FIRST_HOTBAR, Some(helmet));
+        inventory.click(FIRST_HOTBAR, 0, 0);
+        inventory.click(5, 0, 0);
+        assert_eq!(inventory.slot(5), Some(helmet));
+        assert_eq!(inventory.cursor(), None);
+    }
+
     use super::*;
 
     /// Камень: обычная стопка на 64.

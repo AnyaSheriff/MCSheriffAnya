@@ -1,0 +1,67 @@
+{
+  "name": "itemaudit2-crossbow-long_water_breathing",
+  "about": "[проверить] Арбалет сохраняет и доставляет наконечник long_water_breathing; срок обычного эффекта 1/8, расход одной стрелы. Сценарий создан до реализации; не запускался.",
+  "second": true,
+  "track_self": true,
+  "track_players": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "gamemode survival $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "kill $(bot)",
+    "!wait 30",
+    "tp $(bot) $(3.5,0,3.5) 180 0",
+    "!stopfly",
+    "!wait 20",
+    "!hotbar2 0",
+    "!hotbar 0",
+    "give $(bot2) minecraft:crossbow 1",
+    "give $(bot2) minecraft:tipped_arrow[potion_contents={potion:\"minecraft:long_water_breathing\"}] 5",
+    "tp $(bot2) $(3.5,0,-0.5) 0 0",
+    "!wait 20",
+    "!hotbar2 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "use": true,
+      "bot": 2
+    },
+    {
+      "after": 30,
+      "release": true,
+      "bot": 2
+    },
+    {
+      "after": 36,
+      "use": true,
+      "bot": 2
+    }
+  ],
+  "record_ticks": 70,
+  "cleanup": [
+    "kill @e[type=cow,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=arrow,distance=..48]",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "gamemode creative $(bot)",
+    "gamemode creative $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "tp $(bot2) $(6.5,0,6.5)",
+    "!wait 4",
+    "!startfly",
+    "kill @e[type=arrow,distance=..48]",
+    "effect clear $(bot)",
+    "effect clear $(bot2)"
+  ],
+  "item_components": true,
+  "track_second_slots": true,
+  "inventory": true
+}

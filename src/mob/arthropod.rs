@@ -20,7 +20,7 @@ pub fn poison(difficulty: u8) -> Option<Effect> {
         _ => return None,
     };
 
-    Some(Effect { kind: EffectKind::Poison, amplifier: 0, ticks_left, ambient: false, visible: true })
+    Some(Effect { kind: EffectKind::Poison, amplifier: 0, ticks_left, ambient: false, visible: true, show_icon: true })
 }
 
 /// Вики, Silverfish: урон существа и «Poison damage», но не падение/огонь.

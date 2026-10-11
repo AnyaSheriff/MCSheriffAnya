@@ -1,0 +1,57 @@
+{
+  "name": "itemaudit2-splash-mob-water_breathing",
+  "about": "[проверить] Splash water_breathing доставляется обычному мобу, а не только CaveSpider/Silverfish. Сценарий создан до реализации; не запускался.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "kill $(bot)",
+    "!wait 20",
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!look 0 0",
+    "!hotbar 0",
+    "!wait 10",
+    "!wait 25",
+    "give $(bot) splash_potion[potion_contents=\"water_breathing\"]",
+    "tp $(bot) $(3.5,0,1.5) 0 20",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon cow $(3.5,0,3.5) {NoAI:1b,Tags:[\"itemaudit2\"]}"
+    },
+    {
+      "after": 10,
+      "use": true
+    }
+  ],
+  "record_ticks": 90,
+  "cleanup": [
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "effect clear $(bot)",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[tag=itemaudit2,distance=..48]",
+    "effect clear $(bot)",
+    "kill @e[type=arrow,distance=..48]",
+    "kill @e[type=spectral_arrow,distance=..48]",
+    "kill @e[type=snowball,distance=..48]"
+  ],
+  "track_self": true,
+  "item_components": true,
+  "inventory": true,
+  "exclusive": true,
+  "track_mobs": true
+}

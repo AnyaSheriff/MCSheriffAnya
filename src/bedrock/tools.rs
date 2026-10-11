@@ -63,15 +63,19 @@ pub fn use_on_block(
         };
 
         if name == "bone_meal" {
-            if crate::farming::bone_meal(world, clicked).is_none() {
+            let Some(drops) = crate::farming::bone_meal(world, clicked) else {
                 return refuse(world);
-            }
+            };
+            let drops = drops.into_iter().map(|stack| {
+                let (at, velocity) = crate::tick::scattered(clicked, || f64::from(world.random_unit()));
+                (stack, at, velocity)
+            }).collect();
 
             world.tell_directly(clicked.0, clicked.1, clicked.2);
             world.tell_directly(beyond.0, beyond.1, beyond.2);
             crate::redstone::settle(world);
 
-            return Some(ToolUse { slots: spend(bag, creative), ..ToolUse::default() });
+            return Some(ToolUse { slots: spend(bag, creative), drops, ..ToolUse::default() });
         }
 
         let tilled = crate::farming::till(world, clicked, face);

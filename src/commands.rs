@@ -1039,6 +1039,10 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
         crate::mob::horse::apply_data(mob, &value);
     }
     crate::mob::wildlife::apply_data(mob, data);
+    if let Some(on) = flag_in(data, "AgeLocked:") && crate::mob::growth::eligible(mob.kind) {
+        mob.age_locked = on;
+        if on { mob.persistent_tag = true; }
+    }
     if let Some(on) = flag_in(data, "NoAI:") {
         mob.no_ai = on;
     }
@@ -1707,9 +1711,9 @@ fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 
                 for mob in items.mobs_mut() {
                     if chosen.takes(mob.kind.name()) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z))
-                        && !(mob.kind.spider() && kind == crate::survival::EffectKind::Poison)
+                        && mob.accepts_effect(kind)
                     {
-                        mob.vitals.give_effect_shown(crate::survival::Effect { kind, amplifier: amplifier.clamp(0, 255), ticks_left: ticks, ambient: false, visible: !hidden });
+                        mob.vitals.give_effect_shown(crate::survival::Effect { kind, amplifier: amplifier.clamp(0, 255), ticks_left: ticks, ambient: false, visible: !hidden, show_icon: !hidden });
                         changed += 1;
                     }
                 }
@@ -1734,7 +1738,7 @@ fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
             for (uuid, _) in &targets {
-                players.order(uuid, Order::Effect(crate::survival::Effect { kind, amplifier: amplifier.clamp(0, 255), ticks_left: ticks, ambient: false, visible: !hidden }));
+                players.order(uuid, Order::Effect(crate::survival::Effect { kind, amplifier: amplifier.clamp(0, 255), ticks_left: ticks, ambient: false, visible: !hidden, show_icon: !hidden }));
             }
 
             Answer::saying(format!("Эффект {} наложен: {}", name, names_of(&targets)))

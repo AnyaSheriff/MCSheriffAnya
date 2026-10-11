@@ -463,7 +463,7 @@ fn step(raid: &mut Raid, mobs: &mut [Mob], view: &dyn View, players: &[Watcher],
 
             // Герой деревни: уровень набега, 40 минут.
             for hero in &raid.heroes {
-                out.effects.push((*hero, crate::survival::Effect { kind: crate::survival::EffectKind::HeroOfTheVillage, amplifier: raid.level - 1, ticks_left: HERO_TICKS, ambient: false, visible: true }));
+                out.effects.push((*hero, crate::survival::Effect { kind: crate::survival::EffectKind::HeroOfTheVillage, amplifier: raid.level - 1, ticks_left: HERO_TICKS, ambient: false, visible: true, show_icon: true }));
             }
         } else if raid.raiders.is_empty() {
             sweat(raid, mobs, rng);
@@ -623,7 +623,7 @@ fn bells(raids: &mut Raids, mobs: &[Mob], out: &mut Outcome) {
         let mut any = false;
 
         for mob in mobs.iter().filter(|mob| joins(mob.kind) && !mob.is_dead() && dist2((mob.x, mob.y, mob.z), at) <= BELL_RANGE * BELL_RANGE) {
-            out.mob_effects.push((mob.entity_id, crate::survival::Effect { kind: crate::survival::EffectKind::Glowing, amplifier: 0, ticks_left: BELL_GLOW, ambient: false, visible: true }));
+            out.mob_effects.push((mob.entity_id, crate::survival::Effect { kind: crate::survival::EffectKind::Glowing, amplifier: 0, ticks_left: BELL_GLOW, ambient: false, visible: true, show_icon: true }));
             any = true;
         }
 

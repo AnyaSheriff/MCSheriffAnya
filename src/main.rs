@@ -53,6 +53,8 @@ mod playerdata;
 mod redstone;
 mod tnt;
 mod survival;
+mod effect_reactions;
+mod teleport_item;
 mod attributes;
 mod snbt;
 mod stackdata;

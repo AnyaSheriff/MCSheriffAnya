@@ -1,0 +1,42 @@
+{
+  "name": "itemaudit-mending-orb",
+  "about": "[проверить] Orb Value 7 ремонтирует offhand sword damage 20 → 6, не увеличивает XP; полная цепь от подбора orb. Сценарий создан до реализации; не запускался.",
+  "blocks": [],
+  "setup": [
+    "difficulty peaceful",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "kill $(bot)",
+    "!wait 20",
+    "xp set $(bot) 0 levels",
+    "xp set $(bot) 0 points",
+    "fill $(-2,-1,-2) $(8,3,8) minecraft:air",
+    "fill $(-2,-1,-2) $(8,-1,8) minecraft:stone",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!wait 30",
+    "item replace entity $(bot) weapon.offhand with minecraft:diamond_sword[damage=20,enchantments={\"minecraft:mending\":1}]"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon minecraft:experience_orb $(3.5,0.5,5.5) {Value:7s}"
+    }
+  ],
+  "record_ticks": 60,
+  "cleanup": [
+    "kill @e[type=minecraft:experience_orb,distance=..12]",
+    "xp set $(bot) 0 levels",
+    "xp set $(bot) 0 points",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "!wait 4",
+    "!startfly",
+    "clear $(bot)",
+    "kill @e[type=item,distance=..48]"
+  ],
+  "track_self": true,
+  "item_components": true,
+  "inventory": true,
+  "exclusive": true
+}

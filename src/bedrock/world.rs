@@ -952,8 +952,8 @@ impl BedrockWorld {
                 crate::players::Order::Packet(_) | crate::players::Order::Attribute(_) | crate::players::Order::Enchant { .. } | crate::players::Order::Spectate { .. } => {}
                 // Эффекты голода и насыщения считаются, значка у Bedrock пока нет [проверить].
                 crate::players::Order::Effect(effect) => self.health.vit.give_effect_shown(effect),
-                crate::players::Order::ClearEffects => self.health.vit.effects.clear(),
-                crate::players::Order::ClearEffect(kind) => self.health.vit.effects.retain(|effect| effect.kind != kind),
+                crate::players::Order::ClearEffects => { self.health.vit.remove_effects(None); }
+                crate::players::Order::ClearEffect(kind) => { self.health.vit.remove_effects(Some(kind)); }
                 crate::players::Order::Kick { reason } => {
                     let mut disconnect = Out::packet(session::DISCONNECT);
                     disconnect.zigzag32(0).bool(false).string(&reason).string("");
@@ -978,6 +978,8 @@ impl BedrockWorld {
                     connection.close();
                     return;
                 }
+                // [Bedrock: потом] Бросок жемчуга у этого клиента ещё не реализован.
+                crate::players::Order::PearlTeleport { .. } => {}
                 crate::players::Order::Teleport { x, y, z } => self.teleport_to(connection, packets, (x, y, z)),
                 crate::players::Order::Look { yaw, pitch } => {
                     self.rotation = (yaw, pitch);
@@ -1303,7 +1305,8 @@ impl BedrockWorld {
                 .expect("стрелы захвачены другим потоком")
                 .list
                 .iter()
-                .filter(|arrow| arrow.dimension == self.dimension && (arrow.x - f64::from(self.position.0)).abs() <= range && (arrow.z - f64::from(self.position.2)).abs() <= range)
+                // [Bedrock: потом] spectral_arrow пока не показываем как обычную стрелу.
+                .filter(|arrow| !arrow.spectral() && arrow.dimension == self.dimension && (arrow.x - f64::from(self.position.0)).abs() <= range && (arrow.z - f64::from(self.position.2)).abs() <= range)
                 .map(|arrow| {
                     let (yaw, pitch) = arrow.facing();
 
@@ -1366,11 +1369,14 @@ impl BedrockWorld {
                     | crate::thrown::Kind::SmallFireball
                     | crate::thrown::Kind::GhastFireball
                     | crate::thrown::Kind::Snowball
+                    // [Bedrock: потом] Новые Java throwable entities пока скрыты.
+                    | crate::thrown::Kind::Egg
+                    | crate::thrown::Kind::EnderPearl
+                    | crate::thrown::Kind::ExperienceBottle
                     | crate::thrown::Kind::WitherSkull
                     | crate::thrown::Kind::LlamaSpit
                     | crate::thrown::Kind::WindCharge
-                    | crate::thrown::Kind::BreezeWindCharge
-                    | crate::thrown::Kind::EnderPearl => {}
+                    | crate::thrown::Kind::BreezeWindCharge => {}
                 }
             }
 

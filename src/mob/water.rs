@@ -26,7 +26,7 @@ pub fn impaling(kind: Kind,level: i32) -> f32 {
 // Вики, Axolotl: пять секунд за помощь, суммарно не более двух минут.
 pub fn assist_effect(vitals: &crate::survival::Vitals) -> Effect {
     let old=vitals.effects.iter().find(|effect|effect.kind==EffectKind::Regeneration && effect.amplifier==0);
-    Effect {kind:EffectKind::Regeneration,amplifier:0,ticks_left:(old.map_or(0,|effect|effect.ticks_left)+100).min(2400),ambient:false,visible:true}
+    Effect {kind:EffectKind::Regeneration,amplifier:0,ticks_left:(old.map_or(0,|effect|effect.ticks_left)+100).min(2400),ambient:false,visible:true, show_icon:true}
 }
 
 #[derive(Clone, Debug)]
@@ -223,7 +223,7 @@ pub fn vitals(mob: &mut Mob, view: &dyn View) {
         // Метка — через такт после удара, Регенерация (с частицами) — ещё через такт.
         if mob.water.dead_pending == 1 { mob.water.playing_dead = PLAY_DEAD + 1; }
         if mob.water.dead_pending == 0 {
-            mob.vitals.give_effect_shown(Effect { kind: EffectKind::Regeneration, amplifier: 0, ticks_left: PLAY_DEAD, ambient: false, visible: true });
+            mob.vitals.give_effect_shown(Effect { kind: EffectKind::Regeneration, amplifier: 0, ticks_left: PLAY_DEAD, ambient: false, visible: true, show_icon: true });
         }
     }
     if mob.water.playing_dead > 0 { mob.water.playing_dead -= 1; }
@@ -580,7 +580,7 @@ pub fn interactions(mobs: &mut [Mob],view: &dyn View,players: &[ai::Watcher],out
                 {
                     stung=true;
                     if !matches!(victim.kind,Kind::Zombie | Kind::Drowned | Kind::Husk | Kind::ZombieVillager | Kind::Skeleton | Kind::WitherSkeleton | Kind::ZombifiedPiglin) {
-                        victim.vitals.give_effect_shown(Effect{kind:EffectKind::Poison,amplifier:0,ticks_left:60*i32::from(puff),ambient:false,visible:true});
+                        victim.vitals.give_effect_shown(Effect{kind:EffectKind::Poison,amplifier:0,ticks_left:60*i32::from(puff),ambient:false,visible:true, show_icon:true});
                     }
                 }
             }
@@ -588,7 +588,7 @@ pub fn interactions(mobs: &mut [Mob],view: &dyn View,players: &[ai::Watcher],out
         }
         if kind==Kind::Dolphin && !mobs[i].no_ai && mobs[i].water.wet && mobs[i].water.anger==0 {
             for player in players.iter().filter(|p| !p.spectator && distance(&mobs[i],(p.x,p.y,p.z))<81.0 && super::is_water(view.block(p.x.floor() as i32,p.y.floor() as i32,p.z.floor() as i32))) {
-                outcome.water_effects.push((player.id,Effect{kind:EffectKind::DolphinsGrace,amplifier:0,ticks_left:100,ambient:false,visible:true}));
+                outcome.water_effects.push((player.id,Effect{kind:EffectKind::DolphinsGrace,amplifier:0,ticks_left:100,ambient:false,visible:true, show_icon:true}));
             }
         }
         if !matches!(kind,Kind::Axolotl | Kind::Frog) || mobs[i].no_ai { continue; }

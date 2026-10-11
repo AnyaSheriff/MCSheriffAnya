@@ -48,7 +48,7 @@ fn brown_mooshroom_flower_is_consumed_once_then_stew_resets() {
     held(&mut p,"cornflower",2); use_mob(&s,&mut p,id,&mut Reaction::default()); assert_eq!(p.inventory.held().unwrap().count,1);
     use_mob(&s,&mut p,id,&mut Reaction::default()); assert_eq!(p.inventory.held().unwrap().count,1);
     held(&mut p,"bowl",1); use_mob(&s,&mut p,id,&mut Reaction::default());
-    let stew=p.inventory.slots().iter().flatten().find(|s| blocks::item_name(s.item)==Some("suspicious_stew")).unwrap(); assert_eq!(stew.extras().stew,vec![(7,120)]);
+    let stew=p.inventory.slots().iter().flatten().find(|s| blocks::item_name(s.item)==Some("suspicious_stew")).unwrap(); assert_eq!(stew.extras().stew,vec![(7,100)]);
     assert_eq!(s.items_in(p.dimension).lock().unwrap().mobs()[0].land.flower,0);
 }
 #[test]

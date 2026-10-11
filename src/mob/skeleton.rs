@@ -26,7 +26,7 @@ pub fn arrow_effect(kind: Kind) -> Option<Effect> {
         Kind::Bogged => (EffectKind::Poison, 100),
         _ => return None,
     };
-    Some(Effect { kind, amplifier: 0, ticks_left, ambient: false, visible: true })
+    Some(Effect { kind, amplifier: 0, ticks_left, ambient: false, visible: true, show_icon: true })
 }
 
 /// Вики, Stray: «7 seconds (140 game ticks)», затем «15 seconds» дрожи.

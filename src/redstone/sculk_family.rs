@@ -181,7 +181,7 @@ pub fn finish_shriek(world: &mut World, pos: Pos) {
 
 pub fn darkness(world: &mut World, player: i32) {
     world.note_mob_effect(player, crate::survival::Effect { kind: crate::survival::EffectKind::Darkness,
-        amplifier: 0, ticks_left: 260, ambient: false, visible: false });
+        amplifier: 0, ticks_left: 260, ambient: false, visible: false, show_icon: false });
 }
 
 pub fn tick(world: &mut World) {

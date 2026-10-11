@@ -1,0 +1,104 @@
+{
+  "name": "itemaudit3-bonemeal-mushrooms",
+  "about": "[проверить] Третий проход: bonemeal-mushrooms. Сценарий подготовлен, не запускался; RNG parity не измерена.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule random_tick_speed 0",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "!wait 5",
+    "setblock $(1,-1,1) mycelium",
+    "setblock $(1,0,1) brown_mushroom",
+    "give $(bot) bone_meal 64",
+    "gamemode survival $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 10,
+      "click": [
+        1,
+        0,
+        1
+      ],
+      "face": 1
+    },
+    {
+      "after": 20,
+      "click": [
+        1,
+        0,
+        1
+      ],
+      "face": 1
+    },
+    {
+      "after": 30,
+      "click": [
+        1,
+        0,
+        1
+      ],
+      "face": 1
+    },
+    {
+      "after": 40,
+      "click": [
+        1,
+        0,
+        1
+      ],
+      "face": 1
+    },
+    {
+      "after": 50,
+      "click": [
+        1,
+        0,
+        1
+      ],
+      "face": 1
+    },
+    {
+      "after": 60,
+      "click": [
+        1,
+        0,
+        1
+      ],
+      "face": 1
+    },
+    {
+      "after": 70,
+      "click": [
+        1,
+        0,
+        1
+      ],
+      "face": 1
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[tag=itemaudit3]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "gamerule random_tick_speed 3",
+    "difficulty peaceful",
+    "fill $(-4,0,-4) $(6,15,6) air"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true
+}

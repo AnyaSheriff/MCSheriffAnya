@@ -57,9 +57,10 @@ pub(super) enum Shown {
     Cloud { started: bool, radius: f32, waiting: bool },
 }
 
-/// Правая кнопка со взрывным или оседающим зельем в руке `hand`: бросок.
+/// Правая кнопка со взрывным/оседающим зельем или снежком в руке `hand`: бросок.
 /// Возвращает, был ли он.
 pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32) -> bool {
+    if !(0..=1).contains(&hand) { return false; }
     let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
     let Some(stack) = player.inventory.slot(slot) else {
         return false;
@@ -67,8 +68,10 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
     let kind = match crate::combat::item_name(stack.item) {
         Some("splash_potion") => Kind::Splash,
         Some("lingering_potion") => Kind::Lingering,
-        Some("ender_pearl") => Kind::EnderPearl,
         Some("snowball") => Kind::Snowball,
+        Some("egg" | "blue_egg" | "brown_egg") => Kind::Egg,
+        Some("ender_pearl") => Kind::EnderPearl,
+        Some("experience_bottle") => Kind::ExperienceBottle,
         _ => return false,
     };
 
@@ -76,19 +79,19 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
         return false;
     }
 
-    if kind == Kind::EnderPearl {
-        let now=*shared.ticks.borrow();
-        if now < player.pearl_ready { return true; }
-        player.pearl_ready=now+20;
-    }
+    let now = *shared.ticks.borrow();
+    if kind == Kind::EnderPearl && player.item_cooldowns.get("ender_pearl").is_some_and(|until| now < *until) { return false; }
     let dimension = player.dimension;
     let roll = || vitals::world_random(shared, dimension);
     // Неточность 1 — как у стрел (вики, Projectile: 0,0172275 на ось).
     let mut wobble = || f64::from(roll() + roll() + roll() + roll() - 2.0) * 0.0172275 * 1.732;
-    let (dx, dy, dz) = if matches!(kind,Kind::EnderPearl|Kind::Snowball) {
-        let (yaw,pitch)=(f64::from(player.yaw).to_radians(),f64::from(player.pitch).to_radians());
-        ((-yaw.sin()*pitch.cos()+wobble())*1.5,(-pitch.sin()+wobble())*1.5,(yaw.cos()*pitch.cos()+wobble())*1.5)
-    } else { crate::thrown::throw_velocity(player.yaw, player.pitch, crate::thrown::POTION_SPEED, &mut wobble) };
+    let (dx, dy, dz) = if matches!(kind, Kind::Snowball | Kind::Egg | Kind::EnderPearl) {
+        // Вики, Snowball: «1.5» блока/такт, без подъёма зелья [проверить].
+        let (x, y, z) = crate::arrow::aim(player.yaw, player.pitch, 1.0);
+        ((x + wobble()) * 1.5, (y + wobble()) * 1.5, (z + wobble()) * 1.5)
+    } else {
+        crate::thrown::throw_velocity(player.yaw, player.pitch, if kind == Kind::ExperienceBottle { 0.7 } else { crate::thrown::POTION_SPEED }, &mut wobble)
+    };
     let (last_x, last_y, last_z) = player.net.last_delta;
     // К скорости прибавляется скорость бросившего (по вертикали — в воздухе).
     let velocity = (dx + last_x, dy + if player.on_ground { 0.0 } else { last_y }, dz + last_z);
@@ -104,8 +107,12 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
 
         crate::redstone::game_event_from(&mut world, (player.x, player.y, player.z), 3, Some(player.entity_id), false);
         match kind {
-            Kind::EnderPearl => world.note_sound_neutral_at((player.x,player.y,player.z),"minecraft:entity.ender_pearl.throw",0.5,pitch),
-            Kind::Snowball => world.note_sound_neutral_at((player.x,player.y,player.z),"minecraft:entity.snowball.throw",0.5,pitch),
+            Kind::Egg => world.note_sound_player_at((player.x, player.y, player.z), "minecraft:entity.egg.throw", 0.5, pitch),
+            // Жемчуг и снежок — раздел «нейтральные», яйцо — «игроки» (чёрный ящик,
+            // endermite-pearl, itemaudit3-snowball-infested, itemaudit3-egg).
+            Kind::EnderPearl => world.note_sound_neutral_at((player.x, player.y, player.z), "minecraft:entity.ender_pearl.throw", 0.5, pitch),
+            Kind::ExperienceBottle => world.note_sound_neutral_at((player.x, player.y, player.z), "minecraft:entity.experience_bottle.throw", 0.5, pitch),
+            Kind::Snowball => world.note_sound_neutral_at((player.x, player.y, player.z), "minecraft:entity.snowball.throw", 0.5, pitch),
             Kind::Lingering => world.note_sound_neutral_at((player.x, player.y, player.z), "minecraft:entity.lingering_potion.throw", 0.5, pitch),
             _ => world.note_sound_player_at((player.x, player.y, player.z), "minecraft:entity.splash_potion.throw", 0.5, pitch),
         }
@@ -115,6 +122,7 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
 
     shared.thrown.lock().expect("снаряды захвачены другим потоком").flying.push(flying);
     player.progress.used(stack.item);
+    if kind == Kind::EnderPearl { player.item_cooldowns.insert("ender_pearl", now + 20); }
 
     // Инвентарь целиком клиент получает от слежения, между появлением зелья
     // и его первым сдвигом (splash-potion: «инвентарь все» там).

@@ -1,0 +1,38 @@
+{
+  "name": "itemaudit4-projectile_protection",
+  "about": "[проверить] Четвёртый проход: projectile_protection. Unit-test coverage; vanilla ещё не запускался.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "item replace entity $(bot) armor.chest with diamond_chestplate[enchantments={\"minecraft:projectile_protection\":4}]",
+    "gamemode survival $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 10,
+      "cmd": "damage $(bot) 10 minecraft:wither_skull"
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[tag=itemaudit4]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "difficulty peaceful"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true
+}

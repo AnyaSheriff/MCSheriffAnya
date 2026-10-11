@@ -283,6 +283,27 @@ fn stack(out: &mut Vec<u8>, item: i32, count: i32) {
     out.extend([0, 0]);
 }
 
+impl Book {
+    /// Knowledge Book: сначала разрешаем весь список, затем открываем его.
+    /// Wiki, Knowledge Book: «adding it to their recipe book». Синтетические
+    /// ключи текущего recipe registry не выдаём за vanilla ID: поддержаны
+    /// только однозначные crafting-result IDs; остальные отвергаем [проверить].
+    pub fn learn_named(&mut self, names: &[String]) -> bool {
+        let mut keys = Vec::new();
+        for name in names {
+            let name = name.strip_prefix("minecraft:").unwrap_or(name);
+            let candidates: Vec<_> = entries().iter().filter(|entry| match &entry.display {
+                Display::Crafting(recipe) => blocks::item_name(recipe.result) == Some(name),
+                _ => false,
+            }).collect();
+            if candidates.len() != 1 { return false; }
+            keys.push(candidates[0].key.clone());
+        }
+        for key in keys { self.dirty |= self.known.insert(key); }
+        true
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,0 +1,45 @@
+{
+  "name": "itemaudit4-flame",
+  "about": "[проверить] Flame: стрела поджигает сухой погашенный campfire. Candle/TNT/waterlogged branches покрыты unit-тестом; не запускался.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "setblock $(3,0,0) campfire[lit=false]",
+    "give $(bot) bow[enchantments={\"minecraft:flame\":1}]",
+    "give $(bot) arrow 8",
+    "tp $(bot) $(3.5,0,3.5) 180 18"
+  ],
+  "actions": [
+    {
+      "after": 5,
+      "use": true
+    },
+    {
+      "after": 30,
+      "release": true
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[tag=itemaudit4]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "difficulty peaceful",
+    "kill @e[type=arrow,distance=..32]"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true
+}

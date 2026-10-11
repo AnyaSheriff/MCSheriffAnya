@@ -167,7 +167,7 @@ fn float(value: f32) -> Vec<u8> {
 fn properties(mob: &Mob) -> Vec<Property> {
     // Свечение (0x40): у разбойников после звона колокола (raid.rs);
     // невидимость (0x20): торговец, выпивший зелье.
-    let fire = u8::from(mob.vitals.fire > 0) | if mob.vitals.has_effect(crate::survival::EffectKind::Glowing) { 0x40 } else { 0 } | if mob.land.invisible { 0x20 } else { 0 };
+    let fire = u8::from(mob.vitals.fire > 0) | if mob.vitals.has_effect(crate::survival::EffectKind::Glowing) { 0x40 } else { 0 } | if mob.land.invisible || mob.vitals.has_effect(crate::survival::EffectKind::Invisibility) { 0x20 } else { 0 };
 
     // Кристалл Края — не живое: флаги, тишина, цель луча (11 — Optional
     // BlockPos: 0 — нет), «показывать подножие» (minecraft-data: beam_target,
@@ -235,6 +235,9 @@ fn properties(mob: &Mob) -> Vec<Property> {
         particles.drain(..1 + encode_varint(TYPE_PARTICLES).len());
         out.insert(5, (10, TYPE_PARTICLES, particles));
     }
+
+    // minecraft-data 26.1: AgeableMob.age_locked, индекс 17.
+    if crate::mob::growth::eligible(mob.kind) { out.push((17, TYPE_BOOL, vec![u8::from(mob.age_locked)])); }
 
     if crate::mob::horse::equine(mob.kind) {
         out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
@@ -437,9 +440,9 @@ fn properties(mob: &Mob) -> Vec<Property> {
             out.push((18, TYPE_BOOL, vec![u8::from(mob.nether.immune)]));
         }
         Kind::Strider => {
-            out.push((16, TYPE_INT, encode_varint(0)));
-            out.push((17, TYPE_BOOL, vec![u8::from(mob.nether.cold)]));
-            out.push((18, TYPE_BOOL, vec![u8::from(mob.nether.saddled)]));
+            out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
+            out.push((18, TYPE_INT, encode_varint(0)));
+            out.push((19, TYPE_BOOL, vec![u8::from(mob.nether.cold)]));
         }
         Kind::Creeper => {
             out.push((16, TYPE_INT, encode_varint(if mob.h.swell_dir == 0 { -1 } else { mob.h.swell_dir })));
@@ -596,6 +599,7 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
 
     match (*key, kind) {
         (2, _) => value.as_slice() == [0],
+        (17, kind) if crate::mob::growth::eligible(kind) => value.as_slice() == [0],
         (12, _) => value.as_slice() == [0],
         (5, Kind::Bee) => value.as_slice() == [0],
         // Водные виды: общий хвост 18..20 ниже к ним не относится.
@@ -1159,14 +1163,21 @@ async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool)
         slots.push((EQUIPMENT_HEAD, Stack::new(helmet, 1)));
     }
 
+    if mob.kind == Kind::Wolf {
+        if mob.tame.armor.is_none() && !changed { return Ok(()); }
+        return super::send_equipment(stream, mob.entity_id, &[(6, crate::mob::wolf_armor::stack(mob))]).await;
+    }
+
     if crate::mob::land::llama(mob.kind) {
         if mob.land.decor.is_none() && !changed { return Ok(()); }
         let decor=mob.land.decor.and_then(|c| blocks::item_named(&crate::mob::WOOL[usize::from(c)].replace("_wool","_carpet"))).map(|id| Stack::new(id,1));
         return super::send_equipment(stream,mob.entity_id,&[(6,decor)]).await;
     }
-    if mob.kind==Kind::Camel {
-        if !mob.land.saddle && !changed { return Ok(()); }
-        let saddle=mob.land.saddle.then(|| blocks::item_named("saddle")).flatten().map(|id| Stack::new(id,1));
+    if matches!(mob.kind,Kind::Camel | Kind::Strider) {
+        // Minecraft-data 26.1: седло — equipment slot 7, не metadata boost_time.
+        let saddled = if mob.kind == Kind::Strider { mob.nether.saddled } else { mob.land.saddle };
+        if !saddled && !changed { return Ok(()); }
+        let saddle=saddled.then(|| blocks::item_named("saddle")).flatten().map(|id| Stack::new(id,1));
         return super::send_equipment(stream,mob.entity_id,&[(7,saddle)]).await;
     }
     if mob.kind==Kind::Panda && mob.land.held.is_none() && !changed { return Ok(()); }
@@ -1829,5 +1840,22 @@ mod new_mob_tests {
         assert!(props.contains(&(19,11,pos)));
         let mut happy=Mob::new(3,Kind::HappyGhast,(0.0,0.0,0.0));happy.age = -100;
         assert!(properties(&happy).contains(&(16,TYPE_BOOL,vec![1])));
+    }
+}
+
+#[cfg(test)]
+mod itemaudit2_tests {
+    use super::*;
+    #[test]
+    fn invisibility_potion_sets_and_clears_the_entity_flag() {
+        let mut mob = Mob::new(1, Kind::Cow, (0.0, 0.0, 0.0));
+        let flags = |mob: &Mob| properties(mob).into_iter().find(|(id, ..)| *id == 0).unwrap().2[0];
+        assert_eq!(flags(&mob) & 0x20, 0);
+        mob.vitals.give_effect(crate::survival::EffectKind::Invisibility, 0, 100);
+        assert_eq!(flags(&mob) & 0x20, 0x20);
+        mob.vitals.remove_effects(None);
+        assert_eq!(flags(&mob) & 0x20, 0);
+        mob.land.invisible = true;
+        assert_eq!(flags(&mob) & 0x20, 0x20);
     }
 }

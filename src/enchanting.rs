@@ -191,22 +191,23 @@ fn is_curse(number: u16) -> bool {
 /// Несовместимые зачарования 26.1.2 (minecraft-data 26.1, enchantments.json,
 /// `exclude`): в наборе оружия теперь и «пронзатель».
 fn exclusive(a: &str, b: &str) -> bool {
-    const SETS: [&[&str]; 7] = [
-        &["sharpness", "smite", "bane_of_arthropods", "density", "breach", "impaling"],
-        &["protection", "fire_protection", "blast_protection", "projectile_protection"],
-        &["depth_strider", "frost_walker"],
-        &["silk_touch", "fortune"],
-        &["infinity", "mending"],
-        &["multishot", "piercing"],
-        &["riptide", "loyalty", "channeling"],
-    ];
+    crate::commands_world::exclusive(a, b)
+}
 
-    // «Тягун» и «верность» друг другу не мешают — мешают только «тягуну».
-    if (a == "loyalty" && b == "channeling") || (a == "channeling" && b == "loyalty") {
-        return false;
+#[cfg(test)]
+mod itemaudit_tests {
+    use super::*;
+
+    #[test]
+    fn combat_enchantment_conflicts_include_impaling_but_not_lunge_mending() {
+        for name in ["sharpness", "smite", "bane_of_arthropods", "density", "breach"] {
+            assert!(exclusive(name, "impaling"));
+            assert!(exclusive("impaling", name));
+        }
+        assert!(!exclusive("lunge", "mending"));
+        assert!(!exclusive("loyalty", "channeling"));
+        for (name, _) in stackdata::ENCHANTMENTS { assert!(!exclusive(name, name)); }
     }
-
-    a != b && SETS.iter().any(|set| set.contains(&a) && set.contains(&b))
 }
 
 /// К какой группе основных предметов относится предмет.

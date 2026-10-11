@@ -19,6 +19,12 @@ use crate::network::packet::decode_varint;
 use crate::network::varint::{encode_string, encode_varint};
 use crate::snbt::{self, Value};
 
+#[path = "stackdata_potion.rs"]
+mod potion;
+#[path = "stackdata_use.rs"]
+mod use_components;
+pub use potion::PotionExtras;
+
 /// Номера компонентов предмета в 775 (registries.json, data_component_type).
 pub const COMPONENT_UNBREAKABLE: i32 = 4;
 pub const COMPONENT_DAMAGE: i32 = 3;
@@ -157,8 +163,11 @@ pub struct Data {
     /// Свои модификаторы атрибутов вместо тех, что у предмета по умолчанию.
     pub attributes: Option<Vec<ItemModifier>>,
     /// Зелье (компонент `potion_contents`): номер по таблице
-    /// `survival::POTIONS`. Свой цвет и свои эффекты пока не ведутся.
+    /// `survival::POTIONS`; свои эффекты/цвет хранятся отдельно.
     pub potion: Option<u16>,
+    pub potion_extra: Option<PotionExtras>,
+    pub debug_properties: Option<Vec<(String, String)>>,
+    pub recipes: Option<Vec<String>>,
     /// Сколько стрел заряжено в арбалет (компонент `charged_projectiles`):
     /// 0 — не заряжен; с «залпом» заряжается одна, а в компоненте — три
     /// [проверить чёрным ящиком, crossbow-multishot].
@@ -166,6 +175,8 @@ pub struct Data {
     /// Заряжены ракеты, а не стрелы (их довески; полёт 1 без взрывов —
     /// обычная ракета).
     pub charged_rocket: Option<Fireworks>,
+    /// Наконечник заряженной стрелы; боковые копии сохраняют его (вики, Crossbow).
+    pub charged_arrow: Option<Content>,
     /// Ракета: полёт и взрывы (компонент `fireworks`), если не по умолчанию.
     pub fireworks: Option<Fireworks>,
     /// Звезда: её взрыв (компонент `firework_explosion`).
@@ -441,7 +452,11 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
     } else if data.charged > 0
         && let Some(arrow) = crate::blocks::item_named("arrow")
     {
-        // Список снарядов: предмет, число, без довесков (ItemStackTemplate).
+        // Вики, Crossbow: «any type of arrow». Сохраняем тип и довески [проверить].
+        let ammo = data.charged_arrow;
+        let arrow = ammo.map_or(arrow, |ammo| ammo.item);
+        let extras = ammo.and_then(|ammo| ammo.data).map(get).unwrap_or_default();
+        let (added, encoded) = encode_components(&extras);
         out.extend_from_slice(&encode_varint(COMPONENT_CHARGED_PROJECTILES));
         out.extend_from_slice(&encode_varint(i32::from(data.charged)));
 
@@ -450,8 +465,9 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         for index in 0..data.charged {
             out.extend_from_slice(&encode_varint(arrow));
             out.extend_from_slice(&encode_varint(1));
-            out.extend_from_slice(&encode_varint(i32::from(index > 0)));
+            out.extend_from_slice(&encode_varint(added + i32::from(index > 0)));
             out.extend_from_slice(&encode_varint(0));
+            out.extend_from_slice(&encoded);
 
             if index > 0 {
                 out.extend_from_slice(&encode_varint(COMPONENT_INTANGIBLE_PROJECTILE));
@@ -486,13 +502,16 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         count += 1;
     }
 
-    if let Some(potion) = data.potion {
-        // potion_contents: зелье есть, своего цвета нет, своих эффектов нет,
-        // своего имени нет (protocol.json, PotionContents).
+    if let Some(values) = &data.debug_properties {
+        out.extend_from_slice(&encode_varint(57)); out.extend(use_components::encode_map(values)); count += 1;
+    }
+    if let Some(values) = &data.recipes {
+        out.extend_from_slice(&encode_varint(66)); out.extend(use_components::encode_recipes(values)); count += 1;
+    }
+
+    if data.potion.is_some() || data.potion_extra.is_some() {
         out.extend_from_slice(&encode_varint(COMPONENT_POTION_CONTENTS));
-        out.push(1);
-        out.extend_from_slice(&encode_varint(i32::from(potion)));
-        out.extend_from_slice(&[0, 0, 0]);
+        potion::encode(&mut out, data);
         count += 1;
     }
 
@@ -653,12 +672,14 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
     let mut reader = Reader { bytes: body, at: 0 };
 
     match kind {
+        57 => data.debug_properties = use_components::read_map(&mut reader),
+        66 => data.recipes = use_components::read_recipes(&mut reader),
         COMPONENT_STEW => {
             let Some(n)=reader.varint().filter(|n| (0..=32).contains(n)) else { return; };
             let mut effects=Vec::new();
             for _ in 0..n {
                 let (Some(id),Some(ticks))=(reader.varint(),reader.varint()) else { return; };
-                if (0..=32).contains(&id) && ticks>0 { effects.push((id as u8,ticks)); }
+                if crate::survival::EffectKind::ALL.into_iter().any(|kind| kind.id() == id) && ticks > 0 { effects.push((id as u8, ticks)); }
             }
             data.stew=effects;
         }
@@ -754,14 +775,7 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
 
             data.attributes = Some(mods);
         }
-        COMPONENT_POTION_CONTENTS => {
-            if reader.take(1) == Some(&[1])
-                && let Some(potion) = reader.varint().and_then(|number| u16::try_from(number).ok())
-                && usize::from(potion) < crate::survival::POTIONS.len()
-            {
-                data.potion = Some(potion);
-            }
-        }
+        COMPONENT_POTION_CONTENTS => { let _ = potion::read(&mut reader, data); }
         COMPONENT_CHARGED_PROJECTILES => {
             // Обычные стрелы без довесков или ракеты (с `fireworks`); иное —
             // не заряжен.
@@ -770,15 +784,17 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
             let rocket_item = crate::blocks::item_named("firework_rocket");
             let mut loaded = 0u8;
             let mut rocket = None;
+            let mut ammunition = None;
 
             for _ in 0..count.clamp(0, 3) {
                 let (Some(item), Some(_), Some(added), Some(removed)) = (reader.varint(), reader.varint(), reader.varint(), reader.varint()) else { return };
 
-                if removed != 0 || !(Some(item) == arrow || Some(item) == rocket_item) {
+                if removed != 0 || !(Some(item) == arrow || Some(item) == rocket_item || matches!(crate::blocks::item_name(item), Some("tipped_arrow" | "spectral_arrow"))) {
                     return;
                 }
 
                 let mut own = Fireworks::default();
+                let mut arrow_data = Data::default();
 
                 for _ in 0..added.clamp(0, 4) {
                     match reader.varint() {
@@ -786,6 +802,9 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
                             Some(read) => own = read,
                             None => return,
                         },
+                        Some(COMPONENT_POTION_CONTENTS) => {
+                            if potion::read(&mut reader, &mut arrow_data).is_none() { return; }
+                        }
                         Some(COMPONENT_INTANGIBLE_PROJECTILE) => {
                             if reader.take(2).is_none() {
                                 return;
@@ -797,12 +816,15 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
 
                 if Some(item) == rocket_item {
                     rocket = Some(own);
+                } else if loaded == 0 {
+                    ammunition = Some(Content { slot: 0, item, count: 1, data: intern(arrow_data) });
                 }
 
                 loaded += 1;
             }
 
             data.charged = loaded;
+            data.charged_arrow = ammunition.filter(|_| loaded > 0);
             data.charged_rocket = rocket.filter(|_| loaded > 0);
         }
         COMPONENT_FIREWORK_EXPLOSION => data.explosion = read_explosion(&mut reader),
@@ -832,7 +854,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || !data.bees.is_empty() || data.honey.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -872,7 +894,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || !data.bees.is_empty() || data.honey.is_some() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -897,6 +919,19 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             out.extend_from_slice(&[5,data.stew.len().min(32) as u8]);
             for (id,ticks) in data.stew.iter().take(32) { out.push(*id); out.extend_from_slice(&ticks.to_be_bytes()); }
         }
+        for (mark, bytes) in [
+            (13, data.debug_properties.as_ref().map(|v| use_components::encode_map(v))),
+            (14, data.recipes.as_ref().map(|v| use_components::encode_recipes(v))),
+        ] {
+            if let Some(bytes) = bytes { out.push(mark); out.extend_from_slice(&(bytes.len() as u32).to_be_bytes()); out.extend(bytes); }
+        }
+        if data.potion_extra.is_some() {
+            out.push(12);
+            let mut bytes = Vec::new();
+            potion::encode(&mut bytes, data);
+            out.extend_from_slice(&(bytes.len() as u32).to_be_bytes());
+            out.extend_from_slice(&bytes);
+        }
         if let Some(id)=data.instrument { out.extend_from_slice(&[6,id]); }
         if let Some(bucket) = &data.bucket {
             let nbt = bucket.nbt();
@@ -914,6 +949,13 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
         }
         if let Some(id) = data.map_id { out.push(9); out.extend_from_slice(&id.to_be_bytes()); }
 
+        if let Some(ammo) = data.charged_arrow {
+            out.push(11);
+            out.extend_from_slice(&ammo.item.to_be_bytes());
+            let extras = ammo.data.map(|id| to_bytes(&get(id))).unwrap_or_default();
+            out.extend_from_slice(&(extras.len() as u32).to_be_bytes());
+            out.extend_from_slice(&extras);
+        }
         // Содержимое шулкер-ящика: метка 2, число ячеек, у каждой номер,
         // предмет, число и довески (длина и запись; 0 — без довесков).
         if !data.contents.is_empty() {
@@ -1124,6 +1166,23 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
                     data.bees=reader.take(len)?.to_vec();
                     if !data.bees.is_empty() && crate::hive::Data::from_bytes(&data.bees).is_none() { return None; }
                 }
+                13 | 14 => {
+                    let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                    let mut nested = Reader { bytes: reader.take(length)?, at: 0 };
+                    if mark == 13 { data.debug_properties = Some(use_components::read_map(&mut nested)?); }
+                    else { data.recipes = Some(use_components::read_recipes(&mut nested)?); }
+                }
+                12 => {
+                    let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                    potion::read(&mut Reader { bytes: reader.take(length)?, at: 0 }, &mut data)?;
+                }
+                11 => {
+                    let item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
+                    let length = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                    let bytes = reader.take(length)?;
+                    let nested = if bytes.is_empty() { None } else { intern(from_bytes(bytes)?) };
+                    data.charged_arrow = Some(Content { slot: 0, item, count: 1, data: nested });
+                }
                 _ => break,
             }
         }
@@ -1205,11 +1264,28 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
             // Зелье: `potion_contents={potion:"minecraft:healing"}` или
             // короткая запись `potion_contents="minecraft:healing"` (вики,
             // Data component format: potion_contents).
-            "potion_contents" => {
-                let name = value.get("potion").and_then(Value::as_str).or_else(|| value.as_str()).ok_or("potion_contents — {potion:\"…\"}")?;
-                let name = name.strip_prefix("minecraft:").unwrap_or(name);
-
-                data.potion = Some(crate::survival::potion_number(name).ok_or_else(|| format!("нет зелья {name}"))?);
+            "debug_stick_state" => {
+                let Value::Map(fields) = &value else { return Err("debug_stick_state — объект".into()); };
+                data.debug_properties = Some(fields.iter().map(|(k,v)| Ok((k.clone(), v.as_str().ok_or("свойство — строка")?.to_string()))).collect::<Result<_, String>>()?);
+            }
+            "recipes" => {
+                let Value::List(list) = &value else { return Err("recipes — список".into()); };
+                data.recipes = Some(list.iter().map(|v| v.as_str().map(str::to_string).ok_or_else(|| "recipe id — строка".to_string())).collect::<Result<_, _>>()?);
+            }
+            "potion_contents" => potion::parse(&value, &mut data)?,
+            // Вики, Data component format: suspicious_stew_effects.
+            "suspicious_stew_effects" => {
+                let Value::List(list) = &value else { return Err("suspicious_stew_effects — список".to_string()) };
+                if list.len() > 32 { return Err("слишком много эффектов супа".to_string()); }
+                for entry in list {
+                    let name = entry.get("id").and_then(Value::as_str).ok_or("у эффекта супа нет id")?;
+                    let kind = crate::survival::EffectKind::from_name(name).ok_or_else(|| format!("нет эффекта {name}"))?;
+                    let ticks = entry.get("duration").map_or(Some(160.0), Value::as_f64).ok_or("duration — число")?;
+                    if !ticks.is_finite() || ticks < 1.0 || ticks > i32::MAX as f64 || ticks.fract() != 0.0 {
+                        return Err("duration — положительное целое число тактов".to_string());
+                    }
+                    data.stew.push((kind.id() as u8, ticks as i32));
+                }
             }
             // Ракета: `fireworks={flight_duration:2,explosions:[{shape:"star",
             // colors:[I;255]}]}`, звезда: `firework_explosion={…}` (вики, Data
@@ -1401,6 +1477,21 @@ mod tests {
     }
 
     #[test]
+    fn stew_components_parse_and_survive_network_and_disk() {
+        let (_, data) = parse_item_spec("suspicious_stew[suspicious_stew_effects=[{id:\"minecraft:saturation\",duration:7},{id:\"poison\"}]]").unwrap();
+        assert_eq!(data.stew, vec![(22, 7), (18, 160)]);
+        assert_eq!(from_bytes(&to_bytes(&data)), Some(data.clone()));
+        let mut wire = Data::default();
+        read_component(COMPONENT_STEW, &[2, 22, 7, 18, 160, 1], &mut wire);
+        assert_eq!(wire.stew, data.stew);
+        read_component(COMPONENT_STEW, &[1, 34, 100], &mut wire);
+        assert_eq!(wire.stew, vec![(34, 100)], "Raid Omen не теряется из-за дыр в реестре");
+        for invalid in ["suspicious_stew[suspicious_stew_effects=[{id:\"unknown\"}]]", "suspicious_stew[suspicious_stew_effects=[{id:\"poison\",duration:-1}]]", "suspicious_stew[suspicious_stew_effects=[{id:\"poison\",duration:1.5}]]"] {
+            assert!(parse_item_spec(invalid).is_err());
+        }
+    }
+
+    #[test]
     fn fireworks_parse_encode_and_survive_the_file() {
         let (name, data) = parse_item_spec(
             "minecraft:firework_rocket[fireworks={flight_duration:2,explosions:[{shape:\"large_ball\",colors:[I;16711680],fade_colors:[I;255],has_twinkle:true},{shape:\"burst\",has_trail:1b}]}]",
@@ -1520,5 +1611,25 @@ mod tests {
         assert_eq!(mods[0].slot, 1);
         assert!(parse_item_spec("stick[enchantments={nope:1}]").is_err());
         assert_eq!(parse_item_spec("stick").unwrap().1, Data::default());
+    }
+}
+
+#[cfg(test)]
+mod itemaudit2_tests {
+    use super::*;
+    #[test]
+    fn charged_special_arrows_roundtrip_file_and_client_component() {
+        for name in ["tipped_arrow", "spectral_arrow"] {
+            let ammo = if name == "tipped_arrow" { Data { potion: crate::survival::potion_number("poison"), ..Default::default() } } else { Data::default() };
+            let data = Data { charged: 3, charged_arrow: Some(Content { slot: 0, item: crate::blocks::item_named(name).unwrap(), count: 1, data: intern(ammo) }), ..Default::default() };
+            assert_eq!(from_bytes(&to_bytes(&data)), Some(data.clone()));
+            let (count, bytes) = encode_components(&data);
+            assert_eq!(count, 1);
+            let (kind, n) = decode_varint(&bytes).unwrap();
+            assert_eq!(kind, COMPONENT_CHARGED_PROJECTILES);
+            let mut read = Data::default();
+            read_component(kind, &bytes[n..], &mut read);
+            assert_eq!(read, data);
+        }
     }
 }

@@ -131,6 +131,7 @@ pub(super) enum UseKind {
     /// отпустят, — и после броска, и без крепости (чёрный ящик,
     /// eye-of-ender-far, eye-of-ender-none: Metadata 8=1).
     EnderEye,
+    Spyglass,
 }
 
 /// Использование предмета, которое тянется: щит поднят, лук натянут.
@@ -145,6 +146,9 @@ pub(super) struct Using {
 
 /// Идущая еда.
 pub(super) struct Eating {
+    /// Начатая стопка и слот: смена предмета отменяет употребление.
+    pub slot: i32,
+    pub stack: Stack,
     pub ticks_left: i32,
     pub nutrition: i32,
     pub saturation: f32,
@@ -164,7 +168,7 @@ pub(super) enum Drink {
     /// Зловещая бутылка: «Дурное знамение» своего уровня, ничего не остаётся
     /// (вики, Ominous Bottle).
     Ominous,
-    /// Мёд: снимает только яд, питательность 6, питьё 40 тактов.
+    /// Вики, Honey Bottle: «2 seconds», снимает только Poison.
     Honey,
 }
 
@@ -216,7 +220,7 @@ pub(super) struct Net {
     /// Опыт, который должен появиться шариками (добытая руда): место и очки.
     pub new_orbs: Vec<((f64, f64, f64), i32)>,
     /// Очки, подобранные шариками за этот такт: прибавятся в `orbs_tick`.
-    pub xp_taken: i32,
+    pub xp_taken: Vec<i32>,
     sent_health: f32,
     sent_food: i32,
     sent_saturation_zero: bool,
@@ -338,7 +342,7 @@ impl Net {
             announced_health: None,
             landings: Vec::new(),
             new_orbs: Vec::new(),
-            xp_taken: 0,
+            xp_taken: Vec::new(),
             sent_health: survival::MAX_HEALTH,
             sent_food: 20,
             sent_saturation_zero: false,
@@ -417,8 +421,7 @@ struct Food {
     always: bool,
 }
 
-/// Еда по вики (Food). У ели с эффектами (сырая курица, ядовитый картофель,
-/// иглобрюх…) эффекты пока не считаются [проверить].
+/// Еда по вики (Food); эффекты — survival::food_effects/food_illness.
 fn food_of(name: &str) -> Option<Food> {
     let (nutrition, saturation) = match name {
         "apple" => (4, 2.4),
@@ -429,6 +432,7 @@ fn food_of(name: &str) -> Option<Food> {
         "bread" => (5, 6.0),
         "carrot" => (3, 3.6),
         "chicken" => (2, 1.2),
+        "chorus_fruit" => (4, 2.4),
         "cod" => (2, 0.4),
         "cooked_beef" => (8, 12.8),
         "cooked_chicken" => (6, 7.2),
@@ -447,6 +451,8 @@ fn food_of(name: &str) -> Option<Food> {
         "mutton" => (2, 1.2),
         "porkchop" => (3, 1.8),
         "potato" => (1, 0.6),
+        "poisonous_potato" => (2, 1.2),
+        "pufferfish" => (1, 0.2),
         "pumpkin_pie" => (8, 4.8),
         "rabbit" => (3, 1.8),
         "rabbit_stew" => (10, 12.0),
@@ -462,7 +468,7 @@ fn food_of(name: &str) -> Option<Food> {
         nutrition,
         saturation,
         ticks: if name == "dried_kelp" { EAT_TICKS / 2 } else { EAT_TICKS },
-        always: matches!(name, "golden_apple" | "enchanted_golden_apple"),
+        always: matches!(name, "golden_apple" | "enchanted_golden_apple" | "suspicious_stew" | "chorus_fruit"),
     })
 }
 
@@ -750,20 +756,29 @@ pub(super) fn player_command(payload: &[u8], player: &mut PlayerState) {
 
     if let (Some(_entity), Some(action)) = (cursor.varint(), cursor.varint()) {
         match action {
-            1 => player.vit.sprinting = true,
+            1 if !player.vit.has_effect(survival::EffectKind::Blindness) => player.vit.sprinting = true,
             2 => player.vit.sprinting = false,
             _ => {}
         }
     }
 }
 
+pub(super) fn start_eating_at(player: &mut PlayerState, hand: i32, now: u64) -> bool {
+    let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+    if let Some(stack) = player.inventory.slot(slot)
+        && let Some(name) = blocks::item_name(stack.item)
+        && player.item_cooldowns.get(name).is_some_and(|until| now < *until) { return false; }
+    start_eating(player, hand)
+}
+
 /// Правая кнопка с едой в руке: начать есть. Возвращает, началась ли еда.
-pub(super) fn start_eating(player: &mut PlayerState) -> bool {
-    if !mortal(player.game_mode) || player.vit.dead || player.net.eating.is_some() {
+pub(super) fn start_eating(player: &mut PlayerState, hand: i32) -> bool {
+    if player.game_mode == GAME_MODE_SPECTATOR || player.vit.dead || player.net.eating.is_some() || player.net.using.is_some() || !(0..=1).contains(&hand) {
         return false;
     }
 
-    let Some(stack) = player.inventory.held() else {
+    let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+    let Some(stack) = player.inventory.slot(slot) else {
         return false;
     };
     let name = blocks::item_name(stack.item).map_or("", |name| name.strip_prefix("minecraft:").unwrap_or(name));
@@ -771,21 +786,22 @@ pub(super) fn start_eating(player: &mut PlayerState) -> bool {
     // Молоко и зелья пьются в любой сытости, 32 такта (вики, Milk Bucket, Potion).
     let drink = match name {
         "milk_bucket" => Some((Drink::Milk, Vec::new())),
-        "potion" => Some((Drink::Potion, survival::potion_effects(stack.extras().potion.unwrap_or(0)))),
+        "honey_bottle" => Some((Drink::Honey, Vec::new())),
+        "potion" => Some((Drink::Potion, stack.extras().potion_effects())),
         // Вики, Ominous Bottle: «Bad Omen … 100 minutes», уровень — из бутылки.
         "ominous_bottle" => Some((Drink::Ominous, vec![survival::Effect {
             kind: survival::EffectKind::BadOmen,
             amplifier: i32::from(stack.extras().ominous.unwrap_or(0)),
             ticks_left: 120_000,
             ambient: false,
-            visible: true,
+            visible: true, show_icon: true,
         }])),
-        "honey_bottle" => Some((Drink::Honey, Vec::new())),
         _ => None,
     };
 
     if let Some((drink, effects)) = drink {
-        player.net.eating = Some(Eating { ticks_left: if drink==Drink::Honey {40}else{32}, nutrition: 0, saturation: 0.0, effects, drink: Some(drink) });
+        player.net.last_hand = hand;
+        player.net.eating = Some(Eating { slot, stack, ticks_left: if drink == Drink::Honey { 40 } else { 32 }, nutrition: 0, saturation: 0.0, effects, drink: Some(drink) });
 
         return true;
     }
@@ -795,11 +811,12 @@ pub(super) fn start_eating(player: &mut PlayerState) -> bool {
     };
 
     // Сытому обычную еду не дают (вики, Food: «unless hungry»).
-    if !food.always && !player.vit.hungry() {
+    if !food.always && !player.vit.hungry() && player.game_mode != GAME_MODE_CREATIVE {
         return false;
     }
 
-    player.net.eating = Some(Eating { ticks_left: food.ticks, nutrition: food.nutrition, saturation: food.saturation, effects: survival::food_effects(name), drink: None });
+    player.net.last_hand = hand;
+    player.net.eating = Some(Eating { slot, stack, ticks_left: food.ticks, nutrition: food.nutrition, saturation: food.saturation, effects: survival::food_effects(name), drink: None });
 
     true
 }
@@ -819,7 +836,7 @@ pub(super) fn living_flags(player: &PlayerState) -> u8 {
 
     match (player.net.using, player.net.eating.is_some()) {
         (Some(using), _) => 1 | if using.hand == 1 { 2 } else { 0 },
-        (None, true) => 1,
+        (None, true) => 1 | hand,
         (None, false) => hand,
     }
 }
@@ -842,6 +859,7 @@ pub(super) fn start_using(shared: &Shared, player: &mut PlayerState, hand: i32, 
     let kind = match name {
         "shield" if now >= player.net.shield_disabled_until => UseKind::Shield,
         "bow" => UseKind::Bow,
+        "spyglass" => UseKind::Spyglass,
         // Незаряженный арбалет заряжается, если есть чем (вики, Crossbow);
         // заряженный стреляет (`bow::crossbow_fire`).
         "crossbow" => {
@@ -872,6 +890,10 @@ pub(super) fn start_using(shared: &Shared, player: &mut PlayerState, hand: i32, 
         _ => return false,
     };
 
+    if kind == UseKind::Spyglass {
+        shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x,player.y,player.z), "minecraft:item.spyglass.use", 1.0, 1.0);
+        if let Some(stack) = stack { player.progress.used(stack.item); }
+    }
     player.net.using = Some(Using { hand, since: now, kind });
     player.net.last_hand = hand;
 
@@ -905,6 +927,7 @@ pub(super) fn release_use(player: &mut PlayerState, shared: &Shared) {
         UseKind::Trident => super::bow::throw_trident(shared, player, using.hand, held),
         // Арбалет заряжается сам, пока кнопка держится (`tick_crossbow`);
         // отпустили — только опустили руки.
+        UseKind::Spyglass => shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x,player.y,player.z), "minecraft:item.spyglass.stop_using", 1.0, 1.0),
         UseKind::Crossbow { .. } | UseKind::Shield | UseKind::EnderEye | UseKind::Brush => {}
     }
 }
@@ -1532,6 +1555,7 @@ pub(super) fn respawned(player: &mut PlayerState) {
 /// Смерть: сообщение, событие и выпавшие вещи.
 async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, source: Source, killer: Option<Killer<'_>>) -> io::Result<()> {
     super::vehicle::dismount(shared, player);
+    effect_reactions(shared, player, true);
     let mob = player.net.killer;
     let message = death_message(source, player, mob, killer);
 
@@ -1594,19 +1618,17 @@ async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerStat
     player.net.landings.clear();
 
     // Вещи падают, если не включено `keepInventory` (вики, Keep inventory).
-    if !shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed) {
-        for slot in 0..inventory::SLOTS as i32 {
-            if let Some(stack) = player.inventory.slot(slot) {
-                let spread = |shared: &Shared| {
-                    let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+    {
+        let keep = shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed);
+        for stack in crate::combat::death_drops(&mut player.inventory, keep) {
+            let spread = |shared: &Shared| {
+                let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
-                    (f64::from(world.random_unit()) - 0.5) * 0.4
-                };
-                let velocity = (spread(shared), 0.2, spread(shared));
+                (f64::from(world.random_unit()) - 0.5) * 0.4
+            };
+            let velocity = (spread(shared), 0.2, spread(shared));
 
-                drop_into_world(shared, player.dimension, stack, (player.x, player.y + 0.5, player.z), velocity, items::THROWN_DELAY);
-                player.inventory.set(slot, None);
-            }
+            drop_into_world(shared, player.dimension, stack, (player.x, player.y + 0.5, player.z), velocity, items::THROWN_DELAY);
         }
     }
 
@@ -1800,7 +1822,7 @@ pub(super) async fn mob_hit(
 
 /// /damage: тот же расчёт защиты и неуязвимости, с явным источником.
 /// [проверить] Отдача и порядок звуков команды относительно обычного удара.
-pub(super) async fn command_hit(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32, source: Source, origin: crate::combat::DamageOrigin) -> io::Result<()> {
+pub(super) async fn command_hit(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, amount: f32, source: Source, origin: crate::combat::DamageOrigin) -> io::Result<()> {
     if player.vit.dead || (matches!(player.game_mode, GAME_MODE_CREATIVE | GAME_MODE_SPECTATOR) && !source.bypasses_invulnerability()) { return Ok(()); }
     update_equipment(player, *shared.ticks.borrow());
     let at = origin.at.or(origin.entity_at);
@@ -1815,13 +1837,9 @@ pub(super) async fn command_hit(stream: &mut Outgoing<'_>, shared: &Shared, play
         shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x, player.y, player.z), "minecraft:item.shield.block", 1.0, 1.0);
         return Ok(());
     }
-    if source != Source::MobAttack {
-        if !crate::combat::bypasses_armor(source) {
-            super::pvp::wear_armor(shared, player, amount);
-            amount = crate::combat::after_armor_breached(amount, player.attrs.value(crate::attributes::ARMOR) as f32, player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32, 1.0);
-        }
-        let points = crate::combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot)).map(|stack| crate::combat::protection_points(&stack.extras(), source)).sum();
-        amount = crate::combat::after_protection(amount, points);
+    // Броню и защитные чары считает hit_by_breached (общий путь); здесь — только износ.
+    if source != Source::MobAttack && !crate::combat::bypasses_armor(source) {
+        super::pvp::wear_armor(shared, player, amount);
     }
     player.net.hurt_from = at;
     player.net.command_origin = Some(origin.clone());
@@ -1851,27 +1869,38 @@ pub(super) async fn hit_by(
     stream: &mut Outgoing<'_>,
     shared: &Shared,
     player: &mut PlayerState,
-    mut amount: f32,
+    amount: f32,
     source: Source,
     direct: i32,
     cause: i32,
     killer: Option<Killer<'_>>,
     hurt_yaw: Option<f32>,
 ) -> io::Result<Option<survival::Hit>> {
-    if source.scales_with_difficulty() {
-        amount = survival::scaled(amount, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed));
-    }
+    hit_by_breached(stream, shared, player, amount, source, direct, cause, killer, hurt_yaw, 1.0).await
+}
 
-    // Вики, Armor: укус/удар моба сначала масштабируется по сложности,
-    // затем уменьшается бронёй и защитой; яд броню обходит.
-    if matches!(source, Source::MobAttack | Source::Sting | Source::Campfire | Source::InFire | Source::Lava) {
+/// Вики, Difficulty/Arrow: урон снаряда игрока не является уроном моба.
+/// Стрелы скелета и заряды бриза сохраняют масштабирование [проверить].
+fn projectile_difficulty(amount: f32, source: Source, difficulty: u8, player_owned: bool) -> f32 {
+    if source.scales_with_difficulty() && !(player_owned && matches!(source, Source::Arrow | Source::WindCharge)) {
+        survival::scaled(amount, difficulty)
+    } else { amount }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) async fn hit_by_breached(
+    stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32,
+    source: Source, direct: i32, cause: i32, killer: Option<Killer<'_>>, hurt_yaw: Option<f32>, breach: f32,
+) -> io::Result<Option<survival::Hit>> {
+    amount = projectile_difficulty(amount, source, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed), killer.is_some());
+
+    // Броня и защитные чары — разные слои: Feather Falling действует
+    // на падение, Protection — на магию, Fire Protection — на горение.
+    {
         let armor = player.attrs.value(crate::attributes::ARMOR) as f32;
         let toughness = player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32;
-        amount = crate::combat::after_armor_breached(amount, armor, toughness, 1.0);
-    }
-    if matches!(source, Source::MobAttack | Source::Campfire | Source::InFire | Source::Lava | Source::OnFire) {
         let points: i32 = crate::combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot)).map(|stack| crate::combat::protection_points(&stack.extras(), source)).sum();
-        amount = crate::combat::after_protection(amount, points);
+        amount = crate::combat::mitigated_damage(amount, armor, toughness, points, source, breach);
     }
 
     let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
@@ -1884,6 +1913,8 @@ pub(super) async fn hit_by(
     let Some(mut result) = player.vit.hurt(amount, source, immune) else {
         return Ok(None);
     };
+
+    super::pvp::retaliate(shared, player, source, if cause != 0 { cause } else { direct });
 
     let absorbed = result.absorbed;
     let resisted = result.resisted;
@@ -2021,7 +2052,7 @@ async fn revive_by_totem(stream: &mut Outgoing<'_>, player: &mut PlayerState) ->
         (survival::EffectKind::Absorption, 1, 100),
         (survival::EffectKind::FireResistance, 0, 800),
     ] {
-        give_effect(stream, player, survival::Effect { kind, amplifier, ticks_left: ticks, ambient: false, visible: true }).await?;
+        give_effect(stream, player, survival::Effect { kind, amplifier, ticks_left: ticks, ambient: false, visible: true, show_icon: true }).await?;
     }
 
     send_entity_event(stream, player.entity_id, EVENT_TOTEM).await
@@ -2040,6 +2071,21 @@ pub(super) fn blast_velocity(player: &PlayerState, (px, py, pz): (f64, f64, f64)
     let friction = if player.on_ground { 0.546 } else { 0.91 };
 
     ((dx + px) * friction, (rest_y + py - 0.08) * 0.98, (dz + pz) * friction)
+}
+
+/// Вики, Blast Protection: защита гасит именно добавленный толчок,
+/// включая Wind Burst, а не собственную скорость игрока [проверить].
+pub(super) fn protected_blast_push(player: &PlayerState, push: (f64, f64, f64)) -> (f64, f64, f64) {
+    let scale = 1.0 - player.attrs.value(crate::attributes::EXPLOSION_KNOCKBACK_RESISTANCE);
+    (push.0 * scale, push.1 * scale, push.2 * scale)
+}
+
+/// Вики, Fire Protection: сокращение срока поджога, без тушения уже
+/// идущего огня. Округление дробного числа тактов [проверить].
+pub(super) fn ignite(player: &mut PlayerState, ticks: i32) {
+    // Модификатор в float (−0,6000000238…) даёт 31,9999…: прибавка гасит округление вниз [проверить: у оригинала].
+    let ticks = (f64::from(ticks) * player.attrs.value(crate::attributes::BURNING_TIME) + 1.0e-4).floor() as i32;
+    player.vit.ignite(ticks);
 }
 
 /// Скорость, которую сервер сообщает после удара. Она берётся после одного
@@ -2117,7 +2163,17 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
 
         // Шипы отбрасывают ударившего, как обычный удар: скорость идёт сразу
         // за анимацией ушиба (чёрный ящик, pvp-thorns: (0; 0,361; −0,4)).
-        if let (Some(_), Some(dir)) = (done, pending.push) {
+        if let (Some(_), Some((ux, uz)), true) = (done, pending.push, pending.source == Source::IndirectMagic) {
+            // Брошенное зелье толкает, как стрела или удар моба: скорость после
+            // трения такта (0,218; 0,275), одним тактом позже урона (чёрный ящик,
+            // itemaudit2-splash-mob-harming: «робот: скорость 0,001; 0,275; −0,218»).
+            let (dx, dy, dz) = player.net.last_delta;
+            let up = if player.on_ground { 0.275 } else { dy };
+
+            player.net.velocity = Some((dx / 2.0 * 0.546 + ux * 0.218, up, dz / 2.0 * 0.546 + uz * 0.218));
+            player.net.velocity_due = false;
+            player.net.hold_meta = true;
+        } else if let (Some(_), Some(dir)) = (done, pending.push) {
             let resistance = player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE);
 
             knock_back(player, dir, crate::mob::BASE_KNOCKBACK, resistance);
@@ -2249,7 +2305,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     if !player.vit.dead && mortal(player.game_mode) {
         entity_tick(stream, shared, player, difficulty).await?;
     } else if !player.vit.dead && player.game_mode == GAME_MODE_CREATIVE {
-        creative_tick(stream, shared, player).await?;
+        creative_tick(stream, shared, player, difficulty).await?;
     }
 
     // Шарики опыта: появление, полёт к игроку, подбор.
@@ -2303,16 +2359,25 @@ async fn orbs_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Play
     // Подобранное шариком (`take_orbs`) клиенту сообщается здесь, после
     // пакета подбора из журнала (чёрный ящик, cow-xp: подбор, потом Set
     // Experience).
-    if player.net.xp_taken > 0 {
-        player.vit.add_xp(std::mem::take(&mut player.net.xp_taken));
-        send_experience(stream, &player.vit).await?;
+    for points in std::mem::take(&mut player.net.xp_taken) {
+        let roll = world_random(shared, player.dimension);
+        let (slot, remaining) = crate::combat::mend(&mut player.inventory, points, roll);
+        if let Some(slot) = slot {
+            player.net.slot_changed(slot);
+        }
+        if remaining > 0 {
+            player.vit.add_xp(remaining);
+            send_experience(stream, &player.vit).await?;
+        }
     }
 
     Ok(())
 }
 
 /// Творческий режим: тонуть не тонет, но бездна бьёт и здесь.
-async fn creative_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+async fn creative_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
+    player.vit.age = player.vit.age.wrapping_add(1);
+    effects_and_eating_tick(stream, shared, player, difficulty).await?;
     if player.y < void_below(player.dimension) {
         hit(stream, shared, player, 4.0, Source::OutOfWorld, 0).await?;
     }
@@ -2351,7 +2416,7 @@ pub(super) async fn struck(stream: &mut Outgoing<'_>, shared: &Shared, player: &
     if player.vit.fire > 0 {
         player.vit.fire += 1;
     } else {
-        player.vit.ignite(crate::lightning::STRIKE_FIRE_TICKS);
+        ignite(player, crate::lightning::STRIKE_FIRE_TICKS);
     }
 
     hit(stream, shared, player, crate::lightning::STRIKE_DAMAGE, Source::Lightning, 0).await?;
@@ -2423,7 +2488,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
     player.net.fire_flag = player.vit.fire > 0;
 
     if env.in_fire > 0.0 && !player.vit.dead && !player.vit.has_effect(survival::EffectKind::FireResistance) {
-        player.vit.ignite(160);
+        ignite(player, 160);
         hit(stream, shared, player, env.in_fire, Source::InFire, 0).await?;
     }
 
@@ -2457,7 +2522,7 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
     }
 
     if env.in_lava && !player.vit.dead {
-        player.vit.ignite(survival::LAVA_FIRE_TICKS);
+        ignite(player, survival::LAVA_FIRE_TICKS);
         player.vit.fall *= 0.5;
 
         if hit(stream, shared, player, 4.0, Source::Lava, 0).await?.is_some() {
@@ -2487,7 +2552,13 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         hit(stream, shared, player, 4.0, Source::OutOfWorld, 0).await?;
     }
 
-    if !player.vit.dead && player.vit.air_tick(env.eyes_in_water && !env.in_bubbles, false) {
+    if let Some(effect) = turtle_shell_effect(player, env.eyes_in_water) {
+        give_effect(stream, player, effect).await?;
+    }
+
+    let oxygen = player.attrs.value(crate::attributes::OXYGEN_BONUS);
+    let oxygen_roll = if env.eyes_in_water && !env.in_bubbles && oxygen > 0.0 { world_random(shared, player.dimension) } else { 0.0 };
+    if !player.vit.dead && player.vit.air_tick_with_bonus(env.eyes_in_water && !env.in_bubbles, false, oxygen, oxygen_roll) {
         send_entity_event(stream, entity, EVENT_DROWN).await?;
         hit(stream, shared, player, 2.0, Source::Drown, 0).await?;
     }
@@ -2511,16 +2582,56 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         }
     }
 
-    let survival::EffectTick { hurt, gone } = player.vit.effects_tick();
+    effects_and_eating_tick(stream, shared, player, difficulty).await?;
 
+    if let Some(amount) = player.vit.food_tick(difficulty, shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed)) {
+        hit(stream, shared, player, amount, Source::Starve, 0).await?;
+    }
+
+    player.vit.tick_invulnerable();
+
+    Ok(())
+}
+
+// [Bedrock: потом] Реакции игрока на смерть/удар пока подключены только к Java.
+fn effect_reactions(shared: &Shared, player: &mut PlayerState, dead: bool) {
+    let reaction = crate::effect_reactions::take(&mut player.vit, dead, (player.x, player.y, player.z), 1.8, player.yaw, true);
+    if !reaction.wind && !reaction.weaving && !reaction.oozing && reaction.infested_hits == 0 { return; }
+    let targets: Vec<_> = shared.players.lock().expect("игроки").members().iter()
+        .filter(|p| p.dimension == player.dimension && p.game_mode != GAME_MODE_SPECTATOR)
+        .map(|p| crate::tnt::Target { entity_id: p.entity_id, x: p.position.x, y: p.position.y, z: p.position.z, sneaking: p.sneaking }).collect();
+    let mut world = shared.world_in(player.dimension).lock().expect("мир");
+    let mut rng = crate::mob::Rng::new(u64::from(world.random_bits()));
+    let mut items = shared.items_in(player.dimension).lock().expect("сущности");
+    crate::effect_reactions::apply(&mut world, &mut items, reaction, shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed), &targets, &mut || shared.next_entity_id(), &mut rng);
+}
+
+/// Эффекты и использование работают и в творческом режиме: предметы
+/// сохраняются, сроки эффектов убывают. Порядок пакетов [проверить].
+async fn effects_and_eating_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
+    effect_reactions(shared, player, false);
+    let entity = player.entity_id;
+    let survival::EffectTick { hurt, gone, restored } = player.vit.effects_tick();
+
+    trial_omen(stream, shared, player, difficulty).await?;
     omens(stream, shared, player, difficulty, &gone).await?;
 
     for (amount, source) in hurt {
         hit(stream, shared, player, amount, source, 0).await?;
     }
 
-    if !gone.is_empty() {
+    if !gone.is_empty() || !restored.is_empty() {
         apply_effect_modifiers(player);
+    }
+
+    for effect in restored {
+        let mut body = encode_varint(ENTITY_EFFECT);
+        body.extend_from_slice(&encode_varint(entity));
+        body.extend_from_slice(&encode_varint(effect.kind.id()));
+        body.extend_from_slice(&encode_varint(effect.amplifier));
+        body.extend_from_slice(&encode_varint(effect.ticks_left));
+        body.push(effect.flags() & !0x08);
+        write_body(stream, body).await?;
     }
 
     for gone in gone {
@@ -2536,11 +2647,14 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
 
     // Недоеденное — после такта эффектов: эффект от еды впервые действует
     // в следующем такте (golden-apple: регенерация лечит на +1 после Effect).
+    if player.net.eating.as_ref().is_some_and(|eating| !eating_matches(player, eating)) {
+        stop_eating(player);
+    }
     if let Some(eating) = &mut player.net.eating {
         eating.ticks_left -= 1;
 
         if eating.ticks_left <= 0 {
-            let (nutrition, saturation, drink) = (eating.nutrition, eating.saturation, eating.drink);
+            let (slot, nutrition, saturation, drink) = (eating.slot, eating.nutrition, eating.saturation, eating.drink);
             let effects = std::mem::take(&mut eating.effects);
 
             player.net.eating = None;
@@ -2550,8 +2664,8 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
             }
 
             match drink {
-                Some(drink) => finish_drinking(stream, shared, player, drink).await?,
-                None => finish_eating(stream, shared, player, nutrition, saturation).await?,
+                Some(drink) => finish_drinking(stream, shared, player, slot, drink).await?,
+                None => finish_eating(stream, shared, player, slot, nutrition, saturation).await?,
             }
 
             // Эффекты еды — после звуков еды [проверить] (golden-apple).
@@ -2559,9 +2673,9 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
             // (potion-drink: Set Health в такте глотка, Entity Effect нет).
             for effect in effects {
                 match effect.kind {
-                    survival::EffectKind::InstantHealth => player.vit.heal((4 << effect.amplifier.clamp(0, 20)) as f32),
+                    survival::EffectKind::InstantHealth => player.vit.heal(crate::survival::instant_base(crate::survival::EffectKind::InstantHealth, effect.amplifier) as f32),
                     survival::EffectKind::InstantDamage => {
-                        hit(stream, shared, player, (6 << effect.amplifier.clamp(0, 20)) as f32, Source::Magic, 0).await?;
+                        hit(stream, shared, player, crate::survival::instant_base(crate::survival::EffectKind::InstantDamage, effect.amplifier) as f32, Source::Magic, 0).await?;
                     }
                     _ => give_effect(stream, player, effect).await?,
                 }
@@ -2569,12 +2683,25 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         }
     }
 
-    if let Some(amount) = player.vit.food_tick(difficulty, shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed)) {
-        hit(stream, shared, player, amount, Source::Starve, 0).await?;
+    Ok(())
+}
+
+async fn trial_omen(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, difficulty: u8) -> io::Result<()> {
+    use survival::EffectKind::{BadOmen, TrialOmen};
+    if !mortal(player.game_mode) || player.vit.dead || difficulty == survival::PEACEFUL { return Ok(()); }
+    let bad=player.vit.effect_level(BadOmen);
+    if bad==0 && !player.vit.has_effect(TrialOmen) { return Ok(()); }
+    let places={
+        let world=shared.world_in(player.dimension).lock().expect("мир");
+        crate::trial::omen_candidates(&world,(player.x,player.y,player.z),if player.sneaking {1.27} else {1.62})
+    };
+    if places.is_empty() { return Ok(()); }
+    if bad>0 {
+        let remaining=player.vit.effects.iter().find(|e|e.kind==TrialOmen).map_or(0,|e|e.ticks_left);
+        clear_effects(stream,player,Some(BadOmen)).await?;
+        give_effect(stream,player,survival::Effect {kind:TrialOmen,amplifier:0,ticks_left:crate::trial::omen_duration(bad,remaining),ambient:false,visible:true, show_icon: true}).await?;
     }
-
-    player.vit.tick_invulnerable();
-
+    crate::trial::activate_omen(&mut shared.world_in(player.dimension).lock().expect("мир"),&places);
     Ok(())
 }
 
@@ -2590,7 +2717,7 @@ async fn omens(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerSt
                 shared.items_in(player.dimension).lock().expect("сущности").remove_mobs(|m|ids.contains(&m.entity_id));
                 if let Some(bad)=bad {
                     clear_effects(stream,player,Some(survival::EffectKind::BadOmen)).await?;
-                    give_effect(stream,player,survival::Effect {kind:survival::EffectKind::TrialOmen,amplifier:0,ticks_left:18000*(bad.amplifier+1),ambient:false,visible:true}).await?;
+                    give_effect(stream,player,survival::Effect {kind:survival::EffectKind::TrialOmen,amplifier:0,ticks_left:18000*(bad.amplifier+1),ambient:false,visible:true, show_icon:true}).await?;
                 }
             }
         }
@@ -2649,7 +2776,7 @@ async fn omens(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerSt
     }
 
     player.net.raid_omen_level = bad.amplifier + 1;
-    give_effect(stream, player, survival::Effect { kind: survival::EffectKind::RaidOmen, amplifier: bad.amplifier, ticks_left: crate::raid::RAID_OMEN_TICKS, ambient: false, visible: true }).await?;
+    give_effect(stream, player, survival::Effect { kind: survival::EffectKind::RaidOmen, amplifier: bad.amplifier, ticks_left: crate::raid::RAID_OMEN_TICKS, ambient: false, visible: true, show_icon: true }).await?;
 
     // Первый такт новое знамение не убывает: снимается оно через 601 такт
     // (raid-start-wave1: Remove Effect в такте 601).
@@ -2665,34 +2792,68 @@ pub(super) fn world_random(shared: &Shared, dimension: Dimension) -> f32 {
     shared.world_in(dimension).lock().expect("мир захвачен другим потоком").random_unit()
 }
 
-async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, nutrition: i32, saturation: f32) -> io::Result<()> {
+pub(super) fn eating_matches(player: &PlayerState, eating: &Eating) -> bool {
+    player.inventory.slot(eating.slot).is_some_and(|stack| stack.stacks_with(&eating.stack))
+        && (eating.slot == inventory::OFFHAND || eating.slot == player.inventory.selected_slot())
+}
+
+/// Расходует одну порцию, возвращает посуду в освободившийся слот или
+/// рюкзак. Полный инвентарь возвращает остаток для выброса [проверить].
+pub(super) fn consume_stack(player: &mut PlayerState, slot: i32, remainder: &str) -> Option<Stack> {
+    let stack = player.inventory.slot(slot)?;
+    player.progress.consumed(stack.item);
+    if player.game_mode == GAME_MODE_CREATIVE {
+        return None;
+    }
+    player.inventory.set(slot, inventory::remainder(stack, stack.count - 1));
+    player.net.slot_changed(slot);
+    let item = blocks::item_named(remainder)?;
+    let left = Stack::new(item, 1);
+    if player.inventory.slot(slot).is_none() {
+        player.inventory.set(slot, Some(left));
+        None
+    } else {
+        let (slots, left) = player.inventory.put(left);
+        for slot in slots { player.net.slot_changed(slot); }
+        left
+    }
+}
+
+async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, slot: i32, nutrition: i32, saturation: f32) -> io::Result<()> {
     let at = (player.x, player.y, player.z);
+    let stack = player.inventory.slot(slot);
+    let name = stack.and_then(|stack| blocks::item_name(stack.item)).unwrap_or("");
 
     player.vit.eat(nutrition, saturation);
-    if let Some(stack)=player.inventory.held().filter(|s| blocks::item_name(s.item)==Some("suspicious_stew")) {
+    if name == "chorus_fruit" {
+        let destination = {
+            let mut world = shared.world_in(player.dimension).lock().expect("мир");
+            let mut rng = crate::mob::Rng::new(u64::from(world.random_bits()));
+            crate::teleport_item::chorus_destination(&world, at, &mut rng)
+        };
+        if let Some(to) = destination {
+            super::vehicle::dismount(shared, player);
+            shared.players.lock().expect("игроки").order(&player.uuid, crate::players::Order::Teleport { x:to.0,y:to.1,z:to.2 });
+            player.vit.fall = 0.0;
+            shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at(at, "minecraft:item.chorus_fruit.teleport", 1.0, 1.0);
+        }
+        player.item_cooldowns.insert("chorus_fruit", *shared.ticks.borrow() + 20);
+        send_cooldown(stream,"minecraft:chorus_fruit",20).await?;
+    }
+    if let Some(stack)=stack.filter(|_| name == "suspicious_stew") {
         for (id,ticks) in stack.extras().stew {
             if let Some(kind)=survival::EffectKind::ALL.into_iter().find(|k| k.id()==i32::from(id)) {
-                give_effect(stream,player,survival::Effect { kind,amplifier:0,ticks_left:ticks,ambient:false,visible:true }).await?;
+                give_effect(stream,player,survival::Effect { kind,amplifier:0,ticks_left:ticks,ambient:false,visible:true, show_icon: true }).await?;
             }
         }
     }
-    let stew=player.inventory.held().is_some_and(|s| matches!(blocks::item_name(s.item),Some("suspicious_stew"|"mushroom_stew")));
-
-    if let Some(held) = player.inventory.held() {
-        player.progress.consumed(held.item);
+    if let Some(effect) = survival::food_illness(name, world_random(shared, player.dimension)) {
+        give_effect(stream, player, effect).await?;
     }
 
-    if player.game_mode != GAME_MODE_CREATIVE {
-        player.net.slot_update = player.inventory.spend_held();
-    }
-
-    if stew && player.game_mode!=GAME_MODE_CREATIVE && let Some(id)=blocks::item_named("bowl") {
-        if player.inventory.held().is_none() {
-            let slot=player.inventory.selected_slot(); player.inventory.set(slot,Some(Stack::new(id,1))); player.net.slot_changed(slot);
-        } else {
-            let (slots,left)=player.inventory.put(Stack::new(id,1)); for slot in slots { player.net.slot_changed(slot); }
-            if let Some(stack)=left { super::throw_out(shared,player,stack); }
-        }
+    let remainder = if matches!(name, "suspicious_stew" | "mushroom_stew" | "rabbit_stew" | "beetroot_soup") { "bowl" } else { "" };
+    if let Some(left) = consume_stack(player, slot, remainder) {
+        super::throw_out(shared, player, left);
     }
     send_entity_event(stream, player.entity_id, EVENT_FINISHED_EATING).await?;
 
@@ -2708,36 +2869,20 @@ async fn finish_eating(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
 
 /// Допили: молоко снимает эффекты, в руке остаётся посуда (в творческом
 /// режиме — прежний предмет). Звук питья клиент играет сам [проверить].
-async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, drink: Drink) -> io::Result<()> {
-    if let Some(held) = player.inventory.held() {
-        player.progress.consumed(held.item);
-    }
-
-    if player.game_mode != GAME_MODE_CREATIVE {
-        // Бутылки складываются стопкой: тратится одна (вики, Ominous Bottle).
-        if drink == Drink::Ominous {
-            player.inventory.spend_held();
-            player.net.slot_update = Some(player.inventory.selected_slot());
-        } else if drink == Drink::Honey {
-            if let Some(item) = blocks::item_named(drink.remainder()) {
-                let slots = swap_held(player, item, shared);
-                for slot in slots { player.net.slot_changed(slot); }
-            }
-        } else {
-            let slot = player.inventory.selected_slot();
-            player.inventory.set(slot, blocks::item_named(drink.remainder()).map(|item| Stack::new(item, 1)));
-            player.net.slot_update = Some(slot);
-        }
+async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, slot: i32, drink: Drink) -> io::Result<()> {
+    if let Some(left) = consume_stack(player, slot, drink.remainder()) {
+        super::throw_out(shared, player, left);
     }
 
     send_entity_event(stream, player.entity_id, EVENT_FINISHED_EATING).await?;
 
     if drink == Drink::Milk {
         clear_effects(stream, player, None).await?;
-    } else if drink==Drink::Honey {
-        // Вики, Honey Bottle: «removes the Poison effect». [проверить] сроки пакетов.
-        player.vit.eat(6,1.2);
-        clear_effects(stream,player,Some(survival::EffectKind::Poison)).await?;
+    } else if drink == Drink::Honey {
+        player.vit.eat(6, 1.2);
+        clear_effects(stream, player, Some(survival::EffectKind::Poison)).await?;
+        // Вики, Honey Bottle: «unique sound»; звук окончания [проверить].
+        send_sound_at(stream, "minecraft:item.honey_bottle.drink", SOUND_PLAYERS, (player.x, player.y, player.z), 1.0, 1.0).await?;
     }
 
     Ok(())
@@ -2746,6 +2891,7 @@ async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
 /// Эффект от команды: клиенту — Entity Effect.
 pub(super) async fn give_effect(stream: &mut Outgoing<'_>, player: &mut PlayerState, effect: survival::Effect) -> io::Result<()> {
     if !player.vit.effect_replaced_by(effect.kind, effect.amplifier, effect.ticks_left) {
+        player.vit.give_effect_shown(effect);
         return Ok(());
     }
 
@@ -2806,11 +2952,16 @@ pub(super) fn apply_effect_modifiers(player: &mut PlayerState) {
     player.vit.apply_limits(player.attrs.value(MAX_HEALTH) as f32, player.attrs.value(MAX_ABSORPTION) as f32, player.attrs.value(SAFE_FALL_DISTANCE) as f32);
 }
 
+/// Вики, Turtle Shell: «immediately recharges after exposure to air».
+/// Только игрок и только надетый шлем; под водой срок идёт обычно [проверить].
+fn turtle_shell_effect(player: &PlayerState, eyes_in_water: bool) -> Option<survival::Effect> {
+    (!eyes_in_water && !player.vit.dead && player.inventory.slot(5).is_some_and(|stack| blocks::item_name(stack.item) == Some("turtle_helmet")))
+        .then_some(survival::Effect { kind: survival::EffectKind::WaterBreathing, amplifier: 0, ticks_left: 200, ambient: false, visible: false, show_icon: true })
+}
+
 /// Снять все эффекты (или один).
 pub(super) async fn clear_effects(stream: &mut Outgoing<'_>, player: &mut PlayerState, only: Option<survival::EffectKind>) -> io::Result<()> {
-    let (cleared, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut player.vit.effects).into_iter().partition(|effect| only.is_none_or(|kind| effect.kind == kind));
-
-    player.vit.effects = kept;
+    let cleared = player.vit.remove_effects(only);
 
     apply_effect_modifiers(player);
 
@@ -2834,7 +2985,7 @@ mod tests {
         let mut player=PlayerState::new([8;16],"Honey".into(),None,None,0x7F,1,(0.5,64.0,0.5));
         player.game_mode=GAME_MODE_SURVIVAL;
         player.inventory.set(inventory::FIRST_HOTBAR,Some(Stack::new(blocks::item_named("honey_bottle").unwrap(),2)));
-        assert!(start_eating(&mut player));
+        assert!(start_eating(&mut player, 0));
         let drink=player.net.eating.as_ref().unwrap();
         assert_eq!(drink.ticks_left,40);assert_eq!(drink.drink,Some(Drink::Honey));
         assert_eq!(Drink::Honey.remainder(),"glass_bottle");
@@ -2884,6 +3035,35 @@ mod tests {
     }
 
     #[test]
+    fn protection_side_effects_stack_and_end_when_armor_is_removed() {
+        let mut player = archer(GAME_MODE_SURVIVAL, false);
+        let mut data = crate::stackdata::Data::default();
+        for name in ["fire_protection", "blast_protection"] {
+            data.set_enchant(crate::stackdata::enchantment_number(name).unwrap(), 4);
+        }
+        player.inventory.set(6, Some(Stack::new(blocks::item_named("diamond_chestplate").unwrap(), 1).with_extras(data.clone())));
+        update_equipment(&mut player, 0);
+        ignite(&mut player, 80);
+        assert_eq!(player.vit.fire, 32);
+        let push = protected_blast_push(&player, (1.0, 2.0, -1.0));
+        assert!((push.0 - 0.4).abs() < 1e-6 && (push.1 - 0.8).abs() < 1e-6 && (push.2 + 0.4).abs() < 1e-6);
+        player.inventory.set(7, Some(Stack::new(blocks::item_named("diamond_leggings").unwrap(), 1).with_extras(data)));
+        update_equipment(&mut player, 1);
+        ignite(&mut player, 160);
+        assert_eq!(player.vit.fire, 32, "новые чары не тушат уже идущий огонь");
+        player.vit.extinguish();
+        ignite(&mut player, 160);
+        assert_eq!(player.vit.fire, 0);
+        assert_eq!(protected_blast_push(&player, (1.0, 2.0, -1.0)), (0.0, 0.0, 0.0));
+        player.inventory.set(6, None);
+        player.inventory.set(7, None);
+        update_equipment(&mut player, 2);
+        ignite(&mut player, 80);
+        assert_eq!(player.vit.fire, 80);
+        assert_eq!(protected_blast_push(&player, (1.0, 2.0, -1.0)), (1.0, 2.0, -1.0));
+    }
+
+    #[test]
     fn foods_follow_the_wiki_table() {
         let bread = food_of("bread").expect("хлеб — еда");
 
@@ -2891,6 +3071,85 @@ mod tests {
         assert_eq!(food_of("dried_kelp").expect("ламинария").ticks, 16);
         assert!(food_of("golden_apple").expect("яблоко").always);
         assert!(food_of("stone").is_none());
+        assert!(food_of("suspicious_stew").unwrap().always);
+        assert_eq!(food_of("poisonous_potato").unwrap().nutrition, 2);
+        assert_eq!(food_of("pufferfish").unwrap().nutrition, 1);
+    }
+
+    #[test]
+    fn honey_and_stew_are_usable_at_full_hunger_in_either_hand() {
+        for hand in [0, 1] {
+            for (name, ticks) in [("honey_bottle", 40), ("suspicious_stew", 32), ("milk_bucket", 32)] {
+                let mut player = archer(GAME_MODE_SURVIVAL, false);
+                let slot = if hand == 1 { inventory::OFFHAND } else { player.inventory.selected_slot() };
+                player.inventory.set(slot, Some(Stack::new(blocks::item_named(name).unwrap(), 1)));
+                assert!(start_eating(&mut player, hand), "{name}, {hand}");
+                assert_eq!(player.net.eating.as_ref().unwrap().ticks_left, ticks);
+                assert_eq!(living_flags(&player), if hand == 1 { 3 } else { 1 });
+                assert!(eating_matches(&player, player.net.eating.as_ref().unwrap()));
+                player.inventory.set(slot, None);
+                assert!(!eating_matches(&player, player.net.eating.as_ref().unwrap()));
+            }
+        }
+    }
+
+    #[test]
+    fn containers_return_to_the_used_hand_inventory_or_overflow() {
+        let mut player = archer(GAME_MODE_SURVIVAL, false);
+        let honey = blocks::item_named("honey_bottle").unwrap();
+        let glass = blocks::item_named("glass_bottle").unwrap();
+        let slot = inventory::OFFHAND;
+        player.inventory.set(slot, Some(Stack::new(honey, 2)));
+        assert!(consume_stack(&mut player, slot, "glass_bottle").is_none());
+        assert_eq!(player.inventory.slot(slot), Some(Stack::new(honey, 1)));
+        assert!(player.inventory.slots().contains(&Some(Stack::new(glass, 1))));
+        assert!(consume_stack(&mut player, slot, "glass_bottle").is_none());
+        assert_eq!(player.inventory.slot(slot), Some(Stack::new(glass, 1)));
+        let stone = blocks::item_named("stone").unwrap();
+        for filled in inventory::FIRST_MAIN..=inventory::LAST_HOTBAR { player.inventory.set(filled, Some(Stack::new(stone, 64))); }
+        player.inventory.set(slot, Some(Stack::new(honey, 2)));
+        assert_eq!(consume_stack(&mut player, slot, "glass_bottle"), Some(Stack::new(glass, 1)));
+        player.game_mode = GAME_MODE_CREATIVE;
+        assert!(consume_stack(&mut player, slot, "glass_bottle").is_none());
+        assert_eq!(player.inventory.slot(slot), Some(Stack::new(honey, 1)));
+    }
+
+    #[test]
+    fn changed_selected_slot_cannot_finish_an_old_meal() {
+        let mut player = archer(GAME_MODE_SURVIVAL, false);
+        player.inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(blocks::item_named("golden_apple").unwrap(), 1)));
+        assert!(start_eating(&mut player, 0));
+        player.inventory.select(1);
+        assert!(!eating_matches(&player, player.net.eating.as_ref().unwrap()));
+    }
+
+    #[test]
+    fn eating_accepts_more_of_the_same_item_but_not_a_changed_component() {
+        let mut player = archer(GAME_MODE_SURVIVAL, false);
+        let slot = player.inventory.selected_slot();
+        let apple = Stack::new(blocks::item_named("golden_apple").unwrap(), 1);
+        player.inventory.set(slot, Some(apple));
+        assert!(start_eating(&mut player, 0));
+        player.inventory.set(slot, Some(apple.with_count(2)));
+        assert!(eating_matches(&player, player.net.eating.as_ref().unwrap()));
+        player.inventory.set(slot, Some(apple.with_extras(crate::stackdata::Data { damage: 1, ..Default::default() })));
+        assert!(!eating_matches(&player, player.net.eating.as_ref().unwrap()));
+    }
+
+    #[test]
+    fn creative_can_consume_food_and_drinks_without_losing_them() {
+        for name in ["bread", "golden_apple", "honey_bottle", "potion", "milk_bucket"] {
+            let mut player = archer(GAME_MODE_CREATIVE, false);
+            let slot = player.inventory.selected_slot();
+            let stack = Stack::new(blocks::item_named(name).unwrap(), 1);
+            player.inventory.set(slot, Some(stack));
+            assert!(start_eating(&mut player, 0), "{name}");
+            assert!(consume_stack(&mut player, slot, "glass_bottle").is_none());
+            assert_eq!(player.inventory.slot(slot), Some(stack));
+            stop_eating(&mut player);
+            player.game_mode = GAME_MODE_SPECTATOR;
+            assert!(!start_eating(&mut player, 0));
+        }
     }
 
     #[test]
@@ -3026,3 +3285,204 @@ mod tests {
         assert_eq!(death_text(Source::Lava, "Anya"), "Anya tried to swim in lava");
     }
 }
+
+#[cfg(test)]
+mod itemaudit2_tests {
+    use super::*;
+    #[test]
+    fn player_projectiles_ignore_difficulty_while_mob_projectiles_scale() {
+        for source in [Source::Arrow, Source::WindCharge] {
+            for difficulty in 0..=3 {
+                assert_eq!(projectile_difficulty(8.0, source, difficulty, true), 8.0);
+                assert_eq!(projectile_difficulty(8.0, source, difficulty, false), survival::scaled(8.0, difficulty));
+            }
+        }
+    }
+
+    #[test]
+    fn turtle_shell_refreshes_water_breathing_only_on_head_in_air() {
+        let mut player = PlayerState::new([51; 16], "ItemAudit2".into(), None, None, 0x7F, 51, (0.0, 64.0, 0.0));
+        let shell = Stack::new(blocks::item_named("turtle_helmet").unwrap(), 1);
+        player.inventory.set(inventory::OFFHAND, Some(shell));
+        assert!(turtle_shell_effect(&player, false).is_none());
+        player.inventory.set(5, Some(shell));
+        let effect = turtle_shell_effect(&player, false).unwrap();
+        assert_eq!((effect.kind, effect.ticks_left), (survival::EffectKind::WaterBreathing, 200));
+        player.vit.give_effect_shown(effect);
+        assert!(turtle_shell_effect(&player, true).is_none());
+        for _ in 0..200 { player.vit.effects_tick(); }
+        assert!(!player.vit.has_effect(survival::EffectKind::WaterBreathing));
+        assert!(turtle_shell_effect(&player, false).is_some());
+    }
+}
+
+#[cfg(test)]
+mod totem_itemaudit_tests {
+    use super::*;
+    #[test]
+    fn totem_consumption_prefers_main_hand_and_preserves_offhand_until_needed() {
+        let mut player = PlayerState::new([52; 16], "ItemAudit2".into(), None, None, 0x7F, 52, (0.0, 64.0, 0.0));
+        let totem = Stack::new(blocks::item_named("totem_of_undying").unwrap(), 1);
+        player.inventory.set(player.inventory.selected_slot(), Some(totem));
+        player.inventory.set(inventory::OFFHAND, Some(totem));
+        assert!(take_totem(&mut player));
+        assert!(player.inventory.held().is_none());
+        assert_eq!(player.inventory.slot(inventory::OFFHAND), Some(totem));
+        assert!(take_totem(&mut player));
+        assert!(player.inventory.slot(inventory::OFFHAND).is_none());
+        assert!(!take_totem(&mut player));
+        let mut vit = survival::Vitals::new();
+        vit.give_effect(survival::EffectKind::FireResistance, 0, 800);
+        assert!(vit.hurt(100.0, Source::Lava, false).is_none());
+    }
+}
+
+#[cfg(test)]
+mod itemaudit3_tests {
+    use super::*;
+    fn shared() -> Shared {
+        Shared::new(World::in_memory(),World::in_memory(),Default::default(),Default::default(),Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/itemaudit3/unused-ops.json")),crate::skins::Settings::default())
+    }
+    fn player(name: &str, hand: i32) -> PlayerState {
+        let mut p=PlayerState::new([93;16],"ItemAudit3".into(),None,None,0x7f,93,(0.5,1.0,0.5));
+        p.game_mode=GAME_MODE_SURVIVAL;
+        let slot=if hand==1 {inventory::OFFHAND} else {p.inventory.selected_slot()};
+        p.inventory.set(slot,Some(Stack::new(blocks::item_named(name).unwrap(),3)));p
+    }
+    #[test]
+    fn spyglass_uses_either_hand_and_stops_without_wear() {
+        let shared=shared();
+        for hand in [0,1] {
+            let mut p=player("spyglass",hand);
+            assert!(start_using(&shared,&mut p,hand,0));
+            assert_eq!(p.net.using.unwrap().kind,UseKind::Spyglass);
+            assert_eq!(p.net.using.unwrap().hand,hand);
+            assert!(!start_using(&shared,&mut p,hand,1));
+            release_use(&mut p,&shared);assert!(p.net.using.is_none());
+            let slot=if hand==1 {inventory::OFFHAND} else {p.inventory.selected_slot()};
+            assert_eq!(p.inventory.slot(slot).unwrap().count,1);
+            assert_eq!(p.inventory.slot(slot).unwrap().extras().damage,0);
+            p.game_mode=GAME_MODE_SPECTATOR;assert!(!start_using(&shared,&mut p,hand,0));
+        }
+    }
+    #[test]
+    fn chorus_is_food_at_full_hunger_and_cooldown_does_not_block_other_food() {
+        for hand in [0,1] {
+            let mut p=player("chorus_fruit",hand);
+            assert!(start_eating_at(&mut p,hand,0));
+            let e=p.net.eating.as_ref().unwrap();assert_eq!((e.nutrition,e.saturation,e.ticks_left),(4,2.4,32));
+            stop_eating(&mut p);p.item_cooldowns.insert("chorus_fruit",20);
+            assert!(!start_eating_at(&mut p,hand,19));
+            assert!(start_eating_at(&mut p,hand,20));stop_eating(&mut p);
+            let slot=if hand==1 {inventory::OFFHAND} else {p.inventory.selected_slot()};
+            p.inventory.set(slot,Some(Stack::new(blocks::item_named("golden_apple").unwrap(),1)));
+            assert!(start_eating_at(&mut p,hand,19));
+        }
+    }
+    async fn eat(name: &str, hand: i32, creative: bool) -> PlayerState {
+        // Локальная пара сокетов для пакетного буфера, без Minecraft-сервера.
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let _client=TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let (mut server,_)=listener.accept().await.unwrap();let mut out=Outgoing::new(&mut server);
+        let shared=shared();let mut p=player(name,hand);
+        if creative {p.game_mode=GAME_MODE_CREATIVE;}
+        assert!(start_eating(&mut p,hand));
+        for _ in 0..32 {effects_and_eating_tick(&mut out,&shared,&mut p,2).await.unwrap();}
+        assert!(p.net.eating.is_none());
+        let slot=if hand==1 {inventory::OFFHAND} else {p.inventory.selected_slot()};
+        assert_eq!(p.inventory.slot(slot).unwrap().count,if creative {3} else {2});
+        p
+    }
+    #[tokio::test]
+    async fn golden_apple_finishes_in_both_hands_and_applies_exact_buffs() {
+        for hand in [0,1] {for creative in [false,true] {
+            let p=eat("golden_apple",hand,creative).await;
+            assert_eq!(p.vit.absorption,4.0);
+            assert!(p.vit.effects.iter().any(|e|e.kind==survival::EffectKind::Regeneration && e.amplifier==1 && e.ticks_left==100));
+            assert!(p.vit.effects.iter().any(|e|e.kind==survival::EffectKind::Absorption && e.amplifier==0 && e.ticks_left==2400));
+        }}
+    }
+    #[tokio::test]
+    async fn enchanted_apple_applies_all_four_buffs_and_protects_from_fire() {
+        for hand in [0,1] {for creative in [false,true] {
+            let mut p=eat("enchanted_golden_apple",hand,creative).await;
+            assert_eq!(p.vit.absorption,16.0);
+            for (kind,a,t) in [(survival::EffectKind::Regeneration,1,400),(survival::EffectKind::Absorption,3,2400),(survival::EffectKind::Resistance,0,6000),(survival::EffectKind::FireResistance,0,6000)] {
+                assert!(p.vit.effects.iter().any(|e|(e.kind,e.amplifier,e.ticks_left)==(kind,a,t)));
+            }
+            assert!(p.vit.hurt(4.0,Source::Lava,false).is_none());
+        }}
+    }
+    fn waiting_trial(shared: &Shared) {
+        let mut w=shared.world_in(Dimension::Overworld).lock().unwrap();
+        w.set_block(3,1,0,blocks::state_from_text("trial_spawner[trial_spawner_state=waiting_for_players]").unwrap());
+        w.with_trial(3,1,0,|data| {
+            let crate::trial::Data::Spawner(s)=data else {panic!("спавнер");};
+            s.normal.entity="minecraft:zombie".into();s.ominous.entity="minecraft:zombie".into();
+        }).unwrap();
+    }
+    #[tokio::test]
+    async fn bad_omen_converts_at_visible_waiting_trial_and_preserves_longer_omen() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let _client=TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let (mut server,_)=listener.accept().await.unwrap();let mut out=Outgoing::new(&mut server);
+        let shared=shared();waiting_trial(&shared);let mut p=player("apple",0);
+        p.vit.give_effect(survival::EffectKind::BadOmen,2,20);
+        {let mut w=shared.world_in(p.dimension).lock().unwrap();for y in 0..=3 {w.set_block_silently(2,y,0,blocks::state_by_name("stone").unwrap());}}
+        trial_omen(&mut out,&shared,&mut p,2).await.unwrap();assert!(p.vit.has_effect(survival::EffectKind::BadOmen));
+        {let mut w=shared.world_in(p.dimension).lock().unwrap();for y in 0..=3 {w.set_block_silently(2,y,0,crate::world::AIR);}}
+        trial_omen(&mut out,&shared,&mut p,2).await.unwrap();
+        assert!(!p.vit.has_effect(survival::EffectKind::BadOmen));
+        assert_eq!(p.vit.effects.iter().find(|e|e.kind==survival::EffectKind::TrialOmen).unwrap().ticks_left,54000);
+        assert_eq!(crate::trial::omen_duration(1,80000),80000);
+        assert_eq!(crate::trial::omen_duration(5,survival::INFINITE),survival::INFINITE);
+    }
+    #[tokio::test]
+    async fn trial_omen_marks_waiting_spawner_without_consuming_effect() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let _client=TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let (mut server,_)=listener.accept().await.unwrap();let mut out=Outgoing::new(&mut server);
+        let shared=shared();waiting_trial(&shared);let mut p=player("apple",0);
+        p.vit.give_effect(survival::EffectKind::TrialOmen,0,300);
+        trial_omen(&mut out,&shared,&mut p,2).await.unwrap();
+        assert!(crate::trial::ominous_state(shared.world_in(p.dimension).lock().unwrap().get_block(3,1,0)));
+        assert_eq!(p.vit.effects[0].ticks_left,300);
+    }
+    #[tokio::test]
+    async fn ominous_bottle_drinks_then_starts_trial_at_component_level() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let _client=TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let (mut server,_)=listener.accept().await.unwrap();let mut out=Outgoing::new(&mut server);
+        let shared=shared();waiting_trial(&shared);let mut p=player("ominous_bottle",0);
+        let slot=p.inventory.selected_slot();
+        p.inventory.set(slot,Some(p.inventory.held().unwrap().with_extras(crate::stackdata::Data {ominous:Some(2),..Default::default()})));
+        assert!(start_eating(&mut p,0));
+        for _ in 0..32 {effects_and_eating_tick(&mut out,&shared,&mut p,2).await.unwrap();}
+        assert_eq!(p.vit.effect_level(survival::EffectKind::BadOmen),3);
+        effects_and_eating_tick(&mut out,&shared,&mut p,2).await.unwrap();
+        assert!(!p.vit.has_effect(survival::EffectKind::BadOmen));
+        assert_eq!(p.vit.effects.iter().find(|e|e.kind==survival::EffectKind::TrialOmen).unwrap().ticks_left,54000);
+        assert_eq!(p.inventory.held().unwrap().count,2);
+    }
+    #[tokio::test]
+    async fn feather_falling_reduces_pearl_cost_with_protection_cap() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let _client=TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let (mut server,_)=listener.accept().await.unwrap();let mut out=Outgoing::new(&mut server);
+        let shared=shared();
+        for (feather,protection,expected) in [(0,0,5.0),(4,0,2.6),(4,4,1.8)] {
+            let mut p=player("ender_pearl",0);let mut data=crate::stackdata::Data::default();
+            data.set_enchant(crate::stackdata::enchantment_number("feather_falling").unwrap(),feather);
+            data.set_enchant(crate::stackdata::enchantment_number("protection").unwrap(),protection);
+            p.inventory.set(8,Some(Stack::new(blocks::item_named("diamond_boots").unwrap(),1).with_extras(data)));
+            hit(&mut out,&shared,&mut p,5.0,Source::Fall,0).await.unwrap();
+            assert!((p.vit.health-(20.0-expected)).abs()<0.001);
+        }
+    }
+
+}
+
+#[cfg(test)]
+#[path = "effect_audit_tests.rs"]
+mod itemaudit4_effect_tests;

@@ -18,6 +18,7 @@ pub mod ai;
 pub mod trial_gear;
 pub mod small;
 pub mod small_world;
+pub mod growth;
 pub mod arthropod;
 pub mod dragon;
 pub mod breeze;
@@ -43,6 +44,7 @@ pub mod skeleton;
 mod save;
 pub mod tame;
 pub mod wildlife;
+pub mod wolf_armor;
 
 use crate::blocks;
 use crate::inventory::Stack;
@@ -1529,6 +1531,8 @@ pub struct Mob {
     /// Возраст: отрицательный — детёныш, растёт к нулю; положительный у
     /// взрослого — пауза после разведения.
     pub age: i32,
+    pub age_locked: bool,
+    pub growth_cooldown: u64,
 
     /// Сколько тактов ещё влюблён (0 — нет).
     pub love: i32,
@@ -1724,6 +1728,8 @@ impl Mob {
             no_ai: false,
             silent: false,
             age: 0,
+            age_locked: false,
+            growth_cooldown: 0,
             love: 0,
             love_player: None,
             sheared: false,
@@ -2055,12 +2061,9 @@ impl Mob {
         }
         // Рост и пауза после разведения (вики, Breeding).
         // Детёныш-зомби не растёт (вики, Zombie: «baby zombies never grow up»).
-        if self.age < 0 && !self.kind.hostile() {
-            self.age += 1;
-            if self.age == 0 && self.kind == Kind::Turtle { water::scute(self); }
-        } else if self.age > 0 {
-            self.age -= 1;
-        }
+        let was_baby = self.age < 0;
+        growth::tick_age(self);
+        if was_baby && self.age == 0 && self.kind == Kind::Turtle { water::scute(self); }
 
         if self.love > 0 {
             self.love -= 1;
@@ -2117,58 +2120,29 @@ impl Mob {
             return ai::Plan::default();
         }
 
-        // Эффекты наконечников на прочих мобах; отдельные такты ниже не дублируем.
-        if !self.vitals.effects.is_empty() && !wildlife::kind(self.kind) && !matches!(self.kind, Kind::Witch | Kind::Villager | Kind::ZombieVillager | Kind::CaveSpider | Kind::Silverfish) {
-            let effects = self.vitals.effects_tick();
-            for (amount, source) in effects.hurt {
-                self.hurt(amount, source, None);
-            }
-            if self.is_dead() {
-                return ai::Plan::default();
-            }
+        // Иммунитет нужен и для прямого /effect, не только доставки зельем.
+        if self.kind.spider() || crate::combat::mob_traits(self.kind.name()).0 {
+            self.vitals.remove_effects(Some(crate::survival::EffectKind::Poison));
+        }
+        if crate::combat::mob_traits(self.kind.name()).0 {
+            self.vitals.remove_effects(Some(crate::survival::EffectKind::Regeneration));
         }
 
-        // Ведьма пьёт зелья и без ИИ: это её такт, а не мысль (чёрный ящик,
-        // witch-stand: раненая NoAI-ведьма пьёт лечение). Эффекты — до питья:
-        // выпитое лечение действует на следующем такте.
+        // Вики, Effect: каждый эффект тикает один раз; прежде raider терял
+        // два такта, а witch/villager теряли периодический урон [проверить].
+        // Кролик/лиса/пчела, лошади, водные и новые мобы тикают эффекты в своём
+        // модуле (wildlife, horse, water, newmobs) — здесь их не дублируем.
+        if !self.vitals.effects.is_empty() && !wildlife::kind(self.kind) && !horse::equine(self.kind) && !water::creature(self.kind)
+            && !(newmobs::new_kind(self.kind) || self.kind == Kind::ZombifiedPiglin) {
+            let effects = self.vitals.effects_tick_for(crate::combat::mob_traits(self.kind.name()).0);
+            for (amount, source) in effects.hurt { self.hurt(amount, source, None); }
+            if self.is_dead() { return ai::Plan::default(); }
+        }
+
         if self.kind == Kind::Witch {
-            self.vitals.effects_tick();
             hostile::witch_drink(self, view, ctx, rng);
         }
-
-        // Вики, Silverfish: «Poison damage» будит соседей; пауки яд не носят.
-        if matches!(self.kind, Kind::CaveSpider | Kind::Silverfish) {
-            if self.kind.spider() {
-                self.vitals.effects.retain(|effect| effect.kind != crate::survival::EffectKind::Poison);
-            }
-
-            for (amount, source) in self.vitals.effects_tick().hurt {
-                self.hurt(amount, source, None);
-            }
-
-            if self.is_dead() {
-                return ai::Plan::default();
-            }
-        }
-
-        // Житель: эффекты (регенерация после нового уровня) и голос в покое —
-        // и без ИИ (чёрный ящик, villager-trade: NoAI-житель подаёт голос).
-        if self.kind == Kind::ZombieVillager {
-            self.vitals.effects_tick();
-        }
-
-        // Разбойники: свечение от колокола проходит (raid.rs).
-        if illager::raider(self.kind) && !self.vitals.effects.is_empty() {
-            self.vitals.effects_tick();
-        }
-
-        if self.kind == Kind::Villager {
-            self.vitals.effects_tick();
-
-            if self.no_ai {
-                ai::voice(self, rng);
-            }
-        }
+        if self.kind == Kind::Villager && self.no_ai { ai::voice(self, rng); }
 
         // Иссушитель без ИИ тоже подаёт голос (чёрный ящик, wither-half-armor:
         // entity.wither.ambient у NoAI).
@@ -2303,7 +2277,8 @@ impl Mob {
     /// на земле `speed²·(0,6/f)³` (чёрный ящик, probe-cow-plain: у коровы
     /// 0,2 даёт 0,04 за такт — шаг 0,088 блока), в воздухе 0,02.
     pub fn physics(&mut self, view: &dyn View, speed: f64, jump: bool) {
-        let effect_speed = (1.0 - 0.15 * f64::from(self.vitals.effect_level(crate::survival::EffectKind::Slowness))).max(0.0);
+        let effect_speed = (1.0 + 0.2 * f64::from(self.vitals.effect_level(crate::survival::EffectKind::Speed)))
+            * (1.0 - 0.15 * f64::from(self.vitals.effect_level(crate::survival::EffectKind::Slowness))).max(0.0);
         let speed = speed * effect_speed;
         let (cell_x, cell_y, cell_z) = self.cell();
         let here = view.block(cell_x, cell_y, cell_z);
@@ -2326,6 +2301,7 @@ impl Mob {
         if jump && self.on_ground {
             // Прыжок: 0,42 вверх (вики, Jumping: «0.42»).
             self.vy = if self.kind == Kind::MagmaCube { 0.42 + 0.1 * f64::from(self.nether.size) } else { 0.42 };
+            self.vy += 0.1 * f64::from(self.vitals.effect_level(crate::survival::EffectKind::JumpBoost));
         }
 
         // Утопленник плывёт к цели в воде: тяга `SWIM_THRUST · скорость` вперёд и
@@ -2436,7 +2412,15 @@ impl Mob {
         }
 
         if !(self.kind.spider() && self.h.climbing) {
-            self.vy = (self.vy - GRAVITY) * VERTICAL_DRAG;
+            let levitation = self.vitals.effect_level(crate::survival::EffectKind::Levitation);
+            if levitation > 0 {
+                self.vy += (0.05 * f64::from(levitation) - self.vy) * 0.2;
+                self.vitals.fall = 0.0;
+            } else {
+                let gravity = if self.vy <= 0.0 && self.vitals.has_effect(crate::survival::EffectKind::SlowFalling) { 0.01 } else { GRAVITY };
+                self.vy -= gravity;
+            }
+            self.vy *= VERTICAL_DRAG;
         }
 
         // Курица падает медленно (вики, Chicken: «slow falling»): в воздухе
@@ -2558,7 +2542,8 @@ impl Mob {
         // Големы падения не боятся (вики, Iron Golem, Snow Golem).
         // Вики, Frog: «5 ... less fall damage».
         let safe_fall=if self.kind==Kind::Goat { 10.0 } else if self.kind==Kind::Camel { 6.0 } else if self.kind==Kind::Frog { crate::survival::SAFE_FALL+5.0 } else { crate::survival::SAFE_FALL };
-        if fall > safe_fall && !matches!(self.kind, Kind::Chicken | Kind::Bee) && self.kind != Kind::Breeze && !golem::golem(self.kind) {
+        let safe_fall = safe_fall + self.vitals.effect_level(crate::survival::EffectKind::JumpBoost) as f32;
+        if fall > safe_fall && !self.vitals.has_effect(crate::survival::EffectKind::SlowFalling) && !matches!(self.kind, Kind::Chicken | Kind::Bee) && self.kind != Kind::Breeze && !golem::golem(self.kind) {
             let damage = if horse::equine(self.kind) { horse::fall_damage(fall) } else { ((fall - safe_fall - 1.0e-4) * if self.kind==Kind::Camel { 0.5 } else { 1.0 }).ceil() };
             if horse::equine(self.kind) && self.horse.rider.is_some() { self.horse.rider_fall += damage; }
 
@@ -2577,12 +2562,53 @@ impl Mob {
         self.hurt(amount, source, push)
     }
 
+    /// Вики, Fire Aspect/Flame: огонь должен быть виден loot уже при
+    /// смертельном ударе. Неудавшийся удар не оставляет поджог [проверить].
+    pub fn hurt_burning(&mut self, amount: f32, source: Source, push: Option<Push>, breach: f32, ticks: i32) -> Option<Hit> {
+        let before = self.vitals.fire;
+        if !self.fire_immune() { self.vitals.ignite(ticks); }
+        let hit = self.hurt_breached(amount, source, push, breach);
+        if hit.is_none() { self.vitals.fire = before; }
+        hit
+    }
+
+    fn fire_immune(&self) -> bool {
+        matches!(self.kind, Kind::Blaze | Kind::Ghast | Kind::MagmaCube | Kind::Strider | Kind::WitherSkeleton | Kind::ZombifiedPiglin | Kind::Wither | Kind::EnderDragon)
+    }
+
+    pub fn effect_melee_damage(&self, base: f32) -> f32 {
+        use crate::survival::EffectKind;
+        (base + 3.0 * self.vitals.effect_level(EffectKind::Strength) as f32
+            - 4.0 * self.vitals.effect_level(EffectKind::Weakness) as f32).max(0.0)
+    }
+
+    /// Вики, Effect/Undead: единая проверка для splash/cloud/tipped arrow.
+    /// Кристалл, узел, челюсти и снаряды не живые [проверить].
+    pub fn accepts_effect(&self, effect: crate::survival::EffectKind) -> bool {
+        use crate::survival::EffectKind;
+        !self.is_dead()
+            && !matches!(self.kind, Kind::EnderDragon | Kind::EndCrystal | Kind::LeashKnot | Kind::EvokerFangs | Kind::ShulkerBullet)
+            && (self.kind != Kind::Wither || effect.instant())
+            && !(crate::combat::mob_traits(self.kind.name()).0 && matches!(effect, EffectKind::Poison | EffectKind::Regeneration))
+            && !(self.kind.spider() && effect == EffectKind::Poison)
+            && !(self.kind == Kind::Slime && effect == EffectKind::Oozing)
+            && !(self.kind == Kind::Silverfish && effect == EffectKind::Infested)
+    }
+
     /// Удар. `push` — кто и как толкнул (None — урон без толчка: падение,
     /// команда). Возвращает исход или None, если удар не прошёл (вики,
     /// Damage: «Invulnerability frames»).
     pub fn hurt(&mut self, amount: f32, source: Source, push: Option<Push>) -> Option<Hit> {
+        self.hurt_breached(amount, source, push, 1.0)
+    }
+
+    /// Пробивание действует и на естественную броню моба (вики, Breach:
+    /// «natural armor points»). Остальной путь урона общий [проверить].
+    pub fn hurt_breached(&mut self, amount: f32, source: Source, push: Option<Push>, breach: f32) -> Option<Hit> {
         if horse::undead(self.kind) && source == Source::Drown { return None; }
-        if self.is_dead() { return None; }
+        if self.is_dead() || (self.fire_immune() && matches!(source, Source::InFire | Source::OnFire | Source::Lava | Source::Fireball)) {
+            return None;
+        }
         if self.kind == Kind::Zoglin && matches!(source, Source::InFire | Source::OnFire | Source::Lava | Source::Drown) { return None; }
         if matches!(self.kind,Kind::CopperGolem|Kind::HappyGhast) && source == Source::Fall { return None; }
         if self.kind == Kind::CopperGolem && source == Source::Drown { return None; }
@@ -2643,17 +2669,30 @@ impl Mob {
         }
 
         // Ведьма: магия на 85 % слабее (вики, Witch).
-        let amount = if self.kind == Kind::Witch && source == Source::Magic { amount * 0.15 } else { amount };
+        let amount = if self.kind == Kind::Witch && matches!(source, Source::Magic | Source::IndirectMagic) { amount * 0.15 } else { amount };
         let before = self.vitals.health;
         let amount = if armored(source) {
-            if let Some(gear)=&self.h.trial_gear { crate::combat::after_armor(amount,self.armor(),trial_gear::bonus(gear,crate::attributes::ARMOR_TOUGHNESS)) }
+            if breach != 1.0 {
+                let toughness = if let Some(gear)=&self.h.trial_gear { trial_gear::bonus(gear,crate::attributes::ARMOR_TOUGHNESS) } else if horse::equine(self.kind) { horse::toughness(self) } else { 0.0 };
+                crate::combat::after_armor_breached(amount, self.armor(), toughness, breach)
+            }
+            else if let Some(gear)=&self.h.trial_gear { crate::combat::after_armor(amount,self.armor(),trial_gear::bonus(gear,crate::attributes::ARMOR_TOUGHNESS)) }
             else if horse::equine(self.kind) { crate::combat::after_armor(amount, self.armor(), horse::toughness(self)) } else { after_armor(amount, self.armor()) }
         } else { amount };
         let amount=if let Some(gear)=&self.h.trial_gear {
             let points=gear[1..].iter().flatten().map(|s|crate::combat::protection_points(&s.extras(),source)).sum();
             crate::combat::after_protection(amount,points)
         } else {amount};
+        let armor_absorbs = wolf_armor::protects(self, source);
+        let absorption_before = self.vitals.absorption;
         let mut hit = self.vitals.hurt(amount, source, false)?;
+        if armor_absorbs {
+            wolf_armor::damage(self, hit.taken);
+            self.vitals.health = before;
+            self.vitals.absorption = absorption_before;
+            self.vitals.dead = false;
+            hit.taken = 0.0; hit.absorbed = 0.0; hit.died = false;
+        }
 
         // Снято на самом деле — не больше оставшегося здоровья.
         hit.taken = hit.taken.min(before + hit.absorbed);
@@ -2744,7 +2783,7 @@ impl Mob {
             let hurt = if self.kind == Kind::Armadillo && self.small.roll != 0 { "minecraft:entity.armadillo.hurt_reduced" } else { hurt };
             let hurt = if self.kind == Kind::Shulker && self.h.peek == 0 { "minecraft:entity.shulker.hurt_closed" } else { hurt };
 
-            self.events.push(Event::Sound { name: hurt, volume: self.sound_volume(), pitch: self.voice_pitch() });
+            if !armor_absorbs { self.events.push(Event::Sound { name: hurt, volume: self.sound_volume(), pitch: self.voice_pitch() }); }
             golem::crack_sound(self, before);
 
             // Паника — только от удара существа: падение и команда не пугают
@@ -2838,6 +2877,10 @@ impl Mob {
 
     /// Смерть: клиентам — событие, миру — добыча.
     pub fn die(&mut self) {
+        if self.kind == Kind::Wolf && let Some(armor) = wolf_armor::stack(self) {
+            self.events.push(Event::Loot(vec![armor])); self.tame.armor = None;
+        }
+
         if self.dead_for > 0 {
             return;
         }
@@ -2903,7 +2946,7 @@ impl Mob {
         } else {
             self.kind.save_id()
         };
-        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute));
+        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked);
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -2947,7 +2990,7 @@ impl Mob {
         if newmobs::new_kind(self.kind) { newmobs::write(&self.newmobs, out); }
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
-        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) {
+        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked {
             leash::write_tail(self, out);
         }
     }
@@ -3105,6 +3148,11 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
             _ => (name, crate::stackdata::Data::default()),
         };
 
+        // Вики, Fire Aspect: горящая добыча готовится и при смертельном ударе.
+        let name = if mob.vitals.fire > 0 { match name {
+            "beef" => "cooked_beef", "porkchop" => "cooked_porkchop", "mutton" => "cooked_mutton",
+            "chicken" => "cooked_chicken", "rabbit" => "cooked_rabbit", "cod" => "cooked_cod", "salmon" => "cooked_salmon", other => other,
+        } } else { name };
         if let (Some(item), true) = (blocks::item_named(name), count > 0) {
             let mut stack = Stack::new(item, count);
 
@@ -3766,7 +3814,12 @@ pub fn step_all(
         }
 
         let sense = if guardian::guardian(mob.kind) { &guardian_ctx } else if mob.kind==Kind::Drowned { &drowned_ctx } else { &ctx };
-        let plan = mob.tick(view, sense, rng);
+        let mut plan = mob.tick(view, sense, rng);
+        // Вики, Strength/Weakness: +3L / −4L к melee; луч стража — магия.
+        if !guardian::guardian(mob.kind) && let Some(melee) = &mut plan.melee {
+            melee.damage = mob.effect_melee_damage(melee.damage);
+        }
+        if let Some((_, damage, _)) = &mut plan.bite { *damage = mob.effect_melee_damage(*damage); }
 
         // Снежный голем: след и таяние — и без ИИ (snow-golem-shear).
         outcome.snow.extend(golem::snow_tick(mob, view, true));
@@ -3800,7 +3853,7 @@ pub fn step_all(
                 amplifier: i32::from(env.difficulty.saturating_sub(1)).min(2),
                 ticks_left: mob.villager.conversion,
                 ambient: false,
-                visible: true,
+                visible: true, show_icon: true,
             });
         }
 
@@ -4146,8 +4199,8 @@ pub fn step_all(
         items.add_mob_late(baby);
 
         if let Some(mob) = items.mobs_mut().last_mut().filter(|_| cured) {
-            mob.vitals.give_effect_shown(crate::survival::Effect { kind: crate::survival::EffectKind::Nausea, amplifier: 0, ticks_left: CURED_NAUSEA, ambient: false, visible: true });
-            mob.vitals.give_effect_shown(crate::survival::Effect { kind: crate::survival::EffectKind::Strength, amplifier: 0, ticks_left: 1, ambient: false, visible: true });
+            mob.vitals.give_effect_shown(crate::survival::Effect { kind: crate::survival::EffectKind::Nausea, amplifier: 0, ticks_left: CURED_NAUSEA, ambient: false, visible: true, show_icon: true });
+            mob.vitals.give_effect_shown(crate::survival::Effect { kind: crate::survival::EffectKind::Strength, amplifier: 0, ticks_left: 1, ambient: false, visible: true, show_icon: true });
         }
     }
 
@@ -4219,7 +4272,7 @@ pub fn convert(old: &Mob, kind: Kind, entity_id: i32) -> Mob {
     new.h.hand_drop = old.h.hand_drop;
     if matches!(old.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) {
         // Вики, Hoglin / Piglin: "Nausea ... for 10 seconds".
-        new.vitals.give_effect_shown(crate::survival::Effect {kind:crate::survival::EffectKind::Nausea,amplifier:0,ticks_left:200,ambient:false,visible:true});
+        new.vitals.give_effect_shown(crate::survival::Effect {kind:crate::survival::EffectKind::Nausea,amplifier:0,ticks_left:200,ambient:false,visible:true, show_icon:true});
     }
     new
 }
@@ -4230,3 +4283,6 @@ pub const DROP_DELAY: u64 = 10;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod itemaudit_tests;

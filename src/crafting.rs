@@ -161,6 +161,15 @@ impl Recipe {
 /// Что получится из сетки 3×3 (ячейки по рядам, слева направо): первый
 /// подходящий рецепт. None — сетка пуста или рецепта нет.
 pub fn craft(slots: &[Option<Stack>]) -> Option<Stack> {
+    // Вики, Suspicious Stew: «flower used to craft it». Рецепт особый:
+    // результат хранит эффект, а не только номер предмета [проверить].
+    let names: Vec<&str> = slots.iter().flatten().filter_map(|stack| crate::blocks::item_name(stack.item)).collect();
+    if names.len() == 4 && ["bowl", "brown_mushroom", "red_mushroom"].iter().all(|name| names.contains(name))
+        && let Some(effect) = names.iter().find_map(|name| crate::survival::stew_effect(name))
+    {
+        let data = crate::stackdata::Data { stew: vec![effect], ..Default::default() };
+        return Some(Stack::new(crate::blocks::item_named("suspicious_stew")?, 1).with_extras(data));
+    }
     let grid = Grid::new(slots)?;
 
     table::RECIPES
@@ -189,6 +198,20 @@ pub fn remainder(item: i32) -> Option<i32> {
 mod tests {
     use super::*;
     use crate::blocks::item_named;
+
+    #[test]
+    fn suspicious_stew_crafting_keeps_the_flower_effect() {
+        for flower in ["allium", "azure_bluet", "dandelion", "golden_dandelion", "blue_orchid", "closed_eyeblossom", "cornflower", "lily_of_the_valley", "oxeye_daisy", "poppy", "torchflower", "red_tulip", "orange_tulip", "white_tulip", "pink_tulip", "open_eyeblossom", "wither_rose"] {
+            let slots = grid(["bowl", "", "red_mushroom", "", flower, "", "brown_mushroom", "", ""]);
+            let stew = craft(&slots).unwrap();
+            assert_eq!(stew.item, item_named("suspicious_stew").unwrap());
+            assert_eq!(stew.extras().stew, vec![crate::survival::stew_effect(flower).unwrap()]);
+            let mut extra = slots.clone();
+            extra[1] = Some(Stack::new(item_named("stone").unwrap(), 1));
+            assert!(craft(&extra).is_none());
+        }
+        assert!(craft(&grid(["bowl", "red_mushroom", "brown_mushroom", "sunflower", "", "", "", "", ""])).is_none());
+    }
 
     fn grid(names: [&str; 9]) -> Vec<Option<Stack>> {
         names.iter().map(|name| (!name.is_empty()).then(|| Stack::new(item_named(name).unwrap(), 1))).collect()

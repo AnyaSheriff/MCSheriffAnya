@@ -1,0 +1,59 @@
+{
+  "name": "itemaudit-blast-knockback",
+  "about": "[проверить] Blast Protection IV: толчок TNT ×0.4 (сумма уровней ≥7 покрыта unit-тестом). Damage отдельно сохраняется. Создан до реализации; не запускался. Случайность не замаскирована.",
+  "blocks": [
+    {
+      "at": [
+        1,
+        0,
+        0
+      ],
+      "state": "minecraft:tnt[unstable=false]"
+    },
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:lever[face=floor,facing=north,powered=false]"
+    }
+  ],
+  "setup": [
+    "fill $(-4,-1,-4) $(9,-1,4) minecraft:obsidian",
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "kill $(bot)",
+    "!wait 20",
+    "tp $(bot) $(-3.5,0,0.5)",
+    "!stopfly",
+    "!wait 10",
+    "item replace entity $(bot) armor.chest with diamond_chestplate[enchantments={blast_protection:4}]",
+    "!wait 5"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 120,
+  "cleanup": [
+    "fill $(-4,-1,-4) $(9,-1,4) minecraft:stone",
+    "fill $(-1,0,-1) $(6,3,2) minecraft:air",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "!wait 4",
+    "!startfly",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "kill @e[type=item,distance=..48]"
+  ],
+  "track_self": true,
+  "item_components": true
+}

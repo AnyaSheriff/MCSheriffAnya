@@ -1,0 +1,46 @@
+{
+  "name": "itemaudit2-enchanted-apple",
+  "about": "[проверить] Enchanted golden apple: Regen II/Absorption IV/Resistance I/Fire Resistance I; лава не наносит урон. Не запускался.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "kill $(bot)",
+    "!wait 20",
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!look 0 0",
+    "!hotbar 0",
+    "damage $(bot) 10",
+    "!wait 25",
+    "give $(bot) minecraft:enchanted_golden_apple 1",
+    "!hotbar 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "use": true
+    },
+    {
+      "after": 60,
+      "cmd": "damage $(bot) 100 minecraft:lava"
+    }
+  ],
+  "record_ticks": 140,
+  "cleanup": [
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "effect clear $(bot)",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ],
+  "track_self": true,
+  "item_components": true,
+  "inventory": true
+}

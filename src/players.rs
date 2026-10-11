@@ -189,6 +189,8 @@ pub enum Order {
 
     /// Перенести в другое место.
     Teleport { x: f64, y: f64, z: f64 },
+    /// Жемчуг не переносит умершего или ушедшего в другое измерение.
+    PearlTeleport { x: f64, y: f64, z: f64, dimension: crate::dimension::Dimension },
 
     /// Повернуть взгляд: поворот по сторонам и наклон в градусах, как в
     /// `tp x y z поворот наклон`. Идёт следом за переносом.
@@ -225,7 +227,8 @@ pub enum Order {
     /// /damage с прямым виновником, причиной или точкой источника.
     CommandDamage { amount: f32, source: crate::survival::Source, origin: crate::combat::DamageOrigin },
     /// Мгновенный урон зелья с известным бросившим игроком.
-    MagicHit { amount: f32, killer: Option<(String, [u8; 16])> },
+    /// `from` — брошенное зелье: номер снаряда и точка удара (урон «indirect_magic» с отдачей).
+    MagicHit { amount: f32, killer: Option<(String, [u8; 16])>, from: Option<(i32, (f64, f64, f64))> },
     /// Команда `experience`: добавить или задать очки либо уровни.
     Experience { set: bool, amount: i32, levels: bool },
     /// Игрок подобрал шарики опыта на такте мира: очки прибавляются, клиент

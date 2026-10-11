@@ -1,0 +1,41 @@
+{
+  "name": "itemaudit4-effect-health_boost",
+  "about": "[проверить] Четвёртый проход: effect-health_boost. Unit-test coverage; vanilla ещё не запускался.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "gamemode survival $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 5,
+      "cmd": "effect give $(bot) health_boost 3 2"
+    },
+    {
+      "after": 15,
+      "cmd": "damage $(bot) 3 minecraft:generic"
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[tag=itemaudit4]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "difficulty peaceful"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true
+}

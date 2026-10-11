@@ -18,6 +18,8 @@ pub const ATTACK_KNOCKBACK: i32 = 3;
 pub const ATTACK_SPEED: i32 = 4;
 pub const BLOCK_BREAK_SPEED: i32 = 5;
 pub const BLOCK_INTERACTION_RANGE: i32 = 6;
+pub const BURNING_TIME: i32 = 7;
+pub const EXPLOSION_KNOCKBACK_RESISTANCE: i32 = 9;
 pub const ENTITY_INTERACTION_RANGE: i32 = 10;
 pub const GRAVITY: i32 = 14;
 pub const JUMP_STRENGTH: i32 = 15;
@@ -26,12 +28,13 @@ pub const LUCK: i32 = 17;
 pub const MAX_ABSORPTION: i32 = 18;
 pub const MAX_HEALTH: i32 = 19;
 pub const MINING_EFFICIENCY: i32 = 20;
-pub const SUBMERGED_MINING_SPEED: i32 = 29;
 pub const MOVEMENT_SPEED: i32 = 22;
 pub const OXYGEN_BONUS: i32 = 23;
 pub const SAFE_FALL_DISTANCE: i32 = 24;
 pub const SNEAKING_SPEED: i32 = 26;
+pub const SUBMERGED_MINING_SPEED: i32 = 29;
 pub const SWEEPING_DAMAGE_RATIO: i32 = 30;
+pub const WATER_MOVEMENT_EFFICIENCY: i32 = 32;
 
 /// Операции модификатора.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -99,11 +102,15 @@ pub fn limits(attribute: i32) -> (f64, f64) {
         ATTACK_DAMAGE => (0.0, 2048.0),
         ATTACK_KNOCKBACK => (0.0, 5.0),
         ATTACK_SPEED => (0.0, 1024.0),
-        KNOCKBACK_RESISTANCE => (0.0, 1.0),
+        KNOCKBACK_RESISTANCE | EXPLOSION_KNOCKBACK_RESISTANCE => (0.0, 1.0),
+        BURNING_TIME => (0.0, 1024.0),
         MAX_ABSORPTION => (0.0, 2048.0),
         MAX_HEALTH => (1.0, 1024.0),
         MOVEMENT_SPEED => (0.0, 1024.0),
         SWEEPING_DAMAGE_RATIO => (0.0, 1.0),
+        SNEAKING_SPEED | WATER_MOVEMENT_EFFICIENCY => (0.0, 1.0),
+        OXYGEN_BONUS | MINING_EFFICIENCY => (0.0, 1024.0),
+        SUBMERGED_MINING_SPEED => (0.0, 20.0),
         _ => (f64::MIN, f64::MAX),
     }
 }
@@ -158,6 +165,7 @@ pub fn player_base(attribute: i32) -> f64 {
         // Скорость шага одинарной точности — как её знает клиент.
         MOVEMENT_SPEED => f64::from(0.1f32),
         SNEAKING_SPEED => 0.3,
+        BURNING_TIME => 1.0,
         _ => 0.0,
     }
 }

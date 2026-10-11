@@ -78,7 +78,9 @@ pub enum Kind {
     GhastFireball,
     /// Снежок снежного голема: урона нет (ифриту — 3), отбрасывает (вики, Snowball).
     Snowball,
+    Egg,
     EnderPearl,
+    ExperienceBottle,
     /// Череп иссушителя: урон, иссушение, взрыв силой 1 (mob/wither.rs).
     WitherSkull,
     LlamaSpit,
@@ -86,6 +88,17 @@ pub enum Kind {
     WindCharge,
     /// Заряд бриза: по прямой, взрыв ветра силой 3 (wind.rs).
     BreezeWindCharge,
+}
+
+impl Kind {
+    /// Вики, Projectile: bottle o' enchanting −0.07, egg/pearl/snowball −0.03.
+    fn gravity(self) -> f64 {
+        match self {
+            Kind::Snowball | Kind::Egg | Kind::EnderPearl => SNOWBALL_GRAVITY,
+            Kind::ExperienceBottle => 0.07,
+            _ => GRAVITY,
+        }
+    }
 }
 
 /// Место, скорость и поворот снаряда.
@@ -135,7 +148,9 @@ impl Flying {
             Kind::SmallFireball => SMALL_FIREBALL_TYPE,
             Kind::GhastFireball => GHAST_FIREBALL_TYPE,
             Kind::Snowball => SNOWBALL_TYPE,
+            Kind::Egg => 39,
             Kind::EnderPearl => 44,
+            Kind::ExperienceBottle => 48,
             Kind::WitherSkull => WITHER_SKULL_TYPE,
             Kind::LlamaSpit => 79,
             Kind::WindCharge => WIND_CHARGE_TYPE,
@@ -225,7 +240,7 @@ impl Flying {
 
     /// Эффекты зелья.
     pub fn effects(&self) -> Vec<Effect> {
-        self.stack.map(|stack| crate::survival::potion_effects(stack.extras().potion.unwrap_or(0))).unwrap_or_default()
+        self.stack.map(|stack| stack.extras().potion_effects()).unwrap_or_default()
     }
 }
 
@@ -248,6 +263,14 @@ pub fn throw_velocity(yaw: f32, pitch: f32, speed: f64, wobble: &mut dyn FnMut()
 
     ((dx / length + wobble()) * speed, (dy / length + wobble()) * speed, (dz / length + wobble()) * speed)
 }
+
+/// Вики, Egg: 1/8 вылупление, затем 1/32 ещё три цыплёнка.
+pub fn egg_hatch(hatch: u32, extra: u32) -> usize {
+    if hatch != 0 { 0 } else if extra == 0 { 4 } else { 1 }
+}
+
+/// Два независимых броска сохраняют среднее 7 и диапазон 3…11.
+pub fn bottle_experience(a: u32, b: u32) -> i32 { 3 + (a % 5 + b % 5) as i32 }
 
 /// Цвет зелья: среднее цветов эффектов с весом «уровень + 1»; без эффектов —
 /// вода (вики, Potion: «Color») [проверить смешение].
@@ -351,7 +374,7 @@ impl Cloud {
     /// Дыхание дракона: радиус 3 растёт до 7 за 600 тактов, ждёт 20 тактов,
     /// мгновенный урон II (dragon-fireball; вики, Dragon Fireball).
     pub fn dragon_breath(entity_id: i32, dimension: Dimension, at: (f64, f64, f64), owner: i32) -> Self {
-        let effects = vec![Effect { kind: EffectKind::InstantDamage, amplifier: 1, ticks_left: 1, ambient: false, visible: true }];
+        let effects = vec![Effect { kind: EffectKind::InstantDamage, amplifier: 1, ticks_left: 1, ambient: false, visible: true, show_icon: true }];
 
         Self { per_tick: (7.0 - 3.0) / 600.0, on_use: 0.0, wait: 20, dragon: true, ..Self::lingering(entity_id, dimension, at, effects, owner, true) }
     }
@@ -425,9 +448,11 @@ enum Struck {
 /// Ближайшая точка ящика (`low`…`low + height`, полуширина `half`) к `at`:
 /// расстояние до неё (вики, Splash Potion: «closest point of the hitbox»).
 pub fn box_distance(at: (f64, f64, f64), (cx, low, cz): (f64, f64, f64), half: f64, height: f64) -> f64 {
-    let dx = at.0 - at.0.clamp(cx - half, cx + half);
-    let dy = at.1 - at.1.clamp(low, low + height);
-    let dz = at.2 - at.2.clamp(cz - half, cz + half);
+    // Wiki, Splash Potion, 25w04a: расстояние между обоими hitbox,
+    // а не от точки центра. Зелье имеет размер 0.25 × 0.25.
+    let dx = (cx - half - at.0 - 0.125).max(at.0 - 0.125 - cx - half).max(0.0);
+    let dy = (low - at.1 - 0.25).max(at.1 - low - height).max(0.0);
+    let dz = (cz - half - at.2 - 0.125).max(at.2 - 0.125 - cz - half).max(0.0);
 
     (dx * dx + dy * dy + dz * dz).sqrt()
 }
@@ -446,13 +471,32 @@ pub fn scaled_ticks(ticks: i32, scale: f64) -> Option<i32> {
     (scaled > 20).then_some(scaled)
 }
 
+/// Облако не использует splash-порог 20t. Дробь срока облака округляется
+/// вниз; бесконечный срок остаётся бесконечным (wiki, Lingering Potion).
+fn delivery_ticks(ticks: i32, scale: f64, duration_scale: f64) -> Option<i32> {
+    if ticks == crate::survival::INFINITE { return (scale > 0.0).then_some(ticks); }
+    if duration_scale == 1.0 { scaled_ticks(ticks, scale) }
+    else { (ticks > 0).then_some(((f64::from(ticks) * scale * duration_scale) as i32).max(1)) }
+}
+
 /// Сила мгновенного эффекта с множителем `scale`: лечение 4·2^уровень,
 /// урон 6·2^уровень (вики, Instant Health / Instant Damage), округление
 /// до целого [проверить].
 pub fn instant_amount(kind: EffectKind, amplifier: i32, scale: f64) -> f32 {
-    let base = if kind == EffectKind::InstantHealth { 4 << amplifier.clamp(0, 20) } else { 6 << amplifier.clamp(0, 20) };
+    let base = crate::survival::instant_base(kind, amplifier);
 
-    (scale * f64::from(base) + 0.5).floor() as f32
+    (scale * f64::from(base) + 0.5) as i32 as f32
+}
+
+/// Вики, Instant Health/Damage: нежить получает именно обратный эффект,
+/// включая его основу 6/4, а не только обратный знак [проверить].
+pub fn instant_kind(kind: EffectKind, undead: bool) -> EffectKind {
+    if !undead { return kind; }
+    match kind {
+        EffectKind::InstantHealth => EffectKind::InstantDamage,
+        EffectKind::InstantDamage => EffectKind::InstantHealth,
+        other => other,
+    }
 }
 
 /// Первая точка отрезка `from → to` в твёрдом блоке: доля пути и блок (шаг по
@@ -542,15 +586,15 @@ type Bystander = (i32, (f64, f64, f64), bool, i32, [u8; 16]);
 enum Deed {
     Effect(i32, Effect),
     Heal(i32, f32),
-    Hurt([u8; 16], f32, Option<(i32, [u8; 16])>),
+    /// Игрок, урон, бросивший и (для брошенного зелья) номер снаряда с точкой удара.
+    Hurt([u8; 16], f32, Option<(i32, [u8; 16])>, Option<(i32, (f64, f64, f64))>),
     Progress([u8; 16], crate::progress::Event),
-    Pearl([u8; 16], (f64, f64, f64)),
 }
 
 /// Наложить эффекты `effects` с силой `scale` (срок × `duration_scale`,
 /// мгновенные × `scale`) на игрока или моба.
 #[allow(clippy::too_many_arguments)]
-fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uuid: [u8; 16], effects: &[Effect], scale: f64, duration_scale: f64, owner: Option<(i32, [u8; 16])>) {
+fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uuid: [u8; 16], effects: &[Effect], scale: f64, duration_scale: f64, owner: Option<(i32, [u8; 16])>, origin: Option<(i32, (f64, f64, f64))>) {
     for effect in effects {
         if effect.kind.instant() {
             let amount = instant_amount(effect.kind, effect.amplifier, scale);
@@ -560,14 +604,31 @@ fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uu
             }
 
             match target {
-                Struck::Player(id) => deeds.push(if effect.kind == EffectKind::InstantHealth { Deed::Heal(id, amount) } else { Deed::Hurt(uuid, amount, owner) }),
+                Struck::Player(id) => deeds.push(if effect.kind == EffectKind::InstantHealth { Deed::Heal(id, amount) } else { Deed::Hurt(uuid, amount, owner, origin) }),
                 Struck::Mob(id) => {
                     if let Some(mob) = mobs.iter_mut().find(|mob| mob.entity_id == id) {
                         // Нежить лечится уроном и ранится лечением (вики, Instant Health).
+                        if !mob.accepts_effect(effect.kind) { continue; }
                         let undead = crate::combat::mob_traits(mob.kind.name()).0;
+                        let kind = instant_kind(effect.kind, undead);
+                        let amount = instant_amount(kind, effect.amplifier, scale);
 
-                        if (effect.kind == EffectKind::InstantDamage) != undead {
-                            if let Some(hit) = mob.hurt(amount, Source::Magic, None) && let Some((_, uuid)) = owner {
+                        if kind == EffectKind::InstantDamage {
+                            // Брошенное зелье бьёт как indirect_magic с отдачей от точки удара
+                            // (чёрный ящик, itemaudit2-splash-mob-harming: тип 23, корова
+                            // получает скорость (0; 0; 0,4)); облако — прежним уроном магии.
+                            let (source, push) = match origin {
+                                Some((potion, at)) => {
+                                    let (dx, dz) = (mob.x - at.0, mob.z - at.2);
+                                    let length = dx.hypot(dz);
+                                    let dir = if length > 1.0e-4 { (dx / length, dz / length) } else { (0.0, 0.0) };
+
+                                    (Source::IndirectMagic, Some(crate::mob::Push { dir, strength: crate::mob::BASE_KNOCKBACK, cause: potion }))
+                                }
+                                None => (Source::Magic, None),
+                            };
+
+                            if let Some(hit) = mob.hurt(amount, source, push) && let Some((_, uuid)) = owner {
                                 mob.credit_to(uuid);
                                 deeds.push(Deed::Progress(uuid, crate::progress::Event::DamageDealt(hit)));
                             }
@@ -580,13 +641,11 @@ fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uu
             continue;
         }
 
-        // Членистоногие: яд чешуйницы зовёт соседей; пауки к яду невосприимчивы.
+        // Вики, Splash Potion: эффект действует на всех восприимчивых живых мобов [проверить].
         if let Struck::Mob(id) = target {
             if let Some(mob) = mobs.iter_mut().find(|mob| mob.entity_id == id)
-                && (matches!(mob.kind, crate::mob::Kind::CaveSpider | crate::mob::Kind::Silverfish) || crate::mob::horse::equine(mob.kind))
-                && !(mob.kind.spider() && effect.kind == EffectKind::Poison)
-                && !(crate::mob::horse::undead(mob.kind) && matches!(effect.kind, EffectKind::Poison | EffectKind::Regeneration))
-                && let Some(ticks) = scaled_ticks(effect.ticks_left, scale * duration_scale)
+                && mob.accepts_effect(effect.kind)
+                && let Some(ticks) = delivery_ticks(effect.ticks_left, scale, duration_scale)
             {
                 mob.vitals.give_effect_shown(Effect { ticks_left: ticks, ..*effect });
             }
@@ -594,7 +653,7 @@ fn apply(deeds: &mut Vec<Deed>, mobs: &mut [crate::mob::Mob], target: Struck, uu
         }
 
         let Struck::Player(id) = target else { continue };
-        let Some(ticks) = scaled_ticks(effect.ticks_left, scale * duration_scale) else { continue };
+        let Some(ticks) = delivery_ticks(effect.ticks_left, scale, duration_scale) else { continue };
 
         deeds.push(Deed::Effect(id, Effect { ticks_left: ticks, ..*effect }));
     }
@@ -684,7 +743,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             flying.vy = (flying.vy + flying.push.1 * FIREBALL_POWER) * drag;
             flying.vz = (flying.vz + flying.push.2 * FIREBALL_POWER) * drag;
         } else if !flying.is_wind() {
-            flying.vy -= if matches!(flying.kind, Kind::Snowball | Kind::EnderPearl) { SNOWBALL_GRAVITY } else { GRAVITY };
+            flying.vy -= flying.kind.gravity();
             flying.vx *= DRAG;
             flying.vy *= DRAG;
             flying.vz *= DRAG;
@@ -840,29 +899,49 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             continue;
         }
 
+        // Вики, Bottle o' Enchanting: «3–11XP (average 7.0)» [проверить].
+        if flying.kind == Kind::ExperienceBottle {
+            let points = bottle_experience(world.random_bits() % 5, world.random_bits() % 5);
+            let mut rng = crate::mob::Rng::new(u64::from(world.random_bits()));
+            items.drop_experience(points, at, &mut || shared.next_entity_id(), &mut rng);
+            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at, 2002, WATER_COLOR), status: None });
+            continue;
+        }
+        // Перенос выполняет подключение владельца, после проверки жизни.
+        // Endermite, chunk ticket и межмировой полёт [проверить].
         if flying.kind == Kind::EnderPearl {
             if let Some((_, origin, _, mode, uuid)) = members.iter().find(|m| m.0 == flying.owner) {
                 // Вики, Endermite: 5 %, у игрока ДО переноса, а не у жемчуга.
                 if *mode != 3 && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed) && world.random_unit() < 0.05 {
-                    items.add_mob(crate::mob::Mob::new(shared.next_entity_id(),crate::mob::Kind::Endermite,*origin));
+                    items.add_mob(crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Endermite, *origin));
                 }
-                world.note_sound_player_at(at,"minecraft:entity.player.teleport",1.0,1.0);
-                deeds.push(Deed::Pearl(*uuid,at));
+                // Звук телепорта и урон 5 (ender_pearl) — у подключения при переносе.
+                shared.players.lock().expect("игроки").order(uuid, crate::players::Order::PearlTeleport { x: at.0, y: at.1, z: at.2, dimension });
             }
-            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at,-1,0),status:None });
+            // Жемчуг уходит без события мира (чёрный ящик: у оригинала только удаление).
+            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at, -1, 0), status: None });
             continue;
+        }
+        if flying.kind == Kind::Egg {
+            let count = egg_hatch(world.random_bits() % 8, world.random_bits() % 32);
+            for _ in 0..count {
+                let mut chick = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Chicken, at);
+                chick.age = crate::mob::BABY_AGE;
+                // [проверить] Визуальные cold/warm chicken variants ещё отсутствуют.
+                items.add_mob_late(chick);
+            }
         }
 
         // Снежок: о сущность — урон (ифриту 3, прочим 0) с толчком по полёту;
         // разлетается частицами — событие сущности 3 (чёрный ящик, snow-golem-shoot).
-        if matches!(flying.kind, Kind::Snowball | Kind::LlamaSpit) {
+        if matches!(flying.kind, Kind::Snowball | Kind::Egg | Kind::LlamaSpit) {
             let length = flying.vx.hypot(flying.vz).max(1.0e-9);
             let dir = (flying.vx / length, flying.vz / length);
 
             match struck {
                 Some(Struck::Mob(id)) => {
                     if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == id) {
-                        let damage = if flying.kind == Kind::LlamaSpit { 1.0 } else if mob.kind == crate::mob::Kind::Blaze { SNOWBALL_BLAZE_DAMAGE } else { 0.0 };
+                        let damage = if flying.kind == Kind::LlamaSpit { 1.0 } else if flying.kind == Kind::Snowball && mob.kind == crate::mob::Kind::Blaze { SNOWBALL_BLAZE_DAMAGE } else { 0.0 };
 
                         if let Some(hit) = mob.hurt(damage, Source::Thrown, Some(crate::mob::Push { dir, strength: crate::mob::BASE_KNOCKBACK, cause: flying.owner }))
                             && let Some(member) = members.iter().find(|m| m.0 == flying.owner)
@@ -894,7 +973,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 None => {}
             }
 
-            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at, 0, 0), status: (flying.kind == Kind::Snowball).then_some(3) });
+            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at, 0, 0), status: matches!(flying.kind, Kind::Snowball | Kind::Egg).then_some(3) });
             continue;
         }
 
@@ -929,7 +1008,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                             mob.credit_player();
                         }
 
-                        if let Some(hit) = mob.hurt(if deflected && mob.kind == crate::mob::Kind::Ghast { 1000.0 } else { 6.0 }, Source::Fireball, Some(push)) {
+                        if let Some(hit) = mob.hurt(if deflected && mob.kind == crate::mob::Kind::Ghast { 1000.0 } else { 6.0 }, Source::LargeFireball, Some(push)) {
                             let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
                             if let Some(uuid) = players.members().iter().find(|member| member.entity_id == owner).map(|member| member.uuid) {
                                 use crate::progress::Event;
@@ -962,13 +1041,17 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         }
 
         let effects = flying.effects();
-        let color = opaque(potion_color(&effects));
+        let tint = flying.stack.map(|stack| stack.extras().potion_color()).unwrap_or_else(|| potion_color(&effects));
+        let color = opaque(tint);
         let instant = effects.iter().any(|effect| effect.kind.instant());
 
         if flying.kind == Kind::Lingering {
-            let cloud = Cloud::lingering(shared.next_entity_id(), dimension, at, effects, flying.owner, struck.is_none());
+            let instant_cloud = effects.iter().any(|effect| effect.kind.instant());
+            let mut cloud = Cloud::lingering(shared.next_entity_id(), dimension, at, effects, flying.owner, struck.is_none());
+            cloud.color = tint;
 
-            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: Some(cloud.entity_id), event: (block_at, 2002, color), status: None });
+            // Мгновенные зелья (лечение, урон) и в склянке-облаке звучат событием 2007 (чёрный ящик, itemaudit4-potion-harming).
+            impacts.push(Impact { dimension, flying: flying.entity_id, cloud: Some(cloud.entity_id), event: (block_at, if instant_cloud { 2007 } else { 2002 }, color), status: None });
             new_clouds.push(cloud);
             continue;
         }
@@ -1004,7 +1087,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
                 let scale = splash_scale(distance, struck == Some(Struck::Player(*id)));
 
-                apply(&mut deeds, &mut [], Struck::Player(*id), *uuid, &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)));
+                apply(&mut deeds, &mut [], Struck::Player(*id), *uuid, &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)), Some((flying.entity_id, at)));
             }
 
             let targets: Vec<(i32, f64)> = items
@@ -1020,7 +1103,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 .collect();
 
             for (id, scale) in targets {
-                apply(&mut deeds, items.mobs_mut(), Struck::Mob(id), [0; 16], &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)));
+                apply(&mut deeds, items.mobs_mut(), Struck::Mob(id), [0; 16], &effects, scale, 1.0, members.iter().find(|m| m.0 == flying.owner).map(|m| (m.0, m.4)), Some((flying.entity_id, at)));
             }
         }
 
@@ -1206,7 +1289,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             cloud.victims.push((id, age + cloud.delay));
             // Облако даёт четверть срока и половину мгновенного (вики,
             // Area Effect Cloud).
-            apply(&mut deeds, items.mobs_mut(), target, uuid, &cloud.effects, 0.5, 0.5, members.iter().find(|m| m.0 == cloud.owner).map(|m| (m.0, m.4)));
+            apply(&mut deeds, items.mobs_mut(), target, uuid, &cloud.effects, 0.5, 0.5, members.iter().find(|m| m.0 == cloud.owner).map(|m| (m.0, m.4)), None);
 
             if cloud.on_use != 0.0 {
                 cloud.radius += cloud.on_use;
@@ -1249,13 +1332,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         match deed {
             Deed::Effect(id, effect) => world.note_potion_effect(id, effect),
             Deed::Heal(id, amount) => world.note_potion_heal(id, amount),
-            Deed::Hurt(uuid, amount, owner) => hurts.push((uuid, amount, owner)),
+            Deed::Hurt(uuid, amount, owner, origin) => hurts.push((uuid, amount, owner, origin)),
             Deed::Progress(uuid, event) => shared.players.lock().expect("список игроков захвачен другим потоком").order(&uuid, crate::players::Order::Progress(event)),
-            Deed::Pearl(uuid, at) => {
-                let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
-                players.order(&uuid, crate::players::Order::Teleport { x: at.0, y: at.1, z: at.2 });
-                players.order(&uuid, crate::players::Order::Hurt { amount: 5.0, source: Source::Fall });
-            }
         }
     }
 
@@ -1265,9 +1343,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     if !hurts.is_empty() {
         let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
-        for (uuid, amount, owner) in hurts {
+        for (uuid, amount, owner, from) in hurts {
             let killer = owner.and_then(|(id, uuid)| players.members().iter().find(|m| m.entity_id == id).map(|m| (m.name.clone(), uuid)));
-            players.order(&uuid, crate::players::Order::MagicHit { amount, killer });
+            players.order(&uuid, crate::players::Order::MagicHit { amount, killer, from });
         }
     }
 }
@@ -1296,7 +1374,7 @@ fn skull_blasts(shared: &Shared, dimension: Dimension, world: &mut World, hits: 
         let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
         let owned = items.mobs().iter().any(|mob| mob.entity_id == hit.owner && mob.kind == crate::mob::Kind::Wither && !mob.is_dead());
         let (amount, source) = if owned { (crate::mob::wither::SKULL_DAMAGE, Source::WitherSkull) } else { (crate::mob::wither::SKULL_DAMAGE_OWNERLESS, Source::Magic) };
-        let wither = crate::mob::wither::skull_wither_ticks(difficulty).map(|ticks| Effect { kind: EffectKind::Wither, amplifier: crate::mob::wither::SKULL_WITHER_AMPLIFIER, ticks_left: ticks, ambient: false, visible: true });
+        let wither = crate::mob::wither::skull_wither_ticks(difficulty).map(|ticks| Effect { kind: EffectKind::Wither, amplifier: crate::mob::wither::SKULL_WITHER_AMPLIFIER, ticks_left: ticks, ambient: false, visible: true, show_icon: true });
         let mut killed = false;
 
         match hit.struck {
@@ -1471,7 +1549,7 @@ mod tests {
         assert_eq!(instant_amount(EffectKind::InstantDamage, 1, 0.5), 6.0);
         // Ближайшая точка ящика: под ногами — 0, сбоку — до грани.
         assert_eq!(box_distance((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.3, 1.8), 0.0);
-        assert!((box_distance((2.3, 1.0, 0.0), (0.0, 0.0, 0.0), 0.3, 1.8) - 2.0).abs() < 1e-9);
+        assert!((box_distance((2.3, 1.0, 0.0), (0.0, 0.0, 0.0), 0.3, 1.8) - 1.875).abs() < 1e-9);
     }
 
     #[test]
@@ -1519,3 +1597,67 @@ mod tests {
         assert!((0.06 + (-0.42) * part).abs() < 1e-9);
     }
 }
+
+#[cfg(test)]
+mod itemaudit_tests {
+    use super::*;
+
+    #[test]
+    fn every_timed_potion_reaches_a_normal_mob_from_splash_and_cloud() {
+        for (number, name) in crate::survival::POTIONS.iter().enumerate().skip(4) {
+            let effects = crate::survival::potion_effects(number as u16);
+            if effects.iter().any(|e| e.kind.instant()) { continue; }
+            for (scale, duration_scale) in [(1.0, 1.0), (0.5, 0.5)] {
+                let mut mobs = [crate::mob::Mob::new(1, crate::mob::Kind::Cow, (0.0, 0.0, 0.0))];
+                apply(&mut Vec::new(), &mut mobs, Struck::Mob(1), [0; 16], &effects, scale, duration_scale, None, None);
+                for effect in &effects {
+                    let actual = mobs[0].vitals.effects.iter().find(|e| e.kind == effect.kind).expect(name);
+                    assert_eq!(actual.amplifier, effect.amplifier, "{name}");
+                    assert_eq!(actual.ticks_left, if duration_scale == 1.0 { effect.ticks_left } else { effect.ticks_left / 4 }, "{name}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn undead_instant_effects_reverse_the_magnitude_as_well_as_the_sign() {
+        for (kind, health) in [(EffectKind::InstantHealth, 8.0), (EffectKind::InstantDamage, 18.0)] {
+            let mut mobs = [crate::mob::Mob::new(1, crate::mob::Kind::Zombie, (0.0, 0.0, 0.0))];
+            mobs[0].vitals.health = 10.0;
+            let effect = Effect { kind, amplifier: 1, ticks_left: 1, ambient: false, visible: true, show_icon: true };
+            // Лечение II наносит 12: используем 20 HP, урон II лечит 8 из 10.
+            if kind == EffectKind::InstantHealth { mobs[0].vitals.health = 20.0; }
+            apply(&mut Vec::new(), &mut mobs, Struck::Mob(1), [0; 16], &[effect], 1.0, 1.0, None, None);
+            assert_eq!(mobs[0].vitals.health, health);
+        }
+    }
+
+    #[test]
+    fn splash_poison_and_regeneration_respect_undead_immunity() {
+        for name in ["poison", "regeneration"] {
+            let mut mobs = [crate::mob::Mob::new(1, crate::mob::Kind::Zombie, (0.0, 0.0, 0.0))];
+            let effects = crate::survival::potion_effects(crate::survival::potion_number(name).unwrap());
+            apply(&mut Vec::new(), &mut mobs, Struck::Mob(1), [0; 16], &effects, 1.0, 1.0, None, None);
+            assert!(mobs[0].vitals.effects.is_empty());
+        }
+    }
+}
+
+#[cfg(test)]
+mod resistance_itemaudit_tests {
+    use super::*;
+    #[test]
+    fn turtle_master_splash_reduces_mob_damage_and_movement() {
+        let mut mobs = [crate::mob::Mob::new(1, crate::mob::Kind::Cow, (0.0, 0.0, 0.0))];
+        let effects = crate::survival::potion_effects(crate::survival::potion_number("turtle_master").unwrap());
+        apply(&mut Vec::new(), &mut mobs, Struck::Mob(1), [0; 16], &effects, 1.0, 1.0, None, None);
+        assert_eq!(mobs[0].vitals.effect_level(EffectKind::Slowness), 4);
+        let hit = mobs[0].hurt(5.0, Source::PlayerAttack, None).unwrap();
+        assert!((hit.taken - 2.0).abs() < 1e-5);
+        assert!((hit.resisted - 3.0).abs() < 1e-5);
+    }
+}
+
+#[cfg(test)]
+#[path = "potion_audit_tests.rs"]
+mod itemaudit4_tests;

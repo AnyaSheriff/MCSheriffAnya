@@ -1,0 +1,43 @@
+{
+  "name": "itemaudit3-bad-omen-trial",
+  "about": "[проверить] Третий проход: bad-omen-trial. Сценарий подготовлен, не запускался; RNG parity не измерена.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule random_tick_speed 0",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "!wait 5",
+    "setblock $(1,0,1) trial_spawner[trial_spawner_state=waiting_for_players]{normal_config:{spawn_potentials:[{weight:1,data:{entity:{id:\"minecraft:zombie\"}}}]},ominous_config:{spawn_potentials:[{weight:1,data:{entity:{id:\"minecraft:zombie\"}}}]}}",
+    "gamemode survival $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 5,
+      "cmd": "effect give $(bot) bad_omen 10 2"
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[type=zombie,distance=..32]",
+    "kill @e[tag=itemaudit3]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "gamerule random_tick_speed 3",
+    "difficulty peaceful"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true
+}

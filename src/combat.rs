@@ -28,28 +28,36 @@ pub enum Outcome {
 
 /// Урон после брони и зачарований защиты по опубликованному состоянию.
 pub fn final_damage(view: &CombatView, damage: f32, source: Source) -> f32 {
-    let damage = crate::survival::after_resistance(damage, view.resistance, source);
+    final_damage_breached(view, damage, source, 1.0)
+}
 
-    if matches!(source,Source::OutOfWorld|Source::GenericKill|Source::Starve|Source::SonicBoom) {return damage;}
+/// Тот же расчёт с пробиванием: сопротивление применяется после брони,
+/// как у получателя удара. Вики, Breach: «15 percentage points» [проверить].
+fn final_damage_breached(view: &CombatView, damage: f32, source: Source, breach: f32) -> f32 {
     let points = view.protection + if source.is_projectile() { view.projectile_protection } else { 0 };
-    let damage=if bypasses_armor(source) {damage} else {after_armor(damage,view.armor,view.toughness)};
-    after_protection(damage, points)
+
+    crate::survival::after_resistance(mitigated_damage(damage, view.armor, view.toughness, points, source, breach), view.resistance, source)
 }
 
 /// Предсказание исхода удара `damage` из точки `from` по жертве, которая
 /// стоит в `at` и смотрит по `yaw`, на такте `now`.
 pub fn outcome(view: &CombatView, damage: f32, source: Source, now: u64, victim: (f64, f64, f32), from: (f64, f64)) -> Outcome {
+    outcome_breached(view, damage, source, now, victim, from, 1.0)
+}
+
+/// Предсказание должно учитывать те же чары, что и фактический удар.
+pub fn outcome_breached(view: &CombatView, damage: f32, source: Source, now: u64, victim: (f64, f64, f32), from: (f64, f64), breach: f32) -> Outcome {
     if view.dead || damage <= 0.0 {
         return Outcome::Missed;
     }
 
     let up = view.blocking_since.is_some_and(|since| now >= since + u64::from(SHIELD_DELAY)) && now >= view.shield_disabled_until;
 
-    if up && source != Source::SonicBoom && shield_covers(victim.2, (victim.0, victim.1), from) {
+    if up && shield_blocks(source) && shield_covers(victim.2, (victim.0, victim.1), from) {
         return Outcome::Blocked;
     }
 
-    let taken = final_damage(view, damage, source);
+    let taken = if breach == 1.0 { final_damage(view, damage, source) } else { final_damage_breached(view, damage, source, breach) };
 
     if view.invulnerable > 10 {
         if taken <= view.last_hurt {
@@ -135,19 +143,63 @@ fn group_matches(group: u8, place: u8) -> bool {
 pub fn granted(stack: &Stack, place: u8) -> Vec<(i32, Modifier)> {
     let data = stack.extras();
 
-    if let Some(custom) = &data.attributes {
-        return custom.iter().filter(|m| group_matches(m.slot, place)).map(|m| (m.attribute, m.modifier())).collect();
-    }
-
-    let Some(info) = info(stack.item) else {
-        return Vec::new();
+    let mut modifiers: Vec<_> = if let Some(custom) = &data.attributes {
+        custom.iter().filter(|m| group_matches(m.slot, place)).map(|m| (m.attribute, m.modifier())).collect()
+    } else {
+        info(stack.item).into_iter().flat_map(|info| info.mods.iter())
+            .filter(|m| group_matches(m.slot, place))
+            .map(|m| (m.attribute, Modifier { id: m.id.to_string(), amount: m.amount, operation: Operation::from_number(i32::from(m.operation)).unwrap_or(Operation::AddValue) }))
+            .collect()
     };
 
-    info.mods
-        .iter()
-        .filter(|m| group_matches(m.slot, place))
-        .map(|m| (m.attribute, Modifier { id: m.id.to_string(), amount: m.amount, operation: Operation::from_number(i32::from(m.operation)).unwrap_or(Operation::AddValue) }))
-        .collect()
+    // Вики, Respiration/Aqua Affinity/Depth Strider/Swift Sneak/Efficiency:
+    // «oxygen bonus», «400%», «⅓», «15%», «(Level^2)+1».
+    // Чары независимы от собственного attribute_modifiers компонента.
+    // [проверить]: точные ID/порядок модификаторов в пакетах vanilla.
+    // [Bedrock: потом] отображение новых атрибутов в Bedrock-пакетах.
+    // Имя модификатора у оригинала — `enchantment.<чары>/<место>` (чёрный ящик,
+    // itemaudit-enchantment-attributes: respiration/head, depth_strider/feet,
+    // efficiency/mainhand, swift_sneak/legs, fire_protection/chest).
+    let place_name = match place {
+        1 => "mainhand",
+        2 => "offhand",
+        4 => "feet",
+        5 => "legs",
+        6 => "chest",
+        _ => "head",
+    };
+
+    for (name, slot, attribute, per_level, operation) in [
+        ("respiration", 7, crate::attributes::OXYGEN_BONUS, 1.0, Operation::AddValue),
+        ("aqua_affinity", 7, crate::attributes::SUBMERGED_MINING_SPEED, 4.0, Operation::AddMultipliedTotal),
+        ("depth_strider", 4, crate::attributes::WATER_MOVEMENT_EFFICIENCY, 1.0 / 3.0, Operation::AddValue),
+        ("swift_sneak", 5, crate::attributes::SNEAKING_SPEED, 0.15, Operation::AddValue),
+    ] {
+        let level = data.level(name);
+        if place == slot && level > 0 {
+            modifiers.push((attribute, Modifier::new(&format!("minecraft:enchantment.{name}/{place_name}"), f64::from(level) * per_level, operation)));
+        }
+    }
+    let efficiency = data.level("efficiency");
+    if place == 1 && efficiency > 0 {
+        modifiers.push((crate::attributes::MINING_EFFICIENCY, Modifier::new("minecraft:enchantment.efficiency/mainhand", f64::from(efficiency).powi(2) + 1.0, Operation::AddValue)));
+    }
+    // Вики, Fire Protection/Blast Protection: «15 × level»,
+    // «stacking with multiple armor pieces». По одному ID на слот,
+    // иначе нагрудник затёр бы бонус ботинок [проверить: ID пакета].
+    if (4..=7).contains(&place) {
+        for (name, attribute, amount, operation) in [
+            ("fire_protection", crate::attributes::BURNING_TIME, -0.15, Operation::AddMultipliedBase),
+            ("blast_protection", crate::attributes::EXPLOSION_KNOCKBACK_RESISTANCE, 0.15, Operation::AddValue),
+        ] {
+            let level = data.level(name);
+            if level > 0 {
+                // Сумма считается во float, как у оригинала (−0,15·4 = −0,6000000238…).
+                modifiers.push((attribute, Modifier::new(&format!("minecraft:enchantment.{name}/{place_name}"), f64::from(amount as f32 * level as f32), operation)));
+            }
+        }
+    }
+    modifiers
 }
 
 /// Переставляет модификаторы от предметов: снимает прежние (`applied`) и
@@ -236,10 +288,25 @@ pub fn enchant_bonus(data: &Data, undead: bool, arthropod: bool) -> f32 {
 /// зачарования оружия бьют по ним сильнее. Виды, которых здесь нет, — ни то
 /// ни другое; при добавлении враждебных мобов список пополняется.
 pub fn mob_traits(kind: &str) -> (bool, bool) {
-    let undead = matches!(kind, "zombie" | "skeleton" | "husk" | "stray" | "drowned" | "zombie_villager" | "zombified_piglin" | "zoglin" | "wither_skeleton" | "phantom" | "wither" | "skeleton_horse" | "zombie_horse" | "bogged" | "parched");
+    let undead = matches!(kind, "zombie" | "skeleton" | "husk" | "stray" | "drowned" | "zombie_villager" | "zombified_piglin" | "wither_skeleton" | "phantom" | "wither" | "skeleton_horse" | "zombie_horse" | "bogged" | "parched" | "zoglin" | "camel_husk" | "zombie_nautilus");
     let arthropod = matches!(kind, "spider" | "cave_spider" | "silverfish" | "endermite" | "bee");
 
     (undead, arthropod)
+}
+
+/// Вики, Impaling (Java): «both ... projectile and ... melee»; drowned не
+/// aquatic, игрок под дождём также не получает прибавку [проверить].
+pub fn impaling_bonus(data: &Data, kind: &str) -> f32 {
+    if matches!(kind, "axolotl" | "dolphin" | "guardian" | "elder_guardian" | "nautilus" | "zombie_nautilus" | "squid" | "glow_squid" | "tadpole" | "turtle" | "cod" | "salmon" | "pufferfish" | "tropical_fish") {
+        2.5 * data.level("impaling") as f32
+    } else { 0.0 }
+}
+
+/// Вики, Shield: магия, падение, огонь окружения, молния и шипы обходят щит.
+pub fn shield_blocks(source: Source) -> bool {
+    matches!(source, Source::PlayerAttack | Source::MaceSmash | Source::MobAttack | Source::MobAttackNoAggro
+        | Source::Arrow | Source::Trident | Source::Thrown | Source::Fireball | Source::LargeFireball | Source::WitherSkull
+        | Source::WindCharge | Source::Fireworks | Source::Explosion | Source::PlayerExplosion | Source::Thorns)
 }
 
 /// Сила отдачи от удара сверх обычной (0,4): атрибут `attack_knockback`,
@@ -322,8 +389,8 @@ pub fn smash_sound(fall: f32, victim_on_ground: bool) -> &'static str {
 /// (чёрный ящик, pvp-mace и pvp-mace-heavy: 750 при пролёте 1,6 и 4,8).
 pub const SMASH_PARTICLES: i32 = 750;
 
-/// Доля брони, которую оставляет «пробивание» (вики, Breach: «reduces the
-/// effectiveness of armor by 15% per level») [проверить].
+/// Кодирование пробивания для PlayerStrike: 1 − 0,15L; при расчёте брони
+/// вычитается 1 − scale процентных пунктов защиты (вики, Breach).
 pub fn breach_scale(level: i32) -> f32 {
     (1.0 - 0.15 * level as f32).max(0.0)
 }
@@ -343,36 +410,59 @@ pub fn bypasses_armor(source: Source) -> bool {
         | Source::SonicBoom | Source::Stalagmite | Source::Starve | Source::Wither)
 }
 
+/// Вики, Protection: «falling or magical damage» уменьшаются чарами,
+/// хотя саму броню обходят. Голод, пустота, /kill и звуковой удар
+/// хранителя обходят оба слоя (тег bypasses_enchantments).
+pub fn bypasses_enchantments(source: Source) -> bool {
+    matches!(source, Source::Starve | Source::OutOfWorld | Source::GenericKill | Source::SonicBoom)
+}
+
+/// Общий путь для PvP, окружения, зелий и /damage. Сопротивление и
+/// поглощение применяет Vitals::hurt после этого расчёта [проверить].
+pub fn mitigated_damage(damage: f32, armor: f32, toughness: f32, points: i32, source: Source, breach: f32) -> f32 {
+    let damage = if bypasses_armor(source) { damage } else if breach == 1.0 { after_armor(damage, armor, toughness) } else { after_armor_breached(damage, armor, toughness, breach) };
+    if bypasses_enchantments(source) { damage } else { after_protection(damage, points) }
+}
+
 /// Урон после брони и твёрдости (вики, Armor): `урон · (1 − min(20,
 /// max(броня/5, броня − урон/(2 + твёрдость/4)))/25)`.
 pub fn after_armor(damage: f32, armor: f32, toughness: f32) -> f32 {
     after_armor_breached(damage, armor, toughness, 1.0)
 }
 
-/// То же, но защита брони умножена на `scale` — «пробивание» булавы
-/// (`breach_scale`).
+/// Вики, Breach: «15 percentage points lower per level». Вычитаются
+/// процентные пункты, а не доля защиты; без брони урон не растёт [проверить].
 pub fn after_armor_breached(damage: f32, armor: f32, toughness: f32, scale: f32) -> f32 {
-    let defense = (armor / 5.0).max(armor - damage / (2.0 + toughness / 4.0)).min(20.0) * scale;
+    let defense = (armor / 5.0).max(armor - damage / (2.0 + toughness / 4.0)).clamp(0.0, 20.0) / 25.0;
 
-    damage * (1.0 - defense / 25.0)
+    damage * (1.0 - (defense - (1.0 - scale)).max(0.0))
 }
 
-/// Урон шипов при броске `roll` из [0; 1): от 1,5 до 4,5 и от уровня не
-/// зависит (чёрный ящик, pvp-thorns: шипы III и VII дали 12 значений от 1,51
-/// до 4,37; у VII ниже 3,5 — значит, на уровень не множится) [проверить:
-/// точная форма распределения].
+/// Вики, Thorns: «1 ... 5 ... not restricted to integer values»;
+/// с 1.21 уровни >10 также не меняют величину урона [проверить: RNG parity].
 pub fn thorns_damage(_level: i32, roll: f32) -> f32 {
-    3.0 * (0.5 + roll)
+    1.0 + 4.0 * roll
+}
+
+/// Вики, Bane of Arthropods: Slowness IV, 1–(1+0.5L) секунд.
+/// Накладывается после принятого удара, только на членистоногих.
+pub fn bane_effect(data: &Data, kind: &str, roll: f32) -> Option<crate::survival::Effect> {
+    let level = data.level("bane_of_arthropods");
+    (level > 0 && mob_traits(kind).1).then_some(crate::survival::Effect {
+        kind: crate::survival::EffectKind::Slowness, amplifier: 3,
+        ticks_left: ((1.0 + 0.5 * level as f32 * roll) * 20.0) as i32,
+        ambient: false, visible: true, show_icon: true,
+    })
 }
 
 /// Очки защиты зачарований (EPF) одной детали от этого урона (вики,
-/// Protection и др.): защита 1 за уровень от всего, что броня смягчает;
+/// Protection и др.): защита 1 за уровень, кроме bypasses_enchantments;
 /// огнезащита и взрывоустойчивость и защита от снарядов — по 2 за уровень
 /// от своего; лёгкость падения — 3 за уровень от падения.
 pub fn protection_points(data: &Data, source: Source) -> i32 {
     let mut points = 0;
 
-    if !matches!(source,Source::OutOfWorld|Source::GenericKill|Source::Starve|Source::SonicBoom) {
+    if !bypasses_enchantments(source) {
         points += data.level("protection");
     }
 
@@ -380,7 +470,7 @@ pub fn protection_points(data: &Data, source: Source) -> i32 {
         Source::InFire | Source::Campfire | Source::Lava | Source::OnFire | Source::HotFloor => points += 2 * data.level("fire_protection"),
         // Ракета — тоже взрыв (тег is_explosion; вики, Blast Protection) [проверить].
         Source::Explosion | Source::PlayerExplosion | Source::BadRespawnPoint | Source::Fireworks => points += 2 * data.level("blast_protection"),
-        Source::Arrow | Source::Trident | Source::MobProjectile | Source::Thrown | Source::WitherSkull | Source::Spit => points += 2 * data.level("projectile_protection"),
+        Source::Arrow | Source::Trident | Source::MobProjectile | Source::Thrown | Source::WindCharge | Source::LargeFireball | Source::WitherSkull | Source::Spit => points += 2 * data.level("projectile_protection"),
         // Огненный шар — огонь и снаряд сразу (теги is_fire, is_projectile).
         Source::Fireball | Source::UnattributedFireball => points += 2 * data.level("fire_protection") + 2 * data.level("projectile_protection"),
         Source::Fall | Source::EnderPearl | Source::Stalagmite => points += 3 * data.level("feather_falling"),
@@ -443,6 +533,54 @@ pub fn add_damage(stack: Stack, amount: i32) -> Option<Stack> {
     }
 
     Some(stack.with_extras(data))
+}
+
+/// Починка от одного шарика, а не от /xp (вики, Mending: «two durability
+/// per point of experience»). Выбирается только повреждённая вещь в руке,
+/// второй руке или броне; целые вещи и рюкзак не участвуют [проверить].
+/// Возвращает изменённый слот и не потраченный на починку опыт.
+pub fn mend(inventory: &mut Inventory, points: i32, roll: f32) -> (Option<i32>, i32) {
+    if points <= 0 {
+        return (None, 0);
+    }
+
+    let candidates: Vec<(i32, Stack)> = [inventory.selected_slot(), inventory::OFFHAND, 5, 6, 7, 8]
+        .into_iter()
+        .filter_map(|slot| inventory.slot(slot).map(|stack| (slot, stack)))
+        .filter(|(_, stack)| max_damage(stack) > 0 && stack.extras().damage > 0 && stack.extras().level("mending") > 0)
+        .collect();
+
+    if candidates.is_empty() {
+        return (None, points);
+    }
+
+    let index = ((roll.clamp(0.0, 1.0) * candidates.len() as f32) as usize).min(candidates.len() - 1);
+    let (slot, stack) = candidates[index];
+    let mut data = stack.extras();
+    let repaired = data.damage.min(points.saturating_mul(2));
+    data.damage -= repaired;
+    inventory.set(slot, Some(stack.with_extras(data)));
+
+    (Some(slot), points - repaired / 2)
+}
+
+/// Вики, Curse of Vanishing: «does not drop when the player dies».
+/// keepInventory сохраняет и проклятые вещи; ручной выброс не затрагивается.
+pub fn death_drops(inventory: &mut Inventory, keep: bool) -> Vec<Stack> {
+    if keep {
+        return Vec::new();
+    }
+
+    let mut drops = Vec::new();
+    for slot in 0..inventory::SLOTS as i32 {
+        if let Some(stack) = inventory.slot(slot) {
+            inventory.set(slot, None);
+            if stack.extras().level("vanishing_curse") == 0 {
+                drops.push(stack);
+            }
+        }
+    }
+    drops
 }
 
 // ---------------------------------------------------------------------------
@@ -533,7 +671,7 @@ pub fn arrow_damage(speed: f64, power_level: i32, crit: bool, crit_roll: f32) ->
     let mut damage = base.ceil() as f32;
 
     if crit {
-        damage += (crit_roll * (damage / 2.0 + 2.0)).floor();
+        damage += (crit_roll * ((damage / 2.0).floor() + 2.0)).floor();
     }
 
     damage
@@ -673,13 +811,79 @@ mod tests {
 
     #[test]
     fn breach_weakens_armor() {
-        // Пробивание II оставляет 70 % защиты: алмазная броня 20 против 10 урона.
+        // Защита 70 % превращается в 40 %, а не в 49 %.
         let whole = after_armor(10.0, 20.0, 8.0);
         let breached = after_armor_breached(10.0, 20.0, 8.0, breach_scale(2));
 
-        assert!(breached > whole);
+        assert!((whole - 3.0).abs() < 1e-5);
+        assert!((breached - 6.0).abs() < 1e-5);
+        assert!((after_armor_breached(6.0, 20.0, 8.0, breach_scale(4)) - 5.16).abs() < 1e-5);
+        assert_eq!(after_armor_breached(6.0, 2.0, 0.0, breach_scale(4)), 6.0);
+        assert_eq!(after_armor_breached(6.0, 0.0, 0.0, breach_scale(4)), 6.0);
         assert!((breach_scale(2) - 0.7).abs() < 1e-6);
         assert_eq!(breach_scale(7), 0.0);
+    }
+
+    #[test]
+    fn breach_prediction_agrees_with_victim_armor_then_resistance() {
+        let view = CombatView { armor: 20.0, toughness: 8.0, protection: 4, resistance: 1, ..Default::default() };
+        let damage = after_protection(after_armor_breached(6.0, 20.0, 8.0, breach_scale(4)), 4);
+        let expected = crate::survival::after_resistance(damage, 1, Source::PlayerAttack);
+        assert_eq!(outcome_breached(&view, 6.0, Source::PlayerAttack, 0, (0.0, 0.0, 0.0), (0.0, 2.0), breach_scale(4)), Outcome::Taken(expected));
+        let mut mob = crate::mob::Mob::new(42, crate::mob::Kind::Zombie, (0.0, 0.0, 0.0));
+        assert_eq!(mob.hurt_breached(6.0, Source::PlayerAttack, None, breach_scale(4)).unwrap().taken, 6.0);
+    }
+
+    fn mending_item(name: &str, damage: i32) -> Stack {
+        let mut data = Data { damage, ..Default::default() };
+        data.set_enchant(stackdata::enchantment_number("mending").unwrap(), 1);
+        Stack::new(crate::blocks::item_named(name).unwrap(), 1).with_extras(data)
+    }
+
+    #[test]
+    fn mending_selects_only_damaged_equipped_items() {
+        let mut inventory = Inventory::new();
+        inventory.set(inventory::FIRST_MAIN, Some(mending_item("diamond_pickaxe", 100)));
+        inventory.set(5, Some(mending_item("diamond_helmet", 0)));
+        inventory.set(inventory::OFFHAND, Some(mending_item("diamond_sword", 20)));
+        assert_eq!(mend(&mut inventory, 7, 0.0), (Some(inventory::OFFHAND), 0));
+        assert_eq!(inventory.slot(inventory::OFFHAND).unwrap().extras().damage, 6);
+        assert_eq!(inventory.slot(inventory::FIRST_MAIN).unwrap().extras().damage, 100);
+        assert_eq!(mend(&mut inventory, 7, 0.9), (Some(inventory::OFFHAND), 4));
+        assert_eq!(mend(&mut inventory, 3, 0.0), (None, 3));
+    }
+
+    #[test]
+    fn mending_uses_each_equipped_slot_and_rounds_spent_xp_down() {
+        for slot in [inventory::FIRST_HOTBAR, inventory::OFFHAND, 5, 6, 7, 8] {
+            let mut inventory = Inventory::new();
+            inventory.set(slot, Some(mending_item("diamond_sword", 3)));
+            assert_eq!(mend(&mut inventory, 7, 0.5), (Some(slot), 6));
+            assert_eq!(inventory.slot(slot).unwrap().extras().damage, 0);
+        }
+        let mut inventory = Inventory::new();
+        inventory.set(5, Some(mending_item("diamond_helmet", 10)));
+        inventory.set(6, Some(mending_item("diamond_chestplate", 10)));
+        assert_eq!(mend(&mut inventory, 1, 0.0).0, Some(5));
+        assert_eq!(mend(&mut inventory, 1, 0.999).0, Some(6));
+        assert_eq!(mend(&mut inventory, 0, 0.0), (None, 0));
+    }
+
+    #[test]
+    fn vanishing_removes_all_carried_cursed_items_only_on_death() {
+        let mut inventory = Inventory::new();
+        let plain = Stack::new(crate::blocks::item_named("stone").unwrap(), 3);
+        let mut data = Data::default();
+        data.set_enchant(stackdata::enchantment_number("vanishing_curse").unwrap(), 1);
+        let cursed = mending_item("diamond_sword", 10).with_extras(data);
+        for slot in [5, inventory::FIRST_MAIN, inventory::FIRST_HOTBAR, inventory::OFFHAND] {
+            inventory.set(slot, Some(cursed));
+        }
+        inventory.set(10, Some(plain));
+        assert!(death_drops(&mut inventory, true).is_empty());
+        assert_eq!(inventory.slot(5), Some(cursed));
+        assert_eq!(death_drops(&mut inventory, false), vec![plain]);
+        assert!(inventory.slots().iter().all(Option::is_none));
     }
 
     #[test]
@@ -791,6 +995,49 @@ mod tests {
     }
 
     #[test]
+    fn armor_bypass_still_allows_protection_and_feather_falling() {
+        let mut data = Data::default();
+        data.set_enchant(stackdata::enchantment_number("protection").unwrap(), 4);
+        data.set_enchant(stackdata::enchantment_number("feather_falling").unwrap(), 4);
+        assert_eq!(protection_points(&data, Source::Fall), 16);
+        assert!((mitigated_damage(10.0, 20.0, 8.0, 16, Source::Fall, 1.0) - 3.6).abs() < 1e-5);
+        for source in [Source::Magic, Source::IndirectMagic, Source::Wither, Source::OnFire, Source::FlyIntoWall] {
+            assert!((mitigated_damage(10.0, 20.0, 8.0, 4, source, 1.0) - 8.4).abs() < 1e-5, "{source:?}");
+        }
+        for source in [Source::Starve, Source::OutOfWorld, Source::GenericKill] {
+            assert_eq!(protection_points(&data, source), 0);
+            assert_eq!(mitigated_damage(10.0, 20.0, 8.0, 20, source, 1.0), 10.0);
+        }
+        data.set_enchant(stackdata::enchantment_number("blast_protection").unwrap(), 4);
+        assert_eq!(protection_points(&data, Source::PlayerExplosion), 12);
+    }
+
+    #[test]
+    fn equipment_enchantments_apply_only_in_their_slots_and_are_removed() {
+        use crate::attributes::{MINING_EFFICIENCY, OXYGEN_BONUS, SNEAKING_SPEED, SUBMERGED_MINING_SPEED, WATER_MOVEMENT_EFFICIENCY};
+        let mut inventory = Inventory::new();
+        for (slot, item, enchantment, level) in [(5, "diamond_helmet", "respiration", 3), (7, "diamond_leggings", "swift_sneak", 3), (8, "diamond_boots", "depth_strider", 3), (inventory::FIRST_HOTBAR, "diamond_pickaxe", "efficiency", 5)] {
+            let mut data = Data::default();
+            data.set_enchant(stackdata::enchantment_number(enchantment).unwrap(), level);
+            if slot == 5 { data.set_enchant(stackdata::enchantment_number("aqua_affinity").unwrap(), 1); }
+            inventory.set(slot, Some(stack_of(item).with_extras(data)));
+        }
+        let mut attributes = Attributes::player();
+        let mut applied = Vec::new();
+        refresh_equipment(&mut attributes, &mut applied, &inventory);
+        for (id, value) in [(OXYGEN_BONUS, 3.0), (SUBMERGED_MINING_SPEED, 1.0), (SNEAKING_SPEED, 0.75), (WATER_MOVEMENT_EFFICIENCY, 1.0), (MINING_EFFICIENCY, 26.0)] {
+            assert!((attributes.value(id) - value).abs() < 1e-6, "{id}");
+        }
+        let pickaxe = inventory.held();
+        inventory.set(inventory::OFFHAND, pickaxe);
+        for slot in [5, 7, 8, inventory::FIRST_HOTBAR] { inventory.set(slot, None); }
+        refresh_equipment(&mut attributes, &mut applied, &inventory);
+        for (id, value) in [(OXYGEN_BONUS, 0.0), (SUBMERGED_MINING_SPEED, 0.2), (SNEAKING_SPEED, 0.3), (WATER_MOVEMENT_EFFICIENCY, 0.0), (MINING_EFFICIENCY, 0.0)] {
+            assert!((attributes.value(id) - value).abs() < 1e-6, "{id}");
+        }
+    }
+
+    #[test]
     fn armor_wear_is_a_quarter_of_the_damage_and_at_least_one() {
         assert_eq!(armor_wear(1.0), 1);
         assert_eq!(armor_wear(7.9), 1);
@@ -883,11 +1130,11 @@ mod tests {
     }
 
     #[test]
-    fn thorns_damage_stays_within_the_measured_range() {
-        // Шипы III и VII у оригинала: от 1,51 до 4,37, от уровня не зависят.
-        for level in [3, 7] {
-            assert_eq!(thorns_damage(level, 0.0), 1.5);
-            assert!((thorns_damage(level, 0.999) - 4.497).abs() < 1e-3);
+    fn thorns_damage_uses_wiki_range_at_all_levels() {
+        // Вики, Thorns: диапазон 1–5; прежняя выборка не определяла границы.
+        for level in [1, 3, 7, 11, 255] {
+            assert_eq!(thorns_damage(level, 0.0), 1.0);
+            assert!((thorns_damage(level, 0.999) - 4.996).abs() < 1e-3);
         }
     }
 
@@ -911,3 +1158,48 @@ pub struct DamageOrigin {
     pub entity_at: Option<(f64, f64, f64)>,
     pub player: Option<(String, [u8; 16])>,
 }
+
+#[cfg(test)]
+mod itemaudit2_tests {
+    use super::*;
+
+    #[test]
+    fn impaling_covers_java_aquatic_targets_but_not_drowned_or_players() {
+        let mut data = Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number("impaling").unwrap(), 5);
+        for name in ["axolotl", "dolphin", "guardian", "elder_guardian", "nautilus", "zombie_nautilus", "squid", "glow_squid", "tadpole", "turtle", "cod", "salmon", "pufferfish", "tropical_fish"] {
+            assert_eq!(impaling_bonus(&data, name), 12.5, "{name}");
+        }
+        for name in ["drowned", "player", "zombie", "cow"] { assert_eq!(impaling_bonus(&data, name), 0.0); }
+        assert_eq!(impaling_bonus(&Data::default(), "guardian"), 0.0);
+    }
+
+    #[test]
+    fn shield_damage_types_exclude_magic_lightning_and_environment() {
+        for source in [Source::Magic, Source::IndirectMagic, Source::Lightning, Source::Fall, Source::Lava, Source::OnFire, Source::Wither] {
+            assert!(!shield_blocks(source), "{source:?}");
+        }
+        for source in [Source::Arrow, Source::Trident, Source::PlayerAttack, Source::MaceSmash, Source::Fireball, Source::Explosion, Source::Thorns] {
+            assert!(shield_blocks(source));
+        }
+    }
+    #[test]
+    fn enchantment_modifiers_are_named_by_enchantment_and_slot_like_the_original() {
+        // Чёрный ящик, itemaudit-enchantment-attributes: «…fire_protection/chest», «…depth_strider/feet».
+        let mut data = crate::stackdata::Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number("fire_protection").unwrap(), 4);
+        data.set_enchant(crate::stackdata::enchantment_number("depth_strider").unwrap(), 3);
+        let chest = Stack::new(crate::blocks::item_named("diamond_chestplate").unwrap(), 1).with_extras(data.clone());
+        let boots = Stack::new(crate::blocks::item_named("diamond_boots").unwrap(), 1).with_extras(data);
+        let ids = |stack: &Stack, place: u8| granted(stack, place).into_iter().map(|(_, m)| m.id).collect::<Vec<_>>();
+
+        assert!(ids(&chest, 6).iter().any(|id| id == "minecraft:enchantment.fire_protection/chest"));
+        assert!(ids(&boots, 4).iter().any(|id| id == "minecraft:enchantment.depth_strider/feet"));
+        assert!(ids(&boots, 4).iter().any(|id| id == "minecraft:enchantment.fire_protection/feet"));
+    }
+
+}
+
+#[cfg(test)]
+#[path = "combat_audit_tests.rs"]
+mod itemaudit4_tests;

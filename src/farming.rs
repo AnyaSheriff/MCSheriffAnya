@@ -1091,7 +1091,10 @@ pub const BONE_MEAL_EVENT: i32 = 1505;
 /// Применяет костную муку к блоку. None — блок к ней глух, мука не
 /// тратится; Some — мука потрачена (рост мог и не случиться: у саженца
 /// шанс 45 %).
-pub fn bone_meal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<()> {
+#[path = "farming_bonemeal.rs"]
+mod bonemeal;
+
+pub fn bone_meal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<Vec<Stack>> {
     let state = world.get_block(x, y, z);
     let name = name_of(state);
     let pos = (x, y, z);
@@ -1099,7 +1102,7 @@ pub fn bone_meal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<()> {
     if let Some(grown) = crate::vegetation::bone_meal(world, pos) {
         if !grown { return None; }
         world.note_level_event(x, y, z, BONE_MEAL_EVENT, 15);
-        return Some(());
+        return Some(Vec::new());
     }
 
     match name {
@@ -1157,7 +1160,7 @@ pub fn bone_meal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<()> {
                 grow_to(world, pos, with(state, "age", (age + step).min(max)));
             }
         }
-        name if is_sapling(name) => {
+        name if is_sapling(name) && !(name == "mangrove_propagule" && value(state, "hanging") == Some("true")) => {
             world.note_level_event(x, y, z, BONE_MEAL_EVENT, 15);
 
             if chance(world, 0.45) {
@@ -1194,10 +1197,10 @@ pub fn bone_meal(world: &mut World, (x, y, z): (i32, i32, i32)) -> Option<()> {
             world.note_level_event(x, y, z, BONE_MEAL_EVENT, 3);
             grass_bloom(world, pos);
         }
-        _ => return None,
+        _ => return bonemeal::apply(world, pos),
     }
 
-    Some(())
+    Some(Vec::new())
 }
 
 /// Мука на дёрне: вокруг вырастают трава и изредка цветы — 128 попыток,

@@ -1,0 +1,55 @@
+{
+  "name": "itemaudit-blindness-crit",
+  "about": "[проверить] Падающий игрок со Blindness не наносит critical hit. Сценарий создан до реализации; не запускался.",
+  "second": true,
+  "track_self": true,
+  "track_players": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "gamemode survival $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "kill $(bot)",
+    "!wait 30",
+    "give $(bot2) minecraft:diamond_sword 1",
+    "tp $(bot) $(3.5,0,3.5) 180 0",
+    "tp $(bot2) $(3.5,0,1.5) 0 0",
+    "!stopfly",
+    "!wait 20",
+    "!hotbar2 0",
+    "!hotbar 0",
+    "effect give $(bot2) minecraft:blindness 30 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "tp $(bot2) $(3.5,2.5,1.5) 0 0"
+    },
+    {
+      "after": 3,
+      "attack": true,
+      "bot": 2
+    }
+  ],
+  "record_ticks": 50,
+  "cleanup": [
+    "kill @e[type=cow,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=arrow,distance=..48]",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "gamemode creative $(bot)",
+    "gamemode creative $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "tp $(bot2) $(6.5,0,6.5)",
+    "!wait 4",
+    "!startfly",
+    "effect clear $(bot2)"
+  ],
+  "item_components": true
+}

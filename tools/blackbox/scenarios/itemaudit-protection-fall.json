@@ -1,0 +1,45 @@
+{
+  "name": "itemaudit-protection-fall",
+  "about": "[проверить] /damage 10 fall при зачарованной броне: отдельные armor/enchantment bypass; до реализации, без запуска.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "kill $(bot)",
+    "!wait 20",
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!look 0 0",
+    "!hotbar 0",
+    "!wait 10",
+    "!wait 25",
+    "item replace entity $(bot) armor.feet with minecraft:diamond_boots[enchantments={\"minecraft:feather_falling\":4}]"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "damage $(bot) 10 minecraft:fall"
+    }
+  ],
+  "record_ticks": 20,
+  "cleanup": [
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "effect clear $(bot)",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly",
+    "kill @e[type=item,distance=..48]"
+  ],
+  "track_self": true,
+  "item_components": true,
+  "inventory": true,
+  "exclusive": true
+}

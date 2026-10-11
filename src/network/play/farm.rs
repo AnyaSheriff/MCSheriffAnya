@@ -93,9 +93,13 @@ pub(super) fn use_on_block(player: &mut PlayerState, shared: &Shared, clicked: (
         return Some(Reaction { slots, ..Reaction::accepted(sequence) });
     }
 
-    if crate::farming::bone_meal(&mut world, clicked).is_none() {
+    let Some(drops) = crate::farming::bone_meal(&mut world, clicked) else {
         return refuse(&mut world);
-    }
+    };
+    let drops: Vec<_> = drops.into_iter().map(|stack| {
+        let (at, velocity) = crate::tick::scattered(clicked, || f64::from(world.random_unit()));
+        (stack, at, velocity)
+    }).collect();
 
     // Удачная костная мука: оригинал шлёт взмах рукой и самому игроку, дважды
     // (чёрный ящик, block3-fern: два `Animate 0`; у листовой подстилки без роста их нет).
@@ -106,6 +110,9 @@ pub(super) fn use_on_block(player: &mut PlayerState, shared: &Shared, clicked: (
     redstone::settle(&mut world);
     drop(world);
 
+    for (stack, at, velocity) in drops {
+        drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
+    }
     Some(Reaction { slots: spend_placed(player), ..Reaction::accepted(sequence) })
 }
 

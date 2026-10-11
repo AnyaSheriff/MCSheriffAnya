@@ -205,6 +205,8 @@ pub fn block_for_item(item: i32) -> Option<(&'static str, i32)> {
             return state_by_name(crop).and_then(|state| block_at_state(state).map(|name| (name, state)));
         }
 
+        // Вики, String: «placed as tripwire» [проверить: wire packets].
+        if name == "string" { return state_by_name("tripwire").map(|state| ("tripwire", state)); }
         if name == "wheat" {
             return None;
         }
@@ -230,6 +232,7 @@ pub fn block_for_item(item: i32) -> Option<(&'static str, i32)> {
 pub fn item_for_block(name: &str) -> Option<i32> {
     // Посев выбирается семенами (обратное к block_for_item).
     let seeds = match name {
+        "tripwire" => Some("string"),
         "wheat" => Some("wheat_seeds"),
         "beetroots" => Some("beetroot_seeds"),
         "carrots" => Some("carrot"),
@@ -1332,5 +1335,21 @@ mod tests {
         // Ступени — не пара, хоть и с «half».
         let stairs = state_by_name("oak_stairs").unwrap();
         assert_eq!(pair_partner(stairs, (0, 64, 0)), None);
+    }
+}
+
+#[cfg(test)]
+mod itemaudit3_tests {
+    use super::*;
+    #[test]
+    fn string_places_and_picks_tripwire() {
+        let string=item_named("string").unwrap();
+        assert_eq!(block_for_item(string),Some(("tripwire",state_by_name("tripwire").unwrap())));
+        assert_eq!(item_for_block("tripwire"),Some(string));
+        let mut world=crate::world::World::in_memory();
+        world.set_block_silently(0,0,0,state_by_name("stone").unwrap());
+        let click=crate::placing::Click { face:1, cursor_y:0.5, yaw:0.0, pitch:0.0 };
+        assert_eq!(crate::placing::place(&mut world,"tripwire",state_by_name("tripwire").unwrap(),(0,0,0),&click,(3.5,1.0,3.5)),crate::placing::Placement::Placed);
+        assert_eq!(block_at_state(world.get_block(0,1,0)),Some("tripwire"));
     }
 }

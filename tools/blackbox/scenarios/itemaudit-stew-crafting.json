@@ -1,0 +1,95 @@
+{
+  "name": "itemaudit-stew-crafting",
+  "about": "[проверить] Crafter: четыре ингредиента дают stew с эффектом цветка. golden_dandelion, closed_eyeblossom, cornflower, allium. Сравнить item component durations; не запускался.",
+  "track_items": true,
+  "item_components": true,
+  "exclusive": true,
+  "blocks": [
+    {
+      "at": [
+        0,
+        1,
+        0
+      ],
+      "state": "stone_button[face=floor,facing=north,powered=false]"
+    }
+  ],
+  "setup": [
+    "gamemode creative $(bot)",
+    "tp $(bot) $(2.5,0,2.5)",
+    "clear $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(0,0,0) minecraft:crafter[crafting=false,orientation=east_up,triggered=false]{Items:[{Slot:0b,id:\"minecraft:bowl\",count:1},{Slot:1b,id:\"minecraft:red_mushroom\",count:1},{Slot:2b,id:\"minecraft:brown_mushroom\",count:1},{Slot:3b,id:\"minecraft:golden_dandelion\",count:1}]}"
+    },
+    {
+      "after": 2,
+      "cmd": "setblock $(0,1,0) stone_button[face=floor,facing=north,powered=false]"
+    },
+    {
+      "after": 5,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 35,
+      "cmd": "setblock $(0,0,0) minecraft:crafter[crafting=false,orientation=east_up,triggered=false]{Items:[{Slot:0b,id:\"minecraft:bowl\",count:1},{Slot:1b,id:\"minecraft:red_mushroom\",count:1},{Slot:2b,id:\"minecraft:brown_mushroom\",count:1},{Slot:3b,id:\"minecraft:closed_eyeblossom\",count:1}]}"
+    },
+    {
+      "after": 37,
+      "cmd": "setblock $(0,1,0) stone_button[face=floor,facing=north,powered=false]"
+    },
+    {
+      "after": 40,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 70,
+      "cmd": "setblock $(0,0,0) minecraft:crafter[crafting=false,orientation=east_up,triggered=false]{Items:[{Slot:0b,id:\"minecraft:bowl\",count:1},{Slot:1b,id:\"minecraft:red_mushroom\",count:1},{Slot:2b,id:\"minecraft:brown_mushroom\",count:1},{Slot:3b,id:\"minecraft:cornflower\",count:1}]}"
+    },
+    {
+      "after": 72,
+      "cmd": "setblock $(0,1,0) stone_button[face=floor,facing=north,powered=false]"
+    },
+    {
+      "after": 75,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "after": 105,
+      "cmd": "setblock $(0,0,0) minecraft:crafter[crafting=false,orientation=east_up,triggered=false]{Items:[{Slot:0b,id:\"minecraft:bowl\",count:1},{Slot:1b,id:\"minecraft:red_mushroom\",count:1},{Slot:2b,id:\"minecraft:brown_mushroom\",count:1},{Slot:3b,id:\"minecraft:allium\",count:1}]}"
+    },
+    {
+      "after": 107,
+      "cmd": "setblock $(0,1,0) stone_button[face=floor,facing=north,powered=false]"
+    },
+    {
+      "after": 110,
+      "click": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "record_ticks": 150,
+  "cleanup": [
+    "fill $(0,0,0) $(0,1,0) air",
+    "kill @e[type=item,distance=..16]",
+    "clear $(bot)",
+    "kill @e[type=item,distance=..48]"
+  ]
+}

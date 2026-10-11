@@ -98,6 +98,8 @@ pub struct Arrow {
     pub effects: Vec<crate::survival::Effect>,
     /// Исходное зелье для подбора стрелы игрока; собственный эффект моба — None.
     pub potion: Option<u16>,
+    /// Предмет наконечника для подбора и spectral entity (вики, Arrow) [проверить].
+    pub ammo: Option<Stack>,
     /// Полностью натянутая стрела бьёт сильнее и летит с искрами.
     pub crit: bool,
     /// Уровни «силы» и «отдачи» лука, «горящая стрела».
@@ -152,9 +154,21 @@ pub struct Arrow {
 /// (вики, Tipped Arrow: «1/8 the time»). Стрелы мобов задают срок напрямую.
 pub fn tipped_effects(potion: Option<u16>) -> Vec<crate::survival::Effect> {
     potion.map(crate::survival::potion_effects).unwrap_or_default().into_iter().map(|mut effect| {
-        effect.ticks_left = (effect.ticks_left / 8).max(1);
+        if effect.ticks_left != crate::survival::INFINITE { effect.ticks_left = (effect.ticks_left / 8).max(1); }
         effect
     }).collect()
+}
+
+/// Вики, Spectral Arrow: «Glowing ... 10 seconds». [Bedrock: потом]
+pub fn ammunition_effects(ammo: Option<Stack>, potion: Option<u16>) -> Vec<crate::survival::Effect> {
+    if ammo.is_some_and(|stack| crate::blocks::item_name(stack.item) == Some("spectral_arrow")) {
+        vec![crate::survival::Effect { kind: crate::survival::EffectKind::Glowing, amplifier: 0, ticks_left: 200, ambient: false, visible: true, show_icon: true }]
+    } else if let Some(stack) = ammo {
+        stack.extras().potion_effects().into_iter().map(|mut effect| {
+            if effect.ticks_left != crate::survival::INFINITE { effect.ticks_left = (effect.ticks_left / 8).max(1); }
+            effect
+        }).collect()
+    } else { tipped_effects(potion) }
 }
 
 /// Эффекты стрелы на мобе; нежить не принимает яд/регенерацию (вики, Undead).
@@ -162,14 +176,11 @@ pub fn apply_effects(mob: &mut crate::mob::Mob, effects: &[crate::survival::Effe
     use crate::survival::EffectKind;
     let undead = crate::combat::mob_traits(mob.kind.name()).0;
     for effect in effects {
-        if (undead && matches!(effect.kind, EffectKind::Poison | EffectKind::Regeneration))
-            || (mob.kind.spider() && effect.kind == EffectKind::Poison)
-        {
-            continue;
-        }
+        if !mob.accepts_effect(effect.kind) { continue; }
         if effect.kind.instant() {
-            let amount = crate::thrown::instant_amount(effect.kind, effect.amplifier, 1.0);
-            if (effect.kind == EffectKind::InstantDamage) != undead {
+            let kind = crate::thrown::instant_kind(effect.kind, undead);
+            let amount = crate::thrown::instant_amount(kind, effect.amplifier, 1.0);
+            if kind == EffectKind::InstantDamage {
                 mob.hurt(amount, Source::Magic, None);
             } else {
                 mob.vitals.health = (mob.vitals.health + amount).min(mob.vitals.max_health);
@@ -183,6 +194,7 @@ pub fn apply_effects(mob: &mut crate::mob::Mob, effects: &[crate::survival::Effe
 impl Arrow {
     /// Подбирается тот же наконечник, что был выпущен.
     pub fn pickup_stack(&self) -> Stack {
+        if let Some(ammo) = self.ammo { return ammo.with_count(1); }
         let name = if self.potion.is_some() { "tipped_arrow" } else { "arrow" };
         Stack::new(crate::blocks::item_named(name).unwrap_or(0), 1).with_extras(crate::stackdata::Data { potion: self.potion, ..Default::default() })
     }
@@ -210,6 +222,7 @@ impl Arrow {
             shooter: Shooter::Mob { killer },
             effects: Vec::new(),
             potion: None,
+            ammo: None,
             crit: false,
             power: 0,
             punch: 0,
@@ -259,9 +272,26 @@ impl Arrow {
         u8::from(self.crit) | if self.returning { 2 } else { 0 }
     }
 
+    /// Вики, Flame/Punch: поджог на 5 секунд и отдача 0,6 за уровень.
+    /// Огонь ставится до расчёта loot в hurt_burning, здесь отдача [проверить].
+    pub fn hit_effects(&self, mob: &mut crate::mob::Mob) {
+        let length = self.vx.hypot(self.vz);
+        if self.punch > 0 && length > 1.0e-9 && !matches!(mob.kind, crate::mob::Kind::IronGolem | crate::mob::Kind::Shulker) {
+            let resistance = if mob.kind == crate::mob::Kind::Hoglin { 0.6 } else { 0.0 };
+            let push = 0.6 * f64::from(self.punch) * (1.0 - resistance);
+            mob.vx += self.vx / length * push;
+            mob.vy += 0.1 * (1.0 - resistance);
+            mob.vz += self.vz / length * push;
+        }
+    }
+
+    pub fn spectral(&self) -> bool {
+        self.ammo.is_some_and(|stack| crate::blocks::item_name(stack.item) == Some("spectral_arrow"))
+    }
+
     /// Вид сущности для клиента.
     pub fn entity_type(&self) -> i32 {
-        if self.trident.is_some() { TRIDENT_TYPE } else { ARROW_TYPE }
+        if self.trident.is_some() { TRIDENT_TYPE } else if self.spectral() { 123 } else { ARROW_TYPE }
     }
 
     /// Куда смотрит стрела: по скорости, а у вставшей — по скорости выстрела.
@@ -741,6 +771,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     let mut burn = false;
 
                     if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == entity_id) {
+                        let damage = damage + arrow.trident.map_or(0.0, |stack| crate::combat::impaling_bonus(&stack.extras(), mob.kind.name()));
                         let mut damage_result = None;
                         // Стрела без стрелка (призванная командой) опыта за
                         // убийство не сулит (wither-half-armor).
@@ -763,7 +794,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                             } else {
                                 damage_result = mob.hurt_part(damage, false, Source::Arrow, Some(push));
                             }
-                        } else if let Some(hit) = mob.hurt(damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, Some(push)) {
+                        } else if let Some(hit) = mob.hurt_burning(damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, Some(push), 1.0, if arrow.flame { 100 } else { 0 }) {
                             damage_result = Some(hit);
                             // Без стрелка виновник — сама стрела (wither-half-armor:
                             // Damage Event с причиной-сущностью).
@@ -779,6 +810,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                                 mob.stick_arrow();
                             }
 
+                            arrow.hit_effects(mob);
                             apply_effects(mob, &arrow.effects);
                         }
                         if !arrow.is_mob_shot() && arrow.owner != 0 && let Some(hit) = damage_result {
@@ -894,7 +926,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             arrow.y = from.1 + (to.1 - from.1) * part;
             arrow.z = from.2 + (to.2 - from.2) * part;
             arrow.ground_block = block_cell;
-            if arrow.flame { crate::campfire::set_lit(world, block_cell, true); }
+            if arrow.flame { ignite_block(world, block_cell); }
             if let Some(power) = crate::redstone::projectile_target(world, block_cell, (arrow.x, arrow.y, arrow.z), true)
                 && !arrow.is_mob_shot() && arrow.owner != 0
             {
@@ -927,6 +959,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         arrow.z = to.2;
 
         let in_water = crate::mob::is_water(world.get_block(arrow.x.floor() as i32, arrow.y.floor() as i32, arrow.z.floor() as i32));
+        if in_water || world.in_rain(arrow.x, arrow.y, arrow.z, 0.5) { arrow.flame = false; }
         // Трезубец в воде не тормозит (вики, Trident: «does not slow down»).
         let drag = if in_water && arrow.trident.is_none() { WATER_DRAG } else { AIR_DRAG };
 
@@ -969,6 +1002,20 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         }
     }
 }
+
+/// Wiki, Flame: только TNT, campfire и candle, без огня на обычных блоках.
+/// [проверить] Сетевой порядок зажигания при попадании.
+fn ignite_block(world: &mut World, at: (i32,i32,i32)) -> bool {
+    if crate::tnt::ignite(world, at) { return true; }
+    let state=world.get_block(at.0,at.1,at.2);
+    let Some(block)=crate::blocks::orientation_of(state) else { return false; };
+    if !(matches!(block.name,"campfire"|"soul_campfire"|"candle"|"candle_cake") || block.name.ends_with("_candle") || block.name.ends_with("_candle_cake"))
+        || block.value(state,"waterlogged")==Some("true") || block.value(state,"lit")!=Some("false") { return false; }
+    let Some(lit)=block.with(state,"lit","true") else { return false; };
+    world.set_block(at.0,at.1,at.2,lit);
+    true
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -1025,6 +1072,7 @@ mod tests {
             shooter: Shooter::Player,
             effects: Vec::new(),
             potion: None,
+            ammo: None,
             crit: false,
             power: 0,
             punch: 0,
@@ -1146,5 +1194,61 @@ mod tests {
         let off = launch((0.0, 1.0, 0.0), (10.0, 1.0, 0.0), 1.6, 6.0, &mut one);
 
         assert!((off.2 / 1.6 - 0.045).abs() < 0.005);
+    }
+}
+
+#[cfg(test)]
+mod itemaudit2_tests {
+    use super::*;
+    #[test]
+    fn flame_and_punch_apply_to_mobs_after_a_hit() {
+        let mut arrow = Arrow::from_mob(1, Dimension::Overworld, (0.0, 0.0, 0.0), (0.0, 0.0, 3.0), 2, "skeleton");
+        arrow.flame = true;
+        arrow.punch = 2;
+        let mut mob = crate::mob::Mob::new(3, crate::mob::Kind::Cow, (0.0, 0.0, 1.0));
+        mob.hurt_burning(1.0, Source::Arrow, None, 1.0, 100).unwrap();
+        arrow.hit_effects(&mut mob);
+        assert_eq!(mob.vitals.fire, 100);
+        assert!((mob.vz - 1.2).abs() < 1e-6);
+        assert_eq!(mob.vy, 0.1);
+    }
+    #[test]
+    fn healing_arrow_hurts_undead_for_harming_amount() {
+        let mut mob = crate::mob::Mob::new(3, crate::mob::Kind::Zombie, (0.0, 0.0, 1.0));
+        apply_effects(&mut mob, &tipped_effects(crate::survival::potion_number("strong_healing")));
+        assert_eq!(mob.vitals.health, 8.0);
+    }
+}
+
+#[cfg(test)]
+mod itemaudit4_flame_tests {
+    use super::*;
+    #[test]
+    fn flame_lights_only_dry_ignitable_blocks() {
+        let mut world=World::in_memory();
+        for name in ["campfire","soul_campfire","candle","red_candle","candle_cake","blue_candle_cake"] {
+            let state=crate::blocks::state_from_text(&format!("{name}[lit=false]")).unwrap();
+            world.set_block(0,64,0,state);assert!(ignite_block(&mut world,(0,64,0)),"{name}");
+            assert_eq!(crate::blocks::orientation_of(state).unwrap().value(world.get_block(0,64,0),"lit"),Some("true"));
+        }
+        for spec in ["oak_log","candle[waterlogged=true]","campfire[waterlogged=true,lit=false]"] {
+            let state=crate::blocks::state_from_text(spec).unwrap();world.set_block(0,64,0,state);
+            assert!(!ignite_block(&mut world,(0,64,0)));assert_eq!(world.get_block(0,64,0),state);
+        }
+        world.set_block(0,64,0,crate::blocks::state_by_name("tnt").unwrap());assert!(ignite_block(&mut world,(0,64,0)));assert_eq!(world.get_block(0,64,0),crate::world::AIR);
+    }
+}
+
+#[cfg(test)]
+mod itemaudit4_punch_tests {
+    use super::*;
+    #[test]
+    fn punch_levels_scale_horizontal_impulse_and_respect_immunity() {
+        for level in 1..=2 {
+            let mut arrow=Arrow::from_mob(1,Dimension::Overworld,(0.0,0.0,0.0),(0.0,0.0,2.0),0,"skeleton");arrow.punch=level;
+            let mut cow=crate::mob::Mob::new(2,crate::mob::Kind::Cow,(0.0,0.0,0.0));arrow.hit_effects(&mut cow);
+            assert!((cow.vz-0.6*f64::from(level)).abs()<1e-6);assert!((cow.vy-0.1).abs()<1e-6);
+            let mut golem=crate::mob::Mob::new(3,crate::mob::Kind::IronGolem,(0.0,0.0,0.0));arrow.hit_effects(&mut golem);assert_eq!(golem.vz,0.0);
+        }
     }
 }

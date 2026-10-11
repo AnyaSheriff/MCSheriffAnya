@@ -1,0 +1,44 @@
+{
+  "name": "itemaudit3-feather-falling-pearl",
+  "about": "[проверить] Третий проход: feather-falling-pearl. Сценарий подготовлен, не запускался; RNG parity не измерена.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule random_tick_speed 0",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "!wait 5",
+    "item replace entity $(bot) armor.feet with diamond_boots[enchantments={\"minecraft:feather_falling\":4}]",
+    "give $(bot) ender_pearl 2",
+    "gamemode survival $(bot)",
+    "!look 0 75"
+  ],
+  "actions": [
+    {
+      "after": 5,
+      "use": true
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[tag=itemaudit3]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "gamerule random_tick_speed 3",
+    "difficulty peaceful"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true
+}

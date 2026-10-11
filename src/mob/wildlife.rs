@@ -78,7 +78,7 @@ pub fn harmful_flower(name: &str) -> Option<crate::survival::Effect> {
         "open_eyeblossom"=>(crate::survival::EffectKind::Poison,25),
         _=>return None,
     };
-    Some(crate::survival::Effect {kind,amplifier:0,ticks_left,ambient:false,visible:true})
+    Some(crate::survival::Effect {kind,amplifier:0,ticks_left,ambient:false,visible:true, show_icon:true})
 }
 
 pub fn pollinatable(state: i32) -> bool {
@@ -373,7 +373,7 @@ pub fn totem(mob: &mut Mob, source: crate::survival::Source) -> bool {
     mob.wild.mouth=None;mob.vitals.dead=false;mob.vitals.health=1.0;
     mob.vitals.effects.clear();mob.vitals.absorption=0.0;
     for (kind,amplifier,ticks_left) in [(crate::survival::EffectKind::Regeneration,1,900),(crate::survival::EffectKind::Absorption,1,100),(crate::survival::EffectKind::FireResistance,0,800)] {
-        mob.vitals.give_effect_shown(crate::survival::Effect {kind,amplifier,ticks_left,ambient:false,visible:true});
+        mob.vitals.give_effect_shown(crate::survival::Effect {kind,amplifier,ticks_left,ambient:false,visible:true, show_icon:true});
     }
     mob.events.push(Event::Status(35));true
 }
@@ -567,7 +567,7 @@ pub fn sting(mob: &mut Mob) {
 
 pub fn poison(difficulty: u8) -> Option<crate::survival::Effect> {
     let ticks=match difficulty {2=>200,3=>360,_=>return None};
-    Some(crate::survival::Effect { kind:crate::survival::EffectKind::Poison,amplifier:0,ticks_left:ticks,ambient:false,visible:true })
+    Some(crate::survival::Effect { kind:crate::survival::EffectKind::Poison,amplifier:0,ticks_left:ticks,ambient:false,visible:true, show_icon:true })
 }
 
 pub fn crop_growth(state: i32) -> Option<i32> {

@@ -16,9 +16,11 @@ use crate::combat::{self, PlayerStrike};
 use crate::survival::Source;
 use crate::world::World;
 
-/// Досягаемость удара по существу в выживании (атрибут
-/// `entity_interaction_range`) и запас на задержку сети. [проверить]
-const REACH_SLACK: f64 = 1.0;
+/// Досягаемость удара по существу (атрибут `entity_interaction_range`) и запас
+/// сервера: оригинал принимает удар, если ящик цели ближе 3 + 3 блоков от глаз
+/// (чёрный ящик, itemaudit-reach-scan2: удар с зазором 5,95 прошёл, с 6,1 — нет;
+/// itemaudit-reach-scan: сверху с 4,2 прошёл).
+const REACH_SLACK: f64 = 3.0;
 
 /// Ближайшее расстояние от точки до ящика игрока (0,6 × 1,8; присев — 1,5).
 fn distance_to_box(from: (f64, f64, f64), feet: (f64, f64, f64), sneaking: bool) -> f64 {
@@ -34,8 +36,92 @@ fn distance_to_box(from: (f64, f64, f64), feet: (f64, f64, f64), sneaking: bool)
 
 /// Может ли игрок в этом состоянии бить с критом (вики, Critical hit): падает,
 /// не на земле, не бежит, не в воде.
-fn may_crit(player: &PlayerState) -> bool {
+pub(super) fn may_crit(player: &PlayerState) -> bool {
+    // Слепота мешает крит-удару (чёрный ящик, itemaudit-blindness-crit); «Медленное
+    // падение» — нет: булава под ним бьёт критом 6·1,5 (чёрный ящик,
+    // itemaudit-slow-falling-mace). Левитация [проверить]. Копья и всадники не критуют;
+    // лестницы/люки пока [проверить].
     player.vit.fall > 0.0 && !player.on_ground && !player.vit.sprinting && !player.net.in_water
+        && player.ride.vehicle.is_none()
+        && ![crate::survival::EffectKind::Blindness, crate::survival::EffectKind::Levitation].into_iter().any(|kind| player.vit.has_effect(kind))
+        && !player.inventory.held().and_then(|stack| combat::item_name(stack.item)).is_some_and(|name| name.ends_with("_spear"))
+}
+
+pub(super) fn may_smash(player: &PlayerState, mace: bool) -> bool {
+    combat::smash_ready(mace, player.vit.fall, player.on_ground)
+        && !player.glide.active && !player.vit.has_effect(crate::survival::EffectKind::SlowFalling)
+}
+
+/// Wiki, Thorns: срабатывает и от стрел/трезубца и ударов моба.
+/// Обычный PvP melee уже предсказывает шипы в strike_player; здесь только
+/// прочие принятые попадания. [проверить] Порядок отражения в сетевом такте.
+pub(super) fn retaliate(shared: &Shared, player: &mut PlayerState, source: Source, attacker: i32) {
+    if attacker == 0 || attacker == player.entity_id
+        || !(source.is_projectile() || matches!(source, Source::MobAttack | Source::MobAttackNoAggro)) { return; }
+    let target_player = shared.players.lock().expect("игроки").by_entity(attacker).map(|(member,_)| member);
+    for slot in [player.inventory.selected_slot(), inventory::OFFHAND, 5, 6, 7, 8] {
+        let Some(stack) = player.inventory.slot(slot) else { continue; };
+        let level = stack.extras().level("thorns");
+        if level <= 0 || vitals::world_random(shared,player.dimension) >= 0.15 * level as f32 { continue; }
+        let damage = combat::thorns_damage(level,vitals::world_random(shared,player.dimension));
+        let from = (player.x,player.y,player.z);
+        if target_player.as_ref().is_some_and(|m| m.dimension == player.dimension) {
+            shared.world_in(player.dimension).lock().expect("мир").note_player_strike(PlayerStrike {
+                victim:attacker,attacker:player.entity_id,attacker_uuid:player.uuid,attacker_name:player.name.clone(),
+                from,yaw:player.yaw,damage,source:Source::Thorns,extra_knockback:0.0,weapon:None,
+                disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,thorns_slots:Vec::new(),effects:Vec::new(),
+            });
+        } else {
+            let mut items=shared.items_in(player.dimension).lock().expect("мобы");
+            if let Some(mob)=items.mobs_mut().iter_mut().find(|m|m.entity_id==attacker) {
+                let delta=(mob.x-player.x,mob.z-player.z);let length=delta.0.hypot(delta.1).max(1.0e-9);
+                mob.hurt(damage,Source::Thorns,Some(crate::mob::Push {dir:(delta.0/length,delta.1/length),strength:0.4,cause:player.entity_id}));
+                mob.credit_to(player.uuid);
+            }
+        }
+        wear_slot(shared,player,slot,stack,2,combat::ARMOR_SLOTS.iter().any(|(armor,_)|*armor==slot));
+    }
+}
+
+
+#[cfg(test)]
+mod itemaudit_tests {
+    use super::*;
+
+    #[test]
+    fn effects_mounts_and_spears_prevent_critical_hits() {
+        let mut player = PlayerState::new([19; 16], "ItemAudit".to_string(), None, None, 0x7F, 19, (0.0, 64.0, 0.0));
+        player.on_ground = false;
+        player.vit.fall = 2.0;
+        assert!(may_crit(&player));
+        for kind in [crate::survival::EffectKind::Blindness, crate::survival::EffectKind::Levitation] {
+            player.vit.give_effect(kind, 0, 100);
+            assert!(!may_crit(&player), "{kind:?}");
+            player.vit.effects.clear();
+        }
+        // Медленное падение крит не отменяет (чёрный ящик, itemaudit-slow-falling-mace).
+        player.vit.give_effect(crate::survival::EffectKind::SlowFalling, 0, 100);
+        assert!(may_crit(&player));
+        player.vit.effects.clear();
+        player.ride.vehicle = Some(23);
+        assert!(!may_crit(&player));
+        player.ride.vehicle = None;
+        player.inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(blocks::item_named("iron_spear").unwrap(), 1)));
+        assert!(!may_crit(&player));
+    }
+
+    #[test]
+    fn slow_falling_and_elytra_prevent_mace_smash() {
+        let mut player = PlayerState::new([20; 16], "ItemAudit".to_string(), None, None, 0x7F, 20, (0.0, 64.0, 0.0));
+        player.on_ground = false;
+        player.vit.fall = 4.0;
+        assert!(may_smash(&player, true));
+        player.vit.give_effect(crate::survival::EffectKind::SlowFalling, 0, 100);
+        assert!(!may_smash(&player, true));
+        player.vit.effects.clear();
+        player.glide.active = true;
+        assert!(!may_smash(&player, true));
+    }
 }
 
 /// Удар игрока по игроку `target`. Возвращает, был ли такой игрок в
@@ -79,7 +165,8 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
     // за каждый блок падения идёт в основу (и под крит), вид урона —
     // mace_smash, пролёт гасится (чёрный ящик, pvp-mace).
     let mace = held.and_then(|stack| combat::item_name(stack.item)) == Some("mace");
-    let smash = combat::smash_ready(mace, player.vit.fall, player.on_ground);
+    let smash = may_smash(player, mace);
+    let breach = if mace { combat::breach_scale(data.level("breach")) } else { 1.0 };
     let bonus = if smash { combat::smash_bonus(player.vit.fall, data.level("density")) } else { 0.0 };
     let strike = combat::strike(player.attrs.value(crate::attributes::ATTACK_DAMAGE), bonus, enchant, charge, may_crit(player));
     let source = if smash { Source::MaceSmash } else { Source::PlayerAttack };
@@ -94,7 +181,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
     // Исход удара — по тому, что жертва опубликовала (броня, щит,
     // неуязвимость): от него зависят звуки и частицы, которые ставит нападающий
     // сразу за ударом, в том же такте (чёрный ящик, pvp-fist).
-    let outcome = combat::outcome(&gear.view, strike.damage, source, now, (victim.position.x, victim.position.z, victim.position.yaw), (player.x, player.z));
+    let outcome = combat::outcome_breached(&gear.view, strike.damage, source, now, (victim.position.x, victim.position.z, victim.position.yaw), (player.x, player.z), breach);
     let lands = matches!(outcome, combat::Outcome::Taken(_));
 
     if lands {
@@ -144,7 +231,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         extra_knockback: extra,
         weapon: held,
         disables_shield_ticks: (disables * 20.0) as u32,
-        breach_scale: if smash { combat::breach_scale(data.level("breach")) } else { 1.0 },
+        breach_scale: breach,
         fire_ticks: fire * 80,
         thorns_slots,
         effects: Vec::new(),
@@ -338,13 +425,13 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
     }
 
     let mortal = player.game_mode == GAME_MODE_SURVIVAL || player.game_mode == GAME_MODE_ADVENTURE;
-    let mut damage = strike.damage;
+    let damage = strike.damage;
     let now = *shared.ticks.borrow();
 
     // Щит (вики, Shield): поднятый дольше 5 тактов держит удар из передней
     // полусферы — урона нет, щит изнашивается, а топор отключает его.
     if mortal
-        && strike.source != Source::Thorns
+        && combat::shield_blocks(strike.source)
         && !strike.ignores_shield
         && !player.vit.dead
         && damage > 0.0
@@ -354,17 +441,6 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
         return block_with_shield(stream, shared, player, strike, hand, now).await;
     }
 
-    // Броня и зачарования защиты (вики, Armor).
-    let (armor, toughness) = (player.attrs.value(crate::attributes::ARMOR) as f32, player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32);
-
-    if mortal && !combat::bypasses_armor(strike.source) {
-        damage = combat::after_armor_breached(damage, armor, toughness, strike.breach_scale);
-
-        let points: i32 = combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot)).map(|stack| combat::protection_points(&stack.extras(), strike.source)).sum();
-
-        damage = combat::after_protection(damage, points);
-    }
-
     let killer = vitals::Killer { name: &strike.attacker_name, uuid: strike.attacker_uuid, weapon: strike.weapon };
     let at = (player.x, player.y, player.z);
     let from = strike.from;
@@ -372,7 +448,7 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
     let toward = (from.2 - at.2).atan2(from.0 - at.0).to_degrees() as f32;
     let yaw = (toward - player.yaw).rem_euclid(360.0);
     let result = if mortal {
-        vitals::hit_by(stream, shared, player, damage, strike.source, strike.attacker, strike.attacker, Some(killer), Some(yaw)).await?
+        vitals::hit_by_breached(stream, shared, player, damage, strike.source, strike.attacker, strike.attacker, Some(killer), Some(yaw), strike.breach_scale).await?
     } else {
         None
     };
@@ -401,7 +477,7 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             // сам урон ударившему он выдаёт себе в такт удара (`strike_player`).
             for slot in &strike.thorns_slots {
                 if let Some(stack) = player.inventory.slot(*slot) {
-                    replace_worn(shared, player, *slot, stack, 2);
+                    wear_slot(shared, player, *slot, stack, 2, true);
                 }
             }
 
@@ -431,7 +507,7 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
             }
 
             if strike.fire_ticks > 0 {
-                player.vit.ignite(strike.fire_ticks);
+                vitals::ignite(player, strike.fire_ticks);
             }
 
             if let Some(velocity) = player.net.velocity.take() {
@@ -628,7 +704,9 @@ pub(super) fn guardian_spikes(shared: &Shared, player: &mut PlayerState, guardia
     let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
     let mut probe = player.vit.clone();
     let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
-    let announced = probe.hurt(amount, Source::Thorns, immune).is_some();
+    let points: i32 = combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot)).map(|stack| combat::protection_points(&stack.extras(), Source::Thorns)).sum();
+    let (armor, toughness) = (player.attrs.value(crate::attributes::ARMOR) as f32, player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32);
+    let announced = probe.hurt(combat::mitigated_damage(amount, armor, toughness, points, Source::Thorns, 1.0), Source::Thorns, immune).is_some();
 
     if announced {
         let (type_id, culprit, direct) = vitals::damage_fields(Source::Thorns, guardian, 0);
@@ -667,7 +745,7 @@ fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players:
             continue;
         }
 
-        let amount = if level > 10 { (level - 10) as f32 } else { combat::thorns_damage(level, vitals::world_random(shared, dimension)) };
+        let amount = combat::thorns_damage(level, vitals::world_random(shared, dimension));
         let toward = (victim_at.2 - player.z).atan2(victim_at.0 - player.x).to_degrees() as f32;
         let at = (player.x, player.y, player.z);
         let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
@@ -678,7 +756,10 @@ fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players:
         // заранее прикидывается на копии состояния.
         let mut probe = player.vit.clone();
         let immune = player.game_mode == GAME_MODE_CREATIVE || player.game_mode == GAME_MODE_SPECTATOR;
-        let announced = probe.hurt(amount, Source::Thorns, immune).is_some();
+        let points: i32 = combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot)).map(|stack| combat::protection_points(&stack.extras(), Source::Thorns)).sum();
+        // Тот же расчёт, что у настоящего удара (hit_by_breached): броня и чары.
+        let (armor, toughness) = (player.attrs.value(crate::attributes::ARMOR) as f32, player.attrs.value(crate::attributes::ARMOR_TOUGHNESS) as f32);
+        let announced = probe.hurt(combat::mitigated_damage(amount, armor, toughness, points, Source::Thorns, 1.0), Source::Thorns, immune).is_some();
 
         if announced {
             let (type_id, culprit, direct) = vitals::damage_fields(Source::Thorns, victim, 0);
@@ -711,4 +792,24 @@ fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players:
     }
 
     slots
+}
+
+#[cfg(test)]
+mod itemaudit4_thorns_tests {
+    use super::*;
+    #[test]
+    fn thorns_retaliates_to_ranged_and_mob_attacks_without_recursion() {
+        for source in [Source::Arrow,Source::Trident,Source::MobAttack] {
+            let shared=Shared::new(World::in_memory(),World::in_memory(),Default::default(),Default::default(),Default::default(),crate::ops::Ops::open(std::path::Path::new("tmp/itemaudit4/no-ops-thorns.json")),crate::skins::Settings::default());
+            let mut p=PlayerState::new([8;16],"ThornsAudit".into(),None,None,0x7f,8,(0.0,64.0,0.0));p.game_mode=GAME_MODE_SURVIVAL;
+            let mut data=crate::stackdata::Data::default();data.set_enchant(crate::stackdata::enchantment_number("thorns").unwrap(),11);
+            p.inventory.set(6,Some(Stack::new(blocks::item_named("diamond_chestplate").unwrap(),1).with_extras(data)));
+            shared.items_in(p.dimension).lock().unwrap().add_mob(crate::mob::Mob::new(99,crate::mob::Kind::Skeleton,(0.0,64.0,2.0)));
+            retaliate(&shared,&mut p,source,99);
+            let health=shared.items_in(p.dimension).lock().unwrap().mobs()[0].vitals.health;
+            assert!((15.0..=19.0).contains(&health));assert_eq!(p.inventory.slot(6).unwrap().extras().damage,2);
+            retaliate(&shared,&mut p,Source::Thorns,99);assert_eq!(p.inventory.slot(6).unwrap().extras().damage,2);
+        }
+        assert!(combat::shield_blocks(Source::Thorns));
+    }
 }

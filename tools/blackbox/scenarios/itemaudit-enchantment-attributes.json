@@ -1,0 +1,60 @@
+{
+  "name": "itemaudit-enchantment-attributes",
+  "about": "[проверить] Respiration III, Aqua Affinity I, Depth Strider III, Swift Sneak III, Efficiency V: экипировка и снятие отправляют атрибуты. Создан до реализации, не запускался.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "kill $(bot)",
+    "!wait 20",
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!look 0 0",
+    "!hotbar 0",
+    "!wait 10",
+    "!wait 25"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) armor.head with diamond_helmet[enchantments={respiration:3,aqua_affinity:1}]"
+    },
+    {
+      "after": 5,
+      "cmd": "item replace entity $(bot) armor.legs with diamond_leggings[enchantments={swift_sneak:3}]"
+    },
+    {
+      "after": 10,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={depth_strider:3}]"
+    },
+    {
+      "after": 15,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe[enchantments={efficiency:5}]"
+    },
+    {
+      "after": 40,
+      "cmd": "clear $(bot)"
+    }
+  ],
+  "record_ticks": 65,
+  "cleanup": [
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "effect clear $(bot)",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly",
+    "kill @e[type=item,distance=..48]"
+  ],
+  "track_self": true,
+  "item_components": true,
+  "inventory": true,
+  "exclusive": true
+}

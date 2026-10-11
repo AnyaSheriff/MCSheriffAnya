@@ -733,7 +733,7 @@ pub fn step(mob: &mut crate::mob::Mob, view: &dyn crate::mob::View, clock: i64, 
                 let level = state.level;
 
                 state.add_trades(level, rng);
-                mob.vitals.give_effect_shown(crate::survival::Effect { kind: crate::survival::EffectKind::Regeneration, amplifier: 0, ticks_left: LEVEL_UP_REGEN, ambient: false, visible: true });
+                mob.vitals.give_effect_shown(crate::survival::Effect { kind: crate::survival::EffectKind::Regeneration, amplifier: 0, ticks_left: LEVEL_UP_REGEN, ambient: false, visible: true, show_icon: true });
             }
         }
     }

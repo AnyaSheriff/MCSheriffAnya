@@ -788,6 +788,33 @@ fn set_prop(world: &mut crate::world::World, (x, y, z): (i32, i32, i32), key: &s
     }
 }
 
+/// Вики, Trial Omen: видимый спавнер в радиусе 15. Пока переводим только
+/// ожидающий спавнер; сброс активной волны и cooldown [проверить].
+pub fn omen_candidates(world: &crate::world::World, at: (f64,f64,f64), eye: f64) -> Vec<(i32,i32,i32)> {
+    world.trial_places().into_iter().filter(|&(x,y,z)| {
+        let block=world.get_block(x,y,z);
+        let centre=(f64::from(x)+0.5,f64::from(y)+0.5,f64::from(z)+0.5);
+        !ominous_state(block) && prop(block,"trial_spawner_state")==Some("waiting_for_players")
+            && matches!(world.trial(x,y,z),Some(Data::Spawner(s)) if !s.normal.entity.is_empty())
+            && (at.0-centre.0).powi(2)+(at.1-centre.1).powi(2)+(at.2-centre.2).powi(2)<225.0
+            && clear(world,centre,(at.0,at.1+eye,at.2))
+    }).collect()
+}
+
+pub fn activate_omen(world: &mut crate::world::World, positions: &[(i32,i32,i32)]) {
+    for &p in positions {
+        set_prop(world,p,"ominous","true");
+        note(world,p);
+    }
+}
+
+/// Bad Omen не складывает длительности: 15 минут за уровень или более
+/// долгий уже действующий Trial Omen (вики, Trial Omen).
+pub fn omen_duration(bad_level: i32, remaining: i32) -> i32 {
+    if remaining == crate::survival::INFINITE { remaining }
+    else { remaining.max(18_000 * bad_level.clamp(1,5)) }
+}
+
 /// Игрок рядом: номер, UUID, ноги, глаза, считается ли (выживание или
 /// приключение — вики: «Only Survival and Adventure players count»).
 #[derive(Clone, Copy, Debug)]

@@ -1920,6 +1920,14 @@ impl World {
         changed
     }
 
+    /// Debug Stick меняет состояние без обновления соседей (wiki, Debug Stick).
+    pub fn set_debug_state(&mut self, (x,y,z): (i32,i32,i32), state: i32) {
+        if self.set_block_silently(x,y,z,state) {
+            self.events.push(WorldEvent::Change(BlockChange { x,y,z,state,direct:false }));
+            self.dirty.insert(chunk_key(x,z));
+        }
+    }
+
     /// Ставит блок, не запоминая изменение: для начальной расстановки, когда
     /// рассылать ещё некому.
     ///

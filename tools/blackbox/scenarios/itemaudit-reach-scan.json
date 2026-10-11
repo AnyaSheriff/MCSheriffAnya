@@ -1,0 +1,145 @@
+{
+ "name": "itemaudit-reach-scan",
+ "about": "Дальность удара игрока по игроку: горизонтальный разброс 3.2..4.6 и высота 2.5..4. Какие удары прошли, сверка с оригиналом.",
+ "second": true,
+ "track_self": true,
+ "track_players": true,
+ "exclusive": true,
+ "blocks": [],
+ "track_second": true,
+ "record_ticks": 163,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "kill @e[type=arrow,distance=..48]",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "gamemode creative $(bot)",
+  "gamemode creative $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "tp $(bot2) $(6.5,0,6.5)",
+  "!wait 4",
+  "!startfly",
+  "effect clear $(bot2)"
+ ],
+ "item_components": true,
+ "track_second_velocity": true,
+ "setup": [
+  "difficulty normal",
+  "gamerule natural_health_regeneration false",
+  "gamemode survival $(bot)",
+  "gamemode survival $(bot2)",
+  "clear $(bot)",
+  "clear $(bot2)",
+  "kill $(bot)",
+  "!wait 30",
+  "tp $(bot) $(3.5,0,3.5) 180 0",
+  "tp $(bot2) $(3.5,0,1.5) 0 0",
+  "!stopfly",
+  "!wait 20",
+  "!hotbar2 0",
+  "!hotbar 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "tp $(bot2) $(3.5,0,0.20) 0 0"
+  },
+  {
+   "after": 3,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 15,
+   "cmd": "tp $(bot2) $(3.5,0,-0.10) 0 0"
+  },
+  {
+   "after": 18,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 30,
+   "cmd": "tp $(bot2) $(3.5,0,-0.40) 0 0"
+  },
+  {
+   "after": 33,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 45,
+   "cmd": "tp $(bot2) $(3.5,0,-0.70) 0 0"
+  },
+  {
+   "after": 48,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 60,
+   "cmd": "tp $(bot2) $(3.5,0,-1.00) 0 0"
+  },
+  {
+   "after": 63,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 75,
+   "cmd": "tp $(bot2) $(3.5,0,-1.30) 0 0"
+  },
+  {
+   "after": 78,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 90,
+   "cmd": "tp $(bot2) $(3.5,2.0,1.5) 0 0"
+  },
+  {
+   "after": 91,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 103,
+   "cmd": "tp $(bot2) $(3.5,2.5,1.5) 0 0"
+  },
+  {
+   "after": 104,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 116,
+   "cmd": "tp $(bot2) $(3.5,3.0,1.5) 0 0"
+  },
+  {
+   "after": 117,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 129,
+   "cmd": "tp $(bot2) $(3.5,3.5,1.5) 0 0"
+  },
+  {
+   "after": 130,
+   "attack": true,
+   "bot": 2
+  },
+  {
+   "after": 142,
+   "cmd": "tp $(bot2) $(3.5,4.0,1.5) 0 0"
+  },
+  {
+   "after": 143,
+   "attack": true,
+   "bot": 2
+  }
+ ]
+}
