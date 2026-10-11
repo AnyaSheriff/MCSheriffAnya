@@ -25,24 +25,50 @@ const TAG_COMPOUND: u8 = 10;
 /// 2 — флаг, 3 — перечисление (так у BDS).
 const TYPE_ENUM: i32 = 3;
 
-/// Одно перечислимое свойство: имя и значения по порядку.
-struct EnumProperty {
-    name: &'static str,
-    values: &'static [&'static str],
+/// Вид значения свойства в определении BDS: перечисление (3), флаг (2), целое с границами (0).
+enum Shape {
+    Enum(&'static [&'static str]),
+    Flag,
+    Int(i32, i32),
 }
 
-const CLIMATE: EnumProperty = EnumProperty { name: "minecraft:climate_variant", values: &["temperate", "warm", "cold"] };
+/// Одно свойство: имя и вид значения.
+struct EnumProperty {
+    name: &'static str,
+    shape: Shape,
+}
+
+const fn en(name: &'static str, values: &'static [&'static str]) -> EnumProperty {
+    EnumProperty { name, shape: Shape::Enum(values) }
+}
+
+const CLIMATE: EnumProperty = en("minecraft:climate_variant", &["temperate", "warm", "cold"]);
 
 /// Свойства вида в порядке индексов; пустой список — свойств нет.
 fn properties(kind: Kind) -> &'static [EnumProperty] {
-    const PIG: [EnumProperty; 2] = [CLIMATE, EnumProperty { name: "minecraft:sound_variant", values: &["default", "big", "mini"] }];
-    const COW: [EnumProperty; 2] = [CLIMATE, EnumProperty { name: "minecraft:sound_variant", values: &["default", "moody"] }];
-    const CHICKEN: [EnumProperty; 2] = [CLIMATE, EnumProperty { name: "minecraft:sound_variant", values: &["default", "picky"] }];
+    const PIG: [EnumProperty; 2] = [CLIMATE, en("minecraft:sound_variant", &["default", "big", "mini"])];
+    const COW: [EnumProperty; 2] = [CLIMATE, en("minecraft:sound_variant", &["default", "moody"])];
+    const CHICKEN: [EnumProperty; 2] = [CLIMATE, en("minecraft:sound_variant", &["default", "picky"])];
+    // Определения остальных видов — как их шлёт BDS 1.26.13.1 при входе (запись br-cases.js).
+    const BEE: [EnumProperty; 1] = [EnumProperty { name: "minecraft:has_nectar", shape: Shape::Flag }];
+    const GHAST: [EnumProperty; 1] = [EnumProperty { name: "minecraft:can_move", shape: Shape::Flag }];
+    const ARMADILLO: [EnumProperty; 1] = [en("minecraft:armadillo_state", &["unrolled", "rolled_up", "rolled_up_peeking", "rolled_up_relaxing", "rolled_up_unrolling"])];
+    const WOLF: [EnumProperty; 1] = [en("minecraft:sound_variant", &["default", "big", "cute", "grumpy", "mad", "puglin", "sad"])];
+    const CAT: [EnumProperty; 1] = [en("minecraft:sound_variant", &["default", "royal"])];
+    const CREAKING: [EnumProperty; 2] = [en("minecraft:creaking_state", &["neutral", "hostile_observed", "hostile_unobserved", "twitching", "crumbling"]), EnumProperty { name: "minecraft:creaking_swaying_ticks", shape: Shape::Int(0, 6) }];
+    const COPPER: [EnumProperty; 3] = [en("minecraft:chest_interaction", &["none", "take", "take_fail", "put", "put_fail"]), EnumProperty { name: "minecraft:has_flower", shape: Shape::Flag }, en("minecraft:oxidation_level", &["unoxidized", "exposed", "weathered", "oxidized"])];
 
     match kind {
         Kind::Pig => &PIG,
         Kind::Cow => &COW,
         Kind::Chicken => &CHICKEN,
+        Kind::Bee => &BEE,
+        Kind::HappyGhast => &GHAST,
+        Kind::Armadillo => &ARMADILLO,
+        Kind::Wolf => &WOLF,
+        Kind::Cat => &CAT,
+        Kind::Creaking => &CREAKING,
+        Kind::CopperGolem => &COPPER,
         _ => &[],
     }
 }
@@ -59,18 +85,34 @@ fn definition(kind: Kind, list: &[EnumProperty]) -> Vec<u8> {
     name(&mut out, TAG_LIST, "properties");
     out.u8(TAG_COMPOUND).zigzag32(list.len() as i32); // длина списка — int, то есть zigzag
 
+    // Ключи компаунда — по алфавиту, как у BDS: enum | max, min | name, type.
     for property in list {
-        name(&mut out, TAG_LIST, "enum");
-        out.u8(TAG_STRING).zigzag32(property.values.len() as i32);
+        match &property.shape {
+            Shape::Enum(values) => {
+                name(&mut out, TAG_LIST, "enum");
+                out.u8(TAG_STRING).zigzag32(values.len() as i32);
 
-        for value in property.values {
-            out.string(value);
+                for value in *values {
+                    out.string(value);
+                }
+            }
+            Shape::Int(min, max) => {
+                name(&mut out, TAG_INT, "max");
+                out.zigzag32(*max);
+                name(&mut out, TAG_INT, "min");
+                out.zigzag32(*min);
+            }
+            Shape::Flag => {}
         }
 
         name(&mut out, TAG_STRING, "name");
         out.string(property.name);
         name(&mut out, TAG_INT, "type");
-        out.zigzag32(TYPE_ENUM);
+        out.zigzag32(match property.shape {
+            Shape::Enum(_) => TYPE_ENUM,
+            Shape::Flag => 2,
+            Shape::Int(..) => 0,
+        });
         out.u8(0); // конец компаунда свойства
     }
 
@@ -85,13 +127,14 @@ pub fn definitions() -> Vec<Vec<u8>> {
     ALL.iter().filter(|kind| !properties(**kind).is_empty()).map(|kind| definition(*kind, properties(*kind))).collect()
 }
 
-const ALL: [Kind; 3] = [Kind::Pig, Kind::Chicken, Kind::Cow];
+const ALL: [Kind; 10] = [Kind::Pig, Kind::Chicken, Kind::Cow, Kind::Bee, Kind::HappyGhast, Kind::Armadillo, Kind::Wolf, Kind::Cat, Kind::Creaking, Kind::CopperGolem];
 
 /// Значения свойств для Add Actor: `(индекс, номер значения)`.
 /// Климат пока всегда умеренный (у Java вариант зависит от биома) и голос
 /// обычный [проверить]: у BDS голос случайный, у нас такого состояния нет.
 pub fn values(kind: Kind) -> Vec<(u32, i32)> {
-    (0..properties(kind).len() as u32).map(|index| (index, 0)).collect()
+    // Начальные значения: у BDS все нули, кроме `can_move` счастливого гаста.
+    (0..properties(kind).len() as u32).map(|index| (index, i32::from(kind == Kind::HappyGhast))).collect()
 }
 
 /// Поле `properties` Add Actor: целые, потом дробные.
@@ -127,9 +170,28 @@ mod tests {
         assert_eq!(*packet.last().expect("конец"), 0);
     }
 
+    /// Определения BDS: флаг (type 2) без enum, целое (type 0) с max и min по алфавиту, перечисление (type 3).
+    #[test]
+    fn flag_int_and_enum_definitions_follow_bds() {
+        let bee = String::from_utf8_lossy(&definition(Kind::Bee, properties(Kind::Bee))).to_string();
+
+        assert!(bee.contains("minecraft:has_nectar") && !bee.contains("enum"));
+
+        let creaking = definition(Kind::Creaking, properties(Kind::Creaking));
+        let text = String::from_utf8_lossy(&creaking).to_string();
+
+        assert!(text.contains("creaking_state") && text.contains("twitching") && text.contains("creaking_swaying_ticks"));
+        let at = |needle: &[u8]| creaking.windows(needle.len()).position(|w| w == needle).expect("ключ");
+
+        assert!(at(&[TAG_INT, 3, b'm', b'a', b'x']) < at(&[TAG_INT, 3, b'm', b'i', b'n']));
+        assert_eq!(values(Kind::Creaking), vec![(0, 0), (1, 0)]);
+        assert_eq!(values(Kind::HappyGhast), vec![(0, 1)]);
+        assert_eq!(values(Kind::CopperGolem).len(), 3);
+    }
+
     #[test]
     fn only_mobs_with_properties_are_defined() {
-        assert_eq!(definitions().len(), 3);
+        assert_eq!(definitions().len(), 10);
         assert!(properties(Kind::Zombie).is_empty());
         assert!(values(Kind::Sheep).is_empty());
     }

@@ -1,0 +1,62 @@
+{
+  "name": "bedrock-entities-state",
+  "about": "Shared-state fixture for a later Java/Bedrock observer comparison: name removal, sitting, collar, baby, shearing, equipment and health. Client 944 visuals remain unverified.",
+  "track_mobs": true,
+  "exclusive": true,
+  "origin": [
+    120,
+    64,
+    120
+  ],
+  "blocks": [],
+  "setup": [
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "fill $(-8,-1,-8) $(8,-1,12) minecraft:stone",
+    "fill $(-8,0,-8) $(8,12,12) minecraft:air",
+    "tp $(bot) $(0.5,1,0.5)",
+    "!look 0 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon wolf $(-2.5,0,4.5) {NoAI:1b,Silent:1b,CustomName:\"Bedrock wolf\",CollarColor:14b}"
+    },
+    {
+      "after": 0,
+      "cmd": "summon cat $(0.5,0,4.5) {NoAI:1b,Silent:1b,variant:\"minecraft:all_black\",CollarColor:3b}"
+    },
+    {
+      "after": 0,
+      "cmd": "summon sheep $(3.5,0,4.5) {NoAI:1b,Silent:1b,Color:14b,Age:-24000}"
+    },
+    {
+      "after": 10,
+      "cmd": "data merge entity @e[type=wolf,sort=nearest,limit=1] {Sitting:1b,CollarColor:5b,Health:8.0f}"
+    },
+    {
+      "after": 20,
+      "cmd": "data merge entity @e[type=sheep,sort=nearest,limit=1] {Sheared:1b,Age:0}"
+    },
+    {
+      "after": 30,
+      "cmd": "data merge entity @e[type=wolf,sort=nearest,limit=1] {Sitting:0b,CustomName:\"\",CollarColor:14b}"
+    },
+    {
+      "after": 40,
+      "cmd": "data merge entity @e[type=sheep,sort=nearest,limit=1] {Sheared:0b,Color:3b}"
+    },
+    {
+      "after": 50,
+      "cmd": "damage @e[type=wolf,sort=nearest,limit=1] 2 minecraft:generic"
+    }
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..40]",
+    "fill $(-8,-1,-8) $(8,12,12) minecraft:air",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "!startfly"
+  ],
+  "record_ticks": 90
+}

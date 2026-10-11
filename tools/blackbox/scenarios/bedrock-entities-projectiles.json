@@ -1,0 +1,86 @@
+{
+  "name": "bedrock-entities-projectiles",
+  "about": "Shared projectile fixture: all basic throwable families must be visible to a Bedrock observer; trident must not use an arrow model. No recording produced in this task.",
+  "track_mobs": true,
+  "exclusive": true,
+  "origin": [
+    120,
+    64,
+    120
+  ],
+  "blocks": [],
+  "setup": [
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "fill $(-8,-1,-8) $(8,-1,12) minecraft:stone",
+    "fill $(-8,0,-8) $(8,12,12) minecraft:air",
+    "tp $(bot) $(0.5,1,0.5)",
+    "!look 0 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon arrow $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 6,
+      "cmd": "summon spectral_arrow $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 12,
+      "cmd": "summon trident $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 18,
+      "cmd": "summon snowball $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 24,
+      "cmd": "summon egg $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 30,
+      "cmd": "summon ender_pearl $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 36,
+      "cmd": "summon experience_bottle $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 42,
+      "cmd": "summon small_fireball $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 48,
+      "cmd": "summon fireball $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 54,
+      "cmd": "summon dragon_fireball $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 60,
+      "cmd": "summon wither_skull $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 66,
+      "cmd": "summon llama_spit $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 72,
+      "cmd": "summon wind_charge $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    },
+    {
+      "after": 78,
+      "cmd": "summon breeze_wind_charge $(0.5,4,5.5) {Motion:[0.12d,0.0d,0.0d]}"
+    }
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..40]",
+    "fill $(-8,-1,-8) $(8,12,12) minecraft:air",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "!startfly"
+  ],
+  "record_ticks": 110
+}

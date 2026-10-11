@@ -196,7 +196,6 @@ impl<'a> In<'a> {
         Some(((raw >> 1) as i32) ^ -((raw & 1) as i32))
     }
 
-    #[cfg(test)]
     pub fn zigzag64(&mut self) -> Option<i64> {
         let raw = self.varint64()?;
         Some(((raw >> 1) as i64) ^ -((raw & 1) as i64))

@@ -68,25 +68,41 @@ pub struct Look {
     /// BDS шлёт его после каждой сделки).
     pub xp: i32,
     pub name: Option<String>,
+    pub extra_flags: [u64; 2],
+    pub extra: Vec<(u32, Value)>,
+    pub gear: super::entity_gear::Gear,
+    pub health: f32,
+    pub max_health: f32,
+    pub speed: f32,
+    pub scale: f32,
+    /// Сила прыжка лошадиных (`minecraft:horse.jump_strength`).
+    pub jump: Option<f32>,
 }
 
 impl Look {
     pub fn of(mob: &Mob) -> Self {
         Self {
             kind: mob.kind,
-            baby: mob.is_baby(),
+            // Головастик у BDS всегда «детёныш» (бит baby), у Java возраста у него нет.
+            baby: mob.is_baby() || mob.kind == Kind::Tadpole,
             in_love: mob.love > 0,
-            sheared: mob.sheared,
+            sheared: mob.sheared || mob.kind == Kind::SnowGolem && !mob.golem.pumpkin,
             color: mob.color,
-            // Ни приручения, ни «сидит» у наших мобов нет (волков и кошек
-            // в ядре нет).
-            sitting: false,
-            tamed: false,
+            sitting: mob.tame.sitting || mob.land.sitting,
+            tamed: mob.tame.owner.is_some() || mob.horse.tamed || mob.land.tamed,
             profession: mob.villager.profession,
             village_type: mob.villager.kind,
             level: mob.villager.level,
             xp: mob.villager.xp,
-            name: None,
+            name: mob.name.clone(),
+            extra_flags: super::entity_state::flags(mob),
+            extra: super::entity_state::entries(mob),
+            gear: super::entity_gear::Gear::of(mob),
+            health: mob.vitals.health,
+            max_health: mob.vitals.max_health,
+            speed: super::bds_profile::movement(mob.kind, mob.movement_speed()).unwrap_or(mob.movement_speed() as f32),
+            scale: super::bds_profile::shape(mob.kind, mob.is_baby(), mob.size()).2,
+            jump: crate::mob::horse::equine(mob.kind).then_some(mob.horse.jump as f32),
         }
     }
 }
@@ -143,14 +159,20 @@ pub enum Value {
 /// Флаги живого моба: то, что BDS ставит всем (лазит, сталкивается, падает,
 /// дышит), «ходит» у наземных, и состояния из `look`.
 pub fn flags(look: &Look) -> i64 {
-    let mut bits: i64 = (1 << FLAG_CAN_CLIMB) | (1 << FLAG_BREATHING) | (1 << FLAG_HAS_COLLISION) | (1 << FLAG_AFFECTED_BY_GRAVITY);
+    // Постоянные флаги вида — как у BDS (bds_profile); без профиля — прежний набор.
+    let mut bits: i64 = match super::bds_profile::of(look.kind) {
+        Some(p) => super::bds_profile::static_flags(p, look.baby) as i64 | if super::bds_profile::breathes(look.kind) { 1 << FLAG_BREATHING } else { 0 },
+        None => (1 << FLAG_CAN_CLIMB) | (1 << FLAG_BREATHING) | (1 << FLAG_HAS_COLLISION) | (1 << FLAG_AFFECTED_BY_GRAVITY),
+    };
     let mut set = |on: bool, bit: u32| {
         if on {
             bits |= 1 << bit;
         }
     };
 
-    set(!matches!(look.kind, Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet), FLAG_WALKER);
+    if super::bds_profile::of(look.kind).is_none() {
+        set(!matches!(look.kind, Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet), FLAG_WALKER);
+    }
     set(look.baby, FLAG_BABY);
     set(look.in_love, FLAG_INLOVE);
     set(look.sheared, FLAG_SHEARED);
@@ -158,12 +180,12 @@ pub fn flags(look: &Look) -> i64 {
     set(look.tamed, FLAG_TAMED);
     set(look.name.is_some(), FLAG_CAN_SHOW_NAMETAG);
 
-    bits
+    bits | look.extra_flags[0] as i64
 }
 
 /// Значения данных сущности для моба: ключ и значение.
 pub fn entries(look: &Look) -> Vec<(u32, Value)> {
-    let mut list = vec![(KEY_FLAGS, Value::Long(flags(look))), (KEY_SCALE, Value::Float(if look.baby { 0.5 } else { 1.0 }))];
+    let mut list = vec![(KEY_FLAGS, Value::Long(flags(look))), (KEY_SCALE, Value::Float(look.scale))];
 
     match look.kind {
         Kind::Sheep => list.push((KEY_COLOR, Value::Byte(look.color.min(15) as i8))),
@@ -183,11 +205,20 @@ pub fn entries(look: &Look) -> Vec<(u32, Value)> {
         _ => {}
     }
 
-    if let Some(name) = &look.name {
-        list.push((KEY_NAMETAG, Value::Str(name.clone())));
-        list.push((KEY_ALWAYS_SHOW_NAMETAG, Value::Byte(1)));
+    // Пустое имя и нулевые флаги также передаются при снятии состояния.
+    list.push((KEY_NAMETAG, Value::Str(look.name.clone().unwrap_or_default())));
+    // Имя у BDS показывается, только когда на моба смотрят (always_show_nametag 0 и с именем, запись x-name).
+    list.push((92, Value::Long(look.extra_flags[1] as i64)));
+    // Остальное — данные вида (профиль BDS и состояние): уже поставленные ключи не повторяются.
+    for (key, value) in &look.extra {
+        if !list.iter().any(|(k, _)| k == key) {
+            list.push((*key, value.clone()));
+        }
     }
-
+    // Профиль BDS может задать своё значение 81 (дракон и кристалл: -1), иначе — 0.
+    if !list.iter().any(|(key, _)| *key == KEY_ALWAYS_SHOW_NAMETAG) {
+        list.push((KEY_ALWAYS_SHOW_NAMETAG, Value::Byte(0)));
+    }
     list
 }
 
@@ -226,7 +257,7 @@ mod tests {
     use super::*;
 
     fn look(kind: Kind) -> Look {
-        Look { kind, baby: false, in_love: false, sheared: false, color: 0, sitting: false, tamed: false, profession: 0, village_type: 2, level: 1, xp: 0, name: None }
+        Look::of(&Mob::new(1, kind, (0.0, 0.0, 0.0)))
     }
 
     /// Набор флагов взрослой коровы побайтово как у BDS: лазит, ходит, дышит,
@@ -241,9 +272,26 @@ mod tests {
         let mut baby = look(Kind::Sheep);
 
         baby.baby = true;
+        baby.scale = 0.5;
         assert_ne!(flags(&baby) & (1 << 11), 0);
         assert!(entries(&baby).contains(&(KEY_SCALE, Value::Float(0.5))));
         assert!(entries(&look(Kind::Sheep)).contains(&(KEY_SCALE, Value::Float(1.0))));
+    }
+
+    /// Запись BDS (b-cow, d-wolf, d-tadpole): у детёныша размер взрослого и масштаб вида, дикий волк без
+    /// ошейника, головастик — всегда «детёныш».
+    #[test]
+    fn baby_box_wild_collar_and_tadpole_follow_bds() {
+        let mut calf = Mob::new(1, Kind::Cow, (0.0, 0.0, 0.0));
+
+        calf.age = -24000;
+
+        let list = entries(&Look::of(&calf));
+
+        assert!(list.contains(&(KEY_SCALE, Value::Float(0.5))));
+        assert!(list.contains(&(53, Value::Float(0.9))));
+        assert!(entries(&look(Kind::Wolf)).contains(&(3, Value::Byte(0))));
+        assert_ne!(flags(&look(Kind::Tadpole)) & (1 << FLAG_BABY), 0);
     }
 
     #[test]
@@ -288,5 +336,66 @@ mod tests {
 
         write(&mut out, &[(KEY_SCALE, Value::Float(0.5)), (KEY_COLOR, Value::Byte(3))]);
         assert_eq!(&out.bytes[1..], &[2, 38, 3, 0, 0, 0, 0x3f, 3, 0, 3]);
+    }
+}
+
+/// Чтение в тестах независимо от энкодера: ключ, тип, значение (Mojang 944).
+#[cfg(test)]
+pub(crate) fn read_test_entries(r: &mut super::codec::In) -> Vec<(u32, Value)> {
+    (0..r.varint().expect("count")).map(|_| {
+        let key = r.varint().expect("key");
+        let value = match r.varint().expect("type") {
+            0 => Value::Byte(r.u8().unwrap() as i8),
+            1 => Value::Short(i16::from_le_bytes(r.take(2).unwrap().try_into().unwrap())),
+            2 => Value::Int(r.zigzag32().unwrap()),
+            3 => Value::Float(r.lf32().unwrap()),
+            4 => Value::Str(r.string().unwrap()),
+            7 => Value::Long(r.zigzag64().unwrap()),
+            other => panic!("unexpected metadata type {other}"),
+        };
+        (key, value)
+    }).collect()
+}
+
+#[cfg(test)]
+mod snapshot_tests {
+    use super::*;
+    use super::super::codec::In;
+    #[test]
+    fn every_mob_metadata_packet_round_trips_and_keys_are_unique() {
+        for kind in Kind::ALL {
+            let mut mob = Mob::new(500, kind, (0.0, 64.0, 0.0));
+            mob.name = Some("Тест 🐺".to_string());
+            mob.vitals.fire = 12;
+            let look = Look::of(&mob);
+            let data = entries(&look);
+            let keys: std::collections::HashSet<_> = data.iter().map(|(k, _)| k).collect();
+            assert_eq!(keys.len(), data.len(), "{kind:?}");
+            let p = set_data_packet(500, &data);
+            let mut r = In::new(&p);
+            assert_eq!((r.varint(), r.varint64()), (Some(0x27), Some(500)));
+            assert_eq!(read_test_entries(&mut r), data);
+            assert_eq!((r.varint(), r.varint(), r.varint64()), (Some(0), Some(0), Some(0)));
+            assert_eq!(r.remaining(), 0);
+        }
+    }
+    #[test]
+    fn name_leash_and_tame_state_follow_shared_changes_and_clear() {
+        let mut mob = Mob::new(500, Kind::Wolf, (0.0, 0.0, 0.0));
+        mob.name = Some("Wolf".into());
+        mob.tame.owner = Some([1; 16]);
+        mob.tame.owner_id = 99;
+        mob.tame.sitting = true;
+        mob.leash = Some(crate::mob::leash::Holder::Player { id: 99, uuid: [1; 16] });
+        let look = Look::of(&mob);
+        assert!(look.tamed && look.sitting);
+        assert!(entries(&look).contains(&(37, Value::Long(99))));
+        mob.name = None;
+        mob.leash = None;
+        let now = entries(&Look::of(&mob));
+        assert!(now.contains(&(4, Value::Str(String::new()))));
+        assert!(now.contains(&(81, Value::Byte(0))));
+        assert!(now.contains(&(37, Value::Long(0))));
+        assert_ne!(now, entries(&look));
     }
 }

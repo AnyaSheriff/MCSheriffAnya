@@ -281,11 +281,11 @@ pub struct BedrockWorld {
     /// Что клиент знает о виде моба (детёныш, цвет овцы…): при перемене шлём
     /// Set Actor Data.
     mobs_look: HashMap<i32, super::mobdata::Look>,
+    carts_data: HashMap<i32, Vec<(u32, super::mobdata::Value)>>,
+    entity_links: super::entity_links::Links,
     /// Где клиент видит зелья, оки Края, ракеты, падающие блоки и шарики опыта.
-    things_at: HashMap<i32, [f32; 6]>,
+    things_at: HashMap<i32, super::things::Thing>,
 
-    /// Где клиент видит стрелы (mob-стрелка: arrow.rs): место и поворот.
-    arrows_at: HashMap<i32, [f32; 6]>,
     /// Где клиент видит блоки рамок (номер сущности рамки у Java → клетка):
     /// чтобы убрать блок, когда рамка ушла.
     frames_at: HashMap<i32, (i32, i32, i32)>,
@@ -591,8 +591,9 @@ impl BedrockWorld {
             primed_at: HashMap::new(),
             mobs_at: HashMap::new(),
             mobs_look: HashMap::new(),
+            carts_data: HashMap::new(),
+            entity_links: super::entity_links::Links::default(),
             things_at: HashMap::new(),
-            arrows_at: HashMap::new(),
             frames_at: HashMap::new(),
             last_attack: 0,
             body,
@@ -679,12 +680,20 @@ impl BedrockWorld {
                 // а действиям с блоками нужно уже принятое положение.
                 let creative = self.creative();
                 let input = read_input_actions(&mut reader, &mut self.bag, creative);
-                self.take_position(connection, (x, y, z), (yaw, pitch), input.flags);
+                if let Some((vehicle, rotation)) = input.vehicle {
+                    if yaw.is_finite() && pitch.is_finite() { self.rotation = (yaw, pitch); }
+                    if !self.health.vit.dead && self.changing.is_none() && self.teleport.is_none() && self.game_mode != crate::commands::GAME_MODE_SPECTATOR {
+                        self.body.drive(&self.shared, &self.stance(), vehicle, (f64::from(x), f64::from(y), f64::from(z)), rotation, input.flags);
+                    }
+                } else {
+                    self.take_position(connection, (x, y, z), (yaw, pitch), input.flags);
+                }
 
                 // Присел или встал — остальные узнают из общего списка.
                 let sneaking = input.flags & SNEAKING != 0;
                 if sneaking != self.sneaking {
                     self.sneaking = sneaking;
+                    if sneaking { self.body.dismount(&self.shared, self.dimension); }
                     self.shared.players.lock().expect("список игроков захвачен другим потоком").set_sneaking(&self.identity.uuid, sneaking);
                 }
 
@@ -988,8 +997,16 @@ impl BedrockWorld {
                     connection.close();
                     return;
                 }
-                // [Bedrock: потом] Бросок жемчуга у этого клиента ещё не реализован.
-                crate::players::Order::PearlTeleport { .. } => {}
+                crate::players::Order::PearlTeleport { x, y, z, dimension } => {
+                    if dimension == self.dimension && !self.health.vit.dead {
+                        self.body.dismount(&self.shared, self.dimension);
+                        self.health.vit.fall = 0.0;
+                        self.health.vit.landed_from = 0.0;
+                        self.teleport_to(connection, packets, (x, y, z));
+                        self.shared.world_in(dimension).lock().expect("мир").note_sound_player_at((x, y, z), "minecraft:entity.player.teleport", 1.0, 1.0);
+                        if !self.creative() { self.health.hurt(5.0, crate::survival::Source::EnderPearl); }
+                    }
+                }
                 crate::players::Order::Teleport { x, y, z } => self.teleport_to(connection, packets, (x, y, z)),
                 crate::players::Order::Look { yaw, pitch } => {
                     self.rotation = (yaw, pitch);
@@ -1092,11 +1109,18 @@ impl BedrockWorld {
         packets.extend(self.close_window_by_server());
         packets.extend(self.items_shown.drain().map(remove_entity));
         self.primed_at.clear();
+        self.mobs_at.clear();
+        self.mobs_look.clear();
+        self.things_at.clear();
+        self.carts_at.clear();
+        self.carts_data.clear();
+        self.entity_links = super::entity_links::Links::default();
         for (id, shown) in std::mem::take(&mut self.shown) {
             packets.extend(forget_player(id, &shown));
         }
         connection.send(&std::mem::take(packets));
 
+        self.body.dismount(&self.shared, self.dimension);
         let (old, reader) = (self.dimension, self.reader);
         self.shared.world_in(old).lock().expect("мир захвачен другим потоком").forget_reader(reader);
         self.shared.items_in(old).lock().expect("предметы захвачены другим потоком").forget_reader(reader);
@@ -1280,8 +1304,8 @@ impl BedrockWorld {
             let (changes, count) = items.changes_since(self.items_from, self.reader);
             self.items_from = count;
 
-            let carts: Vec<(i32, (f32, f32, f32, f32))> =
-                items.carts().iter().map(|cart| (cart.entity_id, cart_place(cart))).collect();
+            let carts: Vec<CartShown> = items.carts().iter()
+                .map(|cart| (cart.entity_id, cart_place(cart), super::vehicle_data::entries(cart))).collect();
 
             // Рамки, о которых журнал что-то говорит: клиенту уходит их
             // нынешнее состояние целиком, а не по кусочкам.
@@ -1308,21 +1332,9 @@ impl BedrockWorld {
                 .collect();
 
             // Замок стрел — после предметов.
-            let arrows: Vec<(i32, [f32; 6], [f32; 3])> = self
-                .shared
-                .arrows
-                .lock()
-                .expect("стрелы захвачены другим потоком")
-                .list
-                .iter()
-                // [Bedrock: потом] spectral_arrow пока не показываем как обычную стрелу.
-                .filter(|arrow| !arrow.spectral() && arrow.dimension == self.dimension && (arrow.x - f64::from(self.position.0)).abs() <= range && (arrow.z - f64::from(self.position.2)).abs() <= range)
-                .map(|arrow| {
-                    let (yaw, pitch) = arrow.facing();
-
-                    (arrow.entity_id, [arrow.x as f32, arrow.y as f32, arrow.z as f32, -yaw, -pitch, -yaw], [arrow.vx as f32, arrow.vy as f32, arrow.vz as f32])
-                })
-                .collect();
+            let arrows: Vec<super::things::Thing> = self.shared.arrows.lock().expect("стрелы захвачены другим потоком")
+                .list.iter().filter(|a| a.dimension == self.dimension && (a.x - f64::from(self.position.0)).abs() <= range && (a.z - f64::from(self.position.2)).abs() <= range)
+                .map(super::projectiles::arrow).collect();
 
             // Подожжённый динамит: номер, место, скорость, запал.
             let primed: Vec<PrimedShown> = items
@@ -1358,36 +1370,7 @@ impl BedrockWorld {
             let near = |x: f64, z: f64| (x - f64::from(self.position.0)).abs() <= range && (z - f64::from(self.position.2)).abs() <= range;
 
             for flying in thrown.flying.iter().filter(|flying| flying.dimension == self.dimension && near(flying.x, flying.z)) {
-                let velocity = (flying.vx, flying.vy, flying.vz);
-                let at = (flying.x, flying.y, flying.z);
-
-                match flying.kind {
-                    crate::thrown::Kind::Splash | crate::thrown::Kind::Lingering => {
-                        let name = flying
-                            .stack
-                            .as_ref()
-                            .and_then(|stack| stack.extras().potion)
-                            .and_then(|number| crate::survival::POTIONS.get(usize::from(number)))
-                            .copied()
-                            .unwrap_or("water");
-
-                        things.push(super::things::potion(flying.entity_id, flying.kind == crate::thrown::Kind::Lingering, name, at, velocity));
-                    }
-                    // Огненный шар дракона у Bedrock — своя сущность [проверить].
-                    // [Bedrock: потом] шары ифрита и гаста, снежок голема, череп иссушителя, плевок ламы, заряды ветра.
-                    crate::thrown::Kind::DragonFireball
-                    | crate::thrown::Kind::SmallFireball
-                    | crate::thrown::Kind::GhastFireball
-                    | crate::thrown::Kind::Snowball
-                    // [Bedrock: потом] Новые Java throwable entities пока скрыты.
-                    | crate::thrown::Kind::Egg
-                    | crate::thrown::Kind::EnderPearl
-                    | crate::thrown::Kind::ExperienceBottle
-                    | crate::thrown::Kind::WitherSkull
-                    | crate::thrown::Kind::LlamaSpit
-                    | crate::thrown::Kind::WindCharge
-                    | crate::thrown::Kind::BreezeWindCharge => {}
-                }
+                things.push(super::projectiles::thrown(flying));
             }
 
             for eye in thrown.eyes.iter().filter(|eye| eye.dimension == self.dimension && near(eye.x, eye.z)) {
@@ -1451,12 +1434,18 @@ impl BedrockWorld {
                     crate::mob::Event::Death if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 3)),
                     // Сердечки любви: Actor Event love_particles (21, список ActorEvent minecraft-data) [проверить].
                     crate::mob::Event::Hearts if self.items_shown.contains(&entity_id) => packets.push(health::actor_event(entity_id as u64, 21)),
+                    event if self.items_shown.contains(&entity_id) => {
+                        if let Some(kind) = self.mobs_look.get(&entity_id).map(|l| l.kind)
+                            && let Some(event) = super::entity_events::event(kind, &event)
+                        { packets.push(health::actor_event(entity_id as u64, event)); }
+                    }
                     _ => {}
                 },
-                // Шарики опыта Bedrock пока не показываются [проверить].
+                // Опыт показывается снимком things, журнал не дублирует AddActor.
                 crate::items::Change::Orb(_) => {}
                 crate::items::Change::Gone { entity_id } => {
                     self.carts_at.remove(&entity_id);
+                    self.carts_data.remove(&entity_id);
                     self.primed_at.remove(&entity_id);
                     self.mobs_at.remove(&entity_id);
                     self.mobs_look.remove(&entity_id);
@@ -1484,7 +1473,12 @@ impl BedrockWorld {
         self.move_carts(carts, packets);
         self.show_primed(primed, packets);
         self.show_mobs(mobs, packets);
-        self.show_arrows(arrows, packets);
+        things.extend(arrows);
+        {
+            let fishing = self.shared.fishing.lock().expect("поплавки захвачены другим потоком");
+            let range = f64::from(self.shared.properties.view_distance.clamp(2, 10)) * 16.0;
+            things.extend(fishing.iter().filter(|b| b.dimension == self.dimension && (b.at.0 - f64::from(self.position.0)).abs() <= range && (b.at.2 - f64::from(self.position.2)).abs() <= range).map(super::projectiles::bobber));
+        }
 
         // Взрыв ракеты: событие — до того, как ракета пропадёт из списка.
         // Как у BDS: событие 25, следом данные ракеты (по ним клиент рисует
@@ -1497,6 +1491,15 @@ impl BedrockWorld {
         }
 
         self.show_things(things, packets);
+        let seats = self.shared.riding.lock().expect("учёт седоков захвачен другим потоком")
+            .vehicles().filter(|(id, seats)| self.items_shown.contains(id) && seats.iter().all(|r| *r == self.runtime_id as i32 || self.items_shown.contains(r) || self.shown.contains_key(r)))
+            .map(|(id, seats)| (id, seats.to_vec())).collect::<Vec<_>>();
+        packets.extend(self.entity_links.update(&seats));
+        if let Some(at) = super::entity_links::seat(&self.shared, self.dimension, self.runtime_id as i32) {
+            self.position = (at.0 as f32, at.1 as f32 + EYES, at.2 as f32);
+            self.health.vit.fall = 0.0;
+            self.publish_position();
+        }
 
         // Рамки: блок и блок-актор — в тех чанках, что клиент уже получил.
         for frame in frames {
@@ -1515,9 +1518,8 @@ impl BedrockWorld {
     }
 
     /// Мобы: вошедшие в дальность появляются (Add Actor), сдвинувшиеся —
-    /// переносом, ушедшие — убираются. Голоса и удары Bedrock пока не
-    /// получает [проверить]: AddActor с `minecraft:cow` и прочими показывает
-    /// нужную модель; детёныш и цвет овцы — без данных сущности.
+    /// переносом, ушедшие — убираются. Данные, снаряжение и атрибуты
+    /// сравниваются с предыдущим снимком общего мира.
     fn show_mobs(&mut self, mobs: Vec<(i32, super::mobdata::Look, [f32; 6])>, packets: &mut Vec<Vec<u8>>) {
         let present: HashSet<i32> = mobs.iter().map(|(id, ..)| *id).collect();
         let gone: Vec<i32> = self.mobs_at.keys().filter(|id| !present.contains(id)).copied().collect();
@@ -1535,6 +1537,8 @@ impl BedrockWorld {
             match self.mobs_at.insert(entity_id, place) {
                 None => {
                     packets.push(add_mob(entity_id, &look, place));
+                    packets.extend(look.gear.spawn_packets(entity_id));
+                    packets.push(super::entity_gear::attributes(entity_id, &look));
                     self.items_shown.insert(entity_id);
                     self.mobs_look.insert(entity_id, look);
                 }
@@ -1545,7 +1549,21 @@ impl BedrockWorld {
 
                     // Вырос, остригли, влюбился: клиенту — новые данные.
                     if self.mobs_look.get(&entity_id) != Some(&look) {
-                        packets.push(super::mobdata::set_data_packet(entity_id, &super::mobdata::entries(&look)));
+                        let old = self.mobs_look.get(&entity_id);
+                        if old.is_some_and(|old| old.kind != look.kind) {
+                            // Превращение сохраняет номер: клиенту нужен новый AddActor.
+                            self.entity_links.forget(entity_id);
+                            packets.push(remove_entity(entity_id));
+                            packets.push(add_mob(entity_id, &look, place));
+                            packets.extend(look.gear.spawn_packets(entity_id));
+                            packets.push(super::entity_gear::attributes(entity_id, &look));
+                        } else {
+                            packets.push(super::mobdata::set_data_packet(entity_id, &super::mobdata::entries(&look)));
+                            if old.is_none_or(|old| old.gear != look.gear) { packets.extend(look.gear.packets(entity_id)); }
+                            if old.is_none_or(|old| (old.health, old.max_health, old.speed) != (look.health, look.max_health, look.speed)) {
+                                packets.push(super::entity_gear::attributes(entity_id, &look));
+                            }
+                        }
                         self.mobs_look.insert(entity_id, look);
                     }
                 }
@@ -1569,53 +1587,37 @@ impl BedrockWorld {
         }
 
         for thing in things {
-            match self.things_at.insert(thing.id, thing.place) {
+            match self.things_at.insert(thing.id, thing.clone()) {
                 None => {
                     packets.push(super::things::add_packet(&thing));
                     self.items_shown.insert(thing.id);
                 }
-                Some(before) if before != thing.place => packets.push(move_mob(thing.id, thing.place)),
-                Some(_) => {}
-            }
-        }
-    }
-
-    /// Стрелы: вошедшие в дальность появляются (Add Actor `minecraft:arrow` со
-    /// скоростью), летящие — переносом каждый такт, ушедшие и попавшие —
-    /// убираются. Поворот берётся с противоположным знаком: у снарядов угол
-    /// Java считается иначе, чем у мобов [проверить на живом клиенте].
-    fn show_arrows(&mut self, arrows: Vec<(i32, [f32; 6], [f32; 3])>, packets: &mut Vec<Vec<u8>>) {
-        let present: HashSet<i32> = arrows.iter().map(|(id, ..)| *id).collect();
-        let gone: Vec<i32> = self.arrows_at.keys().filter(|id| !present.contains(id)).copied().collect();
-
-        for entity_id in gone {
-            self.arrows_at.remove(&entity_id);
-
-            if self.items_shown.remove(&entity_id) {
-                packets.push(remove_entity(entity_id));
-            }
-        }
-
-        for (entity_id, place, motion) in arrows {
-            match self.arrows_at.insert(entity_id, place) {
-                None => {
-                    packets.push(add_arrow(entity_id, place, motion));
-                    self.items_shown.insert(entity_id);
+                Some(before) => {
+                    if before.place != thing.place { packets.push(move_mob(thing.id, thing.place)); }
+                    if before.motion != thing.motion { packets.push(motion(thing.id as u64, (thing.motion[0], thing.motion[1], thing.motion[2]))); }
+                    if before.data != thing.data {
+                        // Флаги целиком: профиль BDS дописывается и здесь, иначе обновление стёрло бы их.
+                        let mut data = thing.data.clone();
+                        super::bds_profile::extend_thing(thing.name, &mut data);
+                        packets.push(super::mobdata::set_data_packet(thing.id, &data));
+                    }
                 }
-                Some(before) if before != place => packets.push(move_mob(entity_id, place)),
-                Some(_) => {}
             }
         }
     }
 
     /// Вагонетки, которые сдвинулись, — переносом (Move Entity). Шлём, когда
     /// показанная вагонетка сдвинулась.
-    fn move_carts(&mut self, carts: Vec<(i32, (f32, f32, f32, f32))>, packets: &mut Vec<Vec<u8>>) {
-        for (entity_id, place) in carts {
+    fn move_carts(&mut self, carts: Vec<CartShown>, packets: &mut Vec<Vec<u8>>) {
+        for (entity_id, place, data) in carts {
             if !self.items_shown.contains(&entity_id) {
                 continue;
             }
 
+            if self.carts_data.get(&entity_id) != Some(&data) {
+                packets.push(super::mobdata::set_data_packet(entity_id, &data));
+                self.carts_data.insert(entity_id, data);
+            }
             if self.carts_at.insert(entity_id, place) != Some(place) {
                 packets.push(move_cart(entity_id, place));
             }
@@ -3280,6 +3282,11 @@ impl BedrockWorld {
             return;
         }
 
+        if super::entity_links::seat(&self.shared, self.dimension, self.runtime_id as i32).is_some() {
+            if rotation.0.is_finite() && rotation.1.is_finite() { self.rotation = rotation; }
+            return;
+        }
+
         let before = chunk_of(self.position);
 
         // Стоит на земле, если упёрся во что-то по вертикали и не поднимается.
@@ -3801,6 +3808,7 @@ impl BedrockWorld {
 
     /// Уход из мира.
     pub fn leave(mut self) {
+        self.body.dismount(&self.shared, self.dimension);
         log_info!("{} (Bedrock) вышел", self.identity.name);
 
         // Открытое хранилище теряет смотрящего.
@@ -4409,10 +4417,10 @@ const MOVE_ACTOR_ABSOLUTE: u32 = 0x12;
 /// Место и поворот вагонетки для клиента Bedrock. [проверить]: Bedrock может
 /// ждать вагонетку не на уровне низа ящика, а выше — живой клиент.
 ///
-/// TODO(Bedrock): поставить вагонетку предметом на рельсу, ударить и
-/// сломать её, толкнуть собой игрок Bedrock пока не может — у нас это есть
-/// только для Java (play.rs: place_with_main_hand, attack). Качание от
-/// удара (hurt_time) Bedrock тоже не показываем.
+/// [проверить] Постановка вагонетки предметом на рельсу; удары уже проходят
+/// общий код, hurt_time и hurt_dir передаются через vehicle_data.
+type CartShown = (i32, (f32, f32, f32, f32), Vec<(u32, super::mobdata::Value)>);
+
 fn cart_place(cart: &crate::minecart::Minecart) -> (f32, f32, f32, f32) {
     (cart.x as f32, cart.y as f32, cart.z as f32, cart.yaw)
 }
@@ -4421,17 +4429,7 @@ fn cart_place(cart: &crate::minecart::Minecart) -> (f32, f32, f32, f32) {
 /// `minecraft:minecart`, `minecraft:chest_minecart` и т. д.
 fn add_cart(cart: &crate::minecart::Minecart) -> Vec<u8> {
     let (x, y, z, yaw) = cart_place(cart);
-    let name = match cart.kind {
-        crate::minecart::Kind::Plain => "minecraft:minecart",
-        crate::minecart::Kind::Chest => "minecraft:chest_minecart",
-        crate::minecart::Kind::Hopper => "minecraft:hopper_minecart",
-        crate::minecart::Kind::Tnt => "minecraft:tnt_minecart",
-        // У Bedrock вагонетки с печью нет: показываем обычную.
-        crate::minecart::Kind::Furnace => "minecraft:minecart",
-        // [Bedrock: потом] у лодки Bedrock порода — свойство Variant, сидение
-        // и вёсла не рассказываются: показываем дубовую.
-        crate::minecart::Kind::Boat(index) => if crate::minecart::BOATS[index as usize].2 { "minecraft:chest_boat" } else { "minecraft:boat" },
-    };
+    let name = super::vehicle_data::identifier(cart.kind);
 
     let mut out = Out::packet(ADD_ACTOR);
     out.zigzag64(cart.entity_id as i64)
@@ -4443,11 +4441,9 @@ fn add_cart(cart: &crate::minecart::Minecart) -> Vec<u8> {
         .lf32(yaw)
         .lf32(yaw)
         .lf32(yaw)
-        .varint(0) // свойства-атрибуты
-        .varint(0) // данные сущности
-        .varint(0)
-        .varint(0) // свойства: целые, дробные
-        .varint(0); // связи
+        .varint(0); // свойства-атрибуты
+    super::mobdata::write(&mut out, &super::vehicle_data::entries(cart));
+    out.varint(0).varint(0).varint(0); // свойства и связи
     out.bytes
 }
 
@@ -4457,7 +4453,7 @@ fn add_mob(entity_id: i32, look: &super::mobdata::Look, [x, y, z, yaw, pitch, he
     let mut out = Out::packet(ADD_ACTOR);
     out.zigzag64(i64::from(entity_id))
         .varint64(entity_id as u64)
-        .string(kind.bedrock_name())
+        .string(super::entity_state::identifier(kind))
         .vec3f(x, y, z)
         .vec3f(0.0, 0.0, 0.0)
         .lf32(pitch)
@@ -4468,26 +4464,6 @@ fn add_mob(entity_id: i32, look: &super::mobdata::Look, [x, y, z, yaw, pitch, he
     super::mobdata::write(&mut out, &super::mobdata::entries(look)); // данные сущности
     super::mobprops::write_values(&mut out, kind); // свойства: целые, дробные
     out.varint(0); // связи
-    out.bytes
-}
-
-/// Стрела появилась (Add Actor): место, скорость и поворот.
-fn add_arrow(entity_id: i32, [x, y, z, yaw, pitch, head]: [f32; 6], [vx, vy, vz]: [f32; 3]) -> Vec<u8> {
-    let mut out = Out::packet(ADD_ACTOR);
-    out.zigzag64(i64::from(entity_id))
-        .varint64(entity_id as u64)
-        .string("minecraft:arrow")
-        .vec3f(x, y, z)
-        .vec3f(vx, vy, vz)
-        .lf32(pitch)
-        .lf32(yaw)
-        .lf32(head)
-        .lf32(yaw)
-        .varint(0) // свойства-атрибуты
-        .varint(0) // данные сущности
-        .varint(0)
-        .varint(0) // свойства: целые, дробные
-        .varint(0); // связи
     out.bytes
 }
 
@@ -5044,6 +5020,7 @@ fn read_item_use(payload: &[u8]) -> Option<ItemUse> {
 struct Input {
     /// Флаги входа (InputData).
     flags: u128,
+    vehicle: Option<(i32, (f32, f32))>,
     actions: Vec<ItemUse>,
     handled: Option<super::inventory::Handled>,
 }
@@ -5059,6 +5036,7 @@ fn read_input_actions(reader: &mut In, bag: &mut Bag, creative: bool) -> Input {
     let mut found = Vec::new();
     let mut handled = None;
     let mut flags = 0u128;
+    let mut vehicle = None;
 
     let mut read = || -> Option<()> {
         reader.take(8 + 4)?; // move_vector, head_yaw
@@ -5117,15 +5095,16 @@ fn read_input_actions(reader: &mut In, bag: &mut Bag, creative: bool) -> Input {
 
         // Транспорт — после действий с блоками (документация Mojang 944).
         if flags & PREDICTED_VEHICLE != 0 {
-            reader.take(8)?;
-            reader.varint64()?;
+            let (pitch, yaw) = (reader.lf32()?, reader.lf32()?);
+            let id = i32::try_from(reader.zigzag64()?).ok()?;
+            vehicle = Some((id, (yaw, pitch)));
         }
 
         Some(())
     };
 
     read();
-    Input { flags, actions: found, handled }
+    Input { flags, vehicle, actions: found, handled }
 }
 
 fn skip_legacy(reader: &mut In) -> Option<()> {
@@ -5274,7 +5253,17 @@ mod tests {
             let packet = add_mob(7, &crate::bedrock::mobdata::Look::of(&crate::mob::Mob::new(7, kind, (0.0, 0.0, 0.0))), place);
             let text = String::from_utf8_lossy(&packet);
 
-            assert!(text.contains(kind.bedrock_name()), "{}", kind.name());
+            assert!(text.contains(super::super::entity_state::identifier(kind)), "{}", kind.name());
+            let mut r = In::new(&packet);
+            assert_eq!((r.varint(), r.zigzag64(), r.varint64()), (Some(0x0d), Some(7), Some(7)));
+            assert_eq!(r.string().as_deref(), Some(super::super::entity_state::identifier(kind)));
+            for f in [1.5, 64.0, -2.5, 0.0, 0.0, 0.0, 10.0, 90.0, 90.0, 90.0] { assert_eq!(r.lf32(), Some(f)); }
+            assert_eq!(r.varint(), Some(0));
+            let look = super::super::mobdata::Look::of(&crate::mob::Mob::new(7, kind, (0.0, 0.0, 0.0)));
+            assert_eq!(super::super::mobdata::read_test_entries(&mut r), super::super::mobdata::entries(&look));
+            let count = r.varint().unwrap();
+            for _ in 0..count { r.varint().unwrap(); r.zigzag32().unwrap(); }
+            assert_eq!((r.varint(), r.varint(), r.remaining()), (Some(0), Some(0), 0));
         }
 
         let moved = move_mob(7, place);
@@ -5283,14 +5272,35 @@ mod tests {
         assert_ne!(moved, move_mob(7, [1.5, 65.0, -2.5, 90.0, 10.0, 90.0]));
     }
 
-    /// Стрела для клиента Bedrock — актор `minecraft:arrow` со скоростью.
     #[test]
-    fn an_arrow_is_shown_as_a_bedrock_arrow_with_motion() {
-        let place = [1.5, 64.0, -2.5, 90.0, 10.0, 90.0];
-        let packet = add_arrow(9, place, [1.6, 0.0, 0.0]);
+    fn every_vehicle_spawn_round_trips_including_boat_variant() {
+        for kind in crate::minecart::Kind::ALL.into_iter().chain(crate::minecart::boat_kinds()) {
+            let cart = crate::minecart::Minecart::new(301, kind, (1.0, 64.0, 2.0));
+            let p = add_cart(&cart);
+            let mut r = In::new(&p);
+            assert_eq!((r.varint(), r.zigzag64(), r.varint64()), (Some(13), Some(301), Some(301)));
+            assert!(r.string().unwrap().starts_with("minecraft:"));
+            for f in [1.0, 64.0, 2.0, cart.vx as f32, cart.vy as f32, cart.vz as f32, cart.pitch, cart.yaw, cart.yaw, cart.yaw] { assert_eq!(r.lf32(), Some(f)); }
+            assert_eq!(r.varint(), Some(0));
+            assert_eq!(super::super::mobdata::read_test_entries(&mut r), super::super::vehicle_data::entries(&cart));
+            assert_eq!((r.varint(), r.varint(), r.varint(), r.remaining()), (Some(0), Some(0), Some(0), 0));
+        }
+    }
 
-        assert!(String::from_utf8_lossy(&packet).contains("minecraft:arrow"));
-        assert_ne!(packet, add_arrow(9, place, [0.0, 0.0, 0.0]));
+    #[test]
+    fn vehicle_input_uses_signed_unique_id_after_block_actions() {
+        let mut out = Out::default();
+        out.vec3f(0.0, 0.0, 0.0).varint64((1 << 45) | (1 << 35));
+        out.varint(1).varint(0).zigzag32(1).lf32(0.0).lf32(0.0).varint64(7).vec3f(0.0, 0.0, 0.0);
+        out.zigzag32(1).zigzag32(26).zigzag32(3).zigzag32(64).zigzag32(-4).zigzag32(1);
+        out.lf32(10.0).lf32(90.0).zigzag64(301);
+        let input = read_input_actions(&mut In::new(&out.bytes), &mut Bag::new(crate::inventory::Inventory::new()), true);
+        assert_eq!(input.vehicle, Some((301, (90.0, 10.0))));
+        assert_eq!(input.actions.len(), 1);
+        assert_eq!(input.actions[0].position, (3, 64, -4));
+        out.bytes.pop();
+        let input = read_input_actions(&mut In::new(&out.bytes), &mut Bag::new(crate::inventory::Inventory::new()), true);
+        assert_eq!(input.vehicle, None);
     }
 
     #[test]

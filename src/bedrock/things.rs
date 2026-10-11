@@ -304,7 +304,9 @@ pub fn add_packet(thing: &Thing) -> Vec<u8> {
         .lf32(head)
         .lf32(yaw)
         .varint(0); // свойства-атрибуты
-    mobdata::write(&mut out, &thing.data);
+    let mut data = thing.data.clone();
+    super::bds_profile::extend_thing(thing.name, &mut data);
+    mobdata::write(&mut out, &data);
     out.varint(0).varint(0); // свойства: целые, дробные
     out.varint(0); // связи
     out.bytes

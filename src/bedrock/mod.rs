@@ -17,12 +17,18 @@
 // - skin и png — скины: свои у игроков Bedrock, скачанные у игроков Java.
 
 pub mod auth;
+pub mod bds_profile;
 pub mod codec;
 pub mod containers;
 pub mod effects;
 pub mod frames;
 pub mod health;
 pub mod inventory;
+pub mod vehicle_data;
+pub mod entity_events;
+pub mod entity_state;
+pub mod entity_gear;
+pub mod entity_links;
 pub mod mobdata;
 pub mod mobprops;
 pub mod pistons;
@@ -33,6 +39,7 @@ pub mod skin;
 pub mod stations;
 pub mod tables;
 pub mod things;
+pub mod projectiles;
 pub mod trade;
 pub mod tools;
 pub mod world;

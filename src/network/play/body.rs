@@ -85,6 +85,45 @@ impl Body {
         Self { state: Box::new(state) }
     }
 
+    /// Bedrock покидает транспорт тем же кодом, который освобождает водителя Java.
+    pub(crate) fn dismount(&mut self, shared: &Shared, dimension: Dimension) {
+        self.state.dimension = dimension;
+        vehicle::dismount(shared, &self.state);
+        self.state.ride.vehicle = None;
+    }
+
+    /// PlayerAuthInput называет управляемый транспорт; движение проходит
+    /// те же проверки водителя и лошади, что Move Vehicle у Java.
+    pub(crate) fn drive(&mut self, shared: &Shared, stance: &Stance, target: i32, at: (f64, f64, f64), rotation: (f32, f32), flags: u128) {
+        let p = &mut *self.state;
+        let allowed = {
+            let riding = shared.riding.lock().expect("учёт седоков");
+            riding.vehicle_of(p.entity_id) == Some(target) && riding.driver(target) == Some(p.entity_id)
+        };
+        if !allowed || !at.0.is_finite() || !at.1.is_finite() || !at.2.is_finite() || !rotation.0.is_finite() || !rotation.1.is_finite() { return; }
+        let near = {
+            let items = shared.items_in(stance.dimension).lock().expect("предметы");
+            let old = items.carts().iter().find(|c| c.entity_id == target).map(|c| (c.x, c.y, c.z))
+                .or_else(|| items.mobs().iter().find(|m| m.entity_id == target && !m.is_dead()).map(|m| (m.x, m.y, m.z)));
+            old.is_some_and(|old| (old.0 - at.0).hypot(old.1 - at.1).hypot(old.2 - at.2) <= 8.0)
+        };
+        if !near { return; }
+        p.dimension = stance.dimension;
+        p.game_mode = stance.game_mode;
+        p.ride.vehicle = Some(target);
+        let input = u8::from(flags & (1 << 10) != 0) | (u8::from(flags & (1 << 11) != 0) << 1)
+            | (u8::from(flags & (1 << 12) != 0) << 2) | (u8::from(flags & (1 << 13) != 0) << 3)
+            | (u8::from(flags & (1 << 6) != 0) << 4);
+        horse::input(shared, p, input);
+        vehicle::input(input, p, shared);
+        let mut payload = Vec::new();
+        for v in [at.0, at.1, at.2] { push_f64(&mut payload, v); }
+        push_f32(&mut payload, rotation.0); push_f32(&mut payload, rotation.1);
+        payload.push(u8::from(flags & (1 << 50) != 0));
+        if !horse::vehicle_move(&payload, p, shared, &mut Reaction::default()) { vehicle::vehicle_move(&payload, p, shared); }
+        vehicle::steer_boat(&[u8::from(flags & (1 << 46) != 0), u8::from(flags & (1 << 47) != 0)], p, shared);
+    }
+
     /// Тянется ли что-то, чему нужен такт (еда, зарядка арбалета).
     pub(crate) fn busy(&self) -> bool {
         self.state.net.using.is_some() || self.state.net.eating.is_some()
@@ -121,6 +160,7 @@ impl Body {
 
         let now = *shared.ticks.borrow();
         let p = &mut *self.state;
+        p.ride.vehicle = shared.riding.lock().expect("учёт седоков").vehicle_of(p.entity_id);
         let mut done = Done::default();
 
         match act {
@@ -196,6 +236,12 @@ impl Body {
 /// Правая кнопка: то же, что Use Item у Java (`use_item` в play.rs), без
 /// ведра (его Bedrock ведёт своим путём).
 fn use_held(shared: &Shared, p: &mut PlayerState, hand: i32, now: u64) {
+    if fishing::use_rod(shared, p, hand).is_some() || vehicle::place_boat(shared, p, hand) {
+        return;
+    }
+    if thrown::throw_wind_charge(shared, p, hand).is_some() {
+        return;
+    }
     if thrown::throw_potion(shared, p, hand) {
         return;
     }
@@ -395,5 +441,80 @@ pub(crate) fn store_cart(shared: &Shared, dimension: Dimension, entity_id: i32, 
 
     if let Some(cart) = items.carts_mut().iter_mut().find(|found| found.entity_id == entity_id) {
         cart.slots.clone_from_slice(slots);
+    }
+}
+
+#[cfg(test)]
+mod bedrock_entity_tests {
+    use super::*;
+    use crate::mob::{Kind, Mob};
+    fn shared() -> Shared {
+        Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/bedrock-entity-test-ops.json")), crate::skins::Settings::default())
+    }
+    fn stance() -> Stance {
+        Stance { game_mode: GAME_MODE_SURVIVAL, feet: (0.5, 0.0, 0.5), yaw: 0.0, pitch: 0.0, on_ground: true, sneaking: false, dimension: Dimension::Overworld }
+    }
+    fn use_mob(shared: &Shared, kind: Kind, item: &str) -> (Inventory, Done) {
+        let mob = Mob::new(100, kind, (0.5, 0.0, 2.5));
+        shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(mob);
+        let mut inv = Inventory::new();
+        inv.set(inventory::FIRST_HOTBAR, Some(Stack::new(blocks::item_named(item).unwrap(), 1)));
+        let mut body = Body::new([13; 16], "BedrockTest".into(), 10);
+        let done = body.act(shared, &stance(), &mut inv, &mut Vitals::new(), &mut 0, Act::Interact(100));
+        (inv, done)
+    }
+    #[test]
+    fn feeding_and_shearing_mutate_the_shared_mob() {
+        let shared = shared();
+        let (inv, done) = use_mob(&shared, Kind::Cow, "wheat");
+        assert!(inv.held().is_none());
+        assert!(!done.slots.is_empty());
+        assert!(shared.items_in(Dimension::Overworld).lock().unwrap().mobs()[0].love > 0);
+        let shared2 = self::shared();
+        let (inv, _) = use_mob(&shared2, Kind::Sheep, "shears");
+        assert_eq!(inv.held().and_then(|s| blocks::item_name(s.item)), Some("shears"));
+        assert!(shared2.items_in(Dimension::Overworld).lock().unwrap().mobs()[0].sheared);
+    }
+    #[test]
+    fn bucketing_removes_shared_fish_and_returns_its_data() {
+        let shared = shared();
+        let (inv, _) = use_mob(&shared, Kind::Axolotl, "water_bucket");
+        assert_eq!(inv.held().and_then(|s| blocks::item_name(s.item)), Some("axolotl_bucket"));
+        assert!(shared.items_in(Dimension::Overworld).lock().unwrap().mobs().is_empty());
+    }
+    #[test]
+    fn only_current_driver_can_move_the_named_vehicle() {
+        let shared = shared();
+        let mut cart = crate::minecart::Minecart::new(100, crate::minecart::Kind::Boat(0), (0.5, 0.0, 2.5));
+        cart.driver = Some(10);
+        shared.items_in(Dimension::Overworld).lock().unwrap().add_cart(cart);
+        shared.riding.lock().unwrap().mount(10, 100, 2);
+        shared.riding.lock().unwrap().mount(11, 100, 2);
+        let mut rider = Body::new([14; 16], "Passenger".into(), 11);
+        rider.drive(&shared, &stance(), 100, (2.0, 0.0, 2.5), (0.0, 0.0), 0);
+        assert_eq!(shared.items_in(Dimension::Overworld).lock().unwrap().carts()[0].x, 0.5);
+        let mut driver = Body::new([13; 16], "Driver".into(), 10);
+        driver.drive(&shared, &stance(), 100, (2.0, 0.0, 2.5), (0.0, 0.0), 1 << 46);
+        let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+        assert_eq!(items.carts()[0].x, 2.0);
+        assert_eq!(items.carts()[0].paddle, (true, false));
+        drop(items);
+        driver.drive(&shared, &stance(), 100, (200.0, 0.0, 2.5), (0.0, 0.0), 0);
+        driver.drive(&shared, &stance(), 101, (3.0, 0.0, 2.5), (0.0, 0.0), 0);
+        assert_eq!(shared.items_in(Dimension::Overworld).lock().unwrap().carts()[0].x, 2.0);
+    }
+
+    #[test]
+    fn bedrock_dismount_releases_shared_driver() {
+        let shared = shared();
+        let mut body = Body::new([13; 16], "BedrockTest".into(), 10);
+        let mut horse = Mob::new(100, Kind::Horse, (0.5, 0.0, 2.5));
+        horse.horse.rider = Some(([13; 16], 10));
+        shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(horse);
+        assert!(shared.riding.lock().unwrap().mount(10, 100, 1));
+        body.dismount(&shared, Dimension::Overworld);
+        assert!(shared.riding.lock().unwrap().vehicle_of(10).is_none());
+        assert!(shared.items_in(Dimension::Overworld).lock().unwrap().mobs()[0].horse.rider.is_none());
     }
 }
