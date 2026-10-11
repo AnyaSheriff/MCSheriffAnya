@@ -1,0 +1,72 @@
+{
+  "name": "craft-close-returns",
+  "about": "Closing an unmatched 2x2 grid returns both stacks, never a preview. [unverified: record against vanilla 26.1.2]",
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "gamemode survival $(bot)",
+    "!stopfly",
+    "item replace entity $(bot) hotbar.0 with minecraft:diamond 4",
+    "item replace entity $(bot) hotbar.1 with minecraft:oak_log 3"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "window_click": {
+        "slot": 36,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 5,
+      "window_click": {
+        "slot": 2,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 10,
+      "window_click": {
+        "slot": 37,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 15,
+      "window_click": {
+        "slot": 1,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 30,
+      "close": true,
+      "inventory": true
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 55,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "inventory": true,
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true
+}

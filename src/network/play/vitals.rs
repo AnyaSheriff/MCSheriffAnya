@@ -1457,7 +1457,11 @@ pub(super) fn update_equipment(player: &mut PlayerState, now: u64) {
         player.inventory.note_attribute(*attribute as u8);
     }
 
-    player.attrs_touched.extend(touched.into_iter().map(|attribute| (attribute, now + 2)));
+    // Модификатор только сняли (меч убран из руки) — уходит на такт раньше
+    // (чёрный ящик, craft-repair-tools: оригинал +1, надевание — +2).
+    let applied: Vec<i32> = player.attrs_applied.iter().map(|(attribute, _)| *attribute).collect();
+
+    player.attrs_touched.extend(touched.into_iter().map(|attribute| (attribute, now + if applied.contains(&attribute) { 2 } else { 1 })));
 }
 
 /// Что на игроке из вещей, дающих атрибуты: рука, вторая рука, броня.
@@ -1628,6 +1632,10 @@ async fn die(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerStat
     player.net.using = None;
     player.net.hits.clear();
     player.net.landings.clear();
+
+    // Сетка — входы, результат лишь предпросмотр, его ронять нельзя.
+    super::close_own_window(shared, player);
+    for stack in player.inventory.close_window().thrown { super::throw_out(shared, player, stack); }
 
     // Вещи падают, если не включено `keepInventory` (вики, Keep inventory).
     {

@@ -48,6 +48,7 @@ pub(super) async fn open_station(
         Station::Stonecutter => player.progress.custom("interact_with_stonecutter", 1),
         Station::Loom => player.progress.custom("interact_with_loom", 1),
         Station::Cartography => player.progress.custom("interact_with_cartography_table", 1),
+        Station::Crafting => player.progress.custom("interact_with_crafting_table", 1),
         Station::Enchanting => {}
     }
 
@@ -105,6 +106,7 @@ fn compute(shared: &Shared, player: &mut PlayerState) -> (Option<Stack>, Vec<i16
     };
 
     match station.kind {
+        Station::Crafting => (crate::crafting::craft(&window.shown[1..10]), Vec::new()),
         Station::Stonecutter => {
             let input = window.shown[0].map(|s|i64::from(s.item));
             if input != station.input_item { station.selected = -1; station.input_item = input; }
@@ -314,7 +316,7 @@ fn generic_click(shared: &Shared, player: &mut PlayerState, kind: Station, slot:
     let mut allowed = match kind {
         Station::Enchanting => inputs[1].is_none_or(|stack| Some(stack.item) == lapis),
         Station::Grindstone => inputs.iter().flatten().all(enchanting::grindable),
-        Station::Anvil | Station::Stonecutter => true,
+        Station::Crafting | Station::Anvil | Station::Stonecutter => true,
         Station::Loom => inputs.iter().enumerate().all(|(p,s)| s.is_none_or(|s|crate::loom::may_place(p,&s))),
         Station::Cartography => inputs.iter().enumerate().all(|(p,s)|s.is_none_or(|s| if p==0 {blocks::item_name(s.item)==Some("filled_map")} else {matches!(blocks::item_name(s.item),Some("paper"|"map"|"glass_pane"))})),
         Station::Smithing => inputs.iter().enumerate().all(|(place, stack)| stack.is_none_or(|stack| smithing::may_place(place, &stack))),
@@ -368,6 +370,7 @@ fn quick_move_in(player: &mut PlayerState, kind: Station, slot: usize) {
     let lapis = blocks::item_named("lapis_lazuli");
 
     let moved = match kind {
+        Station::Crafting => false,
         Station::Enchanting if Some(stack.item) == lapis => view.move_some(own, &[1]),
         Station::Enchanting => {
             if view.get(0).is_none() {
@@ -518,6 +521,7 @@ fn take_result(shared: &Shared, player: &mut PlayerState, mode: i32, reaction: &
 
             shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_level_event(pos.0, pos.1, pos.2, 1044, 0);
         }
+        Station::Crafting => player.progress.custom("interact_with_crafting_table", 1),
         Station::Enchanting => {}
     }
 
@@ -659,10 +663,15 @@ pub(super) fn rename(shared: &Shared, player: &mut PlayerState, name: String, re
 /// влезшее падает рядом. true — инвентарь поменялся.
 pub(super) fn give_back(shared: &Shared, player: &mut PlayerState, window: &OpenWindow) -> bool {
     let mut changed = false;
+    if window.station.as_ref().is_some_and(|s| s.kind == Station::Crafting) {
+        let cursor = player.inventory.cursor(); player.inventory.set_cursor(None);
+        if let Some(stack) = cursor { changed = true; if let Some(left) = player.inventory.put(stack).1 { throw_out(shared, player, left); } }
+    }
 
     let inputs = window.station.as_ref().map_or(2, |station| station.kind.inputs());
 
-    for stack in window.shown.iter().take(inputs).flatten() {
+    let start = usize::from(window.station.as_ref().is_some_and(|s| s.kind == Station::Crafting));
+    for stack in window.shown.iter().skip(start).take(inputs).flatten() {
         let (_, left) = player.inventory.put(*stack);
 
         changed = true;
@@ -682,7 +691,7 @@ pub(super) fn still_there(shared: &Shared, player: &PlayerState, window: &OpenWi
     };
     let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
-    station_at(&world, station.pos) == Some(station.kind)
+    (station.kind != Station::Crafting || { let (x,y,z) = station.pos; (player.x - f64::from(x) - 0.5).powi(2) + (player.y - f64::from(y) - 0.5).powi(2) + (player.z - f64::from(z) - 0.5).powi(2) <= 64.0 }) && station_at(&world, station.pos) == Some(station.kind)
 }
 
 #[cfg(test)] mod tests {

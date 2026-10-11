@@ -89,6 +89,7 @@ const describe = (e) => {
     case 'slots': return `содержимое окна ${e.items}`;
     case 'slot': return `ячейка ${e.window === 'курсор' ? 'курсора' : e.slot}: ${e.item}`;
     case 'cursor': return `курсор: ${e.item}`;
+    case 'recipe': return `призрак рецепта ${e.width}×${e.height}: ${e.item}`;
     case 'level': return `событие мира ${at} ${e.effect}/${e.data}`;
     case 'property': return `свойство окна ${e.property}=${e.value}`;
     case 'close': return 'окно закрыто';
@@ -140,6 +141,7 @@ const key = (e) => {
     case 'slots': return `slots ${e.items}`;
     case 'slot': return `slot ${e.window} ${e.slot} ${e.item}`;
     case 'cursor': return `cursor ${e.item}`;
+    case 'recipe': return `recipe ${e.width}x${e.height} ${e.item}`;
     case 'level': return `level ${e.at.join(',')} ${e.effect} ${e.data}`;
     case 'property': return `property ${e.property} ${e.value}`;
     case 'meta': return `meta ${e.fields}`;
@@ -160,7 +162,19 @@ const load = (file) => {
   // слушал лишь затем, чтобы не потерять сам последний такт. Такое
   // отбрасывается у обеих сторон одинаково — по такту сервера от начала.
   const last = saved.window ? saved.window.last : null;
-  const events = saved.events.filter(e => last === null || e.tick === null || e.tick === undefined || e.tick <= last);
+  const filtered = saved.events.filter(e => last === null || e.tick === null || e.tick === undefined || e.tick <= last);
+  // Пакеты «рецепты добавлены» одного такта сливаются в одну строку: сколько пакетов и какие
+  // рецепты (порядок рецептов внутри такта у оригинала — по реестру, его не сверяем).
+  const events = [];
+  for (const e of filtered) {
+    const m = e.kind === 'sv' && /^RecipeBookAdd( replace)? \[(.*)\]$/.exec(e.text || '');
+    const prev = events[events.length - 1];
+    if (m && prev && prev.recipes && prev.tick === e.tick) {
+      prev.recipes.packets++; prev.recipes.names.push(...(m[2] ? m[2].split(',') : []));
+      prev.text = `RecipeBookAdd ${prev.recipes.packets} пакетов [${[...prev.recipes.names].sort().join(',')}]`;
+    } else if (m) events.push({ ...e, recipes: { packets: 1, names: m[2] ? m[2].split(',') : [] }, text: e.text.replace('RecipeBookAdd', 'RecipeBookAdd 1 пакет') });
+    else events.push(e);
+  }
   const out = [];
   let step = -1, base = null;
   // Время события — номер такта сервера, а не часы робота: робот пишет такт

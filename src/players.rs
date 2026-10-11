@@ -250,6 +250,9 @@ pub enum Order {
     /// Наложить эффект на столько тактов (`effect give`).
     Effect(crate::survival::Effect),
 
+    /// Команда `recipe`: выдать или отнять рецепты (пусто — все).
+    Recipes { give: bool, names: Vec<String> },
+
     /// Снять все эффекты (`effect clear`).
     ClearEffects,
     /// Снять один эффект.

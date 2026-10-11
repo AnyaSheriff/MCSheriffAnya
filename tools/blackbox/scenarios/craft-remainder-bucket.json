@@ -1,0 +1,201 @@
+{
+  "name": "craft-remainder-bucket",
+  "about": "Cake consumes all ingredients and leaves three buckets in the milk cells. [unverified: record against vanilla 26.1.2]",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:crafting_table"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "gamemode survival $(bot)",
+    "!stopfly",
+    "item replace entity $(bot) hotbar.0 with minecraft:milk_bucket 1",
+    "item replace entity $(bot) hotbar.1 with minecraft:milk_bucket 1",
+    "item replace entity $(bot) hotbar.2 with minecraft:milk_bucket 1",
+    "item replace entity $(bot) hotbar.3 with minecraft:sugar 2",
+    "item replace entity $(bot) hotbar.4 with minecraft:egg 1",
+    "item replace entity $(bot) hotbar.5 with minecraft:wheat 3"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 8,
+      "window_click": {
+        "slot": 37,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 13,
+      "window_click": {
+        "slot": 1,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 18,
+      "window_click": {
+        "slot": 38,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 23,
+      "window_click": {
+        "slot": 2,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 28,
+      "window_click": {
+        "slot": 39,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 33,
+      "window_click": {
+        "slot": 3,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 38,
+      "window_click": {
+        "slot": 40,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 43,
+      "window_click": {
+        "slot": 4,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 48,
+      "window_click": {
+        "slot": 6,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 53,
+      "window_click": {
+        "slot": 40,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 58,
+      "window_click": {
+        "slot": 41,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 63,
+      "window_click": {
+        "slot": 5,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 68,
+      "window_click": {
+        "slot": 42,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 73,
+      "window_click": {
+        "slot": 7,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 78,
+      "window_click": {
+        "slot": 8,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 83,
+      "window_click": {
+        "slot": 9,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 88,
+      "window_click": {
+        "slot": 42,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 93,
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 108,
+      "close": true
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 133,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "inventory": true,
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true
+}

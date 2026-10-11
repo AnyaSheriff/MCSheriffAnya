@@ -1,0 +1,216 @@
+{
+  "name": "craft-bed-wool",
+  "about": "Lime bed from 3 lime wool + 3 oak planks; white+white+red wool with planks gives nothing. [unverified: record against vanilla 26.1.2]",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:crafting_table"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "gamemode survival $(bot)",
+    "!stopfly",
+    "item replace entity $(bot) hotbar.0 with minecraft:lime_wool 3",
+    "item replace entity $(bot) hotbar.1 with minecraft:oak_planks 3",
+    "item replace entity $(bot) hotbar.2 with minecraft:white_wool 2",
+    "item replace entity $(bot) hotbar.3 with minecraft:red_wool 1",
+    "item replace entity $(bot) hotbar.4 with minecraft:birch_planks 3"
+  ],
+  "actions": [
+    {
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 1,
+      "after": 0
+    },
+    {
+      "window_click": {
+        "slot": 37,
+        "button": 0,
+        "mode": 0
+      },
+      "after": 8
+    },
+    {
+      "window_click": {
+        "slot": 1,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 12
+    },
+    {
+      "window_click": {
+        "slot": 2,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 16
+    },
+    {
+      "window_click": {
+        "slot": 3,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 20
+    },
+    {
+      "window_click": {
+        "slot": 38,
+        "button": 0,
+        "mode": 0
+      },
+      "after": 24
+    },
+    {
+      "window_click": {
+        "slot": 4,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 28
+    },
+    {
+      "window_click": {
+        "slot": 5,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 32
+    },
+    {
+      "window_click": {
+        "slot": 6,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 36
+    },
+    {
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0
+      },
+      "after": 40
+    },
+    {
+      "window_click": {
+        "slot": 10,
+        "button": 0,
+        "mode": 0
+      },
+      "after": 44
+    },
+    {
+      "window_click": {
+        "slot": 39,
+        "button": 0,
+        "mode": 0
+      },
+      "after": 48
+    },
+    {
+      "window_click": {
+        "slot": 1,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 52
+    },
+    {
+      "window_click": {
+        "slot": 2,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 56
+    },
+    {
+      "window_click": {
+        "slot": 40,
+        "button": 0,
+        "mode": 0
+      },
+      "after": 60
+    },
+    {
+      "window_click": {
+        "slot": 3,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 64
+    },
+    {
+      "window_click": {
+        "slot": 41,
+        "button": 0,
+        "mode": 0
+      },
+      "after": 68
+    },
+    {
+      "window_click": {
+        "slot": 4,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 72
+    },
+    {
+      "window_click": {
+        "slot": 5,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 76
+    },
+    {
+      "window_click": {
+        "slot": 6,
+        "button": 1,
+        "mode": 0
+      },
+      "after": 80
+    },
+    {
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0
+      },
+      "after": 84
+    },
+    {
+      "close": true,
+      "after": 88
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 100,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "inventory": true,
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true
+}

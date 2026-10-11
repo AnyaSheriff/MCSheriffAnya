@@ -15,8 +15,13 @@
 use crate::inventory::Stack;
 
 mod table;
+mod special;
+mod tags;
+pub mod player;
+pub use special::remainders;
 
 /// Один рецепт верстака.
+#[derive(Clone)]
 pub struct Recipe {
     /// С формой (важно, где что лежит) или без (важен только набор).
     pub shaped: bool,
@@ -138,10 +143,40 @@ impl Grid {
 /// Все рецепты по порядку таблицы: Bedrock нумерует их для клиента
 /// (bedrock/stations.rs).
 pub fn recipes() -> &'static [Recipe] {
-    table::RECIPES
+    tags::recipes()
 }
 
 impl Recipe {
+    /// Пачка крафтов: поток от стопок к ингредиентам, без предположения,
+    /// что каждый раз использована та же порода дерева (вики, Crafting).
+    pub fn covered_counts(&self, items: &[(i32, i32)], times: i32) -> bool {
+        if !(1..=64).contains(&times) || items.iter().any(|(_,n)| *n <= 0) { return false; }
+        let cells: Vec<_> = self.cells.iter().filter(|c| !c.is_empty()).collect();
+        let need = cells.len() as i64 * i64::from(times);
+        if items.iter().map(|(_,n)| i64::from(*n)).sum::<i64>() != need { return false; }
+        let end = items.len() + cells.len() + 1;
+        let mut edges = vec![vec![0; end + 1]; end + 1];
+        for (i,(item,count)) in items.iter().enumerate() {
+            edges[0][i + 1] = *count;
+            for (j,cell) in cells.iter().enumerate() { if cell.contains(item) { edges[i + 1][items.len() + j + 1] = times; } }
+        }
+        for j in 0..cells.len() { edges[items.len() + j + 1][end] = times; }
+        let mut sent = 0;
+        loop {
+            let mut parent = vec![usize::MAX; end + 1]; parent[0] = 0;
+            let mut queue = std::collections::VecDeque::from([0]);
+            while let Some(from) = queue.pop_front() {
+                for (to, prev) in parent.iter_mut().enumerate() { if *prev == usize::MAX && edges[from][to] > 0 { *prev = from; queue.push_back(to); } }
+            }
+            if parent[end] == usize::MAX { return i64::from(sent) == need; }
+            let mut amount = i32::MAX; let mut at = end;
+            while at != 0 { amount = amount.min(edges[parent[at]][at]); at = parent[at]; }
+            at = end;
+            while at != 0 { let from = parent[at]; edges[from][at] -= amount; edges[at][from] += amount; at = from; }
+            sent += amount;
+        }
+    }
+
     /// Хватает ли этих предметов (по одному на клетку) на рецепт, без
     /// учёта формы: у Bedrock клиент сам раскладывает сетку, сервер
     /// сверяет израсходованное.
@@ -161,6 +196,7 @@ impl Recipe {
 /// Что получится из сетки 3×3 (ячейки по рядам, слева направо): первый
 /// подходящий рецепт. None — сетка пуста или рецепта нет.
 pub fn craft(slots: &[Option<Stack>]) -> Option<Stack> {
+    if let Some(result) = special::craft(slots) { return Some(result); }
     let ingredients:Vec<_>=slots.iter().flatten().copied().collect();
     if ingredients.len()==2 {
         let shield=ingredients.iter().find(|s|crate::blocks::item_name(s.item)==Some("shield"));
@@ -184,7 +220,7 @@ pub fn craft(slots: &[Option<Stack>]) -> Option<Stack> {
     }
     let grid = Grid::new(slots)?;
 
-    table::RECIPES
+    recipes()
         .iter()
         .find(|recipe| recipe.matches(&grid))
         .map(|recipe| Stack::new(recipe.result, recipe.count))
@@ -279,3 +315,13 @@ mod tests {
         assert_eq!(remainder(item_named("wheat").unwrap()), None);
     }
 }
+
+/// Номер обычного рецепта для книги и ограниченного крафта.
+pub fn recipe_index(slots: &[Option<Stack>]) -> Option<usize> {
+    let grid = Grid::new(slots)?;
+    recipes().iter().position(|recipe| recipe.matches(&grid))
+}
+
+#[cfg(test)]
+#[path = "crafting/tests.rs"]
+mod player_tests;

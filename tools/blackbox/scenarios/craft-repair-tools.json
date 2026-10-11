@@ -1,0 +1,81 @@
+{
+  "name": "craft-repair-tools",
+  "about": "Two iron swords repair to 138 damage with the five-percent bonus and no Sharpness. [unverified: record against vanilla 26.1.2]",
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "gamemode survival $(bot)",
+    "!stopfly",
+    "item replace entity $(bot) hotbar.0 with minecraft:iron_sword[damage=200,enchantments={\"minecraft:sharpness\":3}] 1",
+    "item replace entity $(bot) hotbar.1 with minecraft:iron_sword[damage=200] 1"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "window_click": {
+        "slot": 36,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 5,
+      "window_click": {
+        "slot": 1,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 10,
+      "window_click": {
+        "slot": 37,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 15,
+      "window_click": {
+        "slot": 4,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 20,
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 35,
+      "close": true,
+      "inventory": true
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 60,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "inventory": true,
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true
+}

@@ -790,6 +790,7 @@ pub fn grind_xp(inputs: &[Option<Stack>], roll: impl FnOnce(i32) -> i32) -> i32 
 /// открыто, и возвращаются игроку при закрытии.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Station {
+    Crafting,
     Enchanting,
     Anvil,
     Grindstone,
@@ -802,6 +803,7 @@ pub enum Station {
 impl Station {
     pub fn of(block: &str) -> Option<Station> {
         match block {
+            "crafting_table" => Some(Station::Crafting),
             "enchanting_table" => Some(Station::Enchanting),
             "anvil" | "chipped_anvil" | "damaged_anvil" => Some(Station::Anvil),
             "grindstone" => Some(Station::Grindstone),
@@ -817,6 +819,7 @@ impl Station {
     /// и заголовок окна.
     pub fn menu(self) -> (i32, &'static str) {
         match self {
+            Station::Crafting => (12, "container.crafting"),
             Station::Enchanting => (13, "container.enchant"),
             Station::Anvil => (8, "container.repair"),
             Station::Grindstone => (15, "container.grindstone_title"),
@@ -831,6 +834,7 @@ impl Station {
     /// кузнечного стола четвёртая).
     pub fn slots(self) -> usize {
         match self {
+            Station::Crafting => 10,
             Station::Enchanting | Station::Stonecutter => 2,
             Station::Anvil | Station::Grindstone | Station::Cartography => 3,
             Station::Smithing | Station::Loom => 4,
@@ -840,6 +844,7 @@ impl Station {
     /// Сколько у станка входных ячеек: итог стоит сразу за ними.
     pub fn inputs(self) -> usize {
         match self {
+            Station::Crafting => 9,
             Station::Smithing | Station::Loom => 3,
             Station::Stonecutter => 1,
             _ => 2,

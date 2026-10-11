@@ -1,0 +1,118 @@
+{
+  "name": "craft-firework",
+  "about": "Three flight-two rockets copy star shape, colours, fade, trail and twinkle. [unverified: record against vanilla 26.1.2]",
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "gamemode survival $(bot)",
+    "!stopfly",
+    "item replace entity $(bot) hotbar.0 with minecraft:paper 1",
+    "item replace entity $(bot) hotbar.1 with minecraft:gunpowder 2",
+    "item replace entity $(bot) hotbar.2 with minecraft:firework_star[firework_explosion={shape:\"burst\",colors:[11743532],fade_colors:[2437522],has_trail:true,has_twinkle:true}] 1"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "window_click": {
+        "slot": 36,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 5,
+      "window_click": {
+        "slot": 1,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 10,
+      "window_click": {
+        "slot": 37,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 15,
+      "window_click": {
+        "slot": 2,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 20,
+      "window_click": {
+        "slot": 3,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 25,
+      "window_click": {
+        "slot": 37,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 30,
+      "window_click": {
+        "slot": 38,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 35,
+      "window_click": {
+        "slot": 4,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 40,
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      }
+    },
+    {
+      "after": 55,
+      "close": true,
+      "inventory": true
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 80,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "inventory": true,
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true
+}

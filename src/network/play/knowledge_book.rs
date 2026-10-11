@@ -30,9 +30,9 @@ mod tests {
                 player.inventory.set(slot,Some(Stack::new(blocks::item_named("knowledge_book").unwrap(),1).with_extras(data.clone())));
                 player.progress.recipes.update();
                 assert!(use_book(&mut player,hand));assert_eq!(player.inventory.slot(slot).map_or(0,|s|s.count),remaining);
-                assert!(player.progress.recipes.update().is_some());
+                assert!(!player.progress.recipes.update().is_empty());
                 assert!(!player.progress.recipes.learn_named(&["diamond_sword".into(),"unknown".into()]));
-                assert!(player.progress.recipes.update().is_none());
+                assert!(player.progress.recipes.update().is_empty());
             }
         }
     }

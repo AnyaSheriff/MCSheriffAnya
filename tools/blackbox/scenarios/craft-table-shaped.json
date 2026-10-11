@@ -1,0 +1,133 @@
+{
+  "name": "craft-table-shaped",
+  "about": "Mirrored wooden axe with birch planks in the right two columns. [unverified: record against vanilla 26.1.2]",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:crafting_table"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "gamemode survival $(bot)",
+    "!stopfly",
+    "item replace entity $(bot) hotbar.0 with minecraft:birch_planks 3",
+    "item replace entity $(bot) hotbar.1 with minecraft:stick 2"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ],
+      "face": 1
+    },
+    {
+      "after": 8,
+      "window_click": {
+        "slot": 37,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 13,
+      "window_click": {
+        "slot": 2,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 18,
+      "window_click": {
+        "slot": 3,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 23,
+      "window_click": {
+        "slot": 6,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 28,
+      "window_click": {
+        "slot": 37,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 33,
+      "window_click": {
+        "slot": 38,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 38,
+      "window_click": {
+        "slot": 5,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 43,
+      "window_click": {
+        "slot": 8,
+        "button": 1,
+        "mode": 0
+      }
+    },
+    {
+      "after": 48,
+      "window_click": {
+        "slot": 38,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 53,
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0
+      }
+    },
+    {
+      "after": 68,
+      "close": true
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 93,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "inventory": true,
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true
+}

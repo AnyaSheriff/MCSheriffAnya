@@ -1,0 +1,115 @@
+{
+  "name": "craft-shift-full",
+  "about": "Shift-click on the planks result with a completely full inventory: nothing is moved and nothing is consumed. [unverified: record against vanilla 26.1.2]",
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "gamemode survival $(bot)",
+    "!stopfly",
+    "item replace entity $(bot) inventory.0 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.1 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.2 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.3 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.4 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.5 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.6 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.7 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.8 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.9 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.10 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.11 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.12 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.13 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.14 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.15 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.16 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.17 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.18 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.19 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.20 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.21 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.22 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.23 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.24 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.25 with minecraft:cobblestone 64",
+    "item replace entity $(bot) inventory.26 with minecraft:cobblestone 64",
+    "item replace entity $(bot) hotbar.0 with minecraft:cobblestone 64",
+    "item replace entity $(bot) hotbar.1 with minecraft:cobblestone 64",
+    "item replace entity $(bot) hotbar.2 with minecraft:cobblestone 64",
+    "item replace entity $(bot) hotbar.3 with minecraft:cobblestone 64",
+    "item replace entity $(bot) hotbar.4 with minecraft:cobblestone 64",
+    "item replace entity $(bot) hotbar.5 with minecraft:cobblestone 64",
+    "item replace entity $(bot) hotbar.6 with minecraft:cobblestone 64",
+    "item replace entity $(bot) hotbar.7 with minecraft:cobblestone 64",
+    "item replace entity $(bot) hotbar.8 with minecraft:oak_log 3"
+  ],
+  "actions": [
+    {
+      "window_click": {
+        "slot": 44,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 0
+    },
+    {
+      "window_click": {
+        "slot": 1,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 4
+    },
+    {
+      "window_click": {
+        "slot": 44,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 8
+    },
+    {
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 1,
+        "inventory": true
+      },
+      "after": 12
+    },
+    {
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 1,
+        "inventory": true
+      },
+      "after": 16
+    },
+    {
+      "close": true,
+      "inventory": true,
+      "after": 20
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 32,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "inventory": true,
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true
+}

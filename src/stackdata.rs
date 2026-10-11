@@ -152,6 +152,9 @@ pub const TRIM_PATTERNS: [&str; 18] = [
 /// Довески одной стопки.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub struct Data {
+    /// Цвет брони и стороны горшка; метки файла 18, 19 (1–17 заняты).
+    pub dyed_color: Option<i32>,
+    pub pot_decorations: Option<[i32; 4]>,
     /// Номер заполненной карты (minecraft:map_id, protocol.json: 46).
     pub map_id: Option<i32>,
     /// Только предпросмотр у картографа: minecraft:map_post_processing (protocol.json: 48),
@@ -380,6 +383,8 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         out.extend_from_slice(&encode_varint(COMPONENT_INSTRUMENT)); out.push(1);
         out.extend_from_slice(&encode_varint(i32::from(id)+1)); count += 1;
     }
+    if let Some(color) = data.dyed_color { out.extend(encode_varint(44)); out.extend(color.to_be_bytes()); count += 1; }
+    if let Some(sides) = data.pot_decorations { out.extend(encode_varint(74)); out.extend(encode_varint(4)); for item in sides { out.extend(encode_varint(item)); } count += 1; }
     if let Some(id) = data.map_id { out.extend_from_slice(&encode_varint(46)); out.extend_from_slice(&encode_varint(id)); count += 1; }
     if let Some(kind) = data.map_post { out.extend_from_slice(&encode_varint(48)); out.extend_from_slice(&encode_varint(i32::from(kind))); count += 1; }
     if data.damage > 0 {
@@ -704,6 +709,9 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
     let mut reader = Reader { bytes: body, at: 0 };
 
     match kind {
+        44 => { data.dyed_color = reader.take(4).and_then(|b| b.try_into().ok()).map(i32::from_be_bytes); }
+        74 => { if reader.varint() == Some(4) { let mut sides = [0; 4]; for item in &mut sides { let Some(id) = reader.varint() else { return; }; *item = id; } data.pot_decorations = Some(sides); } }
+
         57 => data.debug_properties = use_components::read_map(&mut reader),
         66 => data.recipes = use_components::read_recipes(&mut reader),
         COMPONENT_STEW => {
@@ -913,7 +921,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -953,7 +961,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -1006,6 +1014,8 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
                 out.extend_from_slice(&value.to_be_bytes());
             }
         }
+        if let Some(color) = data.dyed_color { out.push(18); out.extend(color.to_be_bytes()); }
+        if let Some(sides) = data.pot_decorations { out.push(19); for item in sides { out.extend(item.to_be_bytes()); } }
         if let Some(book)=&data.book {
             out.push(17); out.push(u8::from(book.title.is_some()));
             let wire=book.encode(); out.extend((wire.len() as u32).to_be_bytes()); out.extend(wire);
@@ -1194,6 +1204,9 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
         // Метки хвоста: 1 — отделка, 2 — содержимое шулкер-ящика.
         while let Some(mark) = reader.take(1).map(|mark| mark[0]) {
             match mark {
+                18 => { data.dyed_color = Some(i32::from_be_bytes(reader.take(4)?.try_into().ok()?)); }
+                19 => { let mut sides = [0; 4]; for item in &mut sides { *item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?); } data.pot_decorations = Some(sides); }
+
                 17 => {
                     let written=reader.take(1)?[0]!=0;
                     let len=u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
@@ -1342,6 +1355,14 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
                     data.bundle.push(Content{slot:0,item:s.stored_item(),count:s.count,data:s.data});
                 }
                 if crate::bundle::weight(&data)>64 {return Err("мешок переполнен".into());}
+            }
+            "dyed_color" => data.dyed_color = Some(value.as_f64().or_else(|| value.get("rgb").and_then(Value::as_f64)).ok_or("dyed_color — число")? as i32 & 0xffffff),
+            "pot_decorations" => {
+                let Value::List(sides) = value else { return Err("стороны — список".into()); };
+                if sides.len() != 4 { return Err("нужны четыре стороны".into()); }
+                let mut ids = [0; 4];
+                for (i, side) in sides.iter().enumerate() { ids[i] = crate::blocks::item_named(side.as_str().ok_or("сторона — предмет")?.trim_start_matches("minecraft:")).ok_or("неизвестная сторона")?; }
+                data.pot_decorations = Some(ids);
             }
             "map_id" => data.map_id = Some(value.as_f64().ok_or("map_id — число")?.max(0.0) as i32),
             "bees" => {

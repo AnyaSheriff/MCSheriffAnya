@@ -97,6 +97,7 @@ impl Kind {
         }
 
         enchanting::Station::of(block).map(|station| match station {
+            enchanting::Station::Crafting => Kind::Workbench,
             enchanting::Station::Enchanting => Kind::Enchanting,
             enchanting::Station::Anvil => Kind::Anvil,
             enchanting::Station::Grindstone => Kind::Grindstone,
@@ -257,7 +258,7 @@ fn variants() -> &'static [Variant] {
     VARIANTS.get_or_init(|| {
         let mut out = Vec::new();
 
-        for (index, recipe) in crafting::recipes().iter().enumerate() {
+        for (index, recipe) in crafting::recipes().iter().chain(super::crafting::recipes()).enumerate() {
             // Выходной предмет должен существовать у Bedrock.
             if bedrock_item(recipe.result).is_none() {
                 continue;
@@ -310,9 +311,7 @@ fn variants() -> &'static [Variant] {
 
                 combos = next;
 
-                if combos.len() > 12 {
-                    combos.truncate(12);
-                }
+
             }
 
             out.extend(combos.into_iter().map(|cells| Variant { recipe: index, cells }));
@@ -336,7 +335,7 @@ fn tag_of(items: &[i32]) -> Option<&'static str> {
         Some("minecraft:wool")
     } else if names.iter().all(|name| name.ends_with("_slab") && !name.contains("stone") && !name.contains("brick")) {
         Some("minecraft:wooden_slabs")
-    } else if names.iter().all(|name| name.contains("log") || name.contains("wood") || name.contains("stem") || name.contains("hyphae")) {
+    } else if names.len() > 20 && names.iter().all(|name| name.contains("log") || name.contains("wood") || name.contains("stem") || name.contains("hyphae")) {
         Some("minecraft:logs")
     } else {
         None
@@ -347,8 +346,13 @@ fn tag_of(items: &[i32]) -> Option<&'static str> {
 pub fn recipe_by_network_id(id: u32) -> Option<&'static Recipe> {
     let variant = variants().get(usize::try_from(id).ok()?.checked_sub(1)?)?;
 
-    crafting::recipes().get(variant.recipe)
+    all_recipe(variant.recipe)
 }
+
+fn all_recipe(index: usize) -> Option<&'static Recipe> {
+    if index < crafting::recipes().len() { crafting::recipes().get(index) } else { super::crafting::recipes().get(index - crafting::recipes().len()) }
+}
+pub fn dynamic_recipe(id: u32) -> bool { id.checked_sub(1).and_then(|i| variants().get(i as usize)).is_some_and(|v| v.recipe >= crafting::recipes().len()) }
 
 fn write_ingredient(out: &mut Out, cell: &Cell) {
     match cell {
@@ -435,7 +439,7 @@ pub fn crafting_data_packet() -> &'static [u8] {
         out.varint((all.len() + smithing.len() + crate::stonecutter::recipes().len() + 3) as u32);
 
         for (number, variant) in all.iter().enumerate() {
-            let recipe = &crafting::recipes()[variant.recipe];
+            let recipe = all_recipe(variant.recipe).expect("рецепт");
             let mut uuid = [0u8; 16];
 
             uuid[..8].copy_from_slice(b"mcsacraf");
@@ -677,7 +681,7 @@ pub fn item_nbt(stack: &Stack) -> Option<Vec<u8>> {
         _ => {}
     }
 
-    if enchants.is_empty() && data.damage == 0 && data.repair_cost == 0 && data.name.is_none() && data.trim.is_none() && data.banner_patterns.is_empty() && !data.ominous_banner && data.base_color.is_none() && data.map_id.is_none() && data.book.is_none() {
+    if enchants.is_empty() && data.damage == 0 && data.repair_cost == 0 && data.name.is_none() && data.trim.is_none() && data.banner_patterns.is_empty() && !data.ominous_banner && data.base_color.is_none() && data.map_id.is_none() && data.book.is_none() && data.dyed_color.is_none() && data.pot_decorations.is_none() {
         return None;
     }
 
@@ -721,6 +725,11 @@ pub fn item_nbt(stack: &Stack) -> Option<Vec<u8>> {
             out.push(INT); name(&mut out,"Color"); out.extend((15-i32::from(color)).to_le_bytes());
             out.push(STRING); name(&mut out,"Pattern"); name(&mut out,crate::loom::BEDROCK[usize::from(pattern)]); out.push(0);
         }
+    }
+    if let Some(color) = data.dyed_color { out.push(INT); name(&mut out, "customColor"); out.extend((color | 0xff000000u32 as i32).to_le_bytes()); }
+    if let Some(sides) = data.pot_decorations {
+        out.push(LIST); name(&mut out, "sherds"); out.push(STRING); out.extend(4i32.to_le_bytes());
+        for item in sides { name(&mut out, &format!("minecraft:{}", crate::blocks::item_name(item).unwrap_or("brick"))); }
     }
     if data.damage != 0 {
         out.push(INT);

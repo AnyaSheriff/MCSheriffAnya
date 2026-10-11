@@ -248,6 +248,7 @@ struct Changing {
 
 /// Игрок Bedrock, уже вошедший в мир.
 pub struct BedrockWorld {
+    progress: crate::progress::Progress,
     shared: Arc<Shared>,
     /// Измерение игрока.
     dimension: Dimension,
@@ -578,6 +579,7 @@ impl BedrockWorld {
         let mut body = crate::network::play::Body::new(identity.uuid, identity.name.clone(), entity_id);
         body.restore_respawn(saved.as_ref().and_then(|data| data.respawn));
         let mut player = BedrockWorld {
+            progress: crate::progress::Progress::load(&identity.uuid),
             shared,
             dimension,
             identity,
@@ -742,7 +744,8 @@ impl BedrockWorld {
                 let (actions, handled) = (input.actions, input.handled);
 
                 if let Some(handled) = handled {
-                    connection.send(&[handled.response]);
+                    let mut packets = vec![handled.response]; packets.extend(self.station_events(handled.events));
+                    connection.send(&packets);
 
                     for stack in handled.thrown {
                         self.throw_out(stack);
@@ -1026,6 +1029,7 @@ impl BedrockWorld {
                 }
                 // Состояние эффектов уходит отдельной сверкой MobEffectPacket.
                 crate::players::Order::Effect(effect) => self.health.vit.give_effect_shown(effect),
+                crate::players::Order::Recipes { .. } => {} // [Bedrock: потом] книга рецептов Java
                 crate::players::Order::ClearEffects => { self.health.vit.remove_effects(None); }
                 crate::players::Order::ClearEffect(kind) => { self.health.vit.remove_effects(Some(kind)); }
                 crate::players::Order::Kick { reason } => {
@@ -2814,8 +2818,13 @@ impl BedrockWorld {
     /// звуки, износ наковальни, опыт точила, новое семя стола. Возвращает
     /// пакеты для клиента.
     fn station_events(&mut self, events: Vec<Event>) -> Vec<Vec<u8>> {
+        let crafted = events.iter().any(|e| matches!(e, Event::Crafted(..)));
         for event in events {
             match event {
+                Event::Crafted(item, count) => {
+                    self.progress.crafted(item, count);
+                    if crate::blocks::item_name(item) == Some("crafting_table") { self.progress.trigger("story/root"); }
+                }
                 Event::Levels(levels) => {
                     self.health.vit.command_xp(false, -levels, true);
                 }
@@ -2878,7 +2887,9 @@ impl BedrockWorld {
             }
         }
 
-        self.bag.enchant_options().into_iter().collect()
+        let mut packets: Vec<_> = self.bag.enchant_options().into_iter().collect();
+        if crafted { packets.extend(self.bag.crafting_sync_packets()); }
+        packets
     }
 
     /// Наковальня отработала: 12 % — на ступень хуже (разрушенная исчезает,
@@ -3241,7 +3252,7 @@ impl BedrockWorld {
             let world = self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком");
             let (x, y, z) = station.pos;
 
-            crate::blocks::block_at_state(world.get_block(x, y, z)).and_then(stations::Kind::of) != Some(station.kind)
+            crate::blocks::block_at_state(world.get_block(x, y, z)).and_then(stations::Kind::of) != Some(station.kind) || station.kind == stations::Kind::Workbench && (f64::from(self.position.0) - f64::from(x) - 0.5).powi(2) + (f64::from(self.position.1 - EYES) - f64::from(y) - 0.5).powi(2) + (f64::from(self.position.2) - f64::from(z) - 0.5).powi(2) > 64.0
         };
 
         if !gone {
@@ -3518,6 +3529,7 @@ impl BedrockWorld {
 
     /// Записывает файл игрока, если что-то изменилось с прошлого раза.
     fn save_if_changed(&mut self) {
+        self.progress.save(&self.identity.uuid);
         let data = self.player_data();
 
         if self.saved.as_ref() == Some(&data) {
@@ -3533,6 +3545,10 @@ impl BedrockWorld {
     /// Такт: другие игроки, чат, изменения блоков, время суток.
     pub fn tick(&mut self, connection: &Connection) {
         self.ticks += 1;
+        let names: Vec<_> = self.bag.inventory.slots().iter().flatten().filter_map(|s| crate::blocks::item_name(s.item)).collect();
+        self.progress.scan_items(&names);
+        self.progress.recipes.scan(&names, names.len(), false);
+        self.bag.allowed_crafting = self.shared.limited_crafting.load(std::sync::atomic::Ordering::Relaxed).then(|| (0..crate::crafting::recipes().len()).filter(|i| self.progress.recipes.knows_crafting(*i)).collect());
 
         // Чанки, прочитанные или сложенные в стороне, — в мир, и клиенту то,
         // что ещё не ушло.

@@ -143,7 +143,7 @@ pub fn craft(world: &mut World, pos: Pos) {
     set(world, pos, with(state, "crafting", true));
 
     // Тратится по одной штуке из каждой занятой ячейки; остатки копятся.
-    let mut remainders = Vec::new();
+    let remainders: Vec<_> = crate::crafting::remainders(&grid).into_iter().flatten().collect();
 
     world.with_container(x, y, z, |crafter| {
         for slot in crafter.slots.iter_mut().take(GRID) {
@@ -153,9 +153,6 @@ pub fn craft(world: &mut World, pos: Pos) {
 
             *slot = (stack.count > 1).then(|| stack.with_count(stack.count - 1));
 
-            if let Some(left) = crate::crafting::remainder(stack.item) {
-                remainders.push(Stack::new(left, 1));
-            }
         }
     });
 

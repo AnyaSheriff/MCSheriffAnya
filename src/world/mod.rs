@@ -216,6 +216,8 @@ pub enum WorldEvent {
     /// Игрок `viewer` (номер его сущности) открыл хранилище: окно уходит
     /// ему в этом месте потока — после звука открытия, до повтора блока.
     OpenWindow { viewer: i32, x: i32, y: i32, z: i32 },
+    /// Повтор блока после щелчка — только тому, кто щёлкнул (craft-two-players).
+    Confirm { viewer: i32, x: i32, y: i32, z: i32, state: i32 },
     /// Окно правки таблички (Open Sign Editor): сторона — передняя или нет.
     OpenSign { viewer: i32, x: i32, y: i32, z: i32, front: bool },
 
@@ -2415,6 +2417,13 @@ impl World {
     }
 
     /// Окно хранилища для игрока — в общем потоке событий.
+    /// Повтор блока `viewer` после его щелчка: остальным игрокам не уходит.
+    pub fn tell_viewer(&mut self, viewer: i32, x: i32, y: i32, z: i32) {
+        let state = self.get_block(x, y, z);
+
+        self.events.push(WorldEvent::Confirm { viewer, x, y, z, state });
+    }
+
     pub fn note_open_window(&mut self, viewer: i32, x: i32, y: i32, z: i32) {
         self.events.push(WorldEvent::OpenWindow { viewer, x, y, z });
     }

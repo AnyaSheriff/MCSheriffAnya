@@ -87,6 +87,7 @@ mod buckets;
 mod equipment_sound;
 mod knowledge_book;
 mod station;
+mod crafting;
 mod body;
 mod signs;
 mod cauldron;
@@ -1593,6 +1594,10 @@ fn pick_up_items(shared: &Shared, player: &mut PlayerState) -> Vec<i32> {
             stack.count - left.map_or(0, |left| left.count)
         });
 
+    if !taken.is_empty() {
+        let names: Vec<_> = player.inventory.slots()[5..].iter().flatten().filter_map(|s| blocks::item_name(s.item)).collect();
+        player.progress.recipes.scan(&names, names.len(), player.net.in_water);
+    }
     for item in taken {
         player.progress.picked_up(item.stack.item, item.stack.count);
         log_debug!(
@@ -4246,6 +4251,8 @@ async fn send_pending_world_events(
                 open_window(stream, shared, player, (*x, *y, *z)).await?;
             }
             WorldEvent::OpenWindow { .. } => {}
+            WorldEvent::Confirm { viewer, x, y, z, state } if *viewer == player.entity_id => send_block_update(stream, *x, *y, *z, *state).await?,
+            WorldEvent::Confirm { .. } => {}
             WorldEvent::OpenSign { viewer, x, y, z, front } if *viewer == player.entity_id => {
                 signs::send_editor(stream, (*x, *y, *z), *front).await?;
             }
@@ -4473,6 +4480,8 @@ async fn open_window(
     player: &mut PlayerState,
     at: (i32, i32, i32),
 ) -> io::Result<()> {
+    // Повторное открытие тоже закрывает личную сетку, иначе входы потеряются.
+    if crafting::is_table(player) { close_own_window(shared, player); }
     let (halves, slots, kind) = {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
         let kind = containers::Kind::of(world.get_block(at.0, at.1, at.2));
@@ -4714,6 +4723,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
             body.extend_from_slice(&encode_varint(window.id));
             write_body(stream, body).await?;
             close_own_window(shared, player);
+            if std::mem::take(&mut player.inventory_after_window) { send_container_content(stream, player).await?; }
         }
 
         return Ok(());
@@ -4827,6 +4837,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
 /// Игрок закрыл окно хранилища (или оно закрылось само): хранилище
 /// теряет смотрящего, курсор возвращается в инвентарь.
 fn close_own_window(shared: &Shared, player: &mut PlayerState) {
+    player.crafting_drag = None;
     let Some(window) = player.window.take() else {
         return;
     };
@@ -5315,6 +5326,27 @@ fn note_criteria(shared: &Shared, player: &PlayerState, seen: &mut Option<[i32; 
     }
 }
 
+/// Рецепты, открытые тем, что лежит у игрока, и пакеты книги: рецепты открываются на перемене
+/// в инвентаре и уходят раньше ячеек (чёрный ящик, craft-recipe-unlock: по пакету на рецепт).
+async fn send_recipes(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
+    if player.progress.recipes.started() {
+        let names: Vec<&str> = player.inventory.slots()[5..].iter().flatten().filter_map(|stack| blocks::item_name(stack.item)).collect();
+        let mut hash = std::collections::hash_map::DefaultHasher::new();
+
+        std::hash::Hash::hash(&(player.net.in_water, player.inventory.slots()[5..].iter().map(|s| s.map(|s| (s.item, s.count))).collect::<Vec<_>>()), &mut hash);
+
+        if player.progress.recipes.changed(std::hash::Hasher::finish(&hash)) {
+            player.progress.recipes.scan(&names, names.len(), player.net.in_water);
+        }
+    }
+
+    for body in player.progress.recipes.update() {
+        write_body(stream, body).await?;
+    }
+
+    Ok(())
+}
+
 /// Раз в такт: счётчики времени, условия по вещам, табло по статистике,
 /// ответ на запрос экрана статистики, достижения (пакет, объявление,
 /// награда) и запись на диск раз в пять минут (progress.rs).
@@ -5330,24 +5362,15 @@ async fn progress_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut 
     progression::effects(player);
     // Предметы у игрока: набор сверяется с таблицей «есть предмет».
     {
-        let mut names: Vec<&str> = Vec::new();
-
-        for slot in 5..inventory::SLOTS as i32 {
-            if let Some(stack) = player.inventory.slot(slot)
-                && let Some(name) = blocks::item_name(stack.item)
-            {
-                names.push(name);
-            }
-        }
+        let names: Vec<&str> = player.inventory.slots()[5..].iter().flatten().filter_map(|stack| blocks::item_name(stack.item)).collect();
 
         player.progress.scan_items(&names);
-        player.progress.recipes.scan(&names, names.len(), player.net.in_water);
     }
 
     if !player.progress.adv.started() {
         write_body(stream, player.progress.recipes.settings_body()).await?;
     }
-    if let Some(body) = player.progress.recipes.update() { write_body(stream, body).await?; }
+    send_recipes(stream, player).await?;
 
     // Биом под ногами раз в секунду.
     if player.progress.ticks.is_multiple_of(20) {
@@ -6181,6 +6204,13 @@ async fn read_and_log_play_packets(
                         }
                     }
                 }
+                Order::Recipes { give, names } => {
+                    if give {
+                        if names.is_empty() { player.progress.recipes.give_all(); } else { player.progress.recipes.learn_named(&names); }
+                    } else if let Some(body) = player.progress.recipes.take(&names) {
+                        write_body(stream, body).await?;
+                    }
+                }
                 Order::ClearEffects => vitals::clear_effects(stream, player, None).await?,
                 Order::ClearEffect(kind) => vitals::clear_effects(stream, player, Some(kind)).await?,
                 Order::XpTaken { points } => player.net.xp_taken.push(points),
@@ -6512,6 +6542,8 @@ async fn read_and_log_play_packets(
 
                     let shown = slots.iter().any(|slot| *slot == player.inventory.selected_slot() || *slot == inventory::OFFHAND);
 
+                    send_recipes(stream, player).await?;
+
                     for slot in slots {
                         send_container_slot(stream, player, slot).await?;
                     }
@@ -6628,7 +6660,13 @@ async fn read_and_log_play_packets(
 
         // Предмет поднимается не по команде клиента, а сам: сервер смотрит,
         // до чего игрок дотянулся.
-        for slot in pick_up_items(shared, player) {
+        let picked = pick_up_items(shared, player);
+
+        if !picked.is_empty() {
+            send_recipes(stream, player).await?;
+        }
+
+        for slot in picked {
             send_container_slot(stream, player, slot).await?;
         }
 
@@ -6665,6 +6703,8 @@ async fn read_and_log_play_packets(
 
                 let lagged =
                     flush_tick(stream, shared, player, &mut world_changes, &mut pending).await?;
+
+                crafting::watch(stream, shared, player).await?;
 
                 // Взмахи чужих игроков — после событий мира, перед здоровьем.
                 send_other_moves(stream, shared, player, &mut seen, Phase::Swings).await?;
@@ -6992,6 +7032,19 @@ async fn apply_reaction(
         send_container_content(stream, player).await?;
     }
 
+    // Оригинал шлёт итог крафта на каждую перемену сетки, до остальных ячеек.
+    for stack in reaction.result_sends.clone() {
+        player.state_id += 1;
+
+        let mut body = encode_varint(SET_CONTAINER_SLOT);
+
+        body.extend_from_slice(&encode_varint(player.window.as_ref().map_or(PLAYER_WINDOW, |window| window.id)));
+        body.extend_from_slice(&encode_varint(player.state_id));
+        push_i16(&mut body, 0);
+        push_slot(&mut body, stack);
+        write_body(stream, body).await?;
+    }
+
     for slot in reaction.slots.clone() {
         send_container_slot(stream, player, slot).await?;
     }
@@ -7057,6 +7110,7 @@ async fn apply_reaction(
         send_player_position(stream, player).await?;
     }
 
+    if let Some(body) = &reaction.crafting_ghost { write_body(stream, body.clone()).await?; }
     if let Some(window) = reaction.close_window {
         let mut body = encode_varint(CLOSE_CONTAINER_CLIENTBOUND);
 
@@ -7142,6 +7196,9 @@ struct Reaction {
 
     /// Окно, которое надо закрыть у клиента (с кафедры забрали книгу).
     close_window: Option<i32>,
+    crafting_ghost: Option<Vec<u8>>,
+    /// Итог крафта, посланный окну по разу на каждую перемену сетки (в порядке перемен).
+    result_sends: Vec<Option<Stack>>,
 
     /// Ещё свойства окна (стол зачарования, наковальня) — по порядку.
     window_properties: Vec<(i32, i16, i16)>,
@@ -7526,6 +7583,8 @@ fn handle_client_packet_inner(
         CLICK_CONTAINER if player.window.as_ref().is_some_and(|window| Cursor::new(payload).varint() == Some(window.id)) => {
             click_window(shared, player, payload, &mut reaction);
         }
+        CLICK_CONTAINER if player.game_mode != GAME_MODE_CREATIVE || player.window.is_none() => { crafting::click(shared, player, payload, &mut reaction); }
+        0x27 => crafting::place(shared, player, payload, &mut reaction),
         CLICK_CONTAINER => {
             // Что бы клиент ни нащёлкал, ответом идёт содержимое инвентаря
             // с сервера: если щелчок понят — новое, если нет — прежнее.
@@ -7561,23 +7620,36 @@ fn handle_client_packet_inner(
 
             // Закрыто окно хранилища — оно теряет смотрящего. Что менялось в
             // инвентаре мимо окна, клиент получит целиком.
+            let table_before = crafting::is_table(player).then(|| (0..=45).map(|slot| player.inventory.slot(slot)).collect::<Vec<_>>());
             close_own_window(shared, player);
 
-            if std::mem::take(&mut player.inventory_after_window) {
+            if std::mem::take(&mut player.inventory_after_window) && table_before.is_none() {
                 reaction.inventory = true;
             }
 
             // Окно закрыто: то, что игрок держал мышкой и положил в сетку
             // верстака, надо вернуть в инвентарь, иначе предмет пропадёт.
             // Не влезло — падает на землю.
+            // Клиенту — поячеечно и курсор (чёрный ящик, craft-inventory-planks:
+            // оригинал шлёт опустевшие ячейки сетки, потом ячейки возврата и
+            // пустой курсор), а не весь инвентарь.
+            let held = player.inventory.cursor().is_some();
             let closed = player.inventory.close_window();
 
             for stack in closed.thrown {
                 throw_out(shared, player, stack);
             }
 
-            if !closed.slots.is_empty() {
-                reaction.inventory = true;
+            if let Some(before) = table_before {
+                // Верстак: оригинал шлёт только изменившиеся ячейки окна 0,
+                // без курсора (чёрный ящик, craft-remainder-bucket).
+                reaction.slots.extend((0..=45).filter(|&slot| player.inventory.slot(slot) != before[slot as usize]));
+            } else if !closed.slots.is_empty() {
+                reaction.slots.extend(closed.slots);
+
+                if held {
+                    reaction.cursor = Some(None);
+                }
             }
         }
         TAB_COMPLETE_REQUEST => {
@@ -9187,8 +9259,8 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
                 world.note_open_window(player.entity_id, clicked_x, clicked_y, clicked_z);
             }
 
-            world.tell_directly(clicked_x, clicked_y, clicked_z);
-            world.tell_directly(bx, by, bz);
+            world.tell_viewer(player.entity_id, clicked_x, clicked_y, clicked_z);
+            world.tell_viewer(player.entity_id, bx, by, bz);
 
             return Some(Reaction::accepted(sequence));
         }
@@ -10387,6 +10459,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
         return;
     }
 
+    if crafting::is_table(player) { crafting::click(shared, player, payload, reaction); return; }
     if player.window.as_ref().is_some_and(|window| window.station.is_some()) {
         station::click(shared, player, payload, reaction);
         return;
@@ -11001,10 +11074,13 @@ struct PlayerState {
     /// этого не показало (броня, вторая рука): после закрытия прислать
     /// инвентарь целиком.
     inventory_after_window: bool,
+    /// Ячейки, изменившиеся при закрытии окна самим сервером: уходят клиенту в следующем такте.
+    late_slots: Vec<i32>,
 
     /// Номер последнего открытого окна — следующее получит номер на один
     /// больше.
     window_counter: i32,
+    crafting_drag: Option<(i32, i8, Vec<i32>)>,
 
     /// Здоровье, еда, воздух, огонь (survival.rs).
     vit: crate::survival::Vitals,
@@ -11218,7 +11294,9 @@ impl PlayerState {
             pending_changes: Vec::new(),
             pending_entities: Vec::new(),
             inventory_after_window: false,
+            late_slots: Vec::new(),
             window_counter: 0,
+            crafting_drag: None,
             net: vitals::Net::synced(&vit),
             vit,
             prev_mode: -1,

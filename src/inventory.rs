@@ -252,6 +252,7 @@ impl Inventory {
     /// рюкзаке.
     pub fn close_window(&mut self) -> Closed {
         let mut closed = Closed::default();
+        if self.slots[0].take().is_some() { closed.slots.push(0); }
         let mut returned: Vec<Stack> = self.cursor.take().into_iter().collect();
 
         for slot in CRAFTING_GRID..CRAFTING_GRID + 4 {
@@ -670,6 +671,7 @@ impl Inventory {
             .slots
             .iter()
             .enumerate()
+            .filter(|(slot, _)| *slot != 0)
             .filter_map(|(slot, stack)| stack.map(|stack| (slot, stack)))
             .collect();
 
@@ -722,7 +724,7 @@ impl Inventory {
                 stack = stack.with_extras(extras);
             }
 
-            if count > 0 {
+            if count > 0 && slot != 0 {
                 inventory.set(slot, Some(stack));
             }
         }

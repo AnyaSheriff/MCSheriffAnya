@@ -118,6 +118,7 @@ pub struct Shared {
     pub difficulty: std::sync::atomic::AtomicU8,
 
     /// Правило `keepInventory`: после смерти вещи остаются у игрока.
+    pub limited_crafting: std::sync::atomic::AtomicBool,
     pub keep_inventory: std::sync::atomic::AtomicBool,
 
     /// Правило `spawn_mobs` (26.1: прежнее doMobSpawning): появляются ли
@@ -225,6 +226,7 @@ impl Shared {
 
         Self {
             difficulty,
+            limited_crafting: std::sync::atomic::AtomicBool::new(false),
             keep_inventory: std::sync::atomic::AtomicBool::new(false),
             spawn_mobs: std::sync::atomic::AtomicBool::new(true),
             spawn_monsters: std::sync::atomic::AtomicBool::new(true),

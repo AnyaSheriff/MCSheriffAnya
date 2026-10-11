@@ -409,6 +409,19 @@ if (bot2) bot2.on('move', () => {
   if (!scenario.track_second_pos || !recording) return;
   note('sv', { text: `b: pos y=${round3(bot2.entity.position.y)} vy=${round3(bot2.entity.velocity.y)} ground=${bot2.entity.onGround}` });
 });
+// Окна второго робота: его номер окна и stateId нужны для щелчков (`"bot": 2`);
+// `track_second_window` пишет и его окно — открытие, ячейки, курсор, закрытие.
+let openWindow2 = null, stateId2 = 0;
+if (bot2) {
+  bot2._client.on('open_window', (p) => { openWindow2 = Number(p.windowId); if (scenario.track_second_window && recording) note('sv', { text: `b: Window open ${p.inventoryType ?? p.windowType}` }); });
+  bot2._client.on('close_window', () => { openWindow2 = null; if (scenario.track_second_window && recording) note('sv', { text: 'b: Window closed' }); });
+  bot2._client.on('window_items', (p) => { stateId2 = p.stateId; });
+  bot2._client.on('set_slot', (p) => {
+    stateId2 = p.stateId;
+    if (scenario.track_second_window && recording && (Number(p.windowId) !== 0 || scenario.track_second_slots !== true)) note('sv', { text: `b: Slot w${Number(p.windowId) === 0 ? 0 : 'N'} ${p.slot} ${itemName(p.item) || 'пусто'}` });
+  });
+  bot2._client.on('set_cursor_item', (p) => { if (scenario.track_second_window && recording) note('sv', { text: `b: Cursor ${itemName(p.contents) || 'пусто'}` }); });
+}
 // `track_second_slots`: и ячейки инвентаря второго (заряженный арбалет, износ оружия).
 if (bot2) bot2._client.on('set_slot', (p) => {
   if (!scenario.track_second_slots || !recording || Number(p.windowId) !== 0) return;
@@ -496,6 +509,26 @@ const itemName = (it) => {
   return `${(mcData.items[id] || {}).name || id}×${it.itemCount}${componentsOf(it)}`;
 };
 let openWindow = null;
+// Place Recipe: displayId различается у серверов, находим по результату
+// из разрешённой таблицы protocol.json 26.1, а не по жёсткому номеру.
+const craftingDisplays = new Map();
+bot._client.on('recipe_book_add', p => {
+  if (p.replace) craftingDisplays.clear();
+  for (const entry of p.entries || []) {
+    const r = entry.recipe;
+    const result = r?.display?.data?.result;
+    const id = result?.type === 'item_stack' ? result.data.itemId : result?.type === 'item' ? result.data : undefined;
+    if (id !== undefined) craftingDisplays.set(mcData.items[id]?.name, r.displayId);
+  }
+});
+// `track_recipes`: что сервер добавил или убрал в книге рецептов (имена результатов, по алфавиту).
+const recipeNames = (p) => [...new Set((p.entries || []).map((e) => { const r = e.recipe?.display?.data?.result; const id = r?.type === 'item_stack' ? r.data.itemId : r?.type === 'item' ? r.data : undefined; return id === undefined ? '?' : mcData.items[id]?.name; }))].sort();
+bot._client.on('recipe_book_add', p => { if (scenario.track_recipes) note('sv', { text: `RecipeBookAdd${p.replace ? ' replace' : ''} [${recipeNames(p).join(',')}]` }); });
+bot._client.on('recipe_book_remove', p => { if (scenario.track_recipes) note('sv', { text: `RecipeBookRemove ${(p.recipes || p.recipeIds || []).length}` }); });
+bot._client.on('craft_recipe_response', p => {
+  const d = p.recipeDisplay?.data;
+  if (d?.result?.type === 'item_stack') note('recipe', { item: itemName(d.result.data), width: d.width || 0, height: d.height || 0 });
+});
 bot._client.on('open_window', (p) => { openWindow = Number(p.windowId); });
 bot._client.on('open_horse_window', (p) => { openWindow = Number(p.windowId); note('window', { type: 'horse', slots: p.nbSlots, entity: entKind.get(p.entityId) || 'horse' }); });
 // Заголовок окна — ключ перевода, если он есть: у окна вагонетки заголовок
@@ -548,7 +581,7 @@ const hookWrites = (client) => {
   const write = client.write.bind(client);
   client.write = (name, params) => {
     if (process.env.BB_DEBUG && name !== 'position' && name !== 'position_look' && name !== 'look' && name !== 'keep_alive') console.error('→', name, JSON.stringify(params, (k, v) => typeof v === 'bigint' ? String(v) : v).slice(0, 160));
-    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'update_sign' || name === 'name_item' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item' || name === 'update_command_block' || name === 'select_trade')) {
+    if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'update_sign' || name === 'name_item' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item' || name === 'update_command_block' || name === 'select_trade' || name === 'craft_recipe_request')) {
       // Такт нажатия берём из плана, а не из часов: в какой такт целились,
       // в тот оно и уходит. Часы на этом месте врать не должны, но нажатие
       // ложится ровно на границу счёта, и округление могло бы дрогнуть.
@@ -760,7 +793,12 @@ bot.once('spawn', async () => {
       const what = a.set ? `set ${a.set.at.join(',')} ${a.set.state}` : a.click ? `click ${a.click.join(',')}` : a.cmd ? `cmd ${a.cmd}` : a.close ? 'close' : a.sign_update ? `sign_update ${a.sign_update.at.join(',')}` : a.select_trade !== undefined ? `select_trade ${a.select_trade}` : a.rename !== undefined ? `rename ${a.rename}` : a.window_click ? `window_click ${JSON.stringify(a.window_click)}` : a.attack ? 'attack' : a.interact ? 'interact' : a.button !== undefined ? `button ${a.button}` : a.slot_state ? `slot_state ${a.slot_state.slot} ${a.slot_state.state}` : a.hotbar !== undefined ? `hotbar ${a.hotbar}` : a.control ? `control ${a.control.join('=')}` : a.fly !== undefined ? `fly ${a.fly}` : a.respawn ? 'respawn' : a.dig ? `dig ${a.dig.join(',')} ${a.status ?? 0}` : a.leave_bed ? 'leave_bed' : a.use ? 'use_item' : a.release ? 'release_use' : a.program ? `program ${a.program.at.join(',')} ${a.program.command}` : JSON.stringify(a);
       pendingDo = { what: a.bot === 2 ? `2: ${what}` : what, tick: at };
       if (a.set) bot.chat(`/setblock ${ORIGIN.x + a.set.at[0]} ${ORIGIN.y + a.set.at[1]} ${ORIGIN.z + a.set.at[2]} ${a.set.state}`);
-      if (a.cmd) bot.chat('/' + expand(a.cmd));
+      if (a.cmd?.startsWith('!place_recipe ')) {
+        const [, result, all] = a.cmd.split(' ');
+        const recipeId = craftingDisplays.get(result);
+        if (recipeId === undefined) throw new Error(`Нет рецепта ${result}`);
+        bot._client.write('craft_recipe_request', { windowId: openWindow ?? 0, recipeId, makeAll: all === 'all' });
+      } else if (a.cmd) bot.chat('/' + expand(a.cmd));
       // Кнопка «Готово» в окне командного блока: пакет Program Command Block
       // (в mineflayer — update_command_block). mode: 0 — цепной, 1 — повторяющийся,
       // 2 — импульсный; flags: 1 — хранить вывод, 2 — условный, 4 — всегда активен.
@@ -769,7 +807,16 @@ bot.once('spawn', async () => {
       // Щелчок в открытом окне: слот, кнопка, режим. Что изменилось, робот
       // серверу не подсказывает — пусть сервер сам пришлёт итог.
       // `"inventory": true` — щелчок в окне самого игрока (номер 0, сетка 2×2), окно не нужно открывать.
-      if (a.window_click && (openWindow !== null || a.window_click.inventory)) {
+      if (a.bot === 2 && a.window_click) {
+        const w = a.window_click;
+        bot2._client.write('window_click', { windowId: w.inventory ? 0 : openWindow2, stateId: stateId2, slot: w.slot, mouseButton: w.button || 0, mode: w.mode || 0, changedSlots: [], cursorItem: undefined });
+      } else if (a.bot === 2 && a.close) {
+        bot2._client.write('close_window', { windowId: a.inventory ? 0 : openWindow2 }); openWindow2 = null;
+      } else if (a.bot === 2 && a.click) {
+        bot2._client.write('block_place', { location: new Vec3(ORIGIN.x + a.click[0], ORIGIN.y + a.click[1], ORIGIN.z + a.click[2]), direction: a.face ?? 1, hand: 0, cursorX: 0.5, cursorY: 0.5, cursorZ: 0.5, insideBlock: false, sequence: placeSeq++, worldBorderHit: false });
+        bot2.swingArm();
+      }
+      if (a.bot !== 2 && a.window_click && (openWindow !== null || a.window_click.inventory)) {
         const w = a.window_click;
         bot._client.write('window_click', { windowId: w.inventory ? 0 : openWindow, stateId, slot: w.slot, mouseButton: w.button || 0, mode: w.mode || 0, changedSlots: [], cursorItem: undefined });
       }
@@ -787,7 +834,7 @@ bot.once('spawn', async () => {
       if (a.select_trade !== undefined) bot._client.write('select_trade', { slot: a.select_trade });
       // Текст таблички: пакет Update Sign (в mineflayer — update_sign).
       if (a.sign_update) bot._client.write('update_sign', { location: new Vec3(ORIGIN.x + a.sign_update.at[0], ORIGIN.y + a.sign_update.at[1], ORIGIN.z + a.sign_update.at[2]), isFrontText: a.sign_update.front !== false, text1: a.sign_update.lines[0] || '', text2: a.sign_update.lines[1] || '', text3: a.sign_update.lines[2] || '', text4: a.sign_update.lines[3] || '' });
-      if (a.close && openWindow !== null) { bot._client.write('close_window', { windowId: openWindow }); openWindow = null; }
+      if (a.bot !== 2 && a.close && (openWindow !== null || a.inventory)) { bot._client.write('close_window', { windowId: a.inventory ? 0 : openWindow }); openWindow = null; }
       // Щелчок (правой кнопкой) по последней появившейся на площадке
       // вагонетке — основной рукой, в середину её ящика.
       if (a.interact) {
@@ -834,7 +881,7 @@ bot.once('spawn', async () => {
       if (a.release) (a.bot === 2 ? bot2 : bot)._client.write('block_dig', { status: 5, location: { x: 0, y: 0, z: 0 }, face: 0, sequence: 0 });
       // Удар по блоку (Player Action, «начал копать»): в выживании мгновенные
       // блоки — посевы, трава — ломаются сразу.
-      if (a.click) {
+      if (a.click && a.bot !== 2) {
         const block = bot.blockAt(new Vec3(ORIGIN.x + a.click[0], ORIGIN.y + a.click[1], ORIGIN.z + a.click[2]));
 
         // Повернуться к цели надо один раз: поворот занимает такты, и при

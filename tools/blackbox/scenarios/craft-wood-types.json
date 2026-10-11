@@ -1,0 +1,374 @@
+{
+  "name": "craft-wood-types",
+  "about": "Sticks from birch, cherry and bamboo planks and from bamboo, sticks from mixed oak+mangrove planks, crafting table from cherry planks, all in the 2x2 grid. [unverified: record against vanilla 26.1.2]",
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "gamemode survival $(bot)",
+    "!stopfly",
+    "item replace entity $(bot) hotbar.0 with minecraft:birch_planks 4",
+    "item replace entity $(bot) hotbar.1 with minecraft:cherry_planks 4",
+    "item replace entity $(bot) hotbar.2 with minecraft:bamboo_planks 4",
+    "item replace entity $(bot) hotbar.3 with minecraft:bamboo 4",
+    "item replace entity $(bot) hotbar.4 with minecraft:oak_planks 1",
+    "item replace entity $(bot) hotbar.5 with minecraft:mangrove_planks 1",
+    "item replace entity $(bot) hotbar.6 with minecraft:cherry_planks 4"
+  ],
+  "actions": [
+    {
+      "window_click": {
+        "slot": 36,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 0
+    },
+    {
+      "window_click": {
+        "slot": 1,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 4
+    },
+    {
+      "window_click": {
+        "slot": 3,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 8
+    },
+    {
+      "window_click": {
+        "slot": 36,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 12
+    },
+    {
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 16
+    },
+    {
+      "window_click": {
+        "slot": 9,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 20
+    },
+    {
+      "window_click": {
+        "slot": 37,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 24
+    },
+    {
+      "window_click": {
+        "slot": 1,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 28
+    },
+    {
+      "window_click": {
+        "slot": 3,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 32
+    },
+    {
+      "window_click": {
+        "slot": 37,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 36
+    },
+    {
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 40
+    },
+    {
+      "window_click": {
+        "slot": 9,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 44
+    },
+    {
+      "window_click": {
+        "slot": 38,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 48
+    },
+    {
+      "window_click": {
+        "slot": 1,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 52
+    },
+    {
+      "window_click": {
+        "slot": 3,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 56
+    },
+    {
+      "window_click": {
+        "slot": 38,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 60
+    },
+    {
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 64
+    },
+    {
+      "window_click": {
+        "slot": 9,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 68
+    },
+    {
+      "window_click": {
+        "slot": 39,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 72
+    },
+    {
+      "window_click": {
+        "slot": 1,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 76
+    },
+    {
+      "window_click": {
+        "slot": 3,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 80
+    },
+    {
+      "window_click": {
+        "slot": 39,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 84
+    },
+    {
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 88
+    },
+    {
+      "window_click": {
+        "slot": 9,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 92
+    },
+    {
+      "window_click": {
+        "slot": 40,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 96
+    },
+    {
+      "window_click": {
+        "slot": 1,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 100
+    },
+    {
+      "window_click": {
+        "slot": 41,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 104
+    },
+    {
+      "window_click": {
+        "slot": 3,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 108
+    },
+    {
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 112
+    },
+    {
+      "window_click": {
+        "slot": 10,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 116
+    },
+    {
+      "window_click": {
+        "slot": 42,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 120
+    },
+    {
+      "window_click": {
+        "slot": 1,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 124
+    },
+    {
+      "window_click": {
+        "slot": 2,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 128
+    },
+    {
+      "window_click": {
+        "slot": 3,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 132
+    },
+    {
+      "window_click": {
+        "slot": 4,
+        "button": 1,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 136
+    },
+    {
+      "window_click": {
+        "slot": 0,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 140
+    },
+    {
+      "window_click": {
+        "slot": 11,
+        "button": 0,
+        "mode": 0,
+        "inventory": true
+      },
+      "after": 144
+    },
+    {
+      "close": true,
+      "inventory": true,
+      "after": 148
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 160,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "inventory": true,
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true
+}

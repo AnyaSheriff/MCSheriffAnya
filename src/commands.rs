@@ -534,6 +534,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         "effect" => effect(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "advancement" => crate::commands_progress::advancement(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "experience" | "xp" => experience(parts.collect::<Vec<&str>>().as_slice(), source, shared),
+        "recipe" => recipe(parts.collect::<Vec<&str>>().as_slice(), source, shared),
         "gamerule" => gamerule(parts.collect::<Vec<&str>>().as_slice(), shared),
         "scoreboard" | "team" | "tag" | "bossbar" | "trigger" | "teammsg" | "tm" | "function" | "schedule" | "datapack" | "return" => crate::commands_score::run(command, source, shared),
 
@@ -1819,6 +1820,22 @@ fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     }
 }
 
+/// `recipe give|take <игрок> *|<рецепт>`: книга рецептов игрока (вики, Commands/recipe).
+fn recipe(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    let [action @ ("give" | "take"), who, what] = parts else {
+        return Answer::saying("Нужно: recipe give|take <игрок> *|<рецепт>".to_string());
+    };
+    let targets = find_targets(who, source, shared);
+    let names = if *what == "*" { Vec::new() } else { vec![(*what).to_string()] };
+    let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
+
+    for (uuid, _) in &targets {
+        players.order(uuid, Order::Recipes { give: *action == "give", names: names.clone() });
+    }
+
+    Answer::saying(format!("Рецепты: {action} {what} — {}", names_of(&targets)))
+}
+
 /// `experience add|set <игрок> <число> [points|levels]` (и `xp`): опыт игрока.
 fn experience(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let usage = || Answer::saying("Нужно: experience add|set <игрок> <число> [points|levels]".to_string());
@@ -1873,6 +1890,11 @@ fn gamerule(parts: &[&str], shared: &Shared) -> Answer {
     }
 
     match parts {
+        ["doLimitedCrafting" | "limited_crafting" | "minecraft:limited_crafting", value @ ("true" | "false")] => {
+            shared.limited_crafting.store(*value == "true", std::sync::atomic::Ordering::Relaxed);
+            Answer::saying(format!("Правило limited_crafting: {value}"))
+        }
+        ["doLimitedCrafting" | "limited_crafting" | "minecraft:limited_crafting"] => Answer::saying(format!("{}", shared.limited_crafting.load(std::sync::atomic::Ordering::Relaxed))),
         ["doFireTick" | "fire_tick" | "minecraft:fire_tick", value @ ("true" | "false")] => {
             for dimension in crate::dimension::Dimension::ALL { shared.world_in(dimension).lock().expect("мир").fire_tick = *value == "true"; }
             Answer::saying(format!("Правило doFireTick: {}", value))

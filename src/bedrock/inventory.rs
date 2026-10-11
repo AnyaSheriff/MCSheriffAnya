@@ -220,6 +220,7 @@ pub struct Bag {
     pub station: Option<Station>,
     /// Уровень игрока для запросов (зачарование, наковальня).
     pub level: i32,
+    pub allowed_crafting: Option<std::collections::BTreeSet<usize>>,
     pub cartography_maps: Option<crate::maps::Maps>,
     /// Итог станка в этом запросе уже создан и его можно брать.
     craft_ready: bool,
@@ -230,6 +231,7 @@ pub struct Bag {
     smithing: Option<[i32; 3]>,
     station_spend: Option<Vec<(Place,Stack)>>,
     station_consumed: Vec<(Place,Stack)>,
+    planned_crafting: Vec<(Place,Stack)>,
     /// Рецепт верстака этого запроса и сколько раз.
     recipe: Option<(&'static crate::crafting::Recipe, i32)>,
     /// Что станок попросил сделать миру, когда запрос удался.
@@ -256,6 +258,7 @@ pub struct Station {
 /// Что станок просит сделать миру после удавшегося запроса.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Event {
+    Crafted(i32, i32),
     /// Потратить уровни (стол, наковальня).
     Levels(i32),
     /// Состоялась сделка с жителем (номер сделки в его списке).
@@ -313,11 +316,13 @@ impl Bag {
             station: None,
             level: 0,
             cartography_maps: None,
+            allowed_crafting: None,
             craft_ready: false,
             consumed: Vec::new(),
             smithing: None,
             station_spend: None,
             station_consumed: Vec::new(),
+            planned_crafting: Vec::new(),
             recipe: None,
             events: Vec::new(),
             offers: None,
@@ -593,6 +598,20 @@ impl Bag {
         packets
     }
 
+    /// Динамический итог несёт довески, которых нет в ItemStackResponse.
+    /// Окно UI: курсор 0, сетки 28–40 (minecraft-data 1.26.10).
+    pub fn crafting_sync_packets(&self) -> Vec<Vec<u8>> {
+        let mut packets = self.content_packets();
+        let mut ui = Out::packet(super::session::INVENTORY_CONTENT);
+        ui.varint(WINDOW_UI).varint(UI_SLOTS as u32);
+        for slot in 0..UI_SLOTS as u8 {
+            let place = if slot == 0 { Place::Cursor } else { Place::Ui(slot) };
+            write_item(&mut ui, self.get(place), self.id(place));
+        }
+        ui.u8(super::containers::WINDOW_CONTAINER).u8(0).zigzag32(0);
+        packets.push(ui.bytes); packets
+    }
+
     /// Одна ячейка окна хранилища пакетом Inventory Slot.
     pub fn window_slot_packet(&self, window: u8, container: u8, slot: usize) -> Option<Vec<u8>> {
         let stack = *self.window.as_ref()?.get(slot)?;
@@ -753,6 +772,7 @@ impl Bag {
         self.smithing = None;
         self.station_spend = None;
         self.station_consumed.clear();
+        self.planned_crafting.clear();
         self.recipe = None;
         self.trade_pick = None;
         self.trade_times = 1;
@@ -874,14 +894,14 @@ impl Bag {
                 // тоже «рецепт»).
                 12 => {
                     let id = reader.varint()?;
-                    let times = i32::from(reader.u8()?).max(1);
+                    let times = i32::from(reader.u8()?);
                     Act::Recipe { id, times }
                 }
                 // Рецепт из книги рецептов: ещё список ингредиентов.
                 13 => {
                     let id = reader.varint()?;
                     let _times = reader.u8()?;
-                    let times = i32::from(reader.u8()?).max(1);
+                    let times = i32::from(reader.u8()?);
 
                     for _ in 0..reader.varint()? {
                         skip_ingredient(reader)?;
@@ -927,6 +947,13 @@ impl Bag {
         dropped: &mut Vec<Stack>,
     ) -> bool {
         let mut failed = false;
+        self.planned_crafting = actions.iter().filter_map(|action| {
+            if let Act::Consume { count, source, destroy: false } = action {
+                let place = self.place_for(*source, creative)?;
+                let stack = self.get(place)?;
+                if *count > 0 && *count <= stack.count { Some((place, stack.with_count(*count))) } else { None }
+            } else { None }
+        }).collect();
 
         for act in actions {
             let ok = match act {
@@ -937,7 +964,7 @@ impl Bag {
                     if destroy {
                         creative && self.remove(count, source, creative, touched).is_some()
                     } else {
-                        self.consume(count, source, creative, touched)
+                        self.consume(count, source, creative, touched, dropped)
                     }
                 }
                 Act::Skip => true,
@@ -970,7 +997,7 @@ impl Bag {
 
     /// Расходует `count` из ячейки (действие consume). У ячейки интерфейса
     /// остаток рецепта (пустое ведро от молока) занимает её место.
-    fn consume(&mut self, count: i32, source: Named, creative: bool, touched: &mut Vec<(Named, Place)>) -> bool {
+    fn consume(&mut self, count: i32, source: Named, creative: bool, touched: &mut Vec<(Named, Place)>, dropped: &mut Vec<Stack>) -> bool {
         let Some(from) = self.place_for(source, creative) else {
             return false;
         };
@@ -986,12 +1013,24 @@ impl Bag {
         let in_ui = matches!(from, Place::Ui(_));
         let mut rest = (left > 0).then(|| stack.with_count(left));
 
-        if left == 0 && in_ui && self.recipe.is_some() && let Some(item) = crate::crafting::remainder(stack.item) {
-            rest = Some(Stack::new(item, 1));
+        if left == 0 && self.recipe.is_some() && let Some(item) = crate::crafting::remainder(stack.item) {
+            rest = Some(Stack::new(item, count));
         }
 
+        if self.station_spend.is_some() && self.recipe.is_some() {
+            let n = blocks::item_name(stack.item).unwrap_or("");
+            if n == "written_book" || n.ends_with("_banner") && (!stack.extras().banner_patterns.is_empty() || stack.extras().ominous_banner) && self.station_spend.as_ref().is_some_and(|v| v.iter().all(|(_,s)| blocks::item_name(s.item).is_some_and(|n| n.ends_with("_banner")))) { rest = Some(stack); }
+        }
         self.set(from, rest);
         touched.push((source, from));
+        if left > 0 && self.recipe.is_some() && let Some(item) = crate::crafting::remainder(stack.item) {
+            let (changed, overflow) = self.inventory.put(Stack::new(item, count));
+            self.touched(&changed); dropped.extend(overflow);
+            for slot in changed {
+                let wire = if slot >= FIRST_HOTBAR { slot - FIRST_HOTBAR } else { slot };
+                touched.push((Named { container: HOTBAR_AND_INVENTORY, dynamic: None, slot: wire as u8 }, Place::Slot(slot)));
+            }
+        }
         self.consumed.push((stack.item, count, in_ui));
         self.station_consumed.push((from,stack.with_count(count)));
         true
@@ -1007,6 +1046,35 @@ impl Bag {
                     return false;
                 };
 
+                if !creative && !stations::dynamic_recipe(id) && self.allowed_crafting.as_ref().is_some_and(|known| crate::crafting::recipes().iter().position(|r| std::ptr::eq(r, recipe)).is_none_or(|i| !known.contains(&i))) { return false; }
+                if self.craft_ready || times <= 0 || times > 64 || recipe.count.checked_mul(times).is_none_or(|n| n > blocks::stack_size(recipe.result)) { return false; }
+                let size = if self.station.is_some() { 3 } else { 2 };
+                if recipe.shaped && (recipe.width > size || recipe.height > size) || recipe.cells.iter().filter(|c| !c.is_empty()).count() > usize::from(size * size) { return false; }
+                let output_name = blocks::item_name(recipe.result).unwrap_or("");
+                if stations::dynamic_recipe(id) || output_name.ends_with("shulker_box") || crate::bundle::is_bundle(recipe.result) {
+                    let start = if size == 3 { stations::UI_GRID_3X3 } else { stations::UI_GRID_2X2 };
+                    let mut grid: Vec<_> = (start..start + size * size).map(|i| self.get(Place::Ui(i))).collect();
+                    let mut wanted: Vec<_> = grid.iter().enumerate().filter_map(|(i,s)| s.map(|s| (Place::Ui(start + i as u8), s.with_count(times)))).collect();
+                    if grid.iter().all(Option::is_none) {
+                        wanted = self.planned_crafting.clone();
+                        if wanted.iter().any(|(_,s)| s.count % times != 0) { return false; }
+                        let mut units: Vec<_> = wanted.iter().flat_map(|(_,s)| std::iter::repeat_n(s.with_count(1), (s.count / times) as usize)).collect();
+                        if units.len() != recipe.cells.iter().filter(|c| !c.is_empty()).count() { return false; }
+                        for (i,cell) in recipe.cells.iter().enumerate() {
+                            if cell.is_empty() { continue; }
+                            let Some(at) = units.iter().position(|s| cell.contains(&s.item)) else { return false; };
+                            let target = if recipe.shaped { i / recipe.width as usize * usize::from(size) + i % recipe.width as usize } else { i };
+                            grid[target] = Some(units.remove(at));
+                        }
+                    } else if grid.iter().flatten().any(|s| s.count < times) { return false; }
+                    let Some(result) = crate::crafting::craft(&crate::crafting::player::padded(&grid)).filter(|s| s.item == recipe.result && s.count == recipe.count && s.extras().map_post.is_none()) else { return false; };
+                    if !recipe.covered_by(&grid.iter().flatten().map(|s| s.item).collect::<Vec<_>>()) { return false; }
+                    self.station_spend = Some(wanted);
+                    self.craft_ready = true;
+                    self.recipe = Some((recipe, times));
+                    self.set(Place::CreativeOutput, Some(result.with_count(result.count * times)));
+                    return true;
+                }
                 self.recipe = Some((recipe, times));
                 self.craft_ready = true;
                 self.set(Place::CreativeOutput, Some(Stack::new(recipe.result, (recipe.count * times).min(blocks::stack_size(recipe.result)))));
@@ -1215,21 +1283,11 @@ impl Bag {
     /// лазурит, на точило — изнашиваемое или зачарованное).
     fn finish_station(&mut self, creative: bool) -> bool {
         if let Some((recipe, times)) = self.recipe {
-            let mut units: Vec<i32> = Vec::new();
+            if times <= 0 || self.get(Place::CreativeOutput).is_some() { return false; }
+            let consumed: Vec<_> = self.consumed.iter().map(|(item,count,_)| (*item,*count)).collect();
+            if !recipe.covered_counts(&consumed, times) { return false; }
+            self.events.push(Event::Crafted(recipe.result, recipe.count * times));
 
-            for &(item, count, _) in &self.consumed {
-                units.extend(std::iter::repeat_n(item, count as usize));
-            }
-
-            let per = units.len() / times.max(1) as usize;
-
-            // На каждый раз — по набору ингредиентов.
-            if !units.len().is_multiple_of(times.max(1) as usize) || units.chunks(per.max(1)).any(|chunk| !recipe.covered_by(chunk)) {
-                return false;
-            }
-
-            // Форма сетки не сверяется: клиент раскладывает сам, сервер
-            // сверяет, что израсходован набор рецепта. [проверить]
         }
 
         // Сделка: израсходовано ровно столько, сколько стоит, и итог взят.
@@ -1277,7 +1335,7 @@ impl Bag {
             let mut wanted= wanted.clone(); wanted.sort_unstable_by_key(|(p,_)|*p);
             let mut spent=self.station_consumed.clone(); spent.sort_unstable_by_key(|(p,_)|*p);
             if spent!=wanted || self.get(Place::CreativeOutput).is_some() { return false; }
-            if let Some(station)=self.station {self.events.push(Event::StationWorked(station.kind,station.pos));}
+            if let Some(station)=self.station.filter(|s| s.kind != stations::Kind::Workbench) {self.events.push(Event::StationWorked(station.kind,station.pos));}
         }
         // Стол расходует ровно по одному из трёх входов.
         if let Some(mut wanted) = self.smithing {
@@ -2471,4 +2529,32 @@ mod tests {
         assert_eq!(bag.get(Place::Ui(stations::UI_TRADE_FIRST)), None);
         assert_eq!(bag.inventory.slot(FIRST_HOTBAR).map(|stack| stack.count), Some(64));
     }
+    #[test]
+    fn crafting_rejects_free_output_zero_times_and_oversized_batches() {
+        let target=item("crafting_table",1).item;
+        let id=(1..2000).find(|i|stations::recipe_by_network_id(*i).is_some_and(|r|r.result==target)).unwrap();
+        for times in [0,1,65,255] {
+            let mut bag=Bag::new(Inventory::new());
+            let data=request(-80,2,|out|{out.u8(12).varint(id).u8(times);take_output(out,1);});
+            let handled=bag.handle_requests(&data,false);assert!(handled.events.is_empty());assert!(bag.get(Place::Cursor).is_none());
+        }
+    }
+    #[test]
+    fn automatic_batches_validate_aggregate_ingredients() {
+        let target=item("stick",1).item;
+        let id=(1..stations::smithing_base()).find(|i|stations::recipe_by_network_id(*i).is_some_and(|r|r.result==target && r.cells.len()==2 && r.cells[0].contains(&item("oak_planks",1).item))).unwrap();
+        let mut bag=Bag::new(Inventory::new());bag.set(Place::Ui(28),Some(item("oak_planks",2)));bag.set(Place::Ui(30),Some(item("spruce_planks",2)));
+        let data=request(-81,4,|out|{out.u8(13).varint(id).u8(2).u8(2).varint(0);consume_action(out,2,stations::CRAFTING_INPUT,28);consume_action(out,2,stations::CRAFTING_INPUT,30);take_output(out,8);});
+        let handled=bag.handle_requests(&data,false);assert_eq!(bag.get(Place::Cursor),Some(item("stick",8)));assert_eq!(handled.events,vec![Event::Crafted(target,8)]);
+    }
+    #[test]
+    fn dynamic_fireworks_and_repair_preserve_server_components() {
+        let rocket=item("firework_rocket",1).item;
+        let id=(1..stations::smithing_base()).find(|i|stations::dynamic_recipe(*i) && stations::recipe_by_network_id(*i).is_some_and(|r|r.result==rocket && r.cells.len()==3 && r.cells[2].contains(&item("firework_star",1).item))).unwrap();
+        let mut bag=Bag::new(Inventory::new());let star=item("firework_star",1).with_extras(crate::stackdata::Data{explosion:Some(crate::stackdata::Explosion{colors:vec![11743532],shape:4,..Default::default()}),..Default::default()});
+        bag.set(Place::Ui(28),Some(item("paper",1)));bag.set(Place::Ui(29),Some(item("gunpowder",1)));bag.set(Place::Ui(30),Some(star));
+        let data=request(-82,5,|out|{out.u8(12).varint(id).u8(1);for slot in 28..=30 {consume_action(out,1,stations::CRAFTING_INPUT,slot);}take_output(out,3);});
+        bag.handle_requests(&data,false);let crafted=bag.get(Place::Cursor).unwrap();assert_eq!(crafted.item,rocket);assert_eq!(crafted.extras().rocket().explosions,vec![star.extras().explosion.unwrap()]);
+    }
+
 }

@@ -101,3 +101,5 @@ pub fn start(shared: Arc<Shared>) {
 
 mod signs;
 mod lectern;
+
+mod crafting;

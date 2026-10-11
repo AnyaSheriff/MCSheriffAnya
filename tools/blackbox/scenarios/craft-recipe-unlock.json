@@ -1,0 +1,59 @@
+{
+  "name": "craft-recipe-unlock",
+  "about": "Recipes added to the recipe book as ingredients are picked up (log, iron ingot from the ground, planks, bamboo, cobblestone, string, wool). [unverified: record against vanilla 26.1.2]",
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "tp $(bot) $(0.5,0,2.5) 180 0",
+    "gamemode survival $(bot)",
+    "!stopfly",
+    "recipe take $(bot) *"
+  ],
+  "actions": [
+    {
+      "cmd": "give $(bot) minecraft:oak_log 1",
+      "after": 0
+    },
+    {
+      "cmd": "summon item $(0.5,0,2.5) {Item:{id:\"minecraft:iron_ingot\",count:1},PickupDelay:0s}",
+      "after": 12
+    },
+    {
+      "cmd": "give $(bot) minecraft:cherry_planks 1",
+      "after": 24
+    },
+    {
+      "cmd": "give $(bot) minecraft:bamboo 1",
+      "after": 36
+    },
+    {
+      "cmd": "give $(bot) minecraft:cobblestone 1",
+      "after": 48
+    },
+    {
+      "cmd": "give $(bot) minecraft:string 4",
+      "after": 60
+    },
+    {
+      "cmd": "give $(bot) minecraft:white_wool 3",
+      "after": 72
+    }
+  ],
+  "cleanup": [
+    "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+    "kill @e[type=item,distance=..48]",
+    "clear $(bot)",
+    "gamemode creative $(bot)"
+  ],
+  "record_ticks": 86,
+  "origin": [
+    0,
+    -59,
+    0
+  ],
+  "inventory": true,
+  "item_components": true,
+  "track_self": true,
+  "track_mobs": true,
+  "track_recipes": true
+}
