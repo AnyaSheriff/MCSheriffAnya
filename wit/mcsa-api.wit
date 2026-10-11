@@ -1,0 +1,274 @@
+// API плагинов MCSheriffAnya, версия 0.1.
+//
+// Пакет WIT `mcsa:api` — это то же самое, что Java-пакет
+// `ru.sheriffanya.mcsa.api` (утверждён 2026-10-02). Соответствие имён:
+//
+//   WIT                         Java (будет в фазе 2, Jar2WASM)
+//   mcsa:api/types              ru.sheriffanya.mcsa.api          (Player, BlockPos, ItemStack …)
+//   mcsa:api/log                ru.sheriffanya.mcsa.api.log
+//   mcsa:api/server             ru.sheriffanya.mcsa.api.server
+//   mcsa:api/player             ru.sheriffanya.mcsa.api.player
+//   mcsa:api/world              ru.sheriffanya.mcsa.api.world
+//   mcsa:api/scheduler          ru.sheriffanya.mcsa.api.scheduler
+//   mcsa:api/command            ru.sheriffanya.mcsa.api.command
+//   mcsa:api/storage            ru.sheriffanya.mcsa.api.storage
+//   mcsa:api/privileged         ru.sheriffanya.mcsa.api.privileged  (только modules/)
+//   mcsa:api/lifecycle          ru.sheriffanya.mcsa.api.Plugin      (enable/disable)
+//   mcsa:api/events             ru.sheriffanya.mcsa.api.event       (обработчики)
+//
+// Идентификатор игрока — его UUID строкой «8-4-4-4-12».
+// Имена блоков и предметов — как в игре, с приставкой или без: `minecraft:stone`.
+
+package mcsa:api@0.1.0;
+
+interface types {
+    /// Измерение.
+    enum dimension { overworld, nether, end }
+
+    /// Режим игры.
+    enum game-mode { survival, creative, adventure, spectator }
+
+    /// Игрок на сервере в момент вызова.
+    record player {
+        uuid: string,
+        name: string,
+        game-mode: game-mode,
+        dimension: dimension,
+        x: f64,
+        y: f64,
+        z: f64,
+        yaw: f32,
+        pitch: f32,
+    }
+
+    /// Место в мире (дробные координаты, куда смотрит).
+    record location {
+        dimension: dimension,
+        x: f64,
+        y: f64,
+        z: f64,
+        yaw: option<f32>,
+        pitch: option<f32>,
+    }
+
+    /// Блок в мире по целым координатам.
+    record block-pos {
+        dimension: dimension,
+        x: s32,
+        y: s32,
+        z: s32,
+    }
+
+    /// Стопка предметов.
+    record item-stack {
+        /// `diamond_sword`, `minecraft:bread` …
+        item: string,
+        count: u32,
+    }
+
+    /// Ответ обработчику отменяемого события.
+    enum verdict {
+        /// Пропустить.
+        allow,
+        /// Отменить: блок не ломается, не ставится, команда не выполняется.
+        deny,
+    }
+
+    /// Ответ обработчику чата.
+    variant chat-result {
+        /// Пропустить как есть.
+        pass,
+        /// Не рассылать сообщение.
+        cancel,
+        /// Разослать вместо него этот текст (текст сообщения, без «<имя>»).
+        replace(string),
+    }
+
+    /// Кто вызвал команду.
+    enum sender-kind { player, console, command-block }
+
+    record sender {
+        kind: sender-kind,
+        /// UUID, если вызвал игрок.
+        uuid: option<string>,
+        name: string,
+    }
+
+    /// Итог команды плагина.
+    record command-result {
+        success: bool,
+        /// Ответ вызвавшему (может быть пустым).
+        message: option<string>,
+    }
+}
+
+interface log {
+    enum level { debug, info, warn, error }
+
+    /// Строка в консоль сервера с именем плагина.
+    write: func(level: level, message: string);
+}
+
+interface server {
+    use types.{player};
+
+    /// Версия API, с которой работает сервер (`0.1`).
+    api-version: func() -> string;
+
+    /// Номер текущего такта мира с запуска.
+    current-tick: func() -> u64;
+
+    /// Сообщение всем в чат (и в консоль).
+    broadcast: func(message: string);
+
+    /// Кто сейчас на сервере.
+    online-players: func() -> list<player>;
+
+    /// Игрок по нику (без учёта регистра).
+    find-player: func(name: string) -> option<player>;
+}
+
+interface player {
+    use types.{location, item-stack};
+
+    /// Личное сообщение. false — игрока нет на сервере.
+    send-message: func(uuid: string, message: string) -> bool;
+
+    /// Перенести игрока (в том числе в другое измерение).
+    teleport: func(uuid: string, to: location) -> bool;
+
+    /// Выдать предметы: что не влезло — падает на землю.
+    give-item: func(uuid: string, stack: item-stack) -> result<_, string>;
+
+    /// Выгнать с сервера.
+    kick: func(uuid: string, reason: string) -> bool;
+}
+
+interface %world {
+    use types.{block-pos, location, dimension};
+
+    /// Имя блока (`minecraft:stone`). none — чанк не загружен.
+    get-block: func(pos: block-pos) -> option<string>;
+
+    /// Поставить блок: `stone`, `minecraft:lever[face=floor]`.
+    set-block: func(pos: block-pos, block: string) -> result<_, string>;
+
+    /// Общая точка появления измерения.
+    spawn-location: func(dimension: dimension) -> location;
+}
+
+interface scheduler {
+    /// Выполнить задачу `task` (её номер плагин выбирает сам) через `delay`
+    /// тактов — на такте мира. Возвращает номер для отмены.
+    run-later: func(delay: u32, task: u32) -> u32;
+
+    /// То же, но повторять каждые `period` тактов (не меньше 1).
+    run-repeating: func(delay: u32, period: u32, task: u32) -> u32;
+
+    /// Отменить задачу по номеру. false — такой уже нет.
+    cancel: func(handle: u32) -> bool;
+}
+
+interface command {
+    record command-spec {
+        /// Имя без косой черты: `[a-z0-9_-]+`.
+        name: string,
+        description: string,
+        usage: string,
+        /// Нужный уровень прав оператора: 0 — всем, 4 — только владельцам.
+        level: u8,
+        /// Узел права (`hello.use`): зарезервирован под будущую систему прав,
+        /// пока действует только `level`.
+        permission: option<string>,
+    }
+
+    /// Зарегистрировать команду. Когда её вызовут — придёт `events.on-command`.
+    register: func(spec: command-spec) -> result<_, string>;
+}
+
+interface storage {
+    /// Текст `config.toml` плагина. Нет файла — создаётся из `default-text`.
+    config: func(default-text: string) -> result<string, string>;
+
+    /// Перезаписать `config.toml`.
+    save-config: func(text: string) -> result<_, string>;
+
+    /// Прочитать файл из папки данных плагина (`<плагин>/data/`).
+    /// Имя — без путей и без `..`; размер файла — не больше 4 МиБ.
+    read: func(name: string) -> result<option<list<u8>>, string>;
+
+    /// Записать файл в папку данных.
+    write: func(name: string, data: list<u8>) -> result<_, string>;
+
+    /// Удалить файл из папки данных. false — его не было.
+    delete: func(name: string) -> result<bool, string>;
+}
+
+/// Только для `modules/` (доверенных). Песочница `plugins/` этого
+/// интерфейса не даёт: плагин, который его просит, не загрузится.
+///
+/// Сюда же лягут глубокие зацепки — пакеты, механики, генерация мира.
+interface privileged {
+    /// Выполнить команду от имени консоли; ответ — текстом.
+    run-console-command: func(command: string) -> string;
+
+    /// Имена загруженных плагинов и модулей.
+    loaded-plugins: func() -> list<string>;
+}
+
+/// Жизненный цикл.
+interface lifecycle {
+    /// Плагин загружен: регистрируй команды и задачи.
+    enable: func();
+    /// Плагин выгружается (выключение, `/plugman unload|reload`).
+    disable: func();
+}
+
+/// То, что сервер вызывает у плагина. Обработчики событий вызываются на
+/// том потоке, что применяет действие игрока (в начале такта, такт его
+/// ждёт); задачи планировщика — на потоке такта.
+interface events {
+    use types.{player, block-pos, verdict, chat-result, sender, command-result};
+
+    on-player-join: func(who: player);
+    on-player-quit: func(who: player);
+
+    /// Игрок написал в чат. Отменяемое и изменяемое.
+    on-chat: func(who: player, message: string) -> chat-result;
+
+    /// Игрок ломает блок (`block` — что стоит там сейчас). Отменяемое.
+    on-block-break: func(who: player, pos: block-pos, block: string) -> verdict;
+
+    /// Игрок ставит блок (`block` — что ставит). Отменяемое.
+    on-block-place: func(who: player, pos: block-pos, block: string) -> verdict;
+
+    /// Игрок ввёл любую команду (без косой черты); отмена — не выполнять.
+    on-player-command: func(who: player, command-line: string) -> verdict;
+
+    /// Вызвана команда этого плагина.
+    on-command: func(caller: sender, name: string, args: list<string>) -> command-result;
+
+    /// Пришло время задачи планировщика.
+    on-task: func(task: u32);
+}
+
+/// Обычный плагин из `plugins/` — в песочнице.
+world plugin {
+    import types;
+    import log;
+    import server;
+    import player;
+    import %world;
+    import scheduler;
+    import command;
+    import storage;
+
+    export lifecycle;
+    export events;
+}
+
+/// Доверенный модуль из `modules/`: всё то же и `privileged`.
+world module {
+    include plugin;
+    import privileged;
+}

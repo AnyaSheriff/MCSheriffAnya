@@ -19,8 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --release --all-targets
-      - run: cargo test --release
+      - run: cargo clippy --release --all-targets --workspace
+      # Тесты плагинов грузят примеры из plugins-examples — собрать их заранее.
+      - run: rustup target add wasm32-wasip2
+      - run: cargo build --release --target wasm32-wasip2
+        working-directory: plugins-examples
+      - run: cargo test --release --workspace
+      - run: cargo test --release --no-default-features
 
   build-other:
     name: Build (${{ matrix.os }})

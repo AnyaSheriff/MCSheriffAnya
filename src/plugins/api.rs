@@ -1,0 +1,573 @@
+// Что плагин может вызвать у сервера: реализация импортов `mcsa:api`.
+//
+// Каждый вызов — обычная функция хозяина над общим состоянием сервера
+// (`Shared`), с теми же замками и тем же порядком, что у остального ядра:
+// замок берётся на время одного вызова и отпускается до возврата в плагин.
+// Плагина при этом никто не ждёт под замком — в ответ на вызов он получает
+// копию данных, не ссылку.
+
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+
+use wasmtime::StoreLimits;
+use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxView, WasiView};
+
+use crate::dimension::Dimension;
+use crate::players::{Member, Order};
+use crate::shared::Shared;
+use crate::{log_debug, log_error, log_info, log_warn};
+
+wasmtime::component::bindgen!({
+    path: "wit/mcsa-api.wit",
+    world: "module",
+});
+
+use mcsa::api::types as wit;
+
+/// Сколько задач и команд может завести один плагин: чтобы забытый цикл
+/// не съел память.
+pub const MAX_TASKS: usize = 256;
+pub const MAX_COMMANDS: usize = 64;
+
+/// Самый большой файл в папке данных плагина.
+pub const MAX_FILE: usize = 4 * 1024 * 1024;
+
+/// Имена команд, которые плагину занимать нельзя: это команды ядра и
+/// игры, и подмена `op` или `stop` плагином была бы дырой.
+const RESERVED: &[&str] = &[
+    "op", "deop", "stop", "ban", "ban-ip", "pardon", "pardon-ip", "banlist", "kick", "whitelist", "gamemode", "give", "tp", "teleport", "help", "list", "say", "me", "msg", "tell",
+    "w", "execute", "function", "data", "setblock", "fill", "summon", "kill", "effect", "time", "weather", "gamerule", "difficulty", "save-all", "save-off", "save-on", "plugman",
+    "reload", "trigger", "scoreboard", "team", "tag", "tick", "clear", "xp", "experience", "enchant", "item", "damage", "spawnpoint", "setworldspawn", "worldborder",
+    "advancement", "attribute", "bossbar", "clone", "datapack", "fillbiome", "forceload", "locate", "loot", "place", "random", "return", "ride", "rotate", "schedule",
+    "spectate", "spreadplayers", "teammsg", "tm", "tnt",
+];
+
+/// Задача планировщика одного плагина.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Task {
+    pub handle: u32,
+    /// Такт, на котором задача сработает.
+    pub due: u64,
+    pub period: Option<u32>,
+    pub task: u32,
+}
+
+/// Команда, зарегистрированная плагином.
+#[derive(Clone, Debug)]
+pub struct Registered {
+    pub name: String,
+    pub description: String,
+    pub usage: String,
+    pub level: u8,
+}
+
+/// Кто каким плагином занят: имя команды → имя плагина. Общий для всех,
+/// чтобы два плагина не заняли одно имя.
+pub type CommandRegistry = Arc<Mutex<HashMap<String, String>>>;
+
+/// Состояние одного плагина (`Store<PluginCtx>`).
+pub struct PluginCtx {
+    pub name: String,
+    /// Модуль из `modules/` — доверенный.
+    pub trusted: bool,
+    pub shared: Arc<Shared>,
+    /// Папка плагина: `plugin.toml`, `config.toml`, `data/`.
+    pub folder: PathBuf,
+    pub wasi: WasiCtx,
+    pub table: ResourceTable,
+    pub limits: StoreLimits,
+    /// Такт, который идёт сейчас (для планировщика).
+    pub tick: u64,
+    pub tasks: Vec<Task>,
+    pub next_handle: u32,
+    pub commands: Vec<Registered>,
+    pub registry: CommandRegistry,
+    /// Имена загруженных плагинов — для `privileged.loaded-plugins`.
+    pub loaded: Arc<Mutex<Vec<String>>>,
+}
+
+impl WasiView for PluginCtx {
+    fn ctx(&mut self) -> WasiCtxView<'_> {
+        WasiCtxView { ctx: &mut self.wasi, table: &mut self.table }
+    }
+}
+
+impl PluginCtx {
+    /// Задачи, чей час пришёл на такте `now`, в порядке номеров. Одноразовые
+    /// удаляются, повторяющиеся переносятся.
+    pub fn due_tasks(&mut self, now: u64) -> Vec<u32> {
+        let mut due: Vec<(u32, u32)> = Vec::new();
+
+        self.tasks.retain_mut(|task| {
+            if task.due > now {
+                return true;
+            }
+
+            due.push((task.handle, task.task));
+
+            match task.period {
+                Some(period) => {
+                    task.due = now + u64::from(period);
+                    true
+                }
+                None => false,
+            }
+        });
+
+        due.sort_by_key(|(handle, _)| *handle);
+        due.into_iter().map(|(_, task)| task).collect()
+    }
+
+    fn add_task(&mut self, delay: u32, period: Option<u32>, task: u32) -> u32 {
+        if self.tasks.len() >= MAX_TASKS {
+            log_warn!("[{}] слишком много задач (больше {}) — новая не заведена", self.name, MAX_TASKS);
+            return 0;
+        }
+
+        self.next_handle = self.next_handle.wrapping_add(1).max(1);
+
+        // Задача с задержкой 0 сработает на ближайшем такте, не в этом же
+        // вызове: иначе плагин мог бы зациклить такт сам на себе.
+        self.tasks.push(Task { handle: self.next_handle, due: self.tick + u64::from(delay.max(1)), period, task });
+        self.next_handle
+    }
+
+    /// Папка данных плагина.
+    pub fn data_dir(&self) -> PathBuf {
+        self.folder.join("data")
+    }
+}
+
+/// UUID строкой («8-4-4-4-12» или без дефисов) в байты.
+pub fn parse_uuid(text: &str) -> Option<[u8; 16]> {
+    let hex: String = text.chars().filter(|c| *c != '-').collect();
+
+    if hex.len() != 32 || !hex.is_ascii() {
+        return None;
+    }
+
+    let mut out = [0u8; 16];
+
+    for (index, byte) in out.iter_mut().enumerate() {
+        *byte = u8::from_str_radix(&hex[index * 2..index * 2 + 2], 16).ok()?;
+    }
+
+    Some(out)
+}
+
+pub fn dimension_to_wit(dimension: Dimension) -> wit::Dimension {
+    match dimension {
+        Dimension::Overworld => wit::Dimension::Overworld,
+        Dimension::Nether => wit::Dimension::Nether,
+        Dimension::End => wit::Dimension::End,
+    }
+}
+
+pub fn dimension_from_wit(dimension: wit::Dimension) -> Dimension {
+    match dimension {
+        wit::Dimension::Overworld => Dimension::Overworld,
+        wit::Dimension::Nether => Dimension::Nether,
+        wit::Dimension::End => Dimension::End,
+    }
+}
+
+fn game_mode_to_wit(mode: i32) -> wit::GameMode {
+    match mode {
+        1 => wit::GameMode::Creative,
+        2 => wit::GameMode::Adventure,
+        3 => wit::GameMode::Spectator,
+        _ => wit::GameMode::Survival,
+    }
+}
+
+/// Игрок как его видит плагин.
+pub fn member_to_wit(member: &Member) -> wit::Player {
+    wit::Player {
+        uuid: crate::network::login::format_uuid(&member.uuid),
+        name: member.name.clone(),
+        game_mode: game_mode_to_wit(member.game_mode),
+        dimension: dimension_to_wit(member.dimension),
+        x: member.position.x,
+        y: member.position.y,
+        z: member.position.z,
+        yaw: member.position.yaw,
+        pitch: member.position.pitch,
+    }
+}
+
+impl super::PlayerView {
+    /// Игрок как его видит плагин.
+    pub fn to_wit(&self) -> wit::Player {
+        wit::Player {
+            uuid: crate::network::login::format_uuid(&self.uuid),
+            name: self.name.clone(),
+            game_mode: game_mode_to_wit(self.game_mode),
+            dimension: dimension_to_wit(self.dimension),
+            x: self.x,
+            y: self.y,
+            z: self.z,
+            yaw: self.yaw,
+            pitch: self.pitch,
+        }
+    }
+}
+
+/// Блок с приставкой: `minecraft:stone`.
+fn block_text(state: i32) -> String {
+    format!("minecraft:{}", crate::blocks::block_at_state(state).unwrap_or("air"))
+}
+
+/// Имя файла в папке данных: без путей, без точки в начале.
+pub fn safe_file_name(name: &str) -> Result<&str, String> {
+    let bad = name.is_empty() || name.len() > 100 || name.starts_with('.') || name.contains(['/', '\\', '\0', ':']);
+
+    if bad { Err(format!("имя файла «{name}» не годится: без путей и точки в начале")) } else { Ok(name) }
+}
+
+fn read_limited(path: &Path) -> Result<Option<Vec<u8>>, String> {
+    match std::fs::metadata(path) {
+        Ok(meta) if meta.len() > MAX_FILE as u64 => Err(format!("файл больше {} МиБ", MAX_FILE / 1024 / 1024)),
+        Ok(_) => std::fs::read(path).map(Some).map_err(|error| error.to_string()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+fn write_file(path: &Path, data: &[u8]) -> Result<(), String> {
+    if data.len() > MAX_FILE {
+        return Err(format!("файл больше {} МиБ", MAX_FILE / 1024 / 1024));
+    }
+
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+
+    // Через временный файл: оборванная запись не оставит половину.
+    let temporary = path.with_extension("tmp");
+
+    std::fs::write(&temporary, data).map_err(|error| error.to_string())?;
+    std::fs::rename(&temporary, path).map_err(|error| error.to_string())
+}
+
+impl mcsa::api::types::Host for PluginCtx {}
+
+impl mcsa::api::log::Host for PluginCtx {
+    fn write(&mut self, level: mcsa::api::log::Level, message: String) {
+        use mcsa::api::log::Level;
+
+        match level {
+            Level::Debug => log_debug!("[{}] {}", self.name, message),
+            Level::Info => log_info!("[{}] {}", self.name, message),
+            Level::Warn => log_warn!("[{}] {}", self.name, message),
+            Level::Error => log_error!("[{}] {}", self.name, message),
+        }
+    }
+}
+
+impl mcsa::api::server::Host for PluginCtx {
+    fn api_version(&mut self) -> String {
+        super::manifest::API_VERSION.to_string()
+    }
+
+    fn current_tick(&mut self) -> u64 {
+        self.tick
+    }
+
+    fn broadcast(&mut self, message: String) {
+        // Как любое сообщение в чат: без управляющих знаков и не длиннее
+        // предела. Цвета («§») плагину пока нельзя — как и игрокам.
+        let clean: String = message.chars().filter(|c| !c.is_control() && *c != '§').take(crate::chat::MAX_MESSAGE).collect();
+
+        if !clean.is_empty() {
+            self.shared.chat.lock().expect("чат захвачен другим потоком").push(clean);
+        }
+    }
+
+    fn online_players(&mut self) -> Vec<wit::Player> {
+        self.shared.players.lock().expect("список игроков захвачен другим потоком").members().iter().map(member_to_wit).collect()
+    }
+
+    fn find_player(&mut self, name: String) -> Option<wit::Player> {
+        let players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
+
+        players.members().iter().find(|member| member.name.eq_ignore_ascii_case(&name)).map(member_to_wit)
+    }
+}
+
+impl mcsa::api::player::Host for PluginCtx {
+    fn send_message(&mut self, uuid: String, message: String) -> bool {
+        let Some(uuid) = parse_uuid(&uuid) else { return false };
+        let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
+
+        if !players.members().iter().any(|member| member.uuid == uuid) {
+            return false;
+        }
+
+        let clean: String = message.chars().filter(|c| !c.is_control() || *c == '\n').collect();
+
+        players.order(&uuid, Order::Message { component: crate::network::nbt::text_component(&clean) });
+        true
+    }
+
+    fn teleport(&mut self, uuid: String, to: wit::Location) -> bool {
+        let Some(uuid) = parse_uuid(&uuid) else { return false };
+        let sane = |value: f64, limit: f64| value.is_finite() && value.abs() <= limit;
+
+        if !(sane(to.x, 30_000_000.0) && sane(to.y, 20_000_000.0) && sane(to.z, 30_000_000.0)) {
+            return false;
+        }
+
+        let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
+        let Some(member) = players.members().iter().find(|member| member.uuid == uuid).cloned() else {
+            return false;
+        };
+
+        let dimension = dimension_from_wit(to.dimension);
+
+        if dimension == member.dimension {
+            players.order(&uuid, Order::Teleport { x: to.x, y: to.y, z: to.z });
+            // Перенос — не шаг: игрок «встаёт» на блок не сразу (players.rs).
+            players.unsettle(&uuid);
+        } else {
+            players.order(&uuid, Order::ChangeDimension { dimension, x: to.x, y: to.y, z: to.z });
+        }
+
+        if let (Some(yaw), Some(pitch)) = (to.yaw, to.pitch)
+            && yaw.is_finite()
+            && pitch.is_finite()
+        {
+            players.order(&uuid, Order::Look { yaw, pitch });
+        }
+
+        true
+    }
+
+    fn give_item(&mut self, uuid: String, stack: wit::ItemStack) -> Result<(), String> {
+        let uuid = parse_uuid(&uuid).ok_or_else(|| "UUID не разобрать".to_string())?;
+
+        if stack.count == 0 || stack.count > 2304 {
+            return Err("count: от 1 до 2304".to_string());
+        }
+
+        let spec = stack.item.strip_prefix("minecraft:").unwrap_or(&stack.item).to_string();
+        let stack = crate::commands::stack_from_spec(&spec, stack.count as i32)?.ok_or_else(|| "воздух выдать нельзя".to_string())?;
+        let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
+
+        if !players.members().iter().any(|member| member.uuid == uuid) {
+            return Err("игрока нет на сервере".to_string());
+        }
+
+        players.order(&uuid, Order::Give { stack });
+        Ok(())
+    }
+
+    fn kick(&mut self, uuid: String, reason: String) -> bool {
+        let Some(uuid) = parse_uuid(&uuid) else { return false };
+        let mut players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
+
+        if !players.members().iter().any(|member| member.uuid == uuid) {
+            return false;
+        }
+
+        players.order(&uuid, Order::Kick { reason });
+        true
+    }
+}
+
+impl mcsa::api::world::Host for PluginCtx {
+    fn get_block(&mut self, pos: wit::BlockPos) -> Option<String> {
+        let world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир захвачен другим потоком");
+
+        if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {
+            return None;
+        }
+
+        Some(block_text(world.get_block(pos.x, pos.y, pos.z)))
+    }
+
+    fn set_block(&mut self, pos: wit::BlockPos, block: String) -> Result<(), String> {
+        let state = crate::blocks::state_from_text(&block).ok_or_else(|| format!("нет такого блока: {block}"))?;
+        let mut world = self.shared.world_in(dimension_from_wit(pos.dimension)).lock().expect("мир захвачен другим потоком");
+
+        if !world.has_chunk(pos.x.div_euclid(16), pos.z.div_euclid(16)) {
+            return Err("чанк не загружен".to_string());
+        }
+
+        let (x, y, z) = (pos.x, pos.y, pos.z);
+
+        // Как команда `setblock`: после установки соседи и редстоун узнают
+        // о перемене в этом же месте (commands.rs, set_blocks).
+        if world.get_block(x, y, z) != state {
+            world.note_commanded(x, y, z);
+        }
+
+        if world.set_block(x, y, z, state) {
+            world.take_spilled();
+            crate::containers::after_change(&mut world);
+            crate::placing::refresh_neighbours(&mut world, x, y, z);
+            crate::redstone::settle(&mut world);
+            crate::redstone::command_placed(&mut world, (x, y, z));
+            crate::redstone::settle(&mut world);
+        }
+
+        Ok(())
+    }
+
+    fn spawn_location(&mut self, dimension: wit::Dimension) -> wit::Location {
+        let (x, y, z) = self.shared.world_in(dimension_from_wit(dimension)).lock().expect("мир захвачен другим потоком").spawn_position();
+
+        wit::Location { dimension, x, y, z, yaw: None, pitch: None }
+    }
+}
+
+impl mcsa::api::scheduler::Host for PluginCtx {
+    fn run_later(&mut self, delay: u32, task: u32) -> u32 {
+        self.add_task(delay, None, task)
+    }
+
+    fn run_repeating(&mut self, delay: u32, period: u32, task: u32) -> u32 {
+        self.add_task(delay, Some(period.max(1)), task)
+    }
+
+    fn cancel(&mut self, handle: u32) -> bool {
+        let before = self.tasks.len();
+
+        self.tasks.retain(|task| task.handle != handle);
+        self.tasks.len() != before
+    }
+}
+
+impl mcsa::api::command::Host for PluginCtx {
+    fn register(&mut self, spec: mcsa::api::command::CommandSpec) -> Result<(), String> {
+        let name = spec.name.to_ascii_lowercase();
+
+        if !super::manifest::valid_name(&name) {
+            return Err(format!("имя команды «{}» не годится: a-z, 0-9, «-», «_»", spec.name));
+        }
+
+        if RESERVED.contains(&name.as_str()) || crate::commands_admin::NAMES.contains(&name.as_str()) {
+            return Err(format!("команда «{name}» принадлежит ядру — другое имя"));
+        }
+
+        if self.commands.len() >= MAX_COMMANDS {
+            return Err("слишком много команд".to_string());
+        }
+
+        if spec.level > crate::ops::HIGHEST_LEVEL as u8 {
+            return Err("level: от 0 до 4".to_string());
+        }
+
+        let mut registry = self.registry.lock().expect("список команд захвачен другим потоком");
+
+        if let Some(owner) = registry.get(&name) {
+            return Err(format!("команду «{name}» уже занял плагин {owner}"));
+        }
+
+        registry.insert(name.clone(), self.name.clone());
+        self.commands.push(Registered { name, description: spec.description, usage: spec.usage, level: spec.level });
+        Ok(())
+    }
+}
+
+impl mcsa::api::storage::Host for PluginCtx {
+    fn config(&mut self, default_text: String) -> Result<String, String> {
+        let path = self.folder.join("config.toml");
+
+        match read_limited(&path)? {
+            Some(bytes) => String::from_utf8(bytes).map_err(|_| "config.toml не в UTF-8".to_string()),
+            None => {
+                write_file(&path, default_text.as_bytes())?;
+                Ok(default_text)
+            }
+        }
+    }
+
+    fn save_config(&mut self, text: String) -> Result<(), String> {
+        write_file(&self.folder.join("config.toml"), text.as_bytes())
+    }
+
+    fn read(&mut self, name: String) -> Result<Option<Vec<u8>>, String> {
+        read_limited(&self.data_dir().join(safe_file_name(&name)?))
+    }
+
+    fn write(&mut self, name: String, data: Vec<u8>) -> Result<(), String> {
+        write_file(&self.data_dir().join(safe_file_name(&name)?), &data)
+    }
+
+    fn delete(&mut self, name: String) -> Result<bool, String> {
+        match std::fs::remove_file(self.data_dir().join(safe_file_name(&name)?)) {
+            Ok(()) => Ok(true),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+            Err(error) => Err(error.to_string()),
+        }
+    }
+}
+
+impl mcsa::api::privileged::Host for PluginCtx {
+    fn run_console_command(&mut self, command: String) -> String {
+        if !self.trusted {
+            return "нет прав".to_string();
+        }
+
+        let line = command.trim().trim_start_matches('/');
+
+        // Управлять плагинами из плагина нельзя: хозяин занят этим самым
+        // вызовом.
+        if line.split_whitespace().next() == Some("plugman") {
+            return "plugman из плагина не вызывается".to_string();
+        }
+
+        crate::commands::run(line, &crate::commands::Source::Console, &self.shared).reply
+    }
+
+    fn loaded_plugins(&mut self) -> Vec<String> {
+        self.loaded.lock().expect("список плагинов захвачен другим потоком").clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn uuid_parses_both_spellings() {
+        let uuid = parse_uuid("26d479c9-4844-3b0a-ba59-8cc656622a78").unwrap();
+
+        assert_eq!(uuid[0], 0x26);
+        assert_eq!(uuid[15], 0x78);
+        assert_eq!(parse_uuid("26d479c948443b0aba598cc656622a78"), Some(uuid));
+        assert_eq!(parse_uuid("zz"), None);
+        assert_eq!(parse_uuid("26d479c9-4844-3b0a-ba59-8cc656622a7"), None);
+        assert_eq!(parse_uuid("жжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжж"), None);
+    }
+
+    #[test]
+    fn file_names_stay_in_the_data_folder() {
+        assert!(safe_file_name("saves.json").is_ok());
+        assert!(safe_file_name("../x").is_err());
+        assert!(safe_file_name("a/b").is_err());
+        assert!(safe_file_name(".hidden").is_err());
+        assert!(safe_file_name("").is_err());
+        assert!(safe_file_name("c:evil").is_err());
+    }
+
+    #[test]
+    fn reserved_commands_are_sorted_out() {
+        assert!(RESERVED.contains(&"op"));
+        assert!(RESERVED.contains(&"plugman"));
+    }
+
+    #[test]
+    fn files_are_written_whole() {
+        let folder = std::env::temp_dir().join(format!("mcsa-api-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&folder);
+        let file = folder.join("a.bin");
+
+        write_file(&file, b"abc").unwrap();
+        assert_eq!(read_limited(&file).unwrap().unwrap(), b"abc");
+        assert_eq!(read_limited(&folder.join("none")).unwrap(), None);
+        assert!(write_file(&file, &vec![0; MAX_FILE + 1]).is_err());
+        let _ = std::fs::remove_dir_all(&folder);
+    }
+}

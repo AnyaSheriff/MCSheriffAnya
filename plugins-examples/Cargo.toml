@@ -1,0 +1,21 @@
+# Примеры плагинов MCSheriffAnya на Rust. Это отдельная сборка: к ядру она не
+# относится (в корневом Cargo.toml папка исключена) и собирается под wasm.
+#
+#   rustup target add wasm32-wasip2
+#   cd plugins-examples && cargo build --release --target wasm32-wasip2
+#   ./install.sh ../  # кладёт плагины в ../plugins/<имя>/
+[workspace]
+resolver = "3"
+members = ["mcsa-sdk", "hello", "chat-filter", "protect-spawn", "misbehave", "modinfo"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

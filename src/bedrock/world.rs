@@ -464,6 +464,7 @@ impl BedrockWorld {
         }
 
         shared.chat.lock().expect("чат захвачен другим потоком").push(format!("{} зашёл на сервер", identity.name));
+        crate::plugins::player_join(&shared, &identity.name);
         let seed = 0u64;
 
         let mut start = Out::packet(session::START_GAME);
@@ -774,6 +775,15 @@ impl BedrockWorld {
             session::TEXT => {
                 if let Some(message) = read_chat(payload).map(|message| clean_text(&message)).filter(|m| !m.is_empty()) {
                     // В консоль строку выводит общий чат — здесь не пишем.
+                    // Плагины видят чат Bedrock так же, как чат Java (plugins/).
+                    let message = match crate::plugins::active().then(|| crate::plugins::PlayerView::find(&self.shared, &self.identity.name)).flatten() {
+                        Some(view) => match crate::plugins::chat(&view, &message) {
+                            crate::plugins::ChatOutcome::Cancel => return,
+                            crate::plugins::ChatOutcome::Replace(new) => new,
+                            crate::plugins::ChatOutcome::Pass => message,
+                        },
+                        None => message,
+                    };
                     let line = format!("<{}> {}", self.identity.name, message);
                     self.shared.chat.lock().expect("чат захвачен другим потоком").push(line);
                 }

@@ -236,6 +236,9 @@ async fn run(shared: Arc<Shared>) {
         // такта, после действий игроков, без замков (functions.rs).
         crate::functions::tick(&shared, ticks);
 
+        // Задачи плагинов: там же, без замков (plugins/mod.rs).
+        crate::plugins::tick(ticks);
+
         // Перенесённые и подтвердившие перенос — на такт ближе к тому, чтобы
         // встать на блок под ногами (`players::SETTLE_TICKS`).
         shared.players.lock().expect("список игроков захвачен другим потоком").settle();

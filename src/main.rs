@@ -104,6 +104,7 @@ mod commands_admin;
 mod dimension;
 mod dragon_fight;
 mod reports;
+mod plugins;
 mod console;
 
 use std::io;
@@ -260,6 +261,9 @@ async fn server() -> io::Result<()> {
     // Функции метки `#minecraft:load` — при запуске.
     functions::load(&shared);
 
+    // Плагины и модули (plugins/, modules/): грузятся до первого игрока.
+    plugins::start(Arc::clone(&shared));
+
     // Остановка сервера: консоль сообщает о ней, а ждёт её вот этот приёмник.
     let (shutdown_sender, mut shutdown) = watch::channel(false);
 
@@ -338,6 +342,8 @@ async fn server() -> io::Result<()> {
     log_info!("Остановка сервера");
     log_info!("Сохранение игроков");
     kick_everyone(&shared).await;
+    // Плагины выгружаются до записи мира: им есть что дописать.
+    plugins::shutdown();
     log_info!("Сохранение мира");
     for dimension in Dimension::ALL {
         let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");

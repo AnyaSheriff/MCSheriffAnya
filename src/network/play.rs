@@ -809,6 +809,21 @@ fn view_for(shared: &Shared, look: &configuration::ClientLook) -> i32 {
     i32::from(look.view_distance).clamp(2.min(server), server)
 }
 
+/// Игрок для плагинов: копия нужных сведений (plugins/mod.rs).
+fn plugin_view(player: &PlayerState) -> crate::plugins::PlayerView {
+    crate::plugins::PlayerView {
+        uuid: player.uuid,
+        name: player.name.clone(),
+        game_mode: player.game_mode,
+        dimension: player.dimension,
+        x: player.x,
+        y: player.y,
+        z: player.z,
+        yaw: player.yaw,
+        pitch: player.pitch,
+    }
+}
+
 /// Отписывает подключение от общих журналов.
 ///
 /// Пока читатель записан, журналы держат для него все изменения. Забыть
@@ -841,6 +856,9 @@ fn forget_reader(shared: &Shared,
 pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
     crate::commands_admin::forget_address(uuid);
 
+    // Снимок — до ухода из списка; вызов плагина — после отпускания замков.
+    let view = if crate::plugins::active() { crate::plugins::PlayerView::find(shared, name) } else { None };
+
     let removed = shared
         .players
         .lock()
@@ -853,6 +871,10 @@ pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
             .lock()
             .expect("чат захвачен другим потоком")
             .push(format!("{} вышел", name));
+
+        if let Some(view) = view {
+            crate::plugins::player_quit(&view);
+        }
     }
 }
 
@@ -1098,6 +1120,8 @@ async fn enter_world(
             .lock()
             .expect("чат захвачен другим потоком")
             .push(format!("{} зашёл на сервер", player.name));
+
+        crate::plugins::player_join(shared, &player.name);
 
         Ok(Some(Entered {
             item_changes,
@@ -7348,6 +7372,17 @@ fn handle_client_packet_inner(
             if let Some(text) = text.as_deref().and_then(crate::chat::allowed) {
                 log_debug!("Play: {} пишет в чат: {}", player.name, text);
 
+                // Плагины могут отменить сообщение или заменить текст
+                // (plugins/): замков в этот миг мы не держим.
+                let text = match crate::plugins::active().then(|| crate::plugins::chat(&plugin_view(player), text)) {
+                    Some(crate::plugins::ChatOutcome::Cancel) => return reaction,
+                    Some(crate::plugins::ChatOutcome::Replace(new)) => match crate::chat::allowed(&new) {
+                        Some(new) => new.to_string(),
+                        None => return reaction,
+                    },
+                    _ => text.to_string(),
+                };
+
                 shared
                     .chat
                     .lock()
@@ -7358,6 +7393,12 @@ fn handle_client_packet_inner(
         SERVERBOUND_CHAT_COMMAND => {
             if let Some(command) = Cursor::new(payload).string() {
                 log_debug!("{} ввёл команду: /{}", player.name, command);
+
+                // Любая команда игрока — плагинам на отмену (plugins/).
+                if crate::plugins::active() && crate::plugins::player_command(&plugin_view(player), &command) == crate::plugins::Verdict::Deny {
+                    reaction.reply = Some("Команду отменил плагин".to_string());
+                    return reaction;
+                }
 
                 let source = Source::Player {
                     uuid: player.uuid,
@@ -8448,6 +8489,17 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         return Some(Reaction::default());
     }
 
+    // Плагины могут не дать сломать (plugins/): до яиц, чешуйниц,
+    // износа инструмента и добычи, без замка мира. Подтверждение вернёт блок.
+    if crate::plugins::active() {
+        let block = format!("minecraft:{}", blocks::block_at_state(state).unwrap_or("air"));
+
+        if crate::plugins::block_break(&plugin_view(player), (x, y, z), &block) == crate::plugins::Verdict::Deny {
+            log_debug!("Play: плагин не дал {} сломать {} {} {}", player.name, x, y, z);
+            return Some(answer);
+        }
+    }
+
     if blocks::block_at_state(state) == Some("turtle_egg") {
         let silk = player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
         let drop_egg = !creative && silk && shared.block_drops.load(std::sync::atomic::Ordering::Relaxed);
@@ -9439,6 +9491,17 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         yaw: player.yaw,
         pitch: player.pitch,
     };
+
+    // Плагины могут не дать поставить (plugins/): место — блок за гранью
+    // щелчка. Замка мира мы тут не держим.
+    if crate::plugins::active() {
+        let target = offset_towards(clicked_x, clicked_y, clicked_z, face);
+
+        if crate::plugins::block_place(&plugin_view(player), target, &format!("minecraft:{name}")) == crate::plugins::Verdict::Deny {
+            log_debug!("Play: плагин не дал {} поставить блок в {} {} {}", player.name, target.0, target.1, target.2);
+            return Some(Reaction::refused(sequence, &[(clicked_x, clicked_y, clicked_z), target]));
+        }
+    }
 
     let mut world = shared
         .world_in(player.dimension)

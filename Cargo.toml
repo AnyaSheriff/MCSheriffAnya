@@ -7,6 +7,14 @@ license = "MIT"
 description = "A Minecraft-compatible game server written from scratch in Rust"
 repository = "https://github.com/MCSheriffAnya-Rust/MCSheriffAnya"
 
+exclude = ["plugins-examples/**"]
+
+[features]
+# Плагины WebAssembly входят в обычную сборку. Отключить:
+# cargo build --release --no-default-features (без /plugman и папок плагинов).
+default = ["plugins"]
+plugins = ["dep:wasmtime", "dep:wasmtime-wasi"]
+
 [dependencies]
 seedmap-core = { path = "tools/seedmap" }
 png = "0.17"
@@ -25,6 +33,13 @@ md-5 = "0.10"
 # стоит под rustls у reqwest — с теми же возможностями, без новой сборки.
 aws-lc-rs = { version = "1", default-features = false, features = ["aws-lc-sys", "prebuilt-nasm"] }
 
+# Исполнитель плагинов: wasmtime с моделью компонентов (WIT). Только то, что
+# нужно: исполнение, компилятор cranelift, компоненты. WASI только Preview 2;
+# он сам включает wasmtime/async даже для синхронного линкера. Без кэша,
+# профилирования, WAT, GC и остальных возможностей по умолчанию.
+wasmtime = { version = "=49.0.2", optional = true, default-features = false, features = ["runtime", "cranelift", "component-model", "std"] }
+wasmtime-wasi = { version = "=49.0.2", optional = true, default-features = false, features = ["p2"] }
+
 # Местное время без libc на Windows (там нет localtime_r).
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_SystemInformation", "Win32_System_Time"] }
@@ -34,3 +49,9 @@ members = ["tools/seedmap"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(seedmap_core)'] }
+
+# Скорость загрузки и вызовов важнее размера: обычный release opt-level=3,
+# без переопределений по размеру для Cranelift, Wasmtime и WASI.
+# Убираем только символы; машинный код и настройки JIT не меняются.
+[profile.release]
+strip = "symbols"

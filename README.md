@@ -152,7 +152,7 @@ endorsed by Mojang or Microsoft.
   bow enchantments (power, punch, flame, infinity), arrow pickup, netherite
   knockback resistance. Potion effects work, including strength, weakness and the full potion set.
 
-Not there yet: plugins, multiple protocol versions, ender chests, shulker
+Not there yet: Java plugins, multiple protocol versions, ender chests, shulker
 boxes, packet compression. See the full list below.
 
 ## Status
@@ -172,7 +172,7 @@ with the black box (about 300 scenarios).
 | Commands | ✅ | Vanilla commands, command blocks, datapack functions, scoreboards |
 | Weather | ✅ | |
 | Known differences | 🟡 | Enderman stare, shulker bullets, riptide side effects, mace wind burst particles |
-| Plugins | ❌ | Planned |
+| Plugins | 🟡 | WebAssembly plugins and modules, hot `/plugman`, API `mcsa:api` (WIT) — [docs/plugins.md](docs/plugins.md). Java API (TeaVM, Jar2WASM) planned |
 | Multiple protocol versions | ❌ | Planned |
 | Ender chests, shulker boxes | ❌ | |
 | Packet compression | ❌ | |
@@ -215,6 +215,10 @@ start creates the config and the world next to the binary. Ports: `25565`
 cargo build
 ./target/debug/mcsheriffanya
 ```
+
+WASM plugins (Wasmtime + Cranelift JIT) are included by default. For an optimized
+binary, use `cargo build --release`; to omit the plugin host, use
+`cargo build --release --no-default-features`. See [plugins](docs/plugins.md).
 
 Run it from a terminal if you want to type console commands. The first start
 creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a

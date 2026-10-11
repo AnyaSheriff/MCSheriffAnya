@@ -1,0 +1,9 @@
+[package]
+name = "mcsa-sdk"
+description = "Обёртка над WIT-пакетом mcsa:api для плагинов на Rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+wit-bindgen = "0.62"
