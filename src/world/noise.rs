@@ -241,7 +241,7 @@ impl Random {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 

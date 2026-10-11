@@ -581,7 +581,7 @@ pub fn sentries(pieces: &[Placed], x0: i32, z0: i32) -> Vec<(i32, i32, i32)> {
     out
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
     use std::collections::HashMap;

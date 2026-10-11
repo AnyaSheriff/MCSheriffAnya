@@ -32,7 +32,7 @@ use std::sync::OnceLock;
 use crate::blocks;
 
 /// Сторона региона в чанках.
-const REGION: i32 = 27;
+pub const REGION: i32 = 27;
 
 /// В скольких первых чанках региона может стоять старт.
 const SPREAD: i32 = 23;
@@ -263,7 +263,7 @@ impl Placed {
     }
 
     /// Низы столбцов-опор куска в мире — для замеров.
-    #[cfg(test)]
+    #[cfg(all(test, not(seedmap_core)))]
     pub fn support_columns(&self) -> Vec<(i32, i32, i32)> {
         templates().pieces[self.kind.at()].supports.iter().map(|&(a, b)| self.world(a, 0, b)).collect()
     }
@@ -695,7 +695,7 @@ pub(super) fn scramble(mut value: u64) -> u64 {
     value ^ (value >> 33)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 

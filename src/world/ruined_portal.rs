@@ -220,8 +220,10 @@ fn cache() -> &'static Starts {
 
 /// Портал области обычного мира.
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Portal> {
+    #[cfg(not(seedmap_core))]
     let key = (terrain.seed(), region_x, region_z, false);
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache().lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return *found;
     }
@@ -232,14 +234,17 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
         if floor { height } else { height.max(super::terrain::SEA) }
     });
 
+    #[cfg(not(seedmap_core))]
     cache().lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, found);
     found
 }
 
 /// Портал области Незера.
 pub fn start_in_nether(nether: &super::nether::Nether, region_x: i32, region_z: i32) -> Option<Portal> {
+    #[cfg(not(seedmap_core))]
     let key = (nether.seed(), region_x, region_z, true);
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache().lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return *found;
     }
@@ -249,6 +254,7 @@ pub fn start_in_nether(nether: &super::nether::Nether, region_x: i32, region_z: 
         portal
     });
 
+    #[cfg(not(seedmap_core))]
     cache().lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, found);
     found
 }
@@ -348,6 +354,7 @@ const SPREAD_FLOOR: [f64; 7] = [0.79, 0.60, 0.40, 0.25, 0.15, 0.08, 0.04];
 
 /// Кладёт в сложенный чанк обычного мира части ближних порталов — до
 /// деревьев: у оригинала строения ставятся раньше растительности.
+#[cfg(not(seedmap_core))]
 pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let super::Generator::Normal(terrain) = generator else {
         return;
@@ -359,6 +366,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
 }
 
 /// То же в Незере.
+#[cfg(not(seedmap_core))]
 pub(super) fn build_nether(nether: &super::nether::Nether, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     for portal in near(chunk_x, chunk_z, &|x, z| start_in_nether(nether, x, z)) {
         paint(nether.seed(), &portal, chunk, chunk_x, chunk_z);
@@ -498,6 +506,7 @@ fn soft(state: i32) -> bool {
 }
 
 /// Блоки портала в чанке: образец, разлив незеррака, заросли.
+#[cfg(not(seedmap_core))]
 fn paint(seed: i64, portal: &Portal, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let template = &library()[portal.template];
     let (sx, sz) = template.footprint(portal.orient);
@@ -676,6 +685,7 @@ fn paint(seed: i64, portal: &Portal, chunk: &mut super::Chunk, chunk_x: i32, chu
 }
 
 /// Ближайший портал вида (`locate structure`): чанк старта.
+#[cfg(not(seedmap_core))]
 pub(super) fn nearest(generator: &super::Generator, variant: Variant, chunk_x: i32, chunk_z: i32, rings: i32) -> Option<(i32, i32)> {
     let start = |region_x: i32, region_z: i32| -> Option<(i32, i32)> {
         let portal = match generator {
@@ -690,7 +700,7 @@ pub(super) fn nearest(generator: &super::Generator, variant: Variant, chunk_x: i
     template::nearest(chunk_x, chunk_z, SPACING, rings, &start)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
     use crate::world::terrain::Biome;

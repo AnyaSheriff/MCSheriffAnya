@@ -95,15 +95,19 @@ fn kinds(warm: bool, big: bool) -> Vec<usize> {
 pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Arc<Site>> {
     type Sites = Mutex<HashMap<(i64, i32, i32), Option<Arc<Site>>>>;
     static CACHE: OnceLock<Sites> = OnceLock::new();
+    #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    #[cfg(not(seedmap_core))]
     let key = (terrain.seed(), region_x, region_z);
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return found.clone();
     }
 
     let found = decide(terrain, region_x, region_z).map(Arc::new);
 
+    #[cfg(not(seedmap_core))]
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, found.clone());
     found
 }
@@ -173,6 +177,7 @@ fn state_of(text: &str) -> i32 {
 }
 
 /// Таблица добычи по имени из образца.
+#[cfg(not(seedmap_core))]
 fn table(name: &str) -> &'static [crate::loot::Pool] {
     if name == "underwater_ruin_big" { &crate::loot::UNDERWATER_RUIN_BIG } else { &crate::loot::UNDERWATER_RUIN_SMALL }
 }
@@ -198,6 +203,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<Ar
     out
 }
 
+#[cfg(not(seedmap_core))]
 pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let super::Generator::Normal(terrain) = generator else {
         return;
@@ -210,6 +216,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
     }
 }
 
+#[cfg(not(seedmap_core))]
 fn paint(seed: i64, warm: bool, ruin: &Ruin, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let template = &library()[ruin.template];
     let (sx, sz) = template.footprint(ruin.orient);
@@ -292,7 +299,7 @@ pub fn nearest(terrain: &super::terrain::Terrain, warm: bool, chunk_x: i32, chun
     template::nearest(chunk_x, chunk_z, SPACING, rings, &|region_x, region_z| site_in(terrain, region_x, region_z).filter(|site| site.warm == warm).map(|site| site.chunk))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
     use crate::world::terrain::Biome;

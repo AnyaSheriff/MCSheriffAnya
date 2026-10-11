@@ -1,5 +1,6 @@
 [package]
 name = "mcsheriffanya"
+default-run = "mcsheriffanya"
 version = "0.1.0-alpha"
 edition = "2024"
 license = "MIT"
@@ -7,6 +8,9 @@ description = "A Minecraft-compatible game server written from scratch in Rust"
 repository = "https://github.com/MCSheriffAnya-Rust/MCSheriffAnya"
 
 [dependencies]
+seedmap-core = { path = "tools/seedmap" }
+png = "0.17"
+font8x8 = "0.3"
 tokio = { version = "1", features = ["full"] }
 bytes = "1"
 serde = { version = "1", features = ["derive"] }
@@ -24,3 +28,9 @@ aws-lc-rs = { version = "1", default-features = false, features = ["aws-lc-sys",
 # Местное время без libc на Windows (там нет localtime_r).
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_SystemInformation", "Win32_System_Time"] }
+
+[workspace]
+members = ["tools/seedmap"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(seedmap_core)'] }

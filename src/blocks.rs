@@ -197,6 +197,7 @@ impl Orientation {
 ///
 /// None означает, что предмет блоком не является (палка, меч, ведро) либо
 /// это такой блок, которого у игрока в руках быть не может (вода, огонь).
+#[cfg(not(seedmap_core))]
 pub fn block_for_item(item: i32) -> Option<(&'static str, i32)> {
     // Семена ставят посев, а сам урожай (пшеница) не ставится ничем
     // (вики, Wheat Seeds; farming.rs).
@@ -644,6 +645,7 @@ pub fn stack_size(item: i32) -> i32 {
 /// None — не выпадает ничего: так со стеклом, листвой и травой. `tool` —
 /// предмет, которым ломали: у части блоков без нужного инструмента не
 /// выпадает ничего (камень без кирки, руда без кирки).
+#[cfg(not(seedmap_core))]
 pub fn drop_of(state: i32, tool: Option<i32>) -> Option<i32> {
     // Скалк требует зачарования: его отдельно учитывает mined_drop.
     if crate::redstone::sculk_family::mined_drop(state, false).is_some() { return None; }
@@ -682,6 +684,7 @@ pub fn drop_of(state: i32, tool: Option<i32>) -> Option<i32> {
 /// — смола: по штуке на каждую занятую грань.
 ///
 /// `luck` одно на всё: из него и «выпало ли», и «сколько».
+#[cfg(not(seedmap_core))]
 pub fn drops_by_luck(state: i32, tool: Option<i32>, luck: f32) -> Option<crate::inventory::Stack> {
     use crate::inventory::Stack;
 
@@ -812,6 +815,7 @@ fn tool_suits(state: i32, tool: Option<i32>) -> bool {
 /// в точке, а вода в нём — тоже блок на пути (вики, Explosion: «Sufficiently
 /// weak explosions happening on … any height of water or lava don't do block
 /// damage»). [проверить] залитые водой ступени и плиты чёрным ящиком.
+#[cfg(not(seedmap_core))]
 pub fn blast_resistance(state: i32) -> f32 {
     use std::cmp::Ordering;
 
@@ -843,6 +847,7 @@ pub fn blast_resistance(state: i32) -> f32 {
 /// «A cobweb drops one piece of string if broken with a non-Silk Touch sword,
 /// if water touches or flows over it, or a piston pushes it» (вики, Cobweb;
 /// сценарий чёрного ящика piston-breaks). Рукой — ничего, как и прежде.
+#[cfg(not(seedmap_core))]
 pub fn world_drops(state: i32, luck: f32) -> Option<crate::inventory::Stack> {
     if block_at_state(state) == Some("cobweb") {
         return item_named("string").map(|string| crate::inventory::Stack::new(string, 1));
@@ -855,6 +860,7 @@ pub fn world_drops(state: i32, luck: f32) -> Option<crate::inventory::Stack> {
 /// using a correct, unenchanted tool (or an empty hand if the correct tool
 /// would be shears)» (вики, TNT). Инструмент — первый годный из таблицы,
 /// кроме ножниц.
+#[cfg(not(seedmap_core))]
 pub fn explosion_drops(state: i32, luck: f32) -> Option<crate::inventory::Stack> {
     let shears = item_named("shears");
     let tool = HARVEST_TOOLS
@@ -865,7 +871,7 @@ pub fn explosion_drops(state: i32, luck: f32) -> Option<crate::inventory::Stack>
     drops_by_luck(state, tool, luck)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 
@@ -1338,7 +1344,7 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod itemaudit3_tests {
     use super::*;
     #[test]

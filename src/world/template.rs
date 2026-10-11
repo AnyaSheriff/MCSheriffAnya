@@ -52,7 +52,7 @@ impl Template {
     }
 
     /// Имя блока палитры без свойств.
-    #[cfg(test)]
+    #[cfg(all(test, not(seedmap_core)))]
     pub fn block_name(&self, index: u16) -> &str {
         let text = &self.texts[usize::from(index)];
 
@@ -322,7 +322,7 @@ pub fn nearest(chunk_x: i32, chunk_z: i32, spacing: i32, rings: i32, start: &dyn
     best
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 

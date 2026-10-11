@@ -36,15 +36,21 @@
 
 use std::sync::OnceLock;
 
+#[cfg(not(seedmap_core))]
 use super::nether_bastion as bastion;
 use super::nether_fortress as fortress;
 use super::noise::Noise;
 use super::terrain::Biome;
+#[cfg(not(seedmap_core))]
 use super::{biome_cell, pack, split, BiomeId, Chunk, AIR, BIOME_CELLS, BIOME_LAYERS, CHUNK_SIZE};
+#[cfg(seedmap_core)]
+use super::{AIR, CHUNK_SIZE};
 use crate::blocks;
 
 /// Верх лавового моря: ниже и на этой высоте пустоты залиты лавой.
 pub const LAVA_SEA: i32 = 31;
+
+pub const STRUCTURE_SPACING: i32 = super::nether_fortress::REGION;
 
 /// Самый верх Незера: выше потолка из бедрока ничего нет.
 pub const CEILING: i32 = 127;
@@ -612,6 +618,7 @@ impl Nether {
         })
     }
 
+    #[cfg(not(seedmap_core))]
     pub fn progress_structure(&self, x: i32, y: i32, z: i32) -> Option<&'static str> {
         if self.fortresses_near(x.div_euclid(16), z.div_euclid(16)).iter().any(|parts| super::in_structure_bounds(parts.iter().map(|p| p.bounds), (x, y, z))) {
             return Some("nether/find_fortress");
@@ -622,6 +629,7 @@ impl Nether {
     }
 
     /// Лежит ли клетка в ящике какого-либо куска крепости.
+    #[cfg(not(seedmap_core))]
     pub fn in_fortress(&self, x: i32, y: i32, z: i32) -> bool {
         self.fortresses_near(x.div_euclid(16), z.div_euclid(16))
             .iter()
@@ -658,6 +666,7 @@ impl Nether {
     }
 
     /// Чанк Незера.
+    #[cfg(not(seedmap_core))]
     pub(super) fn chunk(&self, chunk_x: i32, chunk_z: i32) -> Chunk {
         let piece = self.piece(chunk_x, chunk_z);
         let mut chunk = Chunk::new();
@@ -698,12 +707,14 @@ impl Nether {
     }
 
     /// Блоки чанка на высотах 0..=127: рельеф, поверхность, руда, объекты.
+    #[cfg(not(seedmap_core))]
     fn piece(&self, chunk_x: i32, chunk_z: i32) -> Piece {
         self.piece_with(chunk_x, chunk_z, true)
     }
 
     /// То же, с постройками или без: мир оригинала для замеров рельефа
     /// (vanilla-big) снят без построек, и сверка идёт с таким же нашим.
+    #[cfg(not(seedmap_core))]
     fn piece_with(&self, chunk_x: i32, chunk_z: i32, structures: bool) -> Piece {
         let mut piece = Piece {
             x0: chunk_x * CHUNK_SIZE,
@@ -749,8 +760,9 @@ impl Nether {
     }
 
     /// Бастионы, задевающие этот чанк.
+    #[cfg(not(seedmap_core))]
     fn bastions_near(&self, chunk_x: i32, chunk_z: i32) -> Vec<Vec<bastion::Placed>> {
-        let span = |at: i32| (at - bastion::RADIUS_CHUNKS).div_euclid(27)..=(at + bastion::RADIUS_CHUNKS).div_euclid(27);
+        let span = |at: i32| (at - bastion::RADIUS_CHUNKS).div_euclid(STRUCTURE_SPACING)..=(at + bastion::RADIUS_CHUNKS).div_euclid(STRUCTURE_SPACING);
 
         span(chunk_x)
             .flat_map(|region_x| span(chunk_z).map(move |region_z| (region_x, region_z)))
@@ -764,6 +776,7 @@ impl Nether {
 
     /// Кладёт куски бастионов (опор у них нет) и убирает растения, у
     /// которых бастион отнял опору.
+    #[cfg(not(seedmap_core))]
     fn bastions(&self, piece: &mut Piece, bastions: &[Vec<bastion::Placed>]) {
         if bastions.is_empty() {
             return;
@@ -798,6 +811,7 @@ impl Nether {
 
     /// Крепости, задевающие этот чанк: каждая раскладывается целиком по
     /// семени, а кладётся только своей частью.
+    #[cfg(not(seedmap_core))]
     fn fortresses_near(&self, chunk_x: i32, chunk_z: i32) -> Vec<Vec<fortress::Placed>> {
         fortress::regions_near(chunk_x, chunk_z)
             .filter_map(|(region_x, region_z)| self.fortress_start(region_x, region_z))
@@ -810,6 +824,7 @@ impl Nether {
 
     /// Кладёт куски крепостей (с опорами или без) и убирает растения,
     /// у которых крепость отняла опору.
+    #[cfg(not(seedmap_core))]
     fn fortresses(&self, piece: &mut Piece, fortresses: &[Vec<fortress::Placed>], supports: bool) {
         let states = &self.states;
 
@@ -836,6 +851,7 @@ impl Nether {
 
     /// Растения без опоры: на полу — над пустотой (снизу вверх), лозы
     /// с потолка — под пустотой (сверху вниз).
+    #[cfg(not(seedmap_core))]
     fn drop_unsupported(&self, piece: &mut Piece) {
         let states = &self.states;
 
@@ -864,6 +880,7 @@ impl Nether {
     }
 
     /// Рельеф: бедрок, порода, лава моря и карманов, пустоты.
+    #[cfg(not(seedmap_core))]
     fn relief(&self, piece: &mut Piece, biomes: &[Biome]) {
         let states = &self.states;
         let thresholds = self.thresholds();
@@ -927,6 +944,7 @@ impl Nether {
     ///   на потолке так же; у моря ещё и гравий (~25 %);
     /// — леса: нилий в один блок на полу (~80 %);
     /// — дельты: базальт и чернокамень, магма (~8 %), потолок — базальт.
+    #[cfg(not(seedmap_core))]
     fn surface(&self, piece: &mut Piece, biomes: &[Biome]) {
         let states = &self.states;
 
@@ -1068,6 +1086,7 @@ impl Nether {
     /// пятно заменяет только незеррак (руда в дельтах — ещё и базальт
     /// не трогает). Пятна соседних чанков, заходящие в этот, рисуются по
     /// тем же числам.
+    #[cfg(not(seedmap_core))]
     fn blobs(&self, piece: &mut Piece, chunk_x: i32, chunk_z: i32) {
         let states = &self.states;
 
@@ -1142,6 +1161,7 @@ impl Nether {
     /// лавовые лужи и столбики дельт. Порядок обхода — по чанкам-источникам
     /// и видам, одинаковый для всех чанков: объекты ставятся только в
     /// пустоту, и кто раньше встал, того и место — на обе стороны стыка.
+    #[cfg(not(seedmap_core))]
     fn features(&self, piece: &mut Piece, chunk_x: i32, chunk_z: i32) {
         for near_x in chunk_x - 1..=chunk_x + 1 {
             for near_z in chunk_z - 1..=chunk_z + 1 {
@@ -1176,6 +1196,7 @@ impl Nether {
 
     /// Столбы базальта долины душ: от пола до потолка, с наростами по бокам.
     /// Замер: базальта в долине ~0,3 блока на столбец, часть — в столбах.
+    #[cfg(not(seedmap_core))]
     fn pillars(&self, piece: &mut Piece, chunk_x: i32, chunk_z: i32) {
         let mut dice = self.dice(0x9111A5, chunk_x, chunk_z);
 
@@ -1221,6 +1242,7 @@ impl Nether {
     /// в ней светогрибы; с багровой шляпы свисают лозы (вики, Huge fungus).
     /// Частота — по замеру: на столбец багрового леса ~0,23 блока стебля
     /// и ~1,2 нароста.
+    #[cfg(not(seedmap_core))]
     fn fungi(&self, piece: &mut Piece, chunk_x: i32, chunk_z: i32) {
         let states = &self.states;
         let mut dice = self.dice(0xF0461, chunk_x, chunk_z);
@@ -1364,6 +1386,7 @@ impl Nether {
     /// Светокамень: грозди под потолком. Замер: ~0,015 блока на столбец
     /// во всех биомах, кроме долины душ (там в пять раз реже); чаще всего
     /// у самого верха пещер, y 100–110.
+    #[cfg(not(seedmap_core))]
     fn glowstone(&self, piece: &mut Piece, chunk_x: i32, chunk_z: i32) {
         let mut dice = self.dice(0x6710, chunk_x, chunk_z);
         let tries = GLOWSTONE_TRIES.floor() as i32 + i32::from(dice.unit() < GLOWSTONE_TRIES.fract());
@@ -1418,6 +1441,7 @@ impl Nether {
 
     /// Столбики базальта на полу дельт: по нескольку рядом, высотой 1–5,
     /// изредка выше.
+    #[cfg(not(seedmap_core))]
     fn delta_columns(&self, piece: &mut Piece, chunk_x: i32, chunk_z: i32) {
         let mut dice = self.dice(0xC01, chunk_x, chunk_z);
 
@@ -1455,6 +1479,7 @@ impl Nether {
     /// Лавовые лужи дельт: верх пола в пятнах становится лавой, край лужи —
     /// магмой. Лава ставится только там, где по бокам и снизу сплошная
     /// порода рельефа: лужа не растекается.
+    #[cfg(not(seedmap_core))]
     fn delta_pools(&self, piece: &mut Piece) {
         let states = &self.states;
 
@@ -1495,6 +1520,7 @@ impl Nether {
     /// искажённый — корни 0,11, ростки 0,09, грибы 0,017, вьющиеся лозы
     /// 0,011 (блоков 0,045); пустоши — огонь 0,009, грибы по 0,001; долина —
     /// огонь душ 0,004, огонь 0,002, багровые корни 0,002.
+    #[cfg(not(seedmap_core))]
     fn decorate(&self, piece: &mut Piece, biomes: &[Biome]) {
         let states = &self.states;
 
@@ -1558,6 +1584,7 @@ impl Nether {
     /// стороной (потечёт, как только чанк ляжет в мир), или замурованный
     /// со всех сторон. Замер: ~0,025 блока лавы на столбец выше y 31 во всех
     /// биомах, ровно по высоте.
+    #[cfg(not(seedmap_core))]
     fn springs(&self, piece: &mut Piece, chunk_x: i32, chunk_z: i32) {
         let mut dice = self.dice(0x5981, chunk_x, chunk_z);
 
@@ -1582,6 +1609,7 @@ impl Nether {
     }
 
     /// Что вырастает на этом полу: по биому, блоку пола и броску.
+    #[cfg(not(seedmap_core))]
     fn floor_plant(&self, biome: Biome, floor: i32, roll: f64) -> Option<i32> {
         let states = &self.states;
         let pick = |table: &[(f64, i32)]| {
@@ -1816,7 +1844,7 @@ fn scramble(mut value: u64) -> u64 {
     value ^ (value >> 33)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 

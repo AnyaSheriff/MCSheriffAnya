@@ -233,20 +233,26 @@ impl Start {
 pub fn start_in(kind: Kind, terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Start> {
     type Starts = Mutex<HashMap<(Kind, i64, i32, i32), Option<Start>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
+    #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    #[cfg(not(seedmap_core))]
     let key = (kind, terrain.seed(), region_x, region_z);
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return *found;
     }
 
     let found = decide(kind, terrain, region_x, region_z);
+    #[cfg(not(seedmap_core))]
     let mut cache = cache.lock().unwrap_or_else(|poison| poison.into_inner());
 
+    #[cfg(not(seedmap_core))]
     if cache.len() > 65_536 {
         cache.clear();
     }
 
+    #[cfg(not(seedmap_core))]
     cache.insert(key, found);
     found
 }
@@ -333,6 +339,7 @@ fn state_of(choice: &Choice, facing: u8, dice: u64) -> Option<i32> {
 }
 
 /// Кладёт в сложенный чанк части ближних построек — после растительности.
+#[cfg(not(seedmap_core))]
 pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let super::Generator::Normal(terrain) = generator else {
         return;
@@ -551,6 +558,7 @@ fn igloos_near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) ->
 }
 
 /// Кладёт части ближних иглу в чанк.
+#[cfg(not(seedmap_core))]
 fn build_igloos(terrain: &super::terrain::Terrain, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let (x0, z0) = (chunk_x * 16, chunk_z * 16);
 
@@ -727,7 +735,7 @@ pub fn nearest(kind: Kind, terrain: &super::terrain::Terrain, chunk_x: i32, chun
     best
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 

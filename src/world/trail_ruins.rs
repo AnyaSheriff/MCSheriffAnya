@@ -134,9 +134,12 @@ fn turned_box(library: &Library, entry: &Entry, turns: u8) -> ((i32, i32), (i32,
 pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Arc<Site>> {
     type Sites = Mutex<HashMap<(i64, i32, i32), Option<Arc<Site>>>>;
     static CACHE: OnceLock<Sites> = OnceLock::new();
+    #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    #[cfg(not(seedmap_core))]
     let key = (terrain.seed(), region_x, region_z);
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return found.clone();
     }
@@ -170,6 +173,7 @@ pub fn site_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) 
         Arc::new(Site { chunk: (chunk_x, chunk_z), pieces })
     });
 
+    #[cfg(not(seedmap_core))]
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, found.clone());
     found
 }
@@ -178,6 +182,7 @@ fn state_of(text: &str) -> i32 {
     blocks::state_from_text(text).or_else(|| blocks::state_by_name(text.split('[').next().unwrap_or(text))).unwrap_or(super::AIR)
 }
 
+#[cfg(not(seedmap_core))]
 pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let super::Generator::Normal(terrain) = generator else {
         return;
@@ -236,7 +241,7 @@ pub fn nearest(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32, ri
     template::nearest(chunk_x, chunk_z, SPACING, rings, &|region_x, region_z| site_in(terrain, region_x, region_z).map(|site| site.chunk))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
     use crate::world::terrain::Biome;

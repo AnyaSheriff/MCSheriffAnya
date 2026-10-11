@@ -303,8 +303,10 @@ pub fn ring_points(seed: i64) -> Vec<(i32, i32)> {
 /// Считаются один раз на семя.
 pub fn starts(seed: i64, land: &dyn Fn(i32, i32) -> bool) -> Arc<Vec<(i32, i32)>> {
     static CACHE: Cache<i64, Vec<(i32, i32)>> = OnceLock::new();
+    #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&seed) {
         return found.clone();
     }
@@ -333,6 +335,7 @@ pub fn starts(seed: i64, land: &dyn Fn(i32, i32) -> bool) -> Arc<Vec<(i32, i32)>
     }
 
     let out = Arc::new(out);
+    #[cfg(not(seedmap_core))]
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(seed, out.clone());
     out
 }
@@ -758,6 +761,7 @@ pub fn paint(seed: i64, pieces: &[Placed], chunk: [i32; 4], put: &mut dyn FnMut(
 
 /// Что в куске требует своих данных: сундук с добычей или рассадник.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[cfg(not(seedmap_core))]
 pub enum Special {
     /// Сундук с добычей таблицы: коридор с сундуком — алтарь, кладовая
     /// большой комнаты, библиотека (вики, Stronghold: «Loot»).
@@ -767,6 +771,7 @@ pub enum Special {
 }
 
 /// Сундуки и рассадники кусков в пределах чанка `chunk` (мировые x, z).
+#[cfg(not(seedmap_core))]
 pub fn specials(pieces: &[Placed], chunk: [i32; 4], found: &mut dyn FnMut((i32, i32, i32), Special)) {
     let templates = templates();
 
@@ -828,19 +833,23 @@ pub fn starts_of(terrain: &super::terrain::Terrain) -> Arc<Vec<(i32, i32)>> {
 /// Раскладка крепости — одна на старт, хранится, пока мир жив.
 fn plan_cached(seed: i64, chunk_x: i32, chunk_z: i32) -> Arc<Vec<Placed>> {
     static CACHE: Cache<(i64, i32, i32), Vec<Placed>> = OnceLock::new();
+    #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&(seed, chunk_x, chunk_z)) {
         return found.clone();
     }
 
     let pieces = Arc::new(plan(seed, chunk_x, chunk_z));
+    #[cfg(not(seedmap_core))]
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert((seed, chunk_x, chunk_z), pieces.clone());
     pieces
 }
 
 /// Кладёт в сложенный чанк обычного мира куски ближних крепостей —
 /// после рельефа и пещер (у оригинала крепости — после вырезания пещер).
+#[cfg(not(seedmap_core))]
 pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let super::Generator::Normal(terrain) = generator else {
         return;
@@ -893,18 +902,19 @@ pub fn nearest(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) ->
 }
 
 /// Блоки рамок портала крепости и их место — для тестов и замеров.
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 fn texts_of(piece: &Placed) -> &'static [String] {
     &templates().pieces[piece.template].texts
 }
 
 /// Вход в рамку крепости: план уже закэширован генератором.
+#[cfg(not(seedmap_core))]
 pub fn contains(terrain: &super::terrain::Terrain, x: i32, y: i32, z: i32) -> bool {
     starts_of(terrain).iter().filter(|(cx, cz)| (cx - x.div_euclid(16)).abs() <= RADIUS_CHUNKS && (cz - z.div_euclid(16)).abs() <= RADIUS_CHUNKS)
         .any(|&(cx, cz)| super::in_structure_bounds(plan_cached(terrain.seed(), cx, cz).iter().map(|p| p.bounds), (x, y, z)))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 

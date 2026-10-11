@@ -67,9 +67,12 @@ fn pick(seed: i64, chunk_x: i32, chunk_z: i32) -> (usize, u8) {
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<(i32, i32)> {
     type Starts = Mutex<HashMap<(i64, i32, i32), Option<(i32, i32)>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
+    #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    #[cfg(not(seedmap_core))]
     let key = (terrain.seed(), region_x, region_z);
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return *found;
     }
@@ -79,6 +82,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     let dark = super::cave_biomes::biome_at(&column, FLOOR).is_some_and(|biome| biome == super::terrain::Biome::DeepDark);
     let found = (dark && !library().is_empty()).then_some((chunk_x, chunk_z));
 
+    #[cfg(not(seedmap_core))]
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, found);
     found
 }
@@ -135,6 +139,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i
 }
 
 /// Таблица добычи по имени из образца.
+#[cfg(not(seedmap_core))]
 fn table(name: &str) -> &'static [crate::loot::Pool] {
     match name {
         "chests/ancient_city_ice_box" => &crate::loot::ANCIENT_CITY_ICE_BOX,
@@ -144,6 +149,7 @@ fn table(name: &str) -> &'static [crate::loot::Pool] {
 
 /// Кладёт в сложенный чанк части ближних городов — после пещер и пещерных
 /// украшений: в кусках порода и скалк глубокой тьмы уступают городу.
+#[cfg(not(seedmap_core))]
 pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let super::Generator::Normal(terrain) = generator else {
         return;
@@ -157,6 +163,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
 }
 
 /// Блоки и сундуки города в чанке (chunk_x, chunk_z).
+#[cfg(not(seedmap_core))]
 fn paint(seed: i64, placed: &Placed, chunk_x: i32, chunk_z: i32, chunk: &mut super::Chunk) {
     let template = placed.template;
     let states = &template.states[usize::from(placed.turns % 4)];
@@ -207,7 +214,7 @@ pub fn nearest(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32, ri
     template::nearest(chunk_x, chunk_z, SPACING, rings, &|region_x, region_z| start_in(terrain, region_x, region_z))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
     use crate::blocks;

@@ -151,9 +151,12 @@ fn watery(biome: super::terrain::Biome) -> bool {
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<(i32, i32)> {
     type Starts = Mutex<HashMap<(i64, i32, i32), Option<(i32, i32)>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
+    #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    #[cfg(not(seedmap_core))]
     let key = (terrain.seed(), region_x, region_z);
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return *found;
     }
@@ -170,6 +173,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     };
     let found = (ring(16, deep) && ring(29, watery)).then_some((chunk_x, chunk_z));
 
+    #[cfg(not(seedmap_core))]
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, found);
     found
 }
@@ -228,6 +232,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i
 
 /// Кладёт в сложенный чанк части ближних крепостей — после растительности и
 /// украшений океана: в рамке всё прежнее уходит под воду и крепость.
+#[cfg(not(seedmap_core))]
 pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let super::Generator::Normal(terrain) = generator else {
         return;
@@ -239,6 +244,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
 }
 
 /// Блоки крепости со стартом (start_x, start_z) в чанке (chunk_x, chunk_z).
+#[cfg(not(seedmap_core))]
 fn paint(seed: i64, start_x: i32, start_z: i32, chunk_x: i32, chunk_z: i32, chunk: &mut super::Chunk) {
     let Some(template) = library().get(pick(seed, start_x, start_z).0) else {
         return;
@@ -345,7 +351,7 @@ pub fn nearest(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32, re
     best
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 

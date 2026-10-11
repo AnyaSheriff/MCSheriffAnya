@@ -496,6 +496,7 @@ fn near(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Vec<(i
 
 /// Кладёт в сложенный чанк обычного мира куски ближних деревень — после
 /// рельефа, деревьев и растительности (дома вытесняют траву и цветы).
+#[cfg(not(seedmap_core))]
 pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let super::Generator::Normal(terrain) = generator else {
         return;
@@ -553,7 +554,7 @@ pub fn nearest(terrain: &super::terrain::Terrain, kind: Kind, chunk_x: i32, chun
     best
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 

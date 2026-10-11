@@ -17,6 +17,7 @@ use crate::blocks;
 use crate::world::AIR;
 use crate::world::noise::{Noise, Random};
 
+#[cfg(not(seedmap_core))]
 pub use super::trees::{Axis, Part, TREE_REACH, tree_possible};
 
 /// Верхний блок воды в море: низины залиты по эту высоту включительно.
@@ -783,7 +784,7 @@ pub struct Terrain {
     bands: [&'static str; 192],
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 #[path = "terrain_census.rs"]
 mod census;
 
@@ -822,7 +823,7 @@ impl Terrain {
     }
 
     /// Плавный рельеф — для проверок, которым не важен стиль.
-    #[cfg(test)]
+    #[cfg(all(test, not(seedmap_core)))]
     pub fn smooth(seed: i64) -> Terrain {
         Terrain::new(seed, Style::Smooth)
     }
@@ -924,8 +925,11 @@ impl Terrain {
     /// Осеннее ли здесь пятно обычного леса: редкие участки по медленному
     /// шуму, около двух-трёх сотых площади лесов.
     pub fn autumn_at(&self, x: i32, z: i32) -> bool {
-        AUTUMN_FORESTS.load(std::sync::atomic::Ordering::Relaxed)
-            && self.detail.octaves(x as f64 / 260.0 - 733.0, z as f64 / 260.0 + 911.0, 2) > 0.4
+        self.autumn_enabled_at(x, z, AUTUMN_FORESTS.load(std::sync::atomic::Ordering::Relaxed))
+    }
+
+    pub fn autumn_enabled_at(&self, x: i32, z: i32, enabled: bool) -> bool {
+        enabled && self.detail.octaves(x as f64 / 260.0 - 733.0, z as f64 / 260.0 + 911.0, 2) > 0.4
     }
 
     /// Всё про столбец: высота поверхности и биом.
@@ -956,18 +960,29 @@ impl Terrain {
         // середине. Иначе земля (трава, песок, снег) шла бы по границе
         // одних столбцов, а цвета у клиента — по границе клеток, и на стыке
         // биомов выходили бы кривые куски.
-        let (middle_x, middle_z) = ((x & !3) + 2, (z & !3) + 2);
-        let biome = if (x, z) == (middle_x, middle_z) {
-            self.cell_biome(&climate, middle_x, middle_z)
-        } else {
-            self.cell_biome(&self.climate_at(middle_x, middle_z), middle_x, middle_z)
-        };
+        let biome = self.biome_with_climate(&climate, x, z);
 
         Column {
             height,
             biome,
             climate,
             steep: false,
+        }
+    }
+
+    /// Тот же выбор, что у столбца, без расчёта высоты для карты.
+    #[allow(dead_code)] // чистый запрос карты, сервер использует готовый климат
+    pub fn biome_at(&self, x: i32, z: i32) -> Biome {
+        let (middle_x, middle_z) = ((x & !3) + 2, (z & !3) + 2);
+        self.biome_with_climate(&self.climate_at(middle_x, middle_z), middle_x, middle_z)
+    }
+
+    fn biome_with_climate(&self, climate: &Climate, x: i32, z: i32) -> Biome {
+        let (middle_x, middle_z) = ((x & !3) + 2, (z & !3) + 2);
+        if (x, z) == (middle_x, middle_z) {
+            self.cell_biome(climate, middle_x, middle_z)
+        } else {
+            self.cell_biome(&self.climate_at(middle_x, middle_z), middle_x, middle_z)
         }
     }
 
@@ -1322,7 +1337,7 @@ impl Terrain {
     /// Что стоит в этом месте столбца — для проверок: сам выясняет, камень
     /// ли тут и как глубоко от поверхности. Чанк знает это и так и зовёт
     /// `block_with`.
-    #[cfg(test)]
+    #[cfg(all(test, not(seedmap_core)))]
     pub fn block_at(&self, column: &Column, x: i32, y: i32, z: i32) -> i32 {
         let grid = match self.style {
             Style::Vanilla => Some(self.relief_grid(x, z, x, z)),
@@ -1345,6 +1360,7 @@ impl Terrain {
     /// считается глубина для травы, земли и песка. Так и уступ под
     /// нависанием получает свою траву.
     #[allow(clippy::too_many_arguments)]
+    #[cfg(not(seedmap_core))]
     pub fn block_with(
         &self,
         column: &Column,
@@ -1427,6 +1443,7 @@ impl Terrain {
     /// сторону. Так край снега и льда рваный, как у оригинала, а не ровная
     /// лесенка по клеткам. Цвета у клиента по-прежнему по клеткам — снег
     /// лишь блок поверх земли.
+    #[cfg(not(seedmap_core))]
     fn weather_biome(&self, column: &Column, x: i32, z: i32) -> Biome {
         let mixed = (x as i64)
             .wrapping_mul(341_873_128_712)
@@ -1468,11 +1485,13 @@ impl Terrain {
 
     /// Ляжет ли снег на то, что стоит в этом месте на высоте `y` (крону
     /// дерева): биом со сдвигом, как у снега на земле, холод — по высоте.
+    #[cfg(not(seedmap_core))]
     pub fn snow_falls(&self, column: &Column, x: i32, y: i32, z: i32) -> bool {
         self.weather_biome(column, x, z).snows_at(y)
     }
 
     /// Лежит ли на земле этого столбца снег.
+    #[cfg(not(seedmap_core))]
     fn snows_on(&self, column: &Column, x: i32, z: i32) -> bool {
         let biome = self.weather_biome(column, x, z);
 
@@ -1486,6 +1505,7 @@ impl Terrain {
     /// растительность (`vegetation`) по готовому чанку: ей видно, на какой
     /// земле место и нет ли над ним кроны. Там же трава вытесняет снег,
     /// как у оригинала в заснеженной тайге и на снежных равнинах.
+    #[cfg(not(seedmap_core))]
     fn plant_at(&self, column: &Column, x: i32, y: i32, z: i32) -> Option<&'static str> {
         // В холодных местах на земле лежит снег — тонким слоем, как в игре.
         if y - column.height == 1 && self.snows_on(column, x, z) {
@@ -1782,6 +1802,7 @@ impl Terrain {
     /// сланец. Руда и пятна гранита, гравия и прочего кладутся потом,
     /// отдельным проходом по чанку (`ore_blocks_in`): гнёзда пересекают
     /// границы столбцов, и по одному столбцу их не разложить.
+    #[cfg(not(seedmap_core))]
     fn underground_at(&self, _column: &Column, _x: i32, y: i32, _z: i32) -> i32 {
         if y < DEEPSLATE_FROM {
             common().deepslate
@@ -1806,6 +1827,7 @@ impl Terrain {
     /// всё равно не ляжет (руда кладётся только в камень), и растить его
     /// незачем. Таких много: железо ставит 90 гнёзд на чанк на высотах
     /// 112–384, изумруд в горах — 100.
+    #[cfg(not(seedmap_core))]
     pub fn ore_blocks_in(
         &self,
         chunk_x: i32,
@@ -2663,12 +2685,14 @@ impl Terrain {
     /// и на снежном блоке, — но не на камне, песке, гравии. Поверхность считается так же, как её красит чанк,
     /// с крутизной по соседним столбцам: решение одно для всех чанков, куда
     /// попадают части дерева.
+    #[cfg(not(seedmap_core))]
     pub fn tree_ground(&self, column: &Column, x: i32, z: i32) -> bool {
         self.tree_ground_by(column, x, z, |x, z| self.column_at(x, z).height)
     }
 
     /// То же, что `tree_ground`, но высоты соседей берутся у `height`: у
     /// чанка они уже посчитаны, и заново считать шумы незачем.
+    #[cfg(not(seedmap_core))]
     pub fn tree_ground_by(&self, column: &Column, x: i32, z: i32, height: impl Fn(i32, i32) -> i32) -> bool {
         let steep = height(x, z + 1) - height(x, z - 1) >= 4 || height(x - 1, z) - height(x + 1, z) >= 4;
         // Биом — со сдвигом, как его берёт чанк, когда красит поверхность
@@ -2690,6 +2714,7 @@ impl Terrain {
     /// Чем укрыт биом сверху: запись блока на такой глубине от поверхности.
     /// `None` — значит, дальше идёт камень. Пятна (подзол, лёд, кальцит,
     /// дно рек) решает мелкий шум по месту, полосы терракоты — высота.
+    #[cfg(not(seedmap_core))]
     fn surface(&self, column: &Column, x: i32, y: i32, z: i32, depth: i32) -> Option<&'static str> {
         let biome = column.biome;
         let height = column.height;
@@ -3039,7 +3064,7 @@ fn named(name: &str) -> i32 {
     blocks::state_by_name(name).unwrap_or_else(|| panic!("блок {} есть в таблице", name))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 
@@ -3412,7 +3437,7 @@ mod tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod survey {
     use super::*;
     use std::collections::HashMap;

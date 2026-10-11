@@ -18,6 +18,12 @@
 // терять постройки при падении не хочется.
 
 mod codec;
+mod spawn_search;
+#[cfg(test)]
+#[allow(dead_code)]
+mod seedmap;
+#[cfg(test)]
+mod seedmap_tests;
 mod legacy;
 pub mod cave_biomes;
 pub mod flat;
@@ -66,24 +72,13 @@ use crate::redstone;
 use crate::world::terrain::{Column, Style, Terrain};
 use crate::{log_debug, log_error, log_info, log_warn};
 
-/// Воздух — состояние 0. Это единственное число, в котором мы уверены
-/// заранее: пустая секция чанка кодируется именно нулём.
-pub const AIR: i32 = 0;
-
-/// Нижняя граница мира: как у обычного overworld.
-pub const MIN_Y: i32 = -64;
-
-/// Высота мира.
-pub const WORLD_HEIGHT: i32 = 384;
+include!("gen_limits.rs");
 
 /// Секций в чанке.
 pub const SECTIONS: i32 = WORLD_HEIGHT / 16;
 
 /// Блоков в секции: 16 × 16 × 16.
 pub const SECTION_BLOCKS: usize = 4096;
-
-/// Сторона чанка в блоках.
-const CHUNK_SIZE: i32 = 16;
 
 /// Сколько тактов длятся сутки.
 pub const DAY_LENGTH: i64 = 24_000;
@@ -4563,50 +4558,9 @@ impl World {
             return (f64::from(x) + 0.5, f64::from(y + 1), f64::from(z) + 0.5);
         }
 
-        /// Насколько далеко от начала координат искать сушу.
-        const SEARCH: i32 = 3_000;
-
-        /// Через сколько блоков проверять следующее место.
-        const STEP: i32 = 16;
-
-        let mut ring = 0;
-
-        while ring * STEP <= SEARCH {
-            let side = ring * STEP;
-
-            // Обходим кольцо: его углы и стороны с тем же шагом.
-            for step in -ring..=ring {
-                let along = step * STEP;
-
-                for (x, z) in [
-                    (along, -side),
-                    (along, side),
-                    (-side, along),
-                    (side, along),
-                ] {
-                    let column = self.generator.column_at(x, z);
-
-                    // Суша выше уровня моря и не голый лёд: на воде и на
-                    // отвесных пиках появляться незачем.
-                    if column.height >= terrain::SEA && !column.biome.is_ocean() {
-                        log_info!(
-                            "Точка появления: {} {} {} ({})",
-                            x,
-                            column.height + 1,
-                            z,
-                            column.biome.name()
-                        );
-
-                        return (x as f64 + 0.5, (column.height + 1) as f64, z as f64 + 0.5);
-                    }
-                }
-            }
-
-            ring += 1;
-        }
-
-        // Суши не нашлось — появляемся над водой в начале координат.
-        (0.5, (terrain::SEA + 1) as f64, 0.5)
+        let place = spawn_search::find(|x, z| self.generator.column_at(x, z));
+        log_info!("Точка появления: {} {} {}", place.0, place.1, place.2);
+        place
     }
 }
 

@@ -41,7 +41,10 @@ use std::sync::OnceLock;
 use super::end_city;
 use super::noise::Noise;
 use super::terrain::Biome;
+#[cfg(not(seedmap_core))]
 use super::{biome_cell, pack, split, BiomeId, Chunk, AIR, BIOME_CELLS, BIOME_LAYERS, CHUNK_SIZE};
+#[cfg(seedmap_core)]
+use super::{AIR, CHUNK_SIZE};
 use crate::blocks;
 
 /// Клетка с обсидианом, куда приходит игрок из портала: центр площадки
@@ -457,6 +460,7 @@ impl End {
     }
 
     /// Чанк Энда.
+    #[cfg(not(seedmap_core))]
     pub(super) fn chunk(&self, chunk_x: i32, chunk_z: i32) -> Chunk {
         let mut chunk = Chunk::new();
         let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);
@@ -494,6 +498,7 @@ impl End {
     }
 
     /// Столбы: обсидиановый диск от дна, бедрок и огонь сверху, клетка.
+    #[cfg(not(seedmap_core))]
     fn spikes(&self, chunk: &mut Chunk, x0: i32, z0: i32) {
         let s = &self.states;
 
@@ -536,6 +541,7 @@ impl End {
 
     /// Подставка выходного портала в (0, 0): чаша из бедрока, столб с
     /// факелами. Порталы внутри чаши появляются, когда портал включают.
+    #[cfg(not(seedmap_core))]
     fn podium(&self, chunk: &mut Chunk, x0: i32, z0: i32) {
         if x0 > 4 || x0 + CHUNK_SIZE <= -4 || z0 > 4 || z0 + CHUNK_SIZE <= -4 {
             return;
@@ -549,6 +555,7 @@ impl End {
     }
 
     /// Хорус: простые деревья на внешних островах верховий и середины.
+    #[cfg(not(seedmap_core))]
     fn chorus(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, tops: &[Option<i32>]) {
         let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);
         // Клетки, занятые деревьями этого чанка: соседние деревья не растут
@@ -606,6 +613,7 @@ impl End {
     }
 
     /// Шалкеры энд-городов, стоящие в чанке (end_city::sentries).
+    #[cfg(not(seedmap_core))]
     pub fn city_sentries(&self, chunk_x: i32, chunk_z: i32) -> Vec<(i32, i32, i32)> {
         let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);
         let mut out = Vec::new();
@@ -623,6 +631,7 @@ impl End {
         out
     }
 
+    #[cfg(not(seedmap_core))]
     pub fn in_city(&self, x: i32, y: i32, z: i32) -> bool {
         end_city::regions_near(x.div_euclid(16), z.div_euclid(16)).into_iter()
             .filter_map(|(rx, rz)| self.city_at(rx, rz))
@@ -630,6 +639,7 @@ impl End {
     }
 
     /// Энд-города, задевающие чанк.
+    #[cfg(not(seedmap_core))]
     fn cities(&self, chunk: &mut Chunk, chunk_x: i32, chunk_z: i32) {
         let (x0, z0) = (chunk_x * CHUNK_SIZE, chunk_z * CHUNK_SIZE);
 
@@ -653,6 +663,7 @@ impl End {
     /// unbranched»); не вырос вверх — ветвится вбок («1–4 branches … on an
     /// unbranched plant or 0–3 on a branched plant», в сторону, где пусто
     /// вокруг и снизу); не вырос никуда — засыхает (age 5).
+    #[cfg(not(seedmap_core))]
     fn tree(&self, chunk: &mut Chunk, x: i32, y: i32, z: i32, roll: &mut Dice, taken: &mut std::collections::HashSet<(i32, i32, i32)>) {
         let mut cells: Vec<(i32, i32, i32)> = Vec::new();
         // Живые цветки: место и сколько блоков стебля под ним и ветвился ли он.
@@ -882,6 +893,7 @@ pub fn exit_portal_blocks() -> Vec<(i32, i32, i32)> {
 }
 
 /// Кладёт блок в чанк: `x`, `z` — внутри чанка, `y` — высота мира.
+#[cfg(not(seedmap_core))]
 fn put(chunk: &mut Chunk, x: i32, y: i32, z: i32, state: i32) {
     if !(0..256).contains(&y) {
         return;
@@ -902,7 +914,7 @@ fn scramble(mut value: u64) -> u64 {
     value ^ (value >> 33)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 

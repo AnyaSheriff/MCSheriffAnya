@@ -208,9 +208,12 @@ fn floor_height(height: &dyn Fn(i32, i32) -> i32, chunk_x: i32, chunk_z: i32, ro
 pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32) -> Option<Mansion> {
     type Starts = Mutex<HashMap<(i64, i32, i32), Option<Mansion>>>;
     static CACHE: OnceLock<Starts> = OnceLock::new();
+    #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    #[cfg(not(seedmap_core))]
     let key = (terrain.seed(), region_x, region_z);
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return *found;
     }
@@ -220,6 +223,7 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     let found = biome_fits(terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None).biome)
         .then(|| place(seed, chunk_x, chunk_z, &|x, z| terrain.column_in(x, z, None).height));
 
+    #[cfg(not(seedmap_core))]
     cache.lock().unwrap_or_else(|poison| poison.into_inner()).insert(key, found);
     found
 }
@@ -420,20 +424,26 @@ fn join_seams(built: &mut Built, owner: &[u16]) {
 fn built(mansion: &Mansion) -> Arc<Built> {
     type Cache = Mutex<HashMap<(usize, u8), Arc<Built>>>;
     static CACHE: OnceLock<Cache> = OnceLock::new();
+    #[cfg(not(seedmap_core))]
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    #[cfg(not(seedmap_core))]
     let key = (mansion.layout, mansion.turn);
 
+    #[cfg(not(seedmap_core))]
     if let Some(found) = cache.lock().unwrap_or_else(|poison| poison.into_inner()).get(&key) {
         return found.clone();
     }
 
     let made = Arc::new(assemble(mansion.layout, mansion.turn));
+    #[cfg(not(seedmap_core))]
     let mut cache = cache.lock().unwrap_or_else(|poison| poison.into_inner());
 
     // Собранный особняк — около 0,6 МБ: держим немного.
+    #[cfg(not(seedmap_core))]
     if cache.len() >= 12 {
         cache.clear();
     }
+    #[cfg(not(seedmap_core))]
     cache.insert(key, made.clone());
     made
 }
@@ -476,6 +486,7 @@ fn under_floor(state: i32) -> bool {
 }
 
 /// Кладёт в сложенный чанк части ближних особняков.
+#[cfg(not(seedmap_core))]
 pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let super::Generator::Normal(terrain) = generator else {
         return;
@@ -486,6 +497,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
     }
 }
 
+#[cfg(not(seedmap_core))]
 fn paint(seed: i64, mansion: &Mansion, built: &Built, chunk: &mut super::Chunk, chunk_x: i32, chunk_z: i32) {
     let (x0, y0, z0) = mansion.origin;
     let cobblestone = state_of("cobblestone");
@@ -554,6 +566,7 @@ fn paint(seed: i64, mansion: &Mansion, built: &Built, chunk: &mut super::Chunk, 
 }
 
 /// Предметы сундука образца: «ячейка:предмет:число[:зачарование=уровень]» через «;».
+#[cfg(not(seedmap_core))]
 fn items_of(text: &str) -> Vec<(usize, crate::inventory::Stack)> {
     let mut out = Vec::new();
 
@@ -612,7 +625,7 @@ pub fn nearest(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32, ri
     template::nearest(chunk_x, chunk_z, SPACING, rings, &|region_x, region_z| start_in(terrain, region_x, region_z).map(|mansion| mansion.chunk))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(seedmap_core)))]
 mod tests {
     use super::*;
 
