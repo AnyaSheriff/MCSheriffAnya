@@ -21,6 +21,9 @@ use crate::blocks_table::{
     SMALL_STACKS,
 };
 
+#[path = "blocks_lookup.rs"]
+mod lookup;
+
 /// Свойство блока и его значения.
 pub struct Property {
     /// Имя свойства, как в игре: axis, facing, half, type и так далее.
@@ -266,20 +269,14 @@ pub fn orientation(name: &str) -> Option<&'static Orientation> {
 
 /// Правило установки для блока с таким состоянием — если оно выяснено.
 pub fn orientation_of(state: i32) -> Option<&'static Orientation> {
-    block_at_state(state).and_then(orientation)
+    lookup::orientation(state)
 }
 
 /// Имя блока по номеру состояния.
 ///
 /// None означает, что такого состояния в таблице нет.
 pub fn block_at_state(state: i32) -> Option<&'static str> {
-    BLOCK_NAMES
-        .partition_point(|(low, _, _)| *low <= state)
-        .checked_sub(1)
-        .and_then(|index| {
-            let (low, high, name) = BLOCK_NAMES[index];
-            (state >= low && state <= high).then_some(name)
-        })
+    lookup::name(state)
 }
 
 /// Номер предмета по имени.

@@ -153,18 +153,7 @@ pub fn random_ticks(world: &mut World, players: &[(i32, i32)], distance: i32, sp
         return;
     }
 
-    let mut chunks: Vec<(i32, i32)> = Vec::new();
-
-    for (px, pz) in players {
-        for cx in px - distance..=px + distance {
-            for cz in pz - distance..=pz + distance {
-                chunks.push((cx, cz));
-            }
-        }
-    }
-
-    chunks.sort_unstable();
-    chunks.dedup();
+    let chunks = random_tick_chunks(players, distance);
 
     let mut due: Vec<((i32, i32, i32), i32)> = Vec::new();
 
@@ -210,6 +199,28 @@ pub fn random_ticks(world: &mut World, players: &[(i32, i32)], distance: i32, sp
             random_tick(world, pos, now);
         }
     }
+}
+
+fn random_tick_chunks(players: &[(i32, i32)], distance: i32) -> Vec<(i32, i32)> {
+    // Повторяющиеся центры дают те же клетки; порядок обхода мира всё равно
+    // задаёт последняя сортировка, до первого обращения к ГСЧ.
+    let mut centers = players.to_vec();
+    centers.sort_unstable();
+    centers.dedup();
+    let mut chunks: Vec<(i32, i32)> = Vec::new();
+
+    for (px, pz) in &centers {
+        for cx in px - distance..=px + distance {
+            for cz in pz - distance..=pz + distance {
+                chunks.push((cx, cz));
+            }
+        }
+    }
+
+    chunks.sort_unstable();
+    chunks.dedup();
+
+    chunks
 }
 
 /// Секции чанка, где есть блоки со случайным тактом (бит на секцию). Ищется
@@ -1803,5 +1814,30 @@ mod tests {
         }
 
         assert_eq!(number(world.get_block(0, 1, 0), "age"), 7);
+    }
+}
+
+#[cfg(test)]
+mod perf_tests {
+    use super::*;
+
+    fn old_chunks(players: &[(i32, i32)], distance: i32) -> Vec<(i32, i32)> {
+        let mut chunks = Vec::new();
+        for (px, pz) in players {
+            for cx in px-distance..=px+distance {
+                for cz in pz-distance..=pz+distance { chunks.push((cx,cz)); }
+            }
+        }
+        chunks.sort_unstable(); chunks.dedup(); chunks
+    }
+
+    #[test]
+    fn deduplicated_centers_preserve_exact_random_tick_order() {
+        for count in [0,1,2,20,200] { for seed in 0..20 { for distance in [-1,0,1,4,10] {
+            let players: Vec<_> = (0..count).map(|i| ((i*seed)%7-3, (i+seed)%5-2)).collect();
+            assert_eq!(random_tick_chunks(&players, distance), old_chunks(&players, distance));
+        }}}
+        assert_eq!(random_tick_chunks(&[(i32::MAX-32,i32::MIN+32);200], 32),
+            old_chunks(&[(i32::MAX-32,i32::MIN+32)], 32));
     }
 }

@@ -380,6 +380,7 @@ pub enum Gust {
 /// Порядок блоков внутри секции — тот же, в котором они идут в пакете чанка:
 /// сначала по Y (снизу вверх), внутри — по Z, внутри — по X. Поэтому секцию
 /// не приходится перекладывать при отправке.
+#[derive(Clone)]
 struct Chunk {
     /// Секции снизу вверх. None — секция целиком из воздуха.
     ///
@@ -1813,8 +1814,8 @@ impl World {
 
         wanted.extend(untouched);
 
-        // Чанки по регионам: координаты чанка и его байты.
-        type Batch = Vec<(i32, i32, Vec<u8>)>;
+        // Чанки по регионам: неизменяемые снимки; секции разделяются через Arc.
+        type Batch = Vec<(i32, i32, Chunk)>;
 
         let mut by_region: HashMap<(i32, i32), Batch> = HashMap::new();
 
@@ -1828,10 +1829,10 @@ impl World {
             by_region
                 .entry(region::region_of(chunk_x, chunk_z))
                 .or_default()
-                .push((chunk_x, chunk_z, chunk.to_bytes()));
+                .push((chunk_x, chunk_z, chunk.clone()));
         }
 
-        // Пишет свой поток (`writer`): такт диска не ждёт. Не записалось —
+        // Складывает байты и пишет свой поток (`writer`): такт диска не ждёт. Не записалось —
         // поток повторяет сам, а байты до тех пор читаются из его памяти.
         for (_, chunks) in by_region {
             writer::write_chunks(&directory, chunks);
@@ -2229,6 +2230,10 @@ impl World {
         self.dirty.insert(chunk_key(x, z));
 
         Some(result)
+    }
+
+    pub fn has_trials(&self) -> bool {
+        self.chunks.values().any(|chunk| !chunk.trials.is_empty())
     }
 
     /// Все испытательные блоки загруженных чанков: место в мире.
@@ -5874,6 +5879,21 @@ mod mushroom_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn trial_presence_matches_places_after_changes_and_unload() {
+        let mut world = World::in_memory();
+        assert!(!world.has_trials());
+        for (x,z,name) in [(0,0,"trial_spawner"), (-17,32,"vault"), (48,-16,"trial_spawner")] {
+            world.set_block(x,70,z,crate::blocks::state_by_name(name).unwrap());
+            assert_eq!(world.has_trials(), !world.trial_places().is_empty());
+        }
+        world.set_block(0,70,0,AIR);
+        assert_eq!(world.has_trials(), !world.trial_places().is_empty());
+        world.unload_far(|_,_|false);
+        assert!(!world.has_trials());
+        assert!(world.trial_places().is_empty());
+    }
 
     #[test]
     fn wet_sponge_dries_only_in_the_nether() {

@@ -421,8 +421,8 @@ impl Items {
     /// конец такта показывает то, что было до хода мобов (чёрный ящик,
     /// cow-physics: скорость и сдвиг при падении отстают на один ход).
     pub fn snapshot_mobs(&mut self) {
-        self.mob_view = self.mobs.clone();
-        self.orb_view = self.orbs.clone();
+        self.mob_view.clone_from(&self.mobs);
+        self.orb_view.clone_from(&self.orbs);
     }
 
     /// Мобы такими, какими их видит слежение (`snapshot_mobs`).
@@ -1481,6 +1481,29 @@ pub(crate) fn uuid_for(entity_id: i32) -> [u8; 16] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reused_snapshots_match_full_clones_and_keep_their_tick() {
+        let mut items = Items::new();
+        for (id, kind) in crate::mob::Kind::ALL.into_iter().enumerate() {
+            let mut mob = crate::mob::Mob::new(id as i32, kind, (id as f64, 70.0, -2.0));
+            mob.brain.go(vec![(1,2,3), (4,5,6)], 1.0);
+            items.add_mob(mob);
+        }
+        items.add_orb(900, 3, (0.0,70.0,0.0), (0.1,0.2,0.3));
+        for count in [88, 12, 0, 0] {
+            items.mobs.truncate(count);
+            let old = items.mobs.clone();
+            let old_orbs = items.orbs.clone();
+            let capacity = items.mob_view.capacity();
+            items.snapshot_mobs();
+            assert_eq!(format!("{:?}", items.mob_view), format!("{old:?}"));
+            assert_eq!(format!("{:?}", items.orb_view), format!("{old_orbs:?}"));
+            assert!(items.mob_view.capacity() >= capacity);
+            for mob in &mut items.mobs { mob.ticks += 1; mob.y -= 1.0; mob.brain.go(Vec::new(), 0.0); }
+            assert_eq!(format!("{:?}", items.mob_view), format!("{old:?}"));
+        }
+    }
 
     /// Читатель журнала в проверках: настоящий номер выдаёт сервер.
     const READER: crate::journal::Reader = 1;

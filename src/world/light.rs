@@ -514,6 +514,12 @@ struct Seam<'a> {
     queue: Vec<u32>,
 }
 
+const SEAM_PAIRS: [(usize, usize, usize); 12] = [
+    (0, 1, EAST), (0, 3, SOUTH), (1, 2, EAST), (1, 4, SOUTH),
+    (2, 5, SOUTH), (3, 4, EAST), (3, 6, SOUTH), (4, 5, EAST),
+    (4, 7, SOUTH), (5, 8, SOUTH), (6, 7, EAST), (7, 8, EAST),
+];
+
 impl Seam<'_> {
     /// Свойства блока. None — чанка нет в памяти, туда свет не идёт.
     fn props(&self, (chunk, section, index): (usize, usize, usize)) -> Option<u16> {
@@ -590,24 +596,9 @@ impl Seam<'_> {
     /// Свет через границы соседних чанков: где по одну сторону светлее, чем
     /// может дать другая, — свет переходит и растекается дальше.
     fn stitch(&mut self) {
-        // Пары соседей: (левый или северный, правый или южный, направление).
-        let mut pairs = Vec::with_capacity(12);
+        // Тот же порядок пар: строка, столбец, восток, юг.
 
-        for row in 0..3 {
-            for column in 0..3 {
-                let chunk = row * 3 + column;
-
-                if column < 2 {
-                    pairs.push((chunk, chunk + 1, EAST));
-                }
-
-                if row < 2 {
-                    pairs.push((chunk, chunk + 3, SOUTH));
-                }
-            }
-        }
-
-        for (first, second, forward) in pairs {
+        for (first, second, forward) in SEAM_PAIRS {
             let (Some((_, first_light)), Some((_, second_light))) =
                 (self.chunks[first], self.chunks[second])
             else {
@@ -693,6 +684,62 @@ impl LightJob {
             });
         }
 
+        let mut edited = vec![None; 9 * SECTION_COUNT];
+        let mut queue = Vec::new();
+        let mut result = [true, false].map(|sky| {
+            let mut seam = Seam {
+                chunks: std::array::from_fn(|slot| {
+                    let input = self.chunks[slot].as_ref()?;
+                    let light = own[slot].as_ref()?;
+
+                    Some((&input.sections[..], light.sections(sky)))
+                }),
+                edited: std::mem::take(&mut edited),
+                table: table(),
+                sky,
+                queue: std::mem::take(&mut queue),
+            };
+
+            seam.stitch();
+            let center = seam.center();
+            seam.edited.fill(None);
+            edited = seam.edited;
+            queue = seam.queue;
+            center
+        });
+
+        let block = std::mem::take(&mut result[1]);
+        let sky = std::mem::take(&mut result[0]);
+
+        (ChunkLight { sky, block }, recounted)
+    }
+
+    #[cfg(test)]
+    fn finish_reference(self) -> (ChunkLight, Vec<Recounted>) {
+        let mut recounted = Vec::new();
+        let mut own: [Option<Arc<ChunkLight>>; 9] = Default::default();
+
+        for (slot, input) in self.chunks.iter().enumerate() {
+            let Some(input) = input else {
+                continue;
+            };
+
+            own[slot] = Some(match &input.light {
+                Some(light) => Arc::clone(light),
+                None => {
+                    let light = Arc::new(chunk_light(&input.sections));
+
+                    recounted.push(Recounted {
+                        place: input.place,
+                        revision: input.revision,
+                        light: Arc::clone(&light),
+                    });
+
+                    light
+                }
+            });
+        }
+
         let mut result = [true, false].map(|sky| {
             let mut seam = Seam {
                 chunks: std::array::from_fn(|slot| {
@@ -721,6 +768,48 @@ impl LightJob {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn seam_pairs_keep_the_original_visit_order() {
+        let mut old = Vec::new();
+        for row in 0..3 { for column in 0..3 {
+            let chunk = row*3+column;
+            if column < 2 { old.push((chunk,chunk+1,EAST)); }
+            if row < 2 { old.push((chunk,chunk+3,SOUTH)); }
+        }}
+        assert_eq!(SEAM_PAIRS.as_slice(), old);
+    }
+
+    #[test]
+    fn reused_light_scratch_matches_independent_sky_and_block_jobs() {
+        for seed in 0..12 {
+            let chunks: [crate::world::Chunk; 9] = std::array::from_fn(|slot| {
+                let mut chunk = crate::world::Chunk::new();
+                for n in 0..48 {
+                    let x = (n*7+seed+slot as i32).rem_euclid(16);
+                    let z = (n*11+seed).rem_euclid(16);
+                    let y = 60 + n/16;
+                    let name = ["stone", "torch", "water", "oak_slab", "glowstone", "air"][(n+seed) as usize%6];
+                    chunk.set(x,y,z,state(name));
+                }
+                chunk
+            });
+            let job = || LightJob { chunks: std::array::from_fn(|slot| {
+                if slot != CENTER && (slot+seed as usize).is_multiple_of(4) { return None; }
+                Some(LightInput { place: (slot as i32%3,slot as i32/3), revision: seed as u32,
+                    sections: chunks[slot].sections.clone(),
+                    light: (slot%2 == 0).then(|| Arc::new(chunk_light(&chunks[slot].sections))) })
+            }) };
+            let (new, new_recounted) = job().finish();
+            let (old, old_recounted) = job().finish_reference();
+            assert_eq!(new, old, "seed {seed}");
+            assert_eq!(new_recounted.len(), old_recounted.len());
+            for (new, old) in new_recounted.iter().zip(old_recounted) {
+                assert_eq!((new.place,new.revision), (old.place,old.revision));
+                assert_eq!(new.light, old.light);
+            }
+        }
+    }
 
     fn state(name: &str) -> i32 {
         crate::blocks::state_by_name(name).expect(name)

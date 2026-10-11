@@ -1,0 +1,94 @@
+{
+  "name": "perf-path-edits",
+  "about": "[проверить] Путь зомби к неподвижному игроку: камень, вода, лава и ограда сменяются перед ним на заданных тактах. Проверка отсутствия устаревших свойств клетки после правки мира.",
+  "exclusive": true,
+  "origin": [
+    100,
+    5,
+    100
+  ],
+  "track_mobs": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "time set midnight",
+    "gamemode survival $(bot)",
+    "fill $(-2,-1,-2) $(12,-1,6) minecraft:stone",
+    "fill $(-2,0,-2) $(12,4,-2) minecraft:stone",
+    "fill $(-2,0,6) $(12,4,6) minecraft:stone",
+    "fill $(-2,0,-2) $(-2,4,6) minecraft:stone",
+    "fill $(12,0,-2) $(12,4,6) minecraft:stone",
+    "tp $(bot) $(1.5,0,2.5)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon zombie $(10.5,0,2.5) {Silent:1b,Tags:[\"perf_path\"]}"
+    },
+    {
+      "after": 8,
+      "set": {
+        "at": [
+          6,
+          0,
+          2
+        ],
+        "state": "minecraft:stone"
+      }
+    },
+    {
+      "after": 16,
+      "set": {
+        "at": [
+          6,
+          0,
+          2
+        ],
+        "state": "minecraft:water"
+      }
+    },
+    {
+      "after": 24,
+      "set": {
+        "at": [
+          6,
+          0,
+          2
+        ],
+        "state": "minecraft:lava"
+      }
+    },
+    {
+      "after": 32,
+      "set": {
+        "at": [
+          6,
+          0,
+          2
+        ],
+        "state": "minecraft:oak_fence"
+      }
+    },
+    {
+      "after": 40,
+      "set": {
+        "at": [
+          6,
+          0,
+          2
+        ],
+        "state": "minecraft:air"
+      }
+    }
+  ],
+  "record_ticks": 65,
+  "cleanup": [
+    "gamemode creative $(bot)",
+    "kill @e[tag=perf_path]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "fill $(-3,-1,-3) $(13,5,7) minecraft:air",
+    "difficulty peaceful",
+    "time set day"
+  ]
+}

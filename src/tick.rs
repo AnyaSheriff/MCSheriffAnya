@@ -1930,7 +1930,7 @@ fn barter(items: &mut items::Items, shared: &Shared, watchers: &[crate::mob::ai:
 /// выброшенная награда (trial.rs).
 fn step_trials(shared: &Shared, world: &mut World, items: &mut items::Items, dimension: Dimension, difficulty: u8, rng: &mut crate::mob::Rng) {
     crate::ominous::step(shared,world,dimension,*shared.ticks.borrow(),rng);
-    if world.trial_places().is_empty() {
+    if !world.has_trials() {
         return;
     }
 
