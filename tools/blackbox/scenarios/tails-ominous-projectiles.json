@@ -1,0 +1,58 @@
+{
+  "name": "tails-ominous-projectiles",
+  "about": "[проверить] Java 26.1.2 gameplay tails: ominous-projectiles. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "track_mobs": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule spawn_mobs true",
+    "time set midnight",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-2,0,-2) $(10,5,10) minecraft:air",
+    "fill $(-2,-1,-2) $(10,-1,10) minecraft:stone",
+    "tp $(bot) $(3.5,0,0.5) 0 0",
+    "!wait 10",
+    "!stopfly",
+    "!look 3.14159 0",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(3,0,5) minecraft:trial_spawner{normal_config:{spawn_potentials:[{data:{entity:{id:\"minecraft:zombie\",NoAI:1b,Silent:1b}},weight:1}],total_mobs:2.0f,simultaneous_mobs:1.0f,total_mobs_added_per_player:0.0f,simultaneous_mobs_added_per_player:0.0f,ticks_between_spawn:20,loot_tables_to_eject:[{data:\"minecraft:spawners/trial_chamber/key\",weight:1}]},ominous_config:{spawn_potentials:[{data:{entity:{id:\"minecraft:zombie\",NoAI:1b,Silent:1b}},weight:1}],total_mobs:3.0f,simultaneous_mobs:1.0f,total_mobs_added_per_player:0.0f,simultaneous_mobs_added_per_player:0.0f,ticks_between_spawn:20,loot_tables_to_eject:[{data:\"minecraft:spawners/ominous/trial_chamber/key\",weight:1}]}}"
+    },
+    {
+      "after": 5,
+      "cmd": "effect give $(bot) trial_omen 120 0 true"
+    }
+  ],
+  "record_ticks": 1000,
+  "cleanup": [
+    "gamerule spawn_mobs false",
+    "time set noon",
+    "kill @e[type=zombie,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "setblock $(3,0,5) minecraft:air",
+    "fill $(-2,0,-2) $(10,5,10) minecraft:air",
+    "difficulty peaceful",
+    "effect clear $(bot)",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly",
+    "kill @e[type=!player,distance=..48]",
+    "fill $(-8,0,-8) $(12,15,12) air"
+  ],
+  "inventory": true,
+  "exclusive": true,
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ]
+}

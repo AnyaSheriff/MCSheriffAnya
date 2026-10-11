@@ -20,7 +20,7 @@ fn entities(text: &str, source: &Source, shared: &Shared) -> Vec<Target> {
     };
     if let Some(chosen) = &chosen {
         let items = shared.items_in(dimension).lock().expect("сущности");
-        found.extend(items.mobs().iter().filter(|mob| !mob.is_dead() && chosen.takes(mob.kind.name()) && chosen.reaches(origin, (mob.x, mob.y, mob.z)))
+        found.extend(items.mobs().iter().filter(|mob| !mob.is_dead() && chosen.takes_tagged(mob.kind.name(), &mob.tags) && chosen.reaches(origin, (mob.x, mob.y, mob.z)))
             .map(|mob| Target { id: mob.entity_id, at: (mob.x, mob.y, mob.z), player: None }));
         found.extend(items.items().iter().filter(|e|chosen.takes("item") && chosen.reaches(origin,(e.x,e.y,e.z)))
             .map(|e|Target {id:e.entity_id,at:(e.x,e.y,e.z),player:None}));

@@ -1,0 +1,48 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-8,-1,-8) $(8,-1,8) stone",
+    "fill $(-8,0,-8) $(8,15,8) air",
+    "tp $(bot) $(0.5,0,0.5)",
+    "!hotbar 0",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 5,
+      "cmd": "summon arrow $(0.5,3,2.5) {NoGravity:1b,Motion:[0.05d,0d,0d],pickup:0b}"
+    },
+    {
+      "after": 10,
+      "cmd": "summon arrow $(0.5,3,3.5) {Motion:[0.05d,0d,0d],pickup:0b}"
+    }
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..40]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(-8,0,-8) $(8,15,8) air",
+    "fill $(-8,-1,-8) $(8,-1,8) stone",
+    "difficulty peaceful",
+    "!startfly"
+  ],
+  "record_ticks": 100,
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "name": "tails-arrow-no-gravity",
+  "about": "[проверить] Java 26.1.2 gameplay tails: arrow-no-gravity. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "exclusive": true
+}

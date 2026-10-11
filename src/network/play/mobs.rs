@@ -129,6 +129,11 @@ pub(super) struct ShownMob {
     impulses: u32,
     teleports: u32,
     attr_changes: u32,
+    effect_levels: [i32; 4],
+    /// Броня волка, как показана; перемена шлёт снаряжение, а атрибуты
+    /// следом — на ближайшем такте жизни, кратном трём (`armor_pending`).
+    wolf_armor: Option<i32>,
+    armor_pending: bool,
     gear_version: u32,
     attributes_sent: bool,
 
@@ -142,6 +147,8 @@ pub(super) struct ShownMob {
     /// Наибольшее здоровье, как показано (у волка оно меняется при
     /// приручении — атрибут max_health; чёрный ящик, wolf-tame).
     max_health: f32,
+    /// Сколько выдач эффекта клиент уже видел (свойство 10 уходит заново).
+    effect_gives: u32,
     harness: Option<u8>,
     cargo: Option<Stack>,
 
@@ -230,7 +237,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
     {
         let mut particles = Vec::new();
 
-        super::vitals::push_effect_particles(&mut particles, &mob.vitals.effect_colors());
+        super::vitals::push_effect_particles(&mut particles, &mob.vitals.mob_effect_colors());
         // Ключ и вид уже в записи — оставляем одно значение.
         particles.drain(..1 + encode_varint(TYPE_PARTICLES).len());
         out.insert(5, (10, TYPE_PARTICLES, particles));
@@ -758,12 +765,16 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         impulses: mob.impulses,
         teleports: mob.teleports,
         attr_changes: mob.attr_changes,
+        effect_levels: [0; 4],
+        wolf_armor: mob.tame.armor,
+        armor_pending: false,
         gear_version: mob.horse.gear_version,
         attributes_sent: attributes_at_spawn(mob.kind) || (crate::mob::horse::equine(mob.kind) && mob.horse.explicit != 0),
         modded: modded(mob),
         first: true,
         properties,
         max_health: mob.vitals.max_health,
+        effect_gives: mob.vitals.effect_gives,
         harness: mob.newmobs.harness,
         cargo: mob.newmobs.cargo,
         boss,
@@ -836,7 +847,7 @@ async fn send_max_health(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     body.extend_from_slice(&encode_varint(1));
     body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
     push_f64(&mut body, f64::from(mob.vitals.max_health));
-    push_modifiers(&mut body, None);
+    super::mob_effects::push(&mut body, mob, ATTRIBUTE_MAX_HEALTH, None);
     write_body(stream, body).await
 }
 
@@ -879,7 +890,7 @@ async fn send_horse_attributes(stream: &mut Outgoing<'_>, mob: &Mob, first_order
     for (id, value) in list {
         body.extend_from_slice(&encode_varint(id));
         push_f64(&mut body, value);
-        push_modifiers(&mut body, None);
+        super::mob_effects::push(&mut body, mob, id, None);
     }
 
     write_body(stream, body).await
@@ -887,7 +898,7 @@ async fn send_horse_attributes(stream: &mut Outgoing<'_>, mob: &Mob, first_order
 
 /// Скорость шага в пакете атрибутов: как у вида, но у шалкера, что не
 /// ходит, — 0,7, значение атрибута по умолчанию (чёрный ящик, shulker-stand).
-fn attribute_speed(kind: Kind) -> f64 {
+pub(super) fn attribute_speed(kind: Kind) -> f64 {
     // Чёрный ящик, trader-spawn-despawn: у торговца в пакете 0,7.
     if kind == Kind::WanderingTrader { return 0.7; }
     // Пчела: скорость шага 0,3, летит она по летучей скорости 0,6 (чёрный ящик, bee-sting).
@@ -922,10 +933,10 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
         }
         body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
         push_f64(&mut body, crate::mob::slime::speed(mob.nether.size));
-        push_modifiers(&mut body, None);
+        super::mob_effects::push(&mut body, mob, ATTRIBUTE_MOVEMENT_SPEED, None);
         body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
         push_f64(&mut body, size * size);
-        push_modifiers(&mut body, None);
+        super::mob_effects::push(&mut body, mob, ATTRIBUTE_MAX_HEALTH, None);
 
         return write_body(stream, body).await;
     }
@@ -949,16 +960,7 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     // Пьющая ведьма: модификатор «minecraft:drinking» −0,25; сердитый
     // эндермен — «minecraft:attacking» +0,15; оба — сложением (чёрный ящик,
     // witch-stand, enderman-stare).
-    let modifier = match mob.kind {
-        Kind::Witch if mob.h.drinking > 0 => Some(("minecraft:drinking", -0.25, 0)),
-        Kind::Enderman if mob.h.target.is_some() || mob.newmobs.active => Some(("minecraft:attacking", crate::mob::hostile::ATTACKING_BONUS, 0)),
-        // Детёныш-зомби быстрее: «minecraft:baby» +50 % базы, операция 1
-        // (чёрный ящик, zombie-villager-stand).
-        Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk if mob.is_baby() => Some(("minecraft:baby", 0.5, 1)),
-        _ => None,
-    };
-
-    push_modifiers(&mut body, modifier);
+    super::mob_effects::push(&mut body, mob, ATTRIBUTE_MOVEMENT_SPEED, super::mob_effects::speed_modifier(mob));
 
     if let Some(gear)=&mob.h.trial_gear {
         for (attribute,amount) in [(ATTRIBUTE_ARMOR_TOUGHNESS,crate::mob::trial_gear::bonus(gear,crate::attributes::ARMOR_TOUGHNESS)),(ATTRIBUTE_ARMOR,mob.armor())] {
@@ -976,6 +978,47 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
         body.extend_from_slice(&encode_varint(ATTRIBUTE_OXYGEN_BONUS));
         push_f64(&mut body, 0.0);
         push_modifiers(&mut body, None);
+    }
+    write_body(stream, body).await
+}
+
+/// Правка данных волка (`data modify|merge`): сообщаются все его
+/// атрибуты — здоровье, скорость и, в броне, броня со стойкостью (чёрный ящик,
+/// tails-wolf-armor: на +5 и +38 здоровье 8 и скорость, со второго раза ещё
+/// и «minecraft:armor.body») [проверить: другие мобы].
+async fn send_wolf_reload(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+    let mut body = encode_varint(UPDATE_ATTRIBUTES);
+    let armored = mob.tame.armor.is_some();
+
+    body.extend_from_slice(&encode_varint(mob.entity_id));
+    body.extend_from_slice(&encode_varint(if armored { 4 } else { 2 }));
+    body.extend_from_slice(&encode_varint(ATTRIBUTE_MAX_HEALTH));
+    push_f64(&mut body, f64::from(mob.vitals.max_health));
+    super::mob_effects::push(&mut body, mob, ATTRIBUTE_MAX_HEALTH, None);
+    body.extend_from_slice(&encode_varint(ATTRIBUTE_MOVEMENT_SPEED));
+    push_f64(&mut body, f64::from(attribute_speed(mob.kind) as f32));
+    super::mob_effects::push(&mut body, mob, ATTRIBUTE_MOVEMENT_SPEED, super::mob_effects::speed_modifier(mob));
+    if armored {
+        for (attribute, amount) in [(ATTRIBUTE_ARMOR, 11.0), (ATTRIBUTE_ARMOR_TOUGHNESS, 0.0)] {
+            body.extend_from_slice(&encode_varint(attribute));
+            push_f64(&mut body, 0.0);
+            push_modifiers(&mut body, Some(("minecraft:armor.body", amount, 0)));
+        }
+    }
+    write_body(stream, body).await
+}
+
+/// Атрибуты брони волка: броня 11 и стойкость 0 с модификатором
+/// «minecraft:armor.body»; без брони модификаторов нет.
+async fn send_wolf_armor(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+    let mut body = encode_varint(UPDATE_ATTRIBUTES);
+
+    body.extend_from_slice(&encode_varint(mob.entity_id));
+    body.extend_from_slice(&encode_varint(2));
+    for (attribute, amount) in [(ATTRIBUTE_ARMOR, 11.0), (ATTRIBUTE_ARMOR_TOUGHNESS, 0.0)] {
+        body.extend_from_slice(&encode_varint(attribute));
+        push_f64(&mut body, 0.0);
+        push_modifiers(&mut body, mob.tame.armor.is_some().then_some(("minecraft:armor.body", amount, 0)));
     }
     write_body(stream, body).await
 }
@@ -1382,7 +1425,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         // 0,-0.078 вместе с 18=true на +1, а не на +3; shulker-ai: поворот
         // головы вместе с раскрытием).
         // Лошадь на свойствах слежение вне очереди не гонит (чёрный ящик, horse-jump: 18=34 на +42, сверка на +45).
-        let dirty = !shown.first && !crate::mob::horse::equine(mob.kind) && properties(mob) != shown.properties;
+        let dirty = !shown.first && !crate::mob::horse::equine(mob.kind) && (properties(mob) != shown.properties || mob.vitals.effect_gives != shown.effect_gives);
         let due = mob.ticks % EVERY == 0 || dirty;
 
         if due || impulse {
@@ -1473,11 +1516,12 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         } else {
             // Воздух дельфина уходит заново каждый такт (чёрный ящик water-spawn-all: `1=4800`
             // даже у NoAI, начиная со 2-го такта).
-            now.iter().filter(|entry| !shown.properties.contains(entry) || (mob.kind == Kind::Dolphin && entry.0 == 1)).collect()
+            now.iter().filter(|entry| !shown.properties.contains(entry) || (mob.kind == Kind::Dolphin && entry.0 == 1) || (entry.0 == 10 && mob.vitals.effect_gives != shown.effect_gives)).collect()
         };
 
         send_properties(stream, mob.entity_id, &changed).await?;
         shown.properties = now;
+        shown.effect_gives = mob.vitals.effect_gives;
 
         // Ведьма начала или кончила пить, эндермен рассердился или остыл,
         // шалкер открылся или закрылся: атрибуты (у ведьмы — и рука).
@@ -1517,8 +1561,22 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         let land_gear = (crate::mob::land::rideable(mob.kind) || matches!(mob.kind, Kind::WanderingTrader | Kind::Panda)) && shown.attr_changes != mob.attr_changes;
         let horse_gear = crate::mob::horse::equine(mob.kind) && mob.horse.gear_version != shown.gear_version;
 
-        if shown.first || mob.illager.gear != shown.gear || land_gear || horse_gear || shown.held != mob.small.held {
-            send_mob_equipment(stream, mob, shown.attr_changes != mob.attr_changes).await?;
+        // Броня волка (вики, Wolf Armor): снаряжение уходит сразу, атрибуты
+        // брони — на следующем такте жизни, кратном трём (чёрный ящик,
+        // tails-wolf-armor: надел на 15-м, атрибуты на 18-м) [проверить].
+        let wolf_gear = mob.kind == Kind::Wolf && !shown.first && mob.tame.armor != shown.wolf_armor;
+
+        if mob.kind == Kind::Wolf && shown.armor_pending && !wolf_gear && mob.ticks % 3 == 0 {
+            send_wolf_armor(stream, mob).await?;
+            shown.armor_pending = false;
+        }
+
+        if shown.first || mob.illager.gear != shown.gear || land_gear || horse_gear || shown.held != mob.small.held || wolf_gear {
+            send_mob_equipment(stream, mob, shown.attr_changes != mob.attr_changes || wolf_gear).await?;
+            if wolf_gear {
+                shown.wolf_armor = mob.tame.armor;
+                shown.armor_pending = true;
+            }
             shown.gear = mob.illager.gear;
             shown.gear_version = mob.horse.gear_version;
             shown.held = mob.small.held;
@@ -1544,11 +1602,29 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         // Атрибуты: на третьем такте жизни и после каждой правки данных.
         let attributes_due = if mob.kind == Kind::Wither && mob.wither.built { 1 } else { attributes_at(mob) };
 
-        if (!shown.attributes_sent && mob.ticks >= attributes_due) || mob.attr_changes != shown.attr_changes {
-            send_attributes(stream, mob).await?;
+        let sent_base = (!shown.attributes_sent && mob.ticks >= attributes_due) || mob.attr_changes != shown.attr_changes;
+        if sent_base {
+            if shown.attributes_sent && mob.kind == Kind::Wolf {
+                send_wolf_reload(stream, mob).await?;
+            } else {
+                send_attributes(stream, mob).await?;
+            }
             shown.attributes_sent = true;
             shown.attr_changes = mob.attr_changes;
         }
+
+        let mut changed = super::mob_effects::changed(mob, shown.effect_levels);
+        if sent_base {
+            // Скорость уже включает эффект в основной пачке атрибутов.
+            changed.retain(|a| a.id != ATTRIBUTE_MOVEMENT_SPEED && !(a.id == ATTRIBUTE_MAX_HEALTH
+                && (crate::mob::slime::cube(mob.kind) || (crate::mob::horse::equine(mob.kind) && mob.horse.explicit & 1 != 0))));
+        }
+        if !changed.is_empty() {
+            let mut body = encode_varint(UPDATE_ATTRIBUTES);
+            body.extend_from_slice(&crate::attributes::encode_update(mob.entity_id, &changed));
+            write_body(stream, body).await?;
+        }
+        shown.effect_levels = super::mob_effects::levels(mob);
 
         // Ушибленному скорость уходит ещё раз — в самом конце.
         if impulse {
@@ -1606,12 +1682,16 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         impulses: 0,
         teleports: 0,
         attr_changes: 0,
+        effect_levels: [0; 4],
+        wolf_armor: None,
+        armor_pending: false,
         gear_version: 0,
         attributes_sent: true,
         modded: false,
         first: true,
         properties,
         max_health: 0.0,
+        effect_gives: 0,
         boss: false,
         gear: 0,
         mouth: None,

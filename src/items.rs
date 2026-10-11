@@ -317,6 +317,9 @@ pub struct Items {
 
     changes: Journal<Change>,
     progress_kills: Vec<([u8; 16], &'static str)>,
+
+    /// Эффекты «при смерти» убранных в этом такте трупов (effect_reactions.rs).
+    pub death_reactions: Vec<crate::effect_reactions::Reaction>,
 }
 
 impl Items {
@@ -336,6 +339,7 @@ impl Items {
             xp_delay: std::collections::HashMap::new(),
             changes: Journal::new(),
             progress_kills: Vec::new(),
+            death_reactions: Vec::new(),
         }
     }
 

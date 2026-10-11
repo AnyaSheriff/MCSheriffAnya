@@ -1,0 +1,55 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-8,-1,-8) $(8,-1,8) stone",
+    "fill $(-8,0,-8) $(8,15,8) air",
+    "tp $(bot) $(0.5,0,0.5)",
+    "!hotbar 0",
+    "!wait 10",
+    "setblock $(0,0,2) oak_slab[type=bottom,waterlogged=false]",
+    "tp $(bot) $(0.5,0,0.5) 0 30",
+    "!wait 5",
+    "item replace entity $(bot) weapon.mainhand with water_bucket",
+    "gamemode survival $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 5,
+      "use": true,
+      "hand": 0
+    },
+    {
+      "after": 15,
+      "use": true,
+      "hand": 0
+    }
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..40]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(-8,0,-8) $(8,15,8) air",
+    "fill $(-8,-1,-8) $(8,-1,8) stone",
+    "difficulty peaceful",
+    "!startfly"
+  ],
+  "record_ticks": 100,
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "name": "tails-bucket-use-0",
+  "about": "[проверить] Java 26.1.2 gameplay tails: bucket-use-0. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "exclusive": true
+}

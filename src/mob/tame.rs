@@ -363,11 +363,11 @@ pub fn interact(mob: &mut Mob, who: ([u8; 16], i32), held: Option<&str>, rng: &m
         return Used::Spent;
     }
 
-    // Вики, Wolf Armor: щиток чинит четверть прочности сидящему волку.
+    // Вики, Wolf Armor: щиток чинит 8 единиц прочности сидящему волку.
     if mob.kind == Kind::Wolf && held == Some("armadillo_scute") && mob.tame.ordered_sit
         && let Some(durability) = mob.tame.armor.as_mut().filter(|d| **d < ARMOR_DURABILITY)
     {
-        *durability = (*durability + ARMOR_DURABILITY / 4).min(ARMOR_DURABILITY);
+        *durability = (*durability + 8).min(ARMOR_DURABILITY);
         mob.events.push(Event::Sound { name: "minecraft:item.wolf_armor.repair", volume: 1.0, pitch: 1.0 });
         return Used::Spent;
     }

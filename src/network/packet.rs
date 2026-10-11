@@ -175,13 +175,30 @@ const OUTGOING_LIMIT: usize = 64 * 1024;
 /// (`OUTGOING_LIMIT`). Порядок пакетов прежний; у оригинала пакеты такта
 /// тоже копятся и сбрасываются разом, в конце такта.
 pub struct Outgoing<'a> {
-    stream: &'a mut TcpStream,
+    stream: Transport<'a>,
     buffer: Vec<u8>,
+}
+
+enum Transport<'a> {
+    Tcp(&'a mut TcpStream),
+    #[cfg(test)]
+    Duplex(&'a mut tokio::io::DuplexStream),
+    #[cfg(test)]
+    Capture,
 }
 
 impl<'a> Outgoing<'a> {
     pub fn new(stream: &'a mut TcpStream) -> Self {
-        Self { stream, buffer: Vec::with_capacity(OUTGOING_LIMIT) }
+        Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT) }
+    }
+
+    /// Проверки пакетов без сетевых сокетов и запущенного сервера.
+    #[cfg(test)]
+    pub fn capture() -> Self { Self { stream: Transport::Capture, buffer: Vec::new() } }
+
+    #[cfg(test)]
+    fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
+        Self { stream: Transport::Duplex(stream), buffer: Vec::new() }
     }
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
@@ -201,17 +218,24 @@ impl<'a> Outgoing<'a> {
             return Ok(());
         }
 
-        let written = self.stream.write_all(&self.buffer).await;
-
+        match &mut self.stream {
+            Transport::Tcp(stream) => { stream.write_all(&self.buffer).await?; stream.flush().await?; }
+            #[cfg(test)]
+            Transport::Duplex(stream) => { stream.write_all(&self.buffer).await?; stream.flush().await?; }
+            #[cfg(test)]
+            Transport::Capture => return Ok(()),
+        }
         self.buffer.clear();
-        written?;
-        self.stream.flush().await
+        Ok(())
     }
 
-    /// Сам сокет — для чтения. Перед чтением накопленное надо отправить
-    /// (`flush`): клиент может ждать именно его.
+    /// Сам сокет — для чтения после flush.
     pub fn stream(&mut self) -> &mut TcpStream {
-        self.stream
+        match &mut self.stream {
+            Transport::Tcp(stream) => stream,
+            #[cfg(test)]
+            _ => panic!("проверка не читает сетевой сокет"),
+        }
     }
 
     /// Сколько байт ждёт отправки — для проверок.
@@ -341,12 +365,8 @@ mod tests {
     /// ждут сброса, а прочитанное с той стороны — ровно пакеты по порядку.
     #[tokio::test]
     async fn packets_leave_together_and_in_order() {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let address = listener.local_addr().unwrap();
-        let mut client = TcpStream::connect(address).await.unwrap();
-        let (mut server, _) = listener.accept().await.unwrap();
-
-        let mut out = Outgoing::new(&mut server);
+        let (mut client, mut server) = tokio::io::duplex(OUTGOING_LIMIT * 2);
+        let mut out = Outgoing::duplex(&mut server);
 
         out.send(&[1, 10]).await.unwrap();
         out.send(&[2, 20, 21]).await.unwrap();
@@ -365,12 +385,8 @@ mod tests {
     /// Большой пакет не копится: буфер сбрасывается, как только перерос предел.
     #[tokio::test]
     async fn a_big_packet_goes_out_at_once() {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let address = listener.local_addr().unwrap();
-        let mut client = TcpStream::connect(address).await.unwrap();
-        let (mut server, _) = listener.accept().await.unwrap();
-
-        let mut out = Outgoing::new(&mut server);
+        let (mut client, mut server) = tokio::io::duplex(OUTGOING_LIMIT * 2);
+        let mut out = Outgoing::duplex(&mut server);
         let big = vec![5u8; OUTGOING_LIMIT];
 
         out.send(&big).await.unwrap();

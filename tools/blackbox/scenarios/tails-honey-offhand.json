@@ -1,0 +1,56 @@
+{
+  "name": "tails-honey-offhand",
+  "about": "[проверить] Java 26.1.2 gameplay tails: honey-offhand. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "kill $(bot)",
+    "!wait 20",
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!look 0 0",
+    "!hotbar 0",
+    "!wait 10",
+    "effect give $(bot) minecraft:poison 30 0",
+    "effect give $(bot) minecraft:resistance 30 1 true",
+    "!wait 25",
+    "item replace entity $(bot) weapon.mainhand with stone 64",
+    "item replace entity $(bot) weapon.offhand with honey_bottle 2"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "use": true,
+      "hand": 1
+    }
+  ],
+  "record_ticks": 60,
+  "cleanup": [
+    "fill $(2,0,-70) $(4,3,4) minecraft:air",
+    "fill $(2,-1,-70) $(4,-1,4) minecraft:stone",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "effect clear $(bot)",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly",
+    "kill @e[type=item,distance=..48]",
+    "fill $(-8,0,-8) $(8,15,8) air"
+  ],
+  "track_self": true,
+  "item_components": true,
+  "inventory": true,
+  "exclusive": true,
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ]
+}

@@ -213,6 +213,9 @@ pub struct State {
 
     /// Запал крипера: 0…30.
     pub fuse: i32,
+    /// Завершённый путь бегства пересчитывается через три такта [проверить].
+    pub cat_flee: bool,
+    pub cat_retry: u8,
 
     /// Направление запала для клиента: −1 гаснет, 1 растёт.
     pub swell_dir: i32,
@@ -853,22 +856,34 @@ fn creeper(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &m
 /// Вики, Creeper: «cats and ocelots»; бегство работает и без цели-игрока.
 /// [проверить] точка и скорость бегства.
 fn flee_cat(mob: &mut Mob, view: &dyn View, ctx: &Ctx, grounded: bool) -> bool {
+    // Начатый путь не обрывается на границе радиуса поиска кошки.
+    if mob.h.cat_flee && mob.brain.walking() { return true; }
+    if mob.h.cat_flee {
+        mob.h.cat_flee = false;
+        mob.h.cat_retry = 3;
+    }
     let cat = ctx.mates.iter().filter(|m| matches!(m.kind, Kind::Cat | Kind::Ocelot))
         .filter(|m| dist2(mob, m.x, m.y, m.z) < CAT_AVOID * CAT_AVOID)
         .min_by(|a,b| dist2(mob,a.x,a.y,a.z).total_cmp(&dist2(mob,b.x,b.y,b.z)));
-    let Some(cat) = cat else { return false; };
-    if grounded {
-        mob.brain.repath -= 1;
-        if !mob.brain.walking() || mob.brain.repath <= 0 {
-            let (mut dx, mut dz) = (mob.x-cat.x, mob.z-cat.z);
-            if dx.hypot(dz) < 1e-6 { dx=1.0; dz=0.0; }
-            let length=dx.hypot(dz);
-            let here=mob.cell();
-            let away=ai::settle(view,(here.0+(dx/length*8.0).round() as i32,here.1,here.2+(dz/length*8.0).round() as i32),here.1);
-            mob.brain.go(path::find(view,here,away,path::MAX_NODES),1.2);
-            mob.brain.repath=10;
-        }
+    let Some(cat) = cat else { mob.h.cat_retry = 0; return false; };
+    if !grounded { return true; }
+    if mob.h.cat_retry > 0 { mob.h.cat_retry -= 1; return true; }
+    let (mut dx, mut dz) = (mob.x-cat.x, mob.z-cat.z);
+    if dx.hypot(dz) < 1e-6 { dx=1.0; dz=0.0; }
+    let length=dx.hypot(dz);
+    let here=mob.cell();
+    // Если прямое направление закрыто, пробуем соседние направления от
+    // кошки; точный случайный выбор цели оригинала [проверить].
+    for angle in [0.0f64, std::f64::consts::FRAC_PI_4, -std::f64::consts::FRAC_PI_4] {
+        let (sin, cos) = angle.sin_cos();
+        let away=ai::settle(view,(here.0+((dx*cos-dz*sin)/length*8.0).round() as i32,here.1,here.2+((dx*sin+dz*cos)/length*8.0).round() as i32),here.1);
+        let route=path::find(view,here,away,path::MAX_NODES);
+        if route.is_empty() { continue; }
+        mob.brain.go(route,1.2);
+        mob.h.cat_flee = true;
+        return true;
     }
+    mob.h.cat_retry = 3;
     true
 }
 

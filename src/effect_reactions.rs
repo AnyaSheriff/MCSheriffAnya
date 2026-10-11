@@ -24,6 +24,17 @@ pub fn take(vit: &mut Vitals, dead: bool, at: (f64,f64,f64), height: f64, yaw: f
         infested_hits: std::mem::take(&mut vit.infested_hits) }
 }
 
+/// Реакции на урон фазы сущностей выполняются до публикации этого такта.
+/// take помнит смерть и забирает удары, поэтому второй проход безопасен.
+pub fn mobs(world: &mut World, items: &mut Items, griefing: bool, targets: &[crate::tnt::Target], next_id: &mut dyn FnMut() -> i32, rng: &mut Rng) {
+    let mut reactions = std::mem::take(&mut items.death_reactions);
+    reactions.extend(items.mobs_mut().iter_mut().map(|mob| {
+        let height = mob.size().1;
+        take(&mut mob.vitals, false, (mob.x,mob.y,mob.z), height, mob.yaw, false)
+    }));
+    for reaction in reactions { apply(world,items,reaction,griefing,targets,next_id,rng); }
+}
+
 pub fn infested_count(chance: u32, count: u32) -> usize {
     if chance == 0 { 1 + (count % 2) as usize } else { 0 }
 }
@@ -65,6 +76,9 @@ pub fn apply(world: &mut World, items: &mut Items, r: Reaction, griefing: bool, 
         for _ in 0..count {
             if places.is_empty() { break; }
             let p = places.swap_remove(rng.below(places.len() as u32) as usize);
+            // Событие мира 3018 — рядом с каждой паутиной (чёрный ящик,
+            // tails-effect-weaving: событие на +19, паутина на +20).
+            world.note_level_event(p.0,p.1,p.2,3018,0);
             world.set_block(p.0,p.1,p.2,blocks::state_by_name("cobweb").unwrap_or(AIR));
         }
     }
@@ -131,5 +145,15 @@ mod tests {
         let stone=blocks::state_by_name("stone").unwrap();w.set_block_silently(0,0,0,stone);
         apply(&mut w,&mut items,r,true,&[],&mut || 500,&mut Rng::new(1));
         assert_eq!(w.get_block(0,0,0),stone);
+    }
+
+    #[test]
+    fn death_effects_of_a_mob_wait_for_the_corpse_to_be_removed() {
+        let mut vit = Vitals::new();
+        vit.give_effect(EffectKind::Weaving, 0, 100);
+        let early = take(&mut vit, false, (0.0, 0.0, 0.0), 1.4, 0.0, false);
+        assert!(!early.weaving);
+        let due = take(&mut vit, true, (0.0, 0.0, 0.0), 1.4, 0.0, false);
+        assert!(due.weaving);
     }
 }

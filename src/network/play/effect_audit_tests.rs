@@ -105,11 +105,8 @@ fn absorption_upgrade_expiry_and_health_are_independent() {
 
 #[tokio::test]
 async fn all_potion_payloads_drink_in_both_hands_after_32_ticks() {
-    // Только локальная пара сокетов для Outgoing, без сервера Minecraft.
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let _client = TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
-    let (mut socket, _) = listener.accept().await.unwrap();
-    let mut out = Outgoing::new(&mut socket);
+    // Пакетный буфер в памяти, без сокетов.
+    let mut out = Outgoing::capture();
     let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
         crate::ops::Ops::open(std::path::Path::new("tmp/itemaudit4/no-ops-drink.json")), crate::skins::Settings::default());
     for name in survival::POTIONS.iter().skip(4) {

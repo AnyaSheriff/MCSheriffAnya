@@ -196,18 +196,24 @@ pub(super) fn apply(world: &mut World, at: Pos) -> Option<Vec<Stack>> {
             put(world, upper, with(leaf, "waterlogged", wet(get(world, upper)))?);
         }
         "glow_lichen" => {
-            // Перенос по той же плоскости; огибание углов [проверить].
+            // Вики, Tutorial:Glow Lichen farming: «sides and the top ...
+            // but not the back». Плоскость, внутренний и внешний угол.
             let faces = [("down", (0,-1,0)), ("up", (0,1,0)), ("north", (0,0,-1)), ("south", (0,0,1)), ("west", (-1,0,0)), ("east", (1,0,0))];
             let mut candidates = Vec::new();
             for (face, normal) in faces {
                 if value(state, face) != Some("true") { continue; }
-                for (_, step) in faces {
+                for (side, step) in faces {
                     if step.0 * normal.0 + step.1 * normal.1 + step.2 * normal.2 != 0 { continue; }
                     let next = (x + step.0, y + step.1, z + step.2);
-                    let target = get(world, next);
-                    let support = get(world, (next.0 + normal.0, next.1 + normal.1, next.2 + normal.2));
-                    if blocks::full_cube(support) && (target == AIR || water(target) || (name_of(target) == name && value(target, face) != Some("true"))) {
-                        candidates.push((next, face, target));
+                    let reverse = faces.iter().find(|(_, d)| *d == (-step.0,-step.1,-step.2)).unwrap().0;
+                    for (p, attached, n) in [(at,side,step),(next,face,normal),((next.0+normal.0,next.1+normal.1,next.2+normal.2),reverse,(-step.0,-step.1,-step.2))] {
+                        let target = get(world, p);
+                        let support = get(world, (p.0+n.0,p.1+n.1,p.2+n.2));
+                        if blocks::full_cube(support) && (target == AIR || water(target) || (name_of(target) == name && value(target, attached) != Some("true"))) {
+                            let candidate = (p,attached,target);
+                            if !candidates.contains(&candidate) { candidates.push(candidate); }
+                            break;
+                        }
                     }
                 }
             }
@@ -243,6 +249,17 @@ mod tests {
         w.set_block_silently(0, 1, 0, blocks::state_from_text(plant).unwrap());
         w
     }
+    #[test]
+    fn lichen_wraps_corners_but_plain_vines_do_not_accept_bone_meal() {
+        let mut w=World::in_memory();
+        w.set_block_silently(0,0,0,state_of("stone"));
+        w.set_block_silently(0,1,0,with(state_of("glow_lichen"),"down",true).unwrap());
+        assert!(bone_meal(&mut w,(0,1,0)).is_some());
+        assert!([(1,0,0),(-1,0,0),(0,0,1),(0,0,-1)].iter().any(|&(x,y,z)| name_of(w.get_block(x,y,z))=="glow_lichen"));
+        w.set_block_silently(3,1,0,state_of("vine"));
+        assert!(bone_meal(&mut w,(3,1,0)).is_none());
+    }
+
     #[test]
     fn mushrooms_grow_with_room_and_do_not_overwrite_obstacles() {
         for name in ["brown_mushroom","red_mushroom"] {

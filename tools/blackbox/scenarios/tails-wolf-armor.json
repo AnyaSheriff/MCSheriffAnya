@@ -1,0 +1,79 @@
+{
+  "name": "tails-wolf-armor",
+  "about": "[проверить] Java 26.1.2 gameplay tails: wolf-armor. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "give $(bot) bone 64"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon wolf $(3.5,0,1.5) {NoAI:1b,Tags:[\"itemaudit4\"]}"
+    },
+    {
+      "after": 5,
+      "cmd": "data modify entity @e[tag=itemaudit4,limit=1] Owner set from entity $(bot) UUID"
+    },
+    {
+      "after": 10,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wolf_armor"
+    },
+    {
+      "after": 15,
+      "interact": true
+    },
+    {
+      "after": 25,
+      "cmd": "damage @e[tag=itemaudit4,limit=1] 30 minecraft:player_attack"
+    },
+    {
+      "after": 38,
+      "cmd": "data merge entity @e[tag=itemaudit4,limit=1,distance=..16] {Sitting:1b}"
+    },
+    {
+      "after": 40,
+      "cmd": "item replace entity $(bot) weapon.mainhand with armadillo_scute 4"
+    },
+    {
+      "after": 45,
+      "interact": true
+    },
+    {
+      "after": 60,
+      "cmd": "item replace entity $(bot) weapon.mainhand with shears"
+    },
+    {
+      "after": 65,
+      "interact": true
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[tag=itemaudit4]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "difficulty peaceful"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ]
+}

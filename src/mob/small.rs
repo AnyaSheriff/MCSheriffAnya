@@ -789,7 +789,7 @@ mod tests {
     fn wolf_armor_repair_requires_owner_and_sitting_and_caps_at_64() {
         let mut m=mob(Kind::Wolf); let who=([8;16],2); tame::tame(&mut m,who); m.tame.armor=Some(55);
         assert!(matches!(tame::interact(&mut m,who,Some("armadillo_scute"),&mut Rng::new(1)),tame::Used::Spent));
-        assert_eq!(m.tame.armor,Some(64));
+        assert_eq!(m.tame.armor,Some(63));
         m.tame.armor=Some(10);
         tame::interact(&mut m,([9;16],3),Some("armadillo_scute"),&mut Rng::new(1)); assert_eq!(m.tame.armor,Some(10));
     }

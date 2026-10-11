@@ -468,6 +468,14 @@ async fn run(shared: Arc<Shared>) {
             redstone::settle(&mut world);
             phases.add(3, &mut clock);
 
+            // Урон мобов, стрел и взрывов этого такта тоже запускает реакции
+            // до конца такта (вики, Infested: «takes damage», Oozing: «dies»).
+            {
+                let targets = blast_targets(&shared, dimension);
+                let mut items = shared.items_in(dimension).lock().expect("сущности");
+                crate::effect_reactions::mobs(&mut world, &mut items, shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed), &targets, &mut || shared.next_entity_id(), &mut mob_rng);
+            }
+
             // Игроки видят содержимое хранилищ таким, каким оно стало к фазе
             // сущностей: что воронки перенесут дальше, окна увидят в
             // следующем такте (снято чёрным ящиком, hopper-chain).
@@ -533,7 +541,16 @@ async fn run(shared: Arc<Shared>) {
             phases.report();
         }
 
-        shared.ticks.send_replace(ticks);
+        // Сначала фиксируем рассылку, потом будим подключения. Их поздние
+        // публикации относятся уже к следующему концу такта [проверить].
+        {
+            let _publication = shared.publication.lock().expect("публикация такта");
+            for dimension in Dimension::ALL {
+                shared.world_in(dimension).lock().expect("мир").publish_events();
+            }
+            shared.players.lock().expect("игроки").publish_tick();
+            shared.ticks.send_replace(ticks);
+        }
     }
 }
 
@@ -1179,15 +1196,8 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
 
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
 
-    let reactions: Vec<_> = items.mobs_mut().iter_mut().map(|mob| {
-        let dead = mob.is_dead();
-        let height = mob.size().1;
-        crate::effect_reactions::take(&mut mob.vitals, dead, (mob.x, mob.y, mob.z), height, mob.yaw, false)
-    }).collect();
     let targets: Vec<_> = watchers.iter().map(|p| crate::tnt::Target { entity_id: p.id, x: p.x, y: p.y, z: p.z, sneaking: false }).collect();
-    for reaction in reactions {
-        crate::effect_reactions::apply(world, &mut items, reaction, shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed), &targets, &mut || shared.next_entity_id(), rng);
-    }
+    crate::effect_reactions::mobs(world, &mut items, shared.mob_griefing.load(std::sync::atomic::Ordering::Relaxed), &targets, &mut || shared.next_entity_id(), rng);
 
     for mut mob in loaded {
         mob.entity_id = shared.next_entity_id();

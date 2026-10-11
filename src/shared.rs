@@ -60,6 +60,8 @@ pub struct Shared {
     /// Номер только что закончившегося такта: по нему подключения рассылают
     /// клиентам всё, что случилось за такт, — разом, как у оригинала.
     pub ticks: tokio::sync::watch::Sender<u64>,
+    /// Атомарная публикация связанных звуков и экипировки (арбалет).
+    pub publication: Mutex<()>,
 
     /// Номер такта, который вот-вот начнётся. Действия игроков применяются
     /// к миру по этому сигналу — в начале такта, до его работы: у оригинала
@@ -254,6 +256,7 @@ impl Shared {
             riding: Mutex::new(crate::riding::Riding::new()),
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,
+            publication: Mutex::new(()),
             tick_starts: tokio::sync::watch::channel(0).0,
             waiting_for_tick: Arc::new([std::sync::atomic::AtomicUsize::new(0), std::sync::atomic::AtomicUsize::new(0)]),
             // Номера начинаются с единицы: ноль клиент понимает как «никого».

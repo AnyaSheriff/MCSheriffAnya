@@ -65,8 +65,15 @@ pub(super) fn retaliate(shared: &Shared, player: &mut PlayerState, source: Sourc
         if level <= 0 || vitals::world_random(shared,player.dimension) >= 0.15 * level as f32 { continue; }
         let damage = combat::thorns_damage(level,vitals::world_random(shared,player.dimension));
         let from = (player.x,player.y,player.z);
-        if target_player.as_ref().is_some_and(|m| m.dimension == player.dimension) {
-            shared.world_in(player.dimension).lock().expect("мир").note_player_strike(PlayerStrike {
+        if let Some(member) = target_player.as_ref().filter(|m| m.dimension == player.dimension) {
+            let mut world = shared.world_in(player.dimension).lock().expect("мир");
+            // Звуки шипов у ударившего (чёрный ящик, tails-unbreaking: выстрел из
+            // арбалета в игрока в шипах — «player.hurt» всем, кроме него, и
+            // «thorns.hit» у стрелка).
+            let at = (member.position.x, member.position.y, member.position.z);
+            world.note_sound_player_except(at, "minecraft:entity.player.hurt", 1.0, 1.0, attacker);
+            world.note_sound_player_at(at, "minecraft:enchant.thorns.hit", 1.0, 1.0);
+            world.note_player_strike(PlayerStrike {
                 victim:attacker,attacker:player.entity_id,attacker_uuid:player.uuid,attacker_name:player.name.clone(),
                 from,yaw:player.yaw,damage,source:Source::Thorns,extra_knockback:0.0,weapon:None,
                 disables_shield_ticks:0,breach_scale:1.0,fire_ticks:0,ignores_shield:false,thorns_slots:Vec::new(),effects:Vec::new(),

@@ -1,0 +1,67 @@
+{
+  "name": "tails-debug-stick",
+  "about": "[проверить] Java 26.1.2 gameplay tails: debug-stick. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "setblock $(1,0,1) oak_stairs",
+    "give $(bot) debug_stick"
+  ],
+  "actions": [
+    {
+      "after": 5,
+      "click": [
+        1,
+        0,
+        1
+      ],
+      "face": 1
+    },
+    {
+      "after": 15,
+      "dig": [
+        1,
+        0,
+        1
+      ]
+    },
+    {
+      "after": 25,
+      "click": [
+        1,
+        0,
+        1
+      ],
+      "face": 1
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[tag=itemaudit4]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "difficulty peaceful",
+    "fill $(-8,0,-8) $(8,15,8) air"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ]
+}

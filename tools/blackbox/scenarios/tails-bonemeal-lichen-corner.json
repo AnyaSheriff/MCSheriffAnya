@@ -1,0 +1,90 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-8,-1,-8) $(8,-1,8) stone",
+    "fill $(-8,0,-8) $(8,15,8) air",
+    "tp $(bot) $(0.5,0,0.5)",
+    "!hotbar 0",
+    "!wait 10",
+    "setblock $(0,1,3) stone",
+    "setblock $(0,1,2) glow_lichen[south=true]",
+    "setblock $(1,1,2) stone",
+    "give $(bot) bone_meal 32",
+    "gamemode survival $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 5,
+      "click": [
+        0,
+        1,
+        2
+      ],
+      "face": 2
+    },
+    {
+      "after": 15,
+      "click": [
+        0,
+        1,
+        2
+      ],
+      "face": 2
+    },
+    {
+      "after": 25,
+      "click": [
+        0,
+        1,
+        2
+      ],
+      "face": 2
+    },
+    {
+      "after": 35,
+      "click": [
+        0,
+        1,
+        2
+      ],
+      "face": 2
+    },
+    {
+      "after": 45,
+      "click": [
+        0,
+        1,
+        2
+      ],
+      "face": 2
+    }
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..40]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(-8,0,-8) $(8,15,8) air",
+    "fill $(-8,-1,-8) $(8,-1,8) stone",
+    "difficulty peaceful",
+    "!startfly"
+  ],
+  "record_ticks": 100,
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "name": "tails-bonemeal-lichen-corner",
+  "about": "[проверить] Java 26.1.2 gameplay tails: bonemeal-lichen-corner. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "exclusive": true
+}

@@ -1647,6 +1647,8 @@ pub struct Mob {
     /// Пометка «не исчезать» из бирки или `PersistenceRequired` (вики, Name Tag:
     /// «named mobs do not despawn»).
     pub persistent_tag: bool,
+    /// Метки сущности (`Tags` данных; выбор `@e[tag=…]`).
+    pub tags: Vec<String>,
 
     /// На поводке: у кого (mob/leash.rs).
     pub leash: Option<leash::Holder>,
@@ -1767,6 +1769,7 @@ impl Mob {
             looting: 0,
             name: None,
             persistent_tag: false,
+            tags: Vec::new(),
             leash: None,
             tame: tame::State { variant: tame::default_variant(kind), ..tame::State::default() },
             golem: golem::State::default(),
@@ -4174,6 +4177,15 @@ pub fn step_all(
             mob.events.push(Event::Poof);
         }
     }
+
+    // Эффекты «при смерти» (Oozing, Weaving, Wind Charged) срабатывают, когда
+    // труп убирается, через 20 тактов (чёрный ящик, tails-effect-weaving и
+    // -wind_charged: событие мира на +19 рядом с уходом коровы).
+    let due: Vec<_> = items.mobs_mut().iter_mut().filter(|mob| mob.gone()).map(|mob| {
+        let height = mob.size().1;
+        crate::effect_reactions::take(&mut mob.vitals, true, (mob.x, mob.y, mob.z), height, mob.yaw, false)
+    }).collect();
+    items.death_reactions.extend(due);
 
     items.flush_mob_events(next_id, rng);
     items.remove_mobs(|mob| mob.gone() || mob.h.despawn);

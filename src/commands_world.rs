@@ -1098,7 +1098,7 @@ fn targets(named: &str, source: &Source, shared: &Shared) -> Vec<Target> {
         for mob in items.mobs().iter().filter(|mob| mob.dead_for == 0) {
             let at = (mob.x, mob.y, mob.z);
 
-            if selector.takes(mob.kind.name()) && selector.reaches(origin, at) {
+            if selector.takes_tagged(mob.kind.name(), &mob.tags) && selector.reaches(origin, at) {
                 out.push((distance(origin, at), Target::Mob { entity_id: mob.entity_id, kind: mob.kind, dimension, at }));
             }
         }

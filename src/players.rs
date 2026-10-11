@@ -175,6 +175,11 @@ pub enum Change {
     /// У игрока появился скин (у игрока Bedrock — когда его картинка
     /// загружена в Mojang): остальным надо заново показать его с новым.
     Skin(Member),
+
+    /// Броня игрока поменялась: остальным — Update Attributes с бронёй и
+    /// стойкостью (чёрный ящик, tails-armor-equip-command: на +2 вместе с
+    /// атрибутами самого игрока, стойкость первой).
+    Armor { uuid: [u8; 16], entity_id: i32, entries: Vec<crate::attributes::Attribute> },
 }
 
 /// Поручение подключению игрока — то, что может сделать только оно само.
@@ -301,6 +306,8 @@ pub enum Order {
 pub struct Players {
     shoulders: HashMap<[u8;16],[i32;2]>,
     members: Vec<Member>,
+    /// Снимок рассылки: меняется только перед ticks.send_replace.
+    published: Vec<(Member, Gear)>,
     changes: Journal<Change>,
 
     /// Поручения подключениям: кого выгнать, кого перенести.
@@ -333,6 +340,7 @@ impl Players {
         Self {
             shoulders: HashMap::new(),
             members: Vec::new(),
+            published: Vec::new(),
             changes: Journal::new(),
             orders: HashMap::new(),
             gear: HashMap::new(),
@@ -342,6 +350,14 @@ impl Players {
             sleepers: HashMap::new(),
         }
     }
+
+    /// Чёрный ящик, crossbow-shoot: loading_end и заряженная рука вместе.
+    /// Запись подключения после этой границы видна в следующем такте.
+    pub fn publish_tick(&mut self) {
+        self.published = self.members.iter().map(|member| (member.clone(), self.gear(&member.uuid))).collect();
+    }
+
+    pub fn published(&self) -> &[(Member, Gear)] { &self.published }
 
     /// Добавляет игрока и возвращает его самого (с выданным номером сущности)
     /// и тех, кто был на сервере до него. Номер сущности выдаётся снаружи:
@@ -490,6 +506,11 @@ impl Players {
                 mode: game_mode,
             });
         }
+    }
+
+    /// Сообщает остальным новые атрибуты брони игрока.
+    pub fn armor_changed(&mut self, uuid: &[u8; 16], entity_id: i32, entries: Vec<crate::attributes::Attribute>) {
+        self.changes.push(Change::Armor { uuid: *uuid, entity_id, entries });
     }
 
     /// Запоминает скин игрока и сообщает о нём остальным.
@@ -858,6 +879,21 @@ mod tests {
         players.order(&uuid, Order::Teleport { x: 1.0, y: 2.0, z: 3.0 });
         assert!(woken(&wake));
         assert!(!woken(&wake), "один сигнал — один разбор");
+    }
+
+    #[test]
+    fn observer_snapshot_stays_fixed_while_combat_sees_current_state() {
+        let mut players=Players::new();let (member,_)=joined(&mut players,"Стрелок",1);
+        players.publish_tick();
+        let held=Some(Stack::new(crate::blocks::item_named("crossbow").unwrap(),1));
+        players.set_held(&member.uuid,held);
+        let gear=Gear {health:7.0,..Default::default()};players.set_gear(&member.uuid,gear);
+        assert_eq!(players.published()[0].0.held,None);
+        assert_eq!(players.published()[0].1.health,20.0);
+        assert_eq!(players.by_entity(1).unwrap().1.health,7.0);
+        players.publish_tick();
+        assert_eq!(players.published()[0].0.held,held);
+        assert_eq!(players.published()[0].1.health,7.0);
     }
 
     /// Новичок должен получить список тех, кто уже зашёл, — иначе он их не

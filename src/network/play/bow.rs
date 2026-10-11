@@ -21,6 +21,7 @@ const ENTITY_POSITION_SYNC: i32 = 0x23;
 #[derive(Clone, Copy, Debug)]
 pub(super) struct ShownArrow {
     in_ground: bool,
+    removed: bool,
     /// Нулевой сдвиг ещё не отправлен (стрела скелета в такт выстрела).
     first: bool,
     /// Место, которое клиент знает (сетка 1/4096): от него считается сдвиг.
@@ -33,6 +34,9 @@ pub(super) struct ShownArrow {
     /// Возраст последнего сообщённого перелома полёта: подключение, отставшее
     /// на такт-другой, всё равно его пошлёт.
     resynced: u32,
+    /// Села «полностью» (сдвиг и свойство «в блоке»): такая лежит и шлёт
+    /// нулевой сдвиг раз в 20 тактов.
+    settled: bool,
 }
 
 /// Первая стрела любого типа: руки, панель, рюкзак (вики, Bow).
@@ -183,6 +187,7 @@ fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
         vx: velocity.0,
         vy: velocity.1,
         vz: velocity.2,
+        no_gravity: false,
         owner: player.entity_id,
         owner_uuid: player.uuid,
         owner_name: player.name.clone(),
@@ -527,15 +532,21 @@ fn fire_rockets(shared: &Shared, player: &PlayerState, rocket: &crate::stackdata
 /// скелета (выпущена в ход мобов, ещё не двигалась) — со сдвигом в следующем
 /// такте; приземление узнаёт на такт позже.
 pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
-    let arrows = shared.arrows.lock().expect("стрелы захвачены другим потоком").in_dimension(player.dimension);
+    let (mut arrows, retired) = {
+        let arrows = shared.arrows.lock().expect("стрелы захвачены другим потоком");
+        (arrows.in_dimension(player.dimension), arrows.retired.iter().filter(|a| a.dimension == player.dimension).cloned().collect::<Vec<_>>())
+    };
+    let retired_ids: HashSet<_> = retired.iter().map(|a| a.entity_id).collect();
+    arrows.extend(retired);
     let range = f64::from(shared.properties.view_distance.clamp(2, 10)) * 16.0;
 
     let present: HashSet<i32> = arrows.iter().filter(|arrow| (arrow.x - player.x).abs() <= range && (arrow.z - player.z).abs() <= range).map(|arrow| arrow.entity_id).collect();
     let vanished: Vec<i32> = player.seen_bow_arrows.keys().filter(|id| !present.contains(id)).copied().collect();
 
     for id in vanished {
-        player.seen_bow_arrows.remove(&id);
-        send_remove_entity(stream, id).await?;
+        if player.seen_bow_arrows.remove(&id).is_some_and(|shown| !shown.removed) {
+            send_remove_entity(stream, id).await?;
+        }
     }
 
     for arrow in &arrows {
@@ -548,7 +559,9 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             // миг выстрела (чёрный ящик, pvp-bow: место у стрелка). Увиденная
             // позже — там, где она теперь.
             let ((sx, sy, sz), (svx, svy, svz)) = if arrow.age <= 1 { arrow.start } else { ((arrow.x, arrow.y, arrow.z), (arrow.vx, arrow.vy, arrow.vz)) };
-            let (yaw, pitch) = Arrow { vx: svx, vy: svy, vz: svz, ..arrow.clone() }.angles();
+            // Призванная командой появляется с поворотом 0/0, а не по Motion
+            // (чёрный ящик, tails-arrow-no-gravity: Motion по x, yaw=0).
+            let (yaw, pitch) = if arrow.owner == 0 && !arrow.is_mob_shot() && arrow.age <= 1 && arrow.rot.is_some() { (0.0, 0.0) } else { Arrow { vx: svx, vy: svy, vz: svz, ..arrow.clone() }.angles() };
             let mut body = encode_varint(ADD_ENTITY);
 
             body.extend_from_slice(&encode_varint(arrow.entity_id));
@@ -586,12 +599,12 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
                 write_body(stream, body).await?;
             }
 
-            let shown = ShownArrow { in_ground: false, first: arrow.age == 0, grid: grid_of((sx, sy, sz)), yaw: cart_angle(yaw), pitch: cart_angle(pitch), flags: arrow.flags(), resynced: arrow.resync.map_or(0, |(due, ..)| due) };
+            let shown = ShownArrow { in_ground: false, removed: retired_ids.contains(&arrow.entity_id), first: arrow.age == 0, grid: grid_of((sx, sy, sz)), yaw: cart_angle(yaw), pitch: cart_angle(pitch), flags: arrow.flags(), resynced: arrow.resync.map_or(0, |(due, ..)| due), settled: false };
 
             // Нулевой сдвиг с поворотом: сразу за появлением, если стрела уже
             // ходила (чёрный ящик, arrow-pickup: «arrow сдвиг 0,0,0»), иначе —
             // в следующем такте (чёрный ящик, skeleton-arrow).
-            if !shown.first {
+            if !shown.first && !retired_ids.contains(&arrow.entity_id) {
                 send_zero_move(stream, arrow.entity_id, &shown).await?;
 
                 // Свойства, заданные после создания, слежение шлёт ещё раз
@@ -605,10 +618,20 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
                 }
             }
 
+            if retired_ids.contains(&arrow.entity_id) {
+                send_remove_entity(stream, arrow.entity_id).await?;
+            }
             player.seen_bow_arrows.insert(arrow.entity_id, shown);
             continue;
         };
 
+        if shown.removed { continue; }
+        if retired_ids.contains(&arrow.entity_id) {
+            send_remove_entity(stream, arrow.entity_id).await?;
+            shown.removed = true;
+            player.seen_bow_arrows.insert(arrow.entity_id, shown);
+            continue;
+        }
         if shown.first {
             send_zero_move(stream, arrow.entity_id, &shown).await?;
             shown.first = false;
@@ -667,7 +690,14 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             // на 9-м такте скорость, сдвиг и «в блоке»).
             // Отскочившая стрела — тоже (wither-half-armor: на +12 скорость,
             // сдвиг с поворотом и «в блоке»).
-            let full = arrow.age <= LANDING_SYNC_AGE || arrow.trident.is_some() || arrow.resync.is_some();
+            // Короткий полёт (сдвиг от известного клиенту места умещается в
+            // short) садится так же полно в любом возрасте (чёрный ящик,
+            // tails-arrow-pointblank: на +7 скорость, сдвиг, «в блоке», потом
+            // нулевой сдвиг каждые 20 тактов; ominous-projectiles: на +5)
+            // [проверить: дальний полёт, skeleton-arrow на +17, — одна скорость].
+            let landing = grid_of((arrow.x, arrow.y, arrow.z));
+            let near = [landing.0 - shown.grid.0, landing.1 - shown.grid.1, landing.2 - shown.grid.2].iter().all(|value| i16::try_from(*value).is_ok());
+            let full = arrow.age <= LANDING_SYNC_AGE || arrow.trident.is_some() || arrow.resync.is_some() || (arrow.in_ground && near);
 
             if arrow.in_ground && full {
                 send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), arrow.facing()).await?;
@@ -685,11 +715,26 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             }
 
             shown.in_ground = arrow.in_ground;
+            shown.settled = arrow.in_ground && full;
         } else if !arrow.in_ground && arrow.lived().is_multiple_of(ARROW_SYNC) && arrow.lived() > 0 {
             // Раз в 20 тактов — сверка места (у оригинала так у всех
             // сущностей; замерено только до 18-го такта) [проверить].
-            send_position_sync(stream, arrow).await?;
-        } else if arrow.in_ground && (arrow.trident.is_some() || arrow.resync.is_some()) && arrow.lived().is_multiple_of(ARROW_SYNC) {
+            // Короткий путь за 20 тактов уходит скоростью и сдвигом, длинный —
+            // полной сверкой, в которой скорость уже есть (чёрный ящик,
+            // tails-arrow-no-gravity: на +20, +40, … скорость и сдвиг 0,9 блока).
+            let (place, velocity) = arrow.before_step();
+            let landing = grid_of(place);
+            let near = [landing.0 - shown.grid.0, landing.1 - shown.grid.1, landing.2 - shown.grid.2].iter().all(|value| i16::try_from(*value).is_ok());
+
+            if near {
+                let mut body = encode_varint(ENTITY_VELOCITY);
+
+                body.extend_from_slice(&encode_varint(arrow.entity_id));
+                types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
+                write_body(stream, body).await?;
+            }
+            send_move_to(stream, arrow, &mut shown, place, arrow.facing()).await?;
+        } else if arrow.in_ground && (arrow.trident.is_some() || arrow.resync.is_some() || shown.settled) && arrow.lived().is_multiple_of(ARROW_SYNC) {
             // Лежащий трезубец раз в 20 тактов шлёт нулевой сдвиг с поворотом
             // через 20, 40, 60 тактов после броска (чёрный ящик, trident-throw:
             // +20, +40, +60); у стрел так не бывает (skeleton-arrow), кроме
@@ -717,13 +762,19 @@ const LANDING_SYNC_AGE: u32 = 2;
 fn arrow_data(arrow: &Arrow) -> Option<Vec<u8>> {
     let foil = arrow.trident.is_some_and(|trident| !trident.extras().enchants.is_empty());
 
-    if arrow.flags() == 0 && arrow.pierce_left <= 0 && arrow.loyalty <= 0 && !foil && arrow.effects.is_empty() {
+    if arrow.flags() == 0 && arrow.pierce_left <= 0 && arrow.loyalty <= 0 && !foil && arrow.effects.is_empty() && !arrow.no_gravity {
         return None;
     }
 
     let mut data = encode_varint(SET_ENTITY_DATA);
 
     data.extend_from_slice(&encode_varint(arrow.entity_id));
+
+    if arrow.no_gravity {
+        data.push(5);
+        data.extend_from_slice(&encode_varint(PROPERTY_BOOLEAN));
+        data.push(1);
+    }
 
     if arrow.flags() != 0 {
         data.push(ARROW_FLAGS);

@@ -1,0 +1,286 @@
+{
+  "name": "tails-effect-infested",
+  "about": "[проверить] Java 26.1.2 gameplay tails: effect-infested. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule random_tick_speed 0",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "!wait 5",
+    "summon cow $(1.5,0,1.5) {NoAI:1b,Tags:[\"itemaudit3\"]}",
+    "effect give @e[tag=itemaudit3] infested 60"
+  ],
+  "actions": [
+    {
+      "after": 12,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 24,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 36,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 48,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 60,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 72,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 84,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 96,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 108,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 120,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 132,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 144,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 156,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 168,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 180,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 192,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 204,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 216,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 228,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 240,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 252,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 264,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 276,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 288,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 300,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 312,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 324,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 336,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 348,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 360,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 372,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 384,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 396,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 408,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 420,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 432,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 444,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 456,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 468,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 480,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 492,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 504,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 516,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 528,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 540,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 552,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 564,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 576,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 588,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 600,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 612,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 624,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 636,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 648,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 660,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 672,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 684,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 696,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 708,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    },
+    {
+      "after": 720,
+      "cmd": "damage @e[tag=itemaudit3,limit=1,distance=..32] 0.1 minecraft:generic"
+    }
+  ],
+  "record_ticks": 760,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[type=silverfish,distance=..32]",
+    "kill @e[tag=itemaudit3]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "gamerule random_tick_speed 3",
+    "difficulty peaceful",
+    "kill @e[type=experience_orb,distance=..32]"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ]
+}

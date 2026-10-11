@@ -878,6 +878,7 @@ fn summon_projectile(kind: &str, rest: &[&str], source: &Source, shared: &Shared
         // через такт после призыва), стрелка у неё нет.
         arrow.shooter = crate::arrow::Shooter::Player;
         arrow.fresh = false;
+        arrow.no_gravity = no_gravity(data);
         // Призванная смотрит туда, куда велит поворот (0/0), а не по Motion,
         // и доворачивается к полёту на пятую часть за такт (wither-half-armor:
         // наклон −1 из 256 к удару, а не −2).
@@ -1051,6 +1052,13 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     }
     if let Some(on) = flag_in(data, "NoAI:") {
         mob.no_ai = on;
+    }
+
+    // Метки сущности: `Tags:["a","b"]` (вики, Entity format).
+    if let Some(rest) = data.split("Tags:[").nth(1)
+        && let Some(list) = rest.split(']').next()
+    {
+        mob.tags = list.split('"').skip(1).step_by(2).map(str::to_string).collect();
     }
 
     // Имя (`CustomName:"…"`, простой текст) и «не исчезать» (вики, Entity format).
@@ -1405,7 +1413,7 @@ fn data_command(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     });
     for index in order {
         let mob = &mut items.mobs_mut()[index];
-        if left > 0 && chosen.takes(mob.kind.name()) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z)) {
+        if left > 0 && chosen.takes_tagged(mob.kind.name(), &mob.tags) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z)) {
             apply_mob_data(mob, data);
             // Правка данных — как перезагрузка из NBT: голова смотрит по телу,
             // клиентам уходят атрибуты (чёрный ящик, cow-physics).
@@ -1435,7 +1443,7 @@ fn teleport_mobs(who: &str, place: &[&str], source: &Source, shared: &Shared) ->
     let mut moved = 0;
 
     for mob in items.mobs_mut() {
-        if left > 0 && chosen.takes(mob.kind.name()) && chosen.reaches(origin, (mob.x, mob.y, mob.z)) {
+        if left > 0 && chosen.takes_tagged(mob.kind.name(), &mob.tags) && chosen.reaches(origin, (mob.x, mob.y, mob.z)) {
             (mob.x, mob.y, mob.z) = (x, y, z);
             (mob.vx, mob.vy, mob.vz) = (0.0, 0.0, 0.0);
             mob.on_ground = false;
@@ -1627,7 +1635,7 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let mut discarded = Vec::new();
 
     for mob in items.mobs_mut() {
-        if left > 0 && chosen.takes(mob.kind.name()) && near((mob.x, mob.y, mob.z)) && !mob.is_dead() {
+        if left > 0 && chosen.takes_tagged(mob.kind.name(), &mob.tags) && near((mob.x, mob.y, mob.z)) && !mob.is_dead() {
             // Дракона и кристалл команда убирает сразу — без анимации смерти,
             // опыта и взрыва (чёрный ящик, dragon-death: «убран» в тот же такт).
             if matches!(mob.kind, crate::mob::Kind::EnderDragon | crate::mob::Kind::EndCrystal) {
@@ -1689,6 +1697,27 @@ fn difficulty(parts: &[&str], shared: &Shared) -> Answer {
     Answer::saying(format!("Сложность: {}", parts[0]))
 }
 
+/// `effect clear @e[…] [эффект]`: снять эффекты с мобов, выбранных селектором
+/// (вики, Commands/effect: «clear … removes all or a specific effect»).
+fn clear_mob_effects(who: &str, kind: Option<crate::survival::EffectKind>, source: &Source, shared: &Shared) -> Option<Answer> {
+    if !who.starts_with("@e") {
+        return None;
+    }
+    let chosen = Selector::parse(who)?;
+    let (x, y, z) = origin_of(source, shared);
+    let mut items = shared.items_in(dimension_of(source, shared)).lock().expect("предметы захвачены другим потоком");
+    let mut cleared = 0;
+
+    for mob in items.mobs_mut() {
+        if chosen.takes_tagged(mob.kind.name(), &mob.tags) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z)) {
+            cleared += 1;
+            mob.vitals.remove_effects(kind);
+        }
+    }
+
+    Some(Answer::saying(format!("Эффекты сняты: {} сущностей", cleared)))
+}
+
 /// `effect give <игрок> <эффект> [секунды] [уровень] [скрыть]` и
 /// `effect clear <игрок>`. Считаются голод, насыщение, сила, слабость, скорость, замедление и сопротивление — остальным вредно
 /// не быть [проверить].
@@ -1716,7 +1745,7 @@ fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
                 let mut changed = 0;
 
                 for mob in items.mobs_mut() {
-                    if chosen.takes(mob.kind.name()) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z))
+                    if chosen.takes_tagged(mob.kind.name(), &mob.tags) && chosen.reaches((x, y, z), (mob.x, mob.y, mob.z))
                         && mob.accepts_effect(kind)
                     {
                         mob.vitals.give_effect_shown(crate::survival::Effect { kind, amplifier: amplifier.clamp(0, 255), ticks_left: ticks, ambient: false, visible: !hidden, show_icon: !hidden });
@@ -1753,6 +1782,9 @@ fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             let Some(kind) = crate::survival::EffectKind::from_name(name) else {
                 return Answer::saying(format!("Такого эффекта пока нет: {}", name));
             };
+            if let Some(answer) = clear_mob_effects(who, Some(kind), source, shared) {
+                return answer;
+            }
             let targets = find_targets(who, source, shared);
             let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
@@ -1763,6 +1795,9 @@ fn effect(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             Answer::saying(format!("Эффект {} снят: {}", name, names_of(&targets)))
         }
         ["clear", who] => {
+            if let Some(answer) = clear_mob_effects(who, None, source, shared) {
+                return answer;
+            }
             let targets = find_targets(who, source, shared);
             let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
@@ -1939,6 +1974,10 @@ pub(crate) struct Selector {
     /// — все, кроме игроков; `None` — любые.
     pub(crate) kind: Option<(bool, String)>,
 
+    /// Метки `tag=x` / `tag=!x` (вики, Target selectors): у мобов они
+    /// берутся из `Tags` данных; пустое имя — «без меток» / «с любой».
+    tags: Vec<(bool, String)>,
+
     /// Не дальше скольких блоков от того, кто ввёл команду.
     pub(crate) distance: Option<f64>,
 
@@ -1948,7 +1987,7 @@ pub(crate) struct Selector {
 
 impl Selector {
     pub(crate) fn parse(text: &str) -> Option<Selector> {
-        let mut chosen = Selector { kind: None, distance: None, limit: text.starts_with("@n").then_some(1) };
+        let mut chosen = Selector { kind: None, tags: Vec::new(), distance: None, limit: text.starts_with("@n").then_some(1) };
 
         let inner = match text {
             "@e" | "@n" => return Some(chosen),
@@ -1958,6 +1997,10 @@ impl Selector {
         for pair in split_selector_arguments(inner) {
             // Метки, команды и счёт: у мобов их у нас нет (commands_score).
             let (key, value) = pair.split_once('=')?;
+            if key == "tag" {
+                chosen.tags.push(match value.strip_prefix('!') { Some(tag) => (false, tag.to_string()), None => (true, value.to_string()) });
+                continue;
+            }
             let mut board = crate::commands_score::BoardFilter::default();
             if board.take(key, value)? {
                 if !board.matches_entity() {
@@ -1987,12 +2030,23 @@ impl Selector {
         Some(chosen)
     }
 
-    /// Подходит ли сущность такого вида.
+    /// Подходит ли сущность такого вида без меток (предметы, стрелы и прочее).
     pub(crate) fn takes(&self, kind: &str) -> bool {
-        match &self.kind {
+        self.takes_tagged(kind, &[])
+    }
+
+    /// Подходит ли моб: вид и метки.
+    pub(crate) fn takes_tagged(&self, kind: &str, tags: &[String]) -> bool {
+        let kind_ok = match &self.kind {
             Some((wanted, name)) => (name == kind) == *wanted,
             None => true,
-        }
+        };
+
+        kind_ok && self.tags.iter().all(|(wanted, tag)| {
+            let has = if tag.is_empty() { !tags.is_empty() } else { tags.iter().any(|known| known == tag) };
+
+            if tag.is_empty() { has != *wanted } else { has == *wanted }
+        })
     }
 
     /// Достаточно ли близко сущность.

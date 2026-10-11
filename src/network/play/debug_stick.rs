@@ -11,8 +11,13 @@ fn cycle(state: i32, data: &mut crate::stackdata::Data, select: bool, reverse: b
     if block.properties.is_empty() { return None; }
     let index = if select { index.map(|i| next(i, block.properties.len())).unwrap_or(if reverse { block.properties.len()-1 } else { 0 }) } else { index.unwrap_or(0) };
     let property = &block.properties[index];
-    let selected = data.debug_properties.get_or_insert_with(Vec::new);
-    selected.retain(|(k,_)| *k != key); selected.push((key, property.name.to_string())); selected.sort();
+    // Выбор запоминает только удар; щелчок без выбора меняет первое свойство
+    // и в предмет ничего не пишет (чёрный ящик, tails-debug-stick: на +0
+    // изменение без обновления слота, запись «facing» — после удара).
+    if select {
+        let selected = data.debug_properties.get_or_insert_with(Vec::new);
+        selected.retain(|(k,_)| *k != key); selected.push((key, property.name.to_string())); selected.sort();
+    }
     let value = block.value(state, property.name)?;
     let changed = if select { state } else {
         let index = property.values.iter().position(|v| *v == value)?;
@@ -21,7 +26,7 @@ fn cycle(state: i32, data: &mut crate::stackdata::Data, select: bool, reverse: b
     Some((changed, format!("{}: {}", property.name, block.value(changed, property.name)?)))
 }
 
-pub(super) fn interact(shared: &Shared, player: &mut PlayerState, at: (i32,i32,i32), select: bool, sequence: i32) -> Option<Reaction> {
+pub(super) fn interact(shared: &Shared, player: &mut PlayerState, at: (i32,i32,i32), face: i32, select: bool, sequence: i32) -> Option<Reaction> {
     let stack = player.inventory.held().filter(|s| blocks::item_name(s.item) == Some("debug_stick"))?;
     if !crate::command_block::may_edit(shared, &player.uuid, player.game_mode) {
         return (!select).then(|| Reaction::accepted(sequence));
@@ -31,11 +36,19 @@ pub(super) fn interact(shared: &Shared, player: &mut PlayerState, at: (i32,i32,i
     let mut answer = Reaction::accepted(sequence);
     if let Some((state, text)) = cycle(world.get_block(at.0,at.1,at.2), &mut data, select, player.sneaking) {
         if !select { world.set_debug_state(at, state); }
-        let slot = player.inventory.selected_slot();
-        player.inventory.set(slot, Some(stack.with_extras(data))); answer.slots.push(slot);
+        if select {
+            let slot = player.inventory.selected_slot();
+            player.inventory.set(slot, Some(stack.with_extras(data))); answer.slots.push(slot);
+        } else {
+            // Щелчок: блок, клетка за гранью и блок ещё раз (чёрный ящик,
+            // tails-debug-stick: «блок, воздух над ним, блок»).
+            let (bx, by, bz) = offset_towards(at.0, at.1, at.2, face);
+            world.tell_directly(at.0, at.1, at.2);
+            world.tell_directly(bx, by, bz);
+        }
         let mut body = encode_varint(SYSTEM_CHAT); push_text_component(&mut body, &text); body.push(1); answer.packets.push(body);
     }
-    answer.confirm.push(at);
+    if select { answer.confirm.push(at); }
     Some(answer)
 }
 
@@ -70,12 +83,12 @@ mod authorization_tests {
         shared.world_in(p.dimension).lock().unwrap().set_block(at.0,at.1,at.2,state);
         shared.ops.lock().unwrap().take_away(Some(&p.uuid), &p.name);
         p.game_mode=GAME_MODE_CREATIVE;
-        interact(&shared,&mut p,at,false,0);
+        interact(&shared,&mut p,at,1,false,0);
         assert_eq!(shared.world_in(p.dimension).lock().unwrap().get_block(at.0,at.1,at.2),state);
         shared.ops.lock().unwrap().give(&p.uuid,&p.name,2);
-        p.game_mode=GAME_MODE_SURVIVAL;interact(&shared,&mut p,at,false,0);
+        p.game_mode=GAME_MODE_SURVIVAL;interact(&shared,&mut p,at,1,false,0);
         assert_eq!(shared.world_in(p.dimension).lock().unwrap().get_block(at.0,at.1,at.2),state);
-        p.game_mode=GAME_MODE_CREATIVE;interact(&shared,&mut p,at,false,0);
+        p.game_mode=GAME_MODE_CREATIVE;interact(&shared,&mut p,at,1,false,0);
         let changed=shared.world_in(p.dimension).lock().unwrap().get_block(at.0,at.1,at.2);
         assert_ne!(changed,state);assert_eq!(blocks::block_at_state(changed),Some("oak_log"));
         shared.ops.lock().unwrap().take_away(Some(&p.uuid), &p.name);

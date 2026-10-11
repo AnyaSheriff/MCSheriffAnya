@@ -693,6 +693,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn wave1_scenario_caged_villager_claims_composter() {
+        // Та же клетка, что tools/blackbox/scenarios/raid-start-wave1.json.
+        struct Pad;
+        impl View for Pad {
+            fn block(&self, x:i32,y:i32,z:i32)->i32 {
+                let name=if y==0 { "stone" }
+                    else if (x,y,z)==(3,1,-3) { "composter" }
+                    else if ((1..=2).contains(&y) && matches!((x,z),(1,-3)|(2,-2)|(2,-4)))
+                        || matches!((x,y,z),(3,2,-3)|(2,3,-3)) { "glass" } else { "air" };
+                crate::blocks::state_by_name(name).unwrap()
+            }
+            fn loaded(&self,_x:i32,_z:i32)->bool { true }
+        }
+        let mut villager=Mob::new(1,Kind::Villager,(2.5,1.0,-2.5));
+        let mut rng=Rng::new(5);
+        for clock in 6000..6200 { crate::villager::step(&mut villager,&Pad,clock,&[],&mut rng); }
+        assert_eq!(villager.villager.job_site,Some((3,1,-3)));
+        assert!(in_village(&[villager.villager.job_site.unwrap()],(0.5,1.0,0.5)));
+    }
+
+    #[test]
     fn waves_follow_difficulty() {
         assert_eq!(waves_for(1), 3);
         assert_eq!(waves_for(2), 5);

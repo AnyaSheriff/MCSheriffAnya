@@ -1,0 +1,50 @@
+{
+  "name": "tails-effect-oozing",
+  "about": "[проверить] Java 26.1.2 gameplay tails: effect-oozing. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule random_tick_speed 0",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "!wait 5",
+    "summon cow $(1.5,0,1.5) {NoAI:1b,Tags:[\"itemaudit3\"]}",
+    "effect give @e[tag=itemaudit3] oozing 60"
+  ],
+  "actions": [
+    {
+      "after": 10,
+      "cmd": "damage @e[tag=itemaudit3,limit=1] 100 minecraft:generic"
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[type=slime,distance=..32]",
+    "kill @e[tag=itemaudit3]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "gamerule random_tick_speed 3",
+    "difficulty peaceful",
+    "kill @e[type=experience_orb,distance=..32]"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ]
+}

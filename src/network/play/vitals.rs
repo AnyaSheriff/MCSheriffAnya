@@ -275,6 +275,8 @@ pub(super) struct Net {
     pub(super) slot_update: Option<i32>,
     /// Слоты, которые сервер поменял сам (износ вещей) и которые надо показать клиенту.
     pub(super) slots_dirty: Vec<i32>,
+    /// Атрибуты брони, разосланные игроку в этом такте: их увидят и остальные.
+    pub(super) armor_out: Vec<crate::attributes::Attribute>,
     /// Слоты, поменявшиеся в такте сущности, которые клиенту уходят
     /// следующим кругом (чёрный ящик, crossbow-shoot: зарядка на +25, ячейки
     /// арбалета и стрел — на +26).
@@ -371,6 +373,7 @@ impl Net {
             spin_from: (0.0, 0.0, 0.0),
             slot_update: None,
             slots_dirty: Vec::new(),
+            armor_out: Vec::new(),
             slots_later: Vec::new(),
             respawn: false,
             died_at: None,
@@ -994,6 +997,7 @@ pub(super) fn tick_crossbow(shared: &Shared, player: &mut PlayerState, now: u64)
     let Some(Using { since, hand, kind: UseKind::Crossbow { quick_charge } }) = player.net.using else {
         return;
     };
+    let _publication = shared.publication.lock().expect("публикация арбалета");
     let held = now.saturating_sub(since) as u32;
 
     if let Some((name, volume)) = crate::combat::crossbow_loading_sound(held, quick_charge) {
@@ -1011,7 +1015,7 @@ pub(super) fn tick_crossbow(shared: &Shared, player: &mut PlayerState, now: u64)
     // crossbow-shoot: экипировка на +25 вместе с loading_end).
     if held == crate::combat::crossbow_charge_ticks(quick_charge) {
         super::bow::crossbow_load(player, hand);
-        super::publish_player(shared, player);
+        super::publish_player_inner(shared, player);
     }
 }
 
@@ -1407,6 +1411,12 @@ async fn sync_attributes(stream: &mut Outgoing<'_>, player: &mut PlayerState, no
     let mut body = encode_varint(UPDATE_ATTRIBUTES);
 
     body.extend_from_slice(&crate::attributes::encode_update(player.entity_id, &changed));
+
+    // Броню и стойкость видят и остальные игроки; у них стойкость первая.
+    let mut armor: Vec<_> = changed.iter().filter(|a| a.id == crate::attributes::ARMOR || a.id == crate::attributes::ARMOR_TOUGHNESS).cloned().collect();
+
+    armor.sort_by_key(|a| a.id != crate::attributes::ARMOR_TOUGHNESS);
+    player.net.armor_out = armor;
     write_body(stream, body).await
 }
 
@@ -2129,7 +2139,7 @@ pub(super) fn blasted(player: &mut PlayerState, push: (f64, f64, f64)) {
 /// Такт здоровья игрока: стадии A–D (см. начало файла).
 pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     let entity = player.entity_id;
-    let tick_now = *shared.ticks.borrow();
+    let tick_now = player.publication.as_ref().map_or_else(|| *shared.ticks.borrow(), |p| p.tick);
 
     tick_spin(shared, player, tick_now);
     let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
@@ -2270,6 +2280,12 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     let now = tick_now;
 
     sync_attributes(stream, player, now).await?;
+
+    if !player.net.armor_out.is_empty() {
+        let entries = std::mem::take(&mut player.net.armor_out);
+
+        shared.players.lock().expect("игроки").armor_changed(&player.uuid, player.entity_id, entries);
+    }
     crate::commands_world::publish_attributes(shared, &player.uuid, &player.attrs);
 
     if std::mem::take(&mut player.net.velocity_due) {
@@ -2291,7 +2307,12 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         send_container_slot(stream, player, slot).await?;
     }
 
-    for slot in std::mem::take(&mut player.net.slots_dirty) {
+    // Окно рассылает изменения по возрастанию номеров мест (чёрный ящик,
+    // tails-honey-offhand: пустая бутылка в 37 раньше мёда в 45).
+    let mut dirty = std::mem::take(&mut player.net.slots_dirty);
+
+    dirty.sort_unstable();
+    for slot in dirty {
         send_container_slot(stream, player, slot).await?;
     }
 
@@ -2318,12 +2339,8 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         player.net.pin = Some(medium_step(pinned, player.net.in_lava, player.net.in_water));
     }
 
-    // Бой для нападающих: неуязвимость и щит (players.rs, CombatView).
-    {
-        let gear = player.gear();
-
-        shared.players.lock().expect("список игроков захвачен другим потоком").set_gear(&player.uuid, gear);
-    }
+    // Бой и экипировка публикуются вместе со звуком надевания.
+    super::publish_player(shared, player);
 
     // D. Set Health.
     let vit = &player.vit;
@@ -2880,9 +2897,18 @@ async fn finish_drinking(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
         clear_effects(stream, player, None).await?;
     } else if drink == Drink::Honey {
         player.vit.eat(6, 1.2);
+        // Вики, Honey Bottle: «unique sound»; после него — отрыжка, как у еды
+        // (чёрный ящик, tails-honey-offhand: оба звука до снятия яда).
+        let at = (player.x, player.y, player.z);
+        let (a, b, c) = {
+            let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
+
+            (world.random_unit(), world.random_unit(), world.random_unit())
+        };
+
+        send_sound_at(stream, "minecraft:item.honey_bottle.drink", SOUND_PLAYERS, at, 1.0, 1.0 + (a - b) * 0.4).await?;
+        send_sound_at(stream, "minecraft:entity.player.burp", SOUND_PLAYERS, at, 0.5, c * 0.1 + 0.9).await?;
         clear_effects(stream, player, Some(survival::EffectKind::Poison)).await?;
-        // Вики, Honey Bottle: «unique sound»; звук окончания [проверить].
-        send_sound_at(stream, "minecraft:item.honey_bottle.drink", SOUND_PLAYERS, (player.x, player.y, player.z), 1.0, 1.0).await?;
     }
 
     Ok(())
@@ -3381,10 +3407,8 @@ mod itemaudit3_tests {
         }
     }
     async fn eat(name: &str, hand: i32, creative: bool) -> PlayerState {
-        // Локальная пара сокетов для пакетного буфера, без Minecraft-сервера.
-        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let _client=TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
-        let (mut server,_)=listener.accept().await.unwrap();let mut out=Outgoing::new(&mut server);
+        // Пакетный буфер в памяти, без сокетов.
+        let mut out = Outgoing::capture();
         let shared=shared();let mut p=player(name,hand);
         if creative {p.game_mode=GAME_MODE_CREATIVE;}
         assert!(start_eating(&mut p,hand));
@@ -3424,9 +3448,7 @@ mod itemaudit3_tests {
     }
     #[tokio::test]
     async fn bad_omen_converts_at_visible_waiting_trial_and_preserves_longer_omen() {
-        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let _client=TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
-        let (mut server,_)=listener.accept().await.unwrap();let mut out=Outgoing::new(&mut server);
+        let mut out = Outgoing::capture();
         let shared=shared();waiting_trial(&shared);let mut p=player("apple",0);
         p.vit.give_effect(survival::EffectKind::BadOmen,2,20);
         {let mut w=shared.world_in(p.dimension).lock().unwrap();for y in 0..=3 {w.set_block_silently(2,y,0,blocks::state_by_name("stone").unwrap());}}
@@ -3440,9 +3462,7 @@ mod itemaudit3_tests {
     }
     #[tokio::test]
     async fn trial_omen_marks_waiting_spawner_without_consuming_effect() {
-        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let _client=TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
-        let (mut server,_)=listener.accept().await.unwrap();let mut out=Outgoing::new(&mut server);
+        let mut out = Outgoing::capture();
         let shared=shared();waiting_trial(&shared);let mut p=player("apple",0);
         p.vit.give_effect(survival::EffectKind::TrialOmen,0,300);
         trial_omen(&mut out,&shared,&mut p,2).await.unwrap();
@@ -3451,9 +3471,7 @@ mod itemaudit3_tests {
     }
     #[tokio::test]
     async fn ominous_bottle_drinks_then_starts_trial_at_component_level() {
-        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let _client=TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
-        let (mut server,_)=listener.accept().await.unwrap();let mut out=Outgoing::new(&mut server);
+        let mut out = Outgoing::capture();
         let shared=shared();waiting_trial(&shared);let mut p=player("ominous_bottle",0);
         let slot=p.inventory.selected_slot();
         p.inventory.set(slot,Some(p.inventory.held().unwrap().with_extras(crate::stackdata::Data {ominous:Some(2),..Default::default()})));
@@ -3467,9 +3485,7 @@ mod itemaudit3_tests {
     }
     #[tokio::test]
     async fn feather_falling_reduces_pearl_cost_with_protection_cap() {
-        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let _client=TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
-        let (mut server,_)=listener.accept().await.unwrap();let mut out=Outgoing::new(&mut server);
+        let mut out = Outgoing::capture();
         let shared=shared();
         for (feather,protection,expected) in [(0,0,5.0),(4,0,2.6),(4,4,1.8)] {
             let mut p=player("ender_pearl",0);let mut data=crate::stackdata::Data::default();

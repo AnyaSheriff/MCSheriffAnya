@@ -1086,6 +1086,9 @@ pub struct Vitals {
     /// Вики, Infested: принятые удары обрабатываются миром, включая нулевые.
     pub infested_hits: u32,
     pub death_effects_handled: bool,
+    /// Сколько раз эффект выдавали или обновляли: список частиц у оригинала
+    /// уходит заново и когда цвета те же (чёрный ящик, tails-mob-attributes).
+    pub effect_gives: u32,
 }
 
 impl Default for Vitals {
@@ -1106,6 +1109,26 @@ impl Vitals {
 
         // Фоновые (маяк) — полупрозрачные: альфа 0x26 (чёрный ящик,
         // beacon-effect: 640936959 = 0x2633EBFF для скорости).
+        for (slot, (kind, ambient)) in out.iter_mut().zip(kinds) {
+            *slot = if kind == EffectKind::RaidOmen {
+                RAID_OMEN_PARTICLE
+            } else {
+                ((if ambient { 0x2600_0000u32 } else { 0xFF00_0000u32 }) | kind.color() as u32) as i32
+            };
+        }
+
+        out
+    }
+
+    /// Цвета частиц у моба: у оригинала в порядке номеров эффектов (чёрный
+    /// ящик, tails-mob-attributes: скорость, затем замедление; у игрока —
+    /// порядок `particle_rank`) [проверить].
+    pub fn mob_effect_colors(&self) -> [i32; EFFECT_PARTICLES] {
+        let mut out = [0; EFFECT_PARTICLES];
+        let mut kinds: Vec<(EffectKind, bool)> = self.effects.iter().filter(|effect| effect.visible).map(|effect| (effect.kind, effect.ambient)).collect();
+
+        kinds.sort_by_key(|(kind, _)| kind.id());
+
         for (slot, (kind, ambient)) in out.iter_mut().zip(kinds) {
             *slot = if kind == EffectKind::RaidOmen {
                 RAID_OMEN_PARTICLE
@@ -1171,6 +1194,7 @@ impl Vitals {
             age: 0,
             infested_hits: 0,
             death_effects_handled: false,
+            effect_gives: 0,
         }
     }
 
@@ -1467,6 +1491,7 @@ impl Vitals {
             self.remember_effect(old);
         }
 
+        self.effect_gives = self.effect_gives.wrapping_add(1);
         self.effects.retain(|old| old.kind != effect.kind);
         // У мгновенного срок 1 (effect-instant: dur=1 при любых секундах).
         self.effects.push(Effect { ticks_left: if effect.kind.instant() { 1 } else { effect.ticks_left }, ..effect });

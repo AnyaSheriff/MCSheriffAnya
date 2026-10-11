@@ -182,3 +182,19 @@ fn creepers_flee_ocelots_without_a_player_target() {
     for _ in 0..40 {m.tick(&Flat::new(),&ctx,&mut Rng::new(4));}
     assert!(m.x>5.5);assert_eq!(m.h.fuse,0);
 }
+
+#[test]
+fn creeper_finishes_escape_and_repaths_three_ticks_after_path_ends() {
+    let mut mob=Mob::new(5,Kind::Creeper,(4.5,1.0,0.5));mob.on_ground=true;
+    let mut rng=Rng::new(4);
+    for _ in 0..80 {
+        let cats=[ai::Mate {id:9,kind:Kind::Cat,x:mob.x-2.0,y:1.0,z:mob.z,love:0,baby:false,ready:false,tamed:false}];
+        mob.tick(&Flat::new(),&ai::Ctx {players:&[],mates:&cats,difficulty:2,sky:4,sun_up:false},&mut rng);
+    }
+    assert!(mob.x>12.5,"кошке не удалось остановить бегство: {}",mob.x);
+    mob.brain.stop();mob.h.cat_flee=true;
+    let cats=[ai::Mate {id:9,kind:Kind::Cat,x:mob.x-2.0,y:1.0,z:mob.z,love:0,baby:false,ready:false,tamed:false}];
+    let ctx=ai::Ctx {players:&[],mates:&cats,difficulty:2,sky:4,sun_up:false};
+    for _ in 0..3 {mob.tick(&Flat::new(),&ctx,&mut rng);assert!(!mob.brain.walking());}
+    mob.tick(&Flat::new(),&ctx,&mut rng);assert!(mob.brain.walking());
+}

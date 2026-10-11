@@ -88,6 +88,7 @@ pub struct Arrow {
     pub vx: f64,
     pub vy: f64,
     pub vz: f64,
+    pub no_gravity: bool,
     /// Кто выпустил (номер сущности, 0 — никто), его имя и опознаватель.
     pub owner: i32,
     pub owner_uuid: [u8; 16],
@@ -216,6 +217,7 @@ impl Arrow {
             vx: velocity.0,
             vy: velocity.1,
             vz: velocity.2,
+            no_gravity: false,
             owner,
             owner_uuid: [0; 16],
             owner_name: String::new(),
@@ -316,6 +318,16 @@ impl Arrow {
         angles_of((self.vx, self.vy, self.vz))
     }
 
+    /// Место и скорость до последнего хода: сверка слежения каждые 20 тактов
+    /// у оригинала видит стрелу без хода этого такта (чёрный ящик,
+    /// tails-arrow-no-gravity: сдвиг за 20 тактов — 20 ходов, а не 21).
+    pub fn before_step(&self) -> ((f64, f64, f64), (f64, f64, f64)) {
+        let gravity = if self.no_gravity { 0.0 } else { GRAVITY };
+        let before = (self.vx / AIR_DRAG, (self.vy + gravity) / AIR_DRAG, self.vz / AIR_DRAG);
+
+        ((self.x - before.0, self.y - before.1, self.z - before.2), before)
+    }
+
     /// Сколько тактов прошло с появления: стрела игрока делает первый ход в
     /// такт выстрела (возраст 1), стрела моба — со следующего (возраст 0).
     pub fn lived(&self) -> u32 {
@@ -354,6 +366,9 @@ pub fn ground_backoff((vx, vy, vz): (f64, f64, f64)) -> (f64, f64, f64) {
 #[derive(Default)]
 pub struct Arrows {
     pub list: Vec<Arrow>,
+    /// Попавшие в первый ход: показываем появление и уход в одной рассылке.
+    /// [проверить] Порядок относительно damage_event.
+    pub retired: Vec<Arrow>,
 }
 
 impl Arrows {
@@ -445,6 +460,16 @@ fn sweep_box(from: (f64, f64, f64), to: (f64, f64, f64), (cx, low, cz): (f64, f6
     Some(near)
 }
 
+/// То же для живой цели: если начало пути уже внутри её ящика, попадания нет
+/// (чёрный ящик, tails-arrow-pointblank: стрела, созданная внутри коровы,
+/// пролетела её насквозь и упала в землю; у оригинала отрезок из ящика грани
+/// не пересекает) [проверить: только эта запись].
+fn sweep_living(from: (f64, f64, f64), to: (f64, f64, f64), (cx, low, cz): (f64, f64, f64), half: f64, height: f64) -> Option<f64> {
+    let inside = from.0 > cx - half && from.0 < cx + half && from.1 > low && from.1 < low + height && from.2 > cz - half && from.2 < cz + half;
+
+    if inside { None } else { sweep_box(from, to, (cx, low, cz), half, height) }
+}
+
 /// Кого стрела задела на пути: игрок или моб, и в какой доле пути.
 enum Target {
     Player { entity_id: i32 },
@@ -493,6 +518,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
     let mut arrows = shared.arrows.lock().expect("стрелы захвачены другим потоком");
+    arrows.retired.retain(|arrow| arrow.dimension != dimension);
     let mut pickups: Vec<([u8; 16], Stack)> = Vec::new();
     let mut removed: Vec<i32> = Vec::new();
     let mut progress = Vec::new();
@@ -654,7 +680,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
             let height = if *sneaking { 1.5 } else { 1.8 };
 
-            if let Some(part) = sweep_box(from, to, (at.0, at.1, at.2), 0.3, height)
+            if let Some(part) = sweep_living(from, to, (at.0, at.1, at.2), 0.3, height)
                 && best.as_ref().is_none_or(|(known, _)| part < *known)
             {
                 best = Some((part, Target::Player { entity_id: *entity_id }));
@@ -673,7 +699,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
             let (width, height) = mob.size();
 
-            if let Some(part) = sweep_box(from, to, (mob.x, mob.y, mob.z), width / 2.0, height)
+            if let Some(part) = sweep_living(from, to, (mob.x, mob.y, mob.z), width / 2.0, height)
                 && best.as_ref().is_none_or(|(known, _)| part < *known)
             {
                 if mob.kind == crate::mob::Kind::Enderman {
@@ -964,7 +990,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         let drag = if in_water && arrow.trident.is_none() { WATER_DRAG } else { AIR_DRAG };
 
         arrow.vx *= drag;
-        arrow.vy = arrow.vy * drag - GRAVITY;
+        arrow.vy = arrow.vy * drag - if arrow.no_gravity { 0.0 } else { GRAVITY };
         arrow.vz *= drag;
 
         // Улетела за край мира.
@@ -974,6 +1000,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 
     if !removed.is_empty() {
+        let retired: Vec<_> = arrows.list.iter().filter(|arrow| arrow.age <= 1 && removed.contains(&arrow.entity_id)).cloned().collect();
+        arrows.retired.extend(retired);
         arrows.list.retain(|arrow| !removed.contains(&arrow.entity_id));
     }
 
@@ -1043,6 +1071,28 @@ mod tests {
     }
 
     #[test]
+    fn the_state_before_the_last_step_undoes_drag_and_gravity() {
+        let mut arrow = Arrow::from_mob(1, Dimension::Overworld, (0.0, 10.0, 0.0), (1.0, 0.5, 0.0), 0, "");
+        let (place, velocity) = ((arrow.x, arrow.y, arrow.z), (arrow.vx, arrow.vy, arrow.vz));
+
+        arrow.x += arrow.vx;
+        arrow.y += arrow.vy;
+        arrow.vx *= AIR_DRAG;
+        arrow.vy = arrow.vy * AIR_DRAG - GRAVITY;
+
+        let (back_place, back_velocity) = arrow.before_step();
+
+        assert!((back_place.0 - place.0).abs() < 1e-9 && (back_place.1 - place.1).abs() < 1e-9);
+        assert!((back_velocity.0 - velocity.0).abs() < 1e-9 && (back_velocity.1 - velocity.1).abs() < 1e-9);
+    }
+
+    #[test]
+    fn an_arrow_starting_inside_a_living_box_passes_through() {
+        assert_eq!(sweep_living((0.5, 1.0, 3.1), (0.5, 1.0, 4.1), (0.5, 0.0, 3.5), 0.45, 1.4), None);
+        assert!(sweep_living((0.5, 1.0, 2.0), (0.5, 1.0, 3.2), (0.5, 0.0, 3.5), 0.45, 1.4).is_some());
+    }
+
+    #[test]
     fn a_swept_box_is_hit_at_its_near_face() {
         // из x=0 в x=10, ящик вокруг x=5 шириной 1: вход на x=4,5 — доля 0,45
         let part = sweep_box((0.0, 1.0, 0.0), (10.0, 1.0, 0.0), (5.0, 0.0, 0.0), 0.5, 2.0).expect("попала");
@@ -1066,6 +1116,7 @@ mod tests {
             vx: 0.0,
             vy: 0.0,
             vz: 3.0,
+            no_gravity: false,
             owner: 0,
             owner_uuid: [0; 16],
             owner_name: String::new(),

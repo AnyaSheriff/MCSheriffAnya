@@ -1,0 +1,113 @@
+{
+  "name": "tails-unbreaking-tool",
+  "about": "[проверить] Unbreaking III bow durability over eight shots; compare with armor scenario. RNG outcomes need repeated vanilla recordings.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule random_tick_speed 0",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "!wait 5",
+    "give $(bot) bow[enchantments={unbreaking:3}]",
+    "gamemode survival $(bot)",
+    "!look 0 -1.2217304764",
+    "give $(bot) arrow 64"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "use": true
+    },
+    {
+      "after": 25,
+      "release": true
+    },
+    {
+      "after": 40,
+      "use": true
+    },
+    {
+      "after": 65,
+      "release": true
+    },
+    {
+      "after": 80,
+      "use": true
+    },
+    {
+      "after": 105,
+      "release": true
+    },
+    {
+      "after": 120,
+      "use": true
+    },
+    {
+      "after": 145,
+      "release": true
+    },
+    {
+      "after": 160,
+      "use": true
+    },
+    {
+      "after": 185,
+      "release": true
+    },
+    {
+      "after": 200,
+      "use": true
+    },
+    {
+      "after": 225,
+      "release": true
+    },
+    {
+      "after": 240,
+      "use": true
+    },
+    {
+      "after": 265,
+      "release": true
+    },
+    {
+      "after": 280,
+      "use": true
+    },
+    {
+      "after": 305,
+      "release": true
+    }
+  ],
+  "record_ticks": 340,
+  "cleanup": [
+    "kill @e[type=arrow,distance=..48]",
+    "kill @e[type=experience_bottle,distance=..32]",
+    "kill @e[type=experience_orb,distance=..32]",
+    "kill @e[type=chicken,distance=..32]",
+    "kill @e[type=endermite,distance=..32]",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "effect clear $(bot)",
+    "gamerule random_tick_speed 3",
+    "difficulty peaceful",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "fill $(-8,0,-8) $(8,15,8) air"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ]
+}

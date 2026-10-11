@@ -1,0 +1,63 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-8,-1,-8) $(8,-1,8) stone",
+    "fill $(-8,0,-8) $(8,15,8) air",
+    "tp $(bot) $(0.5,0,0.5)",
+    "!hotbar 0",
+    "!wait 10",
+    "gamemode creative $(bot2)",
+    "clear $(bot2)",
+    "tp $(bot2) $(0.5,0,3.5)"
+  ],
+  "actions": [
+    {
+      "after": 5,
+      "cmd": "item replace entity $(bot2) armor.chest with diamond_chestplate"
+    },
+    {
+      "after": 15,
+      "cmd": "item replace entity $(bot2) armor.chest with diamond_chestplate[damage=5]"
+    },
+    {
+      "after": 25,
+      "cmd": "item replace entity $(bot2) armor.chest with iron_chestplate"
+    },
+    {
+      "after": 35,
+      "cmd": "item replace entity $(bot2) armor.chest with air"
+    }
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..40]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(-8,0,-8) $(8,15,8) air",
+    "fill $(-8,-1,-8) $(8,-1,8) stone",
+    "difficulty peaceful",
+    "!startfly",
+    "clear $(bot2)"
+  ],
+  "record_ticks": 100,
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "second": true,
+  "track_players": true,
+  "track_second": true,
+  "name": "tails-armor-equip-command",
+  "about": "[проверить] Java 26.1.2 gameplay tails: armor-equip-command. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "exclusive": true
+}

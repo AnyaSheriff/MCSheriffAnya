@@ -20,7 +20,6 @@ pub fn damage(mob: &mut Mob, amount: f32) {
     if amount <= 0.0 { return; }
     let remaining = before.saturating_sub(amount.ceil() as i32);
     mob.tame.armor = (remaining > 0).then_some(remaining);
-    mob.attr_changes = mob.attr_changes.wrapping_add(1);
     let sound = if remaining <= 0 { "minecraft:item.wolf_armor.break" }
         else if [60, 44, 20].iter().any(|n| before > *n && remaining <= *n) { "minecraft:item.wolf_armor.crack" }
         else { "minecraft:item.wolf_armor.damage" };
@@ -33,23 +32,20 @@ pub fn interact(mob: &mut Mob, owner: [u8; 16], held: Stack) -> Option<(bool, bo
     match crate::blocks::item_name(held.item)? {
         "wolf_armor" if !mob.is_baby() && mob.tame.armor.is_none() => {
             mob.tame.armor = Some((tame::ARMOR_DURABILITY - held.extras().damage).max(1));
-            mob.attr_changes = mob.attr_changes.wrapping_add(1);
-            mob.events.push(Event::Sound { name: "minecraft:item.armor.equip_wolf", volume: 1.0, pitch: 1.0 });
+                    mob.events.push(Event::Sound { name: "minecraft:item.armor.equip_wolf", volume: 1.0, pitch: 1.0 });
             Some((true, false))
         }
-        "armadillo_scute" => {
+        "armadillo_scute" if mob.tame.ordered_sit => {
             let remaining = mob.tame.armor?;
             if remaining >= tame::ARMOR_DURABILITY { return Some((false, false)); }
             mob.tame.armor = Some((remaining + 8).min(tame::ARMOR_DURABILITY));
-            mob.attr_changes = mob.attr_changes.wrapping_add(1);
-            mob.events.push(Event::Sound { name: "minecraft:item.wolf_armor.repair", volume: 1.0, pitch: 1.0 });
+                    mob.events.push(Event::Sound { name: "minecraft:item.wolf_armor.repair", volume: 1.0, pitch: 1.0 });
             Some((true, false))
         }
         "shears" => {
             let armor = stack(mob)?;
             mob.tame.armor = None;
-            mob.attr_changes = mob.attr_changes.wrapping_add(1);
-            mob.events.push(Event::Loot(vec![armor]));
+                    mob.events.push(Event::Loot(vec![armor]));
             mob.events.push(Event::Sound { name: "minecraft:item.armor.unequip_wolf", volume: 1.0, pitch: 1.0 });
             Some((false, true))
         }
@@ -69,6 +65,7 @@ mod tests {
         assert!(interact(&mut wolf, [3;16], armor).is_none());
         assert_eq!(interact(&mut wolf, [2;16], armor), Some((true,false)));
         assert_eq!(wolf.tame.armor, Some(50));
+        wolf.tame.ordered_sit = true;
         assert_eq!(interact(&mut wolf, [2;16], item("armadillo_scute")), Some((true,false)));
         assert_eq!(wolf.tame.armor, Some(58));
         let health = wolf.vitals.health;

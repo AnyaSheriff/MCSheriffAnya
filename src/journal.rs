@@ -83,18 +83,16 @@ impl<T: Clone> Journal<T> {
     /// Заодно журнал запоминает, что этот читатель дочитал до конца: после
     /// этого прочитанное всеми можно выбросить.
     pub fn since(&mut self, from: usize, reader: Reader) -> Vec<T> {
+        self.until(from, self.count(), reader)
+    }
+
+    /// Снимок до границы такта; более поздние записи остаются непрочитанными.
+    pub fn until(&mut self, from: usize, end: usize, reader: Reader) -> Vec<T> {
+        let end = end.min(self.count()).max(from.min(self.count()));
         let start = from.max(self.dropped) - self.dropped;
-
-        let entries: Vec<T> = self
-            .entries
-            .iter()
-            .skip(start.min(self.entries.len()))
-            .cloned()
-            .collect();
-
-        self.readers.insert(reader, self.count());
+        let entries = self.entries.iter().skip(start).take(end.saturating_sub(from.max(self.dropped))).cloned().collect();
+        self.readers.insert(reader, end);
         self.forget_read();
-
         entries
     }
 
@@ -109,6 +107,7 @@ impl<T: Clone> Journal<T> {
     }
 
     /// То же, что `since`, и заодно — отстал ли читатель (см. `lagged`).
+    #[cfg(test)]
     pub fn since_checked(&mut self, from: usize, reader: Reader) -> (Vec<T>, bool) {
         let lagged = self.lagged(from);
 
@@ -299,5 +298,23 @@ mod tests {
         assert_eq!(journal.since(at_first, first), vec![4]);
         assert_eq!(journal.kept(), 0);
         assert!(journal.since(at_second, second).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod publication_tests {
+    use super::*;
+    #[test]
+    fn two_observers_cannot_see_a_late_write_in_different_ticks() {
+        let mut journal=Journal::new();journal.watch(1);journal.watch(2);
+        journal.push("начало такта");let end=journal.count();
+        let first=journal.until(0,end,1);
+        journal.push("поздний звук");
+        assert_eq!(journal.until(0,end,2),first);
+        assert_eq!(journal.kept(),1);
+        let next=journal.count();
+        assert_eq!(journal.until(end,next,1),vec!["поздний звук"]);
+        assert_eq!(journal.until(end,next,2),vec!["поздний звук"]);
+        assert_eq!(journal.kept(),0);
     }
 }

@@ -1,0 +1,58 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-8,-1,-8) $(8,-1,8) stone",
+    "fill $(-8,0,-8) $(8,15,8) air",
+    "fill $(-8,-1,-8) $(32,-1,8) stone",
+    "tp $(bot) $(0.5,0,0.5)",
+    "!hotbar 0",
+    "!wait 10",
+    "summon creeper $(4.5,0,3.5) {Tags:[\"tails_creeper\"]}",
+    "summon cat $(3.5,0,3.5) {NoAI:1b,Tags:[\"tails_cat\"]}"
+  ],
+  "actions": [
+    {
+      "after": 40,
+      "cmd": "tp @e[tag=tails_cat,limit=1,distance=..48] $(10.5,0,3.5)"
+    },
+    {
+      "after": 80,
+      "cmd": "tp @e[tag=tails_cat,limit=1,distance=..48] $(16.5,0,3.5)"
+    },
+    {
+      "after": 120,
+      "cmd": "tp @e[tag=tails_cat,limit=1,distance=..48] $(22.5,0,3.5)"
+    }
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..64]",
+    "kill @e[type=!player,distance=..40]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(-8,0,-8) $(8,15,8) air",
+    "fill $(-8,-1,-8) $(8,-1,8) stone",
+    "difficulty peaceful",
+    "!startfly",
+    "fill $(9,-1,-8) $(32,15,8) air"
+  ],
+  "record_ticks": 180,
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "name": "tails-creeper-repath",
+  "about": "[проверить] Java 26.1.2 gameplay tails: creeper-repath. Awaiting vanilla recording; no RNG/timing exclusions.",
+  "random": [],
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "exclusive": true,
+  "pad_wide": 48
+}

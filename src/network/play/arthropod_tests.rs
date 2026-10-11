@@ -136,11 +136,8 @@ fn summon_commands_resolve_both_new_kinds() {
 
 #[tokio::test]
 async fn cave_spider_poison_requires_a_successful_unblocked_hit() {
-    // Только локальная пара сокетов теста пакетов, без сервера Minecraft.
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let _client = TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
-    let (mut server, _) = listener.accept().await.unwrap();
-    let mut out = Outgoing::new(&mut server);
+    // Пакетный буфер в памяти, без сокетов.
+    let mut out = Outgoing::capture();
     for (difficulty, creative, invulnerable, shield, duration) in [
         (1, false, false, false, None), (2, false, false, false, Some(140)),
         (3, false, false, false, Some(300)), (2, true, false, false, None),

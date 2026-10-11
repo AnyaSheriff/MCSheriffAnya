@@ -1408,6 +1408,8 @@ pub struct World {
     /// появиться животные (`take_new_chunks`).
     new_chunks: Vec<(i32, i32)>,
 
+    /// Конец журнала на границе рассылки, до пробуждения подключений.
+    pub published_events: Option<usize>,
     /// То же для вагонеток-хранилищ: номер сущности — ячейки.
     pub published_carts: HashMap<i32, Vec<Option<crate::inventory::Stack>>>,
 
@@ -1534,6 +1536,7 @@ impl World {
             primed: Vec::new(),
             blast_rest: Default::default(),
             published: HashMap::new(),
+            published_events: None,
             published_carts: HashMap::new(),
             published_props: HashMap::new(),
             loaded_frames: Vec::new(),
@@ -1697,6 +1700,7 @@ impl World {
             primed: Vec::new(),
             blast_rest: Default::default(),
             published: HashMap::new(),
+            published_events: None,
             published_carts: HashMap::new(),
             published_props: HashMap::new(),
             loaded_frames: Vec::new(),
@@ -3311,13 +3315,18 @@ impl World {
         (self.events.since(from, reader), self.events.count())
     }
 
-    /// То же, что `events_since`, и заодно — отстал ли читатель: часть
-    /// событий до него уже не дойдёт (журнал выбросил их, не дождавшись).
-    /// Отставшему клиенту надо заново прислать чанки вокруг него целиком.
-    pub fn events_since_checked(&mut self, from: usize, reader: journal::Reader) -> (Vec<WorldEvent>, usize, bool) {
-        let (events, lagged) = self.events.since_checked(from, reader);
+    pub fn publish_events(&mut self) { self.published_events = Some(self.events.count()); }
 
-        (events, self.events.count(), lagged)
+    /// Поздний звук подключения не должен попасть только части наблюдателей.
+    #[cfg(test)]
+    pub fn published_events_since(&mut self, from: usize, reader: journal::Reader) -> (Vec<WorldEvent>, usize, bool) {
+        self.published_events_until(from, reader, None)
+    }
+
+    pub fn published_events_until(&mut self, from: usize, reader: journal::Reader, end: Option<usize>) -> (Vec<WorldEvent>, usize, bool) {
+        let end = end.or(self.published_events).unwrap_or_else(|| self.events.count()).max(from);
+        let lagged = self.events.lagged(from);
+        (self.events.until(from, end, reader), end, lagged)
     }
 
     /// Только изменения блоков из журнала — для проверок.

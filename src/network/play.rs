@@ -82,6 +82,9 @@ mod thrown;
 mod sleep;
 mod farm;
 mod debug_stick;
+mod mob_effects;
+mod buckets;
+mod equipment_sound;
 mod knowledge_book;
 mod station;
 mod body;
@@ -626,11 +629,6 @@ enum Phase {
     Moves,
     Swings,
     Gear,
-}
-
-/// Скорость удара чужого игрока как атрибут для пакета (по опубликованному).
-fn speed_of(shared: &Shared, entity_id: i32) -> Option<crate::attributes::Attribute> {
-    shared.players.lock().expect("список игроков захвачен другим потоком").by_entity(entity_id).and_then(|(_, gear)| gear.attack_speed)
 }
 
 /// Что этому клиенту в последний раз сказали про лежащий предмет: где он,
@@ -2950,14 +2948,26 @@ async fn send_swing(stream: &mut Outgoing<'_>, entity_id: i32) -> io::Result<()>
 /// Кладёт в общий список то, что остальным нужно знать об игроке: где он
 /// стоит и что держит в руке. Рассылают это уже их подключения.
 fn publish_player(shared: &Shared, player: &PlayerState) {
-    let mut players = shared
-        .players
-        .lock()
-        .expect("список игроков захвачен другим потоком");
+    let _publication = shared.publication.lock().expect("публикация игрока");
+    publish_player_inner(shared, player);
+}
 
+fn publish_player_inner(shared: &Shared, player: &PlayerState) {
+    let gear = player.gear();
+    let sounds = {
+        let players = shared.players.lock().expect("игроки");
+        equipment_sound::changed(&players.gear(&player.uuid).worn, &gear.worn)
+    };
+    if !sounds.is_empty() {
+        let mut world = shared.world_in(player.dimension).lock().expect("мир");
+        for sound in sounds {
+            world.note_sound_player_at((player.x, player.y, player.z), sound, 1.0, 1.0);
+        }
+    }
+    let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");
     players.set_position(&player.uuid, player.position());
     players.set_held(&player.uuid, player.inventory.held());
-    players.set_gear(&player.uuid, player.gear());
+    players.set_gear(&player.uuid, gear);
 }
 
 /// Сколько тактов миру от роду, который в нём час и сколько раз часы
@@ -3064,39 +3074,40 @@ async fn send_other_moves(
     // раз всех игроков целиком (с ником и скином) незачем: сверке хватает
     // того, что видно другим. Целиком копируется только тот, кого клиенту
     // надо показать впервые.
-    let others: Vec<(Shown, i32, bool, Option<Member>)> = {
+    let others: Vec<(Shown, i32, bool, Option<Member>, crate::players::Gear)> = {
         let players = shared.players.lock().expect("список игроков захвачен другим потоком");
 
-        players
-        .members()
-        .iter()
-        .filter(|member| member.uuid != player.uuid)
-        .map(|member| {
+        let members = if phase == Phase::Moves {
+            players.members().iter().map(|m| (m.clone(), players.gear(&m.uuid))).collect()
+        } else { player.publication.as_ref().map_or_else(|| players.published().to_vec(), |p| p.players.clone()) };
+        members.iter()
+        .filter(|(member, _)| member.uuid != player.uuid)
+        .map(|(member, gear)| {
             let now = Shown {
                 position: member.position,
                 skin_parts: member.skin_parts,
                 main_hand: member.main_hand,
                 held: member.held,
-                worn: players.gear(&member.uuid).worn,
-                speed_bits: u64::from(players.gear(&member.uuid).speed_touch),
-                sprinting: players.gear(&member.uuid).sprinting,
-                living: players.gear(&member.uuid).living,
-                effect_colors: players.gear(&member.uuid).effect_colors,
-                health_bits: players.gear(&member.uuid).health.to_bits(),
-                air: players.gear(&member.uuid).air,
+                worn: gear.worn,
+                speed_bits: u64::from(gear.speed_touch),
+                sprinting: gear.sprinting,
+                living: gear.living,
+                effect_colors: gear.effect_colors,
+                health_bits: gear.health.to_bits(),
+                air: gear.air,
                 sneaking: member.sneaking,
                 swings: member.swings,
-                sleeping: players.gear(&member.uuid).sleeping,
+                sleeping: gear.sleeping,
             };
             let here = member.dimension == player.dimension;
             let new = (here && !seen.contains_key(&member.entity_id)).then(|| member.clone());
 
-            (now, member.entity_id, here, new)
+            (now, member.entity_id, here, new, gear.clone())
         })
         .collect()
     };
 
-    for (now, entity_id, here, new) in others {
+    for (now, entity_id, here, new, gear) in others {
         // Видно только тех, кто в том же измерении: пришёл — показать,
         // ушёл в другое — убрать.
         let Some(shown) = seen.get(&entity_id).copied() else {
@@ -3157,7 +3168,7 @@ async fn send_other_moves(
                 data.push(PROPERTIES_END);
                 write_body(stream, data).await?;
 
-                let movement = shared.players.lock().expect("список игроков захвачен другим потоком").by_entity(entity_id).and_then(|(_, gear)| gear.movement_speed);
+                let movement = gear.movement_speed.clone();
 
                 if let Some(attribute) = movement {
                     let mut body = encode_varint(0x83);
@@ -3258,7 +3269,7 @@ async fn send_other_moves(
             // Скорость удара чужого игрока (оружие в руке) — атрибутом: у
             // оригинала он уходит следом за экипировкой.
             if only.speed_bits != shown.speed_bits
-                && let Some(attribute) = speed_of(shared, entity_id)
+                && let Some(attribute) = gear.attack_speed.clone()
             {
                 let mut body = encode_varint(0x83);
 
@@ -4081,7 +4092,7 @@ async fn send_pending_world_events(
         .world_in(player.dimension)
         .lock()
         .expect("мир захвачен другим потоком")
-        .events_since_checked(*sent, player.reader);
+        .published_events_until(*sent, player.reader, player.publication.as_ref().and_then(|p| p.events));
 
     *sent = count;
 
@@ -4738,7 +4749,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
         window.halves.first().filter(|p| world.container(p.0, p.1, p.2).is_some_and(|c| c.kind == containers::Kind::Beacon)).map(|_| window.shown.clone())
     } else if let Some(cart) = window.cart {
         let equine = shared.items_in(player.dimension).lock().expect("предметы").mobs().iter().any(|m| m.entity_id == cart && crate::mob::horse::equine(m.kind));
-        if equine { horse::slots(shared, player, cart) } else { cart_slots(shared, player.dimension, cart) }
+        if equine { horse::slots(shared, player, cart) } else { shared.world_in(player.dimension).lock().expect("мир").published_carts.get(&cart).cloned() }
     } else {
         let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
@@ -5237,6 +5248,13 @@ async fn send_pending_player_changes(
                 }
             }
             Change::Skin(_) => {}
+            Change::Armor { uuid, entity_id, entries } if *uuid != player.uuid && seen.contains_key(entity_id) => {
+                let mut body = encode_varint(0x83);
+
+                body.extend_from_slice(&crate::attributes::encode_update(*entity_id, entries));
+                write_body(stream, body).await?;
+            }
+            Change::Armor { .. } => {}
         }
     }
 
@@ -6523,6 +6541,18 @@ async fn read_and_log_play_packets(
                 }
 
                 Order::SetSlot { slot, stack } => {
+                    // Команда подменила надетую вещь той же вещью с другими
+                    // данными (чёрный ящик, tails-armor-equip-command:
+                    // damage=5 — снова звук надевания); износ от ударов
+                    // молчит, там вещь меняется не командой.
+                    if (5..=8).contains(&slot)
+                        && let (Some(old), Some(new)) = (player.inventory.slot(slot), stack)
+                        && old.item == new.item && old != new
+                        && let Some(info) = crate::combat::info(new.item)
+                        && !info.equip_sound.is_empty()
+                    {
+                        shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x, player.y, player.z), info.equip_sound, 1.0, 1.0);
+                    }
                     player.inventory.set(slot, stack);
                     send_container_slot(stream, player, slot).await?;
                 }
@@ -6616,6 +6646,15 @@ async fn read_and_log_play_packets(
             None => {
                 mining::tick(shared, player);
                 step_portal(shared, player);
+
+                {
+                    let _publication = shared.publication.lock().expect("снимок рассылки");
+                    player.publication = Some(TrackingPublication {
+                        tick: *shared.ticks.borrow(),
+                        events: shared.world_in(player.dimension).lock().expect("мир").published_events,
+                        players: shared.players.lock().expect("игроки").published().to_vec(),
+                    });
+                }
 
                 let lagged =
                     flush_tick(stream, shared, player, &mut world_changes, &mut pending).await?;
@@ -8444,7 +8483,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
     };
 
     if status == STARTED_DIGGING
-        && let Some(reaction) = debug_stick::interact(shared, player, (x,y,z), true, sequence)
+        && let Some(reaction) = debug_stick::interact(shared, player, (x,y,z), 1, true, sequence)
     { return Some(reaction); }
 
     let breaks_now = mining::allows(player, shared, (x, y, z), state, status);
@@ -9212,7 +9251,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         }
     }
 
-    if let Some(reaction) = debug_stick::interact(shared, player, (clicked_x,clicked_y,clicked_z), false, sequence) {
+    if let Some(reaction) = debug_stick::interact(shared, player, (clicked_x,clicked_y,clicked_z), face, false, sequence) {
         return Some(reaction);
     }
     if let Some(reaction) = gameplay::campfire_use(player, shared, (clicked_x, clicked_y, clicked_z), face, sequence) { return Some(reaction); }
@@ -9447,7 +9486,8 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         return Some(reaction);
     }
 
-    // Вёдра блоков не ставят, но именно ими в мире появляется вода и лава.
+    // Жидкие вёдра применяются только следующим Use Item (вики, Bucket).
+    if buckets::liquid(item) { return Some(Reaction::accepted(sequence)); }
     if let Some(reaction) = use_bucket(
         item,
         (clicked_x, clicked_y, clicked_z),
@@ -9700,9 +9740,6 @@ fn pick_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opti
 /// (текущая вода пропускается, твёрдый блок останавливает), как у
 /// оригинала. Подтверждается всегда.
 fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option<Reaction> {
-    const EYES: f64 = 1.62;
-    const STEP: f64 = 0.05;
-
     let mut cursor = Cursor::new(payload);
     let hand = cursor.varint()?;
     let sequence = cursor.varint()?;
@@ -9801,66 +9838,7 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
         return Some(answer);
     }
 
-    let empty = blocks::item_named("bucket")?;
-
-    if player.inventory.held().map(|stack| stack.item) != Some(empty)
-        || player.game_mode == GAME_MODE_SPECTATOR
-        || player.game_mode == GAME_MODE_ADVENTURE
-    {
-        return Some(answer);
-    }
-
-    // Тот же щелчок, которым только что вылили, — не зачерпывать обратно.
-    if player.poured.take() == Some(sequence - 1) {
-        return Some(answer);
-    }
-
-    let reach = if player.game_mode == GAME_MODE_CREATIVE { 5.0 } else { 4.5 };
-    let (dx, dy, dz) = looking(yaw, pitch);
-    let eye = (player.x, player.y + EYES, player.z);
-    let mut last = None;
-    let mut target = None;
-
-    {
-        let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
-        let mut travelled = 0.0;
-
-        while travelled <= reach {
-            let at = (
-                (eye.0 + dx * travelled).floor() as i32,
-                (eye.1 + dy * travelled).floor() as i32,
-                (eye.2 + dz * travelled).floor() as i32,
-            );
-            travelled += STEP;
-
-            if last == Some(at) {
-                continue;
-            }
-            last = Some(at);
-
-            let state = world.get_block(at.0, at.1, at.2);
-
-            match fluids::fluid_at(state) {
-                Some((_, fluids::SOURCE)) => {
-                    target = Some(at);
-                    break;
-                }
-                Some(_) => continue,
-                None if state == world::AIR => continue,
-                None if fluids::is_powder_snow(state) => {
-                    target = Some(at);
-                    break;
-                }
-                None => break,
-            }
-        }
-    }
-
-    let Some(at) = target else {
-        return Some(answer);
-    };
-
-    use_bucket(empty, at, 1, sequence, player, shared)
+    buckets::use_item(shared, player, hand, sequence, yaw, pitch).or(Some(answer))
 }
 
 fn use_bucket(
@@ -9887,11 +9865,17 @@ fn use_bucket(
             && let Some(next) = crate::block_behaviour::bucket_water(here, item == with_water)
         {
             world.set_block(x, y, z, next);
-            world.note_sound(x, y, z, if item == empty { "minecraft:item.bucket.fill" } else { "minecraft:item.bucket.empty" }, 1.0, 1.0);
+            // Звук ведра не уходит самому игроку: его играет клиент (чёрный
+            // ящик, tails-bucket-use-0: «лишний» item.bucket.empty у нас).
+            let actor = world.actor.replace(player.entity_id);
+            world.note_sound_by_hand(x, y, z, if item == empty { "minecraft:item.bucket.fill" } else { "minecraft:item.bucket.empty" }, 1.0, 1.0);
+            world.actor = actor;
             if blocks::orientation_of(here).is_some_and(|b| b.value(here, "lit") == Some("true") && b.value(next, "lit") == Some("false")) {
                 world.note_sound(x, y, z, if blocks::block_at_state(here).is_some_and(|n| n == "candle" || n.ends_with("_candle")) { "minecraft:block.candle.extinguish" } else { "minecraft:block.fire.extinguish" }, 1.0, 1.0);
             }
-            world.tell_directly(x, y, z);
+            // Ведро берётся из Use Item, у него нет щелчка по блоку, а значит и
+            // повтора блока отдельным сообщением: изменение уходит со всеми
+            // в конце такта (чёрный ящик, tails-bucket-use-0/1).
             redstone::settle(&mut world);
             drop(world);
             player.progress.used(item);
@@ -9976,6 +9960,8 @@ fn use_bucket(
             world.note_sound(x, y, z, "minecraft:block.fire.extinguish", 0.5, pitch);
         } else {
             let target=world.get_block(x,y,z);
+            if !blocks::replaceable(target) && !crate::mob::is_water(target)
+                && !((item == with_water || fish_kind.is_some()) && can_waterlog(target)) { return Some(Reaction::accepted(sequence)); }
             let placed=if fish_kind.is_some() && can_waterlog(target) {
                 blocks::orientation_of(target).and_then(|o|o.with(target,"waterlogged","true")).unwrap_or(poured)
             } else {poured};
@@ -10736,7 +10722,16 @@ impl<'a> Cursor<'a> {
 /// Положение записывается на диск сразу, как только игрок заметно сдвинулся,
 /// — тем же способом, каким сохраняются блоки. Поэтому игрок после перезапуска
 /// сервера оказывается там, где стоял, а не в точке появления.
+// Одна рассылка читает одну границу, даже если запись большого пакета
+// уступит исполнение следующему такту мира.
+struct TrackingPublication {
+    tick: u64,
+    events: Option<usize>,
+    players: Vec<(Member, crate::players::Gear)>,
+}
+
 struct PlayerState {
+    publication: Option<TrackingPublication>,
     shoulders: [Option<Vec<u8>>; 2],
     shoulder_since: u64,
     shoulder_health: f32,
@@ -11118,6 +11113,7 @@ impl PlayerState {
             seen_carts: HashMap::new(),
             seen_frames: HashMap::new(),
             seen_mobs: HashMap::new(),
+            publication: None,
             shoulders: saved.as_ref().map(|s| s.shoulders.clone()).unwrap_or([None,None]),
             shoulder_since: 0,
             shoulder_health: vit.health,
@@ -12295,3 +12291,6 @@ mod tests {
     }
 
 }
+
+#[cfg(test)]
+mod tails_tests;
