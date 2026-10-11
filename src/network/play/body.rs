@@ -15,7 +15,7 @@ use super::*;
 
 use crate::combat::PlayerStrike;
 use crate::combat;
-use crate::survival::{Source, Vitals};
+use crate::survival::{self, Source, Vitals};
 
 /// Сколько тактов до конца еды ещё считается «доел»: отпускание кнопки у
 /// клиента приходит раньше такта сервера на задержку сети [проверить].
@@ -45,6 +45,13 @@ pub(crate) enum Act<'a> {
     Release,
     /// Такт: зарядка арбалета, еда.
     Tick,
+    /// Среда и реакции эффектов: только адаптер Bedrock.
+    Environment,
+    Reactions,
+    Attribute(&'a crate::commands_world::AttributeEdit),
+    Spawn((f64, f64, f64)),
+    RespawnBlock { at: (i32, i32, i32), face: i32 },
+    MobHit { amount: f32, source: Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64) },
     /// Удар игрока по этому игроку (из журнала мира): щит, броня, отдача.
     Struck(&'a PlayerStrike),
     /// Предмет в руке щёлкнут по блоку: ракета фейерверка летит из точки
@@ -70,6 +77,12 @@ pub(crate) struct Done {
     /// Доеденный или допитый предмет (номер Java): Bedrock-клиенту — Completed
     /// Using Item и, для еды, отрыжка (так у BDS).
     pub consumed: Option<(i32, bool)>,
+    pub cooldown: Option<(&'static str, i32)>,
+    pub shield_blocked: bool,
+    pub landed: bool,
+    pub block_used: bool,
+    /// Урон до брони (среда, шипы, магия), в отличие от damage.
+    pub raw_damage: Vec<(f32, Source)>,
 }
 
 pub(crate) struct Body {
@@ -123,6 +136,20 @@ impl Body {
         if !horse::vehicle_move(&payload, p, shared, &mut Reaction::default()) { vehicle::vehicle_move(&payload, p, shared); }
         vehicle::steer_boat(&[u8::from(flags & (1 << 46) != 0), u8::from(flags & (1 << 47) != 0)], p, shared);
     }
+    pub(crate) fn restore_respawn(&mut self, point: Option<crate::bed::RespawnPoint>) { self.state.respawn = point; }
+    pub(crate) fn respawn_point(&self) -> Option<crate::bed::RespawnPoint> { self.state.respawn }
+    pub(crate) fn respawn_target(&mut self, shared: &Shared, fallback: (f64, f64, f64)) -> (Dimension, (f64, f64, f64), Option<f32>, bool) {
+        self.state.spawn_point = fallback;
+        let target = sleep::respawn_target(shared, &mut self.state);
+        (target.dimension, target.at, target.yaw, target.missing)
+    }
+    pub(crate) fn moved(&mut self, delta: (f64, f64, f64)) { self.state.net.last_delta = delta; }
+    pub(crate) fn spinning(&self) -> bool { self.state.net.spin_since.is_some() }
+    pub(crate) fn blocking(&self, now: u64) -> bool { vitals::shield_up(&self.state, now).is_some() }
+    pub(crate) fn mob_hit_landed(&self) -> bool { self.state.net.mob_hit_landed }
+    pub(crate) fn attributes(&self) -> &crate::attributes::Attributes { &self.state.attrs }
+    pub(crate) fn frozen(&self) -> i32 { vitals::bedrock_frozen(&self.state) }
+    pub(crate) fn respawned(&mut self) { vitals::respawned(&mut self.state); }
 
     /// Тянется ли что-то, чему нужен такт (еда, зарядка арбалета).
     pub(crate) fn busy(&self) -> bool {
@@ -162,8 +189,68 @@ impl Body {
         let p = &mut *self.state;
         p.ride.vehicle = shared.riding.lock().expect("учёт седоков").vehicle_of(p.entity_id);
         let mut done = Done::default();
+        vitals::update_equipment(p, now);
+        vitals::apply_effect_modifiers(p);
 
         match act {
+            Act::Spawn(at) => sleep::set_forced(p, at),
+            Act::RespawnBlock { at, face } => {
+                let mut world = shared.world_in(p.dimension).lock().expect("мир");
+                let state = world.get_block(at.0, at.1, at.2);
+                if crate::bed::is_anchor(state) {
+                    let held = p.inventory.held().and_then(|s| blocks::item_name(s.item));
+                    let charges = crate::bed::anchor_charges(state).unwrap_or(0);
+                    if held == Some("glowstone") && charges < 4 {
+                        if let Some(next) = crate::bed::with_charges(state, charges + 1) {
+                            world.set_block(at.0, at.1, at.2, next);
+                            world.note_sound(at.0, at.1, at.2, "minecraft:block.respawn_anchor.charge", 1.0, 1.0);
+                            if p.game_mode != GAME_MODE_CREATIVE { p.inventory.spend_held(); }
+                        }
+                        done.block_used = true;
+                    } else { done.block_used = sleep::use_anchor(&mut world, shared, p, at, face, held, 0).is_some(); }
+                } else if crate::bed::beds_work(p.dimension) && let Some(head) = crate::bed::head_of(&world, at) {
+                    // Точка кровати общая; анимация сна Bedrock [проверить].
+                    if crate::bed::bed_in_reach(&world, head, (p.x, p.y, p.z)) && !crate::bed::bed_obstructed(&world, head) {
+                        p.respawn = Some(crate::bed::RespawnPoint { dimension: p.dimension, pos: head, yaw: p.yaw, forced: false });
+                    }
+                    done.block_used = true;
+                }
+            }
+            Act::MobHit { amount, source, attacker, killer, push, at } => {
+                let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
+                let amount = if source.scales_with_difficulty() { survival::scaled(amount, difficulty) } else { amount };
+                let strike = PlayerStrike { victim: p.entity_id, attacker, attacker_uuid: [0; 16], attacker_name: killer.to_string(),
+                    from: at, yaw: 0.0, damage: amount, source, extra_knockback: 0.0, weapon: None,
+                    disables_shield_ticks: if killer == "entity.minecraft.warden" { 100 } else { 0 }, breach_scale: 1.0,
+                    fire_ticks: 0, ignores_shield: !(matches!(source, Source::MobAttack | Source::Sting) || source.is_projectile()),
+                    thorns_slots: Vec::new(), effects: Vec::new() };
+                struck(shared, p, &strike, now, &mut done);
+                p.net.mob_hit_landed = done.landed;
+                if done.landed {
+                    pvp::retaliate(shared, p, source, attacker);
+                    if killer == "entity.minecraft.cave_spider" && let Some(effect) = crate::mob::arthropod::poison(difficulty) { p.vit.give_effect_shown(effect); }
+                    if source == Source::Sting && let Some(effect) = crate::mob::wildlife::poison(difficulty) { p.vit.give_effect_shown(effect); }
+                }
+                // Sonic Boom: общий расчёт силы хранителя, включая стойкость.
+                if done.landed && source == Source::SonicBoom {
+                    let delta = (p.x - at.0, p.y + 1.62 - at.1, p.z - at.2);
+                    let sonic = crate::mob::warden::sonic_velocity(delta, p.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE));
+                    let flat = (p.x - at.0).hypot(p.z - at.2).max(1.0e-9);
+                    p.net.velocity = Some((((p.x - at.0) / flat * 0.4 + sonic.0) * 0.546,
+                        (0.3606 + sonic.1 - 0.08) * 0.98, ((p.z - at.2) / flat * 0.4 + sonic.2) * 0.546));
+                } else if p.net.velocity.is_some() {
+                    p.net.velocity = push.map(|(x, z)| (x * 0.218, if p.on_ground { 0.275 } else { p.net.last_delta.1 }, z * 0.218));
+                }
+            }
+            Act::Attribute(edit) => { crate::commands_world::apply_attribute_edit(&mut p.attrs, edit); vitals::apply_effect_modifiers(p); }
+            Act::Environment => done.raw_damage.extend(vitals::bedrock_environment(shared, p)),
+            Act::Reactions => {
+                vitals::effect_reactions(shared, p, p.vit.dead);
+                if p.vit.dead { p.net.using = None; p.net.eating = None; p.net.spin_since = None; }
+            },
+            // Вики, Melee attack: общие charge/strike и reach 3+3 из pvp.rs.
+            // Клиент Bedrock не рисует заряд: частые клики ослабляются тем же
+            // серверным таймером; отдельного полного урона нет [проверить UX].
             Act::Attack(target) => attack(target, p, shared),
             Act::Interact(target) => {
                 let reaction = use_entity(target, p, shared);
@@ -186,7 +273,7 @@ impl Body {
                 // кончилось отпусканием (клиент мог его бросить), забыто.
                 p.net.using = None;
                 p.net.eating = None;
-                use_held(shared, p, hand, now);
+                use_held(shared, p, hand, now, &mut done);
             }
             Act::Release => {
                 if let Some(eating) = p.net.eating.take()
@@ -199,6 +286,20 @@ impl Body {
                 vitals::release_use(p, shared);
             }
             Act::Tick => {
+                // Bedrock поднимает щит приседанием (вики, Shield: «sneaking»).
+                // Задержка и отключение — общие Java-правила смешанного PvP.
+                if p.net.using.is_some_and(|using| using.kind == vitals::UseKind::Shield) {
+                    let hand = p.net.using.unwrap().hand;
+                    let held = p.inventory.slot(if hand == 1 { inventory::OFFHAND } else { p.inventory.selected_slot() });
+                    if !p.sneaking || held.and_then(|s| blocks::item_name(s.item)) != Some("shield") { p.net.using = None; }
+                }
+                if p.sneaking && p.net.using.is_none() {
+                    for hand in [0, 1] {
+                        let held = p.inventory.slot(if hand == 1 { inventory::OFFHAND } else { p.inventory.selected_slot() });
+                        if held.and_then(|s| blocks::item_name(s.item)) == Some("shield") { vitals::start_using(shared, p, hand, now); break; }
+                    }
+                }
+                vitals::tick_spin(shared, p, now);
                 vitals::tick_crossbow(shared, p, now);
 
                 if p.net.eating.as_ref().is_some_and(|eating| !vitals::eating_matches(p, eating)) {
@@ -217,6 +318,14 @@ impl Body {
             Act::Struck(strike) => struck(shared, p, strike, now, &mut done),
         }
 
+        // Общие атаки могут отложить шипы/магию. Их нельзя оставлять в
+        // Java net.hits навсегда: у Bedrock другой цикл здоровья.
+        for hit in std::mem::take(&mut p.net.hits) {
+            done.raw_damage.push((hit.amount, hit.source));
+            if let Some(dir) = hit.push {
+                vitals::knock_back(p, dir, crate::mob::BASE_KNOCKBACK, p.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE));
+            }
+        }
         done.velocity = p.net.velocity.take();
 
         for slot in 0..inventory::SLOTS as i32 {
@@ -235,18 +344,21 @@ impl Body {
 
 /// Правая кнопка: то же, что Use Item у Java (`use_item` в play.rs), без
 /// ведра (его Bedrock ведёт своим путём).
-fn use_held(shared: &Shared, p: &mut PlayerState, hand: i32, now: u64) {
+fn use_held(shared: &Shared, p: &mut PlayerState, hand: i32, now: u64, done: &mut Done) {
+    let held = p.inventory.slot(if hand == 1 { inventory::OFFHAND } else { p.inventory.selected_slot() });
     if fishing::use_rod(shared, p, hand).is_some() || vehicle::place_boat(shared, p, hand) {
         return;
     }
+    if thrown::throw_potion(shared, p, hand) {
+        if held.and_then(|s| blocks::item_name(s.item)) == Some("ender_pearl") { done.cooldown = Some(("ender_pearl", 20)); }
+        return;
+    }
     if thrown::throw_wind_charge(shared, p, hand).is_some() {
+        done.cooldown = Some(("wind_charge", crate::wind::COOLDOWN));
         return;
     }
     if super::maps::fill(shared,p,hand).is_some() {return;}
     if super::bundle_use::start(shared,p,hand,now) {return;}
-    if thrown::throw_potion(shared, p, hand) {
-        return;
-    }
 
     let thrown_eye = thrown::throw_eye(shared, p, hand);
 
@@ -298,7 +410,7 @@ fn finish(shared: &Shared, p: &mut PlayerState, eating: vitals::Eating, done: &m
     for effect in eating.effects {
         match effect.kind {
             crate::survival::EffectKind::InstantHealth => p.vit.heal(crate::survival::instant_base(crate::survival::EffectKind::InstantHealth, effect.amplifier) as f32),
-            crate::survival::EffectKind::InstantDamage => done.damage.push((crate::survival::instant_base(crate::survival::EffectKind::InstantDamage, effect.amplifier) as f32, Source::Magic)),
+            crate::survival::EffectKind::InstantDamage => done.raw_damage.push((crate::survival::instant_base(crate::survival::EffectKind::InstantDamage, effect.amplifier) as f32, Source::Magic)),
             _ => p.vit.give_effect_shown(effect),
         }
     }
@@ -319,7 +431,7 @@ fn struck(shared: &Shared, p: &mut PlayerState, strike: &PlayerStrike, now: u64,
     let mut damage = strike.damage;
 
     // Щит (вики, Shield): держит удар из передней полусферы.
-    if strike.source != Source::Thorns
+    if combat::shield_blocks(strike.source)
         && !strike.ignores_shield
         && damage > 0.0
         && let Some(hand) = vitals::shield_up(p, now)
@@ -344,8 +456,9 @@ fn struck(shared: &Shared, p: &mut PlayerState, strike: &PlayerStrike, now: u64,
         if strike.disables_shield_ticks > 0 {
             p.net.shield_disabled_until = now + u64::from(strike.disables_shield_ticks);
             p.net.using = None;
+            done.cooldown = Some(("shield", strike.disables_shield_ticks.min(i32::MAX as u32) as i32));
         }
-
+        done.shield_blocked = true;
         return;
     }
 
@@ -354,13 +467,13 @@ fn struck(shared: &Shared, p: &mut PlayerState, strike: &PlayerStrike, now: u64,
     damage = combat::mitigated_damage(damage, armor, toughness, points, strike.source, strike.breach_scale);
 
     // Внутри неуязвимости проходит только то, что сильнее прошлого удара.
-    let landed = damage > 0.0 && !(p.vit.invulnerable > 10 && !strike.source.bypasses_cooldown() && damage <= p.vit.last_hurt());
+    let landed = p.vit.clone().hurt(damage, strike.source, false).is_some();
 
     done.damage.push((damage, strike.source));
 
-    if !landed {
-        return;
-    }
+    if !landed { return; }
+    done.landed = true;
+    for effect in &strike.effects { p.vit.give_effect_shown(*effect); }
 
     if !combat::bypasses_armor(strike.source) {
         pvp::wear_armor(shared, p, strike.damage);
@@ -518,5 +631,76 @@ mod bedrock_entity_tests {
         body.dismount(&shared, Dimension::Overworld);
         assert!(shared.riding.lock().unwrap().vehicle_of(10).is_none());
         assert!(shared.items_in(Dimension::Overworld).lock().unwrap().mobs()[0].horse.rider.is_none());
+    }
+}
+
+#[cfg(test)]
+mod combat_tests {
+    use super::*;
+
+    fn shared() -> Shared {
+        Shared::new(World::in_memory(), World::in_memory(), std::path::PathBuf::new(), std::path::PathBuf::new(),
+            Default::default(), crate::ops::Ops::open(&std::env::temp_dir().join("bedrock-combat-test-ops.json")), crate::skins::Settings::default())
+    }
+
+    fn stance() -> Stance {
+        Stance { game_mode: 0, feet: (0.0, 64.0, 0.0), yaw: -90.0, pitch: 0.0, on_ground: true, sneaking: false, dimension: Dimension::Overworld }
+    }
+
+    #[test]
+    fn bedrock_attacks_share_java_reach_and_charge() {
+        for (distance, accepted) in [(6.25, true), (6.4, false)] {
+            let shared = shared(); let mut body = Body::new([1; 16], "Bedrock".into(), 1);
+            let victim = PlayerState::new([2; 16], "Java".into(), None, None, 0, 0, (distance, 64.0, 0.0));
+            shared.players.lock().unwrap().join(victim.member(), 2).unwrap();
+            let reader = shared.next_reader();
+            let from = shared.world_in(Dimension::Overworld).lock().unwrap().watch_events(reader);
+            let mut inventory = Inventory::new();
+            inventory.set(inventory.selected_slot(), Some(Stack::new(blocks::item_named("diamond_sword").unwrap(), 1)));
+            let mut vit = Vitals::new(); let mut last = 0;
+            shared.ticks.send_replace(100);
+            body.act(&shared, &stance(), &mut inventory, &mut vit, &mut last, Act::Attack(2));
+            shared.ticks.send_replace(101);
+            body.act(&shared, &stance(), &mut inventory, &mut vit, &mut last, Act::Attack(2));
+            let (events, _) = shared.world_in(Dimension::Overworld).lock().unwrap().events_since(from, reader);
+            let hits: Vec<_> = events.iter().filter_map(|e| match e { WorldEvent::PlayerStrike(s) => Some(s.damage), _ => None }).collect();
+            if accepted { assert_eq!(hits.len(), 2); assert!(hits[0] > hits[1] * 3.0, "{hits:?}"); }
+            else { assert!(hits.is_empty()); }
+        }
+    }
+
+    #[test]
+    fn bedrock_sneak_shield_disables_and_recovers_on_server_timer() {
+        let shared = shared(); let mut body = Body::new([1; 16], "Bedrock".into(), 1);
+        let mut stance = stance(); stance.sneaking = true; stance.yaw = 0.0;
+        let mut inventory = Inventory::new(); let mut vit = Vitals::new(); let mut last = 0;
+        inventory.set(inventory::OFFHAND, Some(Stack::new(blocks::item_named("shield").unwrap(), 1)));
+        shared.ticks.send_replace(100);
+        body.act(&shared, &stance, &mut inventory, &mut vit, &mut last, Act::Tick);
+        assert!(!body.blocking(104)); assert!(body.blocking(105));
+        shared.ticks.send_replace(105);
+        let strike = PlayerStrike { victim: 1, attacker: 2, attacker_uuid: [2;16], attacker_name: "Java".into(),
+            from: (0.0,64.0,2.0), yaw: 180.0, damage: 9.0, source: Source::PlayerAttack, extra_knockback: 0.0,
+            weapon: None, disables_shield_ticks: 100, breach_scale: 1.0, fire_ticks: 0, ignores_shield: false,
+            thorns_slots: Vec::new(), effects: Vec::new() };
+        let done = body.act(&shared, &stance, &mut inventory, &mut vit, &mut last, Act::Struck(&strike));
+        assert!(done.shield_blocked); assert!(done.damage.is_empty()); assert_eq!(done.cooldown, Some(("shield",100)));
+        assert!(!body.blocking(205));
+        shared.ticks.send_replace(205);
+        body.act(&shared, &stance, &mut inventory, &mut vit, &mut last, Act::Tick);
+        assert!(!body.blocking(209)); assert!(body.blocking(210));
+    }
+
+    #[test]
+    fn body_keeps_smash_forgiveness_and_applies_effect_attributes() {
+        let shared = shared(); let mut body = Body::new([1;16], "Bedrock".into(), 1);
+        let mut inventory = Inventory::new(); let mut vit = Vitals::new(); let mut last = 0;
+        vit.smash_forgives = true;
+        vit.give_effect(survival::EffectKind::Strength, 1, 100);
+        vit.give_effect(survival::EffectKind::HealthBoost, 1, 100);
+        body.act(&shared, &stance(), &mut inventory, &mut vit, &mut last, Act::Tick);
+        assert!(vit.smash_forgives); assert_eq!(vit.max_health, 28.0);
+        assert_eq!(body.attributes().value(crate::attributes::ATTACK_DAMAGE), 7.0);
+        assert!(vit.land(-10.0, true, false, 1.0).is_none());
     }
 }

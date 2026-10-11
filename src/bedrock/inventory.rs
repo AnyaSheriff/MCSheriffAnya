@@ -111,8 +111,10 @@ pub fn write_item(out: &mut Out, stack: Option<Stack>, stack_id: i32) {
     // Особый динамит (custom_tnt.rs) — с именем и описанием в NBT предмета;
     // зачарования, износ и имя (станки) — тоже в NBT (stations::item_nbt).
     if let Some(user_data) = stack.tnt.and_then(crate::custom_tnt::by_id).map(custom_tnt_user_data).or_else(|| stations::item_nbt(&stack)) {
-        out.varint((2 + 1 + user_data.len() + 4 + 4 + if id==SHIELD {8} else {0}) as u32).li16(-1).u8(1).raw(&user_data).li32(0).li32(0);
-        if id==SHIELD {out.li64(0);}
+        let blocking = if id == SHIELD { 8 } else { 0 };
+        out.varint((2 + 1 + user_data.len() + 4 + 4 + blocking) as u32).li16(-1).u8(1).raw(&user_data).li32(0).li32(0);
+        // Щит с NBT тоже содержит blocking_tick (ItemExtraDataWithBlockingTick).
+        if id == SHIELD { out.li64(0); }
         return;
     }
 
@@ -1530,6 +1532,20 @@ mod tests {
 
     /// Как клиент берёт камень из творческого меню: создать, взять в курсор,
     /// положить в панель.
+    #[test]
+    fn named_shield_keeps_blocking_tick_after_nbt() {
+        let stack = Stack::new(crate::blocks::item_named("shield").unwrap(), 1)
+            .with_extras(crate::stackdata::Data { name: Some("Guard".into()), ..Default::default() });
+        let mut out = Out::default(); write_item(&mut out, Some(stack), 0);
+        let mut r = In::new(&out.bytes);
+        assert_eq!(r.zigzag32(), Some(SHIELD)); assert!(r.take(2).is_some()); assert!(r.varint().is_some());
+        assert_eq!(r.bool(), Some(false)); assert!(r.zigzag32().is_some());
+        let len = r.varint().unwrap() as usize; let extra = r.take(len).unwrap();
+        assert_eq!(&extra[..3], &[255,255,1]);
+        assert_eq!(&extra[extra.len()-16..], &[0;16]); // два списка + blocking_tick
+        assert_eq!(r.remaining(), 0);
+    }
+
     #[test]
     fn creative_item_lands_in_the_hotbar() {
         let stone_entry = (1..=1496).find(|entry| creative_item(*entry) == crate::blocks::item_named("stone")).expect("камень в меню");

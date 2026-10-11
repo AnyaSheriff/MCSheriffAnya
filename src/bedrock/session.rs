@@ -51,7 +51,6 @@ pub const INVENTORY_SLOT: u32 = 0x32;
 pub const ITEM_STACK_REQUEST: u32 = 0x93;
 pub const AVAILABLE_COMMANDS: u32 = 0x4c;
 pub const COMMAND_REQUEST: u32 = 0x4d;
-pub const SET_PLAYER_GAME_TYPE: u32 = 0x3e;
 pub const ITEM_STACK_RESPONSE: u32 = 0x94;
 pub const PLAYER_LIST: u32 = 0x3f;
 pub const LEVEL_CHUNK: u32 = 0x3a;

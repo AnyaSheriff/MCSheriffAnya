@@ -4134,7 +4134,7 @@ async fn send_pending_world_events(
                 }
             }
             // Ход поршня для Bedrock: у Java клиент рисует его по Block Action.
-            WorldEvent::Piston(_) => {}
+            WorldEvent::Piston(_) | WorldEvent::Totem { .. } => {}
             WorldEvent::BlockEntity { x, y, z, kind, nbt } => entities.push((*x, *y, *z, *kind, nbt.clone())),
             WorldEvent::Action(action) => {
                 let mut body = encode_varint(BLOCK_ACTION);

@@ -1,0 +1,81 @@
+{
+  "origin": [
+    0,
+    -60,
+    0
+  ],
+  "track_self": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "gamemode survival $(bot)",
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "fill $(-2,-1,-2) $(8,-1,8) stone",
+    "tp $(bot) $(0.5,0,0.5) -90 0",
+    "!stopfly",
+    "clear $(bot2)",
+    "effect clear $(bot2)",
+    "gamemode survival $(bot2)",
+    "tp $(bot2) $(6.75,0,0.5) 90 0",
+    "give $(bot) diamond_sword",
+    "!hotbar 0"
+  ],
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "gamerule natural_health_regeneration true",
+    "difficulty peaceful",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-2,0,-2) $(8,8,8) air",
+    "fill $(-2,-1,-2) $(8,-1,8) air",
+    "effect clear $(bot2)",
+    "clear $(bot2)",
+    "gamemode creative $(bot2)"
+  ],
+  "name": "bedrock-combat-reach-charge",
+  "about": "[проверить] Mixed PvP reference: 5.95-block eye-to-box gap accepts, 6.10 rejects. A second immediate attack must use the shared Java cooldown. Replay with Bedrock attacker after Java baseline.",
+  "actions": [
+    {
+      "after": 0,
+      "attack": true,
+      "target": "second"
+    },
+    {
+      "after": 1,
+      "attack": true,
+      "target": "second"
+    },
+    {
+      "after": 35,
+      "cmd": "tp $(bot2) $(6.9,0,0.5) 90 0"
+    },
+    {
+      "after": 38,
+      "attack": true,
+      "target": "second"
+    },
+    {
+      "after": 70,
+      "cmd": "tp $(bot2) $(2.5,0,0.5) 90 0"
+    },
+    {
+      "after": 75,
+      "attack": true,
+      "target": "second"
+    },
+    {
+      "after": 76,
+      "attack": true,
+      "target": "second"
+    }
+  ],
+  "record_ticks": 110,
+  "second": true,
+  "track_players": true,
+  "track_second": true,
+  "track_second_velocity": true
+}

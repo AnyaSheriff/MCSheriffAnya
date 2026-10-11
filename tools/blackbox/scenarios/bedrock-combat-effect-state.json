@@ -1,0 +1,83 @@
+{
+  "origin": [
+    0,
+    -60,
+    0
+  ],
+  "track_self": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "gamemode survival $(bot)",
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "fill $(-2,-1,-2) $(8,-1,8) stone",
+    "tp $(bot) $(0.5,0,0.5)",
+    "!stopfly"
+  ],
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "gamerule natural_health_regeneration true",
+    "difficulty peaceful",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-2,0,-2) $(8,8,8) air",
+    "fill $(-2,-1,-2) $(8,-1,8) air"
+  ],
+  "name": "bedrock-combat-effect-state",
+  "about": "[проверить] Poison/wither damage, independent absorption/XP updates, effect removal and totem. Observe MobEffect 944 ambient and duration during a later Bedrock recording.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "effect give $(bot) poison 4 0"
+    },
+    {
+      "after": 50,
+      "cmd": "effect clear $(bot)"
+    },
+    {
+      "after": 55,
+      "cmd": "effect give $(bot) wither 3 0"
+    },
+    {
+      "after": 90,
+      "cmd": "effect clear $(bot)"
+    },
+    {
+      "after": 95,
+      "cmd": "effect give $(bot) absorption 20 1"
+    },
+    {
+      "after": 100,
+      "cmd": "experience set $(bot) 10 levels"
+    },
+    {
+      "after": 110,
+      "cmd": "damage $(bot) 4 minecraft:sonic_boom"
+    },
+    {
+      "after": 140,
+      "cmd": "item replace entity $(bot) weapon.offhand with totem_of_undying"
+    },
+    {
+      "after": 141,
+      "cmd": "effect clear $(bot)"
+    },
+    {
+      "after": 145,
+      "cmd": "damage $(bot) 100 minecraft:sonic_boom"
+    },
+    {
+      "after": 170,
+      "cmd": "effect give $(bot) darkness 2 0"
+    },
+    {
+      "after": 220,
+      "cmd": "effect clear $(bot)"
+    }
+  ],
+  "record_ticks": 245
+}

@@ -33,6 +33,7 @@ pub mod mobdata;
 pub mod mobprops;
 pub mod pistons;
 pub mod png;
+pub mod player_state;
 pub mod raknet;
 pub mod session;
 pub mod skin;

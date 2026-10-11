@@ -304,6 +304,8 @@ pub enum WorldEvent {
     /// Анимация сущности (Entity Animation): 4 — критический удар, 5 —
     /// удар с зачарованием.
     Animation { entity_id: i32, kind: u8 },
+    /// Тотем для второго представления: Java уже получил своё событие 35.
+    Totem { entity_id: i32 },
     /// Поломка экипировки: клиент рисует частицы и играет звук.
     EquipmentBreak { entity_id: i32, status: u8 },
     /// Звук от сущности (Entity Sound Effect).
@@ -2750,6 +2752,11 @@ impl World {
 
     pub fn note_player_damaged(&mut self, entity_id: i32, type_id: i32, culprit: i32, direct: i32) {
         self.events.push(WorldEvent::PlayerDamaged { entity_id, type_id, culprit, direct, at: None });
+    }
+
+    /// Тотем для клиентов Bedrock; Java игнорирует эту запись.
+    pub fn note_totem(&mut self, entity_id: i32) {
+        self.events.push(WorldEvent::Totem { entity_id });
     }
 
     /// Звук от самой сущности (раздел «игроки»): клиенты играют его там,

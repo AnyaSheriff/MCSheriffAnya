@@ -199,6 +199,9 @@ fn air() -> u32 {
     })
 }
 
+/// Update Player Game Type (0x97): смена режима у BDS.
+const UPDATE_PLAYER_GAME_TYPE: u32 = 0x97;
+
 /// Режим игры для Bedrock. Выживание, творческий и приключение совпадают
 /// с Java; наблюдатель у Bedrock — 6 (GameMode в описании протокола), а 3
 /// там — «наблюдатель выживания».
@@ -263,9 +266,6 @@ pub struct BedrockWorld {
     items_from: usize,
     items_shown: HashSet<i32>,
 
-    /// Показан ли клиенту флаг «использует предмет» (ест, тянет лук).
-    using_shown: bool,
-
     /// Чужие игроки, чью смерть клиент уже видел (death_animation).
     dead_shown: HashSet<i32>,
 
@@ -292,6 +292,7 @@ pub struct BedrockWorld {
     /// Такт сервера, когда игрок последний раз ударил: сила удара растёт
     /// с перезарядкой руки, как у Java.
     last_attack: u64,
+    state_view: super::player_state::View,
     /// Тело для общего кода боя и использования предметов (network/play/body.rs):
     /// в нём тянется натяжение лука, еда, поднятый щит.
     body: crate::network::play::Body,
@@ -574,7 +575,8 @@ impl BedrockWorld {
         let (items_from, lying) = lying_items(&shared, dimension, reader);
         let (arrived_tx, arrived_rx) = mpsc::unbounded_channel();
 
-        let body = crate::network::play::Body::new(identity.uuid, identity.name.clone(), entity_id);
+        let mut body = crate::network::play::Body::new(identity.uuid, identity.name.clone(), entity_id);
+        body.restore_respawn(saved.as_ref().and_then(|data| data.respawn));
         let mut player = BedrockWorld {
             shared,
             dimension,
@@ -587,7 +589,6 @@ impl BedrockWorld {
             bag,
             items_from,
             items_shown: HashSet::new(),
-            using_shown: false,
             dead_shown: HashSet::new(),
             carts_at: HashMap::new(),
             primed_at: HashMap::new(),
@@ -598,6 +599,7 @@ impl BedrockWorld {
             things_at: HashMap::new(),
             frames_at: HashMap::new(),
             last_attack: 0,
+            state_view: super::player_state::View::default(),
             body,
             radius: START_RADIUS,
             sent: HashSet::new(),
@@ -981,10 +983,12 @@ impl BedrockWorld {
             && mode != self.game_mode
         {
             self.game_mode = mode;
-            let mut set = Out::packet(session::SET_PLAYER_GAME_TYPE);
-            set.zigzag32(bedrock_game_mode(mode));
+            // BDS (br-record, gamemodes): смена режима командой — один Update Player
+            // Game Type (0x97: режим, номер игрока, такт), без Set Player Game Type и
+            // без Update Abilities; права по режиму клиент выводит сам.
+            let mut set = Out::packet(UPDATE_PLAYER_GAME_TYPE);
+            set.zigzag32(bedrock_game_mode(mode)).zigzag64(self.runtime_id as i64).varint64(0);
             packets.push(set.bytes);
-            packets.push(abilities(self.runtime_id, mode));
         }
 
         for order in orders {
@@ -992,19 +996,35 @@ impl BedrockWorld {
                 crate::players::Order::Hurt { amount, source } => self.health.hurt(amount, source),
                 // [Bedrock: потом] Атрибуция команды; само здоровье обновляется.
                 crate::players::Order::CommandDamage { amount, source, .. } => self.health.hurt(amount, source),
-                crate::players::Order::MagicHit { amount, .. } => self.health.hurt(amount, crate::survival::Source::Magic),
-                crate::players::Order::Respawn => {}
+                crate::players::Order::MagicHit { amount, from, .. } => self.health.hurt(amount, if from.is_some() { crate::survival::Source::IndirectMagic } else { crate::survival::Source::Magic }),
+                crate::players::Order::Respawn => self.respawn(connection),
                 // Сон у Bedrock пока не ведётся [проверить].
                 crate::players::Order::WakeUp => {}
                 // Сообщения командных блоков операторам — пока только Java [проверить].
                 crate::players::Order::Message { .. } => {}
-                // Опыт у Bedrock пока не считается [проверить].
-                crate::players::Order::Experience { .. } | crate::players::Order::XpTaken { .. } => {}
+                crate::players::Order::Experience { set, amount, levels } => self.health.vit.command_xp(set, amount, levels),
+                crate::players::Order::XpTaken { points } => {
+                    let roll = self.shared.world_in(self.dimension).lock().expect("мир").random_unit();
+                    let (slot, remaining) = crate::combat::mend(&mut self.bag.inventory, points, roll);
+                    self.health.vit.add_xp(remaining);
+                    if let Some(slot) = slot { self.bag.touched(&[slot]); packets.extend(self.bag.slot_packet(slot)); }
+                }
                 // Статистика и достижения Bedrock пока не ведутся [Bedrock: потом].
                 crate::players::Order::KilledPlayer | crate::players::Order::Progress(_) | crate::players::Order::Advancement { .. } => {}
                 // Пакеты и правки команд мира — пока только у Java [проверить].
-                crate::players::Order::Packet(_) | crate::players::Order::Attribute(_) | crate::players::Order::Enchant { .. } | crate::players::Order::Spectate { .. } => {}
-                // Эффекты голода и насыщения считаются, значка у Bedrock пока нет [проверить].
+                crate::players::Order::Packet(_) | crate::players::Order::Spectate { .. } => {}
+                crate::players::Order::Enchant { enchantment, level } => {
+                    let slot = self.bag.inventory.selected_slot();
+                    if let Some(stack) = self.bag.inventory.slot(slot) {
+                        let mut data = stack.extras(); data.set_enchant(enchantment as u16, level);
+                        self.bag.inventory.set(slot, Some(stack.with_extras(data)));
+                        self.bag.touched(&[slot]); packets.extend(self.bag.slot_packet(slot));
+                    }
+                }
+                crate::players::Order::Attribute(edit) => {
+                    let done = self.run(crate::network::play::Act::Attribute(&edit)); self.settle(done, packets);
+                }
+                // Состояние эффектов уходит отдельной сверкой MobEffectPacket.
                 crate::players::Order::Effect(effect) => self.health.vit.give_effect_shown(effect),
                 crate::players::Order::ClearEffects => { self.health.vit.remove_effects(None); }
                 crate::players::Order::ClearEffect(kind) => { self.health.vit.remove_effects(Some(kind)); }
@@ -1017,7 +1037,9 @@ impl BedrockWorld {
                     return;
                 }
                 // Готовые пакеты Java (title, звуки, частицы) Bedrock не нужны.
-                crate::players::Order::Spawn { .. } => {}
+                crate::players::Order::Spawn { x, y, z, .. } => {
+                    let done = self.run(crate::network::play::Act::Spawn((x, y, z))); self.settle(done, packets);
+                }
                 // Чат — простым текстом; прочие пакеты Java (title, звуки, частицы) Bedrock не нужны.
                 crate::players::Order::PacketText { plain, .. } => {
                     if !plain.is_empty() {
@@ -1075,8 +1097,10 @@ impl BedrockWorld {
                 crate::players::Order::ChangeDimension { dimension, x, y, z } => {
                     self.change_dimension(connection, packets, dimension, (x, y, z));
                 }
-                // [проверить] ячейку по команде на Bedrock пока не кладём.
-                crate::players::Order::SetSlot { .. } | crate::players::Order::SetEnderSlot { .. } => {}
+                crate::players::Order::SetSlot { slot, stack } => {
+                    self.bag.inventory.set(slot, stack); self.bag.touched(&[slot]); packets.extend(self.bag.slot_packet(slot));
+                }
+                crate::players::Order::SetEnderSlot { .. } => {}
                 crate::players::Order::Hold { stack } => {
                     let slot = crate::inventory::FIRST_HOTBAR + self.bag.inventory.selected();
 
@@ -1103,6 +1127,7 @@ impl BedrockWorld {
         }
 
         self.position = target;
+        self.body.moved((0.0, 0.0, 0.0));
         self.health.vit.fall = 0.0;
         self.teleport = Some(Teleporting { target, since: self.ticks });
         self.publish_position();
@@ -1744,7 +1769,16 @@ impl BedrockWorld {
         let mortal = self.mortal();
         let immune = self.game_mode == crate::commands::GAME_MODE_CREATIVE || self.game_mode == crate::commands::GAME_MODE_SPECTATOR;
         let feet_y = self.position.1 - EYES;
-        let outcome = self.health.tick(self.runtime_id, mortal, immune, difficulty, feet_y);
+        let done = self.run(crate::network::play::Act::Environment);
+        self.settle(done, packets);
+        let outcome = self.health.step(self.runtime_id, health::Rules { mortal, immune, difficulty, feet_y,
+            natural_regeneration: self.shared.natural_regeneration.load(std::sync::atomic::Ordering::Relaxed) },
+            &mut self.bag.inventory, self.body.attributes());
+        if !outcome.slots.is_empty() {
+            self.shared.world_in(self.dimension).lock().expect("мир").note_totem(self.runtime_id as i32);
+        }
+        self.bag.touched(&outcome.slots);
+        packets.extend(outcome.slots.iter().filter_map(|&slot| self.bag.slot_packet(slot)));
 
         packets.extend(outcome.packets);
 
@@ -1758,9 +1792,15 @@ impl BedrockWorld {
             }
         }
 
-        if let Some(source) = outcome.died {
-            self.die(packets, source);
-        }
+        if let Some(source) = outcome.died { self.die(packets, source); }
+        let done = self.run(crate::network::play::Act::Reactions);
+        self.settle(done, packets);
+        let stance = self.stance();
+        let gear = self.body.gear(&self.shared, &stance, &self.bag.inventory, &self.health.vit, self.last_attack);
+        self.shared.players.lock().expect("игроки").set_gear(&self.identity.uuid, gear);
+        let feet = (self.position.0, self.position.1 - EYES, self.position.2);
+        self.state_view.sync(self.runtime_id, &self.health.vit, self.body.frozen(), self.ticks, (feet.0, feet.1 + 0.9, feet.2), packets);
+        self.state_view.attributes(self.runtime_id, self.body.attributes(), &self.health.vit.effects, packets);
     }
 
     /// Смерть: сообщение, вещи на землю, экран смерти у клиента.
@@ -1775,17 +1815,9 @@ impl BedrockWorld {
         log_info!("{}", text);
         self.shared.chat.lock().expect("чат захвачен другим потоком").push_hidden(text, Some(self.identity.uuid));
 
-        // Вещи падают, если не включено `keepInventory`.
-        if !self.shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed) {
-            for slot in 0..crate::inventory::SLOTS as i32 {
-                if let Some(stack) = self.bag.inventory.slot(slot) {
-                    self.throw_out(stack);
-                    self.bag.inventory.set(slot, None);
-                }
-            }
-
-            packets.extend(self.bag.content_packets());
-        }
+        let keep = self.shared.keep_inventory.load(std::sync::atomic::Ordering::Relaxed);
+        for stack in crate::combat::death_drops(&mut self.bag.inventory, keep) { self.throw_out(stack); }
+        if !keep { packets.extend(self.bag.content_packets()); }
 
         self.health.vit.dead = true;
     }
@@ -1797,19 +1829,24 @@ impl BedrockWorld {
         }
 
         self.health.respawned();
+        self.body.respawned();
 
         let spawn = self.shared.world_in(Dimension::Overworld).lock().expect("мир захвачен другим потоком").spawn_position();
-        let (x, y, z) = crate::network::play::on_the_ground(&self.shared, spawn);
+        let (dimension, (x, y, z), yaw, missing) = self.body.respawn_target(&self.shared, spawn);
+        if let Some(yaw) = yaw { self.rotation.0 = yaw; }
         let mut packets = Vec::new();
+        if missing { packets.push(raw_text("Your respawn point is missing or obstructed.")); }
 
-        if self.dimension == Dimension::Overworld {
+        if self.dimension == dimension {
             self.teleport_to(connection, &mut packets, (x, y, z));
         } else {
-            self.change_dimension(connection, &mut packets, Dimension::Overworld, (x, y, z));
+            self.change_dimension(connection, &mut packets, dimension, (x, y, z));
         }
 
         let eyes = (x as f32, y as f32 + EYES, z as f32);
-        let mut answer = vec![health::respawn_packet(eyes, health::STATE_READY, self.runtime_id), health::attributes(self.runtime_id, &self.health.vit)];
+        let mut answer = packets;
+        answer.push(health::respawn_packet(eyes, health::STATE_READY, self.runtime_id));
+        answer.push(health::attributes(self.runtime_id, &self.health.vit));
 
         answer.push(abilities(self.runtime_id, self.game_mode));
         connection.send(&answer);
@@ -2208,17 +2245,23 @@ impl BedrockWorld {
             packets.push(motion(self.runtime_id, (vx as f32, vy as f32, vz as f32)));
         }
 
-        for (amount, source) in done.damage {
-            self.health.hurt(amount, source);
+        for (amount, source) in done.damage { self.health.hurt_final(amount, source); }
+        for (amount, source) in done.raw_damage { self.health.hurt(amount, source); }
+        if let Some((category, ticks)) = done.cooldown { packets.push(super::player_state::cooldown(category, ticks)); }
+        if done.shield_blocked {
+            let at = (f64::from(self.position.0), f64::from(self.position.1 - EYES), f64::from(self.position.2));
+            self.shared.world_in(self.dimension).lock().expect("мир").note_sound_player_except(at, "minecraft:item.shield.block", 1.0, 1.0, 0);
         }
 
-        // Флаг «использует предмет» у самого игрока: BDS шлёт его после щелчка
-        // (еда, лук) и снимает по окончании — иначе клиент не замедляется и не
-        // рисует еду. Флаги уходят целиком.
-        if self.body.busy() != self.using_shown {
-            self.using_shown = self.body.busy();
-            packets.push(own_flags(self.runtime_id, self.using_shown, self.sneaking));
-        }
+        self.state_view.flags(self.runtime_id, super::player_state::Flags {
+            using: self.body.busy(), sneaking: self.sneaking, sprinting: self.health.vit.sprinting,
+            invisible: self.health.vit.has_effect(crate::survival::EffectKind::Invisibility), burning: self.health.vit.fire > 0,
+            fire_immune: self.health.vit.has_effect(crate::survival::EffectKind::FireResistance), own: true,
+            blocking: self.body.blocking(*self.shared.ticks.borrow()), spinning: self.body.spinning(),
+            // BDS (br-record, gamemodes): при смене режима игроку метаданных не шлёт; спектатора скрывает клиент сам
+            // (соседям он скрыт отдельным путём — show_players ниже по файлу).
+            spectator: false,
+        }, packets);
 
         // Доел или допил: клиенту — Completed Using Item (предмет и способ:
         // 1 — еда, 3 — питьё), еда — ещё отрыжка у лица (BDS: Burp на 0,1
@@ -2307,15 +2350,13 @@ impl BedrockWorld {
     /// Такт тела: еда, зарядка арбалета; и вещи с бойцом — другим игрокам
     /// (щит, броня, неуязвимость нужны тем, кто бьёт этого игрока).
     fn tick_body(&mut self, packets: &mut Vec<Vec<u8>>) {
-        if self.changing.is_some() {
+        if self.changing.is_some() || self.health.vit.dead {
             return;
         }
 
-        if self.body.busy() {
-            let done = self.run(crate::network::play::Act::Tick);
-
-            self.settle(done, packets);
-        }
+        // Тягун и отложенные попадания живут и после отпускания кнопки.
+        let done = self.run(crate::network::play::Act::Tick);
+        self.settle(done, packets);
 
         let stance = self.stance();
         let gear = self.body.gear(&self.shared, &stance, &self.bag.inventory, &self.health.vit, self.last_attack);
@@ -2534,6 +2575,17 @@ impl BedrockWorld {
 
         if distance(eyes, center) > reach {
             return None;
+        }
+
+        let respawn_block = {
+            let world = self.shared.world_in(self.dimension).lock().expect("мир");
+            let state = world.get_block(clicked.0, clicked.1, clicked.2);
+            crate::bed::is_anchor(state) || (crate::bed::is_bed(state) && crate::bed::beds_work(self.dimension))
+        };
+        if respawn_block {
+            let done = self.run(crate::network::play::Act::RespawnBlock { at: clicked, face });
+            let used = done.block_used; let mut packets = Vec::new(); self.settle(done, &mut packets);
+            if used { return Some(packets); }
         }
 
         let (x, y, z) = clicked;
@@ -3387,6 +3439,7 @@ impl BedrockWorld {
         let was_on_ground = self.on_ground;
         let (dy, run) = ((eyes.1 - self.position.1) as f64, f64::from(eyes.0 - self.position.0).hypot(f64::from(eyes.2 - self.position.2)));
 
+        self.body.moved((f64::from(eyes.0 - self.position.0), dy, f64::from(eyes.2 - self.position.2)));
         self.on_ground = flags & VERTICAL_COLLISION != 0 && eyes.1 <= self.position.1;
         self.position = eyes;
         self.health.vit.sprinting = flags & SPRINTING != 0;
@@ -3457,7 +3510,7 @@ impl BedrockWorld {
             dimension: self.dimension,
             vitals: self.health.vit.saved(),
             // Точку возрождения Bedrock-игрок пока не ставит: сохраняем прежнюю.
-            respawn: self.saved.as_ref().and_then(|data| data.respawn),
+            respawn: self.body.respawn_point(),
             // Эндер-сундук Bedrock-игрока: [Bedrock: потом] — сохраняем прежний.
             ender: self.saved.as_ref().map_or_else(crate::playerdata::empty_ender, |data| data.ender.clone()),
         }
@@ -3693,14 +3746,9 @@ impl BedrockWorld {
                 }
                 // Удар моба или стрелы: урон — здоровью, толчок — клиенту
                 // (как у Java: 0,218 вдоль удара и 0,275 вверх с земли).
-                WorldEvent::MobHurt { entity_id, amount, source, push, .. } if entity_id == self.runtime_id as i32 => {
-                    self.health.hurt(amount, source);
-
-                    if let Some((ux, uz)) = push {
-                        let up = if self.on_ground { 0.275 } else { 0.0 };
-
-                        packets.push(motion(self.runtime_id, ((ux * 0.218) as f32, up, (uz * 0.218) as f32)));
-                    }
+                WorldEvent::MobHurt { entity_id, amount, source, attacker, killer, push, at } if entity_id == self.runtime_id as i32 => {
+                    let done = self.run(crate::network::play::Act::MobHit { amount, source, attacker, killer, push, at });
+                    self.settle(done, &mut packets);
                 }
                 // Удар другого игрока (или стрела игрока): щит, броня, отдача —
                 // тем же кодом, что у Java (network/play/body.rs).
@@ -3709,7 +3757,23 @@ impl BedrockWorld {
 
                     self.settle(done, &mut packets);
                 }
-                // Зелья и облака: эффекты считаются, значка у Bedrock пока нет [проверить].
+                WorldEvent::Particle { kind, block, at, skip, .. } if skip != self.runtime_id as i32 && self.within_earshot(at.0, at.2) => {
+                    packets.extend(super::effects::combat_particles(kind, block, at));
+                }
+                WorldEvent::EntitySound { entity_id, name, volume: _, pitch } => {
+                    let at = if entity_id == self.runtime_id as i32 { Some((self.position.0, self.position.1 - 1.62, self.position.2)) }
+                        else if let Some(shown) = self.shown.get(&entity_id) { Some((shown.position.x as f32, shown.position.y as f32, shown.position.z as f32)) }
+                        else { self.mobs_at.get(&entity_id).map(|p| (p[0], p[1], p[2])) };
+                    if let Some(at) = at { packets.extend(super::effects::sound_packets(name, pitch, at, None)); }
+                }
+                WorldEvent::Totem { entity_id } if entity_id != self.runtime_id as i32 && self.shown.contains_key(&entity_id) => {
+                    packets.push(health::actor_event(entity_id as u64, 65));
+                }
+                WorldEvent::Animation { entity_id, kind } if self.shown.contains_key(&entity_id) || self.items_shown.contains(&entity_id) || entity_id == self.runtime_id as i32 => {
+                    packets.push(super::player_state::animation(entity_id as u64, kind));
+                }
+                WorldEvent::MobHitEffect { entity_id, effect } if entity_id == self.runtime_id as i32 && self.body.mob_hit_landed() => self.health.vit.give_effect_shown(effect),
+                WorldEvent::MobEffect { entity_id, effect } if entity_id == self.runtime_id as i32 => self.health.vit.give_effect_shown(effect),
                 WorldEvent::PotionEffect { entity_id, effect } if entity_id == self.runtime_id as i32 => self.health.vit.give_effect_shown(effect),
                 WorldEvent::PotionHeal { entity_id, amount } if entity_id == self.runtime_id as i32 => self.health.vit.heal(amount),
                 _ => {}
@@ -3843,6 +3907,7 @@ impl BedrockWorld {
                             held: member.held,
                             sneaking: member.sneaking,
                             swings: member.swings,
+                            combat_shown: Vec::new(),
                         },
                     );
                 }
@@ -3883,8 +3948,19 @@ impl BedrockWorld {
         {
             let players = self.shared.players.lock().expect("список игроков захвачен другим потоком");
 
-            for (id, shown) in &self.shown {
-                let dead = players.gear(&shown.uuid).health <= 0.0;
+            for (id, shown) in &mut self.shown {
+                let gear = players.gear(&shown.uuid);
+                let dead = gear.health <= 0.0;
+                let now = *self.shared.ticks.borrow();
+                let spectator = players.members().iter().any(|m| m.uuid == shown.uuid && m.game_mode == crate::commands::GAME_MODE_SPECTATOR);
+                let flags = super::player_state::Flags {
+                    using: gear.living & 1 != 0, sneaking: shown.sneaking, sprinting: gear.sprinting,
+                    blocking: gear.view.blocking_since.is_some_and(|since| now >= since + u64::from(crate::combat::SHIELD_DELAY)) && now >= gear.view.shield_disabled_until,
+                    spinning: gear.living & crate::players::SPIN_POSE_BIT != 0, spectator, ..Default::default()
+                };
+                let state = vec![super::player_state::flags(*id as u64, flags), super::player_state::armor(*id as u64, &gear.worn),
+                    super::player_state::offhand(*id as u64, gear.worn[0]), super::player_state::environment(*id as u64, gear.air, 0)];
+                if state != shown.combat_shown { packets.extend(state.iter().cloned()); shown.combat_shown = state; }
 
                 if dead && self.dead_shown.insert(*id) {
                     packets.push(health::death_event(*id as u64));
@@ -4698,27 +4774,6 @@ fn other_flags(member: &Member) -> i64 {
     if member.sneaking { base | (1 << 1) } else { base }
 }
 
-/// Флаги самого игрока: лазить, дышать, сталкиваться, тяжесть, а ещё «использует
-/// предмет» (4, у BDS — `action`) и «приседает» (1) (MetadataFlags1).
-fn own_flags(runtime_id: u64, using: bool, sneaking: bool) -> Vec<u8> {
-    let mut flags: i64 = (1 << 19) | (1 << 35) | (1 << 48) | (1 << 49);
-
-    if using {
-        flags |= 1 << 4;
-    }
-
-    if sneaking {
-        flags |= 1 << 1;
-    }
-
-    let mut out = Out::packet(session::SET_ENTITY_DATA);
-    out.varint64(runtime_id).varint(1);
-    out.varint(DATA_FLAGS).varint(DATA_LONG).zigzag64(flags);
-    out.varint(0).varint(0); // свойства: целые, дробные
-    out.varint64(0); // такт
-    out.bytes
-}
-
 /// Свойства сущности самого игрока: без флага тяжести он висит в воздухе
 /// («ватный», полёт не выключается), без «может лазить» — не лезет по
 /// лестницам. Номера флагов и ключей — описание протокола
@@ -5002,6 +5057,7 @@ struct Shown {
     held: Option<crate::inventory::Stack>,
     sneaking: bool,
     swings: u32,
+    combat_shown: Vec<Vec<u8>>,
 }
 
 /// Начал ломать (из Player Auth Input): ломает только в творческом режиме.

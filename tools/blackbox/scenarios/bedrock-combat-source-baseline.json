@@ -1,0 +1,123 @@
+{
+  "origin": [
+    0,
+    -60,
+    0
+  ],
+  "track_self": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "gamemode survival $(bot)",
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "fill $(-2,-1,-2) $(8,-1,8) stone",
+    "tp $(bot) $(0.5,0,0.5)",
+    "!stopfly"
+  ],
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "gamerule natural_health_regeneration true",
+    "difficulty peaceful",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-2,0,-2) $(8,8,8) air",
+    "fill $(-2,-1,-2) $(8,-1,8) air"
+  ],
+  "name": "bedrock-combat-source-baseline",
+  "about": "[проверить] Java reference for damage causes; later observe the same commands with a Bedrock victim and viewer. No Java scenario replacements.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 2,
+      "cmd": "damage $(bot) 2 minecraft:freeze"
+    },
+    {
+      "after": 30,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 32,
+      "cmd": "damage $(bot) 2 minecraft:ender_pearl"
+    },
+    {
+      "after": 60,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 62,
+      "cmd": "damage $(bot) 2 minecraft:wind_charge"
+    },
+    {
+      "after": 90,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 92,
+      "cmd": "damage $(bot) 2 minecraft:sonic_boom"
+    },
+    {
+      "after": 120,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 122,
+      "cmd": "damage $(bot) 2 minecraft:thorns"
+    },
+    {
+      "after": 150,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 152,
+      "cmd": "damage $(bot) 2 minecraft:indirect_magic"
+    },
+    {
+      "after": 180,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 182,
+      "cmd": "damage $(bot) 2 minecraft:mace_smash"
+    },
+    {
+      "after": 210,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 212,
+      "cmd": "damage $(bot) 2 minecraft:falling_anvil"
+    },
+    {
+      "after": 240,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 242,
+      "cmd": "damage $(bot) 2 minecraft:stalagmite"
+    },
+    {
+      "after": 270,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 272,
+      "cmd": "damage $(bot) 2 minecraft:campfire"
+    },
+    {
+      "after": 300,
+      "cmd": "effect give $(bot) instant_health 1 4 true"
+    },
+    {
+      "after": 302,
+      "cmd": "damage $(bot) 2 minecraft:fireworks"
+    }
+  ],
+  "record_ticks": 350
+}

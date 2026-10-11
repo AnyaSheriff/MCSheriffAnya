@@ -137,12 +137,41 @@ pub fn cue_for(name: &str, pitch: f32) -> Option<Cue> {
     let short = name.strip_prefix("minecraft:")?;
 
     match short {
+        // Mojang r/26_u1, SoundType: имена не зависят от Java registry id.
+        "item.crossbow.loading_start" => return Some(Cue::new(245, Extra::None)),
+        "item.crossbow.loading_middle" => return Some(Cue::new(246, Extra::None)),
+        "item.crossbow.loading_end" => return Some(Cue::new(247, Extra::None)),
+        "item.crossbow.shoot" => return Some(Cue::new(248, Extra::None)),
+        "item.crossbow.quick_charge_1" => return Some(Cue::new(249, Extra::None)),
+        "item.crossbow.quick_charge_2" => return Some(Cue::new(250, Extra::None)),
+        "item.crossbow.quick_charge_3" => return Some(Cue::new(251, Extra::None)),
+        "block.respawn_anchor.charge" => return Some(Cue::new(308, Extra::None)),
+        "block.respawn_anchor.deplete" => return Some(Cue::new(309, Extra::None)),
+        "block.respawn_anchor.set_spawn" => return Some(Cue::new(310, Extra::None)),
+        "entity.player.attack.crit" => return Some(Cue::new(569, Extra::Player)),
+        "item.trident.hit" => return Some(Cue::new(178, Extra::None)),
+        "item.trident.return" => return Some(Cue::new(179, Extra::None)),
+        "item.trident.riptide_1" => return Some(Cue::new(180, Extra::None)),
+        "item.trident.riptide_2" => return Some(Cue::new(181, Extra::None)),
+        "item.trident.riptide_3" => return Some(Cue::new(182, Extra::None)),
+        "item.trident.throw" => return Some(Cue::new(183, Extra::None)),
+        "item.trident.thunder" => return Some(Cue::new(184, Extra::None)),
+        "item.trident.hit_ground" => return Some(Cue::new(185, Extra::None)),
+        "entity.warden.sonic_boom" => return Some(Cue::new(436, Extra::None)),
+        "entity.warden.sonic_charge" => return Some(Cue::new(437, Extra::None)),
+        "entity.wind_charge.throw" => return Some(Cue::new(438, Extra::None)),
+        "entity.wind_charge.wind_burst" => return Some(Cue::new(509, Extra::None)),
+        "item.mace.smash_air" => return Some(Cue::new(514, Extra::None)),
+        "item.mace.smash_ground" => return Some(Cue::new(515, Extra::None)),
+        "item.mace.smash_ground_heavy" => return Some(Cue::new(520, Extra::None)),
+        "event.mob_effect.bad_omen" => return Some(Cue::new(523, Extra::None)),
+        "event.mob_effect.raid_omen" => return Some(Cue::new(524, Extra::None)),
+        "event.mob_effect.trial_omen" => return Some(Cue::new(525, Extra::None)),
         "entity.generic.explode" => return Some(Cue::new(SOUND_EXPLODE, Extra::None)),
         "entity.tnt.primed" => return Some(Cue::new(SOUND_FUSE, Extra::None)),
         "block.fire.extinguish" => return Some(Cue::new(SOUND_FIZZ, Extra::None)),
-        // Бой: у Bedrock нет заряда удара, любой удар по цели — «сильный»;
-        // сметающий и отбрасывающий звуки — только у Java.
-        "entity.player.attack.strong" | "entity.player.attack.weak" | "entity.player.attack.crit" => {
+        // Звук не определяет силу: сервер использует общий Java cooldown.
+        "entity.player.attack.strong" | "entity.player.attack.weak" | "entity.player.attack.sweep" | "entity.player.attack.knockback" => {
             return Some(Cue::new(SOUND_ATTACK_STRONG, Extra::Player));
         }
         "entity.player.attack.nodamage" => return Some(Cue::new(SOUND_ATTACK_NODAMAGE, Extra::Player)),
@@ -323,6 +352,12 @@ pub fn level_packets(x: i32, y: i32, z: i32, effect: i32, data: i32) -> Vec<Vec<
 /// звук).
 pub fn explosion_packets(blast: &crate::world::Blast) -> Vec<Vec<u8>> {
     let centre = (blast.centre.0 as f32, blast.centre.1 as f32, blast.centre.2 as f32);
+    if blast.wind {
+        // LevelEvent WindExplosion/BreezeWindExplosion из документации 944.
+        let breeze = blast.gust == crate::world::Gust::Breeze;
+        return vec![level_sound(if breeze { 493 } else { 509 }, centre),
+            level_event(if breeze { 3610 } else { 3614 }, centre, 0)];
+    }
     let mut packets = vec![level_sound(SOUND_EXPLODE, centre)];
 
     if !blast.wind {
@@ -331,6 +366,21 @@ pub fn explosion_packets(blast: &crate::world::Blast) -> Vec<Vec<u8>> {
     }
 
     packets
+}
+
+/// События боевых частиц. SonicExplosion — 2039; LegacyEvent | Crit —
+/// 0x4003 (Mojang r/26_u1). SweepAttack у Bedrock отсутствует: показываем
+/// искры крита в точке взмаха, без изменения урона [проверить].
+pub fn combat_particles(kind: i32, block: Option<i32>, at: (f64, f64, f64)) -> Option<Vec<u8>> {
+    let at = (at.0 as f32, at.1 as f32, at.2 as f32);
+    match kind {
+        28 => Some(level_event(2039, at, 0)),
+        67 => Some(level_event(0x4003, at, 0)),
+        1 => Some(level_event(9815, at, super::world::bedrock_state(block?) as i32)),
+        26 => Some(level_event(3610, at, 0)),
+        27 => Some(level_event(3614, at, 0)),
+        _ => None,
+    }
 }
 
 /// Set Entity Motion: скорость в блоках за такт.
@@ -385,6 +435,35 @@ mod tests {
     use crate::bedrock::codec::{In, packet_id};
 
     #[test]
+    fn wind_and_combat_particles_have_documented_events() {
+        for (gust, sound, particle) in [(crate::world::Gust::Breeze, 493, 3610), (crate::world::Gust::Charge, 509, 3614), (crate::world::Gust::Mace, 509, 3614)] {
+            let blast = crate::world::Blast { centre: (1.0,2.0,3.0), power: 1.0, blocks: 0, pushed: Vec::new(), wind: true, gust };
+            let packets = explosion_packets(&blast);
+            let (id, body) = packet_id(&packets[0]).unwrap(); let mut r = In::new(body);
+            assert_eq!(id, LEVEL_SOUND_EVENT); assert_eq!(r.varint(), Some(sound));
+            for value in [1.0,2.0,3.0] { assert_eq!(r.lf32(), Some(value)); }
+            assert_eq!(r.zigzag32(), Some(-1)); assert_eq!(r.string().as_deref(), Some(""));
+            assert_eq!((r.bool(), r.bool()), (Some(false), Some(false))); assert_eq!(r.take(8), Some((-1i64).to_le_bytes().as_slice())); assert_eq!(r.remaining(), 0);
+            let (id, body) = packet_id(&packets[1]).unwrap(); let mut r = In::new(body);
+            assert_eq!(id, LEVEL_EVENT); assert_eq!(r.zigzag32(), Some(particle));
+            for value in [1.0,2.0,3.0] { assert_eq!(r.lf32(), Some(value)); }
+            assert_eq!((r.zigzag32(), r.remaining()), (Some(0), 0));
+        }
+        for (kind, expected) in [(28,2039), (67,0x4003), (26,3610), (27,3614)] {
+            let bytes = combat_particles(kind, None, (1.0,2.0,3.0)).unwrap();
+            let (_, body) = packet_id(&bytes).unwrap(); let mut r = In::new(body);
+            assert_eq!(r.zigzag32(), Some(expected));
+            for value in [1.0,2.0,3.0] { assert_eq!(r.lf32(), Some(value)); }
+            assert_eq!((r.zigzag32(), r.remaining()), (Some(0), 0));
+        }
+        assert!(combat_particles(1, None, (0.0,0.0,0.0)).is_none());
+        let bytes = combat_particles(1, Some(0), (0.0,0.0,0.0)).unwrap();
+        let (_, body) = packet_id(&bytes).unwrap(); let mut r = In::new(body);
+        assert_eq!(r.zigzag32(), Some(9815)); for _ in 0..3 { assert_eq!(r.lf32(), Some(0.0)); }
+        assert_eq!(r.zigzag32(), Some(super::super::world::bedrock_state(0) as i32)); assert_eq!(r.remaining(), 0);
+    }
+
+    #[test]
     fn explosion_makes_a_sound_and_a_flash() {
         let blast = crate::world::Blast { centre: (1.0, 64.0, 2.0), power: 4.0, blocks: 3, pushed: Vec::new(), wind: false, gust: crate::world::Gust::Mace };
         let packets = explosion_packets(&blast);
@@ -397,7 +476,7 @@ mod tests {
 
         assert_eq!(id, LEVEL_EVENT);
         assert_eq!(reader.zigzag32(), Some(EVENT_PARTICLE_EXPLOSION));
-        assert_eq!(explosion_packets(&crate::world::Blast { wind: true, ..blast }).len(), 1);
+        assert_eq!(explosion_packets(&crate::world::Blast { wind: true, ..blast }).len(), 2);
     }
 
     #[test]
@@ -473,15 +552,13 @@ mod tests {
     fn combat_and_use_sounds_follow_bds() {
         let cue = |name: &str| cue_for(name, 1.0);
 
-        // Все удары — «сильный» звук от игрока; сметающий и отбрасывающий —
-        // только у Java.
-        for name in ["strong", "weak", "crit"] {
+        // В протоколе 944 критический удар имеет отдельный SoundType 569.
+        for name in ["strong", "weak", "sweep", "knockback"] {
             assert_eq!(cue(&format!("minecraft:entity.player.attack.{name}")), Some(Cue { id: SOUND_ATTACK_STRONG, extra: Extra::Player }));
         }
 
         assert_eq!(cue("minecraft:entity.player.attack.nodamage").map(|cue| cue.id), Some(SOUND_ATTACK_NODAMAGE));
-        assert_eq!(cue("minecraft:entity.player.attack.sweep"), None);
-        assert_eq!(cue("minecraft:entity.player.attack.knockback"), None);
+        assert_eq!(cue("minecraft:entity.player.attack.crit").map(|cue| cue.id), Some(569));
         assert_eq!(cue("minecraft:entity.arrow.shoot").map(|cue| cue.id), Some(SOUND_BOW));
         assert_eq!(cue("minecraft:entity.arrow.hit").map(|cue| cue.id), Some(SOUND_BOW_HIT));
         assert_eq!(cue("minecraft:entity.player.burp").map(|cue| cue.id), Some(SOUND_BURP));

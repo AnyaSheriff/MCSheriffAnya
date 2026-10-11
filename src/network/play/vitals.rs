@@ -229,7 +229,7 @@ pub(super) struct Net {
     meta: Meta,
     /// Горит ли он для свойств: обновляется в начале такта сущности.
     fire_flag: bool,
-    /// [Bedrock: потом] ticks_frozen и замедление игрока Java.
+    /// Общие ticks_frozen; замедление клиента Bedrock [Bedrock: потом].
     frozen: i32,
     /// Скорость, которую надо сообщить после удара.
     pub velocity: Option<(f64, f64, f64)>,
@@ -2018,7 +2018,7 @@ pub(super) async fn hit_by_breached(
     }
 
     if totem {
-        revive_by_totem(stream, player).await?;
+        revive_by_totem(stream, shared, player).await?;
     }
 
     if result.died {
@@ -2055,7 +2055,7 @@ fn take_totem(player: &mut PlayerState) -> bool {
 /// Тотем сработал: здоровье 1, все эффекты сняты, затем регенерация II
 /// на 45 с, поглощение II на 5 с и огнестойкость на 40 с (вики, Totem of
 /// Undying), событие 35 — клиент сам показывает тотем и играет звук.
-async fn revive_by_totem(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
+async fn revive_by_totem(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     clear_effects(stream, player, None).await?;
     player.vit.absorption = 0.0;
 
@@ -2067,6 +2067,7 @@ async fn revive_by_totem(stream: &mut Outgoing<'_>, player: &mut PlayerState) ->
         give_effect(stream, player, survival::Effect { kind, amplifier, ticks_left: ticks, ambient: false, visible: true, show_icon: true }).await?;
     }
 
+    shared.world_in(player.dimension).lock().expect("мир").note_totem(player.entity_id);
     send_entity_event(stream, player.entity_id, EVENT_TOTEM).await
 }
 
@@ -2612,8 +2613,8 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
     Ok(())
 }
 
-// [Bedrock: потом] Реакции игрока на смерть/удар пока подключены только к Java.
-fn effect_reactions(shared: &Shared, player: &mut PlayerState, dead: bool) {
+// Реакции общие для Java и адаптера Bedrock.
+pub(super) fn effect_reactions(shared: &Shared, player: &mut PlayerState, dead: bool) {
     let reaction = crate::effect_reactions::take(&mut player.vit, dead, (player.x, player.y, player.z), 1.8, player.yaw, true);
     if !reaction.wind && !reaction.weaving && !reaction.oozing && reaction.infested_hits == 0 { return; }
     let targets: Vec<_> = shared.players.lock().expect("игроки").members().iter()
@@ -3505,3 +3506,41 @@ mod itemaudit3_tests {
 #[cfg(test)]
 #[path = "effect_audit_tests.rs"]
 mod itemaudit4_effect_tests;
+
+// Среда для второго представления игрока: те же измерения контакта и
+// функции Vitals. Java entity_tick выше остаётся без изменений.
+pub(super) fn bedrock_frozen(player: &PlayerState) -> i32 { player.net.frozen }
+
+pub(super) fn bedrock_environment(shared: &Shared, player: &mut PlayerState) -> Vec<(f32, Source)> {
+    let mut hits = Vec::new();
+    if player.vit.dead { return hits; }
+    if !mortal(player.game_mode) { player.net.frozen = 0; return hits; }
+    let env = {
+        let world = shared.world_in(player.dimension).lock().expect("мир");
+        look_around(&world, player.x, player.y, player.z, player.sneaking, player.net.spin_pose)
+    };
+    player.net.in_water = env.in_water;
+    player.net.in_lava = env.in_lava;
+    let leather = crate::combat::ARMOR_SLOTS.iter().any(|(slot, _)| player.inventory.slot(*slot)
+        .and_then(|s| blocks::item_name(s.item)).is_some_and(|n| matches!(n,
+            "leather_helmet" | "leather_chestplate" | "leather_leggings" | "leather_boots")));
+    player.net.frozen = freezing_step(player.net.frozen, env.powder_snow, leather);
+    if player.net.frozen == 140 && (player.vit.age + 1).is_multiple_of(40)
+        && shared.freeze_damage.load(std::sync::atomic::Ordering::Relaxed) { hits.push((1.0, Source::Freeze)); }
+    if env.in_rain || env.in_water || env.powder_snow { player.vit.extinguish(); }
+    if player.vit.fire_tick(env.in_lava) { hits.push((1.0, Source::OnFire)); }
+    if env.in_fire > 0.0 { ignite(player, 160); hits.push((env.in_fire, Source::InFire)); }
+    if env.campfire > 0.0 && !player.vit.has_effect(survival::EffectKind::FireResistance)
+        && !player.inventory.slot(8).is_some_and(|s| s.extras().level("frost_walker") > 0) {
+        hits.push((env.campfire, Source::Campfire));
+    }
+    if env.cactus { hits.push((1.0, Source::Cactus)); }
+    if env.in_wall { hits.push((1.0, Source::InWall)); }
+    if env.in_lava { ignite(player, survival::LAVA_FIRE_TICKS); player.vit.fall *= 0.5; hits.push((4.0, Source::Lava)); }
+    if let Some(amount) = crate::commands_world::border_of(shared, player.dimension).damage_at(player.x, player.z) { hits.push((amount, Source::OutsideBorder)); }
+    if let Some(effect) = turtle_shell_effect(player, env.eyes_in_water) { player.vit.give_effect_shown(effect); }
+    let oxygen = player.attrs.value(crate::attributes::OXYGEN_BONUS);
+    let roll = if oxygen > 0.0 && env.eyes_in_water && !env.in_bubbles { world_random(shared, player.dimension) } else { 0.0 };
+    if player.vit.air_tick_with_bonus(env.eyes_in_water && !env.in_bubbles, false, oxygen, roll) { hits.push((2.0, Source::Drown)); }
+    hits
+}
