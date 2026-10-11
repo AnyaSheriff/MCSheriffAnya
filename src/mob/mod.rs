@@ -1282,8 +1282,9 @@ pub const BASE_KNOCKBACK: f64 = 0.4;
 pub const GRAVITY: f64 = 0.08;
 pub const VERTICAL_DRAG: f64 = 0.98;
 
-/// Сколько тактов длится паника после удара (вики, Mob AI, «Panic»: ~5 с).
-pub const PANIC_TICKS: i32 = 100;
+/// Память об уроне: вики, Java Edition 24w21a, «2 seconds».
+/// https://minecraft.wiki/w/Java_Edition_24w21a
+pub const PANIC_TICKS: i32 = 40;
 
 /// Сколько тактов тело лежит после смерти, пока не пропадёт: 20 (вики,
 /// Entity, «Death»: анимация смерти — секунда).
@@ -1969,6 +1970,7 @@ impl Mob {
         }
 
         self.ticks += 1;
+        ai::panic::tick(self);
         self.late = false;
         if self.kind == Kind::Warden && ctx.difficulty == crate::survival::PEACEFUL {
             self.h.despawn = true;
@@ -2219,6 +2221,7 @@ impl Mob {
             return ai::Plan::default();
         }
 
+        ai::panic::burning(self);
         let was_on_ground = self.on_ground;
         let mut plan = if small::kind(self.kind) {
             small::think(self, view, ctx, rng)
@@ -2302,7 +2305,7 @@ impl Mob {
     /// `v.y = (v.y − 0,08)·0,98`, трение `v.xz *= f·0,91`, где f —
     /// скользкость блока под ногами (в воздухе 1). Разгон по ходу — до сдвига:
     /// на земле `speed²·(0,6/f)³` (чёрный ящик, probe-cow-plain: у коровы
-    /// 0,2 даёт 0,04 за такт — шаг 0,088 блока), в воздухе 0,02.
+    /// 0,2 даёт 0,04 за такт — шаг 0,088 блока), в воздухе 0,02·speed.
     pub fn physics(&mut self, view: &dyn View, speed: f64, jump: bool) {
         let effect_speed = (1.0 + 0.2 * f64::from(self.vitals.effect_level(crate::survival::EffectKind::Speed)))
             * (1.0 - 0.15 * f64::from(self.vitals.effect_level(crate::survival::EffectKind::Slowness))).max(0.0);
@@ -2369,7 +2372,10 @@ impl Mob {
             } else if slime::cube(self.kind) {
                 0.01 * effective
             } else {
-                0.02
+                // Ввод наземного моба равен attribute × goal modifier и в
+                // воздухе. Фиксированные 0,02 давали полный разгон при
+                // отдаче (чёрный ящик, cow-panic-run, panic-v1/v2).
+                0.02 * effective
             };
             let rad = f64::from(self.yaw).to_radians();
 
@@ -2380,7 +2386,7 @@ impl Mob {
             let (forward, left) = self.strafe;
             let length = (forward * forward + left * left).sqrt();
             let effective = length * self.movement_speed() * effect_speed;
-            let accel = if self.on_ground { effective * effective * (0.6 / slip).powi(3) } else { 0.02 };
+            let accel = if self.on_ground { effective * effective * (0.6 / slip).powi(3) } else { 0.02 * effective };
             let rad = f64::from(self.yaw).to_radians();
             let (fx, fz) = (-rad.sin(), rad.cos());
             let (lx, lz) = (fz, -fx);
@@ -2814,10 +2820,12 @@ impl Mob {
             if !armor_absorbs { self.events.push(Event::Sound { name: hurt, volume: self.sound_volume(), pitch: self.voice_pitch() }); }
             golem::crack_sound(self, before);
 
-            // Паника — только от удара существа: падение и команда не пугают
-            // (чёрный ящик, cow-physics: упавшая корова стоит).
-            if let Some(push) = push.filter(|push| push.cause != 0 && !self.kind.hostile() && !matches!(self.kind, Kind::Wolf | Kind::Armadillo | Kind::HappyGhast | Kind::CopperGolem) && !golem::golem(self.kind)) {
-                self.fright = Some((self.x - push.dir.0 * 8.0, self.z - push.dir.1 * 8.0));
+            // Вики, 24w21a: панику вызывает вид урона, а не наличие
+            // толчка/нападающего; падение и generic в список не входят.
+            if ai::panic::on_hurt(self, source) {
+                if let Some(push) = push {
+                    self.fright = Some((self.x - push.dir.0 * 8.0, self.z - push.dir.1 * 8.0));
+                }
                 self.brain.panic(PANIC_TICKS);
             }
         }

@@ -1,0 +1,135 @@
+{
+ "name": "farm-panic-speeds",
+ "about": "Четыре вида, взрослый и детёныш: 160 тактов прогулки, затем player_attack без отдачи. Сравнивать скорость только в движении и интервалы пакетов, отдельно до и после урона; положение случайно. Базовые атрибуты: Cow 0.2, Sheep 0.23, Pig/Chicken 0.25; множитель паники курицы 1.4, прочих 2 [проверить]. Ограда удерживает животных в радиусе записи; отрезки с упором в ограду не использовать для плато скорости.",
+ "origin": [
+  0,
+  -59,
+  0
+ ],
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,3,3.5)",
+  "fill $(-4,-1,-4) $(11,-1,11) minecraft:stone",
+  "fill $(-4,0,-4) $(11,4,11) minecraft:air",
+  "fill $(-1,0,-1) $(8,0,-1) minecraft:oak_fence",
+  "fill $(-1,0,8) $(8,0,8) minecraft:oak_fence",
+  "fill $(-1,0,0) $(-1,0,7) minecraft:oak_fence",
+  "fill $(8,0,0) $(8,0,7) minecraft:oak_fence",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon cow $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b,Age:0}"
+  },
+  {
+   "after": 160,
+   "cmd": "damage @e[type=cow,distance=..48,limit=1] 1 minecraft:player_attack"
+  },
+  {
+   "after": 240,
+   "cmd": "kill @e[type=cow,distance=..48]"
+  },
+  {
+   "after": 250,
+   "cmd": "summon cow $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b,Age:-24000}"
+  },
+  {
+   "after": 410,
+   "cmd": "damage @e[type=cow,distance=..48,limit=1] 1 minecraft:player_attack"
+  },
+  {
+   "after": 490,
+   "cmd": "kill @e[type=cow,distance=..48]"
+  },
+  {
+   "after": 500,
+   "cmd": "summon sheep $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b,Age:0}"
+  },
+  {
+   "after": 660,
+   "cmd": "damage @e[type=sheep,distance=..48,limit=1] 1 minecraft:player_attack"
+  },
+  {
+   "after": 740,
+   "cmd": "kill @e[type=sheep,distance=..48]"
+  },
+  {
+   "after": 750,
+   "cmd": "summon sheep $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b,Age:-24000}"
+  },
+  {
+   "after": 910,
+   "cmd": "damage @e[type=sheep,distance=..48,limit=1] 1 minecraft:player_attack"
+  },
+  {
+   "after": 990,
+   "cmd": "kill @e[type=sheep,distance=..48]"
+  },
+  {
+   "after": 1000,
+   "cmd": "summon pig $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b,Age:0}"
+  },
+  {
+   "after": 1160,
+   "cmd": "damage @e[type=pig,distance=..48,limit=1] 1 minecraft:player_attack"
+  },
+  {
+   "after": 1240,
+   "cmd": "kill @e[type=pig,distance=..48]"
+  },
+  {
+   "after": 1250,
+   "cmd": "summon pig $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b,Age:-24000}"
+  },
+  {
+   "after": 1410,
+   "cmd": "damage @e[type=pig,distance=..48,limit=1] 1 minecraft:player_attack"
+  },
+  {
+   "after": 1490,
+   "cmd": "kill @e[type=pig,distance=..48]"
+  },
+  {
+   "after": 1500,
+   "cmd": "summon chicken $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b,Age:0}"
+  },
+  {
+   "after": 1660,
+   "cmd": "damage @e[type=chicken,distance=..48,limit=1] 1 minecraft:player_attack"
+  },
+  {
+   "after": 1740,
+   "cmd": "kill @e[type=chicken,distance=..48]"
+  },
+  {
+   "after": 1750,
+   "cmd": "summon chicken $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b,Age:-24000}"
+  },
+  {
+   "after": 1910,
+   "cmd": "damage @e[type=chicken,distance=..48,limit=1] 1 minecraft:player_attack"
+  },
+  {
+   "after": 1990,
+   "cmd": "kill @e[type=chicken,distance=..48]"
+  }
+ ],
+ "record_ticks": 2000,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=sheep,distance=..48]",
+  "kill @e[type=pig,distance=..48]",
+  "kill @e[type=chicken,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "fill $(-4,0,-4) $(11,4,11) minecraft:air",
+  "fill $(-4,-1,-4) $(11,-1,11) minecraft:stone",
+  "clear $(bot)",
+  "gamemode creative $(bot)",
+  "!startfly"
+ ]
+}

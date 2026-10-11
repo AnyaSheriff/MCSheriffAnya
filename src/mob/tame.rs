@@ -466,6 +466,7 @@ pub fn pack_anger(mobs: &mut [Mob]) {
 /// Мысль волка и кошки: сидение, нападение, следование за хозяином; иначе —
 /// обычная мысль животного (ai::think).
 pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
+    if ai::panic::active(mob) { return ai::think(mob, view, ctx, rng); }
     let mut plan = Plan::default();
 
     // Позу сидя ставит ИИ по приказу (чёрный ящик, wolf-sit-follow: у NoAI

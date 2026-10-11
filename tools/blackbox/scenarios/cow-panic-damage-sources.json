@@ -1,0 +1,76 @@
+{
+ "name": "cow-panic-damage-sources",
+ "about": "Корова на чистой площадке: player_attack без толчка, падение (не паника), кактус (паника), затем горение и вода. Повторить для оценки случайных целей. Вики, Damage type tag (Java Edition), panic_causes; точные диапазоны целей и время окончания пути [проверить].",
+ "origin": [
+  0,
+  -59,
+  0
+ ],
+ "exclusive": true,
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,3,3.5)",
+  "fill $(-4,-1,-4) $(11,-1,11) minecraft:stone",
+  "fill $(-4,0,-4) $(11,4,11) minecraft:air",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 1,
+   "cmd": "summon cow $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b}"
+  },
+  {
+   "after": 10,
+   "cmd": "damage @e[type=cow,distance=..12,limit=1] 1 minecraft:player_attack"
+  },
+  {
+   "after": 80,
+   "cmd": "kill @e[type=cow,distance=..48]"
+  },
+  {
+   "after": 81,
+   "cmd": "summon cow $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b}"
+  },
+  {
+   "after": 90,
+   "cmd": "damage @e[type=cow,distance=..12,limit=1] 1 minecraft:fall"
+  },
+  {
+   "after": 160,
+   "cmd": "kill @e[type=cow,distance=..48]"
+  },
+  {
+   "after": 161,
+   "cmd": "summon cow $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b}"
+  },
+  {
+   "after": 170,
+   "cmd": "damage @e[type=cow,distance=..12,limit=1] 1 minecraft:cactus"
+  },
+  {
+   "after": 240,
+   "cmd": "kill @e[type=cow,distance=..48]"
+  },
+  {
+   "after": 241,
+   "cmd": "fill $(5,0,2) $(6,0,4) minecraft:water"
+  },
+  {
+   "after": 242,
+   "cmd": "summon cow $(3.5,0,3.5) {PersistenceRequired:1b,Silent:1b,Fire:160s}"
+  }
+ ],
+ "record_ticks": 320,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "fill $(-4,0,-4) $(11,4,11) minecraft:air",
+  "fill $(-4,-1,-4) $(11,-1,11) minecraft:stone",
+  "clear $(bot)",
+  "gamemode creative $(bot)",
+  "!startfly"
+ ]
+}

@@ -13,7 +13,8 @@
 // - случайный взгляд: шанс 0,02 за такт, 20–40 тактов;
 // - приманка: игрок с едой в руке в 10 блоках, идём со скоростью 1,25;
 // - овца щиплет траву с шансом 1/1000 за такт (у детёныша 1/50), 40 тактов;
-// - паника: от удара 100 тактов, скорость вдвое (у курицы 1,4).
+// - паника: память об уроне 40 тактов (вики, Java Edition 24w21a),
+//   затем заканчивается текущий путь [проверить].
 //
 // Что не сверено 1:1 с оригиналом (там всё случайно), помечено «[проверить]».
 
@@ -21,6 +22,7 @@ use super::path::{self, Cell};
 use super::{Kind, Mob, Rng, View};
 
 mod stroll;
+pub(super) mod panic;
 pub(super) use stroll::route as stroll_route;
 
 /// Сколько тактов подряд пара стоит рядом до детёныша: у оригинала он рождается
@@ -153,6 +155,8 @@ pub struct Brain {
 
     /// Сколько тактов ещё паника.
     panic: i32,
+    /// Уход от замеченной угрозы, отдельно от случайной паники после урона.
+    fleeing: bool,
 
     /// Куда смотрит голова (градусы) и сколько тактов ещё.
     look: Option<Look>,
@@ -205,6 +209,7 @@ impl Brain {
             path: Vec::new(),
             speed: 1.0,
             panic: 0,
+            fleeing: false,
             look: None,
             eating: 0,
             breed: 0,
@@ -219,20 +224,25 @@ impl Brain {
     /// Паника на столько тактов; путь прошлой цели бросается.
     pub fn panic(&mut self, ticks: i32) {
         self.panic = ticks;
+        self.fleeing = false;
         self.path.clear();
         self.eating = 0;
     }
 
+    pub fn flee(&mut self, ticks: i32) {
+        self.panic(ticks);
+        self.fleeing = true;
+    }
+
     #[allow(dead_code)] // для проверок
     pub fn is_panicking(&self) -> bool {
-        self.panic > 0
+        self.panic > 0 || self.doing == Doing::Panic && !self.path.is_empty()
     }
 
     /// Летающие мирные мобы убегают в трёх измерениях, но используют тот же
     /// счётчик паники, что наземные.
     pub(super) fn panic_tick(&mut self) -> bool {
         if self.panic <= 0 { return false; }
-        self.panic -= 1;
         self.doing = Doing::Panic;
         true
     }
@@ -313,6 +323,20 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
 
     let here = mob.cell();
 
+    // 1. Паника выше еды и взгляда; счёт времени идёт и во время отдачи.
+    if mob.brain.is_panicking() {
+        mob.brain.doing = Doing::Panic;
+        if mob.brain.path.is_empty() {
+            let route = if mob.brain.fleeing {
+                panic::flee_route(mob, view, rng)
+            } else {
+                panic::route(mob, view, rng)
+            };
+            mob.brain.go(route, panic_speed(mob.kind));
+        }
+        return walk(mob, plan);
+    }
+
     // Овца жуёт: стоит на месте, голова вниз (вики, Sheep: «eat grass» —
     // 40 тактов, трава пропадает на последних).
     if mob.brain.eating > 0 {
@@ -354,33 +378,6 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
 
         look_around(mob, ctx, rng);
         return plan;
-    }
-
-    // 1. Паника.
-    if mob.brain.panic > 0 {
-        mob.brain.panic -= 1;
-        mob.brain.doing = Doing::Panic;
-
-        if mob.brain.path.is_empty() {
-            let (ax, az) = mob.fright.unwrap_or((mob.x, mob.z));
-            let (dx, dz) = (mob.x - ax, mob.z - az);
-            let len = (dx * dx + dz * dz).sqrt().max(1.0e-6);
-            let (ux, uz) = if len > 1.0e-3 && (dx.abs() > 1.0e-6 || dz.abs() > 1.0e-6) {
-                (dx / len, dz / len)
-            } else {
-                let angle = rng.unit() * std::f64::consts::TAU;
-                (angle.cos(), angle.sin())
-            };
-            let jitter = (rng.unit() - 0.5) * 4.0;
-            let target = (here.0 + (ux * 6.0 + jitter).round() as i32, here.1, here.2 + (uz * 6.0 - jitter).round() as i32);
-            let target = settle(view, target, here.1);
-
-            let route = path::find_for(view, here, target, path::MAX_NODES, mob.kind);
-
-            mob.brain.go(route, panic_speed(mob.kind));
-        }
-
-        return walk(mob, plan);
     }
 
     // 2. Разведение: влюблённый идёт к влюблённому сородичу.

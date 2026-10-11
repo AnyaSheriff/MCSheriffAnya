@@ -197,10 +197,11 @@ pub fn horn_block(name: &str) -> bool {
     matches!(name, "stone" | "packed_ice" | "coal_ore" | "copper_ore" | "emerald_ore" | "iron_ore") || name.ends_with("_log")
 }
 pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
+    if ai::panic::active(mob) { return ai::think(mob, view, ctx, rng); }
     if mob.kind == Kind::WanderingTrader {
         super::trader::think(mob, ctx.sun_up);
         if let Some(enemy)=ctx.mates.iter().find(|m| matches!(m.kind,Kind::Zombie|Kind::ZombieVillager|Kind::Drowned|Kind::Husk|Kind::ZombifiedPiglin) && (m.x-mob.x).hypot(m.z-mob.z)<8.0) {
-            mob.fright=Some((enemy.x,enemy.z)); if !mob.brain.is_panicking() { mob.brain.panic(20); }
+            mob.fright=Some((enemy.x,enemy.z)); if !mob.brain.is_panicking() { mob.brain.flee(20); }
         }
         if mob.villager.trading.is_some() { mob.brain.stop(); return Plan::default(); }
     }
@@ -224,7 +225,7 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     if mob.kind == Kind::Ocelot && !mob.land.trusting
         && let Some(p) = ctx.players.iter().find(|p| p.targetable && (p.x-mob.x).hypot(p.z-mob.z) < 8.0 && !p.holding.iter().flatten().any(|s| matches!(*s, "cod" | "salmon")))
     {
-        mob.fright = Some((p.x, p.z)); if !mob.brain.is_panicking() { mob.brain.panic(20); }
+        mob.fright = Some((p.x, p.z)); if !mob.brain.is_panicking() { mob.brain.flee(20); }
     }
     if mob.kind == Kind::Goat {
         if mob.land.ram_ticks > 0 {

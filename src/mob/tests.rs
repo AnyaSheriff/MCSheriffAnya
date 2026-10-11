@@ -5,6 +5,7 @@ mod drowned;
 mod fire;
 mod newmobs;
 mod phantom;
+mod panic;
 mod skeleton;
 mod tame;
 
@@ -158,7 +159,7 @@ fn a_hit_hurts_pushes_and_starts_invulnerability() {
     run(&mut cow, &view, 3);
     assert!(cow.on_ground);
 
-    let hit = cow.hurt(7.0, Source::Generic, Some(Push { dir: (0.0, 1.0), strength: BASE_KNOCKBACK, cause: 7 })).expect("удар прошёл");
+    let hit = cow.hurt(7.0, Source::PlayerAttack, Some(Push { dir: (0.0, 1.0), strength: BASE_KNOCKBACK, cause: 7 })).expect("удар прошёл");
 
     assert_eq!(hit.taken, 7.0);
     assert_eq!(cow.vitals.health, 3.0);

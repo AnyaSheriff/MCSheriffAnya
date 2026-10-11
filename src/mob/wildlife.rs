@@ -228,7 +228,7 @@ fn rabbit(mob: &mut Mob, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai::P
         if mob.love == 0 {
             let threat = ctx.players.iter().find(|p| p.targetable && !p.holding.iter().flatten().any(|food| mob.kind.likes(food)) && distance(mob,(p.x,p.y,p.z)) < 64.0).map(|p| (p.x,p.z))
                 .or_else(|| ctx.mates.iter().find(|m| matches!(m.kind,Kind::Wolf|Kind::Fox) && distance(mob,(m.x,m.y,m.z))<100.0).map(|m| (m.x,m.z)));
-            if let Some(at)=threat { mob.fright=Some(at); mob.brain.panic(20); }
+            if let Some(at)=threat { mob.fright=Some(at); mob.brain.flee(20); }
         }
         ai::think(mob,view,ctx,rng)
     };
@@ -286,7 +286,7 @@ fn fox(mob: &mut Mob, view: &dyn View, ctx: &ai::Ctx, rng: &mut Rng) -> ai::Plan
     let threat=ctx.players.iter().find(|p| p.targetable && !mob.wild.trusted_ids.contains(&p.id) && (p.eye>1.3 || distance(mob,(p.x,p.y,p.z))<2.25) && distance(mob,(p.x,p.y,p.z))<256.0).map(|p|(p.x,p.z))
         .or_else(||ctx.mates.iter().find(|m|m.kind==Kind::Wolf && !m.tamed && distance(mob,(m.x,m.y,m.z))<64.0).map(|m|(m.x,m.z)));
     if let Some(at)=threat {
-        mob.wild.sleeping=false; mob.fright=Some(at); mob.brain.panic(20);
+        mob.wild.sleeping=false; mob.fright=Some(at); mob.brain.flee(20);
         return ai::think(mob,view,ctx,rng);
     }
     if mob.love>0 || mob.brain.is_panicking() { mob.wild.sleeping=false; return ai::think(mob,view,ctx,rng); }
