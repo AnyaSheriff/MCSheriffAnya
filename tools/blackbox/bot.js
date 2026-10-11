@@ -229,7 +229,7 @@ for (const t of ['breeze', 'wind_charge', 'breeze_wind_charge']) MOB_TYPES.add(t
 for (const t of ['cod', 'salmon', 'tropical_fish', 'pufferfish', 'squid', 'glow_squid', 'dolphin', 'turtle', 'axolotl', 'frog', 'tadpole', 'slime']) MOB_TYPES.add(t);
 MOB_TYPES.add('warden');
 // Эндермит, зоглин, скрипун, радостный гаст, медный голем, жемчуг Предела.
-for (const t of ['endermite', 'zoglin', 'creaking', 'happy_ghast', 'copper_golem', 'ender_pearl']) MOB_TYPES.add(t);
+for (const t of ['endermite', 'zoglin', 'creaking', 'happy_ghast', 'copper_golem', 'ender_pearl', 'armor_stand', 'painting']) MOB_TYPES.add(t);
 // Малые мирные мобы.
 for (const t of ['armadillo', 'sniffer', 'parrot', 'bat', 'allay']) MOB_TYPES.add(t);
 const padDrops = new Set();
@@ -768,9 +768,10 @@ bot.once('spawn', async () => {
       // Закрыть открытое окно, как это делает игрок клавишей Esc.
       // Щелчок в открытом окне: слот, кнопка, режим. Что изменилось, робот
       // серверу не подсказывает — пусть сервер сам пришлёт итог.
-      if (a.window_click && openWindow !== null) {
+      // `"inventory": true` — щелчок в окне самого игрока (номер 0, сетка 2×2), окно не нужно открывать.
+      if (a.window_click && (openWindow !== null || a.window_click.inventory)) {
         const w = a.window_click;
-        bot._client.write('window_click', { windowId: openWindow, stateId, slot: w.slot, mouseButton: w.button || 0, mode: w.mode || 0, changedSlots: [], cursorItem: undefined });
+        bot._client.write('window_click', { windowId: w.inventory ? 0 : openWindow, stateId, slot: w.slot, mouseButton: w.button || 0, mode: w.mode || 0, changedSlots: [], cursorItem: undefined });
       }
       // Кнопка в открытом окне (кафедра листает, стол зачарования): пакет
       // Click Container Button, в mineflayer он зовётся enchant_item.

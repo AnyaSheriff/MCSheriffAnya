@@ -1,0 +1,51 @@
+{
+ "name": "armorstand-equip-break",
+ "about": "Summoned stand flags/poses, equip boots, remove, two survival hits within five ticks.",
+ "blocks": [],
+ "setup": [
+  "kill @e[type=armor_stand,distance=..48]",
+  "clear $(bot)",
+  "tp $(bot) $(0.5,0,3.5) 180 0",
+  "gamemode survival $(bot)",
+  "!stopfly",
+  "give $(bot) minecraft:iron_boots"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:armor_stand $(0.5,0,1.5) {ShowArms:1b,NoBasePlate:1b,Pose:{Head:[10f,20f,30f]}}"
+  },
+  {
+   "after": 10,
+   "interact": true
+  },
+  {
+   "after": 20,
+   "interact": true
+  },
+  {
+   "after": 30,
+   "attack": true
+  },
+  {
+   "after": 33,
+   "attack": true
+  }
+ ],
+ "cleanup": [
+  "kill @e[type=armor_stand,distance=..48]",
+  "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+  "kill @e[type=item,distance=..48]",
+  "clear $(bot)",
+  "gamemode creative $(bot)"
+ ],
+ "record_ticks": 63,
+ "origin": [
+  0,
+  -59,
+  0
+ ],
+ "item_components": true,
+ "track_self": true,
+ "track_mobs": true
+}

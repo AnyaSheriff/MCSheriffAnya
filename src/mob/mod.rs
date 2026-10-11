@@ -15,6 +15,7 @@
 // Что не сверено, помечено «[проверить]».
 
 pub mod ai;
+pub mod armor_stand;
 pub mod trial_gear;
 pub mod small;
 pub mod small_world;
@@ -61,6 +62,7 @@ pub enum Kind {
     Creaking,
     HappyGhast,
     CopperGolem,
+    ArmorStand,
     Cow,
     Pig,
     Sheep,
@@ -186,13 +188,14 @@ pub enum Kind {
 impl Kind {
     /// Все виды: для проверок.
     #[cfg(test)]
-    pub const ALL: [Kind; 88] = [
+    pub const ALL: [Kind; 89] = [
         Kind::Rabbit, Kind::Fox, Kind::Bee,
         Kind::Endermite,
         Kind::Zoglin,
         Kind::Creaking,
         Kind::HappyGhast,
         Kind::CopperGolem,
+        Kind::ArmorStand,
         Kind::Cow,
         Kind::Pig,
         Kind::Sheep,
@@ -361,6 +364,7 @@ impl Kind {
             "creaking" => Kind::Creaking,
             "happy_ghast" => Kind::HappyGhast,
             "copper_golem" => Kind::CopperGolem,
+            "armor_stand" => Kind::ArmorStand,
             "cow" => Kind::Cow,
             "pig" => Kind::Pig,
             "sheep" => Kind::Sheep,
@@ -455,6 +459,7 @@ impl Kind {
             Kind::Creaking => "creaking",
             Kind::HappyGhast => "happy_ghast",
             Kind::CopperGolem => "copper_golem",
+            Kind::ArmorStand => "armor_stand",
             Kind::Cow => "cow",
             Kind::Pig => "pig",
             Kind::Sheep => "sheep",
@@ -549,6 +554,7 @@ impl Kind {
             Kind::Creaking => 31,
             Kind::HappyGhast => 58,
             Kind::CopperGolem => 28,
+            Kind::ArmorStand => 5,
             Kind::Chicken => 26,
             Kind::Creeper => 32,
             Kind::Skeleton => 115,
@@ -654,7 +660,8 @@ impl Kind {
             Kind::Zoglin => "minecraft:zoglin", // [Bedrock: потом] свойства.
             Kind::Creaking => "minecraft:creaking", // [Bedrock: потом] свойства.
             Kind::HappyGhast => "minecraft:happy_ghast", // [Bedrock: потом] свойства.
-            Kind::CopperGolem => "minecraft:copper_golem", // [Bedrock: потом] свойства.
+            Kind::CopperGolem => "minecraft:copper_golem",
+            Kind::ArmorStand => "minecraft:armor_stand", // [Bedrock: потом] свойства.
             Kind::Cow => "minecraft:cow",
             Kind::Pig => "minecraft:pig",
             Kind::Sheep => "minecraft:sheep",
@@ -771,6 +778,7 @@ impl Kind {
             Kind::Creaking => 0.9,
             Kind::HappyGhast => 4.0,
             Kind::CopperGolem => 0.49,
+            Kind::ArmorStand => 0.5,
             Kind::Chicken => 0.4,
             Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk | Kind::Skeleton | Kind::Stray | Kind::Bogged | Kind::Creeper | Kind::Enderman | Kind::Witch | Kind::Villager => 0.6,
             Kind::Spider => 1.4,
@@ -847,6 +855,7 @@ impl Kind {
             Kind::Creaking => 2.7,
             Kind::HappyGhast => 4.0,
             Kind::CopperGolem => 0.98,
+            Kind::ArmorStand => 1.975,
             Kind::Chicken => 0.7,
             Kind::Cow => 1.4,
             Kind::Pig => 0.9,
@@ -928,6 +937,7 @@ impl Kind {
             Kind::Creaking => 1.0,
             Kind::HappyGhast => 20.0,
             Kind::CopperGolem => 12.0,
+            Kind::ArmorStand => 5.0,
             Kind::Cow | Kind::Pig => 10.0,
             Kind::Sheep => 8.0,
             Kind::Chicken => 4.0,
@@ -1013,6 +1023,7 @@ impl Kind {
             Kind::Creaking => 0.4,
             Kind::HappyGhast => 0.05,
             Kind::CopperGolem => 0.2,
+            Kind::ArmorStand => 0.0,
             Kind::Cow => 0.2,
             Kind::Pig | Kind::Chicken => 0.25,
             Kind::Sheep | Kind::Zombie | Kind::ZombieVillager | Kind::Drowned | Kind::Husk => 0.23,
@@ -1133,6 +1144,7 @@ impl Kind {
             Kind::Creaking => ("minecraft:entity.creaking.ambient", "minecraft:entity.creaking.hurt", "minecraft:entity.creaking.death"),
             Kind::HappyGhast => ("minecraft:entity.happy_ghast.ambient", "minecraft:entity.happy_ghast.hurt", "minecraft:entity.happy_ghast.death"),
             Kind::CopperGolem => ("", "minecraft:entity.copper_golem.hurt", "minecraft:entity.copper_golem.death"),
+            Kind::ArmorStand => ("", "minecraft:entity.armor_stand.hit", "minecraft:entity.armor_stand.break"),
             Kind::Cow => ("minecraft:entity.cow.ambient", "minecraft:entity.cow.hurt", "minecraft:entity.cow.death"),
             Kind::Pig => ("minecraft:entity.pig.ambient", "minecraft:entity.pig.hurt", "minecraft:entity.pig.death"),
             Kind::Sheep => ("minecraft:entity.sheep.ambient", "minecraft:entity.sheep.hurt", "minecraft:entity.sheep.death"),
@@ -1223,6 +1235,7 @@ impl Kind {
             Kind::Zoglin => "minecraft:entity.zoglin.step",
             Kind::Creaking => "minecraft:entity.creaking.step",
             Kind::CopperGolem => "minecraft:entity.copper_golem.step",
+            Kind::ArmorStand => "",
             Kind::WitherSkeleton => "minecraft:entity.wither_skeleton.step",
             Kind::ZombifiedPiglin => "minecraft:entity.zombified_piglin.step",
             Kind::Piglin => "minecraft:entity.piglin.step",
@@ -1446,6 +1459,9 @@ pub enum Event {
 
     /// Частицы приземления: блок под ногами и их число.
     Landing { block: i32, count: i32 },
+
+    /// Частицы осколков блока: состояние, место, разброс, скорость, число (поломка стойки).
+    BlockBurst { block: i32, at: (f64, f64, f64), offset: (f32, f32, f32), speed: f32, count: i32 },
 
     /// Звук в месте моба: имя, громкость, высота.
     Sound { name: &'static str, volume: f32, pitch: f32 },
@@ -1679,6 +1695,7 @@ pub struct Mob {
     pub horse: horse::State,
 
     pub newmobs: newmobs::State,
+    pub stand: armor_stand::State,
 
     /// Кролик, лиса и пчела (mob/wildlife.rs).
     pub wild: wildlife::State,
@@ -1785,6 +1802,7 @@ impl Mob {
             wild: wildlife::State::default(),
             small: small::State::new(kind, entity_id),
             newmobs: newmobs::State::default(),
+            stand: armor_stand::State::default(),
         };
         horse::defaults(&mut mob);
         mob
@@ -1843,6 +1861,7 @@ impl Mob {
 
     /// Ширина и высота ящика: у детёныша вдвое меньше (вики, Baby mobs).
     pub fn size(&self) -> (f64, f64) {
+        if self.kind==Kind::ArmorStand {return if self.stand.marker {(0.0,0.0)} else if self.stand.small {(0.25,0.9875)} else {(0.5,1.975)};}
         if let Some(size) = water::size(self) { return size; }
 
         if self.kind == Kind::Warden && self.warden.invulnerable() { return (0.9, 1.0); }
@@ -2099,6 +2118,11 @@ impl Mob {
                 self.hurt(if name == Some("soul_fire") { 2.0 } else { 1.0 }, Source::InFire, None);
             }
             if name == Some("lava") { self.vitals.ignite(300); self.hurt(4.0, Source::Lava, None); }
+        }
+
+        if self.kind==Kind::ArmorStand && !self.is_dead() {
+            if !self.stand.marker && !self.stand.no_gravity {self.physics(view,0.0,false);}
+            return ai::Plan::default();
         }
 
         // Кристалл Края стоит, где поставлен: ни тяжести, ни мыслей, ни голоса
@@ -2608,6 +2632,7 @@ impl Mob {
     /// Пробивание действует и на естественную броню моба (вики, Breach:
     /// «natural armor points»). Остальной путь урона общий [проверить].
     pub fn hurt_breached(&mut self, amount: f32, source: Source, push: Option<Push>, breach: f32) -> Option<Hit> {
+        if self.kind==Kind::ArmorStand {return armor_stand::hurt(self,amount,source);}
         if horse::undead(self.kind) && source == Source::Drown { return None; }
         if self.is_dead() || (self.fire_immune() && matches!(source, Source::InFire | Source::OnFire | Source::Lava | Source::Fireball)) {
             return None;
@@ -2821,7 +2846,7 @@ impl Mob {
         // удара мечом — 0).
         // Железный голем не сдвигается: сопротивление отдаче 100 % (вики, Iron
         // Golem; чёрный ящик, iron-golem-heal: скорость после удара 0).
-        if matches!(self.kind, Kind::Shulker | Kind::IronGolem | Kind::Warden) || (self.kind == Kind::Creaking && self.newmobs.frozen) {
+        if matches!(self.kind, Kind::Shulker | Kind::IronGolem | Kind::Warden | Kind::ArmorStand) || (self.kind == Kind::Creaking && self.newmobs.frozen) {
             return;
         }
 
@@ -2888,6 +2913,21 @@ impl Mob {
             return;
         }
 
+        // Стойка: добыча, звук и частицы поломки — без события смерти и опыта
+        // (чёрный ящик armorstand-equip-break).
+        if self.kind == Kind::ArmorStand {
+            self.dead_for = 1;
+            let drops = loot(self, &mut Rng::new(u64::from(self.entity_id as u32) ^ self.ticks ^ 0x5EED));
+            if !drops.is_empty() { self.events.push(Event::Loot(drops)); }
+            let (width, height) = self.size();
+            self.events.push(Event::Sound { name: "minecraft:entity.armor_stand.break", volume: 1.0, pitch: 1.0 });
+            // Частицы блока «доски» над серединой тела; номер состояния — [проверить].
+            if let Some(block) = blocks::state_from_text("minecraft:oak_planks") {
+                self.events.push(Event::BlockBurst { block, at: (self.x, self.y + height * 2.0 / 3.0, self.z), offset: ((width / 4.0) as f32, (height / 4.0) as f32, (width / 4.0) as f32), speed: 0.05, count: 10 });
+            }
+            return;
+        }
+
         self.dead_for = 1;
         let (_, _, death) = self.sounds();
         let death = if self.kind == Kind::Slime { slime::sound(self.nether.size, "death") } else { death };
@@ -2938,7 +2978,7 @@ impl Mob {
 
     /// Пропал ли труп: 20 тактов после смерти.
     pub fn gone(&self) -> bool {
-        self.dead_for > if self.kind == Kind::EnderDragon { DRAGON_DEATH_TICKS } else { DEATH_TICKS }
+        self.dead_for > if self.kind == Kind::EnderDragon { DRAGON_DEATH_TICKS } else if self.kind==Kind::ArmorStand {0} else { DEATH_TICKS }
     }
 
     /// Запись для файла региона: вид, место, скорость не пишется, здоровье,
@@ -2991,6 +3031,7 @@ impl Mob {
         }
         if water::creature(self.kind) { water::write(&self.water, out); }
         if newmobs::new_kind(self.kind) { newmobs::write(&self.newmobs, out); }
+        if self.kind==Kind::ArmorStand {self.stand.write(out);}
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
         if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked {
@@ -3035,6 +3076,7 @@ impl Mob {
         let mut horse_mob = Mob::new(0, kind, (x, y, z));
         if horse::equine(kind) { horse::read(&mut horse_mob, bytes)?; }
         let small_state = if small::kind(kind) { Some(small::read(bytes)?) } else { None };
+        let stand_state = if kind==Kind::ArmorStand {Some(armor_stand::State::read(bytes)?)} else {None};
         let new_state = if newmobs::new_kind(kind) { Some(newmobs::read(bytes)?) } else { None };
         let tail = if extended { Some(leash::read_tail(bytes)?) } else { None };
 
@@ -3050,6 +3092,7 @@ impl Mob {
             mob.small = state; mob.tame = tame;
         }
         if let Some(state) = new_state { mob.newmobs=state; }
+        if let Some(state) = stand_state {mob.stand=state;}
         mob.yaw = yaw;
         mob.head_yaw = yaw;
         if let Some((size, flags)) = slime_data {
@@ -3169,6 +3212,7 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         Kind::HappyGhast => { if let Some(c) = mob.newmobs.harness { give(&format!("{}_harness", newmobs::COLOURS[c as usize]), 1, 1, rng); } },
         Kind::Zoglin => give("rotten_flesh", 1, 3 + mob.looting, rng),
         Kind::CopperGolem => give("copper_ingot", 1, 3 + mob.looting, rng),
+        Kind::ArmorStand => {if !mob.stand.creative_break {give("armor_stand",1,1,rng);}},
         Kind::Rabbit => {
             give("rabbit_hide", 0, 1 + mob.looting.max(0), rng);
             give(if mob.vitals.fire > 0 { "cooked_rabbit" } else { "rabbit" }, 0, 1 + mob.looting.max(0), rng);
@@ -3383,6 +3427,7 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
     }
 
     if let Some(stack) = mob.newmobs.cargo { drops.push(stack); }
+    if mob.kind==Kind::ArmorStand && !mob.stand.creative_break {drops.extend(mob.stand.equipment.into_iter().flatten());}
     drops
 }
 
@@ -4173,7 +4218,7 @@ pub fn step_all(
 
     // Тела, пролежавшие своё, уходят облачком.
     for mob in items.mobs_mut() {
-        if mob.gone() {
+        if mob.gone() && mob.kind != Kind::ArmorStand {
             mob.events.push(Event::Poof);
         }
     }

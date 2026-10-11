@@ -409,6 +409,43 @@ impl Container {
     }
 }
 
+/// Тело `components:{…}` предмета в данных блока как `ключ=значение,…`.
+fn book_components(inner: &str) -> Option<String> {
+    let start = inner.find("components:{")? + "components:{".len();
+    let (mut depth, mut quote, mut end) = (1, None, None);
+
+    for (at, c) in inner[start..].char_indices() {
+        match (quote, c) {
+            (Some(q), c) if c == q => quote = None,
+            (Some(_), _) => {}
+            (None, '"' | '\'') => quote = Some(c),
+            (None, '{' | '[') => depth += 1,
+            (None, '}' | ']') => {
+                depth -= 1;
+                if depth == 0 { end = Some(at); break; }
+            }
+            _ => {}
+        }
+    }
+
+    let body = &inner[start..start + end?];
+    let mut out = Vec::new();
+
+    for part in crate::stackdata::split_top_level(body) {
+        let part = part.trim();
+        let (key, value) = if let Some(rest) = part.strip_prefix('"') {
+            let close = rest.find('"')?;
+            (&rest[..close], rest[close + 1..].trim_start().strip_prefix(':')?)
+        } else {
+            part.split_once(':')?
+        };
+
+        out.push(format!("{}={}", key.trim(), value.trim()));
+    }
+
+    Some(out.join(","))
+}
+
 /// Ячейки из данных блока в команде: `{Items:[{Slot:0b,id:"minecraft:stone",
 /// count:5}, …]}`. Понимаются поля Slot, id и count (и прежнее Count);
 /// остальные пропускаются. None — запись не разобрать.
@@ -430,7 +467,16 @@ pub fn items_from_text(text: &str) -> Option<Vec<(usize, Stack)>> {
                 let name = &name[..name.find(['"', ',', '}'])?];
                 let name = name.strip_prefix("minecraft:").unwrap_or(name);
 
-                return Some(vec![(0, Stack::new(blocks::item_named(name)?, 1))]);
+                let item = blocks::item_named(name)?;
+                let mut stack = Stack::new(item, 1);
+
+                // `components:{"minecraft:x":{…}}` внутри предмета → спецификация `имя[x={…}]`
+                // (кафедра хранит книгу с текстом, чёрный ящик lectern-pulse).
+                if let Some(spec) = book_components(inner).and_then(|parts| crate::commands::stack_from_spec(&format!("{name}[{parts}]"), 1).ok().flatten()) {
+                    stack = spec;
+                }
+
+                return Some(vec![(0, stack)]);
             }
         }
 
@@ -1991,7 +2037,9 @@ mod tests {
 
         let book = blocks::item_named("writable_book").expect("книга");
         let lectern = r#"{Book:{id:"minecraft:writable_book",count:1,components:{"minecraft:writable_book_content":{pages:["a"]}}},Page:0}"#;
-        assert_eq!(items_from_text(lectern), Some(vec![(0, Stack::new(book, 1))]));
+        let found = items_from_text(lectern).expect("кафедра");
+        assert_eq!((found[0].1.item, found[0].1.count), (book, 1));
+        assert_eq!(found[0].1.extras().book.as_ref().map(|b| b.pages.clone()), Some(vec!["a".to_string()]));
         assert_eq!(items_from_text("нет"), None);
     }
 

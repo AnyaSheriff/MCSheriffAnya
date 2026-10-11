@@ -377,7 +377,12 @@ impl Items {
                 match event {
                     crate::mob::Event::Sound { .. } if silent => {}
                     crate::mob::Event::Loot(stacks) => {
+                        // Поломка стойки: предметы вылетают из случайной точки блока ±0,25 (чёрный ящик armorstand-equip-break: (0,54; 0,43; 1,32)). [проверить: границы]
+                        let stand = self.mobs[index].kind == crate::mob::Kind::ArmorStand;
                         for stack in stacks {
+                            let at = if stand {
+                                (at.0.floor() + 0.5 + (rng.unit() - 0.5) * 0.5, at.1.floor() + 0.375 + (rng.unit() - 0.5) * 0.5, at.2.floor() + 0.5 + (rng.unit() - 0.5) * 0.5)
+                            } else { at };
                             // Как у выпавшего из блока: скорость вверх 0,2, вбок
                             // случайная до 0,1 (чёрный ящик, cow-physics).
                             let velocity = (rng.unit() * 0.2 - 0.1, 0.2, rng.unit() * 0.2 - 0.1);

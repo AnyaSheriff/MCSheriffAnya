@@ -150,8 +150,8 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
             .empty_list("spawn_conditions"),
         "minecraft:painting_variant" => Compound::new()
             .string("asset_id", &format!("minecraft:{}", name))
-            .int("width", 1)
-            .int("height", 1)
+            .int("width", crate::painting::dimensions(name).0)
+            .int("height", crate::painting::dimensions(name).1)
             .compound("title", translate(&format!("painting.minecraft.{}.title", name)))
             .compound(
                 "author",

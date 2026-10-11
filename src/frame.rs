@@ -96,6 +96,7 @@ pub struct Frame {
 
     /// Светящаяся ли.
     pub glow: bool,
+    pub painting: Option<u8>,
 
     /// Что в рамке.
     pub item: Option<Stack>,
@@ -109,16 +110,18 @@ pub struct Frame {
 
 impl Frame {
     pub fn new(entity_id: i32, pos: (i32, i32, i32), facing: u8, glow: bool) -> Self {
-        Self { entity_id, uuid: uuid_for(entity_id), pos, facing: facing.min(EAST), glow, item: None, rotation: 0, age: 0 }
+        Self { entity_id, uuid: uuid_for(entity_id), pos, facing: facing.min(EAST), glow, painting: None, item: None, rotation: 0, age: 0 }
     }
 
     /// Вид сущности для клиента.
     pub fn java_type(&self) -> i32 {
+        if self.painting.is_some() {return 93;}
         if self.glow { GLOW_FRAME_TYPE } else { ITEM_FRAME_TYPE }
     }
 
     /// Имя предмета рамки (он же выпадает при поломке).
     pub fn item_name(&self) -> &'static str {
+        if self.painting.is_some() {return "painting";}
         if self.glow { "glow_item_frame" } else { "item_frame" }
     }
 
@@ -138,11 +141,12 @@ impl Frame {
     /// рамки — здесь.
     pub fn place(&self) -> (f64, f64, f64) {
         let (dx, dy, dz) = self.step();
+        let (across,up)=self.painting.and_then(|id|crate::painting::VARIANTS.get(id as usize)).map_or((0.0,0.0),|(_,w,h)|(if w%2==0 {0.5} else {0.0},if h%2==0 {0.5} else {0.0}));
 
         (
-            f64::from(self.pos.0) + 0.5 - f64::from(dx) * WALL_OFFSET,
-            f64::from(self.pos.1) + 0.5 - f64::from(dy) * WALL_OFFSET,
-            f64::from(self.pos.2) + 0.5 - f64::from(dz) * WALL_OFFSET,
+            f64::from(self.pos.0) + 0.5 - f64::from(dx) * WALL_OFFSET + f64::from(dz)*across,
+            f64::from(self.pos.1) + 0.5 - f64::from(dy) * WALL_OFFSET + up,
+            f64::from(self.pos.2) + 0.5 - f64::from(dz) * WALL_OFFSET - f64::from(dx)*across,
         )
     }
 
@@ -165,6 +169,7 @@ impl Frame {
     /// Щелчок с предметом в руке по пустой рамке кладёт его; по полной —
     /// поворачивает предмет на 45°. Возвращает, что случилось.
     pub fn use_with(&mut self, held: Option<Stack>) -> Used {
+        if self.painting.is_some() {return Used::Nothing;}
         if self.item.is_none() {
             let Some(held) = held else {
                 return Used::Nothing;
@@ -206,6 +211,7 @@ impl Frame {
     /// non-solid blocks like repeaters and comparators»). [проверить]: точный
     /// список опор у оригинала — плиты, ступени, заборы приняты за опору.
     pub fn supported(&self, state_at: &dyn Fn(i32, i32, i32) -> i32) -> bool {
+        if self.painting.is_some() {return crate::painting::supported(self,state_at);}
         let (x, y, z) = self.support();
 
         can_hang_on(state_at(x, y, z), self.facing)
@@ -267,6 +273,7 @@ pub fn refresh_marks(world: &mut World, items: &Items) {
     let marks = items
         .frames()
         .iter()
+        .filter(|frame|frame.painting.is_none())
         .map(|frame| FrameMark { pos: frame.pos, facing: frame.facing, power: frame.comparator_power() })
         .collect();
 
@@ -389,7 +396,7 @@ pub fn break_off(world: &mut World, items: &mut Items, shared: &Shared, entity_i
 /// Рамка уже убрана из мира (клиентам ушёл `Gone`): звучит поломка, запись
 /// стирается, а если `drops` — выпадают сама рамка и её предмет.
 pub fn break_frame(world: &mut World, items: &mut Items, shared: &Shared, frame: &Frame, drops: bool) {
-    items.note_frame(Change::FrameSound { at: frame.place(), name: sound(frame.glow, Sound::Break) });
+    items.note_frame(Change::FrameSound { at: frame.place(), name: if frame.painting.is_some() {"minecraft:entity.painting.break"} else {sound(frame.glow, Sound::Break)} });
     world.forget_frame(frame.pos, frame.facing);
 
     if !drops {
@@ -426,8 +433,9 @@ fn spill(world: &mut World, items: &mut Items, shared: &Shared, stack: Stack, at
 pub fn write(frame: &Frame, out: &mut Vec<u8>) {
     out.push(((frame.pos.0.rem_euclid(16) << 4) | frame.pos.2.rem_euclid(16)) as u8);
     out.extend_from_slice(&(frame.pos.1 as i16).to_be_bytes());
-    out.push(frame.facing | (u8::from(frame.glow) << 3) | (u8::from(frame.item.is_some()) << 4));
+    out.push(frame.facing | (u8::from(frame.glow) << 3) | (u8::from(frame.item.is_some()) << 4) | (u8::from(frame.painting.is_some()) << 5));
     out.push(frame.rotation);
+    if let Some(variant)=frame.painting {out.push(variant);}
 
     if let Some(stack) = frame.item {
         out.extend_from_slice(&stack.stored_item().to_be_bytes());
@@ -459,6 +467,7 @@ pub fn read(bytes: &mut &[u8], chunk_x: i32, chunk_z: i32, entity_id: i32) -> Op
     let mut frame = Frame::new(entity_id, pos, facing, flags & 8 != 0);
 
     frame.rotation = rotation;
+    if flags&32!=0 {let v=take(1)?[0]; if usize::from(v)>=crate::painting::VARIANTS.len() {return None;} frame.painting=Some(v);}
 
     if flags & 16 != 0 {
         let raw = i32::from_be_bytes(take(4)?.try_into().ok()?);

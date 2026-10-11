@@ -128,7 +128,7 @@ pub(super) fn use_sign(
     }
 
     // Правит один игрок за раз: место в окне занимает тот, кто открыл.
-    player.sign_editor = Some(clicked);
+    player.sign_editor = Some((clicked,front));
     world.tell_directly(x, y, z);
     world.note_open_sign(player.entity_id, x, y, z, front);
     world.tell_directly(x, y, z);
@@ -153,7 +153,7 @@ pub(super) fn update(payload: &[u8], player: &mut PlayerState, shared: &Shared) 
         }
     }
 
-    if player.sign_editor.take() != Some((x, y, z)) || !within_reach(player, (x, y, z)) {
+    if player.sign_editor.take() != Some(((x, y, z),front != 0)) || !within_reach(player, (x, y, z)) {
         return;
     }
 

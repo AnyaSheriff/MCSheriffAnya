@@ -22,6 +22,10 @@ pub(super) struct StationWindow {
     /// Наковальня: цена в уровнях и сколько единиц материала уйдёт.
     pub cost: i32,
     pub repair_items: i32,
+    pub selected: i32,
+    pub input_item: Option<i64>,
+    /// Такт последнего звука «взят итог»: за такт он один (чёрный ящик stonecutter-cut: шифт-крафт — один звук).
+    pub sound_tick: Option<u64>,
 }
 
 /// Станок в этом месте, если там станок.
@@ -41,6 +45,9 @@ pub(super) async fn open_station(
         Station::Anvil => player.progress.custom("interact_with_anvil", 1),
         Station::Grindstone => player.progress.custom("interact_with_grindstone", 1),
         Station::Smithing => player.progress.custom("interact_with_smithing_table", 1),
+        Station::Stonecutter => player.progress.custom("interact_with_stonecutter", 1),
+        Station::Loom => player.progress.custom("interact_with_loom", 1),
+        Station::Cartography => player.progress.custom("interact_with_cartography_table", 1),
         Station::Enchanting => {}
     }
 
@@ -55,7 +62,7 @@ pub(super) async fn open_station(
     body.extend_from_slice(&nbt::translated(title));
     write_body(stream, body).await?;
 
-    let station = StationWindow { kind, pos: at, props: Vec::new(), name: None, cost: 0, repair_items: 0 };
+    let station = StationWindow { kind, pos: at, props: Vec::new(), name: None, cost: 0, repair_items: 0, selected: if matches!(kind, Station::Stonecutter | Station::Loom) { 0 } else { -1 }, input_item: None, sound_tick: None };
 
     player.window = Some(OpenWindow {
         id,
@@ -98,6 +105,29 @@ fn compute(shared: &Shared, player: &mut PlayerState) -> (Option<Stack>, Vec<i16
     };
 
     match station.kind {
+        Station::Stonecutter => {
+            let input = window.shown[0].map(|s|i64::from(s.item));
+            if input != station.input_item { station.selected = -1; station.input_item = input; }
+            (crate::stonecutter::result(window.shown[0],station.selected), vec![station.selected as i16])
+        }
+        Station::Loom => {
+            // Свойство окна: 0 при открытии, -1 при смене ячеек, 0 при узоре-предмете
+            // с готовым итогом (чёрный ящик loom-banner). [проверить: пустой краситель, несколько узоров]
+            let sig = window.shown[..3].iter().map(|s| s.map_or(0, |s| i64::from(s.item) + 1)).fold(0, |a, b| a * 4096 + b);
+            let sig = (sig != 0).then_some(sig);
+            let fresh = sig != station.input_item;
+            if fresh { station.selected = -1; station.input_item = sig; }
+            let mut result = crate::loom::result(window.shown[0], window.shown[1], window.shown[2], station.selected);
+            if fresh && window.shown[2].is_some() && result.is_some() {
+                station.selected = 0;
+                result = crate::loom::result(window.shown[0], window.shown[1], window.shown[2], 0);
+            }
+            (result, vec![station.selected as i16])
+        }
+        Station::Cartography => {
+            let result = window.shown[0].zip(window.shown[1]).and_then(|(a,b)| shared.maps.lock().expect("карты").cartography(a,b,false));
+            (result,Vec::new())
+        }
         Station::Enchanting => {
             let shelves = {
                 let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
@@ -210,6 +240,12 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
 
     if has_result && slot == result_slot as i32 {
         taken = take_result(shared, player, mode, reaction);
+        if taken && mode == 1 && matches!(kind, Station::Stonecutter | Station::Loom | Station::Cartography) {
+            for _ in 0..63 {
+                refresh(shared, player, reaction);
+                if !take_result(shared, player, mode, reaction) { break; }
+            }
+        }
     } else if mode == 1 && slot >= size as i32 && (slot as usize) < size + window::PLAYER_SLOTS {
         quick_move_in(player, kind, slot as usize);
     } else if slot == inventory::OUTSIDE || (0..(size + window::PLAYER_SLOTS) as i32).contains(&slot) {
@@ -278,7 +314,9 @@ fn generic_click(shared: &Shared, player: &mut PlayerState, kind: Station, slot:
     let mut allowed = match kind {
         Station::Enchanting => inputs[1].is_none_or(|stack| Some(stack.item) == lapis),
         Station::Grindstone => inputs.iter().flatten().all(enchanting::grindable),
-        Station::Anvil => true,
+        Station::Anvil | Station::Stonecutter => true,
+        Station::Loom => inputs.iter().enumerate().all(|(p,s)| s.is_none_or(|s|crate::loom::may_place(p,&s))),
+        Station::Cartography => inputs.iter().enumerate().all(|(p,s)|s.is_none_or(|s| if p==0 {blocks::item_name(s.item)==Some("filled_map")} else {matches!(blocks::item_name(s.item),Some("paper"|"map"|"glass_pane"))})),
         Station::Smithing => inputs.iter().enumerate().all(|(place, stack)| stack.is_none_or(|stack| smithing::may_place(place, &stack))),
     };
 
@@ -340,6 +378,9 @@ fn quick_move_in(player: &mut PlayerState, kind: Station, slot: usize) {
                 false
             }
         }
+        Station::Stonecutter => !crate::stonecutter::choices(stack.item).is_empty() && view.move_some(own,&[0]),
+        Station::Loom => (0..3).find(|&p|crate::loom::may_place(p,&stack)).is_some_and(|p|view.move_some(own,&[p])),
+        Station::Cartography => match blocks::item_name(stack.item) {Some("filled_map")=>view.move_some(own,&[0]),Some("paper"|"map"|"glass_pane")=>view.move_some(own,&[1]),_=>false},
         Station::Grindstone if !enchanting::grindable(&stack) => false,
         Station::Anvil | Station::Grindstone => view.move_some(own, &[0, 1]),
         // В ту ячейку, куда предмет годится (шаблон, основа, добавка).
@@ -368,7 +409,7 @@ fn take_result(shared: &Shared, player: &mut PlayerState, mode: i32, reaction: &
         return false;
     };
     let result_slot = station.kind.inputs();
-    let Some(result) = window.shown[result_slot] else {
+    let Some(mut result) = window.shown[result_slot] else {
         return false;
     };
 
@@ -377,6 +418,16 @@ fn take_result(shared: &Shared, player: &mut PlayerState, mode: i32, reaction: &
         return false;
     }
 
+    // Новая карта получает собственный id до проверки вместимости: она
+    // не складывается с исходной. Замок держим до фиксации, чтобы два
+    // игрока не выделили один id; отказ оставляет карты без изменений.
+    let cartography=if station.kind==Station::Cartography {
+        let maps=shared.maps.lock().expect("карты");
+        let mut next=maps.clone();
+        let Some(committed)=window.shown[0].zip(window.shown[1]).and_then(|(a,b)|next.cartography(a,b,true)) else {return false;};
+        result=committed;Some((maps,next))
+    } else {None};
+    let inventory_before = player.inventory.clone();
     match mode {
         0 => match player.inventory.cursor() {
             None => player.inventory.set_cursor(Some(result)),
@@ -399,6 +450,10 @@ fn take_result(shared: &Shared, player: &mut PlayerState, mode: i32, reaction: &
         _ => return false,
     }
 
+    if let Some((mut maps,mut next))=cartography {
+        if next.save().is_err() { player.inventory=inventory_before; return false; }
+        *maps=next;
+    }
     let (kind, pos, cost, repair_items) = (station.kind, station.pos, station.cost, station.repair_items);
     let inputs = [window.shown[0], window.shown[1]];
 
@@ -437,6 +492,18 @@ fn take_result(shared: &Shared, player: &mut PlayerState, mode: i32, reaction: &
 
             // Звук точила — событием мира 1042 (вики, World Event).
             shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_level_event(pos.0, pos.1, pos.2, 1042, 0);
+        }
+        Station::Stonecutter | Station::Loom | Station::Cartography => {
+            let consumed=if kind==Station::Stonecutter {1} else {2};
+            for place in 0..consumed { window.shown[place]=inventory::take_one(window.shown[place]); }
+            let sound=match kind { Station::Stonecutter=>"minecraft:ui.stonecutter.take_result",Station::Loom=>"minecraft:ui.loom.take_result",_=>"minecraft:ui.cartography_table.take_result" };
+            let now=*shared.ticks.borrow();
+            let station=window.station.as_mut().expect("станок");
+            if station.sound_tick!=Some(now) {
+                station.sound_tick=Some(now);
+                shared.world_in(player.dimension).lock().expect("мир").note_sound(pos.0,pos.1,pos.2,sound,1.0,1.0);
+            }
+            player.progress.crafted(result.item,result.count);
         }
         Station::Smithing => {
             player.progress.crafted(result.item, result.count);
@@ -490,6 +557,8 @@ fn anvil_used(shared: &Shared, player: &mut PlayerState, (x, y, z): (i32, i32, i
     redstone::settle(&mut world);
 }
 
+
+
 /// Кнопка в окне стола: зачаровать предложением 0–2. Проверки — как у
 /// оригинала: лазурита не меньше номера+1, уровней не меньше стоимости и
 /// номера+1 (творческому — без проверок). Уходит номер+1 уровней и столько
@@ -501,6 +570,14 @@ pub(super) fn button(shared: &Shared, player: &mut PlayerState, window: i32, but
     let Some(open) = player.window.as_ref().filter(|open| open.id == window) else {
         return false;
     };
+    if let Some(station) = open.station.as_ref().filter(|s|matches!(s.kind,Station::Stonecutter|Station::Loom)) {
+        let length=if station.kind==Station::Stonecutter {open.shown[0].map_or(0,|s|crate::stonecutter::choices(s.item).len())} else {crate::loom::choices(open.shown[2]).len()};
+        if button>=0 && (button as usize)<length {
+            player.window.as_mut().unwrap().station.as_mut().unwrap().selected=button;
+            refresh(shared,player,reaction);
+        }
+        return true;
+    }
     let Some(station) = open.station.as_ref().filter(|station| station.kind == Station::Enchanting) else {
         return false;
     };
@@ -606,4 +683,35 @@ pub(super) fn still_there(shared: &Shared, player: &PlayerState, window: &OpenWi
     let world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
 
     station_at(&world, station.pos) == Some(station.kind)
+}
+
+#[cfg(test)] mod tests {
+    use super::*;
+    #[test] fn cartography_checks_room_for_the_new_map_before_spending() {
+        let shared=Shared::new(World::in_memory(),World::in_memory(),Default::default(),Default::default(),Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/cartography-test-ops.json")),crate::skins::Settings::default());
+        let mut player=PlayerState::new([29;16],"Cartography".into(),None,None,0x7f,0,(0.5,64.0,0.5));
+        let id=shared.maps.lock().unwrap().create(Dimension::Overworld,0,0,0);
+        let item=|name,count|Stack::new(blocks::item_named(name).unwrap(),count);
+        let input=item("filled_map",1).with_extras(crate::stackdata::Data{map_id:Some(id),..Default::default()});
+        let paper=item("paper",1);
+        for slot in 9..45 {player.inventory.set(slot,Some(item("stone",64)));}
+        player.inventory.set(9,Some(input));
+        player.window=Some(OpenWindow{id:1,halves:Vec::new(),cart:None,shown:vec![Some(input),Some(paper),Some(input)],lectern:false,crafter:false,kind:None,props:Vec::new(),merchant:None,ender:false,
+            station:Some(StationWindow{kind:Station::Cartography,pos:(0,64,0),props:Vec::new(),name:None,cost:0,repair_items:0,selected:-1,input_item:None,sound_tick:None})});
+        let mut reaction=Reaction::default();
+        assert!(!take_result(&shared,&mut player,1,&mut reaction));
+        assert_eq!(shared.maps.lock().unwrap().maps.len(),1);
+        assert_eq!(player.inventory.slot(9),Some(input));
+        assert_eq!(player.window.as_ref().unwrap().shown[1],Some(paper));
+        player.inventory.set_cursor(Some(input));
+        assert!(!take_result(&shared,&mut player,0,&mut reaction));
+        assert_eq!(shared.maps.lock().unwrap().maps.len(),1);
+        player.inventory.set_cursor(None);player.inventory.set(44,None);
+        assert!(take_result(&shared,&mut player,1,&mut reaction));
+        assert_eq!(player.inventory.slot(44).unwrap().extras().map_id,Some(id+1));
+        assert_eq!(shared.maps.lock().unwrap().maps.len(),2);
+        assert!(player.window.as_ref().unwrap().shown[0].is_none());
+        assert!(player.window.as_ref().unwrap().shown[1].is_none());
+    }
 }

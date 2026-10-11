@@ -1,0 +1,34 @@
+{
+ "name": "shield-banner-craft",
+ "about": "Crafter window (the only 3x3 grid we have): a shield and a patterned banner give a shield with the banner's patterns and base colour in the result slot.",
+ "blocks": [
+  { "at": [0, 0, 0], "state": "minecraft:crafter[orientation=north_up,crafting=false,triggered=false]" }
+ ],
+ "setup": [
+  "clear $(bot)",
+  "tp $(bot) $(0.5,0,2.5) 180 0",
+  "gamemode survival $(bot)",
+  "!stopfly",
+  "give $(bot) minecraft:shield",
+  "give $(bot) minecraft:white_banner[banner_patterns=[{pattern:\"minecraft:creeper\",color:\"red\"},{pattern:\"minecraft:border\",color:\"blue\"}]]"
+ ],
+ "actions": [
+  { "after": 0, "click": [0, 0, 0], "face": 1 },
+  { "after": 10, "window_click": { "slot": 36, "button": 0, "mode": 0 } },
+  { "after": 20, "window_click": { "slot": 0, "button": 0, "mode": 0 } },
+  { "after": 30, "window_click": { "slot": 37, "button": 0, "mode": 0 } },
+  { "after": 40, "window_click": { "slot": 1, "button": 0, "mode": 0 } },
+  { "after": 50, "close": true }
+ ],
+ "cleanup": [
+  "fill $(-5,0,-5) $(5,5,5) minecraft:air",
+  "kill @e[type=item,distance=..48]",
+  "clear $(bot)",
+  "gamemode creative $(bot)"
+ ],
+ "record_ticks": 70,
+ "origin": [0, -59, 0],
+ "item_components": true,
+ "track_self": true,
+ "track_mobs": true
+}

@@ -10,7 +10,7 @@ pub struct Map {
     pub locked:bool, pub colors:Vec<u8>,
     #[serde(default)] pub destination:Option<(i32,i32,i32)>,
 }
-#[derive(Default,Serialize,Deserialize)]
+#[derive(Clone,Default,Serialize,Deserialize)]
 pub struct Maps {
     next:i32, pub maps:BTreeMap<i32,Map>,
     #[serde(skip)] path:Option<PathBuf>,
@@ -38,6 +38,39 @@ impl Maps {
         let scale=scale.min(4);
         self.maps.insert(id,Map{id,scale,x:centre(x,scale),z:centre(z,scale),dimension:dimension.index() as u8,locked:false,colors:vec![0;16384],destination:None});
         self.dirty=true;id
+    }
+    // Вики, Cartography Table: масштаб не выше 4; замок создаёт отдельную
+    // карту, копия сохраняет прежний id. [проверить] пакет результата.
+    pub fn cartography(&mut self, input: crate::inventory::Stack, material: crate::inventory::Stack, commit: bool) -> Option<crate::inventory::Stack> {
+        let id = input.extras().map_id?;
+        let map = self.maps.get(&id)?;
+        let name = blocks::item_name(material.item)?;
+        if blocks::item_name(input.item) != Some("filled_map") { return None; }
+        match name {
+            "map" => Some(input.with_count(2)),
+            "paper" if !map.locked && map.scale < 4 && map.destination.is_none() => {
+                let mut next = map.clone(); next.scale += 1;
+                next.x = centre(next.x,next.scale); next.z = centre(next.z,next.scale);
+                next.colors.fill(0);
+                Some(self.cartography_copy(input,next,commit,1))
+            }
+            "glass_pane" if !map.locked => {
+                let mut next=map.clone(); next.locked=true;
+                Some(self.cartography_copy(input,next,commit,0))
+            }
+            _ => None,
+        }
+    }
+    fn cartography_copy(&mut self, input: crate::inventory::Stack, mut map: Map, commit: bool, post: u8) -> crate::inventory::Stack {
+        let mut data=input.extras();
+        if commit {
+            map.id=self.next; self.next=self.next.saturating_add(1);
+            data.map_id=Some(map.id); self.maps.insert(map.id,map); self.dirty=true;
+        } else {
+            // Предпросмотр помечен «обработать после» (вики, Map item format, map_post_processing). [проверить: стекло]
+            data.map_post=Some(post);
+        }
+        input.with_count(1).with_extras(data)
     }
     pub fn save(&mut self)->std::io::Result<()> {
         if !self.dirty {return Ok(());}
@@ -152,6 +185,33 @@ pub fn patch(before: Option<&[u8]>, after: &[u8]) -> Option<Patch> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cartography_preview_clone_zoom_and_lock_are_independent() {
+        use crate::{inventory::Stack,stackdata::Data};
+        let item=|name| Stack::new(blocks::item_named(name).unwrap(),1);
+        let mut maps=Maps::default();
+        let original=maps.create(Dimension::Overworld,-129,256,0);
+        maps.maps.get_mut(&original).unwrap().colors[42]=99;
+        let input=item("filled_map").with_extras(Data{map_id:Some(original),name:Some("Home".into()),..Data::default()});
+        for _ in 0..10 {assert!(maps.cartography(input,item("paper"),false).is_some());}
+        assert_eq!(maps.next,1); assert_eq!(maps.maps.len(),1);
+        let copy=maps.cartography(input,item("map"),true).unwrap();
+        assert_eq!(copy.count,2); assert_eq!(copy.extras().map_id,Some(original)); assert_eq!(maps.next,1);
+        let zoom=maps.cartography(input,item("paper"),true).unwrap();
+        let zoom_id=zoom.extras().map_id.unwrap();
+        assert_eq!(maps.maps[&zoom_id].scale,1); assert_eq!(maps.maps[&zoom_id].colors[42],0);
+        assert_eq!(maps.maps[&original].colors[42],99); assert_eq!(zoom.extras().name.as_deref(),Some("Home"));
+        let locked=maps.cartography(input,item("glass_pane"),true).unwrap();
+        let locked_id=locked.extras().map_id.unwrap();
+        assert!(maps.maps[&locked_id].locked); assert_eq!(maps.maps[&locked_id].colors[42],99);
+        assert!(!maps.maps[&original].locked);
+        for material in ["paper","glass_pane","stone"] {assert!(maps.cartography(locked,item(material),true).is_none());}
+        assert_eq!(maps.next,3);
+        maps.maps.get_mut(&original).unwrap().scale=4;
+        assert!(maps.cartography(input,item("paper"),true).is_none());
+        let saved:Maps=serde_json::from_slice(&serde_json::to_vec(&maps).unwrap()).unwrap();
+        assert!(saved.maps[&locked_id].locked); assert_eq!(saved.next,3);
+    }
     #[test]
     fn explores_loaded_terrain_and_locked_map_keeps_pixels() {
         let mut w = World::in_memory();

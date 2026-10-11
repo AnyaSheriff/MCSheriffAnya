@@ -111,7 +111,8 @@ pub fn write_item(out: &mut Out, stack: Option<Stack>, stack_id: i32) {
     // Особый динамит (custom_tnt.rs) — с именем и описанием в NBT предмета;
     // зачарования, износ и имя (станки) — тоже в NBT (stations::item_nbt).
     if let Some(user_data) = stack.tnt.and_then(crate::custom_tnt::by_id).map(custom_tnt_user_data).or_else(|| stations::item_nbt(&stack)) {
-        out.varint((2 + 1 + user_data.len() + 4 + 4) as u32).li16(-1).u8(1).raw(&user_data).li32(0).li32(0);
+        out.varint((2 + 1 + user_data.len() + 4 + 4 + if id==SHIELD {8} else {0}) as u32).li16(-1).u8(1).raw(&user_data).li32(0).li32(0);
+        if id==SHIELD {out.li64(0);}
         return;
     }
 
@@ -217,6 +218,7 @@ pub struct Bag {
     pub station: Option<Station>,
     /// Уровень игрока для запросов (зачарование, наковальня).
     pub level: i32,
+    pub cartography_maps: Option<crate::maps::Maps>,
     /// Итог станка в этом запросе уже создан и его можно брать.
     craft_ready: bool,
     /// Что по запросу израсходовано: предмет, сколько, из ячейки интерфейса ли.
@@ -224,6 +226,8 @@ pub struct Bag {
     /// Кузнечный стол: предметы, которые итог требует израсходовать (шаблон,
     /// основа, добавка).
     smithing: Option<[i32; 3]>,
+    station_spend: Option<Vec<(Place,Stack)>>,
+    station_consumed: Vec<(Place,Stack)>,
     /// Рецепт верстака этого запроса и сколько раз.
     recipe: Option<(&'static crate::crafting::Recipe, i32)>,
     /// Что станок попросил сделать миру, когда запрос удался.
@@ -262,6 +266,7 @@ pub enum Event {
     Ground([Option<Stack>; 2], (i32, i32, i32)),
     /// Кузнечный стол сработал (звук — событие мира 1044).
     Smithed((i32, i32, i32)),
+    StationWorked(stations::Kind,(i32,i32,i32)),
 }
 
 /// Насколько разобран запрос.
@@ -305,9 +310,12 @@ impl Bag {
             ui: BTreeMap::new(),
             station: None,
             level: 0,
+            cartography_maps: None,
             craft_ready: false,
             consumed: Vec::new(),
             smithing: None,
+            station_spend: None,
+            station_consumed: Vec::new(),
             recipe: None,
             events: Vec::new(),
             offers: None,
@@ -741,6 +749,8 @@ impl Bag {
         self.craft_ready = false;
         self.consumed.clear();
         self.smithing = None;
+        self.station_spend = None;
+        self.station_consumed.clear();
         self.recipe = None;
         self.trade_pick = None;
         self.trade_times = 1;
@@ -893,10 +903,9 @@ impl Bag {
                 }
                 // Ткацкий станок: узор по имени.
                 17 => {
-                    let length = reader.varint()? as usize;
-                    reader.take(length)?;
+                    let pattern=reader.string()?;
                     reader.u8()?;
-                    Act::Unsupported
+                    Act::Loom(pattern)
                 }
                 // Всё остальное разобрать нельзя — отказ.
                 _ => return None,
@@ -931,9 +940,14 @@ impl Bag {
                 }
                 Act::Skip => true,
                 Act::CraftCreative(entry) => creative && self.craft_creative(entry),
-                Act::Recipe { id, times } => self.craft_recipe(id, times, creative),
-                Act::Anvil => self.anvil(names.first().map(String::as_str), creative),
+                Act::Recipe { id, times } => if self.station.is_some_and(|s|s.kind==stations::Kind::Cartography) {
+                    self.cartography(id,names.first().map(String::as_str))
+                } else {self.craft_recipe(id, times, creative)},
+                Act::Anvil => if self.station.is_some_and(|s|s.kind==stations::Kind::Cartography) {
+                    self.cartography(stations::cartography_base()+3,names.first().map(String::as_str))
+                } else {self.anvil(names.first().map(String::as_str), creative)},
                 Act::Grind => self.grind(),
+                Act::Loom(pattern) => self.loom(&pattern),
                 Act::Unsupported => false,
             };
 
@@ -977,6 +991,7 @@ impl Bag {
         self.set(from, rest);
         touched.push((source, from));
         self.consumed.push((stack.item, count, in_ui));
+        self.station_consumed.push((from,stack.with_count(count)));
         true
     }
 
@@ -996,6 +1011,7 @@ impl Bag {
                 true
             }
             Some(stations::Kind::Smithing) => self.smith(id),
+            Some(stations::Kind::Stonecutter) => self.stonecut(id,times),
             Some(stations::Kind::Trading) => self.trade_recipe(id, times),
             Some(_) => false,
         }
@@ -1141,6 +1157,39 @@ impl Bag {
         true
     }
 
+    fn cartography(&mut self,id:u32,name:Option<&str>)->bool {
+        if self.craft_ready || !(stations::cartography_base()..stations::cartography_base()+4).contains(&id) {return false;}
+        let Some(input)=self.get(Place::Ui(12)) else {return false;};
+        let material=self.get(Place::Ui(13));
+        let Some(maps)=self.cartography_maps.as_mut() else {return false;};
+        let result=if let Some(material)=material {maps.cartography(input,material,true)} else {
+            (input.extras().map_id.is_some() && name.is_some()).then_some(input.with_count(1))
+        };
+        let Some(mut result)=result else {return false;};
+        if let Some(name)=name.filter(|s|s.chars().count()<=50) {let mut data=result.extras();data.name=(!name.is_empty()).then(||name.to_owned());result=result.with_extras(data);}
+        self.craft_ready=true; let mut wanted=vec![(Place::Ui(12),input.with_count(1))];if let Some(m)=material {wanted.push((Place::Ui(13),m.with_count(1)));}self.station_spend=Some(wanted);
+        self.set(Place::CreativeOutput,Some(result));true
+    }
+    fn stonecut(&mut self, id: u32, times: i32) -> bool {
+        let Some(r)=stations::stonecut_recipe(id) else { return false; };
+        let Some(input)=self.get(Place::Ui(3)) else { return false; };
+        if self.craft_ready || input.item!=r.input || times<=0 || times>input.count || times*r.count>blocks::stack_size(r.output) { return false; }
+        self.craft_ready=true; self.station_spend=Some(vec![(Place::Ui(3),input.with_count(times))]);
+        self.set(Place::CreativeOutput,Some(Stack::new(r.output,r.count*times))); true
+    }
+    fn loom(&mut self, name: &str) -> bool {
+        if self.craft_ready || !self.station.is_some_and(|s|s.kind==stations::Kind::Loom) { return false; }
+        let inputs=[self.get(Place::Ui(9)),self.get(Place::Ui(10)),self.get(Place::Ui(11))];
+        let pattern=crate::loom::BEDROCK.iter().position(|p|*p==name).or_else(||crate::loom::PATTERNS.iter().position(|p|*p==name));
+        let Some(pattern)=pattern else { return false; };
+        let choices=crate::loom::choices(inputs[2]);
+        let Some(selected)=choices.iter().position(|p|usize::from(*p)==pattern) else { return false; };
+        let Some(result)=crate::loom::result(inputs[0],inputs[1],inputs[2],selected as i32) else { return false; };
+        self.craft_ready=true;
+        self.station_spend=Some(inputs[..2].iter().enumerate().filter_map(|(i,s)|s.map(|s|(Place::Ui(9+i as u8),s.with_count(1)))).collect());
+        self.set(Place::CreativeOutput,Some(result)); true
+    }
+
     /// Итог точила.
     fn grind(&mut self) -> bool {
         let Some(station) = self.station.filter(|station| station.kind == stations::Kind::Grindstone) else {
@@ -1222,6 +1271,12 @@ impl Bag {
             }
         }
 
+        if let Some(wanted)=&self.station_spend {
+            let mut wanted= wanted.clone(); wanted.sort_unstable_by_key(|(p,_)|*p);
+            let mut spent=self.station_consumed.clone(); spent.sort_unstable_by_key(|(p,_)|*p);
+            if spent!=wanted || self.get(Place::CreativeOutput).is_some() { return false; }
+            if let Some(station)=self.station {self.events.push(Event::StationWorked(station.kind,station.pos));}
+        }
         // Стол расходует ровно по одному из трёх входов.
         if let Some(mut wanted) = self.smithing {
             let mut spent: Vec<i32> = self.consumed.iter().filter(|(_, _, in_ui)| *in_ui).flat_map(|&(item, count, _)| std::iter::repeat_n(item, count as usize)).collect();
@@ -1371,6 +1426,7 @@ enum Act {
     Recipe { id: u32, times: i32 },
     Anvil,
     Grind,
+    Loom(String),
     Unsupported,
 }
 
@@ -1387,6 +1443,7 @@ impl Act {
             Act::Recipe { .. } => "craft_recipe",
             Act::Anvil => "anvil",
             Act::Grind => "grind",
+            Act::Loom(_) => "loom",
             Act::Unsupported => "unsupported",
         }
     }
@@ -1935,6 +1992,62 @@ mod tests {
 
     fn item(name: &str, count: i32) -> Stack {
         Stack::new(crate::blocks::item_named(name).expect(name), count)
+    }
+
+    #[test]
+    fn stonecutter_requires_payment_from_its_input_and_taking_the_result() {
+        let make=|| {
+            let mut bag=Bag::new(Inventory::new());
+            bag.open_station(Station{kind:stations::Kind::Stonecutter,pos:(0,0,0),seed:0,shelves:0});
+            bag.set(Place::Ui(3),Some(item("stone",2)));
+            bag.inventory.set(FIRST_HOTBAR,Some(item("stone",2)));
+            bag
+        };
+        let index=crate::stonecutter::recipes().iter().position(|r|r.input==item("stone",1).item&&r.output==item("stone_slab",1).item).unwrap();
+        let id=stations::stonecut_base()+index as u32;
+        for payment in [53,HOTBAR_AND_INVENTORY] {
+            let mut bag=make();
+            let payload=request(-19,3,|out| {
+                out.u8(12).varint(id).u8(1);
+                consume_action(out,1,payment,if payment==53 {3} else {0});
+                take_output(out,2);
+            });
+            bag.handle_requests(&payload,false);
+            if payment==53 {
+                assert_eq!(bag.get(Place::Cursor),Some(item("stone_slab",2)));
+                assert_eq!(bag.get(Place::Ui(3)),Some(item("stone",1)));
+            } else {
+                assert_eq!(bag.get(Place::Cursor),None);
+                assert_eq!(bag.get(Place::Ui(3)),Some(item("stone",2)));
+            }
+            assert_eq!(bag.inventory.slot(FIRST_HOTBAR),Some(item("stone",2)));
+        }
+        let mut bag=make();
+        bag.handle_requests(&request(-20,1,|out|{out.u8(12).varint(id).u8(1);}),false);
+        assert_eq!(bag.get(Place::Ui(3)),Some(item("stone",2)));
+        assert!(bag.get(Place::CreativeOutput).is_none());
+    }
+
+    #[test]
+    fn failed_cartography_request_does_not_allocate_a_map() {
+        let mut bag=Bag::new(Inventory::new());
+        bag.open_station(Station{kind:stations::Kind::Cartography,pos:(0,0,0),seed:0,shelves:0});
+        let mut maps=crate::maps::Maps::default();
+        let id=maps.create(crate::dimension::Dimension::Overworld,0,0,0);
+        bag.cartography_maps=Some(maps);
+        let input=item("filled_map",1).with_extras(crate::stackdata::Data{map_id:Some(id),..Default::default()});
+        bag.set(Place::Ui(12),Some(input));bag.set(Place::Ui(13),Some(item("paper",1)));
+        bag.handle_requests(&request(-21,1,|out|{out.u8(12).varint(stations::cartography_base()).u8(1);}),false);
+        assert_eq!(bag.cartography_maps.as_ref().unwrap().maps.len(),1);
+        assert_eq!(bag.get(Place::Ui(12)),Some(input));
+        let payload=request(-22,4,|out|{
+            out.u8(12).varint(stations::cartography_base()).u8(1);
+            consume_action(out,1,55,12);consume_action(out,1,56,13);take_output(out,1);
+        });
+        bag.handle_requests(&payload,false);
+        assert_eq!(bag.cartography_maps.as_ref().unwrap().maps.len(),2);
+        assert_eq!(bag.get(Place::Cursor).unwrap().extras().map_id,Some(id+1));
+        assert!(bag.get(Place::Ui(12)).is_none());assert!(bag.get(Place::Ui(13)).is_none());
     }
 
     /// Верстак: четыре доски в сетке 2×2 → верстак в курсор; набор

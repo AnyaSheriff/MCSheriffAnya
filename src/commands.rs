@@ -773,8 +773,8 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return summon_lightning(rest, source, shared);
     }
 
-    if let glow @ ("item_frame" | "glow_item_frame") = name.strip_prefix("minecraft:").unwrap_or(name) {
-        return summon_frame(glow == "glow_item_frame", rest, source, shared);
+    if let glow @ ("item_frame" | "glow_item_frame" | "painting") = name.strip_prefix("minecraft:").unwrap_or(name) {
+        return summon_frame(glow == "glow_item_frame", glow == "painting", rest, source, shared);
     }
 
     if let Some(kind) = crate::mob::Kind::from_name(name) {
@@ -981,7 +981,7 @@ fn summon_orb(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
 /// 4 — запад, 5 — восток (вики, Item Frame, «Facing»); по умолчанию юг.
 /// Как у оригинала, призванная рамка не сообщает сравнителям о себе:
 /// им нужен толчок соседа.
-fn summon_frame(glow: bool, rest: &[&str], source: &Source, shared: &Shared) -> Answer {
+fn summon_frame(glow: bool, painting: bool, rest: &[&str], source: &Source, shared: &Shared) -> Answer {
     let usage = || Answer::saying("Нужно: summon item_frame <x> <y> <z> {Facing:4b,Item:{id:\"…\",count:1},ItemRotation:2b}".to_string());
 
     let (place, data) = match rest {
@@ -1009,7 +1009,14 @@ fn summon_frame(glow: bool, rest: &[&str], source: &Source, shared: &Shared) -> 
         glow,
     );
 
-    frame.item = item_from_text(data).map(|stack| stack.with_count(1));
+    if painting {
+        let value=crate::snbt::parse(data);
+        let name=value.as_ref().and_then(|v|v.get("variant")).and_then(crate::snbt::Value::as_str).unwrap_or("kebab");
+        let name=name.strip_prefix("minecraft:").unwrap_or(name);
+        let Some(id)=crate::painting::VARIANTS.iter().position(|v|v.0==name) else {return Answer::saying(format!("Неизвестная картина {name}"));};
+        frame.painting=Some(id as u8);
+        if frame.facing<2 {frame.facing=crate::frame::DEFAULT_FACING;}
+    } else {frame.item = item_from_text(data).map(|stack| stack.with_count(1));}
     frame.rotation = number_after("ItemRotation:").unwrap_or(0) & 7;
 
     let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
@@ -1019,7 +1026,7 @@ fn summon_frame(glow: bool, rest: &[&str], source: &Source, shared: &Shared) -> 
     items.add_frame(frame);
     crate::frame::refresh_marks(&mut world, &items);
 
-    Answer::saying(format!("Призвана сущность {}", if glow { "glow_item_frame" } else { "item_frame" }))
+    Answer::saying(format!("Призвана сущность {}", if painting {"painting"} else if glow { "glow_item_frame" } else { "item_frame" }))
 }
 
 /// Число после ключа в данных призыва: `Age:-24000`, `Color:3b`.
@@ -1040,6 +1047,7 @@ fn flag_in(data: &str, key: &str) -> Option<bool> {
 /// Правит моба по данным: `NoAI`, `Silent`, `Age`, `Sheared`, `Color`,
 /// `Health`, `Rotation:[yaw,pitch]`.
 fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
+    crate::mob::armor_stand::apply(mob,data);
     crate::mob::land::apply_data(mob, data);
     crate::mob::water::apply_data(mob,data);
     if crate::mob::horse::equine(mob.kind) && let Some(value) = crate::snbt::parse(data) {
@@ -1222,7 +1230,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
 
     // Шлем: `ArmorItems` (четвёртый элемент, голова) или `equipment:{head:…}` (с
     // 1.21.5): любой «…_helmet».
-    if let Some(at) = data.find("ArmorItems:").or_else(|| data.find("equipment:")) {
+    if mob.kind != crate::mob::Kind::ArmorStand && let Some(at) = data.find("ArmorItems:").or_else(|| data.find("equipment:")) {
         mob.h.helmet = data[at..].contains("_helmet") || data[at..].contains("_head");
     }
 
@@ -1488,7 +1496,7 @@ fn summon_lightning(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
 }
 
 /// Предмет из данных сущности, включая компоненты: они участвуют в слиянии.
-fn item_from_text(text: &str) -> Option<crate::inventory::Stack> {
+pub(crate) fn item_from_text(text: &str) -> Option<crate::inventory::Stack> {
     let root = crate::snbt::parse(text)?;
     let item = root.get("Item")?;
     let name = item.get("id")?.as_str()?;
@@ -1509,7 +1517,7 @@ fn item_from_text(text: &str) -> Option<crate::inventory::Stack> {
 }
 
 /// JSON — подмножество SNBT; кавычки сохраняют вложенные строки компонентов.
-fn component_text(value: &crate::snbt::Value) -> String {
+pub(crate) fn component_text(value: &crate::snbt::Value) -> String {
     use crate::snbt::Value;
     match value {
         Value::Num(n) => n.to_string(),

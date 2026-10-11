@@ -132,6 +132,14 @@ impl Window<'_> {
         };
 
         let there = self.get(index);
+        let mut next_cursor=cursor; let mut next_there=there;
+        if crate::bundle::click(&mut next_cursor,&mut next_there,button)
+            && next_there.is_none_or(|s|self.may_place(index,s.item) && s.count<=self.limit(index,&s))
+            && there.is_none_or(|s|self.may_place(index,s.item))
+        {
+            self.inventory.set_cursor(next_cursor); self.set(index,next_there);
+            return Click { understood:true, thrown:None };
+        }
 
         // В выход печи и в чужую ячейку стойки ничего не кладётся: такой же
         // предмет из выхода добавляется к курсору (вики, Furnace).

@@ -161,6 +161,18 @@ impl Recipe {
 /// Что получится из сетки 3×3 (ячейки по рядам, слева направо): первый
 /// подходящий рецепт. None — сетка пуста или рецепта нет.
 pub fn craft(slots: &[Option<Stack>]) -> Option<Stack> {
+    let ingredients:Vec<_>=slots.iter().flatten().copied().collect();
+    if ingredients.len()==2 {
+        let shield=ingredients.iter().find(|s|crate::blocks::item_name(s.item)==Some("shield"));
+        let banner=ingredients.iter().find(|s|crate::loom::may_place(0,s));
+        if let (Some(shield),Some(banner))=(shield,banner) {
+            let mut data=shield.extras(); if data.base_color.is_some() || !data.banner_patterns.is_empty() {return None;}
+            let color=crate::blocks::item_name(banner.item)?.strip_suffix("_banner")?;
+            data.base_color=crate::sign::COLORS.iter().position(|c|*c==color).map(|c|c as u8);
+            let layers=banner.extras();
+            data.banner_patterns=if layers.ominous_banner {crate::stackdata::OMINOUS_BANNER_LAYERS.iter().map(|&(p,c)|(p as u8,c as u8)).collect()} else {layers.banner_patterns};return Some(shield.with_count(1).with_extras(data));
+        }
+    }
     // Вики, Suspicious Stew: «flower used to craft it». Рецепт особый:
     // результат хранит эффект, а не только номер предмета [проверить].
     let names: Vec<&str> = slots.iter().flatten().filter_map(|stack| crate::blocks::item_name(stack.item)).collect();

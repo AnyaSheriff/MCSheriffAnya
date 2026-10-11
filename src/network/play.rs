@@ -93,6 +93,7 @@ mod cauldron;
 mod block_use;
 mod vehicle;
 mod horse;
+mod armor_stands;
 mod glide;
 mod progression;
 mod tame;
@@ -100,6 +101,7 @@ mod gameplay;
 mod fishing;
 mod maps;
 mod brush;
+mod bundle_use;
 mod small;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
@@ -991,6 +993,7 @@ async fn enter_world(
         // черты, и не подсказывает.
         let may_tnt = crate::permissions::allowed(shared, &player.uuid, crate::custom_tnt::GIVE_NODE);
         send_commands(stream, may_tnt).await?;
+        write_body(stream, crate::stonecutter::recipe_packet()).await?;
 
         // Список игроков: сперва те, кто уже на сервере, затем сам игрок.
         // Новичок о них узнаёт только отсюда — записи журнала он ещё не читал.
@@ -2052,6 +2055,10 @@ fn frame_meta(frame: &crate::frame::Frame) -> Option<Vec<u8>> {
     data.extend_from_slice(&encode_varint(frame.entity_id));
 
     let start = data.len();
+    if let Some(variant)=frame.painting {
+        // Сторону несёт пакет появления; у оригинала в метаданных только вариант (чёрный ящик painting-variants: `9={variantId}`).
+        data.extend([9,34]);data.extend(encode_varint(i32::from(variant)+1));data.push(PROPERTIES_END);return Some(data);
+    }
 
     if frame.facing != crate::frame::DEFAULT_FACING {
         data.push(crate::frame::DIRECTION_PROPERTY);
@@ -7001,6 +7008,18 @@ async fn apply_reaction(
         send_window_slot(stream, player, slot, stack).await?;
     }
 
+    if let Some((window, slot)) = reaction.emptied {
+        player.state_id += 1;
+
+        let mut body = encode_varint(SET_CONTAINER_SLOT);
+
+        body.extend_from_slice(&encode_varint(window));
+        body.extend_from_slice(&encode_varint(player.state_id));
+        push_i16(&mut body, slot as i16);
+        push_slot(&mut body, None);
+        write_body(stream, body).await?;
+    }
+
     if let Some(stack) = reaction.cursor {
         let mut body = encode_varint(SET_CURSOR_ITEM);
 
@@ -7105,6 +7124,9 @@ struct Reaction {
 
     /// Ячейки открытого окна хранилища, которые клиент предсказал не так.
     window_slots: Vec<(usize, Option<Stack>)>,
+
+    /// Ячейка окна, опустевшая при закрытии (книга с кафедры): номер окна и ячейка.
+    emptied: Option<(i32, usize)>,
 
     /// Курсор, если клиент его предсказал не так.
     cursor: Option<Option<Stack>>,
@@ -7349,6 +7371,19 @@ fn handle_client_packet_inner(
                 _ => {}
             }
         }
+        0x03 => {
+            let mut c=Cursor::new(payload);
+            if let (Some(slot),Some(index))=(c.varint(),c.varint()) {
+                if let Some(open)=player.window.as_mut() {
+                    let mut view=window::Window{container:&mut open.shown,inventory:&mut player.inventory,kind:open.kind,horse:None};
+                    if slot>=0 && let Some(s)=view.get(slot as usize).filter(|s|crate::bundle::is_bundle(s.item)) {
+                        view.set(slot as usize,Some(crate::bundle::select(s,index)));
+                    }
+                } else if let Some(s)=player.inventory.slot(slot).filter(|s|crate::bundle::is_bundle(s.item)) {
+                    player.inventory.set(slot,Some(crate::bundle::select(s,index)));
+                }
+            }
+        }
         crate::recipe_book::CLIENT_SETTINGS => {
             let mut cursor = Cursor::new(payload);
             if let (Some(book), Some(open), Some(filter)) = (cursor.varint(), cursor.u8(), cursor.u8()) {
@@ -7398,7 +7433,9 @@ fn handle_client_packet_inner(
 
             // Вторая рука пробует, только если основной делать нечего: у
             // вагонеток всё делает основная.
-            if let Some(used) = horse::packet(payload, player, shared) {
+            if let Some(used) = armor_stands::packet(payload, player, shared) {
+                reaction = used;
+            } else if let Some(used) = horse::packet(payload, player, shared) {
                 reaction = used;
             } else if let (Some(target), Some(0)) = (cursor.varint(), cursor.varint()) {
                 reaction = use_entity(target, player, shared);
@@ -7735,6 +7772,8 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     if (mob.x - player.x).powi(2) + (mob.y - player.y).powi(2) + (mob.z - player.z).powi(2) > reach * reach {
         return false;
     }
+
+    if mob.kind==crate::mob::Kind::ArmorStand {mob.stand.creative_break=player.game_mode==GAME_MODE_CREATIVE;}
 
     // Кристалл Края: любой удар — взрыв силой 6 в его точке, сам он исчезает;
     // следом звук удара (чёрный ящик, end-crystal-explode: «убран», взрыв,
@@ -8148,6 +8187,13 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
         return true;
     }
 
+    if items.mobs()[index].kind==crate::mob::Kind::ArmorStand {
+        let mut held=player.inventory.held();
+        if crate::mob::armor_stand::equip(&mut items.mobs_mut()[index],&mut held,player.game_mode==GAME_MODE_CREATIVE) {
+            let slot=player.inventory.selected_slot(); player.inventory.set(slot,held); reaction.slots.push(slot);
+        }
+        return true;
+    }
     if water::use_on_mob(&mut items, index, player, &mut world, reaction) { return true; }
     // Вики, Golden Dandelion: переключает возраст только у растущих малышей.
     // [Bedrock: потом] use/частицы; offhand маршрутизация use_entity [проверить].
@@ -9337,6 +9383,23 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         });
     }
 
+    if let Some(name)=player.inventory.held().and_then(|s|blocks::item_name(s.item))
+        && matches!(name,"painting"|"armor_stand") {
+        let clicked=(clicked_x,clicked_y,clicked_z);
+        let mut world=shared.world_in(player.dimension).lock().expect("мир");
+        let mut items=shared.items_in(player.dimension).lock().expect("сущности");
+        let placed=if name=="painting" {crate::painting::place(&mut world,&mut items,shared,clicked,face as u8)} else {
+crate::mob::armor_stand::place(&mut world,&mut items,shared,clicked,face,player.yaw)
+        };
+        if placed && name=="painting" {
+            // Как у рамки: блок щелчка и клетка за гранью повторяются (чёрный ящик painting-place-break).
+            let (x,y,z)=offset_towards(clicked_x,clicked_y,clicked_z,face);
+            world.tell_directly(clicked_x,clicked_y,clicked_z);
+            world.tell_directly(x,y,z);
+        }
+        return Some(Reaction{slots:if placed {spend_placed(player)} else {Vec::new()},..Reaction::accepted(sequence)});
+    }
+
     // Рамка вешается на грань блока, по которой щёлкнули: клиентам уходит
     // звук и сама рамка, потом повторяются блок опоры и клетка рамки (чёрный
     // ящик, item-frame-rotate и item-frame-facing).
@@ -9586,7 +9649,7 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         let near = offset_towards(clicked_x, clicked_y, clicked_z, face);
 
         if redstone::is_sign(world.get_block(near.0, near.1, near.2)) {
-            player.sign_editor = Some(near);
+            player.sign_editor = Some((near,true));
             world.note_open_sign(player.entity_id, near.0, near.1, near.2, true);
         }
     }
@@ -9763,6 +9826,9 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
         let mut answer = answer;
         answer.inventory = resync;
         return Some(answer);
+    }
+    if bundle_use::start(shared,player,hand,*shared.ticks.borrow()) {
+        let mut answer=answer; answer.inventory=true; return Some(answer);
     }
     if maps::fill(shared, player, hand).is_some() {
         let mut answer = answer;
@@ -10283,6 +10349,9 @@ fn lectern_button(shared: &Shared, player: &mut PlayerState, window: i32, button
             throw_out(shared, player, stack);
         }
 
+        // Оригинал перед закрытием опустошает ячейку 0 и сбрасывает страницу (чёрный ящик lectern-pulse).
+        reaction.emptied = Some((window, 0));
+        reaction.window_property = Some((window, 0, 0));
         reaction.inventory = true;
         reaction.close_window = Some(window);
         close_own_window(shared, player);
@@ -10514,7 +10583,11 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
             .find(|(place, _)| *place == index)
             .map_or(as_pair(before[index]), |(_, item)| *item);
 
-        if !readable || expected != as_pair(*stack) {
+        // Мешок, у которого изменилось содержимое на месте, клиент предсказать не может (хэш довесков
+        // другой): ячейка уходит заново (чёрный ящик bundle-chest-select).
+        let bundle_changed = before[index] != *stack && stack.is_some_and(|s| crate::bundle::is_bundle(s.item)) && before[index].is_some_and(|b| b.item == stack.map_or(-1, |s| s.item));
+
+        if !readable || expected != as_pair(*stack) || bundle_changed {
             reaction.window_slots.push((index, *stack));
         }
     }
@@ -10903,7 +10976,7 @@ struct PlayerState {
 
     /// Табличка, чьё окно правки открыто у игрока (Update Sign принимается
     /// только для неё).
-    sign_editor: Option<(i32, i32, i32)>,
+    sign_editor: Option<((i32, i32, i32), bool)>,
 
     /// Эндер-сундук игрока: один на всех эндер-сундуков мира, лежит в файле
     /// игрока (вики, Ender Chest).

@@ -242,6 +242,8 @@ fn use_held(shared: &Shared, p: &mut PlayerState, hand: i32, now: u64) {
     if thrown::throw_wind_charge(shared, p, hand).is_some() {
         return;
     }
+    if super::maps::fill(shared,p,hand).is_some() {return;}
+    if super::bundle_use::start(shared,p,hand,now) {return;}
     if thrown::throw_potion(shared, p, hand) {
         return;
     }

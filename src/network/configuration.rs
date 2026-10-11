@@ -201,7 +201,7 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 23] = [
     ("minecraft:cow_variant", &["temperate"]),
     ("minecraft:cow_sound_variant", &["classic"]),
     ("minecraft:frog_variant", &["cold", "temperate", "warm"]),
-    ("minecraft:painting_variant", &["kebab"]),
+    ("minecraft:painting_variant", &["alban","aztec","aztec2","backyard","baroque","bomb","bouquet","burning_skull","bust","cavebird","changing","cotan","courbet","creebet","dennis","donkey_kong","earth","endboss","fern","fighters","finding","fire","graham","humble","kebab","lowmist","match","meditative","orb","owlemons","passage","pigscene","plant","pointer","pond","pool","prairie_ride","sea","skeleton","skull_and_roses","stage","sunflowers","sunset","tides","unpacked","void","wanderer","wasteland","water","wind","wither"]),
     ("minecraft:pig_variant", &["temperate"]),
     ("minecraft:pig_sound_variant", &["classic"]),
     ("minecraft:wolf_variant", &["ashen", "black", "chestnut", "pale", "rusty", "snowy", "spotted", "striped", "woods"]),
@@ -269,51 +269,7 @@ pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 23] = [
     // когда рисует знамя, и без них ругается «Unable to find banner pattern».
     (
         "minecraft:banner_pattern",
-        &[
-            "base",
-            "stripe_bottom",
-            "stripe_top",
-            "stripe_left",
-            "stripe_right",
-            "stripe_center",
-            "stripe_middle",
-            "stripe_downright",
-            "stripe_downleft",
-            "small_stripes",
-            "cross",
-            "straight_cross",
-            "diagonal_left",
-            "diagonal_right",
-            "diagonal_up_left",
-            "diagonal_up_right",
-            "half_vertical",
-            "half_vertical_right",
-            "half_horizontal",
-            "half_horizontal_bottom",
-            "square_bottom_left",
-            "square_bottom_right",
-            "square_top_left",
-            "square_top_right",
-            "triangle_bottom",
-            "triangle_top",
-            "triangles_bottom",
-            "triangles_top",
-            "circle",
-            "rhombus",
-            "border",
-            "curly_border",
-            "bricks",
-            "gradient",
-            "gradient_up",
-            "creeper",
-            "skull",
-            "flower",
-            "mojang",
-            "globe",
-            "piglin",
-            "flow",
-            "guster",
-        ],
+        &crate::loom::PATTERNS,
     ),
     // Мир: без типа измерения клиент не примет Login (Play), а plains —
     // биом по умолчанию для незагруженных чанков.
@@ -625,7 +581,8 @@ pub async fn send_update_tags(stream: &mut TcpStream) -> io::Result<()> {
 
     /// Теги реестра minecraft:banner_pattern. Клиент требует их наличия:
     /// на них ссылаются компоненты предметов-узоров.
-    const BANNER_PATTERN_TAGS: [&str; 10] = [
+    const BANNER_PATTERN_TAGS: [&str; 11] = [
+        "minecraft:no_item_required",
         "minecraft:pattern_item/bordure_indented",
         "minecraft:pattern_item/creeper",
         "minecraft:pattern_item/field_masoned",
@@ -661,7 +618,12 @@ pub async fn send_update_tags(stream: &mut TcpStream) -> io::Result<()> {
 
         for tag in tags {
             body.extend_from_slice(&encode_string(tag));
-            body.extend_from_slice(&encode_varint(0)); // записей в теге нет
+            let patterns: Vec<u8> = if registry == "minecraft:banner_pattern" {
+                if *tag == "minecraft:no_item_required" { crate::loom::choices(None) }
+                else { crate::loom::SPECIAL.iter().filter(|(n,_)| tag.ends_with(&format!("/{n}"))).map(|(_,p)|*p).collect() }
+            } else { Vec::new() };
+            body.extend(encode_varint(patterns.len() as i32));
+            for p in patterns { body.extend(encode_varint(i32::from(p))); }
         }
     }
 

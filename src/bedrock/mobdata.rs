@@ -77,7 +77,9 @@ pub struct Look {
     pub scale: f32,
     /// Сила прыжка лошадиных (`minecraft:horse.jump_strength`).
     pub jump: Option<f32>,
+    pub stand: Option<crate::mob::armor_stand::State>,
 }
+
 
 impl Look {
     pub fn of(mob: &Mob) -> Self {
@@ -103,6 +105,7 @@ impl Look {
             speed: super::bds_profile::movement(mob.kind, mob.movement_speed()).unwrap_or(mob.movement_speed() as f32),
             scale: super::bds_profile::shape(mob.kind, mob.is_baby(), mob.size()).2,
             jump: crate::mob::horse::equine(mob.kind).then_some(mob.horse.jump as f32),
+            stand: (mob.kind == Kind::ArmorStand).then(|| mob.stand.clone()),
         }
     }
 }
@@ -180,12 +183,19 @@ pub fn flags(look: &Look) -> i64 {
     set(look.tamed, FLAG_TAMED);
     set(look.name.is_some(), FLAG_CAN_SHOW_NAMETAG);
 
-    bits | look.extra_flags[0] as i64
+    let mut bits = bits | look.extra_flags[0] as i64;
+    if let Some(s)=&look.stand {
+        if s.invisible {bits|=1<<5;}
+        if s.small {bits|=1<<FLAG_BABY;}
+        if s.no_gravity||s.marker {bits&=!(1<<FLAG_AFFECTED_BY_GRAVITY);}
+        if s.marker {bits&=!(1<<FLAG_HAS_COLLISION);}
+    }
+    bits
 }
 
 /// Значения данных сущности для моба: ключ и значение.
 pub fn entries(look: &Look) -> Vec<(u32, Value)> {
-    let mut list = vec![(KEY_FLAGS, Value::Long(flags(look))), (KEY_SCALE, Value::Float(look.scale))];
+    let mut list = vec![(KEY_FLAGS, Value::Long(flags(look))), (KEY_SCALE, Value::Float(if look.stand.as_ref().is_some_and(|s| s.small) { 0.5 } else { look.scale }))];
 
     match look.kind {
         Kind::Sheep => list.push((KEY_COLOR, Value::Byte(look.color.min(15) as i8))),
@@ -250,6 +260,15 @@ pub fn set_data_packet(entity_id: i32, list: &[(u32, Value)]) -> Vec<u8> {
     out.varint(0).varint(0); // свойства: целые, дробные
     out.varint64(0); // такт
     out.bytes
+}
+
+pub fn stand_equipment(id:i32,s:&crate::mob::armor_stand::State)->Vec<Vec<u8>> {
+    let mut armor=Out::packet(0x20);armor.varint64(id as u64);
+    for i in [5,4,3,2] {super::inventory::write_item(&mut armor,s.equipment[i],0);}
+    super::inventory::write_item(&mut armor,None,0);
+    let mut packets=vec![armor.bytes];
+    for (slot,container) in [(0,0),(1,119)] {let mut out=Out::packet(super::session::MOB_EQUIPMENT);out.varint64(id as u64);super::inventory::write_item(&mut out,s.equipment[slot],0);out.u8(0).u8(0).u8(container);packets.push(out.bytes);}
+    packets
 }
 
 #[cfg(test)]

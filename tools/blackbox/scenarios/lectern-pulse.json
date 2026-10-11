@@ -1,0 +1,120 @@
+{
+ "name": "lectern-pulse",
+ "about": "Page changes pulse for two ticks, comparator follows page, take book preserves content.",
+ "blocks": [
+  {
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "state": "minecraft:lectern[facing=north,has_book=true,powered=false]{Book:{id:\"minecraft:writable_book\",count:1,components:{\"minecraft:writable_book_content\":{pages:[\"a\",\"b\",\"c\",\"d\",\"e\"]}}},Page:0}"
+  },
+  {
+   "at": [
+    1,
+    0,
+    0
+   ],
+   "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    2,
+    0,
+    0
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    -1,
+    0,
+    0
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  },
+  {
+   "at": [
+    0,
+    0,
+    1
+   ],
+   "state": "minecraft:redstone_lamp[lit=false]"
+  },
+  {
+   "at": [
+    3,
+    0,
+    1
+   ],
+   "state": "minecraft:lectern[facing=north,has_book=false,powered=false]"
+  },
+  {
+   "at": [
+    4,
+    0,
+    1
+   ],
+   "state": "minecraft:comparator[facing=west,mode=compare,powered=false]"
+  },
+  {
+   "at": [
+    5,
+    0,
+    1
+   ],
+   "state": "minecraft:redstone_wire[east=side,north=none,power=0,south=none,west=side]"
+  }
+ ],
+ "setup": [
+  "give $(bot) minecraft:written_book 1"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "click": [
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "after": 10,
+   "button": 2
+  },
+  {
+   "after": 20,
+   "button": 2
+  },
+  {
+   "after": 30,
+   "button": 2
+  },
+  {
+   "after": 40,
+   "button": 1
+  },
+  {
+   "after": 50,
+   "button": 103
+  },
+  {
+   "after": 60,
+   "button": 3
+  }
+ ],
+ "cleanup": [
+  "fill $(-2,0,-2) $(6,3,3) minecraft:air",
+  "kill @e[type=item,distance=..48]",
+  "clear $(bot)",
+  "gamemode creative $(bot)"
+ ],
+ "record_ticks": 100,
+ "origin": [
+  0,
+  -59,
+  0
+ ],
+ "item_components": true
+}

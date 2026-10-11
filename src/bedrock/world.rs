@@ -339,6 +339,8 @@ pub struct BedrockWorld {
     /// Номер окна станка (верстак, стол зачарования, наковальня, точило),
     /// открытого у клиента; сами ячейки — `Bag::station`.
     station_window: Option<u8>,
+    sign_editor: Option<((i32,i32,i32),bool)>,
+    lectern: Option<(u8,(i32,i32,i32))>,
     /// Такт, когда открыто последнее окно (хранилища или станка): ранний
     /// Container Close с чужим номером — не закрытие этого окна.
     opened_at: u64,
@@ -621,6 +623,8 @@ impl BedrockWorld {
             portal_ready: false,
             window: None,
             station_window: None,
+            sign_editor: None,
+            lectern: None,
             opened_at: 0,
             next_window: 0,
             resync_window: false,
@@ -659,6 +663,36 @@ impl BedrockWorld {
     /// Пакет от клиента после входа.
     pub fn handle(&mut self, connection: &Connection, id: u32, payload: &[u8]) {
         match id {
+            session::BLOCK_ACTOR_DATA => {
+                let mut r=In::new(payload);
+                let (Some(x),Some(y),Some(z))=(r.zigzag32(),r.zigzag32(),r.zigzag32()) else{return;};
+                let Some((pos,front))=self.sign_editor.take().filter(|(p,_)|*p==(x,y,z)) else{return;};
+                if distance((self.position.0 as f64,self.position.1 as f64,self.position.2 as f64),(x as f64+0.5,y as f64+0.5,z as f64+0.5))>6.0{return;}
+                let Some(lines)=super::signs::read(&mut r).and_then(|v|super::signs::lines(&v,front)) else{return;};
+                let mut world=self.shared.world_in(self.dimension).lock().expect("мир");
+                if !crate::redstone::is_sign(world.get_block(x,y,z)) || world.sign(x,y,z).is_some_and(|s|s.waxed) {return;}
+                world.with_sign(x,y,z,|s|s.side_mut(front).lines=lines);
+                if let Some(kind)=crate::redstone::block_entity_type(world.get_block(x,y,z)) && let Some(data)=world.sign(x,y,z) {
+                    let nbt=data.nbt();world.note_block_entity(x,y,z,kind,nbt);
+                }
+                if let Some(packet)=super::signs::actor(&world,pos) {connection.send(&[packet]);}
+            }
+            125 => {
+                let mut r=In::new(payload);
+                let (Some(page),Some(_),Some(x),Some(y),Some(z))=(r.u8(),r.u8(),r.zigzag32(),r.zigzag32(),r.zigzag32()) else{return;};
+                let Some((id,pos))=self.lectern.filter(|(_,p)|*p==(x,y,z)) else{return;};
+                if distance((self.position.0 as f64,self.position.1 as f64,self.position.2 as f64),(x as f64+0.5,y as f64+0.5,z as f64+0.5))>6.0{return;}
+                let mut world=self.shared.world_in(self.dimension).lock().expect("мир");
+                let mut packets=Vec::new();
+                if page==255 {
+                    let book=crate::redstone::lectern::take_book(&mut world,pos);drop(world);
+                    if let Some(book)=book {let (changed,left)=self.bag.inventory.put(book);self.bag.touched(&changed);packets.extend(self.bag.open_sync_packets());if let Some(left)=left{self.throw_out(left);}}
+                    self.lectern=None;packets.push(screens::close_packet(id,25,true));
+                } else {
+                    crate::redstone::lectern::turn_page(&mut world,pos,100+i32::from(page));packets.extend(super::lectern::actor(&world,pos));
+                }
+                connection.send(&packets);
+            }
             session::REQUEST_CHUNK_RADIUS => {
                 let wanted = In::new(payload).zigzag32().unwrap_or(START_RADIUS);
                 self.radius = wanted.clamp(2, self.max_radius());
@@ -880,6 +914,7 @@ impl BedrockWorld {
 
                 if let (Some(window), Some(kind)) = (reader.u8(), reader.u8()) {
                     let mut packets = Vec::new();
+                    self.lectern=None;
                     let by_server = reader.bool();
                     let since = self.ticks - self.opened_at;
                     let ours = self.window.as_ref().map(|open| open.id).or(self.station_window);
@@ -1504,7 +1539,7 @@ impl BedrockWorld {
         // Рамки: блок и блок-актор — в тех чанках, что клиент уже получил.
         for frame in frames {
             if self.sent.contains(&(frame.pos.0 >> 4, frame.pos.2 >> 4)) && heights(self.dimension).contains(&frame.pos.1) {
-                self.frames_at.insert(frame.entity_id, frame.pos);
+                if frame.painting.is_some() { self.items_shown.insert(frame.entity_id); } else {self.frames_at.insert(frame.entity_id, frame.pos);}
                 packets.extend(super::frames::show(&frame));
             }
         }
@@ -1539,6 +1574,7 @@ impl BedrockWorld {
                     packets.push(add_mob(entity_id, &look, place));
                     packets.extend(look.gear.spawn_packets(entity_id));
                     packets.push(super::entity_gear::attributes(entity_id, &look));
+                    if let Some(s)=&look.stand {packets.extend(super::mobdata::stand_equipment(entity_id,s));}
                     self.items_shown.insert(entity_id);
                     self.mobs_look.insert(entity_id, look);
                 }
@@ -1557,9 +1593,11 @@ impl BedrockWorld {
                             packets.push(add_mob(entity_id, &look, place));
                             packets.extend(look.gear.spawn_packets(entity_id));
                             packets.push(super::entity_gear::attributes(entity_id, &look));
+                            if let Some(s) = &look.stand { packets.extend(super::mobdata::stand_equipment(entity_id, s)); }
                         } else {
                             packets.push(super::mobdata::set_data_packet(entity_id, &super::mobdata::entries(&look)));
                             if old.is_none_or(|old| old.gear != look.gear) { packets.extend(look.gear.packets(entity_id)); }
+                            if let Some(s) = &look.stand { packets.extend(super::mobdata::stand_equipment(entity_id, s)); }
                             if old.is_none_or(|old| (old.health, old.max_health, old.speed) != (look.health, look.max_health, look.speed)) {
                                 packets.push(super::entity_gear::attributes(entity_id, &look));
                             }
@@ -1852,6 +1890,14 @@ impl BedrockWorld {
         }
 
         // Рамка в руке вешается на грань блока, по которой щёлкнули.
+        if kind == CLICK && action.trigger != SIMULATION_TICK && self.held_stack(action.held).is_some_and(|s|crate::blocks::item_name(s.item)==Some("armor_stand")) {
+            if self.game_mode==crate::commands::GAME_MODE_SPECTATOR || self.game_mode==crate::commands::GAME_MODE_ADVENTURE || !(1..=5).contains(&action.face)
+                || !self.within_reach((x as f64+0.5,y as f64+0.5,z as f64+0.5)) {return;}
+            let placed={let mut world=self.shared.world_in(self.dimension).lock().expect("мир");let mut items=self.shared.items_in(self.dimension).lock().expect("сущности");
+                crate::mob::armor_stand::place(&mut world,&mut items,&self.shared,action.position,action.face,self.rotation.0)};
+            if placed && !self.creative() && let Some(slot)=self.bag.inventory.spend_held() {self.bag.touched(&[slot]);connection.send(&self.bag.slot_packet(slot).into_iter().collect::<Vec<_>>());}
+            return;
+        }
         if kind == CLICK && action.trigger != SIMULATION_TICK && self.place_frame(connection, &action) {
             return;
         }
@@ -2040,6 +2086,10 @@ impl BedrockWorld {
                     crate::placing::Placement::Refused(places) => places,
                     crate::placing::Placement::Nothing => vec![target],
                     crate::placing::Placement::Placed => {
+                        if crate::redstone::is_sign(world.get_block(target.0,target.1,target.2)) {
+                            self.sign_editor=Some((target,true));
+                            let mut packets=Vec::new();packets.extend(super::signs::actor(&world,target));packets.push(super::signs::editor(target,true));connection.send(&packets);
+                        }
                         // В выживании поставленный блок уходит из руки.
                         if !self.creative()
                             && let Some(slot) = self.bag.inventory.spend_held()
@@ -2382,6 +2432,7 @@ impl BedrockWorld {
         let glow = match crate::blocks::item_name(held.item) {
             Some("item_frame") => false,
             Some("glow_item_frame") => true,
+            Some("painting") => false,
             _ => return false,
         };
         let clicked = action.position;
@@ -2399,7 +2450,9 @@ impl BedrockWorld {
         let placed = {
             let mut items = self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком");
 
-            crate::frame::place(&mut world, &mut items, &self.shared, clicked, action.face as u8, glow)
+            if self.held_stack(action.held).is_some_and(|s|crate::blocks::item_name(s.item)==Some("painting")) {
+                crate::painting::place(&mut world,&mut items,&self.shared,clicked,action.face as u8)
+            } else {crate::frame::place(&mut world, &mut items, &self.shared, clicked, action.face as u8, glow)}
         };
 
         if !placed {
@@ -2491,6 +2544,31 @@ impl BedrockWorld {
             return None;
         }
 
+        if crate::redstone::is_sign(world.get_block(x,y,z)) {
+            let front=super::signs::front(&world,clicked,self.position);
+            let data=world.sign(x,y,z).cloned().unwrap_or_default();
+            let held=self.bag.inventory.held().and_then(|s|crate::blocks::item_name(s.item));
+            let has_text=data.side(front).lines.iter().any(|l|!l.is_empty());
+            let mut changed=false;
+            if !data.waxed {
+                let mut next=data.clone();
+                if held==Some("honeycomb") {next.waxed=true;changed=true;}
+                else if has_text {let side=next.side_mut(front);
+                    if held==Some("glow_ink_sac") && !side.glowing {side.glowing=true;changed=true;}
+                    else if held==Some("ink_sac") && side.glowing {side.glowing=false;changed=true;}
+                    else if let Some(color)=held.and_then(crate::sign::dye_color) && side.color!=color {side.color=color;changed=true;}
+                }
+                if changed {
+                    world.with_sign(x,y,z,|s|*s=next.clone());
+                    if let Some(kind)=crate::redstone::block_entity_type(world.get_block(x,y,z)){world.note_block_entity(x,y,z,kind,next.nbt());}
+                }
+            }
+            let mut packets=Vec::new();packets.extend(super::signs::actor(&world,clicked));drop(world);
+            if changed {
+                if !self.creative() && let Some(slot)=self.bag.inventory.spend_held() {self.bag.touched(&[slot]);packets.extend(self.bag.slot_packet(slot));}
+            } else if !data.waxed {self.sign_editor=Some((clicked,front));packets.push(super::signs::editor(clicked,front));}
+            return Some(packets);
+        }
         let kind = containers::Kind::of(world.get_block(x, y, z));
         // [Bedrock: потом] интерфейс маяка и приготовление на костре.
         if matches!(kind, Some(containers::Kind::Beacon | containers::Kind::Campfire)) { return None; }
@@ -2512,6 +2590,12 @@ impl BedrockWorld {
             drop(world);
 
             let mut packets = Vec::new();
+            if !took && kind==Some(containers::Kind::Lectern) {
+                self.next_window=screens::next_window(self.next_window);let id=self.next_window;
+                let world=self.shared.world_in(self.dimension).lock().expect("мир");packets.extend(super::lectern::actor(&world,clicked));
+                let mut open=Out::packet(session::CONTAINER_OPEN);open.u8(id).u8(25).block_position(x,y,z).zigzag64(-1);packets.push(open.bytes);
+                self.lectern=Some((id,clicked));
+            }
 
             if took
                 && !self.creative()
@@ -2718,6 +2802,10 @@ impl BedrockWorld {
                 Event::AnvilUsed(pos) => self.anvil_used(pos),
                 Event::Smithed(pos) => {
                     self.shared.world_in(self.dimension).lock().expect("мир захвачен другим потоком").note_level_event(pos.0, pos.1, pos.2, 1044, 0);
+                }
+                Event::StationWorked(kind,pos) => {
+                    let sound=match kind {stations::Kind::Stonecutter=>"minecraft:ui.stonecutter.take_result",stations::Kind::Loom=>"minecraft:ui.loom.take_result",_=>"minecraft:ui.cartography_table.take_result"};
+                    self.shared.world_in(self.dimension).lock().expect("мир").note_sound(pos.0,pos.1,pos.2,sound,1.0,1.0);
                 }
                 Event::Ground(inputs, pos) => {
                     let mut rng = crate::mob::Rng::new(u64::from(self.shared.next_entity_id() as u32) ^ (*self.shared.ticks.borrow() << 20));
@@ -2981,6 +3069,12 @@ impl BedrockWorld {
         self.bag.level = crate::survival::level_of(self.health.vit.xp).0;
 
         let Some(window) = &self.window else {
+            if self.bag.station.is_some_and(|s|s.kind==stations::Kind::Cartography) {
+                let mut maps=self.shared.maps.lock().expect("карты");self.bag.cartography_maps=Some(maps.clone());
+                let handled=self.bag.handle_requests(payload,creative);
+                if let Some(next)=self.bag.cartography_maps.take(){*maps=next;if let Err(e)=maps.save(){crate::log_warn!("Карты: {}",e);}}
+                return (handled,Vec::new());
+            }
             return (self.bag.handle_requests(payload, creative), Vec::new());
         };
 
@@ -3544,6 +3638,11 @@ impl BedrockWorld {
                 }
                 // Ход поршня: актор в пути и блоки хода сейчас, конец и
                 // настоящие блоки — на следующих тактах (pistons.rs).
+                WorldEvent::BlockEntity{x,y,z,..} if self.sent.contains(&(x>>4,z>>4)) => {
+                    let world=self.shared.world_in(self.dimension).lock().expect("мир");
+                    packets.extend(super::signs::actor(&world,(x,y,z)));
+                    packets.extend(super::lectern::actor(&world,(x,y,z)));
+                }
                 WorldEvent::Piston(mv)
                     if self.within_earshot(f64::from(mv.base.0), f64::from(mv.base.2)) && heights(self.dimension).contains(&mv.base.1) =>
                 {
@@ -3849,7 +3948,8 @@ impl BedrockWorld {
                 continue;
             }
 
-            if let (Some(packet), Some(kind)) = (screens::actor_at(world, place), containers::Kind::of(world.get_block(place.0, place.1, place.2))) {
+            let actor=super::lectern::actor(world,place).or_else(||screens::actor_at(world,place));
+            if let (Some(packet), Some(kind)) = (actor, containers::Kind::of(world.get_block(place.0, place.1, place.2))) {
                 embedded.push(stored_fields(kind, actor_nbt(&packet)));
             }
 
@@ -3862,6 +3962,10 @@ impl BedrockWorld {
             }
         }
 
+        for ((x,y,z),_) in world.chunk_signs(chunk_x,chunk_z) {
+            let pos=(chunk_x*16+x,y,chunk_z*16+z);
+            if let Some(packet)=super::signs::actor(world,pos) {embedded.push(actor_nbt(&packet));}
+        }
         (embedded, packets)
     }
 
@@ -3969,7 +4073,7 @@ impl BedrockWorld {
 
             // Рамки: блоки поверх воздуха чанка, следом их данные.
             for frame in frames {
-                self.frames_at.insert(frame.entity_id, frame.pos);
+                if frame.painting.is_some() { self.items_shown.insert(frame.entity_id); } else {self.frames_at.insert(frame.entity_id, frame.pos);}
                 batch.extend(super::frames::show(&frame));
             }
 

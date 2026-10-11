@@ -130,14 +130,22 @@ pub fn block_packet(frame: &Frame) -> Vec<u8> {
 }
 
 /// Всё, что клиенту нужно знать о рамке: блок, потом его данные.
-pub fn show(frame: &Frame) -> [Vec<u8>; 2] {
-    [block_packet(frame), actor_packet(frame)]
+pub fn show(frame: &Frame) -> Vec<Vec<u8>> {
+    if let Some(variant)=frame.painting {
+        let mut out=Out::packet(0x16); let (x,y,z)=frame.place();
+        let name=crate::painting::VARIANTS[usize::from(variant)].0;
+        let title=match name {"burning_skull"=>"BurningSkull".to_string(),"skull_and_roses"=>"SkullAndRoses".to_string(),"donkey_kong"=>"DonkeyKong".to_string(),_=>{let mut chars=name.chars();chars.next().unwrap().to_uppercase().to_string()+chars.as_str()}};
+        let direction=match frame.facing {2=>2,3=>0,4=>1,_=>3};
+        out.zigzag64(i64::from(frame.entity_id)).varint64(frame.entity_id as u64).lf32(x as f32).lf32(y as f32).lf32(z as f32).zigzag32(direction).string(&title);
+        return vec![out.bytes];
+    }
+    vec![block_packet(frame), actor_packet(frame)]
 }
 
 /// Рамка, что висит в клетке `pos`: у Bedrock в клетке один блок рамки,
 /// поэтому, если у Java их там несколько (на разных сторонах), берётся первая.
 pub fn frame_at(frames: &[Frame], pos: (i32, i32, i32)) -> Option<&Frame> {
-    frames.iter().find(|frame| frame.pos == pos)
+    frames.iter().find(|frame| frame.painting.is_none() && frame.pos == pos)
 }
 
 #[cfg(test)]

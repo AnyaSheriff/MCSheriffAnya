@@ -140,11 +140,17 @@
   }
  ],
  "cleanup": [
+  "fill $(-2,0,-2) $(5,3,3) minecraft:air",
   "clear $(bot)",
   "setblock $(0,0,0) minecraft:air",
   "setblock $(3,0,0) minecraft:air",
   "setblock $(3,0,-1) minecraft:air",
   "gamemode creative $(bot)"
  ],
- "record_ticks": 110
+ "record_ticks": 110,
+ "origin": [
+  0,
+  -59,
+  0
+ ]
 }

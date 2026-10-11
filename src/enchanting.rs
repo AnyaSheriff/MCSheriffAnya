@@ -794,6 +794,9 @@ pub enum Station {
     Anvil,
     Grindstone,
     Smithing,
+    Stonecutter,
+    Loom,
+    Cartography,
 }
 
 impl Station {
@@ -803,6 +806,9 @@ impl Station {
             "anvil" | "chipped_anvil" | "damaged_anvil" => Some(Station::Anvil),
             "grindstone" => Some(Station::Grindstone),
             "smithing_table" => Some(Station::Smithing),
+            "stonecutter" => Some(Station::Stonecutter),
+            "loom" => Some(Station::Loom),
+            "cartography_table" => Some(Station::Cartography),
             _ => None,
         }
     }
@@ -815,6 +821,9 @@ impl Station {
             Station::Anvil => (8, "container.repair"),
             Station::Grindstone => (15, "container.grindstone_title"),
             Station::Smithing => (21, "container.upgrade"),
+            Station::Stonecutter => (24, "container.stonecutter"),
+            Station::Loom => (18, "container.loom"),
+            Station::Cartography => (23, "container.cartography_table"),
         }
     }
 
@@ -822,16 +831,17 @@ impl Station {
     /// кузнечного стола четвёртая).
     pub fn slots(self) -> usize {
         match self {
-            Station::Enchanting => 2,
-            Station::Anvil | Station::Grindstone => 3,
-            Station::Smithing => 4,
+            Station::Enchanting | Station::Stonecutter => 2,
+            Station::Anvil | Station::Grindstone | Station::Cartography => 3,
+            Station::Smithing | Station::Loom => 4,
         }
     }
 
     /// Сколько у станка входных ячеек: итог стоит сразу за ними.
     pub fn inputs(self) -> usize {
         match self {
-            Station::Smithing => 3,
+            Station::Smithing | Station::Loom => 3,
+            Station::Stonecutter => 1,
             _ => 2,
         }
     }

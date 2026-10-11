@@ -60,9 +60,9 @@ pub const COMPONENT_RARITY: i32 = 12;
 /// Слои зловещего флага: узор (номер в реестре banner_pattern) и цвет
 /// (вики, Ominous Banner: голубой ромб, светло-серое основание, серый столб,
 /// светло-серая кайма, чёрный пояс, светло-серая верхняя половина,
-/// светло-серый круг, чёрная кайма; чёрный ящик, evoker-fangs: 23/9 31/8
-/// 32/7 1/8 36/15 17/8 3/8 1/15).
-pub const OMINOUS_BANNER_LAYERS: [(i32, i32); 8] = [(23, 9), (31, 8), (32, 7), (1, 8), (36, 15), (17, 8), (3, 8), (1, 15)];
+/// светло-серый круг, чёрная кайма). Номера — алфавитный реестр оригинала
+/// loom::PATTERNS.
+pub const OMINOUS_BANNER_LAYERS: [(i32, i32); 8] = [(23, 9), (0, 8), (32, 7), (1, 8), (36, 15), (17, 8), (3, 8), (1, 15)];
 /// Содержимое шулкер-ящика (`container`, registries.json: 75) клиенту пока
 /// не шлётся — см. `encode_components`.
 #[allow(dead_code)]
@@ -154,6 +154,14 @@ pub const TRIM_PATTERNS: [&str; 18] = [
 pub struct Data {
     /// Номер заполненной карты (minecraft:map_id, protocol.json: 46).
     pub map_id: Option<i32>,
+    /// Только предпросмотр у картографа: minecraft:map_post_processing (protocol.json: 48),
+    /// 1 — увеличение (чёрный ящик cartography-zoom). На диск не пишется.
+    pub map_post: Option<u8>,
+    pub book: Option<crate::book::Book>,
+    pub bundle: Vec<Content>,
+    pub bundle_selected: Option<u8>,
+    pub banner_patterns: Vec<(u8, u8)>,
+    pub base_color: Option<u8>,
     /// Износ (компонент `damage`).
     pub damage: i32,
     /// Не изнашивается.
@@ -373,6 +381,7 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         out.extend_from_slice(&encode_varint(i32::from(id)+1)); count += 1;
     }
     if let Some(id) = data.map_id { out.extend_from_slice(&encode_varint(46)); out.extend_from_slice(&encode_varint(id)); count += 1; }
+    if let Some(kind) = data.map_post { out.extend_from_slice(&encode_varint(48)); out.extend_from_slice(&encode_varint(i32::from(kind))); count += 1; }
     if data.damage > 0 {
         out.extend_from_slice(&encode_varint(COMPONENT_DAMAGE));
         out.extend_from_slice(&encode_varint(data.damage));
@@ -554,6 +563,29 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         count += 1;
     }
 
+    if let Some(book)=&data.book {
+        out.extend(encode_varint(if book.title.is_some() {55} else {54})); out.extend(book.encode()); count+=1;
+    }
+    if !data.bundle.is_empty() {
+        out.extend(encode_varint(50)); out.extend(encode_varint(data.bundle.len() as i32));
+        for c in &data.bundle {
+            let s=crate::inventory::Stack::from_stored(c.item,c.count);
+            let (n,extra)=encode_components(&c.data.map(get).unwrap_or_default());
+            for v in [s.item,c.count,n,0] { out.extend(encode_varint(v)); } out.extend(extra);
+        }
+        count+=1;
+    }
+    if let Some(color) = data.base_color {
+        out.extend(encode_varint(73)); out.extend(encode_varint(i32::from(color))); count += 1;
+    }
+    if !data.banner_patterns.is_empty() && !data.ominous_banner {
+        out.extend(encode_varint(COMPONENT_BANNER_PATTERNS));
+        out.extend(encode_varint(data.banner_patterns.len() as i32));
+        for &(pattern, color) in &data.banner_patterns {
+            out.extend(encode_varint(i32::from(pattern) + 1)); out.extend(encode_varint(i32::from(color)));
+        }
+        count += 1;
+    }
     // Зловещий флаг: узор, подсказка без узора, имя и редкость «необычный»
     // (чёрный ящик, evoker-fangs: четыре компонента в таком порядке).
     if data.ominous_banner {
@@ -703,6 +735,33 @@ pub fn read_component(kind: i32, body: &[u8], data: &mut Data) {
         }
         77 => {
             if let Some(hive)=crate::hive::component::decode(body) {data.bees=hive.bytes();}
+        }
+        54 | 55 => {
+            let mut book=crate::book::Book::default();
+            if kind==55 {
+                let Some(title)=reader.string() else {return;}; book.title=Some(title);
+                if reader.take(1)==Some(&[1]) && reader.string().is_none() {return;}
+                let (Some(author),Some(generation))=(reader.string(),reader.varint()) else {return;}; book.author=author; book.generation=generation;
+            }
+            let Some(n)=reader.varint().filter(|n|(0..=100).contains(n)) else {return;};
+            for _ in 0..n {
+                let text=if kind==54 {reader.string()} else {read_book_text(&mut reader)};
+                let Some(text)=text else {return;}; book.pages.push(text);
+                let Some(filtered)=reader.take(1) else {return;};
+                if filtered==[1] && (if kind==54 {reader.string()} else {read_book_text(&mut reader)}).is_none() {return;}
+            }
+            data.book=Some(book);
+        }
+        73 => { data.base_color = reader.varint().filter(|c| (0..16).contains(c)).map(|c|c as u8); }
+        COMPONENT_BANNER_PATTERNS => {
+            let Some(count) = reader.varint().filter(|n| (0..=255).contains(n)) else { return; };
+            let mut layers = Vec::new();
+            for _ in 0..count {
+                let (Some(p),Some(c)) = (reader.varint(),reader.varint()) else { return; };
+                if !(1..=43).contains(&p) || !(0..16).contains(&c) { return; }
+                layers.push(((p-1) as u8,c as u8));
+            }
+            data.banner_patterns = layers;
         }
         COMPONENT_DAMAGE => {
             if let Some(damage) = reader.varint() {
@@ -854,7 +913,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -894,7 +953,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -946,6 +1005,22 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
                 out.extend_from_slice(&key.to_be_bytes());
                 out.extend_from_slice(&value.to_be_bytes());
             }
+        }
+        if let Some(book)=&data.book {
+            out.push(17); out.push(u8::from(book.title.is_some()));
+            let wire=book.encode(); out.extend((wire.len() as u32).to_be_bytes()); out.extend(wire);
+        }
+        if !data.bundle.is_empty() {
+            out.extend([16,data.bundle_selected.unwrap_or(255),data.bundle.len() as u8]);
+            for c in &data.bundle {
+                out.extend(c.item.to_be_bytes()); out.extend(c.count.to_be_bytes());
+                let bytes=c.data.map(|id|to_bytes(&get(id))).unwrap_or_default();
+                out.extend((bytes.len() as u32).to_be_bytes()); out.extend(bytes);
+            }
+        }
+        if !data.banner_patterns.is_empty() || data.base_color.is_some() {
+            out.extend([15, data.base_color.unwrap_or(255), data.banner_patterns.len() as u8]);
+            for &(p,c) in &data.banner_patterns { out.extend([p,c]); }
         }
         if let Some(id) = data.map_id { out.push(9); out.extend_from_slice(&id.to_be_bytes()); }
 
@@ -1119,6 +1194,30 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
         // Метки хвоста: 1 — отделка, 2 — содержимое шулкер-ящика.
         while let Some(mark) = reader.take(1).map(|mark| mark[0]) {
             match mark {
+                17 => {
+                    let written=reader.take(1)?[0]!=0;
+                    let len=u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                    let bytes=reader.take(len)?;
+                    read_component(if written {55} else {54},bytes,&mut data);
+                    data.book.as_ref()?;
+                }
+                16 => {
+                    let selected=reader.take(1)?[0]; let count=reader.take(1)?[0]; if count>64 { return None; }
+                    for _ in 0..count {
+                        let item=i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
+                        let count=i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
+                        if !(1..=64).contains(&count) { return None; }
+                        let len=u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                        let extra=reader.take(len)?; let nested=if len==0 {None} else {intern(from_bytes(extra)?)};
+                        data.bundle.push(Content{slot:0,item,count,data:nested});
+                    }
+                    data.bundle_selected=(usize::from(selected)<data.bundle.len()).then_some(selected);
+                }
+                15 => {
+                    let color = reader.take(1)?[0]; data.base_color = (color < 16).then_some(color);
+                    let count = reader.take(1)?[0];
+                    for _ in 0..count { let pair=reader.take(2)?; if pair[0]>=43 || pair[1]>=16 { return None; } data.banner_patterns.push((pair[0],pair[1])); }
+                }
                 9 => { data.map_id = Some(i32::from_be_bytes(reader.take(4)?.try_into().ok()?)); }
                 1 => {
                     let pair = reader.take(2)?;
@@ -1215,6 +1314,34 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
                 let (id,value)=crate::mob::water::bucket::parse_variant(key,&value)?;
                 data.mob_variants.retain(|(key,_)|*key!=id);
                 data.mob_variants.push((id,value));
+            }
+            "writable_book_content" | "written_book_content" => data.book=Some(crate::book::Book::parse(&value,key=="written_book_content").ok_or("неверная книга")?),
+            "banner_patterns" => {
+                let Value::List(layers)=value else {return Err("узоры — список".into());};
+                if layers.len()>255 {return Err("слишком много узоров".into());}
+                for layer in layers {
+                    let p=layer.get("pattern").and_then(Value::as_str).ok_or("нет узора")?;
+                    let p=p.strip_prefix("minecraft:").unwrap_or(p);
+                    let pattern=crate::loom::PATTERNS.iter().position(|n|*n==p).ok_or("неизвестный узор")?;
+                    let c=layer.get("color").and_then(Value::as_str).ok_or("нет цвета")?;
+                    let color=crate::sign::COLORS.iter().position(|n|*n==c).ok_or("неизвестный цвет")?;
+                    data.banner_patterns.push((pattern as u8,color as u8));
+                }
+            }
+            "base_color" => {
+                let color=value.as_str().ok_or("цвет — строка")?;
+                data.base_color=Some(crate::sign::COLORS.iter().position(|c|*c==color).ok_or("неизвестный цвет")? as u8);
+            }
+            "bundle_contents" => {
+                let Value::List(contents)=value else {return Err("содержимое — список".into());};
+                if contents.len()>64 {return Err("мешок переполнен".into());}
+                for item in contents {
+                    let text=format!("{{Item:{}}}",crate::commands::component_text(&item));
+                    let s=crate::commands::item_from_text(&text).ok_or("неверный предмет в мешке")?;
+                    if crate::containers::is_shulker_item(s.item) {return Err("шулкер не помещается в мешок".into());}
+                    data.bundle.push(Content{slot:0,item:s.stored_item(),count:s.count,data:s.data});
+                }
+                if crate::bundle::weight(&data)>64 {return Err("мешок переполнен".into());}
             }
             "map_id" => data.map_id = Some(value.as_f64().ok_or("map_id — число")?.max(0.0) as i32),
             "bees" => {
@@ -1371,7 +1498,7 @@ pub fn slot_group(name: &str) -> Option<u8> {
 }
 
 /// Делит по запятым вне скобок и кавычек.
-fn split_top_level(text: &str) -> Vec<&str> {
+pub(crate) fn split_top_level(text: &str) -> Vec<&str> {
     let mut parts = Vec::new();
     let mut depth = 0;
     let mut quote: Option<char> = None;
@@ -1632,4 +1759,10 @@ mod itemaudit2_tests {
             assert_eq!(read, data);
         }
     }
+}
+
+fn read_book_text(reader: &mut Reader<'_>) -> Option<String> {
+    if reader.take(1)? != [8] { return None; }
+    let len=u16::from_be_bytes(reader.take(2)?.try_into().ok()?) as usize;
+    String::from_utf8(reader.take(len)?.to_vec()).ok()
 }

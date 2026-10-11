@@ -135,6 +135,9 @@ pub(super) struct ShownMob {
     wolf_armor: Option<i32>,
     armor_pending: bool,
     gear_version: u32,
+    /// Стойка: снаряжение и модификаторы брони, как показаны.
+    stand_gear: [Option<Stack>; 6],
+    stand_mods: Vec<(i32, &'static str, f64)>,
     attributes_sent: bool,
 
     /// `modded` — как показано клиенту (атрибуты, у ведьмы и рука).
@@ -180,6 +183,12 @@ fn properties(mob: &Mob) -> Vec<Property> {
     // BlockPos: 0 — нет), «показывать подножие» (minecraft-data: beam_target,
     // show_bottom; по умолчанию подножие есть — чёрный ящик,
     // end-crystal-explode: призванный свойств не шлёт).
+    if mob.kind==Kind::ArmorStand {
+        // Здоровье 20 уходит всегда (по умолчанию 1): чёрный ящик armorstand-equip-break: `9=20 15=12 16=…`.
+        let mut out=vec![(0,TYPE_BYTE,vec![fire|if mob.stand.invisible {32} else {0}]),(5,TYPE_BOOL,vec![u8::from(mob.stand.no_gravity)]),(9,TYPE_FLOAT,float(20.0)),(15,TYPE_BYTE,vec![mob.stand.flags()])];
+        for (i,p) in mob.stand.pose.iter().enumerate() {out.push((16+i as u8,9,p.iter().flat_map(|v|v.to_be_bytes()).collect()));}
+        return out;
+    }
     if mob.kind == Kind::EndCrystal {
         let mut beam = Vec::new();
 
@@ -259,6 +268,7 @@ fn properties(mob: &Mob) -> Vec<Property> {
     }
 
     match mob.kind {
+        Kind::ArmorStand => {},
         Kind::Llama | Kind::TraderLlama | Kind::Camel | Kind::Goat | Kind::Panda | Kind::PolarBear | Kind::Ocelot | Kind::Mooshroom | Kind::WanderingTrader => {
             let s = &mob.land;
             out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
@@ -605,6 +615,11 @@ fn is_default(entry: &Property, kind: Kind) -> bool {
     let (key, _, value) = entry;
 
     match (*key, kind) {
+        (0 | 5 | 15, Kind::ArmorStand) => value.as_slice() == [0],
+        (16..=21, Kind::ArmorStand) => {
+            let pose = crate::mob::armor_stand::State::default().pose[usize::from(*key) - 16];
+            value.as_slice() == pose.iter().flat_map(|v| v.to_be_bytes()).collect::<Vec<u8>>()
+        }
         (2, _) => value.as_slice() == [0],
         (17, kind) if crate::mob::growth::eligible(kind) => value.as_slice() == [0],
         (12, _) => value.as_slice() == [0],
@@ -769,6 +784,8 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         wolf_armor: mob.tame.armor,
         armor_pending: false,
         gear_version: mob.horse.gear_version,
+        stand_gear: mob.stand.equipment,
+        stand_mods: Vec::new(),
         attributes_sent: attributes_at_spawn(mob.kind) || (crate::mob::horse::equine(mob.kind) && mob.horse.explicit != 0),
         modded: modded(mob),
         first: true,
@@ -903,7 +920,7 @@ pub(super) fn attribute_speed(kind: Kind) -> f64 {
     if kind == Kind::WanderingTrader { return 0.7; }
     // Пчела: скорость шага 0,3, летит она по летучей скорости 0,6 (чёрный ящик, bee-sting).
     if kind == Kind::Bee { return 0.3; }
-    if matches!(kind, Kind::Shulker | Kind::Ghast | Kind::Phantom | Kind::Bat) { 0.7 } else { kind.speed() }
+    if matches!(kind, Kind::Shulker | Kind::Ghast | Kind::Phantom | Kind::Bat | Kind::ArmorStand) { 0.7 } else { kind.speed() }
 }
 
 /// Атрибуты: сообщается одна скорость шага (у оригинала так же: клиенту
@@ -1020,6 +1037,30 @@ async fn send_wolf_armor(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
         push_f64(&mut body, 0.0);
         push_modifiers(&mut body, mob.tame.armor.is_some().then_some(("minecraft:armor.body", amount, 0)));
     }
+    write_body(stream, body).await
+}
+
+/// Броня стойки: оба атрибута (броня, стойкость) с модификаторами надетых вещей.
+async fn send_stand_armor(stream: &mut Outgoing<'_>, entity_id: i32, mods: &[(i32, &'static str, f64)]) -> io::Result<()> {
+    let mut body = encode_varint(UPDATE_ATTRIBUTES);
+
+    body.extend_from_slice(&encode_varint(entity_id));
+    body.extend_from_slice(&encode_varint(2));
+
+    for attribute in [ATTRIBUTE_ARMOR, ATTRIBUTE_ARMOR_TOUGHNESS] {
+        body.extend_from_slice(&encode_varint(attribute));
+        push_f64(&mut body, 0.0);
+
+        let own: Vec<_> = mods.iter().filter(|m| m.0 == attribute).collect();
+
+        body.extend_from_slice(&encode_varint(own.len() as i32));
+        for (_, name, amount) in own {
+            body.extend_from_slice(&encode_string(name));
+            push_f64(&mut body, *amount);
+            body.push(0);
+        }
+    }
+
     write_body(stream, body).await
 }
 
@@ -1140,6 +1181,7 @@ pub(super) async fn send_mob_event(
             body.extend_from_slice(&0i64.to_be_bytes());
             write_body(stream, body).await?;
         }
+        Event::BlockBurst { block, at: place, offset, speed, count } => send_particles(stream, PARTICLE_BLOCK, Some(*block), *place, *offset, *speed, *count).await?,
         Event::Landing { block, count } => send_particles(stream, PARTICLE_BLOCK, Some(*block), at, (0.0, 0.0, 0.0), 0.15, *count).await?,
         Event::Particle { kind, at: place, offset, speed, count } => send_particles(stream, kind.id(), None, *place, *offset, *speed, *count).await?,
         Event::Sound { .. } | Event::SoundAt { .. } | Event::PlayerSound { .. } | Event::EntitySound { .. } | Event::Loot(_) => {}
@@ -1152,6 +1194,12 @@ pub(super) async fn send_mob_event(
 /// шлем на голове (место 5) — по одному пакету на моба; шлем показывается
 /// железным [проверить: вид шлема не хранится].
 async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool) -> io::Result<()> {
+    if mob.kind==Kind::ArmorStand {
+        // Пустая стойка снаряжения не шлёт, занятая — только занятые места (чёрный ящик armorstand-equip-break).
+        let slots:Vec<_>=mob.stand.equipment.iter().enumerate().filter(|(_,s)|s.is_some()).map(|(i,s)|(i as u8,*s)).collect();
+        return if slots.is_empty() { Ok(()) } else { super::send_equipment(stream,mob.entity_id,&slots).await };
+    }
+
     if let Some(gear)=&mob.h.trial_gear {return send_equipment(stream,mob.entity_id,&[(0,gear[0]),(4,gear[1]),(5,gear[2])]).await;}
     // Лиса с пустым ртом снаряжения не шлёт (чёрный ящик, fox-feed, fox-hit).
     if mob.kind == Kind::Fox { return if mob.wild.mouth.is_some() { send_fox_hand(stream, mob).await } else { Ok(()) }; }
@@ -1558,8 +1606,15 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
 
         // Разбойник: арбалет заряжен или выстрелил — снаряжение заново
         // (чёрный ящик, pillager-crossbow: charged_projectiles, затем damage).
-        let land_gear = (crate::mob::land::rideable(mob.kind) || matches!(mob.kind, Kind::WanderingTrader | Kind::Panda)) && shown.attr_changes != mob.attr_changes;
+        let land_gear = mob.kind==Kind::ArmorStand && shown.attr_changes!=mob.attr_changes || (crate::mob::land::rideable(mob.kind) || matches!(mob.kind, Kind::WanderingTrader | Kind::Panda)) && shown.attr_changes != mob.attr_changes;
         let horse_gear = crate::mob::horse::equine(mob.kind) && mob.horse.gear_version != shown.gear_version;
+
+        // Стойка: уходят только изменившиеся ячейки, пустая — ничего (чёрный ящик armorstand-equip-break).
+        if mob.kind == Kind::ArmorStand {
+            let changed: Vec<(u8, Option<Stack>)> = (0..6).filter(|&i| mob.stand.equipment[i] != shown.stand_gear[i]).map(|i| (i as u8, mob.stand.equipment[i])).collect();
+            if !changed.is_empty() { send_equipment(stream, mob.entity_id, &changed).await?; }
+            shown.stand_gear = mob.stand.equipment;
+        }
 
         // Броня волка (вики, Wolf Armor): снаряжение уходит сразу, атрибуты
         // брони — на следующем такте жизни, кратном трём (чёрный ящик,
@@ -1571,7 +1626,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
             shown.armor_pending = false;
         }
 
-        if shown.first || mob.illager.gear != shown.gear || land_gear || horse_gear || shown.held != mob.small.held || wolf_gear {
+        if mob.kind != Kind::ArmorStand && (shown.first || mob.illager.gear != shown.gear || land_gear || horse_gear || shown.held != mob.small.held || wolf_gear) {
             send_mob_equipment(stream, mob, shown.attr_changes != mob.attr_changes || wolf_gear).await?;
             if wolf_gear {
                 shown.wolf_armor = mob.tame.armor;
@@ -1602,7 +1657,7 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         // Атрибуты: на третьем такте жизни и после каждой правки данных.
         let attributes_due = if mob.kind == Kind::Wither && mob.wither.built { 1 } else { attributes_at(mob) };
 
-        let sent_base = (!shown.attributes_sent && mob.ticks >= attributes_due) || mob.attr_changes != shown.attr_changes;
+        let sent_base = (!shown.attributes_sent && mob.ticks >= attributes_due) || (mob.kind != Kind::ArmorStand && mob.attr_changes != shown.attr_changes);
         if sent_base {
             if shown.attributes_sent && mob.kind == Kind::Wolf {
                 send_wolf_reload(stream, mob).await?;
@@ -1625,6 +1680,16 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
             write_body(stream, body).await?;
         }
         shown.effect_levels = super::mob_effects::levels(mob);
+
+        // Броня стойки: броня и стойкость с модификаторами «minecraft:armor.<ячейка>» — позже надевания
+        // (чёрный ящик armorstand-equip-break: +2 надели, +1 сняли). Снятая броня — те же атрибуты без модификаторов.
+        if mob.kind == Kind::ArmorStand && shown.attributes_sent {
+            let mods = crate::mob::armor_stand::armor_mods(&mob.stand);
+            if mods != shown.stand_mods && mob.stand.armor_due.is_none_or(|due| mob.ticks >= due) {
+                send_stand_armor(stream, mob.entity_id, &mods).await?;
+                shown.stand_mods = mods;
+            }
+        }
 
         // Ушибленному скорость уходит ещё раз — в самом конце.
         if impulse {
@@ -1686,6 +1751,8 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         wolf_armor: None,
         armor_pending: false,
         gear_version: 0,
+        stand_gear: [None; 6],
+        stand_mods: Vec::new(),
         attributes_sent: true,
         modded: false,
         first: true,

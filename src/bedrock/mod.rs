@@ -97,3 +97,6 @@ pub fn start(shared: Arc<Shared>) {
 
     log_info!("Bedrock: приём на *:{} (UDP), версия {} (протокол {})", port, GAME_VERSION, PROTOCOL);
 }
+
+mod signs;
+mod lectern;

@@ -82,6 +82,9 @@ pub enum Kind {
     Anvil,
     Grindstone,
     Smithing,
+    Stonecutter,
+    Loom,
+    Cartography,
     /// Торговля с жителем: место станка — номер жителя в первой координате.
     Trading,
 }
@@ -98,6 +101,9 @@ impl Kind {
             enchanting::Station::Anvil => Kind::Anvil,
             enchanting::Station::Grindstone => Kind::Grindstone,
             enchanting::Station::Smithing => Kind::Smithing,
+            enchanting::Station::Stonecutter => Kind::Stonecutter,
+            enchanting::Station::Loom => Kind::Loom,
+            enchanting::Station::Cartography => Kind::Cartography,
         })
     }
 
@@ -109,6 +115,9 @@ impl Kind {
             Kind::Grindstone => GRINDSTONE,
             Kind::Smithing => SMITHING,
             Kind::Trading => TRADING,
+            Kind::Stonecutter => 29,
+            Kind::Loom => 24,
+            Kind::Cartography => 30,
         }
     }
 
@@ -121,6 +130,9 @@ impl Kind {
             Kind::Grindstone => matches!(slot, UI_GRINDSTONE_INPUT | UI_GRINDSTONE_ADDITIONAL),
             Kind::Smithing => matches!(slot, UI_SMITHING_INPUT | UI_SMITHING_MATERIAL | UI_SMITHING_TEMPLATE),
             Kind::Trading => matches!(slot, UI_TRADE_FIRST | UI_TRADE_SECOND),
+            Kind::Stonecutter => slot == 3,
+            Kind::Loom => (9..=11).contains(&slot),
+            Kind::Cartography => (12..=13).contains(&slot),
         }
     }
 }
@@ -129,6 +141,12 @@ impl Kind {
 /// None — такого в интерфейсе нет.
 pub fn ui_slot(container: u8, slot: u8) -> Option<u8> {
     let ok = match container {
+        53 => slot == 3,
+        41 => slot == 9,
+        42 => slot == 10,
+        43 => slot == 11,
+        55 => slot == 12,
+        56 => slot == 13,
         ANVIL_INPUT => slot == UI_ANVIL_INPUT,
         ANVIL_MATERIAL => slot == UI_ANVIL_MATERIAL,
         CRAFTING_INPUT => (UI_GRID_2X2..UI_GRID_3X3 + 9).contains(&slot),
@@ -414,7 +432,7 @@ pub fn crafting_data_packet() -> &'static [u8] {
 
         let smithing = smithing_recipes();
 
-        out.varint((all.len() + smithing.len()) as u32);
+        out.varint((all.len() + smithing.len() + crate::stonecutter::recipes().len() + 3) as u32);
 
         for (number, variant) in all.iter().enumerate() {
             let recipe = &crafting::recipes()[variant.recipe];
@@ -475,6 +493,19 @@ pub fn crafting_data_packet() -> &'static [u8] {
             }
         }
 
+        for (i,r) in crate::stonecutter::recipes().iter().enumerate() {
+            let mut uuid=[0u8;16]; uuid[..8].copy_from_slice(b"mcsacutt"); uuid[8..12].copy_from_slice(&(i as u32).to_be_bytes());
+            out.zigzag32(0).string(&format!("mcsa:cut_{i}")).varint(1);
+            write_wildcard(&mut out,r.input); out.varint(1); write_output(&mut out,r.output,r.count);
+            out.uuid(uuid).string("stonecutter").zigzag32(0).u8(1).varint(stonecut_base()+i as u32);
+        }
+        for (i,material) in ["paper","map","glass_pane"].iter().enumerate() {
+            let mut uuid=[0u8;16];uuid[..8].copy_from_slice(b"mcsamaps");uuid[8..12].copy_from_slice(&(i as u32).to_be_bytes());
+            out.zigzag32(0).string(&format!("mcsa:map_{i}")).varint(2);
+            write_wildcard(&mut out,crate::blocks::item_named("filled_map").unwrap());write_wildcard(&mut out,crate::blocks::item_named(material).unwrap());
+            out.varint(1);write_output(&mut out,crate::blocks::item_named("filled_map").unwrap(),if i==1 {2} else {1});
+            out.uuid(uuid).string("cartography_table").zigzag32(0).u8(1).varint(cartography_base()+i as u32);
+        }
         // Зелья, переливание, редукторы — нет; «очистить прежние» — да.
         out.varint(0).varint(0).varint(0).bool(true);
         out.bytes
@@ -646,7 +677,7 @@ pub fn item_nbt(stack: &Stack) -> Option<Vec<u8>> {
         _ => {}
     }
 
-    if enchants.is_empty() && data.damage == 0 && data.repair_cost == 0 && data.name.is_none() && data.trim.is_none() {
+    if enchants.is_empty() && data.damage == 0 && data.repair_cost == 0 && data.name.is_none() && data.trim.is_none() && data.banner_patterns.is_empty() && !data.ominous_banner && data.base_color.is_none() && data.map_id.is_none() && data.book.is_none() {
         return None;
     }
 
@@ -670,6 +701,27 @@ pub fn item_nbt(stack: &Stack) -> Option<Vec<u8>> {
         }
     }
 
+    if let Some(id)=data.map_id {
+        out.push(4);name(&mut out,"map_uuid");out.extend(i64::from(id).to_le_bytes());
+        out.push(1);name(&mut out,"map_display_players");out.push(1);
+    }
+    if let Some(book)=&data.book {
+        if let Some(title)=&book.title {out.push(STRING);name(&mut out,"title");name(&mut out,title);out.push(STRING);name(&mut out,"author");name(&mut out,&book.author);}
+        out.push(LIST);name(&mut out,"pages");out.push(COMPOUND);out.extend((book.pages.len() as i32).to_le_bytes());
+        for page in &book.pages {out.push(STRING);name(&mut out,"text");name(&mut out,page);out.push(STRING);name(&mut out,"photoname");name(&mut out,"");out.push(0);}
+    }
+    if let Some(color)=data.base_color {
+        out.push(INT); name(&mut out,"Base"); out.extend((15-i32::from(color)).to_le_bytes());
+    }
+    let patterns=if data.ominous_banner {crate::stackdata::OMINOUS_BANNER_LAYERS.iter().map(|&(p,c)|(p as u8,c as u8)).collect()} else {data.banner_patterns.clone()};
+    if !patterns.is_empty() {
+        out.push(LIST); name(&mut out,"Patterns"); out.push(COMPOUND);
+        out.extend((patterns.len() as i32).to_le_bytes());
+        for &(pattern,color) in &patterns {
+            out.push(INT); name(&mut out,"Color"); out.extend((15-i32::from(color)).to_le_bytes());
+            out.push(STRING); name(&mut out,"Pattern"); name(&mut out,crate::loom::BEDROCK[usize::from(pattern)]); out.push(0);
+        }
+    }
     if data.damage != 0 {
         out.push(INT);
         name(&mut out, "Damage");
@@ -707,6 +759,13 @@ pub fn item_nbt(stack: &Stack) -> Option<Vec<u8>> {
     out.push(0);
     Some(out)
 }
+
+pub fn stonecut_base() -> u32 { smithing_base() + smithing_recipes().len() as u32 }
+pub fn stonecut_recipe(id: u32) -> Option<&'static crate::stonecutter::Recipe> {
+    crate::stonecutter::recipes().get(id.checked_sub(stonecut_base())? as usize)
+}
+
+pub fn cartography_base()->u32 {stonecut_base()+crate::stonecutter::recipes().len() as u32}
 
 #[cfg(test)]
 mod tests {

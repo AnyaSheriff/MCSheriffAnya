@@ -82,7 +82,7 @@ pub fn page(world: &World, (x, y, z): Pos) -> Option<(i32, i32)> {
 /// книга ложится (Some(true): её надо потратить), `has_book=true`, звук
 /// `item.book.put`. Кафедра с книгой — Some(false): надо открыть окно. None —
 /// щелчку тут делать нечего, он идёт дальше. `pages` — сколько страниц в
-/// книге (содержимого предметов мы пока не храним — зовущие дают 0).
+/// книге без компонента; при наличии компонента берётся его список страниц.
 pub fn place_book(world: &mut World, pos: Pos, held: Option<Stack>, pages: i32) -> Option<bool> {
     let (x, y, z) = pos;
 
@@ -97,9 +97,9 @@ pub fn place_book(world: &mut World, pos: Pos, held: Option<Stack>, pages: i32) 
     let stack = held.filter(|stack| is_book(stack.item))?;
 
     world.with_container(x, y, z, |lectern| {
-        lectern.slots[0] = Some(Stack::new(stack.item, 1));
+        lectern.slots[0] = Some(stack.with_count(1));
         lectern.page = 0;
-        lectern.pages = pages;
+        lectern.pages = stack.extras().book.as_ref().map_or(pages,|b|b.pages.len() as i32);
     });
     set(world, pos, with(world.get_block(x, y, z), "has_book", true));
     world.note_sound(x, y, z, "minecraft:item.book.put", 1.0, 1.0);

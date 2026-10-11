@@ -502,6 +502,9 @@ impl Inventory {
             return Click::default();
         };
 
+        if index != 0 && crate::bundle::click(&mut self.cursor, &mut self.slots[index], button) {
+            return Click { understood: true, thrown: None };
+        }
         let there = self.slots[index];
 
         match (self.cursor, there, button) {

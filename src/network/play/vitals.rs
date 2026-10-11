@@ -121,6 +121,8 @@ pub(super) struct Pending {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum UseKind {
     Brush,
+    /// Мешок: по стопке за раз (bundle_use.rs).
+    Bundle,
     Shield,
     Bow,
     /// Арбалет заряжается; уровень «быстрой перезарядки».
@@ -931,7 +933,7 @@ pub(super) fn release_use(player: &mut PlayerState, shared: &Shared) {
         // Арбалет заряжается сам, пока кнопка держится (`tick_crossbow`);
         // отпустили — только опустили руки.
         UseKind::Spyglass => shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((player.x,player.y,player.z), "minecraft:item.spyglass.stop_using", 1.0, 1.0),
-        UseKind::Crossbow { .. } | UseKind::Shield | UseKind::EnderEye | UseKind::Brush => {}
+        UseKind::Crossbow { .. } | UseKind::Shield | UseKind::EnderEye | UseKind::Brush | UseKind::Bundle => {}
     }
 }
 
@@ -2661,6 +2663,7 @@ async fn effects_and_eating_tick(stream: &mut Outgoing<'_>, shared: &Shared, pla
 
     tick_crossbow(shared, player, *shared.ticks.borrow());
     super::brush::tick(player,shared,*shared.ticks.borrow());
+    super::bundle_use::tick(player,shared,*shared.ticks.borrow());
 
     // Недоеденное — после такта эффектов: эффект от еды впервые действует
     // в следующем такте (golden-apple: регенерация лечит на +1 после Effect).

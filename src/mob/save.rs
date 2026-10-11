@@ -115,6 +115,7 @@ save_kinds! {
     Creaking => 108,
     HappyGhast => 109,
     CopperGolem => 110,
+    ArmorStand => 111,
 }
 
 // 0x7f/0xff раньше не обозначали ни один вид. Теперь за ними идёт u16 BE;
