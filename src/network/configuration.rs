@@ -28,6 +28,13 @@ const CLIENT_INFORMATION: i32 = 0x00;
 /// Какие части скина показываются, если клиент ничего не сказал: все.
 pub const ALL_SKIN_PARTS: u8 = 0x7F;
 
+/// Clientbound Plugin Message — сообщение по именованному каналу.
+const CUSTOM_PAYLOAD: i32 = 0x01;
+
+/// Название сервера в канале minecraft:brand: клиент показывает его на
+/// экране отладки (F3) как «"…" server». Оригинал шлёт там "vanilla".
+const BRAND: &str = "MCSheriffAnya";
+
 /// Clientbound Registry Data — данные реестров.
 const REGISTRY_DATA: i32 = 0x07;
 
@@ -399,6 +406,23 @@ pub struct KnownPack {
     pub namespace: String,
     pub id: String,
     pub version: String,
+}
+
+/// Отправляет Plugin Message minecraft:brand (clientbound, packet_id = 0x01).
+///
+/// Оригинал шлёт его первым в фазе Configuration, до Known Packs.
+pub async fn send_brand(stream: &mut TcpStream) -> io::Result<()> {
+    write_body(stream, brand_body()).await
+}
+
+/// Тело Plugin Message minecraft:brand: имя канала, затем данные — строка
+/// с названием сервера (данные идут до конца пакета).
+fn brand_body() -> Vec<u8> {
+    let mut body = encode_varint(CUSTOM_PAYLOAD);
+
+    body.extend_from_slice(&encode_string("minecraft:brand"));
+    body.extend_from_slice(&encode_string(BRAND));
+    body
 }
 
 /// Отправляет Known Packs (clientbound, packet_id = 0x0E).
@@ -787,6 +811,18 @@ pub fn read_look(payload: &[u8]) -> Option<ClientLook> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// minecraft:brand: номер пакета, имя канала, строка с названием.
+    #[test]
+    fn brand_names_the_server() {
+        let body = brand_body();
+        let mut expected = vec![0x01, 15];
+
+        expected.extend_from_slice(b"minecraft:brand");
+        expected.push(13);
+        expected.extend_from_slice(b"MCSheriffAnya");
+        assert_eq!(body, expected);
+    }
 
     /// Список видов урона должен совпадать с тем, что лежит в tools/data.
     ///

@@ -125,7 +125,7 @@ use config::server_properties::{load_server_properties, ServerProperties, WorldK
 use dimension::Dimension;
 use network::configuration::{
     read_and_log_configuration_packets, read_known_packs, read_login_acknowledged,
-    send_finish_configuration, send_known_packs, send_registry_data, send_update_tags,
+    send_brand, send_finish_configuration, send_known_packs, send_registry_data, send_update_tags,
 };
 use network::handshake::read_handshake;
 use network::{PROTOCOL_VERSION, VERSION_NAME};
@@ -648,6 +648,10 @@ async fn handle_connection(
             // Фаза Configuration.
             read_login_acknowledged(&mut socket).await?;
             log_debug!("Login Acknowledged получен — клиент в фазе Configuration");
+
+            // Название сервера — первым, как у оригинала: клиент
+            // показывает его на экране F3.
+            send_brand(&mut socket).await?;
 
             // Обмен Known Packs: сервер объявляет набор ресурсов, который
             // считает общим с клиентом. Без этого обмена клиент не сможет
