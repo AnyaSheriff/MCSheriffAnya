@@ -153,7 +153,12 @@ fn main() -> io::Result<()> {
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(others)
-        .max_blocking_threads(others)
+        // Один поток сверху: чтение консоли (tokio::io::stdin) держит
+        // блокирующий поток всё время работы. Без запаса на одно- и
+        // двухъядерной машине он занимал весь пул, и сборка чанков
+        // (spawn_blocking) не начиналась никогда: игрок входил без чанков
+        // и отваливался по тайм-ауту.
+        .max_blocking_threads(others + 1)
         .enable_all()
         .on_thread_start(move || {
             // Рабочие потоки не залезают на ядро такта.
