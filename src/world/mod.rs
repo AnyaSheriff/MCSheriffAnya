@@ -2544,6 +2544,13 @@ impl World {
             return false;
         };
 
+        // Ниже дна мира (упавший в пустоту) дождя нет: без этой проверки
+        // `chunk.block` получал y далеко под миром и ронял такт (регрессия
+        // полного прогона чёрного ящика: упавший вечно игрок под дождём).
+        if y < MIN_Y {
+            return false;
+        }
+
         let open = (y..=chunk.highest()).all(|above| {
             let state = chunk.block(x, above, z);
 
@@ -5935,6 +5942,19 @@ mod tests {
 
         // Второй раз тот же чанк не складывается заново.
         assert!(!world.ensure(6, 6));
+    }
+
+    /// Упавший далеко под мир не роняет такт: дождь там не идёт (полный
+    /// прогон чёрного ящика: игрок, падавший в пустоте под дождём, вызывал
+    /// выход за границы чанка).
+    #[test]
+    fn rain_below_the_world_is_dry_and_does_not_panic() {
+        let mut world = World::in_memory();
+        assert!(world.ensure(0, 0));
+        world.weather.rain_level = 1.0;
+
+        assert!(!world.rain_at(1, -243_824, 1));
+        assert!(!world.in_rain(1.5, -243_824.0, 1.5, 1.8));
     }
 
     /// Яйцо черепахи на песке: событие мира 2012/15 раньше самого блока

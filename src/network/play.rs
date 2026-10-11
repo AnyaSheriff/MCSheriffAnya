@@ -9354,7 +9354,11 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
         if ignited {
             let charge = player.inventory.held().and_then(|s| blocks::item_name(s.item)) == Some("fire_charge");
             let pitch = 0.8 + world.random_unit() * 0.4;
-            world.note_sound(target.0, target.1, target.2, if charge { "minecraft:item.firecharge.use" } else { "minecraft:item.flintandsteel.use" }, 1.0, pitch);
+            // Звук зажигалки слышат все, кроме самого игрока: он играет его
+            // у себя (чёрный ящик, nether-portal: бот-зажигатель звука не получает).
+            let actor = world.actor.replace(player.entity_id);
+            world.note_sound_by_hand(target.0, target.1, target.2, if charge { "minecraft:item.firecharge.use" } else { "minecraft:item.flintandsteel.use" }, 1.0, pitch);
+            world.actor = actor;
         }
 
         drop(world);
