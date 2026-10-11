@@ -38,6 +38,54 @@ pub struct Who {
     pub yaw: f32,
 }
 
+/// Предмет меняет поверхность до открытия окна медного сундука.
+/// Вики, Copper: «waxing», Campfire: «up to four food items».
+pub fn surface(bag: &mut Bag, who: &Who, world: &mut World, pos: (i32,i32,i32), face: i32) -> Option<ToolUse> {
+    let stack = bag.inventory.held()?;
+    let name = blocks::item_name(stack.item)?;
+    let state = world.get_block(pos.0,pos.1,pos.2);
+    let creative = who.game_mode == GAME_MODE_CREATIVE;
+    let mut used = ToolUse::default();
+    let mut consume = false;
+    let mut wear = false;
+    if let Some((next, action)) = crate::copper::interaction(state, name) {
+        crate::copper::replace(world, pos, next);
+        let (event, sound) = match action {
+            crate::copper::Use::Wax => (3003, "minecraft:item.honeycomb.wax_on"),
+            crate::copper::Use::Unwax => (3004, "minecraft:item.axe.wax_off"),
+            crate::copper::Use::Scrape => (3005, "minecraft:item.axe.scrape"),
+        };
+        world.note_level_event(pos.0,pos.1,pos.2,event,0);
+        world.note_sound(pos.0,pos.1,pos.2,sound,1.0,1.0);
+        consume = action == crate::copper::Use::Wax; wear = !consume;
+    } else if crate::campfire::is_campfire(state) {
+        let lighting = matches!(name, "flint_and_steel" | "fire_charge");
+        if lighting || name.ends_with("_shovel") {
+            if !crate::campfire::set_lit(world, pos, lighting) { return None; }
+            consume = name == "fire_charge"; wear = !consume;
+            if lighting { world.note_sound(pos.0,pos.1,pos.2,if consume { "minecraft:item.firecharge.use" } else { "minecraft:item.flintandsteel.use" },1.0,1.0); }
+        } else if name == "water_bucket" {
+            if world.is_nether() {
+                world.note_sound(pos.0,pos.1,pos.2,"minecraft:block.fire.extinguish",0.5,2.6);
+            } else {
+                crate::campfire::set_lit(world,pos,false);
+                let state = world.get_block(pos.0,pos.1,pos.2);
+                let wet = blocks::orientation_of(state)?.with(state,"waterlogged","true")?;
+                world.set_block(pos.0,pos.1,pos.2,wet);
+            }
+            swap_held(bag,creative,blocks::item_named("bucket")?,&mut used);
+        } else if crate::campfire::insert(world,pos,stack) { consume = true; } else { return None; }
+    } else { return None; }
+    if consume { used.slots.extend(spend(bag,creative)); }
+    if wear && !creative {
+        let worn = combat::wear(&stack,1,false,||world.random_unit());
+        let slot = bag.inventory.selected_slot(); bag.inventory.set(slot,combat::add_damage(stack,worn)); used.slots.push(slot);
+    }
+    let beyond = super::world::offset(pos,face);
+    world.tell_directly(pos.0,pos.1,pos.2); world.tell_directly(beyond.0,beyond.1,beyond.2);
+    crate::redstone::settle(world); Some(used)
+}
+
 /// Щелчок предметом `item` по блоку `clicked`, грань `face`. None — это не
 /// наш предмет: щелчок идёт дальше по-обычному (ставится блок).
 pub fn use_on_block(
@@ -271,6 +319,27 @@ mod tests {
 
     fn survival() -> Who {
         Who { game_mode: GAME_MODE_SURVIVAL, yaw: 0.0 }
+    }
+
+    #[test]
+    fn surface_actions_change_shared_state_and_charge_the_hand() {
+        let mut world = World::in_memory(); let pos = (0,70,0);
+        let mut bag = Bag::new(crate::inventory::Inventory::new());
+        let who = Who { game_mode:crate::commands::GAME_MODE_SURVIVAL,yaw:0.0 };
+        world.set_block(0,70,0,blocks::state_by_name("copper_block").unwrap());
+        bag.inventory.set(crate::inventory::FIRST_HOTBAR,Some(Stack::new(blocks::item_named("honeycomb").unwrap(),2)));
+        assert!(surface(&mut bag,&who,&mut world,pos,1).is_some());
+        assert_eq!(blocks::block_at_state(world.get_block(0,70,0)),Some("waxed_copper_block"));
+        assert_eq!(bag.inventory.held().unwrap().count,1);
+        bag.inventory.set(crate::inventory::FIRST_HOTBAR,Some(Stack::new(blocks::item_named("iron_axe").unwrap(),1)));
+        assert!(surface(&mut bag,&who,&mut world,pos,1).is_some());
+        assert_eq!(blocks::block_at_state(world.get_block(0,70,0)),Some("copper_block"));
+        assert_eq!(bag.inventory.held().unwrap().extras().damage,1);
+        world.set_block(0,70,0,blocks::state_by_name("campfire").unwrap());
+        bag.inventory.set(crate::inventory::FIRST_HOTBAR,Some(Stack::new(blocks::item_named("cod").unwrap(),2)));
+        assert!(surface(&mut bag,&who,&mut world,pos,1).is_some());
+        assert_eq!(world.container(0,70,0).unwrap().slots[0].unwrap().count,1);
+        assert_eq!(bag.inventory.held().unwrap().count,1);
     }
 
     #[test]

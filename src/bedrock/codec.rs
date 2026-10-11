@@ -132,6 +132,7 @@ impl Out {
 }
 
 /// Читатель тела пакета.
+#[derive(Clone)]
 pub struct In<'a> {
     data: &'a [u8],
     at: usize,

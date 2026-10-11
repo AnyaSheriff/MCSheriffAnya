@@ -86,9 +86,13 @@ fn item_tag(out: &mut Out, stack: Stack) -> bool {
 
     out.u8(COMPOUND).string("Item");
     out.u8(BYTE).string("Count").u8(1);
-    out.u8(SHORT).string("Damage").li16(metadata as i16);
+    out.u8(SHORT).string("Damage").li16(super::item_components::metadata(&stack, metadata) as i16);
     out.u8(STRING).string("Name").string(&format!("minecraft:{name}"));
     out.u8(BYTE).string("WasPickedUp").u8(0);
+    if let Some(tag) = super::stations::item_nbt(&stack).and_then(|bytes| super::nbt::decode(&bytes, super::nbt::Style::Little)) {
+        let bytes = tag.encode(super::nbt::Style::Network);
+        out.u8(COMPOUND).string("tag").raw(&bytes[2..]);
+    }
     out.u8(0);
     true
 }
@@ -160,6 +164,18 @@ mod tests {
 
     /// Номера состояний совпадают с таблицей blockStates.json Bedrock 1.26.10
     /// (`frame`: 6291.. по сторонам, `glow_frame`: 1046..).
+    #[test]
+    fn frame_map_preserves_shared_map_id() {
+        use crate::bedrock::nbt::{decode,Style,Tag};
+        let mut frame = Frame::new(1,(0,70,0),NORTH,false);
+        frame.item = Some(Stack::new(crate::blocks::item_named("filled_map").unwrap(),1)
+            .with_extras(crate::stackdata::Data { map_id:Some(42),..Default::default() }));
+        let bytes = actor_packet(&frame); let mut r = In::new(&bytes);
+        r.varint().unwrap(); r.zigzag32().unwrap(); r.zigzag32().unwrap(); r.zigzag32().unwrap();
+        let nbt = decode(r.take(r.remaining()).unwrap(),Style::Network).unwrap();
+        assert_eq!(nbt.get("Item").unwrap().get("tag").unwrap().get("map_uuid"),Some(&Tag::Long(42)));
+    }
+
     #[test]
     fn facing_and_glow_choose_the_block_state() {
         let state = |facing, glow| block_state(&Frame::new(1, (0, 0, 0), facing, glow));

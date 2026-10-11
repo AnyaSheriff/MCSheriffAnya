@@ -1,0 +1,79 @@
+{
+  "origin": [
+    0,
+    100,
+    0
+  ],
+  "blocks": [],
+  "inventory": true,
+  "item_components": true,
+  "record_ticks": 100,
+  "cleanup": [
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(-2,-1,-2) $(12,6,12) minecraft:air"
+  ],
+  "about": "Copper wax/scrape and campfire cooking mutate one world; compare both clients observing the same pad.",
+  "setup": [
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "fill $(-2,-1,-2) $(12,-1,12) minecraft:stone",
+    "setblock $(3,0,3) minecraft:copper_block",
+    "setblock $(5,0,3) minecraft:campfire",
+    "tp $(bot) $(3.5,0,0.5) 0 20",
+    "give $(bot) minecraft:honeycomb 2",
+    "!hotbar 0",
+    "!wait 20"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        3,
+        0,
+        3
+      ],
+      "face": 2
+    },
+    {
+      "after": 10,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:iron_axe"
+    },
+    {
+      "after": 15,
+      "click": [
+        3,
+        0,
+        3
+      ],
+      "face": 2
+    },
+    {
+      "after": 25,
+      "cmd": "tp $(bot) $(5.5,0,0.5) 0 20"
+    },
+    {
+      "after": 30,
+      "cmd": "item replace entity $(bot) weapon.mainhand with minecraft:cod 2"
+    },
+    {
+      "after": 35,
+      "click": [
+        5,
+        0,
+        3
+      ],
+      "face": 2
+    },
+    {
+      "after": 45,
+      "click": [
+        5,
+        0,
+        3
+      ],
+      "face": 2
+    }
+  ],
+  "name": "bedrock-copper-campfire-shared"
+}

@@ -170,6 +170,41 @@ pub fn cue_for(name: &str, pitch: f32) -> Option<Cue> {
         "entity.generic.explode" => return Some(Cue::new(SOUND_EXPLODE, Extra::None)),
         "entity.tnt.primed" => return Some(Cue::new(SOUND_FUSE, Extra::None)),
         "block.fire.extinguish" => return Some(Cue::new(SOUND_FIZZ, Extra::None)),
+        // minecraft-data 1.26.10, SoundType; вики, Block of Copper: «Waxing».
+        // [проверить] расстояние и extra_data на живом клиенте.
+        "block.bell.use" => return Some(Cue::new(258, Extra::Block)),
+        "block.campfire.crackle" => return Some(Cue::new(259, Extra::Block)),
+        "item.honeycomb.wax_on" => return Some(Cue::new(339, Extra::Block)),
+        "item.axe.wax_off" => return Some(Cue::new(340, Extra::Block)),
+        "item.axe.scrape" => return Some(Cue::new(341, Extra::Block)),
+        "item.brush.brushing.sand" => return Some(Cue::new(462, Extra::Block)),
+        "item.brush.brushing.gravel" => return Some(Cue::new(462, Extra::Block)),
+        "item.brush.brushing.sand.complete" => return Some(Cue::new(463, Extra::Block)),
+        "item.brush.brushing.gravel.complete" => return Some(Cue::new(463, Extra::Block)),
+        "block.sponge.absorb" => return Some(Cue::new(534, Extra::Block)),
+        "block.bubble_column.upwards_ambient" => return Some(Cue::new(214, Extra::Block)),
+        "block.bubble_column.whirlpool_ambient" => return Some(Cue::new(215, Extra::Block)),
+        "block.bubble_column.bubble_pop" => return Some(Cue::new(216, Extra::Block)),
+        "block.bubble_column.upwards_inside" => return Some(Cue::new(217, Extra::Block)),
+        "block.bubble_column.whirlpool_inside" => return Some(Cue::new(218, Extra::Block)),
+        "block.trial_spawner.open_shutter" => return Some(Cue::new(484, Extra::Block)),
+        "block.trial_spawner.eject_item" => return Some(Cue::new(485, Extra::Block)),
+        "block.trial_spawner.detect_player" => return Some(Cue::new(486, Extra::Block)),
+        "block.trial_spawner.spawn_mob" => return Some(Cue::new(487, Extra::Block)),
+        "block.trial_spawner.close_shutter" => return Some(Cue::new(488, Extra::Block)),
+        "block.trial_spawner.ambient" => return Some(Cue::new(489, Extra::Block)),
+        "block.trial_spawner.ambient_ominous" => return Some(Cue::new(517, Extra::Block)),
+        "block.vault.open_shutter" => return Some(Cue::new(500, Extra::Block)),
+        "block.vault.close_shutter" => return Some(Cue::new(501, Extra::Block)),
+        "block.vault.eject_item" => return Some(Cue::new(502, Extra::Block)),
+        "block.vault.insert_item" => return Some(Cue::new(503, Extra::Block)),
+        "block.vault.insert_item_fail" => return Some(Cue::new(504, Extra::Block)),
+        "block.vault.ambient" => return Some(Cue::new(505, Extra::Block)),
+        "block.vault.activate" => return Some(Cue::new(506, Extra::Block)),
+        "block.vault.deactivate" => return Some(Cue::new(507, Extra::Block)),
+        "block.vault.reject_rewarded_player" => return Some(Cue::new(530, Extra::Block)),
+
+
         // Звук не определяет силу: сервер использует общий Java cooldown.
         "entity.player.attack.strong" | "entity.player.attack.weak" | "entity.player.attack.sweep" | "entity.player.attack.knockback" => {
             return Some(Cue::new(SOUND_ATTACK_STRONG, Extra::Player));
@@ -328,6 +363,11 @@ pub fn level_packets(x: i32, y: i32, z: i32, effect: i32, data: i32) -> Vec<Vec<
 
     match effect {
         JAVA_BONE_MEAL => vec![level_event(PARTICLE_CROP_GROWTH, centre, data)],
+        // World Event Java: wax_on/off/scrape → отдельные LevelEvent Bedrock.
+        3003 => vec![level_event(2030, centre, 0)],
+        3004 => vec![level_event(2031, centre, 0)],
+        3005 => vec![level_event(2032, centre, 0)],
+        1009 => vec![level_sound(SOUND_FIZZ, centre)],
         // Упавшая наковальня: BDS шлёт LevelEvent 1022 с данными 0 в клетке,
         // куда она встала (чёрный ящик, tmp/br-polish/bds-af*.jsonl: место —
         // угол блока). Работа и поломка — те же имена событий Bedrock,
@@ -461,6 +501,25 @@ mod tests {
         let (_, body) = packet_id(&bytes).unwrap(); let mut r = In::new(body);
         assert_eq!(r.zigzag32(), Some(9815)); for _ in 0..3 { assert_eq!(r.lf32(), Some(0.0)); }
         assert_eq!(r.zigzag32(), Some(super::super::world::bedrock_state(0) as i32)); assert_eq!(r.remaining(), 0);
+    }
+
+    #[test]
+    fn block_action_events_decode_with_bedrock_ids() {
+        for (java,bedrock) in [(3003,2030),(3004,2031),(3005,2032)] {
+            let packets = level_packets(-2,70,3,java,0); assert_eq!(packets.len(),1);
+            let mut r = In::new(&packets[0]); assert_eq!(r.varint(),Some(LEVEL_EVENT));
+            assert_eq!(r.zigzag32(),Some(bedrock));
+            assert_eq!((r.lf32(),r.lf32(),r.lf32()),(Some(-1.5),Some(70.5),Some(3.5)));
+            assert_eq!(r.zigzag32(),Some(0)); assert_eq!(r.remaining(),0);
+        }
+        for (name,id) in [("minecraft:block.bell.use",258),("minecraft:item.brush.brushing.sand",462),
+            ("minecraft:block.sponge.absorb",534),("minecraft:item.axe.scrape",341)] {
+            let packets = sound_packets(name,1.0,(1.0,2.0,3.0),Some(55)); assert_eq!(packets.len(),1);
+            let mut r = In::new(&packets[0]); assert_eq!(r.varint(),Some(LEVEL_SOUND_EVENT)); assert_eq!(r.varint(),Some(id));
+            assert_eq!((r.lf32(),r.lf32(),r.lf32()),(Some(1.0),Some(2.0),Some(3.0)));
+            assert_eq!(r.zigzag32(),Some(55)); assert_eq!(r.string().as_deref(),Some(""));
+            assert_eq!((r.bool(),r.bool()),(Some(false),Some(false))); assert_eq!(r.take(8),Some([255;8].as_slice())); assert_eq!(r.remaining(),0);
+        }
     }
 
     #[test]

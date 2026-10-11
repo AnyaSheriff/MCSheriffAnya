@@ -1,0 +1,70 @@
+{
+  "origin": [
+    0,
+    100,
+    0
+  ],
+  "blocks": [],
+  "inventory": true,
+  "item_components": true,
+  "record_ticks": 100,
+  "cleanup": [
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(-2,-1,-2) $(12,6,12) minecraft:air"
+  ],
+  "about": "Shared Java reference for Bedrock chunk actors and subsequent actor updates; reload/view with a Bedrock 944 verifier.",
+  "setup": [
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "fill $(-2,-1,-2) $(12,-1,12) minecraft:stone",
+    "tp $(bot) $(3.5,0,0.5) 0 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(1,0,3) minecraft:crafter{disabled_slots:[I;0,8]}"
+    },
+    {
+      "after": 5,
+      "cmd": "setblock $(2,0,3) minecraft:chiseled_bookshelf[facing=north,slot_0_occupied=true]{Items:[{Slot:0b,id:\"minecraft:book\",count:1}],last_interacted_slot:0}"
+    },
+    {
+      "after": 10,
+      "cmd": "setblock $(3,0,3) minecraft:beehive[honey_level=5]"
+    },
+    {
+      "after": 15,
+      "cmd": "setblock $(4,0,3) minecraft:spawner{SpawnData:{entity:{id:\"minecraft:zombie\"}}}"
+    },
+    {
+      "after": 20,
+      "cmd": "setblock $(5,0,3) minecraft:trial_spawner"
+    },
+    {
+      "after": 25,
+      "cmd": "setblock $(6,0,3) minecraft:vault[ominous=true,vault_state=active]"
+    },
+    {
+      "after": 30,
+      "cmd": "setblock $(7,0,3) minecraft:suspicious_sand[dusted=3]"
+    },
+    {
+      "after": 35,
+      "cmd": "setblock $(8,0,3) minecraft:decorated_pot"
+    },
+    {
+      "after": 40,
+      "cmd": "setblock $(9,0,3) minecraft:copper_golem_statue[copper_golem_pose=star]"
+    },
+    {
+      "after": 45,
+      "cmd": "setblock $(10,0,3) minecraft:potted_pale_oak_sapling"
+    },
+    {
+      "after": 50,
+      "cmd": "setblock $(11,0,3) minecraft:red_banner"
+    }
+  ],
+  "name": "bedrock-block-actor-view"
+}

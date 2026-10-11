@@ -205,7 +205,7 @@ fn state_name(runtime: u32) -> Option<&'static str> {
 
 /// Описание блока для NBT: `{name, states{…}, version}` — как у BDS в
 /// `movingBlock` (имя с `minecraft:`, свойства по алфавиту).
-fn write_block(out: &mut Out, runtime: u32) {
+pub(super) fn write_block(out: &mut Out, runtime: u32) {
     let table = state_table();
     let at = table.offsets.get(runtime as usize).copied();
     let name = at.and_then(|at| table.names.get(u16::from_le_bytes([BLOCK_NBT[at], BLOCK_NBT[at + 1]]) as usize)).copied().unwrap_or("air");

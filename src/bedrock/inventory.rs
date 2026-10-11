@@ -50,6 +50,7 @@ const CREATIVE_OUTPUT: u8 = 60;
 /// сундук, воронка, раздатчик, выбрасыватель — LevelEntityContainer, у бочки
 /// своё имя.
 pub const LEVEL_ENTITY: u8 = 7;
+pub const SHULKER: u8 = 30;
 pub const BARREL: u8 = 58;
 
 /// Ячейки крафтера — CrafterLevelEntityContainer. [проверить] живым клиентом.
@@ -94,6 +95,7 @@ pub fn write_item(out: &mut Out, stack: Option<Stack>, stack_id: i32) {
         return;
     };
 
+    let metadata = super::item_components::metadata(&stack, metadata);
     out.zigzag32(id).lu16(stack.count as u16).varint(metadata);
 
     if stack_id != 0 {
@@ -212,6 +214,7 @@ pub struct Bag {
     layout: Vec<(u8, u8)>,
     /// Какая печь или стойка в окне: что в какую ячейку можно класть.
     restrict: Option<crate::containers::Kind>,
+    pub disabled_slots: u16,
     ids: BTreeMap<Place, i32>,
     next_id: i32,
     /// Ячейки интерфейса: сетка крафта, станки.
@@ -259,6 +262,7 @@ pub struct Station {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Event {
     Crafted(i32, i32),
+    BeaconSelected((i32, i32, i32), i32, i32),
     /// Потратить уровни (стол, наковальня).
     Levels(i32),
     /// Состоялась сделка с жителем (номер сделки в его списке).
@@ -310,6 +314,7 @@ impl Bag {
             window: None,
             layout: Vec::new(),
             restrict: None,
+            disabled_slots: 0,
             ids: BTreeMap::new(),
             next_id: 1,
             ui: BTreeMap::new(),
@@ -437,6 +442,7 @@ impl Bag {
 
     /// Открылось окно хранилища: его ячейки становятся местами запросов,
     /// каждой стопке — свой номер.
+    #[cfg(test)]
     pub fn open_window(&mut self, slots: &[Option<Stack>]) {
         self.open_window_for(slots, Vec::new(), None);
     }
@@ -459,6 +465,7 @@ impl Bag {
         self.window = None;
         self.layout.clear();
         self.restrict = None;
+        self.disabled_slots = 0;
         self.ids.retain(|place, _| !matches!(place, Place::Container(_)));
     }
 
@@ -695,18 +702,18 @@ impl Bag {
         Handled { response: response.bytes, thrown, events: std::mem::take(&mut self.events) }
     }
 
-    /// Один запрос из Player Auth Input: там он лежит без списка вокруг.
-    /// Ответ — отдельным пакетом, как и на обычные запросы.
-    pub fn handle_embedded(&mut self, reader: &mut In, creative: bool) -> (Handled, bool) {
-        let mut answers = Out::default();
-        let mut thrown = Vec::new();
-        self.events.clear();
-
-        let parsed = self.handle_one(reader, creative, &mut answers, &mut thrown);
-
-        let mut response = Out::packet(super::session::ITEM_STACK_RESPONSE);
-        response.varint(u32::from(parsed != Parsed::Nothing)).raw(&answers.bytes);
-        (Handled { response: response.bytes, thrown, events: std::mem::take(&mut self.events) }, parsed == Parsed::Whole)
+    /// Вложенный запрос извлекается без исполнения: world.rs применит его
+    /// под тем же замком общего хранилища, что отдельный ItemStackRequest.
+    pub fn read_embedded(reader: &mut In) -> Option<Vec<u8>> {
+        let mut copy = reader.clone();
+        let before = reader.remaining();
+        reader.zigzag32()?;
+        Self::parse_actions(reader)?;
+        for _ in 0..reader.varint()? { reader.string()?; }
+        reader.li32()?;
+        let mut payload = vec![1];
+        payload.extend_from_slice(copy.take(before - reader.remaining())?);
+        Some(payload)
     }
 
     /// Разбирает и выполняет один запрос, дописывая ответ в `answers`.
@@ -798,7 +805,8 @@ impl Bag {
             return Some(Place::Container(at));
         }
 
-        if matches!(named.container, LEVEL_ENTITY | BARREL | CRAFTER) {
+        if named.container == SHULKER && self.restrict != Some(crate::containers::Kind::ShulkerBox) { return None; }
+        if matches!(named.container, LEVEL_ENTITY | BARREL | CRAFTER | SHULKER) {
             let size = self.window.as_ref()?.len();
             let slot = named.slot as usize;
 
@@ -825,6 +833,8 @@ impl Bag {
                 return true;
             }
 
+            if kind == crate::containers::Kind::ShulkerBox && crate::containers::is_shulker_item(stack.item) { return false; }
+            if kind == crate::containers::Kind::Crafter && self.disabled_slots & (1 << slot) != 0 { return false; }
             crate::furnace::may_place(kind, slot, stack.item) && stack.count <= crate::furnace::slot_limit(kind, slot, stack.item)
         })
     }
@@ -879,11 +889,7 @@ impl Bag {
                     Act::Skip
                 }
                 // Платёж маяку.
-                10 => {
-                    reader.zigzag32()?;
-                    reader.zigzag32()?;
-                    Act::Unsupported
-                }
+                10 => Act::Beacon(reader.zigzag32()?, reader.zigzag32()?),
                 // Предмет из творческого меню.
                 14 => {
                     let entry = reader.varint()?;
@@ -954,6 +960,8 @@ impl Bag {
                 if *count > 0 && *count <= stack.count { Some((place, stack.with_count(*count))) } else { None }
             } else { None }
         }).collect();
+        let mut beacon = None;
+        let mut beacon_paid = 0;
 
         for act in actions {
             let ok = match act {
@@ -964,8 +972,15 @@ impl Bag {
                     if destroy {
                         creative && self.remove(count, source, creative, touched).is_some()
                     } else {
+                        if self.place_for(source, creative) == Some(Place::Ui(stations::UI_BEACON_PAYMENT)) {
+                            if !self.get(Place::Ui(stations::UI_BEACON_PAYMENT)).is_some_and(|s| crate::beacon::payment(s.item)) { failed = true; }
+                            beacon_paid += count;
+                        }
                         self.consume(count, source, creative, touched, dropped)
                     }
+                }
+                Act::Beacon(primary, secondary) => {
+                    if beacon.is_some() { false } else { beacon = Some((primary, secondary)); true }
                 }
                 Act::Skip => true,
                 Act::CraftCreative(entry) => creative && self.craft_creative(entry),
@@ -977,12 +992,26 @@ impl Bag {
                 } else {self.anvil(names.first().map(String::as_str), creative)},
                 Act::Grind => self.grind(),
                 Act::Loom(pattern) => self.loom(&pattern),
-                Act::Unsupported => false,
             };
 
             failed |= !ok;
         }
 
+        if let Some((primary, secondary)) = beacon {
+            // Эффекты Bedrock с единицы, Java с нуля. Уровень передаётся только
+            // на время запроса под замком мира; платёж локален игроку.
+            let station = self.station.filter(|s| s.kind == stations::Kind::Beacon);
+            let powers = primary.checked_sub(1).zip(secondary.checked_sub(1));
+            if let (Some(station), Some((primary, secondary))) = (station, powers) {
+                failed |= !crate::beacon::valid_selection(station.shelves, primary, secondary);
+                if beacon_paid == 0 {
+                    let source = Named { container: stations::BEACON_PAYMENT, dynamic: None, slot: stations::UI_BEACON_PAYMENT };
+                    failed |= !self.get(Place::Ui(stations::UI_BEACON_PAYMENT)).is_some_and(|s| crate::beacon::payment(s.item));
+                    failed |= !self.consume(1, source, creative, touched, dropped);
+                } else { failed |= beacon_paid != 1; }
+                self.events.push(Event::BeaconSelected(station.pos, primary, secondary));
+            } else { failed = true; }
+        } else if beacon_paid != 0 { failed = true; }
         !failed && self.finish_station(creative)
     }
 
@@ -1305,6 +1334,9 @@ impl Bag {
             let lapis = blocks::item_named("lapis_lazuli");
 
             match station.kind {
+                stations::Kind::Beacon => {
+                    if self.get(Place::Ui(stations::UI_BEACON_PAYMENT)).is_some_and(|s| !crate::beacon::payment(s.item)) { return false; }
+                }
                 stations::Kind::Enchanting => {
                     let item = self.get(Place::Ui(stations::UI_ENCHANTING_INPUT));
                     let dust = self.get(Place::Ui(stations::UI_ENCHANTING_LAPIS));
@@ -1477,6 +1509,7 @@ impl Bag {
 
 /// Одно действие запроса, разобранное.
 enum Act {
+    Beacon(i32, i32),
     Move { count: i32, source: Named, destination: Named },
     Swap(Named, Named),
     Drop { count: i32, source: Named },
@@ -1487,13 +1520,13 @@ enum Act {
     Anvil,
     Grind,
     Loom(String),
-    Unsupported,
 }
 
 impl Act {
     /// Короткое имя действия для журнала.
     fn label(&self) -> &'static str {
         match self {
+            Act::Beacon(..) => "beacon",
             Act::Move { .. } => "move",
             Act::Swap(..) => "swap",
             Act::Drop { .. } => "drop",
@@ -1504,7 +1537,6 @@ impl Act {
             Act::Anvil => "anvil",
             Act::Grind => "grind",
             Act::Loom(_) => "loom",
-            Act::Unsupported => "unsupported",
         }
     }
 }
@@ -1574,6 +1606,53 @@ mod tests {
 
     /// Выход творческого меню — слот 50, так его называет клиент.
     const CREATIVE_OUTPUT_SLOT: u8 = 50;
+
+    #[test]
+    fn component_items_decode_without_leaking_into_the_next_item() {
+        use crate::bedrock::nbt::{decode,Style,Tag};
+        for (name,extras,aux) in [
+            ("shield",crate::stackdata::Data { damage:7,name:Some("guard".into()),..Default::default() },0),
+            ("tipped_arrow",crate::stackdata::Data { potion:crate::survival::potion_number("poison"),..Default::default() },26),
+            ("filled_map",crate::stackdata::Data { map_id:Some(31),..Default::default() },0),
+            ("goat_horn",crate::stackdata::Data { instrument:Some(7),..Default::default() },7),
+        ] {
+            let stack = Stack::new(blocks::item_named(name).unwrap(),1).with_extras(extras);
+            let mut out = Out::default(); write_item(&mut out,Some(stack),27); write_item(&mut out,None,0);
+            let mut r = In::new(&out.bytes); let id = r.zigzag32().unwrap();
+            assert_eq!(r.take(2),Some([1,0].as_slice())); assert_eq!(r.varint(),Some(aux));
+            assert_eq!(r.bool(),Some(true)); assert_eq!(r.zigzag32(),Some(27)); r.zigzag32().unwrap();
+            let len = r.varint().unwrap() as usize; let extra = r.take(len).unwrap();
+            assert_eq!(r.zigzag32(),Some(0)); assert_eq!(r.remaining(),0);
+            let suffix = if id == SHIELD { 16 } else { 8 };
+            assert!(extra[extra.len()-suffix..].iter().all(|b| *b == 0));
+            if extra[..2] == [255,255] {
+                assert_eq!(extra[2],1);
+                let tag = decode(&extra[3..extra.len()-suffix],Style::Little).unwrap();
+                if name == "shield" { assert_eq!(tag.get("Damage"),Some(&Tag::Int(7))); }
+                if name == "filled_map" { assert_eq!(tag.get("map_uuid"),Some(&Tag::Long(31))); }
+            } else { assert_eq!(extra.len(),10); }
+        }
+    }
+
+    #[test]
+    fn shulker_nesting_and_disabled_crafter_slots_roll_back() {
+        for (kind,name,disabled) in [(crate::containers::Kind::ShulkerBox,"red_shulker_box",0),
+            (crate::containers::Kind::Crafter,"stone",1)] {
+            let mut bag = Bag::new(Inventory::new());
+            let stack = Stack::new(blocks::item_named(name).unwrap(),1); bag.inventory.set(FIRST_HOTBAR,Some(stack));
+            bag.open_window_for(&vec![None;kind.size()],Vec::new(),Some(kind)); bag.disabled_slots = disabled;
+            let container = super::super::containers::slot_name(kind);
+            let payload = request(4,1,|out| { out.u8(1).u8(1); slot(out,HOTBAR_AND_INVENTORY,0); slot(out,container,0); });
+            let handled = bag.handle_requests(&payload,false); assert_eq!(handled.response[3],1);
+            assert_eq!(bag.inventory.held(),Some(stack)); assert!(bag.window_slots().unwrap().iter().all(Option::is_none));
+            bag.disabled_slots=0; bag.inventory.set(FIRST_HOTBAR,Some(item("stone",1)));
+            assert_eq!(bag.handle_requests(&payload,false).response[3],0);
+            assert_eq!(bag.window_slots().unwrap()[0],Some(item("stone",1)));
+            let packet=bag.window_slot_packet(2,container,0).unwrap(); let mut r=In::new(&packet);
+            assert_eq!(r.varint(),Some(super::super::session::INVENTORY_SLOT));
+            assert_eq!(r.varint(),Some(2)); assert_eq!(r.varint(),Some(0)); assert_eq!(r.u8(),Some(container));
+        }
+    }
 
     fn slot(out: &mut Out, container: u8, slot: u8) {
         out.u8(container).u8(0).u8(slot).zigzag32(0);
@@ -2122,6 +2201,34 @@ mod tests {
         assert_eq!(bag.cartography_maps.as_ref().unwrap().maps.len(),2);
         assert_eq!(bag.get(Place::Cursor).unwrap().extras().map_id,Some(id+1));
         assert!(bag.get(Place::Ui(12)).is_none());assert!(bag.get(Place::Ui(13)).is_none());
+    }
+
+    #[test]
+    fn beacon_payment_is_transactional_and_charged_once() {
+        let mut bag = Bag::new(Inventory::new());
+        bag.open_station(Station { kind: stations::Kind::Beacon, pos:(1,70,2), seed:0, shelves:4 });
+        let pay = Place::Ui(stations::UI_BEACON_PAYMENT);
+        let select = |primary,secondary,consume| request(-31,if consume {2} else {1},|out| {
+            out.u8(10).zigzag32(primary).zigzag32(secondary);
+            if consume { consume_action(out,1,stations::BEACON_PAYMENT,stations::UI_BEACON_PAYMENT); }
+        });
+        for consume in [false,true] {
+            bag.set(pay,Some(item("emerald",2)));
+            let handled = bag.handle_requests(&select(1,10,consume),false);
+            assert_eq!(handled.events,[Event::BeaconSelected((1,70,2),0,9)]);
+            assert_eq!(bag.get(pay),Some(item("emerald",1)));
+            let mut r = In::new(&handled.response);
+            assert_eq!(r.varint(),Some(super::super::session::ITEM_STACK_RESPONSE));
+            assert_eq!(r.varint(),Some(1)); assert_eq!(r.u8(),Some(0));
+        }
+        for (primary,secondary,level,payment) in [(1,10,1,"emerald"),(99,0,4,"emerald"),(1,0,4,"dirt"),(i32::MIN,0,4,"emerald")] {
+            bag.station.as_mut().unwrap().shelves=level; bag.set(pay,Some(item(payment,1)));
+            let handled=bag.handle_requests(&select(primary,secondary,true),false);
+            assert!(handled.events.is_empty()); assert_eq!(bag.get(pay),Some(item(payment,1)));
+        }
+        bag.station.as_mut().unwrap().shelves=4; bag.set(pay,None);
+        assert!(bag.handle_requests(&select(1,0,false),true).events.is_empty());
+        assert!(bag.get(pay).is_none());
     }
 
     /// Верстак: четыре доски в сетке 2×2 → верстак в курсор; набор

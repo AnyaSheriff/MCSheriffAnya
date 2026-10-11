@@ -2209,6 +2209,11 @@ impl World {
         self.chunks.get(&(chunk_x, chunk_z)).map(|chunk| chunk.spawners.iter().map(|(&place, data)| (place, data.nbt())).collect()).unwrap_or_default()
     }
 
+    /// Снимок для второго представления мира (Bedrock), без изменения чанка.
+    pub fn archaeology(&self, at: (i32, i32, i32)) -> Option<&crate::archaeology::Data> {
+        self.chunks.get(&chunk_key(at.0, at.2))?.archaeology.get(&(at.0.rem_euclid(16), at.1, at.2.rem_euclid(16)))
+    }
+
     pub fn with_archaeology<R>(&mut self, at:(i32,i32,i32), change:impl FnOnce(&mut crate::archaeology::Data)->R)->Option<R> {
         let chunk=self.chunks.get_mut(&chunk_key(at.0,at.2))?;
         let data=chunk.archaeology.get_mut(&(at.0.rem_euclid(16),at.1,at.2.rem_euclid(16)))?;

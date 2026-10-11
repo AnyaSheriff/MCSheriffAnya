@@ -10,7 +10,7 @@
 // format». Разбор — tools/research/container-protocol.md, часть 2.
 
 use super::codec::Out;
-use super::inventory::{BARREL, CRAFTER, LEVEL_ENTITY};
+use super::inventory::{BARREL, CRAFTER, LEVEL_ENTITY, SHULKER};
 use super::session;
 use crate::containers::{self, Kind, Pos};
 use crate::world::World;
@@ -31,19 +31,27 @@ pub fn next_window(last: u8) -> u8 {
 /// BDS шлёт нулевое для окон всех видов, как и для окон инвентаря.
 pub const WINDOW_CONTAINER: u8 = 0;
 
+/// ToggleCrafterSlotRequest (944): Vec3 из трёх little-endian int, слот,
+/// disabled. Вики, Crafter: «empty» — проверяет общий обработчик крафтера.
+pub fn read_crafter_toggle(bytes: &[u8]) -> Option<(Pos, u8, bool)> {
+    let mut input = super::codec::In::new(bytes);
+    let pos = (input.li32()?, input.li32()?, input.li32()?);
+    let slot = input.u8()?;
+    let disabled = input.u8()?;
+    (slot < 9 && disabled <= 1 && input.remaining() == 0).then_some((pos, slot, disabled == 1))
+}
+
 /// Вид экрана (ContainerType): у сундука, ловушки и бочки — общий
 /// CONTAINER (0), у двойного сундука отдельного нет.
 pub fn screen(kind: Kind) -> u8 {
     match kind {
         Kind::Chest | Kind::TrappedChest | Kind::Barrel | Kind::CopperChest => 0,
-        // [Bedrock: потом] шулкер-ящик и личный эндер-сундук: окно общее,
-        // содержимое эндер-сундука игрока на Bedrock ещё не ведётся.
+        // Личное содержимое эндер-сундука выбирает world.rs.
         Kind::ShulkerBox | Kind::EnderChest => 0,
         Kind::Dispenser => 6,
         Kind::Dropper => 7,
         Kind::Hopper => 8,
-        // CRAFTER (36). [проверить] живым клиентом: выключенные ячейки
-        // Bedrock пока не видит.
+        // CRAFTER (36); маска ячеек — в блок-акторе.
         Kind::Crafter => 36,
         // Окна у них на Bedrock нет: щелчок разбирается раньше
         // (world.rs, use_block).
@@ -55,8 +63,9 @@ pub fn screen(kind: Kind) -> u8 {
         Kind::BrewingStand => 4,
         Kind::BlastFurnace => 27,
         Kind::Smoker => 28,
-        // [Bedrock: потом] Java-окна маяка и костра не открываются.
-        Kind::Beacon | Kind::Campfire => 0,
+        Kind::Beacon => 13,
+        // У костра нет окна: предметы кладутся щелчком.
+        Kind::Campfire => 0,
     }
 }
 
@@ -66,6 +75,7 @@ pub fn slot_name(kind: Kind) -> u8 {
     match kind {
         Kind::Barrel => BARREL,
         Kind::Crafter => CRAFTER,
+        Kind::ShulkerBox => SHULKER,
         _ => LEVEL_ENTITY,
     }
 }
@@ -127,7 +137,7 @@ fn actor_id(kind: Kind) -> &'static str {
         Kind::BrewingStand => "BrewingStand",
         Kind::ShulkerBox => "ShulkerBox",
         Kind::EnderChest => "EnderChest",
-        // [Bedrock: потом] дополнительные поля актора.
+        // Поля содержимого добавляет block_actors.rs.
         Kind::Campfire => "Campfire",
         Kind::Beacon => "Beacon",
     }
@@ -197,6 +207,7 @@ pub fn actor_packet(kind: Kind, (x, y, z): Pos, pair: Option<Pair>) -> Vec<u8> {
 /// остальных (печи, воронка, раздатчик, выбрасыватель, стойка) пакета нет
 /// вовсе: клиент заводит их блок-акторы сам. Полный вид — `actor_packet` —
 /// уходит вслед за чанком.
+#[cfg(test)]
 pub fn live_actor_packet(kind: Kind, (x, y, z): Pos, pair: Option<Pair>) -> Option<Vec<u8>> {
     const BYTE: u8 = 1;
     const SHORT: u8 = 2;
@@ -305,14 +316,7 @@ pub fn barrel_open(state: i32) -> Option<bool> {
 /// То же, что `actor_at`, но в виде, в каком BDS шлёт актор при смене
 /// блока (`live_actor_packet`).
 pub fn live_actor_at(world: &World, pos: Pos) -> Option<Vec<u8>> {
-    let kind = Kind::of(world.get_block(pos.0, pos.1, pos.2))?;
-    let halves = containers::halves(world, pos);
-    let pair = match halves[..] {
-        [first, second] => Some(if first == pos { (second, true) } else { (first, false) }),
-        _ => None,
-    };
-
-    live_actor_packet(kind, pos, pair)
+    super::block_actors::live(world, pos)
 }
 
 /// Сундук ли (или ловушка) этот номер блока — у Block Action крышки.
@@ -331,6 +335,14 @@ mod tests {
     use super::*;
     use crate::bedrock::codec::In;
 
+    #[test]
+    fn crafter_toggle_uses_fixed_width_coordinates() {
+        let bytes = [255,255,255,255,192,255,255,255,1,0,0,0,8,1];
+        assert_eq!(read_crafter_toggle(&bytes), Some(((-1,-64,1),8,true)));
+        for n in 0..bytes.len() { assert!(read_crafter_toggle(&bytes[..n]).is_none()); }
+        let mut invalid = bytes; invalid[12] = 9; assert!(read_crafter_toggle(&invalid).is_none());
+    }
+
     /// Container Open: окно, вид экрана одним байтом, место, сущность −1.
     #[test]
     fn container_open_reads_back() {
@@ -348,6 +360,8 @@ mod tests {
         assert_eq!(screen(Kind::Barrel), 0);
         assert_eq!(screen(Kind::Dispenser), 6);
         assert_eq!(screen(Kind::Dropper), 7);
+        assert_eq!(open_packet(3, Kind::Beacon, (-5,70,12)), [46,3,13,9,140,1,24,1]);
+        assert_eq!(super::super::stations::Kind::Beacon.screen(), screen(Kind::Beacon));
     }
 
     /// Container Open вагонетки: сундучный вид (0) или воронки (8), клетка

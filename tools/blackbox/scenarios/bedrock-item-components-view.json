@@ -1,0 +1,46 @@
+{
+  "origin": [
+    0,
+    100,
+    0
+  ],
+  "blocks": [],
+  "inventory": true,
+  "item_components": true,
+  "record_ticks": 100,
+  "cleanup": [
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(-2,-1,-2) $(12,6,12) minecraft:air"
+  ],
+  "about": "Item wire components for a Bedrock 944 observer; damaged enchanted shield must not corrupt the following inventory slot.",
+  "setup": [
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "fill $(-2,-1,-2) $(12,-1,12) minecraft:stone",
+    "tp $(bot) $(3.5,0,0.5) 0 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "give $(bot) minecraft:shield[minecraft:damage=7,minecraft:enchantments={unbreaking:3}]"
+    },
+    {
+      "after": 10,
+      "cmd": "give $(bot) minecraft:tipped_arrow[minecraft:potion_contents={potion:\"minecraft:poison\"}] 16"
+    },
+    {
+      "after": 20,
+      "cmd": "give $(bot) minecraft:goat_horn[minecraft:instrument=\"minecraft:dream_goat_horn\"]"
+    },
+    {
+      "after": 30,
+      "cmd": "give $(bot) minecraft:map"
+    },
+    {
+      "after": 40,
+      "cmd": "give $(bot) minecraft:zombified_piglin_spawn_egg"
+    }
+  ],
+  "name": "bedrock-item-components-view"
+}

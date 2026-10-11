@@ -302,6 +302,8 @@ COLORS = [
 
 
 def item_metadata(name):
+    if name == "tipped_arrow":
+        return 1
     for index, color in enumerate(COLORS):
         if name == f"{color}_bed":
             return index
@@ -312,7 +314,12 @@ def item_metadata(name):
 
 # Предметы, у которых имя у Bedrock другое (у рамок это блоки-акторы, а не
 # блоки Java, так что по имени блока их не найти).
-ITEM_ALIASES = {"item_frame": "frame", "glow_item_frame": "glow_frame"}
+ITEM_ALIASES = {
+    "item_frame": "frame", "glow_item_frame": "glow_frame",
+    "map": "empty_map", "zombified_piglin_spawn_egg": "zombie_pigman_spawn_egg",
+    # Вики, Arrow: «data value» — вид наконечника; обычная стрела — 0.
+    "tipped_arrow": "arrow",
+}
 
 
 def write_creative(mapping, states):
@@ -418,6 +425,8 @@ BIOME_ALIASES = {
     "savanna_plateau": "savanna_plateau",
     "autumn_forest": "forest",
     "nether_wastes": "hell",
+    "small_end_islands": "the_end", "end_midlands": "the_end",
+    "end_highlands": "the_end", "end_barrens": "the_end",
     "soul_sand_valley": "soulsand_valley",
 }
 
@@ -475,8 +484,12 @@ def write_tables(state_count):
     terrain = (ROOT / "src" / "world" / "terrain.rs").read_text(encoding="utf8")
     block = terrain[terrain.find("fn name(self)"):]
     block = block[:block.find("\n    }\n")]
-    ours = [name for name in re.findall(r'=> "([a-z_]+)"', block) if name not in NETHER_BIOMES]
-    ours += ["autumn_forest"] + NETHER_BIOMES
+    names_by_variant = dict(re.findall(r'Biome::(\w+) => "([a-z_]+)"', block))
+    def ordered(group):
+        body = re.search(r"pub const " + group + r": \[Biome; \d+\] = \[(.*?)\];", terrain, re.S).group(1)
+        return [names_by_variant[v] for v in re.findall(r"Biome::(\w+)", body)]
+    # Порядок match больше не равен порядку реестра: End идёт ПОСЛЕ Незера.
+    ours = ordered("ALL") + ["autumn_forest"] + ordered("NETHER") + ordered("END")
 
     numbers = []
     names = []
@@ -495,7 +508,7 @@ def write_tables(state_count):
         f"pub const BLOCK_STATES: usize = {state_count};",
         "",
         "/// Номер биома Bedrock для каждого нашего: по порядку `Biome::ALL`, затем",
-        "/// свои (`CUSTOM_BIOMES`), затем Незер (`Biome::NETHER`).",
+        "/// свои (`CUSTOM_BIOMES`), затем Незер (`Biome::NETHER`) и Энд (`Biome::END`).",
         f"pub const BIOMES: [u32; {len(numbers)}] = {numbers};",
         "",
     ]

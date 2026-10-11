@@ -26,6 +26,8 @@ use crate::enchanting;
 use crate::inventory::Stack;
 
 /// Виды контейнеров интерфейса (ContainerEnumName), которые называет клиент.
+pub const BEACON_PAYMENT: u8 = 8;
+pub const UI_BEACON_PAYMENT: u8 = 27;
 pub const ANVIL_INPUT: u8 = 0;
 pub const ANVIL_MATERIAL: u8 = 1;
 pub const CRAFTING_INPUT: u8 = 13;
@@ -78,6 +80,7 @@ pub const TRADING: u8 = 15;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
     Workbench,
+    Beacon,
     Enchanting,
     Anvil,
     Grindstone,
@@ -92,6 +95,7 @@ pub enum Kind {
 impl Kind {
     /// Станок по имени блока (`crafting_table` и то, что есть у Java).
     pub fn of(block: &str) -> Option<Kind> {
+        if block == "beacon" { return Some(Kind::Beacon); }
         if block == "crafting_table" {
             return Some(Kind::Workbench);
         }
@@ -110,6 +114,7 @@ impl Kind {
 
     pub fn screen(self) -> u8 {
         match self {
+            Kind::Beacon => 13,
             Kind::Workbench => WORKBENCH,
             Kind::Enchanting => ENCHANTMENT,
             Kind::Anvil => ANVIL,
@@ -125,6 +130,7 @@ impl Kind {
     /// Какие ячейки интерфейса у станка (кроме сетки 2×2: она есть всегда).
     pub fn has_slot(self, slot: u8) -> bool {
         match self {
+            Kind::Beacon => slot == UI_BEACON_PAYMENT,
             Kind::Workbench => (UI_GRID_3X3..UI_GRID_3X3 + 9).contains(&slot),
             Kind::Enchanting => matches!(slot, UI_ENCHANTING_INPUT | UI_ENCHANTING_LAPIS),
             Kind::Anvil => matches!(slot, UI_ANVIL_INPUT | UI_ANVIL_MATERIAL),
@@ -148,6 +154,7 @@ pub fn ui_slot(container: u8, slot: u8) -> Option<u8> {
         43 => slot == 11,
         55 => slot == 12,
         56 => slot == 13,
+        BEACON_PAYMENT => slot == UI_BEACON_PAYMENT,
         ANVIL_INPUT => slot == UI_ANVIL_INPUT,
         ANVIL_MATERIAL => slot == UI_ANVIL_MATERIAL,
         CRAFTING_INPUT => (UI_GRID_2X2..UI_GRID_3X3 + 9).contains(&slot),
@@ -649,6 +656,10 @@ fn title(name: &str) -> String {
 /// работ и имени: `{ench:[{id:s,lvl:s}], Damage:i, RepairCost:i,
 /// display:{Name:""}}`. None — довесков нет.
 pub fn item_nbt(stack: &Stack) -> Option<Vec<u8>> {
+    super::item_components::augment(stack, base_item_nbt(stack))
+}
+
+fn base_item_nbt(stack: &Stack) -> Option<Vec<u8>> {
     const INT: u8 = 3;
     const SHORT: u8 = 2;
     const STRING: u8 = 8;
