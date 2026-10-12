@@ -232,6 +232,7 @@ MOB_TYPES.add('warden');
 for (const t of ['endermite', 'zoglin', 'creaking', 'happy_ghast', 'copper_golem', 'ender_pearl', 'armor_stand', 'painting']) MOB_TYPES.add(t);
 // Малые мирные мобы.
 for (const t of ['armadillo', 'sniffer', 'parrot', 'bat', 'allay']) MOB_TYPES.add(t);
+const PROJECTILE_TYPES = new Set(['snowball', 'egg', 'ender_pearl', 'splash_potion', 'lingering_potion', 'experience_bottle', 'arrow', 'spectral_arrow', 'trident', 'wind_charge', 'fireball', 'small_fireball', 'firework_rocket', 'llama_spit', 'shulker_bullet', 'wither_skull', 'dragon_fireball', 'breeze_wind_charge']);
 const padDrops = new Set();
 const CART_TYPES = new Set(['minecart', 'chest_minecart', 'hopper_minecart', 'tnt_minecart', 'furnace_minecart', 'item_frame', 'glow_item_frame']);
 bot._client.on('spawn_entity', (p) => {
@@ -244,6 +245,9 @@ bot._client.on('spawn_entity', (p) => {
   // как у вагонеток (поршень толкает предметы). Предметы, лежавшие до записи,
   // тоже в счёт: их кладут командой перед записью.
   if (scenario.track_fishing && inPad(pos) && type === 'fishing_bobber') { padCarts.add(p.entityId); cartAt.set(p.entityId, pos); entKind.set(p.entityId, type); }
+  // `track_projectiles`: брошенное и выпущенное — движение, скорость и сверка
+  // места по тактам, как у вагонеток (траектория снежка, яйца, жемчуга…).
+  if (scenario.track_projectiles && inPad(pos) && PROJECTILE_TYPES.has(type)) { padCarts.add(p.entityId); cartAt.set(p.entityId, pos); entKind.set(p.entityId, type); }
   if (scenario.track_items && inPad(pos) && type === 'item') { padCarts.add(p.entityId); cartAt.set(p.entityId, pos); entKind.set(p.entityId, 'предмет'); }
   // `track_mobs` в сценарии: мобы на площадке пишутся как вагонетки — движение,
   // скорость, события, свойства; а также всё, что сервер говорит о них

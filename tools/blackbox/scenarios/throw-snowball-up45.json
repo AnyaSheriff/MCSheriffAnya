@@ -1,0 +1,41 @@
+{
+ "name": "throw-snowball-up45",
+ "about": "Траектория брошенного snowball: взгляд -45°, на месте. Сверка по тактам: появление, скорость, сдвиги.",
+ "blocks": [],
+ "setup": [
+  "difficulty peaceful",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "fill $(0,0,-75) $(6,30,4) minecraft:air",
+  "fill $(0,-1,-75) $(6,-1,4) minecraft:stone",
+  "tp $(bot) $(3.5,0,2.5) 0 0",
+  "!stopfly",
+  "!hotbar 0",
+  "!wait 10",
+  "give $(bot) snowball 4",
+  "!look 0 -45",
+  "!wait 5"
+ ],
+ "actions": [
+  {
+   "after": 2,
+   "use": true
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=snowball,distance=..96]",
+  "kill @e[type=egg,distance=..96]",
+  "kill @e[type=ender_pearl,distance=..96]",
+  "kill @e[type=chicken,distance=..96]",
+  "kill @e[type=item,distance=..96]",
+  "fill $(0,0,-75) $(6,30,4) minecraft:air",
+  "fill $(0,-1,-75) $(6,-1,4) minecraft:stone",
+  "clear $(bot)",
+  "gamemode creative $(bot)",
+  "tp $(bot) $(3.5,0,2.5)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_projectiles": true
+}

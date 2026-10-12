@@ -1,0 +1,55 @@
+{
+ "name": "throw-egg-walk",
+ "about": "Траектория брошенного egg: взгляд -20°, forward. Сверка по тактам: появление, скорость, сдвиги.",
+ "blocks": [],
+ "setup": [
+  "difficulty peaceful",
+  "gamemode survival $(bot)",
+  "clear $(bot)",
+  "fill $(0,0,-75) $(6,30,4) minecraft:air",
+  "fill $(0,-1,-75) $(6,-1,4) minecraft:stone",
+  "tp $(bot) $(3.5,0,2.5) 0 0",
+  "!stopfly",
+  "!hotbar 0",
+  "!wait 10",
+  "give $(bot) egg 4",
+  "!look 0 -20",
+  "!wait 5"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "control": [
+    "forward",
+    true
+   ]
+  },
+  {
+   "after": 6,
+   "use": true
+  },
+  {
+   "after": 10,
+   "control": [
+    "forward",
+    false
+   ]
+  }
+ ],
+ "record_ticks": 80,
+ "cleanup": [
+  "kill @e[type=snowball,distance=..96]",
+  "kill @e[type=egg,distance=..96]",
+  "kill @e[type=ender_pearl,distance=..96]",
+  "kill @e[type=chicken,distance=..96]",
+  "kill @e[type=item,distance=..96]",
+  "fill $(0,0,-75) $(6,30,4) minecraft:air",
+  "fill $(0,-1,-75) $(6,-1,4) minecraft:stone",
+  "clear $(bot)",
+  "gamemode creative $(bot)",
+  "tp $(bot) $(3.5,0,2.5)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "track_projectiles": true
+}
