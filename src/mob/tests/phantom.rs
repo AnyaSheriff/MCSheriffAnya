@@ -104,11 +104,12 @@ fn a_cat_within_sixteen_blocks_keeps_the_phantom_from_swooping() {
     let view = Flat::new();
     let mut phantom = ph::spawn(5, (0, 28, 0));
     let players = [survivor(1, (0.5, 1.0, 0.5))];
-    let cat = [ai::Mate { id: 9, kind: Kind::Cat, x: 4.5, y: 27.0, z: 0.5, love: 0, baby: false, ready: false, tamed: false }];
-    let ctx = ai::Ctx { players: &players, mates: &cat, difficulty: 2, sky: 4, sun_up: false };
+    let mut cat = [ai::Mate { id: 9, kind: Kind::Cat, x: 4.5, y: 27.0, z: 0.5, love: 0, baby: false, ready: false, tamed: false }];
     let mut rng = Rng::new(9);
 
     for _ in 0..200 {
+        cat[0].x=phantom.x+4.0;cat[0].y=phantom.y;cat[0].z=phantom.z;
+        let ctx = ai::Ctx { players: &players, mates: &cat, difficulty: 2, sky: 4, sun_up: false };
         phantom.tick(&view, &ctx, &mut rng);
     }
 
@@ -194,7 +195,33 @@ fn creeper_finishes_escape_and_repaths_three_ticks_after_path_ends() {
     assert!(mob.x>12.5,"кошке не удалось остановить бегство: {}",mob.x);
     mob.brain.stop();mob.h.cat_flee=true;
     let cats=[ai::Mate {id:9,kind:Kind::Cat,x:mob.x-2.0,y:1.0,z:mob.z,love:0,baby:false,ready:false,tamed:false}];
+    mob.h.cat_threat=Some((cats[0].id,cats[0].x,cats[0].y,cats[0].z));
     let ctx=ai::Ctx {players:&[],mates:&cats,difficulty:2,sky:4,sun_up:false};
     for _ in 0..3 {mob.tick(&Flat::new(),&ctx,&mut rng);assert!(!mob.brain.walking());}
     mob.tick(&Flat::new(),&ctx,&mut rng);assert!(mob.brain.walking());
+}
+
+#[test]
+fn moving_threat_reverses_an_unfinished_creeper_route() {
+    for kind in [Kind::Cat,Kind::Ocelot] {
+        let mut mob=Mob::new(5,Kind::Creeper,(4.5,1.0,0.5));mob.on_ground=true;
+        let mut rng=Rng::new(4);
+        let mut cat=ai::Mate {id:9,kind,x:2.5,y:1.0,z:0.5,love:0,baby:false,ready:false,tamed:false};
+        for _ in 0..5 {mob.tick(&Flat::new(),&ai::Ctx {players:&[],mates:&[cat],difficulty:2,sky:4,sun_up:false},&mut rng);}
+        assert!(mob.brain.walking());
+        let before=mob.x;cat.x=before+2.0;
+        for _ in 0..15 {mob.tick(&Flat::new(),&ai::Ctx {players:&[],mates:&[cat],difficulty:2,sky:4,sun_up:false},&mut rng);}
+        assert!(mob.x<before,"{kind:?}: {} >= {before}",mob.x);
+    }
+}
+
+#[test]
+fn phantom_flees_cat_at_boundary_without_a_player() {
+    let mut mob=Mob::new(7,Kind::Phantom,(0.5,10.0,0.5));
+    let cat=ai::Mate {id:9,kind:Kind::Cat,x:16.5,y:10.0,z:0.5,love:0,baby:false,ready:false,tamed:false};
+    let ctx=ai::Ctx {players:&[],mates:&[cat],difficulty:2,sky:4,sun_up:false};
+    ph::think(&mut mob,&Flat::new(),&ctx,&mut Rng::new(3),ai::Plan::default());
+    assert!(mob.phantom.goal.unwrap().0<mob.x);
+    assert_eq!(mob.phantom.phase,ph::Phase::Circle);
+    assert!(mob.phantom.wait>=ph::BITE_WAIT);
 }

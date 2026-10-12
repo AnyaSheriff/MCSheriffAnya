@@ -1,0 +1,71 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule spawn_mobs false",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-12,-1,-12) $(24,-1,24) stone",
+    "fill $(-12,0,-12) $(24,20,24) air",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!hotbar 0",
+    "!wait 10",
+    "setblock $(0,0,3) red_bed[part=head,facing=south]",
+    "setblock $(0,0,2) red_bed[part=foot,facing=south]",
+    "setblock $(3,0,3) red_bed[part=head,facing=south]",
+    "setblock $(3,0,2) red_bed[part=foot,facing=south]",
+    "setblock $(6,0,3) red_bed[part=head,facing=south]",
+    "setblock $(6,0,2) red_bed[part=foot,facing=south]"
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..64]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "weather clear",
+    "time set noon",
+    "difficulty peaceful",
+    "fill $(-12,-1,-12) $(24,20,24) air",
+    "!startfly"
+  ],
+  "record_ticks": 1200,
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "name": "gaps2-villager-golem",
+  "about": "[проверить] Java 26.1.2: gaps2-villager-golem. New regression; record vanilla before comparing. No timing or RNG exclusions.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "time set midnight"
+    },
+    {
+      "after": 1,
+      "cmd": "summon villager $(0,0,3.5) {Tags:[\"gaps_villager\"]}"
+    },
+    {
+      "after": 2,
+      "cmd": "summon villager $(3,0,3.5) {Tags:[\"gaps_villager\"]}"
+    },
+    {
+      "after": 3,
+      "cmd": "summon villager $(6,0,3.5) {Tags:[\"gaps_villager\"]}"
+    },
+    {
+      "after": 160,
+      "cmd": "time set noon"
+    },
+    {
+      "after": 165,
+      "cmd": "summon zombie $(3.5,0,6.5) {NoAI:1b,Silent:1b,PersistenceRequired:1b}"
+    }
+  ]
+}

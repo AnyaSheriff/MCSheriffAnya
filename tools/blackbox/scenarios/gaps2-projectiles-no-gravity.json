@@ -1,0 +1,85 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule spawn_mobs false",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-12,-1,-12) $(24,-1,24) stone",
+    "fill $(-12,0,-12) $(24,20,24) air",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!hotbar 0",
+    "!wait 10"
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..64]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "weather clear",
+    "time set noon",
+    "difficulty peaceful",
+    "fill $(-12,-1,-12) $(24,20,24) air",
+    "!startfly"
+  ],
+  "record_ticks": 120,
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "name": "gaps2-projectiles-no-gravity",
+  "about": "[проверить] Java 26.1.2: gaps2-projectiles-no-gravity. New regression; record vanilla before comparing. No timing or RNG exclusions.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon arrow $(-4,6,4) {NoGravity:1b,Motion:[0.0d,0.0d,0.1d]}"
+    },
+    {
+      "after": 5,
+      "cmd": "summon spectral_arrow $(-3,6,4) {NoGravity:1b,Motion:[0.0d,0.0d,0.1d]}"
+    },
+    {
+      "after": 10,
+      "cmd": "summon trident $(-2,6,4) {NoGravity:1b,Motion:[0.0d,0.0d,0.1d]}"
+    },
+    {
+      "after": 15,
+      "cmd": "summon snowball $(-1,6,4) {NoGravity:1b,Motion:[0.0d,0.0d,0.1d]}"
+    },
+    {
+      "after": 20,
+      "cmd": "summon egg $(0,6,4) {NoGravity:1b,Motion:[0.0d,0.0d,0.1d]}"
+    },
+    {
+      "after": 25,
+      "cmd": "summon ender_pearl $(1,6,4) {NoGravity:1b,Motion:[0.0d,0.0d,0.1d]}"
+    },
+    {
+      "after": 30,
+      "cmd": "summon experience_bottle $(2,6,4) {NoGravity:1b,Motion:[0.0d,0.0d,0.1d]}"
+    },
+    {
+      "after": 35,
+      "cmd": "summon splash_potion $(3,6,4) {NoGravity:1b,Motion:[0.0d,0.0d,0.1d]}"
+    },
+    {
+      "after": 40,
+      "cmd": "summon lingering_potion $(4,6,4) {NoGravity:1b,Motion:[0.0d,0.0d,0.1d]}"
+    },
+    {
+      "after": 45,
+      "cmd": "summon llama_spit $(5,6,4) {NoGravity:1b,Motion:[0.0d,0.0d,0.1d]}"
+    },
+    {
+      "after": 60,
+      "cmd": "summon arrow $(-4,6,6) {NoGravity:0b}"
+    }
+  ]
+}

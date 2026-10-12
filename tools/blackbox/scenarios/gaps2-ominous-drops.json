@@ -1,0 +1,73 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule spawn_mobs false",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-12,-1,-12) $(24,-1,24) stone",
+    "fill $(-12,0,-12) $(24,20,24) air",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!hotbar 0",
+    "!wait 10"
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..64]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "weather clear",
+    "time set noon",
+    "difficulty peaceful",
+    "fill $(-12,-1,-12) $(24,20,24) air",
+    "!startfly"
+  ],
+  "record_ticks": 260,
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "name": "gaps2-ominous-drops",
+  "about": "[проверить] Java 26.1.2: gaps2-ominous-drops. New regression; record vanilla before comparing. No timing or RNG exclusions.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon ominous_item_spawner $(0,7,4) {item:{id:\"minecraft:arrow\",count:1},spawn_item_after_ticks:20L}"
+    },
+    {
+      "after": 25,
+      "cmd": "summon ominous_item_spawner $(3,7,4) {item:{id:\"minecraft:wind_charge\",count:1},spawn_item_after_ticks:20L}"
+    },
+    {
+      "after": 50,
+      "cmd": "summon ominous_item_spawner $(6,7,4) {item:{id:\"minecraft:fire_charge\",count:1},spawn_item_after_ticks:20L}"
+    },
+    {
+      "after": 75,
+      "cmd": "summon ominous_item_spawner $(9,7,4) {item:{id:\"minecraft:lingering_potion\",count:1},spawn_item_after_ticks:20L}"
+    },
+    {
+      "after": 100,
+      "cmd": "summon ominous_item_spawner $(0,7,7) {item:{id:\"minecraft:splash_potion\",count:1},spawn_item_after_ticks:20L}"
+    },
+    {
+      "after": 125,
+      "cmd": "summon ominous_item_spawner $(3,7,7) {item:{id:\"minecraft:experience_bottle\",count:1},spawn_item_after_ticks:20L}"
+    },
+    {
+      "after": 150,
+      "cmd": "summon ominous_item_spawner $(6,7,7) {item:{id:\"minecraft:ominous_bottle\",count:1},spawn_item_after_ticks:20L}"
+    },
+    {
+      "after": 175,
+      "cmd": "summon ominous_item_spawner $(9,7,7) {item:{id:\"minecraft:diamond\",count:1},spawn_item_after_ticks:20L}"
+    }
+  ]
+}

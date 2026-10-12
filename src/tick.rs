@@ -1070,6 +1070,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         // небо темнее не больше чем на 3): нежить не горит [проверить].
         sun_up: !skyless && !(12_540..23_460).contains(&time) && world.weather.dim_sky(15) > 11,
         clock: world.clock(),
+        tick: world.tick() as i64,
     };
 
     // Свет для мобов, которым он нужен (паук, появление): считается здесь,
@@ -1932,7 +1933,7 @@ fn barter(items: &mut items::Items, shared: &Shared, watchers: &[crate::mob::ai:
 /// Такт испытательных спавнеров и хранилищ: игроки рядом, мобы волны,
 /// выброшенная награда (trial.rs).
 fn step_trials(shared: &Shared, world: &mut World, items: &mut items::Items, dimension: Dimension, difficulty: u8, rng: &mut crate::mob::Rng) {
-    crate::ominous::step(shared,world,dimension,*shared.ticks.borrow(),rng);
+    crate::ominous::step(shared,world,items,dimension,*shared.ticks.borrow(),rng);
     if !world.has_trials() {
         return;
     }

@@ -445,7 +445,7 @@ fn two_animals_in_love_breed_a_baby() {
     let mut babies = 0;
 
     for _ in 0..600 {
-        step_all(&mut items, &view, &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 }, &mut rng, &mut || {
+        step_all(&mut items, &view, &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0, tick: 0 }, &mut rng, &mut || {
             next += 1;
             next
         });
@@ -536,7 +536,7 @@ fn a_sheep_eats_grass_and_grows_wool_back() {
     let mut eaten = None;
 
     for _ in 0..6 {
-        let outcome = step_all(&mut items, &Meadow, &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 }, &mut rng, &mut || {
+        let outcome = step_all(&mut items, &Meadow, &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0, tick: 0 }, &mut rng, &mut || {
             next += 1;
             next
         });
@@ -2121,7 +2121,7 @@ fn slime_with_no_ai_does_not_touch_players() {
     mob.no_ai = true;
     items.add_mob(mob);
     let players = [player_at(90, 0.6, 0.5), player_at(91, 0.4, 0.5)];
-    let env = Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 };
+    let env = Env { difficulty: 2, sky: 15, sun_up: false, clock: 0, tick: 0 };
     let outcome = step_all(&mut items, &Flat::new(), &players, env, &mut Rng::new(8), &mut || 123);
     assert!(outcome.strikes.is_empty(), "чёрный ящик, slime-attack: NoAI не бьёт");
 }
@@ -2416,7 +2416,7 @@ fn breeding_and_curing_send_progress_only_to_the_responsible_player() {
         let mut next = 100;
         let mut events = Vec::new();
         for _ in 0..100 {
-            let out = step_all(&mut items, &view, &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 }, &mut rng, &mut || { next += 1; next });
+            let out = step_all(&mut items, &view, &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0, tick: 0 }, &mut rng, &mut || { next += 1; next });
             events.extend(out.progress);
         }
         assert_eq!(events.len(), 1, "{kind:?}: {events:?}");
@@ -2430,7 +2430,7 @@ fn breeding_and_curing_send_progress_only_to_the_responsible_player() {
     zombie.villager.conversion = 1;
     zombie.villager.converter = Some([3; 16]);
     items.add_mob(zombie);
-    let out = step_all(&mut items, &Flat::new(), &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 }, &mut Rng::new(11), &mut || 100);
+    let out = step_all(&mut items, &Flat::new(), &[], Env { difficulty: 2, sky: 15, sun_up: false, clock: 0, tick: 0 }, &mut Rng::new(11), &mut || 100);
     assert_eq!(out.progress.len(), 1);
     assert_eq!(out.progress[0].0, [3; 16]);
     assert!(matches!(out.progress[0].1, crate::progress::Event::Trigger("story/cure_zombie_villager")));

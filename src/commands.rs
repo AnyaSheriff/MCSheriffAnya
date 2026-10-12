@@ -748,6 +748,21 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 
     let origin = origin_of(source, shared);
 
+    if name.strip_prefix("minecraft:").unwrap_or(name) == "ominous_item_spawner" {
+        let [x,y,z,data @ ..] = rest else { return usage(); };
+        let Some(at) = entity_place(&[*x,*y,*z], origin) else { return usage(); };
+        let data = data.join(" ");
+        let Some(stack) = item_from_text(&data) else { return usage(); };
+        let delay = crate::snbt::parse(&data).and_then(|v| v.get("spawn_item_after_ticks").and_then(crate::snbt::Value::as_f64)).unwrap_or(60.0).max(0.0) as u64;
+        let now = *shared.ticks.borrow();
+        // Список игроков берём до замка снарядов: такт держит их в обратном порядке.
+        let (id, dimension) = (shared.next_entity_id(), dimension_of(source, shared));
+        shared.thrown.lock().expect("снаряды").ominous.push(crate::ominous::Spawner {
+            id,dimension,at,stack,due:now.saturating_add(delay.saturating_sub(1)),
+        });
+        return Answer::saying("Призвана сущность ominous_item_spawner".into());
+    }
+
     if name.strip_prefix("minecraft:").unwrap_or(name) == "item" {
         return summon_item(rest, source, shared);
     }
@@ -760,7 +775,7 @@ fn summon(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return summon_fireball(rest, source, shared);
     }
 
-    if let base @ ("wither_skull" | "arrow") = name.strip_prefix("minecraft:").unwrap_or(name) {
+    if let base @ ("wither_skull" | "arrow" | "spectral_arrow" | "trident" | "snowball" | "egg" | "ender_pearl" | "experience_bottle" | "potion" | "splash_potion" | "lingering_potion" | "small_fireball" | "fireball" | "llama_spit") = name.strip_prefix("minecraft:").unwrap_or(name) {
         return summon_projectile(base, rest, source, shared);
     }
 
@@ -854,7 +869,7 @@ fn summon_fireball(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
 /// стрелка (чёрный ящик, wither-skull-hit, wither-half-armor).
 fn summon_projectile(kind: &str, rest: &[&str], source: &Source, shared: &Shared) -> Answer {
     let origin = origin_of(source, shared);
-    let (place, data) = match rest {
+    let (place, _) = match rest {
         [] => (Some(origin), ""),
         [x, y, z] => (entity_place(&[*x, *y, *z], origin), ""),
         [x, y, z, data @ ..] => (entity_place(&[*x, *y, *z], origin), *data.first().unwrap_or(&"")),
@@ -863,8 +878,36 @@ fn summon_projectile(kind: &str, rest: &[&str], source: &Source, shared: &Shared
     let Some(place) = place else {
         return Answer::saying(format!("Нужно: summon {} <x> <y> <z> [{{Motion:[x,y,z]}}]", kind));
     };
+    let data = rest.get(3..).unwrap_or_default().join(" ");
+    let data = data.as_str();
     let motion = motion_of(data).unwrap_or((0.0, 0.0, 0.0));
     let dimension = dimension_of(source, shared);
+
+    if !matches!(kind, "arrow" | "spectral_arrow" | "trident" | "wither_skull") {
+        use crate::thrown::{Flying, Kind};
+        use crate::inventory::Stack;
+        let id = shared.next_entity_id();
+        let mut flying = match kind {
+            "small_fireball" | "fireball" => Flying::mob_fireball(id, dimension, if kind == "fireball" { Kind::GhastFireball } else { Kind::SmallFireball }, place, motion, 0, 1),
+            "llama_spit" => Flying::spit(id, dimension, place, motion, 0),
+            _ => {
+                let (flying_kind, item) = match kind {
+                    "snowball" => (Kind::Snowball, "snowball"), "egg" => (Kind::Egg, "egg"),
+                    "ender_pearl" => (Kind::EnderPearl, "ender_pearl"), "experience_bottle" => (Kind::ExperienceBottle, "experience_bottle"),
+                    "lingering_potion" => (Kind::Lingering, "lingering_potion"), _ => (Kind::Splash, "splash_potion"),
+                };
+                Flying::potion(id, dimension, flying_kind, item_from_text(data).unwrap_or_else(|| Stack::new(blocks::item_named(item).unwrap(), 1)), place, motion, 0)
+            }
+        };
+        flying.no_gravity = no_gravity(data);
+        flying.in_owner = false;
+        if flying.is_fireball() {
+            flying.vx = motion.0; flying.vy = motion.1; flying.vz = motion.2;
+            flying.start = (place, motion); flying.prev = (place, motion, flying.rot);
+        }
+        shared.thrown.lock().expect("снаряды").flying.push(flying);
+        return Answer::saying(format!("Призвана сущность {}", kind));
+    }
 
     if kind == "wither_skull" {
         // Летит в том же такте (wither-skull-hit: взрыв на +8, синий — на +12
@@ -879,7 +922,10 @@ fn summon_projectile(kind: &str, rest: &[&str], source: &Source, shared: &Shared
         // через такт после призыва), стрелка у неё нет.
         arrow.shooter = crate::arrow::Shooter::Player;
         arrow.fresh = false;
+        arrow.summoned = true;
         arrow.no_gravity = no_gravity(data);
+        if kind == "spectral_arrow" { arrow.ammo = blocks::item_named(kind).map(|id| crate::inventory::Stack::new(id, 1)); }
+        if kind == "trident" { arrow.trident = blocks::item_named(kind).map(|id| crate::inventory::Stack::new(id, 1)); }
         // Призванная смотрит туда, куда велит поворот (0/0), а не по Motion,
         // и доворачивается к полёту на пятую часть за такт (wither-half-armor:
         // наклон −1 из 256 к удару, а не −2).
@@ -1049,6 +1095,7 @@ fn flag_in(data: &str, key: &str) -> Option<bool> {
 /// `Health`, `Rotation:[yaw,pitch]`.
 fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     crate::mob::armor_stand::apply(mob,data);
+    crate::mob::village_golems::apply_data(mob,data);
     crate::mob::land::apply_data(mob, data);
     crate::mob::water::apply_data(mob,data);
     if crate::mob::horse::equine(mob.kind) && let Some(value) = crate::snbt::parse(data) {
@@ -1468,7 +1515,7 @@ fn teleport_mobs(who: &str, place: &[&str], source: &Source, shared: &Shared) ->
 
 /// `NoGravity:1b` (или `true`) в данных призыва: сущность без тяжести.
 fn no_gravity(text: &str) -> bool {
-    text.contains("NoGravity:1b") || text.contains("NoGravity:true") || text.contains("NoGravity:1}") || text.contains("NoGravity:1,")
+    crate::snbt::parse(text).and_then(|v| v.get("NoGravity").and_then(crate::snbt::Value::as_f64)).is_some_and(|n| n != 0.0)
 }
 
 /// `summon lightning_bolt [<x> <y> <z>]` — молния в названной точке (без
@@ -1499,7 +1546,7 @@ fn summon_lightning(rest: &[&str], source: &Source, shared: &Shared) -> Answer {
 /// Предмет из данных сущности, включая компоненты: они участвуют в слиянии.
 pub(crate) fn item_from_text(text: &str) -> Option<crate::inventory::Stack> {
     let root = crate::snbt::parse(text)?;
-    let item = root.get("Item")?;
+    let item = root.get("Item").or_else(|| root.get("item"))?;
     let name = item.get("id")?.as_str()?;
     let count = item.get("count").or_else(|| item.get("Count")).and_then(crate::snbt::Value::as_f64).unwrap_or(1.0) as i32;
     if count <= 0 { return None; }
@@ -3150,6 +3197,12 @@ fn trial_apply(entry: &mut Option<crate::trial::Data>, text: &str) -> Result<(),
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn no_gravity_reads_top_level_snbt_only() {
+        for data in ["{NoGravity:1b}","{NoGravity: true}","{\"NoGravity\": 1}"] { assert!(no_gravity(data)); }
+        for data in ["{NoGravity:0b}","{foo:{NoGravity:1b}}","{CustomName:'NoGravity:1b'}"] { assert!(!no_gravity(data)); }
+    }
 
     #[test]
     fn item_specs_stay_one_word_and_carry_their_components() {

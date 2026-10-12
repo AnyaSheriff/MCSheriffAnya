@@ -26,13 +26,15 @@ pub(super) fn use_rod(shared:&Shared,player:&mut PlayerState,hand:i32)->Option<b
             let mut items=shared.items_in(player.dimension).lock().expect("предметы");
             if let Some(id)=b.hooked {
                 let v=crate::fishing::pull(b.at,owner,false);
-                if let Some(m)=items.mobs_mut().iter_mut().find(|m|m.entity_id==id) {m.vx+=v.0;m.vy+=v.1;m.vz+=v.2;wear=2;}
-                else if let Some(i)=items.items_mut().iter_mut().find(|i|i.entity_id==id) {i.vx+=v.0;i.vy+=v.1;i.vz+=v.2;i.impulse=true;wear=2;}
+                // Чёрный ящик, gaps2-fishing-pull: при подтягивании сущности поплавку уходит событие 31.
+                world.note_equipment_break(b.id,31);
+                if let Some(m)=items.mobs_mut().iter_mut().find(|m|m.entity_id==id) {m.vx+=v.0;m.vy+=v.1;m.vz+=v.2;wear=crate::fishing::rod_wear(false,Some(false),false);}
+                else if let Some(i)=items.items_mut().iter_mut().find(|i|i.entity_id==id) {i.vx+=v.0;i.vy+=v.1;i.vz+=v.2;i.impulse=true;wear=crate::fishing::rod_wear(false,Some(true),false);}
                 else {
                     let mut players=shared.players.lock().expect("игроки");
                     if let Some(uuid)=players.members().iter().find(|m|m.entity_id==id).map(|m|m.uuid) {
                         let mut body=encode_varint(0x65);body.extend(encode_varint(id));types::push_velocity(&mut body,v.0,v.1,v.2);
-                        players.order(&uuid,Order::Packet(body));wear=2;
+                        players.order(&uuid,Order::Packet(body));wear=crate::fishing::rod_wear(false,Some(false),false);
                     }
                 }
             } else if b.bite>0 {
@@ -52,7 +54,7 @@ pub(super) fn use_rod(shared:&Shared,player:&mut PlayerState,hand:i32)->Option<b
                 }
                 wear=1;
             }
-            if b.grounded {wear=5;}
+            if b.grounded {wear=crate::fishing::rod_wear(true,None,false);}
         }
         world.note_thrown_tracker(false);
         drop(world);
@@ -94,12 +96,8 @@ pub(super) async fn send_ticks(stream:&mut Outgoing<'_>,shared:&Shared,player:&m
     for id in gone {send_remove_entity(stream,id).await?;player.seen_fishing.remove(&id);}
     for b in list {
         let previous=player.seen_fishing.get(&b.id).copied();
-        let rotation=|v:(f64,f64,f64)| {
-            let flat=(v.0*v.0+v.2*v.2).sqrt();
-            let byte=|degrees:f64| (degrees*256.0/360.0).floor() as i8;
-            (byte(v.0.atan2(v.2).to_degrees()-1e-6),byte(v.1.atan2(flat).to_degrees()))
-        };
-        let (yaw,pitch)=rotation(b.prev_velocity);
+        let byte=|degrees:f64| (degrees*256.0/360.0).floor() as i8;
+        let (yaw,pitch)=(byte(b.prev_rot.0-1e-6),byte(b.prev_rot.1));
         let mut next=Shown{grid:grid(b.prev_at),hooked:b.prev_hooked,biting:b.prev_bite,velocity:b.prev_velocity,rot:(yaw,pitch)};
         match previous {
             None => {

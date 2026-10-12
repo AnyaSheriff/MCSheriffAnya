@@ -8,7 +8,7 @@ use crate::mob::{tame, Kind};
 
 /// Щелчок по мобу `index` с предметом в руке: бирка, поводок, приручение,
 /// приказ. Возвращает, обработан ли щелчок (тогда дальше не идёт).
-pub(super) fn use_on_mob(items: &mut items::Items, index: usize, player: &mut PlayerState, shared: &Shared, reaction: &mut Reaction) -> bool {
+pub(super) fn use_on_mob(items: &mut items::Items, index: usize, player: &mut PlayerState, shared: &Shared, world: &mut World, reaction: &mut Reaction) -> bool {
     let held_stack = player.inventory.held();
     let held = held_stack.and_then(|stack| blocks::item_name(stack.item));
     let survival = player.game_mode != GAME_MODE_CREATIVE;
@@ -19,6 +19,17 @@ pub(super) fn use_on_mob(items: &mut items::Items, index: usize, player: &mut Pl
             reaction.slots.push(slot);
         }
     };
+
+    if items.mobs()[index].kind == Kind::LeashKnot && held != Some("lead") {
+        let knot = items.mobs()[index].entity_id;
+        let at = leash::knot_block(&items.mobs()[index]);
+        // Чёрный ящик, gaps2-knot-transfer: при переносе — звук item.lead.tied в точке узла.
+        if leash::take_knot(items.mobs_mut(), knot, player.entity_id, player.uuid) > 0 {
+            world.note_sound_neutral_at(leash::knot_point(at), leash::TIED, 1.0, 1.0);
+        }
+        flush(items, shared, &mut rng);
+        return true;
+    }
 
     if let Some(stack) = held_stack
         && let Some((consume, shear)) = crate::mob::wolf_armor::interact(&mut items.mobs_mut()[index], player.uuid, stack)
@@ -59,6 +70,8 @@ pub(super) fn use_on_mob(items: &mut items::Items, index: usize, player: &mut Pl
     if held == Some("lead") && leash::leashable(items.mobs()[index].kind) && items.mobs()[index].leash.is_none() {
         leash::attach(&mut items.mobs_mut()[index], Holder::Player { id: player.entity_id, uuid: player.uuid });
         flush(items, shared, &mut rng);
+        // Чёрный ящик, gaps2-knot-transfer: взмах руки — один Animate игроку.
+        world.note_animation(player.entity_id, 0);
         spend(player, reaction);
         return true;
     }
@@ -185,6 +198,9 @@ pub(super) fn use_fence(world: &mut World, shared: &Shared, player: &PlayerState
     drop(items);
 
     world.note_sound_neutral_at(leash::knot_point(clicked), leash::TIED, 1.0, 1.0);
+    // Чёрный ящик, gaps2-knot-transfer: два Animate (взмах) в такт щелчка по забору.
+    world.note_animation(player.entity_id, 0);
+    world.note_animation(player.entity_id, 0);
 
     let (bx, by, bz) = offset_towards(clicked.0, clicked.1, clicked.2, face);
 

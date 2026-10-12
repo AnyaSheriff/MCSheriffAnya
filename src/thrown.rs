@@ -131,6 +131,7 @@ pub struct Flying {
     pub owner: i32,
     /// Синий череп иссушителя (свойство 8 «dangerous»).
     pub dangerous: bool,
+    pub no_gravity: bool,
     /// Зелье ещё внутри бросившего: его не задевает (splash-potion-feet:
     /// брошенное под ноги летит сквозь робота на пол).
     pub in_owner: bool,
@@ -140,6 +141,9 @@ pub struct Flying {
 }
 
 impl Flying {
+    /// Вики, Entity format: «NoGravity» отключает тяжесть, но не сопротивление.
+    fn gravity(&self) -> f64 { if self.no_gravity { 0.0 } else { self.kind.gravity() } }
+
     pub fn entity_type(&self) -> i32 {
         match self.kind {
             Kind::Splash => SPLASH_TYPE,
@@ -197,6 +201,7 @@ impl Flying {
             power: 0,
             owner,
             dangerous: false,
+            no_gravity: false,
             in_owner: true,
             age: 0,
             start: (at, velocity),
@@ -743,7 +748,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             flying.vy = (flying.vy + flying.push.1 * FIREBALL_POWER) * drag;
             flying.vz = (flying.vz + flying.push.2 * FIREBALL_POWER) * drag;
         } else if !flying.is_wind() {
-            flying.vy -= flying.kind.gravity();
+            flying.vy -= flying.gravity();
             flying.vx *= DRAG;
             flying.vy *= DRAG;
             flying.vz *= DRAG;

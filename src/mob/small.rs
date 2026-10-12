@@ -710,7 +710,7 @@ mod tests {
             }
             let mut next=10; let mut rng=Rng::new(1);
             for _ in 0..70 {
-                super::super::step_all(&mut items,&Ground,&[],super::super::Env { difficulty:2,sky:15,sun_up:false,clock:0 },&mut rng,&mut || {next+=1; next});
+                super::super::step_all(&mut items,&Ground,&[],super::super::Env { difficulty:2,sky:15,sun_up:false,clock: 0, tick: 0 },&mut rng,&mut || {next+=1; next});
             }
             if kind == Kind::Sniffer {
                 assert_eq!(items.mobs().len(),2);

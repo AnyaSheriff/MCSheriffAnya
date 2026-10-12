@@ -188,6 +188,7 @@ fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
         vy: velocity.1,
         vz: velocity.2,
         no_gravity: false,
+        summoned: false,
         owner: player.entity_id,
         owner_uuid: player.uuid,
         owner_name: player.name.clone(),
@@ -585,7 +586,7 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
 
             // Звук броска — от самой сущности, следом за её появлением
             // (чёрный ящик, trident-throw: entity_sound_effect трезубца).
-            if arrow.trident.is_some() && !arrow.is_mob_shot() && arrow.age <= 1 && arrow.resync.is_none() {
+            if arrow.trident.is_some() && !arrow.is_mob_shot() && !arrow.summoned && arrow.age <= 1 && arrow.resync.is_none() {
                 let mut body = encode_varint(ENTITY_SOUND);
 
                 body.extend_from_slice(&encode_varint(0));

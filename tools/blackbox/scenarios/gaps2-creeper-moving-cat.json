@@ -1,0 +1,57 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule spawn_mobs false",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-12,-1,-12) $(24,-1,24) stone",
+    "fill $(-12,0,-12) $(24,20,24) air",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!hotbar 0",
+    "!wait 10"
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..64]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "weather clear",
+    "time set noon",
+    "difficulty peaceful",
+    "fill $(-12,-1,-12) $(24,20,24) air",
+    "!startfly"
+  ],
+  "record_ticks": 160,
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "name": "gaps2-creeper-moving-cat",
+  "about": "[проверить] Java 26.1.2: gaps2-creeper-moving-cat. New regression; record vanilla before comparing. No timing or RNG exclusions.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon creeper $(4.5,0,3.5) {Tags:[\"gaps_creeper\"]}"
+    },
+    {
+      "after": 1,
+      "cmd": "summon cat $(2.5,0,3.5) {NoAI:1b,Tags:[\"gaps_cat\"]}"
+    },
+    {
+      "after": 10,
+      "cmd": "tp @e[tag=gaps_cat,limit=1,distance=..48] $(7.5,0,3.5)"
+    },
+    {
+      "after": 22,
+      "cmd": "tp @e[tag=gaps_cat,limit=1,distance=..48] $(2.5,0,3.5)"
+    }
+  ]
+}

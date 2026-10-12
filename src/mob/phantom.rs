@@ -187,6 +187,23 @@ pub fn spawn(id: i32, at: (i32, i32, i32)) -> Mob {
 pub fn think(mob: &mut Mob, _view: &dyn View, ctx: &Ctx, rng: &mut Rng, mut plan: Plan) -> Plan {
     mob.phantom.wait = (mob.phantom.wait - 1).max(0);
 
+    // Вики, Phantom: «stay at least 16 blocks away». Отход нужен и без
+    // игрока, и при кружении; [проверить] точная траектория испуга.
+    if let Some(cat) = ctx.mates.iter().filter(|m| m.kind == Kind::Cat)
+        .filter(|m| (m.x-mob.x).powi(2)+(m.y-mob.y).powi(2)+(m.z-mob.z).powi(2) <= CAT_FEAR.powi(2))
+        .min_by(|a,b| ((a.x-mob.x).powi(2)+(a.y-mob.y).powi(2)+(a.z-mob.z).powi(2))
+            .total_cmp(&((b.x-mob.x).powi(2)+(b.y-mob.y).powi(2)+(b.z-mob.z).powi(2))))
+    {
+        if mob.phantom.phase == Phase::Swoop { retreat(mob); }
+        mob.phantom.wait = mob.phantom.wait.max(BITE_WAIT);
+        mob.phantom.vmax = RETREAT_SPEED;
+        let (dx, dy, dz) = (mob.x-cat.x, mob.y-cat.y, mob.z-cat.z);
+        let length = (dx*dx+dy*dy+dz*dz).sqrt();
+        let away = if length > 1e-6 { (dx/length,dy/length,dz/length) } else { (0.0,1.0,0.0) };
+        mob.phantom.goal = Some((cat.x+away.0*17.0,cat.y+away.1*17.0,cat.z+away.2*17.0));
+        return plan;
+    }
+
     // Цель: ближайший живой игрок не в творческом режиме в 64 блоках.
     let target = ctx
         .players

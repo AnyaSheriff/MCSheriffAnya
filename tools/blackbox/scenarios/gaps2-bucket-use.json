@@ -1,0 +1,90 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule spawn_mobs false",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-12,-1,-12) $(24,-1,24) stone",
+    "fill $(-12,0,-12) $(24,20,24) air",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!hotbar 0",
+    "!wait 10",
+    "setblock $(0,0,2) oak_slab[type=bottom,waterlogged=false]",
+    "setblock $(2,0,2) cauldron",
+    "tp $(bot) $(0.5,0,0.5) 0 30",
+    "item replace entity $(bot) weapon.mainhand with water_bucket",
+    "gamemode survival $(bot)"
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..64]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "weather clear",
+    "time set noon",
+    "difficulty peaceful",
+    "fill $(-12,-1,-12) $(24,20,24) air",
+    "!startfly"
+  ],
+  "record_ticks": 160,
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "name": "gaps2-bucket-use",
+  "about": "[проверить] Java 26.1.2: gaps2-bucket-use. New regression; record vanilla before comparing. No timing or RNG exclusions.",
+  "actions": [
+    {
+      "after": 1,
+      "look": [
+        3.14159,
+        -0.5236
+      ]
+    },
+    {
+      "after": 5,
+      "use": true
+    },
+    {
+      "after": 20,
+      "cmd": "item replace entity $(bot) weapon.mainhand with lava_bucket"
+    },
+    {
+      "after": 25,
+      "use": true
+    },
+    {
+      "after": 40,
+      "cmd": "item replace entity $(bot) weapon.mainhand with water_bucket"
+    },
+    {
+      "after": 45,
+      "click": [
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "after": 60,
+      "cmd": "item replace entity $(bot) weapon.offhand with water_bucket"
+    },
+    {
+      "after": 61,
+      "cmd": "item replace entity $(bot) weapon.mainhand with air"
+    },
+    {
+      "after": 65,
+      "use": true,
+      "hand": 1
+    }
+  ]
+}

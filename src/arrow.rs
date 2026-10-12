@@ -145,6 +145,8 @@ pub struct Arrow {
     /// Только что выпущена мобом: первый такт пропускает (выпущенная в такт
     /// мобов начинает полёт со следующего).
     pub fresh: bool,
+    /// Призвана командой `summon`: звука броска у трезубца нет (gaps2-projectiles-no-gravity).
+    pub summoned: bool,
     /// Как дошла до клиентов: попала в блок (для звука на следующей рассылке).
     pub landed: bool,
     /// Место и скорость при появлении: клиенту сперва уходит оно.
@@ -247,6 +249,7 @@ impl Arrow {
             ground_ticks: 0,
             age: 0,
             fresh: true,
+            summoned: false,
             landed: false,
             start: (at, velocity),
         }
@@ -1146,6 +1149,7 @@ mod tests {
             ground_ticks: 0,
             age: 0,
             fresh: false,
+            summoned: false,
             landed: false,
             start: ((0.0, 0.0, 0.0), (0.0, 0.0, 3.0)),
         };

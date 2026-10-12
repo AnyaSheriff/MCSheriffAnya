@@ -1183,7 +1183,10 @@ pub(super) async fn send_mob_event(
         }
         Event::BlockBurst { block, at: place, offset, speed, count } => send_particles(stream, PARTICLE_BLOCK, Some(*block), *place, *offset, *speed, *count).await?,
         Event::Landing { block, count } => send_particles(stream, PARTICLE_BLOCK, Some(*block), at, (0.0, 0.0, 0.0), 0.15, *count).await?,
-        Event::Particle { kind, at: place, offset, speed, count } => send_particles(stream, kind.id(), None, *place, *offset, *speed, *count).await?,
+        Event::Particle { kind, at: place, offset, speed, count } => {
+            let item = (*kind == crate::mob::Particle::ItemBreak).then(|| crate::blocks::item_named("wolf_armor").unwrap_or(0));
+            send_particles(stream, kind.id(), item, *place, *offset, *speed, *count).await?
+        }
         Event::Sound { .. } | Event::SoundAt { .. } | Event::PlayerSound { .. } | Event::EntitySound { .. } | Event::Loot(_) => {}
     }
 
@@ -1394,7 +1397,15 @@ pub(super) async fn send_particles(
     body.extend_from_slice(&encode_varint(particle));
 
     if let Some(block) = block {
-        body.extend_from_slice(&encode_varint(block));
+        if particle == 47 {
+            // «item»: данные — предмет (число, номер, без компонентов).
+            body.extend_from_slice(&encode_varint(1));
+            body.extend_from_slice(&encode_varint(block));
+            body.extend_from_slice(&encode_varint(0));
+            body.extend_from_slice(&encode_varint(0));
+        } else {
+            body.extend_from_slice(&encode_varint(block));
+        }
     }
 
     write_body(stream, body).await

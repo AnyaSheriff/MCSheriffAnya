@@ -1,0 +1,44 @@
+{
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "blocks": [],
+  "name": "gaps2-fishing-weather",
+  "setup": [
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "fill $(-3,-2,-3) $(9,0,9) minecraft:stone",
+    "fill $(-2,-1,-2) $(8,0,8) minecraft:water",
+    "tp $(bot) $(3.5,1,-2.5) 0 25",
+    "!stopfly",
+    "give $(bot) minecraft:fishing_rod[enchantments={lure:3,luck_of_the_sea:3}]",
+    "!hotbar 0",
+    "!wait 20",
+    "weather rain"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "use": true
+    }
+  ],
+  "record_ticks": 1000,
+  "cleanup": [
+    "kill @e[type=!player,distance=..48]",
+    "fill $(-3,-2,-3) $(9,4,9) minecraft:air",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "weather clear",
+    "fill $(-12,-1,-12) $(24,20,24) air"
+  ],
+  "about": "[проверить] Lure III / Luck III under rain; bite timing, loot, XP and durability.",
+  "track_fishing": true,
+  "reel_on_bite": true,
+  "random": [],
+  "exclusive": true,
+  "origin": [
+    100,
+    -59,
+    100
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule spawn_mobs false",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-12,-1,-12) $(24,-1,24) stone",
+    "fill $(-12,0,-12) $(24,20,24) air",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!hotbar 0",
+    "!wait 10",
+    "item replace entity $(bot) weapon.mainhand with fishing_rod",
+    "gamemode survival $(bot)"
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..64]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "weather clear",
+    "time set noon",
+    "difficulty peaceful",
+    "fill $(-12,-1,-12) $(24,20,24) air",
+    "!startfly"
+  ],
+  "record_ticks": 100,
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "name": "gaps2-fishing-pull",
+  "about": "[проверить] Java 26.1.2: gaps2-fishing-pull. New regression; record vanilla before comparing. No timing or RNG exclusions.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon cow $(0.5,0,3.5) {NoAI:1b,Silent:1b}"
+    },
+    {
+      "after": 5,
+      "use": true
+    },
+    {
+      "after": 15,
+      "use": true
+    },
+    {
+      "after": 25,
+      "cmd": "kill @e[type=cow,distance=..16]"
+    },
+    {
+      "after": 26,
+      "cmd": "kill @e[type=item,distance=..16]"
+    },
+    {
+      "after": 30,
+      "cmd": "summon item $(0.5,1.4,3.5) {Item:{id:\"minecraft:stone\",count:1},NoGravity:1b}"
+    },
+    {
+      "after": 35,
+      "use": true
+    },
+    {
+      "after": 45,
+      "use": true
+    }
+  ]
+}

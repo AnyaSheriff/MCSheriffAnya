@@ -167,7 +167,7 @@ fn tadpole_grows_into_biome_frog_and_keeps_name() {
     for (biome,variant) in [("plains",0),("desert",1),("snowy_plains",2)] {
         let mut tad=Mob::new(1,Kind::Tadpole,(0.5,1.0,0.5)); tad.water.growth=GROW_TADPOLE-1; tad.name=Some("Tad".into());
         let mut items=Items::new(); items.add_mob(tad); let mut id=10;
-        let env=super::super::Env{difficulty:2,sky:15,sun_up:false,clock:0};
+        let env=super::super::Env{difficulty:2,sky:15,sun_up:false,clock:0,tick:0};
         super::super::step_all(&mut items,&Pool{biome,..pool()},&[],env,&mut Rng::new(1),&mut || {id+=1;id});
         assert_eq!(items.mobs().len(),1); let frog=&items.mobs()[0];
         assert_eq!(frog.kind,Kind::Frog); assert_eq!(frog.water.variant,variant);
@@ -222,7 +222,7 @@ fn no_ai_tadpole_still_grows_and_retains_no_ai_after_conversion() {
     tadpole.no_ai=true;
     tadpole.water.growth=GROW_TADPOLE-1;
     let mut items=Items::new(); items.add_mob(tadpole);
-    let env=super::super::Env{difficulty:2,sky:15,sun_up:false,clock:0};
+    let env=super::super::Env{difficulty:2,sky:15,sun_up:false,clock:0,tick:0};
     super::super::step_all(&mut items,&pool(),&[],env,&mut Rng::new(1),&mut ||2);
     assert_eq!(items.mobs().len(),1);
     assert_eq!(items.mobs()[0].kind,Kind::Frog);
@@ -295,7 +295,7 @@ fn underwater_breeding_makes_eggs_or_inherited_axolotl_baby() {
             mob.love=super::super::LOVE_TICKS; mob.water.variant=id;
             items.add_mob(mob);
         }
-        let env=super::super::Env{difficulty:2,sky:15,sun_up:false,clock:0};
+        let env=super::super::Env{difficulty:2,sky:15,sun_up:false,clock:0,tick:0};
         let mut rng=Rng::new(13); let mut id=10;
         for _ in 0..61 {
             super::super::step_all(&mut items,&pool(),&[],env,&mut rng,&mut ||{id+=1;id});
@@ -370,7 +370,7 @@ fn guardians_attack_aquatic_prey_but_forget_playing_dead_axolotls() {
     let mut axolotl=Mob::new(2,Kind::Axolotl,(5.0,1.0,0.5));
     axolotl.no_ai=true;
     let mut items=Items::new(); items.add_mob(guardian); items.add_mob(axolotl);
-    let env=super::super::Env{difficulty:2,sky:15,sun_up:false,clock:0};
+    let env=super::super::Env{difficulty:2,sky:15,sun_up:false,clock:0,tick:0};
     let outcome=super::super::step_all(&mut items,&pool(),&[],env,&mut Rng::new(1),&mut || 100);
     assert!(outcome.strikes.is_empty());
     assert_eq!(items.mobs().iter().find(|m|m.entity_id==2).unwrap().vitals.health,8.0);

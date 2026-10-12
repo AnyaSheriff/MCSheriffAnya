@@ -1,0 +1,70 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule spawn_mobs false",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-12,-1,-12) $(24,-1,24) stone",
+    "fill $(-12,0,-12) $(24,20,24) air",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!hotbar 0",
+    "!wait 10"
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..64]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "weather clear",
+    "time set noon",
+    "difficulty peaceful",
+    "fill $(-12,-1,-12) $(24,20,24) air",
+    "!startfly"
+  ],
+  "record_ticks": 100,
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "name": "gaps2-wolf-armor",
+  "about": "[проверить] Java 26.1.2: gaps2-wolf-armor. New regression; record vanilla before comparing. No timing or RNG exclusions.",
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon wolf $(1.5,0,2.5) {NoAI:1b,Tags:[\"gaps_wolf\"]}"
+    },
+    {
+      "after": 2,
+      "cmd": "data modify entity @e[tag=gaps_wolf,limit=1,distance=..16] Owner set from entity $(bot) UUID"
+    },
+    {
+      "after": 5,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wolf_armor[dyed_color=16711680]"
+    },
+    {
+      "after": 10,
+      "interact": true,
+      "which": 0
+    },
+    {
+      "after": 20,
+      "cmd": "damage @e[type=wolf,limit=1,distance=..16] 3 minecraft:freeze"
+    },
+    {
+      "after": 40,
+      "cmd": "damage @e[type=wolf,limit=1,distance=..16] 20 minecraft:fall"
+    },
+    {
+      "after": 60,
+      "cmd": "damage @e[type=wolf,limit=1,distance=..16] 100 minecraft:fall"
+    }
+  ]
+}

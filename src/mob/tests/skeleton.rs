@@ -106,7 +106,7 @@ fn world_mob_step_replaces_converting_skeleton_and_emits_conversion_event() {
     let mut items = Items::new();
     items.add_mob(mob);
     let mut rng = Rng::new(3);
-    let env = || Env { difficulty: 2, sky: 0, sun_up: false, clock: 0 };
+    let env = || Env { difficulty: 2, sky: 0, sun_up: false, clock: 0, tick: 0 };
     let first = step_all(&mut items, &Snow(true), &[], env(), &mut rng, &mut || 30);
     assert!(first.level_events.is_empty());
     assert_eq!(items.mobs()[0].kind, Kind::Skeleton);

@@ -1,0 +1,81 @@
+{
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule spawn_mobs false",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-12,-1,-12) $(24,-1,24) stone",
+    "fill $(-12,0,-12) $(24,20,24) air",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!hotbar 0",
+    "!wait 10",
+    "item replace entity $(bot) armor.chest with iron_chestplate",
+    "item replace entity $(bot) weapon.mainhand with diamond_chestplate",
+    "gamemode survival $(bot)"
+  ],
+  "cleanup": [
+    "kill @e[type=!player,distance=..64]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "weather clear",
+    "time set noon",
+    "difficulty peaceful",
+    "fill $(-12,-1,-12) $(24,20,24) air",
+    "!startfly"
+  ],
+  "record_ticks": 160,
+  "origin": [
+    100,
+    -59,
+    100
+  ],
+  "track_mobs": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true,
+  "name": "gaps2-armor-swap",
+  "about": "[проверить] Java 26.1.2: gaps2-armor-swap. New regression; record vanilla before comparing. No timing or RNG exclusions.",
+  "actions": [
+    {
+      "after": 5,
+      "use": true
+    },
+    {
+      "after": 15,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_chestplate[damage=10]"
+    },
+    {
+      "after": 20,
+      "use": true
+    },
+    {
+      "after": 30,
+      "cmd": "item replace entity $(bot) weapon.mainhand with elytra"
+    },
+    {
+      "after": 35,
+      "use": true
+    },
+    {
+      "after": 45,
+      "cmd": "item replace entity $(bot) weapon.offhand with turtle_helmet"
+    },
+    {
+      "after": 50,
+      "use": true,
+      "hand": 1
+    },
+    {
+      "after": 60,
+      "cmd": "item replace entity $(bot) armor.head with carved_pumpkin"
+    },
+    {
+      "after": 75,
+      "cmd": "item replace entity $(bot) armor.head with player_head"
+    }
+  ]
+}

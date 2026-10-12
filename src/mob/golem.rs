@@ -11,8 +11,7 @@
 // узора — и по пустым, с данными 0, — столбец за столбцом сверху вниз; потом
 // голем в клетке ног (+0,05 по высоте, поворот 0); блоки уходят воздухом.
 //
-// Чего нет: появления железных големов в деревнях (у наших жителей нет сна,
-// сплетен и паники) и предложения мака жителю — у нас некому его предлагать.
+// Призыв жителями — village_golems.rs.
 
 use super::ai::{self, Ctx, Plan};
 use super::tame::Target;
@@ -77,11 +76,12 @@ pub struct State {
 
     /// Сколько тактов цель на виду в дальности (снежный стоит и бросает).
     pub seen: i32,
+    pub flower_ticks: u32,
 }
 
 impl Default for State {
     fn default() -> Self {
-        Self { player_made: false, pumpkin: true, target: None, cooldown: 0, seen: 0 }
+        Self { player_made: false, pumpkin: true, target: None, cooldown: 0, seen: 0, flower_ticks: 0 }
     }
 }
 
@@ -397,13 +397,36 @@ pub fn think(mob: &mut Mob, view: &dyn View, ctx: &Ctx, rng: &mut Rng) -> Plan {
     }
 
     let Some(target) = mob.golem.target else {
+        if offer_flower(mob, ctx, rng) { mob.brain.stop(); return plan; }
         return ai::think(mob, view, ctx, rng);
     };
+    if mob.golem.flower_ticks > 0 { mob.golem.flower_ticks=0; mob.events.push(Event::Status(34)); }
     let Some(at) = place(ctx, target) else {
         return ai::think(mob, view, ctx, rng);
     };
 
     if mob.kind == Kind::IronGolem { melee(mob, view, target, is_player(ctx, target), at, plan, rng) } else { shoot(mob, view, target, at, plan, rng) }
+}
+
+/// Вики, Iron Golem: «offer a poppy to villagers». [проверить] шанс
+/// 1/8000 и длительность 400 тактов новым сценарием gaps2-golem-poppy.
+fn offer_flower(mob: &mut Mob, ctx: &Ctx, rng: &mut Rng) -> bool {
+    if mob.kind != Kind::IronGolem { return false; }
+    if mob.golem.flower_ticks > 0 {
+        mob.golem.flower_ticks -= 1;
+        if mob.golem.flower_ticks == 0 { mob.events.push(Event::Status(34)); }
+        return true;
+    }
+    if ctx.sun_up && rng.below(8000) == 0
+        && let Some(v) = ctx.mates.iter().filter(|m| m.kind == Kind::Villager)
+            .find(|m| (m.x-mob.x).abs() <= 6.0 && (m.y-mob.y).abs() <= 2.0 && (m.z-mob.z).abs() <= 6.0)
+    {
+        mob.golem.flower_ticks = 400;
+        ai::look_at_point(mob,v.x,v.y+1.6,v.z);
+        mob.events.push(Event::Status(11));
+        return true;
+    }
+    false
 }
 
 /// Ближний бой железного голема: идти к цели, вплотную — ударить.
@@ -639,5 +662,25 @@ mod tests {
 
         assert_eq!(snow_tick(&mut mob, &view, true), vec![(3, 0, 3)]);
         assert!(snow_tick(&mut mob, &view, false).is_empty());
+    }
+}
+
+#[cfg(test)]
+mod flower_tests {
+    use super::*;
+    #[test]
+    fn flower_offer_starts_and_ends_with_entity_status() {
+        let mut golem=Mob::new(1,Kind::IronGolem,(0.0,1.0,0.0));
+        let villagers=[ai::Mate {id:2,kind:Kind::Villager,x:2.0,y:1.0,z:0.0,love:0,baby:true,ready:false,tamed:false}];
+        let ctx=Ctx {players:&[],mates:&villagers,difficulty:2,sky:15,sun_up:true};
+        let mut rng=Rng::new(4);
+        for _ in 0..100_000 {if offer_flower(&mut golem,&ctx,&mut rng) {break;}}
+        assert_eq!(golem.golem.flower_ticks,400);
+        assert!(golem.events.iter().any(|e|matches!(e,Event::Status(11))));
+        for _ in 0..400 {assert!(offer_flower(&mut golem,&ctx,&mut rng));}
+        assert_eq!(golem.golem.flower_ticks,0);
+        assert!(golem.events.iter().any(|e|matches!(e,Event::Status(34))));
+        let night=Ctx {sun_up:false,..ctx};
+        for _ in 0..1000 {assert!(!offer_flower(&mut golem,&night,&mut rng));}
     }
 }

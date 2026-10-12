@@ -24,6 +24,7 @@ pub mod arthropod;
 pub mod dragon;
 pub mod breeze;
 pub mod golem;
+pub mod village_golems;
 pub mod guardian;
 pub mod wither;
 pub mod water;
@@ -1424,6 +1425,8 @@ pub enum Particle {
     SquidInk,
     GlowSquidInk,
     SonicBoom,
+    /// «item» с предметом — у волчьей брони (play/mobs.rs подставляет предмет).
+    ItemBreak,
 }
 
 impl Particle {
@@ -1434,6 +1437,7 @@ impl Particle {
             Particle::SquidInk => 66,
             Particle::GlowSquidInk => 99,
             Particle::SonicBoom => 28,
+            Particle::ItemBreak => 47,
         }
     }
 }
@@ -2129,6 +2133,10 @@ impl Mob {
 
         // Кристалл Края стоит, где поставлен: ни тяжести, ни мыслей, ни голоса
         // (вики, End Crystal; чёрный ящик, end-crystal-explode: висит без сверок скорости).
+        if self.kind == Kind::LeashKnot {
+            let (x,y,z) = leash::knot_block(self);
+            if !blocks::block_at_state(view.block(x,y,z)).is_some_and(|n| n.ends_with("_fence")) { self.h.despawn = true; }
+        }
         if matches!(self.kind, Kind::EndCrystal | Kind::LeashKnot) {
             return ai::Plan::default();
         }
@@ -2218,6 +2226,11 @@ impl Mob {
             return ai::Plan::default();
         }
         if self.kind == Kind::Creaking && newmobs::freeze(self, view, ctx) {
+            return ai::Plan::default();
+        }
+
+        // Лежащий в кровати житель стоит на месте (village_golems.rs).
+        if self.kind == Kind::Villager && self.villager.summon.bed.is_some() {
             return ai::Plan::default();
         }
 
@@ -2718,6 +2731,7 @@ impl Mob {
             crate::combat::after_protection(amount,points)
         } else {amount};
         let armor_absorbs = wolf_armor::protects(self, source);
+        let armored_wolf = self.kind == Kind::Wolf && self.tame.armor.is_some();
         let absorption_before = self.vitals.absorption;
         let mut hit = self.vitals.hurt(amount, source, false)?;
         if armor_absorbs {
@@ -2817,7 +2831,11 @@ impl Mob {
             let hurt = if self.kind == Kind::Armadillo && self.small.roll != 0 { "minecraft:entity.armadillo.hurt_reduced" } else { hurt };
             let hurt = if self.kind == Kind::Shulker && self.h.peek == 0 { "minecraft:entity.shulker.hurt_closed" } else { hurt };
 
-            if !armor_absorbs { self.events.push(Event::Sound { name: hurt, volume: self.sound_volume(), pitch: self.voice_pitch() }); }
+            // Волк в броне стонет тише (0,4; gaps2-wolf-armor), в том числе когда броня лопнула.
+            if !armor_absorbs || self.tame.armor.is_none() {
+                let volume = if armored_wolf { 0.4 } else { self.sound_volume() };
+                self.events.push(Event::Sound { name: hurt, volume, pitch: self.voice_pitch() });
+            }
             golem::crack_sound(self, before);
 
             // Вики, 24w21a: панику вызывает вид урона, а не наличие
@@ -3803,6 +3821,9 @@ pub struct Env {
 
     /// Часы мира от начала: день × 24000 + час (пополнения жителей).
     pub clock: i64,
+
+    /// Возраст мира в тактах: память жителей «спал» хранит его, а не часы суток.
+    pub tick: i64,
 }
 
 /// Такт всех мобов склада: у каждого мысли и движение, потом разведение,
@@ -3846,7 +3867,7 @@ pub fn step_all(
     let drowned_ctx = ai::Ctx { players: &drowned_targets, ..ctx };
     let mut mobs = std::mem::take(items.mobs_vec());
     let mut breeds: Vec<(i32, i32)> = Vec::new();
-    let mut born = Vec::new();
+    let mut born = village_golems::step(&mut mobs, view, env.tick, env.clock.rem_euclid(24_000), rng, next_id);
 
     // Занятые жителями рабочие блоки: второй их не займёт.
     let mut claimed: Vec<(i32, i32, i32)> = mobs.iter().filter_map(|mob| mob.villager.job_site).collect();

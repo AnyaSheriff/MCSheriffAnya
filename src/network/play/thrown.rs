@@ -50,6 +50,8 @@ const CLOUD_SYNC: u32 = 60;
 pub(super) enum Shown {
     Ominous,
     Flying { grid: (i64, i64, i64) },
+    /// Брошенный снаряд: что клиент знает о месте и повороте (для сдвига без поворота).
+    Shot { grid: (i64, i64, i64), rot: (u8, u8) },
     /// Око Края: `fresh` — появление ушло при броске, слежение ещё не
     /// присылало первого (нулевого) сдвига.
     Eye { grid: (i64, i64, i64), fresh: bool },
@@ -565,7 +567,7 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
     }
 
     for flying in flying.iter().filter(|f| present.contains(&f.entity_id)) {
-        let Some(Shown::Flying { grid }) = player.seen_thrown.get(&flying.entity_id).copied() else {
+        let Some(Shown::Shot { grid, rot }) = player.seen_thrown.get(&flying.entity_id).copied() else {
             // Появление — с местом и скоростью броска (зелье уже сделало
             // первый ход), потом предмет, нулевой сдвиг, предмет ещё раз
             // (splash-potion). Увиденное позже — там, где оно до хода.
@@ -602,32 +604,40 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
             write_body(stream, body).await?;
 
             send_item(stream, flying).await?;
-            player.seen_thrown.insert(flying.entity_id, Shown::Flying { grid: grid_of((sx, sy, sz)) });
+            player.seen_thrown.insert(flying.entity_id, Shown::Shot { grid: grid_of((sx, sy, sz)), rot: (cart_angle(yaw), cart_angle(pitch)) });
             continue;
         };
 
-        // Раз в 10 тактов: скорость и сдвиг с поворотом к месту до хода.
+        // Раз в 10 тактов: скорость и сдвиг с поворотом к месту до хода. Чёрный
+        // ящик, gaps2-projectiles-no-gravity: если поворот не изменился — сдвиг
+        // без поворота; у плевка ламы скорость не шлётся.
         if flying.age > 1 && (flying.age - 1).is_multiple_of(FLYING_SYNC) {
             let (at, velocity, (yaw, pitch)) = flying.prev;
-            let mut body = encode_varint(ENTITY_VELOCITY);
 
-            body.extend_from_slice(&encode_varint(flying.entity_id));
-            types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
-            write_body(stream, body).await?;
+            if flying.kind != crate::thrown::Kind::LlamaSpit {
+                let mut body = encode_varint(ENTITY_VELOCITY);
+
+                body.extend_from_slice(&encode_varint(flying.entity_id));
+                types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
+                write_body(stream, body).await?;
+            }
 
             let next = grid_of(at);
             let step = (next.0 - grid.0, next.1 - grid.1, next.2 - grid.2);
-            let mut body = encode_varint(ENTITY_MOVE_ROTATE);
+            let turned = (cart_angle(yaw), cart_angle(pitch)) != rot;
+            let mut body = encode_varint(if turned { ENTITY_MOVE_ROTATE } else { ENTITY_POSITION });
 
             body.extend_from_slice(&encode_varint(flying.entity_id));
             push_i16(&mut body, step.0.clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16);
             push_i16(&mut body, step.1.clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16);
             push_i16(&mut body, step.2.clamp(i64::from(i16::MIN), i64::from(i16::MAX)) as i16);
-            body.push(cart_angle(yaw));
-            body.push(cart_angle(pitch));
+            if turned {
+                body.push(cart_angle(yaw));
+                body.push(cart_angle(pitch));
+            }
             body.push(0);
             write_body(stream, body).await?;
-            player.seen_thrown.insert(flying.entity_id, Shown::Flying { grid: next });
+            player.seen_thrown.insert(flying.entity_id, Shown::Shot { grid: next, rot: (cart_angle(yaw), cart_angle(pitch)) });
         }
     }
 
@@ -799,15 +809,17 @@ async fn update_cloud(stream: &mut Outgoing<'_>, player: &mut PlayerState, cloud
 
 /// Предмет снаряда (свойство 8): у зелья — само зелье; у шара нет.
 async fn send_item(stream: &mut Outgoing<'_>, flying: &Flying) -> io::Result<()> {
-    let Some(stack) = flying.stack else {
-        return Ok(());
-    };
+    if flying.stack.is_none() && !flying.no_gravity { return Ok(()); }
     let mut body = encode_varint(SET_ENTITY_DATA);
-
     body.extend_from_slice(&encode_varint(flying.entity_id));
-    body.push(ITEM_PROPERTY);
-    body.extend_from_slice(&encode_varint(PROPERTY_SLOT));
-    push_slot(&mut body, Some(stack));
+    if flying.no_gravity {
+        body.push(5); body.extend_from_slice(&encode_varint(PROPERTY_BOOLEAN)); body.push(1);
+    }
+    if let Some(stack) = flying.stack {
+        body.push(ITEM_PROPERTY);
+        body.extend_from_slice(&encode_varint(PROPERTY_SLOT));
+        push_slot(&mut body, Some(stack));
+    }
     body.push(PROPERTIES_END);
     write_body(stream, body).await
 }

@@ -13,7 +13,7 @@ pub fn item(rng:&mut Rng)->Stack {
     };
     Stack::new(blocks::item_named(item).unwrap(),1).with_extras(crate::stackdata::Data {potion:potion.and_then(crate::survival::potion_number),..Default::default()})
 }
-pub fn step(shared:&Shared,world:&mut World,dimension:Dimension,now:u64,rng:&mut Rng) {
+pub fn step(shared:&Shared,world:&mut World,items:&mut crate::items::Items,dimension:Dimension,now:u64,rng:&mut Rng) {
     let mut ready=Vec::new();
     {
         let mut thrown=shared.thrown.lock().expect("снаряды");
@@ -30,7 +30,21 @@ pub fn step(shared:&Shared,world:&mut World,dimension:Dimension,now:u64,rng:&mut
     }
     for s in ready {
         let id=shared.next_entity_id();
-        let velocity=(0.0,-0.1,0.0);
+        // Чёрный ящик, gaps2-ominous-drops (две записи): скорость выпуска вниз —
+        // стрела 1,08, заряд ветра 0,98, огненный шар 1,0 (дальше разгон), зелье
+        // 1,42, пузырёк опыта 1,36; по каждой оси добавляется шум порядка 0,045.
+        // [проверить] яйцо, снежок, жемчуг — взято 1,1 по аналогии.
+        let name=blocks::item_name(s.stack.item);
+        let speed=match name {
+            Some("arrow"|"tipped_arrow"|"spectral_arrow")=>1.08,
+            Some("wind_charge")=>0.98,
+            Some("fire_charge")=>1.0,
+            Some("lingering_potion"|"splash_potion")=>1.42,
+            Some("experience_bottle")=>1.36,
+            _=>1.1,
+        };
+        let mut gauss=||(0..12).map(|_|f64::from(world.random_unit())).sum::<f64>()-6.0;
+        let velocity=(gauss()*0.045,-speed+gauss()*0.045,gauss()*0.045);
         // Чёрный ящик, ominous-spawner: при выпуске — событие 3021, не звук; за 36 тактов — звук «about_to_spawn_item».
         world.note_level_event(s.at.0.floor() as i32,s.at.1.floor() as i32,s.at.2.floor() as i32,3021,1);
         match blocks::item_name(s.stack.item) {
@@ -39,14 +53,50 @@ pub fn step(shared:&Shared,world:&mut World,dimension:Dimension,now:u64,rng:&mut
                 arrow.potion=s.stack.extras().potion;arrow.effects=crate::arrow::tipped_effects(arrow.potion);
                 shared.arrows.lock().expect("стрелы").spawn(arrow);
             }
-            name=>{
+            name if name.is_some_and(projectile_item)=>{
                 let flying=match name {
-                    Some("fire_charge")=>crate::thrown::Flying::mob_fireball(id,dimension,crate::thrown::Kind::SmallFireball,s.at,(0.0,-1.0,0.0),0,1),
+                    Some("fire_charge")=>{
+                        let mut ball=crate::thrown::Flying::mob_fireball(id,dimension,crate::thrown::Kind::SmallFireball,s.at,(0.0,-1.0,0.0),0,1);
+                        ball.vx=velocity.0;ball.vy=velocity.1;ball.vz=velocity.2;
+                        ball.start=(s.at,velocity);ball.prev=(s.at,velocity,ball.rot);
+                        ball
+                    }
                     Some("wind_charge")=>crate::thrown::Flying::wind_charge(id,dimension,s.at,velocity,0,false),
-                    _=>crate::thrown::Flying::potion(id,dimension,crate::thrown::Kind::Lingering,s.stack,s.at,velocity,0),
+                    _=>crate::thrown::Flying::potion(id,dimension,match name {
+                        Some("splash_potion") => crate::thrown::Kind::Splash,
+                        Some("experience_bottle") => crate::thrown::Kind::ExperienceBottle,
+                        Some("egg") => crate::thrown::Kind::Egg,
+                        Some("snowball") => crate::thrown::Kind::Snowball,
+                        Some("ender_pearl") => crate::thrown::Kind::EnderPearl,
+                        _ => crate::thrown::Kind::Lingering,
+                    },s.stack,s.at,velocity,0),
                 };
                 shared.thrown.lock().expect("снаряды").flying.push(flying);
             }
+            // Предмет падает как выброшенный: x, z в пределах ±0,1 и 0,2 вверх
+            // (та же запись: (−0,094; +0,200; −0,010) у ominous_bottle).
+            _ => {
+                let toss=(f64::from(world.random_unit())*0.2-0.1,0.2,f64::from(world.random_unit())*0.2-0.1);
+                items.drop_item(id,s.stack,s.at,toss,10)
+            }
         }
+    }
+}
+
+// Вики, Ominous Item Spawner: «Otherwise the item is dropped».
+fn projectile_item(name: &str) -> bool {
+    matches!(name, "fire_charge" | "wind_charge" | "lingering_potion" | "splash_potion"
+        | "experience_bottle" | "snowball" | "egg" | "ender_pearl")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn bottles_are_items_unless_they_are_throwable() {
+        assert!(!projectile_item("ominous_bottle"));
+        assert!(!projectile_item("potion"));
+        assert!(!projectile_item("diamond"));
+        for name in ["lingering_potion","splash_potion","experience_bottle","wind_charge","fire_charge"] { assert!(projectile_item(name)); }
     }
 }

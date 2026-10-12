@@ -32,12 +32,33 @@ pub struct Bobber {
     /// Поклёвка меняет скорость рывком: слежение шлёт её не дожидаясь 5-го такта.
     pub force: bool,
     pub prev_force: bool,
+    /// Поворот в градусах (рыскание, наклон): по курсу полёта, с гашением 0,2 за такт
+    /// и только пока поплавок не в воде (чёрный ящик, gaps2-fishing-covered/-pull:
+    /// на плаву поворот почти не шлётся). [проверить] точная формула.
+    pub rot: (f64, f64),
+    pub prev_rot: (f64, f64),
+}
+
+/// Поворот по вектору скорости: (рыскание, наклон) в градусах.
+pub fn heading(v: (f64, f64, f64)) -> (f64, f64) {
+    (v.0.atan2(v.2).to_degrees(), v.1.atan2((v.0 * v.0 + v.2 * v.2).sqrt()).to_degrees())
 }
 
 impl Bobber {
     pub fn new(id: i32, owner: i32, dimension: Dimension, at: (f64,f64,f64), velocity: (f64,f64,f64), lure: i32, luck: f64) -> Self {
-        Self { id, owner, dimension, at, velocity, lure, luck, age: 0, grounded: false, ground_ticks: 0, hooked: None, waiting: 0, approaching: 0, bite: 0, open: true, angle: 0.0, fresh: true, prev_at: at, prev_velocity: velocity, prev_hooked: None, prev_bite: false, in_water: false, force: false, prev_force: false }
+        Self { id, owner, dimension, at, velocity, lure, luck, age: 0, grounded: false, ground_ticks: 0, hooked: None, waiting: 0, approaching: 0, bite: 0, open: true, angle: 0.0, fresh: true, prev_at: at, prev_velocity: velocity, prev_hooked: None, prev_bite: false, in_water: false, force: false, prev_force: false, rot: heading(velocity), prev_rot: heading(velocity) }
     }
+}
+
+/// Вики, Fishing: дождь сокращает ожидание на 20%, закрытое небо удваивает.
+pub fn weather_speed(rain: bool, sky: bool, rain_roll: f32, sky_roll: f32) -> i32 {
+    1 + i32::from(rain && rain_roll < 0.25) - i32::from(!sky && sky_roll < 0.5)
+}
+
+/// Вики, Fishing Rod: улов 1, застрявший крючок 2, предмет 3, моб 5.
+/// [проверить] современные значения Java сценарием gaps2-fishing-pull.
+pub fn rod_wear(grounded: bool, hooked_item: Option<bool>, bite: bool) -> i32 {
+    if grounded { 2 } else if let Some(item) = hooked_item { if item { 3 } else { 5 } } else { i32::from(bite) }
 }
 
 pub fn wait_ticks(roll: u32, lure: i32) -> i32 { 100 + (roll % 501) as i32 - lure.clamp(0, 255) * 100 }
@@ -53,7 +74,7 @@ pub fn open_water(w: &World, p: (i32,i32,i32)) -> bool {
             let s=w.get_block(x,y,z);
             let name=blocks::block_at_state(s).unwrap_or("");
             let water=(!blocks::has_box(s) && crate::fluids::fluid_at(s)==Some((crate::fluids::Kind::Water,crate::fluids::SOURCE)))
-                || (name != "water" && crate::mob::is_water(s)) || (!blocks::has_box(s) && blocks::orientation_of(s).and_then(|o| o.value(s,"waterlogged"))==Some("true"));
+                || (!blocks::has_box(s) && name != "water" && crate::mob::is_water(s)) || (!blocks::has_box(s) && blocks::orientation_of(s).and_then(|o| o.value(s,"waterlogged"))==Some("true"));
             let air=matches!(name,"air"|"cave_air"|"void_air"|"lily_pad");
             if !water && !air { return false; }
             if layer.is_some_and(|l| l!=air) { return false; }
@@ -123,7 +144,7 @@ pub fn step(shared: &Shared, dimension: Dimension, w: &mut World) {
         let dx=owner.position.x-b.at.0; let dy=owner.position.y-b.at.1; let dz=owner.position.z-b.at.2;
         if dx*dx+dy*dy+dz*dz>1024.0 || b.at.1 < -128.0 {return false;}
         if b.fresh { b.fresh=false; return true; }
-        b.prev_at=b.at; b.prev_velocity=b.velocity; b.prev_hooked=b.hooked; b.prev_bite=b.bite>0; b.prev_force=b.force; b.force=false;
+        b.prev_at=b.at; b.prev_velocity=b.velocity; b.prev_hooked=b.hooked; b.prev_bite=b.bite>0; b.prev_force=b.force; b.force=false; b.prev_rot=b.rot;
         b.age+=1;
         if let Some(id)=b.hooked {
             if let Some(m)=items.mobs().iter().find(|m|m.entity_id==id && !m.vitals.dead) { b.at=(m.x,m.y+0.5,m.z);return true; }
@@ -181,6 +202,13 @@ pub fn step(shared: &Shared, dimension: Dimension, w: &mut World) {
             w.note_sound_neutral_at(b.at,"minecraft:entity.generic.splash",(speed*0.2).min(1.0) as f32,pitch);
             b.velocity.0*=0.3;b.velocity.2*=0.3;b.velocity.1*=0.2;
         }
+        if !b.in_water {
+            let target=heading(b.velocity);
+            let mut yaw_turn=target.0-b.rot.0;
+            while yaw_turn< -180.0 {yaw_turn+=360.0;}
+            while yaw_turn>=180.0 {yaw_turn-=360.0;}
+            b.rot=(b.rot.0+yaw_turn*0.2,b.rot.1+(target.1-b.rot.1)*0.2);
+        }
         b.in_water=in_water_now;
         true
     });
@@ -199,7 +227,8 @@ fn float(b: &mut Bobber, w: &mut World, p: (i32, i32, i32)) {
     let mut surface=p;
     while surface.1<p.1+4 && crate::mob::is_water(w.get_block(surface.0,surface.1+1,surface.2)) { surface.1+=1; }
     b.open &= open_water(w,surface);
-    let speed=1+i32::from(w.rain_at(p.0,p.1+1,p.2)&&w.random_unit()<0.25)-i32::from(!w.open_sky(p.0,p.1+1,p.2)&&w.random_unit()<0.5);
+    let rain=w.rain_at(p.0,p.1+1,p.2);let sky=w.open_sky(p.0,p.1+1,p.2);
+    let speed = weather_speed(rain,sky,if rain { w.random_unit() } else { 1.0 },if sky { 1.0 } else { w.random_unit() });
     if b.bite>0 {
         b.bite-=1; b.velocity.1-=f64::from(w.random_unit())*0.02;
     } else if b.approaching>0 {
@@ -238,6 +267,27 @@ fn float(b: &mut Bobber, w: &mut World, p: (i32, i32, i32)) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn enclosed_water_never_rolls_treasure_even_with_luck() {
+        let mut w=World::in_memory();
+        for _ in 0..1000 {
+            let catch=loot(&mut w,3.0,false,false);
+            assert!(!matches!(blocks::item_name(catch.item),Some("name_tag"|"saddle"|"bow"|"enchanted_book"|"nautilus_shell")));
+        }
+    }
+
+    #[test]
+    fn weather_and_retrieval_costs() {
+        assert_eq!(weather_speed(false,true,0.0,0.0),1);
+        assert_eq!(weather_speed(true,true,0.24,0.0),2);
+        assert_eq!(weather_speed(true,true,0.25,0.0),1);
+        assert_eq!(weather_speed(false,false,0.0,0.49),0);
+        assert_eq!(weather_speed(false,false,0.0,0.5),1);
+        assert_eq!(rod_wear(false,None,false),0);assert_eq!(rod_wear(false,None,true),1);
+        assert_eq!(rod_wear(true,None,false),2);assert_eq!(rod_wear(false,Some(true),false),3);
+        assert_eq!(rod_wear(false,Some(false),false),5);
+    }
+
     #[test]
     fn float_reaches_bite_and_keeps_treasure_eligible_in_two_deep_pool() {
         let mut w = World::in_memory();
@@ -278,5 +328,19 @@ mod tests {
         w.set_block(0, 69, 0, blocks::state_by_name("water").unwrap());
         w.set_block(0,72,0,blocks::state_by_name("stone").unwrap());assert!(!open_water(&w,(2,70,2)));
         w.set_block(0,72,0,0);w.set_block(0,69,0,crate::fluids::state_of(crate::fluids::Kind::Water,1));assert!(!open_water(&w,(2,70,2)));
+    }
+    #[test]
+    fn heading_follows_velocity_and_turns_the_short_way() {
+        let (yaw, pitch) = heading((0.0, -1.0, 1.0));
+        assert!(yaw.abs() < 1e-9 && (pitch + 45.0).abs() < 1e-9);
+        assert!((heading((1.0, 0.0, 0.0)).0 - 90.0).abs() < 1e-9);
+        let mut b = Bobber::new(1, 1, Dimension::Overworld, (0.0, 0.0, 0.0), (0.0, 0.0, 1.0), 0, 0.0);
+        assert_eq!(b.rot, (0.0, 0.0));
+        b.rot = (179.0, 0.0);
+        b.velocity = (0.0, 0.0, -1.0);
+        let target = heading(b.velocity);
+        let mut turn = target.0 - b.rot.0;
+        while turn < -180.0 { turn += 360.0; }
+        assert!(turn.abs() <= 180.0);
     }
 }

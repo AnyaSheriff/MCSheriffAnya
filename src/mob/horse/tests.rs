@@ -244,7 +244,7 @@ fn horse_and_donkey_breed_through_passive_mob_pipeline() {
     }
     let mut rng = Rng::new(783); let mut id = 200;
     for _ in 0..100 {
-        super::super::step_all(&mut items, &Floor { wall: false }, &[], super::super::Env { difficulty: 2, sky: 15, sun_up: false, clock: 0 }, &mut rng, &mut || { id += 1; id });
+        super::super::step_all(&mut items, &Floor { wall: false }, &[], super::super::Env { difficulty: 2, sky: 15, sun_up: false, clock: 0, tick: 0 }, &mut rng, &mut || { id += 1; id });
     }
     assert_eq!(items.mobs().iter().filter(|m| m.kind == Kind::Mule && m.is_baby()).count(), 1);
     assert!(items.mobs().iter().filter(|m| m.kind != Kind::Mule).all(|m| m.age > 0 && m.love == 0));

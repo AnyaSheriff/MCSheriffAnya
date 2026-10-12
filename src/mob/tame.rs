@@ -118,6 +118,7 @@ pub struct State {
 
     /// Броня волка: прочность (None — нет) [проверить: поглощение урона].
     pub armor: Option<i32>,
+    pub armor_color: Option<i32>,
 
     /// Волк мокрый (был в воде): выйдя, отряхивается (событие 8).
     pub wet: bool,
@@ -152,6 +153,7 @@ impl Default for State {
             melee: false,
             begging: false,
             armor: None,
+            armor_color: None,
             wet: false,
             hurt_by: 0,
             perch: None,
@@ -806,11 +808,12 @@ fn shake(mob: &mut Mob, view: &dyn View) {
 
 /// Запись для файла: хозяин, приказ, ошейник, вариант, броня.
 pub fn write(state: &State, out: &mut Vec<u8>) {
-    out.push(u8::from(state.owner.is_some()) | (u8::from(state.ordered_sit) << 1) | (u8::from(state.armor.is_some()) << 2));
+    out.push(u8::from(state.owner.is_some()) | (u8::from(state.ordered_sit) << 1) | (u8::from(state.armor.is_some()) << 2) | (u8::from(state.armor_color.is_some()) << 3));
     out.extend_from_slice(&state.owner.unwrap_or([0; 16]));
     out.push(state.collar);
     out.push(state.variant);
     out.extend_from_slice(&state.armor.unwrap_or(0).to_be_bytes());
+    if let Some(color) = state.armor_color { out.extend_from_slice(&color.to_be_bytes()); }
 }
 
 /// Читает запись `write`; None — испорчена.
@@ -827,6 +830,8 @@ pub fn read(bytes: &mut &[u8]) -> Option<State> {
     let variant = take(1)?[0];
     let armor = i32::from_be_bytes(take(4)?.try_into().ok()?);
 
+    let armor_color = if flags & 8 != 0 { Some(i32::from_be_bytes(take(4)?.try_into().ok()?)) } else { None };
+
     if collar > 15 {
         return None;
     }
@@ -835,6 +840,7 @@ pub fn read(bytes: &mut &[u8]) -> Option<State> {
         owner: (flags & 1 != 0).then_some(owner),
         ordered_sit: flags & 2 != 0,
         armor: (flags & 4 != 0).then_some(armor),
+        armor_color,
         collar,
         variant,
         ..State::default()

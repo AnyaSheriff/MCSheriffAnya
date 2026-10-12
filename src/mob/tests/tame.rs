@@ -123,7 +123,7 @@ fn an_owner_strike_sends_the_wolf_biting_for_four() {
 
     let players = [player_at(OWNER.1, 0.5, -2.5)];
     let mut rng = Rng::new(2);
-    let env = Env { difficulty: 2, sky: 15, sun_up: false, clock: 1000 };
+    let env = Env { difficulty: 2, sky: 15, sun_up: false, clock: 1000, tick: 1000 };
     let mut bitten = false;
 
     for _ in 0..60 {
@@ -233,4 +233,20 @@ fn a_name_tag_renames_once_and_variants_follow_the_original_registry() {
     assert_eq!(tm::wolf_variant_for("plains"), tm::WOLF_DEFAULT);
     assert_eq!(tm::wolf_variant_for("snowy_taiga"), 0);
     assert_eq!(tm::dye_colour("red_dye"), Some(tm::RED));
+}
+
+#[test]
+fn knot_transfer_keeps_leads_and_broken_knot_drops_them() {
+    let mut cow=Mob::new(1,Kind::Cow,(1.0,1.0,1.0));
+    leash::attach(&mut cow,leash::Holder::Knot {id:8,at:(1,1,1)});
+    cow.events.clear();
+    let mut mobs=vec![leash::new_knot(8,(1,1,1)),cow];
+    assert_eq!(leash::take_knot(&mut mobs,8,50,[2;16]),1);
+    assert_eq!(mobs[1].leash,Some(leash::Holder::Player {id:50,uuid:[2;16]}));
+    assert!(!mobs[1].events.iter().any(|e|matches!(e,Event::Loot(_))));
+    assert!(mobs[0].h.despawn);
+    leash::attach(&mut mobs[1],leash::Holder::Knot {id:8,at:(1,1,1)});
+    leash::step_all(&mut mobs,&[]);
+    assert!(mobs[1].leash.is_none());
+    assert!(mobs[1].events.iter().any(|e|matches!(e,Event::Loot(s) if s.len()==1 && crate::blocks::item_name(s[0].item)==Some("lead"))));
 }

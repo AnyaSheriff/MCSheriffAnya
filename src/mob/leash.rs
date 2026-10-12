@@ -75,6 +75,21 @@ pub fn attach(mob: &mut Mob, holder: Holder) {
     mob.events.push(Event::Leash(holder.id()));
 }
 
+/// Вики, Lead: «transfers the leads to the player». Перенос не роняет предметы.
+pub fn take_knot(mobs: &mut [Mob], knot: i32, player: i32, uuid: [u8; 16]) -> usize {
+    let mut count = 0;
+    for mob in mobs.iter_mut() {
+        if !mob.is_dead() && matches!(mob.leash, Some(Holder::Knot { id, .. }) if id == knot) {
+            attach(mob, Holder::Player { id: player, uuid });
+            count += 1;
+        }
+    }
+    if let Some(mob) = mobs.iter_mut().find(|m| m.entity_id == knot && m.kind == Kind::LeashKnot) {
+        mob.h.despawn = true;
+    }
+    count
+}
+
 /// Можно ли взять моба на поводок (вики, Lead: «most passive and neutral
 /// mobs»; враждебных — нет) [проверить: полный список].
 pub fn leashable(kind: Kind) -> bool {
@@ -137,7 +152,7 @@ pub fn drop_leash(mob: &mut Mob, drop: bool) {
 /// того же списка. Порвавшиеся звучат в точке держателя; узлы без мобов
 /// пропадают. Возвращает точки обрывов (для проверок).
 pub fn step_all(mobs: &mut [Mob], players: &[(i32, (f64, f64, f64))]) -> Vec<(f64, f64, f64)> {
-    let knots: Vec<(i32, (f64, f64, f64))> = mobs.iter().filter(|mob| mob.kind == Kind::LeashKnot && !mob.h.despawn).map(|mob| (mob.entity_id, (mob.x, mob.y, mob.z))).collect();
+    let knots: Vec<(i32, (f64, f64, f64))> = mobs.iter().filter(|mob| mob.kind == Kind::LeashKnot && !mob.h.despawn && !mob.is_dead()).map(|mob| (mob.entity_id, (mob.x, mob.y, mob.z))).collect();
     let holders: Vec<_> = mobs.iter().filter(|m| !m.is_dead() && !m.h.despawn).map(|m| (m.entity_id,m.uuid,(m.x,m.y,m.z))).collect();
     let mut broke = Vec::new();
 

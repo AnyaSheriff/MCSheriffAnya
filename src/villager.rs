@@ -228,6 +228,7 @@ pub struct State {
     /// Только что вылечен: эффекты (тошнота, сила на такт) ложатся на следующем
     /// такте, а не при появлении (чёрный ящик, zombie-villager-cured). Не сохраняется.
     pub fresh_cure: bool,
+    pub summon: crate::mob::village_golems::State,
 }
 
 impl State {
@@ -856,7 +857,7 @@ pub fn work_sound(profession: u8) -> Option<&'static str> {
 /// Запись жителя для файла региона (хвост записи моба).
 pub fn write(state: &State, out: &mut Vec<u8>) {
     // Бит 1 четвёртого байта — «есть хвост лечения и молвы» (старые записи без него).
-    out.extend_from_slice(&[state.kind, state.profession, state.level, u8::from(state.finalized) | 2]);
+    out.extend_from_slice(&[state.kind, state.profession, state.level, u8::from(state.finalized) | 2 | 4]);
     out.extend_from_slice(&state.xp.to_be_bytes());
 
     let site = state.job_site.unwrap_or((i32::MIN, 0, 0));
@@ -897,6 +898,8 @@ pub fn write(state: &State, out: &mut Vec<u8>) {
         out.extend_from_slice(uuid);
         out.extend_from_slice(&value.to_be_bytes());
     }
+    out.extend_from_slice(&state.summon.slept.unwrap_or(i64::MIN).to_be_bytes());
+    out.extend_from_slice(&state.summon.cooldown.to_be_bytes());
 }
 
 /// Читает запись `write`; None — она испорчена.
@@ -956,7 +959,15 @@ pub fn read(bytes: &mut &[u8]) -> Option<State> {
         }
     }
 
+    let mut summon = crate::mob::village_golems::State::default();
+    if head[3] & 4 != 0 {
+        let slept = i64::from_be_bytes(take(8)?.try_into().ok()?);
+        summon.slept = (slept != i64::MIN).then_some(slept);
+        summon.cooldown = u32::from_be_bytes(take(4)?.try_into().ok()?);
+    }
+
     Some(State {
+        summon,
         conversion,
         converter,
         gossip,

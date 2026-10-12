@@ -89,6 +89,8 @@ mod debug_stick;
 mod mob_effects;
 mod buckets;
 mod equipment_sound;
+#[cfg(test)]
+mod gaps_tests;
 mod knowledge_book;
 mod station;
 mod crafting;
@@ -8358,7 +8360,7 @@ fn use_mob(shared: &Shared, player: &mut PlayerState, target: i32, reaction: &mu
     if items.mobs()[index].age_locked && player.inventory.held().and_then(|s| blocks::item_name(s.item)).is_some_and(|food| items.mobs()[index].kind.likes(food)) { return true; }
 
     // Бирка, поводок, волк и кошка (play/tame.rs).
-    if tame::use_on_mob(&mut items, index, player, shared, reaction) {
+    if tame::use_on_mob(&mut items, index, player, shared, &mut world, reaction) {
         return true;
     }
 
@@ -9978,6 +9980,8 @@ fn use_item(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Option
     if !player.awaiting_teleport {
         player.set_rotation(yaw, pitch);
     }
+
+    if let Some(answer) = equipment_sound::use_item(shared, player, hand, sequence) { return Some(answer); }
 
     if let Some(resync) = fishing::use_rod(shared, player, hand) {
         let mut answer = answer;

@@ -39,7 +39,7 @@ pub(super) fn use_item(shared: &Shared, player: &mut PlayerState, hand: i32, seq
     if matches!(player.game_mode, GAME_MODE_SPECTATOR | GAME_MODE_ADVENTURE) { return Some(Reaction::accepted(sequence)); }
     let hit = {
         let world = shared.world_in(player.dimension).lock().expect("мир");
-        target(&world, (player.x,player.y+if player.sneaking {1.27} else {1.62},player.z), looking(yaw,pitch), 5.0, blocks::item_name(item)==Some("bucket"))
+        target(&world, (player.x,player.y+if player.sneaking {1.27} else {1.62},player.z), looking(yaw,pitch), player.attrs.value(crate::attributes::BLOCK_INTERACTION_RANGE) + if player.game_mode == GAME_MODE_CREATIVE { 0.5 } else { 0.0 }, blocks::item_name(item)==Some("bucket"))
     };
     let Some((at, face)) = hit else { return Some(Reaction::accepted(sequence)); };
     // Повторно используем обмен ведра, включая полные стопки и выпадение.

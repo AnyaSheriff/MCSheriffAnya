@@ -217,6 +217,7 @@ pub struct State {
     /// Завершённый путь бегства пересчитывается через три такта [проверить].
     pub cat_flee: bool,
     pub cat_retry: u8,
+    pub cat_threat: Option<(i32, f64, f64, f64)>,
 
     /// Направление запала для клиента: −1 гаснет, 1 растёт.
     pub swell_dir: i32,
@@ -842,16 +843,20 @@ fn creeper(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &m
 /// Вики, Creeper: «cats and ocelots»; бегство работает и без цели-игрока.
 /// [проверить] точка и скорость бегства.
 fn flee_cat(mob: &mut Mob, view: &dyn View, ctx: &Ctx, grounded: bool) -> bool {
-    // Начатый путь не обрывается на границе радиуса поиска кошки.
-    if mob.h.cat_flee && mob.brain.walking() { return true; }
-    if mob.h.cat_flee {
-        mob.h.cat_flee = false;
-        mob.h.cat_retry = 3;
-    }
     let cat = ctx.mates.iter().filter(|m| matches!(m.kind, Kind::Cat | Kind::Ocelot))
         .filter(|m| dist2(mob, m.x, m.y, m.z) < CAT_AVOID * CAT_AVOID)
         .min_by(|a,b| dist2(mob,a.x,a.y,a.z).total_cmp(&dist2(mob,b.x,b.y,b.z)));
-    let Some(cat) = cat else { mob.h.cat_retry = 0; return false; };
+    // Вики, Creeper: «flee from cats and ocelots». Новое положение угрозы
+    // требует нового пути; вне радиуса заканчиваем уже начатый путь.
+    let threat = cat.map(|c| (c.id, c.x, c.y, c.z));
+    let moved = threat.is_some() && threat != mob.h.cat_threat;
+    if mob.h.cat_flee && mob.brain.walking() && !moved { return true; }
+    if mob.h.cat_flee {
+        mob.h.cat_flee = false;
+        mob.h.cat_retry = if moved { 0 } else { 3 };
+    }
+    let Some(cat) = cat else { mob.h.cat_retry = 0; mob.h.cat_threat = None; return false; };
+    mob.h.cat_threat = threat;
     if !grounded { return true; }
     if mob.h.cat_retry > 0 { mob.h.cat_retry -= 1; return true; }
     let (mut dx, mut dz) = (mob.x-cat.x, mob.z-cat.z);
