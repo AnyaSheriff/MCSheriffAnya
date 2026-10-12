@@ -1,0 +1,59 @@
+{
+  "positions_unchanged": true,
+  "changes": [
+    {
+      "pos": [
+        630,
+        39,
+        -974
+      ],
+      "before": "minecraft:blaze",
+      "after": "minecraft:magma_cube"
+    },
+    {
+      "pos": [
+        498,
+        39,
+        538
+      ],
+      "before": "minecraft:blaze",
+      "after": "minecraft:magma_cube"
+    },
+    {
+      "pos": [
+        7690,
+        39,
+        8206
+      ],
+      "before": "minecraft:blaze",
+      "after": "minecraft:magma_cube"
+    },
+    {
+      "pos": [
+        -8158,
+        39,
+        346
+      ],
+      "before": "minecraft:blaze",
+      "after": "minecraft:magma_cube"
+    },
+    {
+      "pos": [
+        -7934,
+        39,
+        -102
+      ],
+      "before": "minecraft:blaze",
+      "after": "minecraft:magma_cube"
+    },
+    {
+      "pos": [
+        8678,
+        39,
+        7826
+      ],
+      "before": "minecraft:blaze",
+      "after": "minecraft:magma_cube"
+    }
+  ]
+}

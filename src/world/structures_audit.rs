@@ -28,14 +28,23 @@ fn description(marker: seedmap::Marker, generator: &Generator) -> Value {
                     out["kind"] = json!(format!("village_{}", kind.name()));
                     let pieces = village::plan(t.seed(), kind, cx, cz, &|x,z| ground.supported_height(x,z));
                     out["pieces"] = json!(pieces.len());
+                    out["piece_records"] = json!(village::audit_pieces(kind, &pieces));
                     out["footprints"] = json!(pieces.iter().map(|p| p.bounds).collect::<Vec<_>>());
+                }
+                1 => { out["piece_records"] = json!(pillager_outpost::audit_pieces(t,cx,cz)); }
+                6 => { out["piece_records"] = json!([ancient_city::audit_box(t.seed(),cx,cz)]); }
+                7 => { out["piece_records"] = json!([trial_chambers::audit_box(t.seed(),cx,cz)]); }
+                14 => {
+                    let site = trail_ruins::site_in(t,cx.div_euclid(trail_ruins::SPACING),cz.div_euclid(trail_ruins::SPACING)).unwrap();
+                    out["piece_records"] = json!(trail_ruins::audit_pieces(&site));
                 }
                 2 | 3 | 16 => {
                     let kind = match marker.kind { 2 => temples::Kind::DesertPyramid, 3 => temples::Kind::JunglePyramid, _ => temples::Kind::SwampHut };
                     let s = temples::start_in(kind,t,cx.div_euclid(32),cz.div_euclid(32)).unwrap();
                     out["floor"] = json!(s.y); out["footprint"] = json!(s.area()); out["pieces"] = json!(1);
+                    out["piece_records"] = json!([temples::audit_piece(&s)]);
                 }
-                4 => { out["floor"] = json!(monument::BOTTOM); }
+                4 => { out["floor"] = json!(monument::BOTTOM); out["piece_records"] = json!([monument::audit_box(t.seed(),cx,cz)]); }
                 5 => {
                     let s = mansion::start_in(t,cx.div_euclid(80),cz.div_euclid(80)).unwrap();
                     out["origin"] = json!(s.origin); out["size_xz"] = json!(s.footprint());
@@ -44,28 +53,33 @@ fn description(marker: seedmap::Marker, generator: &Generator) -> Value {
                     let pieces = stronghold::plan(t.seed(),cx,cz);
                     out["pieces"] = json!(pieces.len()); out["boxes"] = json!(pieces.iter().map(|p| p.bounds).collect::<Vec<_>>());
                     out["piece_types"] = json!(pieces.iter().map(|p| p.kind.id()).collect::<Vec<_>>());
+                    out["piece_records"] = json!(pieces.iter().map(|p| json!({"name":p.kind.id(),"box":p.bounds})).collect::<Vec<_>>());
                 }
                 9 => {
                     let (mesa, height) = mineshaft::start_at(t,cx,cz).unwrap();
                     out["kind"] = json!(if mesa { "mineshaft_mesa" } else { "mineshaft" });
                     let plan = mineshaft::plan(t.seed(),cx,cz,mesa,height);
                     out["pieces"] = json!(plan.pieces.len());
+                    out["piece_records"] = json!(plan.pieces.iter().map(|p| json!({"name":format!("{:?}",p.kind),"rotation":p.facing,"box":p.bb})).collect::<Vec<_>>());
                 }
                 10 => {
                     let s = ruined_portal::start_in(t,cx.div_euclid(40),cz.div_euclid(40)).unwrap();
                     out["kind"] = json!(s.variant.name()); out["origin"] = json!(s.origin);
                     out["template"] = json!(ruined_portal::library()[s.template].name);
+                    out["piece_records"] = json!([template_record(&ruined_portal::library()[s.template],s.orient,s.origin)]);
                 }
                 11 => {
                     let s = shipwreck::start_in(t,cx.div_euclid(24),cz.div_euclid(24)).unwrap();
                     out["kind"] = json!(if s.beached { "shipwreck_beached" } else { "shipwreck" });
                     out["origin"] = json!(s.origin); out["template"] = json!(shipwreck::library()[s.template].name);
+                    out["piece_records"] = json!([template_record(&shipwreck::library()[s.template],s.orient,s.origin)]);
                 }
-                12 => { out["floor"] = json!(shipwreck::treasure_in(t,cx,cz).unwrap()); }
+                12 => { let y = shipwreck::treasure_in(t,cx,cz).unwrap(); out["floor"] = json!(y); out["piece_records"] = json!([{"name":"buried_treasure","box":[cx*16+9,y,cz*16+9,cx*16+9,y,cz*16+9]}]); }
                 13 => {
                     let s = ocean_ruin::site_in(t,cx.div_euclid(20),cz.div_euclid(20)).unwrap();
                     out["kind"] = json!(if s.warm { "ocean_ruin_warm" } else { "ocean_ruin_cold" });
                     out["pieces"] = json!(s.ruins.len());
+                    out["piece_records"] = json!(s.ruins.iter().map(|p| template_record(&ocean_ruin::library()[p.template],p.orient,p.origin)).collect::<Vec<_>>());
                 }
                 15 => {
                     let s = temples::igloo_in(t,cx.div_euclid(32),cz.div_euclid(32)).unwrap();
@@ -76,6 +90,11 @@ fn description(marker: seedmap::Marker, generator: &Generator) -> Value {
         }
         Generator::Nether(n) => {
             out["biome"] = json!(n.biome_at(marker.x,marker.z).name());
+            out["piece_records"] = match marker.kind {
+                17 => json!(nether_fortress::plan(n.seed(),cx,cz).iter().map(|p| json!({"name":p.kind.id(),"rotation":p.facing,"box":p.bounds})).collect::<Vec<_>>()),
+                18 => json!(nether_bastion::audit_pieces(&nether_bastion::plan(n.seed(),cx,cz))),
+                _ => json!([]),
+            };
             let boxes = match marker.kind {
                 17 => nether_fortress::plan(n.seed(),cx,cz).iter().map(|p| p.bounds).collect::<Vec<_>>(),
                 18 => nether_bastion::plan(n.seed(),cx,cz).iter().map(|p| p.bounds).collect::<Vec<_>>(),
@@ -85,6 +104,7 @@ fn description(marker: seedmap::Marker, generator: &Generator) -> Value {
             if marker.kind == 10 {
                 let s = ruined_portal::start_in_nether(n,cx.div_euclid(40),cz.div_euclid(40)).unwrap();
                 out["kind"] = json!("ruined_portal_nether"); out["origin"] = json!(s.origin);
+                out["piece_records"] = json!([template_record(&ruined_portal::library()[s.template],s.orient,s.origin)]);
             }
         }
         Generator::End(e) => {
@@ -93,6 +113,7 @@ fn description(marker: seedmap::Marker, generator: &Generator) -> Value {
             let pieces = end_city::plan(e.seed(),cx,cz,y);
             out["pieces"] = json!(pieces.len()); out["boxes"] = json!(pieces.iter().map(|p| p.bounds).collect::<Vec<_>>());
             out["piece_types"] = json!(pieces.iter().map(|p| p.name()).collect::<Vec<_>>());
+            out["piece_records"] = json!(end_city::audit_pieces(&pieces));
         }
         Generator::Flat => unreachable!(),
     }
@@ -113,12 +134,14 @@ fn offline_structures_audit() {
         _ => panic!("AUDIT_DIM"),
     };
     let map = seedmap::Map::new(SEED,dim,false,false);
+    let halo: i32 = std::env::var("AUDIT_HALO").ok().map(|s| s.parse().unwrap()).unwrap_or(0);
     let mut starts = Vec::new();
     for (wx,wz,half) in windows() {
+        let half = half + halo;
         for kind in 0..20 {
             for marker in map.structures(kind,(wx-half)*16,(wz-half)*16,(wx+half)*16,(wz+half)*16).unwrap() {
                 let mut record = description(marker,&generator);
-                record["window"] = json!([wx/512,wz/512]); starts.push(record);
+                record["window"] = if cx_in_core(marker.x.div_euclid(16), marker.z.div_euclid(16), wx, wz, half-halo) { json!(format!("{},{}",wx/512,wz/512)) } else { Value::Null }; starts.push(record);
             }
         }
     }
@@ -128,11 +151,15 @@ fn offline_structures_audit() {
     // числа жеод. Формат: x/y/z i32 LE, затем номер материала u8.
     let mut shells = std::io::BufWriter::new(std::fs::File::create(dir.join(format!("{selected}-shells.bin"))).unwrap());
     let names: Vec<_> = (0..=u16::MAX).map(|s| blocks::block_at_state(i32::from(s)).unwrap_or("air")).collect();
+    let probes: std::collections::BTreeMap<String, Vec<[i32;3]>> = std::env::var("AUDIT_PROBES").ok().map(|p| serde_json::from_slice(&std::fs::read(p).unwrap()).unwrap()).unwrap_or_default();
+    let selected_chunks: Option<std::collections::HashSet<[i32;2]>> = std::env::var("AUDIT_CHUNKS").ok().map(|p| serde_json::from_slice(&std::fs::read(p).unwrap()).unwrap());
     let mut count = 0;
     let started = std::time::Instant::now();
     for (wx,wz,half) in windows() {
+        let half = half + halo;
         for cz in wz-half..wz+half {
             for cx in wx-half..wx+half {
+                if selected_chunks.as_ref().is_some_and(|cs| !cs.contains(&[cx,cz])) { continue; }
                 if count == limit { output.flush().unwrap(); shells.flush().unwrap(); return; }
                 let chunk = Chunk::generated(&generator,cx,cz);
                 let mut histogram = std::collections::BTreeMap::<&str,usize>::new();
@@ -153,7 +180,17 @@ fn offline_structures_audit() {
                 }
                 let containers: Vec<_> = chunk.containers.iter().map(|(&(x,y,z),c)| json!({"pos":[cx*16+x,y,cz*16+z],"kind":format!("{:?}",c.kind),"occupied_slots":c.slots.iter().flatten().count()})).collect();
                 let spawners: Vec<_> = chunk.spawners.iter().map(|(&(x,y,z),s)| json!({"pos":[cx*16+x,y,cz*16+z],"entity":s.entity,"block":blocks::block_at_state(chunk.block(x,y,z))})).collect();
-                let record = json!({"chunk":[cx,cz],"window":[wx/512,wz/512],"blocks":histogram,"containers":containers,"spawners":spawners});
+                let mut probe_tops = std::collections::HashMap::new();
+                let samples: Vec<_> = probes.get(&format!("{cx},{cz}")).into_iter().flatten().map(|&[x,y,z]| {
+                    let top = *probe_tops.entry((x,z)).or_insert_with(|| (MIN_Y..MIN_Y+WORLD_HEIGHT).rev().find(|&h| blocks::has_box(chunk.block(x.rem_euclid(16),h,z.rem_euclid(16)))));
+                    json!({"pos":[x,y,z],"at":blocks::block_at_state(chunk.block(x.rem_euclid(16),y,z.rem_euclid(16))),"below":blocks::block_at_state(chunk.block(x.rem_euclid(16),y-1,z.rem_euclid(16))),"surface":top})
+                }).collect();
+                let missing_containers: Vec<_> = chunk.sections.iter().enumerate().flat_map(|(si,section)| section.iter().flat_map(move |s| s.iter().enumerate().map(move |(i,&state)| (si,i,state)))).filter_map(|(si,i,state)| {
+                    let (x,y,z) = (i as i32%16,MIN_Y+si as i32*16+i as i32/256,i as i32/16%16);
+                    (matches!(names[usize::from(state)],"chest"|"barrel") && !chunk.containers.contains_key(&(x,y,z))).then_some([cx*16+x,y,cz*16+z])
+                }).collect();
+                let frames: Vec<_> = chunk.frames.iter().map(|f| json!({"id":"item_frame","pos":[cx*16+f.pos.0,f.pos.1,cz*16+f.pos.2],"facing":f.facing,"item":f.item.and_then(|s| blocks::item_name(s.item))})).collect();
+                let record = json!({"frames":frames,"spawn_markers":spawn_markers(&generator,cx,cz),"samples":samples,"missing_containers":missing_containers,"chunk":[cx,cz],"window":[wx/512,wz/512],"blocks":histogram,"containers":containers,"spawners":spawners});
                 serde_json::to_writer(&mut output,&record).unwrap(); writeln!(output).unwrap();
                 count += 1;
                 if count.is_multiple_of(256) { output.flush().unwrap(); eprintln!("{selected}: {count}/49152 chunks, {:.1}s",started.elapsed().as_secs_f64()); }
@@ -271,4 +308,64 @@ fn offline_structure_support_audit() {
     }
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("support.json"),serde_json::to_vec_pretty(&results).unwrap()).unwrap();
+}
+
+fn cx_in_core(cx: i32, cz: i32, wx: i32, wz: i32, half: i32) -> bool {
+    (wx-half..wx+half).contains(&cx) && (wz-half..wz+half).contains(&cz)
+}
+
+#[test]
+fn measured_bastion_spawner_keeps_magma_cube_on_reload() {
+    let generator = Generator::Nether(nether::Nether::new(SEED));
+    let chunk = Chunk::generated(&generator,-496,-7);
+    let pos = (2,39,10);
+    assert_eq!(blocks::block_at_state(chunk.block(pos.0,pos.1,pos.2)),Some("spawner"));
+    assert_eq!(chunk.spawners[&pos].entity,"minecraft:magma_cube");
+    let decoded = Chunk::from_bytes(&chunk.to_bytes()).unwrap();
+    assert_eq!(decoded.spawners[&pos].entity,"minecraft:magma_cube");
+    let Generator::Nether(n) = &generator else { unreachable!() };
+    assert!(n.bastion_spawners(-496,-7).contains(&pos));
+}
+
+fn template_record(t: &template::Template, orient: template::Orient, (x,y,z): (i32,i32,i32)) -> Value {
+    let (w,d) = t.footprint(orient);
+    json!({"name":t.name,"rotation":orient.turns,"mirror":orient.mirror,"box":[x,y,z,x+w-1,y+t.height-1,z+d-1]})
+}
+
+// Плановые маркеры свежего чанка — до фильтра столкновений в tick.rs.
+// Не выдаём их за реально сохранённых мобов после симуляции.
+fn spawn_markers(generator: &Generator, cx: i32, cz: i32) -> Vec<Value> {
+    let mut out = Vec::new();
+    let mut add = |kind: &str, pos: (f64,f64,f64)| out.push(json!({"id":kind,"pos":pos}));
+    match generator {
+        Generator::Normal(t) => {
+            for p in monument::elders(t,cx,cz) { add("elder_guardian",p); }
+            for p in ocean_ruin::drowned(t,cx,cz) { add("drowned",p); }
+            for p in temples::hut_dwellers(t,cx,cz) { add("witch",p); add("cat_all_black",p); }
+            for p in pillager_outpost::golems(t,cx,cz) { add("iron_golem",p); }
+            for p in pillager_outpost::allays(t,cx,cz) { add("allay",p); }
+            for (p,k) in mansion::dwellers(t,cx,cz) { add(k,p); }
+            for (p,zombie) in temples::igloo_dwellers(t,cx,cz) { add(if zombie {"zombie_villager"} else {"villager"},p); }
+            for ((x,y,z),_) in mineshaft::carts(t,cx,cz) { add("chest_minecart",(f64::from(x),f64::from(y),f64::from(z))); }
+        }
+        Generator::End(e) => for (x,y,z) in e.city_sentries(cx,cz) { add("shulker",(f64::from(x),f64::from(y),f64::from(z))); },
+        _ => {}
+    }
+    out
+}
+
+#[path = "structures_audit_border.rs"]
+mod border;
+
+#[test]
+fn generated_end_ship_frame_survives_reload_without_duplication() {
+    let g = Generator::End(the_end::End::new(SEED));
+    let c = Chunk::generated(&g,-33,61);
+    assert_eq!(c.frames.len(),1);
+    let f = &c.frames[0];
+    assert_eq!(f.pos,(10,126,8));
+    assert_eq!(f.facing,crate::frame::WEST);
+    assert_eq!(blocks::item_name(f.item.unwrap().item),Some("elytra"));
+    let back = Chunk::from_bytes(&c.to_bytes()).unwrap();
+    assert_eq!(back.frames,c.frames);
 }

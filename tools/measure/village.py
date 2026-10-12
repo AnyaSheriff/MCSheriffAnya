@@ -220,7 +220,7 @@ def surface(w, x, z, top, bottom):
         if n.split('[')[0].replace('minecraft:', '') not in soft: return y
     return None
 
-def cmd_export(world, starts, out, kind='plains', count='12'):
+def cmd_export(world, starts, out, kind='plains', count='12', seed='1234567890'):
     w = World(world)
     villages = []
     for (k, cx, cz) in read_starts(starts, kind):
@@ -269,7 +269,7 @@ def cmd_export(world, starts, out, kind='plains', count='12'):
                             if n is not None: grids[loc][(a, y, bb)][unrotate(n.replace('minecraft:', ''), t)] += 1
                 lay.append((loc, t, x0 - cx * 16, 0, z0 - cz * 16))
         layouts.append(lay)
-    lines = ['# Деревни (%s) — замер мира оригинала 26.1.2 (%d деревень, семя 1234567890),' % (kind, len(villages)),
+    lines = ['# Деревни (%s) — замер мира оригинала 26.1.2 (%d деревень, семя %s),' % (kind, len(villages), seed),
              '# tools/measure/village.py export. Образец: рамка в его собственном повороте',
              '# (a — x, b — z, y — от низа); «.» — рельеф остаётся, «_» — пусто. У образцов',
              '# terrain_matching (улицы) два слоя: верх рельефа столбца и над ним.',

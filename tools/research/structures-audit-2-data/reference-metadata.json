@@ -1,0 +1,15 @@
+{
+  "DataVersion": 4790,
+  "Version": {
+    "Snapshot": 0,
+    "Series": "main",
+    "Id": 4790,
+    "Name": "26.1.2"
+  },
+  "RandomSeed": null,
+  "worldgen": {
+    "bonus_chest": 0,
+    "seed": 100554032945340,
+    "generate_structures": 1
+  }
+}

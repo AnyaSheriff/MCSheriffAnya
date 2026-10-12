@@ -497,3 +497,8 @@ mod tests {
         assert_eq!(counts[4], 8);
     }
 }
+
+#[cfg(all(test, not(seedmap_core)))]
+pub(super) fn audit_box(seed: i64, cx: i32, cz: i32) -> serde_json::Value {
+    serde_json::json!({"name":"whole_snapshot","rotation":pick(seed,cx,cz).1,"box":[cx*16-BACK,BOTTOM,cz*16-BACK,cx*16-BACK+SIZE-1,BOTTOM+HEIGHT-1,cz*16-BACK+SIZE-1]})
+}

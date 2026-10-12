@@ -355,3 +355,12 @@ mod tests {
         assert!(sites > 0);
     }
 }
+
+#[cfg(all(test, not(seedmap_core)))]
+pub(super) fn audit_pieces(s: &Site) -> Vec<serde_json::Value> {
+    s.pieces.iter().map(|p| {
+        let t = &library().templates[p.template];
+        let (w,d) = t.footprint(p.orient);
+        serde_json::json!({"name":t.name,"rotation":p.orient.turns,"box":[p.origin.0,p.origin.1,p.origin.2,p.origin.0+w-1,p.origin.1+t.height-1,p.origin.2+d-1]})
+    }).collect()
+}

@@ -1,0 +1,1016 @@
+[
+  {
+    "changed": 0,
+    "chunk": [
+      -524,
+      -544
+    ],
+    "chunks": 50,
+    "examples": [],
+    "kind": "village_plains",
+    "seam_cells": 1146,
+    "seam_changed": 0,
+    "solid_cells": 4687
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      54,
+      8
+    ],
+    "chunks": 49,
+    "examples": [],
+    "kind": "village_plains",
+    "seam_cells": 1121,
+    "seam_changed": 0,
+    "solid_cells": 4689
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -17,
+      494
+    ],
+    "chunks": 43,
+    "examples": [],
+    "kind": "village_taiga",
+    "seam_cells": 826,
+    "seam_changed": 0,
+    "solid_cells": 4936
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -14,
+      526
+    ],
+    "chunks": 42,
+    "examples": [],
+    "kind": "village_taiga",
+    "seam_cells": 847,
+    "seam_changed": 0,
+    "solid_cells": 4808
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      483,
+      9
+    ],
+    "chunks": 48,
+    "examples": [],
+    "kind": "village_plains",
+    "seam_cells": 1200,
+    "seam_changed": 0,
+    "solid_cells": 5150
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -538,
+      -532
+    ],
+    "chunks": 54,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 4552,
+    "seam_changed": 0,
+    "solid_cells": 24714
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -532,
+      -509
+    ],
+    "chunks": 86,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 7313,
+    "seam_changed": 0,
+    "solid_cells": 35786
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -503,
+      -526
+    ],
+    "chunks": 53,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 6080,
+    "seam_changed": 0,
+    "solid_cells": 28244
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -512,
+      -494
+    ],
+    "chunks": 59,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 4387,
+    "seam_changed": 0,
+    "solid_cells": 16180
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -540,
+      9
+    ],
+    "chunks": 73,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 5926,
+    "seam_changed": 0,
+    "solid_cells": 27947
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -538,
+      -5
+    ],
+    "chunks": 12,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 10591,
+    "seam_changed": 0,
+    "solid_cells": 42020
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -497,
+      -8
+    ],
+    "chunks": 18,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 15754,
+    "seam_changed": 0,
+    "solid_cells": 62687
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -511,
+      20
+    ],
+    "chunks": 18,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 15981,
+    "seam_changed": 0,
+    "solid_cells": 63563
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -531,
+      520
+    ],
+    "chunks": 69,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 6079,
+    "seam_changed": 0,
+    "solid_cells": 25520
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -509,
+      495
+    ],
+    "chunks": 57,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 3356,
+    "seam_changed": 0,
+    "solid_cells": 15985
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -524,
+      500
+    ],
+    "chunks": 12,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11885,
+    "seam_changed": 0,
+    "solid_cells": 46446
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -508,
+      513
+    ],
+    "chunks": 11,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 8415,
+    "seam_changed": 0,
+    "solid_cells": 33736
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -495,
+      540
+    ],
+    "chunks": 12,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11612,
+    "seam_changed": 0,
+    "solid_cells": 46447
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -481,
+      517
+    ],
+    "chunks": 21,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 17604,
+    "seam_changed": 0,
+    "solid_cells": 63552
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -12,
+      -529
+    ],
+    "chunks": 60,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 5861,
+    "seam_changed": 0,
+    "solid_cells": 26694
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      13,
+      -520
+    ],
+    "chunks": 73,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 7439,
+    "seam_changed": 0,
+    "solid_cells": 29460
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      1,
+      -497
+    ],
+    "chunks": 78,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 7874,
+    "seam_changed": 0,
+    "solid_cells": 31515
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      2,
+      -485
+    ],
+    "chunks": 85,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 7640,
+    "seam_changed": 0,
+    "solid_cells": 34008
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -7,
+      -510
+    ],
+    "chunks": 12,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11392,
+    "seam_changed": 0,
+    "solid_cells": 48105
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -44,
+      41
+    ],
+    "chunks": 62,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 5498,
+    "seam_changed": 0,
+    "solid_cells": 25940
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -10,
+      -59
+    ],
+    "chunks": 65,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 6596,
+    "seam_changed": 0,
+    "solid_cells": 30385
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -24,
+      -22
+    ],
+    "chunks": 68,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 5899,
+    "seam_changed": 0,
+    "solid_cells": 27702
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -25,
+      19
+    ],
+    "chunks": 57,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 5526,
+    "seam_changed": 0,
+    "solid_cells": 29405
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -9,
+      40
+    ],
+    "chunks": 82,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 6551,
+    "seam_changed": 0,
+    "solid_cells": 20071
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      14,
+      -20
+    ],
+    "chunks": 56,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 5206,
+    "seam_changed": 0,
+    "solid_cells": 26066
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      19,
+      41
+    ],
+    "chunks": 56,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 6288,
+    "seam_changed": 0,
+    "solid_cells": 26533
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      45,
+      -14
+    ],
+    "chunks": 56,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 5023,
+    "seam_changed": 0,
+    "solid_cells": 24341
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      30,
+      10
+    ],
+    "chunks": 66,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 5715,
+    "seam_changed": 0,
+    "solid_cells": 28937
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      48,
+      57
+    ],
+    "chunks": 108,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 10173,
+    "seam_changed": 0,
+    "solid_cells": 40708
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -36,
+      -42
+    ],
+    "chunks": 15,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 12065,
+    "seam_changed": 0,
+    "solid_cells": 50505
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -49,
+      -26
+    ],
+    "chunks": 16,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 8035,
+    "seam_changed": 0,
+    "solid_cells": 33386
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -41,
+      6
+    ],
+    "chunks": 16,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11610,
+    "seam_changed": 0,
+    "solid_cells": 48072
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -49,
+      61
+    ],
+    "chunks": 11,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 10060,
+    "seam_changed": 0,
+    "solid_cells": 40737
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -21,
+      -53
+    ],
+    "chunks": 12,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11613,
+    "seam_changed": 0,
+    "solid_cells": 46448
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      16,
+      -47
+    ],
+    "chunks": 15,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11536,
+    "seam_changed": 0,
+    "solid_cells": 48105
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      10,
+      5
+    ],
+    "chunks": 16,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 9835,
+    "seam_changed": 0,
+    "solid_cells": 40738
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      22,
+      63
+    ],
+    "chunks": 16,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 10257,
+    "seam_changed": 0,
+    "solid_cells": 40738
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      41,
+      -62
+    ],
+    "chunks": 19,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 17006,
+    "seam_changed": 0,
+    "solid_cells": 63054
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      48,
+      -45
+    ],
+    "chunks": 15,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11548,
+    "seam_changed": 0,
+    "solid_cells": 48143
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      30,
+      32
+    ],
+    "chunks": 18,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 15752,
+    "seam_changed": 0,
+    "solid_cells": 62686
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      59,
+      -47
+    ],
+    "chunks": 17,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 7247,
+    "seam_changed": 0,
+    "solid_cells": 30746
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -24,
+      491
+    ],
+    "chunks": 82,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 7232,
+    "seam_changed": 0,
+    "solid_cells": 30982
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -16,
+      530
+    ],
+    "chunks": 76,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 7017,
+    "seam_changed": 0,
+    "solid_cells": 28273
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      19,
+      502
+    ],
+    "chunks": 89,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 6885,
+    "seam_changed": 0,
+    "solid_cells": 29813
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      1,
+      532
+    ],
+    "chunks": 13,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11505,
+    "seam_changed": 0,
+    "solid_cells": 48141
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      481,
+      -538
+    ],
+    "chunks": 16,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 9942,
+    "seam_changed": 0,
+    "solid_cells": 40657
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      493,
+      -538
+    ],
+    "chunks": 16,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 9002,
+    "seam_changed": 0,
+    "solid_cells": 36594
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      502,
+      -491
+    ],
+    "chunks": 16,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11609,
+    "seam_changed": 0,
+    "solid_cells": 48071
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      500,
+      -482
+    ],
+    "chunks": 16,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11632,
+    "seam_changed": 0,
+    "solid_cells": 48142
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      515,
+      -538
+    ],
+    "chunks": 12,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 10870,
+    "seam_changed": 0,
+    "solid_cells": 41580
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      518,
+      -513
+    ],
+    "chunks": 13,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11466,
+    "seam_changed": 0,
+    "solid_cells": 48070
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      541,
+      -527
+    ],
+    "chunks": 14,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 12212,
+    "seam_changed": 0,
+    "solid_cells": 50470
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      502,
+      4
+    ],
+    "chunks": 89,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 8194,
+    "seam_changed": 0,
+    "solid_cells": 31621
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      523,
+      2
+    ],
+    "chunks": 74,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 6761,
+    "seam_changed": 0,
+    "solid_cells": 29233
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      490,
+      -16
+    ],
+    "chunks": 16,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11632,
+    "seam_changed": 0,
+    "solid_cells": 48144
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      515,
+      -22
+    ],
+    "chunks": 12,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 10759,
+    "seam_changed": 0,
+    "solid_cells": 45742
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      504,
+      499
+    ],
+    "chunks": 72,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 6739,
+    "seam_changed": 0,
+    "solid_cells": 29934
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      514,
+      532
+    ],
+    "chunks": 55,
+    "examples": [],
+    "kind": "fortress",
+    "seam_cells": 3477,
+    "seam_changed": 0,
+    "solid_cells": 16025
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      504,
+      517
+    ],
+    "chunks": 12,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 11411,
+    "seam_changed": 0,
+    "solid_cells": 48142
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      530,
+      486
+    ],
+    "chunks": 12,
+    "examples": [],
+    "kind": "bastion_remnant",
+    "seam_cells": 10924,
+    "seam_changed": 0,
+    "solid_cells": 42016
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -500,
+      8
+    ],
+    "chunks": 4,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 233,
+    "seam_changed": 0,
+    "solid_cells": 2390
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -493,
+      480
+    ],
+    "chunks": 14,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 824,
+    "seam_changed": 0,
+    "solid_cells": 6100
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -495,
+      506
+    ],
+    "chunks": 4,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 271,
+    "seam_changed": 0,
+    "solid_cells": 2210
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -15,
+      -513
+    ],
+    "chunks": 5,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 228,
+    "seam_changed": 0,
+    "solid_cells": 3245
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      2,
+      -493
+    ],
+    "chunks": 19,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 2044,
+    "seam_changed": 0,
+    "solid_cells": 11220
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -55,
+      -52
+    ],
+    "chunks": 12,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 640,
+    "seam_changed": 0,
+    "solid_cells": 4790
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -38,
+      63
+    ],
+    "chunks": 8,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 259,
+    "seam_changed": 0,
+    "solid_cells": 3735
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      62,
+      -12
+    ],
+    "chunks": 4,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 185,
+    "seam_changed": 0,
+    "solid_cells": 2233
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      -15,
+      542
+    ],
+    "chunks": 8,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 255,
+    "seam_changed": 0,
+    "solid_cells": 2410
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      505,
+      -494
+    ],
+    "chunks": 21,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 2320,
+    "seam_changed": 0,
+    "solid_cells": 13319
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      488,
+      500
+    ],
+    "chunks": 3,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 116,
+    "seam_changed": 0,
+    "solid_cells": 1835
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      508,
+      483
+    ],
+    "chunks": 9,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 303,
+    "seam_changed": 0,
+    "solid_cells": 3689
+  },
+  {
+    "changed": 0,
+    "chunk": [
+      505,
+      520
+    ],
+    "chunks": 27,
+    "examples": [],
+    "kind": "end_city",
+    "seam_cells": 2333,
+    "seam_changed": 0,
+    "solid_cells": 12161
+  }
+]

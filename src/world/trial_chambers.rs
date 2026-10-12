@@ -593,3 +593,12 @@ mod tests {
         assert_eq!(entities, placed.template.entities.len());
     }
 }
+
+#[cfg(all(test, not(seedmap_core)))]
+pub(super) fn audit_box(seed: i64, cx: i32, cz: i32) -> serde_json::Value {
+    let p = Placed::new(seed,cx,cz).unwrap();
+    let a = p.to_world(0,0);
+    let b = p.to_world(p.template.width-1,p.template.depth-1);
+    let y = p.bottom();
+    serde_json::json!({"name":"whole_snapshot","rotation":p.turns,"box":[a.0.min(b.0),y,a.1.min(b.1),a.0.max(b.0),y+p.template.height-1,a.1.max(b.1)]})
+}

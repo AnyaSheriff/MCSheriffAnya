@@ -1,0 +1,29 @@
+{
+  "overworld": {
+    "errors": [],
+    "DataVersion": {
+      "4790": 71936
+    },
+    "sections": {
+      "24": 71936
+    }
+  },
+  "the_nether": {
+    "errors": [],
+    "DataVersion": {
+      "4790": 71936
+    },
+    "sections": {
+      "16": 71936
+    }
+  },
+  "the_end": {
+    "errors": [],
+    "DataVersion": {
+      "4790": 71936
+    },
+    "sections": {
+      "16": 71936
+    }
+  }
+}

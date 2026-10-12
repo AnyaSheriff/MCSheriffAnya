@@ -677,14 +677,16 @@ impl Chunk {
             // Разрушенные порталы Незера (ruined_portal.rs).
             ruined_portal::build_nether(nether, &mut chunk, chunk_x, chunk_z);
 
-            // Спавнеры ифритов в комнатах трона крепости (вики, Nether Fortress:
+            // Спавнеры ифритов крепости и лавовых кубов бастиона (вики, Nether Fortress:
             // «blaze spawner»): блок в образце уже лежит, блок-сущность — здесь.
+            let bastion_spawners = nether.bastion_spawners(chunk_x, chunk_z);
             if let Some(spawner) = crate::blocks::state_by_name("spawner") {
                 for y in 1..127 {
                     for z in 0..CHUNK_SIZE {
                         for x in 0..CHUNK_SIZE {
                             if chunk.block(x, y, z) == spawner {
-                                chunk.put_generated_spawner(x, y, z, crate::spawner::Data::of("blaze"));
+                                let kind = if bastion_spawners.contains(&(x,y,z)) { "magma_cube" } else { "blaze" };
+                                chunk.put_generated_spawner(x, y, z, crate::spawner::Data::of(kind));
                             }
                         }
                     }

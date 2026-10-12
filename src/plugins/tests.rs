@@ -309,12 +309,14 @@ fn repeating_tasks_run_on_their_ticks() {
 
     host.load("hello").unwrap();
 
-    // `hello` просит повтор раз в 1200 тактов, первый раз через 1200.
+    // `hello` просит повтор раз в 1200 тактов после включения. Общий
+    // счётчик уже могли продвинуть другие параллельные проверки.
     assert_eq!(host.loaded[0].store.data().tasks.len(), 1);
-    host.tick(10);
-    assert_eq!(host.loaded[0].store.data().tasks[0].due, 1200);
-    host.tick(1200);
-    assert_eq!(host.loaded[0].store.data().tasks[0].due, 2400);
+    let enabled_at = host.loaded[0].store.data().tick;
+    host.tick(enabled_at + 10);
+    assert_eq!(host.loaded[0].store.data().tasks[0].due, enabled_at + 1200);
+    host.tick(enabled_at + 1200);
+    assert_eq!(host.loaded[0].store.data().tasks[0].due, enabled_at + 2400);
     assert!(host.is_loaded("hello"));
 }
 

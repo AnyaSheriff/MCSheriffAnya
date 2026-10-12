@@ -1,0 +1,215 @@
+[
+  {
+    "start_chunk": [
+      -478,
+      -12
+    ],
+    "counted_in_core": false,
+    "pieces": [
+      {
+        "box": [
+          -7641,
+          104,
+          -273,
+          -7629,
+          127,
+          -245
+        ],
+        "ground_delta": 0,
+        "name": "ship",
+        "origin": [
+          null,
+          null,
+          null
+        ],
+        "projection": null,
+        "rotation": "NONE"
+      }
+    ],
+    "frames": [
+      {
+        "Facing": 3,
+        "Item": {
+          "count": 1,
+          "id": "minecraft:elytra"
+        },
+        "Pos": [
+          -7634.5,
+          109.5,
+          -265.96875
+        ],
+        "id": "minecraft:item_frame",
+        "piece_membership": [
+          15
+        ]
+      }
+    ]
+  },
+  {
+    "start_chunk": [
+      -479,
+      486
+    ],
+    "counted_in_core": false,
+    "pieces": [
+      {
+        "box": [
+          -7742,
+          120,
+          7747,
+          -7714,
+          143,
+          7759
+        ],
+        "ground_delta": 0,
+        "name": "ship",
+        "origin": [
+          null,
+          null,
+          null
+        ],
+        "projection": null,
+        "rotation": "COUNTERCLOCKWISE_90"
+      }
+    ],
+    "frames": [
+      {
+        "Facing": 5,
+        "Item": {
+          "count": 1,
+          "id": "minecraft:elytra"
+        },
+        "Pos": [
+          -7734.96875,
+          125.5,
+          7753.5
+        ],
+        "id": "minecraft:item_frame",
+        "piece_membership": [
+          74
+        ]
+      }
+    ]
+  },
+  {
+    "start_chunk": [
+      -474,
+      544
+    ],
+    "counted_in_core": false,
+    "pieces": [
+      {
+        "box": [
+          -7490,
+          148,
+          8688,
+          -7462,
+          171,
+          8700
+        ],
+        "ground_delta": 0,
+        "name": "ship",
+        "origin": [
+          null,
+          null,
+          null
+        ],
+        "projection": null,
+        "rotation": "CLOCKWISE_90"
+      }
+    ],
+    "frames": []
+  },
+  {
+    "start_chunk": [
+      25,
+      -477
+    ],
+    "counted_in_core": false,
+    "pieces": [
+      {
+        "box": [
+          375,
+          144,
+          -7727,
+          387,
+          167,
+          -7699
+        ],
+        "ground_delta": 0,
+        "name": "ship",
+        "origin": [
+          null,
+          null,
+          null
+        ],
+        "projection": null,
+        "rotation": "NONE"
+      }
+    ],
+    "frames": [
+      {
+        "Facing": 3,
+        "Item": {
+          "count": 1,
+          "id": "minecraft:elytra"
+        },
+        "Pos": [
+          381.5,
+          149.5,
+          -7719.96875
+        ],
+        "id": "minecraft:item_frame",
+        "piece_membership": [
+          55
+        ]
+      }
+    ]
+  },
+  {
+    "start_chunk": [
+      545,
+      -535
+    ],
+    "counted_in_core": false,
+    "pieces": [
+      {
+        "box": [
+          8687,
+          141,
+          -8502,
+          8699,
+          164,
+          -8474
+        ],
+        "ground_delta": 0,
+        "name": "ship",
+        "origin": [
+          null,
+          null,
+          null
+        ],
+        "projection": null,
+        "rotation": "CLOCKWISE_180"
+      }
+    ],
+    "frames": [
+      {
+        "Facing": 2,
+        "Item": {
+          "count": 1,
+          "id": "minecraft:elytra"
+        },
+        "Pos": [
+          8693.5,
+          146.5,
+          -8480.03125
+        ],
+        "id": "minecraft:item_frame",
+        "piece_membership": [
+          68
+        ]
+      }
+    ]
+  }
+]

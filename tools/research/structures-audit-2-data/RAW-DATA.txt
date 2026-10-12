@@ -1,0 +1,1 @@
+Сырые данные (≈15 МБ) не в репозитории: ~/.cache/mcsheriffanya/structaudit2-data; пересоздаются командами из ../structures-audit-2.md.

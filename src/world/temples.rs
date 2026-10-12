@@ -966,3 +966,10 @@ mod tests {
         assert!(snow > 0);
     }
 }
+
+#[cfg(all(test, not(seedmap_core)))]
+pub(super) fn audit_piece(s: &Start) -> serde_json::Value {
+    let t = s.template().unwrap();
+    let a = s.area();
+    serde_json::json!({"name":s.kind.name(),"rotation":s.facing,"box":[a[0],s.y+t.low,a[1],a[2],s.y+t.low+t.height-1,a[3]]})
+}

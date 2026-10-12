@@ -652,6 +652,7 @@ impl End {
 
             let pieces = end_city::plan(self.seed, start_x, start_z, y);
             end_city::paint(&pieces, x0, z0, AIR, &mut |x, y, z, state| put(chunk, x - x0, y, z - z0, state));
+            chunk.frames.extend(end_city::ship_frames(&pieces,x0,z0));
         }
     }
 

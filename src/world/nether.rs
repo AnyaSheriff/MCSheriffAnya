@@ -2662,3 +2662,19 @@ mod tests {
         }
     }
 }
+
+// Вики, Bastion Remnant: «magma cube spawner». Запись SpawnData в мире
+// 26.1.2, seed 100554032945340: (-8406,39,478). Маска рисуется тем же
+// построителем и в том же порядке: одной рамки недостаточно при наложении.
+#[cfg(not(seedmap_core))]
+impl Nether {
+    pub(super) fn bastion_spawners(&self, cx: i32, cz: i32) -> std::collections::HashSet<(i32,i32,i32)> {
+        let plans = self.bastions_near(cx, cz);
+        if plans.is_empty() { return std::collections::HashSet::new(); }
+        let mut mask = vec![AIR; 128*16*16];
+        let mut canvas = fortress::Canvas { blocks: &mut mask, x0: cx*16, z0: cz*16, passable: &|_| true, air: AIR, supports: false };
+        for plan in plans { bastion::paint(self.seed, &plan, &mut canvas); }
+        let spawner = blocks::state_by_name("spawner").unwrap();
+        mask.iter().enumerate().filter_map(|(i,&state)| (state == spawner).then_some((i as i32%16,i as i32/256,i as i32/16%16))).collect()
+    }
+}

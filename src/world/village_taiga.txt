@@ -1,0 +1,1706 @@
+# Источник: vanilla-struct/world, только чтение region, 26.1.2.
+# Один экземпляр: частоты, независимая сборка и очистка природных блоков [проверить].
+# Деревни (taiga) — замер мира оригинала 26.1.2 (1 деревень, семя 100554032945340, чанк (510,484)),
+# tools/measure/village.py export. Образец: рамка в его собственном повороте
+# (a — x, b — z, y — от низа); «.» — рельеф остаётся, «_» — пусто. У образцов
+# terrain_matching (улицы) два слоя: верх рельефа столбца и над ним.
+# layout — раскладка одной деревни: образец, поворот (четверти по часовой),
+# начало куска от угла чанка старта по x и z и высота над землёй вокруг.
+
+template plains/terminators/terminator_01 2 3 2 terrain_matching 3
+  A dirt_path
+layer 0
+  ..
+  .A
+  .A
+layer 1
+  ..
+  ..
+  ..
+
+template plains/terminators/terminator_02 1 1 2 terrain_matching 8
+layer 0
+  .
+layer 1
+  .
+
+template plains/terminators/terminator_03 3 3 2 terrain_matching 3
+  A dirt_path
+  B spruce_leaves[distance=4,persistent=false,waterlogged=false]
+  C spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  D spruce_leaves[distance=2,persistent=false,waterlogged=false]
+layer 0
+  A.B
+  ..C
+  ..D
+layer 1
+  ...
+  ...
+  ...
+
+template plains/terminators/terminator_04 4 4 2 terrain_matching 3
+  A dirt_path
+  B spruce_planks
+layer 0
+  ..AA
+  ..AA
+  B.AA
+  B...
+layer 1
+  ....
+  ....
+  ....
+  ....
+
+template taiga/houses/taiga_butcher_shop_1 11 9 7 rigid 1
+  A fern
+  B poppy
+  C mossy_cobblestone
+  D cobblestone
+  E spruce_log[axis=y]
+  F smooth_stone_slab[type=top,waterlogged=false]
+  G smooth_stone_slab[type=double,waterlogged=false]
+  H large_fern[half=lower]
+  I grass_block[snowy=false]
+  J spruce_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  K spruce_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  L cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  M spruce_trapdoor[facing=south,half=bottom,open=true,powered=false,waterlogged=false]
+  N smoker[facing=south,lit=false]
+  O large_fern[half=upper]
+  P spruce_door[facing=north,half=lower,hinge=right,open=false,powered=false]
+  Q spruce_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  R spruce_door[facing=north,half=lower,hinge=left,open=false,powered=false]
+  S spruce_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  T spruce_fence[east=true,north=true,south=false,waterlogged=false,west=false]
+  U spruce_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  V spruce_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  W spruce_trapdoor[facing=north,half=top,open=true,powered=false,waterlogged=false]
+  X spruce_trapdoor[facing=west,half=top,open=true,powered=false,waterlogged=false]
+  Y glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  Z glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  a cobblestone_wall[east=none,north=tall,south=none,up=true,waterlogged=false,west=none]
+  b spruce_door[facing=north,half=upper,hinge=right,open=false,powered=false]
+  c spruce_door[facing=north,half=upper,hinge=left,open=false,powered=false]
+  d torch
+  e spruce_log[axis=x]
+  f wall_torch[facing=south]
+  g cobblestone_wall[east=tall,north=tall,south=tall,up=false,waterlogged=false,west=tall]
+  h spruce_trapdoor[facing=east,half=top,open=true,powered=false,waterlogged=false]
+  i wall_torch[facing=west]
+  j spruce_trapdoor[facing=south,half=top,open=true,powered=false,waterlogged=false]
+  k wall_torch[facing=north]
+  l spruce_log[axis=z]
+  m campfire[facing=north,lit=true,signal_fire=false,waterlogged=false]
+  n cobblestone_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  o cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  p cobblestone_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  q cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  r cobblestone_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  s cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  t cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  u cobblestone_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  v cobblestone_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+layer 0
+  ___ABB__A__
+  _CDDDDDDDD_
+  BDDEEFFGFDH
+  _DEEEFFFFDA
+  _DEEEDDDDDH
+  HDEEEDIIIIJ
+  _DDDDCIIIIJ
+  _HCDDKIIIIJ
+  _BLLLHMMMM_
+layer 1
+  ___________
+  _DDDDDDDDD_
+  _D_J_N__GDO
+  _DM_____GD_
+  _D___DDPCDO
+  OD___D___Q_
+  _DDRDDS__Q_
+  _O____TUUV_
+  _____O_____
+layer 2
+  __W_W_W_W__
+  XDCYCDDYDD_
+  _Z___a___D_
+  _Z_______D_
+  XD___DDbDD_
+  _D___D_____
+  _DDcDD_____
+  _________d_
+  ___________
+layer 3
+  eeeeeeeeeee
+  _DCDDDDDDD_
+  _D_fXgh_iD_
+  _D___j__iD_
+  _D___CDDDD_
+  eD_k_Dleeee
+  lDDDDDl____
+  l_____l____
+  ___________
+layer 4
+  ___________
+  eeeeeeeeeee
+  _DlllmDDDD_
+  _DlllDDDDD_
+  ellllleeeee
+  _lllll_____
+  _lDDDl_____
+  _l_f_l_____
+  ___________
+layer 5
+  ___________
+  ____nDo____
+  eeeeD_eeeee
+  eeeeeDDeeee
+  __lEl______
+  __lll______
+  __lDl______
+  __l_l______
+  ___________
+layer 6
+  ___________
+  ____pqr____
+  ____s_t____
+  ____uLv____
+  ___l_______
+  ___l_______
+  ___l_______
+  ___l_______
+  ___________
+
+template taiga/houses/taiga_large_farm_2 8 9 7 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C dirt_path
+  D large_fern[half=lower]
+  E spruce_trapdoor[facing=north,half=bottom,open=true,powered=false,waterlogged=false]
+  F pumpkin
+  G spruce_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  H farmland[moisture=7]
+  I spruce_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  J water[level=0]
+  K cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  L spruce_log[axis=y]
+  M fern
+  N cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+  O composter[level=0]
+  P large_fern[half=upper]
+  Q spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  R spruce_leaves[distance=1,persistent=false,waterlogged=false]
+  S wheat[age=3]
+  T wheat[age=7]
+  U pumpkin_stem[age=0]
+  V wheat[age=0]
+  W spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  X wheat[age=1]
+  Y potatoes[age=0]
+  Z torch
+layer 0
+  AAAAABAA
+  BABBAAAA
+  ABABAAAB
+  AAAAAAAA
+  CCAAAAAB
+  BCCABAAA
+  AACCBAAA
+  AABCCCCC
+  AAABAAAA
+layer 1
+  _DEE_F__
+  FGHHI_D_
+  GHHJHI_F
+  GHHHHHI_
+  __KHHHIL
+  F__HJHIM
+  _N__HHI_
+  D_F_____
+  ____DON_
+layer 2
+  _P____QR
+  __ST__PQ
+  _UT_V__W
+  _UTXUU__
+  ___UUT_L
+  ___U_Y__
+  _N__TY__
+  P_______
+  ____P_N_
+layer 3
+  RQ_____R
+  QW______
+  W_______
+  _______R
+  ______RL
+  _______R
+  _Z______
+  ________
+  ______Z_
+layer 4
+  R_____QR
+  ______WQ
+  ______WQ
+  _____WQR
+  _____QRL
+  _____WQR
+  ______WQ
+  ________
+  ________
+layer 5
+  RQ_____R
+  QW______
+  W_______
+  _______R
+  ______RL
+  _______R
+  ________
+  ________
+  ________
+layer 6
+  R_____QR
+  ______WQ
+  _______W
+  ________
+  _______L
+  ________
+  ________
+  ________
+  ________
+
+template taiga/houses/taiga_medium_house_2 7 8 11 rigid 1
+  A grass_block[snowy=false]
+  B dirt_path
+  C dirt
+  D spruce_planks
+  E cobblestone
+  F mossy_cobblestone
+  G fern
+  H spruce_door[facing=south,half=lower,hinge=right,open=true,powered=false]
+  I spruce_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  J spruce_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  K spruce_door[facing=south,half=lower,hinge=right,open=false,powered=false]
+  L crafting_table
+  M blue_bed[facing=east,occupied=false,part=foot]
+  N blue_bed[facing=east,occupied=false,part=head]
+  O spruce_log[axis=z]
+  P spruce_door[facing=south,half=upper,hinge=right,open=true,powered=false]
+  Q spruce_door[facing=south,half=upper,hinge=right,open=false,powered=false]
+  R glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  S spruce_trapdoor[facing=south,half=top,open=true,powered=false,waterlogged=false]
+  T wall_torch[facing=north]
+  U spruce_leaves[distance=5,persistent=false,waterlogged=false]
+  V spruce_leaves[distance=4,persistent=false,waterlogged=false]
+  W spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  X wall_torch[facing=south]
+  Y spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  Z purple_bed[facing=west,occupied=false,part=head]
+  a purple_bed[facing=west,occupied=false,part=foot]
+  b chest[facing=south,type=single,waterlogged=false]
+  c spruce_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  d spruce_trapdoor[facing=north,half=top,open=true,powered=false,waterlogged=false]
+  e wall_torch[facing=east]
+  f spruce_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  g spruce_log[axis=x]
+  h wall_torch[facing=west]
+layer 0
+  AAABCAB
+  AACDCAC
+  AACDCAA
+  ACCECCA
+  ACEFECA
+  ACEEECA
+  ACCCCCA
+  AAAAAAA
+layer 1
+  _______
+  G_DHD_I
+  __D_D_J
+  _EEKEE_
+  _E___E_
+  _FLMNF_
+  _EEEEE_
+  _______
+layer 2
+  _O___O_
+  _ODPDO_
+  _OD_DOI
+  _EFQEFJ
+  _E___E_
+  _E___E_
+  _ERERE_
+  _S_S_S_
+layer 3
+  __OTO__
+  __ODO__
+  U_OTO__
+  VEEEFFI
+  WE_X_EJ
+  YE___E_
+  WEEEEE_
+  VU_____
+layer 4
+  ___O___
+  ___O___
+  ___O___
+  _EEEEE_
+  WEDDDEI
+  YFDDDED
+  WFEEFE_
+  _______
+layer 5
+  _______
+  _______
+  _______
+  _EEEEE_
+  _EZabE_
+  _E___c_
+  _EEEEE_
+  _______
+layer 6
+  _______
+  _______
+  _d_d_d_
+  _ERERE_
+  WE___Ee
+  YE___f_
+  WERERE_
+  _S_S_S_
+layer 7
+  _______
+  _______
+  _______
+  _EEFEF_
+  _E___E_
+  _E___E_
+  _EEEFE_
+  _______
+layer 8
+  _______
+  _______
+  ggggggg
+  _EEEEE_
+  _E___F_
+  _E___E_
+  _EEEEE_
+  ggggggg
+layer 9
+  _______
+  _______
+  _______
+  ggggggg
+  _Ee_hE_
+  _Ee_hE_
+  ggggggg
+  _______
+layer 10
+  _______
+  _______
+  _______
+  _______
+  ggggggg
+  ggggggg
+  _______
+  _______
+
+template taiga/houses/taiga_medium_house_4 9 9 7 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C sand
+  D spruce_planks
+  E cobblestone
+  F mossy_cobblestone
+  G dirt_path
+  H spruce_log[axis=y]
+  I purple_bed[facing=west,occupied=false,part=head]
+  J purple_bed[facing=west,occupied=false,part=foot]
+  K purple_bed[facing=east,occupied=false,part=foot]
+  L purple_bed[facing=east,occupied=false,part=head]
+  M spruce_trapdoor[facing=north,half=bottom,open=true,powered=false,waterlogged=false]
+  N spruce_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  O furnace[facing=south,lit=false]
+  P spruce_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  Q spruce_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  R spruce_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  S spruce_door[facing=north,half=lower,hinge=right,open=true,powered=false]
+  T spruce_log[axis=z]
+  U spruce_trapdoor[facing=north,half=top,open=true,powered=false,waterlogged=false]
+  V glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  W wall_torch[facing=west]
+  X wall_torch[facing=east]
+  Y wall_torch[facing=south]
+  Z spruce_door[facing=north,half=upper,hinge=right,open=true,powered=false]
+  a spruce_log[axis=x]
+  b wall_torch[facing=north]
+  c cobblestone_stairs[facing=south,half=top,shape=outer_left,waterlogged=false]
+  d cobblestone_stairs[facing=south,half=top,shape=straight,waterlogged=false]
+  e cobblestone_stairs[facing=west,half=top,shape=outer_left,waterlogged=false]
+  f cobblestone_stairs[facing=east,half=top,shape=straight,waterlogged=false]
+  g campfire[facing=north,lit=true,signal_fire=false,waterlogged=false]
+  h cobblestone_stairs[facing=west,half=top,shape=straight,waterlogged=false]
+  i cobblestone_stairs[facing=north,half=top,shape=outer_right,waterlogged=false]
+  j cobblestone_stairs[facing=north,half=top,shape=straight,waterlogged=false]
+  k cobblestone_stairs[facing=west,half=top,shape=outer_right,waterlogged=false]
+  l cobblestone_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  m cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  n cobblestone_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  o cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  p cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  q cobblestone_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  r cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  s cobblestone_stairs[facing=north,half=bottom,shape=outer_left,waterlogged=false]
+layer 0
+  AAAAAAAAA
+  ABBBBBBBA
+  CBDDDDDBA
+  CBDDDDDBA
+  CBDDBDDBA
+  CBDDEDDBA
+  CBDDDDDBA
+  CBBBFBBBA
+  GGAAGAAAA
+layer 1
+  _________
+  _HEEEEEH_
+  _EIJDKLE_
+  _E__M__E_
+  _E_NOP_E_
+  _EQ___RE_
+  _EQ___RF_
+  _HEESEEH_
+  _________
+layer 2
+  T_U_U_U_T
+  THEVEVEHT
+  TE_____ET
+  TE_____ET
+  TE_WEX_FT
+  TE__Y__ET
+  TE_____ET
+  THEEZEEHT
+  T_______T
+layer 3
+  _T_____T_
+  _TaEEEaT_
+  _T_____T_
+  _T_____T_
+  _T__E__T_
+  _T_____T_
+  _T_____T_
+  _TaEEEaT_
+  _T_____T_
+layer 4
+  __T_b_T__
+  __TaaaT__
+  __T___T__
+  __TcdeT__
+  __TfghT__
+  __TijkT__
+  __T___T__
+  __TaaaT__
+  __T_Y_T__
+layer 5
+  ___TTT___
+  ___TTT___
+  ___TTT___
+  ___EEE___
+  ___E_E___
+  ___EEE___
+  ___TTT___
+  ___TTT___
+  ___TTT___
+layer 6
+  _________
+  _________
+  _________
+  ___lmn___
+  ___o_p___
+  ___qrs___
+  _________
+  _________
+  _________
+
+template taiga/houses/taiga_shepherds_house_1 10 11 7 rigid 1
+  A grass_block[snowy=false]
+  B dirt
+  C dirt_path
+  D short_grass
+  E spruce_log[axis=y]
+  F cobblestone
+  G spruce_planks
+  H cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  I mossy_cobblestone
+  J loom[facing=south]
+  K spruce_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  L spruce_fence[east=true,north=false,south=true,waterlogged=false,west=true]
+  M spruce_fence[east=false,north=false,south=true,waterlogged=false,west=true]
+  N spruce_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  O spruce_fence[east=false,north=true,south=true,waterlogged=false,west=true]
+  P purple_carpet
+  Q white_carpet
+  R spruce_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  S spruce_door[facing=west,half=lower,hinge=right,open=false,powered=false]
+  T spruce_door[facing=east,half=lower,hinge=right,open=false,powered=false]
+  U spruce_fence[east=false,north=true,south=false,waterlogged=false,west=true]
+  V spruce_log[axis=x]
+  W spruce_trapdoor[facing=east,half=top,open=true,powered=false,waterlogged=false]
+  X torch
+  Y spruce_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  Z glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  a spruce_door[facing=west,half=upper,hinge=right,open=false,powered=false]
+  b spruce_door[facing=east,half=upper,hinge=right,open=false,powered=false]
+  c spruce_pressure_plate[powered=false]
+  d spruce_leaves[distance=1,persistent=false,waterlogged=false]
+  e spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  f spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  g spruce_log[axis=z]
+  h wall_torch[facing=north]
+  i wall_torch[facing=south]
+  j wall_torch[facing=west]
+layer 0
+  AAAAAAAAAA
+  ABBBBBAAAA
+  AABBBBBBBB
+  CBBBBBBBBB
+  AABBBBBBBB
+  ABBBBBBBBB
+  AABBBBBBBB
+  CABBBBBBBB
+  AABBBBBBBB
+  ABBBBBAAAA
+  _____AAAAA
+layer 1
+  __D_______
+  _EFFFF____
+  __FGGFFFFF
+  _HIGGFAABF
+  __FGGFAAAF
+  _EFGGFAAAF
+  __IGGFAAAF
+  _HFGGFAAAF
+  __FGGFFFFF
+  _EFFFF____
+  __________
+layer 2
+  __________
+  _EFFFF____
+  __FJJFKKLM
+  __N__F__EO
+  __FPQF___R
+  _EFQPS___R
+  __FPQF___R
+  __T__F___R
+  __FLLFKKKU
+  _EFFFF____
+  __________
+layer 3
+  VVVVVVV___
+  _EGGGG____
+  __G__GW__X
+  __Y__Z__E_
+  __G__GW___
+  _EG__a____
+  __G__GW___
+  __b__Z____
+  __GccGW__X
+  _EGGGG____
+  VVVVVVV___
+layer 4
+  __________
+  VVVVVVVdef
+  _gG__Gdede
+  _gG__GedEd
+  _gGh_Gdede
+  VVVVVVVdef
+  _gGi_G____
+  _gG__G____
+  _gG__G____
+  VVVVVVV___
+  __________
+layer 5
+  __________
+  __________
+  VVVVVVV_d_
+  _jG__G_dEd
+  VVVVVVV_d_
+  __________
+  VVVVVVV___
+  _jG__G____
+  VVVVVVV___
+  __________
+  __________
+layer 6
+  __________
+  _______fef
+  ______dede
+  VVVVVVVeEd
+  ______dede
+  _______fef
+  __________
+  VVVVVVV___
+  __________
+  __________
+  __________
+
+template taiga/houses/taiga_small_farm_1 7 8 7 rigid 1
+  A dirt
+  B grass_block[snowy=false]
+  C water[level=8]
+  D mossy_cobblestone
+  E cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  F cobblestone
+  G water[level=0]
+  H farmland[moisture=7]
+  I cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+  J pumpkin_stem[age=7]
+  K pumpkin
+  L composter[level=0]
+  M spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  N spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  O torch
+  P spruce_leaves[distance=4,persistent=false,waterlogged=false]
+  Q spruce_leaves[distance=5,persistent=false,waterlogged=false]
+layer 0
+  AAAAAAA
+  AAAABAA
+  ABABBBA
+  AAAAAAA
+  ABBBABA
+  AACBBAA
+  ABBAAAA
+  AAAAAAA
+layer 1
+  DDDEDDF
+  FGHDHGF
+  DHHHHHD
+  DAAGDAD
+  FHHHHHD
+  FDGHHDD
+  DHHHAGF
+  FFDFDDD
+layer 2
+  __I_I__
+  __J_J__
+  _JJJJJ_
+  _KK_LK_
+  _JJJJJ_
+  ___JJ__
+  _JJJK__
+  _______
+layer 3
+  MNO_O_N
+  NP_____
+  PQ_____
+  Q______
+  _______
+  _______
+  _______
+  _______
+layer 4
+  N______
+  P______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 5
+  ______N
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+layer 6
+  M______
+  N______
+  _______
+  _______
+  _______
+  _______
+  _______
+  _______
+
+template taiga/houses/taiga_small_house_2 7 7 7 rigid 1
+  A fern
+  B cobblestone_wall[east=none,north=none,south=low,up=true,waterlogged=false,west=none]
+  C cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  D large_fern[half=lower]
+  E cobblestone
+  F spruce_log[axis=y]
+  G spruce_planks
+  H mossy_cobblestone
+  I torch
+  J large_fern[half=upper]
+  K spruce_door[facing=south,half=lower,hinge=left,open=false,powered=false]
+  L spruce_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  M purple_bed[facing=south,occupied=false,part=foot]
+  N purple_bed[facing=south,occupied=false,part=head]
+  O spruce_door[facing=south,half=upper,hinge=left,open=false,powered=false]
+  P spruce_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  Q spruce_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  R glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  S glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  T spruce_trapdoor[facing=south,half=bottom,open=true,powered=false,waterlogged=false]
+  U spruce_log[axis=z]
+layer 0
+  _ABCBD_
+  _EEEEE_
+  _EFGFE_
+  _HGGGE_
+  _EFGFE_
+  _EHEEE_
+  __A____
+layer 1
+  __I_IJ_
+  _EEKHE_
+  _EL__H_
+  _EG_ME_
+  _HL_NE_
+  _EEEEE_
+  _______
+layer 2
+  _______
+  _EHOEE_
+  PE___EQ
+  _RI__R_
+  PE___EQ
+  _HESEH_
+  __T_T__
+layer 3
+  U_____U
+  UHEEEEU
+  UE___EU
+  UE___EU
+  UE___EU
+  UEEEEEU
+  U_____U
+layer 4
+  _U___U_
+  _UEEEU_
+  _U___U_
+  _U___U_
+  _U___U_
+  _UEEHU_
+  _U___U_
+layer 5
+  __U_U__
+  __UEU__
+  __U_U__
+  __U_U__
+  __U_U__
+  __UEU__
+  __U_U__
+layer 6
+  ___U___
+  ___U___
+  ___U___
+  ___U___
+  ___U___
+  ___U___
+  ___U___
+
+template taiga/houses/taiga_small_house_3 7 7 7 rigid 6
+  A cobblestone_wall[east=none,north=none,south=tall,up=true,waterlogged=false,west=none]
+  B cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  C poppy
+  D spruce_log[axis=y]
+  E cobblestone
+  F cobblestone_wall[east=none,north=none,south=low,up=true,waterlogged=false,west=none]
+  G spruce_door[facing=south,half=lower,hinge=left,open=false,powered=false]
+  H chest[facing=east,type=single,waterlogged=false]
+  I crafting_table
+  J blue_bed[facing=south,occupied=false,part=foot]
+  K spruce_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  L blue_bed[facing=south,occupied=false,part=head]
+  M torch
+  N spruce_door[facing=south,half=upper,hinge=left,open=false,powered=false]
+  O spruce_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  P spruce_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  Q glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  R glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  S spruce_trapdoor[facing=south,half=bottom,open=true,powered=false,waterlogged=false]
+  T spruce_log[axis=z]
+  U wall_torch[facing=south]
+  V wall_torch[facing=north]
+layer 0
+  __ABA_C
+  _DEEED_
+  _EEEEE_
+  _EEEEE_
+  _EEEEE_
+  _DEEED_
+  _______
+layer 1
+  __F_F__
+  _DEGED_
+  _EH_IE_
+  _EJ_KE_
+  _EL_KE_
+  _DEEED_
+  _______
+layer 2
+  __M_M__
+  _DENED_
+  OE___EP
+  _Q___Q_
+  OE___EP
+  _DERED_
+  __S_S__
+layer 3
+  T_____T
+  TDEEEDT
+  TE___ET
+  TE___ET
+  TE___ET
+  TDEEEDT
+  T_____T
+layer 4
+  _T___T_
+  _TEEET_
+  _T_U_T_
+  _T___T_
+  _T_V_T_
+  _TEEET_
+  _T___T_
+layer 5
+  __T_T__
+  __TET__
+  __T_T__
+  __T_T__
+  __T_T__
+  __TET__
+  __T_T__
+layer 6
+  ___T___
+  ___T___
+  ___T___
+  ___T___
+  ___T___
+  ___T___
+  ___T___
+
+template taiga/houses/taiga_small_house_5 9 7 7 rigid 1
+  A spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  B spruce_log[axis=y]
+  C cobblestone
+  D mossy_cobblestone
+  E spruce_leaves[distance=1,persistent=false,waterlogged=false]
+  F large_fern[half=lower]
+  G spruce_planks
+  H cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  I spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  J large_fern[half=upper]
+  K chest[facing=south,type=single,waterlogged=false]
+  L purple_bed[facing=east,occupied=false,part=foot]
+  M purple_bed[facing=east,occupied=false,part=head]
+  N spruce_door[facing=east,half=lower,hinge=left,open=false,powered=false]
+  O spruce_trapdoor[facing=north,half=top,open=true,powered=false,waterlogged=false]
+  P glass_pane[east=true,north=false,south=false,waterlogged=false,west=true]
+  Q spruce_trapdoor[facing=east,half=top,open=true,powered=false,waterlogged=false]
+  R spruce_door[facing=east,half=upper,hinge=left,open=false,powered=false]
+  S glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  T spruce_trapdoor[facing=south,half=top,open=true,powered=false,waterlogged=false]
+  U spruce_log[axis=x]
+  V wall_torch[facing=west]
+  W wall_torch[facing=east]
+layer 0
+  ________A
+  _BCDCCCBE
+  _FCGGGC_A
+  _HCGGGC_I
+  _FCGGGC__
+  _BCCDDCB_
+  _________
+layer 1
+  _________
+  _BCCCCCB_
+  _JCKLMD__
+  __N___C__
+  _JC__HC__
+  _BCCCCCB_
+  _________
+layer 2
+  ___O_O___
+  _BDCPCCB_
+  __C___CQ_
+  __R___S__
+  __C___CQ_
+  _BCCPCCB_
+  ___T_T___
+layer 3
+  UUUUUUUUU
+  _BCDCCDB_
+  __C___C__
+  _VCW_VC__
+  __C___C__
+  _BCCCCCB_
+  UUUUUUUUU
+layer 4
+  _________
+  UUUUUUUUU
+  __C___C__
+  __C___C__
+  __C___C__
+  UUUUUUUUU
+  _EEE_____
+layer 5
+  _________
+  _________
+  UUUUUUUUU
+  __C___C__
+  UUUUUUUUU
+  _________
+  _________
+layer 6
+  _________
+  _________
+  _________
+  UUUUUUUUU
+  _________
+  _________
+  _________
+
+template taiga/houses/taiga_tannery_1 9 9 6 rigid 1
+  A spruce_trapdoor[facing=north,half=top,open=true,powered=false,waterlogged=false]
+  B spruce_trapdoor[facing=west,half=top,open=true,powered=false,waterlogged=false]
+  C grass_block[snowy=false]
+  D cobblestone
+  E mossy_cobblestone
+  F cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  G fern
+  H dirt_path
+  I large_fern[half=lower]
+  J poppy
+  K spruce_trapdoor[facing=north,half=bottom,open=true,powered=false,waterlogged=false]
+  L chest[facing=south,type=single,waterlogged=false]
+  M spruce_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  N spruce_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  O spruce_trapdoor[facing=south,half=bottom,open=true,powered=false,waterlogged=false]
+  P torch
+  Q spruce_door[facing=east,half=lower,hinge=left,open=true,powered=false]
+  R water_cauldron[level=3]
+  S spruce_log[axis=x]
+  T large_fern[half=upper]
+  U spruce_trapdoor[facing=east,half=top,open=true,powered=false,waterlogged=false]
+  V glass_pane[east=false,north=true,south=true,waterlogged=false,west=false]
+  W spruce_door[facing=east,half=upper,hinge=left,open=true,powered=false]
+  X wall_torch[facing=west]
+  Y wall_torch[facing=east]
+layer 0
+  _A_______
+  BCDDDDED_
+  BCDDDDDE_
+  BCDDDDED_
+  BCDDDDDD_
+  _DDDDDDD_
+  _FDDDDDD_
+  _EDDDDDEG
+  H________
+layer 1
+  _________
+  _IDDDDDD_
+  _JD_KKLD_
+  _IDM__ND_
+  _GD_OO_D_
+  _PD____D_
+  __Q__RRD_
+  _PDEDDDD_
+  _________
+layer 2
+  _SSSSSSSS
+  _TDDDDDD_
+  _BD____DU
+  _TV____V_
+  _BD____DU
+  __D____V_
+  __W____DU
+  __DDDDDD_
+  _SSSSSSSS
+layer 3
+  _________
+  _SSSSSSSS
+  __D____D_
+  __E____D_
+  __D____D_
+  __D____E_
+  __D____D_
+  _SSSSSSSS
+  _________
+layer 4
+  _________
+  _________
+  _SSSSSSSS
+  __D____D_
+  __DXEDYD_
+  __D____E_
+  _SSSSSSSS
+  _________
+  _________
+layer 5
+  _________
+  _________
+  _________
+  _SSSSSSSS
+  _SSSSSSSS
+  _SSSSSSSS
+  _________
+  _________
+  _________
+
+template taiga/houses/taiga_weaponsmith_2 6 7 5 rigid 2
+  A grass_block[snowy=false]
+  B dirt_path
+  C cobblestone
+  D dirt
+  E fern
+  F cobblestone_wall[east=none,north=none,south=low,up=true,waterlogged=false,west=none]
+  G large_fern[half=lower]
+  H cobblestone_wall[east=none,north=low,south=low,up=false,waterlogged=false,west=none]
+  I cobblestone_wall[east=none,north=low,south=none,up=true,waterlogged=false,west=none]
+  J grindstone[face=floor,facing=south]
+  K spruce_log[axis=x]
+  L torch
+  M large_fern[half=upper]
+  N cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+layer 0
+  ABABBA
+  AABBAA
+  ABBBAA
+  .BCBAA
+  AABAAA
+  AAAAAA
+  DDDDDA
+layer 1
+  E_____
+  F.__FG
+  H___H_
+  I_J_I_
+  _E_GE_
+  FEF_F_
+  KKKKK_
+layer 2
+  ______
+  L___LM
+  ______
+  N___N_
+  ___M__
+  KKKKK_
+  ______
+layer 3
+  _____.
+  _____.
+  ______
+  F___F_
+  KKKKK_
+  ______
+  ..____
+layer 4
+  _____.
+  _____.
+  _____.
+  KKKKK.
+  ____..
+  ____..
+  _____.
+
+template taiga/streets/corner_01 16 16 2 terrain_matching 1
+  A dirt_path
+  B spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  C spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  D spruce_leaves[distance=4,persistent=false,waterlogged=false]
+  E spruce_leaves[distance=5,persistent=false,waterlogged=false]
+  F large_fern[half=lower]
+  G fern
+layer 0
+  ......AA...BCDBD
+  ......A....DBCDC
+  .......AA..EDBCC
+  .......ABCB.EDBC
+  ......ABCCCB...B
+  ......ACCCCC....
+  ......ABCCCB....
+  AAA..AAABCB.....
+  A.AAAA.A........
+  AAAAA.A.........
+  ................
+  ...............B
+  ..............BC
+  ..............CD
+  ......DBD.....BC
+  .....DBDBD...BCB
+layer 1
+  .....F..........
+  ........F.......
+  ....F...........
+  ................
+  .....F..........
+  ................
+  ................
+  .............G..
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ....G...........
+  ................
+
+template taiga/streets/corner_02 16 16 2 terrain_matching 1
+  A dirt_path
+  B spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  C spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  D cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  E cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+  F spruce_trapdoor[facing=north,half=bottom,open=true,powered=false,waterlogged=false]
+  G wheat[age=3]
+  H wheat[age=7]
+  I spruce_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  J pumpkin_stem[age=0]
+  K wheat[age=0]
+  L spruce_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  M wheat[age=1]
+  N spruce_leaves[distance=1,persistent=false,waterlogged=false]
+  O cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  P torch
+  Q potatoes[age=0]
+  R composter[level=0]
+  S spruce_leaves[distance=4,persistent=false,waterlogged=false]
+  T spruce_leaves[distance=5,persistent=false,waterlogged=false]
+  U pumpkin
+  V fern
+  W large_fern[half=lower]
+layer 0
+  A.A.....BBBBB...
+  AAA.CBC.CBBBCCBC
+  AAACBCBC.CBCCBBB
+  DEABCCCBFF..BBBB
+  AAACBCBCGHI.CBBB
+  AA..CBCJH.KICCBC
+  AAA...LJHMJCBNBB
+  A.A...AAOJJBNNNB
+  .AA....AAJ.CBNBC
+  AAA....PAAHQCBC.
+  A.A......AAAAA..
+  AAA........RP...
+  CST.............
+  BCSTAAAAAAAAAAAA
+  CBCSAAAAAAAA.AA.
+  CCBCAAA...AAAAA.
+layer 1
+  ................
+  ................
+  ................
+  ...........U....
+  ................
+  ................
+  ................
+  ................
+  .....VU.........
+  ................
+  ......W.U.......
+  ..........W.....
+  ................
+  ................
+  ................
+  ................
+
+template taiga/streets/corner_03 4 4 2 terrain_matching 4
+  A spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  B spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  C dirt_path
+layer 0
+  ..AB
+  ....
+  C...
+  C...
+layer 1
+  ....
+  ....
+  ....
+  ....
+
+template taiga/streets/crossroad_04 4 5 2 terrain_matching 2
+  A dirt_path
+  B torch
+layer 0
+  .A..
+  AAAA
+  .AAB
+  AAA.
+  .A.A
+layer 1
+  ....
+  ....
+  ....
+  ....
+  ....
+
+template taiga/streets/crossroad_05 5 5 2 terrain_matching 6
+  A dirt_path
+layer 0
+  ..AA.
+  .AA.A
+  ...A.
+  A.AAA
+  ..AA.
+layer 1
+  .....
+  .....
+  .....
+  .....
+  .....
+
+template taiga/streets/crossroad_06 5 5 2 terrain_matching 4
+  A dirt_path
+layer 0
+  .A...
+  .A...
+  .A...
+  .A...
+  ..A..
+layer 1
+  .....
+  .....
+  .....
+  .....
+  .....
+
+template taiga/streets/straight_02 16 16 2 terrain_matching 2
+  A spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  B spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  C dirt_path
+  D spruce_log[axis=x]
+  E fern
+layer 0
+  ................
+  ...............A
+  ...............B
+  C...........AB..
+  CC........B.A.B.
+  CCC......D.A.A..
+  .CC.....DD......
+  .C.....DDD......
+  ..C....DDD......
+  ..C....DDD......
+  C...............
+  C...............
+  ................
+  ................
+  ................
+  ................
+layer 1
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ..............E.
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+  ................
+
+template taiga/streets/straight_03 13 11 2 terrain_matching 4
+  A dirt_path
+  B spruce_log[axis=x]
+layer 0
+  AAA..........
+  .............
+  .A.BBBBBB....
+  AA.BBBBBBB...
+  ...BBBBBBB...
+  .A.BBBBBBB...
+  ..ABBBBBBB...
+  .A.BBBBBBB...
+  .AABBBBBBB...
+  .A....BB.....
+  .A...........
+layer 1
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+  .............
+
+template taiga/streets/straight_04 11 9 2 terrain_matching 6
+  A dirt_path
+  B spruce_log[axis=x]
+  C spruce_leaves[distance=2,persistent=false,waterlogged=false]
+layer 0
+  A.A........
+  A.A........
+  ..A........
+  ...BB......
+  .A.BB......
+  ...BB......
+  ...BB......
+  .A.BB......
+  C.A........
+layer 1
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+  ...........
+
+template taiga/streets/straight_05 20 17 2 terrain_matching 6
+  A dirt_path
+  B spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  C spruce_leaves[distance=3,persistent=false,waterlogged=false]
+layer 0
+  .A...B..............
+  ..................B.
+  .................B..
+  ....................
+  ..A................B
+  ....................
+  .A..................
+  A.A.................
+  AAA.................
+  AA..................
+  .AA.................
+  ....................
+  ....................
+  ....................
+  ....................
+  ..................C.
+  ..................B.
+layer 1
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+  ....................
+
+template taiga/streets/straight_06 21 18 2 terrain_matching 1
+  A spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  B dirt_path
+  C spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  D spruce_log[axis=z]
+  E cobblestone_wall[east=low,north=none,south=none,up=false,waterlogged=false,west=low]
+  F torch
+  G spruce_leaves[distance=4,persistent=false,waterlogged=false]
+  H spruce_leaves[distance=1,persistent=false,waterlogged=false]
+  I spruce_log[axis=x]
+  J cobblestone_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]
+  K cobblestone_stairs[facing=east,half=bottom,shape=outer_right,waterlogged=false]
+  L cobblestone_stairs[facing=south,half=bottom,shape=straight,waterlogged=false]
+  M cobblestone_stairs[facing=south,half=bottom,shape=outer_right,waterlogged=false]
+  N campfire[facing=east,lit=true,signal_fire=false,waterlogged=false]
+  O cobblestone_stairs[facing=west,half=bottom,shape=straight,waterlogged=false]
+  P spruce_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  Q cobblestone_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]
+  R cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  S cobblestone_stairs[facing=west,half=bottom,shape=outer_right,waterlogged=false]
+  T spruce_fence[east=false,north=true,south=true,waterlogged=false,west=false]
+  U spruce_fence[east=true,north=false,south=false,waterlogged=false,west=true]
+  V spruce_trapdoor[facing=south,half=bottom,open=true,powered=false,waterlogged=false]
+  W fern
+  X poppy
+  Y large_fern[half=lower]
+  Z pumpkin
+layer 0
+  A.......BB.........AC
+  CDDDEF.B....ACA.ACA..
+  ADDDB.BBBB.ACCCACGCA.
+  DDDDBB.B.B.CCCCCGAGC.
+  DDDDBBB.BB.ACCCACGCA.
+  D..DEFBB....ACA.HHC..
+  .IIIIIIIBBB.IIDDDDDD.
+  .IIIIIIIB.B.IIIIDDDD.
+  .IIIIIIIBBBJIIIIDDDD.
+  .IIIIIIIBF.JIIIIDDDD.
+  .IIIIIIIBB.JIIIIKLMDH
+  .IIIIIIIB.B.IIIIJNODH
+  .IIIIIIIBBBPIIIDQRSDH
+  ........BBBPT.DDDDDD.
+  ........BBBPT.DDDDDD.
+  ........B.BPFUDDDDDD.
+  .........BB.VVDDDDDD.
+  ........BBB..........
+layer 1
+  .....................
+  ......W..............
+  .....W...............
+  .....................
+  .....................
+  .....................
+  .....................
+  ...........X.........
+  .....................
+  .....................
+  .....................
+  ...........Y.........
+  .....................
+  .....................
+  .......Z.............
+  .......Z.Z...........
+  ........ZZ...........
+  .....................
+
+template taiga/streets/turn_01 18 8 2 terrain_matching 1
+  A spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  B spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  C dirt_path
+  D fern
+layer 0
+  ABBACCABA.........
+  BBABAABABA........
+  BAAABBABAB........
+  ABABAABABA........
+  .ABA..ABAC........
+  .......CCC........
+  .......CCC......AB
+  .......CCC.....ABB
+layer 1
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ..................
+  ...DD.............
+  ......D...........
+
+template taiga/taiga_decoration_1 3 6 2 rigid 1
+  A dirt_path
+  B grass_block[snowy=false]
+  C spruce_planks
+  D spruce_trapdoor[facing=north,half=bottom,open=true,powered=false,waterlogged=false]
+  E spruce_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  F spruce_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  G spruce_trapdoor[facing=south,half=bottom,open=true,powered=false,waterlogged=false]
+layer 0
+  ABA
+  BCB
+  ACA
+  ACA
+  ACA
+  AAA
+layer 1
+  _D_
+  E_F
+  E_F
+  E_F
+  E_F
+  _G_
+
+template taiga/taiga_decoration_3 1 2 2 rigid 3
+  A cobblestone
+  B cobblestone_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+  C cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+layer 0
+  A
+  B
+layer 1
+  C
+  _
+
+template taiga/taiga_decoration_5 1 1 1 rigid 2
+  A campfire[facing=north,lit=true,signal_fire=false,waterlogged=false]
+layer 0
+  A
+
+template taiga/taiga_lamp_post_1 1 1 2 rigid 6
+  A cobblestone_wall[east=none,north=none,south=none,up=true,waterlogged=false,west=none]
+  B torch
+layer 0
+  A
+layer 1
+  B
+
+template taiga/town_centers/taiga_meeting_point_1 22 18 3 rigid 1
+  A grass_block[snowy=false]
+  B dirt_path
+  C dirt
+  D spruce_log[axis=y]
+  E spruce_trapdoor[facing=north,half=bottom,open=true,powered=false,waterlogged=false]
+  F spruce_trapdoor[facing=west,half=bottom,open=true,powered=false,waterlogged=false]
+  G spruce_planks
+  H spruce_trapdoor[facing=east,half=bottom,open=true,powered=false,waterlogged=false]
+  I spruce_trapdoor[facing=south,half=bottom,open=true,powered=false,waterlogged=false]
+  J fern
+  K spruce_leaves[distance=3,persistent=false,waterlogged=false]
+  L spruce_leaves[distance=2,persistent=false,waterlogged=false]
+  M bell[attachment=floor,facing=north,powered=false]
+  N spruce_leaves[distance=1,persistent=false,waterlogged=false]
+layer 0
+  AAAAABBBAAAAAAAAAAAAAA
+  ABBABBBBAABBAACAAAAAAA
+  BBABBBBBABBAAAAAAAAAAA
+  BBBBBBBBBBBBAAAAAAAAAA
+  ABBBBBBAABBBAAAAAAAAAC
+  AABABBABABBBAAAAAAAAAA
+  AABBBBBBBABBAACAAAAAAA
+  ACCCCCCAAAAAAAAAAAAAAA
+  ACCCCCCCAAAAAAAAAAAAAA
+  ACCCCCCCAAACAAAAAAAAAA
+  ACCCCCCCAAAAAAAAAAAACA
+  ACCCCCCAAAAAAAAAAAAAAA
+  AAACCAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAACAAAAAAAAA
+  AAAAAACAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAA
+  AAAAAAAAAAAAAAAAAAAAAA
+layer 1
+  ______________________
+  ______________D_______
+  _________E____________
+  ________FGH___________
+  ____AB___I___________D
+  ___AAA________________
+  _AAAAAA_______D_______
+  _AACCCA_______________
+  _CCCCCCA______________
+  _CCCCCCA___D__________
+  _CCCCCCC____________D_
+  _CCCCCC_______________
+  ___CC________J________
+  _________J____________
+  __________J_D_________
+  ___J__D_______J_______
+  ______________________
+  ______________________
+layer 2
+  __KLK_________________
+  ______________D_______
+  ____________________KL
+  _________M_________KLN
+  _____________KLK___LND
+  ____________KLNLK__KLN
+  ____________LNDNL___KL
+  ___AAA______KLNLK_____
+  _AAAAAC______KLK______
+  _AACACA____D________N_
+  _AAACAAA___________NDN
+  _AAAAAAA____________N_
+  _AAAAAAA______________
+  ______________________
+  ______N_____D_________
+  _____NDN______________
+  ______N_______________
+  ______________________
+
+layout 85
+  taiga/town_centers/taiga_meeting_point_1 3 0 -4 0
+  taiga/streets/straight_05 1 -1 0 -7
+  taiga/streets/straight_05 0 2 0 1
+  taiga/streets/crossroad_05 0 -22 0 -8
+  taiga/taiga_lamp_post_1 1 3 1 14
+  taiga/houses/taiga_tannery_1 0 4 1 6
+  taiga/streets/crossroad_04 2 5 0 22
+  taiga/streets/straight_03 0 2 0 -10
+  taiga/streets/crossroad_05 1 -18 0 -3
+  taiga/streets/corner_03 2 -14 0 -5
+  taiga/streets/straight_04 2 -19 0 -9
+  taiga/streets/straight_04 1 -23 0 -7
+  taiga/streets/straight_03 1 16 0 19
+  taiga/taiga_lamp_post_1 2 2 1 20
+  taiga/streets/crossroad_06 1 5 0 23
+  taiga/houses/taiga_small_house_5 0 4 2 -7
+  taiga/streets/crossroad_05 3 -22 0 6
+  taiga/streets/straight_04 0 -16 0 -17
+  taiga/streets/straight_05 0 -21 0 -34
+  taiga/houses/taiga_medium_house_2 1 -22 0 -17
+  taiga/taiga_lamp_post_1 3 -19 1 -13
+  taiga/streets/crossroad_05 2 -32 0 -4
+  taiga/houses/taiga_small_house_3 0 -30 0 -4
+  taiga/houses/taiga_medium_house_4 2 14 0 30
+  taiga/streets/straight_03 1 27 0 19
+  taiga/streets/straight_02 2 4 0 43
+  taiga/streets/straight_03 3 -10 0 26
+  taiga/streets/straight_04 2 -19 0 15
+  plains/terminators/terminator_02 0 -23 0 4
+  taiga/streets/crossroad_06 2 -18 0 1
+  taiga/houses/taiga_small_house_3 3 -13 1 -10
+  taiga/taiga_decoration_3 0 -16 1 -13
+  taiga/houses/taiga_small_farm_1 3 -18 0 -24
+  taiga/streets/straight_05 2 -19 0 -35
+  taiga/taiga_decoration_1 2 -19 -3 -18
+  taiga/streets/corner_02 3 -48 0 12
+  taiga/streets/straight_05 3 -53 0 -5
+  taiga/streets/crossroad_04 0 -36 0 -13
+  taiga/houses/taiga_small_house_3 0 19 1 22
+  taiga/streets/straight_06 3 28 0 28
+  taiga/streets/corner_03 0 13 0 19
+  taiga/taiga_lamp_post_1 1 3 -6 30
+  taiga/streets/corner_03 3 2 0 47
+  taiga/houses/taiga_small_house_3 1 1 1 32
+  taiga/houses/taiga_shepherds_house_1 3 -10 0 23
+  taiga/streets/straight_04 3 -19 0 26
+  taiga/houses/taiga_small_house_3 1 -22 1 8
+  plains/terminators/terminator_02 3 -20 0 16
+  taiga/taiga_decoration_3 0 -20 -2 -1
+  taiga/houses/taiga_small_house_2 1 -22 1 -46
+  taiga/taiga_decoration_5 3 -20 -2 -48
+  taiga/streets/straight_05 0 -21 0 -68
+  taiga/streets/crossroad_06 1 -32 0 -8
+  taiga/houses/taiga_large_farm_2 3 -45 -4 6
+  taiga/streets/turn_01 3 -56 0 19
+  taiga/taiga_decoration_3 0 -45 1 11
+  taiga/houses/taiga_weaponsmith_2 2 -42 0 -8
+  taiga/streets/straight_04 3 -62 0 -5
+  taiga/taiga_decoration_5 3 -40 1 -6
+  taiga/streets/crossroad_05 3 -36 0 -14
+  taiga/taiga_lamp_post_1 2 -33 1 -11
+  taiga/streets/crossroad_05 1 -37 0 -13
+  taiga/taiga_lamp_post_1 0 37 1 19
+  taiga/houses/taiga_butcher_shop_1 0 34 1 9
+  taiga/houses/taiga_weaponsmith_2 0 29 -4 22
+  taiga/houses/taiga_small_house_3 0 34 1 21
+  taiga/streets/straight_02 3 46 0 20
+  taiga/streets/corner_03 1 4 0 40
+  taiga/streets/crossroad_06 0 6 0 44
+  taiga/streets/corner_01 2 -20 0 33
+  plains/terminators/terminator_04 1 -19 0 -72
+  plains/terminators/terminator_01 0 -58 0 13
+  plains/terminators/terminator_01 0 -64 0 -7
+  plains/terminators/terminator_01 1 -33 0 -20
+  plains/terminators/terminator_02 2 -31 0 -16
+  plains/terminators/terminator_02 0 -37 0 -16
+  plains/terminators/terminator_02 0 -42 0 -11
+  plains/terminators/terminator_02 3 -39 0 -8
+  plains/terminators/terminator_03 1 -38 0 -16
+  plains/terminators/terminator_04 2 65 0 20
+  plains/terminators/terminator_03 0 -2 0 40
+  plains/terminators/terminator_04 3 7 0 52
+  plains/terminators/terminator_02 1 8 0 43
+  plains/terminators/terminator_03 2 13 0 47
+  plains/terminators/terminator_02 3 -27 0 34
+

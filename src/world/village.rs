@@ -275,12 +275,14 @@ fn library(kind: Kind) -> Option<&'static Library> {
     static PLAINS: OnceLock<Library> = OnceLock::new();
     static DESERT: OnceLock<Library> = OnceLock::new();
     static SAVANNA: OnceLock<Library> = OnceLock::new();
+    static TAIGA: OnceLock<Library> = OnceLock::new();
 
     match kind {
         Kind::Plains => Some(PLAINS.get_or_init(|| parse(include_str!("village_plains.txt")))),
         Kind::Desert => Some(DESERT.get_or_init(|| parse(include_str!("village_desert.txt")))),
         Kind::Savanna => Some(SAVANNA.get_or_init(|| parse(include_str!("village_savanna.txt")))),
-        _ => None,
+        Kind::Taiga => Some(TAIGA.get_or_init(|| parse(include_str!("village_taiga.txt")))),
+        Kind::Snowy => None,
     }
 }
 
@@ -786,5 +788,62 @@ mod tests {
         println!("деревня в чанке ({}, {}): {:?}", start_x, start_z, counts);
         assert!(counts.get("dirt_path").copied().unwrap_or(0) > 300);
         assert!(counts.get("bell").copied().unwrap_or(0) >= 1);
+    }
+}
+
+// Офлайн-описание: те же принятые куски, без второго планировщика.
+#[cfg(all(test, not(seedmap_core)))]
+pub(super) fn audit_pieces(kind: Kind, pieces: &[Placed]) -> Vec<serde_json::Value> {
+    let lib = library(kind).unwrap();
+    pieces.iter().map(|p| {
+        let (name, height, rigid) = if p.template == HAY_PILE { ("feature:pile_hay", 2, true) }
+            else { let t = &lib.templates[p.template]; (t.key.as_str(), t.height, t.rigid) };
+        serde_json::json!({"name":name,"rotation":p.turns,"box":[p.bounds[0],p.origin.1,p.bounds[1],p.bounds[2],p.origin.1+height-1,p.bounds[3]],"projection":if rigid {"rigid"} else {"terrain_matching"}})
+    }).collect()
+}
+
+#[cfg(test)]
+mod taiga_measurement_tests {
+    use super::*;
+
+    #[test]
+    fn taiga_plan_paints_the_same_across_negative_chunk_borders() {
+        for seed in 0..4 {
+            let ground = |x: i32,z: i32| 70+(x+z).div_euclid(32);
+            let pieces = plan(seed,Kind::Taiga,-1,-1,&ground);
+            let mut whole = HashMap::new();
+            let reach = RADIUS_CHUNKS*16;
+            let bounds = [-16-reach,-16-reach,reach-1,reach-1];
+            assert!(pieces.iter().all(|p| p.bounds[0]>=bounds[0] && p.bounds[1]>=bounds[1] && p.bounds[2]<=bounds[2] && p.bounds[3]<=bounds[3]));
+            paint(Kind::Taiga,&pieces,bounds,&ground,&mut |Put::Block(x,y,z,state)| { whole.insert((x,y,z),state); });
+            let mut tiled = HashMap::new();
+            for cx in -1-RADIUS_CHUNKS..=-1+RADIUS_CHUNKS {
+                for cz in -1-RADIUS_CHUNKS..=-1+RADIUS_CHUNKS {
+                    paint(Kind::Taiga,&pieces,[cx*16,cz*16,cx*16+15,cz*16+15],&ground,&mut |Put::Block(x,y,z,state)| {
+                        if x.div_euclid(16)==cx && z.div_euclid(16)==cz { tiled.insert((x,y,z),state); }
+                    });
+                }
+            }
+            assert_eq!(whole,tiled);
+            assert!(whole.values().any(|&s| blocks::block_at_state(s)==Some("chest")));
+        }
+    }
+
+    #[test]
+    fn measured_taiga_layout_is_complete_and_rotates() {
+        let lib = library(Kind::Taiga).unwrap();
+        assert_eq!(lib.templates.len(),32);
+        assert_eq!(lib.layouts.len(),1);
+        assert!(!lib.layouts[0].is_empty());
+        for t in &lib.templates { assert_eq!(t.cells.len(),(t.width*t.length*t.height) as usize); }
+        let mut rotations = std::collections::HashSet::new();
+        for seed in 0..32 {
+            let pieces = plan(seed,Kind::Taiga,-5,7,&|_,_| 70);
+            assert_eq!(pieces.len(),lib.layouts[0].len());
+            rotations.insert(pieces[0].turns);
+            assert!(pieces.iter().all(|p| p.bounds[0]<=p.bounds[2] && p.bounds[1]<=p.bounds[3]));
+        }
+        assert_eq!(rotations.len(),4);
+        assert!(library(Kind::Snowy).is_none(),"без измерения снежная деревня не подменяется другой");
     }
 }

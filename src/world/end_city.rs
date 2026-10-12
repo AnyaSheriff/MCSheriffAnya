@@ -26,8 +26,8 @@
 //
 // Чем: образцы кусков — src/world/end_city.txt, снятые с тех же городов.
 // Сундуки стоят пустыми; шалкеры — по местам `SENTRIES` (их ставит такт
-// мобов, когда чанк сложен: tick.rs, step_mobs); элитры в рамке на корабле нет (рамка — сущность, кладётся не при
-// генерации).
+// мобов, когда чанк сложен: tick.rs, step_mobs). Рамка с элитрами корабля
+// сохраняется вместе с чанком; положение снято с vanilla-struct (см. ниже).
 //
 // Раскладка зависит только от семени и региона, поэтому каждый чанк сам
 // строит ближние города целиком и кладёт только то, что в него попало.
@@ -675,6 +675,64 @@ mod tests {
             let (x, z) = region_start(5, region.0, region.1);
             assert!((0..SPREAD).contains(&(x - region.0 * REGION)));
             assert!((0..SPREAD).contains(&(z - region.1 * REGION)));
+        }
+    }
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+pub(super) fn audit_pieces(pieces: &[Placed]) -> Vec<serde_json::Value> {
+    pieces.iter().map(|p| serde_json::json!({"name":p.name(),"rotation":p.rot,"box":p.bounds})).collect()
+}
+
+// Вики, End City: «elytra in an item frame». В сохранённых кораблях
+// vanilla-struct 26.1.2 (семя 100554032945340) рамка в (6,5,7), лицом на
+// юг до поворота. Замеры: (-7634.5,109.5,-265.96875),
+// (-7734.96875,125.5,7753.5), (8693.5,146.5,-8480.03125).
+// https://minecraft.wiki/w/End_City#End_ship
+#[cfg(not(seedmap_core))]
+pub(super) fn ship_frames(pieces: &[Placed], x0: i32, z0: i32) -> Vec<crate::frame::Frame> {
+    pieces.iter().filter(|p| p.name()=="ship").filter_map(|p| {
+        let (x,y,z) = p.world(6,5,7);
+        if !(x0..x0+16).contains(&x) || !(z0..z0+16).contains(&z) { return None; }
+        let facing = [crate::frame::SOUTH,crate::frame::WEST,crate::frame::NORTH,crate::frame::EAST][p.rot as usize];
+        let mut frame = crate::frame::Frame::new(0,(x-x0,y,z-z0),facing,false);
+        frame.item = Some(crate::inventory::Stack::new(blocks::item_named("elytra").unwrap(),1));
+        Some(frame)
+    }).collect()
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+mod ship_frame_tests {
+    use super::*;
+
+    #[test]
+    fn frame_positions_match_saved_world_and_have_a_wall_in_all_rotations() {
+        for (rot,tp,expected) in [
+            (0,(-7641,104,-273),(-7634.5,109.5,-265.96875)),
+            (3,(-7742,120,7759),(-7734.96875,125.5,7753.5)),
+            (2,(8699,141,-8474),(8693.5,146.5,-8480.03125)),
+        ] {
+            let p = Placed::new(template("ship"),rot,tp);
+            let (x,_,z) = p.world(6,5,7);
+            let (x0,z0) = (x.div_euclid(16)*16,z.div_euclid(16)*16);
+            let mut frames = ship_frames(&[p],x0,z0);
+            assert_eq!(frames.len(),1);
+            frames[0].pos.0 += x0; frames[0].pos.2 += z0;
+            assert_eq!(frames[0].place(),expected);
+        }
+        for rot in 0..4 {
+            let p = Placed::new(template("ship"),rot,(-1,80,-1));
+            let (x,_,z) = p.world(6,5,7);
+            let (x0,z0) = (x.div_euclid(16)*16,z.div_euclid(16)*16);
+            let frames = ship_frames(std::slice::from_ref(&p),x0,z0);
+            let (sx,sy,sz) = frames[0].support();
+            let (sx,sz) = (sx+x0,sz+z0);
+            let mut wall = None;
+            paint(&[p],sx.div_euclid(16)*16,sz.div_euclid(16)*16,0,&mut |x,y,z,state| {
+                if (x,y,z)==(sx,sy,sz) { wall=Some(state); }
+            });
+            assert!(wall.is_some_and(blocks::full_cube));
+            assert!(ship_frames(&[],x0,z0).is_empty());
         }
     }
 }

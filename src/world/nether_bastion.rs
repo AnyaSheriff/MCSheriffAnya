@@ -295,6 +295,12 @@ pub fn paint(seed: i64, pieces: &[Placed], canvas: &mut Canvas) {
     }
 }
 
+#[cfg(all(test, not(seedmap_core)))]
+pub(super) fn audit_pieces(pieces: &[Placed]) -> Vec<serde_json::Value> {
+    let names: Vec<_> = include_str!("nether_bastion.txt").lines().filter(|l| l.starts_with("template ")).map(|l| l.split_whitespace().nth(1).unwrap()).collect();
+    pieces.iter().map(|p| serde_json::json!({"name":names[p.template],"rotation":p.rotation,"box":p.bounds})).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

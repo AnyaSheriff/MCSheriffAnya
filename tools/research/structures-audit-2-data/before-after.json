@@ -1,0 +1,144 @@
+{
+  "overworld": {
+    "before": {
+      "chunks": 49152,
+      "blocks": {
+        "budding_amethyst": 69262,
+        "chest": 2404,
+        "spawner": 1346,
+        "vault": 1343,
+        "trial_spawner": 982,
+        "barrel": 761,
+        "suspicious_sand": 311,
+        "bone_block": 348,
+        "suspicious_gravel": 592
+      },
+      "spawners": {
+        "minecraft:zombie": 494,
+        "minecraft:skeleton": 231,
+        "minecraft:spider": 199,
+        "minecraft:cave_spider": 419,
+        "minecraft:silverfish": 3
+      },
+      "containers": 502,
+      "missing_containers": 2664,
+      "frames": []
+    },
+    "after": {
+      "chunks": 49152,
+      "blocks": {
+        "budding_amethyst": 69262,
+        "chest": 2425,
+        "spawner": 1346,
+        "vault": 1343,
+        "trial_spawner": 982,
+        "barrel": 761,
+        "suspicious_sand": 311,
+        "bone_block": 348,
+        "suspicious_gravel": 592
+      },
+      "spawners": {
+        "minecraft:zombie": 494,
+        "minecraft:skeleton": 231,
+        "minecraft:spider": 199,
+        "minecraft:cave_spider": 419,
+        "minecraft:silverfish": 3
+      },
+      "containers": 502,
+      "missing_containers": 2685,
+      "frames": []
+    }
+  },
+  "the_nether": {
+    "before": {
+      "chunks": 49152,
+      "blocks": {
+        "spawner": 63,
+        "chest": 481
+      },
+      "spawners": {
+        "minecraft:blaze": 63
+      },
+      "containers": 34,
+      "missing_containers": 447,
+      "frames": []
+    },
+    "after": {
+      "chunks": 49152,
+      "blocks": {
+        "spawner": 63,
+        "chest": 481
+      },
+      "spawners": {
+        "minecraft:blaze": 57,
+        "minecraft:magma_cube": 6
+      },
+      "containers": 34,
+      "missing_containers": 447,
+      "frames": []
+    }
+  },
+  "the_end": {
+    "before": {
+      "chunks": 49152,
+      "blocks": {
+        "chest": 46
+      },
+      "spawners": {},
+      "containers": 0,
+      "missing_containers": 46,
+      "frames": []
+    },
+    "after": {
+      "chunks": 49152,
+      "blocks": {
+        "chest": 46
+      },
+      "spawners": {},
+      "containers": 0,
+      "missing_containers": 46,
+      "frames": [
+        {
+          "facing": 4,
+          "id": "item_frame",
+          "item": "elytra",
+          "pos": [
+            -518,
+            126,
+            984
+          ]
+        },
+        {
+          "facing": 5,
+          "id": "item_frame",
+          "item": "elytra",
+          "pos": [
+            -305,
+            80,
+            8682
+          ]
+        },
+        {
+          "facing": 4,
+          "id": "item_frame",
+          "item": "elytra",
+          "pos": [
+            8220,
+            124,
+            7769
+          ]
+        },
+        {
+          "facing": 4,
+          "id": "item_frame",
+          "item": "elytra",
+          "pos": [
+            8146,
+            128,
+            8304
+          ]
+        }
+      ]
+    }
+  }
+}

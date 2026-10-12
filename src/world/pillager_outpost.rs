@@ -657,3 +657,12 @@ mod tests {
     }
 
 }
+
+#[cfg(all(test, not(seedmap_core)))]
+pub(super) fn audit_pieces(t: &super::terrain::Terrain, cx: i32, cz: i32) -> Vec<serde_json::Value> {
+    let ground = super::structure_terrain::Ground::new(t);
+    plan(t.seed(),cx,cz,&|x,z| ground.supported_height(x,z)).iter().map(|p| {
+        let t = &library().templates[p.template];
+        serde_json::json!({"name":t.name,"rotation":p.turns,"box":[p.bounds[0],p.origin.1,p.bounds[1],p.bounds[2],p.origin.1+t.height-1,p.bounds[3]]})
+    }).collect()
+}
