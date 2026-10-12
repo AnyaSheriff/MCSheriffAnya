@@ -27,7 +27,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use tokio::net::TcpStream;
+use super::connection::Connection;
 use tokio::time::timeout;
 
 use super::nbt;
@@ -681,12 +681,13 @@ struct Entered {
 /// Возвращает false, если игрок в мир так и не попал. Уход, сохранение и
 /// освобождение имени завершаются здесь, до возврата вызывающему.
 pub async fn play_session(
-    socket: &mut TcpStream,
+    socket: &mut Connection,
     name: &str,
     uuid: &[u8; 16],
     look: configuration::ClientLook,
     shared: &Shared,
     (came_from, came_to): (&str, &str),
+    verified_skin: Option<Option<Skin>>,
 ) -> io::Result<bool> {
     // Смена сессии завершается до load: прежний владелец уже сохранил вещи
     // и вышел из списка. Lease отпускается только после нашего ухода.
@@ -702,7 +703,10 @@ pub async fn play_session(
 
     // Скин узнаётся до входа в мир: он должен быть готов к тому мгновению,
     // когда сервер расскажет о новом игроке остальным.
-    let skin = skins::look_up(&shared.skins, name, &shared.skin_settings).await;
+    let skin = match verified_skin {
+        Some(skin) => skin,
+        None => skins::look_up(&shared.skins, name, &shared.skin_settings).await,
+    };
 
     // Точка появления — всегда в обычном мире.
     let spawn = shared
@@ -6965,26 +6969,10 @@ struct Inbound {
 }
 
 impl Inbound {
-    fn start(stream: &TcpStream, shared: &Shared) -> io::Result<Self> {
-        // Второй дескриптор того же сокета: читатель владеет своим, запись
-        // остаётся за подключением.
-        #[cfg(unix)]
-        let own = {
-            use std::os::fd::AsFd;
-
-            std::net::TcpStream::from(stream.as_fd().try_clone_to_owned()?)
-        };
-        #[cfg(windows)]
-        let own = {
-            use std::os::windows::io::AsSocket;
-
-            std::net::TcpStream::from(stream.as_socket().try_clone_to_owned()?)
-        };
-        own.set_nonblocking(true)?;
-
-        // Чтение — через буфер: клиент шлёт по нескольку мелких пакетов за
-        // такт, и без буфера каждый байт длины был бы своим системным вызовом.
-        let mut own = tokio::io::BufReader::new(TcpStream::from_std(own)?);
+    fn start(stream: &mut Connection, shared: &Shared) -> io::Result<Self> {
+        // Буфер читателя хранит уже расшифрованные байты; состояние CFB8
+        // передаётся из Configuration без сброса IV.
+        let mut own = tokio::io::BufReader::new(stream.take_reader()?);
         let (sender, packets) = tokio::sync::mpsc::unbounded_channel();
         let waiting = shared.waiting_for_tick.clone();
         let starts = shared.tick_starts.subscribe();

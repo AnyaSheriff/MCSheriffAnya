@@ -17,7 +17,7 @@ use std::io;
 
 use serde_json::json;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
+use super::connection::Connection;
 
 use super::handshake::HandshakePacket;
 use super::varint::{encode_string, encode_varint, read_varint};
@@ -52,7 +52,7 @@ pub fn build_status_response(motd: &str, online: i32, max: i32) -> String {
 /// (например, для логирования адреса/версии клиента); сам ответ
 /// Server List Ping не зависит от его полей.
 pub async fn handle_status(
-    stream: &mut TcpStream,
+    stream: &mut Connection,
     handshake: &HandshakePacket,
     motd: &str,
     online: i32,

@@ -10,7 +10,7 @@ use std::io;
 
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::time::{Duration, Instant, timeout_at};
-use tokio::net::TcpStream;
+use super::connection::Connection;
 
 use super::varint::read_varint;
 
@@ -153,7 +153,7 @@ fn unpack(frame: &[u8], threshold: i32) -> io::Result<Vec<u8>> {
 
 /// Записывает тело пакета в поток, добавив перед ним VarInt длину,
 /// и сбрасывает буфер.
-pub async fn write_body(stream: &mut TcpStream, body: Vec<u8>) -> io::Result<()> {
+pub async fn write_body(stream: &mut Connection, body: Vec<u8>) -> io::Result<()> {
     let mut packet = Vec::with_capacity(body.len() + 8);
 
     frame(&mut packet, &body, compression_threshold());
@@ -198,7 +198,7 @@ pub struct Outgoing<'a> {
 }
 
 enum Transport<'a> {
-    Tcp(&'a mut TcpStream),
+    Tcp(&'a mut Connection),
     #[cfg(test)]
     Duplex(&'a mut tokio::io::DuplexStream),
     #[cfg(test)]
@@ -206,7 +206,7 @@ enum Transport<'a> {
 }
 
 impl<'a> Outgoing<'a> {
-    pub fn new(stream: &'a mut TcpStream) -> Self {
+    pub fn new(stream: &'a mut Connection) -> Self {
         Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false }
     }
 
@@ -283,7 +283,7 @@ impl<'a> Outgoing<'a> {
     }
 
     /// Сам сокет — для чтения после flush.
-    pub fn stream(&mut self) -> &mut TcpStream {
+    pub fn stream(&mut self) -> &mut Connection {
         match &mut self.stream {
             Transport::Tcp(stream) => stream,
             #[cfg(test)]
@@ -379,6 +379,29 @@ pub fn is_client_disconnect(error: &io::Error) -> bool {
 mod tests {
     use super::*;
     use crate::network::varint::encode_varint;
+
+    #[tokio::test]
+    async fn encryption_wraps_compressed_and_uncompressed_frames() {
+        use super::super::connection::CryptoStream;
+        for threshold in [-1, 0, 256] {
+            let (server, client) = tokio::io::duplex(65536);
+            let mut server = CryptoStream::new(server);
+            let mut client = CryptoStream::new(client);
+            server.enable_encryption(&[17; 16]);
+            client.enable_encryption(&[17; 16]);
+            for size in [1, 127, 256, 16000] {
+                let body: Vec<_> = (0..size).map(|i| (i % 251) as u8).collect();
+                let mut framed = Vec::new();
+                frame(&mut framed, &body, threshold);
+                write_bytes(&mut server, &framed).await.unwrap();
+                let length = read_varint(&mut client).await.unwrap();
+                let mut received = vec![0; length as usize];
+                client.read_exact(&mut received).await.unwrap();
+                let decoded = if threshold < 0 { received } else { unpack(&received, threshold).unwrap() };
+                assert_eq!(decoded, body);
+            }
+        }
+    }
 
     #[tokio::test(start_paused = true)]
     async fn unread_peer_times_out_and_partial_frame_is_never_retried() {

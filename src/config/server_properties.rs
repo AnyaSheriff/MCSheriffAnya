@@ -16,6 +16,10 @@ pub struct ServerProperties {
     pub motd: String,
     pub max_players: i32,
     pub server_port: u16,
+    /// Проверять Java-профиль у sessionserver перед допуском в мир.
+    pub online_mode: bool,
+    /// Передавать адрес клиента при проверке сессии (вики, server.properties).
+    pub prevent_proxy_connections: bool,
 
     /// Сколько чанков вокруг себя видит игрок. Считается в каждую сторону:
     /// при десяти игроку уходит квадрат 21×21.
@@ -62,6 +66,8 @@ impl Default for ServerProperties {
             motd: "My Rust Server".to_string(),
             max_players: 20,
             server_port: 25565,
+            online_mode: true,
+            prevent_proxy_connections: false,
             // Значения по умолчанию — те же, что у оригинала.
             view_distance: 10,
             simulation_distance: 10,
@@ -121,6 +127,8 @@ pub fn load_server_properties(path: &str) -> io::Result<ServerProperties> {
         motd,
         max_players,
         server_port,
+        online_mode: boolean(&values, "online-mode", defaults.online_mode),
+        prevent_proxy_connections: boolean(&values, "prevent-proxy-connections", defaults.prevent_proxy_connections),
         view_distance,
         simulation_distance,
         level_seed,
@@ -486,6 +494,10 @@ fn written_at() -> String {
     String::from_utf8_lossy(&text[..written]).into_owned()
 }
 
+fn boolean(values: &HashMap<String, String>, key: &str, default: bool) -> bool {
+    values.get(key).and_then(|value| value.trim().parse().ok()).unwrap_or(default)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -612,5 +624,23 @@ mod tests {
                 key
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod online_tests {
+    use super::*;
+
+    #[test]
+    fn authentication_defaults_and_overrides() {
+        let defaults = ServerProperties::default();
+        assert!(defaults.online_mode);
+        assert!(!defaults.prevent_proxy_connections);
+        let values = parse_properties("online-mode=false\nprevent-proxy-connections=true\n");
+        assert!(!boolean(&values, "online-mode", defaults.online_mode));
+        assert!(boolean(&values, "prevent-proxy-connections", defaults.prevent_proxy_connections));
+        let values = parse_properties("online-mode=invalid\n");
+        assert!(boolean(&values, "online-mode", defaults.online_mode));
+        assert!(boolean(&HashMap::new(), "online-mode", defaults.online_mode));
     }
 }

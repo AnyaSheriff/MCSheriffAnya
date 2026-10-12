@@ -11,7 +11,7 @@
 
 use std::io;
 use tokio::io::AsyncReadExt;
-use tokio::net::TcpStream;
+use super::connection::Connection;
 
 use super::varint::{read_string, read_varint};
 
@@ -25,7 +25,7 @@ pub struct HandshakePacket {
 }
 
 /// Читает и разбирает пакет Handshake из TCP-потока.
-pub async fn read_handshake(stream: &mut TcpStream) -> io::Result<HandshakePacket> {
+pub async fn read_handshake(stream: &mut Connection) -> io::Result<HandshakePacket> {
     // Длина всего пакета нам сейчас не нужна для разбора полей,
     // но её обязательно нужно прочитать, чтобы не сбить границы потока.
     let _packet_length = read_varint(stream).await?;

@@ -1,7 +1,7 @@
 [package]
 name = "mcsheriffanya"
 default-run = "mcsheriffanya"
-version = "0.1.0-alpha"
+version = "0.2.0-alpha"
 edition = "2024"
 license = "MIT"
 description = "A Minecraft-compatible game server written from scratch in Rust"
@@ -29,6 +29,10 @@ flate2 = "1"
 zstd = "0.13"
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "http2", "json", "charset", "multipart"] }
 md-5 = "0.10"
+rsa = { version = "0.9.8", default-features = false, features = ["std"] }
+aes = "0.8.4"
+cfb8 = "0.8.1"
+sha1 = "0.10.6"
 # Проверка подписей входа Xbox Live (RS256, ES384). Та же библиотека уже
 # стоит под rustls у reqwest — с теми же возможностями, без новой сборки.
 aws-lc-rs = { version = "1", default-features = false, features = ["aws-lc-sys", "prebuilt-nasm"] }
@@ -48,6 +52,7 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_
 members = ["tools/seedmap"]
 
 [dev-dependencies]
+http = "1"
 tokio = { version = "1", features = ["test-util"] }
 
 [lints.rust]

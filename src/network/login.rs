@@ -1,5 +1,6 @@
 // Обработка состояния Login: клиент отправляет Login Start,
-// сервер отвечает Login Success.
+// сервер проверяет профиль через online.rs (если включён online-mode),
+// затем отвечает Login Success.
 //
 // Формат Login Start (serverbound, без сжатия):
 //   VarInt   packet_length
@@ -16,10 +17,9 @@
 
 use std::io;
 
-use tokio::io::{AsyncReadExt};
-use tokio::net::TcpStream;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite};
 
-use super::varint::{encode_string, encode_varint, read_string, read_varint};
+use super::varint::{encode_string, encode_varint, read_varint};
 
 /// Разобранные данные пакета Login Start.
 #[derive(Debug)]
@@ -67,27 +67,18 @@ pub fn format_uuid(uuid: &[u8; 16]) -> String {
 }
 
 /// Читает и разбирает пакет Login Start из TCP-потока.
-pub async fn read_login_start(stream: &mut TcpStream) -> io::Result<LoginStart> {
-    // Длина пакета нужна только для контроля границ потока.
-    let _packet_length = read_varint(stream).await?;
-
-    let packet_id = read_varint(stream).await?;
-    if packet_id != 0x00 {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!(
-                "Ожидался пакет Login Start (packet_id=0x00), получен 0x{:02X}",
-                packet_id
-            ),
-        ));
+pub async fn read_login_start<R: AsyncRead + Unpin>(stream: &mut R) -> io::Result<LoginStart> {
+    let length = read_varint(stream).await?;
+    if !(18..=82).contains(&length) {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "длина Login Start"));
     }
-
-    // Ник — String(16); проверка состава — у вызывающего.
-    let username = read_string(stream, 16 * 4).await?;
-
-    // UUID передаётся 16 «сырыми» байтами, а не строкой.
-    let mut uuid = [0u8; 16];
-    stream.read_exact(&mut uuid).await?;
+    let mut body = vec![0; length as usize];
+    stream.read_exact(&mut body).await?;
+    let (id, mut offset) = super::packet::decode_varint(&body)?;
+    if id != 0 { return Err(io::Error::new(io::ErrorKind::InvalidData, "ожидался Login Start")); }
+    let username = super::packet::decode_string(&body, &mut offset)?;
+    let uuid = body.get(offset..).and_then(|bytes| bytes.try_into().ok())
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "UUID Login Start"))?;
 
     Ok(LoginStart { username, uuid })
 }
@@ -97,7 +88,7 @@ pub async fn read_login_start(stream: &mut TcpStream) -> io::Result<LoginStart> 
 /// Это единственный пакет, в котором текст сообщения передаётся не так, как
 /// везде: в фазе входа клиент ещё не получил реестры, поэтому текст здесь
 /// записывается строкой JSON, а не сжатым видом, как в игре.
-pub async fn send_login_disconnect(stream: &mut TcpStream, reason: &str) -> io::Result<()> {
+pub async fn send_login_disconnect<W: AsyncWrite + Unpin>(stream: &mut W, reason: &str) -> io::Result<()> {
     // Разметку JSON собираем сами: сообщение состоит из одного куска текста.
     let reason = format!("{{\"text\":\"{}\"}}", escape_json(reason));
 
@@ -113,7 +104,7 @@ pub async fn send_login_disconnect(stream: &mut TcpStream, reason: &str) -> io::
 }
 
 /// То же с готовым компонентом в виде JSON (блокировки: `translate` и аргументы).
-pub async fn send_login_disconnect_json(stream: &mut TcpStream, json: &str) -> io::Result<()> {
+pub async fn send_login_disconnect_json<W: AsyncWrite + Unpin>(stream: &mut W, json: &str) -> io::Result<()> {
     let mut body = encode_varint(0x00);
     body.extend_from_slice(&encode_string(json));
 
@@ -147,9 +138,7 @@ fn escape_json(text: &str) -> String {
 /// Отправляет Set Compression (clientbound, 0x03) с порогом из настроек:
 /// с него и всё дальнейшее идёт в сжатом виде (вики, Java Edition protocol,
 /// «Set Compression»). Сам он уходит ещё несжатым. Порог −1 — пакета нет.
-pub async fn send_set_compression(stream: &mut TcpStream) -> io::Result<()> {
-    let threshold = super::packet::compression_threshold();
-
+pub async fn send_set_compression<W: AsyncWrite + Unpin>(stream: &mut W, threshold: i32) -> io::Result<()> {
     if threshold < 0 {
         return Ok(());
     }
@@ -164,22 +153,30 @@ pub async fn send_set_compression(stream: &mut TcpStream) -> io::Result<()> {
 }
 
 /// Отправляет пакет Login Success: подтверждает вход игрока под указанным
-/// именем и UUID. Список properties пуст (свойства профиля не поддерживаются).
-pub async fn send_login_success(
-    stream: &mut TcpStream,
+/// именем и UUID. Подписанное свойство textures приходит от sessionserver.
+pub async fn send_login_success<W: AsyncWrite + Unpin>(
+    stream: &mut W,
     username: &str,
     uuid: &[u8; 16],
+    skin: Option<&crate::skins::Skin>,
+    threshold: i32,
 ) -> io::Result<()> {
     // Тело пакета: VarInt packet_id + UUID + String username + VarInt properties.
     let mut body = encode_varint(0x02);
     body.extend_from_slice(uuid);
     body.extend_from_slice(&encode_string(username));
-    body.extend_from_slice(&encode_varint(0)); // properties count = 0
+    body.extend_from_slice(&encode_varint(i32::from(skin.is_some())));
+    if let Some(skin) = skin {
+        body.extend(encode_string("textures"));
+        body.extend(encode_string(&skin.value));
+        body.push(u8::from(!skin.signature.is_empty()));
+        if !skin.signature.is_empty() { body.extend(encode_string(&skin.signature)); }
+    }
 
     // Полный пакет: длина тела + само тело, в сжатом виде, если оно включено.
     let mut packet = Vec::with_capacity(body.len() + 8);
 
-    super::packet::frame(&mut packet, &body, super::packet::compression_threshold());
+    super::packet::frame(&mut packet, &body, threshold);
 
     super::packet::write_bytes(stream, &packet).await?;
 

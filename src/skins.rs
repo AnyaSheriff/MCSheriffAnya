@@ -494,11 +494,25 @@ async fn fetch_ely(client: &reqwest::Client, name: &str) -> Answer {
 /// Он один на всё время работы: внутри у него сложенные соединения, и
 /// заводить его заново на каждый запрос — значит каждый раз всё это
 /// выбрасывать и собирать снова.
-fn client() -> Option<&'static reqwest::Client> {
+pub(crate) fn client() -> Option<&'static reqwest::Client> {
     static CLIENT: std::sync::OnceLock<Option<reqwest::Client>> = std::sync::OnceLock::new();
 
     CLIENT
-        .get_or_init(|| reqwest::Client::builder().timeout(WAIT).build().ok())
+        .get_or_init(|| reqwest::Client::builder()
+            .timeout(WAIT)
+            .redirect(reqwest::redirect::Policy::custom(|attempt| {
+                // Проверка входа принимает только прямой ответ sessionserver:
+                // перенаправление — такой же отказ, как иной статус не 200.
+                // Для прежних запросов скинов политика остаётся обычной.
+                if attempt.previous().first().is_some_and(|url|
+                    url.host_str() == Some("sessionserver.mojang.com")
+                        && url.path() == "/session/minecraft/hasJoined") {
+                    attempt.stop()
+                } else {
+                    reqwest::redirect::Policy::default().redirect(attempt)
+                }
+            }))
+            .build().ok())
         .as_ref()
 }
 

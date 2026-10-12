@@ -221,6 +221,9 @@ async fn server() -> io::Result<()> {
     );
 
     network::packet::set_compression_threshold(properties.compression_threshold);
+    if properties.online_mode {
+        network::online::initialize().await?;
+    }
 
     let bind_address = format!("0.0.0.0:{}", properties.server_port);
     let listener = TcpListener::bind(&bind_address).await?;
@@ -492,7 +495,7 @@ fn ensure_directories(dirs: &[&str]) -> io::Result<()> {
 /// Сначала читает пакет Handshake, затем в зависимости от поля
 /// next_state переходит в соответствующее состояние протокола.
 async fn handle_connection(
-    mut socket: TcpStream,
+    socket: TcpStream,
     addr: std::net::SocketAddr,
     properties: Arc<ServerProperties>,
     shared: Arc<Shared>,
@@ -508,6 +511,7 @@ async fn handle_connection(
         }
     }
 
+    let mut socket = network::connection::Connection::new(socket);
     let handshake = read_handshake(&mut socket).await?;
 
     log_debug!(
@@ -577,12 +581,32 @@ async fn handle_connection(
                 return Ok(());
             }
 
-            // Опознаватель считаем сами, из ника, как оригинал без проверки
-            // Mojang: присланному клиентом верить нельзя — к нему привязаны
-            // права и файл игрока.
-            let sent = login.uuid;
-            login.uuid = offline_uuid(&login.username);
-            adopt_old_identity(&shared, &login.username, &sent, &login.uuid);
+            let authenticated = if properties.online_mode {
+                let auth = network::online::Authenticator::get()?;
+                let ip = properties.prevent_proxy_connections.then_some(addr.ip());
+                match auth.authenticate(&mut socket, &login.username, ip).await {
+                    Ok(profile) => {
+                        login.uuid = profile.uuid;
+                        login.username = profile.name.clone();
+                        Some(profile)
+                    }
+                    Err(error) => {
+                        if let network::online::Failure::Protocol(ref cause) = error {
+                            log_debug!("Ошибка проверки входа {}: {}", addr, cause);
+                        }
+                        let json = serde_json::json!({"translate": error.translation()}).to_string();
+                        send_login_disconnect_json(&mut socket, &json).await?;
+                        return Ok(());
+                    }
+                }
+            } else {
+                // Старый перенос личности остаётся только в offline-mode:
+                // в online-mode права определяются проверенным UUID.
+                let sent = login.uuid;
+                login.uuid = offline_uuid(&login.username);
+                adopt_old_identity(&shared, &login.username, &sent, &login.uuid);
+                None
+            };
 
             // Как у обычного сервера: опознаватель игрока и откуда он пришёл —
             // с какого адреса и на какой адрес сервера стучался. Адрес сервера
@@ -618,8 +642,8 @@ async fn handle_connection(
             let came_to = format!("{}:{}", handshake.server_address, handshake.server_port);
 
             // Сжатие включается до Login Success: он уже идёт в новом виде.
-            network::login::send_set_compression(&mut socket).await?;
-            send_login_success(&mut socket, &login.username, &login.uuid).await?;
+            network::login::send_set_compression(&mut socket, properties.compression_threshold).await?;
+            send_login_success(&mut socket, &login.username, &login.uuid, authenticated.as_ref().and_then(|profile| profile.skin.as_ref()), properties.compression_threshold).await?;
             log_debug!("Login Success отправлен игроку {}", login.username);
 
             // Фаза Configuration.
@@ -671,6 +695,7 @@ async fn handle_connection(
                     look,
                     &shared,
                     (&came_from, &came_to),
+                    authenticated.map(|profile| profile.skin),
                 )
                 .await;
 

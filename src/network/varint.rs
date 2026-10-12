@@ -3,7 +3,7 @@
 
 use std::io;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
+use super::connection::Connection;
 
 /// Читает VarInt напрямую из TCP-потока.
 ///
@@ -86,7 +86,7 @@ pub fn encode_varlong(value: i64) -> Vec<u8> {
 /// Читает строку протокола: VarInt длина (в байтах) + сами UTF-8 байты.
 /// Строка длиннее `max` байт — ошибка: так читаются только адрес
 /// в Handshake и ник, оба короткие.
-pub async fn read_string(stream: &mut TcpStream, max: usize) -> io::Result<String> {
+pub async fn read_string(stream: &mut Connection, max: usize) -> io::Result<String> {
     let len = read_varint(stream).await?;
     let Some(len) = usize::try_from(len).ok().filter(|&len| len <= max) else {
         return Err(io::Error::new(
@@ -111,6 +111,6 @@ pub fn encode_string(value: &str) -> Vec<u8> {
 /// Небольшой помощник — оставлен для возможного прямого использования
 /// AsyncWriteExt в других модулях сети (например, для flush после записи).
 #[allow(dead_code)]
-pub async fn write_raw(stream: &mut TcpStream, bytes: &[u8]) -> io::Result<()> {
+pub async fn write_raw(stream: &mut Connection, bytes: &[u8]) -> io::Result<()> {
     stream.write_all(bytes).await
 }

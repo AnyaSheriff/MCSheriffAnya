@@ -10,7 +10,7 @@
 
 use std::io;
 
-use tokio::net::TcpStream;
+use super::connection::Connection;
 
 use super::registries;
 use super::nbt::Compound;
@@ -385,7 +385,7 @@ fn packet_name(packet_id: i32) -> &'static str {
 
 /// Читает Login Acknowledged (serverbound, packet_id = 0x03) —
 /// первый пакет клиента в фазе Configuration.
-pub async fn read_login_acknowledged(stream: &mut TcpStream) -> io::Result<()> {
+pub async fn read_login_acknowledged(stream: &mut Connection) -> io::Result<()> {
     let packet = read_packet(stream).await?;
 
     if packet.id != 0x03 {
@@ -411,7 +411,7 @@ pub struct KnownPack {
 /// Отправляет Plugin Message minecraft:brand (clientbound, packet_id = 0x01).
 ///
 /// Оригинал шлёт его первым в фазе Configuration, до Known Packs.
-pub async fn send_brand(stream: &mut TcpStream) -> io::Result<()> {
+pub async fn send_brand(stream: &mut Connection) -> io::Result<()> {
     write_body(stream, brand_body()).await
 }
 
@@ -433,7 +433,7 @@ fn brand_body() -> Vec<u8> {
 /// Обмен нужен ради записей, содержимое которых сервер не задаёт сам:
 /// если набор выбран обеими сторонами, клиент берёт данные такой записи
 /// из собственных файлов, а в пакете она помечается как запись без данных.
-pub async fn send_known_packs(stream: &mut TcpStream) -> io::Result<()> {
+pub async fn send_known_packs(stream: &mut Connection) -> io::Result<()> {
     let mut body = encode_varint(KNOWN_PACKS);
 
     body.extend_from_slice(&encode_varint(1));
@@ -452,7 +452,7 @@ pub async fn send_known_packs(stream: &mut TcpStream) -> io::Result<()> {
 ///
 /// Возвращает наборы ресурсов клиента и части скина, если они попались.
 pub async fn read_known_packs(
-    stream: &mut TcpStream,
+    stream: &mut Connection,
 ) -> io::Result<(Vec<KnownPack>, Option<ClientLook>)> {
     let mut look = None;
 
@@ -513,7 +513,7 @@ pub async fn read_known_packs(
 /// Содержимое остальных записей сервер тоже задаёт сам (модуль registries).
 /// Раньше они шли без содержимого, и клиент брал его из своего набора
 /// ресурсов; тогда войти мог только клиент ровно такой же версии.
-pub async fn send_registry_data(stream: &mut TcpStream) -> io::Result<usize> {
+pub async fn send_registry_data(stream: &mut Connection) -> io::Result<usize> {
     let mut body = encode_varint(REGISTRY_DATA);
 
     body.extend_from_slice(&encode_string("minecraft:damage_type"));
@@ -595,7 +595,7 @@ fn message_id(damage_type: &str) -> &str {
 ///
 /// Списки записей пустые: клиенту достаточно самого факта существования тега,
 /// а числовые ID записей зависят от порядка записей в реестре.
-pub async fn send_update_tags(stream: &mut TcpStream) -> io::Result<()> {
+pub async fn send_update_tags(stream: &mut Connection) -> io::Result<()> {
     /// Теги реестра minecraft:damage_type.
     const DAMAGE_TYPE_TAGS: [&str; 3] = [
         "minecraft:bypasses_shield",
@@ -658,7 +658,7 @@ pub async fn send_update_tags(stream: &mut TcpStream) -> io::Result<()> {
 ///
 /// Отправляется последним: клиент проверяет реестры и теги именно в этот
 /// момент, поэтому всё, что он требует, должно быть отправлено раньше.
-pub async fn send_finish_configuration(stream: &mut TcpStream) -> io::Result<()> {
+pub async fn send_finish_configuration(stream: &mut Connection) -> io::Result<()> {
     let body = encode_varint(FINISH_CONFIGURATION);
 
     write_body(stream, body).await
@@ -670,7 +670,7 @@ pub async fn send_finish_configuration(stream: &mut TcpStream) -> io::Result<()>
 /// после него клиент готов к фазе Play. Если клиент закрыл соединение,
 /// возвращает false.
 pub async fn read_and_log_configuration_packets(
-    stream: &mut TcpStream,
+    stream: &mut Connection,
     known: Option<ClientLook>,
 ) -> io::Result<Option<ClientLook>> {
     // Какие части скина игрок показывает и какая рука у него ведущая.

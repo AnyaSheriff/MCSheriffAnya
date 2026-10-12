@@ -1,0 +1,23 @@
+{
+  "name": "online-mode-play-smoke",
+  "about": "[проверить] Java 26.1.2, online-mode=true, network-compression-threshold=256. Проверяющий входит настоящей Java-сессией; OP заранее выдан её online UUID. После шифрованного входа проверяются чанки, команды и изменения блоков. Сам обмен авторизации проверяется отдельно по инструкции online-mode-verification.md.",
+  "exclusive": true,
+  "origin": [100, 180, 100],
+  "chat": true,
+  "blocks": [],
+  "setup": [
+    "fill $(-3,-1,-3) $(3,3,3) minecraft:air",
+    "fill $(-3,-1,-3) $(3,-1,3) minecraft:stone",
+    "tp $(bot) $(0.5,0,0.5)",
+    "!wait 20"
+  ],
+  "actions": [
+    {"after": 0, "cmd": "setblock $(1,0,1) minecraft:stone"},
+    {"after": 10, "cmd": "setblock $(1,0,1) minecraft:gold_block"},
+    {"after": 20, "cmd": "say online-mode-play-smoke"}
+  ],
+  "cleanup": [
+    "fill $(-3,-1,-3) $(3,3,3) minecraft:air"
+  ],
+  "record_ticks": 60
+}

@@ -24,3 +24,6 @@ pub mod play;
 pub mod text_info;
 
 pub mod keep_alive;
+
+pub mod connection;
+pub mod online;
