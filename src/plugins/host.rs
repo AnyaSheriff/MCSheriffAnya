@@ -146,6 +146,7 @@ fn linkers(engine: &Engine) -> wasmtime::Result<(Linker<PluginCtx>, Linker<Plugi
         mcsa::api::types::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::log::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::server::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
+        mcsa::api::presentation::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::player::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::world::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
         mcsa::api::scheduler::add_to_linker::<PluginCtx, HasSelf<PluginCtx>>(linker, |ctx| ctx)?;
@@ -328,6 +329,7 @@ impl Host {
 
         // enable: здесь плагин регистрирует команды и задачи. Упал — не грузим.
         if let Err(reason) = plugin.call(self.shared_tick(), |instance, store| instance.mcsa_api_lifecycle().call_enable(store)) {
+            crate::presentation::release(&self.shared, &plugin.manifest.name);
             self.drop_registrations(&plugin.manifest.name);
             return Err(format!("{}: enable не удался: {reason}", plugin.manifest.name));
         }
@@ -388,6 +390,7 @@ impl Host {
             log_warn!("Плагин {}: disable не удался: {}", name, reason);
         }
 
+        crate::presentation::release(&self.shared, name);
         self.drop_registrations(name);
         self.publish_names();
         // Всё остальное — задачи, команды, память — уходит вместе со `Store`.

@@ -1016,10 +1016,10 @@ async fn enter_world(
         // Список игроков: сперва те, кто уже на сервере, затем сам игрок.
         // Новичок о них узнаёт только отсюда — записи журнала он ещё не читал.
         for other in &others {
-            send_player_info(stream, other).await?;
+            send_player_info(stream, shared, other).await?;
         }
 
-        send_player_info(stream, &member).await?;
+        send_player_info(stream, shared, &member).await?;
 
         // И про самого себя: свой второй слой скина клиент рисует не по своим
         // настройкам, а по тем же сведениям о сущности, что и чужой. Не сказать
@@ -1140,6 +1140,7 @@ async fn enter_world(
             .expect("чат захвачен другим потоком")
             .push(format!("{} зашёл на сервер", player.name));
 
+        publish_ui(shared, player);
         crate::plugins::player_join(shared, &player.name);
 
         Ok(Some(Entered {
@@ -1423,10 +1424,11 @@ async fn read_confirm_teleportation(
 ///
 /// «Показывать в списке» — отдельное действие со своим битом, и без него
 /// клиент игрока знает, но в списке не показывает: список остаётся пустым.
-async fn send_player_info(stream: &mut Outgoing<'_>, member: &Member) -> io::Result<()> {
+async fn send_player_info(stream: &mut Outgoing<'_>, shared: &Shared, member: &Member) -> io::Result<()> {
+    let display = shared.players.lock().expect("игроки").ui.list_names.get(&member.uuid).map(|(_, name)| crate::scoreboard::encode_component(name));
     let mut body = encode_varint(PLAYER_INFO_UPDATE);
 
-    body.push(PLAYER_INFO_ADD | PLAYER_INFO_GAME_MODE | PLAYER_INFO_LISTED);
+    body.push(PLAYER_INFO_ADD | PLAYER_INFO_GAME_MODE | PLAYER_INFO_LISTED | if display.is_some() { 0x20 } else { 0 });
     body.extend_from_slice(&encode_varint(1)); // один игрок
     body.extend_from_slice(&member.uuid);
 
@@ -1460,6 +1462,9 @@ async fn send_player_info(stream: &mut Outgoing<'_>, member: &Member) -> io::Res
 
     // Действие «показывать в списке».
     body.push(1);
+    // Имя плагина входит и в ADD: раннее обновление могло прийти клиенту
+    // до записи об игроке; смена скина тоже пересоздаёт эту запись.
+    if let Some(display) = display { body.push(1); body.extend(display); }
 
     write_body(stream, body).await
 }
@@ -3006,6 +3011,17 @@ fn publish_player_inner(shared: &Shared, player: &PlayerState) {
     players.set_position(&player.uuid, player.position());
     players.set_held(&player.uuid, player.inventory.held());
     players.set_gear(&player.uuid, gear);
+
+}
+
+fn publish_ui(shared: &Shared, player: &PlayerState) {
+    let (level, exp) = crate::survival::level_of(player.vit.xp);
+    let mut players = shared.players.lock().expect("игроки");
+    let first = players.ui.info.insert(player.uuid, crate::presentation::Info { ping: player.keep_alive.latency, health: player.vit.health, max_health: player.vit.max_health, food: player.vit.food, level, exp }).is_none();
+    if first {
+        let packets: Vec<_> = players.ui.list_names.iter().map(|(uuid, (_, name))| crate::presentation::list_packet(uuid, Some(name))).collect();
+        for packet in packets { players.order(&player.uuid, Order::Packet(packet)); }
+    }
 }
 
 /// Сколько тактов миру от роду, который в нём час и сколько раз часы
@@ -5219,7 +5235,7 @@ async fn send_pending_player_changes(
     for change in &changes {
         match change {
             Change::Joined(member) if member.uuid != player.uuid => {
-                send_player_info(stream, member).await?;
+                send_player_info(stream, shared, member).await?;
 
                 // Кто уже показан — при входе или раньше по этому же журналу —
                 // второй раз в мир не добавляется: клиент заменил бы сущность
@@ -5269,7 +5285,7 @@ async fn send_pending_player_changes(
                     send_remove_entity(stream, member.entity_id).await?;
                 }
                 send_player_info_remove(stream, &member.uuid).await?;
-                send_player_info(stream, member).await?;
+                send_player_info(stream, shared, member).await?;
 
                 if shown {
                     let now = Shown {
@@ -5338,6 +5354,7 @@ async fn send_pending_score(stream: &mut Outgoing<'_>, shared: &Shared, uuid: &[
 /// раз после входа): цель, заведённая позже, получает счёт с первым
 /// изменением [проверить].
 fn note_criteria(shared: &Shared, player: &PlayerState, seen: &mut Option<[i32; 5]>) {
+    publish_ui(shared, player);
     const CRITERIA: [&str; 5] = ["health", "food", "air", "level", "xp"];
     let now = [player.vit.health.ceil() as i32, player.vit.food, player.vit.air, crate::survival::level_of(player.vit.xp).0, player.vit.xp];
 

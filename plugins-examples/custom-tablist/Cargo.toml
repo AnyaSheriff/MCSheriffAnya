@@ -1,0 +1,15 @@
+[package]
+name = "custom-tablist"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+mcsa-sdk = { path = "../mcsa-sdk" }
+serde_json = "1"
+serde_yaml = "0.9.34"
+regex = "1"
+chrono = { version = "0.4", default-features = false, features = ["std"] }

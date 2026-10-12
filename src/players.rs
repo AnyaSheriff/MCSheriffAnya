@@ -307,6 +307,7 @@ pub enum Order {
 
 /// Список игроков на сервере и журнал изменений.
 pub struct Players {
+    pub ui: crate::presentation::State,
     shoulders: HashMap<[u8;16],[i32;2]>,
     members: Vec<Member>,
     /// Снимок рассылки: меняется только перед ticks.send_replace.
@@ -342,6 +343,7 @@ impl Players {
     pub fn shoulders(&self, uuid: &[u8;16]) -> [i32;2] { self.shoulders.get(uuid).copied().unwrap_or([-1,-1]) }
     pub fn new() -> Self {
         Self {
+            ui: Default::default(),
             shoulders: HashMap::new(),
             members: Vec::new(),
             published: Vec::new(),
@@ -417,6 +419,7 @@ impl Players {
             return false;
         };
 
+        self.ui.leave(uuid);
         self.members.retain(|member| &member.uuid != uuid);
         self.orders.remove(uuid);
         self.connections.remove(uuid);

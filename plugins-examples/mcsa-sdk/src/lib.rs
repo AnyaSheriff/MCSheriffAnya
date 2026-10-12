@@ -15,6 +15,7 @@ pub mod bindings {
 pub use bindings::mcsa::api::command::{self, CommandSpec};
 pub use bindings::mcsa::api::log::{self, Level};
 pub use bindings::mcsa::api::player;
+pub use bindings::mcsa::api::presentation;
 pub use bindings::mcsa::api::scheduler;
 pub use bindings::mcsa::api::server;
 pub use bindings::mcsa::api::storage;

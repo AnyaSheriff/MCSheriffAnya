@@ -28,6 +28,7 @@ TOML
   echo "установлен: $dir"
 }
 
+put plugins custom-tablist "Настраиваемый TAB, имена, HUD и чат"
 put plugins hello "Приветствие при входе и команда /hello"
 put plugins chat-filter "Фильтр чата: запрещённые слова и капс"
 put plugins protect-spawn "Защита точки появления от ломания и стройки"

@@ -29,6 +29,9 @@ pub struct Settings {
     /// с клиентом. Нужен только для поиска неполадок.
     pub debug: bool,
 
+    /// TPS и время такта внизу списка игроков Java.
+    pub tab_tps: bool,
+
     /// На сколько чанков дальше прорисовки мир складывается заранее, пока
     /// игрок ходит: к тому мгновению, как чанк войдёт в обзор, он уже готов.
     /// Эти чанки держатся в памяти. 0 — не складывать впрок.
@@ -91,6 +94,7 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             debug: false,
+            tab_tps: true,
             prefetch_chunks: 3,
             prefetch_at_once: 4,
             bedrock_port: 19132,
@@ -159,6 +163,7 @@ impl Settings {
 
         Settings {
             debug: take(&values, "debug", default.debug, path),
+            tab_tps: take(&values, "tab-tps", default.tab_tps, path),
             prefetch_chunks: take(&values, "prefetch-chunks", default.prefetch_chunks, path),
             prefetch_at_once: take(&values, "prefetch-at-once", default.prefetch_at_once, path),
             bedrock_port: take(&values, "bedrock-port", default.bedrock_port, path),
@@ -190,8 +195,9 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 15] {
+    fn sections(self) -> [(&'static str, String); 16] {
         [
+            ("tab-tps", format!("# TPS и время такта внизу списка игроков Java; оформление плагина имеет приоритет.\ntab-tps={}\n", self.tab_tps)),
             ("debug", format!("\
 # Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
 # с клиентом. Нужен только для поиска неполадок; в обычной игре — false.
@@ -336,6 +342,14 @@ fn move_old_file(old: &Path, path: &Path) -> Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tab_tps_defaults_and_explicit_disable() {
+        let path = Path::new("config/mcsa.properties");
+        assert!(Settings::parse("", path).tab_tps);
+        assert!(!Settings::parse("tab-tps=false", path).tab_tps);
+        assert!(Settings::default().to_file().contains("tab-tps=true"));
+    }
 
     /// Нет файла — подробный лог выключен и положен файл с пояснениями;
     /// есть файл — читается; испорченное значение — по умолчанию.

@@ -9,13 +9,14 @@ pub const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(15);
 
 pub struct KeepAlive {
     last_sent: Instant,
+    pub latency: u32,
     next_id: i64,
     pending: Option<(i64, Instant)>,
 }
 
 impl KeepAlive {
     pub fn new() -> Self {
-        Self { last_sent: Instant::now(), next_id: 1, pending: None }
+        Self { latency: 0, last_sent: Instant::now(), next_id: 1, pending: None }
     }
 
     pub fn deadline(&self) -> Option<Instant> { self.pending.map(|(_, deadline)| deadline) }
@@ -38,6 +39,7 @@ impl KeepAlive {
     pub fn answer(&mut self, payload: &[u8]) -> bool {
         let Ok(bytes) = <[u8; 8]>::try_from(payload) else { return false; };
         if self.pending.is_some_and(|(id, deadline)| id == i64::from_be_bytes(bytes) && Instant::now() < deadline) {
+            self.latency = self.last_sent.elapsed().as_millis().min(u128::from(u32::MAX)) as u32;
             self.pending = None;
             return true;
         }
@@ -63,6 +65,7 @@ mod tests {
         assert_eq!(alive.deadline(), deadline);
         assert!(!alive.expired());
         assert!(alive.answer(&id.to_be_bytes()));
+        assert_eq!(alive.latency, 10_000);
         assert_eq!(alive.deadline(), None);
         assert!(!alive.answer(&id.to_be_bytes()));
         let next = alive.send_due().unwrap();

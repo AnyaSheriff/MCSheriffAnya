@@ -664,6 +664,8 @@ pub struct Ticking {
 
     /// Сколько длились последние такты, мс — для `tick query`.
     spent: std::collections::VecDeque<f32>,
+    intervals: std::collections::VecDeque<f32>,
+    last_start: Option<Instant>,
 }
 
 #[derive(Debug)]
@@ -675,7 +677,7 @@ struct Sprint {
 
 impl Default for Ticking {
     fn default() -> Self {
-        Self { rate: 20.0, frozen: false, step_left: 0, sprint: None, spent: std::collections::VecDeque::new() }
+        Self { rate: 20.0, frozen: false, step_left: 0, sprint: None, spent: std::collections::VecDeque::new(), intervals: Default::default(), last_start: None }
     }
 }
 
@@ -692,6 +694,19 @@ pub struct Plan {
 }
 
 impl Ticking {
+    pub fn metrics(&self) -> (f32, f32) {
+        let mspt = self.spent.iter().sum::<f32>() / self.spent.len().max(1) as f32;
+        let elapsed = if self.intervals.is_empty() { mspt } else { self.intervals.iter().sum::<f32>() / self.intervals.len() as f32 };
+        (self.rate.min(1000.0 / elapsed.max(0.001)), mspt)
+    }
+
+    pub fn note_start(&mut self, now: Instant) {
+        if let Some(last) = self.last_start.replace(now) {
+            self.intervals.push_back(now.saturating_duration_since(last).as_secs_f32() * 1000.0);
+            if self.intervals.len() > SAMPLES { self.intervals.pop_front(); }
+        }
+    }
+
     fn period(&self) -> Duration {
         Duration::from_secs_f64(1.0 / f64::from(self.rate))
     }

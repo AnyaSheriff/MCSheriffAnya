@@ -144,6 +144,79 @@ interface player {
     kick: func(uuid: string, reason: string) -> bool;
 }
 
+/// Компоненты текста — JSON; сервер проверяет их и кодирует в anonymous NBT.
+/// UI только Java. false означает: игрок отсутствует, Bedrock или неверные данные.
+/// Ресурсы принадлежат плагину, очищаются при выгрузке; id локален плагину.
+interface presentation {
+    record player-info {
+        ping: u32,
+        health: f32,
+        max-health: f32,
+        %world: string,
+        display-name: string,
+        food: s32,
+        level: s32,
+        exp: f32,
+        operator-level: u8,
+    }
+    record server-info {
+        tps: f32,
+        mspt: f32,
+        online: u32,
+        max-players: u32,
+    }
+    record team {
+        id: string,
+        prefix: string,
+        suffix: string,
+        color: string,
+        visibility: string,
+        members: list<string>,
+    }
+    record objective {
+        id: string,
+        title: string,
+        hearts: bool,
+    }
+    record score {
+        objective: string,
+        holder: string,
+        value: s32,
+        display: option<string>,
+        /// none — обычное число, some — fixed-компонент вместо числа.
+        number: option<string>,
+    }
+    record boss-bar {
+        id: string,
+        title: string,
+        progress: f32,
+        color: string,
+        style: string,
+    }
+    get-player-info: func(uuid: string) -> option<player-info>;
+    get-server-info: func() -> server-info;
+    set-tab-header-footer: func(uuid: string, header: string, footer: string) -> bool;
+    /// Возвращает заголовок/подвал ядру, только если им владеет вызывающий.
+    reset-tab-header-footer: func(uuid: string) -> bool;
+    set-display-name: func(uuid: string, text: string) -> bool;
+    set-player-list-name: func(uuid: string, text: string) -> bool;
+    set-team: func(uuid: string, value: team) -> bool;
+    remove-team: func(uuid: string, id: string) -> bool;
+    set-objective: func(uuid: string, value: objective) -> bool;
+    remove-objective: func(uuid: string, id: string) -> bool;
+    /// list, sidebar, below_name; none снимает только собственный слот.
+    set-display-slot: func(uuid: string, slot: string, objective: option<string>) -> bool;
+    set-score: func(uuid: string, value: score) -> bool;
+    remove-score: func(uuid: string, objective: string, holder: string) -> bool;
+    set-boss-bar: func(uuid: string, value: boss-bar) -> bool;
+    remove-boss-bar: func(uuid: string, id: string) -> bool;
+    set-action-bar: func(uuid: string, text: string) -> bool;
+    send-component: func(uuid: string, text: string) -> bool;
+    broadcast-component: func(text: string) -> bool;
+    /// Удаляет оформление вызывающего плагина для этого игрока.
+    reset-player: func(uuid: string) -> bool;
+}
+
 interface %world {
     use types.{block-pos, location, dimension};
 
@@ -258,6 +331,7 @@ world plugin {
     import log;
     import server;
     import player;
+    import presentation;
     import %world;
     import scheduler;
     import command;

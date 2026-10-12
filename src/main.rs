@@ -93,6 +93,7 @@ mod tick;
 mod chat;
 mod ops;
 mod players;
+mod presentation;
 mod shared;
 mod sessions;
 mod log;

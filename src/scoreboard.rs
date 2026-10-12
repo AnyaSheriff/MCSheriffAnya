@@ -175,7 +175,7 @@ impl BossBar {
     }
 
     /// Пакет «добавить» (действие 0): название, доля, цвет, деления, флаги.
-    fn add_packet(&self) -> Vec<u8> {
+    pub(crate) fn add_packet(&self) -> Vec<u8> {
         let mut body = encode_varint(BOSS_PACKET);
         body.extend_from_slice(&self.uuid);
         body.extend(encode_varint(0));
@@ -187,7 +187,7 @@ impl BossBar {
         body
     }
 
-    fn remove_packet(&self) -> Vec<u8> {
+    pub(crate) fn remove_packet(&self) -> Vec<u8> {
         let mut body = encode_varint(BOSS_PACKET);
         body.extend_from_slice(&self.uuid);
         body.extend(encode_varint(1));
@@ -775,7 +775,7 @@ impl Default for Scoreboard {
 }
 
 /// Пакет цели: 0 — добавить, 1 — убрать, 2 — изменить.
-fn objective_packet(objective: &Objective, action: u8) -> Vec<u8> {
+pub(crate) fn objective_packet(objective: &Objective, action: u8) -> Vec<u8> {
     let mut body = encode_varint(OBJECTIVE_PACKET);
     body.extend(encode_string(&objective.name));
     body.push(action);
@@ -789,14 +789,14 @@ fn objective_packet(objective: &Objective, action: u8) -> Vec<u8> {
     body
 }
 
-fn display_packet(slot: usize, name: &str) -> Vec<u8> {
+pub(crate) fn display_packet(slot: usize, name: &str) -> Vec<u8> {
     let mut body = encode_varint(DISPLAY_PACKET);
     body.extend(encode_varint(slot as i32));
     body.extend(encode_string(name));
     body
 }
 
-fn score_packet(holder: &str, objective: &str, score: &Score) -> Vec<u8> {
+pub(crate) fn score_packet(holder: &str, objective: &str, score: &Score) -> Vec<u8> {
     let mut body = encode_varint(SCORE_PACKET);
     body.extend(encode_string(holder));
     body.extend(encode_string(objective));
@@ -816,7 +816,7 @@ fn score_packet(holder: &str, objective: &str, score: &Score) -> Vec<u8> {
 
 /// Пакет команды: 0 — создать (с участниками), 1 — убрать, 2 — изменить,
 /// 3 — вступили, 4 — вышли.
-fn team_packet(team: &Team, mode: u8, players: &[String]) -> Vec<u8> {
+pub(crate) fn team_packet(team: &Team, mode: u8, players: &[String]) -> Vec<u8> {
     let mut body = encode_varint(TEAMS_PACKET);
     body.extend(encode_string(&team.name));
     body.push(mode);

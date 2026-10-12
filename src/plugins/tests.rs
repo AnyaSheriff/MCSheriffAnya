@@ -404,3 +404,158 @@ fn benchmark_host() {
     assert!(host.is_loaded("chat-filter"));
     println!("BENCH base_rss_kib={base_rss} empty_rss_kib={empty_rss} loaded_rss_kib={loaded_rss} engine_ms={engine_ms:.3} load_ms={load_ms:.3} hot_100k_ms={hot_ms:.3}");
 }
+
+fn java_info(shared: &Shared) {
+    shared.players.lock().unwrap().ui.info.insert([1;16], crate::presentation::Info {ping:42,health:17.0,max_health:24.0,food:18,level:3,exp:0.5});
+}
+
+#[test]
+fn custom_tablist_loads_defaults_yields_core_and_cleans_up() {
+    let root = server_root("custom-tablist");
+    assert!(install(&root, "plugins", "custom-tablist", "custom-tablist", ""));
+    let shared = shared();
+    java_info(&shared);
+    let mut host = Host::new(Arc::clone(&shared), root.clone()).unwrap();
+    host.load("custom-tablist").unwrap();
+    let first_tick=host.loaded[0].store.data().tick+1;host.tick(first_tick);
+    assert_eq!(host.command_level("tablist"), Some(2));
+    assert_eq!(std::fs::read_to_string(root.join("plugins/custom-tablist/data/config.yml")).unwrap(), include_str!("../../plugins-examples/custom-tablist/config.yml"));
+    {
+        let mut players = shared.players.lock().unwrap();
+        assert_eq!(players.ui.headers.get(&[1;16]).map(String::as_str), Some("custom-tablist"));
+        let owned = &players.ui.owned[&("custom-tablist".into(), [1;16])];
+        assert_eq!(owned.teams.len(),1);
+        assert_eq!(owned.objectives.len(),1);
+        let packets = players.take_orders(&[1;16]);
+        assert!(packets.iter().any(|o|matches!(o, crate::players::Order::Packet(p) if p[0]==0x7a)));
+        assert!(packets.iter().any(|o|matches!(o, crate::players::Order::Packet(p) if p[0]==0x46)));
+    }
+    crate::presentation::tick_footer(&shared);
+    assert!(shared.players.lock().unwrap().take_orders(&[1;16]).is_empty());
+    let base_tick = host.loaded[0].store.data().tick;
+    host.tick(base_tick + 19);
+    assert!(shared.players.lock().unwrap().take_orders(&[1;16]).is_empty());
+    host.tick(base_tick + 20);
+    assert!(shared.players.lock().unwrap().take_orders(&[1;16]).iter().any(|o|matches!(o, crate::players::Order::Packet(p) if p[0]==0x7a)));
+    host.unload("custom-tablist").unwrap();
+    {
+        let mut players=shared.players.lock().unwrap();
+        assert!(players.ui.headers.is_empty());assert!(players.ui.owned.is_empty());assert!(players.ui.list_names.is_empty());assert!(players.ui.slots.is_empty());
+        players.take_orders(&[1;16]);
+    }
+    crate::presentation::tick_footer(&shared);
+    assert!(shared.players.lock().unwrap().take_orders(&[1;16]).iter().any(|o|matches!(o, crate::players::Order::Packet(p) if p[0]==0x7a)));
+}
+
+#[test]
+fn custom_tablist_reload_commands_chat_and_all_hud_features() {
+    let root=server_root("custom-all");
+    assert!(install(&root,"plugins","custom-tablist","custom-tablist",""));
+    let folder=root.join("plugins/custom-tablist/data");std::fs::create_dir_all(&folder).unwrap();
+    let config="bossbar:\n  enabled: true\n  format: '<red>%tps% TPS'\n  progress: 0.25\n  color: BLUE\n  style: SEGMENTED_10\nactionbar:\n  enabled: true\n  lines: ['first', 'second']\n  update-interval: 10\nscoreboard:\n  enabled: true\n  title: '<bold>Статистика'\n  lines: ['%online%', '%mspt%', '%unknown%']\n";
+    std::fs::write(folder.join("config.yml"),config).unwrap();
+    let shared=shared();java_info(&shared);
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap();
+    host.load("custom-tablist").unwrap();
+    let first_tick=host.loaded[0].store.data().tick+1;host.tick(first_tick);
+    {
+        let mut players=shared.players.lock().unwrap();
+        let owned=&players.ui.owned[&("custom-tablist".into(),[1;16])];
+        assert_eq!(owned.bars.len(),1);assert_eq!(owned.objectives.len(),2);
+        let bar=owned.bars.values().next().unwrap();assert_eq!((bar.color,bar.style,bar.value),(1,2,250000));
+        assert_eq!(players.ui.slots.len(),2);
+        assert!(players.take_orders(&[1;16]).iter().any(|o|matches!(o, crate::players::Order::Packet(p) if p[0]==0x57)));
+    }
+    assert_eq!(host.chat(&view(),"<red>hello %player%"),ChatOutcome::Cancel);
+    assert!(shared.chat.lock().unwrap().since(0).iter().any(|line| line.contains("Первый: <red>hello %player%")));
+    assert!(host.run_command(console(),"cprefix",&["Первый".into(),"<gold>[Admin]".into()]).unwrap().0);
+    assert!(std::fs::read_to_string(folder.join("config.yml")).unwrap().contains("[Admin]"));
+    assert!(host.run_command(console(),"tablist",&["toggle".into(),"all".into(),"off".into()]).unwrap().0);
+    assert!(shared.players.lock().unwrap().ui.owned.is_empty());
+    assert_eq!(host.chat(&view(),"hello"),ChatOutcome::Pass);
+    std::fs::write(folder.join("config.yml"),"bad: [").unwrap();
+    assert!(!host.run_command(console(),"tablist",&["reload".into()]).unwrap().0);
+    assert!(host.is_loaded("custom-tablist"));
+}
+
+#[test]
+fn presentation_api_validates_ownership_and_bedrock_is_not_sent_java_packets() {
+    use super::api::mcsa::api::presentation::Host as _;
+    let root=server_root("ui-api");assert!(install(&root,"plugins","hello","hello",""));
+    let shared=shared();let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("hello").unwrap();
+    let uuid=crate::network::login::format_uuid(&[1;16]);
+    let ctx=host.loaded[0].store.data_mut();
+    assert!(!ctx.set_tab_header_footer(uuid.clone(),"\"head\"".into(),"\"foot\"".into()));
+    java_info(&shared);
+    assert!(!ctx.set_tab_header_footer(uuid.clone(),"not JSON".into(),"\"foot\"".into()));
+    assert!(!ctx.set_action_bar("bad uuid".into(),"\"text\"".into()));
+    assert!(!ctx.set_action_bar(uuid.clone(),r#"{"text":"a","extra":"bad"}"#.into()));
+    assert!(ctx.set_tab_header_footer(uuid.clone(),"\"head\"".into(),"\"foot\"".into()));
+    ctx.name="other".into();
+    assert!(!ctx.reset_tab_header_footer(uuid.clone()));
+    assert!(ctx.set_tab_header_footer(uuid.clone(),"\"other\"".into(),"\"foot\"".into()));
+    ctx.name="hello".into();
+    assert!(ctx.reset_player(uuid.clone()));
+    assert_eq!(shared.players.lock().unwrap().ui.headers.get(&[1;16]).map(String::as_str),Some("other"));
+    let info=ctx.get_player_info(uuid.clone()).unwrap();assert_eq!((info.ping,info.health,info.max_health),(42,17.0,24.0));assert_eq!(info.world,"world");
+    assert_eq!(ctx.get_server_info().online,1);
+    shared.players.lock().unwrap().leave(&[1;16]);
+    assert!(shared.players.lock().unwrap().ui.headers.is_empty());
+    assert!(ctx.get_player_info(uuid).is_none());
+}
+
+#[test]
+fn presentation_resource_updates_removal_and_crash_cleanup() {
+    use super::api::mcsa::api::presentation::{self as ui, Host as _};
+    let root=server_root("ui-resources");assert!(install(&root,"plugins","misbehave","misbehave",""));
+    let shared=shared();java_info(&shared);
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap();host.load("misbehave").unwrap();
+    let uuid=crate::network::login::format_uuid(&[1;16]);
+    let ctx=host.loaded[0].store.data_mut();
+    let team=ui::Team{id:"test".into(),prefix:"\"pre\"".into(),suffix:"\"post\"".into(),color:"green".into(),visibility:"never".into(),members:vec!["Первый".into()]};
+    assert!(ctx.set_team(uuid.clone(),team.clone()));
+    shared.players.lock().unwrap().take_orders(&[1;16]);
+    assert!(ctx.set_team(uuid.clone(),team));assert!(shared.players.lock().unwrap().take_orders(&[1;16]).is_empty());
+    let objective=ui::Objective{id:"test".into(),title:"\"title\"".into(),hearts:false};
+    assert!(ctx.set_objective(uuid.clone(),objective));
+    assert!(ctx.set_display_slot(uuid.clone(),"sidebar".into(),Some("test".into())));
+    assert!(!ctx.set_display_slot(uuid.clone(),"bad".into(),Some("test".into())));
+    assert!(!ctx.set_display_slot(uuid.clone(),"sidebar".into(),Some("missing".into())));
+    assert!(ctx.set_score(uuid.clone(),ui::Score{objective:"test".into(),holder:"row".into(),value:17,display:Some("\"text\"".into()),number:Some("\"❤\"".into())}));
+    assert!(ctx.remove_score(uuid.clone(),"test".into(),"row".into()));
+    assert!(ctx.set_display_slot(uuid.clone(),"sidebar".into(),None));
+    assert!(ctx.remove_objective(uuid.clone(),"test".into()));
+    assert!(ctx.remove_team(uuid.clone(),"test".into()));
+    let mut bar=ui::BossBar{id:"bar".into(),title:"\"title\"".into(),progress:0.5,color:"red".into(),style:"progress".into()};
+    assert!(ctx.set_boss_bar(uuid.clone(),bar.clone()));shared.players.lock().unwrap().take_orders(&[1;16]);
+    bar.progress=0.25;assert!(ctx.set_boss_bar(uuid.clone(),bar));
+    let packets=shared.players.lock().unwrap().take_orders(&[1;16]);
+    assert_eq!(packets.len(),1);
+    assert!(matches!(&packets[0],crate::players::Order::Packet(p) if p[0]==crate::scoreboard::BOSS_PACKET as u8 && p[17]==2));
+    assert!(ctx.remove_boss_bar(uuid.clone(),"bar".into()));
+    assert!(ctx.set_tab_header_footer(uuid.clone(),"\"head\"".into(),"\"foot\"".into()));
+    assert!(ctx.set_action_bar(uuid,"\"action\"".into()));
+    assert_eq!(host.chat(&view(),"panic"),ChatOutcome::Pass);
+    assert!(!host.is_loaded("misbehave"));
+    let players=shared.players.lock().unwrap();assert!(players.ui.headers.is_empty());assert!(players.ui.actions.is_empty());assert!(players.ui.owned.is_empty());
+}
+
+#[test]
+fn custom_tablist_handles_a_default_capacity_server() {
+    let root=server_root("custom-capacity");assert!(install(&root,"plugins","custom-tablist","custom-tablist",""));
+    let shared=shared();java_info(&shared);
+    {
+        let mut players=shared.players.lock().unwrap();
+        let original=players.members()[0].clone();
+        for n in 2..=20u8 {
+            let mut member=original.clone();member.uuid=[n;16];member.name=format!("Player{n}");member.entity_id=i32::from(n);
+            players.join(member,i32::from(n));
+            players.ui.info.insert([n;16],crate::presentation::Info{health:20.0,max_health:20.0,..Default::default()});
+        }
+    }
+    let mut host=Host::new(Arc::clone(&shared),root).unwrap();
+    host.load("custom-tablist").unwrap();
+    let first_tick=host.loaded[0].store.data().tick+1;host.tick(first_tick);let base_tick=host.loaded[0].store.data().tick;host.tick(base_tick+20);
+    assert!(host.is_loaded("custom-tablist"));
+    assert_eq!(shared.players.lock().unwrap().ui.headers.len(),20);
+}

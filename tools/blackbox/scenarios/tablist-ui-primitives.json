@@ -1,0 +1,30 @@
+{
+  "name": "tablist-ui-primitives",
+  "about": "[проверить] Protocol primitives used by CustomTabList: per-score fixed below-name health, nametag team, sidebar, bossbar and actionbar. Core TPS/plugin headers need a separate Java-client check; vanilla has no plugin command.",
+  "origin": [0, 100, 0],
+  "exclusive": true,
+  "track_score": true,
+  "chat": true,
+  "blocks": [],
+  "setup": ["fill $(-2,-1,-2) $(2,2,2) air", "setblock $(0,-1,0) stone", "scoreboard objectives remove ctl_probe_health", "scoreboard objectives remove ctl_probe_side", "team remove ctl_probe", "bossbar remove mcsa:ctl_probe"],
+  "actions": [
+    {"after": 0, "cmd": "team add ctl_probe"},
+    {"after": 2, "cmd": "team modify ctl_probe prefix {\"text\":\"[Аня] \",\"color\":\"gold\"}"},
+    {"after": 4, "cmd": "team join ctl_probe $(bot)"},
+    {"after": 6, "cmd": "scoreboard objectives add ctl_probe_health dummy \"\""},
+    {"after": 8, "cmd": "scoreboard objectives setdisplay belowName ctl_probe_health"},
+    {"after": 10, "cmd": "scoreboard players set $(bot) ctl_probe_health 17"},
+    {"after": 12, "cmd": "scoreboard players display numberformat $(bot) ctl_probe_health fixed {\"text\":\"[17/20❤]\",\"color\":\"red\"}"},
+    {"after": 14, "cmd": "scoreboard objectives add ctl_probe_side dummy {\"text\":\"Статистика\",\"bold\":true}"},
+    {"after": 16, "cmd": "scoreboard objectives setdisplay sidebar ctl_probe_side"},
+    {"after": 18, "cmd": "scoreboard players set line0 ctl_probe_side 1"},
+    {"after": 20, "cmd": "scoreboard players display name line0 ctl_probe_side {\"text\":\"Онлайн: 1\",\"color\":\"green\"}"},
+    {"after": 22, "cmd": "bossbar add mcsa:ctl_probe {\"text\":\"Сервер\",\"color\":\"blue\"}"},
+    {"after": 24, "cmd": "bossbar set mcsa:ctl_probe players $(bot)"},
+    {"after": 26, "cmd": "bossbar set mcsa:ctl_probe value 25"},
+    {"after": 28, "cmd": "title $(bot) actionbar {\"text\":\"Первая строка\",\"color\":\"green\"}"},
+    {"after": 48, "cmd": "title $(bot) actionbar {\"text\":\"Вторая строка\",\"color\":\"yellow\"}"}
+  ],
+  "record_ticks": 65,
+  "cleanup": ["team remove ctl_probe", "scoreboard objectives remove ctl_probe_health", "scoreboard objectives remove ctl_probe_side", "bossbar remove mcsa:ctl_probe", "title $(bot) clear", "fill $(-2,-1,-2) $(2,2,2) air"]
+}

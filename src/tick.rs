@@ -206,6 +206,7 @@ async fn run(shared: Arc<Shared>) {
         ticks += 1;
 
         let started = std::time::Instant::now();
+        shared.world_cmd.ticking.lock().expect("такт").note_start(started);
 
         // Где лежат предметы к началу такта — по этим местам их подбирают
         // игроки, как у оригинала, где подбор идёт раньше шага предметов.
@@ -532,6 +533,7 @@ async fn run(shared: Arc<Shared>) {
 
         phases.tick_done(spent);
         crate::commands_world::note_spent(&shared, spent);
+        if ticks.is_multiple_of(20) { crate::presentation::tick_footer(&shared); }
 
         if plan.run_world {
             morning_due = wake_sleepers(&shared);

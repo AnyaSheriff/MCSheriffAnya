@@ -32,6 +32,8 @@ use crate::shared::Shared;
 #[cfg(feature = "plugins")]
 mod api;
 #[cfg(feature = "plugins")]
+mod presentation;
+#[cfg(feature = "plugins")]
 mod host;
 #[cfg(feature = "plugins")]
 mod manifest;

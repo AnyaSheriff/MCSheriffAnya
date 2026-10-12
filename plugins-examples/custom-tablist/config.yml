@@ -1,0 +1,117 @@
+# ============ ОСНОВНЫЕ НАСТРОЙКИ ============
+format:
+  # auto - автоматическое определение (рекомендуется)
+  # legacy - только & и § коды
+  # minimessage - только MiniMessage теги
+  mode: "auto"
+  use-legacy-format: false
+
+# ============ ЦВЕТА МИРОВ ============
+world-colors:
+  default: "<white>"
+  world: "<green>"
+  world_nether: "<red>"
+  world_the_end: "<light_purple>"
+
+# ============ DISPLAY NAME ============
+# Управляет именем в TAB-листе и значением %displayname%
+display-name:
+  enabled: true
+  format: "%cprefix% %player% %csuffix%"
+  update-interval: 20
+
+# ============ NAMETAG (имя над головой игрока) ============
+nametag:
+  enabled: true
+  prefix-format: "%cprefix%"
+  suffix-format: "%csuffix%"
+  visible-to-all: true
+  update-interval: 20
+
+  below-name:
+    enabled: true
+    format: "<gray>[<white>%health_int%<gray>/<white>%max_health_int%<red>❤<gray>]"
+    update-interval: 20
+
+# ============ TABLIST ============
+tablist:
+  enabled: true
+  header:
+    - "<gradient:red:blue>Сервер Майнкрафт"
+    - ""
+  footer:
+    - ""
+    - "<gradient:#00FFF7:blue>Добро пожаловать,</gradient> <green>%player%!</green>"
+  player-format: "%cprefix%<world_color>%player%</world_color>%csuffix% <dark_gray>|</dark_gray> <green>%ping%мс</green>"
+  update-interval: 20
+  use-custom-playerlist: true
+  hide-playerlist: false
+  use-placeholderapi: true
+  long-names-handling: "none"
+  max-name-length: 48
+
+# ============ BOSSBAR ============
+bossbar:
+  enabled: false
+  format: ""
+  progress: 1.0
+  color: RED
+  style: SOLID
+  update-interval: 20
+  use-placeholderapi: true
+
+# ============ ACTIONBAR ============
+actionbar:
+  enabled: false
+  lines: []
+  update-interval: 100
+  use-placeholderapi: true
+  cycle-lines: true
+  display-time: 3
+
+# ============ SCOREBOARD ============
+scoreboard:
+  enabled: false
+  title: ""
+  lines: []
+  update-interval: 20
+  use-placeholderapi: true
+  use-world-specific: false
+
+# ============ ЧАТ ============
+chat:
+  enabled: true
+  format: '{prefix}{player}{suffix}: {message}'
+  global-format: '{prefix}{player}{suffix}: {message}'
+  use-placeholderapi: true
+
+  slow-mode: 0
+
+  anti-spam:
+    enabled: false
+    cooldown: 3
+
+  caps-filter:
+    enabled: false
+    max-percent: 50
+    min-length: 5
+
+  ads-filter:
+    enabled: false
+    allowed-domains:
+      - "youtube.com"
+      - "discord.gg"
+      - "t.me"
+
+  blocked-words: []
+
+  log-commands: false
+
+# ============ ОБЩИЕ НАСТРОЙКИ ============
+settings:
+  update-on-world-change: true
+  debug: false
+
+# ============ ПРЕФИКСЫ И СУФФИКСЫ ============
+player-prefixes: {}
+player-suffixes: {}

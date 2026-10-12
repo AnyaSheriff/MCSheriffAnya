@@ -223,3 +223,93 @@ export_plugin!(Mine);
 Собирать на `wasm32-wasip2`; рядом с `.wasm` положить `plugin.toml`.
 Плагин на любом другом языке с поддержкой компонентов (C, Go, JS, Python …)
 тоже подходит, если собран под `wit/mcsa-api.wit`.
+
+## Оформление списка игроков и HUD
+
+Интерфейс `mcsa:api/presentation` (Rust: `mcsa_sdk::presentation`) доступен
+обычным плагинам. Текст передаётся JSON-компонентом, например
+`{"text":"Привет","color":"green"}`, и кодируется хозяином в anonymous NBT.
+Максимум 16 КиБ на компонент, JSON проверяется до отправки. Поддерживаются
+text, translate/with/fallback, keybind, цвета, декорации, font, insertion,
+click_event и hover_event/show_text. Произвольного доступа к пакетам нет.
+
+| Вызов | Назначение |
+| --- | --- |
+| `get-player-info(uuid)` | Ping (мс), здоровье и максимум, мир, display-name (JSON), еда, уровень, опыт, уровень оператора |
+| `get-server-info()` | TPS, MSPT, online, max-players |
+| `set-tab-header-footer(uuid, header, footer)` | Заголовок и подвал конкретного Java-клиента; отключает для него подвал ядра |
+| `reset-tab-header-footer(uuid)` | Освобождает свой заголовок/подвал, ядро возобновляет TPS на ближайшем обновлении |
+| `set-display-name(uuid, text)` | Имя для плагинов, возвращаемое в get-player-info |
+| `set-player-list-name(uuid, text)` | Имя игрока в TAB у всех Java-клиентов |
+| `set-team` / `remove-team` | Префикс, суффикс, цвет, видимость nametag и участники для конкретного зрителя |
+| `set-objective` / `remove-objective` | Цель табло конкретного зрителя |
+| `set-display-slot` | Слоты list, sidebar, below_name, sidebar.team.COLOR; none освобождает свой слот |
+| `set-score` / `remove-score` | Число, необязательное имя строки и fixed-компонент вместо числа |
+| `set-boss-bar` / `remove-boss-bar` | Название, доля 0..1, цвет, деления |
+| `set-action-bar` | Сообщение над панелью предметов |
+| `send-component` / `broadcast-component` | Форматированное сообщение, в том числе для собственного обработчика чата |
+| `reset-player` | Удаляет всё оформление вызывающего плагина для этого игрока |
+
+UI-вызовы возвращают false при неверных данных, отсутствии игрока или
+Bedrock-подключении. Bedrock в текущем хозяине не переводит эти Java-пакеты.
+Компоненты чата проходят существующий путь доставки чата. World возвращается
+как world, world_nether, world_the_end. Снимок состояния игрока обновляется
+подключением; ping меняется после подтверждённого keep-alive.
+
+Идентификаторы ресурсов локальны плагину, до 128 байт; хозяин создаёт имена
+протокола самостоятельно. На зрителя и плагин: до 256 teams, 32 objectives,
+32 bossbars, 2048 записей кэша (включая scores). Каждый вызов set заменяет
+предыдущее значение; повтор одинаковых данных не создаёт новые ресурсы.
+На выгрузке, ошибке enable или аварии ресурсы удаляются. Disconnect очищает
+состояние зрителя. Заголовок, actionbar, имя и display slot используют последнее
+установленное значение; выгрузка прежнего владельца не стирает чужое.
+Один клиентский слот и membership игрока в team всё равно общие: плагины,
+которые одновременно управляют одним слотом/nametag, должны договориться.
+Оформление не меняет сохраняемое серверное scoreboard и правила боя.
+
+`tab-tps=true` в `config/mcsa.properties` включает подвал ядра раз в 20 тактов.
+TPS ограничен целевой tick rate и считается по 100 последним интервалам
+начала тактов; MSPT — по существующим 100 замерам работы такта. TPS: зелёный
+от 19.5, жёлтый от 15, иначе красный; MSPT: зелёный до 50 мс, жёлтый до
+66.67 мс, иначе красный. Плагин забирает подвал только конкретного игрока.
+
+Пример `plugins-examples/custom-tablist` переносит пользовательский
+CustomTabList. Его конфиг — `plugins/custom-tablist/data/config.yml`, при
+первом включении копируется исходный config.yml без изменений. Команды
+`/tablist reload|placeholders|test|format|worldcolors|toggle` и исходные
+`/tablistreload`, `/tablistplaceholders`, `/tablisttest`, `/tablistformat`,
+`/tablistworldcolors`, `/tablisttoggle`, `/cprefix`, `/csuffix`,
+`/cprefixremove`, `/csuffixremove`, `/cnametag`, `/chat` доступны операторам
+уровня 2. Узлов Bukkit permissions в хозяине нет; для обхода фильтров чата
+используется уровень оператора. Неудачный reload сохраняет действующую
+конфигурацию. Запись через команды сохраняет значения YAML, но не комментарии.
+Первое применение после enable/reload/join — ближайший такт. Обновления
+делятся на четыре группы игроков и отдельные задачи по видам оформления;
+все группы выполняются в одном такте с тем же update-interval. Это сохраняет
+лимиты WASM на каждый вызов при стандартных 20 игроках.
+
+Парсер реализован по [публичному описанию MiniMessage](https://docs.advntr.dev/minimessage/format.html),
+без исходников Adventure. Поддерживает named/hex colours, gradient с несколькими
+цветами и фазой, transition, rainbow, decorations/aliases/negation, reset,
+newline, font, insertion, click, hover/show_text, keybind, translate; legacy
+`&`/`§`, `&#RRGGBB` и `§x§R§R§G§G§B§B`. Режим auto принимает оба синтаксиса,
+legacy — только legacy, minimessage — только теги. Неизвестные теги и
+плейсхолдеры сохраняются буквально. Это ограниченный парсер, не полная
+реализация Adventure: NBT/selector/score, hover предмета/сущности, sprite,
+head, pride, shadow и сложные аргументы translate не реализованы.
+
+Нативные placeholders включают внутренние исходного плагина,
+`%customtablist_prefix%`, `%customtablist_suffix%`, `%customtablist_full%`,
+health-варианты и новые `%tps%`, `%mspt%`, `%online%`, `%max_players%`.
+PlaceholderAPI отсутствует; use-placeholderapi сохраняется для совместимости.
+`%time%` и `%date%` используют UTC (WASI не получает timezone сервера).
+Как в исходном TabListManager/ActionBarManager, long-names-handling,
+max-name-length и display-time не изменяют поведение: имена не обрезаются,
+actionbar обновляется и циклически меняется по update-interval. Sidebar
+сохраняет цвета и повторяющиеся строки, показывая до 15 непустых строк.
+ChatListener исходника использует chat.format; global-format сохраняется,
+но отдельного глобального канала в этом порте нет. Сообщения игроков
+вставляются литералами, без исполнения тегов оформления.
+
+[проверить] Внешний вид на Java-клиенте и сопоставление с исходным плагином
+требуют отдельной проверки; автоматические тесты запускают WASM без сервера.
