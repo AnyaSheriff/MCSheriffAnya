@@ -73,6 +73,14 @@ pub fn parse(payload: &[u8]) -> io::Result<Click> {
     let id = packet::decode_string(payload, &mut offset)?;
     if !matches!(id.as_str(), "mcsheriffanya:login" | "mcsheriffanya:register" | "mcsheriffanya:exit") { return Err(invalid()); }
     let mut rest = &payload[offset..];
+    // Перед NBT настоящий клиент шлёт его длину (VarInt, вики: «Payload
+    // size»). Без длины — старая запись наших тестов, её тоже принимаем.
+    if let Ok((size, used)) = packet::decode_varint(rest)
+        && size >= 0 && rest.len() == used + size as usize
+        && rest.get(used).is_some_and(|tag| matches!(tag, 0 | 10))
+    {
+        rest = &rest[used..];
+    }
     if id == "mcsheriffanya:exit" && rest == [0] { return Ok(Click { id, password: String::new(), repeat: None }); }
     rest = rest.strip_prefix(&[10]).ok_or_else(invalid)?;
     let mut password = None;

@@ -66,6 +66,19 @@ fn custom_click_strict_nbt_and_unicode() {
     assert!(dialog::parse(&nested).is_err());
 }
 
+#[test]
+fn custom_click_with_payload_size_like_the_real_client() {
+    // Настоящий клиент 26.1.2 ставит перед NBT его длину (живой вход на альфе).
+    let nbt = Compound::new().string("password", "abcd").encode_network();
+    let mut payload = encode_string("mcsheriffanya:login");
+    payload.extend(crate::network::varint::encode_varint(nbt.len() as i32));
+    payload.extend(&nbt);
+    assert_eq!(dialog::parse(&payload).unwrap().password, "abcd");
+    let mut exit = encode_string("mcsheriffanya:exit");
+    exit.extend([1, 0]);
+    assert_eq!(dialog::parse(&exit).unwrap().id, "mcsheriffanya:exit");
+}
+
 async fn click<S: tokio::io::AsyncWrite + Unpin>(stream: &mut S, action: &str, password: &str, register: bool) {
     let mut body = vec![dialog::CLICK as u8]; body.extend(encode_string(action));
     let mut nbt = Compound::new().string("password", password);
