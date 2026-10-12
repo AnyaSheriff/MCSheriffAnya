@@ -200,6 +200,7 @@ pub(crate) fn stack_from_spec(spec: &str, count: i32) -> Result<Option<crate::in
 }
 
 pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
+    if let Some(answer) = crate::auth::command(command, source, shared) { return answer; }
     // `/plugman` и команды плагинов (plugins/): раньше всего прочего, чтобы
     // права плагина проверял он сам, а не общая таблица уровней.
     if let Some(answer) = crate::plugins::run_command(command, source, shared) {

@@ -537,6 +537,20 @@ mod tests {
     }
 
     #[test]
+    fn xbox_player_with_op_name_has_no_java_op_rights() {
+        let path = std::env::temp_dir()
+            .join(format!("bedrock-auth-op-{}.json", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let mut ops = crate::ops::Ops::open(&path);
+        let owner = [0x16, 0xd3, 0xc2, 0x21, 0x47, 0x76, 0x4f, 0xe3, 0x80, 0xaf, 0x6f, 0x2b, 0x65, 0x1b, 0x50, 0x1b];
+        ops.give(&owner, "SheriffAnya", 4);
+        // Даже подтверждённый Xbox-вход получает только UUID от XUID.
+        assert_eq!(ops.level_of(&uuid_for("2535425101461547", "SheriffAnya")), 0);
+        assert_eq!(ops.level_of(&owner), 4);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn xbox_uuid_comes_from_xuid() {
         let uuid = uuid_for("2535425101461547", "Кто-то");
         assert_eq!(&uuid[..8], &[0; 8]);

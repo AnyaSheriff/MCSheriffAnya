@@ -261,3 +261,44 @@ Rules of the project, to keep it legally clean:
 
 Before sending changes: `cargo test` and `cargo clippy --all-targets` must
 be clean.
+
+### Offline Java password accounts
+
+`config/mcsa.properties` has `auth-enabled=true` and `auth-premium=true` by
+default. With Java `online-mode=false`, all players authenticate in a Russian
+Configuration-phase dialog before entering the world. Online-mode Java and
+Bedrock skip this gate. Bedrock's Xbox-only policy is controlled separately by
+`bedrock-online-mode=true`.
+
+Premium detection is optional: a Mojang name lookup has a 3-second timeout and
+30-minute cache. A successful licence check supplies the online UUID and signed
+textures, but still requires the password. If licence authentication fails,
+reconnect with the same name and IP within five minutes to use the cracked path.
+Non-premium names and unavailable profile APIs go directly to that path.
+
+Accounts are keyed by lowercase name. Registration requires matching passwords
+of 4–64 characters. An account keeps its original UUID across both paths. An
+unregistered op name is protected unless a verified licence matches its ops.json
+UUID. With auth enabled, legacy name-based identity/op adoption is disabled.
+
+Console: `auth setpassword <name> <password>`, `auth unregister <name>`, `auth list`.
+A new console-created op account uses its existing ops.json UUID; a new non-op
+account uses its offline UUID. Existing accounts retain their UUID. In game:
+`/changepassword <old> <new>`. Use JSON-quoted arguments for passwords with spaces.
+Unregister removes the account, not playerdata or ops; it does not kick an
+already admitted player. Direct password commands bypass plugin hooks and their
+arguments are not logged.
+
+`auth.db` is an atomically rewritten file database (SQLite was unavailable in the
+offline dependency cache). It stores salted PBKDF2-HMAC-SHA256 hashes with 100,000
+iterations and 16-byte random salts. Back up this file together with playerdata
+and ops.json. Corrupt storage fails closed. Registration quotas survive restart;
+login failure counters and premium caches are in memory. Limits: three wrong
+passwords per connection, five failures/IP per rolling ten minutes, three
+registrations/IP per rolling day, and 90 seconds for configuration/password entry.
+
+Vanilla text inputs display their contents; this dialog API has no masked input.
+Cracked connections retain the existing offline transport without encryption.
+Licensed connections use the existing encrypted online handshake. Real-client,
+signed-skin and Essential checks are listed in
+[the verification checklist](tools/blackbox/auth-verification.md).

@@ -25,6 +25,10 @@ pub const OLD_FILES: [&str; 2] = ["config/mcsheriffanya.toml", "config/rustcraft
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
+    /// Парольный диалог для Java offline-mode до входа в мир.
+    pub auth_enabled: bool,
+    /// Пробовать лицензию; неудача разрешает cracked-повторный вход.
+    pub auth_premium: bool,
     /// Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
     /// с клиентом. Нужен только для поиска неполадок.
     pub debug: bool,
@@ -93,6 +97,8 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Settings {
+            auth_enabled: true,
+            auth_premium: true,
             debug: false,
             tab_tps: true,
             prefetch_chunks: 3,
@@ -162,6 +168,8 @@ impl Settings {
         }
 
         Settings {
+            auth_enabled: take(&values, "auth-enabled", default.auth_enabled, path),
+            auth_premium: take(&values, "auth-premium", default.auth_premium, path),
             debug: take(&values, "debug", default.debug, path),
             tab_tps: take(&values, "tab-tps", default.tab_tps, path),
             prefetch_chunks: take(&values, "prefetch-chunks", default.prefetch_chunks, path),
@@ -195,8 +203,10 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 16] {
+    fn sections(self) -> [(&'static str, String); 18] {
         [
+            ("auth-enabled", format!("# Парольный диалог Java в offline-mode, до входа в мир; БД auth.db.\nauth-enabled={}\n", self.auth_enabled)),
+            ("auth-premium", format!("# Проверять лицензию Java; после неудачи повторный вход без лицензии.\n# Действует при auth-enabled=true и online-mode=false.\nauth-premium={}\n", self.auth_premium)),
             ("tab-tps", format!("# TPS и время такта внизу списка игроков Java; оформление плагина имеет приоритет.\ntab-tps={}\n", self.tab_tps)),
             ("debug", format!("\
 # Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
@@ -341,6 +351,15 @@ fn move_old_file(old: &Path, path: &Path) -> Settings {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn auth_settings_default_and_round_trip() {
+        let defaults = super::Settings::default();
+        assert!(defaults.auth_enabled && defaults.auth_premium);
+        let path = std::path::Path::new("config/mcsa.properties");
+        let changed = super::Settings::parse("auth-enabled=false\nauth-premium=false\n", path);
+        assert!(!changed.auth_enabled && !changed.auth_premium);
+        assert_eq!(super::Settings::parse(&changed.to_file(), path), changed);
+    }
     use super::*;
 
     #[test]

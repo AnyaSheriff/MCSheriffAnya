@@ -61,10 +61,10 @@ async fn arrow_hitting_in_spawn_tick_sends_spawn_then_remove_once() {
     crate::arrow::step(&shared,observer.dimension,&mut w);
     assert!(shared.arrows.lock().unwrap().list.is_empty());
     }
-    let mut out=Outgoing::capture();bow::send_arrow_ticks(&mut out,&shared,&mut observer).await.unwrap();
+    let mut out=Outgoing::capture();bow::send_arrow_ticks(&mut out,&shared,&mut observer,None).await.unwrap();
     let ids=packet_ids(&out).await;
     assert_eq!(ids,vec![ADD_ENTITY,REMOVE_ENTITIES]);
-    bow::send_arrow_ticks(&mut out,&shared,&mut observer).await.unwrap();
+    bow::send_arrow_ticks(&mut out,&shared,&mut observer,None).await.unwrap();
     assert_eq!(packet_ids(&out).await,ids);
 }
 

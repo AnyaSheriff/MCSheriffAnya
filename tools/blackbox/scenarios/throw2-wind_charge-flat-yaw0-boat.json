@@ -1,0 +1,372 @@
+{
+ "name": "throw2-wind_charge-flat-yaw0-boat",
+ "about": "wind_charge: Minecraft yaw 0°, pitch 0°; boat. Angles passed to mineflayer are radians. [проверить] Release phase and mounted movement against vanilla 26.1.2.",
+ "blocks": [],
+ "setup": [
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "ride $(bot) dismount",
+  "execute positioned $(0,0,0) run kill @e[type=snowball,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=egg,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=ender_pearl,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=splash_potion,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=lingering_potion,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=experience_bottle,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=wind_charge,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=trident,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=arrow,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=spectral_arrow,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=firework_rocket,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=area_effect_cloud,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=endermite,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=experience_orb,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=minecart,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=oak_boat,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=item,distance=..128]",
+  "fill $(-40,0,-40) $(40,3,40) minecraft:air",
+  "fill $(-40,4,-40) $(40,7,40) minecraft:air",
+  "fill $(-40,8,-40) $(40,11,40) minecraft:air",
+  "fill $(-40,12,-40) $(40,15,40) minecraft:air",
+  "fill $(-40,16,-40) $(40,19,40) minecraft:air",
+  "fill $(-40,20,-40) $(40,23,40) minecraft:air",
+  "fill $(-40,24,-40) $(40,27,40) minecraft:air",
+  "fill $(-40,28,-40) $(40,31,40) minecraft:air",
+  "fill $(-40,32,-40) $(40,35,40) minecraft:air",
+  "fill $(-40,36,-40) $(40,39,40) minecraft:air",
+  "fill $(-40,40,-40) $(40,43,40) minecraft:air",
+  "fill $(-40,44,-40) $(40,47,40) minecraft:air",
+  "fill $(-40,48,-40) $(40,51,40) minecraft:air",
+  "fill $(-40,52,-40) $(40,55,40) minecraft:air",
+  "fill $(-40,56,-40) $(40,59,40) minecraft:air",
+  "fill $(-40,60,-40) $(40,63,40) minecraft:air",
+  "fill $(-40,64,-40) $(40,64,40) minecraft:air",
+  "fill $(-40,-1,-40) $(40,-1,40) minecraft:stone",
+  "fill $(-40,0,-40) $(-40,63,40) minecraft:stone",
+  "fill $(40,0,-40) $(40,63,40) minecraft:stone",
+  "fill $(-39,0,-40) $(39,63,-40) minecraft:stone",
+  "fill $(-39,0,40) $(39,63,40) minecraft:stone",
+  "fill $(-40,64,-40) $(40,64,40) minecraft:stone",
+  "fill $(1,0,0) $(5,0,12) minecraft:water",
+  "tp $(bot) $(3.5,1,2.5) 0 0",
+  "!stopfly",
+  "gamemode survival $(bot)",
+  "effect give $(bot) minecraft:instant_health 1 5 true",
+  "!hotbar 0",
+  "give $(bot) minecraft:wind_charge 1",
+  "!look 3.141592653589793 -0.000000000000000",
+  "!wait 10"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon minecraft:oak_boat $(3.5,0.4,2.5)"
+  },
+  {
+   "after": 2,
+   "interact": true
+  },
+  {
+   "after": 5,
+   "look": [
+    3.141592653589793,
+    -0.0
+   ]
+  },
+  {
+   "after": 6,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:0.4",
+      "z": "@z:2.65",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 7,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:0.4",
+      "z": "@z:2.80",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 8,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:0.4",
+      "z": "@z:2.95",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 9,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:0.4",
+      "z": "@z:3.10",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 10,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:0.4",
+      "z": "@z:3.25",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 11,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:0.4",
+      "z": "@z:3.40",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 12,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:0.4",
+      "z": "@z:3.55",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 12,
+   "use": true
+  },
+  {
+   "after": 13,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:0.4",
+      "z": "@z:3.70",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 14,
+   "raw": [
+    {
+     "name": "steer_boat",
+     "params": {
+      "leftPaddle": true,
+      "rightPaddle": true
+     }
+    },
+    {
+     "name": "vehicle_move",
+     "params": {
+      "x": "@x:3.5",
+      "y": "@y:0.4",
+      "z": "@z:3.85",
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "onGround": false
+     }
+    }
+   ]
+  },
+  {
+   "after": 16,
+   "raw": {
+    "name": "steer_boat",
+    "params": {
+     "leftPaddle": false,
+     "rightPaddle": false
+    }
+   }
+  },
+  {
+   "after": 18,
+   "control": [
+    "jump",
+    false
+   ]
+  },
+  {
+   "after": 18,
+   "control": [
+    "forward",
+    false
+   ]
+  },
+  {
+   "after": 18,
+   "control": [
+    "sprint",
+    false
+   ]
+  }
+ ],
+ "cleanup": [
+  "ride $(bot) dismount",
+  "gamemode creative $(bot)",
+  "tp $(bot) $(3.5,1,2.5)",
+  "!startfly",
+  "execute positioned $(0,0,0) run kill @e[type=snowball,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=egg,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=ender_pearl,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=splash_potion,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=lingering_potion,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=experience_bottle,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=wind_charge,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=trident,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=arrow,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=spectral_arrow,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=firework_rocket,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=area_effect_cloud,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=endermite,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=experience_orb,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=minecart,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=oak_boat,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=item,distance=..128]",
+  "fill $(-40,0,-40) $(40,3,40) minecraft:air",
+  "fill $(-40,4,-40) $(40,7,40) minecraft:air",
+  "fill $(-40,8,-40) $(40,11,40) minecraft:air",
+  "fill $(-40,12,-40) $(40,15,40) minecraft:air",
+  "fill $(-40,16,-40) $(40,19,40) minecraft:air",
+  "fill $(-40,20,-40) $(40,23,40) minecraft:air",
+  "fill $(-40,24,-40) $(40,27,40) minecraft:air",
+  "fill $(-40,28,-40) $(40,31,40) minecraft:air",
+  "fill $(-40,32,-40) $(40,35,40) minecraft:air",
+  "fill $(-40,36,-40) $(40,39,40) minecraft:air",
+  "fill $(-40,40,-40) $(40,43,40) minecraft:air",
+  "fill $(-40,44,-40) $(40,47,40) minecraft:air",
+  "fill $(-40,48,-40) $(40,51,40) minecraft:air",
+  "fill $(-40,52,-40) $(40,55,40) minecraft:air",
+  "fill $(-40,56,-40) $(40,59,40) minecraft:air",
+  "fill $(-40,60,-40) $(40,63,40) minecraft:air",
+  "fill $(-40,64,-40) $(40,64,40) minecraft:air",
+  "fill $(-40,-1,-40) $(40,-1,40) minecraft:stone",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "!nosprint"
+ ],
+ "record_ticks": 180,
+ "track_projectiles": true,
+ "track_self": true,
+ "track_mobs": true,
+ "pad_wide": 64,
+ "pad_up": 80,
+ "timeout_ms": 240000
+}

@@ -113,6 +113,7 @@ mod dimension;
 mod dragon_fight;
 mod reports;
 mod plugins;
+mod auth;
 mod console;
 
 use std::io;
@@ -221,7 +222,7 @@ async fn server() -> io::Result<()> {
     );
 
     network::packet::set_compression_threshold(properties.compression_threshold);
-    if properties.online_mode {
+    if properties.online_mode || (settings.auth_enabled && settings.auth_premium) {
         network::online::initialize().await?;
     }
 
@@ -261,6 +262,9 @@ async fn server() -> io::Result<()> {
     );
     *shared.maps.lock().expect("карты") = maps::Maps::open(Path::new(WORLD_PATH))?;
     shared.settings = settings;
+    if settings.auth_enabled && !properties.online_mode {
+        shared.auth = Some(Arc::new(auth::Service::open(Path::new("auth.db"))?));
+    }
     shared.scoreboard = std::sync::Mutex::new(scoreboard::Scoreboard::open(Path::new(WORLD_PATH)));
     shared.functions = std::sync::Mutex::new(functions::Functions::new(Path::new(WORLD_PATH)));
     let shared = Arc::new(shared);
@@ -581,7 +585,15 @@ async fn handle_connection(
                 return Ok(());
             }
 
-            let authenticated = if properties.online_mode {
+            let password_auth = shared.auth.as_ref();
+            if password_auth.is_some_and(|auth| auth.blocked(addr.ip())) {
+                send_login_disconnect(&mut socket, auth::BLOCKED).await?;
+                return Ok(());
+            }
+            let try_premium = if let Some(auth) = password_auth {
+                shared.settings.auth_premium && auth.premium.should_verify(&login.username, addr.ip()).await
+            } else { false };
+            let authenticated = if properties.online_mode || try_premium {
                 let auth = network::online::Authenticator::get()?;
                 let ip = properties.prevent_proxy_connections.then_some(addr.ip());
                 match auth.authenticate(&mut socket, &login.username, ip).await {
@@ -591,6 +603,11 @@ async fn handle_connection(
                         Some(profile)
                     }
                     Err(error) => {
+                        if try_premium {
+                            password_auth.expect("auth").premium.failed(&login.username, addr.ip(), auth::now());
+                            let _ = send_login_disconnect(&mut socket, auth::premium::RETRY).await;
+                            return Ok(());
+                        }
                         if let network::online::Failure::Protocol(ref cause) = error {
                             log_debug!("Ошибка проверки входа {}: {}", addr, cause);
                         }
@@ -604,9 +621,18 @@ async fn handle_connection(
                 // в online-mode права определяются проверенным UUID.
                 let sent = login.uuid;
                 login.uuid = offline_uuid(&login.username);
-                adopt_old_identity(&shared, &login.username, &sent, &login.uuid);
+                if password_auth.is_none() {
+                    adopt_old_identity(&shared, &login.username, &sent, &login.uuid);
+                }
                 None
             };
+
+            let verified_uuid = authenticated.as_ref().map(|p| p.uuid);
+            let auth_identity = password_auth.map(|auth| auth.identity(&login.username, verified_uuid));
+            if let Some(identity) = &auth_identity {
+                login.uuid = identity.uuid;
+                login.username = identity.name.clone();
+            }
 
             // Как у обычного сервера: опознаватель игрока и откуда он пришёл —
             // с какого адреса и на какой адрес сервера стучался. Адрес сервера
@@ -616,9 +642,9 @@ async fn handle_connection(
 
             // Блокировки по нику и адресу и белый список — раньше проверки на
             // «сервер полон», как у оригинала (commands_admin.rs).
-            let is_op = shared.ops.lock().expect("права захвачены другим потоком").level_of(&login.uuid) > 0;
+            let is_op = password_auth.is_none() && shared.ops.lock().expect("права захвачены другим потоком").level_of(&login.uuid) > 0;
 
-            if let Some((json, plain)) = commands_admin::login_refusal(&login.username, &login.uuid, addr.ip(), is_op) {
+            if password_auth.is_none() && let Some((json, plain)) = commands_admin::login_refusal(&login.username, &login.uuid, addr.ip(), is_op) {
                 log_info!("{} не пущен: {}", login.username, plain.replace('\n', " "));
                 send_login_disconnect_json(&mut socket, &json).await?;
                 return Ok(());
@@ -646,36 +672,65 @@ async fn handle_connection(
             send_login_success(&mut socket, &login.username, &login.uuid, authenticated.as_ref().and_then(|profile| profile.skin.as_ref()), properties.compression_threshold).await?;
             log_debug!("Login Success отправлен игроку {}", login.username);
 
-            // Фаза Configuration.
-            read_login_acknowledged(&mut socket).await?;
-            log_debug!("Login Acknowledged получен — клиент в фазе Configuration");
+            // Один срок на согласование Configuration и ввод пароля.
+            let config_deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(90);
+            let negotiation = async {
+                // Фаза Configuration.
+                read_login_acknowledged(&mut socket).await?;
+                log_debug!("Login Acknowledged получен — клиент в фазе Configuration");
 
-            // Название сервера — первым, как у оригинала: клиент
-            // показывает его на экране F3.
-            send_brand(&mut socket).await?;
+                // Название сервера — первым, как у оригинала: клиент
+                // показывает его на экране F3.
+                send_brand(&mut socket).await?;
 
-            // Обмен Known Packs: сервер объявляет набор ресурсов, который
-            // считает общим с клиентом. Без этого обмена клиент не сможет
-            // взять содержимое записей реестров из собственных файлов.
-            send_known_packs(&mut socket).await?;
-            log_debug!("Known Packs отправлен (minecraft:core)");
+                // Обмен Known Packs: сервер объявляет набор ресурсов, который
+                // считает общим с клиентом. Без этого обмена клиент не сможет
+                // взять содержимое записей реестров из собственных файлов.
+                send_known_packs(&mut socket).await?;
+                log_debug!("Known Packs отправлен (minecraft:core)");
 
-            let (packs, look_from_settings) = read_known_packs(&mut socket).await?;
-            for pack in &packs {
-                log_debug!(
-                    "Known Packs клиента: {}:{} версия \"{}\"",
-                    pack.namespace, pack.id, pack.version
-                );
-            }
+                let (packs, look_from_settings) = read_known_packs(&mut socket).await?;
+                for pack in &packs {
+                    log_debug!(
+                        "Known Packs клиента: {}:{} версия \"{}\"",
+                        pack.namespace, pack.id, pack.version
+                    );
+                }
 
-            // Данные реестров: клиент требует их до тегов и Finish Configuration.
-            let entries = send_registry_data(&mut socket).await?;
-            log_debug!("Registry Data отправлен ({} записей)", entries);
+                // Данные реестров: клиент требует их до тегов и Finish Configuration.
+                let entries = send_registry_data(&mut socket).await?;
+                log_debug!("Registry Data отправлен ({} записей)", entries);
 
-            // Теги реестров: клиент требует их при обработке Finish Configuration,
-            // из known packs они не берутся.
-            send_update_tags(&mut socket).await?;
-            log_debug!("Update Tags отправлен (теги minecraft:damage_type)");
+                // Теги реестров: клиент требует их при обработке Finish Configuration,
+                // из known packs они не берутся.
+                send_update_tags(&mut socket).await?;
+                log_debug!("Update Tags отправлен (теги minecraft:damage_type)");
+                Ok::<_, io::Error>(look_from_settings)
+            };
+            let look_from_settings = if password_auth.is_some() {
+                match tokio::time::timeout_at(config_deadline, negotiation).await {
+                    Ok(result) => result?,
+                    Err(_) => {
+                        auth::dialog::disconnect(&mut socket, auth::dialog::TIMEOUT).await?;
+                        return Ok(());
+                    }
+                }
+            } else { negotiation.await? };
+
+            // Парольный барьер: до Finish Configuration нет игрока, прав,
+            // плагиновых join-событий или чтения playerdata. Старую личность
+            // при auth-enabled вообще не переносим, включая Ops::adopt.
+            let _auth_session = if let (Some(auth), Some(identity)) = (password_auth, &auth_identity) {
+                if !auth::dialog::authenticate(&mut socket, auth, identity, addr.ip(), &shared.ops, verified_uuid, config_deadline).await? {
+                    return Ok(());
+                }
+                let is_op = shared.ops.lock().expect("ops").level_of(&login.uuid) > 0;
+                if let Some((_, plain)) = commands_admin::login_refusal(&login.username, &login.uuid, addr.ip(), is_op) {
+                    auth::dialog::disconnect(&mut socket, &plain).await?;
+                    return Ok(());
+                }
+                Some(auth.session(identity))
+            } else { None };
 
             // Завершение фазы. Какие ещё реестры потребует клиент — покажет
             // его лог: он называет недостающий реестр или тег.

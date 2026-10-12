@@ -366,7 +366,7 @@ pub fn ground_backoff((vx, vy, vz): (f64, f64, f64)) -> (f64, f64, f64) {
 }
 
 /// Все стрелы сервера.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Arrows {
     pub list: Vec<Arrow>,
     /// Попавшие в первый ход: показываем появление и уход в одной рассылке.
@@ -505,9 +505,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     // (pvp-bow на пустой площадке: стрелу никто не видел).
     let any = shared.arrows.lock().expect("стрелы захвачены другим потоком").list.iter().any(|arrow| arrow.dimension == dimension);
 
-    if any {
-        world.note_arrow_tracker();
-    }
+    let tracker = any.then(|| world.begin_arrow_snapshot());
 
     let members: Vec<Bystander> = shared
         .players
@@ -1015,6 +1013,13 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
     }
 
+    // Снимок относится к метке этого такта, даже если подключение отстало.
+    if let Some(tracker) = tracker {
+        let _ = tracker.set(Arrows {
+            list: arrows.in_dimension(dimension),
+            retired: arrows.retired.iter().filter(|a| a.dimension == dimension).cloned().collect(),
+        });
+    }
     drop(arrows);
     drop(items);
 

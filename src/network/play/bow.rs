@@ -15,7 +15,6 @@ use crate::combat;
 const ENTITY_SOUND: i32 = 0x74;
 /// Пакеты: скорость сущности, сверка места, убрать сущность, звук.
 const ENTITY_VELOCITY: i32 = 0x65;
-const ENTITY_POSITION_SYNC: i32 = 0x23;
 
 /// Что клиенту о стреле уже сказано.
 #[derive(Clone, Copy, Debug)]
@@ -160,21 +159,7 @@ pub(super) struct Shot {
 /// градусов (боковые стрелы «залпа»).
 fn shoot(shared: &Shared, player: &PlayerState, shot: &Shot, yaw_offset: f32) {
     let dimension = player.dimension;
-    let roll = || vitals::world_random(shared, dimension);
-
-    // Неточность: к каждой оси направления — треугольная добавка в пределах
-    // ±0,0172275 (вики, Arrow), разность двух равномерных (чёрный ящик: у
-    // оригинала все 17 выстрелов луком, арбалетом и трезубцем в пределах
-    // ±0,0163 по оси при длине 1).
-    let wobble = || f64::from(roll() - roll()) * 0.0172275;
-    let (dx, dy, dz) = crate::arrow::aim(player.yaw + yaw_offset, player.pitch, 1.0);
-    let (last_x, last_y, last_z) = player.net.last_delta;
-    // К скорости стрелы прибавляется скорость стрелка (по вертикали — только в воздухе).
-    let velocity = (
-        (dx + wobble()) * shot.speed + last_x,
-        (dy + wobble()) * shot.speed + if player.on_ground { 0.0 } else { last_y },
-        (dz + wobble()) * shot.speed + last_z,
-    );
+    let velocity = projectile::velocity(shared, player, shot.speed, false, yaw_offset);
     let eye = player.y + if player.sneaking { 1.27 } else { 1.62 } - 0.1;
     let entity_id = shared.next_entity_id();
     let arrow = Arrow {
@@ -510,7 +495,7 @@ fn fire_rockets(shared: &Shared, player: &PlayerState, rocket: &crate::stackdata
             .expect("мир захвачен другим потоком")
             .note_sound_player_at((player.x, player.y, player.z), "minecraft:item.crossbow.shoot", 1.0, pitch);
 
-        let wobble = || f64::from(roll() - roll()) * 0.0172275;
+        let wobble = || projectile::noise(&mut || roll());
         let (dx, dy, dz) = crate::arrow::aim(player.yaw + offset, player.pitch, 1.0);
         let speed = crate::firework::CROSSBOW_SPEED;
         let velocity = ((dx + wobble()) * speed, (dy + wobble()) * speed, (dz + wobble()) * speed);
@@ -532,9 +517,13 @@ fn fire_rockets(shared: &Shared, player: &PlayerState, rocket: &crate::stackdata
 /// уже сделала ход), оно показывает вместе с нулевым сдвигом сразу, а стрелу
 /// скелета (выпущена в ход мобов, ещё не двигалась) — со сдвигом в следующем
 /// такте; приземление узнаёт на такт позже.
-pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, snapshot: Option<&crate::arrow::Arrows>) -> io::Result<()> {
     let (mut arrows, retired) = {
-        let arrows = shared.arrows.lock().expect("стрелы захвачены другим потоком");
+        let live;
+        let arrows = if let Some(snapshot) = snapshot { snapshot } else {
+            live = shared.arrows.lock().expect("стрелы захвачены другим потоком");
+            &*live
+        };
         (arrows.in_dimension(player.dimension), arrows.retired.iter().filter(|a| a.dimension == player.dimension).cloned().collect::<Vec<_>>())
     };
     let retired_ids: HashSet<_> = retired.iter().map(|a| a.entity_id).collect();
@@ -653,7 +642,7 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
             write_body(stream, body).await?;
 
-            send_move_to(stream, arrow, &mut shown, at, facing).await?;
+            send_move_to(stream, arrow, &mut shown, at, velocity, facing).await?;
 
             if flags != shown.flags {
                 let mut data = encode_varint(SET_ENTITY_DATA);
@@ -701,7 +690,7 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
             let full = arrow.age <= LANDING_SYNC_AGE || arrow.trident.is_some() || arrow.resync.is_some() || (arrow.in_ground && near);
 
             if arrow.in_ground && full {
-                send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), arrow.facing()).await?;
+                send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), (arrow.vx, arrow.vy, arrow.vz), arrow.facing()).await?;
             }
 
             if full || !arrow.in_ground {
@@ -734,13 +723,13 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
                 types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
                 write_body(stream, body).await?;
             }
-            send_move_to(stream, arrow, &mut shown, place, arrow.facing()).await?;
+            send_move_to(stream, arrow, &mut shown, place, velocity, arrow.facing()).await?;
         } else if arrow.in_ground && (arrow.trident.is_some() || arrow.resync.is_some() || shown.settled) && arrow.lived().is_multiple_of(ARROW_SYNC) {
             // Лежащий трезубец раз в 20 тактов шлёт нулевой сдвиг с поворотом
             // через 20, 40, 60 тактов после броска (чёрный ящик, trident-throw:
             // +20, +40, +60); у стрел так не бывает (skeleton-arrow), кроме
             // отскочившей (wither-half-armor: нулевой сдвиг на +20).
-            send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), arrow.facing()).await?;
+            send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), (arrow.vx, arrow.vy, arrow.vz), arrow.facing()).await?;
         }
 
         player.seen_bow_arrows.insert(arrow.entity_id, shown);
@@ -815,23 +804,19 @@ fn arrow_data(arrow: &Arrow) -> Option<Vec<u8>> {
 
 /// Сдвиг стрелы к месту `at` с поворотом `facing` от того, что клиент знает;
 /// слишком далёкий — сверкой места.
-async fn send_move_to(stream: &mut Outgoing<'_>, arrow: &Arrow, shown: &mut ShownArrow, at: (f64, f64, f64), (yaw, pitch): (f32, f32)) -> io::Result<()> {
+async fn send_move_to(stream: &mut Outgoing<'_>, arrow: &Arrow, shown: &mut ShownArrow, at: (f64, f64, f64), velocity: (f64, f64, f64), (yaw, pitch): (f32, f32)) -> io::Result<()> {
     let grid = grid_of(at);
-    let step = (grid.0 - shown.grid.0, grid.1 - shown.grid.1, grid.2 - shown.grid.2);
-
-    if [step.0, step.1, step.2].iter().all(|value| i16::try_from(*value).is_ok()) {
+    if let Some(step) = projectile::relative_step(shown.grid, grid) {
         let mut body = encode_varint(0x36);
 
         body.extend_from_slice(&encode_varint(arrow.entity_id));
-        push_i16(&mut body, step.0 as i16);
-        push_i16(&mut body, step.1 as i16);
-        push_i16(&mut body, step.2 as i16);
+        for delta in step { push_i16(&mut body, delta); }
         body.push(cart_angle(yaw));
         body.push(cart_angle(pitch));
         body.push(0);
         write_body(stream, body).await?;
     } else {
-        send_position_sync(stream, arrow).await?;
+        write_body(stream, projectile::position_sync(arrow.entity_id, at, velocity, (yaw, pitch), arrow.in_ground)).await?;
     }
 
     shown.grid = grid;
@@ -860,21 +845,3 @@ const ARROW_IN_GROUND: u8 = 10;
 const TRIDENT_LOYALTY: u8 = 11;
 const TRIDENT_FOIL: u8 = 12;
 const PROPERTY_BOOLEAN: i32 = 8;
-
-/// Сверка места и скорости стрелы (Entity Position Sync).
-async fn send_position_sync(stream: &mut Outgoing<'_>, arrow: &Arrow) -> io::Result<()> {
-    let (yaw, pitch) = arrow.angles();
-    let mut body = encode_varint(ENTITY_POSITION_SYNC);
-
-    body.extend_from_slice(&encode_varint(arrow.entity_id));
-
-    for value in [arrow.x, arrow.y, arrow.z, arrow.vx, arrow.vy, arrow.vz] {
-        push_f64(&mut body, value);
-    }
-
-    push_f32(&mut body, yaw);
-    push_f32(&mut body, pitch);
-    body.push(u8::from(arrow.in_ground));
-
-    write_body(stream, body).await
-}

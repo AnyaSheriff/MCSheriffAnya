@@ -408,7 +408,7 @@ pub struct Impact {
 }
 
 /// Все снаряды и облака сервера.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Thrown {
     pub flying: Vec<Flying>,
     pub clouds: Vec<Cloud>,
@@ -429,6 +429,21 @@ pub struct Thrown {
 impl Thrown {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Снимок такта: отложенная рассылка не читает уже изменившийся полёт.
+    pub fn snapshot(&self, dimension: Dimension) -> Self {
+        Self {
+            flying: self.flying.iter().filter(|v| v.dimension == dimension).cloned().collect(),
+            clouds: self.clouds.iter().filter(|v| v.dimension == dimension).cloned().collect(),
+            impacts: self.impacts.iter().filter(|v| v.dimension == dimension).cloned().collect(),
+            faded: self.faded.iter().filter(|v| v.dimension == dimension).cloned().collect(),
+            rockets: self.rockets.iter().filter(|v| v.dimension == dimension).cloned().collect(),
+            blasts: self.blasts.iter().filter(|v| v.last.dimension == dimension).cloned().collect(),
+            eyes: self.eyes.iter().filter(|v| v.dimension == dimension).cloned().collect(),
+            ominous: self.ominous.iter().filter(|v| v.dimension == dimension).cloned().collect(),
+            eyes_gone: self.eyes_gone.iter().filter(|v| v.last.dimension == dimension).cloned().collect(),
+        }
     }
 
     pub fn any_in(&self, dimension: Dimension) -> bool {
@@ -712,7 +727,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
     // Отстающее слежение за облаками — до их хода (lingering-potion-feet:
     // радиус прошлого такта раньше пакета эффекта).
-    world.note_thrown_tracker(true);
+    let tracker = std::sync::Arc::new(std::sync::OnceLock::new());
+    world.note_thrown_snapshot(true, tracker.clone());
 
     let mut deeds: Vec<Deed> = Vec::new();
     let mut gone: Vec<i32> = Vec::new();
@@ -1343,7 +1359,8 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     }
 
     // Слежение — в конце хода: раскол, облако и уход снаряда в порядке оригинала.
-    world.note_thrown_tracker(false);
+    let _ = tracker.set(shared.thrown.lock().expect("снаряды").snapshot(dimension));
+    world.note_thrown_snapshot(false, tracker);
 
     if !hurts.is_empty() {
         let mut players = shared.players.lock().expect("список игроков захвачен другим потоком");

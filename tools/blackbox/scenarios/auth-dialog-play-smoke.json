@@ -1,0 +1,21 @@
+{
+  "name": "auth-dialog-play-smoke",
+  "about": "[проверить] Java 26.1.2: сначала пройти парольный Configuration-диалог по auth-verification.md. OP выдан UUID аккаунта заранее. JSON проверяет только Play после входа; диалог требует внешнего проверяющего.",
+  "exclusive": true,
+  "origin": [100, 180, 100],
+  "chat": true,
+  "blocks": [],
+  "setup": [
+    "fill $(-3,-1,-3) $(3,3,3) minecraft:air",
+    "fill $(-3,-1,-3) $(3,-1,3) minecraft:stone",
+    "tp $(bot) $(0.5,0,0.5)",
+    "!wait 20"
+  ],
+  "actions": [
+    {"after": 0, "cmd": "setblock $(1,0,1) minecraft:stone"},
+    {"after": 10, "cmd": "setblock $(1,0,1) minecraft:gold_block"},
+    {"after": 20, "cmd": "say auth-dialog-play-smoke"}
+  ],
+  "cleanup": ["fill $(-3,-1,-3) $(3,3,3) minecraft:air"],
+  "record_ticks": 60
+}

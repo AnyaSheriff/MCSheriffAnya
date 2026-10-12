@@ -242,6 +242,12 @@ pub enum WorldEvent {
 
     /// Метка «здесь слежение рассылает стрелы»: после хода стрел (arrow.rs).
     ArrowTracker,
+    /// Снимки принадлежат такту события, а не моменту чтения подключения.
+    /// OnceLock заполняется до публикации такта; ранняя и поздняя метки
+    /// брошенных предметов разделяют один снимок, без второго копирования.
+    ArrowSnapshot(std::sync::Arc<std::sync::OnceLock<crate::arrow::Arrows>>),
+    ProjectileLaunch(Box<crate::thrown::Flying>),
+    ThrownSnapshot { early: bool, state: std::sync::Arc<std::sync::OnceLock<crate::thrown::Thrown>> },
 
     /// Ракета фейерверка взорвалась: событие сущности 17 тем, кто её видит
     /// (firework.rs).
@@ -2415,6 +2421,20 @@ impl World {
     }
 
     /// Точка такта, где слежение рассылает клиентам стрелы.
+    pub fn begin_arrow_snapshot(&mut self) -> std::sync::Arc<std::sync::OnceLock<crate::arrow::Arrows>> {
+        let state = std::sync::Arc::new(std::sync::OnceLock::new());
+        self.events.push(WorldEvent::ArrowSnapshot(state.clone()));
+        state
+    }
+
+    pub fn note_projectile_launch(&mut self, flying: crate::thrown::Flying) {
+        self.events.push(WorldEvent::ProjectileLaunch(Box::new(flying)));
+    }
+
+    pub fn note_thrown_snapshot(&mut self, early: bool, state: std::sync::Arc<std::sync::OnceLock<crate::thrown::Thrown>>) {
+        self.events.push(WorldEvent::ThrownSnapshot { early, state });
+    }
+
     pub fn note_arrow_tracker(&mut self) {
         self.events.push(WorldEvent::ArrowTracker);
     }

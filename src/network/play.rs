@@ -83,6 +83,9 @@ mod bow;
 #[cfg(test)]
 mod bow_tests;
 mod thrown;
+mod projectile;
+#[cfg(test)]
+mod projectile_tests;
 mod sleep;
 mod farm;
 mod debug_stick;
@@ -3722,6 +3725,16 @@ async fn send_commands(stream: &mut Outgoing<'_>, may_tnt: bool) -> io::Result<(
         nodes.push(argument("доводы", &[], GREEDY));
     }
 
+    // Пароль не запрашивает подсказок у сервера или плагинов.
+    let at = nodes.len() as i32;
+    extra_roots.push(at);
+    nodes.push(literal("changepassword", &[at + 1], false));
+    let mut password = vec![NODE_ARGUMENT | EXECUTABLE, 0];
+    password.extend(encode_string("старый_и_новый_пароль"));
+    password.extend(encode_varint(PARSER_STRING));
+    password.extend(encode_varint(GREEDY));
+    nodes.push(password);
+
     // Команды commands_admin.rs: свои узлы за остальными.
     let (admin_roots, admin_nodes) = crate::commands_admin::tree_nodes(nodes.len() as i32);
 
@@ -4320,9 +4333,17 @@ async fn send_pending_world_events(
                 mobs::send_mob_ticks(stream, shared, player).await?;
             }
             WorldEvent::MobSpawn(mob) => mobs::send_released_mob(stream, shared, player, mob).await?,
-            WorldEvent::ArrowTracker => bow::send_arrow_ticks(stream, shared, player).await?,
+            WorldEvent::ArrowTracker => bow::send_arrow_ticks(stream, shared, player, None).await?,
+            WorldEvent::ArrowSnapshot(state) => {
+                if let Some(state) = state.get() { bow::send_arrow_ticks(stream, shared, player, Some(state)).await?; }
+            }
+            WorldEvent::ProjectileLaunch(flying) => thrown::send_launch(stream, shared, player, flying).await?,
+            WorldEvent::ThrownSnapshot { early, state } => {
+                if let Some(state) = state.get() { thrown::send_thrown_ticks(stream, shared, player, *early, Some(state)).await?; }
+                if !early { fishing::send_ticks(stream, shared, player).await?; }
+            }
             WorldEvent::ThrownTracker { early } => {
-                thrown::send_thrown_ticks(stream, shared, player, *early).await?;
+                thrown::send_thrown_ticks(stream, shared, player, *early, None).await?;
                 if !early { fishing::send_ticks(stream, shared, player).await?; }
             }
             WorldEvent::RocketBlast { entity_id } => thrown::send_rocket_blast(stream, player, *entity_id).await?,
@@ -6066,6 +6087,7 @@ async fn read_and_log_play_packets(
     let mut starts = shared.tick_starts.subscribe();
     let mut pending: Vec<Reaction> = Vec::new();
     let mut inbound = Inbound::start(stream.stream(), shared)?;
+    let mut finished_tick = false;
     let wake = shared.players.lock().expect("список игроков захвачен другим потоком").waker(&player.uuid);
 
     loop {
@@ -6075,14 +6097,15 @@ async fn read_and_log_play_packets(
         stream.deadline(player.keep_alive.deadline());
         stream.flush().await?;
 
-        let ready = tokio::select! {
+        let ready = if std::mem::take(&mut finished_tick) { None } else { tokio::select! {
+            biased;
             _ = control.cancelled() => return Ok(()),
-            ready = tokio::time::timeout_at(player.keep_alive.next_wake(), inbound.packets.recv()) => Some(ready),
             _ = ticks.changed() => None,
+            ready = tokio::time::timeout_at(player.keep_alive.next_wake(), inbound.recv()) => Some(ready),
             // Поручение (перенос командой) — обработать сразу, как у оригинала,
             // где пакет переноса уходит в миг команды.
             _ = wake.notified() => Some(timeout(Duration::ZERO, std::future::pending::<Option<io::Result<Incoming>>>()).await),
-        };
+        } };
 
         // Связь пропала без закрытия соединения (Wi-Fi, NAT): TCP заметит это
         // через много минут, а до тех пор ник занят и вернуться нельзя. Как
@@ -6813,91 +6836,110 @@ async fn read_and_log_play_packets(
                 log_debug!("Play: клиент закрыл соединение");
                 return Ok(());
             }
-            Some(Ok(Some(Ok((packet, arrived, permit))))) => {
-                if packet.id == CLIENT_TICK_END {
-                    continue;
-                }
+            Some(Ok(Some(Ok(first)))) => {
+                let mut incoming = Some(first);
+                while let Some((packet, arrived, permit)) = incoming.take() {
+                    if packet.id == CLIENT_TICK_END {
+                        continue;
+                    }
 
-                // Действия с миром применяются на границе тактов, как у
-                // оригинала: щелчок, ломание, установка и команда, пришедшие
-                // во время такта, ложатся в начало следующего. Иначе щелчок по
-                // рычагу и ход поршня от него разъезжались бы по тактам как
-                // попало. Такт `arrived` к приходу уже шёл — ждём следующего;
-                // если он уже начался, он ждёт нас (`waiting_for_tick`).
-                let gated = is_gated(packet.id);
+                    // Действия с миром применяются на границе тактов, как у
+                    // оригинала: щелчок, ломание, установка и команда, пришедшие
+                    // во время такта, ложатся в начало следующего. Иначе щелчок по
+                    // рычагу и ход поршня от него разъезжались бы по тактам как
+                    // попало. Такт `arrived` к приходу уже шёл — ждём следующего;
+                    // если он уже начался, он ждёт нас (`waiting_for_tick`).
+                    let gated = is_gated(packet.id);
 
-                // Команда, пришедшая в простое (работа такта кончилась, следующий
-                // не начался), исполняется сразу: оригинал берёт её между тактами
-                // тут же, и ответ (пакет переноса `tp`) уходит через ~1 мс, а не
-                // на начале следующего такта (чёрный ящик, pvp-mace: у оригинала
-                // перенос на +1 мс при любой фазе, у нас на +27 — падающий робот
-                // успевал на тик меньше). Мир при этом не меняется: до начала
-                // такта всё равно ничего не идёт.
-                let at_once = packet.id == SERVERBOUND_CHAT_COMMAND && *ticks.borrow() >= *starts.borrow();
+                    // Команда, пришедшая в простое (работа такта кончилась, следующий
+                    // не начался), исполняется сразу: оригинал берёт её между тактами
+                    // тут же, и ответ (пакет переноса `tp`) уходит через ~1 мс, а не
+                    // на начале следующего такта (чёрный ящик, pvp-mace: у оригинала
+                    // перенос на +1 мс при любой фазе, у нас на +27 — падающий робот
+                    // успевал на тик меньше). Мир при этом не меняется: до начала
+                    // такта всё равно ничего не идёт.
+                    let at_once = packet.id == SERVERBOUND_CHAT_COMMAND && *ticks.borrow() >= *starts.borrow();
 
-                if gated && !at_once {
-                    // Ждать начала такта с неотправленным нельзя: оно
-                    // задержалось бы на такт.
-                    stream.flush().await?;
+                    if gated && !at_once {
+                        // Ждать начала такта с неотправленным нельзя: оно
+                        // задержалось бы на такт.
+                        stream.flush().await?;
 
-                    while *starts.borrow_and_update() <= arrived {
-                        tokio::select! {
-                            _ = control.cancelled() => return Ok(()),
-                            _ = tokio::time::sleep_until(player.keep_alive.next_wake()) => {
-                                if player.keep_alive.expired() {
-                                    return Err(io::Error::new(io::ErrorKind::TimedOut, "нет ответа Keep Alive"));
+                        while *starts.borrow_and_update() <= arrived {
+                            tokio::select! {
+                                // Конец предыдущего такта нельзя проспать, ожидая
+                                // следующего ввода: иначе появление улетит на +1/+2.
+                                changed = ticks.changed() => {
+                                    if changed.is_err() { return Ok(()); }
+                                    finished_tick = true;
+                                    break;
                                 }
-                                if let Some(id) = player.keep_alive.send_due() {
-                                    stream.deadline(player.keep_alive.deadline());
-                                    send_keep_alive(stream, id).await?;
-                                    stream.flush().await?;
+                                _ = control.cancelled() => return Ok(()),
+                                _ = tokio::time::sleep_until(player.keep_alive.next_wake()) => {
+                                    if player.keep_alive.expired() {
+                                        return Err(io::Error::new(io::ErrorKind::TimedOut, "нет ответа Keep Alive"));
+                                    }
+                                    if let Some(id) = player.keep_alive.send_due() {
+                                        stream.deadline(player.keep_alive.deadline());
+                                        send_keep_alive(stream, id).await?;
+                                        stream.flush().await?;
+                                    }
                                 }
+                                changed = starts.changed() => if changed.is_err() { break; },
                             }
-                            changed = starts.changed() => if changed.is_err() { break; },
                         }
                     }
-                }
 
-                let reaction = handle_client_packet(&packet, player, shared);
+                    if finished_tick {
+                        inbound.queued = Some(Ok((packet, arrived, permit)));
+                        break;
+                    }
 
-                // Действие в начале такта могло сменить то, что видят другие
-                // (лук опущен, вещь износилась): им это должно быть известно
-                // уже в этом такте, а не когда подключение дойдёт до конца
-                // своего — иначе соседи видят перемену на такт позже, смотря
-                // кто первым (pvp-bow, 30.09).
-                if gated {
+                    let reaction = handle_client_packet(&packet, player, shared);
+
+                    // Действие в начале такта могло сменить то, что видят другие
+                    // (лук опущен, вещь износилась): им это должно быть известно
+                    // уже в этом такте, а не когда подключение дойдёт до конца
+                    // своего — иначе соседи видят перемену на такт позже, смотря
+                    // кто первым (pvp-bow, 30.09).
+                    if gated {
+                        publish_player(shared, player);
+                    }
+
+                    // Команда перенесла самого игрока: в мире он на новом месте
+                    // уже в этом такте, до шага сущностей, как у оригинала
+                    // (minecart-push: вагонетку толкает в такте команды). Пакет
+                    // переноса клиенту уйдёт с поручением на ближайшем круге.
+                    let moved = if packet.id == SERVERBOUND_CHAT_COMMAND {
+                        shared.players.lock().expect("список игроков захвачен другим потоком").pending_teleport(&player.uuid)
+                    } else {
+                        None
+                    };
+
+                    if let Some((x, y, z)) = moved {
+                        (player.x, player.y, player.z) = (x, y, z);
+                        publish_player(shared, player);
+                    }
+
+                    drop(permit);
+
+                    // Остальные узнают, где игрок стоит, из общего списка:
+                    // туда это кладётся здесь, а рассылают его уже их
+                    // подключения.
                     publish_player(shared, player);
+
+                    // Ответ клиенту уходит в конце такта, вместе с тем, что
+                    // за такт изменилось в мире.
+                    pending.push(reaction);
+
+                    // Пакеты одной границы — подряд, без рассылки чанков и хода
+                    // здоровья между движением и броском. FIFO сохраняется;
+                    // команду и её поручения разбирает следующий круг.
+                    incoming = if packet.id == SERVERBOUND_CHAT_COMMAND { None } else { inbound.take_gameplay(*starts.borrow()) };
                 }
-
-                // Команда перенесла самого игрока: в мире он на новом месте
-                // уже в этом такте, до шага сущностей, как у оригинала
-                // (minecart-push: вагонетку толкает в такте команды). Пакет
-                // переноса клиенту уйдёт с поручением на ближайшем круге.
-                let moved = if packet.id == SERVERBOUND_CHAT_COMMAND {
-                    shared.players.lock().expect("список игроков захвачен другим потоком").pending_teleport(&player.uuid)
-                } else {
-                    None
-                };
-
-                if let Some((x, y, z)) = moved {
-                    (player.x, player.y, player.z) = (x, y, z);
-                    publish_player(shared, player);
-                }
-
-                drop(permit);
-
-                // Положение записываем сразу, как только оно изменилось
-                // заметно, — так же, как сохраняются блоки.
+                // Запись на диск — после пачки: она не задерживает движение
+                // перед следующим Use Item на той же границе такта.
                 player.save_if_needed(&shared.playerdata);
-
-                // Остальные узнают, где игрок стоит, из общего списка:
-                // туда это кладётся здесь, а рассылают его уже их
-                // подключения.
-                publish_player(shared, player);
-
-                // Ответ клиенту уходит в конце такта, вместе с тем, что
-                // за такт изменилось в мире.
-                pending.push(reaction);
             }
             Some(Ok(Some(Err(e)))) if is_client_disconnect(&e) => {
                 log_debug!("Play: клиент закрыл соединение ({})", e.kind());
@@ -6913,7 +6955,8 @@ fn is_gated(packet_id: i32) -> bool {
     matches!(
         packet_id,
         USE_ITEM_ON | PLAYER_ACTION | USE_ITEM | SERVERBOUND_CHAT_COMMAND | ATTACK
-            | SET_PLAYER_POSITION | SET_PLAYER_POSITION_AND_ROTATION | SET_PLAYER_ON_GROUND
+            | SET_PLAYER_POSITION | SET_PLAYER_POSITION_AND_ROTATION | SET_PLAYER_ROTATION | SET_PLAYER_ON_GROUND
+            | vitals::PLAYER_COMMAND | PLAYER_INPUT | vehicle::VEHICLE_MOVE | vehicle::STEER_BOAT
             // Взмах и смена ячейки тоже ждут начала такта: взмах сбрасывает
             // заряд руки и виден другим, смена ячейки меняет экипировку. Без
             // этого взмах, пришедший вслед за ударом, успевал или не успевал
@@ -6966,9 +7009,26 @@ type Incoming = (PacketInfo, u64, TickPermit);
 struct Inbound {
     packets: tokio::sync::mpsc::UnboundedReceiver<io::Result<Incoming>>,
     reader: tokio::task::JoinHandle<()>,
+    queued: Option<io::Result<Incoming>>,
 }
 
 impl Inbound {
+    async fn recv(&mut self) -> Option<io::Result<Incoming>> {
+        if let Some(packet) = self.queued.take() { Some(packet) } else { self.packets.recv().await }
+    }
+
+    fn take_gameplay(&mut self, started: u64) -> Option<Incoming> {
+        let packet = self.queued.take().or_else(|| self.packets.try_recv().ok())?;
+        let ready = packet.as_ref().is_ok_and(|(packet, arrived, _)| {
+            *arrived < started && matches!(packet.id,
+                SET_PLAYER_POSITION | SET_PLAYER_POSITION_AND_ROTATION | SET_PLAYER_ROTATION
+                | SET_PLAYER_ON_GROUND | USE_ITEM | USE_ITEM_ON | PLAYER_ACTION
+                | ATTACK | SWING_ARM | SET_CARRIED_ITEM | vitals::PLAYER_COMMAND
+                | PLAYER_INPUT | vehicle::VEHICLE_MOVE | vehicle::STEER_BOAT)
+        });
+        if ready { packet.ok() } else { self.queued = Some(packet); None }
+    }
+
     fn start(stream: &mut Connection, shared: &Shared) -> io::Result<Self> {
         // Буфер читателя хранит уже расшифрованные байты; состояние CFB8
         // передаётся из Configuration без сброса IV.
@@ -6993,7 +7053,7 @@ impl Inbound {
             }
         });
 
-        Ok(Self { packets, reader })
+        Ok(Self { packets, reader, queued: None })
     }
 }
 
@@ -7462,6 +7522,14 @@ fn handle_client_packet_inner(
                 && let Some(&flag) = payload.get(ROTATION_BYTES)
             {
                 player.set_on_ground(flag & ON_GROUND_FLAG != 0);
+                // Поворот без координат означает отсутствие шага: иначе
+                // следующий бросок наследовал бы старую скорость ходьбы.
+                // Отметку переноса не тратим: её ждёт первый пакет места,
+                // иначе шаг со старого места после переноса считается
+                // падением (itemaudit4-knockback: лишний урон 1).
+                if !player.net.teleported {
+                    vitals::moved(player, shared, (player.x, player.y, player.z));
+                }
             }
         }
         SET_PLAYER_ON_GROUND => {
@@ -7581,10 +7649,10 @@ fn handle_client_packet_inner(
         }
         SERVERBOUND_CHAT_COMMAND => {
             if let Some(command) = Cursor::new(payload).string() {
-                log_debug!("{} ввёл команду: /{}", player.name, command);
+                if !crate::auth::sensitive_command(&command) { log_debug!("{} ввёл команду: /{}", player.name, command); }
 
                 // Любая команда игрока — плагинам на отмену (plugins/).
-                if crate::plugins::active() && crate::plugins::player_command(&plugin_view(player), &command) == crate::plugins::Verdict::Deny {
+                if !crate::auth::sensitive_command(&command) && crate::plugins::active() && crate::plugins::player_command(&plugin_view(player), &command) == crate::plugins::Verdict::Deny {
                     reaction.reply = Some("Команду отменил плагин".to_string());
                     return reaction;
                 }

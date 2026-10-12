@@ -28,6 +28,7 @@ pub type Place = (f64, f64, f64);
 /// или поздно застынет вместе с тактом — а за ними встанет весь сервер
 /// (так и было: вход игрока брал игроков раньше мира).
 pub struct Shared {
+    pub auth: Option<std::sync::Arc<crate::auth::Service>>,
     /// Миры измерений по порядку `Dimension::ALL`: блоки, такты, события.
     worlds: [Mutex<World>; 3],
 
@@ -261,6 +262,7 @@ impl Shared {
             fishing: Mutex::new(Vec::new()),
             maps,
             riding: Mutex::new(crate::riding::Riding::new()),
+            auth: None,
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,
             publication: Mutex::new(()),

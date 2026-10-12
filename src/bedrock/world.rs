@@ -822,6 +822,10 @@ impl BedrockWorld {
                     return;
                 };
                 let command = clean_text(command.trim().trim_start_matches('/'));
+                if crate::auth::sensitive_command(&command) {
+                    connection.send(&[raw_text("Парольная авторизация доступна только игрокам Java")]);
+                    return;
+                }
                 log_info!("{} ввёл команду: /{}", self.identity.name, command);
 
                 // Вход Xbox Live не подтверждён (auth.rs): кто угодно мог

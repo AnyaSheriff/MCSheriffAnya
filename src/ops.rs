@@ -84,6 +84,17 @@ impl Ops {
             .unwrap_or(0)
     }
 
+    /// UUID защищённого имени; только проверенный владелец может завести
+    /// такой аккаунт из игры. Права по имени этот метод не выдаёт.
+    pub fn uuid_for_name(&self, name: &str) -> Option<[u8; 16]> {
+        let op = self.list.iter().find(|op| op.name.eq_ignore_ascii_case(name))?;
+        let hex = op.uuid.replace('-', "");
+        if hex.len() != 32 || !hex.bytes().all(|b| b.is_ascii_hexdigit()) { return Some([0; 16]); }
+        let mut uuid = [0; 16];
+        for (i, byte) in uuid.iter_mut().enumerate() { *byte = u8::from_str_radix(&hex[i * 2..i * 2 + 2], 16).ok()?; }
+        Some(uuid)
+    }
+
     /// Выдаёт права. Возвращает false, если они уже были.
     pub fn give(&mut self, uuid: &[u8; 16], name: &str, level: i32) -> bool {
         let uuid = format_uuid(uuid);
