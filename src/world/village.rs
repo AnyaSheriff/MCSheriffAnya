@@ -27,6 +27,12 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::blocks;
 
+#[cfg(not(seedmap_core))]
+#[path = "village_population.rs"]
+mod population;
+#[cfg(not(seedmap_core))]
+pub(super) use population::populate;
+
 /// Область попыток и наименьший зазор (вики: 34 и 8 чанков).
 pub const SPACING: i32 = 34;
 pub const SEPARATION: i32 = 8;
@@ -87,7 +93,7 @@ fn roll(seed: i64, x: i32, z: i32, salt: u64) -> u64 {
 /// Чанк попытки в области (rx, rz): сдвиг 0…25 по каждой оси (вики:
 /// «separation» — у соседних областей старты не ближе 8 чанков).
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
-    let dice = roll(seed, region_x, region_z, 0x0000_1038_7312);
+    let dice = roll(seed, region_x, region_z, 10_387_312);
     let span = (SPACING - SEPARATION) as u64;
 
     (region_x * SPACING + (dice % span) as i32, region_z * SPACING + ((dice >> 20) % span) as i32)
@@ -585,6 +591,7 @@ pub(super) fn build(generator: &super::Generator, chunk: &mut super::Chunk, chun
         paint(kind, &pieces, [x0, z0, x0 + 15, z0 + 15], &ground, &mut |Put::Block(x, y, z, state)| {
             chunk.put_generated(x - x0, y, z - z0, state, true);
         });
+        population::chests(terrain.seed(),kind,&pieces,chunk,chunk_x,chunk_z);
     }
 }
 
@@ -633,9 +640,11 @@ mod tests {
     fn reported_village_streets_have_ground() {
         use super::super::{Chunk, Generator, terrain::{Style, Terrain}};
         let generator = Generator::Normal(Terrain::new(1_791_716_133_710_533_940, Style::Vanilla));
+        let Generator::Normal(terrain)=&generator else {unreachable!()};
+        let (sx,sz)=nearest(terrain,Kind::Plains,-11,5,12).unwrap();
         let mut streets = 0;
-        for cx in -12..=-9 {
-            for cz in 4..=7 {
+        for cx in sx-3..=sx+3 {
+            for cz in sz-3..=sz+3 {
                 let chunk = Chunk::generated(&generator, cx, cz);
                 for x in 0..16 {
                     for z in 0..16 {
@@ -643,7 +652,7 @@ mod tests {
                             if blocks::block_at_state(chunk.block(x, y, z)) == Some("dirt_path") {
                                 streets += 1;
                                 let under = blocks::block_at_state(chunk.block(x, y - 1, z));
-                                assert!(matches!(under, Some("dirt" | "grass_block" | "stone" | "sand" | "sandstone")),
+                                assert!(ground_tests::earth(chunk.block(x, y - 1, z)),
                                     "street ({}, {}, {}) above {:?}", cx * 16 + x, y, cz * 16 + z, under);
                             }
                         }

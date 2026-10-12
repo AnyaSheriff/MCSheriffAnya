@@ -46,9 +46,8 @@ const RING_MIDDLE: f64 = 128.0;
 const RING_STEP: f64 = 192.0;
 const RING_HALF: f64 = 48.0;
 
-/// Как далеко (в чанках) старт ищет сушу вокруг точки кольца [проверить:
-/// вики говорит только «searching horizontally»].
-const LAND_SEARCH: i32 = 7;
+/// Вики, Biome tag: «moved up to 112 block», биом на y=0.
+const LAND_SEARCH: i32 = 112;
 
 /// Дальше этого от середины старта (по большей из осей) кусков нет (вики:
 /// «within a horizontal radius of 112 blocks»).
@@ -287,8 +286,10 @@ pub fn ring_points(seed: i64) -> Vec<(i32, i32)> {
     for (ring, &count) in RINGS.iter().enumerate() {
         let turn = dice.unit() * std::f64::consts::TAU;
 
+        // Вики, Stronghold: «roughly 36°» у последнего кольца из девяти.
+        let divisions = if ring == 7 { 10 } else { count };
         for at in 0..count {
-            let angle = turn + std::f64::consts::TAU * f64::from(at) / f64::from(count);
+            let angle = turn + std::f64::consts::TAU * f64::from(at) / f64::from(divisions);
             let distance = RING_MIDDLE + RING_STEP * ring as f64 + (dice.unit() * 2.0 - 1.0) * RING_HALF;
 
             out.push(((angle.cos() * distance).round() as i32, (angle.sin() * distance).round() as i32));
@@ -299,7 +300,7 @@ pub fn ring_points(seed: i64) -> Vec<(i32, i32)> {
 }
 
 /// Чанки стартов всех 128 крепостей мира: точки колец, сдвинутые к
-/// ближайшему чанку суши (`land` — суша ли под серединой чанка).
+/// предпочтительному биому (`land` принимает мировые координаты блоков).
 /// Считаются один раз на семя.
 pub fn starts(seed: i64, land: &dyn Fn(i32, i32) -> bool) -> Arc<Vec<(i32, i32)>> {
     static CACHE: Cache<i64, Vec<(i32, i32)>> = OnceLock::new();
@@ -311,28 +312,7 @@ pub fn starts(seed: i64, land: &dyn Fn(i32, i32) -> bool) -> Arc<Vec<(i32, i32)>
         return found.clone();
     }
 
-    let mut out = Vec::with_capacity(128);
-
-    for (x, z) in ring_points(seed) {
-        let mut best = (x, z);
-
-        'search: for radius in 0..=LAND_SEARCH {
-            for dx in -radius..=radius {
-                for dz in -radius..=radius {
-                    if dx.abs() != radius && dz.abs() != radius {
-                        continue;
-                    }
-
-                    if land(x + dx, z + dz) {
-                        best = (x + dx, z + dz);
-                        break 'search;
-                    }
-                }
-            }
-        }
-
-        out.push(best);
-    }
+    let out = biased_points(seed,land);
 
     let out = Arc::new(out);
     #[cfg(not(seedmap_core))]
@@ -816,13 +796,24 @@ pub fn specials(pieces: &[Placed], chunk: [i32; 4], found: &mut dyn FnMut((i32, 
     }
 }
 
-/// Суша ли под серединой чанка — туда тянется старт крепости (вики:
-/// #stronghold_biased_to — суша; у нас — всё, кроме океанов и рек).
-fn land(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> bool {
-    use super::terrain::Biome;
+/// Предпочтительный биом в клетке на y=0 (вики: #stronghold_biased_to).
+fn land(terrain: &super::terrain::Terrain, x: i32, z: i32) -> bool {
+    let column = terrain.column_at(x, z);
+    preferred(super::cave_biomes::biome_at(&column, 0).unwrap_or(column.biome))
+}
 
-    let biome = terrain.column_in(chunk_x * 16 + 8, chunk_z * 16 + 8, None).biome;
-    !(biome.is_ocean() || matches!(biome, Biome::River | Biome::FrozenRiver))
+// Вики, Biome tag (Java Edition), oldid=3502708: stronghold_biased_to.
+// Пляж, болото и deep_dark не предпочтительны, но крепость там допустима.
+fn preferred(biome: super::terrain::Biome) -> bool {
+    use super::terrain::Biome::*;
+    matches!(biome, Plains | SunflowerPlains | SnowyPlains | IceSpikes | Desert
+        | Forest | FlowerForest | BirchForest | DarkForest | PaleGarden
+        | OldGrowthBirchForest | OldGrowthPineTaiga | OldGrowthSpruceTaiga | Taiga
+        | SnowyTaiga | Savanna | SavannaPlateau | WindsweptHills | WindsweptGravellyHills
+        | WindsweptForest | WindsweptSavanna | Jungle | SparseJungle | BambooJungle
+        | Badlands | ErodedBadlands | WoodedBadlands | Meadow | CherryGrove | Grove
+        | SnowySlopes | FrozenPeaks | JaggedPeaks | StonyPeaks | MushroomFields
+        | DripstoneCaves | LushCaves)
 }
 
 /// Чанки стартов крепостей мира с этим рельефом.
@@ -947,7 +938,7 @@ mod tests {
                 angles.push(f64::from(z).atan2(f64::from(x)));
             }
 
-            let step = std::f64::consts::TAU / f64::from(count);
+            let step = std::f64::consts::TAU / f64::from(if ring == 7 { 10 } else { count });
             let gap = (angles[1] - angles[0]).rem_euclid(std::f64::consts::TAU);
             assert!((gap - step).abs() < 0.05, "кольцо {}: шаг {} против {}", ring, gap, step);
             at += count as usize;
@@ -1135,5 +1126,49 @@ mod tests {
                 assert!(after < before, "сторона {}: рамка ({}, {}) смотрит наружу", facing, x, z);
             }
         }
+    }
+}
+
+// Вики, Stronghold: «generate underwater if necessary». Предпочтение
+// суши не запрещает океан; детализацию сетки поиска [проверить].
+fn biased_points(seed:i64,land:&dyn Fn(i32,i32)->bool) -> Vec<(i32,i32)> {
+    ring_points(seed).into_iter().map(|(cx,cz)| {
+        let (x,z)=(cx*16+8,cz*16+8);
+        let mut dice=Dice::new(seed,0x57_B10,cx,cz);
+        let mut found=0;
+        let mut best=(cx,cz);
+        for qx in (x-LAND_SEARCH).div_euclid(4)..=(x+LAND_SEARCH).div_euclid(4) {
+            for qz in (z-LAND_SEARCH).div_euclid(4)..=(z+LAND_SEARCH).div_euclid(4) {
+                let (px,pz)=(qx*4+2,qz*4+2);
+                if land(px,pz) {
+                    found+=1;
+                    if dice.below(found)==0 {best=(px.div_euclid(16),pz.div_euclid(16));}
+                }
+            }
+        }
+        best
+    }).collect()
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn ocean_only_stronghold_world_keeps_all_ring_points() {
+    assert_eq!(biased_points(901,&|_,_|false),ring_points(901));
+    let raw=ring_points(901);
+    let biased=biased_points(901,&|_,_|true);
+    assert_eq!(biased.len(),128);
+    assert!(raw.iter().zip(&biased).all(|(&(x,z),&(a,b))|(x-a).abs()<=7 && (z-b).abs()<=7));
+    assert!(raw.iter().zip(&biased).any(|(a,b)|a!=b));
+}
+
+#[cfg(test)]
+#[test]
+fn stronghold_preferred_tag_is_not_all_land() {
+    use super::terrain::Biome::*;
+    for b in [Beach, SnowyBeach, StonyShore, Swamp, MangroveSwamp, DeepDark, DeepFrozenOcean] {
+        assert!(!preferred(b), "{b:?}");
+    }
+    for b in [Plains, CherryGrove, PaleGarden, LushCaves, DripstoneCaves] {
+        assert!(preferred(b), "{b:?}");
     }
 }

@@ -40,13 +40,13 @@ use crate::blocks;
 pub const REGION: i32 = 20;
 
 /// В скольких первых чанках региона может стоять старт (вики: 0-8).
-const SPREAD: i32 = 9;
+const SPREAD: i32 = REGION - 11;
 
 /// На сколько чанков от чанка старта достаёт город (замер: размах до 96
 /// блоков, корабль — ещё до 100 блоков за мостом).
 pub const RADIUS_CHUNKS: i32 = 10;
 
-/// Ниже этого верха эндемняка под основанием города нет [проверить].
+/// Верх эндемняка Y59 даёт начало основания на Y60 (замер 26.1.2).
 pub const MIN_TOP: i32 = 59;
 
 /// Больше этого кусков в городе не ставится (замер: до 97).
@@ -266,7 +266,7 @@ fn scramble(mut value: u64) -> u64 {
 /// Чанк старта города в регионе.
 pub fn region_start(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
     let mut dice = Dice(scramble(
-        (seed as u64) ^ (region_x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (region_z as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F) ^ 0x10387313,
+        (seed as u64) ^ (region_x as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (region_z as u64).wrapping_mul(0xC2B2_AE3D_27D4_EB4F) ^ 10_387_313,
     ));
 
     (region_x * REGION + dice.below(SPREAD), region_z * REGION + dice.below(SPREAD))

@@ -63,7 +63,7 @@ impl Kind {
     /// соли).
     fn salt(self) -> u64 {
         match self {
-            Kind::DesertPyramid => 0x7E3D_0001,
+            Kind::DesertPyramid => 14_357_617,
             Kind::JunglePyramid => 0x7E3D_0002,
             Kind::SwampHut => 0x7E3D_0003,
         }
@@ -972,4 +972,13 @@ pub(super) fn audit_piece(s: &Start) -> serde_json::Value {
     let t = s.template().unwrap();
     let a = s.area();
     serde_json::json!({"name":s.kind.name(),"rotation":s.facing,"box":[a[0],s.y+t.low,a[1],a[2],s.y+t.low+t.height-1,a[3]]})
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn desert_pyramid_uses_the_documented_set_and_only_desert() {
+    assert_eq!(Kind::DesertPyramid.salt(),14_357_617);
+    assert!(Kind::DesertPyramid.biome_fits(super::terrain::Biome::Desert));
+    assert!(!Kind::DesertPyramid.biome_fits(super::terrain::Biome::Badlands));
+    assert!(!Kind::DesertPyramid.biome_fits(super::terrain::Biome::Savanna));
 }

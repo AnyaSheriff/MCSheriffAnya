@@ -4,6 +4,7 @@ include!("gen_limits.rs");
 pub mod terrain;
 #[path = "nether.rs"]
 pub mod nether;
+pub mod nether_fossil;
 #[path = "the_end.rs"]
 pub mod the_end;
 #[path = "village.rs"]

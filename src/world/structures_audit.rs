@@ -15,7 +15,7 @@ fn windows() -> Vec<(i32, i32, i32)> {
 
 fn description(marker: seedmap::Marker, generator: &Generator) -> Value {
     let (cx, cz) = (marker.x.div_euclid(16), marker.z.div_euclid(16));
-    let names = ["village", "pillager_outpost", "desert_pyramid", "jungle_pyramid", "monument", "mansion", "ancient_city", "trial_chambers", "stronghold", "mineshaft", "ruined_portal", "shipwreck", "buried_treasure", "ocean_ruin", "trail_ruins", "igloo", "swamp_hut", "fortress", "bastion_remnant", "end_city"];
+    let names = ["village", "pillager_outpost", "desert_pyramid", "jungle_pyramid", "monument", "mansion", "ancient_city", "trial_chambers", "stronghold", "mineshaft", "ruined_portal", "shipwreck", "buried_treasure", "ocean_ruin", "trail_ruins", "igloo", "swamp_hut", "fortress", "bastion_remnant", "end_city", "nether_fossil"];
     let mut out = json!({"kind":names[marker.kind as usize],"chunk":[cx,cz],"anchor":[marker.x,marker.z]});
     match generator {
         Generator::Normal(t) => {
@@ -32,7 +32,13 @@ fn description(marker: seedmap::Marker, generator: &Generator) -> Value {
                     out["footprints"] = json!(pieces.iter().map(|p| p.bounds).collect::<Vec<_>>());
                 }
                 1 => { out["piece_records"] = json!(pillager_outpost::audit_pieces(t,cx,cz)); }
-                6 => { out["piece_records"] = json!([ancient_city::audit_box(t.seed(),cx,cz)]); }
+                6 => {
+                    let column = t.column_at(marker.x,marker.z);
+                    out["surface_biome"] = out["biome"].clone();
+                    out["biome"] = json!(cave_biomes::biome_at(&column,-51).unwrap_or(column.biome).name());
+                    out["biome_y"] = json!(-51);
+                    out["piece_records"] = json!([ancient_city::audit_box(t.seed(),cx,cz)]);
+                }
                 7 => { out["piece_records"] = json!([trial_chambers::audit_box(t.seed(),cx,cz)]); }
                 14 => {
                     let site = trail_ruins::site_in(t,cx.div_euclid(trail_ruins::SPACING),cz.div_euclid(trail_ruins::SPACING)).unwrap();
@@ -101,6 +107,13 @@ fn description(marker: seedmap::Marker, generator: &Generator) -> Value {
                 _ => Vec::new(),
             };
             if !boxes.is_empty() { out["pieces"] = json!(boxes.len()); out["boxes"] = json!(boxes); }
+            if marker.kind == 20 {
+                let s = nether_fossil::start_in(n,cx.div_euclid(2),cz.div_euclid(2)).unwrap();
+                out["anchor_biome"] = out["biome"].clone();
+                out["origin"] = json!(s.origin);
+                out["biome"] = json!(n.biome_at(s.origin.0,s.origin.2).name());
+                out["piece_records"] = json!([template_record(&nether_fossil::library()[s.template],s.orient,s.origin)]);
+            }
             if marker.kind == 10 {
                 let s = ruined_portal::start_in_nether(n,cx.div_euclid(40),cz.div_euclid(40)).unwrap();
                 out["kind"] = json!("ruined_portal_nether"); out["origin"] = json!(s.origin);
@@ -138,7 +151,7 @@ fn offline_structures_audit() {
     let mut starts = Vec::new();
     for (wx,wz,half) in windows() {
         let half = half + halo;
-        for kind in 0..20 {
+        for kind in 0..seedmap::STRUCTURES.len() as u8 {
             for marker in map.structures(kind,(wx-half)*16,(wz-half)*16,(wx+half)*16,(wz+half)*16).unwrap() {
                 let mut record = description(marker,&generator);
                 record["window"] = if cx_in_core(marker.x.div_euclid(16), marker.z.div_euclid(16), wx, wz, half-halo) { json!(format!("{},{}",wx/512,wz/512)) } else { Value::Null }; starts.push(record);
@@ -190,7 +203,8 @@ fn offline_structures_audit() {
                     (matches!(names[usize::from(state)],"chest"|"barrel") && !chunk.containers.contains_key(&(x,y,z))).then_some([cx*16+x,y,cz*16+z])
                 }).collect();
                 let frames: Vec<_> = chunk.frames.iter().map(|f| json!({"id":"item_frame","pos":[cx*16+f.pos.0,f.pos.1,cz*16+f.pos.2],"facing":f.facing,"item":f.item.and_then(|s| blocks::item_name(s.item))})).collect();
-                let record = json!({"frames":frames,"spawn_markers":spawn_markers(&generator,cx,cz),"samples":samples,"missing_containers":missing_containers,"chunk":[cx,cz],"window":[wx/512,wz/512],"blocks":histogram,"containers":containers,"spawners":spawners});
+                let saved_mobs: Vec<_> = chunk.mobs.iter().map(|m| json!({"kind":format!("{:?}",m.kind),"pos":[m.x,m.y,m.z],"age":m.age,"type":m.villager.kind,"profession":m.villager.profession,"variant":m.tame.variant})).collect();
+                let record = json!({"saved_mobs":saved_mobs,"frames":frames,"spawn_markers":spawn_markers(&generator,cx,cz),"samples":samples,"missing_containers":missing_containers,"chunk":[cx,cz],"window":[wx/512,wz/512],"blocks":histogram,"containers":containers,"spawners":spawners});
                 serde_json::to_writer(&mut output,&record).unwrap(); writeln!(output).unwrap();
                 count += 1;
                 if count.is_multiple_of(256) { output.flush().unwrap(); eprintln!("{selected}: {count}/49152 chunks, {:.1}s",started.elapsed().as_secs_f64()); }
@@ -360,12 +374,53 @@ mod border;
 #[test]
 fn generated_end_ship_frame_survives_reload_without_duplication() {
     let g = Generator::End(the_end::End::new(SEED));
-    let c = Chunk::generated(&g,-33,61);
+    let c = Chunk::generated(&g,-35,-54);
     assert_eq!(c.frames.len(),1);
     let f = &c.frames[0];
-    assert_eq!(f.pos,(10,126,8));
+    assert_eq!(f.pos,(7,105,5));
     assert_eq!(f.facing,crate::frame::WEST);
     assert_eq!(blocks::item_name(f.item.unwrap().item),Some("elytra"));
     let back = Chunk::from_bytes(&c.to_bytes()).unwrap();
     assert_eq!(back.frames,c.frames);
+}
+
+/// Доля площади по одинаковой с эталоном сетке 4×4, плюс биомы попыток.
+#[test]
+#[ignore]
+fn offline_structure_exposure() {
+    let dir = std::path::PathBuf::from(std::env::var("AUDIT_OUT").expect("AUDIT_OUT"));
+    std::fs::create_dir_all(&dir).unwrap();
+    let t = Terrain::new(SEED,terrain::Style::Vanilla);
+    let mut rows = serde_json::Map::new();
+    let mut caves = serde_json::Map::new();
+    for (wx,wz,h) in windows() {
+        let mut surface = std::collections::BTreeMap::<String,u64>::new();
+        let mut cave = std::collections::BTreeMap::<String,u64>::new();
+        for cx in wx-h..wx+h { for cz in wz-h..wz+h {
+            for dx in [2,6,10,14] { for dz in [2,6,10,14] {
+                let c=t.column_at(cx*16+dx,cz*16+dz);
+                *surface.entry(cave_biomes::biome_at(&c,64).unwrap_or(c.biome).name().into()).or_default()+=16;
+                *cave.entry(cave_biomes::biome_at(&c,-51).unwrap_or(c.biome).name().into()).or_default()+=16;
+            }}
+        }}
+        rows.insert(format!("{},{}",wx/512,wz/512),json!(surface));
+        caves.insert(format!("{},{}",wx/512,wz/512),json!(cave));
+    }
+    std::fs::write(dir.join("ours-exposure.json"),serde_json::to_vec_pretty(&json!({"y64":rows,"y_minus51":caves})).unwrap()).unwrap();
+}
+
+#[test]
+fn ancient_city_audit_reports_its_underground_biome() {
+    let generator=Generator::Normal(Terrain::new(SEED,terrain::Style::Vanilla));
+    let Generator::Normal(t)=&generator else { unreachable!() };
+    let mut found=0;
+    for rx in -24..24 { for rz in -24..24 {
+        if let Some((cx,cz))=ancient_city::start_in(t,rx,rz) {
+            let record=description(seedmap::Marker{kind:6,x:cx*16+8,z:cz*16+8},&generator);
+            assert_eq!(record["biome"],"deep_dark");
+            assert_eq!(record["biome_y"],-51);
+            found+=1;
+        }
+    }}
+    assert!(found>0);
 }

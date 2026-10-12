@@ -554,12 +554,12 @@ impl Nether {
 
     /// Открыто ли место для объектов — пусто и не бедрок, над морем лавы
     /// или в нём (решается только по координатам).
-    fn open(&self, x: i32, y: i32, z: i32) -> bool {
+    pub(super) fn open(&self, x: i32, y: i32, z: i32) -> bool {
         (1..CEILING).contains(&y) && !self.bedrock(x, y, z) && self.hollow(x, y, z)
     }
 
     /// Сплошная ли порода в этом месте рельефа (без бедрока).
-    fn rock_at(&self, x: i32, y: i32, z: i32) -> bool {
+    pub(super) fn rock_at(&self, x: i32, y: i32, z: i32) -> bool {
         (1..CEILING).contains(&y) && !self.bedrock(x, y, z) && !self.hollow(x, y, z)
     }
 

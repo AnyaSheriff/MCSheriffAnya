@@ -2,8 +2,9 @@
 use super::*;
 use super::super::{Chunk, Generator, structure_terrain::{self, Ground}, terrain::{Style, Terrain}};
 
-fn earth(state: i32) -> bool {
-    matches!(blocks::block_at_state(state), Some("stone" | "dirt" | "grass_block" | "sand" | "sandstone" | "gravel" | "coarse_dirt" | "mud" | "clay" | "terracotta" | "red_sand" | "red_sandstone" | "podzol" | "snow_block"))
+pub(super) fn earth(state: i32) -> bool {
+    // Руда остаётся частью грунта; пересекающиеся дороги могут опираться друг на друга.
+    blocks::block_at_state(state).is_some_and(|name| name.ends_with("_ore")) || matches!(blocks::block_at_state(state), Some("stone" | "dirt_path" | "dirt" | "grass_block" | "sand" | "sandstone" | "gravel" | "coarse_dirt" | "mud" | "clay" | "terracotta" | "red_sand" | "red_sandstone" | "podzol" | "snow_block"))
 }
 
 fn check_village(seed: i64, kind: Kind, sx: i32, sz: i32) {
@@ -76,7 +77,8 @@ fn check_village(seed: i64, kind: Kind, sx: i32, sz: i32) {
 fn reported_entire_plains_village_has_supported_streets_and_floors() {
     let seed = 1_791_716_133_710_533_940;
     let terrain = Terrain::new(seed, Style::Vanilla);
-    let (sx, sz, kind) = near(&terrain, -11, 5).into_iter().find(|&(_, _, kind)| kind == Kind::Plains).unwrap();
+    let (sx, sz) = nearest(&terrain, Kind::Plains, -11, 5, 12).unwrap();
+    let kind = Kind::Plains;
     let original = terrain.column_at(-184, 119).height;
     let wrong = terrain.column_in(-184, 119, None).height;
     assert!(wrong > original + 3, "источник ошибки: {wrong} / {original}");

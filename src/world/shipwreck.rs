@@ -124,7 +124,8 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
         }
 
         heights.sort_unstable();
-        let y = heights.get(heights.len() / 2).copied().unwrap_or(super::terrain::SEA);
+        let median = heights.get(heights.len() / 2).copied().unwrap_or(super::terrain::SEA);
+        let y = placement_height(median,library()[template].height,beached,dice);
 
         Ship { template, orient, origin: (x, y, z), woods, beached, chunk: (chunk_x, chunk_z) }
     });
@@ -230,7 +231,7 @@ const TREASURE_DEPTH: [i32; 3] = [1, 2, 3];
 pub fn treasure_in(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32) -> Option<i32> {
     use super::terrain::Biome;
 
-    if template::chance(terrain.seed(), chunk_x, 0, chunk_z, 0xB0_7EA5) >= TREASURE_SHARE {
+    if template::chance(terrain.seed(), chunk_x, 0, chunk_z, 0) >= TREASURE_SHARE {
         return None;
     }
 
@@ -238,6 +239,8 @@ pub fn treasure_in(terrain: &super::terrain::Terrain, chunk_x: i32, chunk_z: i32
 
     let depth = TREASURE_DEPTH[(template::roll(terrain.seed(), chunk_x, chunk_z, 0xB0_7EA7) % 3) as usize];
 
+    // Вики, Buried Treasure: «relative 9»; биом проверяем в клетке сундука.
+    // Отдельного подтверждения иного смещения у границы пляжа нет.
     matches!(column.biome, Biome::Beach | Biome::SnowyBeach).then_some(column.height - depth)
 }
 
@@ -360,7 +363,7 @@ mod tests {
     /// Клад — в 1 % чанков (до проверки биома).
     #[test]
     fn treasure_share_is_one_percent() {
-        let hits = (0..200).flat_map(|x| (0..200).map(move |z| (x, z))).filter(|&(x, z)| template::chance(5, x, 0, z, 0xB0_7EA5) < TREASURE_SHARE).count();
+        let hits = (0..200).flat_map(|x| (0..200).map(move |z| (x, z))).filter(|&(x, z)| template::chance(5, x, 0, z, 0) < TREASURE_SHARE).count();
 
         assert!((300..500).contains(&hits), "{hits}");
     }
@@ -435,4 +438,36 @@ mod tests {
         assert!(totals[0].0 > 0);
     }
 
+}
+
+// vanilla-struct: beached BB Y59/61, верх берега вокруг рамки на 3–5 выше.
+// Вики, Shipwreck: «in beaches»; точное распределение заглубления [проверить].
+fn placement_height(surface:i32,height:i32,beached:bool,dice:u64) -> i32 {
+    if beached {surface - (height/2-1).max(1) - ((dice>>32)%3) as i32} else {surface}
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn beached_ship_is_partly_buried_and_preserves_its_loot() {
+    assert_eq!(kind_of(super::terrain::Biome::Beach),Some(true));
+    assert_eq!(kind_of(super::terrain::Biome::SnowyBeach),Some(true));
+    for dice in [0,1_u64<<32,2_u64<<32] {
+        let y=placement_height(64,9,true,dice);
+        assert!((59..=61).contains(&y));
+        assert!(y<64 && y+9>64);
+        assert_eq!(placement_height(45,9,false,dice),45);
+    }
+    let i=library().iter().position(|t| t.name.contains("rightsideup_backhalf")).unwrap();
+    let ship=Ship{template:i,orient:Orient::default(),origin:(-16,59,-16),woods:("oak","spruce"),beached:true,chunk:(-1,-1)};
+    let mut chest_count=0;
+    let (sx,sz)=ship.footprint();
+    for cx in -1..=(-16+sx-1).div_euclid(16) { for cz in -1..=(-16+sz-1).div_euclid(16) {
+        let mut c=super::Chunk::new();
+        paint(1,&ship,&mut c,cx,cz);
+        chest_count+=c.containers.len();
+        assert!(c.containers.values().all(|c|c.slots.iter().any(Option::is_some)));
+        let back=super::Chunk::from_bytes(&c.to_bytes()).unwrap();
+        assert_eq!(back.containers.len(),c.containers.len());
+    }}
+    assert!(chest_count>0);
 }

@@ -128,7 +128,7 @@ fn roll(seed: i64, x: i32, z: i32, salt: u64) -> u64 {
 
 /// Чанк попытки в области: «треугольный» сдвиг — полусумма двух 0…26.
 pub fn attempt(seed: i64, region_x: i32, region_z: i32) -> (i32, i32) {
-    let dice = roll(seed, region_x, region_z, 0x009E_7D71);
+    let dice = roll(seed, region_x, region_z, 10_387_313);
     let span = (SPACING - SEPARATION) as u64;
     let part = |shift: u32| (dice >> shift) % span;
 
@@ -164,12 +164,11 @@ pub fn start_in(terrain: &super::terrain::Terrain, region_x: i32, region_z: i32)
     let (chunk_x, chunk_z) = attempt(terrain.seed(), region_x, region_z);
     let (x, z) = (chunk_x * 16, chunk_z * 16);
     let biome = |dx: i32, dz: i32| terrain.column_in(x + dx, z + dz, None).biome;
-    // Квадрат 16 — глубокий океан, квадрат 29 — вода; по сетке через 8 блоков
-    // и по краям [проверить: у оригинала — по клеткам биомов 4×4].
-    let ring = |radius: i32, test: fn(super::terrain::Biome) -> bool| {
-        let steps: Vec<i32> = (-radius..=radius).step_by(8).chain([radius]).collect();
-
-        steps.iter().all(|&dx| steps.iter().all(|&dz| test(biome(dx, dz))))
+    // Вики, Ocean Monument: «everywhere within a 16 block square radius».
+    // Проверяются все клетки биомов 4×4, иначе узкая суша между пробами
+    // через восемь блоков пропускала неподходящую площадку.
+    let ring = |radius, test: fn(super::terrain::Biome) -> bool| {
+        biome_square(x,z,radius,&|px,pz| test(biome(px-x,pz-z)))
     };
     let found = (ring(16, deep) && ring(29, watery)).then_some((chunk_x, chunk_z));
 
@@ -501,4 +500,21 @@ mod tests {
 #[cfg(all(test, not(seedmap_core)))]
 pub(super) fn audit_box(seed: i64, cx: i32, cz: i32) -> serde_json::Value {
     serde_json::json!({"name":"whole_snapshot","rotation":pick(seed,cx,cz).1,"box":[cx*16-BACK,BOTTOM,cz*16-BACK,cx*16-BACK+SIZE-1,BOTTOM+HEIGHT-1,cz*16-BACK+SIZE-1]})
+}
+
+fn biome_square(x:i32,z:i32,radius:i32,accept:&dyn Fn(i32,i32)->bool) -> bool {
+    ((x-radius).div_euclid(4)..=(x+radius).div_euclid(4)).all(|qx| {
+            ((z-radius).div_euclid(4)..=(z+radius).div_euclid(4)).all(|qz| accept(qx*4+2,qz*4+2))
+        })
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn monument_checks_every_biome_cell_including_narrow_interior_land() {
+    assert!(biome_square(-16,32,16,&|_,_|true));
+    assert!(!biome_square(-16,32,16,&|x,z| (x,z)!=(-10,38)));
+    assert!(!biome_square(0,0,29,&|x,z| (x,z)!=(30,30)));
+    assert!(deep(super::terrain::Biome::DeepFrozenOcean));
+    assert!(watery(super::terrain::Biome::River));
+    assert!(!deep(super::terrain::Biome::River));
 }

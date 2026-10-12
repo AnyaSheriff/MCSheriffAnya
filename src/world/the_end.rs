@@ -594,7 +594,7 @@ impl End {
         let (chunk_x, chunk_z) = end_city::region_start(self.seed, region_x, region_z);
         let (x, z) = end_city::root_corner(chunk_x, chunk_z);
 
-        if f64::from(x).hypot(f64::from(z)) < OUTER_FROM {
+        if !city_distance_fits(x, z) {
             return None;
         }
 
@@ -1256,4 +1256,19 @@ mod tests {
         assert!((0.10..0.30).contains(&share(Biome::EndHighlands)));
         assert!((0.05..0.25).contains(&share(Biome::EndBarrens)));
     }
+}
+
+// Вики, End City: «outer islands»; начало внешней области — 1024 блока.
+fn city_distance_fits(x: i32, z: i32) -> bool {
+    i64::from(x).pow(2) + i64::from(z).pow(2) >= 1024_i64.pow(2)
+}
+
+#[cfg(all(test, not(seedmap_core)))]
+#[test]
+fn city_distance_uses_outer_islands_not_terrain_fade() {
+    assert!(!city_distance_fits(945,0));
+    assert!(!city_distance_fits(-1023,0));
+    assert!(city_distance_fits(1024,0));
+    assert!(city_distance_fits(0,-1024));
+    assert_eq!(end_city::MIN_TOP+1,60);
 }

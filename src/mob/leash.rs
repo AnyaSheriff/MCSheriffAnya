@@ -211,13 +211,19 @@ pub fn bind_knots(mobs: &mut [Mob]) {
     }
 }
 
+// Биты хвоста 1/2/4/8/16 уже заняты; 32 — UUID населения деревни.
+// Старые записи без бита читаются как прежде, номера видов не меняются.
+pub(super) fn village_uuid(mob: &Mob) -> Option<[u8;16]> {
+    (matches!(mob.kind,Kind::Villager|Kind::Cat|Kind::IronGolem) && mob.land.saved_uuid.is_some()).then_some(mob.uuid)
+}
+
 /// Хвост записи моба: имя, «не исчезать», поводок.
 pub fn write_tail(mob: &Mob, out: &mut Vec<u8>) {
     let name = mob.name.as_deref().unwrap_or("");
 
     let nether = matches!(mob.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute);
     // Бит 16 — «не взрослеть» (AgeLocked), без своих байтов.
-    out.push(u8::from(mob.name.is_some()) | (u8::from(mob.persistent_tag) << 1) | (u8::from(nether) << 2) | (u8::from(mob.h.trial_gear.is_some()) << 3) | (u8::from(mob.age_locked) << 4));
+    out.push(u8::from(mob.name.is_some()) | (u8::from(mob.persistent_tag) << 1) | (u8::from(nether) << 2) | (u8::from(mob.h.trial_gear.is_some()) << 3) | (u8::from(mob.age_locked) << 4) | (u8::from(village_uuid(mob).is_some()) << 5));
     out.extend_from_slice(&(name.len() as u16).to_be_bytes());
     out.extend_from_slice(name.as_bytes());
 
@@ -239,11 +245,13 @@ pub fn write_tail(mob: &Mob, out: &mut Vec<u8>) {
         out.extend_from_slice(&mob.newmobs.outside.to_be_bytes());
         out.push(u8::from(mob.nether.immune));
     }
+    if let Some(uuid)=village_uuid(mob) {out.extend_from_slice(&uuid);}
     if let Some(gear)=&mob.h.trial_gear {super::trial_gear::write(gear,out);}
 }
 
 /// Прочитанный хвост.
 pub struct Tail {
+    uuid: Option<[u8;16]>,
     name: Option<String>,
     persistent: bool,
     age_locked: bool,
@@ -279,12 +287,14 @@ pub fn read_tail(bytes: &mut &[u8]) -> Option<Tail> {
     };
 
     let nether=if flags & 4 != 0 {Some((i32::from_be_bytes(take(4)?.try_into().ok()?),take(1)?[0]!=0))} else {None};
+    let uuid=if flags & 32 != 0 {Some(take(16)?.try_into().ok()?)} else {None};
     let trial_gear=if flags & 8 != 0 {Some(super::trial_gear::read(bytes)?)} else {None};
-    Some(Tail { trial_gear, name: (flags & 1 != 0).then_some(name), persistent: flags & 2 != 0, age_locked: flags & 16 != 0, leash, nether })
+    Some(Tail { uuid, trial_gear, name: (flags & 1 != 0).then_some(name), persistent: flags & 2 != 0, age_locked: flags & 16 != 0, leash, nether })
 }
 
 /// Кладёт прочитанный хвост в моба.
 pub fn apply_tail(mob: &mut Mob, tail: Tail) {
+    if let Some(uuid)=tail.uuid {mob.uuid=uuid;mob.land.saved_uuid=Some(uuid);}
     mob.h.trial_gear=tail.trial_gear;
     mob.name = tail.name;
     mob.persistent_tag = tail.persistent;

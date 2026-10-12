@@ -29,6 +29,7 @@ pub mod cave_biomes;
 pub mod flat;
 pub mod light;
 pub mod nether;
+pub mod nether_fossil;
 pub mod nether_bastion;
 pub mod nether_fortress;
 pub mod end_city;
@@ -673,6 +674,7 @@ impl Chunk {
         // У Незера пол и потолок — он складывается целиком своим путём.
         if let Generator::Nether(nether) = generator {
             let mut chunk = nether.chunk(chunk_x, chunk_z);
+            nether_fossil::build(nether, &mut chunk, chunk_x, chunk_z);
 
             // Разрушенные порталы Незера (ruined_portal.rs).
             ruined_portal::build_nether(nether, &mut chunk, chunk_x, chunk_z);
@@ -758,6 +760,10 @@ impl Chunk {
                 }
             }
         }
+
+        // Жители и кошки — сохранённые мобы чанка, до первого тика; повторная
+        // загрузка читает их запись, а не воспроизводит маркеры деревни.
+        village::populate(generator, &mut chunk, chunk_x, chunk_z);
 
         // Свет — когда все блоки на местах.
         chunk.light_up();
@@ -4127,6 +4133,7 @@ impl World {
         }
 
         let (size, start): (i32, Start<'_>) = match (&*self.generator, name) {
+            (Generator::Nether(nether), "nether_fossil") => (nether_fossil::SPACING, Box::new(|x,z| nether_fossil::start_in(nether,x,z).map(|f|f.chunk))),
             (Generator::Nether(nether), "fortress") => (27, Box::new(|x, z| nether.fortress_start(x, z))),
             (Generator::Nether(nether), "bastion_remnant") => (27, Box::new(|x, z| nether.bastion_start(x, z))),
             (Generator::End(end), "end_city") => (end_city::REGION, Box::new(|x, z| end.city_at(x, z).map(|(x, z, _)| (x, z)))),
@@ -8132,3 +8139,6 @@ fn in_structure_bounds(bounds: impl Iterator<Item = [i32; 6]>, at: (i32, i32, i3
 
 #[cfg(test)]
 mod structures_audit;
+
+#[cfg(test)]
+mod structure_fix_tests;

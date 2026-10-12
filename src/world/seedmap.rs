@@ -1,6 +1,6 @@
 // Общие запросы карты: только биомы и настоящие старты нашего генератора.
 // Маркер означает середину стартового чанка, а не всю рамку постройки.
-use super::{ancient_city, end_city, mansion, mineshaft, monument, nether, ocean_ruin,
+use super::{ancient_city, end_city, mansion, mineshaft, monument, nether, nether_fossil, ocean_ruin,
     pillager_outpost, ruined_portal, shipwreck, spawn_search, stronghold, temples,
     terrain::{self, Biome, Style, Terrain}, the_end, trail_ruins, trial_chambers, village};
 use std::sync::OnceLock;
@@ -29,7 +29,7 @@ pub struct Structure {
     pub dimensions: u8,
 }
 
-pub const STRUCTURES: [Structure; 20] = [
+pub const STRUCTURES: [Structure; 21] = [
     Structure { id: 0, name: "Деревня", icon: "V", color: "#efce70", dimensions: 1 },
     Structure { id: 1, name: "Аванпост", icon: "O", color: "#bb8272", dimensions: 1 },
     Structure { id: 2, name: "Храм пустыни", icon: "D", color: "#ffcc80", dimensions: 1 },
@@ -50,6 +50,7 @@ pub const STRUCTURES: [Structure; 20] = [
     Structure { id: 17, name: "Крепость Незера", icon: "F", color: "#eaa0a0", dimensions: 2 },
     Structure { id: 18, name: "Бастион", icon: "B", color: "#d3bb72", dimensions: 2 },
     Structure { id: 19, name: "Город Энда", icon: "E", color: "#d9b2f7", dimensions: 4 },
+    Structure { id: 20, name: "Окаменелость Незера", icon: "f", color: "#dedac8", dimensions: 2 },
 ];
 
 pub struct Map {
@@ -123,7 +124,7 @@ impl Map {
             2 | 3 | 15 | 16 => temples::SPACING, 4 => monument::SPACING, 5 => mansion::SPACING,
             6 => ancient_city::SPACING, 7 => trial_chambers::SPACING, 9 | 12 => 1,
             10 => ruined_portal::SPACING, 11 => shipwreck::SPACING, 13 => ocean_ruin::SPACING,
-            14 => trail_ruins::SPACING, 17 | 18 => nether::STRUCTURE_SPACING, 19 => end_city::REGION,
+            14 => trail_ruins::SPACING, 17 | 18 => nether::STRUCTURE_SPACING, 19 => end_city::REGION, 20 => nether_fossil::SPACING,
             _ => unreachable!(),
         };
         for rx in x0.div_euclid(16).div_euclid(spacing)..=(x1 - 1).div_euclid(16).div_euclid(spacing) {
@@ -145,6 +146,7 @@ impl Map {
                     14 => trail_ruins::site_in(t, rx, rz).map(|s| s.chunk),
                     15 => temples::igloo_in(t, rx, rz).map(|s| s.chunk),
                     17 => self.nether().fortress_start(rx, rz), 18 => self.nether().bastion_start(rx, rz),
+                    20 => nether_fossil::start_in(self.nether(), rx, rz).map(|s| s.chunk),
                     19 => self.end().city_at(rx, rz).map(|(x, z, _)| (x, z)),
                     _ => unreachable!(),
                 };
