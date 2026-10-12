@@ -735,6 +735,15 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
 
             player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false });
         }
+    } else if player.game_mode == GAME_MODE_CREATIVE && !player.vit.dead {
+        // Творческий: урона от падения нет, но высота падения копится — от неё
+        // зависит крит (вики, Critical hit: в творческом криты есть); в полёте
+        // высота не копится.
+        if player.creative_flying {
+            player.vit.fall = 0.0;
+        } else {
+            let _ = player.vit.land(dy, on_ground, player.net.in_water, 1.0);
+        }
     }
 
     if on_ground {

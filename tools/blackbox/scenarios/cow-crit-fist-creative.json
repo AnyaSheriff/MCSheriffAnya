@@ -1,0 +1,71 @@
+{
+ "name": "cow-crit-fist-creative",
+ "about": "Удар кулаком в падении в творческом: тоже крит (высота падения копится и без урона от падения).",
+ "track_mobs": true,
+ "blocks": [],
+ "setup": [
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "tp $(bot) $(3.5,0,0.5)",
+  "!stopfly",
+  "!wait 10",
+  "!look 0 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b}"
+  },
+  {
+   "after": 10,
+   "cmd": "tp $(bot) $(3.5,2.5,0.5)"
+  },
+  {
+   "after": 13,
+   "attack": true
+  }
+ ],
+ "record_ticks": 40,
+ "cleanup": [
+  "kill @e[type=cow,distance=..48]",
+  "kill @e[type=sheep,distance=..48]",
+  "kill @e[type=pig,distance=..48]",
+  "kill @e[type=chicken,distance=..48]",
+  "kill @e[type=item,distance=..48]",
+  "difficulty peaceful",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "!wait 4",
+  "!startfly"
+ ],
+ "random": [
+  {
+   "type": "mask",
+   "name": "число предметов в стопке",
+   "kind": "meta",
+   "pattern": "\"itemCount\":\\d+",
+   "replace": "\"itemCount\":N",
+   "why": "вики, Cow: «Drops: 0–2 leather, 1–3 raw beef» — число стопок 1–2, число штук в них случайно"
+  },
+  {
+   "type": "count",
+   "name": "голос коровы в покое",
+   "match": "entity\\.cow\\.ambient",
+   "range": [
+    0,
+    3
+   ],
+   "anytick": true,
+   "why": "вики, Sounds: голос в покое раз в несколько секунд по случайному счёту (`ambient sound`); у оригинала две записи расходятся"
+  },
+  {
+   "type": "mask",
+   "name": "высота игрока при ударе",
+   "kind": "sound",
+   "pattern": "^sound 3\\.5,2\\.(375|5),0\\.5 minecraft:entity\\.player\\.attack\\.crit",
+   "replace": "sound 3.5,Y,0.5 minecraft:entity.player.attack.crit",
+   "why": "робот бьёт в падении: высота, на которой сервер застаёт его в миг удара, зависит от того, сколько пакетов движения он успел обработать (у оригинала два прогона дают 2,375 и 2,5)"
+  }
+ ]
+}

@@ -7927,6 +7927,8 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     // Критический удар (вики, Critical hit): полная рука, игрок падает —
     // не на земле, не бежит, не в воде; урон ×1,5 (чёрный ящик, cow-crit).
     let crit_ok = pvp::may_crit(player);
+    crate::log_debug!("удар по мобу: крит={crit_ok} заряд={charge:.2} падение={:.3} на_земле={} бег={} в_воде={}",
+        player.vit.fall, player.on_ground, player.vit.sprinting, player.net.in_water);
     let (undead, arthropod) = crate::combat::mob_traits(mob.kind.name());
     // Сокрушающий удар булавы — как по игроку (pvp::strike_player): прибавка
     // за пролёт в основу, вид урона mace_smash, пролёт гасится [проверить
