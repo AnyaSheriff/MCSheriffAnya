@@ -179,7 +179,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
     let source = if smash { Source::MaceSmash } else { Source::PlayerAttack };
     let sprint_hit = player.vit.sprinting && strike.full;
     let extra = combat::extra_knockback(player.attrs.value(crate::attributes::ATTACK_KNOCKBACK), &data, sprint_hit);
-    let sweep = strike.full && !strike.crit && !sprint_hit && player.on_ground && held.and_then(|stack| combat::item_name(stack.item)).is_some_and(|name| name.ends_with("_sword"));
+    let sweep = super::sweep::eligible(player, strike.full, strike.crit, now);
     let info = held.and_then(|stack| combat::info(stack.item));
     let disables = info.map_or(0.0, |info| info.disable_blocking_seconds);
 
@@ -614,12 +614,12 @@ pub(super) fn sweep_damage(attack_damage: f64, data: &crate::stackdata::Data) ->
     1.0 + ratio * attack_damage as f32
 }
 
-fn in_sweep_box(main: &MainTarget, feet: (f64, f64, f64), size: (f64, f64), attacker: (f64, f64, f64)) -> bool {
+pub(super) fn in_sweep_box(main: &MainTarget, feet: (f64, f64, f64), size: (f64, f64), attacker: (f64, f64, f64)) -> bool {
     let reach_squared = (feet.0 - attacker.0).powi(2) + (feet.1 - attacker.1).powi(2) + (feet.2 - attacker.2).powi(2);
 
     reach_squared < 9.0
-        && (feet.0 - main.feet.0).abs() <= (size.0 + main.size.0) / 2.0 + 1.0
-        && (feet.2 - main.feet.2).abs() <= (size.0 + main.size.0) / 2.0 + 1.0
+        && (feet.0 - main.feet.0).abs() < (size.0 + main.size.0) / 2.0 + 1.0
+        && (feet.2 - main.feet.2).abs() < (size.0 + main.size.0) / 2.0 + 1.0
         && feet.1 < main.feet.1 + main.size.1 + 0.25
         && feet.1 + size.1 > main.feet.1 - 0.25
 }
@@ -661,9 +661,8 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
             yaw: player.yaw,
             damage,
             source: Source::PlayerAttack,
-            // Обычная отдача 0,4 от нападающего и ещё 0,4 вдоль взгляда:
-            // жертва берёт половину `extra_knockback`.
-            extra_knockback: 0.8,
+            // Вики, Sweep attack: толчок 0,4; обычный удар уже даёт его.
+            extra_knockback: 0.0,
             weapon: player.inventory.held(),
             disables_shield_ticks: 0,
             breach_scale: 1.0,
@@ -675,27 +674,23 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
     }
 }
 
-/// Взмах по мобам: урон и отдача, как у обычного удара, и ещё толчок вдоль взгляда.
+/// Взмах по мобам: урон и один толчок 0,4 вдоль взгляда.
 pub(super) fn sweep_mobs(items: &mut crate::items::Items, player: &mut PlayerState, main: &MainTarget, damage: f32) {
     let attacker = (player.x, player.y, player.z);
     let look = crate::mob::look_direction(player.yaw);
 
     for mob in items.mobs_mut() {
-        if mob.entity_id == main.entity_id || mob.is_dead() || !in_sweep_box(main, (mob.x, mob.y, mob.z), mob.size(), attacker) {
+        if mob.entity_id == main.entity_id || mob.is_dead() || mob.kind.object() || !in_sweep_box(main, (mob.x, mob.y, mob.z), mob.size(), attacker) {
             continue;
         }
 
-        let away = (mob.x - attacker.0, mob.z - attacker.2);
-        let length = away.0.hypot(away.1);
-        let dir = if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { look };
-        let push = crate::mob::Push { dir, strength: crate::mob::BASE_KNOCKBACK, cause: player.entity_id };
+        let push = crate::mob::Push { dir: look, strength: crate::mob::BASE_KNOCKBACK, cause: player.entity_id };
 
         mob.credit_player();
 
         if let Some(hit) = mob.hurt(damage, Source::PlayerAttack, Some(push)) {
             player.progress.damage_dealt(hit);
             mob.credit_to(player.uuid);
-            mob.knockback(look.0, look.1, crate::mob::BASE_KNOCKBACK);
         }
     }
 }

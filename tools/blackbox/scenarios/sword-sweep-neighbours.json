@@ -1,0 +1,26 @@
+{
+  "name": "sword-sweep-neighbours",
+  "about": "[проверить] Grounded wooden sword: sweep particle, secondary damage, Sweeping Edge III and one 0.4 knockback; repeat quickly to suppress sweep.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal", "gamemode creative $(bot)", "clear $(bot)", "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(7,-1,7) stone", "fill $(-4,0,-4) $(7,6,7) air",
+    "tp $(bot) $(3.5,0,3.5) 180 0", "!hotbar 0",
+    "give $(bot) wooden_sword[enchantments={\"minecraft:knockback\":3,\"minecraft:sweeping_edge\":3}]",
+    "gamemode survival $(bot)"
+  ],
+  "actions": [
+    {"after":0,"cmd":"summon cow $(3.5,0,1.5) {NoAI:1b,Tags:[\"sweep_probe\"]}"},
+    {"after":0,"cmd":"summon cow $(4.4,0,1.5) {NoAI:1b,Tags:[\"sweep_probe\"]}"},
+    {"after":0,"cmd":"summon cow $(6.5,0,1.5) {NoAI:1b,Tags:[\"sweep_probe\"]}"},
+    {"after":20,"attack":true},
+    {"after":21,"attack":true}
+  ],
+  "record_ticks":80,
+  "cleanup":[
+    "gamemode creative $(bot)", "clear $(bot)", "effect clear $(bot)",
+    "kill @e[tag=sweep_probe]", "kill @e[type=item,distance=..32]", "kill @e[type=experience_orb,distance=..32]",
+    "fill $(-4,-1,-4) $(7,6,7) air", "difficulty peaceful"
+  ],
+  "track_self":true,"track_mobs":true,"inventory":true,"item_components":true,"exclusive":true
+}

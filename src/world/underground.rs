@@ -10,12 +10,18 @@
 // складывались чанки. Жила — это просто шум: каждый блок знает, жила он или
 // нет, и граница чанка ей не видна. Жеода больше чанка, поэтому каждый чанк
 // перебирает жеоды своих соседей и рисует из них то, что попало к нему, —
-// как деревья в `grow_trees` и гнёзда руды в `ore_blocks_in`. Данж же
-// целиком ставится внутри своего чанка: ему надо видеть пещеру, в которую он
-// выходит, а соседний чанк чужую пещеру не видит.
+// как деревья в `grow_trees` и гнёзда руды в `ore_blocks_in`. Комнаты
+// проверяют неизменяемые снимки пещер соседей, затем каждый чанк рисует
+// только свою часть принятой комнаты (underground_dungeons.rs).
 //
 // Числа — с вики (Ore vein, Amethyst Geode, Monster Room, Deepslate); сама
 // форма жил и жеод своя.
+
+#[path = "underground_dungeons.rs"]
+mod dungeons;
+#[path = "underground_carvers.rs"]
+mod carvers;
+pub(super) use dungeons::{base_chunk, build_dungeons};
 
 use super::noise::{Noise, Random};
 use super::terrain::{self, Terrain};
@@ -32,12 +38,11 @@ pub(super) fn dig(generator: &Generator, chunk: &mut Chunk, chunk_x: i32, chunk_
 
     blend_deepslate(chunk, chunk_x, chunk_z, key, &palette);
     lay_veins(chunk, chunk_x, chunk_z, key, &palette);
+    carvers::carve(chunk, chunk_x, chunk_z, key, &palette);
 
     for geode in geodes_near(terrain, key, chunk_x, chunk_z) {
         carve_geode(chunk, chunk_x, chunk_z, &geode, &palette);
     }
-
-    build_dungeons(chunk, chunk_x, chunk_z, key, &palette);
 }
 
 /// Число мира, от которого считается всё подземелье: семя, перемешанное
@@ -467,15 +472,14 @@ const GEODE_CHANCE: f64 = 1.0 / 24.0;
 const GEODE_LOW: i32 = -58;
 const GEODE_HIGH: i32 = 30;
 
-/// Границы слоёв — по «расстоянию» от центральных точек жеоды: внутри
-/// пусто, дальше аметист, кальцит и гладкий базальт. Внутренняя граница —
-/// 1.7, как у вики; вики задаёт толщины в своей мере, у нас мера — блоки,
-/// и тоньше блока оболочка выходит дырявой, поэтому каждый слой здесь
-/// ровно в блок толщиной.
-const GEODE_AIR: f64 = 1.7;
-const GEODE_AMETHYST: f64 = 2.7;
-const GEODE_CALCITE: f64 = 3.7;
-const GEODE_BASALT: f64 = 4.7;
+/// Вики задаёт нелинейные толщины 1,7 / 2,2 / 3,2 / 4,2, не радиусы
+/// в блоках. Своя геометрия откалибрована по оболочкам vanilla 26.1.2:
+/// две группы диаметров около 13 и 19, слои примерно по блоку.
+/// https://minecraft.wiki/w/Amethyst_Geode [проверить: форма трещин].
+const GEODE_AIR: f64 = 4.0;
+const GEODE_AMETHYST: f64 = 5.0;
+const GEODE_CALCITE: f64 = 5.85;
+const GEODE_BASALT: f64 = 6.7;
 
 /// Центральных точек 3 или 4 (вики); каждая отходит от центра на столько
 /// блоков по каждой оси, не дальше.
@@ -496,11 +500,7 @@ const GEODE_BUDDING: f64 = 0.083;
 const GEODE_BUD: f64 = 0.35;
 
 /// Дальше этого от центра жеода не заходит ни одним блоком.
-const GEODE_REACH: i32 = GEODE_BASALT as i32 + GEODE_POINT_SPREAD + 2;
-
-/// Над жеодой столько блоков толщи до поверхности: иначе она вскрыла бы
-/// дно моря или склон.
-const GEODE_COVER: i32 = 10;
+const GEODE_REACH: i32 = 13;
 
 /// Слой жеоды.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -527,8 +527,8 @@ struct Geode {
 fn geodes_near(terrain: &Terrain, key: u64, chunk_x: i32, chunk_z: i32) -> Vec<Geode> {
     let mut found = Vec::new();
 
-    for from_x in (chunk_x - 1)..=(chunk_x + 1) {
-        for from_z in (chunk_z - 1)..=(chunk_z + 1) {
+    for from_x in (chunk_x - 2)..=(chunk_x + 2) {
+        for from_z in (chunk_z - 2)..=(chunk_z + 2) {
             let Some(geode) = geode_of(terrain, key, from_x, from_z) else {
                 continue;
             };
@@ -558,6 +558,8 @@ fn geode_of(terrain: &Terrain, key: u64, chunk_x: i32, chunk_z: i32) -> Option<G
     let x = chunk_x * CHUNK_SIZE + next_in(&mut random, 0, CHUNK_SIZE - 1);
     let z = chunk_z * CHUNK_SIZE + next_in(&mut random, 0, CHUNK_SIZE - 1);
     let y = next_in(&mut random, GEODE_LOW, GEODE_HIGH);
+    // Вики: точка размещения — нижний северо-западный угол.
+    let (x, y, z) = (x + 5, y + 5, z + 5);
 
     let count = next_in(&mut random, GEODE_POINTS_LOW, GEODE_POINTS_HIGH);
     let points = (0..count)
@@ -574,10 +576,12 @@ fn geode_of(terrain: &Terrain, key: u64, chunk_x: i32, chunk_z: i32) -> Option<G
         (angle.cos(), angle.sin())
     });
 
-    // Жеода не должна вскрывать поверхность: над ней нужна толща земли.
-    // Столбец считается только у выпавших жеод — их одна на два десятка
-    // чанков.
-    if y + GEODE_COVER > terrain.column_at(x, z).height {
+    // Вики: воздух в опорной точке отменяет попытку. Выход наружу
+    // разрешён; водоносные полости жеода перекрывает.
+    let column = terrain.column_at(x,z);
+    let grid = terrain.relief_grid(x,z,x,z);
+    let caves = terrain.cave_grid(x,z,x,z,y);
+    if terrain.block_with(&column, &caves, x,y,z, terrain.solid_in(Some(&grid),&column,x,y,z),column.height) == AIR {
         return None;
     }
 
@@ -591,7 +595,7 @@ fn geode_of(terrain: &Terrain, key: u64, chunk_x: i32, chunk_z: i32) -> Option<G
 
 impl Geode {
     /// «Расстояние» от точки до жеоды: гармоническое среднее расстояний до
-    /// её центральных точек. Около одной точки оно мало, между точками
+    /// её центральных точек, с расширением для большой группы оболочек. Около одной точки оно мало, между точками
     /// плавно растёт — получается неровный ком, а не шар.
     fn distance(&self, x: i32, y: i32, z: i32, wobble: &Noise) -> f64 {
         let (fx, fy, fz) = (x as f64, y as f64, z as f64);
@@ -603,7 +607,7 @@ impl Geode {
             inverse += 1.0 / d;
         }
 
-        self.points.len() as f64 / inverse + GEODE_WOBBLE * wobble.at3(fx / 3.0, fy / 3.0, fz / 3.0)
+        self.points.len() as f64 / inverse - (self.points.len() - 3) as f64 * 3.0 + GEODE_WOBBLE * wobble.at3(fx / 3.0, fy / 3.0, fz / 3.0)
     }
 
     /// Лежит ли точка в трещине: у луча от центра в сторону трещины.
@@ -684,8 +688,8 @@ impl Geode {
     }
 }
 
-/// Рисует часть жеоды, попавшую в чанк. Бедрок, вода и лава не трогаются:
-/// жеода не пробивает дно мира и не выпускает жидкость.
+/// Рисует часть жеоды, попавшую в чанк. Вики: «aquifers ... overridden»;
+/// жидкости заменяются оболочкой, бедрок остаётся.
 fn carve_geode(chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, geode: &Geode, palette: &Palette) {
     let wobble = Noise::new(scramble(geode.key ^ SALT_NOISE_GEODE) as i64);
     let (cx, cy, cz) = geode.center;
@@ -705,7 +709,7 @@ fn carve_geode(chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, geode: &Geode, pal
                 let (local_x, local_z) = (x - base_x, z - base_z);
                 let here = chunk.block(local_x, y, local_z);
 
-                if here == palette.bedrock || palette.liquid(here) {
+                if here == palette.bedrock {
                     continue;
                 }
 
@@ -751,7 +755,7 @@ const DUNGEON_MOSS: f64 = 0.75;
 const DUNGEON_CHESTS: u32 = 2;
 const DUNGEON_CHEST_TRIES: u32 = 3;
 
-/// Где пробовать поставить данж: угол комнаты внутри чанка и её размеры.
+/// Где пробовать поставить данж: угол комнаты в координатах мира и размеры.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct DungeonSpot {
     local_x: i32,
@@ -762,9 +766,9 @@ struct DungeonSpot {
     size_z: i32,
 }
 
-/// Места всех четырнадцати попыток чанка. Комната целиком внутри своего
-/// чанка: проверять, выходит ли она в пещеру, можно только по своим
-/// блокам.
+/// Вики, Monster Room: «fourteen attempts». Равномерно выбирается
+/// центр во всём чанке, а не угол во внутренней полосе. Y — уровень
+/// спавнера: пол на один блок ниже. https://minecraft.wiki/w/Monster_Room
 fn dungeon_spots(key: u64, chunk_x: i32, chunk_z: i32) -> Vec<(DungeonSpot, u64)> {
     let mut random = Random::new(hash(key, chunk_x, 0, chunk_z, SALT_DUNGEON) as i64);
     let mut spots = Vec::new();
@@ -772,44 +776,38 @@ fn dungeon_spots(key: u64, chunk_x: i32, chunk_z: i32) -> Vec<(DungeonSpot, u64)
     for attempt in 0..(DUNGEON_TRIES_HIGH + DUNGEON_TRIES_LOW) {
         let size_x = DUNGEON_SIDES[next_in(&mut random, 0, 1) as usize];
         let size_z = DUNGEON_SIDES[next_in(&mut random, 0, 1) as usize];
-        let local_x = next_in(&mut random, 0, CHUNK_SIZE - size_x);
-        let local_z = next_in(&mut random, 0, CHUNK_SIZE - size_z);
+        let local_x = chunk_x * CHUNK_SIZE + next_in(&mut random, 0, CHUNK_SIZE - 1) - size_x / 2;
+        let local_z = chunk_z * CHUNK_SIZE + next_in(&mut random, 0, CHUNK_SIZE - 1) - size_z / 2;
         let y = if attempt < DUNGEON_TRIES_HIGH {
-            next_in(&mut random, 0, TOP - DUNGEON_HEIGHT)
+            next_in(&mut random, 0, TOP)
         } else {
             next_in(&mut random, DUNGEON_LOW, -1)
         };
         let seed = random.next();
 
-        spots.push((DungeonSpot { local_x, local_z, y, size_x, size_z }, seed));
+        spots.push((DungeonSpot { local_x, local_z, y: y - 1, size_x, size_z }, seed));
     }
 
     spots
 }
 
-fn build_dungeons(chunk: &mut Chunk, chunk_x: i32, chunk_z: i32, key: u64, palette: &Palette) {
-    for (spot, seed) in dungeon_spots(key, chunk_x, chunk_z) {
-        try_dungeon(chunk, spot, seed, palette);
-    }
-}
-
 /// Сколько выходов в воздух у стен комнаты на уровне над полом — или None,
 /// если пол или потолок где-то не сплошные.
-fn dungeon_openings(chunk: &Chunk, spot: DungeonSpot, palette: &Palette) -> Option<u32> {
+fn dungeon_openings(mut block: impl FnMut(i32, i32, i32) -> i32, spot: DungeonSpot, palette: &Palette) -> Option<u32> {
     let DungeonSpot { local_x, local_z, y, size_x, size_z } = spot;
     let ceiling = y + DUNGEON_HEIGHT - 1;
     let mut openings = 0;
 
     for x in local_x..local_x + size_x {
         for z in local_z..local_z + size_z {
-            if !palette.solid(chunk.block(x, y, z)) || !palette.solid(chunk.block(x, ceiling, z)) {
+            if !palette.solid(block(x, y, z)) || !palette.solid(block(x, ceiling, z)) {
                 return None;
             }
 
             let wall = x == local_x || x == local_x + size_x - 1 || z == local_z || z == local_z + size_z - 1;
 
             // Выход — два блока воздуха друг над другом прямо над полом.
-            if wall && chunk.block(x, y + 1, z) == AIR && chunk.block(x, y + 2, z) == AIR {
+            if wall && block(x, y + 1, z) == AIR && block(x, y + 2, z) == AIR {
                 openings += 1;
             }
         }
@@ -826,21 +824,23 @@ fn try_dungeon(chunk: &mut Chunk, spot: DungeonSpot, seed: u64, palette: &Palett
         return false;
     }
 
-    match dungeon_openings(chunk, spot, palette) {
+    match dungeon_openings(|x, y, z| chunk.block(x, y, z), spot, palette) {
         Some(openings) if DUNGEON_OPENINGS.contains(&openings) => {}
         _ => return false,
     }
 
     let ceiling = y + DUNGEON_HEIGHT - 1;
 
-    // Стены, пол и потолок — из булыжника там, где был твёрдый блок;
+    // Вики, Monster Room: «without a ceiling»; измеренные комнаты
+    // сохраняют естественную крышу на Y спавнера + 4. Стены и пол —
+    // из булыжника там, где был твёрдый блок;
     // выходы в пещеру остаются открытыми. Внутри — пусто.
     for x in local_x..local_x + size_x {
         for z in local_z..local_z + size_z {
             let wall = x == local_x || x == local_x + size_x - 1 || z == local_z || z == local_z + size_z - 1;
 
-            for level in y..=ceiling {
-                let shell = wall || level == y || level == ceiling;
+            for level in y..ceiling {
+                let shell = wall || level == y;
                 let here = chunk.block(x, level, z);
 
                 let state = if !shell {
@@ -1071,7 +1071,7 @@ mod tests {
                 if let Some(geode) = geode_of(terrain, key, chunk_x, chunk_z) {
                     let (_, y, _) = geode.center;
 
-                    assert!((GEODE_LOW..=GEODE_HIGH).contains(&y));
+                    assert!((GEODE_LOW + 5..=GEODE_HIGH + 5).contains(&y));
                     count += 1;
                 }
             }
@@ -1079,6 +1079,42 @@ mod tests {
 
         // 3600 чанков по 1/24 — около 150, но часть отсеяна поверхностью.
         assert!(count > 30, "жеод {}", count);
+    }
+
+    /// Масштаб измеренных оболочек, не число попыток: старые жеоды
+    /// давали около четырёх почек вместо 36, хотя шанс почки был верным.
+    #[test]
+    fn geode_shell_scale_and_budding_fraction() {
+        let generator = generator();
+        let Generator::Normal(terrain) = &generator else { unreachable!() };
+        let mut geodes = 0usize;
+        let mut shells = 0usize;
+        let mut amethyst = 0usize;
+        let mut budding = 0usize;
+        for cx in -32..32 { for cz in -32..32 {
+            let Some(g) = geode_of(terrain, world_key(terrain), cx, cz) else { continue; };
+            geodes += 1;
+            let noise = Noise::new(scramble(g.key ^ SALT_NOISE_GEODE) as i64);
+            for x in g.center.0-GEODE_REACH..=g.center.0+GEODE_REACH {
+                for z in g.center.2-GEODE_REACH..=g.center.2+GEODE_REACH {
+                    for y in (g.center.1-GEODE_REACH).max(MIN_Y)..=g.center.1+GEODE_REACH {
+                        match g.layer(x,y,z,&noise) {
+                            Some(GeodeLayer::Amethyst) => { amethyst += 1; shells += 1; }
+                            Some(GeodeLayer::Budding) => { amethyst += 1; budding += 1; shells += 1; }
+                            Some(GeodeLayer::Calcite | GeodeLayer::Basalt) => shells += 1,
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        } }
+        assert!(geodes > 100);
+        let mean = shells as f64 / geodes as f64;
+        assert!((1200.0..1900.0).contains(&mean), "оболочка {mean}");
+        let fraction = budding as f64 / amethyst as f64;
+        assert!((0.075..0.091).contains(&fraction), "растущий аметист {fraction}");
+        let mean = budding as f64 / geodes as f64;
+        assert!((28.0..44.0).contains(&mean), "почки {mean}");
     }
 
     /// Переход в глубинный сланец: на нуле камня нет, у восьми — почти
@@ -1177,7 +1213,7 @@ mod tests {
                     other => panic!("в полу {}", other),
                 }
 
-                assert_eq!(name(open.block(x, 25, z)), "cobblestone", "потолок");
+                assert_eq!(name(open.block(x, 25, z)), "stone", "естественный потолок");
             }
         }
 
@@ -1225,9 +1261,9 @@ mod tests {
         assert!(!try_dungeon(&mut chunk, spot, 7, &palette));
     }
 
-    /// Все попытки данжей — внутри своего чанка и внутри мира.
+    /// Центры попыток — во всём исходном чанке, комнаты пересекают границу.
     #[test]
-    fn dungeon_spots_stay_inside() {
+    fn dungeon_centers_cover_the_source_chunk() {
         let key = key();
 
         for chunk_x in -20..20 {
@@ -1237,9 +1273,9 @@ mod tests {
                 assert_eq!(spots.len(), 14);
 
                 for (spot, _) in spots {
-                    assert!(spot.local_x >= 0 && spot.local_x + spot.size_x <= CHUNK_SIZE);
-                    assert!(spot.local_z >= 0 && spot.local_z + spot.size_z <= CHUNK_SIZE);
-                    assert!(spot.y >= DUNGEON_LOW && spot.y + DUNGEON_HEIGHT <= TOP);
+                    assert_eq!((spot.local_x + spot.size_x / 2).div_euclid(CHUNK_SIZE), chunk_x);
+                    assert_eq!((spot.local_z + spot.size_z / 2).div_euclid(CHUNK_SIZE), chunk_z);
+                    assert!((DUNGEON_LOW..=TOP).contains(&(spot.y + 1)));
                     assert!(DUNGEON_SIDES.contains(&spot.size_x) && DUNGEON_SIDES.contains(&spot.size_z));
                 }
             }

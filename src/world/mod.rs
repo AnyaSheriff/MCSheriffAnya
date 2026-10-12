@@ -567,39 +567,9 @@ impl Chunk {
     }
 
     /// Чанк сложенного мира: рельеф, биомы и всё, что из них следует.
-    fn generated(generator: &Generator, chunk_x: i32, chunk_z: i32) -> Self {
-        // У Незера пол и потолок — он складывается целиком своим путём.
-        if let Generator::Nether(nether) = generator {
-            let mut chunk = nether.chunk(chunk_x, chunk_z);
-
-            // Разрушенные порталы Незера (ruined_portal.rs).
-            ruined_portal::build_nether(nether, &mut chunk, chunk_x, chunk_z);
-
-            // Спавнеры ифритов в комнатах трона крепости (вики, Nether Fortress:
-            // «blaze spawner»): блок в образце уже лежит, блок-сущность — здесь.
-            if let Some(spawner) = crate::blocks::state_by_name("spawner") {
-                for y in 1..127 {
-                    for z in 0..CHUNK_SIZE {
-                        for x in 0..CHUNK_SIZE {
-                            if chunk.block(x, y, z) == spawner {
-                                chunk.put_generated_spawner(x, y, z, crate::spawner::Data::of("blaze"));
-                            }
-                        }
-                    }
-                }
-            }
-
-            chunk.light_up();
-            return chunk;
-        }
-
-        // Энд — тоже целиком своим путём.
-        if let Generator::End(end) = generator {
-            let mut chunk = end.chunk(chunk_x, chunk_z);
-            chunk.light_up();
-            return chunk;
-        }
-
+    /// Неизменяемый снимок до комнат: соседние чанки проверяют те же
+    /// пещеры независимо от порядка генерации и уже загруженного мира.
+    fn underground_generated(generator: &Generator, chunk_x: i32, chunk_z: i32) -> Self {
         let mut chunk = Self::new();
 
         // Шумы считаются один раз на столбец, а не на каждый блок: иначе на
@@ -696,6 +666,52 @@ impl Chunk {
         // камень и где воздух. Деревья — после руды: им до неё дела нет.
         generator.lay_ores(&mut chunk, chunk_x, chunk_z);
         underground::dig(generator, &mut chunk, chunk_x, chunk_z);
+        chunk
+    }
+
+    fn generated(generator: &Generator, chunk_x: i32, chunk_z: i32) -> Self {
+        // У Незера пол и потолок — он складывается целиком своим путём.
+        if let Generator::Nether(nether) = generator {
+            let mut chunk = nether.chunk(chunk_x, chunk_z);
+
+            // Разрушенные порталы Незера (ruined_portal.rs).
+            ruined_portal::build_nether(nether, &mut chunk, chunk_x, chunk_z);
+
+            // Спавнеры ифритов в комнатах трона крепости (вики, Nether Fortress:
+            // «blaze spawner»): блок в образце уже лежит, блок-сущность — здесь.
+            if let Some(spawner) = crate::blocks::state_by_name("spawner") {
+                for y in 1..127 {
+                    for z in 0..CHUNK_SIZE {
+                        for x in 0..CHUNK_SIZE {
+                            if chunk.block(x, y, z) == spawner {
+                                chunk.put_generated_spawner(x, y, z, crate::spawner::Data::of("blaze"));
+                            }
+                        }
+                    }
+                }
+            }
+
+            chunk.light_up();
+            return chunk;
+        }
+
+        // Энд — тоже целиком своим путём.
+        if let Generator::End(end) = generator {
+            let mut chunk = end.chunk(chunk_x, chunk_z);
+            chunk.light_up();
+            return chunk;
+        }
+
+        let mut chunk = (*underground::base_chunk(generator, chunk_x, chunk_z)).clone();
+        let (from_x, from_z) = (chunk_x * CHUNK_SIZE - 1, chunk_z * CHUNK_SIZE - 1);
+        let grid = generator.relief_grid(from_x, from_z, from_x + CHUNK_SIZE + 1, from_z + CHUNK_SIZE + 1);
+        let mut columns = Vec::with_capacity(((CHUNK_SIZE + 2) * (CHUNK_SIZE + 2)) as usize);
+        for x in from_x..=from_x + CHUNK_SIZE + 1 {
+            for z in from_z..=from_z + CHUNK_SIZE + 1 {
+                columns.push(generator.column_in(x, z, grid.as_ref()));
+            }
+        }
+        underground::build_dungeons(generator, &mut chunk, chunk_x, chunk_z);
         // Заброшенные шахты — после пещер: проходы режут камень и пещеры,
         // над пустотой — мосты (mineshaft.rs).
         mineshaft::build(generator, &mut chunk, chunk_x, chunk_z);

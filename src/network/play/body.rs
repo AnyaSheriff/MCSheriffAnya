@@ -94,6 +94,8 @@ impl Body {
         let mut state = PlayerState::new(uuid, name, None, None, 0, 0, (0.0, 0.0, 0.0));
 
         state.entity_id = entity_id;
+        // Подтверждение переноса ведёт BedrockWorld, не Java-пакеты.
+        state.awaiting_teleport = false;
 
         Self { state: Box::new(state) }
     }
@@ -143,7 +145,14 @@ impl Body {
         let target = sleep::respawn_target(shared, &mut self.state);
         (target.dimension, target.at, target.yaw, target.missing)
     }
-    pub(crate) fn moved(&mut self, delta: (f64, f64, f64)) { self.state.net.last_delta = delta; }
+    pub(crate) fn moved(&mut self, now: u64, delta: (f64, f64, f64)) {
+        self.state.net.last_delta = delta;
+        self.state.net.sweep_motion.moved(now, delta.0, delta.2);
+    }
+    pub(crate) fn reset_motion(&mut self) {
+        self.state.net.last_delta = (0.0, 0.0, 0.0);
+        self.state.net.sweep_motion = Default::default();
+    }
     pub(crate) fn spinning(&self) -> bool { self.state.net.spin_since.is_some() }
     pub(crate) fn blocking(&self, now: u64) -> bool { vitals::shield_up(&self.state, now).is_some() }
     pub(crate) fn mob_hit_landed(&self) -> bool { self.state.net.mob_hit_landed }

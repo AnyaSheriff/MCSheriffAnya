@@ -49,7 +49,7 @@
 use std::sync::OnceLock;
 
 use super::noise::Noise;
-use super::terrain::{self, Biome, CaveGrid, Climate, Column, ReliefGrid, Terrain, SEA};
+use super::terrain::{self, Biome, Climate, Column, ReliefGrid, Terrain, SEA};
 use super::underground::{hash, scramble, unit};
 use super::{trees, Chunk, Generator, AIR, CHUNK_SIZE, MIN_Y, WORLD_HEIGHT};
 
@@ -406,7 +406,7 @@ pub(super) fn decorate(
     // Глубокая тьма у соседа тоже задевает наш край: чанк без пещерных
     // клеток ещё смотрит, нет ли её за гранями.
     let caves = spans.iter().any(Option::is_some);
-    let rim = Rim::new(terrain, chunk, (chunk_x, chunk_z), columns, grid, caves);
+    let rim = Rim::new(generator, chunk, (chunk_x, chunk_z), columns, grid, caves);
 
     if !caves && rim.sides.iter().all(Option::is_none) {
         return;
@@ -984,15 +984,9 @@ enum Beyond {
     Dark,
 }
 
-/// Сколько сплошного камня над блоком хватает, чтобы блок решался как в
-/// самой толще: у поверхности пещеры сходят на нет на 32 блоках, правила
-/// поверхности — ещё раньше.
-const SOLID_ENOUGH: i32 = 32;
-
 /// Блоки соседей в полосу шириной в блок за гранями чанка — только на
 /// высотах, где у грани с той или другой стороны глубокая тьма. Считаются
-/// тем же рельефом и теми же пещерами, что и сам соседний чанк, но без его
-/// руды, жеод и данжей: камень под рудой здесь остаётся камнем.
+/// по неизменяемым снимкам подземелья, включая руду, жеоды и комнаты.
 struct Rim {
     /// Запад, восток, север, юг.
     sides: [Option<RimSide>; 4],
@@ -1040,13 +1034,14 @@ impl Rim {
     /// Кайма чанка. `mine` — есть ли у самого чанка пещерные клетки: без
     /// них своих слоёв глубокой тьмы у граней нет, смотрим только соседей.
     fn new(
-        terrain: &Terrain,
+        generator: &Generator,
         chunk: &Chunk,
         (chunk_x, chunk_z): (i32, i32),
         columns: &[Column],
         grid: Option<&ReliefGrid>,
         mine: bool,
     ) -> Rim {
+        let Generator::Normal(terrain) = generator else { unreachable!() };
         let numbers = Numbers::new();
         let near = |(local_x, local_z): (i32, i32)| &columns[((local_x + 1) * (CHUNK_SIZE + 2) + local_z + 1) as usize];
         let world = |(local_x, local_z): (i32, i32)| (chunk_x * CHUNK_SIZE + local_x, chunk_z * CHUNK_SIZE + local_z);
@@ -1092,17 +1087,20 @@ impl Rim {
 
             let from = MIN_Y + all.trailing_zeros() as i32 * 4;
             let to = MIN_Y + (Layers::BITS - 1 - all.leading_zeros()) as i32 * 4 + 3;
-            let (first, _) = across(side, 0);
-            let (last, _) = across(side, CHUNK_SIZE - 1);
-            let ((x_from, z_from), (x_to, z_to)) = (world(first), world(last));
-            let caves = terrain.cave_grid(x_from, z_from, x_to, z_to, to);
+            // Сосед должен видеть те же ходы, жеоды и комнаты: один
+            // шум рельефа уже не описывает его пустоты. Снимок не зависит
+            // от того, загружен ли сосед, и не запускает декоратор повторно.
+            let (dx,dz) = OUTWARD[side];
+            let (cx,cz) = (chunk_x+dx,chunk_z+dz);
+            let mut snapshot = (*super::underground::base_chunk(generator,cx,cz)).clone();
+            super::underground::build_dungeons(generator,&mut snapshot,cx,cz);
             let mut blocks = Vec::with_capacity((CHUNK_SIZE * (to - from + 1)) as usize);
 
             for along in 0..CHUNK_SIZE {
                 let (outside, _) = across(side, along);
                 let dark = theirs[(along / 4) as usize];
 
-                rim_column(terrain, near(outside), &caves, grid, world(outside), (from, to), dark, &mut blocks);
+                rim_column(&snapshot, world(outside), (from, to), dark, &mut blocks);
             }
 
             Some(RimSide { from, to, blocks })
@@ -1125,46 +1123,18 @@ impl Rim {
     }
 }
 
-/// Один столбец каймы: блоки от `from` до `to`, как их сложит соседний
-/// чанк, — сверху вниз, чтобы знать толщу камня над каждым. `dark` — слои
-/// глубокой тьмы его клетки.
-#[allow(clippy::too_many_arguments)]
-fn rim_column(
-    terrain: &Terrain,
-    column: &Column,
-    caves: &CaveGrid,
-    grid: Option<&ReliefGrid>,
-    (x, z): (i32, i32),
-    (from, to): (i32, i32),
-    dark: Layers,
-    out: &mut Vec<Beyond>,
-) {
+/// Один столбец каймы из того же снимка, который получит сосед.
+fn rim_column(chunk: &Chunk, (x,z): (i32,i32), (from,to): (i32,i32), dark: Layers, out: &mut Vec<Beyond>) {
     let blocks = palette();
-    let start = out.len();
-    let mut run_top = to + SOLID_ENOUGH;
-
-    out.resize(start + (to - from + 1) as usize, Beyond::Other);
-
-    for y in (from..=to + SOLID_ENOUGH).rev() {
-        let solid = terrain.solid_in(grid, column, x, y, z);
-
-        if !solid {
-            run_top = y - 1;
-        }
-
-        if y > to {
-            continue;
-        }
-
-        let state = terrain.block_with(column, caves, x, y, z, solid, run_top);
-
-        out[start + (y - from) as usize] = if state == AIR && dark >> ((y - MIN_Y) / 4) & 1 == 1 {
+    for y in from..=to {
+        let state = chunk.block(x.rem_euclid(CHUNK_SIZE),y,z.rem_euclid(CHUNK_SIZE));
+        out.push(if state == AIR && dark >> ((y-MIN_Y)/4) & 1 == 1 {
             Beyond::Dark
         } else if blocks.rock(state) {
             Beyond::Rock
         } else {
             Beyond::Other
-        };
+        });
     }
 }
 

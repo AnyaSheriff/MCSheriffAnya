@@ -1207,7 +1207,7 @@ impl BedrockWorld {
         }
 
         self.position = target;
-        self.body.moved((0.0, 0.0, 0.0));
+        self.body.reset_motion();
         self.health.vit.fall = 0.0;
         self.teleport = Some(Teleporting { target, since: self.ticks });
         self.publish_position();
@@ -3778,7 +3778,7 @@ impl BedrockWorld {
         let was_on_ground = self.on_ground;
         let (dy, run) = ((eyes.1 - self.position.1) as f64, f64::from(eyes.0 - self.position.0).hypot(f64::from(eyes.2 - self.position.2)));
 
-        self.body.moved((f64::from(eyes.0 - self.position.0), dy, f64::from(eyes.2 - self.position.2)));
+        self.body.moved(*self.shared.ticks.borrow(), (f64::from(eyes.0 - self.position.0), dy, f64::from(eyes.2 - self.position.2)));
         self.on_ground = flags & VERTICAL_COLLISION != 0 && eyes.1 <= self.position.1;
         self.position = eyes;
         self.health.vit.sprinting = flags & SPRINTING != 0;

@@ -124,18 +124,28 @@ fn offline_structures_audit() {
     }
     std::fs::write(dir.join(format!("{selected}-starts.json")),serde_json::to_vec_pretty(&starts).unwrap()).unwrap();
     let mut output = std::io::BufWriter::new(std::fs::File::create(dir.join(format!("{selected}-chunks.jsonl"))).unwrap());
+    // Координаты оболочек для связных компонент, а не число почек вместо
+    // числа жеод. Формат: x/y/z i32 LE, затем номер материала u8.
+    let mut shells = std::io::BufWriter::new(std::fs::File::create(dir.join(format!("{selected}-shells.bin"))).unwrap());
     let names: Vec<_> = (0..=u16::MAX).map(|s| blocks::block_at_state(i32::from(s)).unwrap_or("air")).collect();
     let mut count = 0;
     let started = std::time::Instant::now();
     for (wx,wz,half) in windows() {
         for cz in wz-half..wz+half {
             for cx in wx-half..wx+half {
-                if count == limit { output.flush().unwrap(); return; }
+                if count == limit { output.flush().unwrap(); shells.flush().unwrap(); return; }
                 let chunk = Chunk::generated(&generator,cx,cz);
                 let mut histogram = std::collections::BTreeMap::<&str,usize>::new();
-                for section in chunk.sections.iter().flatten() {
-                    for &state in section.iter() {
+                for (si, section) in chunk.sections.iter().enumerate() {
+                    let Some(section) = section else { continue };
+                    for (i, &state) in section.iter().enumerate() {
                         let name = names[usize::from(state)];
+                        if let Some(material) = ["amethyst_block", "budding_amethyst", "calcite", "smooth_basalt"].iter().position(|&n| n == name) {
+                            for coordinate in [cx * 16 + i as i32 % 16, MIN_Y + si as i32 * 16 + i as i32 / 256, cz * 16 + i as i32 / 16 % 16] {
+                                shells.write_all(&coordinate.to_le_bytes()).unwrap();
+                            }
+                            shells.write_all(&[material as u8]).unwrap();
+                        }
                         if matches!(name,"budding_amethyst"|"bone_block"|"end_gateway"|"spawner"|"chest"|"barrel"|"trial_spawner"|"vault"|"suspicious_sand"|"suspicious_gravel") {
                             *histogram.entry(name).or_default() += 1;
                         }
@@ -151,6 +161,7 @@ fn offline_structures_audit() {
         }
     }
     output.flush().unwrap();
+    shells.flush().unwrap();
 }
 
 #[test]

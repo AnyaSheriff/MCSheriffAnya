@@ -76,6 +76,9 @@ mod water;
 mod water_tests;
 mod merchant;
 mod pvp;
+mod sweep;
+#[cfg(test)]
+mod sweep_tests;
 mod bow;
 #[cfg(test)]
 mod bow_tests;
@@ -7830,6 +7833,8 @@ fn attack(target: i32, player: &mut PlayerState, shared: &Shared) {
         return;
     }
 
+    sweep::settle(shared, player);
+
     // Рамка: удар вынимает предмет или ломает её, без звука удара (чёрный
     // ящик, item-frame-rotate: только звуки рамки).
     if strike_frame(shared, player.dimension, target, (player.x, player.y, player.z), player.game_mode == GAME_MODE_CREATIVE) {
@@ -7837,10 +7842,11 @@ fn attack(target: i32, player: &mut PlayerState, shared: &Shared) {
     }
 
     let now = *shared.ticks.borrow();
-    let since = u32::try_from(now.saturating_sub(player.last_attack)).unwrap_or(u32::MAX);
 
     // Атрибуты (урон и скорость удара) — по вещам в руках и на теле сейчас.
+    // Смена оружия может сбросить заряд: считаем его после экипировки.
     vitals::update_equipment(player, now);
+    let since = u32::try_from(now.saturating_sub(player.last_attack)).unwrap_or(u32::MAX);
 
     // Игрок: бой игроков (pvp.rs).
     if pvp::strike_player(shared, player, target, now) {
@@ -7855,8 +7861,8 @@ fn attack(target: i32, player: &mut PlayerState, shared: &Shared) {
 
     // Мечом при полной руке, стоя и не на бегу — взмах, как по мобу
     // (чёрный ящик, boat-break).
-    let sword = player.inventory.held().and_then(|stack| blocks::item_name(stack.item)).is_some_and(|name| name.ends_with("_sword"));
-    let sweep = (sword && crate::minecart::hand_charge(since) > 0.9 && player.on_ground && !player.vit.sprinting).then_some(player.yaw);
+    let charge = crate::combat::charge(since, player.attrs.value(crate::attributes::ATTACK_SPEED));
+    let sweep = sweep::eligible(player, charge > 0.9, false, now).then_some(player.yaw);
 
     if strike_cart(shared, player.dimension, target, (player.x, player.y, player.z), player.game_mode == GAME_MODE_CREATIVE, since, player.attrs.value(crate::attributes::ATTACK_DAMAGE) as f32, sweep) {
         player.last_attack = now;
@@ -8018,7 +8024,7 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     match hit {
         None => mob.events.push(crate::mob::Event::PlayerSound { name: "minecraft:entity.player.attack.nodamage", at: from }),
         Some(hit) => {
-            let sweep = !crit && !sprint_hit && blow.full && player.on_ground && held.is_some_and(|name| name.ends_with("_sword"));
+            let sweep = !sprint_hit && sweep::eligible(player, blow.full, crit, *shared.ticks.borrow());
             let rad = f64::from(player.yaw).to_radians();
 
             if crit {
@@ -8078,6 +8084,11 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
 
     items.flush_mob_events(&mut || shared.next_entity_id(), &mut crate::mob::Rng::new(u64::from(shared.next_entity_id() as u32)));
     drop(items);
+
+    if let Some(damage) = sweeping {
+        let mut world = shared.world_in(player.dimension).lock().expect("мир");
+        pvp::sweep_players(shared, &mut world, player, &main, damage, *shared.ticks.borrow());
+    }
 
     if let Some((x, y, z)) = smash_event {
         shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком").note_level_event(x, y, z, 2013, crate::combat::SMASH_PARTICLES);

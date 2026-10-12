@@ -246,6 +246,7 @@ pub(super) struct Net {
     velocity_due: bool,
     prev_ground: bool,
     pub last_delta: (f64, f64, f64),
+    pub sweep_motion: super::sweep::Motion,
     pub eating: Option<Eating>,
     /// Поднятый щит или натянутый лук.
     pub using: Option<Using>,
@@ -358,6 +359,7 @@ impl Net {
             velocity_due: false,
             prev_ground: false,
             last_delta: (0.0, 0.0, 0.0),
+            sweep_motion: Default::default(),
             eating: None,
             using: None,
             last_hand: 0,
@@ -643,6 +645,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         player.net.pin = None;
         player.net.prev_ground = on_ground;
         player.net.last_delta = (0.0, 0.0, 0.0);
+        player.net.sweep_motion = Default::default();
         player.vit.fall = 0.0;
 
         return;
@@ -740,6 +743,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
 
     player.net.prev_ground = on_ground;
     player.net.last_delta = (dx, dy, dz);
+    player.net.sweep_motion.moved(*shared.ticks.borrow(), dx, dz);
 }
 
 /// Шаг вертикальной скорости за такт: воздух — тяжесть 0,08 и сопротивление
