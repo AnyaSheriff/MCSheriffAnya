@@ -628,6 +628,23 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool
     env
 }
 
+/// Смена режима общая для своей команды и поручения другого игрока.
+pub(super) fn change_game_mode(player: &mut PlayerState, mode: i32) {
+    if player.game_mode != mode {
+        // itemaudit4-knockback: накопленное в creative падение не должно
+        // ранить после survival. Вики, Damage: «Creative mode»; крит в
+        // самом creative по-прежнему использует fall (cow-crit-fist-creative).
+        // [проверить] отдельным зондом смены режима посреди падения.
+        if !mortal(player.game_mode) || !mortal(mode) {
+            player.vit.fall = 0.0;
+            player.vit.smash_forgives = false;
+        }
+        player.prev_mode = player.game_mode;
+        player.game_mode = mode;
+    }
+    player.creative_flying = false;
+}
+
 /// Пакет движения от клиента: прыжок, бег по земле и приземление.
 pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, f64)) {
     // Едущий не бежит ногами и не получает вторично урон падения транспорта.
@@ -723,11 +740,11 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         // разбросом 0,3 — раньше обычных (чёрный ящик, pvp-mace-wind-burst:
         // `block 200 (0.3…)` и `block 90 (0…)` в одном такте).
         if on_ground && smashed && !env.soft {
-            player.net.landings.push((env.below, smash_landing_particles(player.vit.landed_total), true));
+            landing(player, shared, env.below, smash_landing_particles(player.vit.landed_total), true);
         }
 
         if count > 0 {
-            player.net.landings.push((env.below, count, false));
+            landing(player, shared, env.below, count, false);
         }
 
         if let Some(damage) = damage {
@@ -1184,6 +1201,15 @@ async fn send_sound_at(
 /// [проверить]).
 fn smash_landing_particles(fall: f32) -> i32 {
     ((fall * 42.0).round() as i32).clamp(0, 200)
+}
+
+fn landing(player: &mut PlayerState, shared: &Shared, block: i32, count: i32, wide: bool) {
+    player.net.landings.push((block, count, wide));
+    // pvp-mace / pvp-mace-wind-burst: наблюдатель видит приземление в тот
+    // же такт. Событие нужно до publish_events, а не из позднего vitals::tick.
+    let spread = if wide { 0.3 } else { 0.0 };
+    shared.world_in(player.dimension).lock().expect("мир").note_particle_except(
+        player.entity_id, 1, Some(block), (player.x, player.y, player.z), (spread, spread, spread), 0.15, count);
 }
 
 /// Частицы блока под ногами при приземлении.
@@ -2178,13 +2204,6 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     // A. удары, ждавшие своего такта.
     for (block, count, wide) in std::mem::take(&mut player.net.landings) {
         send_landing_particles(stream, (player.x, player.y, player.z), block, count, wide).await?;
-
-        // Остальным рядом — то же (у оригинала частицы идут всем в округе:
-        // первый робот видит приземление второго).
-        let mut world = shared.world_in(player.dimension).lock().expect("мир захвачен другим потоком");
-        let spread = if wide { 0.3 } else { 0.0 };
-
-        world.note_particle_except(player.entity_id, 1, Some(block), (player.x, player.y, player.z), (spread, spread, spread), 0.15, count);
     }
 
     for pending in std::mem::take(&mut player.net.hits) {

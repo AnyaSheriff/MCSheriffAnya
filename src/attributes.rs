@@ -90,7 +90,9 @@ impl Modifier {
 pub fn syncable(attribute: i32) -> bool {
     // Тяготение и сила прыжка клиенту не уходят (effect-flags: у плавного
     // падения и прыгучести пакета Attributes по ним нет).
-    !matches!(attribute, ATTACK_DAMAGE | ATTACK_KNOCKBACK | KNOCKBACK_RESISTANCE | SWEEPING_DAMAGE_RATIO | GRAVITY | JUMP_STRENGTH)
+    // Sweeping damage ratio уходит: sword-sweep-neighbours, модификатор
+    // sweeping_edge/mainhand = 0,75 (декодер бота называет его waypoint).
+    !matches!(attribute, ATTACK_DAMAGE | ATTACK_KNOCKBACK | KNOCKBACK_RESISTANCE | GRAVITY | JUMP_STRENGTH)
 }
 
 /// Пределы значения атрибута (вики, Attribute: «Range»); неизвестные —

@@ -65,7 +65,7 @@ fn sweep_damage_and_box_boundaries() {
 }
 
 #[test]
-fn enchanted_sword_sweeps_from_both_protocols_with_one_knockback() {
+fn enchanted_sword_sweeps_from_both_protocols_with_both_knockbacks() {
     for bedrock in [false,true] {
         let shared = shared();
         shared.ticks.send_replace(100);
@@ -97,7 +97,9 @@ fn enchanted_sword_sweeps_from_both_protocols_with_one_knockback() {
         assert!(particle.1.0.abs()<1e-6); assert_eq!((particle.1.1,particle.1.2,*particle.2,*particle.3),(0.0,-1.0,0.0,0));
         let secondary = &items.mobs()[1];
         assert_eq!(secondary.vitals.health,9.0);
-        assert!((secondary.vz+0.4).abs()<1e-6 && secondary.vx.abs()<1e-6);
+        let distance = 0.9f64.hypot(2.0);
+        assert!((secondary.vz - (-0.4 - 0.2 * 2.0 / distance)).abs()<1e-6);
+        assert!((secondary.vx - 0.2 * 0.9 / distance).abs()<1e-6);
         assert_eq!(items.mobs()[2].vitals.health,10.0);
         assert!(crate::bedrock::effects::combat_particles(67,None,*particle.0).is_some());
     }

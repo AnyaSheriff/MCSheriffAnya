@@ -181,6 +181,12 @@ pub fn granted(stack: &Stack, place: u8) -> Vec<(i32, Modifier)> {
         }
     }
     let efficiency = data.level("efficiency");
+    // Вики, Sweeping Edge: «level / (level + 1)»; sword-sweep-neighbours:
+    // модификатор sweeping_edge/mainhand = 0,75, в том числе после износа.
+    let sweeping = data.level("sweeping_edge");
+    if place == 1 && sweeping > 0 {
+        modifiers.push((crate::attributes::SWEEPING_DAMAGE_RATIO, Modifier::new("minecraft:enchantment.sweeping_edge/mainhand", f64::from(sweeping as f32 / (sweeping as f32 + 1.0)), Operation::AddValue)));
+    }
     if place == 1 && efficiency > 0 {
         modifiers.push((crate::attributes::MINING_EFFICIENCY, Modifier::new("minecraft:enchantment.efficiency/mainhand", f64::from(efficiency).powi(2) + 1.0, Operation::AddValue)));
     }

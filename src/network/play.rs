@@ -79,6 +79,8 @@ mod pvp;
 mod sweep;
 #[cfg(test)]
 mod sweep_tests;
+#[cfg(test)]
+mod mismatch_tests;
 mod bow;
 #[cfg(test)]
 mod bow_tests;
@@ -6642,12 +6644,7 @@ async fn read_and_log_play_packets(
                 // консоли): клиенту нужен Game Event «смена режима», строка
                 // в списке игроков — тоже.
                 Order::GameMode { mode } => {
-                    if player.game_mode != mode {
-                        player.prev_mode = player.game_mode;
-                    }
-
-                    player.game_mode = mode;
-                    player.creative_flying = false;
+                    vitals::change_game_mode(player, mode);
                     send_game_event_game_mode(stream, mode).await?;
                     send_abilities(stream, mode).await?;
                     send_game_mode(stream, &player.uuid, mode).await?;
@@ -7537,7 +7534,11 @@ fn handle_client_packet_inner(
                 && let Some(&flag) = payload.first()
             {
                 player.set_on_ground(flag & ON_GROUND_FLAG != 0);
-                vitals::moved(player, shared, (player.x, player.y, player.z));
+                // Как поворот без координат: не расходуем защиту переноса
+                // (itemaudit4-knockback; вики, Commands/teleport).
+                if !player.net.teleported {
+                    vitals::moved(player, shared, (player.x, player.y, player.z));
+                }
             }
         }
         0x34 => { gameplay::beacon_select(payload, player, shared); }
@@ -7677,12 +7678,7 @@ fn handle_client_packet_inner(
                 if let Effect::GameMode { uuid, mode } = answer.effect
                     && uuid == player.uuid
                 {
-                    if player.game_mode != mode {
-                        player.prev_mode = player.game_mode;
-                    }
-
-                    player.game_mode = mode;
-                    player.creative_flying = false;
+                    vitals::change_game_mode(player, mode);
                 }
             }
         }

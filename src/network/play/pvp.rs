@@ -674,7 +674,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
     }
 }
 
-/// Взмах по мобам: урон и один толчок 0,4 вдоль взгляда.
+/// Взмах по мобам: обычная отдача от урона, затем толчок вдоль взгляда.
 pub(super) fn sweep_mobs(items: &mut crate::items::Items, player: &mut PlayerState, main: &MainTarget, damage: f32) {
     let attacker = (player.x, player.y, player.z);
     let look = crate::mob::look_direction(player.yaw);
@@ -684,11 +684,17 @@ pub(super) fn sweep_mobs(items: &mut crate::items::Items, player: &mut PlayerSta
             continue;
         }
 
-        let push = crate::mob::Push { dir: look, strength: crate::mob::BASE_KNOCKBACK, cause: player.entity_id };
+        // Вики, Sword: «Sweep attack». pvp-sweep: (0,089; 0; 0,579) —
+        // радиальный толчок 0,4, затем половина этой скорости + 0,4 по взгляду.
+        let away = (mob.x - player.x, mob.z - player.z);
+        let length = away.0.hypot(away.1);
+        let dir = if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { look };
+        let push = crate::mob::Push { dir, strength: crate::mob::BASE_KNOCKBACK, cause: player.entity_id };
 
         mob.credit_player();
 
         if let Some(hit) = mob.hurt(damage, Source::PlayerAttack, Some(push)) {
+            mob.knockback(look.0, look.1, crate::mob::BASE_KNOCKBACK);
             player.progress.damage_dealt(hit);
             mob.credit_to(player.uuid);
         }

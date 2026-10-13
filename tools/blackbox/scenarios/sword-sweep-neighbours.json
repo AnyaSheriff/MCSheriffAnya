@@ -22,5 +22,13 @@
     "kill @e[tag=sweep_probe]", "kill @e[type=item,distance=..32]", "kill @e[type=experience_orb,distance=..32]",
     "fill $(-4,-1,-4) $(7,6,7) air", "difficulty peaceful"
   ],
-  "track_self":true,"track_mobs":true,"inventory":true,"item_components":true,"exclusive":true
+  "track_self":true,"track_mobs":true,"inventory":true,"item_components":true,"exclusive":true,
+  "random": [{
+    "type": "count",
+    "name": "голоса коров в покое",
+    "match": "entity\\.cow\\.ambient",
+    "range": [0, 9],
+    "anytick": true,
+    "why": "Вики, Cow: ambient sounds. Те же случайные голоса уже учтены в cow-crit-fist-creative; здесь три коровы. В vanilla sword-sweep-neighbours два голоса, в ours ни одного, к sweep они не относятся."
+  }]
 }
