@@ -274,3 +274,6 @@ async fn long_arrow_sync_uses_the_same_before_step_position_and_velocity() {
     let values: Vec<_> = (0..6).map(|_| f64::from_be_bytes(c.bytes(8).unwrap().try_into().unwrap())).collect();
     assert_eq!(values, vec![at.0, at.1, at.2, velocity.0, velocity.1, velocity.2]);
 }
+
+#[path = "projectile_recording_tests.rs"]
+mod recordings;

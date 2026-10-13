@@ -16,6 +16,13 @@ pub(super) fn inherit(shot: (f64, f64, f64), movement: (f64, f64, f64), on_groun
 }
 
 pub(super) fn velocity(shared: &Shared, player: &PlayerState, speed: f64, lifted: bool, yaw_offset: f32) -> (f64, f64, f64) {
+    launch(shared, player, speed, lifted, yaw_offset).0
+}
+
+/// tmp/bb/throw-snowball-walk.md:8,12: наклон −47, а из полной скорости
+/// вышел бы −42. Вики, Projectile: «inherits the velocity of the player»:
+/// движение прибавляется ПОСЛЕ начального поворота по разбросанному броску.
+pub(super) fn launch(shared: &Shared, player: &PlayerState, speed: f64, lifted: bool, yaw_offset: f32) -> ((f64, f64, f64), (f32, f32)) {
     let mut roll = || vitals::world_random(shared, player.dimension);
     let mut wobble = || noise(&mut roll);
     let shot = if lifted {
@@ -24,7 +31,7 @@ pub(super) fn velocity(shared: &Shared, player: &PlayerState, speed: f64, lifted
         let (x, y, z) = crate::arrow::aim(player.yaw + yaw_offset, player.pitch, 1.0);
         ((x + wobble()) * speed, (y + wobble()) * speed, (z + wobble()) * speed)
     };
-    inherit(shot, player.net.last_delta, player.on_ground)
+    (inherit(shot, player.net.last_delta, player.on_ground), crate::thrown::angles(shot))
 }
 
 /// Относительный пакет вмещает только [-8; 8) блоков. Обрезать нельзя:

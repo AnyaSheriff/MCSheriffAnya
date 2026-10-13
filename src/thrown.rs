@@ -138,6 +138,8 @@ pub struct Flying {
     pub age: u32,
     /// Место и скорость при появлении: клиенту сперва уходит оно.
     pub start: ((f64, f64, f64), (f64, f64, f64)),
+    /// Поворот броска до прибавления движения игрока (throw-snowball-walk.md:8).
+    pub start_rot: (f32, f32),
 }
 
 impl Flying {
@@ -205,6 +207,7 @@ impl Flying {
             in_owner: true,
             age: 0,
             start: (at, velocity),
+            start_rot: rot,
         }
     }
 
@@ -598,6 +601,16 @@ pub(crate) fn overlap(a: (f64, f64, f64), a_half: f64, a_height: f64, b: (f64, f
     (a.0 - b.0).abs() < a_half + b_half && (a.2 - b.2).abs() < a_half + b_half && a.1 < b.1 + b_height && b.1 < a.1 + a_height
 }
 
+/// tmp/bb/throw2-egg-flat-yaw0-falling.md:14–18,27–32: у нас яйцо
+/// сразу било хозяина, оригинал летел ещё 14 тактов. Проверяем тот же
+/// отрезок и расширенный ящик, что при попадании: прежний тесный ящик
+/// разрешал удар раньше выхода из области столкновения. Дополнительный
+/// запас при выходе и повторном входе [проверить: throw3-egg-owner-return].
+fn owner_in_path(from: (f64, f64, f64), to: (f64, f64, f64), half: f64, tall: f64, owner: (f64, f64, f64), height: f64) -> bool {
+    let centre = |p: (f64, f64, f64)| (p.0, p.1 + tall / 2.0, p.2);
+    sweep(centre(from), centre(to), owner, 0.3 + half, height + tall).is_some()
+}
+
 /// Игрок рядом: номер, место, приседает ли, режим, опознаватель.
 type Bystander = (i32, (f64, f64, f64), bool, i32, [u8; 16]);
 
@@ -788,7 +801,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
         // Бросивший не задевается, пока зелье в нём.
         if flying.in_owner
-            && !members.iter().any(|m| m.0 == flying.owner && overlap(from, half, tall, m.1, 0.3, height(m.2)))
+            && !members.iter().any(|m| m.0 == flying.owner && owner_in_path(from, to, half, tall, m.1, height(m.2)))
         {
             flying.in_owner = false;
         }
@@ -936,8 +949,12 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 if *mode != 3 && shared.spawn_mobs.load(std::sync::atomic::Ordering::Relaxed) && world.random_unit() < 0.05 {
                     items.add_mob(crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Endermite, *origin));
                 }
-                // Звук телепорта и урон 5 (ender_pearl) — у подключения при переносе.
+                // Урон 5 (ender_pearl) — у подключения при переносе.
                 shared.players.lock().expect("игроки").order(uuid, crate::players::Order::PearlTeleport { x: at.0, y: at.1, z: at.2, dimension });
+                // tmp/bb/throw2-ender_pearl-down30-yaw0-standing.md:11–19:
+                // перенос, урон, звук, удаление — один такт; запись звука
+                // из подключения опаздывала до следующей публикации мира.
+                world.note_sound_player_at(at, "minecraft:entity.player.teleport", 1.0, 1.0);
             }
             // Жемчуг уходит без события мира (чёрный ящик: у оригинала только удаление).
             impacts.push(Impact { dimension, flying: flying.entity_id, cloud: None, event: (block_at, -1, 0), status: None });
@@ -948,8 +965,14 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             for _ in 0..count {
                 let mut chick = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Chicken, at);
                 chick.age = crate::mob::BABY_AGE;
+                // tmp/bb/throw2-egg-down30-yaw-135-standing.md:11,18:
+                // цыплёнок наследует yaw яйца (134,488°), но pitch = 0.
+                chick.yaw = flying.rot.0;
                 // [проверить] Визуальные cold/warm chicken variants ещё отсутствуют.
-                items.add_mob_late(chick);
+                items.add_mob_late(chick.clone());
+                // tmp/bb/throw2-egg-down30-yaw-135-standing.md:11–16:
+                // появление и свойства ДО события 3, нулевой сдвиг — позже.
+                world.note_mob_spawn(chick);
             }
         }
 

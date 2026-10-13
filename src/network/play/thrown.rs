@@ -90,7 +90,7 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
         _ => crate::thrown::POTION_SPEED,
     };
     let lifted = matches!(kind, Kind::Splash | Kind::Lingering | Kind::ExperienceBottle);
-    let velocity = projectile::velocity(shared, player, speed, lifted, 0.0);
+    let (velocity, rotation) = projectile::launch(shared, player, speed, lifted, 0.0);
     let at = (player.x, player.y + if player.sneaking { 1.27 } else { 1.62 } - 0.1, player.z);
 
     // Звук броска — до появления; у взрывного раздел «игроки», у оседающего
@@ -98,7 +98,10 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
     // 0,4 / (0,8…1,2) (вики, Splash Potion).
     let pitch = 0.4 / (roll() * 0.4 + 0.8);
 
-    let flying = Flying::potion(shared.next_entity_id(), dimension, kind, stack.with_count(1), at, velocity, player.entity_id);
+    let mut flying = Flying::potion(shared.next_entity_id(), dimension, kind, stack.with_count(1), at, velocity, player.entity_id);
+    flying.start_rot = rotation;
+    flying.rot = rotation;
+    flying.prev.2 = rotation;
 
     {
         let mut world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
@@ -138,7 +141,7 @@ pub(super) async fn send_launch(stream: &mut Outgoing<'_>, shared: &Shared, play
     // первый ход), потом предмет, нулевой сдвиг, предмет ещё раз
     // (splash-potion). Увиденное позже — там, где оно до хода.
     let ((sx, sy, sz), (svx, svy, svz)) = if flying.age <= 1 { flying.start } else { (flying.prev.0, flying.prev.1) };
-    let (yaw, pitch) = if flying.is_fireball() { (0.0, 0.0) } else if flying.age <= 1 { crate::thrown::angles(flying.start.1) } else { flying.prev.2 };
+    let (yaw, pitch) = if flying.is_fireball() { (0.0, 0.0) } else if flying.age <= 1 { flying.start_rot } else { flying.prev.2 };
     let mut body = encode_varint(ADD_ENTITY);
 
     body.extend_from_slice(&encode_varint(flying.entity_id));

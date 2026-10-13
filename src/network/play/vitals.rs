@@ -305,6 +305,8 @@ pub(super) struct Net {
     /// (чёрный ящик: Set Health в такте удара, Metadata и скорость — в
     /// следующем).
     pub hold_meta: bool,
+    /// Жемчуг попадает после хода игрока: стадия C уже выполнена до переноса.
+    pearl_entity_ticked: bool,
 
     /// Последний удар моба нанёс урон (не погашен неуязвимостью): эффекты «от
     /// удара» (иссушение, голод) ложатся только тогда.
@@ -389,6 +391,7 @@ impl Net {
             command_origin: None,
             arrow_timer: 0,
             hold_meta: false,
+            pearl_entity_ticked: false,
             mob_hit_landed: false,
             raid_omen_level: 0,
             omen_switch: false,
@@ -547,6 +550,22 @@ fn fluid_height(world: &World, x: i32, y: i32, z: i32, kind: fluids::Kind, level
     f64::from(8 - level) / 9.0
 }
 
+/// Вики, Damage: «Suffocation»; tmp/bb/throw2-ender_pearl-up45-yaw0-standing.md:
+/// 31–45: z=39,836, стена z=40, затем type=22, хотя центр головы в воздухе.
+/// Нужна ширина головы, а не один блок под глазами. Точная граница 0,24
+/// [проверить: throw3-pearl-wall-edge]; записи ограничивают её снизу 0,164.
+fn head_in_wall(world: &World, x: f64, eye: f64, z: f64) -> bool {
+    for bx in (x - 0.24).floor() as i32..=(x + 0.24).floor() as i32 {
+        for bz in (z - 0.24).floor() as i32..=(z + 0.24).floor() as i32 {
+            let head = world.get_block(bx, eye.floor() as i32, bz);
+            if blocks::full_cube(head) && fluids::fluid_at(head).is_none() && blocks::block_at_state(head) != Some("powder_snow") {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool) -> Env {
     let (bx, bz) = (x.floor() as i32, z.floor() as i32);
     let mut env = Env { in_fire: 0.0, campfire: 0.0, powder_snow: false, cactus: false, berries: false, in_wall: false, in_lava: false, in_water: false, in_rain: false, eyes_in_water: false, in_bubbles: false, soft: false, landing: 1.0, below: 0 };
@@ -602,11 +621,9 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool
         }
     }
 
-    let head = world.get_block(bx, (y + if spin { 0.4 } else if sneaking { 1.27 } else { 1.62 }).floor() as i32, bz);
-
     // Снег задевает весь ящик; через его край тоже начинают замерзать.
     env.powder_snow = powder_contact(world, x, y, z, top - y);
-    env.in_wall = blocks::full_cube(head) && fluids::fluid_at(head).is_none() && blocks::block_at_state(head) != Some("powder_snow");
+    env.in_wall = head_in_wall(world, x, y + if spin { 0.4 } else if sneaking { 1.27 } else { 1.62 }, z);
 
     env.soft = env.in_water || env.in_lava || blocks::block_at_state(feet).is_some_and(soft_block);
 
@@ -2186,6 +2203,36 @@ pub(super) fn blasted(player: &mut PlayerState, push: (f64, f64, f64)) {
     }
 }
 
+/// tmp/bb/throw2-ender_pearl-down30-yaw0-standing.md:12,18–19: урон
+/// сейчас, свойства и скорость — следующим тактом, после Set Health.
+pub(super) async fn pearl_hit(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    if hit(stream, shared, player, 5.0, Source::EnderPearl, 0).await?.is_some() {
+        player.net.hold_meta = true;
+        // В нашей стадии C таймер убывает в конце, а следующий урон
+        // среды проверяется до убывания. Сохраняем эту фазу и при ранней C
+        // (throw2-ender_pearl-up45-yaw0-standing.md:32,42: интервал 10).
+        if player.net.pearl_entity_ticked { player.vit.tick_invulnerable(); }
+    }
+    Ok(())
+}
+
+/// tmp/bb/throw2-ender_pearl-down30-yaw0-standing.md:15–20: в такт
+/// попадания 15 HP, у нас было сразу 16 — мирное лечение ошибочно шло
+/// ПОСЛЕ урона жемчуга. Выполняем ход игрока в старой точке до переноса;
+/// ниже стадию C повторять нельзя. Одновременные другие удары [проверить].
+pub(super) async fn before_pearl_teleport(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
+    if !player.net.pearl_entity_ticked && !player.vit.dead {
+        let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
+        if mortal(player.game_mode) {
+            entity_tick(stream, shared, player, difficulty).await?;
+        } else if player.game_mode == GAME_MODE_CREATIVE {
+            creative_tick(stream, shared, player, difficulty).await?;
+        }
+        player.net.pearl_entity_ticked = true;
+    }
+    Ok(())
+}
+
 /// Такт здоровья игрока: стадии A–D (см. начало файла).
 pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState) -> io::Result<()> {
     let entity = player.entity_id;
@@ -2366,10 +2413,12 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     if !mortal(player.game_mode) { player.net.frozen = 0; }
 
     // C. такт сущности.
-    if !player.vit.dead && mortal(player.game_mode) {
-        entity_tick(stream, shared, player, difficulty).await?;
-    } else if !player.vit.dead && player.game_mode == GAME_MODE_CREATIVE {
-        creative_tick(stream, shared, player, difficulty).await?;
+    if !std::mem::take(&mut player.net.pearl_entity_ticked) {
+        if !player.vit.dead && mortal(player.game_mode) {
+            entity_tick(stream, shared, player, difficulty).await?;
+        } else if !player.vit.dead && player.game_mode == GAME_MODE_CREATIVE {
+            creative_tick(stream, shared, player, difficulty).await?;
+        }
     }
 
     // Шарики опыта: появление, полёт к игроку, подбор.
@@ -3583,4 +3632,22 @@ pub(super) fn bedrock_environment(shared: &Shared, player: &mut PlayerState) -> 
     let roll = if oxygen > 0.0 && env.eyes_in_water && !env.in_bubbles { world_random(shared, player.dimension) } else { 0.0 };
     if player.vit.air_tick_with_bonus(env.eyes_in_water && !env.in_bubbles, false, oxygen, roll) { hits.push((2.0, Source::Drown)); }
     hits
+}
+
+#[cfg(test)]
+mod pearl_wall_tests {
+    use super::*;
+
+    #[test]
+    fn a_pearl_can_leave_the_eye_centre_outside_but_the_head_inside_a_wall() {
+        // tmp/bb/throw2-ender_pearl-up45-yaw0-standing.md:31,42:
+        // (3.562,13.358,39.836), Damage Event type=22 через 10 тактов.
+        let mut world = World::in_memory();
+        world.set_block_silently(3, 14, 40, blocks::state_by_name("stone").unwrap());
+        assert!(look_around(&world, 3.562, 13.358, 39.836, false, false).in_wall);
+        assert!(!look_around(&world, 3.562, 13.358, 39.7, false, false).in_wall);
+        assert!(!look_around(&world, 3.562, 12.0, 39.836, false, false).in_wall);
+        world.set_block_silently(3, 14, 40, world::AIR);
+        assert!(!look_around(&world, 3.562, 13.358, 39.836, false, false).in_wall);
+    }
 }

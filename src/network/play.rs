@@ -1324,6 +1324,8 @@ enum Sync {
     /// Портал Незера: и поворот относительный — флаги 504 (чёрный ящик,
     /// nether-portal-enter). Сдвиг поворота у нас пока 0 [проверить].
     NetherPortal,
+    /// tmp/bb/throw2-ender_pearl-down30-yaw0-standing.md:11: флаги 504.
+    Pearl,
 }
 
 async fn send_player_position_as(stream: &mut Outgoing<'_>, player: &mut PlayerState, sync: Sync) -> io::Result<()> {
@@ -1371,7 +1373,7 @@ fn position_body(player: &mut PlayerState, sync: Sync) -> Vec<u8> {
             push_f32(&mut body, 0.0); // наклон: прибавить 0
             push_i32(&mut body, 496); // относительные: наклон, скорость, её поворот
         }
-        Sync::NetherPortal => {
+        Sync::NetherPortal | Sync::Pearl => {
             push_f32(&mut body, 0.0); // поворот: прибавить 0
             push_f32(&mut body, 0.0); // наклон: прибавить 0
             push_i32(&mut body, 504); // относительные: поворот, наклон, скорость, её поворот
@@ -6554,13 +6556,13 @@ async fn read_and_log_play_packets(
 
                 Order::Teleport { x, y, z } | Order::PearlTeleport { x, y, z, .. } => {
                     if pearl_teleport {
+                        vitals::before_pearl_teleport(stream, shared, player).await?;
+                        if player.vit.dead { continue; }
                         vehicle::dismount(shared, player);
-                        // Звук телепорта — в точке прибытия (чёрный ящик, itemaudit3-ender_pearl-near: (3,375; 0,375; 4,375)).
-                        shared.world_in(player.dimension).lock().expect("мир").note_sound_player_at((x,y,z), "minecraft:entity.player.teleport", 1.0, 1.0);
                         player.vit.fall = 0.0;
                         player.vit.landed_from = 0.0;
-                        player.net.last_delta = (0.0, 0.0, 0.0);
-                        player.net.pin = None;
+                        // Скорость сохраняется: относительные dx/dy/dz в
+                        // throw2-ender_pearl-down30-yaw0-standing.md:11.
                     }
                     player.x = x;
                     player.y = y;
@@ -6573,7 +6575,7 @@ async fn read_and_log_play_packets(
                         player.pitch = pitch;
                         send_player_position(stream, player).await?;
                     } else {
-                        send_player_position_as(stream, player, Sync::Command).await?;
+                        send_player_position_as(stream, player, if pearl_teleport { Sync::Pearl } else { Sync::Command }).await?;
                     }
 
                     player.save(&shared.playerdata);
@@ -6599,7 +6601,7 @@ async fn read_and_log_play_packets(
                     .await?;
                     all_chunks_sent = false;
                     if pearl_teleport {
-                        vitals::hit(stream, shared, player, 5.0, crate::survival::Source::EnderPearl, 0).await?;
+                        vitals::pearl_hit(stream, shared, player).await?;
                     }
 
                     log_debug!(
