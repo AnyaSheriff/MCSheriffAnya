@@ -21,50 +21,122 @@ fn packet(id: i32, payload: &[u8]) -> PacketInfo {
 }
 
 #[test]
-fn creative_fall_still_crits_but_does_not_cross_game_modes() {
+fn creative_fall_crosses_game_modes_without_resetting() {
+    // fall-mode-teleport-reset: 12 блоков, из них часть в creative, урон 9.
     let shared = shared();
     let mut p = player();
-    p.y = 68.0;
-    vitals::moved(&mut p, &shared, (3.5,72.0,1.5));
+    p.y = 72.0;
+    vitals::moved(&mut p, &shared, (3.5,76.0,1.5));
     assert_eq!(p.vit.fall, 4.0);
     assert!(pvp::may_crit(&p));
-    assert_eq!(p.vit.health, 20.0);
     vitals::change_game_mode(&mut p, GAME_MODE_SURVIVAL);
+    p.y = 65.2;
+    vitals::moved(&mut p, &shared, (3.5,72.0,1.5));
     p.on_ground = true;
-    p.y = 67.5;
-    vitals::moved(&mut p, &shared, (3.5,68.0,1.5));
-    assert!(p.net.hits.is_empty());
-    assert_eq!(p.vit.health, 20.0);
-    // Падение, начатое уже в survival, по-прежнему ранит.
-    p.on_ground = false;
-    p.y = 63.5;
-    vitals::moved(&mut p, &shared, (3.5,67.5,1.5));
-    vitals::change_game_mode(&mut p, GAME_MODE_SURVIVAL);
-    p.on_ground = true;
-    vitals::moved(&mut p, &shared, (3.5,63.5,1.5));
-    assert!(p.net.hits.iter().any(|hit| hit.source == crate::survival::Source::Fall));
+    p.y = 64.0;
+    vitals::moved(&mut p, &shared, (3.5,65.2,1.5));
+    assert_eq!(p.net.hits.len(), 1);
+    assert_eq!(p.net.hits[0].amount, 9.0);
+    assert_eq!(p.net.landings[0].1, 100);
+    assert_eq!(p.vit.fall, 0.0);
 }
 
 #[test]
-fn teleport_guard_survives_ground_and_rotation_only_packets() {
+fn teleport_preserves_fall_but_does_not_count_the_coordinate_jump() {
+    // fall-mode-teleport-reset: после /tp вниз накопленные 4 блока дают урон 1.
     let shared = shared();
     let mut p = player();
-    p.vit.fall = 8.0;
+    p.game_mode = GAME_MODE_SURVIVAL;
+    p.vit.fall = 4.0;
     position_body(&mut p, Sync::Command);
-    assert_eq!(p.vit.fall, 0.0);
+    assert_eq!(p.vit.fall, 4.0);
     handle_client_packet(&packet(CONFIRM_TELEPORTATION, &encode_varint(p.teleport)), &mut p, &shared);
     handle_client_packet(&packet(SET_PLAYER_ON_GROUND, &[0]), &mut p, &shared);
     let mut turn = Vec::new();
     push_f32(&mut turn, 0.0); push_f32(&mut turn, 0.0); turn.push(0);
     handle_client_packet(&packet(SET_PLAYER_ROTATION, &turn), &mut p, &shared);
     assert!(p.net.teleported);
-    vitals::change_game_mode(&mut p, GAME_MODE_SURVIVAL);
     let mut place = Vec::new();
     for v in [3.5,60.0,1.5] { push_f64(&mut place, v); }
     place.push(1);
     handle_client_packet(&packet(SET_PLAYER_POSITION, &place), &mut p, &shared);
     assert!(!p.net.teleported);
+    assert_eq!(p.vit.fall, 4.0);
     assert!(p.net.hits.is_empty());
+    handle_client_packet(&packet(SET_PLAYER_ON_GROUND, &[1]), &mut p, &shared);
+    assert_eq!(p.net.hits.len(), 1);
+    assert_eq!(p.net.hits[0].amount, 1.0);
+    assert_eq!(p.net.landings[0].1, 40);
+}
+
+#[tokio::test]
+async fn mode_change_packets_follow_the_recording() {
+    let mut p = player();
+    let mut out = Outgoing::capture();
+    vitals::game_mode_order(&mut out, &mut p, GAME_MODE_SURVIVAL, 10).await.unwrap();
+    let mut bytes = out.queued();
+    let mut ids = Vec::new();
+    while !bytes.is_empty() { ids.push(read_packet(&mut bytes).await.unwrap().id); }
+    assert_eq!(ids, [PLAYER_ABILITIES, GAME_EVENT, PLAYER_ABILITIES]);
+    assert_eq!(p.attrs_touched, [(crate::attributes::BLOCK_INTERACTION_RANGE,12), (crate::attributes::ENTITY_INTERACTION_RANGE,12)]);
+}
+
+#[tokio::test]
+async fn anvil_levels_do_not_award_total_experience_or_score() {
+    // anvil-rename-repair: level=29/26/21, total=0, без Metadata 18.
+    let shared = shared();
+    let mut p = player();
+    p.vit.command_xp(true, 30, true);
+    for (cost, level) in [(1,29), (3,26), (5,21)] {
+        p.vit.command_xp(false, -cost, true);
+        let mut out = Outgoing::capture();
+        vitals::send_experience(&mut out, &p.vit).await.unwrap();
+        let mut bytes = out.queued();
+        let packet = read_packet(&mut bytes).await.unwrap();
+        let mut cursor = Cursor::new(packet.payload());
+        assert_eq!(cursor.bytes(4), Some(&0f32.to_be_bytes()[..]));
+        assert_eq!(cursor.varint(), Some(level));
+        assert_eq!(cursor.varint(), Some(0));
+        let mut out = Outgoing::capture();
+        vitals::tick(&mut out, &shared, &mut p).await.unwrap();
+        let mut bytes = out.queued();
+        while !bytes.is_empty() { assert_ne!(read_packet(&mut bytes).await.unwrap().id, SET_ENTITY_DATA); }
+    }
+}
+
+#[tokio::test]
+async fn ordinary_fall_announces_observer_packets_once_in_the_movement_tick() {
+    // pvp-mace-landing-count: порядок звуков и Damage Event при уроне 1.
+    let shared = shared();
+    let mut p = player();
+    p.game_mode = GAME_MODE_SURVIVAL;
+    p.vit.fall = 4.0;
+    p.on_ground = true;
+    let stone = blocks::state_by_name("stone").unwrap();
+    let reader = shared.next_reader();
+    let start = {
+        let mut world = shared.world_in(p.dimension).lock().unwrap();
+        world.set_block_silently(3,63,1,stone);
+        world.watch_events(reader)
+    };
+    vitals::moved(&mut p, &shared, (3.5,64.0,1.5));
+    assert_eq!(p.net.announced_health, Some(19.0));
+    let mut out = Outgoing::capture();
+    vitals::tick(&mut out, &shared, &mut p).await.unwrap();
+    assert_eq!(p.vit.health,19.0);
+    let mut world = shared.world_in(p.dimension).lock().unwrap();
+    world.publish_events();
+    let (events,_,_) = world.published_events_since(start,reader);
+    let mut order = Vec::new();
+    for event in events {
+        match event {
+            WorldEvent::Particle { count, .. } => { assert_eq!(count,40); order.push("particle"); }
+            WorldEvent::Sound(sound) => { assert_eq!(sound.except,Some(p.entity_id)); order.push(sound.name); }
+            WorldEvent::PlayerDamaged { type_id, .. } => { assert_eq!(type_id,10); order.push("damage"); }
+            _ => {}
+        }
+    }
+    assert_eq!(order,["particle","minecraft:entity.player.small_fall","minecraft:block.stone.fall","damage","minecraft:entity.player.hurt"]);
 }
 
 #[test]

@@ -4255,6 +4255,10 @@ impl World {
         self.kind == WorldKind::Nether
     }
 
+    pub fn is_flat(&self) -> bool {
+        self.kind == WorldKind::Flat
+    }
+
     /// Энд ли это: ни солнца, ни неба.
     pub fn is_end(&self) -> bool {
         self.kind == WorldKind::End

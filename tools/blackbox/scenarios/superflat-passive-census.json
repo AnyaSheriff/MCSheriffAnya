@@ -1,0 +1,249 @@
+{
+  "name": "superflat-passive-census",
+  "about": "[проверить] Run on fresh isolated 26.1.2 flat saves. Spectator enters a fresh area with spawning enabled: initial animals must be zero (no chunk-generation herds). Then create a common elevated grass pad and count periodic plains animals at 400-tick intervals. Counts are statistical; repeat on fresh areas/seeds. Pad height is deliberately identical because our flat ground is Y=0, vanilla Y=-61. Scoreboard text is the authoritative count, including animals outside tracker range. Requires no other non-spectator players; restore previous gamerules manually if different.",
+  "origin": [
+    1048576,
+    80,
+    1048576
+  ],
+  "exclusive": true,
+  "track_mobs": true,
+  "blocks": [],
+  "setup": [
+    "gamerule spawn_mobs false",
+    "gamemode spectator $(bot)",
+    "scoreboard objectives add flat_animals dummy",
+    "time set noon",
+    "weather clear"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "gamerule spawn_mobs true"
+    },
+    {
+      "after": 1,
+      "cmd": "tp $(bot) $(1024,0,0)"
+    },
+    {
+      "after": 30,
+      "cmd": "scoreboard players set #initial flat_animals 0"
+    },
+    {
+      "after": 31,
+      "cmd": "execute as @e[type=sheep,distance=..192] run scoreboard players add #initial flat_animals 1"
+    },
+    {
+      "after": 32,
+      "cmd": "execute as @e[type=pig,distance=..192] run scoreboard players add #initial flat_animals 1"
+    },
+    {
+      "after": 33,
+      "cmd": "execute as @e[type=chicken,distance=..192] run scoreboard players add #initial flat_animals 1"
+    },
+    {
+      "after": 34,
+      "cmd": "execute as @e[type=cow,distance=..192] run scoreboard players add #initial flat_animals 1"
+    },
+    {
+      "after": 35,
+      "cmd": "execute as @e[type=horse,distance=..192] run scoreboard players add #initial flat_animals 1"
+    },
+    {
+      "after": 36,
+      "cmd": "execute as @e[type=donkey,distance=..192] run scoreboard players add #initial flat_animals 1"
+    },
+    {
+      "after": 38,
+      "cmd": "scoreboard players get #initial flat_animals"
+    },
+    {
+      "after": 45,
+      "cmd": "gamerule spawn_mobs false"
+    },
+    {
+      "after": 46,
+      "cmd": "kill @e[type=sheep,distance=..192]"
+    },
+    {
+      "after": 47,
+      "cmd": "kill @e[type=pig,distance=..192]"
+    },
+    {
+      "after": 48,
+      "cmd": "kill @e[type=chicken,distance=..192]"
+    },
+    {
+      "after": 49,
+      "cmd": "kill @e[type=cow,distance=..192]"
+    },
+    {
+      "after": 50,
+      "cmd": "kill @e[type=horse,distance=..192]"
+    },
+    {
+      "after": 51,
+      "cmd": "kill @e[type=donkey,distance=..192]"
+    },
+    {
+      "after": 55,
+      "cmd": "tp $(bot) $(0,0,0)"
+    },
+    {
+      "after": 56,
+      "cmd": "fill $(-48,-1,-48) $(48,-1,48) minecraft:grass_block"
+    },
+    {
+      "after": 57,
+      "cmd": "gamemode creative $(bot)"
+    },
+    {
+      "after": 60,
+      "cmd": "gamerule spawn_mobs true"
+    },
+    {
+      "after": 460,
+      "cmd": "scoreboard players set #cycle460 flat_animals 0"
+    },
+    {
+      "after": 461,
+      "cmd": "execute as @e[type=sheep,distance=..192] run scoreboard players add #cycle460 flat_animals 1"
+    },
+    {
+      "after": 462,
+      "cmd": "execute as @e[type=pig,distance=..192] run scoreboard players add #cycle460 flat_animals 1"
+    },
+    {
+      "after": 463,
+      "cmd": "execute as @e[type=chicken,distance=..192] run scoreboard players add #cycle460 flat_animals 1"
+    },
+    {
+      "after": 464,
+      "cmd": "execute as @e[type=cow,distance=..192] run scoreboard players add #cycle460 flat_animals 1"
+    },
+    {
+      "after": 465,
+      "cmd": "execute as @e[type=horse,distance=..192] run scoreboard players add #cycle460 flat_animals 1"
+    },
+    {
+      "after": 466,
+      "cmd": "execute as @e[type=donkey,distance=..192] run scoreboard players add #cycle460 flat_animals 1"
+    },
+    {
+      "after": 468,
+      "cmd": "scoreboard players get #cycle460 flat_animals"
+    },
+    {
+      "after": 860,
+      "cmd": "scoreboard players set #cycle860 flat_animals 0"
+    },
+    {
+      "after": 861,
+      "cmd": "execute as @e[type=sheep,distance=..192] run scoreboard players add #cycle860 flat_animals 1"
+    },
+    {
+      "after": 862,
+      "cmd": "execute as @e[type=pig,distance=..192] run scoreboard players add #cycle860 flat_animals 1"
+    },
+    {
+      "after": 863,
+      "cmd": "execute as @e[type=chicken,distance=..192] run scoreboard players add #cycle860 flat_animals 1"
+    },
+    {
+      "after": 864,
+      "cmd": "execute as @e[type=cow,distance=..192] run scoreboard players add #cycle860 flat_animals 1"
+    },
+    {
+      "after": 865,
+      "cmd": "execute as @e[type=horse,distance=..192] run scoreboard players add #cycle860 flat_animals 1"
+    },
+    {
+      "after": 866,
+      "cmd": "execute as @e[type=donkey,distance=..192] run scoreboard players add #cycle860 flat_animals 1"
+    },
+    {
+      "after": 868,
+      "cmd": "scoreboard players get #cycle860 flat_animals"
+    },
+    {
+      "after": 1660,
+      "cmd": "scoreboard players set #cycle1660 flat_animals 0"
+    },
+    {
+      "after": 1661,
+      "cmd": "execute as @e[type=sheep,distance=..192] run scoreboard players add #cycle1660 flat_animals 1"
+    },
+    {
+      "after": 1662,
+      "cmd": "execute as @e[type=pig,distance=..192] run scoreboard players add #cycle1660 flat_animals 1"
+    },
+    {
+      "after": 1663,
+      "cmd": "execute as @e[type=chicken,distance=..192] run scoreboard players add #cycle1660 flat_animals 1"
+    },
+    {
+      "after": 1664,
+      "cmd": "execute as @e[type=cow,distance=..192] run scoreboard players add #cycle1660 flat_animals 1"
+    },
+    {
+      "after": 1665,
+      "cmd": "execute as @e[type=horse,distance=..192] run scoreboard players add #cycle1660 flat_animals 1"
+    },
+    {
+      "after": 1666,
+      "cmd": "execute as @e[type=donkey,distance=..192] run scoreboard players add #cycle1660 flat_animals 1"
+    },
+    {
+      "after": 1668,
+      "cmd": "scoreboard players get #cycle1660 flat_animals"
+    },
+    {
+      "after": 3260,
+      "cmd": "scoreboard players set #cycle3260 flat_animals 0"
+    },
+    {
+      "after": 3261,
+      "cmd": "execute as @e[type=sheep,distance=..192] run scoreboard players add #cycle3260 flat_animals 1"
+    },
+    {
+      "after": 3262,
+      "cmd": "execute as @e[type=pig,distance=..192] run scoreboard players add #cycle3260 flat_animals 1"
+    },
+    {
+      "after": 3263,
+      "cmd": "execute as @e[type=chicken,distance=..192] run scoreboard players add #cycle3260 flat_animals 1"
+    },
+    {
+      "after": 3264,
+      "cmd": "execute as @e[type=cow,distance=..192] run scoreboard players add #cycle3260 flat_animals 1"
+    },
+    {
+      "after": 3265,
+      "cmd": "execute as @e[type=horse,distance=..192] run scoreboard players add #cycle3260 flat_animals 1"
+    },
+    {
+      "after": 3266,
+      "cmd": "execute as @e[type=donkey,distance=..192] run scoreboard players add #cycle3260 flat_animals 1"
+    },
+    {
+      "after": 3268,
+      "cmd": "scoreboard players get #cycle3260 flat_animals"
+    }
+  ],
+  "record_ticks": 3280,
+  "cleanup": [
+    "gamerule spawn_mobs false",
+    "kill @e[type=sheep,distance=..192]",
+    "kill @e[type=pig,distance=..192]",
+    "kill @e[type=chicken,distance=..192]",
+    "kill @e[type=cow,distance=..192]",
+    "kill @e[type=horse,distance=..192]",
+    "kill @e[type=donkey,distance=..192]",
+    "kill @e[type=item,distance=..192]",
+    "kill @e[type=experience_orb,distance=..192]",
+    "fill $(-48,-1,-48) $(48,-1,48) minecraft:air",
+    "scoreboard objectives remove flat_animals",
+    "gamemode creative $(bot)",
+    "clear $(bot)"
+  ]
+}

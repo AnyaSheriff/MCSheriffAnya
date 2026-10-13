@@ -1,0 +1,61 @@
+{
+  "name": "fall-mode-teleport-motion",
+  "about": "[проверить] Same 26.1.2 fall/mode/teleport cases with exact client movement packets. Resolve the creative-to-survival landing tick and -1.195 versus -0.078 velocity without guessing from output-only recordings.",
+  "blocks": [],
+  "track_self": true,
+  "exclusive": true,
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode creative $(bot)",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "fill $(-2,-1,-2) $(7,-1,7) stone",
+    "fill $(-2,0,-2) $(7,16,7) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "effect give $(bot) instant_health 1 10",
+    "!stopfly",
+    "!wait 20"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "tp $(bot) $(3.5,12,3.5)"
+    },
+    {
+      "after": 12,
+      "cmd": "gamemode survival $(bot)"
+    },
+    {
+      "after": 45,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 60,
+      "cmd": "tp $(bot) $(3.5,12,3.5)"
+    },
+    {
+      "after": 72,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 100,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 120,
+      "cmd": "tp $(bot) $(3.5,6,3.5)"
+    }
+  ],
+  "record_ticks": 160,
+  "cleanup": [
+    "gamemode creative $(bot)",
+    "effect clear $(bot)",
+    "effect give $(bot) instant_health 1 10",
+    "gamerule natural_health_regeneration true",
+    "difficulty peaceful",
+    "fill $(-2,-1,-2) $(7,16,7) air",
+    "!startfly"
+  ],
+  "track_client_moves": true
+}

@@ -219,6 +219,8 @@ pub(super) struct Net {
     /// под ногами и число.
     /// Третье поле — широкий разброс 0,3 (приземление после булавы).
     pub landings: Vec<(i32, i32, bool)>,
+    /// sign-edit: звук /give у получателя следует за появлением вещи в том же такте.
+    pub give_sounds: Vec<((f64, f64, f64), f32)>,
     /// Опыт, который должен появиться шариками (добытая руда): место и очки.
     pub new_orbs: Vec<((f64, f64, f64), i32)>,
     /// Очки, подобранные шариками за этот такт: прибавятся в `orbs_tick`.
@@ -348,6 +350,7 @@ impl Net {
             announced: false,
             announced_health: None,
             landings: Vec::new(),
+            give_sounds: Vec::new(),
             new_orbs: Vec::new(),
             xp_taken: Vec::new(),
             sent_health: survival::MAX_HEALTH,
@@ -408,7 +411,7 @@ impl Net {
         net.sent_saturation_zero = vit.saturation == 0.0;
         net.meta.health = vit.health;
         net.meta.air = vit.air;
-        net.meta.score = vit.xp;
+        net.meta.score = vit.xp_total;
 
         net
     }
@@ -648,18 +651,25 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool
 /// Смена режима общая для своей команды и поручения другого игрока.
 pub(super) fn change_game_mode(player: &mut PlayerState, mode: i32) {
     if player.game_mode != mode {
-        // itemaudit4-knockback: накопленное в creative падение не должно
-        // ранить после survival. Вики, Damage: «Creative mode»; крит в
-        // самом creative по-прежнему использует fall (cow-crit-fist-creative).
-        // [проверить] отдельным зондом смены режима посреди падения.
-        if !mortal(player.game_mode) || !mortal(mode) {
-            player.vit.fall = 0.0;
-            player.vit.smash_forgives = false;
-        }
+        // fall-mode-teleport-reset, 26.1.2: creative → survival сохраняет
+        // пролёт целиком (12 блоков дают урон 9, а не 5).
         player.prev_mode = player.game_mode;
         player.game_mode = mode;
     }
     player.creative_flying = false;
+}
+
+/// fall-mode-teleport-reset: Abilities, Game Event, снова Abilities; дальность
+/// взаимодействия повторяется через два такта после команды.
+pub(super) async fn game_mode_order(stream: &mut Outgoing<'_>, player: &mut PlayerState, mode: i32, now: u64) -> io::Result<()> {
+    change_game_mode(player, mode);
+    send_abilities(stream, mode).await?;
+    send_game_event_game_mode(stream, mode).await?;
+    send_abilities(stream, mode).await?;
+    for attribute in [crate::attributes::BLOCK_INTERACTION_RANGE, crate::attributes::ENTITY_INTERACTION_RANGE] {
+        player.attrs_touched.push((attribute, now + 2));
+    }
+    Ok(())
 }
 
 /// Пакет движения от клиента: прыжок, бег по земле и приземление.
@@ -680,7 +690,8 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         player.net.prev_ground = on_ground;
         player.net.last_delta = (0.0, 0.0, 0.0);
         player.net.sweep_motion = Default::default();
-        player.vit.fall = 0.0;
+        // fall-mode-teleport-reset: /tp не прибавляет скачок координат,
+        // но сохраняет уже накопленный пролёт (после /tp вниз урон 1).
 
         return;
     }
@@ -757,7 +768,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         // разбросом 0,3 — раньше обычных (чёрный ящик, pvp-mace-wind-burst:
         // `block 200 (0.3…)` и `block 90 (0…)` в одном такте).
         if on_ground && smashed && !env.soft {
-            landing(player, shared, env.below, smash_landing_particles(player.vit.landed_total), true);
+            landing(player, shared, env.below, smash_landing_particles(player.vit.landed_from), true);
         }
 
         if count > 0 {
@@ -767,7 +778,8 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         if let Some(damage) = damage {
             log_debug!("Play: {} приземлился с уроном {} на {:.2} {:.2} {:.2} (шаг {:.3})", player.name, damage, player.x, player.y, player.z, dy);
 
-            player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0, hurt_yaw: None, killer: None, push: None, announced: false });
+            let announced = announce_fall(player, shared, damage, env.below);
+            player.net.hits.push(Pending { amount: damage, source: Source::Fall, direct: 0, hurt_yaw: None, killer: None, push: None, announced });
         }
     } else if player.game_mode == GAME_MODE_CREATIVE && !player.vit.dead {
         // Творческий: урона от падения нет, но высота падения копится — от неё
@@ -787,6 +799,31 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
     player.net.prev_ground = on_ground;
     player.net.last_delta = (dx, dy, dz);
     player.net.sweep_motion.moved(*shared.ticks.borrow(), dx, dz);
+}
+
+/// pvp-mace-landing-count: наблюдателю в такт приземления идут small_fall,
+/// stone.fall, Damage Event, hurt и здоровье. Самому звуки не посылаются.
+fn announce_fall(player: &mut PlayerState, shared: &Shared, amount: f32, below: i32) -> bool {
+    let points: i32 = crate::combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| player.inventory.slot(*slot))
+        .map(|stack| crate::combat::protection_points(&stack.extras(), Source::Fall)).sum();
+    let amount_after_armor = crate::combat::mitigated_damage(amount, 0.0, 0.0, points, Source::Fall, 1.0);
+    let mut probe = player.vit.clone();
+    let Some(hit) = probe.hurt(amount_after_armor, Source::Fall, !mortal(player.game_mode)) else { return false; };
+    // Смерть/тотем имеют свою публикацию в hit_by; здесь только обычный ушиб.
+    if hit.died { return false; }
+    let at = (player.x, player.y, player.z);
+    let mut world = shared.world_in(player.dimension).lock().expect("мир");
+    let sound = if amount > 4.0 { "minecraft:entity.player.big_fall" } else { "minecraft:entity.player.small_fall" };
+    world.note_sound_player_except(at, sound, 1.0, 1.0, player.entity_id);
+    // Запись сделана на камне; остальные группы звуков блока [проверить].
+    if blocks::block_at_state(below) == Some("stone") {
+        world.note_sound_player_except(at, "minecraft:block.stone.fall", 0.5, 0.75, player.entity_id);
+    }
+    world.note_command_damage(player.entity_id, Source::Fall.type_id(), 0, 0, None);
+    world.note_sound_player_except(at, "minecraft:entity.player.hurt", 1.0, 1.0, player.entity_id);
+    player.net.announced_health = Some(probe.health);
+    shared.players.lock().expect("игроки").set_health(&player.uuid, probe.health);
+    true
 }
 
 /// Шаг вертикальной скорости за такт: воздух — тяжесть 0,08 и сопротивление
@@ -1188,7 +1225,7 @@ pub(super) fn damage_packet(entity_id: i32, source: Source, direct: i32, cause: 
 }
 
 /// Звук в точке: раздел, громкость, высота.
-async fn send_sound_at(
+pub(super) async fn send_sound_at(
     stream: &mut Outgoing<'_>,
     name: &str,
     category: i32,
@@ -1212,12 +1249,12 @@ async fn send_sound_at(
     write_body(stream, body).await
 }
 
-/// Сколько частиц блока даёт приземление после сокрушающего удара сверх
-/// обычных: 42 на блок пролёта, не больше 200 (чёрный ящик: пролёт 2,5 —
-/// 105, пролёт ~9 с «порывом ветра» — 200; две точки, формула подогнана
-/// [проверить]).
-fn smash_landing_particles(fall: f32) -> i32 {
-    ((fall * 42.0).round() as i32).clamp(0, 200)
+/// pvp-mace-landing-count, 26.1.2: 105, 167, 200, 200. Для пролётов
+/// до последнего шага 2,10955; 3,34627; 4,06335; 4,84448 это floor(50h),
+/// предел 200. [проверить] Промежуточные высоты и фаза движения после удара:
+/// зонд pvp-mace-landing-motion пишет несокращённую траекторию клиента.
+fn smash_landing_particles(before: f32) -> i32 {
+    ((before * 50.0) as i32).clamp(0, 200)
 }
 
 fn landing(player: &mut PlayerState, shared: &Shared, block: i32, count: i32, wide: bool) {
@@ -1271,7 +1308,7 @@ pub(super) async fn send_experience(stream: &mut Outgoing<'_>, vit: &Vitals) -> 
 
     push_f32(&mut body, bar);
     body.extend_from_slice(&encode_varint(level));
-    body.extend_from_slice(&encode_varint(vit.xp));
+    body.extend_from_slice(&encode_varint(vit.xp_total));
 
     write_body(stream, body).await
 }
@@ -1448,6 +1485,9 @@ async fn sync_attributes(stream: &mut Outgoing<'_>, player: &mut PlayerState, no
 
     // Изменённое предметами уходит через два такта после смены (чёрный
     // ящик, pvp-armor: атрибуты брони после износа — на +2).
+    // itemaudit4-knockback / anvil-rename-repair: бывает +1; прежние
+    // pvp-mace-записи отмечают фазу слежения +1/+2. [проверить] зондом
+    // itemaudit4-knockback-phase, прежде чем менять задержку всему бою.
     let (due, waiting): (Vec<_>, Vec<_>) = std::mem::take(&mut player.attrs_touched).into_iter().partition(|(_, due)| *due <= now);
     let touched: Vec<i32> = due.iter().map(|(attribute, _)| *attribute).collect();
     let skip: Vec<i32> = waiting.iter().map(|(attribute, _)| *attribute).collect();
@@ -2324,7 +2364,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     }
 
     let now = Meta {
-        score: player.vit.xp,
+        score: player.vit.xp_total,
         arrows: player.net.arrows,
         stingers: player.net.stingers,
         health: player.vit.health,
@@ -3098,6 +3138,22 @@ pub(super) async fn clear_effects(stream: &mut Outgoing<'_>, player: &mut Player
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn smash_particle_counts_follow_pre_landing_descent() {
+        // pvp-mace-landing-count: дискретный пролёт до касания, не высота /tp.
+        let mut speed = 0.0f64;
+        let mut before = 0.0f32;
+        for step in 1..=12 {
+            before -= speed as f32;
+            speed = (speed - 0.08) * 0.98;
+            let expected = match step { 8 => Some(105), 10 => Some(167), 11 | 12 => Some(200), _ => None };
+            if let Some(expected) = expected { assert_eq!(smash_landing_particles(before), expected); }
+        }
+        assert_eq!(smash_landing_particles(0.0), 0);
+        assert_eq!(smash_landing_particles(3.999), 199);
+        assert_eq!(smash_landing_particles(4.0), 200);
+    }
 
     #[test]
     fn honey_drinks_at_full_food_for_forty_ticks() {

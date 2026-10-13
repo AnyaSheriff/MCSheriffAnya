@@ -89,7 +89,10 @@ fn reported_entire_plains_village_has_supported_streets_and_floors() {
 fn desert_village_has_supported_streets_and_floors() {
     let seed = 42;
     let terrain = Terrain::new(seed, Style::Vanilla);
-    let (sx, sz) = nearest(&terrain, Kind::Desert, 0, 0, 12).unwrap();
+    // После расширения пустынь ближайшую к нулю деревню (-22,87)
+    // пересекает пирамида (-26,86), чья комната намеренно вырезает дом.
+    // Для проверки опоры выбираем отдельную деревню без этого пересечения.
+    let (sx, sz) = nearest(&terrain, Kind::Desert, -128, 0, 12).unwrap();
     check_village(seed, Kind::Desert, sx, sz);
 }
 

@@ -107,7 +107,7 @@ impl Area<'_> {
     /// дотягивается конусный айсберг. Температура меняется медленно, и
     /// запаса в 0,1 от границы самого холодного уровня хватает с лихвой.
     fn cold(&self) -> bool {
-        self.columns.iter().any(|column| column.climate.temperature < FROZEN_BELOW + 0.1)
+        self.columns.iter().any(|column| frozen_sea(column.biome) || column.climate.temperature < FROZEN_BELOW + 0.1)
     }
 }
 
@@ -435,7 +435,8 @@ fn large_icebergs(area: &Area, chunk: &mut Chunk, blocks: &Palette) {
 
             // У края холода айсберги сходят на нет, а не обрываются стеной
             // на границе с тёплым океаном.
-            let chill = ((FROZEN_BELOW - column.climate.temperature) / BERG_FADE).clamp(0.0, 1.0);
+            let temperature = area.terrain.surface_temperature_at(area.chunk_x * CHUNK_SIZE + local_x, area.chunk_z * CHUNK_SIZE + local_z);
+            let chill = ((FROZEN_BELOW - temperature) / BERG_FADE).clamp(0.0, 1.0);
             let surface = chunk.block(local_x, SEA, local_z);
 
             if surface != blocks.water && surface != blocks.ice {

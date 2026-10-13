@@ -746,15 +746,25 @@ mod tests {
         let seed = 1_791_716_133_710_533_940;
         let terrain = Terrain::new(seed, Style::Vanilla);
         let smooth = Terrain::new(seed, Style::Smooth);
-        // Кэш двух типов мира с одинаковым семенем не должен смешиваться.
-        let _ = start_in(Kind::SwampHut, &smooth, -1, 0);
-        let start = start_in(Kind::SwampHut, &terrain, -1, 0).unwrap();
+        // После настройки биомов прежняя точка перестала быть болотом.
+        // Ищем тот же случай ошибки высоты, не привязываясь к биому точки.
+        let (rx, rz, _) = (-32..32).flat_map(|rx| (-32..32).map(move |rz| (rx,rz)))
+            .find_map(|(rx,rz)| {
+                let start = start_in(Kind::SwampHut, &terrain, rx, rz)?;
+                let [x0,z0,x1,z1] = start.area();
+                let wrong = terrain.column_in((x0+x1)/2,(z0+z1)/2,None).height;
+                let flat = (x0..=x1).all(|x| (z0..=z1).all(|z| {
+                    (1..=4).contains(&(start.y+1-terrain.column_at(x,z).height.max(SEA)))
+                }));
+                ((63..=66).contains(&start.y) && wrong-start.y>=10 && flat).then_some((rx,rz,start))
+            }).expect("болотная хижина с расхождением приближённой и настоящей высоты");
+        let _ = start_in(Kind::SwampHut, &smooth, rx, rz);
+        let start = start_in(Kind::SwampHut, &terrain, rx, rz).unwrap();
         let [x0, z0, x1, z1] = start.area();
-        assert!((x0 + 176).abs() < 32 && (z0 - 340).abs() < 32, "{start:?}");
         assert!((63..=66).contains(&start.y), "base {}", start.y);
         let wrong = terrain.column_in((x0 + x1) / 2, (z0 + z1) / 2, None).height;
         assert!(wrong - start.y >= 10, "old {wrong} / new {}", start.y);
-        assert_eq!(decide(Kind::SwampHut, &terrain, -1, 0).unwrap().y, start.y);
+        assert_eq!(decide(Kind::SwampHut, &terrain, rx, rz).unwrap().y, start.y);
         let generator = Generator::Normal(Terrain::new(seed, Style::Vanilla));
         let mut legs = 0;
         let mut floor = 0;

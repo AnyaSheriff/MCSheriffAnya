@@ -1,0 +1,83 @@
+{
+  "name": "itemaudit4-knockback-phase",
+  "about": "[проверить] 26.1.2 attacker attribute tracker phase: identical durability changes at both odd/even intervals. Compare repeated vanilla recordings; no fixed one-tick delay assumed.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(-4,-1,-4) $(6,-1,6) stone",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!hotbar 0",
+    "give $(bot) wooden_sword[enchantments={\"minecraft:knockback\":3}]",
+    "gamemode survival $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "kill @e[type=cow,tag=itemaudit4,distance=..32]"
+    },
+    {
+      "after": 1,
+      "cmd": "summon cow $(3.5,0,1.5) {NoAI:1b,Tags:[\"itemaudit4\"]}"
+    },
+    {
+      "after": 15,
+      "attack": true
+    },
+    {
+      "after": 41,
+      "cmd": "kill @e[type=cow,tag=itemaudit4,distance=..32]"
+    },
+    {
+      "after": 42,
+      "cmd": "summon cow $(3.5,0,1.5) {NoAI:1b,Tags:[\"itemaudit4\"]}"
+    },
+    {
+      "after": 56,
+      "attack": true
+    },
+    {
+      "after": 83,
+      "cmd": "kill @e[type=cow,tag=itemaudit4,distance=..32]"
+    },
+    {
+      "after": 84,
+      "cmd": "summon cow $(3.5,0,1.5) {NoAI:1b,Tags:[\"itemaudit4\"]}"
+    },
+    {
+      "after": 98,
+      "attack": true
+    },
+    {
+      "after": 124,
+      "cmd": "kill @e[type=cow,tag=itemaudit4,distance=..32]"
+    },
+    {
+      "after": 125,
+      "cmd": "summon cow $(3.5,0,1.5) {NoAI:1b,Tags:[\"itemaudit4\"]}"
+    },
+    {
+      "after": 139,
+      "attack": true
+    }
+  ],
+  "record_ticks": 180,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "kill @e[tag=itemaudit4,distance=..32]",
+    "kill @e[type=item,distance=..32]",
+    "fill $(-4,0,-4) $(6,6,6) air",
+    "difficulty peaceful",
+    "fill $(-4,-1,-4) $(6,6,6) air"
+  ],
+  "track_self": true,
+  "track_mobs": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true
+}

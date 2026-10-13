@@ -1345,9 +1345,14 @@ fn position_body(player: &mut PlayerState, sync: Sync) -> Vec<u8> {
     player.awaiting_teleport = true;
     player.moved_since_tp = false;
 
-    // Перенос обнуляет падение: скачок места не высота падения.
-    player.vit.fall = 0.0;
+    // fall-mode-teleport-reset, 26.1.2: /tp сохраняет накопленный пролёт;
+    // сам скачок координат отсекает net.teleported в vitals::moved.
+    // Жемчуг же пролёт обнуляет: его урон заменяет урон падения
+    // (throw2-ender_pearl-*: после переноса падение не считается).
     player.net.teleported = true;
+    if matches!(sync, Sync::Pearl) {
+        player.vit.fall = 0.0;
+    }
 
     body.extend_from_slice(&encode_varint(player.teleport));
     push_f64(&mut body, player.x); // X
@@ -6646,9 +6651,8 @@ async fn read_and_log_play_packets(
                 // консоли): клиенту нужен Game Event «смена режима», строка
                 // в списке игроков — тоже.
                 Order::GameMode { mode } => {
-                    vitals::change_game_mode(player, mode);
-                    send_game_event_game_mode(stream, mode).await?;
-                    send_abilities(stream, mode).await?;
+                    let now = *shared.ticks.borrow();
+                    vitals::game_mode_order(stream, player, mode, now).await?;
                     send_game_mode(stream, &player.uuid, mode).await?;
                     player.save(&shared.playerdata);
                 }
@@ -6754,6 +6758,8 @@ async fn read_and_log_play_packets(
         )
         .await?;
         send_item_moves(stream, shared, player.dimension, &mut seen_items).await?;
+
+        give::send_sounds(stream, player).await?;
 
         match ready {
             // Клиент молчит — на этом круге Keep Alive уже отправлен выше.
@@ -12063,7 +12069,7 @@ mod tests {
             pitch: 0.0,
             game_mode: 0,
             dimension: Default::default(),
-            vitals: crate::playerdata::SavedVitals { health: 6.0, food: 11, saturation: 2.0, exhaustion: 1.5, air: 200, fire: 80, fall: 0.0, experience: 21, xp_seed: 5 },
+            vitals: crate::playerdata::SavedVitals { health: 6.0, food: 11, saturation: 2.0, exhaustion: 1.5, air: 200, fire: 80, fall: 0.0, experience: 21, experience_total: 21, xp_seed: 5 },
             respawn: None,
             ender: playerdata::empty_ender(),
         };

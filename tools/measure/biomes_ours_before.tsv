@@ -1,0 +1,263 @@
+
+running 1 test
+meta	layout	reference	step	4	height_step	32	seeds	[100554032945340, 42, 1, 1234567890]
+seed	100554032945340	786432	0.600945	0.217354
+monument	100554032945340	1024	96	82	0.080078
+seed	42	786432	0.586870	0.193007
+monument	42	1024	104	92	0.089844
+seed	1	786432	0.446518	0.060351
+monument	1	1024	92	77	0.075195
+seed	1234567890	786432	0.218633	0.035235
+monument	1234567890	1024	122	110	0.107422
+total	3145728
+share	badlands	0.003317
+land_share	badlands	0.006179
+share	bamboo_jungle	0.011902
+land_share	bamboo_jungle	0.022174
+share	beach	0.005651
+land_share	beach	0.010528
+share	birch_forest	0.016628
+land_share	birch_forest	0.030978
+share	cherry_grove	0.002615
+land_share	cherry_grove	0.004872
+share	cold_ocean	0.042983
+share	dark_forest	0.030169
+land_share	dark_forest	0.056205
+share	deep_cold_ocean	0.026394
+share	deep_frozen_ocean	0.056252
+share	deep_lukewarm_ocean	0.025882
+share	deep_ocean	0.017958
+share	desert	0.012804
+land_share	desert	0.023854
+share	eroded_badlands	0.001692
+land_share	eroded_badlands	0.003152
+share	flower_forest	0.005896
+land_share	flower_forest	0.010985
+share	forest	0.068628
+land_share	forest	0.127856
+share	frozen_ocean	0.076442
+share	frozen_peaks	0.008705
+land_share	frozen_peaks	0.016217
+share	frozen_river	0.001979
+land_share	frozen_river	0.003687
+share	grove	0.020739
+land_share	grove	0.038638
+share	ice_spikes	0.003073
+land_share	ice_spikes	0.005725
+share	jagged_peaks	0.009803
+land_share	jagged_peaks	0.018263
+share	jungle	0.025603
+land_share	jungle	0.047699
+share	lukewarm_ocean	0.065166
+share	mangrove_swamp	0.011629
+land_share	mangrove_swamp	0.021666
+share	meadow	0.015981
+land_share	meadow	0.029773
+share	ocean	0.028997
+share	old_growth_birch_forest	0.015337
+land_share	old_growth_birch_forest	0.028574
+share	old_growth_pine_taiga	0.015178
+land_share	old_growth_pine_taiga	0.028277
+share	old_growth_spruce_taiga	0.010534
+land_share	old_growth_spruce_taiga	0.019625
+share	pale_garden	0.004465
+land_share	pale_garden	0.008318
+share	plains	0.058904
+land_share	plains	0.109741
+share	river	0.017766
+land_share	river	0.033099
+share	savanna	0.019182
+land_share	savanna	0.035737
+share	savanna_plateau	0.005243
+land_share	savanna_plateau	0.009767
+share	snowy_beach	0.000683
+land_share	snowy_beach	0.001273
+share	snowy_plains	0.014142
+land_share	snowy_plains	0.026348
+share	snowy_slopes	0.010868
+land_share	snowy_slopes	0.020248
+share	snowy_taiga	0.010871
+land_share	snowy_taiga	0.020252
+share	sparse_jungle	0.009024
+land_share	sparse_jungle	0.016812
+share	stony_peaks	0.005391
+land_share	stony_peaks	0.010043
+share	stony_shore	0.004972
+land_share	stony_shore	0.009263
+share	sunflower_plains	0.005684
+land_share	sunflower_plains	0.010590
+share	swamp	0.033611
+land_share	swamp	0.062619
+share	taiga	0.024317
+land_share	taiga	0.045303
+share	warm_ocean	0.123166
+share	windswept_forest	0.004129
+land_share	windswept_forest	0.007693
+share	windswept_gravelly_hills	0.000855
+land_share	windswept_gravelly_hills	0.001594
+share	windswept_hills	0.002179
+land_share	windswept_hills	0.004059
+share	windswept_savanna	0.000959
+land_share	windswept_savanna	0.001786
+share	wooded_badlands	0.005651
+land_share	wooded_badlands	0.010528
+summary	ocean	0.463241	deep	0.126487	land	0.536759
+height	badlands	62	69	77	112	147	153
+height	bamboo_jungle	62	65	69	76	91	611
+height	beach	56	59	61	63	65	277
+height	birch_forest	63	67	71	79	104	838
+height	cherry_grove	82	92	106	123	133	119
+height	cold_ocean	38	42	47	52	58	2076
+height	dark_forest	62	67	70	75	90	1481
+height	deep_cold_ocean	33	37	40	43	49	1296
+height	deep_frozen_ocean	33	38	41	45	50	2804
+height	deep_lukewarm_ocean	33	36	40	44	51	1266
+height	deep_ocean	33	37	39	44	50	882
+height	desert	62	65	67	72	78	632
+height	eroded_badlands	62	70	83	133	159	89
+height	flower_forest	62	66	69	75	87	280
+height	forest	62	67	72	81	126	3423
+height	frozen_ocean	38	43	48	53	59	3772
+height	frozen_peaks	125	135	143	152	164	428
+height	frozen_river	49	53	56	59	64	97
+height	grove	73	103	126	141	154	1015
+height	ice_spikes	60	66	69	77	116	148
+height	jagged_peaks	123	136	146	156	166	499
+height	jungle	63	67	74	91	130	1243
+height	lukewarm_ocean	39	44	49	54	58	3193
+height	mangrove_swamp	57	61	63	64	67	570
+height	meadow	81	94	109	124	137	808
+height	ocean	38	42	47	53	59	1405
+height	old_growth_birch_forest	62	66	69	74	85	762
+height	old_growth_pine_taiga	62	67	72	80	118	723
+height	old_growth_spruce_taiga	63	67	71	78	113	505
+height	pale_garden	82	99	112	124	137	209
+height	plains	62	65	68	74	88	2882
+height	river	49	53	56	60	64	853
+height	savanna	62	65	69	75	91	974
+height	savanna_plateau	87	105	122	136	152	263
+height	snowy_beach	56	58	61	63	64	34
+height	snowy_plains	63	67	73	83	128	695
+height	snowy_slopes	66	74	94	128	149	531
+height	snowy_taiga	63	66	70	82	122	543
+height	sparse_jungle	62	66	70	76	90	449
+height	stony_peaks	121	131	141	150	162	266
+height	stony_shore	56	60	63	67	74	226
+height	sunflower_plains	62	65	68	72	94	281
+height	swamp	56	60	61	63	68	1672
+height	taiga	62	66	70	76	106	1206
+height	warm_ocean	35	41	47	52	58	6003
+height	windswept_forest	69	75	82	87	93	203
+height	windswept_gravelly_hills	68	75	80	83	89	48
+height	windswept_hills	68	75	81	88	92	99
+height	windswept_savanna	58	64	69	73	82	48
+height	wooded_badlands	62	66	71	86	115	272
+height_group	deep	33	37	40	44	50	6248
+height_group	land	59	65	70	84	139	26455
+height_group	shallow	37	42	47	53	58	16449
+patch	all_oceans	55	8550	53231	220849	0.000
+patch_area	all_oceans	854080	3533584
+patch	badlands	17	216	780	3720	0.235
+patch_area	badlands	58400	59520
+patch	bamboo_jungle	60	85	2339	4446	0.183
+patch_area	bamboo_jungle	41568	71136
+patch	beach	237	37	201	768	0.253
+patch_area	beach	2848	7920
+patch	birch_forest	149	68	694	9340	0.228
+patch_area	birch_forest	21056	149440
+patch	cherry_grove	40	29	557	1677	0.275
+patch_area	cherry_grove	14400	26832
+patch	cold_ocean	88	402	4351	16283	0.159
+patch_area	cold_ocean	78160	260528
+patch	dark_forest	136	103	1742	10174	0.199
+patch_area	dark_forest	54864	162784
+patch	deep_cold_ocean	30	487	5525	29813	0.100
+patch_area	deep_cold_ocean	400112	477008
+patch	deep_frozen_ocean	15	1163	38979	53669	0.067
+patch_area	deep_frozen_ocean	663488	858704
+patch	deep_lukewarm_ocean	31	656	6359	17550	0.097
+patch_area	deep_lukewarm_ocean	195104	280800
+patch	deep_ocean	25	498	4270	21513	0.120
+patch_area	deep_ocean	70928	344208
+patch	desert	64	90	1410	6623	0.203
+patch_area	desert	51904	105968
+patch	eroded_badlands	8	190	2180	2568	0.125
+patch_area	eroded_badlands	34880	41088
+patch	flower_forest	37	160	1479	3293	0.054
+patch_area	flower_forest	23664	52688
+patch	forest	408	60	1493	13410	0.277
+patch_area	forest	36672	167584
+patch	frozen_ocean	46	754	8945	83895	0.043
+patch_area	frozen_ocean	442368	1342320
+patch	frozen_peaks	44	125	1457	4802	0.159
+patch_area	frozen_peaks	23312	76832
+patch	frozen_river	54	53	320	523	0.315
+patch_area	frozen_river	4992	7824
+patch	grove	168	149	923	7283	0.173
+patch_area	grove	15152	116528
+patch	ice_spikes	21	62	1217	4256	0.238
+patch_area	ice_spikes	32608	68096
+patch	jagged_peaks	27	380	3285	5912	0.074
+patch_area	jagged_peaks	52560	94592
+patch	jungle	102	111	2436	8063	0.206
+patch_area	jungle	47280	129008
+patch	lukewarm_ocean	73	762	8780	23111	0.082
+patch_area	lukewarm_ocean	140480	369776
+patch	mangrove_swamp	42	97	1643	13421	0.262
+patch_area	mangrove_swamp	98304	214736
+patch	meadow	139	64	1023	7593	0.216
+patch_area	meadow	27680	121488
+patch	ocean	83	536	2955	10760	0.096
+patch_area	ocean	47280	172160
+patch	old_growth_birch_forest	109	176	1259	3878	0.165
+patch_area	old_growth_birch_forest	18912	46752
+patch	old_growth_pine_taiga	57	83	1538	11028	0.386
+patch_area	old_growth_pine_taiga	83024	176448
+patch	old_growth_spruce_taiga	69	77	1411	5950	0.290
+patch_area	old_growth_spruce_taiga	27280	95200
+patch	pale_garden	58	73	475	3449	0.190
+patch_area	pale_garden	8240	55184
+patch	plains	327	75	1735	11805	0.266
+patch_area	plains	38496	114352
+patch	river	303	77	486	2701	0.191
+patch_area	river	7648	22064
+patch	savanna	103	120	1501	7040	0.204
+patch_area	savanna	42640	112640
+patch	savanna_plateau	47	53	961	3779	0.255
+patch_area	savanna_plateau	16688	60464
+patch	snowy_beach	32	42	136	347	0.219
+patch_area	snowy_beach	2176	5552
+patch	snowy_plains	90	55	1000	14121	0.289
+patch_area	snowy_plains	76560	225936
+patch	snowy_slopes	87	172	1361	3706	0.138
+patch_area	snowy_slopes	22512	59296
+patch	snowy_taiga	69	44	1323	9626	0.275
+patch_area	snowy_taiga	39568	154016
+patch	sparse_jungle	72	60	1028	3914	0.139
+patch_area	sparse_jungle	23072	62624
+patch	stony_peaks	40	138	1197	4215	0.150
+patch_area	stony_peaks	23632	67440
+patch	stony_shore	161	53	278	839	0.255
+patch_area	stony_shore	3200	11680
+patch	sunflower_plains	27	242	1014	5558	0.148
+patch_area	sunflower_plains	40544	88928
+patch	swamp	70	239	4362	21855	0.186
+patch_area	swamp	82160	349680
+patch	taiga	197	59	940	9846	0.284
+patch_area	taiga	21408	157536
+patch	warm_ocean	47	1663	30135	44018	0.043
+patch_area	warm_ocean	482160	704288
+patch	windswept_forest	46	193	600	1739	0.065
+patch_area	windswept_forest	7872	27824
+patch	windswept_gravelly_hills	17	83	209	724	0.235
+patch_area	windswept_gravelly_hills	10192	11584
+patch	windswept_hills	49	61	460	1092	0.122
+patch_area	windswept_hills	8544	17472
+patch	windswept_savanna	34	64	135	845	0.176
+patch_area	windswept_savanna	2160	13520
+patch	wooded_badlands	13	591	2208	6671	0.000
+patch_area	wooded_badlands	49104	106736
+test world::terrain::census::offline_ocean_census ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 1.61s
+

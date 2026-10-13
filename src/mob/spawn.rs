@@ -15,6 +15,7 @@ use super::{Kind, Mob, Rng, View, solid};
 use crate::blocks;
 
 pub mod space;
+pub mod flat;
 #[cfg(test)]
 mod fluid_tests;
 

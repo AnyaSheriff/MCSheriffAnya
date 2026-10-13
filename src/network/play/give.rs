@@ -28,7 +28,12 @@ pub(super) fn give(shared: &Shared, player: &mut PlayerState, stack: Stack, visu
         if left.is_none() {
             let mut world = shared.world_in(player.dimension).lock().expect("мир");
             let pitch = (world.random_unit() - world.random_unit()) * 0.7 + 1.0;
-            world.note_sound_player_at((player.x, player.y, player.z), "minecraft:entity.item.pickup", 0.2, pitch * 2.0);
+            // sign-edit, 26.1.2: появление honeycomb и pickup в одном такте.
+            // Поручение /give может прийти после снимка событий мира; своему
+            // клиенту звук отдаём вместе с появлением, без ожидания снимка.
+            let at = (player.x, player.y, player.z);
+            player.net.give_sounds.push((at, pitch * 2.0));
+            world.note_sound_player_except(at, "minecraft:entity.item.pickup", 0.2, pitch * 2.0, player.entity_id);
         }
     }
     slots.sort_unstable();
@@ -36,9 +41,34 @@ pub(super) fn give(shared: &Shared, player: &mut PlayerState, stack: Stack, visu
     slots
 }
 
+pub(super) async fn send_sounds(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
+    for (at, pitch) in std::mem::take(&mut player.net.give_sounds) {
+        vitals::send_sound_at(stream, "minecraft:entity.item.pickup", 4, at, 0.2, pitch).await?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn pickup_sound_does_not_wait_for_the_next_world_publication() {
+        // sign-edit: появление /give и pickup в одном такте, без повтора.
+        let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(), crate::ops::Ops::open(std::path::Path::new("tmp/give-sound-ops.json")), crate::skins::Settings::default());
+        let mut player = PlayerState::new([19;16], "GiveSound".into(), None, None, 0x7f, 1, (3.5,64.0,2.5));
+        player.entity_id = 19;
+        shared.world_in(player.dimension).lock().unwrap().publish_events();
+        give(&shared, &mut player, Stack::new(blocks::item_named("honeycomb").unwrap(),1), true);
+        let mut out = Outgoing::capture();
+        send_sounds(&mut out, &mut player).await.unwrap();
+        let mut bytes = out.queued();
+        assert_eq!(read_packet(&mut bytes).await.unwrap().id, SOUND_EFFECT);
+        assert!(bytes.is_empty());
+        let mut out = Outgoing::capture();
+        send_sounds(&mut out, &mut player).await.unwrap();
+        assert!(out.queued().is_empty());
+    }
+
     #[test]
     fn give_adds_once_and_shows_pickup_and_overflow_is_owned() {
         let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(), crate::ops::Ops::open(std::path::Path::new("target/give-test-ops.json")), crate::skins::Settings::default());

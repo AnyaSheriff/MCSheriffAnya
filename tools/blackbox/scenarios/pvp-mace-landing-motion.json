@@ -1,0 +1,183 @@
+{
+  "name": "pvp-mace-landing-motion",
+  "about": "[проверить] Follow-up to the fresh 26.1.2 pvp-mace-landing-count recording. Client movement packets and client Y/velocity distinguish pre-landing distance, the last movement segment, smash reset and packet phase. Also covers intermediate hit heights. Do not add timing tolerances before comparing repeated vanilla recordings. Reset attacker effects, safe-fall distance and gravity to remove hidden setup-state ambiguity.",
+  "second": true,
+  "track_self": true,
+  "track_players": true,
+  "exclusive": true,
+  "blocks": [],
+  "track_second": true,
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "gamemode survival $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "effect clear $(bot2)",
+    "attribute $(bot2) minecraft:safe_fall_distance base reset",
+    "attribute $(bot2) minecraft:gravity base reset",
+    "kill $(bot)",
+    "!wait 30",
+    "give $(bot2) minecraft:mace 1",
+    "tp $(bot) $(3.5,0,3.5) 180 0",
+    "tp $(bot2) $(3.5,0,1.5) 0 0",
+    "!stopfly",
+    "!wait 20",
+    "!hotbar2 0",
+    "!hotbar 0",
+    "fill $(-2,-1,-2) $(7,-1,7) stone",
+    "fill $(-2,0,-2) $(7,12,7) air",
+    "attribute $(bot) minecraft:max_health base set 200",
+    "effect give $(bot) instant_health 1 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 0,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 180 0"
+    },
+    {
+      "after": 0,
+      "cmd": "tp $(bot2) $(3.5,4,1.5) 0 0"
+    },
+    {
+      "after": 0,
+      "cmd": "effect give $(bot2) instant_health 1 10"
+    },
+    {
+      "after": 7,
+      "attack": true,
+      "bot": 2
+    },
+    {
+      "after": 60,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 60,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 180 0"
+    },
+    {
+      "after": 60,
+      "cmd": "tp $(bot2) $(3.5,5,1.5) 0 0"
+    },
+    {
+      "after": 60,
+      "cmd": "effect give $(bot2) instant_health 1 10"
+    },
+    {
+      "after": 67,
+      "attack": true,
+      "bot": 2
+    },
+    {
+      "after": 120,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 120,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 180 0"
+    },
+    {
+      "after": 120,
+      "cmd": "tp $(bot2) $(3.5,6,1.5) 0 0"
+    },
+    {
+      "after": 120,
+      "cmd": "effect give $(bot2) instant_health 1 10"
+    },
+    {
+      "after": 127,
+      "attack": true,
+      "bot": 2
+    },
+    {
+      "after": 180,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 180,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 180 0"
+    },
+    {
+      "after": 180,
+      "cmd": "tp $(bot2) $(3.5,7,1.5) 0 0"
+    },
+    {
+      "after": 180,
+      "cmd": "effect give $(bot2) instant_health 1 10"
+    },
+    {
+      "after": 187,
+      "attack": true,
+      "bot": 2
+    },
+    {
+      "after": 240,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 240,
+      "cmd": "effect give $(bot2) instant_health 1 10"
+    },
+    {
+      "after": 240,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 180 0"
+    },
+    {
+      "after": 240,
+      "cmd": "tp $(bot2) $(3.5,4.5,1.5) 0 0"
+    },
+    {
+      "after": 247,
+      "attack": true,
+      "bot": 2
+    },
+    {
+      "after": 300,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 300,
+      "cmd": "effect give $(bot2) instant_health 1 10"
+    },
+    {
+      "after": 300,
+      "cmd": "tp $(bot) $(3.5,0,3.5) 180 0"
+    },
+    {
+      "after": 300,
+      "cmd": "tp $(bot2) $(3.5,5.5,1.5) 0 0"
+    },
+    {
+      "after": 307,
+      "attack": true,
+      "bot": 2
+    }
+  ],
+  "record_ticks": 360,
+  "cleanup": [
+    "attribute $(bot) minecraft:max_health base reset",
+    "kill @e[type=cow,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=arrow,distance=..48]",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "gamemode creative $(bot)",
+    "gamemode creative $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "tp $(bot2) $(6.5,0,6.5)",
+    "!wait 4",
+    "!startfly",
+    "fill $(-2,-1,-2) $(7,12,7) air"
+  ],
+  "item_components": true,
+  "track_second_velocity": true,
+  "track_second_pos": true,
+  "track_client_moves": true
+}

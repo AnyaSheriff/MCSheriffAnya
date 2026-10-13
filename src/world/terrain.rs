@@ -789,9 +789,11 @@ pub struct Terrain {
     bands: [&'static str; 192],
 }
 
-#[cfg(all(test, not(seedmap_core)))]
+#[cfg(test)]
 #[path = "terrain_census.rs"]
 mod census;
+#[path = "biome_distribution.rs"]
+mod distribution;
 
 impl Terrain {
     /// Заводит рельеф от семени мира. Каждому шуму достаётся своё семя, иначе
@@ -842,6 +844,10 @@ impl Terrain {
     /// промежуток от -1 до 1. Континентальность «Обычного» подобрана по
     /// переписи сохранённого мира; прежняя растяжка оставлена «Супер плавности».
     pub fn climate_at(&self, x: i32, z: i32) -> Climate {
+        self.raw_climate_at(x, z)
+    }
+
+    fn raw_climate_at(&self, x: i32, z: i32) -> Climate {
         // Температура и влажность решают только биом, а биом у оригинала
         // один на клетку 4×4: берём их в середине клетки. Так граница биома
         // — и край льда на воде — идёт ломаной по клеткам, а не дугой.
@@ -982,6 +988,16 @@ impl Terrain {
         self.biome_with_climate(&self.climate_at(middle_x, middle_z), middle_x, middle_z)
     }
 
+    /// Температура именно биомной клетки для затухания айсбергов. Климат
+    /// пещер и рельефа остаётся исходным (вики, World generation).
+    #[allow(dead_code)] // в чистой карте нет айсбергов
+    pub fn surface_temperature_at(&self, x: i32, z: i32) -> f64 {
+        let (x,z) = ((x & !3)+2,(z & !3)+2);
+        let c = self.biome_input(&self.climate_at(x,z),x,z);
+        if self.style == Style::Vanilla { distribution::mapped(&c,&distribution::CALIBRATED).temperature }
+        else { c.temperature }
+    }
+
     fn biome_with_climate(&self, climate: &Climate, x: i32, z: i32) -> Biome {
         let (middle_x, middle_z) = ((x & !3) + 2, (z & !3) + 2);
         if (x, z) == (middle_x, middle_z) {
@@ -998,6 +1014,11 @@ impl Terrain {
     /// крапинки в одну-три клетки: пятно снега посреди леса. Такая клетка,
     /// если у неё меньше двух горных соседей, берёт биом соседа.
     fn cell_biome(&self, climate: &Climate, middle_x: i32, middle_z: i32) -> Biome {
+        let input = self.biome_input(climate, middle_x, middle_z);
+        let adjusted = if self.style == Style::Vanilla {
+            distribution::mapped(&input, &distribution::CALIBRATED)
+        } else { input };
+        let climate = &adjusted;
         let biome = biome_of(climate);
 
         if !matches!(biome, Biome::SnowySlopes | Biome::Grove) || climate.temperature_level() == 0 {
@@ -1011,7 +1032,12 @@ impl Terrain {
         let mut high = 0;
 
         for (dx, dz) in [(4, 0), (-4, 0), (0, 4), (0, -4)] {
-            let near = biome_of(&self.climate_at(middle_x + dx, middle_z + dz));
+            let near_climate = self.climate_at(middle_x + dx, middle_z + dz);
+            let near_climate = self.biome_input(&near_climate, middle_x + dx, middle_z + dz);
+            let near_climate = if self.style == Style::Vanilla {
+                distribution::mapped(&near_climate, &distribution::CALIBRATED)
+            } else { near_climate };
+            let near = biome_of(&near_climate);
 
             if mountain(near) {
                 high += 1;
@@ -1024,6 +1050,17 @@ impl Terrain {
             Some(near) if high < 2 => near,
             _ => biome,
         }
+    }
+
+    // Небольшое искривление границ только у биомов: прямой двумерный шум
+    // почти не оставлял мелких краевых пятен, видимых в переписи оригинала.
+    // Вики, World generation, «horizontal coordinates». Это собственная
+    // модель, не алгоритм оригинала [проверить: вид границ на местности].
+    fn biome_input(&self, climate: &Climate, x: i32, z: i32) -> Climate {
+        if self.style != Style::Vanilla { return *climate; }
+        let dx = self.detail.octaves(f64::from(x)/12.0+0.37, f64::from(z)/12.0+0.37, 2)*10.0;
+        let dz = self.detail.octaves(f64::from(x)/12.0+183.37, f64::from(z)/12.0-97.37, 2)*10.0;
+        self.climate_at(x+dx.round() as i32,z+dz.round() as i32)
     }
 
     /// Камень ли в этом месте рельефа (без пещер).

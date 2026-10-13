@@ -42,7 +42,9 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// них четыре байта длины записи (`write_ender`). Файлы версий 1–6 читаются
 /// с пустым эндер-сундуком.
 /// Версия 8 — после эндер-сундука сущности попугаев на плечах.
-const FORMAT_VERSION: u32 = 8;
+// Версия 9 — общий полученный опыт отдельно от очков шкалы (anvil-rename-repair).
+const FORMAT_VERSION: u32 = 9;
+const SHOULDERS_VERSION: u32 = 8;
 const ENDER_VERSION: u32 = 7;
 
 /// Версия с семенем зачарования, но без эндер-сундука.
@@ -91,6 +93,7 @@ pub struct SavedVitals {
     pub fall: f32,
     /// Всего очков опыта.
     pub experience: i32,
+    pub experience_total: i32,
     /// Семя зачарования (`XpSeed`).
     pub xp_seed: i32,
 }
@@ -98,7 +101,7 @@ pub struct SavedVitals {
 impl Default for SavedVitals {
     /// Новорождённый: полное здоровье и еда, насыщение 5, воздуха 300.
     fn default() -> Self {
-        Self { health: 20.0, food: 20, saturation: 5.0, exhaustion: 0.0, air: 300, fire: 0, fall: 0.0, experience: 0, xp_seed: 0 }
+        Self { health: 20.0, food: 20, saturation: 5.0, exhaustion: 0.0, air: 300, fire: 0, fall: 0.0, experience: 0, experience_total: 0, xp_seed: 0 }
     }
 }
 
@@ -130,6 +133,7 @@ impl SavedVitals {
             fire: i32::from_be_bytes(take(bytes, 20)?),
             fall: f32::from_be_bytes(take(bytes, 24)?),
             experience: i32::from_be_bytes(take(bytes, 28)?),
+            experience_total: i32::from_be_bytes(take(bytes, 28)?),
             xp_seed: 0,
         };
 
@@ -320,12 +324,19 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 
             (Inventory::from_bytes(inventory)?, dimension, Default::default(), None)
         }
-        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | FORMAT_VERSION => {
+        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | FORMAT_VERSION => {
             let mut tail = bytes.get(SIZE..)?;
             let mut respawn = None;
             let mut seed = 0;
 
-            if version == FORMAT_VERSION {
+            let total = if version >= FORMAT_VERSION {
+                let (rest, bytes) = tail.split_at(tail.len().checked_sub(4)?);
+                let total = i32::from_be_bytes(bytes.try_into().ok()?);
+                if total < 0 { return None; }
+                tail = rest;
+                Some(total)
+            } else { None };
+            if version >= SHOULDERS_VERSION {
                 let (rest,length) = tail.split_at(tail.len().checked_sub(4)?);
                 let length = u32::from_be_bytes(length.try_into().ok()?) as usize;
                 let (rest,stored) = rest.split_at(rest.len().checked_sub(length)?);
@@ -359,7 +370,8 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
             let (rest, vitals) = tail.split_at(tail.len().checked_sub(VITALS_SIZE)?);
             let (last, inventory) = rest.split_last()?;
             let dimension = *crate::dimension::Dimension::ALL.get(*last as usize)?;
-            let vitals = SavedVitals { xp_seed: seed, ..SavedVitals::read(vitals)? };
+            let mut vitals = SavedVitals { xp_seed: seed, ..SavedVitals::read(vitals)? };
+            if let Some(total) = total { vitals.experience_total = total; }
 
             (Inventory::from_bytes(inventory)?, dimension, vitals, respawn)
         }
@@ -420,6 +432,7 @@ fn encode(data: &PlayerData) -> io::Result<Vec<u8>> {
     let shoulders = serde_json::to_vec(&data.shoulders)?;
     out.extend_from_slice(&shoulders);
     out.extend_from_slice(&(shoulders.len() as u32).to_be_bytes());
+    out.extend_from_slice(&data.vitals.experience_total.to_be_bytes());
 
     Ok(out)
 }
@@ -457,6 +470,20 @@ mod tests {
         }
     }
 
+    #[test]
+    fn earned_experience_survives_level_spending_and_version_eight_is_readable() {
+        // anvil-rename-repair: опыт шкалы и общий опыт теперь независимы.
+        let mut data = sample();
+        data.vitals.experience = 1288;
+        data.vitals.experience_total = 0;
+        let mut bytes = encode(&data).unwrap();
+        assert_eq!(parse(&bytes), Some(data.clone()));
+        bytes.truncate(bytes.len() - 4);
+        bytes[4..8].copy_from_slice(&SHOULDERS_VERSION.to_be_bytes());
+        data.vitals.experience_total = data.vitals.experience;
+        assert_eq!(parse(&bytes), Some(data));
+    }
+
     /// Записанное положение читается обратно ровно таким же: иначе игрок
     /// после перезапуска оказывался бы не там, где стоял.
     #[test]
@@ -482,6 +509,7 @@ mod tests {
 
         // Прежняя версия (6): тот же файл без хвоста эндер-сундука.
         let mut old = fs::read(path_for(&directory, &[8; 16])).expect("прочитать");
+        old.truncate(old.len() - 4); // общий опыт версии 9
         let tail = u32::from_be_bytes(old[old.len() - 4..].try_into().expect("длина")) as usize;
 
         old.truncate(old.len() - 4 - tail);
@@ -500,6 +528,7 @@ mod tests {
         parrot.small.variant=4; parrot.tame.owner=Some(uuid);
         let mut stored=Vec::new(); parrot.write(&mut stored); data.shoulders[0]=Some(stored);
         let mut old=encode(&data).unwrap(); assert_eq!(parse(&old),Some(data.clone()));
+        old.truncate(old.len() - 4);
         let length=u32::from_be_bytes(old[old.len()-4..].try_into().unwrap()) as usize;
         old.truncate(old.len()-4-length); old[4..8].copy_from_slice(&ENDER_VERSION.to_be_bytes());
         data.shoulders=[None,None];
@@ -516,7 +545,7 @@ mod tests {
         data.inventory.set(crate::inventory::FIRST_HOTBAR, Some(crate::inventory::Stack::new(stone, 12)));
         data.inventory.select(3);
         data.dimension = crate::dimension::Dimension::Nether;
-        data.vitals = SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234, xp_seed: -77 };
+        data.vitals = SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234, experience_total: 1234, xp_seed: -77 };
         data.respawn = Some(crate::bed::RespawnPoint { dimension: crate::dimension::Dimension::Nether, pos: (3, 70, -9), yaw: -90.0, forced: false });
         data.ender[26] = Some(crate::inventory::Stack::new(stone, 64));
 
@@ -703,7 +732,7 @@ mod tests {
     fn vitals_are_saved_with_the_player() {
         let directory = test_directory("vitals");
         let data = PlayerData {
-            vitals: SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234, xp_seed: -77 },
+            vitals: SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234, experience_total: 1234, xp_seed: -77 },
             ..sample()
         };
 
@@ -735,6 +764,7 @@ mod tests {
         let path = path_for(&directory, &[12; 16]);
         let mut bytes = fs::read(&path).expect("прочитать");
 
+        bytes.truncate(bytes.len() - 4); // общий опыт версии 9
         // Сначала убираем попугаев и длину их записи, добавленные в версии 8.
         let shoulders = u32::from_be_bytes(bytes[bytes.len() - 4..].try_into().expect("длина попугаев")) as usize;
         bytes.truncate(bytes.len() - 4 - shoulders);

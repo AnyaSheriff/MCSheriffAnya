@@ -320,6 +320,7 @@ bot._client.on('position', (p) => {
 });
 bot._client.on('entity_velocity', (p) => {
   if (scenario.track_self && bot.entity && p.entityId === bot.entity.id) note('self', { what: 'vel', v: vec(p.velocity) });
+  if (scenario.track_client_moves && recording && bot.entity && p.entityId === bot.entity.id) note('sv', { text: `a: velocity exact ${JSON.stringify(p.velocity)}` });
 });
 // `track_self` (выживание): всё, что сервер шлёт роботу о его здоровье, еде,
 // ударах, смерти и возрождении. Пакеты пишутся строкой `text` (вид `sv`);
@@ -433,6 +434,7 @@ if (bot2) bot2._client.on('set_slot', (p) => {
 });
 // `track_second_velocity`: и скорость, которую сервер сообщает второму (отдача нападающему).
 if (bot2) bot2._client.on('entity_velocity', (p) => {
+  if (scenario.track_client_moves && recording && isSelfOf(bot2)(p.entityId)) note('sv', { text: `b: velocity exact ${JSON.stringify(p.velocity)}` });
   if (!scenario.track_second_velocity || !recording || !isSelfOf(bot2)(p.entityId)) return;
   note('sv', { text: `b: Velocity ${vec(p.velocity)}` });
 });
@@ -584,6 +586,11 @@ let pendingDo = null;
 const hookWrites = (client) => {
   const write = client.write.bind(client);
   client.write = (name, params) => {
+    // Зонды fall/mace 26.1.2: исходные шаги нужны, чтобы отличить фазу
+    // физики клиента от задержки сервера и не подгонять число частиц.
+    if (scenario.track_client_moves && recording && ['position', 'position_look', 'flying', 'look'].includes(name)) {
+      note('sv', { text: `${client === bot._client ? 'a' : 'b'}: sent ${name} ${JSON.stringify(params)}` });
+    }
     if (process.env.BB_DEBUG && name !== 'position' && name !== 'position_look' && name !== 'look' && name !== 'keep_alive') console.error('→', name, JSON.stringify(params, (k, v) => typeof v === 'bigint' ? String(v) : v).slice(0, 160));
     if (pendingDo && (name === 'block_place' || name === 'chat_command' || name === 'chat_command_signed' || name === 'close_window' || name === 'update_sign' || name === 'name_item' || name === 'window_click' || name === 'enchant_item' || name === 'set_slot_state' || name === 'attack' || name === 'held_item_slot' || name === 'client_command' || name === 'block_dig' || name === 'use_item' || name === 'update_command_block' || name === 'select_trade' || name === 'craft_recipe_request')) {
       // Такт нажатия берём из плана, а не из часов: в какой такт целились,

@@ -1,0 +1,578 @@
+meta	full_cells	932864
+window	-8192	-8192	512	65536	65536
+window	-8192	0	512	65536	65536
+window	-8192	8192	512	65536	65536
+window	0	-8192	512	65536	65536
+window	0	0	1024	262144	262144
+window	0	8192	512	65536	65536
+window	8192	-8192	512	65536	65536
+window	8192	0	512	65536	65536
+window	8192	8192	512	65536	65536
+meta	cells	786432	block_area	12582912
+height	badlands	61	69	88	100	118
+height	bamboo_jungle	56	63	78	94	137
+height	beach	47	55	62	63	68
+height	birch_forest	52	64	68	72	96
+height	cherry_grove	96	114	128	134	142
+height	cold_ocean	44	47	48	51	55
+height	deep_cold_ocean	32	35	38	39	45
+height	deep_frozen_ocean	34	37	39	45	72
+height	deep_lukewarm_ocean	33	36	38	41	47
+height	deep_ocean	33	37	39	42	47
+height	desert	52	63	66	70	83
+height	dripstone_caves	31	58	76	88	113
+height	eroded_badlands	61	84	92	99	113
+height	flower_forest	61	66	72	92	115
+height	forest	59	66	70	78	111
+height	frozen_ocean	46	48	62	62	73
+height	frozen_river	62	62	62	62	62
+height	grove	83	91	98	101	106
+height	ice_spikes	62	62	62	62	62
+height	jungle	61	68	75	86	105
+height	lukewarm_ocean	45	47	48	51	55
+height	lush_caves	18	31	33	37	53
+height	mangrove_swamp	57	68	76	82	95
+height	meadow	94	110	119	127	134
+height	mushroom_fields	45	55	67	70	74
+height	ocean	43	47	48	51	56
+height	old_growth_birch_forest	54	72	81	90	112
+height	old_growth_pine_taiga	60	68	79	95	112
+height	old_growth_spruce_taiga	61	69	75	84	102
+height	plains	57	63	68	77	105
+height	river	39	50	54	57	62
+height	savanna	52	63	68	74	100
+height	savanna_plateau	87	103	118	124	127
+height	snowy_beach	62	62	62	63	68
+height	snowy_plains	62	64	69	71	76
+height	snowy_taiga	62	63	70	75	82
+height	sparse_jungle	61	67	72	81	94
+height	stony_shore	46	52	62	69	72
+height	sunflower_plains	55	63	67	70	80
+height	swamp	57	61	64	70	80
+height	taiga	59	65	70	74	81
+height	warm_ocean	37	46	47	50	55
+height	windswept_gravelly_hills	69	80	84	88	101
+height	windswept_hills	64	70	76	79	91
+height	windswept_savanna	49	58	64	80	97
+height	wooded_badlands	59	63	67	76	108
+share	desert	0.150758
+share	warm_ocean	0.093268
+share	lukewarm_ocean	0.086798
+share	plains	0.074225
+share	forest	0.073870
+share	river	0.056452
+share	frozen_ocean	0.052649
+share	deep_frozen_ocean	0.043730
+share	savanna	0.037140
+share	deep_cold_ocean	0.035121
+share	ocean	0.034509
+share	cold_ocean	0.034341
+share	badlands	0.027437
+share	beach	0.023687
+share	flower_forest	0.016688
+share	wooded_badlands	0.015757
+share	deep_lukewarm_ocean	0.015633
+share	jungle	0.009638
+share	sparse_jungle	0.009243
+share	eroded_badlands	0.009223
+share	birch_forest	0.008879
+share	deep_ocean	0.008617
+share	taiga	0.007745
+share	meadow	0.007727
+share	windswept_savanna	0.006967
+share	cherry_grove	0.006111
+share	stony_shore	0.005595
+share	swamp	0.005230
+share	bamboo_jungle	0.005135
+share	old_growth_spruce_taiga	0.004935
+share	mangrove_swamp	0.004522
+share	snowy_taiga	0.004078
+share	old_growth_pine_taiga	0.003212
+share	windswept_hills	0.002992
+share	snowy_plains	0.002679
+share	snowy_beach	0.002652
+share	savanna_plateau	0.002502
+share	sunflower_plains	0.002261
+share	windswept_gravelly_hills	0.002211
+share	old_growth_birch_forest	0.001823
+share	mushroom_fields	0.001610
+share	frozen_river	0.001581
+share	dripstone_caves	0.000338
+share	ice_spikes	0.000284
+share	grove	0.000098
+share	lush_caves	0.000047
+patch	badlands	24	96	2078	6998	0.375
+patch_area	badlands	65136	111968
+patch	bamboo_jungle	7	1	4	4029	0.714
+patch_area	bamboo_jungle	64464	64464
+patch	beach	145	16	373	1485	0.407
+patch_area	beach	7888	17680
+patch	birch_forest	5	157	698	6124	0.400
+patch_area	birch_forest	97984	97984
+patch	cherry_grove	5	287	348	3929	0.200
+patch_area	cherry_grove	62864	62864
+patch	cold_ocean	14	266	5375	7720	0.286
+patch_area	cold_ocean	122320	123520
+patch	deep_cold_ocean	8	56	5199	22233	0.250
+patch_area	deep_cold_ocean	355728	355728
+patch	deep_frozen_ocean	17	3	4712	19235	0.647
+patch_area	deep_frozen_ocean	307760	307760
+patch	deep_lukewarm_ocean	17	107	605	7662	0.412
+patch_area	deep_lukewarm_ocean	122592	122592
+patch	deep_ocean	10	75	1561	4207	0.400
+patch_area	deep_ocean	67312	67312
+patch	desert	79	76	4049	19692	0.430
+patch_area	desert	165200	315072
+patch	dripstone_caves	48	2	16	40	0.625
+patch_area	dripstone_caves	256	640
+patch	eroded_badlands	14	14	380	3399	0.429
+patch_area	eroded_badlands	45520	54384
+patch	flower_forest	12	75	1258	8781	0.500
+patch_area	flower_forest	140496	140496
+patch	forest	80	3	1678	9335	0.537
+patch_area	forest	90944	149360
+patch	frozen_ocean	19	2	11050	15722	0.684
+patch_area	frozen_ocean	180224	251552
+patch	frozen_river	11	3	148	872	0.545
+patch_area	frozen_river	13952	13952
+patch	grove	1	77	77	77	0.000
+patch_area	grove	1232	1232
+patch	ice_spikes	4	53	53	168	0.500
+patch_area	ice_spikes	2688	2688
+patch	jungle	11	249	2377	2925	0.182
+patch_area	jungle	38032	46800
+patch	lukewarm_ocean	23	1	5356	22997	0.609
+patch_area	lukewarm_ocean	282768	367952
+patch	lush_caves	5	1	5	29	0.600
+patch_area	lush_caves	464	464
+patch	mangrove_swamp	5	117	750	2587	0.200
+patch_area	mangrove_swamp	41392	41392
+patch	meadow	9	117	1108	4275	0.111
+patch_area	meadow	68400	68400
+patch	mushroom_fields	2	1265	1	1265	0.500
+patch_area	mushroom_fields	20240	20240
+patch	ocean	22	41	422	19463	0.318
+patch_area	ocean	311408	311408
+patch	old_growth_birch_forest	5	100	257	945	0.000
+patch_area	old_growth_birch_forest	15120	15120
+patch	old_growth_pine_taiga	1	2526	2526	2526	0.000
+patch_area	old_growth_pine_taiga	40416	40416
+patch	old_growth_spruce_taiga	1	3881	3881	3881	0.000
+patch_area	old_growth_spruce_taiga	62096	62096
+patch	plains	99	11	1570	8041	0.434
+patch_area	plains	61744	128656
+patch	river	126	68	907	5544	0.349
+patch_area	river	19984	88704
+patch	savanna	52	25	1258	8033	0.385
+patch_area	savanna	62336	128528
+patch	savanna_plateau	4	229	229	1597	0.250
+patch_area	savanna_plateau	25552	25552
+patch	snowy_beach	19	48	191	628	0.263
+patch_area	snowy_beach	3056	10048
+patch	snowy_plains	9	8	50	1950	0.222
+patch_area	snowy_plains	31200	31200
+patch	snowy_taiga	10	71	406	2552	0.200
+patch_area	snowy_taiga	40832	40832
+patch	sparse_jungle	18	4	837	3556	0.500
+patch_area	sparse_jungle	41232	56896
+patch	stony_shore	54	3	259	884	0.537
+patch_area	stony_shore	6352	14144
+patch	sunflower_plains	11	7	559	736	0.455
+patch_area	sunflower_plains	8944	11776
+patch	swamp	3	662	662	3035	0.000
+patch_area	swamp	48560	48560
+patch	taiga	17	2	307	3338	0.588
+patch_area	taiga	53408	53408
+patch	warm_ocean	34	7	982	43846	0.441
+patch_area	warm_ocean	701536	701536
+patch	windswept_gravelly_hills	2	1737	2	1737	0.500
+patch_area	windswept_gravelly_hills	27792	27792
+patch	windswept_hills	10	163	576	770	0.200
+patch_area	windswept_hills	9216	12320
+patch	windswept_savanna	14	71	301	4098	0.286
+patch_area	windswept_savanna	65568	65568
+patch	wooded_badlands	28	71	1234	2253	0.286
+patch_area	wooded_badlands	19744	36048
+patch_summary	all_surface	1114	705.953	11	1373
+pair	badlands	river	0.3496
+pair	badlands	desert	0.3383
+pair	badlands	eroded_badlands	0.1909
+pair	badlands	wooded_badlands	0.0932
+pair	badlands	savanna	0.0143
+pair	badlands	plains	0.0099
+pair	badlands	forest	0.0038
+pair	bamboo_jungle	beach	0.2892
+pair	bamboo_jungle	lukewarm_ocean	0.2434
+pair	bamboo_jungle	mangrove_swamp	0.2381
+pair	bamboo_jungle	river	0.0952
+pair	bamboo_jungle	windswept_savanna	0.0688
+pair	bamboo_jungle	sparse_jungle	0.0494
+pair	bamboo_jungle	desert	0.0159
+pair	beach	river	0.1777
+pair	beach	lukewarm_ocean	0.1662
+pair	beach	plains	0.1384
+pair	beach	forest	0.0981
+pair	beach	ocean	0.0927
+pair	beach	cold_ocean	0.0861
+pair	beach	savanna	0.0716
+pair	beach	jungle	0.0283
+pair	beach	taiga	0.0259
+pair	beach	flower_forest	0.0253
+pair	beach	bamboo_jungle	0.0199
+pair	beach	birch_forest	0.0159
+pair	beach	sparse_jungle	0.0145
+pair	beach	desert	0.0127
+pair	beach	swamp	0.0088
+pair	beach	stony_shore	0.0062
+pair	beach	mangrove_swamp	0.0040
+pair	beach	sunflower_plains	0.0027
+pair	beach	windswept_savanna	0.0025
+pair	beach	snowy_beach	0.0023
+pair	beach	warm_ocean	0.0001
+pair	birch_forest	forest	0.5404
+pair	birch_forest	beach	0.1735
+pair	birch_forest	ocean	0.1113
+pair	birch_forest	old_growth_birch_forest	0.0980
+pair	birch_forest	river	0.0768
+pair	cherry_grove	plains	0.5882
+pair	cherry_grove	dripstone_caves	0.1630
+pair	cherry_grove	sunflower_plains	0.1220
+pair	cherry_grove	forest	0.0737
+pair	cherry_grove	savanna_plateau	0.0531
+pair	cold_ocean	deep_cold_ocean	0.3232
+pair	cold_ocean	beach	0.2562
+pair	cold_ocean	frozen_ocean	0.1877
+pair	cold_ocean	ocean	0.0905
+pair	cold_ocean	river	0.0468
+pair	cold_ocean	forest	0.0378
+pair	cold_ocean	stony_shore	0.0339
+pair	cold_ocean	taiga	0.0198
+pair	cold_ocean	snowy_beach	0.0018
+pair	cold_ocean	deep_frozen_ocean	0.0018
+pair	cold_ocean	plains	0.0004
+pair	deep_cold_ocean	cold_ocean	0.6233
+pair	deep_cold_ocean	deep_frozen_ocean	0.1564
+pair	deep_cold_ocean	mushroom_fields	0.1557
+pair	deep_cold_ocean	deep_ocean	0.0556
+pair	deep_cold_ocean	frozen_ocean	0.0042
+pair	deep_cold_ocean	lush_caves	0.0028
+pair	deep_cold_ocean	ocean	0.0021
+pair	deep_frozen_ocean	frozen_ocean	0.9061
+pair	deep_frozen_ocean	deep_cold_ocean	0.0918
+pair	deep_frozen_ocean	cold_ocean	0.0020
+pair	deep_lukewarm_ocean	lukewarm_ocean	0.8631
+pair	deep_lukewarm_ocean	warm_ocean	0.1073
+pair	deep_lukewarm_ocean	deep_ocean	0.0296
+pair	deep_ocean	ocean	0.8405
+pair	deep_ocean	deep_cold_ocean	0.0989
+pair	deep_ocean	deep_lukewarm_ocean	0.0593
+pair	deep_ocean	lukewarm_ocean	0.0012
+pair	desert	river	0.4576
+pair	desert	warm_ocean	0.2470
+pair	desert	wooded_badlands	0.0901
+pair	desert	badlands	0.0786
+pair	desert	stony_shore	0.0260
+pair	desert	eroded_badlands	0.0222
+pair	desert	mangrove_swamp	0.0166
+pair	desert	savanna	0.0152
+pair	desert	jungle	0.0152
+pair	desert	beach	0.0083
+pair	desert	windswept_savanna	0.0077
+pair	desert	plains	0.0062
+pair	desert	sparse_jungle	0.0040
+pair	desert	forest	0.0029
+pair	desert	lukewarm_ocean	0.0015
+pair	desert	bamboo_jungle	0.0007
+pair	dripstone_caves	plains	0.4040
+pair	dripstone_caves	cherry_grove	0.2673
+pair	dripstone_caves	forest	0.1168
+pair	dripstone_caves	meadow	0.1109
+pair	dripstone_caves	river	0.0772
+pair	dripstone_caves	sunflower_plains	0.0158
+pair	dripstone_caves	savanna_plateau	0.0079
+pair	eroded_badlands	badlands	0.5128
+pair	eroded_badlands	desert	0.2569
+pair	eroded_badlands	river	0.1908
+pair	eroded_badlands	savanna	0.0367
+pair	eroded_badlands	plains	0.0028
+pair	flower_forest	river	0.2964
+pair	flower_forest	plains	0.2146
+pair	flower_forest	savanna	0.1667
+pair	flower_forest	beach	0.1643
+pair	flower_forest	meadow	0.0723
+pair	flower_forest	windswept_hills	0.0464
+pair	flower_forest	swamp	0.0330
+pair	flower_forest	savanna_plateau	0.0039
+pair	flower_forest	windswept_gravelly_hills	0.0024
+pair	forest	river	0.3424
+pair	forest	plains	0.1872
+pair	forest	beach	0.1020
+pair	forest	savanna	0.0636
+pair	forest	birch_forest	0.0514
+pair	forest	jungle	0.0438
+pair	forest	stony_shore	0.0417
+pair	forest	taiga	0.0414
+pair	forest	meadow	0.0346
+pair	forest	old_growth_birch_forest	0.0249
+pair	forest	cold_ocean	0.0132
+pair	forest	windswept_savanna	0.0093
+pair	forest	ocean	0.0083
+pair	forest	cherry_grove	0.0077
+pair	forest	dripstone_caves	0.0074
+pair	forest	sparse_jungle	0.0063
+pair	forest	desert	0.0047
+pair	forest	grove	0.0025
+pair	forest	savanna_plateau	0.0023
+pair	forest	badlands	0.0014
+pair	forest	snowy_taiga	0.0013
+pair	forest	windswept_hills	0.0010
+pair	forest	wooded_badlands	0.0010
+pair	forest	lukewarm_ocean	0.0005
+pair	frozen_ocean	deep_frozen_ocean	0.5979
+pair	frozen_ocean	cold_ocean	0.1403
+pair	frozen_ocean	snowy_beach	0.1069
+pair	frozen_ocean	snowy_plains	0.0595
+pair	frozen_ocean	snowy_taiga	0.0353
+pair	frozen_ocean	frozen_river	0.0326
+pair	frozen_ocean	ice_spikes	0.0259
+pair	frozen_ocean	deep_cold_ocean	0.0016
+pair	frozen_river	snowy_beach	0.4854
+pair	frozen_river	snowy_taiga	0.2816
+pair	frozen_river	frozen_ocean	0.1958
+pair	frozen_river	snowy_plains	0.0372
+pair	grove	forest	0.6250
+pair	grove	meadow	0.3750
+pair	ice_spikes	frozen_ocean	0.6486
+pair	ice_spikes	snowy_plains	0.3514
+pair	jungle	forest	0.2813
+pair	jungle	river	0.2724
+pair	jungle	beach	0.1892
+pair	jungle	desert	0.1544
+pair	jungle	wooded_badlands	0.0517
+pair	jungle	sparse_jungle	0.0194
+pair	jungle	lukewarm_ocean	0.0178
+pair	jungle	mangrove_swamp	0.0129
+pair	jungle	plains	0.0008
+pair	lukewarm_ocean	deep_lukewarm_ocean	0.2524
+pair	lukewarm_ocean	beach	0.2473
+pair	lukewarm_ocean	savanna	0.1610
+pair	lukewarm_ocean	river	0.0739
+pair	lukewarm_ocean	ocean	0.0658
+pair	lukewarm_ocean	warm_ocean	0.0653
+pair	lukewarm_ocean	stony_shore	0.0413
+pair	lukewarm_ocean	plains	0.0270
+pair	lukewarm_ocean	bamboo_jungle	0.0249
+pair	lukewarm_ocean	sparse_jungle	0.0206
+pair	lukewarm_ocean	windswept_savanna	0.0123
+pair	lukewarm_ocean	jungle	0.0040
+pair	lukewarm_ocean	desert	0.0034
+pair	lukewarm_ocean	forest	0.0007
+pair	lukewarm_ocean	deep_ocean	0.0002
+pair	lush_caves	mangrove_swamp	0.5862
+pair	lush_caves	old_growth_pine_taiga	0.2759
+pair	lush_caves	deep_cold_ocean	0.0690
+pair	lush_caves	river	0.0517
+pair	lush_caves	old_growth_spruce_taiga	0.0172
+pair	mangrove_swamp	desert	0.3800
+pair	mangrove_swamp	bamboo_jungle	0.2455
+pair	mangrove_swamp	sparse_jungle	0.1218
+pair	mangrove_swamp	river	0.0727
+pair	mangrove_swamp	lush_caves	0.0618
+pair	mangrove_swamp	beach	0.0600
+pair	mangrove_swamp	jungle	0.0291
+pair	mangrove_swamp	windswept_savanna	0.0291
+pair	meadow	plains	0.4739
+pair	meadow	forest	0.3052
+pair	meadow	flower_forest	0.1021
+pair	meadow	dripstone_caves	0.0622
+pair	meadow	taiga	0.0377
+pair	meadow	grove	0.0133
+pair	meadow	savanna_plateau	0.0044
+pair	meadow	savanna	0.0011
+pair	mushroom_fields	deep_cold_ocean	1.0000
+pair	ocean	beach	0.2666
+pair	ocean	deep_ocean	0.2370
+pair	ocean	lukewarm_ocean	0.1272
+pair	ocean	cold_ocean	0.0875
+pair	ocean	river	0.0774
+pair	ocean	windswept_savanna	0.0711
+pair	ocean	plains	0.0586
+pair	ocean	birch_forest	0.0293
+pair	ocean	forest	0.0230
+pair	ocean	stony_shore	0.0213
+pair	ocean	deep_cold_ocean	0.0010
+pair	old_growth_birch_forest	forest	0.5103
+pair	old_growth_birch_forest	river	0.2990
+pair	old_growth_birch_forest	birch_forest	0.1907
+pair	old_growth_pine_taiga	river	0.6608
+pair	old_growth_pine_taiga	taiga	0.2920
+pair	old_growth_pine_taiga	lush_caves	0.0472
+pair	old_growth_spruce_taiga	river	0.5659
+pair	old_growth_spruce_taiga	taiga	0.4313
+pair	old_growth_spruce_taiga	lush_caves	0.0027
+pair	plains	river	0.3692
+pair	plains	forest	0.1345
+pair	plains	beach	0.1034
+pair	plains	savanna	0.0702
+pair	plains	cherry_grove	0.0441
+pair	plains	windswept_hills	0.0425
+pair	plains	meadow	0.0386
+pair	plains	windswept_savanna	0.0261
+pair	plains	flower_forest	0.0247
+pair	plains	windswept_gravelly_hills	0.0227
+pair	plains	swamp	0.0215
+pair	plains	dripstone_caves	0.0185
+pair	plains	sparse_jungle	0.0166
+pair	plains	stony_shore	0.0157
+pair	plains	ocean	0.0152
+pair	plains	lukewarm_ocean	0.0136
+pair	plains	sunflower_plains	0.0124
+pair	plains	desert	0.0071
+pair	plains	badlands	0.0026
+pair	plains	savanna_plateau	0.0004
+pair	plains	eroded_badlands	0.0003
+pair	plains	jungle	0.0001
+pair	plains	cold_ocean	0.0001
+pair	river	desert	0.2654
+pair	river	plains	0.1878
+pair	river	forest	0.1251
+pair	river	savanna	0.0751
+pair	river	beach	0.0675
+pair	river	wooded_badlands	0.0521
+pair	river	badlands	0.0471
+pair	river	lukewarm_ocean	0.0189
+pair	river	stony_shore	0.0178
+pair	river	flower_forest	0.0173
+pair	river	jungle	0.0155
+pair	river	warm_ocean	0.0117
+pair	river	sparse_jungle	0.0111
+pair	river	sunflower_plains	0.0104
+pair	river	old_growth_pine_taiga	0.0103
+pair	river	ocean	0.0102
+pair	river	eroded_badlands	0.0096
+pair	river	old_growth_spruce_taiga	0.0095
+pair	river	windswept_savanna	0.0092
+pair	river	taiga	0.0069
+pair	river	cold_ocean	0.0060
+pair	river	old_growth_birch_forest	0.0053
+pair	river	birch_forest	0.0027
+pair	river	bamboo_jungle	0.0025
+pair	river	mangrove_swamp	0.0018
+pair	river	dripstone_caves	0.0018
+pair	river	swamp	0.0013
+pair	river	lush_caves	0.0001
+pair	savanna	river	0.3058
+pair	savanna	lukewarm_ocean	0.1673
+pair	savanna	plains	0.1454
+pair	savanna	beach	0.1107
+pair	savanna	forest	0.0946
+pair	savanna	savanna_plateau	0.0594
+pair	savanna	flower_forest	0.0397
+pair	savanna	desert	0.0360
+pair	savanna	stony_shore	0.0185
+pair	savanna	badlands	0.0079
+pair	savanna	eroded_badlands	0.0075
+pair	savanna	sunflower_plains	0.0069
+pair	savanna	meadow	0.0002
+pair	savanna_plateau	savanna	0.8005
+pair	savanna_plateau	cherry_grove	0.1111
+pair	savanna_plateau	forest	0.0455
+pair	savanna_plateau	flower_forest	0.0126
+pair	savanna_plateau	meadow	0.0101
+pair	savanna_plateau	plains	0.0101
+pair	savanna_plateau	dripstone_caves	0.0101
+pair	snowy_beach	frozen_ocean	0.3896
+pair	snowy_beach	frozen_river	0.2944
+pair	snowy_beach	snowy_taiga	0.2581
+pair	snowy_beach	snowy_plains	0.0343
+pair	snowy_beach	beach	0.0186
+pair	snowy_beach	cold_ocean	0.0049
+pair	snowy_plains	frozen_ocean	0.4368
+pair	snowy_plains	snowy_taiga	0.3458
+pair	snowy_plains	ice_spikes	0.1028
+pair	snowy_plains	snowy_beach	0.0692
+pair	snowy_plains	frozen_river	0.0455
+pair	snowy_taiga	snowy_beach	0.3493
+pair	snowy_taiga	snowy_plains	0.2324
+pair	snowy_taiga	frozen_river	0.2311
+pair	snowy_taiga	frozen_ocean	0.1740
+pair	snowy_taiga	forest	0.0133
+pair	sparse_jungle	river	0.2479
+pair	sparse_jungle	plains	0.1883
+pair	sparse_jungle	beach	0.1235
+pair	sparse_jungle	lukewarm_ocean	0.1173
+pair	sparse_jungle	mangrove_swamp	0.0689
+pair	sparse_jungle	wooded_badlands	0.0545
+pair	sparse_jungle	desert	0.0525
+pair	sparse_jungle	forest	0.0514
+pair	sparse_jungle	windswept_savanna	0.0422
+pair	sparse_jungle	bamboo_jungle	0.0288
+pair	sparse_jungle	jungle	0.0247
+pair	stony_shore	river	0.1858
+pair	stony_shore	forest	0.1594
+pair	stony_shore	desert	0.1579
+pair	stony_shore	warm_ocean	0.1560
+pair	stony_shore	lukewarm_ocean	0.1103
+pair	stony_shore	plains	0.0838
+pair	stony_shore	savanna	0.0477
+pair	stony_shore	cold_ocean	0.0453
+pair	stony_shore	ocean	0.0294
+pair	stony_shore	beach	0.0246
+pair	sunflower_plains	river	0.3409
+pair	sunflower_plains	plains	0.2066
+pair	sunflower_plains	cherry_grove	0.1523
+pair	sunflower_plains	swamp	0.1146
+pair	sunflower_plains	windswept_hills	0.0845
+pair	sunflower_plains	savanna	0.0558
+pair	sunflower_plains	beach	0.0332
+pair	sunflower_plains	dripstone_caves	0.0121
+pair	swamp	plains	0.4161
+pair	swamp	windswept_hills	0.1801
+pair	swamp	sunflower_plains	0.1329
+pair	swamp	beach	0.1276
+pair	swamp	flower_forest	0.0734
+pair	swamp	river	0.0507
+pair	swamp	windswept_savanna	0.0192
+pair	taiga	forest	0.3170
+pair	taiga	beach	0.2062
+pair	taiga	old_growth_spruce_taiga	0.1513
+pair	taiga	river	0.1445
+pair	taiga	old_growth_pine_taiga	0.0954
+pair	taiga	cold_ocean	0.0530
+pair	taiga	meadow	0.0328
+pair	warm_ocean	desert	0.7313
+pair	warm_ocean	lukewarm_ocean	0.0850
+pair	warm_ocean	stony_shore	0.0761
+pair	warm_ocean	river	0.0597
+pair	warm_ocean	deep_lukewarm_ocean	0.0409
+pair	warm_ocean	windswept_savanna	0.0068
+pair	warm_ocean	beach	0.0002
+pair	windswept_gravelly_hills	plains	0.8367
+pair	windswept_gravelly_hills	windswept_hills	0.1533
+pair	windswept_gravelly_hills	flower_forest	0.0100
+pair	windswept_hills	plains	0.6283
+pair	windswept_hills	swamp	0.1377
+pair	windswept_hills	flower_forest	0.0789
+pair	windswept_hills	sunflower_plains	0.0749
+pair	windswept_hills	windswept_gravelly_hills	0.0615
+pair	windswept_hills	forest	0.0107
+pair	windswept_hills	windswept_savanna	0.0080
+pair	windswept_savanna	plains	0.2635
+pair	windswept_savanna	ocean	0.1866
+pair	windswept_savanna	river	0.1821
+pair	windswept_savanna	desert	0.0887
+pair	windswept_savanna	forest	0.0677
+pair	windswept_savanna	lukewarm_ocean	0.0622
+pair	windswept_savanna	sparse_jungle	0.0375
+pair	windswept_savanna	bamboo_jungle	0.0357
+pair	windswept_savanna	warm_ocean	0.0265
+pair	windswept_savanna	beach	0.0192
+pair	windswept_savanna	mangrove_swamp	0.0146
+pair	windswept_savanna	swamp	0.0101
+pair	windswept_savanna	windswept_hills	0.0055
+pair	wooded_badlands	desert	0.4261
+pair	wooded_badlands	river	0.4246
+pair	wooded_badlands	badlands	0.1024
+pair	wooded_badlands	jungle	0.0240
+pair	wooded_badlands	sparse_jungle	0.0199
+pair	wooded_badlands	forest	0.0030

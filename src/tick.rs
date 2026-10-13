@@ -1366,7 +1366,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         }
     }
 
-    if spawning {
+    if spawning && !world.is_flat() {
         for (chunk_x, chunk_z) in fresh {
             let biome = world.surface_biome(chunk_x * 16 + 8, chunk_z * 16 + 8);
             let animals = if crate::mob::spawn::land_table(biome).is_empty() {
@@ -1382,6 +1382,13 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             for wolf in crate::mob::spawn::wolves_for_new_chunk(&MobView(world), chunk_x, chunk_z, biome, rng, &mut || shared.next_entity_id()) {
                 items.add_mob(wolf);
             }
+        }
+    }
+
+    if spawning && world.is_flat() && ticks.is_multiple_of(crate::mob::spawn::flat::INTERVAL) {
+        let sky = world.weather.spawn_sky(redstone::ambient_sky(time));
+        for mob in crate::mob::spawn::flat::cycle(&MobView(world), &watchers, items.mobs(), world.spawn_position(), sky, rng, &mut || shared.next_entity_id()) {
+            items.add_mob(mob);
         }
     }
 
@@ -3660,6 +3667,18 @@ mod tests {
     }
 
     #[test]
+    fn fresh_flat_chunks_do_not_generate_uncapped_animal_herds() {
+        let shared = mob_server();
+        shared.spawn_mobs.store(true, std::sync::atomic::Ordering::Relaxed);
+        let dimension = Dimension::Overworld;
+        let mut world = shared.world_in(dimension).lock().unwrap();
+        assert!(world.is_flat());
+        for cx in 0..20 { for cz in 0..20 { world.ensure(cx, cz); } }
+        step_mobs(&shared, dimension, &mut world, &mut crate::mob::Rng::new(71), 1);
+        assert!(shared.items_in(dimension).lock().unwrap().mobs().is_empty());
+    }
+
+    #[test]
     fn scaffolding_and_dripstone_enter_the_real_falling_entity_queue() {
         let shared = mob_server();
         let dimension = Dimension::Overworld;
@@ -3768,15 +3787,15 @@ mod tests {
         assert!(!shared.items_in(overworld).lock().unwrap().mobs()[0].sheared, "шерсть отросла");
     }
 
-    /// Выключенное правило `spawn_mobs` не пускает животных в новые чанки;
-    /// включённое — пускает (в обычном мире, не в Незере).
+    /// В ровном мире новые чанки сами не создают стада: включённое правило
+    /// разрешает только последующие циклы при наличии игрока.
     #[test]
-    fn new_chunks_get_animals_only_when_the_rule_is_on() {
+    fn flat_chunk_generation_never_bypasses_the_periodic_creature_cap() {
         let shared = mob_server();
         let overworld = Dimension::Overworld;
         let mut rng = crate::mob::Rng::new(4);
 
-        // Обычный мир с травой: много новых чанков, чтобы шанс в 10 % сработал.
+        // Ровный мир с травой: раньше сюда ошибочно попадал шанс 10 %.
         {
             let mut world = shared.world_in(overworld).lock().unwrap();
 
@@ -3791,7 +3810,7 @@ mod tests {
 
         let with_rule = shared.items_in(overworld).lock().unwrap().mobs().len();
 
-        assert!(with_rule > 0, "на сорока плоских чанках хоть одна группа селится");
+        assert_eq!(with_rule, 0, "стада не создаются вместе с плоскими чанками");
 
         let quiet = mob_server();
 

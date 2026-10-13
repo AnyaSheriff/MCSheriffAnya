@@ -1062,6 +1062,8 @@ pub struct Vitals {
 
     /// Опыт: всего очков (по нему считаются уровень и шкала).
     pub xp: i32,
+    /// anvil-rename-repair, 26.1.2: уровни меняются, total и счёт — нет.
+    pub xp_total: i32,
 
     /// Семя зачарования (`XpSeed`): по нему стол предлагает зачарования
     /// (enchanting.rs). 0 — ещё не заведено: заводится при входе.
@@ -1185,6 +1187,7 @@ impl Vitals {
             dead: false,
             sprinting: false,
             xp: 0,
+            xp_total: 0,
             xp_seed: 0,
             effects: Vec::new(),
             hidden_effects: Vec::new(),
@@ -1209,6 +1212,7 @@ impl Vitals {
             fire: self.fire,
             fall: self.fall,
             experience: self.xp,
+            experience_total: self.xp_total,
             xp_seed: self.xp_seed,
         }
     }
@@ -1229,6 +1233,7 @@ impl Vitals {
             fire: saved.fire,
             fall: saved.fall,
             xp: saved.experience,
+            xp_total: saved.experience_total,
             xp_seed: saved.xp_seed,
             ..Self::new()
         }
@@ -1664,12 +1669,17 @@ impl Vitals {
     /// Очки опыта прибавляются (или убавляются, но не ниже нуля).
     pub fn add_xp(&mut self, amount: i32) {
         self.xp = self.xp.saturating_add(amount).max(0);
+        self.xp_total = self.xp_total.saturating_add(amount).max(0);
     }
 
     /// Команда `experience add|set … points|levels` (вики, Commands/experience):
     /// очки прибавляются к общему числу; уровни меняют уровень и сохраняют
     /// долю шкалы; `set … points` задаёт очки внутри текущего уровня.
     pub fn command_xp(&mut self, set: bool, amount: i32, levels: bool) {
+        if !set && !levels {
+            self.add_xp(amount);
+            return;
+        }
         let (level, bar) = level_of(self.xp);
         let keep = |level: i32| total_at_level(level) + (bar * level_size(level) as f32) as i32;
 

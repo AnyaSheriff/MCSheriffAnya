@@ -71,6 +71,7 @@ fn offline_ocean_census() {
     println!("meta\tlayout\t{layout}\tstep\t4\theight_step\t32\tseeds\t{seeds:?}");
     for seed in seeds {
         let terrain = Terrain::new(seed, Style::Vanilla);
+        let mut seed_counts = BTreeMap::<&str, usize>::new();
         let (mut seed_total, mut seed_ocean, mut seed_deep) = (0, 0, 0);
         for &(cx, cz, half) in &windows {
             let side = (half / 2) as usize;
@@ -82,6 +83,7 @@ fn offline_ocean_census() {
                     let biome = terrain.cell_biome(&climate, x, z);
                     grid.push(biome);
                     *counts.entry(biome.name()).or_default() += 1;
+                    *seed_counts.entry(biome.name()).or_default() += 1;
                     seed_total += 1;
                     seed_ocean += usize::from(biome.is_ocean());
                     seed_deep += usize::from(deep(biome));
@@ -98,6 +100,7 @@ fn offline_ocean_census() {
             patches(&grid, side, true, &mut sizes);
         }
         println!("seed\t{seed}\t{seed_total}\t{:.6}\t{:.6}", seed_ocean as f64 / seed_total as f64, seed_deep as f64 / seed_total as f64);
+        for (name, count) in seed_counts { println!("seed_share\t{seed}\t{name}\t{:.6}", count as f64 / seed_total as f64); }
         total += seed_total;
         oceans += seed_ocean;
         deeps += seed_deep;
@@ -130,6 +133,9 @@ fn offline_ocean_census() {
             println!("{kind}\t{name}\t{a}\t{b}\t{c}\t{d}\t{e}\t{}", values.len());
         }
     }
+    let mut all: Vec<_> = sizes.iter().filter(|(name,_)| **name != "all_oceans").flat_map(|(_,v)| v.iter().copied()).collect();
+    all.sort_unstable();
+    println!("patch_summary\tall_surface\t{}\t{:.3}\t{}\t{}", all.len(), total as f64/all.len() as f64, all[all.len()/2], all[(all.len()-1)*9/10]);
     for (name, values) in &mut sizes {
         values.sort_unstable();
         let small = values.iter().filter(|&&v| v <= 3).count();
@@ -195,7 +201,9 @@ fn ocean_distribution_and_land_relief() {
         let ours = share(*counts.get(name).unwrap_or(&0));
         assert!((ours - measured).abs() < 0.025, "{name}: {ours}, оригинал {measured}");
     }
-    for (name, before) in [("forest", 0.1311), ("plains", 0.1373), ("swamp", 0.0736), ("meadow", 0.0267)] {
+    // Доли суши по полной переписи, а не сохранение прежней ошибки:
+    // например, болота занимают 0,52% мира, то есть около 0,87% суши.
+    for (name, before) in [("forest", 0.1241), ("plains", 0.1247), ("swamp", 0.0087), ("meadow", 0.0130)] {
         let ours = *counts.get(name).unwrap_or(&0) as f64 / (total - oceans) as f64;
         assert!((ours - before).abs() < 0.03, "доля {name} в суше: {ours}, прежде {before}");
     }
@@ -204,4 +212,67 @@ fn ocean_distribution_and_land_relief() {
     for ((ours, before), tolerance) in heights.into_iter().zip([59, 64, 69, 81, 135]).zip([3, 3, 3, 5, 8]) {
         assert!((ours - before).abs() <= tolerance, "высота суши {ours}, прежде {before}");
     }
+}
+
+// Подбор только по данным нашего шума и измеренной таблице долей.
+#[test]
+#[ignore]
+fn calibrate_biome_distribution() {
+    use super::distribution::{INITIAL, mapped};
+    let path = std::env::var("BIOME_REFERENCE").expect("BIOME_REFERENCE");
+    let reference = std::fs::read_to_string(path).unwrap();
+    let mut target = [0.0_f64; 65];
+    for line in reference.lines() {
+        let parts: Vec<_> = line.split('\t').collect();
+        if parts[0] == "share" && let Some(b) = Biome::ALL.iter().find(|b| b.name() == parts[1]) {
+            target[b.number() as usize] = parts[2].parse().unwrap();
+        }
+    }
+    let mut samples = Vec::new();
+    for seed in SEEDS {
+        let t = Terrain::new(seed, Style::Vanilla);
+        for cx in [-8192, 0, 8192] { for cz in [-8192, 0, 8192] {
+            let half = if cx == 0 && cz == 0 { 1024 } else { 512 };
+            for x in (cx-half..cx+half).step_by(16) { for z in (cz-half..cz+half).step_by(16) {
+                samples.push(t.raw_climate_at(x+2,z+2));
+            }}
+        }}
+    }
+    let score = |p: &[f64; 45]| {
+        let mut counts = [0_usize; 65];
+        for c in &samples { counts[biome_of(&mapped(c,p)).number() as usize] += 1; }
+        let mut loss = 0.0;
+        for (i, &want) in target.iter().enumerate() {
+            let got = counts[i] as f64 / samples.len() as f64;
+            if want >= 0.005 {
+                let err = ((got + 0.0001) / (want + 0.0001)).ln();
+                loss += err * err + 8.0 * (err.abs() - 0.22).max(0.0).powi(2);
+            } else { loss += 0.03 * ((got - want) / 0.005).powi(2); }
+        }
+        (loss, counts)
+    };
+    let mut p = std::env::var("BIOME_PARAMS").ok().map(|s| serde_json::from_str::<Vec<f64>>(&s).unwrap().try_into().unwrap()).unwrap_or(INITIAL);
+    let mut best = score(&p).0;
+    for round in 0..45 {
+        let step = (0.035 * 0.91_f64.powi(round)).max(0.002);
+        for i in 0..45 {
+            if i == 32 || i == 33 { continue; }
+            let old = p[i];
+            let mut chosen = old;
+            for sign in [-1.0, 1.0] {
+                p[i] = old + step * sign;
+                let groups = [0..4,4..8,8..12,12..16,16..20,20..24,24..28,28..32,32..37,37..43];
+                let valid = groups.iter().all(|g| p[g.clone()].windows(2).all(|v| v[1]-v[0] > 0.012)) && p[i].abs() < 1.0 && p[44] > 0.1;
+                if valid {
+                    let s = score(&p).0;
+                    if s < best { best = s; chosen = p[i]; }
+                }
+            }
+            p[i] = chosen;
+        }
+        println!("round {round}: {best} {p:?}");
+    }
+    let (_, counts) = score(&p);
+    for b in Biome::ALL { let i=b.number() as usize; println!("fit\t{}\t{}\t{}", b.name(), target[i], counts[i] as f64/samples.len() as f64); }
+    std::fs::write(std::env::var("BIOME_PARAMS_OUT").unwrap(),format!("{p:?}")).unwrap();
 }
