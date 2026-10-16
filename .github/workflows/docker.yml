@@ -1,0 +1,80 @@
+name: Docker Hub
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-hub-publish
+  cancel-in-progress: false
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate panel scripts
+        run: |
+          bash -n docker/pterodactyl/entrypoint.sh
+          python3 docker/pterodactyl/test_panel.py
+
+      - name: Image version
+        id: version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Оставляем шесть знаков для суффикса -panel (предел тега — 128).
+          if [[ ! "$VERSION" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,121}$ ]]; then
+            echo "Invalid Docker tag: $VERSION" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            sheriffanya/mcsa:${{ steps.version.outputs.version }}
+            sheriffanya/mcsa:latest
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+          cache-from: type=gha,scope=mcsa
+          cache-to: type=gha,scope=mcsa,mode=max
+
+      - name: Build and push panel image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/pterodactyl/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            sheriffanya/mcsa:${{ steps.version.outputs.version }}-panel
+            sheriffanya/mcsa:panel
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+          cache-from: |
+            type=gha,scope=mcsa-panel
+            type=gha,scope=mcsa
+          cache-to: type=gha,scope=mcsa-panel,mode=max

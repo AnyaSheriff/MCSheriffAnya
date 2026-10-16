@@ -218,6 +218,50 @@ cargo build
 запуске создаются `config/`, `world/`, `logs/` и `playerdata/`. Подключайтесь
 клиентом 26.1.2 к `localhost:25565`.
 
+## Docker
+
+Образ `sheriffanya/mcsa:latest` поддерживает Linux amd64 и arm64; плагины WASM включены:
+
+```sh
+docker run -it --name mcsa --restart unless-stopped --stop-timeout 120 \
+  -p 25565:25565/tcp -p 19132:19132/udp \
+  -v mcsa-data:/data sheriffanya/mcsa:latest
+```
+
+**Ctrl+P, Ctrl+Q** отключает терминал; `docker attach mcsa` возвращает консоль
+для ввода команд. Команда `stop`, Ctrl+C или `docker stop mcsa` сохраняет игроков
+и миры. Для очень больших миров при необходимости увеличьте тайм-аут 120 секунд.
+Для запуска в фоне замените `-it` на `-dit`: ввод останется доступен при подключении.
+
+Можно использовать готовый `docker-compose.yml`:
+
+```sh
+docker compose up -d
+docker attach "$(docker compose ps -q mcsa)"
+docker compose stop
+```
+
+Именованный том в `/data` хранит `world/` (включая `world/playerdata/`),
+`config/`, `ops.json`, `auth.db`, `logs/`, `skins/`, `plugins/` и `modules/`.
+Compose создаёт отдельный том с префиксом проекта. `docker compose down`
+сохраняет его, а `docker compose down -v` удаляет.
+
+При первом запуске создаются `/data/config/server.properties` и
+`/data/config/mcsa.properties`. Перед правкой файлов в томе остановите сервер,
+после правки выполните `docker start mcsa` или `docker compose up -d`.
+Для удобной правки с хоста замените `mcsa-data:/data` на `./mcsa-data:/data`
+(для `docker run` укажите абсолютный путь), заранее создайте папку и дайте
+UID/GID `10001:10001` право записи. Настройки Java меняются в
+`mcsa-data/config/server.properties`, настройки MCSA, включая `bedrock-port`, —
+в `mcsa-data/config/mcsa.properties`. Java использует **25565/TCP**; для Bedrock
+нужно пробросить **19132/UDP** и разрешить UDP в межсетевом экране. При изменении
+внутреннего порта обновите и проброс.
+
+Местная сборка: `docker build --build-arg VERSION=dev -t sheriffanya/mcsa:dev .`.
+Если `Cargo.lock` есть, сборка использует его; иначе создаёт перед сборкой
+с `--locked`. Отправка тега `v*` публикует образ с версией без `v` и с тегом
+`latest`. В секретах репозитория нужны `DOCKERHUB_USERNAME` и `DOCKERHUB_TOKEN`.
+
 ## Настройки
 
 - `config/server.properties` — те же ключи и формат, что у оригинала. Ничего

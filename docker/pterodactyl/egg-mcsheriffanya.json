@@ -1,0 +1,82 @@
+{
+    "_comment": "Maintained by the MCSheriffAnya project; PTDL_v2 import file.",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": "https://raw.githubusercontent.com/AnyaSheriff/MCSheriffAnya/main/docker/pterodactyl/egg-mcsheriffanya.json"
+    },
+    "exported_at": "2026-10-16T00:00:00+00:00",
+    "name": "MCSheriffAnya",
+    "author": "AnyaSheriff@users.noreply.github.com",
+    "description": "Minecraft-compatible server written in Rust (MIT, alpha). Java 26.1.2 / protocol 775; partial Bedrock 26.10–26.13 / protocol 944. Binary is included in the panel image. Allocate a UDP port for Bedrock or set BEDROCK_PORT=0. gamemode in server.properties is not implemented; use console commands.",
+    "features": [],
+    "docker_images": {
+        "MCSheriffAnya (panel)": "sheriffanya/mcsa:panel"
+    },
+    "file_denylist": [],
+    "startup": "/usr/local/bin/mcsheriffanya",
+    "config": {
+        "files": "{\n    \"config/server.properties\": {\n        \"parser\": \"properties\",\n        \"find\": {\n            \"server-port\": \"{{server.build.default.port}}\",\n            \"server-ip\": \"0.0.0.0\",\n            \"online-mode\": \"{{server.environment.ONLINE_MODE}}\",\n            \"max-players\": \"{{server.environment.MAX_PLAYERS}}\",\n            \"motd\": \"{{server.environment.MOTD}}\"\n        }\n    },\n    \"config/mcsa.properties\": {\n        \"parser\": \"properties\",\n        \"find\": {\n            \"bedrock-port\": \"{{server.environment.BEDROCK_PORT}}\",\n            \"auth-enabled\": \"{{server.environment.AUTH_ENABLED}}\"\n        }\n    }\n}",
+        "startup": "{\n    \"done\": \"Готово (\"\n}",
+        "logs": "{}",
+        "stop": "stop"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/sh\nset -eu\n\n# Wings: установка идёт в /mnt/server, запуск — в /home/container.\n# https://pelican.dev/docs/eggs/creating-a-custom-egg/ — \"Install Container Path\".\nmkdir -p /mnt/server\ncd /mnt/server\nmkdir -p config world logs playerdata skins plugins modules\n\n# Создаём ключи до обработки конфигурации панелью. При переустановке\n# сохраняем существующие файлы; значения egg панель применяет перед запуском.\nif [ ! -e config/server.properties ]; then\n    cat > config/server.properties <<'PROPERTIES'\nserver-port=25565\nserver-ip=0.0.0.0\nonline-mode=true\nmax-players=20\nmotd=MCSheriffAnya Server\nPROPERTIES\nfi\nif [ ! -e config/mcsa.properties ]; then\n    cat > config/mcsa.properties <<'PROPERTIES'\nbedrock-port=19132\nauth-enabled=true\nPROPERTIES\nfi\nprintf '%s\\n' 'MCSheriffAnya: data directories ready; binary is supplied by the panel image.'\n",
+            "container": "debian:bookworm-slim",
+            "entrypoint": "sh"
+        }
+    },
+    "variables": [
+        {
+            "name": "Bedrock UDP port",
+            "description": "UDP allocation assigned by the host. 0 disables Bedrock. Changing this value does not create an allocation or firewall rule.",
+            "env_variable": "BEDROCK_PORT",
+            "default_value": "19132",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|integer|between:0,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Java online mode",
+            "description": "Verify Java accounts. Password login applies only when this is false. Bedrock Xbox policy is configured separately via bedrock-online-mode.",
+            "env_variable": "ONLINE_MODE",
+            "default_value": "true",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Password login",
+            "description": "Enable built-in password registration/login for offline Java players. Java online-mode and Bedrock bypass this gate.",
+            "env_variable": "AUTH_ENABLED",
+            "default_value": "true",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Maximum players",
+            "description": "Maximum player count (max-players in config/server.properties).",
+            "env_variable": "MAX_PLAYERS",
+            "default_value": "20",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|between:1,2147483647",
+            "field_type": "text"
+        },
+        {
+            "name": "MOTD",
+            "description": "Server list description, one line. Unicode text is allowed.",
+            "env_variable": "MOTD",
+            "default_value": "MCSheriffAnya Server",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:255|regex:/\\A[^\\r\\n]*\\z/u",
+            "field_type": "text"
+        }
+    ]
+}

@@ -224,6 +224,49 @@ Run it from a terminal if you want to type console commands. The first start
 creates `config/`, `world/`, `logs/` and `playerdata/`. Connect with a
 26.1.2 client to `localhost:25565`.
 
+## Docker
+
+The image `sheriffanya/mcsa:latest` supports Linux amd64 and arm64, including WASM plugins:
+
+```sh
+docker run -it --name mcsa --restart unless-stopped --stop-timeout 120 \
+  -p 25565:25565/tcp -p 19132:19132/udp \
+  -v mcsa-data:/data sheriffanya/mcsa:latest
+```
+
+Detach with **Ctrl+P, Ctrl+Q**; reconnect with `docker attach mcsa` to enter
+console commands. `stop`, Ctrl+C, or `docker stop mcsa` saves players and worlds.
+Allow more than 120 seconds for very large worlds if needed. For a detached start
+use `-dit` instead of `-it`, keeping stdin open for later attachment.
+
+Or use the included `docker-compose.yml`:
+
+```sh
+docker compose up -d
+docker attach "$(docker compose ps -q mcsa)"
+docker compose stop
+```
+
+The named volume at `/data` keeps `world/` (including `world/playerdata/`),
+`config/`, `ops.json`, `auth.db`, `logs/`, `skins/`, `plugins/`, and `modules/`.
+Compose creates its own project-prefixed volume; `docker compose down` preserves
+it, while `docker compose down -v` deletes it.
+
+The first start creates `/data/config/server.properties` and
+`/data/config/mcsa.properties`. Stop the server before editing them in the volume,
+then use `docker start mcsa` or `docker compose up -d`. For convenient host editing,
+replace `mcsa-data:/data` with `./mcsa-data:/data` (an absolute host path with
+`docker run`), create that directory first, and make it writable by UID/GID
+`10001:10001`. Edit `mcsa-data/config/server.properties` for Java settings and
+`mcsa-data/config/mcsa.properties` for MCSA settings, including `bedrock-port`.
+Java uses **25565/TCP**; Bedrock needs **19132/UDP** published and allowed through
+the firewall. If you change an internal port, update the mapping too.
+
+Build locally with `docker build --build-arg VERSION=dev -t sheriffanya/mcsa:dev .`.
+An existing `Cargo.lock` is used; otherwise the image generates one before the
+locked release build. Tag pushes (`v*`) publish the version without `v` and
+`latest`; configure repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
+
 ## Configuration
 
 - `config/server.properties` — the same keys and format as the original
