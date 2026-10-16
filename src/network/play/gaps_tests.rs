@@ -7,7 +7,7 @@ fn shared() -> Shared {
 fn stack(name: &str) -> Stack { Stack::new(blocks::item_named(name).unwrap(),1) }
 fn player(shared: &Shared) -> PlayerState {
     let mut p=PlayerState::new([29;16],"Gaps".into(),None,None,0x7f,29,(0.5,64.0,0.5));
-    p.game_mode=GAME_MODE_SURVIVAL;p.awaiting_teleport=false;
+    vitals::change_game_mode(&mut p,GAME_MODE_SURVIVAL);p.awaiting_teleport=false;
     shared.players.lock().unwrap().join(p.member(),p.entity_id).unwrap();p
 }
 fn use_packet(hand:i32) -> Vec<u8> {

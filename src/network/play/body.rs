@@ -125,6 +125,7 @@ impl Body {
         if !near { return; }
         p.dimension = stance.dimension;
         p.game_mode = stance.game_mode;
+        p.attrs.set_creative_ranges(stance.game_mode == GAME_MODE_CREATIVE);
         p.ride.vehicle = Some(target);
         let input = u8::from(flags & (1 << 10) != 0) | (u8::from(flags & (1 << 11) != 0) << 1)
             | (u8::from(flags & (1 << 12) != 0) << 2) | (u8::from(flags & (1 << 13) != 0) << 3)
@@ -169,6 +170,7 @@ impl Body {
         let p = &mut *self.state;
 
         p.game_mode = stance.game_mode;
+        p.attrs.set_creative_ranges(stance.game_mode == GAME_MODE_CREATIVE);
         (p.x, p.y, p.z) = stance.feet;
         p.yaw = stance.yaw;
         p.pitch = stance.pitch;

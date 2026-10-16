@@ -284,7 +284,7 @@ pub(super) struct Net {
     pub(super) slot_update: Option<i32>,
     /// Слоты, которые сервер поменял сам (износ вещей) и которые надо показать клиенту.
     pub(super) slots_dirty: Vec<i32>,
-    /// Атрибуты брони, разосланные игроку в этом такте: их увидят и остальные.
+    /// Атрибуты брони и дальности, разосланные игроку: их увидят и остальные.
     pub(super) armor_out: Vec<crate::attributes::Attribute>,
     /// Слоты, поменявшиеся в такте сущности, которые клиенту уходят
     /// следующим кругом (чёрный ящик, crossbow-shoot: зарядка на +25, ячейки
@@ -668,6 +668,7 @@ pub(super) fn change_game_mode(player: &mut PlayerState, mode: i32) {
         player.game_mode = mode;
     }
     player.creative_flying = false;
+    player.attrs.set_creative_ranges(mode == GAME_MODE_CREATIVE);
 }
 
 /// fall-mode-teleport-reset: Abilities, Game Event, снова Abilities; дальность
@@ -1524,8 +1525,12 @@ async fn sync_attributes(stream: &mut Outgoing<'_>, player: &mut PlayerState, no
 
     body.extend_from_slice(&crate::attributes::encode_update(player.entity_id, &changed));
 
-    // Броню и стойкость видят и остальные игроки; у них стойкость первая.
-    let mut armor: Vec<_> = changed.iter().filter(|a| a.id == crate::attributes::ARMOR || a.id == crate::attributes::ARMOR_TOUGHNESS).cloned().collect();
+    // Броню, стойкость и дальность видят и остальные игроки; стойкость первая.
+    // Дальность подтверждена itemaudit4-attribute-phase-equipment, 26.1.2.
+    let mut armor: Vec<_> = changed.iter().filter(|a| matches!(a.id,
+        crate::attributes::ARMOR | crate::attributes::ARMOR_TOUGHNESS
+        | crate::attributes::BLOCK_INTERACTION_RANGE | crate::attributes::ENTITY_INTERACTION_RANGE
+    )).cloned().collect();
 
     armor.sort_by_key(|a| a.id != crate::attributes::ARMOR_TOUGHNESS);
     player.net.armor_out = armor;
@@ -1675,6 +1680,7 @@ pub(super) fn respawned(player: &mut PlayerState) {
     player.attrs = crate::attributes::Attributes::player();
     player.attrs_applied.clear();
     player.attrs_sent = crate::attributes::Sent::of(&player.attrs);
+    player.attrs.set_creative_ranges(player.game_mode == GAME_MODE_CREATIVE);
     player.equip_seen.clear();
 }
 
@@ -3166,6 +3172,22 @@ pub(super) async fn clear_effects(stream: &mut Outgoing<'_>, player: &mut Player
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn game_modes_update_reach_without_changing_its_base() {
+        use crate::attributes::{BLOCK_INTERACTION_RANGE, ENTITY_INTERACTION_RANGE};
+        let mut player = PlayerState::new([94; 16], "Range".into(), None, None, 0x7f, 94, (0.5, 64.0, 0.5));
+        player.attrs.set_base(ENTITY_INTERACTION_RANGE, 4.0);
+        for mode in [GAME_MODE_SURVIVAL, GAME_MODE_CREATIVE, GAME_MODE_CREATIVE, GAME_MODE_SPECTATOR, GAME_MODE_ADVENTURE] {
+            change_game_mode(&mut player, mode);
+            assert_eq!(player.attrs.value(BLOCK_INTERACTION_RANGE), if mode == GAME_MODE_CREATIVE { 5.0 } else { 4.5 });
+            assert_eq!(player.attrs.value(ENTITY_INTERACTION_RANGE), if mode == GAME_MODE_CREATIVE { 6.0 } else { 4.0 });
+        }
+        change_game_mode(&mut player, GAME_MODE_CREATIVE);
+        respawned(&mut player);
+        assert_eq!(player.attrs.value(BLOCK_INTERACTION_RANGE), 5.0);
+        assert_eq!(player.attrs.value(ENTITY_INTERACTION_RANGE), 5.0);
+    }
 
     #[test]
     fn smash_particle_counts_follow_pre_landing_descent() {

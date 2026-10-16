@@ -239,6 +239,22 @@ impl Attributes {
             entry.modifiers.retain(|m| m.id != id);
         }
     }
+
+    /// Вики, Attribute: «Block interaction range», «Entity interaction range».
+    /// Чёрный ящик 26.1.2, itemaudit4-attribute-phase-equipment: creative
+    /// добавляет 0,5/2 к основе, а при выходе снимает только свои модификаторы.
+    pub fn set_creative_ranges(&mut self, creative: bool) {
+        for (attribute, id, amount) in [
+            (BLOCK_INTERACTION_RANGE, "minecraft:creative_mode_block_range", 0.5),
+            (ENTITY_INTERACTION_RANGE, "minecraft:creative_mode_entity_range", 2.0),
+        ] {
+            if creative {
+                self.set_modifier(attribute, Modifier::new(id, amount, Operation::AddValue));
+            } else {
+                self.remove_modifier(attribute, id);
+            }
+        }
+    }
 }
 
 /// Что клиенту уже сообщено об атрибутах: по этому слепку решается, что
@@ -401,6 +417,29 @@ mod tests {
         let expected = 7.0 * 1.75 * 1.1 * 1.2;
 
         assert!((attributes.value(ATTACK_DAMAGE) - expected).abs() < 1e-9);
+    }
+
+    #[test]
+    fn creative_ranges_preserve_custom_bases_and_modifiers() {
+        let mut attributes = Attributes::player();
+        attributes.set_base(BLOCK_INTERACTION_RANGE, 7.0);
+        attributes.set_modifier(ENTITY_INTERACTION_RANGE, Modifier::new("test:reach", 1.0, Operation::AddValue));
+        let original = attributes.clone();
+        let mut sent = Sent::of(&attributes);
+
+        attributes.set_creative_ranges(true);
+        assert_eq!(attributes.value(BLOCK_INTERACTION_RANGE), 7.5);
+        assert_eq!(attributes.value(ENTITY_INTERACTION_RANGE), 6.0);
+        assert_eq!(sent.changed(&attributes).len(), 2);
+        attributes.set_creative_ranges(true);
+        assert!(sent.changed(&attributes).is_empty());
+        assert_eq!(attributes.value(ENTITY_INTERACTION_RANGE), 6.0);
+
+        attributes.set_creative_ranges(false);
+        assert_eq!(attributes, original);
+        assert_eq!(sent.changed(&attributes).len(), 2);
+        attributes.set_creative_ranges(false);
+        assert!(sent.changed(&attributes).is_empty());
     }
 
     #[test]

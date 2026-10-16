@@ -11431,6 +11431,8 @@ impl PlayerState {
 
         // Здоровье, еда, воздух и огонь — как при выходе.
         let mut vit = saved.as_ref().map(|data| crate::survival::Vitals::restored(&data.vitals)).unwrap_or_default();
+        let mut attrs = crate::attributes::Attributes::player();
+        attrs.set_creative_ranges(game_mode == GAME_MODE_CREATIVE);
 
         // Семя зачарования 0 — не заведено: завести (вики, Enchanting
         // mechanics: «seed of 0 … will be regenerated»).
@@ -11510,7 +11512,7 @@ impl PlayerState {
             net: vitals::Net::synced(&vit),
             vit,
             prev_mode: -1,
-            attrs: crate::attributes::Attributes::player(),
+            attrs,
             attrs_applied: Vec::new(),
             attrs_sent: crate::attributes::Sent::of(&crate::attributes::Attributes::player()),
             equip_seen: Vec::new(),
