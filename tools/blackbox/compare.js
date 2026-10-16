@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
+const { valueOrder } = require('./value-order');
 
 const name = process.argv[2];
 if (!name) { console.error('использование: node compare.js <сценарий> [--record]'); process.exit(2); }
@@ -138,14 +139,15 @@ const key = (e) => {
     // Заголовок окна у сервера свой («Chest» или перевод) — сравниваем тип.
     case 'sign_editor': return `sign_editor ${e.at.join(',')} ${e.front}`;
     case 'window': return `window ${e.type}`;
-    case 'slots': return `slots ${e.items}`;
-    case 'slot': return `slot ${e.window} ${e.slot} ${e.item}`;
-    case 'cursor': return `cursor ${e.item}`;
+    case 'slots': return `slots ${valueOrder(e.items)}`;
+    case 'slot': return `slot ${e.window} ${e.slot} ${valueOrder(e.item)}`;
+    case 'cursor': return `cursor ${valueOrder(e.item)}`;
+    case 'inv': return `inv ${e.slot} ${valueOrder(e.item)}`;
     case 'recipe': return `recipe ${e.width}x${e.height} ${e.item}`;
     case 'level': return `level ${e.at.join(',')} ${e.effect} ${e.data}`;
     case 'property': return `property ${e.property} ${e.value}`;
     case 'meta': return `meta ${e.fields}`;
-    case 'cart': return `cart ${describeCart(e)}`;
+    case 'cart': return `cart ${valueOrder(describeCart(e))}`;
     case 'sv': return `sv ${e.text}`;
     case 'sc': return `sc ${e.text}`;
     case 'self': return `self ${describe(e)}`;

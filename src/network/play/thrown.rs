@@ -90,7 +90,11 @@ pub(super) fn throw_potion(shared: &Shared, player: &mut PlayerState, hand: i32)
         _ => crate::thrown::POTION_SPEED,
     };
     let lifted = matches!(kind, Kind::Splash | Kind::Lingering | Kind::ExperienceBottle);
-    let (velocity, rotation) = projectile::launch(shared, player, speed, lifted, 0.0);
+    let (velocity, rotation) = if matches!(kind, Kind::Snowball | Kind::Egg | Kind::EnderPearl) {
+        projectile::launch_simple(shared, player, speed)
+    } else {
+        projectile::launch(shared, player, speed, lifted, 0.0)
+    };
     let at = (player.x, player.y + if player.sneaking { 1.27 } else { 1.62 } - 0.1, player.z);
 
     // Звук броска — до появления; у взрывного раздел «игроки», у оседающего
@@ -174,6 +178,50 @@ pub(super) async fn send_launch(stream: &mut Outgoing<'_>, shared: &Shared, play
 
     send_item(stream, flying).await?;
     player.seen_thrown.insert(flying.entity_id, Shown::Shot { grid: grid_of((sx, sy, sz)), rot: (cart_angle(yaw), cart_angle(pitch)), age: flying.age });
+    Ok(())
+}
+
+/// throw3-egg-sync-impact.md:19–22: снимок +10 ещё живого снаряда
+/// уходит до события 3 и удаления. Одинаково для живых и разбившихся.
+pub(super) async fn update_flying(stream: &mut Outgoing<'_>, player: &mut PlayerState, flying: &Flying) -> io::Result<()> {
+    let Some(Shown::Shot { grid, rot, age }) = player.seen_thrown.get(&flying.entity_id).copied() else {
+        return Ok(());
+    };
+
+    if flying.age <= age { return Ok(()); }
+    player.seen_thrown.insert(flying.entity_id, Shown::Shot { grid, rot, age: flying.age });
+
+    // Раз в 10 тактов — скорость и место до хода (splash-potion).
+    // Записи throw-* скрывают сдвиги за пределы площадки 8×8×8:
+    // [проверить throw2-*] точный выбор пакетов у каждого вида.
+    if flying.age > 1 && (flying.age - 1).is_multiple_of(FLYING_SYNC) {
+        let (at, velocity, (yaw, pitch)) = flying.prev;
+
+        if flying.kind != crate::thrown::Kind::LlamaSpit {
+            let mut body = encode_varint(ENTITY_VELOCITY);
+
+            body.extend_from_slice(&encode_varint(flying.entity_id));
+            types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
+            write_body(stream, body).await?;
+        }
+
+        let next = grid_of(at);
+        if let Some(step) = projectile::relative_step(grid, next) {
+            let turned = (cart_angle(yaw), cart_angle(pitch)) != rot;
+            let mut body = encode_varint(if turned { ENTITY_MOVE_ROTATE } else { ENTITY_POSITION });
+            body.extend_from_slice(&encode_varint(flying.entity_id));
+            for delta in step { push_i16(&mut body, delta); }
+            if turned {
+                body.push(cart_angle(yaw));
+                body.push(cart_angle(pitch));
+            }
+            body.push(0);
+            write_body(stream, body).await?;
+        } else {
+            write_body(stream, projectile::position_sync(flying.entity_id, at, velocity, (yaw, pitch), false)).await?;
+        }
+        player.seen_thrown.insert(flying.entity_id, Shown::Shot { grid: next, rot: (cart_angle(yaw), cart_angle(pitch)), age: flying.age });
+    }
     Ok(())
 }
 
@@ -477,6 +525,9 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
     let blasts: Vec<_> = state.blasts.iter().map(|b| &b.last).collect();
 
     if early {
+        for flying in &state.landed {
+            update_flying(stream, player, flying).await?;
+        }
         for cloud in clouds.iter().chain(faded.iter()).filter(|c| c.lag) {
             update_cloud(stream, player, cloud).await?;
         }
@@ -487,6 +538,10 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
     let range = f64::from(shared.properties.view_distance.clamp(2, 10)) * 16.0;
     let (viewer_x, viewer_z) = (player.x, player.z);
     let near = |at: (f64, f64, f64)| (at.0 - viewer_x).abs() <= range && (at.2 - viewer_z).abs() <= range;
+
+    for flying in &state.landed {
+        update_flying(stream, player, flying).await?;
+    }
 
     // Расколы такта: облако, событие мира, уход снаряда (lingering-potion).
     for impact in impacts {
@@ -589,44 +644,10 @@ pub(super) async fn send_thrown_ticks(stream: &mut Outgoing<'_>, shared: &Shared
     }
 
     for flying in flying.iter().filter(|f| present.contains(&f.entity_id)) {
-        let Some(Shown::Shot { grid, rot, age }) = player.seen_thrown.get(&flying.entity_id).copied() else {
+        if !player.seen_thrown.contains_key(&flying.entity_id) {
             send_launch(stream, shared, player, flying).await?;
-            continue;
-        };
-
-        if flying.age <= age { continue; }
-        player.seen_thrown.insert(flying.entity_id, Shown::Shot { grid, rot, age: flying.age });
-
-        // Раз в 10 тактов — скорость и место до хода (splash-potion).
-        // Записи throw-* скрывают сдвиги за пределы площадки 8×8×8:
-        // [проверить throw2-*] точный выбор пакетов у каждого вида.
-        if flying.age > 1 && (flying.age - 1).is_multiple_of(FLYING_SYNC) {
-            let (at, velocity, (yaw, pitch)) = flying.prev;
-
-            if flying.kind != crate::thrown::Kind::LlamaSpit {
-                let mut body = encode_varint(ENTITY_VELOCITY);
-
-                body.extend_from_slice(&encode_varint(flying.entity_id));
-                types::push_velocity(&mut body, velocity.0, velocity.1, velocity.2);
-                write_body(stream, body).await?;
-            }
-
-            let next = grid_of(at);
-            if let Some(step) = projectile::relative_step(grid, next) {
-                let turned = (cart_angle(yaw), cart_angle(pitch)) != rot;
-                let mut body = encode_varint(if turned { ENTITY_MOVE_ROTATE } else { ENTITY_POSITION });
-                body.extend_from_slice(&encode_varint(flying.entity_id));
-                for delta in step { push_i16(&mut body, delta); }
-                if turned {
-                    body.push(cart_angle(yaw));
-                    body.push(cart_angle(pitch));
-                }
-                body.push(0);
-                write_body(stream, body).await?;
-            } else {
-                write_body(stream, projectile::position_sync(flying.entity_id, at, velocity, (yaw, pitch), false)).await?;
-            }
-            player.seen_thrown.insert(flying.entity_id, Shown::Shot { grid: next, rot: (cart_angle(yaw), cart_angle(pitch)), age: flying.age });
+        } else {
+            update_flying(stream, player, flying).await?;
         }
     }
 

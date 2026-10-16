@@ -14,6 +14,9 @@
 // такт двигает их из tick.rs, клиентам о них рассказывает своё слежение
 // (network/play/thrown.rs) — в конце хода, после событий раскола.
 
+#[path = "thrown_hatch.rs"]
+mod hatch;
+
 use crate::dimension::Dimension;
 use crate::inventory::Stack;
 use crate::shared::Shared;
@@ -253,7 +256,8 @@ impl Flying {
 }
 
 /// Угол по сторонам света и наклон по скорости, как у стрел: `yaw =
-/// atan2(vx, vz)` (splash-potion: на −z поворот 127 из 256).
+/// atan2(vx, vz)`; throw-snowball-flat.json: x>0 даёт 127,
+/// throw-snowball-walk.md:8: x<0 даёт −128. Разброс уже учтён.
 pub fn angles((vx, vy, vz): (f64, f64, f64)) -> (f32, f32) {
     (vx.atan2(vz).to_degrees() as f32, vy.atan2(vx.hypot(vz)).to_degrees() as f32)
 }
@@ -414,6 +418,8 @@ pub struct Impact {
 #[derive(Default, Clone)]
 pub struct Thrown {
     pub flying: Vec<Flying>,
+    /// Последний снимок до удара: throw3-egg-sync-impact.md:19–22.
+    pub landed: Vec<Flying>,
     pub clouds: Vec<Cloud>,
     /// Расколы последнего такта по измерениям.
     pub impacts: Vec<Impact>,
@@ -438,6 +444,7 @@ impl Thrown {
     pub fn snapshot(&self, dimension: Dimension) -> Self {
         Self {
             flying: self.flying.iter().filter(|v| v.dimension == dimension).cloned().collect(),
+            landed: self.landed.iter().filter(|v| v.dimension == dimension).cloned().collect(),
             clouds: self.clouds.iter().filter(|v| v.dimension == dimension).cloned().collect(),
             impacts: self.impacts.iter().filter(|v| v.dimension == dimension).cloned().collect(),
             faded: self.faded.iter().filter(|v| v.dimension == dimension).cloned().collect(),
@@ -708,6 +715,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     let mut thrown = shared.thrown.lock().expect("снаряды захвачены другим потоком");
 
     thrown.impacts.retain(|impact| impact.dimension != dimension);
+    thrown.landed.retain(|f| f.dimension != dimension);
     thrown.blasts.retain(|blast| blast.dimension != dimension);
     thrown.eyes_gone.retain(|gone| gone.last.dimension != dimension);
 
@@ -745,6 +753,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
     let mut deeds: Vec<Deed> = Vec::new();
     let mut gone: Vec<i32> = Vec::new();
+    let mut landed = Vec::new();
     let mut new_clouds: Vec<Cloud> = Vec::new();
     let mut impacts: Vec<Impact> = Vec::new();
     let mut blasts: Vec<(i32, (f64, f64, f64), f32)> = Vec::new();
@@ -889,6 +898,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 deeds.push(Deed::Progress(owner.4, crate::progress::Event::Trigger("adventure/bullseye")));
             }
         }
+        if matches!(flying.kind, Kind::Snowball | Kind::Egg | Kind::EnderPearl) {
+            landed.push(flying.clone());
+        }
         gone.push(flying.entity_id);
         crate::redstone::game_event_from(world, at, 2, Some(flying.owner), true);
 
@@ -942,7 +954,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             continue;
         }
         // Перенос выполняет подключение владельца, после проверки жизни.
-        // Endermite, chunk ticket и межмировой полёт [проверить].
+        // throw3-pearl-endermite-repeat: 0/128, потому что bot.js:731
+        // выключает spawn_mobs. Шанс/место/lifetime этим не измерены
+        // [проверить: исправленный probe; chunk ticket и межмировой полёт].
         if flying.kind == Kind::EnderPearl {
             if let Some((_, origin, _, mode, uuid)) = members.iter().find(|m| m.0 == flying.owner) {
                 // Вики, Endermite: 5 %, у игрока ДО переноса, а не у жемчуга.
@@ -950,7 +964,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     items.add_mob(crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Endermite, *origin));
                 }
                 // Урон 5 (ender_pearl) — у подключения при переносе.
-                shared.players.lock().expect("игроки").order(uuid, crate::players::Order::PearlTeleport { x: at.0, y: at.1, z: at.2, dimension });
+                shared.players.lock().expect("игроки").order(uuid, crate::players::Order::PearlTeleport { x: at.0, y: at.1, z: at.2, dimension, tick: *shared.tick_starts.borrow(), shot: Box::new(flying.clone()) });
                 // tmp/bb/throw2-ender_pearl-down30-yaw0-standing.md:11–19:
                 // перенос, урон, звук, удаление — один такт; запись звука
                 // из подключения опаздывала до следующей публикации мира.
@@ -963,12 +977,20 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         if flying.kind == Kind::Egg {
             let count = egg_hatch(world.random_bits() % 8, world.random_bits() % 32);
             for _ in 0..count {
-                let mut chick = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Chicken, at);
+                let mut chick = crate::mob::Mob::new(shared.next_entity_id(), crate::mob::Kind::Chicken, hatch::position(world, at));
                 chick.age = crate::mob::BABY_AGE;
                 // tmp/bb/throw2-egg-down30-yaw-135-standing.md:11,18:
                 // цыплёнок наследует yaw яйца (134,488°), но pitch = 0.
                 chick.yaw = flying.rot.0;
-                // [проверить] Визуальные cold/warm chicken variants ещё отсутствуют.
+                // throw3-egg-hatch-repeat.md:225,810: голова 0…4 байта, независимо
+                // от yaw яйца. Равномерные 0…2π градусов [проверить распределение].
+                chick.head_yaw = world.random_unit() * std::f32::consts::TAU;
+                // Вики, Egg: «blue eggs hatch cold chicks», «brown eggs hatch warm chicks».
+                // color уже сохраняется; для курицы 0=temperate, 1=cold, 2=warm.
+                // Цветные яйца в throw3 не снимались [проверить: throw4-egg-variants].
+                chick.color = match flying.stack.and_then(|s| crate::blocks::item_name(s.item)) {
+                    Some("blue_egg") => 1, Some("brown_egg") => 2, _ => 0,
+                };
                 items.add_mob_late(chick.clone());
                 // tmp/bb/throw2-egg-down30-yaw-135-standing.md:11–16:
                 // появление и свойства ДО события 3, нулевой сдвиг — позже.
@@ -1352,6 +1374,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     thrown.faded.extend(gone_clouds);
     thrown.clouds.extend(new_clouds);
     thrown.impacts.extend(impacts);
+    thrown.landed.extend(landed);
 
     drop(thrown);
     drop(items);

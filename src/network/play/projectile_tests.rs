@@ -277,3 +277,6 @@ async fn long_arrow_sync_uses_the_same_before_step_position_and_velocity() {
 
 #[path = "projectile_recording_tests.rs"]
 mod recordings;
+
+#[path = "projectile_third_tests.rs"]
+mod third_pass;

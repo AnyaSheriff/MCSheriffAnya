@@ -98,6 +98,7 @@ mod shared;
 mod sessions;
 mod log;
 mod commands;
+mod commands_feedback;
 mod command_block;
 mod commands_world;
 mod commands_score;

@@ -1562,6 +1562,7 @@ pub struct Mob {
 
     /// Овца: остригнута ли, цвет шерсти (0 — белая).
     pub sheared: bool,
+    /// Цвет овцы; у курицы вариант: 0=temperate, 1=cold, 2=warm (старый 0 сохранён).
     pub color: u8,
 
     /// Курица: сколько тактов до яйца.
@@ -2556,17 +2557,17 @@ impl Mob {
         // Высота падения копится по пройденному вниз, и такт приземления
         // в счёт урона (чёрный ящик, cow-physics: с шести блоков — урон 3)
         // (вики, Fall damage); для частиц он не в счёте — берётся высота до него.
-        let before = self.vitals.fall;
+        let before = self.vitals.fall as f32;
 
         if moved_y < 0.0 {
-            self.vitals.fall += (-moved_y) as f32;
+            self.vitals.fall = f64::from(self.vitals.fall as f32 + (-moved_y) as f32);
         }
 
         if !self.on_ground {
             return;
         }
 
-        let fall = self.vitals.fall;
+        let fall = self.vitals.fall as f32;
 
         self.vitals.fall = 0.0;
 

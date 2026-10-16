@@ -1,0 +1,84 @@
+{
+  "name": "fall-fractional-motion",
+  "about": "[проверить] 26.1.2 follow-up: ordinary fractional falls distinguish the rounding inferred from fall-mode-teleport-motion and pvp-mace-landing-motion from smash-only protection. Heights 3.5, 3.999, 4, 4.001, 4.5, 5.5. Exact outgoing movement and velocity; expected unarmored damage under the inferred rule: 0,0,1,1,1,2. Verify integer boundaries, no fixed landing delay. Stone pad is removed in cleanup.",
+  "blocks": [],
+  "track_self": true,
+  "exclusive": true,
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode creative $(bot)",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "fill $(-2,-1,-2) $(7,-1,7) stone",
+    "fill $(-2,0,-2) $(7,16,7) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "effect give $(bot) instant_health 1 10",
+    "!stopfly",
+    "!wait 20",
+    "attribute $(bot) minecraft:safe_fall_distance base reset",
+    "attribute $(bot) minecraft:gravity base reset",
+    "gamemode survival $(bot)"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 2,
+      "cmd": "tp $(bot) $(3.5,3.5,3.5)"
+    },
+    {
+      "after": 50,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 52,
+      "cmd": "tp $(bot) $(3.5,3.999,3.5)"
+    },
+    {
+      "after": 100,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 102,
+      "cmd": "tp $(bot) $(3.5,4,3.5)"
+    },
+    {
+      "after": 150,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 152,
+      "cmd": "tp $(bot) $(3.5,4.001,3.5)"
+    },
+    {
+      "after": 200,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 202,
+      "cmd": "tp $(bot) $(3.5,4.5,3.5)"
+    },
+    {
+      "after": 250,
+      "cmd": "effect give $(bot) instant_health 1 10"
+    },
+    {
+      "after": 252,
+      "cmd": "tp $(bot) $(3.5,5.5,3.5)"
+    }
+  ],
+  "record_ticks": 290,
+  "cleanup": [
+    "gamemode creative $(bot)",
+    "effect clear $(bot)",
+    "effect give $(bot) instant_health 1 10",
+    "gamerule natural_health_regeneration true",
+    "difficulty peaceful",
+    "fill $(-2,-1,-2) $(7,16,7) air",
+    "!startfly"
+  ],
+  "track_client_moves": true
+}

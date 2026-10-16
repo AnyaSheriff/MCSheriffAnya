@@ -226,6 +226,7 @@ fn smash_landing_particles_are_published_in_the_movement_tick() {
     let mut p = player();
     p.game_mode = GAME_MODE_SURVIVAL;
     p.vit.fall = 9.0;
+    p.vit.smash_landing = true;
     p.vit.smash_forgives = true;
     p.on_ground = true;
     let mut world = shared.world_in(p.dimension).lock().unwrap();

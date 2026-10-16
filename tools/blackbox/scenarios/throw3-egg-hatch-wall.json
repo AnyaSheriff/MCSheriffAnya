@@ -1,9 +1,7 @@
 {
  "name": "throw3-egg-hatch-wall",
- "about": "[проверить] Repeated deterministic summoned eggs hit wall z=6 at known height and velocity (NoGravity). Conditional hatch packets reveal vertical placement offset, wall clearance and random initial head yaw without launch spread. Compare floor hatch-repeat separately.",
- "blocks": [
-
- ],
+ "about": "128 deterministic NoGravity impacts. Vanilla: 20 hatches, 23 chicks (19 singles, one four), all at (3.5,3.8,5.85), yaw/pitch 0, head bytes 0..4; spawn and metadata before status/removal. Conditional lifecycle must remain visible: prior ours failed positioned cleanup.",
+ "blocks": [],
  "setup": [
   "gamerule natural_health_regeneration false",
   "gamerule natural_health_regeneration false",
@@ -504,5 +502,17 @@
  "pad_wide": 64,
  "pad_up": 80,
  "timeout_ms": 240000,
- "exclusive": true
+ "exclusive": true,
+ "random": [
+  {
+   "type": "count",
+   "name": "conditional valid wall chick spawns",
+   "match": "^spawn 3\\.5,3\\.8,5\\.85 chicken 0 3\\.5,3\\.8,5\\.85 yaw=0 pitch=0 head=[0-4]$",
+   "range": [
+    3,
+    42
+   ],
+   "why": "minecraft.wiki/w/Egg: hatch 1/8; conditional four chicks 1/32. 128 official trials: 20 hatches / 23 chicks; position is identical in every hatch. Only geometrically valid spawn packets qualify; wrong placement, metadata and cleanup/lifecycle stay visible. A count rule cannot establish conditional packet order: audit-throw3.py checks spawn/metadata before egg status/removal separately. Total-count bounds are a broad statistical guard, not exact probability verification."
+  }
+ ]
 }

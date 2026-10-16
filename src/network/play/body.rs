@@ -251,7 +251,11 @@ impl Body {
                     p.net.velocity = push.map(|(x, z)| (x * 0.218, if p.on_ground { 0.275 } else { p.net.last_delta.1 }, z * 0.218));
                 }
             }
-            Act::Attribute(edit) => { crate::commands_world::apply_attribute_edit(&mut p.attrs, edit); vitals::apply_effect_modifiers(p); }
+            Act::Attribute(edit) => {
+                crate::commands_world::apply_attribute_edit(&mut p.attrs, edit);
+                vitals::apply_effect_modifiers(p);
+                crate::commands_world::finish_attribute_edit(shared, &p.uuid, &p.attrs);
+            }
             Act::Environment => done.raw_damage.extend(vitals::bedrock_environment(shared, p)),
             Act::Reactions => {
                 vitals::effect_reactions(shared, p, p.vit.dead);

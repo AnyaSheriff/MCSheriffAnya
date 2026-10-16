@@ -1,9 +1,7 @@
 {
  "name": "throw3-egg-hatch-repeat",
- "about": "[проверить] 128 downward diagonal throws: enough independent hatch trials for spawn tick/order, yaw, initial head rotation and baby metadata. Inspect raw trajectories and condition on hatching; do not pair random hatch counts between servers. Also provides a larger launch-spread sample.",
- "blocks": [
-
- ],
+ "about": "128 diagonal floor throws. Vanilla: 20 single-chick hatches; head bytes 0..4, inherited body yaw, feet y=0; spawn/metadata before egg status/removal. 384 launch-noise components: sd 0.0068095, kurtosis 2.32996. Our original cleanup did not execute, so later chick behavior is a real mismatch.",
+ "blocks": [],
  "setup": [
   "gamerule natural_health_regeneration false",
   "gamerule natural_health_regeneration false",
@@ -631,5 +629,15 @@
  "pad_wide": 64,
  "pad_up": 80,
  "timeout_ms": 240000,
- "exclusive": true
+ "exclusive": true,
+ "random": [
+  {
+   "type": "mask",
+   "name": "random initial chick head byte",
+   "kind": "spawn",
+   "pattern": "( chicken 0 [^ ]+ yaw=-?\\d+ pitch=0 head=)[0-4]$",
+   "replace": "$1RNG",
+   "why": "43 vanilla chicks in throw3-egg-hatch-repeat/wall have initial head bytes 0..4 independently of body yaw. Mask only that measured field; positions, hatch presence, body rotation and lifecycle remain compared."
+  }
+ ]
 }

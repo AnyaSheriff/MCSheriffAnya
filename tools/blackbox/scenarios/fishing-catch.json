@@ -28,7 +28,7 @@
   "clear $(bot)",
   "gamemode creative $(bot)"
  ],
- "about": "[unverified] Cast in open water; reel once when bobber metadata reports a bite. Timing and loot remain random; no tolerance rules without vanilla-vs-vanilla evidence.",
+ "about": "Подсечка ровно один раз при biting=true; случайные ожидание/улов/опыт. Первый шаг шарика опыта и его значение обязательны даже при немедленном подборе. Поздний лишний Collect не скрыт: требуется изолированный повтор.",
  "track_fishing": true,
  "reel_on_bite": true,
  "random": [
@@ -118,6 +118,14 @@
    ],
    "anytick": true,
    "why": "поплавок в воде плещется со случайной громкостью, дождевые всплески — в случайных местах"
+  },
+  {
+   "type": "mask",
+   "name": "улов в инвентаре",
+   "kind": "inv",
+   "pattern": "^inv 37 (?:cod|salmon|tropical_fish|pufferfish|bone|bowl|ink_sac|leather|lily_pad|rotten_flesh|stick|string|tripwire_hook)×1$",
+   "replace": "inv 37 fishing-loot×1",
+   "why": "minecraft.wiki/w/Fishing: случайный улов рыбы/мусора; tmp/bb/fishing-catch.md:415 — bone против cod. Меняется только имя одного предмета в ячейке 37; количество и номер ячейки остаются точными."
   }
  ]
 }

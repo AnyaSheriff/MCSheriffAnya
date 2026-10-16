@@ -37,5 +37,23 @@
   "!wait 4",
   "!startfly"
  ],
- "track_projectiles": true
+ "track_projectiles": true,
+ "random": [
+  {
+   "type": "mask",
+   "name": "north-facing launch yaw from random X sign",
+   "kind": "spawn",
+   "pattern": "( (?:snowball|ender_pearl) \\d+ [^ ]+ yaw=)(?:127|-128)(?= pitch=)",
+   "replace": "$1RNG",
+   "why": "vanilla-throw-snowball-flat.json has vx=+0.001343 and yaw=127; vanilla-throw-snowball-walk/ender_pearl-flat have vx<0 and yaw=-128. atan2 uses noisy launch direction before inherited motion; these adjacent byte values are random, not a fixed wrap correction. No movement, timing or position tolerance."
+  },
+  {
+   "type": "mask",
+   "name": "down20 launch pitch straddles byte boundary",
+   "kind": "spawn",
+   "pattern": "( snowball \\d+ [^ ]+ yaw=(?:RNG|127|-128) pitch=)(?:46|47)(?= head=0$)",
+   "replace": "$1RNG",
+   "why": "The scenario passes 20 radians, not degrees. Vanilla velocity (-0.009888,1.381554,-0.600989) implies byte 47; ours (-0.007935,1.352500,-0.608191) implies 46. Both lie within measured launch spread. Their +10 velocities are replay-tested separately, not masked."
+  }
+ ]
 }

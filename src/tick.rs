@@ -2469,7 +2469,9 @@ fn land_falling(shared: &Shared, dimension: Dimension, world: &mut World) {
         let there = world.get_block(x, y, z);
 
         let dripstone = blocks::block_at_state(state) == Some("pointed_dripstone");
-        if dripstone { world.note_level_event(x, y, z, 2001, state); }
+        // Вики, Pointed Dripstone: «breaks upon landing»; запись
+        // dripstone-placement-support.md:20,23 — 1045/0, не частицы 2001.
+        if dripstone { world.note_level_event(x, y, z, 1045, 0); }
         if !dripstone && redstone::free_to_fall_into(there) {
             // Леса приземляются с прежним состоянием (distance=7), а пересчёт идёт
             // следующим тактом (чёрный ящик, scaffolding-support).
@@ -3676,6 +3678,37 @@ mod tests {
         for cx in 0..20 { for cz in 0..20 { world.ensure(cx, cz); } }
         step_mobs(&shared, dimension, &mut world, &mut crate::mob::Rng::new(71), 1);
         assert!(shared.items_in(dimension).lock().unwrap().mobs().is_empty());
+    }
+
+    #[test]
+    fn falling_dripstone_lands_with_1045_and_drops_the_item() {
+        let shared = mob_server();
+        let dimension = Dimension::Overworld;
+        let mut w = shared.world_in(dimension).lock().unwrap();
+        w.set_block_silently(0, 0, 0, blocks::state_by_name("stone").unwrap());
+        let state = blocks::state_from_text("pointed_dripstone[vertical_direction=down]").unwrap();
+        w.set_block_silently(0, 3, 0, state);
+        crate::dripstone::ticked(&mut w, (0, 3, 0));
+        start_falling(&shared, dimension, &mut w);
+        {
+            let mut items = shared.items_in(dimension).lock().unwrap();
+            for _ in 0..30 {
+                items.step(&|_, y, _| y <= 0, &|_, y, _| y <= 0, &|_, _| true);
+            }
+        }
+        let cursor = w.watch_events(1);
+        land_falling(&shared, dimension, &mut w);
+        let events = w.events_since(cursor, 1).0;
+        let levels: Vec<_> = events.iter().filter_map(|e| match e {
+            crate::world::WorldEvent::Level { x, y, z, effect, data, .. } => Some((*x, *y, *z, *effect, *data)),
+            _ => None,
+        }).collect();
+        assert_eq!(levels, vec![(0, 1, 0, 1045, 0)]);
+        assert_eq!(w.get_block(0, 1, 0), AIR);
+        let items = shared.items_in(dimension).lock().unwrap();
+        assert_eq!(items.items().len(), 1);
+        assert!(items.items()[0].block.is_none());
+        assert_eq!(items.items()[0].stack, Stack::new(blocks::item_named("pointed_dripstone").unwrap(), 1));
     }
 
     #[test]

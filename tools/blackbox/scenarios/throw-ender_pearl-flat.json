@@ -37,5 +37,23 @@
   "!wait 4",
   "!startfly"
  ],
- "track_projectiles": true
+ "track_projectiles": true,
+ "random": [
+  {
+   "type": "mask",
+   "name": "north-facing launch yaw from random X sign",
+   "kind": "spawn",
+   "pattern": "( (?:snowball|ender_pearl) \\d+ [^ ]+ yaw=)(?:127|-128)(?= pitch=)",
+   "replace": "$1RNG",
+   "why": "vanilla-throw-snowball-flat.json has vx=+0.001343 and yaw=127; vanilla-throw-snowball-walk/ender_pearl-flat have vx<0 and yaw=-128. atan2 uses noisy launch direction before inherited motion; these adjacent byte values are random, not a fixed wrap correction. No movement, timing or position tolerance."
+  },
+  {
+   "type": "mask",
+   "name": "flat launch pitch from random Y sign",
+   "kind": "spawn",
+   "pattern": "( ender_pearl \\d+ [^ ]+ yaw=(?:RNG|127|-128) pitch=)(?:-1|0)(?= head=0$)",
+   "replace": "$1RNG",
+   "why": "vanilla-throw-ender_pearl-flat.json has vy=+0.000977 and pitch=0; ours vy=-0.016603 and pitch=-1. Both are within observed launch spread; floor quantization preserves the sign. Only the two adjacent angle bytes are masked."
+  }
+ ]
 }

@@ -81,6 +81,8 @@ mod sweep;
 mod sweep_tests;
 #[cfg(test)]
 mod mismatch_tests;
+#[cfg(test)]
+mod motion_recording_tests;
 mod bow;
 #[cfg(test)]
 mod bow_tests;
@@ -895,6 +897,8 @@ pub fn player_left(shared: &Shared, name: &str, uuid: &[u8; 16]) {
         .lock()
         .expect("список игроков захвачен другим потоком")
         .leave(uuid);
+
+    crate::commands_world::forget_attributes(shared, uuid);
 
     if removed {
         shared
@@ -2365,6 +2369,9 @@ async fn send_pending_item_changes(
                 }
             }
             items::Change::Taken { entity_id, by, count, remaining } => {
+                if let Some(shown) = mobs.get_mut(&entity_id) {
+                    mobs::orb_before_pickup(stream, entity_id, shown).await?;
+                }
                 send_pick_up(stream, entity_id, by, count).await?;
                 if !remaining {
                     send_remove_entity(stream, entity_id).await?;
@@ -6097,6 +6104,7 @@ async fn read_and_log_play_packets(
     let mut pending: Vec<Reaction> = Vec::new();
     let mut inbound = Inbound::start(stream.stream(), shared)?;
     let mut finished_tick = false;
+    let mut pearl_orders = Vec::new();
     let wake = shared.players.lock().expect("список игроков захвачен другим потоком").waker(&player.uuid);
 
     loop {
@@ -6212,7 +6220,10 @@ async fn read_and_log_play_packets(
 
         // Поручения от команд: выгнать, перенести. Их отдаёт не то
         // подключение, которого они касаются, поэтому забираем их отсюда.
-        let mut orders = take_orders(shared, &player.uuid);
+        // throw2-ender_pearl-up45-yaw90-standing.md:36–43: wake от
+        // попадания мог показать перенос до публикации самого удара. Все
+        // пакеты жемчуга ждут конца хода, обычные команды остаются немедленными.
+        let mut orders = projectile::orders_at_tick(take_orders(shared, &player.uuid), &mut pearl_orders, ready.is_none().then(|| *shared.ticks.borrow()));
 
         if std::mem::take(&mut player.net.respawn) && player.vit.dead {
             orders.insert(0, Order::Respawn);
@@ -6242,6 +6253,11 @@ async fn read_and_log_play_packets(
             let pearl_teleport = matches!(&order, Order::PearlTeleport { .. });
             if let Order::PearlTeleport { dimension, .. } = &order
                 && (*dimension != player.dimension || player.vit.dead) { continue; }
+            // throw3-pearl-moving.md:36–41: последняя сверка снаряда
+            // предшествует переносу хозяина, урону и звуку.
+            if let Order::PearlTeleport { shot, .. } = &order {
+                thrown::update_flying(stream, player, shot).await?;
+            }
             // Возрождение — тот же переход, что и в другое измерение: клиент
             // забывает мир и получает его заново, только у точки возрождения.
             let respawning = matches!(order, Order::Respawn);
@@ -6583,6 +6599,13 @@ async fn read_and_log_play_packets(
                         send_player_position_as(stream, player, if pearl_teleport { Sync::Pearl } else { Sync::Command }).await?;
                     }
 
+                    // throw2-ender_pearl-up45-yaw90-standing.md:36–43:
+                    // урон должен идти сразу за переносом, до сохранения и
+                    // загрузки чанков, которые могут занять следующий такт.
+                    if pearl_teleport {
+                        vitals::pearl_hit(stream, shared, player).await?;
+                    }
+
                     player.save(&shared.playerdata);
 
                     publish_player(shared, player);
@@ -6605,9 +6628,6 @@ async fn read_and_log_play_packets(
                     )
                     .await?;
                     all_chunks_sent = false;
-                    if pearl_teleport {
-                        vitals::pearl_hit(stream, shared, player).await?;
-                    }
 
                     log_debug!(
                         "Play: игрок {} перенесён в {:.2} {:.2} {:.2}",
@@ -6690,6 +6710,7 @@ async fn read_and_log_play_packets(
                     let attribute = crate::commands_world::edited_attribute(&edit);
 
                     crate::commands_world::apply_attribute_edit(&mut player.attrs, &edit);
+                    crate::commands_world::finish_attribute_edit(shared, &player.uuid, &player.attrs);
                     player.attrs_touched.push((attribute, *shared.ticks.borrow() + 1));
                 }
 
@@ -8006,7 +8027,7 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
     // за пролёт в основу, вид урона mace_smash, пролёт гасится [проверить
     // по мобу: снято только по игроку, pvp-mace].
     let smash = pvp::may_smash(player, held == Some("mace"));
-    let smash_fall = player.vit.fall;
+    let smash_fall = player.vit.fall as f32;
     let bonus = if smash { crate::combat::smash_bonus(smash_fall, data.level("density")) } else { 0.0 };
     let source = if smash { crate::survival::Source::MaceSmash } else { crate::survival::Source::PlayerAttack };
     let enchanted = crate::combat::enchant_bonus(&data, undead, arthropod) + crate::combat::impaling_bonus(&data, mob.kind.name());
@@ -8063,7 +8084,8 @@ fn strike_mob(shared: &Shared, player: &mut PlayerState, target: i32, since: u32
 
     if smash && landed {
         player.vit.fall = 0.0;
-        player.vit.smash_forgives = true;
+        player.vit.smash_landing = true;
+        player.vit.smash_forgives = data.level("wind_burst") > 0;
         player.net.velocity = Some((0.0, 0.01, 0.0));
     }
 

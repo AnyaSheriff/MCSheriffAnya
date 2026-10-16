@@ -907,12 +907,14 @@ fn grow_bamboo(world: &mut World, (x, y, z): (i32, i32, i32)) -> bool {
     // под нынешней верхушкой лист есть; тогда тот, что под верхушкой, мельчает,
     // а следующий теряет листья.
     let leaves = if name_of(below) == "bamboo" && value(below, "leaves") != Some("none") { "large" } else { "small" };
-    let age = if number(here, "age") == 1 || name_of(below) == "bamboo" { "1" } else { "0" };
+    // Вики, Bamboo: «age» — толщина. Запись bamboo-growth.md:13–15: три блока
+    // ещё age=0; :24–30 — утолщение при появлении четвёртого.
+    let age = if number(here, "age") == 1 || height >= 3 { "1" } else { "0" };
     let target = blocks::orientation("bamboo").unwrap().state(&[
         ("age", age), ("leaves", leaves), ("stage", if stopped { "1" } else { "0" }),
     ]).unwrap();
     world.set_block(x, y + 1, z, target);
-    // Утолщение берёт весь ствол: у оригинала при росте до трёх блоков все
+    // Утолщение берёт весь ствол: у оригинала при росте до четырёх блоков все
     // нижние тоже получают age=1 (чёрный ящик, bamboo-growth).
     if age == "1" {
         for dy in 0..height {
@@ -1424,6 +1426,23 @@ mod tests {
             assert_eq!(value(w.get_block(0, top - 2, 0), "leaves"), Some("small"));
             assert!(bone_meal(&mut w, (0, 1, 0)).is_none());
         }
+    }
+
+    #[test]
+    fn bamboo_thickens_on_the_fourth_block_not_the_third() {
+        let mut w = world();
+        w.set_block_silently(0, 1, 0, state("bamboo_sapling"));
+        grow_bamboo_shoot(&mut w, (0, 1, 0));
+        assert!(grow_bamboo(&mut w, (0, 2, 0)));
+        for y in 1..=3 {
+            assert_eq!(number(w.get_block(0, y, 0), "age"), 0);
+        }
+        assert_eq!(value(w.get_block(0, 3, 0), "leaves"), Some("small"));
+        assert!(grow_bamboo(&mut w, (0, 3, 0)));
+        for y in 1..=4 {
+            assert_eq!(number(w.get_block(0, y, 0), "age"), 1);
+        }
+        assert_eq!(value(w.get_block(0, 4, 0), "leaves"), Some("large"));
     }
 
     #[test]

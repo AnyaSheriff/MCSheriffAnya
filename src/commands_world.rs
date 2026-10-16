@@ -268,9 +268,8 @@ pub struct State {
     /// Последовательности `random`: имя → сколько значений выдано.
     sequences: Mutex<HashMap<String, u64>>,
 
-    /// Атрибуты игроков, как их ведёт подключение (оно же их и пишет сюда
-    /// каждый такт): команда `attribute` читает отсюда, а правит поручением.
-    pub player_attributes: Mutex<HashMap<[u8; 16], crate::attributes::Attributes>>,
+    /// Снимок подключения и ещё не исполненные им правки команд.
+    player_attributes: Mutex<HashMap<[u8; 16], AttributeSnapshot>>,
 
     /// Кто на ком едет (`ride`): наездник → транспорт (номера сущностей).
     pub rides: Mutex<HashMap<i32, i32>>,
@@ -1408,6 +1407,25 @@ pub enum AttributeEdit {
     RemoveModifier { attribute: i32, id: String },
 }
 
+struct AttributeSnapshot {
+    current: crate::attributes::Attributes,
+    pending: std::collections::VecDeque<AttributeEdit>,
+}
+
+impl Default for AttributeSnapshot {
+    fn default() -> Self {
+        Self { current: crate::attributes::Attributes::player(), pending: Default::default() }
+    }
+}
+
+impl AttributeSnapshot {
+    fn projected(&self) -> crate::attributes::Attributes {
+        let mut attributes = self.current.clone();
+        for edit in &self.pending { apply_attribute_edit(&mut attributes, edit); }
+        attributes
+    }
+}
+
 /// Какой атрибут правится.
 pub fn edited_attribute(edit: &AttributeEdit) -> i32 {
     match edit {
@@ -1429,9 +1447,23 @@ pub fn apply_attribute_edit(attributes: &mut crate::attributes::Attributes, edit
 pub fn publish_attributes(shared: &Shared, uuid: &[u8; 16], attributes: &crate::attributes::Attributes) {
     let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты захвачены другим потоком");
 
-    if known.get(uuid) != Some(attributes) {
-        known.insert(*uuid, attributes.clone());
+    let snapshot = known.entry(*uuid).or_default();
+    if snapshot.current != *attributes {
+        snapshot.current = attributes.clone();
     }
+}
+
+/// Подключение исполнило правку: снимаем её с ожидания вместе с новым снимком.
+pub fn finish_attribute_edit(shared: &Shared, uuid: &[u8; 16], attributes: &crate::attributes::Attributes) {
+    let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты захвачены другим потоком");
+    let snapshot = known.entry(*uuid).or_default();
+    // Подключение исполняет поручения строго в порядке очереди.
+    snapshot.pending.pop_front();
+    snapshot.current = attributes.clone();
+}
+
+pub fn forget_attributes(shared: &Shared, uuid: &[u8; 16]) {
+    shared.world_cmd.player_attributes.lock().expect("атрибуты захвачены другим потоком").remove(uuid);
 }
 
 /// Есть ли атрибут у игрока (вики, Attribute: у игрока нет «follow_range»,
@@ -1480,7 +1512,12 @@ fn attribute(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return fail("commands.attribute.failed.no_attribute", &[target.plain_name(), attribute_arg]);
     }
 
-    let attributes = shared.world_cmd.player_attributes.lock().expect("атрибуты захвачены другим потоком").get(uuid).cloned().unwrap_or_else(crate::attributes::Attributes::player);
+    // tmp/bb/ours-cmd-attribute.json: пакет команд пришёл разом на +42;
+    // get/remove читали старый снимок после успешного add. Учитываем принятые,
+    // но ещё не исполненные правки; vanilla-cmd-attribute.json даёт 0.3.
+    let mut known = shared.world_cmd.player_attributes.lock().expect("атрибуты захвачены другим потоком");
+    let snapshot = known.entry(*uuid).or_default();
+    let attributes = snapshot.projected();
     let entry = attributes.get(attribute).cloned().unwrap_or(crate::attributes::Attribute { id: attribute, base: crate::attributes::player_base(attribute), modifiers: Vec::new() });
     let scaled = |value: f64, scale: Option<&&str>| -> Result<f64, Answer> {
         match scale {
@@ -1489,7 +1526,8 @@ fn attribute(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         }
     };
 
-    let edit = |edit: AttributeEdit| {
+    let mut edit = |edit: AttributeEdit| {
+        snapshot.pending.push_back(edit.clone());
         shared.players.lock().expect("список игроков захвачен другим потоком").order(uuid, Order::Attribute(edit));
     };
 

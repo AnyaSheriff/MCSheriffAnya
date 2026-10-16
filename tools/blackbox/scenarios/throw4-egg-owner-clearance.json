@@ -1,0 +1,410 @@
+{
+ "name": "throw4-egg-owner-clearance",
+ "about": "[проверить] Move the owner into the recorded horizontal path at +1 or +4 ticks after throwing, using six offsets around predicted centres. Early moves test initial exclusion; late moves test re-entry after clearance. Reconstruct the swept region from each launch velocity and command timing; do not mask self-hit timing.",
+ "blocks": [],
+ "setup": [
+  "gamerule natural_health_regeneration false",
+  "gamerule natural_health_regeneration false",
+  "difficulty normal",
+  "gamemode creative $(bot)",
+  "clear $(bot)",
+  "ride $(bot) dismount",
+  "execute positioned $(0,0,0) run kill @e[type=snowball,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=egg,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=ender_pearl,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=splash_potion,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=lingering_potion,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=experience_bottle,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=wind_charge,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=trident,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=arrow,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=spectral_arrow,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=firework_rocket,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=area_effect_cloud,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=endermite,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=experience_orb,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=minecart,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=oak_boat,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=item,distance=..128]",
+  "fill $(-40,0,-40) $(40,3,40) minecraft:air",
+  "fill $(-40,4,-40) $(40,7,40) minecraft:air",
+  "fill $(-40,8,-40) $(40,11,40) minecraft:air",
+  "fill $(-40,12,-40) $(40,15,40) minecraft:air",
+  "fill $(-40,16,-40) $(40,19,40) minecraft:air",
+  "fill $(-40,20,-40) $(40,23,40) minecraft:air",
+  "fill $(-40,24,-40) $(40,27,40) minecraft:air",
+  "fill $(-40,28,-40) $(40,31,40) minecraft:air",
+  "fill $(-40,32,-40) $(40,35,40) minecraft:air",
+  "fill $(-40,36,-40) $(40,39,40) minecraft:air",
+  "fill $(-40,40,-40) $(40,43,40) minecraft:air",
+  "fill $(-40,44,-40) $(40,47,40) minecraft:air",
+  "fill $(-40,48,-40) $(40,51,40) minecraft:air",
+  "fill $(-40,52,-40) $(40,55,40) minecraft:air",
+  "fill $(-40,56,-40) $(40,59,40) minecraft:air",
+  "fill $(-40,60,-40) $(40,63,40) minecraft:air",
+  "fill $(-40,64,-40) $(40,64,40) minecraft:air",
+  "fill $(-40,-1,-40) $(40,-1,40) minecraft:stone",
+  "fill $(-40,0,-40) $(-40,63,40) minecraft:stone",
+  "fill $(40,0,-40) $(40,63,40) minecraft:stone",
+  "fill $(-39,0,-40) $(39,63,-40) minecraft:stone",
+  "fill $(-39,0,40) $(39,63,40) minecraft:stone",
+  "fill $(-40,64,-40) $(40,64,40) minecraft:stone",
+  "tp $(bot) $(3.5,1,2.5) 0 0",
+  "!stopfly",
+  "gamemode survival $(bot)",
+  "effect give $(bot) minecraft:instant_health 1 5 true",
+  "!hotbar 0",
+  "give $(bot) minecraft:egg 1",
+  "!look 3.141592653589793 1.570796326794897",
+  "!wait 10",
+  "!look 3.141592653589793 0"
+ ],
+ "actions": [
+  {
+   "after": 0,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 0,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 0,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 2,
+   "use": true
+  },
+  {
+   "after": 3,
+   "cmd": "tp $(bot) $(3.5,0,3.385000) 0 0"
+  },
+  {
+   "after": 30,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 40,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 40,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 40,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 42,
+   "use": true
+  },
+  {
+   "after": 43,
+   "cmd": "tp $(bot) $(3.5,0,3.535000) 0 0"
+  },
+  {
+   "after": 70,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 80,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 80,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 80,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 82,
+   "use": true
+  },
+  {
+   "after": 83,
+   "cmd": "tp $(bot) $(3.5,0,3.685000) 0 0"
+  },
+  {
+   "after": 110,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 120,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 120,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 120,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 122,
+   "use": true
+  },
+  {
+   "after": 123,
+   "cmd": "tp $(bot) $(3.5,0,3.985000) 0 0"
+  },
+  {
+   "after": 150,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 160,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 160,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 160,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 162,
+   "use": true
+  },
+  {
+   "after": 163,
+   "cmd": "tp $(bot) $(3.5,0,4.285000) 0 0"
+  },
+  {
+   "after": 190,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 200,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 200,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 200,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 202,
+   "use": true
+  },
+  {
+   "after": 203,
+   "cmd": "tp $(bot) $(3.5,0,4.585000) 0 0"
+  },
+  {
+   "after": 230,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 240,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 240,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 240,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 242,
+   "use": true
+  },
+  {
+   "after": 246,
+   "cmd": "tp $(bot) $(3.5,0,7.751493) 0 0"
+  },
+  {
+   "after": 270,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 280,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 280,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 280,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 282,
+   "use": true
+  },
+  {
+   "after": 286,
+   "cmd": "tp $(bot) $(3.5,0,7.901493) 0 0"
+  },
+  {
+   "after": 310,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 320,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 320,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 320,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 322,
+   "use": true
+  },
+  {
+   "after": 326,
+   "cmd": "tp $(bot) $(3.5,0,8.051493) 0 0"
+  },
+  {
+   "after": 350,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 360,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 360,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 360,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 362,
+   "use": true
+  },
+  {
+   "after": 366,
+   "cmd": "tp $(bot) $(3.5,0,8.351493) 0 0"
+  },
+  {
+   "after": 390,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 400,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 400,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 400,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 402,
+   "use": true
+  },
+  {
+   "after": 406,
+   "cmd": "tp $(bot) $(3.5,0,8.651493) 0 0"
+  },
+  {
+   "after": 430,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  },
+  {
+   "after": 440,
+   "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"
+  },
+  {
+   "after": 440,
+   "cmd": "tp $(bot) $(3.5,0,2.5) 0 0"
+  },
+  {
+   "after": 440,
+   "cmd": "give $(bot) minecraft:egg 1"
+  },
+  {
+   "after": 442,
+   "use": true
+  },
+  {
+   "after": 446,
+   "cmd": "tp $(bot) $(3.5,0,8.951493) 0 0"
+  },
+  {
+   "after": 470,
+   "cmd": "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]"
+  }
+ ],
+ "cleanup": [
+  "ride $(bot) dismount",
+  "gamemode creative $(bot)",
+  "tp $(bot) $(3.5,1,2.5)",
+  "!startfly",
+  "execute positioned $(0,0,0) run kill @e[type=snowball,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=egg,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=ender_pearl,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=splash_potion,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=lingering_potion,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=experience_bottle,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=wind_charge,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=trident,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=arrow,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=spectral_arrow,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=firework_rocket,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=area_effect_cloud,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=chicken,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=endermite,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=experience_orb,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=minecart,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=oak_boat,distance=..128]",
+  "execute positioned $(0,0,0) run kill @e[type=item,distance=..128]",
+  "fill $(-40,0,-40) $(40,3,40) minecraft:air",
+  "fill $(-40,4,-40) $(40,7,40) minecraft:air",
+  "fill $(-40,8,-40) $(40,11,40) minecraft:air",
+  "fill $(-40,12,-40) $(40,15,40) minecraft:air",
+  "fill $(-40,16,-40) $(40,19,40) minecraft:air",
+  "fill $(-40,20,-40) $(40,23,40) minecraft:air",
+  "fill $(-40,24,-40) $(40,27,40) minecraft:air",
+  "fill $(-40,28,-40) $(40,31,40) minecraft:air",
+  "fill $(-40,32,-40) $(40,35,40) minecraft:air",
+  "fill $(-40,36,-40) $(40,39,40) minecraft:air",
+  "fill $(-40,40,-40) $(40,43,40) minecraft:air",
+  "fill $(-40,44,-40) $(40,47,40) minecraft:air",
+  "fill $(-40,48,-40) $(40,51,40) minecraft:air",
+  "fill $(-40,52,-40) $(40,55,40) minecraft:air",
+  "fill $(-40,56,-40) $(40,59,40) minecraft:air",
+  "fill $(-40,60,-40) $(40,63,40) minecraft:air",
+  "fill $(-40,64,-40) $(40,64,40) minecraft:air",
+  "fill $(-40,-1,-40) $(40,-1,40) minecraft:stone",
+  "clear $(bot)",
+  "effect clear $(bot)",
+  "!nosprint",
+  "gamerule natural_health_regeneration true",
+  "difficulty peaceful",
+  "gamerule natural_health_regeneration true",
+  "difficulty peaceful"
+ ],
+ "record_ticks": 500,
+ "track_projectiles": true,
+ "track_self": true,
+ "track_mobs": true,
+ "pad_wide": 64,
+ "pad_up": 80,
+ "timeout_ms": 240000,
+ "exclusive": true
+}

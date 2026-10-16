@@ -678,15 +678,15 @@ fn execute(shared: &Shared, dimension: Dimension, (x, y, z): Pos, name: &str, co
 
     if success > 0 && shared.command_block_rules.output.load(Ordering::Relaxed) {
         crate::log_info!("[{}: {}]", name, answer.reply);
-        broadcast_to_ops(shared, name, &answer.reply);
+        broadcast_to_ops(shared, name, &answer.reply, answer.component.as_deref());
     }
 
     (success, Some(answer.reply))
 }
 
 /// «[имя: текст]» серым курсивом — всем операторам в игре.
-fn broadcast_to_ops(shared: &Shared, name: &str, text: &str) {
-    let component = admin_message(name, text);
+fn broadcast_to_ops(shared: &Shared, name: &str, text: &str, rich: Option<&[u8]>) {
+    let component = admin_message(name, text, rich);
     let ops: Vec<[u8; 16]> = {
         let ops = shared.ops.lock().expect("права захвачены другим потоком");
 
@@ -708,18 +708,24 @@ fn broadcast_to_ops(shared: &Shared, name: &str, text: &str) {
 }
 
 /// Компонент «[имя: текст]» серым курсивом в сетевом NBT — как у
-/// оригинала (чёрный ящик, cmdblock-chain): `{"with":[{"":имя},{"":текст}],
+/// оригинала (чёрный ящик, cmdblock-chain): `{"with":[{"":имя},ответ],
 /// "color":"gray","italic":1b,"translate":"chat.type.admin"}` (в списке
 /// разнородных частей строка обёрнута составным с пустым именем).
-pub fn admin_message(name: &str, text: &str) -> Vec<u8> {
+pub fn admin_message(name: &str, text: &str, rich: Option<&[u8]>) -> Vec<u8> {
     let mut out = vec![TAG_COMPOUND];
 
     head(&mut out, TAG_LIST, "with");
     out.push(TAG_COMPOUND);
     out.extend_from_slice(&2i32.to_be_bytes());
 
-    for value in [name, text] {
-        string(&mut out, "", value);
+    string(&mut out, "", name);
+    out.push(TAG_END);
+    // tmp/bb/cmdblock-chain.md:9–11: вложенный перевод сохраняется,
+    // иначе клиент видит строку вместо commands.setblock.success.
+    if let Some(component) = rich.filter(|bytes| bytes.first() == Some(&TAG_COMPOUND)) {
+        out.extend_from_slice(&component[1..]);
+    } else {
+        string(&mut out, "", text);
         out.push(TAG_END);
     }
 
@@ -875,11 +881,24 @@ mod tests {
 
     #[test]
     fn admin_message_is_a_compound() {
-        let bytes = admin_message("@", "ok");
+        let bytes = admin_message("@", "ok", None);
 
         assert_eq!(bytes[0], 0x0A);
         assert_eq!(*bytes.last().unwrap(), 0x00);
         assert!(bytes.windows(15).any(|w| w == b"chat.type.admin"));
+    }
+
+    #[test]
+    fn admin_message_keeps_the_nested_translation() {
+        use crate::commands_admin::{Tag, translate};
+        let nested = translate("commands.setblock.success", vec![Tag::Int(100), Tag::Int(-59), Tag::Int(102)]);
+        let expected = Tag::Compound(vec![
+            ("with".to_string(), Tag::List(vec![Tag::Str("@".to_string()), nested.clone()])),
+            ("color".to_string(), Tag::Str("gray".to_string())),
+            ("italic".to_string(), Tag::Byte(1)),
+            ("translate".to_string(), Tag::Str("chat.type.admin".to_string())),
+        ]);
+        assert_eq!(admin_message("@", "plain fallback", Some(&nested.encode())), expected.encode());
     }
 
     #[test]

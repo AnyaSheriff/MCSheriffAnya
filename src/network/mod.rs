@@ -20,6 +20,7 @@ pub mod status;
 pub mod login;
 pub mod configuration;
 pub mod registries;
+pub mod chat_types;
 pub mod play;
 pub mod text_info;
 

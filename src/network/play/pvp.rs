@@ -48,7 +48,7 @@ pub(super) fn may_crit(player: &PlayerState) -> bool {
 }
 
 pub(super) fn may_smash(player: &PlayerState, mace: bool) -> bool {
-    combat::smash_ready(mace, player.vit.fall, player.on_ground)
+    combat::smash_ready(mace, player.vit.fall as f32, player.on_ground)
         && !player.glide.active && !player.vit.has_effect(crate::survival::EffectKind::SlowFalling)
 }
 
@@ -174,7 +174,7 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
     let mace = held.and_then(|stack| combat::item_name(stack.item)) == Some("mace");
     let smash = may_smash(player, mace);
     let breach = if mace { combat::breach_scale(data.level("breach")) } else { 1.0 };
-    let bonus = if smash { combat::smash_bonus(player.vit.fall, data.level("density")) } else { 0.0 };
+    let bonus = if smash { combat::smash_bonus(player.vit.fall as f32, data.level("density")) } else { 0.0 };
     let strike = combat::strike(player.attrs.value(crate::attributes::ATTACK_DAMAGE), bonus, enchant, charge, may_crit(player));
     let source = if smash { Source::MaceSmash } else { Source::PlayerAttack };
     let sprint_hit = player.vit.sprinting && strike.full;
@@ -197,15 +197,15 @@ pub(super) fn strike_player(shared: &Shared, player: &mut PlayerState, target: i
         player.vit.add_exhaustion(0.1);
     }
 
-    // Сокрушил: пролёт считается заново от этого места — падение дальше не
-    // ранит, — и клиенту уходит скорость (0; 0,01; 0): вертикальный ход
-    // гасится (чёрный ящик, pvp-mace: «b: Velocity 0,0.01,0», урона от
-    // падения с 4 и 8 блоков нет).
-    let smash_fall = player.vit.fall;
+    // pvp-mace-landing-motion: прощается уже пройденный путь, а дальнейший
+    // считается заново (после смаша с высот 6/7 урон 1/2). Вики, Mace:
+    // «nullifying any fall damage»; отдельная защита Wind Burst сохранена.
+    let smash_fall = player.vit.fall as f32;
 
     if smash && lands {
         player.vit.fall = 0.0;
-        player.vit.smash_forgives = true;
+        player.vit.smash_landing = true;
+        player.vit.smash_forgives = data.level("wind_burst") > 0;
         player.net.velocity = Some((0.0, 0.01, 0.0));
     }
 

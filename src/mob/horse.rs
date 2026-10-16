@@ -375,7 +375,7 @@ pub fn drive(mob: &mut Mob, view: &dyn super::View, to: (f64, f64, f64), look: (
         }
         candidate.horse.air_ticks = 0;
         if candidate.vitals.fall > 0.0 {
-            let damage = fall_damage(candidate.vitals.fall);
+            let damage = fall_damage(candidate.vitals.fall as f32);
             candidate.vitals.fall = 0.0;
             if damage > 0.0 { candidate.hurt(damage, crate::survival::Source::Fall, None); candidate.horse.rider_fall += damage; }
         }

@@ -47,6 +47,19 @@ def resistance_rust(blocks):
     return "\n".join(lines)
 
 
+def mining_rust(blocks):
+    lines = [
+        "/// Добыча: состояния, твёрдость, материал, допустимые инструменты для дропа.",
+        "pub const MINING: &[(i32, i32, f32, &str, &[i32])] = &[",
+    ]
+    for b in sorted(blocks, key=lambda b: b["minStateId"]):
+        hardness = float(b["hardness"]) if b.get("hardness") is not None else -1.0
+        tools = ", ".join(str(i) for i in sorted(map(int, b.get("harvestTools", {}))))
+        lines.append(f'    ({b["minStateId"]}, {b["maxStateId"]}, {hardness!r}, "{b.get("material", "default")}", &[{tools}]),')
+    lines.append("];")
+    return "\n".join(lines)
+
+
 def main():
     blocks = json.loads(DATA.read_text())
     instant = [b for b in blocks if b.get("hardness") == 0 and b["name"] != "air"]
@@ -57,6 +70,7 @@ def main():
         rust("INSTANT", "Состояния блоков, которые ломаются с первого удара.", ranges(instant)),
         rust("UNBREAKABLE", "Состояния блоков, которые в выживании не ломаются.", ranges(unbreakable)),
         resistance_rust(blocks),
+        mining_rust(blocks),
     ]) + "\n"
     OUTPUT.write_text(text)
     print(f"{OUTPUT}: мгновенных {len(instant)}, неразрушимых {len(unbreakable)}")

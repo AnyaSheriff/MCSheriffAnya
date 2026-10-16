@@ -195,7 +195,7 @@ pub enum Order {
     /// Перенести в другое место.
     Teleport { x: f64, y: f64, z: f64 },
     /// Жемчуг не переносит умершего или ушедшего в другое измерение.
-    PearlTeleport { x: f64, y: f64, z: f64, dimension: crate::dimension::Dimension },
+    PearlTeleport { x: f64, y: f64, z: f64, dimension: crate::dimension::Dimension, tick: u64, shot: Box<crate::thrown::Flying> },
 
     /// Повернуть взгляд: поворот по сторонам и наклон в градусах, как в
     /// `tp x y z поворот наклон`. Идёт следом за переносом.

@@ -1,0 +1,19 @@
+{
+  "name": "cmd-feedback-regression",
+  "about": "Изолированная проверка исправлений tmp/bb/cmd-attribute.md:30, cmdblock-chain.md:9–11,33 и cmdblock-repeat.md:9–10: переводы give/setblock и Disguised Chat. Без допусков random.",
+  "exclusive": true,
+  "chat": true,
+  "track_self": true,
+  "inventory": true,
+  "blocks": [],
+  "setup": ["clear $(bot)"],
+  "actions": [
+    {"after": 0, "cmd": "setblock $(0,0,0) minecraft:stone"},
+    {"after": 5, "cmd": "setblock $(0,0,0) minecraft:stone"},
+    {"after": 10, "cmd": "give $(bot) minecraft:diamond_sword"},
+    {"after": 20, "cmd": "setblock $(2,0,0) minecraft:command_block[facing=up]{auto:1b,Command:\"setblock ~ ~ ~2 minecraft:stone\"}"},
+    {"after": 30, "cmd": "setblock $(4,0,0) minecraft:command_block[facing=up]{auto:1b,Command:\"say feedback\"}"}
+  ],
+  "cleanup": ["clear $(bot)", "fill $(0,0,0) $(4,1,2) minecraft:air"],
+  "record_ticks": 40
+}

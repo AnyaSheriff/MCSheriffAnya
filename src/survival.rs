@@ -1042,17 +1042,18 @@ pub struct Vitals {
     last_hurt: f32,
 
     /// Накопленная высота падения.
-    pub fall: f32,
-    /// Сокрушающий удар булавы прощает ближайшее приземление: оригинал не
-    /// ранит после смаша с 3,2 блока (чёрный ящик, pvp-mace-heavy; вики,
-    /// Mace: «nullifying any fall damage») [проверить: предел].
+    pub fall: f64,
+    /// Частицы ближайшего приземления после смаша (pvp-mace-landing-motion).
+    pub smash_landing: bool,
+    /// Защита после Wind Burst: pvp-mace-wind-burst, падение с 9 блоков
+    /// без урона. [проверить] Предел защиты ветра вне записанной траектории.
     pub smash_forgives: bool,
 
     /// Высота падения до последнего шага приземления (для частиц), 0 — не
     /// приземлялся в этом шаге.
-    pub landed_from: f32,
+    pub landed_from: f64,
     /// Весь пролёт до приземления, с последним шагом (для частиц после булавы).
-    pub landed_total: f32,
+    pub landed_total: f64,
 
     /// Игрок мёртв и ждёт возрождения.
     pub dead: bool,
@@ -1181,6 +1182,7 @@ impl Vitals {
             invulnerable: 0,
             last_hurt: 0.0,
             fall: 0.0,
+            smash_landing: false,
             smash_forgives: false,
             landed_from: 0.0,
             landed_total: 0.0,
@@ -1210,7 +1212,7 @@ impl Vitals {
             exhaustion: self.exhaustion,
             air: self.air,
             fire: self.fire,
-            fall: self.fall,
+            fall: self.fall as f32,
             experience: self.xp,
             experience_total: self.xp_total,
             xp_seed: self.xp_seed,
@@ -1231,7 +1233,7 @@ impl Vitals {
             exhaustion: saved.exhaustion,
             air: saved.air.min(MAX_AIR),
             fire: saved.fire,
-            fall: saved.fall,
+            fall: f64::from(saved.fall),
             xp: saved.experience,
             xp_total: saved.experience_total,
             xp_seed: saved.xp_seed,
@@ -1606,21 +1608,34 @@ impl Vitals {
     /// блока внизу (сено и мёд 0,2, кровать 0,5). Возвращает урон при
     /// приземлении (вики, Fall damage: `ceil(distance − 3)`).
     pub fn land(&mut self, dy: f64, on_ground: bool, soft: bool, multiplier: f32) -> Option<f32> {
+        self.land_rounded(dy, on_ground, soft, multiplier, true)
+    }
+
+    /// Java 26.1.2, fall-mode-teleport-motion: 4,84448 → 1 HP;
+    /// pvp-mace-landing-motion: 3,90740 → 0, 4,40740 → 1, 5,40740 → 2.
+    /// В этих записях дробная часть урона отбрасывается, а не округляется вверх.
+    pub fn land_java(&mut self, dy: f64, on_ground: bool, soft: bool, multiplier: f32) -> Option<f32> {
+        self.land_rounded(dy, on_ground, soft, multiplier, false)
+    }
+
+    fn land_rounded(&mut self, dy: f64, on_ground: bool, soft: bool, multiplier: f32, round_up: bool) -> Option<f32> {
         self.landed_from = 0.0;
         self.landed_total = 0.0;
 
         if soft {
             self.fall = 0.0;
+            self.smash_landing = false;
+            self.smash_forgives = false;
 
             return None;
         }
 
         let before = self.fall;
 
-        // Высота копится в float, как у оригинала: от этого зависит, на какой
-        // высоте округление даёт лишний пункт урона.
+        // Вики, Java Edition 1.21.5: «changed from float to double».
+        // fall-mode-teleport-motion: сумма шагов 12; f32 терял 0,000001.
         if dy < 0.0 {
-            self.fall -= dy as f32;
+            self.fall = if round_up { f64::from(self.fall as f32 - dy as f32) } else { self.fall - dy };
         }
 
         if !on_ground {
@@ -1631,6 +1646,7 @@ impl Vitals {
 
         self.landed_from = before;
         self.landed_total = distance;
+        self.smash_landing = false;
 
         if std::mem::take(&mut self.smash_forgives) {
             return None;
@@ -1639,8 +1655,12 @@ impl Vitals {
         // Плавное падение урона не даёт (вики, Slow Falling) [проверить].
         let multiplier = if self.has_effect(EffectKind::SlowFalling) { 0.0 } else { multiplier };
 
-        if distance > self.safe_fall && multiplier > 0.0 {
-            let damage = ((distance - self.safe_fall) * multiplier).ceil();
+        if distance > f64::from(self.safe_fall) && multiplier > 0.0 {
+            let damage = if round_up {
+                ((distance as f32 - self.safe_fall) * multiplier).ceil()
+            } else {
+                ((distance - f64::from(self.safe_fall)) * f64::from(multiplier)).floor() as f32
+            };
 
             if damage > 0.0 {
                 return Some(damage);
@@ -1859,9 +1879,8 @@ mod tests {
     }
 
     #[test]
-    fn mace_smash_forgives_the_next_landing_only() {
-        // pvp-mace-heavy: после смаша с 3,2 блока урона нет; следующее
-        // падение — как обычно.
+    fn wind_burst_forgives_the_next_landing_only() {
+        // pvp-mace-wind-burst: защита ветра расходуется при приземлении.
         let mut v = Vitals::new();
 
         v.smash_forgives = true;
@@ -1887,7 +1906,7 @@ mod tests {
 
         v.land(-28.515, false, false, 1.0);
         assert_eq!(v.land(-1.485, true, false, 1.0), Some(27.0));
-        assert_eq!(landing_particles(v.landed_from), 280);
+        assert_eq!(landing_particles(v.landed_from as f32), 280);
 
         // в воздухе и на мягком блоке приземления нет
         assert_eq!(v.land(-0.1, false, false, 1.0), None);

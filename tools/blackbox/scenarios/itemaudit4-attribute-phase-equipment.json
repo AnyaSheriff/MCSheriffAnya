@@ -1,0 +1,91 @@
+{
+  "name": "itemaudit4-attribute-phase-equipment",
+  "about": "[проверить] Two-player 26.1.2 tracker phase follow-up. Durability-only item replacements and game-mode range changes at odd/even intervals. Compare per-player attribute parity across both kinds of change and across repeated fresh connections before changing production scheduling. No mobs or random loot. Existing phase recording proves a period of two but does not identify its origin.",
+  "second": true,
+  "exclusive": true,
+  "track_self": true,
+  "track_second": true,
+  "track_players": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "fill $(-2,-1,-2) $(7,-1,7) stone",
+    "fill $(-2,0,-2) $(7,6,7) air",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "effect clear $(bot)",
+    "effect clear $(bot2)",
+    "tp $(bot) $(3.5,0,3.5)",
+    "tp $(bot2) $(3.5,0,1.5)",
+    "gamemode survival $(bot)",
+    "gamemode survival $(bot2)",
+    "!hotbar 0",
+    "!hotbar2 0",
+    "item replace entity $(bot) weapon.mainhand with wooden_sword",
+    "item replace entity $(bot2) weapon.mainhand with wooden_sword"
+  ],
+  "actions": [
+    {
+      "after": 15,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wooden_sword[damage=1]"
+    },
+    {
+      "after": 15,
+      "cmd": "item replace entity $(bot2) weapon.mainhand with wooden_sword[damage=1]"
+    },
+    {
+      "after": 56,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wooden_sword[damage=2]"
+    },
+    {
+      "after": 56,
+      "cmd": "item replace entity $(bot2) weapon.mainhand with wooden_sword[damage=2]"
+    },
+    {
+      "after": 98,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wooden_sword[damage=3]"
+    },
+    {
+      "after": 98,
+      "cmd": "item replace entity $(bot2) weapon.mainhand with wooden_sword[damage=3]"
+    },
+    {
+      "after": 139,
+      "cmd": "item replace entity $(bot) weapon.mainhand with wooden_sword[damage=4]"
+    },
+    {
+      "after": 139,
+      "cmd": "item replace entity $(bot2) weapon.mainhand with wooden_sword[damage=4]"
+    },
+    {
+      "after": 160,
+      "cmd": "gamemode creative $(bot)"
+    },
+    {
+      "after": 160,
+      "cmd": "gamemode creative $(bot2)"
+    },
+    {
+      "after": 181,
+      "cmd": "gamemode survival $(bot)"
+    },
+    {
+      "after": 181,
+      "cmd": "gamemode survival $(bot2)"
+    }
+  ],
+  "record_ticks": 210,
+  "cleanup": [
+    "gamemode creative $(bot)",
+    "gamemode creative $(bot2)",
+    "clear $(bot)",
+    "clear $(bot2)",
+    "gamerule natural_health_regeneration true",
+    "difficulty peaceful",
+    "!startfly",
+    "fill $(-2,-1,-2) $(7,6,7) air"
+  ]
+}

@@ -147,7 +147,8 @@ const DAMAGE_TYPES: [&str; 51] = [
 ///
 /// Имена записей даны без namespace — он всегда minecraft. Это идентификаторы
 /// из документации протокола, а не содержимое игровых файлов.
-pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 23] = [
+pub const REQUIRED_REGISTRIES: [(&str, &[&str]); 24] = [
+    ("minecraft:chat_type", super::chat_types::NAMES),
     // Зачарования: на них ссылаются довески предметов (`enchantments`); порядок —
     // номера для клиента (stackdata::ENCHANTMENTS).
     (
@@ -540,31 +541,29 @@ pub async fn send_registry_data(stream: &mut Connection) -> io::Result<usize> {
     let mut entries = DAMAGE_TYPES.len();
 
     for (registry, registry_entries) in REQUIRED_REGISTRIES {
-        let mut body = encode_varint(REGISTRY_DATA);
-
-        body.extend_from_slice(&encode_string(registry));
-        body.extend_from_slice(&encode_varint(registry_entries.len() as i32));
-
-        for entry in registry_entries {
-            body.extend_from_slice(&encode_string(&entry_id(entry)));
-
-            match registries::entry(registry, entry) {
-                Some(contents) => {
-                    body.push(0x01); // содержимое записи идёт следом
-                    body.extend_from_slice(&contents.encode_network());
-                }
-                // Содержимого нет — клиент попробует взять его у себя.
-                // Так быть не должно: за этим следит проверка в registries.
-                None => body.push(0x00),
-            }
-        }
-
-        write_body(stream, body).await?;
+        write_body(stream, registry_body(registry, registry_entries)).await?;
 
         entries += registry_entries.len();
     }
 
     Ok(entries)
+}
+
+pub(crate) fn registry_body(registry: &str, entries: &[&str]) -> Vec<u8> {
+    let mut body = encode_varint(REGISTRY_DATA);
+    body.extend_from_slice(&encode_string(registry));
+    body.extend_from_slice(&encode_varint(entries.len() as i32));
+    for entry in entries {
+        body.extend_from_slice(&encode_string(&entry_id(entry)));
+        match registries::entry(registry, entry) {
+            Some(contents) => {
+                body.push(0x01);
+                body.extend_from_slice(&contents.encode_network());
+            }
+            None => body.push(0x00),
+        }
+    }
+    body
 }
 
 /// Идентификатор записи реестра: имена оригинала записаны в таблицах без

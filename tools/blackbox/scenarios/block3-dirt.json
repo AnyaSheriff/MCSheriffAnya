@@ -47,5 +47,15 @@
     "fill $(-2,0,-2) $(4,7,1) air",
     "kill @e[type=item,distance=..12]",
     "gamemode creative $(bot)"
+  ],
+  "random": [
+    {
+      "type": "mask",
+      "name": "место пяти брызг бутылки",
+      "kind": "particle",
+      "pattern": "^частица (?:0(?:\\.\\d+)?|1),1,(?:0(?:\\.\\d+)?|1) splash 1 1 \\(0,0,0\\)$",
+      "replace": "частица dirt-top splash 1 1 (0,0,0)",
+      "why": "tmp/bb/block3-dirt.md:7–11,16–20: ровно пять splash, y=1, count=1, speed=1; x/z случайны внутри верхней грани. Число, такт, тип и параметры сохраняются."
+    }
   ]
 }

@@ -1,0 +1,20 @@
+{
+  "name": "cmdblock-cleanup-regression",
+  "about": "[проверить] Disguised Chat должен разбираться без падения. После fill не должно быть cleanup-tick/cleanup-chain, после setblock — cleanup-replaced. Уборка входит в запись, тишина проверяется ещё 20 тактов.",
+  "exclusive": true,
+  "chat": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": ["fill $(-1,0,-1) $(3,2,2) minecraft:air"],
+  "actions": [
+    {"after": 0, "cmd": "setblock $(0,1,0) minecraft:chain_command_block[facing=up]{auto:1b,Command:\"say cleanup-chain\"}"},
+    {"after": 3, "cmd": "setblock $(0,0,0) minecraft:repeating_command_block[facing=up]{auto:1b,Command:\"say cleanup-tick\"}"},
+    {"after": 8, "cmd": "fill $(-1,0,0) $(2,1,0) minecraft:air"},
+    {"after": 12, "cmd": "tellraw @s \"cleanup-fill-done\""},
+    {"after": 24, "cmd": "setblock $(0,0,0) minecraft:repeating_command_block[facing=up]{auto:1b,Command:\"say cleanup-replaced\"}"},
+    {"after": 29, "cmd": "setblock $(0,0,0) minecraft:stone"},
+    {"after": 33, "cmd": "tellraw @s \"cleanup-replace-done\""}
+  ],
+  "cleanup": ["fill $(-1,0,-1) $(3,2,2) minecraft:air"],
+  "record_ticks": 55
+}

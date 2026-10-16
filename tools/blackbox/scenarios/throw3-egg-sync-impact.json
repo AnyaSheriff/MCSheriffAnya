@@ -1,6 +1,6 @@
 {
  "name": "throw3-egg-sync-impact",
- "about": "[проверить] Deterministic NoGravity snowballs hit z=6 on ages 10,11,12 (ticks +9,+10,+11) from z=-3,-4,-4.5. Reveals whether the ten-tick velocity/position sync precedes status/removal when impact coincides with tracking. None of the supplied vanilla throw2 recordings impacts on a multiple of ten.",
+ "about": "Recorded 26.1.2: impacts at +8/+10/+11. At +10, velocity and position sync precede status 3 and removal (diff lines 19-22). Exact deterministic comparison; no random tolerances.",
  "blocks": [],
  "setup": [
   "gamerule natural_health_regeneration false",

@@ -1,0 +1,30 @@
+{
+  "name": "xp-newborn-pickup",
+  "about": "[проверить] Experience orb: немедленный подбор двух фиксированных шариков. fishing-catch.md:406–412 — перед Collect обязательны первый нулевой шаг и повтор значения 8=5. Случайной стоимости или толчка нет; подготовлено без запуска.",
+  "track_mobs": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "kill @e[type=experience_orb,distance=..16]",
+    "experience set $(bot) 0 levels",
+    "experience set $(bot) 0 points",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!wait 10"
+  ],
+  "actions": [
+    { "after": 0, "cmd": "summon experience_orb $(3.5,0.5,3.5) {Value:5s,Motion:[0d,0d,0d]}" },
+    { "after": 10, "cmd": "summon experience_orb $(3.5,0.5,3.5) {Value:5s,Motion:[0d,0d,0d]}" }
+  ],
+  "record_ticks": 30,
+  "cleanup": [
+    "kill @e[type=experience_orb,distance=..16]",
+    "clear $(bot)",
+    "experience set $(bot) 0 levels",
+    "experience set $(bot) 0 points",
+    "gamemode creative $(bot)",
+    "fill $(-2,0,-2) $(6,7,6) air"
+  ]
+}

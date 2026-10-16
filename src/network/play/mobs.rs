@@ -391,7 +391,9 @@ fn properties(mob: &Mob) -> Vec<Property> {
         }
         Kind::Chicken => {
             out.push((16, TYPE_BOOL, vec![u8::from(mob.is_baby())]));
-            out.push((18, TYPE_CHICKEN_VARIANT, encode_varint(1)));
+            // Вики, Egg: «variant depends on which egg variant was thrown».
+            // Реестр configuration.rs: cold=0, temperate=1, warm=2.
+            out.push((18, TYPE_CHICKEN_VARIANT, encode_varint(match mob.color { 1 => 0, 2 => 2, _ => 1 })));
             out.push((19, TYPE_CHICKEN_SOUND, encode_varint(0)));
         }
         // Зомби, кадавр и утопленник (чёрный ящик, zombie-to-drowned: 18=true на
@@ -1779,6 +1781,21 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
     })
 }
 
+/// Первый отчёт ещё не прошёл, а шарик уже подбирают.
+pub(super) async fn orb_before_pickup(stream: &mut Outgoing<'_>, entity_id: i32, shown: &mut ShownMob) -> io::Result<()> {
+    if !shown.first { return Ok(()); }
+    // Вики, Experience orb: «picked up»; fishing-catch.md:406–412 — нулевой шаг
+    // и повтор значения приходят даже при подборе в такте рождения шарика.
+    let mut body = encode_varint(ENTITY_POSITION);
+    body.extend_from_slice(&encode_varint(entity_id));
+    for _ in 0..3 { push_i16(&mut body, 0); }
+    body.push(u8::from(shown.on_ground));
+    write_body(stream, body).await?;
+    send_properties(stream, entity_id, &shown.properties.iter().collect::<Vec<_>>()).await?;
+    shown.first = false;
+    Ok(())
+}
+
 /// Слежение за шариками опыта — как за мобами, но раз в 20 тактов: скорость,
 /// если изменилась, потом место шагом (переносом при смене «на земле»); в
 /// первый прогон и раз в 60 тактов место уходит в любом случае, а в первый
@@ -1792,7 +1809,7 @@ async fn send_orb_ticks(stream: &mut Outgoing<'_>, player: &mut PlayerState, orb
 
         let speed = (orb.vx, orb.vy, orb.vz);
 
-        if orb.ticks % ORB_EVERY == 0 {
+        if orb.ticks % ORB_EVERY == 0 && (orb.ticks != 0 || shown.first) {
             let change = (speed.0 - shown.speed.0).powi(2) + (speed.1 - shown.speed.1).powi(2) + (speed.2 - shown.speed.2).powi(2);
 
             if change > SPED || (speed == (0.0, 0.0, 0.0) && shown.speed != (0.0, 0.0, 0.0)) {
@@ -2015,5 +2032,52 @@ mod itemaudit2_tests {
         assert_eq!(flags(&mob) & 0x20, 0);
         mob.land.invisible = true;
         assert_eq!(flags(&mob) & 0x20, 0x20);
+    }
+}
+
+#[cfg(test)]
+mod egg_variant_tests {
+    use super::*;
+
+    #[test]
+    fn hatched_chicken_variant_uses_existing_registry_and_save_field() {
+        for (stored, registry) in [(0, 1), (1, 0), (2, 2)] {
+            let mut chick = Mob::new(500, Kind::Chicken, (0.5, 64.0, 0.5));
+            chick.age = crate::mob::BABY_AGE;
+            chick.color = stored;
+            let mut saved = Vec::new();
+            chick.write(&mut saved);
+            let restored = Mob::read(&mut saved.as_slice()).unwrap();
+            assert_eq!(restored.color, stored);
+            let entry = properties(&restored).into_iter().find(|e| e.0 == 18).unwrap();
+            assert_eq!(entry, (18, TYPE_CHICKEN_VARIANT, encode_varint(registry)));
+        }
+    }
+}
+
+#[cfg(test)]
+mod orb_pickup_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn newborn_orb_sends_first_step_and_value_before_pickup_once() {
+        let orb = XpOrb::new(42, 5, (3.5, 1.5, -2.0), (0.0, 0.0, 0.0));
+        let mut spawn = Outgoing::capture();
+        let mut shown = send_orb(&mut spawn, &orb).await.unwrap();
+        let mut out = Outgoing::capture();
+        orb_before_pickup(&mut out, 42, &mut shown).await.unwrap();
+        let bytes = out.queued().to_vec();
+        assert!(!bytes.is_empty());
+        assert!(!shown.first);
+        orb_before_pickup(&mut out, 42, &mut shown).await.unwrap();
+        assert_eq!(out.queued(), bytes);
+        let mut input = bytes.as_slice();
+        let movement = crate::network::packet::read_packet(&mut input).await.unwrap();
+        assert_eq!(movement.id, ENTITY_POSITION);
+        assert_eq!(movement.payload(), &[42, 0, 0, 0, 0, 0, 0, 0]);
+        let metadata = crate::network::packet::read_packet(&mut input).await.unwrap();
+        assert_eq!(metadata.id, SET_ENTITY_DATA);
+        assert_eq!(metadata.payload(), &[42, ORB_VALUE_KEY, TYPE_INT as u8, 5, 255]);
+        assert!(input.is_empty());
     }
 }

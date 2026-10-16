@@ -40,5 +40,18 @@
   "cleanup": [
     "fill $(-6,0,-6) $(7,2,6) air",
     "kill @e[type=item,distance=..10]"
+  ],
+  "random": [
+    {
+      "type": "count",
+      "name": "всплеск выпавшего аметиста",
+      "match": "^sound (?:[0-3](?:\\.\\d+)?|-0\\.\\d+),(?:[01](?:\\.\\d+)?),-?[0-2](?:\\.\\d+)? minecraft:entity.generic.splash 0\\.0[1-9]$",
+      "range": [
+        0,
+        3
+      ],
+      "anytick": true,
+      "why": "tmp/bb/amethyst-support-faces.md:16–19: случайно разбросанные предметы входят в воду в разных местах; блоки, грани и дроп остаются точными."
+    }
   ]
 }

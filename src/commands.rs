@@ -375,12 +375,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 }
             }
 
-            Answer::saying(format!(
-                "Выдано: {} × {} — игрокам: {}",
-                item_name,
-                count,
-                names_of(&targets)
-            ))
+            crate::commands_feedback::give(stack, &targets)
         }
         "clear" => {
             let named = parts.next();
@@ -459,6 +454,11 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
 
             if text.is_empty() {
                 return Answer::saying("Что сказать? Напиши текст после команды".to_string());
+            }
+
+            if let Source::Block { name, .. } = source {
+                crate::commands_feedback::block_say(shared, name, text);
+                return Answer::saying(String::new());
             }
 
             // Сообщение уходит в общую ленту, поэтому в ответе его повторять
@@ -556,6 +556,15 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                     Some(dimension) => teleport(tail, source, shared, Some(dimension)),
                     None => Answer::saying(format!("Нет такого измерения: {}", dimension)),
                 },
+                // throw3-egg-hatch-repeat.md: после cleanup наши цыплята
+                // жили дальше: positioned не разбирался. Меняем только центр
+                // селектора kill, сохраняя исполнителя и его измерение.
+                ["positioned", x, y, z, "run", "kill", tail @ ..] => {
+                    match entity_place(&[*x, *y, *z], origin_of(source, shared)) {
+                        Some(origin) => kill_at(tail, source, shared, origin),
+                        None => Answer::saying("Неверное место positioned".into()),
+                    }
+                }
                 // Остальное (as, if/unless, store, run) — commands_score.rs.
                 _ => crate::commands_score::run(command, source, shared),
             }
@@ -1585,6 +1594,10 @@ pub(crate) fn component_text(value: &crate::snbt::Value) -> String {
 /// сундуком лежит её земля, предмета вагонетки нет). [проверить]: разброс
 /// высыпанного.
 fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    kill_at(parts, source, shared, origin_of(source, shared))
+}
+
+fn kill_at(parts: &[&str], source: &Source, shared: &Shared, origin: (f64, f64, f64)) -> Answer {
     // `kill <игрок>` / `kill @s` — убить игрока (вид урона generic_kill).
     if let Some(who) = parts.first().filter(|who| !who.starts_with("@e")) {
         let targets = if *who == "@s" {
@@ -1611,7 +1624,7 @@ fn kill(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         return Answer::saying("Нужно: kill @e[type=<вид>] — вагонетки, item, tnt, falling_block".to_string());
     };
 
-    let (x, y, z) = origin_of(source, shared);
+    let (x, y, z) = origin;
     let near = |at: (f64, f64, f64)| chosen.reaches((x, y, z), at);
     let mut left = chosen.limit.unwrap_or(usize::MAX);
 
@@ -2505,10 +2518,8 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
 
     if area {
         Answer::saying(format!("Заполнено блоков: {}", changed))
-    } else if changed == 0 {
-        Answer::saying("Там уже такой блок".to_string())
     } else {
-        Answer::saying(format!("Блок в {}, {}, {} изменён", x1, y1, z1))
+        crate::commands_feedback::setblock(changed != 0, x1, y1, z1)
     }
 }
 
@@ -3645,7 +3656,8 @@ mod tests {
         let shared = server();
 
         let answer = run("give Первый stone 5", &Source::Console, &shared);
-        assert!(answer.reply.contains("Выдано"), "{}", answer.reply);
+        assert!(answer.reply.contains("Gave"), "{}", answer.reply);
+        assert!(answer.component.as_ref().unwrap().windows(28).any(|part| part == b"commands.give.success.single"));
 
         let orders = shared
             .players
@@ -3726,7 +3738,7 @@ mod tests {
             &shared,
         )
         .reply;
-        assert!(reply.contains("изменён"), "{}", reply);
+        assert!(reply.contains("Changed the block"), "{}", reply);
 
         let lever = blocks::state_from_text("lever[face=floor,facing=north,powered=true]")
             .expect("рычаг разбирается");
@@ -3749,6 +3761,171 @@ mod tests {
         assert!(run("fill 0 0 0 100 100 100 stone", &Source::Console, &shared)
             .reply
             .contains("Слишком много"));
+    }
+
+    /// cmdblock-chain.md:33–34: отказ остаётся нулём, но теперь он красный
+    /// перевод, а не строка «Там уже такой блок».
+    #[test]
+    fn setblock_feedback_preserves_success_and_failure() {
+        use crate::commands_world::{Arg, fail, tr};
+        let shared = server();
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        let first = run("setblock 3 5 7 stone", &Source::Console, &shared);
+        assert_eq!(take_result(), Some(1));
+        assert_eq!(first.result, Some(1));
+        assert_eq!(first.component, tr("commands.setblock.success", &[Arg::Int(3), Arg::Int(5), Arg::Int(7)]).component);
+        let second = run("setblock 3 5 7 stone", &Source::Console, &shared);
+        assert_eq!(take_result(), Some(0));
+        assert_eq!(second.result, None);
+        assert_eq!(second.component, fail("commands.setblock.failed", &[]).component);
+    }
+
+    /// cmdblock-repeat.md:9–42: по одному Disguised Chat каждому игроку,
+    /// без дублирующего System Chat и без ответа в LastOutput.
+    #[test]
+    fn block_say_uses_profileless_chat_for_every_player() {
+        let shared = server();
+        let source = Source::Block { x: 0, y: 5, z: 0, dimension: Dimension::Overworld, name: "@".to_string() };
+        let answer = run("say tick", &source, &shared);
+        assert!(answer.reply.is_empty());
+        assert_eq!(shared.chat.lock().unwrap().count(), 0);
+        for uuid in [1, 2] {
+            let orders = orders_for(&shared, uuid);
+            assert_eq!(orders.len(), 1);
+            assert!(matches!(&orders[0], Order::PacketText { id: 0x21, body, plain }
+                if body.starts_with(&crate::network::nbt::text_component("tick")) && plain == "[@] tick"));
+        }
+    }
+
+    /// Пакет команд при задержке подключения: get/remove должны видеть add
+    /// сразу (tmp/bb/ours-cmd-attribute.json, ответы на +42).
+    #[test]
+    fn attribute_commands_see_pending_edits_and_survive_old_publications() {
+        use crate::commands_world::{apply_attribute_edit, finish_attribute_edit, publish_attributes};
+        let shared = server();
+        let source = Source::Player { uuid: [1; 16], name: "Первый".to_string() };
+        let mut actual = crate::attributes::Attributes::player();
+        let command = |tail: &str| run(&format!("attribute @s movement_speed {tail}"), &source, &shared);
+        publish_attributes(&shared, &[1; 16], &actual);
+        command("base set 0.2");
+        command("modifier add test:x 0.5 add_multiplied_base");
+        assert!(command("get").reply.ends_with("0.30000000000000004"));
+        publish_attributes(&shared, &[1; 16], &actual);
+        assert!(command("get").reply.ends_with("0.30000000000000004"));
+        let duplicate = command("modifier add test:x 0.5 add_multiplied_base");
+        assert!(String::from_utf8_lossy(&duplicate.component.unwrap()).contains("modifier_already_present"));
+        let removed = command("modifier remove test:x");
+        assert!(String::from_utf8_lossy(&removed.component.unwrap()).contains("modifier.remove.success"));
+        assert!(command("get").reply.ends_with("0.2"));
+        command("base reset");
+        let pending = orders_for(&shared, 1);
+        assert_eq!(pending.len(), 4);
+        for order in pending {
+            let Order::Attribute(edit) = order else { panic!("ожидали правку атрибута"); };
+            apply_attribute_edit(&mut actual, &edit);
+            finish_attribute_edit(&shared, &[1; 16], &actual);
+            publish_attributes(&shared, &[1; 16], &actual);
+            assert!(command("get").reply.ends_with("0.10000000149011612"));
+        }
+        assert_eq!(actual, crate::attributes::Attributes::player());
+        command("base set 0.8");
+        crate::commands_world::forget_attributes(&shared, &[1; 16]);
+        publish_attributes(&shared, &[1; 16], &actual);
+        assert!(command("get").reply.ends_with("0.10000000149011612"));
+    }
+
+    /// minecraft.wiki, Command Block: «executes every game tick» — только
+    /// пока блок существует. Уборка cmdblock-repeat должна гасить и уже
+    /// извлечённую очередь выполнения, и следующий запланированный такт.
+    #[test]
+    fn command_block_cleanup_stops_queued_and_scheduled_runs() {
+        for (cleanup, auto) in [
+            ("fill -1 5 0 2 6 0 air", true), ("fill -1 5 0 2 6 0 air", false),
+            ("setblock 0 5 0 stone", true), ("setblock 0 5 0 stone", false),
+        ] {
+            let shared = server();
+            {
+                let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                world.ensure(-1, 0);
+                world.ensure(0, 0);
+            }
+            let command = format!(r#"setblock 0 5 0 repeating_command_block[facing=up]{{auto:{}b,Command:"say tick"}}"#, u8::from(auto));
+            run(&command, &Source::Console, &shared);
+            run(r#"setblock 0 6 0 chain_command_block[facing=up]{auto:1b,Command:"say chain"}"#, &Source::Console, &shared);
+            if !auto { run("setblock -1 5 0 redstone_block", &Source::Console, &shared); }
+            let advance = || {
+                let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                for (pos, _) in world.advance(100) {
+                    crate::redstone::ticked(&mut world, pos);
+                }
+                world.take_command_runs()
+            };
+            crate::command_block::run_queued(&shared, Dimension::Overworld, advance());
+            for uuid in [1, 2] {
+                let orders = orders_for(&shared, uuid);
+                assert_eq!(orders.len(), 2, "repeat и chain работали до уборки");
+            }
+            let queued = advance();
+            assert!(!queued.is_empty());
+            take_result();
+            run(cleanup, &Source::Console, &shared);
+            assert!(take_result().unwrap() > 0);
+            {
+                let world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                assert!(world.command_block(0, 5, 0).is_none());
+                if cleanup.starts_with("fill") {
+                    assert!(world.command_block(0, 6, 0).is_none());
+                }
+            }
+            crate::command_block::run_queued(&shared, Dimension::Overworld, queued);
+            for _ in 0..20 {
+                let queued = advance();
+                assert!(queued.is_empty(), "удалённый блок снова попал в очередь");
+                crate::command_block::run_queued(&shared, Dimension::Overworld, queued);
+            }
+            for uuid in [1, 2] { assert!(orders_for(&shared, uuid).is_empty()); }
+        }
+    }
+
+    /// cmdblock-chain.md:9–18: неудачный setblock гасит только условное
+    /// звено; ответы удачных звеньев сохраняют вложенные переводы.
+    #[test]
+    fn command_chain_keeps_results_and_translated_feedback() {
+        let shared = server();
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        for command in [
+            r#"setblock 0 5 0 command_block[facing=east]{auto:1b,Command:"setblock ~ ~ ~2 stone"}"#,
+            r#"setblock 1 5 0 chain_command_block[facing=east]{auto:1b,Command:"setblock ~-1 ~ ~2 stone"}"#,
+            r#"setblock 2 5 0 chain_command_block[facing=east,conditional=true]{auto:1b,Command:"setblock ~ ~ ~2 glass"}"#,
+            r#"setblock 3 5 0 chain_command_block[facing=east]{auto:1b,Command:"setblock ~ ~ ~2 dirt"}"#,
+        ] {
+            run(command, &Source::Console, &shared);
+        }
+        let starts = {
+            let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            for (pos, _) in world.advance(100) {
+                crate::redstone::ticked(&mut world, pos);
+            }
+            world.take_command_runs()
+        };
+        crate::command_block::run_queued(&shared, Dimension::Overworld, starts);
+        {
+            let world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            for (x, success) in [(0, 1), (1, 0), (2, 0), (3, 1)] {
+                assert_eq!(crate::command_block::comparator_reading(&world, (x, 5, 0)), Some(success));
+            }
+            assert_eq!(world.get_block(2, 5, 2), blocks::state_by_name("air").unwrap());
+            assert_eq!(world.get_block(3, 5, 2), blocks::state_by_name("dirt").unwrap());
+        }
+        for uuid in [1, 2] {
+            let orders = orders_for(&shared, uuid);
+            assert_eq!(orders.len(), 2);
+            for (order, x) in orders.iter().zip([0, 3]) {
+                let answer = crate::commands_feedback::setblock(true, x, 5, 2);
+                let expected = crate::command_block::admin_message("@", &answer.reply, answer.component.as_deref());
+                assert!(matches!(order, Order::Message { component } if component == &expected));
+            }
+        }
     }
 
     /// Враждебные призываются командой: скелет без данных — с луком, с данными —
@@ -3778,6 +3955,27 @@ mod tests {
         }
 
         assert_eq!(run("kill @e[type=skeleton]", &Source::Console, &shared).reply, "Убрано сущностей: 3");
+    }
+
+    #[test]
+    fn bee_feed_summons_both_ages_with_no_ai() {
+        // Вики, Bee: «flowers»; bee-feed.md:6–16 — прежде всего
+        // нужны оба spawn. Проверяем команды из неполной записи без сервера.
+        let shared = server();
+        for command in [
+            "summon bee 103.5 -59 103.5 {NoAI:1b,Silent:1b}",
+            "summon bee 102.5 -59 103.5 {NoAI:1b,Silent:1b,Age:-24000}",
+        ] {
+            assert!(run(command, &Source::Console, &shared).reply.contains("bee"));
+        }
+        let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+        assert_eq!(items.mobs().len(), 2);
+        for (mob, age) in items.mobs().iter().zip([0, -24000]) {
+            assert_eq!(mob.kind, crate::mob::Kind::Bee);
+            assert!(mob.no_ai && mob.silent);
+            assert_eq!(mob.age, age);
+            assert_eq!(mob.vitals.health, 10.0);
+        }
     }
 
     /// Животные призываются по вики: NoAI, Age, Silent, Sheared, Color,

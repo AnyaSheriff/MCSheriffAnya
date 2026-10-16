@@ -1,10 +1,11 @@
 {
  "name": "bee-feed",
- "about": "Пчела NoAI: цветок — любовь, второй щелчок не тратит; детёныш ускоряет рост; иссушающая роза; пшеница не еда.",
+ "about": "Пчела NoAI: цветок — любовь, второй щелчок не тратит; детёныш ускоряет рост; иссушающая роза; пшеница не еда. tmp/bb/ours-bee-feed.json содержит только действия без spawn; track_self оставлен для диагностики ответа /summon. [проверить] изолированный повтор.",
  "exclusive": true,
  "track_mobs": true,
  "blocks": [],
  "setup": [
+  "execute in minecraft:overworld run tp $(bot) $(3.5,1,0.5)",
   "difficulty normal",
   "gamemode survival $(bot)",
   "effect clear $(bot)",
@@ -92,5 +93,7 @@
   "!startfly",
   "fill $(-8,0,-8) $(8,8,8) minecraft:air",
   "fill $(-8,-1,-8) $(8,-1,8) minecraft:stone"
- ]
+ ],
+ "track_self": true,
+ "chat": true
 }

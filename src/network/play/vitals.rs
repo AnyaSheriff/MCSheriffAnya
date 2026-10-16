@@ -248,6 +248,10 @@ pub(super) struct Net {
     velocity_due: bool,
     prev_ground: bool,
     pub last_delta: (f64, f64, f64),
+    /// fall-mode-teleport-motion: инерция creative → survival доживает
+    /// до приземления; /tp её обнуляет. [проверить] Другие среды.
+    mode_fall_velocity: Option<f64>,
+    landing_velocity: Option<f64>,
     pub sweep_motion: super::sweep::Motion,
     pub eating: Option<Eating>,
     /// Поднятый щит или натянутый лук.
@@ -364,6 +368,8 @@ impl Net {
             velocity_due: false,
             prev_ground: false,
             last_delta: (0.0, 0.0, 0.0),
+            mode_fall_velocity: None,
+            landing_velocity: None,
             sweep_motion: Default::default(),
             eating: None,
             using: None,
@@ -555,11 +561,11 @@ fn fluid_height(world: &World, x: i32, y: i32, z: i32, kind: fluids::Kind, level
 
 /// Вики, Damage: «Suffocation»; tmp/bb/throw2-ender_pearl-up45-yaw0-standing.md:
 /// 31–45: z=39,836, стена z=40, затем type=22, хотя центр головы в воздухе.
-/// Нужна ширина головы, а не один блок под глазами. Точная граница 0,24
-/// [проверить: throw3-pearl-wall-edge]; записи ограничивают её снизу 0,164.
+/// throw3-pearl-wall-edge.md:16–36: z=39,76 не душит, 39,77 душит.
+/// Касание границы без пересечения не считается: верхний край открыт.
 fn head_in_wall(world: &World, x: f64, eye: f64, z: f64) -> bool {
-    for bx in (x - 0.24).floor() as i32..=(x + 0.24).floor() as i32 {
-        for bz in (z - 0.24).floor() as i32..=(z + 0.24).floor() as i32 {
+    for bx in (x - 0.24).floor() as i32..=(x + 0.24).ceil() as i32 - 1 {
+        for bz in (z - 0.24).floor() as i32..=(z + 0.24).ceil() as i32 - 1 {
             let head = world.get_block(bx, eye.floor() as i32, bz);
             if blocks::full_cube(head) && fluids::fluid_at(head).is_none() && blocks::block_at_state(head) != Some("powder_snow") {
                 return true;
@@ -653,6 +659,11 @@ pub(super) fn change_game_mode(player: &mut PlayerState, mode: i32) {
     if player.game_mode != mode {
         // fall-mode-teleport-reset, 26.1.2: creative → survival сохраняет
         // пролёт целиком (12 блоков дают урон 9, а не 5).
+        if player.game_mode == GAME_MODE_CREATIVE && mortal(mode)
+            && !player.creative_flying && !player.on_ground && player.net.last_delta.1 < 0.0
+        {
+            player.net.mode_fall_velocity = Some(medium_step(player.net.last_delta.1, player.net.in_lava, player.net.in_water));
+        }
         player.prev_mode = player.game_mode;
         player.game_mode = mode;
     }
@@ -687,6 +698,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
 
     if std::mem::take(&mut player.net.teleported) || jump {
         player.net.pin = None;
+        player.net.mode_fall_velocity = None;
         player.net.prev_ground = on_ground;
         player.net.last_delta = (0.0, 0.0, 0.0);
         player.net.sweep_motion = Default::default();
@@ -731,9 +743,10 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         };
 
         // Высота падения вместе с этим шагом — для грядки.
-        let fallen = player.vit.fall + (-dy).max(0.0) as f32;
-        let smashed = player.vit.smash_forgives;
-        let damage = player.vit.land(dy, on_ground, env.soft, env.landing);
+        let fallen = (player.vit.fall + (-dy).max(0.0)) as f32;
+        let smashed = player.vit.smash_landing;
+        let damage = player.vit.land_java(dy, on_ground, env.soft, env.landing);
+        if env.soft { player.net.mode_fall_velocity = None; }
         if on_ground && fallen >= 2.0 {
             player.progress.custom("fall_one_cm", (fallen * 100.0).round() as i32);
         }
@@ -758,7 +771,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         // Частицы приземления не зависят от урона (сено, мёд, стойкость их не
         // отменяют); число — по высоте до последнего шага (survival::
         // landing_particles).
-        let count = survival::landing_particles(player.vit.landed_from);
+        let count = survival::landing_particles(player.vit.landed_from as f32);
 
         if on_ground && player.vit.landed_from > 0.0 {
             log_debug!("Play: {} встал на землю, падение до шага {:.2}, частиц {}", player.name, player.vit.landed_from, count);
@@ -776,6 +789,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         }
 
         if let Some(damage) = damage {
+            player.net.landing_velocity = player.net.mode_fall_velocity;
             log_debug!("Play: {} приземлился с уроном {} на {:.2} {:.2} {:.2} (шаг {:.3})", player.name, damage, player.x, player.y, player.z, dy);
 
             let announced = announce_fall(player, shared, damage, env.below);
@@ -788,12 +802,13 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
         if player.creative_flying {
             player.vit.fall = 0.0;
         } else {
-            let _ = player.vit.land(dy, on_ground, player.net.in_water, 1.0);
+            let _ = player.vit.land_java(dy, on_ground, player.net.in_water, 1.0);
         }
     }
 
     if on_ground {
         player.net.pin = None;
+        player.net.mode_fall_velocity = None;
     }
 
     player.net.prev_ground = on_ground;
@@ -1249,11 +1264,10 @@ pub(super) async fn send_sound_at(
     write_body(stream, body).await
 }
 
-/// pvp-mace-landing-count, 26.1.2: 105, 167, 200, 200. Для пролётов
-/// до последнего шага 2,10955; 3,34627; 4,06335; 4,84448 это floor(50h),
-/// предел 200. [проверить] Промежуточные высоты и фаза движения после удара:
-/// зонд pvp-mace-landing-motion пишет несокращённую траекторию клиента.
-fn smash_landing_particles(before: f32) -> i32 {
+/// pvp-mace-landing-motion, 26.1.2: floor(50h), предел 200.
+/// h — пролёт после смаша ДО касания; 2,69456 → 134, 3,21151 → 160.
+/// Шаг в полёте, пришедший после атаки до Velocity, тоже входит в h.
+fn smash_landing_particles(before: f64) -> i32 {
     ((before * 50.0) as i32).clamp(0, 200)
 }
 
@@ -1483,11 +1497,11 @@ async fn sync_attributes(stream: &mut Outgoing<'_>, player: &mut PlayerState, no
         player.attrs.remove_modifier(crate::attributes::MOVEMENT_SPEED, "minecraft:powder_snow");
     }
 
-    // Изменённое предметами уходит через два такта после смены (чёрный
-    // ящик, pvp-armor: атрибуты брони после износа — на +2).
-    // itemaudit4-knockback / anvil-rename-repair: бывает +1; прежние
-    // pvp-mace-записи отмечают фазу слежения +1/+2. [проверить] зондом
-    // itemaudit4-knockback-phase, прежде чем менять задержку всему бою.
+    // itemaudit4-knockback-phase, 26.1.2: удары +15/56/98/139,
+    // Attributes +17/57/99/141 (задержки 2/1/1/2). Период — два такта,
+    // но начало фазы по этим записям не установить: у экипировки рассылки
+    // чётные по возрасту мира, у смены режима — нечётные. [проверить]
+    // itemaudit4-attribute-phase-equipment; прежнюю задержку пока сохраняем.
     let (due, waiting): (Vec<_>, Vec<_>) = std::mem::take(&mut player.attrs_touched).into_iter().partition(|(_, due)| *due <= now);
     let touched: Vec<i32> = due.iter().map(|(attribute, _)| *attribute).collect();
     let skip: Vec<i32> = waiting.iter().map(|(attribute, _)| *attribute).collect();
@@ -2301,6 +2315,16 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
 
         let done = hit_by(stream, shared, player, pending.amount, pending.source, pending.direct, 0, killer, pending.hurt_yaw).await?;
 
+        if pending.source == Source::Fall
+            && let Some(vy) = player.net.landing_velocity.take()
+            && done.is_some()
+        {
+            // fall-mode-teleport-motion: -1,195 после смены режима,
+            // затем обычные приземления после /tp снова дают -0,078.
+            player.net.velocity_due = false;
+            player.net.velocity = Some((player.net.last_delta.0, vy, player.net.last_delta.2));
+        }
+
         // Шипы отбрасывают ударившего, как обычный удар: скорость идёт сразу
         // за анимацией ушиба (чёрный ящик, pvp-thorns: (0; 0,361; −0,4)).
         if let (Some(_), Some((ux, uz)), true) = (done, pending.push, pending.source == Source::IndirectMagic) {
@@ -2464,6 +2488,10 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     // Шарики опыта: появление, полёт к игроку, подбор.
     if !player.vit.dead {
         orbs_tick(stream, shared, player).await?;
+    }
+
+    if let Some(vy) = player.net.mode_fall_velocity {
+        player.net.mode_fall_velocity = Some(medium_step(vy, player.net.in_lava, player.net.in_water));
     }
 
     // Скорость, которую сервер ведёт после удара, за такт делает шаг.
@@ -3143,9 +3171,9 @@ mod tests {
     fn smash_particle_counts_follow_pre_landing_descent() {
         // pvp-mace-landing-count: дискретный пролёт до касания, не высота /tp.
         let mut speed = 0.0f64;
-        let mut before = 0.0f32;
+        let mut before = 0.0f64;
         for step in 1..=12 {
-            before -= speed as f32;
+            before -= speed;
             speed = (speed - 0.08) * 0.98;
             let expected = match step { 8 => Some(105), 10 => Some(167), 11 | 12 => Some(200), _ => None };
             if let Some(expected) = expected { assert_eq!(smash_landing_particles(before), expected); }
@@ -3701,7 +3729,12 @@ mod pearl_wall_tests {
         let mut world = World::in_memory();
         world.set_block_silently(3, 14, 40, blocks::state_by_name("stone").unwrap());
         assert!(look_around(&world, 3.562, 13.358, 39.836, false, false).in_wall);
-        assert!(!look_around(&world, 3.562, 13.358, 39.7, false, false).in_wall);
+        for z in [39.7, 39.74, 39.76] {
+            assert!(!look_around(&world, 3.562, 13.358, z, false, false).in_wall, "z={z}");
+        }
+        for z in [39.77, 39.8, 39.836, 39.9] {
+            assert!(look_around(&world, 3.562, 13.358, z, false, false).in_wall, "z={z}");
+        }
         assert!(!look_around(&world, 3.562, 12.0, 39.836, false, false).in_wall);
         world.set_block_silently(3, 14, 40, world::AIR);
         assert!(!look_around(&world, 3.562, 13.358, 39.836, false, false).in_wall);

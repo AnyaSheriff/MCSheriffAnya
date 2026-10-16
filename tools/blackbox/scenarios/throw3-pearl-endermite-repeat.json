@@ -1,9 +1,7 @@
 {
  "name": "throw3-pearl-endermite-repeat",
- "about": "[проверить] 128 pearl impacts on Normal (Peaceful hides endermites): record spawn at thrower before teleport, packet order, and removal. Heal between throws; 24-tick interval exceeds pearl cooldown. Hatch is random 5%; compare conditional behavior, not equal counts.",
- "blocks": [
-
- ],
+ "about": "128 Normal-difficulty impacts with spawn_mobs explicitly enabled. The original throw3 recording had zero endermites because bot.js disables spawning; it cannot measure the 5% chance or placement. Per-trial cleanup tests short lifecycle only; use throw4-pearl-endermite-lifetime for natural expiry. [проверить]",
+ "blocks": [],
  "setup": [
   "gamerule natural_health_regeneration false",
   "gamerule natural_health_regeneration false",
@@ -59,7 +57,11 @@
   "!hotbar 0",
   "give $(bot) minecraft:ender_pearl 1",
   "!look 3.141592653589793 -1.570796326794897",
-  "!wait 10"
+  "!wait 10",
+  "fill $(-39,-1,-39) $(39,-1,39) minecraft:sea_lantern",
+  "fill $(-40,64,-40) $(40,64,40) minecraft:sea_lantern",
+  "!wait 5",
+  "gamerule spawn_mobs true"
  ],
  "actions": [
   {"after": 0, "cmd": "effect give $(bot) minecraft:instant_health 1 5 true"},
@@ -704,6 +706,7 @@
   {"after": 3062, "cmd": "execute positioned $(0,0,0) run kill @e[type=endermite,distance=..128]"}
  ],
  "cleanup": [
+  "gamerule spawn_mobs false",
   "ride $(bot) dismount",
   "gamemode creative $(bot)",
   "tp $(bot) $(3.5,1,2.5)",

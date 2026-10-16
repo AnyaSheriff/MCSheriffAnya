@@ -1,0 +1,738 @@
+[
+  {
+    "name": "throw3-egg-falling-owner",
+    "kind": "egg",
+    "start": [
+      3.5,
+      8.37,
+      2.5
+    ],
+    "teleport": null,
+    "teleport_phases": [],
+    "velocity": [
+      -0.008057132393334498,
+      -0.3982176646523836,
+      1.4969175364707317
+    ],
+    "observations": [
+      {
+        "tick": 10,
+        "velocity": [
+          -0.007,
+          -0.644,
+          1.354
+        ]
+      },
+      {
+        "tick": 10,
+        "velocity": [
+          -0.007,
+          -0.644,
+          1.354
+        ],
+        "at": [
+          3.424,
+          3.02,
+          16.67
+        ],
+        "rotation": [
+          -0.309,
+          -20.191
+        ]
+      }
+    ],
+    "gone": 14,
+    "spawn_extra": null,
+    "spawn_delay": 1,
+    "rotation": [
+      -0.30839055049726394,
+      -14.896887856013945
+    ]
+  },
+  {
+    "name": "throw3-egg-owner-return",
+    "kind": "egg",
+    "start": [
+      3.5,
+      1.52,
+      2.5
+    ],
+    "teleport": null,
+    "teleport_phases": [],
+    "velocity": [
+      -0.017457120185558228,
+      1.4858084599890131,
+      0.007446743575657777
+    ],
+    "observations": [
+      {
+        "tick": 10,
+        "velocity": [
+          -0.016,
+          1.06,
+          0.007
+        ]
+      },
+      {
+        "tick": 10,
+        "velocity": [
+          -0.016,
+          1.06,
+          0.007
+        ],
+        "at": [
+          3.335,
+          14,
+          2.57
+        ],
+        "rotation": [
+          -66.881,
+          89.151
+        ]
+      },
+      {
+        "tick": 20,
+        "velocity": [
+          -0.014,
+          0.674,
+          0.006
+        ]
+      },
+      {
+        "tick": 20,
+        "velocity": [
+          -0.014,
+          0.674,
+          0.006
+        ],
+        "at": [
+          3.186,
+          22.446,
+          2.634
+        ],
+        "rotation": [
+          -66.881,
+          88.851
+        ]
+      },
+      {
+        "tick": 30,
+        "velocity": [
+          -0.013,
+          0.326,
+          0.005
+        ]
+      },
+      {
+        "tick": 40,
+        "velocity": [
+          -0.012,
+          0.011,
+          0.005
+        ]
+      },
+      {
+        "tick": 50,
+        "velocity": [
+          -0.011,
+          -0.274,
+          0.005
+        ]
+      },
+      {
+        "tick": 60,
+        "velocity": [
+          -0.01,
+          -0.532,
+          0.004
+        ]
+      },
+      {
+        "tick": 70,
+        "velocity": [
+          -0.009,
+          -0.765,
+          0.004
+        ]
+      },
+      {
+        "tick": 80,
+        "velocity": [
+          -0.008,
+          -0.976,
+          0.003
+        ]
+      },
+      {
+        "tick": 80,
+        "velocity": [
+          -0.008,
+          -0.976,
+          0.003
+        ],
+        "at": [
+          2.547,
+          7.632,
+          2.907
+        ],
+        "rotation": [
+          -66.881,
+          -89.394
+        ]
+      }
+    ],
+    "gone": 87,
+    "spawn_extra": null,
+    "spawn_delay": 0,
+    "rotation": [
+      -66.8981928056388,
+      89.26816853756993
+    ]
+  },
+  {
+    "name": "throw3-pearl-health-order",
+    "kind": "ender_pearl",
+    "start": [
+      3.5,
+      1.52,
+      2.5
+    ],
+    "teleport": {
+      "tick": 4372274,
+      "ms": 2374,
+      "kind": "self",
+      "what": "pos",
+      "at": [
+        3.165,
+        13.458,
+        39.612
+      ],
+      "flags": "{\"_value\":504,\"x\":false,\"y\":false,\"z\":false,\"yaw\":true,\"pitch\":true,\"dx\":true,\"dy\":true,\"dz\":true,\"yawDelta\":true}"
+    },
+    "teleport_phases": [
+      {
+        "offset": 0,
+        "kind": "self",
+        "what": "pos"
+      },
+      {
+        "offset": 0,
+        "kind": "sv",
+        "what": "Damage Event type=8 cause=0 direct=0 pos=none"
+      },
+      {
+        "offset": 0,
+        "kind": "sound",
+        "what": "minecraft:entity.player.teleport"
+      },
+      {
+        "offset": 0,
+        "kind": "cart",
+        "what": "gone"
+      },
+      {
+        "offset": 0,
+        "kind": "sv",
+        "what": "Set Health health=15 food=20 saturation=20"
+      },
+      {
+        "offset": 1,
+        "kind": "sv",
+        "what": "Metadata 9=15"
+      },
+      {
+        "offset": 1,
+        "kind": "self",
+        "what": "vel"
+      }
+    ],
+    "velocity": [
+      -0.009644143319294418,
+      1.0498687664041997,
+      1.0683025086980407
+    ],
+    "observations": [
+      {
+        "tick": 10,
+        "velocity": [
+          -0.009,
+          0.666,
+          0.966
+        ]
+      },
+      {
+        "tick": 10,
+        "velocity": [
+          -0.009,
+          0.666,
+          0.966
+        ],
+        "at": [
+          3.409,
+          9.873,
+          12.613
+        ],
+        "rotation": [
+          -0.517,
+          38.348
+        ]
+      },
+      {
+        "tick": 20,
+        "velocity": [
+          -0.008,
+          0.318,
+          0.874
+        ]
+      },
+      {
+        "tick": 20,
+        "velocity": [
+          -0.008,
+          0.318,
+          0.874
+        ],
+        "at": [
+          3.326,
+          14.588,
+          21.758
+        ],
+        "rotation": [
+          -0.517,
+          25.926
+        ]
+      },
+      {
+        "tick": 30,
+        "velocity": [
+          -0.007,
+          0.004,
+          0.79
+        ]
+      },
+      {
+        "tick": 30,
+        "velocity": [
+          -0.007,
+          0.004,
+          0.79
+        ],
+        "at": [
+          3.251,
+          16.012,
+          30.03
+        ],
+        "rotation": [
+          -0.517,
+          8.204
+        ]
+      },
+      {
+        "tick": 40,
+        "velocity": [
+          -0.006,
+          -0.281,
+          0.715
+        ]
+      }
+    ],
+    "gone": 43,
+    "spawn_extra": "3.5,1.52,2.5 yaw=-1 pitch=31 head=0",
+    "spawn_delay": 0,
+    "rotation": [
+      -0.5172258743657577,
+      44.50021928949972
+    ]
+  },
+  {
+    "name": "throw3-pearl-moving",
+    "kind": "ender_pearl",
+    "start": [
+      3.5,
+      2.76919,
+      5.47313
+    ],
+    "teleport": {
+      "tick": 4373726,
+      "ms": 2215,
+      "kind": "self",
+      "what": "pos",
+      "at": [
+        3.21,
+        19.738,
+        39.823
+      ],
+      "flags": "{\"_value\":504,\"x\":false,\"y\":false,\"z\":false,\"yaw\":true,\"pitch\":true,\"dx\":true,\"dy\":true,\"dz\":true,\"yawDelta\":true}"
+    },
+    "teleport_phases": [
+      {
+        "offset": 0,
+        "kind": "self",
+        "what": "pos"
+      },
+      {
+        "offset": 0,
+        "kind": "sv",
+        "what": "Damage Event type=8 cause=0 direct=0 pos=none"
+      },
+      {
+        "offset": 0,
+        "kind": "sound",
+        "what": "minecraft:entity.player.teleport"
+      },
+      {
+        "offset": 0,
+        "kind": "cart",
+        "what": "gone"
+      },
+      {
+        "offset": 0,
+        "kind": "sv",
+        "what": "Set Health health=15 food=20 saturation=18"
+      },
+      {
+        "offset": 1,
+        "kind": "sv",
+        "what": "Metadata 9=15"
+      },
+      {
+        "offset": 1,
+        "kind": "self",
+        "what": "vel"
+      }
+    ],
+    "velocity": [
+      -0.011231154245254338,
+      1.1460660440700727,
+      1.332967100042727
+    ],
+    "observations": [
+      {
+        "tick": 10,
+        "velocity": [
+          -0.01,
+          0.752,
+          1.206
+        ]
+      },
+      {
+        "tick": 10,
+        "velocity": [
+          -0.01,
+          0.752,
+          1.205
+        ],
+        "at": [
+          3.393,
+          12.032,
+          18.091
+        ],
+        "rotation": [
+          -0.499,
+          35.765
+        ]
+      },
+      {
+        "tick": 20,
+        "velocity": [
+          -0.009,
+          0.397,
+          1.09
+        ]
+      },
+      {
+        "tick": 20,
+        "velocity": [
+          -0.009,
+          0.397,
+          1.09
+        ],
+        "at": [
+          3.297,
+          17.57,
+          29.502
+        ],
+        "rotation": [
+          -0.486,
+          24.897
+        ]
+      },
+      {
+        "tick": 30,
+        "velocity": [
+          -0.008,
+          0.075,
+          0.986
+        ]
+      },
+      {
+        "tick": 30,
+        "velocity": [
+          -0.008,
+          0.075,
+          0.986
+        ],
+        "at": [
+          3.21,
+          19.738,
+          39.823
+        ],
+        "rotation": [
+          -0.485,
+          10.653
+        ]
+      }
+    ],
+    "gone": 30,
+    "spawn_extra": "3.5,2.76919,5.47313 yaw=-1 pitch=32 head=0",
+    "spawn_delay": 0,
+    "rotation": [
+      -0.48274448048499985,
+      40.68746653874338
+    ]
+  },
+  {
+    "name": "throw-snowball-down20",
+    "kind": "snowball",
+    "start": [
+      3.5,
+      1.52,
+      2.5
+    ],
+    "teleport": null,
+    "teleport_phases": [],
+    "velocity": [
+      -0.009888298846365107,
+      1.3815540499298051,
+      -0.6009888298846364
+    ],
+    "observations": [
+      {
+        "tick": 10,
+        "velocity": [
+          -0.009,
+          0.965,
+          -0.544
+        ]
+      }
+    ],
+    "gone": 81,
+    "spawn_extra": "3.5,1.52,2.5 yaw=-128 pitch=47 head=0",
+    "spawn_delay": 0,
+    "rotation": [
+      -179.0573757021884,
+      66.48767618299954
+    ]
+  },
+  {
+    "name": "throw-snowball-walk",
+    "kind": "snowball",
+    "start": [
+      3.5,
+      1.52,
+      1.45757
+    ],
+    "teleport": null,
+    "teleport_phases": [],
+    "velocity": [
+      -0.011353232008789682,
+      -1.3581151193310137,
+      -0.8356222913996216
+    ],
+    "observations": [],
+    "gone": 1,
+    "spawn_extra": "3.5,1.52,1.45757 yaw=-128 pitch=-47 head=0",
+    "spawn_delay": 0,
+    "rotation": [
+      -179.22159537475684,
+      -58.39444812114033
+    ]
+  },
+  {
+    "name": "throw-ender_pearl-flat",
+    "kind": "ender_pearl",
+    "start": [
+      3.5,
+      1.52,
+      2.5
+    ],
+    "teleport": null,
+    "teleport_phases": [],
+    "velocity": [
+      -0.006470121467374801,
+      0.0009766221082831983,
+      -1.4993590917414394
+    ],
+    "observations": [],
+    "gone": 9,
+    "spawn_extra": "3.5,1.52,2.5 yaw=-128 pitch=0 head=0",
+    "spawn_delay": 0,
+    "rotation": [
+      -179.7527554579632,
+      0.037319809772028104
+    ]
+  },
+  {
+    "name": "throw2-ender_pearl-up45-yaw90-standing",
+    "kind": "ender_pearl",
+    "start": [
+      3.5,
+      1.52,
+      2.5
+    ],
+    "teleport": {
+      "tick": 4303524,
+      "ms": 2814,
+      "kind": "self",
+      "what": "pos",
+      "at": [
+        -38.599,
+        9.144,
+        2.192
+      ],
+      "flags": "{\"_value\":504,\"x\":false,\"y\":false,\"z\":false,\"yaw\":true,\"pitch\":true,\"dx\":true,\"dy\":true,\"dz\":true,\"yawDelta\":true}"
+    },
+    "teleport_phases": [
+      {
+        "offset": 0,
+        "kind": "self",
+        "what": "pos"
+      },
+      {
+        "offset": 0,
+        "kind": "sv",
+        "what": "Damage Event type=8 cause=0 direct=0 pos=none"
+      },
+      {
+        "offset": 0,
+        "kind": "sound",
+        "what": "minecraft:entity.player.teleport"
+      },
+      {
+        "offset": 0,
+        "kind": "cart",
+        "what": "gone"
+      },
+      {
+        "offset": 0,
+        "kind": "sv",
+        "what": "Set Health health=15 food=20 saturation=20"
+      },
+      {
+        "offset": 1,
+        "kind": "sv",
+        "what": "Metadata 9=15"
+      },
+      {
+        "offset": 1,
+        "kind": "self",
+        "what": "vel"
+      }
+    ],
+    "velocity": [
+      -1.044741500335714,
+      1.0518220106207656,
+      -0.007690899102728466
+    ],
+    "observations": [
+      {
+        "tick": 10,
+        "velocity": [
+          -0.945,
+          0.667,
+          -0.007
+        ]
+      },
+      {
+        "tick": 10,
+        "velocity": [
+          -0.945,
+          0.667,
+          -0.007
+        ],
+        "at": [
+          -6.39,
+          9.891,
+          2.428
+        ],
+        "rotation": [
+          -90.42,
+          39.03
+        ]
+      },
+      {
+        "tick": 20,
+        "velocity": [
+          -0.854,
+          0.319,
+          -0.006
+        ]
+      },
+      {
+        "tick": 20,
+        "velocity": [
+          -0.854,
+          0.319,
+          -0.006
+        ],
+        "at": [
+          -15.334,
+          14.622,
+          2.362
+        ],
+        "rotation": [
+          -90.42,
+          26.503
+        ]
+      },
+      {
+        "tick": 30,
+        "velocity": [
+          -0.773,
+          0.005,
+          -0.006
+        ]
+      },
+      {
+        "tick": 30,
+        "velocity": [
+          -0.773,
+          0.005,
+          -0.006
+        ],
+        "at": [
+          -23.422,
+          16.06,
+          2.303
+        ],
+        "rotation": [
+          -90.42,
+          8.475
+        ]
+      },
+      {
+        "tick": 40,
+        "velocity": [
+          -0.699,
+          -0.28,
+          -0.005
+        ]
+      },
+      {
+        "tick": 50,
+        "velocity": [
+          -0.632,
+          -0.537,
+          -0.005
+        ]
+      }
+    ],
+    "gone": 52,
+    "spawn_extra": "3.5,1.52,2.5 yaw=-65 pitch=32 head=0",
+    "spawn_delay": 0,
+    "rotation": [
+      -90.42177715667331,
+      45.19272225452437
+    ]
+  }
+]

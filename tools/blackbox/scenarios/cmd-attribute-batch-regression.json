@@ -1,0 +1,28 @@
+{
+  "name": "cmd-attribute-batch-regression",
+  "about": "[проверить] Цепь выполняет base set, modifier add, get, remove, get и reset за один такт: get должен вернуть 0.3 и 0.2, remove должен удаться даже до обработки поручений подключением.",
+  "exclusive": true,
+  "chat": true,
+  "track_self": true,
+  "blocks": [],
+  "setup": [
+    "fill $(-1,0,-1) $(6,1,1) minecraft:air",
+    "attribute $(bot) minecraft:movement_speed base reset",
+    "attribute $(bot) minecraft:movement_speed modifier remove test:batch",
+    "setblock $(1,0,0) minecraft:chain_command_block[facing=east]{auto:1b,Command:\"attribute @p minecraft:movement_speed modifier add test:batch 0.5 add_multiplied_base\"}",
+    "setblock $(2,0,0) minecraft:chain_command_block[facing=east]{auto:1b,Command:\"attribute @p minecraft:movement_speed get\"}",
+    "setblock $(3,0,0) minecraft:chain_command_block[facing=east]{auto:1b,Command:\"attribute @p minecraft:movement_speed modifier remove test:batch\"}",
+    "setblock $(4,0,0) minecraft:chain_command_block[facing=east]{auto:1b,Command:\"attribute @p minecraft:movement_speed get\"}",
+    "setblock $(5,0,0) minecraft:chain_command_block[facing=east]{auto:1b,Command:\"attribute @p minecraft:movement_speed base reset\"}"
+  ],
+  "actions": [
+    {"after": 0, "cmd": "setblock $(0,0,0) minecraft:command_block[facing=east]{auto:1b,Command:\"attribute @p minecraft:movement_speed base set 0.2\"}"},
+    {"after": 10, "cmd": "attribute $(bot) minecraft:movement_speed get"}
+  ],
+  "cleanup": [
+    "fill $(-1,0,-1) $(6,1,1) minecraft:air",
+    "attribute $(bot) minecraft:movement_speed modifier remove test:batch",
+    "attribute $(bot) minecraft:movement_speed base reset"
+  ],
+  "record_ticks": 30
+}

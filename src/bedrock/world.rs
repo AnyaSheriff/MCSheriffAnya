@@ -1138,7 +1138,7 @@ impl BedrockWorld {
                     connection.close();
                     return;
                 }
-                crate::players::Order::PearlTeleport { x, y, z, dimension } => {
+                crate::players::Order::PearlTeleport { x, y, z, dimension, .. } => {
                     if dimension == self.dimension && !self.health.vit.dead {
                         self.body.dismount(&self.shared, self.dimension);
                         self.health.vit.fall = 0.0;

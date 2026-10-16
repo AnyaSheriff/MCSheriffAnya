@@ -11,6 +11,21 @@ pub(super) fn noise(roll: &mut dyn FnMut() -> f32) -> f64 {
     (-2.0 * u.ln()).sqrt() * (std::f64::consts::TAU * f64::from(roll())).cos() * 0.0075
 }
 
+/// Вики, Arrow: «−0.0172275 … 0.0172275» на ось.
+/// vanilla-throw3-egg-hatch-repeat.json: 384 компоненты, σ=0,00681,
+/// эксцесс −0,67; треугольный разброс вместо нормальных хвостов
+/// [проверить точный закон повторной независимой выборкой].
+pub(super) fn simple_noise(roll: &mut dyn FnMut() -> f32) -> f64 {
+    (f64::from(roll()) - f64::from(roll())) * 0.0172275
+}
+
+pub(super) fn launch_simple(shared: &Shared, player: &PlayerState, speed: f64) -> ((f64, f64, f64), (f32, f32)) {
+    let mut roll = || vitals::world_random(shared, player.dimension);
+    let (x, y, z) = crate::arrow::aim(player.yaw, player.pitch, 1.0);
+    let shot = ((x + simple_noise(&mut roll)) * speed, (y + simple_noise(&mut roll)) * speed, (z + simple_noise(&mut roll)) * speed);
+    (inherit(shot, player.net.last_delta, player.on_ground), crate::thrown::angles(shot))
+}
+
 pub(super) fn inherit(shot: (f64, f64, f64), movement: (f64, f64, f64), on_ground: bool) -> (f64, f64, f64) {
     (shot.0 + movement.0, shot.1 + if on_ground { 0.0 } else { movement.1 }, shot.2 + movement.2)
 }
@@ -49,4 +64,17 @@ pub(super) fn position_sync(id: i32, at: (f64, f64, f64), velocity: (f64, f64, f
     push_f32(&mut body, pitch);
     body.push(u8::from(on_ground));
     body
+}
+
+/// Поручение жемчуга создаётся внутри хода мира; wake ещё не означает,
+/// что опубликованы звук и удаление. Снимок удара не читается из будущего.
+pub(super) fn orders_at_tick(orders: Vec<Order>, pending: &mut Vec<Order>, published: Option<u64>) -> Vec<Order> {
+    pending.extend(orders);
+    let mut immediate = Vec::new();
+    for order in std::mem::take(pending) {
+        if matches!(&order, Order::PearlTeleport { tick, .. } if published.is_none_or(|known| *tick > known)) {
+            pending.push(order);
+        } else { immediate.push(order); }
+    }
+    immediate
 }

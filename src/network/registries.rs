@@ -108,6 +108,7 @@ pub fn jukebox_song(name: &str) -> Option<(f32, u8)> {
 /// у нас нет — тогда отправлять её нельзя.
 pub fn entry(registry: &str, name: &str) -> Option<Compound> {
     let out = match registry {
+        "minecraft:chat_type" => super::chat_types::entry(name)?,
         "minecraft:cat_variant" => {
             // У кота нет поля модели.
             variant("cat", name, None)
