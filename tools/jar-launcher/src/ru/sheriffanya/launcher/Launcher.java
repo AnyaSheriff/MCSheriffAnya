@@ -10,7 +10,7 @@ import java.util.zip.GZIPInputStream;
 
 /** Маленький переходник между Java-панелью хостинга и родным сервером. */
 public final class Launcher {
-    static final String VERSION = "1.0.0";
+    static final String VERSION = "1.0.1";
     static final String API = "https://api.github.com/repos/AnyaSheriff/MCSheriffAnya/releases/";
     static final long ARCHIVE_LIMIT = 128L * 1024 * 1024;
     static final long TAR_LIMIT = 512L * 1024 * 1024;
@@ -41,8 +41,7 @@ public final class Launcher {
     }
 
     static int run(Path cwd, String[] args) throws Exception {
-        String port = setting("SERVER_PORT");
-        validatePort(port);
+        String port = choosePort(setting("SERVER_PORT"), System.getProperty("spt"));
         Path binary = cwd.resolve("mcsheriffanya");
         Path marker = cwd.resolve("mcsa-update");
         boolean update = Files.exists(marker) || "1".equals(setting("MCSA_UPDATE"));
@@ -315,10 +314,19 @@ public final class Launcher {
         catch (NumberFormatException e) { throw failure("Слишком большое число в tar."); }
     }
 
+    // Hosting-Minecraft.pro передаёт выделенный порт параметром JVM -Dspt.
+    static String choosePort(String configured, String panel) throws IOException {
+        String port = configured;
+        if (port == null || port.isBlank()) port = panel;
+        if (port != null) port = port.isBlank() ? null : port.trim();
+        validatePort(port);
+        return port;
+    }
+
     static void validatePort(String port) throws IOException {
         if (port == null) return;
         if (!port.matches("[0-9]{1,5}") || Integer.parseInt(port) < 1 || Integer.parseInt(port) > 65535) {
-            throw failure("SERVER_PORT должен быть целым числом от 1 до 65535.");
+            throw failure("Порт (SERVER_PORT или -Dspt) должен быть целым числом от 1 до 65535.");
         }
     }
 

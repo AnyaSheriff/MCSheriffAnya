@@ -117,6 +117,14 @@ final class LauncherSelfTest {
     }
 
     private static void propertiesTests() throws Exception {
+        check(Launcher.choosePort(null, "25951").equals("25951"), "порт из -Dspt");
+        check(Launcher.choosePort("25601", "25951").equals("25601"), "SERVER_PORT важнее -Dspt");
+        check(Launcher.choosePort("25601", "bad").equals("25601"), "неиспользуемый -Dspt игнорируется");
+        check(Launcher.choosePort(" ", " 25951 ").equals("25951"), "пробелы в портах панели");
+        check(Launcher.choosePort(null, null) == null, "нет настроек порта");
+        check(Launcher.choosePort(null, " ") == null, "пустой -Dspt");
+        rejects(() -> Launcher.choosePort(null, "65536"), "неверный -Dspt");
+        rejects(() -> Launcher.choosePort("bad", "25951"), "неверный SERVER_PORT не заменяется -Dspt");
         String original = "# пометка\r\n motd = Наш сервер\r\nserver-port=1\r\n"
                 + "server-port=2\r\nonline-mode=\r\ncustom = a=b\r\nlast-line";
         Map<String, String> forced = new LinkedHashMap<>();

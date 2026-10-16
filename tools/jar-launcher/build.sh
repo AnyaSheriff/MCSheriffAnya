@@ -6,8 +6,10 @@ mkdir -p dist
 BUILD_DIR=$(mktemp -d dist/build.XXXXXX)
 trap 'rm -rf -- "$BUILD_DIR"' EXIT
 "$JDK/javac" --release 17 -encoding UTF-8 -Xlint:all -Werror \
-  -d "$BUILD_DIR/classes" src/ru/sheriffanya/launcher/*.java
+  -d "$BUILD_DIR/classes" src/ru/sheriffanya/launcher/*.java \
+  src/pro/gravit/launcher/server/ServerWrapper.java
 "$JDK/jar" --create --file "$BUILD_DIR/server.jar" \
   --main-class ru.sheriffanya.launcher.Launcher -C "$BUILD_DIR/classes" .
 mv -- "$BUILD_DIR/server.jar" dist/server.jar
-echo 'Готово: tools/jar-launcher/dist/server.jar (Java 17+)'
+cp -- dist/server.jar dist/ServerWrapper.jar
+echo 'Готово: tools/jar-launcher/dist/{server,ServerWrapper}.jar (Java 17+)'

@@ -24,7 +24,7 @@ x86_64 musl. Если он уже есть, launcher не обращается �
 обновления. На запрете исполнения (`noexec`) он объяснит причину и завершится
 с кодом 1. Понадобится помощь поддержки хостинга.
 
-Первая строка лога: `MCSheriffAnya launcher 1.0.0`.
+Первая строка лога: `MCSheriffAnya launcher 1.0.1`.
 Для определения готовности в настройках панели используйте строку `Готово (`:
 её выводит сам сервер после загрузки.
 
@@ -49,7 +49,23 @@ x86_64 musl. Если он уже есть, launcher не обращается �
 ключа ещё нет в `config/server.properties`. Последующие изменения этих значений
 делайте в `config/server.properties`. Другие строки и комментарии сохраняются;
 разбор `key=value` соответствует самому серверу (UTF-8, без Java-экранирования).
-Если `SERVER_PORT` не задан, launcher оставляет порты без изменений.
+Если `SERVER_PORT` не задан, launcher использует параметр JVM `-Dspt=<порт>`
+(его передаёт Hosting-Minecraft.pro). При отсутствии обоих порты не меняются.
+
+## Панель с отдельным ServerWrapper.jar
+
+Для фиксированной строки запуска
+`java ... -cp ServerWrapper.jar:server.jar pro.gravit.launcher.server.ServerWrapper`
+загрузите `dist/ServerWrapper.jar` рядом с обычным `server.jar` хостинга.
+В поле «Файл ядра» оставьте `server.jar`, а в списке флагов выберите
+«Флаги под запуск лаунчера -cp ServerWrapper.jar:server.jar без проверки Forge 1.17+».
+Порт берётся из `SERVER_PORT` или `-Dspt`, например `-Dspt=25951`.
+
+Это собственный адаптер MCSA с именем входного класса из команды панели;
+код Gravit не используется. Запускается MCSheriffAnya. Обычный JAR остаётся
+для проверки панели по [инструкции хостинга](https://my.hosting-minecraft.pro/index.php?rp=/knowledgebase/119/).
+Сам по себе этот режим не даёт разрешения выполнять программы, если хостинг
+запрещает их запуск. Работу на конкретном тарифе нужно проверить запуском.
 
 ## Версия и обновление
 
@@ -98,10 +114,12 @@ Launcher не собирает телеметрию и не выводит зн�
 ```sh
 bash tools/jar-launcher/build.sh
 java -jar tools/jar-launcher/dist/server.jar --launcher-self-test
+java -cp tools/jar-launcher/dist/ServerWrapper.jar pro.gravit.launcher.server.ServerWrapper --launcher-self-test
 ```
 
 Скрипт использует `/usr/lib/jvm/java-25-openjdk/bin/javac` с `--release 17` и
-`jar` из того же JDK. Готовый файл: `tools/jar-launcher/dist/server.jar`.
+`jar` из того же JDK. Готовые одинаковые файлы:
+`tools/jar-launcher/dist/server.jar` и `tools/jar-launcher/dist/ServerWrapper.jar`.
 В манифесте задан `Main-Class: ru.sheriffanya.launcher.Launcher`.
 Самопроверка не обращается к сети, не запускает сервер и не открывает порты:
 проверяет маленькие архивы в памяти, обработку повреждений, JSON, адреса загрузки,
