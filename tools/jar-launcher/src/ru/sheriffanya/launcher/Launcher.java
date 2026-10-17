@@ -10,7 +10,7 @@ import java.util.zip.GZIPInputStream;
 
 /** Маленький переходник между Java-панелью хостинга и родным сервером. */
 public final class Launcher {
-    static final String VERSION = "1.0.1";
+    static final String VERSION = "1.0.2";
     static final String API = "https://api.github.com/repos/AnyaSheriff/MCSheriffAnya/releases/";
     static final long ARCHIVE_LIMIT = 128L * 1024 * 1024;
     static final long TAR_LIMIT = 512L * 1024 * 1024;
@@ -86,9 +86,16 @@ public final class Launcher {
         Runtime.getRuntime().addShutdownHook(hook);
         synchronized (lock) {
             if (stopping[0]) return 1;
-            System.out.println("Запускаем mcsheriffanya. Команды консоли поступают прямо серверу.");
+            System.out.println("Запускаем mcsheriffanya. Консоль панели работает в построчном режиме.");
             try {
-                child[0] = new ProcessBuilder(command).directory(cwd.toFile()).inheritIO().start();
+                // Панели часто предоставляют PTY: inheritIO включал в ядре
+                // посимвольную перерисовку "> команда", которую панель разбивала
+                // на отдельные строки. Канал stdin выбирает обычный read_lines
+                // и у уже выпущенных версий ядра; stdout/stderr остаются прямыми.
+                child[0] = new ProcessBuilder(command).directory(cwd.toFile())
+                        .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                        .redirectError(ProcessBuilder.Redirect.INHERIT).start();
+                forwardInput(child[0]);
             } catch (IOException e) {
                 String message = String.valueOf(e.getMessage()).toLowerCase(Locale.ROOT);
                 if (message.contains("error=13") || message.contains("permission denied")) {
@@ -99,6 +106,27 @@ public final class Launcher {
         }
         // Обработчик остаётся до выхода JVM: после обычного stop ребёнок уже завершён.
         return child[0].waitFor();
+    }
+
+    static void forwardInput(Process process) {
+        Thread input = new Thread(() -> {
+            try (OutputStream output = process.getOutputStream()) {
+                byte[] bytes = new byte[8192];
+                int count;
+                while ((count = System.in.read(bytes)) != -1) {
+                    output.write(bytes, 0, count);
+                    output.flush();
+                }
+            } catch (IOException e) {
+                if (process.isAlive()) {
+                    System.err.println("Не удалось передать ввод консоли серверу.");
+                }
+            }
+        }, "mcsa-console-input");
+        // Чтение stdin может ждать бесконечно: завершившийся сервер не должен
+        // удерживать JVM из-за открытого терминала панели.
+        input.setDaemon(true);
+        input.start();
     }
 
     static LauncherFailure permissionFailure() {
