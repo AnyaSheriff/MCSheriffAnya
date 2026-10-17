@@ -1,0 +1,311 @@
+{
+  "name": "enchant-lunge-threshold",
+  "about": "Точный порог Lunge I и III: пары с интервалами10/11/12/13/14, восстановление еды перед каждой парой. Уровень и еда не должны смешиваться с cooldown.",
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "effect give $(bot) instant_health 1 10 true",
+    "effect give $(bot) saturation 1 10 true",
+    "!hotbar 0",
+    "fill $(-3,0,-3) $(3,5,30) air",
+    "fill $(-3,-1,-3) $(3,-1,30) stone",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!stopfly",
+    "!look 0 0",
+    "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:1}]",
+    "!wait 25"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 1,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:1}]"
+    },
+    {
+      "after": 25,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 35,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 65,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 66,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:1}]"
+    },
+    {
+      "after": 90,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 101,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 130,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 131,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:1}]"
+    },
+    {
+      "after": 155,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 167,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 195,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 196,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:1}]"
+    },
+    {
+      "after": 220,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 233,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 260,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 261,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:1}]"
+    },
+    {
+      "after": 285,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 299,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 325,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 326,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:3}]"
+    },
+    {
+      "after": 350,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 360,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 390,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 391,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:3}]"
+    },
+    {
+      "after": 415,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 426,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 455,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 456,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:3}]"
+    },
+    {
+      "after": 480,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 492,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 520,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 521,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:3}]"
+    },
+    {
+      "after": 545,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 558,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 585,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 586,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:3}]"
+    },
+    {
+      "after": 610,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 624,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    }
+  ],
+  "record_ticks": 650,
+  "cleanup": [
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "effect clear $(bot)",
+    "!startfly"
+  ],
+  "item_components": true,
+  "inventory": true,
+  "track_self": true
+}

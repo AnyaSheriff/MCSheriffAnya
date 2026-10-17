@@ -49,6 +49,8 @@ use crate::commands::{
 };
 use crate::hardness_table::UNBREAKABLE;
 mod mining;
+mod movement_enchantments;
+mod spear;
 mod give;
 use crate::playerdata::{self, PlayerData};
 use crate::players::{Change, Member, Order, Position};
@@ -4396,8 +4398,8 @@ async fn send_pending_world_events(
                 player.net.hold_meta = done.is_some();
             }
             WorldEvent::Hurt { .. } => {}
-            WorldEvent::MobHurt { entity_id, amount, source, attacker, killer, push, at } if *entity_id == player.entity_id => {
-                vitals::mob_hit(stream, shared, player, *amount, *source, *attacker, killer, *push, *at).await?;
+            WorldEvent::MobHurt { entity_id, amount, source, attacker, killer, push, at, enchantments } if *entity_id == player.entity_id => {
+                vitals::mob_hit(stream, shared, player, *amount, *source, *attacker, killer, *push, *at, *enchantments).await?;
             }
             WorldEvent::MobHurt { .. } => {}
             WorldEvent::MobEffect { entity_id, effect } if *entity_id == player.entity_id => {
@@ -8704,6 +8706,13 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         format_hex(payload)
     );
 
+    // Java 26.1.2: jab копья — действие без блока. Нулевая позиция в
+    // пакете не должна проходить проверку дальности/загруженности чанка.
+    if status == 7 {
+        spear::jab(shared, player);
+        return Some(Reaction::accepted(sequence));
+    }
+
     // Выброс предмета из руки приходит этим же пакетом: место в нём нулевое,
     // потому что бросают не в блок.
     if status == DROP_STACK || status == DROP_ONE {
@@ -8902,6 +8911,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
     };
 
     *mined = Some(broken);
+    crate::frost::broken(&mut world, (x, y, z), broken, creative, hive_silk);
 
     if let Some(sides) = pot {
         if player.game_mode != GAME_MODE_CREATIVE && shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
@@ -8950,7 +8960,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             let silk=held.is_some_and(|stack|stack.extras().level("silk_touch")>0);
             let fortune=held.map_or(0,|stack|stack.extras().level("fortune"));
             let stack=crate::mob::newblocks::heart_drop(broken,silk,fortune,world.random_unit());
-            if player.game_mode==GAME_MODE_SURVIVAL && blocks::orientation_of(broken).and_then(|b|b.value(broken,"natural"))==Some("true") {
+            if player.game_mode==GAME_MODE_SURVIVAL && !silk && blocks::orientation_of(broken).and_then(|b|b.value(broken,"natural"))==Some("true") {
                 let xp=20+(world.random_unit()*5.0) as i32;
                 player.net.new_orbs.push(((f64::from(x)+0.5,f64::from(y)+0.5,f64::from(z)+0.5),xp));
             }
@@ -8985,17 +8995,9 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
     // В выживании из сломанного блока выпадает предмет — он падает на землю
     // и лежит, пока его не подберут. В творческом режиме блоки просто
     // исчезают: предметы там берут из меню.
-    if player.game_mode != GAME_MODE_CREATIVE {
-        let tool = player.inventory.held().map(|stack| stack.item);
-        let luck = world.random_unit();
-
-        // Скалк с «шёлковым касанием» отдаёт блок вместо опыта (вики,
-        // Sculk: «Silk Touch»). Прочие руды сохраняют прежний расчёт.
-        let silk_sculk = player.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
-        let sculk_drop = redstone::sculk_family::mined_drop(broken, silk_sculk);
-        let xp = if sculk_drop.is_some() && silk_sculk { 0 } else {
-            blocks::block_at_state(broken).map_or(0, |name| crate::survival::ore_xp(name, world.random_unit()))
-        };
+    if player.game_mode != GAME_MODE_CREATIVE && drops {
+        let tool = player.inventory.held();
+        let xp = crate::mining::experience(broken, tool, world.random_unit());
 
         if xp > 0 && player.game_mode == GAME_MODE_SURVIVAL {
             player.net.new_orbs.push(((x as f64 + 0.5, y as f64 + 0.5, z as f64 + 0.5), xp));
@@ -9018,23 +9020,13 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             return Some(Reaction::accepted(sequence));
         }
 
-        match sculk_drop.unwrap_or_else(|| blocks::drops_by_luck(broken, tool, luck)).map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
-            Some(stack) => {
-                let (at, velocity) = crate::tick::scattered((x, y, z), || f64::from(world.random_unit()));
-                // Мир отпускаем: класть предмет будем под другим замком.
-                drop(world);
-
-                drop_into_world(
-                    shared, player.dimension,
-                    stack,
-                    at,
-                    velocity,
-                    items::MINED_DELAY,
-                );
-
-                log_debug!("Play: из блока в {} {} {} выпал предмет {} × {}", x, y, z, stack.item, stack.count);
-            }
-            None => log_debug!("Play: из блока {} ничего не выпало", broken),
+        let placed: Vec<_> = crate::mining::block_drops(broken, tool, || world.random_unit()).into_iter()
+            .map(|stack| (crate::custom_tnt::tag_drop(stack, custom), crate::tick::scattered((x, y, z), || f64::from(world.random_unit())))).collect();
+        // Мир отпускаем: класть предметы будем под другим замком.
+        drop(world);
+        for (stack, (at, velocity)) in placed {
+            drop_into_world(shared, player.dimension, stack, at, velocity, items::MINED_DELAY);
+            log_debug!("Play: из блока в {} {} {} выпал предмет {} × {}", x, y, z, stack.item, stack.count);
         }
     }
 
@@ -11313,6 +11305,7 @@ struct PlayerState {
 
     /// Экипировка, по которой посчитаны модификаторы: рука, вторая рука, броня.
     equip_seen: Vec<Option<Stack>>,
+    foot_enchants: movement_enchantments::State,
 
     /// Атрибуты, чьи модификаторы от предметов снимались и ставились заново:
     /// клиенту они уходят, даже если значение то же.
@@ -11516,6 +11509,7 @@ impl PlayerState {
             attrs_applied: Vec::new(),
             attrs_sent: crate::attributes::Sent::of(&crate::attributes::Attributes::player()),
             equip_seen: Vec::new(),
+            foot_enchants: movement_enchantments::State::default(),
             attrs_touched: Vec::new(),
             speed_due: Vec::new(),
             speed_touch: 0,

@@ -4,6 +4,7 @@
   "blocks": [],
   "setup": [
     "difficulty normal", "gamemode creative $(bot)", "clear $(bot)", "effect clear $(bot)",
+    "effect give $(bot) instant_health 1 10 true", "effect give $(bot) saturation 1 10 true", "!wait 20",
     "fill $(-4,-1,-4) $(7,-1,7) stone", "fill $(-4,0,-4) $(7,6,7) air",
     "tp $(bot) $(3.5,0,3.5) 180 0", "!hotbar 0",
     "give $(bot) wooden_sword[enchantments={\"minecraft:knockback\":3,\"minecraft:sweeping_edge\":3}]",

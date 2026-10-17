@@ -355,11 +355,13 @@ fn turtle_egg_cracks_and_breaks_one_at_a_time() {
 
 #[test]
 fn impaling_applies_to_aquatic_mobs_but_not_drowned_or_frogs() {
+    let mut data = crate::stackdata::Data::default();
+    data.set_enchant(crate::stackdata::enchantment_number("impaling").unwrap(), 3);
     for kind in [Kind::Cod,Kind::Axolotl,Kind::Turtle,Kind::Tadpole,Kind::Guardian,Kind::ElderGuardian] {
-        assert_eq!(impaling(kind,3),7.5);
+        assert_eq!(crate::combat::impaling_bonus(&data,kind.name()),7.5);
     }
-    for kind in [Kind::Drowned,Kind::Frog,Kind::Zombie] { assert_eq!(impaling(kind,3),0.0); }
-    assert_eq!(impaling(Kind::Cod,0),0.0);
+    for kind in [Kind::Drowned,Kind::Frog,Kind::Zombie] { assert_eq!(crate::combat::impaling_bonus(&data,kind.name()),0.0); }
+    assert_eq!(crate::combat::impaling_bonus(&crate::stackdata::Data::default(),Kind::Cod.name()),0.0);
 }
 
 #[test]

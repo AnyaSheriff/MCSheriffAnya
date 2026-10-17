@@ -1,0 +1,126 @@
+{
+  "name": "enchant-mob-equipment-drops",
+  "about": "Проверка equipment/drop_chances 0/1/2, /item при нулевом шансе, Vanishing и armor stand. /kill и player attack отдельно.",
+  "exclusive": true,
+  "origin": [
+    128,
+    70,
+    128
+  ],
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(8.5,0,10.5)",
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "time set midnight",
+    "effect give $(bot) instant_health 1 10 true",
+    "kill @e[tag=gear_drop_probe]",
+    "fill $(0,-1,0) $(20,-1,12) stone",
+    "fill $(0,0,0) $(20,4,8) air",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon zombie $(2.5,0,3.5) {NoAI:1b,Silent:1b,Tags:[\"gear_drop_probe\",\"gear_zero\"],equipment:{feet:{id:\"minecraft:diamond_boots\",count:1}},drop_chances:{feet:0.0f}}"
+    },
+    {
+      "after": 3,
+      "cmd": "summon zombie $(5.5,0,3.5) {NoAI:1b,Silent:1b,Tags:[\"gear_drop_probe\",\"gear_one\"],equipment:{feet:{id:\"minecraft:diamond_boots\",count:1}},drop_chances:{feet:1.0f}}"
+    },
+    {
+      "after": 6,
+      "cmd": "summon zombie $(8.5,0,3.5) {NoAI:1b,Silent:1b,Tags:[\"gear_drop_probe\",\"gear_two\"],equipment:{feet:{id:\"minecraft:diamond_boots\",count:1}},drop_chances:{feet:2.0f}}"
+    },
+    {
+      "after": 9,
+      "cmd": "summon zombie $(11.5,0,3.5) {NoAI:1b,Silent:1b,Tags:[\"gear_drop_probe\",\"gear_item\"],equipment:{feet:{id:\"minecraft:diamond_boots\",count:1}},drop_chances:{feet:0.0f}}"
+    },
+    {
+      "after": 12,
+      "cmd": "summon zombie $(14.5,0,3.5) {NoAI:1b,Silent:1b,Tags:[\"gear_drop_probe\",\"gear_vanish\"],equipment:{feet:{id:\"minecraft:diamond_boots\",count:1,components:{\"minecraft:enchantments\":{\"minecraft:vanishing_curse\":1}}}},drop_chances:{feet:2.0f}}"
+    },
+    {
+      "after": 18,
+      "cmd": "item replace entity @e[tag=gear_item,limit=1] armor.feet with golden_boots"
+    },
+    {
+      "after": 22,
+      "cmd": "data get entity @e[tag=gear_zero,limit=1] drop_chances"
+    },
+    {
+      "after": 24,
+      "cmd": "data get entity @e[tag=gear_one,limit=1] drop_chances"
+    },
+    {
+      "after": 26,
+      "cmd": "data get entity @e[tag=gear_two,limit=1] drop_chances"
+    },
+    {
+      "after": 28,
+      "cmd": "data get entity @e[tag=gear_item,limit=1] drop_chances"
+    },
+    {
+      "after": 30,
+      "cmd": "data get entity @e[tag=gear_vanish,limit=1] drop_chances"
+    },
+    {
+      "after": 40,
+      "cmd": "kill @e[tag=gear_drop_probe]"
+    },
+    {
+      "after": 80,
+      "cmd": "summon zombie $(3.5,0,3.5) {NoAI:1b,Silent:1b,Tags:[\"gear_drop_probe\",\"gear_credited\"],equipment:{feet:{id:\"minecraft:iron_boots\",count:1}},drop_chances:{feet:1.0f}}"
+    },
+    {
+      "after": 90,
+      "cmd": "damage @e[tag=gear_credited,limit=1] 1000 minecraft:player_attack by $(bot)"
+    },
+    {
+      "after": 120,
+      "cmd": "summon armor_stand $(8.5,0,3.5) {Tags:[\"gear_drop_probe\",\"gear_stand\"],equipment:{feet:{id:\"minecraft:netherite_boots\",count:1,components:{\"minecraft:enchantments\":{\"minecraft:vanishing_curse\":1}}}}}"
+    },
+    {
+      "after": 130,
+      "cmd": "kill @e[tag=gear_stand]"
+    },
+    {
+      "after": 155,
+      "cmd": "summon armor_stand $(5.5,0,6.5) {Tags:[\"gear_drop_probe\",\"gear_stand_plain\"],equipment:{feet:{id:\"minecraft:netherite_boots\",count:1}}}"
+    },
+    {
+      "after": 160,
+      "cmd": "summon armor_stand $(11.5,0,6.5) {Tags:[\"gear_drop_probe\",\"gear_stand_curse\"],equipment:{feet:{id:\"minecraft:netherite_boots\",count:1,components:{\"minecraft:enchantments\":{\"minecraft:vanishing_curse\":1}}}}}"
+    },
+    {
+      "after": 175,
+      "cmd": "damage @e[tag=gear_stand_plain,limit=1] 1000 minecraft:player_attack by $(bot)"
+    },
+    {
+      "after": 177,
+      "cmd": "damage @e[tag=gear_stand_plain,limit=1] 1000 minecraft:player_attack by $(bot)"
+    },
+    {
+      "after": 185,
+      "cmd": "damage @e[tag=gear_stand_curse,limit=1] 1000 minecraft:player_attack by $(bot)"
+    },
+    {
+      "after": 187,
+      "cmd": "damage @e[tag=gear_stand_curse,limit=1] 1000 minecraft:player_attack by $(bot)"
+    }
+  ],
+  "record_ticks": 215,
+  "cleanup": [
+    "kill @e[tag=gear_drop_probe]",
+    "kill @e[type=item,distance=..48]",
+    "difficulty peaceful",
+    "time set day",
+    "gamemode creative $(bot)"
+  ],
+  "pad_wide": 24,
+  "track_mobs": true,
+  "track_self": true,
+  "chat": true
+}

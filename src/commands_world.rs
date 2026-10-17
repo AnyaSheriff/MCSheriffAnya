@@ -1623,12 +1623,6 @@ pub(crate) fn enchantable(enchantment: &str, item: &str) -> bool {
     let armor = helmet || chest || legs || boots;
     let tool = pickaxe || shovel || axe || hoe;
     let durable = armor || tool || sword || spear || matches!(item, "bow" | "crossbow" | "trident" | "fishing_rod" | "shears" | "flint_and_steel" | "carrot_on_a_stick" | "warped_fungus_on_a_stick" | "shield" | "elytra" | "brush" | "mace");
-    let book = item == "book" || item == "enchanted_book";
-
-    if book {
-        return true;
-    }
-
     match enchantment {
         "sharpness" => sword || axe || spear,
         "smite" | "bane_of_arthropods" => sword || axe || spear || item == "mace",
@@ -1638,7 +1632,7 @@ pub(crate) fn enchantable(enchantment: &str, item: &str) -> bool {
         "silk_touch" | "fortune" => tool,
         "unbreaking" => durable,
         "mending" => durable,
-        "vanishing_curse" => durable || matches!(item, "compass" | "recovery_compass" | "carved_pumpkin") || item.ends_with("_head") || item.ends_with("_skull"),
+        "vanishing_curse" => durable || matches!(item, "compass" | "carved_pumpkin") || item.ends_with("_head") || item.ends_with("_skull"),
         "binding_curse" => armor || item == "elytra" || item == "carved_pumpkin" || item.ends_with("_head") || item.ends_with("_skull"),
         "protection" | "fire_protection" | "blast_protection" | "projectile_protection" => armor,
         "thorns" => armor,
@@ -1671,12 +1665,47 @@ pub(crate) fn exclusive(a: &str, b: &str) -> bool {
     a != b && SETS.iter().any(|set| set.contains(&a) && set.contains(&b))
 }
 
+/// Команда добавляет новые чары, но не заменяет уже имеющиеся, даже
+/// тем же уровнем или нулём (чёрный ящик, enchant-command-validation).
+/// Наковальня, напротив, объединяет одинаковые чары через `exclusive`.
+fn can_command_enchant(name: &str, item: &str, existing: &[(u16, i32)]) -> bool {
+    enchantable(name, item) && !existing.iter().any(|(other, _)| {
+        crate::stackdata::ENCHANTMENTS.get(*other as usize).is_some_and(|(other, _)| *other == name || exclusive(name, other))
+    })
+}
+
 /// Название зачарования с уровнем (уровень не пишется, только если и он,
 /// и наибольший — 1); проклятия — красным.
 fn enchant_name(name: &str, level: i32, max: i32) -> Arg {
     let level = (level != 1 || max != 1).then_some(level);
 
     Arg::Raw(Box::new(RawText::Enchantment { name: name.to_string(), level, curse: name.ends_with("_curse") }))
+}
+
+/// Общая экипировка целей /item: тот же selector и limit, что у других
+/// команд сущностей. Именованных игроков обрабатывает прежняя ветка.
+pub(crate) fn replace_equipment(named: &str, slot: u8, stack: Option<crate::inventory::Stack>, source: &Source, shared: &Shared) -> Option<Answer> {
+    if !(named.starts_with("@e") || named.starts_with("@n")) { return None; }
+    let found = targets(named, source, shared);
+    if found.is_empty() { return Some(no_entity(named)); }
+    let mut changed = 0;
+    for target in found {
+        match target {
+            Target::Mob { entity_id, dimension, .. } => {
+                let mut items = shared.items_in(dimension).lock().expect("сущности");
+                if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == entity_id)
+                    && crate::mob::equipment::set_slot(mob, slot, stack) { changed += 1; }
+            }
+            Target::Player { uuid, .. } => {
+                let order = if slot == 0 { Order::Hold { stack } } else {
+                    Order::SetSlot { slot: match slot { 1 => crate::inventory::OFFHAND, 2 => 8, 3 => 7, 4 => 6, _ => 5 }, stack }
+                };
+                shared.players.lock().expect("игроки").order(&uuid, order);
+                changed += 1;
+            }
+        }
+    }
+    Some(Answer::saying(format!("Экипировка изменена у сущностей: {changed}")))
 }
 
 fn enchant(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
@@ -1711,12 +1740,11 @@ fn enchant(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     let mut last_failure = None;
 
     for target in &found {
-        let Target::Player { uuid, .. } = target else {
-            last_failure = Some(fail("commands.enchant.failed.entity", &[target.name()]));
-            continue;
+        let held = match target {
+            Target::Player { uuid, .. } => shared.players.lock().expect("список игроков захвачен другим потоком").members().iter().find(|member| &member.uuid == uuid).and_then(|member| member.held),
+            Target::Mob { entity_id, dimension, .. } => shared.items_in(*dimension).lock().expect("сущности").mobs().iter()
+                .find(|mob| mob.entity_id == *entity_id).and_then(|mob| crate::mob::equipment::slot(mob, 0)),
         };
-
-        let held = shared.players.lock().expect("список игроков захвачен другим потоком").members().iter().find(|member| &member.uuid == uuid).and_then(|member| member.held);
 
         let Some(stack) = held else {
             last_failure = Some(fail("commands.enchant.failed.itemless", &[target.plain_name()]));
@@ -1725,9 +1753,7 @@ fn enchant(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
 
         let item = crate::blocks::item_name(stack.item).unwrap_or("");
         let existing = stack.extras();
-        let conflicts = existing.enchants.iter().any(|(other, _)| crate::stackdata::ENCHANTMENTS.get(*other as usize).is_some_and(|(other, _)| exclusive(name, other)));
-
-        if !enchantable(name, item) || conflicts {
+        if !can_command_enchant(name, item, &existing.enchants) {
             // Пробник: название предмета строкой по-английски («Diamond Sword»).
             let item_arg = s(crate::survival::item_title(item));
 
@@ -1735,7 +1761,20 @@ fn enchant(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
             continue;
         }
 
-        shared.players.lock().expect("список игроков захвачен другим потоком").order(uuid, Order::Enchant { enchantment: i32::from(number), level });
+        // Нулевой уровень допустим, но на незачарованном предмете ничего
+        // не меняет: оригинал не присылает повторный слот инвентаря.
+        if level > 0 {
+            match target {
+                Target::Player { uuid, .. } => { shared.players.lock().expect("список игроков захвачен другим потоком").order(uuid, Order::Enchant { enchantment: i32::from(number), level }); }
+                Target::Mob { entity_id, dimension, .. } => {
+                    let mut items = shared.items_in(*dimension).lock().expect("сущности");
+                    if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == *entity_id) {
+                        let mut data = stack.extras(); data.set_enchant(number, level);
+                        crate::mob::equipment::set_slot(mob, 0, Some(stack.with_extras(data)));
+                    }
+                }
+            }
+        }
         applied += 1;
     }
 
@@ -2915,6 +2954,92 @@ mod tests {
         assert!(enchantable("protection", "iron_boots"));
         assert!(exclusive("sharpness", "smite"));
         assert!(!exclusive("sharpness", "unbreaking"));
+    }
+
+    #[test]
+    fn command_enchant_rejects_books_and_existing_enchantments() {
+        let sharpness = crate::stackdata::enchantment_number("sharpness").unwrap();
+        let unbreaking = crate::stackdata::enchantment_number("unbreaking").unwrap();
+
+        for (name, _) in crate::stackdata::ENCHANTMENTS {
+            assert!(!can_command_enchant(name, "book", &[]), "{name}");
+            assert!(!can_command_enchant(name, "enchanted_book", &[]), "{name}");
+        }
+        assert!(can_command_enchant("sharpness", "diamond_sword", &[]));
+        assert!(!can_command_enchant("sharpness", "diamond_sword", &[(sharpness, 1)]));
+        assert!(!can_command_enchant("sharpness", "diamond_sword", &[(sharpness, 5)]));
+        assert!(!can_command_enchant("smite", "diamond_sword", &[(sharpness, 1)]));
+        assert!(can_command_enchant("unbreaking", "diamond_sword", &[(sharpness, 1)]));
+        assert!(can_command_enchant("sharpness", "diamond_sword", &[(unbreaking, 3)]));
+    }
+
+    /// minecraft-data 26.1: category vanishing не содержит recovery_compass;
+    /// подтверждено чёрным ящиком enchant-compasses.
+    #[test]
+    fn vanishing_accepts_compass_but_not_recovery_compass() {
+        assert!(can_command_enchant("vanishing_curse", "compass", &[]));
+        assert!(!can_command_enchant("vanishing_curse", "recovery_compass", &[]));
+    }
+
+    /// Независимая матрица разрешённых предметов: minecraft-data 26.1,
+    /// enchantments.json (`category`) × items.json (`enchantCategories`).
+    #[test]
+    fn enchantment_applicability_matches_item_categories() {
+        let categories = [
+            ("aqua_affinity", "head_armor"),
+            ("bane_of_arthropods", "weapon"),
+            ("binding_curse", "equippable"),
+            ("blast_protection", "armor"),
+            ("breach", "mace"),
+            ("channeling", "trident"),
+            ("density", "mace"),
+            ("depth_strider", "foot_armor"),
+            ("efficiency", "mining"),
+            ("feather_falling", "foot_armor"),
+            ("fire_aspect", "fire_aspect"),
+            ("fire_protection", "armor"),
+            ("flame", "bow"),
+            ("fortune", "mining_loot"),
+            ("frost_walker", "foot_armor"),
+            ("impaling", "trident"),
+            ("infinity", "bow"),
+            ("knockback", "melee_weapon"),
+            ("looting", "melee_weapon"),
+            ("loyalty", "trident"),
+            ("luck_of_the_sea", "fishing"),
+            ("lunge", "lunge"),
+            ("lure", "fishing"),
+            ("mending", "durability"),
+            ("multishot", "crossbow"),
+            ("piercing", "crossbow"),
+            ("power", "bow"),
+            ("projectile_protection", "armor"),
+            ("protection", "armor"),
+            ("punch", "bow"),
+            ("quick_charge", "crossbow"),
+            ("respiration", "head_armor"),
+            ("riptide", "trident"),
+            ("sharpness", "sharp_weapon"),
+            ("silk_touch", "mining_loot"),
+            ("smite", "weapon"),
+            ("soul_speed", "foot_armor"),
+            ("sweeping_edge", "sweeping"),
+            ("swift_sneak", "leg_armor"),
+            ("thorns", "armor"),
+            ("unbreaking", "durability"),
+            ("vanishing_curse", "vanishing"),
+            ("wind_burst", "mace"),
+        ];
+        let items: Vec<serde_json::Value> = serde_json::from_str(include_str!("../tools/data/items.json")).unwrap();
+        assert_eq!(categories.len(), crate::stackdata::ENCHANTMENTS.len());
+        for (enchantment, category) in categories {
+            assert!(crate::stackdata::enchantment_number(enchantment).is_some());
+            for item in &items {
+                let name = item["name"].as_str().unwrap();
+                let expected = item["enchantCategories"].as_array().is_some_and(|cats| cats.iter().any(|cat| cat.as_str() == Some(category)));
+                assert_eq!(enchantable(enchantment, name), expected, "{enchantment} на {name}");
+            }
+        }
     }
 
     #[test]

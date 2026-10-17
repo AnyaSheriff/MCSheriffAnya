@@ -1,0 +1,84 @@
+{
+  "name": "enchant-mining-efficiency-aqua",
+  "about": "[проверить] Efficiency V даёт +26 один раз: stone не ломается на START. Aqua Affinity под водой снимает только штраф воды, не даёт второй множитель скорости.",
+  "exclusive": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!hotbar 0",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe[enchantments={efficiency:5}]"
+    },
+    {
+      "after": 4,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 6,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 10,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 20,
+      "cmd": "item replace entity $(bot) armor.head with diamond_helmet[enchantments={aqua_affinity:1}]"
+    },
+    {
+      "after": 22,
+      "cmd": "fill $(2,0,4) $(4,2,6) water"
+    },
+    {
+      "after": 25,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 27,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 31,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    }
+  ],
+  "record_ticks": 45,
+  "cleanup": [
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(0,0,0) $(8,4,8) air",
+    "!startfly"
+  ]
+}

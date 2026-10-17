@@ -1,0 +1,190 @@
+{
+  "name": "enchant-lunge-cost-motion",
+  "about": "Диагностика Lunge I–III: точная сырая скорость на камне/льду/в воздухе/воде; saturation/exhaustion до и после каждого уровня. Не считать округлённую .458 универсальной константой.",
+  "chat": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "effect give $(bot) instant_health 1 10 true",
+    "effect give $(bot) saturation 1 10 true",
+    "!hotbar 0",
+    "fill $(-3,0,-5) $(3,5,5) air",
+    "fill $(-3,-1,-5) $(3,-1,5) stone",
+    "tp $(bot) $(0.5,0,0.5) 180 0",
+    "!stopfly",
+    "!look 0 0",
+    "!wait 25",
+    "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:1}]",
+    "!wait 30"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 2,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:1}]"
+    },
+    {
+      "after": 22,
+      "cmd": "data get entity $(bot) foodSaturationLevel"
+    },
+    {
+      "after": 23,
+      "cmd": "data get entity $(bot) foodExhaustionLevel"
+    },
+    {
+      "after": 25,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 35,
+      "cmd": "data get entity $(bot) foodSaturationLevel"
+    },
+    {
+      "after": 36,
+      "cmd": "data get entity $(bot) foodExhaustionLevel"
+    },
+    {
+      "after": 55,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 57,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:2}]"
+    },
+    {
+      "after": 77,
+      "cmd": "data get entity $(bot) foodSaturationLevel"
+    },
+    {
+      "after": 78,
+      "cmd": "data get entity $(bot) foodExhaustionLevel"
+    },
+    {
+      "after": 80,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 90,
+      "cmd": "data get entity $(bot) foodSaturationLevel"
+    },
+    {
+      "after": 91,
+      "cmd": "data get entity $(bot) foodExhaustionLevel"
+    },
+    {
+      "after": 110,
+      "cmd": "effect give $(bot) saturation 1 10 true"
+    },
+    {
+      "after": 112,
+      "cmd": "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:3}]"
+    },
+    {
+      "after": 132,
+      "cmd": "data get entity $(bot) foodSaturationLevel"
+    },
+    {
+      "after": 133,
+      "cmd": "data get entity $(bot) foodExhaustionLevel"
+    },
+    {
+      "after": 135,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 145,
+      "cmd": "data get entity $(bot) foodSaturationLevel"
+    },
+    {
+      "after": 146,
+      "cmd": "data get entity $(bot) foodExhaustionLevel"
+    },
+    {
+      "after": 165,
+      "cmd": "fill $(-3,-1,-5) $(3,-1,5) packed_ice"
+    },
+    {
+      "after": 185,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 205,
+      "cmd": "tp $(bot) $(0.5,20,0.5) 180 0"
+    },
+    {
+      "after": 207,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 235,
+      "cmd": "tp $(bot) $(0.5,0,0.5) 180 0"
+    },
+    {
+      "after": 240,
+      "cmd": "fill $(-3,0,-5) $(3,2,5) water"
+    },
+    {
+      "after": 265,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    }
+  ],
+  "record_ticks": 285,
+  "cleanup": [
+    "fill $(-3,0,-5) $(3,2,5) air",
+    "fill $(-3,-1,-5) $(3,-1,5) stone",
+    "tp $(bot) $(0.5,0,0.5) 180 0",
+    "ride $(bot) dismount",
+    "kill @e[type=oak_boat,distance=..10]",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "effect clear $(bot)",
+    "!startfly",
+    "difficulty peaceful"
+  ],
+  "item_components": true,
+  "inventory": true,
+  "track_self": true,
+  "track_client_moves": true
+}

@@ -1,0 +1,92 @@
+{
+  "name": "enchant-mining-fortune-gravel",
+  "about": "[проверить] Fortune III гарантированно даёт кремень; Silk Touch с Fortune III через /give даёт гравий, не кремень.",
+  "exclusive": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!hotbar 0",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_shovel[enchantments={fortune:3}]"
+    },
+    {
+      "after": 2,
+      "cmd": "setblock $(3,0,3) gravel"
+    },
+    {
+      "after": 4,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 8,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 12,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 20,
+      "cmd": "tp $(bot) $(3.5,0,5.5)"
+    },
+    {
+      "after": 25,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_shovel[enchantments={fortune:3,silk_touch:1}]"
+    },
+    {
+      "after": 27,
+      "cmd": "setblock $(3,0,3) gravel"
+    },
+    {
+      "after": 29,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 33,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 37,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    }
+  ],
+  "record_ticks": 55,
+  "cleanup": [
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(0,0,0) $(8,4,8) air",
+    "!startfly"
+  ]
+}

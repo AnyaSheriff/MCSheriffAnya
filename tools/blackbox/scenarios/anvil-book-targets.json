@@ -1,0 +1,96 @@
+{
+  "name": "anvil-book-targets",
+  "about": "[проверить] Наковальня: обычная книга + зачарованная Sharpness I (не должна создавать обычную книгу с активными чарами); меч Smite I + книга Sharpness I/Unbreaking I (несовместимую остроту пропустить, прочность принять, стоимость включает отказ). Итоги не забираются, чтобы избежать случайного износа наковальни.",
+  "blocks": [
+    {
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "state": "minecraft:anvil[facing=north]"
+    }
+  ],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "effect give $(bot) instant_health 1 10 true",
+    "!wait 3",
+    "experience set $(bot) 30 levels",
+    "experience set $(bot) 0 points",
+    "tp $(bot) $(0.5,0,3.5) 180 0",
+    "!stopfly",
+    "give $(bot) book",
+    "give $(bot) enchanted_book[stored_enchantments={sharpness:1}]",
+    "give $(bot) diamond_sword[enchantments={smite:1}]",
+    "give $(bot) enchanted_book[stored_enchantments={sharpness:1,unbreaking:1}]"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "click": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "after": 10,
+      "window_click": {
+        "slot": 30,
+        "mode": 1
+      }
+    },
+    {
+      "after": 20,
+      "window_click": {
+        "slot": 31,
+        "mode": 1
+      }
+    },
+    {
+      "after": 30,
+      "window_click": {
+        "slot": 0,
+        "mode": 1
+      }
+    },
+    {
+      "after": 40,
+      "window_click": {
+        "slot": 1,
+        "mode": 1
+      }
+    },
+    {
+      "after": 50,
+      "window_click": {
+        "slot": 32,
+        "mode": 1
+      }
+    },
+    {
+      "after": 60,
+      "window_click": {
+        "slot": 33,
+        "mode": 1
+      }
+    },
+    {
+      "after": 70,
+      "close": true
+    }
+  ],
+  "record_ticks": 90,
+  "cleanup": [
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "experience set $(bot) 0 levels",
+    "experience set $(bot) 0 points",
+    "setblock $(0,0,0) minecraft:air",
+    "kill @e[type=item,distance=..48]"
+  ],
+  "item_components": true,
+  "inventory": true,
+  "track_self": true
+}

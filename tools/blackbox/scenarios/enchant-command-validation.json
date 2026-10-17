@@ -1,0 +1,73 @@
+{
+  "name": "enchant-command-validation",
+  "about": "[проверить] /enchant: обычная и зачарованная книга, повторное зачарование, повышение/понижение, уровень 0 и превышение максимума. Без случайных событий.",
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "!hotbar 0",
+    "item replace entity $(bot) weapon.mainhand with book",
+    "!wait 5"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "enchant $(bot) sharpness 1"
+    },
+    {
+      "after": 5,
+      "cmd": "item replace entity $(bot) weapon.mainhand with enchanted_book[stored_enchantments={mending:1}]"
+    },
+    {
+      "after": 10,
+      "cmd": "enchant $(bot) sharpness 1"
+    },
+    {
+      "after": 15,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_sword"
+    },
+    {
+      "after": 20,
+      "cmd": "enchant $(bot) sharpness 2"
+    },
+    {
+      "after": 25,
+      "cmd": "enchant $(bot) sharpness 3"
+    },
+    {
+      "after": 30,
+      "cmd": "enchant $(bot) sharpness 1"
+    },
+    {
+      "after": 35,
+      "cmd": "enchant $(bot) sharpness 0"
+    },
+    {
+      "after": 40,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_sword"
+    },
+    {
+      "after": 45,
+      "cmd": "enchant $(bot) sharpness 0"
+    },
+    {
+      "after": 50,
+      "cmd": "enchant $(bot) unbreaking 1"
+    },
+    {
+      "after": 55,
+      "cmd": "enchant $(bot) sharpness 5"
+    },
+    {
+      "after": 60,
+      "cmd": "enchant $(bot) sharpness 6"
+    }
+  ],
+  "record_ticks": 75,
+  "cleanup": [
+    "clear $(bot)"
+  ],
+  "item_components": true,
+  "inventory": true,
+  "track_self": true
+}

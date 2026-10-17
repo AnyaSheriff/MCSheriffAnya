@@ -321,6 +321,15 @@ pub fn extra_knockback(attack_knockback: f64, data: &Data, sprint_bonus: bool) -
     attack_knockback as f32 + data.level("knockback") as f32 + if sprint_bonus { 1.0 } else { 0.0 }
 }
 
+/// Добавка от «отбрасывания» стрелы до трения: 0,6 за уровень по горизонтали
+/// и 0,1 вверх (вики, Punch; чёрный ящик pvp-bow-punch). PlayerStrike кодирует
+/// уровень как 1,2L. Сопротивление уменьшает только горизонтальную добавку.
+pub fn punch_impulse(extra_knockback: f32, dir: (f64, f64), resistance: f64) -> (f64, f64, f64) {
+    if extra_knockback <= 0.0 { return (0.0, 0.0, 0.0); }
+    let push = f64::from(extra_knockback) * 0.5 * (1.0 - resistance).max(0.0);
+    (dir.0 * push, 0.1, dir.1 * push)
+}
+
 /// Итог удара по цели.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Strike {
@@ -541,7 +550,7 @@ pub fn add_damage(stack: Stack, amount: i32) -> Option<Stack> {
     Some(stack.with_extras(data))
 }
 
-/// Починка от одного шарика, а не от /xp (вики, Mending: «two durability
+/// Один шаг починки от шарика, а не от /xp (вики, Mending: «two durability
 /// per point of experience»). Выбирается только повреждённая вещь в руке,
 /// второй руке или броне; целые вещи и рюкзак не участвуют [проверить].
 /// Возвращает изменённый слот и не потраченный на починку опыт.
@@ -568,6 +577,21 @@ pub fn mend(inventory: &mut Inventory, points: i32, roll: f32) -> (Option<i32>, 
     inventory.set(slot, Some(stack.with_extras(data)));
 
     (Some(slot), points - repaired / 2)
+}
+
+/// Остаток того же шарика сначала чинит остальные повреждённые вещи.
+/// Вики, Mending: «remaining experience ... used to repair another item».
+/// Один пункт износа чинится без целого XP; цикл всё равно завершается,
+/// поскольку выбранная вещь либо становится целой, либо расходует весь XP.
+pub fn mend_all(inventory: &mut Inventory, mut points: i32, mut roll: impl FnMut() -> f32) -> (Vec<i32>, i32) {
+    let mut changed = Vec::new();
+    while points > 0 {
+        let (slot, remaining) = mend(inventory, points, roll());
+        let Some(slot) = slot else { break; };
+        changed.push(slot);
+        points = remaining;
+    }
+    (changed, points.max(0))
 }
 
 /// Вики, Curse of Vanishing: «does not drop when the player dies».
@@ -876,6 +900,33 @@ mod tests {
     }
 
     #[test]
+    fn mending_spends_one_orb_across_equipment_before_granting_xp() {
+        let mut inventory = Inventory::new();
+        inventory.set(5, Some(mending_item("diamond_helmet", 3)));
+        inventory.set(6, Some(mending_item("diamond_chestplate", 10)));
+        inventory.set(7, Some(mending_item("diamond_leggings", 1)));
+        inventory.set(inventory::FIRST_MAIN, Some(mending_item("diamond_pickaxe", 100)));
+        assert_eq!(mend_all(&mut inventory, 7, || 0.0), (vec![5, 6, 7], 1));
+        for slot in [5, 6, 7] { assert_eq!(inventory.slot(slot).unwrap().extras().damage, 0); }
+        assert_eq!(inventory.slot(inventory::FIRST_MAIN).unwrap().extras().damage, 100);
+        assert_eq!(mend_all(&mut inventory, 7, || 0.0), (vec![], 7));
+        assert_eq!(mend_all(&mut inventory, -1, || panic!("нет броска без опыта")), (vec![], 0));
+    }
+
+    #[test]
+    fn mending_stops_when_orb_runs_out_and_selects_again_after_repair() {
+        let mut inventory = Inventory::new();
+        inventory.set(5, Some(mending_item("diamond_helmet", 2)));
+        inventory.set(6, Some(mending_item("diamond_chestplate", 10)));
+        inventory.set(7, Some(mending_item("diamond_leggings", 10)));
+        let mut rolls = [0.0, 0.999].into_iter();
+        assert_eq!(mend_all(&mut inventory, 3, || rolls.next().unwrap()), (vec![5, 7], 0));
+        assert_eq!(inventory.slot(5).unwrap().extras().damage, 0);
+        assert_eq!(inventory.slot(6).unwrap().extras().damage, 10);
+        assert_eq!(inventory.slot(7).unwrap().extras().damage, 6);
+    }
+
+    #[test]
     fn vanishing_removes_all_carried_cursed_items_only_on_death() {
         let mut inventory = Inventory::new();
         let plain = Stack::new(crate::blocks::item_named("stone").unwrap(), 3);
@@ -1168,6 +1219,19 @@ pub struct DamageOrigin {
 #[cfg(test)]
 mod itemaudit2_tests {
     use super::*;
+
+    #[test]
+    fn punch_impulse_scales_with_level_and_horizontal_resistance() {
+        assert_eq!(punch_impulse(0.0, (0.0, 1.0), 0.0), (0.0, 0.0, 0.0));
+        for level in [1, 2] {
+            for resistance in [0.0, 0.5, 1.0] {
+                let impulse = punch_impulse(level as f32 * 1.2, (0.0, 1.0), resistance);
+                assert_eq!(impulse.0, 0.0);
+                assert_eq!(impulse.1, 0.1);
+                assert!((impulse.2 - 0.6 * f64::from(level) * (1.0 - resistance)).abs() < 1e-6);
+            }
+        }
+    }
 
     #[test]
     fn impaling_covers_java_aquatic_targets_but_not_drowned_or_players() {

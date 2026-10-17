@@ -1035,6 +1035,7 @@ impl Bag {
         let Some(from) = self.place_for(source, creative) else {
             return false;
         };
+        if self.bound(from, creative) { return false; }
         let Some(stack) = self.get(from) else {
             return false;
         };
@@ -1390,6 +1391,13 @@ impl Bag {
         true
     }
 
+    /// Проклятие несъёмности удерживает надетую вещь, но не мешает
+    /// носить её в рюкзаке и не ограничивает творческий режим.
+    fn bound(&self, place: Place, creative: bool) -> bool {
+        !creative && matches!(place, Place::Slot(5..=8))
+            && self.get(place).is_some_and(|stack| stack.extras().level("binding_curse") > 0)
+    }
+
     fn move_stack(
         &mut self,
         count: i32,
@@ -1416,6 +1424,8 @@ impl Bag {
             return true;
         }
 
+        if self.bound(from, creative) { return false; }
+
         let there = self.get(to);
 
         if there.is_some_and(|t| !t.stacks_with(&moving)) {
@@ -1441,6 +1451,8 @@ impl Bag {
         };
         let (a, b) = (self.get(from), self.get(to));
 
+        if from != to && (self.bound(from, creative) || self.bound(to, creative)) { return false; }
+
         self.set(from, b);
         self.set(to, a);
         touched.push((source, from));
@@ -1451,6 +1463,8 @@ impl Bag {
     fn remove(&mut self, count: i32, source: Named, creative: bool, touched: &mut Vec<(Named, Place)>) -> Option<Stack> {
         let from = self.place_for(source, creative)?;
         let stack = self.get(from)?;
+
+        if self.bound(from, creative) { return None; }
 
         if count <= 0 || count > stack.count {
             return None;
@@ -1724,6 +1738,40 @@ mod tests {
         let handled = bag.handle_requests(&payload, false);
         assert_eq!(handled.response[3], 1); // отказ
         assert_eq!(bag.get(Place::CreativeOutput), None);
+    }
+
+    #[test]
+    fn binding_blocks_bedrock_take_swap_and_drop_but_allows_creative() {
+        let mut data = crate::stackdata::Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number("binding_curse").unwrap(), 1);
+        let cursed = item("diamond_helmet", 1).with_extras(data);
+        for action in [0, 2, 3] {
+            for creative in [false, true] {
+                let mut bag = Bag::new(Inventory::new());
+                bag.inventory.set(5, Some(cursed));
+                let payload = request(1, 1, |out| {
+                    out.u8(action);
+                    if action != 2 { out.u8(1); }
+                    slot(out, ARMOR, 0);
+                    if action == 3 { out.bool(false); } else { slot(out, HOTBAR_AND_INVENTORY, 0); }
+                });
+                let handled = bag.handle_requests(&payload, creative);
+                assert_eq!(handled.response[3], if creative { 0 } else { 1 }, "action={action}, creative={creative}");
+                assert_eq!(bag.inventory.slot(5), if creative { None } else { Some(cursed) });
+            }
+        }
+        // Нельзя вытеснить проклятую броню обменом из рюкзака.
+        let mut bag = Bag::new(Inventory::new());
+        bag.inventory.set(5, Some(cursed));
+        bag.inventory.set(FIRST_HOTBAR, Some(item("iron_helmet", 1)));
+        let swap = request(1, 1, |out| { out.u8(2); slot(out, HOTBAR_AND_INVENTORY, 0); slot(out, ARMOR, 0); });
+        assert_eq!(bag.handle_requests(&swap, false).response[3], 1);
+        assert_eq!(bag.inventory.slot(5), Some(cursed));
+        // Само проклятие не запрещает перемещать ненадетую вещь.
+        bag.inventory.set(FIRST_HOTBAR, Some(cursed));
+        let take = request(1, 1, |out| { out.u8(0).u8(1); slot(out, HOTBAR_AND_INVENTORY, 0); slot(out, CURSOR, 0); });
+        assert_eq!(bag.handle_requests(&take, false).response[3], 0);
+        assert_eq!(bag.get(Place::Cursor), Some(cursed));
     }
 
     /// Неудачное действие откатывает и те, что прошли до него.

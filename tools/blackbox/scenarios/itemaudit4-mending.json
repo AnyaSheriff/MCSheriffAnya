@@ -1,22 +1,31 @@
 {
   "name": "itemaudit4-mending",
-  "about": "[проверить] Mending: orb 7 XP чинит одну из двух вещей с damage=3; 6 XP остаются, вторая вещь не чинится. Не запускался.",
+  "about": "[проверить] Mending: orb 7 XP при двух вещах damage=3 — проверить передачу остатка другой вещи, итоговый износ обеих и опыт игрока.",
   "blocks": [],
   "setup": [
+    "gamemode creative $(bot)",
+    "execute in minecraft:overworld run tp $(bot) $(3.5,0,3.5)",
+    "!wait 10",
     "difficulty peaceful",
-    "gamemode survival $(bot)",
     "clear $(bot)",
-    "kill $(bot)",
-    "!wait 20",
+    "effect clear $(bot)",
+    "attribute $(bot) minecraft:scale base set 1",
+    "attribute $(bot) minecraft:step_height base set 0.6",
+    "attribute $(bot) minecraft:safe_fall_distance base set 3",
+    "attribute $(bot) minecraft:max_health base set 20",
     "xp set $(bot) 0 levels",
     "xp set $(bot) 0 points",
-    "fill $(-2,-1,-2) $(8,3,8) minecraft:air",
+    "fill $(-2,0,-2) $(8,3,8) minecraft:air",
     "fill $(-2,-1,-2) $(8,-1,8) minecraft:stone",
+    "kill @e[type=experience_orb,distance=..48]",
     "tp $(bot) $(3.5,0,3.5)",
+    "gamemode survival $(bot)",
+    "effect give $(bot) instant_health 1 10 true",
     "!stopfly",
-    "!wait 30",
+    "!wait 20",
     "item replace entity $(bot) weapon.offhand with minecraft:diamond_sword[damage=3,enchantments={\"minecraft:mending\":1}]",
-    "item replace entity $(bot) armor.head with diamond_helmet[damage=3,enchantments={\"minecraft:mending\":1}]"
+    "item replace entity $(bot) armor.head with diamond_helmet[damage=3,enchantments={\"minecraft:mending\":1}]",
+    "!wait 5"
   ],
   "actions": [
     {
@@ -39,5 +48,10 @@
   "track_self": true,
   "item_components": true,
   "inventory": true,
-  "exclusive": true
+  "exclusive": true,
+  "origin": [
+    128,
+    70,
+    128
+  ]
 }

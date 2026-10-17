@@ -1,0 +1,51 @@
+{
+  "name": "enchant-channeling-lightning-rod",
+  "about": "Channeling: в грозу бросок трезубца в громоотвод под открытым небом должен создать молнию и включить rod. Сырой диагностический зонд без маскировок случайного полёта/огня. Направление +Z: !look принимает радианы клиента, yaw pi соответствует Minecraft yaw 0; успех проверять по урону/молнии, не только существованию снаряда.",
+  "origin": [
+    100,
+    5,
+    100
+  ],
+  "exclusive": true,
+  "track_mobs": true,
+  "track_self": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "weather thunder",
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5) 0 0",
+    "!stopfly",
+    "!hotbar 0",
+    "give $(bot) trident[enchantments={channeling:1}] 1",
+    "setblock $(3,1,3) lightning_rod[facing=up,powered=false,waterlogged=false]",
+    "!look 3.141592653589793 0",
+    "!wait 120"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "use": true
+    },
+    {
+      "after": 12,
+      "release": true
+    }
+  ],
+  "record_ticks": 60,
+  "cleanup": [
+    "kill @e[type=trident,distance=..48]",
+    "kill @e[type=lightning_bolt,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "setblock $(3,1,3) air",
+    "fill $(-3,0,-3) $(9,3,9) air replace fire",
+    "weather clear",
+    "difficulty peaceful",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ],
+  "track_projectiles": true
+}

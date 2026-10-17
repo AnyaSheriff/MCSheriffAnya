@@ -1,0 +1,33 @@
+{
+  "name": "enchant-compasses",
+  "about": "[проверить] Curse of Vanishing: minecraft-data 26.1 разрешает обычный compass, но исключает recovery_compass. Подтверждение применимости на оригинале.",
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "!hotbar 0",
+    "item replace entity $(bot) weapon.mainhand with compass",
+    "!wait 5"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "enchant $(bot) vanishing_curse 1"
+    },
+    {
+      "after": 5,
+      "cmd": "item replace entity $(bot) weapon.mainhand with recovery_compass"
+    },
+    {
+      "after": 10,
+      "cmd": "enchant $(bot) vanishing_curse 1"
+    }
+  ],
+  "record_ticks": 20,
+  "cleanup": [
+    "clear $(bot)"
+  ],
+  "item_components": true,
+  "inventory": true,
+  "track_self": true
+}

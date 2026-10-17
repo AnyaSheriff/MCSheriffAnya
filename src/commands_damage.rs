@@ -127,9 +127,14 @@ pub(super) fn run(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         })
     });
     let before = mob.events.len();
-    let hit = mob.hurt(amount, kind, push);
+    // Чёрный ящик, enchant-mob-equipment-drops: смертельный /damage by
+    // игрок даёт зомби 5 XP. Кредит нужен до расчёта смерти внутри hurt.
+    let hit = if let Some((_, uuid)) = &origin.player {
+        mob.hurt_credited(amount, kind, push, *uuid, mob.looting)
+    } else {
+        mob.hurt(amount, kind, push)
+    };
     if hit.is_some() {
-        if let Some((_, uuid)) = origin.player { mob.credit_to(uuid); }
         for event in &mut mob.events[before..] {
             if matches!(event, crate::mob::Event::Hurt { .. }) {
                 *event = crate::mob::Event::CommandHurt { source: kind, origin: origin.clone() };
@@ -181,6 +186,46 @@ mod tests {
         let (events, _) = shared.items_in(dimension).lock().unwrap().changes_since(from, reader);
         assert!(events.iter().any(|event| matches!(event, crate::items::Change::MobEvent { event: crate::mob::Event::CommandHurt { origin, .. }, .. } if origin.at == Some((1.0, 64.0, 2.0)) && origin.direct == 0)));
     }
+
+    #[test]
+    fn lethal_damage_command_credits_player_before_calculating_experience() {
+        for (suffix, owner, xp) in [
+            ("minecraft:player_attack by Первый", Some([1; 16]), 5),
+            ("minecraft:arrow by Второй from Первый", Some([1; 16]), 5),
+            ("minecraft:generic", None, 0),
+        ] {
+            let shared = super::super::tests::server();
+            shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(crate::mob::Mob::new(100, crate::mob::Kind::Zombie, (0.0, 64.0, 0.0)));
+            let answer = super::super::run(&format!("damage @e[type=zombie,limit=1] 1000 {suffix}"), &Source::Console, &shared);
+            assert!(answer.reply.contains("Нанесён"), "{}", answer.reply);
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &items.mobs()[0];
+            assert!(mob.is_dead(), "{suffix}");
+            assert_eq!(mob.kill_credit, owner, "{suffix}");
+            // Команда уже вызывает flush_mob_events: XP перенесён из моба
+            // в настоящие шарики мира; учитываем и возможное слияние.
+            assert_eq!(mob.pending_xp, 0, "{suffix}");
+            assert_eq!(items.orbs().iter().map(|orb| orb.value * orb.count).sum::<i32>(), xp, "{suffix}");
+        }
+    }
+
+    #[test]
+    fn rejected_damage_command_does_not_steal_player_credit() {
+        let shared = super::super::tests::server();
+        shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(crate::mob::Mob::new(100, crate::mob::Kind::Zombie, (0.0, 64.0, 0.0)));
+        let command = |name: &str| format!("damage @e[type=zombie,limit=1] 1 minecraft:player_attack by {name}");
+        assert!(super::super::run(&command("Первый"), &Source::Console, &shared).reply.contains("Нанесён"));
+        let before = {
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &items.mobs()[0];
+            (mob.kill_credit, mob.xp_until, mob.looting, mob.vitals.health)
+        };
+        assert!(super::super::run(&command("Второй"), &Source::Console, &shared).reply.contains("не получила"));
+        let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+        let mob = &items.mobs()[0];
+        assert_eq!((mob.kill_credit, mob.xp_until, mob.looting, mob.vitals.health), before);
+    }
+
     #[test]
     fn dispatcher_uses_one_validated_path_for_every_form() {
         let shared=super::super::tests::server();

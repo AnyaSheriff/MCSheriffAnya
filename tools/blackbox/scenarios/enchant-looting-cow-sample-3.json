@@ -1,0 +1,415 @@
+{
+  "name": "enchant-looting-cow-sample-3",
+  "about": "Статистический зонд Looting 3: 32 коровы с 1 HP. Считать реальные itemCount мяса/кожи, не требовать одинакового RNG. Диапазон beef 1..6, leather 0..5; маскировок расхождений нет. 32 убийства не доказывают распределение.",
+  "track_mobs": true,
+  "item_components": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5) 0 0",
+    "!stopfly",
+    "!wait 10",
+    "!hotbar 0",
+    "give $(bot) diamond_sword[enchantments={looting:3}] 1",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 2,
+      "attack": true
+    },
+    {
+      "after": 4,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 6,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 8,
+      "attack": true
+    },
+    {
+      "after": 10,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 12,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 14,
+      "attack": true
+    },
+    {
+      "after": 16,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 18,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 20,
+      "attack": true
+    },
+    {
+      "after": 22,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 24,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 26,
+      "attack": true
+    },
+    {
+      "after": 28,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 30,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 32,
+      "attack": true
+    },
+    {
+      "after": 34,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 36,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 38,
+      "attack": true
+    },
+    {
+      "after": 40,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 42,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 44,
+      "attack": true
+    },
+    {
+      "after": 46,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 48,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 50,
+      "attack": true
+    },
+    {
+      "after": 52,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 54,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 56,
+      "attack": true
+    },
+    {
+      "after": 58,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 60,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 62,
+      "attack": true
+    },
+    {
+      "after": 64,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 66,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 68,
+      "attack": true
+    },
+    {
+      "after": 70,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 72,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 74,
+      "attack": true
+    },
+    {
+      "after": 76,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 78,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 80,
+      "attack": true
+    },
+    {
+      "after": 82,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 84,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 86,
+      "attack": true
+    },
+    {
+      "after": 88,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 90,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 92,
+      "attack": true
+    },
+    {
+      "after": 94,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 96,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 98,
+      "attack": true
+    },
+    {
+      "after": 100,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 102,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 104,
+      "attack": true
+    },
+    {
+      "after": 106,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 108,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 110,
+      "attack": true
+    },
+    {
+      "after": 112,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 114,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 116,
+      "attack": true
+    },
+    {
+      "after": 118,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 120,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 122,
+      "attack": true
+    },
+    {
+      "after": 124,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 126,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 128,
+      "attack": true
+    },
+    {
+      "after": 130,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 132,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 134,
+      "attack": true
+    },
+    {
+      "after": 136,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 138,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 140,
+      "attack": true
+    },
+    {
+      "after": 142,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 144,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 146,
+      "attack": true
+    },
+    {
+      "after": 148,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 150,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 152,
+      "attack": true
+    },
+    {
+      "after": 154,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 156,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 158,
+      "attack": true
+    },
+    {
+      "after": 160,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 162,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 164,
+      "attack": true
+    },
+    {
+      "after": 166,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 168,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 170,
+      "attack": true
+    },
+    {
+      "after": 172,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 174,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 176,
+      "attack": true
+    },
+    {
+      "after": 178,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 180,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 182,
+      "attack": true
+    },
+    {
+      "after": 184,
+      "cmd": "kill @e[type=item,distance=..48]"
+    },
+    {
+      "after": 186,
+      "cmd": "summon cow $(3.5,0,2.5) {NoAI:1b,Silent:1b,Health:1.0f}"
+    },
+    {
+      "after": 188,
+      "attack": true
+    },
+    {
+      "after": 190,
+      "cmd": "kill @e[type=item,distance=..48]"
+    }
+  ],
+  "record_ticks": 196,
+  "cleanup": [
+    "kill @e[type=cow,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "difficulty peaceful",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ]
+}

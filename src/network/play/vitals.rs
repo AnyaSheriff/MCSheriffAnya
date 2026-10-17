@@ -245,7 +245,7 @@ pub(super) struct Net {
     /// по последнему шагу клиента к этому моменту, а не к моменту удара
     /// (чёрный ящик, void-death: скорость на такт позже удара несёт шаг этого
     /// же такта).
-    velocity_due: bool,
+    pub(super) velocity_due: bool,
     prev_ground: bool,
     pub last_delta: (f64, f64, f64),
     /// fall-mode-teleport-motion: инерция creative → survival доживает
@@ -297,7 +297,7 @@ pub(super) struct Net {
     /// Игрока только что перенесли: первый пакет места после этого не считается движением.
     pub teleported: bool,
     /// Среда игрока по последнему такту: лава, вода.
-    in_lava: bool,
+    pub(super) in_lava: bool,
     pub in_water: bool,
     /// Ключ имени того, кто нанёс последний удар (моб, стрела, крипер):
     /// для сообщения о смерти; пусто — никто.
@@ -654,6 +654,22 @@ fn look_around(world: &World, x: f64, y: f64, z: f64, sneaking: bool, spin: bool
     env
 }
 
+/// Вики, Frost Walker: «eliminates all damage from magma blocks and
+/// campfires». Лава от этого зачарования не защищена. Общая проверка для
+/// обоих представлений игрока, включая огнестойкость.
+fn protected_from_hot_blocks(player: &PlayerState) -> bool {
+    player.vit.has_effect(survival::EffectKind::FireResistance)
+        || crate::frost::protects(&player.inventory, Source::HotFloor)
+}
+
+/// Вики, Magma Block: урон при ходьбе, кроме крадущихся и носящих Ледоход.
+/// [проверить] Точная фаза касания края блока и верхних покрытий.
+fn magma_contact(player: &PlayerState, env: &Env) -> bool {
+    player.on_ground && !player.sneaking && player.ride.vehicle.is_none()
+        && blocks::block_at_state(env.below) == Some("magma_block")
+        && !protected_from_hot_blocks(player)
+}
+
 /// Смена режима общая для своей команды и поручения другого игрока.
 pub(super) fn change_game_mode(player: &mut PlayerState, mode: i32) {
     if player.game_mode != mode {
@@ -815,6 +831,7 @@ pub(super) fn moved(player: &mut PlayerState, shared: &Shared, from: (f64, f64, 
     player.net.prev_ground = on_ground;
     player.net.last_delta = (dx, dy, dz);
     player.net.sweep_motion.moved(*shared.ticks.borrow(), dx, dz);
+    super::movement_enchantments::update(shared, player);
 }
 
 /// pvp-mace-landing-count: наблюдателю в такт приземления идут small_fall,
@@ -1675,6 +1692,7 @@ pub(super) async fn send_respawn_intro(stream: &mut Outgoing<'_>, player: &Playe
 pub(super) fn respawned(player: &mut PlayerState) {
     player.vit.respawned();
     player.net.reset();
+    player.foot_enchants = Default::default();
 
     // Клиент после возрождения знает атрибуты по умолчанию.
     player.attrs = crate::attributes::Attributes::player();
@@ -1785,6 +1803,7 @@ pub(super) async fn mob_hit(
     killer: &'static str,
     push: Option<(f64, f64)>,
     at: (f64, f64, f64),
+    enchantments: crate::world::ProjectileEnchantments,
 ) -> io::Result<()> {
     player.net.killer = killer;
     player.net.mob_hit_landed = false;
@@ -1792,7 +1811,7 @@ pub(super) async fn mob_hit(
     // Вики, Shield: передний удар моба поглощается; укус, остановленный
     // щитом, не накладывает яд. Износ — тот же, что в бою игроков.
     let now = *shared.ticks.borrow();
-    if (matches!(source, Source::MobAttack | Source::Sting) || source.is_projectile()) && amount > 0.0 && !player.vit.dead
+    if !enchantments.ignores_shield && (matches!(source, Source::MobAttack | Source::Sting) || source.is_projectile()) && amount > 0.0 && !player.vit.dead
         && matches!(player.game_mode, GAME_MODE_SURVIVAL | GAME_MODE_ADVENTURE)
         && let Some(hand) = shield_up(player, now)
         && crate::combat::shield_covers(player.yaw, (player.x, player.z), (at.0, at.2))
@@ -1925,6 +1944,11 @@ pub(super) async fn mob_hit(
         let (ux, uz) = ((player.x - at.0) / flat, (player.z - at.2) / flat);
         player.net.velocity = Some(((ux * 0.4 + sonic.0) * 0.546, (0.3606 + sonic.1 - 0.08) * 0.98, (uz * 0.4 + sonic.2) * 0.546));
         player.net.velocity_due = false;
+    } else if let (Some(_), Some(dir), true) = (done, push, source == Source::Thorns) {
+        // enchant-mob-thorns-wear: отражение приходит без трения такта,
+        // как PvP Thorns: в записи (0;0.361;-0.4), а не обычный mob_hit .218.
+        // До округления: -0.0784 / 2 + 0.4 = 0.3608 по вертикали.
+        knock_back(player, dir, 0.4, player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE));
     } else if let (Some(_), Some(dir), true) = (done, push, killer == "entity.minecraft.warden") {
         // Сценарий warden-melee: после двух толчков (0,4 и 0,75) клиенту уходит
         // скорость после трения такта: (0; 0,314; 0,519).
@@ -1953,6 +1977,20 @@ pub(super) async fn mob_hit(
         player.net.velocity_due = false;
     }
 
+    if done.is_some() {
+        if enchantments.melee_knockback > 0.0 && let Some(dir) = push {
+            enchanted_mob_knockback(player, dir, enchantments.melee_knockback);
+        }
+        if enchantments.fire_ticks > 0 { ignite(player, enchantments.fire_ticks); }
+        if source == Source::Arrow && let Some(dir) = push {
+            let extra = crate::combat::punch_impulse(enchantments.punch as f32 * 1.2, dir, player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE));
+            if let Some(velocity) = player.net.velocity.as_mut() {
+                // mob_hit уже передал скорость через трение и тяжесть такта.
+                *velocity = (velocity.0 + extra.0 * 0.546, velocity.1 + extra.1 * 0.98, velocity.2 + extra.2 * 0.546);
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -1960,6 +1998,9 @@ pub(super) async fn mob_hit(
 /// [проверить] Отдача и порядок звуков команды относительно обычного удара.
 pub(super) async fn command_hit(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, amount: f32, source: Source, origin: crate::combat::DamageOrigin) -> io::Result<()> {
     if player.vit.dead || (matches!(player.game_mode, GAME_MODE_CREATIVE | GAME_MODE_SPECTATOR) && !source.bypasses_invulnerability()) { return Ok(()); }
+    // enchant-frost-immunity: отклонённые HotFloor/Campfire не изнашивают
+    // обувь. Проверяем до износа брони и щита, а не только внутри hit_by.
+    if crate::frost::protects(&player.inventory, source) { return Ok(()); }
     update_equipment(player, *shared.ticks.borrow());
     let at = origin.at.or(origin.entity_at);
     if amount > 0.0 && at.is_some() && !crate::combat::bypasses_armor(source)
@@ -2028,6 +2069,7 @@ pub(super) async fn hit_by_breached(
     stream: &mut Outgoing<'_>, shared: &Shared, player: &mut PlayerState, mut amount: f32,
     source: Source, direct: i32, cause: i32, killer: Option<Killer<'_>>, hurt_yaw: Option<f32>, breach: f32,
 ) -> io::Result<Option<survival::Hit>> {
+    if crate::frost::protects(&player.inventory, source) { return Ok(None); }
     amount = projectile_difficulty(amount, source, shared.difficulty.load(std::sync::atomic::Ordering::Relaxed), killer.is_some());
 
     // Броня и защитные чары — разные слои: Feather Falling действует
@@ -2111,10 +2153,14 @@ pub(super) async fn hit_by_breached(
     // Удар моба или стрелы: анимация «ранен» с направлением на виновника,
     // у стрелы ещё звук попадания (чёрный ящик, skeleton-arrow).
     if let Some(from) = player.net.hurt_from
-        && matches!(source, Source::MobAttack | Source::Sting | Source::Arrow | Source::Trident | Source::WindCharge | Source::SonicBoom)
+        && matches!(source, Source::MobAttack | Source::Sting | Source::Arrow | Source::Trident | Source::WindCharge | Source::SonicBoom | Source::Thorns)
     {
         // Угол приведён к [-180; 180): у оригинала игрок с рысканьем 180 видит 90, не −270.
-        let yaw = ((from.2 - player.z).atan2(from.0 - player.x).to_degrees() - f64::from(player.yaw) + 180.0).rem_euclid(360.0) - 180.0;
+        let toward = (from.2 - player.z).atan2(from.0 - player.x).to_degrees() - f64::from(player.yaw);
+        // Отражение шипов использует тот же диапазон [0;360), что PvP:
+        // enchant-mob-thorns-wear даёт yaw270, а не эквивалентное -90.
+        let yaw = if source == Source::Thorns { toward.rem_euclid(360.0) }
+            else { (toward + 180.0).rem_euclid(360.0) - 180.0 };
         let yaw = yaw as f32;
         let mut body = encode_varint(HURT_ANIMATION);
 
@@ -2241,6 +2287,18 @@ fn hurt_velocity(player: &mut PlayerState) -> (f64, f64, f64) {
     }
 
     (dx, vy, dz)
+}
+
+/// Второй толчок зачарованного оружия моба. Основной mob_hit уже применил
+/// трение такта, поэтому сначала возвращаем скорость до этой стадии.
+/// [проверить] Фаза движущейся/воздушной цели в enchant-mob-melee-effects.
+pub(super) fn enchanted_mob_knockback(player: &mut PlayerState, dir: (f64, f64), level: f32) {
+    let Some(velocity) = player.net.velocity else { return; };
+    let base = (velocity.0 / 0.546, velocity.1 / 0.98 + 0.08, velocity.2 / 0.546);
+    let after = combat::knockback_velocity(base, dir, f64::from(level) * 0.5,
+        player.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE), player.on_ground);
+    player.net.velocity = Some((after.0 * 0.546, (after.1 - 0.08) * 0.98, after.2 * 0.546));
+    player.net.velocity_due = false;
 }
 
 /// Отдача от удара: скорость игрока гасится вдвое и получает толчок
@@ -2439,6 +2497,7 @@ pub(super) async fn tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
 
     let now = tick_now;
 
+    super::movement_enchantments::update(shared, player);
     sync_attributes(stream, player, now).await?;
 
     if !player.net.armor_out.is_empty() {
@@ -2543,9 +2602,8 @@ async fn orbs_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Play
     // пакета подбора из журнала (чёрный ящик, cow-xp: подбор, потом Set
     // Experience).
     for points in std::mem::take(&mut player.net.xp_taken) {
-        let roll = world_random(shared, player.dimension);
-        let (slot, remaining) = crate::combat::mend(&mut player.inventory, points, roll);
-        if let Some(slot) = slot {
+        let (slots, remaining) = crate::combat::mend_all(&mut player.inventory, points, || world_random(shared, player.dimension));
+        for slot in slots {
             player.net.slot_changed(slot);
         }
         if remaining > 0 {
@@ -2675,9 +2733,12 @@ async fn entity_tick(stream: &mut Outgoing<'_>, shared: &Shared, player: &mut Pl
         hit(stream, shared, player, env.in_fire, Source::InFire, 0).await?;
     }
 
-    if env.campfire > 0.0 && !player.vit.dead && !player.vit.has_effect(survival::EffectKind::FireResistance)
-        && !player.inventory.slot(8).is_some_and(|s| s.extras().level("frost_walker") > 0) {
+    if env.campfire > 0.0 && !player.vit.dead && !protected_from_hot_blocks(player) {
         hit(stream, shared, player, env.campfire, Source::Campfire, 0).await?;
+    }
+
+    if !player.vit.dead && magma_contact(player, &env) {
+        hit(stream, shared, player, 1.0, Source::HotFloor, 0).await?;
     }
 
     if env.cactus && !player.vit.dead {
@@ -3725,10 +3786,10 @@ pub(super) fn bedrock_environment(shared: &Shared, player: &mut PlayerState) -> 
     if env.in_rain || env.in_water || env.powder_snow { player.vit.extinguish(); }
     if player.vit.fire_tick(env.in_lava) { hits.push((1.0, Source::OnFire)); }
     if env.in_fire > 0.0 { ignite(player, 160); hits.push((env.in_fire, Source::InFire)); }
-    if env.campfire > 0.0 && !player.vit.has_effect(survival::EffectKind::FireResistance)
-        && !player.inventory.slot(8).is_some_and(|s| s.extras().level("frost_walker") > 0) {
+    if env.campfire > 0.0 && !protected_from_hot_blocks(player) {
         hits.push((env.campfire, Source::Campfire));
     }
+    if magma_contact(player, &env) { hits.push((1.0, Source::HotFloor)); }
     if env.cactus { hits.push((1.0, Source::Cactus)); }
     if env.in_wall { hits.push((1.0, Source::InWall)); }
     if env.in_lava { ignite(player, survival::LAVA_FIRE_TICKS); player.vit.fall *= 0.5; hits.push((4.0, Source::Lava)); }
@@ -3760,5 +3821,191 @@ mod pearl_wall_tests {
         assert!(!look_around(&world, 3.562, 12.0, 39.836, false, false).in_wall);
         world.set_block_silently(3, 14, 40, world::AIR);
         assert!(!look_around(&world, 3.562, 13.358, 39.836, false, false).in_wall);
+    }
+}
+
+#[cfg(test)]
+mod enchanted_mob_arrow_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn piercing_mob_arrow_bypasses_a_raised_shield() {
+        for piercing in [false, true] {
+            let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/enchant-mob-piercing/ops.json")), crate::skins::Settings::default());
+            let mut player = PlayerState::new([75; 16], "Shield".into(), None, None, 0, 75, (0.5, 64.0, 0.5));
+            player.game_mode = GAME_MODE_SURVIVAL; player.on_ground = true; player.yaw = 0.0;
+            player.inventory.set(inventory::OFFHAND, Some(Stack::new(blocks::item_named("shield").unwrap(), 1)));
+            player.net.using = Some(Using { kind: UseKind::Shield, hand: 1, since: 0 });
+            shared.ticks.send_replace(10);
+            let mut out = Outgoing::capture();
+            mob_hit(&mut out, &shared, &mut player, 4.0, Source::Arrow, 42, "entity.minecraft.pillager", Some((0.0, -1.0)),
+                (0.5, 64.0, 2.5), crate::world::ProjectileEnchantments { ignores_shield: piercing, ..Default::default() }).await.unwrap();
+            assert_eq!(player.net.mob_hit_landed, piercing);
+            assert_eq!(player.vit.health < 20.0, piercing);
+            assert_eq!(player.inventory.slot(inventory::OFFHAND).unwrap().extras().damage == 0, piercing);
+        }
+    }
+
+    #[tokio::test]
+    async fn mob_thorns_use_the_measured_unattenuated_velocity() {
+        let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/enchant-mob-thorns/ops.json")), crate::skins::Settings::default());
+        let mut player = PlayerState::new([74; 16], "Thorns".into(), None, None, 0, 74, (0.5, 64.0, 0.5));
+        player.game_mode = GAME_MODE_SURVIVAL;
+        player.on_ground = true;
+        player.yaw = 180.0;
+        let mut out = Outgoing::capture();
+        mob_hit(&mut out, &shared, &mut player, 2.0, Source::Thorns, 42, "entity.minecraft.zombie", Some((0.0, -1.0)),
+            (0.5, 64.0, 2.5), Default::default()).await.unwrap();
+        let velocity = player.net.velocity.unwrap();
+        assert!(velocity.0.abs() < 1e-9);
+        // Стоящий игрок имеет скорость -0.08 * 0.98; толчок делит её
+        // пополам и добавляет 0.4. Запись blackbox округлена до 0.361.
+        let expected_y = (-0.08 * 0.98) / 2.0 + 0.4;
+        assert!((velocity.1 - expected_y).abs() < 1e-9);
+        assert_eq!((velocity.1 * 1000.0).round() / 1000.0, 0.361);
+        assert!((velocity.2 + 0.4).abs() < 1e-9);
+        let mut bytes = out.queued();
+        let mut animations = Vec::new();
+        while !bytes.is_empty() {
+            let packet = read_packet(&mut bytes).await.unwrap();
+            if packet.id == HURT_ANIMATION { animations.push(packet.body); }
+        }
+        let mut expected = encode_varint(HURT_ANIMATION);
+        expected.extend(encode_varint(player.entity_id));
+        push_f32(&mut expected, 270.0);
+        assert_eq!(animations, vec![expected], "отражение моба посылает Hurt Animation ровно один раз");
+    }
+
+    #[tokio::test]
+    async fn mob_arrow_flame_and_punch_require_an_accepted_hit() {
+        for blocked in [false, true] {
+            let mut velocities = Vec::new();
+            for level in [0, 2] {
+                let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+                    crate::ops::Ops::open(std::path::Path::new("tmp/enchant-mob-arrow/ops.json")), crate::skins::Settings::default());
+                let mut player = PlayerState::new([71; 16], "Лучник".into(), None, None, 0x7f, 71, (0.5, 64.0, 0.5));
+                player.game_mode = GAME_MODE_SURVIVAL;
+                player.on_ground = true;
+                player.yaw = 0.0;
+                if blocked {
+                    player.inventory.set(inventory::OFFHAND, Some(Stack::new(blocks::item_named("shield").unwrap(), 1)));
+                    player.net.using = Some(Using { kind: UseKind::Shield, hand: 1, since: 0 });
+                    shared.ticks.send_replace(10);
+                }
+                let mut out = Outgoing::capture();
+                let enchants = crate::world::ProjectileEnchantments { punch: level, fire_ticks: 100, ..Default::default() };
+                mob_hit(&mut out, &shared, &mut player, 4.0, Source::Arrow, 42, "entity.minecraft.skeleton", Some((0.0, -1.0)), (0.5, 64.0, 2.5), enchants).await.unwrap();
+                assert_eq!(player.net.mob_hit_landed, !blocked);
+                assert_eq!(player.vit.fire > 0, !blocked);
+                if blocked { assert!(player.net.velocity.is_none()); }
+                else { velocities.push(player.net.velocity.unwrap()); }
+            }
+            if !blocked {
+                let (plain, punch) = (velocities[0], velocities[1]);
+                assert!((punch.2 - plain.2 + 1.2 * 0.546).abs() < 1e-6);
+                assert!((punch.1 - plain.1 - 0.098).abs() < 1e-6);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod hot_block_enchantment_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn frost_immunity_applies_to_direct_damage_without_wear_or_hurt() {
+        let (shared, mut player) = scene();
+        boots(&mut player, 1);
+        let before = player.inventory.slot(8);
+        let mut stream = Outgoing::capture();
+        for source in [Source::HotFloor, Source::Campfire] {
+            assert!(hit(&mut stream, &shared, &mut player, 20.0, source, 0).await.unwrap().is_none());
+            assert_eq!(player.vit.health, 20.0);
+            assert_eq!(player.inventory.slot(8), before);
+            assert_eq!(player.vit.invulnerable, 0);
+        }
+        assert!(hit(&mut stream, &shared, &mut player, 2.0, Source::Lava, 0).await.unwrap().is_some());
+        assert!(player.vit.health < 20.0);
+    }
+
+    #[tokio::test]
+    async fn frost_command_damage_rejects_before_armor_and_shield_wear() {
+        for shield in [false, true] {
+            let (shared, mut player) = scene();
+            boots(&mut player, 1);
+            if shield {
+                player.inventory.set(inventory::OFFHAND, Some(Stack::new(blocks::item_named("shield").unwrap(), 1)));
+                player.net.using = Some(Using { kind: UseKind::Shield, hand: 1, since: 0 });
+                player.yaw = 0.0;
+                shared.ticks.send_replace(10);
+            }
+            let before = (player.inventory.slot(8), player.inventory.slot(inventory::OFFHAND));
+            let mut stream = Outgoing::capture();
+            let origin = crate::combat::DamageOrigin { at: shield.then_some((0.5, 64.0, 2.5)), ..Default::default() };
+            for source in [Source::HotFloor, Source::Campfire] {
+                command_hit(&mut stream, &shared, &mut player, 2.0, source, origin.clone()).await.unwrap();
+                assert_eq!(player.vit.health, 20.0);
+                assert_eq!(player.vit.invulnerable, 0);
+                assert_eq!((player.inventory.slot(8), player.inventory.slot(inventory::OFFHAND)), before);
+            }
+            // Тот же обработчик принимает лаву и расходует ровно1 прочности.
+            player.net.using = None;
+            command_hit(&mut stream, &shared, &mut player, 2.0, Source::Lava, Default::default()).await.unwrap();
+            assert!((player.vit.health - 18.176).abs() < 0.0001);
+            assert_eq!(player.inventory.slot(8).unwrap().extras().damage, 1);
+        }
+    }
+
+    fn scene() -> (Shared, PlayerState) {
+        let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/frost-hot-blocks/ops.json")), crate::skins::Settings::default());
+        let mut player = PlayerState::new([72; 16], "Ледоход".into(), None, None, 0x7f, 72, (0.5, 64.0, 0.5));
+        player.game_mode = GAME_MODE_SURVIVAL;
+        player.on_ground = true;
+        shared.world_in(player.dimension).lock().unwrap().set_block_silently(0, 63, 0, blocks::state_by_name("magma_block").unwrap());
+        (shared, player)
+    }
+
+    fn boots(player: &mut PlayerState, level: i32) {
+        let mut data = crate::stackdata::Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number("frost_walker").unwrap(), level);
+        player.inventory.set(8, Some(Stack::new(blocks::item_named("diamond_boots").unwrap(), 1).with_extras(data)));
+    }
+
+    #[test]
+    fn magma_requires_ground_contact_and_respects_frost_sneaking_and_fire_resistance() {
+        let (shared, mut player) = scene();
+        let has_magma = |p: &mut PlayerState| bedrock_environment(&shared, p).contains(&(1.0, Source::HotFloor));
+        assert!(has_magma(&mut player));
+        player.on_ground = false;
+        assert!(!has_magma(&mut player));
+        player.on_ground = true;
+        player.sneaking = true;
+        assert!(!has_magma(&mut player));
+        player.sneaking = false;
+        boots(&mut player, 1);
+        assert!(!has_magma(&mut player));
+        player.inventory.set(8, None);
+        assert!(has_magma(&mut player));
+        player.vit.give_effect(survival::EffectKind::FireResistance, 0, 100);
+        assert!(!has_magma(&mut player));
+    }
+
+    #[test]
+    fn frost_boots_protect_from_campfires_but_not_lava() {
+        let (shared, mut player) = scene();
+        {
+            let mut world = shared.world_in(player.dimension).lock().unwrap();
+            world.set_block_silently(0, 63, 0, blocks::state_by_name("stone").unwrap());
+            world.set_block_silently(0, 64, 0, blocks::state_from_text("campfire[lit=true]").unwrap());
+        }
+        assert!(bedrock_environment(&shared, &mut player).iter().any(|(_, source)| *source == Source::Campfire));
+        boots(&mut player, 2);
+        assert!(!bedrock_environment(&shared, &mut player).iter().any(|(_, source)| *source == Source::Campfire));
+        shared.world_in(player.dimension).lock().unwrap().set_block_silently(0, 64, 0, fluids::state_of(fluids::Kind::Lava, 0));
+        assert!(bedrock_environment(&shared, &mut player).contains(&(4.0, Source::Lava)));
     }
 }

@@ -25,6 +25,8 @@ mod pottery;
 mod portal;
 mod plants;
 mod farming;
+mod frost;
+mod soul;
 mod block_behaviour;
 mod vegetation;
 mod copper;

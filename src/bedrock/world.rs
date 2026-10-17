@@ -1082,10 +1082,11 @@ impl BedrockWorld {
                 }
                 crate::players::Order::Experience { set, amount, levels } => self.health.vit.command_xp(set, amount, levels),
                 crate::players::Order::XpTaken { points } => {
-                    let roll = self.shared.world_in(self.dimension).lock().expect("мир").random_unit();
-                    let (slot, remaining) = crate::combat::mend(&mut self.bag.inventory, points, roll);
+                    let (slots, remaining) = crate::combat::mend_all(&mut self.bag.inventory, points,
+                        || self.shared.world_in(self.dimension).lock().expect("мир").random_unit());
                     self.health.vit.add_xp(remaining);
-                    if let Some(slot) = slot { self.bag.touched(&[slot]); packets.extend(self.bag.slot_packet(slot)); }
+                    self.bag.touched(&slots);
+                    for slot in slots { packets.extend(self.bag.slot_packet(slot)); }
                 }
                 // Статистика и достижения Bedrock пока не ведутся [Bedrock: потом].
                 crate::players::Order::KilledPlayer | crate::players::Order::Progress(_) | crate::players::Order::Advancement { .. } => {}
@@ -2182,6 +2183,39 @@ impl BedrockWorld {
                 // Особый динамит помнит свой вид до слома: выпадет он же.
                 let pot = world.pot((x,y,z));
                 let custom = world.custom_tnt_at((x, y, z));
+                let tool = self.bag.inventory.held();
+                let original = world.get_block(x, y, z);
+                let creative = self.creative();
+                let tile_drops = self.shared.block_drops.load(std::sync::atomic::Ordering::Relaxed);
+                let silk = tool.is_some_and(|stack| stack.extras().level("silk_touch") > 0);
+                if crate::blocks::block_at_state(original) == Some("turtle_egg") {
+                    // Как у Java: ломается одно яйцо кладки; Silk сохраняет
+                    // ровно его, в creative исчезает вся кладка без добычи.
+                    if creative { world.set_block(x, y, z, crate::world::AIR); }
+                    else { crate::mob::water::eggs::break_one(&mut world, (x, y, z)); }
+                    crate::redstone::settle(&mut world);
+                    drop(world);
+                    if !creative && silk && tile_drops && let Some(item) = crate::blocks::item_named("turtle_egg") {
+                        self.shared.items_in(self.dimension).lock().expect("предметы").drop_item(
+                            self.shared.next_entity_id(), crate::inventory::Stack::new(item, 1),
+                            (x as f64 + 0.5, y as f64 + 0.5, z as f64 + 0.5), (0.0, 0.2, 0.0), crate::items::MINED_DELAY);
+                    }
+                    return;
+                }
+                if crate::mob::arthropod::releases(original, !creative, silk, tile_drops) {
+                    let mob = crate::mob::arthropod::released(self.shared.next_entity_id(), (x, y, z));
+                    self.shared.items_in(self.dimension).lock().expect("предметы").add_mob_late(mob.clone());
+                    world.note_mob_spawn(mob);
+                }
+                let hive = crate::hive::is_hive(original);
+                let hive_drop = if hive && silk { crate::hive::silk_stack(&world, (x, y, z)) } else { None };
+                if hive && !silk {
+                    let mut items = self.shared.items_in(self.dimension).lock().expect("предметы");
+                    crate::hive::disturb(&mut world, &mut items, (x, y, z), self.runtime_id as i32, &mut || self.shared.next_entity_id());
+                }
+                if tool.is_some_and(|stack| crate::blocks::item_name(stack.item) == Some("shears")) {
+                    crate::redstone::disarm_tripwire(&mut world, (x, y, z));
+                }
                 let Some(broken) = crate::placing::break_block(&mut world, x, y, z) else {
                     // Ломать было нечего — но клиент мог показать поломку.
                     let packets = self.restore(&world, &[action.position]);
@@ -2194,23 +2228,45 @@ impl BedrockWorld {
                     return;
                 };
 
+                // Добыча учитывает чары даже на последнем пункте прочности.
+                // Для выпадений ниже сохранена исходная стопка `tool`.
+                crate::frost::broken(&mut world, (x, y, z), broken, self.creative(), tool.is_some_and(|stack| stack.extras().level("silk_touch") > 0));
+                if !self.creative() && let Some(stack) = tool {
+                    let wear = crate::combat::wear(&stack, crate::mining::wear(broken, stack), false, || world.random_unit());
+                    if wear > 0 {
+                        let slot = self.bag.inventory.selected_slot();
+                        self.bag.inventory.set(slot, crate::combat::add_damage(stack, wear));
+                        self.bag.touched(&[slot]);
+                        connection.send(&self.bag.slot_packet(slot).into_iter().collect::<Vec<_>>());
+                    }
+                }
+
                 if let Some(sides) = pot {
                     if !self.creative() && self.shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
-                        for stack in crate::pottery::drops(sides,self.bag.inventory.held()) {
+                        for stack in crate::pottery::drops(sides,tool) {
                             self.shared.items_in(self.dimension).lock().expect("предметы").drop_item(self.shared.next_entity_id(),stack,(x as f64+0.5,y as f64+0.25,z as f64+0.5),(0.0,0.2,0.0),crate::items::MINED_DELAY);
                         }
                     }
                     return;
                 }
-                if !self.creative() {
-                    let tool = self.bag.inventory.held().map(|stack| stack.item);
-                    let luck = world.random_unit();
+                if !self.creative() && self.shared.block_drops.load(std::sync::atomic::Ordering::Relaxed) {
+                    let xp = crate::mining::experience(broken, tool, world.random_unit());
+                    let fortune = tool.map_or(0, |stack| stack.extras().level("fortune"));
+                    let drops = if hive {
+                        hive_drop.or_else(|| (crate::blocks::block_at_state(broken) == Some("beehive"))
+                            .then(|| crate::blocks::item_named("beehive").map(|item| crate::inventory::Stack::new(item, 1))).flatten())
+                            .into_iter().collect()
+                    } else {
+                        crate::farming::harvest(&mut world, broken, fortune)
+                            .unwrap_or_else(|| crate::mining::block_drops(broken, tool, || world.random_unit()))
+                    };
                     drop(world);
-
-                    let silk = self.bag.inventory.held().is_some_and(|stack| stack.extras().level("silk_touch") > 0);
-                    let drops = crate::redstone::sculk_family::mined_drop(broken, silk)
-                        .unwrap_or_else(|| crate::blocks::drops_by_luck(broken, tool, luck));
-                    if let Some(stack) = drops.map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
+                    if xp > 0 {
+                        let mut rng = crate::mob::Rng::new(u64::from(self.shared.next_entity_id() as u32) ^ (*self.shared.ticks.borrow() << 20));
+                        self.shared.items_in(self.dimension).lock().expect("предметы")
+                            .drop_experience(xp, (x as f64 + 0.5, y as f64 + 0.5, z as f64 + 0.5), &mut || self.shared.next_entity_id(), &mut rng);
+                    }
+                    for stack in drops.into_iter().map(|stack| crate::custom_tnt::tag_drop(stack, custom)) {
                         self.shared.items_in(self.dimension).lock().expect("предметы захвачены другим потоком").drop_item(
                             self.shared.next_entity_id(),
                             stack,
@@ -4099,8 +4155,8 @@ impl BedrockWorld {
                 }
                 // Удар моба или стрелы: урон — здоровью, толчок — клиенту
                 // (как у Java: 0,218 вдоль удара и 0,275 вверх с земли).
-                WorldEvent::MobHurt { entity_id, amount, source, attacker, killer, push, at } if entity_id == self.runtime_id as i32 => {
-                    let done = self.run(crate::network::play::Act::MobHit { amount, source, attacker, killer, push, at });
+                WorldEvent::MobHurt { entity_id, amount, source, attacker, killer, push, at, enchantments } if entity_id == self.runtime_id as i32 => {
+                    let done = self.run(crate::network::play::Act::MobHit { amount, source, attacker, killer, push, at, enchantments });
                     self.settle(done, &mut packets);
                 }
                 // Удар другого игрока (или стрела игрока): щит, броня, отдача —
@@ -4111,7 +4167,11 @@ impl BedrockWorld {
                     self.settle(done, &mut packets);
                 }
                 WorldEvent::Particle { kind, block, at, skip, .. } if skip != self.runtime_id as i32 && self.within_earshot(at.0, at.2) => {
-                    packets.extend(super::effects::combat_particles(kind, block, at));
+                    if kind == 41 {
+                        packets.push(super::effects::soul_particle(bedrock_dimension(self.dimension) as u8, at));
+                    } else {
+                        packets.extend(super::effects::combat_particles(kind, block, at));
+                    }
                 }
                 WorldEvent::EntitySound { entity_id, name, volume: _, pitch } => {
                     let at = if entity_id == self.runtime_id as i32 { Some((self.position.0, self.position.1 - 1.62, self.position.2)) }

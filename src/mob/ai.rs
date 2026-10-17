@@ -171,6 +171,12 @@ pub struct Brain {
     stuck: i32,
     last: (f64, f64),
 
+    /// Лучшее расстояние до текущего узла: круги вокруг него — не прогресс.
+    nearest: f64,
+    no_progress: i32,
+    /// Не забывать отвергнутый узел после path.clear и очередного go.
+    blocked: Option<BlockedWaypoint>,
+
     /// Тактов до следующей ненужной проверки пути к приманке.
     pub repath: i32,
 
@@ -179,6 +185,14 @@ pub struct Brain {
 
     /// Ведёт ли сейчас цель (для отладки и проверок): что делает моб.
     pub doing: Doing,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct BlockedWaypoint {
+    cell: Cell,
+    nearest: f64,
+    retry_at: u64,
+    failures: u32,
 }
 
 /// Чем занят моб — для проверок.
@@ -215,6 +229,9 @@ impl Brain {
             breed: 0,
             stuck: 0,
             last: (0.0, 0.0),
+            nearest: f64::INFINITY,
+            no_progress: 0,
+            blocked: None,
             repath: 0,
             ambient: 0,
             doing: Doing::Idle,
@@ -260,9 +277,20 @@ impl Brain {
 
     /// Дать путь напрямую (проверки и приманка).
     pub fn go(&mut self, path: Vec<Cell>, speed: f64) {
+        // Преследование обновляет путь каждые 10 тактов. Новый маршрут
+        // к тому же ближайшему узлу не означает, что моб продвинулся:
+        // иначе пересчёт бесконечно продлевает кружение перед препятствием.
+        let same_waypoint = !path.is_empty() && self.path.first() == path.first();
+        if let Some(first) = path.first()
+            && self.blocked.is_some_and(|blocked| blocked.cell != *first)
+        { self.blocked = None; }
         self.path = path;
         self.speed = speed;
-        self.stuck = 0;
+        if !same_waypoint {
+            self.stuck = 0;
+            self.nearest = f64::INFINITY;
+            self.no_progress = 0;
+        }
     }
 }
 
@@ -625,12 +653,30 @@ pub(super) fn walk(mob: &mut Mob, mut plan: Plan) -> Plan {
     let (tx, tz) = (f64::from(nx) + 0.5, f64::from(nz) + 0.5);
     let (dx, dz) = (tx - mob.x, tz - mob.z);
     let flat = dx * dx + dz * dz;
+    let distance = (flat + (mob.y - f64::from(ny)).powi(2)).sqrt();
+
+    if let Some(blocked) = mob.brain.blocked.filter(|blocked| blocked.cell == (nx, ny, nz)) {
+        if distance + 0.25 < blocked.nearest {
+            // Толчок вперёд/подъём действительно помог: можно идти сразу.
+            mob.brain.blocked = None;
+        } else if mob.ticks < blocked.retry_at {
+            // Проверять до поворота: иначе даже отказ от шага вращает моба
+            // каждый раз, когда цель заново отдаёт тот же маршрут.
+            mob.brain.path.clear();
+            plan.speed = 0.0;
+            plan.jump = false;
+            return plan;
+        }
+    }
 
     // Дошли до клетки: по горизонтали в пределах ширины, по вертикали
     // не выше ступеньки (вики, Pathfinding: узел достигнут, когда моб в нём).
     if flat < 0.25 * 0.25 * 4.0 && (mob.y - f64::from(ny)).abs() < 1.0 {
         mob.brain.path.remove(0);
+        mob.brain.blocked = None;
         mob.brain.stuck = 0;
+        mob.brain.nearest = f64::INFINITY;
+        mob.brain.no_progress = 0;
 
         if mob.brain.path.is_empty() {
             return plan;
@@ -665,10 +711,33 @@ pub(super) fn walk(mob: &mut Mob, mut plan: Plan) -> Plan {
 
     mob.brain.last = (mob.x, mob.z);
 
-    if mob.brain.stuck > 40 {
+    // Сдвиг сам по себе не доказывает продвижение: у недостижимого узла
+    // моб мог бесконечно вращаться и возвращаться сюда после толчка.
+    // Учитываем также высоту, чтобы подъём по стене/ступени был прогрессом.
+    // Порог времени оставлен как у прежней защиты; точный vanilla timeout
+    // [проверить]. Регрессии: walking_does_not_mistake_a_circle_for_progress.
+    if distance + 0.01 < mob.brain.nearest {
+        mob.brain.nearest = distance;
+        mob.brain.no_progress = 0;
+    } else {
+        mob.brain.no_progress += 1;
+    }
+
+    if mob.brain.stuck > 40 || mob.brain.no_progress > 40 {
+        let failures = mob.brain.blocked.filter(|blocked| blocked.cell == (nx, ny, nz))
+            .map_or(1, |blocked| blocked.failures.saturating_add(1));
+        // Защитная пауза 80/160/320 тактов не даёт цели немедленно вернуть
+        // отвергнутый путь. Редкий retry нужен после удаления препятствия.
+        // Это ограничение нашего поиска, точное vanilla-время [проверить].
+        let delay = 40u64 << failures.min(3);
+        mob.brain.blocked = Some(BlockedWaypoint { cell: (nx, ny, nz), nearest: mob.brain.nearest,
+            retry_at: mob.ticks.saturating_add(delay), failures });
         mob.brain.path.clear();
         mob.brain.stuck = 0;
+        mob.brain.nearest = f64::INFINITY;
+        mob.brain.no_progress = 0;
         plan.speed = 0.0;
+        plan.jump = false;
     }
 
     plan

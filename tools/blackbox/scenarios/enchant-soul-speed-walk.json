@@ -1,0 +1,68 @@
+{
+  "name": "enchant-soul-speed-walk",
+  "about": "[проверить] Soul Speed I: надевание на почве душ, переход на камень, прыжок и возврат; бонус атрибутов.",
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(3.5,1,5.5)",
+    "attribute $(bot) minecraft:scale base set 1",
+    "attribute $(bot) minecraft:safe_fall_distance base set 3",
+    "attribute $(bot) minecraft:step_height base set 0.6",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(2,-1,2) $(7,-1,4) stone",
+    "fill $(2,-1,2) $(3,-1,4) soul_soil",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!look -90 0",
+    "!wait 25"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={soul_speed:1},unbreakable={}]"
+    },
+    {
+      "after": 15,
+      "control": [
+        "forward",
+        true
+      ]
+    },
+    {
+      "after": 35,
+      "control": [
+        "forward",
+        false
+      ]
+    },
+    {
+      "after": 45,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 60,
+      "control": [
+        "jump",
+        true
+      ]
+    },
+    {
+      "after": 75,
+      "control": [
+        "jump",
+        false
+      ]
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(2,-1,2) $(4,-1,4) stone",
+    "!startfly"
+  ],
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true
+}

@@ -360,7 +360,7 @@ pub fn fox_damage(mob: &Mob, target: Option<Kind>) -> f32 {
     let mut attrs=crate::attributes::Attributes::player();
     attrs.set_base(crate::attributes::ATTACK_DAMAGE,2.0);
     let mut bonus=0.0;
-    if let Some(stack)=mob.wild.mouth {
+    if let Some(stack)=super::equipment::slot(mob,0) {
         for (id,modifier) in crate::combat::granted(&stack,1) {attrs.set_modifier(id,modifier);}
         let (undead,arthropod)=target.map_or((false,false),|k|crate::combat::mob_traits(k.name()));
         bonus=crate::combat::enchant_bonus(&stack.extras(),undead,arthropod);

@@ -13,10 +13,26 @@ pub(super) fn levels(mob: &Mob) -> [i32; 4] {
 }
 
 pub(super) fn modifiers(mob: &Mob, attribute: i32) -> Vec<Modifier> {
-    KINDS.iter().filter_map(|kind| {
+    let mut result: Vec<_> = KINDS.iter().filter_map(|kind| {
         let (id, name, amount, operation) = kind.modifier()?;
         let level = mob.vitals.effect_level(*kind);
         (id == attribute && level > 0).then(|| Modifier::new(name, f64::from(amount as f32) * f64::from(level), operation))
+    }).collect();
+    if mob.foot_enchants.soul > 0 && matches!(attribute, attributes::MOVEMENT_SPEED | attributes::MOVEMENT_EFFICIENCY) {
+        let amount = if attribute == attributes::MOVEMENT_SPEED { crate::soul::bonus(mob.foot_enchants.soul) } else { 1.0 };
+        result.push(Modifier::new(crate::soul::ID, amount, attributes::Operation::AddValue));
+    }
+    result
+}
+
+pub(super) fn soul_changed(mob: &Mob, before: i32) -> Vec<Attribute> {
+    if before == mob.foot_enchants.soul { return Vec::new(); }
+    [attributes::MOVEMENT_SPEED, attributes::MOVEMENT_EFFICIENCY].into_iter().map(|id| {
+        let mut modifiers = modifiers(mob, id);
+        if id == attributes::MOVEMENT_SPEED && let Some((name, amount, op)) = speed_modifier(mob) {
+            modifiers.insert(0, Modifier::new(name, amount, attributes::Operation::from_number(i32::from(op)).unwrap()));
+        }
+        Attribute { id, base: if id == attributes::MOVEMENT_SPEED { speed_base(mob) } else { 0.0 }, modifiers }
     }).collect()
 }
 
@@ -77,6 +93,22 @@ pub(super) fn push(body: &mut Vec<u8>, mob: &Mob, attribute: i32, native: Option
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn soul_modifier_combines_with_potions_and_clears_both_attributes() {
+        let mut mob = Mob::new(2, Kind::Zombie, (0.0, 0.0, 0.0));
+        mob.foot_enchants.soul = 2;
+        mob.vitals.give_effect_shown(crate::survival::Effect { kind: EffectKind::Speed, amplifier: 0, ticks_left: 100, ambient: false, visible: true, show_icon: true });
+        let attrs = soul_changed(&mob, 0);
+        assert_eq!(attrs.len(), 2);
+        assert!((attrs[0].value() - (speed_base(&mob) + crate::soul::bonus(2)) * 1.2).abs() < 1e-7);
+        assert_eq!(attrs[1].value(), 1.0);
+        assert!(soul_changed(&mob, 2).is_empty());
+        mob.foot_enchants.soul = 0;
+        let attrs = soul_changed(&mob, 2);
+        assert_eq!(attrs[0].modifiers.len(), 1);
+        assert_eq!(attrs[1].value(), 0.0);
+    }
+
     #[test]
     fn potion_attributes_combine_upgrade_and_clear_without_dirtying_every_tick() {
         let mut mob = Mob::new(1, Kind::Cow, (0.0, 0.0, 0.0));

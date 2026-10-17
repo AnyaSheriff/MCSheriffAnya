@@ -1,0 +1,68 @@
+{
+  "name": "enchant-lunge-hit-probe",
+  "about": "[проверить] Разделение jab status7 и обычного Attack entityId: копьё с Lunge I перед двумя коровами. Проверяем, поражает ли status7 цели самостоятельно и запускает ли отдельный Attack эффект Lunge.",
+  "blocks": [],
+  "setup": [
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "effect give $(bot) instant_health 1 10 true",
+    "effect give $(bot) saturation 1 10 true",
+    "!hotbar 0",
+    "fill $(-3,0,-7) $(3,5,5) air",
+    "fill $(-3,-1,-7) $(3,-1,5) stone",
+    "tp $(bot) $(0.5,0,0.5) 180 0",
+    "!stopfly",
+    "!look 0 0",
+    "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:1}]",
+    "!wait 25"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon cow $(0.5,0,-2.5) {NoAI:1b,Silent:1b,Tags:[\"lungeprobe\"]}"
+    },
+    {
+      "after": 5,
+      "cmd": "summon cow $(0.5,0,-4.5) {NoAI:1b,Silent:1b,Tags:[\"lungeprobe\"]}"
+    },
+    {
+      "after": 20,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 50,
+      "attack": true,
+      "which": 0
+    },
+    {
+      "after": 80,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "kill @e[tag=lungeprobe,distance=..12]",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "effect clear $(bot)",
+    "!startfly",
+    "kill @e[type=item,distance=..12]",
+    "kill @e[type=experience_orb,distance=..12]"
+  ],
+  "item_components": true,
+  "inventory": true,
+  "track_self": true,
+  "track_mobs": true
+}

@@ -1,0 +1,75 @@
+{
+  "name": "enchant-frost-melt",
+  "about": "[проверить] Frost Walker II: шаг по берегу замораживает только источники с воздухом сверху; днём следим за возрастом льда и сроками таяния без случайных тактов. Для случайных задержек нужны две записи vanilla.",
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(3.5,1,5.5)",
+    "attribute $(bot) minecraft:scale base set 1",
+    "attribute $(bot) minecraft:safe_fall_distance base set 3",
+    "attribute $(bot) minecraft:step_height base set 0.6",
+    "gamerule random_tick_speed 0",
+    "gamerule advance_time false",
+    "time set noon",
+    "weather clear",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(0,-2,0) $(8,-2,8) stone",
+    "fill $(0,-1,0) $(8,3,8) air",
+    "fill $(0,-1,0) $(8,-1,8) stone",
+    "fill $(1,-1,1) $(7,-1,7) water",
+    "setblock $(3,-1,5) stone",
+    "setblock $(3,-1,4) stone",
+    "setblock $(5,0,5) glass",
+    "setblock $(6,-1,5) water[level=1]",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!look 180 0",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={frost_walker:2}]"
+    },
+    {
+      "after": 6,
+      "control": [
+        "forward",
+        true
+      ]
+    },
+    {
+      "after": 16,
+      "control": [
+        "forward",
+        false
+      ]
+    },
+    {
+      "after": 20,
+      "cmd": "tp $(bot) $(0.5,0,0.5)"
+    },
+    {
+      "after": 22,
+      "cmd": "item replace entity $(bot) armor.feet with air"
+    }
+  ],
+  "record_ticks": 420,
+  "cleanup": [
+    "item replace entity $(bot) armor.feet with air",
+    "gamemode creative $(bot)",
+    "gamerule random_tick_speed 3",
+    "gamerule advance_time true",
+    "fill $(0,-1,0) $(8,3,8) air",
+    "fill $(0,-1,0) $(8,-1,8) grass_block",
+    "time set day",
+    "!startfly"
+  ],
+  "origin": [
+    128,
+    70,
+    128
+  ]
+}

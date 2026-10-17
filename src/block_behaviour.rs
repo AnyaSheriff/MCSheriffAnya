@@ -255,6 +255,7 @@ pub fn ticked(world: &mut World, p: Pos) -> bool {
     let here = at(world, p);
     match name(here) {
         "pointed_dripstone" => crate::dripstone::ticked(world, p),
+        "frosted_ice" => crate::frost::ticked(world, p),
         "cauldron" | "water_cauldron" => crate::dripstone::fill_cauldron(world, p),
         "scaffolding" => crate::scaffolding::ticked(world, p),
         "composter" => crate::compost::ticked(world, p),

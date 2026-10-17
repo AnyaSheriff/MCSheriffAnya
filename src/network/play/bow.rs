@@ -30,6 +30,8 @@ pub(super) struct ShownArrow {
     pitch: u8,
     /// Флаги (свойство 8), которые клиент знает.
     flags: u8,
+    /// Клиент видел Piercing; при посадке нужно явно прислать ноль.
+    piercing: bool,
     /// Возраст последнего сообщённого перелома полёта: подключение, отставшее
     /// на такт-другой, всё равно его пошлёт.
     resynced: u32,
@@ -589,7 +591,7 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
                 write_body(stream, body).await?;
             }
 
-            let shown = ShownArrow { in_ground: false, removed: retired_ids.contains(&arrow.entity_id), first: arrow.age == 0, grid: grid_of((sx, sy, sz)), yaw: cart_angle(yaw), pitch: cart_angle(pitch), flags: arrow.flags(), resynced: arrow.resync.map_or(0, |(due, ..)| due), settled: false };
+            let shown = ShownArrow { in_ground: false, removed: retired_ids.contains(&arrow.entity_id), first: arrow.age == 0, grid: grid_of((sx, sy, sz)), yaw: cart_angle(yaw), pitch: cart_angle(pitch), flags: arrow.flags(), piercing: arrow.pierce_left > 0, resynced: arrow.resync.map_or(0, |(due, ..)| due), settled: false };
 
             // Нулевой сдвиг с поворотом: сразу за появлением, если стрела уже
             // ходила (чёрный ящик, arrow-pickup: «arrow сдвиг 0,0,0»), иначе —
@@ -693,10 +695,16 @@ pub(super) async fn send_arrow_ticks(stream: &mut Outgoing<'_>, shared: &Shared,
                 send_move_to(stream, arrow, &mut shown, (arrow.x, arrow.y, arrow.z), (arrow.vx, arrow.vy, arrow.vz), arrow.facing()).await?;
             }
 
-            if full || !arrow.in_ground {
+            if full || !arrow.in_ground || shown.piercing {
                 let mut data = encode_varint(SET_ENTITY_DATA);
 
                 data.extend_from_slice(&encode_varint(arrow.entity_id));
+                if arrow.in_ground && shown.piercing {
+                    data.push(9);
+                    data.extend_from_slice(&encode_varint(PROPERTY_BYTE));
+                    data.push(0);
+                    shown.piercing = false;
+                }
                 data.push(ARROW_IN_GROUND);
                 data.extend_from_slice(&encode_varint(PROPERTY_BOOLEAN));
                 data.push(u8::from(arrow.in_ground));

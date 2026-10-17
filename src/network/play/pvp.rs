@@ -82,8 +82,8 @@ pub(super) fn retaliate(shared: &Shared, player: &mut PlayerState, source: Sourc
             let mut items=shared.items_in(player.dimension).lock().expect("мобы");
             if let Some(mob)=items.mobs_mut().iter_mut().find(|m|m.entity_id==attacker) {
                 let delta=(mob.x-player.x,mob.z-player.z);let length=delta.0.hypot(delta.1).max(1.0e-9);
-                mob.hurt(damage,Source::Thorns,Some(crate::mob::Push {dir:(delta.0/length,delta.1/length),strength:0.4,cause:player.entity_id}));
-                mob.credit_to(player.uuid);
+                let looting = player.inventory.held().map_or(0, |held| held.extras().level("looting"));
+                mob.hurt_credited(damage,Source::Thorns,Some(crate::mob::Push {dir:(delta.0/length,delta.1/length),strength:0.4,cause:player.entity_id}),player.uuid,looting);
             }
         }
         wear_slot(shared,player,slot,stack,2,combat::ARMOR_SLOTS.iter().any(|(armor,_)|*armor==slot));
@@ -503,10 +503,9 @@ pub(super) async fn take_strike(stream: &mut Outgoing<'_>, shared: &Shared, play
                     // «Отбрасывание» лука не гасит скорость, а прибавляет:
                     // 0,6 на уровень вдоль полёта и 0,1 вверх (чёрный ящик,
                     // pvp-bow-punch: (0,874; 0,373) при отбрасывании II).
-                    let push = f64::from(strike.extra_knockback) * 0.5 * (1.0 - resistance).max(0.0);
-
+                    let push = combat::punch_impulse(strike.extra_knockback, look, resistance);
                     if let Some(velocity) = player.net.velocity.as_mut() {
-                        *velocity = (velocity.0 + look.0 * push, velocity.1 + 0.1, velocity.2 + look.1 * push);
+                        *velocity = (velocity.0 + push.0, velocity.1 + push.1, velocity.2 + push.2);
                     }
                 } else {
                     vitals::knock_back(player, look, f64::from(strike.extra_knockback) * 0.5, resistance);
@@ -678,6 +677,7 @@ pub(super) fn sweep_players(shared: &Shared, world: &mut World, player: &PlayerS
 pub(super) fn sweep_mobs(items: &mut crate::items::Items, player: &mut PlayerState, main: &MainTarget, damage: f32) {
     let attacker = (player.x, player.y, player.z);
     let look = crate::mob::look_direction(player.yaw);
+    let looting = player.inventory.held().map_or(0, |held| held.extras().level("looting"));
 
     for mob in items.mobs_mut() {
         if mob.entity_id == main.entity_id || mob.is_dead() || mob.kind.object() || !in_sweep_box(main, (mob.x, mob.y, mob.z), mob.size(), attacker) {
@@ -691,12 +691,9 @@ pub(super) fn sweep_mobs(items: &mut crate::items::Items, player: &mut PlayerSta
         let dir = if length > 1.0e-6 { (away.0 / length, away.1 / length) } else { look };
         let push = crate::mob::Push { dir, strength: crate::mob::BASE_KNOCKBACK, cause: player.entity_id };
 
-        mob.credit_player();
-
-        if let Some(hit) = mob.hurt(damage, Source::PlayerAttack, Some(push)) {
+        if let Some(hit) = mob.hurt_credited(damage, Source::PlayerAttack, Some(push), player.uuid, looting) {
             mob.knockback(look.0, look.1, crate::mob::BASE_KNOCKBACK);
             player.progress.damage_dealt(hit);
-            mob.credit_to(player.uuid);
         }
     }
 }
@@ -805,6 +802,64 @@ fn thorns_hits(shared: &Shared, player: &mut PlayerState, view: &crate::players:
 #[cfg(test)]
 mod itemaudit4_thorns_tests {
     use super::*;
+    #[test]
+    fn lethal_thorns_credits_player_and_looting_before_drops() {
+        let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/enchant-thorns-credit/ops.json")), crate::skins::Settings::default());
+        let mut player = PlayerState::new([8; 16], "ThornsAudit".into(), None, None, 0x7f, 8, (0.0, 64.0, 0.0));
+        let mut thorns = crate::stackdata::Data::default();
+        thorns.set_enchant(crate::stackdata::enchantment_number("thorns").unwrap(), 11);
+        player.inventory.set(6, Some(Stack::new(blocks::item_named("diamond_chestplate").unwrap(), 1).with_extras(thorns)));
+        let mut looting = crate::stackdata::Data::default();
+        looting.set_enchant(crate::stackdata::enchantment_number("looting").unwrap(), 3);
+        player.inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(blocks::item_named("diamond_sword").unwrap(), 1).with_extras(looting)));
+        let mut mob = crate::mob::Mob::new(99, crate::mob::Kind::Breeze, (0.0, 64.0, 2.0));
+        mob.vitals.health = 1.0;
+        shared.items_in(player.dimension).lock().unwrap().add_mob(mob);
+        retaliate(&shared, &mut player, Source::MobAttack, 99);
+        let items = shared.items_in(player.dimension).lock().unwrap();
+        let dead = &items.mobs()[0];
+        assert!(dead.is_dead());
+        assert_eq!(dead.kill_credit, Some(player.uuid));
+        assert!(dead.pending_xp > 0);
+        assert!(dead.events.iter().any(|event| matches!(event, crate::mob::Event::Loot(stacks)
+            if stacks.iter().any(|stack| blocks::item_name(stack.item) == Some("breeze_rod") && stack.count >= 4))));
+    }
+
+    #[test]
+    fn sweeping_kills_use_main_hand_looting_for_every_neighbour() {
+        for level in [0, 3] {
+            let mut player = PlayerState::new([8; 16], "SweepAudit".into(), None, None, 0x7f, 8, (0.0, 64.0, 0.0));
+            let mut data = crate::stackdata::Data::default();
+            data.set_enchant(crate::stackdata::enchantment_number("looting").unwrap(), level);
+            player.inventory.set(inventory::FIRST_HOTBAR, Some(Stack::new(blocks::item_named("diamond_sword").unwrap(), 1).with_extras(data)));
+            let main = MainTarget { entity_id: 100, feet: (0.0, 64.0, 2.0), size: (0.6, 1.8) };
+            let mut items = crate::items::Items::new();
+            for id in 10..74 {
+                let mut cow = crate::mob::Mob::new(id, crate::mob::Kind::Cow, (0.5, 64.0, 2.0));
+                cow.vitals.health = 1.0;
+                items.add_mob(cow);
+            }
+            sweep_mobs(&mut items, &mut player, &main, 2.0);
+            let mut increased = false;
+            for dead in items.mobs() {
+                assert!(dead.is_dead());
+                assert_eq!(dead.kill_credit, Some(player.uuid));
+                assert_eq!(dead.looting, level);
+                assert!(dead.pending_xp > 0);
+                for event in &dead.events {
+                    if let crate::mob::Event::Loot(stacks) = event {
+                        for stack in stacks.iter().filter(|stack| blocks::item_name(stack.item) == Some("beef")) {
+                            assert!((1..=3 + level).contains(&stack.count));
+                            increased |= stack.count > 3;
+                        }
+                    }
+                }
+            }
+            assert_eq!(increased, level > 0);
+        }
+    }
+
     #[test]
     fn thorns_retaliates_to_ranged_and_mob_attacks_without_recursion() {
         for source in [Source::Arrow,Source::Trident,Source::MobAttack] {

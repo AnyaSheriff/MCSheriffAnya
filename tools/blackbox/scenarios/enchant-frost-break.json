@@ -1,0 +1,304 @@
+{
+  "name": "enchant-frost-break",
+  "about": "Подмороженный и обычный лёд: ломание обычной/шёлковой киркой, creative и отсутствие подпорки. Ночь и random_tick_speed0 исключают солнечное таяние.",
+  "exclusive": true,
+  "origin": [
+    128,
+    70,
+    128
+  ],
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(3.5,1,5.5)",
+    "attribute $(bot) minecraft:scale base set 1",
+    "attribute $(bot) minecraft:safe_fall_distance base set 3",
+    "attribute $(bot) minecraft:step_height base set 0.6",
+    "gamerule random_tick_speed 0",
+    "gamerule advance_time false",
+    "time set midnight",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(1,-2,1) $(6,0,6) stone",
+    "fill $(1,1,1) $(6,4,6) air",
+    "tp $(bot) $(3.5,1,5.5)",
+    "!stopfly",
+    "!hotbar 0",
+    "!wait 15"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "gamemode survival $(bot)"
+    },
+    {
+      "after": 1,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 2,
+      "cmd": "setblock $(3,-1,3) stone"
+    },
+    {
+      "after": 3,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe"
+    },
+    {
+      "after": 4,
+      "cmd": "setblock $(3,0,3) frosted_ice"
+    },
+    {
+      "after": 8,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 18,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 35,
+      "cmd": "gamemode survival $(bot)"
+    },
+    {
+      "after": 36,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 37,
+      "cmd": "setblock $(3,-1,3) stone"
+    },
+    {
+      "after": 38,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe[enchantments={silk_touch:1}]"
+    },
+    {
+      "after": 39,
+      "cmd": "setblock $(3,0,3) frosted_ice"
+    },
+    {
+      "after": 43,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 53,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 70,
+      "cmd": "gamemode creative $(bot)"
+    },
+    {
+      "after": 71,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 72,
+      "cmd": "setblock $(3,-1,3) stone"
+    },
+    {
+      "after": 73,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe"
+    },
+    {
+      "after": 74,
+      "cmd": "setblock $(3,0,3) frosted_ice"
+    },
+    {
+      "after": 78,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 88,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 105,
+      "cmd": "gamemode survival $(bot)"
+    },
+    {
+      "after": 106,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 107,
+      "cmd": "setblock $(3,-1,3) air"
+    },
+    {
+      "after": 108,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe"
+    },
+    {
+      "after": 109,
+      "cmd": "setblock $(3,0,3) frosted_ice"
+    },
+    {
+      "after": 113,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 123,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 140,
+      "cmd": "gamemode survival $(bot)"
+    },
+    {
+      "after": 141,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 142,
+      "cmd": "setblock $(3,-1,3) stone"
+    },
+    {
+      "after": 143,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe"
+    },
+    {
+      "after": 144,
+      "cmd": "setblock $(3,0,3) ice"
+    },
+    {
+      "after": 148,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 158,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 175,
+      "cmd": "gamemode survival $(bot)"
+    },
+    {
+      "after": 176,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 177,
+      "cmd": "setblock $(3,-1,3) stone"
+    },
+    {
+      "after": 178,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe[enchantments={silk_touch:1}]"
+    },
+    {
+      "after": 179,
+      "cmd": "setblock $(3,0,3) ice"
+    },
+    {
+      "after": 183,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 193,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 210,
+      "cmd": "gamemode survival $(bot)"
+    },
+    {
+      "after": 211,
+      "cmd": "setblock $(3,0,3) stone"
+    },
+    {
+      "after": 212,
+      "cmd": "setblock $(3,-1,3) air"
+    },
+    {
+      "after": 213,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe"
+    },
+    {
+      "after": 214,
+      "cmd": "setblock $(3,0,3) ice"
+    },
+    {
+      "after": 218,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 228,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    }
+  ],
+  "record_ticks": 245,
+  "cleanup": [
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "kill @e[type=item,distance=..48]",
+    "gamerule random_tick_speed 3",
+    "gamerule advance_time true",
+    "time set day",
+    "fill $(1,0,1) $(6,4,6) air",
+    "!startfly"
+  ]
+}

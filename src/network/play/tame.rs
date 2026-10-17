@@ -209,3 +209,29 @@ pub(super) fn use_fence(world: &mut World, shared: &Shared, player: &PlayerState
 
     Some(Reaction::accepted(sequence))
 }
+
+#[cfg(test)]
+mod equipment_tests {
+    use super::*;
+
+    #[test]
+    fn allay_give_and_take_still_update_hand_with_command_equipped_helmet() {
+        let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(Path::new("tmp/allay-gear/ops.json")), crate::skins::Settings::default());
+        let mut world = World::in_memory();
+        let mut items = items::Items::new();
+        let mut mob = crate::mob::Mob::new(47, Kind::Allay, (0.0, 64.0, 0.0));
+        crate::mob::equipment::set_slot(&mut mob, 5, Some(Stack::new(blocks::item_named("iron_helmet").unwrap(), 1)));
+        items.add_mob(mob);
+        let mut player = PlayerState::new([74; 16], "AllayGear".into(), None, None, 0, 74, (0.0, 64.0, 0.0));
+        player.game_mode = GAME_MODE_SURVIVAL;
+        let gift = Stack::new(blocks::item_named("diamond").unwrap(), 1).with_extras(crate::stackdata::Data { name: Some("gift".into()), ..Default::default() });
+        player.inventory.set(inventory::FIRST_HOTBAR, Some(gift));
+        assert!(use_on_mob(&mut items, 0, &mut player, &shared, &mut world, &mut Reaction::default()));
+        assert_eq!(crate::mob::equipment::slot(&items.mobs()[0], 0), Some(gift));
+        assert!(player.inventory.held().is_none());
+        assert!(use_on_mob(&mut items, 0, &mut player, &shared, &mut world, &mut Reaction::default()));
+        assert_eq!(crate::mob::equipment::slot(&items.mobs()[0], 0), None);
+        assert_eq!(player.inventory.held(), Some(gift));
+    }
+}

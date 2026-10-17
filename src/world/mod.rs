@@ -180,6 +180,17 @@ pub struct WorldSound {
 /// заполнит. Два журнала такого порядка не держат: подключение выливало бы
 /// сперва один целиком, потом другой, и действие более позднего такта
 /// обгоняло бы изменения более раннего.
+/// Эффекты оружия моба: снимок выстрела либо ближнего удара.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ProjectileEnchantments {
+    pub punch: i32,
+    pub fire_ticks: i32,
+    /// Отдельный повторный толчок melee, не горизонтальный импульс Punch.
+    pub melee_knockback: f32,
+    /// Piercing сохраняется и на последней цели пробивающего снаряда.
+    pub ignores_shield: bool,
+}
+
 #[derive(Clone)]
 pub enum WorldEvent {
     /// Достижение для игроков в заданной рамке; [Bedrock: потом].
@@ -290,7 +301,7 @@ pub enum WorldEvent {
     /// Игроку `entity_id` нанёс урон моб или стрела (mob/hostile.rs, arrow.rs):
     /// вид урона, номер виновника, ключ его имени для сообщения о смерти и
     /// толчок (скорость после отдачи, если есть).
-    MobHurt { entity_id: i32, amount: f32, source: crate::survival::Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64) },
+    MobHurt { entity_id: i32, amount: f32, source: crate::survival::Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64), enchantments: ProjectileEnchantments },
 
     /// Эффект игроку от моба (снаряд шалкера — левитация): подключение
     /// игрока даёт его, как команда `effect give`.
@@ -2588,7 +2599,12 @@ impl World {
     /// Урон игроку от моба или стрелы: см. `WorldEvent::MobHurt`.
     #[allow(clippy::too_many_arguments)]
     pub fn note_mob_hurt(&mut self, entity_id: i32, amount: f32, source: crate::survival::Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64)) {
-        self.events.push(WorldEvent::MobHurt { entity_id, amount, source, attacker, killer, push, at });
+        self.note_enchanted_mob_hurt(entity_id, amount, source, attacker, killer, push, at, ProjectileEnchantments::default());
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn note_enchanted_mob_hurt(&mut self, entity_id: i32, amount: f32, source: crate::survival::Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64), enchantments: ProjectileEnchantments) {
+        self.events.push(WorldEvent::MobHurt { entity_id, amount, source, attacker, killer, push, at, enchantments });
     }
 
     /// Эффект игроку от моба: см. `WorldEvent::MobEffect`.

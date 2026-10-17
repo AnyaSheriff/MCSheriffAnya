@@ -990,6 +990,42 @@ mod tests {
         assert_eq!(anvil(Some(item("diamond_sword").with_extras(sharp_sword)), Some(item("enchanted_book").with_extras(smite_book)), None, false).result, None);
     }
 
+    /// Чёрный ящик, anvil-book-targets: обычная книга не принимает чары
+    /// книги на наковальне. Зачарованные книги при этом объединяются.
+    #[test]
+    fn anvil_requires_an_enchanted_book_as_book_target() {
+        let sharpness = stackdata::enchantment_number("sharpness").unwrap();
+        let mut data = Data::default();
+        data.set_stored(sharpness, 1);
+        let book = item("enchanted_book").with_extras(data);
+
+        assert_eq!(anvil(Some(item("book")), Some(book), None, false).result, None);
+        let result = anvil(Some(book), Some(book), None, false).result.expect("книги объединяются");
+        assert_eq!(result.extras().stored, vec![(sharpness, 2)]);
+        assert!(result.extras().enchants.is_empty());
+    }
+
+    /// Совместимые чары смешанной книги применяются, отказ от остальных
+    /// добавляет один уровень к цене (anvil-book-targets).
+    #[test]
+    fn anvil_applies_only_compatible_enchantments_from_mixed_book() {
+        let sharpness = stackdata::enchantment_number("sharpness").unwrap();
+        let smite = stackdata::enchantment_number("smite").unwrap();
+        let unbreaking = stackdata::enchantment_number("unbreaking").unwrap();
+        let mut sword = Data::default();
+        sword.set_enchant(smite, 1);
+        let mut book = Data::default();
+        book.set_stored(sharpness, 1);
+        book.set_stored(unbreaking, 1);
+        let out = anvil(Some(item("diamond_sword").with_extras(sword)), Some(item("enchanted_book").with_extras(book)), None, false);
+
+        assert_eq!(out.cost, 2);
+        let result = out.result.expect("совместимые чары перенесены").extras();
+        assert_eq!(result.level("smite"), 1);
+        assert_eq!(result.level("sharpness"), 0);
+        assert_eq!(result.level("unbreaking"), 1);
+    }
+
     /// Дороже 39 — «Слишком дорого»: итога нет, цена видна; в творческом
     /// режиме — можно.
     #[test]

@@ -1,0 +1,73 @@
+{
+  "name": "enchant-frost-magma",
+  "about": "Магма: обычная обувь получает hot_floor, Frost Walker I защищает; снятие снова включает урон. Приседание и огнестойкость как контроль.",
+  "exclusive": true,
+  "blocks": [],
+  "origin": [
+    128,
+    70,
+    128
+  ],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(3.5,1,5.5)",
+    "attribute $(bot) minecraft:scale base set 1",
+    "attribute $(bot) minecraft:safe_fall_distance base set 3",
+    "attribute $(bot) minecraft:step_height base set 0.6",
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "effect give $(bot) instant_health 1 10",
+    "fill $(2,-1,2) $(4,-1,4) stone",
+    "fill $(2,0,2) $(4,3,4) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!wait 15"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "setblock $(3,-1,3) magma_block"
+    },
+    {
+      "after": 25,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={frost_walker:1}]"
+    },
+    {
+      "after": 60,
+      "cmd": "item replace entity $(bot) armor.feet with air"
+    },
+    {
+      "after": 85,
+      "control": [
+        "sneak",
+        true
+      ]
+    },
+    {
+      "after": 115,
+      "control": [
+        "sneak",
+        false
+      ]
+    },
+    {
+      "after": 135,
+      "cmd": "effect give $(bot) fire_resistance 30"
+    }
+  ],
+  "record_ticks": 165,
+  "cleanup": [
+    "setblock $(3,-1,3) stone",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "gamemode creative $(bot)",
+    "!startfly"
+  ],
+  "track_self": true,
+  "inventory": true,
+  "item_components": true
+}

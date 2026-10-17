@@ -1,0 +1,65 @@
+{
+  "name": "enchant-frost-mobs",
+  "about": "Ледоход на стойке и зомби: надевание boots, /tp на земле и иммунитет /damage. Ночь, изолированные платформы над водой.",
+  "exclusive": true,
+  "origin": [
+    128,
+    70,
+    128
+  ],
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(3.5,0,10.5)",
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "gamerule random_tick_speed 0",
+    "gamerule advance_time false",
+    "time set midnight",
+    "kill @e[tag=frost_mob_probe]",
+    "fill $(0,-2,0) $(20,-2,8) stone",
+    "fill $(0,-1,0) $(20,3,8) air",
+    "fill $(0,-1,0) $(20,-1,8) water",
+    "setblock $(3,-1,4) stone",
+    "setblock $(14,-1,4) stone",
+    "summon armor_stand $(3.5,0,4.5) {Tags:[\"frost_mob_probe\",\"frost_stand\"]}",
+    "summon zombie $(14.5,0,4.5) {NoAI:1b,OnGround:1b,Tags:[\"frost_mob_probe\",\"frost_zombie\"]}",
+    "!wait 20"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity @e[tag=frost_stand,limit=1] armor.feet with diamond_boots[enchantments={frost_walker:2}]"
+    },
+    {
+      "after": 10,
+      "cmd": "item replace entity @e[tag=frost_zombie,limit=1] armor.feet with diamond_boots[enchantments={frost_walker:2}]"
+    },
+    {
+      "after": 30,
+      "cmd": "damage @e[tag=frost_zombie,limit=1] 2 minecraft:hot_floor"
+    },
+    {
+      "after": 45,
+      "cmd": "damage @e[tag=frost_zombie,limit=1] 2 minecraft:campfire"
+    },
+    {
+      "after": 60,
+      "cmd": "tp @e[tag=frost_stand] $(4.5,0,4.5)"
+    },
+    {
+      "after": 80,
+      "cmd": "tp @e[tag=frost_zombie] $(15.5,0,4.5)"
+    }
+  ],
+  "record_ticks": 120,
+  "cleanup": [
+    "kill @e[tag=frost_mob_probe]",
+    "kill @e[type=item,distance=..48]",
+    "gamerule random_tick_speed 3",
+    "gamerule advance_time true",
+    "time set day",
+    "fill $(0,-1,0) $(20,3,8) air",
+    "difficulty peaceful"
+  ],
+  "pad_wide": 24
+}

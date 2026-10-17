@@ -18,8 +18,6 @@ fn progress(player: &PlayerState, shared: &Shared, state: i32) -> f32 {
     use crate::attributes::{BLOCK_BREAK_SPEED, MINING_EFFICIENCY, SUBMERGED_MINING_SPEED};
     use crate::survival::EffectKind;
     let tool = player.inventory.held();
-    let efficiency = tool.map_or(0, |stack| stack.extras().level("efficiency"));
-    let aqua = player.inventory.slot(5).is_some_and(|stack| stack.extras().level("aqua_affinity") > 0);
     let underwater = vitals::eyes_in_water(&shared.world_in(player.dimension).lock().expect("мир"), player);
     crate::mining::progress(state, tool, crate::mining::Conditions {
         haste: player.vit.effect_level(EffectKind::Haste),
@@ -33,9 +31,12 @@ fn progress(player: &PlayerState, shared: &Shared, state: i32) -> f32 {
             let below = world.get_block(player.x.floor() as i32, (player.y - 0.001).floor() as i32, player.z.floor() as i32);
             (player.y - player.y.floor()).abs() < 0.001 && crate::blocks::solid_top(below)
         },
-        efficiency: player.attrs.value(MINING_EFFICIENCY) as f32 + if efficiency > 0 { (efficiency as f32).powi(2) + 1.0 } else { 0.0 },
+        // Зачарования уже включены refresh_equipment в атрибуты. Повторная
+        // прибавка давала Efficiency V +52 вместо +26 и Aqua Affinity ×25
+        // вместо ×5 (minecraft.wiki/w/Aqua_Affinity: «penalty to be ignored»).
+        efficiency: player.attrs.value(MINING_EFFICIENCY) as f32,
         block_speed: player.attrs.value(BLOCK_BREAK_SPEED) as f32,
-        submerged_speed: player.attrs.value(SUBMERGED_MINING_SPEED) as f32 * if aqua { 5.0 } else { 1.0 },
+        submerged_speed: player.attrs.value(SUBMERGED_MINING_SPEED) as f32,
     })
 }
 
@@ -51,6 +52,7 @@ pub(super) fn allows(player: &mut PlayerState, shared: &Shared, at: (i32, i32, i
         return status == 0;
     }
     let now = *shared.ticks.borrow();
+    vitals::update_equipment(player, now);
     match status {
         0 => {
             let instant = progress(player, shared, state) >= 1.0;
@@ -132,6 +134,67 @@ mod tests {
         break_block(&body, player, shared).unwrap()
     }
     fn block(shared: &Shared, player: &PlayerState) -> i32 { shared.world_in(player.dimension).lock().unwrap().get_block(3, 64, 3) }
+
+    fn enchanted(player: &mut PlayerState, slot: i32, item: &str, name: &str, level: i32) {
+        let mut data = crate::stackdata::Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number(name).unwrap(), level);
+        player.inventory.set(slot, Some(Stack::new(blocks::item_named(item).unwrap(), 1).with_extras(data)));
+    }
+
+    #[test]
+    fn efficiency_and_aqua_affinity_apply_once_and_refresh_before_digging() {
+        let (shared, mut player) = setup("stone", Some("diamond_pickaxe"));
+        let stone = block(&shared, &player);
+        let hand = player.inventory.selected_slot();
+        enchanted(&mut player, hand, "diamond_pickaxe", "efficiency", 5);
+        // Первая попытка после замены вещи должна видеть новые атрибуты;
+        // 34 / 45 < 1: Efficiency V не даёт мгновенного слома без Haste.
+        assert!(!allows(&mut player, &shared, (3, 64, 3), stone, 0));
+        let dry = progress(&player, &shared, stone);
+        assert!((dry - 34.0 / 45.0).abs() < 0.000_001);
+        shared.world_in(player.dimension).lock().unwrap().set_block_silently(3, 65, 5, blocks::state_by_name("water").unwrap());
+        assert!((progress(&player, &shared, stone) - dry / 5.0).abs() < 0.000_001);
+        enchanted(&mut player, 5, "diamond_helmet", "aqua_affinity", 1);
+        allows(&mut player, &shared, (3, 64, 3), stone, 0);
+        assert!((progress(&player, &shared, stone) - dry).abs() < 0.000_001);
+        player.on_ground = false;
+        player.y += 0.1;
+        assert!((progress(&player, &shared, stone) - dry / 5.0).abs() < 0.000_001);
+    }
+
+    #[test]
+    fn silk_dig_keeps_the_last_durability_drop_and_suppresses_ore_xp() {
+        let (shared, mut player) = setup("diamond_ore", Some("diamond_pickaxe"));
+        let hand = player.inventory.selected_slot();
+        enchanted(&mut player, hand, "diamond_pickaxe", "silk_touch", 1);
+        let held = player.inventory.held().unwrap();
+        let mut data = held.extras();
+        data.damage = crate::combat::max_damage(&held) - 1;
+        player.inventory.set(hand, Some(held.with_extras(data)));
+        dig(&shared, &mut player, 0);
+        shared.ticks.send_modify(|tick| *tick += 100);
+        dig(&shared, &mut player, 2);
+        assert_eq!(block(&shared, &player), 0);
+        assert!(player.inventory.held().is_none());
+        assert!(player.net.new_orbs.is_empty());
+        let items = shared.items_in(player.dimension).lock().unwrap();
+        assert_eq!(items.items().len(), 1);
+        assert_eq!(blocks::item_name(items.items()[0].stack.item), Some("diamond_ore"));
+    }
+
+    #[test]
+    fn wrong_tool_and_disabled_block_drops_never_grant_ore_experience() {
+        for (tool, enabled) in [("wooden_pickaxe", true), ("diamond_pickaxe", false)] {
+            let (shared, mut player) = setup("diamond_ore", Some(tool));
+            shared.block_drops.store(enabled, std::sync::atomic::Ordering::Relaxed);
+            dig(&shared, &mut player, 0);
+            shared.ticks.send_modify(|tick| *tick += 1000);
+            dig(&shared, &mut player, 2);
+            assert_eq!(block(&shared, &player), 0);
+            assert!(player.net.new_orbs.is_empty());
+            assert!(shared.items_in(player.dimension).lock().unwrap().items().is_empty());
+        }
+    }
 
     #[test]
     fn finish_requires_start_and_seventy_percent_and_cancel_resets_it() {

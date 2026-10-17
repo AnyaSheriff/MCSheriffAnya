@@ -130,6 +130,7 @@ pub(super) struct ShownMob {
     teleports: u32,
     attr_changes: u32,
     effect_levels: [i32; 4],
+    soul_level: i32,
     /// Броня волка, как показана; перемена шлёт снаряжение, а атрибуты
     /// следом — на ближайшем такте жизни, кратном трём (`armor_pending`).
     wolf_armor: Option<i32>,
@@ -783,10 +784,11 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
         teleports: mob.teleports,
         attr_changes: mob.attr_changes,
         effect_levels: [0; 4],
+        soul_level: 0,
         wolf_armor: mob.tame.armor,
         armor_pending: false,
         gear_version: mob.horse.gear_version,
-        stand_gear: mob.stand.equipment,
+        stand_gear: crate::mob::equipment::all(mob),
         stand_mods: Vec::new(),
         attributes_sent: attributes_at_spawn(mob.kind) || (crate::mob::horse::equine(mob.kind) && mob.horse.explicit != 0),
         modded: modded(mob),
@@ -966,7 +968,7 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     // Железный шлем на мобе: к скорости добавляются стойкость и броня с
     // модификатором «minecraft:armor.helmet» (0 и +2) — чёрный ящик,
     // stray-slowness, bogged-shear.
-    body.extend_from_slice(&encode_varint(if dolphin { 2 } else if mob.h.helmet || mob.h.trial_gear.is_some() { 3 } else { 1 }));
+    body.extend_from_slice(&encode_varint(if dolphin { 2 + if mob.equipment.is_some() { 2 } else { 0 } } else if mob.h.helmet || mob.h.trial_gear.is_some() || mob.equipment.is_some() { 3 } else { 1 }));
     if dolphin && !mob.is_baby() {
         body.extend_from_slice(&encode_varint(ATTRIBUTE_OXYGEN_BONUS));
         push_f64(&mut body, 0.0);
@@ -981,8 +983,8 @@ async fn send_attributes(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()>
     // witch-stand, enderman-stare).
     super::mob_effects::push(&mut body, mob, ATTRIBUTE_MOVEMENT_SPEED, super::mob_effects::speed_modifier(mob));
 
-    if let Some(gear)=&mob.h.trial_gear {
-        for (attribute,amount) in [(ATTRIBUTE_ARMOR_TOUGHNESS,crate::mob::trial_gear::bonus(gear,crate::attributes::ARMOR_TOUGHNESS)),(ATTRIBUTE_ARMOR,mob.armor())] {
+    if mob.equipment.is_some() || mob.h.trial_gear.is_some() {
+        for (attribute,amount) in [(ATTRIBUTE_ARMOR_TOUGHNESS,crate::mob::equipment::bonus(mob,crate::attributes::ARMOR_TOUGHNESS)),(ATTRIBUTE_ARMOR,mob.armor())] {
             body.extend_from_slice(&encode_varint(attribute));push_f64(&mut body,f64::from(amount));push_modifiers(&mut body,None);
         }
     } else if mob.h.helmet {
@@ -1199,6 +1201,26 @@ pub(super) async fn send_mob_event(
 /// шлем на голове (место 5) — по одному пакету на моба; шлем показывается
 /// железным [проверить: вид шлема не хранится].
 async fn send_mob_equipment(stream: &mut Outgoing<'_>, mob: &Mob, changed: bool) -> io::Result<()> {
+    if mob.equipment.is_some() {
+        let gear = crate::mob::equipment::all(mob);
+        let mut slots: Vec<_> = gear.iter().enumerate().filter(|(_, stack)| changed || stack.is_some()).map(|(index, stack)| (index as u8, *stack)).collect();
+        // Шесть общих ячеек не заменяют отдельные body/saddle слоты.
+        let mut extra = Vec::new();
+        if crate::mob::horse::equine(mob.kind) { extra.extend([(7, mob.horse.slots[0]), (6, mob.horse.slots[1])]); }
+        if mob.kind == Kind::Wolf { extra.push((6, crate::mob::wolf_armor::stack(mob))); }
+        if crate::mob::land::llama(mob.kind) {
+            extra.push((6, mob.land.decor.and_then(|c| blocks::item_named(&crate::mob::WOOL[usize::from(c)].replace("_wool", "_carpet"))).map(|id| Stack::new(id, 1))));
+        }
+        if matches!(mob.kind, Kind::Camel | Kind::Strider) {
+            let saddled = if mob.kind == Kind::Strider { mob.nether.saddled } else { mob.land.saddle };
+            extra.push((7, saddled.then(|| blocks::item_named("saddle")).flatten().map(|id| Stack::new(id, 1))));
+        }
+        if mob.kind == Kind::HappyGhast {
+            extra.push((6, mob.newmobs.harness.and_then(|c| blocks::item_named(&format!("{}_harness", crate::mob::newmobs::COLOURS[c as usize]))).map(|id| Stack::new(id, 1))));
+        }
+        slots.extend(extra.into_iter().filter(|(_, stack)| changed || stack.is_some()));
+        return if slots.is_empty() { Ok(()) } else { send_equipment(stream, mob.entity_id, &slots).await };
+    }
     if mob.kind==Kind::ArmorStand {
         // Пустая стойка снаряжения не шлёт, занятая — только занятые места (чёрный ящик armorstand-equip-break).
         let slots:Vec<_>=mob.stand.equipment.iter().enumerate().filter(|(_,s)|s.is_some()).map(|(i,s)|(i as u8,*s)).collect();
@@ -1623,10 +1645,11 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         let horse_gear = crate::mob::horse::equine(mob.kind) && mob.horse.gear_version != shown.gear_version;
 
         // Стойка: уходят только изменившиеся ячейки, пустая — ничего (чёрный ящик armorstand-equip-break).
-        if mob.kind == Kind::ArmorStand {
-            let changed: Vec<(u8, Option<Stack>)> = (0..6).filter(|&i| mob.stand.equipment[i] != shown.stand_gear[i]).map(|i| (i as u8, mob.stand.equipment[i])).collect();
+        if mob.kind == Kind::ArmorStand || mob.equipment.is_some() {
+            let gear = crate::mob::equipment::all(mob);
+            let changed: Vec<(u8, Option<Stack>)> = (0..6).filter(|&i| gear[i] != shown.stand_gear[i]).map(|i| (i as u8, gear[i])).collect();
             if !changed.is_empty() { send_equipment(stream, mob.entity_id, &changed).await?; }
-            shown.stand_gear = mob.stand.equipment;
+            shown.stand_gear = gear;
         }
 
         // Броня волка (вики, Wolf Armor): снаряжение уходит сразу, атрибуты
@@ -1682,6 +1705,11 @@ pub(super) async fn send_mob_ticks(stream: &mut Outgoing<'_>, shared: &Shared, p
         }
 
         let mut changed = super::mob_effects::changed(mob, shown.effect_levels);
+        for attribute in super::mob_effects::soul_changed(mob, shown.soul_level) {
+            changed.retain(|other| other.id != attribute.id);
+            changed.push(attribute);
+        }
+        shown.soul_level = mob.foot_enchants.soul;
         if sent_base {
             // Скорость уже включает эффект в основной пачке атрибутов.
             changed.retain(|a| a.id != ATTRIBUTE_MOVEMENT_SPEED && !(a.id == ATTRIBUTE_MAX_HEALTH
@@ -1761,6 +1789,7 @@ pub(super) async fn send_orb(stream: &mut Outgoing<'_>, orb: &XpOrb) -> io::Resu
         teleports: 0,
         attr_changes: 0,
         effect_levels: [0; 4],
+        soul_level: 0,
         wolf_armor: None,
         armor_pending: false,
         gear_version: 0,
@@ -1876,7 +1905,8 @@ fn sound_category(name: &str) -> i32 {
         "minecraft:entity.zoglin.",
     ];
 
-    if matches!(name, "minecraft:item.crossbow.loading_start" | "minecraft:item.crossbow.loading_middle") {
+    if matches!(name, "minecraft:item.crossbow.loading_start" | "minecraft:item.crossbow.loading_middle"
+        | "minecraft:item.crossbow.quick_charge_1" | "minecraft:item.crossbow.quick_charge_2" | "minecraft:item.crossbow.quick_charge_3") {
         SOUND_PLAYERS
     } else if HOSTILE.iter().any(|prefix| name.starts_with(prefix)) {
         5

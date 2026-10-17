@@ -1,0 +1,150 @@
+{
+  "name": "enchant-mining-silk",
+  "about": "[проверить] Silk Touch: алмазная и лазуритовая руда, стекло и книжная полка выпадают целиком; руды не дают опыта.",
+  "exclusive": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!hotbar 0",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_pickaxe[enchantments={silk_touch:1}]"
+    },
+    {
+      "after": 10,
+      "cmd": "setblock $(3,0,3) diamond_ore"
+    },
+    {
+      "after": 12,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 32,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 36,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 44,
+      "cmd": "tp $(bot) $(3.5,0,5.5)"
+    },
+    {
+      "after": 50,
+      "cmd": "setblock $(3,0,3) deepslate_lapis_ore"
+    },
+    {
+      "after": 52,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 72,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 76,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 84,
+      "cmd": "tp $(bot) $(3.5,0,5.5)"
+    },
+    {
+      "after": 90,
+      "cmd": "setblock $(3,0,3) glass"
+    },
+    {
+      "after": 92,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 112,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 116,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 124,
+      "cmd": "tp $(bot) $(3.5,0,5.5)"
+    },
+    {
+      "after": 130,
+      "cmd": "setblock $(3,0,3) bookshelf"
+    },
+    {
+      "after": 132,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 152,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 156,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 164,
+      "cmd": "tp $(bot) $(3.5,0,5.5)"
+    }
+  ],
+  "record_ticks": 175,
+  "cleanup": [
+    "kill @e[type=item,distance=..48]",
+    "kill @e[type=experience_orb,distance=..48]",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "fill $(0,0,0) $(8,4,8) air",
+    "!startfly"
+  ]
+}

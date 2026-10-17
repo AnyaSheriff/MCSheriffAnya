@@ -1,0 +1,87 @@
+{
+  "name": "enchant-soul-effects",
+  "about": "Soul Speed I: долгая ходьба по soul_soil, приседание, прыжок, остановка; частота soul particle/sound и износ.",
+  "exclusive": true,
+  "origin": [
+    128,
+    70,
+    128
+  ],
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(3.5,0,3.5)",
+    "attribute $(bot) minecraft:scale base set 1",
+    "attribute $(bot) minecraft:step_height base set 0.6",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "gamerule natural_health_regeneration false",
+    "effect give $(bot) instant_health 1 10",
+    "fill $(0,-1,0) $(80,-1,80) soul_soil",
+    "fill $(0,0,0) $(80,3,80) air",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!look -90 0",
+    "!wait 20"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={soul_speed:1}]"
+    },
+    {
+      "after": 20,
+      "control": [
+        "forward",
+        true
+      ]
+    },
+    {
+      "after": 70,
+      "control": [
+        "sneak",
+        true
+      ]
+    },
+    {
+      "after": 110,
+      "control": [
+        "sneak",
+        false
+      ]
+    },
+    {
+      "after": 140,
+      "control": [
+        "jump",
+        true
+      ]
+    },
+    {
+      "after": 160,
+      "control": [
+        "jump",
+        false
+      ]
+    },
+    {
+      "after": 190,
+      "control": [
+        "forward",
+        false
+      ]
+    }
+  ],
+  "record_ticks": 220,
+  "cleanup": [
+    "clear $(bot)",
+    "gamerule natural_health_regeneration true",
+    "gamemode creative $(bot)",
+    "!startfly",
+    "fill $(0,-1,0) $(80,-1,80) stone"
+  ],
+  "pad_wide": 90
+}

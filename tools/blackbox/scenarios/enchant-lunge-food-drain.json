@@ -1,0 +1,357 @@
+{
+  "name": "enchant-lunge-food-drain",
+  "about": "Сам LungeIII последовательно тратит saturation/food; перед каждым jab запрашивается foodLevel. Определяем минимальную еду по последнему принятому рывку. Hunger не применяется.",
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "effect give $(bot) instant_health 1 10 true",
+    "effect give $(bot) saturation 1 10 true",
+    "!hotbar 0",
+    "fill $(-3,0,-3) $(3,5,30) air",
+    "fill $(-3,-1,-3) $(3,-1,30) stone",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!stopfly",
+    "!look 0 0",
+    "item replace entity $(bot) weapon.mainhand with iron_spear[enchantments={lunge:3}]",
+    "!wait 25"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 2,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 25,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 27,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 50,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 52,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 75,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 77,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 100,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 102,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 125,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 127,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 150,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 152,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 175,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 177,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 200,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 202,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 225,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 227,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 250,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 252,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 275,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 277,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 300,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 302,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 325,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 327,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 350,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 352,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 375,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 377,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 400,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 402,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 425,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 427,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 450,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 452,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 475,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 477,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 500,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 502,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 525,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 527,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    },
+    {
+      "after": 550,
+      "cmd": "data get entity $(bot) foodLevel"
+    },
+    {
+      "after": 552,
+      "dig": [
+        0,
+        0,
+        0
+      ],
+      "status": 7,
+      "face": 0
+    }
+  ],
+  "record_ticks": 575,
+  "cleanup": [
+    "clear $(bot)",
+    "gamemode creative $(bot)",
+    "effect clear $(bot)",
+    "!startfly",
+    "difficulty peaceful"
+  ],
+  "item_components": true,
+  "inventory": true,
+  "track_self": true,
+  "chat": true
+}

@@ -1119,6 +1119,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
     if let Some(on) = flag_in(data, "NoAI:") {
         mob.no_ai = on;
     }
+    if let Some(on) = flag_in(data, "OnGround:") { mob.on_ground = on; }
 
     // Метки сущности: `Tags:["a","b"]` (вики, Entity format).
     if let Some(rest) = data.split("Tags:[").nth(1)
@@ -1351,6 +1352,7 @@ fn apply_mob_data(mob: &mut crate::mob::Mob, data: &str) {
             mob.pitch = pitch;
         }
     }
+    crate::mob::equipment::apply(mob, data);
 }
 
 /// `summon cow|pig|sheep|chicken <x> <y> <z> {NoAI:1b,Age:-24000,…}` — животное
@@ -1512,7 +1514,10 @@ fn teleport_mobs(who: &str, place: &[&str], source: &Source, shared: &Shared) ->
         if left > 0 && chosen.takes_tagged(mob.kind.name(), &mob.tags) && chosen.reaches(origin, (mob.x, mob.y, mob.z)) {
             (mob.x, mob.y, mob.z) = (x, y, z);
             (mob.vx, mob.vy, mob.vz) = (0.0, 0.0, 0.0);
-            mob.on_ground = false;
+            // enchant-frost-mobs: NoAI сохраняет OnGround при /tp и уже
+            // в следующем такте замораживает воду. Его физика не обновляет
+            // этот флаг; воздушного NoAI при этом не ставим на землю.
+            if !mob.no_ai { mob.on_ground = false; }
             mob.vitals.fall = 0.0;
             mob.teleports += 1;
             left -= 1;
@@ -2544,6 +2549,7 @@ fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) 
             Ok(stack) => stack,
             Err(why) => return Answer::saying(why),
         };
+        if let Some(answer) = crate::commands_world::replace_equipment(named, 0, stack, source, shared) { return answer; }
         let targets = find_targets(named, source, shared);
 
         if targets.is_empty() {
@@ -2652,6 +2658,8 @@ fn item_entity(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         Err(why) => return Answer::saying(why),
     };
 
+    if ender.is_none() && let Some(wire) = match slot { 5 => Some(5), 6 => Some(4), 7 => Some(3), 8 => Some(2), crate::inventory::OFFHAND => Some(1), _ => None }
+        && let Some(answer) = crate::commands_world::replace_equipment(named, wire, stack, source, shared) { return answer; }
     let targets = find_targets(named, source, shared);
 
     if targets.is_empty() {
@@ -3441,6 +3449,38 @@ mod tests {
         assert!(orders_for(&shared, 1).is_empty());
     }
 
+    #[test]
+    fn teleport_preserves_no_ai_ground_and_reapplies_frost_at_destination() {
+        for (no_ai, grounded) in [(true, true), (true, false), (false, true), (false, false)] {
+            let shared = server();
+            {
+                let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                world.ensure(0, 0);
+                for x in 6..=14 { for z in -4..=4 {
+                    world.set_block_silently(x, 63, z, crate::blocks::state_by_name("water").unwrap());
+                } }
+            }
+            run(&format!("summon zombie 0.5 64 0.5 {{NoAI:{}b,OnGround:{}b,Tags:[\"frost_tp_test\"]}}", u8::from(no_ai), u8::from(grounded)), &Source::Console, &shared);
+            run("item replace entity @e[tag=frost_tp_test,limit=1] armor.feet with diamond_boots[enchantments={frost_walker:2}]", &Source::Console, &shared);
+            // Заполняем прежнее состояние чар до переноса реальной командой.
+            {
+                let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                let mut items = shared.items_in(Dimension::Overworld).lock().unwrap();
+                crate::mob::movement_enchantments::step(&mut world, &mut items, &[], &[]);
+            }
+            run("tp @e[tag=frost_tp_test] 10.5 64 0.5", &Source::Console, &shared);
+            let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            let mut items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = items.mobs().iter().find(|mob| mob.tags.iter().any(|tag| tag == "frost_tp_test")).unwrap();
+            assert_eq!((mob.x, mob.y, mob.z), (10.5, 64.0, 0.5));
+            assert_eq!(mob.no_ai, no_ai);
+            assert_eq!(mob.on_ground, no_ai && grounded);
+            crate::mob::movement_enchantments::step(&mut world, &mut items, &[], &[]);
+            assert_eq!(crate::blocks::block_at_state(world.get_block(10, 63, 0)),
+                Some(if no_ai && grounded { "frosted_ice" } else { "water" }));
+        }
+    }
+
     /// Перенос — не шаг: на новом месте игрок не стоит, пока от клиента не
     /// придут пакеты о перемещении (иначе крикун под точкой переноса
     /// вскрикивал бы в такте команды — sculk-shrieker).
@@ -3955,6 +3995,25 @@ mod tests {
         }
 
         assert_eq!(run("kill @e[type=skeleton]", &Source::Console, &shared).reply, "Убрано сущностей: 3");
+    }
+
+    #[test]
+    fn mob_equipment_commands_preserve_enchants_and_can_clear_slots() {
+        let shared = server();
+        run("summon zombie 1 64 2 {NoAI:1b,OnGround:1b}", &Source::Console, &shared);
+        run("item replace entity @e[type=zombie,limit=1] armor.feet with diamond_boots[enchantments={frost_walker:2}]", &Source::Console, &shared);
+        run("item replace entity @e[type=zombie,limit=1] weapon.mainhand with diamond_sword", &Source::Console, &shared);
+        run("enchant @e[type=zombie,limit=1] sharpness 3", &Source::Console, &shared);
+        {
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &items.mobs()[0];
+            assert!(mob.on_ground);
+            assert_eq!(crate::mob::equipment::slot(mob, 2).unwrap().extras().level("frost_walker"), 2);
+            assert_eq!(crate::mob::equipment::slot(mob, 0).unwrap().extras().level("sharpness"), 3);
+        }
+        run("item replace entity @e[type=zombie,limit=1] armor.feet with air", &Source::Console, &shared);
+        let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+        assert_eq!(crate::mob::equipment::slot(&items.mobs()[0], 2), None);
     }
 
     #[test]

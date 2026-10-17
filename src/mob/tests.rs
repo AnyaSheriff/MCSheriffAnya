@@ -354,6 +354,141 @@ fn walking_reaches_the_end_of_a_given_path() {
 }
 
 #[test]
+fn walking_abandons_an_unreachable_waypoint_after_the_floor_is_removed() {
+    let view = Flat::new();
+    let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
+    run(&mut cow, &view, 3);
+    // Путь был построен к возвышению, но блоки уже убрали: горизонтальная
+    // координата доступна, высота узла — нет. Движение по кругу не прогресс.
+    cow.brain.go(vec![(3, 3, 0)], 1.0);
+    let mut turns = 0.0;
+    for _ in 0..300 {
+        let yaw = cow.yaw;
+        let plan = ai::walk(&mut cow, ai::Plan::default());
+        turns += (cow.yaw - yaw).abs();
+        cow.physics(&view, plan.speed, plan.jump);
+        if !cow.brain.walking() { break; }
+    }
+    assert!(!cow.brain.walking(), "недостижимый узел удерживает путь, поворотов: {turns}°");
+}
+
+#[test]
+fn walking_does_not_mistake_a_circle_for_progress() {
+    let mut cow = Mob::new(1, Kind::Cow, (1.5, 1.0, 0.5));
+    cow.on_ground = true;
+    cow.brain.go(vec![(0, 1, 0)], 1.0);
+    for tick in 0..200 {
+        // Постоянный радиус больше порога достижения: старый тест на
+        // сдвиг между тактами принимал такое кружение за нормальный ход.
+        let angle = f64::from(tick) * 0.15;
+        cow.x = 0.5 + angle.cos();
+        cow.z = 0.5 + angle.sin();
+        ai::walk(&mut cow, ai::Plan::default());
+        if !cow.brain.walking() { break; }
+    }
+    assert!(!cow.brain.walking(), "кружение не должно удерживать старую цель бесконечно");
+}
+
+#[test]
+fn recalculating_the_same_waypoint_does_not_restart_the_stuck_timer() {
+    let mut cow = Mob::new(1, Kind::Cow, (1.5, 1.0, 0.5));
+    cow.on_ground = true;
+    cow.brain.go(vec![(0, 1, 0), (5, 1, 0)], 1.0);
+    for tick in 0..100 {
+        if tick % 10 == 0 {
+            // Конец маршрута может меняться вместе с движущейся целью.
+            cow.brain.go(vec![(0, 1, 0), (5 + tick / 10, 1, 0)], 1.0);
+        }
+        let angle = f64::from(tick) * 0.15;
+        cow.x = 0.5 + angle.cos();
+        cow.z = 0.5 + angle.sin();
+        ai::walk(&mut cow, ai::Plan::default());
+        if !cow.brain.walking() { return; }
+    }
+    panic!("перестроение пути скрыло кружение у прежнего узла");
+}
+
+#[test]
+fn rejected_waypoint_survives_replanning_and_a_push_away() {
+    let view = Flat::new();
+    let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
+    cow.on_ground = true;
+    // Узел выше апогея прыжка плюс допуск достижения (<1): Y3 здесь
+    // ошибочно считался пройденным в воздухе при ногах около Y2.25.
+    let mut stopped = None;
+    for tick in 1..200 {
+        cow.ticks = tick;
+        if tick % 10 == 1 || !cow.brain.walking() {
+            cow.brain.go(vec![(3, 4, 0), (12 + tick as i32 / 10, 4, 0)], 1.0);
+        }
+        let plan = ai::walk(&mut cow, ai::Plan::default());
+        cow.physics(&view, plan.speed, plan.jump);
+        if !cow.brain.walking() { stopped = Some(tick); break; }
+    }
+    let stopped = stopped.expect("недостижимая высота должна оборвать реальный ход");
+    // Как в жалобе: оттолкнули от места кружения, цель тут же снова
+    // построила тот же первый узел. Она не должна вернуть туда моба.
+    cow.x -= 3.0;
+    cow.vx = 0.0; cow.vz = 0.0;
+    let (x, z, yaw) = (cow.x, cow.z, cow.yaw);
+    for tick in stopped + 1..stopped + 70 {
+        cow.ticks = tick;
+        cow.brain.go(vec![(3, 4, 0), (12 + tick as i32 / 10, 4, 0)], 1.0);
+        let plan = ai::walk(&mut cow, ai::Plan::default());
+        assert_eq!(plan.speed, 0.0, "пересчёт вернул отказанный путь на {tick}");
+        assert!(!plan.jump);
+        cow.physics(&view, plan.speed, plan.jump);
+        assert_eq!((cow.x, cow.z, cow.yaw), (x, z, yaw));
+    }
+    cow.brain.go(vec![(0, 1, 3)], 1.0);
+    assert!(ai::walk(&mut cow, ai::Plan::default()).speed > 0.0, "новый путь должен работать сразу");
+}
+
+#[test]
+fn rejected_waypoint_retries_later_and_can_become_reachable() {
+    let mut view = Flat::new();
+    view.stone.push((1, 1, 0));
+    view.stone.push((1, 2, 0));
+    let mut cow = Mob::new(1, Kind::Cow, (0.5, 1.0, 0.5));
+    cow.on_ground = true;
+    let mut stopped = None;
+    for tick in 1..160 {
+        cow.ticks = tick;
+        cow.brain.go(vec![(2, 1, 0)], 1.0);
+        let plan = ai::walk(&mut cow, ai::Plan::default());
+        cow.physics(&view, plan.speed, plan.jump);
+        if !cow.brain.walking() { stopped = Some(tick); break; }
+    }
+    let stopped = stopped.expect("стена должна остановить путь");
+    view.stone.clear();
+    let mut retried = false;
+    for tick in stopped + 1..stopped + 180 {
+        cow.ticks = tick;
+        if tick % 10 == 0 || !cow.brain.walking() { cow.brain.go(vec![(2, 1, 0)], 1.0); }
+        let plan = ai::walk(&mut cow, ai::Plan::default());
+        retried |= plan.speed > 0.0;
+        cow.physics(&view, plan.speed, plan.jump);
+        if cow.x > 2.0 { break; }
+    }
+    assert!(retried && cow.x > 2.0, "после удаления стены преследование должно продолжиться");
+}
+
+#[test]
+fn changing_waypoint_and_vertical_progress_are_not_stuck() {
+    let mut spider = Mob::new(1, Kind::Spider, (0.5, 1.0, 0.5));
+    spider.h.climbing = true;
+    spider.brain.go(vec![(0, 12, 0)], 1.0);
+    for tick in 0..80 {
+        spider.y = 1.0 + f64::from(tick) * 0.1;
+        if tick % 10 == 0 { spider.brain.go(vec![(0, 12, 0)], 1.0); }
+        ai::walk(&mut spider, ai::Plan::default());
+        assert!(spider.brain.walking(), "подъём по стене — продвижение");
+    }
+    spider.brain.go(vec![(4, 9, 0)], 1.0);
+    assert!(ai::walk(&mut spider, ai::Plan::default()).speed > 0.0);
+}
+
+#[test]
 fn a_mob_climbs_a_one_block_step_by_jumping() {
     let mut view = Flat::new();
 

@@ -1,0 +1,46 @@
+{
+  "name": "enchant-pillager-crossbow-plain",
+  "about": "Проверка чар арбалета у разбойника: длительность зарядки, число стрел и Piercing metadata. Независимая площадка и восстановление здоровья.",
+  "origin": [
+    128,
+    70,
+    128
+  ],
+  "pad_wide": 24,
+  "track_mobs": true,
+  "track_self": true,
+  "track_projectiles": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "execute in minecraft:overworld run tp $(bot) $(0.5,0,0.5)",
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "kill @e[type=pillager,distance=..32]",
+    "kill @e[type=arrow,distance=..32]",
+    "fill $(-20,-1,-20) $(20,-1,20) stone",
+    "effect give $(bot) instant_health 1 10 true",
+    "effect give $(bot) resistance 30 4 true",
+    "gamemode survival $(bot)",
+    "!stopfly",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon pillager $(7.5,0,0.5) {Tags:[\"enchcross\"],PersistenceRequired:1b,equipment:{mainhand:{id:\"minecraft:crossbow\",count:1}}}"
+    }
+  ],
+  "record_ticks": 150,
+  "cleanup": [
+    "gamemode creative $(bot)",
+    "kill @e[tag=enchcross,distance=..64]",
+    "kill @e[type=arrow,distance=..64]",
+    "effect clear $(bot)",
+    "difficulty peaceful",
+    "!startfly"
+  ],
+  "random": []
+}

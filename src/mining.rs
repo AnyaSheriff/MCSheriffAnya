@@ -3,6 +3,9 @@
 
 use crate::{blocks, inventory::Stack};
 
+mod drops;
+pub use drops::{block_drops, experience};
+
 pub fn properties(state: i32) -> (f32, &'static str, &'static [i32]) {
     let table = crate::hardness_table::MINING;
     let index = table.partition_point(|&(_, high, ..)| high < state);

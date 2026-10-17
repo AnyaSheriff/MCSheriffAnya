@@ -148,9 +148,17 @@ endorsed by Mojang or Microsoft.
   and `attribute_modifiers` (`give @p diamond_sword[enchantments={sharpness:5}]`);
   attack cooldown, crits, sprint knockback, sweeping, armor and protection
   enchantments, durability, shields (blocking arc, axes disable them), bows and
-  arrows, thorns, fire aspect. Not checked against the official server: thorns,
-  bow enchantments (power, punch, flame, infinity), arrow pickup, netherite
-  knockback resistance. Potion effects work, including strength, weakness and the full potion set.
+  arrows, thorns, fire aspect. Thorns and bow enchantments (power, punch,
+  flame, infinity) are also checked by the `pvp-*` scenarios. Potion effects
+  work, including strength, weakness and the full potion set.
+- Enchantments: spear Lunge is implemented; Frost Walker and Soul Speed are
+  expanded; Impaling, Looting, Mending, Silk Touch/Fortune and Bedrock Binding
+  are corrected. Mobs persist six equipment slots with enchantments and drop
+  chances, including weapon effects, Thorns and enchanted pillager crossbows.
+  The `enchant-*` scenarios measure individual effects against vanilla 26.1.2.
+  Full parity is not claimed: packet timing/order, general AI movement and
+  statistically measured random distributions still have known differences
+  or require further verification.
 
 Not there yet: Java plugins, multiple protocol versions, ender chests, shulker
 boxes, packet compression. See the full list below.

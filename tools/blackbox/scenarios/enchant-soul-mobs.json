@@ -1,0 +1,152 @@
+{
+  "name": "enchant-soul-mobs",
+  "about": "Одинаковый взрослый zombie преследует неподвижного игрока: stone/soil/sand, Soul0/III. Первые20t NoAI+Motion контролируют bypass физики.",
+  "exclusive": true,
+  "origin": [
+    128,
+    70,
+    128
+  ],
+  "pad_wide": 40,
+  "track_mobs": true,
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(3.5,0,18.5)",
+    "attribute $(bot) minecraft:scale base set 1",
+    "attribute $(bot) minecraft:step_height base set 0.6",
+    "attribute $(bot) minecraft:safe_fall_distance base set 3",
+    "difficulty normal",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "effect give $(bot) resistance 60 255 true",
+    "effect give $(bot) instant_health 1 10",
+    "gamerule natural_health_regeneration false",
+    "gamerule advance_time false",
+    "time set midnight",
+    "kill @e[tag=soul_mob_probe]",
+    "fill $(0,-2,0) $(8,-1,25) stone",
+    "fill $(0,0,0) $(8,4,25) air",
+    "tp $(bot) $(3.5,0,18.5)",
+    "!stopfly",
+    "!wait 20"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon zombie $(3.5,0,3.5) {Tags:[\"soul_mob_probe\"],NoAI:1b,OnGround:1b,Motion:[0.0d,0.0d,0.2d],IsBaby:0b,Silent:1b,PersistenceRequired:1b}"
+    },
+    {
+      "after": 20,
+      "cmd": "kill @e[tag=soul_mob_probe]"
+    },
+    {
+      "after": 30,
+      "cmd": "kill @e[tag=soul_mob_probe]"
+    },
+    {
+      "after": 31,
+      "cmd": "fill $(0,-1,0) $(8,-1,25) stone"
+    },
+    {
+      "after": 33,
+      "cmd": "summon zombie $(3.5,0,3.5) {Tags:[\"soul_mob_probe\"],OnGround:1b,IsBaby:0b,Silent:1b,PersistenceRequired:1b}"
+    },
+    {
+      "after": 34,
+      "cmd": "item replace entity @e[tag=soul_mob_probe,limit=1] armor.feet with diamond_boots"
+    },
+    {
+      "after": 100,
+      "cmd": "kill @e[tag=soul_mob_probe]"
+    },
+    {
+      "after": 101,
+      "cmd": "fill $(0,-1,0) $(8,-1,25) soul_soil"
+    },
+    {
+      "after": 103,
+      "cmd": "summon zombie $(3.5,0,3.5) {Tags:[\"soul_mob_probe\"],OnGround:1b,IsBaby:0b,Silent:1b,PersistenceRequired:1b}"
+    },
+    {
+      "after": 104,
+      "cmd": "item replace entity @e[tag=soul_mob_probe,limit=1] armor.feet with diamond_boots"
+    },
+    {
+      "after": 170,
+      "cmd": "kill @e[tag=soul_mob_probe]"
+    },
+    {
+      "after": 171,
+      "cmd": "fill $(0,-1,0) $(8,-1,25) soul_sand"
+    },
+    {
+      "after": 173,
+      "cmd": "summon zombie $(3.5,0,3.5) {Tags:[\"soul_mob_probe\"],OnGround:1b,IsBaby:0b,Silent:1b,PersistenceRequired:1b}"
+    },
+    {
+      "after": 174,
+      "cmd": "item replace entity @e[tag=soul_mob_probe,limit=1] armor.feet with diamond_boots"
+    },
+    {
+      "after": 240,
+      "cmd": "kill @e[tag=soul_mob_probe]"
+    },
+    {
+      "after": 241,
+      "cmd": "fill $(0,-1,0) $(8,-1,25) stone"
+    },
+    {
+      "after": 243,
+      "cmd": "summon zombie $(3.5,0,3.5) {Tags:[\"soul_mob_probe\"],OnGround:1b,IsBaby:0b,Silent:1b,PersistenceRequired:1b}"
+    },
+    {
+      "after": 244,
+      "cmd": "item replace entity @e[tag=soul_mob_probe,limit=1] armor.feet with diamond_boots[enchantments={soul_speed:3}]"
+    },
+    {
+      "after": 310,
+      "cmd": "kill @e[tag=soul_mob_probe]"
+    },
+    {
+      "after": 311,
+      "cmd": "fill $(0,-1,0) $(8,-1,25) soul_soil"
+    },
+    {
+      "after": 313,
+      "cmd": "summon zombie $(3.5,0,3.5) {Tags:[\"soul_mob_probe\"],OnGround:1b,IsBaby:0b,Silent:1b,PersistenceRequired:1b}"
+    },
+    {
+      "after": 314,
+      "cmd": "item replace entity @e[tag=soul_mob_probe,limit=1] armor.feet with diamond_boots[enchantments={soul_speed:3}]"
+    },
+    {
+      "after": 380,
+      "cmd": "kill @e[tag=soul_mob_probe]"
+    },
+    {
+      "after": 381,
+      "cmd": "fill $(0,-1,0) $(8,-1,25) soul_sand"
+    },
+    {
+      "after": 383,
+      "cmd": "summon zombie $(3.5,0,3.5) {Tags:[\"soul_mob_probe\"],OnGround:1b,IsBaby:0b,Silent:1b,PersistenceRequired:1b}"
+    },
+    {
+      "after": 384,
+      "cmd": "item replace entity @e[tag=soul_mob_probe,limit=1] armor.feet with diamond_boots[enchantments={soul_speed:3}]"
+    }
+  ],
+  "record_ticks": 460,
+  "cleanup": [
+    "kill @e[tag=soul_mob_probe]",
+    "kill @e[type=item,distance=..48]",
+    "effect clear $(bot)",
+    "gamerule natural_health_regeneration true",
+    "gamerule advance_time true",
+    "time set day",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "!startfly"
+  ]
+}

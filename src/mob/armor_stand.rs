@@ -120,6 +120,12 @@ pub fn hurt(mob:&mut Mob,amount:f32,source:crate::survival::Source)->Option<crat
     if source!=Source::GenericKill && (mob.stand.marker || mob.stand.invisible) {return None;}
     if mob.is_dead() {return None;}
     let hit=|died|Some(crate::survival::Hit{taken:0.0,absorbed:0.0,resisted:0.0,died});
+    // Vanilla enchant-mob-equipment-drops: /kill удаляет стойку без её
+    // предмета, снаряжения, звука и частиц обычной поломки.
+    if source == Source::GenericKill {
+        mob.vitals.health=0.0; mob.vitals.dead=true; mob.dead_for=1; mob.h.despawn=true;
+        return hit(true);
+    }
     let punch=matches!(source,Source::PlayerAttack|Source::MaceSmash);
     let breaks=if punch && !mob.stand.creative_break {
         if mob.stand.last_hit.is_none_or(|t|mob.ticks.saturating_sub(t)>5) {
@@ -128,7 +134,7 @@ pub fn hurt(mob:&mut Mob,amount:f32,source:crate::survival::Source)->Option<crat
             return hit(false);
         }
         true
-    } else if matches!(source,Source::Arrow|Source::GenericKill) || mob.stand.creative_break {true} else {
+    } else if source==Source::Arrow || mob.stand.creative_break {true} else {
         mob.vitals.health-=amount; mob.vitals.health<=0.0
     };
     if !breaks {return hit(false);}

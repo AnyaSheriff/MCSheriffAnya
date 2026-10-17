@@ -1027,6 +1027,39 @@ pub fn store_mobs(shared: &Shared, dimension: Dimension, world: &mut World) {
     world.store_mobs(items.mobs());
 }
 
+/// Снаряды одного выстрела моба. Снимок оружия получен до его износа,
+/// поэтому даже последний залп сломанного арбалета сохраняет чары.
+fn mob_projectiles(fired: &crate::mob::Fired, dimension: Dimension, difficulty: u8, rng: &mut crate::mob::Rng, next_id: &mut dyn FnMut() -> i32) -> Vec<crate::arrow::Arrow> {
+    let crossbow = fired.weapon.filter(|stack| blocks::item_name(stack.item) == Some("crossbow"));
+    let data = crossbow.map(|stack| stack.extras()).unwrap_or_default();
+    let offsets: &[f32] = if fired.shot.crossbow && data.level("multishot") > 0 {
+        &[0.0, crate::combat::MULTISHOT_ANGLE, -crate::combat::MULTISHOT_ANGLE]
+    } else { &[0.0] };
+    let mut arrows = Vec::with_capacity(offsets.len());
+    for offset in offsets {
+        let mut gauss = || {
+            let (a, b) = (rng.unit().max(1.0e-12), rng.unit());
+            (-2.0 * a.ln()).sqrt() * (std::f64::consts::TAU * b).cos()
+        };
+        let angle = f64::from(*offset).to_radians();
+        let (dx, dz) = (fired.shot.aim.0 - fired.shot.from.0, fired.shot.aim.2 - fired.shot.from.2);
+        let aim = if *offset == 0.0 { fired.shot.aim } else {
+            (fired.shot.from.0 + dx * angle.cos() - dz * angle.sin(), fired.shot.aim.1,
+                fired.shot.from.2 + dx * angle.sin() + dz * angle.cos())
+        };
+        let velocity = crate::arrow::launch(fired.shot.from, aim, fired.shot.speed, crate::mob::hostile::arrow_error(difficulty), &mut gauss);
+        let killer = crate::mob::hostile::killer_key(fired.kind);
+        let mut arrow = crate::arrow::Arrow::from_mob(next_id(), dimension, fired.shot.from, velocity, fired.shooter, killer);
+        arrow.effects.extend(crate::mob::skeleton::arrow_effect(fired.kind));
+        if !fired.shot.crossbow && let Some(bow) = fired.weapon { arrow.enchant_from_bow(&bow.extras()); }
+        arrow.crossbow = fired.shot.crossbow;
+        if fired.shot.crossbow { arrow.pierce_left = data.level("piercing").max(0); }
+        if fired.shot.trident { arrow.trident = blocks::item_named("trident").map(|item| crate::inventory::Stack::new(item, 1)); }
+        arrows.push(arrow);
+    }
+    arrows
+}
+
 /// Такт мобов. Прочитанные вместе с чанками заводятся в мир; в новых чанках
 /// Обычного мира селятся животные (если не выключено `gamerule spawn_mobs`),
 /// а в темноте — враждебные; дальше — мысли, движение, разведение, добыча
@@ -1579,6 +1612,8 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
         crate::mob::horse::traps(&mut items, &mut riding, &watchers, rng, &mut || shared.next_entity_id());
         crate::mob::horse::sync_riding(&mut items, &mut riding, &owners, &MobView(world))
     };
+    let riders: Vec<i32> = shared.riding.lock().expect("седоки").vehicles().flat_map(|(_, ids)| ids.iter().copied()).collect();
+    crate::mob::movement_enchantments::step(world, &mut items, &watchers, &riders);
     let outcome = crate::mob::step_all(&mut items, &MobView(world), &watchers, env, rng, &mut || shared.next_entity_id());
     rider_hurt.extend(crate::mob::horse::sync_riding(&mut items, &mut shared.riding.lock().expect("учёт седоков"), &owners, &MobView(world)));
     for (id, damage) in rider_hurt {
@@ -1599,6 +1634,18 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     for (uuid, event) in outcome.progress {
         shared.players.lock().expect("список игроков захвачен другим потоком").order(&uuid, crate::players::Order::Progress(event));
     }
+    for hit in outcome.enchant_retaliation {
+        let dir = watchers.iter().find(|p| p.id == hit.target).map(|p| {
+            let delta = (p.x - hit.at.0, p.z - hit.at.2);
+            let length = delta.0.hypot(delta.1).max(1e-9);
+            (delta.0 / length, delta.1 / length)
+        });
+        world.note_mob_hurt(hit.target, hit.damage, crate::survival::Source::Thorns, hit.attacker,
+            crate::mob::hostile::killer_key(hit.kind), dir, hit.at);
+        if let Some(player) = watchers.iter().find(|p| p.id == hit.target) {
+            world.note_sound_player_at((player.x, player.y, player.z), "minecraft:enchant.thorns.hit", 1.0, 1.0);
+        }
+    }
     for strike in outcome.strikes {
         // Зомби бьёт жителя: убитый превращается в зомби-жителя (вики, Zombie
         // Villager, «Conversion»: лёгкая 0 %, обычная 50 %, трудная 100 %).
@@ -1606,7 +1653,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             continue;
         }
 
-        world.note_mob_hurt(
+        world.note_enchanted_mob_hurt(
             strike.melee.target,
             strike.melee.damage,
             // Луч стража — магия от существа (mob/guardian.rs).
@@ -1615,6 +1662,7 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
             crate::mob::hostile::killer_key(strike.kind),
             Some(strike.melee.push),
             strike.at,
+            strike.enchantments,
         );
 
         // Иссушитель: 10 секунд иссушения (вики, Wither Skeleton).
@@ -1669,32 +1717,10 @@ fn step_mobs(shared: &Shared, dimension: Dimension, world: &mut World, rng: &mut
     }
 
     for fired in outcome.shots {
-        let mut gauss = || {
-            let (a, b) = (rng.unit().max(1.0e-12), rng.unit());
-
-            (-2.0 * a.ln()).sqrt() * (std::f64::consts::TAU * b).cos()
-        };
-        let error = crate::mob::hostile::arrow_error(difficulty);
-        let velocity = crate::arrow::launch(fired.shot.from, fired.shot.aim, fired.shot.speed, error, &mut gauss);
-        let killer = crate::mob::hostile::killer_key(fired.kind);
-        let mut arrow = crate::arrow::Arrow::from_mob(shared.next_entity_id(), dimension, fired.shot.from, velocity, fired.shooter, killer);
-
-        arrow.effects.extend(crate::mob::skeleton::arrow_effect(fired.kind));
-        if let Some(gear)=items.mobs().iter().find(|m|m.entity_id==fired.shooter).and_then(|m|m.h.trial_gear) && let Some(bow)=gear[0] {
-            arrow.power=bow.extras().level("power");arrow.punch=bow.extras().level("punch");
-        }
-
-        // Стрела из арбалета разбойника (чёрный ящик, pillager-crossbow:
-        // item.crossbow.hit при попадании).
-        arrow.crossbow = fired.shot.crossbow;
-
-        // Утопленник бросает трезубец, а не стрелу (вики, Drowned).
-        if fired.shot.trident {
-            arrow.trident = blocks::item_named("trident").map(|item| crate::inventory::Stack::new(item, 1));
-        }
-
+        let arrows = mob_projectiles(&fired, dimension, difficulty, rng, &mut || shared.next_entity_id());
         // Замок стрел — после предметов (shared.rs).
-        shared.arrows.lock().expect("стрелы захвачены другим потоком").spawn(arrow);
+        let mut flying = shared.arrows.lock().expect("стрелы захвачены другим потоком");
+        for arrow in arrows { flying.spawn(arrow); }
     }
 
     for (shooter, (from, velocity)) in outcome.spits {
@@ -2130,7 +2156,10 @@ fn strike_villager(items: &mut items::Items, world: &mut World, strike: &crate::
     if !infects {
         let push = crate::mob::Push { dir: strike.melee.push, strength: 0.4, cause: strike.attacker };
 
-        mob.hurt(damage, crate::survival::Source::MobAttack, Some(push));
+        if mob.hurt_burning(damage, crate::survival::Source::MobAttack, Some(push), 1.0, strike.enchantments.fire_ticks).is_some()
+            && strike.enchantments.melee_knockback > 0.0 {
+            mob.knockback(push.dir.0, push.dir.1, f64::from(strike.enchantments.melee_knockback) * 0.5);
+        }
 
         return true;
     }
@@ -3120,6 +3149,37 @@ mod tests {
     use crate::blocks;
     use crate::fluids::Kind;
     use crate::world::AIR;
+
+    #[test]
+    fn mob_crossbow_multishot_and_piercing_use_the_actual_weapon_snapshot() {
+        let stack = |name: &str, enchanted: bool| {
+            let mut data = crate::stackdata::Data::default();
+            if enchanted {
+                for (name, level) in [("multishot", 1), ("piercing", 4)] {
+                    data.set_enchant(crate::stackdata::enchantment_number(name).unwrap(), level);
+                }
+            }
+            crate::inventory::Stack::new(blocks::item_named(name).unwrap(), 1).with_extras(data)
+        };
+        let mut fired = crate::mob::Fired { kind: crate::mob::Kind::Pillager, shooter: 4,
+            shot: crate::mob::hostile::Shot { from: (0.5, 1.5, 0.5), aim: (0.5, 0.6, 8.5), speed: 1.6, trident: false, crossbow: true },
+            weapon: Some(stack("crossbow", false)) };
+        let plain = mob_projectiles(&fired, Dimension::Overworld, 3, &mut crate::mob::Rng::new(42), &mut || 10);
+        assert_eq!(plain.len(), 1);
+        assert_eq!(plain[0].pierce_left, 0);
+        let mut id = 10;
+        fired.weapon = Some(stack("crossbow", true));
+        let triple = mob_projectiles(&fired, Dimension::Overworld, 3, &mut crate::mob::Rng::new(42), &mut || { id += 1; id });
+        assert_eq!(triple.len(), 3);
+        assert!(triple.iter().all(|a| a.pierce_left == 4 && a.crossbow && a.owner == 4 && !a.crit));
+        assert_eq!((triple[0].vx, triple[0].vy, triple[0].vz), (plain[0].vx, plain[0].vy, plain[0].vz));
+        assert!(triple[1].vx < triple[0].vx && triple[2].vx > triple[0].vx);
+        assert_eq!(triple.iter().map(|a| a.entity_id).collect::<Vec<_>>(), vec![11, 12, 13]);
+        fired.weapon = Some(stack("stick", true));
+        let wrong_item = mob_projectiles(&fired, Dimension::Overworld, 3, &mut crate::mob::Rng::new(42), &mut || 20);
+        assert_eq!(wrong_item.len(), 1);
+        assert_eq!(wrong_item[0].pierce_left, 0);
+    }
 
     /// Камень.
     const STONE: i32 = 1;

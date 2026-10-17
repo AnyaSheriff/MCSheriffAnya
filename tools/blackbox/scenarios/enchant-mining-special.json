@@ -1,0 +1,195 @@
+{
+  "name": "enchant-mining-special",
+  "about": "[проверить] Silk Touch снежные слои 3/8, снег лопатой; листья ножницами и Silk hoe. Независимо от случайного Fortune.",
+  "exclusive": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "difficulty peaceful",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "effect give $(bot) instant_health 1 10 true",
+    "fill $(2,-1,2) $(4,-1,6) stone",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!hotbar 0",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_shovel[enchantments={silk_touch:1}]"
+    },
+    {
+      "after": 2,
+      "cmd": "setblock $(3,0,3) snow[layers=3]"
+    },
+    {
+      "after": 5,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 25,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 30,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 45,
+      "cmd": "tp $(bot) $(3.5,0,5.5)"
+    },
+    {
+      "after": 55,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_shovel[enchantments={silk_touch:1}]"
+    },
+    {
+      "after": 57,
+      "cmd": "setblock $(3,0,3) snow[layers=8]"
+    },
+    {
+      "after": 60,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 80,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 85,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 100,
+      "cmd": "tp $(bot) $(3.5,0,5.5)"
+    },
+    {
+      "after": 110,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_shovel"
+    },
+    {
+      "after": 112,
+      "cmd": "setblock $(3,0,3) snow[layers=3]"
+    },
+    {
+      "after": 115,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 135,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 140,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 155,
+      "cmd": "tp $(bot) $(3.5,0,5.5)"
+    },
+    {
+      "after": 165,
+      "cmd": "item replace entity $(bot) weapon.mainhand with shears"
+    },
+    {
+      "after": 167,
+      "cmd": "setblock $(3,0,3) oak_leaves[persistent=true]"
+    },
+    {
+      "after": 170,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 190,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 195,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 210,
+      "cmd": "tp $(bot) $(3.5,0,5.5)"
+    },
+    {
+      "after": 220,
+      "cmd": "item replace entity $(bot) weapon.mainhand with diamond_hoe[enchantments={silk_touch:1}]"
+    },
+    {
+      "after": 222,
+      "cmd": "setblock $(3,0,3) oak_leaves[persistent=true]"
+    },
+    {
+      "after": 225,
+      "dig": [
+        3,
+        0,
+        3
+      ]
+    },
+    {
+      "after": 245,
+      "dig": [
+        3,
+        0,
+        3
+      ],
+      "status": 2
+    },
+    {
+      "after": 250,
+      "cmd": "tp $(bot) $(3.5,0,3.5)"
+    },
+    {
+      "after": 265,
+      "cmd": "tp $(bot) $(3.5,0,5.5)"
+    }
+  ],
+  "record_ticks": 275,
+  "cleanup": [
+    "clear $(bot)",
+    "kill @e[type=item,distance=..48]",
+    "gamemode creative $(bot)",
+    "!startfly"
+  ]
+}

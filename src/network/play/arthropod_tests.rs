@@ -156,7 +156,7 @@ async fn cave_spider_poison_requires_a_successful_unblocked_hit() {
             shared.ticks.send_replace(10);
         }
         let at = (player.x, player.y, player.z + 1.0);
-        vitals::mob_hit(&mut out, &shared, &mut player, 2.0, crate::survival::Source::MobAttack, 42, "entity.minecraft.cave_spider", None, at).await.unwrap();
+        vitals::mob_hit(&mut out, &shared, &mut player, 2.0, crate::survival::Source::MobAttack, 42, "entity.minecraft.cave_spider", None, at, Default::default()).await.unwrap();
         assert_eq!(player.vit.effects.iter().find(|effect| effect.kind == crate::survival::EffectKind::Poison).map(|effect| effect.ticks_left), duration);
     }
 }

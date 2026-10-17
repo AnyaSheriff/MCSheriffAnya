@@ -81,6 +81,9 @@ pub struct Bolt {
     pub struck_entities: Vec<i32>,
     /// Игрок с Channeling; [Bedrock: потом] достижения получает Java-подключение.
     pub channeler: Option<[u8; 16]>,
+    /// Channeling в громоотвод: молния появляется на Y самой клетки,
+    /// но питает именно её, а не блок снизу (enchant-channeling-lightning-rod).
+    rod: Option<Pos>,
 
     /// Молния ловушки скелетов — только видимая вспышка, без урона и огня.
     pub visual_only: bool,
@@ -99,6 +102,7 @@ impl Bolt {
             fires: 0,
             struck_entities: Vec::new(),
             channeler: None,
+            rod: None,
             visual_only: false,
         }
     }
@@ -115,7 +119,12 @@ impl Bolt {
     /// на высоте 2 над громоотводом на высоте 1 бьёт в него (чёрный ящик,
     /// lightning-rod).
     pub fn struck_block(&self) -> Pos {
-        (self.x.floor() as i32, (self.y - 1.0e-6).floor() as i32, self.z.floor() as i32)
+        self.rod.unwrap_or((self.x.floor() as i32, (self.y - 1.0e-6).floor() as i32, self.z.floor() as i32))
+    }
+
+    pub fn on_rod(mut self, block: Pos) -> Self {
+        self.rod = Some(block);
+        self
     }
 
     /// Светит ли молния в этом такте (удар или вспышка): тогда она бьёт

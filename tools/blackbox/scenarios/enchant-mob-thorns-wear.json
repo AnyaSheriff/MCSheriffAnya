@@ -1,0 +1,66 @@
+{
+  "name": "enchant-mob-thorns-wear",
+  "about": "Моб в нагруднике ThornsVII: отражение обычного удара и точный damage брони после попадания. Отдельный контроль без Thorns проверяет обычный wear мобов.",
+  "track_mobs": true,
+  "track_self": true,
+  "chat": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "time set midnight",
+    "effect clear $(bot)",
+    "effect give $(bot) instant_health 1 10 true",
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "fill $(-3,0,-3) $(6,5,7) air",
+    "fill $(-3,-1,-3) $(6,-1,7) stone",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!stopfly",
+    "!hotbar 0",
+    "!look 0 0"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon zombie $(0.5,0,2.0) {NoAI:1b,Silent:1b,Tags:[\"enchant_mob\"],equipment:{chest:{id:\"minecraft:diamond_chestplate\",count:1,components:{\"minecraft:enchantments\":{\"minecraft:thorns\":7}}}}}"
+    },
+    {
+      "after": 20,
+      "attack": true
+    },
+    {
+      "after": 25,
+      "cmd": "data get entity @e[tag=enchant_mob,limit=1] equipment"
+    },
+    {
+      "after": 35,
+      "cmd": "data get entity @e[tag=enchant_mob,limit=1] Health"
+    },
+    {
+      "after": 40,
+      "cmd": "kill @e[tag=enchant_mob]"
+    },
+    {
+      "after": 65,
+      "cmd": "summon zombie $(0.5,0,2.0) {NoAI:1b,Silent:1b,Tags:[\"enchant_mob\"],equipment:{chest:{id:\"minecraft:diamond_chestplate\",count:1}}}"
+    },
+    {
+      "after": 85,
+      "attack": true
+    },
+    {
+      "after": 90,
+      "cmd": "data get entity @e[tag=enchant_mob,limit=1] equipment"
+    }
+  ],
+  "record_ticks": 110,
+  "cleanup": [
+    "kill @e[tag=enchant_mob]",
+    "kill @e[type=item,distance=..48]",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "time set noon",
+    "!startfly"
+  ]
+}

@@ -9,6 +9,7 @@
 use super::ai::{self, Ctx, Plan, Watcher};
 use super::hostile::{self, Melee, Shot};
 use super::{Event, Kind, Mob, Rng, View};
+use crate::blocks;
 
 /// Заклинания (свойство 17 у заклинателя и иллюзиониста, minecraft-data:
 /// spell_casting): 0 — нет, 1 — вредины, 2 — челюсти, 3 — «вололо»
@@ -71,10 +72,13 @@ pub fn fang_damage(difficulty: u8) -> f32 {
 /// (чёрный ящик, pillager-crossbow: 17=true в такте 0, loading_start в 5,
 /// loading_middle в 13, loading_end в 24, 17=false в 25; свойства слежение
 /// показывает на такт позже — отсюда счёт с 6).
-pub const CHARGE_TICKS: i32 = 25;
-pub const CHARGE_START_SOUND: i32 = 6;
-pub const CHARGE_MIDDLE_SOUND: i32 = 14;
-pub const CHARGE_END_SOUND: i32 = 25;
+fn loading_sound(held: u32, quick: i32) -> Option<(&'static str, f32)> {
+    let total = crate::combat::crossbow_charge_ticks(quick);
+    if held == total { return Some(("minecraft:item.crossbow.loading_end", 1.0)); }
+    // У моба start/middle на такт позже player helper, конец без сдвига:
+    // plain6/14/25, QuickIII3/10 (enchant-pillager-crossbow-*).
+    held.checked_sub(1).and_then(|held| crate::combat::crossbow_loading_sound(held, quick))
+}
 
 /// Пауза заряженного до выстрела: 20 + 0…19 тактов (pillager-crossbow:
 /// 34, 38, 38) [проверить: разброс]; после выстрела новая зарядка через 2.
@@ -282,7 +286,7 @@ pub fn melee_damage(kind: Kind, difficulty: u8) -> f32 {
 /// разоритель — седло; иллюзионист — лук 8,5 %.
 pub fn loot(mob: &Mob, give: &mut dyn FnMut(&str, i32, i32, &mut Rng), rng: &mut Rng) {
     let looting = mob.looting.max(0);
-    let hand_chance = |rng: &mut Rng| rng.unit() < f64::from(super::DEFAULT_DROP) + 0.01 * f64::from(looting);
+    let hand_chance = |rng: &mut Rng| mob.equipment.is_none() && rng.unit() < f64::from(super::DEFAULT_DROP) + 0.01 * f64::from(looting);
 
     match mob.kind {
         Kind::Pillager => {
@@ -330,7 +334,7 @@ fn captain_loot(mob: &Mob, give: &mut dyn FnMut(&str, i32, i32, &mut Rng), rng: 
         return;
     }
 
-    give("ominous_banner", 1, 1, rng);
+    if mob.equipment.is_none() { give("ominous_banner", 1, 1, rng); }
 
     if mob.illager.raid == 0 {
         let level = rng.below(5);
@@ -558,6 +562,13 @@ fn ravager(mob: &mut Mob, view: &dyn View, ctx: &Ctx, target: &Watcher, plan: &m
 /// 20–39 и стреляет (чёрный ящик, pillager-crossbow).
 #[allow(clippy::too_many_arguments)]
 fn pillager(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, dist_sq: f64, sight: bool, rng: &mut Rng, grounded: bool) {
+    let Some(crossbow) = super::equipment::slot(mob, 0).filter(|stack| blocks::item_name(stack.item) == Some("crossbow")) else {
+        mob.illager.charge = 0;
+        mob.illager.charged = false;
+        return;
+    };
+    let data = crossbow.extras();
+    let quick = data.level("quick_charge");
     ai::look_at_point(mob, target.x, target.y + target.eye, target.z);
 
     let in_range = dist_sq <= PILLAGER_RANGE * PILLAGER_RANGE && sight;
@@ -581,9 +592,19 @@ fn pillager(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, d
         if state.delay <= 0 && in_range {
             state.charged = false;
             state.charge = -RECHARGE_AFTER;
-            state.wear += 1;
+            let count = if data.level("multishot") > 0 { 3 } else { 1 };
+            if crate::combat::max_damage(&crossbow) > 0 {
+                state.wear += crate::combat::wear(&crossbow, count, false, || rng.unit() as f32);
+            }
             state.gear += 1;
             mob.events.push(Event::Sound { name: "minecraft:item.crossbow.shoot", volume: 1.0, pitch: 1.0 });
+            if count == 3 {
+                for extra in [0.63, 0.43] {
+                    let pitch = 1.0 / (rng.unit() as f32 * 0.5 + 1.8) + extra;
+                    mob.events.push(Event::Sound { name: "minecraft:item.crossbow.shoot", volume: 1.0, pitch });
+                }
+            }
+            let broken = crate::combat::max_damage(&crossbow) > 0 && state.wear >= crate::combat::max_damage(&crossbow);
             plan.shot = Some(Shot {
                 from: (mob.x, mob.y + mob.eye() - 0.1, mob.z),
                 aim: (target.x, target.y + 0.6, target.z),
@@ -591,6 +612,11 @@ fn pillager(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, d
                 trident: false,
                 crossbow: true,
             });
+            if broken {
+                super::equipment::set_slot(mob, 0, None);
+                mob.events.push(Event::Status(47));
+                mob.events.push(Event::Sound { name: "minecraft:entity.item.break", volume: 0.8, pitch: 0.8 });
+            }
         }
 
         return;
@@ -607,18 +633,12 @@ fn pillager(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut Plan, d
 
     state.charge += 1;
 
-    match state.charge - 1 {
-        CHARGE_START_SOUND => mob.events.push(Event::Sound { name: "minecraft:item.crossbow.loading_start", volume: 0.5, pitch: 1.0 }),
-        CHARGE_MIDDLE_SOUND => mob.events.push(Event::Sound { name: "minecraft:item.crossbow.loading_middle", volume: 0.5, pitch: 1.0 }),
-        CHARGE_END_SOUND => {
-            let pitch = 1.0 / (rng.unit() as f32 * 0.5 + 1.0) + 0.2;
-
-            mob.events.push(Event::Sound { name: "minecraft:item.crossbow.loading_end", volume: 1.0, pitch });
-        }
-        _ => {}
+    if let Some((name, volume)) = loading_sound((state.charge - 1) as u32, quick) {
+        let pitch = if name == "minecraft:item.crossbow.loading_end" { 1.0 / (rng.unit() as f32 * 0.5 + 1.0) + 0.2 } else { 1.0 };
+        mob.events.push(Event::Sound { name, volume, pitch });
     }
 
-    if mob.illager.charge > CHARGE_TICKS {
+    if mob.illager.charge > crate::combat::crossbow_charge_ticks(quick) as i32 {
         mob.illager.charge = 0;
         mob.illager.charged = true;
         mob.illager.gear += 1;
@@ -990,6 +1010,85 @@ mod tests {
         // Чёрный ящик, evoker-fangs: первая челюсть в 1,25 блока к цели.
         assert!((evoker.illager.summon[0].1 .0 - 6.25).abs() < 1.0e-9);
         assert_eq!(evoker.illager.summon[15].2, 15);
+    }
+
+    struct CrossbowFloor;
+    impl View for CrossbowFloor {
+        fn block(&self, _: i32, y: i32, _: i32) -> i32 { if y < 0 { 1 } else { 0 } }
+        fn loaded(&self, _: i32, _: i32) -> bool { true }
+    }
+    fn crossbow_target() -> Watcher {
+        Watcher { id: 2, x: 0.5, y: 0.0, z: 6.5, eye: 1.62, holding: [None, None], spectator: false, targetable: true,
+            look: (0.0, 0.0), pumpkin: false, sprinting: false, riding: false, gold_armor: false }
+    }
+    fn crossbow(quick: i32, multi: i32, unbreaking: i32) -> crate::inventory::Stack {
+        let mut data = crate::stackdata::Data::default();
+        for (name, level) in [("quick_charge", quick), ("multishot", multi), ("unbreaking", unbreaking)] {
+            data.set_enchant(crate::stackdata::enchantment_number(name).unwrap(), level);
+        }
+        crate::inventory::Stack::new(blocks::item_named("crossbow").unwrap(), 1).with_extras(data)
+    }
+
+    #[test]
+    fn actual_pillager_charge_keeps_plain_phase_and_shortens_quick_charge() {
+        for (quick, expected) in [(0, vec![7, 15, 26]), (3, vec![4, 11])] {
+            let mut mob = Mob::new(1, Kind::Pillager, (0.5, 0.0, 0.5));
+            super::super::equipment::set_slot(&mut mob, 0, Some(crossbow(quick, 0, 0)));
+            let mut rng = Rng::new(42);
+            let mut sounds = Vec::new();
+            for tick in 1..=26 {
+                let mut plan = Plan::default();
+                pillager(&mut mob, &CrossbowFloor, &crossbow_target(), &mut plan, 36.0, true, &mut rng, false);
+                for event in std::mem::take(&mut mob.events) {
+                    if let Event::Sound { name, .. } = event {
+                        sounds.push(tick);
+                        if quick > 0 { assert_ne!(name, "minecraft:item.crossbow.loading_middle"); }
+                    }
+                }
+                if mob.illager.charged { assert_eq!(tick, if quick == 0 { 26 } else { 11 }); break; }
+            }
+            assert_eq!(sounds, expected);
+            assert!(mob.illager.charged);
+            assert!((20..40).contains(&mob.illager.delay));
+        }
+    }
+
+    #[test]
+    fn pillager_multishot_wears_each_arrow_and_unbreaking_protects_it() {
+        for level in [0, 3] {
+            let mut mob = Mob::new(1, Kind::Pillager, (0.5, 0.0, 0.5));
+            super::super::equipment::set_slot(&mut mob, 0, Some(crossbow(0, 1, level)));
+            let mut rng = Rng::new(42);
+            for _ in 0..50 {
+                mob.illager.charged = true; mob.illager.delay = 1;
+                let mut plan = Plan::default();
+                pillager(&mut mob, &CrossbowFloor, &crossbow_target(), &mut plan, 36.0, true, &mut rng, false);
+                assert!(plan.shot.unwrap().crossbow);
+                assert_eq!(std::mem::take(&mut mob.events).iter().filter(|event| matches!(event, Event::Sound { name: "minecraft:item.crossbow.shoot", .. })).count(), 3);
+            }
+            if level == 0 { assert_eq!(mob.illager.wear, 150); }
+            else { assert!((15..70).contains(&mob.illager.wear)); }
+        }
+        let mut mob = Mob::new(1, Kind::Pillager, (0.5, 0.0, 0.5));
+        let stack = crossbow(0, 1, 0);
+        let mut data = stack.extras(); data.unbreakable = true;
+        super::super::equipment::set_slot(&mut mob, 0, Some(stack.with_extras(data)));
+        mob.illager.charged = true; mob.illager.delay = 1;
+        let mut plan = Plan::default();
+        pillager(&mut mob, &CrossbowFloor, &crossbow_target(), &mut plan, 36.0, true, &mut Rng::new(1), false);
+        assert!(plan.shot.is_some());
+        assert_eq!(mob.illager.wear, 0);
+        let mut data = stack.extras(); data.damage = crate::combat::max_damage(&stack) - 1;
+        super::super::equipment::set_slot(&mut mob, 0, Some(stack.with_extras(data)));
+        mob.illager.charged = true; mob.illager.delay = 1;
+        let mut plan = Plan::default();
+        pillager(&mut mob, &CrossbowFloor, &crossbow_target(), &mut plan, 36.0, true, &mut Rng::new(1), false);
+        assert!(plan.shot.is_some());
+        assert!(super::super::equipment::slot(&mob, 0).is_none());
+        let mut next = Plan::default();
+        pillager(&mut mob, &CrossbowFloor, &crossbow_target(), &mut next, 36.0, true, &mut Rng::new(1), false);
+        assert!(next.shot.is_none());
+        assert!(!charging(&mob));
     }
 
     #[test]

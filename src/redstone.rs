@@ -1885,6 +1885,9 @@ fn settle_from(world: &mut World, depth: usize) {
 /// `old` — что стояло здесь раньше: снятая деталь тоже должна предупредить
 /// тех, кого она питала.
 fn block_changed(world: &mut World, pos: Pos, old: i32, depth: usize) {
+    if blocks::block_at_state(old) == Some("frosted_ice")
+        && blocks::block_at_state(world.get_block(pos.0, pos.1, pos.2)) != Some("frosted_ice")
+    { crate::frost::removed(world, pos); }
     let new_block = Block::at(world, pos);
     let old_block = Block {
         state: old,

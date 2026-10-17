@@ -50,6 +50,11 @@ impl Gear {
             _ => {}
         }
         if let Some(gear) = &m.h.trial_gear { g.hand = gear[0]; g.armor[1] = gear[1]; g.armor[0] = gear[2]; }
+        if m.equipment.is_some() {
+            let gear = crate::mob::equipment::all(m);
+            g.hand = gear[0]; g.offhand = gear[1];
+            for (target, source) in [5, 4, 3, 2].into_iter().enumerate() { g.armor[target] = gear[source]; }
+        }
         g
     }
 
@@ -115,6 +120,20 @@ mod tests {
         assert_eq!(r.remaining(), 0);
         assert_eq!(armor_packet(9, &[None; 5]), [0x20, 9, 0, 0, 0, 0, 0]);
         assert_eq!(hand_packet(9, None, true), [0x1f, 9, 0, 0, 0, 119]);
+    }
+
+    #[test]
+    fn generic_mob_equipment_reaches_bedrock_and_clears_removed_boots() {
+        let mut mob = Mob::new(3, Kind::Zombie, (0.0, 64.0, 0.0));
+        let boots = item("diamond_boots");
+        crate::mob::equipment::set_slot(&mut mob, 2, boots);
+        let shown = Gear::of(&mob);
+        assert_eq!(shown.armor[3], boots);
+        assert_eq!(shown.spawn_packets(3).len(), 1);
+        crate::mob::equipment::set_slot(&mut mob, 2, None);
+        let changed = Gear::of(&mob);
+        assert_ne!(shown, changed);
+        assert_eq!(changed.packets(3)[2], armor_packet(3, &[None; 5]));
     }
 }
 

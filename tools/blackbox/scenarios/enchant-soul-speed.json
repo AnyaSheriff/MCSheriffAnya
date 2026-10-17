@@ -1,0 +1,59 @@
+{
+  "name": "enchant-soul-speed",
+  "about": "[проверить] Скорость души I/II/III: бонус на почве душ, снятие на камне и смена обуви. Только атрибуты и экипировка, игрок стоит.",
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(3.5,1,5.5)",
+    "attribute $(bot) minecraft:scale base set 1",
+    "attribute $(bot) minecraft:safe_fall_distance base set 3",
+    "attribute $(bot) minecraft:step_height base set 0.6",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "effect give $(bot) instant_health 1 10",
+    "fill $(2,-1,2) $(4,-1,4) stone",
+    "tp $(bot) $(3.5,0,3.5)",
+    "!stopfly",
+    "!wait 25"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={soul_speed:1},unbreakable={}]"
+    },
+    {
+      "after": 10,
+      "cmd": "fill $(2,-1,2) $(4,-1,4) soul_soil"
+    },
+    {
+      "after": 25,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={soul_speed:2},unbreakable={}]"
+    },
+    {
+      "after": 40,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={soul_speed:3},unbreakable={}]"
+    },
+    {
+      "after": 55,
+      "cmd": "fill $(2,-1,2) $(4,-1,4) stone"
+    },
+    {
+      "after": 70,
+      "cmd": "fill $(2,-1,2) $(4,-1,4) soul_soil"
+    },
+    {
+      "after": 85,
+      "cmd": "item replace entity $(bot) armor.feet with air"
+    }
+  ],
+  "record_ticks": 100,
+  "cleanup": [
+    "clear $(bot)",
+    "fill $(2,-1,2) $(4,-1,4) stone",
+    "!startfly"
+  ],
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "exclusive": true
+}

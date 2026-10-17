@@ -2,6 +2,54 @@ use super::*;
 use crate::survival;
 use crate::stackdata::{self, Data};
 
+#[tokio::test]
+async fn piercing_block_hit_clears_history_and_sends_zero_with_ground_metadata() {
+    for piercing in [false, true] {
+        let shared = shared();
+        let mut player = player("crossbow", Stack::new(blocks::item_named("arrow").unwrap(), 1), None);
+        let mut arrow = crate::arrow::Arrow::from_mob(44, Dimension::Overworld, (0.5, 64.5, 0.5), (0.0, 0.0, 3.0), 42, "entity.minecraft.pillager");
+        arrow.fresh = false;
+        arrow.crossbow = true;
+        if piercing {
+            arrow.pierce_left = 3;
+            arrow.pierced.push(99);
+            arrow.killed.push("cow");
+        }
+        shared.arrows.lock().unwrap().spawn(arrow);
+        bow::send_arrow_ticks(&mut Outgoing::capture(), &shared, &mut player, None).await.unwrap();
+        {
+            let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            for z in 0..=3 { world.set_block_silently(0, 64, z, crate::world::AIR); }
+            world.set_block_silently(0, 64, 2, blocks::state_by_name("stone").unwrap());
+            crate::arrow::step(&shared, Dimension::Overworld, &mut world);
+            let arrows = shared.arrows.lock().unwrap();
+            let arrow = &arrows.list[0];
+            assert!(arrow.in_ground);
+            assert_eq!(arrow.pierce_left, 0);
+            assert!(arrow.pierced.is_empty() && arrow.killed.is_empty());
+        }
+        let mut early = Outgoing::capture();
+        bow::send_arrow_ticks(&mut early, &shared, &mut player, None).await.unwrap();
+        {
+            let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            crate::arrow::step(&shared, Dimension::Overworld, &mut world);
+        }
+        let mut out = Outgoing::capture();
+        bow::send_arrow_ticks(&mut out, &shared, &mut player, None).await.unwrap();
+        let mut expected = encode_varint(SET_ENTITY_DATA);
+        expected.extend(encode_varint(44));
+        if piercing { expected.extend([9, PROPERTY_BYTE as u8, 0]); }
+        expected.extend([10, 8, 1, PROPERTIES_END]); // Номер сериализатора Boolean — 8.
+        let mut bytes = out.queued();
+        let mut metadata = Vec::new();
+        while !bytes.is_empty() {
+            let packet = read_packet(&mut bytes).await.unwrap();
+            if packet.id == SET_ENTITY_DATA { metadata.push(packet.body); }
+        }
+        assert_eq!(metadata, vec![expected]);
+    }
+}
+
 fn shared() -> Shared {
     Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
         crate::ops::Ops::open(std::path::Path::new("tmp/itemaudit2/unused-ops.json")), crate::skins::Settings::default())

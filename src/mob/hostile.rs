@@ -695,9 +695,10 @@ pub(super) fn melee(mob: &mut Mob, view: &dyn View, target: &Watcher, plan: &mut
                 _ => 3.0,
             };
 
-            let damage=damage+mob.h.trial_gear.as_ref().map_or(0.0,|gear| {
-                super::trial_gear::bonus(gear,crate::attributes::ATTACK_DAMAGE)+gear[0].map_or(0.0,|s|crate::combat::enchant_bonus(&s.extras(),false,false))
-            });
+            let damage=damage+if mob.equipment.is_some() || mob.h.trial_gear.is_some() {
+                super::equipment::bonus(mob,crate::attributes::ATTACK_DAMAGE)
+
+            } else {0.0};
             mob.events.push(Event::Swing);
             if matches!(mob.kind,Kind::Creaking|Kind::Zoglin) {
                 mob.events.push(Event::Sound{name:if mob.kind==Kind::Creaking {"minecraft:entity.creaking.attack"}else{"minecraft:entity.zoglin.attack"},volume:1.0,pitch:1.0});

@@ -1,0 +1,69 @@
+{
+  "name": "enchant-frost-collision",
+  "about": "[проверить] Frost Walker на месте после экипировки: корова пересекает водяную клетку, предмет лежит в другой. Проверяем, кто препятствует заморозке; после удаления коровы повторная экипировка.",
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(3.5,1,5.5)",
+    "attribute $(bot) minecraft:scale base set 1",
+    "attribute $(bot) minecraft:safe_fall_distance base set 3",
+    "attribute $(bot) minecraft:step_height base set 0.6",
+    "gamerule random_tick_speed 0",
+    "gamerule advance_time false",
+    "time set midnight",
+    "weather clear",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "fill $(0,-2,0) $(8,-2,8) stone",
+    "fill $(0,-1,0) $(8,3,8) air",
+    "fill $(0,-1,0) $(8,-1,8) stone",
+    "fill $(1,-1,1) $(7,-1,7) water",
+    "setblock $(3,-1,5) stone",
+    "setblock $(3,-1,4) stone",
+    "setblock $(5,0,5) glass",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!look 180 0",
+    "!wait 10",
+    "summon cow $(4.5,-0.5,6.5) {NoAI:1b,NoGravity:1b,Invulnerable:1b,Tags:[\"frost_probe\"]}",
+    "summon item $(2.5,-0.5,4.5) {NoGravity:1b,PickupDelay:32767s,Item:{id:\"minecraft:stick\",count:1},Tags:[\"frost_probe\"]}",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={frost_walker:2}]"
+    },
+    {
+      "after": 20,
+      "cmd": "kill @e[tag=frost_probe,distance=..48]"
+    },
+    {
+      "after": 25,
+      "cmd": "item replace entity $(bot) armor.feet with air"
+    },
+    {
+      "after": 30,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={frost_walker:2}]"
+    }
+  ],
+  "record_ticks": 50,
+  "cleanup": [
+    "kill @e[tag=frost_probe,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "item replace entity $(bot) armor.feet with air",
+    "gamemode creative $(bot)",
+    "gamerule random_tick_speed 3",
+    "gamerule advance_time true",
+    "fill $(0,-1,0) $(8,3,8) air",
+    "fill $(0,-1,0) $(8,-1,8) grass_block",
+    "time set day",
+    "!startfly"
+  ],
+  "origin": [
+    128,
+    70,
+    128
+  ]
+}

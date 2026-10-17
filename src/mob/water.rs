@@ -18,11 +18,6 @@ pub const DOLPHIN_AIR: i32 = 4800;
 pub const DOLPHIN_MOISTURE: i32 = 2400;
 pub type Sting = (i32, i32, (f64, f64, f64), u8, (f64, f64));
 
-// Вики, Impaling: водные существа, но не утопленник и не лягушка.
-pub fn impaling(kind: Kind,level: i32) -> f32 {
-    if (creature(kind) && kind!=Kind::Frog) || super::guardian::guardian(kind) {2.5*level.max(0) as f32} else {0.0}
-}
-
 // Вики, Axolotl: пять секунд за помощь, суммарно не более двух минут.
 pub fn assist_effect(vitals: &crate::survival::Vitals) -> Effect {
     let old=vitals.effects.iter().find(|effect|effect.kind==EffectKind::Regeneration && effect.amplifier==0);
@@ -492,9 +487,9 @@ pub fn loot(mob: &Mob,rng: &mut Rng,give: &mut dyn FnMut(&str,i32,i32,&mut Rng))
         Kind::Cod=>give(if cooked {"cooked_cod"} else {"cod"},1,1,rng),
         Kind::Salmon=>give(if cooked {"cooked_salmon"} else {"salmon"},1,1,rng),
         Kind::TropicalFish=>give("tropical_fish",1,1,rng), Kind::Pufferfish=>give("pufferfish",1,1,rng),
-        Kind::Squid=>give("ink_sac",1,3+mob.looting,rng), Kind::GlowSquid=>give("glow_ink_sac",1,3+mob.looting,rng),
-        Kind::Dolphin=>give(if cooked {"cooked_cod"} else {"cod"},0,1+mob.looting,rng),
-        Kind::Turtle=>give("seagrass",0,2+mob.looting,rng), _=>{}
+        Kind::Squid=>give("ink_sac",1,3,rng), Kind::GlowSquid=>give("glow_ink_sac",1,3,rng),
+        Kind::Dolphin=>give(if cooked {"cooked_cod"} else {"cod"},0,1,rng),
+        Kind::Turtle=>give("seagrass",0,2,rng), _=>{}
     }
     if fish(mob.kind) && rng.below(20)==0 { give("bone_meal",1,1,rng); }
 }

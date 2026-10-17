@@ -28,6 +28,7 @@ pub const LUCK: i32 = 17;
 pub const MAX_ABSORPTION: i32 = 18;
 pub const MAX_HEALTH: i32 = 19;
 pub const MINING_EFFICIENCY: i32 = 20;
+pub const MOVEMENT_EFFICIENCY: i32 = 21;
 pub const MOVEMENT_SPEED: i32 = 22;
 pub const OXYGEN_BONUS: i32 = 23;
 pub const SAFE_FALL_DISTANCE: i32 = 24;
@@ -110,7 +111,7 @@ pub fn limits(attribute: i32) -> (f64, f64) {
         MAX_HEALTH => (1.0, 1024.0),
         MOVEMENT_SPEED => (0.0, 1024.0),
         SWEEPING_DAMAGE_RATIO => (0.0, 1.0),
-        SNEAKING_SPEED | WATER_MOVEMENT_EFFICIENCY => (0.0, 1.0),
+        SNEAKING_SPEED | MOVEMENT_EFFICIENCY | WATER_MOVEMENT_EFFICIENCY => (0.0, 1.0),
         OXYGEN_BONUS | MINING_EFFICIENCY => (0.0, 1024.0),
         SUBMERGED_MINING_SPEED => (0.0, 20.0),
         _ => (f64::MIN, f64::MAX),

@@ -207,6 +207,13 @@ impl Arrow {
         matches!(self.shooter, Shooter::Mob { .. })
     }
 
+    /// Зачарования лука остаются со стрелой после смены оружия стрелком.
+    pub fn enchant_from_bow(&mut self, data: &crate::stackdata::Data) {
+        self.power = data.level("power");
+        self.punch = data.level("punch");
+        self.flame = data.level("flame") > 0;
+    }
+
     /// Стрела скелета: из точки `at` со скоростью `velocity`.
     pub fn from_mob(entity_id: i32, dimension: Dimension, at: (f64, f64, f64), velocity: (f64, f64, f64), owner: i32, killer: &'static str) -> Self {
         Self {
@@ -479,8 +486,9 @@ enum Target {
     Mob { entity_id: i32 },
 }
 
-/// Игрок рядом со стрелой: номер, место, приседает ли, режим, опознаватель, имя.
-type Bystander = (i32, (f64, f64, f64), bool, i32, [u8; 16], String);
+/// Игрок рядом со стрелой: номер, место, приседает ли, режим, опознаватель,
+/// имя и «добыча» в основной руке в текущем такте, а не в момент выстрела.
+type Bystander = (i32, (f64, f64, f64), bool, i32, [u8; 16], String, i32);
 
 /// Ход стрел одного измерения за такт. Мир нужен для блоков, игроки и
 /// мобы — для целей.
@@ -499,6 +507,15 @@ fn channeling_bolt(arrow: &Arrow, world: &World, target: Option<(f64, f64, f64)>
     world.open_sky(cell.0, cell.1, cell.2).then_some((f64::from(cell.0) + 0.5, f64::from(cell.1), f64::from(cell.2) + 0.5))
 }
 
+/// Вики, Channeling/Lightning Rod: «a lightning rod ... during a thunderstorm».
+/// Чёрный ящик enchant-channeling-lightning-rod: молния на Y самого
+/// громоотвода; целевая клетка отдельно передаётся Bolt::on_rod.
+fn channeling_rod(arrow: &Arrow, world: &World, cell: (i32, i32, i32)) -> Option<(f64, f64, f64)> {
+    let name = crate::blocks::block_at_state(world.get_block(cell.0, cell.1, cell.2))?;
+    if !name.ends_with("lightning_rod") || !world.open_sky(cell.0, cell.1, cell.2) { return None; }
+    channeling_bolt(arrow, world, Some((f64::from(cell.0), f64::from(cell.1), f64::from(cell.2))))
+}
+
 pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
     // Стрелы клиентам рассылает своё слежение (после хода стрел): пока они есть
     // (и в такт, когда последняя пропала), оно должно идти — даже без мобов
@@ -514,7 +531,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         .members()
         .iter()
         .filter(|member| member.dimension == dimension)
-        .map(|member| (member.entity_id, (member.position.x, member.position.y, member.position.z), member.sneaking, member.game_mode, member.uuid, member.name.clone()))
+        .map(|member| (member.entity_id, (member.position.x, member.position.y, member.position.z), member.sneaking, member.game_mode, member.uuid, member.name.clone(), member.held.map_or(0, |stack| stack.extras().level("looting"))))
         .collect();
 
     let mut items = shared.items_in(dimension).lock().expect("предметы захвачены другим потоком");
@@ -560,7 +577,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         }
 
         if arrow.returning {
-            let Some((owner_id, at, _, mode, uuid, _)) = members.iter().find(|member| member.0 == arrow.owner && member.3 != 3) else {
+            let Some((owner_id, at, _, mode, uuid, _, _)) = members.iter().find(|member| member.0 == arrow.owner && member.3 != 3) else {
                 // Хозяин ушёл: падает, где летел [проверить].
                 arrow.returning = false;
                 continue;
@@ -633,7 +650,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                 // с упавшим трезубцем, его не поднял (чёрный ящик,
                 // trident-throw: лежит до конца записи, 60 тактов).
                 let owner_only = arrow.trident.is_some();
-                let picker = members.iter().find(|(entity_id, at, _, mode, _, _)| {
+                let picker = members.iter().find(|(entity_id, at, _, mode, _, _, _)| {
                     (*mode == 0 || *mode == 1 || *mode == 2)
                         && (arrow.pickup == Pickup::Yes || *mode == 1)
                         && (!owner_only || *entity_id == arrow.owner)
@@ -643,7 +660,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         && (at.2 - arrow.z).abs() <= PICKUP_REACH
                 });
 
-                if let Some((entity_id, _, _, _, uuid, _)) = picker {
+                if let Some((entity_id, _, _, _, uuid, _, _)) = picker {
                     // Творческому трезубец не возвращается в руки: он и не уходил.
                     match arrow.trident {
                         Some(stack) if arrow.pickup == Pickup::Yes => pickups.push((*uuid, stack)),
@@ -674,7 +691,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
         let mut best: Option<(f64, Target)> = None;
 
         // Игроки.
-        for (entity_id, at, sneaking, mode, _, _) in &members {
+        for (entity_id, at, sneaking, mode, _, _, _) in &members {
             if arrow.dealt || *mode == 3 || (*entity_id == arrow.owner && arrow.age <= OWNER_SAFE) || arrow.pierced.contains(entity_id) {
                 continue;
             }
@@ -764,7 +781,9 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     let Shooter::Mob { killer } = arrow.shooter else { unreachable!() };
                     let flat = arrow.vx.hypot(arrow.vz).max(1.0e-9);
 
-                    world.note_mob_hurt(entity_id, damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, arrow.owner, killer, Some((arrow.vx / flat, arrow.vz / flat)), (arrow.x, arrow.y, arrow.z));
+                    world.note_enchanted_mob_hurt(entity_id, damage, if arrow.trident.is_some() { Source::Trident } else { Source::Arrow }, arrow.owner, killer, Some((arrow.vx / flat, arrow.vz / flat)), (arrow.x, arrow.y, arrow.z),
+                        crate::world::ProjectileEnchantments { punch: arrow.punch, fire_ticks: if arrow.flame { 100 } else { 0 },
+                            ignores_shield: arrow.pierce_left > 0 || !arrow.pierced.is_empty(), ..Default::default() });
                     for effect in &arrow.effects {
                         world.note_mob_hit_effect(entity_id, *effect);
                     }
@@ -798,6 +817,7 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                     let mut burn = false;
 
                     if let Some(mob) = items.mobs_mut().iter_mut().find(|mob| mob.entity_id == entity_id) {
+                        let previous_credit = (mob.kill_credit, mob.xp_until, mob.looting, mob.by_player);
                         let damage = damage + arrow.trident.map_or(0.0, |stack| crate::combat::impaling_bonus(&stack.extras(), mob.kind.name()));
                         let mut damage_result = None;
                         // Стрела без стрелка (призванная командой) опыта за
@@ -805,8 +825,13 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
                         if arrow.owner != 0 && !arrow.is_mob_shot() {
                             mob.credit_player();
                         }
-                        let damage=damage+arrow.trident.map_or(0.0,|stack|crate::mob::water::impaling(mob.kind,stack.extras().level("impaling")));
-
+                        // Вики, Tutorial:Dual wielding: «mobs killed by the
+                        // bow ... affected by the sword's Looting». Смена
+                        // руки во время полёта меняет добычу. Установить до
+                        // hurt: смертельный удар сразу создаёт Event::Loot.
+                        mob.looting = if !arrow.is_mob_shot() && arrow.owner != 0 {
+                            members.iter().find(|m| m.0 == arrow.owner).map_or(0, |m| m.6)
+                        } else { 0 };
                         // Иссушитель в броне (половина здоровья и меньше): стрела
                         // отскакивает без урона (вики, Wither; wither-half-armor).
                         if crate::mob::wither::powered(mob) {
@@ -839,6 +864,11 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
 
                             arrow.hit_effects(mob);
                             apply_effects(mob, &arrow.effects);
+                        }
+                        // Отбитая стрела и непринятый урон не продлевают
+                        // кредит убийства и не заменяют чары прошлого удара.
+                        if damage_result.is_none() {
+                            (mob.kill_credit, mob.xp_until, mob.looting, mob.by_player) = previous_credit;
                         }
                         if !arrow.is_mob_shot() && arrow.owner != 0 && let Some(hit) = damage_result {
                             use crate::progress::Event;
@@ -953,6 +983,12 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             arrow.y = from.1 + (to.1 - from.1) * part;
             arrow.z = from.2 + (to.2 - from.2) * part;
             arrow.ground_block = block_cell;
+            if let Some(place) = channeling_rod(arrow, world, block_cell) {
+                let mut bolt = crate::lightning::Bolt::new(shared.next_entity_id(), place).on_rod(block_cell);
+                if !arrow.is_mob_shot() && arrow.owner != 0 { bolt.channeler = Some(arrow.owner_uuid); }
+                items.add_bolt(bolt);
+                world.note_sound_neutral_at(place, "minecraft:item.trident.thunder", 5.0, 1.0);
+            }
             if arrow.flame { ignite_block(world, block_cell); }
             if let Some(power) = crate::redstone::projectile_target(world, block_cell, (arrow.x, arrow.y, arrow.z), true)
                 && !arrow.is_mob_shot() && arrow.owner != 0
@@ -975,6 +1011,11 @@ pub fn step(shared: &Shared, dimension: Dimension, world: &mut World) {
             (arrow.vx, arrow.vy, arrow.vz) = (0.0, 0.0, 0.0);
             crate::redstone::game_event_from(world, (arrow.x, arrow.y, arrow.z), 2, Some(arrow.owner), true);
             arrow.in_ground = true;
+            // enchant-pillager-crossbow-enchanted: при попадании в блок
+            // Piercing сбрасывается (metadata9=0 вместе с10=true).
+            arrow.pierce_left = 0;
+            arrow.pierced.clear();
+            arrow.killed.clear();
             arrow.ground_ticks = 0;
             arrow.landed = true;
             world.note_sound_neutral_at((arrow.x, arrow.y, arrow.z), arrow.ground_sound(), 1.0, 1.0);
@@ -1260,6 +1301,235 @@ mod tests {
 #[cfg(test)]
 mod itemaudit2_tests {
     use super::*;
+    #[test]
+    fn rejected_arrows_preserve_kill_credit_looting_and_existing_fire() {
+        for kind in [crate::mob::Kind::Wither, crate::mob::Kind::Cow] {
+            for player_shot in [false, true] {
+                let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+                    crate::ops::Ops::open(std::path::Path::new("tmp/enchant-arrow-rejected/ops.json")), crate::skins::Settings::default());
+                let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                for y in 64..=67 { for z in 0..=4 { world.set_block_silently(0, y, z, crate::world::AIR); } }
+                let mut mob = crate::mob::Mob::new(30, kind, (0.5, 64.0, 2.5));
+                mob.no_ai = true;
+                mob.ticks = 100;
+                mob.xp_until = 107;
+                mob.kill_credit = Some([8; 16]);
+                mob.looting = 2;
+                mob.by_player = true;
+                mob.vitals.fire = 17;
+                if kind == crate::mob::Kind::Wither {
+                    mob.vitals.health = 100.0; // Броня босса отбивает стрелу до hurt.
+                } else {
+                    // Обычный hurt отклоняет стрелу слабее предыдущего удара.
+                    assert!(mob.vitals.hurt(7.0, Source::Arrow, false).is_some());
+                }
+                let health = mob.vitals.health;
+                shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(mob);
+                let mut arrow = Arrow::from_mob(40, Dimension::Overworld, (0.5, 64.5, 0.5), (0.0, 0.0, 3.0), 31, "skeleton");
+                arrow.fresh = false;
+                arrow.flame = true;
+                if player_shot { arrow.shooter = Shooter::Player; arrow.owner_uuid = [31; 16]; }
+                shared.arrows.lock().unwrap().spawn(arrow);
+                step(&shared, Dimension::Overworld, &mut world);
+                let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+                let victim = items.mobs().iter().find(|mob| mob.entity_id == 30).unwrap();
+                assert_eq!(victim.vitals.health, health);
+                assert_eq!((victim.kill_credit, victim.xp_until, victim.looting, victim.by_player),
+                    (Some([8; 16]), 107, 2, true), "{kind:?}, player={player_shot}");
+                assert_eq!(victim.vitals.fire, 17, "отклонённый Flame не продлевает прежний огонь");
+                drop(items);
+                let arrows = shared.arrows.lock().unwrap();
+                if kind == crate::mob::Kind::Wither {
+                    assert!(arrows.list.iter().any(|arrow| arrow.entity_id == 40 && arrow.vz < 0.0),
+                        "стрела действительно столкнулась с боссом и отскочила");
+                } else {
+                    assert!(arrows.list.iter().all(|arrow| arrow.entity_id != 40),
+                        "стрела действительно достигла цели с непринятым уроном");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn channeling_rod_requires_trident_enchantment_thunder_and_open_sky() {
+        for (enchanted, thunder, roof, rod) in [
+            (true, true, false, true), (false, true, false, true),
+            (true, false, false, true), (true, true, true, true), (true, true, false, false),
+        ] {
+            let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/enchant-channeling/ops.json")), crate::skins::Settings::default());
+            let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            let cell = (0, 65, 2);
+            world.set_block_silently(cell.0, cell.1, cell.2,
+                crate::blocks::state_by_name(if rod { "lightning_rod" } else { "stone" }).unwrap());
+            if roof { world.set_block_silently(0, 66, 2, crate::blocks::state_by_name("stone").unwrap()); }
+            world.weather.rain_level = 1.0;
+            world.weather.thunder_level = if thunder { 1.0 } else { 0.0 };
+            let mut arrow = Arrow::from_mob(40, Dimension::Overworld, (0.5, 65.5, 0.5), (0.0, 0.0, 3.0), 31, "");
+            arrow.fresh = false;
+            arrow.shooter = Shooter::Player;
+            arrow.owner_uuid = [31; 16];
+            let mut data = crate::stackdata::Data::default();
+            data.set_enchant(crate::stackdata::enchantment_number("channeling").unwrap(), i32::from(enchanted));
+            arrow.trident = Some(Stack::new(crate::blocks::item_named("trident").unwrap(), 1).with_extras(data));
+            let expected = enchanted && thunder && !roof && rod;
+            assert_eq!(channeling_rod(&arrow, &world, cell).is_some(), expected);
+            shared.arrows.lock().unwrap().spawn(arrow);
+            step(&shared, Dimension::Overworld, &mut world);
+            let mut count = 0;
+            shared.items_in(Dimension::Overworld).lock().unwrap().step_bolts(|bolt| {
+                count += 1;
+                assert_eq!(bolt.struck_block(), cell);
+                assert_eq!((bolt.x, bolt.y, bolt.z), (0.5, 65.0, 2.5));
+                assert_eq!(bolt.channeler, Some([31; 16]));
+                true
+            });
+            assert_eq!(count, i32::from(expected));
+        }
+    }
+
+    #[test]
+    fn only_player_owned_projectiles_unlock_player_kill_drops() {
+        for (owner, player_shot) in [(31, true), (31, false), (0, true)] {
+            let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/enchant-arrow-credit/ops.json")), crate::skins::Settings::default());
+            let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            world.set_block_silently(0, 63, 0, crate::blocks::state_by_name("stone").unwrap());
+            let mut blaze = crate::mob::Mob::new(30, crate::mob::Kind::Blaze, (0.5, 64.0, 2.5));
+            blaze.no_ai = true;
+            blaze.vitals.health = 1.0;
+            shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(blaze);
+            let mut arrow = Arrow::from_mob(40, Dimension::Overworld, (0.5, 64.5, 0.5), (0.0, 0.0, 3.0), owner, "skeleton");
+            arrow.fresh = false;
+            if player_shot { arrow.shooter = Shooter::Player; }
+            shared.arrows.lock().unwrap().spawn(arrow);
+            step(&shared, Dimension::Overworld, &mut world);
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let victim = items.mobs().iter().find(|mob| mob.entity_id == 30).unwrap();
+            assert!(victim.is_dead());
+            let has_rod = items.items().iter().any(|item| crate::blocks::item_name(item.stack.item) == Some("blaze_rod"));
+            // Фиксированный RNG id30/ticks0 выбирает один стержень, если
+            // выполнено условие убийства игроком, до начисления достижений.
+            assert_eq!(has_rod, owner != 0 && player_shot, "owner={owner}, player={player_shot}");
+        }
+    }
+
+    #[test]
+    fn mob_bow_copies_power_punch_and_flame_into_the_projectile() {
+        let mut arrow = Arrow::from_mob(1, Dimension::Overworld, (0.0, 64.0, 0.0), (0.0, 0.0, 3.0), 2, "skeleton");
+        let mut data = crate::stackdata::Data::default();
+        for (name, level) in [("power", 5), ("punch", 2), ("flame", 1)] {
+            data.set_enchant(crate::stackdata::enchantment_number(name).unwrap(), level);
+        }
+        arrow.enchant_from_bow(&data);
+        assert_eq!((arrow.power, arrow.punch, arrow.flame), (5, 2, true));
+        data.set_enchant(crate::stackdata::enchantment_number("flame").unwrap(), 0);
+        assert!(arrow.flame, "стрела хранит чары своего выстрела");
+        assert_eq!(damage_of(&arrow, 0.0), 15.0);
+    }
+
+    #[test]
+    fn projectile_looting_uses_the_shooters_current_main_hand() {
+        let sword = |level| {
+            let mut data = crate::stackdata::Data::default();
+            data.set_enchant(crate::stackdata::enchantment_number("looting").unwrap(), level);
+            Stack::new(crate::blocks::item_named("diamond_sword").unwrap(), 1).with_extras(data)
+        };
+        for (initial, final_level, mob_shot, expected) in [(0, 3, false, 3), (3, 0, false, 0), (3, 3, true, 0)] {
+            let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/enchant-looting/ops.json")), crate::skins::Settings::default());
+            let uuid = [31; 16];
+            let member = crate::players::Member {
+                uuid, name: "Лучник".into(), entity_id: 31, game_mode: 0,
+                position: crate::players::Position { x: 5.0, y: 64.0, z: 0.5, yaw: 0.0, pitch: 0.0, on_ground: true },
+                skin: None, skin_parts: 0x7f, main_hand: 1, held: Some(sword(initial)),
+                dimension: Dimension::Overworld, sneaking: false, swings: 0, shoved: ((0.0, 0.0, 0.0), 0), unsettled: 0,
+            };
+            shared.players.lock().unwrap().join(member, 31).unwrap();
+            let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            world.set_block_silently(0, 63, 0, crate::blocks::state_by_name("stone").unwrap());
+            let mut mob = crate::mob::Mob::new(30, crate::mob::Kind::Llama, (0.5, 64.0, 2.5));
+            mob.no_ai = true;
+            mob.vitals.health = 1.0;
+            shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(mob);
+            let mut arrow = Arrow::from_mob(40, Dimension::Overworld, (0.5, 64.5, 0.5), (0.0, 0.0, 3.0), 31, "skeleton");
+            arrow.owner_uuid = uuid;
+            if !mob_shot { arrow.shooter = Shooter::Player; }
+            shared.arrows.lock().unwrap().spawn(arrow);
+            // Первый такт — появление; до столкновения игрок меняет руку.
+            step(&shared, Dimension::Overworld, &mut world);
+            shared.players.lock().unwrap().set_held(&uuid, (final_level > 0).then(|| sword(final_level)));
+            step(&shared, Dimension::Overworld, &mut world);
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let victim = items.mobs().iter().find(|mob| mob.entity_id == 30).unwrap();
+            assert!(victim.is_dead());
+            assert_eq!(victim.looting, expected, "{initial} -> {final_level}, моб={mob_shot}");
+            let mut reference = victim.clone();
+            reference.looting = expected;
+            let expected_loot = crate::mob::loot(&reference, &mut crate::mob::Rng::new(30 ^ reference.ticks ^ 0x5EED));
+            // step уже перенёс Loot из моба в настоящие сущности предметов.
+            let dropped: Vec<_> = items.items().iter().map(|item| item.stack).collect();
+            assert_eq!(dropped, expected_loot, "добыча рассчитана уже внутри смертельного попадания");
+        }
+    }
+
+    #[test]
+    fn thrown_impaling_adds_one_bonus_per_level_only_to_aquatic_targets() {
+        // Вики, Impaling: «2.5 ... extra damage per level». Проверяем весь
+        // путь столкновения: два отдельных helper раньше удваивали прибавку.
+        for kind in [crate::mob::Kind::Guardian, crate::mob::Kind::Cow] {
+            for level in [0, 1, 5] {
+                let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+                    crate::ops::Ops::open(std::path::Path::new("tmp/enchant-impaling/ops.json")), crate::skins::Settings::default());
+                let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                world.set_block_silently(0, 63, 0, crate::blocks::state_by_name("stone").unwrap());
+                let mut mob = crate::mob::Mob::new(30, kind, (0.5, 64.0, 2.5));
+                mob.no_ai = true;
+                let before = mob.vitals.health;
+                shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(mob);
+                let mut data = crate::stackdata::Data::default();
+                data.set_enchant(crate::stackdata::enchantment_number("impaling").unwrap(), level);
+                let mut arrow = Arrow::from_mob(40, Dimension::Overworld, (0.5, 64.5, 0.5), (0.0, 0.0, 3.0), 0, "");
+                arrow.fresh = false;
+                arrow.trident = Some(Stack::new(crate::blocks::item_named("trident").unwrap(), 1).with_extras(data));
+                shared.arrows.lock().unwrap().spawn(arrow);
+                step(&shared, Dimension::Overworld, &mut world);
+                let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+                let hit = items.mobs().iter().find(|mob| mob.entity_id == 30).unwrap();
+                let expected = 8.0 + if kind == crate::mob::Kind::Guardian { 2.5 * level as f32 } else { 0.0 };
+                assert_eq!(before - hit.vitals.health, expected, "{kind:?}, Impaling {level}");
+            }
+        }
+    }
+
+    #[test]
+    fn lethal_flame_arrow_cooks_drops_before_death_is_processed() {
+        for flame in [false, true] {
+            let shared = Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
+                crate::ops::Ops::open(std::path::Path::new("tmp/enchant-flame-loot/ops.json")), crate::skins::Settings::default());
+            let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+            // Исключаем случайный рельеф in_memory на пути снаряда.
+            for y in 64..=66 { for z in 0..=4 { world.set_block_silently(0, y, z, 0); } }
+            let mut cow = crate::mob::Mob::new(30, crate::mob::Kind::Cow, (0.5, 64.0, 2.5));
+            cow.no_ai = true;
+            cow.vitals.health = 1.0;
+            shared.items_in(Dimension::Overworld).lock().unwrap().add_mob(cow);
+            let mut arrow = Arrow::from_mob(40, Dimension::Overworld, (0.5, 64.5, 0.5), (0.0, 0.0, 3.0), 31, "skeleton");
+            arrow.flame = flame;
+            arrow.fresh = false;
+            shared.arrows.lock().unwrap().spawn(arrow);
+            step(&shared, Dimension::Overworld, &mut world);
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let victim = items.mobs().iter().find(|mob| mob.entity_id == 30).unwrap();
+            assert!(victim.is_dead());
+            let drops: Vec<_> = items.items().iter().map(|item| item.stack).collect();
+            let expected = if flame { "cooked_beef" } else { "beef" };
+            let forbidden = if flame { "beef" } else { "cooked_beef" };
+            assert!(drops.iter().any(|stack| crate::blocks::item_name(stack.item) == Some(expected)));
+            assert!(drops.iter().all(|stack| crate::blocks::item_name(stack.item) != Some(forbidden)));
+        }
+    }
+
     #[test]
     fn flame_and_punch_apply_to_mobs_after_a_hit() {
         let mut arrow = Arrow::from_mob(1, Dimension::Overworld, (0.0, 0.0, 0.0), (0.0, 0.0, 3.0), 2, "skeleton");

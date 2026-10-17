@@ -196,6 +196,7 @@ impl Health {
 
     fn apply_hit(&mut self, id: u64, (mut amount, source, final_damage): (f32, Source, bool), rules: &Rules,
         inventory: &mut crate::inventory::Inventory, attrs: &crate::attributes::Attributes, out: &mut Outcome) {
+        if crate::frost::protects(inventory, source) { return; }
         if !final_damage {
             if source.scales_with_difficulty() { amount = survival::scaled(amount, rules.difficulty); }
             let points = crate::combat::ARMOR_SLOTS.iter().filter_map(|(slot, _)| inventory.slot(*slot))
@@ -542,6 +543,25 @@ mod tests {
         health.hurt_final(6.0, Source::Arrow);
         health.step(1, Rules { mortal: true, immune: false, difficulty: survival::EASY, feet_y: 64.0, natural_regeneration: false }, &mut inventory, &attrs);
         assert_eq!(health.vit.health, 14.0);
+    }
+
+    #[test]
+    fn frost_boots_reject_both_raw_and_final_hot_block_damage() {
+        let mut inventory = crate::inventory::Inventory::new();
+        let mut data = crate::stackdata::Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number("frost_walker").unwrap(), 1);
+        inventory.set(8, Some(crate::inventory::Stack::new(crate::blocks::item_named("diamond_boots").unwrap(), 1).with_extras(data)));
+        let attrs = crate::attributes::Attributes::player();
+        let rules = || Rules { mortal: true, immune: false, difficulty: survival::NORMAL, feet_y: 64.0, natural_regeneration: false };
+        let mut health = Health::new(None);
+        health.hurt(20.0, Source::HotFloor);
+        health.hurt_final(20.0, Source::Campfire);
+        let out = health.step(1, rules(), &mut inventory, &attrs);
+        assert!(out.hurts.is_empty());
+        assert_eq!(health.vit.health, 20.0);
+        health.hurt(2.0, Source::Lava);
+        assert_eq!(health.step(1, rules(), &mut inventory, &attrs).hurts, vec![Source::Lava]);
+        assert_eq!(health.vit.health, 18.0);
     }
 
     #[test]

@@ -51,7 +51,7 @@ pub(crate) enum Act<'a> {
     Attribute(&'a crate::commands_world::AttributeEdit),
     Spawn((f64, f64, f64)),
     RespawnBlock { at: (i32, i32, i32), face: i32 },
-    MobHit { amount: f32, source: Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64) },
+    MobHit { amount: f32, source: Source, attacker: i32, killer: &'static str, push: Option<(f64, f64)>, at: (f64, f64, f64), enchantments: crate::world::ProjectileEnchantments },
     /// Удар игрока по этому игроку (из журнала мира): щит, броня, отдача.
     Struck(&'a PlayerStrike),
     /// Предмет в руке щёлкнут по блоку: ракета фейерверка летит из точки
@@ -227,13 +227,13 @@ impl Body {
                     done.block_used = true;
                 }
             }
-            Act::MobHit { amount, source, attacker, killer, push, at } => {
+            Act::MobHit { amount, source, attacker, killer, push, at, enchantments } => {
                 let difficulty = shared.difficulty.load(std::sync::atomic::Ordering::Relaxed);
                 let amount = if source.scales_with_difficulty() { survival::scaled(amount, difficulty) } else { amount };
                 let strike = PlayerStrike { victim: p.entity_id, attacker, attacker_uuid: [0; 16], attacker_name: killer.to_string(),
                     from: at, yaw: 0.0, damage: amount, source, extra_knockback: 0.0, weapon: None,
                     disables_shield_ticks: if killer == "entity.minecraft.warden" { 100 } else { 0 }, breach_scale: 1.0,
-                    fire_ticks: 0, ignores_shield: !(matches!(source, Source::MobAttack | Source::Sting) || source.is_projectile()),
+                    fire_ticks: enchantments.fire_ticks, ignores_shield: enchantments.ignores_shield || !(matches!(source, Source::MobAttack | Source::Sting) || source.is_projectile()),
                     thorns_slots: Vec::new(), effects: Vec::new() };
                 struck(shared, p, &strike, now, &mut done);
                 p.net.mob_hit_landed = done.landed;
@@ -249,8 +249,17 @@ impl Body {
                     let flat = (p.x - at.0).hypot(p.z - at.2).max(1.0e-9);
                     p.net.velocity = Some((((p.x - at.0) / flat * 0.4 + sonic.0) * 0.546,
                         (0.3606 + sonic.1 - 0.08) * 0.98, ((p.z - at.2) / flat * 0.4 + sonic.2) * 0.546));
-                } else if p.net.velocity.is_some() {
+                } else if p.net.velocity.is_some() && source != Source::Thorns {
                     p.net.velocity = push.map(|(x, z)| (x * 0.218, if p.on_ground { 0.275 } else { p.net.last_delta.1 }, z * 0.218));
+                }
+                if done.landed && enchantments.melee_knockback > 0.0 && let Some(dir) = push {
+                    vitals::enchanted_mob_knockback(p, dir, enchantments.melee_knockback);
+                }
+                if done.landed && source == Source::Arrow && let Some(dir) = push {
+                    let extra = combat::punch_impulse(enchantments.punch as f32 * 1.2, dir, p.attrs.value(crate::attributes::KNOCKBACK_RESISTANCE));
+                    if let Some(velocity) = p.net.velocity.as_mut() {
+                        *velocity = (velocity.0 + extra.0 * 0.546, velocity.1 + extra.1 * 0.98, velocity.2 + extra.2 * 0.546);
+                    }
                 }
             }
             Act::Attribute(edit) => {
@@ -258,7 +267,10 @@ impl Body {
                 vitals::apply_effect_modifiers(p);
                 crate::commands_world::finish_attribute_edit(shared, &p.uuid, &p.attrs);
             }
-            Act::Environment => done.raw_damage.extend(vitals::bedrock_environment(shared, p)),
+            Act::Environment => {
+                super::movement_enchantments::update(shared, p);
+                done.raw_damage.extend(vitals::bedrock_environment(shared, p));
+            },
             Act::Reactions => {
                 vitals::effect_reactions(shared, p, p.vit.dead);
                 if p.vit.dead { p.net.using = None; p.net.eating = None; p.net.spin_since = None; }
@@ -438,7 +450,7 @@ fn finish(shared: &Shared, p: &mut PlayerState, eating: vitals::Eating, done: &m
 fn struck(shared: &Shared, p: &mut PlayerState, strike: &PlayerStrike, now: u64, done: &mut Done) {
     let mortal = p.game_mode == GAME_MODE_SURVIVAL || p.game_mode == GAME_MODE_ADVENTURE;
 
-    if !mortal || p.vit.dead {
+    if !mortal || p.vit.dead || crate::frost::protects(&p.inventory, strike.source) {
         return;
     }
 
@@ -508,10 +520,16 @@ fn struck(shared: &Shared, p: &mut PlayerState, strike: &PlayerStrike, now: u64,
 
     vitals::knock_back(p, dir, crate::mob::BASE_KNOCKBACK, resistance);
 
-    if strike.extra_knockback > 0.0 && strike.source != Source::Arrow {
+    if strike.extra_knockback > 0.0 {
         let look = crate::mob::look_direction(strike.yaw);
-
-        vitals::knock_back(p, look, f64::from(strike.extra_knockback) * 0.5, resistance);
+        if strike.source == Source::Arrow {
+            let push = combat::punch_impulse(strike.extra_knockback, look, resistance);
+            if let Some(velocity) = p.net.velocity.as_mut() {
+                *velocity = (velocity.0 + push.0, velocity.1 + push.1, velocity.2 + push.2);
+            }
+        } else {
+            vitals::knock_back(p, look, f64::from(strike.extra_knockback) * 0.5, resistance);
+        }
     }
 
     if strike.fire_ticks > 0 {
@@ -578,6 +596,93 @@ pub(crate) fn store_cart(shared: &Shared, dimension: Dimension, entity_id: i32, 
 mod bedrock_entity_tests {
     use super::*;
     use crate::mob::{Kind, Mob};
+
+    #[test]
+    fn piercing_mob_arrow_bypasses_bedrock_shield_without_wearing_it() {
+        for piercing in [false, true] {
+            let shared = shared();
+            let mut body = Body::new([1; 16], "Bedrock".into(), 1);
+            let mut stance = stance(); stance.sneaking = true;
+            let mut inventory = Inventory::new();
+            inventory.set(inventory::OFFHAND, Some(Stack::new(blocks::item_named("shield").unwrap(), 1)));
+            let mut vit = Vitals::new(); let mut last = 0;
+            shared.ticks.send_replace(100);
+            body.act(&shared, &stance, &mut inventory, &mut vit, &mut last, Act::Tick);
+            shared.ticks.send_replace(105);
+            let done = body.act(&shared, &stance, &mut inventory, &mut vit, &mut last,
+                Act::MobHit { amount: 4.0, source: Source::Arrow, attacker: 2, killer: "entity.minecraft.pillager",
+                    push: Some((0.0, -1.0)), at: (0.5, 0.0, 2.5),
+                    enchantments: crate::world::ProjectileEnchantments { ignores_shield: piercing, ..Default::default() } });
+            assert_eq!(done.landed, piercing);
+            assert_eq!(done.shield_blocked, !piercing);
+            assert_eq!(inventory.slot(inventory::OFFHAND).unwrap().extras().damage == 0, piercing);
+        }
+    }
+
+    #[test]
+    fn mob_thorns_keep_the_same_velocity_as_java() {
+        let shared = shared();
+        let mut body = Body::new([1; 16], "Bedrock".into(), 1);
+        let mut inventory = Inventory::new();
+        let mut vit = Vitals::new();
+        let mut last = 0;
+        let done = body.act(&shared, &stance(), &mut inventory, &mut vit, &mut last,
+            Act::MobHit { amount: 2.0, source: Source::Thorns, attacker: 2, killer: "entity.minecraft.zombie",
+                push: Some((0.0, -1.0)), at: (0.5, 0.0, 2.5), enchantments: Default::default() });
+        assert!(done.landed);
+        let velocity = done.velocity.unwrap();
+        // Та же физика, что в Java: тяжесть/сопротивление стоящего игрока,
+        // половина предыдущей скорости, затем толчок. Blackbox даёт 0.361.
+        let expected_y = (-0.08 * 0.98) / 2.0 + 0.4;
+        assert!((velocity.1 - expected_y).abs() < 1e-9);
+        assert_eq!((velocity.1 * 1000.0).round() / 1000.0, 0.361);
+        assert!((velocity.2 + 0.4).abs() < 1e-9);
+    }
+
+    #[test]
+    fn bedrock_receives_punch_from_player_and_mob_arrows_but_shield_blocks_it() {
+        for mob in [false, true] {
+            for shield in [false, true] {
+                let mut velocities = Vec::new();
+                for level in [0, 2] {
+                    let shared = shared();
+                    let mut body = Body::new([1; 16], "Bedrock".into(), 1);
+                    let mut stance = stance();
+                    stance.sneaking = shield;
+                    let mut inventory = Inventory::new();
+                    let mut vit = Vitals::new();
+                    let mut last = 0;
+                    if shield { inventory.set(inventory::OFFHAND, Some(Stack::new(blocks::item_named("shield").unwrap(), 1))); }
+                    shared.ticks.send_replace(100);
+                    body.act(&shared, &stance, &mut inventory, &mut vit, &mut last, Act::Tick);
+                    shared.ticks.send_replace(105);
+                    let strike = PlayerStrike { victim: 1, attacker: 2, attacker_uuid: [2; 16], attacker_name: "Лучник".into(),
+                        from: (0.5, 0.0, 2.5), yaw: 180.0, damage: 4.0, source: Source::Arrow,
+                        extra_knockback: level as f32 * 1.2, weapon: None, disables_shield_ticks: 0, breach_scale: 1.0,
+                        fire_ticks: 100, ignores_shield: false, thorns_slots: Vec::new(), effects: Vec::new() };
+                    let act = if mob {
+                        Act::MobHit { amount: 4.0, source: Source::Arrow, attacker: 2, killer: "entity.minecraft.skeleton",
+                            push: Some((0.0, -1.0)), at: strike.from,
+                            enchantments: crate::world::ProjectileEnchantments { punch: level, fire_ticks: 100, ..Default::default() } }
+                    } else { Act::Struck(&strike) };
+                    let done = body.act(&shared, &stance, &mut inventory, &mut vit, &mut last, act);
+                    assert_eq!(done.landed, !shield);
+                    assert_eq!(done.shield_blocked, shield);
+                    assert_eq!(vit.fire > 0, !shield);
+                    if shield { assert!(done.velocity.is_none()); }
+                    else { velocities.push(done.velocity.unwrap()); }
+                }
+                if !shield {
+                    let (plain, punch) = (velocities[0], velocities[1]);
+                    let friction = if mob { 0.546 } else { 1.0 };
+                    let vertical = if mob { 0.98 } else { 1.0 };
+                    assert!((punch.2 - plain.2 + 1.2 * friction).abs() < 1e-6);
+                    assert!((punch.1 - plain.1 - 0.1 * vertical).abs() < 1e-6);
+                }
+            }
+        }
+    }
+
     fn shared() -> Shared {
         Shared::new(World::in_memory(), World::in_memory(), Default::default(), Default::default(), Default::default(),
             crate::ops::Ops::open(std::path::Path::new("tmp/bedrock-entity-test-ops.json")), crate::skins::Settings::default())

@@ -423,6 +423,15 @@ pub fn combat_particles(kind: i32, block: Option<i32>, at: (f64, f64, f64)) -> O
     }
 }
 
+/// minecraft-data 1.26.10, packet_spawn_particle_effect; wiki Particles
+/// (Bedrock Edition): «soul_particle». Вид и траектория на BDS [проверить].
+pub fn soul_particle(dimension: u8, at: (f64, f64, f64)) -> Vec<u8> {
+    let mut out = Out::packet(118);
+    out.u8(dimension).zigzag64(-1).vec3f(at.0 as f32, at.1 as f32, at.2 as f32)
+        .string("minecraft:soul_particle").bool(false);
+    out.bytes
+}
+
 /// Set Entity Motion: скорость в блоках за такт.
 pub fn motion(runtime_id: u64, (x, y, z): (f32, f32, f32)) -> Vec<u8> {
     let mut out = Out::packet(SET_ENTITY_MOTION);
@@ -473,6 +482,19 @@ pub fn move_primed(entity_id: i32, (x, y, z): (f32, f32, f32)) -> Vec<u8> {
 mod tests {
     use super::*;
     use crate::bedrock::codec::{In, packet_id};
+
+    #[test]
+    fn soul_particle_carries_dimension_and_unbound_entity() {
+        let packet = soul_particle(2, (1.5, 70.1, 4.5));
+        let (id, data) = packet_id(&packet).unwrap();
+        assert_eq!(id, 118);
+        let mut r = In::new(data);
+        assert_eq!(r.u8(), Some(2));
+        assert_eq!(r.zigzag64(), Some(-1));
+        for v in [1.5, 70.1, 4.5] { assert_eq!(r.lf32(), Some(v)); }
+        assert_eq!(r.string().as_deref(), Some("minecraft:soul_particle"));
+        assert_eq!(r.bool(), Some(false));
+    }
 
     #[test]
     fn wind_and_combat_particles_have_documented_events() {

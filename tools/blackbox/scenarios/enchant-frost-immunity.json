@@ -1,0 +1,75 @@
+{
+  "name": "enchant-frost-immunity",
+  "about": "Иммунитет Frost Walker при /damage hot_floor и campfire, сравнение с lava; FireResistance для тех же источников.",
+  "exclusive": true,
+  "track_self": true,
+  "inventory": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "execute in minecraft:overworld run tp $(bot) $(3.5,1,5.5)",
+    "attribute $(bot) minecraft:scale base set 1",
+    "attribute $(bot) minecraft:safe_fall_distance base set 3",
+    "attribute $(bot) minecraft:step_height base set 0.6",
+    "difficulty normal",
+    "gamerule natural_health_regeneration false",
+    "gamemode survival $(bot)",
+    "clear $(bot)",
+    "effect clear $(bot)",
+    "effect give $(bot) instant_health 1 10",
+    "tp $(bot) $(3.5,0,5.5)",
+    "!stopfly",
+    "!wait 15"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "item replace entity $(bot) armor.feet with diamond_boots[enchantments={frost_walker:1}]"
+    },
+    {
+      "after": 10,
+      "cmd": "damage $(bot) 2 minecraft:hot_floor"
+    },
+    {
+      "after": 35,
+      "cmd": "damage $(bot) 2 minecraft:campfire"
+    },
+    {
+      "after": 60,
+      "cmd": "damage $(bot) 2 minecraft:lava"
+    },
+    {
+      "after": 85,
+      "cmd": "item replace entity $(bot) armor.feet with air"
+    },
+    {
+      "after": 90,
+      "cmd": "effect give $(bot) fire_resistance 30"
+    },
+    {
+      "after": 100,
+      "cmd": "damage $(bot) 2 minecraft:hot_floor"
+    },
+    {
+      "after": 125,
+      "cmd": "damage $(bot) 2 minecraft:campfire"
+    },
+    {
+      "after": 150,
+      "cmd": "damage $(bot) 2 minecraft:lava"
+    },
+    {
+      "after": 175,
+      "cmd": "effect clear $(bot)"
+    }
+  ],
+  "record_ticks": 190,
+  "cleanup": [
+    "effect clear $(bot)",
+    "clear $(bot)",
+    "difficulty peaceful",
+    "gamerule natural_health_regeneration true",
+    "gamemode creative $(bot)",
+    "!startfly"
+  ]
+}

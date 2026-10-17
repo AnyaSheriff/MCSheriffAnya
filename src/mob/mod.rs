@@ -16,7 +16,10 @@
 
 pub mod ai;
 pub mod armor_stand;
+pub mod movement_enchantments;
 pub mod trial_gear;
+pub mod equipment;
+pub mod combat_enchantments;
 pub mod small;
 pub mod small_world;
 pub mod growth;
@@ -1637,6 +1640,8 @@ pub struct Mob {
     /// Опыт, который надо ронять шариками: ставит смерть, забирает
     /// `Items::flush_mob_events`.
     pub pending_xp: i32,
+    /// Принятые шипы; переживают смерть носителя до следующего такта.
+    pub enchant_retaliation: Vec<combat_enchantments::Retaliation>,
 
     /// Дракон боя Края, ещё не побеждённого: за него 12000 опыта.
     pub first_dragon: bool,
@@ -1702,6 +1707,9 @@ pub struct Mob {
 
     pub newmobs: newmobs::State,
     pub stand: armor_stand::State,
+    pub foot_enchants: movement_enchantments::State,
+    pub equipment: Option<equipment::Gear>,
+    pub equipment_drop_chances: equipment::Chances,
 
     /// Кролик, лиса и пчела (mob/wildlife.rs).
     pub wild: wildlife::State,
@@ -1782,6 +1790,7 @@ impl Mob {
             xp_until: 0,
             kill_credit: None,
             pending_xp: 0,
+            enchant_retaliation: Vec::new(),
             first_dragon: false,
             beam_target: None,
             healer: 0,
@@ -1809,6 +1818,9 @@ impl Mob {
             small: small::State::new(kind, entity_id),
             newmobs: newmobs::State::default(),
             stand: armor_stand::State::default(),
+            foot_enchants: movement_enchantments::State::default(),
+            equipment: None,
+            equipment_drop_chances: [DEFAULT_DROP; 6],
         };
         horse::defaults(&mut mob);
         mob
@@ -1854,7 +1866,8 @@ impl Mob {
     }
 
     pub fn movement_speed(&self) -> f64 {
-        if horse::equine(self.kind) { self.horse.speed } else { self.kind.speed() }
+        let base = if horse::equine(self.kind) { self.horse.speed } else { self.kind.speed() };
+        base + crate::soul::bonus(self.foot_enchants.soul)
     }
 
     pub fn is_baby(&self) -> bool {
@@ -2112,7 +2125,7 @@ impl Mob {
             self.hurt(1.0, Source::OnFire, None);
         }
 
-        let fireproof = self.kind.object() || matches!(self.kind, Kind::EnderDragon | Kind::Blaze | Kind::MagmaCube | Kind::Ghast | Kind::WitherSkeleton | Kind::ZombifiedPiglin);
+        let fireproof = self.kind.object() || self.fire_immune();
         if fireproof { self.vitals.extinguish(); }
         if !fireproof && !self.vitals.has_effect(crate::survival::EffectKind::FireResistance) {
             let (x, y, z) = self.cell();
@@ -2120,6 +2133,9 @@ impl Mob {
             let name = blocks::block_at_state(state);
             let campfire = crate::campfire::damage(state).max(crate::campfire::damage(view.block(x, (self.y - 0.01).floor() as i32, z)));
             if campfire > 0.0 { self.hurt(campfire, Source::Campfire, None); }
+            if self.on_ground && blocks::block_at_state(view.block(x, (self.y - 0.2).floor() as i32, z)) == Some("magma_block") {
+                self.hurt(1.0, Source::HotFloor, None);
+            }
             if matches!(name, Some("fire" | "soul_fire")) {
                 self.vitals.ignite(160);
                 self.hurt(if name == Some("soul_fire") { 2.0 } else { 1.0 }, Source::InFire, None);
@@ -2477,8 +2493,9 @@ impl Mob {
             self.vy *= 0.6;
         }
 
-        self.vx *= friction;
-        self.vz *= friction;
+        let floor_drag = movement_enchantments::floor_drag(self, view);
+        self.vx *= friction * floor_drag;
+        self.vz *= friction * floor_drag;
 
         if self.vx.abs() < 0.003 {
             self.vx = 0.0;
@@ -2619,8 +2636,25 @@ impl Mob {
         hit
     }
 
+    /// Вики, Drops/Experience: удар игрока и его прирученного волка даёт
+    /// кредит уже смертельному попаданию. die() рассчитывает добычу внутри
+    /// hurt(), поэтому назначать владельца после него слишком поздно.
+    /// Непринятый удар не обновляет ни владельца, ни «добычу».
+    pub fn hurt_credited(&mut self, amount: f32, source: Source, push: Option<Push>, owner: [u8; 16], looting: i32) -> Option<Hit> {
+        self.hurt_credited_burning(amount, source, push, owner, looting, 0)
+    }
+
+    pub fn hurt_credited_burning(&mut self, amount: f32, source: Source, push: Option<Push>, owner: [u8; 16], looting: i32, fire: i32) -> Option<Hit> {
+        let before = (self.kill_credit, self.xp_until, self.looting);
+        self.credit_to(owner);
+        self.looting = looting.max(0);
+        let hit = self.hurt_burning(amount, source, push, 1.0, fire);
+        if hit.is_none() { (self.kill_credit, self.xp_until, self.looting) = before; }
+        hit
+    }
+
     fn fire_immune(&self) -> bool {
-        matches!(self.kind, Kind::Blaze | Kind::Ghast | Kind::MagmaCube | Kind::Strider | Kind::WitherSkeleton | Kind::ZombifiedPiglin | Kind::Wither | Kind::EnderDragon)
+        matches!(self.kind, Kind::Blaze | Kind::Ghast | Kind::MagmaCube | Kind::Strider | Kind::WitherSkeleton | Kind::ZombifiedPiglin | Kind::Wither | Kind::EnderDragon | Kind::Zoglin | Kind::Warden)
     }
 
     pub fn effect_melee_damage(&self, base: f32) -> f32 {
@@ -2652,9 +2686,10 @@ impl Mob {
     /// Пробивание действует и на естественную броню моба (вики, Breach:
     /// «natural armor points»). Остальной путь урона общий [проверить].
     pub fn hurt_breached(&mut self, amount: f32, source: Source, push: Option<Push>, breach: f32) -> Option<Hit> {
+        if crate::frost::protects_boots(equipment::slot(self, 2), source) { return None; }
         if self.kind==Kind::ArmorStand {return armor_stand::hurt(self,amount,source);}
         if horse::undead(self.kind) && source == Source::Drown { return None; }
-        if self.is_dead() || (self.fire_immune() && matches!(source, Source::InFire | Source::OnFire | Source::Lava | Source::Fireball)) {
+        if self.is_dead() || (self.fire_immune() && matches!(source, Source::InFire | Source::Campfire | Source::HotFloor | Source::OnFire | Source::Lava | Source::Fireball)) {
             return None;
         }
         if self.kind == Kind::Zoglin && matches!(source, Source::InFire | Source::OnFire | Source::Lava | Source::Drown) { return None; }
@@ -2710,9 +2745,8 @@ impl Mob {
             return None;
         }
 
-        if matches!(source, Source::InFire | Source::Campfire | Source::OnFire | Source::Lava)
-            && (matches!(self.kind, Kind::Blaze | Kind::MagmaCube | Kind::Ghast | Kind::WitherSkeleton | Kind::ZombifiedPiglin)
-                || self.vitals.has_effect(crate::survival::EffectKind::FireResistance)) {
+        if matches!(source, Source::InFire | Source::Campfire | Source::HotFloor | Source::OnFire | Source::Lava)
+            && self.vitals.has_effect(crate::survival::EffectKind::FireResistance) {
             return None;
         }
 
@@ -2721,16 +2755,14 @@ impl Mob {
         let before = self.vitals.health;
         let amount = if armored(source) {
             if breach != 1.0 {
-                let toughness = if let Some(gear)=&self.h.trial_gear { trial_gear::bonus(gear,crate::attributes::ARMOR_TOUGHNESS) } else if horse::equine(self.kind) { horse::toughness(self) } else { 0.0 };
+                let toughness = equipment::bonus(self,crate::attributes::ARMOR_TOUGHNESS) + if horse::equine(self.kind) { horse::toughness(self) } else { 0.0 };
                 crate::combat::after_armor_breached(amount, self.armor(), toughness, breach)
             }
-            else if let Some(gear)=&self.h.trial_gear { crate::combat::after_armor(amount,self.armor(),trial_gear::bonus(gear,crate::attributes::ARMOR_TOUGHNESS)) }
+            else if self.equipment.is_some() || self.h.trial_gear.is_some() { crate::combat::after_armor(amount,self.armor(),equipment::bonus(self,crate::attributes::ARMOR_TOUGHNESS)) }
             else if horse::equine(self.kind) { crate::combat::after_armor(amount, self.armor(), horse::toughness(self)) } else { after_armor(amount, self.armor()) }
         } else { amount };
-        let amount=if let Some(gear)=&self.h.trial_gear {
-            let points=gear[1..].iter().flatten().map(|s|crate::combat::protection_points(&s.extras(),source)).sum();
-            crate::combat::after_protection(amount,points)
-        } else {amount};
+        let points=equipment::all(self)[2..].iter().flatten().map(|s|crate::combat::protection_points(&s.extras(),source)).sum();
+        let amount=crate::combat::after_protection(amount,points);
         let armor_absorbs = wolf_armor::protects(self, source);
         let armored_wolf = self.kind == Kind::Wolf && self.tame.armor.is_some();
         let absorption_before = self.vitals.absorption;
@@ -2767,6 +2799,7 @@ impl Mob {
             self.h.silverfish_call = arthropod::CALL_DELAY;
         }
 
+        combat_enchantments::on_hurt(self, source, push);
         self.events.push(Event::Hurt { source, cause: push.map_or(0, |push| push.cause), at: (self.x, self.y, self.z) });
 
         // Ударили зомби-пиглина: злится и зовёт стаю (вики, Zombified Piglin).
@@ -2856,7 +2889,7 @@ impl Mob {
     /// даёт закрытие после открытия (`covered`): призванный закрытым без брони
     /// (чёрный ящик, shulker-stand: NoAI-шалкер теряет от меча 7 из 30).
     pub fn armor(&self) -> f32 {
-        let extra=self.h.trial_gear.as_ref().map_or(0.0,|gear|trial_gear::bonus(gear,crate::attributes::ARMOR));
+        let extra=equipment::bonus(self,crate::attributes::ARMOR);
         extra + match self.kind {
             Kind::Rabbit if self.wild.variant == 99 => 8.0,
             Kind::Shulker if self.h.covered => 20.0,
@@ -3016,7 +3049,7 @@ impl Mob {
         } else {
             self.kind.save_id()
         };
-        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some());
+        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some());
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -3061,7 +3094,7 @@ impl Mob {
         if self.kind==Kind::ArmorStand {self.stand.write(out);}
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
-        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() {
+        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() {
             leash::write_tail(self, out);
         }
     }
@@ -3203,16 +3236,47 @@ impl PartialEq for Mob {
 /// Выпадающее после смерти (вики: Cow, Pig, Sheep, Chicken, «Drops»):
 /// корова — 0–2 кожи и 1–3 говядины, свинья — 1–3 свинины, овца — шерсть
 /// своего цвета (если не острижена) и 1–2 баранины, курица — 0–2 пера и
-/// курятина. Детёныши ничего не роняют. Горящие роняют жареное [проверить:
-/// огня у мобов ещё нет].
+/// курятина. Детёныши ничего не роняют. Горящие роняют жареное.
 pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
-    if (mob.is_baby() && !mob.kind.hostile() && mob.kind != Kind::Fox) || mob.kind.object() {
+    if mob.kind.object() {
         return Vec::new();
     }
+    if mob.is_baby() && !mob.kind.hostile() && mob.kind != Kind::Fox { return equipment::death_drops(mob, rng); }
 
+    // Вики, Drops: добыча от убийства игроком учитывает и его снаряды.
+    // credit_player ставится до смертельного попадания; то же условие уже
+    // используется skeleton::loot. by_player отдельно нужен прямому удару.
+    let credited = mob.by_player || mob.xp_until > mob.ticks;
     let mut drops = Vec::new();
     let mut give = |name: &str, low: i32, high: i32, rng: &mut Rng| {
         let count = low + rng.below((high - low + 1) as u32) as i32;
+        // Вики, Item modifier/enchanted_count_increase: дробный бонус
+        // «rounded after multiplying by the looting level». Как у скелета,
+        // бросок прибавки отдельный: распределение не равномерно 0..max+L.
+        // Шерсть овцы, блок эндермена и железо голема «добыча» не умножает.
+        // [проверить] Распределение и последовательность RNG на vanilla 26.1.2.
+        let common = matches!((mob.kind, name),
+            (Kind::Cow | Kind::Mooshroom, "leather" | "beef")
+            | (Kind::Pig, "porkchop") | (Kind::Sheep, "mutton")
+            | (Kind::Chicken, "feather" | "chicken")
+            | (Kind::Zombie | Kind::Husk | Kind::ZombieVillager, "rotten_flesh")
+            | (Kind::Creeper, "gunpowder") | (Kind::Spider, "string")
+            | (Kind::Cat, "string") | (Kind::Enderman, "ender_pearl")
+            | (Kind::Llama | Kind::TraderLlama | Kind::Horse | Kind::Donkey | Kind::Mule, "leather")
+            | (Kind::Rabbit, "rabbit_hide" | "rabbit" | "cooked_rabbit")
+            | (Kind::PolarBear, "cod" | "salmon")
+            | (Kind::SkeletonHorse | Kind::WitherSkeleton, "bone")
+            | (Kind::ZombieHorse | Kind::Drowned | Kind::Zoglin, "rotten_flesh")
+            | (Kind::CaveSpider | Kind::Strider, "string")
+            | (Kind::Blaze, "blaze_rod") | (Kind::Phantom, "phantom_membrane")
+            | (Kind::Ghast, "ghast_tear" | "gunpowder")
+            | (Kind::ZombifiedPiglin, "rotten_flesh" | "gold_nugget")
+            | (Kind::Hoglin, "porkchop" | "leather") | (Kind::Parrot, "feather")
+            | (Kind::Squid, "ink_sac") | (Kind::GlowSquid, "glow_ink_sac")
+            | (Kind::Dolphin, "cod" | "cooked_cod") | (Kind::Turtle, "seagrass"));
+        let count = if common && mob.looting > 0 {
+            count + (rng.unit() * f64::from(mob.looting)).round() as i32
+        } else { count };
 
         // Зловещие флаг и бутылка — с довесками (mob/illager.rs, captain_loot).
         let (name, data) = match name.split_once(':') {
@@ -3237,32 +3301,32 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
     match mob.kind {
         Kind::Endermite | Kind::Creaking => {},
         Kind::HappyGhast => { if let Some(c) = mob.newmobs.harness { give(&format!("{}_harness", newmobs::COLOURS[c as usize]), 1, 1, rng); } },
-        Kind::Zoglin => give("rotten_flesh", 1, 3 + mob.looting, rng),
+        Kind::Zoglin => give("rotten_flesh", 1, 3, rng),
         Kind::CopperGolem => give("copper_ingot", 1, 3 + mob.looting, rng),
         Kind::ArmorStand => {if !mob.stand.creative_break {give("armor_stand",1,1,rng);}},
         Kind::Rabbit => {
-            give("rabbit_hide", 0, 1 + mob.looting.max(0), rng);
-            give(if mob.vitals.fire > 0 { "cooked_rabbit" } else { "rabbit" }, 0, 1 + mob.looting.max(0), rng);
-            if mob.by_player && rng.unit() < 0.1 + 0.03 * f64::from(mob.looting.max(0)) {
+            give("rabbit_hide", 0, 1, rng);
+            give("rabbit", 0, 1, rng);
+            if credited && rng.unit() < 0.1 + 0.03 * f64::from(mob.looting.max(0)) {
                 give("rabbit_foot", 1, 1, rng);
             }
         }
         Kind::Fox => {
-            if let Some(held) = mob.wild.mouth { drops.push(held); }
+            if mob.equipment.is_none() && let Some(held) = mob.wild.mouth { drops.push(held); }
         }
         Kind::Bee => {}
         Kind::Cow | Kind::Mooshroom => {
             give("leather", 0, 2, rng);
             give("beef", 1, 3, rng);
         }
-        Kind::Llama | Kind::TraderLlama => give("leather", 0, 2 + mob.looting, rng),
-        Kind::PolarBear => give(if rng.below(4) < 3 { "cod" } else { "salmon" }, 0, 2 + mob.looting, rng),
+        Kind::Llama | Kind::TraderLlama => give("leather", 0, 2, rng),
+        Kind::PolarBear => give(if rng.below(4) < 3 { "cod" } else { "salmon" }, 0, 2, rng),
         Kind::Panda => give("bamboo", 1, 1, rng),
         Kind::WanderingTrader | Kind::Camel | Kind::Goat | Kind::Ocelot => {},
         Kind::Pig => give("porkchop", 1, 3, rng),
-        Kind::Horse | Kind::Donkey | Kind::Mule => give("leather", 0, 2 + mob.looting, rng),
-        Kind::SkeletonHorse => give("bone", 0, 2 + mob.looting, rng),
-        Kind::ZombieHorse => give("rotten_flesh", 0, 2 + mob.looting, rng),
+        Kind::Horse | Kind::Donkey | Kind::Mule => give("leather", 0, 2, rng),
+        Kind::SkeletonHorse => give("bone", 0, 2, rng),
+        Kind::ZombieHorse => give("rotten_flesh", 0, 2, rng),
         Kind::Sheep => {
             if !mob.sheared {
                 give(WOOL[usize::from(mob.color) % 16], 1, 1, rng);
@@ -3282,31 +3346,31 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         // «Добычи», только от игрока) [проверить: шанс], вещь из основной руки по
         // её шансу и ракушка из второй всегда.
         Kind::Drowned => {
-            give("rotten_flesh", 0, 2 + mob.looting, rng);
+            give("rotten_flesh", 0, 2, rng);
 
-            if mob.by_player && rng.below(100) < 11 + 2 * mob.looting as u32 {
+            if credited && rng.below(100) < 11 + 2 * mob.looting as u32 {
                 give("copper_ingot", 1, 1, rng);
             }
 
-            if let Some(item) = hostile::hand_item(mob.h.hand).and_then(blocks::item_named)
+            if mob.equipment.is_none() && let Some(item) = hostile::hand_item(mob.h.hand).and_then(blocks::item_named)
                 && rng.unit() < f64::from(mob.h.hand_drop)
             {
                 drops.push(Stack::new(item, 1));
             }
 
-            if mob.h.offhand_shell && let Some(item) = blocks::item_named("nautilus_shell") {
+            if mob.equipment.is_none() && mob.h.offhand_shell && let Some(item) = blocks::item_named("nautilus_shell") {
                 drops.push(Stack::new(item, 1));
             }
         }
         // Вики, Zombie Villager: гнилая плоть и редко железо, морковь, картофель
         // [проверить: шансы редкого].
         Kind::ZombieVillager => give("rotten_flesh", 0, 2, rng),
-        Kind::Skeleton | Kind::Stray | Kind::Bogged => return skeleton::loot(mob, rng),
+        Kind::Skeleton | Kind::Stray | Kind::Bogged => drops.extend(skeleton::loot(mob, rng)),
         Kind::Creeper => give("gunpowder", 0, 2, rng),
         Kind::CaveSpider => {
-            give("string", 0, 2 + mob.looting, rng);
+            give("string", 0, 2, rng);
 
-            if mob.by_player || mob.xp_until > mob.ticks {
+            if credited {
                 // Вики, Cave Spider: «-1–1», с Looting верхняя граница растёт.
                 give("spider_eye", -1, 1 + mob.looting, rng);
             }
@@ -3315,23 +3379,23 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         Kind::Spider => {
             give("string", 0, 2, rng);
 
-            if mob.by_player {
+            if credited {
                 give("spider_eye", 0, 1, rng);
             }
         }
         // Вики, Blaze: 0–1 стержня ифрита (только от игрока; «Looting» +1 за уровень).
         Kind::Blaze => {
-            if mob.by_player {
-                give("blaze_rod", 0, 1 + mob.looting, rng);
+            if credited {
+                give("blaze_rod", 0, 1, rng);
             }
         }
         // Вики, Wither Skeleton: 0–2 костей, 0–1 угля (+ «Looting»); череп 2,5 %
         // (+1 % за уровень) только от игрока.
         Kind::WitherSkeleton => {
-            give("bone", 0, 2 + mob.looting, rng);
+            give("bone", 0, 2, rng);
             give("coal", 0, 1 + mob.looting, rng);
 
-            if mob.by_player && rng.below(1000) < 25 + 10 * mob.looting as u32 {
+            if credited && rng.below(1000) < 25 + 10 * mob.looting as u32 {
                 give("wither_skeleton_skull", 1, 1, rng);
             }
         }
@@ -3349,16 +3413,16 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         }
         // Вики, Ghast: 0–1 слезы гаста и 0–2 пороха (+ «Looting»).
         Kind::Ghast => {
-            give("ghast_tear", 0, 1 + mob.looting, rng);
-            give("gunpowder", 0, 2 + mob.looting, rng);
+            give("ghast_tear", 0, 1, rng);
+            give("gunpowder", 0, 2, rng);
         }
         // Вики, Zombified Piglin: 0–1 гнилой плоти, 0–1 золотого самородка,
         // золотой слиток 2,5 % (только от игрока).
         Kind::ZombifiedPiglin => {
-            give("rotten_flesh", 0, 1 + mob.looting, rng);
-            give("gold_nugget", 0, 1 + mob.looting, rng);
+            give("rotten_flesh", 0, 1, rng);
+            give("gold_nugget", 0, 1, rng);
 
-            if mob.by_player && rng.below(1000) < 25 + 10 * mob.looting as u32 {
+            if credited && rng.below(1000) < 25 + 10 * mob.looting as u32 {
                 give("gold_ingot", 1, 1, rng);
             }
         }
@@ -3370,11 +3434,11 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         }
         // Вики, Hoglin: 2–4 сырой свинины, 0–1 кожи.
         Kind::Hoglin => {
-            give("porkchop", 2, 4 + mob.looting, rng);
-            give("leather", 0, 1 + mob.looting, rng);
+            give("porkchop", 2, 4, rng);
+            give("leather", 0, 1, rng);
         }
         // Вики, Strider: 2–5 нитей.
-        Kind::Strider => give("string", 2, 5 + mob.looting, rng),
+        Kind::Strider => give("string", 2, 5, rng),
         // Кристалл и дракон предметов не роняют (вики: у дракона только опыт,
         // яйцо — блок на портале).
         // Житель ничего не роняет (вики, Villager: «Drops: none»).
@@ -3390,14 +3454,14 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         Kind::Pillager | Kind::Vindicator | Kind::Evoker | Kind::Illusioner | Kind::Vex | Kind::Ravager | Kind::EvokerFangs => illager::loot(mob, &mut give, rng),
         // Вики, Phantom: мембрана — 0–1 (+ «Looting»), только если убил игрок или прирученный волк.
         Kind::Phantom => {
-            if mob.by_player {
-                give("phantom_membrane", 0, 1 + mob.looting, rng);
+            if credited {
+                give("phantom_membrane", 0, 1, rng);
             }
         }
         // Вики, Breeze: 1–2 стержня бриза (+1 за уровень «Looting» к верху и
         // низу: 2–4, 3–6, 4–8), только если убил игрок или прирученный волк.
         Kind::Breeze => {
-            if mob.by_player {
+            if credited {
                 give("breeze_rod", 1 + mob.looting, 2 + 2 * mob.looting, rng);
             }
         }
@@ -3407,8 +3471,8 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         Kind::Cod | Kind::Salmon | Kind::TropicalFish | Kind::Pufferfish | Kind::Squid | Kind::GlowSquid | Kind::Dolphin | Kind::Turtle | Kind::Axolotl | Kind::Frog | Kind::Tadpole => water::loot(mob, rng, &mut give),
         Kind::Warden => give("sculk_catalyst", 1, 1, rng),
         Kind::Armadillo | Kind::Sniffer | Kind::Bat => {}
-        Kind::Parrot => give("feather", 1, 2 + mob.looting, rng),
-        Kind::Allay => { drops.extend(mob.small.held); drops.extend(mob.small.cargo); }
+        Kind::Parrot => give("feather", 1, 2, rng),
+        Kind::Allay => { if mob.equipment.is_none() { drops.extend(mob.small.held); } drops.extend(mob.small.cargo); }
         Kind::EndCrystal | Kind::EnderDragon | Kind::ShulkerBullet | Kind::Villager | Kind::Wolf | Kind::LeashKnot => {}
         // Вики, Enderman: «0–1 ender pearl» и всегда блок из рук.
         Kind::Enderman => {
@@ -3453,8 +3517,13 @@ pub fn loot(mob: &Mob, rng: &mut Rng) -> Vec<Stack> {
         if mob.horse.chest && let Some(item) = blocks::item_named("chest") { drops.push(Stack::new(item, 1)); }
     }
 
-    if let Some(stack) = mob.newmobs.cargo { drops.push(stack); }
-    if mob.kind==Kind::ArmorStand && !mob.stand.creative_break {drops.extend(mob.stand.equipment.into_iter().flatten());}
+    if mob.equipment.is_none() && let Some(stack) = mob.newmobs.cargo { drops.push(stack); }
+    if mob.kind==Kind::ArmorStand && !mob.stand.creative_break {
+        // Vanilla enchant-mob-equipment-drops: при двух ударах стойка
+        // выпадает, а boots с Vanishing исчезают; обычные boots остаются.
+        drops.extend(mob.stand.equipment.into_iter().flatten().filter(|stack| stack.extras().level("vanishing_curse") == 0));
+    }
+    drops.extend(equipment::death_drops(mob, rng));
     drops
 }
 
@@ -3786,6 +3855,7 @@ pub struct Outcome {
     pub axolotl_assists: Vec<i32>,
     pub darkness: Vec<i32>,
     pub sonic_booms: Vec<warden::Boom>,
+    pub enchant_retaliation: Vec<combat_enchantments::Retaliation>,
 }
 
 /// Удар моба в ближнем бою.
@@ -3795,6 +3865,7 @@ pub struct Strike {
     pub at: (f64, f64, f64),
     pub kind: Kind,
     pub melee: hostile::Melee,
+    pub enchantments: crate::world::ProjectileEnchantments,
 }
 
 /// Выстрел скелета.
@@ -3803,6 +3874,8 @@ pub struct Fired {
     pub kind: Kind,
     pub shooter: i32,
     pub shot: hostile::Shot,
+    /// Оружие до tick: последний выстрел сохраняет чары сломанного арбалета.
+    pub weapon: Option<Stack>,
 }
 
 /// Взрыв крипера: центр, сила, кто.
@@ -3892,12 +3965,17 @@ pub fn step_all(
         }
 
         let sense = if guardian::guardian(mob.kind) { &guardian_ctx } else if mob.kind==Kind::Drowned { &drowned_ctx } else { &ctx };
+        let shot_weapon = equipment::slot(mob, 0);
         let mut plan = mob.tick(view, sense, rng);
         // Вики, Strength/Weakness: +3L / −4L к melee; луч стража — магия.
         if !guardian::guardian(mob.kind) && let Some(melee) = &mut plan.melee {
-            melee.damage = mob.effect_melee_damage(melee.damage);
+            let target = mates.iter().find(|target| target.id == melee.target).map(|target| target.kind);
+            melee.damage = mob.effect_melee_damage(melee.damage) + combat_enchantments::bonus(mob, target);
         }
-        if let Some((_, damage, _)) = &mut plan.bite { *damage = mob.effect_melee_damage(*damage); }
+        if let Some((target, damage, _)) = &mut plan.bite {
+            let kind = mates.iter().find(|mate| mate.id == *target).map(|mate| mate.kind);
+            *damage = mob.effect_melee_damage(*damage) + if mob.kind == Kind::Fox { 0.0 } else { combat_enchantments::bonus(mob, kind) };
+        }
 
         // Снежный голем: след и таяние — и без ИИ (snow-golem-shear).
         outcome.snow.extend(golem::snow_tick(mob, view, true));
@@ -3953,7 +4031,7 @@ pub fn step_all(
         if slime::cube(mob.kind) && env.difficulty != crate::survival::PEACEFUL {
             for player in players {
                 if let Some(melee) = slime::contact(mob, view, player) {
-                    outcome.strikes.push(Strike { attacker: mob.entity_id, at: (mob.x, mob.y, mob.z), kind: mob.kind, melee });
+                    outcome.strikes.push(Strike { attacker: mob.entity_id, at: (mob.x, mob.y, mob.z), kind: mob.kind, melee, enchantments: combat_enchantments::effects(mob) });
                 }
             }
         }
@@ -3976,11 +4054,11 @@ pub fn step_all(
                 outcome.level_events.push((mob.cell(), 1039));
             }
 
-            outcome.strikes.push(Strike { attacker: mob.entity_id, at: (mob.x, mob.y, mob.z), kind: mob.kind, melee });
+            outcome.strikes.push(Strike { attacker: mob.entity_id, at: (mob.x, mob.y, mob.z), kind: mob.kind, melee, enchantments: combat_enchantments::effects(mob) });
         }
 
         if let Some(shot) = plan.shot {
-            outcome.shots.push(Fired { kind: mob.kind, shooter: mob.entity_id, shot });
+            outcome.shots.push(Fired { kind: mob.kind, shooter: mob.entity_id, shot, weapon: shot_weapon });
         }
 
         // Вредины и челюсти заклинателя (mob/illager.rs): вредина со сроком
@@ -4083,22 +4161,37 @@ pub fn step_all(
         let goat = mobs.iter().any(|mob| mob.entity_id == attacker && mob.kind == Kind::Goat);
         let warden = mobs.iter().any(|mob| mob.entity_id == attacker && mob.kind == Kind::Warden);
         let bee_attack = mobs.iter().any(|m| m.entity_id == attacker && m.kind == Kind::Bee && !m.wild.stung);
-        let weapon = mobs.iter().find(|m| m.entity_id == attacker && m.kind == Kind::Fox).and_then(|m| m.wild.mouth);
+        let weapon = mobs.iter().find(|m| m.entity_id == attacker).and_then(combat_enchantments::weapon);
         let mut stung = false;
         if let Some(victim) = mobs.iter_mut().find(|mob| mob.entity_id == target) {
-            if let Some(weapon) = weapon {
-                victim.looting = weapon.extras().level("looting");
-                victim.vitals.fire = victim.vitals.fire.max(80 * weapon.extras().level("fire_aspect"));
-            }
             let source = if goat { Source::MobAttackNoAggro } else { Source::MobAttack };
-            let hit = victim.hurt(damage, source, Some(Push { dir, strength: BASE_KNOCKBACK, cause: attacker }));
-            if hit.is_some() && let Some(uuid) = owner { victim.credit_to(uuid); }
+            let push = Some(Push { dir, strength: BASE_KNOCKBACK, cause: attacker });
+            let hit = if let Some(uuid) = owner {
+                // Чары меча хозяина не переходят волку. Команда может выдать
+                // оружие самому волку: его чары учитываются до смерти цели.
+                let looting = weapon.map_or(0, |stack| stack.extras().level("looting"));
+                let fire = weapon.map_or(0, |stack| stack.extras().level("fire_aspect").saturating_mul(80));
+                victim.hurt_credited_burning(damage, source, push, uuid, looting, fire)
+            } else {
+                let before = victim.looting;
+                victim.looting = weapon.map_or(0, |stack| stack.extras().level("looting"));
+                let fire = weapon.map_or(0, |stack| 80 * stack.extras().level("fire_aspect"));
+                let hit = victim.hurt_burning(damage, source, push, 1.0, fire);
+                if hit.is_none() { victim.looting = before; }
+                hit
+            };
             if bee_attack && hit.is_some() {
                 stung = true;
                 if !victim.is_dead() && !crate::combat::mob_traits(victim.kind.name()).0 && !victim.kind.spider()
                     && let Some(effect) = wildlife::poison(env.difficulty) { victim.vitals.give_effect_shown(effect); }
             }
 
+            if hit.is_some() && let Some(stack) = weapon {
+                let data = stack.extras();
+                let knockback = data.level("knockback");
+                if knockback > 0 { victim.knockback(dir.0, dir.1, f64::from(knockback) * 0.5); }
+                if let Some(effect) = crate::combat::bane_effect(&data, victim.kind.name(), rng.unit() as f32) { victim.vitals.give_effect_shown(effect); }
+            }
             if hit.is_some() && warden { victim.knockback(dir.0, dir.1, 0.75); }
             if let Some(at) = golem_at {
                 if hit.is_some() {
@@ -4116,6 +4209,8 @@ pub fn step_all(
 
     // Волки хозяев: кого хозяин ударил и кто ударил хозяина; дикая стая;
     // поводки (mob/leash.rs).
+    outcome.enchant_retaliation = combat_enchantments::reflect(&mut mobs);
+
     let owner_hits: Vec<(i32, i32)> = outcome.strikes.iter().map(|strike| (strike.attacker, strike.melee.target)).collect();
 
     tame::orders(&mut mobs, &owner_hits);
@@ -4354,6 +4449,8 @@ pub fn convert(old: &Mob, kind: Kind, entity_id: i32) -> Mob {
     new.h.bow = old.h.bow;
     new.h.helmet = old.h.helmet;
     new.h.trial_gear = old.h.trial_gear;
+    new.equipment = old.equipment;
+    new.equipment_drop_chances = old.equipment_drop_chances;
     new.h.hand = old.h.hand;
     new.h.offhand_shell = old.h.offhand_shell;
     new.h.hand_drop = old.h.hand_drop;
@@ -4373,3 +4470,7 @@ mod tests;
 
 #[cfg(test)]
 mod itemaudit_tests;
+
+#[cfg(test)]
+#[path = "enchant_loot_tests.rs"]
+mod enchant_loot_tests;

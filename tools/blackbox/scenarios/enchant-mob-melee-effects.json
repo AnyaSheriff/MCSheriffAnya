@@ -1,0 +1,60 @@
+{
+  "name": "enchant-mob-melee-effects",
+  "about": "Активный зомби с алмазным мечом SharpnessV/FireAspectII/KnockbackII бьёт стоящего игрока: урон, огонь, velocity и износ оружия. Неподвижный бот выдерживает толчок, моб замораживается сразу после первого окна атаки.",
+  "track_mobs": true,
+  "track_self": true,
+  "chat": true,
+  "item_components": true,
+  "blocks": [],
+  "setup": [
+    "gamerule natural_health_regeneration false",
+    "difficulty normal",
+    "time set midnight",
+    "effect clear $(bot)",
+    "effect give $(bot) instant_health 1 10 true",
+    "clear $(bot)",
+    "gamemode survival $(bot)",
+    "fill $(-3,0,-3) $(6,5,7) air",
+    "fill $(-3,-1,-3) $(6,-1,7) stone",
+    "tp $(bot) $(0.5,0,0.5) 0 0",
+    "!stopfly",
+    "!hotbar 0",
+    "!look 0 0",
+    "attribute $(bot) minecraft:knockback_resistance base set 0",
+    "effect give $(bot) health_boost 30 10 true",
+    "effect give $(bot) instant_health 1 10 true"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon zombie $(0.5,0,1.7) {Silent:1b,PersistenceRequired:1b,Tags:[\"enchant_mob\"],equipment:{mainhand:{id:\"minecraft:diamond_sword\",count:1,components:{\"minecraft:enchantments\":{\"minecraft:sharpness\":5,\"minecraft:fire_aspect\":2,\"minecraft:knockback\":2}}}}}"
+    },
+    {
+      "after": 60,
+      "cmd": "data merge entity @e[tag=enchant_mob,limit=1] {NoAI:1b}"
+    },
+    {
+      "after": 62,
+      "cmd": "data get entity @e[tag=enchant_mob,limit=1] equipment"
+    },
+    {
+      "after": 63,
+      "cmd": "data get entity $(bot) Fire"
+    },
+    {
+      "after": 64,
+      "cmd": "data get entity $(bot) Health"
+    }
+  ],
+  "record_ticks": 85,
+  "cleanup": [
+    "kill @e[tag=enchant_mob]",
+    "kill @e[type=item,distance=..48]",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "time set noon",
+    "!startfly",
+    "effect clear $(bot)",
+    "gamerule natural_health_regeneration true"
+  ]
+}

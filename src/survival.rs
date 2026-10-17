@@ -1245,7 +1245,7 @@ impl Vitals {
     /// Возвращает исход или None, если удар не прошёл (вики, Damage:
     /// «Invulnerability frames»).
     pub fn hurt(&mut self, amount: f32, source: Source, immune: bool) -> Option<Hit> {
-        if self.dead || amount < 0.0 || (amount == 0.0 && source != Source::Thrown) || (self.has_effect(EffectKind::FireResistance) && matches!(source, Source::InFire | Source::OnFire | Source::Lava | Source::Fireball)) {
+        if self.dead || amount < 0.0 || (amount == 0.0 && source != Source::Thrown) || (self.has_effect(EffectKind::FireResistance) && matches!(source, Source::InFire | Source::OnFire | Source::Lava | Source::Fireball | Source::Campfire | Source::HotFloor)) {
             return None;
         }
 
@@ -2492,7 +2492,7 @@ mod itemaudit2_tests {
     fn fire_resistance_stops_all_fire_sources_but_not_explosion_or_melee() {
         let mut v = Vitals::new();
         v.give_effect(EffectKind::FireResistance, 0, 100);
-        for source in [Source::InFire, Source::OnFire, Source::Lava, Source::Fireball] {
+        for source in [Source::InFire, Source::OnFire, Source::Lava, Source::Fireball, Source::Campfire, Source::HotFloor] {
             assert!(v.hurt(5.0, source, false).is_none());
             assert_eq!(v.health, 20.0);
         }

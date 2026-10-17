@@ -1,0 +1,47 @@
+{
+  "name": "enchant-impaling-elder-guardian-0",
+  "about": "Пронизывание 0: бросок по elder_guardian без ИИ. Ожидаемое здоровье после одного попадания 72; прибавка только водной цели и ровно 2.5 за уровень. Сетевые случайности не скрыты. Направление +Z: !look принимает радианы клиента, yaw pi соответствует Minecraft yaw 0; успех проверять по урону/молнии, не только существованию снаряда.",
+  "track_mobs": true,
+  "track_self": true,
+  "item_components": true,
+  "exclusive": true,
+  "blocks": [],
+  "setup": [
+    "difficulty normal",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "tp $(bot) $(3.5,0,0.5) 0 0",
+    "!stopfly",
+    "!wait 10",
+    "!hotbar 0",
+    "give $(bot) minecraft:trident 1",
+    "!look 3.141592653589793 0",
+    "!wait 10"
+  ],
+  "actions": [
+    {
+      "after": 0,
+      "cmd": "summon elder_guardian $(3.5,0,3.5) {NoAI:1b,Silent:1b}"
+    },
+    {
+      "after": 8,
+      "use": true
+    },
+    {
+      "after": 20,
+      "release": true
+    }
+  ],
+  "record_ticks": 45,
+  "cleanup": [
+    "kill @e[type=elder_guardian,distance=..48]",
+    "kill @e[type=trident,distance=..48]",
+    "kill @e[type=item,distance=..48]",
+    "difficulty peaceful",
+    "gamemode creative $(bot)",
+    "clear $(bot)",
+    "!wait 4",
+    "!startfly"
+  ],
+  "track_projectiles": true
+}
