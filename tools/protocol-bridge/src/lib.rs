@@ -207,3 +207,5 @@ mod tests {
 
 #[cfg(test)]
 mod item_observation_tests;
+
+mod trades;

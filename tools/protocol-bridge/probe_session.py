@@ -27,7 +27,7 @@ def slot(data):
 
 class Probe(Client):
     def __init__(self,sock,protocol):
-        super().__init__(sock,protocol);self.names=[];self.inventory=None;self.windows=[]
+        super().__init__(sock,protocol);self.names=[];self.inventory=None;self.windows=[];self.spawns=[]
     def observe_packet(self,name,payload):
         self.names.append(name)
         if name=='window_items':
@@ -35,6 +35,18 @@ class Probe(Client):
             slots=[slot(data) for _ in range(read_varint(data.read))];cursor=slot(data)
             assert not data.read(),'trailing inventory data'
             self.inventory={'window':window,'revision':revision,'slots':slots,'cursor':cursor}
+        elif name=='set_slot':
+            data=io.BytesIO(payload);window=read_varint(data.read);revision=read_varint(data.read)
+            place=struct.unpack('>h',data.read(2))[0];value=slot(data);assert not data.read()
+            if self.inventory and self.inventory['window']==window:
+                assert 0<=place<len(self.inventory['slots'])
+                self.inventory['slots'][place]=value;self.inventory['revision']=revision
+        elif name=='set_cursor_item':
+            data=io.BytesIO(payload);value=slot(data);assert not data.read()
+            if self.inventory:self.inventory['cursor']=value
+        elif name=='spawn_entity':
+            data=io.BytesIO(payload);entity=read_varint(data.read);data.read(16)
+            self.spawns.append({'id':entity,'type':read_varint(data.read)})
         elif name=='open_window':
             data=io.BytesIO(payload);self.windows.append({'window':read_varint(data.read),'type':read_varint(data.read)})
 
@@ -42,7 +54,8 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--test-binary',type=Path,required=True);p.add_argument('--data',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--join-only',action='store_true');p.add_argument('--client-dir',type=Path)
-    p.add_argument('--complex-items',action='store_true');a=p.parse_args()
+    p.add_argument('--complex-items',action='store_true');p.add_argument('--trading',action='store_true');a=p.parse_args()
+    if a.trading:assert not a.client_dir and not a.join_only
     if a.complex_items:assert a.client_dir and not a.join_only
     protocol=json.loads((a.data/'protocol.json').read_text())
     sources=json.loads((a.data/'sources.json').read_text());entry=next(v for v in sources['files'] if v['file']=='protocol.json')
@@ -101,6 +114,34 @@ def main():
                         pump(.5);assert client.windows and client.windows[-1]['type']==2,'chest did not open'
                         client.send('close_window',varint(client.windows[-1]['window']));pump(.3)
                         report['checks'].append('open-close-chest')
+                    if a.trading:
+                        command('clear McsaProbe');pump(.2)
+                        command('gamemode survival McsaProbe');pump(.2)
+                        command('give McsaProbe wheat 20');pump(.3)
+                        command('summon villager 2 64 2 {NoAI:1b,VillagerData:{type:"minecraft:plains",profession:"minecraft:farmer",level:2},Offers:{Recipes:[{buy:{id:"minecraft:wheat",count:20},sell:{id:"minecraft:emerald",count:1},maxUses:16}]}}');pump(.7)
+                        kind=next(e['id'] for e in json.loads((a.data/'entities.json').read_text()) if e['name']=='villager')
+                        entity=next(e['id'] for e in reversed(client.spawns) if e['type']==kind)
+                        client.send('use_entity',varint(entity)+b'\0\0\0');pump(.5)
+                        assert client.windows[-1]['type']==19,'merchant did not open'
+                        assert 'trade_list' in client.names,'no offers'
+                        window=client.windows[-1]['window']
+                        assert client.inventory['window']==window
+                        client.send('select_trade',varint(0));pump(.5)
+                        wheat=next(e['id'] for e in json.loads((a.data/'items.json').read_text()) if e['name']=='wheat')
+                        emerald=next(e['id'] for e in json.loads((a.data/'items.json').read_text()) if e['name']=='emerald')
+                        assert client.inventory['slots'][0]=={'item':wheat,'count':20},'trade selection did not fill payment'
+                        assert client.inventory['slots'][2]=={'item':emerald,'count':1},'no trade result'
+                        for place in [2,3]:
+                            client.send('window_click',varint(window)+varint(client.inventory['revision'])+struct.pack('>hb',place,0)+b'\0\0\0');pump(.4)
+                        assert client.inventory['cursor'] is None
+                        assert all(s is None or s['item']!=wheat for s in client.inventory['slots']),'payment not consumed'
+                        assert sum(s['count'] for s in client.inventory['slots'] if s and s['item']==emerald)==1,'wrong trade output or duplicate'
+                        assert client.inventory['slots'][2] is None,'trade result survived payment'
+                        before=list(client.inventory['slots'])
+                        client.send('window_click',varint(window)+varint(client.inventory['revision'])+struct.pack('>hb',2,0)+b'\0\0\0');pump(.4)
+                        assert client.inventory['slots']==before and client.inventory['cursor'] is None,'empty result duplicated a trade'
+                        client.send('close_window',varint(window));pump(.3)
+                        report['checks'].extend(['trade-wheat-for-one-emerald','trade-empty-result-no-dup'])
                     if a.complex_items:
                         path=Path(__file__).parent/'testdata/complex-item-commands.json'
                         cases=json.loads(path.read_text());report['complex_commands_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()

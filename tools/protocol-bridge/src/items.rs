@@ -136,7 +136,7 @@ fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, co
     Ok(out)
 }
 
-fn component_bytes(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context)->Result<Vec<u8>,Error>{
+pub(crate) fn component_bytes(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context)->Result<Vec<u8>,Error>{
     if matches!(kind,16|18){return crate::item_components::remap(kind,input,from,to);}
     let start=input.0;component_data(kind,input,context)?;Ok(start[..start.len()-input.0.len()].to_vec())
 }

@@ -88,10 +88,13 @@ pub fn translate_with_context(
         (State::Play, Direction::Serverbound, "window_click") => {
             crate::actions::click(&mut cursor,&mut out,from,to)?;
         }
+        (State::Play, Direction::Clientbound, "trade_list") => {
+            crate::trades::translate(&mut cursor,&mut out,from,to,context.items)?;
+        }
         (State::Play, Direction::Clientbound, "open_window") => {
             uint(&mut out,cursor.uint()?);let menu=cursor.uint()?;
-            //19обычных взаимодействий с блоками775/777, menu-observations.json.
-            if !matches!(menu,2|6|8..=16|18|20..=24){return Err(Error::PayloadUnavailable("unverified menu type"));}
+            // Обычные взаимодействия с блоками и жителем: menu/trading-observations.json.
+            if !matches!(menu,2|6|8..=16|18..=24){return Err(Error::PayloadUnavailable("unverified menu type"));}
             uint(&mut out,menu);
             let n=crate::registry::nbt_length(cursor.rest).map_err(|_|Error::Invalid)?;out.extend(cursor.take(n)?);
         }

@@ -184,6 +184,12 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 let count = input.count(1024)?; uint(out,count as u32);
                 for _ in 0..count { crate::particles::particle(input,out,from,to,context.items)?; }
             }
+            18 => {
+                // Все 7 типов, 15 профессий и уровни 1–5 записаны обычными
+                // summon на обеих версиях (trading-observations.json).
+                uint(out,input.count(6)? as u32);uint(out,input.count(14)? as u32);
+                let level=input.count(5)?;if level==0{return Err(wire::Error::Invalid);}uint(out,level as u32);
+            }
             19 => uint(out,input.uint()?),
             20 => uint(out,input.count(17)? as u32),
             21..=32 => {
