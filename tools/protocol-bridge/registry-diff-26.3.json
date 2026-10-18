@@ -1,0 +1,141 @@
+{
+  "candidate_commit": "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2",
+  "baseline_sha256": {
+    "protocol-26.1.json": "0bb4f020fa45cc6629748f09546ec2bfd645f1843cccac9da2cab9d0539ab7e3",
+    "entities-26.1.json": "e65d88a15fac5fc090cb2555c8cddaa80d9daf8c554d252680cec60a1d6eefc3",
+    "core/blocks.json": "573e172619f3c1ca64e15d07799ab646e1fd9ad19d759d9ceca65ac4fc7440a9",
+    "core/items.json": "0d085dbf8a6fa129b94f696b77286d65ce7b04476eab398492558ab03cc1c45e"
+  },
+  "registries": [
+    {
+      "registry": "Item",
+      "old_count": 1506,
+      "new_count": 1658,
+      "mapped": 1506,
+      "renumbered": 1480,
+      "old_unmapped": [],
+      "new_unmapped_count": 152
+    },
+    {
+      "registry": "Block",
+      "old_count": 1168,
+      "new_count": 1286,
+      "mapped": 1168,
+      "renumbered": 1145,
+      "old_unmapped": [],
+      "new_unmapped_count": 118
+    },
+    {
+      "registry": "BlockState",
+      "old_count": 29873,
+      "new_count": 35723,
+      "mapped": 29873,
+      "renumbered": 29846,
+      "old_unmapped": [],
+      "new_unmapped_count": 5850
+    },
+    {
+      "registry": "Entity",
+      "old_count": 157,
+      "new_count": 161,
+      "mapped": 157,
+      "renumbered": 124,
+      "old_unmapped": [],
+      "new_unmapped_count": 4
+    },
+    {
+      "registry": "Particle",
+      "old_count": 117,
+      "new_count": 128,
+      "mapped": 115,
+      "renumbered": 111,
+      "old_unmapped": [
+        "trial_spawner_detected_player",
+        "trial_spawner_detected_player_ominous"
+      ],
+      "new_unmapped_count": 13
+    },
+    {
+      "registry": "Attribute",
+      "old_count": 35,
+      "new_count": 31,
+      "mapped": 31,
+      "renumbered": 11,
+      "old_unmapped": [
+        "mining_efficiency",
+        "movement_efficiency",
+        "oxygen_bonus",
+        "sneaking_speed"
+      ],
+      "new_unmapped_count": 0
+    },
+    {
+      "registry": "Component",
+      "old_count": 110,
+      "new_count": 122,
+      "mapped": 108,
+      "renumbered": 68,
+      "old_unmapped": [
+        "swing_animation",
+        "map_color"
+      ],
+      "new_unmapped_count": 14
+    },
+    {
+      "registry": "LoginClientbound",
+      "old_count": 6,
+      "new_count": 6,
+      "mapped": 6,
+      "renumbered": 0,
+      "old_unmapped": [],
+      "new_unmapped_count": 0
+    },
+    {
+      "registry": "LoginServerbound",
+      "old_count": 5,
+      "new_count": 5,
+      "mapped": 5,
+      "renumbered": 0,
+      "old_unmapped": [],
+      "new_unmapped_count": 0
+    },
+    {
+      "registry": "ConfigurationClientbound",
+      "old_count": 20,
+      "new_count": 21,
+      "mapped": 20,
+      "renumbered": 10,
+      "old_unmapped": [],
+      "new_unmapped_count": 1
+    },
+    {
+      "registry": "ConfigurationServerbound",
+      "old_count": 10,
+      "new_count": 10,
+      "mapped": 10,
+      "renumbered": 0,
+      "old_unmapped": [],
+      "new_unmapped_count": 0
+    },
+    {
+      "registry": "PlayClientbound",
+      "old_count": 141,
+      "new_count": 144,
+      "mapped": 141,
+      "renumbered": 104,
+      "old_unmapped": [],
+      "new_unmapped_count": 3
+    },
+    {
+      "registry": "PlayServerbound",
+      "old_count": 69,
+      "new_count": 69,
+      "mapped": 68,
+      "renumbered": 16,
+      "old_unmapped": [
+        "spectate_entity"
+      ],
+      "new_unmapped_count": 1
+    }
+  ]
+}

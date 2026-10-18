@@ -53,6 +53,8 @@ def observe(port, protocol, records):
             if phase == 'login':
                 if packet_id != 2:
                     raise ValueError(f'LoginSuccess hypothesis failed: id={packet_id}')
+                # Только наш синтетический offline-профиль McsaProbe, без реальных секретов.
+                records[-1]['test_profile_payload_hex'] = payload.hex()
                 send(sock, b'\x03')
                 phase = 'configuration'
                 send(sock, b'\x00\x05en_us\x02\x00\x01\x7f\x01\x00\x01\x00')

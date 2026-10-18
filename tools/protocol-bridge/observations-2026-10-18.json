@@ -15,7 +15,8 @@
         "phase": "login",
         "id": 2,
         "size": 27,
-        "sha256": "4a3785f2356d0849f36a7a27e055d0ccd96dc3f9a9f77e7c17d46ecf4e86b870"
+        "sha256": "4a3785f2356d0849f36a7a27e055d0ccd96dc3f9a9f77e7c17d46ecf4e86b870",
+        "test_profile_payload_hex": "f0856c057f7739b1b6005719f4e70be8094d63736150726f626500"
       },
       {
         "phase": "configuration",
@@ -214,7 +215,7 @@
         "phase": "configuration",
         "id": 13,
         "size": 32316,
-        "sha256": "c3551f0c271d4a82931165ca35e2da4352f4611d4da12c701f564e558dd4360d"
+        "sha256": "c992cac18663aa86449cc5e9502854e31f3d564498d83b496a6540d3ee936f53"
       },
       {
         "phase": "configuration",
@@ -247,7 +248,8 @@
         "phase": "login",
         "id": 2,
         "size": 43,
-        "sha256": "dc10839be8c47d43f57db672eb81237dde22b29d68fb0c3da13ebb1e8c72f9d4"
+        "sha256": "07d730f6eda868b42257d43c7b93f4d3808dde97c39c480a8b31e4433416c7af",
+        "test_profile_payload_hex": "f0856c057f7739b1b6005719f4e70be8094d63736150726f6265000c37a4cf9493459ca3f74e34250a70cf"
       },
       {
         "phase": "configuration",
@@ -470,7 +472,7 @@
         "phase": "configuration",
         "id": 14,
         "size": 58754,
-        "sha256": "07fbd2e14265f2c262c17171efef8217ebaafeb2e6d7c609dfaa3c942fb1f0de"
+        "sha256": "f8cea71443daf9d3cfbfc4b543617acb0372634799ad4d956c4e1590c794b65d"
       },
       {
         "phase": "configuration",
