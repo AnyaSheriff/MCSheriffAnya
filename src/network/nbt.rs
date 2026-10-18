@@ -228,6 +228,7 @@ fn write_name(out: &mut Vec<u8>, name: &str) {
 /// Простой текст без оформления — это строка. Имени корневого тега здесь так
 /// же нет, как и у компаунда: в сетевом виде оно не записывается.
 pub fn text_component(text: &str) -> Vec<u8> {
+    if let Some(component) = crate::colors::component(text) { return component; }
     let mut out = Vec::with_capacity(text.len() + 3);
     out.push(TAG_STRING);
     write_string(&mut out, text);

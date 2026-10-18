@@ -39,6 +39,7 @@ endorsed by Mojang or Microsoft.
 ## What works
 
 - Login, world join, several players at once, chat, tab list, player skins
+  ([chat colors, HEX and console colors](docs/colors.md))
   (Mojang, then Ely.by as a fallback; both can be switched off).
 - A persistent world with its own compact on-disk format (`region/r.X.Z.mcs`,
   zstd-compressed palettes, about half the size of vanilla Anvil; old `.rcw`

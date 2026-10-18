@@ -49,6 +49,8 @@ pub struct Settings {
     /// Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
     /// с клиентом. Нужен только для поиска неполадок.
     pub debug: bool,
+    /// ANSI консоли: auto — терминал, always — также панель, never — чистый текст.
+    pub console_colors: crate::colors::ConsoleColors,
 
     /// TPS и время такта внизу списка игроков Java.
     pub tab_tps: bool,
@@ -118,6 +120,7 @@ impl Default for Settings {
             auth_provider: AuthProvider::Builtin,
             auth_premium: true,
             debug: false,
+            console_colors: crate::colors::ConsoleColors::Auto,
             tab_tps: true,
             prefetch_chunks: 3,
             prefetch_at_once: 4,
@@ -190,6 +193,7 @@ impl Settings {
             auth_provider: take(&values, "auth-provider", default.auth_provider, path),
             auth_premium: take(&values, "auth-premium", default.auth_premium, path),
             debug: take(&values, "debug", default.debug, path),
+            console_colors: take(&values, "console-colors", default.console_colors, path),
             tab_tps: take(&values, "tab-tps", default.tab_tps, path),
             prefetch_chunks: take(&values, "prefetch-chunks", default.prefetch_chunks, path),
             prefetch_at_once: take(&values, "prefetch-at-once", default.prefetch_at_once, path),
@@ -222,8 +226,9 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 19] {
+    fn sections(self) -> [(&'static str, String); 20] {
         [
+            ("console-colors", format!("# Цвета консоли: auto — только терминал (учитывает NO_COLOR/TERM=dumb).\n# always — включить также в панели хостинга; never — отключить ANSI.\n# Цвета чата &a, &l, &r и &#RRGGBB работают независимо от этой настройки.\nconsole-colors={}\n", self.console_colors)),
             ("auth-enabled", format!("# Парольный диалог Java в offline-mode, до входа в мир; БД auth.db.\nauth-enabled={}\n", self.auth_enabled)),
             ("auth-provider", format!("# builtin — встроенная проверка; guard — подписанный MCSA Guard (Linux x86_64).\nauth-provider={}\n", self.auth_provider)),
             ("auth-premium", format!("# Проверять лицензию Java; после неудачи повторный вход без лицензии.\n# Действует при auth-enabled=true и online-mode=false.\nauth-premium={}\n", self.auth_premium)),
@@ -385,6 +390,18 @@ mod tests {
         assert_eq!(super::Settings::parse("auth-provider=garud\n",path).auth_provider,super::AuthProvider::Invalid);
     }
     use super::*;
+
+    #[test]
+    fn console_color_modes_survive_properties_and_legacy_toml() {
+        use crate::colors::ConsoleColors;
+        let path = Path::new("config/mcsa.properties");
+        assert_eq!(Settings::parse("", path).console_colors, ConsoleColors::Auto);
+        assert_eq!(Settings::parse("console-colors=always", path).console_colors, ConsoleColors::Always);
+        assert_eq!(Settings::parse("console-colors=never", path).console_colors, ConsoleColors::Never);
+        assert_eq!(Settings::parse("console-colors=typo", path).console_colors, ConsoleColors::Auto);
+        assert_eq!(toml::from_str::<Settings>("console_colors = 'always'").unwrap().console_colors, ConsoleColors::Always);
+        assert!(Settings::default().to_file().contains("console-colors=auto"));
+    }
 
     #[test]
     fn tab_tps_defaults_and_explicit_disable() {
