@@ -6,6 +6,7 @@
     "core/blocks.json": "573e172619f3c1ca64e15d07799ab646e1fd9ad19d759d9ceca65ac4fc7440a9",
     "core/items.json": "0d085dbf8a6fa129b94f696b77286d65ce7b04476eab398492558ab03cc1c45e"
   },
+  "attribute_observations_sha256": "44ef4b0fe5999c5e970670dfd700fa2d897ad4fc67f367cc541159e6c9f7f2cc",
   "registries": [
     {
       "registry": "Item",
@@ -58,16 +59,11 @@
     {
       "registry": "Attribute",
       "old_count": 35,
-      "new_count": 31,
-      "mapped": 31,
-      "renumbered": 11,
-      "old_unmapped": [
-        "mining_efficiency",
-        "movement_efficiency",
-        "oxygen_bonus",
-        "sneaking_speed"
-      ],
-      "new_unmapped_count": 0
+      "new_count": 40,
+      "mapped": 35,
+      "renumbered": 35,
+      "old_unmapped": [],
+      "new_unmapped_count": 5
     },
     {
       "registry": "Component",

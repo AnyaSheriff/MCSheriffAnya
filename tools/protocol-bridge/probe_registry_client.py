@@ -75,6 +75,7 @@ def main():
     parser.add_argument('--play-packets', type=Path, help='наши14 Play-пакетов из export_chunk_client_probe')
     parser.add_argument('--particle-probe', action='store_true', help='четыре world_particles и эффекты трёх мобов')
     parser.add_argument('--entity-probe', action='store_true', help='два Respawn и три моба от настоящих builder-ов ядра')
+    parser.add_argument('--extra-play-packets',type=Path,help='дополнительные наши подготовленные кадры Play после основного набора')
     args = parser.parse_args()
     cache = args.client_dir.resolve()
     with (cache / 'client.jar').open('rb') as source:
@@ -183,6 +184,13 @@ def main():
                             send(connection, body)
                             report['sent_play'].append(body[0])
                             time.sleep(.15)
+                        if args.extra_play_packets:
+                            extra=json.loads(args.extra_play_packets.read_text());assert len(extra)<=256
+                            report['extra_fixture_sha256']=hashlib.sha256(args.extra_play_packets.read_bytes()).hexdigest()
+                            report['extra_packets']=len(extra)
+                            for value in extra:
+                                body=bytes.fromhex(value);assert body and len(body)<=1024*1024
+                                send(connection,body);time.sleep(.05)
                         # Ping после всех пакетов требует ответа уже после их обработки.
                         send(connection, b'\x3e' + struct.pack('>i', 0x4d435341))
                         # ID закреплены в candidate protocol.json; проверяем не только

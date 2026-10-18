@@ -1,0 +1,218 @@
+[
+  {
+    "name": "potion_water",
+    "command": "potion[potion_contents={potion:\"minecraft:water\"}]"
+  },
+  {
+    "name": "potion_mundane",
+    "command": "potion[potion_contents={potion:\"minecraft:mundane\"}]"
+  },
+  {
+    "name": "potion_thick",
+    "command": "potion[potion_contents={potion:\"minecraft:thick\"}]"
+  },
+  {
+    "name": "potion_awkward",
+    "command": "potion[potion_contents={potion:\"minecraft:awkward\"}]"
+  },
+  {
+    "name": "potion_night_vision",
+    "command": "potion[potion_contents={potion:\"minecraft:night_vision\"}]"
+  },
+  {
+    "name": "potion_long_night_vision",
+    "command": "potion[potion_contents={potion:\"minecraft:long_night_vision\"}]"
+  },
+  {
+    "name": "potion_invisibility",
+    "command": "potion[potion_contents={potion:\"minecraft:invisibility\"}]"
+  },
+  {
+    "name": "potion_long_invisibility",
+    "command": "potion[potion_contents={potion:\"minecraft:long_invisibility\"}]"
+  },
+  {
+    "name": "potion_leaping",
+    "command": "potion[potion_contents={potion:\"minecraft:leaping\"}]"
+  },
+  {
+    "name": "potion_long_leaping",
+    "command": "potion[potion_contents={potion:\"minecraft:long_leaping\"}]"
+  },
+  {
+    "name": "potion_strong_leaping",
+    "command": "potion[potion_contents={potion:\"minecraft:strong_leaping\"}]"
+  },
+  {
+    "name": "potion_fire_resistance",
+    "command": "potion[potion_contents={potion:\"minecraft:fire_resistance\"}]"
+  },
+  {
+    "name": "potion_long_fire_resistance",
+    "command": "potion[potion_contents={potion:\"minecraft:long_fire_resistance\"}]"
+  },
+  {
+    "name": "potion_swiftness",
+    "command": "potion[potion_contents={potion:\"minecraft:swiftness\"}]"
+  },
+  {
+    "name": "potion_long_swiftness",
+    "command": "potion[potion_contents={potion:\"minecraft:long_swiftness\"}]"
+  },
+  {
+    "name": "potion_strong_swiftness",
+    "command": "potion[potion_contents={potion:\"minecraft:strong_swiftness\"}]"
+  },
+  {
+    "name": "potion_slowness",
+    "command": "potion[potion_contents={potion:\"minecraft:slowness\"}]"
+  },
+  {
+    "name": "potion_long_slowness",
+    "command": "potion[potion_contents={potion:\"minecraft:long_slowness\"}]"
+  },
+  {
+    "name": "potion_strong_slowness",
+    "command": "potion[potion_contents={potion:\"minecraft:strong_slowness\"}]"
+  },
+  {
+    "name": "potion_turtle_master",
+    "command": "potion[potion_contents={potion:\"minecraft:turtle_master\"}]"
+  },
+  {
+    "name": "potion_long_turtle_master",
+    "command": "potion[potion_contents={potion:\"minecraft:long_turtle_master\"}]"
+  },
+  {
+    "name": "potion_strong_turtle_master",
+    "command": "potion[potion_contents={potion:\"minecraft:strong_turtle_master\"}]"
+  },
+  {
+    "name": "potion_water_breathing",
+    "command": "potion[potion_contents={potion:\"minecraft:water_breathing\"}]"
+  },
+  {
+    "name": "potion_long_water_breathing",
+    "command": "potion[potion_contents={potion:\"minecraft:long_water_breathing\"}]"
+  },
+  {
+    "name": "potion_healing",
+    "command": "potion[potion_contents={potion:\"minecraft:healing\"}]"
+  },
+  {
+    "name": "potion_strong_healing",
+    "command": "potion[potion_contents={potion:\"minecraft:strong_healing\"}]"
+  },
+  {
+    "name": "potion_harming",
+    "command": "potion[potion_contents={potion:\"minecraft:harming\"}]"
+  },
+  {
+    "name": "potion_strong_harming",
+    "command": "potion[potion_contents={potion:\"minecraft:strong_harming\"}]"
+  },
+  {
+    "name": "potion_poison",
+    "command": "potion[potion_contents={potion:\"minecraft:poison\"}]"
+  },
+  {
+    "name": "potion_long_poison",
+    "command": "potion[potion_contents={potion:\"minecraft:long_poison\"}]"
+  },
+  {
+    "name": "potion_strong_poison",
+    "command": "potion[potion_contents={potion:\"minecraft:strong_poison\"}]"
+  },
+  {
+    "name": "potion_regeneration",
+    "command": "potion[potion_contents={potion:\"minecraft:regeneration\"}]"
+  },
+  {
+    "name": "potion_long_regeneration",
+    "command": "potion[potion_contents={potion:\"minecraft:long_regeneration\"}]"
+  },
+  {
+    "name": "potion_strong_regeneration",
+    "command": "potion[potion_contents={potion:\"minecraft:strong_regeneration\"}]"
+  },
+  {
+    "name": "potion_strength",
+    "command": "potion[potion_contents={potion:\"minecraft:strength\"}]"
+  },
+  {
+    "name": "potion_long_strength",
+    "command": "potion[potion_contents={potion:\"minecraft:long_strength\"}]"
+  },
+  {
+    "name": "potion_strong_strength",
+    "command": "potion[potion_contents={potion:\"minecraft:strong_strength\"}]"
+  },
+  {
+    "name": "potion_weakness",
+    "command": "potion[potion_contents={potion:\"minecraft:weakness\"}]"
+  },
+  {
+    "name": "potion_long_weakness",
+    "command": "potion[potion_contents={potion:\"minecraft:long_weakness\"}]"
+  },
+  {
+    "name": "potion_luck",
+    "command": "potion[potion_contents={potion:\"minecraft:luck\"}]"
+  },
+  {
+    "name": "potion_slow_falling",
+    "command": "potion[potion_contents={potion:\"minecraft:slow_falling\"}]"
+  },
+  {
+    "name": "potion_long_slow_falling",
+    "command": "potion[potion_contents={potion:\"minecraft:long_slow_falling\"}]"
+  },
+  {
+    "name": "potion_wind_charged",
+    "command": "potion[potion_contents={potion:\"minecraft:wind_charged\"}]"
+  },
+  {
+    "name": "potion_weaving",
+    "command": "potion[potion_contents={potion:\"minecraft:weaving\"}]"
+  },
+  {
+    "name": "potion_oozing",
+    "command": "potion[potion_contents={potion:\"minecraft:oozing\"}]"
+  },
+  {
+    "name": "potion_infested",
+    "command": "potion[potion_contents={potion:\"minecraft:infested\"}]"
+  },
+  {
+    "name": "attribute_attack",
+    "command": "stick[attribute_modifiers=[{type:\"minecraft:attack_damage\",id:\"mcsa:probe\",amount:9,operation:\"add_value\",slot:\"mainhand\"}]]"
+  },
+  {
+    "name": "attribute_speed",
+    "command": "stick[attribute_modifiers=[{type:\"minecraft:movement_speed\",id:\"mcsa:probe\",amount:0.25,operation:\"add_multiplied_total\",slot:\"offhand\"}]]"
+  },
+  {
+    "name": "potion_custom",
+    "command": "tipped_arrow[potion_contents={potion:\"minecraft:poison\",custom_color:1193046,custom_effects:[{id:\"minecraft:slowness\",amplifier:2,duration:803}]}] 5"
+  },
+  {
+    "name": "potion_scale",
+    "command": "potion[potion_contents={potion:\"minecraft:swiftness\"},potion_duration_scale=1.5]"
+  },
+  {
+    "name": "writable",
+    "command": "writable_book[writable_book_content={pages:[\"First page\",\"Вторая страница\"]}]"
+  },
+  {
+    "name": "written",
+    "command": "written_book[written_book_content={title:\"Story\",author:\"Alex\",pages:[\"First page\"]}]"
+  },
+  {
+    "name": "tooltip",
+    "command": "paper[tooltip_display={hide_tooltip:false,hidden_components:[\"minecraft:damage\",\"minecraft:writable_book_content\"]}]"
+  },
+  {
+    "name": "food",
+    "command": "apple[food={nutrition:7,saturation:2.5,can_always_eat:true}]"
+  }
+]

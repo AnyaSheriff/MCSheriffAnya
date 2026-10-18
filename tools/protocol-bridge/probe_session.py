@@ -41,7 +41,9 @@ class Probe(Client):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--test-binary',type=Path,required=True);p.add_argument('--data',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
-    p.add_argument('--join-only',action='store_true');p.add_argument('--client-dir',type=Path);a=p.parse_args()
+    p.add_argument('--join-only',action='store_true');p.add_argument('--client-dir',type=Path)
+    p.add_argument('--complex-items',action='store_true');a=p.parse_args()
+    if a.complex_items:assert a.client_dir and not a.join_only
     protocol=json.loads((a.data/'protocol.json').read_text())
     sources=json.loads((a.data/'sources.json').read_text());entry=next(v for v in sources['files'] if v['file']=='protocol.json')
     assert hashlib.sha256((a.data/'protocol.json').read_bytes()).hexdigest()==entry['sha256']
@@ -99,6 +101,15 @@ def main():
                         pump(.5);assert client.windows and client.windows[-1]['type']==2,'chest did not open'
                         client.send('close_window',varint(client.windows[-1]['window']));pump(.3)
                         report['checks'].append('open-close-chest')
+                    if a.complex_items:
+                        path=Path(__file__).parent/'testdata/complex-item-commands.json'
+                        cases=json.loads(path.read_text());report['complex_commands_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
+                        for name in ['potion_swiftness','potion_custom','attribute_speed','writable','written']:
+                            command('clear McsaProbe');pump(.2);start=len(log.read_text())
+                            give=next(e['command'] for e in cases if e['name']==name)
+                            command('give McsaProbe '+give);pump(.7)
+                            assert 'Gave ' in log.read_text()[start:],'core rejected item '+name
+                            report['checks'].append('complex-item-'+name)
                 assert 'Перевод Java-пакета:' not in log.read_text(),'translation failure'
             except BaseException as e:report['error']=str(e);raise
             finally:

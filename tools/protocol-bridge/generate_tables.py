@@ -68,6 +68,33 @@ def attributes(document):
     return mapper(fields[1]['type'][1]['type'][1][0]['type'])
 
 
+def observed_attributes(path):
+    # Кандидат JSON ошибочно оставил старые номера/неполный список777.
+    # Обычный Tab команды /attribute, затем предмет с каждым предложенным
+    # свойством: никакого чтения реализации, reports или дампов датапаков.
+    observations=json.loads(path.read_text())
+    result=[]
+    for side,protocol,count in [('old',775,35),('new',777,40)]:
+        sample=observations[side];assert sample['protocol']==protocol and sample['exit_code']==0
+        values={}
+        for entry in sample['cases']:
+            data=iter(bytes.fromhex(entry['slot_hex']))
+            def uint():
+                value=0
+                for shift in range(0,35,7):
+                    byte=next(data);assert shift!=28 or byte<8
+                    value|=(byte&127)<<shift
+                    if byte<128:return value
+                raise ValueError('oversized attribute VarInt')
+            assert uint()==1;uint() # количество и ID stick
+            assert [uint(),uint(),uint(),uint()]==[1,0,16,1]
+            number=uint();name=entry['name'];assert name not in values;values[name]=number
+        assert len(values)==count and set(values.values())==set(range(count))
+        assert set(values)==set(sample['attribute_suggestions'])
+        result.append(values)
+    return result
+
+
 def make_tables(source, target):
     for values in [source, target]:
         ids = list(values.values())
@@ -97,13 +124,15 @@ def main():
     new = load('protocol.json')
     blocks_old = json.loads((ROOT / 'tools/data/blocks.json').read_text())
     blocks_new = load('blocks.json')
+    attribute_source=ROOT/'tools/protocol-bridge/testdata/attribute-id-observations.json'
+    attributes_old,attributes_new=observed_attributes(attribute_source)
     definitions = [
         ('Item', named(json.loads((ROOT / 'tools/data/items.json').read_text())), named(load('items.json'))),
         ('Block', named(blocks_old), named(blocks_new)),
         ('BlockState', states(blocks_old), states(blocks_new)),
         ('Entity', named(load('entities-26.1.json')), named(load('entities.json'))),
         ('Particle', particle(old), particle(new)),
-        ('Attribute', attributes(old), attributes(new)),
+        ('Attribute', attributes_old, attributes_new),
         ('Component', mapper(old['types']['SlotComponentType']), mapper(new['types']['SlotComponentType'])),
     ]
     for phase in ['login', 'configuration', 'play']:
@@ -111,6 +140,7 @@ def main():
             definitions.append((phase.title() + suffix, packets(old, phase, direction), packets(new, phase, direction)))
     text = '// Сгенерировано generate_tables.py из разрешённых JSON, см. candidate-sources-26.3.json.\n'
     text += '// Только соответствие ID; одинаковый ID/имя не означает совместимость payload.\n\n'
+    text += '// Attribute: собственные наблюдения обычных команд, testdata/attribute-id-observations.json.\n\n'
     text += '#[derive(Clone, Copy, Debug, Eq, PartialEq)]\npub enum RegistryKind {\n'
     text += ''.join(f'    {name},\n' for name, _, _ in definitions) + '}\n\n'
     text += '#[cfg(test)]\npub const ALL: &[RegistryKind] = &[\n'
@@ -151,7 +181,9 @@ def main():
     for name in ['blocks.json', 'items.json']:
         baseline['core/' + name] = hashlib.sha256((ROOT / 'tools/data' / name).read_bytes()).hexdigest()
     (ROOT / 'tools/protocol-bridge/registry-diff-26.3.json').write_text(json.dumps(
-        {'candidate_commit': provenance['commit'], 'baseline_sha256': baseline, 'registries': report}, indent=2) + '\n')
+        {'candidate_commit': provenance['commit'], 'baseline_sha256': baseline,
+         'attribute_observations_sha256':hashlib.sha256(attribute_source.read_bytes()).hexdigest(),
+         'registries': report}, indent=2) + '\n')
     print(json.dumps(report))
 
 

@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import io
 import json
+import re
 from pathlib import Path
 import select
 import socket
@@ -29,11 +30,17 @@ CASES = [
 ]
 class Probe(Client):
     def __init__(self,sock,protocol,version):
-        super().__init__(sock,protocol); self.version=version; self.slots=[]
+        super().__init__(sock,protocol); self.version=version; self.slots=[]; self.suggestions=[]
     def confirm_teleport(self,teleport,values):
         self.send('teleport_confirm',varint(teleport)+(struct.pack('>dddff',*values) if self.version==777 else b''))
     def observe_packet(self,name,payload):
         data=io.BytesIO(payload)
+        if name=='tab_complete':
+            assert read_varint(data.read)==31
+            read_varint(data.read);read_varint(data.read)
+            for _ in range(read_varint(data.read)):
+                self.suggestions.append(data.read(read_varint(data.read)).decode())
+                assert data.read(1)==b'\0','unexpected suggestion tooltip'
         if name=='set_slot':
             window=struct.unpack('>b',data.read(1))[0] if self.version==340 else read_varint(data.read)
             if self.version!=340: read_varint(data.read)
@@ -58,7 +65,14 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--jar',type=Path,required=True);p.add_argument('--data',type=Path,required=True)
     p.add_argument('--version',type=int,choices=[340,775,777],required=True);p.add_argument('--port',type=int,default=26023);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--replay',type=Path)
+    p.add_argument('--cases',type=Path,help='свои команды для дополнительных современных компонентов')
+    p.add_argument('--allow-missing-attributes',action='store_true',help='записать явный отказ неизвестного имени атрибута')
+    p.add_argument('--discover-attributes',action='store_true',help='обычное дополнение /attribute и отдельный предмет с каждым предложенным свойством')
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
+    cases=CASES
+    if a.cases:
+        assert a.version in (775,777) and not a.replay
+        cases=[(entry['name'],'',entry['command']) for entry in json.loads(a.cases.read_text())]
     expected={340:'886945bfb2b978778c3a0288fd7fab09d315b25f',775:'97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51',777:'33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'}
     with a.jar.open('rb') as f:assert hashlib.file_digest(f,'sha1').hexdigest()==expected[a.version]
     path=a.data/('protocol-26.1.json' if a.version==775 else 'protocol.json');manifest=json.loads((a.data/'sources.json').read_text())
@@ -85,14 +99,29 @@ def main():
                     client=Probe(sock,protocol,340)
                 else:client=connect(a.port,protocol,lambda s,p:Probe(s,p,a.version),version=a.version)
                 client.pump(2)
-                for name,old,new in ([] if a.replay else CASES):
+                if a.discover_attributes:
+                    assert a.version in (775,777) and not a.replay and not a.cases
+                    command('op McsaProbe');client.pump(.5)
+                    text=b'/attribute McsaProbe '
+                    client.send('tab_complete',varint(31)+varint(len(text))+text)
+                    deadline=time.monotonic()+5
+                    while not client.suggestions:
+                        assert time.monotonic()<deadline,'attribute suggestions missing';client.pump(.1)
+                    assert all(re.fullmatch(r'minecraft:[a-z0-9_]+',name) for name in client.suggestions)
+                    report['attribute_suggestions']=client.suggestions
+                    cases=[(name,'','stick[attribute_modifiers=[{type:"'+name+'",id:"mcsa:probe",amount:1,operation:"add_value",slot:"mainhand"}]]') for name in client.suggestions]
+                for name,old,new in ([] if a.replay else cases):
                     client.slots.clear()
+                    log_start=len(log.read_text())
                     command(('replaceitem entity McsaProbe slot.hotbar.0 '+old) if a.version==340 else ('item replace entity McsaProbe hotbar.0 with '+new))
                     deadline=time.monotonic()+8
                     while not client.slots:
+                        error=log.read_text()[log_start:]
+                        if a.allow_missing_attributes and 'Unknown registry key' in error and 'minecraft:attribute' in error:
+                            report['cases'].append({'name':name,'command':new,'missing_attribute':True});break
                         assert time.monotonic()<deadline, name+' command produced no slot'
                         client.pump(.1)
-                    report['cases'].append({'name':name,'command':old if a.version==340 else new,'slot_hex':client.slots[-1]})
+                    if client.slots:report['cases'].append({'name':name,'command':old if a.version==340 else new,'slot_hex':client.slots[-1]})
                 if a.replay:
                     assert a.version==340
                     replay=json.loads(a.replay.read_text())

@@ -589,8 +589,11 @@ mod tests {
         string(&mut attributes, "mcsa:test"); attributes.extend(0.5f64.to_be_bytes()); attributes.push(2);
         let mapped = cb(&attributes, OLD, NEW).unwrap();
         assert_eq!(cb(&mapped, NEW, OLD).unwrap(), attributes);
-        attributes[4] = 20; // удалённый mining_efficiency: нельзя отправить как movement_speed.
-        assert_eq!(cb(&attributes, OLD, NEW), Err(Error::Id(ids::IdTranslationError::MissingTarget(20))));
+        assert_eq!(mapped[4],26); // movement_speed по официальному наблюдению.
+        attributes[4] = 20; // mining_efficiency существует:20→24.
+        assert_eq!(cb(&attributes,OLD,NEW).unwrap()[4],24);
+        let mut new_attribute=mapped;new_attribute[4]=0; // Новый air_drag_modifier.
+        assert_eq!(cb(&new_attribute, NEW, OLD), Err(Error::Id(ids::IdTranslationError::MissingTarget(0))));
     }
 
     #[test]

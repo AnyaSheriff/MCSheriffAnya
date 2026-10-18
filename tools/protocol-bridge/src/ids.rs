@@ -52,13 +52,15 @@ mod tests {
     }
 
     #[test]
-    fn new_content_and_removed_attributes_never_get_silent_fallbacks() {
-        // Четыре атрибута удалены из таблицы 777. Их значения нельзя просто
-        // отправить под прежними ID: это уже другие атрибуты.
-        for id in [20, 21, 23, 26] {
-            assert_eq!(translate(RegistryKind::Attribute, V26_1_2, V26_3, id),
+    fn new_attributes_never_get_silent_fallbacks() {
+        // Официальные команды подтвердили35старых+5новых, а не удаление
+        // четырёх атрибутов, ошибочно указанное в JSON-кандидате777.
+        for id in [0, 6, 9, 17, 27] {
+            assert_eq!(translate(RegistryKind::Attribute, V26_3, V26_1_2, id),
                 Err(IdTranslationError::MissingTarget(id)));
         }
+        assert_eq!(translate(RegistryKind::Attribute,V26_1_2,V26_3,2),Ok(3));
+        assert_eq!(translate(RegistryKind::Attribute,V26_1_2,V26_3,22),Ok(26));
         assert_eq!(translate(RegistryKind::Item, V26_2, V26_3, 1),
             Err(IdTranslationError::UnsupportedVersion(V26_2)));
         assert_eq!(translate(RegistryKind::BlockState, V26_3, V26_1_2, u32::MAX),

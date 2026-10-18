@@ -16,7 +16,7 @@ from smoke import read_varint, varint
 
 class Probe(ParticleProbe):
     def observe_packet(self, name, payload):
-        if name in ('entity_effect', 'remove_entity_effect', 'sound_effect'):
+        if name in ('entity_effect', 'remove_entity_effect', 'sound_effect', 'entity_update_attributes'):
             self.observed.append({'name': name, 'body': (varint(next(k for k,v in self.incoming.items() if v == name)) + payload).hex()})
 
 def main():
@@ -24,6 +24,7 @@ def main():
     p.add_argument('--version',type=int,choices=[775,777],required=True)
     p.add_argument('--jar',type=Path,required=True);p.add_argument('--data',type=Path,required=True)
     p.add_argument('--effects',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--attributes',action='store_true',help='проверить /attribute base set вместо эффектов')
     a=p.parse_args();port=26027
     expected={775:'97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51',777:'33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'}[a.version]
     assert hashlib.sha1(a.jar.read_bytes()).hexdigest()==expected
@@ -49,7 +50,13 @@ def main():
                     assert server.poll() is None and time.monotonic()<deadline,'startup failed';time.sleep(.1)
                 client=connect(port,protocol,lambda s,p:Probe(s,p,a.version),a.version)
                 client.pump(10,lambda r:r['name']=='position');client.pump(.3)
-                for effect in effects:
+                if a.attributes:
+                    report['attribute_updates']=[]
+                    for name,value in [('movement_speed',.25),('max_health',30),('scale',1.25)]:
+                        start=len(client.observed);command(f'attribute McsaProbe minecraft:{name} base set {value}');client.pump(.3)
+                        packets=[r for r in client.observed[start:] if r['name']=='entity_update_attributes'];assert packets,name
+                        report['attribute_updates'].append({'name':name,'value':value,'packets':packets})
+                for effect in ([] if a.attributes else effects):
                     name=re.sub(r'(?<!^)(?=[A-Z])','_',effect['name']).lower()
                     name={'bad_luck':'unluck'}.get(name,name)
                     start=len(client.observed);command(f'effect give McsaProbe {name} 100 0 true')
@@ -72,5 +79,5 @@ def main():
                 report['exit_code']=server.returncode
                 (a.output/'result.json').write_text(json.dumps(report,indent=2)+'\n');(a.output/'server.log').write_text(log.read_text())
     assert report['exit_code']==0
-    print(json.dumps({'observed':sum(bool(e['observed_ids']) for e in report['effects']),'total':len(effects)}))
+    print(json.dumps({'observed':sum(bool(e['observed_ids']) for e in report['effects']),'attribute_updates':len(report.get('attribute_updates',[]))}))
 if __name__=='__main__':main()

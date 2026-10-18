@@ -25,15 +25,18 @@ impl<'a> Reader<'a> {
     pub fn take(&mut self, n: usize) -> Result<&'a [u8], Error> {
         let (value, rest) = self.0.split_at_checked(n).ok_or(Error::Truncated)?; self.0 = rest; Ok(value)
     }
-    pub fn uint(&mut self) -> Result<u32, Error> {
+    pub fn varint(&mut self) -> Result<i32, Error> {
         let mut value = 0;
         for shift in (0..35).step_by(7) {
             let byte = self.take(1)?[0];
-            if shift == 28 && byte & 0xf8 != 0 { return Err(Error::Invalid); }
+            if shift == 28 && byte & 0xf0 != 0 { return Err(Error::Invalid); }
             value |= u32::from(byte & 127) << shift;
-            if byte < 128 { return Ok(value); }
+            if byte < 128 { return Ok(value as i32); }
         }
         Err(Error::Invalid)
+    }
+    pub fn uint(&mut self) -> Result<u32, Error> {
+        self.varint()?.try_into().map_err(|_|Error::Invalid)
     }
     pub fn count(&mut self, max: usize) -> Result<usize, Error> {
         let n = self.uint()? as usize; if n > max { Err(Error::TooLarge) } else { Ok(n) }
@@ -41,7 +44,7 @@ impl<'a> Reader<'a> {
     pub fn boolean(&mut self) -> Result<bool, Error> {
         match self.take(1)? { [0] => Ok(false), [1] => Ok(true), _ => Err(Error::Invalid) }
     }
-    fn nbt(&mut self) -> Result<&'a [u8], Error> {
+    pub(crate) fn nbt(&mut self) -> Result<&'a [u8], Error> {
         let size = registry::nbt_length(self.0).map_err(Error::Nbt)?; self.take(size)
     }
 }
@@ -82,14 +85,14 @@ fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Co
         if !seen.insert(kind) { return Err(Error::Invalid); }
         let data = if untrusted {
             let size = input.count(LIMIT)?; let data = input.take(size)?;
-            let mut component = Reader(data); component_data(kind, &mut component, context)?;
+            let mut component = Reader(data); let data=component_bytes(kind,&mut component,version,JavaVersion::V26_1_2,context)?;
             if !component.0.is_empty() { return Err(Error::Invalid); }
             data
         } else {
-            let start = input.0; component_data(kind, &mut input, context)?;
-            &start[..start.len() - input.0.len()]
+            component_bytes(kind,&mut input,version,JavaVersion::V26_1_2,context)?
         };
-        added.push(Component { kind, data: data.to_vec() });
+        if data.len()>LIMIT{return Err(Error::TooLarge);}
+        added.push(Component { kind, data });
     }
     for _ in 0..removed_count {
         let kind = id(RegistryKind::Component, version, JavaVersion::V26_1_2, input.uint()?)?;
@@ -119,11 +122,11 @@ fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, co
     for component in &stack.added {
         if !seen.insert(component.kind) { return Err(Error::Invalid); }
         if component.data.len() > LIMIT { return Err(Error::TooLarge); }
-        let mut input = Reader(&component.data); component_data(component.kind, &mut input, context)?;
+        let mut input = Reader(&component.data); let data=component_bytes(component.kind,&mut input,JavaVersion::V26_1_2,version,context)?;
         if !input.0.is_empty() { return Err(Error::Invalid); }
         uint(&mut out, id(RegistryKind::Component, JavaVersion::V26_1_2, version, component.kind)?);
-        if untrusted { uint(&mut out, component.data.len() as u32); }
-        out.extend(&component.data);
+        if untrusted { uint(&mut out, data.len() as u32); }
+        out.extend(data);
         if out.len() > LIMIT { return Err(Error::TooLarge); }
     }
     for &kind in &stack.removed {
@@ -131,6 +134,11 @@ fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, co
         uint(&mut out, id(RegistryKind::Component, JavaVersion::V26_1_2, version, kind)?);
     }
     Ok(out)
+}
+
+fn component_bytes(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context)->Result<Vec<u8>,Error>{
+    if matches!(kind,16|18){return crate::item_components::remap(kind,input,from,to);}
+    let start=input.0;component_data(kind,input,context)?;Ok(start[..start.len()-input.0.len()].to_vec())
 }
 
 fn component_data(kind: u32, input: &mut Reader<'_>, context: Context) -> Result<(), Error> {
@@ -161,7 +169,7 @@ fn component_data(kind: u32, input: &mut Reader<'_>, context: Context) -> Result
         48 => { input.count(1)?; }
         63 => { input.count(4)?; }
         73 => { input.count(15)?; }
-        _ => return Err(Error::UnsupportedComponent(kind)),
+        _ => return crate::item_components::validate(kind,input),
     }
     Ok(())
 }

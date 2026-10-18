@@ -161,28 +161,27 @@ fn allowed(command: &str, source: &Source, shared: &Shared) -> bool {
     }
 }
 
-/// Убирает пробелы внутри квадратных скобок вне кавычек: запись предмета с
-/// довесками (`iron_sword[enchantments={sharpness:5, knockback:1}]`) должна
-/// остаться одним словом команды.
-fn compact_item_specs(command: &str) -> String {
-    let mut out = String::with_capacity(command.len());
-    let mut depth = 0;
-    let mut quote: Option<char> = None;
-
-    for c in command.chars() {
-        match (quote, c) {
-            (Some(q), c) if c == q => quote = None,
-            (None, '"' | '\'') if depth > 0 => quote = Some(c),
-            (None, '[') => depth += 1,
-            (None, ']') if depth > 0 => depth -= 1,
-            (None, c) if depth > 0 && c.is_whitespace() => continue,
+/// Пробелы внутри компонентов предмета и SNBT не разделяют аргументы.
+/// Кавычки и экранирование сохраняем: текст книги должен дойти без изменений.
+fn command_arguments(command: &str) -> impl Iterator<Item = &str> {
+    let mut depth = 0usize;
+    let mut quote = None;
+    let mut escaped = false;
+    command.split(move |c: char| {
+        if let Some(q) = quote {
+            if escaped { escaped = false; }
+            else if c == '\\' { escaped = true; }
+            else if c == q { quote = None; }
+            return false;
+        }
+        match c {
+            '"' | '\'' if depth > 0 => quote = Some(c),
+            '[' | '{' => depth += 1,
+            ']' | '}' => depth = depth.saturating_sub(1),
             _ => {}
         }
-
-        out.push(c);
-    }
-
-    out
+        depth == 0 && c.is_whitespace()
+    }).filter(|part| !part.is_empty())
 }
 
 /// Стопка по записи предмета команды (`diamond_sword[damage=5]`): None —
@@ -213,9 +212,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         return answer;
     }
 
-    let compact = compact_item_specs(command);
-    let command = compact.as_str();
-    let mut parts = command.split_whitespace();
+    let mut parts = command_arguments(command);
     let name = parts.next().unwrap_or("");
 
     if !allowed(name, source, shared) {
@@ -3226,8 +3223,8 @@ mod tests {
 
     #[test]
     fn item_specs_stay_one_word_and_carry_their_components() {
-        assert_eq!(compact_item_specs("give a iron_sword[enchantments={sharpness:5, knockback:1}] 1"), "give a iron_sword[enchantments={sharpness:5,knockback:1}] 1");
-        assert_eq!(compact_item_specs("say [a b] c"), "say [ab] c");
+        assert_eq!(command_arguments("give a iron_sword[enchantments={sharpness:5, knockback:1}] 1").collect::<Vec<_>>(), ["give", "a", "iron_sword[enchantments={sharpness:5, knockback:1}]", "1"]);
+        assert_eq!(command_arguments("say [a b] c").collect::<Vec<_>>(), ["say", "[a b]", "c"]);
 
         let stack = stack_from_spec("minecraft:diamond_sword[damage=3,enchantments={sharpness:2}]", 1).expect("разобралось").expect("не воздух");
 
@@ -3715,6 +3712,26 @@ mod tests {
         assert!(answer.reply.contains("Нет такого предмета"), "{}", answer.reply);
     }
 
+
+    #[test]
+    fn give_books_preserves_spaces_quotes_and_count() {
+        let shared = server();
+        for (item, component) in [("writable_book", "writable_book_content"), ("written_book", "written_book_content")] {
+            let command = format!(r#"give Первый {item}[{component}={{title:"A story",author:"Some author",pages:["First  page", "Вторая \"страница\" ] {{"]}}] 2"#);
+            let answer = run(&command, &Source::Console, &shared);
+            assert!(answer.reply.contains("Gave"), "{}", answer.reply);
+            let orders = shared.players.lock().unwrap().take_orders(&[1; 16]);
+            let Some(Order::Give { stack }) = orders.first() else { panic!("нет выдачи") };
+            assert_eq!(stack.count, 2);
+            let data = stack.extras();
+            let book = data.book.as_ref().unwrap();
+            assert_eq!(book.pages, ["First  page", "Вторая \"страница\" ] {"]);
+            if item == "written_book" {
+                assert_eq!(book.title.as_deref(), Some("A story"));
+                assert_eq!(book.author, "Some author");
+            }
+        }
+    }
 
     #[test]
     fn difficulty_and_keep_inventory_are_runtime_settings() {
