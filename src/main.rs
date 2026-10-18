@@ -179,7 +179,7 @@ async fn server() -> io::Result<()> {
     let started = Instant::now();
 
     // Первые строки — как у обычного сервера: что за сервер, что грузим.
-    log_info!("Запуск сервера MCSheriffAnya (Minecraft {}, протокол {})", VERSION_NAME, PROTOCOL_VERSION);
+    log_info!("Запуск сервера MCSheriffAnya");
 
     match tick::tick_core() {
         Some(core) => log_info!(
@@ -197,7 +197,15 @@ async fn server() -> io::Result<()> {
 
     // Свои настройки — отдельно от server.properties: тот должен выглядеть
     // как у обычного сервера.
+    let first_start = !Path::new(config::mcsheriffanya::FILE).exists();
     let settings = config::mcsheriffanya::Settings::load(Path::new(config::mcsheriffanya::FILE));
+    settings.validate()?;
+    log_info!("Основная версия игры: Minecraft Java {} (протокол {})", VERSION_NAME, PROTOCOL_VERSION);
+    if first_start {
+        log_info!("Первый запуск: основная версия задаётся строкой java-version={} в config/mcsa.properties", VERSION_NAME);
+        log_info!("Чтобы выбрать более старую версию, остановите сервер, сохраните копию мира и укажите поддерживаемую версию в java-version. В этой сборке доступна только {}", VERSION_NAME);
+        log_info!("При online-mode=false: offline-license-mode=cosmetics — лицензии для косметики; disabled — без проверки лицензий. Пароли настраиваются отдельно через auth-enabled и auth-provider");
+    }
     log::set_debug(settings.debug);
     world::terrain::AUTUMN_FORESTS.store(settings.autumn_forests, std::sync::atomic::Ordering::Relaxed);
     world::terrain::PINK_CHERRY_GROVES.store(settings.pink_cherry_groves, std::sync::atomic::Ordering::Relaxed);
@@ -225,7 +233,7 @@ async fn server() -> io::Result<()> {
     );
 
     network::packet::set_compression_threshold(properties.compression_threshold);
-    if properties.online_mode || (settings.auth_enabled && settings.auth_premium) {
+    if settings.verify_license(properties.online_mode) {
         network::online::initialize().await?;
     }
 
@@ -253,6 +261,8 @@ async fn server() -> io::Result<()> {
         WorldKind::End,
     )?;
 
+    let mut skin_settings = skins::Settings::load(Path::new(skins::SETTINGS_FILE));
+    settings.apply_skin_policy(properties.online_mode, &mut skin_settings);
     let mut shared = Shared::with_end(
         overworld,
         nether,
@@ -261,7 +271,7 @@ async fn server() -> io::Result<()> {
         PathBuf::from(skins::DIRECTORY),
         (*properties).clone(),
         ops::Ops::open(std::path::Path::new(ops::FILE)),
-        skins::Settings::load(Path::new(skins::SETTINGS_FILE)),
+        skin_settings,
     );
     *shared.maps.lock().expect("карты") = maps::Maps::open(Path::new(WORLD_PATH))?;
     shared.settings = settings;
@@ -595,9 +605,9 @@ async fn handle_connection(
                 send_login_disconnect(&mut socket, auth::BLOCKED).await?;
                 return Ok(());
             }
-            let try_premium = if let Some(auth) = password_auth {
-                shared.settings.auth_premium && auth.premium.should_verify(&login.username, addr.ip()).await
-            } else { false };
+            let try_premium = !properties.online_mode
+                && shared.settings.verify_license(false)
+                && shared.premium.should_verify(&login.username, addr.ip()).await;
             let authenticated = if properties.online_mode || try_premium {
                 let auth = network::online::Authenticator::get()?;
                 let ip = properties.prevent_proxy_connections.then_some(addr.ip());
@@ -609,7 +619,7 @@ async fn handle_connection(
                     }
                     Err(error) => {
                         if try_premium {
-                            password_auth.expect("auth").premium.failed(&login.username, addr.ip(), auth::now());
+                            shared.premium.failed(&login.username, addr.ip(), auth::now());
                             let _ = send_login_disconnect(&mut socket, auth::premium::RETRY).await;
                             return Ok(());
                         }

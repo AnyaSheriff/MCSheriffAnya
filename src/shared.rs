@@ -29,6 +29,7 @@ pub type Place = (f64, f64, f64);
 /// (так и было: вход игрока брал игроков раньше мира).
 pub struct Shared {
     pub auth: Option<std::sync::Arc<crate::auth::Service>>,
+    pub premium: crate::auth::premium::Detector,
     /// Миры измерений по порядку `Dimension::ALL`: блоки, такты, события.
     worlds: [Mutex<World>; 3],
 
@@ -263,6 +264,7 @@ impl Shared {
             maps,
             riding: Mutex::new(crate::riding::Riding::new()),
             auth: None,
+            premium: crate::auth::premium::Detector::default(),
             ops: Mutex::new(ops),
             ticks: tokio::sync::watch::channel(0).0,
             publication: Mutex::new(()),

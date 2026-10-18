@@ -12,6 +12,9 @@ impl JavaVersion {
     pub const fn name(self) -> &'static str {
         match self { Self::V26_1_2 => "26.1.2", Self::V26_2 => "26.2", Self::V26_3 => "26.3" }
     }
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name { "26.1.2" => Some(Self::V26_1_2), "26.2" => Some(Self::V26_2), "26.3" => Some(Self::V26_3), _ => None }
+    }
     pub const fn from_protocol(protocol: i32) -> Option<Self> {
         match protocol { 775 => Some(Self::V26_1_2), 776 => Some(Self::V26_2), 777 => Some(Self::V26_3), _ => None }
     }
