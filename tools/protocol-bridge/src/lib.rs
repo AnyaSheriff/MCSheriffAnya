@@ -7,6 +7,7 @@ pub mod ids;
 pub mod login;
 pub mod movement;
 pub mod teleport;
+pub mod registry;
 pub mod wire;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

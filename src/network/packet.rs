@@ -183,6 +183,19 @@ pub async fn write_configuration<S: AsyncWrite + Unpin>(stream: &mut CryptoStrea
     write_bytes(stream, &packet).await
 }
 
+/// Реестр уже собран для целевого клиента. Обычный wire::translate не
+/// пропускает произвольный RegistryData между версиями: NBT-схема не следует
+/// из неизменного внешнего заголовка пакета. Здесь проверяем метку builder-а.
+pub async fn write_registry<S: AsyncWrite + Unpin>(stream: &mut CryptoStream<S>, registry: &mcsa_protocol::registry::Registry) -> io::Result<()> {
+    if registry.version != stream.client_version() {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "Реестр подготовлен для другой версии клиента"));
+    }
+    let body = registry.encode().map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("RegistryData: {error:?}")))?;
+    let mut packet = Vec::with_capacity(body.len() + 8);
+    frame(&mut packet, &body, compression_threshold());
+    write_bytes(stream, &packet).await
+}
+
 /// Поток уже расшифрован CryptoStream, кадр уже распакован read_packet.
 /// Эта функция применяется только в Play: одинаковый ID в другой фазе иной.
 pub async fn read_play_packet<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion) -> io::Result<PacketInfo> {

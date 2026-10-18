@@ -1,0 +1,44 @@
+{
+  "client_sha1": "e877b6a07acd633fb3bb475002175cec036e7b87",
+  "cases": [
+    {
+      "client": "26.3",
+      "protocol": 777,
+      "registry_count": 27,
+      "fixture_sha256": "bd4fa85de25ed03add1fa56108688caa10d29587962930a803f6ed631f87262a",
+      "empty_known_packs": false,
+      "finish_ack": true,
+      "received": [
+        2,
+        0,
+        7,
+        3
+      ],
+      "known_packs_count": 1
+    },
+    {
+      "client": "26.3",
+      "protocol": 777,
+      "registry_count": 27,
+      "fixture_sha256": "bd4fa85de25ed03add1fa56108688caa10d29587962930a803f6ed631f87262a",
+      "empty_known_packs": true,
+      "finish_ack": true,
+      "received": [
+        2,
+        0,
+        7,
+        3
+      ],
+      "known_packs_count": 0
+    }
+  ],
+  "legacy_comparison": {
+    "baseline": "ff093a240a41d68d48ed2db32ca8a7cb524b8757",
+    "equal_configuration_packets": 29,
+    "equal_registries": 25
+  },
+  "workspace_passed": 2541,
+  "ignored": 72,
+  "admission_checks": 9,
+  "scope": "Configuration acceptance only; native admission remains 775, gameplay 777 is unfinished."
+}
