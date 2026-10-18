@@ -4951,8 +4951,9 @@ fn plain_component(component: &[u8]) -> Option<String> {
 }
 
 fn raw_text(line: &str) -> Vec<u8> {
+    let line = crate::colors::bedrock(line);
     let mut text = Out::packet(session::TEXT);
-    text.bool(false).u8(0).u8(0).string(line).string("").string("").bool(false);
+    text.bool(false).u8(0).u8(0).string(&line).string("").string("").bool(false);
     text.bytes
 }
 
