@@ -9,6 +9,8 @@ pub struct Account {
     pub display_name: String,
     pub password_hash: [u8; 32],
     pub salt: [u8; 16],
+    #[serde(default, skip_serializing_if="Option::is_none")]
+    pub protected: Option<String>,
     pub created: u64,
     pub last_ip: String,
     pub last_login: u64,
@@ -46,8 +48,10 @@ impl Store for FileStore {
         };
         let db: Database = serde_json::from_slice(&bytes)
             .map_err(|_| io::Error::other("auth.db: неверный формат"))?;
-        if db.version != 1 || db.accounts.iter().any(|(name, a)| {
-            name != &a.name || name != &name.to_ascii_lowercase()
+        if !matches!(db.version, 1 | 2) || db.accounts.iter().any(|(name, a)| {
+            (a.protected.is_some() && db.version != 2)
+                || a.protected.as_ref().is_some_and(|v| v.is_empty() || v.len()>1024 || a.password_hash != [0;32] || a.salt != [0;16])
+                || name != &a.name || name != &name.to_ascii_lowercase()
                 || !crate::network::login::valid_name(name)
                 || !a.display_name.eq_ignore_ascii_case(name)
         }) { return Err(io::Error::other("auth.db: неверные записи или версия")); }

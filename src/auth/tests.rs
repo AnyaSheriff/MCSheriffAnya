@@ -312,3 +312,90 @@ async fn login_success_uuid_and_configuration_finish_are_password_gated() {
     };
     tokio::join!(serving, joining);
 }
+
+// Реальный закрытый бинарник поставляется отдельно. CI не получает исходники/ключ.
+// MCSA_GUARD_TEST_BUNDLE указывает на каталог подписанного публичного выпуска.
+#[test]
+#[ignore = "requires signed MCSA_GUARD_TEST_BUNDLE on Linux x86_64"]
+fn guard_signed_module_migration_registration_failure_and_secret_loss() {
+    let bundle=std::env::var_os("MCSA_GUARD_TEST_BUNDLE").expect("signed release fixture");
+    let dir=std::env::temp_dir().join(format!("mcsa-guard-integration-{}",std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let db=dir.join("auth.db");
+    let pepper=dir.join("pepper");
+    let _=std::fs::remove_file(&db);
+    let _=std::fs::remove_file(&pepper);
+    let legacy=Service::open(&db).unwrap();
+    let identity=legacy.identity("Alice",Some([42;16]));
+    legacy.submit(&identity,ip(),"correct",Some("correct"),true).unwrap();
+    drop(legacy);
+    let module=guard::Guard::test_fixture(Path::new(&bundle),pepper.clone()).unwrap();
+    let auth=Arc::new(Service::open_with_guard(&db,Some(module)).unwrap());
+    let identity=auth.identity("Alice",None);
+    let original=std::fs::read(&db).unwrap();
+    assert!(auth.submit(&identity,ip(),"wrong",None,true).is_err());
+    assert_eq!(std::fs::read(&db).unwrap(),original);
+    auth.submit(&identity,ip(),"correct",None,true).unwrap();
+    {
+        let state=auth.state.lock().unwrap();
+        let account=&state.db.accounts["alice"];
+        assert_eq!(state.db.version,2);
+        assert_eq!(account.uuid,[42;16]);
+        assert_eq!(account.password_hash,[0;32]);
+        assert_eq!(account.salt,[0;16]);
+        assert!(account.protected.is_some());
+    }
+    assert!(Service::open(&db).is_err()); // Нет отката к builtin.
+    auth.submit(&identity,ip(),"correct",None,true).unwrap();
+    assert!(auth.submit(&identity,ip(),"wrong",None,true).is_err());
+    let bob=auth.identity("Bob",None);
+    auth.submit(&bob,ip(),"длинный😀пароль",Some("длинный😀пароль"),true).unwrap();
+    assert!(auth.state.lock().unwrap().db.accounts["bob"].protected.is_some());
+    let registered_bob=auth.identity("Bob",None);
+    auth.submit(&registered_bob,ip(),"длинный😀пароль",None,true).unwrap();
+    {
+        let _busy=auth.operation.lock().unwrap();
+        assert_eq!(auth.submit(&identity,ip(),"correct",None,true),Err("Авторизация занята. Попробуй ещё раз."));
+        assert_eq!(auth.identity("Alice",None).uuid,[42;16]);
+    }
+    {
+        use crate::{commands::{run,Source}, shared::Shared,world::World};
+        let mut shared=Shared::new(World::in_memory(),World::in_memory(),dir.join("players"),dir.join("skins"),
+            Default::default(),crate::ops::Ops::open(&dir.join("ops")),Default::default());
+        shared.auth=Some(auth.clone());
+        let player=Source::Player { name:identity.name.clone(),uuid:identity.uuid };
+        let _session=auth.session(&identity);
+        assert_eq!(run("changepassword correct newpass",&player,&shared).reply,"Готово");
+        auth.submit(&identity,ip(),"newpass",None,true).unwrap();
+        assert!(auth.submit(&identity,ip(),"correct",None,true).is_err());
+        assert_eq!(run("auth setpassword Alice correct",&Source::Console,&shared).reply,"Готово");
+        auth.submit(&identity,ip(),"correct",None,true).unwrap();
+    }
+    std::fs::remove_file(&pepper).unwrap();
+    assert!(auth.submit(&identity,ip(),"correct",None,true).is_err());
+    assert!(!pepper.exists());
+    assert!(auth.submit(&auth.identity("Eve",None),ip(),"correct",Some("correct"),true).is_err());
+    assert!(!auth.state.lock().unwrap().db.accounts.contains_key("eve"));
+    drop(auth);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn protected_database_cannot_be_loaded_as_legacy_or_builtin() {
+    let p=path("guard-corruption");
+    let auth=Service::open(&p).unwrap();
+    auth.submit(&auth.identity("Alice",None),ip(),"correct",Some("correct"),true).unwrap();
+    let mut db=FileStore::new(&p).load().unwrap();
+    db.accounts.get_mut("alice").unwrap().protected=Some("opaque-guard-record".into());
+    FileStore::new(&p).save(&db).unwrap();
+    assert!(Service::open(&p).is_err());
+    db.version=2;
+    FileStore::new(&p).save(&db).unwrap();
+    assert!(FileStore::new(&p).load().is_err()); // Запрещён сохранённый слабый дубликат.
+    let a=db.accounts.get_mut("alice").unwrap();
+    a.password_hash=[0;32]; a.salt=[0;16];
+    FileStore::new(&p).save(&db).unwrap();
+    assert!(FileStore::new(&p).load().is_ok());
+    assert!(Service::open(&p).is_err());
+    std::fs::remove_file(p).unwrap();
+}

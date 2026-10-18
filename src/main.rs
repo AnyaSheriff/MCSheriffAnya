@@ -266,7 +266,7 @@ async fn server() -> io::Result<()> {
     *shared.maps.lock().expect("карты") = maps::Maps::open(Path::new(WORLD_PATH))?;
     shared.settings = settings;
     if settings.auth_enabled && !properties.online_mode {
-        shared.auth = Some(Arc::new(auth::Service::open(Path::new("auth.db"))?));
+        shared.auth = Some(Arc::new(auth::Service::configured(Path::new("auth.db"), settings.auth_provider).await?));
     }
     shared.scoreboard = std::sync::Mutex::new(scoreboard::Scoreboard::open(Path::new(WORLD_PATH)));
     shared.functions = std::sync::Mutex::new(functions::Functions::new(Path::new(WORLD_PATH)));

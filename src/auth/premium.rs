@@ -105,7 +105,7 @@ mod tests {
                     let offline = crate::network::login::offline_uuid("SheriffAnya");
                     if account != "new" {
                         auth.state.lock().unwrap().db.accounts.insert("sheriffanya".into(), Account {
-                            name: "sheriffanya".into(), display_name: "SheriffAnya".into(), salt, password_hash,
+                            name: "sheriffanya".into(), display_name: "SheriffAnya".into(), salt, password_hash, protected: None,
                             created: 1, last_ip: String::new(), last_login: 1,
                             uuid: if account == "licensed" { owner } else { offline }, premium: account == "licensed",
                         });
