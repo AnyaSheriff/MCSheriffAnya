@@ -53,3 +53,13 @@ entity cases and four dimension changes per version. Only random spawn UUIDs
 are normalized during the comparison; metadata and Respawn are compared exactly.
 The 777 command uses the documented `BlockState` inner fields `id/properties`.
 No JAR code, registry dumps or world-generation data were extracted.
+
+# Particle observations
+
+`particle-observations.json`: 23 WorldParticles and two entity metadata cases
+from each official775/777server, recorded by our ordinary commands. World
+packets compare byte-for-byte after translation. The two cow effect particles
+are compared as a set because their ordering differs between independent worlds;
+the adapter itself retains order. AreaEffectCloud contains its default
+entity_effect particle, not the attempted dust override. See
+[particle research](../../research/particles-26.3.md) for limitations.

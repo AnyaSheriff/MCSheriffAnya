@@ -7,6 +7,7 @@ pub mod ids;
 pub mod entities;
 mod entity_layouts;
 pub mod items;
+mod particles;
 pub mod legacy_items;
 mod legacy_item_ids;
 pub mod login;

@@ -85,6 +85,9 @@ pub fn translate_with_context(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Clientbound, "world_particles") => {
+            crate::particles::world(&mut cursor, &mut out, from, to, context.items)?;
+        }
         (State::Play, Direction::Clientbound, "spawn_entity") => {
             crate::entities::spawn(&mut cursor, &mut out, from, to)?;
         }

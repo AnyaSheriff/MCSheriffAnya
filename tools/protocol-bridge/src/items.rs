@@ -55,12 +55,25 @@ fn id(kind: RegistryKind, from: JavaVersion, to: JavaVersion, value: u32) -> Res
 /// Разбирает ровно один слот; возвращает число прочитанных байтов для массива слотов.
 /// untrusted=true только для serverbound Creative Slot: компоненты имеют длину.
 pub fn decode(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Context) -> Result<(Option<Stack>, usize), Error> {
+    decode_stack(version, bytes, untrusted, context, false)
+}
+
+/// Particle ItemStackTemplate: ID перед количеством, пустого слота нет.
+pub fn decode_template(version: JavaVersion, bytes: &[u8], context: Context) -> Result<(Stack, usize), Error> {
+    let (stack, size) = decode_stack(version, bytes, false, context, true)?;
+    Ok((stack.ok_or(Error::Invalid)?, size))
+}
+
+fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Context, template: bool) -> Result<(Option<Stack>, usize), Error> {
     id(RegistryKind::Item, version, version, 0)?;
     if bytes.len() > LIMIT { return Err(Error::TooLarge); }
     let mut input = Reader(bytes);
+    let template_id = if template { Some(input.uint()?) } else { None };
     let count = input.count(127)? as u32;
-    if count == 0 { return Ok((None, bytes.len() - input.0.len())); }
-    let item = id(RegistryKind::Item, version, JavaVersion::V26_1_2, input.uint()?)?;
+    if count == 0 {
+        return if template { Err(Error::Invalid) } else { Ok((None, bytes.len() - input.0.len())) };
+    }
+    let item = id(RegistryKind::Item, version, JavaVersion::V26_1_2, match template_id { Some(id) => id, None => input.uint()? })?;
     if item == 0 { return Err(Error::Invalid); }
     let added_count = input.count(256)?; let removed_count = input.count(256)?;
     let mut added = Vec::new(); let mut removed = Vec::new(); let mut seen = BTreeSet::new();
@@ -87,11 +100,20 @@ pub fn decode(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Cont
 }
 
 pub fn encode(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, context: Context) -> Result<Vec<u8>, Error> {
+    encode_stack(version, stack, untrusted, context, false)
+}
+
+pub fn encode_template(version: JavaVersion, stack: &Stack, context: Context) -> Result<Vec<u8>, Error> {
+    encode_stack(version, Some(stack), false, context, true)
+}
+
+fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, context: Context, template: bool) -> Result<Vec<u8>, Error> {
     id(RegistryKind::Item, version, version, 0)?;
     let Some(stack) = stack else { return Ok(vec![0]); };
     if !(1..=127).contains(&stack.count) || stack.item == 0 || stack.added.len() > 256 || stack.removed.len() > 256 { return Err(Error::Invalid); }
-    let mut out = Vec::new(); uint(&mut out, stack.count);
-    uint(&mut out, id(RegistryKind::Item, JavaVersion::V26_1_2, version, stack.item)?);
+    let mut out = Vec::new();
+    let item = id(RegistryKind::Item, JavaVersion::V26_1_2, version, stack.item)?;
+    for value in if template { [item, stack.count] } else { [stack.count, item] } { uint(&mut out, value); }
     uint(&mut out, stack.added.len() as u32); uint(&mut out, stack.removed.len() as u32);
     let mut seen = BTreeSet::new();
     for component in &stack.added {

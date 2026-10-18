@@ -61,8 +61,14 @@ async fn packets(version: JavaVersion) -> Vec<Vec<u8>> {
         let mut mob = crate::mob::Mob::new(20+i as i32,kind,(-10.5+i as f64,65.0,-10.5));
         mob.uuid = [70+i as u8;16]; // одна синтетическая личность в обоих прогонах
         mob.no_ai = true;
+        mob.vitals.give_effect(crate::survival::EffectKind::Speed,1,2000);
+        mob.vitals.give_effect(crate::survival::EffectKind::Strength,1,2000);
         if kind == crate::mob::Kind::Slime { mob.nether.size = 4; }
         mobs::send_compatibility_probe(&mut outgoing,&mob).await.unwrap();
+    }
+    for (particle, data, count) in [(4,None,7),(4,None,0),(1,Some(blocks::state_by_name("bamboo_planks").unwrap()),7),
+        (47,Some(blocks::item_named("red_wool").unwrap()),7)] {
+        mobs::send_particles(&mut outgoing,particle,data,(-8.5,67.0,-8.5),(0.25,0.5,0.75),0.125,count).await.unwrap();
     }
     outgoing.flush().await.unwrap();
     drop(outgoing); drop(stream);
@@ -79,7 +85,12 @@ async fn real_chunk_builder_crosses_encrypted_transport_with_shared_biome_contex
     let context = wire::Context { metadata_registry_counts:&COUNTS, items: mcsa_protocol::items::Context { shared_enchantment_count: Some(crate::stackdata::ENCHANTMENTS.len() as u32) }, chunk: Some(mcsa_protocol::chunk::Context {
         min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: count as u32,
     }), ..Default::default() };
-    assert!(modern.len()>31);
+    assert_eq!(modern.len(),43);
+    // Реальная проба775: ItemStackTemplate red_wool = e3 01 <count> 00 00.
+    // Это ловит прежнюю перестановку ID/количества даже на родном маршруте.
+    assert!(native.last().unwrap().ends_with(&[47,0xe3,1,1,0,0]));
+    assert_eq!(native.iter().filter(|body| body[0] == 0x2f).count(),4);
+    assert_eq!(modern.iter().filter(|body| body[0] == 0x30).count(),4);
     assert_eq!(modern.len(),native.len());
     for (old,new) in native[14..18].iter().zip(&modern[14..18]) {
         let mapped = wire::translate_with_context(mcsa_protocol::State::Play,mcsa_protocol::Direction::Clientbound,JavaVersion::V26_1_2,JavaVersion::V26_3,old,context).unwrap();

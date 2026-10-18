@@ -170,7 +170,11 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 uint(out, if serializer == 15 && value == 0 { 0 }
                     else { ids::translate(RegistryKind::BlockState,from,to,value)? });
             }
-            17 => { if input.uint()? != 0 { return Err(failure(Error::Serializer(serializer))); } out.push(0); }
+            16 => crate::particles::particle(input,out,from,to,context.items)?,
+            17 => {
+                let count = input.count(1024)?; uint(out,count as u32);
+                for _ in 0..count { crate::particles::particle(input,out,from,to,context.items)?; }
+            }
             19 => uint(out,input.uint()?),
             20 => uint(out,input.count(17)? as u32),
             21..=32 => {

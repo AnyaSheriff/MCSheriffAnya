@@ -1427,9 +1427,9 @@ pub(super) async fn send_particles(
 
     if let Some(block) = block {
         if particle == 47 {
-            // «item»: данные — предмет (число, номер, без компонентов).
-            body.extend_from_slice(&encode_varint(1));
+            // ItemStackTemplate: номер ПЕРЕД числом; подтверждено официальной пробой.
             body.extend_from_slice(&encode_varint(block));
+            body.extend_from_slice(&encode_varint(1));
             body.extend_from_slice(&encode_varint(0));
             body.extend_from_slice(&encode_varint(0));
         } else {

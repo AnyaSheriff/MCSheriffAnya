@@ -73,6 +73,7 @@ def main():
     parser.add_argument('--port', type=int, default=26012)
     parser.add_argument('--empty-known-packs', action='store_true')
     parser.add_argument('--play-packets', type=Path, help='наши14 Play-пакетов из export_chunk_client_probe')
+    parser.add_argument('--particle-probe', action='store_true', help='четыре world_particles и эффекты трёх мобов')
     parser.add_argument('--entity-probe', action='store_true', help='два Respawn и три моба от настоящих builder-ов ядра')
     args = parser.parse_args()
     cache = args.client_dir.resolve()
@@ -161,6 +162,8 @@ def main():
                             assert sum(b[0] == 0x65 for b in play) == 3
                         else:
                             assert len(play) in (14, 18) and sum(b[0] == 0x2e for b in play) == 9
+                        if args.particle_probe:
+                            assert args.entity_probe and sum(b[0] == 0x30 for b in play) == 4
                         expected_poses = {}
                         for body in play:
                             if body[0] == 0x49:
