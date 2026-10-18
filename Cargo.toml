@@ -17,6 +17,7 @@ plugins = ["dep:wasmtime", "dep:wasmtime-wasi"]
 
 [dependencies]
 seedmap-core = { path = "tools/seedmap" }
+mcsa-protocol = { path = "tools/protocol-bridge" }
 png = "0.17"
 font8x8 = "0.3"
 tokio = { version = "1", features = ["full"] }
@@ -50,7 +51,7 @@ wasmtime-wasi = { version = "=49.0.2", optional = true, default-features = false
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_SystemInformation", "Win32_System_Time"] }
 
 [workspace]
-members = ["tools/seedmap"]
+members = ["tools/seedmap", "tools/protocol-bridge"]
 
 [dev-dependencies]
 http = "1"

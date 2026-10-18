@@ -179,7 +179,7 @@ async fn server() -> io::Result<()> {
     let started = Instant::now();
 
     // Первые строки — как у обычного сервера: что за сервер, что грузим.
-    log_info!("Запуск сервера MCSheriffAnya (Minecraft 26.1.2, протокол 775)");
+    log_info!("Запуск сервера MCSheriffAnya (Minecraft {}, протокол {})", VERSION_NAME, PROTOCOL_VERSION);
 
     match tick::tick_core() {
         Some(core) => log_info!(
@@ -557,9 +557,10 @@ async fn handle_connection(
             // в невнятную «ошибку сетевого протокола» — вместо этого сразу
             // говорим человеку, в чём дело.
             //
-            // Пока ядро понимает одну версию. Когда появится свой перевод
-            // между версиями, здесь будет не отказ, а выбор переводчика.
-            if handshake.protocol_version != PROTOCOL_VERSION {
+            // Клиентская и внутренняя версии разделены. Пока разрешён только
+            // родной маршрут; номера новых версий не включают их поддержку.
+            let negotiated = mcsa_protocol::Negotiated::native_only(handshake.protocol_version, network::NATIVE_VERSION);
+            if negotiated.is_err() {
                 log_info!(
                     "Вход отклонён: версия клиента (протокол {}) не подходит, ядру нужен протокол {}",
                     handshake.protocol_version,
@@ -578,6 +579,7 @@ async fn handle_connection(
                 return Ok(());
             }
 
+            socket.protocol = negotiated.ok();
             let mut login = read_login_start(&mut socket).await?;
 
             // Ник — как у оригинала. Иначе длинный ник отключил бы всех

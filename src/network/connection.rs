@@ -16,11 +16,12 @@ pub struct CryptoStream<S> {
     encryptor: Option<Encryptor>,
     decryptor: Option<Decryptor>,
     read_taken: bool,
+    pub protocol: Option<mcsa_protocol::Negotiated>,
 }
 
 impl<S> CryptoStream<S> {
     pub fn new(inner: S) -> Self {
-        Self { inner, encryptor: None, decryptor: None, read_taken: false }
+        Self { inner, encryptor: None, decryptor: None, read_taken: false, protocol: None }
     }
 
     pub fn enable_encryption(&mut self, secret: &[u8; 16]) {
@@ -48,6 +49,7 @@ impl Connection {
         own.set_nonblocking(true)?;
         let mut reader = Self::new(tokio::net::TcpStream::from_std(own)?);
         reader.decryptor = self.decryptor.take();
+        reader.protocol = self.protocol;
         self.read_taken = true;
         Ok(reader)
     }
@@ -161,6 +163,25 @@ mod tests {
             right.write_all(&secret).await.unwrap();
         };
         tokio::join!(sender, receiver);
+    }
+
+    #[tokio::test]
+    async fn play_reader_keeps_negotiated_versions_and_cannot_be_taken_twice() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let peer=tokio::net::TcpStream::connect(listener.local_addr().unwrap());
+        let (peer,accepted)=tokio::join!(peer,listener.accept());
+        let mut peer=peer.unwrap();
+        let mut writer=Connection::new(accepted.unwrap().0);
+        let protocol=mcsa_protocol::Negotiated::native_only(775,super::super::NATIVE_VERSION).unwrap();
+        writer.protocol=Some(protocol);
+        let mut reader=writer.take_reader().unwrap();
+        assert_eq!(reader.protocol,Some(protocol));
+        assert_eq!(writer.protocol,Some(protocol));
+        assert!(writer.take_reader().is_err());
+        peer.write_all(b"play").await.unwrap();
+        let mut bytes=[0;4];
+        reader.read_exact(&mut bytes).await.unwrap();
+        assert_eq!(&bytes,b"play");
     }
 
     #[tokio::test]
