@@ -38,8 +38,8 @@ pub fn prepare(root: &Path, interactive: bool, input: &mut impl BufRead, output:
         if changed {fs::write(&path,&text)?;}
     }
     let values=super::server_properties::parse_properties(&text);
-    let choose_version=values.get("java-version").is_some_and(|v| v == PENDING);
-    let choose_reports=values.get("send-error-reports").is_some_and(|v| v == PENDING);
+    let choose_version=values.get("java-version").is_some_and(|v| v == PENDING || (!existing && v != crate::network::VERSION_NAME));
+    let choose_reports=values.get("send-error-reports").is_some_and(|v| v == PENDING || (!existing && !matches!(v.as_str(),"true"|"false")));
     if !choose_version && !choose_reports { return Ok(true); }
     writeln!(output,"Первоначальная настройка MCSheriffAnya. Мир ещё не создан.")?;
     if choose_version {
@@ -53,7 +53,7 @@ pub fn prepare(root: &Path, interactive: bool, input: &mut impl BufRead, output:
         writeln!(output,"В панели откройте config/mcsa.properties:")?;
         if choose_version { writeln!(output,"  java-version={} — основная версия игры",crate::network::VERSION_NAME)?; }
         if choose_reports { writeln!(output,"  send-error-reports=true или false — отправлять или не отправлять отчёты")?; }
-        writeln!(output,"Замените choose выбранными значениями и запустите сервер снова. Запуск остановлен до выбора.")?;
+        writeln!(output,"Укажите выбранные значения и запустите сервер снова. Запуск остановлен до выбора.")?;
         return Ok(false);
     }
     let mut answers=Vec::new();
@@ -144,4 +144,35 @@ mod tests {
         assert!(prepare(&root,true,&mut &b"1\nno\n"[..],&mut Vec::new()).unwrap());
         assert!(fs::read_to_string(&path).unwrap().contains("send-error-reports=false"));fs::remove_dir_all(root).unwrap();
     }
+    #[test]
+    fn malformed_fresh_consent_is_not_a_completed_choice() {
+        let root=root("invalid-consent");fs::create_dir(root.join("config")).unwrap();
+        let path=root.join(super::super::mcsheriffanya::FILE);
+        for invalid in ["", "maybe", "yes", "TRUE"] {
+            let text=format!("java-version={}\nsend-error-reports={invalid}\nauth-enabled=false\n",crate::network::VERSION_NAME);
+            fs::write(&path,&text).unwrap();let mut output=Vec::new();
+            assert!(!prepare(&root,false,&mut &b""[..],&mut output).unwrap());
+            assert_eq!(fs::read_to_string(&path).unwrap(),text);
+            assert!(!root.join("world").exists());
+            assert!(String::from_utf8(output).unwrap().contains("send-error-reports=true или false"));
+            assert!(prepare(&root,true,&mut &b"no\n"[..],&mut Vec::new()).unwrap());
+            let saved=fs::read_to_string(&path).unwrap();
+            assert!(saved.contains("send-error-reports=false"));assert!(saved.contains("auth-enabled=false"));
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn unavailable_fresh_version_requires_selection_before_start() {
+        let root=root("invalid-version");fs::create_dir(root.join("config")).unwrap();
+        let path=root.join(super::super::mcsheriffanya::FILE);
+        for invalid in ["", "invalid", "26.3"] {
+            fs::write(&path,format!("java-version={invalid}\nsend-error-reports=false\n")).unwrap();
+            assert!(!prepare(&root,false,&mut &b""[..],&mut Vec::new()).unwrap());
+            assert!(!root.join("world").exists());
+            assert!(prepare(&root,true,&mut &b"1\n"[..],&mut Vec::new()).unwrap());
+            assert!(fs::read_to_string(&path).unwrap().contains(&format!("java-version={}",crate::network::VERSION_NAME)));
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+
 }
