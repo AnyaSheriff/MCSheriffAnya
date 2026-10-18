@@ -34,9 +34,13 @@ class Client:
         self.last_tick = 0
         self.position = None
         self.loaded = False
+        self.login_body = None
 
     def send(self, name, payload=b''):
         send(self.sock, varint(self.outgoing[name]) + payload)
+
+    def confirm_teleport(self, teleport, values):
+        self.send('teleport_confirm', varint(teleport) + struct.pack('>dddff', *values))
 
     def pump(self, duration, predicate=None):
         deadline = time.monotonic() + duration
@@ -56,6 +60,7 @@ class Client:
             if name == 'keep_alive':
                 self.send('keep_alive', payload)
             elif name == 'login':
+                self.login_body = varint(packet_id) + payload
                 self.send('player_loaded')
                 self.loaded = True
             elif name == 'position':
@@ -68,7 +73,7 @@ class Client:
                     values = [value + self.position[i] if flags & (1 << i) else value
                               for i, value in enumerate(values)]
                 self.position = values
-                self.send('teleport_confirm', varint(teleport) + struct.pack('>dddff', *values))
+                self.confirm_teleport(teleport, values)
                 record['position'] = self.position
             elif name == 'chunk_batch_finished':
                 self.send('chunk_batch_received', struct.pack('>f', 64))
@@ -109,7 +114,7 @@ class Client:
         return None
 
 
-def connect(port, protocol):
+def connect(port, protocol, client_type=Client):
     sock = socket.create_connection(('127.0.0.1', port), timeout=10)
     try:
         handshake(sock, 777, port, 2)
@@ -129,7 +134,7 @@ def connect(port, protocol):
                 send(sock, b'\x04' + payload)
             elif packet_id == 3:
                 send(sock, b'\x03')
-                return Client(sock, protocol)
+                return client_type(sock, protocol)
         raise RuntimeError('configuration packet budget exhausted')
     except BaseException:
         sock.close()

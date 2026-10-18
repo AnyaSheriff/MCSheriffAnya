@@ -72,9 +72,16 @@ pub struct PacketInfo {
     pub length: i32,
     /// Тело пакета целиком, включая идентификатор.
     pub body: Vec<u8>,
+    /// Дополнительные поля ConfirmTeleportation777; тело приведено к775.
+    pub teleport: Option<mcsa_protocol::teleport::Confirmation>,
 }
 
 impl PacketInfo {
+    pub fn teleport_confirmation(&self) -> Option<mcsa_protocol::teleport::Confirmation> {
+        if self.id != 0 { return None; }
+        self.teleport.or_else(|| mcsa_protocol::teleport::Confirmation::decode(wire::INTERNAL, self.payload()).ok())
+    }
+
     /// Полезная нагрузка пакета — тело без идентификатора.
     ///
     /// Все поля пакета начинаются именно отсюда. Разбирать тело с начала
@@ -122,6 +129,7 @@ pub async fn read_packet<R: AsyncRead + Unpin>(stream: &mut R) -> io::Result<Pac
         id: packet_id,
         length,
         body,
+        teleport: None,
     })
 }
 
@@ -179,11 +187,20 @@ pub async fn write_configuration<S: AsyncWrite + Unpin>(stream: &mut CryptoStrea
 /// Эта функция применяется только в Play: одинаковый ID в другой фазе иной.
 pub async fn read_play_packet<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion) -> io::Result<PacketInfo> {
     let packet = read_packet(stream).await?;
+    // Confirm имеет ID0 в обеих проверенных версиях. Его новые поля нужны
+    // обработчику, поэтому не пропускаем их через обычный перевод в775.
+    if packet.id == 0 && matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) {
+        let confirmation = mcsa_protocol::teleport::Confirmation::decode(version, packet.payload())
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("ConfirmTeleportation: {error:?}")))?;
+        let mut body = vec![0];
+        push_varint(&mut body, confirmation.id);
+        return Ok(PacketInfo { id: 0, length: body.len() as i32, body, teleport: Some(confirmation) });
+    }
     if version == wire::INTERNAL { return Ok(packet); }
     let body = wire::translate(State::Play, Direction::Serverbound,
         version, wire::INTERNAL, &packet.body).map_err(translate_error)?.into_owned();
     let (id, _) = decode_varint(&body)?;
-    Ok(PacketInfo { id, length: body.len() as i32, body })
+    Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None })
 }
 
 /// Предел одной записи вместе со сбросом. Это защита транспорта, а не
@@ -248,8 +265,16 @@ impl<'a> Outgoing<'a> {
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
     pub async fn send(&mut self, body: &[u8]) -> io::Result<()> {
-        let body = wire::translate(State::Play, Direction::Clientbound,
-            wire::INTERNAL, self.version, body).map_err(translate_error)?;
+        self.send_with_context(body, wire::Context::default()).await
+    }
+
+    pub async fn send_login(&mut self, body: &[u8], online_mode: bool) -> io::Result<()> {
+        self.send_with_context(body, wire::Context { online_mode: Some(online_mode) }).await
+    }
+
+    async fn send_with_context(&mut self, body: &[u8], context: wire::Context) -> io::Result<()> {
+        let body = wire::translate_with_context(State::Play, Direction::Clientbound,
+            wire::INTERNAL, self.version, body, context).map_err(translate_error)?;
         frame(&mut self.buffer, &body, compression_threshold());
 
         if self.buffer.len() >= OUTGOING_LIMIT {

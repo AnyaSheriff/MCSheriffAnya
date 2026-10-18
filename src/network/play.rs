@@ -1004,6 +1004,7 @@ async fn enter_world(
             player.entity_id,
             shared.properties.view_distance,
             shared.properties.simulation_distance,
+            shared.properties.online_mode,
         )
         .await?;
         send_abilities(stream, player.game_mode).await?;
@@ -1011,8 +1012,7 @@ async fn enter_world(
 
         // Клиент подтверждает телепортацию — до подтверждения он игнорирует
         // пакеты о перемещении.
-        let look = read_confirm_teleportation(stream).await?;
-        player.awaiting_teleport = false;
+        let look = read_confirm_teleportation(stream, player).await?;
 
         if let Some(look) = look {
             player.skin_parts = look.skin_parts;
@@ -1193,6 +1193,7 @@ async fn send_login(
     entity_id: i32,
     view: i32,
     simulation: i32,
+    online_mode: bool,
 ) -> io::Result<()> {
     let mut body = encode_varint(LOGIN);
 
@@ -1215,7 +1216,7 @@ async fn send_login(
     push_spawn_info(&mut body, dimension, game_mode);
     body.push(0x00); // обязательный защищённый чат
 
-    write_body(stream, body).await
+    stream.send_login(&body, online_mode).await
 }
 
 /// Сведения о месте появления — общая часть Login (Play) и Respawn: в каком
@@ -1402,11 +1403,34 @@ async fn write_body(stream: &mut Outgoing<'_>, body: Vec<u8>) -> io::Result<()> 
     stream.send(&body).await
 }
 
+/// Номер сверяется и при первом входе, и после следующего переноса.
+/// В26.3 ответ содержит итоговую позу: оригинал принимает её (наблюдение
+/// tools/protocol-bridge/testdata/teleport-observation-26.3.json).
+fn accept_teleport(packet: &PacketInfo, player: &mut PlayerState) -> bool {
+    let Some(confirmation) = packet.teleport_confirmation() else { return false; };
+    if !player.awaiting_teleport || confirmation.id != player.teleport { return false; }
+    if let Some(at) = confirmation.pose {
+        // Те же границы, что у обычного движения. Не допускаем испорченные
+        // координаты в сохранение мира; точные пределы vanilla [проверить].
+        if !valid_position(at.x, at.y, at.z) || !at.yaw.is_finite() || !at.pitch.is_finite() { return false; }
+        player.set_position(at.x, at.y, at.z);
+        player.set_rotation(at.yaw, at.pitch);
+    }
+    player.awaiting_teleport = false;
+    true
+}
+
+fn valid_position(x: f64, y: f64, z: f64) -> bool {
+    let sane = |value: f64, limit: f64| value.is_finite() && value.abs() <= limit;
+    sane(x, 30_000_000.0) && sane(y, 20_000_000.0) && sane(z, 30_000_000.0)
+}
+
 /// Читает подтверждение телепортации, пропуская прочие пакеты клиента —
 /// кроме настроек: их клиент шлёт сразу после входа, и выбросить их значило
 /// бы потерять, например, его ведущую руку. Возвращает последние из них.
 async fn read_confirm_teleportation(
     stream: &mut Outgoing<'_>,
+    player: &mut PlayerState,
 ) -> io::Result<Option<configuration::ClientLook>> {
     let mut look = None;
     let version = stream.stream().client_version();
@@ -1429,7 +1453,7 @@ async fn read_confirm_teleportation(
             }
         };
 
-        if packet.id == CONFIRM_TELEPORTATION {
+        if accept_teleport(&packet, player) {
             log_debug!("Play: клиент подтвердил телепортацию");
             return Ok(look);
         }
@@ -7447,8 +7471,7 @@ fn handle_client_packet_inner(
             player.keep_alive.answer(payload);
         }
         CONFIRM_TELEPORTATION => {
-            if Cursor::new(payload).varint() == Some(player.teleport) {
-                player.awaiting_teleport = false;
+            if accept_teleport(packet, player) {
 
                 // Перенесённый командой встанет на блок под ногами через
                 // `players::SETTLE_TICKS` тактов.
@@ -7477,8 +7500,7 @@ fn handle_client_packet_inner(
             // Как у оригинала: не число, бесконечность и место за границей
             // мира не принимаются — они ушли бы в файл игрока и всем
             // остальным, а огромные координаты переполняли бы счёт чанков.
-            let sane = |value: f64, limit: f64| value.is_finite() && value.abs() <= limit;
-            if !(sane(x, 30_000_000.0) && sane(y, 20_000_000.0) && sane(z, 30_000_000.0)) {
+            if !valid_position(x, y, z) {
                 log_debug!("Play: {} прислал недопустимое место {} {} {}", player.name, x, y, z);
                 return reaction;
             }
@@ -12246,6 +12268,7 @@ mod tests {
             id: SET_PLAYER_POSITION,
             length: body.len() as i32,
             body,
+            teleport: None,
         };
 
         assert_eq!(packet.payload().len(), POSITION_BYTES);
@@ -12277,7 +12300,7 @@ mod tests {
                 push_f32(&mut body, *value);
             }
             body.push(flags);
-            PacketInfo { id, length: body.len() as i32, body }
+            PacketInfo { id, length: body.len() as i32, body, teleport: None }
         };
 
         handle_client_packet(&packet(SET_PLAYER_POSITION, &[1.5, 2.0, 3.5], &[], 0x01), &mut player, &shared);

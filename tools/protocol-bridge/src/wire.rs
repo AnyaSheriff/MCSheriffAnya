@@ -12,6 +12,7 @@ const LIMIT: usize = 8 * 1024 * 1024;
 pub enum Error {
     UnsupportedVersion(JavaVersion),
     Invalid,
+    MissingOnlineMode,
     Truncated,
     TooLarge,
     Id(ids::IdTranslationError),
@@ -31,9 +32,22 @@ impl From<crate::movement::Error> for Error {
 /// смысл числовых ID, которые производят существующие игровые обработчики.
 pub const INTERNAL: JavaVersion = JavaVersion::V26_1_2;
 
+#[derive(Clone, Copy, Default)]
+pub struct Context {
+    /// Настоящий server.properties online-mode; не результат проверки лицензии/AuthMe.
+    pub online_mode: Option<bool>,
+}
+
 pub fn translate(
     state: State, direction: Direction, from: JavaVersion, to: JavaVersion,
     body: &[u8],
+) -> Result<Cow<'_, [u8]>, Error> {
+    translate_with_context(state, direction, from, to, body, Context::default())
+}
+
+pub fn translate_with_context(
+    state: State, direction: Direction, from: JavaVersion, to: JavaVersion,
+    body: &[u8], context: Context,
 ) -> Result<Cow<'_, [u8]>, Error> {
     for version in [from, to] {
         if version == JavaVersion::V26_2 { return Err(Error::UnsupportedVersion(version)); }
@@ -58,6 +72,9 @@ pub fn translate(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Clientbound, "login") => {
+            play_login(&mut cursor, &mut out, from, to, context)?;
+        }
         (State::Play, Direction::Clientbound, "rel_entity_move" | "entity_move_look") => {
             entity_move(&mut cursor, &mut out, from, to, name == "entity_move_look")?;
         }
@@ -171,6 +188,36 @@ fn passthrough(state: State, direction: Direction, name: &str) -> bool {
     }
 }
 
+/// Login Play: Wiki oldid3848030 и закреплённые protocol.json. В 777
+/// onlineMode идёт перед enforcesSecureChat. Общие поля проверяем целиком:
+/// добавлять байт к неразобранному пакету опасно при повреждённой структуре.
+fn play_login(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, context: Context) -> Result<(), Error> {
+    let common = cursor.rest;
+    cursor.take(4)?; // entityId, не статический ID реестра
+    cursor.boolean()?; // hardcore
+    let worlds = cursor.count(1024)?;
+    for _ in 0..worlds { cursor.string()?; }
+    for _ in 0..3 { cursor.uint()?; } // maxPlayers, view, simulation
+    for _ in 0..3 { cursor.boolean()?; } // debug, respawn screen, limited crafting
+    cursor.uint()?; // dimensionType — реестр, ранее отправленный этим сервером
+    cursor.string()?; // dimension name
+    cursor.take(8)?; // hashed seed
+    if cursor.take(1)?[0] > 3 { return Err(Error::Invalid); }
+    if !matches!(cursor.take(1)?[0], 0..=3 | 255) { return Err(Error::Invalid); }
+    cursor.boolean()?; // debug world
+    cursor.boolean()?; // flat world
+    if cursor.boolean()? { cursor.string()?; cursor.take(8)?; } // death location
+    cursor.uint()?; // portal cooldown
+    cursor.varint()?; // sea level может быть отрицательным
+    let common_len = common.len() - cursor.remaining();
+    let online = if from == JavaVersion::V26_3 { Some(cursor.boolean()?) } else { context.online_mode };
+    let secure = cursor.boolean()?;
+    out.extend(&common[..common_len]);
+    if to == JavaVersion::V26_3 { out.push(u8::from(online.ok_or(Error::MissingOnlineMode)?)); }
+    out.push(u8::from(secure));
+    Ok(())
+}
+
 fn entity_move(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, rotation: bool) -> Result<(), Error> {
     uint(out, cursor.uint()?);
     let (delta, angles) = if from == JavaVersion::V26_1_2 {
@@ -236,15 +283,21 @@ impl<'a> Cursor<'a> {
         self.rest = rest;
         Ok(value)
     }
-    fn uint(&mut self) -> Result<u32, Error> {
-        let mut value = 0;
+    fn boolean(&mut self) -> Result<bool, Error> {
+        match self.take(1)?[0] { 0 => Ok(false), 1 => Ok(true), _ => Err(Error::Invalid) }
+    }
+    fn varint(&mut self) -> Result<i32, Error> {
+        let mut value = 0u32;
         for shift in (0..35).step_by(7) {
             let byte = self.take(1)?[0];
-            if shift == 28 && byte & 0xf8 != 0 { return Err(Error::Invalid); }
+            if shift == 28 && byte & 0xf0 != 0 { return Err(Error::Invalid); }
             value |= u32::from(byte & 127) << shift;
-            if byte < 128 { return Ok(value); }
+            if byte < 128 { return Ok(value as i32); }
         }
         Err(Error::Invalid)
+    }
+    fn uint(&mut self) -> Result<u32, Error> {
+        self.varint()?.try_into().map_err(|_| Error::Invalid)
     }
     fn count(&mut self, limit: usize) -> Result<usize, Error> {
         let value = self.uint()? as usize;
@@ -270,6 +323,40 @@ mod tests {
     fn cb(body: &[u8], from: JavaVersion, to: JavaVersion) -> Result<Vec<u8>, Error> {
         translate(State::Play, Direction::Clientbound, from, to, body).map(Cow::into_owned)
     }
+    #[test]
+    fn actual_play_login_frames_translate_with_explicit_online_mode() {
+        let old = include_bytes!("../testdata/play-login-26.1.2.bin");
+        let new = include_bytes!("../testdata/play-login-26.3.bin");
+        for original in [&old[..], &new[..]] {
+            let from = if original[0] == 0x31 { OLD } else { NEW };
+            let to = if from == OLD { NEW } else { OLD };
+            let context = Context { online_mode: Some(false) };
+            let translated = translate_with_context(State::Play, Direction::Clientbound, from, to, original, context).unwrap();
+            let restored = translate_with_context(State::Play, Direction::Clientbound, to, from, &translated, context).unwrap();
+            assert_eq!(restored.as_ref(), original);
+            for n in 1..original.len() {
+                assert!(translate_with_context(State::Play, Direction::Clientbound, from, to, &original[..n], context).is_err());
+            }
+            let mut extra = original.to_vec(); extra.push(0);
+            assert!(translate_with_context(State::Play, Direction::Clientbound, from, to, &extra, context).is_err());
+        }
+        assert_eq!(cb(old, OLD, NEW), Err(Error::MissingOnlineMode));
+        for online in [false, true] {
+            let mapped = translate_with_context(State::Play, Direction::Clientbound, OLD, NEW, old,
+                Context { online_mode: Some(online) }).unwrap();
+            assert_eq!(mapped[0], 0x32);
+            assert_eq!(&mapped[1..mapped.len() - 2], &old[1..old.len() - 1]);
+            assert_eq!(&mapped[mapped.len() - 2..], &[u8::from(online), 0]);
+        }
+        let mut bad = new.to_vec();
+        let len = bad.len(); bad[len - 2] = 2;
+        assert_eq!(cb(&bad, NEW, OLD), Err(Error::Invalid));
+        let mut bad = new.to_vec(); bad[5] = 2; // hardcore — Bool
+        assert_eq!(cb(&bad, NEW, OLD), Err(Error::Invalid));
+        let mut bad = new.to_vec(); bad.splice(6..7, [0x81, 8]); // 1025 миров
+        assert_eq!(cb(&bad, NEW, OLD), Err(Error::TooLarge));
+    }
+
     #[test]
     fn rotation_and_ground_are_not_swapped_by_the_movement_adapter() {
         for rotation in [false, true] {
@@ -327,7 +414,7 @@ mod tests {
         let body = [0x2c, 0, 0, 0, 0, 0, 0, 0, 7];
         assert!(matches!(translate(State::Play, Direction::Clientbound, OLD, OLD, &body), Ok(Cow::Borrowed(_))));
         assert_eq!(cb(&body, OLD, NEW).unwrap()[0], 0x2d);
-        for (id, name) in [(0x2d, "map_chunk"), (0x14, "set_slot"), (0x63, "entity_metadata"), (0x31, "login")] {
+        for (id, name) in [(0x2d, "map_chunk"), (0x14, "set_slot"), (0x63, "entity_metadata")] {
             assert_eq!(cb(&[id], OLD, NEW), Err(Error::PayloadUnavailable(name)));
         }
         assert_eq!(cb(&[], OLD, NEW), Err(Error::Truncated));

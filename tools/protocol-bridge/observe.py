@@ -87,6 +87,10 @@ def observe(port, protocol, records):
                 elif packet_id == 4 and len(payload) == 8:
                     send(sock, b'\x04' + payload)
             else:
+                # Только Login нашего тестового игрока, не содержимое реестров.
+                expected = 0x32 if protocol == 777 else 0x31
+                assert packet_id == expected
+                records[-1]['test_play_login_hex'] = (varint(packet_id) + payload).hex()
                 return records
         raise ValueError('packet budget exhausted')
 
