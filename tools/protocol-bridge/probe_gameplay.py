@@ -36,6 +36,9 @@ class Client:
         self.loaded = False
         self.login_body = None
 
+    def observe_packet(self, name, payload):
+        pass
+
     def send(self, name, payload=b''):
         send(self.sock, varint(self.outgoing[name]) + payload)
 
@@ -55,6 +58,7 @@ class Client:
             packet_id = read_varint(packet.read)
             payload = packet.read()
             name = self.incoming.get(packet_id, f'unknown-{packet_id}')
+            self.observe_packet(name, payload)
             data = io.BytesIO(payload)
             record = {'name': name, 'id': packet_id, 'size': len(payload)}
             if name == 'keep_alive':
@@ -114,21 +118,22 @@ class Client:
         return None
 
 
-def connect(port, protocol, client_type=Client):
+def connect(port, protocol, client_type=Client, version=777):
     sock = socket.create_connection(('127.0.0.1', port), timeout=10)
     try:
-        handshake(sock, 777, port, 2)
+        handshake(sock, version, port, 2)
         name = b'McsaProbe'
         send(sock, b'\0' + varint(len(name)) + name + bytes([37]) * 16)
         packet = io.BytesIO(frame(sock))
         assert read_varint(packet.read) == 2
         send(sock, b'\x03')
         send(sock, b'\x00\x05en_us\x02\x00\x01\x7f\x01\x00\x01\x00')
+        known_packs = mapping(protocol, "configuration", "toClient")["select_known_packs"]
         for _ in range(160):
             packet = io.BytesIO(frame(sock))
             packet_id = read_varint(packet.read)
             payload = packet.read()
-            if packet_id == 15:
+            if packet_id == known_packs:
                 send(sock, b'\x07' + payload)
             elif packet_id == 4:
                 send(sock, b'\x04' + payload)

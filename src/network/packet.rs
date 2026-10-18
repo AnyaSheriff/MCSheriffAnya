@@ -482,6 +482,25 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn light_translation_crosses_encrypted_socket_with_observed_target_bytes() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let raw_client = tokio::net::TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let (raw_server, _) = listener.accept().await.unwrap();
+        let mut server = CryptoStream::new(raw_server);
+        let mut client = CryptoStream::new(raw_client);
+        server.protocol = Some(modern_profile());
+        server.enable_encryption(&[19; 16]); client.enable_encryption(&[19; 16]);
+        let mut old = vec![0x30, 255, 255, 255, 255, 15, 255, 255, 255, 255, 15];
+        old.extend(include_bytes!("../../tools/protocol-bridge/testdata/light-26.1.2-placed.bin"));
+        let mut expected = vec![0x31, 255, 255, 255, 255, 15, 255, 255, 255, 255, 15];
+        expected.extend(include_bytes!("../../tools/protocol-bridge/testdata/light-26.3-placed.bin"));
+        let mut outgoing = Outgoing::new(&mut server);
+        outgoing.send(&old).await.unwrap();
+        outgoing.flush().await.unwrap();
+        assert_eq!(read_packet(&mut client).await.unwrap().body, expected);
+    }
+
+    #[tokio::test]
     async fn versioned_incoming_packets_translate_after_decryption() {
         let (server, client) = tokio::io::duplex(1024);
         let mut server = CryptoStream::new(server);

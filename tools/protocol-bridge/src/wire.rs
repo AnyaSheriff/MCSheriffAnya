@@ -13,6 +13,7 @@ pub enum Error {
     UnsupportedVersion(JavaVersion),
     Invalid,
     MissingOnlineMode,
+    Light(crate::light::Error),
     Truncated,
     TooLarge,
     Id(ids::IdTranslationError),
@@ -72,6 +73,12 @@ pub fn translate_with_context(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Clientbound, "update_light") => {
+            // Координаты — signed VarInt; копируем точные 32-битные значения.
+            for _ in 0..2 { uint(&mut out, cursor.varint()? as u32); }
+            let light = crate::light::Light::decode(from, cursor.take(cursor.remaining())?).map_err(Error::Light)?;
+            out.extend(light.encode(to).map_err(Error::Light)?);
+        }
         (State::Play, Direction::Clientbound, "login") => {
             play_login(&mut cursor, &mut out, from, to, context)?;
         }
@@ -323,6 +330,39 @@ mod tests {
     fn cb(body: &[u8], from: JavaVersion, to: JavaVersion) -> Result<Vec<u8>, Error> {
         translate(State::Play, Direction::Clientbound, from, to, body).map(Cow::into_owned)
     }
+    #[test]
+    fn observed_light_data_translates_inside_negative_coordinate_updates() {
+        use crate::light::Light;
+        let cases: [(JavaVersion, &[u8], u8); 4] = [
+            (OLD, include_bytes!("../testdata/light-26.1.2-placed.bin"), 14),
+            (OLD, include_bytes!("../testdata/light-26.1.2-removed.bin"), 0),
+            (NEW, include_bytes!("../testdata/light-26.3-placed.bin"), 14),
+            (NEW, include_bytes!("../testdata/light-26.3-removed.bin"), 0),
+        ];
+        for (from, data, expected_level) in cases {
+            let to = if from == OLD { NEW } else { OLD };
+            let light = Light::decode(from, data).unwrap();
+            let level = if light.empty_block.get(1).unwrap_or(&0) & 2 != 0 { 0 } else {
+                assert_ne!(light.block[1] & 2, 0);
+                let index = light.block[0].count_ones() + u32::from(light.block[1] & 1);
+                light.block_arrays[index as usize][128] & 15
+            };
+            assert_eq!(level, expected_level);
+            // Только обёртка синтетическая: payload наблюдался внутри MapChunk.
+            let mut body = vec![if from == OLD { 0x30 } else { 0x31 }];
+            body.extend([255, 255, 255, 255, 15, 255, 255, 255, 255, 15]);
+            body.extend(data);
+            let translated = cb(&body, from, to).unwrap();
+            assert_eq!(translated[0], if to == OLD { 0x30 } else { 0x31 });
+            assert_eq!(&translated[1..11], &body[1..11]);
+            assert_eq!(Light::decode(to, &translated[11..]).unwrap(), light);
+            assert_eq!(cb(&translated, to, from).unwrap(), body);
+            for n in [1, 10, 12, body.len() - 1] { assert!(cb(&body[..n], from, to).is_err()); }
+            let mut extra = body; extra.push(0);
+            assert!(cb(&extra, from, to).is_err());
+        }
+    }
+
     #[test]
     fn actual_play_login_frames_translate_with_explicit_online_mode() {
         let old = include_bytes!("../testdata/play-login-26.1.2.bin");

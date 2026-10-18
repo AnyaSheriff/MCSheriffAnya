@@ -5,6 +5,8 @@ use std::collections::{BTreeMap, BTreeSet};
 mod generated_ids;
 pub mod ids;
 pub mod login;
+pub mod light;
+pub mod chunk_sections;
 pub mod movement;
 pub mod teleport;
 pub mod registry;
