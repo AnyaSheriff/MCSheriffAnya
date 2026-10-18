@@ -5,3 +5,5 @@
 
 pub mod mcsheriffanya;
 pub mod server_properties;
+
+pub mod first_start;

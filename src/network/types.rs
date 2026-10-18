@@ -103,6 +103,17 @@ pub fn push_velocity(out: &mut Vec<u8>, x: f64, y: f64, z: f64) {
 mod tests {
     use super::*;
 
+    #[test]
+    fn bridge_velocity_preserves_native_wire_encoding() {
+        for x in [0.0,1e-9,-1e-9,0.1,-0.1,1.0,3.0,3.1,42.0,-123.0] {
+            for y in [-3.0,0.0,3.0] {for z in [-0.7,0.0,0.7] {
+                let mut native=Vec::new();let mut bridge=Vec::new();
+                push_velocity(&mut native,x,y,z);mcsa_protocol::entity_sync::push_velocity(&mut bridge,x,y,z);
+                assert_eq!(native,bridge);
+            }}
+        }
+    }
+
     /// Вектор скорости, записанный этим кодом.
     fn velocity(x: f64, y: f64, z: f64) -> Vec<u8> {
         let mut out = Vec::new();

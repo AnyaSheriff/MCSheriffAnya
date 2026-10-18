@@ -799,6 +799,8 @@ pub async fn play_session(
 
     // Как у обычного сервера: «потерял соединение» с причиной, а «вышел»
     // добавит общий список игроков следом.
+    #[cfg(test)]
+    if let Err(error) = &result { eprintln!("MCSA play probe failure: {error}"); }
     match &result {
         Ok(()) => log_info!("{} потерял соединение: отключился", player.name),
         Err(error) => log_info!("{} потерял соединение: {}", player.name, error.kind()),
@@ -7440,7 +7442,12 @@ fn handle_client_packet(
     shared: &Shared,
 ) -> Reaction {
     let before = (player.x, player.y, player.z, player.yaw, player.pitch);
-    let reaction = handle_client_packet_inner(packet, player, shared);
+    let mut reaction = handle_client_packet_inner(packet, player, shared);
+    if packet.foreign_inventory && packet.id==CLICK_CONTAINER {
+        // Действия вычисляет сервер. Межверсионные хэши не разрешают скрыть
+        // авторитетное обновление контейнера/курсора после щелчка.
+        reaction.inventory=true;
+    }
 
     // Бездействие (`setidletimeout`): движение и повороты считаются делом,
     // только если место или взгляд правда изменились; ответы на Keep Alive и
@@ -12273,7 +12280,7 @@ mod tests {
             id: SET_PLAYER_POSITION,
             length: body.len() as i32,
             body,
-            teleport: None,
+            teleport: None, foreign_inventory: false,
         };
 
         assert_eq!(packet.payload().len(), POSITION_BYTES);
@@ -12305,7 +12312,7 @@ mod tests {
                 push_f32(&mut body, *value);
             }
             body.push(flags);
-            PacketInfo { id, length: body.len() as i32, body, teleport: None }
+            PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false }
         };
 
         handle_client_packet(&packet(SET_PLAYER_POSITION, &[1.5, 2.0, 3.5], &[], 0x01), &mut player, &shared);

@@ -1,0 +1,244 @@
+{
+  "old": {
+    "version": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "menus": [
+      {
+        "block": "chest",
+        "type": 2,
+        "name": "open_window",
+        "body": "3b01020a0800097472616e736c617465000f636f6e7461696e65722e636865737400"
+      },
+      {
+        "block": "barrel",
+        "type": 2,
+        "name": "open_window",
+        "body": "3b02020a0800097472616e736c6174650010636f6e7461696e65722e62617272656c00"
+      },
+      {
+        "block": "dispenser",
+        "type": 6,
+        "name": "open_window",
+        "body": "3b03060a0800097472616e736c6174650013636f6e7461696e65722e64697370656e73657200"
+      },
+      {
+        "block": "dropper",
+        "type": 6,
+        "name": "open_window",
+        "body": "3b04060a0800097472616e736c6174650011636f6e7461696e65722e64726f7070657200"
+      },
+      {
+        "block": "hopper",
+        "type": 16,
+        "name": "open_window",
+        "body": "3b05100a0800097472616e736c6174650010636f6e7461696e65722e686f7070657200"
+      },
+      {
+        "block": "crafting_table",
+        "type": 12,
+        "name": "open_window",
+        "body": "3b060c0a0800097472616e736c6174650012636f6e7461696e65722e6372616674696e6700"
+      },
+      {
+        "block": "furnace",
+        "type": 14,
+        "name": "open_window",
+        "body": "3b070e0a0800097472616e736c6174650011636f6e7461696e65722e6675726e61636500"
+      },
+      {
+        "block": "blast_furnace",
+        "type": 10,
+        "name": "open_window",
+        "body": "3b080a0a0800097472616e736c6174650017636f6e7461696e65722e626c6173745f6675726e61636500"
+      },
+      {
+        "block": "smoker",
+        "type": 22,
+        "name": "open_window",
+        "body": "3b09160a0800097472616e736c6174650010636f6e7461696e65722e736d6f6b657200"
+      },
+      {
+        "block": "brewing_stand",
+        "type": 11,
+        "name": "open_window",
+        "body": "3b0a0b0a0800097472616e736c6174650011636f6e7461696e65722e62726577696e6700"
+      },
+      {
+        "block": "enchanting_table",
+        "type": 13,
+        "name": "open_window",
+        "body": "3b0b0d0a0800097472616e736c6174650011636f6e7461696e65722e656e6368616e7400"
+      },
+      {
+        "block": "anvil",
+        "type": 8,
+        "name": "open_window",
+        "body": "3b0c080a0800097472616e736c6174650010636f6e7461696e65722e72657061697200"
+      },
+      {
+        "block": "beacon",
+        "type": 9,
+        "name": "open_window",
+        "body": "3b0d090a0800097472616e736c6174650010636f6e7461696e65722e626561636f6e00"
+      },
+      {
+        "block": "cartography_table",
+        "type": 23,
+        "name": "open_window",
+        "body": "3b0e170a0800097472616e736c617465001b636f6e7461696e65722e636172746f6772617068795f7461626c6500"
+      },
+      {
+        "block": "grindstone",
+        "type": 15,
+        "name": "open_window",
+        "body": "3b0f0f0a0800097472616e736c617465001a636f6e7461696e65722e6772696e6473746f6e655f7469746c6500"
+      },
+      {
+        "block": "loom",
+        "type": 18,
+        "name": "open_window",
+        "body": "3b10120a0800097472616e736c617465000e636f6e7461696e65722e6c6f6f6d00"
+      },
+      {
+        "block": "smithing_table",
+        "type": 21,
+        "name": "open_window",
+        "body": "3b11150a0800097472616e736c6174650011636f6e7461696e65722e7570677261646500"
+      },
+      {
+        "block": "stonecutter",
+        "type": 24,
+        "name": "open_window",
+        "body": "3b12180a0800097472616e736c6174650015636f6e7461696e65722e73746f6e6563757474657200"
+      },
+      {
+        "block": "shulker_box",
+        "type": 20,
+        "name": "open_window",
+        "body": "3b13140a0800097472616e736c6174650014636f6e7461696e65722e7368756c6b6572426f7800"
+      }
+    ],
+    "exit_code": 0
+  },
+  "new": {
+    "version": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "menus": [
+      {
+        "block": "chest",
+        "type": 2,
+        "name": "open_window",
+        "body": "3c01020a0800097472616e736c617465000f636f6e7461696e65722e636865737400"
+      },
+      {
+        "block": "barrel",
+        "type": 2,
+        "name": "open_window",
+        "body": "3c02020a0800097472616e736c6174650010636f6e7461696e65722e62617272656c00"
+      },
+      {
+        "block": "dispenser",
+        "type": 6,
+        "name": "open_window",
+        "body": "3c03060a0800097472616e736c6174650013636f6e7461696e65722e64697370656e73657200"
+      },
+      {
+        "block": "dropper",
+        "type": 6,
+        "name": "open_window",
+        "body": "3c04060a0800097472616e736c6174650011636f6e7461696e65722e64726f7070657200"
+      },
+      {
+        "block": "hopper",
+        "type": 16,
+        "name": "open_window",
+        "body": "3c05100a0800097472616e736c6174650010636f6e7461696e65722e686f7070657200"
+      },
+      {
+        "block": "crafting_table",
+        "type": 12,
+        "name": "open_window",
+        "body": "3c060c0a0800097472616e736c6174650012636f6e7461696e65722e6372616674696e6700"
+      },
+      {
+        "block": "furnace",
+        "type": 14,
+        "name": "open_window",
+        "body": "3c070e0a0800097472616e736c6174650011636f6e7461696e65722e6675726e61636500"
+      },
+      {
+        "block": "blast_furnace",
+        "type": 10,
+        "name": "open_window",
+        "body": "3c080a0a0800097472616e736c6174650017636f6e7461696e65722e626c6173745f6675726e61636500"
+      },
+      {
+        "block": "smoker",
+        "type": 22,
+        "name": "open_window",
+        "body": "3c09160a0800097472616e736c6174650010636f6e7461696e65722e736d6f6b657200"
+      },
+      {
+        "block": "brewing_stand",
+        "type": 11,
+        "name": "open_window",
+        "body": "3c0a0b0a0800097472616e736c6174650011636f6e7461696e65722e62726577696e6700"
+      },
+      {
+        "block": "enchanting_table",
+        "type": 13,
+        "name": "open_window",
+        "body": "3c0b0d0a0800097472616e736c6174650011636f6e7461696e65722e656e6368616e7400"
+      },
+      {
+        "block": "anvil",
+        "type": 8,
+        "name": "open_window",
+        "body": "3c0c080a0800097472616e736c6174650010636f6e7461696e65722e72657061697200"
+      },
+      {
+        "block": "beacon",
+        "type": 9,
+        "name": "open_window",
+        "body": "3c0d090a0800097472616e736c6174650010636f6e7461696e65722e626561636f6e00"
+      },
+      {
+        "block": "cartography_table",
+        "type": 23,
+        "name": "open_window",
+        "body": "3c0e170a0800097472616e736c617465001b636f6e7461696e65722e636172746f6772617068795f7461626c6500"
+      },
+      {
+        "block": "grindstone",
+        "type": 15,
+        "name": "open_window",
+        "body": "3c0f0f0a0800097472616e736c617465001a636f6e7461696e65722e6772696e6473746f6e655f7469746c6500"
+      },
+      {
+        "block": "loom",
+        "type": 18,
+        "name": "open_window",
+        "body": "3c10120a0800097472616e736c617465000e636f6e7461696e65722e6c6f6f6d00"
+      },
+      {
+        "block": "smithing_table",
+        "type": 21,
+        "name": "open_window",
+        "body": "3c11150a0800097472616e736c6174650011636f6e7461696e65722e7570677261646500"
+      },
+      {
+        "block": "stonecutter",
+        "type": 24,
+        "name": "open_window",
+        "body": "3c12180a0800097472616e736c6174650015636f6e7461696e65722e73746f6e6563757474657200"
+      },
+      {
+        "block": "shulker_box",
+        "type": 20,
+        "name": "open_window",
+        "body": "3c13140a0800097472616e736c6174650014636f6e7461696e65722e7368756c6b6572426f7800"
+      }
+    ],
+    "exit_code": 0
+  }
+}

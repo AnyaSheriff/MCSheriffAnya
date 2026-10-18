@@ -26,7 +26,7 @@ def observe(binary,protocol,output,port):
     with tempfile.TemporaryDirectory(prefix='mcsa-native-chunks-') as folder:
         root=Path(folder);(root/'config').mkdir()
         (root/'config/server.properties').write_text(f'server-ip=127.0.0.1\nserver-port={port}\nonline-mode=false\nnetwork-compression-threshold=-1\nlevel-type=minecraft:flat\nlevel-seed=1\nview-distance=2\nsimulation-distance=2\n')
-        (root/'config/mcsa.properties').write_text('auth-enabled=false\nauth-premium=false\nbedrock-port=0\nprefetch-chunks=0\n')
+        (root/'config/mcsa.properties').write_text('java-version=26.1.2\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\nbedrock-port=0\nprefetch-chunks=0\n')
         log=output/'server.log';report={}
         with log.open('w') as out:
             server=subprocess.Popen([str(binary.resolve())],cwd=root,stdin=subprocess.PIPE,stdout=out,stderr=subprocess.STDOUT,text=True)

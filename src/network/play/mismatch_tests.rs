@@ -17,7 +17,32 @@ fn player() -> PlayerState {
 fn packet(id: i32, payload: &[u8]) -> PacketInfo {
     let mut body = encode_varint(id);
     body.extend_from_slice(payload);
-    PacketInfo { id, length: body.len() as i32, body, teleport: None }
+    PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false }
+}
+
+#[test]
+fn foreign_click_resyncs_and_forged_predictions_cannot_create_items() {
+    let shared=shared();
+    for foreign in [false,true] {
+        let mut p=player();p.game_mode=GAME_MODE_SURVIVAL;
+        let stone=blocks::item_named("stone").unwrap();
+        p.inventory.set(36,Some(Stack::new(stone,5)));
+        // Клиент обещает64алмаза вместо взятых5камней. Его хэш не авторитетен.
+        let mut payload=vec![0,0,0,36,0,0,1,0,36,1];
+        payload.extend(encode_varint(blocks::item_named("diamond").unwrap()));
+        payload.extend([64,0,0,0]);
+        let mut packet=packet(CLICK_CONTAINER,&payload);packet.foreign_inventory=foreign;
+        let reaction=handle_client_packet(&packet,&mut p,&shared);
+        assert_eq!(p.inventory.slot(36),None);
+        assert_eq!(p.inventory.cursor(),Some(Stack::new(stone,5)));
+        if foreign {assert!(reaction.inventory);}
+    }
+    // Даже когда непонятное действие ничего не изменило, иностранный клиент
+    // получает полный снимок, а родной путь сохраняет прежнюю реакцию.
+    for foreign in [false,true] {
+        let mut p=player();let mut packet=packet(CLICK_CONTAINER,&[99,0,0,36,0,0,0,0]);packet.foreign_inventory=foreign;
+        assert_eq!(handle_client_packet(&packet,&mut p,&shared).inventory,foreign);
+    }
 }
 
 #[test]

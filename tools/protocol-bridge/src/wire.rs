@@ -85,6 +85,22 @@ pub fn translate_with_context(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Serverbound, "window_click") => {
+            crate::actions::click(&mut cursor,&mut out,from,to)?;
+        }
+        (State::Play, Direction::Clientbound, "open_window") => {
+            uint(&mut out,cursor.uint()?);let menu=cursor.uint()?;
+            //19обычных взаимодействий с блоками775/777, menu-observations.json.
+            if !matches!(menu,2|6|8..=16|18|20..=24){return Err(Error::PayloadUnavailable("unverified menu type"));}
+            uint(&mut out,menu);
+            let n=crate::registry::nbt_length(cursor.rest).map_err(|_|Error::Invalid)?;out.extend(cursor.take(n)?);
+        }
+        (State::Play, Direction::Clientbound, "sound_effect" | "entity_sound_effect" | "explosion" | "world_event" | "entity_effect" | "remove_entity_effect" | "damage_event") => {
+            crate::actions::effects(name,&mut cursor,&mut out,from,to,context)?;
+        }
+        (State::Play, Direction::Clientbound, "declare_recipes" | "recipe_book_add" | "craft_recipe_response" | "advancements") => {
+            crate::recipes::translate(name, &mut cursor, &mut out, from, to, context)?;
+        }
         (State::Play, Direction::Clientbound, "world_particles") => {
             crate::particles::world(&mut cursor, &mut out, from, to, context.items)?;
         }
@@ -236,6 +252,10 @@ fn passthrough(state: State, direction: Direction, name: &str) -> bool {
             "keep_alive" | "pong" | "resource_pack_receive" | "select_known_packs" |
             "custom_click_action" | "accept_code_of_conduct"),
         (State::Play, Direction::Serverbound) => matches!(name,
+            "select_bundle_item" | "enchant_item" | "set_slot_state" | "edit_book" |
+            "pick_item_from_block" | "pick_item_from_entity" | "craft_recipe_request" |
+            "recipe_book" | "displayed_recipe" | "advancement_tab" | "select_trade" |
+            "update_command_block" | "update_command_block_minecart" | "update_jigsaw_block" | "update_structure_block" |
             "attack" | "query_block_nbt" | "set_difficulty" | "change_gamemode" |
             "message_acknowledgement" | "chat_command" | "chat_command_signed" | "chat_message" |
             "chat_session_update" | "chunk_batch_received" | "client_command" | "tick_end" |
@@ -247,6 +267,8 @@ fn passthrough(state: State, direction: Direction, name: &str) -> bool {
             "name_item" | "resource_pack_receive" | "held_item_slot" | "update_sign" |
             "arm_animation" | "spectate" | "block_place" | "use_item" | "custom_click_action"),
         (State::Play, Direction::Clientbound) => matches!(name,
+            "declare_commands" | "player_info" | "spawn_position" | "update_time" |
+            "craft_progress_bar" | "set_cooldown" | "open_horse_window" | "recipe_book_remove" |
             "bundle_delimiter" | "animation" | "acknowledge_player_digging" | "block_break_animation" |
             "boss_bar" | "difficulty" | "chunk_batch_finished" | "chunk_batch_start" | "clear_titles" |
             "tab_complete" | "close_window" | "cookie_request" | "chat_suggestions" |

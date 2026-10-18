@@ -80,7 +80,7 @@ const CORE_PACK_VERSION: &str = "26.1.2";
 /// значения у каждого вида свои и в википедии не перечислены, поэтому здесь
 /// они одинаковые: на поведение клиента это пока не влияет — смертей и голода
 /// на сервере ещё нет, а важен лишь сам факт, что запись есть.
-const DAMAGE_TYPES: [&str; 51] = [
+pub(super) const DAMAGE_TYPES: [&str; 51] = [
     "minecraft:arrow",
     "minecraft:bad_respawn_point",
     "minecraft:cactus",

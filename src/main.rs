@@ -152,6 +152,8 @@ const SERVER_PROPERTIES_PATH: &str = "config/server.properties";
 const WORLD_PATH: &str = "world";
 
 fn main() -> io::Result<()> {
+    use std::io::IsTerminal;
+    if !config::first_start::prepare(Path::new("."),std::io::stdin().is_terminal(),&mut std::io::stdin().lock(),&mut std::io::stdout().lock())? { return Ok(()); }
     // Такту отводится отдельное ядро, всё остальное делит оставшиеся: сеть,
     // складывание чанков, скины. Если ядро всего одно, делить нечего —
     // работаем как придётся.
@@ -572,6 +574,11 @@ async fn handle_connection(
             // Клиентская и внутренняя версии разделены. Пока разрешён только
             // родной маршрут; номера новых версий не включают их поддержку.
             let negotiated = mcsa_protocol::Negotiated::native_only(handshake.protocol_version, network::NATIVE_VERSION);
+            // Только отдельный тестовый бинарник может исследовать ещё закрытый маршрут.
+            #[cfg(test)]
+            let negotiated = if shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V26_3) && handshake.protocol_version==777 {
+                Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V26_3,native:network::NATIVE_VERSION})
+            } else {negotiated};
             if negotiated.is_err() {
                 log_info!(
                     "Вход отклонён: версия клиента (протокол {}) не подходит, ядру нужен протокол {}",
@@ -805,3 +812,7 @@ fn save_scoreboard(shared: &Shared) {
         log_warn!("Табло не записано ({}): {}", file.display(), error);
     }
 }
+
+#[cfg(test)]
+#[path = "network/gameplay_probe.rs"]
+mod gameplay_probe;

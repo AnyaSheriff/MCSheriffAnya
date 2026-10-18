@@ -71,7 +71,7 @@ def main():
             f'server-ip=127.0.0.1\nserver-port={args.port}\nonline-mode=false\n'
             'network-compression-threshold=-1\nlevel-type=minecraft:flat\nlevel-seed=1\n'
             'view-distance=2\nsimulation-distance=2\n')
-        (root / 'config/mcsa.properties').write_text('auth-enabled=false\nauth-premium=false\nbedrock-port=0\nprefetch-chunks=0\n')
+        (root / 'config/mcsa.properties').write_text('java-version=26.1.2\nsend-error-reports=false\nauth-enabled=false\nauth-premium=false\nbedrock-port=0\nprefetch-chunks=0\n')
         log = root / 'server.log'
         with log.open('w') as output:
             server = subprocess.Popen([binary], cwd=root, stdin=subprocess.PIPE, stdout=output,

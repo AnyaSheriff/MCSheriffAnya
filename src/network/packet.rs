@@ -74,6 +74,8 @@ pub struct PacketInfo {
     pub body: Vec<u8>,
     /// Дополнительные поля ConfirmTeleportation777; тело приведено к775.
     pub teleport: Option<mcsa_protocol::teleport::Confirmation>,
+    /// Предсказания хэшей компонентов чужой версии не подтверждают инвентарь.
+    pub foreign_inventory: bool,
 }
 
 impl PacketInfo {
@@ -129,7 +131,7 @@ pub async fn read_packet<R: AsyncRead + Unpin>(stream: &mut R) -> io::Result<Pac
         id: packet_id,
         length,
         body,
-        teleport: None,
+        teleport: None, foreign_inventory: false,
     })
 }
 
@@ -207,13 +209,13 @@ pub async fn read_play_packet<S: AsyncRead + Unpin>(stream: &mut S, version: Jav
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("ConfirmTeleportation: {error:?}")))?;
         let mut body = vec![0];
         push_varint(&mut body, confirmation.id);
-        return Ok(PacketInfo { id: 0, length: body.len() as i32, body, teleport: Some(confirmation) });
+        return Ok(PacketInfo { id: 0, length: body.len() as i32, body, teleport: Some(confirmation), foreign_inventory: false });
     }
     if version == wire::INTERNAL { return Ok(packet); }
     let body = wire::translate_with_context(State::Play, Direction::Serverbound,
         version, wire::INTERNAL, &packet.body, wire::Context { items: item_context(), ..Default::default() }).map_err(translate_error)?.into_owned();
     let (id, _) = decode_varint(&body)?;
-    Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None })
+    Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: id == 0x12 })
 }
 
 /// Предел одной записи вместе со сбросом. Это защита транспорта, а не
@@ -300,10 +302,17 @@ impl<'a> Outgoing<'a> {
         // Оба Configuration-профиля используют REQUIRED_REGISTRIES в том же
         // порядке; имя/число записей ограничивает динамические metadata ID.
         static COUNTS: std::sync::LazyLock<Vec<(&'static str,u32)>> = std::sync::LazyLock::new(||
-            super::configuration::REQUIRED_REGISTRIES.iter().map(|(name,entries)| (*name,entries.len() as u32)).collect());
+            super::configuration::REQUIRED_REGISTRIES.iter().map(|(name,entries)| (*name,entries.len() as u32))
+                .chain(std::iter::once(("minecraft:damage_type", super::configuration::DAMAGE_TYPES.len() as u32))).collect());
         context.metadata_registry_counts = &COUNTS;
-        let body = self.entities.translate(wire::INTERNAL, self.version, body, context).map_err(translate_error)?;
-        frame(&mut self.buffer, &body, compression_threshold());
+        if self.version == wire::INTERNAL {
+            let body = self.entities.translate(wire::INTERNAL,self.version,body,context).map_err(translate_error)?;
+            frame(&mut self.buffer, &body, compression_threshold());
+        } else {
+            for body in self.entities.translate_packets(wire::INTERNAL, self.version, body, context).map_err(translate_error)? {
+                frame(&mut self.buffer, &body, compression_threshold());
+            }
+        }
 
         if self.buffer.len() >= OUTGOING_LIMIT {
             self.flush().await?;
@@ -462,6 +471,15 @@ pub fn is_client_disconnect(error: &io::Error) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn native_outgoing_keeps_packet_size_guards() {
+        let mut outgoing=Outgoing::capture();
+        assert_eq!(outgoing.send(&[]).await.unwrap_err().kind(),io::ErrorKind::InvalidData);
+        assert_eq!(outgoing.send(&vec![0;8*1024*1024+1]).await.unwrap_err().kind(),io::ErrorKind::InvalidData);
+        assert!(outgoing.buffer.is_empty());
+        outgoing.send(&[1]).await.unwrap();assert!(!outgoing.buffer.is_empty());
+    }
     use crate::network::varint::encode_varint;
 
     fn modern_profile() -> mcsa_protocol::Negotiated {

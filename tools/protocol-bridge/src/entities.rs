@@ -19,6 +19,15 @@ pub struct Tracker {
 }
 
 impl Tracker {
+    /// Перевод может требовать нескольких пакетов: абсолютная позиция777
+    /// отделена от скорости. Родной маршрут остаётся одним borrowed-пакетом.
+    pub fn translate_packets<'a>(&mut self,from:JavaVersion,to:JavaVersion,body:&'a [u8],context:wire::Context)->Result<Vec<Cow<'a,[u8]>>,wire::Error>{
+        if from==JavaVersion::V26_1_2 && to==JavaVersion::V26_3 && body.first()==Some(&0x23){
+            return Ok(crate::entity_sync::upgrade(body)?.into_iter().map(Cow::Owned).collect());
+        }
+        Ok(vec![self.translate(from,to,body,context)?])
+    }
+
     pub fn translate<'a>(&mut self, from: JavaVersion, to: JavaVersion, body: &'a [u8], mut context: wire::Context) -> Result<Cow<'a, [u8]>, wire::Error> {
         if from == to { return wire::translate_with_context(State::Play, Direction::Clientbound, from, to, body, context); }
         let mut input = Cursor::new(body);
