@@ -91,12 +91,12 @@ async fn download(client: &reqwest::Client, url: &str, limit: usize) -> io::Resu
 }
 
 pub struct Guard {
-    executable: PathBuf,
+    #[cfg(target_os="linux")]
     pepper: PathBuf,
     // На Linux исполняем запечатанную копию проверенных байтов: замена файла
     // после проверки не меняет запускаемый код (нет окна check→exec).
     #[cfg(target_os="linux")]
-    _sealed: fs::File,
+    sealed: fs::File,
 }
 impl Guard {
     pub async fn prepare(directory: &Path, protected_accounts: bool) -> io::Result<Self> {
@@ -156,7 +156,7 @@ impl Guard {
 
     fn from_verified(data: &[u8], pepper: PathBuf) -> io::Result<Self> {
         #[cfg(target_os="linux")] {
-            use std::os::fd::{FromRawFd,AsRawFd};
+            use std::os::fd::FromRawFd;
             let fd=unsafe { libc::memfd_create(c"mcsa-guard".as_ptr(),libc::MFD_ALLOW_SEALING|libc::MFD_CLOEXEC) };
             if fd<0 { return Err(io::Error::last_os_error()); }
             let mut file=unsafe { fs::File::from_raw_fd(fd) };
@@ -164,17 +164,42 @@ impl Guard {
             if unsafe { libc::fcntl(fd,libc::F_ADD_SEALS,libc::F_SEAL_WRITE|libc::F_SEAL_GROW|libc::F_SEAL_SHRINK|libc::F_SEAL_SEAL) }<0 {
                 return Err(io::Error::last_os_error());
             }
-            let executable=PathBuf::from(format!("/proc/self/fd/{}",file.as_raw_fd()));
-            Ok(Self { executable,pepper,_sealed:file })
+            Ok(Self { pepper,sealed:file })
         }
         #[cfg(not(target_os="linux"))] { let _=(data,pepper); Err(error("MCSA Guard: платформа пока не поддерживается")) }
     }
+    fn command(&self) -> io::Result<Command> {
+        #[cfg(target_os="linux")] {
+            use std::{ffi::CString, os::{fd::AsRawFd, unix::{ffi::OsStrExt, process::CommandExt}}};
+            let fd=self.sealed.as_raw_fd();
+            let pepper=CString::new(self.pepper.as_os_str().as_bytes())
+                .map_err(|_|error("MCSA Guard: недопустимый путь секрета"))?;
+            // man7 execveat(2): "on systems that do not have the /proc filesystem mounted".
+            // Имя — только метка: pre_exec либо заменяет процесс проверенным ELF,
+            // либо возвращает ошибку. Файл с таким именем никогда не запускается.
+            let mut command=Command::new("mcsa-guard-from-sealed-memory");
+            command.env_clear();
+            // После fork допустимы только async-signal-safe операции. CString
+            // создаётся выше, в родителе; в потомке нет аллокаций и блокировок.
+            unsafe {
+                command.pre_exec(move || {
+                    let argv=[c"mcsa-guard".as_ptr(),pepper.as_ptr(),std::ptr::null()];
+                    let envp=[std::ptr::null::<libc::c_char>()];
+                    libc::syscall(libc::SYS_execveat,fd,c"".as_ptr(),argv.as_ptr(),envp.as_ptr(),libc::AT_EMPTY_PATH);
+                    Err(io::Error::last_os_error())
+                });
+            }
+            Ok(command)
+        }
+        #[cfg(not(target_os="linux"))] { Err(error("MCSA Guard: платформа пока не поддерживается")) }
+    }
+
     fn request(&self, value: &serde_json::Value) -> io::Result<serde_json::Value> {
         let bytes=Zeroizing::new(serde_json::to_vec(value).map_err(|_|error("MCSA Guard: неверный запрос"))?);
         if bytes.len()>4096 { return Err(error("MCSA Guard: запрос слишком большой")); }
-        let mut child=Command::new(&self.executable).arg(&self.pepper).env_clear()
+        let mut child=self.command()?
             .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn()
-            .map_err(|_|error("MCSA Guard: не удалось запустить модуль; проверьте разрешения memfd и /proc"))?;
+            .map_err(|_|error("MCSA Guard: не удалось запустить модуль; хостинг должен разрешать memfd и execveat"))?;
         let result=(|| {
             child.stdin.take().ok_or_else(||error("MCSA Guard: нет канала"))?.write_all(&bytes)?;
             let deadline=Instant::now()+Duration::from_secs(10);
@@ -233,6 +258,22 @@ fn wipe_password(request:&mut serde_json::Value) {
 mod tests {
     use super::*;
     use signature::KeyPair;
+    #[cfg(target_os="linux")]
+    #[test]
+    fn sealed_copy_cannot_change_and_invalid_executable_fails_closed() {
+        use std::os::unix::fs::FileExt;
+        let mut data=b"not an ELF executable".to_vec();
+        let guard=Guard::from_verified(&data,PathBuf::from("unused-test-pepper")).unwrap();
+        data.fill(0);
+        let mut snapshot=vec![0;guard.sealed.metadata().unwrap().len() as usize];
+        guard.sealed.read_exact_at(&mut snapshot,0).unwrap();
+        assert_eq!(snapshot,b"not an ELF executable");
+        assert_eq!(guard.sealed.write_at(b"x",0).unwrap_err().raw_os_error(),Some(libc::EPERM));
+        assert_eq!(guard.sealed.set_len(0).unwrap_err().raw_os_error(),Some(libc::EPERM));
+        let error=guard.command().unwrap().spawn().unwrap_err();
+        assert_eq!(error.raw_os_error(),Some(libc::ENOEXEC));
+    }
+
     #[test]
     fn rejects_tampering_wrong_key_platform_protocol_and_rollback() {
         let key=signature::Ed25519KeyPair::generate().unwrap();
