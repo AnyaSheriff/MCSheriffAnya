@@ -153,16 +153,19 @@ def main():
                     assert report['finish_ack'], 'client did not accept configuration'
                     if args.play_packets:
                         play = [bytes.fromhex(b) for b in json.loads(args.play_packets.read_text())]
-                        assert len(play) == 14 and sum(b[0] == 0x2e for b in play) == 9
+                        assert len(play) in (14, 18) and sum(b[0] == 0x2e for b in play) == 9
                         report['play_fixture_sha256'] = hashlib.sha256(args.play_packets.read_bytes()).hexdigest()
                         report['play_received'] = []
                         report['teleport_ack'] = False
                         report['player_loaded'] = False
+                        report['post_play_pong'] = False
                         report['sent_play'] = []
                         for body in play:
                             send(connection, body)
                             report['sent_play'].append(body[0])
                             time.sleep(.15)
+                        # Ping после всех пакетов требует ответа уже после их обработки.
+                        send(connection, b'\x3e' + struct.pack('>i', 0x4d435341))
                         # ID закреплены в candidate protocol.json; проверяем не только
                         # TCP-приём, а закрытие клиентом экрана загрузки и подтверждение позы.
                         deadline = time.monotonic() + 30
@@ -177,9 +180,12 @@ def main():
                                 report['teleport_ack'] = True
                             if kind == 44:
                                 report['player_loaded'] = True
-                            if report['teleport_ack'] and report['player_loaded']:
+                            if kind == 45:
+                                assert struct.unpack('>i', response.read())[0] == 0x4d435341
+                                report['post_play_pong'] = True
+                            if report['teleport_ack'] and report['player_loaded'] and report['post_play_pong']:
                                 break
-                        assert report['teleport_ack'] and report['player_loaded'], 'client did not finish chunk loading'
+                        assert report['teleport_ack'] and report['player_loaded'] and report['post_play_pong'], 'client did not finish play exchange'
                         time.sleep(1)
                         assert not list((root / 'debug').glob('disconnect-*.txt')), 'client produced a disconnect report'
                         if (root / 'logs/latest.log').exists():

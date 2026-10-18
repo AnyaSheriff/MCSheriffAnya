@@ -210,8 +210,8 @@ pub async fn read_play_packet<S: AsyncRead + Unpin>(stream: &mut S, version: Jav
         return Ok(PacketInfo { id: 0, length: body.len() as i32, body, teleport: Some(confirmation) });
     }
     if version == wire::INTERNAL { return Ok(packet); }
-    let body = wire::translate(State::Play, Direction::Serverbound,
-        version, wire::INTERNAL, &packet.body).map_err(translate_error)?.into_owned();
+    let body = wire::translate_with_context(State::Play, Direction::Serverbound,
+        version, wire::INTERNAL, &packet.body, wire::Context { items: item_context(), ..Default::default() }).map_err(translate_error)?.into_owned();
     let (id, _) = decode_varint(&body)?;
     Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None })
 }
@@ -261,6 +261,11 @@ enum Transport<'a> {
     Capture,
 }
 
+fn item_context() -> mcsa_protocol::items::Context {
+    // Оба профиля Configuration получают этот порядок; тест реестров это проверяет.
+    mcsa_protocol::items::Context { shared_enchantment_count: Some(crate::stackdata::ENCHANTMENTS.len() as u32) }
+}
+
 impl<'a> Outgoing<'a> {
     pub fn new(stream: &'a mut Connection) -> Self {
         let version = stream.client_version();
@@ -289,7 +294,8 @@ impl<'a> Outgoing<'a> {
         self.send_with_context(body, wire::Context { online_mode: Some(online_mode), ..wire::Context::default() }).await
     }
 
-    async fn send_with_context(&mut self, body: &[u8], context: wire::Context) -> io::Result<()> {
+    async fn send_with_context(&mut self, body: &[u8], mut context: wire::Context) -> io::Result<()> {
+        context.items = item_context();
         let body = wire::translate_with_context(State::Play, Direction::Clientbound,
             wire::INTERNAL, self.version, body, context).map_err(translate_error)?;
         frame(&mut self.buffer, &body, compression_threshold());

@@ -82,7 +82,7 @@ def main():
                     assert server.poll() is None, log.read_text()
                     assert time.monotonic() < deadline, 'startup timeout'
                     time.sleep(.05)
-                for protocol in [47, 775, 776, 777, 778]:
+                for protocol in [47, 340, 775, 776, 777, 778]:
                     with socket.create_connection(('127.0.0.1', args.port), timeout=5) as sock:
                         handshake(sock, protocol, args.port, 1)
                         send(sock, b'\0')
@@ -92,7 +92,7 @@ def main():
                         status = json.loads(response.read(length))
                         assert status['version'] == {'name': '26.1.2', 'protocol': 775}, status
                         checks.append(f'status-{protocol}-native775')
-                for protocol in [47, 774, 776, 777, 778]:
+                for protocol in [47, 340, 774, 776, 777, 778]:
                     with socket.create_connection(('127.0.0.1', args.port), timeout=5) as sock:
                         handshake(sock, protocol, args.port, 2)
                         response = frame(sock)

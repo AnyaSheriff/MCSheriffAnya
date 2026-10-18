@@ -14,6 +14,7 @@ pub enum Error {
     Invalid,
     MissingOnlineMode,
     MissingChunkContext,
+    Item(crate::items::Error),
     Chunk(crate::chunk::Error),
     BlockEntity(crate::block_entities::Error),
     Light(crate::light::Error),
@@ -41,6 +42,7 @@ pub struct Context {
     /// Настоящий server.properties online-mode; не результат проверки лицензии/AuthMe.
     pub online_mode: Option<bool>,
     pub chunk: Option<crate::chunk::Context>,
+    pub items: crate::items::Context,
 }
 
 pub fn translate(
@@ -77,6 +79,36 @@ pub fn translate_with_context(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Clientbound, "set_slot" | "window_items") => {
+            uint(&mut out, cursor.varint()? as u32); // -1/-2 — специальные окна
+            uint(&mut out, cursor.uint()?); // revision
+            if name == "set_slot" {
+                out.extend(cursor.take(2)?);
+                item(&mut cursor, &mut out, from, to, false, context.items)?;
+            } else {
+                let count = cursor.count(4096)?; uint(&mut out, count as u32);
+                for _ in 0..count { item(&mut cursor, &mut out, from, to, false, context.items)?; }
+                item(&mut cursor, &mut out, from, to, false, context.items)?; // cursor
+            }
+        }
+        (State::Play, Direction::Clientbound, "set_cursor_item" | "set_player_inventory") => {
+            if name == "set_player_inventory" { uint(&mut out, cursor.uint()?); }
+            item(&mut cursor, &mut out, from, to, false, context.items)?;
+        }
+        (State::Play, Direction::Clientbound, "entity_equipment") => {
+            uint(&mut out, cursor.uint()?); let mut seen = 0u16;
+            loop {
+                let slot = cursor.take(1)?[0]; let index = slot & 127;
+                if index > 7 || seen & (1 << index) != 0 { return Err(Error::Invalid); }
+                seen |= 1 << index; out.push(slot);
+                item(&mut cursor, &mut out, from, to, false, context.items)?;
+                if slot & 128 == 0 { break; }
+            }
+        }
+        (State::Play, Direction::Serverbound, "set_creative_slot") => {
+            out.extend(cursor.take(2)?);
+            item(&mut cursor, &mut out, from, to, true, context.items)?;
+        }
         (State::Play, Direction::Clientbound, "map_chunk") => {
             let context = context.chunk.ok_or(Error::MissingChunkContext)?;
             out.extend(crate::chunk::translate(from, to, cursor.take(cursor.remaining())?, context).map_err(Error::Chunk)?);
@@ -157,6 +189,14 @@ pub fn translate_with_context(
     if cursor.remaining() != 0 { return Err(Error::Invalid); }
     if out.len() > LIMIT { return Err(Error::TooLarge); }
     Ok(Cow::Owned(out))
+}
+
+fn item(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion,
+    untrusted: bool, context: crate::items::Context) -> Result<(), Error> {
+    let (stack, size) = crate::items::decode(from, cursor.rest, untrusted, context).map_err(Error::Item)?;
+    cursor.take(size)?;
+    out.extend(crate::items::encode(to, stack.as_ref(), untrusted, context).map_err(Error::Item)?);
+    Ok(())
 }
 
 /// Здесь только пакеты без статических ID контента. Динамические ID сущностей,
@@ -523,9 +563,7 @@ mod tests {
         assert!(matches!(translate(State::Play, Direction::Clientbound, OLD, OLD, &body), Ok(Cow::Borrowed(_))));
         assert_eq!(cb(&body, OLD, NEW).unwrap()[0], 0x2d);
         assert_eq!(cb(&[0x2d], OLD, NEW), Err(Error::MissingChunkContext));
-        for (id, name) in [(0x14, "set_slot"), (0x63, "entity_metadata")] {
-            assert_eq!(cb(&[id], OLD, NEW), Err(Error::PayloadUnavailable(name)));
-        }
+        assert_eq!(cb(&[0x63], OLD, NEW), Err(Error::PayloadUnavailable("entity_metadata")));
         assert_eq!(cb(&[], OLD, NEW), Err(Error::Truncated));
         assert_eq!(cb(&[255; 5], OLD, NEW), Err(Error::Invalid));
         assert!(matches!(cb(&[0], JavaVersion::V26_2, NEW), Err(Error::UnsupportedVersion(_))));

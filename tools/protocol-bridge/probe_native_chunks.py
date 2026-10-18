@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Сравнение SHA256 первых25 родных чанков двух сборок нашего ядра."""
+"""Сравнение SHA256 первых25 родных чанков и начального инвентаря двух сборок нашего ядра."""
 import argparse
 import hashlib
 import json
@@ -13,11 +13,13 @@ from smoke import varint
 
 class Probe(Client):
     def __init__(self,sock,protocol):
-        super().__init__(sock,protocol);self.chunks={}
+        super().__init__(sock,protocol);self.chunks={};self.inventory=[]
     def confirm_teleport(self,teleport,values):self.send('teleport_confirm',varint(teleport))
     def observe_packet(self,name,payload):
         if name=='map_chunk':
             x,z=struct.unpack('>ii',payload[:8]);self.chunks.setdefault(f'{x},{z}',hashlib.sha256(payload).hexdigest())
+        elif name in ('window_items','set_slot','set_cursor_item','set_player_inventory'):
+            self.inventory.append((name,hashlib.sha256(payload).hexdigest()))
 
 def observe(binary,protocol,output,port):
     output.mkdir(parents=True,exist_ok=True)
@@ -36,10 +38,11 @@ def observe(binary,protocol,output,port):
                     time.sleep(.05)
                 client=connect(port,protocol,Probe,version=775)
                 deadline=time.monotonic()+15
-                while len(client.chunks)<25:
+                while len(client.chunks)<25 or not client.inventory:
                     assert time.monotonic()<deadline, f'only {len(client.chunks)} chunks'
                     client.pump(.2)
                 report['chunks']=client.chunks
+                report['inventory']=client.inventory
             finally:
                 if client:client.sock.close()
                 if server.poll() is None:
@@ -49,7 +52,7 @@ def observe(binary,protocol,output,port):
                 report['exit_code']=server.returncode
                 (output/'result.json').write_text(json.dumps(report,indent=2)+'\n')
     assert report['exit_code']==0
-    return report['chunks']
+    return {'chunks':report['chunks'],'inventory':report['inventory']}
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
@@ -62,8 +65,8 @@ def main():
     protocol=json.loads(path.read_text())
     old=observe(a.baseline,protocol,a.output/'baseline',a.port)
     new=observe(a.binary,protocol,a.output/'current',a.port)
-    assert old==new,'native chunk bytes changed'
-    report={'equal_native_chunks':len(old),'baseline':str(a.baseline),'current':str(a.binary)}
+    assert old==new,'native chunk/inventory bytes changed'
+    report={'equal_native_chunks':len(old['chunks']),'equal_native_inventory':len(old['inventory']),'baseline':str(a.baseline),'current':str(a.binary)}
     (a.output/'comparison.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))
 
 if __name__=='__main__':main()

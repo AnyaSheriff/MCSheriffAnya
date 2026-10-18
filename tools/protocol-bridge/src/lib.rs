@@ -4,6 +4,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 mod generated_ids;
 pub mod ids;
+pub mod items;
+pub mod legacy_items;
+mod legacy_item_ids;
 pub mod login;
 pub mod light;
 pub mod chunk_sections;
@@ -158,7 +161,7 @@ mod tests {
             assert_eq!(Negotiated::native_only(client.protocol(), native), Err(AdmissionError::AdapterUnavailable { client, native }));
             assert_eq!(JavaVersion::from_protocol(client.protocol()), Some(client));
         }
-        for protocol in [-1, 0, 774, 778, i32::MAX] {
+        for protocol in [-1, 0, 340, 774, 778, i32::MAX] {
             assert_eq!(Negotiated::native_only(protocol, native), Err(AdmissionError::UnknownProtocol(protocol)));
         }
     }
@@ -194,3 +197,6 @@ mod tests {
         assert_eq!(old.translate_id(1,&new),Err(PacketError::WrongContext));
     }
 }
+
+#[cfg(test)]
+mod item_observation_tests;
