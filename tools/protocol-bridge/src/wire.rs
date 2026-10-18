@@ -14,6 +14,8 @@ pub enum Error {
     Invalid,
     MissingOnlineMode,
     MissingChunkContext,
+    MissingEntityContext,
+    Entity(crate::entities::Error),
     Item(crate::items::Error),
     Chunk(crate::chunk::Error),
     BlockEntity(crate::block_entities::Error),
@@ -43,6 +45,10 @@ pub struct Context {
     pub online_mode: Option<bool>,
     pub chunk: Option<crate::chunk::Context>,
     pub items: crate::items::Context,
+    /// Тип наблюдаемой сущности в пространстве775, установленный по AddEntity/Login.
+    pub entity_kind: Option<u32>,
+    /// Одинаковые порядок и содержимое динамических реестров обоих профилей.
+    pub metadata_registry_counts: &'static [(&'static str, u32)],
 }
 
 pub fn translate(
@@ -79,6 +85,18 @@ pub fn translate_with_context(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Clientbound, "spawn_entity") => {
+            crate::entities::spawn(&mut cursor, &mut out, from, to)?;
+        }
+        (State::Play, Direction::Clientbound, "entity_metadata") => {
+            crate::entities::metadata(&mut cursor, &mut out, from, to, context)?;
+        }
+        (State::Play, Direction::Clientbound, "respawn") => {
+            spawn_info(&mut cursor, &mut out, from, to)?;
+            let flags = cursor.take(1)?[0];
+            if flags & !3 != 0 { return Err(Error::Invalid); }
+            out.push(flags);
+        }
         (State::Play, Direction::Clientbound, "set_slot" | "window_items") => {
             uint(&mut out, cursor.varint()? as u32); // -1/-2 — специальные окна
             uint(&mut out, cursor.uint()?); // revision
@@ -261,6 +279,17 @@ fn play_login(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to:
     for _ in 0..worlds { cursor.string()?; }
     for _ in 0..3 { cursor.uint()?; } // maxPlayers, view, simulation
     for _ in 0..3 { cursor.boolean()?; } // debug, respawn screen, limited crafting
+    out.extend(&common[..common.len() - cursor.remaining()]);
+    spawn_info(cursor, out, from, to)?;
+    let online = if from == JavaVersion::V26_3 { Some(cursor.boolean()?) } else { context.online_mode };
+    let secure = cursor.boolean()?;
+    if to == JavaVersion::V26_3 { out.push(u8::from(online.ok_or(Error::MissingOnlineMode)?)); }
+    out.push(u8::from(secure));
+    Ok(())
+}
+
+fn spawn_info(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), Error> {
+    let common = cursor.rest;
     cursor.uint()?; // dimensionType — реестр, ранее отправленный этим сервером
     cursor.string()?; // dimension name
     cursor.take(8)?; // hashed seed
@@ -284,11 +313,7 @@ fn play_login(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to:
     cursor.uint()?; // portal cooldown
     cursor.varint()?; // sea level может быть отрицательным
     let common_len = common.len() - cursor.remaining();
-    let online = if from == JavaVersion::V26_3 { Some(cursor.boolean()?) } else { context.online_mode };
-    let secure = cursor.boolean()?;
     out.extend(&common[..common_len]);
-    if to == JavaVersion::V26_3 { out.push(u8::from(online.ok_or(Error::MissingOnlineMode)?)); }
-    out.push(u8::from(secure));
     Ok(())
 }
 
@@ -348,19 +373,19 @@ fn tags(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaV
     Ok(())
 }
 
-struct Cursor<'a> { rest: &'a [u8] }
+pub(crate) struct Cursor<'a> { pub(crate) rest: &'a [u8] }
 impl<'a> Cursor<'a> {
-    fn new(rest: &'a [u8]) -> Self { Self { rest } }
-    fn remaining(&self) -> usize { self.rest.len() }
-    fn take(&mut self, n: usize) -> Result<&'a [u8], Error> {
+    pub(crate) fn new(rest: &'a [u8]) -> Self { Self { rest } }
+    pub(crate) fn remaining(&self) -> usize { self.rest.len() }
+    pub(crate) fn take(&mut self, n: usize) -> Result<&'a [u8], Error> {
         let (value, rest) = self.rest.split_at_checked(n).ok_or(Error::Truncated)?;
         self.rest = rest;
         Ok(value)
     }
-    fn boolean(&mut self) -> Result<bool, Error> {
+    pub(crate) fn boolean(&mut self) -> Result<bool, Error> {
         match self.take(1)?[0] { 0 => Ok(false), 1 => Ok(true), _ => Err(Error::Invalid) }
     }
-    fn varint(&mut self) -> Result<i32, Error> {
+    pub(crate) fn varint(&mut self) -> Result<i32, Error> {
         let mut value = 0u32;
         for shift in (0..35).step_by(7) {
             let byte = self.take(1)?[0];
@@ -370,20 +395,20 @@ impl<'a> Cursor<'a> {
         }
         Err(Error::Invalid)
     }
-    fn uint(&mut self) -> Result<u32, Error> {
+    pub(crate) fn uint(&mut self) -> Result<u32, Error> {
         self.varint()?.try_into().map_err(|_| Error::Invalid)
     }
-    fn count(&mut self, limit: usize) -> Result<usize, Error> {
+    pub(crate) fn count(&mut self, limit: usize) -> Result<usize, Error> {
         let value = self.uint()? as usize;
         if value > limit { return Err(Error::TooLarge); }
         Ok(value)
     }
-    fn string(&mut self) -> Result<&'a str, Error> {
+    pub(crate) fn string(&mut self) -> Result<&'a str, Error> {
         let size = self.count(32_767)?;
         std::str::from_utf8(self.take(size)?).map_err(|_| Error::Invalid)
     }
 }
-fn uint(out: &mut Vec<u8>, mut value: u32) {
+pub(crate) fn uint(out: &mut Vec<u8>, mut value: u32) {
     while value >= 128 { out.push((value as u8 & 127) | 128); value >>= 7; }
     out.push(value as u8);
 }
@@ -563,7 +588,7 @@ mod tests {
         assert!(matches!(translate(State::Play, Direction::Clientbound, OLD, OLD, &body), Ok(Cow::Borrowed(_))));
         assert_eq!(cb(&body, OLD, NEW).unwrap()[0], 0x2d);
         assert_eq!(cb(&[0x2d], OLD, NEW), Err(Error::MissingChunkContext));
-        assert_eq!(cb(&[0x63], OLD, NEW), Err(Error::PayloadUnavailable("entity_metadata")));
+        assert_eq!(cb(&[0x63], OLD, NEW), Err(Error::MissingEntityContext));
         assert_eq!(cb(&[], OLD, NEW), Err(Error::Truncated));
         assert_eq!(cb(&[255; 5], OLD, NEW), Err(Error::Invalid));
         assert!(matches!(cb(&[0], JavaVersion::V26_2, NEW), Err(Error::UnsupportedVersion(_))));

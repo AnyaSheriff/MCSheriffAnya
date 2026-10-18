@@ -45,3 +45,11 @@ JSON в кодировании previous game mode. См. исследовани�
 `src/item_observation_tests.rs` содержит те же hex-байты для тестов без JSON-
 зависимости и явный порядок реестра зачарований контрольных современных миров.
 NBT1.12.2 имеет имя корня; Slot775/777 содержит компоненты вместо старого Damage.
+# Entity observations
+
+`entity-observations.json` was recorded by our `probe_entities.py` using ordinary
+commands on isolated official 775/777 servers. It contains eleven controlled
+entity cases and four dimension changes per version. Only random spawn UUIDs
+are normalized during the comparison; metadata and Respawn are compared exactly.
+The 777 command uses the documented `BlockState` inner fields `id/properties`.
+No JAR code, registry dumps or world-generation data were extracted.

@@ -4,6 +4,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 mod generated_ids;
 pub mod ids;
+pub mod entities;
+mod entity_layouts;
 pub mod items;
 pub mod legacy_items;
 mod legacy_item_ids;

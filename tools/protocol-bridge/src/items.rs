@@ -146,7 +146,7 @@ fn component_data(kind: u32, input: &mut Reader<'_>, context: Context) -> Result
 
 /// Только строки и простое оформление. Hover/click/translate/селекторы требуют
 /// отдельной семантики; их нельзя передавать между версиями непрозрачно.
-fn plain_text(data: &[u8]) -> Result<(), Error> {
+pub(crate) fn plain_text(data: &[u8]) -> Result<(), Error> {
     if data.first() == Some(&8) { return Ok(()); }
     if data.first() != Some(&10) { return Err(Error::Invalid); }
     let fields = fields(&data[1..])?;

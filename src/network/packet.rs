@@ -251,6 +251,7 @@ pub struct Outgoing<'a> {
     deadline: Option<Instant>,
     failed: bool,
     version: JavaVersion,
+    entities: mcsa_protocol::entities::Tracker,
 }
 
 enum Transport<'a> {
@@ -269,16 +270,16 @@ fn item_context() -> mcsa_protocol::items::Context {
 impl<'a> Outgoing<'a> {
     pub fn new(stream: &'a mut Connection) -> Self {
         let version = stream.client_version();
-        Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false, version }
+        Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false, version, entities: Default::default() }
     }
 
     /// Проверки пакетов без сетевых сокетов и запущенного сервера.
     #[cfg(test)]
-    pub fn capture() -> Self { Self { stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL } }
+    pub fn capture() -> Self { Self { stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, entities: Default::default() } }
 
     #[cfg(test)]
     pub(crate) fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
-        Self { stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL }
+        Self { stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, entities: Default::default() }
     }
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
@@ -296,8 +297,12 @@ impl<'a> Outgoing<'a> {
 
     async fn send_with_context(&mut self, body: &[u8], mut context: wire::Context) -> io::Result<()> {
         context.items = item_context();
-        let body = wire::translate_with_context(State::Play, Direction::Clientbound,
-            wire::INTERNAL, self.version, body, context).map_err(translate_error)?;
+        // Оба Configuration-профиля используют REQUIRED_REGISTRIES в том же
+        // порядке; имя/число записей ограничивает динамические metadata ID.
+        static COUNTS: std::sync::LazyLock<Vec<(&'static str,u32)>> = std::sync::LazyLock::new(||
+            super::configuration::REQUIRED_REGISTRIES.iter().map(|(name,entries)| (*name,entries.len() as u32)).collect());
+        context.metadata_registry_counts = &COUNTS;
+        let body = self.entities.translate(wire::INTERNAL, self.version, body, context).map_err(translate_error)?;
         frame(&mut self.buffer, &body, compression_threshold());
 
         if self.buffer.len() >= OUTGOING_LIMIT {

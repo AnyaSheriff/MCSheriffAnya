@@ -805,6 +805,11 @@ async fn send_mob(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<ShownMob> 
     })
 }
 
+#[cfg(test)]
+pub(super) async fn send_compatibility_probe(stream: &mut Outgoing<'_>, mob: &Mob) -> io::Result<()> {
+    send_mob(stream, mob).await.map(|_| ())
+}
+
 /// Номер полосы босса иссушителя — его собственный UUID.
 fn boss_uuid(entity_id: i32) -> [u8; 16] {
     crate::items::uuid_for(entity_id)

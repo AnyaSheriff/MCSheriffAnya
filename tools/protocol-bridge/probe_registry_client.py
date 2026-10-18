@@ -73,6 +73,7 @@ def main():
     parser.add_argument('--port', type=int, default=26012)
     parser.add_argument('--empty-known-packs', action='store_true')
     parser.add_argument('--play-packets', type=Path, help='наши14 Play-пакетов из export_chunk_client_probe')
+    parser.add_argument('--entity-probe', action='store_true', help='два Respawn и три моба от настоящих builder-ов ядра')
     args = parser.parse_args()
     cache = args.client_dir.resolve()
     with (cache / 'client.jar').open('rb') as source:
@@ -153,7 +154,22 @@ def main():
                     assert report['finish_ack'], 'client did not accept configuration'
                     if args.play_packets:
                         play = [bytes.fromhex(b) for b in json.loads(args.play_packets.read_text())]
-                        assert len(play) in (14, 18) and sum(b[0] == 0x2e for b in play) == 9
+                        if args.entity_probe:
+                            assert len(play) <= 128 and sum(b[0] == 0x2e for b in play) == 18
+                            assert sum(b[0] == 0x54 for b in play) == 2
+                            assert sum(b[0] == 1 for b in play) == 3
+                            assert sum(b[0] == 0x65 for b in play) == 3
+                        else:
+                            assert len(play) in (14, 18) and sum(b[0] == 0x2e for b in play) == 9
+                        expected_poses = {}
+                        for body in play:
+                            if body[0] == 0x49:
+                                position = io.BytesIO(body); integer(position)
+                                teleport = integer(position)
+                                values = struct.unpack('>ddddddffI',position.read())
+                                assert values[-1] == 0
+                                expected_poses[teleport] = values[:3]+values[6:8]
+                        acknowledgements = set()
                         report['play_fixture_sha256'] = hashlib.sha256(args.play_packets.read_bytes()).hexdigest()
                         report['play_received'] = []
                         report['teleport_ack'] = False
@@ -174,10 +190,12 @@ def main():
                             kind = integer(response)
                             report['play_received'].append(kind)
                             if kind == 0:
-                                assert integer(response) == 1
+                                teleport = integer(response)
                                 pose = struct.unpack('>dddff', response.read())
-                                assert pose == (-8.5, 67.0, -8.5, 0.0, 0.0), pose
-                                report['teleport_ack'] = True
+                                assert teleport in expected_poses and pose == expected_poses[teleport], (teleport,pose)
+                                acknowledgements.add(teleport)
+                                report['teleport_ids'] = sorted(acknowledgements)
+                                report['teleport_ack'] = acknowledgements == set(expected_poses)
                             if kind == 44:
                                 report['player_loaded'] = True
                             if kind == 45:
