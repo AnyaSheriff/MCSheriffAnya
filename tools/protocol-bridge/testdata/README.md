@@ -29,3 +29,12 @@ LoginPlay26.1.2 получен `observe.py --protocol 775`; LoginPlay26.3 и о�
 каждого состояния; значения14/0 и SHA256 в `light-observations.json`.
 Обёртки UpdateLight в Rust-тестах синтетические. Подробнее и ограничения:
 [свет/чанки](../../research/light-chunks-26.3.md).
+
+
+`block-entities-*.json` — записи только явно поставленных блоков из
+`probe_block_entities.py`. Кровать в777 дополнительно проверена командой
+execute if block; отсутствие BE не объясняется исчезновением блока.
+`oak_sign-*`, `oak_hanging_sign-*`, `beacon-*` — наблюдённые NBT для точного
+сравнения. `play-login-*-none.bin` и `*-previous-creative.bin` — вход до/после
+смены creative→survival; Wiki3848030 и эти записи исправляют ошибку кандидата
+JSON в кодировании previous game mode. См. исследование чанков/блок-сущностей.

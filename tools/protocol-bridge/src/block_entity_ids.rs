@@ -1,0 +1,53 @@
+// Собственные наблюдения probe_block_entities.py; не таблица из дампа реестров.
+// Сгенерировано generate_block_entities.py. Не наблюдавшиеся ID запрещены.
+pub const OBSERVED: &[(u32, Option<u32>, &str)] = &[
+    (0, Some(0), "furnace"),
+    (1, Some(1), "chest"),
+    (2, Some(2), "trapped_chest"),
+    (3, Some(3), "ender_chest"),
+    (4, Some(4), "jukebox"),
+    (5, Some(5), "dispenser"),
+    (6, Some(6), "dropper"),
+    (7, Some(7), "oak_sign"),
+    (8, Some(8), "oak_hanging_sign"),
+    (9, Some(9), "spawner"),
+    (12, Some(12), "brewing_stand"),
+    (13, Some(13), "enchanting_table"),
+    (14, Some(14), "end_portal"),
+    (15, Some(15), "beacon"),
+    (16, Some(16), "skeleton_skull"),
+    (17, Some(17), "daylight_detector"),
+    (18, Some(18), "hopper"),
+    (19, Some(19), "comparator"),
+    (20, Some(20), "white_banner"),
+    (21, Some(21), "structure_block"),
+    (22, Some(22), "end_gateway"),
+    (23, Some(23), "command_block"),
+    (24, Some(24), "shulker_box"),
+    (25, None, "white_bed"),
+    (26, Some(25), "conduit"),
+    (27, Some(26), "barrel"),
+    (28, Some(27), "smoker"),
+    (29, Some(28), "blast_furnace"),
+    (30, Some(29), "lectern"),
+    (31, Some(30), "bell"),
+    (32, Some(31), "jigsaw"),
+    (33, Some(32), "campfire"),
+    (34, Some(33), "beehive"),
+    (35, Some(34), "sculk_sensor"),
+    (36, Some(35), "calibrated_sculk_sensor"),
+    (37, Some(36), "sculk_catalyst"),
+    (38, Some(37), "sculk_shrieker"),
+    (39, Some(38), "chiseled_bookshelf"),
+    (40, Some(39), "oak_shelf"),
+    (41, Some(40), "suspicious_sand"),
+    (42, Some(41), "decorated_pot"),
+    (43, Some(42), "crafter"),
+    (44, Some(43), "trial_spawner"),
+    (45, Some(44), "vault"),
+];
+
+// tools/data/blocks.json SHA256 573e172619f3c1ca64e15d07799ab646e1fd9ad19d759d9ceca65ac4fc7440a9
+pub fn legacy_bed(state: u32) -> bool {
+    matches!(state, 1931..=2186)
+}

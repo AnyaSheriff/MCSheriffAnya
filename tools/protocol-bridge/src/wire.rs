@@ -13,6 +13,9 @@ pub enum Error {
     UnsupportedVersion(JavaVersion),
     Invalid,
     MissingOnlineMode,
+    MissingChunkContext,
+    Chunk(crate::chunk::Error),
+    BlockEntity(crate::block_entities::Error),
     Light(crate::light::Error),
     Truncated,
     TooLarge,
@@ -37,6 +40,7 @@ pub const INTERNAL: JavaVersion = JavaVersion::V26_1_2;
 pub struct Context {
     /// Настоящий server.properties online-mode; не результат проверки лицензии/AuthMe.
     pub online_mode: Option<bool>,
+    pub chunk: Option<crate::chunk::Context>,
 }
 
 pub fn translate(
@@ -73,6 +77,17 @@ pub fn translate_with_context(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Clientbound, "map_chunk") => {
+            let context = context.chunk.ok_or(Error::MissingChunkContext)?;
+            out.extend(crate::chunk::translate(from, to, cursor.take(cursor.remaining())?, context).map_err(Error::Chunk)?);
+        }
+        (State::Play, Direction::Clientbound, "tile_entity_data") => {
+            out.extend(cursor.take(8)?);
+            let kind = cursor.uint()?;
+            let translated = crate::block_entities::translate(from, to, kind, cursor.take(cursor.remaining())?).map_err(Error::BlockEntity)?;
+            let (kind, data) = translated.ok_or(Error::PayloadUnavailable("removed block entity update"))?;
+            uint(&mut out, kind); out.extend(data);
+        }
         (State::Play, Direction::Clientbound, "update_light") => {
             // Координаты — signed VarInt; копируем точные 32-битные значения.
             for _ in 0..2 { uint(&mut out, cursor.varint()? as u32); }
@@ -209,8 +224,20 @@ fn play_login(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to:
     cursor.uint()?; // dimensionType — реестр, ранее отправленный этим сервером
     cursor.string()?; // dimension name
     cursor.take(8)?; // hashed seed
-    if cursor.take(1)?[0] > 3 { return Err(Error::Invalid); }
-    if !matches!(cursor.take(1)?[0], 0..=3 | 255) { return Err(Error::Invalid); }
+    out.extend(&common[..common.len() - cursor.remaining()]);
+    // Wiki3848030 + probe_block_entities: JSON-кандидат ошибочно оставил
+    // старые byte-поля. В777 оба режима VarInt; предыдущий =0(None) / ID+1.
+    let mode = if from == JavaVersion::V26_3 { cursor.uint()? } else { u32::from(cursor.take(1)?[0]) };
+    if mode > 3 { return Err(Error::Invalid); }
+    let previous = if from == JavaVersion::V26_3 {
+        match cursor.uint()? { 0 => None, value @ 1..=4 => Some(value - 1), _ => return Err(Error::Invalid) }
+    } else {
+        match cursor.take(1)?[0] { 255 => None, value @ 0..=3 => Some(u32::from(value)), _ => return Err(Error::Invalid) }
+    };
+    uint(out, mode); // 0..3 занимают один байт в обоих форматах.
+    if to == JavaVersion::V26_3 { uint(out, previous.map_or(0, |id| id + 1)); }
+    else { out.push(previous.map_or(255, |id| id as u8)); }
+    let common = cursor.rest;
     cursor.boolean()?; // debug world
     cursor.boolean()?; // flat world
     if cursor.boolean()? { cursor.string()?; cursor.take(8)?; } // death location
@@ -370,7 +397,7 @@ mod tests {
         for original in [&old[..], &new[..]] {
             let from = if original[0] == 0x31 { OLD } else { NEW };
             let to = if from == OLD { NEW } else { OLD };
-            let context = Context { online_mode: Some(false) };
+            let context = Context { online_mode: Some(false), ..Context::default() };
             let translated = translate_with_context(State::Play, Direction::Clientbound, from, to, original, context).unwrap();
             let restored = translate_with_context(State::Play, Direction::Clientbound, to, from, &translated, context).unwrap();
             assert_eq!(restored.as_ref(), original);
@@ -383,9 +410,10 @@ mod tests {
         assert_eq!(cb(old, OLD, NEW), Err(Error::MissingOnlineMode));
         for online in [false, true] {
             let mapped = translate_with_context(State::Play, Direction::Clientbound, OLD, NEW, old,
-                Context { online_mode: Some(online) }).unwrap();
+                Context { online_mode: Some(online), ..Context::default() }).unwrap();
             assert_eq!(mapped[0], 0x32);
-            assert_eq!(&mapped[1..mapped.len() - 2], &old[1..old.len() - 1]);
+            // Общие поля сохраняются, а previousMode меняет смысл (см. отдельный тест).
+            assert_eq!(&mapped[1..6], &old[1..6]);
             assert_eq!(&mapped[mapped.len() - 2..], &[u8::from(online), 0]);
         }
         let mut bad = new.to_vec();
@@ -395,6 +423,46 @@ mod tests {
         assert_eq!(cb(&bad, NEW, OLD), Err(Error::Invalid));
         let mut bad = new.to_vec(); bad.splice(6..7, [0x81, 8]); // 1025 миров
         assert_eq!(cb(&bad, NEW, OLD), Err(Error::TooLarge));
+    }
+
+    #[test]
+    fn block_entity_updates_translate_types_and_keep_checked_nbt() {
+        for (old_kind, new_kind, nbt) in [(27u8,26u8,&[0][..]), (7,7,&include_bytes!("../testdata/oak_sign-26.1.2.nbt")[..])] {
+            let mut old = vec![6]; old.extend([255;8]); old.push(old_kind); old.extend(nbt);
+            let mut expected = old.clone(); expected[9] = new_kind;
+            assert_eq!(cb(&old, OLD, NEW).unwrap(),expected);
+            assert_eq!(cb(&expected, NEW, OLD).unwrap(),old);
+        }
+        let mut bed = vec![6]; bed.extend([0;8]); bed.extend([25,0]);
+        assert_eq!(cb(&bed,OLD,NEW),Err(Error::PayloadUnavailable("removed block entity update")));
+    }
+
+    #[test]
+    fn previous_game_mode_uses_optional_varint_in_777_not_the_json_candidate_byte() {
+        // Минимальный Login с единственным измерением m:o; expected строится
+        // независимо от codec и проверяет все5 возможных предыдущих режимов.
+        let mut prefix = vec![0x31, 0, 0, 0, 1, 0, 0, 20, 2, 2, 0, 1, 0, 0, 3, b'm', b':', b'o'];
+        prefix.extend([0; 8]); prefix.push(1);
+        for previous in [255u8, 0, 1, 2, 3] {
+            let mut old = prefix.clone(); old.push(previous); old.extend([0, 0, 0, 0, 63, 0]);
+            let mut expected = prefix.clone(); expected[0] = 0x32;
+            expected.push(if previous == 255 { 0 } else { previous + 1 });
+            expected.extend([0, 0, 0, 0, 63, 0, 0]);
+            let new = translate_with_context(State::Play, Direction::Clientbound, OLD, NEW, &old,
+                Context { online_mode: Some(false), ..Default::default() }).unwrap();
+            assert_eq!(new.as_ref(), expected);
+            assert_eq!(cb(&expected, NEW, OLD).unwrap(), old);
+            let mut invalid = expected.clone(); invalid[prefix.len()] = 5;
+            assert_eq!(cb(&invalid, NEW, OLD), Err(Error::Invalid));
+            let mut extended = expected; extended.splice(prefix.len()..prefix.len()+1, [0x80 | if previous == 255 { 0 } else { previous + 1 }, 0]);
+            assert_eq!(cb(&extended, NEW, OLD).unwrap(), old);
+        }
+        for data in [include_bytes!("../testdata/play-login-26.3-none.bin").as_slice(), include_bytes!("../testdata/play-login-26.3-previous-creative.bin").as_slice()] {
+            let old = cb(data, NEW, OLD).unwrap();
+            let restored = translate_with_context(State::Play, Direction::Clientbound, OLD, NEW, &old,
+                Context { online_mode: Some(false), ..Default::default() }).unwrap();
+            assert_eq!(restored.as_ref(), data);
+        }
     }
 
     #[test]
@@ -454,7 +522,8 @@ mod tests {
         let body = [0x2c, 0, 0, 0, 0, 0, 0, 0, 7];
         assert!(matches!(translate(State::Play, Direction::Clientbound, OLD, OLD, &body), Ok(Cow::Borrowed(_))));
         assert_eq!(cb(&body, OLD, NEW).unwrap()[0], 0x2d);
-        for (id, name) in [(0x2d, "map_chunk"), (0x14, "set_slot"), (0x63, "entity_metadata")] {
+        assert_eq!(cb(&[0x2d], OLD, NEW), Err(Error::MissingChunkContext));
+        for (id, name) in [(0x14, "set_slot"), (0x63, "entity_metadata")] {
             assert_eq!(cb(&[id], OLD, NEW), Err(Error::PayloadUnavailable(name)));
         }
         assert_eq!(cb(&[], OLD, NEW), Err(Error::Truncated));

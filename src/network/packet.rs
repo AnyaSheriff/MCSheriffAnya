@@ -281,8 +281,12 @@ impl<'a> Outgoing<'a> {
         self.send_with_context(body, wire::Context::default()).await
     }
 
+    pub async fn send_chunk(&mut self, body: &[u8], context: mcsa_protocol::chunk::Context) -> io::Result<()> {
+        self.send_with_context(body, wire::Context { chunk: Some(context), ..wire::Context::default() }).await
+    }
+
     pub async fn send_login(&mut self, body: &[u8], online_mode: bool) -> io::Result<()> {
-        self.send_with_context(body, wire::Context { online_mode: Some(online_mode) }).await
+        self.send_with_context(body, wire::Context { online_mode: Some(online_mode), ..wire::Context::default() }).await
     }
 
     async fn send_with_context(&mut self, body: &[u8], context: wire::Context) -> io::Result<()> {

@@ -5736,7 +5736,12 @@ async fn send_chunk(
 
     push_light(&mut body, top, light);
 
-    write_body(stream, body).await
+    let biome_count = super::configuration::REQUIRED_REGISTRIES.iter()
+        .find(|(name, _)| *name == "minecraft:worldgen/biome")
+        .expect("реестр биомов задан при Configuration").1.len();
+    stream.send_chunk(&body, mcsa_protocol::chunk::Context {
+        min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: biome_count as u32,
+    }).await
 }
 
 /// Добавляет одну секцию чанка.
@@ -12678,3 +12683,6 @@ mod tests {
 
 #[cfg(test)]
 mod tails_tests;
+
+#[cfg(test)]
+mod chunk_compat_tests;

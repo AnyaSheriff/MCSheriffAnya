@@ -72,6 +72,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--port', type=int, default=26012)
     parser.add_argument('--empty-known-packs', action='store_true')
+    parser.add_argument('--play-packets', type=Path, help='наши14 Play-пакетов из export_chunk_client_probe')
     args = parser.parse_args()
     cache = args.client_dir.resolve()
     with (cache / 'client.jar').open('rb') as source:
@@ -150,6 +151,40 @@ def main():
                             report['finish_ack'] = True
                             break
                     assert report['finish_ack'], 'client did not accept configuration'
+                    if args.play_packets:
+                        play = [bytes.fromhex(b) for b in json.loads(args.play_packets.read_text())]
+                        assert len(play) == 14 and sum(b[0] == 0x2e for b in play) == 9
+                        report['play_fixture_sha256'] = hashlib.sha256(args.play_packets.read_bytes()).hexdigest()
+                        report['play_received'] = []
+                        report['teleport_ack'] = False
+                        report['player_loaded'] = False
+                        report['sent_play'] = []
+                        for body in play:
+                            send(connection, body)
+                            report['sent_play'].append(body[0])
+                            time.sleep(.15)
+                        # ID закреплены в candidate protocol.json; проверяем не только
+                        # TCP-приём, а закрытие клиентом экрана загрузки и подтверждение позы.
+                        deadline = time.monotonic() + 30
+                        while time.monotonic() < deadline:
+                            response = packet(connection)
+                            kind = integer(response)
+                            report['play_received'].append(kind)
+                            if kind == 0:
+                                assert integer(response) == 1
+                                pose = struct.unpack('>dddff', response.read())
+                                assert pose == (-8.5, 67.0, -8.5, 0.0, 0.0), pose
+                                report['teleport_ack'] = True
+                            if kind == 44:
+                                report['player_loaded'] = True
+                            if report['teleport_ack'] and report['player_loaded']:
+                                break
+                        assert report['teleport_ack'] and report['player_loaded'], 'client did not finish chunk loading'
+                        time.sleep(1)
+                        assert not list((root / 'debug').glob('disconnect-*.txt')), 'client produced a disconnect report'
+                        if (root / 'logs/latest.log').exists():
+                            messages = (root / 'logs/latest.log').read_text()
+                            assert 'Failed to handle packet' not in messages and 'Failed to load chunk' not in messages, 'client rejected play data'
                     message = b'Registry probe complete'
                     send(connection, b'\x20\x08' + struct.pack('>H', len(message)) + message)
                     time.sleep(.5)
@@ -167,6 +202,12 @@ def main():
                 except subprocess.TimeoutExpired:
                     os.killpg(client.pid, signal.SIGKILL)
                     client.wait()
+                for folder in ['crash-reports', 'debug']:
+                    for diagnostic in (root / folder).rglob('*.txt'):
+                        if diagnostic.stat().st_size <= 1024 * 1024:
+                            destination = args.output / 'diagnostics' / diagnostic.relative_to(root)
+                            destination.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copyfile(diagnostic, destination)
                 if (root / 'logs/latest.log').exists():
                     shutil.copyfile(root / 'logs/latest.log', args.output / 'latest.log')
                 (args.output / 'result.json').write_text(json.dumps(report, indent=2) + '\n')

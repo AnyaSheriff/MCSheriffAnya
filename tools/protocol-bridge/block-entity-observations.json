@@ -1,0 +1,222 @@
+[
+  {
+    "block": "furnace",
+    "old": 0,
+    "new": 0
+  },
+  {
+    "block": "chest",
+    "old": 1,
+    "new": 1
+  },
+  {
+    "block": "trapped_chest",
+    "old": 2,
+    "new": 2
+  },
+  {
+    "block": "ender_chest",
+    "old": 3,
+    "new": 3
+  },
+  {
+    "block": "jukebox",
+    "old": 4,
+    "new": 4
+  },
+  {
+    "block": "dispenser",
+    "old": 5,
+    "new": 5
+  },
+  {
+    "block": "dropper",
+    "old": 6,
+    "new": 6
+  },
+  {
+    "block": "oak_sign",
+    "old": 7,
+    "new": 7
+  },
+  {
+    "block": "oak_hanging_sign",
+    "old": 8,
+    "new": 8
+  },
+  {
+    "block": "spawner",
+    "old": 9,
+    "new": 9
+  },
+  {
+    "block": "brewing_stand",
+    "old": 12,
+    "new": 12
+  },
+  {
+    "block": "enchanting_table",
+    "old": 13,
+    "new": 13
+  },
+  {
+    "block": "end_portal",
+    "old": 14,
+    "new": 14
+  },
+  {
+    "block": "beacon",
+    "old": 15,
+    "new": 15
+  },
+  {
+    "block": "skeleton_skull",
+    "old": 16,
+    "new": 16
+  },
+  {
+    "block": "daylight_detector",
+    "old": 17,
+    "new": 17
+  },
+  {
+    "block": "hopper",
+    "old": 18,
+    "new": 18
+  },
+  {
+    "block": "comparator",
+    "old": 19,
+    "new": 19
+  },
+  {
+    "block": "white_banner",
+    "old": 20,
+    "new": 20
+  },
+  {
+    "block": "structure_block",
+    "old": 21,
+    "new": 21
+  },
+  {
+    "block": "end_gateway",
+    "old": 22,
+    "new": 22
+  },
+  {
+    "block": "command_block",
+    "old": 23,
+    "new": 23
+  },
+  {
+    "block": "shulker_box",
+    "old": 24,
+    "new": 24
+  },
+  {
+    "block": "white_bed",
+    "old": 25,
+    "new": null
+  },
+  {
+    "block": "conduit",
+    "old": 26,
+    "new": 25
+  },
+  {
+    "block": "barrel",
+    "old": 27,
+    "new": 26
+  },
+  {
+    "block": "smoker",
+    "old": 28,
+    "new": 27
+  },
+  {
+    "block": "blast_furnace",
+    "old": 29,
+    "new": 28
+  },
+  {
+    "block": "lectern",
+    "old": 30,
+    "new": 29
+  },
+  {
+    "block": "bell",
+    "old": 31,
+    "new": 30
+  },
+  {
+    "block": "jigsaw",
+    "old": 32,
+    "new": 31
+  },
+  {
+    "block": "campfire",
+    "old": 33,
+    "new": 32
+  },
+  {
+    "block": "beehive",
+    "old": 34,
+    "new": 33
+  },
+  {
+    "block": "sculk_sensor",
+    "old": 35,
+    "new": 34
+  },
+  {
+    "block": "calibrated_sculk_sensor",
+    "old": 36,
+    "new": 35
+  },
+  {
+    "block": "sculk_catalyst",
+    "old": 37,
+    "new": 36
+  },
+  {
+    "block": "sculk_shrieker",
+    "old": 38,
+    "new": 37
+  },
+  {
+    "block": "chiseled_bookshelf",
+    "old": 39,
+    "new": 38
+  },
+  {
+    "block": "oak_shelf",
+    "old": 40,
+    "new": 39
+  },
+  {
+    "block": "suspicious_sand",
+    "old": 41,
+    "new": 40
+  },
+  {
+    "block": "decorated_pot",
+    "old": 42,
+    "new": 41
+  },
+  {
+    "block": "crafter",
+    "old": 43,
+    "new": 42
+  },
+  {
+    "block": "trial_spawner",
+    "old": 44,
+    "new": 43
+  },
+  {
+    "block": "vault",
+    "old": 45,
+    "new": 44
+  }
+]

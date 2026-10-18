@@ -23,6 +23,19 @@ pub struct Registry {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error { UnsupportedVersion, Invalid, Truncated, TooLarge, TooDeep, DuplicateEntry, Id(ids::IdTranslationError) }
 
+/// Размер одного анонимного NBT-тега; End разрешён для отсутствующих данных.
+pub(crate) fn nbt_length(bytes: &[u8]) -> Result<usize, Error> {
+    let (&kind, rest) = bytes.split_first().ok_or(Error::Truncated)?;
+    Ok(1 + nbt_payload_length(kind, rest)?)
+}
+
+pub(crate) fn nbt_payload_length(kind: u8, bytes: &[u8]) -> Result<usize, Error> {
+    if bytes.len() > MAX_BYTES { return Err(Error::TooLarge); }
+    let mut input = Cursor(bytes);
+    if kind != 0 { let mut budget = MAX_NODES; nbt_payload(&mut input, kind, 0, &mut budget)?; }
+    Ok(bytes.len() - input.0.len())
+}
+
 fn supported(version: JavaVersion) -> Result<(), Error> {
     if version == JavaVersion::V26_2 { Err(Error::UnsupportedVersion) } else { Ok(()) }
 }
