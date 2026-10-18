@@ -11,6 +11,8 @@ use std::io;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::time::{Duration, Instant, timeout_at};
 use super::connection::Connection;
+use super::connection::CryptoStream;
+use mcsa_protocol::{Direction, State, JavaVersion, wire};
 
 use super::varint::read_varint;
 
@@ -154,11 +156,34 @@ fn unpack(frame: &[u8], threshold: i32) -> io::Result<Vec<u8>> {
 /// Записывает тело пакета в поток, добавив перед ним VarInt длину,
 /// и сбрасывает буфер.
 pub async fn write_body(stream: &mut Connection, body: Vec<u8>) -> io::Result<()> {
+    write_configuration(stream, &body).await
+}
+
+fn translate_error(error: wire::Error) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, format!("Перевод Java-пакета: {error:?}"))
+}
+
+/// Единая граница Configuration, в том числе для диалогов AuthMe.
+/// Содержимое переводится до сжатия, поток шифрует уже готовые кадры.
+pub async fn write_configuration<S: AsyncWrite + Unpin>(stream: &mut CryptoStream<S>, body: &[u8]) -> io::Result<()> {
+    let body = wire::translate(State::Configuration, Direction::Clientbound,
+        wire::INTERNAL, stream.client_version(), body).map_err(translate_error)?;
     let mut packet = Vec::with_capacity(body.len() + 8);
 
     frame(&mut packet, &body, compression_threshold());
 
     write_bytes(stream, &packet).await
+}
+
+/// Поток уже расшифрован CryptoStream, кадр уже распакован read_packet.
+/// Эта функция применяется только в Play: одинаковый ID в другой фазе иной.
+pub async fn read_play_packet<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion) -> io::Result<PacketInfo> {
+    let packet = read_packet(stream).await?;
+    if version == wire::INTERNAL { return Ok(packet); }
+    let body = wire::translate(State::Play, Direction::Serverbound,
+        version, wire::INTERNAL, &packet.body).map_err(translate_error)?.into_owned();
+    let (id, _) = decode_varint(&body)?;
+    Ok(PacketInfo { id, length: body.len() as i32, body })
 }
 
 /// Предел одной записи вместе со сбросом. Это защита транспорта, а не
@@ -195,6 +220,7 @@ pub struct Outgoing<'a> {
     control: Option<crate::sessions::Control>,
     deadline: Option<Instant>,
     failed: bool,
+    version: JavaVersion,
 }
 
 enum Transport<'a> {
@@ -207,21 +233,24 @@ enum Transport<'a> {
 
 impl<'a> Outgoing<'a> {
     pub fn new(stream: &'a mut Connection) -> Self {
-        Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false }
+        let version = stream.client_version();
+        Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false, version }
     }
 
     /// Проверки пакетов без сетевых сокетов и запущенного сервера.
     #[cfg(test)]
-    pub fn capture() -> Self { Self { stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false } }
+    pub fn capture() -> Self { Self { stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL } }
 
     #[cfg(test)]
     pub(crate) fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
-        Self { stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false }
+        Self { stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL }
     }
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
     pub async fn send(&mut self, body: &[u8]) -> io::Result<()> {
-        frame(&mut self.buffer, body, compression_threshold());
+        let body = wire::translate(State::Play, Direction::Clientbound,
+            wire::INTERNAL, self.version, body).map_err(translate_error)?;
+        frame(&mut self.buffer, &body, compression_threshold());
 
         if self.buffer.len() >= OUTGOING_LIMIT {
             self.flush().await?;
@@ -276,7 +305,9 @@ impl<'a> Outgoing<'a> {
     pub async fn disconnect(&mut self, body: &[u8]) {
         if self.failed { return; }
         self.buffer.clear();
-        frame(&mut self.buffer, body, compression_threshold());
+        let Ok(body) = wire::translate(State::Play, Direction::Clientbound,
+            wire::INTERNAL, self.version, body) else { return; };
+        frame(&mut self.buffer, &body, compression_threshold());
         self.control = None;
         self.deadline = Some(Instant::now() + Duration::from_millis(250));
         let _ = self.flush().await;
@@ -379,6 +410,87 @@ pub fn is_client_disconnect(error: &io::Error) -> bool {
 mod tests {
     use super::*;
     use crate::network::varint::encode_varint;
+
+    fn modern_profile() -> mcsa_protocol::Negotiated {
+        mcsa_protocol::Negotiated { client: JavaVersion::V26_3, native: wire::INTERNAL }
+    }
+
+    #[tokio::test]
+    async fn versioned_play_crosses_the_real_encrypted_socket_boundary() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let raw_client = tokio::net::TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+        let (raw_server, _) = listener.accept().await.unwrap();
+        let mut server = CryptoStream::new(raw_server);
+        let mut client = CryptoStream::new(raw_client);
+        server.protocol = Some(modern_profile());
+        server.enable_encryption(&[91; 16]);
+        client.enable_encryption(&[91; 16]);
+        let mut outgoing = Outgoing::new(&mut server);
+        // Старый Move+Look: ground ПОСЛЕ двух углов. Новый — перед delta.
+        outgoing.send(&[0x36, 9, 0, 1, 0, 2, 0xff, 0xfe, 127, 254, 1]).await.unwrap();
+        let before = outgoing.buffer.clone();
+        // Неизвестный формат не портит уже накопленный буфер.
+        assert!(outgoing.send(&[0x2d]).await.is_err());
+        assert_eq!(outgoing.buffer, before);
+        outgoing.flush().await.unwrap();
+        assert_eq!(read_packet(&mut client).await.unwrap().body,
+            [0x37, 9, 1, 0, 1, 0, 2, 0xff, 0xfe, 127, 254]);
+        let mut reason = vec![0x20];
+        reason.extend(crate::network::nbt::text_component("Проверка версии"));
+        outgoing.disconnect(&reason).await;
+        let received = read_packet(&mut client).await.unwrap();
+        assert_eq!(received.id, 0x20);
+        assert_eq!(received.payload(), &reason[1..]);
+    }
+
+    #[tokio::test]
+    async fn versioned_incoming_packets_translate_after_decryption() {
+        let (server, client) = tokio::io::duplex(1024);
+        let mut server = CryptoStream::new(server);
+        let mut client = CryptoStream::new(client);
+        server.protocol = Some(modern_profile());
+        server.enable_encryption(&[13; 16]); client.enable_encryption(&[13; 16]);
+        // held_item_slot сместился с 0x35 на 0x36 в JSON777. Поле Short прежнее.
+        let original = vec![0x36, 0, 7];
+        let mut framed = Vec::new(); frame(&mut framed, &original, compression_threshold());
+        write_bytes(&mut client, &framed).await.unwrap();
+        let received = read_play_packet(&mut server, JavaVersion::V26_3).await.unwrap();
+        assert_eq!(received.id, 0x35);
+        assert_eq!(received.payload(), &original[1..]);
+        assert_eq!(received.length, received.body.len() as i32);
+    }
+
+    #[tokio::test]
+    async fn login_success_has_a_fresh_session_and_preserves_signed_textures() {
+        use mcsa_protocol::login::Success;
+        let skin = crate::skins::Skin { value: "test-textures".into(), signature: "test-signature".into() };
+        let mut previous = None;
+        for version in [wire::INTERNAL, JavaVersion::V26_3, JavaVersion::V26_3] {
+            for threshold in [-1, 0, 256] {
+                let (server, client) = tokio::io::duplex(8192);
+                let mut server = CryptoStream::new(server);
+                let mut client = CryptoStream::new(client);
+                server.protocol = Some(mcsa_protocol::Negotiated { client: version, native: wire::INTERNAL });
+                server.enable_encryption(&[39; 16]); client.enable_encryption(&[39; 16]);
+                super::super::login::send_login_success(&mut server, "McsaProbe", &[42; 16], Some(&skin), threshold).await.unwrap();
+                let length = read_varint(&mut client).await.unwrap();
+                let mut bytes = vec![0; length as usize]; client.read_exact(&mut bytes).await.unwrap();
+                let body = if threshold < 0 { bytes } else { unpack(&bytes, threshold).unwrap() };
+                assert_eq!(body[0], 2);
+                let decoded = Success::decode(version, &body[1..]).unwrap();
+                assert_eq!(decoded.uuid, [42; 16]); assert_eq!(decoded.username, "McsaProbe");
+                assert_eq!(decoded.properties[0].value, skin.value);
+                assert_eq!(decoded.properties[0].signature.as_deref(), Some(skin.signature.as_str()));
+                assert_eq!(decoded.session_id, server.login_session_id);
+                if version == JavaVersion::V26_3 {
+                    let id = decoded.session_id.unwrap();
+                    assert_ne!(Some(id), previous); assert_ne!(id, [42; 16]); assert_ne!(id, [0; 16]);
+                    assert_eq!(id[6] >> 4, 4); assert_eq!(id[8] >> 6, 2);
+                    previous = Some(id);
+                } else { assert!(decoded.session_id.is_none()); }
+            }
+        }
+    }
 
     #[tokio::test]
     async fn encryption_wraps_compressed_and_uncompressed_frames() {

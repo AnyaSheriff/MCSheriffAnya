@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import itertools
 import json
+from compare_schemas import schema
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -130,6 +131,20 @@ def main():
                        'renumbered': sum(x >= 0 and x != i for i, x in enumerate(forward)),
                        'old_unmapped': [str(k) for k, v in a.items() if forward[v] < 0],
                        'new_unmapped_count': sum(x < 0 for x in backward)})
+    text += "pub fn packet_info(kind: RegistryKind, modern: bool, id: usize) -> Option<(&'static str, bool)> {\n"
+    text += '    let entries: &[(&str, bool)] = match (kind, modern) {\n'
+    for phase in ['login', 'configuration', 'play']:
+        for direction, suffix in [('toClient', 'Clientbound'), ('toServer', 'Serverbound')]:
+            name = phase.title() + suffix
+            a, b = packets(old, phase, direction), packets(new, phase, direction)
+            equal = {key for key in a.keys() & b.keys()
+                     if schema(old, phase, direction, key)[0] == schema(new, phase, direction, key)[0]}
+            for modern, mapping in [(False, a), (True, b)]:
+                text += f'        (RegistryKind::{name}, {str(modern).lower()}) => &[\n'
+                for key, _ in sorted(mapping.items(), key=lambda entry: entry[1]):
+                    text += f'            ("{key}", {str(key in equal).lower()}),\n'
+                text += '        ],\n'
+    text += '        _ => return None,\n    };\n    entries.get(id).copied()\n}\n'
     (ROOT / 'tools/protocol-bridge/src/generated_ids.rs').write_text(text)
     inputs = ['protocol-26.1.json', 'entities-26.1.json']
     baseline = {name: hashlib.sha256((args.data / name).read_bytes()).hexdigest() for name in inputs}

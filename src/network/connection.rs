@@ -17,11 +17,16 @@ pub struct CryptoStream<S> {
     decryptor: Option<Decryptor>,
     read_taken: bool,
     pub protocol: Option<mcsa_protocol::Negotiated>,
+    pub login_session_id: Option<[u8; 16]>,
 }
 
 impl<S> CryptoStream<S> {
     pub fn new(inner: S) -> Self {
-        Self { inner, encryptor: None, decryptor: None, read_taken: false, protocol: None }
+        Self { inner, encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None }
+    }
+
+    pub fn client_version(&self) -> mcsa_protocol::JavaVersion {
+        self.protocol.map_or(mcsa_protocol::wire::INTERNAL, |profile| profile.client)
     }
 
     pub fn enable_encryption(&mut self, secret: &[u8; 16]) {
@@ -50,6 +55,7 @@ impl Connection {
         let mut reader = Self::new(tokio::net::TcpStream::from_std(own)?);
         reader.decryptor = self.decryptor.take();
         reader.protocol = self.protocol;
+        reader.login_session_id = self.login_session_id;
         self.read_taken = true;
         Ok(reader)
     }
@@ -174,8 +180,10 @@ mod tests {
         let mut writer=Connection::new(accepted.unwrap().0);
         let protocol=mcsa_protocol::Negotiated::native_only(775,super::super::NATIVE_VERSION).unwrap();
         writer.protocol=Some(protocol);
+        writer.login_session_id=Some([23; 16]);
         let mut reader=writer.take_reader().unwrap();
         assert_eq!(reader.protocol,Some(protocol));
+        assert_eq!(reader.login_session_id,Some([23; 16]));
         assert_eq!(writer.protocol,Some(protocol));
         assert!(writer.take_reader().is_err());
         peer.write_all(b"play").await.unwrap();

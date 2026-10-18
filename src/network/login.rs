@@ -155,23 +155,30 @@ pub async fn send_set_compression<W: AsyncWrite + Unpin>(stream: &mut W, thresho
 /// Отправляет пакет Login Success: подтверждает вход игрока под указанным
 /// именем и UUID. Подписанное свойство textures приходит от sessionserver.
 pub async fn send_login_success<W: AsyncWrite + Unpin>(
-    stream: &mut W,
+    stream: &mut super::connection::CryptoStream<W>,
     username: &str,
     uuid: &[u8; 16],
     skin: Option<&crate::skins::Skin>,
     threshold: i32,
 ) -> io::Result<()> {
-    // Тело пакета: VarInt packet_id + UUID + String username + VarInt properties.
+    use mcsa_protocol::{JavaVersion, login::{Property, Success}};
+    use rsa::rand_core::{OsRng, RngCore};
+    let version = stream.client_version();
+    let session_id = if version == JavaVersion::V26_3 {
+        let mut id = [0; 16];
+        OsRng.try_fill_bytes(&mut id).map_err(io::Error::other)?;
+        id[6] = (id[6] & 15) | 0x40;
+        id[8] = (id[8] & 63) | 0x80;
+        Some(id)
+    } else { None };
+    let properties = skin.into_iter().map(|skin| Property {
+        name: "textures".into(), value: skin.value.clone(),
+        signature: (!skin.signature.is_empty()).then(|| skin.signature.clone()),
+    }).collect();
+    let payload = Success { uuid: *uuid, username: username.into(), properties, session_id }
+        .encode(version).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("Login Success: {error:?}")))?;
     let mut body = encode_varint(0x02);
-    body.extend_from_slice(uuid);
-    body.extend_from_slice(&encode_string(username));
-    body.extend_from_slice(&encode_varint(i32::from(skin.is_some())));
-    if let Some(skin) = skin {
-        body.extend(encode_string("textures"));
-        body.extend(encode_string(&skin.value));
-        body.push(u8::from(!skin.signature.is_empty()));
-        if !skin.signature.is_empty() { body.extend(encode_string(&skin.signature)); }
-    }
+    body.extend(payload);
 
     // Полный пакет: длина тела + само тело, в сжатом виде, если оно включено.
     let mut packet = Vec::with_capacity(body.len() + 8);
@@ -179,6 +186,7 @@ pub async fn send_login_success<W: AsyncWrite + Unpin>(
     super::packet::frame(&mut packet, &body, threshold);
 
     super::packet::write_bytes(stream, &packet).await?;
+    stream.login_session_id = session_id;
 
     Ok(())
 }

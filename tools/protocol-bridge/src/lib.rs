@@ -6,6 +6,7 @@ mod generated_ids;
 pub mod ids;
 pub mod login;
 pub mod movement;
+pub mod wire;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum JavaVersion { V26_1_2, V26_2, V26_3 }

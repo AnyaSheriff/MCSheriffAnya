@@ -32,7 +32,9 @@ use tokio::time::timeout;
 
 use super::nbt;
 use super::keep_alive::KeepAlive;
-use super::packet::{Outgoing, PacketInfo, decode_varint, is_client_disconnect, read_packet};
+use super::packet::{Outgoing, PacketInfo, decode_varint, is_client_disconnect, read_play_packet};
+#[cfg(test)]
+use super::packet::read_packet;
 use super::types;
 use super::configuration;
 use super::varint::{encode_string, encode_varint, encode_varlong};
@@ -1407,6 +1409,7 @@ async fn read_confirm_teleportation(
     stream: &mut Outgoing<'_>,
 ) -> io::Result<Option<configuration::ClientLook>> {
     let mut look = None;
+    let version = stream.stream().client_version();
 
     // Клиент подтвердит только то, что получил.
     stream.flush().await?;
@@ -1421,7 +1424,7 @@ async fn read_confirm_teleportation(
                     None => std::future::pending().await,
                 }
             } => return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "вход прерван")),
-            packet = tokio::time::timeout_at(deadline, read_packet(stream.stream())) => {
+            packet = tokio::time::timeout_at(deadline, read_play_packet(stream.stream(), version)) => {
                 packet.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "нет подтверждения переноса"))??
             }
         };
@@ -7061,13 +7064,14 @@ impl Inbound {
         // Буфер читателя хранит уже расшифрованные байты; состояние CFB8
         // передаётся из Configuration без сброса IV.
         let mut own = tokio::io::BufReader::new(stream.take_reader()?);
+        let version = own.get_ref().client_version();
         let (sender, packets) = tokio::sync::mpsc::unbounded_channel();
         let waiting = shared.waiting_for_tick.clone();
         let starts = shared.tick_starts.subscribe();
 
         let reader = tokio::spawn(async move {
             loop {
-                let read = read_packet(&mut own).await;
+                let read = read_play_packet(&mut own, version).await;
                 let arrived = *starts.borrow();
                 let failed = read.is_err();
 
