@@ -1,0 +1,378 @@
+{
+  "description": "Официальный1.12.2: обычный вход offline, настройки, телепорт, смена режима, смерть и возрождение. Только сетевые наблюдения; сжатый и несжатый транспорт.",
+  "runs": [
+    {
+      "compression": -1,
+      "jar_sha1": "886945bfb2b978778c3a0288fd7fab09d315b25f",
+      "recording_sha256": "d305056322ec23bc99177ac91aa67ae80749899f1f8624e056feb74cdf5b89e7",
+      "checks": [
+        "offline-login-join-teleport-ack",
+        "absolute-teleport",
+        "survival-death-respawn-teleport-ack"
+      ],
+      "packets": [
+        {
+          "phase": "login",
+          "name": "success",
+          "id": 2,
+          "size": 47,
+          "sha256": "5a85d60a005d5ffad6c28e18915ad6ef3c4d995ac5829dc7d00b791e67747f82",
+          "payload": "2466303835366330352d376637372d333962312d623630302d353731396634653730626538094d63736150726f6265",
+          "uuid": "f0856c05-7f77-39b1-b600-5719f4e70be8",
+          "username": "McsaProbe"
+        },
+        {
+          "phase": "play",
+          "name": "login",
+          "id": 35,
+          "size": 17,
+          "sha256": "f7c7d94cb11af494e3b2fcf6cdc6c279d18325c33ae72862d2d674bfe8d03768",
+          "payload": "0000002e0100000000011404666c617400",
+          "entity": 46,
+          "mode": 1,
+          "dimension": 0,
+          "difficulty": 1,
+          "maximum": 20,
+          "level_type": "flat",
+          "reduced_debug": false
+        },
+        {
+          "phase": "play",
+          "name": "abilities",
+          "id": 44,
+          "size": 9,
+          "sha256": "1e1adbe7f73771329075036810af5f7ee8585b85cb36d198a38da58c20eb1922",
+          "payload": "0d3d4ccccd3dcccccd",
+          "flags": 13,
+          "flying": 0.05000000074505806,
+          "walking": 0.10000000149011612
+        },
+        {
+          "phase": "play",
+          "name": "position",
+          "id": 47,
+          "size": 34,
+          "sha256": "0ff550c9fc1aa8d9017fc2d00b599c707781e3999404d541c02653dd54c5e3e8",
+          "payload": "408dfc00000000004010000000000000c082cc000000000000000000000000000001",
+          "values": [
+            959.5,
+            4.0,
+            -601.5,
+            0.0,
+            0.0
+          ],
+          "flags": 0,
+          "teleport": 1
+        },
+        {
+          "phase": "play",
+          "name": "position",
+          "id": 47,
+          "size": 34,
+          "sha256": "38c3d693c57dc0f291fa39511ee647e021a99570166bcb31f672d872ce78df45",
+          "payload": "40120000000000004050400000000000c00400000000000042b40000412000000002",
+          "values": [
+            4.5,
+            65.0,
+            -2.5,
+            90.0,
+            10.0
+          ],
+          "flags": 0,
+          "teleport": 2
+        },
+        {
+          "phase": "play",
+          "name": "abilities",
+          "id": 44,
+          "size": 9,
+          "sha256": "a25859a922f04059b2924bb750954b3a28250e9edf95be625f4ed561aaabc85b",
+          "payload": "003d4ccccd3dcccccd",
+          "flags": 0,
+          "flying": 0.05000000074505806,
+          "walking": 0.10000000149011612
+        },
+        {
+          "phase": "play",
+          "name": "game_state_change",
+          "id": 30,
+          "size": 5,
+          "sha256": "a665e6b115dd56fd3e0c89be631e6eda8e9666b822e0bd7026bf0822c4bbc68f",
+          "payload": "0300000000",
+          "reason": 3,
+          "value": 0.0
+        },
+        {
+          "phase": "play",
+          "name": "abilities",
+          "id": 44,
+          "size": 9,
+          "sha256": "a25859a922f04059b2924bb750954b3a28250e9edf95be625f4ed561aaabc85b",
+          "payload": "003d4ccccd3dcccccd",
+          "flags": 0,
+          "flying": 0.05000000074505806,
+          "walking": 0.10000000149011612
+        },
+        {
+          "phase": "play",
+          "name": "position",
+          "id": 47,
+          "size": 34,
+          "sha256": "74873fc429ea137ad1e69718d796976f3f2c1a15ad6f676f43634ff6eeb67e96",
+          "payload": "40120000000000004050400000000000c00400000000000042b40000412000000003",
+          "values": [
+            4.5,
+            65.0,
+            -2.5,
+            90.0,
+            10.0
+          ],
+          "flags": 0,
+          "teleport": 3
+        },
+        {
+          "phase": "play",
+          "name": "abilities",
+          "id": 44,
+          "size": 9,
+          "sha256": "a25859a922f04059b2924bb750954b3a28250e9edf95be625f4ed561aaabc85b",
+          "payload": "003d4ccccd3dcccccd",
+          "flags": 0,
+          "flying": 0.05000000074505806,
+          "walking": 0.10000000149011612
+        },
+        {
+          "phase": "play",
+          "name": "abilities",
+          "id": 44,
+          "size": 9,
+          "sha256": "a25859a922f04059b2924bb750954b3a28250e9edf95be625f4ed561aaabc85b",
+          "payload": "003d4ccccd3dcccccd",
+          "flags": 0,
+          "flying": 0.05000000074505806,
+          "walking": 0.10000000149011612
+        },
+        {
+          "phase": "play",
+          "name": "respawn",
+          "id": 53,
+          "size": 11,
+          "sha256": "4cca4f51b0218e4548aa3eb8bcd5cc00708b746a997e1ddc77f3b8b6b73e85fa",
+          "payload": "00000000010004666c6174",
+          "dimension": 0,
+          "difficulty": 1,
+          "mode": 0,
+          "level_type": "flat"
+        },
+        {
+          "phase": "play",
+          "name": "position",
+          "id": 47,
+          "size": 34,
+          "sha256": "c754ce57a301044b1abc8b9ba989e378f0a82206fd09e2e84cc2599c13ca3b50",
+          "payload": "408dec00000000004010000000000000c082a4000000000000000000000000000004",
+          "values": [
+            957.5,
+            4.0,
+            -596.5,
+            0.0,
+            0.0
+          ],
+          "flags": 0,
+          "teleport": 4
+        }
+      ]
+    },
+    {
+      "compression": 256,
+      "jar_sha1": "886945bfb2b978778c3a0288fd7fab09d315b25f",
+      "recording_sha256": "3cadf3dd54007c0f53006b67ea5e798bf221a0013f0773e0f54ee1eeddd7eb85",
+      "checks": [
+        "offline-login-join-teleport-ack",
+        "absolute-teleport",
+        "survival-death-respawn-teleport-ack"
+      ],
+      "packets": [
+        {
+          "phase": "login",
+          "name": "compress",
+          "id": 3,
+          "size": 2,
+          "sha256": "d404b24986b2963deb3378e98664bfe617910d92095df1f0bdb40d7c2d813e21",
+          "payload": "8002",
+          "threshold": 256
+        },
+        {
+          "phase": "login",
+          "name": "success",
+          "id": 2,
+          "size": 47,
+          "sha256": "5a85d60a005d5ffad6c28e18915ad6ef3c4d995ac5829dc7d00b791e67747f82",
+          "payload": "2466303835366330352d376637372d333962312d623630302d353731396634653730626538094d63736150726f6265",
+          "uuid": "f0856c05-7f77-39b1-b600-5719f4e70be8",
+          "username": "McsaProbe"
+        },
+        {
+          "phase": "play",
+          "name": "login",
+          "id": 35,
+          "size": 17,
+          "sha256": "f7c7d94cb11af494e3b2fcf6cdc6c279d18325c33ae72862d2d674bfe8d03768",
+          "payload": "0000002e0100000000011404666c617400",
+          "entity": 46,
+          "mode": 1,
+          "dimension": 0,
+          "difficulty": 1,
+          "maximum": 20,
+          "level_type": "flat",
+          "reduced_debug": false
+        },
+        {
+          "phase": "play",
+          "name": "abilities",
+          "id": 44,
+          "size": 9,
+          "sha256": "1e1adbe7f73771329075036810af5f7ee8585b85cb36d198a38da58c20eb1922",
+          "payload": "0d3d4ccccd3dcccccd",
+          "flags": 13,
+          "flying": 0.05000000074505806,
+          "walking": 0.10000000149011612
+        },
+        {
+          "phase": "play",
+          "name": "position",
+          "id": 47,
+          "size": 34,
+          "sha256": "36d1c219d75bd449a1384da5d204915a6fc824a404e9b20c6a3681daa18bc347",
+          "payload": "408e0400000000004010000000000000c0824c000000000000000000000000000001",
+          "values": [
+            960.5,
+            4.0,
+            -585.5,
+            0.0,
+            0.0
+          ],
+          "flags": 0,
+          "teleport": 1
+        },
+        {
+          "phase": "play",
+          "name": "position",
+          "id": 47,
+          "size": 34,
+          "sha256": "38c3d693c57dc0f291fa39511ee647e021a99570166bcb31f672d872ce78df45",
+          "payload": "40120000000000004050400000000000c00400000000000042b40000412000000002",
+          "values": [
+            4.5,
+            65.0,
+            -2.5,
+            90.0,
+            10.0
+          ],
+          "flags": 0,
+          "teleport": 2
+        },
+        {
+          "phase": "play",
+          "name": "abilities",
+          "id": 44,
+          "size": 9,
+          "sha256": "a25859a922f04059b2924bb750954b3a28250e9edf95be625f4ed561aaabc85b",
+          "payload": "003d4ccccd3dcccccd",
+          "flags": 0,
+          "flying": 0.05000000074505806,
+          "walking": 0.10000000149011612
+        },
+        {
+          "phase": "play",
+          "name": "game_state_change",
+          "id": 30,
+          "size": 5,
+          "sha256": "a665e6b115dd56fd3e0c89be631e6eda8e9666b822e0bd7026bf0822c4bbc68f",
+          "payload": "0300000000",
+          "reason": 3,
+          "value": 0.0
+        },
+        {
+          "phase": "play",
+          "name": "abilities",
+          "id": 44,
+          "size": 9,
+          "sha256": "a25859a922f04059b2924bb750954b3a28250e9edf95be625f4ed561aaabc85b",
+          "payload": "003d4ccccd3dcccccd",
+          "flags": 0,
+          "flying": 0.05000000074505806,
+          "walking": 0.10000000149011612
+        },
+        {
+          "phase": "play",
+          "name": "position",
+          "id": 47,
+          "size": 34,
+          "sha256": "74873fc429ea137ad1e69718d796976f3f2c1a15ad6f676f43634ff6eeb67e96",
+          "payload": "40120000000000004050400000000000c00400000000000042b40000412000000003",
+          "values": [
+            4.5,
+            65.0,
+            -2.5,
+            90.0,
+            10.0
+          ],
+          "flags": 0,
+          "teleport": 3
+        },
+        {
+          "phase": "play",
+          "name": "abilities",
+          "id": 44,
+          "size": 9,
+          "sha256": "a25859a922f04059b2924bb750954b3a28250e9edf95be625f4ed561aaabc85b",
+          "payload": "003d4ccccd3dcccccd",
+          "flags": 0,
+          "flying": 0.05000000074505806,
+          "walking": 0.10000000149011612
+        },
+        {
+          "phase": "play",
+          "name": "abilities",
+          "id": 44,
+          "size": 9,
+          "sha256": "a25859a922f04059b2924bb750954b3a28250e9edf95be625f4ed561aaabc85b",
+          "payload": "003d4ccccd3dcccccd",
+          "flags": 0,
+          "flying": 0.05000000074505806,
+          "walking": 0.10000000149011612
+        },
+        {
+          "phase": "play",
+          "name": "respawn",
+          "id": 53,
+          "size": 11,
+          "sha256": "4cca4f51b0218e4548aa3eb8bcd5cc00708b746a997e1ddc77f3b8b6b73e85fa",
+          "payload": "00000000010004666c6174",
+          "dimension": 0,
+          "difficulty": 1,
+          "mode": 0,
+          "level_type": "flat"
+        },
+        {
+          "phase": "play",
+          "name": "position",
+          "id": 47,
+          "size": 34,
+          "sha256": "b87523827bb71a551874f6a44e2bb48793c0d6777778f919c4f3df57e19a4245",
+          "payload": "408e5400000000004010000000000000c08294000000000000000000000000000004",
+          "values": [
+            970.5,
+            4.0,
+            -594.5,
+            0.0,
+            0.0
+          ],
+          "flags": 0,
+          "teleport": 4
+        }
+      ]
+    }
+  ]
+}
