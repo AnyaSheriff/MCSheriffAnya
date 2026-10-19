@@ -172,3 +172,46 @@ async fn native_world_snapshot_preserves_blocks_light_and_negative_height_in_leg
     assert!(legacy_blocks::project(View {version:JavaVersion::V26_1_2,x:-1,z:-1,min_y:world::MIN_Y,
         window,sections:&invalid,biomes:[1;256],block_entities:vec![]}).is_err());
 }
+
+#[test]
+#[ignore = "экспорт собственного мира и пакетов для непрозрачного клиента1.12.2"]
+fn export_legacy_chunk_client_probe() {
+    use mcsa_protocol::{legacy_blocks::{self, SourceSection, View}, legacy_chunk::HeightWindow,
+        legacy_control::Packet as Legacy, teleport::Pose};
+    let mut world = World::in_memory();
+    for z in -16..16 { for x in -16..16 { world.set_block(x,0,z,blocks::state_by_name("stone").unwrap()); } }
+    for (x,name) in [(2,"red_wool"),(3,"glowstone"),(4,"diamond_block")] {
+        world.set_block(x,1,2,blocks::state_by_name(name).unwrap());
+    }
+    let hex = |bytes: &[u8]| bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
+    let control = |value: Legacy| {
+        let (_,id,bytes)=value.encode().unwrap(); let mut out=encode_varint(id as i32);out.extend(bytes);hex(&out)
+    };
+    let pose=Pose {x:0.5,y:65.0,z:0.5,yaw:0.0,pitch:0.0};
+    let mut sky_chunks=Vec::new(); let mut dark_chunks=Vec::new();
+    for z in -1..=0 { for x in -1..=0 {
+        let snapshot=world.chunk_packet(x,z,|sections,_|sections.to_vec()).unwrap();
+        let light=crate::world::light::chunk_light(&snapshot);
+        let block:Vec<_>=light.block.iter().map(|s|s.nibbles()).collect();
+        let sky:Vec<_>=light.sky.iter().map(|s|s.nibbles()).collect();
+        for sky_enabled in [true,false] {
+            let source:Vec<_>=snapshot.iter().enumerate().map(|(i,s)|SourceSection {blocks:s.as_deref(),block_light:&block[i],sky_light:sky_enabled.then_some(sky[i].as_slice())}).collect();
+            let chunk=legacy_blocks::project(View {version:JavaVersion::V26_1_2,x,z,min_y:world::MIN_Y,
+                window:HeightWindow::new(-64).unwrap(),sections:&source,biomes:[1;256],block_entities:vec![]}).unwrap();
+            let mut out=vec![0x20];out.extend(chunk.encode(sky_enabled).unwrap());
+            if sky_enabled {sky_chunks.push(hex(&out));} else {dark_chunks.push(hex(&out));}
+        }
+    } }
+    let report=serde_json::json!({
+        "protocol":340,"window_origin":-64,"position":[pose.x,pose.y,pose.z,pose.yaw,pose.pitch],
+        "login":control(Legacy::LoginSuccess {uuid:crate::network::login::offline_uuid("McsaProbe"),username:"McsaProbe".into()}),
+        "join":control(Legacy::Join {entity:1,mode:1,hardcore:false,dimension:0,difficulty:2,maximum:20,level_type:"flat".into(),reduced_debug:false}),
+        "abilities":control(Legacy::Abilities {flags:7,flying:0.05,walking:0.1}),
+        "teleports":[control(Legacy::Teleport {pose,flags:0,id:1}),control(Legacy::Teleport {pose,flags:0,id:2}),control(Legacy::Teleport {pose,flags:0,id:3})],
+        "respawn_nether":control(Legacy::Respawn {dimension:-1,difficulty:2,mode:1,level_type:"flat".into()}),
+        "respawn_overworld":control(Legacy::Respawn {dimension:0,difficulty:2,mode:1,level_type:"flat".into()}),
+        "sky_chunks":sky_chunks,"dark_chunks":dark_chunks,
+    });
+    std::fs::create_dir_all("tmp").unwrap();
+    std::fs::write("tmp/legacy-chunk-client.json",serde_json::to_vec_pretty(&report).unwrap()).unwrap();
+}
