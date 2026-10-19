@@ -112,14 +112,39 @@ fn fishing_catch_grants_one_to_six_xp_and_one_point_of_wear() {
 }
 
 #[test]
-fn commanded_bundles_match_official_nested_inventory_slots() {
+fn commanded_nested_items_match_official_inventory_slots() {
     let commands:serde_json::Value=serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/nested-item-commands.json")).unwrap();
     let samples:serde_json::Value=serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/nested-item-observations.json")).unwrap();
-    for name in ["bundle_basic","bundle_nested","bundle_book"] {
+    for name in ["bundle_basic","bundle_nested","bundle_book","container_sparse","container_empty"] {
         let command=commands.as_array().unwrap().iter().find(|c|c["name"]==name).unwrap()["command"].as_str().unwrap();
         let expected=samples["old"]["cases"].as_array().unwrap().iter().find(|c|c["name"]==name).unwrap()["slot_hex"].as_str().unwrap();
         let expected=expected.as_bytes().as_chunks::<2>().0.iter().map(|s|u8::from_str_radix(std::str::from_utf8(s).unwrap(),16).unwrap()).collect::<Vec<_>>();
         let stack=crate::commands::stack_from_spec(command,1).unwrap().unwrap();let mut actual=Vec::new();push_slot(&mut actual,Some(stack));
         assert_eq!(actual,expected,"{name}: содержимое команды не должно теряться");
     }
+}
+
+#[test]
+fn creative_shulker_keeps_official_contents_through_file_placement_and_repacking() {
+    use mcsa_protocol::{JavaVersion, items};
+    let samples:serde_json::Value=serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/nested-item-observations.json")).unwrap();
+    let hex=samples["old"]["cases"].as_array().unwrap().iter().find(|c|c["name"]=="container_sparse").unwrap()["slot_hex"].as_str().unwrap();
+    let bytes=hex.as_bytes().as_chunks::<2>().0.iter().map(|s|u8::from_str_radix(std::str::from_utf8(s).unwrap(),16).unwrap()).collect::<Vec<_>>();
+    let (canonical,used)=items::decode(JavaVersion::V26_1_2,&bytes,false,items::Context::default()).unwrap();assert_eq!(used,bytes.len());
+    let untrusted=items::encode(JavaVersion::V26_1_2,canonical.as_ref(),true,items::Context::default()).unwrap();
+    let received=read_untrusted_slot(&mut Cursor::new(&untrusted)).unwrap().unwrap();
+    for n in 1..untrusted.len() {assert!(read_untrusted_slot(&mut Cursor::new(&untrusted[..n])).is_none());}
+    let saved=crate::stackdata::to_bytes(&received.extras());
+    let restored=stack("shulker_box").with_extras(crate::stackdata::from_bytes(&saved).unwrap());
+    assert_eq!(received,restored);
+    let shared=shared();let mut p=player(&shared);let held=p.inventory.selected_slot();p.inventory.set(held,Some(restored));
+    shared.world_in(p.dimension).lock().unwrap().set_block_silently(0,63,2,blocks::state_by_name("stone").unwrap());
+    let mut click=encode_varint(0);push_packed_position(&mut click,0,63,2);click.extend(encode_varint(1));
+    for _ in 0..3 {click.extend(0.5f32.to_be_bytes());}click.push(0);click.extend(encode_varint(1));
+    place_block(&click,&mut p,&shared).unwrap();assert!(p.inventory.slot(held).is_none());
+    let world=shared.world_in(p.dimension).lock().unwrap();let contents=&world.container(0,64,2).unwrap().slots;
+    assert_eq!(contents[0],Some(stack("stone").with_count(3)));assert!(contents[1..26].iter().all(Option::is_none));
+    assert_eq!(contents[26].unwrap().extras().potion,Some(13));
+    let repacked=containers::with_contents(stack("shulker_box"),contents);
+    let mut actual=Vec::new();push_slot(&mut actual,Some(repacked));assert_eq!(actual,bytes);
 }

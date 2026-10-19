@@ -10524,6 +10524,8 @@ fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
 
         if kind == 50 {
             if !crate::stackdata::read_bundle_component(data, &mut extras) { return None; }
+        } else if kind == crate::stackdata::COMPONENT_CONTAINER {
+            if !crate::stackdata::read_container_component(data, &mut extras) { return None; }
         } else { crate::stackdata::read_component(kind, data, &mut extras); }
     }
 
@@ -10534,6 +10536,7 @@ fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
         extras.name = None;
     }
 
+    if crate::stackdata::to_bytes(&extras).len() > u16::MAX as usize { return None; }
     Some(Some(stack.with_extras(extras)))
 }
 
