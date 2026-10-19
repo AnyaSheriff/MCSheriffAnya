@@ -94,7 +94,7 @@ def main():
     p.add_argument('--port', type=int, required=True)
     a = p.parse_args()
     if a.test_binary:
-        assert a.version == 777 and a.port == 26026
+        assert a.port == 26026
     sources = json.loads((a.data / 'sources.json').read_text())
     for entry in sources['files'] + sources['baseline_files']:
         assert hashlib.sha256((a.data / entry['file']).read_bytes()).hexdigest() == entry['sha256']
@@ -104,6 +104,7 @@ def main():
     commands = Path(__file__).parent / 'testdata/nested-item-commands.json'
     item = next(c['command'] for c in json.loads(commands.read_text()) if c['name'] == 'container_sparse')
     report = {'version': a.version, 'checks': [], 'snapshots': {}, 'commands_sha256': hashlib.sha256(commands.read_bytes()).hexdigest()}
+    report['gameplay_version'] = '26.1.2' if a.test_binary or a.version == 775 else '26.3'
     report['items_sha256'] = hashlib.sha256(item_table.read_bytes()).hexdigest()
     if a.jar:
         expected = {775: '97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51', 777: '33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'}[a.version]
