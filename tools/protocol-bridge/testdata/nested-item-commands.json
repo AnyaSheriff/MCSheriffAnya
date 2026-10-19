@@ -1,0 +1,38 @@
+[
+  {
+    "name": "bundle_basic",
+    "command": "bundle[bundle_contents=[{id:\"minecraft:stone\",count:3},{id:\"minecraft:red_wool\",count:5}]]"
+  },
+  {
+    "name": "bundle_nested",
+    "command": "blue_bundle[bundle_contents=[{id:\"minecraft:red_bundle\",count:1,components:{\"minecraft:bundle_contents\":[{id:\"minecraft:stone\",count:2}]}},{id:\"minecraft:paper\",count:1,components:{\"minecraft:custom_name\":\"A note\"}}]]"
+  },
+  {
+    "name": "bundle_book",
+    "command": "bundle[bundle_contents=[{id:\"minecraft:written_book\",count:1,components:{\"minecraft:written_book_content\":{title:\"Story\",author:\"Alex\",pages:[\"First page\"]}}}]]"
+  },
+  {
+    "name": "crossbow_arrow",
+    "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1}]]"
+  },
+  {
+    "name": "crossbow_tipped",
+    "command": "crossbow[charged_projectiles=[{id:\"minecraft:tipped_arrow\",count:1,components:{\"minecraft:potion_contents\":{potion:\"minecraft:poison\"}}},{id:\"minecraft:spectral_arrow\",count:1},{id:\"minecraft:arrow\",count:1}]]"
+  },
+  {
+    "name": "container_sparse",
+    "command": "shulker_box[container=[{slot:0,item:{id:\"minecraft:stone\",count:3}},{slot:26,item:{id:\"minecraft:potion\",count:1,components:{\"minecraft:potion_contents\":{potion:\"minecraft:swiftness\"}}}}]]"
+  },
+  {
+    "name": "container_empty",
+    "command": "shulker_box[container=[]]"
+  },
+  {
+    "name": "use_remainder",
+    "command": "apple[use_remainder={id:\"minecraft:paper\",count:2,components:{\"minecraft:custom_name\":\"A remainder\"}}]"
+  },
+  {
+    "name": "crossbow_intangible",
+    "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1},{id:\"minecraft:arrow\",count:1,components:{\"minecraft:intangible_projectile\":{}}},{id:\"minecraft:arrow\",count:1,components:{\"minecraft:intangible_projectile\":{}}}]]"
+  }
+]

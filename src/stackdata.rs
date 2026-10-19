@@ -822,7 +822,9 @@ fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, de
                 let Some(filtered)=reader.take(1) else {return false;};
                 if filtered==[1] && (if kind==54 {reader.string()} else {read_book_text(reader)}).is_none() {return false;}
             }
-            if kind == 55 && reader.take(1).is_none() { return false; }
+            if kind==55 {
+                book.resolved=match reader.take(1) {Some([0])=>false,Some([1])=>true,_=>return false};
+            }
             data.book=Some(book);
         }
         73 => { data.base_color = reader.varint().filter(|c| (0..16).contains(c)).map(|c|c as u8); }

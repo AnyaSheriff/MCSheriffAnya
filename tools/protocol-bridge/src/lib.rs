@@ -209,3 +209,4 @@ mod tests {
 mod item_observation_tests;
 
 mod trades;
+mod nested_items;

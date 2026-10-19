@@ -110,3 +110,16 @@ fn fishing_catch_grants_one_to_six_xp_and_one_point_of_wear() {
     assert!((1..=6).contains(&items.orbs().iter().map(|o|o.value).sum::<i32>()));
     assert!(items.items()[0].vz<0.0);
 }
+
+#[test]
+fn commanded_bundles_match_official_nested_inventory_slots() {
+    let commands:serde_json::Value=serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/nested-item-commands.json")).unwrap();
+    let samples:serde_json::Value=serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/nested-item-observations.json")).unwrap();
+    for name in ["bundle_basic","bundle_nested","bundle_book"] {
+        let command=commands.as_array().unwrap().iter().find(|c|c["name"]==name).unwrap()["command"].as_str().unwrap();
+        let expected=samples["old"]["cases"].as_array().unwrap().iter().find(|c|c["name"]==name).unwrap()["slot_hex"].as_str().unwrap();
+        let expected=expected.as_bytes().as_chunks::<2>().0.iter().map(|s|u8::from_str_radix(std::str::from_utf8(s).unwrap(),16).unwrap()).collect::<Vec<_>>();
+        let stack=crate::commands::stack_from_spec(command,1).unwrap().unwrap();let mut actual=Vec::new();push_slot(&mut actual,Some(stack));
+        assert_eq!(actual,expected,"{name}: содержимое команды не должно теряться");
+    }
+}

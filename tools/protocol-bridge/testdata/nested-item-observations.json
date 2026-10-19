@@ -1,0 +1,106 @@
+{
+  "old": {
+    "protocol": 775,
+    "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+    "cases": [
+      {
+        "name": "bundle_basic",
+        "command": "bundle[bundle_contents=[{id:\"minecraft:stone\",count:3},{id:\"minecraft:red_wool\",count:5}]]",
+        "slot_hex": "018d080100320201030000e301050000"
+      },
+      {
+        "name": "bundle_nested",
+        "command": "blue_bundle[bundle_contents=[{id:\"minecraft:red_bundle\",count:1,components:{\"minecraft:bundle_contents\":[{id:\"minecraft:stone\",count:2}]}},{id:\"minecraft:paper\",count:1,components:{\"minecraft:custom_name\":\"A note\"}}]]",
+        "slot_hex": "019908010032029c0801010032010102000085080101000608000641206e6f7465"
+      },
+      {
+        "name": "bundle_book",
+        "command": "bundle[bundle_contents=[{id:\"minecraft:written_book\",count:1,components:{\"minecraft:written_book_content\":{title:\"Story\",author:\"Alex\",pages:[\"First page\"]}}}]]",
+        "slot_hex": "018d0801003201c609010100370553746f72790004416c6578000108000a466972737420706167650000"
+      },
+      {
+        "name": "crossbow_arrow",
+        "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1}]]",
+        "slot_hex": "01bc0a010031018007010000"
+      },
+      {
+        "name": "crossbow_tipped",
+        "command": "crossbow[charged_projectiles=[{id:\"minecraft:tipped_arrow\",count:1,components:{\"minecraft:potion_contents\":{potion:\"minecraft:poison\"}}},{id:\"minecraft:spectral_arrow\",count:1},{id:\"minecraft:arrow\",count:1}]]",
+        "slot_hex": "01bc0a010031038e0a01010033011c0000008d0a0100008007010000"
+      },
+      {
+        "name": "container_sparse",
+        "command": "shulker_box[container=[{slot:0,item:{id:\"minecraft:stone\",count:3}},{slot:26,item:{id:\"minecraft:potion\",count:1,components:{\"minecraft:potion_contents\":{potion:\"minecraft:swiftness\"}}}}]]",
+        "slot_hex": "01c60401004b1b01010300000000000000000000000000000000000000000000000000000001e20801010033010d000000"
+      },
+      {
+        "name": "container_empty",
+        "command": "shulker_box[container=[]]",
+        "slot_hex": "01c6040000"
+      },
+      {
+        "name": "use_remainder",
+        "command": "apple[use_remainder={id:\"minecraft:paper\",count:2,components:{\"minecraft:custom_name\":\"A remainder\"}}]",
+        "slot_hex": "01fe0601001985080201000608000b412072656d61696e646572"
+      },
+      {
+        "name": "crossbow_intangible",
+        "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1},{id:\"minecraft:arrow\",count:1,components:{\"minecraft:intangible_projectile\":{}}},{id:\"minecraft:arrow\",count:1,components:{\"minecraft:intangible_projectile\":{}}}]]",
+        "slot_hex": "01bc0a0100310380070100008007010100160a008007010100160a00"
+      }
+    ],
+    "exit_code": 0
+  },
+  "new": {
+    "protocol": 777,
+    "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+    "cases": [
+      {
+        "name": "bundle_basic",
+        "command": "bundle[bundle_contents=[{id:\"minecraft:stone\",count:3},{id:\"minecraft:red_wool\",count:5}]]",
+        "slot_hex": "01810901003402010300008802050000"
+      },
+      {
+        "name": "bundle_nested",
+        "command": "blue_bundle[bundle_contents=[{id:\"minecraft:red_bundle\",count:1,components:{\"minecraft:bundle_contents\":[{id:\"minecraft:stone\",count:2}]}},{id:\"minecraft:paper\",count:1,components:{\"minecraft:custom_name\":\"A note\"}}]]",
+        "slot_hex": "018d09010034029009010100340101020000f9080101000608000641206e6f7465"
+      },
+      {
+        "name": "bundle_book",
+        "command": "bundle[bundle_contents=[{id:\"minecraft:written_book\",count:1,components:{\"minecraft:written_book_content\":{title:\"Story\",author:\"Alex\",pages:[\"First page\"]}}}]]",
+        "slot_hex": "01810901003401dc0a010100390553746f72790004416c6578000108000a466972737420706167650000"
+      },
+      {
+        "name": "crossbow_arrow",
+        "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1}]]",
+        "slot_hex": "01d30b01003301f107010000"
+      },
+      {
+        "name": "crossbow_tipped",
+        "command": "crossbow[charged_projectiles=[{id:\"minecraft:tipped_arrow\",count:1,components:{\"minecraft:potion_contents\":{potion:\"minecraft:poison\"}}},{id:\"minecraft:spectral_arrow\",count:1},{id:\"minecraft:arrow\",count:1}]]",
+        "slot_hex": "01d30b01003303a40b01010035011c000000a30b010000f107010000"
+      },
+      {
+        "name": "container_sparse",
+        "command": "shulker_box[container=[{slot:0,item:{id:\"minecraft:stone\",count:3}},{slot:26,item:{id:\"minecraft:potion\",count:1,components:{\"minecraft:potion_contents\":{potion:\"minecraft:swiftness\"}}}}]]",
+        "slot_hex": "01900501004d1b01010300000000000000000000000000000000000000000000000000000001f70901010035010d000000"
+      },
+      {
+        "name": "container_empty",
+        "command": "shulker_box[container=[]]",
+        "slot_hex": "0190050000"
+      },
+      {
+        "name": "use_remainder",
+        "command": "apple[use_remainder={id:\"minecraft:paper\",count:2,components:{\"minecraft:custom_name\":\"A remainder\"}}]",
+        "slot_hex": "01ef07010019f9080201000608000b412072656d61696e646572"
+      },
+      {
+        "name": "crossbow_intangible",
+        "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1},{id:\"minecraft:arrow\",count:1,components:{\"minecraft:intangible_projectile\":{}}},{id:\"minecraft:arrow\",count:1,components:{\"minecraft:intangible_projectile\":{}}}]]",
+        "slot_hex": "01d30b01003303f107010000f107010100160a00f107010100160a00"
+      }
+    ],
+    "exit_code": 0
+  }
+}

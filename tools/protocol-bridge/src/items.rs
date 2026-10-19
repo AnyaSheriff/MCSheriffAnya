@@ -137,6 +137,11 @@ fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, co
 }
 
 pub(crate) fn component_bytes(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context)->Result<Vec<u8>,Error>{
+    component_bytes_at(kind,input,from,to,context,0)
+}
+
+pub(crate) fn component_bytes_at(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize)->Result<Vec<u8>,Error>{
+    if matches!(kind,25|49|50|75){return crate::nested_items::remap(kind,input,from,to,context,depth);}
     if matches!(kind,16|18){return crate::item_components::remap(kind,input,from,to);}
     let start=input.0;component_data(kind,input,context)?;Ok(start[..start.len()-input.0.len()].to_vec())
 }
@@ -167,6 +172,7 @@ fn component_data(kind: u32, input: &mut Reader<'_>, context: Context) -> Result
             if !(0..=0xffffff).contains(&color) { return Err(Error::Invalid); }
         }
         48 => { input.count(1)?; }
+        22 => { if input.nbt()? != [10,0] { return Err(Error::Invalid); } } // intangible_projectile: пустой compound.
         63 => { input.count(4)?; }
         73 => { input.count(15)?; }
         _ => return crate::item_components::validate(kind,input),

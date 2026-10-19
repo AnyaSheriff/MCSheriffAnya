@@ -54,9 +54,9 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--test-binary',type=Path,required=True);p.add_argument('--data',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--join-only',action='store_true');p.add_argument('--client-dir',type=Path)
-    p.add_argument('--complex-items',action='store_true');p.add_argument('--trading',action='store_true');a=p.parse_args()
+    p.add_argument('--complex-items',action='store_true');p.add_argument('--trading',action='store_true');p.add_argument('--nested-items',action='store_true');a=p.parse_args()
     if a.trading:assert not a.client_dir and not a.join_only
-    if a.complex_items:assert a.client_dir and not a.join_only
+    if a.complex_items or a.nested_items:assert a.client_dir and not a.join_only
     protocol=json.loads((a.data/'protocol.json').read_text())
     sources=json.loads((a.data/'sources.json').read_text());entry=next(v for v in sources['files'] if v['file']=='protocol.json')
     assert hashlib.sha256((a.data/'protocol.json').read_bytes()).hexdigest()==entry['sha256']
@@ -151,6 +151,15 @@ def main():
                             command('give McsaProbe '+give);pump(.7)
                             assert 'Gave ' in log.read_text()[start:],'core rejected item '+name
                             report['checks'].append('complex-item-'+name)
+                    if a.nested_items:
+                        path=Path(__file__).parent/'testdata/nested-item-commands.json'
+                        cases=json.loads(path.read_text());report['nested_commands_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
+                        for name in ['bundle_basic','bundle_nested','bundle_book']:
+                            command('clear McsaProbe');pump(.2);start=len(log.read_text())
+                            give=next(e['command'] for e in cases if e['name']==name)
+                            command('give McsaProbe '+give);pump(.7)
+                            assert 'Gave ' in log.read_text()[start:],'core rejected nested item '+name
+                            report['checks'].append('nested-item-'+name)
                 assert 'Перевод Java-пакета:' not in log.read_text(),'translation failure'
             except BaseException as e:report['error']=str(e);raise
             finally:
