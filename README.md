@@ -11,9 +11,9 @@ A Minecraft-compatible game server written from scratch in Rust.
 [![Rust 2024](https://img.shields.io/badge/Rust-2024-CE422B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 [![MIT](https://img.shields.io/badge/License-MIT-3DA639?style=for-the-badge)](LICENSE)
 
-[![Last commit](https://img.shields.io/github/last-commit/MCSheriffAnya-Rust/MCSheriffAnya?style=flat-square&label=last%20commit)](https://github.com/MCSheriffAnya-Rust/MCSheriffAnya/commits/main)
-[![Stars](https://img.shields.io/github/stars/MCSheriffAnya-Rust/MCSheriffAnya?style=flat-square&label=stars)](https://github.com/MCSheriffAnya-Rust/MCSheriffAnya/stargazers)
-[![Issues](https://img.shields.io/github/issues/MCSheriffAnya-Rust/MCSheriffAnya?style=flat-square&label=issues)](https://github.com/MCSheriffAnya-Rust/MCSheriffAnya/issues)
+[![Last commit](https://img.shields.io/github/last-commit/AnyaSheriff/MCSheriffAnya?style=flat-square&label=last%20commit)](https://github.com/AnyaSheriff/MCSheriffAnya/commits/main)
+[![Stars](https://img.shields.io/github/stars/AnyaSheriff/MCSheriffAnya?style=flat-square&label=stars)](https://github.com/MCSheriffAnya-Rust/MCSheriffAnya/stargazers)
+[![Issues](https://img.shields.io/github/issues/AnyaSheriff/AnyaSheriff?style=flat-square&label=issues)](https://github.com/AnyaSheriff/MCSheriffAnya/issues)
 
 [![English](https://img.shields.io/badge/English-selected-0969DA?style=flat-square)](README.md)
 [![Русский](https://img.shields.io/badge/Русский-читать-555555?style=flat-square)](README_ru.md)
