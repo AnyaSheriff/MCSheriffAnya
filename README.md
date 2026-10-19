@@ -12,7 +12,7 @@ A Minecraft-compatible game server written from scratch in Rust.
 [![MIT](https://img.shields.io/badge/License-MIT-3DA639?style=for-the-badge)](LICENSE)
 
 [![Last commit](https://img.shields.io/github/last-commit/AnyaSheriff/MCSheriffAnya?style=flat-square&label=last%20commit)](https://github.com/AnyaSheriff/MCSheriffAnya/commits/main)
-[![Stars](https://img.shields.io/github/stars/AnyaSheriff/MCSheriffAnya?style=flat-square&label=stars)](https://github.com/MCSheriffAnya-Rust/MCSheriffAnya/stargazers)
+[![Stars](https://img.shields.io/github/stars/AnyaSheriff/MCSheriffAnya?style=flat-square&label=stars)](https://github.com/AnyaSheriff/MCSheriffAnya/stargazers)
 [![Issues](https://img.shields.io/github/issues/AnyaSheriff/AnyaSheriff?style=flat-square&label=issues)](https://github.com/AnyaSheriff/MCSheriffAnya/issues)
 
 [![English](https://img.shields.io/badge/English-selected-0969DA?style=flat-square)](README.md)
