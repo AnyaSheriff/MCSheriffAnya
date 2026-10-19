@@ -13,7 +13,7 @@ A Minecraft-compatible game server written from scratch in Rust.
 
 [![Last commit](https://img.shields.io/github/last-commit/AnyaSheriff/MCSheriffAnya?style=flat-square&label=last%20commit)](https://github.com/AnyaSheriff/MCSheriffAnya/commits/main)
 [![Stars](https://img.shields.io/github/stars/AnyaSheriff/MCSheriffAnya?style=flat-square&label=stars)](https://github.com/AnyaSheriff/MCSheriffAnya/stargazers)
-[![Issues](https://img.shields.io/github/issues/AnyaSheriff/AnyaSheriff?style=flat-square&label=issues)](https://github.com/AnyaSheriff/MCSheriffAnya/issues)
+[![Issues](https://img.shields.io/github/issues/AnyaSheriff/MCSheriffAnya?style=flat-square&label=issues)](https://github.com/AnyaSheriff/MCSheriffAnya/issues)
 
 [![English](https://img.shields.io/badge/English-selected-0969DA?style=flat-square)](README.md)
 [![Русский](https://img.shields.io/badge/Русский-читать-555555?style=flat-square)](README_ru.md)
@@ -95,7 +95,7 @@ endorsed by Mojang or Microsoft.
   verification (signature check via OpenID discovery); an unverified player can
   only use `help`, `list`, and `say` commands. Flight is disabled in survival
   mode. Player skins from Bedrock can be uploaded to Mojang via MineSkin for
-  Java players to see; Bedrock players see Java capes. Crafting, furnaces and the other
+  Java players to see them; Bedrock players see Java capes. Crafting, furnaces and the other
   workstations work, see [Status](#status).
 
 - Farm animals: cows, pigs, sheep and chickens (`summon cow|pig|sheep|chicken
@@ -125,17 +125,6 @@ endorsed by Mojang or Microsoft.
   are checked against the official server with the black box (`zombie-hit`,
   `zombie-burn`, `creeper-explode`, `skeleton-stand`; `skeleton-arrow`,
   `zombie-attack`, `spider-climb` are random and match by structure).
-  Drowned and husk are zombie variants: a husk does not burn in the sun and its
-  hit gives Hunger (140 ticks on Normal); a drowned walks the bottom or swims
-  straight to a target in water, attacks players at night or in water, throws
-  a trident every 40 ticks from 10 blocks, burns in the sun out of water, drops
-  copper ingots and what it holds; a zombie 30 s underwater shakes for 15 s and
-  becomes a drowned (a husk becomes a zombie); husks spawn in deserts, drowned
-  in rivers and oceans (`drowned-attack`, `drowned-swim`, `drowned-trident`,
-  `zombie-to-drowned`, `husk-hunger`). A
-  hostile mob killed by a player drops 5 experience points plus 1–3 per
-  equipment item; Bedrock players see the mobs and arrows and can fight them; main combat sounds
-  are sent, the rest of the sounds are not complete (see Status).
 - Experience orbs: real entities that fly to the nearest player and are picked
   up one per 2 ticks; the value is split greedily into 7, 3 and 1 (checked
   against the official server).
@@ -280,7 +269,7 @@ locked release build. Tag pushes (`v*`) publish the version without `v` and
 
 - `config/server.properties` — the same keys and format as the original
   server. Nothing from it is hard-coded.
-- `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`; `prefetch-chunks` / `prefetch-at-once` — how far beyond the view distance the world is generated ahead of the player (0 turns it off); `bedrock-port` and `bedrock-online-mode` (if true, only verified Xbox Live accounts join; if false, all join but only verified get operator rights); `autumn-forests` and `pink-cherry-groves` — small additions not found in vanilla (rare autumn patches in forests, pinkish grass and more petals in cherry groves; `false` keeps the world vanilla); `text-info` — a plain-text server summary for `telnet host port`, browsers and curl; `portal-delay` — how many ticks to stand in a portal before changing dimensions in survival mode (80 by default, as in vanilla); `portal-min-width`, `portal-min-height`, `portal-max-width`, `portal-max-height` — which portal openings light (2×3 to 21×21 by default, as in vanilla; each side 1 to 256); `send-error-reports` — enable anonymous error reports sent to developers (false by default; reports contain recent log lines with names, addresses and UUIDs removed).
+- `config/mcsa.properties` (MCSheriffAnya.properties, same `key=value` format as `server.properties`) — MCSheriffAnya's own settings: `debug`; `prefetch-chunks` / `prefetch-at-once` — how far[...]
 - `config/skins.toml` — which skin sources to use (Mojang, Ely.by) and whether to upload Bedrock player skins to Mojang via MineSkin so Java players can see them.
 - `ops.json` — operators, the original format.
 
@@ -294,8 +283,7 @@ only *run* and observed over the network; its jar is never opened. The bot can
 record both servers at once (`--parallel`). The whole suite is about 300
 scenarios. Redstone alone is 137 of them (pistons with slime, honey and flying
 machines, containers, rails and minecarts, TNT and lightning, sculk, the
-crafter, fluids, the Nether portal); all 137 match the original tick for tick
-in full. Where vanilla itself is random
+crafter, fluids; all 137 match the original tick for tick in full. Where vanilla itself is random
 (blast spread, fuse from an explosion, particle colours), the scenario says so
 in a `random` rule backed by a wiki quote or vanilla-against-vanilla
 recordings, and everything else is still compared exactly. See `tools/blackbox/README.md`.
