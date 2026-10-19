@@ -33,6 +33,12 @@ class Probe:
         self.phase = 'login'
         self.position = None
 
+    def observe_packet(self, name, payload):
+        pass
+
+    def tick(self):
+        pass
+
     def send(self, name, body=b''):
         packet = varint(mapping(self.protocol, 'play', 'toServer')[name]) + body
         if self.threshold is not None:
@@ -59,6 +65,8 @@ class Probe:
         names = {v: k for k, v in mapping(self.protocol, self.phase, 'toClient').items()}
         name = names.get(packet_id, f'unknown-{packet_id}')
         payload = data.read()
+        if self.phase == 'play':
+            self.observe_packet(name, payload)
         record = {'phase': self.phase, 'name': name, 'id': packet_id, 'size': len(payload), 'sha256': hashlib.sha256(payload).hexdigest()}
         data = io.BytesIO(payload)
         if self.phase == 'login':
@@ -114,6 +122,7 @@ class Probe:
     def pump(self, seconds, predicate=None):
         deadline = time.monotonic() + seconds
         while time.monotonic() < deadline:
+            self.tick()
             if select.select([self.sock], [], [], .05)[0]:
                 record = self.receive()
                 if predicate and predicate(record):
