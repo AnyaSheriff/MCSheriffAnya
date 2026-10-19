@@ -98,6 +98,7 @@ def main():
     p.add_argument('--data', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--port', type=int, default=26023)
+    p.add_argument('--snowy', action='store_true', help='Проверить metadata травы/подзола/мицелия под снегом')
     a = p.parse_args()
     with a.jar.open('rb') as f:
         assert hashlib.file_digest(f, 'sha1').hexdigest() == '886945bfb2b978778c3a0288fd7fab09d315b25f'
@@ -146,14 +147,28 @@ def main():
                 client.pump(10, lambda r: r['name'] == 'position')
                 client.pump(3)
                 expected = {}
-                for section_y, count in enumerate([1, 16, 17, 33, 65, 129, 300], start=4):
-                    y = section_y * 16
-                    command(f'fill 0 {y} 0 15 {y+15} 15 stone')
-                    values = [16] * 4096
-                    for i, state in enumerate(states[:count - 1]):
-                        command(f'setblock {i%16} {y+i//256} {(i//16)%16} {names[state//16]} {state%16}')
-                        values[i] = state
-                    expected[section_y] = values
+                if a.snowy:
+                    command('fill 0 64 0 15 79 15 air')
+                    command('fill 0 64 0 15 69 15 stone')
+                    values = [16] * (6 * 256) + [0] * (10 * 256)
+                    for row, (block, meta) in enumerate([(2, 0), (3, 2), (110, 0)]):
+                        for column, (above, snow_meta) in enumerate([(0, 0), (78, 0), (80, 0)]):
+                            x, z = 2 + column * 4, 2 + row * 4
+                            command(f'setblock {x} 70 {z} {names[block]} {meta}')
+                            values[6 * 256 + z * 16 + x] = block * 16 + meta
+                            if above:
+                                command(f'setblock {x} 71 {z} {names[above]} {snow_meta}')
+                                values[7 * 256 + z * 16 + x] = above * 16 + snow_meta
+                    expected[4] = values
+                else:
+                    for section_y, count in enumerate([1, 16, 17, 33, 65, 129, 300], start=4):
+                        y = section_y * 16
+                        command(f'fill 0 {y} 0 15 {y+15} 15 stone')
+                        values = [16] * 4096
+                        for i, state in enumerate(states[:count - 1]):
+                            command(f'setblock {i%16} {y+i//256} {(i//16)%16} {names[state//16]} {state%16}')
+                            values[i] = state
+                        expected[section_y] = values
                 command('say MCSA_CHUNKS_READY')
                 deadline = time.monotonic() + 60
                 while 'MCSA_CHUNKS_READY' not in log.read_text():
@@ -168,10 +183,10 @@ def main():
                 client.pump(10, lambda r: r['name'] == 'position')
                 client.pump(5)
                 report['cases'] = client.cases
-                assert len(client.cases) == 7, len(client.cases)
+                assert len(client.cases) == (1 if a.snowy else 7), len(client.cases)
                 widths = [c['width'] for c in client.cases]
-                assert set(widths) == {4, 5, 6, 7, 8, 13}, widths
-                report['checks'].append('seven-authored-sections-all-palette-widths')
+                assert set(widths) == ({4} if a.snowy else {4, 5, 6, 7, 8, 13}), widths
+                report['checks'].append('snowy-neighbours-nine-cases' if a.snowy else 'seven-authored-sections-all-palette-widths')
             except BaseException as error:
                 report['error'] = str(error)
                 raise

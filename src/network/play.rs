@@ -32,7 +32,7 @@ use tokio::time::timeout;
 
 use super::nbt;
 use super::keep_alive::KeepAlive;
-use super::packet::{Outgoing, PacketInfo, decode_varint, is_client_disconnect, read_play_packet};
+use super::packet::{Outgoing, PacketInfo, decode_varint, is_client_disconnect};
 #[cfg(test)]
 use super::packet::read_packet;
 use super::types;
@@ -1436,6 +1436,7 @@ async fn read_confirm_teleportation(
 ) -> io::Result<Option<configuration::ClientLook>> {
     let mut look = None;
     let version = stream.stream().client_version();
+    let legacy = stream.stream().legacy.clone();
 
     // Клиент подтвердит только то, что получил.
     stream.flush().await?;
@@ -1450,7 +1451,7 @@ async fn read_confirm_teleportation(
                     None => std::future::pending().await,
                 }
             } => return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "вход прерван")),
-            packet = tokio::time::timeout_at(deadline, read_play_packet(stream.stream(), version)) => {
+            packet = tokio::time::timeout_at(deadline, super::packet::read_play_packet_with_legacy(stream.stream(), version, legacy.as_ref())) => {
                 packet.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "нет подтверждения переноса"))??
             }
         };
@@ -5593,6 +5594,10 @@ async fn send_chunk(
     chunk_z: i32,
     light: &ChunkLight,
 ) -> io::Result<()> {
+    if let Some((window, sky)) = stream.legacy_view()? {
+        let chunk = legacy_chunks::snapshot(world, chunk_x, chunk_z, light, window, sky)?;
+        return stream.send_legacy_chunk(&chunk).await;
+    }
     let mut body = encode_varint(CHUNK_DATA);
 
     push_i32(&mut body, chunk_x);
@@ -7096,13 +7101,14 @@ impl Inbound {
         // передаётся из Configuration без сброса IV.
         let mut own = tokio::io::BufReader::new(stream.take_reader()?);
         let version = own.get_ref().client_version();
+        let legacy = own.get_ref().legacy.clone();
         let (sender, packets) = tokio::sync::mpsc::unbounded_channel();
         let waiting = shared.waiting_for_tick.clone();
         let starts = shared.tick_starts.subscribe();
 
         let reader = tokio::spawn(async move {
             loop {
-                let read = read_play_packet(&mut own, version).await;
+                let read = super::packet::read_play_packet_with_legacy(&mut own, version, legacy.as_ref()).await;
                 let arrived = *starts.borrow();
                 let failed = read.is_err();
 
@@ -12701,3 +12707,5 @@ mod chunk_compat_tests;
 
 #[cfg(test)]
 mod legacy_action_tests;
+
+mod legacy_chunks;

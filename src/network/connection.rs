@@ -8,6 +8,7 @@ use aes::cipher::{BlockDecryptMut, BlockEncryptMut, KeyIvInit};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 pub type Connection = CryptoStream<tokio::net::TcpStream>;
+pub type LegacySession = std::sync::Arc<std::sync::Mutex<mcsa_protocol::legacy_play::Session>>;
 type Encryptor = cfb8::Encryptor<aes::Aes128>;
 type Decryptor = cfb8::Decryptor<aes::Aes128>;
 
@@ -18,11 +19,12 @@ pub struct CryptoStream<S> {
     read_taken: bool,
     pub protocol: Option<mcsa_protocol::Negotiated>,
     pub login_session_id: Option<[u8; 16]>,
+    pub legacy: Option<LegacySession>,
 }
 
 impl<S> CryptoStream<S> {
     pub fn new(inner: S) -> Self {
-        Self { inner, encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None }
+        Self { inner, encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None, legacy: None }
     }
 
     pub fn client_version(&self) -> mcsa_protocol::JavaVersion {
@@ -56,6 +58,7 @@ impl Connection {
         reader.decryptor = self.decryptor.take();
         reader.protocol = self.protocol;
         reader.login_session_id = self.login_session_id;
+        reader.legacy = self.legacy.clone();
         self.read_taken = true;
         Ok(reader)
     }

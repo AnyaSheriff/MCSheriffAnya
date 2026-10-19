@@ -1,0 +1,11 @@
+{
+  "protocol": 340,
+  "jar_sha1": "886945bfb2b978778c3a0288fd7fab09d315b25f",
+  "backgrounds": [
+    "minecraft:textures/gui/advancements/backgrounds/adventure.png",
+    "minecraft:textures/gui/advancements/backgrounds/end.png",
+    "minecraft:textures/gui/advancements/backgrounds/husbandry.png",
+    "minecraft:textures/gui/advancements/backgrounds/nether.png",
+    "minecraft:textures/gui/advancements/backgrounds/stone.png"
+  ]
+}

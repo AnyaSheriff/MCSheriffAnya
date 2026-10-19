@@ -1,0 +1,37 @@
+{
+  "protocol": 340,
+  "jar_sha1": "886945bfb2b978778c3a0288fd7fab09d315b25f",
+  "actor_entity": 47,
+  "observations": [
+    {
+      "stage": "left-no-skin",
+      "packet": "entity_metadata",
+      "hex": "2f0d00000e0000ff"
+    },
+    {
+      "stage": "right-all-skin",
+      "packet": "entity_metadata",
+      "hex": "2f0d007f0e0001ff"
+    },
+    {
+      "stage": "sneaking",
+      "packet": "entity_metadata",
+      "hex": "2f000002ff"
+    },
+    {
+      "stage": "standing",
+      "packet": "entity_metadata",
+      "hex": "2f000000ff"
+    },
+    {
+      "stage": "glowing",
+      "packet": "entity_metadata",
+      "hex": "2f000040ff"
+    },
+    {
+      "stage": "invisible",
+      "packet": "entity_metadata",
+      "hex": "2f000060ff"
+    }
+  ]
+}

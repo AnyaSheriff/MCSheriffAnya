@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import io
 import json
+import re
 from pathlib import Path
 import select
 import socket
@@ -27,8 +28,9 @@ def string(data):
 
 
 class Probe:
-    def __init__(self, sock, protocol, report):
+    def __init__(self, sock, protocol, report, name="McsaProbe"):
         self.sock, self.protocol, self.report = sock, protocol, report
+        self.name = name
         self.threshold = None
         self.phase = 'login'
         self.position = None
@@ -77,8 +79,8 @@ class Probe:
                 record['threshold'] = self.threshold
             elif name == 'success':
                 ident, username = string(data), string(data)
-                expected = uuid.UUID(bytes=hashlib.md5(b'OfflinePlayer:McsaProbe').digest(), version=3)
-                assert ident == str(expected) and username == 'McsaProbe'
+                expected = uuid.UUID(bytes=hashlib.md5(('OfflinePlayer:' + self.name).encode()).digest(), version=3)
+                assert ident == str(expected) and username == self.name
                 record.update(uuid=ident, username=username)
                 self.phase = 'play'
             else:
@@ -114,6 +116,35 @@ class Probe:
             assert not data.read(), name
         elif name == 'keep_alive':
             self.send('keep_alive', payload)
+        elif name == 'entity_update_attributes':
+            record['payload'] = payload.hex()
+            record['entity'] = read_varint(data.read)
+            count = struct.unpack('>i', data.read(4))[0]
+            assert 0 <= count <= 1024
+            entries = []
+            for _ in range(count):
+                key, base = string(data), struct.unpack('>d', data.read(8))[0]
+                modifiers = []
+                for _ in range(read_varint(data.read)):
+                    ident = str(uuid.UUID(bytes=data.read(16)))
+                    amount, operation = struct.unpack('>dB', data.read(9))
+                    assert operation <= 2
+                    modifiers.append({'uuid': ident, 'amount': amount, 'operation': operation})
+                entries.append({'name': key, 'base': base, 'modifiers': modifiers})
+            assert not data.read()
+            record['attributes'] = entries
+        elif name == 'unlock_recipes':
+            record['payload'] = payload.hex()
+            action = read_varint(data.read)
+            assert action in (0, 1, 2)
+            opened, filtering = struct.unpack('>BB', data.read(2))
+            recipes = [read_varint(data.read) for _ in range(read_varint(data.read))]
+            highlights = [read_varint(data.read) for _ in range(read_varint(data.read))] if action == 0 else []
+            assert not data.read()
+            record.update(action=action, opened=opened, filtering=filtering, recipes=recipes, highlights=highlights)
+        elif name == 'advancements':
+            record['payload'] = payload.hex()
+            record['backgrounds'] = sorted(set(x.decode() for x in re.findall(rb'minecraft:textures/[a-z0-9_/.]+\.png',payload)))
         elif name == 'kick_disconnect':
             raise AssertionError('Server disconnected test player')
         self.report['packets'].append(record)
@@ -137,6 +168,9 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--port', type=int, default=26023)
     parser.add_argument('--compression', type=int, choices=[-1, 256], required=True)
+    parser.add_argument('--attributes', action='store_true')
+    parser.add_argument('--recipes', action='store_true')
+    parser.add_argument('--advancements', action='store_true')
     args = parser.parse_args()
     assert hashlib.sha1(args.jar.read_bytes()).hexdigest() == '886945bfb2b978778c3a0288fd7fab09d315b25f'
     manifest = json.loads((args.data / 'sources.json').read_text())
@@ -174,6 +208,42 @@ def main():
                 position = client.pump(5, lambda r: r['name'] == 'position')
                 assert position['values'] == [4.5, 65, -2.5, 90, 10]
                 report['checks'].append('absolute-teleport')
+                if args.advancements:
+                    for key in ['story/root','nether/root','end/root','adventure/root','husbandry/root']:
+                        command(f'advancement grant McsaProbe only minecraft:{key}')
+                        client.pump(1)
+                    backgrounds = {b for r in report['packets'] for b in r.get('backgrounds',[])}
+                    assert len(backgrounds) == 5, backgrounds
+                    report['checks'].append('five-explicit-advancement-root-backgrounds')
+                if args.recipes:
+                    for recipe in ['crafting_table', 'stick', 'oak_planks']:
+                        command(f'recipe take McsaProbe minecraft:{recipe}')
+                        client.pump(.3)
+                        command(f'recipe give McsaProbe minecraft:{recipe}')
+                        packet = client.pump(5, lambda r: r['name'] == 'unlock_recipes' and r.get('action') == 1 and bool(r.get('recipes')))
+                        assert len(packet['recipes']) == 1
+                        report.setdefault('recipe_ids', {})[recipe] = packet['recipes'][0]
+                    report['checks'].append('three-explicit-recipe-identifiers')
+                if args.attributes:
+                    entity = next(r['entity'] for r in report['packets'] if r['name'] == 'login')
+                    for action in (3, 4):
+                        client.send('entity_action', varint(entity) + varint(action) + b'\0')
+                        client.pump(1)
+                    command('replaceitem entity McsaProbe slot.weapon.mainhand minecraft:diamond_sword 1')
+                    client.pump(1)
+                    command('effect McsaProbe minecraft:speed 30 1')
+                    client.pump(1)
+                    command('effect McsaProbe clear')
+                    client.pump(1)
+                    for value in ('replaceitem entity McsaProbe slot.armor.chest minecraft:diamond_chestplate 1',
+                                  'effect McsaProbe minecraft:health_boost 30 1',
+                                  'effect McsaProbe minecraft:luck 30 1',
+                                  'effect McsaProbe clear'):
+                        command(value)
+                        client.pump(1)
+                    records = [r for r in report['packets'] if r['name'] == 'entity_update_attributes']
+                    assert len(records) >= 5, len(records)
+                    report['checks'].append('attributes-sprint-held-item-effect')
                 command('gamemode survival McsaProbe')
                 mode = client.pump(5, lambda r: r['name'] == 'game_state_change' and r.get('reason') == 3)
                 assert mode['value'] == 0

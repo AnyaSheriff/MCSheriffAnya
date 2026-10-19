@@ -899,3 +899,12 @@ pub const BLOCKS: &[(u16, u32)] = &[
     (4082, 21724), // minecraft:structure_block[mode=corner]
     (4083, 21725), // minecraft:structure_block[mode=data]
 ];
+pub const SNOWY: &[(u32, u16, bool)] = &[
+    (8, 32, true),
+    (9, 32, false),
+    (12, 50, true),
+    (13, 50, false),
+    (8918, 1760, true),
+    (8919, 1760, false),
+];
+pub const SNOW: &[u32] = &[6919, 6920, 6921, 6922, 6923, 6924, 6925, 6926, 6928];

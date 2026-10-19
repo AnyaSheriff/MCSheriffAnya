@@ -1,0 +1,260 @@
+{
+  "jar_sha1": "886945bfb2b978778c3a0288fd7fab09d315b25f",
+  "protocol": 340,
+  "observations": [
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 36,
+      "sha256": "c8db683b351475755a018531d6137206d69c520777c5ad7f8113150c416cb870",
+      "payload": "2e000000011567656e657269632e6d6f76656d656e7453706565643fb99999a000000000",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.10000000149011612,
+          "modifiers": []
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 61,
+      "sha256": "8dc4de6b495905e8bca87d02aedfdfa859a0b8e5de37ed04f298b33ff52ef324",
+      "payload": "2e000000011567656e657269632e6d6f76656d656e7453706565643fb99999a000000001662a6b8dda3e4c1c881396ea6097278d3fd333334000000002",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.10000000149011612,
+          "modifiers": [
+            {
+              "uuid": "662a6b8d-da3e-4c1c-8813-96ea6097278d",
+              "amount": 0.30000001192092896,
+              "operation": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 36,
+      "sha256": "c8db683b351475755a018531d6137206d69c520777c5ad7f8113150c416cb870",
+      "payload": "2e000000011567656e657269632e6d6f76656d656e7453706565643fb99999a000000000",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.10000000149011612,
+          "modifiers": []
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 59,
+      "sha256": "a5199b1e651d715ec66fb0070d1a1e3d0a7f95a3eb40b4d6b90ef57bf0af524d",
+      "payload": "2e000000011367656e657269632e61747461636b5370656564401000000000000001fa233e1c41804865b01bbcce9785aca3c00333334000000000",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.attackSpeed",
+          "base": 4.0,
+          "modifiers": [
+            {
+              "uuid": "fa233e1c-4180-4865-b01b-bcce9785aca3",
+              "amount": -2.4000000953674316,
+              "operation": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 61,
+      "sha256": "38ff3c81a8cd5e6f0fd838390ea64ab11a4d84a2d42fb1442c4369f61105c932",
+      "payload": "2e000000011567656e657269632e6d6f76656d656e7453706565643fb99999a00000000191aeaa56376b4498935b2f7f680706353fd99999a000000002",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.10000000149011612,
+          "modifiers": [
+            {
+              "uuid": "91aeaa56-376b-4498-935b-2f7f68070635",
+              "amount": 0.4000000059604645,
+              "operation": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 36,
+      "sha256": "c8db683b351475755a018531d6137206d69c520777c5ad7f8113150c416cb870",
+      "payload": "2e000000011567656e657269632e6d6f76656d656e7453706565643fb99999a000000000",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.10000000149011612,
+          "modifiers": []
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 110,
+      "sha256": "410b184e7d55fbde5aa4a0e384ab06d4c73d43f097fe0b4b795289b6cbaa534b",
+      "payload": "2e000000020d67656e657269632e61726d6f720000000000000000019f3d476dc1184544836564846904b48e4020000000000000001667656e657269632e61726d6f72546f7567686e6573730000000000000000019f3d476dc1184544836564846904b48e400000000000000000",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.armor",
+          "base": 0.0,
+          "modifiers": [
+            {
+              "uuid": "9f3d476d-c118-4544-8365-64846904b48e",
+              "amount": 8.0,
+              "operation": 0
+            }
+          ]
+        },
+        {
+          "name": "generic.armorToughness",
+          "base": 0.0,
+          "modifiers": [
+            {
+              "uuid": "9f3d476d-c118-4544-8365-64846904b48e",
+              "amount": 2.0,
+              "operation": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 57,
+      "sha256": "114f510f9ddca1fe8e71ddb44d359ade5042ddb916c944f884d5e30c8f4ebc22",
+      "payload": "2e000000011167656e657269632e6d61784865616c74684034000000000000015d6f0ba2118646acb896c61c5cee99cc402000000000000000",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.maxHealth",
+          "base": 20.0,
+          "modifiers": [
+            {
+              "uuid": "5d6f0ba2-1186-46ac-b896-c61c5cee99cc",
+              "amount": 8.0,
+              "operation": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 52,
+      "sha256": "fb6cf95521f8b72ae27f1821db60a1cad0c6adc568de649927e283c6ae9d8574",
+      "payload": "2e000000010c67656e657269632e6c75636b00000000000000000103c3c89d70374b42869fb146bcb64d2e400000000000000000",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.luck",
+          "base": 0.0,
+          "modifiers": [
+            {
+              "uuid": "03c3c89d-7037-4b42-869f-b146bcb64d2e",
+              "amount": 2.0,
+              "operation": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 54,
+      "sha256": "587619151f87ef3b64c9645dbfd86bb95f47e36f412385659d30644c9ad77bb8",
+      "payload": "2e000000020c67656e657269632e6c75636b0000000000000000001167656e657269632e6d61784865616c7468403400000000000000",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.luck",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.maxHealth",
+          "base": 20.0,
+          "modifiers": []
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 89,
+      "sha256": "a4e839bb3c243859d7057d4e7202d82a54101f2349145e4a18552c99f96a9424",
+      "payload": "2e000000030d67656e657269632e61726d6f720000000000000000001667656e657269632e61726d6f72546f7567686e6573730000000000000000001367656e657269632e61747461636b5370656564401000000000000000",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.armor",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.armorToughness",
+          "base": 0.0,
+          "modifiers": []
+        },
+        {
+          "name": "generic.attackSpeed",
+          "base": 4.0,
+          "modifiers": []
+        }
+      ]
+    },
+    {
+      "phase": "play",
+      "name": "entity_update_attributes",
+      "id": 78,
+      "size": 36,
+      "sha256": "c8db683b351475755a018531d6137206d69c520777c5ad7f8113150c416cb870",
+      "payload": "2e000000011567656e657269632e6d6f76656d656e7453706565643fb99999a000000000",
+      "entity": 46,
+      "attributes": [
+        {
+          "name": "generic.movementSpeed",
+          "base": 0.10000000149011612,
+          "modifiers": []
+        }
+      ]
+    }
+  ]
+}

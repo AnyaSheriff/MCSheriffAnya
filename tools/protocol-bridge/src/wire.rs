@@ -17,6 +17,7 @@ pub enum Error {
     MissingEntityContext,
     Entity(crate::entities::Error),
     Item(crate::items::Error),
+    LegacyItem(crate::legacy_items::Error),
     Chunk(crate::chunk::Error),
     BlockEntity(crate::block_entities::Error),
     Light(crate::light::Error),

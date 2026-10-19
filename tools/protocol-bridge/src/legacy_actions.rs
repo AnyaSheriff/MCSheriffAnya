@@ -73,6 +73,10 @@ pub fn translate(body: &[u8], context: Context) -> Result<Vec<u8>, Error> {
             out.extend([0, 1, 0]); // фильтр текста, серверный список, частицы all
         }
         0x03 => { out.push(0x0c); uint(&mut out, bounded(&mut input, 1)?); }
+        0x19 => {
+            let action=bounded(&mut input,1)?; out.extend([0x32,action as u8]);
+            if action==0 { string(&mut out,input.string()?); }
+        }
         0x08 => { out.push(0x13); uint(&mut out, u32::from(input.take(1)?[0])); }
         0x1a => {
             out.push(0x35);
@@ -89,6 +93,16 @@ pub fn translate(body: &[u8], context: Context) -> Result<Vec<u8>, Error> {
             // право летать и скорости определяются сервером.
             for _ in 0..2 { if angle(&mut input)? < 0.0 { return Err(Error::Invalid); } }
             out.push(flags & 2);
+        }
+        0x15 => {
+            let entity = input.uint()?; let action = bounded(&mut input, 8)?;
+            let jump = bounded(&mut input, 100)?;
+            if action < 2 {
+                if jump != 0 { return Err(Error::Invalid); }
+                out.extend([0x2b, if action == 0 {0x20} else {0}]);
+            } else {
+                out.push(0x2a); uint(&mut out,entity); uint(&mut out,action - 2); uint(&mut out,jump);
+            }
         }
         0x14 => {
             out.push(0x29); uint(&mut out, bounded(&mut input, 6)?);
@@ -150,6 +164,15 @@ mod tests {
     use super::*;
     fn context() -> Context {
         Context { window: HeightWindow::new(-64).unwrap(), pose: Pose { x: 0.0, y: -1.0, z: 0.0, yaw: 32.0, pitch: -12.0 } }
+    }
+    #[test]
+    fn old_entity_actions_have_explicit_native_numbers() {
+        assert_eq!(translate(&[0x15,42,0,0],context()).unwrap(),[0x2b,0x20]);
+        assert_eq!(translate(&[0x15,42,1,0],context()).unwrap(),[0x2b,0]);
+        for action in 2..=8 { assert_eq!(translate(&[0x15,42,action,0],context()).unwrap(),[0x2a,42,action-2,0]); }
+        for packet in [&[0x15,42,9,0][..], &[0x15,42,5,101], &[0x15,42,0,1]] {
+            assert!(translate(packet,context()).is_err());
+        }
     }
     #[test]
     fn actual_client_initial_packets_enter_the_native_format() {

@@ -200,8 +200,20 @@ pub async fn write_registry<S: AsyncWrite + Unpin>(stream: &mut CryptoStream<S>,
 
 /// Поток уже расшифрован CryptoStream, кадр уже распакован read_packet.
 /// Эта функция применяется только в Play: одинаковый ID в другой фазе иной.
+#[cfg(test)]
 pub async fn read_play_packet<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion) -> io::Result<PacketInfo> {
+    read_play_packet_with_legacy(stream, version, None).await
+}
+
+pub async fn read_play_packet_with_legacy<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion, legacy: Option<&super::connection::LegacySession>) -> io::Result<PacketInfo> {
     let packet = read_packet(stream).await?;
+    if version == JavaVersion::V1_12_2 {
+        let legacy = legacy.ok_or_else(|| io::Error::other("Нет состояния соединения1.12.2"))?;
+        let body = legacy.lock().map_err(|_| io::Error::other("Состояние соединения1.12.2 повреждено"))?
+            .serverbound(&packet.body).map_err(translate_error)?;
+        let (id, _) = decode_varint(&body)?;
+        return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false });
+    }
     // Confirm имеет ID0 в обеих проверенных версиях. Его новые поля нужны
     // обработчику, поэтому не пропускаем их через обычный перевод в775.
     if packet.id == 0 && matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) {
@@ -254,6 +266,7 @@ pub struct Outgoing<'a> {
     failed: bool,
     version: JavaVersion,
     entities: mcsa_protocol::entities::Tracker,
+    legacy: Option<super::connection::LegacySession>,
 }
 
 enum Transport<'a> {
@@ -272,16 +285,17 @@ fn item_context() -> mcsa_protocol::items::Context {
 impl<'a> Outgoing<'a> {
     pub fn new(stream: &'a mut Connection) -> Self {
         let version = stream.client_version();
-        Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false, version, entities: Default::default() }
+        let legacy = stream.legacy.clone();
+        Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false, version, entities: Default::default(), legacy }
     }
 
     /// Проверки пакетов без сетевых сокетов и запущенного сервера.
     #[cfg(test)]
-    pub fn capture() -> Self { Self { stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, entities: Default::default() } }
+    pub fn capture() -> Self { Self { stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, entities: Default::default(), legacy: None } }
 
     #[cfg(test)]
     pub(crate) fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
-        Self { stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, entities: Default::default() }
+        Self { stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, entities: Default::default(), legacy: None }
     }
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
@@ -291,6 +305,23 @@ impl<'a> Outgoing<'a> {
 
     pub async fn send_chunk(&mut self, body: &[u8], context: mcsa_protocol::chunk::Context) -> io::Result<()> {
         self.send_with_context(body, wire::Context { chunk: Some(context), ..wire::Context::default() }).await
+    }
+
+    pub fn legacy_view(&self) -> io::Result<Option<(mcsa_protocol::legacy_chunk::HeightWindow, bool)>> {
+        self.legacy.as_ref().map(|legacy| {
+            let legacy = legacy.lock().map_err(|_| io::Error::other("Состояние соединения1.12.2 повреждено"))?;
+            let dimension = legacy.dimension.ok_or_else(|| io::Error::other("Нет измерения1.12.2"))?;
+            Ok((legacy.window, dimension == 0))
+        }).transpose()
+    }
+
+    pub async fn send_legacy_chunk(&mut self, chunk: &mcsa_protocol::legacy_chunk::Chunk) -> io::Result<()> {
+        if self.version != JavaVersion::V1_12_2 { return Err(io::Error::other("Чанк340 для другого клиента")); }
+        let (_, sky) = self.legacy_view()?.ok_or_else(|| io::Error::other("Нет окна1.12.2"))?;
+        let mut body = vec![0x20]; body.extend(chunk.encode(sky).map_err(translate_error)?);
+        frame(&mut self.buffer, &body, compression_threshold());
+        if self.buffer.len() >= OUTGOING_LIMIT { self.flush().await?; }
+        Ok(())
     }
 
     pub async fn send_login(&mut self, body: &[u8], online_mode: bool) -> io::Result<()> {
@@ -305,7 +336,13 @@ impl<'a> Outgoing<'a> {
             super::configuration::REQUIRED_REGISTRIES.iter().map(|(name,entries)| (*name,entries.len() as u32))
                 .chain(std::iter::once(("minecraft:damage_type", super::configuration::DAMAGE_TYPES.len() as u32))).collect());
         context.metadata_registry_counts = &COUNTS;
-        if self.version == wire::INTERNAL {
+        if self.version == JavaVersion::V1_12_2 {
+            let legacy = self.legacy.as_ref().ok_or_else(|| io::Error::other("Нет состояния соединения1.12.2"))?;
+            static ENCHANTMENTS: std::sync::LazyLock<Vec<&'static str>> = std::sync::LazyLock::new(|| crate::stackdata::ENCHANTMENTS.iter().map(|(name,_)| *name).collect());
+            let translated = legacy.lock().map_err(|_| io::Error::other("Состояние соединения1.12.2 повреждено"))?
+                .clientbound(body, &ENCHANTMENTS).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("Пакет340 {:02x?}: {error:?}", body.first())))?;
+            for body in translated { frame(&mut self.buffer, &body, compression_threshold()); }
+        } else if self.version == wire::INTERNAL {
             let body = self.entities.translate(wire::INTERNAL,self.version,body,context).map_err(translate_error)?;
             frame(&mut self.buffer, &body, compression_threshold());
         } else {
@@ -367,11 +404,15 @@ impl<'a> Outgoing<'a> {
     pub async fn disconnect(&mut self, body: &[u8]) {
         if self.failed { return; }
         self.buffer.clear();
+        self.control = None;
+        self.deadline = Some(Instant::now() + Duration::from_millis(250));
+        if self.version == JavaVersion::V1_12_2 {
+            if self.send(body).await.is_ok() { let _ = self.flush().await; }
+            return;
+        }
         let Ok(body) = wire::translate(State::Play, Direction::Clientbound,
             wire::INTERNAL, self.version, body) else { return; };
         frame(&mut self.buffer, &body, compression_threshold());
-        self.control = None;
-        self.deadline = Some(Instant::now() + Duration::from_millis(250));
         let _ = self.flush().await;
     }
 

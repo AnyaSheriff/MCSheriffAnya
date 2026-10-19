@@ -578,6 +578,8 @@ async fn handle_connection(
             #[cfg(test)]
             let negotiated = if shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V26_3) && handshake.protocol_version==777 {
                 Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V26_3,native:network::NATIVE_VERSION})
+            } else if shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V1_12_2) && handshake.protocol_version==340 {
+                Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V1_12_2,native:network::NATIVE_VERSION})
             } else {negotiated};
             if negotiated.is_err() {
                 log_info!(
@@ -599,6 +601,20 @@ async fn handle_connection(
             }
 
             socket.protocol = negotiated.ok();
+            let legacy = socket.client_version() == mcsa_protocol::JavaVersion::V1_12_2;
+            if legacy {
+                // В340 нет Configuration-диалога. До реализации старого
+                // интерфейса нельзя обходить парольный барьер.
+                if shared.settings.auth_enabled || shared.auth.is_some() {
+                    send_login_disconnect(&mut socket, "Вход с 1.12.2 при включённой защите паролем ещё не поддерживается").await?;
+                    return Ok(());
+                }
+                let state = mcsa_protocol::legacy_play::Session::new(
+                    mcsa_protocol::legacy_chunk::HeightWindow::new(-64).map_err(|error| io::Error::other(format!("Окно340: {error:?}")))?,
+                    properties.difficulty,
+                ).map_err(|error| io::Error::other(format!("Состояние340: {error:?}")))?;
+                socket.legacy = Some(Arc::new(std::sync::Mutex::new(state)));
+            }
             let mut login = read_login_start(&mut socket).await?;
 
             // Ник — как у оригинала. Иначе длинный ник отключил бы всех
@@ -695,6 +711,15 @@ async fn handle_connection(
             network::login::send_set_compression(&mut socket, properties.compression_threshold).await?;
             send_login_success(&mut socket, &login.username, &login.uuid, authenticated.as_ref().and_then(|profile| profile.skin.as_ref()), properties.compression_threshold).await?;
             log_debug!("Login Success отправлен игроку {}", login.username);
+
+            if legacy {
+                // Старый протокол сразу переходит в Play. Проверки личности,
+                // запретов и вместимости выше — те же, что у родного клиента.
+                play_session(&mut socket, &login.username, &login.uuid,
+                    network::configuration::ClientLook::DEFAULT, &shared,
+                    (&came_from, &came_to), authenticated.map(|profile| profile.skin)).await?;
+                return Ok(());
+            }
 
             // Один срок на согласование Configuration и ввод пароля.
             let config_deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(90);

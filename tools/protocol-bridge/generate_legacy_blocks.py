@@ -61,8 +61,25 @@ def main():
     for old, new, name in sorted(accepted):
         text += f'    ({old}, {new}), // {name}\n'
     text += '];\n'
+    # В старом metadata нет snowy: представление допустимо только после
+    # проверки верхнего соседа в project(), не в переводе одной ячейки.
+    snowy = []
+    for pair, label in legacy.items():
+        name = label.removeprefix('minecraft:').partition('[')[0]
+        if name in {'grass_block', 'podzol', 'mycelium'}:
+            block, meta = map(int, pair.split(':'))
+            for value in ('true', 'false'):
+                snowy.append((modern[(name, (('snowy', value),))], block * 16 + meta, value))
+    assert len(snowy) == 6
+    text += 'pub const SNOWY: &[(u32, u16, bool)] = &[\n'
+    for new, old, value in sorted(snowy):
+        text += f'    ({new}, {old}, {value}),\n'
+    text += '];\n'
+    snow = sorted(value for (name, _), value in modern.items() if name in {'snow', 'snow_block'})
+    assert len(snow) == 9
+    text += f'pub const SNOW: &[u32] = &{snow};\n'
     (ROOT / 'tools/protocol-bridge/src/legacy_block_ids.rs').write_text(text)
-    report = {'mapped': len(accepted), 'core_blocks_sha256': hashlib.sha256(source.read_bytes()).hexdigest(), 'skipped': skipped}
+    report = {'mapped': len(accepted), 'contextual_snowy': len(snowy), 'core_blocks_sha256': hashlib.sha256(source.read_bytes()).hexdigest(), 'skipped': skipped}
     (ROOT / 'tools/protocol-bridge/legacy-blocks-1.12.2.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps({'mapped': len(accepted), 'skipped': len(skipped)}))
 

@@ -3,6 +3,83 @@ use super::*;
 use mcsa_protocol::{JavaVersion, Negotiated, wire};
 use crate::network::connection::CryptoStream;
 
+#[test]
+fn legacy_recipe_book_uses_actual_core_descriptors_and_returns_native_display_id() {
+    use mcsa_protocol::{legacy_chunk::HeightWindow, legacy_play::Session};
+    let mut state = Session::new(HeightWindow::new(-64).unwrap(),2).unwrap();
+    let mut book = crate::recipe_book::Book::default();
+    book.grant_initial();
+    assert!(book.learn_named(&["oak_planks".into()]));
+    state.clientbound(&book.settings_body(),&[]).unwrap();
+    for packet in book.update() {
+        let output = state.clientbound(&packet,&[]).unwrap();
+        assert_eq!(output[0][0],0x31);
+    }
+    let mut request = vec![0x12,0]; request.extend(encode_varint(360)); request.push(0);
+    let native = state.serverbound(&request).unwrap();
+    assert_eq!(&native[..2],&[0x27,0]);
+    let mut cursor = Cursor::new(&native[2..]);
+    let display = cursor.varint().unwrap();
+    assert_ne!(display,360);
+    let take = book.take(&["crafting_table".into()]).unwrap();
+    let mut removed = Cursor::new(&take[1..]);
+    assert_eq!(removed.varint(),Some(1)); assert_eq!(removed.varint(),Some(display));
+    state.clientbound(&take,&[]).unwrap(); assert!(state.serverbound(&request).is_err());
+}
+
+#[tokio::test]
+async fn legacy_control_uses_the_actual_outgoing_and_inbound_transport() {
+    use mcsa_protocol::{legacy_chunk::HeightWindow, legacy_control::Packet, legacy_play::Session, State};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let peer = tokio::net::TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+    let mut peer = CryptoStream::new(peer);
+    let mut server = CryptoStream::new(listener.accept().await.unwrap().0);
+    server.protocol = Some(Negotiated { client: JavaVersion::V1_12_2, native: wire::INTERNAL });
+    server.legacy = Some(Arc::new(Mutex::new(Session::new(HeightWindow::new(-64).unwrap(), 3).unwrap())));
+    server.enable_encryption(&[41; 16]); peer.enable_encryption(&[41; 16]);
+    let reading = tokio::spawn(async move {
+        let join = read_packet(&mut peer).await.unwrap();
+        let Packet::Join { dimension, difficulty, mode, entity, .. } = Packet::decode(State::Play, join.id as u32, join.payload()).unwrap() else { panic!() };
+        assert_eq!((dimension, difficulty, mode, entity), (0, 3, 1, 73));
+        let abilities = read_packet(&mut peer).await.unwrap();
+        assert!(matches!(Packet::decode(State::Play, abilities.id as u32, abilities.payload()).unwrap(), Packet::Abilities { .. }));
+        let teleport = read_packet(&mut peer).await.unwrap();
+        let Packet::Teleport { pose, id, flags } = Packet::decode(State::Play, teleport.id as u32, teleport.payload()).unwrap() else { panic!() };
+        assert_eq!((pose.x, pose.y, pose.z, flags), (0.5, 128.0, -1.5, 0));
+        let chunk = read_packet(&mut peer).await.unwrap();
+        assert_eq!(chunk.id, 0x20);
+        let chunk = mcsa_protocol::legacy_chunk::Chunk::decode(chunk.payload(), true).unwrap();
+        assert_eq!(chunk.sections[0].1.blocks[0], 16);
+        assert_eq!(chunk.biomes, Some([1; 256]));
+        let mut body = vec![0]; body.extend(encode_varint(id));
+        let mut frame = Vec::new(); super::super::packet::frame(&mut frame, &body, super::super::packet::compression_threshold());
+        super::super::packet::write_bytes(&mut peer, &frame).await.unwrap();
+        let kick = read_packet(&mut peer).await.unwrap();
+        assert_eq!(kick.id, 0x1a);
+        assert_eq!(&kick.payload()[1..], br#""bye""#);
+    });
+    let legacy = server.legacy.clone();
+    let mut outgoing = Outgoing::new(&mut server);
+    send_login(&mut outgoing, Dimension::Overworld, GAME_MODE_CREATIVE, 73, 2, 2, false).await.unwrap();
+    send_abilities(&mut outgoing, GAME_MODE_CREATIVE).await.unwrap();
+    let mut body = vec![0x48, 9];
+    for value in [0.5f64, 64.0, -1.5, 0.0, 0.0, 0.0] { body.extend(value.to_be_bytes()); }
+    body.extend([0; 12]);
+    outgoing.send(&body).await.unwrap();
+    let mut world = World::in_memory(); world.set_block(0, -64, 0, blocks::state_by_name("stone").unwrap());
+    let plains = world::terrain::Biome::ALL.iter().position(|biome| *biome == world::terrain::Biome::Plains).unwrap() as u16;
+    assert_ne!(plains, 1); // Проверяем перевод имени, не совпадение ID.
+    world.fill_biome((0, -64, 0), (15, 319, 15), plains, None);
+    let snapshot = world.chunk_packet(0, 0, |sections,_| sections.to_vec()).unwrap();
+    let light = crate::world::light::chunk_light(&snapshot);
+    send_chunk(&mut outgoing, &Mutex::new(world), 0, 0, &light).await.unwrap();
+    outgoing.flush().await.unwrap();
+    let confirmation = super::super::packet::read_play_packet_with_legacy(outgoing.stream(), JavaVersion::V1_12_2, legacy.as_ref()).await.unwrap();
+    assert_eq!(confirmation.teleport_confirmation().unwrap().id, 9);
+    outgoing.disconnect(&[0x20, 8, 0, 3, b'b', b'y', b'e']).await;
+    reading.await.unwrap();
+}
+
 async fn packets(version: JavaVersion) -> Vec<Vec<u8>> {
     let mut world = World::in_memory();
     for z in -16..0 { for x in -16..0 { world.set_block(x, 64, z, blocks::state_by_name("stone").unwrap()); } }
@@ -165,7 +242,7 @@ async fn native_world_snapshot_preserves_blocks_light_and_negative_height_in_leg
     assert_eq!(world.get_block(-1,192,-1),stone);
     let mut modified = snapshot.clone();
     let section = modified[0].as_mut().unwrap();
-    std::sync::Arc::make_mut(section)[0] = blocks::state_by_name("grass_block").unwrap() as u16;
+    std::sync::Arc::make_mut(section)[0] = blocks::state_by_name("copper_bulb").unwrap() as u16;
     let invalid: Vec<_> = modified.iter().enumerate().map(|(i,blocks)| SourceSection {
         blocks: blocks.as_deref(), block_light:&block_light[i], sky_light:Some(&sky_light[i]),
     }).collect();
