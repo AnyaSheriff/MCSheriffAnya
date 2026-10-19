@@ -1,0 +1,395 @@
+{
+  "description": "Обычные команды item replace, выстрел и подбор на оригиналах; полные пакеты сохранены в handoff/verification-crossbow-projectiles.",
+  "sources": [
+    {
+      "version": 775,
+      "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+      "recording_sha256": "add2bc74c8e39b7fafecd9eef5415b9e9b84375130c8be3947dac3985bc2b1cf"
+    },
+    {
+      "version": 777,
+      "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+      "recording_sha256": "94d30d0085971e1bb241e5064ef20be050046bc71baad752e4326ab411898c32"
+    }
+  ],
+  "cases": [
+    {
+      "name": "crossbow_arrow",
+      "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1}]]",
+      "before": {
+        "item": "crossbow",
+        "count": 1,
+        "projectiles": [
+          {
+            "item": "arrow",
+            "count": 1
+          }
+        ]
+      },
+      "after_shot": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 1
+      },
+      "pickup": [
+        {
+          "item": "arrow",
+          "count": 1
+        }
+      ],
+      "spawns": [
+        "arrow"
+      ]
+    },
+    {
+      "name": "crossbow_tipped",
+      "command": "crossbow[charged_projectiles=[{id:\"minecraft:tipped_arrow\",count:1,components:{\"minecraft:potion_contents\":{potion:\"minecraft:poison\"}}},{id:\"minecraft:spectral_arrow\",count:1},{id:\"minecraft:arrow\",count:1}]]",
+      "before": {
+        "item": "crossbow",
+        "count": 1,
+        "projectiles": [
+          {
+            "item": "tipped_arrow",
+            "count": 1,
+            "potion": 28
+          },
+          {
+            "item": "spectral_arrow",
+            "count": 1
+          },
+          {
+            "item": "arrow",
+            "count": 1
+          }
+        ]
+      },
+      "after_shot": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 3
+      },
+      "pickup": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "spectral_arrow",
+          "count": 1
+        },
+        {
+          "item": "tipped_arrow",
+          "count": 1,
+          "potion": 28
+        }
+      ],
+      "spawns": [
+        "arrow",
+        "spectral_arrow",
+        "arrow"
+      ]
+    },
+    {
+      "name": "crossbow_intangible",
+      "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1},{id:\"minecraft:arrow\",count:1,components:{\"minecraft:intangible_projectile\":{}}},{id:\"minecraft:arrow\",count:1,components:{\"minecraft:intangible_projectile\":{}}}]]",
+      "before": {
+        "item": "crossbow",
+        "count": 1,
+        "projectiles": [
+          {
+            "item": "arrow",
+            "count": 1
+          },
+          {
+            "item": "arrow",
+            "count": 1,
+            "intangible": true
+          },
+          {
+            "item": "arrow",
+            "count": 1,
+            "intangible": true
+          }
+        ]
+      },
+      "after_shot": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 3
+      },
+      "pickup": [
+        {
+          "item": "arrow",
+          "count": 1
+        }
+      ],
+      "spawns": [
+        "arrow",
+        "arrow",
+        "arrow"
+      ]
+    },
+    {
+      "name": "crossbow_two",
+      "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1},{id:\"minecraft:spectral_arrow\",count:1}]]",
+      "before": {
+        "item": "crossbow",
+        "count": 1,
+        "projectiles": [
+          {
+            "item": "arrow",
+            "count": 1
+          },
+          {
+            "item": "spectral_arrow",
+            "count": 1
+          }
+        ]
+      },
+      "after_shot": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 2
+      },
+      "pickup": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "spectral_arrow",
+          "count": 1
+        }
+      ],
+      "spawns": [
+        "arrow",
+        "spectral_arrow"
+      ]
+    },
+    {
+      "name": "crossbow_mixed_rocket",
+      "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1},{id:\"minecraft:firework_rocket\",count:1},{id:\"minecraft:spectral_arrow\",count:1}]]",
+      "before": {
+        "item": "crossbow",
+        "count": 1,
+        "projectiles": [
+          {
+            "item": "arrow",
+            "count": 1
+          },
+          {
+            "item": "firework_rocket",
+            "count": 1
+          },
+          {
+            "item": "spectral_arrow",
+            "count": 1
+          }
+        ]
+      },
+      "after_shot": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 5
+      },
+      "pickup": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "spectral_arrow",
+          "count": 1
+        }
+      ],
+      "spawns": [
+        "arrow",
+        "firework_rocket",
+        "spectral_arrow"
+      ]
+    },
+    {
+      "name": "crossbow_two_multishot",
+      "command": "crossbow[enchantments={multishot:1},charged_projectiles=[{id:\"minecraft:arrow\",count:1},{id:\"minecraft:spectral_arrow\",count:1}]]",
+      "before": {
+        "item": "crossbow",
+        "count": 1,
+        "enchantments": [
+          [
+            24,
+            1
+          ]
+        ],
+        "projectiles": [
+          {
+            "item": "arrow",
+            "count": 1
+          },
+          {
+            "item": "spectral_arrow",
+            "count": 1
+          }
+        ]
+      },
+      "after_shot": {
+        "item": "crossbow",
+        "count": 1,
+        "enchantments": [
+          [
+            24,
+            1
+          ]
+        ],
+        "damage": 2
+      },
+      "pickup": [
+        {
+          "item": "arrow",
+          "count": 1
+        },
+        {
+          "item": "spectral_arrow",
+          "count": 1
+        }
+      ],
+      "spawns": [
+        "arrow",
+        "spectral_arrow"
+      ]
+    },
+    {
+      "name": "crossbow_four",
+      "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:1},{id:\"minecraft:spectral_arrow\",count:1},{id:\"minecraft:arrow\",count:1},{id:\"minecraft:spectral_arrow\",count:1}]]",
+      "before": {
+        "item": "crossbow",
+        "count": 1,
+        "projectiles": [
+          {
+            "item": "arrow",
+            "count": 1
+          },
+          {
+            "item": "spectral_arrow",
+            "count": 1
+          },
+          {
+            "item": "arrow",
+            "count": 1
+          },
+          {
+            "item": "spectral_arrow",
+            "count": 1
+          }
+        ]
+      },
+      "after_shot": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 4
+      },
+      "pickup": [
+        {
+          "item": "arrow",
+          "count": 2
+        },
+        {
+          "item": "spectral_arrow",
+          "count": 2
+        }
+      ],
+      "spawns": [
+        "arrow",
+        "spectral_arrow",
+        "arrow",
+        "spectral_arrow"
+      ]
+    },
+    {
+      "name": "crossbow_count_two",
+      "command": "crossbow[charged_projectiles=[{id:\"minecraft:arrow\",count:2}]]",
+      "before": {
+        "item": "crossbow",
+        "count": 1,
+        "projectiles": [
+          {
+            "item": "arrow",
+            "count": 2
+          }
+        ]
+      },
+      "after_shot": {
+        "item": "crossbow",
+        "count": 1,
+        "damage": 1
+      },
+      "pickup": [
+        {
+          "item": "arrow",
+          "count": 1
+        }
+      ],
+      "spawns": [
+        "arrow"
+      ]
+    },
+    {
+      "name": "crossbow_four_multishot",
+      "command": "crossbow[enchantments={multishot:1},charged_projectiles=[{id:\"minecraft:arrow\",count:1},{id:\"minecraft:spectral_arrow\",count:1},{id:\"minecraft:arrow\",count:1},{id:\"minecraft:spectral_arrow\",count:1}]]",
+      "before": {
+        "item": "crossbow",
+        "count": 1,
+        "enchantments": [
+          [
+            24,
+            1
+          ]
+        ],
+        "projectiles": [
+          {
+            "item": "arrow",
+            "count": 1
+          },
+          {
+            "item": "spectral_arrow",
+            "count": 1
+          },
+          {
+            "item": "arrow",
+            "count": 1
+          },
+          {
+            "item": "spectral_arrow",
+            "count": 1
+          }
+        ]
+      },
+      "after_shot": {
+        "item": "crossbow",
+        "count": 1,
+        "enchantments": [
+          [
+            24,
+            1
+          ]
+        ],
+        "damage": 4
+      },
+      "pickup": [
+        {
+          "item": "arrow",
+          "count": 2
+        },
+        {
+          "item": "spectral_arrow",
+          "count": 2
+        }
+      ],
+      "spawns": [
+        "arrow",
+        "spectral_arrow",
+        "arrow",
+        "spectral_arrow"
+      ]
+    }
+  ]
+}

@@ -154,7 +154,7 @@ def main():
                     if a.nested_items:
                         path=Path(__file__).parent/'testdata/nested-item-commands.json'
                         cases=json.loads(path.read_text());report['nested_commands_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
-                        for name in ['bundle_basic','bundle_nested','bundle_book','container_sparse','container_empty']:
+                        for name in ['bundle_basic','bundle_nested','bundle_book','container_sparse','container_empty','crossbow_arrow','crossbow_tipped','crossbow_intangible']:
                             command('clear McsaProbe');pump(.2);start=len(log.read_text())
                             give=next(e['command'] for e in cases if e['name']==name)
                             command('give McsaProbe '+give);pump(.7)

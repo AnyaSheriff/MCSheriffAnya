@@ -115,7 +115,7 @@ fn fishing_catch_grants_one_to_six_xp_and_one_point_of_wear() {
 fn commanded_nested_items_match_official_inventory_slots() {
     let commands:serde_json::Value=serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/nested-item-commands.json")).unwrap();
     let samples:serde_json::Value=serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/nested-item-observations.json")).unwrap();
-    for name in ["bundle_basic","bundle_nested","bundle_book","container_sparse","container_empty"] {
+    for name in ["bundle_basic","bundle_nested","bundle_book","container_sparse","container_empty","crossbow_arrow","crossbow_tipped","crossbow_intangible"] {
         let command=commands.as_array().unwrap().iter().find(|c|c["name"]==name).unwrap()["command"].as_str().unwrap();
         let expected=samples["old"]["cases"].as_array().unwrap().iter().find(|c|c["name"]==name).unwrap()["slot_hex"].as_str().unwrap();
         let expected=expected.as_bytes().as_chunks::<2>().0.iter().map(|s|u8::from_str_radix(std::str::from_utf8(s).unwrap(),16).unwrap()).collect::<Vec<_>>();
@@ -147,4 +147,22 @@ fn creative_shulker_keeps_official_contents_through_file_placement_and_repacking
     assert_eq!(contents[26].unwrap().extras().potion,Some(13));
     let repacked=containers::with_contents(stack("shulker_box"),contents);
     let mut actual=Vec::new();push_slot(&mut actual,Some(repacked));assert_eq!(actual,bytes);
+}
+
+#[test]
+fn creative_crossbow_preserves_official_charges_through_storage() {
+    use mcsa_protocol::{JavaVersion, items};
+    let samples: serde_json::Value = serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/nested-item-observations.json")).unwrap();
+    for case in samples["old"]["cases"].as_array().unwrap().iter().filter(|c| c["name"].as_str().unwrap().starts_with("crossbow_")) {
+        let hex = case["slot_hex"].as_str().unwrap();
+        let bytes = hex.as_bytes().as_chunks::<2>().0.iter().map(|s| u8::from_str_radix(std::str::from_utf8(s).unwrap(),16).unwrap()).collect::<Vec<_>>();
+        let (canonical, used) = items::decode(JavaVersion::V26_1_2, &bytes, false, items::Context::default()).unwrap();
+        assert_eq!(used, bytes.len());
+        let untrusted = items::encode(JavaVersion::V26_1_2, canonical.as_ref(), true, items::Context::default()).unwrap();
+        let received = read_untrusted_slot(&mut Cursor::new(&untrusted)).unwrap().unwrap();
+        for n in 1..untrusted.len() { assert!(read_untrusted_slot(&mut Cursor::new(&untrusted[..n])).is_none()); }
+        let restored = stack("crossbow").with_extras(crate::stackdata::from_bytes(&crate::stackdata::to_bytes(&received.extras())).unwrap());
+        assert_eq!(restored, received);
+        let mut actual = Vec::new(); push_slot(&mut actual, Some(restored)); assert_eq!(actual, bytes);
+    }
 }

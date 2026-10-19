@@ -24,6 +24,9 @@ mod potion;
 #[path = "stackdata_use.rs"]
 mod use_components;
 pub use potion::PotionExtras;
+#[path = "stackdata_projectiles.rs"]
+mod projectiles;
+pub use projectiles::{ChargedProjectile, loaded as loaded_projectiles, read_body as read_charged_component};
 
 /// Номера компонентов предмета в 775 (registries.json, data_component_type).
 pub const COMPONENT_UNBREAKABLE: i32 = 4;
@@ -181,6 +184,8 @@ pub struct Data {
     /// 0 — не заряжен; с «залпом» заряжается одна, а в компоненте — три
     /// [проверить чёрным ящиком, crossbow-multishot].
     pub charged: u8,
+    /// Неоднородный список; пустой — старые поля однородного заряда.
+    pub charged_projectiles: Vec<ChargedProjectile>,
     /// Заряжены ракеты, а не стрелы (их довески; полёт 1 без взрывов —
     /// обычная ракета).
     pub charged_rocket: Option<Fireworks>,
@@ -432,61 +437,9 @@ pub fn encode_components(data: &Data) -> (i32, Vec<u8>) {
         count += 1;
     }
 
-    if data.charged > 0
-        && let Some(rocket) = &data.charged_rocket
-        && let Some(item) = crate::blocks::item_named("firework_rocket")
-    {
-        // Ракеты: у каждой свои довески `fireworks` (если не по умолчанию),
-        // боковые «залпа» — ещё и `intangible_projectile` [проверить порядок].
+    if data.charged > 0 {
         out.extend_from_slice(&encode_varint(COMPONENT_CHARGED_PROJECTILES));
-        out.extend_from_slice(&encode_varint(i32::from(data.charged)));
-
-        let own = *rocket != Fireworks::default();
-
-        for index in 0..data.charged {
-            out.extend_from_slice(&encode_varint(item));
-            out.extend_from_slice(&encode_varint(1));
-            out.extend_from_slice(&encode_varint(i32::from(own) + i32::from(index > 0)));
-            out.extend_from_slice(&encode_varint(0));
-
-            if own {
-                out.extend_from_slice(&encode_varint(COMPONENT_FIREWORKS));
-                encode_fireworks(&mut out, rocket);
-            }
-
-            if index > 0 {
-                out.extend_from_slice(&encode_varint(COMPONENT_INTANGIBLE_PROJECTILE));
-                out.extend_from_slice(&[0x0a, 0x00]);
-            }
-        }
-
-        count += 1;
-    } else if data.charged > 0
-        && let Some(arrow) = crate::blocks::item_named("arrow")
-    {
-        // Вики, Crossbow: «any type of arrow». Сохраняем тип и довески [проверить].
-        let ammo = data.charged_arrow;
-        let arrow = ammo.map_or(arrow, |ammo| ammo.item);
-        let extras = ammo.and_then(|ammo| ammo.data).map(get).unwrap_or_default();
-        let (added, encoded) = encode_components(&extras);
-        out.extend_from_slice(&encode_varint(COMPONENT_CHARGED_PROJECTILES));
-        out.extend_from_slice(&encode_varint(i32::from(data.charged)));
-
-        // Боковые стрелы «залпа» — с пометкой «не подбирается»
-        // (`intangible_projectile`, пустой NBT) (чёрный ящик, crossbow-multishot).
-        for index in 0..data.charged {
-            out.extend_from_slice(&encode_varint(arrow));
-            out.extend_from_slice(&encode_varint(1));
-            out.extend_from_slice(&encode_varint(added + i32::from(index > 0)));
-            out.extend_from_slice(&encode_varint(0));
-            out.extend_from_slice(&encoded);
-
-            if index > 0 {
-                out.extend_from_slice(&encode_varint(COMPONENT_INTANGIBLE_PROJECTILE));
-                out.extend_from_slice(&[0x0a, 0x00]);
-            }
-        }
-
+        out.extend(projectiles::encode(data));
         count += 1;
     }
 
@@ -981,55 +934,7 @@ fn read_component_cursor(kind: i32, reader: &mut Reader<'_>, data: &mut Data, de
         }
         COMPONENT_POTION_CONTENTS => { let _ = potion::read(reader, data); }
         COMPONENT_CHARGED_PROJECTILES => {
-            // Обычные стрелы без довесков или ракеты (с `fireworks`); иное —
-            // не заряжен.
-            let Some(count) = reader.varint() else { return false };
-            let arrow = crate::blocks::item_named("arrow");
-            let rocket_item = crate::blocks::item_named("firework_rocket");
-            let mut loaded = 0u8;
-            let mut rocket = None;
-            let mut ammunition = None;
-
-            for _ in 0..count.clamp(0, 3) {
-                let (Some(item), Some(_), Some(added), Some(removed)) = (reader.varint(), reader.varint(), reader.varint(), reader.varint()) else { return false };
-
-                if removed != 0 || !(Some(item) == arrow || Some(item) == rocket_item || matches!(crate::blocks::item_name(item), Some("tipped_arrow" | "spectral_arrow"))) {
-                    return false;
-                }
-
-                let mut own = Fireworks::default();
-                let mut arrow_data = Data::default();
-
-                for _ in 0..added.clamp(0, 4) {
-                    match reader.varint() {
-                        Some(COMPONENT_FIREWORKS) if Some(item) == rocket_item => match read_fireworks(reader) {
-                            Some(read) => own = read,
-                            None => return false,
-                        },
-                        Some(COMPONENT_POTION_CONTENTS) => {
-                            if potion::read(reader, &mut arrow_data).is_none() { return false; }
-                        }
-                        Some(COMPONENT_INTANGIBLE_PROJECTILE) => {
-                            if reader.take(2).is_none() {
-                                return false;
-                            }
-                        }
-                        _ => return false,
-                    }
-                }
-
-                if Some(item) == rocket_item {
-                    rocket = Some(own);
-                } else if loaded == 0 {
-                    ammunition = Some(Content { slot: 0, item, count: 1, data: intern(arrow_data) });
-                }
-
-                loaded += 1;
-            }
-
-            data.charged = loaded;
-            data.charged_arrow = ammunition.filter(|_| loaded > 0);
-            data.charged_rocket = rocket.filter(|_| loaded > 0);
+            if projectiles::read(reader, data, depth).is_none() { return false; }
         }
         COMPONENT_FIREWORK_EXPLOSION => data.explosion = read_explosion(reader),
         COMPONENT_FIREWORKS => {
@@ -1059,7 +964,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
             | (u8::from(data.fireworks.is_some()) << 4)
             | (u8::from(data.explosion.is_some()) << 5)
             | (u8::from(data.charged > 0 && data.charged_rocket.is_some()) << 6)
-            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some()) << 7),
+            | (u8::from(!data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.charged_projectiles.is_empty()) << 7),
     );
     out.push(data.enchants.len().min(255) as u8);
 
@@ -1099,7 +1004,7 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
 
     // Хвост наковальни и книги: зачарования книги, цена работ, имя, отделка
     // (её байты в конце: в старых файлах их нет).
-    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() {
+    if !data.stored.is_empty() || data.repair_cost != 0 || data.name.is_some() || data.trim.is_some() || !data.contents.is_empty() || data.ominous.is_some() || data.ominous_banner || !data.stew.is_empty() || data.instrument.is_some() || data.bucket.is_some() || !data.mob_variants.is_empty() || data.map_id.is_some() || data.map_post.is_some() || !data.bees.is_empty() || data.honey.is_some() || data.charged_arrow.is_some() || data.potion_extra.is_some() || data.debug_properties.is_some() || data.recipes.is_some() || !data.banner_patterns.is_empty() || data.base_color.is_some() || !data.bundle.is_empty() || data.book.is_some() || data.dyed_color.is_some() || data.pot_decorations.is_some() || !data.charged_projectiles.is_empty() {
         out.push(data.stored.len().min(255) as u8);
 
         for (number, level) in data.stored.iter().take(255) {
@@ -1115,6 +1020,13 @@ pub fn to_bytes(data: &Data) -> Vec<u8> {
         out.push(u8::from(data.name.is_some()));
         out.extend_from_slice(&(length as u16).to_be_bytes());
         out.extend_from_slice(&name.as_bytes()[..length]);
+
+        if !data.charged_projectiles.is_empty() {
+            let bytes = projectiles::encode(data);
+            out.push(20);
+            out.extend_from_slice(&(bytes.len() as u32).to_be_bytes());
+            out.extend(bytes);
+        }
 
         if let Some((material, pattern)) = data.trim {
             out.extend_from_slice(&[1, material, pattern]);
@@ -1342,6 +1254,10 @@ pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
         // Метки хвоста: 1 — отделка, 2 — содержимое шулкер-ящика.
         while let Some(mark) = reader.take(1).map(|mark| mark[0]) {
             match mark {
+                20 => {
+                    let len = u32::from_be_bytes(reader.take(4)?.try_into().ok()?) as usize;
+                    if !projectiles::read_body(reader.take(len)?, &mut data) { return None; }
+                }
                 18 => { data.dyed_color = Some(i32::from_be_bytes(reader.take(4)?.try_into().ok()?)); }
                 19 => { let mut sides = [0; 4]; for item in &mut sides { *item = i32::from_be_bytes(reader.take(4)?.try_into().ok()?); } data.pot_decorations = Some(sides); }
 
@@ -1460,6 +1376,7 @@ pub fn parse_item_spec(spec: &str) -> Result<(String, Data), String> {
         let value = snbt::parse(value.trim()).ok_or_else(|| format!("не разобрать значение {value}"))?;
 
         match key {
+            "charged_projectiles" => projectiles::parse(&value, &mut data)?,
             "bucket_entity_data" => data.bucket = Some(crate::mob::water::bucket::BucketData::parse(&value)),
             "salmon/size" | "axolotl/variant" | "tropical_fish/pattern" | "tropical_fish/base_color" | "tropical_fish/pattern_color" => {
                 let (id,value)=crate::mob::water::bucket::parse_variant(key,&value)?;

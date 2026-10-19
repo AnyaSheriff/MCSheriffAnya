@@ -278,3 +278,36 @@ fn custom_effects_survive_multishot_disk_wire_and_reach_target() {
         assert_eq!(cow.vitals.effects.iter().find(|e| e.kind == survival::EffectKind::Weakness).unwrap().ticks_left, -1);
     }
 }
+
+#[test]
+fn observed_heterogeneous_crossbows_fire_every_charge_with_individual_pickup() {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!("../../../tools/protocol-bridge/testdata/crossbow-observations.json")).unwrap();
+    for case in fixture["cases"].as_array().unwrap() {
+        for mode in [GAME_MODE_SURVIVAL, GAME_MODE_CREATIVE] {
+            let shared = shared();
+            let mut player = player("crossbow", Stack::new(blocks::item_named("arrow").unwrap(), 1), None);
+            player.game_mode = mode;
+            let stack = crate::commands::stack_from_spec(case["command"].as_str().unwrap(), 1).unwrap().unwrap();
+            // После сохранения и повторного чтения используем настоящий обработчик выстрела.
+            let data = stackdata::from_bytes(&stackdata::to_bytes(&stack.extras())).unwrap();
+            let projectiles = stackdata::loaded_projectiles(&data);
+            player.inventory.set(player.inventory.selected_slot(), Some(stack.with_extras(data)));
+            assert!(bow::crossbow_fire(&shared, &mut player, 0));
+            assert!(!bow::crossbow_fire(&shared, &mut player, 0));
+            let unloaded = player.inventory.held().unwrap().extras();
+            assert_eq!(unloaded.damage, if mode == GAME_MODE_CREATIVE { 0 } else { case["after_shot"]["damage"].as_i64().unwrap() as i32 });
+            assert_eq!(unloaded.charged, 0); assert!(unloaded.charged_projectiles.is_empty());
+            assert!(unloaded.charged_arrow.is_none() && unloaded.charged_rocket.is_none());
+            let arrows = shared.arrows.lock().unwrap();
+            let expected: Vec<_> = projectiles.iter().filter(|p| blocks::item_name(p.content.item) != Some("firework_rocket")).collect();
+            assert_eq!(arrows.list.len(), expected.len());
+            let speed = if expected.len() == projectiles.len() { combat::CROSSBOW_SPEED } else { crate::firework::CROSSBOW_SPEED };
+            for (arrow, projectile) in arrows.list.iter().zip(expected) {
+                assert_eq!(arrow.pickup_stack(), Stack { data: projectile.content.data, ..Stack::new(projectile.content.item, 1) });
+                assert_eq!(arrow.pickup, if mode == GAME_MODE_CREATIVE || projectile.intangible { crate::arrow::Pickup::CreativeOnly } else { crate::arrow::Pickup::Yes });
+                assert!(((arrow.vx * arrow.vx + arrow.vy * arrow.vy + arrow.vz * arrow.vz).sqrt() - speed).abs() < 0.15);
+            }
+            assert_eq!(shared.thrown.lock().unwrap().rockets.len(), projectiles.len() - arrows.list.len());
+        }
+    }
+}
