@@ -21,7 +21,7 @@ pub struct Light {
 }
 
 fn supported(version: JavaVersion) -> Result<(), Error> {
-    if version == JavaVersion::V26_2 { Err(Error::UnsupportedVersion) } else { Ok(()) }
+    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
 }
 fn trim(mask: &mut Vec<u8>) { while mask.last() == Some(&0) { mask.pop(); } }
 fn population(mask: &[u8]) -> usize { mask.iter().map(|b| b.count_ones() as usize).sum() }

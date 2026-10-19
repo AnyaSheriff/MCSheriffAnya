@@ -16,7 +16,7 @@ pub fn translate(
     registry: RegistryKind, from: JavaVersion, to: JavaVersion, id: u32,
 ) -> Result<u32, IdTranslationError> {
     for version in [from, to] {
-        if version == JavaVersion::V26_2 { return Err(IdTranslationError::UnsupportedVersion(version)); }
+        if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { return Err(IdTranslationError::UnsupportedVersion(version)); }
     }
     let (forward, backward) = tables(registry);
     let source = if from == JavaVersion::V26_1_2 { forward } else { backward };

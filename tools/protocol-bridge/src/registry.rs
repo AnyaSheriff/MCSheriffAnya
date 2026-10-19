@@ -37,7 +37,7 @@ pub(crate) fn nbt_payload_length(kind: u8, bytes: &[u8]) -> Result<usize, Error>
 }
 
 fn supported(version: JavaVersion) -> Result<(), Error> {
-    if version == JavaVersion::V26_2 { Err(Error::UnsupportedVersion) } else { Ok(()) }
+    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
 }
 
 fn identifier(value: &str) -> bool {

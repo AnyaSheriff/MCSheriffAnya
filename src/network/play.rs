@@ -12698,3 +12698,6 @@ mod tails_tests;
 
 #[cfg(test)]
 mod chunk_compat_tests;
+
+#[cfg(test)]
+mod legacy_action_tests;

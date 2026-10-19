@@ -25,7 +25,7 @@ pub struct Success {
 pub enum Error { UnsupportedVersion, Truncated, Invalid, TooLarge, MissingSessionId, UnexpectedSessionId }
 
 fn supported(version: JavaVersion) -> Result<(), Error> {
-    if version == JavaVersion::V26_2 { Err(Error::UnsupportedVersion) } else { Ok(()) }
+    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
 }
 
 fn valid_name(name: &str) -> bool {

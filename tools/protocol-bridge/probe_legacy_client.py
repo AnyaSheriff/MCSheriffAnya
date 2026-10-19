@@ -78,7 +78,7 @@ def main():
                             continue
                         data = io.BytesIO(frame(sock)); number = read_varint(data.read)
                         body = data.read(); name = incoming.get(number, f'unknown-{number}')
-                        record = {'phase': index, 'name': name, 'bytes': len(body)}
+                        record = {'phase': index, 'name': name, 'bytes': len(body), 'body_hex': (varint(number) + body).hex()}
                         parsed = io.BytesIO(body)
                         if name == 'teleport_confirm':
                             ident = read_varint(parsed.read)

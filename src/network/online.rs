@@ -82,7 +82,9 @@ impl Authenticator {
         request.extend(encode_string(""));
         put_array(&mut request, &self.public_key);
         put_array(&mut request, &token);
-        request.push(1); // should_authenticate=true
+        if stream.client_version() != mcsa_protocol::JavaVersion::V1_12_2 {
+            request.push(1); // should_authenticate=true, поля нет в340
+        }
         let mut frame = encode_varint(request.len() as i32);
         frame.extend(request);
         write_bytes(stream, &frame).await?;
@@ -351,7 +353,9 @@ mod tests {
         let public = RsaPublicKey::from_public_key_der(&request[2 + size..end]).unwrap();
         assert_eq!(public.n().bits(), 1024);
         assert_eq!(request[end], 4);
-        assert_eq!(request[end + 5..], [1]);
+        if client.client_version() == mcsa_protocol::JavaVersion::V1_12_2 {
+            assert!(request[end + 5..].is_empty());
+        } else { assert_eq!(request[end + 5..], [1]); }
         let mut body = vec![1];
         put_array(&mut body, &public.encrypt(&mut OsRng, Pkcs1v15Encrypt, &[9; 16]).unwrap());
         put_array(&mut body, &public.encrypt(&mut OsRng, Pkcs1v15Encrypt, &request[end + 1..end + 5]).unwrap());
@@ -407,6 +411,39 @@ mod tests {
             assert_eq!(super::super::packet::decode_string(&body, &mut offset).unwrap(), "signed");
             assert_eq!(offset, body.len());
             client.write_all(&[2, 0, 3]).await.unwrap();
+        };
+        tokio::join!(serving, joining);
+    }
+
+    #[tokio::test]
+    async fn legacy_login_encrypts_compresses_and_uses_verified_identity() {
+        use mcsa_protocol::{JavaVersion, Negotiated, State, legacy_control::Packet};
+        let auth = auth();
+        let (server, client) = tokio::io::duplex(8192);
+        let mut server = CryptoStream::new(server);
+        let mut client = CryptoStream::new(client);
+        let protocol = Negotiated { client: JavaVersion::V1_12_2, native: JavaVersion::V26_1_2 };
+        server.protocol = Some(protocol); client.protocol = Some(protocol);
+        let serving = async {
+            let profile = auth.authenticate_with(&mut server, |_| async {
+                Ok(parse_profile(PROFILE, "Notch").unwrap())
+            }).await.unwrap();
+            super::super::login::send_set_compression(&mut server, 32).await.unwrap();
+            super::super::login::send_login_success(&mut server, &profile.name, &profile.uuid, profile.skin.as_ref(), 32).await.unwrap();
+            assert_eq!(server.login_session_id, None);
+        };
+        let joining = async {
+            client_exchange(&mut client).await;
+            assert_eq!(raw_packet(&mut client).await, [3, 32]);
+            let packed = raw_packet(&mut client).await;
+            let (length, offset) = decode_varint(&packed).unwrap();
+            let mut body = Vec::new();
+            std::io::Read::read_to_end(&mut flate2::read::ZlibDecoder::new(&packed[offset..]), &mut body).unwrap();
+            assert_eq!(length as usize, body.len());
+            assert_eq!(body[0], 2);
+            assert_eq!(Packet::decode(State::Login, 2, &body[1..]).unwrap(), Packet::LoginSuccess {
+                uuid: parse_profile(PROFILE, "Notch").unwrap().uuid, username: "Notch".into(),
+            });
         };
         tokio::join!(serving, joining);
     }

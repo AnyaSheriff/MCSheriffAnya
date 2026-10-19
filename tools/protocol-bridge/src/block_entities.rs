@@ -7,7 +7,7 @@ use crate::{JavaVersion, registry};
 pub enum Error { UnsupportedVersion, UnknownType(u32), UnsupportedData, Invalid, Nbt(registry::Error) }
 
 pub fn translate(from: JavaVersion, to: JavaVersion, kind: u32, data: &[u8]) -> Result<Option<(u32, Vec<u8>)>, Error> {
-    if [from, to].contains(&JavaVersion::V26_2) { return Err(Error::UnsupportedVersion); }
+    if [from, to].iter().any(|version| !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3)) { return Err(Error::UnsupportedVersion); }
     if registry::nbt_length(data).map_err(Error::Nbt)? != data.len() { return Err(Error::Invalid); }
     let row = crate::block_entity_ids::OBSERVED.iter().find(|(old, new, _)| {
         if from == JavaVersion::V26_1_2 { *old == kind } else { *new == Some(kind) }

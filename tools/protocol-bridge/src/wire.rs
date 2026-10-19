@@ -63,7 +63,7 @@ pub fn translate_with_context(
     body: &[u8], context: Context,
 ) -> Result<Cow<'_, [u8]>, Error> {
     for version in [from, to] {
-        if version == JavaVersion::V26_2 { return Err(Error::UnsupportedVersion(version)); }
+        if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion(version)); }
     }
     if body.is_empty() { return Err(Error::Truncated); }
     if body.len() > LIMIT { return Err(Error::TooLarge); }
