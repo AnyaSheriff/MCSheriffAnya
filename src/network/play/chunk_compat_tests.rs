@@ -119,3 +119,56 @@ async fn export_chunk_client_probe() {
     std::fs::create_dir_all("tmp").unwrap();
     std::fs::write("tmp/chunk-client-26.3.json",serde_json::to_vec_pretty(&bodies).unwrap()).unwrap();
 }
+
+#[tokio::test]
+async fn native_world_snapshot_preserves_blocks_light_and_negative_height_in_legacy_chunk() {
+    use mcsa_protocol::{legacy_blocks::{self, SourceSection, View}, legacy_chunk::{Chunk, HeightWindow}};
+    let mut world = World::in_memory();
+    let stone = blocks::state_by_name("stone").unwrap();
+    let wool = blocks::state_by_name("red_wool").unwrap();
+    let glowstone = blocks::state_by_name("glowstone").unwrap();
+    for (x,y,z,state) in [(-16,-64,-16,stone),(-15,-63,-16,glowstone),(-1,191,-1,wool),(-1,192,-1,stone)] {
+        assert!(world.set_block(x,y,z,state));
+    }
+    // Тот же снимок Arc-секций, который берёт обычный send_chunk.
+    let snapshot = world.chunk_packet(-1,-1, |sections,_| sections.to_vec()).unwrap();
+    let light = crate::world::light::chunk_light(&snapshot);
+    let block_light: Vec<_> = light.block.iter().map(|v| v.nibbles()).collect();
+    let sky_light: Vec<_> = light.sky.iter().map(|v| v.nibbles()).collect();
+    let source: Vec<_> = snapshot.iter().enumerate().map(|(i,blocks)| SourceSection {
+        blocks: blocks.as_deref(), block_light: &block_light[i], sky_light: Some(&sky_light[i]),
+    }).collect();
+    let window = HeightWindow::new(-64).unwrap();
+    let projected = legacy_blocks::project(View { version: JavaVersion::V26_1_2, x:-1,z:-1,min_y:world::MIN_Y,
+        window, sections:&source, biomes:[1;256], block_entities:vec![] }).unwrap();
+    assert_eq!(projected.sections[0].1.blocks[0], 16);
+    assert_eq!(projected.sections[15].1.blocks[4095], 35*16+14);
+    assert_eq!(projected.sections[0].1.block_light[128] >> 4, 15);
+    assert_eq!(projected.sections.len(), 16);
+    let body = projected.encode(true).unwrap();
+    // Реальное framing и существующее шифрование потока; только порт0 для теста.
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let peer = tokio::net::TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
+    let mut peer = CryptoStream::new(peer);
+    let mut writer = CryptoStream::new(listener.accept().await.unwrap().0);
+    peer.enable_encryption(&[81;16]); writer.enable_encryption(&[81;16]);
+    let reader = tokio::spawn(async move { read_packet(&mut peer).await.unwrap().body });
+    let mut packet = vec![0x20]; packet.extend(body);
+    let mut frame = Vec::new(); crate::network::packet::frame(&mut frame,&packet,-1);
+    crate::network::packet::write_bytes(&mut writer,&frame).await.unwrap();
+    let received = reader.await.unwrap();
+    assert_eq!(received[0],0x20);
+    assert_eq!(Chunk::decode(&received[1..],true).unwrap(),projected);
+    // Снимок и перевод не переписывают серверную высоту или состояние.
+    assert_eq!(world.get_block(-16,-64,-16),stone);
+    assert_eq!(world.get_block(-1,191,-1),wool);
+    assert_eq!(world.get_block(-1,192,-1),stone);
+    let mut modified = snapshot.clone();
+    let section = modified[0].as_mut().unwrap();
+    std::sync::Arc::make_mut(section)[0] = blocks::state_by_name("grass_block").unwrap() as u16;
+    let invalid: Vec<_> = modified.iter().enumerate().map(|(i,blocks)| SourceSection {
+        blocks: blocks.as_deref(), block_light:&block_light[i], sky_light:Some(&sky_light[i]),
+    }).collect();
+    assert!(legacy_blocks::project(View {version:JavaVersion::V26_1_2,x:-1,z:-1,min_y:world::MIN_Y,
+        window,sections:&invalid,biomes:[1;256],block_entities:vec![]}).is_err());
+}

@@ -40,6 +40,17 @@ fn named_nbt_length(bytes: &[u8]) -> Result<usize, Error> {
     Ok(header + size)
 }
 
+pub(crate) fn validate_block_entities(entities: &[Vec<u8>]) -> Result<(), Error> {
+    if entities.len() > MAX_ENTITIES { return Err(Error::TooLarge); }
+    let mut total = 0usize;
+    for data in entities {
+        total = total.checked_add(data.len()).ok_or(Error::TooLarge)?;
+        if total > MAX_BYTES { return Err(Error::TooLarge); }
+        if named_nbt_length(data)? != data.len() { return Err(Error::Invalid); }
+    }
+    Ok(())
+}
+
 impl Chunk {
     /// Тело MapChunk без ID0x20, транспортного framing и сжатия.
     pub fn decode(bytes: &[u8], has_sky_light: bool) -> Result<Self, Error> {
@@ -93,6 +104,7 @@ impl Chunk {
     /// исходной палитры. Все16секций/свет/биомы валидируются до выдачи пакета.
     pub fn encode(&self, has_sky_light: bool) -> Result<Vec<u8>, Error> {
         if self.sections.len() > 16 || self.block_entities.len() > MAX_ENTITIES { return Err(Error::TooLarge); }
+        validate_block_entities(&self.block_entities)?;
         let mut packed = Vec::new();
         let mut mask = 0u32;
         let mut previous = None;
@@ -135,7 +147,6 @@ impl Chunk {
         uint(&mut out, self.block_entities.len() as u32);
         for data in &self.block_entities {
             if data.len() > MAX_BYTES || out.len() + data.len() > MAX_BYTES { return Err(Error::TooLarge); }
-            if named_nbt_length(data)? != data.len() { return Err(Error::Invalid); }
             out.extend(data);
         }
         if out.len() > MAX_BYTES { return Err(Error::TooLarge); }
