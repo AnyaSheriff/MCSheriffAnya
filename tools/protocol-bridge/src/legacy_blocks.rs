@@ -21,12 +21,19 @@ static FROM_NATIVE: [u16; NATIVE_STATES] = reverse();
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error { UnsupportedLegacy(u16), UnsupportedModern(u32), Id(ids::IdTranslationError), InvalidView }
 
+fn supported_payload(version: JavaVersion) -> Result<(), Error> {
+    if matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { Ok(()) }
+    else { Err(Error::Id(ids::IdTranslationError::UnsupportedVersion(version))) }
+}
+
 pub fn to_modern(state: u16, version: JavaVersion) -> Result<u32, Error> {
+    supported_payload(version)?;
     let value = TO_NATIVE.get(usize::from(state)).copied().filter(|v| *v != MISSING).ok_or(Error::UnsupportedLegacy(state))?;
     ids::translate(RegistryKind::BlockState, JavaVersion::V26_1_2, version, u32::from(value)).map_err(Error::Id)
 }
 
 pub fn to_legacy(state: u32, version: JavaVersion) -> Result<u16, Error> {
+    supported_payload(version)?;
     let value = ids::translate(RegistryKind::BlockState, version, JavaVersion::V26_1_2, state).map_err(Error::Id)?;
     FROM_NATIVE.get(value as usize).copied().filter(|v| *v != MISSING).ok_or(Error::UnsupportedModern(state))
 }
@@ -57,6 +64,7 @@ pub struct View<'a> {
 /// переведённый чанк не возвращается и исходный мир не изменяется.
 pub fn project(view: View<'_>) -> Result<crate::legacy_chunk::Chunk, Error> {
     use crate::legacy_chunk::{Chunk, Section};
+    supported_payload(view.version)?;
     if view.min_y % 16 != 0 || view.sections.is_empty() || view.sections.len() > 256 { return Err(Error::InvalidView); }
     let start = view.window.origin().checked_sub(view.min_y).filter(|v| *v >= 0).ok_or(Error::InvalidView)? as usize / 16;
     let source = view.sections.get(start..start + 16).ok_or(Error::InvalidView)?;

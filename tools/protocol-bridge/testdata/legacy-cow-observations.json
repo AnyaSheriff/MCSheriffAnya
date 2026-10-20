@@ -1786,6 +1786,7 @@
       "No health bar is shown, health semantics not visually verified",
       "No combat, effects, sound or same-dimension respawn verification",
       "First attempt retained with Game Menu overlay; final attempt uses private pauseOnLostFocus:false"
-    ]
+    ],
+    "observed_fixture_sha256": "2078fffaeaf1f3354618e24af98688884a72e8bee6b764f9272ba8a204ced4a4"
   }
 }

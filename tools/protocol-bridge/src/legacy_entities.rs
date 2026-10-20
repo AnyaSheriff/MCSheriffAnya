@@ -1,23 +1,30 @@
-//! Представление выпавших предметов775→340. Только собственные пакеты ядра,
-//! pinned protocol.json и запись official-item-entities; не игровые правила.
+//! Представление предметов/cow775→340. Только собственные пакеты ядра,
+//! pinned protocol.json и собственные записи official340; не игровые правила.
 use std::{collections::{BTreeMap, BTreeSet}, sync::Arc};
 use crate::{legacy_chunk::HeightWindow, teleport::Pose, wire::{Cursor, Error, uint}};
 
 const LIMIT: usize = 65_536;
 const ITEM: u32 = 71;
+const COW: u32 = 30;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Kind { Item, Cow }
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Tracked { kind: Kind, pose: Pose }
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Tracker {
     // Session::control клонирует состояние перед проверкой пакета; общая карта
     // не копируется целиком при каждой телепортации/смене abilities.
-    items: Arc<BTreeMap<u32, Pose>>,
+    entities: Arc<BTreeMap<u32, Tracked>>,
 }
 
 fn number(input: &mut Cursor<'_>) -> Result<f64, Error> {
     let value = f64::from_be_bytes(input.take(8)?.try_into().map_err(|_| Error::Invalid)?);
     if value.is_finite() { Ok(value) } else { Err(Error::Invalid) }
 }
-fn degrees(input: &mut Cursor<'_>) -> Result<f32, Error> {
+fn scalar(input: &mut Cursor<'_>) -> Result<f32, Error> {
     let value = f32::from_be_bytes(input.take(4)?.try_into().map_err(|_| Error::Invalid)?);
     if value.is_finite() { Ok(value) } else { Err(Error::Invalid) }
 }
@@ -55,14 +62,19 @@ fn put_velocity(out: &mut Vec<u8>, values: [f64; 3]) -> Result<(), Error> {
     for value in values {
         // [проверить] Высокие скорости требуют отдельной пробы ограничения340.
         // Здесь не обрезаем неизвестный диапазон молча; обычный дроп в пределах.
-        if !value.is_finite() || value.abs() > 3.9 { return Err(Error::PayloadUnavailable("legacy item velocity range")); }
+        if !value.is_finite() || value.abs() > 3.9 { return Err(Error::PayloadUnavailable("legacy entity velocity range")); }
         out.extend(((value * 8000.0).trunc() as i16).to_be_bytes());
     }
     Ok(())
 }
 
 impl Tracker {
-    pub(crate) fn clear(&mut self) { self.items = Arc::default(); }
+    pub(crate) fn clear(&mut self) { self.entities = Arc::default(); }
+
+    pub(crate) fn living(&self, entity: u32) -> Result<(), Error> {
+        if self.tracked(entity)?.kind == Kind::Cow { Ok(()) }
+        else { Err(Error::PayloadUnavailable("legacy entity is not living")) }
+    }
 
     pub(crate) fn translate(&mut self, id: u32, payload: &[u8], window: HeightWindow,
         player: Option<i32>, enchantments: &[&str]) -> Result<Vec<Vec<u8>>, Error> {
@@ -85,44 +97,62 @@ impl Tracker {
             let entity = input.uint()?;
             match id {
                 0x01 => {
-                    if player == Some(entity as i32) || self.items.contains_key(&entity) { return Err(Error::Invalid); }
-                    if self.items.len() >= LIMIT { return Err(Error::TooLarge); }
+                    if player == Some(entity as i32) || self.entities.contains_key(&entity) { return Err(Error::Invalid); }
+                    if self.entities.len() >= LIMIT { return Err(Error::TooLarge); }
                     let uuid = input.take(16)?;
-                    if input.uint()? != ITEM { return Err(Error::PayloadUnavailable("legacy entity kind")); }
+                    let kind = match input.uint()? {
+                        ITEM => Kind::Item, COW => Kind::Cow,
+                        _ => return Err(Error::PayloadUnavailable("legacy entity kind")),
+                    };
                     let mut pose = position(&mut input)?;
                     let speed = velocity(&mut input)?;
                     let pitch = input.take(1)?[0]; let yaw = input.take(1)?[0];
-                    input.take(1)?; // headYaw не применяется к предмету.
-                    if input.varint()? != 0 { return Err(Error::PayloadUnavailable("legacy item spawn data")); }
+                    let head = input.take(1)?[0];
+                    if input.varint()? != 0 { return Err(Error::PayloadUnavailable("legacy entity spawn data")); }
                     pose.yaw = f32::from(yaw) * 360.0 / 256.0; pose.pitch = f32::from(pitch) * 360.0 / 256.0;
-                    out.push(0x00); uint(&mut out, entity); out.extend(uuid); out.push(2);
-                    put_position(&mut out, pose, window)?; out.extend([pitch, yaw]);
-                    // official340 item-no-gravity: objectData=1, включая обычный item.
-                    out.extend(1i32.to_be_bytes()); put_velocity(&mut out, speed)?;
-                    changed = Some((entity, pose));
+                    out.push(if kind == Kind::Item { 0x00 } else { 0x03 });
+                    uint(&mut out, entity); out.extend(uuid);
+                    if kind == Kind::Item { out.push(2); } else { uint(&mut out, 92); }
+                    put_position(&mut out, pose, window)?;
+                    if kind == Kind::Item {
+                        out.extend([pitch, yaw]);
+                        // official340 item-no-gravity: objectData=1, включая обычный item.
+                        out.extend(1i32.to_be_bytes()); put_velocity(&mut out, speed)?;
+                    } else {
+                        out.extend([yaw, pitch, head]); put_velocity(&mut out, speed)?;
+                        // Actual340 client: пустой inline список, затем отдельная
+                        // Metadata корректно показывают adult/baby (cow fixture).
+                        out.push(255);
+                    }
+                    changed = Some((entity, Tracked { kind, pose }));
                 }
                 0x63 => {
-                    self.item(entity)?;
+                    let kind = self.tracked(entity)?.kind;
                     out.push(0x3c); uint(&mut out, entity);
-                    metadata(&mut input, &mut out, enchantments)?;
+                    metadata(&mut input, &mut out, kind, enchantments)?;
                 }
                 0x65 => {
-                    if player != Some(entity as i32) { self.item(entity)?; }
+                    if player != Some(entity as i32) { self.tracked(entity)?; }
                     out.push(0x3e); uint(&mut out, entity); put_velocity(&mut out, velocity(&mut input)?)?;
                 }
+                0x53 => {
+                    self.living(entity)?;
+                    out.push(0x36); uint(&mut out, entity); out.extend(input.take(1)?);
+                }
                 0x23 => {
-                    self.item(entity)?;
+                    let mut tracked = self.tracked(entity)?;
                     let mut pose = position(&mut input)?;
                     let speed = [number(&mut input)?, number(&mut input)?, number(&mut input)?];
-                    pose.yaw = degrees(&mut input)?; pose.pitch = degrees(&mut input)?;
+                    pose.yaw = scalar(&mut input)?; pose.pitch = scalar(&mut input)?;
                     let ground = input.boolean()?;
                     out.push(0x4c); uint(&mut out, entity); put_position(&mut out, pose, window)?;
                     out.extend([angle(pose.yaw), angle(pose.pitch), u8::from(ground)]);
                     let mut motion = vec![0x3e]; uint(&mut motion, entity); put_velocity(&mut motion, speed)?;
-                    extra.push(motion); changed = Some((entity, pose));
+                    extra.push(motion); tracked.pose = pose; changed = Some((entity, tracked));
                 }
                 0x35 | 0x36 | 0x38 => {
-                    let mut pose = self.item(entity)?;
+                    let mut tracked = self.tracked(entity)?;
+                    let pose = &mut tracked.pose;
                     out.push(match id { 0x35 => 0x26, 0x36 => 0x27, _ => 0x28 }); uint(&mut out, entity);
                     if id != 0x38 {
                         for value in [&mut pose.x, &mut pose.y, &mut pose.z] {
@@ -137,8 +167,8 @@ impl Tracker {
                         pose.yaw = f32::from(yaw) * 360.0 / 256.0; pose.pitch = f32::from(pitch) * 360.0 / 256.0;
                         out.extend([yaw, pitch]);
                     }
-                    out.push(u8::from(input.boolean()?)); window.client_position(pose)?;
-                    changed = Some((entity, pose));
+                    out.push(u8::from(input.boolean()?)); window.client_position(*pose)?;
+                    changed = Some((entity, tracked));
                 }
                 0x7c => {
                     self.item(entity)?;
@@ -153,17 +183,23 @@ impl Tracker {
             }
         }
         if input.remaining() != 0 { return Err(Error::Invalid); }
-        if let Some((entity, pose)) = changed { Arc::make_mut(&mut self.items).insert(entity, pose); }
-        for entity in removed { Arc::make_mut(&mut self.items).remove(&entity); }
+        if let Some((entity, tracked)) = changed { Arc::make_mut(&mut self.entities).insert(entity, tracked); }
+        for entity in removed { Arc::make_mut(&mut self.entities).remove(&entity); }
         extra.insert(0, out); Ok(extra)
     }
 
     fn item(&self, entity: u32) -> Result<Pose, Error> {
-        self.items.get(&entity).copied().ok_or(Error::PayloadUnavailable("legacy untracked item"))
+        let tracked = self.tracked(entity)?;
+        if tracked.kind != Kind::Item { return Err(Error::PayloadUnavailable("legacy entity is not item")); }
+        Ok(tracked.pose)
+    }
+
+    fn tracked(&self, entity: u32) -> Result<Tracked, Error> {
+        self.entities.get(&entity).copied().ok_or(Error::PayloadUnavailable("legacy untracked entity"))
     }
 }
 
-fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, enchantments: &[&str]) -> Result<(), Error> {
+fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, entity_kind: Kind, enchantments: &[&str]) -> Result<(), Error> {
     let mut seen = BTreeSet::new();
     loop {
         let index = input.take(1)?[0];
@@ -174,18 +210,44 @@ fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, enchantments: &[&str]) ->
             (0, 0) => { out.extend([0, 0]); out.extend(input.take(1)?); }
             (1, 1) => { out.extend([1, 1]); uint(out, input.varint()? as u32); }
             (2, 6) => {
-                if input.boolean()? { return Err(Error::PayloadUnavailable("legacy item custom name")); }
+                if input.boolean()? { return Err(Error::PayloadUnavailable("legacy entity custom name")); }
                 out.extend([2, 3, 0]);
             }
             (3..=5, 8) => { out.extend([index, 6, u8::from(input.boolean()?)]); }
-            (8, 7) => {
+            (8, 7) if entity_kind == Kind::Item => {
                 let (item, count) = crate::items::decode(crate::wire::INTERNAL, input.rest, false,
                     crate::items::Context { shared_enchantment_count: Some(enchantments.len() as u32) }).map_err(Error::Item)?;
                 input.take(count)?;
                 out.extend([6, 5]); out.extend(crate::legacy_items::encode(item.as_ref(),
                     crate::legacy_items::Context { enchantments }).map_err(Error::LegacyItem)?);
             }
-            _ => return Err(Error::PayloadUnavailable("legacy item metadata field")),
+            (9, 3) if entity_kind == Kind::Cow => {
+                let health = scalar(input)?;
+                if health < 0.0 { return Err(Error::Invalid); }
+                out.extend([7, 2]); out.extend(health.to_be_bytes());
+            }
+            (6, 20) | (10, 17) | (12, 1) if entity_kind == Kind::Cow => {
+                // Собственный sender фильтрует standing/empty particles/arrow0
+                // при spawn, но changed path может прислать сброс. У клиента340
+                // это исходное состояние; ненулевые значения здесь ещё НЕ
+                // принимались. Разбираем0, не угадывая индексы старых эффектов.
+                if input.varint()? != 0 { return Err(Error::PayloadUnavailable("legacy cow nondefault metadata")); }
+            }
+            (15, 0) if entity_kind == Kind::Cow => {
+                // NoAI: old adult1 против AI cow0, cross-entity observation.
+                // [проверить] isolated toggle; прочие биты НЕ переносим наугад.
+                let flags = input.take(1)?[0];
+                if flags & !1 != 0 { return Err(Error::PayloadUnavailable("legacy cow flags")); }
+                out.extend([11, 0, flags]);
+            }
+            (16, 8) if entity_kind == Kind::Cow =>
+                out.extend([12, 6, u8::from(input.boolean()?)]),
+            (17, 8) if entity_kind == Kind::Cow => {
+                // AgeLocked управляет ростом на сервере. False не меняет
+                // старую визуализацию, возраст уже передаётся полем12.
+                if input.boolean()? { return Err(Error::PayloadUnavailable("legacy cow locked age")); }
+            }
+            _ => return Err(Error::PayloadUnavailable("legacy entity metadata field")),
         }
     }
 }

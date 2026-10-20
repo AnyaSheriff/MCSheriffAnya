@@ -3,6 +3,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 mod generated_ids;
+mod generated_static_776;
+#[cfg(test)]
+mod static_776_tests;
 pub mod ids;
 pub mod entities;
 mod entity_layouts;

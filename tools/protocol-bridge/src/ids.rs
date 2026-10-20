@@ -1,4 +1,5 @@
-//! Точный перевод ID775↔777 и наблюдённых Attribute776. Это не перевод пакетов.
+//! Точный перевод статических ID775/776/777; Attribute776 подтверждены отдельно
+//! наблюдениями. Доступность таблиц ID не означает поддержку форматов пакетов.
 use crate::JavaVersion;
 use crate::generated_ids::tables;
 pub use crate::generated_ids::RegistryKind;
@@ -15,6 +16,22 @@ pub enum IdTranslationError {
 pub fn translate(
     registry: RegistryKind, from: JavaVersion, to: JavaVersion, id: u32,
 ) -> Result<u32, IdTranslationError> {
+    if (from == JavaVersion::V26_2 || to == JavaVersion::V26_2)
+        && crate::generated_static_776::source_count(registry, JavaVersion::V26_2).is_some() {
+        // Плотность source IDs доказана генератором. Сначала проверяем наличие
+        // исходного ID;65535 означает лишь отсутствие цели у существующего объекта.
+        let count = crate::generated_static_776::source_count(registry, from)
+            .ok_or(IdTranslationError::UnsupportedVersion(from))?;
+        crate::generated_static_776::source_count(registry, to)
+            .ok_or(IdTranslationError::UnsupportedVersion(to))?;
+        if id >= count { return Err(IdTranslationError::UnknownId(id)); }
+        if from == to { return Ok(id); }
+        let table = crate::generated_static_776::table(registry, from, to)
+            .ok_or(IdTranslationError::UnsupportedVersion(to))?;
+        let mapped = table[id as usize];
+        return if mapped == crate::generated_static_776::MISSING { Err(IdTranslationError::MissingTarget(id)) }
+            else { Ok(u32::from(mapped)) };
+    }
     for version in [from, to] {
         if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3)
             && !(registry == RegistryKind::Attribute && version == JavaVersion::V26_2) {
@@ -71,7 +88,7 @@ mod tests {
         }
         assert_eq!(translate(RegistryKind::Attribute,V26_1_2,V26_3,2),Ok(3));
         assert_eq!(translate(RegistryKind::Attribute,V26_1_2,V26_3,22),Ok(26));
-        assert_eq!(translate(RegistryKind::Item, V26_2, V26_3, 1),
+        assert_eq!(translate(RegistryKind::PlayClientbound, V26_2, V26_3, 1),
             Err(IdTranslationError::UnsupportedVersion(V26_2)));
         assert_eq!(translate(RegistryKind::BlockState, V26_3, V26_1_2, u32::MAX),
             Err(IdTranslationError::UnknownId(u32::MAX)));
@@ -136,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn attribute_776_keeps_bounds_and_does_not_enable_other_registries() {
+    fn attribute_776_keeps_bounds_and_does_not_enable_packet_registries() {
         for id in [40, u32::MAX] {
             for (from, to) in [(V26_2, V26_2), (V26_2, V26_1_2), (V26_2, V26_3), (V26_3, V26_2)] {
                 assert_eq!(translate(RegistryKind::Attribute, from, to, id), Err(IdTranslationError::UnknownId(id)));
@@ -146,7 +163,7 @@ mod tests {
             assert_eq!(translate(RegistryKind::Attribute, V26_1_2, V26_2, id), Err(IdTranslationError::UnknownId(id)));
         }
         for &registry in crate::generated_ids::ALL {
-            if registry == RegistryKind::Attribute { continue; }
+            if registry == RegistryKind::Attribute || crate::generated_static_776::source_count(registry, V26_2).is_some() { continue; }
             for (from, to) in [(V26_2, V26_2), (V26_2, V26_1_2), (V26_1_2, V26_2), (V26_2, V26_3), (V26_3, V26_2)] {
                 assert_eq!(translate(registry, from, to, 0), Err(IdTranslationError::UnsupportedVersion(V26_2)));
             }

@@ -13,12 +13,15 @@ pub struct Context {
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
-    Invalid, Truncated, TooLarge, Context,
+    UnsupportedVersion(JavaVersion), Invalid, Truncated, TooLarge, Context,
     Sections(chunk_sections::Error), Light(crate::light::Error),
     Entity(block_entities::Error), Nbt(registry::Error), Id(ids::IdTranslationError),
 }
 
 pub fn translate(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context) -> Result<Vec<u8>, Error> {
+    for version in [from, to] {
+        if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion(version)); }
+    }
     if payload.len() > MAX_BYTES { return Err(Error::TooLarge); }
     if context.sections == 0 || context.sections > 256 || context.min_y % 16 != 0
         || context.min_y < i32::from(i16::MIN) || context.min_y > i32::from(i16::MAX) - context.sections as i32 * 16 + 1 {

@@ -165,9 +165,14 @@ impl Session {
                 if self.entity == Some(target.uint()? as i32) { return Ok(vec![self.player_metadata(input.rest)?]); }
                 return self.items.translate(id, input.rest, self.window, self.entity, enchantments);
             }
-            0x01 | 0x23 | 0x35 | 0x36 | 0x38 | 0x4d | 0x65 | 0x7c =>
+            0x01 | 0x23 | 0x35 | 0x36 | 0x38 | 0x4d | 0x53 | 0x65 | 0x7c =>
                 return self.items.translate(id, input.rest, self.window, self.entity, enchantments),
-            0x83 => return Ok(self.modifiers.translate(input.rest)?.into_iter().collect()),
+            0x83 => {
+                let mut target = Cursor::new(input.rest);
+                let entity = target.uint()?;
+                if self.entity != Some(entity as i32) { self.items.living(entity)?; }
+                return Ok(self.modifiers.translate(input.rest)?.into_iter().collect());
+            }
             0x4a..=0x4c => return Ok(vec![self.recipes.clientbound(id,input.rest)?]),
             0x82 => return Ok(vec![crate::legacy_advancements::translate(input.rest,enchantments)?]),
             0x46 => {
