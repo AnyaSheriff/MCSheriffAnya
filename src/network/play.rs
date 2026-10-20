@@ -12719,6 +12719,9 @@ mod tails_tests;
 mod chunk_compat_tests;
 
 #[cfg(test)]
+mod initial_776_probe;
+
+#[cfg(test)]
 mod legacy_action_tests;
 
 mod legacy_chunks;

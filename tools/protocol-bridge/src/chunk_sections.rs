@@ -1,4 +1,4 @@
-//! Собственные палитры секций775/777. Wiki Chunk format oldid3661930:
+//! Собственные палитры секций775/776/777. Wiki Chunk format oldid3661930:
 //! «length ... no longer sent»; значения не пересекают границу long.
 //! Динамические ID биомов должны совпадать у обеих сторон (контракт вызывающего).
 use std::collections::BTreeMap;
@@ -16,7 +16,13 @@ pub struct Section {
 }
 
 fn block_bits(version: JavaVersion) -> Result<u8, Error> {
-    match version { JavaVersion::V26_1_2 => Ok(15), JavaVersion::V26_3 => Ok(16), _ => Err(Error::UnsupportedVersion) }
+    // 776:300 авторских состояний, direct width15 по обычному MapChunk.
+    // Полный chunk/admission этим низкоуровневым helper не включается.
+    match version {
+        JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(15),
+        JavaVersion::V26_3 => Ok(16),
+        JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion),
+    }
 }
 fn bits(count: u32) -> u8 { (32 - count.saturating_sub(1).leading_zeros()).max(1) as u8 }
 fn uint(out: &mut Vec<u8>, mut value: u32) {

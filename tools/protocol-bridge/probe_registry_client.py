@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Проверка наших Configuration-пакетов непрозрачным официальным клиентом26.3.
+"""Проверка наших Configuration-пакетов непрозрачным официальным клиентом26.2/26.3.
 
 JAR только исполняется; никакого чтения его кода или выгрузки датапаков.
 Отдельные Xvfb, каталог игры и loopback-порт, вымышленный offline-профиль.
@@ -8,16 +8,15 @@ import argparse
 import hashlib
 import io
 import json
-import os
 from pathlib import Path
 import shutil
-import signal
 import socket
 import struct
-import subprocess
 import tempfile
 import time
 import uuid
+
+from live_client import CLIENT_SHA1, launch, stop
 
 
 def varint(value):
@@ -65,64 +64,134 @@ def send(stream, body):
     stream.sendall(varint(len(body)) + body)
 
 
-def main():
+# Configuration IDs подтверждены pinned protocol JSON. NBT проверяет сам клиент.
+CONFIGURATIONS = {
+    '26.2': {'protocol': 776, 'known': 14, 'tags': 13, 'registries': 25},
+    '26.3': {'protocol': 777, 'known': 15, 'tags': 14, 'registries': None},
+}
+
+
+def read_string(stream):
+    size = integer(stream)
+    if size > 32767:
+        raise ValueError('oversized configuration string')
+    return exact(stream, size).decode('utf-8')
+
+
+def require_end(stream, label):
+    if stream.read(1):
+        raise ValueError('trailing bytes: ' + label)
+
+
+def known_packs(stream):
+    count = integer(stream)
+    if count > 1024:
+        raise ValueError('oversized known-packs count')
+    packs = [tuple(read_string(stream) for _ in range(3)) for _ in range(count)]
+    require_end(stream, 'known packs')
+    return packs
+
+
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--client-dir', type=Path, required=True)
     parser.add_argument('--packets', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--version', choices=CONFIGURATIONS, default='26.3')
     parser.add_argument('--port', type=int, default=26012)
     parser.add_argument('--empty-known-packs', action='store_true')
     parser.add_argument('--play-packets', type=Path, help='наши14 Play-пакетов из export_chunk_client_probe')
     parser.add_argument('--particle-probe', action='store_true', help='четыре world_particles и эффекты трёх мобов')
     parser.add_argument('--entity-probe', action='store_true', help='два Respawn и три моба от настоящих builder-ов ядра')
     parser.add_argument('--extra-play-packets',type=Path,help='дополнительные наши подготовленные кадры Play после основного набора')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    if not 1 <= args.port <= 65535:
+        parser.error('--port must be between 1 and 65535')
+    if args.version == '26.2' and any((args.play_packets, args.particle_probe, args.entity_probe, args.extra_play_packets)):
+        parser.error('26.2 supports Configuration-only probing; Play is not verified yet')
+    if (args.particle_probe or args.entity_probe or args.extra_play_packets) and not args.play_packets:
+        parser.error('Play probe flags require --play-packets')
+    if args.particle_probe and not args.entity_probe:
+        parser.error('--particle-probe requires --entity-probe')
+    return args
+
+
+def configuration_fixture(raw, version, empty):
+    config = CONFIGURATIONS[version]
+    encoded = json.loads(raw)
+    if not isinstance(encoded, list) or not 29 <= len(encoded) <= 128:
+        raise ValueError('unexpected configuration packet count')
+    bodies = [bytes.fromhex(body) for body in encoded]
+    if any(not body or len(body) > 8 * 1024 * 1024 for body in bodies):
+        raise ValueError('invalid configuration packet size')
+    registry_count = len(bodies) - 4
+    if config['registries'] is not None and registry_count != config['registries']:
+        raise ValueError('unexpected registry count for ' + version)
+    expected = [1, config['known']] + [7] * registry_count + [config['tags'], 3]
+    if [integer(io.BytesIO(body)) for body in bodies] != expected or bodies[-1] != b'\x03':
+        raise ValueError('configuration packet IDs/order do not match ' + version)
+    advertised = io.BytesIO(bodies[1])
+    integer(advertised)
+    if known_packs(advertised) != [('minecraft', 'core', version)]:
+        raise ValueError('fixture must offer the exact client core pack')
+    if empty:
+        bodies[1] = bytes(varint(config['known'])) + b'\x00'
+    return bodies, registry_count
+
+
+def configuration_reply(connection, report, expected_packs=None, timeout=60):
+    """Ограниченное ожидание ответа; ACK с лишним payload успехом не считается."""
+    deadline = time.monotonic() + timeout
+    for _ in range(32):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError('configuration reply deadline')
+        connection.settimeout(remaining)
+        response = packet(connection)
+        kind = integer(response)
+        report['received'].append(kind)
+        if kind == 7:
+            if expected_packs is None:
+                raise ValueError('duplicate/out-of-order known-packs reply')
+            packs = known_packs(response)
+            report['known_packs'] = packs
+            report['known_packs_count'] = len(packs)
+            if packs != expected_packs:
+                raise ValueError('unexpected known packs: ' + repr(packs))
+            return
+        if kind == 3:
+            if expected_packs is not None:
+                raise ValueError('finish ACK before known-packs reply')
+            require_end(response, 'finish ACK')
+            report['finish_ack'] = True
+            return
+    raise RuntimeError('no expected configuration reply within 32 packets')
+
+
+def main(argv=None):
+    args = parse_args(argv)
     cache = args.client_dir.resolve()
-    with (cache / 'client.jar').open('rb') as source:
-        assert hashlib.file_digest(source, 'sha1').hexdigest() == 'e877b6a07acd633fb3bb475002175cec036e7b87'
-    bodies = [bytes.fromhex(body) for body in json.loads(args.packets.read_text())]
-    registry_count = sum(body[0] == 7 for body in bodies)
-    assert registry_count >= 25 and len(bodies) == registry_count + 4
-    assert bodies[0][0] == 1 and bodies[1][0] == 15 and bodies[-1] == b'\x03'
-    if args.empty_known_packs:
-        bodies[1] = b'\x0f\x00'
+    raw = args.packets.read_bytes()
+    bodies, registry_count = configuration_fixture(raw, args.version, args.empty_known_packs)
     args.output.mkdir(parents=True, exist_ok=True)
-    report = {'client': '26.3', 'protocol': 777, 'registry_count': registry_count,
-              'fixture_sha256': hashlib.sha256(args.packets.read_bytes()).hexdigest(),
+    report = {'client': args.version, 'protocol': CONFIGURATIONS[args.version]['protocol'],
+              'client_sha1': CLIENT_SHA1[args.version], 'registry_count': registry_count,
+              'fixture_sha256': hashlib.sha256(raw).hexdigest(),
               'empty_known_packs': args.empty_known_packs, 'finish_ack': False, 'received': []}
     with tempfile.TemporaryDirectory(prefix='mcsa-registry-client-') as directory, socket.socket() as listener:
         root = Path(directory)
-        (root / 'options.txt').write_text('onboardAccessibility:false\nskipMultiplayerWarning:true\nnarrator:0\n')
         listener.bind(('127.0.0.1', args.port))
         listener.listen(4)
         listener.settimeout(120)
         identity = uuid.UUID(bytes=hashlib.md5(b'OfflinePlayer:McsaProbe').digest(), version=3)
-        command = ['xvfb-run', '-a', '-s', '-screen 0 854x480x24',
-                   '/usr/lib/jvm/java-25-openjdk/bin/java', '-Xmx1G', '-XX:StackShadowPages=32',
-                   '--enable-native-access=ALL-UNNAMED', '--add-exports', 'java.base/jdk.internal.misc=ALL-UNNAMED',
-                   '-Djava.library.path=' + str(root / 'natives/java'),
-                   '-Djna.tmpdir=' + str(root / 'natives/jna'),
-                   '-Dorg.lwjgl.system.SharedLibraryExtractPath=' + str(root / 'natives/lwjgl'),
-                   '-Dio.netty.native.workdir=' + str(root / 'natives/netty'),
-                   '-Dminecraft.launcher.brand=mcsa-probe', '-Dminecraft.launcher.version=1',
-                   '-cp', (cache / 'classpath.txt').read_text().strip(), 'net.minecraft.client.main.Main',
-                   '--username', 'McsaProbe', '--version', '26.3', '--gameDir', str(root),
-                   '--assetsDir', str(cache / 'assets'), '--assetIndex', '34', '--uuid', identity.hex,
-                   '--accessToken', '0', '--clientId', '0', '--xuid', '0', '--versionType', 'release',
-                   '--width', '854', '--height', '480', '--quickPlayMultiplayer', f'127.0.0.1:{args.port}']
-        environment = os.environ.copy()
-        for key in ['WAYLAND_DISPLAY', 'WAYLAND_SOCKET', 'DISPLAY', 'XAUTHORITY', 'DBUS_SESSION_BUS_ADDRESS']:
-            environment.pop(key, None)
-        (root / 'runtime').mkdir(mode=0o700)
-        environment.update(XDG_SESSION_TYPE='x11', XDG_RUNTIME_DIR=str(root / 'runtime'), ALSOFT_DRIVERS='null')
         with (args.output / 'client.log').open('w') as log:
-            client = subprocess.Popen(command, cwd=root, stdin=subprocess.DEVNULL, stdout=log,
-                                      stderr=subprocess.STDOUT, start_new_session=True, env=environment)
+            client = None
             try:
+                client = launch(cache, root, args.port, log, version=args.version)
                 with listener.accept()[0] as connection:
                     connection.settimeout(60)
                     handshake = packet(connection)
-                    assert integer(handshake) == 0 and integer(handshake) == 777
+                    assert integer(handshake) == 0 and integer(handshake) == report['protocol']
                     exact(handshake, integer(handshake))
                     exact(handshake, 2)
                     assert integer(handshake) == 2
@@ -130,30 +199,16 @@ def main():
                     assert integer(login) == 0
                     assert exact(login, integer(login)) == b'McsaProbe'
                     send(connection, b'\x02' + identity.bytes + string('McsaProbe') + b'\x00' + uuid.uuid4().bytes)
-                    assert integer(packet(connection)) == 3
+                    login_ack = packet(connection)
+                    assert integer(login_ack) == 3
+                    require_end(login_ack, 'Login ACK')
                     for body in bodies[:2]:
                         send(connection, body)
-                    for _ in range(32):
-                        response = packet(connection)
-                        kind = integer(response)
-                        report['received'].append(kind)
-                        if kind == 7:
-                            report['known_packs_count'] = integer(response)
-                            if args.empty_known_packs:
-                                assert report['known_packs_count'] == 0
-                            break
-                    else:
-                        raise RuntimeError('no known-packs reply')
+                    expected_packs = [] if args.empty_known_packs else [('minecraft', 'core', args.version)]
+                    configuration_reply(connection, report, expected_packs)
                     for body in bodies[2:]:
                         send(connection, body)
-                    for _ in range(32):
-                        response = packet(connection)
-                        kind = integer(response)
-                        report['received'].append(kind)
-                        if kind == 3:
-                            report['finish_ack'] = True
-                            break
-                    assert report['finish_ack'], 'client did not accept configuration'
+                    configuration_reply(connection, report)
                     if args.play_packets:
                         play = [bytes.fromhex(b) for b in json.loads(args.play_packets.read_text())]
                         if args.entity_probe:
@@ -227,16 +282,10 @@ def main():
                 report['error'] = repr(error)
                 raise
             finally:
-                # Завершаем только собственную группу Xvfb+Java по сохранённому PID.
-                try:
-                    os.killpg(client.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-                try:
-                    client.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    os.killpg(client.pid, signal.SIGKILL)
-                    client.wait()
+                # live_client завершает только созданную им группу Xvfb+Java.
+                if client is not None:
+                    stop(client)
+                    report['client_exit'] = client.returncode
                 for folder in ['crash-reports', 'debug']:
                     for diagnostic in (root / folder).rglob('*.txt'):
                         if diagnostic.stat().st_size <= 1024 * 1024:

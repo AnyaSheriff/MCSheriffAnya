@@ -1,5 +1,5 @@
-//! Свет775↔777: pinned protocol.json, Wiki Light Data; реальныеfixtures вtestdata.
-//! В775 маски — массив BE-long, в777 — массив байтов с младшими битами впереди.
+//! Свет775/776/777: pinned protocol.json, Wiki Light Data; реальныеfixtures вtestdata.
+//! В775/776 маски — массив BE-long, в777 — массив байтов с младшими битами впереди.
 use crate::JavaVersion;
 
 const MAX_SECTIONS: usize = 256;
@@ -20,8 +20,16 @@ pub struct Light {
     pub block_arrays: Vec<Vec<u8>>,
 }
 
-fn supported(version: JavaVersion) -> Result<(), Error> {
-    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
+#[derive(Clone, Copy)]
+enum MaskLayout { Longs, Bytes }
+
+fn mask_layout(version: JavaVersion) -> Result<MaskLayout, Error> {
+    // 776: ordinary-payloads-26.2.json, два собственных MapChunk с факелом.
+    match version {
+        JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(MaskLayout::Longs),
+        JavaVersion::V26_3 => Ok(MaskLayout::Bytes),
+        JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion),
+    }
 }
 fn trim(mask: &mut Vec<u8>) { while mask.last() == Some(&0) { mask.pop(); } }
 fn population(mask: &[u8]) -> usize { mask.iter().map(|b| b.count_ones() as usize).sum() }
@@ -29,13 +37,13 @@ fn population(mask: &[u8]) -> usize { mask.iter().map(|b| b.count_ones() as usiz
 impl Light {
     /// Только LightData, без номера пакета и координат чанка.
     pub fn decode(version: JavaVersion, payload: &[u8]) -> Result<Self, Error> {
-        supported(version)?;
+        let layout = mask_layout(version)?;
         if payload.len() > MAX_BYTES { return Err(Error::TooLarge); }
         let mut input = Cursor(payload);
-        let sky = input.mask(version)?;
-        let block = input.mask(version)?;
-        let empty_sky = input.mask(version)?;
-        let empty_block = input.mask(version)?;
+        let sky = input.mask(layout)?;
+        let block = input.mask(layout)?;
+        let empty_sky = input.mask(layout)?;
+        let empty_block = input.mask(layout)?;
         let sky_arrays = input.arrays(population(&sky))?;
         let block_arrays = input.arrays(population(&block))?;
         if !input.0.is_empty() { return Err(Error::Invalid); }
@@ -60,12 +68,12 @@ impl Light {
     }
 
     pub fn encode(&self, version: JavaVersion) -> Result<Vec<u8>, Error> {
-        supported(version)?;
+        let layout = mask_layout(version)?;
         self.validate()?;
         let mut out = Vec::new();
         for mask in [&self.sky, &self.block, &self.empty_sky, &self.empty_block] {
             let mut mask = mask.clone(); trim(&mut mask);
-            if version == JavaVersion::V26_1_2 {
+            if matches!(layout, MaskLayout::Longs) {
                 uint(&mut out, mask.len().div_ceil(8) as u32);
                 for bytes in mask.chunks(8) {
                     let mut word = [0; 8]; word[..bytes.len()].copy_from_slice(bytes);
@@ -99,8 +107,8 @@ impl<'a> Cursor<'a> {
         }
         Err(Error::Invalid)
     }
-    fn mask(&mut self, version: JavaVersion) -> Result<Vec<u8>, Error> {
-        let mut mask = if version == JavaVersion::V26_1_2 {
+    fn mask(&mut self, layout: MaskLayout) -> Result<Vec<u8>, Error> {
+        let mut mask = if matches!(layout, MaskLayout::Longs) {
             let count = self.count(MAX_MASK_BYTES.div_ceil(8))?;
             let mut out = Vec::with_capacity(count * 8);
             for word in self.take(count * 8)?.as_chunks::<8>().0 {
@@ -156,10 +164,10 @@ mod tests {
     #[test]
     fn masks_cross_byte_and_long_boundaries_in_both_directions() {
         let light = sample();
-        for version in [JavaVersion::V26_1_2, JavaVersion::V26_3] {
+        for version in [JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3] {
             let bytes = light.encode(version).unwrap();
             assert_eq!(Light::decode(version, &bytes).unwrap(), light);
-            if version == JavaVersion::V26_1_2 { assert_eq!(&bytes[..9], &[2, 128, 0, 0, 0, 0, 0, 2, 1]); }
+            if version != JavaVersion::V26_3 { assert_eq!(&bytes[..9], &[2, 128, 0, 0, 0, 0, 0, 2, 1]); }
             else { assert_eq!(&bytes[..10], &[9, 1, 2, 0, 0, 0, 0, 0, 128, 1]); }
             for size in [0, 1, 10, bytes.len() - 1] { assert!(Light::decode(version, &bytes[..size]).is_err()); }
             let mut trailing = bytes; trailing.push(0);
@@ -175,6 +183,6 @@ mod tests {
         let mut light = sample(); light.sky_arrays.pop();
         assert_eq!(light.encode(JavaVersion::V26_3), Err(Error::Invalid));
         assert_eq!(Light::decode(JavaVersion::V26_3, &[255,255,255,255,7]), Err(Error::TooLarge));
-        assert_eq!(Light::decode(JavaVersion::V26_2, &[]), Err(Error::UnsupportedVersion));
+        assert_eq!(Light::decode(JavaVersion::V1_12_2, &[]), Err(Error::UnsupportedVersion));
     }
 }

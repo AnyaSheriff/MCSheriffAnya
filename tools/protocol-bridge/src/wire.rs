@@ -374,9 +374,21 @@ fn respawn(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: Ja
     Ok(())
 }
 
+// 775/776: обычные i16 delta, затем yaw/pitch и onGround. 777: Delta с
+// флагами/шагами, затем yaw/pitch. Не является общим alias протокола776.
+fn move_angles_before_ground(version: JavaVersion) -> Result<bool, Error> {
+    match version {
+        JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(true),
+        JavaVersion::V26_3 => Ok(false),
+        JavaVersion::V1_12_2 => Err(Error::UnsupportedVersion(version)),
+    }
+}
+
 fn entity_move(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, rotation: bool) -> Result<(), Error> {
+    let source_angles_before_ground = move_angles_before_ground(from)?;
+    let target_angles_before_ground = move_angles_before_ground(to)?;
     uint(out, cursor.uint()?);
-    let (delta, angles) = if from == JavaVersion::V26_1_2 {
+    let (delta, angles) = if source_angles_before_ground {
         let bytes = cursor.take(6)?;
         let movement = [i16::from_be_bytes([bytes[0], bytes[1]]), i16::from_be_bytes([bytes[2], bytes[3]]), i16::from_be_bytes([bytes[4], bytes[5]])];
         // В старом Position+Rotation onGround стоит ПОСЛЕ yaw/pitch.
@@ -390,7 +402,7 @@ fn entity_move(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to
         (delta, angles)
     };
     let encoded = delta.encode(to)?;
-    if to == JavaVersion::V26_1_2 && rotation {
+    if target_angles_before_ground && rotation {
         out.extend(&encoded[..6]);
         out.extend(angles.ok_or(Error::Invalid)?);
         out.push(encoded[6]);
@@ -821,3 +833,11 @@ mod tests {
         assert!(matches!(cb(&[0], JavaVersion::V26_2, NEW), Err(Error::UnsupportedVersion(_))));
     }
 }
+
+#[cfg(test)]
+#[path = "payload_776_tests.rs"]
+mod payload_776_tests;
+
+#[cfg(test)]
+#[path = "initial_play_776_tests.rs"]
+mod initial_play_776_tests;

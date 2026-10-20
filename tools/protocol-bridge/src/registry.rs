@@ -37,7 +37,7 @@ pub(crate) fn nbt_payload_length(kind: u8, bytes: &[u8]) -> Result<usize, Error>
 }
 
 fn supported(version: JavaVersion) -> Result<(), Error> {
-    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
+    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
 }
 
 fn identifier(value: &str) -> bool {
@@ -84,7 +84,15 @@ impl Registry {
     pub fn encode(&self) -> Result<Vec<u8>, Error> {
         supported(self.version)?;
         if self.entries.len() > MAX_ENTRIES { return Err(Error::TooLarge); }
-        let id = ids::translate(RegistryKind::ConfigurationClientbound, JavaVersion::V26_1_2, self.version, 7).map_err(Error::Id)?;
+        // Готовое содержимое builder-а; private lookup не открывает общий wire776.
+        let id = if self.version == JavaVersion::V26_2 {
+            let info = crate::packet_layouts::packet_info(RegistryKind::ConfigurationClientbound,
+                JavaVersion::V26_1_2, self.version, 7).ok_or(Error::Invalid)?;
+            if info.name != "registry_data" || !info.schema_equal { return Err(Error::Invalid); }
+            info.target_id.ok_or(Error::Invalid)?
+        } else {
+            ids::translate(RegistryKind::ConfigurationClientbound, JavaVersion::V26_1_2, self.version, 7).map_err(Error::Id)?
+        };
         let mut out = Vec::new();
         uint(&mut out, id);
         string(&mut out, &self.name)?;
@@ -204,7 +212,7 @@ mod tests {
     }
     #[test]
     fn round_trip_preserves_custom_entries_order_and_optional_nbt() {
-        for version in [JavaVersion::V26_1_2, JavaVersion::V26_3] {
+        for version in [JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3] {
             let mut registry = sample(); registry.version = version;
             let bytes = registry.encode().unwrap();
             assert_eq!(bytes[0], 7);
@@ -213,8 +221,10 @@ mod tests {
             let mut trailing = bytes[1..].to_vec(); trailing.push(0);
             assert_eq!(Registry::decode(version, &trailing), Err(Error::Invalid));
         }
-        let mut registry = sample(); registry.version = JavaVersion::V26_2;
+        let mut registry = sample(); registry.version = JavaVersion::V1_12_2;
         assert_eq!(registry.encode(), Err(Error::UnsupportedVersion));
+        assert!(ids::translate(RegistryKind::ConfigurationClientbound,
+            JavaVersion::V26_1_2, JavaVersion::V26_2, 7).is_err());
     }
     #[test]
     fn root_list_is_valid_for_block_transformers_but_must_be_bounded() {

@@ -1,5 +1,7 @@
 //! Confirm Teleportation: Wiki oldid3848030, «resulting position and rotation».
 //! 777 добавляет координаты и углы к номеру. Не теряем эти поля при переводе.
+//! Короткий ACK776: закреплённый JSON и принятие собственного probe сервером;
+//! [проверить] исходящий ACK настоящего GUI-клиента776 ещё не записан.
 use crate::JavaVersion;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -29,7 +31,7 @@ pub enum Error { UnsupportedVersion, Truncated, Invalid, MissingPose, Unexpected
 
 impl Confirmation {
     pub fn decode(version: JavaVersion, payload: &[u8]) -> Result<Self, Error> {
-        if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion); }
+        if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion); }
         let mut rest = payload;
         let mut value = 0u32;
         let mut complete = false;
@@ -62,9 +64,9 @@ impl Confirmation {
 
     pub fn encode(self, version: JavaVersion) -> Result<Vec<u8>, Error> {
         match (version, self.pose) {
-            (JavaVersion::V1_12_2 | JavaVersion::V26_2, _) => return Err(Error::UnsupportedVersion),
+            (JavaVersion::V1_12_2, _) => return Err(Error::UnsupportedVersion),
             (JavaVersion::V26_3, None) => return Err(Error::MissingPose),
-            (JavaVersion::V26_1_2, Some(_)) => return Err(Error::UnexpectedPose),
+            (JavaVersion::V26_1_2 | JavaVersion::V26_2, Some(_)) => return Err(Error::UnexpectedPose),
             _ => {}
         }
         let mut out = Vec::with_capacity(37);
@@ -122,6 +124,6 @@ mod tests {
         for bytes in [&[255, 255, 255, 255, 31][..], &[128, 128, 128, 128, 128, 0], &[1, 0]] {
             assert!(Confirmation::decode(OLD, bytes).is_err());
         }
-        assert_eq!(Confirmation::decode(JavaVersion::V26_2, &[0]), Err(Error::UnsupportedVersion));
+        assert_eq!(Confirmation::decode(JavaVersion::V1_12_2, &[0]), Err(Error::UnsupportedVersion));
     }
 }

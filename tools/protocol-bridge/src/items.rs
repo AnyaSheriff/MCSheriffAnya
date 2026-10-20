@@ -1,4 +1,4 @@
-//! Предметы775↔777: только явно разобранные компоненты, без потери неизвестных данных.
+//! Предметы775↔777 и ограниченный Slot776: только явно разобранные компоненты, без потери неизвестных данных.
 //! Источник: закреплённые Slot/UntrustedSlotComponent в protocol.json.
 use std::collections::BTreeSet;
 use crate::{JavaVersion, ids::{self, RegistryKind}, registry};
@@ -57,8 +57,18 @@ fn id(kind: RegistryKind, from: JavaVersion, to: JavaVersion, value: u32) -> Res
 
 // Таблица ID сама по себе не разрешает payload этой версии.
 fn supported_payload(version: JavaVersion) -> Result<(), Error> {
-    if matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { Ok(()) }
+    if matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Ok(()) }
     else { Err(Error::UnsupportedVersion(version)) }
+}
+
+// Обычный Slot776 наблюдён отдельно. Верхние Particle ItemStackTemplate и
+// serverbound Creative Slot ещё не проверены; совпавшая JSON-форма не открывает их.
+fn supported_form(version: JavaVersion, untrusted: bool, template: bool) -> Result<(), Error> {
+    supported_payload(version)?;
+    if version == JavaVersion::V26_2 && (untrusted || template) {
+        return Err(Error::UnsupportedVersion(version));
+    }
+    Ok(())
 }
 
 /// Разбирает ровно один слот; возвращает число прочитанных байтов для массива слотов.
@@ -74,7 +84,7 @@ pub fn decode_template(version: JavaVersion, bytes: &[u8], context: Context) -> 
 }
 
 fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Context, template: bool) -> Result<(Option<Stack>, usize), Error> {
-    supported_payload(version)?;
+    supported_form(version, untrusted, template)?;
     if bytes.len() > LIMIT { return Err(Error::TooLarge); }
     let mut input = Reader(bytes);
     let template_id = if template { Some(input.uint()?) } else { None };
@@ -117,7 +127,7 @@ pub fn encode_template(version: JavaVersion, stack: &Stack, context: Context) ->
 }
 
 fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, context: Context, template: bool) -> Result<Vec<u8>, Error> {
-    supported_payload(version)?;
+    supported_form(version, untrusted, template)?;
     let Some(stack) = stack else { return Ok(vec![0]); };
     if !(1..=127).contains(&stack.count) || stack.item == 0 || stack.added.len() > 256 || stack.removed.len() > 256 { return Err(Error::Invalid); }
     let mut out = Vec::new();
@@ -139,6 +149,8 @@ fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, co
         if !seen.insert(kind) { return Err(Error::Invalid); }
         uint(&mut out, id(RegistryKind::Component, JavaVersion::V26_1_2, version, kind)?);
     }
+    // Removed IDs тоже занимают место: весь Slot должен укладываться в LIMIT.
+    if out.len() > LIMIT { return Err(Error::TooLarge); }
     Ok(out)
 }
 
@@ -148,6 +160,21 @@ pub(crate) fn component_bytes(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to
 
 pub(crate) fn component_bytes_at(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize)->Result<Vec<u8>,Error>{
     supported_payload(from)?; supported_payload(to)?;
+    if (from == JavaVersion::V26_2 || to == JavaVersion::V26_2)
+        && !matches!(kind,3|6|16|40|45|84|25|49|50|75) {
+        return Err(Error::UnsupportedComponent(kind));
+    }
+    // В776 эти два компонента наблюдены отдельно. В777 swing_animation
+    // удалён, а collar payload здесь ещё не открываем по одному совпавшему ID.
+    if matches!(kind,40|84) && matches!(from,JavaVersion::V26_1_2|JavaVersion::V26_2)
+        && matches!(to,JavaVersion::V26_1_2|JavaVersion::V26_2) {
+        let start=input.0;
+        if kind==40 { input.count(2)?; input.uint()?; } else { input.count(15)?; }
+        return Ok(start[..start.len()-input.0.len()].to_vec());
+    }
+    // Для776 вложенные формы25/49/50/75 разрешены только по равенству pinned
+    // схем775/776 (fixture); live776 nested ещё НЕ проверены. Общие32 уровня,
+    // 256 записей и LIMIT сохраняются, внутри действует тот же component gate.
     if matches!(kind,25|49|50|75){return crate::nested_items::remap(kind,input,from,to,context,depth);}
     if matches!(kind,16|18){return crate::item_components::remap(kind,input,from,to);}
     let start=input.0;component_data(kind,input,context)?;Ok(start[..start.len()-input.0.len()].to_vec())
@@ -231,3 +258,7 @@ pub(crate) fn fields(mut bytes: &[u8]) -> Result<Vec<NbtField<'_>>, Error> {
         if out.len() > 256 { return Err(Error::TooLarge); }
     }
 }
+
+#[cfg(test)]
+#[path = "item_776_tests.rs"]
+mod tests_776;

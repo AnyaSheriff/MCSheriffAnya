@@ -58,21 +58,22 @@ fn old_components_shared_with_776_do_not_disappear_through_777() {
 }
 
 #[test]
-fn static_tables_do_not_enable_item_or_component_payloads() {
+fn observed_776_slot_does_not_enable_untrusted_template_or_unknown_components() {
     use crate::items::{self, Context, Stack};
     let ctx = Context::default();
     let unsupported = items::Error::UnsupportedVersion(MID);
-    for untrusted in [false, true] {
-        assert_eq!(items::decode(MID, &[0], untrusted, ctx), Err(unsupported.clone()));
-        assert_eq!(items::encode(MID, None, untrusted, ctx), Err(unsupported.clone()));
-    }
+    assert_eq!(items::decode(MID, &[0], false, ctx), Ok((None, 1)));
+    assert_eq!(items::encode(MID, None, false, ctx), Ok(vec![0]));
+    assert_eq!(items::decode(MID, &[0], true, ctx), Err(unsupported.clone()));
+    assert_eq!(items::encode(MID, None, true, ctx), Err(unsupported.clone()));
     assert_eq!(items::decode_template(MID, &[1, 1, 0, 0], ctx), Err(unsupported.clone()));
     let stack = Stack { item: 1, count: 1, added: vec![], removed: vec![] };
-    assert_eq!(items::encode_template(MID, &stack, ctx), Err(unsupported.clone()));
+    assert_eq!(items::encode_template(MID, &stack, ctx), Err(unsupported));
     for (from, to) in [(MID, OLD), (OLD, MID), (MID, NEW), (NEW, MID)] {
         let mut input = items::Reader(&[]);
-        // Пустой unbreakable компонент также не обходит version guard.
-        assert_eq!(items::component_bytes(4, &mut input, from, to, ctx), Err(unsupported.clone()));
+        // Пустой unbreakable компонент не входит в bounded776 scope.
+        assert_eq!(items::component_bytes(4, &mut input, from, to, ctx),
+            Err(items::Error::UnsupportedComponent(4)));
     }
 }
 
@@ -105,6 +106,9 @@ fn static_tables_do_not_enable_chunk_entity_wire_or_admission_routes() {
     assert!(crate::Negotiated::native_only(776, OLD).is_err());
     assert!(crate::registry::Registry::decode(MID, &[]).is_err());
     assert!(crate::light::Light::decode(MID, &[]).is_err());
-    assert!(crate::teleport::Confirmation::decode(MID, &[0]).is_err());
+    // Короткий ACK уже проверяется отдельным codec; общий wire остаётся закрыт.
+    assert_eq!(crate::teleport::Confirmation::decode(MID, &[0]),
+        Ok(crate::teleport::Confirmation { id: 0, pose: None }));
+    assert!(crate::teleport::Confirmation::decode(MID, &[]).is_err());
     assert!(crate::chunk_sections::decode(MID, &[], 1, 1).is_err());
 }

@@ -22,6 +22,17 @@ pub fn translate(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Co
     for version in [from, to] {
         if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion(version)); }
     }
+    translate_inner(from, to, payload, context)
+}
+
+// Только два шага ignored-test export: настоящий native775 builder → bounded776.
+// Публичный wrapper выше сохраняет свой прежний список поддержанных версий.
+#[cfg(test)]
+pub(crate) fn translate_776_fixture(payload: &[u8], context: Context) -> Result<Vec<u8>, Error> {
+    translate_inner(JavaVersion::V26_1_2, JavaVersion::V26_2, payload, context)
+}
+
+fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context) -> Result<Vec<u8>, Error> {
     if payload.len() > MAX_BYTES { return Err(Error::TooLarge); }
     if context.sections == 0 || context.sections > 256 || context.min_y % 16 != 0
         || context.min_y < i32::from(i16::MIN) || context.min_y > i32::from(i16::MAX) - context.sections as i32 * 16 + 1 {
@@ -51,6 +62,9 @@ pub fn translate(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Co
     let size = input.count(MAX_BYTES)?;
     let mut sections = chunk_sections::decode(from, input.take(size)?, context.sections, context.shared_biome_count).map_err(Error::Sections)?;
     let count = input.count(context.sections * 4096)?;
+    if (from == JavaVersion::V26_2 || to == JavaVersion::V26_2) && count != 0 {
+        return Err(Error::Entity(block_entities::Error::UnsupportedVersion));
+    }
     if count > input.0.len() / 5 { return Err(Error::Truncated); }
     let mut entities = BTreeMap::new();
     let mut places = BTreeSet::new();

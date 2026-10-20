@@ -529,8 +529,8 @@ pub async fn send_registry_data(stream: &mut Connection) -> io::Result<usize> {
 
 fn registry_bundle(version: mcsa_protocol::JavaVersion) -> io::Result<Vec<mcsa_protocol::registry::Registry>> {
     use mcsa_protocol::{JavaVersion, registry::{Entry, Registry}};
-    if version == JavaVersion::V26_2 {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "Реестры Java26.2 ещё не поддерживаются"));
+    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "Версия реестров не поддерживается"));
     }
     let damage = DAMAGE_TYPES.iter().map(|name| Entry {
         name: (*name).into(),
@@ -540,7 +540,7 @@ fn registry_bundle(version: mcsa_protocol::JavaVersion) -> io::Result<Vec<mcsa_p
     let mut registries = vec![Registry { version, name: "minecraft:damage_type".into(), entries: damage }];
     for (name, entries) in REQUIRED_REGISTRIES {
         let mut registry = prepare_registry(version, name, entries)?;
-        if version == JavaVersion::V26_3 && name == "minecraft:jukebox_song" {
+        if matches!(version, JavaVersion::V26_2 | JavaVersion::V26_3) && name == "minecraft:jukebox_song" {
             registry.entries.extend(prepare_registry(version, name, &["bounce"])?.entries);
         }
         registries.push(registry);
@@ -603,6 +603,10 @@ fn message_id(damage_type: &str) -> &str {
 /// Списки записей пустые: клиенту достаточно самого факта существования тега,
 /// а числовые ID записей зависят от порядка записей в реестре.
 pub async fn send_update_tags(stream: &mut Connection) -> io::Result<()> {
+    write_body(stream, update_tags_body()).await
+}
+
+fn update_tags_body() -> Vec<u8> {
     /// Теги реестра minecraft:damage_type.
     const DAMAGE_TYPE_TAGS: [&str; 3] = [
         "minecraft:bypasses_shield",
@@ -658,7 +662,7 @@ pub async fn send_update_tags(stream: &mut Connection) -> io::Result<()> {
         }
     }
 
-    write_body(stream, body).await
+    body
 }
 
 /// Отправляет Finish Configuration (clientbound, packet_id = 0x03, тело пустое).
@@ -869,8 +873,58 @@ mod tests {
                 }
             } else { assert_eq!(old.entries, new.entries); }
         }
-        assert!(registry_bundle(JavaVersion::V26_2).is_err());
+        assert!(registry_bundle(JavaVersion::V1_12_2).is_err());
         assert!(prepare_registry(JavaVersion::V26_3, "minecraft:unknown", &["x"]).is_err());
+    }
+
+    /// Проверка наших данных, не доказательство принятия официальным клиентом776.
+    #[test]
+    fn registry_776_keeps_native_ids_and_appends_required_bounce_song() {
+        use mcsa_protocol::{JavaVersion, registry::Registry};
+        let old = registry_bundle(JavaVersion::V26_1_2).unwrap();
+        let middle = registry_bundle(JavaVersion::V26_2).unwrap();
+        let new = registry_bundle(JavaVersion::V26_3).unwrap();
+        assert_eq!(middle.len(), 25);
+        for ((old, middle), new) in old.iter().zip(&middle).zip(&new) {
+            assert_eq!(old.name, middle.name);
+            assert_eq!(old.entries.iter().map(|entry| &entry.name).collect::<Vec<_>>(),
+                middle.entries.iter().take(old.entries.len()).map(|entry| &entry.name).collect::<Vec<_>>());
+            assert!(middle.entries.iter().all(|entry| entry.data.is_some()));
+            let expected = if matches!(old.name.as_str(), "minecraft:dimension_type" | "minecraft:jukebox_song") {
+                &new.entries
+            } else { &old.entries };
+            if old.name == "minecraft:jukebox_song" {
+                assert_eq!(middle.entries.len(), old.entries.len() + 1);
+                assert_eq!(middle.entries.last().unwrap().name, "minecraft:bounce");
+                assert_eq!(&middle.entries[..old.entries.len()], old.entries.as_slice());
+            }
+            assert_eq!(&middle.entries, expected, "{}", old.name);
+            let body = middle.encode().unwrap();
+            assert_eq!(body[0], 7);
+            assert_eq!(Registry::decode(JavaVersion::V26_2, &body[1..]).unwrap(), *middle);
+        }
+    }
+
+    /// Только собственные Configuration-кадры. Public wire/admission776 остаются закрыты.
+    #[test]
+    #[ignore = "экспорт собственных Configuration776 для первого настоящего клиентского ACK"]
+    fn export_registry_client_probe_776() {
+        use mcsa_protocol::JavaVersion;
+        let mut known = encode_varint(KNOWN_PACKS);
+        known.extend(encode_varint(1));
+        for text in ["minecraft", "core", "26.2"] { known.extend(encode_string(text)); }
+        let mut bodies = vec![brand_body(), known];
+        for registry in registry_bundle(JavaVersion::V26_2).unwrap() {
+            bodies.push(registry.encode().unwrap());
+        }
+        // Все непустые ссылки принадлежат нашим неизменённым dynamic banner IDs.
+        bodies.push(update_tags_body());
+        bodies.push(encode_varint(FINISH_CONFIGURATION));
+        assert_eq!(bodies.len(), 29);
+        let bodies: Vec<String> = bodies.iter().map(|body|
+            body.iter().map(|byte| format!("{byte:02x}")).collect()).collect();
+        std::fs::create_dir_all("tmp").unwrap();
+        std::fs::write("tmp/registry-client-26.2.json", serde_json::to_vec_pretty(&bodies).unwrap()).unwrap();
     }
 
     #[tokio::test]

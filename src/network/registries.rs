@@ -116,7 +116,7 @@ pub fn entry(registry: &str, name: &str) -> Option<Compound> {
 /// Собственные определения для версии клиента; состав и порядок реестров
 /// сохраняются. Изменения форматов: tools/research/registries-26.3.md.
 pub fn entry_for(version: mcsa_protocol::JavaVersion, registry: &str, name: &str) -> Option<Compound> {
-    if version == mcsa_protocol::JavaVersion::V26_2 { return None; }
+    if !matches!(version, mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) { return None; }
     let out = match registry {
         "minecraft:chat_type" => super::chat_types::entry(name)?,
         "minecraft:decorated_pot_pattern" if version == mcsa_protocol::JavaVersion::V26_3 => {
@@ -249,7 +249,7 @@ pub fn entry_for(version: mcsa_protocol::JavaVersion, registry: &str, name: &str
             .float("use_duration", 7.0)
             .float("range", 256.0),
         "minecraft:jukebox_song" => {
-            let (length, comparator) = if version == mcsa_protocol::JavaVersion::V26_3 && name == "bounce" {
+            let (length, comparator) = if matches!(version, mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) && name == "bounce" {
                 // Wiki Music Disc: Bounce 3:54, comparator8. Добавлена в26.2.
                 (234.0, 8)
             } else { jukebox_song(name)? };
@@ -491,7 +491,8 @@ fn moon_timeline() -> Compound {
 /// Клиент26.3 действительно разрешает ссылку на тег: без UpdateTags она
 /// отвергается. Явный список совпадает с нашей логикой src/fire.rs.
 fn infiniburn(out: Compound, version: mcsa_protocol::JavaVersion, dimension: &str) -> Compound {
-    if version == mcsa_protocol::JavaVersion::V26_3 {
+    // [проверить] Принятие собственного списка клиентом776: отдельный Finish Configuration ACK.
+    if matches!(version, mcsa_protocol::JavaVersion::V26_2 | mcsa_protocol::JavaVersion::V26_3) {
         let blocks: &[&str] = if dimension == "end" {
             &["minecraft:netherrack", "minecraft:magma_block", "minecraft:bedrock"]
         } else { &["minecraft:netherrack", "minecraft:magma_block"] };
@@ -730,9 +731,9 @@ fn nether_biome(biome: crate::world::terrain::Biome, version: mcsa_protocol::Jav
 }
 
 /// Biome definition oldid3848210: «Removed ... spawners ... spawn_costs»
-/// в26.3snap4. В775 сохраняем прежние байты; генерацию/спавн ведёт сервер.
+/// в26.3snap4. В775/776 сохраняем прежние байты; генерацию/спавн ведёт сервер.
 fn spawn_fields(out: Compound, version: mcsa_protocol::JavaVersion) -> Compound {
-    if version == mcsa_protocol::JavaVersion::V26_1_2 {
+    if matches!(version, mcsa_protocol::JavaVersion::V26_1_2 | mcsa_protocol::JavaVersion::V26_2) {
         out.compound("spawners", Compound::new()).compound("spawn_costs", Compound::new())
     } else { out }
 }

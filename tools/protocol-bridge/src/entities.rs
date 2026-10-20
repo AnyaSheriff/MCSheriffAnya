@@ -124,11 +124,25 @@ fn registry_id(input: &mut Cursor<'_>, out: &mut Vec<u8>, context: wire::Context
     uint(out, id); Ok(())
 }
 
+#[path = "entity_layouts_776.rs"]
+mod layouts_776;
+
+fn metadata_layout(version: JavaVersion, kind: u32) -> Result<&'static [&'static str], wire::Error> {
+    let (_, old, new) = entity_layouts::LAYOUTS.get(kind as usize).ok_or_else(|| failure(Error::UnknownKind(kind)))?;
+    match version {
+        JavaVersion::V26_1_2 => Ok(old),
+        JavaVersion::V26_2 => layouts_776::LAYOUTS.iter().find(|entry| entry.0 == kind)
+            .map(|entry| entry.2).ok_or(wire::Error::PayloadUnavailable("unverified 26.2 metadata entity")),
+        JavaVersion::V26_3 => Ok(new),
+        JavaVersion::V1_12_2 => Err(wire::Error::UnsupportedVersion(version)),
+    }
+}
+
 pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, context: wire::Context) -> Result<(), wire::Error> {
     let kind = context.entity_kind.ok_or(wire::Error::MissingEntityContext)?;
-    let (_, old, new) = entity_layouts::LAYOUTS.get(kind as usize).ok_or_else(|| failure(Error::UnknownKind(kind)))?;
-    let source = if from == JavaVersion::V26_3 { new } else { old };
-    let target = if to == JavaVersion::V26_3 { new } else { old };
+    let source = metadata_layout(from, kind)?;
+    let target = metadata_layout(to, kind)?;
+    let has_776 = from == JavaVersion::V26_2 || to == JavaVersion::V26_2;
     uint(out, input.uint()?);
     let mut seen = [false;255];
     loop {
@@ -138,7 +152,15 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
         let field = source.get(index as usize).ok_or_else(|| failure(Error::UnknownField(index)))?;
         let target_index = target.iter().position(|name| name == field).ok_or_else(|| failure(Error::MissingField(field)))?;
         out.push(target_index as u8);
-        let serializer = input.uint()?; uint(out, serializer);
+        let serializer = input.uint()?;
+        if has_776 {
+            // Только четыре выбранных layout. Поле не разрешает произвольный
+            // serializer и тем самым не открывает непроверенные Slot/Particle.
+            let expected = layouts_776::SERIALIZERS.iter().find(|entry| entry.0 == *field)
+                .ok_or_else(|| failure(Error::UnknownField(index)))?.1;
+            if serializer != expected { return Err(failure(Error::Serializer(serializer))); }
+        }
+        uint(out, serializer);
         match serializer {
             0 => out.extend(input.take(1)?),
             1 => uint(out, input.varint()? as u32),
@@ -192,7 +214,9 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
             }
             16 => crate::particles::particle(input,out,from,to,context.items)?,
             17 => {
-                let count = input.count(1024)?; uint(out,count as u32);
+                let count = input.count(1024)?;
+                if has_776 && count != 0 { return Err(wire::Error::PayloadUnavailable("unverified 26.2 metadata particles")); }
+                uint(out,count as u32);
                 for _ in 0..count { crate::particles::particle(input,out,from,to,context.items)?; }
             }
             18 => {
@@ -224,3 +248,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
 #[cfg(test)]
 #[path = "entity_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "metadata_776_tests.rs"]
+mod metadata_776_tests;

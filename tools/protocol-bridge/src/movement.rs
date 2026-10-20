@@ -1,6 +1,7 @@
 //! Wiki Java Edition protocol/Packets oldid=3848030, Update Entity Position:
 //! «remaining bits store the step count», fixed point с 12 дробными битами.
-//! Сам формат подтверждён пакетами отдельного vanilla26.3 теста.
+//! Шаги подтверждены vanilla26.3; обычные i16 delta776 — тремя MoveLook
+//! и RelativeMove в ordinary-payloads-26.2.json.
 use crate::JavaVersion;
 
 const MAX_STEPS: usize = 1024;
@@ -20,7 +21,7 @@ impl Delta {
     pub fn decode_prefix(version: JavaVersion, bytes: &[u8]) -> Result<(Self, usize), Error> {
         let mut cursor = Cursor { bytes, offset: 0 };
         let value = match version {
-            JavaVersion::V26_1_2 => {
+            JavaVersion::V26_1_2 | JavaVersion::V26_2 => {
                 let delta = cursor.delta()?;
                 let on_ground = match cursor.take(1)?[0] {
                     0 => false, 1 => true, _ => return Err(Error::Invalid),
@@ -43,7 +44,7 @@ impl Delta {
                 };
                 Self { on_ground: properties & 1 != 0, motion }
             }
-            JavaVersion::V1_12_2 | JavaVersion::V26_2 => return Err(Error::UnsupportedVersion),
+            JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
         };
         Ok((value, cursor.offset))
     }
@@ -51,7 +52,7 @@ impl Delta {
     pub fn encode(&self, version: JavaVersion) -> Result<Vec<u8>, Error> {
         let mut out = Vec::new();
         match version {
-            JavaVersion::V26_1_2 => {
+            JavaVersion::V26_1_2 | JavaVersion::V26_2 => {
                 let Motion::Linear(delta) = &self.motion else { return Err(Error::RequiresTimedDelivery); };
                 push_delta(&mut out, delta);
                 out.push(u8::from(self.on_ground));
@@ -72,7 +73,7 @@ impl Delta {
                     }
                 }
             },
-            JavaVersion::V1_12_2 | JavaVersion::V26_2 => return Err(Error::UnsupportedVersion),
+            JavaVersion::V1_12_2 => return Err(Error::UnsupportedVersion),
         }
         Ok(out)
     }
@@ -112,7 +113,7 @@ fn push_delta(out: &mut Vec<u8>, delta: &[i16; 3]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use JavaVersion::{V26_1_2, V26_3};
+    use JavaVersion::{V26_1_2, V26_2, V26_3};
 
     #[test]
     fn actual_vanilla_steps_reencode_without_losing_timing() {
@@ -130,6 +131,7 @@ mod tests {
             assert_eq!(value.encode(V26_3).unwrap(), bytes[offset..offset + used]);
             // Сведение шагов в один пакет потеряло бы сроки их выполнения.
             assert_eq!(value.encode(V26_1_2), Err(Error::RequiresTimedDelivery));
+            assert_eq!(value.encode(V26_2), Err(Error::RequiresTimedDelivery));
             offset += used;
             samples += 1;
         }
@@ -141,7 +143,7 @@ mod tests {
     fn linear_delta_converts_both_directions_and_keeps_rotation_tail() {
         for ground in [false, true] {
             let value = Delta { on_ground: ground, motion: Motion::Linear([i16::MIN, 0, i16::MAX]) };
-            for version in [V26_1_2, V26_3] {
+            for version in [V26_1_2, V26_2, V26_3] {
                 let mut bytes = value.encode(version).unwrap();
                 bytes.extend([42, 255]);
                 let (decoded, used) = Delta::decode_prefix(version, &bytes).unwrap();
