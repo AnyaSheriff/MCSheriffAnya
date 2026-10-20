@@ -516,10 +516,10 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
         "tp" | "teleport" => {
             let rest: Vec<&str> = parts.collect();
 
-            // Сущности, кроме игроков, — только вагонетки: `tp @e[type=minecart] x y z`.
+            // Вагонетки и мобы обрабатываются отдельно от игроков.
             match rest.as_slice() {
                 [who, place @ ..] if cart_selector(who).is_some() => teleport_carts(who, place, source, shared),
-                [who, place @ ..] if who.starts_with("@e[") && place.len() == 3 && !who.contains("type=!player") => teleport_mobs(who, place, source, shared),
+                [who, place @ ..] if who.starts_with("@e[") && matches!(place.len(), 3 | 5) && !who.contains("type=!player") => teleport_mobs(who, place, source, shared),
                 _ => teleport(&rest, source, shared, None),
             }
         }
@@ -1492,15 +1492,58 @@ fn data_command(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
     Answer::saying(format!("Изменено сущностей: {}", changed))
 }
 
-/// `tp @e[type=cow,…] <x> <y> <z>` — перенос мобов: скорость обнуляется.
+/// Official775: relative от rotation контекста; wrap обоих углов, затем clamp pitch.
+/// Своя запись: tools/protocol-bridge/testdata/mob-teleport-observations.json.
+/// Source::Block не хранит rotation; как у консоли, его исходные углы — нули.
+fn mob_teleport_rotation(yaw: &str, pitch: &str, source: &Source, shared: &Shared) -> Option<(f32, f32)> {
+    let origin = match source {
+        Source::Player { uuid, .. } => shared.players.lock().expect("список игроков")
+            .members().iter().find(|member| &member.uuid == uuid)
+            .map(|member| (member.position.yaw, member.position.pitch))?,
+        Source::Console | Source::Block { .. } => (0.0, 0.0),
+    };
+    let angle = |text: &str, from: f32| -> Option<f32> {
+        let value = match text.strip_prefix('~') {
+            Some("") => from,
+            Some(offset) => from + offset.parse::<f32>().ok()?,
+            None => text.parse::<f32>().ok()?,
+        };
+        value.is_finite().then_some(value)
+    };
+    let yaw = angle(yaw, origin.0)?;
+    let pitch = angle(pitch, origin.1)?;
+    let wrap = |value: f32| {
+        // Сначала остаток: прибавление 180 потеряло бы точность малых углов.
+        let value = value % 360.0;
+        if value >= 180.0 { value - 360.0 }
+        else if value < -180.0 { value + 360.0 }
+        else { value }
+    };
+    Some((wrap(yaw), wrap(pitch).clamp(-90.0, 90.0)))
+}
+
+/// `tp @e[type=cow,…] <x> <y> <z> [yaw pitch]` — перенос мобов.
+/// Свои записи official340/775: head следует указанному yaw.
 fn teleport_mobs(who: &str, place: &[&str], source: &Source, shared: &Shared) -> Answer {
     let Some(chosen) = Selector::parse(who) else {
         return Answer::saying("Не понял, кого переносить".to_string());
     };
 
+    // Всё разбирается до захвата/изменения мобов: неверный последний угол
+    // не может оставить частично перенесённую группу сущностей.
+    let look = match place {
+        [_, _, _] => None,
+        [_, _, _, yaw, pitch] => {
+            let Some(look) = mob_teleport_rotation(yaw, pitch, source, shared) else {
+                return Answer::saying("Не понял поворот: нужны конечные yaw и pitch".to_string());
+            };
+            Some(look)
+        }
+        _ => return Answer::saying("Нужно: tp @e[type=cow] <x> <y> <z> [yaw pitch]".to_string()),
+    };
     let origin = origin_of(source, shared);
-    let Some((x, y, z)) = entity_place(place, origin) else {
-        return Answer::saying("Нужно: tp @e[type=cow] <x> <y> <z>".to_string());
+    let Some((x, y, z)) = entity_place(&place[..3], origin) else {
+        return Answer::saying("Нужно: tp @e[type=cow] <x> <y> <z> [yaw pitch]".to_string());
     };
 
     let mut left = chosen.limit.unwrap_or(usize::MAX);
@@ -1510,6 +1553,10 @@ fn teleport_mobs(who: &str, place: &[&str], source: &Source, shared: &Shared) ->
     for mob in items.mobs_mut() {
         if left > 0 && chosen.takes_tagged(mob.kind.name(), &mob.tags) && chosen.reaches(origin, (mob.x, mob.y, mob.z)) {
             (mob.x, mob.y, mob.z) = (x, y, z);
+            if let Some((yaw, pitch)) = look {
+                mob.face(yaw);
+                mob.pitch = pitch;
+            }
             (mob.vx, mob.vy, mob.vz) = (0.0, 0.0, 0.0);
             // enchant-frost-mobs: NoAI сохраняет OnGround при /tp и уже
             // в следующем такте замораживает воду. Его физика не обновляет
@@ -3444,6 +3491,97 @@ mod tests {
         let answer = run("tp сюда-вот", &first, &shared);
         assert!(answer.reply.contains("Не понял"));
         assert!(orders_for(&shared, 1).is_empty());
+    }
+
+    #[test]
+    fn teleport_mob_absolute_rotation_reaches_mob_handler_and_turns_head() {
+        let shared = server();
+        run("summon cow 1.0 64 2.0 {NoAI:1b,Tags:[\"tp_angle\"]}", &Source::Console, &shared);
+        for (command, expected) in [
+            ("tp @e[type=cow,tag=tp_angle,limit=1] 3.5 64 0.5 90 10", ((3.5,64.0,0.5),(90.0,10.0,90.0),1)),
+            ("teleport @e[type=cow,tag=tp_angle,limit=1] -6.5 64 0.5 180 0", ((-6.5,64.0,0.5),(-180.0,0.0,-180.0),2)),
+            ("tp @e[type=cow,tag=tp_angle,limit=1] 3 64 4 450 -30", ((3.5,64.0,4.5),(90.0,-30.0,90.0),3)),
+            ("tp @e[type=cow,tag=tp_angle,limit=1] 3.5 64 4.5 -450 30", ((3.5,64.0,4.5),(-90.0,30.0,-90.0),4)),
+        ] {
+            assert!(run(command, &Source::Console, &shared).reply.contains("Перенесено сущностей: 1"));
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &items.mobs()[0];
+            assert_eq!(((mob.x,mob.y,mob.z),(mob.yaw,mob.pitch,mob.head_yaw),mob.teleports), expected);
+        }
+    }
+
+    #[test]
+    fn teleport_mob_pitch_wraps_before_clamping() {
+        // ±270 отличают wrap→clamp от простого clamp; ±360 возвращают ноль.
+        let shared = server();
+        run("summon cow 1.0 64 2.0 {NoAI:1b}", &Source::Console, &shared);
+        for (pitch, expected) in [
+            (95,90.0),(-95,-90.0),(450,90.0),(-450,-90.0),
+            (270,-90.0),(-270,90.0),(360,0.0),(-360,0.0),
+        ] {
+            let command = format!("tp @e[type=cow,limit=1] 3.5 64 0.5 0 {pitch}");
+            assert!(run(&command, &Source::Console, &shared).reply.contains("Перенесено сущностей: 1"));
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &items.mobs()[0];
+            assert_eq!((mob.yaw,mob.pitch,mob.head_yaw),(0.0,expected,0.0),"pitch={pitch}");
+        }
+    }
+
+    #[test]
+    fn teleport_mob_relative_rotation_uses_executor_and_omission_preserves_look() {
+        // Official775: player35/-12 и console0/0; omitted сохраняет rotation моба.
+        let shared = server();
+        run("summon cow 1.0 64 2.0 {NoAI:1b,Rotation:[80f,20f],Tags:[\"tp_angle\"]}", &Source::Console, &shared);
+        let source = Source::Player { uuid: [1;16], name: "Первый".into() };
+        {
+            let mut players = shared.players.lock().unwrap();
+            let mut position = players.members().iter().find(|member| member.uuid==[1;16]).unwrap().position;
+            position.yaw = 35.0; position.pitch = -12.0;
+            players.set_position(&[1;16], position);
+        }
+        for (who, tail, expected) in [
+            (&source, "~10 ~5", (45.0,-7.0,45.0)),
+            (&source, "~ ~", (35.0,-12.0,35.0)),
+            (&source, "~ ~120", (35.0,90.0,35.0)),
+            (&source, "~ ~-120", (35.0,-90.0,35.0)),
+            (&Source::Console, "~10 ~5", (10.0,5.0,10.0)),
+            (&Source::Console, "~ ~", (0.0,0.0,0.0)),
+        ] {
+            let command=format!("tp @e[type=cow,tag=tp_angle] 3.5 64 4.5 {tail}");
+            assert!(run(&command, who, &shared).reply.contains("Перенесено сущностей: 1"));
+            let items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &items.mobs()[0];
+            assert_eq!((mob.yaw,mob.pitch,mob.head_yaw),expected);
+        }
+        {
+            let mut items = shared.items_in(Dimension::Overworld).lock().unwrap();
+            let mob = &mut items.mobs_mut()[0];
+            (mob.yaw,mob.pitch,mob.head_yaw)=(70.0,-20.0,35.0);
+        }
+        run("tp @e[type=cow,tag=tp_angle] ~ ~ ~", &source, &shared);
+        let items=shared.items_in(Dimension::Overworld).lock().unwrap();let mob=&items.mobs()[0];
+        assert_eq!((mob.yaw,mob.pitch,mob.head_yaw),(70.0,-20.0,35.0));
+        assert_eq!((mob.x,mob.y,mob.z),(10.0,1.0,0.0));
+    }
+
+    #[test]
+    fn malformed_mob_teleport_does_not_change_any_selected_entity() {
+        let shared=server();
+        for x in [1,2] {
+            run(&format!("summon cow {x}.0 64 2.0 {{NoAI:1b,Rotation:[80f,20f],Tags:[\"tp_angle\"]}}"),&Source::Console,&shared);
+        }
+        let snapshot=|| {
+            shared.items_in(Dimension::Overworld).lock().unwrap().mobs().iter().map(|mob|
+                (mob.entity_id,(mob.x,mob.y,mob.z),(mob.yaw,mob.pitch,mob.head_yaw),
+                 (mob.vx,mob.vy,mob.vz),mob.vitals.fall,mob.on_ground,mob.teleports)).collect::<Vec<_>>()
+        };
+        let before=snapshot();
+        for tail in ["3.5 64 4.5 NaN 0", "3.5 64 4.5 90 Infinity", "3.5 64 4.5 ~bad 0",
+            "3.5 64 4.5 90 ~NaN", "bad 64 4.5 90 0", "3.5 64 4.5 90", "3.5 64 4.5 90 0 extra"] {
+            let answer=run(&format!("tp @e[type=cow,tag=tp_angle] {tail}"),&Source::Console,&shared);
+            assert!(!answer.reply.contains("Перенесено сущностей:"),"{tail}: {}",answer.reply);
+            assert_eq!(snapshot(),before,"{tail}");
+        }
     }
 
     #[test]

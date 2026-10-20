@@ -10,6 +10,7 @@ import io
 import json
 from pathlib import Path
 import struct
+import socket
 import subprocess
 import tempfile
 import time
@@ -29,7 +30,7 @@ def decode(payload, version):
     for _ in range(4):
         count = read_varint(data.read)
         assert count <= 40
-        if version == 775:
+        if version in (775, 776):
             words = [int.from_bytes(data.read(8), 'big') for _ in range(count)]
             mask = sum(word << (i * 64) for i, word in enumerate(words))
         else:
@@ -60,12 +61,15 @@ def decode(payload, version):
 
 
 class LightClient(Client):
-    def __init__(self, sock, protocol, version):
+    def __init__(self, sock, protocol, version, expected_section=None):
         super().__init__(sock, protocol)
         self.version = version
         self.lights = []
         self.light_headers = []
         self.chunk_ready = False
+        self.expected_section = expected_section
+        self.authored_sections = []
+        self.block_entity_counts = []
 
     def send(self, name, payload=b''):
         if name == 'tick_end' and self.position is not None:
@@ -85,8 +89,13 @@ class LightClient(Client):
             for _ in range(read_varint(data.read)):
                 read_varint(data.read)
                 data.read(read_varint(data.read) * 8)
-            data.read(read_varint(data.read))
-            assert read_varint(data.read) == 0, 'unexpected block entity in test chunk'
+            sections = data.read(read_varint(data.read))
+            if self.expected_section is not None:
+                from probe_776_payloads import authored_section
+                self.authored_sections.append(authored_section(sections, self.expected_section))
+            entity_count = read_varint(data.read)
+            self.block_entity_counts.append(entity_count)
+            assert entity_count == 0, ('unexpected block entity in test chunk', entity_count)
             light = data.read()
             observed = decode(varint(-1) + varint(-1) + light, self.version)
             observed['source_packet'] = 'map_chunk'
@@ -105,20 +114,38 @@ class LightClient(Client):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--jar', type=Path, required=True)
-    parser.add_argument('--data', type=Path, required=True)
+    parser.add_argument('--data', type=Path)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--version', type=int, choices=[775, 777], required=True)
+    parser.add_argument('--version', type=int, choices=[775, 776, 777], required=True)
     parser.add_argument('--port', type=int, default=26015)
+    parser.add_argument('--authored-section', action='store_true', help='только776: секция300 устойчивых общих состояний')
+    import official_26_2_inputs
+    official_26_2_inputs.arguments(parser)
     args = parser.parse_args()
     expected = {775: '97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51', 777: '33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'}
-    with args.jar.open('rb') as source:
-        assert hashlib.file_digest(source, 'sha1').hexdigest() == expected[args.version]
-    path = args.data / ('protocol.json' if args.version == 777 else 'protocol-26.1.json')
-    protocol = json.loads(path.read_text())
-    manifest = json.loads((args.data / 'sources.json').read_text())
-    assert hashlib.sha256(path.read_bytes()).hexdigest() == next(f['sha256'] for f in manifest['files'] + manifest['baseline_files'] if f['file'] == path.name)
+    provenance = None
+    if args.version == 776:
+        protocol, _, provenance = official_26_2_inputs.load(args)
+        expected[776] = provenance['jar_sha1']
+    else:
+        assert args.data is not None
+        with args.jar.open('rb') as source:
+            assert hashlib.file_digest(source, 'sha1').hexdigest() == expected[args.version]
+        path = args.data / ('protocol.json' if args.version == 777 else 'protocol-26.1.json')
+        protocol = json.loads(path.read_text())
+        manifest = json.loads((args.data / 'sources.json').read_text())
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == next(f['sha256'] for f in manifest['files'] + manifest['baseline_files'] if f['file'] == path.name)
+    section_commands, expected_section = [], None
+    if args.authored_section:
+        assert args.version == 776
+        from probe_776_payloads import authored_states
+        section_commands, expected_section = authored_states(args.registry_cache)
+    with socket.socket() as check:
+        check.bind(('127.0.0.1', args.port))
     args.output.mkdir(parents=True, exist_ok=True)
     report = {'protocol': args.version, 'jar_sha1': expected[args.version], 'cases': []}
+    if provenance is not None: report['provenance'] = provenance
+    report['commands'] = []
     with tempfile.TemporaryDirectory(prefix='mcsa-light-probe-') as directory:
         root = Path(directory)
         (root / 'eula.txt').write_text('eula=true\n')
@@ -133,6 +160,7 @@ def main():
                                       cwd=root, stdin=subprocess.PIPE, stdout=output, stderr=subprocess.STDOUT, text=True)
             client = None
             def command(value):
+                report['commands'].append(value)
                 server.stdin.write(value + '\n')
                 server.stdin.flush()
             try:
@@ -140,14 +168,23 @@ def main():
                 while 'Done (' not in log.read_text():
                     assert server.poll() is None and time.monotonic() < deadline
                     time.sleep(.1)
+                command('gamerule minecraft:spawn_mobs false')
+                command('gamerule minecraft:random_tick_speed 0')
                 command('forceload add -16 -16')
+                for value in section_commands:
+                    command(value)
+                command('say MCSA_776_LIGHT_READY')
+                deadline = time.monotonic() + 45
+                while 'MCSA_776_LIGHT_READY' not in log.read_text():
+                    assert time.monotonic() < deadline, 'authored section commands incomplete'
+                    time.sleep(.1)
                 command('setblock -16 64 -16 minecraft:stone')
                 for name, block, level in [('placed', 'torch', 14), ('removed', 'air', 0)]:
                     # Свежий вход проверяет фактический LightData полного чанка.
                     # Доставка инкрементальных обновлений — отдельная проверка.
                     command('setblock -16 65 -16 minecraft:' + block)
                     time.sleep(1)
-                    client = connect(args.port, protocol, lambda sock, data: LightClient(sock, data, args.version), version=args.version)
+                    client = connect(args.port, protocol, lambda sock, data: LightClient(sock, data, args.version, expected_section), version=args.version)
                     client.protocol = protocol
                     deadline = time.monotonic() + 15
                     while not any(r['torch_cell_level'] == level for r in client.lights):
@@ -155,12 +192,17 @@ def main():
                         client.pump(.2)
                     record = next(r for r in client.lights if r['torch_cell_level'] == level)
                     report['cases'].append({'case': name, **record})
+                    if expected_section is not None:
+                        assert client.authored_sections, 'authored section missing'
+                        report.setdefault('authored_sections', []).append({'case': name, **client.authored_sections[-1]})
                     client.sock.close()
                     client = None
                     time.sleep(.5)
             except Exception as error:
                 report['error'] = repr(error)
                 if client:
+                    report['authored_sections_before_failure'] = client.authored_sections
+                    report['block_entity_counts'] = client.block_entity_counts
                     report['debug_lights'] = client.lights[-12:]
                     report['light_headers'] = client.light_headers[-30:]
                     report['packet_names'] = sorted(set(r['name'] for r in client.records))

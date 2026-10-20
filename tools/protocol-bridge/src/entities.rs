@@ -18,10 +18,20 @@ pub struct Tracker {
     dimension: Option<String>,
 }
 
+fn supported_payload(from: JavaVersion, to: JavaVersion) -> Result<(), wire::Error> {
+    for version in [from, to] {
+        if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) {
+            return Err(wire::Error::UnsupportedVersion(version));
+        }
+    }
+    Ok(())
+}
+
 impl Tracker {
     /// Перевод может требовать нескольких пакетов: абсолютная позиция777
     /// отделена от скорости. Родной маршрут остаётся одним borrowed-пакетом.
     pub fn translate_packets<'a>(&mut self,from:JavaVersion,to:JavaVersion,body:&'a [u8],context:wire::Context)->Result<Vec<Cow<'a,[u8]>>,wire::Error>{
+        supported_payload(from, to)?;
         if from==JavaVersion::V26_1_2 && to==JavaVersion::V26_3 && body.first()==Some(&0x23){
             return Ok(crate::entity_sync::upgrade(body)?.into_iter().map(Cow::Owned).collect());
         }
@@ -29,11 +39,12 @@ impl Tracker {
     }
 
     pub fn translate<'a>(&mut self, from: JavaVersion, to: JavaVersion, body: &'a [u8], mut context: wire::Context) -> Result<Cow<'a, [u8]>, wire::Error> {
+        supported_payload(from, to)?;
         if from == to { return wire::translate_with_context(State::Play, Direction::Clientbound, from, to, body, context); }
         let mut input = Cursor::new(body);
         let packet = input.uint()?;
         ids::translate(RegistryKind::PlayClientbound, from, to, packet)?;
-        let (name, _) = crate::generated_ids::packet_info(RegistryKind::PlayClientbound, from == JavaVersion::V26_3, packet as usize).ok_or(wire::Error::Invalid)?;
+        let name = crate::packet_layouts::packet_info(RegistryKind::PlayClientbound, from, to, packet as usize).ok_or(wire::Error::Invalid)?.name;
         let mut spawn = None;
         let mut removed = Vec::new();
         let mut dimension = None;

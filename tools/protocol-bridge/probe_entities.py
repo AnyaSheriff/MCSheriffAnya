@@ -32,10 +32,11 @@ class Probe(Client):
         super().__init__(sock, protocol)
         self.version = version
         self.observed = []
+        self.capture_motion = False
     def confirm_teleport(self, teleport, values):
         self.send('teleport_confirm', varint(teleport) + (struct.pack('>dddff', *values) if self.version == 777 else b''))
     def observe_packet(self, name, payload):
-        if name in ('spawn_entity', 'entity_metadata', 'respawn'):
+        if name in ('spawn_entity', 'entity_metadata', 'respawn') or (self.capture_motion and name in ('rel_entity_move', 'entity_move_look', 'sync_entity_position')):
             self.observed.append({'name': name, 'body': (varint(next(k for k,v in self.incoming.items() if v == name)) + payload).hex()})
 
 def main():
@@ -47,11 +48,14 @@ def main():
     parser.add_argument('--port', type=int, default=26024)
     parser.add_argument('--respawns-only', action='store_true',
                         help='Join до/после смены режима и Respawn; без summon/block probes')
+    parser.add_argument('--ordinary-only', action='store_true', help='только776: cow/slime/magma metadata и короткое движение, без Respawn')
     import official_26_2_inputs
     official_26_2_inputs.arguments(parser)
     args = parser.parse_args()
+    assert not (args.respawns_only and args.ordinary_only)
+    assert not args.ordinary_only or args.version == 776
     if args.version == 776:
-        assert args.respawns_only, '776 entity/block probes require separate verification; use --respawns-only'
+        assert args.respawns_only or args.ordinary_only, '776 entity/block probes require separate verification; use --respawns-only'
         protocol, entity_rows, provenance = official_26_2_inputs.load(args)
         expected = provenance['jar_sha1']
     else:
@@ -67,7 +71,7 @@ def main():
     entities = {v['name']:v['id'] for v in entity_rows}
     with socket.socket() as check: check.bind(('127.0.0.1', args.port))
     args.output.mkdir(parents=True, exist_ok=True)
-    report = {'version':args.version, 'jar_sha1':expected, 'entities':[], 'respawns':[]}
+    report = {'version':args.version, 'jar_sha1':expected, 'entities':[], 'respawns':[], 'commands':[]}
     if provenance is not None: report['provenance'] = provenance
     with tempfile.TemporaryDirectory(prefix='mcsa-entity-probe-') as directory:
         root = Path(directory)
@@ -78,15 +82,18 @@ def main():
             server = subprocess.Popen(['/usr/lib/jvm/java-25-openjdk/bin/java','-Xmx1G','-jar',str(args.jar.resolve()),'nogui'], cwd=root, stdin=subprocess.PIPE, stdout=output, stderr=subprocess.STDOUT, text=True)
             client = None
             def command(text):
+                report['commands'].append(text)
                 server.stdin.write(text+'\n'); server.stdin.flush()
             try:
                 deadline = time.monotonic()+120
                 while 'Done (' not in log.read_text():
                     assert server.poll() is None and time.monotonic()<deadline, 'startup failed'
                     time.sleep(.1)
+                command('gamerule minecraft:spawn_mobs false')
                 client = connect(args.port, protocol, lambda s,p:Probe(s,p,args.version), args.version)
+                client.capture_motion = args.ordinary_only
                 client.pump(10, lambda r:r['name']=='position')
-                report['login_initial_hex'] = client.login_body.hex()
+                if not args.ordinary_only: report['login_initial_hex'] = client.login_body.hex()
                 if args.respawns_only:
                     command('gamemode survival McsaProbe'); client.pump(.5)
                     client.sock.close(); client = None
@@ -98,12 +105,20 @@ def main():
                 client.pump(5, lambda r:r.get('position',[])[:3]==[.5,80.,.5])
                 command('fill -4 79 -4 4 79 4 minecraft:stone')
                 client.pump(1)
-                for name, nbt in ([] if args.respawns_only else CASES):
+                cases = CASES
+                if args.ordinary_only:
+                    cases = [
+                        ('cow', '{Tags:["mcsa_776_cow"],NoAI:1b,NoGravity:1b,Age:-24000,CustomName:"MCSA cow",CustomNameVisible:1b}'),
+                        ('slime', '{NoAI:1b,NoGravity:1b,Size:3}'),
+                        ('magma_cube', '{NoAI:1b,NoGravity:1b,Size:2}'),
+                    ]
+                for name, nbt in ([] if args.respawns_only else cases):
                     # Release notes26.3: BlockState Name/Properties → id/properties.
                     if args.version == 777 and name in ('falling_block','enderman','block_display'):
                         nbt = nbt.replace('Name:', 'id:').replace('Properties:', 'properties:')
                     start = len(client.observed)
-                    command('summon '+name+' 2 80 2 '+nbt)
+                    x = {'cow':2, 'slime':5, 'magma_cube':8}[name] if args.ordinary_only else 2
+                    command('summon '+name+f' {x} 80 2 '+nbt)
                     event = client.pump(5, lambda r:r['name']=='spawn_entity' and r.get('entity_type')==entities[name])
                     client.pump(.5)
                     packets = []
@@ -122,8 +137,47 @@ def main():
                         from generate_tables import states
                         blocks = json.loads((args.data/'blocks.json').read_text()) if args.version == 777 else json.loads((Path(__file__).resolve().parents[1]/'data/blocks.json').read_text())
                         assert read_varint(raw.read) == states(blocks)[('oak_log',(('axis','x'),))], 'falling block did not retain requested oak_log[axis=x]'
-                    report['entities'].append({'type':name,'id':event['entity'],'packets':packets})
-                for mode, dimension in [('survival','the_nether'),('creative','the_end'),('spectator','overworld'),('adventure','the_nether')]:
+                    entry = {'type':name,'id':event['entity'],'packets':packets}
+                    if args.ordinary_only: entry['spawn_position'] = event['position']
+                    report['entities'].append(entry)
+                    if args.ordinary_only:
+                        from probe_776_payloads import metadata
+                        fields = {}
+                        for packet in packets:
+                            if packet['name'] == 'entity_metadata':
+                                entity, values = metadata(bytes.fromhex(packet['body']))
+                                assert entity == event['entity']
+                                fields.update(values)
+                        assert fields, 'no authored metadata'
+                        entry['metadata_fields'] = fields
+                        if name == 'cow':
+                            assert fields[16] == {'serializer':8, 'value':1}, fields
+                            assert fields[2]['value'] == 'MCSA cow', fields
+                        else:
+                            assert fields[18] == {'serializer':1, 'value':4 if name == 'slime' else 3}, fields
+                            assert not any(fields.get(i, {}).get('serializer') == 1 for i in [16,17]), fields
+                if args.ordinary_only:
+                    from probe_776_payloads import motion
+                    cow = next(row['id'] for row in report['entities'] if row['type'] == 'cow')
+                    position = next(row['spawn_position'].copy() for row in report['entities'] if row['type'] == 'cow')
+                    report['motions'] = []
+                    for x, yaw in [(2.25,30), (2.5,60), (2.0,0)]:
+                        start = len(client.observed)
+                        text = f'data merge entity @e[tag=mcsa_776_cow,limit=1] {{Pos:[{x}d,80d,2d],Rotation:[{yaw}f,15f]}}'
+                        command(text); client.pump(1)
+                        packets = []
+                        for packet in client.observed[start:]:
+                            if packet['name'] not in ('rel_entity_move','entity_move_look','sync_entity_position'): continue
+                            decoded = motion(packet['name'], bytes.fromhex(packet['body']))
+                            if decoded['entity'] != cow: continue
+                            packets.append({**packet, 'decoded':decoded})
+                            if 'delta' in decoded: position = [a+b/4096 for a,b in zip(position,decoded['delta'])]
+                            else: position = decoded['position']
+                        entry = {'command':text, 'expected_position':[x,80.,2.], 'position':position.copy(), 'packets':packets}
+                        report['motions'].append(entry)
+                        assert packets and position == [x,80.,2.], entry
+                    assert any(p['name']=='entity_move_look' for row in report['motions'] for p in row['packets']), 'no relative rotation observation'
+                for mode, dimension in ([] if args.ordinary_only else [('survival','the_nether'),('creative','the_end'),('spectator','overworld'),('adventure','the_nether')]):
                     command('gamemode '+mode+' McsaProbe'); client.pump(.2)
                     start = len(client.observed)
                     command('execute in minecraft:'+dimension+' run tp McsaProbe 0.5 120 0.5')
@@ -133,6 +187,8 @@ def main():
                     report['respawns'].append({'mode':mode,'dimension':dimension,**records[0]})
             except BaseException as error:
                 report['error'] = str(error)
+                if args.ordinary_only and client:
+                    report['failed_observed_packets'] = client.observed[-80:]
                 raise
             finally:
                 if client: client.sock.close()

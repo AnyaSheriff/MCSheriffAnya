@@ -3,6 +3,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 mod generated_ids;
+mod generated_packet_776;
+mod packet_layouts;
 mod generated_static_776;
 #[cfg(test)]
 mod static_776_tests;

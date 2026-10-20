@@ -81,3 +81,52 @@ python3 -B tools/protocol-bridge/test_protocol_26_2_probe.py
 Ограничения: onlineMode=true и online-session не проверялись. Таблицы всех
 остальных реестров, полный gameplay776, первичный профиль26.2 и публичный
 допуск этой пробой не подтверждены.
+
+## Обычные Light, Slot и entity payloads:2026-10-20
+
+Следующее отдельное окно official776 на26028 завершено: Light02 PASS,
+Slots01 8/8 PASS, Entities02 PASS. Все Java exit0, после последней пробы
+процессов Java нет, bind26028 успешен. Использованы два логических CPU;
+Rust/Cargo параллельно не запускались.
+
+- Light: обычные MapChunk после размещения/удаления факела дали уровень14→0.
+  LightData использует массивы BE-long для масок, как775. В отдельной секции
+  y96..111 нашими fill/setblock размещены300 различных устойчивых состояний:
+  обе записи имеют direct width15,4096 непустых блоков и0 жидкостей; все4096
+  ID совпали с авторскими командами и закреплёнными JSON. Это не экспорт мира:
+  сохраняется только выбранная секция обычного сетевого пакета и LightData.
+- Slots: stone3, custom_name6, damage3=7, attribute_modifiers16 с
+  attack_damage3, map_color45=1193046, swing_animation40=[2,7],
+  wolf/collar85=14 и пустой Slot. Проверены точные item/component IDs,
+  значения и полное исчерпание каждой полезной нагрузки. Это не проверка
+  всех компонентов или инвентарных транзакций.
+- Entity metadata: у авторской коровы baby index16=true; у slime и magma_cube
+  размер находится в index18 с VarInt4/3. Три перемещения коровы подтверждают
+  обычные три i16 delta /4096 и yaw/pitch перед onGround в MoveLook776.
+  Начальная позиция взята из SpawnEntity2.5/80/2.5, итоговые позиции совпали
+  со всеми тремя командами. Общее поведение остальных сущностей не проверено.
+- Короткий teleport confirmation (только VarInt ID) отправлял наш probe;
+  официальный776 принимал сессию. Реального GUI-client ACK ещё нет.
+
+Сохранены оба исходных FAIL: Light01 ошибочно выбрал test_instance_block,
+создав block entity; после исключения известных block-entity типов и аудита
+выбранных300 состояний Light02 прошёл. Entities01 ошибочно начинал сумму
+смещений от целых координат summon; Entities02 использует наблюдённый Spawn.
+Ни формат пакетов, ни ожидаемые delta/angles ради повторов не менялись.
+
+Локальные неизменённые исходные result.json находятся в handoff:
+`verification-protocol776-ordinary-light-02/light/result.json`,
+`verification-protocol776-ordinary-slots-01/slots/result.json`,
+`verification-protocol776-ordinary-entities-02/entities/result.json`.
+Их SHA256 соответственно:
+
+- `light-02`: `d42b0e8fa613fdb6759057748b0292c0c7772e835a520ce7c54232b0f47c4746`.
+- `slots-01`: `f565f09e18a9cb6109d13474b138d8fbcefa48675b956e5d0b1c4a484a5355a1`.
+- `entities-02`: `ba43741cda1d2df28bebc4271a27f3cd908b355116e5b8f41cb5afe1e9e6c38b`.
+
+Воспроизводимый runner: `run_ordinary_776.py`; порядок Light→Slots→Entities,
+каждый этап имеет отдельный временный мир. `--stage` позволяет повторить
+только выбранную пробу в новом каталоге, предыдущие FAIL не перезаписываются.
+Python6/6 проверок пробы прошли. Эти наблюдения ещё не означают, что Rust
+поддерживает весь776: payload helpers готовятся отдельно, public wire,
+клиентский допуск и основной профиль остаются закрыты.

@@ -81,8 +81,9 @@ pub fn translate_with_context(
     let mut cursor = Cursor::new(body);
     let id = cursor.uint()?;
     let mapped = ids::translate(registry, from, to, id)?;
-    let (name, equal) = crate::generated_ids::packet_info(registry, from == JavaVersion::V26_3, id as usize)
-        .ok_or(Error::Invalid)?;
+    let info = crate::packet_layouts::packet_info(registry, from, to, id as usize).ok_or(Error::Invalid)?;
+    debug_assert_eq!(info.target_id, Some(mapped));
+    let (name, equal) = (info.name, info.schema_equal);
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {

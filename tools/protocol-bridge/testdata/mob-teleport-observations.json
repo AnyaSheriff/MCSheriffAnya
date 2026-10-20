@@ -1,0 +1,815 @@
+{
+  "schema": 1,
+  "version": "26.1.2",
+  "protocol": 775,
+  "kind": "official black-box commands and entity state observations",
+  "jar_sha1": "97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51",
+  "setup": {
+    "cow": "NoAI:1b,NoGravity:1b,Silent:1b",
+    "reset_position": [
+      3.5,
+      64,
+      0.5
+    ],
+    "reset_rotation": [
+      80,
+      20
+    ],
+    "player_rotation": [
+      35,
+      -12
+    ]
+  },
+  "inputs": [
+    {
+      "run": "official-1",
+      "result_sha256": "fa1694aeea9741dd92131bf4e916519aa52f78f964837f9a88be5a42c850b730",
+      "log_sha256": "cd566699232abdacf4171fe83331cfbbdc0e095d3b97f63b77f1c7ff70a0acf9",
+      "cases": 25
+    },
+    {
+      "run": "official-pitch-wrap-2",
+      "result_sha256": "67a4ef1f170476c932923e86a08dc9a609e5d86a553bd97d9c861d06f4759d14",
+      "log_sha256": "8624f2a00d780fa80d0865d1cc5db5e64f15a560cc4d4d6259c8056e2b796daf",
+      "cases": 4
+    }
+  ],
+  "cases": [
+    {
+      "name": "absolute90",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 90 10",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "0b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[90.0f, 10.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0240"
+      ]
+    },
+    {
+      "name": "absolute180",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] -6.5 64 0.5 180 0",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[-6.5d, 64.0d, 0.5d]",
+        "Rotation": "[-180.0f, 0.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0280"
+      ]
+    },
+    {
+      "name": "absolute450",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 4.5 450 -30",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 4.5d]",
+        "Rotation": "[90.0f, -30.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0240"
+      ]
+    },
+    {
+      "name": "absolute_minus450",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 4.5 -450 30",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 4.5d]",
+        "Rotation": "[-90.0f, 30.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "02c0"
+      ]
+    },
+    {
+      "name": "pitch95",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 0 95",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[0.0f, 90.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0200"
+      ]
+    },
+    {
+      "name": "pitch_minus95",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 0 -95",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[0.0f, -90.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0200"
+      ]
+    },
+    {
+      "name": "pitch450",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 0 450",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[0.0f, 90.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0200"
+      ]
+    },
+    {
+      "name": "pitch_minus450",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 0 -450",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[0.0f, -90.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0200"
+      ]
+    },
+    {
+      "name": "console_relative",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 ~10 ~5",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[10.0f, 5.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0207"
+      ]
+    },
+    {
+      "name": "console_relative_zero",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 ~ ~",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[0.0f, 0.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0200"
+      ]
+    },
+    {
+      "name": "player_relative",
+      "source": "player",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 ~10 ~5",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[45.0f, -7.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0220"
+      ]
+    },
+    {
+      "name": "player_relative_zero",
+      "source": "player",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 ~ ~",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[35.0f, -12.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0218"
+      ]
+    },
+    {
+      "name": "player_relative_pitch_high",
+      "source": "player",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 ~ ~120",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[35.0f, 90.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0218"
+      ]
+    },
+    {
+      "name": "player_relative_pitch_low",
+      "source": "player",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 ~ ~-120",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[35.0f, -90.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0218"
+      ]
+    },
+    {
+      "name": "execute_as",
+      "source": "as",
+      "command": "execute as McsaProbe run tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 ~10 ~5",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[10.0f, 5.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0600",
+        "0d00",
+        "0b00",
+        "0700",
+        "0207",
+        "0b15",
+        "050e",
+        "0b20",
+        "0523"
+      ]
+    },
+    {
+      "name": "execute_at",
+      "source": "at",
+      "command": "execute at McsaProbe run tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 ~10 ~5",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[45.0f, -7.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0220",
+        "0720",
+        "0c4c",
+        "0c4b"
+      ]
+    },
+    {
+      "name": "execute_as_at",
+      "source": "as_at",
+      "command": "execute as McsaProbe at @s run tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 ~10 ~5",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[45.0f, -7.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "06b8",
+        "0b35",
+        "0220",
+        "06a3",
+        "0c48",
+        "0b4a",
+        "0690",
+        "0c47",
+        "0b60",
+        "055f",
+        "0c42",
+        "0b75",
+        "0574"
+      ]
+    },
+    {
+      "name": "omitted",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 5.5 64 1.5",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[5.5d, 64.0d, 1.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0697",
+        "0ed4",
+        "0c4e",
+        "06a0",
+        "0ecd",
+        "0c5a",
+        "0d50",
+        "03f8",
+        "0d5c",
+        "03e3",
+        "03db"
+      ]
+    },
+    {
+      "name": "bad_yaw_nan",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 5.5 64 1.5 NaN 10",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": true,
+      "head_rotation_payloads_hex": [
+        "03d8",
+        "03d9",
+        "03de"
+      ],
+      "response": "[13:21:31] [Server thread/INFO]: Incorrect argument for command\n[13:21:31] [Server thread/INFO]: ...,limit=1] 5.5 64 1.5 NaN 10<--[HERE]\n[13:21:31] [Server thread/INFO]: [Not Secure] [Server] MCSA_TP_BARRIER_0183\n"
+    },
+    {
+      "name": "bad_pitch_inf",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 5.5 64 1.5 10 Infinity",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": true,
+      "head_rotation_payloads_hex": [],
+      "response": "[13:21:32] [Server thread/INFO]: Incorrect argument for command\n[13:21:32] [Server thread/INFO]: ...,limit=1] 5.5 64 1.5 10 Infinity<--[HERE]\n[13:21:32] [Server thread/INFO]: [Not Secure] [Server] MCSA_TP_BARRIER_0193\n"
+    },
+    {
+      "name": "bad_relative",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 5.5 64 1.5 ~bad 10",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": true,
+      "head_rotation_payloads_hex": [
+        "0c14",
+        "0701",
+        "0c04"
+      ],
+      "response": "[13:21:34] [Server thread/INFO]: Incorrect argument for command\n[13:21:34] [Server thread/INFO]: ...,limit=1] 5.5 64 1.5 ~bad 10<--[HERE]\n[13:21:34] [Server thread/INFO]: [Not Secure] [Server] MCSA_TP_BARRIER_0203\n"
+    },
+    {
+      "name": "bad_relative_nan",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 5.5 64 1.5 10 ~NaN",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": true,
+      "head_rotation_payloads_hex": [],
+      "response": "[13:21:35] [Server thread/INFO]: Incorrect argument for command\n[13:21:35] [Server thread/INFO]: ...,limit=1] 5.5 64 1.5 10 ~NaN<--[HERE]\n[13:21:35] [Server thread/INFO]: [Not Secure] [Server] MCSA_TP_BARRIER_0213\n"
+    },
+    {
+      "name": "bad_position",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] bad 64 1.5 10 20",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": true,
+      "head_rotation_payloads_hex": [
+        "0b31",
+        "0ef0",
+        "0efd"
+      ],
+      "response": "[13:21:36] [Server thread/INFO]: Incorrect argument for command\n[13:21:36] [Server thread/INFO]: ...,limit=1] bad 64 1.5 10 20<--[HERE]\n[13:21:36] [Server thread/INFO]: [Not Secure] [Server] MCSA_TP_BARRIER_0223\n"
+    },
+    {
+      "name": "missing_pitch",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 5.5 64 1.5 10",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": true,
+      "head_rotation_payloads_hex": [
+        "0c66",
+        "0715",
+        "0b33",
+        "072a",
+        "0740",
+        "0c5f"
+      ],
+      "response": "[13:21:38] [Server thread/INFO]: Incorrect argument for command\n[13:21:38] [Server thread/INFO]: ...,limit=1] 5.5 64 1.5 10<--[HERE]\n[13:21:38] [Server thread/INFO]: [Not Secure] [Server] MCSA_TP_BARRIER_0233\n"
+    },
+    {
+      "name": "extra_argument",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 5.5 64 1.5 10 20 extra",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": true,
+      "head_rotation_payloads_hex": [
+        "0eae",
+        "0e9a",
+        "074f"
+      ],
+      "response": "[13:21:39] [Server thread/INFO]: Incorrect argument for command\n[13:21:39] [Server thread/INFO]: ...,limit=1] 5.5 64 1.5 10 20 extra<--[HERE]\n[13:21:39] [Server thread/INFO]: [Not Secure] [Server] MCSA_TP_BARRIER_0243\n"
+    },
+    {
+      "name": "pitch270",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 0 270",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "0b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[0.0f, -90.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0200"
+      ]
+    },
+    {
+      "name": "pitch_minus270",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 0 -270",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[0.0f, 90.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0200"
+      ]
+    },
+    {
+      "name": "pitch360",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 0 360",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[0.0f, 0.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0200"
+      ]
+    },
+    {
+      "name": "pitch_minus360",
+      "source": "console",
+      "command": "tp @e[type=cow,tag=mcsa_tp,limit=1] 3.5 64 0.5 0 -360",
+      "player_rotation": [
+        35.0,
+        -12.0
+      ],
+      "before": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[80.0f, 20.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "after": {
+        "Pos": "[3.5d, 64.0d, 0.5d]",
+        "Rotation": "[0.0f, 0.0f]",
+        "Motion": "[0.0d, 0.0d, 0.0d]",
+        "OnGround": "1b"
+      },
+      "unchanged": false,
+      "head_rotation_payloads_hex": [
+        "0200"
+      ]
+    }
+  ],
+  "scope": "Command rotation only; execute as/at are evidence about execution context, not a claim our command supports those forms.",
+  "protocol_json_sha256": "0bb4f020fa45cc6629748f09546ec2bfd645f1843cccac9da2cab9d0539ab7e3"
+}
