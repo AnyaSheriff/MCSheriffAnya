@@ -226,6 +226,11 @@ fn handle_line(line: &str, shared: &Shared, shutdown: &watch::Sender<bool>) {
         return;
     }
 
+    // Только строка настоящего ввода: функции и плагины с Source::Console
+    // не должны сами бесконечно будить пустой сервер.
+    if shared.properties.pause_when_empty_seconds > 0 {
+        shared.players.lock().expect("игроки").note_console_command();
+    }
     let answer = commands::run(command, &Source::Console, shared);
 
     if !answer.reply.is_empty() {
@@ -234,5 +239,34 @@ fn handle_line(line: &str, shared: &Shared, shutdown: &watch::Sender<bool>) {
 
     if matches!(answer.effect, Effect::Stop) {
         let _ = shutdown.send(true);
+    }
+}
+
+#[cfg(test)]
+mod idle_console_tests {
+    use super::*;
+    use crate::world::World;
+
+    #[tokio::test(start_paused = true)]
+    async fn idle_only_real_nonempty_console_input_extends_thirty_seconds() {
+        let shared = Shared::new(World::in_memory(),World::in_memory(),
+            std::path::PathBuf::new(),std::path::PathBuf::new(),Default::default(),
+            crate::ops::Ops::open(&std::env::temp_dir().join(format!("mcsa-idle-console-ops-{}",std::process::id()))),
+            crate::skins::Settings::default());
+        let mut presence = shared.players.lock().unwrap().presence();
+        let (shutdown,_) = watch::channel(false);
+        presence.borrow_and_update();
+        // Так же вызывают команды функции/плагины: этот путь не будит.
+        commands::run("list",&Source::Console,&shared);
+        handle_line("   ",&shared,&shutdown);
+        handle_line(" / ",&shared,&shutdown);
+        assert!(!presence.has_changed().unwrap());
+        assert!(presence.borrow().console_until.is_none());
+        let now = tokio::time::Instant::now();
+        handle_line("list",&shared,&shutdown);
+        assert_eq!(presence.borrow_and_update().console_until,Some(now+std::time::Duration::from_secs(30)));
+        tokio::time::advance(std::time::Duration::from_secs(5)).await;
+        handle_line("unknown_idle_probe_command",&shared,&shutdown);
+        assert_eq!(presence.borrow_and_update().console_until,Some(now+std::time::Duration::from_secs(35)));
     }
 }

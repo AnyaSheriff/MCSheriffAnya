@@ -9,6 +9,8 @@
 // каждом такте отдаёт те, которым пора. Поэтому стоящая вода ничего не стоит:
 // пока её никто не трогает, проверять нечего.
 
+mod idle;
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -170,6 +172,7 @@ async fn run(shared: Arc<Shared>) {
     // начинаем сетку заново, иначе после долгой заминки мир мчался бы
     // рывком.
     let mut next = tokio::time::Instant::now();
+    let mut presence = shared.players.lock().expect("игроки").presence();
     let mut ticks: u64 = 0;
     let mut phases = PhaseStats::default();
     let mut mob_rng = crate::mob::Rng::new(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(1, |passed| passed.as_nanos() as u64));
@@ -178,8 +181,12 @@ async fn run(shared: Arc<Shared>) {
     let mut morning_due = false;
 
     loop {
-        tokio::time::sleep_until(next).await;
-
+        // Пауза пустого сервера сильнее freeze/step/sprint: их счётчики ждут
+        // входа игрока; функции и плагины тоже не тикают в пустом мире.
+        if let Some(paused) = idle::wait_tick(&shared, &mut presence, next).await {
+            next = tokio::time::Instant::now();
+            shared.world_cmd.ticking.lock().expect("такт").resumed_after_idle(paused);
+        }
         let behind = tokio::time::Instant::now().saturating_duration_since(next);
 
         if behind > CATCH_UP_LIMIT {

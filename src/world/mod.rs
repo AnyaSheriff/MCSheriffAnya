@@ -1843,6 +1843,14 @@ impl World {
         self.save(true);
     }
 
+    /// Перед паузой — полный снимок без ожидания диска под замком мира.
+    /// Не теряем мобов из чанков, принятых асинхронно после последнего такта:
+    /// они ещё в loaded_mobs, а в Items попадут только при возобновлении.
+    pub fn save_before_idle(&mut self, mobs: &[crate::mob::Mob]) {
+        self.store_mobs(mobs);
+        self.save_with_flush(true, false);
+    }
+
     /// Записывает мир, если с прошлой записи прошла секунда; иначе ничего не
     /// делает — изменения и так уйдут с ближайшей общей записью в такте.
     ///
@@ -1858,6 +1866,10 @@ impl World {
     }
 
     fn save(&mut self, everything: bool) {
+        self.save_with_flush(everything, everything);
+    }
+
+    fn save_with_flush(&mut self, everything: bool, flush: bool) {
         if self.path.as_os_str().is_empty() {
             self.dirty.clear();
             self.fresh.clear();
@@ -1914,7 +1926,8 @@ impl World {
         self.save_level();
 
         // При остановке — дождаться, пока всё ляжет на диск.
-        if everything {
+        // Пауза только ставит снимки в очередь, чтобы не задерживать вход.
+        if flush {
             writer::flush();
         }
     }
@@ -2115,9 +2128,29 @@ impl World {
     /// заменяется тем, кто в нём сейчас стоит. Чанк без мобов, у которого их
     /// и не было, не трогается — не переписывается зря.
     pub fn store_mobs(&mut self, mobs: &[crate::mob::Mob]) {
+        self.store_mobs_inner(mobs, false);
+    }
+
+    /// Во время паузы не переписываем одинаковые записи мобов каждую секунду.
+    /// Сравниваем только сохраняемые поля; обычный активный такт этой работы
+    /// не делает. Сериализация целого чанка для сравнения не нужна.
+    pub fn store_mobs_if_changed(&mut self, mobs: &[crate::mob::Mob]) {
+        self.store_mobs_inner(mobs, true);
+    }
+
+    fn store_mobs_inner(&mut self, mobs: &[crate::mob::Mob], only_if_changed: bool) {
         let mut by_chunk: HashMap<(i32, i32), Vec<crate::mob::Mob>> = HashMap::new();
 
-        for mob in mobs.iter().filter(|mob| !mob.is_dead() && mob.persistent) {
+        // Общая защита нужна и сохранению при stop/save-all: ещё не
+        // установленные мобы остаются в loaded_mobs до следующего такта.
+        // Текущий Items важнее старого снимка при совпадении UUID, даже если
+        // моб уже мёртв или перестал сохраняться: не воскрешаем старую копию.
+        let mut seen = std::collections::HashSet::new();
+        for mob in mobs.iter().chain(self.loaded_mobs.iter()) {
+            // Записи с диска до установки имеют entity_id0. Их временный
+            // UUID не считаем доказательством общей личности: сохраняем все.
+            let identified = mob.entity_id != 0;
+            if (identified && !seen.insert(mob.uuid)) || mob.is_dead() || !mob.persistent { continue; }
             let (x, z) = mob.chunk();
 
             by_chunk.entry((x, z)).or_default().push(mob.clone());
@@ -2128,8 +2161,16 @@ impl World {
         for (key, chunk) in &mut self.chunks {
             let now = by_chunk.remove(key).unwrap_or_default();
 
-            if now.is_empty() && chunk.mobs.is_empty() {
-                continue;
+            if now.is_empty() && chunk.mobs.is_empty() { continue; }
+            if only_if_changed && now.len() == chunk.mobs.len() {
+                let records = |mobs: &[crate::mob::Mob]| {
+                    let mut records: Vec<_> = mobs.iter().map(|mob| {
+                        let mut record = Vec::new(); mob.write(&mut record); record
+                    }).collect();
+                    records.sort_unstable();
+                    records
+                };
+                if records(&now) == records(&chunk.mobs) { continue; }
             }
 
             chunk.mobs = now;
@@ -6009,6 +6050,117 @@ mod mushroom_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn idle_snapshot_preserves_live_and_not_yet_installed_chunk_mobs() {
+        let mut world = World::in_memory();
+        world.ensure(0,0);
+        let mut live = crate::mob::Mob::new(10,crate::mob::Kind::Cow,(0.5,64.0,0.5));
+        live.persistent = true;
+        let mut loaded = crate::mob::Mob::new(11,crate::mob::Kind::Pig,(1.5,64.0,0.5));
+        loaded.persistent = true;
+        let ids = [live.uuid,loaded.uuid];
+        world.queue_water_hatch(loaded);
+        let clock = world.clock();
+        world.save_before_idle(&[live]);
+        let stored = &world.chunks.get(&(0,0)).unwrap().mobs;
+        assert_eq!(stored.len(),2);
+        for id in ids { assert!(stored.iter().any(|m| m.uuid == id)); }
+        assert_eq!(world.loaded_mobs.len(),1,"очередь остаётся для первого такта после входа");
+        assert_eq!(world.clock(),clock,"снимок не делает игровой такт");
+    }
+
+    #[test]
+    fn idle_stop_save_all_preserves_pending_mobs_and_maintenance_updates_only_changes() {
+        let path = std::env::temp_dir().join(format!("mcsheriffanya-idle-mobs-save-{}",std::process::id()));
+        assert!(!path.exists(),"папка только этой проверки");
+        let mut world = World::open(&path,Some(1),WorldKind::Flat).unwrap();
+        world.ensure(0,0);
+        let mut pending = crate::mob::Mob::new(21,crate::mob::Kind::Cow,(0.5,64.0,0.5));
+        pending.persistent = true;
+        let read_pending = |mob: crate::mob::Mob| {
+            let mut bytes = Vec::new(); mob.write(&mut bytes);
+            crate::mob::Mob::read(&mut bytes.as_slice()).unwrap()
+        };
+        let pending = read_pending(pending);
+        let second = read_pending(crate::mob::Mob::new(24,crate::mob::Kind::Sheep,(2.5,64.0,0.5)));
+        assert_eq!((pending.entity_id,second.entity_id),(0,0),"дисковые мобы ещё не установлены в runtime");
+        world.queue_water_hatch(pending); world.queue_water_hatch(second);
+        let mut live = crate::mob::Mob::new(22,crate::mob::Kind::Pig,(1.5,64.0,0.5));
+        live.persistent = true;
+        // Тот же путь, что main::stop и команда save-all: только Items в аргументе.
+        world.store_mobs(&[live.clone()]);
+        world.save_all();
+        assert_eq!(world.loaded_mobs.len(),2,"сохранение не запускает мобов");
+        live.vitals.health = 4.0; // как изменение моба консольной командой
+        world.store_mobs_if_changed(&[live.clone()]);
+        assert!(world.dirty.contains(&(0,0)));
+        world.save_if_needed();
+        world.store_mobs_if_changed(&[live.clone()]);
+        assert!(!world.dirty.contains(&(0,0)),"одинаковое не переписывается в паузе");
+        drop(world);
+        let mut reopened = World::open(&path,None,WorldKind::Flat).unwrap();
+        reopened.ensure(0,0);
+        let loaded = reopened.take_loaded_mobs();
+        assert_eq!(loaded.len(),3,"оба анонимных pending-моба и текущий Items сохранены");
+        assert!(loaded.iter().any(|mob| mob.kind == crate::mob::Kind::Cow));
+        assert!(loaded.iter().any(|mob| mob.kind == crate::mob::Kind::Sheep));
+        assert_eq!(loaded.iter().find(|mob| mob.kind == crate::mob::Kind::Pig).unwrap().vitals.health,4.0);
+        drop(reopened);
+        fs::remove_dir_all(path).unwrap();
+    }
+
+    #[test]
+    fn idle_pending_mob_merge_prefers_live_and_does_not_duplicate_or_resurrect() {
+        let mut world = World::in_memory(); world.ensure(0,0);
+        let mut live = crate::mob::Mob::new(23,crate::mob::Kind::Cow,(0.5,64.0,0.5));
+        live.persistent = true;
+        world.queue_water_hatch(live.clone());
+        live.vitals.health = 4.0;
+        world.store_mobs_if_changed(&[live.clone()]);
+        let stored = &world.chunks.get(&(0,0)).unwrap().mobs;
+        assert_eq!(stored.len(),1); assert_eq!(stored[0].vitals.health,4.0);
+        live.die();
+        world.store_mobs_if_changed(&[live]);
+        assert!(world.chunks.get(&(0,0)).unwrap().mobs.is_empty());
+        assert_eq!(world.loaded_mobs.len(),1,"очередь ещё не потреблена тактом");
+    }
+
+    #[test]
+    fn idle_uninstalled_mobs_are_not_merged_even_with_synthetic_equal_uuid() {
+        let mut world = World::in_memory(); world.ensure(0,0);
+        for kind in [crate::mob::Kind::Cow,crate::mob::Kind::Sheep] {
+            let mut pending = crate::mob::Mob::new(0,kind,(0.5,64.0,0.5));
+            pending.uuid = [0x42;16]; // намеренное совпадение, не свойство чтения диска
+            world.queue_water_hatch(pending);
+        }
+        world.store_mobs(&[]);
+        assert_eq!(world.chunks.get(&(0,0)).unwrap().mobs.len(),2);
+        assert_eq!(world.loaded_mobs.len(),2);
+    }
+
+    #[test]
+    fn idle_snapshot_keeps_failed_chunk_write_for_retry() {
+        let path = std::env::temp_dir().join(format!("mcsheriffanya-idle-save-retry-{}",std::process::id()));
+        assert!(!path.exists(),"новая папка только этой проверки");
+        let mut world = World::open(&path,Some(1),WorldKind::Flat).unwrap();
+        world.ensure(0,0);
+        let stone = crate::blocks::state_by_name("stone").unwrap();
+        world.set_block(0,64,0,stone);
+        let region = region::path_for(&path.join(REGIONS),0,0);
+        fs::create_dir_all(&region).unwrap(); // запись намеренно невозможна
+        world.save_before_idle(&[]);
+        assert!(writer::waiting(&path.join(REGIONS),0,0).is_some(),"снимок не потерян при ошибке диска");
+        fs::remove_dir(&region).unwrap();
+        writer::flush();
+        assert!(writer::waiting(&path.join(REGIONS),0,0).is_none());
+        drop(world);
+        let mut reopened = World::open(&path,None,WorldKind::Flat).unwrap();
+        reopened.ensure(0,0);
+        assert_eq!(reopened.get_block(0,64,0),stone);
+        drop(reopened);
+        fs::remove_dir_all(path).unwrap();
+    }
 
     #[test]
     fn trial_presence_matches_places_after_changes_and_unload() {
