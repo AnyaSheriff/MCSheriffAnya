@@ -70,6 +70,8 @@ pub(crate) fn translate(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Ja
     }Ok(())
 }
 fn advancements(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context)->Result<(),Error>{
+    let source_inside = advancement_coordinates_inside(from)?;
+    let target_inside = advancement_coordinates_inside(to)?;
     boolean(input,out)?;let n=input.count(65536)?;uint(out,n as u32);
     for _ in 0..n {
         string(input,out)?;if boolean(input,out)?{string(input,out)?;}
@@ -80,15 +82,15 @@ fn advancements(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaV
             let flags=input.take(4)?;let flag_value=u32::from_be_bytes(flags.try_into().map_err(|_|Error::Invalid)?);
             if flag_value&!7!=0{return Err(Error::Invalid);}shown_data.extend(flags);
             if flag_value&1!=0{string(input,&mut shown_data)?;}
-            if from==JavaVersion::V26_1_2{floats(input,&mut coords,2)?;}
+            if source_inside{floats(input,&mut coords,2)?;}
         }
         let mut requirements=Vec::new();let n=input.count(4096)?;uint(&mut requirements,n as u32);
         for _ in 0..n{let n=input.count(4096)?;uint(&mut requirements,n as u32);for _ in 0..n{string(input,&mut requirements)?;}}
         boolean(input,&mut requirements)?;
-        if from==JavaVersion::V26_3{floats(input,&mut coords,2)?;}
+        if !source_inside{floats(input,&mut coords,2)?;}
         else if !shown {coords.extend([0;8]);}
         out.push(u8::from(shown));out.extend(shown_data);
-        if to==JavaVersion::V26_1_2 {
+        if target_inside {
             if shown{out.extend(&coords);}else if coords!=[0;8]{return Err(Error::PayloadUnavailable("coordinates of hidden advancement"));}
             out.extend(requirements);
         }else{out.extend(requirements);out.extend(coords);}
@@ -97,6 +99,16 @@ fn advancements(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaV
     let progress=input.count(65536)?;uint(out,progress as u32);
     for _ in 0..progress{string(input,out)?;let n=input.count(4096)?;uint(out,n as u32);for _ in 0..n{string(input,out)?;if boolean(input,out)?{out.extend(input.take(8)?);}}}
     boolean(input,out)?;Ok(())
+}
+
+// JSON776 держит координаты внутри displayData как775. Envelope template776
+// подтверждена камнерезом; полный initial advancement требует actual core run.
+fn advancement_coordinates_inside(version: JavaVersion) -> Result<bool, Error> {
+    match version {
+        JavaVersion::V26_1_2 | JavaVersion::V26_2 => Ok(true),
+        JavaVersion::V26_3 => Ok(false),
+        _ => Err(Error::UnsupportedVersion(version)),
+    }
 }
 
 #[cfg(test)]

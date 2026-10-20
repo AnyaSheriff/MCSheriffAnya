@@ -359,12 +359,13 @@ async fn initial_confirmation_waits_for_the_right_id_and_keeps_client_settings()
     use mcsa_protocol::{JavaVersion, Negotiated, wire, teleport::{Confirmation, Pose}};
     use super::super::connection::CryptoStream;
     use super::super::packet::{frame, compression_threshold, write_bytes};
-    for version in [JavaVersion::V26_1_2, JavaVersion::V26_3] {
+    for version in [JavaVersion::V26_1_2, JavaVersion::V26_2, JavaVersion::V26_3] {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let client = tokio::net::TcpStream::connect(listener.local_addr().unwrap()).await.unwrap();
         let mut client = CryptoStream::new(client);
         let mut server = CryptoStream::new(listener.accept().await.unwrap().0);
         server.protocol = Some(Negotiated { client: version, native: wire::INTERNAL });
+        server.probe_776 = version == JavaVersion::V26_2;
         client.enable_encryption(&[19; 16]); server.enable_encryption(&[19; 16]);
         let pose = (version == JavaVersion::V26_3).then_some(Pose { x: 17.5, y: 81.0, z: 10.5, yaw: 47.0, pitch: 0.0 });
         let mut frames = Vec::new();

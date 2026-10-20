@@ -20,6 +20,11 @@
       "file": "verification-protocol776-ordinary-entities-02/entities/result.json",
       "sha256": "ba43741cda1d2df28bebc4271a27f3cd908b355116e5b8f41cb5afe1e9e6c38b",
       "bytes": 7350
+    },
+    "observation_items": {
+      "file": "testdata/item-lifecycle-26.2-observation.json",
+      "sha256": "9a535140f183e9e646329e93167285ad09e108c85edc499ed948e52e6b1f5895",
+      "bytes": 3749
     }
   },
   "layouts": [
@@ -94,6 +99,45 @@
         "sound_variant"
       ],
       "evidence": "pinned layout + own metadata packets"
+    },
+    {
+      "name": "item",
+      "native_id": 71,
+      "protocol776_id": 71,
+      "fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "item"
+      ],
+      "serializers": [
+        0,
+        1,
+        6,
+        8,
+        8,
+        8,
+        20,
+        1,
+        7
+      ],
+      "old_fields": [
+        "shared_flags",
+        "air_supply",
+        "custom_name",
+        "custom_name_visible",
+        "silent",
+        "no_gravity",
+        "pose",
+        "ticks_frozen",
+        "item"
+      ],
+      "evidence": "pinned layout + ordinary item lifecycle packets"
     },
     {
       "name": "magma_cube",
@@ -409,13 +453,75 @@
           "body": "63040508010903411000000f0001120103ff"
         }
       ]
+    },
+    {
+      "type": "item",
+      "id": 2,
+      "metadata_fields": {
+        "5": {
+          "serializer": 8,
+          "value": 1
+        },
+        "8": {
+          "serializer": 7,
+          "value": {
+            "item": 1,
+            "count": 3
+          },
+          "slot_hex": "03010000"
+        }
+      },
+      "packets": [
+        {
+          "name": "entity_metadata",
+          "body": "6302050801080703010000ff",
+          "decoded": {
+            "entity": 2,
+            "fields": {
+              "5": {
+                "serializer": 8,
+                "value": 1
+              },
+              "8": {
+                "serializer": 7,
+                "value": {
+                  "item": 1,
+                  "count": 3
+                },
+                "slot_hex": "03010000"
+              }
+            }
+          }
+        },
+        {
+          "name": "entity_metadata",
+          "body": "6302050801080703010000ff",
+          "decoded": {
+            "entity": 2,
+            "fields": {
+              "5": {
+                "serializer": 8,
+                "value": 1
+              },
+              "8": {
+                "serializer": 7,
+                "value": {
+                  "item": 1,
+                  "count": 3
+                },
+                "slot_hex": "03010000"
+              }
+            }
+          }
+        }
+      ]
     }
   ],
   "limits": [
-    "player is schema-based only, not new official metadata observation",
+    "player is schema-based only; item zero-velocity spawn/metadata/collect/destroy are observed",
     "nonempty particles/complex unknown serializers refused for776",
     "public wire/Tracker/admission remains closed",
     "fields absent from775 fail MissingField, never silently dropped"
   ],
-  "generated_sha256": "06ea2f987e32c8a29a026b8c3930eb343d116a5866ca35729a70c061a71695ba"
+  "generated_sha256": "230f2ed36b95ba1800f9608731e307e8a4f23edbde82043638893a12899c383d"
 }

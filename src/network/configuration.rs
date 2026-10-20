@@ -390,7 +390,7 @@ fn packet_name(packet_id: i32) -> &'static str {
 pub async fn read_login_acknowledged(stream: &mut Connection) -> io::Result<()> {
     let packet = read_packet(stream).await?;
 
-    if packet.id != 0x03 {
+    if packet.id != 0x03 || (stream.probe_776_enabled() && !packet.payload().is_empty()) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!(
@@ -460,6 +460,8 @@ pub async fn read_known_packs(
 
     loop {
         let packet = read_packet(stream).await?;
+        #[cfg(test)]
+        if stream.probe_776_enabled() { validate_probe_config_packet(&packet, false)?; }
 
         log_debug!(
             "Configuration: пакет клиента 0x{:02X} ({}) — длина тела {} байт",
@@ -476,6 +478,8 @@ pub async fn read_known_packs(
             continue;
         }
 
+        #[cfg(test)]
+        if stream.probe_776_enabled() { validate_probe_known_packs(packet.payload())?; }
         let (_, mut offset) = decode_varint(&packet.body)?;
         let (count, read) = decode_varint(&packet.body[offset..])?;
         offset += read;
@@ -693,6 +697,8 @@ pub async fn read_and_log_configuration_packets(
     loop {
         match read_packet(stream).await {
             Ok(packet) => {
+                #[cfg(test)]
+                if stream.probe_776_enabled() { validate_probe_config_packet(&packet, true)?; }
                 log_debug!(
                     "Configuration: пакет клиента 0x{:02X} ({}) — длина тела {} байт",
                     packet.id,
@@ -817,6 +823,77 @@ pub fn read_look(payload: &[u8]) -> Option<ClientLook> {
         main_hand,
         view_distance,
     })
+}
+
+#[cfg(test)]
+fn probe_invalid() -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, "Некорректный пакет Configuration776")
+}
+
+#[cfg(test)]
+fn probe_uint(body: &[u8], offset: &mut usize, maximum: i32) -> io::Result<i32> {
+    let (value, size) = decode_varint(body.get(*offset..).ok_or_else(probe_invalid)?)?;
+    if !(0..=maximum).contains(&value) { return Err(probe_invalid()); }
+    *offset += size;
+    Ok(value)
+}
+
+#[cfg(test)]
+fn probe_byte(body: &[u8], offset: &mut usize, maximum: u8) -> io::Result<()> {
+    let value = *body.get(*offset).ok_or_else(probe_invalid)?;
+    if value > maximum { return Err(probe_invalid()); }
+    *offset += 1;
+    Ok(())
+}
+
+#[cfg(test)]
+fn validate_probe_settings(body: &[u8]) -> io::Result<()> {
+    let mut offset = 0;
+    let locale = decode_string(body, &mut offset)?;
+    if locale.len() > 16 { return Err(probe_invalid()); }
+    probe_byte(body, &mut offset, 127)?; // положительная дальность i8
+    probe_uint(body, &mut offset, 2)?;
+    probe_byte(body, &mut offset, 1)?;
+    probe_byte(body, &mut offset, 127)?;
+    probe_uint(body, &mut offset, 1)?;
+    for _ in 0..2 { probe_byte(body, &mut offset, 1)?; }
+    probe_uint(body, &mut offset, 2)?;
+    if offset != body.len() { return Err(probe_invalid()); }
+    Ok(())
+}
+
+#[cfg(test)]
+fn validate_probe_known_packs(body: &[u8]) -> io::Result<()> {
+    let mut offset = 0;
+    let count = probe_uint(body, &mut offset, 1)?;
+    if count == 1 {
+        let namespace = decode_string(body, &mut offset)?;
+        let id = decode_string(body, &mut offset)?;
+        let version = decode_string(body, &mut offset)?;
+        if (namespace.as_str(), id.as_str(), version.as_str()) != ("minecraft", "core", "26.2") {
+            return Err(probe_invalid());
+        }
+    }
+    if offset != body.len() { return Err(probe_invalid()); }
+    Ok(())
+}
+
+#[cfg(test)]
+fn validate_probe_config_packet(packet: &super::packet::PacketInfo, finishing: bool) -> io::Result<()> {
+    match packet.id {
+        0 => validate_probe_settings(packet.payload()),
+        2 => {
+            let mut offset = 0;
+            let channel = decode_string(packet.payload(), &mut offset)?;
+            if channel.len() > 32767 { return Err(probe_invalid()); }
+            Ok(())
+        }
+        3 if finishing && packet.payload().is_empty() => Ok(()),
+        4 if packet.payload().len() == 8 => Ok(()),
+        5 if packet.payload().len() == 4 => Ok(()),
+        7 if !finishing => Ok(()), // точный offered tuple проверяется отдельно
+        _ => Err(probe_invalid()),
+    }
 }
 
 #[cfg(test)]
@@ -1099,3 +1176,7 @@ mod tests {
         assert_eq!(read_look(&[]), None);
     }
 }
+
+#[cfg(test)]
+#[path = "configuration_776_tests.rs"]
+mod probe_776_tests;

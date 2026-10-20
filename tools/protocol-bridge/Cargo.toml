@@ -5,6 +5,10 @@ edition = "2024"
 license = "MIT"
 publish = false
 
+[features]
+# Только явный test-probe API; обычные admission/wire guards не меняются.
+probe-776 = []
+
 [dependencies]
 
 [dev-dependencies]

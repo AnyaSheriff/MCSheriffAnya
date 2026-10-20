@@ -19,7 +19,7 @@ fn meta(from: JavaVersion, to: JavaVersion, bytes: &[u8], kind: u32) -> Result<V
 }
 
 #[test]
-fn observed_776_cow_slime_magma_metadata_keeps_values_and_exact_size_indices() {
+fn observed_776_cow_slime_magma_item_metadata_keeps_values_and_exact_size_indices() {
     let data = report();
     for entity in data["observed_entities"].as_array().unwrap() {
         let layout = data["layouts"].as_array().unwrap().iter().find(|row| row["name"] == entity["type"]).unwrap();
@@ -30,7 +30,7 @@ fn observed_776_cow_slime_magma_metadata_keeps_values_and_exact_size_indices() {
             assert_eq!(body[0], 0x63);
             let payload = &body[1..];
             let mut old = payload.to_vec();
-            if entity["type"] != "cow" {
+            if matches!(entity["type"].as_str(), Some("slime" | "magma_cube")) {
                 let tail = old.len() - 4;
                 assert_eq!(&old[tail..tail + 2], &[18, 1]);
                 old[tail] = 16;

@@ -42,6 +42,8 @@ pub mod movement;
 pub mod teleport;
 pub mod registry;
 pub mod wire;
+#[cfg(any(test, feature = "probe-776"))]
+pub mod probe_776;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum JavaVersion { V1_12_2, V26_1_2, V26_2, V26_3 }

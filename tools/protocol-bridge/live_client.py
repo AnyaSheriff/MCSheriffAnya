@@ -11,13 +11,22 @@ CLIENT_SHA1 = {"26.2": "2dc72797acbc1b63fc16a11c4ac393605f453754",
                "26.3": "e877b6a07acd633fb3bb475002175cec036e7b87"}
 
 
-def launch(cache, root, port, log, *, version="26.3"):
+def launch(cache, root, port, log, *, version="26.3", gui_scale=None, pause_on_lost_focus=None):
     assert version in CLIENT_SHA1
     metadata = json.loads((cache / 'version.json').read_text())
     assert metadata['id'] == version
     assert metadata['downloads']['client']['sha1'] == CLIENT_SHA1[version]
     assert hashlib.sha1((cache / 'client.jar').read_bytes()).hexdigest() == CLIENT_SHA1[version]
-    (root / 'options.txt').write_text('onboardAccessibility:false\nskipMultiplayerWarning:true\nnarrator:0\n')
+    options = 'onboardAccessibility:false\nskipMultiplayerWarning:true\nnarrator:0\n'
+    if gui_scale is not None:
+        if type(gui_scale) is not int or not 1 <= gui_scale <= 4:
+            raise ValueError('invalid private GUI scale')
+        options += f'guiScale:{gui_scale}\n'
+    if pause_on_lost_focus is not None:
+        if type(pause_on_lost_focus) is not bool:
+            raise ValueError('invalid pause option')
+        options += 'pauseOnLostFocus:' + str(pause_on_lost_focus).lower() + '\n'
+    (root / 'options.txt').write_text(options)
     identity = uuid.UUID(bytes=hashlib.md5(b'OfflinePlayer:McsaProbe').digest(), version=3)
     command = ['xvfb-run', '-a', '-s', '-screen 0 854x480x24',
                '/usr/lib/jvm/java-25-openjdk/bin/java', '-Xmx1G', '-XX:StackShadowPages=32',

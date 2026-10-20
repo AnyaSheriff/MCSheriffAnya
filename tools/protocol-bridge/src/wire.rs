@@ -66,6 +66,17 @@ pub fn translate_with_context(
     for version in [from, to] {
         if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion(version)); }
     }
+    translate_inner(state, direction, from, to, body, context, false)
+}
+
+pub(crate) fn translate_inner(
+    state: State, direction: Direction, from: JavaVersion, to: JavaVersion,
+    body: &[u8], context: Context, probe_776: bool,
+) -> Result<Cow<'_, [u8]>, Error> {
+    if probe_776 && !matches!((from,to),
+        (JavaVersion::V26_1_2,JavaVersion::V26_2) | (JavaVersion::V26_2,JavaVersion::V26_1_2)) {
+        return Err(Error::UnsupportedVersion(from));
+    }
     if body.is_empty() { return Err(Error::Truncated); }
     if body.len() > LIMIT { return Err(Error::TooLarge); }
     // Родной маршрут не копирует пакеты и сохраняет существующие проверки ядра.
@@ -80,8 +91,12 @@ pub fn translate_with_context(
     };
     let mut cursor = Cursor::new(body);
     let id = cursor.uint()?;
-    let mapped = ids::translate(registry, from, to, id)?;
+    let standard_id = if probe_776 { None } else { Some(ids::translate(registry, from, to, id)?) };
     let info = crate::packet_layouts::packet_info(registry, from, to, id as usize).ok_or(Error::Invalid)?;
+    let mapped = if probe_776 {
+        if !probe_776_allowed(state, direction, info.name) { return Err(Error::PayloadUnavailable(info.name)); }
+        info.target_id.ok_or(ids::IdTranslationError::MissingTarget(id))?
+    } else { standard_id.ok_or(Error::Invalid)? };
     debug_assert_eq!(info.target_id, Some(mapped));
     let (name, equal) = (info.name, info.schema_equal);
     let mut out = Vec::with_capacity(body.len() + 8);
@@ -110,7 +125,14 @@ pub fn translate_with_context(
             crate::particles::world(&mut cursor, &mut out, from, to, context.items)?;
         }
         (State::Play, Direction::Clientbound, "spawn_entity") => {
-            crate::entities::spawn(&mut cursor, &mut out, from, to)?;
+            if probe_776 { crate::entities::spawn_776(&mut cursor, &mut out, from, to)?; }
+            else { crate::entities::spawn(&mut cursor, &mut out, from, to)?; }
+        }
+        (State::Play, Direction::Clientbound, "collect") if probe_776 => {
+            for _ in 0..2 { uint(&mut out, cursor.uint()?); }
+            let count = cursor.uint()?;
+            if !(1..=127).contains(&count) { return Err(Error::Invalid); }
+            uint(&mut out, count);
         }
         (State::Play, Direction::Clientbound, "entity_metadata") => {
             crate::entities::metadata(&mut cursor, &mut out, from, to, context)?;
@@ -150,7 +172,10 @@ pub fn translate_with_context(
         }
         (State::Play, Direction::Clientbound, "map_chunk") => {
             let context = context.chunk.ok_or(Error::MissingChunkContext)?;
-            out.extend(crate::chunk::translate(from, to, cursor.take(cursor.remaining())?, context).map_err(Error::Chunk)?);
+            let payload = cursor.take(cursor.remaining())?;
+            out.extend(if probe_776 {
+                crate::chunk::translate_776_bounded(from, to, payload, context)
+            } else { crate::chunk::translate(from, to, payload, context) }.map_err(Error::Chunk)?);
         }
         (State::Play, Direction::Clientbound, "tile_entity_data") => {
             out.extend(cursor.take(8)?);
@@ -292,6 +317,39 @@ fn passthrough(state: State, direction: Direction, name: &str) -> bool {
             "playerlist_header" | "collect" | "entity_teleport" | "set_ticking_state" |
             "step_tick" | "transfer" | "set_projectile_power" | "custom_report_details" |
             "server_links" | "clear_dialog" | "show_dialog"),
+    }
+}
+
+// Ограничения конкретной первой core-пробы. Равенство JSON дополнительно
+// проверяется обычным dispatcher; содержательные ID идут через typed ветки.
+// Никаких aliases776=775, непрозрачных RegistryData или silent skip.
+fn probe_776_allowed(state: State, direction: Direction, name: &str) -> bool {
+    match (state, direction) {
+        (State::Configuration, Direction::Clientbound) => matches!(name,
+            "custom_payload" | "select_known_packs" | "tags" | "finish_configuration" | "disconnect"),
+        (State::Play, Direction::Serverbound) => matches!(name,
+            "settings" | "custom_payload" | "keep_alive" | "pong" | "player_loaded" |
+            "chunk_batch_received" | "tick_end" | "position" | "position_look" | "look" |
+            "flying" | "player_input" | "abilities" | "entity_action" |
+            "chat_command" | "chat_message" | "chat_session_update" | "message_acknowledgement" |
+            "tab_complete" | "window_click" | "close_window" | "held_item_slot" |
+            "recipe_book" | "displayed_recipe" | "advancement_tab" | "arm_animation"),
+        (State::Play, Direction::Clientbound) => matches!(name,
+            "login" | "position" | "abilities" | "declare_commands" | "declare_recipes" |
+            "player_info" | "player_remove" | "entity_metadata" | "entity_destroy" |
+            "spawn_entity" | "collect" | "rel_entity_move" |
+            "initialize_world_border" | "set_ticking_state" | "step_tick" | "spawn_position" |
+            "update_health" | "experience" | "game_state_change" | "update_time" |
+            "update_view_position" | "update_view_distance" | "simulation_distance" |
+            "map_chunk" | "update_light" | "unload_chunk" | "chunk_batch_start" |
+            "chunk_batch_finished" | "window_items" | "set_slot" | "set_cursor_item" |
+            "set_player_inventory" | "held_item_slot" | "close_window" |
+            "keep_alive" | "ping" | "system_chat" | "tab_complete" | "kick_disconnect" |
+            "recipe_book_settings" | "recipe_book_add" | "recipe_book_remove" |
+            "advancements" | "select_advancement_tab" | "entity_update_attributes" |
+            "block_change" | "multi_block_change" | "sound_effect" | "entity_sound_effect" |
+            "playerlist_header"),
+        _ => false,
     }
 }
 

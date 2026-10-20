@@ -58,7 +58,7 @@ fn old_components_shared_with_776_do_not_disappear_through_777() {
 }
 
 #[test]
-fn observed_776_slot_does_not_enable_untrusted_template_or_unknown_components() {
+fn observed_776_slot_and_template_do_not_enable_untrusted_or_unknown_components() {
     use crate::items::{self, Context, Stack};
     let ctx = Context::default();
     let unsupported = items::Error::UnsupportedVersion(MID);
@@ -66,9 +66,9 @@ fn observed_776_slot_does_not_enable_untrusted_template_or_unknown_components() 
     assert_eq!(items::encode(MID, None, false, ctx), Ok(vec![0]));
     assert_eq!(items::decode(MID, &[0], true, ctx), Err(unsupported.clone()));
     assert_eq!(items::encode(MID, None, true, ctx), Err(unsupported.clone()));
-    assert_eq!(items::decode_template(MID, &[1, 1, 0, 0], ctx), Err(unsupported.clone()));
     let stack = Stack { item: 1, count: 1, added: vec![], removed: vec![] };
-    assert_eq!(items::encode_template(MID, &stack, ctx), Err(unsupported));
+    assert_eq!(items::decode_template(MID, &[1, 1, 0, 0], ctx), Ok((stack.clone(), 4)));
+    assert_eq!(items::encode_template(MID, &stack, ctx), Ok(vec![1, 1, 0, 0]));
     for (from, to) in [(MID, OLD), (OLD, MID), (MID, NEW), (NEW, MID)] {
         let mut input = items::Reader(&[]);
         // Пустой unbreakable компонент не входит в bounded776 scope.

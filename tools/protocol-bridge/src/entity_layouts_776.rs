@@ -2,6 +2,7 @@
 pub(crate) type Layout = (u32, &'static str, &'static [&'static str]);
 pub(crate) const LAYOUTS: &[Layout] = &[
     (30, "cow", &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen", "living_entity_flags", "health", "effect_particles", "effect_ambience", "arrow_count", "stinger_count", "sleeping_pos", "mob_flags", "baby", "age_locked", "variant", "sound_variant"]),
+    (71, "item", &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen", "item"]),
     (80, "magma_cube", &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen", "living_entity_flags", "health", "effect_particles", "effect_ambience", "arrow_count", "stinger_count", "sleeping_pos", "mob_flags", "baby", "age_locked", "size"]),
     (117, "slime", &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen", "living_entity_flags", "health", "effect_particles", "effect_ambience", "arrow_count", "stinger_count", "sleeping_pos", "mob_flags", "baby", "age_locked", "size"]),
     (155, "player", &["shared_flags", "air_supply", "custom_name", "custom_name_visible", "silent", "no_gravity", "pose", "ticks_frozen", "living_entity_flags", "health", "effect_particles", "effect_ambience", "arrow_count", "stinger_count", "sleeping_pos", "player_main_hand", "player_mode_customisation", "player_absorption", "score", "shoulder_parrot_left", "shoulder_parrot_right"]),
@@ -16,6 +17,7 @@ pub(crate) const SERIALIZERS: &[(&str, u32)] = &[
     ("effect_ambience", 8),
     ("effect_particles", 17),
     ("health", 3),
+    ("item", 7),
     ("living_entity_flags", 0),
     ("mob_flags", 0),
     ("no_gravity", 8),

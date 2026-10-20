@@ -20,11 +20,20 @@ pub struct CryptoStream<S> {
     pub protocol: Option<mcsa_protocol::Negotiated>,
     pub login_session_id: Option<[u8; 16]>,
     pub legacy: Option<LegacySession>,
+    #[cfg(test)]
+    pub(crate) probe_776: bool,
 }
 
 impl<S> CryptoStream<S> {
     pub fn new(inner: S) -> Self {
-        Self { inner, encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None, legacy: None }
+        Self { inner, encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None, legacy: None, #[cfg(test)] probe_776: false }
+    }
+
+    pub(crate) fn probe_776_enabled(&self) -> bool {
+        #[cfg(test)]
+        { self.probe_776 && self.client_version() == mcsa_protocol::JavaVersion::V26_2 }
+        #[cfg(not(test))]
+        { false }
     }
 
     pub fn client_version(&self) -> mcsa_protocol::JavaVersion {
@@ -59,6 +68,8 @@ impl Connection {
         reader.protocol = self.protocol;
         reader.login_session_id = self.login_session_id;
         reader.legacy = self.legacy.clone();
+        #[cfg(test)]
+        { reader.probe_776 = self.probe_776; }
         self.read_taken = true;
         Ok(reader)
     }

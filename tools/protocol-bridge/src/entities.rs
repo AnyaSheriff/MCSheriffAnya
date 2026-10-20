@@ -38,12 +38,16 @@ impl Tracker {
         Ok(vec![self.translate(from,to,body,context)?])
     }
 
-    pub fn translate<'a>(&mut self, from: JavaVersion, to: JavaVersion, body: &'a [u8], mut context: wire::Context) -> Result<Cow<'a, [u8]>, wire::Error> {
+    pub fn translate<'a>(&mut self, from: JavaVersion, to: JavaVersion, body: &'a [u8], context: wire::Context) -> Result<Cow<'a, [u8]>, wire::Error> {
         supported_payload(from, to)?;
+        self.translate_inner(from, to, body, context, false)
+    }
+
+    pub(crate) fn translate_inner<'a>(&mut self, from: JavaVersion, to: JavaVersion, body: &'a [u8], mut context: wire::Context, probe_776: bool) -> Result<Cow<'a, [u8]>, wire::Error> {
         if from == to { return wire::translate_with_context(State::Play, Direction::Clientbound, from, to, body, context); }
         let mut input = Cursor::new(body);
         let packet = input.uint()?;
-        ids::translate(RegistryKind::PlayClientbound, from, to, packet)?;
+        if !probe_776 { ids::translate(RegistryKind::PlayClientbound, from, to, packet)?; }
         let name = crate::packet_layouts::packet_info(RegistryKind::PlayClientbound, from, to, packet as usize).ok_or(wire::Error::Invalid)?.name;
         let mut spawn = None;
         let mut removed = Vec::new();
@@ -54,11 +58,28 @@ impl Tracker {
                 let id = input.uint()?; input.take(16)?;
                 let kind = ids::translate(RegistryKind::Entity, from, wire::INTERNAL, input.uint()?)?;
                 if !self.entities.contains_key(&id) && self.entities.len() >= 65_536 { return Err(wire::Error::TooLarge); }
+                if probe_776 && kind != probe_776_item_kind() { return Err(wire::Error::PayloadUnavailable("unverified 26.2 spawned entity")); }
                 spawn = Some((id, kind));
             }
             "entity_metadata" => {
                 let id = input.uint()?;
                 context.entity_kind = Some(*self.entities.get(&id).ok_or_else(|| failure(Error::UnknownEntity(id)))?);
+            }
+            "collect" if probe_776 => {
+                let item = input.uint()?;
+                let collector = input.uint()?;
+                let count = input.uint()?;
+                if self.entities.get(&item) != Some(&probe_776_item_kind()) {
+                    return Err(failure(Error::UnknownEntity(item)));
+                }
+                if self.player != Some(collector) { return Err(failure(Error::UnknownEntity(collector))); }
+                if !(1..=127).contains(&count) || input.remaining() != 0 { return Err(wire::Error::Invalid); }
+            }
+            "rel_entity_move" if probe_776 => {
+                let id = input.uint()?;
+                if self.entities.get(&id) != Some(&probe_776_item_kind()) {
+                    return Err(failure(Error::UnknownEntity(id)));
+                }
             }
             "entity_destroy" => {
                 let count = input.count(65_536)?;
@@ -77,7 +98,9 @@ impl Tracker {
             "respawn" => { input.uint()?; dimension = Some(input.string()?.to_owned()); }
             _ => (),
         }
-        let translated = wire::translate_with_context(State::Play, Direction::Clientbound, from, to, body, context)?;
+        let translated = if probe_776 {
+            wire::translate_inner(State::Play, Direction::Clientbound, from, to, body, context, true)?
+        } else { wire::translate_with_context(State::Play, Direction::Clientbound, from, to, body, context)? };
         if let Some(dimension) = dimension {
             // В том же измерении остальные сущности остаются известны клиенту.
             if player.is_some() || self.dimension.as_ref() != Some(&dimension) { self.entities.clear(); }
@@ -89,6 +112,19 @@ impl Tracker {
         for id in removed { self.entities.remove(&id); }
         Ok(translated)
     }
+}
+
+// Внутренняя идентичность по своей закреплённой таблице, не wire ID776.
+fn probe_776_item_kind() -> u32 {
+    entity_layouts::LAYOUTS.iter().position(|entry| entry.0 == "item").expect("item layout") as u32
+}
+
+pub(crate) fn spawn_776(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), wire::Error> {
+    let mut header = Cursor::new(input.rest);
+    header.uint()?; header.take(16)?;
+    let kind = ids::translate(RegistryKind::Entity, from, wire::INTERNAL, header.uint()?)?;
+    if kind != probe_776_item_kind() { return Err(wire::Error::PayloadUnavailable("unverified 26.2 spawned entity")); }
+    spawn(input, out, from, to)
 }
 
 pub(crate) fn spawn(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), wire::Error> {
@@ -154,7 +190,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
         out.push(target_index as u8);
         let serializer = input.uint()?;
         if has_776 {
-            // Только четыре выбранных layout. Поле не разрешает произвольный
+            // Только пять выбранных layout. Поле не разрешает произвольный
             // serializer и тем самым не открывает непроверенные Slot/Particle.
             let expected = layouts_776::SERIALIZERS.iter().find(|entry| entry.0 == *field)
                 .ok_or_else(|| failure(Error::UnknownField(index)))?.1;

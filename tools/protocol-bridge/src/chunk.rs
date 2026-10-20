@@ -32,6 +32,11 @@ pub(crate) fn translate_776_fixture(payload: &[u8], context: Context) -> Result<
     translate_inner(JavaVersion::V26_1_2, JavaVersion::V26_2, payload, context)
 }
 
+pub(crate) fn translate_776_bounded(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context) -> Result<Vec<u8>, Error> {
+    if (from, to) != (JavaVersion::V26_1_2, JavaVersion::V26_2) { return Err(Error::UnsupportedVersion(to)); }
+    translate_inner(from, to, payload, context)
+}
+
 fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context) -> Result<Vec<u8>, Error> {
     if payload.len() > MAX_BYTES { return Err(Error::TooLarge); }
     if context.sections == 0 || context.sections > 256 || context.min_y % 16 != 0

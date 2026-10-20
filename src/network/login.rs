@@ -173,7 +173,7 @@ pub async fn send_login_success<W: AsyncWrite + Unpin>(
     use mcsa_protocol::{JavaVersion, login::{Property, Success}};
     use rsa::rand_core::{OsRng, RngCore};
     let version = stream.client_version();
-    let session_id = if version == JavaVersion::V26_3 {
+    let session_id = if matches!(version, JavaVersion::V26_2 | JavaVersion::V26_3) {
         let mut id = [0; 16];
         OsRng.try_fill_bytes(&mut id).map_err(io::Error::other)?;
         id[6] = (id[6] & 15) | 0x40;

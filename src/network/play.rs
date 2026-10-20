@@ -1439,6 +1439,7 @@ async fn read_confirm_teleportation(
     let mut look = None;
     let version = stream.stream().client_version();
     let legacy = stream.stream().legacy.clone();
+    let probe_776 = stream.stream().probe_776_enabled();
 
     // Клиент подтвердит только то, что получил.
     stream.flush().await?;
@@ -1453,7 +1454,7 @@ async fn read_confirm_teleportation(
                     None => std::future::pending().await,
                 }
             } => return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "вход прерван")),
-            packet = tokio::time::timeout_at(deadline, super::packet::read_play_packet_with_legacy(stream.stream(), version, legacy.as_ref())) => {
+            packet = tokio::time::timeout_at(deadline, super::packet::read_play_packet_routed(stream.stream(), version, legacy.as_ref(), probe_776)) => {
                 packet.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "нет подтверждения переноса"))??
             }
         };
@@ -7104,13 +7105,14 @@ impl Inbound {
         let mut own = tokio::io::BufReader::new(stream.take_reader()?);
         let version = own.get_ref().client_version();
         let legacy = own.get_ref().legacy.clone();
+        let probe_776 = own.get_ref().probe_776_enabled();
         let (sender, packets) = tokio::sync::mpsc::unbounded_channel();
         let waiting = shared.waiting_for_tick.clone();
         let starts = shared.tick_starts.subscribe();
 
         let reader = tokio::spawn(async move {
             loop {
-                let read = super::packet::read_play_packet_with_legacy(&mut own, version, legacy.as_ref()).await;
+                let read = super::packet::read_play_packet_routed(&mut own, version, legacy.as_ref(), probe_776).await;
                 let arrived = *starts.borrow();
                 let failed = read.is_err();
 

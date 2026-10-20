@@ -1,4 +1,4 @@
-//! Предметы775↔777 и ограниченный Slot776: только явно разобранные компоненты, без потери неизвестных данных.
+//! Предметы775↔777 и ограниченные Slot/ItemStackTemplate776: только разобранные компоненты.
 //! Источник: закреплённые Slot/UntrustedSlotComponent в protocol.json.
 use std::collections::BTreeSet;
 use crate::{JavaVersion, ids::{self, RegistryKind}, registry};
@@ -61,11 +61,13 @@ fn supported_payload(version: JavaVersion) -> Result<(), Error> {
     else { Err(Error::UnsupportedVersion(version)) }
 }
 
-// Обычный Slot776 наблюдён отдельно. Верхние Particle ItemStackTemplate и
-// serverbound Creative Slot ещё не проверены; совпавшая JSON-форма не открывает их.
-fn supported_form(version: JavaVersion, untrusted: bool, template: bool) -> Result<(), Error> {
+// Slot776 и component-free ItemStackTemplate камнереза наблюдены отдельно
+// (stonecutter-26.2-observation.json). Для компонентов остаётся прежний gate:
+// композиция проверяется синтетически, не объявляется отдельным live наблюдением.
+// Serverbound Creative Slot776 ещё закрыт; новые длины компонентов не угадываем.
+fn supported_form(version: JavaVersion, untrusted: bool) -> Result<(), Error> {
     supported_payload(version)?;
-    if version == JavaVersion::V26_2 && (untrusted || template) {
+    if version == JavaVersion::V26_2 && untrusted {
         return Err(Error::UnsupportedVersion(version));
     }
     Ok(())
@@ -77,14 +79,14 @@ pub fn decode(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Cont
     decode_stack(version, bytes, untrusted, context, false)
 }
 
-/// Particle ItemStackTemplate: ID перед количеством, пустого слота нет.
+/// ItemStackTemplate (в том числе recipe display): ID перед количеством, пустого слота нет.
 pub fn decode_template(version: JavaVersion, bytes: &[u8], context: Context) -> Result<(Stack, usize), Error> {
     let (stack, size) = decode_stack(version, bytes, false, context, true)?;
     Ok((stack.ok_or(Error::Invalid)?, size))
 }
 
 fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Context, template: bool) -> Result<(Option<Stack>, usize), Error> {
-    supported_form(version, untrusted, template)?;
+    supported_form(version, untrusted)?;
     if bytes.len() > LIMIT { return Err(Error::TooLarge); }
     let mut input = Reader(bytes);
     let template_id = if template { Some(input.uint()?) } else { None };
@@ -127,7 +129,7 @@ pub fn encode_template(version: JavaVersion, stack: &Stack, context: Context) ->
 }
 
 fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, context: Context, template: bool) -> Result<Vec<u8>, Error> {
-    supported_form(version, untrusted, template)?;
+    supported_form(version, untrusted)?;
     let Some(stack) = stack else { return Ok(vec![0]); };
     if !(1..=127).contains(&stack.count) || stack.item == 0 || stack.added.len() > 256 || stack.removed.len() > 256 { return Err(Error::Invalid); }
     let mut out = Vec::new();

@@ -54,6 +54,7 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_
 members = ["tools/seedmap", "tools/protocol-bridge"]
 
 [dev-dependencies]
+mcsa-protocol = { path = "tools/protocol-bridge", features = ["probe-776"] }
 http = "1"
 tokio = { version = "1", features = ["test-util"] }
 

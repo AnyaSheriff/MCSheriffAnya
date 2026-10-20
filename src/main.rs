@@ -19,6 +19,7 @@ mod config;
 mod world;
 mod blocks;
 mod blocks_table;
+mod gameplay_catalog;
 mod hardness_table;
 mod mining;
 mod placing;
@@ -528,6 +529,13 @@ async fn handle_connection(
     properties: Arc<ServerProperties>,
     shared: Arc<Shared>,
 ) -> io::Result<()> {
+    handle_connection_inner(socket, addr, properties, shared, false).await
+}
+
+async fn handle_connection_inner(
+    socket: TcpStream, addr: std::net::SocketAddr, properties: Arc<ServerProperties>,
+    shared: Arc<Shared>, _probe_776: bool,
+) -> io::Result<()> {
     // Подключился не клиент Minecraft (telnet, браузер) — справка текстом.
     if shared.settings.text_info {
         match network::text_info::classify(&socket).await {
@@ -587,6 +595,9 @@ async fn handle_connection(
                 Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V26_3,native:network::NATIVE_VERSION})
             } else if shared.settings.java_version==Some(mcsa_protocol::JavaVersion::V1_12_2) && handshake.protocol_version==340 {
                 Ok(mcsa_protocol::Negotiated {client:mcsa_protocol::JavaVersion::V1_12_2,native:network::NATIVE_VERSION})
+            } else if _probe_776 && handshake.protocol_version == 776 && addr.ip().is_loopback()
+                && !properties.online_mode && !shared.settings.auth_enabled && shared.auth.is_none() {
+                Ok(mcsa_protocol::Negotiated { client: mcsa_protocol::JavaVersion::V26_2, native: network::NATIVE_VERSION })
             } else {negotiated};
             if negotiated.is_err() {
                 log_info!(
@@ -608,6 +619,8 @@ async fn handle_connection(
             }
 
             socket.protocol = negotiated.ok();
+            #[cfg(test)]
+            { socket.probe_776 = _probe_776 && socket.client_version() == mcsa_protocol::JavaVersion::V26_2; }
             let legacy = socket.client_version() == mcsa_protocol::JavaVersion::V1_12_2;
             if legacy {
                 // В340 нет Configuration-диалога. До реализации старого
@@ -729,6 +742,7 @@ async fn handle_connection(
             }
 
             // Один срок на согласование Configuration и ввод пароля.
+            let probe_776 = socket.probe_776_enabled();
             let config_deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(90);
             let negotiation = async {
                 // Фаза Configuration.
@@ -763,7 +777,7 @@ async fn handle_connection(
                 log_debug!("Update Tags отправлен (теги minecraft:damage_type)");
                 Ok::<_, io::Error>(look_from_settings)
             };
-            let look_from_settings = if password_auth.is_some() {
+            let look_from_settings = if password_auth.is_some() || probe_776 {
                 match tokio::time::timeout_at(config_deadline, negotiation).await {
                     Ok(result) => result?,
                     Err(_) => {
@@ -793,7 +807,10 @@ async fn handle_connection(
             send_finish_configuration(&mut socket).await?;
             log_debug!("Finish Configuration отправлен");
 
-            let look = read_and_log_configuration_packets(&mut socket, look_from_settings).await?;
+            let look = if probe_776 {
+                tokio::time::timeout_at(config_deadline, read_and_log_configuration_packets(&mut socket, look_from_settings)).await
+                    .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "776 Configuration ACK не получен"))??
+            } else { read_and_log_configuration_packets(&mut socket, look_from_settings).await? };
             log_debug!("Configuration: чтение пакетов клиента завершено");
 
             // Фаза Play: вводим игрока в мир.

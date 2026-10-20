@@ -23,6 +23,93 @@ fn template(raw: &[u8]) -> Vec<u8> {
     out.extend(input.0); out
 }
 
+fn stonecutter_fixture() -> serde_json::Value {
+    serde_json::from_str(include_str!("../testdata/stonecutter-26.2-observation.json")).unwrap()
+}
+
+#[test]
+fn official_776_stonecutter_template_preserves_exact_selected_bytes() {
+    let data = stonecutter_fixture();
+    assert_eq!(data["protocol"], 776);
+    assert_eq!(data["limits"]["actual_template_components"], "none");
+    assert_eq!(data["final_snapshot"]["cursor_evidence"], "server-set-cursor-item");
+    let raw = bytes(data["selected"]["template_hex"].as_str().unwrap());
+    assert_eq!(raw, bytes("b702020000"));
+    let (stack, n) = decode_template(MID, &raw, context()).unwrap();
+    assert_eq!(n, raw.len());
+    assert_eq!(stack, Stack { item: 284, count: 2, added: vec![], removed: vec![] });
+    // ID284/311/355 по pinned JSON; только middle bytes наблюдены в этом случае.
+    for (version, expected) in [(OLD, "9c02020000"), (MID, "b702020000"), (NEW, "e302020000")] {
+        let expected = bytes(expected);
+        assert_eq!(encode_template(version, &stack, context()).unwrap(), expected);
+        assert_eq!(decode_template(version, &expected, context()).unwrap(), (stack.clone(), expected.len()));
+    }
+    for end in 0..raw.len() { assert!(decode_template(MID, &raw[..end], context()).is_err()); }
+    let mut adjacent = raw.clone(); adjacent.extend([1, 1, 0, 0]);
+    assert_eq!(decode_template(MID, &adjacent, context()).unwrap(), (stack, raw.len()));
+}
+
+#[test]
+fn synthetic_known_component_templates_keep_the_existing_776_gate() {
+    // Это композиция уже наблюдённых Slot-компонентов с проверенной envelope,
+    // а не утверждение, что эти семь templates получены от official776.
+    let data = fixture();
+    for case in data["cases"].as_array().unwrap().iter().take(7) {
+        let middle = template(&bytes(case["slot_hex"].as_str().unwrap()));
+        let native = template(&bytes(case["native_slot_hex"].as_str().unwrap()));
+        let (stack, n) = decode_template(MID, &middle, context()).unwrap();
+        assert_eq!(n, middle.len());
+        assert_eq!(encode_template(OLD, &stack, context()).unwrap(), native);
+        assert_eq!(encode_template(MID, &stack, context()).unwrap(), middle);
+        for end in 0..middle.len() { assert!(decode_template(MID, &middle[..end], context()).is_err()); }
+    }
+    let raw = [1, 1, 1, 0, 4]; // unbreakable, вне прежнего bounded776 scope.
+    assert_eq!(decode_template(MID, &raw, context()), Err(Error::UnsupportedComponent(4)));
+    let stack = Stack { item: 1, count: 1, added: vec![Component { kind: 4, data: vec![] }], removed: vec![] };
+    assert_eq!(encode_template(MID, &stack, context()), Err(Error::UnsupportedComponent(4)));
+}
+
+#[test]
+fn selected_776_recipe_display_translates_without_opening_public_wire() {
+    use crate::{recipes, wire};
+    let data = stonecutter_fixture();
+    let display = bytes(data["selected"]["display_hex"].as_str().unwrap());
+    let mut middle = vec![0, 1, 2, 1]; // no property sets; one row; input stone.
+    middle.extend(display);
+    let native = bytes("00010201059c02020000");
+    for (from, to, input, expected) in [(OLD, MID, &native, &middle), (MID, OLD, &middle, &native)] {
+        let mut reader = wire::Cursor::new(input);
+        let mut out = Vec::new();
+        recipes::translate("declare_recipes", &mut reader, &mut out, from, to, wire::Context::default()).unwrap();
+        assert_eq!(reader.remaining(), 0);
+        assert_eq!(&out, expected);
+    }
+    let mut body = vec![0x85, 0x01]; body.extend(native);
+    assert_eq!(wire::translate(crate::State::Play, crate::Direction::Clientbound, OLD, MID, &body),
+        Err(wire::Error::UnsupportedVersion(MID)));
+}
+
+#[test]
+fn template_776_limits_and_unknown_missing_ids_still_refuse() {
+    for raw in [
+        vec![1, 0, 0, 0], vec![0, 1, 0, 0], vec![1, 128, 1, 0, 0],
+        vec![1, 1, 129, 2, 0], vec![1, 1, 2, 0, 3, 0, 3, 0],
+        vec![1, 1, 1, 1, 3, 0, 3],
+    ] { assert!(decode_template(MID, &raw, context()).is_err(), "{raw:?}"); }
+    for (item, error) in [
+        (1052, ids::IdTranslationError::MissingTarget(1052)),
+        (1537, ids::IdTranslationError::UnknownId(1537)),
+    ] {
+        let mut raw = Vec::new(); uint(&mut raw, item); raw.extend([1, 0, 0]);
+        assert_eq!(decode_template(MID, &raw, context()), Err(Error::Id(error)));
+    }
+    assert_eq!(decode_template(MID, &vec![0; LIMIT + 1], context()), Err(Error::TooLarge));
+    for count in [0, 128] {
+        let stack = Stack { item: 1, count, added: vec![], removed: vec![] };
+        assert_eq!(encode_template(MID, &stack, context()), Err(Error::Invalid));
+    }
+}
+
 #[test]
 fn eight_official_776_slots_preserve_exact_bytes_and_native_meaning() {
     let data = fixture();
@@ -69,7 +156,7 @@ fn direct_775_776_components_do_not_detour_through_777() {
 }
 
 #[test]
-fn missing_native_content_and_unobserved_forms_still_fail_explicitly() {
+fn missing_native_content_and_untrusted_form_still_fail_explicitly() {
     let missing = |id| Error::Id(ids::IdTranslationError::MissingTarget(id));
     let mut sulfur = vec![1]; uint(&mut sulfur, 1052); sulfur.extend([0, 0]);
     assert_eq!(decode(MID, &sulfur, false, context()), Err(missing(1052)));
@@ -84,11 +171,10 @@ fn missing_native_content_and_unobserved_forms_still_fail_explicitly() {
     let unsupported = Error::UnsupportedVersion(MID);
     for raw in [&[0][..], &[1, 1, 0, 0]] {
         assert_eq!(decode(MID, raw, true, context()), Err(unsupported.clone()));
-        assert_eq!(decode_template(MID, raw, context()), Err(unsupported.clone()));
     }
     assert_eq!(encode(MID, None, true, context()), Err(unsupported.clone()));
     assert_eq!(encode(MID, Some(&stack), true, context()), Err(unsupported.clone()));
-    assert_eq!(encode_template(MID, &stack, context()), Err(unsupported));
+    assert_eq!(decode_template(MID, &[1, 0, 0, 0], context()), Err(Error::Invalid));
 }
 
 #[test]
