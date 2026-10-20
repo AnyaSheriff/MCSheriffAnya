@@ -24,6 +24,24 @@ use super::*;
 
 use std::cell::RefCell;
 
+/// Неподдержанная раскладка/каталог не равны повреждённому чанку:
+/// повторная генерация поверх таких данных запрещена.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum DecodeError {
+    Damaged,
+    UnsupportedLayout(u8),
+    UnknownBlockState(u16),
+}
+impl std::fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Damaged => f.write_str("содержимое чанка повреждено"),
+            Self::UnsupportedLayout(version) => write!(f,"раскладка чанка {version} не поддержана"),
+            Self::UnknownBlockState(state) => write!(f,"состояние блока {state} отсутствует в текущем каталоге"),
+        }
+    }
+}
+
 /// Секция целиком из воздуха.
 const AIR_SECTION: u8 = 0;
 
@@ -376,14 +394,26 @@ impl Chunk {
     /// блоков, номер биома — в реестре, палитра и номера — сходиться. Испорченная запись
     /// даёт None, а не панику под замком мира и не чужие блоки у клиента.
     pub(super) fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        if *bytes.first()? != CHUNK_VERSION {
-            return None;
-        }
+        Self::decode_for_load(bytes).ok()
+    }
 
+    /// Runtime не должен терять причину отказа за Option::None.
+    pub(super) fn decode_for_load(bytes: &[u8]) -> Result<Self, DecodeError> {
+        let version = *bytes.first().ok_or(DecodeError::Damaged)?;
+        if version != CHUNK_VERSION { return Err(DecodeError::UnsupportedLayout(version)); }
+        let unknown = std::cell::Cell::new(None);
+        let state_ok = |state: u16| {
+            let valid = unpack(state) == AIR || crate::blocks::block_at_state(unpack(state)).is_some();
+            if !valid { unknown.set(Some(state)); }
+            valid
+        };
+        Self::read_current(bytes, &state_ok).ok_or_else(||
+            unknown.get().map_or(DecodeError::Damaged, DecodeError::UnknownBlockState))
+    }
+
+    fn read_current(bytes: &[u8], state_ok: &dyn Fn(u16) -> bool) -> Option<Self> {
         let mut reader = Reader::new(bytes.get(1..)?);
         let mut chunk = Chunk::new();
-
-        let state_ok = |state: u16| unpack(state) == AIR || crate::blocks::block_at_state(unpack(state)).is_some();
 
         for section in 0..SECTIONS as usize {
             // Вид секции подглядываем: воздушная секции не заводится.
@@ -394,7 +424,7 @@ impl Chunk {
 
             let blocks = chunk.filled_section(section);
 
-            read_container(&mut reader, blocks, &state_ok)?;
+            read_container(&mut reader, blocks, state_ok)?;
         }
 
         let biomes = terrain::biome_registry_size();
@@ -934,3 +964,7 @@ mod tests {
     }
 
 }
+
+#[cfg(test)]
+#[path = "codec_incompatible_tests.rs"]
+mod incompatible_tests;

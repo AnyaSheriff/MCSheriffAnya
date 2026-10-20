@@ -269,43 +269,60 @@ pub fn path_for(directory: &Path, uuid: &[u8; 16]) -> PathBuf {
     directory.join(format!("{}.mcrw", name))
 }
 
-/// Читает данные игрока.
-///
-/// None означает, что файла нет или он не читается: тогда игрок заходит как
-/// в первый раз. Ронять сервер из-за испорченного файла незачем — терять
-/// при этом нечего, кроме положения одного игрока.
-pub fn load(directory: &Path, uuid: &[u8; 16]) -> Option<PlayerData> {
-    let path = path_for(directory, uuid);
+/// Причина отказа, которую нельзя заменить входом с пустыми данными.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LoadError { UnsupportedLayout(u32) }
+impl std::fmt::Display for LoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self { Self::UnsupportedLayout(version) => write!(f,
+            "раскладка файла игрока {version} не поддержана; вход остановлен без изменения сохранения") }
+    }
+}
+impl std::error::Error for LoadError {}
 
+/// Missing остаётся новым игроком; неподдержанный заголовок требует отказа.
+/// Прежняя политика damaged/IO здесь намеренно не расширяется: этот срез
+/// различает только известные версии раскладки и не распознаёт профиль мира.
+pub fn load_checked(directory: &Path, uuid: &[u8; 16]) -> Result<Option<PlayerData>, LoadError> {
+    let path = path_for(directory, uuid);
     let bytes = match fs::read(&path) {
         Ok(bytes) => bytes,
-        // Файла нет — игрок на сервере впервые.
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return None,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(e) => {
             log_warn!("Не удалось прочитать данные игрока ({}): {}", path.display(), e);
-            return None;
+            return Ok(None);
         }
     };
-
+    check_layout(&bytes)?;
     match parse(&bytes) {
         Some(data) => {
-            log_info!(
-                "Положение игрока прочитано из {}: {:.2} {:.2} {:.2}",
-                path.display(),
-                data.x,
-                data.y,
-                data.z
-            );
-            Some(data)
+            log_info!("Положение игрока прочитано из {}: {:.2} {:.2} {:.2}",
+                path.display(), data.x, data.y, data.z);
+            Ok(Some(data))
         }
         None => {
-            log_warn!(
-                "Файл игрока {} не читается, игрок зайдёт как в первый раз",
-                path.display()
-            );
-            None
+            log_warn!("Файл игрока {} не читается, игрок зайдёт как в первый раз", path.display());
+            Ok(None)
         }
     }
+}
+
+fn check_layout(bytes: &[u8]) -> Result<(), LoadError> {
+    // Полного известного заголовка достаточно для несовместимости даже
+    // при обрезанном теле. Чужая подпись/обрезанный заголовок пока damaged.
+    if bytes.get(..4) == Some(MAGIC.as_slice())
+        && let Some(version) = take::<4>(bytes, 4).map(u32::from_be_bytes)
+        && !(OLD_FORMAT_VERSION..=FORMAT_VERSION).contains(&version) {
+        return Err(LoadError::UnsupportedLayout(version));
+    }
+    Ok(())
+}
+
+// Прежний Option helper сохранён только для unit fixtures. Runtime callers
+// обязаны обрабатывать LoadError через load_checked.
+#[cfg(test)]
+pub fn load(directory: &Path, uuid: &[u8; 16]) -> Option<PlayerData> {
+    load_checked(directory, uuid).ok().flatten()
 }
 
 /// Разбирает содержимое файла. None — файл не наш, другой версии или обрезан.
@@ -911,3 +928,7 @@ mod tests {
         assert_eq!(SavedVitals::read(&bytes[1..]), None);
     }
 }
+
+#[cfg(test)]
+#[path = "playerdata/incompatible_tests.rs"]
+mod incompatible_tests;

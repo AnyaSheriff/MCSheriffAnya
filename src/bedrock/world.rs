@@ -423,7 +423,10 @@ impl BedrockWorld {
         // измерение, место, поворот, режим игры, инвентарь. Впервые зашедший
         // появляется в точке появления обычного мира в творческом режиме,
         // как игрок Java.
-        let saved = crate::playerdata::load(&shared.playerdata, &identity.uuid);
+        let saved = match crate::playerdata::load_checked(&shared.playerdata, &identity.uuid) {
+            Ok(saved) => saved,
+            Err(error) => { log_warn!("Вход Bedrock остановлен: {}", error); return None; }
+        };
         let dimension = saved.as_ref().map(|data| data.dimension).unwrap_or_default();
         let world_spawn = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").spawn_position();
         let spawn = saved.as_ref().map_or(world_spawn, |data| (data.x, data.y, data.z));

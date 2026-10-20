@@ -4524,7 +4524,8 @@ enum Taken {
 /// «Нет на диске» и «не читается» — разные вещи. Нет — складываем. Запись
 /// испорчена — сперва откладываем её байты в сторону (`set_aside`), и только
 /// потом складываем чанк заново: он ляжет на её место. Диск не ответил —
-/// не делаем ничего, чанк попробуют прочитать снова.
+/// не делаем ничего, чанк попробуют прочитать снова. Неподдержанные раскладка
+/// или состояние каталога тоже дают отказ, без corrupt-copy и новой генерации.
 fn take_chunk(path: &Path, generator: &Generator, chunk_x: i32, chunk_z: i32) -> Taken {
     if !chunk_in_limits(chunk_x, chunk_z) {
         log_debug!("Мир: чанк {} {} за пределами мира", chunk_x, chunk_z);
@@ -4545,17 +4546,31 @@ fn take_chunk(path: &Path, generator: &Generator, chunk_x: i32, chunk_z: i32) ->
     let directory = path.join(REGIONS);
 
     let (raw, why) = match region::read_stored(&directory, chunk_x, chunk_z) {
-        Ok(region::Stored::Missing) => return generated(),
-        Ok(region::Stored::Found(bytes)) => match Chunk::from_bytes(&bytes) {
+        Ok(region::Stored::Missing) => match legacy::pending_region(&directory, chunk_x, chunk_z) {
+            Ok(false) => return generated(),
+            Ok(true) => {
+                log_error!("Чанк {} {} не загружен: старый регион не перенесён, новая генерация запрещена", chunk_x, chunk_z);
+                return Taken::Unavailable;
+            }
+            Err(error) => {
+                log_error!("Не удалось проверить старый регион чанка {} {}: {} — новая генерация запрещена", chunk_x, chunk_z, error);
+                return Taken::Unavailable;
+            }
+        },
+        Ok(region::Stored::Found(bytes)) => match Chunk::decode_for_load(&bytes) {
             // Свет на диске не хранится: он считается заново по блокам.
-            Some(mut chunk) => {
+            Ok(mut chunk) => {
                 chunk.light_up();
 
                 let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
 
                 return Taken::Loaded { chunk, from_disk: true, wake };
             }
-            None => (bytes, "содержимое чанка не разбирается"),
+            Err(codec::DecodeError::Damaged) => (bytes, "содержимое чанка не разбирается"),
+            Err(incompatible) => {
+                log_error!("Чанк {} {} не поддержан ({}): загрузка остановлена, исходная запись не изменена", chunk_x, chunk_z, incompatible);
+                return Taken::Unavailable;
+            }
         },
         Ok(region::Stored::Damaged { raw, why }) => (raw, why),
         Err(e) => {
@@ -8185,3 +8200,6 @@ mod structures_audit;
 
 #[cfg(test)]
 mod structure_fix_tests;
+
+#[cfg(test)]
+mod incompatible_load_tests;

@@ -712,7 +712,7 @@ pub async fn play_session(
     let skin_parts = look.skin_parts;
     // Что осталось от прошлого захода: место, поворот и режим игры. Если
     // игрок здесь впервые, этого нет — он появится в точке появления.
-    let saved = playerdata::load(&shared.playerdata, uuid);
+    let saved = playerdata::load_checked(&shared.playerdata, uuid).map_err(io::Error::other)?;
 
     // Скин узнаётся до входа в мир: он должен быть готов к тому мгновению,
     // когда сервер расскажет о новом игроке остальным.
