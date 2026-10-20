@@ -14,6 +14,7 @@ pub struct Session {
     modifiers: crate::legacy_attributes::Modifiers,
     pending_teleport: Option<i32>,
     recipes: crate::legacy_recipes::Book,
+    items: crate::legacy_entities::Tracker,
 }
 
 fn number(input: &mut Cursor<'_>) -> Result<f64, Error> {
@@ -79,7 +80,7 @@ pub fn block_position(packed: u64, window: HeightWindow) -> Result<u64, Error> {
 impl Session {
     pub fn new(window: HeightWindow, difficulty: u8) -> Result<Self, Error> {
         if difficulty > 3 { return Err(Error::Invalid); }
-        Ok(Self { window, pose: None, dimension: None, entity: None, difficulty, player_flags: 0, clock: None, modifiers: Default::default(), pending_teleport: None, recipes: Default::default() })
+        Ok(Self { window, pose: None, dimension: None, entity: None, difficulty, player_flags: 0, clock: None, modifiers: Default::default(), pending_teleport: None, recipes: Default::default(), items: Default::default() })
     }
 
     /// Только подтверждённые поля игрока. Для моба тот же индекс может
@@ -159,7 +160,13 @@ impl Session {
                 let z = input.take(4)?; let x = input.take(4)?;
                 out.push(0x1d); out.extend(x); out.extend(z);
             }
-            0x63 => return Ok(vec![self.player_metadata(input.rest)?]),
+            0x63 => {
+                let mut target = Cursor::new(input.rest);
+                if self.entity == Some(target.uint()? as i32) { return Ok(vec![self.player_metadata(input.rest)?]); }
+                return self.items.translate(id, input.rest, self.window, self.entity, enchantments);
+            }
+            0x01 | 0x23 | 0x35 | 0x36 | 0x38 | 0x4d | 0x65 | 0x7c =>
+                return self.items.translate(id, input.rest, self.window, self.entity, enchantments),
             0x83 => return Ok(self.modifiers.translate(input.rest)?.into_iter().collect()),
             0x4a..=0x4c => return Ok(vec![self.recipes.clientbound(id,input.rest)?]),
             0x82 => return Ok(vec![crate::legacy_advancements::translate(input.rest,enchantments)?]),
@@ -291,6 +298,7 @@ impl Session {
                 input.boolean()?; input.boolean()?;
                 let (dim, mode, flat) = spawn(&mut input)?;
                 input.boolean()?;
+                next.items.clear();
                 next.dimension = Some(dim); next.entity = Some(entity); next.pose = None; next.pending_teleport = None;
                 Packet::Join { entity, mode, hardcore, dimension: dim, difficulty: self.difficulty,
                     maximum, level_type: if flat { "flat" } else { "default" }.into(), reduced_debug }
@@ -298,6 +306,9 @@ impl Session {
             0x52 => {
                 let (dim, mode, flat) = spawn(&mut input)?;
                 if input.take(1)?[0] & !3 != 0 { return Err(Error::Invalid); }
+                // Как в существующем modern Tracker: тот же dimension сохраняет
+                // прочие сущности. Для340 это ещё требует отдельной живой пробы.
+                if next.dimension != Some(dim) { next.items.clear(); }
                 next.dimension = Some(dim); next.pose = None; next.pending_teleport = None;
                 Packet::Respawn { dimension: dim, difficulty: self.difficulty, mode,
                     level_type: if flat { "flat" } else { "default" }.into() }

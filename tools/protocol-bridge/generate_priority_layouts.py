@@ -20,7 +20,7 @@ CANDIDATE = ("DallasCarraher/minecraft-data", "924e26d6b3bb8f97a5d1e73d6190b0987
 LEGACY = ("PrismarineJS/minecraft-data", "201ca802a1b2c968b02e7fa5b31dd74e8bff3d8b")
 BASELINE = ("PrismarineJS/minecraft-data", "23303d2350177f2084f94cd38e5d7c8e54dfc8d3")
 VERSIONS = {"1.12.2": 340, "1.16.5": 754, "1.17": 755, "1.20.1": 763,
-            "1.21.1": 767, "1.21.11": 774, "26.1": 775, "26.3": 777}
+            "1.21.1": 767, "1.21.11": 774, "26.1": 775, "26.2": 776, "26.3": 777}
 DEFAULT_OUTPUT = Path(__file__).parent / "testdata/priority-protocol-layouts.json"
 PLAY_NAMES = set("""
 login respawn keep_alive start_configuration configuration_acknowledged player_loaded
@@ -62,7 +62,7 @@ class Sources:
             raise ValueError("Требуется полный commit SHA")
         # Не допускаем чтение исходников, произвольных файлов или выхода из кэша.
         if path != "data/dataPaths.json" and not re.fullmatch(
-                r"data/pc/(?:1\.[0-9]+(?:\.[0-9]+)?|26\.[13])/(?:protocol|version)\.json", path):
+                r"data/pc/(?:1\.[0-9]+(?:\.[0-9]+)?|26\.[123])/(?:protocol|version)\.json", path):
             raise ValueError(f"Не разрешён JSON-путь: {path}")
         key = f"{commit}/{path}"
         url = f"https://raw.githubusercontent.com/{repo}/{commit}/{path}"
@@ -217,7 +217,7 @@ def build_report(sources):
         "purpose": "JSON wire inventory only; no runtime support or black-box parity claim",
         "baseline_protocol": 775,
         "internal_references": "First 16 hex digits of SHA256 with collision rejection; source hashes are full SHA256",
-        "priority_protocols": [340, 754, 755, 763, 767, 774],
+        "priority_protocols": [340, 754, 755, 763, 767, 774, 776],
         "data_paths_source": paths_key,
         "comparison": "Exact JSON schema and transitive named types, by state/direction/name; "
                       "not semantic equivalence. External/native codec implementations are not read. "

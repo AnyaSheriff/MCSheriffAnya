@@ -17,6 +17,7 @@ pub mod legacy_inventory;
 pub mod legacy_control;
 pub mod legacy_actions;
 pub mod legacy_play;
+mod legacy_entities;
 pub mod legacy_attributes;
 pub mod legacy_recipes;
 pub mod legacy_advancements;
