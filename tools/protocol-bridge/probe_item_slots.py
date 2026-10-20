@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Наши команды → сетевые Slot официальных1.12.2/26.1.2/26.3. JAR только исполняется."""
+"""Наши команды → сетевые Slot официальных1.12.2/26.1.2/26.2/26.3. JAR только исполняется."""
 import argparse
 import hashlib
 import io
@@ -62,8 +62,10 @@ class Probe(Client):
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--jar',type=Path,required=True);p.add_argument('--data',type=Path,required=True)
-    p.add_argument('--version',type=int,choices=[340,775,777],required=True);p.add_argument('--port',type=int,default=26023);p.add_argument('--output',type=Path,required=True)
+    p=argparse.ArgumentParser();p.add_argument('--jar',type=Path,required=True);p.add_argument('--data',type=Path)
+    p.add_argument('--version',type=int,choices=[340,775,776,777],required=True);p.add_argument('--port',type=int,default=26023);p.add_argument('--output',type=Path,required=True)
+    import official_26_2_inputs
+    official_26_2_inputs.arguments(p)
     p.add_argument('--replay',type=Path)
     p.add_argument('--cases',type=Path,help='свои команды для дополнительных современных компонентов')
     p.add_argument('--allow-missing-attributes',action='store_true',help='записать явный отказ неизвестного имени атрибута')
@@ -71,13 +73,20 @@ def main():
     a=p.parse_args();a.output.mkdir(parents=True,exist_ok=True)
     cases=CASES
     if a.cases:
-        assert a.version in (775,777) and not a.replay
+        assert a.version in (775,776,777) and not a.replay
         cases=[(entry['name'],'',entry['command']) for entry in json.loads(a.cases.read_text())]
     expected={340:'886945bfb2b978778c3a0288fd7fab09d315b25f',775:'97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51',777:'33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'}
-    with a.jar.open('rb') as f:assert hashlib.file_digest(f,'sha1').hexdigest()==expected[a.version]
-    path=a.data/('protocol-26.1.json' if a.version==775 else 'protocol.json');manifest=json.loads((a.data/'sources.json').read_text())
-    assert hashlib.sha256(path.read_bytes()).hexdigest()==next(r['sha256'] for r in manifest['files']+manifest.get('baseline_files',[]) if r['file']==path.name)
-    protocol=json.loads(path.read_text());report={'protocol':a.version,'jar_sha1':expected[a.version],'cases':[]}
+    if a.version == 776:
+        protocol, _, provenance = official_26_2_inputs.load(a)
+        expected[776] = provenance['jar_sha1']
+    else:
+        assert a.data is not None, '--data required for340/775/777'
+        with a.jar.open('rb') as f:assert hashlib.file_digest(f,'sha1').hexdigest()==expected[a.version]
+        path=a.data/('protocol-26.1.json' if a.version==775 else 'protocol.json');manifest=json.loads((a.data/'sources.json').read_text())
+        assert hashlib.sha256(path.read_bytes()).hexdigest()==next(r['sha256'] for r in manifest['files']+manifest.get('baseline_files',[]) if r['file']==path.name)
+        protocol=json.loads(path.read_text());provenance=None
+    report={'protocol':a.version,'jar_sha1':expected[a.version],'cases':[]}
+    if provenance is not None: report['provenance']=provenance
     with socket.socket() as check:check.bind(('127.0.0.1',a.port))
     with tempfile.TemporaryDirectory(prefix='mcsa-item-slots-') as directory:
         root=Path(directory);(root/'eula.txt').write_text('eula=true\n')
@@ -100,7 +109,7 @@ def main():
                 else:client=connect(a.port,protocol,lambda s,p:Probe(s,p,a.version),version=a.version)
                 client.pump(2)
                 if a.discover_attributes:
-                    assert a.version in (775,777) and not a.replay and not a.cases
+                    assert a.version in (775,776,777) and not a.replay and not a.cases
                     command('op McsaProbe');client.pump(.5)
                     text=b'/attribute McsaProbe '
                     client.send('tab_complete',varint(31)+varint(len(text))+text)

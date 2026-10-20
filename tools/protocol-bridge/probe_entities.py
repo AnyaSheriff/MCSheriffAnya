@@ -40,22 +40,35 @@ class Probe(Client):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--version', type=int, choices=[775,777], required=True)
+    parser.add_argument('--version', type=int, choices=[775,776,777], required=True)
     parser.add_argument('--jar', type=Path, required=True)
-    parser.add_argument('--data', type=Path, required=True)
+    parser.add_argument('--data', type=Path)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--port', type=int, default=26024)
+    parser.add_argument('--respawns-only', action='store_true',
+                        help='Join до/после смены режима и Respawn; без summon/block probes')
+    import official_26_2_inputs
+    official_26_2_inputs.arguments(parser)
     args = parser.parse_args()
-    expected = {775:'97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51',777:'33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'}[args.version]
-    assert hashlib.sha1(args.jar.read_bytes()).hexdigest() == expected
-    sources = json.loads((args.data/'sources.json').read_text())
-    for entry in sources['files'] + sources['baseline_files']:
-        assert hashlib.sha256((args.data/entry['file']).read_bytes()).hexdigest() == entry['sha256']
-    protocol = json.loads((args.data/('protocol.json' if args.version == 777 else 'protocol-26.1.json')).read_text())
-    entities = {v['name']:v['id'] for v in json.loads((args.data/('entities.json' if args.version == 777 else 'entities-26.1.json')).read_text())}
+    if args.version == 776:
+        assert args.respawns_only, '776 entity/block probes require separate verification; use --respawns-only'
+        protocol, entity_rows, provenance = official_26_2_inputs.load(args)
+        expected = provenance['jar_sha1']
+    else:
+        assert args.data is not None, '--data required for775/777'
+        expected = {775:'97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51',777:'33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c'}[args.version]
+        assert hashlib.sha1(args.jar.read_bytes()).hexdigest() == expected
+        sources = json.loads((args.data/'sources.json').read_text())
+        for entry in sources['files'] + sources['baseline_files']:
+            assert hashlib.sha256((args.data/entry['file']).read_bytes()).hexdigest() == entry['sha256']
+        protocol = json.loads((args.data/('protocol.json' if args.version == 777 else 'protocol-26.1.json')).read_text())
+        entity_rows = json.loads((args.data/('entities.json' if args.version == 777 else 'entities-26.1.json')).read_text())
+        provenance = None
+    entities = {v['name']:v['id'] for v in entity_rows}
     with socket.socket() as check: check.bind(('127.0.0.1', args.port))
     args.output.mkdir(parents=True, exist_ok=True)
     report = {'version':args.version, 'jar_sha1':expected, 'entities':[], 'respawns':[]}
+    if provenance is not None: report['provenance'] = provenance
     with tempfile.TemporaryDirectory(prefix='mcsa-entity-probe-') as directory:
         root = Path(directory)
         (root/'eula.txt').write_text('eula=true\n')
@@ -73,11 +86,19 @@ def main():
                     time.sleep(.1)
                 client = connect(args.port, protocol, lambda s,p:Probe(s,p,args.version), args.version)
                 client.pump(10, lambda r:r['name']=='position')
+                report['login_initial_hex'] = client.login_body.hex()
+                if args.respawns_only:
+                    command('gamemode survival McsaProbe'); client.pump(.5)
+                    client.sock.close(); client = None
+                    time.sleep(.5)
+                    client = connect(args.port, protocol, lambda s,p:Probe(s,p,args.version), args.version)
+                    client.pump(10, lambda r:r['name']=='position')
+                    report['login_after_switch_hex'] = client.login_body.hex()
                 command('tp McsaProbe 0.5 80 0.5')
                 client.pump(5, lambda r:r.get('position',[])[:3]==[.5,80.,.5])
                 command('fill -4 79 -4 4 79 4 minecraft:stone')
                 client.pump(1)
-                for name, nbt in CASES:
+                for name, nbt in ([] if args.respawns_only else CASES):
                     # Release notes26.3: BlockState Name/Properties → id/properties.
                     if args.version == 777 and name in ('falling_block','enderman','block_display'):
                         nbt = nbt.replace('Name:', 'id:').replace('Properties:', 'properties:')

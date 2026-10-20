@@ -115,10 +115,7 @@ pub fn translate_with_context(
             crate::entities::metadata(&mut cursor, &mut out, from, to, context)?;
         }
         (State::Play, Direction::Clientbound, "respawn") => {
-            spawn_info(&mut cursor, &mut out, from, to)?;
-            let flags = cursor.take(1)?[0];
-            if flags & !3 != 0 { return Err(Error::Invalid); }
-            out.push(flags);
+            respawn(&mut cursor, &mut out, from, to)?;
         }
         (State::Play, Direction::Clientbound, "set_slot" | "window_items") => {
             uint(&mut out, cursor.varint()? as u32); // -1/-2 — специальные окна
@@ -297,10 +294,30 @@ fn passthrough(state: State, direction: Direction, name: &str) -> bool {
     }
 }
 
-/// Login Play: Wiki oldid3848030 и закреплённые protocol.json. В 777
-/// onlineMode идёт перед enforcesSecureChat. Общие поля проверяем целиком:
+struct SpawnLayout {
+    varint_modes: bool,
+    join_online_mode: bool,
+}
+
+fn spawn_layout(version: JavaVersion) -> Result<SpawnLayout, Error> {
+    match version {
+        JavaVersion::V26_1_2 => Ok(SpawnLayout { varint_modes: false, join_online_mode: false }),
+        // Собственные Join/Respawn observations: 776 уже содержит onlineMode,
+        // но режимы ещё byte/255(None), а dimensionType по-прежнему VarInt.
+        // testdata/protocol-26.2-observations.json; публичный маршрут закрыт.
+        JavaVersion::V26_2 => Ok(SpawnLayout { varint_modes: false, join_online_mode: true }),
+        JavaVersion::V26_3 => Ok(SpawnLayout { varint_modes: true, join_online_mode: true }),
+        _ => Err(Error::UnsupportedVersion(version)),
+    }
+}
+
+/// Login Play: Wiki oldid3848030, закреплённые protocol.json и собственные
+/// observations776. В 776/777 onlineMode идёт перед enforcesSecureChat.
+/// Общие поля проверяем целиком:
 /// добавлять байт к неразобранному пакету опасно при повреждённой структуре.
 fn play_login(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, context: Context) -> Result<(), Error> {
+    let source = spawn_layout(from)?;
+    let target = spawn_layout(to)?;
     let common = cursor.rest;
     cursor.take(4)?; // entityId, не статический ID реестра
     cursor.boolean()?; // hardcore
@@ -310,14 +327,16 @@ fn play_login(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to:
     for _ in 0..3 { cursor.boolean()?; } // debug, respawn screen, limited crafting
     out.extend(&common[..common.len() - cursor.remaining()]);
     spawn_info(cursor, out, from, to)?;
-    let online = if from == JavaVersion::V26_3 { Some(cursor.boolean()?) } else { context.online_mode };
+    let online = if source.join_online_mode { Some(cursor.boolean()?) } else { context.online_mode };
     let secure = cursor.boolean()?;
-    if to == JavaVersion::V26_3 { out.push(u8::from(online.ok_or(Error::MissingOnlineMode)?)); }
+    if target.join_online_mode { out.push(u8::from(online.ok_or(Error::MissingOnlineMode)?)); }
     out.push(u8::from(secure));
     Ok(())
 }
 
 fn spawn_info(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), Error> {
+    let source = spawn_layout(from)?;
+    let target = spawn_layout(to)?;
     let common = cursor.rest;
     cursor.uint()?; // dimensionType — реестр, ранее отправленный этим сервером
     cursor.string()?; // dimension name
@@ -325,15 +344,15 @@ fn spawn_info(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to:
     out.extend(&common[..common.len() - cursor.remaining()]);
     // Wiki3848030 + probe_block_entities: JSON-кандидат ошибочно оставил
     // старые byte-поля. В777 оба режима VarInt; предыдущий =0(None) / ID+1.
-    let mode = if from == JavaVersion::V26_3 { cursor.uint()? } else { u32::from(cursor.take(1)?[0]) };
+    let mode = if source.varint_modes { cursor.uint()? } else { u32::from(cursor.take(1)?[0]) };
     if mode > 3 { return Err(Error::Invalid); }
-    let previous = if from == JavaVersion::V26_3 {
+    let previous = if source.varint_modes {
         match cursor.uint()? { 0 => None, value @ 1..=4 => Some(value - 1), _ => return Err(Error::Invalid) }
     } else {
         match cursor.take(1)?[0] { 255 => None, value @ 0..=3 => Some(u32::from(value)), _ => return Err(Error::Invalid) }
     };
     uint(out, mode); // 0..3 занимают один байт в обоих форматах.
-    if to == JavaVersion::V26_3 { uint(out, previous.map_or(0, |id| id + 1)); }
+    if target.varint_modes { uint(out, previous.map_or(0, |id| id + 1)); }
     else { out.push(previous.map_or(255, |id| id as u8)); }
     let common = cursor.rest;
     cursor.boolean()?; // debug world
@@ -343,6 +362,14 @@ fn spawn_info(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to:
     cursor.varint()?; // sea level может быть отрицательным
     let common_len = common.len() - cursor.remaining();
     out.extend(&common[..common_len]);
+    Ok(())
+}
+
+fn respawn(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), Error> {
+    spawn_info(cursor, out, from, to)?;
+    let flags = cursor.take(1)?[0];
+    if flags & !3 != 0 { return Err(Error::Invalid); }
+    out.push(flags);
     Ok(())
 }
 
@@ -517,6 +544,173 @@ mod tests {
         assert_eq!(cb(&bad, NEW, OLD), Err(Error::Invalid));
         let mut bad = new.to_vec(); bad.splice(6..7, [0x81, 8]); // 1025 миров
         assert_eq!(cb(&bad, NEW, OLD), Err(Error::TooLarge));
+    }
+
+    struct ObservedSpawn {
+        join: bool,
+        body: Vec<u8>,
+        previous_at: usize,
+    }
+
+    fn observed_776_spawn_packets() -> Vec<ObservedSpawn> {
+        fn bytes(value: &serde_json::Value) -> Vec<u8> {
+            let hex = value.as_str().unwrap();
+            assert!(hex.len().is_multiple_of(2));
+            (0..hex.len()).step_by(2).map(|at| u8::from_str_radix(&hex[at..at + 2], 16).unwrap()).collect()
+        }
+        let observations: serde_json::Value = serde_json::from_str(
+            include_str!("../testdata/protocol-26.2-observations.json")).unwrap();
+        let session = &observations["sessions"];
+        assert_eq!(session["version"], 776);
+        let mut packets = vec![
+            ObservedSpawn { join: true, body: bytes(&session["login_initial_hex"]), previous_at: 102 },
+            ObservedSpawn { join: true, body: bytes(&session["login_after_switch_hex"]), previous_at: 102 },
+        ];
+        let respawns = session["respawns"].as_array().unwrap();
+        assert_eq!(respawns.len(), 4);
+        for (entry, previous_at) in respawns.iter().zip([32, 29, 31, 32]) {
+            packets.push(ObservedSpawn { join: false, body: bytes(&entry["body"]), previous_at });
+        }
+        // Смещения относятся только к закреплённой записи, а не к общему codec.
+        // Проверяем их независимо установленными парами mode/previous.
+        for (packet, modes) in packets.iter().zip([[1, 255], [0, 1], [0, 1], [1, 0], [3, 1], [2, 3]]) {
+            assert_eq!(packet.body[0], if packet.join { 0x31 } else { 0x52 });
+            assert_eq!(packet.body[packet.previous_at - 1..=packet.previous_at], modes);
+        }
+        packets
+    }
+
+    /// Только payload: таблицы ID/реестров776 этим helper не включаются.
+    fn spawn_payload(join: bool, body: &[u8], from: JavaVersion, to: JavaVersion, online_mode: Option<bool>) -> Result<Vec<u8>, Error> {
+        let mut cursor = Cursor::new(body);
+        let mut out = Vec::new();
+        if join {
+            play_login(&mut cursor, &mut out, from, to, Context { online_mode, ..Default::default() })?;
+        } else {
+            respawn(&mut cursor, &mut out, from, to)?;
+        }
+        if cursor.remaining() != 0 { return Err(Error::Invalid); }
+        Ok(out)
+    }
+
+    /// Ожидаемое представление наблюдённого776 payload. 775/777 здесь
+    /// синтетические проекции полей, не записи других серверов.
+    fn expected_spawn(packet: &ObservedSpawn, version: JavaVersion) -> Vec<u8> {
+        let mut payload = packet.body[1..].to_vec();
+        if version == NEW {
+            let previous = &mut payload[packet.previous_at - 1];
+            *previous = if *previous == 255 { 0 } else { *previous + 1 };
+        } else if version == OLD && packet.join {
+            assert_eq!(payload.remove(payload.len() - 2), 0); // observed onlineMode=false
+        }
+        payload
+    }
+
+    #[test]
+    fn observed_776_join_and_respawn_fields_translate_between_all_three_private_layouts() {
+        let middle = JavaVersion::V26_2;
+        for packet in observed_776_spawn_packets() {
+            for from in [OLD, middle, NEW] {
+                let source = expected_spawn(&packet, from);
+                for to in [OLD, middle, NEW] {
+                    // Для776/777 источник поля — пакет, даже если context иной.
+                    let context = Some(from != OLD);
+                    assert_eq!(spawn_payload(packet.join, &source, from, to, context).unwrap(),
+                        expected_spawn(&packet, to), "{from:?}→{to:?}, join={}", packet.join);
+                    for length in 0..source.len() {
+                        assert!(spawn_payload(packet.join, &source[..length], from, to, context).is_err());
+                    }
+                    let mut extra = source.clone(); extra.push(0);
+                    assert_eq!(spawn_payload(packet.join, &extra, from, to, context), Err(Error::Invalid));
+                }
+            }
+        }
+        // Настоящие прежние775/777 записи тоже проходят новый средний helper.
+        for (from, body) in [
+            (OLD, include_bytes!("../testdata/play-login-26.1.2-none.bin").as_slice()),
+            (OLD, include_bytes!("../testdata/play-login-26.1.2-previous-creative.bin").as_slice()),
+            (NEW, include_bytes!("../testdata/play-login-26.3-none.bin").as_slice()),
+            (NEW, include_bytes!("../testdata/play-login-26.3-previous-creative.bin").as_slice()),
+        ] {
+            let converted = spawn_payload(true, &body[1..], from, middle, Some(false)).unwrap();
+            assert_eq!(spawn_payload(true, &converted, middle, from, None).unwrap(), body[1..]);
+        }
+    }
+
+    #[test]
+    fn private_776_online_mode_requires_source_or_context_and_valid_booleans() {
+        let middle = JavaVersion::V26_2;
+        for packet in observed_776_spawn_packets().into_iter().filter(|packet| packet.join) {
+            let old = expected_spawn(&packet, OLD);
+            for to in [middle, NEW] {
+                assert_eq!(spawn_payload(true, &old, OLD, to, None), Err(Error::MissingOnlineMode));
+            }
+            for from in [middle, NEW] {
+                let mut source = expected_spawn(&packet, from);
+                for online in [false, true] {
+                    // online=true — синтетическая проверка Bool, не наблюдение
+                    // настоящего online-mode сервера в этом наборе.
+                    let at = source.len() - 2; source[at] = u8::from(online);
+                    for to in [middle, NEW] {
+                        let mapped = spawn_payload(true, &source, from, to, Some(!online)).unwrap();
+                        assert_eq!(mapped[mapped.len() - 2], u8::from(online));
+                    }
+                    assert_eq!(spawn_payload(true, &source, from, OLD, None).unwrap(), old);
+                }
+                for at in [source.len() - 2, source.len() - 1] {
+                    let mut invalid = source.clone(); invalid[at] = 2;
+                    assert_eq!(spawn_payload(true, &invalid, from, OLD, None), Err(Error::Invalid));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn private_spawn_layout_checks_modes_flags_and_varint_dimension_type() {
+        for packet in observed_776_spawn_packets() {
+            for from in [OLD, JavaVersion::V26_2, NEW] {
+                let source = expected_spawn(&packet, from);
+                for (at, value) in [(packet.previous_at - 2, 4), (packet.previous_at - 1, if from == NEW { 5 } else { 254 })] {
+                    let mut invalid = source.clone(); invalid[at] = value;
+                    assert_eq!(spawn_payload(packet.join, &invalid, from, OLD, Some(false)), Err(Error::Invalid));
+                }
+                if !packet.join {
+                    let mut invalid = source.clone();
+                    *invalid.last_mut().unwrap() = 4;
+                    assert_eq!(spawn_payload(false, &invalid, from, OLD, None), Err(Error::Invalid));
+                    // Синтетический VarInt131 проверяет ширину поля; это не
+                    // заявление о наличии такого dimensionType в registry.
+                    let mut wide_dimension = source;
+                    wide_dimension.splice(..1, [0x83, 1]);
+                    let mapped = spawn_payload(false, &wide_dimension, from, JavaVersion::V26_2, None).unwrap();
+                    assert_eq!(&mapped[..2], &[0x83, 1]);
+                    assert_eq!(spawn_payload(false, &mapped, JavaVersion::V26_2, from, None).unwrap(), wide_dimension);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn private_776_spawn_helpers_do_not_open_the_public_protocol_route() {
+        let middle = JavaVersion::V26_2;
+        for from in [OLD, middle, NEW] {
+            for to in [OLD, middle, NEW] {
+                if from != middle && to != middle { continue; }
+                for state in [State::Login, State::Configuration, State::Play] {
+                    for direction in [Direction::Clientbound, Direction::Serverbound] {
+                        assert_eq!(translate_with_context(state, direction, from, to, &[0],
+                            Context { online_mode: Some(false), ..Default::default() }),
+                            Err(Error::UnsupportedVersion(middle)));
+                    }
+                }
+            }
+        }
+        for join in [false, true] {
+            assert_eq!(spawn_payload(join, &[], JavaVersion::V1_12_2, middle, None),
+                Err(Error::UnsupportedVersion(JavaVersion::V1_12_2)));
+            assert_eq!(spawn_payload(join, &[], middle, JavaVersion::V1_12_2, None),
+                Err(Error::UnsupportedVersion(JavaVersion::V1_12_2)));
+        }
     }
 
     #[test]

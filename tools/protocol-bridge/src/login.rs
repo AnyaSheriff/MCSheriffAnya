@@ -1,5 +1,5 @@
-//! Login Success 775/777: разрешённые protocol.json, pinned в candidate-sources.
-//! В 777 добавлен UUID sessionId после свойств профиля. Это не UUID игрока.
+//! Login Success 775/776/777: разрешённые protocol.json и наблюдения vanilla.
+//! В 776/777 после свойств профиля передаётся UUID sessionId. Это не UUID игрока.
 use crate::JavaVersion;
 
 const MAX_PACKET: usize = 2_097_151;
@@ -25,7 +25,7 @@ pub struct Success {
 pub enum Error { UnsupportedVersion, Truncated, Invalid, TooLarge, MissingSessionId, UnexpectedSessionId }
 
 fn supported(version: JavaVersion) -> Result<(), Error> {
-    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
+    if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Err(Error::UnsupportedVersion) } else { Ok(()) }
 }
 
 fn valid_name(name: &str) -> bool {
@@ -53,21 +53,21 @@ impl Success {
             };
             properties.push(Property { name, value, signature });
         }
-        let session_id = if version == JavaVersion::V26_3 {
+        let session_id = if matches!(version, JavaVersion::V26_2 | JavaVersion::V26_3) {
             Some(cursor.take(16)?.try_into().map_err(|_| Error::Truncated)?)
         } else { None };
         if !cursor.0.is_empty() { return Err(Error::Invalid); }
         Ok(Self { uuid, username, properties, session_id })
     }
 
-    /// Для 777 sessionId обязан выдать вызывающий сервер. Не подменяем его
+    /// Для 776/777 sessionId обязан выдать вызывающий сервер. Не подменяем его
     /// UUID игрока или нулями при отсутствии настоящей сессии.
     pub fn encode(&self, version: JavaVersion) -> Result<Vec<u8>, Error> {
         supported(version)?;
         if !valid_name(&self.username) { return Err(Error::Invalid); }
         if self.properties.len() > MAX_PROPERTIES { return Err(Error::TooLarge); }
         match (version, self.session_id) {
-            (JavaVersion::V26_3, None) => return Err(Error::MissingSessionId),
+            (JavaVersion::V26_2 | JavaVersion::V26_3, None) => return Err(Error::MissingSessionId),
             (JavaVersion::V26_1_2, Some(_)) => return Err(Error::UnexpectedSessionId),
             _ => {}
         }
@@ -137,16 +137,29 @@ mod tests {
     #[test]
     fn decodes_actual_offline_vanilla_frames() {
         let old_wire = include_bytes!("../testdata/login-success-26.1.2.bin");
-        let new_wire = include_bytes!("../testdata/login-success-26.3.bin");
         let old = Success::decode(V26_1_2, old_wire).unwrap();
-        let new = Success::decode(V26_3, new_wire).unwrap();
         assert_eq!(old.username, "McsaProbe");
-        assert_eq!(new.username, old.username);
-        assert_eq!(old.uuid, new.uuid);
-        assert!(old.properties.is_empty() && new.properties.is_empty());
-        assert!(old.session_id.is_none() && new.session_id.is_some());
+        assert!(old.properties.is_empty() && old.session_id.is_none());
         assert_eq!(old.encode(V26_1_2).unwrap(), old_wire);
-        assert_eq!(new.encode(V26_3).unwrap(), new_wire);
+        for (version, wire) in [
+            (V26_2, include_bytes!("../testdata/login-success-26.2.bin")),
+            (V26_3, include_bytes!("../testdata/login-success-26.3.bin")),
+        ] {
+            let new = Success::decode(version, wire).unwrap();
+            assert_eq!(new.username, old.username);
+            assert_eq!(new.uuid, old.uuid);
+            assert!(new.properties.is_empty());
+            let session = new.session_id.unwrap();
+            assert_ne!(session, new.uuid);
+            assert_ne!(session, [0; 16]);
+            assert_eq!(new.encode(version).unwrap(), wire);
+            for length in 0..wire.len() {
+                assert!(Success::decode(version, &wire[..length]).is_err(), "{version:?}: truncation {length}");
+            }
+            let mut trailing = wire.to_vec();
+            trailing.push(0);
+            assert_eq!(Success::decode(version, &trailing), Err(Error::Invalid));
+        }
     }
 
     #[test]
@@ -155,17 +168,21 @@ mod tests {
         let old_wire = old.encode(V26_1_2).unwrap();
         assert_eq!(old_wire.len(), 27); // наблюдение vanilla26.1.2
         assert_eq!(Success::decode(V26_1_2, &old_wire), Ok(old.clone()));
-        assert_eq!(old.encode(V26_3), Err(Error::MissingSessionId));
         let mut new = old.clone();
         new.session_id = Some([9; 16]);
-        let new_wire = new.encode(V26_3).unwrap();
-        assert_eq!(new_wire.len(), 43); // наблюдение vanilla26.3
-        assert_eq!(&new_wire[..old_wire.len()], &old_wire);
-        assert_eq!(&new_wire[old_wire.len()..], &[9; 16]);
-        assert_eq!(Success::decode(V26_3, &new_wire), Ok(new.clone()));
+        for version in [V26_2, V26_3] {
+            assert_eq!(old.encode(version), Err(Error::MissingSessionId));
+            let new_wire = new.encode(version).unwrap();
+            assert_eq!(new_wire.len(), 43); // наблюдения vanilla26.2/26.3
+            assert_eq!(&new_wire[..old_wire.len()], &old_wire);
+            assert_eq!(&new_wire[old_wire.len()..], &[9; 16]);
+            assert_eq!(Success::decode(version, &new_wire), Ok(new.clone()));
+            assert_eq!(Success::decode(version, &old_wire), Err(Error::Truncated));
+            assert_eq!(Success::decode(V26_1_2, &new_wire), Err(Error::Invalid));
+        }
         assert_eq!(new.encode(V26_1_2), Err(Error::UnexpectedSessionId));
-        assert!(Success::decode(V26_1_2, &new_wire).is_err());
-        assert_eq!(old.encode(V26_2), Err(Error::UnsupportedVersion));
+        assert_eq!(old.encode(JavaVersion::V1_12_2), Err(Error::UnsupportedVersion));
+        assert_eq!(Success::decode(JavaVersion::V1_12_2, &old_wire), Err(Error::UnsupportedVersion));
     }
 
     #[test]
@@ -175,8 +192,8 @@ mod tests {
             Property { name: "textures".into(), value: "test-public-texture".into(), signature: Some("test-signature".into()) },
             Property { name: "other".into(), value: "тест".into(), signature: None },
         ];
-        for version in [V26_1_2, V26_3] {
-            value.session_id = (version == V26_3).then_some([3; 16]);
+        for version in [V26_1_2, V26_2, V26_3] {
+            value.session_id = matches!(version, V26_2 | V26_3).then_some([3; 16]);
             let wire = value.encode(version).unwrap();
             assert_eq!(Success::decode(version, &wire), Ok(value.clone()));
             for length in 0..wire.len() {
