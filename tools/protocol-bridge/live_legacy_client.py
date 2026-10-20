@@ -5,10 +5,12 @@ import subprocess
 import uuid
 
 
-def launch(cache, root, port, log):
+def launch(cache, root, port, log, *, pause_on_lost_focus=True):
     with (cache / 'client.jar').open('rb') as f:
         assert hashlib.file_digest(f, 'sha1').hexdigest() == '0f275bc1547d01fa5f56ba34bdc87d981ee12daf'
-    (root / 'options.txt').write_text('renderDistance:2\nmaxFps:30\nsoundCategory_master:0.0\n')
+    (root / 'options.txt').write_text(
+        'renderDistance:2\nmaxFps:30\nsoundCategory_master:0.0\n'
+        + ('pauseOnLostFocus:false\n' if not pause_on_lost_focus else ''))
     identity = uuid.UUID(bytes=hashlib.md5(b'OfflinePlayer:McsaProbe').digest(), version=3)
     command = ['xvfb-run', '-a', '-s', '-screen 0 854x480x24',
                '/usr/lib/jvm/java-8-openjdk/jre/bin/java', '-Xmx1G',
