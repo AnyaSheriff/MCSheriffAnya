@@ -102,6 +102,9 @@ pub(crate) fn translate_inner(
     let mut out = Vec::with_capacity(body.len() + 8);
     uint(&mut out, mapped);
     match (state, direction, name) {
+        (State::Play, Direction::Serverbound, "block_dig") => {
+            digging(&mut cursor, &mut out, from, to)?;
+        }
         (State::Play, Direction::Serverbound, "window_click") => {
             crate::actions::click(&mut cursor,&mut out,from,to)?;
         }
@@ -255,6 +258,33 @@ pub(crate) fn translate_inner(
     Ok(Cow::Owned(out))
 }
 
+/// Только собственные ordinary-наблюдения: actual777-dig-observations.json.
+/// Равная VarInt-схема не гарантирует равный смысл enum. Cancel/drop/swap и
+/// остальные действия закрыты до отдельных наблюдений; никакого общего сдвига.
+#[derive(Clone, Copy)]
+enum DigAction { Start, Finish }
+
+fn digging(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), Error> {
+    use JavaVersion::{V26_1_2 as Old, V26_3 as New};
+    let action = match (from, cursor.uint()?) {
+        (Old | New, 0) => DigAction::Start,
+        (Old, 2) | (New, 3) => DigAction::Finish,
+        _ => return Err(Error::PayloadUnavailable("unverified block_dig action")),
+    };
+    let status = match (to, action) {
+        (Old | New, DigAction::Start) => 0,
+        (Old, DigAction::Finish) => 2,
+        (New, DigAction::Finish) => 3,
+        _ => return Err(Error::UnsupportedVersion(to)),
+    };
+    let position = cursor.take(8)?;
+    let face = cursor.take(1)?[0];
+    if face > 5 { return Err(Error::Invalid); }
+    let sequence = cursor.uint()?;
+    uint(out, status);out.extend(position);out.push(face);uint(out, sequence);
+    Ok(())
+}
+
 fn item(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion,
     untrusted: bool, context: crate::items::Context) -> Result<(), Error> {
     let (stack, size) = crate::items::decode(from, cursor.rest, untrusted, context).map_err(Error::Item)?;
@@ -290,7 +320,7 @@ fn passthrough(state: State, direction: Direction, name: &str) -> bool {
             "cookie_response" | "custom_payload" | "query_entity_nbt" | "use_entity" |
             "keep_alive" | "lock_difficulty" | "position" | "position_look" | "look" |
             "flying" | "vehicle_move" | "steer_boat" | "ping_request" | "abilities" |
-            "block_dig" | "entity_action" | "player_input" | "player_loaded" | "pong" |
+            "entity_action" | "player_input" | "player_loaded" | "pong" |
             "name_item" | "resource_pack_receive" | "held_item_slot" | "update_sign" |
             "arm_animation" | "spectate" | "block_place" | "use_item" | "custom_click_action"),
         (State::Play, Direction::Clientbound) => matches!(name,
@@ -899,3 +929,7 @@ mod payload_776_tests;
 #[cfg(test)]
 #[path = "initial_play_776_tests.rs"]
 mod initial_play_776_tests;
+
+#[cfg(test)]
+#[path = "dig_action_tests.rs"]
+mod dig_action_tests;
