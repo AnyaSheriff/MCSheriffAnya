@@ -8759,6 +8759,24 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         format_hex(payload)
     );
 
+    // Обычная проба official775: action6 меняет обе руки без потери числа
+    // предметов (observations-player-actions-26.3.md). Позиция тут не блок.
+    if status == 6 {
+        if cursor.offset != payload.len() || player.vit.dead || player.game_mode == GAME_MODE_SPECTATOR {
+            return Some(Reaction::default());
+        }
+        let main = player.inventory.selected_slot();
+        let held = player.inventory.slot(main);
+        let offhand = player.inventory.slot(inventory::OFFHAND);
+        player.inventory.set(main, offhand);
+        player.inventory.set(inventory::OFFHAND, held);
+        // Смена рук прерывает использование; отпускание не должно выстрелить
+        // уже перемещённым луком или закончить еду из прежнего слота.
+        player.net.using = None;
+        vitals::stop_eating(player);
+        return Some(Reaction { slots: vec![main, inventory::OFFHAND], ..Reaction::default() });
+    }
+
     // Java 26.1.2: jab копья — действие без блока. Нулевая позиция в
     // пакете не должна проходить проверку дальности/загруженности чанка.
     if status == 7 {
@@ -12732,3 +12750,6 @@ mod legacy_inventory;
 
 #[cfg(test)]
 mod dupe_tests;
+
+#[cfg(test)]
+mod hand_action_tests;

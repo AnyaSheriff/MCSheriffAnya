@@ -313,13 +313,13 @@ def finish_run(report, output, game, client, server, peers, listener, workers, e
                 (output/'result.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
 
 
-def main():
+def main(scenario=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--execute',action='store_true')
     for name in ('jar','data','client-dir','output'):parser.add_argument('--'+name,type=Path)
     args=parser.parse_args()
     if not args.execute:
-        print(json.dumps({'execute':False,'backend':PORT,'relay':RELAY,'checkpoint':'each target PNG needs calibration JSON','scope':'actual official777 stone/singlebottom slab dig'}));return
+        print(json.dumps({'execute':False,'backend':PORT,'relay':RELAY,'checkpoint':'each target PNG needs calibration JSON','scope':scenario.scope if scenario else 'actual official777 stone/singlebottom slab dig'}));return
     if not all((args.jar,args.data,args.client_dir,args.output)):parser.error('explicit verified inputs and fresh output required')
     gui_tools=preflight_gui_tools()
     tables=inputs(args.data)
@@ -329,12 +329,13 @@ def main():
     if len(cpus)!=2:raise RuntimeError('need two available CPUs')
     os.sched_setaffinity(0,cpus)
     output=args.output.resolve();output.mkdir(parents=True,exist_ok=False)
-    report={'result':'FAIL','scope':'ordinary official777 stone/singlebottom slab, not core support',
+    report={'result':'FAIL','scope':scenario.scope if scenario else 'ordinary official777 stone/singlebottom slab, not core support',
             'gui_tools':gui_tools,
             'packets':[],'commands':[],'screenshots':[],'checks':[],'cpu_affinity':cpus,
             'runner_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             'jar_sha1':JAR_SHA1,'sources':{k:hashlib.sha256((args.data/k).read_bytes()).hexdigest() for k in tables if k.endswith('.json')}}
-    observer=Observer777(tables['protocol.json'],report['packets'],next(v['id'] for v in tables['entities.json'] if v['name']=='item'))
+    observer_type=scenario.observer_type if scenario else Observer777
+    observer=observer_type(tables['protocol.json'],report['packets'],next(v['id'] for v in tables['entities.json'] if v['name']=='item'))
     tool=next(v['id'] for v in tables['items.json'] if v['name']=='diamond_pickaxe')
     lock=threading.RLock();ending=threading.Event();peers=[];workers=[];server=client=listener=None
     previous={}
@@ -405,7 +406,13 @@ def main():
                 for source,target,direction in ((backend,peer,'toClient'),(peer,backend,'toServer')):
                     worker=threading.Thread(target=relay,args=(source,target,direction),daemon=True);workers.append(worker);worker.start()
                 wait(lambda:observer.loaded and observer.acks and observer.phase['toClient']=='play',120)
-                for label,block,pitch in [('stone','stone',30.),('slab','white_concrete_slab[type=bottom,waterlogged=false]',35.)]:
+                cases=[('stone','stone',30.),('slab','white_concrete_slab[type=bottom,waterlogged=false]',35.)]
+                if scenario is not None:
+                    scenario.run({'report':report,'observer':observer,'client':client,'tables':tables,
+                                  'command':command,'barrier':barrier,'wait':wait,'snapshot':snapshot,
+                                  'output':output,'log':log,'lock':lock})
+                    cases=[]
+                for label,block,pitch in cases:
                     observer.stage=label+'-setup'
                     for text in ['kill @e[type=minecraft:item]','clear McsaProbe','gamemode survival McsaProbe',
                                  'item replace entity McsaProbe weapon.mainhand with minecraft:diamond_pickaxe',
