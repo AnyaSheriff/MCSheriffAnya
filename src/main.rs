@@ -154,6 +154,13 @@ const WORLD_PATH: &str = "world";
 fn main() -> io::Result<()> {
     use std::io::IsTerminal;
     if !config::first_start::prepare(Path::new("."),std::io::stdin().is_terminal(),&mut std::io::stdin().lock(),&mut std::io::stdout().lock())? { return Ok(()); }
+    // Проверяем мир до создания каталогов, слушателей и фоновых писателей.
+    // Замок живёт дольше runtime; session.lock измерений остаются отдельными.
+    let world_guard = world::startup::prepare(Path::new(WORLD_PATH))?;
+    log_debug!("Проверка заявленного профиля мира: {:?}", world_guard.check);
+    if !world_guard.has_exclusive_lock() {
+        log_warn!("На этой платформе доступна только читающая проверка профиля мира; общий межпроцессный замок пока не реализован");
+    }
     // Такту отводится отдельное ядро, всё остальное делит оставшиеся: сеть,
     // складывание чанков, скины. Если ядро всего одно, делить нечего —
     // работаем как придётся.
