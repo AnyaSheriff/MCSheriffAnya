@@ -13,11 +13,21 @@ use super::profile::{self, StartupCheck};
 /// удаление занятого inode позволило бы другому процессу создать новый замок.
 pub(crate) struct StartupGuard {
     lock: Option<File>,
+    #[cfg(target_os = "linux")]
+    world: PathBuf,
+    #[cfg(target_os = "linux")]
+    identity: Option<(u64, u64)>,
     pub(crate) check: StartupCheck,
 }
 
 impl StartupGuard {
     pub(crate) fn has_exclusive_lock(&self) -> bool { self.lock.is_some() }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn world_path(&self) -> &Path { &self.world }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn world_identity(&self) -> Option<(u64, u64)> { self.identity }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn snapshot_lock(&self) -> Option<&File> { self.lock.as_ref() }
 }
 
 fn world_path(world: &Path) -> io::Result<PathBuf> {
@@ -82,7 +92,17 @@ pub(crate) fn prepare(world: &Path) -> io::Result<StartupGuard> {
     check_directory(&world)?;
     let check = profile::check_current_world(&world).map_err(|error|
         io::Error::new(io::ErrorKind::InvalidData, format!("запуск мира остановлен: {error}")))?;
-    Ok(StartupGuard { lock, check })
+    #[cfg(target_os = "linux")]
+    let identity = {
+        use std::os::unix::fs::MetadataExt;
+        match fs::symlink_metadata(&world) {
+            Ok(metadata) if metadata.is_dir() => Some((metadata.dev(), metadata.ino())),
+            Ok(_) => return Err(io::Error::new(io::ErrorKind::InvalidInput, "путь мира изменился во время запуска")),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+            Err(error) => return Err(error),
+        }
+    };
+    Ok(StartupGuard { lock, #[cfg(target_os = "linux")] world, #[cfg(target_os = "linux")] identity, check })
 }
 
 #[cfg(test)]

@@ -20,6 +20,7 @@
 mod codec;
 pub mod profile;
 pub(crate) mod startup;
+pub(crate) mod snapshot;
 mod spawn_search;
 #[cfg(test)]
 #[allow(dead_code)]
