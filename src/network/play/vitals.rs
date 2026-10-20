@@ -1692,6 +1692,9 @@ pub(super) async fn send_respawn_intro(stream: &mut Outgoing<'_>, player: &Playe
 pub(super) fn respawned(player: &mut PlayerState) {
     player.vit.respawned();
     player.net.reset();
+    // Официальный340 после смерти создаёт новое окно инвентаря:
+    // незавершённый ACK прежней жизни больше не блокирует щелчки.
+    player.legacy_transaction = None;
     player.foot_enchants = Default::default();
 
     // Клиент после возрождения знает атрибуты по умолчанию.

@@ -254,7 +254,9 @@ fn drag(player: &mut PlayerState, window: i32, slot: i32, button: i8, slots: &mu
         for target in selected {
             let old = get(player,slots,target); if old.is_some_and(|s| !s.stacks_with(&held)) { continue; }
             let count = old.map_or(0,|s| s.count); let moved = each.min(held.limit() - count).min(if kind == 2 { held.limit() } else { left });
-            if moved > 0 { set(player,slots,target,Some(held.with_count(count + moved))); if kind != 2 { left -= moved; } }
+            // Официальные340/775: творческое заполнение тоже вычитает
+            // добавленное из курсора; отрицательный остаток означает пустоту.
+            if moved > 0 { set(player,slots,target,Some(held.with_count(count + moved))); left -= moved; }
         }
         player.inventory.set_cursor(inventory::remainder(held,left));
     }

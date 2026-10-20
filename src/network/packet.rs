@@ -76,6 +76,8 @@ pub struct PacketInfo {
     pub teleport: Option<mcsa_protocol::teleport::Confirmation>,
     /// Предсказания хэшей компонентов чужой версии не подтверждают инвентарь.
     pub foreign_inventory: bool,
+    /// Старое подтверждение хранится отдельно от современных хэшей.
+    pub legacy_inventory: Option<mcsa_protocol::legacy_inventory::Action>,
 }
 
 impl PacketInfo {
@@ -131,7 +133,7 @@ pub async fn read_packet<R: AsyncRead + Unpin>(stream: &mut R) -> io::Result<Pac
         id: packet_id,
         length,
         body,
-        teleport: None, foreign_inventory: false,
+        teleport: None, foreign_inventory: false, legacy_inventory: None,
     })
 }
 
@@ -209,10 +211,19 @@ pub async fn read_play_packet_with_legacy<S: AsyncRead + Unpin>(stream: &mut S, 
     let packet = read_packet(stream).await?;
     if version == JavaVersion::V1_12_2 {
         let legacy = legacy.ok_or_else(|| io::Error::other("Нет состояния соединения1.12.2"))?;
+        if matches!(packet.id, 0x05 | 0x07 | 0x1b) {
+            let (body, action) = mcsa_protocol::legacy_inventory::decode(&packet.body,
+                mcsa_protocol::legacy_items::Context { enchantments: legacy_enchantments() }).map_err(translate_error)?;
+            // Только типизированный ACK имеет пустое тело и внутренний ID−1.
+            // Такой пакет никогда не передаётся обычному обработчику.
+            let id = if body.is_empty() { -1 } else { decode_varint(&body)?.0 };
+            return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None,
+                foreign_inventory: false, legacy_inventory: action });
+        }
         let body = legacy.lock().map_err(|_| io::Error::other("Состояние соединения1.12.2 повреждено"))?
             .serverbound(&packet.body).map_err(translate_error)?;
         let (id, _) = decode_varint(&body)?;
-        return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false });
+        return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None });
     }
     // Confirm имеет ID0 в обеих проверенных версиях. Его новые поля нужны
     // обработчику, поэтому не пропускаем их через обычный перевод в775.
@@ -221,13 +232,13 @@ pub async fn read_play_packet_with_legacy<S: AsyncRead + Unpin>(stream: &mut S, 
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("ConfirmTeleportation: {error:?}")))?;
         let mut body = vec![0];
         push_varint(&mut body, confirmation.id);
-        return Ok(PacketInfo { id: 0, length: body.len() as i32, body, teleport: Some(confirmation), foreign_inventory: false });
+        return Ok(PacketInfo { id: 0, length: body.len() as i32, body, teleport: Some(confirmation), foreign_inventory: false, legacy_inventory: None });
     }
     if version == wire::INTERNAL { return Ok(packet); }
     let body = wire::translate_with_context(State::Play, Direction::Serverbound,
         version, wire::INTERNAL, &packet.body, wire::Context { items: item_context(), ..Default::default() }).map_err(translate_error)?.into_owned();
     let (id, _) = decode_varint(&body)?;
-    Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: id == 0x12 })
+    Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: id == 0x12, legacy_inventory: None })
 }
 
 /// Предел одной записи вместе со сбросом. Это защита транспорта, а не
@@ -277,6 +288,12 @@ enum Transport<'a> {
     Capture,
 }
 
+pub(super) fn legacy_enchantments() -> &'static [&'static str] {
+    static NAMES: std::sync::LazyLock<Vec<&'static str>> = std::sync::LazyLock::new(||
+        crate::stackdata::ENCHANTMENTS.iter().map(|(name, _)| *name).collect());
+    &NAMES
+}
+
 fn item_context() -> mcsa_protocol::items::Context {
     // Оба профиля Configuration получают этот порядок; тест реестров это проверяет.
     mcsa_protocol::items::Context { shared_enchantment_count: Some(crate::stackdata::ENCHANTMENTS.len() as u32) }
@@ -315,6 +332,13 @@ impl<'a> Outgoing<'a> {
         }).transpose()
     }
 
+    pub async fn send_legacy_confirmation(&mut self, ack: mcsa_protocol::legacy_inventory::Confirmation) -> io::Result<()> {
+        if self.version != JavaVersion::V1_12_2 { return Err(io::Error::other("Транзакция340 для другого клиента")); }
+        frame(&mut self.buffer, &ack.packet(), compression_threshold());
+        if self.buffer.len() >= OUTGOING_LIMIT { self.flush().await?; }
+        Ok(())
+    }
+
     pub async fn send_legacy_chunk(&mut self, chunk: &mcsa_protocol::legacy_chunk::Chunk) -> io::Result<()> {
         if self.version != JavaVersion::V1_12_2 { return Err(io::Error::other("Чанк340 для другого клиента")); }
         let (_, sky) = self.legacy_view()?.ok_or_else(|| io::Error::other("Нет окна1.12.2"))?;
@@ -338,9 +362,8 @@ impl<'a> Outgoing<'a> {
         context.metadata_registry_counts = &COUNTS;
         if self.version == JavaVersion::V1_12_2 {
             let legacy = self.legacy.as_ref().ok_or_else(|| io::Error::other("Нет состояния соединения1.12.2"))?;
-            static ENCHANTMENTS: std::sync::LazyLock<Vec<&'static str>> = std::sync::LazyLock::new(|| crate::stackdata::ENCHANTMENTS.iter().map(|(name,_)| *name).collect());
             let translated = legacy.lock().map_err(|_| io::Error::other("Состояние соединения1.12.2 повреждено"))?
-                .clientbound(body, &ENCHANTMENTS).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("Пакет340 {:02x?}: {error:?}", body.first())))?;
+                .clientbound(body, legacy_enchantments()).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, format!("Пакет340 {:02x?}: {error:?}", body.first())))?;
             for body in translated { frame(&mut self.buffer, &body, compression_threshold()); }
         } else if self.version == wire::INTERNAL {
             let body = self.entities.translate(wire::INTERNAL,self.version,body,context).map_err(translate_error)?;

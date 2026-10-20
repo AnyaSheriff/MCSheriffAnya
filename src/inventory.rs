@@ -330,8 +330,10 @@ impl Inventory {
             .chain(FIRST_MAIN..=LAST_MAIN)
             .collect();
 
-        // Сперва доложить в начатые стопки.
-        for slot in &order {
+        // Сперва доложить в начатые стопки, включая вторую руку.
+        // Наблюдение official775: полный рюкзак + offhand pumpkin7,
+        // give pumpkin1 → offhand8. Пустую вторую руку не заполняем.
+        for slot in order.iter().chain(std::iter::once(&OFFHAND)) {
             if left <= 0 {
                 break;
             }
@@ -474,10 +476,18 @@ impl Inventory {
         match mode {
             0 => self.pick_up(slot, button),
             1 => Click { understood: self.quick_move(slot), thrown: None },
-            2 => Click { understood: self.swap(slot, button), thrown: None },
+            2 => self.swap(slot, button),
             4 => self.throw_away(slot, button),
             _ => Click::default(),
         }
+    }
+
+    /// Броня принимает только свой тип экипировки и ровно одну вещь.
+    /// Официальные340/775/777: bedrock в слот шлема не помещается.
+    fn slot_limit(slot: i32, stack: Stack) -> i32 {
+        if (5..=8).contains(&slot) {
+            i32::from(crate::combat::info(stack.item).is_some_and(|info| i32::from(info.equip_slot) == 12 - slot))
+        } else { stack.limit() }
     }
 
     /// Обычный щелчок: взять стопку в курсор, положить её или поменять местами.
@@ -503,6 +513,9 @@ impl Inventory {
             return Click::default();
         };
 
+        if self.cursor.is_some_and(|held| Self::slot_limit(slot, held) == 0) {
+            return Click { understood: true, thrown: None };
+        }
         if index != 0 && crate::bundle::click(&mut self.cursor, &mut self.slots[index], button) {
             return Click { understood: true, thrown: None };
         }
@@ -526,8 +539,9 @@ impl Inventory {
 
             // В курсоре что-то есть, слот пуст — кладём всё или одну штуку.
             (Some(held), None, 0) => {
-                self.slots[index] = Some(held);
-                self.cursor = None;
+                let moved = held.count.min(Self::slot_limit(slot, held));
+                self.slots[index] = Some(held.with_count(moved));
+                self.cursor = remainder(held, held.count - moved);
             }
             (Some(held), None, _) => {
                 self.slots[index] = Some(held.with_count(1));
@@ -536,7 +550,7 @@ impl Inventory {
 
             // Тот же предмет — досыпаем, сколько влезет.
             (Some(held), Some(there), button) if held.stacks_with(&there) => {
-                let room = (there.limit() - there.count).max(0);
+                let room = (Self::slot_limit(slot, there) - there.count).max(0);
                 let moved = if button == 0 { room.min(held.count) } else { room.min(1) };
 
                 self.slots[index] = Some(there.with_count(there.count.saturating_add(moved)));
@@ -545,6 +559,7 @@ impl Inventory {
 
             // Разные предметы — меняем местами.
             (Some(held), Some(there), _) => {
+                if held.count > Self::slot_limit(slot, held) { return Click { understood: true, thrown: None }; }
                 self.slots[index] = Some(held);
                 self.cursor = Some(there);
             }
@@ -617,20 +632,35 @@ impl Inventory {
 
     /// Щелчок с цифрой: слот меняется местами со слотом панели (или со второй
     /// рукой, если нажата клавиша второй руки).
-    fn swap(&mut self, slot: i32, button: i8) -> bool {
+    fn swap(&mut self, slot: i32, button: i8) -> Click {
         let other = match button {
             SWAP_OFFHAND => OFFHAND,
             0..=8 => FIRST_HOTBAR + button as i32,
-            _ => return false,
+            _ => return Click::default(),
         };
 
         let (Some(here), Some(there)) = (self.index(slot), self.index(other)) else {
-            return false;
+            return Click::default();
         };
+        let unchanged = Click { understood: true, thrown: None };
+        if here == there { return unchanged; }
 
+        if let Some(incoming) = self.slots[there] {
+            let limit = Self::slot_limit(slot, incoming);
+            if limit == 0 { return unchanged; }
+            if incoming.count > limit {
+                // Вики, Inventory: «hotbar keys». Официальные340/775:
+                // из стопки тыкв надевается одна, прежний шлем возвращается
+                // в рюкзак; при полном инвентаре выпадает ровно остаток.
+                let displaced = self.slots[here].replace(incoming.with_count(limit));
+                self.slots[there] = remainder(incoming, incoming.count - limit);
+                return Click { understood: true, thrown: displaced.and_then(|stack| self.put(stack).1) };
+            }
+        }
+        if self.slots[here].is_some_and(|stack| stack.count > Self::slot_limit(other, stack)) { return unchanged; }
         self.slots.swap(here, there);
 
-        true
+        unchanged
     }
 
     /// Выброс: предмет из слота летит на землю — одна штука или вся стопка.
@@ -783,6 +813,112 @@ mod tests {
         inventory.click(5, 0, 0);
         assert_eq!(inventory.slot(5), Some(helmet));
         assert_eq!(inventory.cursor(), None);
+    }
+
+    #[test]
+    fn armor_slots_reject_wrong_items_and_limit_wearables() {
+        let stone = Stack::new(crate::blocks::item_named("bedrock").unwrap(),8);
+        let helmet = Stack::new(crate::blocks::item_named("diamond_helmet").unwrap(),1);
+        for slot in 5..=8 {
+            for creative in [false, true] {
+                let mut inv = Inventory::new(); inv.set_cursor(Some(stone));
+                inv.click_in_mode(slot, 0, 0, creative);
+                assert_eq!(inv.slot(slot),None); assert_eq!(inv.cursor(),Some(stone));
+                inv.set_cursor(None); inv.set(36,Some(stone));
+                inv.click_in_mode(slot,0,2,creative);
+                assert_eq!(inv.slot(slot),None); assert_eq!(inv.slot(36),Some(stone));
+            }
+        }
+        let mut inv = Inventory::new(); inv.set_cursor(Some(helmet));
+        inv.click(6,0,0); assert_eq!(inv.slot(6),None); assert_eq!(inv.cursor(),Some(helmet));
+        inv.click(5,0,0); assert_eq!(inv.slot(5),Some(helmet)); assert_eq!(inv.cursor(),None);
+        let pumpkin = Stack::new(crate::blocks::item_named("carved_pumpkin").unwrap(),8);
+        for mode in [0,2] {
+            let mut inv = Inventory::new();
+            if mode == 0 { inv.set_cursor(Some(pumpkin)); } else { inv.set(36,Some(pumpkin)); }
+            inv.click(5,0,mode); assert_eq!(inv.slot(5),Some(pumpkin.with_count(1)));
+            assert_eq!(if mode == 0 {inv.cursor()} else {inv.slot(36)},Some(pumpkin.with_count(7)));
+        }
+    }
+
+    #[test]
+    fn put_merges_existing_offhand_without_filling_an_empty_one() {
+        let pumpkin = Stack::new(crate::blocks::item_named("carved_pumpkin").unwrap(), 7);
+        let bedrock = Stack::new(crate::blocks::item_named("bedrock").unwrap(), 64);
+        let mut inventory = Inventory::new();
+        for slot in FIRST_MAIN..=LAST_HOTBAR { inventory.set(slot, Some(bedrock)); }
+        inventory.set(OFFHAND, Some(pumpkin));
+        assert_eq!(inventory.put(pumpkin.with_count(1)), (vec![OFFHAND], None));
+        assert_eq!(inventory.slot(OFFHAND), Some(pumpkin.with_count(8)));
+
+        inventory.set(OFFHAND, Some(pumpkin.with_count(63)));
+        assert_eq!(inventory.put(pumpkin.with_count(3)), (vec![OFFHAND], Some(pumpkin.with_count(2))));
+        assert_eq!(inventory.slot(OFFHAND), Some(pumpkin.with_count(64)));
+
+        inventory.set(OFFHAND, None);
+        assert_eq!(inventory.put(pumpkin), (vec![], Some(pumpkin)));
+        assert_eq!(inventory.slot(OFFHAND), None);
+
+        let mut data = crate::stackdata::Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number("binding_curse").unwrap(), 1);
+        let distinct = pumpkin.with_extras(data);
+        inventory.set(OFFHAND, Some(distinct));
+        assert_eq!(inventory.put(pumpkin), (vec![], Some(pumpkin)));
+        assert_eq!(inventory.slot(OFFHAND), Some(distinct));
+    }
+
+    #[test]
+    fn armor_number_keys_match_official_snapshots_and_conserve_every_item() {
+        let fixture: serde_json::Value = serde_json::from_str(include_str!("../tools/protocol-bridge/testdata/inventory-armor-edges.json")).unwrap();
+        let stack = |value: &serde_json::Value| {
+            (!value.is_null()).then(|| Stack::new(crate::blocks::item_named(value["item"].as_str().unwrap()).unwrap(), value["count"].as_i64().unwrap() as i32))
+        };
+        let totals = |inventory: &Inventory, dropped: &[Stack]| {
+            let mut counts = std::collections::BTreeMap::<i32, i32>::new();
+            for item in inventory.slots().iter().flatten().chain(inventory.cursor().as_ref()).chain(dropped) {
+                *counts.entry(item.item).or_default() += item.count;
+            }
+            counts
+        };
+        for case in fixture["cases"].as_array().unwrap() {
+            let name = case["name"].as_str().unwrap();
+            let mut inventory = Inventory::new();
+            for (index, value) in case["before"].as_array().unwrap().iter().enumerate() { inventory.set(index as i32, stack(value)); }
+            let before = totals(&inventory, &[]);
+            let button = case["button"].as_i64().unwrap() as i8;
+            let click = inventory.click(5, button, 2);
+            let dropped: Vec<_> = click.thrown.into_iter().collect();
+            assert!(click.understood, "{name}");
+            let expected: Vec<_> = case["after"].as_array().unwrap().iter().map(stack).collect();
+            assert_eq!(inventory.slots(), expected, "{name}");
+            assert_eq!(inventory.cursor(), stack(&case["cursor"]), "{name}");
+            assert_eq!(dropped, case["dropped"].as_array().unwrap().iter().filter_map(stack).collect::<Vec<_>>(), "{name}");
+            assert_eq!(totals(&inventory, &dropped), before, "{name}: потеря или дюп");
+            // Повтор одного действия не должен повторно выбрасывать уже
+            // вытесненный шлем, даже если клиент повторит запрос много раз.
+            for _ in 0..16 {
+                assert_eq!(inventory.click(5, button, 2).thrown, None, "{name}: повторный дроп");
+                assert_eq!(totals(&inventory, &dropped), before, "{name}: повторный щелчок");
+            }
+        }
+    }
+
+    #[test]
+    fn bound_armor_rolls_back_displacement_and_overflow_drop() {
+        let mut inventory = Inventory::new();
+        let bedrock = Stack::new(crate::blocks::item_named("bedrock").unwrap(), 64);
+        for slot in 9..=44 { inventory.set(slot, Some(bedrock)); }
+        let mut data = crate::stackdata::Data::default();
+        data.set_enchant(crate::stackdata::enchantment_number("binding_curse").unwrap(), 1);
+        inventory.set(5, Some(Stack::new(crate::blocks::item_named("iron_helmet").unwrap(), 1).with_extras(data)));
+        inventory.set(36, Some(Stack::new(crate::blocks::item_named("carved_pumpkin").unwrap(), 8)));
+        let before = inventory.clone();
+        for _ in 0..16 {
+            let click = inventory.click(5, 0, 2);
+            assert!(click.understood); assert_eq!(click.thrown, None);
+            assert_eq!(inventory.slots(), before.slots());
+            assert_eq!(inventory.cursor(), before.cursor());
+        }
     }
 
     use super::*;

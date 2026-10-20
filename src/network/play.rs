@@ -124,6 +124,8 @@ mod bundle_use;
 mod review_tests;
 #[cfg(test)]
 mod disconnect_tests;
+#[cfg(test)]
+mod save_conservation_tests;
 mod small;
 
 pub(crate) use body::{Act, Body, Done, Stance, cart_contents, cart_info, release_villager, store_cart, trade_paid, villager_missing, villager_state};
@@ -816,7 +818,7 @@ fn finish_play(shared: &Shared, player: &mut PlayerState) {
     close_own_window(shared, player);
 
     // Курсор и сетка верстака при выходе возвращаются в инвентарь, а что
-    // не влезло — на землю: в файл игрока они не пишутся.
+    // не влезло — на землю. При аварии до этого шага курсор остаётся в v10.
     for stack in player.inventory.close_window().thrown {
         throw_out(shared, player, stack);
     }
@@ -4984,7 +4986,7 @@ fn close_own_window(shared: &Shared, player: &mut PlayerState) {
     // Окно торговли: житель свободен; оплата, если осталась, — в инвентарь.
     if let Some(trade) = window.merchant {
         for stack in trade.slots[..2].iter().flatten() {
-            player.inventory.put(*stack);
+            if let Some(rest) = player.inventory.put(*stack).1 { throw_out(shared, player, rest); }
         }
 
         merchant::release(shared, player.dimension, trade.villager);
@@ -7174,6 +7176,7 @@ async fn apply_reaction(
     player: &mut PlayerState,
     reaction: &Reaction,
 ) -> io::Result<()> {
+    if let Some(ack) = reaction.legacy_confirmation { stream.send_legacy_confirmation(ack).await?; }
     for body in &reaction.packets {
         write_body(stream, body.clone()).await?;
     }
@@ -7330,6 +7333,7 @@ async fn send_window_property(stream: &mut Outgoing<'_>, window: i32, property: 
 /// уведомить об этом клиента.
 #[derive(Default)]
 struct Reaction {
+    legacy_confirmation: Option<mcsa_protocol::legacy_inventory::Confirmation>,
     /// Номер действия с блоком, которое нужно подтвердить клиенту.
     acknowledge: Option<i32>,
 
@@ -7447,6 +7451,9 @@ fn handle_client_packet(
     player: &mut PlayerState,
     shared: &Shared,
 ) -> Reaction {
+    if let Some(action) = &packet.legacy_inventory {
+        return legacy_inventory::handle(action, packet, player, shared);
+    }
     let before = (player.x, player.y, player.z, player.yaw, player.pitch);
     let mut reaction = handle_client_packet_inner(packet, player, shared);
     if packet.foreign_inventory && packet.id==CLICK_CONTAINER {
@@ -9418,9 +9425,11 @@ fn place_with_main_hand(payload: &[u8], player: &mut PlayerState, shared: &Share
 
                     let slots = match used {
                         redstone::bookshelf::Used::Placed => spend_placed(player),
-                        // Не влезшее в инвентарь пропадает. [проверить] у
-                        // оригинала оно выпадает под ноги.
-                        redstone::bookshelf::Used::Taken(book) => player.inventory.put(book).0,
+                        redstone::bookshelf::Used::Taken(book) => {
+                            let (slots, rest) = player.inventory.put(book);
+                            if let Some(rest) = rest { throw_out(shared, player, rest); }
+                            slots
+                        }
                     };
 
                     return Some(Reaction { slots, ..Reaction::accepted(sequence) });
@@ -11252,6 +11261,9 @@ struct PlayerState {
     /// Инвентарь игрока: сервер ведёт его сам и показывает клиенту.
     inventory: Inventory,
 
+    /// Блокировка старых щелчков после отрицательного подтверждения.
+    legacy_transaction: Option<(u8, i16)>,
+
     /// Счётчик состояний окна. Клиент возвращает его в щелчке, а сервер
     /// увеличивает при каждой посылке содержимого: по нему клиент понимает,
     /// что картинка у него свежая.
@@ -11544,6 +11556,7 @@ impl PlayerState {
                 .map(|data| data.inventory.clone())
                 .unwrap_or_else(Inventory::new),
             state_id: 0,
+            legacy_transaction: None,
             window: None,
             pending_changes: Vec::new(),
             pending_entities: Vec::new(),
@@ -12291,7 +12304,7 @@ mod tests {
             id: SET_PLAYER_POSITION,
             length: body.len() as i32,
             body,
-            teleport: None, foreign_inventory: false,
+            teleport: None, foreign_inventory: false, legacy_inventory: None,
         };
 
         assert_eq!(packet.payload().len(), POSITION_BYTES);
@@ -12323,7 +12336,7 @@ mod tests {
                 push_f32(&mut body, *value);
             }
             body.push(flags);
-            PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false }
+            PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: false, legacy_inventory: None }
         };
 
         handle_client_packet(&packet(SET_PLAYER_POSITION, &[1.5, 2.0, 3.5], &[], 0x01), &mut player, &shared);
@@ -12709,3 +12722,8 @@ mod chunk_compat_tests;
 mod legacy_action_tests;
 
 mod legacy_chunks;
+
+mod legacy_inventory;
+
+#[cfg(test)]
+mod dupe_tests;

@@ -18,6 +18,7 @@
 // терять постройки при падении не хочется.
 
 mod codec;
+pub mod profile;
 mod spawn_search;
 #[cfg(test)]
 #[allow(dead_code)]

@@ -18,6 +18,8 @@ use std::path::{Path, PathBuf};
 use crate::inventory::Inventory;
 use crate::{log_info, log_warn};
 
+mod cursor;
+
 /// Подпись файла игрока: по ней сервер понимает, что файл его.
 const MAGIC: &[u8; 4] = b"MCPD";
 
@@ -43,7 +45,10 @@ const MAGIC: &[u8; 4] = b"MCPD";
 /// с пустым эндер-сундуком.
 /// Версия 8 — после эндер-сундука сущности попугаев на плечах.
 // Версия 9 — общий полученный опыт отдельно от очков шкалы (anvil-rename-repair).
-const FORMAT_VERSION: u32 = 9;
+/// Версия 10 — отдельный ограниченный хвост курсора после общего опыта.
+/// Старое ядро v9 не читает v10: обратный переход требует резервной копии.
+pub(crate) const FORMAT_VERSION: u32 = 10;
+const TOTAL_EXPERIENCE_VERSION: u32 = 9;
 const SHOULDERS_VERSION: u32 = 8;
 const ENDER_VERSION: u32 = 7;
 
@@ -315,7 +320,8 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
     // второй — без измерения; в третьей измерение — последний байт.
     let mut ender = empty_ender();
     let mut shoulders = [None,None];
-    let (inventory, dimension, vitals, respawn) = match version {
+    let mut saved_cursor = None;
+    let (mut inventory, dimension, vitals, respawn) = match version {
         OLD_FORMAT_VERSION if bytes.len() == SIZE => (Inventory::new(), Default::default(), Default::default(), None),
         INVENTORY_VERSION => (Inventory::from_bytes(bytes.get(SIZE..)?)?, Default::default(), Default::default(), None),
         DIMENSION_VERSION => {
@@ -324,12 +330,13 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
 
             (Inventory::from_bytes(inventory)?, dimension, Default::default(), None)
         }
-        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | FORMAT_VERSION => {
+        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | TOTAL_EXPERIENCE_VERSION | FORMAT_VERSION => {
             let mut tail = bytes.get(SIZE..)?;
+            if version >= FORMAT_VERSION { saved_cursor = cursor::take(&mut tail)?; }
             let mut respawn = None;
             let mut seed = 0;
 
-            let total = if version >= FORMAT_VERSION {
+            let total = if version >= TOTAL_EXPERIENCE_VERSION {
                 let (rest, bytes) = tail.split_at(tail.len().checked_sub(4)?);
                 let total = i32::from_be_bytes(bytes.try_into().ok()?);
                 if total < 0 { return None; }
@@ -378,6 +385,7 @@ fn parse(bytes: &[u8]) -> Option<PlayerData> {
         _ => return None,
     };
 
+    inventory.set_cursor(saved_cursor);
     Some(PlayerData {
         shoulders,
         x: f64::from_be_bytes(take(bytes, 8)?),
@@ -433,6 +441,7 @@ fn encode(data: &PlayerData) -> io::Result<Vec<u8>> {
     out.extend_from_slice(&shoulders);
     out.extend_from_slice(&(shoulders.len() as u32).to_be_bytes());
     out.extend_from_slice(&data.vitals.experience_total.to_be_bytes());
+    cursor::append(data.inventory.cursor(), &mut out)?;
 
     Ok(out)
 }
@@ -470,6 +479,67 @@ mod tests {
         }
     }
 
+    fn strip_cursor_tail(bytes: &mut Vec<u8>) {
+        let mut tail = bytes.as_slice();
+        cursor::take(&mut tail).expect("хвост курсора v10");
+        let length = tail.len();
+        bytes.truncate(length);
+        bytes[4..8].copy_from_slice(&TOTAL_EXPERIENCE_VERSION.to_be_bytes());
+    }
+
+    #[test]
+    fn cursor_encoding_failure_preserves_previous_player_file() {
+        let directory = test_directory("cursor-write-error");
+        let uuid = [234; 16];
+        let data = sample();
+        save(&directory, &uuid, &data).unwrap();
+        let original = fs::read(path_for(&directory, &uuid)).unwrap();
+        let invalid = crate::inventory::Stack::new(crate::blocks::item_named("diamond").unwrap(), 65);
+        let mut wrong = data.clone();
+        wrong.inventory.set_cursor(Some(invalid));
+        assert_eq!(save(&directory, &uuid, &wrong).unwrap_err().kind(), io::ErrorKind::InvalidData);
+        assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
+        let oversized = crate::inventory::Stack::new(crate::blocks::item_named("diamond").unwrap(), 1)
+            .with_extras(crate::stackdata::Data { name: Some("a".repeat(65536)), ..Default::default() });
+        wrong.inventory.set_cursor(Some(oversized));
+        assert_eq!(save(&directory, &uuid, &wrong).unwrap_err().kind(), io::ErrorKind::InvalidData);
+        assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
+        assert_eq!(load(&directory, &uuid), Some(data));
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn cursor_modifier_limit_never_replaces_the_file_with_truncated_components() {
+        let directory = test_directory("cursor-modifier-loss");
+        let uuid = [235; 16];
+        let data = sample();
+        save(&directory, &uuid, &data).unwrap();
+        let original = fs::read(path_for(&directory, &uuid)).unwrap();
+        let modifier_stack = |id: &str| {
+            // Этот вход допускает длинный id; cursor writer не должен
+            // превращать его в более короткий, даже если весь payload мал.
+            let spec = format!("diamond[attribute_modifiers=[{{type:attack_damage,id:\"{id}\",amount:2,operation:add_value,slot:mainhand}}]]");
+            let (_, extras) = crate::stackdata::parse_item_spec(&spec).unwrap();
+            crate::inventory::Stack::new(crate::blocks::item_named("diamond").unwrap(), 7).with_extras(extras)
+        };
+        for id in [format!("mcsa:{}", "a".repeat(251)), format!("mcsa:{}я", "a".repeat(249))] {
+            assert_eq!(id.len(), 256);
+            let mut invalid = data.clone();
+            invalid.inventory.set_cursor(Some(modifier_stack(&id)));
+            assert_eq!(save(&directory, &uuid, &invalid).unwrap_err().kind(), io::ErrorKind::InvalidData);
+            assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
+            assert_eq!(load(&directory, &uuid), Some(data.clone()));
+        }
+        for id in [format!("mcsa:{}", "a".repeat(250)), format!("mcsa:{}я", "a".repeat(248))] {
+            assert_eq!(id.len(), 255);
+            let mut valid = data.clone();
+            valid.inventory.set_cursor(Some(modifier_stack(&id)));
+            save(&directory, &uuid, &valid).unwrap();
+            assert_eq!(load(&directory, &uuid), Some(valid));
+        }
+        fs::remove_dir_all(directory).unwrap();
+    }
+
     #[test]
     fn earned_experience_survives_level_spending_and_version_eight_is_readable() {
         // anvil-rename-repair: опыт шкалы и общий опыт теперь независимы.
@@ -478,6 +548,7 @@ mod tests {
         data.vitals.experience_total = 0;
         let mut bytes = encode(&data).unwrap();
         assert_eq!(parse(&bytes), Some(data.clone()));
+        strip_cursor_tail(&mut bytes);
         bytes.truncate(bytes.len() - 4);
         bytes[4..8].copy_from_slice(&SHOULDERS_VERSION.to_be_bytes());
         data.vitals.experience_total = data.vitals.experience;
@@ -509,6 +580,7 @@ mod tests {
 
         // Прежняя версия (6): тот же файл без хвоста эндер-сундука.
         let mut old = fs::read(path_for(&directory, &[8; 16])).expect("прочитать");
+        strip_cursor_tail(&mut old);
         old.truncate(old.len() - 4); // общий опыт версии 9
         let tail = u32::from_be_bytes(old[old.len() - 4..].try_into().expect("длина")) as usize;
 
@@ -528,6 +600,7 @@ mod tests {
         parrot.small.variant=4; parrot.tame.owner=Some(uuid);
         let mut stored=Vec::new(); parrot.write(&mut stored); data.shoulders[0]=Some(stored);
         let mut old=encode(&data).unwrap(); assert_eq!(parse(&old),Some(data.clone()));
+        strip_cursor_tail(&mut old);
         old.truncate(old.len() - 4);
         let length=u32::from_be_bytes(old[old.len()-4..].try_into().unwrap()) as usize;
         old.truncate(old.len()-4-length); old[4..8].copy_from_slice(&ENDER_VERSION.to_be_bytes());
@@ -545,11 +618,11 @@ mod tests {
         data.inventory.set(crate::inventory::FIRST_HOTBAR, Some(crate::inventory::Stack::new(stone, 12)));
         data.inventory.select(3);
         data.dimension = crate::dimension::Dimension::Nether;
-        data.vitals = SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234, experience_total: 1234, xp_seed: -77 };
+        data.vitals = SavedVitals { health: 7.5, food: 9, saturation: 0.0, exhaustion: 2.25, air: 120, fire: 60, fall: 4.5, experience: 1234, experience_total: 6543, xp_seed: -77 };
         data.respawn = Some(crate::bed::RespawnPoint { dimension: crate::dimension::Dimension::Nether, pos: (3, 70, -9), yaw: -90.0, forced: false });
         data.ender[26] = Some(crate::inventory::Stack::new(stone, 64));
 
-        for version in OLD_FORMAT_VERSION..=ENDER_VERSION {
+        for version in OLD_FORMAT_VERSION..=TOTAL_EXPERIENCE_VERSION {
             let mut bytes = Vec::new();
             let mut expected = sample();
 
@@ -572,7 +645,7 @@ mod tests {
             }
             if version >= VITALS_VERSION {
                 data.vitals.write(&mut bytes);
-                expected.vitals = SavedVitals { xp_seed: 0, ..data.vitals };
+                expected.vitals = SavedVitals { xp_seed: 0, experience_total: data.vitals.experience, ..data.vitals };
             }
             if version >= XP_SEED_VERSION {
                 bytes.extend_from_slice(&data.vitals.xp_seed.to_be_bytes());
@@ -587,6 +660,16 @@ mod tests {
                 expected.ender = data.ender.clone();
             }
 
+            if version >= SHOULDERS_VERSION {
+                let shoulders = serde_json::to_vec(&data.shoulders).unwrap();
+                bytes.extend_from_slice(&shoulders);
+                bytes.extend_from_slice(&(shoulders.len() as u32).to_be_bytes());
+                expected.shoulders = data.shoulders.clone();
+            }
+            if version >= TOTAL_EXPERIENCE_VERSION {
+                bytes.extend_from_slice(&data.vitals.experience_total.to_be_bytes());
+                expected.vitals.experience_total = data.vitals.experience_total;
+            }
             assert_eq!(parse(&bytes), Some(expected), "версия {version}");
         }
     }
@@ -763,6 +846,7 @@ mod tests {
 
         let path = path_for(&directory, &[12; 16]);
         let mut bytes = fs::read(&path).expect("прочитать");
+        strip_cursor_tail(&mut bytes);
 
         bytes.truncate(bytes.len() - 4); // общий опыт версии 9
         // Сначала убираем попугаев и длину их записи, добавленные в версии 8.

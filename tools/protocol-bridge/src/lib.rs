@@ -13,6 +13,7 @@ mod recipes;
 mod actions;
 pub mod entity_sync;
 pub mod legacy_items;
+pub mod legacy_inventory;
 pub mod legacy_control;
 pub mod legacy_actions;
 pub mod legacy_play;

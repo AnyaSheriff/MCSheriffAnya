@@ -32,7 +32,10 @@ fn prediction(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVer
     Ok(())
 }
 pub(crate) fn click(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion)->Result<(),Error>{
-    uint(out,input.uint()?);uint(out,input.uint()?);out.extend(input.take(3)?);uint(out,input.count(6)? as u32);
+    uint(out,input.uint()?);
+    // Официальные775/777 принимают revision=-1 и возвращают полный снимок
+    // (probe_inventory_modes.py). Сохраняем signed VarInt без смены смысла.
+    uint(out,input.varint()? as u32);out.extend(input.take(3)?);uint(out,input.count(6)? as u32);
     let n=input.count(128)?;uint(out,n as u32);let mut seen=BTreeSet::new();
     for _ in 0..n {
         let slot=input.take(2)?;let number=i16::from_be_bytes(slot.try_into().map_err(|_|Error::Invalid)?);
@@ -133,6 +136,17 @@ mod tests {
         let context=Context {metadata_registry_counts:&[("minecraft:damage_type",1)],..Default::default()};
         let mut result=Vec::new();effects("damage_event",&mut Cursor::new(&body),&mut result,OLD,NEW,context).unwrap();assert_eq!(result,body);
         assert!(effects("damage_event",&mut Cursor::new(&[1,1,0,0,0]),&mut Vec::new(),OLD,NEW,context).is_err());
+    }
+    #[test]
+    fn negative_click_revision_reaches_the_authoritative_inventory() {
+        let body = [0, 255, 255, 255, 255, 15, 0, 5, 0, 0, 0, 0];
+        for (from, to) in [(OLD, NEW), (NEW, OLD)] {
+            let mut result = Vec::new();
+            let mut input = Cursor::new(&body);
+            click(&mut input, &mut result, from, to).unwrap();
+            assert!(input.rest.is_empty());
+            assert_eq!(result, body);
+        }
     }
     #[test]
     fn click_maps_items_and_components_but_does_not_trust_hashes() {
