@@ -106,7 +106,7 @@ fn compute(shared: &Shared, player: &mut PlayerState) -> (Option<Stack>, Vec<i16
     };
 
     match station.kind {
-        Station::Crafting => (crate::crafting::craft(&window.shown[1..10]), Vec::new()),
+        Station::Crafting => (crate::crafting::craft_for_catalog(shared.catalog(), &window.shown[1..10]), Vec::new()),
         Station::Stonecutter => {
             let input = window.shown[0].map(|s|i64::from(s.item));
             if input != station.input_item { station.selected = -1; station.input_item = input; }

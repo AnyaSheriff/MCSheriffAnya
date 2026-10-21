@@ -33,7 +33,12 @@ fn store(player: &mut PlayerState, slots: &[Option<Stack>]) {
 }
 fn result(shared: &Shared, player: &PlayerState, slots: &[Option<Stack>], commit: bool) -> Option<Stack> {
     let padded = grid_ops::padded(slots);
-    let result = recipes::craft(&padded)?;
+    let result = recipes::craft_for_catalog(shared.catalog(), &padded)?;
+    // Книга нового рецепта пока не наблюдена: limited crafting не обходим.
+    if result.item == crate::gameplay_catalog::WHITE_SLAB_ITEM
+        && shared.limited_crafting.load(std::sync::atomic::Ordering::Relaxed)
+        && player.game_mode != GAME_MODE_CREATIVE
+    { return None; }
     if shared.limited_crafting.load(std::sync::atomic::Ordering::Relaxed)
         && player.game_mode != GAME_MODE_CREATIVE
         && let Some(id) = recipes::recipe_index(&padded)
@@ -276,6 +281,87 @@ mod tests {
     fn table(p: &mut PlayerState) {
         p.window=Some(OpenWindow{id:1,halves:Vec::new(),cart:None,shown:vec![None;10],lectern:false,crafter:false,kind:None,props:Vec::new(),merchant:None,ender:false,
             station:Some(station::StationWindow{kind:Station::Crafting,pos:(0,64,0),props:Vec::new(),name:None,cost:0,repair_items:0,selected:-1,input_item:None,sound_tick:None})});
+    }
+    fn slab_table(profile: crate::gameplay_catalog::Profile, count: i32) -> (Shared, PlayerState) {
+        let catalog = crate::gameplay_catalog::Catalog::new(profile);
+        let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+            Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(Path::new("tmp/crafting-slab-ops.json")), crate::skins::Settings::default());
+        shared.world_in(Dimension::Overworld).lock().unwrap().set_block(0,64,0,blocks::state_by_name("crafting_table").unwrap());
+        let mut p = player(); table(&mut p);
+        for slot in 1..=3 { p.window.as_mut().unwrap().shown[slot] = Some(item("white_concrete",count)); }
+        refresh(&shared, &mut p);
+        (shared,p)
+    }
+    #[test]
+    fn slab_recipe_uses_profile_and_shaped_grid_without_changing_native_table() {
+        use crate::gameplay_catalog::{Catalog, Profile, WHITE_SLAB_ITEM};
+        assert_eq!(blocks::item_named("white_concrete"),Some(615));
+        let preview = Catalog::new(Profile::Preview26_3);
+        let base = Catalog::new(Profile::Java26_1_2);
+        for row in 0..3 {
+            let mut slots = [None;9];
+            slots[row*3..row*3+3].fill(Some(item("white_concrete",1)));
+            assert_eq!(recipes::craft_for_catalog(preview,&slots),Some(Stack::new(WHITE_SLAB_ITEM,6)));
+            assert!(recipes::craft_for_catalog(base,&slots).is_none());
+            assert!(recipes::craft(&slots).is_none());
+            slots[(row*3+3)%9] = Some(item("stone",1));
+            assert!(recipes::craft_for_catalog(preview,&slots).is_none());
+        }
+        let mut vertical = [None;9];
+        for i in [0,3,6] { vertical[i] = Some(item("white_concrete",1)); }
+        assert!(recipes::craft_for_catalog(preview,&vertical).is_none());
+        let small = grid_ops::padded(&[Some(item("white_concrete",1));4]);
+        assert!(recipes::craft_for_catalog(preview,&small).is_none());
+        assert!(!recipes::recipes().iter().any(|r| r.result == WHITE_SLAB_ITEM));
+    }
+    #[test]
+    fn slab_take_consumes_one_per_input_and_shift_repeats_without_duplication() {
+        use crate::gameplay_catalog::{Profile,WHITE_SLAB_ITEM};
+        let (shared,mut p) = slab_table(Profile::Preview26_3,2);
+        assert_eq!(p.window.as_ref().unwrap().shown[0],Some(Stack::new(WHITE_SLAB_ITEM,6)));
+        click(&shared,&mut p,&packet(1,0,0,0),&mut Reaction::default());
+        assert_eq!(p.inventory.cursor(),Some(Stack::new(WHITE_SLAB_ITEM,6)));
+        for s in 1..=3 { assert_eq!(p.window.as_ref().unwrap().shown[s],Some(item("white_concrete",1))); }
+        p.inventory.set_cursor(None);
+        click(&shared,&mut p,&packet(1,0,0,1),&mut Reaction::default());
+        assert_eq!(p.inventory.slot(44),Some(Stack::new(WHITE_SLAB_ITEM,6)));
+        assert!(p.window.as_ref().unwrap().shown.iter().all(Option::is_none));
+        click(&shared,&mut p,&packet(1,0,0,1),&mut Reaction::default());
+        assert_eq!(p.inventory.slot(44),Some(Stack::new(WHITE_SLAB_ITEM,6)));
+        let (shared,mut p) = slab_table(Profile::Preview26_3,3);
+        click(&shared,&mut p,&packet(1,0,0,1),&mut Reaction::default());
+        assert_eq!(p.inventory.slot(44),Some(Stack::new(WHITE_SLAB_ITEM,18)));
+        assert!(p.window.as_ref().unwrap().shown.iter().all(Option::is_none));
+    }
+    #[test]
+    fn slab_refused_output_and_native_profile_preserve_inputs() {
+        use crate::gameplay_catalog::{Profile,WHITE_SLAB_ITEM};
+        for cursor in [Some(Stack::new(WHITE_SLAB_ITEM,59)),Some(item("stone",1))] {
+            let (shared,mut p) = slab_table(Profile::Preview26_3,2);
+            p.inventory.set_cursor(cursor);let before = p.window.as_ref().unwrap().shown.clone();
+            click(&shared,&mut p,&packet(1,0,0,0),&mut Reaction::default());
+            assert_eq!(p.inventory.cursor(),cursor);assert_eq!(p.window.as_ref().unwrap().shown,before);
+        }
+        let (shared,mut p) = slab_table(Profile::Preview26_3,2);
+        for slot in 9..=44 { p.inventory.set(slot,Some(item("stone",64))); }
+        let before = p.window.as_ref().unwrap().shown.clone();
+        click(&shared,&mut p,&packet(1,0,0,1),&mut Reaction::default());
+        assert_eq!(p.window.as_ref().unwrap().shown,before);
+        let (shared,mut p) = slab_table(Profile::Java26_1_2,2);
+        let before = p.window.as_ref().unwrap().shown.clone();
+        click(&shared,&mut p,&packet(1,0,0,0),&mut Reaction::default());
+        assert!(p.inventory.cursor().is_none());assert_eq!(p.window.as_ref().unwrap().shown,before);
+    }
+    #[test]
+    fn slab_limited_crafting_stays_closed_until_recipe_book_is_supported() {
+        use crate::gameplay_catalog::Profile;
+        let (shared,mut p) = slab_table(Profile::Preview26_3,1);
+        shared.limited_crafting.store(true,std::sync::atomic::Ordering::Relaxed);
+        refresh(&shared,&mut p);let before=p.window.as_ref().unwrap().shown.clone();
+        click(&shared,&mut p,&packet(1,0,0,0),&mut Reaction::default());
+        assert!(p.window.as_ref().unwrap().shown[0].is_none());
+        assert_eq!(p.window.as_ref().unwrap().shown,before);assert!(p.inventory.cursor().is_none());
     }
     #[test]
     fn inventory_clicks_compute_and_consume_without_trusting_client_output() {

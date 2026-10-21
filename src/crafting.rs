@@ -193,6 +193,24 @@ impl Recipe {
     }
 }
 
+// Внутренний775 ID white_concrete; источник tools/data/items.json.
+// Обычный official777: три блока в любом горизонтальном ряду → шесть плит.
+// Собственная запись: observations-craft-26.3.md, «3×3 crafting grid».
+const WHITE_SLAB_RECIPE: Recipe = Recipe {
+    shaped: true, width: 3, height: 1,
+    result: crate::gameplay_catalog::WHITE_SLAB_ITEM, count: 6,
+    cells: &[&[615], &[615], &[615]],
+};
+
+/// Только наблюдённое расширение профиля; общая таблица775 не дополняется.
+/// Автозаполнение/книга и автокрафтер нового рецепта пока не включены.
+pub fn craft_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Option<Stack>]) -> Option<Stack> {
+    if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && Grid::new(slots).is_some_and(|grid| WHITE_SLAB_RECIPE.matches(&grid))
+    { return Some(Stack::new(WHITE_SLAB_RECIPE.result, WHITE_SLAB_RECIPE.count)); }
+    craft(slots)
+}
+
 /// Что получится из сетки 3×3 (ячейки по рядам, слева направо): первый
 /// подходящий рецепт. None — сетка пуста или рецепта нет.
 pub fn craft(slots: &[Option<Stack>]) -> Option<Stack> {
