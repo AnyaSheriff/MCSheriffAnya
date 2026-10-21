@@ -470,4 +470,5 @@ NBT-свойства: износ, зачарования, ремонт, обыч
 пересылка без преобразования могла выбросить кирку вместо разрушения блока.
 Подробности наблюдения, ограничения остальных действий и воспроизводимые
 пробы: [копание 26.3](../tools/protocol-bridge/observations-dig-26.3.md),
-[отмена, выброс и смена рук](../tools/protocol-bridge/observations-player-actions-26.3.md).
+[отмена, выброс и смена рук](../tools/protocol-bridge/observations-player-actions-26.3.md),
+[отпускание лука и выпад копьём](../tools/protocol-bridge/observations-use-actions-26.3.md).

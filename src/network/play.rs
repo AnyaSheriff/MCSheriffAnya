@@ -7668,12 +7668,6 @@ fn handle_client_packet_inner(
         }
         // Разобрать пакет могло и не получиться: тогда отвечать не на что.
         PLAYER_ACTION => {
-            // Статус 5 — «отпустил кнопку использования»: еда прервана.
-            if Cursor::new(payload).varint() == Some(5) {
-                vitals::stop_eating(player);
-                vitals::release_use(player, shared);
-            }
-
             if let Some(answer) = break_block(payload, player, shared) {
                 reaction = answer;
             }
@@ -8759,12 +8753,24 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
         format_hex(payload)
     );
 
+    // Действия без блока применяем только после полного разбора пакета.
+    // Иначе один байт release мог потратить стрелу, а хвост jab — повредить копьё.
+    if matches!(status, 5..=7)
+        && (cursor.offset != payload.len() || player.vit.dead || player.game_mode == GAME_MODE_SPECTATOR)
+    {
+        return Some(Reaction::default());
+    }
+    // Собственная проба bow: status5, нулевая позиция/грань/sequence.
+    // Позиция отпускания не ограничивает дальность использования предмета.
+    if status == 5 {
+        vitals::stop_eating(player);
+        vitals::release_use(player, shared);
+        return Some(Reaction::default());
+    }
+
     // Обычная проба official775: action6 меняет обе руки без потери числа
     // предметов (observations-player-actions-26.3.md). Позиция тут не блок.
     if status == 6 {
-        if cursor.offset != payload.len() || player.vit.dead || player.game_mode == GAME_MODE_SPECTATOR {
-            return Some(Reaction::default());
-        }
         let main = player.inventory.selected_slot();
         let held = player.inventory.slot(main);
         let offhand = player.inventory.slot(inventory::OFFHAND);
@@ -12753,3 +12759,6 @@ mod dupe_tests;
 
 #[cfg(test)]
 mod hand_action_tests;
+
+#[cfg(test)]
+mod use_action_tests;

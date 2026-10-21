@@ -260,10 +260,10 @@ pub(crate) fn translate_inner(
 
 /// Только собственные ordinary-наблюдения: actual777-dig-observations.json.
 /// Равная VarInt-схема не гарантирует равный смысл enum. Cancel/drop/swap проверены
-/// отдельно: actual777-player-action-observations.json. Release/jab и
-/// остальные действия закрыты до наблюдений; никакого общего сдвига.
+/// отдельно: actual777-player-action-observations.json. Release/jab наблюдены
+/// в actual777-use-action-observations.json; остальные закрыты, общего сдвига нет.
 #[derive(Clone, Copy)]
-enum DigAction { Start, Cancel, Finish, DropStack, DropOne, Swap }
+enum DigAction { Start, Cancel, Finish, DropStack, DropOne, ReleaseUse, Swap, Jab }
 
 fn digging(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), Error> {
     use JavaVersion::{V26_1_2 as Old, V26_3 as New};
@@ -273,7 +273,9 @@ fn digging(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: Ja
         (Old, 2) | (New, 3) => DigAction::Finish,
         (Old, 3) | (New, 4) => DigAction::DropStack,
         (Old, 4) | (New, 5) => DigAction::DropOne,
+        (Old, 5) | (New, 6) => DigAction::ReleaseUse,
         (Old, 6) | (New, 7) => DigAction::Swap,
+        (Old, 7) | (New, 8) => DigAction::Jab,
         _ => return Err(Error::PayloadUnavailable("unverified block_dig action")),
     };
     let status = match (to, action) {
@@ -286,8 +288,12 @@ fn digging(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: Ja
         (New, DigAction::DropStack) => 4,
         (Old, DigAction::DropOne) => 4,
         (New, DigAction::DropOne) => 5,
+        (Old, DigAction::ReleaseUse) => 5,
+        (New, DigAction::ReleaseUse) => 6,
         (Old, DigAction::Swap) => 6,
         (New, DigAction::Swap) => 7,
+        (Old, DigAction::Jab) => 7,
+        (New, DigAction::Jab) => 8,
         _ => return Err(Error::UnsupportedVersion(to)),
     };
     let position = cursor.take(8)?;

@@ -35,7 +35,7 @@ fn actual_777_start_finish_payloads_map_to_native_mining_without_tool_drop(){
 
 #[test]
 fn unverified_cross_version_actions_are_denied_in_both_directions(){
-    for (from,to,verified) in [(OLD,NEW,&[0,1,2,3,4,6][..]),(NEW,OLD,&[0,2,3,4,5,7][..])]{
+    for (from,to,verified) in [(OLD,NEW,&[0,1,2,3,4,5,6,7][..]),(NEW,OLD,&[0,2,3,4,5,6,7,8][..])]{
         for status in (0..=255).chain([u32::MAX]){
             if verified.contains(&status){continue;}
             assert!(sb(&packet(status,1,17),from,to).is_err(),"unverified status {status}");
@@ -45,8 +45,8 @@ fn unverified_cross_version_actions_are_denied_in_both_directions(){
 
 #[test]
 fn typed_action_payload_requires_face_sequence_and_exact_end(){
-    for (from,to,status) in [(OLD,NEW,0),(OLD,NEW,1),(OLD,NEW,2),(OLD,NEW,3),(OLD,NEW,4),(OLD,NEW,6),
-                             (NEW,OLD,0),(NEW,OLD,2),(NEW,OLD,3),(NEW,OLD,4),(NEW,OLD,5),(NEW,OLD,7)]{
+    for (from,to,status) in [(OLD,NEW,0),(OLD,NEW,1),(OLD,NEW,2),(OLD,NEW,3),(OLD,NEW,4),(OLD,NEW,5),(OLD,NEW,6),(OLD,NEW,7),
+                             (NEW,OLD,0),(NEW,OLD,2),(NEW,OLD,3),(NEW,OLD,4),(NEW,OLD,5),(NEW,OLD,6),(NEW,OLD,7),(NEW,OLD,8)]{
         let valid=packet(status,1,300);
         for end in 0..valid.len(){assert!(sb(&valid[..end],from,to).is_err(),"truncated at {end}");}
         for face in [6,127,255]{assert!(sb(&packet(status,face,300),from,to).is_err());}
@@ -94,4 +94,55 @@ fn actual_777_cancel_drop_swap_map_selected_payloads_without_guessing_other_acti
             assert_eq!(sb(&mapped,OLD,NEW).unwrap().as_ref(),raw);
         }
     }
+}
+
+#[test]
+fn actual_777_bow_release_and_spear_jab_map_only_observed_payloads(){
+    let fixture:serde_json::Value=serde_json::from_str(include_str!("../testdata/actual777-use-action-observations.json")).unwrap();
+    assert_eq!(fixture["protocol"],777);
+    assert_eq!(fixture["source_sha256"],"1a647a569081c25b36c9c32a81f14bda1cd400dbf712fb852bc9616fa7abcf23");
+    assert_eq!(fixture["statuses"],serde_json::json!({"release_use":6,"jab":8}));
+    assert_eq!(fixture["visual_review_status"],"PASS");
+    assert_eq!(fixture["observations"].as_array().unwrap().len(),2);
+    for case in fixture["observations"].as_array().unwrap(){
+        assert_eq!(case["positive_console_predicates"].as_array().unwrap().len(),2);
+        let event=&case["action"];
+        let (status,native)=match case["case"].as_str().unwrap(){
+            "bow"=>{
+                assert_eq!(case["use_item"].as_array().unwrap().len(),1);
+                assert_eq!(case["use_item"][0]["hand"],0);
+                assert_eq!(case["acknowledgements"].as_array().unwrap().len(),1);
+                assert_eq!(case["acknowledgements"][0]["sequence"],case["use_item"][0]["sequence"]);
+                let use_time=case["use_item"][0]["elapsed"].as_f64().unwrap();
+                let action_time=event["elapsed"].as_f64().unwrap();
+                assert!(action_time-use_time>=1.2);
+                assert!(action_time>=case["input"]["release_requested"].as_f64().unwrap());
+                assert_eq!(case["arrow_spawns"].as_array().unwrap().len(),1);
+                assert_eq!(case["arrow_spawns"][0]["entity_type"],fixture["fixtures"]["arrow_entity"]);
+                assert_eq!(case["hand_updates"][0]["mainhand"],serde_json::json!({"item":1008,"count":1,"damage":1}));
+                assert_eq!(case["hand_updates"][1]["offhand"],serde_json::json!({"item":1009,"count":2}));
+                (6,5)
+            },
+            "spear"=>{
+                assert!(case["use_item"].as_array().unwrap().is_empty());
+                assert!(case["acknowledgements"].as_array().unwrap().is_empty());
+                assert!(case["arrow_spawns"].as_array().unwrap().is_empty());
+                assert!(case["displacement"]["delta_x"].as_f64().unwrap()>0.3);
+                assert_eq!(case["hand_updates"][0]["mainhand"]["damage"],1);
+                assert_eq!(case["hand_updates"][0]["mainhand"]["item"],1450);
+                (8,7)
+            },
+            other=>panic!("unverified fixture case {other}"),
+        };
+        assert_eq!(event["status"],status);
+        assert_eq!(event["target"],serde_json::json!([0,0,0]));
+        assert_eq!(event["face"],0);assert_eq!(event["sequence"],0);
+        let mut raw=vec![0x29];raw.extend(hex(event["payload_hex"].as_str().unwrap()));
+        let mut expected=raw.clone();expected[1]=native;
+        let mapped=sb(&raw,NEW,OLD).unwrap();
+        assert_eq!(mapped.as_ref(),expected);
+        assert_eq!(sb(&mapped,OLD,NEW).unwrap().as_ref(),raw);
+    }
+    // Неизвестная777единица не выводится из соседних enum-значений.
+    assert!(sb(&packet(1,0,0),NEW,OLD).is_err());
 }
