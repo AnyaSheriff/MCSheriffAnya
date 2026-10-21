@@ -2,7 +2,7 @@
 // Таблица твёрдости и допустимых инструментов — только minecraft-data JSON.
 
 use crate::{blocks, inventory::Stack};
-use crate::gameplay_catalog::{Catalog, Profile, WHITE_SLAB_FIRST_STATE, WHITE_SLAB_LAST_STATE};
+use crate::gameplay_catalog::{Catalog, Profile};
 
 const BASE: Catalog = Catalog::new(Profile::Java26_1_2);
 
@@ -103,18 +103,20 @@ pub fn wear_with_catalog(catalog: Catalog, state: i32, tool: Stack) -> i32 {
     else { 0 }
 }
 
-/// Новая плита использует общий расчёт инструмента; особые старые выпадения
+/// Бетонные плиты используют общий расчёт инструмента; особые старые выпадения
 /// (листва, Silk Touch и Fortune) остаются в прежнем обработчике.
 pub fn block_drops_with_catalog(catalog: Catalog, state: i32, tool: Option<Stack>, mut roll: impl FnMut() -> f32) -> Vec<Stack> {
-    if (WHITE_SLAB_FIRST_STATE..=WHITE_SLAB_LAST_STATE).contains(&state) {
-        return catalog.drops_by_luck(state, tool.map(|stack| stack.item), roll()).ok().flatten().into_iter().collect();
+    match catalog.slab_entry(state) {
+        Ok(Some(_)) => catalog.drops_by_luck(state, tool.map(|stack| stack.item), roll()).ok().flatten().into_iter().collect(),
+        Ok(None) => block_drops(state, tool, roll),
+        Err(_) => Vec::new(),
     }
-    block_drops(state, tool, roll)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gameplay_catalog::{WHITE_SLAB_FIRST_STATE, WHITE_SLAB_LAST_STATE};
     fn state(name: &str) -> i32 { blocks::state_by_name(name).unwrap() }
     fn tool(name: &str) -> Option<Stack> { Some(Stack::new(blocks::item_named(name).unwrap(), 1)) }
     fn env() -> Conditions { Conditions { haste: 0, fatigue: 0, underwater: false, on_ground: true, efficiency: 0.0, block_speed: 1.0, submerged_speed: 0.2 } }

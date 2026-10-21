@@ -2,14 +2,19 @@
 use super::*;
 use crate::blocks::{Family, Orientation, Property};
 
-pub static WHITE_SLAB_ORIENTATION: Orientation = Orientation {
-    name: WHITE_SLAB_NAME, min: WHITE_SLAB_FIRST_STATE, max: WHITE_SLAB_LAST_STATE,
-    family: Family::Slab,
-    properties: &[
-        Property { name: "type", values: &["top", "bottom", "double"], default: "bottom" },
-        Property { name: "waterlogged", values: &["true", "false"], default: "false" },
-    ],
-};
+const SLAB_PROPERTIES: &[Property] = &[
+    Property { name: "type", values: &["top", "bottom", "double"], default: "bottom" },
+    Property { name: "waterlogged", values: &["true", "false"], default: "false" },
+];
+
+fn slab_orientation(row: &'static ConcreteSlab) -> &'static Orientation {
+    static ORIENTATIONS: std::sync::OnceLock<Vec<Orientation>> = std::sync::OnceLock::new();
+    let rows = ORIENTATIONS.get_or_init(|| CONCRETE_SLABS.iter().map(|row| Orientation {
+        name: row.name, min: row.first_state, max: row.last_state,
+        family: Family::Slab, properties: SLAB_PROPERTIES,
+    }).collect());
+    &rows[CONCRETE_SLABS.iter().position(|candidate| candidate == row).expect("плита каталога")]
+}
 
 // Внутренние775 ID, не номера инструментов из клиентского JSON777.
 const SLAB_TOOLS: &[i32] = &[914, 919, 924, 929, 934, 939, 944];
@@ -17,27 +22,27 @@ const SLAB_TOOLS: &[i32] = &[914, 919, 924, 929, 934, 939, 944];
 impl Catalog {
     pub fn block_for_item(self, item: i32) -> Result<Option<(&'static str, i32)>, Error> {
         self.name(Kind::Item, item)?;
-        Ok(if item == WHITE_SLAB_ITEM { Some((WHITE_SLAB_NAME, WHITE_SLAB_DEFAULT_STATE)) }
+        Ok(if let Some(row) = Self::entry_id(Kind::Item, item) { Some((row.name, row.default_state)) }
             else { crate::blocks::block_for_item(item) })
     }
 
     pub fn item_for_block(self, name: &str) -> Result<Option<i32>, Error> {
-        if name == WHITE_SLAB_NAME { self.extension()?; return Ok(Some(WHITE_SLAB_ITEM)); }
+        if let Some(row) = Self::entry_named(name) { self.extension_named(row.name)?; return Ok(Some(row.item)); }
         Ok(crate::blocks::item_for_block(name))
     }
 
     pub fn block_id(self, name: &str) -> Result<Option<i32>, Error> {
-        if name == WHITE_SLAB_NAME { self.extension()?; return Ok(Some(WHITE_SLAB_BLOCK)); }
+        if let Some(row) = Self::entry_named(name) { self.extension_named(row.name)?; return Ok(Some(row.block)); }
         Ok(crate::blocks::block_id(name))
     }
 
     pub fn states_of(self, name: &str) -> Result<Option<(i32, i32)>, Error> {
-        if name == WHITE_SLAB_NAME { self.extension()?; return Ok(Some((WHITE_SLAB_FIRST_STATE, WHITE_SLAB_LAST_STATE))); }
+        if let Some(row) = Self::entry_named(name) { self.extension_named(row.name)?; return Ok(Some((row.first_state, row.last_state))); }
         Ok(crate::blocks::states_of(name))
     }
 
     pub fn orientation(self, name: &str) -> Result<Option<&'static Orientation>, Error> {
-        if name == WHITE_SLAB_NAME { self.extension()?; return Ok(Some(&WHITE_SLAB_ORIENTATION)); }
+        if let Some(row) = Self::entry_named(name) { self.extension_named(row.name)?; return Ok(Some(slab_orientation(row))); }
         Ok(crate::blocks::orientation(name))
     }
 
@@ -52,8 +57,9 @@ impl Catalog {
             Some((name, rest)) => (name, Some(rest)), None => (text, None),
         };
         let name = name.strip_prefix("minecraft:").unwrap_or(name);
-        if name != WHITE_SLAB_NAME { return Ok(crate::blocks::state_from_text(text)); }
-        self.extension()?;
+        let Some(row) = Self::entry_named(name) else { return Ok(crate::blocks::state_from_text(text)); };
+        self.extension_named(row.name)?;
+        let orientation = slab_orientation(row);
         let Some(properties) = properties else { return self.default_state(name); };
         let Some(properties) = properties.strip_suffix(']') else { return Ok(None); };
         if properties.trim().is_empty() { return self.default_state(name); }
@@ -61,21 +67,21 @@ impl Catalog {
         for pair in properties.split(',') {
             let Some((key, value)) = pair.split_once('=') else { return Ok(None); };
             let key = key.trim();
-            if !WHITE_SLAB_ORIENTATION.properties.iter().any(|p| p.name == key)
+            if !orientation.properties.iter().any(|p| p.name == key)
                 || values.iter().any(|(previous, _)| *previous == key) { return Ok(None); }
             values.push((key, value.trim()));
         }
-        Ok(WHITE_SLAB_ORIENTATION.state(&values))
+        Ok(orientation.state(&values))
     }
 
     /// Твёрдость и инструменты — выбранный pinned JSON, не предположение по имени.
     pub fn mining_properties(self, state: i32) -> Result<(f32, &'static str, &'static [i32]), Error> {
-        if self.name(Kind::State, state)? == WHITE_SLAB_NAME { return Ok((1.8, "mineable/pickaxe", SLAB_TOOLS)); }
+        if self.slab_entry(state)?.is_some() { return Ok((1.8, "mineable/pickaxe", SLAB_TOOLS)); }
         Ok(crate::mining::properties(state))
     }
 
     pub fn blast_resistance(self, state: i32) -> Result<f32, Error> {
-        if self.name(Kind::State, state)? == WHITE_SLAB_NAME { return Ok(1.8); }
+        if self.slab_entry(state)?.is_some() { return Ok(1.8); }
         Ok(crate::blocks::blast_resistance(state))
     }
 
@@ -94,10 +100,11 @@ impl Catalog {
     #[cfg(not(seedmap_core))]
     pub fn drops_by_luck(self, state: i32, tool: Option<i32>, luck: f32) -> Result<Option<crate::inventory::Stack>, Error> {
         self.name(Kind::State, state)?;
-        if let Some((half, _)) = self.slab_properties(state)? {
+        if let Some(row) = self.slab_entry(state)? {
+            let (half, _) = self.slab_properties(state)?.expect("состояние плиты");
             // Обычное наблюдение добычи: без кирки — ничего, двойная плита — две.
             return Ok(tool.filter(|tool| SLAB_TOOLS.contains(tool)).map(|_| {
-                crate::inventory::Stack::new(WHITE_SLAB_ITEM, if half == SlabHalf::Double { 2 } else { 1 })
+                crate::inventory::Stack::new(row.item, if half == SlabHalf::Double { 2 } else { 1 })
             }));
         }
         Ok(crate::blocks::drops_by_luck(state, tool, luck))

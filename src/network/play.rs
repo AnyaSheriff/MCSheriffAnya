@@ -12785,3 +12785,6 @@ mod catalog_action_tests;
 
 #[cfg(test)]
 mod crafter_catalog_tests;
+
+#[cfg(test)]
+mod concrete_slab_family_tests;

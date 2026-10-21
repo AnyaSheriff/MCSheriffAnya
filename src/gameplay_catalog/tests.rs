@@ -92,10 +92,10 @@ fn every_slab_property_pair_has_exact_selected_candidate_state() {
 #[test]
 fn unknown_ids_never_inherit_default_stack_size_or_wrap_into_valid_state() {
     for catalog in [OLD_CATALOG, PREVIEW] {
-        for id in [-1, i32::MIN, i32::MAX, WHITE_SLAB_ITEM + 1] {
+        for id in [-1, i32::MIN, i32::MAX, CONCRETE_SLABS.last().unwrap().item + 1] {
             assert!(matches!(catalog.stack_size(id), Err(Error::UnknownInternal { .. })));
         }
-        for id in [-1, i32::MIN, i32::MAX, WHITE_SLAB_LAST_STATE + 1, 65535] {
+        for id in [-1, i32::MIN, i32::MAX, CONCRETE_SLABS.last().unwrap().last_state + 1, 65535] {
             assert!(matches!(catalog.name(Kind::State, id), Err(Error::UnknownInternal { .. })));
         }
         assert!(catalog.decode_client_id(Kind::Item, u32::MAX, NEW).is_err());
@@ -171,4 +171,64 @@ fn runtime_mining_metadata_uses_pinned_values_and_internal_tool_identity() {
     assert_eq!(PREVIEW.drops_by_luck(stone, Some(tools[0]), 0.5).unwrap(), crate::blocks::drops_by_luck(stone, Some(tools[0]), 0.5));
     assert!(PREVIEW.light_properties(-1).is_err());
     assert!(PREVIEW.block_for_item(-1).is_err());
+}
+
+#[test]
+fn concrete_family_selected_metadata_and_all_96_states_stay_distinct() {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!("concrete-slabs-26.3.json")).unwrap();
+    let entries = fixture["entries"].as_array().unwrap();
+    assert_eq!(entries.len(), CONCRETE_SLABS.len());
+    let mut states = std::collections::HashSet::new();
+    for (index, row) in CONCRETE_SLABS.iter().enumerate() {
+        let selected = &entries[index];
+        assert_eq!(selected["name"], row.name);
+        assert_eq!(selected["block777"]["id"], row.wire_block);
+        assert_eq!(selected["item777"]["id"], row.wire_item);
+        assert_eq!(selected["block777"]["minStateId"], row.wire_first_state);
+        assert_eq!(selected["block777"]["maxStateId"], row.wire_first_state + 5);
+        assert_eq!(selected["block777"]["defaultState"], row.wire_first_state + 3);
+        assert_eq!(row.default_state, row.first_state + 3);
+        assert_eq!(row.last_state, row.first_state + 5);
+        assert_eq!(row.item, WHITE_SLAB_ITEM + index as i32);
+        assert_eq!(row.block, WHITE_SLAB_BLOCK + index as i32);
+        assert_eq!(row.first_state, WHITE_SLAB_FIRST_STATE + 6 * index as i32);
+        assert_eq!(selected["block777"]["hardness"], 1.8);
+        assert_eq!(selected["block777"]["resistance"], 1.8);
+        assert_eq!(selected["block777"]["material"], "mineable/pickaxe");
+        assert_eq!(selected["item777"]["stackSize"], 64);
+        assert_eq!(selected["concrete_input"]["item775"], row.input_item);
+        assert_eq!(crate::blocks::item_named(row.input_name), Some(row.input_item));
+        assert_eq!(PREVIEW.item_named(row.name), Ok(Some(row.item)));
+        assert_eq!(PREVIEW.block_for_item(row.item), Ok(Some((row.name,row.default_state))));
+        assert_eq!(PREVIEW.item_for_block(row.name), Ok(Some(row.item)));
+        assert_eq!(PREVIEW.block_id(row.name), Ok(Some(row.block)));
+        for (kind,id,wire) in [(Kind::Item,row.item,row.wire_item),(Kind::Block,row.block,row.wire_block)] {
+            assert_eq!(PREVIEW.to_client(kind,id,NEW),Ok(wire));
+            assert_eq!(PREVIEW.decode_client_id(kind,wire,NEW),Ok(id));
+            assert!(matches!(OLD_CATALOG.name(kind,id),Err(Error::Disabled { .. })));
+            assert!(PREVIEW.to_client(kind,id,OLD).is_err());
+        }
+        for half in [SlabHalf::Top,SlabHalf::Bottom,SlabHalf::Double] {
+            for wet in [true,false] {
+                let state = PREVIEW.slab_state_for(row,half,wet).unwrap();
+                assert!(states.insert(state));
+                assert_eq!(PREVIEW.slab_entry(state),Ok(Some(row)));
+                assert_eq!(PREVIEW.slab_properties(state),Ok(Some((half,wet))));
+                let wire = row.wire_first_state + (state-row.first_state) as u32;
+                assert_eq!(PREVIEW.to_client(Kind::State,state,NEW),Ok(wire));
+                assert_eq!(PREVIEW.decode_client_id(Kind::State,wire,NEW),Ok(state));
+                assert!(OLD_CATALOG.slab_entry(state).is_err());
+                assert!(OLD_CATALOG.decode_client_id(Kind::State,wire,NEW).is_err());
+                assert!(PREVIEW.to_client(Kind::State,state,MIDDLE).is_err());
+                let orientation = PREVIEW.orientation_of(state).unwrap().unwrap();
+                assert_eq!(orientation.name,row.name);
+                assert_eq!(orientation.state(&[("type",orientation.value(state,"type").unwrap()),("waterlogged",if wet {"true"} else {"false"})]),Some(state));
+                let tool = crate::blocks::item_named("diamond_pickaxe");
+                assert_eq!(PREVIEW.drops_by_luck(state,tool,0.0),Ok(Some(crate::inventory::Stack::new(row.item,if half==SlabHalf::Double {2}else{1}))));
+            }
+        }
+    }
+    assert_eq!(states.len(),96);
+    assert_eq!(PREVIEW.slab_entry(WHITE_SLAB_FIRST_STATE-1),Ok(None));
+    assert!(PREVIEW.slab_entry(CONCRETE_SLABS.last().unwrap().last_state+1).is_err());
 }

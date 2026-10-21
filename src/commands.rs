@@ -2594,7 +2594,7 @@ fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) 
             },
             _ => return usage(),
         };
-        let stack = match stack_from_spec(thing, count) {
+        let stack = match stack_from_spec_for_catalog(shared.catalog(), thing, count) {
             Ok(stack) => stack,
             Err(why) => return Answer::saying(why),
         };
@@ -2640,7 +2640,7 @@ fn item(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimension) 
         None
     } else {
         // С довесками: `potion[potion_contents={potion:"minecraft:water"}]`.
-        match stack_from_spec(thing, count) {
+        match stack_from_spec_for_catalog(shared.catalog(), thing, count) {
             Ok(stack) => stack,
             Err(why) => return Answer::saying(why),
         }
@@ -2702,7 +2702,7 @@ fn item_entity(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
         _ => return usage(),
     };
 
-    let stack = match stack_from_spec(thing, count) {
+    let stack = match stack_from_spec_for_catalog(shared.catalog(), thing, count) {
         Ok(stack) => stack,
         Err(why) => return Answer::saying(why),
     };
@@ -3856,6 +3856,51 @@ mod tests {
         assert_eq!(catalog.slab_properties(world.get_block(2, 65, 2)), Ok(Some((SlabHalf::Top, true))));
         for x in 3..=4 {
             assert_eq!(catalog.slab_properties(world.get_block(x, 65, 2)), Ok(Some((SlabHalf::Double, false))));
+        }
+    }
+
+    #[test]
+    fn replace_item_uses_primary_catalog_for_hands_slots_and_containers() {
+        use crate::gameplay_catalog::{Catalog, Profile, CONCRETE_SLABS};
+        use crate::inventory::Stack;
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let shared = server_with_catalog(Catalog::new(profile));
+            {
+                let mut world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                world.ensure(0, 0);
+                world.set_block(2, 65, 2, blocks::state_by_name("chest").unwrap());
+            }
+            for row in &CONCRETE_SLABS {
+                let spec = format!(r#"minecraft:{}[custom_name="Цветная плита"]"#, row.name);
+                for target in ["weapon.mainhand", "weapon.offhand", "hotbar.2", "enderchest.3"] {
+                    let answer = run(&format!("item replace entity Первый {target} with {spec} 2"), &Source::Console, &shared);
+                    let orders = orders_for(&shared, 1);
+                    if profile == Profile::Java26_1_2 {
+                        assert!(answer.reply.contains("Нет такого предмета"));
+                        assert!(orders.is_empty());
+                    } else {
+                        assert_eq!(orders.len(), 1, "{}: {}", row.name, answer.reply);
+                        let stack = match &orders[0] {
+                            Order::Hold { stack } | Order::SetSlot { stack, .. } | Order::SetEnderSlot { stack, .. } => stack.unwrap(),
+                            _ => panic!("неверное поручение замены"),
+                        };
+                        assert_eq!((stack.item, stack.count), (row.item, 2));
+                        assert_eq!(stack.extras().name.as_deref(), Some("Цветная плита"));
+                    }
+                }
+                let stone = Stack::new(blocks::item_named("stone").unwrap(), 7);
+                shared.world_in(Dimension::Overworld).lock().unwrap().with_container(2, 65, 2, |container| container.slots[0] = Some(stone));
+                let answer = run(&format!("item replace block 2 65 2 container.0 with {spec} 2"), &Source::Console, &shared);
+                let world = shared.world_in(Dimension::Overworld).lock().unwrap();
+                let stored = world.container(2, 65, 2).unwrap().slots[0].unwrap();
+                if profile == Profile::Java26_1_2 {
+                    assert!(answer.reply.contains("Нет такого предмета"));
+                    assert_eq!(stored, stone);
+                } else {
+                    assert_eq!((stored.item, stored.count), (row.item, 2), "{}", answer.reply);
+                    assert_eq!(stored.extras().name.as_deref(), Some("Цветная плита"));
+                }
+            }
         }
     }
 

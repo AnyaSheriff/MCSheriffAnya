@@ -75,9 +75,7 @@ pub fn place(recipe: &super::Recipe, grid: &mut [Option<Stack>], inventory: &mut
 }
 
 pub fn place_for_catalog(catalog: crate::gameplay_catalog::Catalog, recipe: &super::Recipe, grid: &mut [Option<Stack>], inventory: &mut Inventory, all: bool) -> bool {
-    if recipe.result == crate::gameplay_catalog::WHITE_SLAB_ITEM
-        && super::recipe_for_catalog(catalog, super::RecipeId::WhiteConcreteSlab).is_none()
-    { return false; }
+    if catalog.name(crate::gameplay_catalog::Kind::Item, recipe.result).is_err() { return false; }
     let width = if grid.len() == 4 { 2 } else { 3 };
     if recipe.shaped && (recipe.width as usize > width || recipe.height as usize > width) || recipe.cells.iter().filter(|c| !c.is_empty()).count() > grid.len() { return false; }
     let mut bag = inventory.clone();
@@ -153,4 +151,27 @@ mod catalog_tests {
         assert_eq!(inventory.slot(36), Some(Stack::new(615, 3)));
         assert!(small.iter().all(Option::is_none));
     }
+    #[test]
+    fn colored_autofill_keeps_ingredients_separate_and_rejects_base_before_mutation() {
+        use crate::gameplay_catalog::CONCRETE_SLABS;
+        let preview = Catalog::new(Profile::Preview26_3);
+        let base = Catalog::new(Profile::Java26_1_2);
+        for (index, row) in CONCRETE_SLABS.iter().enumerate() {
+            let recipe = recipe_for_catalog(preview, RecipeId::concrete_slab(index).unwrap()).unwrap();
+            let other = &CONCRETE_SLABS[(index + 1) % CONCRETE_SLABS.len()];
+            let mut inventory = Inventory::new();
+            inventory.set(36, Some(Stack::new(row.input_item, 6)));
+            inventory.set(37, Some(Stack::new(other.input_item, 64)));
+            let mut grid = vec![None; 9];
+            assert!(!place_for_catalog(base, recipe, &mut grid, &mut inventory, true));
+            assert_eq!(inventory.slot(36), Some(Stack::new(row.input_item, 6)));
+            assert!(place_for_catalog(preview, recipe, &mut grid, &mut inventory, false));
+            assert_eq!(grid[3..6], [Some(Stack::new(row.input_item, 1)); 3]);
+            assert!(place_for_catalog(preview, recipe, &mut grid, &mut inventory, false));
+            assert_eq!(grid[3..6], [Some(Stack::new(row.input_item, 2)); 3]);
+            assert!(inventory.slot(36).is_none());
+            assert_eq!(inventory.slot(37), Some(Stack::new(other.input_item, 64)));
+        }
+    }
+
 }

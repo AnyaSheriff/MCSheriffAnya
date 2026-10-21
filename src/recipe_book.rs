@@ -15,7 +15,8 @@ pub const ADD: i32 = 0x4a;
 pub const REMOVE: i32 = 0x4b;
 pub const CLIENT_SETTINGS: i32 = 0x2e;
 // OptVarInt: локальная группа0 (raw1); official raw22 не является стабильным ID.
-const WHITE_SLAB_GROUP: u8 = 1;
+const CONCRETE_SLAB_GROUP: u8 = 1;
+#[cfg(test)]
 const WHITE_SLAB_CUT_KEY: &str = "minecraft:white_concrete_slab_from_white_concrete_stonecutting";
 
 #[derive(Default)]
@@ -43,12 +44,12 @@ enum Display {
     Stonecutting { input: i32, result: i32, count: i32 },
 }
 #[derive(Clone)]
-struct Entry { key: String, display: Display, recipe_id: Option<crafting::RecipeId> }
+struct Entry { key: String, display: Display, recipe_id: Option<crafting::RecipeId>, slab: Option<usize> }
 
 impl Entry {
     fn named(&self, catalog: crate::gameplay_catalog::Catalog, name: &str) -> bool {
         // Только имя, подтверждённое обычными recipe take/give777; не имя результата.
-        if self.key == WHITE_SLAB_CUT_KEY { return self.key.strip_prefix("minecraft:") == Some(name); }
+        if self.slab.is_some() && matches!(self.display, Display::Stonecutting { .. }) { return self.key.strip_prefix("minecraft:") == Some(name); }
         matches!(&self.display, Display::Crafting(recipe) if catalog.name(crate::gameplay_catalog::Kind::Item, recipe.result).ok() == Some(name))
     }
 }
@@ -58,19 +59,19 @@ fn entries() -> &'static [Entry] {
     ENTRIES.get_or_init(|| {
         let mut entries: Vec<Entry> = crafting::recipes().iter().enumerate().map(|(index, recipe)| Entry {
             key: format!("crafting/{}/{index}", blocks::item_name(recipe.result).unwrap_or("unknown")),
-            display: Display::Crafting(recipe), recipe_id: Some(crafting::RecipeId::Native(index)),
+            display: Display::Crafting(recipe), recipe_id: Some(crafting::RecipeId::Native(index)), slab: None,
         }).collect();
         for (kind, key) in [(Kind::Furnace, "smelting"), (Kind::BlastFurnace, "blasting"), (Kind::Smoker, "smoking")] {
             for name in blocks::item_names() {
                 let input = blocks::item_named(name).unwrap();
                 if let Some((result, xp)) = furnace::smelt(kind, input) {
-                    entries.push(Entry { key: format!("{key}/{name}"), recipe_id: None, display: Display::Furnace { kind, input, result, xp } });
+                    entries.push(Entry { key: format!("{key}/{name}"), recipe_id: None, slab: None, display: Display::Furnace { kind, input, result, xp } });
                 }
             }
         }
         for cut in crate::stonecutter::recipes() {
             let (input, result) = (blocks::item_name(cut.input).unwrap_or("unknown"), blocks::item_name(cut.output).unwrap_or("unknown"));
-            entries.push(Entry { key: format!("stonecutting/{result}_from_{input}"), recipe_id: None, display: Display::Stonecutting { input: cut.input, result: cut.output, count: cut.count } });
+            entries.push(Entry { key: format!("stonecutting/{result}_from_{input}"), recipe_id: None, slab: None, display: Display::Stonecutting { input: cut.input, result: cut.output, count: cut.count } });
         }
         entries
     })
@@ -81,16 +82,18 @@ fn entries_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> &'static [E
     static PREVIEW: OnceLock<Vec<Entry>> = OnceLock::new();
     PREVIEW.get_or_init(|| {
         let mut extended = entries().to_vec();
-        extended.push(Entry {
-            key: "minecraft:white_concrete_slab".into(),
-            display: Display::Crafting(crafting::recipe_for_catalog(catalog, crafting::RecipeId::WhiteConcreteSlab).expect("рецепт профиля")),
-            recipe_id: Some(crafting::RecipeId::WhiteConcreteSlab),
-        });
-        extended.push(Entry {
-            key: WHITE_SLAB_CUT_KEY.into(),
-            display: Display::Stonecutting { input: 615, result: crate::gameplay_catalog::WHITE_SLAB_ITEM, count: 2 },
-            recipe_id: None,
-        });
+        for (index, row) in crate::gameplay_catalog::CONCRETE_SLABS.iter().enumerate() {
+            extended.push(Entry {
+                key: format!("minecraft:{}", row.name),
+                display: Display::Crafting(crafting::recipe_for_catalog(catalog, crafting::RecipeId::concrete_slab(index).expect("цвет рецепта")).expect("рецепт профиля")),
+                recipe_id: crafting::RecipeId::concrete_slab(index), slab: Some(index),
+            });
+            extended.push(Entry {
+                key: format!("minecraft:{}_from_{}_stonecutting", row.name, row.input_name),
+                display: Display::Stonecutting { input: row.input_item, result: row.item, count: 2 },
+                recipe_id: None, slab: Some(index),
+            });
+        }
         extended
     })
 }
@@ -230,10 +233,8 @@ impl Book {
     }
     fn entries(&self) -> &'static [Entry] { entries_for_catalog(self.catalog()) }
     fn entry_for_recipe(&self, id: crafting::RecipeId) -> Option<&'static Entry> {
-        let entry = match id {
-            crafting::RecipeId::Native(index) => self.entries().get(index),
-            crafting::RecipeId::WhiteConcreteSlab => self.entries().get(entries().len()),
-        }?;
+        let entry = if let crafting::RecipeId::Native(index) = id { self.entries().get(index) }
+        else { self.entries().get(entries().len() + 2 * id.slab_index()?) }?;
         (entry.recipe_id == Some(id)).then_some(entry)
     }
     pub fn learn_recipe(&mut self, id: crafting::RecipeId) {
@@ -252,7 +253,7 @@ impl Book {
         for entry in self.entries() {
             if self.known.contains(&entry.key) { continue; }
             let unlocked = match &entry.display {
-                Display::Crafting(_) if entry.recipe_id == Some(crafting::RecipeId::WhiteConcreteSlab) => names.contains(&"white_concrete"),
+                Display::Crafting(_) if entry.slab.is_some() => names.contains(&crate::gameplay_catalog::CONCRETE_SLABS[entry.slab.expect("цвет рецепта")].input_name),
                 Display::Crafting(recipe) => unlock(recipe, names, occupied, water),
                 Display::Furnace { input, .. } | Display::Stonecutting { input, .. } => blocks::item_name(*input).is_some_and(|name| names.contains(&name)),
             };
@@ -342,13 +343,13 @@ fn entry_body(id: usize, entry: &Entry, announce: bool) -> Vec<u8> {
             }
             body.extend(encode_varint(recipe.cells.len() as i32));
             for cell in recipe.cells {
-                if entry.recipe_id == Some(crafting::RecipeId::WhiteConcreteSlab) { ingredient_set(&mut body, cell); }
+                if entry.slab.is_some() { ingredient_set(&mut body, cell); }
                 else { slot(&mut body, cell); }
             }
             stack(&mut body, recipe.result, recipe.count);
             slot(&mut body, &[blocks::item_named("crafting_table").unwrap()]);
             // Обычное наблюдение777: building_blocks; группа назначена локально.
-            body.extend(if entry.recipe_id == Some(crafting::RecipeId::WhiteConcreteSlab) { [WHITE_SLAB_GROUP, 0, 1] } else { [0, 3, 1] });
+            body.extend(if entry.slab.is_some() { [CONCRETE_SLAB_GROUP, 0, 1] } else { [0, 3, 1] });
             let cells: Vec<_> = recipe.cells.iter().filter(|cell| !cell.is_empty()).collect();
             body.extend(encode_varint(cells.len() as i32));
             for cell in cells {
@@ -369,11 +370,11 @@ fn entry_body(id: usize, entry: &Entry, announce: bool) -> Vec<u8> {
         }
         Display::Stonecutting { input, result, count } => {
             body.extend(encode_varint(3));
-            if entry.key == WHITE_SLAB_CUT_KEY { ingredient_set(&mut body, &[*input]); }
+            if entry.slab.is_some() { ingredient_set(&mut body, &[*input]); }
             else { slot(&mut body, &[*input]); }
             stack(&mut body, *result, *count);
             slot(&mut body, &[blocks::item_named("stonecutter").unwrap()]);
-            if entry.key == WHITE_SLAB_CUT_KEY {
+            if entry.slab.is_some() {
                 // Обычное наблюдение777: без группы, stonecutter, один IDSet требования.
                 body.extend([0, 10, 1, 1, 2]); body.extend(encode_varint(*input));
             } else { body.extend([0, 10, 0]); } // прежняя таблица775
@@ -455,8 +456,9 @@ pub fn ghost(window: i32, recipe: &crafting::Recipe) -> Vec<u8> {
     body.extend(encode_varint(i32::from(recipe.shaped)));
     if recipe.shaped { body.extend(encode_varint(i32::from(recipe.width))); body.extend(encode_varint(i32::from(recipe.height))); }
     body.extend(encode_varint(recipe.cells.len() as i32));
+    let slab = crafting::concrete_slab_recipes().iter().any(|known| std::ptr::eq(known, recipe));
     for cell in recipe.cells {
-        if recipe.result == crate::gameplay_catalog::WHITE_SLAB_ITEM { ingredient_set(&mut body, cell); }
+        if slab { ingredient_set(&mut body, cell); }
         else { slot(&mut body, cell); }
     }
     stack(&mut body, recipe.result, recipe.count); slot(&mut body, &[blocks::item_named("crafting_table").unwrap()]); body
@@ -541,7 +543,7 @@ mod tests {
     #[test]
     fn profile_extension_preserves_every_native_display_and_is_inert_in_base() {
         let base = entries(); let extended = entries_for_catalog(preview());
-        assert_eq!(extended.len(), base.len() + 2);
+        assert_eq!(extended.len(), base.len() + 2 * crate::gameplay_catalog::CONCRETE_SLABS.len());
         for (id, native) in base.iter().enumerate() {
             assert_eq!(native.key, extended[id].key);
             assert_eq!(entry_body(id, native, false), entry_body(id, &extended[id], false));
@@ -579,7 +581,7 @@ mod tests {
         for _ in 0..3 { expected.extend([6, 2]); expected.extend(encode_varint(615)); }
         stack(&mut expected, crate::gameplay_catalog::WHITE_SLAB_ITEM, 6);
         slot(&mut expected, &[blocks::item_named("crafting_table").unwrap()]);
-        expected.extend([WHITE_SLAB_GROUP, 0, 1, 3]);
+        expected.extend([CONCRETE_SLAB_GROUP, 0, 1, 3]);
         for _ in 0..3 { expected.push(2); expected.extend(encode_varint(615)); }
         expected.push(3);
         assert_eq!(body, expected);
@@ -623,6 +625,43 @@ mod tests {
         assert!(base.take(&[WHITE_SLAB_CUT_KEY.into()]).is_none());
         base.take(&[]);
         assert!(base.known.contains(WHITE_SLAB_CUT_KEY), "неизвестный ключ не стирается базовым профилем");
+    }
+
+    #[test]
+    fn family_unlocks_only_own_color_and_keeps_white_display_positions() {
+        use crate::gameplay_catalog::CONCRETE_SLABS;
+        let base_len = entries().len();
+        let all = entries_for_catalog(preview());
+        assert_eq!(all[base_len].key, "minecraft:white_concrete_slab");
+        assert_eq!(all[base_len + 1].key, WHITE_SLAB_CUT_KEY);
+        for (index, row) in CONCRETE_SLABS.iter().enumerate() {
+            let id = crafting::RecipeId::concrete_slab(index).unwrap();
+            let shaped = base_len + index * 2; let cut = shaped + 1;
+            let mut book = Book::for_catalog(preview());
+            book.scan(&[row.input_name], 1, false);
+            let known_family = all.iter().filter(|entry| entry.slab.is_some() && book.known.contains(&entry.key)).count();
+            assert_eq!(known_family, 2, "{} открывает только свою пару", row.name);
+            assert!(book.knows_recipe(id));
+            assert_eq!(book.crafting_display(shaped as i32).unwrap().result, row.item);
+            assert!(book.crafting_display(cut as i32).is_none());
+            assert_eq!(all[shaped].slab, Some(index));
+            assert_eq!(all[cut].slab, Some(index));
+            assert!(book.take(&[all[cut].key.clone()]).is_some());
+            assert!(book.knows_recipe(id));
+            assert!(book.learn_named(&[all[cut].key.clone()]));
+            assert!(book.take(&[all[shaped].key.clone()]).is_some());
+            assert!(!book.knows_recipe(id));
+            assert!(book.known.contains(&all[cut].key));
+            book.learn_recipe(id);
+            assert!(book.knows_recipe(id), "O(1) lookup соответствует display-позиции");
+            let mut base = Book::from_json(&book.to_json()).unwrap();
+            assert!(!base.knows_recipe(id));
+            assert!(!base.learn_named(&[all[shaped].key.clone()]));
+            assert!(!base.learn_named(&[all[cut].key.clone()]));
+            base.take(&[]);
+            assert!(base.known.contains(&all[shaped].key));
+            assert!(base.known.contains(&all[cut].key));
+        }
     }
 
 }

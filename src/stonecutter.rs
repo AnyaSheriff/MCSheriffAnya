@@ -73,7 +73,7 @@ pub fn recipes_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> &'stati
     static PREVIEW: OnceLock<Vec<Recipe>> = OnceLock::new();
     PREVIEW.get_or_init(|| {
         let mut all = recipes().to_vec();
-        all.push(Recipe { input: 615, output: crate::gameplay_catalog::WHITE_SLAB_ITEM, count: 2 });
+        all.extend(crate::gameplay_catalog::CONCRETE_SLABS.iter().map(|row| Recipe { input: row.input_item, output: row.item, count: 2 }));
         all
     })
 }
@@ -128,7 +128,7 @@ mod tests {
         let preview = Catalog::new(Profile::Preview26_3);
         let extended = recipes_for_catalog(preview);
         assert_eq!(&extended[..recipes().len()], recipes());
-        assert_eq!(extended.len(), recipes().len() + 1);
+        assert_eq!(extended.len(), recipes().len() + crate::gameplay_catalog::CONCRETE_SLABS.len());
         assert_eq!(recipe_packet_for_catalog(base), recipe_packet());
         // Прежние строки пакета сохраняются дословно: меняются только размер и хвост.
         let native_body = recipe_packet(); let extended_body = recipe_packet_for_catalog(preview);
@@ -137,7 +137,7 @@ mod tests {
         let preview_header = prefix + crate::network::varint::encode_varint(extended.len() as i32).len();
         assert_eq!(&native_body[native_header..], &extended_body[preview_header..preview_header + native_body.len() - native_header]);
         assert_eq!(choices_for_catalog(base, 615).len(), 0);
-        assert_eq!(choices_for_catalog(preview, 615), vec![extended.last().unwrap()]);
+        assert_eq!(choices_for_catalog(preview, 615), vec![&extended[recipes().len()]]);
     }
 
     #[test]
@@ -153,6 +153,24 @@ mod tests {
         assert!(result_for_catalog(base, input, 0).is_none());
         assert!(result_for_catalog(preview, None, 0).is_none());
         assert!(result_for_catalog(preview, Some(Stack::new(crate::gameplay_catalog::WHITE_SLAB_ITEM, 1)), 0).is_none());
+    }
+
+    #[test]
+    fn each_color_has_one_own_cut_and_keeps_native_choices() {
+        use crate::gameplay_catalog::{Catalog, Profile, CONCRETE_SLABS};
+        let preview = Catalog::new(Profile::Preview26_3);
+        let base = Catalog::new(Profile::Java26_1_2);
+        for row in &CONCRETE_SLABS {
+            let choices = choices_for_catalog(preview, row.input_item);
+            assert_eq!(choices.len(), 1);
+            assert_eq!(choices[0].output, row.item);
+            assert_eq!(result_for_catalog(preview, Some(Stack::new(row.input_item, 1)), 0), Some(Stack::new(row.item, 2)));
+            assert!(result_for_catalog(base, Some(Stack::new(row.input_item, 1)), 0).is_none());
+            assert!(result_for_catalog(preview, Some(Stack::new(row.input_item, 1)), 1).is_none());
+        }
+        for recipe in recipes() {
+            assert_eq!(choices_for_catalog(preview, recipe.input), choices(recipe.input));
+        }
     }
 
 }

@@ -195,38 +195,56 @@ impl Recipe {
 
 /// Идентичность рецепта сервера: сетевые display ID принадлежат книге отдельно.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RecipeId { Native(usize), WhiteConcreteSlab }
+pub enum RecipeId { Native(usize), WhiteConcreteSlab, ConcreteSlab(u8) }
 
-pub fn recipe_for_catalog(catalog: crate::gameplay_catalog::Catalog, id: RecipeId) -> Option<&'static Recipe> {
-    match id {
-        RecipeId::Native(index) => recipes().get(index),
-        RecipeId::WhiteConcreteSlab if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3 => Some(&WHITE_SLAB_RECIPE),
-        RecipeId::WhiteConcreteSlab => None,
+impl RecipeId {
+    pub fn concrete_slab(index: usize) -> Option<Self> {
+        if index >= crate::gameplay_catalog::CONCRETE_SLABS.len() { return None; }
+        Some(if index == 0 { Self::WhiteConcreteSlab } else { Self::ConcreteSlab(index as u8) })
+    }
+    pub fn slab_index(self) -> Option<usize> {
+        match self {
+            Self::WhiteConcreteSlab => Some(0),
+            Self::ConcreteSlab(index) if index > 0 && usize::from(index) < crate::gameplay_catalog::CONCRETE_SLABS.len() => Some(usize::from(index)),
+            _ => None,
+        }
     }
 }
 
+/// Статические ссылки на ингредиенты общей таблицы: без дублирования ID цветов.
+pub fn concrete_slab_recipes() -> &'static [Recipe] {
+    static CELLS: std::sync::OnceLock<Vec<[&'static [i32]; 3]>> = std::sync::OnceLock::new();
+    static RECIPES: std::sync::OnceLock<Vec<Recipe>> = std::sync::OnceLock::new();
+    let cells = CELLS.get_or_init(|| {
+        let rows: &'static [_] = &crate::gameplay_catalog::CONCRETE_SLABS;
+        rows.iter().map(|row| [std::slice::from_ref(&row.input_item); 3]).collect()
+    });
+    RECIPES.get_or_init(|| crate::gameplay_catalog::CONCRETE_SLABS.iter().zip(cells).map(|(row, cells)| Recipe {
+        shaped: true, width: 3, height: 1, result: row.item, count: 6, cells,
+    }).collect())
+}
+
+pub fn recipe_for_catalog(catalog: crate::gameplay_catalog::Catalog, id: RecipeId) -> Option<&'static Recipe> {
+    if let RecipeId::Native(index) = id { return recipes().get(index); }
+    if catalog.profile() != crate::gameplay_catalog::Profile::Preview26_3 { return None; }
+    concrete_slab_recipes().get(id.slab_index()?)
+}
+
 pub fn recipe_identity_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Option<Stack>]) -> Option<RecipeId> {
-    if let Some(recipe) = recipe_for_catalog(catalog, RecipeId::WhiteConcreteSlab)
-        && Grid::new(slots).is_some_and(|grid| recipe.matches(&grid))
-    { return Some(RecipeId::WhiteConcreteSlab); }
+    if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && let Some(grid) = Grid::new(slots)
+        && let Some(index) = concrete_slab_recipes().iter().position(|recipe| recipe.matches(&grid))
+    { return RecipeId::concrete_slab(index); }
     recipe_index(slots).map(RecipeId::Native)
 }
 
-// Внутренний775 ID white_concrete; источник tools/data/items.json.
-// Обычный official777: три блока в любом горизонтальном ряду → шесть плит.
-// Собственная запись: observations-craft-26.3.md, «3×3 crafting grid».
-const WHITE_SLAB_RECIPE: Recipe = Recipe {
-    shaped: true, width: 3, height: 1,
-    result: crate::gameplay_catalog::WHITE_SLAB_ITEM, count: 6,
-    cells: &[&[615], &[615], &[615]],
-};
-
-/// Только наблюдённое расширение профиля; общая таблица775 не дополняется.
-/// Верстак, книга и автокрафтер используют один рецепт основного профиля.
+/// Каталог основного профиля общий для верстака, книги и автокрафтера.
+/// Базовые специальные рецепты сохраняют прежний порядок проверки.
 pub fn craft_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Option<Stack>]) -> Option<Stack> {
-    if recipe_for_catalog(catalog, RecipeId::WhiteConcreteSlab)
-        .is_some_and(|recipe| Grid::new(slots).is_some_and(|grid| recipe.matches(&grid)))
-    { return Some(Stack::new(WHITE_SLAB_RECIPE.result, WHITE_SLAB_RECIPE.count)); }
+    if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && let Some(grid) = Grid::new(slots)
+        && let Some(recipe) = concrete_slab_recipes().iter().find(|recipe| recipe.matches(&grid))
+    { return Some(Stack::new(recipe.result, recipe.count)); }
     craft(slots)
 }
 
@@ -362,3 +380,37 @@ pub fn recipe_index(slots: &[Option<Stack>]) -> Option<usize> {
 #[cfg(test)]
 #[path = "crafting/tests.rs"]
 mod player_tests;
+
+#[cfg(test)]
+mod concrete_slab_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile, CONCRETE_SLABS};
+
+    #[test]
+    fn all_colors_match_only_their_own_horizontal_recipe_and_profile() {
+        let preview = Catalog::new(Profile::Preview26_3);
+        let base = Catalog::new(Profile::Java26_1_2);
+        assert_eq!(RecipeId::concrete_slab(0), Some(RecipeId::WhiteConcreteSlab));
+        assert!(RecipeId::concrete_slab(16).is_none());
+        assert!(recipe_for_catalog(preview, RecipeId::ConcreteSlab(0)).is_none());
+        assert!(recipe_for_catalog(preview, RecipeId::ConcreteSlab(255)).is_none());
+        for (index, row) in CONCRETE_SLABS.iter().enumerate() {
+            let id = RecipeId::concrete_slab(index).unwrap();
+            assert_eq!(id.slab_index(), Some(index));
+            assert_eq!(recipe_for_catalog(preview, id).unwrap().result, row.item);
+            assert!(recipe_for_catalog(base, id).is_none());
+            for y in 0..3 {
+                let mut slots = [None; 9];
+                for x in 0..3 { slots[y * 3 + x] = Some(Stack::new(row.input_item, x as i32 + 1)); }
+                assert_eq!(recipe_identity_for_catalog(preview, &slots), Some(id));
+                assert_eq!(craft_for_catalog(preview, &slots), Some(Stack::new(row.item, 6)));
+                assert!(craft_for_catalog(base, &slots).is_none());
+                slots[y * 3 + 1] = Some(Stack::new(CONCRETE_SLABS[(index + 1) % 16].input_item, 1));
+                assert!(craft_for_catalog(preview, &slots).is_none(), "смешанные цвета {}", row.name);
+            }
+            let mut vertical = [None; 9];
+            for at in [0, 3, 6] { vertical[at] = Some(Stack::new(row.input_item, 1)); }
+            assert!(craft_for_catalog(preview, &vertical).is_none());
+        }
+    }
+}

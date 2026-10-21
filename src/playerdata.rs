@@ -703,24 +703,26 @@ mod tests {
     /// проверку совместимости при добавлении очередного хвоста файла.
     #[test]
     fn explicit_catalog_player_file_preserves_preview_items_and_refuses_downgrade() {
-        use crate::gameplay_catalog::WHITE_SLAB_ITEM;
+        use crate::gameplay_catalog::CONCRETE_SLABS;
         use crate::inventory::Stack;
         let directory = test_directory("catalog_preview");
         let uuid = [43; 16];
         let preview = Catalog::new(Profile::Preview26_3);
         let base = Catalog::new(Profile::Java26_1_2);
-        let mut data = sample();
-        let slab = Stack::new(WHITE_SLAB_ITEM, 37).with_extras(crate::stackdata::Data { name: Some("Белая плита".into()), ..Default::default() });
-        data.inventory.set_for_catalog(crate::inventory::FIRST_HOTBAR as usize, Some(slab), preview).unwrap();
-        data.inventory.set_cursor(Some(slab.with_count(11)));
-        data.ender[26] = Some(slab.with_count(23));
-        save_for_catalog(&directory, &uuid, &data, preview).unwrap();
-        let original = fs::read(path_for(&directory, &uuid)).unwrap();
-        assert_eq!(load_checked_for_catalog(&directory, &uuid, preview), Ok(Some(data.clone())));
-        assert!(matches!(load_checked_for_catalog(&directory, &uuid, base), Err(LoadError::IncompatibleInventory(_))));
-        assert!(save_for_catalog(&directory, &uuid, &data, base).is_err());
-        assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
-        assert!(!path_for(&directory, &uuid).with_extension("tmp").exists());
+        for row in &CONCRETE_SLABS {
+            let mut data = sample();
+            let slab = Stack::new(row.item, 37).with_extras(crate::stackdata::Data { name: Some(row.name.into()), ..Default::default() });
+            data.inventory.set_for_catalog(crate::inventory::FIRST_HOTBAR as usize, Some(slab), preview).unwrap();
+            data.inventory.set_cursor(Some(slab.with_count(11)));
+            data.ender[26] = Some(slab.with_count(23));
+            save_for_catalog(&directory, &uuid, &data, preview).unwrap();
+            let original = fs::read(path_for(&directory, &uuid)).unwrap();
+            assert_eq!(load_checked_for_catalog(&directory, &uuid, preview), Ok(Some(data.clone())), "{}", row.name);
+            assert!(matches!(load_checked_for_catalog(&directory, &uuid, base), Err(LoadError::IncompatibleInventory(_))));
+            assert!(save_for_catalog(&directory, &uuid, &data, base).is_err());
+            assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
+            assert!(!path_for(&directory, &uuid).with_extension("tmp").exists());
+        }
         fs::remove_dir_all(directory).unwrap();
     }
 

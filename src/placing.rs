@@ -181,7 +181,7 @@ pub fn place_tagged(
         .unwrap_or(default_state);
 
     // Наблюдение777: одиночная бетонная плита сохраняет воду в клетке.
-    let state = if name == crate::gameplay_catalog::WHITE_SLAB_NAME
+    let state = if matches!(catalog.slab_entry(state), Ok(Some(_)))
         && fluids::fluid_at(world.get_block(x, y, z)).is_some_and(|(kind, _)| kind == fluids::Kind::Water)
     {
         orientation.and_then(|rule| rule.with(state, "waterlogged", "true")).unwrap_or(state)
