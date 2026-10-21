@@ -865,3 +865,7 @@ fn save_scoreboard(shared: &Shared) {
 #[cfg(test)]
 #[path = "network/gameplay_probe.rs"]
 mod gameplay_probe;
+
+#[cfg(test)]
+#[path = "network/catalog_preview_probe.rs"]
+mod catalog_preview_probe;

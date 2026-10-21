@@ -220,7 +220,15 @@ pub async fn read_play_packet_with_legacy<S: AsyncRead + Unpin>(stream: &mut S, 
     read_play_packet_routed(stream, version, legacy, false).await
 }
 
+#[cfg(test)]
 pub(super) async fn read_play_packet_routed<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion, legacy: Option<&super::connection::LegacySession>, probe_776: bool) -> io::Result<PacketInfo> {
+    read_play_packet_with_content(stream, version, legacy, probe_776, Default::default()).await
+}
+
+pub(super) async fn read_play_packet_with_content<S: AsyncRead + Unpin>(stream: &mut S, version: JavaVersion, legacy: Option<&super::connection::LegacySession>, probe_776: bool, content: mcsa_protocol::content::ContentCodec) -> io::Result<PacketInfo> {
+    if content.is_preview() && version != JavaVersion::V26_3 {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
+    }
     if probe_776 && (!cfg!(test) || version != JavaVersion::V26_2) {
         return Err(translate_error(wire::Error::UnsupportedVersion(version)));
     }
@@ -252,14 +260,14 @@ pub(super) async fn read_play_packet_routed<S: AsyncRead + Unpin>(stream: &mut S
     }
     #[cfg(test)]
     if probe_776 {
-        let body = mcsa_protocol::probe_776::serverbound(&packet.body, wire::Context { items: item_context(), ..Default::default() })
+        let body = mcsa_protocol::probe_776::serverbound(&packet.body, wire::Context { items: item_context(content), ..Default::default() })
             .map_err(translate_error)?.into_owned();
         let (id, _) = decode_varint(&body)?;
         return Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: id == 0x12, legacy_inventory: None });
     }
     if version == wire::INTERNAL { return Ok(packet); }
     let body = wire::translate_with_context(State::Play, Direction::Serverbound,
-        version, wire::INTERNAL, &packet.body, wire::Context { items: item_context(), ..Default::default() }).map_err(translate_error)?.into_owned();
+        version, wire::INTERNAL, &packet.body, wire::Context { items: item_context(content), ..Default::default() }).map_err(translate_error)?.into_owned();
     let (id, _) = decode_varint(&body)?;
     Ok(PacketInfo { id, length: body.len() as i32, body, teleport: None, foreign_inventory: id == 0x12, legacy_inventory: None })
 }
@@ -293,6 +301,7 @@ const OUTGOING_LIMIT: usize = 64 * 1024;
 /// (`OUTGOING_LIMIT`). Порядок пакетов прежний; у оригинала пакеты такта
 /// тоже копятся и сбрасываются разом, в конце такта.
 pub struct Outgoing<'a> {
+    content: mcsa_protocol::content::ContentCodec,
     stream: Transport<'a>,
     buffer: Vec<u8>,
     control: Option<crate::sessions::Control>,
@@ -318,9 +327,9 @@ pub(super) fn legacy_enchantments() -> &'static [&'static str] {
     &NAMES
 }
 
-fn item_context() -> mcsa_protocol::items::Context {
+fn item_context(content: mcsa_protocol::content::ContentCodec) -> mcsa_protocol::items::Context {
     // Оба профиля Configuration получают этот порядок; тест реестров это проверяет.
-    mcsa_protocol::items::Context { shared_enchantment_count: Some(crate::stackdata::ENCHANTMENTS.len() as u32) }
+    mcsa_protocol::items::Context { shared_enchantment_count: Some(crate::stackdata::ENCHANTMENTS.len() as u32), content }
 }
 
 impl<'a> Outgoing<'a> {
@@ -328,16 +337,17 @@ impl<'a> Outgoing<'a> {
         let version = stream.client_version();
         let legacy = stream.legacy.clone();
         let probe_776 = stream.probe_776_enabled();
-        Self { stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false, version, probe_776, entities: Default::default(), legacy }
+        let content = stream.content;
+        Self { content, stream: Transport::Tcp(stream), buffer: Vec::with_capacity(OUTGOING_LIMIT), control: None, deadline: None, failed: false, version, probe_776, entities: Default::default(), legacy }
     }
 
     /// Проверки пакетов без сетевых сокетов и запущенного сервера.
     #[cfg(test)]
-    pub fn capture() -> Self { Self { stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None } }
+    pub fn capture() -> Self { Self { content: Default::default(), stream: Transport::Capture, buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None } }
 
     #[cfg(test)]
     pub(crate) fn duplex(stream: &'a mut tokio::io::DuplexStream) -> Self {
-        Self { stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None }
+        Self { content: Default::default(), stream: Transport::Duplex(stream), buffer: Vec::new(), control: None, deadline: None, failed: false, version: wire::INTERNAL, probe_776: false, entities: Default::default(), legacy: None }
     }
 
     /// Кладёт пакет в очередь: VarInt длина, потом тело.
@@ -378,7 +388,10 @@ impl<'a> Outgoing<'a> {
     }
 
     async fn send_with_context(&mut self, body: &[u8], mut context: wire::Context) -> io::Result<()> {
-        context.items = item_context();
+        context.items = item_context(self.content);
+        if self.content.is_preview() && self.version != JavaVersion::V26_3 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
+        }
         // Оба Configuration-профиля используют REQUIRED_REGISTRIES в том же
         // порядке; имя/число записей ограничивает динамические metadata ID.
         static COUNTS: std::sync::LazyLock<Vec<(&'static str,u32)>> = std::sync::LazyLock::new(||

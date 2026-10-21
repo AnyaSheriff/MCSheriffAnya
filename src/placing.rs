@@ -64,7 +64,15 @@ pub fn place_tagged(
         return Placement::Nothing;
     };
 
-    let orientation = blocks::orientation(name);
+    // Профиль принадлежит миру: версия клиента не включает новые блоки.
+    let catalog = world.catalog();
+    if catalog.name(crate::gameplay_catalog::Kind::State, default_state).is_err() {
+        return Placement::Nothing;
+    }
+    let orientation = match catalog.orientation(name) {
+        Ok(orientation) => orientation,
+        Err(_) => return Placement::Nothing,
+    };
     if name == "turtle_egg" {
         let state = world.get_block(clicked_x,clicked_y,clicked_z);
         if blocks::block_at_state(state) == Some("turtle_egg") && let Some(o) = orientation {
@@ -171,6 +179,13 @@ pub fn place_tagged(
     let state = orientation
         .and_then(|orientation| state_in_world(orientation, click, world, x, y, z))
         .unwrap_or(default_state);
+
+    // Наблюдение777: одиночная бетонная плита сохраняет воду в клетке.
+    let state = if name == crate::gameplay_catalog::WHITE_SLAB_NAME
+        && fluids::fluid_at(world.get_block(x, y, z)).is_some_and(|(kind, _)| kind == fluids::Kind::Water)
+    {
+        orientation.and_then(|rule| rule.with(state, "waterlogged", "true")).unwrap_or(state)
+    } else { state };
 
     // Лист, поставленный игроком, не гниёт (farming.rs).
     let state = crate::farming::placed(world, state, (x, y, z));
@@ -329,7 +344,10 @@ pub fn break_block(world: &mut World, x: i32, y: i32, z: i32) -> Option<i32> {
     // Крючок растяжки, сломанный игроком, звучит «detach».
     crate::redstone::hook_broken_by_player(world, (x, y, z), broken);
 
-    world.set_block(x, y, z, crate::vegetation::fluid_left(broken));
+    let fluid_left = if world.catalog().slab_properties(broken).ok().flatten().is_some_and(|(_, wet)| wet) {
+        fluids::state_of(fluids::Kind::Water, fluids::SOURCE)
+    } else { crate::vegetation::fluid_left(broken) };
+    world.set_block(x, y, z, fluid_left);
     if !blocks::block_at_state(broken).is_some_and(crate::redstone::sculk_family::quiet_block) {
         crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_DESTROY);
     }
@@ -1183,6 +1201,54 @@ mod tests {
 
     /// Лепестки, полевые цветы и сухие листья ставятся лицом к игроку, второй
     /// сегмент поворот не меняет (чёрный ящик, place-facing-*).
+    #[test]
+    fn profile_slab_uses_real_placement_merge_and_waterlogging() {
+        use crate::gameplay_catalog::{Catalog, Profile, SlabHalf, WHITE_SLAB_NAME};
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let mut world = World::in_memory_with_catalog(catalog);
+        world.ensure(0, 0);
+        let stone = blocks::state_by_name("stone").unwrap();
+        let default = catalog.default_state(WHITE_SLAB_NAME).unwrap().unwrap();
+        let away = (8.5, 64.0, 8.5);
+        world.set_block_silently(0, 63, 0, stone);
+        assert_eq!(place(&mut world, WHITE_SLAB_NAME, default, (0, 63, 0), &click(1, 0.5, 0.0), away), Placement::Placed);
+        assert_eq!(catalog.slab_properties(world.get_block(0, 64, 0)), Ok(Some((SlabHalf::Bottom, false))));
+        assert_eq!(place(&mut world, WHITE_SLAB_NAME, default, (0, 64, 0), &click(1, 0.5, 0.0), (0.5, 64.5, 0.5)), Placement::Refused(vec![(0, 64, 0)]));
+        assert_eq!(catalog.slab_properties(world.get_block(0, 64, 0)), Ok(Some((SlabHalf::Bottom, false))));
+        assert_eq!(place(&mut world, WHITE_SLAB_NAME, default, (0, 64, 0), &click(1, 0.5, 0.0), away), Placement::Merged);
+        assert_eq!(catalog.slab_properties(world.get_block(0, 64, 0)), Ok(Some((SlabHalf::Double, false))));
+        world.set_block_silently(2, 65, 0, stone);
+        assert_eq!(place(&mut world, WHITE_SLAB_NAME, default, (2, 65, 0), &click(0, 0.5, 0.0), away), Placement::Placed);
+        assert_eq!(catalog.slab_properties(world.get_block(2, 64, 0)), Ok(Some((SlabHalf::Top, false))));
+        world.set_block_silently(4, 63, 0, stone);
+        world.set_block_silently(4, 64, 0, fluids::state_of(fluids::Kind::Water, fluids::SOURCE));
+        assert_eq!(place(&mut world, WHITE_SLAB_NAME, default, (4, 63, 0), &click(1, 0.5, 0.0), away), Placement::Placed);
+        assert_eq!(catalog.slab_properties(world.get_block(4, 64, 0)), Ok(Some((SlabHalf::Bottom, true))));
+        assert_eq!(place(&mut world, WHITE_SLAB_NAME, default, (4, 64, 0), &click(1, 0.5, 0.0), away), Placement::Merged);
+        assert_eq!(catalog.slab_properties(world.get_block(4, 64, 0)), Ok(Some((SlabHalf::Double, false))));
+        let mut old = World::in_memory();
+        old.ensure(0, 0);
+        old.set_block_silently(0, 63, 0, stone);
+        assert_eq!(place(&mut old, WHITE_SLAB_NAME, default, (0, 63, 0), &click(1, 0.5, 0.0), away), Placement::Nothing);
+        assert_eq!(old.get_block(0, 64, 0), world::AIR);
+    }
+
+    #[test]
+    fn breaking_preview_waterlogged_slab_leaves_source() {
+        use crate::gameplay_catalog::{Catalog,Profile,SlabHalf};
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let mut world = World::in_memory_with_catalog(catalog);
+        world.ensure(0,0);
+        for half in [SlabHalf::Top,SlabHalf::Bottom,SlabHalf::Double] {
+            for wet in [false,true] {
+                let slab = catalog.slab_state(half,wet).unwrap();
+                world.set_block_silently(3,64,3,slab);
+                assert_eq!(break_block(&mut world,3,64,3),Some(slab));
+                assert_eq!(world.get_block(3,64,3),if wet { fluids::state_of(fluids::Kind::Water,fluids::SOURCE) } else { world::AIR });
+            }
+        }
+    }
+
     #[test]
     fn flat_flowers_face_the_player() {
         for (name, amount) in [("pink_petals", "flower_amount"), ("wildflowers", "flower_amount"), ("leaf_litter", "segment_amount")] {

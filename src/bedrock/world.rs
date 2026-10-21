@@ -423,7 +423,7 @@ impl BedrockWorld {
         // измерение, место, поворот, режим игры, инвентарь. Впервые зашедший
         // появляется в точке появления обычного мира в творческом режиме,
         // как игрок Java.
-        let saved = match crate::playerdata::load_checked(&shared.playerdata, &identity.uuid) {
+        let saved = match crate::playerdata::load_checked_for_catalog(&shared.playerdata, &identity.uuid, shared.catalog()) {
             Ok(saved) => saved,
             Err(error) => { log_warn!("Вход Bedrock остановлен: {}", error); return None; }
         };
@@ -3926,7 +3926,7 @@ impl BedrockWorld {
             return;
         }
 
-        match crate::playerdata::save(&self.shared.playerdata, &self.identity.uuid, &data) {
+        match crate::playerdata::save_for_catalog(&self.shared.playerdata, &self.identity.uuid, &data, self.shared.catalog()) {
             Ok(()) => self.saved = Some(data),
             Err(error) => log_warn!("Bedrock: файл игрока {} не записан: {}", self.identity.name, error),
         }

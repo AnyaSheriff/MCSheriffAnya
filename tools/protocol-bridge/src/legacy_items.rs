@@ -104,7 +104,7 @@ pub fn decode(bytes: &[u8], context: Context<'_>) -> Result<(Option<Stack>, usiz
             }
         }
     }
-    items::encode(crate::JavaVersion::V26_1_2,Some(&stack),false,items::Context {shared_enchantment_count:Some(context.enchantments.len() as u32)})?;
+    items::encode(crate::JavaVersion::V26_1_2,Some(&stack),false,items::Context {shared_enchantment_count:Some(context.enchantments.len() as u32), ..Default::default() })?;
     Ok((Some(stack),bytes.len()-input.0.len()))
 }
 
@@ -112,8 +112,7 @@ pub fn encode(stack: Option<&Stack>, context: Context<'_>) -> Result<Vec<u8>, Er
     let Some(stack) = stack else { return Ok(vec![255,255]); };
     // Сначала валидируем общий формат, включая дубликаты и границы компонентов.
     items::encode(crate::JavaVersion::V26_1_2,Some(stack),false,items::Context {
-        shared_enchantment_count: Some(context.enchantments.len() as u32),
-    })?;
+        shared_enchantment_count: Some(context.enchantments.len() as u32), ..Default::default() })?;
     if !stack.removed.is_empty() { return Err(Error::Invalid); }
     let row = legacy_item_ids::ITEMS.iter().find(|r|r.2 == stack.item).ok_or(Error::MissingItem(stack.item))?;
     if row.0 == 358 && !stack.added.iter().any(|c| c.kind == 46) { return Err(Error::Invalid); }

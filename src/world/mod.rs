@@ -579,6 +579,10 @@ impl Chunk {
         self.light = Some((self.revision, Arc::new(light::chunk_light(&self.sections))));
     }
 
+    fn light_up_with_catalog(&mut self, catalog: crate::gameplay_catalog::Catalog) {
+        self.light = Some((self.revision, Arc::new(light::chunk_light_with_catalog(&self.sections, catalog))));
+    }
+
     /// Собственный свет, если он не устарел.
     fn fresh_light(&self) -> Option<&Arc<light::ChunkLight>> {
         match &self.light {
@@ -1224,6 +1228,7 @@ const CHUNK_VERSION_WIDE: u8 = 1;
 
 /// Мир целиком: чанки и список изменений.
 pub struct World {
+    catalog: crate::gameplay_catalog::Catalog,
     pub maps: std::sync::Arc<std::sync::Mutex<crate::maps::Maps>>,
     pub fire_tick: bool,
     pub fire_difficulty: u8,
@@ -1542,10 +1547,19 @@ fn chunk_in_limits(chunk_x: i32, chunk_z: i32) -> bool {
 }
 
 impl World {
+    /// Каталог принадлежит миру, а не версии подключившегося клиента.
+    pub fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.catalog }
+
     /// Пустой мир без файла на диске — только для проверок.
     #[cfg(test)]
     pub fn in_memory() -> Self {
+        Self::in_memory_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+    }
+
+    #[cfg(test)]
+    pub fn in_memory_with_catalog(catalog: crate::gameplay_catalog::Catalog) -> Self {
         Self {
+            catalog,
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
@@ -1705,6 +1719,7 @@ impl World {
         log_info!("Тип мира: {}", kind.name());
 
         let mut world = Self {
+            catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2),
             maps: Default::default(),
             fire_tick: true,
             fire_difficulty: 2,
@@ -1900,6 +1915,12 @@ impl World {
                 continue;
             };
 
+            if let Err(error) = chunk.validate_catalog(self.catalog) {
+                log_error!("Чанк {} {} не записан: {}", chunk_x, chunk_z, error);
+                self.dirty.insert((chunk_x, chunk_z));
+                continue;
+            }
+
             by_region
                 .entry(region::region_of(chunk_x, chunk_z))
                 .or_default()
@@ -2018,7 +2039,7 @@ impl World {
 
         // Номер состояния, не влезающий в хранение, — ошибка того, кто его
         // прислал; падать из-за неё под замком мира нельзя.
-        if Packed::try_from(state).is_err() {
+        if Packed::try_from(state).is_err() || self.catalog.name(crate::gameplay_catalog::Kind::State, state).is_err() {
             log_warn!("Мир: состояние {} в {} {} {} не поставлено — такого номера нет", state, x, y, z);
             return false;
         }
@@ -3114,6 +3135,7 @@ impl World {
         self.chunks.get(&(chunk_x, chunk_z))?;
 
         Some(light::LightJob {
+            catalog: self.catalog,
             chunks: std::array::from_fn(|slot| {
                 let place = (chunk_x + slot as i32 % 3 - 1, chunk_z + slot as i32 / 3 - 1);
                 let chunk = self.chunks.get(&place)?;
@@ -3210,6 +3232,7 @@ impl World {
     /// замок мира нельзя, иначе встанет такт.
     pub fn source(&self) -> ChunkSource {
         ChunkSource {
+            catalog: self.catalog,
             path: self.path.clone(),
             generator: Arc::clone(&self.generator),
             epoch: self.unload_epoch,
@@ -3413,7 +3436,7 @@ impl World {
             return false;
         }
 
-        match take_chunk(&self.path, &self.generator, chunk_x, chunk_z) {
+        match take_chunk(&self.path, &self.generator, self.catalog, chunk_x, chunk_z) {
             Taken::Loaded { chunk, from_disk, wake } => {
                 self.insert_chunk(chunk_x, chunk_z, chunk, from_disk, &wake);
                 true
@@ -3738,7 +3761,7 @@ impl World {
         // исполняется прежний (вики, Tick, 18w10c).
         // Прежний такт был заведён для другой жидкости (раздатчик забрал
         // источник ведром): он пропадёт вместе с ней, и новый не ждёт его.
-        let fluid = fluid_type(self.get_block(x, y, z));
+        let fluid = fluid_type(self.get_block(x, y, z), self.catalog);
 
         if self.waits_ahead((x, y, z), TickKind::Fluid)
             && self
@@ -3782,7 +3805,7 @@ impl World {
         let order = self.next_order;
         self.next_order += 1;
 
-        let fluid = if kind == TickKind::Fluid { fluid_type(self.get_block(place.0, place.1, place.2)) } else { 0 };
+        let fluid = if kind == TickKind::Fluid { fluid_type(self.get_block(place.0, place.1, place.2), self.catalog) } else { 0 };
 
         self.waiting.insert((place, kind), WaitingTick { due, order, priority, fluid });
         self.scheduled.push(Reverse(Scheduled {
@@ -3805,7 +3828,7 @@ impl World {
             let (x, y, z) = (x + dx, y + dy, z + dz);
             let state = self.get_block(x, y, z);
 
-            if !wet(state) {
+            if !wet(state, self.catalog) {
                 continue;
             }
 
@@ -3824,7 +3847,7 @@ impl World {
     pub fn fluid_tick_holds(&self, place: (i32, i32, i32)) -> bool {
         self.waiting
             .get(&(place, TickKind::Fluid))
-            .is_none_or(|waiting| waiting.fluid == fluid_type(self.get_block(place.0, place.1, place.2)))
+            .is_none_or(|waiting| waiting.fluid == fluid_type(self.get_block(place.0, place.1, place.2), self.catalog))
     }
 
     /// Двигает время мира на такт вперёд и отдаёт места, которым пора, —
@@ -4567,7 +4590,7 @@ enum Taken {
 /// потом складываем чанк заново: он ляжет на её место. Диск не ответил —
 /// не делаем ничего, чанк попробуют прочитать снова. Неподдержанные раскладка
 /// или состояние каталога тоже дают отказ, без corrupt-copy и новой генерации.
-fn take_chunk(path: &Path, generator: &Generator, chunk_x: i32, chunk_z: i32) -> Taken {
+fn take_chunk(path: &Path, generator: &Generator, catalog: crate::gameplay_catalog::Catalog, chunk_x: i32, chunk_z: i32) -> Taken {
     if !chunk_in_limits(chunk_x, chunk_z) {
         log_debug!("Мир: чанк {} {} за пределами мира", chunk_x, chunk_z);
         return Taken::Unavailable;
@@ -4598,10 +4621,10 @@ fn take_chunk(path: &Path, generator: &Generator, chunk_x: i32, chunk_z: i32) ->
                 return Taken::Unavailable;
             }
         },
-        Ok(region::Stored::Found(bytes)) => match Chunk::decode_for_load(&bytes) {
+        Ok(region::Stored::Found(bytes)) => match Chunk::decode_for_load_with_catalog(&bytes, catalog) {
             // Свет на диске не хранится: он считается заново по блокам.
             Ok(mut chunk) => {
-                chunk.light_up();
+                chunk.light_up_with_catalog(catalog);
 
                 let wake = chunk.fluids_to_wake(chunk_x, chunk_z);
 
@@ -4685,6 +4708,7 @@ pub struct ReadyChunk {
 /// Живёт отдельно от мира нарочно: пока чанк читается с диска или
 /// складывается заново, замок мира держать нельзя — такт не должен ждать.
 pub struct ChunkSource {
+    catalog: crate::gameplay_catalog::Catalog,
     path: PathBuf,
     generator: Arc<Generator>,
 
@@ -4696,7 +4720,7 @@ impl ChunkSource {
     /// Читает чанк с диска, а если его там нет — складывает заново.
     pub fn take(&self, chunk_x: i32, chunk_z: i32) -> ReadyChunk {
         ReadyChunk {
-            taken: take_chunk(&self.path, &self.generator, chunk_x, chunk_z),
+            taken: take_chunk(&self.path, &self.generator, self.catalog, chunk_x, chunk_z),
             epoch: self.epoch,
         }
     }
@@ -5908,25 +5932,24 @@ const AROUND: [(i32, i32, i32); 7] = [(0, 0, 0), (0, 1, 0), (0, -1, 0), (-1, 0, 
 /// Какая жидкость в блоке — для такта жидкости: 0 — никакой, 1 — источник
 /// воды (и залитый водой блок), 2 — текущая вода, 3 — источник лавы,
 /// 4 — текущая лава.
-fn fluid_type(state: i32) -> u8 {
+fn fluid_type(state: i32, catalog: crate::gameplay_catalog::Catalog) -> u8 {
     match fluids::fluid_at(state) {
         Some((fluids::Kind::Water, fluids::SOURCE)) => 1,
         Some((fluids::Kind::Water, _)) => 2,
         Some((fluids::Kind::Lava, fluids::SOURCE)) => 3,
         Some((fluids::Kind::Lava, _)) => 4,
-        None if wet(state) => 1,
+        None if wet(state, catalog) => 1,
         None => 0,
     }
 }
 
 /// Есть ли в блоке жидкость: вода, лава или залитый водой блок.
-fn wet(state: i32) -> bool {
+fn wet(state: i32, catalog: crate::gameplay_catalog::Catalog) -> bool {
     if state == AIR {
         return false;
     }
 
-    fluids::fluid_at(state).is_some()
-        || crate::blocks::orientation_of(state).and_then(|rule| rule.value(state, "waterlogged")) == Some("true")
+    fluids::source_at_with_catalog(state, catalog).is_some()
 }
 
 /// Ключ чанка по мировым координатам блока.
@@ -7659,7 +7682,7 @@ mod speed {
         // WORLD=<папка мира> — брать сохранённые чанки оттуда (например, мир
         // тестового сервера), а не свежую генерацию.
         let path = std::env::var("WORLD").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir().join("mcsheriffanya-no-such-world"));
-        let source = ChunkSource { path, generator, epoch: 0 };
+        let source = ChunkSource { path, generator, catalog: crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), epoch: 0 };
 
         for dx in -2..=2 {
             for dz in -2..=2 {
@@ -8355,3 +8378,6 @@ mod structure_fix_tests;
 
 #[cfg(test)]
 mod incompatible_load_tests;
+
+#[cfg(test)]
+mod catalog_tests;

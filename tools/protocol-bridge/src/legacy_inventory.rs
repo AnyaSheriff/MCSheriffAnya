@@ -58,8 +58,7 @@ pub fn decode(body: &[u8], context: legacy_items::Context<'_>) -> Result<(Vec<u8
             let (stack, n) = legacy_items::decode(input.rest, context).map_err(Error::LegacyItem)?; input.take(n)?;
             let mut out = vec![0x38]; out.extend(slot.to_be_bytes());
             out.extend(items::encode(JavaVersion::V26_1_2, stack.as_ref(), true, items::Context {
-                shared_enchantment_count: Some(context.enchantments.len() as u32),
-            }).map_err(|_| Error::Invalid)?);
+                shared_enchantment_count: Some(context.enchantments.len() as u32), ..Default::default() }).map_err(|_| Error::Invalid)?);
             (out, None)
         }
         _ => return Err(Error::PayloadUnavailable("legacy inventory packet")),

@@ -1,12 +1,17 @@
 //! Явный серверный каталог: прежние ID775 и дописываемые внутренние объекты.
 //!
-//! Клиентская версия не выбирает игровые правила. Экспериментальный каталог
-//! пока не подключён к Shared, сохранениям или production admission.
-//! Источник первого объекта — выбранные pinned JSON в white-concrete-slab.json;
-//! свойства поведения ещё требуют обычного наблюдения [проверить].
+//! Клиентская версия не выбирает игровые правила. Каталог принадлежит World/Shared,
+//! проходит через игровые обработчики, сеть и проверки сохранений. Preview доступен
+//! только отдельной пробе с миром в памяти; production admission остаётся775.
+//! Источник первого объекта — pinned JSON white-concrete-slab.json и обычные
+//! наблюдения установки/добычи. Полная механика26.3 ещё не реализована.
 #![allow(dead_code)] // Основа следующего среза; production-путь остаётся775.
 
 use mcsa_protocol::{JavaVersion, ids::{self, RegistryKind}};
+
+mod runtime;
+mod stack_validation;
+pub use stack_validation::{StackError, StackLocation, StackProblem};
 
 /// Это серверный профиль, а не согласованная версия сетевого соединения.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -64,6 +69,13 @@ pub struct Catalog { profile: Profile }
 impl Catalog {
     pub const fn new(profile: Profile) -> Self { Self { profile } }
     pub const fn profile(self) -> Profile { self.profile }
+
+    pub fn content_codec(self) -> mcsa_protocol::content::ContentCodec {
+        match self.profile {
+            Profile::Java26_1_2 => Default::default(),
+            Profile::Preview26_3 => mcsa_protocol::content::ContentCodec::white_slab_preview(),
+        }
+    }
 
     /// Отпечаток внутренней идентичности блоков/предметов, не полного gameplay.
     /// Для775 возвращается ТОЧНО прежний fingerprint, без extension в базе.

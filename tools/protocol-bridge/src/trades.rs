@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use crate::{JavaVersion,ids::{self,RegistryKind},items,wire::{self,Cursor,uint}};
 
 fn cost(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:items::Context)->Result<(),wire::Error>{
-    let item=ids::translate(RegistryKind::Item,from,to,input.uint()?)?;
+    let item=context.content.packet_id(RegistryKind::Item,from,to,input.uint()?)?;
     if item==0{return Err(wire::Error::Invalid);}uint(out,item);
     let count=input.count(127)?;if count==0{return Err(wire::Error::Invalid);}uint(out,count as u32);
     let count=input.count(256)?;uint(out,count as u32);let mut seen=BTreeSet::new();
@@ -23,8 +23,8 @@ pub(crate) fn translate(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,
     uint(out,input.uint()?);let count=input.count(1024)?;uint(out,count as u32);
     for _ in 0..count {
         cost(input,out,from,to,context)?;
-        let (stack,n)=items::decode(from,input.rest,false,context).map_err(wire::Error::Item)?;
-        input.take(n)?;out.extend(items::encode(to,stack.as_ref(),false,context).map_err(wire::Error::Item)?);
+        let (stack,n)=items::decode_packet_slot(from,input.rest,false,context).map_err(wire::Error::Item)?;
+        input.take(n)?;out.extend(items::encode_packet_slot(to,stack.as_ref(),false,context).map_err(wire::Error::Item)?);
         let second=input.boolean()?;out.push(u8::from(second));if second{cost(input,out,from,to,context)?;}
         out.push(u8::from(input.boolean()?));
         out.extend(input.take(16)?); // uses/maxUses/xp/specialPrice, включая отрицательную скидку.

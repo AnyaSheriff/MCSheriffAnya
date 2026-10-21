@@ -6,7 +6,7 @@ fn expected_stack(stack: Option<Stack>) -> Result<Option<items::Stack>, mcsa_pro
     let mut bytes = Vec::new(); push_slot(&mut bytes, stack);
     let context = legacy_items::Context { enchantments: super::super::packet::legacy_enchantments() };
     let (stack, _) = items::decode(JavaVersion::V26_1_2, &bytes, false, items::Context {
-        shared_enchantment_count: Some(context.enchantments.len() as u32),
+        shared_enchantment_count: Some(context.enchantments.len() as u32), ..Default::default()
     }).map_err(mcsa_protocol::wire::Error::Item)?;
     // Сравниваем именно представление клиента (в том числе старый Damage).
     let bytes = legacy_items::encode(stack.as_ref(), context).map_err(mcsa_protocol::wire::Error::LegacyItem)?;

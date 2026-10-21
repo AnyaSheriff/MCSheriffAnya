@@ -1,10 +1,11 @@
 //! Вложенные ItemStackTemplate: ID идёт перед количеством (не обычный Slot).
 //! Каждый уровень переводит свои компоненты; глубина и размеры ограничены.
 use std::collections::BTreeSet;
+use crate::content::IdSpace;
 use crate::{JavaVersion,ids::{self,RegistryKind},items::{self,Reader,Context,Error,uint}};
 
-fn template(input:&mut Reader<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize)->Result<(),Error>{
-    let item=ids::translate(RegistryKind::Item,from,to,input.uint()?).map_err(Error::Id)?;
+fn template(input:&mut Reader<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize,spaces:(IdSpace,IdSpace))->Result<(),Error>{
+    let item=items::content_id(context,RegistryKind::Item,spaces.0,spaces.1,input.uint()?)?;
     if item==0{return Err(Error::Invalid);}uint(out,item);
     let count=input.count(127)?;if count==0{return Err(Error::Invalid);}uint(out,count as u32);
     let added=input.count(256)?;let removed=input.count(256)?;uint(out,added as u32);uint(out,removed as u32);
@@ -13,7 +14,7 @@ fn template(input:&mut Reader<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersi
         let source=input.uint()?;let kind=ids::translate(RegistryKind::Component,from,JavaVersion::V26_1_2,source).map_err(Error::Id)?;
         if !seen.insert(kind){return Err(Error::Invalid);}
         uint(out,ids::translate(RegistryKind::Component,from,to,source).map_err(Error::Id)?);
-        out.extend(items::component_bytes_at(kind,input,from,to,context,depth)?);
+        out.extend(items::component_bytes_at_spaces(kind,input,from,to,context,depth,spaces)?);
         if out.len()>items::LIMIT{return Err(Error::TooLarge);}
     }
     for _ in 0..removed {
@@ -23,16 +24,21 @@ fn template(input:&mut Reader<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersi
     }Ok(())
 }
 
+#[cfg(test)]
 pub(crate) fn remap(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize)->Result<Vec<u8>,Error>{
+    remap_with_spaces(kind,input,from,to,context,depth,(IdSpace::Wire(from),IdSpace::Wire(to)))
+}
+
+pub(crate) fn remap_with_spaces(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize,spaces:(IdSpace,IdSpace))->Result<Vec<u8>,Error>{
     if depth>=32{return Err(Error::TooLarge);}let mut out=Vec::new();
     match kind {
-        25=>template(input,&mut out,from,to,context,depth+1)?,
+        25=>template(input,&mut out,from,to,context,depth+1,spaces)?,
         49|50|75=>{
             let count=input.count(256)?;uint(&mut out,count as u32);
             for _ in 0..count {
                 let present=kind!=75 || input.boolean()?;
                 if kind==75{out.push(u8::from(present));}
-                if present{template(input,&mut out,from,to,context,depth+1)?;}
+                if present{template(input,&mut out,from,to,context,depth+1,spaces)?;}
                 if out.len()>items::LIMIT{return Err(Error::TooLarge);}
             }
         }

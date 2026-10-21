@@ -187,15 +187,20 @@ fn command_arguments(command: &str) -> impl Iterator<Item = &str> {
 /// Стопка по записи предмета команды (`diamond_sword[damage=5]`): None —
 /// воздух.
 pub(crate) fn stack_from_spec(spec: &str, count: i32) -> Result<Option<crate::inventory::Stack>, String> {
+    stack_from_spec_for_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), spec, count)
+}
+
+/// Каталог задаёт сервер; название из команды не может включить новый профиль.
+pub(crate) fn stack_from_spec_for_catalog(catalog: crate::gameplay_catalog::Catalog, spec: &str, count: i32) -> Result<Option<crate::inventory::Stack>, String> {
     let (name, data) = crate::stackdata::parse_item_spec(spec).map_err(|why| format!("Не разобрать предмет {spec}: {why}"))?;
 
     if name == "air" {
         return Ok(None);
     }
 
-    let number = blocks::item_named(&name).ok_or_else(|| format!("Нет такого предмета: {}", spec.split('[').next().unwrap_or(spec)))?;
+    let number = catalog.item_named(&name).ok().flatten().ok_or_else(|| format!("Нет такого предмета: {}", spec.split('[').next().unwrap_or(spec)))?;
 
-    Ok(Some(crate::inventory::Stack::new(number, count.min(blocks::stack_size(number))).with_extras(data)))
+    Ok(Some(crate::inventory::Stack::new(number, count.min(catalog.stack_size(number).map_err(|_| format!("Нет такого предмета: {name}"))?)).with_extras(data)))
 }
 
 pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
@@ -349,7 +354,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 return Answer::saying("Сколько выдавать? Число должно быть больше нуля".to_string());
             }
 
-            let stack = match stack_from_spec(item_name, count) {
+            let stack = match stack_from_spec_for_catalog(shared.catalog(), item_name, count) {
                 Ok(Some(stack)) => crate::inventory::Stack { count, ..stack },
                 Ok(None) => return Answer::saying(format!("Нет такого предмета: {}", item_name)),
                 Err(why) => return Answer::saying(why),
@@ -372,7 +377,7 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
                 }
             }
 
-            crate::commands_feedback::give(stack, &targets)
+            crate::commands_feedback::give(shared.catalog(), stack, &targets)
         }
         "clear" => {
             let named = parts.next();
@@ -2373,7 +2378,7 @@ fn set_blocks(parts: &[&str], source: &Source, shared: &Shared, dimension: Dimen
         return Answer::saying(why);
     }
 
-    let Some(state) = blocks::state_from_text(block) else {
+    let Some(state) = shared.catalog().state_from_text(block).ok().flatten() else {
         return Answer::saying(format!("Не знаю такого блока: {}", block));
     };
 
@@ -3344,9 +3349,13 @@ mod tests {
 
     /// Сервер с двумя игроками для проверок команд.
     pub(super) fn server() -> Shared {
+        server_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+    }
+
+    fn server_with_catalog(catalog: crate::gameplay_catalog::Catalog) -> Shared {
         let shared = Shared::new(
-            World::in_memory(),
-            crate::world::World::in_memory(),
+            World::in_memory_with_catalog(catalog),
+            crate::world::World::in_memory_with_catalog(catalog),
             PathBuf::new(),
             PathBuf::new(),
             Default::default(),
@@ -3826,6 +3835,49 @@ mod tests {
     }
 
     /// Выдача предметов доходит до игрока поручением.
+    #[test]
+    fn preview_commands_resolve_slab_through_server_catalog() {
+        use crate::gameplay_catalog::{Catalog, Profile, SlabHalf, WHITE_SLAB_ITEM};
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let shared = server_with_catalog(catalog);
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        let answer = run(r#"give Первый minecraft:white_concrete_slab[custom_name="Плита"] 70"#, &Source::Console, &shared);
+        assert!(answer.reply.contains("white_concrete_slab"), "{}", answer.reply);
+        let orders = orders_for(&shared, 1);
+        assert!(matches!(orders.as_slice(), [Order::Give { stack }] if stack.item == WHITE_SLAB_ITEM && stack.count == 70 && stack.extras().name.as_deref() == Some("Плита")));
+        let component = answer.component.unwrap();
+        assert!(component.windows(b"block.minecraft.white_concrete_slab".len()).any(|bytes| bytes == b"block.minecraft.white_concrete_slab"));
+        assert!(component.windows(b"minecraft:white_concrete_slab".len()).any(|bytes| bytes == b"minecraft:white_concrete_slab"));
+        let answer = run("setblock 2 65 2 minecraft:white_concrete_slab[type=top,waterlogged=true]", &Source::Console, &shared);
+        assert!(answer.reply.contains("Changed the block"), "{}", answer.reply);
+        let answer = run("fill 3 65 2 4 65 2 white_concrete_slab[type=double]", &Source::Console, &shared);
+        assert!(!answer.reply.contains("Не знаю"), "{}", answer.reply);
+        let world = shared.world_in(Dimension::Overworld).lock().unwrap();
+        assert_eq!(catalog.slab_properties(world.get_block(2, 65, 2)), Ok(Some((SlabHalf::Top, true))));
+        for x in 3..=4 {
+            assert_eq!(catalog.slab_properties(world.get_block(x, 65, 2)), Ok(Some((SlabHalf::Double, false))));
+        }
+    }
+
+    #[test]
+    fn native_commands_reject_preview_slab_without_orders_or_world_changes() {
+        let shared = server();
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        let before = shared.world_in(Dimension::Overworld).lock().unwrap().get_block(2, 65, 2);
+        let answer = run("give Первый white_concrete_slab 3", &Source::Console, &shared);
+        assert!(answer.reply.contains("Нет такого предмета"), "{}", answer.reply);
+        assert!(orders_for(&shared, 1).is_empty());
+        for command in ["setblock 2 65 2 white_concrete_slab", "fill 2 65 2 3 65 2 white_concrete_slab[type=double]"] {
+            let answer = run(command, &Source::Console, &shared);
+            assert!(answer.reply.contains("Не знаю такого блока"), "{}", answer.reply);
+            assert_eq!(shared.world_in(Dimension::Overworld).lock().unwrap().get_block(2, 65, 2), before);
+        }
+        let preview = server_with_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Preview26_3));
+        let answer = run("give Первый not_a_real_item", &Source::Console, &preview);
+        assert!(answer.reply.contains("Нет такого предмета"));
+        assert!(orders_for(&preview, 1).is_empty());
+    }
+
     #[test]
     fn give_sends_the_items_to_the_player() {
         let shared = server();

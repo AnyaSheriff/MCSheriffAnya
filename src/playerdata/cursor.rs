@@ -4,20 +4,16 @@ use crate::inventory::Stack;
 
 const MAX_PAYLOAD: usize = 1 + 4 + 4 + 2 + u16::MAX as usize;
 
-fn valid(stack: &Stack) -> bool {
-    stack.item > 0 && crate::blocks::item_name(stack.item).is_some()
-        && (1..=stack.limit()).contains(&stack.count)
-        && stack.tnt.is_none_or(|kind| kind.0 <= 0x7f && crate::custom_tnt::by_id(kind).is_some())
+pub(super) fn append(stack: Option<Stack>, out: &mut Vec<u8>) -> io::Result<()> {
+    append_for_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), stack, out)
 }
 
-pub(super) fn append(stack: Option<Stack>, out: &mut Vec<u8>) -> io::Result<()> {
+pub(super) fn append_for_catalog(catalog: crate::gameplay_catalog::Catalog, stack: Option<Stack>, out: &mut Vec<u8>) -> io::Result<()> {
     let mut payload = Vec::new();
     match stack {
         None => payload.push(0),
         Some(stack) => {
-            if !valid(&stack) {
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "неверная стопка курсора игрока"));
-            }
+            catalog.validate_stack(&stack).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
             payload.push(1);
             payload.extend_from_slice(&stack.stored_item().to_be_bytes());
             payload.extend_from_slice(&stack.count.to_be_bytes());
@@ -47,17 +43,21 @@ pub(super) fn append(stack: Option<Stack>, out: &mut Vec<u8>) -> io::Result<()> 
 /// Снимает хвост только после полного успешного разбора. Неизвестный предмет,
 /// неверная длина/число и лишние байты не превращаются в пустой курсор.
 pub(super) fn take(tail: &mut &[u8]) -> Option<Option<Stack>> {
+    take_for_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), tail)
+}
+
+pub(super) fn take_for_catalog(catalog: crate::gameplay_catalog::Catalog, tail: &mut &[u8]) -> Option<Option<Stack>> {
     let length_at = tail.len().checked_sub(4)?;
     let length = u32::from_be_bytes(tail.get(length_at..)?.try_into().ok()?) as usize;
     if !(1..=MAX_PAYLOAD).contains(&length) { return None; }
     let start = length_at.checked_sub(length)?;
     let payload = tail.get(start..length_at)?;
-    let stack = parse(payload)?;
+    let stack = parse(catalog, payload)?;
     *tail = &tail[..start];
     Some(stack)
 }
 
-fn parse(payload: &[u8]) -> Option<Option<Stack>> {
+fn parse(catalog: crate::gameplay_catalog::Catalog, payload: &[u8]) -> Option<Option<Stack>> {
     if payload == [0] { return Some(None); }
     if payload.first() != Some(&1) { return None; }
     let stored = i32::from_be_bytes(payload.get(1..5)?.try_into().ok()?);
@@ -67,7 +67,7 @@ fn parse(payload: &[u8]) -> Option<Option<Stack>> {
     // Новый хвост не должен молча менять семантику предмета.
     let custom = ((stored >> 24) & 0x7f) as u8;
     if stack.tnt.map_or(0, |kind| kind.0) != custom
-        || stack.item <= 0 || crate::blocks::item_name(stack.item).is_none() { return None; }
+        || stack.item <= 0 || catalog.name(crate::gameplay_catalog::Kind::Item, stack.item).is_err() { return None; }
     let mut offset: usize = 9;
     let extras = Stack::read_extras(stored, |length| {
         let bytes = payload.get(offset..offset.checked_add(length)?)?;
@@ -83,13 +83,33 @@ fn parse(payload: &[u8]) -> Option<Option<Stack>> {
     }
     // Предел количества проверяется с восстановленными компонентами, чтобы
     // будущий компонент размера стопки не оценивался по пустому предмету.
-    if !valid(&stack) { return None; }
+    if catalog.validate_stack(&stack).is_err() { return None; }
     Some(Some(stack))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preview_cursor_roundtrip_keeps_new_item_and_default_rejects_it() {
+        use crate::gameplay_catalog::{Catalog, Profile, WHITE_SLAB_ITEM};
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let stack = Stack::new(WHITE_SLAB_ITEM, 37).with_extras(crate::stackdata::Data {
+            name: Some("Новая плита".into()), ..Default::default()
+        });
+        let mut bytes = vec![9];
+        append_for_catalog(catalog, Some(stack), &mut bytes).unwrap();
+        let mut original = bytes.as_slice();
+        assert!(take(&mut original).is_none());
+        assert_eq!(original, bytes);
+        let mut tail = bytes.as_slice();
+        assert_eq!(take_for_catalog(catalog, &mut tail), Some(Some(stack)));
+        assert_eq!(tail, [9]);
+        let mut rejected = vec![9];
+        assert!(append(Some(stack), &mut rejected).is_err());
+        assert_eq!(rejected, [9]);
+    }
 
     #[test]
     fn malformed_cursor_tail_does_not_become_an_empty_stack() {

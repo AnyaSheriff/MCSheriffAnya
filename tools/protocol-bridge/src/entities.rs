@@ -128,6 +128,9 @@ pub(crate) fn spawn_776(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVer
 }
 
 pub(crate) fn spawn(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), wire::Error> {
+    spawn_with_content(input,out,from,to,crate::content::ContentCodec::default())
+}
+pub(crate) fn spawn_with_content(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, content: crate::content::ContentCodec) -> Result<(), wire::Error> {
     uint(out, input.uint()?); out.extend(input.take(16)?);
     let kind = input.uint()?;
     uint(out, ids::translate(RegistryKind::Entity, from, to, kind)?);
@@ -147,7 +150,7 @@ pub(crate) fn spawn(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion
     let data = input.varint()?;
     let old_kind = ids::translate(RegistryKind::Entity, from, wire::INTERNAL, kind)?;
     uint(out, if old_kind == entity_layouts::FALLING_BLOCK {
-        ids::translate(RegistryKind::BlockState, from, to, u32::try_from(data).map_err(|_| wire::Error::Invalid)?)?
+        content.packet_id(RegistryKind::BlockState, from, to, u32::try_from(data).map_err(|_| wire::Error::Invalid)?)?
     } else { data as u32 }); // направление либо динамический entityId, не ID контента
     Ok(())
 }
@@ -227,9 +230,9 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 }
             }
             7 => {
-                let (stack,size) = items::decode(from,input.rest,false,context.items).map_err(wire::Error::Item)?;
+                let (stack,size) = items::decode_packet_slot(from,input.rest,false,context.items).map_err(wire::Error::Item)?;
                 input.take(size)?;
-                out.extend(items::encode(to,stack.as_ref(),false,context.items).map_err(wire::Error::Item)?);
+                out.extend(items::encode_packet_slot(to,stack.as_ref(),false,context.items).map_err(wire::Error::Item)?);
             }
             8 => out.push(u8::from(input.boolean()?)),
             10 => out.extend(input.take(8)?),
@@ -246,7 +249,7 @@ pub(crate) fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
                 // OptionalBlockState:0означает отсутствие, остальные — прямой
                 // stateID. Это НЕ OptionalUnsignedInt с добавлением единицы.
                 uint(out, if serializer == 15 && value == 0 { 0 }
-                    else { ids::translate(RegistryKind::BlockState,from,to,value)? });
+                    else { context.items.content.packet_id(RegistryKind::BlockState,from,to,value)? });
             }
             16 => crate::particles::particle(input,out,from,to,context.items)?,
             17 => {

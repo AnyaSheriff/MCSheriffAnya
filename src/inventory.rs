@@ -726,6 +726,32 @@ impl Inventory {
         out
     }
 
+    /// Строгий путь сохранений: неизвестное/усечённое не становится пустой ячейкой.
+    pub fn from_bytes_for_catalog(bytes: &[u8], catalog: crate::gameplay_catalog::Catalog) -> Result<Self, crate::gameplay_catalog::StackError> {
+        use crate::gameplay_catalog::{StackError, StackProblem};
+        let malformed = || StackError { path: Vec::new(), problem: StackProblem::MalformedEncoding };
+        let inventory = Self::from_bytes(bytes).ok_or_else(malformed)?;
+        catalog.validate_inventory(&inventory)?;
+        // Включая выбранный слот, custom TNT, компоненты и хвост атрибутов.
+        // Старый декодер может обрезать/пропустить запись — это не успех.
+        let canonical = inventory.to_bytes();
+        // Прежний писатель мог явно записывать пустой хвост атрибутов.
+        let legacy_empty_tail = inventory.seen_attributes.is_empty()
+            && bytes.strip_suffix(&[0]) == Some(canonical.as_slice());
+        if canonical != bytes && !legacy_empty_tail { return Err(malformed()); }
+        Ok(inventory)
+    }
+
+    /// Явный профиль проверяет предел до установки; общий каталог775 не меняется.
+    #[cfg(test)]
+    pub fn set_for_catalog(&mut self, slot: usize, stack: Option<Stack>, catalog: crate::gameplay_catalog::Catalog) -> Result<(), crate::gameplay_catalog::StackError> {
+        use crate::gameplay_catalog::{StackError, StackLocation, StackProblem};
+        let target = self.slots.get_mut(slot).ok_or_else(|| StackError { path: vec![StackLocation::Slot(slot)], problem: StackProblem::MalformedEncoding })?;
+        if let Some(stack) = &stack { catalog.validate_stack(stack)?; }
+        *target = stack;
+        Ok(())
+    }
+
     /// Читает инвентарь из файла игрока. None — запись испорчена.
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
         let selected = *bytes.first()?;
@@ -784,6 +810,19 @@ pub fn remainder(stack: Stack, count: i32) -> Option<Stack> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn strict_inventory_accepts_legacy_optional_empty_attribute_tail() {
+        let catalog = crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2);
+        let inventory = Inventory::new();
+        let canonical = inventory.to_bytes();
+        assert_eq!(Inventory::from_bytes_for_catalog(&canonical, catalog), Ok(inventory.clone()));
+        let mut legacy = canonical;
+        legacy.push(0);
+        assert_eq!(Inventory::from_bytes_for_catalog(&legacy, catalog), Ok(inventory));
+        legacy.push(0);
+        assert!(Inventory::from_bytes_for_catalog(&legacy, catalog).is_err());
+    }
+
     #[test]
     fn binding_blocks_every_supported_way_out_of_an_armor_slot() {
         let mut data = crate::stackdata::Data::default();

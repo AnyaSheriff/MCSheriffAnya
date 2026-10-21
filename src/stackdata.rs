@@ -300,6 +300,11 @@ pub fn intern(data: Data) -> Option<DataId> {
     Some(DataId(number))
 }
 
+/// Строгое чтение: неизвестный номер не превращается в пустые довески.
+pub fn try_get(id: DataId) -> Option<Data> {
+    table().lock().expect("таблица довесков захвачена другим потоком").entries.get(id.0 as usize).cloned()
+}
+
 /// Довески по номеру записи.
 pub fn get(id: DataId) -> Data {
     table().lock().expect("таблица довесков захвачена другим потоком").entries.get(id.0 as usize).cloned().unwrap_or_default()

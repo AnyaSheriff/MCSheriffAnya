@@ -5,13 +5,13 @@ fn nbt(input:&mut Cursor<'_>,out:&mut Vec<u8>)->Result<(),Error>{let n=registry:
 fn boolean(input:&mut Cursor<'_>,out:&mut Vec<u8>)->Result<bool,Error>{let value=input.boolean()?;out.push(u8::from(value));Ok(value)}
 fn floats(input:&mut Cursor<'_>,out:&mut Vec<u8>,count:usize)->Result<(),Error>{for _ in 0..count {let v=input.take(4)?;if !f32::from_be_bytes(v.try_into().map_err(|_|Error::Invalid)?).is_finite(){return Err(Error::Invalid);}out.extend(v);}Ok(())}
 fn template(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context)->Result<(),Error>{
-    let (stack,n)=items::decode_template(from,input.rest,context.items).map_err(Error::Item)?;input.take(n)?;
-    out.extend(items::encode_template(to,&stack,context.items).map_err(Error::Item)?);Ok(())
+    let (stack,n)=items::decode_packet_template(from,input.rest,context.items).map_err(Error::Item)?;input.take(n)?;
+    out.extend(items::encode_packet_template(to,&stack,context.items).map_err(Error::Item)?);Ok(())
 }
-fn item(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion)->Result<(),Error>{uint(out,ids::translate(RegistryKind::Item,from,to,input.uint()?)?);Ok(())}
-fn id_set(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion)->Result<(),Error>{
+fn item(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context)->Result<(),Error>{uint(out,context.items.content.packet_id(RegistryKind::Item,from,to,input.uint()?)?);Ok(())}
+fn id_set(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context)->Result<(),Error>{
     let n=input.count(65537)?;uint(out,n as u32);
-    if n==0 {string(input,out)?;} else {for _ in 1..n {item(input,out,from,to)?;}}Ok(())
+    if n==0 {string(input,out)?;} else {for _ in 1..n {item(input,out,from,to,context)?;}}Ok(())
 }
 fn display(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize,budget:&mut usize)->Result<(),Error>{
     if depth>32 || *budget==0 {return Err(Error::TooLarge);}*budget-=1;
@@ -20,9 +20,9 @@ fn display(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersio
         0|1=>(),
         2=>display(input,out,from,to,context,depth+1,budget)?,
         3=>{display(input,out,from,to,context,depth+1,budget)?;uint(out,ids::translate(RegistryKind::Component,from,to,input.uint()?)?);}
-        4=>item(input,out,from,to)?,
+        4=>item(input,out,from,to,context)?,
         5=>template(input,out,from,to,context)?,
-        6=>id_set(input,out,from,to)?,
+        6=>id_set(input,out,from,to,context)?,
         7|9=>{for _ in 0..2 {display(input,out,from,to,context,depth+1,budget)?;}}
         8=>{
             for _ in 0..2 {display(input,out,from,to,context,depth+1,budget)?;}
@@ -52,15 +52,15 @@ pub(crate) fn translate(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Ja
     match name {
         "declare_recipes"=>{
             let n=input.count(4096)?;uint(out,n as u32);
-            for _ in 0..n{string(input,out)?;let n=input.count(65536)?;uint(out,n as u32);for _ in 0..n{item(input,out,from,to)?;}}
+            for _ in 0..n{string(input,out)?;let n=input.count(65536)?;uint(out,n as u32);for _ in 0..n{item(input,out,from,to,context)?;}}
             let n=input.count(65536)?;uint(out,n as u32);
-            for _ in 0..n{id_set(input,out,from,to)?;display(input,out,from,to,context,0,&mut budget)?;}
+            for _ in 0..n{id_set(input,out,from,to,context)?;display(input,out,from,to,context,0,&mut budget)?;}
         }
         "recipe_book_add"=>{
             let n=input.count(65536)?;uint(out,n as u32);
             for _ in 0..n{
                 uint(out,input.uint()?);recipe(input,out,from,to,context,&mut budget)?;uint(out,input.uint()?);uint(out,input.count(12)? as u32);
-                if boolean(input,out)?{let n=input.count(1024)?;uint(out,n as u32);for _ in 0..n{id_set(input,out,from,to)?;}}
+                if boolean(input,out)?{let n=input.count(1024)?;uint(out,n as u32);for _ in 0..n{id_set(input,out,from,to,context)?;}}
                 let flags=input.take(1)?[0];if flags&!3!=0{return Err(Error::Invalid);}out.push(flags);
             }boolean(input,out)?;
         }

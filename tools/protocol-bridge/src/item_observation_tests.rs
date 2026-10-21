@@ -14,7 +14,7 @@ const SAMPLES: &[(&str, &str, &str, &str)] = &[
 const ENCHANTMENTS: &[&str] = &["aqua_affinity", "bane_of_arthropods", "binding_curse", "blast_protection", "breach", "channeling", "density", "depth_strider", "efficiency", "feather_falling", "fire_aspect", "fire_protection", "flame", "fortune", "frost_walker", "impaling", "infinity", "knockback", "looting", "loyalty", "luck_of_the_sea", "lunge", "lure", "mending", "multishot", "piercing", "power", "projectile_protection", "protection", "punch", "quick_charge", "respiration", "riptide", "sharpness", "silk_touch", "smite", "soul_speed", "sweeping_edge", "swift_sneak", "thorns", "unbreaking", "vanishing_curse", "wind_burst"];
 use crate::{items::{self, Component, Context, Stack}, legacy_items, JavaVersion::{V26_1_2 as OLD, V26_3 as NEW}, wire, Direction, State};
 fn bytes(hex: &str) -> Vec<u8> { hex.as_bytes().as_chunks::<2>().0.iter().map(|p|u8::from_str_radix(std::str::from_utf8(p).unwrap(),16).unwrap()).collect() }
-fn context() -> Context { Context {shared_enchantment_count:Some(ENCHANTMENTS.len() as u32)} }
+fn context() -> Context { Context {shared_enchantment_count:Some(ENCHANTMENTS.len() as u32), ..Default::default() } }
 fn legacy() -> legacy_items::Context<'static> { legacy_items::Context {enchantments:ENCHANTMENTS} }
 fn canonical(mut stack: Option<Stack>) -> Option<Stack> {
     if let Some(s) = &mut stack {s.added.sort_by_key(|c|c.kind);s.removed.sort();} stack

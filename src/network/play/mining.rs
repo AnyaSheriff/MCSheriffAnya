@@ -19,7 +19,7 @@ fn progress(player: &PlayerState, shared: &Shared, state: i32) -> f32 {
     use crate::survival::EffectKind;
     let tool = player.inventory.held();
     let underwater = vitals::eyes_in_water(&shared.world_in(player.dimension).lock().expect("мир"), player);
-    crate::mining::progress(state, tool, crate::mining::Conditions {
+    crate::mining::progress_with_catalog(shared.catalog(), state, tool, crate::mining::Conditions {
         haste: player.vit.effect_level(EffectKind::Haste),
         fatigue: player.vit.effect_level(EffectKind::MiningFatigue),
         underwater,

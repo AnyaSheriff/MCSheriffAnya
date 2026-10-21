@@ -51,13 +51,22 @@ fn with(state: i32, key: &str, value: &str) -> Option<i32> {
 }
 
 /// Рамка внутри клетки: от угла (доли блока).
-type Corners = ((f64, f64, f64), (f64, f64, f64));
+pub(crate) type Corners = ((f64, f64, f64), (f64, f64, f64));
 
 const THIN: f64 = 3.0 / 16.0;
 
 /// Обо что в клетке ударяется заряд: полный блок — куб, дверь и люк — своя
 /// тонкая плита, прочее неполное — насквозь [проверить: ступени, плиты,
 /// заборы и остальные формы].
+fn boxes_with_catalog(state: i32, catalog: crate::gameplay_catalog::Catalog) -> Vec<Corners> {
+    use crate::gameplay_catalog::SlabHalf;
+    if let Ok(Some((half, _))) = catalog.slab_properties(state) {
+        let (low, high) = match half { SlabHalf::Top => (0.5, 1.0), SlabHalf::Bottom => (0.0, 0.5), SlabHalf::Double => (0.0, 1.0) };
+        return vec![((0.0, low, 0.0), (1.0, high, 1.0))];
+    }
+    boxes(state)
+}
+
 fn boxes(state: i32) -> Vec<Corners> {
     let Some(name) = blocks::block_at_state(state) else {
         return Vec::new();
@@ -160,7 +169,7 @@ pub fn first_hit(world: &World, from: (f64, f64, f64), to: (f64, f64, f64)) -> O
     for x in lo.0.floor() as i32..=hi.0.floor() as i32 {
         for y in lo.1.floor() as i32..=hi.1.floor() as i32 {
             for z in lo.2.floor() as i32..=hi.2.floor() as i32 {
-                for (a, b) in boxes(world.get_block(x, y, z)) {
+                for (a, b) in boxes_with_catalog(world.get_block(x, y, z), world.catalog()) {
                     let corners = ((f64::from(x) + a.0, f64::from(y) + a.1, f64::from(z) + a.2), (f64::from(x) + b.0, f64::from(y) + b.1, f64::from(z) + b.2));
 
                     if let Some((part, normal)) = enter(from, step, corners)
@@ -284,5 +293,24 @@ mod tests {
     fn the_charge_knockback_is_stronger_than_the_breeze() {
         const { assert!(CHARGE_KNOCKBACK > BREEZE_KNOCKBACK) };
         assert_eq!(2.0 * CHARGE_POWER, 2.4);
+    }
+}
+
+#[cfg(test)]
+mod catalog_boxes_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog,Profile,SlabHalf};
+    #[test]
+    fn preview_ray_boxes_match_selected_six_state_json() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let source: serde_json::Value = serde_json::from_str(include_str!("gameplay_catalog/white-concrete-slab.json")).unwrap();
+        for (index,half) in [SlabHalf::Top,SlabHalf::Bottom,SlabHalf::Double].into_iter().enumerate() {
+            for (wet_index,wet) in [true,false].into_iter().enumerate() {
+                let boxes = boxes_with_catalog(catalog.slab_state(half,wet).unwrap(),catalog);
+                let (a,b)=boxes[0];
+                let actual = serde_json::json!([[a.0,a.1,a.2,b.0,b.1,b.2]]);
+                assert_eq!(actual,source["collision_by_state"][index*2+wet_index]);
+            }
+        }
     }
 }

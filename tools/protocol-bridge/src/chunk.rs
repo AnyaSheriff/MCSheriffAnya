@@ -15,29 +15,42 @@ pub struct Context {
 pub enum Error {
     UnsupportedVersion(JavaVersion), Invalid, Truncated, TooLarge, Context,
     Sections(chunk_sections::Error), Light(crate::light::Error),
-    Entity(block_entities::Error), Nbt(registry::Error), Id(ids::IdTranslationError),
+    Entity(block_entities::Error), Nbt(registry::Error), Id(ids::IdTranslationError), Content(crate::content::Error),
 }
 
 pub fn translate(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context) -> Result<Vec<u8>, Error> {
     for version in [from, to] {
         if !matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_3) { return Err(Error::UnsupportedVersion(version)); }
     }
-    translate_inner(from, to, payload, context)
+    translate_inner(from, to, payload, context, crate::content::ContentCodec::default())
+}
+
+/// Endpoint775 обозначает внутренний packet builder; content IDs при
+/// preview canonical. Публичный translate выше остаётся Wire→Wire base.
+pub fn translate_with_content(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context, content: crate::content::ContentCodec) -> Result<Vec<u8>, Error> {
+    if content.is_preview() && !matches!((from,to),
+        (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2)) {
+        return Err(Error::Context);
+    }
+    for version in [from,to] {
+        if !matches!(version,JavaVersion::V26_1_2|JavaVersion::V26_3) { return Err(Error::UnsupportedVersion(version)); }
+    }
+    translate_inner(from,to,payload,context,content)
 }
 
 // Только два шага ignored-test export: настоящий native775 builder → bounded776.
 // Публичный wrapper выше сохраняет свой прежний список поддержанных версий.
 #[cfg(test)]
 pub(crate) fn translate_776_fixture(payload: &[u8], context: Context) -> Result<Vec<u8>, Error> {
-    translate_inner(JavaVersion::V26_1_2, JavaVersion::V26_2, payload, context)
+    translate_inner(JavaVersion::V26_1_2, JavaVersion::V26_2, payload, context, crate::content::ContentCodec::default())
 }
 
 pub(crate) fn translate_776_bounded(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context) -> Result<Vec<u8>, Error> {
     if (from, to) != (JavaVersion::V26_1_2, JavaVersion::V26_2) { return Err(Error::UnsupportedVersion(to)); }
-    translate_inner(from, to, payload, context)
+    translate_inner(from, to, payload, context, crate::content::ContentCodec::default())
 }
 
-fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context) -> Result<Vec<u8>, Error> {
+fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: Context, content: crate::content::ContentCodec) -> Result<Vec<u8>, Error> {
     if payload.len() > MAX_BYTES { return Err(Error::TooLarge); }
     if context.sections == 0 || context.sections > 256 || context.min_y % 16 != 0
         || context.min_y < i32::from(i16::MIN) || context.min_y > i32::from(i16::MAX) - context.sections as i32 * 16 + 1 {
@@ -65,7 +78,7 @@ fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: 
     }
     let header_length = payload.len() - input.0.len();
     let size = input.count(MAX_BYTES)?;
-    let mut sections = chunk_sections::decode(from, input.take(size)?, context.sections, context.shared_biome_count).map_err(Error::Sections)?;
+    let mut sections = chunk_sections::decode_with_content(from, input.take(size)?, context.sections, context.shared_biome_count, content.packet_space(from), content).map_err(Error::Sections)?;
     let count = input.count(context.sections * 4096)?;
     if (from == JavaVersion::V26_2 || to == JavaVersion::V26_2) && count != 0 {
         return Err(Error::Entity(block_entities::Error::UnsupportedVersion));
@@ -97,7 +110,9 @@ fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: 
     }
     for (section_index, section) in sections.iter_mut().enumerate() {
         for (at, state) in section.blocks.iter_mut().enumerate() {
-            *state = ids::translate(RegistryKind::BlockState, from, to, *state).map_err(Error::Id)?;
+            *state = content.packet_id(RegistryKind::BlockState, from, to, *state).map_err(|error| match error {
+                crate::content::Error::Id(error) => Error::Id(error), error => Error::Content(error),
+            })?;
             if from == JavaVersion::V26_3 && to == JavaVersion::V26_1_2 && crate::block_entity_ids::legacy_bed(*state) {
                 let y = (context.min_y + section_index as i32 * 16 + (at / 256) as i32) as i16;
                 let xz = (((at & 15) << 4) | ((at >> 4) & 15)) as u8;
@@ -105,7 +120,7 @@ fn translate_inner(from: JavaVersion, to: JavaVersion, payload: &[u8], context: 
             }
         }
     }
-    let sections = chunk_sections::encode(to, &sections, context.shared_biome_count).map_err(Error::Sections)?;
+    let sections = chunk_sections::encode_with_content(to, &sections, context.shared_biome_count, content.packet_space(to), content).map_err(Error::Sections)?;
     let mut out = payload[..header_length].to_vec();
     uint(&mut out, sections.len() as u32); out.extend(sections);
     uint(&mut out, entities.len() as u32);

@@ -2,10 +2,11 @@
 //! «length ... no longer sent»; значения не пересекают границу long.
 //! Динамические ID биомов должны совпадать у обеих сторон (контракт вызывающего).
 use std::collections::BTreeMap;
+use crate::content::{ContentCodec, IdSpace};
 use crate::{JavaVersion, ids::{self, RegistryKind}};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Error { UnsupportedVersion, Invalid, Truncated, TooLarge, Id(ids::IdTranslationError) }
+pub enum Error { UnsupportedVersion, Invalid, Truncated, TooLarge, Id(ids::IdTranslationError), Content(crate::content::Error) }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Section {
@@ -13,6 +14,10 @@ pub struct Section {
     pub fluids_present: u16,
     pub blocks: Vec<u32>,
     pub biomes: Vec<u32>,
+}
+
+fn content_error(error: crate::content::Error) -> Error {
+    match error { crate::content::Error::Id(error) => Error::Id(error), error => Error::Content(error) }
 }
 
 fn block_bits(version: JavaVersion) -> Result<u8, Error> {
@@ -31,6 +36,9 @@ fn uint(out: &mut Vec<u8>, mut value: u32) {
 }
 
 pub fn decode(version: JavaVersion, bytes: &[u8], sections: usize, biome_count: u32) -> Result<Vec<Section>, Error> {
+    decode_with_content(version,bytes,sections,biome_count,IdSpace::Wire(version),ContentCodec::default())
+}
+pub fn decode_with_content(version: JavaVersion, bytes: &[u8], sections: usize, biome_count: u32, space: IdSpace, content: ContentCodec) -> Result<Vec<Section>, Error> {
     let direct = block_bits(version)?;
     if bytes.len() > 8 * 1024 * 1024 || sections > 256 { return Err(Error::TooLarge); }
     if sections == 0 || biome_count == 0 || biome_count > 65_536 { return Err(Error::Invalid); }
@@ -41,7 +49,7 @@ pub fn decode(version: JavaVersion, bytes: &[u8], sections: usize, biome_count: 
         let fluids_present = u16::from_be_bytes(input.take(2)?.try_into().map_err(|_| Error::Invalid)?);
         if blocks_present > 4096 || fluids_present > 4096 { return Err(Error::Invalid); }
         let blocks = input.palette(4096, 4, 8, direct)?;
-        for &id in &blocks { ids::translate(RegistryKind::BlockState, version, version, id).map_err(Error::Id)?; }
+        for &id in &blocks { content.map(RegistryKind::BlockState, space, space, id).map_err(content_error)?; }
         let biomes = input.palette(64, 1, 3, bits(biome_count))?;
         if biomes.iter().any(|id| *id >= biome_count) { return Err(Error::Invalid); }
         out.push(Section { blocks_present, fluids_present, blocks, biomes });
@@ -60,6 +68,9 @@ pub fn translate(from: JavaVersion, to: JavaVersion, bytes: &[u8], sections: usi
 }
 
 pub fn encode(version: JavaVersion, sections: &[Section], biome_count: u32) -> Result<Vec<u8>, Error> {
+    encode_with_content(version,sections,biome_count,IdSpace::Wire(version),ContentCodec::default())
+}
+pub fn encode_with_content(version: JavaVersion, sections: &[Section], biome_count: u32, space: IdSpace, content: ContentCodec) -> Result<Vec<u8>, Error> {
     let direct = block_bits(version)?;
     if sections.is_empty() || sections.len() > 256 || biome_count == 0 || biome_count > 65_536 { return Err(Error::Invalid); }
     let mut out = Vec::new();
@@ -67,7 +78,10 @@ pub fn encode(version: JavaVersion, sections: &[Section], biome_count: u32) -> R
         if section.blocks.len() != 4096 || section.biomes.len() != 64 || section.blocks_present > 4096 || section.fluids_present > 4096 {
             return Err(Error::Invalid);
         }
-        for &id in &section.blocks { ids::translate(RegistryKind::BlockState, version, version, id).map_err(Error::Id)?; }
+        for &id in &section.blocks {
+            content.map(RegistryKind::BlockState, space, space, id).map_err(content_error)?;
+            if id >= (1u32 << direct) { return Err(Error::Invalid); }
+        }
         if section.biomes.iter().any(|id| *id >= biome_count) { return Err(Error::Invalid); }
         out.extend(section.blocks_present.to_be_bytes()); out.extend(section.fluids_present.to_be_bytes());
         palette(&mut out, &section.blocks, 4, 8, direct);

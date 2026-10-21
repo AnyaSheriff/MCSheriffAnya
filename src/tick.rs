@@ -958,6 +958,7 @@ fn step_frames(shared: &Shared, dimension: Dimension, world: &mut World) {
 pub struct MobView<'a>(pub &'a World);
 
 impl crate::mob::View for MobView<'_> {
+    fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.0.catalog() }
     fn biome(&self, x: i32, y: i32, z: i32) -> &'static str { self.0.mob_biome(x,y,z) }
     fn griefing(&self) -> bool { self.0.wildlife_griefing }
     fn raining(&self) -> bool { !self.0.is_nether() && !self.0.is_end() && self.0.weather.is_raining() }
@@ -3106,7 +3107,7 @@ pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
     let wanted = {
         let view = |x, y, z| world.get_block(x, y, z);
 
-        fluids::in_world(world.is_nether(), || fluids::update((x, y, z), &view))
+        fluids::in_world(world.is_nether(), || fluids::update_with_catalog((x, y, z), &view, world.catalog()))
     };
 
     if let Some(state) = wanted {
@@ -3127,7 +3128,7 @@ pub(crate) fn flow(world: &mut World, x: i32, y: i32, z: i32) {
     let targets = {
         let view = |x, y, z| world.get_block(x, y, z);
 
-        fluids::in_world(world.is_nether(), || fluids::spreading((x, y, z), &view))
+        fluids::in_world(world.is_nether(), || fluids::spreading_with_catalog((x, y, z), &view, world.catalog()))
     };
 
     for ((tx, ty, tz), state) in targets {

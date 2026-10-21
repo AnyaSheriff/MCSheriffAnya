@@ -117,3 +117,58 @@ fn preview_fingerprint_never_relabels_or_changes_native_profile() {
     assert_eq!(Catalog::new(Profile::Preview26_3).registry_id(), preview);
     assert_eq!(crate::world::profile::current_profile(), before);
 }
+
+#[test]
+fn runtime_resolvers_preserve_profile_boundary_and_validate_properties() {
+    assert_eq!(PREVIEW.block_for_item(WHITE_SLAB_ITEM), Ok(Some((WHITE_SLAB_NAME, WHITE_SLAB_DEFAULT_STATE))));
+    assert_eq!(PREVIEW.item_for_block(WHITE_SLAB_NAME), Ok(Some(WHITE_SLAB_ITEM)));
+    assert_eq!(PREVIEW.block_id(WHITE_SLAB_NAME), Ok(Some(WHITE_SLAB_BLOCK)));
+    assert_eq!(PREVIEW.states_of(WHITE_SLAB_NAME), Ok(Some((WHITE_SLAB_FIRST_STATE, WHITE_SLAB_LAST_STATE))));
+    for text in ["white_concrete_slab", "minecraft:white_concrete_slab[type=bottom,waterlogged=false]"] {
+        assert_eq!(PREVIEW.state_from_text(text), Ok(Some(WHITE_SLAB_DEFAULT_STATE)));
+        assert!(matches!(OLD_CATALOG.state_from_text(text), Err(Error::Disabled { .. })));
+    }
+    for text in ["white_concrete_slab[type=side]", "white_concrete_slab[type=top,type=bottom]",
+        "white_concrete_slab[unknown=true]", "white_concrete_slab[type=top"] {
+        assert_eq!(PREVIEW.state_from_text(text), Ok(None));
+    }
+    for state in WHITE_SLAB_FIRST_STATE..=WHITE_SLAB_LAST_STATE {
+        let orientation = PREVIEW.orientation_of(state).unwrap().unwrap();
+        assert_eq!(orientation.family, crate::blocks::Family::Slab);
+        let (half, wet) = PREVIEW.slab_properties(state).unwrap().unwrap();
+        assert_eq!(orientation.value(state, "waterlogged"), Some(if wet { "true" } else { "false" }));
+        assert_eq!(orientation.value(state, "type"), Some(match half { SlabHalf::Top => "top", SlabHalf::Bottom => "bottom", SlabHalf::Double => "double" }));
+        assert!(matches!(OLD_CATALOG.orientation_of(state), Err(Error::Disabled { .. })));
+        assert!(matches!(OLD_CATALOG.mining_properties(state), Err(Error::Disabled { .. })));
+        assert!(matches!(OLD_CATALOG.light_properties(state), Err(Error::Disabled { .. })));
+    }
+}
+
+#[test]
+fn runtime_mining_metadata_uses_pinned_values_and_internal_tool_identity() {
+    let selected: serde_json::Value = serde_json::from_str(include_str!("white-concrete-slab.json")).unwrap();
+    let (hardness, material, tools) = PREVIEW.mining_properties(WHITE_SLAB_DEFAULT_STATE).unwrap();
+    assert_eq!(f64::from(hardness), f64::from(selected["block"]["hardness"].as_f64().unwrap() as f32));
+    assert_eq!(material, selected["block"]["material"].as_str().unwrap());
+    assert_eq!(PREVIEW.blast_resistance(WHITE_SLAB_DEFAULT_STATE), Ok(1.8));
+    let mut translated = selected["block"]["harvestTools"].as_object().unwrap().keys()
+        .map(|id| PREVIEW.decode_client_id(Kind::Item, id.parse().unwrap(), NEW).unwrap()).collect::<Vec<_>>();
+    translated.sort_unstable();
+    assert_eq!(tools, translated);
+    for state in WHITE_SLAB_FIRST_STATE..=WHITE_SLAB_LAST_STATE {
+        let (emit, filter, _) = PREVIEW.light_properties(state).unwrap();
+        assert_eq!((emit, filter), (0, 0));
+        assert_eq!(PREVIEW.drops_by_luck(state, None, 0.5), Ok(None));
+        assert_eq!(PREVIEW.drops_by_luck(state, crate::blocks::item_named("iron_shovel"), 0.5), Ok(None));
+        for &tool in tools {
+            let half = PREVIEW.slab_properties(state).unwrap().unwrap().0;
+            assert_eq!(PREVIEW.drops_by_luck(state, Some(tool), 0.5),
+                Ok(Some(crate::inventory::Stack::new(WHITE_SLAB_ITEM, if half == SlabHalf::Double { 2 } else { 1 }))));
+        }
+    }
+    let stone = crate::blocks::state_by_name("stone").unwrap();
+    assert_eq!(PREVIEW.mining_properties(stone).unwrap(), crate::mining::properties(stone));
+    assert_eq!(PREVIEW.drops_by_luck(stone, Some(tools[0]), 0.5).unwrap(), crate::blocks::drops_by_luck(stone, Some(tools[0]), 0.5));
+    assert!(PREVIEW.light_properties(-1).is_err());
+    assert!(PREVIEW.block_for_item(-1).is_err());
+}

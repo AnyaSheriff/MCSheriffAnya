@@ -139,6 +139,7 @@ pub(super) fn input(shared: &Shared, player: &PlayerState, flags: u8) {
 
 struct View<'a>(&'a World);
 impl crate::mob::View for View<'_> {
+    fn catalog(&self) -> crate::gameplay_catalog::Catalog { self.0.catalog() }
     fn block(&self, x: i32, y: i32, z: i32) -> i32 { self.0.get_block(x, y, z) }
     fn loaded(&self, x: i32, z: i32) -> bool { self.0.has_chunk(x, z) }
 }

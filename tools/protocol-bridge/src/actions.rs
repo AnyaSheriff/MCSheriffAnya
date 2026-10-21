@@ -14,9 +14,9 @@ fn sound(input:&mut Cursor<'_>,out:&mut Vec<u8>)->Result<(),Error>{
     if id!=0{return Err(Error::PayloadUnavailable("static sound registry"));}
     uint(out,0);string(input,out)?;let fixed=input.boolean()?;out.push(u8::from(fixed));if fixed{floats(input,out,1,false)?;}Ok(())
 }
-fn prediction(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion)->Result<(),Error>{
+fn prediction(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,content:crate::content::ContentCodec)->Result<(),Error>{
     let present=input.boolean()?;out.push(u8::from(present));if !present{return Ok(());}
-    let item=ids::translate(RegistryKind::Item,from,to,input.uint()?)?;if item==0{return Err(Error::Invalid);}uint(out,item);
+    let item=content.packet_id(RegistryKind::Item,from,to,input.uint()?)?;if item==0{return Err(Error::Invalid);}uint(out,item);
     let count=input.count(127)?;if count==0{return Err(Error::Invalid);}uint(out,count as u32);
     let mut seen=BTreeSet::new();
     let n=input.count(256)?;uint(out,n as u32);
@@ -31,7 +31,11 @@ fn prediction(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVer
     for _ in 0..n {let kind=ids::translate(RegistryKind::Component,from,to,input.uint()?)?;if !seen.insert(kind){return Err(Error::Invalid);}uint(out,kind);}
     Ok(())
 }
+#[cfg(test)]
 pub(crate) fn click(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion)->Result<(),Error>{
+    click_with_content(input,out,from,to,crate::content::ContentCodec::default())
+}
+pub(crate) fn click_with_content(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,content:crate::content::ContentCodec)->Result<(),Error>{
     uint(out,input.uint()?);
     // Официальные775/777 принимают revision=-1 и возвращают полный снимок
     // (probe_inventory_modes.py). Сохраняем signed VarInt без смены смысла.
@@ -39,9 +43,9 @@ pub(crate) fn click(input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:J
     let n=input.count(128)?;uint(out,n as u32);let mut seen=BTreeSet::new();
     for _ in 0..n {
         let slot=input.take(2)?;let number=i16::from_be_bytes(slot.try_into().map_err(|_|Error::Invalid)?);
-        if number<0 || !seen.insert(number){return Err(Error::Invalid);}out.extend(slot);prediction(input,out,from,to)?;
+        if number<0 || !seen.insert(number){return Err(Error::Invalid);}out.extend(slot);prediction(input,out,from,to,content)?;
     }
-    prediction(input,out,from,to)
+    prediction(input,out,from,to,content)
 }
 pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:JavaVersion,to:JavaVersion,context:Context)->Result<(),Error>{
     match name {
@@ -83,7 +87,7 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
             let data=match kind {
                 // Wiki Java Edition protocol/Packets, Level Event:
                 // 2001/3008: «Block state ID» (слом и завершение археологии).
-                2001|3008=>ids::translate(RegistryKind::BlockState,from,to,u32::try_from(data).map_err(|_|Error::Invalid)?)? as i32,
+                2001|3008=>context.items.content.packet_id(RegistryKind::BlockState,from,to,u32::try_from(data).map_err(|_|Error::Invalid)?)? as i32,
                 // Цвета, направления и число частиц, а не ID содержимого.
                 1500..=1505|2000|2002..=2004|2006..=2013|3000..=3007|3009=>data,
                 _=>return Err(Error::PayloadUnavailable("unverified level event data")),

@@ -1,22 +1,23 @@
 //! Предметы775↔777 и ограниченные Slot/ItemStackTemplate776: только разобранные компоненты.
 //! Источник: закреплённые Slot/UntrustedSlotComponent в protocol.json.
 use std::collections::BTreeSet;
-use crate::{JavaVersion, ids::{self, RegistryKind}, registry};
+use crate::{JavaVersion, ids::{self, RegistryKind}, registry, content::{ContentCodec, IdSpace}};
 
 pub(crate) const LIMIT: usize = 1024 * 1024;
 #[derive(Clone, Copy, Default)]
 pub struct Context {
     /// Одинаковые порядок и содержимое реестра зачарований ОБЯЗАТЕЛЬНЫ.
     pub shared_enchantment_count: Option<u32>,
+    pub content: ContentCodec,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
     UnsupportedVersion(JavaVersion), Invalid, Truncated, TooLarge, UnsupportedComponent(u32), MissingEnchantmentContext,
-    Id(ids::IdTranslationError), Nbt(registry::Error),
+    Id(ids::IdTranslationError), Content(crate::content::Error), Nbt(registry::Error),
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Component { pub kind: u32, pub data: Vec<u8> }
-/// ID предмета и компонентов здесь всегда в пространстве775.
+/// ID предмета принадлежит canonical catalog; ID компонентов остаются775.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Stack { pub item: u32, pub count: u32, pub added: Vec<Component>, pub removed: Vec<u32> }
 
@@ -55,6 +56,13 @@ fn id(kind: RegistryKind, from: JavaVersion, to: JavaVersion, value: u32) -> Res
     ids::translate(kind, from, to, value).map_err(Error::Id)
 }
 
+pub(crate) fn content_id(context: Context, kind: RegistryKind, from: IdSpace, to: IdSpace, value: u32) -> Result<u32, Error> {
+    context.content.map(kind, from, to, value).map_err(|error| match error {
+        crate::content::Error::Id(error) => Error::Id(error),
+        error => Error::Content(error),
+    })
+}
+
 // Таблица ID сама по себе не разрешает payload этой версии.
 fn supported_payload(version: JavaVersion) -> Result<(), Error> {
     if matches!(version, JavaVersion::V26_1_2 | JavaVersion::V26_2 | JavaVersion::V26_3) { Ok(()) }
@@ -76,16 +84,42 @@ fn supported_form(version: JavaVersion, untrusted: bool) -> Result<(), Error> {
 /// Разбирает ровно один слот; возвращает число прочитанных байтов для массива слотов.
 /// untrusted=true только для serverbound Creative Slot: компоненты имеют длину.
 pub fn decode(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Context) -> Result<(Option<Stack>, usize), Error> {
-    decode_stack(version, bytes, untrusted, context, false)
+    decode_stack(version, bytes, untrusted, context, false, IdSpace::Wire(version))
 }
 
 /// ItemStackTemplate (в том числе recipe display): ID перед количеством, пустого слота нет.
 pub fn decode_template(version: JavaVersion, bytes: &[u8], context: Context) -> Result<(Stack, usize), Error> {
-    let (stack, size) = decode_stack(version, bytes, false, context, true)?;
+    let (stack, size) = decode_stack(version, bytes, false, context, true, IdSpace::Wire(version))?;
     Ok((stack.ok_or(Error::Invalid)?, size))
 }
 
-fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Context, template: bool) -> Result<(Option<Stack>, usize), Error> {
+/// Внутренний payload использует раскладку775, но canonical ID предметов.
+/// Его нельзя читать как настоящий Slot клиента775 при включённом extension.
+pub fn decode_canonical(bytes: &[u8], untrusted: bool, context: Context) -> Result<(Option<Stack>, usize), Error> {
+    decode_stack(JavaVersion::V26_1_2, bytes, untrusted, context, false, IdSpace::Canonical)
+}
+pub fn decode_canonical_template(bytes: &[u8], context: Context) -> Result<(Stack, usize), Error> {
+    let (stack, size) = decode_stack(JavaVersion::V26_1_2, bytes, false, context, true, IdSpace::Canonical)?;
+    Ok((stack.ok_or(Error::Invalid)?, size))
+}
+
+// Эти функции вызываются только translator-ом пакетов:775 endpoint —
+// внутренний builder, не настоящий клиент775 при private preview.
+pub(crate) fn decode_packet_slot(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Context) -> Result<(Option<Stack>, usize), Error> {
+    decode_stack(version,bytes,untrusted,context,false,context.content.packet_space(version))
+}
+pub(crate) fn encode_packet_slot(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, context: Context) -> Result<Vec<u8>, Error> {
+    encode_stack(version,stack,untrusted,context,false,context.content.packet_space(version))
+}
+pub(crate) fn decode_packet_template(version: JavaVersion, bytes: &[u8], context: Context) -> Result<(Stack, usize), Error> {
+    let (stack,size)=decode_stack(version,bytes,false,context,true,context.content.packet_space(version))?;
+    Ok((stack.ok_or(Error::Invalid)?,size))
+}
+pub(crate) fn encode_packet_template(version: JavaVersion, stack: &Stack, context: Context) -> Result<Vec<u8>, Error> {
+    encode_stack(version,Some(stack),false,context,true,context.content.packet_space(version))
+}
+
+fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Context, template: bool, source: IdSpace) -> Result<(Option<Stack>, usize), Error> {
     supported_form(version, untrusted)?;
     if bytes.len() > LIMIT { return Err(Error::TooLarge); }
     let mut input = Reader(bytes);
@@ -94,7 +128,7 @@ fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Co
     if count == 0 {
         return if template { Err(Error::Invalid) } else { Ok((None, bytes.len() - input.0.len())) };
     }
-    let item = id(RegistryKind::Item, version, JavaVersion::V26_1_2, match template_id { Some(id) => id, None => input.uint()? })?;
+    let item = content_id(context, RegistryKind::Item, source, IdSpace::Canonical, match template_id { Some(id) => id, None => input.uint()? })?;
     if item == 0 { return Err(Error::Invalid); }
     let added_count = input.count(256)?; let removed_count = input.count(256)?;
     let mut added = Vec::new(); let mut removed = Vec::new(); let mut seen = BTreeSet::new();
@@ -103,11 +137,11 @@ fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Co
         if !seen.insert(kind) { return Err(Error::Invalid); }
         let data = if untrusted {
             let size = input.count(LIMIT)?; let data = input.take(size)?;
-            let mut component = Reader(data); let data=component_bytes(kind,&mut component,version,JavaVersion::V26_1_2,context)?;
+            let mut component = Reader(data); let data=component_bytes_at_spaces(kind,&mut component,version,JavaVersion::V26_1_2,context,0,(source,IdSpace::Canonical))?;
             if !component.0.is_empty() { return Err(Error::Invalid); }
             data
         } else {
-            component_bytes(kind,&mut input,version,JavaVersion::V26_1_2,context)?
+            component_bytes_at_spaces(kind,&mut input,version,JavaVersion::V26_1_2,context,0,(source,IdSpace::Canonical))?
         };
         if data.len()>LIMIT{return Err(Error::TooLarge);}
         added.push(Component { kind, data });
@@ -121,26 +155,33 @@ fn decode_stack(version: JavaVersion, bytes: &[u8], untrusted: bool, context: Co
 }
 
 pub fn encode(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, context: Context) -> Result<Vec<u8>, Error> {
-    encode_stack(version, stack, untrusted, context, false)
+    encode_stack(version, stack, untrusted, context, false, IdSpace::Wire(version))
 }
 
 pub fn encode_template(version: JavaVersion, stack: &Stack, context: Context) -> Result<Vec<u8>, Error> {
-    encode_stack(version, Some(stack), false, context, true)
+    encode_stack(version, Some(stack), false, context, true, IdSpace::Wire(version))
 }
 
-fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, context: Context, template: bool) -> Result<Vec<u8>, Error> {
+pub fn encode_canonical(stack: Option<&Stack>, untrusted: bool, context: Context) -> Result<Vec<u8>, Error> {
+    encode_stack(JavaVersion::V26_1_2, stack, untrusted, context, false, IdSpace::Canonical)
+}
+pub fn encode_canonical_template(stack: &Stack, context: Context) -> Result<Vec<u8>, Error> {
+    encode_stack(JavaVersion::V26_1_2, Some(stack), false, context, true, IdSpace::Canonical)
+}
+
+fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, context: Context, template: bool, target: IdSpace) -> Result<Vec<u8>, Error> {
     supported_form(version, untrusted)?;
     let Some(stack) = stack else { return Ok(vec![0]); };
     if !(1..=127).contains(&stack.count) || stack.item == 0 || stack.added.len() > 256 || stack.removed.len() > 256 { return Err(Error::Invalid); }
     let mut out = Vec::new();
-    let item = id(RegistryKind::Item, JavaVersion::V26_1_2, version, stack.item)?;
+    let item = content_id(context, RegistryKind::Item, IdSpace::Canonical, target, stack.item)?;
     for value in if template { [item, stack.count] } else { [stack.count, item] } { uint(&mut out, value); }
     uint(&mut out, stack.added.len() as u32); uint(&mut out, stack.removed.len() as u32);
     let mut seen = BTreeSet::new();
     for component in &stack.added {
         if !seen.insert(component.kind) { return Err(Error::Invalid); }
         if component.data.len() > LIMIT { return Err(Error::TooLarge); }
-        let mut input = Reader(&component.data); let data=component_bytes(component.kind,&mut input,JavaVersion::V26_1_2,version,context)?;
+        let mut input = Reader(&component.data); let data=component_bytes_at_spaces(component.kind,&mut input,JavaVersion::V26_1_2,version,context,0,(IdSpace::Canonical,target))?;
         if !input.0.is_empty() { return Err(Error::Invalid); }
         uint(&mut out, id(RegistryKind::Component, JavaVersion::V26_1_2, version, component.kind)?);
         if untrusted { uint(&mut out, data.len() as u32); }
@@ -157,10 +198,10 @@ fn encode_stack(version: JavaVersion, stack: Option<&Stack>, untrusted: bool, co
 }
 
 pub(crate) fn component_bytes(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context)->Result<Vec<u8>,Error>{
-    component_bytes_at(kind,input,from,to,context,0)
+    component_bytes_at_spaces(kind,input,from,to,context,0,(context.content.packet_space(from),context.content.packet_space(to)))
 }
 
-pub(crate) fn component_bytes_at(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize)->Result<Vec<u8>,Error>{
+pub(crate) fn component_bytes_at_spaces(kind:u32,input:&mut Reader<'_>,from:JavaVersion,to:JavaVersion,context:Context,depth:usize,spaces:(IdSpace,IdSpace))->Result<Vec<u8>,Error>{
     supported_payload(from)?; supported_payload(to)?;
     if (from == JavaVersion::V26_2 || to == JavaVersion::V26_2)
         && !matches!(kind,3|6|16|40|45|84|25|49|50|75) {
@@ -177,7 +218,7 @@ pub(crate) fn component_bytes_at(kind:u32,input:&mut Reader<'_>,from:JavaVersion
     // Для776 вложенные формы25/49/50/75 разрешены только по равенству pinned
     // схем775/776 (fixture); live776 nested ещё НЕ проверены. Общие32 уровня,
     // 256 записей и LIMIT сохраняются, внутри действует тот же component gate.
-    if matches!(kind,25|49|50|75){return crate::nested_items::remap(kind,input,from,to,context,depth);}
+    if matches!(kind,25|49|50|75){return crate::nested_items::remap_with_spaces(kind,input,from,to,context,depth,spaces);}
     if matches!(kind,16|18){return crate::item_components::remap(kind,input,from,to);}
     let start=input.0;component_data(kind,input,context)?;Ok(start[..start.len()-input.0.len()].to_vec())
 }
@@ -264,3 +305,7 @@ pub(crate) fn fields(mut bytes: &[u8]) -> Result<Vec<NbtField<'_>>, Error> {
 #[cfg(test)]
 #[path = "item_776_tests.rs"]
 mod tests_776;
+
+#[cfg(test)]
+#[path = "items_catalog_tests.rs"]
+mod catalog_tests;

@@ -25,7 +25,7 @@ fn metadata(count: u8) -> Vec<u8> {
     stack.as_mut().unwrap().count = u32::from(count);
     let mut out = vec![47, 0, 0, 0, 1, 1, 0, 2, 6, 0, 3, 8, 0, 4, 8, 0, 5, 8, 1, 8, 7];
     out.extend(crate::items::encode(crate::wire::INTERNAL, stack.as_ref(), false,
-        crate::items::Context { shared_enchantment_count: Some(0) }).unwrap()); out.push(255); out
+        crate::items::Context { shared_enchantment_count: Some(0), ..Default::default() }).unwrap()); out.push(255); out
 }
 fn registered() -> Tracker {
     let mut state = Tracker::default(); translate(&mut state, 0x01, &spawn(-59.5)).unwrap(); state

@@ -18,6 +18,7 @@ pub struct CryptoStream<S> {
     decryptor: Option<Decryptor>,
     read_taken: bool,
     pub protocol: Option<mcsa_protocol::Negotiated>,
+    pub(crate) content: mcsa_protocol::content::ContentCodec,
     pub login_session_id: Option<[u8; 16]>,
     pub legacy: Option<LegacySession>,
     #[cfg(test)]
@@ -26,7 +27,7 @@ pub struct CryptoStream<S> {
 
 impl<S> CryptoStream<S> {
     pub fn new(inner: S) -> Self {
-        Self { inner, encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None, legacy: None, #[cfg(test)] probe_776: false }
+        Self { inner, content: Default::default(), encryptor: None, decryptor: None, read_taken: false, protocol: None, login_session_id: None, legacy: None, #[cfg(test)] probe_776: false }
     }
 
     pub(crate) fn probe_776_enabled(&self) -> bool {
@@ -66,6 +67,7 @@ impl Connection {
         let mut reader = Self::new(tokio::net::TcpStream::from_std(own)?);
         reader.decryptor = self.decryptor.take();
         reader.protocol = self.protocol;
+        reader.content = self.content;
         reader.login_session_id = self.login_session_id;
         reader.legacy = self.legacy.clone();
         #[cfg(test)]

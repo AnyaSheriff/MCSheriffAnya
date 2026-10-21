@@ -25,6 +25,9 @@
 use std::sync::OnceLock;
 
 use crate::blocks;
+use crate::gameplay_catalog::Catalog;
+#[cfg(test)]
+use crate::gameplay_catalog::Profile;
 use crate::world::AIR;
 
 /// Уровень источника.
@@ -191,6 +194,14 @@ pub fn source_at(state: i32) -> Option<(Kind, i32)> {
         .then_some((Kind::Water, SOURCE))
 }
 
+/// Вода первого нового блока разрешается только выбранным каталогом мира.
+pub fn source_at_with_catalog(state: i32, catalog: crate::gameplay_catalog::Catalog) -> Option<(Kind, i32)> {
+    if let Ok(Some((_, wet))) = catalog.slab_properties(state) {
+        return wet.then_some((Kind::Water, SOURCE));
+    }
+    source_at(state)
+}
+
 /// Рыхлый ли это снег.
 ///
 /// Он не жидкость, но жидкости его касается: вода и лава его не обтекают,
@@ -307,7 +318,15 @@ fn drains_into(state: i32) -> bool {
 /// спуск.
 ///
 /// None означает «менять нечего».
+#[cfg(test)]
 pub fn update<F>(at: (i32, i32, i32), block: &F) -> Option<i32>
+where
+    F: Fn(i32, i32, i32) -> i32,
+{
+    update_with_catalog(at, block, Catalog::new(Profile::Java26_1_2))
+}
+
+pub fn update_with_catalog<F>(at: (i32, i32, i32), block: &F, catalog: Catalog) -> Option<i32>
 where
     F: Fn(i32, i32, i32) -> i32,
 {
@@ -333,7 +352,7 @@ where
         return None;
     }
 
-    let supply = supply(at, fluid_at(here).map(|(kind, _)| kind), block);
+    let supply = supply(at, fluid_at(here).map(|(kind, _)| kind), block, catalog);
 
     // Жидкости здесь нет, и прийти ей неоткуда — место остаётся, каким было.
     // Высыхает только сама жидкость: рыхлый снег или цветок, рядом с которым
@@ -345,7 +364,7 @@ where
     // Вода между двумя источниками сама становится источником — отсюда
     // берётся бесконечная вода.
     if let Some((Kind::Water, _)) = supply
-        && becomes_source(at, block)
+        && becomes_source(at, block, catalog)
     {
         let source = state_of(Kind::Water, SOURCE);
 
@@ -374,14 +393,22 @@ where
 /// Лава, которой есть куда падать в воду, делает из воды камень (вики,
 /// Lava: «If lava flows into water from above, the water turns into
 /// stone»).
+#[cfg(test)]
 pub fn spreading<F>(from: (i32, i32, i32), block: &F) -> Vec<((i32, i32, i32), i32)>
+where
+    F: Fn(i32, i32, i32) -> i32,
+{
+    spreading_with_catalog(from, block, Catalog::new(Profile::Java26_1_2))
+}
+
+pub fn spreading_with_catalog<F>(from: (i32, i32, i32), block: &F, catalog: Catalog) -> Vec<((i32, i32, i32), i32)>
 where
     F: Fn(i32, i32, i32) -> i32,
 {
     let (x, y, z) = from;
     let mut out = Vec::new();
 
-    let Some((kind, _)) = source_at(block(x, y, z)) else {
+    let Some((kind, _)) = source_at_with_catalog(block(x, y, z), catalog) else {
         return out;
     };
 
@@ -390,7 +417,7 @@ where
 
     if kind == Kind::Lava && matches!(fluid_at(under), Some((Kind::Water, _))) {
         out.push((below, named_state("stone")));
-    } else if let Some(state) = poured(below, kind, block) {
+    } else if let Some(state) = poured(below, kind, block, catalog) {
         out.push((below, state));
     }
 
@@ -400,8 +427,8 @@ where
         let (dx, dz) = SIDES[side];
         let to = (x + dx, y, z + dz);
 
-        if flows_towards(from, side, kind, block)
-            && let Some(state) = poured(to, kind, block)
+        if flows_towards(from, side, kind, block, catalog)
+            && let Some(state) = poured(to, kind, block, catalog)
         {
             out.push((to, state));
         }
@@ -412,7 +439,7 @@ where
 
 /// Что встанет в пустом месте, куда растекается эта жидкость. None — место
 /// занято или питать его нечем.
-fn poured<F>(at: (i32, i32, i32), kind: Kind, block: &F) -> Option<i32>
+fn poured<F>(at: (i32, i32, i32), kind: Kind, block: &F, catalog: Catalog) -> Option<i32>
 where
     F: Fn(i32, i32, i32) -> i32,
 {
@@ -428,9 +455,9 @@ where
         return None;
     }
 
-    let (kind, level) = supply(at, Some(kind), block)?;
+    let (kind, level) = supply(at, Some(kind), block, catalog)?;
 
-    if kind == Kind::Water && becomes_source(at, block) {
+    if kind == Kind::Water && becomes_source(at, block, catalog) {
         return Some(state_of(Kind::Water, SOURCE));
     }
 
@@ -548,7 +575,7 @@ where
 /// или той, что сейчас в него растекается (`spreading`). Жидкость питается
 /// только своей же жидкостью: вода рядом с лавой лавой не становится —
 /// встречу воды с лавой разбирает `mixing`, и там меняется лава, а не вода.
-fn supply<F>(at: (i32, i32, i32), own: Option<Kind>, block: &F) -> Option<(Kind, i32)>
+fn supply<F>(at: (i32, i32, i32), own: Option<Kind>, block: &F, catalog: Catalog) -> Option<(Kind, i32)>
 where
     F: Fn(i32, i32, i32) -> i32,
 {
@@ -557,7 +584,7 @@ where
     // Жидкость, над которой жидкость, — падающая, даже если под ней пол:
     // низ водопада у оригинала тоже падающий, а растекание от него
     // начинается с первого уровня (сценарий чёрного ящика waterfall).
-    if let Some((kind, _)) = source_at(block(x, y + 1, z))
+    if let Some((kind, _)) = source_at_with_catalog(block(x, y + 1, z), catalog)
         && own.is_none_or(|own| own == kind)
     {
         return Some((kind, FALLING));
@@ -568,7 +595,7 @@ where
     for (dx, dz) in SIDES {
         let neighbour = (x + dx, y, z + dz);
 
-        let Some((kind, level)) = source_at(block(neighbour.0, neighbour.1, neighbour.2)) else {
+        let Some((kind, level)) = source_at_with_catalog(block(neighbour.0, neighbour.1, neighbour.2), catalog) else {
             continue;
         };
 
@@ -611,7 +638,7 @@ where
 /// Сперва главное: если ей есть куда падать, вбок она не идёт вовсе. Иначе
 /// считаются веса всех четырёх сторон — за сколько шагов оттуда находится
 /// спуск, — и жидкость течёт только в самые лёгкие стороны.
-fn flows_towards<F>(from: (i32, i32, i32), side: usize, kind: Kind, block: &F) -> bool
+fn flows_towards<F>(from: (i32, i32, i32), side: usize, kind: Kind, block: &F, catalog: Catalog) -> bool
 where
     F: Fn(i32, i32, i32) -> i32,
 {
@@ -624,7 +651,7 @@ where
 
     // Источник разливается вбок даже над дырой, а текущая жидкость — нет:
     // она целиком уходит вниз.
-    let is_source = matches!(source_at(block(x, y, z)), Some((_, SOURCE)));
+    let is_source = matches!(source_at_with_catalog(block(x, y, z), catalog), Some((_, SOURCE)));
 
     if !is_source && drains_into(block(x, y - 1, z)) {
         return false;
@@ -722,7 +749,7 @@ const SEEN_SIDE: usize = (2 * SEEN_REACH + 1) as usize;
 /// Так и получается бесконечная вода: место, у которого по сторонам два
 /// источника, а под ногами твёрдый блок или такой же источник, само
 /// становится источником.
-fn becomes_source<F>(at: (i32, i32, i32), block: &F) -> bool
+fn becomes_source<F>(at: (i32, i32, i32), block: &F, catalog: Catalog) -> bool
 where
     F: Fn(i32, i32, i32) -> i32,
 {
@@ -732,7 +759,7 @@ where
         .iter()
         .filter(|(dx, dz)| {
             matches!(
-                source_at(block(x + dx, y, z + dz)),
+                source_at_with_catalog(block(x + dx, y, z + dz), catalog),
                 Some((Kind::Water, SOURCE))
             )
         })
@@ -772,11 +799,11 @@ mod tests {
     #[test]
     fn waterlogs_campfire_without_replacing_it_and_lava_cannot_enter() {
         let dry = named_state("campfire");
-        let wet = poured((0, 70, 0), Kind::Water, &|_, _, _| dry).unwrap();
+        let wet = poured((0, 70, 0), Kind::Water, &|_, _, _| dry, Catalog::new(Profile::Java26_1_2)).unwrap();
         assert_eq!(blocks::block_at_state(wet), Some("campfire"));
         assert_eq!(fluid_at(wet), Some((Kind::Water, SOURCE)));
         assert!(!crate::campfire::lit(wet));
-        assert!(poured((0, 70, 0), Kind::Lava, &|_, _, _| dry).is_none());
+        assert!(poured((0, 70, 0), Kind::Lava, &|_, _, _| dry, Catalog::new(Profile::Java26_1_2)).is_none());
         assert!(update((0, 70, 0), &|_, _, _| wet).is_none());
     }
     use std::collections::HashMap;
@@ -1137,5 +1164,54 @@ mod tests {
         place.set((1, 64, 0), snow);
 
         assert_eq!(place.update((1, 64, 0)), Some(water(1)));
+    }
+}
+
+#[cfg(test)]
+mod catalog_water_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile, SlabHalf};
+    #[test]
+    fn preview_wet_slab_feeds_down_and_side_without_replacing_slab() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let stone = named_state("stone");
+        for half in [SlabHalf::Top,SlabHalf::Bottom,SlabHalf::Double] {
+            let wet = catalog.slab_state(half,true).unwrap();
+            let dry = catalog.slab_state(half,false).unwrap();
+            let view = |x,y,z| if (x,y,z)==(0,64,0) { wet } else if y==63 { stone } else { AIR };
+            let updates = spreading_with_catalog((0,64,0),&view,catalog);
+            assert!(updates.contains(&((1,64,0),state_of(Kind::Water,1))));
+            assert!(updates.iter().all(|(pos,_)| *pos != (0,64,0)));
+            assert_eq!(update_with_catalog((0,64,0),&view,catalog),None);
+            assert_eq!(update_with_catalog((1,64,0),&view,catalog),Some(state_of(Kind::Water,1)));
+            assert!(spreading((0,64,0),&view).is_empty());
+            let hanging = |x,y,z| if (x,y,z)==(0,64,0) { wet } else { AIR };
+            assert!(spreading_with_catalog((0,64,0),&hanging,catalog).contains(&((0,63,0),state_of(Kind::Water,FALLING))));
+            let unwaterlogged = |x,y,z| if (x,y,z)==(0,64,0) { dry } else { AIR };
+            assert!(spreading_with_catalog((0,64,0),&unwaterlogged,catalog).is_empty());
+        }
+        let native = |x,y,z| if (x,y,z)==(0,64,0) { state_of(Kind::Water,SOURCE) } else if y==63 { stone } else { AIR };
+        assert_eq!(spreading((0,64,0),&native),spreading_with_catalog((0,64,0),&native,Catalog::new(Profile::Java26_1_2)));
+    }
+
+    #[test]
+    fn two_preview_wet_slabs_feed_new_source() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let wet = catalog.slab_state(SlabHalf::Bottom,true).unwrap();
+        let view = |x: i32,y: i32,z: i32| if y==63 { named_state("stone") } else if y==64 && z==0 && x.abs()==1 { wet } else { AIR };
+        assert_eq!(update_with_catalog((0,64,0),&view,catalog),Some(state_of(Kind::Water,SOURCE)));
+        assert_eq!(update((0,64,0),&view),None);
+    }
+
+    #[test]
+    fn preview_water_source_requires_enabled_catalog() {
+        let preview = Catalog::new(Profile::Preview26_3);
+        for half in [SlabHalf::Top, SlabHalf::Bottom, SlabHalf::Double] {
+            let wet = preview.slab_state(half,true).unwrap();
+            let dry = preview.slab_state(half,false).unwrap();
+            assert_eq!(source_at_with_catalog(wet,preview),Some((Kind::Water,SOURCE)));
+            assert_eq!(source_at_with_catalog(dry,preview),None);
+            assert_eq!(source_at_with_catalog(wet,Catalog::new(Profile::Java26_1_2)),None);
+        }
     }
 }

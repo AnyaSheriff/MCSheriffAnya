@@ -20,7 +20,7 @@ pub fn translate(bytes: &[u8], enchantments: &[&str]) -> Result<Vec<u8>,Error> {
         if boolean(&mut input,&mut out)? { string(&mut out,input.string()?); }
         if boolean(&mut input,&mut out)? {
             text(&mut input,&mut out)?; text(&mut input,&mut out)?;
-            let (icon,n)=items::decode_template(crate::wire::INTERNAL,input.rest,items::Context {shared_enchantment_count:Some(enchantments.len() as u32)}).map_err(Error::Item)?;
+            let (icon,n)=items::decode_template(crate::wire::INTERNAL,input.rest,items::Context {shared_enchantment_count:Some(enchantments.len() as u32), ..Default::default() }).map_err(Error::Item)?;
             input.take(n)?; out.extend(legacy_items::encode(Some(&icon),legacy_items::Context {enchantments}).map_err(Error::LegacyItem)?);
             let frame=input.count(2)?; uint(&mut out,frame as u32);
             let flags=u32::from_be_bytes(input.take(4)?.try_into().map_err(|_|Error::Invalid)?);

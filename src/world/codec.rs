@@ -31,13 +31,17 @@ pub(super) enum DecodeError {
     Damaged,
     UnsupportedLayout(u8),
     UnknownBlockState(u16),
+    InvalidInventory { profile: crate::gameplay_catalog::Profile, item: i32 },
+    UnsupportedCatalogState { profile: crate::gameplay_catalog::Profile, state: u16 },
 }
 impl std::fmt::Display for DecodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::InvalidInventory { profile, item } => write!(f, "предмет {item} в чанке несовместим с профилем {profile:?} или не сохраняется без потерь"),
             Self::Damaged => f.write_str("содержимое чанка повреждено"),
             Self::UnsupportedLayout(version) => write!(f,"раскладка чанка {version} не поддержана"),
             Self::UnknownBlockState(state) => write!(f,"состояние блока {state} отсутствует в текущем каталоге"),
+            Self::UnsupportedCatalogState { profile, state } => write!(f,"состояние блока {state} недоступно в профиле {profile:?}"),
         }
     }
 }
@@ -215,6 +219,15 @@ fn read_container(reader: &mut Reader, dest: &mut [u16], valid: &dyn Fn(u16) -> 
     }
 
     Some(())
+}
+
+fn validate_state(catalog: crate::gameplay_catalog::Catalog, state: u16) -> Result<(), DecodeError> {
+    use crate::gameplay_catalog::{Error, Kind};
+    match catalog.name(Kind::State, unpack(state)) {
+        Ok(_) => Ok(()),
+        Err(Error::Disabled { profile, .. }) => Err(DecodeError::UnsupportedCatalogState { profile, state }),
+        Err(_) => Err(DecodeError::UnknownBlockState(state)),
+    }
 }
 
 impl Chunk {
@@ -399,19 +412,58 @@ impl Chunk {
 
     /// Runtime не должен терять причину отказа за Option::None.
     pub(super) fn decode_for_load(bytes: &[u8]) -> Result<Self, DecodeError> {
-        let version = *bytes.first().ok_or(DecodeError::Damaged)?;
-        if version != CHUNK_VERSION { return Err(DecodeError::UnsupportedLayout(version)); }
-        let unknown = std::cell::Cell::new(None);
-        let state_ok = |state: u16| {
-            let valid = unpack(state) == AIR || crate::blocks::block_at_state(unpack(state)).is_some();
-            if !valid { unknown.set(Some(state)); }
-            valid
-        };
-        Self::read_current(bytes, &state_ok).ok_or_else(||
-            unknown.get().map_or(DecodeError::Damaged, DecodeError::UnknownBlockState))
+        Self::decode_for_load_with_catalog(bytes, crate::gameplay_catalog::Catalog::new(
+            crate::gameplay_catalog::Profile::Java26_1_2))
     }
 
-    fn read_current(bytes: &[u8], state_ok: &dyn Fn(u16) -> bool) -> Option<Self> {
+    /// Каталог задаёт мир, а не версия клиента. Отказ каталога не разрешает
+    /// восстанавливать чанк генерацией; runtime обязан сохранить typed error.
+    pub(super) fn decode_for_load_with_catalog(
+        bytes: &[u8], catalog: crate::gameplay_catalog::Catalog,
+    ) -> Result<Self, DecodeError> {
+        let version = *bytes.first().ok_or(DecodeError::Damaged)?;
+        if version != CHUNK_VERSION { return Err(DecodeError::UnsupportedLayout(version)); }
+        let incompatible = std::cell::Cell::new(None);
+        let state_ok = |state: u16| {
+            match validate_state(catalog, state) {
+                Ok(()) => true,
+                Err(error) => { incompatible.set(Some(error)); false }
+            }
+        };
+        let chunk = Self::read_current(bytes, &state_ok, catalog, &incompatible).ok_or_else(||
+            incompatible.get().unwrap_or(DecodeError::Damaged))?;
+        chunk.validate_catalog(catalog)?;
+        Ok(chunk)
+    }
+
+    /// Проверяет блоки и сохранённые предметы до передачи байтов writer.
+    pub(super) fn validate_catalog(&self, catalog: crate::gameplay_catalog::Catalog) -> Result<(), DecodeError> {
+        for blocks in self.sections.iter().flatten() {
+            for &state in blocks.iter() { validate_state(catalog, state)?; }
+        }
+        let valid_stack = |stack: &crate::inventory::Stack| catalog.validate_stack(stack)
+            .map_err(|_| DecodeError::InvalidInventory { profile: catalog.profile(), item: stack.item });
+        for container in self.containers.values().chain(self.spilled.iter().map(|(_, container)| container)) {
+            for stack in container.slots.iter().flatten() { valid_stack(stack)?; }
+        }
+        for frame in &self.frames {
+            if let Some(stack) = &frame.item { valid_stack(stack)?; }
+        }
+        for sides in self.pots.values() {
+            for &item in sides {
+                catalog.name(crate::gameplay_catalog::Kind::Item, item).map_err(|_| DecodeError::InvalidInventory { profile: catalog.profile(), item })?;
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(super) fn to_bytes_with_catalog(&self, catalog: crate::gameplay_catalog::Catalog) -> Result<Vec<u8>, DecodeError> {
+        self.validate_catalog(catalog)?;
+        Ok(self.to_bytes())
+    }
+
+    fn read_current(bytes: &[u8], state_ok: &dyn Fn(u16) -> bool, catalog: crate::gameplay_catalog::Catalog, incompatible: &std::cell::Cell<Option<DecodeError>>) -> Option<Self> {
         let mut reader = Reader::new(bytes.get(1..)?);
         let mut chunk = Chunk::new();
 
@@ -443,7 +495,16 @@ impl Chunk {
             rest = &rest[2..];
 
             for _ in 0..count {
+                let original = rest;
                 let (place, container) = containers::Container::read(&mut rest, 0, 0)?;
+                let mut encoded = Vec::new();
+                container.write(place, &mut encoded);
+                let consumed = original.len().checked_sub(rest.len())?;
+                let invalid = container.slots.iter().flatten().find(|stack| catalog.validate_stack(stack).is_err());
+                if encoded != original.get(..consumed)? || invalid.is_some() {
+                    incompatible.set(Some(DecodeError::InvalidInventory { profile: catalog.profile(), item: invalid.map_or(0, |stack| stack.item) }));
+                    return None;
+                }
 
                 if containers::Kind::of(chunk.block(place.0, place.1, place.2)) == Some(container.kind) {
                     chunk.containers.insert(place, container);
@@ -481,7 +542,16 @@ impl Chunk {
             rest = &rest[2..];
 
             for _ in 0..count {
+                let original = rest;
                 let frame = crate::frame::read(&mut rest, 0, 0, 0)?;
+                let mut encoded = Vec::new();
+                crate::frame::write(&frame, &mut encoded);
+                let consumed = original.len().checked_sub(rest.len())?;
+                let invalid = frame.item.as_ref().filter(|stack| catalog.validate_stack(stack).is_err());
+                if encoded != original.get(..consumed)? || invalid.is_some() {
+                    incompatible.set(Some(DecodeError::InvalidInventory { profile: catalog.profile(), item: invalid.map_or(0, |stack| stack.item) }));
+                    return None;
+                }
 
                 chunk.frames.push(frame);
             }
@@ -968,3 +1038,7 @@ mod tests {
 #[cfg(test)]
 #[path = "codec_incompatible_tests.rs"]
 mod incompatible_tests;
+
+#[cfg(test)]
+#[path = "codec_catalog_tests.rs"]
+mod catalog_tests;

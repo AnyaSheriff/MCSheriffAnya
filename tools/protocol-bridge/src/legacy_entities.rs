@@ -216,7 +216,7 @@ fn metadata(input: &mut Cursor<'_>, out: &mut Vec<u8>, entity_kind: Kind, enchan
             (3..=5, 8) => { out.extend([index, 6, u8::from(input.boolean()?)]); }
             (8, 7) if entity_kind == Kind::Item => {
                 let (item, count) = crate::items::decode(crate::wire::INTERNAL, input.rest, false,
-                    crate::items::Context { shared_enchantment_count: Some(enchantments.len() as u32) }).map_err(Error::Item)?;
+                    crate::items::Context { shared_enchantment_count: Some(enchantments.len() as u32), ..Default::default() }).map_err(Error::Item)?;
                 input.take(count)?;
                 out.extend([6, 5]); out.extend(crate::legacy_items::encode(item.as_ref(),
                     crate::legacy_items::Context { enchantments }).map_err(Error::LegacyItem)?);

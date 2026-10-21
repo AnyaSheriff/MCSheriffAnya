@@ -17,15 +17,15 @@ pub(crate) fn particle(input: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVers
     let kind = ids::translate(RegistryKind::Particle,from,JavaVersion::V26_1_2,source)?;
     uint(out,ids::translate(RegistryKind::Particle,from,to,source)?);
     match kind {
-        1 | 2 | 29 | 111 | 115 => uint(out,ids::translate(RegistryKind::BlockState,from,to,input.uint()?)?),
+        1 | 2 | 29 | 111 | 115 => uint(out,context.content.packet_id(RegistryKind::BlockState,from,to,input.uint()?)?),
         14 | 15 => { out.extend(input.take(if kind == 14 {4} else {8})?); floats(input,out,1,false)?; }
         21 | 36 | 42 => out.extend(input.take(4)?),
         8 | 38 => floats(input,out,1,false)?,
         16 | 46 => { out.extend(input.take(4)?); floats(input,out,1,false)?; }
         47 => {
-            let (stack,size) = items::decode_template(from,input.rest,context).map_err(Error::Item)?;
+            let (stack,size) = items::decode_packet_template(from,input.rest,context).map_err(Error::Item)?;
             input.take(size)?;
-            out.extend(items::encode_template(to,&stack,context).map_err(Error::Item)?);
+            out.extend(items::encode_packet_template(to,&stack,context).map_err(Error::Item)?);
         }
         48 => {
             let source = input.count(1)?; uint(out,source as u32);

@@ -30,14 +30,14 @@ fn java_autosaved_cursor_survives_disk_and_bedrock_with_full_inventory() {
     });
     for slot in 9..=44 { player.inventory.set(slot, Some(stone)); }
     player.inventory.set(36, Some(held));
-    player.save_if_needed(directory);
+    player.save_if_needed(directory, crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2));
     assert!(player.inventory.click(36, 0, 0).understood);
     assert_eq!(player.inventory.cursor(), Some(held));
     // Пока игрок держит курсор, освободившееся место заполняет другая стопка.
     assert!(player.inventory.put(stone).1.is_none());
     assert!(player.inventory.slots()[9..=44].iter().all(Option::is_some));
     assert!(player.needs_save());
-    player.save_if_needed(directory);
+    player.save_if_needed(directory, crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2));
     assert!(!player.needs_save());
     let original = player.inventory.clone();
     // Не вызываем finish_play/close_window: именно так остаётся файл после

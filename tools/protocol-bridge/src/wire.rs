@@ -17,6 +17,7 @@ pub enum Error {
     MissingEntityContext,
     Entity(crate::entities::Error),
     Item(crate::items::Error),
+    Content(crate::content::Error),
     LegacyItem(crate::legacy_items::Error),
     Chunk(crate::chunk::Error),
     BlockEntity(crate::block_entities::Error),
@@ -34,6 +35,12 @@ impl From<ids::IdTranslationError> for Error {
 }
 impl From<crate::movement::Error> for Error {
     fn from(value: crate::movement::Error) -> Self { Self::Movement(value) }
+}
+
+impl From<crate::content::Error> for Error {
+    fn from(value: crate::content::Error) -> Self {
+        match value { crate::content::Error::Id(error) => Self::Id(error), error => Self::Content(error) }
+    }
 }
 
 /// Внутренний формат пока 775. Версия мира и версия клиента не должны менять
@@ -77,6 +84,10 @@ pub(crate) fn translate_inner(
         (JavaVersion::V26_1_2,JavaVersion::V26_2) | (JavaVersion::V26_2,JavaVersion::V26_1_2)) {
         return Err(Error::UnsupportedVersion(from));
     }
+    if context.items.content.is_preview() && (probe_776 || !matches!((from,to),
+        (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2))) {
+        return Err(Error::PayloadUnavailable("preview content requires explicit canonical/777 route"));
+    }
     if body.is_empty() { return Err(Error::Truncated); }
     if body.len() > LIMIT { return Err(Error::TooLarge); }
     // Родной маршрут не копирует пакеты и сохраняет существующие проверки ядра.
@@ -106,7 +117,7 @@ pub(crate) fn translate_inner(
             digging(&mut cursor, &mut out, from, to)?;
         }
         (State::Play, Direction::Serverbound, "window_click") => {
-            crate::actions::click(&mut cursor,&mut out,from,to)?;
+            crate::actions::click_with_content(&mut cursor,&mut out,from,to,context.items.content)?;
         }
         (State::Play, Direction::Clientbound, "trade_list") => {
             crate::trades::translate(&mut cursor,&mut out,from,to,context.items)?;
@@ -129,7 +140,7 @@ pub(crate) fn translate_inner(
         }
         (State::Play, Direction::Clientbound, "spawn_entity") => {
             if probe_776 { crate::entities::spawn_776(&mut cursor, &mut out, from, to)?; }
-            else { crate::entities::spawn(&mut cursor, &mut out, from, to)?; }
+            else { crate::entities::spawn_with_content(&mut cursor, &mut out, from, to, context.items.content)?; }
         }
         (State::Play, Direction::Clientbound, "collect") if probe_776 => {
             for _ in 0..2 { uint(&mut out, cursor.uint()?); }
@@ -174,11 +185,12 @@ pub(crate) fn translate_inner(
             item(&mut cursor, &mut out, from, to, true, context.items)?;
         }
         (State::Play, Direction::Clientbound, "map_chunk") => {
+            let content = context.items.content;
             let context = context.chunk.ok_or(Error::MissingChunkContext)?;
             let payload = cursor.take(cursor.remaining())?;
             out.extend(if probe_776 {
                 crate::chunk::translate_776_bounded(from, to, payload, context)
-            } else { crate::chunk::translate(from, to, payload, context) }.map_err(Error::Chunk)?);
+            } else { crate::chunk::translate_with_content(from, to, payload, context, content) }.map_err(Error::Chunk)?);
         }
         (State::Play, Direction::Clientbound, "tile_entity_data") => {
             out.extend(cursor.take(8)?);
@@ -203,7 +215,7 @@ pub(crate) fn translate_inner(
             let action = name == "block_action";
             out.extend(cursor.take(if action { 10 } else { 8 })?);
             let kind = if action { RegistryKind::Block } else { RegistryKind::BlockState };
-            uint(&mut out, ids::translate(kind, from, to, cursor.uint()?)?);
+            uint(&mut out, context.items.content.packet_id(kind, from, to, cursor.uint()?)?);
         }
         (State::Play, Direction::Clientbound, "multi_block_change") => {
             out.extend(cursor.take(8)?);
@@ -211,7 +223,7 @@ pub(crate) fn translate_inner(
             uint(&mut out, count as u32);
             for _ in 0..count {
                 let record = cursor.uint()?;
-                let state = ids::translate(RegistryKind::BlockState, from, to, record >> 12)?;
+                let state = context.items.content.packet_id(RegistryKind::BlockState, from, to, record >> 12)?;
                 uint(&mut out, (state << 12) | (record & 4095));
             }
         }
@@ -234,7 +246,7 @@ pub(crate) fn translate_inner(
             }
         }
         (State::Configuration | State::Play, Direction::Clientbound, "tags") => {
-            tags(&mut cursor, &mut out, from, to)?;
+            tags(&mut cursor, &mut out, from, to, context.items.content)?;
         }
         (State::Configuration, Direction::Clientbound, "select_known_packs") => {
             let count = cursor.count(1024)?;
@@ -306,9 +318,9 @@ fn digging(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: Ja
 
 fn item(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion,
     untrusted: bool, context: crate::items::Context) -> Result<(), Error> {
-    let (stack, size) = crate::items::decode(from, cursor.rest, untrusted, context).map_err(Error::Item)?;
+    let (stack, size) = crate::items::decode_packet_slot(from, cursor.rest, untrusted, context).map_err(Error::Item)?;
     cursor.take(size)?;
-    out.extend(crate::items::encode(to, stack.as_ref(), untrusted, context).map_err(Error::Item)?);
+    out.extend(crate::items::encode_packet_slot(to, stack.as_ref(), untrusted, context).map_err(Error::Item)?);
     Ok(())
 }
 
@@ -520,7 +532,7 @@ fn entity_move(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to
     Ok(())
 }
 
-fn tags(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion) -> Result<(), Error> {
+fn tags(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaVersion, content: crate::content::ContentCodec) -> Result<(), Error> {
     let count = cursor.count(1024)?;
     uint(out, count as u32);
     for _ in 0..count {
@@ -542,7 +554,7 @@ fn tags(cursor: &mut Cursor<'_>, out: &mut Vec<u8>, from: JavaVersion, to: JavaV
             uint(out, count as u32);
             for _ in 0..count {
                 let id = cursor.uint()?;
-                uint(out, match registry { Some(kind) => ids::translate(kind, from, to, id)?, None => id });
+                uint(out, match registry { Some(kind) => content.packet_id(kind, from, to, id)?, None => id });
             }
         }
     }

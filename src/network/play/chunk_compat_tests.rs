@@ -159,7 +159,7 @@ async fn real_chunk_builder_crosses_encrypted_transport_with_shared_biome_contex
     let count = configuration::REQUIRED_REGISTRIES.iter().find(|(name,_)| *name == "minecraft:worldgen/biome").unwrap().1.len();
     static COUNTS: std::sync::LazyLock<Vec<(&'static str,u32)>> = std::sync::LazyLock::new(||
         configuration::REQUIRED_REGISTRIES.iter().map(|(name,entries)| (*name,entries.len() as u32)).collect());
-    let context = wire::Context { metadata_registry_counts:&COUNTS, items: mcsa_protocol::items::Context { shared_enchantment_count: Some(crate::stackdata::ENCHANTMENTS.len() as u32) }, chunk: Some(mcsa_protocol::chunk::Context {
+    let context = wire::Context { metadata_registry_counts:&COUNTS, items: mcsa_protocol::items::Context { shared_enchantment_count: Some(crate::stackdata::ENCHANTMENTS.len() as u32), ..Default::default() }, chunk: Some(mcsa_protocol::chunk::Context {
         min_y: world::MIN_Y, sections: world::SECTIONS as usize, shared_biome_count: count as u32,
     }), ..Default::default() };
     assert_eq!(modern.len(),43);

@@ -12,6 +12,7 @@ pub mod ids;
 pub mod entities;
 mod entity_layouts;
 pub mod items;
+pub mod content;
 mod item_components;
 mod particles;
 mod recipes;
@@ -245,3 +246,6 @@ mod item_observation_tests;
 
 mod trades;
 mod nested_items;
+
+#[cfg(test)]
+mod content_packet_tests;

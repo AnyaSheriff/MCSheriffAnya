@@ -702,6 +702,11 @@ pub async fn play_session(
     (came_from, came_to): (&str, &str),
     verified_skin: Option<Option<Skin>>,
 ) -> io::Result<bool> {
+    if shared.catalog().profile() == crate::gameplay_catalog::Profile::Preview26_3
+        && socket.client_version() != mcsa_protocol::JavaVersion::V26_3 {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "Тестовый каталог требует клиента26.3"));
+    }
+    socket.content = shared.catalog().content_codec();
     // Смена сессии завершается до load: прежний владелец уже сохранил вещи
     // и вышел из списка. Lease отпускается только после нашего ухода.
     let lease = shared.sessions.acquire(name, *uuid).await;
@@ -712,7 +717,7 @@ pub async fn play_session(
     let skin_parts = look.skin_parts;
     // Что осталось от прошлого захода: место, поворот и режим игры. Если
     // игрок здесь впервые, этого нет — он появится в точке появления.
-    let saved = playerdata::load_checked(&shared.playerdata, uuid).map_err(io::Error::other)?;
+    let saved = playerdata::load_checked_for_catalog(&shared.playerdata, uuid, shared.catalog()).map_err(io::Error::other)?;
 
     // Скин узнаётся до входа в мир: он должен быть готов к тому мгновению,
     // когда сервер расскажет о новом игроке остальным.
@@ -826,7 +831,7 @@ fn finish_play(shared: &Shared, player: &mut PlayerState) {
     // При выходе записываем положение в любом случае — в том числе когда
     // соединение оборвалось ошибкой. Иначе последние метры пути пропали бы.
     player.progress.custom("leave_game", 1);
-    player.save(&shared.playerdata);
+    player.save_with_catalog(&shared.playerdata, shared.catalog());
     log_debug!(
         "Play: положение игрока {} записано при выходе: {:.2} {:.2} {:.2}",
         player.name,
@@ -1440,6 +1445,7 @@ async fn read_confirm_teleportation(
     let version = stream.stream().client_version();
     let legacy = stream.stream().legacy.clone();
     let probe_776 = stream.stream().probe_776_enabled();
+    let content = stream.stream().content;
 
     // Клиент подтвердит только то, что получил.
     stream.flush().await?;
@@ -1454,7 +1460,7 @@ async fn read_confirm_teleportation(
                     None => std::future::pending().await,
                 }
             } => return Err(io::Error::new(io::ErrorKind::ConnectionAborted, "вход прерван")),
-            packet = tokio::time::timeout_at(deadline, super::packet::read_play_packet_routed(stream.stream(), version, legacy.as_ref(), probe_776)) => {
+            packet = tokio::time::timeout_at(deadline, super::packet::read_play_packet_with_content(stream.stream(), version, legacy.as_ref(), probe_776, content)) => {
                 packet.map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "нет подтверждения переноса"))??
             }
         };
@@ -6606,7 +6612,7 @@ async fn read_and_log_play_packets(
 
                     send_container_content(stream, player).await?;
 
-                    player.save(&shared.playerdata);
+                    player.save_with_catalog(&shared.playerdata, shared.catalog());
 
                     log_info!("{} перешёл в {} ({:.1}, {:.1}, {:.1})", player.name, dimension.name(), x, y, z);
                 }
@@ -6650,7 +6656,7 @@ async fn read_and_log_play_packets(
                         vitals::pearl_hit(stream, shared, player).await?;
                     }
 
-                    player.save(&shared.playerdata);
+                    player.save_with_catalog(&shared.playerdata, shared.catalog());
 
                     publish_player(shared, player);
 
@@ -6718,7 +6724,7 @@ async fn read_and_log_play_packets(
                     let now = *shared.ticks.borrow();
                     vitals::game_mode_order(stream, player, mode, now).await?;
                     send_game_mode(stream, &player.uuid, mode).await?;
-                    player.save(&shared.playerdata);
+                    player.save_with_catalog(&shared.playerdata, shared.catalog());
                 }
 
                 Order::SetSlot { slot, stack } => {
@@ -6740,7 +6746,7 @@ async fn read_and_log_play_packets(
 
                 Order::SetEnderSlot { slot, stack } => {
                     player.ender[slot] = stack;
-                    player.save(&shared.playerdata);
+                    player.save_with_catalog(&shared.playerdata, shared.catalog());
                 }
 
                 // Готовый пакет команд мира (рамка, такт, наездники).
@@ -7009,7 +7015,7 @@ async fn read_and_log_play_packets(
                 }
                 // Запись на диск — после пачки: она не задерживает движение
                 // перед следующим Use Item на той же границе такта.
-                player.save_if_needed(&shared.playerdata);
+                player.save_if_needed(&shared.playerdata, shared.catalog());
             }
             Some(Ok(Some(Err(e)))) if is_client_disconnect(&e) => {
                 log_debug!("Play: клиент закрыл соединение ({})", e.kind());
@@ -7106,13 +7112,14 @@ impl Inbound {
         let version = own.get_ref().client_version();
         let legacy = own.get_ref().legacy.clone();
         let probe_776 = own.get_ref().probe_776_enabled();
+        let content = own.get_ref().content;
         let (sender, packets) = tokio::sync::mpsc::unbounded_channel();
         let waiting = shared.waiting_for_tick.clone();
         let starts = shared.tick_starts.subscribe();
 
         let reader = tokio::spawn(async move {
             loop {
-                let read = super::packet::read_play_packet_routed(&mut own, version, legacy.as_ref(), probe_776).await;
+                let read = super::packet::read_play_packet_with_content(&mut own, version, legacy.as_ref(), probe_776, content).await;
                 let arrived = *starts.borrow();
                 let failed = read.is_err();
 
@@ -7937,7 +7944,7 @@ fn handle_client_packet_inner(
         }
         SET_CREATIVE_MODE_SLOT => {
             // Слот −1 — предмет выброшен прямо из меню, мимо инвентаря.
-            if let Some(thrown) = read_creative_slot(payload, player) {
+            if let Some(thrown) = read_creative_slot_with_catalog(payload, player, shared.catalog()) {
                 throw_out(shared, player, thrown);
             }
         }
@@ -8716,7 +8723,7 @@ fn break_block(payload: &[u8], player: &mut PlayerState, shared: &Shared) -> Opt
     let mut mined = None;
     let result = break_block_inner(payload, player, shared, &mut mined);
     if player.game_mode == GAME_MODE_SURVIVAL && let Some(state) = mined {
-        if let Some(stack) = held { pvp::wear_held(shared, player, stack, crate::mining::wear(state, stack), false); }
+        if let Some(stack) = held { pvp::wear_held(shared, player, stack, crate::mining::wear_with_catalog(shared.catalog(), state, stack), false); }
         player.vit.add_exhaustion(0.005);
     }
     result
@@ -9097,7 +9104,7 @@ fn break_block_inner(payload: &[u8], player: &mut PlayerState, shared: &Shared, 
             return Some(Reaction::accepted(sequence));
         }
 
-        let placed: Vec<_> = crate::mining::block_drops(broken, tool, || world.random_unit()).into_iter()
+        let placed: Vec<_> = crate::mining::block_drops_with_catalog(world.catalog(), broken, tool, || world.random_unit()).into_iter()
             .map(|stack| (crate::custom_tnt::tag_drop(stack, custom), crate::tick::scattered((x, y, z), || f64::from(world.random_unit())))).collect();
         // Мир отпускаем: класть предметы будем под другим замком.
         drop(world);
@@ -9879,7 +9886,7 @@ crate::mob::armor_stand::place(&mut world,&mut items,shared,clicked,face,player.
         return Some(reaction);
     }
 
-    let Some((name, default_state)) = blocks::block_for_item(item) else {
+    let Some((name, default_state)) = shared.catalog().block_for_item(item).ok().flatten() else {
         log_debug!("Play: предмет {} блоком не является — ставить нечего", item);
 
         // Оригинал и тут повторяет клиенту блок и блок за гранью (чёрный
@@ -9999,11 +10006,11 @@ crate::mob::armor_stand::place(&mut world,&mut items,shared,clicked,face,player.
     }
 
     match placed {
-        placing::Placement::Placed => Some(Reaction {
+        placing::Placement::Placed | placing::Placement::Merged => Some(Reaction {
             slots: spend_placed(player),
             ..Reaction::accepted(sequence)
         }),
-        placing::Placement::Merged | placing::Placement::Nothing => Some(Reaction::accepted(sequence)),
+        placing::Placement::Nothing => Some(Reaction::accepted(sequence)),
         placing::Placement::Refused(places) => Some(Reaction::refused(sequence, &places)),
     }
 }
@@ -10591,7 +10598,12 @@ fn read_untrusted_slot(cursor: &mut Cursor) -> Option<Option<Stack>> {
 ///
 /// Возвращает предмет, который надо бросить на землю: его выбросили прямо
 /// из меню (слот −1).
+#[cfg(test)]
 fn read_creative_slot(payload: &[u8], player: &mut PlayerState) -> Option<Stack> {
+    read_creative_slot_with_catalog(payload, player, crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+}
+
+fn read_creative_slot_with_catalog(payload: &[u8], player: &mut PlayerState, catalog: crate::gameplay_catalog::Catalog) -> Option<Stack> {
     // В выживании предметы берутся из мира, а не из меню. Клиент такого
     // сообщения там и не шлёт, но верить ему на слово нельзя: изменённый
     // клиент мог бы выдать себе что угодно.
@@ -10609,7 +10621,7 @@ fn read_creative_slot(payload: &[u8], player: &mut PlayerState) -> Option<Stack>
     // в руке ушёл бы всем остальным и отключил бы их, а число больше стопки
     // ломало бы счёт при делении стопки.
     if let Some(stack) = stack
-        && (!known_item(stack.item) || stack.count > crate::blocks::stack_size(stack.item))
+        && catalog.validate_stack(&stack).is_err()
     {
         log_debug!(
             "Play: {} прислал недопустимый предмет {} ({} шт.) — не берём",
@@ -10637,14 +10649,6 @@ fn read_creative_slot(payload: &[u8], player: &mut PlayerState) -> Option<Stack>
     }
 
     None
-}
-
-/// Есть ли такой предмет в реестре (воздух — не предмет).
-fn known_item(item: i32) -> bool {
-    item > 0
-        && crate::blocks_table::ITEM_NAMES
-            .binary_search_by_key(&item, |(number, _)| *number)
-            .is_ok()
 }
 
 /// Щелчок в окне хранилища. Как у оригинала (вики, Click Container):
@@ -11792,15 +11796,15 @@ impl PlayerState {
     /// Записывает положение на диск, если оно отличается от того, что там уже
     /// лежит. Так же, как сохраняется мир: сразу, а не только при выходе, —
     /// сервер может и не успеть сохранить, если его выключат.
-    fn save_if_needed(&mut self, directory: &Path) {
+    fn save_if_needed(&mut self, directory: &Path, catalog: crate::gameplay_catalog::Catalog) {
         if self.needs_save() {
-            self.save(directory);
+            self.save_with_catalog(directory, catalog);
         }
     }
 
     /// Записывает положение на диск. Зовётся при выходе игрока — тогда
     /// записывается в любом случае, даже если ничего не изменилось.
-    fn save(&mut self, directory: &Path) {
+    fn save_with_catalog(&mut self, directory: &Path, catalog: crate::gameplay_catalog::Catalog) {
         let data = PlayerData {
             shoulders: self.shoulders.clone(),
             x: self.x,
@@ -11818,7 +11822,7 @@ impl PlayerState {
 
         self.progress.save(&self.uuid);
 
-        match playerdata::save(directory, &self.uuid, &data) {
+        match playerdata::save_for_catalog(directory, &self.uuid, &data, catalog) {
             Ok(()) => self.saved = Some(data),
             Err(e) => log_error!(
                 "Не удалось сохранить положение игрока {}: {}",
@@ -12259,7 +12263,7 @@ mod tests {
 
         player.set_position(123.5, 70.0, -45.25);
         player.set_rotation(90.0, 0.0);
-        player.save_if_needed(&directory);
+        player.save_if_needed(&directory, crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2));
 
         let read = playerdata::load(&directory, &player.uuid).expect("файл игрока");
 
@@ -12762,3 +12766,6 @@ mod hand_action_tests;
 
 #[cfg(test)]
 mod use_action_tests;
+
+#[cfg(test)]
+mod catalog_action_tests;
