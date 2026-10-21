@@ -2763,6 +2763,10 @@ fn loot_answer(single: &str, multiple: &str, stacks: &[crate::inventory::Stack])
 /// Английские шаблоны ответов (языковая таблица en_us 26.1 из
 /// minecraft-data) — для консоли, журнала и Bedrock.
 const TEMPLATES: &[(&str, &str)] = &[
+    ("argument.entity.options.limit.toosmall", "Limit must be at least 1"),
+    ("commands.data.entity.query", "%s has the following entity data: %s"),
+    ("argument.nbtpath.nothing_found", "Found no elements matching %s"),
+    ("commands.generic.permission", "You do not have permission to use this command"),
     ("argument.block.id.invalid", "Unknown block type '%s'"),
     ("argument.dimension.invalid", "Unknown dimension '%s'"),
     ("argument.double.big", "Double must not be more than %s: found %s"),

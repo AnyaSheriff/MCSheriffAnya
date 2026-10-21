@@ -110,6 +110,7 @@ mod signs;
 mod cauldron;
 mod block_use;
 mod vehicle;
+mod terrain_floor;
 mod horse;
 mod armor_stands;
 mod glide;
@@ -7555,6 +7556,7 @@ fn handle_client_packet_inner(
             // в ответ на свой очередной пакет места). Сдвиг, который клиент
             // посчитал сам, принимается. Допуск 0,0625 — как у оригинала на
             // «moved wrongly» [проверить].
+            let piston_step = player.shoved_to.is_some();
             if let Some(at) = player.shoved_to.take() {
                 let off = (x - at.0).powi(2) + (y - at.1).powi(2) + (z - at.2).powi(2);
 
@@ -7586,6 +7588,15 @@ fn handle_client_packet_inner(
                 return reaction;
             }
 
+            // Обычная сверка пола до записи места, ground и последствий шага.
+            // Согласованный ответ на толчок поршня сохраняет прежний путь.
+            let floor = if piston_step { terrain_floor::Decision::Legacy }
+                else { terrain_floor::classify(shared, player, (x, y, z)) };
+            if floor == terrain_floor::Decision::Reject {
+                reaction.resync = true;
+                return reaction;
+            }
+
             let from = (player.x, player.y, player.z);
 
             player.moved_since_tp = true;
@@ -7594,7 +7605,7 @@ fn handle_client_packet_inner(
             // Признак «на земле» — в байте флагов после координат (и углов).
             let flags = if packet.id == SET_PLAYER_POSITION { POSITION_BYTES } else { POSITION_BYTES + ROTATION_BYTES };
             if let Some(&flag) = payload.get(flags) {
-                player.set_on_ground(flag & ON_GROUND_FLAG != 0);
+                player.set_on_ground(floor == terrain_floor::Decision::PreserveGround || flag & ON_GROUND_FLAG != 0);
                 // Бит 2 — упёрся в стену (нужен элитрам: удар о стену).
                 player.glide.wall = flag & 0x02 != 0;
             }

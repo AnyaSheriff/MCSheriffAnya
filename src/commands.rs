@@ -221,6 +221,10 @@ pub fn run(command: &str, source: &Source, shared: &Shared) -> Answer {
     let name = parts.next().unwrap_or("");
 
     if !allowed(name, source, shared) {
+        // Новый read-only путь не должен сообщать execute store об успехе отказа.
+        if name == "data" && command_arguments(command).nth(1) == Some("get") {
+            return crate::commands_world::fail("commands.generic.permission", &[]);
+        }
         return Answer::saying("На это у тебя нет прав".to_string());
     }
 
@@ -1435,8 +1439,78 @@ fn summon_mob(kind: crate::mob::Kind, rest: &[&str], source: &Source, shared: &S
     Answer::saying(format!("Призвана сущность {}", kind.name()))
 }
 
+/// Только два публичных read-only поля онлайн-игрока, не полный NBT сущности.
+fn data_get_player(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    use crate::commands_world::{fail, s, tr};
+    let ["get", "entity", target, field] = parts else { return fail("command.unknown.argument", &[]); };
+    if !matches!(*field, "Pos" | "OnGround") { return fail("argument.nbtpath.nothing_found", &[s(*field)]); }
+    if target.starts_with('@') {
+        let (base, inner) = match target.split_once('[') {
+            Some((base, rest)) => match rest.strip_suffix(']') { Some(inner) => (base, Some(inner)), None => return fail("command.unknown.argument", &[]) },
+            None => (*target, None),
+        };
+        if !matches!(base, "@s" | "@p" | "@r" | "@a" | "@e") { return fail("command.unknown.argument", &[]); }
+        // Старый resolver не перемешивает отфильтрованный @r; не выдаём его
+        // первый элемент за случайный выбор. Полный sort здесь не добавляем.
+        if base == "@r" && inner.is_some() { return fail("command.unknown.argument", &[]); }
+        let mut limit = None; let mut player_type = false; let mut seen_type = false; let mut seen_sort = false;
+        if let Some(inner) = inner {
+            for argument in split_selector_arguments(inner) {
+                let Some((key, value)) = argument.split_once('=') else { return fail("command.unknown.argument", &[]); };
+                match key {
+                    "limit" => {
+                        if limit.is_some() { return fail("command.unknown.argument", &[]); }
+                        match value.parse::<usize>() {
+                            Ok(1) => limit = Some(1),
+                            Ok(0) => return fail("argument.entity.options.limit.toosmall", &[]),
+                            Ok(_) => return fail("argument.entity.toomany", &[]),
+                            Err(_) => return fail("command.unknown.argument", &[]),
+                        }
+                    }
+                    "type" => {
+                        if seen_type { return fail("command.unknown.argument", &[]); }
+                        seen_type = true;
+                        player_type = matches!(value.trim_matches('"'), "player" | "minecraft:player");
+                        if !player_type { return fail("command.unknown.argument", &[]); }
+                    }
+                    "sort" => {
+                        if seen_sort || !((base == "@p" && value == "nearest") || (matches!(base, "@a" | "@e") && value == "arbitrary")) { return fail("command.unknown.argument", &[]); }
+                        seen_sort = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        // Синтаксис обязан выбирать одного даже при единственном игроке онлайн.
+        if matches!(base, "@a" | "@e") && limit != Some(1) { return fail("argument.entity.toomany", &[]); }
+        // Общий @e не подменяем player-only resolver: мобы здесь не поддержаны.
+        if base == "@e" && !player_type { return fail("command.unknown.argument", &[]); }
+    }
+    let targets = find_targets(target, source, shared);
+    let [(uuid, _)] = targets.as_slice() else {
+        return fail(if targets.len() > 1 { "argument.entity.toomany" } else { "argument.entity.notfound.player" }, &[]);
+    };
+    let snapshot = shared.players.lock().expect("список игроков").members().iter().find(|member| member.uuid == *uuid).map(|member| (member.name.clone(), member.position));
+    let Some((name, position)) = snapshot else { return fail("argument.entity.notfound.player", &[]); };
+    if !position.x.is_finite() || !position.y.is_finite() || !position.z.is_finite() { return fail("command.unknown.argument", &[]); }
+    let (value, result) = if *field == "Pos" {
+        let number = |v: f64| {
+            let mut text = v.to_string();
+            if !text.contains('.') && !text.contains('e') && !text.contains('E') { text.push_str(".0"); }
+            text.push('d'); text
+        };
+        (format!("[{}, {}, {}]", number(position.x), number(position.y), number(position.z)), 3)
+    } else { (format!("{}b", u8::from(position.on_ground)), i32::from(position.on_ground)) };
+    let mut answer = tr("commands.data.entity.query", &[s(name), s(value)]);
+    // Обычный 777 execute store: Pos даёт3, OnGround byte даёт0/1
+    // (player-floor-ordinary-01). Снимок принятого флага не доказывает физику опоры.
+    answer.result = Some(result);
+    answer
+}
+
 /// `data merge entity <кто> {NoAI:0b,…}` — правка данных мобов.
 fn data_command(parts: &[&str], source: &Source, shared: &Shared) -> Answer {
+    if parts.first() == Some(&"get") { return data_get_player(parts, source, shared); }
     if let ["merge", "block", x, y, z, data @ ..] = parts {
         let Some((x, y, z)) = entity_place(&[x, y, z], origin_of(source, shared)) else {
             return Answer::saying("Не понял место блока".to_string());
@@ -4393,3 +4467,7 @@ mod tests {
     }
 
 }
+
+#[cfg(test)]
+#[path = "commands/data_get_tests.rs"]
+mod data_get_tests;
