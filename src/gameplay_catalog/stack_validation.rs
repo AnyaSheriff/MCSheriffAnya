@@ -5,13 +5,16 @@ use crate::{inventory::{Inventory, Stack}, stackdata::{self, Content}};
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StackLocation {
     Slot(usize), Cursor, Container(usize), Bundle(usize), ChargedArrow,
-    Projectile(usize), PotDecoration(usize), Ender(usize),
+    Projectile(usize), PotDecoration(usize), Ender(usize), HiveOccupant(usize), Shoulder(usize),
+    MobEquipment(usize), MobTrialGear(usize), MobStandEquipment(usize), MobHorseSlot(usize),
+    MobLandCargo(usize), MobLandHeld, MobSmallHeld, MobSmallCargo, MobWildMouth, MobNewCargo,
+    MobTradeBuy(usize), MobTradeSecondBuy(usize), MobTradeSell(usize), MobCarriedState,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StackProblem {
     Catalog(Error), EmptyItem, Count { count: i32, limit: i32 },
-    MalformedEncoding, CustomTnt, MissingComponents, ComponentsTooLarge, LossyComponents, NestingLimit,
+    MalformedEncoding, CustomTnt, MissingComponents, ComponentsTooLarge, LossyComponents, NestingLimit, InvalidHive,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -45,7 +48,7 @@ impl Catalog {
         Ok(())
     }
 
-    fn validate_stack_at(self, stack: &Stack, path: &mut Vec<StackLocation>, depth: usize) -> Result<(), StackError> {
+    pub(super) fn validate_stack_at(self, stack: &Stack, path: &mut Vec<StackLocation>, depth: usize) -> Result<(), StackError> {
         let current_path = path.clone();
         let fail = |problem| StackError { path: current_path.clone(), problem };
         // Предел нашего файлового декодера, не правило игры.
@@ -83,6 +86,10 @@ impl Catalog {
                     StackError { path, problem: StackProblem::Catalog(e) }
                 })?;
             }
+        }
+        if !data.bees.is_empty() {
+            let hive = crate::hive::Data::from_bytes(&data.bees).ok_or_else(|| fail(StackProblem::InvalidHive))?;
+            self.validate_hive_at(&hive, path, depth + 1)?;
         }
         let bytes = stackdata::to_bytes(&data);
         if bytes.len() > u16::MAX as usize { return Err(fail(StackProblem::ComponentsTooLarge)); }

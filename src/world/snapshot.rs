@@ -1,8 +1,8 @@
-//! Полная побайтовая копия папки мира, пока НЕ подключённая к запуску/переходам.
+//! Полная побайтовая копия папки мира; узкий storageupgrade публикуется под теми же замками.
 //!
 //! Снимок не преобразует формат и не разрешает downgrade. Для будущего перехода
 //! наличие проверенного конвертера должно проверяться ДО вызова этого модуля.
-#![allow(dead_code)] // Автономный primitive; startup пока не вызывает backup.
+#![allow(dead_code)] // Полные переносы игровых профилей ещё не реализованы.
 
 use std::fmt;
 use std::io;
@@ -73,3 +73,21 @@ fn unsupported() -> BackupError {
 
 #[cfg(target_os = "linux")]
 mod linux;
+
+/// Только известный переход storage10→11. Манифест меняется после полной
+/// проверки копии, пока session.lock всех измерений ещё удерживаются.
+pub(crate) fn create_storage_upgrade(guard: &StartupGuard, expected: &super::profile::Manifest) -> Result<VerifiedBackup, BackupError> {
+    #[cfg(target_os = "linux")]
+    { linux::create_storage_upgrade(guard, expected) }
+    #[cfg(not(target_os = "linux"))]
+    { let _ = (guard, expected); Err(unsupported()) }
+}
+
+/// Не определяет игровой профиль: копия неизвестного мира и отдельный receipt
+/// новых раскладок публикуются при непрерывном удержании session.lock.
+pub(crate) fn create_unidentified_storage_receipt(guard: &StartupGuard) -> Result<VerifiedBackup, BackupError> {
+    #[cfg(target_os = "linux")]
+    { linux::create_unidentified_storage_receipt(guard) }
+    #[cfg(not(target_os = "linux"))]
+    { let _ = guard; Err(unsupported()) }
+}

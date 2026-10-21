@@ -159,6 +159,27 @@ impl Stack {
         }
     }
 
+    /// Строгий путь записей мобов: проверяем сырые данные до нормализации.
+    /// Каталог и предел стопки проверяет вызывающий код после полного чтения.
+    pub fn from_stored_strict(stored: i32, count: i32, extras: Option<crate::stackdata::Data>) -> Option<Self> {
+        if count <= 0 || stored & 0x00ff_ffff == 0 || (stored < 0) != extras.is_some() { return None; }
+        let tag = ((stored >> 24) & 0x7f) as u8;
+        let mut stack = Self::from_stored(stored, count);
+        if tag != 0 && (stack.tnt.map(|kind| kind.0) != Some(tag)
+            || blocks::item_name(stack.item) != Some("tnt")) { return None; }
+        if let Some(data) = extras { stack = stack.with_extras(data); }
+        (stack.stored_item() == stored).then_some(stack)
+    }
+
+    /// Проверяет именно записанные байты компонентов, включая лишний хвост.
+    pub fn read_extras_strict<'a>(stored: i32, mut take: impl FnMut(usize) -> Option<&'a [u8]>) -> Option<Option<crate::stackdata::Data>> {
+        if stored >= 0 { return Some(None); }
+        let length = usize::from(u16::from_be_bytes(take(2)?.try_into().ok()?));
+        let bytes = take(length)?;
+        let data = crate::stackdata::from_bytes(bytes)?;
+        (crate::stackdata::to_bytes(&data) == bytes).then_some(Some(data))
+    }
+
     /// Сколько таких предметов помещается в одну стопку.
     pub fn limit(&self) -> i32 {
         blocks::stack_size(self.item)
@@ -1309,5 +1330,106 @@ mod tests {
 
         assert_eq!(inventory.held(), Some(Stack::new(STONE, 9)));
         assert_eq!(inventory.slot(FIRST_MAIN + 2), Some(held));
+    }
+}
+
+#[cfg(test)]
+mod strict_mob_storage_tests {
+    use super::*;
+    use crate::mob::{self, Kind, Mob};
+
+    // Только сохранённая стопка сравнивается целиком, не нормализуемое тело моба.
+    fn record(family: usize, stack: Stack) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        let mut mob = Mob::new(71, Kind::Llama, (0.0, 64.0, 0.0));
+        match family {
+            0 => { let mut gear = [None; 6]; gear[0] = Some(stack); mob::equipment::write(&gear, &mut bytes); }
+            1 => { let mut gear = [None; 3]; gear[0] = Some(stack); mob::trial_gear::write(&gear, &mut bytes); }
+            2 => { mob.stand.equipment[0] = Some(stack); mob.stand.write(&mut bytes); }
+            3 => { mob.horse.slots[0] = Some(stack); mob::horse::write(&mob, &mut bytes); }
+            4 => { mob.land.chest = true; mob.land.strength = 1; mob.land.cargo = vec![Some(stack), None, None]; mob::land::write(&mob, &mut bytes); }
+            5 => { mob.small.held = Some(stack); mob::small::write(&mob, &mut bytes); }
+            6 => { mob.wild.mouth = Some(stack); mob::wildlife::write(&mob.wild, &mut bytes); }
+            7 => { mob.newmobs.cargo = Some(stack); mob::newmobs::write(&mob.newmobs, &mut bytes); }
+            _ => unreachable!(),
+        }
+        bytes
+    }
+
+    fn read(family: usize, bytes: &mut &[u8]) -> Option<Stack> {
+        match family {
+            0 => mob::equipment::read(bytes)?[0],
+            1 => mob::trial_gear::read(bytes)?[0],
+            2 => mob::armor_stand::State::read(bytes)?.equipment[0],
+            3 => { let mut mob = Mob::new(72, Kind::Llama, (0.0, 64.0, 0.0)); mob::horse::read(&mut mob, bytes)?; mob.horse.slots[0] }
+            4 => mob::land::read(bytes)?.0.cargo[0],
+            5 => mob::small::read(bytes)?.0.held,
+            6 => mob::wildlife::read(bytes)?.mouth,
+            7 => mob::newmobs::read(bytes)?.cargo,
+            _ => unreachable!(),
+        }
+    }
+
+    fn change_item(bytes: &mut [u8], old: i32, new: i32) {
+        let needle = old.to_be_bytes();
+        let offsets: Vec<_> = bytes.windows(4).enumerate().filter_map(|(i, b)| (b == needle).then_some(i)).collect();
+        assert_eq!(offsets.len(), 1, "одна выбранная запись предмета");
+        bytes[offsets[0]..offsets[0]+4].copy_from_slice(&new.to_be_bytes());
+    }
+
+    #[test]
+    fn strict_storage_decodes_writer_records_and_refuses_tnt_tag_normalization_in_every_family() {
+        let stone = blocks::item_named("stone").unwrap();
+        let tnt = blocks::item_named("tnt").unwrap();
+        for family in 0..8 {
+            let stack = Stack::new(stone, 1).with_extras(crate::stackdata::Data { name: Some("Сохранённая стопка".into()), ..Default::default() });
+            let valid = record(family, stack);
+            let mut concatenated = valid.clone(); concatenated.extend([0xab, 0xcd]);
+            let mut tail = concatenated.as_slice();
+            assert_eq!(read(family, &mut tail), Some(stack), "семейство{family}");
+            assert_eq!(tail, &[0xab, 0xcd]);
+            for raw in [stack.stored_item() | (127 << 24), stack.stored_item() | (1 << 24)] {
+                let mut bad = valid.clone(); change_item(&mut bad, stack.stored_item(), raw);
+                assert!(read(family, &mut bad.as_slice()).is_none(), "семейство{family}, raw{raw}");
+            }
+            let item_at = valid.windows(4).position(|b| b == stack.stored_item().to_be_bytes()).unwrap();
+            let extra_at = item_at + if matches!(family, 1 | 6) { 4 } else { 8 };
+            let length = u16::from_be_bytes(valid[extra_at..extra_at+2].try_into().unwrap());
+            let mut bad_extra = valid.clone();
+            bad_extra[extra_at..extra_at+2].copy_from_slice(&(length + 1).to_be_bytes());
+            bad_extra.insert(extra_at + 2 + usize::from(length), 0);
+            assert!(read(family, &mut bad_extra.as_slice()).is_none(), "лишний хвост компонентов семейство{family}");
+            let custom = Stack { tnt: Some(crate::custom_tnt::KindId(1)), ..Stack::new(tnt, 1) };
+            let bytes = record(family, custom);
+            assert_eq!(read(family, &mut bytes.as_slice()), Some(custom), "известный TNT семейство{family}");
+        }
+    }
+
+    #[test]
+    fn present_zero_and_negative_counts_are_errors_not_empty_horse_or_cargo_slots() {
+        let item = blocks::item_named("stone").unwrap();
+        for family in [0, 2, 3, 4, 5, 7] {
+            let valid = record(family, Stack::new(item, 7));
+            for count in [0i32, -1] {
+                let mut needle = item.to_be_bytes().to_vec(); needle.extend(7_i32.to_be_bytes());
+                let offsets: Vec<_> = valid.windows(8).enumerate().filter_map(|(i, b)| (b == needle).then_some(i)).collect();
+                assert_eq!(offsets.len(), 1);
+                let mut bad = valid.clone();
+                bad[offsets[0]+4..offsets[0]+8].copy_from_slice(&count.to_be_bytes());
+                assert!(read(family, &mut bad.as_slice()).is_none(), "семейство{family}, count{count}");
+            }
+        }
+    }
+
+    #[test]
+    fn strict_extras_refuse_trailing_component_bytes_and_empty_flag_normalization() {
+        let stack = Stack::new(blocks::item_named("stone").unwrap(), 1).with_extras(crate::stackdata::Data { name: Some("Имя".into()), ..Default::default() });
+        let mut extra = Vec::new(); stack.write_extras(&mut extra);
+        let length = u16::from_be_bytes(extra[..2].try_into().unwrap());
+        extra[..2].copy_from_slice(&(length + 1).to_be_bytes()); extra.push(0);
+        let mut tail = extra.as_slice();
+        assert!(Stack::read_extras_strict(stack.stored_item(), |n| { let (a,b) = tail.split_at_checked(n)?; tail = b; Some(a) }).is_none());
+        assert!(Stack::from_stored_strict(stack.item | i32::MIN, 1, Some(Default::default())).is_none());
+        assert!(Stack::from_stored_strict(stack.item, 1, Some(stack.extras())).is_none());
     }
 }

@@ -13,6 +13,10 @@ impl Fixture {
         fs::create_dir(&root).unwrap();
         fs::create_dir(root.join("world")).unwrap();
         fs::write(root.join("world/session.lock"),b"old-process-marker\n").unwrap();
+        // Как у manifest fixtures: локальное утверждение уже допущенных раскладок.
+        // Его наличие не выдаётся за проверку старой копии; каждый test создаёт свою.
+        let receipt = crate::world::startup::storage_receipt::Receipt::for_backup("fedcba9876543210fedcba9876543210");
+        fs::write(root.join("world").join(crate::world::startup::storage_receipt::NAME), serde_json::to_vec(&receipt).unwrap()).unwrap();
         Self(root)
     }
     fn world(&self)->PathBuf { self.0.join("world") }
@@ -337,4 +341,90 @@ fn verification_rejects_directory_replaced_after_its_bytes_were_checked() {
     }).is_err());
     assert!(fired);assert!(moved.join("snapshot.json").is_file());
     assert_eq!(fs::read(path.join("replacement")).unwrap(),b"unverified");
+}
+
+#[test]
+fn storage_upgrade_failures_retain_partial_or_verified_backup_without_replacing_old_manifest() {
+    use crate::world::profile;
+    for fail_at in [Point::BeforeWrite, Point::ParentSynced] {
+        let fixture = Fixture::new();
+        let mut guard = fixture.guard();
+        let current = profile::current_profile();
+        let old = profile::Manifest { schema: profile::MANIFEST_SCHEMA,
+            save_format: profile::SaveFormat { region_layout: 1, playerdata_layout: 10 },
+            registry_id: current.registry_id, gameplay_version: current.gameplay_version, snapshot_id: ID.into() };
+        let old_bytes = serde_json::to_vec_pretty(&old).unwrap();
+        fs::write(fixture.world().join(profile::MANIFEST_NAME), &old_bytes).unwrap();
+        guard.check = profile::StartupCheck::StorageUpgradePending { snapshot_id: ID.into() };
+        let original = unchanged_bytes(&fixture.world());
+        let error = create_with_completion(&guard, options(ID), &mut |point| {
+            if point == fail_at { Err(io::Error::other("fixture failure before manifest publication")) } else { Ok(()) }
+        }, Some(&old), false, &mut |source, backup, uncertain| {
+            publish_storage_manifest(source, &old, backup, uncertain)
+        }).unwrap_err();
+        assert_eq!(unchanged_bytes(&fixture.world()), original);
+        let retained = error.retained.expect("созданная копия остаётся для проверки");
+        assert!(retained.exists());
+        assert!(!error.publication_uncertain);
+        if fail_at == Point::ParentSynced {
+            let verified = verify(&retained).unwrap();
+            assert_eq!(verified.snapshot_id(), ID);
+            assert_eq!(fs::read(retained.join("world").join(profile::MANIFEST_NAME)).unwrap(), old_bytes);
+        } else {
+            assert!(retained.file_name().unwrap().to_string_lossy().ends_with(".partial"));
+            assert!(verify(&retained).is_err());
+        }
+    }
+}
+
+#[test]
+fn storage_manifest_publication_keeps_dimension_locks_and_rejects_temp_collision_without_world_mutation() {
+    use crate::world::profile;
+    let fixture = Fixture::new();
+    let mut guard = fixture.guard();
+    let current = profile::current_profile();
+    let old = profile::Manifest { schema: profile::MANIFEST_SCHEMA,
+        save_format: profile::SaveFormat { region_layout: 1, playerdata_layout: 10 },
+        registry_id: current.registry_id, gameplay_version: current.gameplay_version, snapshot_id: ID.into() };
+    let old_bytes = serde_json::to_vec(&old).unwrap();
+    fs::write(fixture.world().join(profile::MANIFEST_NAME), &old_bytes).unwrap();
+    guard.check = profile::StartupCheck::StorageUpgradePending { snapshot_id: ID.into() };
+    let original = unchanged_bytes(&fixture.world());
+    let temp = fixture.0.join(format!(".mcsa-manifest-{ID}.tmp"));
+    fs::write(&temp, b"existing-file-preserved").unwrap();
+    let error = create_with_completion(&guard, options(ID), &mut |_| Ok(()), Some(&old), false,
+        &mut |source, backup, uncertain| {
+            let lock = regular(&source.root, b"session.lock")?;
+            // SAFETY: новый fd того же fixture: существующий lock ещё удерживается.
+            assert_ne!(unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) }, 0);
+            assert_eq!(io::Error::last_os_error().kind(), io::ErrorKind::WouldBlock);
+            publish_storage_manifest(source, &old, backup, uncertain)
+        }).unwrap_err();
+    assert_eq!(unchanged_bytes(&fixture.world()), original);
+    assert_eq!(fs::read(&temp).unwrap(), b"existing-file-preserved");
+    assert!(!error.publication_uncertain);
+    verify(&error.retained.unwrap()).unwrap();
+}
+
+#[test]
+fn unidentified_storage_receipt_collision_after_verified_backup_never_overwrites_receipt() {
+    use crate::world::startup::storage_receipt;
+    let fixture = Fixture::new();
+    let guard = fixture.guard();
+    fs::remove_file(fixture.world().join(storage_receipt::NAME)).unwrap();
+    let original_lock = fs::read(fixture.world().join("session.lock")).unwrap();
+    let collision = b"externally-created-receipt-preserved";
+    let error = create_with_completion(&guard, options(ID), &mut |point| {
+        if point == Point::ParentSynced {
+            fs::write(fixture.world().join(storage_receipt::NAME), collision)?;
+        }
+        Ok(())
+    }, None, true, &mut |source, backup, uncertain| publish_storage_receipt(source, backup, uncertain)).unwrap_err();
+    assert_eq!(fs::read(fixture.world().join(storage_receipt::NAME)).unwrap(), collision);
+    assert_eq!(fs::read(fixture.world().join("session.lock")).unwrap(), original_lock);
+    assert!(!fixture.world().join(crate::world::profile::MANIFEST_NAME).exists());
+    assert!(!error.publication_uncertain);
+    let backup = error.retained.unwrap(); verify(&backup).unwrap();
+    assert!(!backup.join("world").join(storage_receipt::NAME).exists());
+    assert!(!fixture.0.join(format!(".mcsa-storage-{ID}.tmp")).exists());
 }

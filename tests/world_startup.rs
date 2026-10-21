@@ -38,6 +38,9 @@ fn unavailable_config_version_keeps_its_existing_error_for_unidentified_worlds()
     let error = String::from_utf8(output.stderr).unwrap();
     assert!(error.contains("эта сборка поддерживает java-version=26.1.2"), "{error}");
     assert!(!root.0.join("world/mcsa-world.json").exists());
+    assert!(!root.0.join("world/mcsa-storage.json").exists());
+    assert!(!root.0.join("backups").exists());
+    assert!(!root.0.join(".mcsa-world.lock").exists());
     assert_eq!(fs::read(root.0.join("world/legacy-marker")).unwrap(), b"preserve");
 }
 

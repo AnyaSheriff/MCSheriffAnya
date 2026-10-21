@@ -30,7 +30,7 @@ fn current_manifest() -> profile::Manifest {
 }
 
 #[test]
-fn missing_and_unidentified_worlds_are_not_created_or_marked() {
+fn missing_and_empty_worlds_are_not_created_or_marked() {
     let fixture = Fixture::new();
     let world = fixture.world();
     {
@@ -40,11 +40,10 @@ fn missing_and_unidentified_worlds_are_not_created_or_marked() {
         assert!(!world.exists());
     }
     fs::create_dir(&world).unwrap();
-    fs::write(world.join("old-world-marker"), b"unchanged").unwrap();
     let guard = prepare(&world).unwrap();
     assert_eq!(guard.check, StartupCheck::LegacyUnidentified);
-    assert_eq!(fs::read_dir(&world).unwrap().count(), 1);
-    assert_eq!(fs::read(world.join("old-world-marker")).unwrap(), b"unchanged");
+    assert_eq!(fs::read_dir(&world).unwrap().count(), 0);
+    assert!(!fixture.0.join("backups").exists());
 }
 
 #[test]
@@ -64,7 +63,7 @@ fn bad_manifests_refuse_without_migration_and_release_the_guard() {
     let mut future = current.clone();
     future.schema += 1;
     let mut old_layout = current.clone();
-    old_layout.save_format.playerdata_layout -= 1;
+    old_layout.save_format.playerdata_layout = 9;
     for bytes in [
         serde_json::to_vec(&wrong_registry).unwrap(),
         serde_json::to_vec(&wrong_profile).unwrap(),
@@ -164,4 +163,208 @@ fn independent_process_is_excluded_until_guard_drops() {
     child(&fixture.0, "free");
     assert_eq!(fs::metadata(&lock).unwrap().ino(), inode);
     assert!(!fixture.world().exists());
+}
+
+#[cfg(target_os = "linux")]
+fn old_storage_world(fixture: &Fixture) -> (PathBuf, Vec<u8>) {
+    let world = fixture.world();
+    fs::create_dir(&world).unwrap();
+    fs::write(world.join("session.lock"), b"fixture-lock-pid").unwrap();
+    fs::create_dir(world.join("playerdata")).unwrap();
+    fs::write(world.join("playerdata/fixture.dat"), b"old-player-bytes-preserved").unwrap();
+    let mut manifest = current_manifest();
+    manifest.save_format.playerdata_layout = 10;
+    let mut bytes = serde_json::to_vec_pretty(&manifest).unwrap();
+    bytes.push(b'\n');
+    fs::write(world.join(profile::MANIFEST_NAME), &bytes).unwrap();
+    (world, bytes)
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn known_storage_ten_upgrades_after_verified_backup_and_restart_does_not_repeat_it() {
+    let fixture = Fixture::new();
+    let (world, previous) = old_storage_world(&fixture);
+    assert!(matches!(profile::check_current_world(&world), Err(profile::Error::TransitionRequired)));
+    let guard = prepare(&world).unwrap();
+    let StartupCheck::ManifestMatches { snapshot_id } = &guard.check else { panic!("незавершённый перенос не выходит из prepare"); };
+    assert_ne!(snapshot_id, &current_manifest().snapshot_id);
+    let backup = fixture.0.join("backups/world").join(snapshot_id);
+    let verified = super::super::snapshot::verify_backup(&backup).unwrap();
+    assert_eq!(verified.snapshot_id(), snapshot_id);
+    assert_eq!(fs::read(backup.join("world").join(profile::MANIFEST_NAME)).unwrap(), previous);
+    assert_eq!(fs::read(backup.join("world/session.lock")).unwrap(), b"fixture-lock-pid");
+    assert_eq!(fs::read(backup.join("world/playerdata/fixture.dat")).unwrap(), b"old-player-bytes-preserved");
+    assert_eq!(fs::read(world.join("playerdata/fixture.dat")).unwrap(), b"old-player-bytes-preserved");
+    assert_eq!(fs::read(world.join("session.lock")).unwrap(), b"fixture-lock-pid");
+    let marker: serde_json::Value = serde_json::from_slice(&fs::read(backup.join("snapshot.json")).unwrap()).unwrap();
+    assert_eq!(marker["source_profile"]["save_format"]["playerdata_layout"], 10);
+    let updated = profile::read_manifest(&world).unwrap().unwrap();
+    assert_eq!(updated.save_format, current_manifest().save_format);
+    assert_eq!(&updated.snapshot_id, snapshot_id);
+    assert_eq!(updated.registry_id, current_manifest().registry_id);
+    assert_eq!(updated.gameplay_version, current_manifest().gameplay_version);
+    let published = fs::read(world.join(profile::MANIFEST_NAME)).unwrap();
+    let check = guard.check.clone();
+    drop(guard);
+    assert_eq!(prepare(&world).unwrap().check, check);
+    assert_eq!(fs::read_dir(fixture.0.join("backups/world")).unwrap().count(), 1);
+    assert_eq!(fs::read(world.join(profile::MANIFEST_NAME)).unwrap(), published);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn storage_upgrade_backup_failure_and_occupied_locks_preserve_original_world() {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::fs::symlink;
+    let fixture = Fixture::new();
+    let (world, previous) = old_storage_world(&fixture);
+    // Даже старый core, не знающий внешнего замка, исключается session.lock.
+    let held = File::open(world.join("session.lock")).unwrap();
+    // SAFETY: живой fd нашего fixture удерживается до drop.
+    assert_eq!(unsafe { libc::flock(held.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) }, 0);
+    assert!(prepare(&world).is_err());
+    assert!(!fixture.0.join("backups").exists());
+    assert_eq!(fs::read(world.join(profile::MANIFEST_NAME)).unwrap(), previous);
+    drop(held);
+    let outside = fixture.0.join("outside");
+    fs::write(&outside, b"preserve-outside").unwrap();
+    symlink(&outside, world.join("unsupported-link")).unwrap();
+    assert!(prepare(&world).is_err());
+    assert!(!fixture.0.join("backups").exists());
+    assert_eq!(fs::read(world.join(profile::MANIFEST_NAME)).unwrap(), previous);
+    assert_eq!(fs::read(world.join("session.lock")).unwrap(), b"fixture-lock-pid");
+    assert_eq!(fs::read(world.join("playerdata/fixture.dat")).unwrap(), b"old-player-bytes-preserved");
+    assert_eq!(fs::read(&outside).unwrap(), b"preserve-outside");
+    fs::remove_file(world.join("unsupported-link")).unwrap();
+    // Внешний замок проверяется ещё до планирования и создания снимка.
+    let external = lock_world(&world).unwrap();
+    assert_eq!(prepare(&world).err().unwrap().kind(), io::ErrorKind::WouldBlock);
+    assert!(!fixture.0.join("backups").exists());
+    assert_eq!(fs::read(world.join(profile::MANIFEST_NAME)).unwrap(), previous);
+    drop(external);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn storage_upgrade_never_relabels_mismatched_manifest_before_or_during_backup() {
+    let fixture = Fixture::new();
+    let (world, previous) = old_storage_world(&fixture);
+    let mut wrong = profile::decode(&previous).unwrap();
+    wrong.registry_id = "different-registry".into();
+    let wrong_bytes = serde_json::to_vec(&wrong).unwrap();
+    fs::write(world.join(profile::MANIFEST_NAME), &wrong_bytes).unwrap();
+    assert!(prepare(&world).is_err());
+    assert!(!fixture.0.join("backups").exists());
+    assert_eq!(fs::read(world.join(profile::MANIFEST_NAME)).unwrap(), wrong_bytes);
+    fs::write(world.join(profile::MANIFEST_NAME), &previous).unwrap();
+    let result = prepare_with_upgrade(&world, |guard, expected| {
+        // Детерминированная подмена между read-only plan и fd-relative snapshot.
+        fs::write(world.join(profile::MANIFEST_NAME), &wrong_bytes)?;
+        super::super::snapshot::create_storage_upgrade(guard, expected).map(|_| ()).map_err(io::Error::other)
+    });
+    assert!(result.is_err());
+    assert!(!fixture.0.join("backups").exists());
+    assert_eq!(fs::read(world.join(profile::MANIFEST_NAME)).unwrap(), wrong_bytes);
+    assert_eq!(fs::read(world.join("playerdata/fixture.dat")).unwrap(), b"old-player-bytes-preserved");
+}
+
+
+#[cfg(target_os = "linux")]
+#[test]
+fn unidentified_nonempty_world_gets_verified_copy_and_storage_receipt_without_gameplay_label() {
+    let fixture = Fixture::new();
+    let world = fixture.world();
+    fs::create_dir(&world).unwrap();
+    fs::write(world.join("session.lock"), b"unknown-old-lock").unwrap();
+    fs::create_dir(world.join("playerdata")).unwrap();
+    fs::write(world.join("playerdata/old.dat"), b"opaque-layout10-player").unwrap();
+    fs::write(world.join("old-region"), b"opaque-layout4-chunk").unwrap();
+    let guard = prepare(&world).unwrap();
+    assert_eq!(guard.check, StartupCheck::LegacyUnidentified);
+    assert!(!world.join(profile::MANIFEST_NAME).exists());
+    let receipt = storage_receipt::read(&world).unwrap().unwrap();
+    let backup = fixture.0.join("backups/world").join(&receipt.snapshot_id);
+    let verified = super::super::snapshot::verify_backup(&backup).unwrap();
+    assert_eq!(verified.snapshot_id(), receipt.snapshot_id);
+    assert_eq!(fs::read(backup.join("world/session.lock")).unwrap(), b"unknown-old-lock");
+    assert_eq!(fs::read(backup.join("world/playerdata/old.dat")).unwrap(), b"opaque-layout10-player");
+    assert_eq!(fs::read(backup.join("world/old-region")).unwrap(), b"opaque-layout4-chunk");
+    assert!(!backup.join("world").join(storage_receipt::NAME).exists());
+    assert!(!backup.join("world").join(profile::MANIFEST_NAME).exists());
+    let marker: serde_json::Value = serde_json::from_slice(&fs::read(backup.join("snapshot.json")).unwrap()).unwrap();
+    assert!(marker["source_profile"].is_null());
+    let bytes = fs::read(world.join(storage_receipt::NAME)).unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(value["region_layout"], 1); assert_eq!(value["chunk_layout"], 5); assert_eq!(value["playerdata_layout"], 11);
+    assert!(value.get("gameplay_version").is_none()); assert!(value.get("registry_id").is_none());
+    drop(guard);
+    // Настоящий gameplay мог поменять файлы: повторный допуск не требует равенства старой копии.
+    fs::write(world.join("playerdata/old.dat"), b"new-layout11-state").unwrap();
+    assert_eq!(prepare(&world).unwrap().check, StartupCheck::LegacyUnidentified);
+    assert_eq!(fs::read_dir(fixture.0.join("backups/world")).unwrap().count(), 1);
+    assert_eq!(fs::read(world.join(storage_receipt::NAME)).unwrap(), bytes);
+    assert_eq!(fs::read(world.join("playerdata/old.dat")).unwrap(), b"new-layout11-state");
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn unidentified_backup_failure_never_publishes_receipt_or_changes_existing_files() {
+    use std::os::unix::fs::symlink;
+    let fixture = Fixture::new();
+    let world = fixture.world();
+    fs::create_dir(&world).unwrap(); fs::write(world.join("session.lock"), b"old-lock").unwrap();
+    fs::write(world.join("old-region"), b"unchanged").unwrap();
+    let target = fixture.0.join("outside"); fs::write(&target, b"outside").unwrap();
+    symlink(&target, world.join("unsupported")).unwrap();
+    assert!(prepare(&world).is_err());
+    assert!(!world.join(storage_receipt::NAME).exists());
+    assert!(!world.join(profile::MANIFEST_NAME).exists());
+    assert!(!fixture.0.join("backups").exists());
+    assert_eq!(fs::read(world.join("old-region")).unwrap(), b"unchanged");
+    assert_eq!(fs::read(world.join("session.lock")).unwrap(), b"old-lock");
+    assert_eq!(fs::read(&target).unwrap(), b"outside");
+}
+
+#[test]
+fn malformed_future_or_ambiguous_storage_receipts_refuse_without_writing_world() {
+    let fixture = Fixture::new();
+    let world = fixture.world(); fs::create_dir(&world).unwrap();
+    fs::write(world.join("session.lock"), b"old-lock").unwrap();
+    fs::write(world.join("old-region"), b"unchanged").unwrap();
+    let receipt = storage_receipt::Receipt::for_backup("0123456789abcdef0123456789abcdef");
+    let valid = serde_json::to_value(receipt).unwrap();
+    let duplicate = serde_json::to_string(&valid).unwrap().replacen('{', "{\"schema\":1,", 1);
+    let mut invalid = vec![b"{".to_vec(), duplicate.into_bytes()];
+    for key in ["schema", "region_layout", "chunk_layout", "playerdata_layout"] {
+        let mut value = valid.clone(); value[key] = serde_json::json!(999);
+        invalid.push(serde_json::to_vec(&value).unwrap());
+    }
+    for bad_id in ["", "../world", "0123456789ABCDEF0123456789ABCDEF"] {
+        let mut value = valid.clone(); value["snapshot_id"] = serde_json::json!(bad_id);
+        invalid.push(serde_json::to_vec(&value).unwrap());
+    }
+    let mut unknown = valid.clone(); unknown["gameplay_version"] = serde_json::json!("26.3");
+    invalid.push(serde_json::to_vec(&unknown).unwrap());
+    for bytes in invalid {
+        fs::write(world.join(storage_receipt::NAME), &bytes).unwrap();
+        assert!(prepare(&world).is_err());
+        assert_eq!(fs::read(world.join(storage_receipt::NAME)).unwrap(), bytes);
+        assert_eq!(fs::read(world.join("old-region")).unwrap(), b"unchanged");
+        assert!(!world.join(profile::MANIFEST_NAME).exists());
+        assert!(!fixture.0.join("backups").exists());
+    }
+}
+
+
+#[test]
+fn existing_shape_valid_receipt_is_a_local_claim_without_repeat_backup_verification() {
+    let fixture = Fixture::new(); let world = fixture.world(); fs::create_dir(&world).unwrap();
+    fs::write(world.join("session.lock"), b"old-lock").unwrap();
+    let receipt = storage_receipt::Receipt::for_backup("0123456789abcdef0123456789abcdef");
+    fs::write(world.join(storage_receipt::NAME), serde_json::to_vec(&receipt).unwrap()).unwrap();
+    assert!(!fixture.0.join("backups").exists());
+    assert_eq!(prepare(&world).unwrap().check, StartupCheck::LegacyUnidentified);
+    assert!(!fixture.0.join("backups").exists());
+    assert!(!world.join(profile::MANIFEST_NAME).exists());
 }

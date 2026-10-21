@@ -47,6 +47,7 @@ pub mod spawn;
 pub mod slime;
 pub mod skeleton;
 mod save;
+mod item_storage;
 pub mod tame;
 pub mod wildlife;
 pub mod wolf_armor;
@@ -3043,15 +3044,20 @@ impl Mob {
         self.dead_for > if self.kind == Kind::EnderDragon { DRAGON_DEATH_TICKS } else if self.kind==Kind::ArmorStand {0} else { DEATH_TICKS }
     }
 
-    /// Запись для файла региона: вид, место, скорость не пишется, здоровье,
-    /// возраст, любовь, признаки, цвет, яйцо.
+    /// Проверяет длины и полную представимость предметного дополнения до записи.
+    pub fn validate_item_storage(&self) -> Result<(), &'static str> {
+        item_storage::validate(self)
+    }
+
+    /// Запись собственного формата; вызывающий проверяет данные до очереди снимков.
     pub fn write(&self, out: &mut Vec<u8>) {
+        self.validate_item_storage().expect("предметы моба проверены до записи");
         let id = if self.kind == Kind::Skeleton && (self.h.water_ticks != 0 || self.h.converting != 0) {
             save::SNOW_SKELETON
         } else {
             self.kind.save_id()
         };
-        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some());
+        save::write_head(out, id, self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() || item_storage::needed(self));
         out.extend_from_slice(&self.x.to_be_bytes());
         out.extend_from_slice(&self.y.to_be_bytes());
         out.extend_from_slice(&self.z.to_be_bytes());
@@ -3096,7 +3102,7 @@ impl Mob {
         if self.kind==Kind::ArmorStand {self.stand.write(out);}
 
         // Общий хвост (вид с битом `EXTENDED`): имя с бирки и поводок (mob/leash.rs).
-        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() {
+        if self.name.is_some() || self.leash.is_some() || self.persistent_tag || self.h.trial_gear.is_some() || self.equipment.is_some() || matches!(self.kind, Kind::Hoglin | Kind::Piglin | Kind::PiglinBrute) || self.age_locked || leash::village_uuid(self).is_some() || item_storage::needed(self) {
             leash::write_tail(self, out);
         }
     }
@@ -3125,7 +3131,11 @@ impl Mob {
         let flags = take(1)?[0];
         let color = take(1)?[0];
         let egg_timer = i32::from_be_bytes(take(4)?.try_into().ok()?);
-        let carried = if kind == Kind::Enderman { Some(i32::from_be_bytes(take(4)?.try_into().ok()?)).filter(|state| *state >= 0) } else { None };
+        let carried = if kind == Kind::Enderman {
+            match i32::from_be_bytes(take(4)?.try_into().ok()?) {
+                -1 => None, state if state >= 0 => Some(state), _ => return None,
+            }
+        } else { None };
         let shell = if kind == Kind::Shulker { take(2)?.to_vec() } else { vec![0, 16] };
         let slime_data = if kind == Kind::Slime { Some((i32::from_be_bytes(take(4)?.try_into().ok()?), take(1)?[0])) } else { None };
         let villager = if matches!(kind, Kind::Villager | Kind::ZombieVillager) { Some(crate::villager::read(bytes)?) } else { None };
@@ -3208,7 +3218,7 @@ impl Mob {
         }
 
         if let Some(tail) = tail {
-            leash::apply_tail(&mut mob, tail);
+            leash::apply_tail_checked(&mut mob, tail)?;
         }
 
         // Снаряд без цели не живёт: прочитанный из файла гаснет.

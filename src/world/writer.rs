@@ -297,3 +297,7 @@ mod tests {
         std::fs::remove_dir_all(directory).unwrap();
     }
 }
+
+#[cfg(test)]
+#[path = "writer_mob_storage_tests.rs"]
+mod mob_storage_tests;

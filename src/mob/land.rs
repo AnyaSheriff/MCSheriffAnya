@@ -462,8 +462,8 @@ pub fn read(bytes: &mut &[u8]) -> Option<(State, crate::villager::State)> {
     for _ in 0..s.slots() {
         let stack = if take(1)?[0]!=0 {
             let item=i32::from_be_bytes(take(4)?.try_into().ok()?); let count=i32::from_be_bytes(take(4)?.try_into().ok()?);
-            let extras=Stack::read_extras(item,&mut take)?; let mut stack=Stack::from_stored(item,count);
-            if let Some(data)=extras { stack=stack.with_extras(data); } Some(stack)
+            let extras=Stack::read_extras_strict(item,&mut take)?;
+            Some(Stack::from_stored_strict(item,count,extras)?)
         } else { None };
         s.cargo.push(stack);
     }
@@ -475,6 +475,8 @@ pub fn read(bytes: &mut &[u8]) -> Option<(State, crate::villager::State)> {
             let (data,rest)=bytes.split_at_checked(n)?; *bytes=rest;
             if !data.is_empty() {
                 let extras=crate::stackdata::from_bytes(data)?;
+                if crate::stackdata::to_bytes(&extras) != data { return None; }
+                if which == 1 && offer.buy_b.is_none() { return None; }
                 match which { 0=>offer.buy=offer.buy.with_extras(extras),1=>offer.buy_b=offer.buy_b.map(|s| s.with_extras(extras)),_=>offer.sell=offer.sell.with_extras(extras) }
             }
         }

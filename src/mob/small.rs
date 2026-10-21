@@ -506,10 +506,8 @@ pub fn read(bytes: &mut &[u8]) -> Option<(State,tame::State)> {
         if take(bytes,1)?[0] != 0 {
             let stored = i32::from_be_bytes(take(bytes,4)?.try_into().ok()?);
             let count = i32::from_be_bytes(take(bytes,4)?.try_into().ok()?);
-            let extra = Stack::read_extras(stored, |n| take(bytes,n))?;
-            let mut stack = Stack::from_stored(stored,count);
-            stack.data = extra.and_then(crate::stackdata::intern);
-            *slot = Some(stack);
+            let extra = Stack::read_extras_strict(stored, |n| take(bytes,n))?;
+            *slot = Some(Stack::from_stored_strict(stored,count,extra)?);
         }
     }
     if state.variant > 4 || state.roll > 3 || state.sniff > 6 || state.explored.len() > 20

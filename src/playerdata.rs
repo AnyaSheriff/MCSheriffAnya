@@ -49,7 +49,10 @@ const MAGIC: &[u8; 4] = b"MCPD";
 // Версия 9 — общий полученный опыт отдельно от очков шкалы (anvil-rename-repair).
 /// Версия 10 — отдельный ограниченный хвост курсора после общего опыта.
 /// Старое ядро v9 не читает v10: обратный переход требует резервной копии.
-pub(crate) const FORMAT_VERSION: u32 = 10;
+/// Версия 11 — новые полные записи мобов внутри переносимых ульев;
+/// старые читатели должны отвергнуть файл до изменения инвентаря.
+pub(crate) const FORMAT_VERSION: u32 = 11;
+const CURSOR_VERSION: u32 = 10;
 const TOTAL_EXPERIENCE_VERSION: u32 = 9;
 const SHOULDERS_VERSION: u32 = 8;
 const ENDER_VERSION: u32 = 7;
@@ -338,6 +341,18 @@ fn validate_player(data: &PlayerData, catalog: Catalog) -> Result<(), StackError
             catalog.validate_stack(stack).map_err(|mut error| { error.path.insert(0, StackLocation::Ender(slot)); error })?;
         }
     }
+    // Плечи содержат собственные записи Mob, а не доверенные произвольные bytes.
+    // Старые Parrot записи читаются прежним декодером без обратной перезаписи.
+    for (slot, stored) in data.shoulders.iter().enumerate() {
+        let Some(stored) = stored else { continue; };
+        let location = StackLocation::Shoulder(slot);
+        let malformed = || StackError { path: vec![location.clone()], problem: StackProblem::MalformedEncoding };
+        let mut rest = stored.as_slice();
+        let mob = crate::mob::Mob::read(&mut rest).ok_or_else(malformed)?;
+        if !rest.is_empty() || mob.kind != crate::mob::Kind::Parrot { return Err(malformed()); }
+        mob.validate_item_storage().map_err(|_| malformed())?;
+        catalog.validate_mob(&mob).map_err(|mut error| { error.path.insert(0, location); error })?;
+    }
     Ok(())
 }
 
@@ -390,9 +405,9 @@ fn parse_with_catalog(bytes: &[u8], catalog: Option<Catalog>) -> Option<PlayerDa
 
             (read_inventory(inventory)?, dimension, Default::default(), None)
         }
-        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | TOTAL_EXPERIENCE_VERSION | FORMAT_VERSION => {
+        VITALS_VERSION | RESPAWN_VERSION | XP_SEED_VERSION | ENDER_VERSION | SHOULDERS_VERSION | TOTAL_EXPERIENCE_VERSION | CURSOR_VERSION | FORMAT_VERSION => {
             let mut tail = bytes.get(SIZE..)?;
-            if version >= FORMAT_VERSION { saved_cursor = match catalog { Some(catalog) => cursor::take_for_catalog(catalog, &mut tail)?, None => cursor::take(&mut tail)? }; }
+            if version >= CURSOR_VERSION { saved_cursor = match catalog { Some(catalog) => cursor::take_for_catalog(catalog, &mut tail)?, None => cursor::take(&mut tail)? }; }
             let mut respawn = None;
             let mut seed = 0;
 
@@ -699,6 +714,81 @@ mod tests {
         assert_eq!(parse(&old),Some(data));
     }
 
+    fn shoulder_bytes(kind: crate::mob::Kind, stack: Option<crate::inventory::Stack>) -> Vec<u8> {
+        let mut mob = crate::mob::Mob::new(1, kind, (0.0, 1.0, 0.0));
+        if let Some(stack) = stack { mob.equipment = Some([Some(stack), None, None, None, None, None]); }
+        let mut stored = Vec::new(); mob.write(&mut stored); stored
+    }
+
+    #[test]
+    fn shoulder_catalog_checks_nested_gear_on_real_load_and_save_without_replacing_bytes() {
+        use crate::{inventory::Stack, gameplay_catalog::WHITE_SLAB_ITEM};
+        let directory = test_directory("shoulder-catalog"); let uuid = [215; 16];
+        let native = Catalog::new(Profile::Java26_1_2); let preview = Catalog::new(Profile::Preview26_3);
+        let path = path_for(&directory, &uuid);
+        for slot in 0..2 {
+            let clean = sample(); save_for_catalog(&directory, &uuid, &clean, native).unwrap();
+            let original = fs::read(&path).unwrap();
+            let inner = crate::stackdata::Content { slot: 0, item: WHITE_SLAB_ITEM, count: 1, data: None };
+            let gear = Stack::new(crate::blocks::item_named("shulker_box").unwrap(), 1).with_extras(crate::stackdata::Data { contents: vec![inner], ..Default::default() });
+            let mut data = sample(); data.shoulders[slot] = Some(shoulder_bytes(crate::mob::Kind::Parrot, Some(gear)));
+            assert!(save_for_catalog(&directory, &uuid, &data, native).is_err());
+            assert_eq!(fs::read(&path).unwrap(), original);
+            assert!(!path.with_extension("tmp").exists());
+            save_for_catalog(&directory, &uuid, &data, preview).unwrap();
+            let preview_bytes = fs::read(&path).unwrap();
+            assert_eq!(load_checked_for_catalog(&directory, &uuid, preview), Ok(Some(data.clone())));
+            let error = load_checked_for_catalog(&directory, &uuid, native).unwrap_err();
+            assert!(matches!(error, LoadError::IncompatibleInventory(StackError { path, .. }) if path == [StackLocation::Shoulder(slot), StackLocation::MobEquipment(0), StackLocation::Container(0)]));
+            assert_eq!(fs::read(&path).unwrap(), preview_bytes);
+            data.shoulders[slot] = Some(shoulder_bytes(crate::mob::Kind::Parrot, Some(Stack::new(999_999, 1))));
+            for catalog in [native, preview] { assert!(save_for_catalog(&directory, &uuid, &data, catalog).is_err()); }
+            assert_eq!(fs::read(&path).unwrap(), preview_bytes);
+            // Подготовка неподходящего файла намеренно обходит production-писатель.
+            fs::write(&path, encode_inner(&data, preview).unwrap()).unwrap();
+            let invalid_bytes = fs::read(&path).unwrap();
+            for catalog in [native, preview] { assert!(load_checked_for_catalog(&directory, &uuid, catalog).is_err()); }
+            assert_eq!(fs::read(&path).unwrap(), invalid_bytes);
+        }
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn malformed_shoulders_never_become_empty_or_overwrite_previous_player() {
+        use crate::{inventory::Stack, mob::{Mob, Kind}};
+        let directory = test_directory("shoulder-malformed"); let uuid = [216; 16];
+        let native = Catalog::new(Profile::Java26_1_2); let path = path_for(&directory, &uuid);
+        let valid = shoulder_bytes(Kind::Parrot, None);
+        let mut trailing = valid.clone(); trailing.push(0);
+        let mut truncated = valid.clone(); truncated.pop();
+        let mut annex_parrot = Mob::new(2, Kind::Parrot, (0.0, 1.0, 0.0));
+        annex_parrot.h.trial_gear = Some([Some(Stack::new(1, 2)), None, None]);
+        let mut unknown_schema = Vec::new(); annex_parrot.write(&mut unknown_schema);
+        // Annex: u32 длина, schema1, mask16, полная стопка и две пустых.
+        let annex = [0, 0, 0, 13, 1, 16, 1, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0];
+        assert!(unknown_schema.ends_with(&annex));
+        let schema = unknown_schema.len() - 13; unknown_schema[schema] = 2;
+        let malformed = [Vec::new(), truncated, trailing, shoulder_bytes(Kind::Cow, None), unknown_schema];
+        for (case, shoulder) in malformed.into_iter().enumerate() {
+            save_for_catalog(&directory, &uuid, &sample(), native).unwrap();
+            let original = fs::read(&path).unwrap();
+            let mut invalid = sample(); invalid.shoulders[case % 2] = Some(shoulder);
+            assert!(save_for_catalog(&directory, &uuid, &invalid, native).is_err());
+            assert_eq!(fs::read(&path).unwrap(), original);
+            fs::write(&path, encode_inner(&invalid, native).unwrap()).unwrap();
+            let before = fs::read(&path).unwrap();
+            assert!(load_checked_for_catalog(&directory, &uuid, native).is_err());
+            assert_eq!(fs::read(&path).unwrap(), before);
+        }
+        // Текущий простой Parrot использует прежнюю раскладку без annex.
+        let mut old = sample(); old.shoulders[0] = Some(valid);
+        let mut bytes = encode_inner(&old, native).unwrap(); bytes[4..8].copy_from_slice(&10u32.to_be_bytes());
+        fs::write(&path, &bytes).unwrap();
+        assert_eq!(load_checked_for_catalog(&directory, &uuid, native), Ok(Some(old)));
+        assert_eq!(fs::read(&path).unwrap(), bytes);
+        fs::remove_dir_all(directory).unwrap();
+    }
+
     /// Старые раскладки строим напрямую: новый писатель не должен менять
     /// проверку совместимости при добавлении очередного хвоста файла.
     #[test]
@@ -740,6 +830,40 @@ mod tests {
         assert!(save_for_catalog(&directory, &uuid, &data, catalog).is_err());
         assert_eq!(fs::read(path_for(&directory, &uuid)).unwrap(), original);
         fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn frozen_version_ten_cursor_and_empty_cursor_remain_readable_after_version_eleven() {
+        // Зафиксированный v10: слот36 stone5, выбран3, курсор stone7,
+        // seed77, experience1234/total4321. Не создаётся текущим encode().
+        const V10_HEX: &str = "4d4350440000000a40290000000000004050400000000000c00a00000000000042b40000c14000000000000103012400000001000000050041a000000000001440a00000000000000000012c0000000000000000000004d20000004d0000000000000000000000000000000000000000000000015b6e756c6c2c6e756c6c5d0000000b000010e101000000010000000700000009";
+        let original: Vec<u8> = V10_HEX.as_bytes().as_chunks::<2>().0.iter().map(|pair| {
+            u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap()
+        }).collect();
+        let mut expected = sample();
+        expected.inventory.select(3);
+        expected.inventory.set(36, Some(crate::inventory::Stack::new(1, 5)));
+        expected.vitals.xp_seed = 77;
+        expected.vitals.experience = 1234;
+        expected.vitals.experience_total = 4321;
+        for cursor in [Some(crate::inventory::Stack::new(1, 7)), None] {
+            let mut bytes = original.clone();
+            if cursor.is_none() { bytes.truncate(bytes.len() - 13); bytes.extend([0, 0, 0, 0, 1]); }
+            expected.inventory.set_cursor(cursor);
+            assert_eq!(check_layout(&bytes), Ok(()));
+            assert_eq!(parse(&bytes), Some(expected.clone()));
+            assert_eq!(parse_with_catalog(&bytes, Some(Catalog::new(Profile::Java26_1_2))), Some(expected.clone()));
+            let rewritten = encode(&expected).unwrap();
+            assert_eq!(u32::from_be_bytes(rewritten[4..8].try_into().unwrap()), 11);
+            assert_eq!(parse(&rewritten), Some(expected.clone()));
+            assert_eq!(parse_with_catalog(&rewritten, Some(Catalog::new(Profile::Java26_1_2))), Some(expected.clone()));
+            // Старый курсор обязателен и в10, и в11: обрезка не превращается в None.
+            let mut damaged = bytes; damaged.pop();
+            assert!(parse(&damaged).is_none());
+        }
+        let mut future = original;
+        future[4..8].copy_from_slice(&12u32.to_be_bytes());
+        assert_eq!(check_layout(&future), Err(LoadError::UnsupportedLayout(12)));
     }
 
     #[test]

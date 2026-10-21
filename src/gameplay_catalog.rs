@@ -12,6 +12,11 @@ use mcsa_protocol::{JavaVersion, ids::{self, RegistryKind}};
 mod runtime;
 mod stack_validation;
 pub use mcsa_protocol::content::{ConcreteSlab, CONCRETE_SLABS};
+mod mob_validation;
+mod hive_validation;
+
+#[cfg(test)]
+mod hive_validation_tests;
 pub use stack_validation::{StackError, StackLocation, StackProblem};
 
 /// Это серверный профиль, а не согласованная версия сетевого соединения.

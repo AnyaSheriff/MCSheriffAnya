@@ -32,12 +32,16 @@ pub(super) enum DecodeError {
     UnsupportedLayout(u8),
     UnknownBlockState(u16),
     InvalidInventory { profile: crate::gameplay_catalog::Profile, item: i32 },
+    InvalidMob { profile: crate::gameplay_catalog::Profile },
+    InvalidHive { profile: crate::gameplay_catalog::Profile },
     UnsupportedCatalogState { profile: crate::gameplay_catalog::Profile, state: u16 },
 }
 impl std::fmt::Display for DecodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidInventory { profile, item } => write!(f, "предмет {item} в чанке несовместим с профилем {profile:?} или не сохраняется без потерь"),
+            Self::InvalidMob { profile } => write!(f, "запись моба несовместима с профилем {profile:?} или не сохраняется без потерь"),
+            Self::InvalidHive { profile } => write!(f, "запись улья несовместима с профилем {profile:?} или не сохраняется без потерь"),
             Self::Damaged => f.write_str("содержимое чанка повреждено"),
             Self::UnsupportedLayout(version) => write!(f,"раскладка чанка {version} не поддержана"),
             Self::UnknownBlockState(state) => write!(f,"состояние блока {state} отсутствует в текущем каталоге"),
@@ -422,7 +426,7 @@ impl Chunk {
         bytes: &[u8], catalog: crate::gameplay_catalog::Catalog,
     ) -> Result<Self, DecodeError> {
         let version = *bytes.first().ok_or(DecodeError::Damaged)?;
-        if version != CHUNK_VERSION { return Err(DecodeError::UnsupportedLayout(version)); }
+        if !matches!(version, 4 | CHUNK_VERSION) { return Err(DecodeError::UnsupportedLayout(version)); }
         let incompatible = std::cell::Cell::new(None);
         let state_ok = |state: u16| {
             match validate_state(catalog, state) {
@@ -438,6 +442,11 @@ impl Chunk {
 
     /// Проверяет блоки и сохранённые предметы до передачи байтов writer.
     pub(super) fn validate_catalog(&self, catalog: crate::gameplay_catalog::Catalog) -> Result<(), DecodeError> {
+        // Счётчик записи — u16: нельзя обрезать число мобов и оставить хвост,
+        // который после перезапуска прочитается как следующий раздел чанка.
+        if self.mobs.len() > usize::from(u16::MAX) {
+            return Err(DecodeError::InvalidMob { profile: catalog.profile() });
+        }
         for blocks in self.sections.iter().flatten() {
             for &state in blocks.iter() { validate_state(catalog, state)?; }
         }
@@ -453,6 +462,13 @@ impl Chunk {
             for &item in sides {
                 catalog.name(crate::gameplay_catalog::Kind::Item, item).map_err(|_| DecodeError::InvalidInventory { profile: catalog.profile(), item })?;
             }
+        }
+        for mob in &self.mobs {
+            catalog.validate_mob(mob).map_err(|_| DecodeError::InvalidMob { profile: catalog.profile() })?;
+            mob.validate_item_storage().map_err(|_| DecodeError::InvalidMob { profile: catalog.profile() })?;
+        }
+        for hive in self.hives.values() {
+            catalog.validate_hive(hive).map_err(|_| DecodeError::InvalidHive { profile: catalog.profile() })?;
         }
         Ok(())
     }
@@ -557,14 +573,17 @@ impl Chunk {
             }
         }
 
-        // Мобы, если записаны. Испорченная запись — весь чанк испорчен.
+        // Неподдержанная запись моба запрещает повторную генерацию чанка.
         if rest.len() >= 2 {
             let count = u16::from_be_bytes([rest[0], rest[1]]);
 
             rest = &rest[2..];
 
             for _ in 0..count {
-                let mob = crate::mob::Mob::read(&mut rest)?;
+                let mob = crate::mob::Mob::read(&mut rest).or_else(|| {
+                    incompatible.set(Some(DecodeError::InvalidMob { profile: catalog.profile() }));
+                    None
+                })?;
 
                 chunk.mobs.push(mob);
             }
@@ -645,7 +664,14 @@ impl Chunk {
                     return None;
                 }
                 let (bytes, tail) = tail.split_at_checked(len)?;
-                let hive = crate::hive::Data::from_bytes(bytes)?;
+                let hive = crate::hive::Data::from_bytes(bytes).or_else(|| {
+                    incompatible.set(Some(DecodeError::InvalidHive { profile: catalog.profile() }));
+                    None
+                })?;
+                if catalog.validate_hive(&hive).is_err() {
+                    incompatible.set(Some(DecodeError::InvalidHive { profile: catalog.profile() }));
+                    return None;
+                }
                 if crate::hive::is_hive(chunk.block(place.0, place.1, place.2)) {
                     chunk.hives.insert(place, hive);
                 }
@@ -1042,3 +1068,7 @@ mod incompatible_tests;
 #[cfg(test)]
 #[path = "codec_catalog_tests.rs"]
 mod catalog_tests;
+
+#[cfg(test)]
+#[path = "codec_mob_storage_tests.rs"]
+mod mob_storage_tests;

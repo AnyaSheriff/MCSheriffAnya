@@ -9,6 +9,8 @@ use std::path::{Path, PathBuf};
 
 use super::profile::{self, StartupCheck};
 
+pub(super) mod storage_receipt;
+
 /// Живёт до завершения runtime. Файл замка намеренно не удаляется при Drop:
 /// удаление занятого inode позволило бы другому процессу создать новый замок.
 pub(crate) struct StartupGuard {
@@ -82,16 +84,39 @@ fn lock_world(_world: &Path) -> io::Result<Option<File>> {
     Ok(None)
 }
 
-/// Не создаёт world, не маркирует старые сохранения и не вызывает World::open.
-/// На Unix создаётся только соседний lock-файл; на остальных платформах
-/// выполняется читающая проверка без обещания исключительного доступа.
+/// Не создаёт world и не маркирует неизвестные сохранения. Единственное
+/// изменение до World::open — допуск новых раскладок после полной копии.
+/// Неопознанный непустой мир получает только storage receipt, не игровой профиль.
+/// На остальных платформах этот перенос явно не поддержан.
 pub(crate) fn prepare(world: &Path) -> io::Result<StartupGuard> {
+    prepare_with_upgrade(world, |guard, manifest| {
+        super::snapshot::create_storage_upgrade(guard, manifest).map(|_| ()).map_err(io::Error::other)
+    })
+}
+
+fn prepare_with_upgrade(world: &Path,
+    upgrade: impl FnOnce(&StartupGuard, &profile::Manifest) -> io::Result<()>,
+) -> io::Result<StartupGuard> {
     let world = world_path(world)?;
     check_directory(&world)?;
     let lock = lock_world(&world)?;
     check_directory(&world)?;
-    let check = profile::check_current_world(&world).map_err(|error|
-        io::Error::new(io::ErrorKind::InvalidData, format!("запуск мира остановлен: {error}")))?;
+    let manifest = profile::read_manifest(&world).map_err(profile_error)?;
+    let receipt = storage_receipt::read(&world)?;
+    let unidentified_backup = manifest.is_none() && receipt.is_none() && nonempty_world(&world)?;
+    let current = profile::current_profile();
+    let pending = if let Some(manifest) = &manifest {
+        let plan = profile::plan_transition(Some(manifest), &current.gameplay_version, std::slice::from_ref(&current))
+            .map_err(profile_error)?;
+        match plan.kind {
+            profile::TransitionKind::NoChange => false,
+            profile::TransitionKind::StorageUpgrade => true,
+            _ => return Err(profile_error(profile::Error::TransitionRequired)),
+        }
+    } else { false };
+    let check = if pending {
+        StartupCheck::StorageUpgradePending { snapshot_id: manifest.as_ref().expect("известный исходный профиль").snapshot_id.clone() }
+    } else { profile::check_current_world(&world).map_err(profile_error)? };
     #[cfg(target_os = "linux")]
     let identity = {
         use std::os::unix::fs::MetadataExt;
@@ -102,7 +127,28 @@ pub(crate) fn prepare(world: &Path) -> io::Result<StartupGuard> {
             Err(error) => return Err(error),
         }
     };
-    Ok(StartupGuard { lock, #[cfg(target_os = "linux")] world, #[cfg(target_os = "linux")] identity, check })
+    let mut guard = StartupGuard { lock, #[cfg(target_os = "linux")] world: world.clone(), #[cfg(target_os = "linux")] identity, check };
+    if pending {
+        upgrade(&guard, manifest.as_ref().expect("известный исходный профиль"))?;
+        guard.check = profile::check_current_world(&world).map_err(profile_error)?;
+    } else if unidentified_backup {
+        super::snapshot::create_unidentified_storage_receipt(&guard).map_err(io::Error::other)?;
+        // Раскладка записи известна, игровой профиль по-прежнему НЕ установлен.
+        guard.check = profile::check_current_world(&world).map_err(profile_error)?;
+    }
+    Ok(guard)
+}
+
+fn nonempty_world(world: &Path) -> io::Result<bool> {
+    match fs::read_dir(world) {
+        Ok(mut entries) => entries.next().transpose().map(|entry| entry.is_some()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error),
+    }
+}
+
+fn profile_error(error: profile::Error) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, format!("запуск мира остановлен: {error}"))
 }
 
 #[cfg(test)]

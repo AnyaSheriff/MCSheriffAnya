@@ -155,6 +155,11 @@ const WORLD_PATH: &str = "world";
 fn main() -> io::Result<()> {
     use std::io::IsTerminal;
     if !config::first_start::prepare(Path::new("."),std::io::stdin().is_terminal(),&mut std::io::stdin().lock(),&mut std::io::stdout().lock())? { return Ok(()); }
+    // Неподдержанная игровая версия не должна запускать даже перенос хранения.
+    // Передаём ровно эти проверенные настройки в runtime, не читая их повторно.
+    let first_start = !Path::new(config::mcsheriffanya::FILE).exists();
+    let settings = config::mcsheriffanya::Settings::load(Path::new(config::mcsheriffanya::FILE));
+    settings.validate()?;
     // Проверяем мир до создания каталогов, слушателей и фоновых писателей.
     // Замок живёт дольше runtime; session.lock измерений остаются отдельными.
     let world_guard = world::startup::prepare(Path::new(WORLD_PATH))?;
@@ -183,10 +188,10 @@ fn main() -> io::Result<()> {
         })
         .build()?;
 
-    runtime.block_on(server())
+    runtime.block_on(server(settings, first_start))
 }
 
-async fn server() -> io::Result<()> {
+async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) -> io::Result<()> {
     let started = Instant::now();
 
     // Первые строки — как у обычного сервера: что за сервер, что грузим.
@@ -208,9 +213,6 @@ async fn server() -> io::Result<()> {
 
     // Свои настройки — отдельно от server.properties: тот должен выглядеть
     // как у обычного сервера.
-    let first_start = !Path::new(config::mcsheriffanya::FILE).exists();
-    let settings = config::mcsheriffanya::Settings::load(Path::new(config::mcsheriffanya::FILE));
-    settings.validate()?;
     log_info!("Основная версия игры: Minecraft Java {} (протокол {})", VERSION_NAME, PROTOCOL_VERSION);
     if first_start {
         log_info!("Первый запуск: основная версия задаётся строкой java-version={} в config/mcsa.properties", VERSION_NAME);

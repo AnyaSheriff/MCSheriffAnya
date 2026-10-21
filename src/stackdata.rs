@@ -19,6 +19,10 @@ use crate::network::packet::decode_varint;
 use crate::network::varint::{encode_string, encode_varint};
 use crate::snbt::{self, Value};
 
+pub(crate) mod storage_depth;
+#[cfg(test)]
+mod storage_depth_tests;
+
 #[path = "stackdata_potion.rs"]
 mod potion;
 #[path = "stackdata_use.rs"]
@@ -1186,6 +1190,7 @@ fn fireworks_from_bytes(reader: &mut Reader) -> Option<Fireworks> {
 
 /// Довески из файла; None — запись испорчена.
 pub fn from_bytes(bytes: &[u8]) -> Option<Data> {
+    let _scope = storage_depth::enter()?;
     let mut reader = Reader { bytes, at: 0, failed: false };
     let damage = i32::from_be_bytes(reader.take(4)?.try_into().ok()?);
     let flags = reader.take(1)?[0];

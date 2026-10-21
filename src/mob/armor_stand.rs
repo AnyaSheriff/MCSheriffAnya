@@ -34,7 +34,7 @@ impl State {
         s.disabled=i32::from_be_bytes(take(4)?.try_into().ok()?);
         for slot in &mut s.equipment {if take(1)?[0]!=0 {
             let raw=i32::from_be_bytes(take(4)?.try_into().ok()?);let count=i32::from_be_bytes(take(4)?.try_into().ok()?);
-            let mut stack=Stack::from_stored(raw,count); if let Some(data)=Stack::read_extras(raw,&mut take)? {stack=stack.with_extras(data);} *slot=Some(stack);
+            let extra=Stack::read_extras_strict(raw,&mut take)?; *slot=Some(Stack::from_stored_strict(raw,count,extra)?);
         }} Some(s)
     }
 }

@@ -518,13 +518,23 @@ pub(super) fn create(guard: &StartupGuard) -> Result<VerifiedBackup, BackupError
     create_with(guard, Options::default(), &mut |_| Ok(()))
 }
 fn create_with(guard: &StartupGuard, options:Options, hook:&mut impl FnMut(Point)->io::Result<()>) -> Result<VerifiedBackup, BackupError> {
+    create_with_completion(guard, options, hook, None, false, &mut |_, _, _| Ok(()))
+}
+fn create_with_completion(
+    guard: &StartupGuard, options: Options, hook: &mut impl FnMut(Point)->io::Result<()>,
+    expected: Option<&super::super::profile::Manifest>, unidentified: bool,
+    completion: &mut impl FnMut(&LockedWorld<'_>, &VerifiedBackup, &mut bool)->io::Result<()>,
+) -> Result<VerifiedBackup, BackupError> {
     let mut retained = None;
+    let mut manifest_uncertain = false;
     let mut published = false;
     let mut parent_synced = false;
     let attempt = (|| -> io::Result<VerifiedBackup> {
         let source = LockedWorld::acquire(guard)?;
         hook(Point::LocksAcquired)?;
         source.check_anchor()?;
+        if let Some(expected) = expected { checked_manifest(&source, expected)?; }
+        if unidentified { require_unidentified_without_receipt(&source)?; }
         let files = inventory(&source.root, options.memory)?;
         known_dimensions(&files)?;
         // Все неизменяемые ограничения проверяются до создания backup ancestors.
@@ -602,7 +612,7 @@ fn create_with(guard: &StartupGuard, options:Options, hook:&mut impl FnMut(Point
         list.sync_all()?; hook(Point::EntriesSynced)?;
         check_inventory(&source.root,&files,options.memory)?;
         source.check_anchor()?;
-        let source_profile = if matches!(guard.check, super::super::profile::StartupCheck::ManifestMatches { .. }) {
+        let source_profile = if !matches!(guard.check, super::super::profile::StartupCheck::LegacyUnidentified) {
             let file=regular(&source.root,super::super::profile::MANIFEST_NAME.as_bytes())?;
             let mut bytes=Vec::new();file.take((super::super::profile::MAX_MANIFEST_BYTES+1) as u64).read_to_end(&mut bytes)?;
             Some(super::super::profile::decode(&bytes).map_err(|e| invalid(e.to_string()))?)
@@ -630,9 +640,10 @@ fn create_with(guard: &StartupGuard, options:Options, hook:&mut impl FnMut(Point
         check_directory_path(&base.join(&id),&partial)?;
         source.check_anchor()?;
         verified.directory=base.join(id);
+        completion(&source, &verified, &mut manifest_uncertain)?;
         Ok(verified)
     })();
-    attempt.map_err(|cause| BackupError { retained, publication_uncertain:published && !parent_synced, cause })
+    attempt.map_err(|cause| BackupError { retained, publication_uncertain:manifest_uncertain || (published && !parent_synced), cause })
 }
 fn rename_no_replace(from:&File, old:&[u8], to:&File, new:&[u8]) -> io::Result<()> {
     let old=component(old)?;let new=component(new)?;
@@ -659,3 +670,121 @@ fn verify_with(path:&Path, hook:&mut impl FnMut(Point)->io::Result<()>) -> Resul
 
 #[cfg(test)]
 mod tests;
+
+// Снимок и публикация манифеста выполняются при непрерывно удержанных
+// внешнем и всех существующих session.lock; прежние байты уже проверены.
+pub(super) fn create_storage_upgrade(guard: &StartupGuard, expected: &super::super::profile::Manifest) -> Result<VerifiedBackup, BackupError> {
+    use super::super::profile;
+    let target = profile::current_profile();
+    let plan = profile::plan_transition(Some(expected), &target.gameplay_version, std::slice::from_ref(&target))
+        .map_err(|error| BackupError { retained: None, publication_uncertain: false, cause: invalid(error.to_string()) })?;
+    if plan.kind != profile::TransitionKind::StorageUpgrade
+        || !matches!(&guard.check, profile::StartupCheck::StorageUpgradePending { snapshot_id } if snapshot_id == &expected.snapshot_id) {
+        return Err(BackupError { retained: None, publication_uncertain: false, cause: invalid("нет незавершённого плана storage10→11") });
+    }
+    create_with_completion(guard, Options::default(), &mut |_| Ok(()), Some(expected), false,
+        &mut |source, backup, uncertain| publish_storage_manifest(source, expected, backup, uncertain))
+}
+
+fn checked_manifest(source: &LockedWorld<'_>, expected: &super::super::profile::Manifest) -> io::Result<(File, Stamp)> {
+    let file = regular(&source.root, super::super::profile::MANIFEST_NAME.as_bytes())?;
+    let stamp = Stamp::of(&metadata_supported(&file, b"mcsa-world.json")?);
+    let mut bytes = Vec::new();
+    (&file).take((super::super::profile::MAX_MANIFEST_BYTES + 1) as u64).read_to_end(&mut bytes)?;
+    let actual = super::super::profile::decode(&bytes).map_err(|error| invalid(error.to_string()))?;
+    if actual != *expected || Stamp::of(&file.metadata()?) != stamp { return Err(changed()); }
+    Ok((file, stamp))
+}
+
+fn publish_storage_manifest(source: &LockedWorld<'_>, expected: &super::super::profile::Manifest,
+    backup: &VerifiedBackup, uncertain: &mut bool) -> io::Result<()> {
+    use super::super::profile;
+    let target = profile::current_profile();
+    let plan = profile::plan_transition(Some(expected), &target.gameplay_version, std::slice::from_ref(&target))
+        .map_err(|error| invalid(error.to_string()))?;
+    if plan.kind != profile::TransitionKind::StorageUpgrade { return Err(invalid("требуется точный переход playerdata10→11")); }
+    source.check_anchor()?;
+    let (previous, stamp) = checked_manifest(source, expected)?;
+    let updated = profile::Manifest { save_format: target.save_format, snapshot_id: backup.snapshot_id().to_owned(), ..expected.clone() };
+    let bytes = serde_json::to_vec_pretty(&updated).map_err(io::Error::other)?;
+    profile::decode(&bytes).map_err(|error| invalid(error.to_string()))?;
+    let temp_name = format!(".mcsa-manifest-{}.tmp", backup.snapshot_id());
+    let mut temporary = new_file(&source.parent, temp_name.as_bytes())?;
+    temporary.write_all(&bytes)?;
+    // SAFETY: действующий наш fd; сохраняем обычные права исходного файла.
+    if unsafe { libc::fchmod(temporary.as_raw_fd(), stamp.mode & 0o777) } != 0 { return Err(io::Error::last_os_error()); }
+    temporary.sync_all()?;
+    let mut readback = Vec::new();
+    regular(&source.parent, temp_name.as_bytes())?.take((profile::MAX_MANIFEST_BYTES + 1) as u64).read_to_end(&mut readback)?;
+    if readback != bytes { return Err(invalid("новый манифест не прошёл побайтовую проверку")); }
+    source.check_anchor()?;
+    let (current, current_stamp) = checked_manifest(source, expected)?;
+    if current_stamp != stamp || !same_inode(&current.metadata()?, &previous.metadata()?)
+        || !same_inode(&regular(&source.parent, temp_name.as_bytes())?.metadata()?, &temporary.metadata()?) { return Err(changed()); }
+    let old = component(temp_name.as_bytes())?;
+    let new = component(profile::MANIFEST_NAME.as_bytes())?;
+    // SAFETY: fd-relative rename заменяет проверенный манифест атомарно.
+    if unsafe { libc::renameat(source.parent.as_raw_fd(), old.as_ptr(), source.root.as_raw_fd(), new.as_ptr()) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    *uncertain = true;
+    source.root.sync_all()?;
+    source.parent.sync_all()?;
+    source.check_anchor()?;
+    let (published, _) = checked_manifest(source, &updated)?;
+    if !same_inode(&published.metadata()?, &temporary.metadata()?) { return Err(changed()); }
+    *uncertain = false;
+    Ok(())
+}
+
+fn require_absent(root: &File, name: &[u8]) -> io::Result<()> {
+    match open_at(root, name, libc::O_PATH, 0) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+        Ok(_) => Err(io::Error::new(io::ErrorKind::AlreadyExists, "манифест/receipt появился во время подготовки снимка")),
+    }
+}
+fn require_unidentified_without_receipt(source: &LockedWorld<'_>) -> io::Result<()> {
+    require_absent(&source.root, super::super::profile::MANIFEST_NAME.as_bytes())?;
+    require_absent(&source.root, super::super::startup::storage_receipt::NAME.as_bytes())
+}
+
+pub(super) fn create_unidentified_storage_receipt(guard: &StartupGuard) -> Result<VerifiedBackup, BackupError> {
+    if !matches!(&guard.check, super::super::profile::StartupCheck::LegacyUnidentified) {
+        return Err(BackupError { retained: None, publication_uncertain: false, cause: invalid("для receipt требуется неопознанный мир") });
+    }
+    create_with_completion(guard, Options::default(), &mut |_| Ok(()), None, true,
+        &mut |source, backup, uncertain| publish_storage_receipt(source, backup, uncertain))
+}
+
+fn publish_storage_receipt(source: &LockedWorld<'_>, backup: &VerifiedBackup, uncertain: &mut bool) -> io::Result<()> {
+    use super::super::startup::storage_receipt;
+    source.check_anchor()?;
+    require_unidentified_without_receipt(source)?;
+    let receipt = storage_receipt::Receipt::for_backup(backup.snapshot_id());
+    let bytes = serde_json::to_vec_pretty(&receipt).map_err(io::Error::other)?;
+    storage_receipt::decode(&bytes)?;
+    let temp_name = format!(".mcsa-storage-{}.tmp", backup.snapshot_id());
+    let mut temporary = new_file(&source.parent, temp_name.as_bytes())?;
+    temporary.write_all(&bytes)?;
+    temporary.sync_all()?;
+    let mut readback = Vec::new();
+    regular(&source.parent, temp_name.as_bytes())?.take(16 * 1024 + 1).read_to_end(&mut readback)?;
+    if readback != bytes { return Err(invalid("storage receipt не прошёл побайтовую проверку")); }
+    source.check_anchor()?;
+    require_unidentified_without_receipt(source)?;
+    if !same_inode(&regular(&source.parent, temp_name.as_bytes())?.metadata()?, &temporary.metadata()?) { return Err(changed()); }
+    // Никогда не заменяем даже подставленный за время копии receipt.
+    rename_no_replace(&source.parent, temp_name.as_bytes(), &source.root, storage_receipt::NAME.as_bytes())?;
+    *uncertain = true;
+    source.root.sync_all()?; source.parent.sync_all()?;
+    source.check_anchor()?;
+    require_absent(&source.root, super::super::profile::MANIFEST_NAME.as_bytes())?;
+    let published = regular(&source.root, storage_receipt::NAME.as_bytes())?;
+    if !same_inode(&published.metadata()?, &temporary.metadata()?) { return Err(changed()); }
+    let mut final_bytes = Vec::new();
+    published.take(16 * 1024 + 1).read_to_end(&mut final_bytes)?;
+    if final_bytes != bytes { return Err(changed()); }
+    *uncertain = false;
+    Ok(())
+}

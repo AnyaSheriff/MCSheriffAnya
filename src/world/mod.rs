@@ -1214,7 +1214,8 @@ const REGIONS: &str = "region";
 /// Четвёртая версия — палитры с битовыми номерами (codec.rs); файл региона
 /// `.mcs` сжимает её ещё и zstd. Первые три версии писались в `.rcw`, их
 /// читает только перенос мира (legacy.rs).
-const CHUNK_VERSION: u8 = 4;
+// Пятая версия допускает дополнение предметов моба; четвёртая читается без потерь.
+const CHUNK_VERSION: u8 = 5;
 
 /// Вторая версия: состояния по два байта, биом один на столбец клетки 4×4.
 /// Такие чанки читаются, их биом растягивается на всю высоту.
@@ -2184,14 +2185,18 @@ impl World {
 
             if now.is_empty() && chunk.mobs.is_empty() { continue; }
             if only_if_changed && now.len() == chunk.mobs.len() {
-                let records = |mobs: &[crate::mob::Mob]| {
-                    let mut records: Vec<_> = mobs.iter().map(|mob| {
-                        let mut record = Vec::new(); mob.write(&mut record); record
-                    }).collect();
+                let records = |mobs: &[crate::mob::Mob]| -> Option<Vec<Vec<u8>>> {
+                    let mut records = Vec::with_capacity(mobs.len());
+                    for mob in mobs {
+                        mob.validate_item_storage().ok()?;
+                        let mut record = Vec::new(); mob.write(&mut record);
+                        records.push(record);
+                    }
                     records.sort_unstable();
-                    records
+                    Some(records)
                 };
-                if records(&now) == records(&chunk.mobs) { continue; }
+                if let (Some(now), Some(previous)) = (records(&now), records(&chunk.mobs))
+                    && now == previous { continue; }
             }
 
             chunk.mobs = now;

@@ -155,7 +155,11 @@ pub fn read_manifest(world: &Path) -> Result<Option<Manifest>, Error> {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum TransitionKind { NoChange, Upgrade, Downgrade }
+pub enum TransitionKind {
+    NoChange, Upgrade, Downgrade,
+    /// Только playerdata10→11 при прежней игровой идентичности; без конвертации содержимого.
+    StorageUpgrade,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TransitionPlan {
@@ -166,7 +170,8 @@ pub struct TransitionPlan {
 }
 
 impl TransitionPlan {
-    /// Все изменения требуют полной проверки и пока отсутствующего конвертера.
+    /// Любое изменение требует отдельной процедуры; StorageUpgrade читает старые записи,
+    /// но всё равно требует снимка до первой записи нового несовместимого заголовка.
     pub fn requires_migration(&self) -> bool { self.kind != TransitionKind::NoChange }
 
     /// Даже повышение требует копии до преобразования сохранения.
@@ -198,14 +203,25 @@ pub fn plan_transition(
         .ok_or_else(|| Error::UnsupportedProfile(version.to_string()));
     let source = find(&manifest.gameplay_version)?;
     let target = find(target)?;
-    if source.save_format != manifest.save_format { return Err(Error::FormatMismatch); }
     if source.registry_id != manifest.registry_id { return Err(Error::RegistryMismatch); }
-    let kind = match source.release_order.cmp(&target.release_order) {
-        Ordering::Equal => TransitionKind::NoChange,
-        Ordering::Less => TransitionKind::Upgrade,
-        Ordering::Greater => TransitionKind::Downgrade,
+    // Только этот объявленный предшественник читается без преобразования данных.
+    // Совпадение одного номера/старший номер не разрешают произвольный перенос.
+    let storage_upgrade = source.gameplay_version == target.gameplay_version
+        && source.registry_id == target.registry_id
+        && source.release_order == target.release_order
+        && source.save_format == target.save_format
+        && source.save_format == (SaveFormat { region_layout: 1, playerdata_layout: 11 })
+        && manifest.save_format == (SaveFormat { region_layout: 1, playerdata_layout: 10 });
+    if source.save_format != manifest.save_format && !storage_upgrade { return Err(Error::FormatMismatch); }
+    let kind = if storage_upgrade { TransitionKind::StorageUpgrade } else {
+        match source.release_order.cmp(&target.release_order) {
+            Ordering::Equal => TransitionKind::NoChange,
+            Ordering::Less => TransitionKind::Upgrade,
+            Ordering::Greater => TransitionKind::Downgrade,
+        }
     };
-    Ok(TransitionPlan { source: source.clone(), target: target.clone(), kind, snapshot_id: manifest.snapshot_id.clone() })
+    let source = ProfileDescriptor { save_format: manifest.save_format, ..source.clone() };
+    Ok(TransitionPlan { source, target: target.clone(), kind, snapshot_id: manifest.snapshot_id.clone() })
 }
 
 /// Отпечаток ТОЛЬКО числовых блоков/состояний/предметов. Он не покрывает биомы,
@@ -271,6 +287,9 @@ pub fn current_profile() -> ProfileDescriptor {
 pub enum StartupCheck {
     /// Разрешён прежний путь запуска, но источник всё ещё не установлен.
     LegacyUnidentified,
+    /// Внутренний guard до снимка и атомарной публикации storage10→11.
+    /// prepare никогда не возвращает этот незавершённый результат.
+    StorageUpgradePending { snapshot_id: String },
     /// Совпали только заявленные поля; это не проверка всех файлов мира.
     ManifestMatches { snapshot_id: String },
 }
@@ -451,4 +470,50 @@ mod tests {
         }
         std::fs::remove_dir(&directory).unwrap();
     }
+    #[test]
+    fn declared_player_ten_predecessor_is_a_backup_requiring_storage_upgrade() {
+        let current = current_profile();
+        assert_eq!(current.save_format, SaveFormat { region_layout: 1, playerdata_layout: 11 });
+        let mut previous = manifest(&current);
+        previous.save_format.playerdata_layout = 10;
+        let plan = plan_transition(Some(&previous), &current.gameplay_version, std::slice::from_ref(&current)).unwrap();
+        assert_eq!(plan.kind, TransitionKind::StorageUpgrade);
+        assert!(plan.requires_migration());
+        assert!(plan.requires_full_backup());
+        assert_eq!(plan.source.save_format.playerdata_layout, 10);
+        assert_eq!(plan.target.save_format.playerdata_layout, 11);
+        assert_eq!(plan.source.gameplay_version, plan.target.gameplay_version);
+        assert_eq!(plan.source.registry_id, plan.target.registry_id);
+        assert_eq!(plan.source.registry_id, block_item_registry_id());
+        assert_eq!(plan.snapshot_id, previous.snapshot_id);
+        // Ни номер региона, ни неизвестный player-layout не получают такого исключения.
+        for (region, player) in [(2, 10), (1, 9), (1, 12), (5, 10)] {
+            let mut unsupported = previous.clone();
+            unsupported.save_format = SaveFormat { region_layout: region, playerdata_layout: player };
+            assert!(matches!(plan_transition(Some(&unsupported), &current.gameplay_version, std::slice::from_ref(&current)), Err(Error::FormatMismatch)));
+        }
+        let mut changed = previous.clone(); changed.registry_id = "different-registry".into();
+        assert!(matches!(plan_transition(Some(&changed), &current.gameplay_version, std::slice::from_ref(&current)), Err(Error::RegistryMismatch)));
+        let mut newer_game = current.clone(); newer_game.gameplay_version = "known-next".into(); newer_game.release_order += 1;
+        assert!(matches!(plan_transition(Some(&previous), &newer_game.gameplay_version, &[current.clone(), newer_game.clone()]), Err(Error::FormatMismatch)));
+        let mut old_target = current.clone(); old_target.save_format.playerdata_layout = 10;
+        assert!(matches!(plan_transition(Some(&manifest(&current)), &old_target.gameplay_version, &[old_target.clone()]), Err(Error::FormatMismatch)));
+        assert_eq!(plan_transition(Some(&manifest(&current)), &current.gameplay_version, std::slice::from_ref(&current)).unwrap().kind, TransitionKind::NoChange);
+    }
+
+    #[test]
+    fn old_storage_manifest_does_not_authorize_writes_or_relabel_itself() {
+        let directory = std::env::temp_dir().join(format!("mcsa-storage-upgrade-{}-{}", std::process::id(),
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        std::fs::create_dir(&directory).unwrap();
+        let current = current_profile(); let mut old = manifest(&current);
+        old.save_format.playerdata_layout = 10;
+        let path = directory.join(MANIFEST_NAME);
+        let bytes = serde_json::to_vec(&old).unwrap();
+        std::fs::write(&path, &bytes).unwrap();
+        assert!(matches!(check_current_world(&directory), Err(Error::TransitionRequired)));
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
 }

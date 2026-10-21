@@ -9,6 +9,7 @@ pub mod component;
 type Cell = (i32,i32,i32);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Occupant {
     pub entity: Vec<u8>,
     pub ticks: i32,
@@ -17,6 +18,7 @@ pub struct Occupant {
     pub uuid: [u8;16],
 }
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Data { pub bees: Vec<Occupant> }
 
 pub fn is_hive(state: i32) -> bool { matches!(blocks::block_at_state(state),Some("beehive"|"bee_nest")) }
@@ -45,6 +47,7 @@ pub fn smoked(world: &World, (x,y,z): Cell) -> bool {
 impl Data {
     pub fn enter(&mut self, bee: &Mob) -> bool {
         if self.bees.len()>=3 || bee.kind!=Kind::Bee || bee.is_dead() || bee.leash.is_some() || bee.wild.stung { return false; }
+        if bee.validate_item_storage().is_err() { return false; }
         let mut entity=Vec::new(); bee.write(&mut entity);
         self.bees.push(Occupant { entity,ticks:0,minimum:if bee.wild.nectar {2400}else{600},nectar:bee.wild.nectar,uuid:bee.uuid });
         true
@@ -66,10 +69,19 @@ impl Data {
     }
     pub fn bytes(&self) -> Vec<u8> { serde_json::to_vec(self).expect("данные улья") }
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        let _scope = crate::stackdata::storage_depth::enter()?;
         let data: Self=serde_json::from_slice(bytes).ok()?;
-        if data.bees.len()>3 || data.bees.iter().any(|b|Mob::read(&mut b.entity.as_slice()).is_none_or(|m|m.kind!=Kind::Bee)) { return None; }
+        if data.bees.len()>3 || data.bees.iter().any(|b|decode_occupant(b).is_none()) { return None; }
         Some(data)
     }
+}
+
+/// В записи жильца должен находиться ровно один моб нужного вида.
+/// Остаток нельзя игнорировать: там может быть вторая сущность или неверный хвост.
+pub(crate) fn decode_occupant(occupant: &Occupant) -> Option<Mob> {
+    let mut bytes = occupant.entity.as_slice();
+    let mob = Mob::read(&mut bytes)?;
+    (bytes.is_empty() && mob.kind == Kind::Bee).then_some(mob)
 }
 
 /// Работа ульев идёт и тогда, когда снаружи не осталось ни одной пчелы.
@@ -121,7 +133,7 @@ pub fn tick(world: &mut World, items: &mut crate::items::Items, next_id: &mut dy
     }
 }
 fn released(occupant: &Occupant, at: Cell, state: i32, id: i32) -> Option<Mob> {
-    let mut bee=Mob::read(&mut occupant.entity.as_slice())?;
+    let mut bee=decode_occupant(occupant)?;
     bee.entity_id=id; bee.uuid=occupant.uuid;
     (bee.x,bee.y,bee.z)=entrance(at,state);
     bee.wild.hive=Some(at); bee.wild.enter=false;
@@ -354,5 +366,31 @@ mod tests {
     fn malformed_or_oversized_hives_are_rejected() {
         assert!(Data::from_bytes(b"{}").is_none());
         let mut h=Data::generated(1);h.bees.push(h.bees[0].clone());assert!(Data::from_bytes(&h.bytes()).is_none());
+    }
+}
+
+#[cfg(test)]
+mod storage_entry_tests {
+    use super::*;
+
+    #[test]
+    fn unrepresentable_equipment_keeps_real_bee_outside_hive() {
+        let mut world = World::in_memory();
+        world.set_block(0,64,0,blocks::state_by_name("beehive").unwrap());
+        let mut bee = Mob::new(1,Kind::Bee,(0.5,64.0,0.5));
+        let stack = Stack::new(blocks::item_named("stone").unwrap(),1).with_extras(crate::stackdata::Data {
+            name: Some("я".repeat(40_000)), ..Default::default()
+        });
+        bee.equipment = Some([Some(stack),None,None,None,None,None]);
+        assert!(bee.validate_item_storage().is_err());
+        let mut hive = Data::default();
+        assert!(!hive.enter(&bee)); assert!(hive.bees.is_empty());
+        bee.wild.hive = Some((0,64,0)); bee.wild.enter = true;
+        let mut items = crate::items::Items::new(); items.add_mob(bee);
+        tick(&mut world,&mut items,&mut || 2);
+        assert_eq!(items.mobs().len(),1);
+        assert_eq!(items.mobs()[0].entity_id,1);
+        assert_eq!(items.mobs()[0].equipment.unwrap()[0],Some(stack));
+        assert!(world.hive(0,64,0).unwrap().bees.is_empty());
     }
 }
