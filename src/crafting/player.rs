@@ -69,13 +69,21 @@ pub fn take(grid: &mut [Option<Stack>], inventory: &mut Inventory, result: Stack
 }
 
 /// Автозаполнение книги: план целиком, без потери вещей при нехватке места.
+#[cfg(test)]
 pub fn place(recipe: &super::Recipe, grid: &mut [Option<Stack>], inventory: &mut Inventory, all: bool) -> bool {
+    place_for_catalog(crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2), recipe, grid, inventory, all)
+}
+
+pub fn place_for_catalog(catalog: crate::gameplay_catalog::Catalog, recipe: &super::Recipe, grid: &mut [Option<Stack>], inventory: &mut Inventory, all: bool) -> bool {
+    if recipe.result == crate::gameplay_catalog::WHITE_SLAB_ITEM
+        && super::recipe_for_catalog(catalog, super::RecipeId::WhiteConcreteSlab).is_none()
+    { return false; }
     let width = if grid.len() == 4 { 2 } else { 3 };
     if recipe.shaped && (recipe.width as usize > width || recipe.height as usize > width) || recipe.cells.iter().filter(|c| !c.is_empty()).count() > grid.len() { return false; }
     let mut bag = inventory.clone();
     for stack in grid.iter().flatten() { if bag.put(*stack).1.is_some() { return false; } }
     let previous = grid.iter().flatten().map(|s| s.count).min().unwrap_or(0);
-    let cap = if all { 64 } else if super::recipe_index(&padded(grid)).is_some_and(|i| std::ptr::eq(&super::recipes()[i], recipe)) { (previous + 1).min(64) } else { 1 };
+    let cap = if all { 64 } else if super::recipe_identity_for_catalog(catalog, &padded(grid)).and_then(|id| super::recipe_for_catalog(catalog, id)).is_some_and(|known| std::ptr::eq(known, recipe)) { (previous + 1).min(64) } else { 1 };
     let mut best = None;
     for amount in 1..=cap {
         let mut trial = bag.clone(); let mut filled = vec![None; grid.len()];
@@ -109,4 +117,40 @@ fn assign(cells: &[(usize, &&[i32])], at: usize, amount: i32, bag: &mut Inventor
         grid[target] = None;
     }
     false
+}
+
+#[cfg(test)]
+mod catalog_tests {
+    use super::*;
+    use crate::{crafting::{recipe_for_catalog, recipe_identity_for_catalog, RecipeId}, gameplay_catalog::{Catalog, Profile}};
+
+    #[test]
+    fn slab_fill_repeats_then_fills_all_without_losing_ingredients() {
+        let catalog = Catalog::new(Profile::Preview26_3);
+        let recipe = recipe_for_catalog(catalog, RecipeId::WhiteConcreteSlab).unwrap();
+        let mut inventory = Inventory::new();
+        inventory.set(36, Some(Stack::new(615, 12)));
+        let mut grid = vec![None; 9];
+        assert!(place_for_catalog(catalog, recipe, &mut grid, &mut inventory, false));
+        assert_eq!(grid[3..6], [Some(Stack::new(615, 1)); 3]);
+        assert_eq!(inventory.slot(36), Some(Stack::new(615, 9)));
+        assert!(place_for_catalog(catalog, recipe, &mut grid, &mut inventory, false));
+        assert_eq!(grid[3..6], [Some(Stack::new(615, 2)); 3]);
+        assert_eq!(inventory.slot(36), Some(Stack::new(615, 6)));
+        assert!(place_for_catalog(catalog, recipe, &mut grid, &mut inventory, true));
+        assert_eq!(grid[3..6], [Some(Stack::new(615, 4)); 3]);
+        assert!(inventory.slot(36).is_none());
+        assert_eq!(recipe_identity_for_catalog(catalog, &grid), Some(RecipeId::WhiteConcreteSlab));
+        let base = Catalog::new(Profile::Java26_1_2);
+        assert!(recipe_for_catalog(base, RecipeId::WhiteConcreteSlab).is_none());
+        let before = grid.clone();
+        assert!(!place_for_catalog(base, recipe, &mut grid, &mut inventory, true));
+        assert_eq!(grid, before);
+        assert!(recipe_identity_for_catalog(base, &grid).is_none());
+        let mut small = vec![None; 4];
+        inventory.set(36, Some(Stack::new(615, 3)));
+        assert!(!place_for_catalog(catalog, recipe, &mut small, &mut inventory, false));
+        assert_eq!(inventory.slot(36), Some(Stack::new(615, 3)));
+        assert!(small.iter().all(Option::is_none));
+    }
 }

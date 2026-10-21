@@ -34,15 +34,10 @@ fn store(player: &mut PlayerState, slots: &[Option<Stack>]) {
 fn result(shared: &Shared, player: &PlayerState, slots: &[Option<Stack>], commit: bool) -> Option<Stack> {
     let padded = grid_ops::padded(slots);
     let result = recipes::craft_for_catalog(shared.catalog(), &padded)?;
-    // Книга нового рецепта пока не наблюдена: limited crafting не обходим.
-    if result.item == crate::gameplay_catalog::WHITE_SLAB_ITEM
-        && shared.limited_crafting.load(std::sync::atomic::Ordering::Relaxed)
-        && player.game_mode != GAME_MODE_CREATIVE
-    { return None; }
     if shared.limited_crafting.load(std::sync::atomic::Ordering::Relaxed)
         && player.game_mode != GAME_MODE_CREATIVE
-        && let Some(id) = recipes::recipe_index(&padded)
-        && !player.progress.recipes.knows_crafting(id)
+        && let Some(id) = recipes::recipe_identity_for_catalog(shared.catalog(), &padded)
+        && !player.progress.recipes.knows_recipe(id)
     { return None; }
     if result.extras().map_post == Some(1) {
         let mut data = result.extras(); data.map_post = None;
@@ -145,11 +140,11 @@ pub(super) fn click(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
             let mut trial = player.inventory.clone(); let mut trial_grid = slots.clone(); let mut trial_drops = Vec::new();
             if !grid_ops::take(&mut trial_grid, &mut trial, preview, mode, button, &mut trial_drops) { break; }
             let Some(actual) = result(shared, player, &slots, true) else { break; };
-            let learned = recipes::recipe_index(&grid_ops::padded(&slots));
+            let learned = recipes::recipe_identity_for_catalog(shared.catalog(), &grid_ops::padded(&slots));
             let steps = consumption_steps(shared, player, &slots);
             if !grid_ops::take(&mut slots, &mut player.inventory, actual, mode, button, &mut dropped) { break; }
             trace.extend(steps);
-            if let Some(id) = learned { player.progress.recipes.learn_crafting(id); }
+            if let Some(id) = learned { player.progress.recipes.learn_recipe(id); }
             player.progress.crafted(actual.item, actual.count);
             if blocks::item_name(actual.item) == Some("crafting_table") { player.progress.trigger("story/root"); }
             if actual.extras().pot_decorations.is_some_and(|sides| sides.iter().all(|i| blocks::item_name(*i).is_some_and(|n| n.ends_with("_pottery_sherd")))) { player.progress.trigger("adventure/craft_decorated_pot_using_only_sherds"); }
@@ -215,7 +210,7 @@ pub(super) fn place(shared: &Shared, player: &mut PlayerState, payload: &[u8], r
     let mut now = slots.clone();
     let mut trace = Vec::new();
     for i in 0..now.len() { now[i] = None; trace.push(result(shared, player, &now, false)); }
-    if !grid_ops::place(recipe, &mut slots, &mut player.inventory, all != 0) {
+    if !grid_ops::place_for_catalog(shared.catalog(), recipe, &mut slots, &mut player.inventory, all != 0) {
         reaction.crafting_ghost = Some(crate::recipe_book::ghost(window, recipe));
     }
     for (i, filled) in slots.iter().enumerate() {
@@ -288,7 +283,7 @@ mod tests {
             Default::default(), Default::default(), Default::default(),
             crate::ops::Ops::open(Path::new("tmp/crafting-slab-ops.json")), crate::skins::Settings::default());
         shared.world_in(Dimension::Overworld).lock().unwrap().set_block(0,64,0,blocks::state_by_name("crafting_table").unwrap());
-        let mut p = player(); table(&mut p);
+        let mut p = player(); p.progress.recipes = crate::recipe_book::Book::for_catalog(catalog); table(&mut p);
         for slot in 1..=3 { p.window.as_mut().unwrap().shown[slot] = Some(item("white_concrete",count)); }
         refresh(&shared, &mut p);
         (shared,p)
@@ -354,7 +349,7 @@ mod tests {
         assert!(p.inventory.cursor().is_none());assert_eq!(p.window.as_ref().unwrap().shown,before);
     }
     #[test]
-    fn slab_limited_crafting_stays_closed_until_recipe_book_is_supported() {
+    fn slab_limited_crafting_requires_profile_recipe_unlock() {
         use crate::gameplay_catalog::Profile;
         let (shared,mut p) = slab_table(Profile::Preview26_3,1);
         shared.limited_crafting.store(true,std::sync::atomic::Ordering::Relaxed);
@@ -362,6 +357,59 @@ mod tests {
         click(&shared,&mut p,&packet(1,0,0,0),&mut Reaction::default());
         assert!(p.window.as_ref().unwrap().shown[0].is_none());
         assert_eq!(p.window.as_ref().unwrap().shown,before);assert!(p.inventory.cursor().is_none());
+        assert!(p.progress.recipes.learn_named(&["minecraft:white_concrete_slab".into()]));
+        refresh(&shared,&mut p);
+        assert_eq!(p.window.as_ref().unwrap().shown[0],Some(Stack::new(crate::gameplay_catalog::WHITE_SLAB_ITEM,6)));
+        p.progress.recipes.take(&["minecraft:white_concrete_slab".into()]).unwrap();
+        refresh(&shared,&mut p);
+        assert!(p.window.as_ref().unwrap().shown[0].is_none());
+        p.progress.recipes.learn_named(&["minecraft:white_concrete_slab".into()]);
+        click(&shared,&mut p,&packet(1,0,0,0),&mut Reaction::default());
+        assert_eq!(p.inventory.cursor(),Some(Stack::new(crate::gameplay_catalog::WHITE_SLAB_ITEM,6)));
+        assert!(p.window.as_ref().unwrap().shown.iter().all(Option::is_none));
+    }
+    #[test]
+    fn slab_manual_craft_learns_owned_recipe_and_player_constructor_binds_catalog() {
+        use crate::{crafting::RecipeId, gameplay_catalog::{Catalog, Profile}};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let mut p = PlayerState::new_for_catalog([237;16],"BookProfile".into(),None,None,0,0,
+                (0.5,64.0,0.5),Catalog::new(profile));
+            assert_eq!(p.progress.recipes.learn_named(&["white_concrete_slab".into()]), profile == Profile::Preview26_3);
+        }
+        let (shared,mut p) = slab_table(Profile::Preview26_3,1);
+        assert!(!p.progress.recipes.knows_recipe(RecipeId::WhiteConcreteSlab));
+        click(&shared,&mut p,&packet(1,0,0,0),&mut Reaction::default());
+        assert!(p.progress.recipes.knows_recipe(RecipeId::WhiteConcreteSlab));
+    }
+    #[test]
+    fn slab_book_click_centers_increments_and_rejects_unknown_or_small_grid() {
+        use crate::gameplay_catalog::Profile;
+        let (shared,mut p) = slab_table(Profile::Preview26_3,1);
+        p.window.as_mut().unwrap().shown.fill(None);
+        p.inventory.set(36,Some(item("white_concrete",9)));
+        p.progress.recipes.learn_named(&["white_concrete_slab".into()]);
+        let id = (0..i16::MAX as i32).find(|&id| p.progress.recipes.crafting_display(id)
+            .is_some_and(|recipe| recipe.result == crate::gameplay_catalog::WHITE_SLAB_ITEM)).unwrap();
+        let payload = |window, recipe_id, all| {
+            let mut bytes = encode_varint(window); bytes.extend(encode_varint(recipe_id)); bytes.push(all); bytes
+        };
+        let mut reaction = Reaction::default();
+        let before = p.inventory.clone();
+        place(&shared,&mut p,&payload(1,i32::MAX,0),&mut reaction);
+        assert_eq!(p.inventory,before);
+        assert!(p.window.as_ref().unwrap().shown.iter().all(Option::is_none));
+        for (all,count) in [(0,1),(0,2),(1,3)] {
+            place(&shared,&mut p,&payload(1,id,all),&mut reaction);
+            for slot in 1..=9 {
+                assert_eq!(p.window.as_ref().unwrap().shown[slot],
+                    if (4..=6).contains(&slot) {Some(item("white_concrete",count))} else {None});
+            }
+            assert_eq!(p.inventory.slot(36), if count<3 {Some(item("white_concrete",9-count*3))} else {None});
+        }
+        close_own_window(&shared,&mut p);
+        let before=p.inventory.clone();
+        place(&shared,&mut p,&payload(0,id,0),&mut reaction);
+        assert_eq!(p.inventory,before);
     }
     #[test]
     fn inventory_clicks_compute_and_consume_without_trusting_client_output() {

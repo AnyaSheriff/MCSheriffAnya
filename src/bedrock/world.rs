@@ -619,7 +619,7 @@ impl BedrockWorld {
         let mut body = crate::network::play::Body::new(identity.uuid, identity.name.clone(), entity_id);
         body.restore_respawn(saved.as_ref().and_then(|data| data.respawn));
         let mut player = BedrockWorld {
-            progress: crate::progress::Progress::load(&identity.uuid),
+            progress: crate::progress::Progress::load_for_catalog(&identity.uuid, shared.catalog()),
             shared,
             dimension,
             identity,

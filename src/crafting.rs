@@ -193,6 +193,25 @@ impl Recipe {
     }
 }
 
+/// Идентичность рецепта сервера: сетевые display ID принадлежат книге отдельно.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RecipeId { Native(usize), WhiteConcreteSlab }
+
+pub fn recipe_for_catalog(catalog: crate::gameplay_catalog::Catalog, id: RecipeId) -> Option<&'static Recipe> {
+    match id {
+        RecipeId::Native(index) => recipes().get(index),
+        RecipeId::WhiteConcreteSlab if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3 => Some(&WHITE_SLAB_RECIPE),
+        RecipeId::WhiteConcreteSlab => None,
+    }
+}
+
+pub fn recipe_identity_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Option<Stack>]) -> Option<RecipeId> {
+    if let Some(recipe) = recipe_for_catalog(catalog, RecipeId::WhiteConcreteSlab)
+        && Grid::new(slots).is_some_and(|grid| recipe.matches(&grid))
+    { return Some(RecipeId::WhiteConcreteSlab); }
+    recipe_index(slots).map(RecipeId::Native)
+}
+
 // Внутренний775 ID white_concrete; источник tools/data/items.json.
 // Обычный official777: три блока в любом горизонтальном ряду → шесть плит.
 // Собственная запись: observations-craft-26.3.md, «3×3 crafting grid».
@@ -203,10 +222,10 @@ const WHITE_SLAB_RECIPE: Recipe = Recipe {
 };
 
 /// Только наблюдённое расширение профиля; общая таблица775 не дополняется.
-/// Автозаполнение/книга и автокрафтер нового рецепта пока не включены.
+/// Книга/автозаполнение используют ту же идентичность; автокрафтер не расширен.
 pub fn craft_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Option<Stack>]) -> Option<Stack> {
-    if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
-        && Grid::new(slots).is_some_and(|grid| WHITE_SLAB_RECIPE.matches(&grid))
+    if recipe_for_catalog(catalog, RecipeId::WhiteConcreteSlab)
+        .is_some_and(|recipe| Grid::new(slots).is_some_and(|grid| recipe.matches(&grid)))
     { return Some(Stack::new(WHITE_SLAB_RECIPE.result, WHITE_SLAB_RECIPE.count)); }
     craft(slots)
 }

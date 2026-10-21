@@ -733,7 +733,7 @@ pub async fn play_session(
         .expect("мир захвачен другим потоком")
         .spawn_position();
 
-    let mut player = PlayerState::new(
+    let mut player = PlayerState::new_for_catalog(
         *uuid,
         name.to_string(),
         saved,
@@ -741,6 +741,7 @@ pub async fn play_session(
         skin_parts,
         shared.next_reader(),
         spawn,
+        shared.catalog(),
     );
 
     player.main_hand = look.main_hand;
@@ -11476,6 +11477,17 @@ impl PlayerState {
         reader: journal::Reader,
         spawn: (f64, f64, f64),
     ) -> Self {
+        Self::new_for_catalog(uuid, name, saved, skin, skin_parts, reader, spawn,
+            crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2))
+    }
+
+    /// Книгу рецептов выбирает основной профиль мира, а не протокол игрока.
+    #[allow(clippy::too_many_arguments)]
+    fn new_for_catalog(
+        uuid: [u8; 16], name: String, saved: Option<PlayerData>, skin: Option<Skin>,
+        skin_parts: u8, reader: journal::Reader, spawn: (f64, f64, f64),
+        catalog: crate::gameplay_catalog::Catalog,
+    ) -> Self {
         // Игрок, сохранённый ниже дна мира, вернулся бы в пустоту и падал
         // вечно. Такое бывает после того, как мир поменялся, — ставим его
         // в точку появления.
@@ -11605,7 +11617,7 @@ impl PlayerState {
             attrs_touched: Vec::new(),
             speed_due: Vec::new(),
             speed_touch: 0,
-            progress: crate::progress::Progress::load(&uuid),
+            progress: crate::progress::Progress::load_for_catalog(&uuid, catalog),
             progress_location: progression::Location::default(),
             skin,
             skin_parts,
