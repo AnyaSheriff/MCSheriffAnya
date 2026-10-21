@@ -3,7 +3,7 @@
 // [проверить] порядок кнопок и полный набор рецептов записью vanilla.
 use std::sync::OnceLock;
 use crate::{blocks, inventory::Stack};
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Recipe { pub input: i32, pub output: i32, pub count: i32 }
 pub fn recipes() -> &'static [Recipe] {
     static ALL: OnceLock<Vec<Recipe>> = OnceLock::new();
@@ -67,17 +67,42 @@ pub fn recipes() -> &'static [Recipe] {
         all
     })
 }
+/// Серверный профиль дописывает запись; номера и порядок775 неизменны.
+pub fn recipes_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> &'static [Recipe] {
+    if catalog.profile() == crate::gameplay_catalog::Profile::Java26_1_2 { return recipes(); }
+    static PREVIEW: OnceLock<Vec<Recipe>> = OnceLock::new();
+    PREVIEW.get_or_init(|| {
+        let mut all = recipes().to_vec();
+        all.push(Recipe { input: 615, output: crate::gameplay_catalog::WHITE_SLAB_ITEM, count: 2 });
+        all
+    })
+}
 pub fn choices(input: i32) -> Vec<&'static Recipe> { recipes().iter().filter(|r| r.input == input).collect() }
+pub fn choices_for_catalog(catalog: crate::gameplay_catalog::Catalog, input: i32) -> Vec<&'static Recipe> {
+    if catalog.profile() == crate::gameplay_catalog::Profile::Java26_1_2 { return choices(input); }
+    recipes_for_catalog(catalog).iter().filter(|r| r.input == input).collect()
+}
 pub fn result(input: Option<Stack>, selected: i32) -> Option<Stack> {
     let recipe = *choices(input?.item).get(usize::try_from(selected).ok()?)?;
     Some(Stack::new(recipe.output,recipe.count))
 }
+/// selected — кнопка среди рецептов текущего входа, не глобальный номер.
+pub fn result_for_catalog(catalog: crate::gameplay_catalog::Catalog, input: Option<Stack>, selected: i32) -> Option<Stack> {
+    if catalog.profile() == crate::gameplay_catalog::Profile::Java26_1_2 { return result(input, selected); }
+    let recipe = *choices_for_catalog(catalog, input?.item).get(usize::try_from(selected).ok()?)?;
+    Some(Stack::new(recipe.output, recipe.count))
+}
 // Update Recipes, minecraft-data 26.1 protocol.json: IDSet, SlotDisplay.
-pub fn recipe_packet() -> Vec<u8> {
+pub fn recipe_packet() -> Vec<u8> { packet(recipes()) }
+pub fn recipe_packet_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> Vec<u8> {
+    if catalog.profile() == crate::gameplay_catalog::Profile::Java26_1_2 { return recipe_packet(); }
+    packet(recipes_for_catalog(catalog))
+}
+fn packet(recipes: &[Recipe]) -> Vec<u8> {
     use crate::network::varint::encode_varint;
     let mut out=encode_varint(0x85); out.extend(encode_varint(0));
-    out.extend(encode_varint(recipes().len() as i32));
-    for r in recipes() {
+    out.extend(encode_varint(recipes.len() as i32));
+    for r in recipes {
         for v in [2,r.input,5,r.output,r.count,0,0] { out.extend(encode_varint(v)); }
     }
     out
@@ -96,5 +121,39 @@ mod tests {
         assert!(result(None,0).is_none());
         assert!(recipes().iter().all(|r|r.count>0));
     }
+    #[test]
+    fn profile_rows_preserve_native_order_and_packet_bytes() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        let base = Catalog::new(Profile::Java26_1_2);
+        let preview = Catalog::new(Profile::Preview26_3);
+        let extended = recipes_for_catalog(preview);
+        assert_eq!(&extended[..recipes().len()], recipes());
+        assert_eq!(extended.len(), recipes().len() + 1);
+        assert_eq!(recipe_packet_for_catalog(base), recipe_packet());
+        // Прежние строки пакета сохраняются дословно: меняются только размер и хвост.
+        let native_body = recipe_packet(); let extended_body = recipe_packet_for_catalog(preview);
+        let prefix = crate::network::varint::encode_varint(0x85).len() + 1;
+        let native_header = prefix + crate::network::varint::encode_varint(recipes().len() as i32).len();
+        let preview_header = prefix + crate::network::varint::encode_varint(extended.len() as i32).len();
+        assert_eq!(&native_body[native_header..], &extended_body[preview_header..preview_header + native_body.len() - native_header]);
+        assert_eq!(choices_for_catalog(base, 615).len(), 0);
+        assert_eq!(choices_for_catalog(preview, 615), vec![extended.last().unwrap()]);
+    }
+
+    #[test]
+    fn preview_selection_uses_local_button_and_base_cannot_cut_new_slab() {
+        use crate::gameplay_catalog::{Catalog, Profile};
+        let base = Catalog::new(Profile::Java26_1_2);
+        let preview = Catalog::new(Profile::Preview26_3);
+        let input = Some(Stack::new(615, 3));
+        assert_eq!(result_for_catalog(preview, input, 0), Some(Stack::new(crate::gameplay_catalog::WHITE_SLAB_ITEM, 2)));
+        for selected in [-1, 1, recipes().len() as i32, i32::MAX] {
+            assert!(result_for_catalog(preview, input, selected).is_none());
+        }
+        assert!(result_for_catalog(base, input, 0).is_none());
+        assert!(result_for_catalog(preview, None, 0).is_none());
+        assert!(result_for_catalog(preview, Some(Stack::new(crate::gameplay_catalog::WHITE_SLAB_ITEM, 1)), 0).is_none());
+    }
+
 }
 

@@ -1,0 +1,261 @@
+{
+  "scope": "selected ordinary raw777 stonecutter operation, noGUI",
+  "jar_sha1": "33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c",
+  "selected_display": {
+    "packet_payload_sha256": "e425f7f24a3939e08a49ebfc7653714fbb581d4e4bf1bf953636284b0c982c8e",
+    "packet_payload_length": 3761,
+    "entry_ordinal": 347,
+    "entry_offset": 3725,
+    "display_offset": 3728,
+    "display_end": 3734,
+    "input_ids": [
+      689
+    ],
+    "display_type": 5,
+    "display_hex": "05d105020000",
+    "template_hex": "d105020000",
+    "decoded_template": {
+      "item": 721,
+      "count": 2,
+      "added": 0,
+      "removed": 0
+    },
+    "scope": "only selected white_concrete→white_concrete_slab; unrelated prefix discarded",
+    "button_ordinal_for_input": 0
+  },
+  "selected_book_entries": [
+    {
+      "display_id": 1694,
+      "type": 3,
+      "input_ids": [
+        689
+      ],
+      "result": {
+        "item": "white_concrete_slab",
+        "count": 2
+      },
+      "station_item": 1513,
+      "group_raw": 0,
+      "category": 10,
+      "requirements": [
+        [
+          689
+        ]
+      ],
+      "flags": 3,
+      "replace": false
+    }
+  ],
+  "actions": [
+    {
+      "action": "window_click",
+      "window": 1,
+      "slot": 29,
+      "mode": 0
+    },
+    {
+      "action": "window_click",
+      "window": 1,
+      "slot": 0,
+      "mode": 0
+    },
+    {
+      "action": "select",
+      "window": 1,
+      "button": -1
+    },
+    {
+      "action": "select",
+      "window": 1,
+      "button": 0
+    },
+    {
+      "action": "select",
+      "window": 1,
+      "button": -1
+    },
+    {
+      "action": "select",
+      "window": 1,
+      "button": 65536
+    },
+    {
+      "action": "window_click",
+      "window": 1,
+      "slot": 1,
+      "mode": 0
+    },
+    {
+      "action": "window_click",
+      "window": 1,
+      "slot": 29,
+      "mode": 0
+    },
+    {
+      "action": "window_click",
+      "window": 1,
+      "slot": 1,
+      "mode": 1
+    }
+  ],
+  "properties": [
+    {
+      "window": 1,
+      "property": 0,
+      "value": 0,
+      "stage": "menu"
+    },
+    {
+      "window": 1,
+      "property": 0,
+      "value": -1,
+      "stage": "menu"
+    },
+    {
+      "window": 1,
+      "property": 0,
+      "value": 0,
+      "stage": "selected"
+    },
+    {
+      "window": 1,
+      "property": 0,
+      "value": -1,
+      "stage": "shift-take"
+    }
+  ],
+  "checks": [
+    "selected-update-recipes-template-is-two-slabs",
+    "named-stonecut-recipe-accepted-and-selected-book-entry-reawarded",
+    "invalid-negative-selection-preserves-input-and-empty-output",
+    "derived-valid-button-shows-two-without-consuming-input",
+    "invalid-negative-and-large-buttons-preserve-selection-and-counts",
+    "ordinary-result-consumes-one-and-gives-two",
+    "shift-consumes-remaining-two-and-total-output-is-six"
+  ],
+  "result": "PASS",
+  "server_exit": 0,
+  "group_gone": true,
+  "port_free": true,
+  "runner_sha256": "29974f924a16eca4eb66b0275314b913c4965237bc782de19c0468da05dbb703",
+  "snapshots": {
+    "opened": {
+      "window": 1,
+      "slots": {
+        "29": {
+          "item": "white_concrete",
+          "count": 3
+        }
+      },
+      "cursor": null,
+      "slot_count": 38
+    },
+    "input-three": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 3
+        }
+      },
+      "cursor": null,
+      "slot_count": 38
+    },
+    "invalid-before-selection": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 3
+        }
+      },
+      "cursor": null,
+      "slot_count": 38
+    },
+    "selected": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 3
+        },
+        "1": {
+          "item": "white_concrete_slab",
+          "count": 2
+        }
+      },
+      "cursor": null,
+      "slot_count": 38
+    },
+    "invalid-after-selection": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 3
+        },
+        "1": {
+          "item": "white_concrete_slab",
+          "count": 2
+        }
+      },
+      "cursor": null,
+      "slot_count": 38
+    },
+    "taken-once": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "1": {
+          "item": "white_concrete_slab",
+          "count": 2
+        }
+      },
+      "cursor": {
+        "item": "white_concrete_slab",
+        "count": 2
+      },
+      "slot_count": 38
+    },
+    "stored-first-two": {
+      "window": 1,
+      "slots": {
+        "0": {
+          "item": "white_concrete",
+          "count": 2
+        },
+        "1": {
+          "item": "white_concrete_slab",
+          "count": 2
+        },
+        "29": {
+          "item": "white_concrete_slab",
+          "count": 2
+        }
+      },
+      "cursor": null,
+      "slot_count": 38
+    },
+    "shift-rest": {
+      "window": 1,
+      "slots": {
+        "29": {
+          "item": "white_concrete_slab",
+          "count": 6
+        }
+      },
+      "cursor": null,
+      "slot_count": 38
+    }
+  },
+  "recipe_name": "minecraft:white_concrete_slab_from_white_concrete_stonecutting",
+  "source": "stonecut777-observation-02, original retained outside repo",
+  "limits": [
+    "selected row/button/display numbers are observed local metadata",
+    "whole recipe payload is not retained",
+    "ordinary raw packets, not GUI or full packet-order parity"
+  ]
+}

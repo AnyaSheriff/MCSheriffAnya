@@ -16,6 +16,7 @@ pub const REMOVE: i32 = 0x4b;
 pub const CLIENT_SETTINGS: i32 = 0x2e;
 // OptVarInt: локальная группа0 (raw1); official raw22 не является стабильным ID.
 const WHITE_SLAB_GROUP: u8 = 1;
+const WHITE_SLAB_CUT_KEY: &str = "minecraft:white_concrete_slab_from_white_concrete_stonecutting";
 
 #[derive(Default)]
 pub struct Book {
@@ -43,6 +44,14 @@ enum Display {
 }
 #[derive(Clone)]
 struct Entry { key: String, display: Display, recipe_id: Option<crafting::RecipeId> }
+
+impl Entry {
+    fn named(&self, catalog: crate::gameplay_catalog::Catalog, name: &str) -> bool {
+        // Только имя, подтверждённое обычными recipe take/give777; не имя результата.
+        if self.key == WHITE_SLAB_CUT_KEY { return self.key.strip_prefix("minecraft:") == Some(name); }
+        matches!(&self.display, Display::Crafting(recipe) if catalog.name(crate::gameplay_catalog::Kind::Item, recipe.result).ok() == Some(name))
+    }
+}
 
 fn entries() -> &'static [Entry] {
     static ENTRIES: OnceLock<Vec<Entry>> = OnceLock::new();
@@ -76,6 +85,11 @@ fn entries_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> &'static [E
             key: "minecraft:white_concrete_slab".into(),
             display: Display::Crafting(crafting::recipe_for_catalog(catalog, crafting::RecipeId::WhiteConcreteSlab).expect("рецепт профиля")),
             recipe_id: Some(crafting::RecipeId::WhiteConcreteSlab),
+        });
+        extended.push(Entry {
+            key: WHITE_SLAB_CUT_KEY.into(),
+            display: Display::Stonecutting { input: 615, result: crate::gameplay_catalog::WHITE_SLAB_ITEM, count: 2 },
+            recipe_id: None,
         });
         extended
     })
@@ -218,7 +232,7 @@ impl Book {
     fn entry_for_recipe(&self, id: crafting::RecipeId) -> Option<&'static Entry> {
         let entry = match id {
             crafting::RecipeId::Native(index) => self.entries().get(index),
-            crafting::RecipeId::WhiteConcreteSlab => self.entries().last(),
+            crafting::RecipeId::WhiteConcreteSlab => self.entries().get(entries().len()),
         }?;
         (entry.recipe_id == Some(id)).then_some(entry)
     }
@@ -355,10 +369,14 @@ fn entry_body(id: usize, entry: &Entry, announce: bool) -> Vec<u8> {
         }
         Display::Stonecutting { input, result, count } => {
             body.extend(encode_varint(3));
-            slot(&mut body, &[*input]);
+            if entry.key == WHITE_SLAB_CUT_KEY { ingredient_set(&mut body, &[*input]); }
+            else { slot(&mut body, &[*input]); }
             stack(&mut body, *result, *count);
             slot(&mut body, &[blocks::item_named("stonecutter").unwrap()]);
-            body.extend([0, 10, 0]); // группа и требования отсутствуют, категория stonecutter
+            if entry.key == WHITE_SLAB_CUT_KEY {
+                // Обычное наблюдение777: без группы, stonecutter, один IDSet требования.
+                body.extend([0, 10, 1, 1, 2]); body.extend(encode_varint(*input));
+            } else { body.extend([0, 10, 0]); } // прежняя таблица775
         }
     }
     body.push(if announce { 3 } else { 0 });
@@ -398,7 +416,7 @@ impl Book {
             let mut keys = Vec::new();
             for name in names {
                 let name = name.strip_prefix("minecraft:").unwrap_or(name);
-                let found: Vec<_> = self.entries().iter().filter(|e| matches!(&e.display, Display::Crafting(r) if self.catalog().name(crate::gameplay_catalog::Kind::Item, r.result).ok() == Some(name))).collect();
+                let found: Vec<_> = self.entries().iter().filter(|e| e.named(self.catalog(), name)).collect();
                 if found.len() != 1 { return None; }
                 keys.push(found[0].key.clone());
             }
@@ -415,15 +433,13 @@ impl Book {
     /// Knowledge Book: сначала разрешаем весь список, затем открываем его.
     /// Wiki, Knowledge Book: «adding it to their recipe book». Синтетические
     /// ключи текущего recipe registry не выдаём за vanilla ID: поддержаны
-    /// только однозначные crafting-result IDs; остальные отвергаем [проверить].
+    /// однозначные crafting-result IDs и наблюдённое имя нового stonecut;
+    /// остальные отвергаем [проверить].
     pub fn learn_named(&mut self, names: &[String]) -> bool {
         let mut keys = Vec::new();
         for name in names {
             let name = name.strip_prefix("minecraft:").unwrap_or(name);
-            let candidates: Vec<_> = self.entries().iter().filter(|entry| match &entry.display {
-                Display::Crafting(recipe) => self.catalog().name(crate::gameplay_catalog::Kind::Item, recipe.result).ok() == Some(name),
-                _ => false,
-            }).collect();
+            let candidates: Vec<_> = self.entries().iter().filter(|entry| entry.named(self.catalog(), name)).collect();
             if candidates.len() != 1 { return false; }
             keys.push(candidates[0].key.clone());
         }
@@ -525,7 +541,7 @@ mod tests {
     #[test]
     fn profile_extension_preserves_every_native_display_and_is_inert_in_base() {
         let base = entries(); let extended = entries_for_catalog(preview());
-        assert_eq!(extended.len(), base.len() + 1);
+        assert_eq!(extended.len(), base.len() + 2);
         for (id, native) in base.iter().enumerate() {
             assert_eq!(native.key, extended[id].key);
             assert_eq!(entry_body(id, native, false), entry_body(id, &extended[id], false));
@@ -557,7 +573,7 @@ mod tests {
     #[test]
     fn shaped_extension_uses_observed_building_category_and_id_set_displays() {
         let entries = entries_for_catalog(preview());
-        let entry = entries.last().unwrap();
+        let entry = &entries[super::entries().len()];
         let body = entry_body(0, entry, true);
         let mut expected = vec![0, 1, 3, 1, 3];
         for _ in 0..3 { expected.extend([6, 2]); expected.extend(encode_varint(615)); }
@@ -573,6 +589,40 @@ mod tests {
         let mut expected_ghost = vec![0x3f, 1];
         expected_ghost.extend(&expected[1..expected.len() - (4 + 3 * 3 + 1)]);
         assert_eq!(ghost, expected_ghost);
+    }
+
+    #[test]
+    fn stonecut_extension_preserves_shaped_identity_and_unlocks_independently() {
+        let mut book = Book::for_catalog(preview());
+        let shaped_id = entries().len(); let cut_id = shaped_id + 1;
+        book.learn_recipe(crafting::RecipeId::WhiteConcreteSlab);
+        assert!(book.knows_recipe(crafting::RecipeId::WhiteConcreteSlab));
+        assert!(book.crafting_display(shaped_id as i32).is_some());
+        assert!(!book.known.contains(WHITE_SLAB_CUT_KEY));
+        book.scan(&["white_concrete"], 1, false);
+        assert!(book.known.contains(WHITE_SLAB_CUT_KEY));
+        assert!(book.crafting_display(cut_id as i32).is_none());
+        book.take(&["minecraft:white_concrete_slab".into()]);
+        assert!(!book.knows_recipe(crafting::RecipeId::WhiteConcreteSlab));
+        assert!(book.known.contains(WHITE_SLAB_CUT_KEY), "имя shaped не отнимает stonecut");
+        assert!(book.take(&[WHITE_SLAB_CUT_KEY.into()]).is_some());
+        assert!(!book.known.contains(WHITE_SLAB_CUT_KEY));
+        assert!(book.learn_named(&[WHITE_SLAB_CUT_KEY.into()]));
+        assert!(!book.knows_recipe(crafting::RecipeId::WhiteConcreteSlab), "имя stonecut не открывает shaped");
+        assert!(book.known.contains(WHITE_SLAB_CUT_KEY));
+        let entry = &book.entries()[cut_id];
+        let actual = entry_body(0, entry, true);
+        let mut expected = vec![0, 3, 6, 2]; expected.extend(encode_varint(615));
+        stack(&mut expected, crate::gameplay_catalog::WHITE_SLAB_ITEM, 2);
+        slot(&mut expected, &[blocks::item_named("stonecutter").unwrap()]);
+        expected.extend([0, 10, 1, 1, 2]); expected.extend(encode_varint(615)); expected.push(3);
+        assert_eq!(actual, expected);
+        let mut base = Book::from_json(&book.to_json()).unwrap();
+        assert!(base.crafting_display(cut_id as i32).is_none());
+        assert!(!base.learn_named(&[WHITE_SLAB_CUT_KEY.into()]));
+        assert!(base.take(&[WHITE_SLAB_CUT_KEY.into()]).is_none());
+        base.take(&[]);
+        assert!(base.known.contains(WHITE_SLAB_CUT_KEY), "неизвестный ключ не стирается базовым профилем");
     }
 
 }

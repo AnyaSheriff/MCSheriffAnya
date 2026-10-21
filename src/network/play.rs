@@ -1043,7 +1043,7 @@ async fn enter_world(
         // черты, и не подсказывает.
         let may_tnt = crate::permissions::allowed(shared, &player.uuid, crate::custom_tnt::GIVE_NODE);
         send_commands(stream, may_tnt).await?;
-        write_body(stream, crate::stonecutter::recipe_packet()).await?;
+        write_body(stream, crate::stonecutter::recipe_packet_for_catalog(shared.catalog())).await?;
 
         // Список игроков: сперва те, кто уже на сервере, затем сам игрок.
         // Новичок о них узнаёт только отсюда — записи журнала он ещё не читал.
