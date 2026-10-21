@@ -115,6 +115,15 @@ pub fn quiet_block(name: &str) -> bool {
     name.ends_with("_wool") || (name.ends_with("_carpet") && !name.ends_with("moss_carpet"))
 }
 
+/// Только испускание событий установки/разрушения. Шаги, приземления и
+/// перекрытие луча здесь не определяются: для плит это отдельные наблюдения.
+pub fn quiet_state(catalog: crate::gameplay_catalog::Catalog, state: i32) -> bool {
+    if let Ok(Some(row)) = catalog.slab_entry(state) {
+        return row.family == crate::gameplay_catalog::SlabFamily::Wool;
+    }
+    catalog.name(crate::gameplay_catalog::Kind::State, state).ok().is_some_and(quiet_block)
+}
+
 /// Шерсть перекрывает луч, ковёр только гасит шаги. Шесть лучей от малых
 /// смещений источника устраняют ложное перекрытие на границе блока.
 /// [проверить] точность на рёбрах, совпадающих с линией слушателя.
@@ -373,6 +382,25 @@ mod tests {
         for (name, blocked) in [("stone", false), ("white_wool", true), ("white_carpet", false)] {
             world.set_block(2, 1, 0, blocks::state_by_name(name).unwrap());
             assert_eq!(occluded(&world, (0.5, 1.5, 0.5), (4.5, 1.5, 0.5)), blocked, "{name}");
+        }
+    }
+
+    #[test]
+    fn block_change_quiet_state_requires_enabled_wool_family_and_preserves_native_names() {
+        use crate::gameplay_catalog::{Catalog, Profile, SlabFamily, slabs};
+        let base = Catalog::new(Profile::Java26_1_2);
+        let preview = Catalog::new(Profile::Preview26_3);
+        for row in slabs() {
+            for state in row.first_state..=row.last_state {
+                assert_eq!(quiet_state(preview, state), row.family == SlabFamily::Wool);
+                assert!(!quiet_state(base, state), "выключенный extension не получает правила шерсти");
+            }
+        }
+        for catalog in [base, preview] {
+            for name in ["white_wool", "black_wool", "white_carpet", "stone", "moss_carpet", "pale_moss_carpet"] {
+                assert_eq!(quiet_state(catalog, blocks::state_by_name(name).unwrap()), quiet_block(name));
+            }
+            for state in [-1, i32::MAX] { assert!(!quiet_state(catalog, state)); }
         }
     }
 

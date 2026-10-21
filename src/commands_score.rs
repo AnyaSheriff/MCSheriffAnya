@@ -1479,20 +1479,50 @@ fn condition(words: &[&str]) -> Option<(usize, Test)> {
                 let (Some(x), Some(y), Some(z)) = (coordinate(&x, origin.0), coordinate(&y, origin.1), coordinate(&z, origin.2)) else {
                     return Err(bad(&x));
                 };
-                let wanted = block.split('[').next().unwrap_or(&block);
-                let wanted = wanted.strip_prefix("minecraft:").unwrap_or(wanted);
                 let dimension = crate::commands::dimension_of(source, shared);
-                let state = shared.world_in(dimension).lock().expect("мир захвачен другим потоком").get_block(x, y, z);
-                let here = crate::blocks::block_at_state(state).unwrap_or("air");
-                let here = here.strip_prefix("minecraft:").unwrap_or(here);
-                // Свойства в скобках сверяются целиком по состоянию [проверить:
-                // оригинал сверяет только названные].
-                let same = if block.contains('[') { crate::blocks::state_from_text(&block) == Some(state) } else { here == wanted };
+                let (catalog, state) = {
+                    let world = shared.world_in(dimension).lock().expect("мир захвачен другим потоком");
+                    (world.catalog(), world.get_block(x, y, z))
+                };
+                let same = matches_block_predicate(catalog, &block, state).map_err(|_| bad(&block))?;
                 Ok(i32::from(same))
             })))
         }
         _ => None,
     }
+}
+
+/// Предикат команды сверяет лишь названные свойства, а не состояние с
+/// подставленными defaults. Ordinary777: lever[powered=true] совпадает с
+/// напольным рычагом; запись wool-sculk-discovery-01/server.log:454.
+/// Ошибка — отдельный результат: `unless` не должен превращать её в успех.
+fn matches_block_predicate(catalog: crate::gameplay_catalog::Catalog, text: &str, state: i32) -> Result<bool, ()> {
+    let (name, properties) = match text.split_once('[') {
+        Some((name, rest)) => {
+            let properties = rest.strip_suffix(']').ok_or(())?;
+            if properties.contains('[') || properties.contains(']') { return Err(()); }
+            (name, Some(properties))
+        }
+        None => (text, None),
+    };
+    let name = name.strip_prefix("minecraft:").unwrap_or(name);
+    catalog.default_state(name).map_err(|_| ())?.ok_or(())?;
+    let orientation = catalog.orientation(name).map_err(|_| ())?;
+    let mut requested = Vec::new();
+    if let Some(properties) = properties.filter(|properties| !properties.trim().is_empty()) {
+        for pair in properties.split(',') {
+            let (key, value) = pair.split_once('=').ok_or(())?;
+            let (key, value) = (key.trim(), value.trim());
+            if requested.iter().any(|(previous, _)| *previous == key) { return Err(()); }
+            let property = orientation.ok_or(())?.properties.iter().find(|property| property.name == key).ok_or(())?;
+            if !property.values.contains(&value) { return Err(()); }
+            requested.push((key, value));
+        }
+    }
+    // Даже при другом блоке некорректные свойства выше остаются ошибкой.
+    let actual = catalog.name(crate::gameplay_catalog::Kind::State, state).map_err(|_| ())?;
+    if actual != name { return Ok(false); }
+    Ok(requested.into_iter().all(|(key, value)| orientation.is_some_and(|rule| rule.value(state, key) == Some(value))))
 }
 
 /// Счёт одного держателя (None — не задан).
@@ -1634,4 +1664,114 @@ mod tests {
         board.set_score("p", "s", 2);
         assert!(filter.matches(&board, &uuid, "p"));
     }
+}
+
+
+#[cfg(test)]
+mod block_predicate_tests {
+    use super::*;
+    use crate::{blocks, dimension::Dimension, gameplay_catalog::{Catalog, Profile, SlabHalf, slabs}, world::World};
+
+    fn server(profile: Profile) -> Shared {
+        let catalog = Catalog::new(profile);
+        let shared = Shared::new(World::in_memory_with_catalog(catalog), World::in_memory_with_catalog(catalog),
+            Default::default(), Default::default(), Default::default(),
+            crate::ops::Ops::open(std::path::Path::new("tmp/execute-block-predicate-ops.json")), crate::skins::Settings::default());
+        // setblock меняет лишь загруженный чанк — как и в настоящем мире.
+        shared.world_in(Dimension::Overworld).lock().unwrap().ensure(0, 0);
+        assert!(crate::commands::run("scoreboard objectives add predicate dummy", &Source::Console, &shared).result.is_some());
+        shared
+    }
+    fn state(shared: &Shared) -> i32 {
+        shared.world_in(Dimension::Overworld).lock().unwrap().get_block(0, 64, 0)
+    }
+    fn check(shared: &Shared, predicate: &str, matches: bool) {
+        let before = state(shared);
+        for (mode, passes) in [("if", matches), ("unless", !matches)] {
+            let command = format!("execute {mode} block 0 64 0 {predicate}");
+            assert_eq!(crate::commands::run(&command, &Source::Console, shared).result,
+                passes.then_some(1), "{command}");
+            crate::commands::run("scoreboard players set guard predicate 0", &Source::Console, shared);
+            crate::commands::run(&format!("{command} run scoreboard players add guard predicate 1"), &Source::Console, shared);
+            assert_eq!(shared.scoreboard.lock().unwrap().score("guard", "predicate").unwrap().value, i32::from(passes), "{command} side effect");
+            assert_eq!(state(shared), before);
+        }
+    }
+    fn invalid(shared: &Shared, predicate: &str) {
+        let before = state(shared);
+        for mode in ["if", "unless"] {
+            crate::commands::run("scoreboard players set guard predicate 0", &Source::Console, shared);
+            let command = format!("execute {mode} block 0 64 0 {predicate}");
+            assert_eq!(crate::commands::run(&command, &Source::Console, shared).result, None, "{command}");
+            assert_eq!(crate::commands::run(&format!("{command} run scoreboard players add guard predicate 1"), &Source::Console, shared).result,
+                None, "неверный предикат не запускает run: {command}");
+            assert_eq!(shared.scoreboard.lock().unwrap().score("guard", "predicate").unwrap().value, 0);
+            assert_eq!(state(shared), before);
+        }
+    }
+
+    #[test]
+    fn native_partial_lever_properties_do_not_require_omitted_defaults_for_if_or_unless() {
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let shared = server(profile);
+            assert!(crate::commands::run("setblock 0 63 0 stone", &Source::Console, &shared).result.is_some());
+            assert!(crate::commands::run("setblock 0 64 0 lever[face=floor,facing=east,powered=true]", &Source::Console, &shared).result.is_some());
+            let expected = blocks::state_from_text("lever[face=floor,facing=east,powered=true]").unwrap();
+            assert_eq!(state(&shared), expected);
+            for text in ["lever", "minecraft:lever", "lever[]", "lever[powered=true]", "minecraft:lever[facing=east]", "lever[face=floor]", "lever[face=floor,facing=east,powered=true]"] {
+                check(&shared, text, true);
+            }
+            for text in ["stone", "minecraft:air", "lever[powered=false]", "lever[face=wall]", "lever[facing=north]"] { check(&shared, text, false); }
+        }
+    }
+
+    #[test]
+    fn all_32_slab_names_and_only_requested_properties_use_primary_catalog() {
+        let shared = server(Profile::Preview26_3);
+        let catalog = shared.catalog();
+        let rows: Vec<_> = slabs().collect();
+        for (index, row) in rows.iter().enumerate() {
+            let other_family = rows[(index + 16) % 32];
+            for (half, name) in [(SlabHalf::Top, "top"), (SlabHalf::Bottom, "bottom"), (SlabHalf::Double, "double")] {
+                for wet in [false, true] {
+                    let text = format!("{}[type={name},waterlogged={wet}]", row.name);
+                    assert!(crate::commands::run(&format!("setblock 0 64 0 {text}"), &Source::Console, &shared).result.is_some(), "setup {text}");
+                    assert_eq!(state(&shared), catalog.slab_state_for(row, half, wet).unwrap());
+                    for query in [row.name.to_owned(), format!("minecraft:{}", row.name), text,
+                        format!("{}[type={name}]", row.name), format!("{}[waterlogged={wet}]", row.name)] {
+                        check(&shared, &query, true);
+                    }
+                    check(&shared, &format!("{}[waterlogged={}]", row.name, !wet), false);
+                    check(&shared, &format!("{}[type={name}]", other_family.name), false);
+                }
+            }
+        }
+        let native = server(Profile::Java26_1_2);
+        assert!(crate::commands::run("setblock 0 64 0 stone", &Source::Console, &native).result.is_some());
+        assert_eq!(state(&native), blocks::state_by_name("stone").unwrap());
+        for row in rows {
+            invalid(&native, row.name);
+            invalid(&native, &format!("minecraft:{}[type=top]", row.name));
+        }
+    }
+
+    #[test]
+    fn invalid_properties_names_or_syntax_never_succeed_even_for_unless_and_different_actual_block() {
+        let shared = server(Profile::Preview26_3);
+        assert!(crate::commands::run("setblock 0 64 0 stone", &Source::Console, &shared).result.is_some());
+        assert_eq!(state(&shared), blocks::state_by_name("stone").unwrap());
+        for text in ["not_a_block", "minecraft:not_a_block", "other:stone", "#minecraft:wool",
+            "lever[unknown=true]", "lever[powered=maybe]", "lever[powered=true,powered=true]",
+            "lever[", "lever[powered=true]junk", "lever[powered=true][facing=east]", "lever[powered=true,]",
+            "stone[powered=true]", "air[type=top]", "white_wool_slab[type=bad]", "white_wool_slab[type=top,type=bottom]"] {
+            invalid(&shared, text);
+        }
+        let catalog = shared.catalog();
+        assert!(matches_block_predicate(catalog, "air", i32::MAX).is_err());
+        assert!(matches_block_predicate(catalog, "air", -1).is_err());
+        assert_eq!(matches_block_predicate(catalog, "stone[powered=true]", blocks::state_by_name("lever").unwrap()), Err(()));
+        // Ошибка неизвестного actual state не становится совпадением с воздухом.
+        assert_eq!(matches_block_predicate(Catalog::new(Profile::Java26_1_2), "air", rows_first_wool_state()), Err(()));
+    }
+    fn rows_first_wool_state() -> i32 { crate::gameplay_catalog::WOOL_SLABS[0].first_state }
 }

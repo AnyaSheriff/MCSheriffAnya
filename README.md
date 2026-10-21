@@ -69,8 +69,8 @@ endorsed by Mojang or Microsoft.
 - Redstone: wire, torches, repeaters, comparators, levers, buttons, pressure
   plates, observers, copper bulbs, lamps, doors, trapdoors, fence gates,
   pistons and sticky pistons with real two-tick movement and client-side
-  animation. Timings are verified against the official server tick by tick
-  (see below).
+  animation. Selected timing scenarios are compared with the official server
+  tick by tick; this does not establish parity for every circuit (see below).
 - Day and night with sun, moon phases and sky colour; time is kept across
   restarts.
 - Operators (`ops.json`), commands with permission levels and tab hints:
@@ -163,7 +163,7 @@ with the black box (about 300 scenarios).
 | Area | State | Notes |
 | --- | --- | --- |
 | World generation | ✅ | Overworld, Nether, End with the dragon fight, strongholds, villages, end cities |
-| Redstone | ✅ | All components, pistons, containers, comparators |
+| Redstone | Implemented; verification ongoing | Core components, pistons, containers and comparators; edge cases and 26.3 interactions remain under verification |
 | Combat and PvP | ✅ | Melee, sweep, crits, shields, bow, crossbow, trident, mace |
 | Survival | ✅ | Hunger, XP, potions, beds, respawn anchor, farming, furnaces, brewing, enchanting, anvil, grindstone, smithing table, villagers and trading |
 | Mobs | ✅ | |
@@ -281,9 +281,12 @@ a lever like a player would, records every block change, block action and
 sound with its tick, and diffs the two recordings. The official server is
 only *run* and observed over the network; its jar is never opened. The bot can
 record both servers at once (`--parallel`). The whole suite is about 300
-scenarios. Redstone alone is 137 of them (pistons with slime, honey and flying
-machines, containers, rails and minecarts, TNT and lightning, sculk, the
-crafter, fluids; all 137 match the original tick for tick in full. Where vanilla itself is random
+scenarios. The previously recorded 26.1.2 redstone suite contains 137 scenarios
+(pistons with slime, honey and flying machines, containers, rails and minecarts,
+TNT and lightning, sculk, the crafter and fluids). These are bounded comparisons,
+not proof of every possible circuit or complete 26.3 behavior. The current
+migration also has unverified edge cases; historical results are not a fresh
+run against the current binary. Where vanilla itself is random
 (blast spread, fuse from an explosion, particle colours), the scenario says so
 in a `random` rule backed by a wiki quote or vanilla-against-vanilla
 recordings, and everything else is still compared exactly. See `tools/blackbox/README.md`.

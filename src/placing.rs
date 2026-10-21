@@ -226,7 +226,7 @@ pub fn place_tagged(
         world.set_custom_tnt((x, y, z), custom);
     }
 
-    if !crate::redstone::sculk_family::quiet_block(name) {
+    if !crate::redstone::sculk_family::quiet_state(world.catalog(), state) {
         crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_PLACE);
     }
 
@@ -348,7 +348,7 @@ pub fn break_block(world: &mut World, x: i32, y: i32, z: i32) -> Option<i32> {
         fluids::state_of(fluids::Kind::Water, fluids::SOURCE)
     } else { crate::vegetation::fluid_left(broken) };
     world.set_block(x, y, z, fluid_left);
-    if !blocks::block_at_state(broken).is_some_and(crate::redstone::sculk_family::quiet_block) {
+    if !crate::redstone::sculk_family::quiet_state(world.catalog(), broken) {
         crate::redstone::game_event(world, (x, y, z), crate::redstone::FREQ_DESTROY);
     }
 
@@ -1710,5 +1710,102 @@ mod tests {
 
         // Пологий взгляд вниз ещё не считается «под ноги».
         assert_eq!(facing(0.0, 20.0), "north");
+    }
+}
+
+#[cfg(test)]
+mod catalog_sculk_emission_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile, SlabFamily, SlabHalf, slabs};
+    const TARGET: (i32, i32, i32) = (0, 64, 0);
+    const SENSOR: (i32, i32, i32) = (4, 64, 0);
+
+    fn world(profile: Profile) -> World {
+        let mut world = World::in_memory_with_catalog(Catalog::new(profile));
+        for x in 0..=4 { world.set_block_silently(x, 63, 0, blocks::state_by_name("stone").unwrap()); }
+        let sensor = blocks::orientation("sculk_sensor").unwrap().state(&[
+            ("sculk_sensor_phase", "inactive"), ("power", "0"), ("waterlogged", "false")]).unwrap();
+        world.set_block_silently(SENSOR.0, SENSOR.1, SENSOR.2, sensor);
+        world.redstone.sculk.events.clear();
+        world
+    }
+
+    fn assert_emission(world: &mut World, quiet: bool, frequency: u8) {
+        let emitted = &world.redstone.sculk.events;
+        assert_eq!(emitted.len(), usize::from(!quiet));
+        if !quiet {
+            assert_eq!(emitted[0].frequency, frequency);
+            assert_eq!(emitted[0].at, crate::redstone::sculk_family::center(TARGET));
+        }
+        // Настоящий слушатель должен получить/не получить событие, не только helper bool.
+        for _ in 0..6 { crate::redstone::sensors_tick(world); }
+        let state = world.get_block(SENSOR.0, SENSOR.1, SENSOR.2);
+        let phase = blocks::orientation("sculk_sensor").unwrap().value(state, "sculk_sensor_phase").unwrap();
+        assert_eq!(phase, if quiet { "inactive" } else { "active" });
+    }
+
+    #[test]
+    fn actual_native_placement_and_break_keep_stone_loud_and_full_wool_quiet() {
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            for (name, quiet) in [("stone", false), ("white_wool", true)] {
+                let mut placed = world(profile);
+                let state = blocks::state_by_name(name).unwrap();
+                assert_eq!(place(&mut placed, name, state, (0, 63, 0),
+                    &Click { face: 1, cursor_y: 0.5, yaw: 0.0, pitch: 0.0 }, (2.5, 64.0, 3.5)), Placement::Placed);
+                assert_eq!(placed.get_block(TARGET.0, TARGET.1, TARGET.2), state);
+                assert_emission(&mut placed, quiet, crate::redstone::FREQ_PLACE);
+                let mut broken = world(profile);
+                broken.set_block_silently(TARGET.0, TARGET.1, TARGET.2, state);
+                assert_eq!(break_block(&mut broken, TARGET.0, TARGET.1, TARGET.2), Some(state));
+                assert_eq!(broken.get_block(TARGET.0, TARGET.1, TARGET.2), world::AIR);
+                assert_emission(&mut broken, quiet, crate::redstone::FREQ_DESTROY);
+            }
+        }
+    }
+
+    #[test]
+    fn all_enabled_slab_colors_place_top_bottom_dry_or_wet_with_own_emission_policy() {
+        for row in slabs() {
+            for half in [SlabHalf::Top, SlabHalf::Bottom] {
+                for wet in [false, true] {
+                    let mut placed = world(Profile::Preview26_3);
+                    let catalog = placed.catalog();
+                    if wet { placed.set_block_silently(TARGET.0, TARGET.1, TARGET.2, fluids::state_of(fluids::Kind::Water, fluids::SOURCE)); }
+                    let (clicked, face) = if half == SlabHalf::Top {
+                        placed.set_block_silently(0, 65, 0, blocks::state_by_name("stone").unwrap());
+                        ((0, 65, 0), 0)
+                    } else { ((0, 63, 0), 1) };
+                    assert_eq!(place(&mut placed, row.name, row.default_state, clicked,
+                        &Click { face, cursor_y: 0.5, yaw: 0.0, pitch: 0.0 }, (2.5, 64.0, 3.5)), Placement::Placed);
+                    assert_eq!(placed.get_block(TARGET.0, TARGET.1, TARGET.2), catalog.slab_state_for(row, half, wet).unwrap());
+                    assert_emission(&mut placed, row.family == SlabFamily::Wool, crate::redstone::FREQ_PLACE);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn all_six_slab_states_break_with_correct_fluid_and_catalog_emission_without_changing_merge() {
+        for row in slabs() {
+            for half in [SlabHalf::Top, SlabHalf::Bottom, SlabHalf::Double] {
+                for wet in [false, true] {
+                    let mut broken = world(Profile::Preview26_3);
+                    let state = broken.catalog().slab_state_for(row, half, wet).unwrap();
+                    broken.set_block_silently(TARGET.0, TARGET.1, TARGET.2, state);
+                    assert_eq!(break_block(&mut broken, TARGET.0, TARGET.1, TARGET.2), Some(state));
+                    assert_eq!(broken.get_block(TARGET.0, TARGET.1, TARGET.2), if wet { fluids::state_of(fluids::Kind::Water, fluids::SOURCE) } else { world::AIR });
+                    assert_emission(&mut broken, row.family == SlabFamily::Wool, crate::redstone::FREQ_DESTROY);
+                }
+            }
+            // Прежняя ветка merge не меняется этим срезом. Это регрессия своего
+            // поведения, а не утверждение частоты merge официального сервера.
+            let mut merged = world(Profile::Preview26_3);
+            let catalog = merged.catalog();
+            merged.set_block_silently(TARGET.0, TARGET.1, TARGET.2, catalog.slab_state_for(row, SlabHalf::Bottom, true).unwrap());
+            assert_eq!(place(&mut merged, row.name, row.default_state, TARGET,
+                &Click { face: 1, cursor_y: 0.5, yaw: 0.0, pitch: 0.0 }, (2.5, 64.0, 3.5)), Placement::Merged);
+            assert_eq!(merged.get_block(TARGET.0, TARGET.1, TARGET.2), catalog.slab_state_for(row, SlabHalf::Double, false).unwrap());
+            assert!(merged.redstone.sculk.events.is_empty());
+        }
     }
 }
