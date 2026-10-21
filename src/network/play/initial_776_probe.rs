@@ -42,7 +42,7 @@ async fn fixture() -> Value {
     send_look(&mut out, 1, 0x7f, 1, false).await.unwrap();
 
     player.inventory.set(36, Some(Stack::new(blocks::item_named("stone").unwrap(), 3)));
-    send_container_content(&mut out, &mut player).await.unwrap();
+    send_container_content(&mut out, &mut player, crate::gameplay_catalog::Catalog::new(crate::gameplay_catalog::Profile::Java26_1_2)).await.unwrap();
     let paper = Stack::new(blocks::item_named("paper").unwrap(), 1).with_extras(crate::stackdata::Data {
         name: Some("MCSA probe".into()), ..Default::default()
     });

@@ -109,7 +109,7 @@ pub(super) async fn open(stream: &mut Outgoing<'_>, shared: &Shared, player: &mu
     push_i32(&mut packet, entity_id);
     write_body(stream, packet).await?;
     player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false });
-    send_window_content(stream, player).await
+    send_window_content(stream, player, shared.catalog()).await
 }
 
 pub(super) fn command(payload: &[u8], player: &mut PlayerState, shared: &Shared, reaction: &mut Reaction) {

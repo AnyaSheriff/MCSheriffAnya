@@ -131,7 +131,7 @@ pub(super) async fn open_merchant_window(stream: &mut Outgoing<'_>, shared: &Sha
         station: None,
         ender: false,
     });
-    send_window_content(stream, player).await?;
+    send_window_content(stream, player, shared.catalog()).await?;
     write_body(stream, offers_packet(id, &state, wandering)).await
 }
 

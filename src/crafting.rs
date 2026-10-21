@@ -222,7 +222,7 @@ const WHITE_SLAB_RECIPE: Recipe = Recipe {
 };
 
 /// Только наблюдённое расширение профиля; общая таблица775 не дополняется.
-/// Книга/автозаполнение используют ту же идентичность; автокрафтер не расширен.
+/// Верстак, книга и автокрафтер используют один рецепт основного профиля.
 pub fn craft_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Option<Stack>]) -> Option<Stack> {
     if recipe_for_catalog(catalog, RecipeId::WhiteConcreteSlab)
         .is_some_and(|recipe| Grid::new(slots).is_some_and(|grid| recipe.matches(&grid)))

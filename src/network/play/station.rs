@@ -78,7 +78,7 @@ pub(super) async fn open_station(
         station: Some(station),
         ender: false,
     });
-    send_window_content(stream, player).await?;
+    send_window_content(stream, player, shared.catalog()).await?;
 
     // Свойства — все сразу, как у оригинала при открытии (у точила их нет).
     let (_, props) = compute(shared, player);

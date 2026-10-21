@@ -125,7 +125,12 @@ pub(crate) fn translate_inner(
         (State::Play, Direction::Clientbound, "open_window") => {
             uint(&mut out,cursor.uint()?);let menu=cursor.uint()?;
             // Обычные взаимодействия с блоками и жителем: menu/trading-observations.json.
-            if !matches!(menu,2|6|8..=16|18..=24){return Err(Error::PayloadUnavailable("unverified menu type"));}
+            // Autocraft777: фактический OpenScreen menu7; для776 ещё не наблюдён.
+            let observed_crafter = menu == 7 && matches!((from, to),
+                (JavaVersion::V26_1_2, JavaVersion::V26_3) | (JavaVersion::V26_3, JavaVersion::V26_1_2));
+            if !matches!(menu,2|6|8..=16|18..=24) && !observed_crafter {
+                return Err(Error::PayloadUnavailable("unverified menu type"));
+            }
             uint(&mut out,menu);
             let n=crate::registry::nbt_length(cursor.rest).map_err(|_|Error::Invalid)?;out.extend(cursor.take(n)?);
         }
@@ -610,6 +615,26 @@ mod tests {
     fn cb(body: &[u8], from: JavaVersion, to: JavaVersion) -> Result<Vec<u8>, Error> {
         translate(State::Play, Direction::Clientbound, from, to, body).map(Cow::into_owned)
     }
+    #[test]
+    fn observed_crafter_menu_roundtrips_without_opening_unobserved_menus_or_776() {
+        // Настоящий OpenScreen official777, autocraft777-observation-02.
+        let payload = b"\x01\x07\x0a\x08\x00\x09translate\x00\x11container.crafter\x00";
+        let mut body = vec![0x3b]; body.extend(payload);
+        let mapped = cb(&body, OLD, NEW).unwrap();
+        assert_eq!(&mapped[1..], payload);
+        assert_eq!(cb(&mapped, NEW, OLD).unwrap(), body);
+        for menu in [0, 1, 3, 4, 5, 17, 25, 127] {
+            let mut denied = body.clone(); denied[2] = menu;
+            assert_eq!(cb(&denied, OLD, NEW), Err(Error::PayloadUnavailable("unverified menu type")));
+        }
+        assert_eq!(translate_inner(State::Play, Direction::Clientbound, OLD, JavaVersion::V26_2,
+            &body, Context::default(), true), Err(Error::PayloadUnavailable("open_window")));
+        let mut truncated = body.clone(); truncated.pop();
+        assert!(cb(&truncated, OLD, NEW).is_err());
+        let mut trailing = body; trailing.push(0);
+        assert!(cb(&trailing, OLD, NEW).is_err());
+    }
+
     #[test]
     fn observed_light_data_translates_inside_negative_coordinate_updates() {
         use crate::light::Light;

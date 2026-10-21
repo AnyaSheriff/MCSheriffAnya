@@ -1159,7 +1159,7 @@ async fn enter_world(
 
         // Инвентарь: то, с чем игрок вышел в прошлый раз. Без этой посылки клиент
         // показал бы пустой инвентарь, хотя на сервере вещи есть.
-        send_container_content(stream, player).await?;
+        send_container_content(stream, player, shared.catalog()).await?;
         send_held_slot(stream, player.inventory.selected()).await?;
 
         if !others.is_empty() {
@@ -2681,10 +2681,11 @@ async fn send_held_slot(stream: &mut Outgoing<'_>, slot: i32) -> io::Result<()> 
 async fn send_container_content(
     stream: &mut Outgoing<'_>,
     player: &mut PlayerState,
+    catalog: crate::gameplay_catalog::Catalog,
 ) -> io::Result<()> {
     if player.window.is_some() {
         player.inventory_after_window = true;
-        return send_window_content(stream, player).await;
+        return send_window_content(stream, player, catalog).await;
     }
 
     player.state_id += 1;
@@ -4709,7 +4710,7 @@ async fn open_window(
         station: None,
         ender: kind == containers::Kind::EnderChest,
     });
-    send_window_content(stream, player).await?;
+    send_window_content(stream, player, shared.catalog()).await?;
 
     for (property, value) in props.into_iter().enumerate() {
         send_window_property(stream, id, property as i16, value).await?;
@@ -4760,7 +4761,7 @@ async fn open_cart_window(stream: &mut Outgoing<'_>, shared: &Shared, player: &m
     write_body(stream, body).await?;
 
     player.window = Some(OpenWindow { id, halves: Vec::new(), cart: Some(entity_id), shown: slots, lectern: false, crafter: false, kind: None, props: Vec::new(), merchant: None, station: None, ender: false });
-    send_window_content(stream, player).await
+    send_window_content(stream, player, shared.catalog()).await
 }
 
 /// Окно вагонетки-хранилища: вид меню и заголовок. Вид — тот же, что у
@@ -4784,7 +4785,7 @@ pub(super) fn cart_slots(shared: &Shared, dimension: crate::dimension::Dimension
 
 /// Всё окно хранилища целиком: ячейки хранилища (как их знает клиент),
 /// рюкзак и панель игрока, курсор.
-async fn send_window_content(stream: &mut Outgoing<'_>, player: &mut PlayerState) -> io::Result<()> {
+async fn send_window_content(stream: &mut Outgoing<'_>, player: &mut PlayerState, catalog: crate::gameplay_catalog::Catalog) -> io::Result<()> {
     let Some(window) = &player.window else {
         return Ok(());
     };
@@ -4816,7 +4817,7 @@ async fn send_window_content(stream: &mut Outgoing<'_>, player: &mut PlayerState
     }
 
     if window.crafter {
-        push_slot(&mut body, crate::crafting::craft(&window.shown));
+        push_slot(&mut body, crate::crafting::craft_for_catalog(catalog, &window.shown));
     }
 
     push_slot(&mut body, player.inventory.cursor());
@@ -4856,7 +4857,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
             body.extend_from_slice(&encode_varint(window.id));
             write_body(stream, body).await?;
             close_own_window(shared, player);
-            if std::mem::take(&mut player.inventory_after_window) { send_container_content(stream, player).await?; }
+            if std::mem::take(&mut player.inventory_after_window) { send_container_content(stream, player, shared.catalog()).await?; }
         }
 
         return Ok(());
@@ -4922,7 +4923,7 @@ async fn send_window_changes(stream: &mut Outgoing<'_>, shared: &Shared, player:
     };
 
     let changed: Vec<usize> = (0..now.len()).filter(|&slot| now[slot] != window.shown[slot]).collect();
-    let result = window.crafter.then(|| (window.result_slot(), crate::crafting::craft(&window.shown), crate::crafting::craft(&now)));
+    let result = window.crafter.then(|| (window.result_slot(), crate::crafting::craft_for_catalog(shared.catalog(), &window.shown), crate::crafting::craft_for_catalog(shared.catalog(), &now)));
 
     // Свойства печи и стойки, снятые вместе с содержимым: уходят после
     // ячеек, только сменившиеся (чёрный ящик, furnace-smelt).
@@ -6611,7 +6612,7 @@ async fn read_and_log_play_packets(
                     .await?;
                     all_chunks_sent = false;
 
-                    send_container_content(stream, player).await?;
+                    send_container_content(stream, player, shared.catalog()).await?;
 
                     player.save_with_catalog(&shared.playerdata, shared.catalog());
 
@@ -6802,7 +6803,7 @@ async fn read_and_log_play_packets(
                         player.inventory.set(slot, None);
                     }
 
-                    send_container_content(stream, player).await?;
+                    send_container_content(stream, player, shared.catalog()).await?;
                     log_debug!("Play: инвентарь игрока {} очищен", player.name);
                 }
             }
@@ -7234,7 +7235,7 @@ async fn apply_reaction(
     }
 
     if reaction.inventory {
-        send_container_content(stream, player).await?;
+        send_container_content(stream, player, shared.catalog()).await?;
     }
 
     // Оригинал шлёт итог крафта на каждую перемену сетки, до остальных ячеек.
@@ -10925,7 +10926,7 @@ fn click_window(shared: &Shared, player: &mut PlayerState, payload: &[u8], react
     }
 
     if let Some(window) = player.window.as_mut() {
-        let crafted = window.crafter.then(|| (crate::crafting::craft(&window.shown), crate::crafting::craft(&after[..size])));
+        let crafted = window.crafter.then(|| (crate::crafting::craft_for_catalog(shared.catalog(), &window.shown), crate::crafting::craft_for_catalog(shared.catalog(), &after[..size])));
 
         window.shown = after[..size].to_vec();
 
@@ -12781,3 +12782,6 @@ mod use_action_tests;
 
 #[cfg(test)]
 mod catalog_action_tests;
+
+#[cfg(test)]
+mod crafter_catalog_tests;

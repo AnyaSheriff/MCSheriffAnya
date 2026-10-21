@@ -88,6 +88,10 @@ pub(crate) fn effects(name:&str,input:&mut Cursor<'_>,out:&mut Vec<u8>,from:Java
                 // Wiki Java Edition protocol/Packets, Level Event:
                 // 2001/3008: «Block state ID» (слом и завершение археологии).
                 2001|3008=>context.items.content.packet_id(RegistryKind::BlockState,from,to,u32::try_from(data).map_err(|_|Error::Invalid)?)? as i32,
+                // Обычный автокрафтер777: успех/неудача с data0, не ссылка на реестр.
+                // Другие данные/версии этим наблюдением не разрешаются.
+                1049|1050 if data == 0 && matches!((from,to),
+                    (JavaVersion::V26_1_2,JavaVersion::V26_3) | (JavaVersion::V26_3,JavaVersion::V26_1_2)) => 0,
                 // Цвета, направления и число частиц, а не ID содержимого.
                 1500..=1505|2000|2002..=2004|2006..=2013|3000..=3007|3009=>data,
                 _=>return Err(Error::PayloadUnavailable("unverified level event data")),
@@ -183,6 +187,33 @@ mod tests {
         for n in 0..body.len(){assert!(effects("sound_effect",&mut Cursor::new(&body[..n]),&mut Vec::new(),OLD,NEW,Context::default()).is_err());}
         body[0]=1;assert!(effects("sound_effect",&mut Cursor::new(&body),&mut Vec::new(),OLD,NEW,Context::default()).is_err());
     }
+    #[test]
+    fn observed_crafter_events_preserve_data_and_reject_unobserved_sound_values() {
+        let fixture:serde_json::Value = serde_json::from_str(include_str!("../testdata/white-slab-autocrafting-events-777.json")).unwrap();
+        let rows = fixture["events"].as_array().unwrap();
+        for required in [1049,1050,2010] { assert!(rows.iter().any(|row| row["effect_id"] == required)); }
+        for row in rows {
+            let hex = row["payload_hex"].as_str().unwrap(); assert_eq!(hex.len()%2,0);
+            let body:Vec<u8> = hex.as_bytes().as_chunks::<2>().0.iter()
+                .map(|pair|u8::from_str_radix(std::str::from_utf8(pair).unwrap(),16).unwrap()).collect();
+            for (from,to) in [(OLD,NEW),(NEW,OLD)] {
+                let mut cursor = Cursor::new(&body); let mut output = Vec::new();
+                effects("world_event",&mut cursor,&mut output,from,to,Context::default()).unwrap();
+                assert!(cursor.rest.is_empty()); assert_eq!(output,body);
+                for end in 0..body.len() {
+                    assert!(effects("world_event",&mut Cursor::new(&body[..end]),&mut Vec::new(),from,to,Context::default()).is_err());
+                }
+                if matches!(row["effect_id"].as_i64(),Some(1049|1050)) {
+                    let mut invalid = body.clone(); invalid[12..16].copy_from_slice(&1_i32.to_be_bytes());
+                    assert_eq!(effects("world_event",&mut Cursor::new(&invalid),&mut Vec::new(),from,to,Context::default()),
+                        Err(Error::PayloadUnavailable("unverified level event data")));
+                    assert_eq!(effects("world_event",&mut Cursor::new(&body),&mut Vec::new(),OLD,JavaVersion::V26_2,Context::default()),
+                        Err(Error::PayloadUnavailable("unverified level event data")));
+                }
+            }
+        }
+    }
+
     #[test]
     fn block_break_event_maps_state_instead_of_copying_its_number() {
         for event in [2001i32,3008] {
