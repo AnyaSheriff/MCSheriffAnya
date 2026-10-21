@@ -1,0 +1,112 @@
+{
+  "result": "PASS",
+  "scope": "Selected wool slab recipes/states/placement/harvesting; guarded preview only",
+  "official_checks": 288,
+  "core_checks": 288,
+  "manual_snapshots": 32,
+  "states": 96,
+  "placements": 16,
+  "tool_cases": 96,
+  "raw_reports": {
+    "official": {
+      "path": "/home/lenox/.local/share/mcsa-handoff/wool-official-family-01/result.json",
+      "sha256": "cc484d2a4882907fb281e0ec35aa2a8fd61b9552c6c2255f0fa31486f6bd8fa9"
+    },
+    "core": {
+      "path": "/home/lenox/.local/share/mcsa-handoff/wool-core-family-01/result.json",
+      "sha256": "e64a706834598c9b663c8f2457fce2d5cbd3f71982552c454b98ad999057ecae"
+    }
+  },
+  "core_binary_sha256": "5f3d15ee6bba534e76a6d0dc903ddef53570893b73d0d396ca2122262d167df8",
+  "probe_sha256": "968f9671c252af56d9e9cb7be382537a17245bdecbbbfab94d560834279a8f39",
+  "comparer_sha256": "cd8daf1d27800e4747f95f8bb571f0500b891a10ecddce0f0c2cdd78cd5d5cbe",
+  "comparison_sha256": "1656f2303149a0cb7170f3a1398e71f5fe5df38df978743d33e6182f6047dc28",
+  "checker_negative_controls": {
+    "rejected": 15,
+    "missed": 0,
+    "source_sha256": "b1f2571f69abcda645dd3ca076b7e543f5b3572ab992eae38fcd3a30c61ae91b"
+  },
+  "cleanup": {
+    "official": {
+      "server_exit": 0,
+      "group_gone": true,
+      "port_free": true
+    },
+    "core": {
+      "server_exit": 0,
+      "group_gone": true,
+      "port_free": true
+    }
+  },
+  "limits": [
+    "No full packet ordering or exact mining times",
+    "No graphical client proof",
+    "No fire/sculk/enchantment/explosion official parity",
+    "No persistent/public26.3 activation",
+    "Hand post-drop pickup timing excluded; fresh spawn/type/count independently checked"
+  ],
+  "native_combat": {
+    "runs": [
+      {
+        "scenario": "pvp-knockback",
+        "directory": "/home/lenox/.local/share/mcsa-handoff/native-regression-wool-final03/runs/20261021T135620Z-34296-pvp-knockback",
+        "counts": [
+          11,
+          0,
+          0,
+          0
+        ],
+        "baseline_unchanged": true,
+        "clean": true
+      },
+      {
+        "scenario": "cow-crit",
+        "directory": "/home/lenox/.local/share/mcsa-handoff/native-regression-wool-final03/runs/20261021T135646Z-34401-cow-crit",
+        "counts": [
+          31,
+          0,
+          0,
+          0
+        ],
+        "baseline_unchanged": true,
+        "clean": true
+      },
+      {
+        "scenario": "sword-sweep-neighbours",
+        "directory": "/home/lenox/.local/share/mcsa-handoff/native-regression-wool-final03/runs/20261021T135709Z-34433-sword-sweep-neighbours",
+        "counts": [
+          30,
+          1,
+          0,
+          0
+        ],
+        "baseline_unchanged": true,
+        "clean": true
+      },
+      {
+        "scenario": "itemaudit4-knockback",
+        "directory": "/home/lenox/.local/share/mcsa-handoff/native-regression-wool-final03/runs/20261021T135734Z-34686-itemaudit4-knockback",
+        "counts": [
+          12,
+          1,
+          3,
+          3
+        ],
+        "baseline_unchanged": true,
+        "clean": true
+      }
+    ],
+    "fixedyaw": {
+      "counts": [
+        16,
+        0,
+        1,
+        0
+      ],
+      "path": "/home/lenox/.local/share/mcsa-handoff/native-fixedyaw-final/runs/20261021T135837Z-34898",
+      "compare_sha256": "87f61896d7e6b29e9dc6e0e2ea0e65e5068dca1bbf0a306c7e916af2dd9c16ea",
+      "combat": "sweep-Z, both velocities(0,0,-1.7), health6, swordwear1 match",
+      "residual": "official cow ambient sound at+11 absent in core recording; full parity not claimed"
+    }
+  }
+}

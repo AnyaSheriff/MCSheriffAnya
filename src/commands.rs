@@ -3861,7 +3861,7 @@ mod tests {
 
     #[test]
     fn replace_item_uses_primary_catalog_for_hands_slots_and_containers() {
-        use crate::gameplay_catalog::{Catalog, Profile, CONCRETE_SLABS};
+        use crate::gameplay_catalog::{Catalog, Profile, slabs};
         use crate::inventory::Stack;
         for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
             let shared = server_with_catalog(Catalog::new(profile));
@@ -3870,7 +3870,7 @@ mod tests {
                 world.ensure(0, 0);
                 world.set_block(2, 65, 2, blocks::state_by_name("chest").unwrap());
             }
-            for row in &CONCRETE_SLABS {
+            for row in slabs() {
                 let spec = format!(r#"minecraft:{}[custom_name="Цветная плита"]"#, row.name);
                 for target in ["weapon.mainhand", "weapon.offhand", "hotbar.2", "enderchest.3"] {
                     let answer = run(&format!("item replace entity Первый {target} with {spec} 2"), &Source::Console, &shared);

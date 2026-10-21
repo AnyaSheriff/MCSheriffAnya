@@ -195,7 +195,7 @@ impl Recipe {
 
 /// Идентичность рецепта сервера: сетевые display ID принадлежат книге отдельно.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum RecipeId { Native(usize), WhiteConcreteSlab, ConcreteSlab(u8) }
+pub enum RecipeId { Native(usize), WhiteConcreteSlab, ConcreteSlab(u8), WoolSlab(u8) }
 
 impl RecipeId {
     pub fn concrete_slab(index: usize) -> Option<Self> {
@@ -212,29 +212,45 @@ impl RecipeId {
 }
 
 /// Статические ссылки на ингредиенты общей таблицы: без дублирования ID цветов.
+fn slab_recipes(rows: &'static [crate::gameplay_catalog::SlabDescriptor], cells: &'static std::sync::OnceLock<Vec<[&'static [i32]; 3]>>, recipes: &'static std::sync::OnceLock<Vec<Recipe>>) -> &'static [Recipe] {
+    let cells = cells.get_or_init(|| rows.iter().map(|row| [std::slice::from_ref(&row.input_item); 3]).collect());
+    recipes.get_or_init(|| rows.iter().zip(cells).map(|(row, cells)| Recipe {
+        shaped: true, width: 3, height: 1, result: row.item, count: 6, cells,
+    }).collect())
+}
+
 pub fn concrete_slab_recipes() -> &'static [Recipe] {
     static CELLS: std::sync::OnceLock<Vec<[&'static [i32]; 3]>> = std::sync::OnceLock::new();
     static RECIPES: std::sync::OnceLock<Vec<Recipe>> = std::sync::OnceLock::new();
-    let cells = CELLS.get_or_init(|| {
-        let rows: &'static [_] = &crate::gameplay_catalog::CONCRETE_SLABS;
-        rows.iter().map(|row| [std::slice::from_ref(&row.input_item); 3]).collect()
-    });
-    RECIPES.get_or_init(|| crate::gameplay_catalog::CONCRETE_SLABS.iter().zip(cells).map(|(row, cells)| Recipe {
-        shaped: true, width: 3, height: 1, result: row.item, count: 6, cells,
-    }).collect())
+    slab_recipes(&crate::gameplay_catalog::CONCRETE_SLABS, &CELLS, &RECIPES)
+}
+
+pub fn wool_slab_recipes() -> &'static [Recipe] {
+    static CELLS: std::sync::OnceLock<Vec<[&'static [i32]; 3]>> = std::sync::OnceLock::new();
+    static RECIPES: std::sync::OnceLock<Vec<Recipe>> = std::sync::OnceLock::new();
+    slab_recipes(&crate::gameplay_catalog::WOOL_SLABS, &CELLS, &RECIPES)
 }
 
 pub fn recipe_for_catalog(catalog: crate::gameplay_catalog::Catalog, id: RecipeId) -> Option<&'static Recipe> {
     if let RecipeId::Native(index) = id { return recipes().get(index); }
     if catalog.profile() != crate::gameplay_catalog::Profile::Preview26_3 { return None; }
-    concrete_slab_recipes().get(id.slab_index()?)
+    match id {
+        RecipeId::WoolSlab(index) => wool_slab_recipes().get(usize::from(index)),
+        _ => concrete_slab_recipes().get(id.slab_index()?),
+    }
 }
 
 pub fn recipe_identity_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Option<Stack>]) -> Option<RecipeId> {
     if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
         && let Some(grid) = Grid::new(slots)
-        && let Some(index) = concrete_slab_recipes().iter().position(|recipe| recipe.matches(&grid))
-    { return RecipeId::concrete_slab(index); }
+    {
+        if let Some(index) = concrete_slab_recipes().iter().position(|recipe| recipe.matches(&grid)) {
+            return RecipeId::concrete_slab(index);
+        }
+        if let Some(index) = wool_slab_recipes().iter().position(|recipe| recipe.matches(&grid)) {
+            return Some(RecipeId::WoolSlab(index as u8));
+        }
+    }
     recipe_index(slots).map(RecipeId::Native)
 }
 
@@ -243,7 +259,7 @@ pub fn recipe_identity_for_catalog(catalog: crate::gameplay_catalog::Catalog, sl
 pub fn craft_for_catalog(catalog: crate::gameplay_catalog::Catalog, slots: &[Option<Stack>]) -> Option<Stack> {
     if catalog.profile() == crate::gameplay_catalog::Profile::Preview26_3
         && let Some(grid) = Grid::new(slots)
-        && let Some(recipe) = concrete_slab_recipes().iter().find(|recipe| recipe.matches(&grid))
+        && let Some(recipe) = concrete_slab_recipes().iter().chain(wool_slab_recipes()).find(|recipe| recipe.matches(&grid))
     { return Some(Stack::new(recipe.result, recipe.count)); }
     craft(slots)
 }
@@ -411,6 +427,40 @@ mod concrete_slab_tests {
             let mut vertical = [None; 9];
             for at in [0, 3, 6] { vertical[at] = Some(Stack::new(row.input_item, 1)); }
             assert!(craft_for_catalog(preview, &vertical).is_none());
+        }
+    }
+}
+
+#[cfg(test)]
+mod wool_slab_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog, Profile, WOOL_SLABS, CONCRETE_SLABS};
+
+    #[test]
+    fn wool_recipes_require_one_color_in_a_row_and_preview_profile() {
+        let preview = Catalog::new(Profile::Preview26_3);
+        let base = Catalog::new(Profile::Java26_1_2);
+        assert!(recipe_for_catalog(preview, RecipeId::WoolSlab(16)).is_none());
+        assert!(recipe_for_catalog(preview, RecipeId::WoolSlab(255)).is_none());
+        for (index, row) in WOOL_SLABS.iter().enumerate() {
+            let id = RecipeId::WoolSlab(index as u8);
+            assert_eq!(recipe_for_catalog(preview, id).unwrap().result, row.item);
+            assert!(recipe_for_catalog(base, id).is_none());
+            for y in 0..3 {
+                let mut slots = [None; 9];
+                for x in 0..3 { slots[y * 3 + x] = Some(Stack::new(row.input_item, x as i32 + 1)); }
+                assert_eq!(recipe_identity_for_catalog(preview, &slots), Some(id));
+                assert_eq!(craft_for_catalog(preview, &slots), Some(Stack::new(row.item, 6)));
+                assert!(craft_for_catalog(base, &slots).is_none());
+                for wrong in [WOOL_SLABS[(index + 1) % 16].input_item, CONCRETE_SLABS[index].input_item] {
+                    slots[y * 3 + 1] = Some(Stack::new(wrong, 1));
+                    assert!(craft_for_catalog(preview, &slots).is_none());
+                }
+            }
+            let mut vertical = [None; 9];
+            for at in [0, 3, 6] { vertical[at] = Some(Stack::new(row.input_item, 1)); }
+            assert!(craft_for_catalog(preview, &vertical).is_none());
+            assert!(craft_for_catalog(preview, &[Some(Stack::new(row.input_item, 3)); 4]).is_none());
         }
     }
 }

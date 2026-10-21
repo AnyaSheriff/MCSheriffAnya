@@ -537,9 +537,13 @@ fn rays_with(world: &mut World, centre: (f64, f64, f64), power: f32, cap: Option
                     if state != AIR && resist {
                         // Синий череп иссушителя: прочность не больше 0,8, кроме
                         // неразрушимого (mob/wither.rs).
+                        let Ok(own_resistance) = world.catalog().blast_resistance(state) else {
+                            // Неизвестный профильный блок нельзя считать воздухом или ломать.
+                            break;
+                        };
                         let resistance = match cap {
-                            Some(cap) if !crate::mob::wither::wither_immune(state) => blocks::blast_resistance(state).min(cap),
-                            _ => blocks::blast_resistance(state),
+                            Some(cap) if !crate::mob::wither::wither_immune(state) => own_resistance.min(cap),
+                            _ => own_resistance,
                         };
 
                         intensity -= (resistance + 0.3) * 0.3;
@@ -550,7 +554,7 @@ fn rays_with(world: &mut World, centre: (f64, f64, f64), power: f32, cap: Option
                             touched.push(cell);
                         }
 
-                        if can_blow_up(state) && seen.insert(cell) {
+                        if can_blow_up(world.catalog(), state) && seen.insert(cell) {
                             doomed.push(cell);
                         }
                     }
@@ -589,8 +593,9 @@ fn set_fires(world: &mut World, touched: &[Pos]) {
 /// Можно ли взорвать блок. Воздух — нечего; служебный блок едущего поршня
 /// не трогаем: его убирает сам ход. [проверить] у оригинала. Прочее держит
 /// лучи своей стойкостью (бедрок, барьер — 3 600 000).
-fn can_blow_up(state: i32) -> bool {
-    state != AIR && blocks::block_at_state(state) != Some("moving_piston")
+fn can_blow_up(catalog: crate::gameplay_catalog::Catalog, state: i32) -> bool {
+    state != AIR && catalog.name(crate::gameplay_catalog::Kind::State, state)
+        .is_ok_and(|name| name != "moving_piston")
 }
 
 /// Толкает и ранит сущности в радиусе 2 · сила (вики, Explosion):
@@ -843,9 +848,15 @@ fn ray_blocked(world: &World, from: (f64, f64, f64), to: (f64, f64, f64)) -> boo
     // Отрезок короче радиуса взрыва — клеток на пути немного; предел на
     // всякий случай.
     for _ in 0..256 {
-        if blocks::has_box(world.get_block(at[0], at[1], at[2])) {
-            return true;
-        }
+        let state = world.get_block(at[0], at[1], at[2]);
+        // Базовый проход считает занятой целую клетку с ящиком. Для новых
+        // плит каждая разрешённая форма имеет объём; правило старых блоков сохранено.
+        let has_box = match world.catalog().slab_entry(state) {
+            Ok(Some(_)) => true,
+            Ok(None) => blocks::has_box(state),
+            Err(_) => true,
+        };
+        if has_box { return true; }
 
         if at == end {
             return false;
@@ -886,7 +897,7 @@ fn destroy_blocks(world: &mut World, items: &mut Items, doomed: &[Pos], next_id:
     for &(x, y, z) in doomed {
         let state = world.get_block(x, y, z);
 
-        if state == AIR {
+        if !can_blow_up(world.catalog(), state) {
             continue;
         }
 
@@ -908,7 +919,11 @@ fn destroy_blocks(world: &mut World, items: &mut Items, doomed: &[Pos], next_id:
 
         let luck = world.random_unit();
 
-        if let Some(stack) = blocks::explosion_drops(state, luck) {
+        let Ok(stack) = world.catalog().explosion_drops(state, luck) else {
+            // Ошибка каталога не разрешает удалить блок без его предмета.
+            continue;
+        };
+        if let Some(stack) = stack {
             let joined = dropped
                 .iter_mut()
                 .find(|(pile, _)| pile.item == stack.item && pile.count + stack.count <= pile.limit());
@@ -1638,5 +1653,107 @@ mod tests {
 
         assert_eq!(exposure(&world, (0.5, 64.06, 0.5), (4.5, 64.0, 0.5), (SIZE, SIZE)), 0.0);
         assert_eq!(exposure(&world, (0.5, 64.06, 0.5), (-2.5, 64.0, 0.5), (SIZE, SIZE)), 1.0);
+    }
+}
+
+
+#[cfg(test)]
+mod catalog_resistance_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog,Profile,CONCRETE_SLABS,WOOL_SLABS,SlabHalf};
+
+    fn filled(state: i32, catalog: Catalog) -> World {
+        let mut world=World::in_memory_with_catalog(catalog);
+        for x in -3..=3 { for y in 61..=67 { for z in -3..=3 { world.set_block(x,y,z,state); } } }
+        world
+    }
+
+    #[test]
+    fn real_rays_match_base_material_resistance_for_dry_and_waterlogged_slabs() {
+        let catalog=Catalog::new(Profile::Preview26_3);
+        let water=blocks::state_by_name("water").unwrap();
+        for row in [&CONCRETE_SLABS[0],&WOOL_SLABS[0]] {
+            for half in [SlabHalf::Bottom,SlabHalf::Top,SlabHalf::Double] {
+                for wet in [false,true] {
+                    let slab=catalog.slab_state_for(row,half,wet).unwrap();
+                    let base=if wet {water} else {blocks::state_by_name(row.input_name).unwrap()};
+                    assert_eq!(catalog.blast_resistance(slab),Ok(blocks::blast_resistance(base)));
+                    let mut actual=filled(slab,catalog);
+                    let mut expected=filled(base,Catalog::new(Profile::Java26_1_2));
+                    assert_eq!(actual.random_bits(),expected.random_bits(),"одинаковый генератор до лучей");
+                    assert_eq!(rays(&mut actual,(0.5,64.5,0.5),4.0,None),rays(&mut expected,(0.5,64.5,0.5),4.0,None));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn known_catalog_policy_prevents_unknown_or_disabled_states_from_becoming_doomed() {
+        let native=Catalog::new(Profile::Java26_1_2);
+        let preview=Catalog::new(Profile::Preview26_3);
+        for state in [-1,i32::MAX,65535] { assert!(!can_blow_up(preview,state)); }
+        assert!(!can_blow_up(native,WOOL_SLABS[0].default_state));
+        assert!(can_blow_up(preview,WOOL_SLABS[0].default_state));
+        assert!(!can_blow_up(preview,blocks::state_by_name("moving_piston").unwrap()));
+        assert!(!can_blow_up(preview,AIR));
+    }
+}
+
+
+#[cfg(test)]
+mod catalog_drop_exposure_tests {
+    use super::*;
+    use crate::gameplay_catalog::{Catalog,Profile,slabs,SlabHalf,WOOL_SLABS};
+
+    #[test]
+    fn actual_destroy_path_drops_own_single_or_double_item_for_all_32_slabs() {
+        let catalog=Catalog::new(Profile::Preview26_3);
+        for row in slabs() {
+            for half in [SlabHalf::Bottom,SlabHalf::Top,SlabHalf::Double] {
+                let mut world=World::in_memory_with_catalog(catalog);
+                let state=catalog.slab_state_for(row,half,false).unwrap();
+                assert!(world.set_block_silently(0,64,0,state));
+                let mut items=Items::new(); let mut id=100;
+                destroy_blocks(&mut world,&mut items,&[(0,64,0)],&mut || {id+=1;id});
+                assert_eq!(world.get_block(0,64,0),AIR);
+                let stacks: Vec<_>=items.items().iter().map(|drop|drop.stack).collect();
+                assert_eq!(stacks,vec![crate::inventory::Stack::new(row.item,if half==SlabHalf::Double {2}else{1})]);
+            }
+        }
+    }
+
+    #[test]
+    fn disabled_and_unknown_content_cannot_enter_or_be_removed_by_destroy_policy() {
+        let catalog=Catalog::new(Profile::Java26_1_2);
+        let mut world=World::in_memory_with_catalog(catalog);
+        for state in [WOOL_SLABS[0].default_state,i32::MAX,-1] {
+            assert!(catalog.explosion_drops(state,0.5).is_err());
+            assert!(!can_blow_up(catalog,state));
+            assert!(!world.set_block_silently(0,64,0,state));
+        }
+        let piston=blocks::state_by_name("moving_piston").unwrap();
+        world.set_block_silently(1,64,0,piston);
+        let mut items=Items::new(); destroy_blocks(&mut world,&mut items,&[(0,64,0),(1,64,0)],&mut ||100);
+        assert_eq!(world.get_block(0,64,0),AIR);
+        assert_eq!(world.get_block(1,64,0),piston);
+        assert!(items.items().is_empty());
+    }
+
+    #[test]
+    fn actual_exposure_double_slab_wall_matches_base_full_cell_policy() {
+        let catalog=Catalog::new(Profile::Preview26_3);
+        let base=blocks::state_by_name("stone").unwrap();
+        for row in slabs() {
+            let slab=catalog.slab_state_for(row,SlabHalf::Double,false).unwrap();
+            let mut actual=World::in_memory_with_catalog(catalog); let mut control=World::in_memory();
+            for y in 62..=67 { for z in -3..=3 { actual.set_block_silently(1,y,z,slab); control.set_block_silently(1,y,z,base); } }
+            for centre in [(0.5,64.5,0.5),(0.5,68.5,0.5)] {
+                let a=exposure(&actual,centre,(3.5,64.0,0.5),(0.6,1.8));
+                let b=exposure(&control,centre,(3.5,64.0,0.5),(0.6,1.8));
+                assert!((0.0..=1.0).contains(&a)); assert_eq!(a,b);
+            }
+            assert!(ray_blocked(&actual,(0.5,64.5,0.5),(3.5,64.5,0.5)));
+            assert!(!ray_blocked(&actual,(0.5,68.5,0.5),(3.5,68.5,0.5)));
+        }
     }
 }

@@ -16,6 +16,7 @@ pub const REMOVE: i32 = 0x4b;
 pub const CLIENT_SETTINGS: i32 = 0x2e;
 // OptVarInt: локальная группа0 (raw1); official raw22 не является стабильным ID.
 const CONCRETE_SLAB_GROUP: u8 = 1;
+const WOOL_SLAB_GROUP: u8 = 2;
 #[cfg(test)]
 const WHITE_SLAB_CUT_KEY: &str = "minecraft:white_concrete_slab_from_white_concrete_stonecutting";
 
@@ -43,8 +44,19 @@ enum Display {
     Furnace { kind: Kind, input: i32, result: i32, xp: f32 },
     Stonecutting { input: i32, result: i32, count: i32 },
 }
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Slab { Concrete(usize), Wool(usize) }
+impl Slab {
+    fn input_name(self) -> &'static str {
+        match self {
+            Self::Concrete(index) => crate::gameplay_catalog::CONCRETE_SLABS[index].input_name,
+            Self::Wool(index) => crate::gameplay_catalog::WOOL_SLABS[index].input_name,
+        }
+    }
+    fn group(self) -> u8 { match self { Self::Concrete(_) => CONCRETE_SLAB_GROUP, Self::Wool(_) => WOOL_SLAB_GROUP } }
+}
 #[derive(Clone)]
-struct Entry { key: String, display: Display, recipe_id: Option<crafting::RecipeId>, slab: Option<usize> }
+struct Entry { key: String, display: Display, recipe_id: Option<crafting::RecipeId>, slab: Option<Slab> }
 
 impl Entry {
     fn named(&self, catalog: crate::gameplay_catalog::Catalog, name: &str) -> bool {
@@ -86,12 +98,21 @@ fn entries_for_catalog(catalog: crate::gameplay_catalog::Catalog) -> &'static [E
             extended.push(Entry {
                 key: format!("minecraft:{}", row.name),
                 display: Display::Crafting(crafting::recipe_for_catalog(catalog, crafting::RecipeId::concrete_slab(index).expect("цвет рецепта")).expect("рецепт профиля")),
-                recipe_id: crafting::RecipeId::concrete_slab(index), slab: Some(index),
+                recipe_id: crafting::RecipeId::concrete_slab(index), slab: Some(Slab::Concrete(index)),
             });
             extended.push(Entry {
                 key: format!("minecraft:{}_from_{}_stonecutting", row.name, row.input_name),
                 display: Display::Stonecutting { input: row.input_item, result: row.item, count: 2 },
-                recipe_id: None, slab: Some(index),
+                recipe_id: None, slab: Some(Slab::Concrete(index)),
+            });
+        }
+        // Дополняем после прежних shaped/cut пар: их сетевые позиции и ключи неизменны.
+        for (index, row) in crate::gameplay_catalog::WOOL_SLABS.iter().enumerate() {
+            let id = crafting::RecipeId::WoolSlab(index as u8);
+            extended.push(Entry {
+                key: format!("minecraft:{}", row.name),
+                display: Display::Crafting(crafting::recipe_for_catalog(catalog, id).expect("рецепт профиля")),
+                recipe_id: Some(id), slab: Some(Slab::Wool(index)),
             });
         }
         extended
@@ -233,8 +254,13 @@ impl Book {
     }
     fn entries(&self) -> &'static [Entry] { entries_for_catalog(self.catalog()) }
     fn entry_for_recipe(&self, id: crafting::RecipeId) -> Option<&'static Entry> {
-        let entry = if let crafting::RecipeId::Native(index) = id { self.entries().get(index) }
-        else { self.entries().get(entries().len() + 2 * id.slab_index()?) }?;
+        let position = match id {
+            crafting::RecipeId::Native(index) => index,
+            crafting::RecipeId::WoolSlab(index) if usize::from(index) < crate::gameplay_catalog::WOOL_SLABS.len() =>
+                entries().len() + 2 * crate::gameplay_catalog::CONCRETE_SLABS.len() + usize::from(index),
+            _ => entries().len() + 2 * id.slab_index()?,
+        };
+        let entry = self.entries().get(position)?;
         (entry.recipe_id == Some(id)).then_some(entry)
     }
     pub fn learn_recipe(&mut self, id: crafting::RecipeId) {
@@ -253,7 +279,7 @@ impl Book {
         for entry in self.entries() {
             if self.known.contains(&entry.key) { continue; }
             let unlocked = match &entry.display {
-                Display::Crafting(_) if entry.slab.is_some() => names.contains(&crate::gameplay_catalog::CONCRETE_SLABS[entry.slab.expect("цвет рецепта")].input_name),
+                Display::Crafting(_) if entry.slab.is_some() => names.contains(&entry.slab.expect("цвет рецепта").input_name()),
                 Display::Crafting(recipe) => unlock(recipe, names, occupied, water),
                 Display::Furnace { input, .. } | Display::Stonecutting { input, .. } => blocks::item_name(*input).is_some_and(|name| names.contains(&name)),
             };
@@ -349,7 +375,7 @@ fn entry_body(id: usize, entry: &Entry, announce: bool) -> Vec<u8> {
             stack(&mut body, recipe.result, recipe.count);
             slot(&mut body, &[blocks::item_named("crafting_table").unwrap()]);
             // Обычное наблюдение777: building_blocks; группа назначена локально.
-            body.extend(if entry.slab.is_some() { [CONCRETE_SLAB_GROUP, 0, 1] } else { [0, 3, 1] });
+            body.extend(if let Some(slab) = entry.slab { [slab.group(), 0, 1] } else { [0, 3, 1] });
             let cells: Vec<_> = recipe.cells.iter().filter(|cell| !cell.is_empty()).collect();
             body.extend(encode_varint(cells.len() as i32));
             for cell in cells {
@@ -456,7 +482,7 @@ pub fn ghost(window: i32, recipe: &crafting::Recipe) -> Vec<u8> {
     body.extend(encode_varint(i32::from(recipe.shaped)));
     if recipe.shaped { body.extend(encode_varint(i32::from(recipe.width))); body.extend(encode_varint(i32::from(recipe.height))); }
     body.extend(encode_varint(recipe.cells.len() as i32));
-    let slab = crafting::concrete_slab_recipes().iter().any(|known| std::ptr::eq(known, recipe));
+    let slab = crafting::concrete_slab_recipes().iter().chain(crafting::wool_slab_recipes()).any(|known| std::ptr::eq(known, recipe));
     for cell in recipe.cells {
         if slab { ingredient_set(&mut body, cell); }
         else { slot(&mut body, cell); }
@@ -543,7 +569,7 @@ mod tests {
     #[test]
     fn profile_extension_preserves_every_native_display_and_is_inert_in_base() {
         let base = entries(); let extended = entries_for_catalog(preview());
-        assert_eq!(extended.len(), base.len() + 2 * crate::gameplay_catalog::CONCRETE_SLABS.len());
+        assert_eq!(extended.len(), base.len() + 2 * crate::gameplay_catalog::CONCRETE_SLABS.len() + crate::gameplay_catalog::WOOL_SLABS.len());
         for (id, native) in base.iter().enumerate() {
             assert_eq!(native.key, extended[id].key);
             assert_eq!(entry_body(id, native, false), entry_body(id, &extended[id], false));
@@ -644,8 +670,8 @@ mod tests {
             assert!(book.knows_recipe(id));
             assert_eq!(book.crafting_display(shaped as i32).unwrap().result, row.item);
             assert!(book.crafting_display(cut as i32).is_none());
-            assert_eq!(all[shaped].slab, Some(index));
-            assert_eq!(all[cut].slab, Some(index));
+            assert_eq!(all[shaped].slab, Some(Slab::Concrete(index)));
+            assert_eq!(all[cut].slab, Some(Slab::Concrete(index)));
             assert!(book.take(&[all[cut].key.clone()]).is_some());
             assert!(book.knows_recipe(id));
             assert!(book.learn_named(&[all[cut].key.clone()]));
@@ -661,6 +687,80 @@ mod tests {
             base.take(&[]);
             assert!(base.known.contains(&all[shaped].key));
             assert!(base.known.contains(&all[cut].key));
+        }
+    }
+
+    #[test]
+    fn wool_family_unlocks_own_shaped_and_preserves_existing_display_ids() {
+        use crate::gameplay_catalog::{CONCRETE_SLABS, WOOL_SLABS};
+        let base_len = entries().len();
+        let wool_start = base_len + 2 * CONCRETE_SLABS.len();
+        let all = entries_for_catalog(preview());
+        assert_eq!(all.len(), wool_start + WOOL_SLABS.len());
+        for (index, base) in entries().iter().enumerate() {
+            assert_eq!(all[index].key, base.key);
+            assert_eq!(entry_body(index, &all[index], false), entry_body(index, base, false));
+        }
+        for (index, row) in CONCRETE_SLABS.iter().enumerate() {
+            assert_eq!(all[base_len + 2 * index].key, format!("minecraft:{}", row.name));
+            assert_eq!(all[base_len + 2 * index + 1].key, format!("minecraft:{}_from_{}_stonecutting", row.name, row.input_name));
+        }
+        for (index, row) in WOOL_SLABS.iter().enumerate() {
+            let id = crafting::RecipeId::WoolSlab(index as u8);
+            let display = wool_start + index;
+            let mut book = Book::for_catalog(preview());
+            assert!(book.crafting_display(display as i32).is_none(), "неизвестный display закрыт");
+            book.scan(&[row.input_name], 1, false);
+            let known_slabs: Vec<_> = all.iter().filter(|entry| entry.slab.is_some() && book.known.contains(&entry.key)).collect();
+            assert_eq!(known_slabs.len(), 1, "{} открывает только свою shaped плиту", row.input_name);
+            assert_eq!(known_slabs[0].key, format!("minecraft:{}", row.name));
+            assert!(book.knows_recipe(id));
+            assert_eq!(book.crafting_display(display as i32).unwrap().result, row.item);
+            assert_eq!(book.entry_for_recipe(id).unwrap().slab, Some(Slab::Wool(index)));
+            let invented_cut = format!("minecraft:{}_from_{}_stonecutting", row.name, row.input_name);
+            assert!(!book.learn_named(std::slice::from_ref(&invented_cut)));
+            assert!(book.take(&[invented_cut]).is_none());
+            assert!(book.take(&[all[display].key.clone()]).is_some());
+            assert!(!book.knows_recipe(id));
+            assert!(book.learn_named(&[all[display].key.clone()]));
+            assert!(book.knows_recipe(id));
+            let saved = book.to_json();
+            let loaded = Book::from_json(&saved).unwrap();
+            assert!(loaded.known.contains(&all[display].key));
+            let mut native = loaded;
+            assert!(!native.knows_recipe(id));
+            assert!(!native.learn_named(&[all[display].key.clone()]));
+            native.take(&[]);
+            assert!(native.known.contains(&all[display].key), "базовый профиль сохраняет чужой ключ");
+            let mut restored = Book { known: native.known, ..Book::for_catalog(preview()) };
+            assert!(restored.knows_recipe(id));
+            restored.take(&[all[display].key.clone()]);
+            restored.learn_recipe(id);
+            assert!(restored.knows_recipe(id), "typed lookup не указывает на соседний цвет/семейство");
+        }
+        let mut book = Book::for_catalog(preview());
+        book.learn_recipe(crafting::RecipeId::WoolSlab(255));
+        assert!(!book.knows_recipe(crafting::RecipeId::WoolSlab(255)));
+    }
+
+    #[test]
+    fn wool_displays_have_own_group_and_exact_color_ingredients() {
+        let start = entries().len() + 2 * crate::gameplay_catalog::CONCRETE_SLABS.len();
+        assert_ne!(WOOL_SLAB_GROUP, CONCRETE_SLAB_GROUP);
+        for (index, row) in crate::gameplay_catalog::WOOL_SLABS.iter().enumerate() {
+            let entry = &entries_for_catalog(preview())[start + index];
+            let mut expected = vec![0, 1, 3, 1, 3];
+            for _ in 0..3 { ingredient_set(&mut expected, &[row.input_item]); }
+            stack(&mut expected, row.item, 6);
+            slot(&mut expected, &[blocks::item_named("crafting_table").unwrap()]);
+            let mut expected_ghost = vec![0x3f, 1];
+            expected_ghost.extend_from_slice(&expected[1..]);
+            let recipe = crafting::recipe_for_catalog(preview(), crafting::RecipeId::WoolSlab(index as u8)).unwrap();
+            assert_eq!(ghost(1, recipe), expected_ghost, "призрачный рецепт {}", row.name);
+            expected.extend([WOOL_SLAB_GROUP, 0, 1, 3]);
+            for _ in 0..3 { expected.push(2); expected.extend(encode_varint(row.input_item)); }
+            expected.push(3);
+            assert_eq!(entry_body(0, entry, true), expected, "{}", row.name);
         }
     }
 

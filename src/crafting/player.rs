@@ -153,24 +153,53 @@ mod catalog_tests {
     }
     #[test]
     fn colored_autofill_keeps_ingredients_separate_and_rejects_base_before_mutation() {
-        use crate::gameplay_catalog::CONCRETE_SLABS;
+        use crate::gameplay_catalog::{SlabFamily, slabs};
         let preview = Catalog::new(Profile::Preview26_3);
         let base = Catalog::new(Profile::Java26_1_2);
-        for (index, row) in CONCRETE_SLABS.iter().enumerate() {
-            let recipe = recipe_for_catalog(preview, RecipeId::concrete_slab(index).unwrap()).unwrap();
-            let other = &CONCRETE_SLABS[(index + 1) % CONCRETE_SLABS.len()];
+        let colors: Vec<_> = slabs().collect();
+        for (index, row) in colors.iter().enumerate() {
+            let id = match row.family {
+                SlabFamily::Concrete => RecipeId::concrete_slab(index % 16).unwrap(),
+                SlabFamily::Wool => RecipeId::WoolSlab((index % 16) as u8),
+            };
+            let recipe = recipe_for_catalog(preview, id).unwrap();
+            assert_eq!(recipe.result, row.item);
+            assert!(recipe_for_catalog(base, id).is_none());
+            let other = colors[index / 16 * 16 + (index + 1) % 16];
+            let other_family = colors[(index + 16) % 32];
             let mut inventory = Inventory::new();
-            inventory.set(36, Some(Stack::new(row.input_item, 6)));
+            inventory.set(36, Some(Stack::new(row.input_item, 12)));
             inventory.set(37, Some(Stack::new(other.input_item, 64)));
+            inventory.set(38, Some(Stack::new(other_family.input_item, 64)));
             let mut grid = vec![None; 9];
+            let before = inventory.clone();
             assert!(!place_for_catalog(base, recipe, &mut grid, &mut inventory, true));
-            assert_eq!(inventory.slot(36), Some(Stack::new(row.input_item, 6)));
-            assert!(place_for_catalog(preview, recipe, &mut grid, &mut inventory, false));
-            assert_eq!(grid[3..6], [Some(Stack::new(row.input_item, 1)); 3]);
-            assert!(place_for_catalog(preview, recipe, &mut grid, &mut inventory, false));
-            assert_eq!(grid[3..6], [Some(Stack::new(row.input_item, 2)); 3]);
-            assert!(inventory.slot(36).is_none());
-            assert_eq!(inventory.slot(37), Some(Stack::new(other.input_item, 64)));
+            assert_eq!(inventory, before);
+            assert!(grid.iter().all(Option::is_none));
+            for (all, count) in [(false, 1), (false, 2), (true, 4)] {
+                assert!(place_for_catalog(preview, recipe, &mut grid, &mut inventory, all));
+                for (slot, stack) in grid.iter().enumerate() {
+                    assert_eq!(*stack, if (3..6).contains(&slot) { Some(Stack::new(row.input_item, count)) } else { None });
+                }
+                assert_eq!(recipe_identity_for_catalog(preview, &grid), Some(id));
+                assert_eq!(inventory.slot(36), inventory::remainder(Stack::new(row.input_item, 12), 12 - 3 * count));
+                assert_eq!(inventory.slot(37), Some(Stack::new(other.input_item, 64)));
+                assert_eq!(inventory.slot(38), Some(Stack::new(other_family.input_item, 64)));
+            }
+            // Сходный цвет другой семьи не заменяет настоящий ингредиент.
+            let mut wrong_inventory = Inventory::new();
+            wrong_inventory.set(36, Some(Stack::new(other_family.input_item, 64)));
+            wrong_inventory.set(37, Some(Stack::new(other.input_item, 64)));
+            let before = wrong_inventory.clone();
+            let mut empty = vec![None; 9];
+            assert!(!place_for_catalog(preview, recipe, &mut empty, &mut wrong_inventory, true));
+            assert_eq!(wrong_inventory, before); assert!(empty.iter().all(Option::is_none));
+            // Рецепт3×1 не влезает в личную сетку2×2 даже при достатке ингредиентов.
+            wrong_inventory.set(36, Some(Stack::new(row.input_item, 12)));
+            let before = wrong_inventory.clone();
+            let mut small = vec![None; 4];
+            assert!(!place_for_catalog(preview, recipe, &mut small, &mut wrong_inventory, false));
+            assert_eq!(wrong_inventory, before); assert!(small.iter().all(Option::is_none));
         }
     }
 

@@ -11,7 +11,7 @@ use mcsa_protocol::{JavaVersion, ids::{self, RegistryKind}};
 
 mod runtime;
 mod stack_validation;
-pub use mcsa_protocol::content::{ConcreteSlab, CONCRETE_SLABS};
+pub use mcsa_protocol::content::{SlabDescriptor, SlabFamily, CONCRETE_SLABS, WOOL_SLABS, slabs};
 mod mob_validation;
 mod hive_validation;
 
@@ -23,7 +23,7 @@ pub use stack_validation::{StackError, StackLocation, StackProblem};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Profile {
     Java26_1_2,
-    /// База775 +16бетонных плит, НЕ полный каталог26.3.
+    /// База775 +16бетонных и16шерстяных плит, НЕ полный каталог26.3.
     Preview26_3,
 }
 
@@ -97,7 +97,7 @@ impl Catalog {
                 hash.update(&(value.len() as u64).to_be_bytes());
                 hash.update(value.as_bytes());
             }
-            for row in &CONCRETE_SLABS {
+            for row in slabs() {
                 hash.update(&(row.name.len() as u64).to_be_bytes());
                 hash.update(row.name.as_bytes());
                 for value in [row.item, row.block, row.first_state, row.last_state, row.default_state] { hash.update(&value.to_be_bytes()); }
@@ -116,17 +116,17 @@ impl Catalog {
 
     fn extension(self) -> Result<(), Error> { self.extension_named(WHITE_SLAB_NAME) }
 
-    fn entry_named(name: &str) -> Option<&'static ConcreteSlab> { CONCRETE_SLABS.iter().find(|row| row.name == name) }
+    fn entry_named(name: &str) -> Option<&'static SlabDescriptor> { slabs().find(|row| row.name == name) }
 
-    fn entry_id(kind: Kind, id: i32) -> Option<&'static ConcreteSlab> {
-        CONCRETE_SLABS.iter().find(|row| match kind {
+    fn entry_id(kind: Kind, id: i32) -> Option<&'static SlabDescriptor> {
+        slabs().find(|row| match kind {
             Kind::Item => row.item == id,
             Kind::Block => row.block == id,
             Kind::State => (row.first_state..=row.last_state).contains(&id),
         })
     }
 
-    pub fn slab_entry(self, state: i32) -> Result<Option<&'static ConcreteSlab>, Error> {
+    pub fn slab_entry(self, state: i32) -> Result<Option<&'static SlabDescriptor>, Error> {
         self.name(Kind::State, state)?;
         Ok(Self::entry_id(Kind::State, state))
     }
@@ -162,7 +162,7 @@ impl Catalog {
         self.slab_state_for(&CONCRETE_SLABS[0], half, waterlogged)
     }
 
-    pub fn slab_state_for(self, row: &ConcreteSlab, half: SlabHalf, waterlogged: bool) -> Result<i32, Error> {
+    pub fn slab_state_for(self, row: &SlabDescriptor, half: SlabHalf, waterlogged: bool) -> Result<i32, Error> {
         let actual = Self::entry_id(Kind::State, row.first_state).filter(|actual| *actual == row)
             .ok_or(Error::UnknownInternal { kind: Kind::State, id: row.first_state })?;
         self.extension_named(actual.name)?;
@@ -193,7 +193,7 @@ impl Catalog {
 
     pub fn decode_client_id(self, kind: Kind, id: u32, client: JavaVersion) -> Result<i32, Error> {
         let extension = if client == JavaVersion::V26_3 {
-            CONCRETE_SLABS.iter().find_map(|row| match kind {
+            slabs().find_map(|row| match kind {
                 Kind::Item if id == row.wire_item => Some(row.item),
                 Kind::Block if id == row.wire_block => Some(row.block),
                 Kind::State if (row.wire_first_state..row.wire_first_state + 6).contains(&id) => Some(row.first_state + (id - row.wire_first_state) as i32),

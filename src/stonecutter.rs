@@ -175,3 +175,23 @@ mod tests {
 
 }
 
+
+#[cfg(test)]
+mod wool_cut_refusal_tests {
+    use super::*;
+    #[test]
+    fn wool_inputs_and_slabs_have_no_stonecutter_result() {
+        use crate::gameplay_catalog::{Catalog, Profile, WOOL_SLABS};
+        for profile in [Profile::Java26_1_2, Profile::Preview26_3] {
+            let catalog = Catalog::new(profile);
+            for row in &WOOL_SLABS {
+                for input in [row.input_item, row.item] {
+                    assert!(choices_for_catalog(catalog, input).is_empty());
+                    for button in [-1, 0, 1, i32::MAX] {
+                        assert!(result_for_catalog(catalog, Some(Stack::new(input, 64)), button).is_none());
+                    }
+                }
+            }
+        }
+    }
+}

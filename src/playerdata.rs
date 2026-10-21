@@ -793,13 +793,13 @@ mod tests {
     /// проверку совместимости при добавлении очередного хвоста файла.
     #[test]
     fn explicit_catalog_player_file_preserves_preview_items_and_refuses_downgrade() {
-        use crate::gameplay_catalog::CONCRETE_SLABS;
+        use crate::gameplay_catalog::slabs;
         use crate::inventory::Stack;
         let directory = test_directory("catalog_preview");
         let uuid = [43; 16];
         let preview = Catalog::new(Profile::Preview26_3);
         let base = Catalog::new(Profile::Java26_1_2);
-        for row in &CONCRETE_SLABS {
+        for row in slabs() {
             let mut data = sample();
             let slab = Stack::new(row.item, 37).with_extras(crate::stackdata::Data { name: Some(row.name.into()), ..Default::default() });
             data.inventory.set_for_catalog(crate::inventory::FIRST_HOTBAR as usize, Some(slab), preview).unwrap();

@@ -92,10 +92,10 @@ fn every_slab_property_pair_has_exact_selected_candidate_state() {
 #[test]
 fn unknown_ids_never_inherit_default_stack_size_or_wrap_into_valid_state() {
     for catalog in [OLD_CATALOG, PREVIEW] {
-        for id in [-1, i32::MIN, i32::MAX, CONCRETE_SLABS.last().unwrap().item + 1] {
+        for id in [-1, i32::MIN, i32::MAX, WOOL_SLABS.last().unwrap().item + 1] {
             assert!(matches!(catalog.stack_size(id), Err(Error::UnknownInternal { .. })));
         }
-        for id in [-1, i32::MIN, i32::MAX, CONCRETE_SLABS.last().unwrap().last_state + 1, 65535] {
+        for id in [-1, i32::MIN, i32::MAX, WOOL_SLABS.last().unwrap().last_state + 1, 65535] {
             assert!(matches!(catalog.name(Kind::State, id), Err(Error::UnknownInternal { .. })));
         }
         assert!(catalog.decode_client_id(Kind::Item, u32::MAX, NEW).is_err());
@@ -230,5 +230,107 @@ fn concrete_family_selected_metadata_and_all_96_states_stay_distinct() {
     }
     assert_eq!(states.len(),96);
     assert_eq!(PREVIEW.slab_entry(WHITE_SLAB_FIRST_STATE-1),Ok(None));
-    assert!(PREVIEW.slab_entry(CONCRETE_SLABS.last().unwrap().last_state+1).is_err());
+    assert!(PREVIEW.slab_entry(WOOL_SLABS.last().unwrap().last_state+1).is_err());
+}
+
+#[test]
+fn wool_metadata_allocates_only_append_ids_and_maps_all_96_selected_states() {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!("wool-slabs-26.3.json")).unwrap();
+    assert_eq!(fixture["candidate_commit"], "924e26d6b3bb8f97a5d1e73d6190b09879c2e1e2");
+    let selected = fixture["entries"].as_array().unwrap();
+    assert_eq!(selected.len(), 16);
+    assert_eq!(slabs().count(), 32);
+    let mut states = std::collections::HashSet::new();
+    for (index, row) in WOOL_SLABS.iter().enumerate() {
+        let entry = &selected[index];
+        assert_eq!(row.family, SlabFamily::Wool);
+        assert_eq!(entry["name"], row.name);
+        assert_eq!((row.item, row.block, row.first_state, row.last_state, row.default_state),
+            (1522 + index as i32, 1184 + index as i32, 29969 + 6 * index as i32, 29974 + 6 * index as i32, 29972 + 6 * index as i32));
+        assert_eq!(entry["canonical"]["item"], row.item);
+        assert_eq!(entry["canonical"]["block"], row.block);
+        assert_eq!(entry["canonical"]["minStateId"], row.first_state);
+        assert_eq!(entry["canonical"]["maxStateId"], row.last_state);
+        assert_eq!(entry["canonical"]["defaultState"], row.default_state);
+        assert_eq!(entry["item777"]["id"], row.wire_item);
+        assert_eq!(entry["item777"]["stackSize"], 64);
+        assert_eq!(entry["block777"]["id"], row.wire_block);
+        assert_eq!(entry["block777"]["minStateId"], row.wire_first_state);
+        assert_eq!(entry["block777"]["maxStateId"], row.wire_first_state + 5);
+        assert_eq!(entry["block777"]["defaultState"], row.wire_first_state + 3);
+        assert_eq!(entry["block777"]["hardness"], 0.8);
+        assert_eq!(entry["block777"]["resistance"], 0.8);
+        assert_eq!(entry["block777"]["material"], "wool");
+        assert_eq!(entry["block777"]["emitLight"], 0);
+        assert_eq!(entry["block777"]["filterLight"], 0);
+        assert_eq!(entry["block777"]["harvestTools"], serde_json::Value::Null);
+        assert_eq!(entry["wool_input"]["item775"], row.input_item);
+        assert_eq!(crate::blocks::item_named(row.input_name), Some(row.input_item));
+        assert_eq!(ids::translate(RegistryKind::Item, OLD, NEW, row.input_item as u32).unwrap(), entry["wool_input"]["item777"].as_u64().unwrap() as u32);
+        assert_eq!(PREVIEW.item_named(row.name), Ok(Some(row.item)));
+        assert_eq!(PREVIEW.default_state(row.name), Ok(Some(row.default_state)));
+        assert_eq!(PREVIEW.stack_size(row.item), Ok(64));
+        assert!(matches!(OLD_CATALOG.item_named(row.name), Err(Error::Disabled { .. })));
+        for (kind, id, wire) in [(Kind::Item, row.item, row.wire_item), (Kind::Block, row.block, row.wire_block)] {
+            assert_eq!(PREVIEW.name(kind, id), Ok(row.name));
+            assert_eq!(PREVIEW.to_client(kind, id, NEW), Ok(wire));
+            assert_eq!(PREVIEW.decode_client_id(kind, wire, NEW), Ok(id));
+            assert!(matches!(OLD_CATALOG.decode_client_id(kind, wire, NEW), Err(Error::Disabled { .. })));
+            for version in [OLD, MIDDLE, JavaVersion::V1_12_2] { assert!(PREVIEW.to_client(kind, id, version).is_err()); }
+        }
+        for (half_index, half) in [SlabHalf::Top, SlabHalf::Bottom, SlabHalf::Double].into_iter().enumerate() {
+            for wet in [true, false] {
+                let offset = 2 * half_index + usize::from(!wet);
+                let state = PREVIEW.slab_state_for(row, half, wet).unwrap();
+                let wire = row.wire_first_state + offset as u32;
+                assert_eq!(state, row.first_state + offset as i32);
+                assert!(states.insert(state));
+                assert_eq!(entry["enumerated_states777"][offset]["id"], wire);
+                assert_eq!(entry["enumerated_states777"][offset]["properties"]["type"], ["top", "bottom", "double"][half_index]);
+                assert_eq!(entry["enumerated_states777"][offset]["properties"]["waterlogged"], if wet { "true" } else { "false" });
+                assert_eq!(PREVIEW.slab_entry(state), Ok(Some(row)));
+                assert_eq!(PREVIEW.slab_properties(state), Ok(Some((half, wet))));
+                assert_eq!(PREVIEW.to_client(Kind::State, state, NEW), Ok(wire));
+                assert_eq!(PREVIEW.decode_client_id(Kind::State, wire, NEW), Ok(state));
+                assert!(matches!(OLD_CATALOG.slab_entry(state), Err(Error::Disabled { .. })));
+                assert!(OLD_CATALOG.decode_client_id(Kind::State, wire, NEW).is_err());
+                assert!(PREVIEW.to_client(Kind::State, state, OLD).is_err());
+            }
+        }
+    }
+    assert_eq!(states.len(), 96);
+    assert_eq!(WOOL_SLABS[0].item, CONCRETE_SLABS[15].item + 1);
+    assert_eq!(WOOL_SLABS[0].block, CONCRETE_SLABS[15].block + 1);
+    assert_eq!(WOOL_SLABS[0].first_state, CONCRETE_SLABS[15].last_state + 1);
+    assert_eq!(PREVIEW.slab_entry(WOOL_SLABS[0].first_state - 1), Ok(Some(&CONCRETE_SLABS[15])));
+    assert!(PREVIEW.slab_entry(WOOL_SLABS[15].last_state + 1).is_err());
+    assert_eq!(crate::world::profile::current_profile().gameplay_version, "26.1.2");
+}
+
+#[test]
+fn shared_descriptor_keeps_concrete_identity_and_wool_changes_only_preview_fingerprint() {
+    let concrete: Vec<_> = slabs().take(16).collect();
+    assert_eq!(concrete, CONCRETE_SLABS.iter().collect::<Vec<_>>());
+    for (index, row) in CONCRETE_SLABS.iter().enumerate() {
+        assert_eq!(row.family, SlabFamily::Concrete);
+        assert_eq!((row.item, row.block, row.first_state, row.last_state, row.default_state),
+            (1506 + index as i32, 1168 + index as i32, 29873 + 6 * index as i32, 29878 + 6 * index as i32, 29876 + 6 * index as i32));
+    }
+    // Замороженный алгоритм прежнего preview с одним concrete-семейством.
+    use aws_lc_rs::digest;
+    let base = crate::world::profile::block_item_registry_id();
+    let mut old = digest::Context::new(&digest::SHA256);
+    for value in ["mcsa-catalog-v1", base, "type:top,bottom,double", "waterlogged:true,false"] {
+        old.update(&(value.len() as u64).to_be_bytes()); old.update(value.as_bytes());
+    }
+    for row in &CONCRETE_SLABS {
+        old.update(&(row.name.len() as u64).to_be_bytes()); old.update(row.name.as_bytes());
+        for id in [row.item, row.block, row.first_state, row.last_state, row.default_state] { old.update(&id.to_be_bytes()); }
+    }
+    let hex: String = old.finish().as_ref().iter().map(|byte| format!("{byte:02x}")).collect();
+    assert_ne!(PREVIEW.registry_id(), format!("mcsa-catalog-v1:sha256:{hex}"));
+    assert_eq!(OLD_CATALOG.registry_id(), base);
+    assert_eq!(crate::world::profile::current_profile().registry_id, base);
+    let mut forged = WOOL_SLABS[0]; forged.family = SlabFamily::Concrete;
+    assert!(PREVIEW.slab_state_for(&forged, SlabHalf::Bottom, false).is_err());
 }

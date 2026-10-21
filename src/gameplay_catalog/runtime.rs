@@ -7,13 +7,13 @@ const SLAB_PROPERTIES: &[Property] = &[
     Property { name: "waterlogged", values: &["true", "false"], default: "false" },
 ];
 
-fn slab_orientation(row: &'static ConcreteSlab) -> &'static Orientation {
+fn slab_orientation(row: &'static SlabDescriptor) -> &'static Orientation {
     static ORIENTATIONS: std::sync::OnceLock<Vec<Orientation>> = std::sync::OnceLock::new();
-    let rows = ORIENTATIONS.get_or_init(|| CONCRETE_SLABS.iter().map(|row| Orientation {
+    let rows = ORIENTATIONS.get_or_init(|| slabs().map(|row| Orientation {
         name: row.name, min: row.first_state, max: row.last_state,
         family: Family::Slab, properties: SLAB_PROPERTIES,
     }).collect());
-    &rows[CONCRETE_SLABS.iter().position(|candidate| candidate == row).expect("плита каталога")]
+    &rows[slabs().position(|candidate| candidate == row).expect("плита каталога")]
 }
 
 // Внутренние775 ID, не номера инструментов из клиентского JSON777.
@@ -76,12 +76,25 @@ impl Catalog {
 
     /// Твёрдость и инструменты — выбранный pinned JSON, не предположение по имени.
     pub fn mining_properties(self, state: i32) -> Result<(f32, &'static str, &'static [i32]), Error> {
-        if self.slab_entry(state)?.is_some() { return Ok((1.8, "mineable/pickaxe", SLAB_TOOLS)); }
+        if let Some(row) = self.slab_entry(state)? {
+            return Ok(match row.family {
+                SlabFamily::Concrete => (1.8, "mineable/pickaxe", SLAB_TOOLS),
+                SlabFamily::Wool => (0.8, "wool", &[]),
+            });
+        }
         Ok(crate::mining::properties(state))
     }
 
     pub fn blast_resistance(self, state: i32) -> Result<f32, Error> {
-        if self.slab_entry(state)?.is_some() { return Ok(1.8); }
+        if let Some(row) = self.slab_entry(state)? {
+            let own: f32 = match row.family { SlabFamily::Concrete => 1.8, SlabFamily::Wool => 0.8 };
+            let wet = self.slab_properties(state)?.expect("состояние плиты").1;
+            // Как в blocks::blast_resistance: вода защищает водонаполненную клетку.
+            return Ok(if wet {
+                let water = crate::blocks::state_by_name("water").map_or(own, crate::blocks::blast_resistance);
+                own.max(water)
+            } else { own });
+        }
         Ok(crate::blocks::blast_resistance(state))
     }
 
@@ -97,16 +110,91 @@ impl Catalog {
         Ok(if equivalent != state { (0, 0, faces) } else { (emit, filter, faces) })
     }
 
+    /// Взрыв использует правильный незачарованный инструмент, кроме ножниц.
+    /// [проверить] фактический TNT drop новых семейств; здесь сохранена наша базовая политика.
+    #[cfg(not(seedmap_core))]
+    pub fn explosion_drops(self, state: i32, luck: f32) -> Result<Option<crate::inventory::Stack>, Error> {
+        self.name(Kind::State, state)?;
+        if self.slab_entry(state)?.is_some() {
+            let (_, _, tools) = self.mining_properties(state)?;
+            let shears = crate::blocks::item_named("shears");
+            let tool = tools.iter().copied().find(|tool| Some(*tool) != shears);
+            self.drops_by_luck(state, tool, luck)
+        } else { Ok(crate::blocks::explosion_drops(state, luck)) }
+    }
+
     #[cfg(not(seedmap_core))]
     pub fn drops_by_luck(self, state: i32, tool: Option<i32>, luck: f32) -> Result<Option<crate::inventory::Stack>, Error> {
         self.name(Kind::State, state)?;
         if let Some(row) = self.slab_entry(state)? {
             let (half, _) = self.slab_properties(state)?.expect("состояние плиты");
-            // Обычное наблюдение добычи: без кирки — ничего, двойная плита — две.
-            return Ok(tool.filter(|tool| SLAB_TOOLS.contains(tool)).map(|_| {
-                crate::inventory::Stack::new(row.item, if half == SlabHalf::Double { 2 } else { 1 })
-            }));
+            // Бетон требует кирку; наблюдённая шерстяная плита выпадает и рукой.
+            let harvests = match row.family {
+                SlabFamily::Concrete => tool.is_some_and(|tool| SLAB_TOOLS.contains(&tool)),
+                SlabFamily::Wool => true,
+            };
+            return Ok(harvests.then(|| crate::inventory::Stack::new(row.item, if half == SlabHalf::Double { 2 } else { 1 })));
         }
         Ok(crate::blocks::drops_by_luck(state, tool, luck))
+    }
+}
+
+
+#[cfg(test)]
+mod wool_runtime_tests {
+    use super::*;
+
+    #[test]
+    fn all_96_wool_states_have_selected_properties_geometry_drops_and_native_refusal() {
+        let preview = Catalog::new(Profile::Preview26_3);
+        let native = Catalog::new(Profile::Java26_1_2);
+        let selected: serde_json::Value = serde_json::from_str(include_str!("wool-slabs-26.3.json")).unwrap();
+        let water = crate::blocks::blast_resistance(crate::blocks::state_by_name("water").unwrap());
+        let tools = [None, crate::blocks::item_named("shears"), crate::blocks::item_named("diamond_pickaxe")];
+        let mut count = 0;
+        for (index, row) in WOOL_SLABS.iter().enumerate() {
+            assert_eq!(row.family, SlabFamily::Wool);
+            assert_eq!(selected["entries"][index]["block777"]["hardness"], 0.8);
+            assert_eq!(selected["entries"][index]["block777"]["resistance"], 0.8);
+            assert_eq!(selected["entries"][index]["block777"]["material"], "wool");
+            for state in row.first_state..=row.last_state {
+                count += 1;
+                let (half, wet) = preview.slab_properties(state).unwrap().unwrap();
+                let orientation = preview.orientation_of(state).unwrap().unwrap();
+                assert_eq!(orientation.name,row.name);
+                assert_eq!(orientation.family,Family::Slab);
+                assert_eq!(orientation.value(state,"waterlogged"),Some(if wet {"true"} else {"false"}));
+                assert_eq!(preview.mining_properties(state),Ok((0.8,"wool",&[][..])));
+                assert_eq!(preview.blast_resistance(state),Ok(if wet {water.max(0.8)} else {0.8}));
+                assert_eq!((preview.light_properties(state).unwrap().0,preview.light_properties(state).unwrap().1),(0,0));
+                assert!(crate::mining::harvests_with_catalog(preview,state,None));
+                for tool in tools {
+                    if let Some(tool) = tool {
+                        assert_eq!(crate::mining::wear_with_catalog(preview,state,crate::inventory::Stack::new(tool,1)),1);
+                    }
+                    assert_eq!(preview.drops_by_luck(state,tool,0.5),Ok(Some(crate::inventory::Stack::new(row.item,if half==SlabHalf::Double {2}else{1}))));
+                }
+                assert!(native.orientation_of(state).is_err());
+                assert!(native.mining_properties(state).is_err());
+                assert!(native.blast_resistance(state).is_err());
+                assert!(native.drops_by_luck(state,None,0.5).is_err());
+            }
+        }
+        assert_eq!(count,96);
+    }
+
+    #[test]
+    fn concrete_policy_and_base_properties_remain_separate_from_wool() {
+        let preview = Catalog::new(Profile::Preview26_3);
+        for row in &CONCRETE_SLABS {
+            let dry = row.default_state;
+            assert_eq!(preview.mining_properties(dry),Ok((1.8,"mineable/pickaxe",SLAB_TOOLS)));
+            assert_eq!(preview.blast_resistance(dry),Ok(1.8));
+            assert_eq!(preview.drops_by_luck(dry,None,0.5),Ok(None));
+            assert_eq!(preview.drops_by_luck(dry,crate::blocks::item_named("shears"),0.5),Ok(None));
+        }
+        let stone = crate::blocks::state_by_name("stone").unwrap();
+        assert_eq!(preview.blast_resistance(stone),Ok(crate::blocks::blast_resistance(stone)));
+        assert_eq!(preview.mining_properties(stone),Ok(crate::mining::properties(stone)));
     }
 }

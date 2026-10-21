@@ -1,6 +1,6 @@
 //! Все цвета проходят реальные обработчики; внутренние ID не заменяются белыми.
 use super::*;
-use crate::gameplay_catalog::{Catalog, Profile, SlabHalf, CONCRETE_SLABS};
+use crate::gameplay_catalog::{Catalog, Profile, SlabFamily, SlabHalf, slabs};
 
 fn setup(profile: Profile) -> (Shared, PlayerState) {
     let catalog = Catalog::new(profile);
@@ -37,7 +37,7 @@ fn target(shared: &Shared, player: &PlayerState) -> i32 {
 
 #[test]
 fn every_color_places_dry_or_waterlogged_bottom_then_merges_spending_exactly_two() {
-    for row in &CONCRETE_SLABS {
+    for row in slabs() {
         for water in [false, true] {
             let (shared, mut player) = setup(Profile::Preview26_3);
             if water {
@@ -62,7 +62,8 @@ fn every_color_places_dry_or_waterlogged_bottom_then_merges_spending_exactly_two
 
 #[test]
 fn every_color_places_top_and_never_merges_into_another_color_or_native_profile() {
-    for (index, row) in CONCRETE_SLABS.iter().enumerate() {
+    let colors: Vec<_> = slabs().collect();
+    for (index, row) in colors.iter().enumerate() {
         let (shared, mut player) = setup(Profile::Preview26_3);
         let slot = player.inventory.selected_slot();
         player.inventory.set(slot, Some(Stack::new(row.item, 2)));
@@ -72,11 +73,16 @@ fn every_color_places_top_and_never_merges_into_another_color_or_native_profile(
         let top = shared.catalog().slab_state_for(row, SlabHalf::Top, false).unwrap();
         assert_eq!(target(&shared, &player), top, "{}", row.name);
         assert_eq!(player.inventory.slot(slot), Some(Stack::new(row.item, 1)));
-        let other = &CONCRETE_SLABS[(index + 1) % CONCRETE_SLABS.len()];
-        player.inventory.set(slot, Some(Stack::new(other.item, 1)));
-        // Снизу свободная половина, но предмет другого цвета не должен удвоить плиту.
-        place_block(&click((3, 64, 3), 0), &mut player, &shared).unwrap();
-        assert_eq!(target(&shared, &player), top, "{} / {}", row.name, other.name);
+        // Чужой цвет и одинаковый цвет чужого семейства не сливаются.
+        // Соседняя клетка снизу занята камнем: отказ не должен расходовать предмет.
+        for other in [colors[index / 16 * 16 + (index + 1) % 16], colors[(index + 16) % 32]] {
+            let held = Stack::new(other.item, 1);
+            player.inventory.set(slot, Some(held));
+            let refused = place_block(&click((3, 64, 3), 0), &mut player, &shared).unwrap();
+            assert_eq!(target(&shared, &player), top, "{} / {}", row.name, other.name);
+            assert_eq!(player.inventory.slot(slot), Some(held));
+            assert!(refused.slots.is_empty());
+        }
         let (base, mut native) = setup(Profile::Java26_1_2);
         let slot = native.inventory.selected_slot();
         native.inventory.set(slot, Some(Stack::new(row.item, 2)));
@@ -88,31 +94,32 @@ fn every_color_places_top_and_never_merges_into_another_color_or_native_profile(
 }
 
 #[test]
-fn every_color_native_mining_drops_its_own_single_or_double_and_bare_hand_drops_nothing() {
-    for row in &CONCRETE_SLABS {
+fn every_slab_family_mines_own_color_with_family_specific_hand_drop_and_exact_tool_wear() {
+    for row in slabs() {
         for half in [SlabHalf::Top, SlabHalf::Bottom, SlabHalf::Double] {
-            for pickaxe in [false, true] {
+            for tool_name in [None, Some("iron_pickaxe"), Some("shears")] {
                 let (shared, mut player) = setup(Profile::Preview26_3);
                 let state = shared.catalog().slab_state_for(row, half, false).unwrap();
                 shared.world_in(player.dimension).lock().unwrap().set_block_silently(3, 64, 3, state);
                 let slot = player.inventory.selected_slot();
-                let tool = Stack::new(blocks::item_named("iron_pickaxe").unwrap(), 1).with_extras(crate::stackdata::Data {
+                let tool = tool_name.map(|name| Stack::new(blocks::item_named(name).unwrap(), 1).with_extras(crate::stackdata::Data {
                     damage: 7, name: Some("Цветная добыча".into()), ..Default::default()
-                });
-                player.inventory.set(slot, pickaxe.then_some(tool));
+                }));
+                player.inventory.set(slot, tool);
                 break_block(&dig(0), &mut player, &shared).unwrap();
                 assert_eq!(target(&shared, &player), state);
                 shared.ticks.send_modify(|tick| *tick += 1000);
                 break_block(&dig(2), &mut player, &shared).unwrap();
                 assert_eq!(target(&shared, &player), world::AIR, "{} {half:?}", row.name);
-                if pickaxe {
+                if let Some(tool) = tool {
                     let mut data = tool.extras(); data.damage += 1;
                     assert_eq!(player.inventory.slot(slot), Some(tool.with_extras(data)));
                 } else { assert!(player.inventory.slot(slot).is_none()); }
                 let items = shared.items_in(player.dimension).lock().unwrap();
                 let drops: Vec<_> = items.items().iter().map(|item| item.stack).collect();
-                assert_eq!(drops, if pickaxe { vec![Stack::new(row.item, if half == SlabHalf::Double { 2 } else { 1 })] } else { Vec::new() },
-                    "{} {half:?} pickaxe={pickaxe}", row.name);
+                let harvests = row.family == SlabFamily::Wool || tool_name == Some("iron_pickaxe");
+                assert_eq!(drops, if harvests { vec![Stack::new(row.item, if half == SlabHalf::Double { 2 } else { 1 })] } else { Vec::new() },
+                    "{} {half:?} tool={tool_name:?}", row.name);
             }
         }
     }
