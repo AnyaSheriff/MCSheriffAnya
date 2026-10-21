@@ -622,6 +622,20 @@ impl PhaseStats {
     }
 }
 
+/// Событие шага (частота 1) отдельно от приземления: у ковра ноги на y+1/16,
+/// прежнее y-0.2 попадает в подложку. Мох не меняет прежний выбор подложки.
+fn quiet_step_at(world: &World, at: redstone::sculk_family::Point) -> bool {
+    let x = at.0.floor() as i32; let z = at.2.floor() as i32;
+    let feet = world.get_block(x, at.1.floor() as i32, z);
+    // Допуск только для выбранной высоты контакта, не модель физики опоры.
+    let carpet_contact = (at.1 - (at.1.floor() + 1.0 / 16.0)).abs() <= 1.0e-5;
+    if carpet_contact && blocks::block_at_state(feet).is_some_and(|name| name.ends_with("_carpet") && redstone::sculk_family::quiet_block(name)) {
+        return true;
+    }
+    let below = world.get_block(x, (at.1 - 0.2).floor() as i32, z);
+    redstone::sculk_family::quiet_step_state(world.catalog(), below)
+}
+
 /// Снимки для скалка: UUID переживает выход и смену измерения; шаги берутся
 /// из движения, а не из звуков. [проверить] порог шага настоящего клиента.
 fn sculk_prepare(shared: &Shared, dimension: Dimension, world: &mut World) {
@@ -654,7 +668,9 @@ fn sculk_prepare(shared: &Shared, dimension: Dimension, world: &mut World) {
             if unsettled > 0 || distance > 8.0 { continue; }
             let cell = (player.at.0.floor() as i32, (player.at.1 - 0.2).floor() as i32, player.at.2.floor() as i32);
             let floor = blocks::block_at_state(world.get_block(cell.0, cell.1, cell.2)).unwrap_or("air");
-            if sculk_family::quiet_block(floor) || player.sneaking { continue; }
+            let quiet = if ground && was_ground { quiet_step_at(world, player.at) }
+                else { sculk_family::quiet_block(floor) };
+            if quiet || player.sneaking { continue; }
             let walked = walked + distance * 0.6;
             if ground && (!was_ground || walked >= 1.0) {
                 redstone::game_event_from(world, player.at, if was_ground { 1 } else { 2 }, Some(player.id), false);
@@ -676,9 +692,15 @@ fn sculk_finish(shared: &Shared, dimension: Dimension, world: &mut World, ticks:
             redstone::sculk_family::feed(world, charge.catalyst, charge.at, charge.amount);
         }
         for event in std::mem::take(&mut items.vibrations) {
-            // Шаги и приземления мобов на шерсти так же тихи, как у игроков.
+            // Событие шага моба использует ту же политику; обычной проверки мобов не было.
+            // Приземление (частота 2) остаётся на прежнем пути без обобщения шага.
             let floor = world.get_block(event.at.0.floor() as i32, (event.at.1 - 0.2).floor() as i32, event.at.2.floor() as i32);
-            if matches!(event.frequency, 1 | 2) && blocks::block_at_state(floor).is_some_and(redstone::sculk_family::quiet_block) { continue; }
+            let quiet = match event.frequency {
+                1 => quiet_step_at(world, event.at),
+                2 => blocks::block_at_state(floor).is_some_and(redstone::sculk_family::quiet_block),
+                _ => false,
+            };
+            if quiet { continue; }
             redstone::game_event_from(world, event.at, event.frequency, event.source, event.projectile);
         }
     }
@@ -3930,3 +3952,7 @@ mod tests {
         assert!(quiet.items_in(overworld).lock().unwrap().mobs().is_empty(), "правило выключено — никого");
     }
 }
+
+#[cfg(test)]
+#[path = "tick/sculk_step_tests.rs"]
+mod sculk_step_tests;

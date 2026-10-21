@@ -124,6 +124,16 @@ pub fn quiet_state(catalog: crate::gameplay_catalog::Catalog, state: i32) -> boo
     catalog.name(crate::gameplay_catalog::Kind::State, state).ok().is_some_and(quiet_block)
 }
 
+/// Только событие шага (частота 1): обычная проверка 777 сухой белой плиты.
+/// TODO: мокрые плиты и приземление не наблюдались; прежняя политика сохранена.
+pub fn quiet_step_state(catalog: crate::gameplay_catalog::Catalog, state: i32) -> bool {
+    if let Ok(Some(row)) = catalog.slab_entry(state) {
+        return row.family == crate::gameplay_catalog::SlabFamily::Wool
+            && matches!(catalog.slab_properties(state), Ok(Some((_, false))));
+    }
+    blocks::block_at_state(state).is_some_and(quiet_block)
+}
+
 /// Шерсть перекрывает луч, ковёр только гасит шаги. Шесть лучей от малых
 /// смещений источника устраняют ложное перекрытие на границе блока.
 /// [проверить] точность на рёбрах, совпадающих с линией слушателя.
