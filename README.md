@@ -329,14 +329,14 @@ Unregister removes the account, not playerdata or ops; it does not kick an
 already admitted player. Direct password commands bypass plugin hooks and their
 arguments are not logged.
 
-Since **0.2.6-alpha**, `auth-provider=guard` enables the optional signed, closed-source
-[MCSA Guard](https://github.com/AnyaSheriff/MCSA-Guard) module. Existing accounts
-migrate after a successful login. Initial platform: Linux x86_64. See
-[setup and secret backup instructions](docs/guard.md). The default is `builtin`.
+Since **0.2.8-alpha** passwords always use Argon2id with a secret pepper built into the
+core (the former MCSA Guard module; no download, no `auth-provider` setting). Old
+PBKDF2 accounts are upgraded on a successful login. Back up `auth.db` together with
+`mcsa-guard/` (see [docs/auth.md](docs/auth.md), in Russian).
 
 `auth.db` is an atomically rewritten file database (SQLite was unavailable in the
-offline dependency cache). It stores salted PBKDF2-HMAC-SHA256 in builtin mode hashes with 100,000
-iterations and 16-byte random salts. Back up this file together with playerdata
+offline dependency cache). It stores Argon2id + HMAC-pepper records (legacy PBKDF2 records are
+upgraded at login). Back up this file together with `mcsa-guard/`, playerdata
 and ops.json. Corrupt storage fails closed. Registration quotas survive restart;
 login failure counters and premium caches are in memory. Limits: three wrong
 passwords per connection, five failures/IP per rolling ten minutes, three

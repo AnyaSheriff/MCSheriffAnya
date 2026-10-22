@@ -21,29 +21,12 @@ pub const FILE: &str = "config/mcsa.properties";
 /// переводится в новый — терять настройки из-за смены места незачем.
 pub const OLD_FILES: [&str; 2] = ["config/mcsheriffanya.toml", "config/rustcraft.toml"];
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
-#[serde(rename_all="lowercase")]
-pub enum AuthProvider { Builtin, Guard, Invalid }
-impl std::str::FromStr for AuthProvider {
-    type Err = std::convert::Infallible;
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Ok(match value { "builtin" => Self::Builtin, "guard" => Self::Guard, _ => Self::Invalid })
-    }
-}
-impl std::fmt::Display for AuthProvider {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self { Self::Builtin=>"builtin", Self::Guard=>"guard", Self::Invalid=>"invalid" })
-    }
-}
-
 /// Настройки.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Settings {
     /// Парольный диалог для Java offline-mode до входа в мир.
     pub auth_enabled: bool,
-    /// Поставщик паролей. Неизвестное значение не должно отключать Guard.
-    pub auth_provider: AuthProvider,
     /// Пробовать лицензию; неудача разрешает cracked-повторный вход.
     pub auth_premium: bool,
     /// Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
@@ -117,7 +100,6 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             auth_enabled: true,
-            auth_provider: AuthProvider::Builtin,
             auth_premium: true,
             debug: false,
             console_colors: crate::colors::ConsoleColors::Auto,
@@ -188,9 +170,11 @@ impl Settings {
             }
         }
 
+        if values.contains_key("auth-provider") {
+            log_info!("{}: auth-provider больше не нужен — пароли всегда хранятся через Argon2id; настройка игнорируется", path.display());
+        }
         Settings {
             auth_enabled: take(&values, "auth-enabled", default.auth_enabled, path),
-            auth_provider: take(&values, "auth-provider", default.auth_provider, path),
             auth_premium: take(&values, "auth-premium", default.auth_premium, path),
             debug: take(&values, "debug", default.debug, path),
             console_colors: take(&values, "console-colors", default.console_colors, path),
@@ -226,11 +210,10 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 20] {
+    fn sections(self) -> [(&'static str, String); 19] {
         [
             ("console-colors", format!("# Цвета консоли: auto — только терминал (учитывает NO_COLOR/TERM=dumb).\n# always — включить также в панели хостинга; never — отключить ANSI.\n# Цвета чата &a, &l, &r и &#RRGGBB работают независимо от этой настройки.\nconsole-colors={}\n", self.console_colors)),
             ("auth-enabled", format!("# Парольный диалог Java в offline-mode, до входа в мир; БД auth.db.\nauth-enabled={}\n", self.auth_enabled)),
-            ("auth-provider", format!("# builtin — встроенная проверка; guard — подписанный MCSA Guard (Linux x86_64).\nauth-provider={}\n", self.auth_provider)),
             ("auth-premium", format!("# Проверять лицензию Java; после неудачи повторный вход без лицензии.\n# Действует при auth-enabled=true и online-mode=false.\nauth-premium={}\n", self.auth_premium)),
             ("tab-tps", format!("# TPS и время такта внизу списка игроков Java; оформление плагина имеет приоритет.\ntab-tps={}\n", self.tab_tps)),
             ("debug", format!("\
@@ -384,10 +367,10 @@ mod tests {
         let changed = super::Settings::parse("auth-enabled=false\nauth-premium=false\n", path);
         assert!(!changed.auth_enabled && !changed.auth_premium);
         assert_eq!(super::Settings::parse(&changed.to_file(), path), changed);
-        let guard=super::Settings::parse("auth-provider=guard\n",path);
-        assert_eq!(guard.auth_provider,super::AuthProvider::Guard);
-        assert_eq!(super::Settings::parse(&guard.to_file(),path),guard);
-        assert_eq!(super::Settings::parse("auth-provider=garud\n",path).auth_provider,super::AuthProvider::Invalid);
+        // Старая настройка auth-provider игнорируется и не попадает в файл.
+        let old=super::Settings::parse("auth-provider=guard\n",path);
+        assert_eq!(old,defaults);
+        assert!(!old.to_file().contains("auth-provider"));
     }
     use super::*;
 

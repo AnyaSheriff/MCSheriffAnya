@@ -89,16 +89,16 @@ mod tests {
     }
     #[tokio::test]
     async fn license_account_op_decision_table() {
-        use super::super::{Service, store::Account, hash};
+        use super::super::{Service, store::Account, legacy_hash};
         let owner = [0x16, 0xd3, 0xc2, 0x21, 0x47, 0x76, 0x4f, 0xe3, 0x80, 0xaf, 0x6f, 0x2b, 0x65, 0x1b, 0x50, 0x1b];
-        let (salt, password_hash) = hash("correct").unwrap();
+        let (salt, password_hash) = legacy_hash("correct").unwrap();
         for license in ["ok", "failed-retry", "not-premium", "api-down"] {
             for account in ["new", "licensed", "cracked"] {
                 for op in [false, true] {
                     let root = std::env::temp_dir();
                     let path = root.join(format!("matrix-{}-{license}-{account}-{op}.db", std::process::id()));
                     let _ = std::fs::remove_file(&path);
-                    let auth = Service::open(&path).unwrap();
+                    let auth = Service::open_test(&path).unwrap();
                     let op_path = path.with_extension("ops.json"); let _ = std::fs::remove_file(&op_path);
                     let mut ops = crate::ops::Ops::open(&op_path);
                     if op { ops.give(&owner, "SheriffAnya", 4); }
@@ -130,7 +130,7 @@ mod tests {
                     assert_eq!(result.is_ok(), account != "new" || !op || verified.is_some(), "{license}/{account}/{op}");
                     if result.is_ok() {
                         assert_eq!(ops.level_of(&identity.uuid), if op && expected_uuid == owner { 4 } else { 0 });
-                        let reload = Service::open(&path).unwrap();
+                        let reload = Service::open_test(&path).unwrap();
                         assert_eq!(reload.identity("sheriffanya", None).uuid, expected_uuid);
                     }
                     std::fs::remove_file(path).unwrap(); let _ = std::fs::remove_file(op_path);

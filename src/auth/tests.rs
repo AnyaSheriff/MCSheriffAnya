@@ -3,27 +3,27 @@ use crate::network::{nbt::Compound, packet, varint::encode_string};
 
 fn path(name: &str) -> std::path::PathBuf {
     let p = std::env::temp_dir().join(format!("auth-{}-{name}.db", std::process::id()));
-    let _ = std::fs::remove_file(&p); p
+    let _ = std::fs::remove_file(&p); let _ = std::fs::remove_dir_all(p.with_extension("guard")); p
 }
-fn service(name: &str) -> Arc<Service> { Arc::new(Service::open(&path(name)).unwrap()) }
+fn service(name: &str) -> Arc<Service> { Arc::new(Service::open_test(&path(name)).unwrap()) }
 fn ip() -> IpAddr { "192.0.2.1".parse().unwrap() }
 
 #[test]
 fn hashing_roundtrip_identity_and_limits() {
     let p = path("roundtrip");
-    let auth = Service::open(&p).unwrap();
+    let auth = Service::open_test(&p).unwrap();
     let identity = auth.identity("Alice", Some([42; 16]));
     assert!(auth.submit(&identity, ip(), "correct", Some("correct"), true).is_ok());
-    let auth = Service::open(&p).unwrap();
+    let auth = Service::open_test(&p).unwrap();
     let identity = auth.identity("alice", None);
     assert_eq!(identity.uuid, [42; 16]); assert_eq!(identity.name, "Alice");
     assert!(auth.submit(&identity, ip(), "correct", None, true).is_ok());
     assert_eq!(auth.submit(&identity, ip(), "wrong", None, true), Err("Неверный пароль"));
     let state = auth.state.lock().unwrap();
     let a = state.db.accounts.get("alice").unwrap();
-    assert!(a.premium); assert!(verify(a, "correct")); assert!(!verify(a, "Correct"));
-    let (salt, hashed) = hash("correct").unwrap();
-    assert_ne!(salt, a.salt); assert_ne!(hashed, a.password_hash);
+    assert!(a.premium); assert!(auth.check_password(a, "correct").unwrap()); assert!(!auth.check_password(a, "Correct").unwrap());
+    assert_eq!(a.salt, [0; 16]); assert_eq!(a.password_hash, [0; 32]);
+    assert_ne!(a.protected, Some(auth.new_password("alice", "correct").unwrap()));
     drop(state);
     let mut limits = Limits::default();
     for _ in 0..5 { assert!(!limits.blocked(ip(), 100)); limits.fail(ip(), 100); }
@@ -187,7 +187,7 @@ fn dialog_matches_pinned_wiki_schema() {
 #[test]
 fn corrupt_database_is_never_reset_and_failed_save_does_not_commit() {
     let p = path("corrupt"); std::fs::write(&p, "broken").unwrap();
-    assert!(Service::open(&p).is_err()); assert_eq!(std::fs::read_to_string(&p).unwrap(), "broken");
+    assert!(Service::open_test(&p).is_err()); assert_eq!(std::fs::read_to_string(&p).unwrap(), "broken");
     struct Broken;
     impl Store for Broken {
         fn load(&self) -> io::Result<Database> { Ok(Database::default()) }
@@ -267,7 +267,7 @@ fn console_commands_password_change_and_session_requirement() {
 #[test]
 fn daily_registration_limit_survives_unregister_and_restart() {
     let p = path("quota");
-    let auth = Service::open(&p).unwrap();
+    let auth = Service::open_test(&p).unwrap();
     for name in ["Alice", "Bob", "Eve"] {
         auth.submit(&auth.identity(name, None), ip(), "abcd", Some("abcd"), true).unwrap();
     }
@@ -275,7 +275,7 @@ fn daily_registration_limit_survives_unregister_and_restart() {
         let mut state = auth.state.lock().unwrap();
         state.db.accounts.clear(); state.store.save(&state.db).unwrap();
     }
-    let auth = Service::open(&p).unwrap();
+    let auth = Service::open_test(&p).unwrap();
     let id = auth.identity("Fourth", None);
     assert!(auth.submit(&id, ip(), "abcd", Some("abcd"), true).is_err());
     auth.state.lock().unwrap().db.registrations.iter_mut().for_each(|(_, t)| *t = now() - 86400);
@@ -313,89 +313,65 @@ async fn login_success_uuid_and_configuration_finish_are_password_gated() {
     tokio::join!(serving, joining);
 }
 
-// Реальный закрытый бинарник поставляется отдельно. CI не получает исходники/ключ.
-// MCSA_GUARD_TEST_BUNDLE указывает на каталог подписанного публичного выпуска.
 #[test]
-#[ignore = "requires signed MCSA_GUARD_TEST_BUNDLE on Linux x86_64"]
-fn guard_signed_module_migration_registration_failure_and_secret_loss() {
-    let bundle=std::env::var_os("MCSA_GUARD_TEST_BUNDLE").expect("signed release fixture");
-    let dir=std::env::temp_dir().join(format!("mcsa-guard-integration-{}",std::process::id()));
-    std::fs::create_dir_all(&dir).unwrap();
-    let db=dir.join("auth.db");
-    let pepper=dir.join("pepper");
-    let _=std::fs::remove_file(&db);
-    let _=std::fs::remove_file(&pepper);
-    let legacy=Service::open(&db).unwrap();
-    let identity=legacy.identity("Alice",Some([42;16]));
-    legacy.submit(&identity,ip(),"correct",Some("correct"),true).unwrap();
-    drop(legacy);
-    let module=guard::Guard::test_fixture(Path::new(&bundle),pepper.clone()).unwrap();
-    let auth=Arc::new(Service::open_with_guard(&db,Some(module)).unwrap());
-    let identity=auth.identity("Alice",None);
-    let original=std::fs::read(&db).unwrap();
-    assert!(auth.submit(&identity,ip(),"wrong",None,true).is_err());
-    assert_eq!(std::fs::read(&db).unwrap(),original);
-    auth.submit(&identity,ip(),"correct",None,true).unwrap();
+fn legacy_hash_upgrades_on_login_and_secret_is_required() {
+    let p=path("migration");
+    let auth=Service::open_test(&p).unwrap();
+    let identity=auth.identity("Alice",Some([42;16]));
+    // Запись «до Guard»: PBKDF2 без секрета, версия 1.
+    let (salt,password_hash)=legacy_hash("correct").unwrap();
+    let mut db=FileStore::new(&p).load().unwrap();
+    db.accounts.insert("alice".into(),Account { name:"alice".into(),display_name:"Alice".into(),password_hash,salt,protected:None,
+        created:1,last_ip:String::new(),last_login:0,uuid:[42;16],premium:true });
+    FileStore::new(&p).save(&db).unwrap();
+    drop(auth);
+    let auth=Service::open_test(&p).unwrap();
+    let identity_registered=auth.identity("Alice",None);
+    assert_eq!(identity_registered.uuid,[42;16]); let _=identity;
+    let original=std::fs::read(&p).unwrap();
+    assert!(auth.submit(&identity_registered,ip(),"wrong",None,true).is_err());
+    assert_eq!(std::fs::read(&p).unwrap(),original); // Ошибка ничего не переписывает.
+    auth.submit(&identity_registered,ip(),"correct",None,true).unwrap();
     {
         let state=auth.state.lock().unwrap();
         let account=&state.db.accounts["alice"];
         assert_eq!(state.db.version,2);
-        assert_eq!(account.uuid,[42;16]);
-        assert_eq!(account.password_hash,[0;32]);
-        assert_eq!(account.salt,[0;16]);
-        assert!(account.protected.is_some());
+        assert_eq!((account.salt,account.password_hash),([0;16],[0;32]));
+        assert!(account.protected.as_deref().unwrap().starts_with("g1."));
     }
-    assert!(Service::open(&db).is_err()); // Нет отката к builtin.
-    auth.submit(&identity,ip(),"correct",None,true).unwrap();
-    assert!(auth.submit(&identity,ip(),"wrong",None,true).is_err());
+    assert!(auth.submit(&identity_registered,ip(),"correct",None,true).is_ok());
+    assert!(auth.submit(&identity_registered,ip(),"wrong",None,true).is_err());
+    // Новый аккаунт сразу получает Argon2id-запись.
     let bob=auth.identity("Bob",None);
     auth.submit(&bob,ip(),"длинный😀пароль",Some("длинный😀пароль"),true).unwrap();
     assert!(auth.state.lock().unwrap().db.accounts["bob"].protected.is_some());
-    let registered_bob=auth.identity("Bob",None);
-    auth.submit(&registered_bob,ip(),"длинный😀пароль",None,true).unwrap();
-    {
-        let _busy=auth.operation.lock().unwrap();
-        assert_eq!(auth.submit(&identity,ip(),"correct",None,true),Err("Авторизация занята. Попробуй ещё раз."));
-        assert_eq!(auth.identity("Alice",None).uuid,[42;16]);
-    }
-    {
-        use crate::{commands::{run,Source}, shared::Shared,world::World};
-        let mut shared=Shared::new(World::in_memory(),World::in_memory(),dir.join("players"),dir.join("skins"),
-            Default::default(),crate::ops::Ops::open(&dir.join("ops")),Default::default());
-        shared.auth=Some(auth.clone());
-        let player=Source::Player { name:identity.name.clone(),uuid:identity.uuid };
-        let _session=auth.session(&identity);
-        assert_eq!(run("changepassword correct newpass",&player,&shared).reply,"Готово");
-        auth.submit(&identity,ip(),"newpass",None,true).unwrap();
-        assert!(auth.submit(&identity,ip(),"correct",None,true).is_err());
-        assert_eq!(run("auth setpassword Alice correct",&Source::Console,&shared).reply,"Готово");
-        auth.submit(&identity,ip(),"correct",None,true).unwrap();
-    }
-    std::fs::remove_file(&pepper).unwrap();
-    assert!(auth.submit(&identity,ip(),"correct",None,true).is_err());
-    assert!(!pepper.exists());
-    assert!(auth.submit(&auth.identity("Eve",None),ip(),"correct",Some("correct"),true).is_err());
-    assert!(!auth.state.lock().unwrap().db.accounts.contains_key("eve"));
+    // Потеря секрета не пускает и не создаёт новый секрет при наличии записей.
     drop(auth);
-    std::fs::remove_dir_all(dir).unwrap();
+    let secret=p.with_extension("guard").join("pepper");
+    std::fs::remove_file(&secret).unwrap();
+    assert!(Service::open_test(&p).is_err());
+    assert!(!secret.exists());
 }
 
 #[test]
-fn protected_database_cannot_be_loaded_as_legacy_or_builtin() {
-    let p=path("guard-corruption");
-    let auth=Service::open(&p).unwrap();
-    auth.submit(&auth.identity("Alice",None),ip(),"correct",Some("correct"),true).unwrap();
-    let mut db=FileStore::new(&p).load().unwrap();
-    db.accounts.get_mut("alice").unwrap().protected=Some("opaque-guard-record".into());
-    FileStore::new(&p).save(&db).unwrap();
-    assert!(Service::open(&p).is_err());
-    db.version=2;
-    FileStore::new(&p).save(&db).unwrap();
-    assert!(FileStore::new(&p).load().is_err()); // Запрещён сохранённый слабый дубликат.
-    let a=db.accounts.get_mut("alice").unwrap();
-    a.password_hash=[0;32]; a.salt=[0;16];
-    FileStore::new(&p).save(&db).unwrap();
-    assert!(FileStore::new(&p).load().is_ok());
-    assert!(Service::open(&p).is_err());
-    std::fs::remove_file(p).unwrap();
+fn changepassword_and_setpassword_use_new_scheme() {
+    use crate::{commands::{run,Source}, shared::Shared,world::World};
+    let p=path("commands-scheme");
+    let auth=Arc::new(Service::open_test(&p).unwrap());
+    let identity=auth.identity("Alice",Some([42;16]));
+    auth.submit(&identity,ip(),"correct",Some("correct"),true).unwrap();
+    let identity=auth.identity("Alice",None);
+    let dir=std::env::temp_dir().join(format!("auth-commands-{}",std::process::id()));
+    let mut shared=Shared::new(World::in_memory(),World::in_memory(),dir.join("players"),dir.join("skins"),
+        Default::default(),crate::ops::Ops::open(&dir.join("ops")),Default::default());
+    shared.auth=Some(auth.clone());
+    let player=Source::Player { name:identity.name.clone(),uuid:identity.uuid };
+    let _session=auth.session(&identity);
+    assert_eq!(run("changepassword correct newpass",&player,&shared).reply,"Готово");
+    auth.submit(&identity,ip(),"newpass",None,true).unwrap();
+    assert!(auth.submit(&identity,ip(),"correct",None,true).is_err());
+    assert_eq!(run("auth setpassword Alice correct",&Source::Console,&shared).reply,"Готово");
+    auth.submit(&identity,ip(),"correct",None,true).unwrap();
+    assert!(auth.state.lock().unwrap().db.accounts["alice"].protected.is_some());
+    let _=std::fs::remove_dir_all(dir);
 }

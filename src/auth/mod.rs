@@ -3,28 +3,29 @@
 pub mod dialog;
 pub mod premium;
 mod store;
-mod guard;
+mod hash;
 #[cfg(test)] mod tests;
 
 use std::{collections::HashMap, io, net::IpAddr, num::NonZeroU32, path::Path, sync::{Arc, Mutex}, time::{SystemTime, UNIX_EPOCH}};
-use aws_lc_rs::{pbkdf2, rand};
+use aws_lc_rs::pbkdf2;
 use store::{Account, Database, FileStore, Store};
 
 pub const OP_PROTECTED: &str = "Аккаунт оператора: пароль задаётся из консоли";
 pub const BLOCKED: &str = "Слишком много ошибок входа. Попробуй через 10 минут.";
-type PasswordRecord = ([u8;16], [u8;32], Option<String>);
 const ITERATIONS: NonZeroU32 = NonZeroU32::new(100_000).unwrap();
 
 pub fn now() -> u64 { SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() }
 fn valid_password(password: &str) -> bool { (4..=64).contains(&password.chars().count()) }
-fn hash(password: &str) -> io::Result<([u8; 16], [u8; 32])> {
+// Старый (до Argon2id) способ: только для проверки записей v1 и тестов миграции.
+#[cfg(test)]
+fn legacy_hash(password: &str) -> io::Result<([u8; 16], [u8; 32])> {
     let mut salt = [0; 16];
-    rand::fill(&mut salt).map_err(|_| io::Error::other("не удалось получить случайную соль"))?;
+    aws_lc_rs::rand::fill(&mut salt).map_err(|_| io::Error::other("не удалось получить случайную соль"))?;
     let mut result = [0; 32];
     pbkdf2::derive(pbkdf2::PBKDF2_HMAC_SHA256, ITERATIONS, &salt, password.as_bytes(), &mut result);
     Ok((salt, result))
 }
-fn verify(account: &Account, password: &str) -> bool {
+fn legacy_verify(account: &Account, password: &str) -> bool {
     pbkdf2::verify(pbkdf2::PBKDF2_HMAC_SHA256, ITERATIONS, &account.salt,
         password.as_bytes(), &account.password_hash).is_ok()
 }
@@ -47,7 +48,7 @@ struct State {
 pub struct Service {
     state: Mutex<State>,
     operation: Mutex<()>,
-    guard: Option<guard::Guard>,
+    pepper: hash::Pepper,
     pub premium: premium::Detector,
 }
 
@@ -59,29 +60,18 @@ pub struct Identity {
     pub registered: bool,
 }
 impl Service {
+    /// Секрет лежит рядом с базой: `mcsa-guard/pepper`. Бэкап — auth.db и mcsa-guard/ вместе.
+    pub fn open(path: &Path) -> io::Result<Self> { Self::open_in(path, &path.with_file_name("mcsa-guard")) }
     #[cfg(test)]
-    pub fn open(path: &Path) -> io::Result<Self> { Self::open_with_guard(path,None) }
-    pub async fn configured(path: &Path, provider: crate::config::mcsheriffanya::AuthProvider) -> io::Result<Self> {
-        use crate::config::mcsheriffanya::AuthProvider;
-        let db=FileStore::new(path).load()?;
-        let protected=db.accounts.values().any(|a| a.protected.is_some());
-        let module=match provider {
-            AuthProvider::Guard=>Some(guard::Guard::prepare(&path.with_file_name("mcsa-guard"),protected).await?),
-            AuthProvider::Builtin if !protected=>None,
-            AuthProvider::Builtin=>return Err(io::Error::other("Auth: аккаунты MCSA Guard требуют auth-provider=guard")),
-            AuthProvider::Invalid=>return Err(io::Error::other("Auth: auth-provider должен быть builtin или guard")),
-        };
-        Self::open_with_guard(path,module)
-    }
-    fn open_with_guard(path: &Path, guard: Option<guard::Guard>) -> io::Result<Self> {
+    fn open_test(path: &Path) -> io::Result<Self> { Self::open_in(path, &path.with_extension("guard")) }
+    fn open_in(path: &Path, secret: &Path) -> io::Result<Self> {
         let store = Box::new(FileStore::new(path));
         let db = store.load()?;
-        if guard.is_none() && db.accounts.values().any(|a| a.protected.is_some()) {
-            return Err(io::Error::other("Auth: для этой базы необходим MCSA Guard"));
-        }
+        // Пока в базе есть записи с секретом, молча создавать новый секрет нельзя.
+        let pepper = hash::Pepper::open(secret, !db.accounts.values().any(|a| a.protected.is_some()))?;
         // Создание файла проверяет доступность записи до первого подключения.
         store.save(&db)?;
-        Ok(Self { state: Mutex::new(State { store, db, limits: Limits::default(), sessions: HashMap::new() }), operation:Mutex::new(()), guard, premium: premium::Detector::default() })
+        Ok(Self { state: Mutex::new(State { store, db, limits: Limits::default(), sessions: HashMap::new() }), operation:Mutex::new(()), pepper, premium: premium::Detector::default() })
     }
     pub fn identity(&self, name: &str, verified_uuid: Option<[u8; 16]>) -> Identity {
         let state = self.state.lock().expect("auth");
@@ -130,24 +120,26 @@ impl Service {
             return Err("Неверный пароль");
         }
         if !identity.registered {
-            let (salt,password_hash,protected)=self.new_password(&key,password)?;
+            let protected=Some(self.new_password(&key,password)?);
             db.accounts.insert(key.clone(), Account {
-                name: key.clone(), display_name: identity.name.clone(), password_hash, salt, protected,
+                name: key.clone(), display_name: identity.name.clone(), password_hash: [0;32], salt: [0;16], protected,
                 created: time, last_ip: ip.to_string(), last_login: time, uuid: identity.uuid, premium: identity.verified,
             });
             db.registrations.retain(|(_, t)| time.saturating_sub(*t) < 86400);
             db.registrations.push((ip.to_string(), time));
         }
         let account = db.accounts.get_mut(&key).expect("аккаунт");
-        if self.guard.is_some() && account.protected.is_none() {
-            (account.salt,account.password_hash,account.protected)=self.new_password(&key,password)?;
+        // Старый хеш (v1) после успешного входа заменяется на Argon2id.
+        if account.protected.is_none() {
+            account.protected=Some(self.new_password(&key,password)?);
+            account.salt=[0;16]; account.password_hash=[0;32];
         }
         account.last_ip = ip.to_string(); account.last_login = time;
         if identity.verified && !account.premium {
             crate::log_info!("Auth: {} подтвердил лицензию; сохранён UUID cracked-аккаунта {}", identity.name, crate::network::login::format_uuid(&account.uuid));
         }
         if deadline.is_some_and(|d| tokio::time::Instant::now() >= d) { return Err(dialog::TIMEOUT); }
-        if self.guard.is_some() { db.version=2; }
+        db.version=2;
         let mut state=self.state.lock().expect("auth");
         state.store.save(&db).map_err(|_| "Не удалось сохранить аккаунт")?;
         state.db = db;
@@ -155,19 +147,13 @@ impl Service {
     }
     fn check_password(&self,account:&Account,password:&str)->Result<bool,&'static str> {
         match &account.protected {
-            Some(record)=>self.guard.as_ref().ok_or("Для аккаунта нужен MCSA Guard")?
-                .verify(&account.name,password,record).map_err(|_|"MCSA Guard недоступен или секрет установки повреждён"),
-            None=>Ok(verify(account,password)),
+            Some(record)=>self.pepper.verify(&account.name,password,record)
+                .map_err(|_|"Запись пароля повреждена или не совпадает с секретом mcsa-guard/pepper"),
+            None=>Ok(legacy_verify(account,password)),
         }
     }
-    fn new_password(&self,name:&str,password:&str)->Result<PasswordRecord,&'static str> {
-        if let Some(guard)=&self.guard {
-            let record=guard.hash(name,password).map_err(|_|"MCSA Guard не смог сохранить пароль")?;
-            Ok(([0;16],[0;32],Some(record)))
-        } else {
-            let (salt,hash)=hash(password).map_err(|_|"Не удалось сохранить пароль")?;
-            Ok((salt,hash,None))
-        }
+    fn new_password(&self,name:&str,password:&str)->Result<String,&'static str> {
+        self.pepper.hash(name,password).map_err(|_|"Не удалось сохранить пароль")
     }
     pub fn session(self: &Arc<Self>, identity: &Identity) -> Session {
         let key = (identity.name.to_ascii_lowercase(), identity.uuid);
@@ -237,13 +223,13 @@ fn command_inner(command: &str, source: &crate::commands::Source, shared: &crate
             if !crate::network::login::valid_name(name) { return Err("Недопустимый ник"); }
             if !valid_password(password) { return Err("Пароль должен содержать 4–64 символа"); }
             let key = name.to_ascii_lowercase();
-            let (salt,password_hash,protected)=service.new_password(&key,password)?;
+            let protected=Some(service.new_password(&key,password)?);
             let op_uuid = shared.ops.lock().expect("ops").uuid_for_name(name);
             let account = db.accounts.entry(key.clone()).or_insert_with(|| Account {
-                name: key, display_name: (*name).into(), password_hash, salt, protected:None, created: now(), last_ip: String::new(), last_login: 0,
+                name: key, display_name: (*name).into(), password_hash: [0;32], salt: [0;16], protected:None, created: now(), last_ip: String::new(), last_login: 0,
                 uuid: op_uuid.unwrap_or_else(|| crate::network::login::offline_uuid(name)), premium: op_uuid.is_some(),
             });
-            account.salt = salt; account.password_hash = password_hash; account.protected=protected;
+            account.salt = [0;16]; account.password_hash = [0;32]; account.protected=protected;
         }
         ["changepassword", old, new] => {
             let Source::Player { uuid, name } = source else { return Err("Команда доступна вошедшему игроку"); };
@@ -251,11 +237,12 @@ fn command_inner(command: &str, source: &crate::commands::Source, shared: &crate
             if !valid_password(new) { return Err("Пароль должен содержать 4–64 символа"); }
             let account = db.accounts.get_mut(&name.to_ascii_lowercase()).ok_or("Аккаунт не найден")?;
             if account.uuid != *uuid || !valid_password(old) || !service.check_password(account, old)? { return Err("Неверный пароль"); }
-            (account.salt, account.password_hash,account.protected) = service.new_password(&account.name,new)?;
+            account.protected = Some(service.new_password(&account.name,new)?);
+            account.salt = [0;16]; account.password_hash = [0;32];
         }
         _ => return Err("Использование: auth setpassword <name> <password> | auth unregister <name> | auth list; /changepassword <old> <new>"),
     }
-    if service.guard.is_some() { db.version=2; }
+    db.version=2;
     let mut state=service.state.lock().expect("auth");
     state.store.save(&db).map_err(|_| "Не удалось сохранить auth.db")?;
     state.db = db;
