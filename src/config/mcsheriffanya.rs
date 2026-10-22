@@ -21,21 +21,6 @@ pub const FILE: &str = "config/mcsa.properties";
 /// переводится в новый — терять настройки из-за смены места незачем.
 pub const OLD_FILES: [&str; 2] = ["config/mcsheriffanya.toml", "config/rustcraft.toml"];
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
-#[serde(rename_all="lowercase")]
-pub enum AuthProvider { Builtin, Guard, Invalid }
-impl std::str::FromStr for AuthProvider {
-    type Err = std::convert::Infallible;
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Ok(match value { "builtin" => Self::Builtin, "guard" => Self::Guard, _ => Self::Invalid })
-    }
-}
-impl std::fmt::Display for AuthProvider {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self { Self::Builtin=>"builtin", Self::Guard=>"guard", Self::Invalid=>"invalid" })
-    }
-}
-
 /// Проверка лицензий в Java offline-mode, независимо от парольной защиты.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 #[serde(rename_all="lowercase")]
@@ -61,8 +46,6 @@ pub struct Settings {
     pub java_version: Option<mcsa_protocol::JavaVersion>,
     /// Парольный диалог для Java offline-mode до входа в мир.
     pub auth_enabled: bool,
-    /// Поставщик паролей. Неизвестное значение не должно отключать Guard.
-    pub auth_provider: AuthProvider,
     /// Пробовать лицензию; неудача разрешает cracked-повторный вход.
     pub auth_premium: bool,
     /// Имеет приоритет над устаревшим auth-premium.
@@ -161,7 +144,6 @@ impl Default for Settings {
         Settings {
             java_version: Some(crate::network::NATIVE_VERSION),
             auth_enabled: true,
-            auth_provider: AuthProvider::Builtin,
             auth_premium: true,
             offline_license_mode: OfflineLicenseMode::Cosmetics,
             debug: false,
@@ -233,10 +215,12 @@ impl Settings {
             }
         }
 
+        if values.contains_key("auth-provider") {
+            log_info!("{}: auth-provider больше не нужен — пароли всегда хранятся через Argon2id; настройка игнорируется", path.display());
+        }
         Settings {
             java_version: values.get("java-version").map_or(default.java_version, |value| mcsa_protocol::JavaVersion::from_name(value)),
             auth_enabled: take(&values, "auth-enabled", default.auth_enabled, path),
-            auth_provider: take(&values, "auth-provider", default.auth_provider, path),
             auth_premium: take(&values, "auth-premium", default.auth_premium, path),
             // Старые настройки не должны неожиданно включить проверку входа.
             offline_license_mode: take(&values, "offline-license-mode",
@@ -277,14 +261,13 @@ impl Settings {
 
     /// Каждая настройка с пояснением над ней — по порядку файла. Ключ идёт
     /// отдельно: по нему видно, какой настройки в файле ещё нет.
-    fn sections(self) -> [(&'static str, String); 22] {
+    fn sections(self) -> [(&'static str, String); 21] {
         [
             ("java-version", format!("# Основная версия Java. Менять только на поддерживаемую этой сборкой версию.\n# Сейчас поддерживается 26.1.2; 26.2/26.3 ещё в разработке. Перед сменой версии\n# сохраните резервную копию мира: новые данные могут не читаться старым ядром.\njava-version={}\n", self.java_version.map_or("invalid", mcsa_protocol::JavaVersion::name))),
             ("console-colors", format!("# Цвета консоли: auto — только терминал (учитывает NO_COLOR/TERM=dumb).\n# always — включить также в панели хостинга; never — отключить ANSI.\n# Цвета чата &a, &l, &r и &#RRGGBB работают независимо от этой настройки.\nconsole-colors={}\n", self.console_colors)),
             ("auth-enabled", format!("# Парольный диалог Java в offline-mode, до входа в мир; БД auth.db.\nauth-enabled={}\n", self.auth_enabled)),
-            ("auth-provider", format!("# builtin — встроенная проверка; guard — подписанный MCSA Guard (Linux x86_64).\nauth-provider={}\n", self.auth_provider)),
             ("auth-premium", format!("# Устаревшая настройка; используется только при отсутствии offline-license-mode.\nauth-premium={}\n", self.auth_premium)),
-            ("offline-license-mode", format!("# Только для online-mode=false: cosmetics — проверять лицензию для скинов/плащей;\n# после неудачи можно войти повторно без лицензии. disabled — не проверять\n# лицензию и не искать профили/скины через Mojang. Пароли AuthMe/Guard независимы.\n# Имеет приоритет над auth-premium; действует и при auth-enabled=false.\noffline-license-mode={}\n", self.offline_license_mode)),
+            ("offline-license-mode", format!("# Только для online-mode=false: cosmetics — проверять лицензию для скинов/плащей;\n# после неудачи можно войти повторно без лицензии. disabled — не проверять\n# лицензию и не искать профили/скины через Mojang. Парольная защита AuthMe независима.\n# Имеет приоритет над auth-premium; действует и при auth-enabled=false.\noffline-license-mode={}\n", self.offline_license_mode)),
             ("tab-tps", format!("# TPS и время такта внизу списка игроков Java; оформление плагина имеет приоритет.\ntab-tps={}\n", self.tab_tps)),
             ("debug", format!("\
 # Подробный лог: каждый пакет, каждое движение игрока, служебный обмен
@@ -447,10 +430,10 @@ mod tests {
         let changed = super::Settings::parse("auth-enabled=false\nauth-premium=false\n", path);
         assert!(!changed.auth_enabled && !changed.auth_premium);
         assert_eq!(super::Settings::parse(&changed.to_file(), path), changed);
-        let guard=super::Settings::parse("auth-provider=guard\n",path);
-        assert_eq!(guard.auth_provider,super::AuthProvider::Guard);
-        assert_eq!(super::Settings::parse(&guard.to_file(),path),guard);
-        assert_eq!(super::Settings::parse("auth-provider=garud\n",path).auth_provider,super::AuthProvider::Invalid);
+        // Старая настройка auth-provider игнорируется и не попадает в файл.
+        let old=super::Settings::parse("auth-provider=guard\n",path);
+        assert_eq!(old,defaults);
+        assert!(!old.to_file().contains("auth-provider"));
     }
     use super::*;
 
@@ -492,9 +475,8 @@ mod tests {
         let invalid = Settings::parse("offline-license-mode=disabeld", path);
         assert!(invalid.validate().is_err());
         assert!(!invalid.verify_license(false));
-        let protected = Settings::parse("auth-enabled=true\nauth-provider=guard\noffline-license-mode=disabled", path);
+        let protected = Settings::parse("auth-enabled=true\noffline-license-mode=disabled", path);
         assert!(protected.auth_enabled);
-        assert_eq!(protected.auth_provider, AuthProvider::Guard);
     }
 
     #[test]

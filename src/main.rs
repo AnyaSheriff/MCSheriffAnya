@@ -219,7 +219,7 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
     if first_start {
         log_info!("Первый запуск: основная версия задаётся строкой java-version={} в config/mcsa.properties", VERSION_NAME);
         log_info!("Чтобы выбрать более старую версию, остановите сервер, сохраните копию мира и укажите поддерживаемую версию в java-version. В этой сборке доступна только {}", VERSION_NAME);
-        log_info!("При online-mode=false: offline-license-mode=cosmetics — лицензии для косметики; disabled — без проверки лицензий. Пароли настраиваются отдельно через auth-enabled и auth-provider");
+        log_info!("При online-mode=false: offline-license-mode=cosmetics — лицензии для косметики; disabled — без проверки лицензий. Пароли настраиваются отдельно через auth-enabled");
     }
     log::set_debug(settings.debug);
     log::set_console_colors(settings.console_colors);
@@ -292,7 +292,7 @@ async fn server(settings: config::mcsheriffanya::Settings, first_start: bool) ->
     *shared.maps.lock().expect("карты") = maps::Maps::open(Path::new(WORLD_PATH))?;
     shared.settings = settings;
     if settings.auth_enabled && !properties.online_mode {
-        shared.auth = Some(Arc::new(auth::Service::configured(Path::new("auth.db"), settings.auth_provider).await?));
+        shared.auth = Some(Arc::new(auth::Service::open(Path::new("auth.db"))?));
     }
     shared.scoreboard = std::sync::Mutex::new(scoreboard::Scoreboard::open(Path::new(WORLD_PATH)));
     shared.functions = std::sync::Mutex::new(functions::Functions::new(Path::new(WORLD_PATH)));

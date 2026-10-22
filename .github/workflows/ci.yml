@@ -25,18 +25,6 @@ jobs:
       - run: cargo build --release --target wasm32-wasip2
         working-directory: plugins-examples
       - run: cargo test --release --workspace
-      # Закрытый Guard проверяем по подписанному публичному бинарнику.
-      # Ключ подписи и исходники модуля в Actions не передаются.
-      - name: Test signed Guard integration
-        run: |
-          guard_fixture="$RUNNER_TEMP/mcsa-guard-fixture"
-          mkdir -p "$guard_fixture"
-          for asset in linux-x86_64.json linux-x86_64.sig mcsa-guard-linux-x86_64; do
-            curl --fail --location --retry 3 --max-time 60 \
-              "https://github.com/AnyaSheriff/MCSA-Guard/releases/download/v0.1.0/$asset" \
-              --output "$guard_fixture/$asset"
-          done
-          MCSA_GUARD_TEST_BUNDLE="$guard_fixture" cargo test --release guard_signed_module -- --ignored
       - run: cargo test --release --no-default-features
 
   build-other:
